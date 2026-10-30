@@ -98,7 +98,7 @@ remote Git lists):
 | `dev.azure.com`, `ssh.dev.azure.com`, any `*.visualstudio.com` | `azure-devops` |
 | any other host (GitHub, GitHub Enterprise…), or no remote | `github` |
 
-On `github`, the engine goes through `gh`, and the pull request's body opens with
+On `github`, the engine goes through the host's GitHub MCP server, else `gh` (see below), and the pull request's body opens with
 `Closes #<issue>` when it targets the default branch, `Refs #<issue>` otherwise. On
 `azure-devops`, the engine opens the pull request on Azure Repos through `az` (the Azure CLI
 with its `azure-devops` extension): its body opens with `AB#<work item>`, and the pull request
@@ -112,6 +112,31 @@ own files (`~/.skraft/config.json`, `skraft-config.local.json`), else from the r
 `skraft-config.json` of the pull request under review, which its author wrote, chooses no forge.
 
 Under Copilot, the **Configuration** tab of the skraft canvas chooses it: its first choice, *From the Git remote: <forge>*, leaves `forge` out of `skraft-config.json` and names the forge the remote gives; *GitHub* or *Azure DevOps* writes it. `skraft doctor` says which forge a run uses and what chose it, on its `forge` line.
+
+#### GitHub MCP server first, gh as fallback
+
+When the host has a known GitHub MCP server connected and the repository is on `github.com`,
+the engine reads the issue, keeps its comment, finds, opens and edits the pull request, and
+reads and comments the pull request under review through that server's tools (`issue_read`,
+`add_issue_comment`, `update_issue_comment`, `get_me`, `list_pull_requests`,
+`create_pull_request`, `update_pull_request`, `pull_request_read`, as github/github-mcp-server
+v2.0.3 names them). The known servers, by exact name, in this order: `github-mcp-server`
+(Copilot CLI's built-in one), `github`, `claude_ai_Github` (the claude.ai connector); a server
+of any other name is never used. Issues are read on the repository `gh` reads them on (its
+default, else `upstream`, else `origin`); pull requests and the issue comment go to `origin`.
+
+Each operation falls back to `gh` when the server is absent or not connected, a read is
+refused, the tool is missing or fails, the server answers what the engine cannot read (a page
+outside the repository in use included), or the conversation holds 100 comments or more. A
+write you or the host refuse (in Claude Code, a tool you have not allowed) is not retried with
+`gh`: the run says it wrote nothing. The guarantees stay those of `gh`: the pull request is
+found before one is opened, only your own comment is rewritten, the reasons are fixed by the
+engine. The journal says which way served each operation: `via` (`mcp` or `gh`) and, when
+`gh` served after the server could not, `fallback` with a fixed code (`mcp-unavailable`,
+`mcp-tool-missing`, `mcp-refused`, `mcp-failed`, `mcp-unreadable`); `run.started` keeps it as
+`issueRoute`. Reading the issue and keeping its comment need no `gh`; opening the pull request
+still asks `gh` for the repository's default branch, and the push stays `git`. `skraft next`
+(the VS Code agent loop) and the `skraft` CLI reach no MCP server and always use `gh`.
 
 ### Validation and messages
 

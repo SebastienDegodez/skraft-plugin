@@ -8,6 +8,7 @@ import { runReport } from '../../domain/reporting/run-report.mjs'
 import { statusLine } from '../../domain/reporting/run-status.mjs'
 import { branchOf } from '../../domain/reporting/branches.mjs'
 import { forgeAdapters } from '../config/forge.mjs'
+import { routeOf } from '../config/github-mcp.mjs'
 
 /**
  * The pull request of a run: its description rendered from the journal into the tracking
@@ -182,15 +183,15 @@ const pushAndOpen = async (deps, request, pull) => {
 const hashOf = ({ hasher }, body) => hasher.sha256(body.replace(/\r\n/g, '\n').trimEnd())
 
 /**
- * @typedef {{ target: Extract<Target, { ok: true }>, title: string, bodyFile: string, bodyHash: string }} Located
+ * @typedef {{ target: Extract<Target, { ok: true }>, title: string, bodyFile: string, body: string, bodyHash: string }} Located
  */
 
 /** @param {OnForge} deps @param {PublishRequest} request @param {Located} pull @returns {Promise<Publication>} */
-const opened = async ({ codeHost }, { journal, config }, { target, title, bodyFile, bodyHash }) => {
+const opened = async ({ codeHost }, { journal, config }, { target, title, bodyFile, body, bodyHash }) => {
   const { base, head } = target
-  const made = await codeHost.create({ base, head, title, bodyFile, draft: config.publish.draft, issue: deriveRun(journal.events).story?.issue ?? null })
+  const made = await codeHost.create({ base, head, title, bodyFile, body, draft: config.publish.draft, issue: deriveRun(journal.events).story?.issue ?? null })
   if (!made.ok) return notOpened(made.reason)
-  await journal.append('pull-request.opened', { number: made.number, url: made.url, base, head, draft: config.publish.draft, bodyHash })
+  await journal.append('pull-request.opened', { number: made.number, url: made.url, base, head, draft: config.publish.draft, bodyHash, ...routeOf(made) })
   return { published: true, reason: `pull request #${made.number} opened${config.publish.draft ? ' as a draft' : ''}: ${made.url}${made.note === undefined ? '' : `; ${made.note}`}` }
 }
 
@@ -200,12 +201,12 @@ const opened = async ({ codeHost }, { journal, config }, { target, title, bodyFi
  * @param {OnForge} deps @param {PublishRequest} request @param {Located & { found: { number: number, url: string }, liveHash: string }} pull
  * @returns {Promise<Publication>}
  */
-const updated = async ({ codeHost }, { journal }, { found, bodyFile, bodyHash, liveHash }) => {
+const updated = async ({ codeHost }, { journal }, { found, bodyFile, body, bodyHash, liveHash }) => {
   if (liveHash === bodyHash) return { published: true, reason: `pull request #${found.number} is up to date: ${found.url}` }
   if (lastHash(journal.events, found.number) !== liveHash) return notOpened(`pull request #${found.number} was edited since skraft last wrote its body, which stays as it is`)
-  const edited = await codeHost.edit({ number: found.number, bodyFile })
+  const edited = await codeHost.edit({ number: found.number, bodyFile, body })
   if (!edited.ok) return notOpened(edited.reason)
-  await journal.append('pull-request.updated', { number: found.number, url: found.url, bodyHash })
+  await journal.append('pull-request.updated', { number: found.number, url: found.url, bodyHash, ...routeOf(edited) })
   return { published: true, reason: `pull request #${found.number} updated: ${found.url}` }
 }
 

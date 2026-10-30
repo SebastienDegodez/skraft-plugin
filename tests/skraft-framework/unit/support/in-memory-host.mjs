@@ -636,8 +636,10 @@ export class InMemoryCodeHost {
    *   link: the line the forge links a pull request to its story with, GitHub's unless given;
    *   bodyLimit: the longest body the forge takes, GitHub's unless given.
    */
-  constructor({ unavailable = null, branch = 'checkout', defaultBranch = 'main', remotes = ['origin'], open = [], fails = {}, repository = { host: 'github.com', repository: 'acme/shop' }, issues, link = (issue, closes) => `${closes ? 'Closes' : 'Refs'} #${issue}`, bodyLimit = 60_000 } = {}) {
+  constructor({ unavailable = null, branch = 'checkout', defaultBranch = 'main', remotes = ['origin'], open = [], fails = {}, repository = { host: 'github.com', repository: 'acme/shop' }, issues, link = (issue, closes) => `${closes ? 'Closes' : 'Refs'} #${issue}`, bodyLimit = 60_000, pages = 'https://github.example.com/acme/shop' } = {}) {
     this.bodyLimit = bodyLimit
+    /** where the forge's pages are */
+    this.pages = pages
     this.issues = issues
     this.link = link
     /** @type {number[]} */
@@ -648,7 +650,7 @@ export class InMemoryCodeHost {
     this.default = defaultBranch
     this.remoteNames = remotes
     /** @type {Array<{ number: number, url: string, head: string, state: string, body: string, base?: string, title?: string, bodyFile?: string, draft?: boolean, issue?: number | null }>} issue: the story's, linked at creation */
-    this.pullRequests = open.map(({ number, head, state = 'open', body = '' }) => ({ number, head, state, body, url: `https://github.example.com/acme/shop/pull/${number}` }))
+    this.pullRequests = open.map(({ number, head, state = 'open', body = '' }) => ({ number, head, state, body, url: `${pages}/pull/${number}` }))
     this.fails = fails
     /** @type {Array<{ number: number, bodyFile: string, body: string, bodies: string[], edits: number, url: string }>} the issue comments on the forge, in the order they were posted; a test may remove one, as a human deleting it */
     this.comments = []
@@ -667,7 +669,7 @@ export class InMemoryCodeHost {
     if (unreadable) return { read: 'failed', reason: unreadable }
     const found = this.issues === undefined ? { title: `Issue ${number}`, body: `Acceptance criteria of #${number}` } : this.issues[number]
     if (found === 'pull-request') return { read: 'pull-request' }
-    return found ? { read: 'issue', issue: { number, title: found.title, url: `https://github.example.com/acme/shop/issues/${number}`, body: found.body } } : { read: 'missing' }
+    return found ? { read: 'issue', issue: { number, title: found.title, url: `${this.pages}/issues/${number}`, body: found.body } } : { read: 'missing' }
   }
   async remotes() { return this.remoteNames }
   async repository() { return this.named }
@@ -687,7 +689,7 @@ export class InMemoryCodeHost {
     this.calls.push(`create ${base} <- ${head}${draft ? ' (draft)' : ''}: ${title}`)
     if (this.fails.create) return { ok: false, reason: this.fails.create }
     const number = 41 + this.pullRequests.length + 1
-    const url = `https://github.example.com/acme/shop/pull/${number}`
+    const url = `${this.pages}/pull/${number}`
     this.pullRequests.push({ number, url, head, base, title, bodyFile, draft, issue, state: 'open', body: this.read(bodyFile) })
     return { ok: true, number, url, ...(this.fails.link ? { note: this.fails.link } : {}) }
   }
@@ -709,7 +711,7 @@ export class InMemoryCodeHost {
       return { ok: true, url: kept.url }
     }
     this.posted += 1
-    const comment = { number, bodyFile, body, bodies: [body], edits: 0, url: `https://github.example.com/acme/shop/issues/${number}#issuecomment-${900 + this.posted}` }
+    const comment = { number, bodyFile, body, bodies: [body], edits: 0, url: `${this.pages}/issues/${number}#issuecomment-${900 + this.posted}` }
     this.comments.push(comment)
     return { ok: true, url: comment.url }
   }
@@ -724,7 +726,8 @@ export class InMemoryPullRequests {
   /**
    * @param {{ unavailable?: string | null, pullRequests?: object[], fails?: Record<string, string> }} [forge]
    */
-  constructor({ unavailable = null, pullRequests = [], fails = {}, repository = { host: 'github.com', repository: 'acme/shop' } } = {}) {
+  constructor({ unavailable = null, pullRequests = [], fails = {}, repository = { host: 'github.com', repository: 'acme/shop' }, pages = 'https://github.example.com/acme/shop' } = {}) {
+    this.pages = pages
     this.missing = unavailable
     this.named = repository
     this.pullRequests = pullRequests
@@ -756,7 +759,7 @@ export class InMemoryPullRequests {
       kept.bodies.push(body)
       return { ok: true, url: kept.url }
     }
-    const comment = { number, body, bodies: [body], url: `https://github.example.com/acme/shop/pull/${number}#issuecomment-${900 + this.comments.length + 1}` }
+    const comment = { number, body, bodies: [body], url: `${this.pages}/pull/${number}#issuecomment-${900 + this.comments.length + 1}` }
     this.comments.push(comment)
     return { ok: true, url: comment.url }
   }
@@ -851,3 +854,95 @@ export const inMemoryDeps = ({ tracking = new InMemoryTracking(), config, local,
   timer: new ManualTimer(),
   ...given,
 })
+
+/**
+ * The host's GitHub MCP server over the same forge double gh reaches (an InMemoryCodeHost or an
+ * InMemoryPullRequests): its tools read and write that forge's issues, pull requests and comments,
+ * on the repository `repository` names only, as the signed-in user, its pages the forge's.
+ * `calls` lists `<server> <tool>` in order, `asked` the repository of each call that names one;
+ * `fails` gives, by tool, the reason it fails with (`mcp-refused`…), or `unreadable` for an answer
+ * that is no JSON; a tool it lacks answers `mcp-tool-missing`; `answers` replaces what a tool
+ * answers, given its arguments. `listed` counts how often the host listed its servers.
+ */
+export class InMemoryGithubMcp {
+  /** @param {{ forge: InMemoryCodeHost | InMemoryPullRequests, servers?: string[], login?: string, fails?: Record<string, string>, repository?: string, answers?: Record<string, (args: object, mcp: InMemoryGithubMcp) => unknown> }} options */
+  constructor({ forge, servers = ['github-mcp-server'], login = 'skraft-dev', fails = {}, repository = 'acme/shop', answers = {} }) {
+    this.forge = forge
+    this.names = servers
+    this.login = login
+    this.fails = fails
+    this.repository = repository
+    this.answers = answers
+    /** @type {string[]} */
+    this.calls = []
+    /** @type {string[]} */
+    this.asked = []
+    this.listed = 0
+    this.page = forge instanceof InMemoryPullRequests ? 'pull' : 'issues'
+  }
+  async servers() {
+    this.listed += 1
+    return this.names
+  }
+  async call({ server, tool, arguments: args }) {
+    this.calls.push(`${server} ${tool}`)
+    if (args.owner !== undefined) this.asked.push(`${args.owner}/${args.repo}`)
+    const failure = this.fails[tool]
+    if (failure === 'unreadable') return { ok: true, text: 'not JSON' }
+    if (failure) return { ok: false, reason: failure }
+    const run = this.answers[tool] ?? (TOOLS[tool] && ((given) => TOOLS[tool](this, given)))
+    if (!run) return { ok: false, reason: 'mcp-tool-missing' }
+    const onRepository = args.owner === undefined || `${args.owner}/${args.repo}` === this.repository
+    const answer = onRepository ? run(args, this) : null
+    return answer === null ? { ok: false, reason: 'mcp-failed' } : { ok: true, text: JSON.stringify(answer) }
+  }
+}
+
+/** @param {string} url */
+const commentId = (url) => Number(url.slice(url.lastIndexOf('-') + 1))
+
+/** The tools of github/github-mcp-server v2.0.3 skraft calls, each on the forge double. */
+const TOOLS = {
+  get_me: (mcp) => ({ login: mcp.login }),
+  issue_read: (mcp, { method, issue_number: number }) => (method === 'get' ? issueOn(mcp.forge, number) : mcp.forge.comments
+    .filter((comment) => comment.number === number)
+    .map((comment) => ({ id: commentId(comment.url), body: comment.body, html_url: comment.url, user: { login: comment.login ?? mcp.login } }))),
+  add_issue_comment: (mcp, { issue_number: number, body }) => {
+    const index = mcp.forge.posted === undefined ? mcp.forge.comments.length + 1 : (mcp.forge.posted += 1)
+    const comment = { number, body, bodies: [body], edits: 0, url: `${mcp.forge.pages}/${mcp.page}/${number}#issuecomment-${900 + index}` }
+    mcp.forge.comments.push(comment)
+    return { id: String(commentId(comment.url)), url: comment.url }
+  },
+  update_issue_comment: (mcp, { comment_id: id, body }) => {
+    const comment = mcp.forge.comments.find((each) => commentId(each.url) === id)
+    if (!comment) return null
+    Object.assign(comment, { body, bodies: [...comment.bodies, body], edits: (comment.edits ?? 0) + 1 })
+    return { id: String(id), url: comment.url }
+  },
+  list_pull_requests: (mcp, { head, state }) => (state !== 'all' ? null : mcp.forge.pullRequests
+    .filter((pull) => `${mcp.repository.split('/')[0]}:${pull.head}` === head).reverse().slice(0, 1)
+    .map(({ number, url, state: now, body }) => ({ number, html_url: url, state: now === 'open' ? 'open' : 'closed', merged: false, ...(now === 'merged' ? { merged_at: '2026-10-01T00:00:00Z' } : {}), body }))),
+  create_pull_request: (mcp, { base, head, title, body, draft }) => {
+    const number = 41 + mcp.forge.pullRequests.length + 1
+    const url = `${mcp.forge.pages}/pull/${number}`
+    mcp.forge.pullRequests.push({ number, url, head, base, title, draft, state: 'open', body })
+    return { id: String(number * 1000), url }
+  },
+  update_pull_request: (mcp, { pullNumber, body }) => {
+    const pull = mcp.forge.pullRequests.find((each) => each.number === pullNumber)
+    if (!pull) return null
+    pull.body = body
+    return { id: String(pullNumber * 1000), url: pull.url }
+  },
+  pull_request_read: (mcp, { method, pullNumber }) => {
+    const pull = method === 'get' ? mcp.forge.pullRequests.find((each) => each.number === pullNumber) : undefined
+    return pull ? { number: pull.number, title: pull.title, body: pull.body, state: 'open', html_url: pull.url, base: pull.base, head: pull.head } : null
+  },
+}
+
+/** @param {InMemoryCodeHost} forge @param {number} number */
+const issueOn = (forge, number) => {
+  const found = forge.issues === undefined ? { title: `Issue ${number}`, body: `Acceptance criteria of #${number}` } : forge.issues[number]
+  if (found === 'pull-request') return { number, title: 'A pull request', html_url: `${forge.pages}/pull/${number}`, state: 'open' }
+  return found ? { number, title: found.title, body: found.body, html_url: `${forge.pages}/issues/${number}`, state: 'open' } : null
+}

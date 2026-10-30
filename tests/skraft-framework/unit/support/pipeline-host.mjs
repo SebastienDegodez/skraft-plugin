@@ -10,7 +10,7 @@ import { createRunPipeline } from '../../../../plugins/skraft-framework/engine/a
 import { createDecide } from '../../../../plugins/skraft-framework/engine/application/decisions/decide-usecase.mjs'
 import { createPublish } from '../../../../plugins/skraft-framework/engine/application/publish/publish-usecase.mjs'
 import {
-  BUILT_IN_WORKFLOW, FakeHasher, FixedClock, InMemoryAgentCatalog, InMemoryCodeHost, InMemoryGit, InMemoryRunLock, InMemoryTemplates, InMemoryTracking, InMemoryUserSettings, InMemoryWorkflowSource, InMemoryWorkspace,
+  BUILT_IN_WORKFLOW, FakeHasher, FixedClock, InMemoryAgentCatalog, InMemoryCodeHost, InMemoryGit, InMemoryPullRequests, InMemoryRunLock, InMemoryTemplates, InMemoryTracking, InMemoryUserSettings, InMemoryWorkflowSource, InMemoryWorkspace,
   ManualTimer, RecordingProgress, ScriptedAgentRunner, ScriptedHuman, ScriptedMachine, ScriptedReplay,
 } from './in-memory-host.mjs'
 
@@ -66,7 +66,7 @@ export const pipelineHost = ({
     commitReplay: replay ?? new ScriptedReplay({ clock }),
     workflowSource: new InMemoryWorkflowSource(workflow),
     agentCatalog: catalog,
-    forges: { github: { codeHost } },
+    forges: { github: { codeHost, pullRequests: new InMemoryPullRequests({ repository: codeHost.named }) } },
     runLock: new InMemoryRunLock(tracking, owner),
     timer: new ManualTimer(clock),
   }
