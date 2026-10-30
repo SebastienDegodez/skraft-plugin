@@ -150,3 +150,24 @@ test('a work item neither the server nor az finds is refused as no issue of the 
   assert.deepEqual([outcome.ok, outcome.code, host.codeHost.issuesRead], [false, 'issue-not-found', [42]])
   assert.deepEqual(host.events(), [])
 })
+
+test('a description or criteria longer than 200,000 characters is not read: the story says so in a fixed line, the other field and the title kept, and nothing throws', async () => {
+  const kept = async (fields) => (await startOn({ mcp: { workItems: { 42: { ...USER_STORY, ...fields } } } })).host.tracking.read(SLUG, ISSUE_42)
+  const nested = '<ul><li>x'.repeat(50_000) + '</li></ul>'.repeat(50_000)
+
+  assert.match(await kept({ 'System.Description': `<p>${'a'.repeat(200_000)}</p>` }), /^[^\n]*\n\n[^\n]*\n\nThe work item's description is longer than 200000 characters, so skraft did not read it: read System\.Description on the work item\.\n\n## Acceptance criteria\n\n- A declined card shows an error\n- An accepted card creates the order\n$/)
+  assert.match(await kept({ 'Microsoft.VSTS.Common.AcceptanceCriteria': nested }), /\n\nThe card is charged once\.\n\n## Acceptance criteria\n\nThe work item's acceptance criteria are longer than 200000 characters, so skraft did not read them: read Microsoft\.VSTS\.Common\.AcceptanceCriteria on the work item\.\n$/)
+  assert.match(await kept({ 'System.Description': 'a'.repeat(200_000) }), /\n\na{200000}\n\n## Acceptance criteria/, 'a text of exactly the limit is read')
+  const { outcome } = await startOn({ mcp: { workItems: { 42: { ...USER_STORY, 'System.Description': nested } } } })
+  assert.equal(outcome.ok, true)
+})
+
+test('a partial answer of the server, missing the work item type or the project, is no refusal: az reads the work item, and the journal says the answer was unreadable', async () => {
+  for (const field of ['System.WorkItemType', 'System.TeamProject']) {
+    const { [field]: _left, ...partial } = USER_STORY
+    const { host, outcome } = await startOn({ az: { issues: { 42: AZ_STORY } }, mcp: { workItems: { 42: partial } } })
+
+    assert.equal(outcome.ok, true, field)
+    assert.deepEqual([host.codeHost.issuesRead, started(host).issueRoute], [[42], { via: 'az', fallback: 'mcp-unreadable' }], field)
+  }
+})
