@@ -125,6 +125,17 @@ test('cards are buttons that open a labelled panel; each actor and seal has a na
   assert.match(renderFigure(flow, { lang: 'en' }), /<title>Human<\/title>/)
 })
 
+test('every scenario has its label and its sentence in French and in English, none empty', async () => {
+  const flow = await buildFlow(layout(), texts())
+  assert.ok(flow.scenarios.length > 0)
+  for (const s of flow.scenarios) {
+    for (const lang of ['fr', 'en']) {
+      assert.ok(s.label?.[lang]?.trim(), `${s.id}: no ${lang} label`)
+      assert.ok(s.caption?.[lang]?.trim(), `${s.id}: no ${lang} sentence`)
+    }
+  }
+})
+
 test('captions escape their text and turn backticks into code', () => {
   assert.equal(inline('a `<b>` & c'), 'a <code>&lt;b&gt;</code> &amp; c')
 })

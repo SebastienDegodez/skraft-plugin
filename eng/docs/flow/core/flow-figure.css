@@ -24,7 +24,7 @@
   --sf-mono: var(--ifm-font-family-monospace, ui-monospace, SFMono-Regular, Menlo, monospace);
   --sf-radius: var(--ifm-global-radius, 0.4rem);
   --sf-dim: 0.32;
-  --sf-panel-w: 268px;
+  --sf-panel-w: 360px;
 
   contain: inline-size;
   max-width: 100%;
@@ -61,11 +61,18 @@
 
 /* ---------- stage: dotted canvas, panels over it ---------- */
 .skraft-flow .sf-stage { position: relative; }
+/* wide figure: the panel sits beside the column, which moves over; never over a card */
+.skraft-flow.is-wide.has-panel .sf-stage { display: flex; align-items: flex-start; }
+.skraft-flow.is-wide.has-panel .sf-board { flex: 1 1 auto; min-width: 0; }
+.skraft-flow.is-wide.has-panel .sf-panels { flex: 0 0 var(--sf-panel-w); padding: 8px 12px 8px 0; }
+/* otherwise: under the figure, full width */
+.skraft-flow:not(.is-wide) .sf-panels { padding: 0 8px; }
+.skraft-flow.has-panel:not(.is-wide) .sf-panels { padding: 8px; border-top: 1px solid var(--sf-line); }
 .skraft-flow .sf-board {
   overflow-x: auto; overflow-y: hidden; padding: 4px 2px;
   background: radial-gradient(circle, var(--sf-line) 1px, transparent 1.3px) 0 0 / 16px 16px, var(--sf-bg);
 }
-.skraft-flow .sf-svg { display: block; width: 100%; height: auto; overflow: visible; }
+.skraft-flow .sf-svg { display: block; width: 100%; max-width: 760px; height: auto; margin: 0 auto; overflow: visible; }
 
 /* ---------- cards ---------- */
 .skraft-flow .sf-node[role='button'] { cursor: pointer; }
@@ -170,18 +177,17 @@
 .skraft-flow .sf-legend__line.e-down { stroke: var(--sf-soft); }
 .skraft-flow .sf-legend__line.e-fail { stroke: var(--sf-danger); stroke-dasharray: 5 4; }
 .skraft-flow .sf-legend__dashed { fill: none; stroke: var(--sf-soft); stroke-dasharray: 3 2; }
-.skraft-flow.has-panel .sf-legend { opacity: 0.15; }
+
 
 /* ---------- panels, like the canvas's step inspector ---------- */
 .skraft-flow .sf-panel {
-  position: absolute; z-index: 2; width: var(--sf-panel-w); max-width: calc(100% - 8px);
+  position: static; width: auto; max-width: 640px; margin: 0 auto;
   padding: 10px 12px 12px; background: var(--sf-card); color: var(--sf-ink);
   border: 1px solid var(--sf-line); border-radius: calc(var(--sf-radius) * 1.5);
   box-shadow: 0 12px 32px rgba(0, 0, 0, 0.18); font-size: 14px; line-height: 1.45;
 }
 .skraft-flow .sf-panel[hidden] { display: none; }
-/* no room beside the step: the panel drops under it, over the steps below, until it closes */
-.skraft-flow .sf-panel.is-under { width: min(400px, calc(100% - 8px)); box-shadow: 0 18px 40px rgba(0, 0, 0, 0.28); }
+
 .skraft-flow .sf-panel__head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .skraft-flow .sf-panel__head h3 { margin: 0; font-size: 11px; font-weight: 800; letter-spacing: 1.2px; text-transform: uppercase; color: var(--sf-muted); }
 .skraft-flow .sf-panel__head code { text-transform: none; letter-spacing: 0; font-size: 13px; color: var(--sf-ink); background: none; border: 0; padding: 0; }
@@ -228,7 +234,6 @@
 @media (max-width: 640px) {
   .skraft-flow .sf-svg { width: 640px; max-width: none; }
   .skraft-flow .sf-hint { display: block; }
-  .skraft-flow .sf-panel { position: static; width: auto; max-width: none; margin: 8px; box-shadow: none; }
   .skraft-flow .sf-replay { margin-left: 0; }
   .skraft-flow .sf-legend { display: none; }
 }

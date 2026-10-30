@@ -3,10 +3,10 @@
   "id": "deliver",
   "source": "plugins/skraft-framework/workflows/pipeline.skraft.dot",
   "viewBox": [
-    700,
-    1080
+    720,
+    902
   ],
-  "panelWidth": 268,
+  "panelWidth": 360,
   "title": {
     "fr": "La boucle de DELIVER : gates, revue, mutation, publication",
     "en": "The DELIVER loop: gates, review, mutation, publication"
@@ -39,9 +39,9 @@
         "story"
       ],
       "x": 196,
-      "y": 14,
-      "w": 280,
-      "h": 54
+      "y": 12,
+      "w": 304,
+      "h": 48
     },
     {
       "id": "deliver",
@@ -49,9 +49,9 @@
       "badge": "1",
       "mono": "software-engineer",
       "x": 196,
-      "y": 102,
-      "w": 280,
-      "h": 96,
+      "y": 86,
+      "w": 304,
+      "h": 82,
       "role": {
         "fr": "Fait passer le contrat au vert en cycles TDD que le moteur rejoue.",
         "en": "Turns the contract green in TDD cycles the engine replays."
@@ -73,9 +73,9 @@
       "mono": "build … coverage",
       "seal": "locked",
       "x": 196,
-      "y": 232,
-      "w": 280,
-      "h": 96,
+      "y": 194,
+      "w": 304,
+      "h": 82,
       "role": {
         "fr": "Lance les commandes des composants modifiés, puis de tous : la première qui échoue renvoie à deliver.",
         "en": "Runs the commands of the changed components, then of all: the first that fails sends the run back to deliver."
@@ -96,9 +96,9 @@
       "mono": "workflow review",
       "seal": "mandatory",
       "x": 196,
-      "y": 362,
-      "w": 280,
-      "h": 96,
+      "y": 302,
+      "w": 304,
+      "h": 82,
       "role": {
         "fr": "Appelle la revue : les lentilles lisent le diff en parallèle, le refuter conteste leurs constats, le moteur rend le verdict.",
         "en": "Calls the review: lenses read the diff in parallel, the refuter challenges their findings, the engine returns the verdict."
@@ -116,9 +116,9 @@
       "mono": "gate mutation",
       "seal": "locked",
       "x": 196,
-      "y": 492,
-      "w": 280,
-      "h": 96,
+      "y": 410,
+      "w": 304,
+      "h": 82,
       "role": {
         "fr": "Mesure une fois, sur le code revu, si les tests attrapent des fautes injectées.",
         "en": "Measures once, on reviewed code, whether the tests catch injected faults."
@@ -141,9 +141,9 @@
       "badge": "5",
       "mono": "playwright-visuals",
       "x": 196,
-      "y": 622,
-      "w": 280,
-      "h": 96,
+      "y": 518,
+      "w": 304,
+      "h": 82,
       "when": "frontend",
       "role": {
         "fr": "Lance les e2e de chaque front et commite les captures.",
@@ -165,9 +165,9 @@
       "badge": "6",
       "mono": "pr-writer",
       "x": 196,
-      "y": 752,
-      "w": 280,
-      "h": 96,
+      "y": 626,
+      "w": 304,
+      "h": 82,
       "role": {
         "fr": "Écrit la prose de la pull request.",
         "en": "Writes the pull request's prose."
@@ -188,9 +188,9 @@
       "badge": "7",
       "mono": "pull-request",
       "x": 196,
-      "y": 882,
-      "w": 280,
-      "h": 96,
+      "y": 734,
+      "w": 304,
+      "h": 82,
       "role": {
         "fr": "Pousse la branche et ouvre la pull request, avec le consentement demandé.",
         "en": "Pushes the branch and opens the pull request, with the consent asked."
@@ -213,9 +213,9 @@
         "pull request"
       ],
       "x": 196,
-      "y": 1012,
-      "w": 280,
-      "h": 54
+      "y": 842,
+      "w": 304,
+      "h": 48
     }
   ],
   "edges": [

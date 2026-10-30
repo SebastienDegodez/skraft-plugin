@@ -4,19 +4,19 @@
   "workflow": "plugins/skraft-framework/workflows/pipeline.skraft.dot",
   "start": "deliver",
   "geometry": {
-    "width": 700,
+    "width": 720,
     "columnX": 196,
-    "top": 14,
+    "top": 12,
     "card": [
-      280,
-      96
+      304,
+      82
     ],
     "io": [
-      280,
-      54
+      304,
+      48
     ],
-    "gap": 34,
-    "panel": 268
+    "gap": 26,
+    "panel": 360
   },
   "title": {
     "fr": "La boucle de DELIVER : gates, revue, mutation, publication",

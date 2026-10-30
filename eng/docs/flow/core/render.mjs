@@ -150,10 +150,10 @@ function cardMarkup(node, flow, lang, panelId) {
   const t = ui(lang)
   const parts = [`<rect class="sf-node__box" width="${node.w}" height="${node.h}" rx="8"/>`]
   if (node.io) {
-    parts.push(`<text class="sf-node__iotitle" x="12" y="22">${escapeHtml(node.io === 'in' ? t.inputs : t.outputs)}</text>`)
+    parts.push(`<text class="sf-node__iotitle" x="12" y="19">${escapeHtml(node.io === 'in' ? t.inputs : t.outputs)}</text>`)
     let x = 12
     for (const c of node.chips) {
-      const m = chip(pick(c, lang), x, 28)
+      const m = chip(pick(c, lang), x, 25)
       parts.push(m.markup)
       x += m.w + 4
     }
@@ -173,7 +173,7 @@ function cardMarkup(node, flow, lang, panelId) {
       right -= w
       parts.push(chip(text, right, 7, 'sf-chip--when').markup)
     }
-    parts.push(`<text class="sf-node__mono" x="12" y="46">${escapeHtml(node.mono)}</text>`)
+    parts.push(`<text class="sf-node__mono" x="12" y="44">${escapeHtml(node.mono)}</text>`)
     const counter = counterText(node, flow, lang)
     if (counter) {
       const label = `${counter}`
@@ -181,12 +181,12 @@ function cardMarkup(node, flow, lang, panelId) {
       const w = chipWidth(label) + glyph + 12
       const x = node.w - 10 - w
       parts.push(
-        `<g class="sf-counter"><rect x="${x}" y="32" width="${w}" height="22" rx="11"/>` +
-          (glyph ? icon('fan', x + 7, 35, { cls: 'sf-fan' }) : '') +
-          `<text x="${x + glyph + 8}" y="47">${escapeHtml(label)}</text>${icon('chevron', x + w - 17, 35, { size: 14 })}</g>`,
+        `<g class="sf-counter"><rect x="${x}" y="29" width="${w}" height="22" rx="11"/>` +
+          (glyph ? icon('fan', x + 7, 32, { cls: 'sf-fan' }) : '') +
+          `<text x="${x + glyph + 8}" y="44">${escapeHtml(label)}</text>${icon('chevron', x + w - 17, 32, { size: 14 })}</g>`,
       )
-    } else parts.push(icon('chevron', node.w - 24, 35, { cls: 'sf-more' }))
-    parts.push(ioRows(node, 12, 60, node.w, lang).markup)
+    } else parts.push(icon('chevron', node.w - 24, 32, { cls: 'sf-more' }))
+    parts.push(ioRows(node, 12, 55, node.w, lang).markup)
   }
   const cls = ['sf-node', `sf-node--${node.kind}`]
   if (node.when) cls.push('is-optional')
@@ -297,7 +297,7 @@ function commandsFigure(sub, lang) {
 function lensesFigure(sub, lang) {
   const t = ui(lang)
   const left = 34
-  const w = 256
+  const w = 268
   const fan = { x: 12, y: 10 }
   const out = []
   const edges = []
@@ -358,7 +358,7 @@ function lensesFigure(sub, lang) {
 
 function loopFigure(sub, lang) {
   const t = ui(lang)
-  const left = 60
+  const left = 84
   const w = 240
   const boxes = {}
   const cards = []
@@ -405,7 +405,7 @@ function loopFigure(sub, lang) {
       d = `M${x} ${a.y + a.h + 1} L${x} ${b.y - 2}`
       if (e.label === 'FAIL') chips.push(chip(`FAIL · max ${e.maxVisits}`, x + 8, a.y + a.h + 2, 'sf-chip--fail').markup)
     } else {
-      const lane = left - 14 * (r.lane + 1)
+      const lane = left - 24 * (r.lane + 1)
       const y1 = portY(e.from, r)
       const y2 = portY(e.to, r)
       d = `M${a.x} ${y1} L${lane + 6} ${y1} Q${lane} ${y1} ${lane} ${y1 - 6} L${lane} ${y2 + 6} Q${lane} ${y2} ${lane + 6} ${y2} L${b.x - 2} ${y2}`

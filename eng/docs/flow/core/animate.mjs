@@ -2,7 +2,7 @@
 // animate(root, flow) takes a <figure class="skraft-flow"> holding renderFigure()'s markup and
 // the flow (or its runtime subset { scenarios }). Returns { play, open, close, destroy }.
 
-import { captionHtml, escapeHtml, pick } from './render.mjs'
+import { captionHtml } from './render.mjs'
 
 const SVG_NS = 'http://www.w3.org/2000/svg'
 const SPEED = 0.34 // px per ms
@@ -35,34 +35,27 @@ export function animate(root, flow) {
 
   // ---------------------------------------------------------------- panels
 
-  // beside the step, on the right, else on the left; with no room on either side, under it
+  // Where a panel goes depends on the figure's own width, never the window's:
+  // from WIDE px on, beside the column (the figure moves over to make room); under it otherwise.
+  // A panel never covers a card.
+  const WIDE = 1100
+  let aligned = false
+  const layout = () => {
+    root.classList.toggle('is-wide', root.clientWidth >= WIDE)
+    // a figure narrower than its drawing scrolls sideways: start on the column, the lanes to its left
+    const board = root.querySelector('.sf-board')
+    if (aligned || board.scrollWidth <= board.clientWidth + 1) return
+    const first = main.querySelector('.sf-node[role="button"] .sf-node__box')
+    board.scrollLeft = first.getBoundingClientRect().left - board.getBoundingClientRect().left - 56
+    aligned = true
+  }
   function place(panel, id) {
-    panel.classList.remove('is-under')
-    if (narrow()) {
-      panel.style.left = panel.style.top = ''
-      return
-    }
+    panel.style.marginTop = ''
+    if (!root.classList.contains('is-wide')) return
     const box = card(id).querySelector('.sf-node__box').getBoundingClientRect()
     const s = stage.getBoundingClientRect()
-    const w = panel.offsetWidth
-    let left = box.right - s.left + 14
-    let top = box.top - s.top
-    if (left + w > s.width - 4) {
-      left = box.left - s.left - 14 - w
-      if (left < 4) {
-        panel.classList.add('is-under')
-        const wide = panel.offsetWidth
-        left = Math.max(4, Math.min(box.left - s.left + (box.width - wide) / 2, s.width - wide - 4))
-        top = box.bottom - s.top + 8
-      }
-    }
-    top = Math.max(0, Math.min(top, s.height - panel.offsetHeight - 4))
-    panel.style.left = `${Math.round(left)}px`
-    panel.style.top = `${Math.round(top)}px`
+    panel.style.marginTop = `${Math.max(0, Math.round(box.top - s.top))}px`
   }
-  const under = () => openId && panelOf(openId).classList.contains('is-under')
-  const below = (id, than) => card(id)?.getBoundingClientRect().top > card(than)?.getBoundingClientRect().top
-
   function open(id, { focus = false } = {}) {
     const panel = panelOf(id)
     if (!panel) return null
@@ -72,7 +65,10 @@ export function animate(root, flow) {
     card(id)?.setAttribute('aria-expanded', 'true')
     root.classList.add('has-panel')
     place(panel, id)
-    if (focus) panel.querySelector('.sf-panel__close')?.focus()
+    if (focus) {
+      panel.querySelector('.sf-panel__close')?.focus({ preventScroll: true })
+      if (!root.classList.contains('is-wide')) panel.scrollIntoView({ block: 'nearest', behavior: reduced() ? 'auto' : 'smooth' })
+    }
     return panel
   }
 
@@ -211,17 +207,12 @@ export function animate(root, flow) {
     press(id)
     reset()
     if (reduced()) return settle(scenario)
-    caption.setAttribute('aria-busy', 'true')
-    caption.innerHTML = `<b>${escapeHtml(pick(scenario.label, lang))}</b> <span class="sf-caption__wait">…</span>`
+    // the scenario's sentence shows as soon as it is chosen; the playback illustrates it
+    caption.innerHTML = captionHtml(scenario, lang)
     main.classList.add('is-focus')
     for (const step of scenario.steps) if (step.fig === 'main') step.nodes.forEach((n) => card(n)?.classList.add('is-on'))
     for (const step of scenario.steps) {
       if (me !== run) return
-      // a panel dropped under its step hides the steps below: it closes when the run leaves it
-      if (step.fig === 'main' && step.edges.length && under() && below(step.nodes[0], openId)) {
-        close({ restore: false })
-        await wait(160)
-      }
       if (step.fig !== 'main' && openId !== step.fig) {
         open(step.fig)
         card(step.fig)?.classList.add('is-on')
@@ -241,9 +232,6 @@ export function animate(root, flow) {
       mark(svg, step)
       await wait(step.mark === 'fail' ? 900 : step.mark ? 220 : step.chip ? 520 : 120)
     }
-    if (me !== run) return
-    caption.innerHTML = captionHtml(scenario, lang)
-    caption.removeAttribute('aria-busy')
   }
 
   // ---------------------------------------------------------------- landing
@@ -283,10 +271,15 @@ export function animate(root, flow) {
       toggle(c.dataset.node)
     }
   }
-  const onResize = () => openId && place(panelOf(openId), openId)
+  const onResize = () => {
+    layout()
+    if (openId) place(panelOf(openId), openId)
+  }
+  const sizes = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(onResize)
+  sizes?.observe(root)
+  layout()
   root.addEventListener('click', onClick)
   root.addEventListener('keydown', onKey)
-  window.addEventListener('resize', onResize)
   root.classList.add('is-ready')
 
   if (reduced() || typeof IntersectionObserver === 'undefined') play(current)
@@ -312,7 +305,7 @@ export function animate(root, flow) {
       observer?.disconnect()
       root.removeEventListener('click', onClick)
       root.removeEventListener('keydown', onKey)
-      window.removeEventListener('resize', onResize)
+      sizes?.disconnect()
     },
   }
 }
