@@ -13,8 +13,7 @@ persona: reviewer
 
 ## Prérequis
 
-- Le plugin `skraft` installé ; `skraft` désigne
-  `node "<dossier du plugin>/engine/drivers/cli/skraft.mjs"`.
+- Le plugin `skraft` installé ; `skraft` est la commande que [`skraft install`]({{ "/fr/how-to/install-on-a-host" | relative_url }}#skraft-command) met en place ; la ligne longue `node "<dossier du plugin>/engine/drivers/cli/skraft.mjs"` marche sans elle.
 - `gh` installé et connecté à l'hôte du dépôt (`gh auth status`).
 - Un clone du dépôt, à la racine duquel vous lancez tout.
 
