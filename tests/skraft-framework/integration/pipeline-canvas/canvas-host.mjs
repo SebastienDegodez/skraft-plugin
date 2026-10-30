@@ -2,6 +2,9 @@
 // it is given, as the SDK keeps the handlers, and the test calls open, the action and onClose as
 // the host would. Requests reach the panel's real loopback server.
 import { request as httpRequest } from 'node:http'
+import { connect } from 'node:net'
+import { once } from 'node:events'
+import { setTimeout as delay } from 'node:timers/promises'
 import { createPipelineCanvas } from '../../../../plugins/skraft-framework/engine/drivers/copilot-workflow/pipeline-canvas.mjs'
 import { PLUGIN_ROOT } from '../support/workspace.mjs'
 
@@ -83,13 +86,62 @@ const sendParts = async (sent, parts) => {
 export const tokenOf = async (url) => /** @type {string} */ (new URL(url).searchParams.get('t'))
 
 /**
- * The panel's content stream, read as a page reads it: `next(until)` waits for the first content
- * `until` accepts, among those not read yet, until the test ends. The stream closes after the
- * test, and once its signal aborts.
+ * Waits for `promise` at most `ms` (or until the test aborts): its outcome, else 'still waiting'.
+ * The timer does not keep the process alive.
+ * @template T
+ * @param {import('node:test').TestContext} t @param {number} ms @param {Promise<T>} promise
+ * @returns {Promise<T | string>}
+ */
+export const within = (t, ms, promise) => Promise.race([promise, delay(ms, 'still waiting', { ref: false, signal: t.signal }).catch(() => 'still waiting')])
+
+/**
+ * A raw TCP connection to the panel's server, for what an HTTP client cannot do (send nothing, a
+ * request cut short). `closed` resolves 'closed' once the server dropped it. The socket is
+ * destroyed after the test and when its signal aborts: a live one would keep the process alive.
+ * @param {import('node:test').TestContext} t @param {string} url
+ */
+export const rawConnection = async (t, url) => {
+  const socket = connect(Number(new URL(url).port), '127.0.0.1')
+  socket.setEncoding('utf8')
+  let text = ''
+  socket.on('data', (chunk) => { text += chunk })
+  socket.on('error', () => undefined)
+  const closed = once(socket, 'close').then(() => 'closed', () => 'closed')
+  t.after(() => socket.destroy())
+  t.signal.addEventListener('abort', () => socket.destroy(), { once: true })
+  await within(t, 10_000, once(socket, 'connect'))
+  return { socket, received: () => text, closed }
+}
+
+/**
+ * Opens `instanceId` once the server has seen a page leave: a panel whose page closed a moment ago
+ * still counts as listened to, and an open refused for that reason has no effect, so it is tried
+ * again a little later. Any other refusal is thrown.
+ * @param {import('node:test').TestContext} t @param {(instanceId: string) => Promise<any>} open @param {string} instanceId
+ */
+export const pageLeft = async (t, open, instanceId) => {
+  for (;;) {
+    try {
+      return await open(instanceId)
+    } catch (error) {
+      if (/** @type {any} */ (error).code !== 'skraft_too_many_canvases' || t.signal.aborted) throw error
+      await delay(25, undefined, { signal: t.signal })
+    }
+  }
+}
+
+/**
+ * The panel's content stream, read as a page reads it. Every block it sends is a frame, in order:
+ * `{ comment: 'ping' }` for a comment line, else the fields it names (`retry`, `event`, `data`).
+ * `next(until)` waits for the first content (a block with data and no event, parsed) `until`
+ * accepts, among those not read yet, until the test ends. `frame(until, ms)` reads the frames not
+ * read yet from its own cursor and gives the first `until` accepts, or null once `ms` passed or
+ * the test aborted. The stream closes after the test, and once its signal aborts.
  * @param {import('node:test').TestContext} t @param {string} url @param {string} token
  */
 export const contentStream = (t, url, token) => {
   const received = []
+  const frames = []
   const waiting = []
   const sent = httpRequest(new URL(`/events?token=${token}`, url), (res) => {
     let buffer = ''
@@ -98,10 +150,16 @@ export const contentStream = (t, url, token) => {
       buffer += chunk
       const blocks = buffer.split('\n\n')
       buffer = blocks.pop() ?? ''
-      for (const block of blocks) received.push(JSON.parse(block.replace(/^data: /, '')))
+      for (const block of blocks) accept(block)
       for (const wake of waiting.splice(0)) wake()
     })
   })
+  /** @param {string} block */
+  const accept = (block) => {
+    const frame = frameOf(block)
+    frames.push(frame)
+    if (frame.data !== undefined && frame.event === undefined) received.push(JSON.parse(frame.data))
+  }
   sent.on('error', () => undefined)
   sent.end()
   t.after(() => sent.destroy())
@@ -124,5 +182,28 @@ export const contentStream = (t, url, token) => {
       await new Promise((wake) => { waiting.push(wake); setTimeout(wake, 100) })
     }
   }
-  return { next, received, close }
+  let seen = 0
+  /** @param {(frame: Record<string, string>) => boolean} until @param {number} [ms] @returns {Promise<Record<string, string> | null>} */
+  const frame = async (until, ms = 10_000) => {
+    const deadline = Date.now() + ms
+    for (;;) {
+      while (seen < frames.length) {
+        const found = frames[seen++]
+        if (until(found)) return found
+      }
+      if (t.signal.aborted || Date.now() > deadline) return null
+      await new Promise((wake) => { waiting.push(wake); setTimeout(wake, 25) })
+    }
+  }
+  return { next, frame, frames, received, close }
+}
+
+/** One stream block as a frame: a comment line is `{ comment }`, any other line a field. @param {string} block */
+const frameOf = (block) => {
+  const frame = /** @type {Record<string, string>} */ ({})
+  for (const line of block.split('\n')) {
+    if (line.startsWith(':')) frame.comment = line.slice(1).trim()
+    else frame[line.slice(0, line.indexOf(':'))] = line.slice(line.indexOf(':') + 1).trim()
+  }
+  return frame
 }
