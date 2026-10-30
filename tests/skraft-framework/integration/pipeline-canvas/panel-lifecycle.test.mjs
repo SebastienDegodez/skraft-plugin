@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { workingCopy } from '../copilot-workflow/simulated-host.mjs'
-import { BOUNDED, CanvasError, contentStream, pipelineCanvas, request, tokenOf } from './canvas-host.mjs'
+import { BOUNDED, CanvasError, contentStream, pipelineCanvas, rawConnection, request, tokenOf, within } from './canvas-host.mjs'
 
 const INVALID_INPUT = { name: 'Error', code: 'skraft_invalid_input', message: 'the skraft-pipeline canvas takes only tab, one of run, configuration and workflow; it shows the active pipeline of this working copy' }
 
@@ -37,6 +37,19 @@ test('opening an open instance again gives the same panel; closing it stops its 
   assert.notEqual(again.url, first.url)
   assert.equal((await request(again.url)).status, 200)
   await canvas.onClose({ instanceId: 'never-opened' })
+})
+
+test('closing a panel ends at once, though a connection that sent no request and a listening page are open, and drops both', BOUNDED, async (t) => {
+  const { open, canvas } = await canvasOn(t)
+  const { url } = await open('panel-1')
+  const stream = contentStream(t, url, await tokenOf(url))
+  await stream.next()
+  const idle = await rawConnection(t, url)
+  assert.equal((await request(url)).status, 200)
+
+  assert.equal(await within(t, 5000, canvas.onClose({ instanceId: 'panel-1' }).then(() => 'closed')), 'closed')
+  assert.equal(await within(t, 5000, idle.closed), 'closed')
+  await assert.rejects(request(url, { signal: t.signal }))
 })
 
 /** A page listening to each of these panels. */
