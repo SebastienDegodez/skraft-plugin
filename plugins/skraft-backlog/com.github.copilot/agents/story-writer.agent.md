@@ -9,6 +9,9 @@ tools:
   - edit/editFiles
   - edit/createDirectory
   - search/codebase
+skills:
+  - story-elaboration
+  - issue-refinement
 metadata:
   cost_role_class: implementer
   dispatched_by: skraft-prd-backlog

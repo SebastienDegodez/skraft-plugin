@@ -74,7 +74,7 @@ jobs:
       - name: Both agent trees in sync with their baseline
         run: node scripts/project-plugin-adapters.mjs --check --plugin-root plugins/skraft-backlog
       - name: Dispatch tree and declared skills are valid
-        run: node scripts/agent-policy/build-config-bin.mjs --emit --dir plugins/skraft-backlog/com.github.copilot/agents > /dev/null
+        run: node scripts/agent-policy/build-config-bin.mjs --emit --preload --dir plugins/skraft-backlog/com.github.copilot/agents > /dev/null
       - name: Claude Code agents preload their mandatory skills
         run: node scripts/agent-policy/build-config-bin.mjs --preload --dir plugins/skraft-backlog/com.anthropic.claude-code/agents
       - name: Skill script coverage floor

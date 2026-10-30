@@ -8,6 +8,9 @@ tools:
   - edit/editFiles
   - search/codebase
   - graphify/*
+skills:
+  - architecture-patterns
+  - architecture-decisions
 metadata:
   dispatched_by: Skraft - Orchestrator
   phase: DESIGN
