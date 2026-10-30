@@ -20,9 +20,13 @@ controller.watch()
 const server = await startServer({ controller, port, onError: (error) => process.stderr.write(`${error.stack}\n`) })
 process.stdout.write(`${server.url}\n${cwd}\n`)
 
+// server.close() resolves only once every connection has closed, and Node (22.17) never counts
+// a connection that has not sent a request yet as idle: a browser's preconnected socket held it
+// open for good and the test timed out in afterEach. Exiting drops every connection; only the
+// workspace has to be gone first.
 const stop = async () => {
-  controller.stop()
-  await server.close()
+  await controller.stop()
+  void server.close()
   await rm(cwd, { recursive: true, force: true })
   process.exit(0)
 }
