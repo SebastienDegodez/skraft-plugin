@@ -1,20 +1,21 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { readFileSync, writeFileSync } from 'node:fs'
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { workingCopy } from '../copilot-workflow/simulated-host.mjs'
+import { PLUGIN_ROOT, workingCopy } from '../copilot-workflow/simulated-host.mjs'
 import { git } from '../support/workspace.mjs'
-import { BOUNDED, CanvasError, contentStream, pipelineCanvas, request, tokenOf } from './canvas-host.mjs'
+import { BOUNDED, CanvasError, contentStream, pipelineCanvas, request, tokenOf, within } from './canvas-host.mjs'
 
 const API = Object.freeze({ name: 'mastermind-api', root: '.', stack: 'dotnet', commands: { build: 'dotnet build', test: 'dotnet test' } })
 
-/** A working copy with one .NET component, and the canvas of a session in it. */
-const configured = async (t, where = {}) => {
+/** A working copy (a git repository, as a developer's is) with one .NET component, and the canvas of a session in it; `more` is what the canvas takes besides. */
+const configured = async (t, where = {}, more = {}) => {
   const { cwd, cleanup } = await workingCopy()
   t.after(cleanup)
+  git(cwd, 'init', '-q')
   writeFileSync(join(cwd, 'skraft-config.json'), JSON.stringify({ publish: { pullRequest: false }, components: [API] }))
   where.cwd = cwd
-  return { cwd, ...pipelineCanvas(t, { directory: () => where.cwd ?? null, home: `${cwd}-home` }) }
+  return { cwd, ...pipelineCanvas(t, { directory: () => where.cwd ?? null, home: `${cwd}-home`, more }) }
 }
 
 /** A save as the page sends it. */
@@ -128,4 +129,61 @@ test('the canvas opens on a tab it has only: any other tab, or any other key, is
       && error.message === 'the skraft-pipeline canvas takes only tab, one of run, configuration and workflow; it shows the active pipeline of this working copy')
   }
   for (const tab of ['run', 'workflow']) assert.match((await open(`panel-${tab}`, { tab })).url, new RegExp(`&tab=${tab}$`))
+})
+
+
+/** The pipeline workflow with the lens `lens` added to the design review, and nothing else changed. @param {string} workflow @param {string} lens */
+const withLens = (workflow, lens) => workflow
+  .replace('  design_review [shape=tripleoctagon, mandatory=true]\n', `  design_review_${lens} [shape=note, lens="${lens}"]\n  design_review [shape=tripleoctagon, mandatory=true]\n`)
+  .replace('  design_review_lenses -> design_review_fitness -> design_review\n', `  design_review_lenses -> design_review_fitness -> design_review\n  design_review_lenses -> design_review_${lens} -> design_review\n`)
+
+/** The agent of the lens `lens`, as the working copy of `side` (.claude or .github) names its file, listing the skill `<lens>-rules`. */
+const lensAgent = (cwd, side, lens) => {
+  mkdirSync(join(cwd, side, 'agents'), { recursive: true })
+  writeFileSync(join(cwd, side, 'agents', `${lens}-lens${side === '.github' ? '.agent' : ''}.md`), `---\nname: ${lens}-lens\ndescription: Reviews the design as ${lens}\nmetadata:\n  skills:\n    - ${lens}-rules\n---\nReview the design.\n`)
+}
+
+/** The skill `<lens>-rules`, in the skills folder of `side`. */
+const lensSkill = (cwd, side, lens) => {
+  mkdirSync(join(cwd, side, 'skills', `${lens}-rules`), { recursive: true })
+  writeFileSync(join(cwd, side, 'skills', `${lens}-rules`, 'SKILL.md'), `---\nname: ${lens}-rules\ndescription: Rules of ${lens}\n---\nRules.\n`)
+}
+
+/** An edit, then the content `until` accepts among what the page is sent: a page that listens is shown the edit. */
+const shownAfter = (t, stream) => async (edit, until) => {
+  edit()
+  assert.notEqual(await within(t, 10_000, stream.next(until)), 'still waiting', until.toString())
+}
+
+const lensesKnown = ({ workflows, configuration }) => workflows[0]?.file === '.skraft/pipeline.skraft.dot' && configuration.models.agents !== null
+const lensesUnknown = ({ workflows, configuration }) => workflows[0]?.file === '.skraft/pipeline.skraft.dot' && configuration.models.agents === null
+
+test('an open page shows each file a person edits as soon as it changes', BOUNDED, async (t) => {
+  const { cwd, open } = await configured(t)
+  const { url } = await open()
+  const stream = contentStream(t, url, await tokenOf(url))
+  await stream.next()
+  const shows = shownAfter(t, stream)
+
+  await shows(() => { mkdirSync(join(`${cwd}-home`, '.skraft'), { recursive: true }); writeFileSync(join(`${cwd}-home`, '.skraft', 'config.json'), JSON.stringify({ forge: 'azure-devops' })) },
+    ({ configuration }) => configuration.forge.named === 'azure-devops' && configuration.forge.namedIn === '~/.skraft/config.json')
+  await shows(() => git(cwd, 'remote', 'add', 'origin', 'https://dev.azure.com/acme/mastermind/_git/mastermind'), ({ configuration }) => configuration.forge.deduced === 'azure-devops')
+  await shows(() => writeFileSync(join(cwd, 'skraft-config.local.json'), JSON.stringify({ configurationConfirmed: true, models: { economy: { copilot: { model: 'copilot-small' } } } })),
+    ({ configuration }) => configuration.models.models.economy?.copilot?.model === 'copilot-small')
+  // A lens of the repository whose agent and skill nobody provides yet: the ejected workflow is invalid until both are.
+  let workflow = withLens(readFileSync(join(PLUGIN_ROOT, 'workflows', 'pipeline.skraft.dot'), 'utf8'), 'acme')
+  mkdirSync(join(cwd, '.skraft'), { recursive: true })
+  await shows(() => writeFileSync(join(cwd, '.skraft', 'pipeline.skraft.dot'), workflow), lensesUnknown)
+  await shows(() => { lensAgent(cwd, '.claude', 'acme'); lensSkill(cwd, '.github', 'acme') }, lensesKnown)
+  // Each other lens is written with all but one of what it needs, in the other folders; the one left, alone, makes it known again.
+  for (const [lens, first, last] of [
+    ['beta', () => lensAgent(cwd, '.claude', 'beta'), () => lensSkill(cwd, '.github', 'beta')],
+    ['gamma', () => lensSkill(cwd, '.claude', 'gamma'), () => lensAgent(cwd, '.github', 'gamma')],
+    ['delta', () => lensSkill(cwd, '.github', 'delta'), () => lensAgent(cwd, '.claude', 'delta')],
+    ['epsilon', () => lensAgent(cwd, '.github', 'epsilon'), () => lensSkill(cwd, '.claude', 'epsilon')],
+  ]) {
+    workflow = withLens(workflow, lens)
+    await shows(() => { writeFileSync(join(cwd, '.skraft', 'pipeline.skraft.dot'), workflow); first() }, lensesUnknown)
+    await shows(last, lensesKnown)
+  }
 })
