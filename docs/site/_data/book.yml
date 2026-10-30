@@ -69,15 +69,15 @@ meta:
         fr: "Accroche en une phrase, sans jargon (blockquote)"
         en: "One-sentence hook, no jargon (blockquote)"
       - id: pourquoi
-        required: true
+        required: false   # Diataxis : le pourquoi vit dans la page d'explication liee
         fr: "## Pourquoi — le probleme que ca resout"
         en: "## Why — the problem it solves"
       - id: concepts
-        required: true
+        required: false   # le contenu factuel peut s'organiser en sections propres (tableaux, synopsis)
         fr: "## Concepts cles — comment ca marche (schema mermaid + tableaux)"
         en: "## Key concepts — how it works (mermaid diagram + tables)"
       - id: why-citation
-        required: true
+        required: false   # Diataxis : une page de reference ne porte pas de citation narrative
         fr: "## Pourquoi cette pratique — citation : auteur, *ouvrage*, annee"
         en: "## Why this practice — citation: author, *work*, year"
       - id: pieges
@@ -89,7 +89,7 @@ meta:
         fr: "## Pour aller plus loin (liens internes)"
         en: "## Going further (internal links)"
       - id: sources
-        required: true
+        required: false   # requis seulement quand la page cite une source
         fr: "## Sources — references (auteur, ouvrage, annee) depuis citations.yml"
         en: "## Sources — references (author, work, year) from citations.yml"
       - id: glossaire
@@ -383,16 +383,6 @@ parts:
             en: "en/explanation/hve-core.md"
             purpose_fr: "Le journal d'evenements chaine qui remplace state.json : etat recalcule, reprise exacte, modifications detectees."
             purpose_en: "The chained event journal that replaces state.json: state recomputed, exact resume, edits detected."
-          - id: traces
-            type: derived
-            label_fr: "Traces et auditabilité"
-            label_en: "Traces and auditability"
-            sidebar_position: 5
-            fr: "fr/explanation/traces.md"
-            en: "en/explanation/traces.md"
-            source: "plugins/skraft-framework/com.github.copilot/agents/skraft-orchestrator.agent.md"
-            purpose_fr: "Les traces laissées par le pipeline : artefacts datés, état, PR et verdicts."
-            purpose_en: "The traces left by the pipeline: dated artifacts, state, PRs, and verdicts."
           - id: hooks
             type: editorial
             label_fr: "Garde-fous : du hook au moteur"
@@ -522,8 +512,8 @@ parts:
     sidebar_position: 4
     title_fr: "Référence — consulter"
     title_en: "Reference — look up"
-    intro_fr: "Tout le factuel : agents, skills, les 49 gates, lentilles, patterns, citations, glossaire, changelog."
-    intro_en: "All the facts: agents, skills, the 49 gates, lenses, patterns, citations, glossary, changelog."
+    intro_fr: "Tout le factuel : hôtes, commandes, workflow DOT, phases, configuration, journal, gates, catalogue agentique, patterns, citations, glossaire, changelog."
+    intro_en: "All the facts: hosts, commands, DOT workflow, phases, configuration, journal, gates, agentic catalogue, patterns, citations, glossary, changelog."
     # Menu a 3 niveaux : partie -> section -> page. Le catalogue dashboard couvre
     # agents, skills, workers et lentilles sans materialiser une page Markdown par
     # source. Les autres sections conservent leurs pages handbook explicites.
@@ -533,33 +523,60 @@ parts:
         title_en: "Using SKRAFT"
         sidebar_position: 1
         pages:
+          - id: hosts
+            type: editorial
+            label_fr: "Hôtes"
+            label_en: "Hosts"
+            sidebar_position: 1
+            fr: "fr/reference/hosts.md"
+            en: "en/reference/hosts.md"
+            purpose_fr: "Claude Code, Copilot CLI et VS Code : prerequis, installation, pilote, commandes, questions humaines, suivi et capacites de chaque hote."
+            purpose_en: "Claude Code, Copilot CLI and VS Code: prerequisites, install, driver, commands, human questions, tracking and capabilities of each host."
           - id: cli
             type: editorial
             label_fr: "Ligne de commande"
             label_en: "Command line"
-            sidebar_position: 1
+            sidebar_position: 2
             fr: "fr/reference/cli.md"
             en: "en/reference/cli.md"
-            purpose_fr: "Chaque commande skraft, ses options, ses sorties et codes de sortie, et leurs equivalents dans le mod Claude Code et le workflow Copilot."
-            purpose_en: "Every skraft command, its options, outputs and exit codes, and their equivalents in the Claude Code mod and the Copilot workflow."
+            purpose_fr: "Chaque commande skraft : synopsis, options, sorties texte et JSON, codes de sortie."
+            purpose_en: "Every skraft command: synopsis, options, text and JSON outputs, exit codes."
+          - id: workflow-dot
+            type: editorial
+            label_fr: "Workflow DOT"
+            label_en: "DOT workflow"
+            sidebar_position: 3
+            fr: "fr/reference/workflow-dot.md"
+            en: "en/reference/workflow-dot.md"
+            purpose_fr: "La syntaxe des workflows .skraft.dot : formes de noeud, attributs, aretes, regles de validite, noeuds verrouilles et obligatoires, revues, noeud d'appel."
+            purpose_en: "The syntax of .skraft.dot workflows: node shapes, attributes, edges, validity rules, locked and mandatory nodes, reviews, call node."
+          - id: phases-reference
+            type: editorial
+            label_fr: "Phases"
+            label_en: "Phases"
+            sidebar_position: 4
+            fr: "fr/reference/phases.md"
+            en: "en/reference/phases.md"
+            purpose_fr: "Chaque phase de DISCOVER a PUBLISH : entrees, sorties et leurs chemins, agents, lentilles et gates, aretes de retour, decisions humaines."
+            purpose_en: "Each phase from DISCOVER to PUBLISH: inputs, outputs and their paths, agents, lenses and gates, loop-back edges, human decisions."
           - id: skraft-config
             type: editorial
             label_fr: "skraft-config.json"
             label_en: "skraft-config.json"
-            sidebar_position: 2
+            sidebar_position: 5
             fr: "fr/reference/skraft-config.md"
             en: "en/reference/skraft-config.md"
-            purpose_fr: "Le schema complet de la configuration, ses regles de validation, les lignes de commande et les defauts de detection."
-            purpose_en: "The full configuration schema, its validation rules, command lines and detection defaults."
+            purpose_fr: "Le schema complet de la configuration et de ses couches, ses regles de validation, les lignes de commande et les defauts de detection."
+            purpose_en: "The full schema of the configuration and its layers, its validation rules, command lines and detection defaults."
           - id: run-journal
             type: editorial
             label_fr: "Suivi et journal"
             label_en: "Tracking and journal"
-            sidebar_position: 3
+            sidebar_position: 6
             fr: "fr/reference/run-journal.md"
             en: "en/reference/run-journal.md"
-            purpose_fr: "Le dossier de suivi, les evenements de events.jsonl, les artefacts et tous les codes de refus et de blocage."
-            purpose_en: "The tracking folder, the events.jsonl events, the artefacts and every refusal and block code."
+            purpose_fr: "Le dossier de suivi, les artefacts par phase, les evenements de events.jsonl et tous les codes de refus et de blocage."
+            purpose_en: "The tracking folder, the artifacts by phase, the events.jsonl events and every refusal and block code."
       - id: catalogue
         title_fr: "Catalogue agentique"
         title_en: "Agentic catalogue"
@@ -600,8 +617,8 @@ parts:
             fr: "fr/reference/gates.md"
             en: "en/reference/gates.md"
             source: "plugins/skraft-framework/skills/*-review-criteria/SKILL.md"
-            purpose_fr: "Les gates de revue (Gxx) par phase : ce que chaque gate verifie et pourquoi."
-            purpose_en: "Review gates (Gxx) per phase: what each gate checks and why."
+            purpose_fr: "Les gates de commandes du moteur et les criteres de revue (Gxx) de chaque lentille, par phase, et le calcul du verdict."
+            purpose_en: "The engine's command gates and each lens's review criteria (Gxx), per phase, and how the verdict is computed."
       - id: patterns
         title_fr: "Patterns"
         title_en: "Patterns"
