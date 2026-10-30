@@ -60,13 +60,19 @@ const split = async (deps, base, adrs) => {
 }
 
 /**
- * What an ADR the base holds breaks: a change beyond its status lines, a deletion. An ADR is
- * touched only in a working copy that has a base.
+ * The base of the working copy. An ADR is touched only through the heads of the run's bases, so a
+ * run that touched one has it: a working copy in no repository has no head to change a file in.
+ * @param {Base[]} base
+ */
+const ownBase = (base) => /** @type {Base} */ (base.find((entry) => entry.component === null))
+
+/**
+ * What an ADR the base holds breaks: a change beyond its status lines, a deletion.
  * @param {AdrDeps} deps @param {Base[]} base @param {ChangedAdr[]} adrs
  * @returns {Promise<string[] | string>} a string: why Git cannot give the text on the base
  */
 const publishedFailures = async (deps, base, adrs) => {
-  const own = /** @type {Base} */ (base.find((entry) => entry.component === null))
+  const own = ownBase(base)
   const problems = []
   for (const { path, text } of adrs) {
     const before = await deps.sourceControl.show('.', own.sha, path)
@@ -91,13 +97,10 @@ const draftFailures = async (deps, base, drafts) => {
 }
 
 /**
- * Whether the working copy's base holds the file; without a base (no Git) it counts as published.
+ * Whether the working copy's base holds the file.
  * @param {AdrDeps} deps @param {Base[]} base @param {string} path relative to the working copy
  */
-const published = async ({ sourceControl }, base, path) => {
-  const own = base.find((entry) => entry.component === null)
-  return own === undefined || sourceControl.existsAt('.', own.sha, path)
-}
+const published = ({ sourceControl }, base, path) => sourceControl.existsAt('.', ownBase(base).sha, path)
 
 /** @param {AdrDeps} deps @param {{ base: Base[], adrs: string[] }} known @param {string} path @param {string} text */
 const linkProblems = async (deps, { base, adrs }, path, text) => {
