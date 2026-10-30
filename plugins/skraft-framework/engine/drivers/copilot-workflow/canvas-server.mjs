@@ -72,8 +72,8 @@ export const startPanel = async (host) => {
   const server = createServer(serverOptions(limits), (req, res) => { void served(/** @type {Panel} */ (bound.panel), req, res) })
   server.listen(0, LOOPBACK)
   await once(server, 'listening')
-  // An `error` event with no listener ends the session's process; none can follow a listening loopback server that a test can cause.
-  // Stryker disable next-line ArrowFunction,BlockStatement: unreachable in a test: a listening loopback server emits no error a test can cause
+  // An `error` event with no listener ends the session's process.
+  // Stryker disable next-line ArrowFunction,BlockStatement: the mutant changes nothing observable in any test: no test can make a listening loopback server emit `error`
   server.on('error', () => undefined)
   bound.panel = panelOf(host, limits, server)
   return runningPanel(bound.panel, server)
