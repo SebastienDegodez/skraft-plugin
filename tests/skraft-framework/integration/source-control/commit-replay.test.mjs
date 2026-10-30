@@ -493,6 +493,24 @@ test('in a pnpm workspace, a store package that reads a sibling it does not decl
   assert.deepEqual(standing, [[]])
 })
 
+test('in a pnpm workspace, a store package imports the commit\'s sibling package whose folder name starts with two dots', async (t) => {
+  const { repo, sha: first } = pnpmRepository(t)
+  mkdirSync(join(repo, '..odd'))
+  writeFileSync(join(repo, '..odd', 'index.js'), 'module.exports = 3\n')
+  writeFileSync(join(repo, 'apps', 'web', 'odd.cjs'), "process.exit(require('odd'))\n")
+  const sha = commitAll(repo, 'odd')
+  writeFileSync(join(repo, '..odd', 'index.js'), 'module.exports = 4\n')
+  writeStore(repo, [['node_modules/.pnpm/odd@1.0.0/node_modules/odd/index.js', "module.exports = require('sib')\n"]])
+  link(repo, join(repo, '..odd'), 'node_modules/.pnpm/odd@1.0.0/node_modules/sib')
+  link(repo, join(IN_STORE, 'odd@1.0.0', 'node_modules', 'odd'), 'apps/web/node_modules/odd')
+  const standing = []
+  const replay = createGitCommitReplay({ commandRunner: watchingAllLinks(createNodeCommandRunner({ root: repo }), standing) })
+
+  assert.equal((await replayWeb(replay, sha, 'odd.cjs')).exitCode, 3)
+  assert.deepEqual(standing, [[]])
+  assert.notEqual(sha, first)
+})
+
 test('in a pnpm workspace whose store reaches no sibling package, the replay links the store whole and copies nothing', async (t) => {
   const { repo, sha } = pnpmRepository(t, { reached: false })
   const standing = []
