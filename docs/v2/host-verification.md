@@ -488,12 +488,35 @@ worktree ; les autres, dont le magasin `.pnpm`, restent liées à la copie de tr
 commit, 2 et 20 dans la copie de travail ; le rejeu lit 1 et 10, le bin `.bin/core` →
 `../core/bin.js` lance celui du commit, et aucun lien ne reste quand Git retire le worktree.
 
+### Magasin pnpm — 2026-10-30 (branche v2/replay-pnpm-store, #330)
+
+Dans un espace de travail pnpm, `apps/web/node_modules/lib` pointe dans `node_modules/.pnpm`, que le
+rejeu liait en entier à la copie de travail : Node résout depuis le chemin réel, donc `lib` lisait
+`core` dans la copie de travail. Git liste `apps/web/node_modules` avant `node_modules` ; les
+dossiers sont désormais remplis du moins profond au plus profond, `.pnpm` avant les autres entrées
+de son dossier. Le rejeu reconstruit le magasin quand une de ses entrées atteint un paquet frère,
+directement ou par une autre entrée (point fixe) : l'entrée est copiée (déréférencée, pour que le
+chemin réel reste dans le worktree) et ses liens sont repointés vers le frère du commit ; les autres
+entrées, et les liens qui sortent du dépôt, restent liés à la copie de travail. Un magasin qu'aucune
+entrée n'atteint reste lié en entier. Un lien du magasin vers un frère est reconnu qu'il soit relatif
+(POSIX) ou absolu (jonction Windows). Mesuré (Node 22.17.1, macOS) par les tests d'intégration du
+rejeu : `lib` (lit `core` et un dossier hors dépôt, 40) répond 41 au lieu de 42 ; `wrap` (lit `lib`)
+141 au lieu de 142 ; `@acme/kit` (lit `@acme/util` par un lien absolu) 10 au lieu de 20 ; un magasin
+qu'aucune entrée n'atteint reste un lien (`dep` répond 5) ; aucun lien ne reste quand Git retire le
+worktree, et la copie de travail garde ses liens. Windows : non mesuré ; les tests ne sont pas
+ignorés sous win32, la CI `windows-latest` de la pull request donne la mesure.
+
 ### Ce que le rejeu ne couvre pas
 
 - Espaces de travail : un paquet frère dont le point d'entrée est une sortie de build ignorée
   par Git (`dist/`) n'a pas cette sortie dans le worktree ; le rejeu ne construit rien. Un paquet
-  du magasin `.pnpm` qui dépend lui-même d'un paquet frère le lit dans la copie de travail. Les
-  jonctions et la copie des fichiers de `node_modules` n'ont pas été mesurées sous Windows.
+  frère injecté (`dependenciesMeta.injected`, entrée `core@file+packages+core`) : son nom de
+  dossier ne se décode pas de façon fiable. Un magasin hors du dépôt (magasin virtuel global,
+  `virtual-store-dir`) n'est pas reconstruit. Une recherche fantôme par `.pnpm/node_modules` depuis
+  un paquet du magasin non reconstruit lit la copie de travail. Les liens vers des fichiers ne sont
+  pas faits sous Windows. Chemins longs : un worktree dont les chemins du magasin dépassent 260
+  caractères peut échouer au retrait sans `core.longpaths`. Les jonctions et la copie des fichiers
+  de `node_modules` n'ont pas été mesurées sous Windows.
 - Le programme rejoué écrit à travers les liens dans les vrais dossiers : un cache que l'outil
   garde sous `node_modules`, un `__pycache__` sous `.venv`, et toute installation. Mesuré sur
   Mastermind : `web/node_modules/.vite/deps` de la copie de travail porte l'heure des rejeux. Le rejeu refuse une commande test ou e2e qui contient
