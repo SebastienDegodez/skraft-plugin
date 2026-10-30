@@ -15,12 +15,13 @@ test.beforeAll(async () => {
 })
 test.afterAll(() => state.scope.close())
 
-/** Opens a panel and its page; `cwd` null opens the panel on a session with no directory yet. */
-const open = async (page, { cwd = state.run.cwd, tab, clock = false, journalRows } = {}) => {
+/** Opens a panel and its page; `cwd` null opens the panel on a session with no directory yet; `writes` collects each request that is not a GET. */
+const open = async (page, { cwd = state.run.cwd, tab, clock = false, journalRows, writes } = {}) => {
   const where = { cwd }
   state.panel = await openPanel({ where, home: state.run.home, tab, journalRows })
   state.errors = []
   page.on('pageerror', (error) => state.errors.push(error.message))
+  if (writes) page.on('request', (request) => request.method() !== 'GET' && writes.push(`${request.method()} ${new URL(request.url()).pathname}`))
   if (clock) await page.clock.install()
   await page.goto(state.panel.url)
   await expect(page.locator('.app[data-state="ready"]')).toBeVisible()
@@ -80,6 +81,63 @@ test('the Journal tab shows the last entries only, and says how many there are',
   await expect(page.locator('.journal-shown')).toHaveText('The last 2 of 5 entries.')
 })
 
+test('a question waiting puts a We need you button in the header, which comes and goes with the question and leads to it', async ({ page }) => {
+  const where = await open(page, { cwd: null, tab: 'configuration' })
+  await expect(page.locator('.needs-you')).toHaveCount(0)
+
+  where.cwd = state.run.cwd
+
+  const button = page.locator('.needs-you')
+  await expect(button).toBeVisible()
+  await expect(button).toContainText('We need you')
+  await expect(page.locator('.needs-you code')).toHaveText('adr-1')
+  await expect(button).toHaveAttribute('aria-keyshortcuts', 'n')
+  await expect(page.locator('[role="tablist"] .needs-you')).toHaveCount(0)
+  await button.click()
+  await expect(page.getByRole('tab', { name: 'Run' })).toHaveAttribute('aria-selected', 'true')
+  await expect(page.locator('#question')).toBeFocused()
+})
+
+test('the n key leads to the waiting question from any tab, but not while the person types in a field', async ({ page }) => {
+  await open(page, { tab: 'configuration' })
+  const field = page.locator('.commands input[type="text"]').first()
+  await field.click()
+  await page.keyboard.press('End')
+
+  await page.keyboard.type('n')
+
+  await expect(page.getByRole('tab', { name: 'Configuration' })).toHaveAttribute('aria-selected', 'true')
+  expect(await field.inputValue()).toMatch(/n$/)
+
+  await page.getByRole('tab', { name: 'Configuration' }).focus()
+  await page.keyboard.press('n')
+  await expect(page.getByRole('tab', { name: 'Run' })).toHaveAttribute('aria-selected', 'true')
+  await expect(page.locator('#question')).toBeFocused()
+})
+
+test('the n key does nothing when no question waits', async ({ page }) => {
+  await open(page, { cwd: null, tab: 'configuration' })
+  await page.getByRole('tab', { name: 'Configuration' }).focus()
+
+  await page.keyboard.press('n')
+
+  await expect(page.getByRole('tab', { name: 'Configuration' })).toHaveAttribute('aria-selected', 'true')
+})
+
+test('the We need you button and the n key answer nothing: the page sends no request but its stream and its files, the run still waits, the journal is unchanged, and the page never names skraft_decide', async ({ page }) => {
+  const writes = []
+  await open(page, { writes })
+  const before = readFileSync(journalFile(state.run.cwd), 'utf8')
+
+  await page.locator('.needs-you').click()
+  await page.keyboard.press('n')
+
+  expect(writes).toEqual([])
+  await expect(page.locator('.run-status')).toHaveText('waiting')
+  expect(readFileSync(journalFile(state.run.cwd), 'utf8')).toBe(before)
+  await expect(page.locator('body')).not.toContainText('skraft_decide')
+})
+
 const WORDS = {
   en: { phases: ['closed', 'under way', 'to come', 'to come', 'to come'], steps: ['done:', 'done:', 'under way:'] },
   fr: { phases: ['close', 'en cours', 'à venir', 'à venir', 'à venir'], steps: ['faite:', 'faite:', 'en cours:'] },
@@ -125,6 +183,12 @@ test.describe('in French (the driver\'s sentences)', () => {
     await expect(page.locator('.reason')).toHaveText(NO_DIRECTORY_FR)
     await page.getByRole('tab', { name: 'Configuration' }).click()
     await expect(page.locator('.notice.n-fail')).toHaveText(NO_DIRECTORY_FR)
+  })
+
+  test('the We need you button speaks French', async ({ page }) => {
+    await open(page)
+
+    await expect(page.locator('.needs-you')).toContainText('On a besoin de vous')
   })
 
   test('the Journal tab speaks French: the chain, the pass and the edge', async ({ page }) => {
@@ -249,7 +313,7 @@ test.describe('captures', () => {
 
   for (const [locale, lang] of [['fr-FR', 'fr'], ['en-US', 'en']]) {
     for (const colorScheme of ['light', 'dark']) {
-      test(`the run and the configuration, ${lang}, ${colorScheme}`, async ({ browser }) => {
+      test(`the run, the configuration and the journal, ${lang}, ${colorScheme}`, async ({ browser }) => {
         const folder = /** @type {string} */ (process.env.SKRAFT_CANVAS_SHOTS)
         mkdirSync(folder, { recursive: true })
         const context = await browser.newContext({ locale, colorScheme, viewport: { width: 1280, height: 860 } })
@@ -259,6 +323,9 @@ test.describe('captures', () => {
         await page.getByRole('tab', { name: 'Configuration' }).click()
         await expect(page.locator('.consent').first()).toBeVisible()
         await page.screenshot({ path: join(folder, `configuration-${lang}-${colorScheme}.png`), fullPage: true })
+        await page.getByRole('tab', { name: 'Journal' }).click()
+        await expect(page.locator('.chain-word')).toBeVisible()
+        await page.screenshot({ path: join(folder, `journal-${lang}-${colorScheme}.png`), fullPage: true })
         await context.close()
       })
     }
