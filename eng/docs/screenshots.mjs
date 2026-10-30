@@ -9,7 +9,7 @@
 //     `skraft report` and the end of the workflow log of that finished run;
 //   - backlog: the skraft-backlog canvas over its browser-test workspace, in French and English;
 //   - dashboard: the dashboard page built from the plugin sources (eng/catalog/scan.mjs,
-//     eng/dashboard/build.mjs), its evidence and replay manifest read from eng/docs/fixtures/replay;
+//     eng/dashboard/build.mjs), its evidence and replay manifest read from tests/docs/fixtures/replay;
 //   - replay: AGENTVIZ (npm package agentviz@1.2.0, the only download besides the tutorial's
 //     StrykerJS) opened from the dashboard's replay link on one recorded baseline/skilled pair.
 //
@@ -32,7 +32,7 @@ import { terminalSvg } from './terminal-svg.mjs'
 const REPO = resolve(dirname(fileURLToPath(import.meta.url)), '../..')
 const SITE = join(REPO, 'docs', 'site')
 const PLUGIN_ROOT = join(REPO, 'plugins', 'skraft-framework')
-const REPLAY_FIXTURE = join(REPO, 'eng', 'docs', 'fixtures', 'replay')
+const REPLAY_FIXTURE = join(REPO, 'tests', 'docs', 'fixtures', 'replay')
 const AGENTVIZ = 'agentviz@1.2.0'
 const MAX_BYTES = 250 * 1024
 const VIEWPORT = Object.freeze({ width: 1280, height: 800 })
