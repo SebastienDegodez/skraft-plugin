@@ -37,7 +37,7 @@ test('a repository agent between DESIGN and DISTILL is launched in its place, as
     '- Attempt: 1 of 2',
     '- Read first:',
     `- ${TRACKING}/research/2026-10-11/${SLUG}-research.md`,
-    `- ${TRACKING}/details/2026-10-11/context-map.md`,
+    `- ${TRACKING}/details/2026-10-11/consistency-matrix-checkout.md`,
     '- Fill each output in place; keep the path, create no other copy:',
     `- ${TRACKING}/security/2026-10-11/${SLUG}-review.md`,
     `- ${TRACKING}/notes.md`,

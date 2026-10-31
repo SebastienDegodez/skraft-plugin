@@ -82,7 +82,7 @@ test('a blocker the refuter confirms sends DESIGN back as pass 2 with the findin
   const blocker = finding('F1', 'blocker', 'The ADR names no payment provider')
   const revises = (brief, { slug }) => {
     fillOutputs(brief, 'The provider is Acme Pay.\n')
-    commit(cwd, `docs(${slug}): name the payment provider`, { 'docs/adr/adr-001-card-payment.md': '# ADR-001 Card payment\n\n**Status:** Proposed\n\nAccepted: Acme Pay.\n' })
+    commit(cwd, `docs(${slug}): name the payment provider`, { 'docs/adr/adr-001-card-payment.md': '---\nstatus: Proposed\ndecision: We will pay by card.\n---\n# ADR-001 Card payment\n\n**Status:** Proposed\n\nAccepted: Acme Pay.\n' })
     writeResult(brief, { status: 'done', summary: 'provider named' })
   }
 
@@ -104,7 +104,7 @@ test('a blocker the refuter confirms sends DESIGN back as pass 2 with the findin
   assert.deepEqual(recorded(events, 'design_review')[0].failures, [FINDING_LINE])
   assert.ok(spawns[6].prompt.includes('- Pass: 2, after the review sent the work back'), spawns[6].prompt)
   assert.ok(spawns[6].prompt.includes(`The review sent the work back on pass 1, with these findings:\n- ${FINDING_LINE}`), spawns[6].prompt)
-  assert.equal(git(cwd, 'show', 'HEAD:docs/adr/adr-001-card-payment.md'), '# ADR-001 Card payment\n\n**Status:** Accepted\n\nAccepted: Acme Pay.')
+  assert.equal(git(cwd, 'show', 'HEAD:docs/adr/adr-001-card-payment.md'), '---\nstatus: Accepted\ndecision: We will pay by card.\n---\n# ADR-001 Card payment\n\n**Status:** Accepted\n\nAccepted: Acme Pay.')
 })
 
 test('a lens that answers twice without a readable verdict stops the run as lens-unreadable, naming its agent; the resumed run spawns only that lens again', async (t) => {
@@ -216,7 +216,7 @@ test('a blocker the refuter refutes does not count; an unverifiable high finding
   const { cwd } = pipelineRepository(t)
   const revises = (brief, { slug }) => {
     fillOutputs(brief, 'Payments has one owner.\n')
-    commit(cwd, `docs(${slug}): one owner for payments`, { 'docs/adr/adr-001-card-payment.md': '# ADR-001 Card payment\n\n**Status:** Proposed\n\nPayments owns refunds.\n' })
+    commit(cwd, `docs(${slug}): one owner for payments`, { 'docs/adr/adr-001-card-payment.md': '---\nstatus: Proposed\ndecision: We will pay by card.\n---\n# ADR-001 Card payment\n\n**Status:** Proposed\n\nPayments owns refunds.\n' })
     writeResult(brief, { status: 'done', summary: 'owner named' })
   }
 
@@ -256,11 +256,11 @@ test('a blocker two lenses give at the same line is checked in one call, each fi
   assert.deepEqual(reviewsOf(events)[0], ['design_review', 1, 'approved', 'adr'])
 })
 
-test('on pass 2 only the lenses that had findings or whose inputs changed run again; a clean one whose inputs did not move is taken over', async (t) => {
+test('on pass 2 the lens that had findings and the clean ones whose inputs moved (the design document the rework changed) run again', async (t) => {
   const { cwd } = pipelineRepository(t)
   const blocker = finding('F1', 'blocker', 'The ADR names no payment provider')
   const reworks = (brief, { slug }) => {
-    commit(cwd, `docs(${slug}): name the payment provider`, { 'docs/adr/adr-001-card-payment.md': '# ADR-001 Card payment\n\n**Status:** Proposed\n\nAccepted: Acme Pay.\n' })
+    commit(cwd, `docs(${slug}): name the payment provider`, { 'docs/architecture/context-map.md': 'Payment: Core.\n\nProvider: Acme Pay.\n' })
     writeResult(brief, { status: 'done', summary: 'provider named' })
   }
 
@@ -271,9 +271,9 @@ test('on pass 2 only the lenses that had findings or whose inputs changed run ag
 
   assert.equal(outcome.status, 'done')
   assert.deepEqual(spawns.filter((item) => / · design_review · .* · pass 2 · /.test(item.description)).map((item) => item.description).sort(), [
-    `skraft ${SLUG} · design_review · architecture-compliance · pass 2 · attempt 1`, `skraft ${SLUG} · design_review · consistency · pass 2 · attempt 1`,
+    `skraft ${SLUG} · design_review · architecture-compliance · pass 2 · attempt 1`, `skraft ${SLUG} · design_review · consistency · pass 2 · attempt 1`, `skraft ${SLUG} · design_review · fitness · pass 2 · attempt 1`,
   ])
   assert.deepEqual(lensEvents(events, 'design_review').filter((event) => event.visit === 2).map(({ lens, reused }) => [lens, reused ?? false]).sort(), [
-    ['architecture-compliance', false], ['consistency', false], ['fitness', true],
+    ['architecture-compliance', false], ['consistency', false], ['fitness', false],
   ])
 })

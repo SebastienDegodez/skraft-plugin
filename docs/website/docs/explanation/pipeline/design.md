@@ -41,6 +41,12 @@ reused as is, extended or new — citing the research or the scan, and it search
 for what they leave open. A commitment the scan detects with no accepted ADR covering it gets a
 catch-up ADR: it becomes a written decision, not a fait accompli.
 
+Before the code, it reads what earlier stories left in the repository: the context map, the
+tactical design of each context and the event model under `docs/`, and the ADRs. It completes
+those files on the story's branch rather than rewriting them, so the pull request shows what
+changed in the model. When they already cover the story, the architect says so in its consistency
+matrix, cites them and moves on.
+
 This choice saves tokens, but above all it prevents a design that ignores what exists: the scan
 is the same source the lenses read afterwards.
 
@@ -50,7 +56,7 @@ Three lenses review the design, each in a fresh context: **consistency** across 
 contracts and event model; **compliance** with the architecture (the dependency rule, where
 interfaces live, relations between contexts); **fitness** of the patterns, which refuses any
 aggregate or pattern no story justifies. The engine also checks, with no lens, the traces a
-human should not have to reread: consistency matrix, naming and register of superseded ADRs.
+human should not have to reread: consistency matrix, naming and register of superseded ADRs, the decisions index, and the ADR rules (no version, a one-sentence decision, a closed status vocabulary, a published ADR changed only in its status lines).
 
 The review happens **before** ratification. A human thus only reads ADRs that are already
 consistent; they answer `RATIFIED` or `REJECTED` with a reason that goes back to the architect.
@@ -70,6 +76,7 @@ place: an architecture decision commits the team, not the model that proposed it
 - [Reference: DESIGN](../../reference/phases.md#design) — nodes, outputs, engine checks, edges.
 - [Reference: DESIGN review criteria](../../reference/gates.md#design).
 - [Reference: unpublished ADRs](../../reference/run-journal.md#unpublished-adrs).
+- [Reference: durable documentation](../../reference/run-journal.md#durable-docs) — what goes to `docs/`, what stays in the tracking folder.
 - [DISTILL](./distill.md) — the next phase.
 
 ## Sources

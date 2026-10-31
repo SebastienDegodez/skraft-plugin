@@ -11,13 +11,26 @@
  *   from none.
  * @typedef {{ ok: true } | { ok: false, reason: string }} Done
  * @typedef {{ number: number, title: string, url: string, body: string }} Issue
- * @typedef {{ read: 'issue', issue: Issue } | { read: 'missing' } | { read: 'pull-request' } | { read: 'failed', reason: string }} IssueReading
+ * @typedef {{ read: 'issue', issue: Issue } | { read: 'missing' } | { read: 'pull-request' } | { read: 'other-project', project: string } | { read: 'not-a-story' } | { read: 'failed', reason: string }} IssueReading
  *   missing: the forge answered and has no issue of that number; pull-request: the number is a
- *   pull request's; failed: the forge could not be asked or did not answer, reason says why.
- * @typedef {{ number: number, marker: string, url: string | null, bodyFile: string, body: string }} IssueCommentRequest
- *   number: the issue, or the pull request, of the repository; marker: a line the comment's body
- *   holds, that finds it again; url: the comment as last kept, null when none was; bodyFile: the
- *   absolute path of the file that holds the body; body: that body.
+ *   pull request's; other-project: the work item is of another project than the remote's, which
+ *   `project` names (Azure Boards only); not-a-story: the work item's type is not a story's
+ *   (Azure Boards only); failed: the forge could not be asked or did not answer, reason says why.
+ * @typedef {{ number: number, marker: string, url: string | null, bodyFile: string, requestFile: string, body: string }} IssueCommentRequest
+ *   number: the issue, the pull request, or the work item, of the repository; marker: a line the
+ *   comment's body holds, that finds it again; url: the comment as last kept, null when none was;
+ *   bodyFile: the absolute path of the file that holds the body; requestFile: the absolute path of
+ *   a file holding `{"text": <body>}` as JSON, for a forge client that sends a JSON request (az on
+ *   Azure Boards; GitHub ignores it); body: that body. On Azure Boards the comment's url is the
+ *   REST address skraft builds, `<organization>/<project>/_apis/wit/workItems/<id>/comments/<comment>`:
+ *   a web anchor for a comment is not documented, so none is invented.
+ * @typedef {{ number: number, marker: string, url: string | null, bodyFile: string, body: string, threadFile: string, commentFile: string }} PullRequestCommentRequest
+ *   number: the pull request; marker: the first line of the comment's body, that finds it again;
+ *   url: the comment as last kept, null when none was; bodyFile, body: the Markdown to keep;
+ *   threadFile: the absolute path of a file holding the thread to post as JSON
+ *   (`{"comments":[{"parentCommentId":0,"content":<body>,"commentType":1}],"status":4}`) and
+ *   commentFile: that of a file holding `{"content":<body>}`, for a forge whose client sends JSON
+ *   (az on Azure Repos); both empty for another forge.
  * @typedef {{
  *   unavailable: () => Promise<string | null>,
  *   remotes: () => Promise<string[]>,
@@ -29,9 +42,12 @@
  *   create: (request: PullRequestRequest) => Promise<({ ok: true, note?: string } & PullRequest) | { ok: false, reason: string }>,
  *   edit: (request: { number: number, bodyFile: string, body: string }) => Promise<Done>,
  *   keepIssueComment: (request: IssueCommentRequest) => Promise<{ ok: true, url: string } | { ok: false, reason: string }>,
+ *   keepPullRequestComment: (request: PullRequestCommentRequest) => Promise<{ ok: true, url: string } | { ok: false, reason: string }>,
  *   issue: (number: number) => Promise<IssueReading>,
  *   storyLink: (issue: number, closes: boolean) => string | null,
  *   bodyLimit: number,
+ *   commentLimit: number,
+ *   takesRequestFile: boolean,
  * }} CodeHost
  *   unavailable: why no pull request can be opened from here (no remote, no forge client, not
  *   signed in), null when one can. remotes: the names of the repository's remotes. repository:
@@ -45,7 +61,11 @@
  *   one either, posts a new comment. Gives the URL of the comment kept. issue: the issue of that
  *   number on the repository gh would pick in a clone of a fork, its body as written; failed when
  *   there is no remote, no forge client, no sign-in to that forge, or the forge refused.
- *   bodyLimit: the longest body the forge takes, in characters.
+ *   keepPullRequestComment: keepIssueComment on a pull request (GitHub: the same comment route; Azure
+ *   Repos: a thread of the pull request, posted closed, its first comment rewritten). bodyLimit: the
+ *   longest body the forge takes, in characters; commentLimit: the longest comment. takesRequestFile: whether the
+ *   forge's client sends a JSON request file (az on Azure Boards), which keepIssueComment is then
+ *   handed; false: no such file is written.
  *   storyLink: the line of a pull request's body that links it to the story's issue, as the
  *   forge reads it: one that closes the issue when the pull request merges, when closes is true;
  *   null when the forge links none.

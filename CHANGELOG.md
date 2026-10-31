@@ -3,6 +3,63 @@
 Toutes les modifications notables de ce projet sont documentées ici.
 Format basé sur [Conventional Commits](https://www.conventionalcommits.org/) — versionnage [SemVer](https://semver.org/).
 
+## [2.0.0-alpha.44](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.43...v2.0.0-alpha.44) (2026-10-31)
+
+### ✨ Features
+
+* **engine:** past the forge's body limit, the PR keeps what decides and its run details go to a kept comment, on GitHub and Azure Repos ([#465](https://github.com/SebastienDegodez/skraft-plugin/issues/465)) ([9a8f183](https://github.com/SebastienDegodez/skraft-plugin/commit/9a8f18382e022eb3cac37fb7ee1df23b6129868b)), closes [#421](https://github.com/SebastienDegodez/skraft-plugin/issues/421)
+
+## [2.0.0-alpha.43](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.42...v2.0.0-alpha.43) (2026-10-31)
+
+### ✨ Features
+
+* **engine:** skraft reviews an Azure Repos pull request, MCP first, az as fallback, and keeps one closed review thread ([#464](https://github.com/SebastienDegodez/skraft-plugin/issues/464)) ([8357210](https://github.com/SebastienDegodez/skraft-plugin/commit/83572108595dc81095f6df1e438b4b67ca61df75)), closes [#397](https://github.com/SebastienDegodez/skraft-plugin/issues/397) [#395](https://github.com/SebastienDegodez/skraft-plugin/issues/395) [#396](https://github.com/SebastienDegodez/skraft-plugin/issues/396) [#401](https://github.com/SebastienDegodez/skraft-plugin/issues/401)
+
+### 📝 Documentation
+
+* **host-verification:** Azure Repos work-item link and split parts, non mesuré ([#463](https://github.com/SebastienDegodez/skraft-plugin/issues/463)) ([e54f661](https://github.com/SebastienDegodez/skraft-plugin/commit/e54f661fe869bf10790a15f47caab6832d76fc52)), closes [#417](https://github.com/SebastienDegodez/skraft-plugin/issues/417)
+
+## [2.0.0-alpha.42](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.41...v2.0.0-alpha.42) (2026-10-31)
+
+### ✨ Features
+
+* **engine:** an ADR states one decision, names no version, keeps a closed status and its index row; review and ratification loop once ([#457](https://github.com/SebastienDegodez/skraft-plugin/issues/457)) ([3449dff](https://github.com/SebastienDegodez/skraft-plugin/commit/3449dfffb355caeaec30f9d95d43db3e0460b61f)), closes [#333](https://github.com/SebastienDegodez/skraft-plugin/issues/333) [#451](https://github.com/SebastienDegodez/skraft-plugin/issues/451)
+* **engine:** Azure Boards — the run reads its story from the work item and keeps its tracking comment there, MCP first, az as fallback ([#458](https://github.com/SebastienDegodez/skraft-plugin/issues/458)) ([f7d45a0](https://github.com/SebastienDegodez/skraft-plugin/commit/f7d45a0e99fa5a0715c2f6b7e8df79c7a6a2bd95)), closes [#395](https://github.com/SebastienDegodez/skraft-plugin/issues/395) [#396](https://github.com/SebastienDegodez/skraft-plugin/issues/396)
+
+## [2.0.0-alpha.41](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.40...v2.0.0-alpha.41) (2026-10-31)
+
+### 🐛 Bug Fixes
+
+* **azure-devops:** an Azure Repos pull request links its work item with Fixes #N or #N; a split story's parts are Related ([#460](https://github.com/SebastienDegodez/skraft-plugin/issues/460)) ([bc9aa41](https://github.com/SebastienDegodez/skraft-plugin/commit/bc9aa41f562a427b78cdd91be05356bb511280ab)), closes [#N](https://github.com/SebastienDegodez/skraft-plugin/issues/N) [#N](https://github.com/SebastienDegodez/skraft-plugin/issues/N) [#417](https://github.com/SebastienDegodez/skraft-plugin/issues/417)
+
+## [2.0.0-alpha.40](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.39...v2.0.0-alpha.40) (2026-10-30)
+
+### ✨ Features
+
+* **copilot:** /skraft under Copilot CLI and VS Code, with the Claude Code syntax, its name measured by the probe ([#455](https://github.com/SebastienDegodez/skraft-plugin/issues/455)) ([7fcf324](https://github.com/SebastienDegodez/skraft-plugin/commit/7fcf324e02068a283abb1dad679bdc464ec9e1d7)), closes [#252](https://github.com/SebastienDegodez/skraft-plugin/issues/252)
+
+## [2.0.0-alpha.39](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.38...v2.0.0-alpha.39) (2026-10-30)
+
+### ✨ Features
+
+* **cli:** skraft install makes the skraft command available on macOS, Linux and Windows ([#452](https://github.com/SebastienDegodez/skraft-plugin/issues/452)) ([1126c9e](https://github.com/SebastienDegodez/skraft-plugin/commit/1126c9e5378781476862689ca53645177788413c)), closes [#447](https://github.com/SebastienDegodez/skraft-plugin/issues/447)
+
+## [2.0.0-alpha.38](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.37...v2.0.0-alpha.38) (2026-10-30)
+
+### ✨ Features
+
+* **claude-mod:** the mod applies each agent's effort through turn.step, measured on Claude Code 2.1.291 and 2.1.314 ([#453](https://github.com/SebastienDegodez/skraft-plugin/issues/453)) ([0837030](https://github.com/SebastienDegodez/skraft-plugin/commit/08370309b1364d27865597393f3eb21dd91bbea2)), closes [#258](https://github.com/SebastienDegodez/skraft-plugin/issues/258)
+
+### 📝 Documentation
+
+* **tutorial:** the Copilot tutorial shows the canvas's Journal tab of the finished run ([#450](https://github.com/SebastienDegodez/skraft-plugin/issues/450)) ([c147efe](https://github.com/SebastienDegodez/skraft-plugin/commit/c147efe65871864261bf29321014268deedf3407)), closes [#418](https://github.com/SebastienDegodez/skraft-plugin/issues/418)
+
+## [2.0.0-alpha.37](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.36...v2.0.0-alpha.37) (2026-10-30)
+
+### 🐛 Bug Fixes
+
+* **code-host:** az is checked before the Git remote, and the Windows fake az stands where the installer puts it ([#449](https://github.com/SebastienDegodez/skraft-plugin/issues/449)) ([b787d4b](https://github.com/SebastienDegodez/skraft-plugin/commit/b787d4bb80f5d38acf7176e9cc726d44b581bd8f))
+
 ## [2.0.0-alpha.36](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.35...v2.0.0-alpha.36) (2026-10-30)
 
 ### ✨ Features

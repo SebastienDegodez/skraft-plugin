@@ -41,6 +41,12 @@ réutilisé tel quel, étendu ou nouveau — en citant la recherche ou le scan, 
 code que pour ce qu'ils laissent ouvert. Un engagement que le scan détecte sans ADR accepté qui
 le couvre reçoit un ADR de rattrapage : il devient une décision écrite, pas un fait accompli.
 
+Avant le code, il lit ce que les stories précédentes ont laissé dans le dépôt : la context map,
+la conception tactique de chaque contexte et le modèle d'événements sous `docs/`, et les ADR. Il
+complète ces fichiers sur la branche de la story plutôt que de les réécrire, pour que la pull
+request montre ce qui a changé dans le modèle. Quand ils couvrent déjà la story, l'architecte le
+dit dans sa matrice de cohérence, les cite et passe à la suite.
+
 Ce choix économise des tokens, mais surtout il empêche une conception qui ignore l'existant :
 c'est la même source, le scan, que les lentilles relisent ensuite.
 
@@ -51,7 +57,7 @@ ADR, diagrammes, contrats et modèle d'événements ; la **conformité** à l'ar
 de dépendance, la place des interfaces, les relations entre contextes) ; l'**adéquation** des
 patterns, qui refuse tout agrégat ou pattern qu'aucune story ne justifie. Le moteur vérifie en
 plus, sans lentille, les traces qu'un humain ne devrait pas avoir à relire : matrice de
-cohérence, nommage et registre des ADR remplacés.
+cohérence, nommage et registre des ADR remplacés, index des décisions, et règles des ADR (aucune version, une décision d'une phrase, un vocabulaire de statut fermé, un ADR publié modifié seulement sur ses lignes de statut).
 
 La revue a lieu **avant** la ratification. Un humain ne relit ainsi que des ADR déjà
 cohérents ; il répond `RATIFIED` ou `REJECTED` avec une raison qui repart chez l'architecte.
@@ -72,6 +78,7 @@ proposée.
 - [Référence : DESIGN](../../reference/phases.md#design) — nœuds, sorties, contrôles du moteur, arêtes.
 - [Référence : critères de revue de DESIGN](../../reference/gates.md#design).
 - [Référence : ADR non publiés](../../reference/run-journal.md#unpublished-adrs).
+- [Référence : documentation durable](../../reference/run-journal.md#durable-docs) — ce qui va dans `docs/`, ce qui reste dans le dossier de suivi.
 - [DISTILL](./distill.md) — la phase suivante.
 
 ## Sources

@@ -16,8 +16,7 @@ code carrying a pattern no ADR covers needs a back-fill ADR.
 
 Two ADRs with the same scope and incompatible decisions, neither superseding the other, are a
 finding. For every row of `docs/adr/supersessions.md`, the named new ADR carries
-`**Supersedes:** ADR-MMM`. The superseded ADR's file is never edited: report an edit to it, never
-ask for one.
+`**Supersedes:** ADR-MMM`.
 
 - ✗ ADR-001 prescribes CQRS for eligibility; ADR-005 prescribes a single model for the same scope.
 - ✓ ADR-001 covers eligibility, ADR-005 policy renewal: different scopes.
@@ -116,6 +115,20 @@ detect either, is a finding.
 ## G15 — No baseline ADR
 
 See the baseline list in SKILL.md (*Fitness judgements*).
+
+## G17 — Eligible subject
+
+An ADR decides a layer boundary, an aggregate boundary, a bounded context, a pattern adding complexity or a cross-cutting concern, and weighs a real trade-off. Any other subject is `ADR-INFLATION`; no alternative genuinely weighed is `NON-DECISION`.
+
+- ✗ "ADR-012: Mount `PaymentBanner` in the checkout layout."
+- ✓ "ADR-013: Route loaders fetch data before render, so pages hold no fetch logic."
+
+## G18 — Decision level
+
+One decision per ADR, at decision level. Independent decisions in one body, a full signature (a contract sketch of up to 5 lines is fine), a file path, enum values, a Value Object inventory, a route tree, or a ticket, AC or PRD reference other than the story that triggered it is each a finding at its line.
+
+- ✗ "ADR-004's Decision lists `OrderStatus { Draft, Placed, Paid }` and `src/Domain/Order.cs`."
+- ✓ "ADR-004: model order status as a state machine inside the Order aggregate; the values live in `contracts-US-04.md`."
 
 ## G16 — Comparable contracts share a convention
 

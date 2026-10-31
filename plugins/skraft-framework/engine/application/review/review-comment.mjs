@@ -1,8 +1,9 @@
 import { CONFIG_FILE, USER_CONFIG_FILE } from '../../domain/config/skraft-config.mjs'
 import { reviewConsentOf, withReviewConsent } from '../../domain/decisions/review-consents.mjs'
 import { questionKey, questionOf, readAnswer, REVIEW_CONSENT_TEXT } from '../../domain/decisions/questions.mjs'
-import { COMMENT_FILE, markerOf, renderComment } from '../../domain/review/pull-request.mjs'
-import { routeOf } from '../config/github-mcp.mjs'
+import { COMMENT_FILE, COMMENT_THREAD_FILE, COMMENT_CONTENT_FILE, markerOf, renderComment } from '../../domain/review/pull-request.mjs'
+import { contentRequestOf, threadRequestOf } from '../../domain/review/azure-pull-request.mjs'
+import { routeOf } from '../config/mcp-route.mjs'
 
 /**
  * The review's comment: rendered beside the review on every pass, then, with `--publish`, kept as
@@ -12,6 +13,7 @@ import { routeOf } from '../config/github-mcp.mjs'
  * the working copy; never a review, never a request for changes.
  *
  * @typedef {import('../../domain/review/verdict.mjs').ReviewVerdict} ReviewVerdict
+ * @typedef {Pick<import('./review-pull-request-usecase.mjs').OnForge, 'pullRequests' | 'reviewFiles'>} OnForgeFiles
  * @typedef {{
  *   deps: import('./review-pull-request-usecase.mjs').OnForge, slug: string, number: number, publish: boolean,
  *   journal: import('../journal/run-journal.mjs').OpenJournal,
@@ -40,10 +42,22 @@ export const keepComment = async (context, review) => {
 const unpublishedOf = (reason) => `not published: ${reason}`
 
 /** The comment rewritten, or posted. @param {CommentContext} context @param {string} body */
-const posted = ({ deps, slug, number, journal }, body) => deps.pullRequests.keepComment({
+const posted = async ({ deps, slug, number, journal }, body) => deps.pullRequests.keepComment({
   number, marker: markerOf(number), url: journal.events.findLast((event) => event.type === 'review.commented')?.url ?? null,
-  bodyFile: deps.reviewFiles.location(slug, COMMENT_FILE), body,
+  bodyFile: deps.reviewFiles.location(slug, COMMENT_FILE), body, ...(await requestFilesOf(deps, slug, body)),
 })
+
+/**
+ * The comment as the JSON of a new thread and of the rewrite of a comment, kept beside it, written
+ * only for a forge whose client sends one; their paths, else empty ones.
+ * @param {OnForgeFiles} deps @param {string} slug @param {string} body
+ */
+const requestFilesOf = async ({ pullRequests, reviewFiles }, slug, body) => {
+  if (!pullRequests.takesRequestFile) return { threadFile: '', contentFile: '' }
+  await reviewFiles.write(slug, COMMENT_THREAD_FILE, threadRequestOf(body))
+  await reviewFiles.write(slug, COMMENT_CONTENT_FILE, contentRequestOf(body))
+  return { threadFile: reviewFiles.location(slug, COMMENT_THREAD_FILE), contentFile: reviewFiles.location(slug, COMMENT_CONTENT_FILE) }
+}
 
 /**
  * Why the comment may not be kept, null once consented: the repository's answer, else the

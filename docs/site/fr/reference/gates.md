@@ -105,7 +105,7 @@ critère qui en interdit un.
 | ID | Lentille | Critère | Sévérité |
 | --- | --- | --- | --- |
 | **G1** | `consistency` | Tout engagement structurel d'un diagramme ou du scan structurel a un ADR `Accepted`, ou `Proposed` de ce passage, qui le justifie. | blocker |
-| **G2** | `consistency` | Deux ADR ne se contredisent pas ; le corps d'un ADR remplacé est inchangé ; chaque ligne de `docs/adr/supersessions.md` a son nouvel ADR portant la ligne `**Supersedes:**`. | blocker |
+| **G2** | `consistency` | Deux ADR ne se contredisent pas ; chaque ligne de `docs/adr/supersessions.md` a son nouvel ADR portant la ligne `**Supersedes:**`. | blocker |
 | **G10** | `consistency` | Le journal de rétro-propagation de la matrice de cohérence explique chaque réécriture de réconciliation. | blocker |
 | **G12** | `consistency` | Chaque ligne d'un `supersession-plan-{story}.md` a son nouvel ADR portant `**Supersedes:**`, et aucun modèle d'événements, diagramme ou contrat ne cite encore l'ADR remplacé comme source de vérité. | blocker |
 | **G14** | `consistency` | Un ADR `Status: Rejected` ne tient que si une story ou une force mesurable du lot a posé la question et que sa section Alternatives nomme l'option retenue. | blocker |
@@ -120,6 +120,8 @@ critère qui en interdit un.
 | **G9** | `fitness` | Chaque agrégat, contexte, adoption d'Event Sourcing ou Saga remonte à une story qui l'exige. | medium |
 | **G11** | `fitness` | Tout ADR adoptant CQRS, Event Sourcing, Saga, cohérence éventuelle, découpage de service ou ACL cite une force admissible et évalue l'option « faire sans ». | high |
 | **G15** | `fitness` | Aucun ADR ne ratifie un socle déjà imposé par un skill `clean-architecture-*` ou un test d'architecture. | high |
+| **G17** | `fitness` | Chaque ADR de la passe décide d'une frontière de couche, d'une frontière d'agrégat, d'un contexte borné, d'un pattern ajoutant de la complexité ou d'une préoccupation transverse, et pèse un vrai compromis ; un autre sujet est `ADR-INFLATION`, aucune alternative pesée est `NON-DECISION`. | high |
+| **G18** | `fitness` | Chaque ADR de la passe tient une décision au niveau décision : ni signature complète, ni chemin de fichier, ni valeurs d'enum, ni inventaire de Value Objects, ni arbre de routes, ni référence ticket, AC ou PRD au-delà de la story déclencheuse. | medium |
 | **F1** | `fitness` | Chaque attribut qualité que la story ou la recherche énonce a un élément de conception qui y répond. | high |
 
 **Contrôles du moteur.** Après chaque tentative de `solution-architect`, sans lentille
@@ -128,11 +130,15 @@ critère qui en interdit un.
 | Critère | Contrôle |
 | --- | --- |
 | G10 | un `consistency-matrix-<story>.md` dans le dossier de suivi, sa ligne `consistency-gate` à `PASS` |
+| docs-relied-on | la matrice a une ligne `docs-relied-on:` (chemins relatifs au dépôt séparés par des virgules, accents graves permis, séparateurs `/` ou `\`) qui liste au moins un fichier sous `docs/adr/`, `docs/architecture/`, `docs/domain/event-model/` ou `docs/features/`, et chaque chemin listé est un fichier régulier lisible de la copie de travail. Un chemin ne compte que depuis son début (pas ré-ancré depuis `mydocs/`, un chemin absolu ou `../docs/`), un chemin avec un segment `.` ou `..` n'est pas listé, un `:ligne`, `#ancre` ou point final est ôté, et un dossier ou tout autre fichier de `docs/` ne compte pas |
 | G14 | aucun ADR écrit par le run nommé `*-rejected.md`, `*-accepted.md`, `*-deprecated.md` ou `*-superseded.md` |
 | G2, G12 | chaque `**Supersedes:** ADR-MMM` d'un ADR écrit par le run a sa ligne dans le registre `docs/adr/supersessions.md` |
+| G2 | chaque ADR écrit par le run a sa ligne dans `docs/adr/decisions-index.md` |
+| G2 | un ADR de la branche de base ne change que ses lignes de statut et n'est jamais supprimé (`adr-lifecycle`) |
 
 Un manquement renvoie l'architecte avec une ligne par trace ; après sa dernière tentative, le
-run s'arrête avec `design-records`.
+run s'arrête avec `design-records`. La matrice de cohérence est aussi la sortie déclarée de DESIGN : quand
+elle manque, le run s'arrête avec `missing-outputs`.
 
 ## DISTILL {#distill}
 

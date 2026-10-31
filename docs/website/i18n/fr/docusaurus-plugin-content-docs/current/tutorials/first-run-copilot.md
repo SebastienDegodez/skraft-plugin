@@ -104,7 +104,8 @@ avec `<dossier du plugin skraft>` le dossier où Copilot a installé le plugin :
 $ node "<dossier du plugin skraft>/engine/drivers/cli/skraft.mjs" init
 ```
 
-Dans la suite, `skraft …` veut dire cette commande complète. Vous voyez :
+Dans la suite, `skraft …` veut dire cette commande complète, ou la commande `skraft` que
+[`skraft install`](../how-to/install-on-a-host.mdx#skraft-command) met en place. Vous voyez :
 
 ![Terminal : skraft init répond « skraft-config.json: web (javascript, web) »](/img/screenshots/shared/terminal-init.svg)
 
@@ -132,14 +133,15 @@ Ouvrez une session Copilot dans `shop` :
 $ copilot
 ```
 
-Tapez `/agent`, choisissez `skraft:skraft-orchestrator`, puis écrivez :
+Tapez la commande :
 
 ```text
-Lance le pipeline checkout pour l'issue 42, titre « Pay by card ».
+/skraft checkout #42 Pay by card
 ```
 
-L'agent lance le workflow dynamique `skraft-pipeline` avec `{ slug: "checkout", issue: 42, title:
-"Pay by card" }`. Le dépôt n'a pas de remote : le run démarre quand même, ses agents n'ont que le
+La commande lance le workflow dynamique `skraft-pipeline` avec `{ slug: "checkout", issue: 42, title:
+"Pay by card" }`. (Vous pouvez aussi taper `/agent`, choisir `skraft:skraft-orchestrator`, puis écrire :
+*Lance le pipeline checkout pour l'issue 42, titre « Pay by card ».* Il lance le même workflow.) Le dépôt n'a pas de remote : le run démarre quand même, ses agents n'ont que le
 numéro et le titre de l'issue.
 
 Avant toute phase, au premier run d'une copie de travail, Copilot pose une fois dans le chat :
@@ -203,6 +205,14 @@ Le canvas coche alors chaque phase :
 *Figure 5 — Un run terminé dans le canvas (dépôt scripté des tests d'intégration). Les étapes
 `kill_proposal` à `mutation_gates` restent grises : aucun mutant n'a survécu.*
 
+Son onglet **Journal** relit `events.jsonl` : la chaîne de hachage est-elle intacte, puis chaque étape
+enregistrée et chaque décision humaine, avec qui l'a confirmée.
+
+![Canvas skraft-pipeline, onglet Journal : la chaîne de hachage intacte, 62 lignes chaînées chacune à la précédente et signées ; puis chaque étape avec sa phase, son passage et son résultat, et la décision humaine adr-1 RATIFIED par host-confirmed](/img/screenshots/shared/pipeline-canvas-journal.png)
+
+*Figure 6 — L'onglet Journal du run terminé : `adr-1` a été ratifiée par la boîte de confirmation
+de Copilot elle-même (`host-confirmed`).*
+
 ## 8. Lire le rapport du run
 
 Dans le terminal, à la racine de `shop` :
@@ -213,7 +223,7 @@ $ skraft report
 
 ![Terminal : skraft report, un tableau d'une ligne par étape avec ses visites, tentatives, relances, temps, coût et résultat, une ligne Total, puis la question adr-1 répondue RATIFIED par host-confirmed](/img/screenshots/shared/terminal-report-done.svg)
 
-*Figure 6 — Le rapport d'un run terminé. Sur le dépôt scripté, les agents répondent aussitôt, d'où
+*Figure 7 — Le rapport d'un run terminé. Sur le dépôt scripté, les agents répondent aussitôt, d'où
 des temps nuls ; sous Copilot, la colonne Coût reste vide : Copilot compte en crédits.*
 
 La dernière table dit qui a répondu : `host-confirmed`, c'est-à-dire vous, dans la boîte de
@@ -222,8 +232,8 @@ la description de la pull request que votre run a produite.
 
 ## Ce que vous avez appris
 
-- sous Copilot CLI, l'agent `skraft:skraft-orchestrator` lance le workflow `skraft-pipeline`, et le
-  moteur conduit chaque phase ;
+- sous Copilot CLI, `/skraft <slug> [#issue] [titre]` (ou l'agent `skraft:skraft-orchestrator`) lance le
+  workflow `skraft-pipeline`, et le moteur conduit chaque phase ;
 - chaque décision vous est posée une seule fois, dans le chat ; votre réponse est journalisée
   `host-confirmed` ;
 - `/workflows` montre le journal du run, et le canvas `skraft-pipeline` le workflow et la question en

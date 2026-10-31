@@ -1,6 +1,6 @@
 import { stat } from 'node:fs/promises'
 import { basename, dirname, resolve } from 'node:path'
-import { AZ_NOT_FROM_INSTALLER } from '../code-host/az-code-host.mjs'
+import { AZ_NOT_FROM_INSTALLER } from '../code-host/az-cli.mjs'
 
 /**
  * Under Windows the Azure CLI is `az.cmd` (or a pip `az.bat`), which Node starts only through

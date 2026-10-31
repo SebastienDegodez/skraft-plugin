@@ -634,10 +634,15 @@ export class InMemoryCodeHost {
    *   it, the forge has every issue, titled `Issue <number>`, its body `Acceptance criteria of #<number>`.
    *   An issue is read only from a forge that is available (unavailable null) and not told to fail.
    *   link: the line the forge links a pull request to its story with, GitHub's unless given;
-   *   bodyLimit: the longest body the forge takes, GitHub's unless given.
+   *   bodyLimit: the longest body the forge takes, GitHub's unless given; takesRequestFile: whether
+   *   its client sends a JSON request file (az), false unless given.
    */
-  constructor({ unavailable = null, branch = 'checkout', defaultBranch = 'main', remotes = ['origin'], open = [], fails = {}, repository = { host: 'github.com', repository: 'acme/shop' }, issues, link = (issue, closes) => `${closes ? 'Closes' : 'Refs'} #${issue}`, bodyLimit = 60_000, pages = 'https://github.example.com/acme/shop' } = {}) {
+  constructor({ unavailable = null, branch = 'checkout', defaultBranch = 'main', remotes = ['origin'], open = [], fails = {}, repository = { host: 'github.com', repository: 'acme/shop' }, issues, link = (issue, closes) => `${closes ? 'Closes' : 'Refs'} #${issue}`, bodyLimit = 60_000, commentLimit = 60_000, takesRequestFile = false, pages = 'https://github.example.com/acme/shop' } = {}) {
     this.bodyLimit = bodyLimit
+    this.commentLimit = commentLimit
+    /** @type {Array<{ number: number, body: string, bodies: string[], edits: number, url: string, threadFile: string, commentFile: string }>} the comments kept on pull requests, in the order they were posted */
+    this.pullRequestComments = []
+    this.takesRequestFile = takesRequestFile
     /** where the forge's pages are */
     this.pages = pages
     this.issues = issues
@@ -703,7 +708,7 @@ export class InMemoryCodeHost {
     this.calls.push(`keep comment #${number}${url === null ? '' : ` ${url.slice(url.indexOf('#'))}`}`)
     if (this.fails.comment) return { ok: false, reason: this.fails.comment }
     const body = this.read(bodyFile)
-    const kept = this.comments.find((comment) => comment.url === url) ?? this.comments.findLast((comment) => comment.number === number && comment.body.includes(marker))
+    const kept = this.comments.find((comment) => comment.url === url) ?? this.comments.findLast((comment) => comment.number === number && comment.body.startsWith(marker))
     if (kept) {
       kept.body = body
       kept.bodies.push(body)
@@ -715,6 +720,19 @@ export class InMemoryCodeHost {
     this.comments.push(comment)
     return { ok: true, url: comment.url }
   }
+  async keepPullRequestComment({ number, marker, url, bodyFile, threadFile, commentFile }) {
+    this.calls.push(`keep pr comment #${number}${url === null ? '' : ` ${url.slice(url.indexOf('#'))}`}`)
+    if (this.fails.pullRequestComment) return { ok: false, reason: this.fails.pullRequestComment }
+    const body = this.read(bodyFile)
+    const kept = this.pullRequestComments.find((comment) => comment.url === url) ?? this.pullRequestComments.findLast((comment) => comment.number === number && comment.body.startsWith(marker))
+    if (kept) {
+      Object.assign(kept, { body, bodies: [...kept.bodies, body], edits: kept.edits + 1 })
+      return { ok: true, url: kept.url }
+    }
+    const comment = { number, body, bodies: [body], edits: 0, url: `${this.pages}/pull/${number}#details-${this.pullRequestComments.length + 1}`, threadFile, commentFile }
+    this.pullRequestComments.push(comment)
+    return { ok: true, url: comment.url }
+  }
 }
 
 /**
@@ -724,10 +742,13 @@ export class InMemoryCodeHost {
  */
 export class InMemoryPullRequests {
   /**
-   * @param {{ unavailable?: string | null, pullRequests?: object[], fails?: Record<string, string> }} [forge]
+   * @param {{ unavailable?: string | null, pullRequests?: object[], fails?: Record<string, string>, checkout?: (number: number) => string, takesRequestFile?: boolean }} [forge]
+   *   checkout: the command that checks a pull request out; takesRequestFile: whether a comment goes as JSON files, which the double ignores
    */
-  constructor({ unavailable = null, pullRequests = [], fails = {}, repository = { host: 'github.com', repository: 'acme/shop' }, pages = 'https://github.example.com/acme/shop' } = {}) {
+  constructor({ unavailable = null, pullRequests = [], fails = {}, repository = { host: 'github.com', repository: 'acme/shop' }, pages = 'https://github.example.com/acme/shop', checkout = (number) => `gh pr checkout ${number}`, takesRequestFile = false } = {}) {
     this.pages = pages
+    this.checkout = checkout
+    this.takesRequestFile = takesRequestFile
     this.missing = unavailable
     this.named = repository
     this.pullRequests = pullRequests
@@ -744,6 +765,7 @@ export class InMemoryPullRequests {
     return this.missing
   }
   async repository() { return this.named }
+  checkoutCommand(number) { return this.checkout(number) }
   async find(number) {
     this.calls.push(`find #${number}`)
     if (this.fails.read) return { ok: false, reason: this.fails.read }
@@ -945,4 +967,113 @@ const issueOn = (forge, number) => {
   const found = forge.issues === undefined ? { title: `Issue ${number}`, body: `Acceptance criteria of #${number}` } : forge.issues[number]
   if (found === 'pull-request') return { number, title: 'A pull request', html_url: `${forge.pages}/pull/${number}`, state: 'open' }
   return found ? { number, title: found.title, body: found.body, html_url: `${forge.pages}/issues/${number}`, state: 'open' } : null
+}
+
+/**
+ * The host's Azure DevOps MCP server (`ado`, @azure-devops/mcp) over work items it holds: its
+ * `wit_work_item` tool gets one or lists its comments, its `wit_work_item_comment_write` adds or
+ * updates one, as the signed-in user, the organization's pages its own. What each answers is the
+ * REST JSON as text, the shape skraft assumes (docs/v2/host-verification.md, not measured). Like
+ * 2.11.0 it rewrites `<`, `>` and `&` of a Markdown comment as HTML entities.
+ * `requests` lists each call (tool and arguments) in order, `calls` its `<server> <tool>`;
+ * `fails` gives, by tool or by `<tool>:<action>`, the reason it fails with (`mcp-refused`…), or `unreadable` for an
+ * answer that is no JSON; a tool it lacks answers `mcp-tool-missing`; `answers` replaces what a
+ * tool answers, given its arguments. `workItems` are the fields of each work item by id;
+ * `comments` the comments of the work items, which a test may remove, as a human deleting one;
+ * `pageSize` the most comments one listing answers before it gives a continuation token.
+ * `listed` counts how often the host listed its servers.
+ */
+export class InMemoryAzureMcp {
+  /** @param {{ servers?: string[], organization?: string, workItems?: Record<number, Record<string, unknown>>, pullRequests?: Record<number, Record<string, unknown>>, fails?: Record<string, string>, answers?: Record<string, (args: any, mcp: InMemoryAzureMcp) => unknown>, pageSize?: number }} [options]
+   *   pullRequests: the pull requests as the REST API answers them, by id; `threads` (below) their comment threads */
+  constructor({ servers = ['ado'], organization = 'https://dev.azure.com/acme', workItems = {}, pullRequests = {}, fails = {}, answers = {}, pageSize = 100 } = {}) {
+    this.names = servers
+    this.organization = organization
+    this.workItems = workItems
+    this.pullRequests = pullRequests
+    this.fails = fails
+    this.answers = answers
+    this.pageSize = pageSize
+    /** @type {Array<{ id: number, workItemId: number, project: string, text: string, texts: string[] }>} */
+    this.comments = []
+    /** @type {Array<{ id: number, pullRequestId: number, project?: string, status?: string, comments: Array<{ id: number, content: string, isDeleted?: boolean }> }>} the threads of the pull requests, in the order they were posted */
+    this.threads = []
+    this.threadsPosted = 0
+    /** @type {string[]} */
+    this.calls = []
+    /** @type {Array<{ tool: string, arguments: Record<string, unknown> }>} */
+    this.requests = []
+    this.listed = 0
+    this.posted = 0
+  }
+  async servers() {
+    this.listed += 1
+    return this.names
+  }
+  async call({ server, tool, arguments: args }) {
+    this.calls.push(`${server} ${tool}`)
+    this.requests.push({ tool, arguments: args })
+    const failure = this.fails[`${tool}:${args.action}`] ?? this.fails[tool]
+    if (failure === 'unreadable') return { ok: true, text: 'not JSON' }
+    if (failure) return { ok: false, reason: failure }
+    const run = this.answers[tool] ?? (AZURE_TOOLS[tool] && ((given) => AZURE_TOOLS[tool](this, given)))
+    if (!run) return { ok: false, reason: 'mcp-tool-missing' }
+    const answer = run(args, this)
+    return answer === null ? { ok: false, reason: 'mcp-failed' } : { ok: true, text: JSON.stringify(answer) }
+  }
+}
+
+/** @param {InMemoryAzureMcp} mcp @param {{ id: number, workItemId: number, project: string }} comment */
+const commentUrl = (mcp, { id, workItemId, project }) => `${mcp.organization}/${encodeURIComponent(project)}/_apis/wit/workItems/${workItemId}/comments/${id}`
+
+/** The comment as the REST API answers it. @param {InMemoryAzureMcp} mcp @param {InMemoryAzureMcp['comments'][number]} comment */
+const commentAnswer = (mcp, comment) => ({ id: comment.id, workItemId: comment.workItemId, text: comment.text, format: 'markdown', url: commentUrl(mcp, comment) })
+
+/** The thread as the tool answers it: whole with `fullResponse`, else as the server trims it, the id and content of each comment. @param {InMemoryAzureMcp['threads'][number]} thread @param {boolean} [full] */
+const threadAnswer = ({ pullRequestId, project, ...thread }, full = true) => (full ? thread : { id: thread.id, comments: thread.comments.map(({ id, content }) => ({ id, content })) })
+
+/** The repository tools of @azure-devops/mcp 2.11.0 (src/tools/repositories.ts) skraft calls, on the pull requests and threads of the double. */
+const AZURE_REPOSITORY_TOOLS = {
+  repo_repository: (mcp, { action, project, repositoryNameOrId }) => (action === 'get' ? { id: 'r-1', name: repositoryNameOrId, url: `${mcp.organization}/p-1/_apis/git/repositories/r-1`, webUrl: `${mcp.organization}/${encodeURIComponent(project)}/_git/${repositoryNameOrId}` } : null),
+  repo_pull_request: (mcp, { action, pullRequestId }) => (action === 'get' ? mcp.pullRequests[pullRequestId] ?? null : null),
+  repo_pull_request_thread: (mcp, { action, project, pullRequestId, top = 100, skip = 0, fullResponse }) => {
+    if (action !== 'list') return null
+    return mcp.threads.filter((thread) => thread.pullRequestId === pullRequestId && (thread.project ?? project) === project).sort((a, b) => a.id - b.id).slice(skip, skip + top).map((thread) => threadAnswer(thread, fullResponse === true))
+  },
+  repo_pull_request_thread_write: (mcp, { action, project, pullRequestId, threadId, commentId, content, status, fullResponse }) => {
+    if (action === 'create') {
+      mcp.threadsPosted += 1
+      const thread = { pullRequestId, project, id: 40 + mcp.threadsPosted, status, comments: [{ id: 1, content }] }
+      mcp.threads.push(thread)
+      return threadAnswer(thread)
+    }
+    const comment = mcp.threads.find((each) => each.pullRequestId === pullRequestId && each.id === threadId)?.comments.find((each) => each.id === commentId)
+    if (action !== 'update' || !comment) return null
+    Object.assign(comment, { content })
+    return fullResponse ? { id: comment.id, content } : `Comment ${commentId} successfully updated`
+  },
+}
+
+/** The tools of @azure-devops/mcp 2.11.0 skraft calls, each on the work items of the double. */
+const AZURE_TOOLS = {
+  ...AZURE_REPOSITORY_TOOLS,
+  wit_work_item: (mcp, { action, id, workItemId, project }) => {
+    if (action === 'get') return mcp.workItems[id] ? { id, url: `${mcp.organization}/_apis/wit/workItems/${id}`, fields: mcp.workItems[id] } : null
+    if (action !== 'list_comments') return null
+    const comments = mcp.comments.filter((comment) => comment.workItemId === workItemId && comment.project === project)
+    return { count: comments.length, comments: comments.slice(0, mcp.pageSize).map((comment) => commentAnswer(mcp, comment)), ...(comments.length > mcp.pageSize ? { continuationToken: 'more' } : {}) }
+  },
+  wit_work_item_comment_write: (mcp, { action, project, workItemId, commentId, text }) => {
+    const escaped = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    if (action === 'add') {
+      mcp.posted += 1
+      const comment = { id: 700 + mcp.posted, workItemId, project, text: escaped, texts: [escaped] }
+      mcp.comments.push(comment)
+      return commentAnswer(mcp, comment)
+    }
+    const comment = mcp.comments.find((each) => each.id === commentId && each.workItemId === workItemId)
+    if (action !== 'update' || !comment) return null
+    Object.assign(comment, { text: escaped, texts: [...comment.texts, escaped] })
+    return commentAnswer(mcp, comment)
+  },
 }

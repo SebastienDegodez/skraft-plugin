@@ -38,6 +38,7 @@ title: "Changelog"
 | alpha.16 | `skraft doctor` et le run montrent le modèle de chaque agent sous l'hôte qui le lance. |
 | alpha.16 | Le moteur ne cherche plus Docker : un test qui a besoin d'un conteneur échoue comme un autre. |
 | alpha.19 | La mutation tourne en dernier, une seule fois, sur le code que la revue DELIVER a approuvé. En échec, `kill_proposal` écrit une proposition par fichier de survivants sans toucher au code ; la question `mutation-plan` laisse le développeur choisir (`APPLY`, sa consigne, `STOP`) ; `kill_mutants` applique le choix, puis `mutation_gates` relance les gates avant une nouvelle mutation. |
+| prochaine | Règles des ADR dans le moteur : aucune version, `decision` d'une phrase, vocabulaire de statut fermé, ADR publiés modifiés seulement sur leurs lignes de statut, une ligne dans `decisions-index.md` pour chaque ADR écrit ; la revue DESIGN et la ratification ne reviennent qu'une fois (`max_visits` 1) ; gates de lentille G17 et G18. |
 
 ### Fin de run et pull requests {#v2-publish}
 

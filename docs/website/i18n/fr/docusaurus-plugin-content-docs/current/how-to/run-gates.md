@@ -15,8 +15,7 @@ faire de chaque échec.
   ([Configurer les composants](./configure-components.md)).
 - Un pipeline actif : `skraft init <slug>` ou `/skraft <slug>` (sinon refus
   `no-active-pipeline`).
-- Un terminal à la racine de la copie de travail ; `skraft` désigne
-  `node "<dossier du plugin>/engine/drivers/cli/skraft.mjs"`.
+- Un terminal à la racine de la copie de travail ; `skraft` est la commande que [`skraft install`](./install-on-a-host.mdx#skraft-command) met en place ; la ligne longue `node "<dossier du plugin>/engine/drivers/cli/skraft.mjs"` marche sans elle.
 
 ## 1. Lancer les gates des composants modifiés
 

@@ -1,4 +1,5 @@
 import { forgeOfRemote, forgeUnreachable } from '../../domain/config/forge.mjs'
+import { azureMcpFirst } from './azure-mcp.mjs'
 import { githubMcpFirst } from './github-mcp.mjs'
 
 /**
@@ -39,7 +40,13 @@ export const forgeAdapters = async ({ forges, sourceControl, mcpTools }, named) 
   const { forge } = await chosenForge({ sourceControl }, named)
   const adapters = forges[forge]
   if (adapters === undefined) return unreachable(forge)
-  return forge === 'github' && mcpTools !== undefined ? githubMcpFirst(adapters, mcpTools) : adapters
+  return mcpTools === undefined ? adapters : mcpFirst(forge, adapters, { mcpTools, sourceControl })
+}
+
+/** The adapters of the forge served first by the host's MCP server, when skraft knows one for that forge. @param {Forge} forge @param {ForgeAdapters} adapters @param {{ mcpTools: import('../ports/mcp-tools.mjs').McpTools, sourceControl: ForgeDeps['sourceControl'] }} host */
+const mcpFirst = (forge, adapters, { mcpTools, sourceControl }) => {
+  if (forge === 'github') return githubMcpFirst(adapters, mcpTools)
+  return forge === 'azure-devops' ? azureMcpFirst(adapters, mcpTools, sourceControl) : adapters
 }
 
 /**
@@ -68,12 +75,21 @@ const nowhereCodeHost = (reason) => Object.freeze({
   ...nowhere(reason),
   // Stryker disable next-line all: no run reaches them, every caller stops on unavailable() first
   remotes: async () => [], currentBranch: async () => null, defaultBranch: async () => null,
-  push: refusal(reason), findPullRequest: refusal(reason), create: refusal(reason), edit: refusal(reason), keepIssueComment: refusal(reason),
+  push: refusal(reason), findPullRequest: refusal(reason), create: refusal(reason), edit: refusal(reason), keepIssueComment: refusal(reason), keepPullRequestComment: refusal(reason),
   issue: async () => ({ read: /** @type {const} */ ('failed'), reason }),
   storyLink: () => null,
   // Stryker disable next-line all: a forge skraft cannot reach opens no pull request, whose body would be cut for it
   bodyLimit: Number.POSITIVE_INFINITY,
+  // Stryker disable next-line all: a forge skraft cannot reach opens no pull request, whose details would be split for it
+  commentLimit: Number.POSITIVE_INFINITY,
+  // Stryker disable next-line all: a forge skraft cannot reach keeps no comment
+  takesRequestFile: false,
 })
 
 /** @param {string} reason @returns {import('../ports/pull-requests.mjs').PullRequests} */
-const nowherePullRequests = (reason) => Object.freeze({ ...nowhere(reason), find: refusal(reason), keepComment: refusal(reason) })
+const nowherePullRequests = (reason) => Object.freeze({
+  ...nowhere(reason),
+  // Stryker disable next-line ArrowFunction,StringLiteral,BooleanLiteral: no run reaches the checkout command nor the request file of a forge skraft cannot reach, every caller stops on unavailable() first
+  checkoutCommand: () => '', takesRequestFile: false,
+  find: refusal(reason), keepComment: refusal(reason),
+})

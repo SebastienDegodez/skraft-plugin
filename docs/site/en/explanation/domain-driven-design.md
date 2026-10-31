@@ -64,9 +64,10 @@ makes this classification the starting point of design choices
 ([Khononov, 2021]({{ cites }}#cite-khononov-lddd-2021)); skraft uses it to measure how much DDD to
 apply: a rich model for the Core, standard patterns elsewhere.
 
-The `solution-architect` writes all of this in `context-map.md`, the output the engine expects
-from it in DESIGN (`details/{date}/context-map.md`). Splitting or merging a context needs an ADR,
-and the `fitness` lens refuses a context no story asks for (G9).
+The `solution-architect` writes all of this in the repository's context map,
+`docs/architecture/context-map.md`: one file, completed story after story, that the next runs read
+before designing. Splitting or merging a context needs an ADR, and the `fitness` lens refuses a
+context no story asks for (G9).
 
 ## The context map: naming every relationship
 
@@ -117,9 +118,10 @@ for them.
 ```mermaid
 flowchart TB
     S["Refined stories<br/>DISCUSS"] --> SA
+    D["docs/ of the repository<br/>read first"] --> SA
     subgraph SA["DESIGN — solution-architect"]
         direction LR
-        EM["event-model-{story}.md<br/>Event Modeling"] --> CM["context-map.md<br/>strategic DDD"] --> TD["diagrams-{story}.md<br/>tactical DDD"] --> CT["contracts-{story}.md"] --> MX["ADRs +<br/>consistency matrix"]
+        EM["docs/domain/event-model/{context}.md<br/>Event Modeling"] --> CM["docs/architecture/context-map.md<br/>strategic DDD"] --> TD["docs/architecture/{context}.md<br/>tactical DDD"] --> CT["contracts-{story}.md"] --> MX["ADRs +<br/>consistency matrix"]
     end
     SA --> RV["DESIGN review<br/>consistency · architecture-compliance · fitness"]
     RV --> H["Human ADR ratification"] --> DI["DISTILL"]
@@ -127,7 +129,9 @@ flowchart TB
 
 *Figure 2 — The path of the DESIGN artefacts, in the order the `solution-architect` writes them
 (`com.github.copilot/agents/solution-architect.agent.md`) and the workflow has them reviewed then
-ratified (`pipeline.skraft.dot`).*
+ratified (`pipeline.skraft.dot`). The event model, the context map, the tactical design and the
+ADRs go under `docs/` of the repository; the contracts and the consistency matrix stay in the
+run's tracking folder.*
 
 **Event Modeling first.** Before drawing aggregates, the `solution-architect` models behaviour on
 a timeline: a command (an intent, which may be rejected), an event (a past fact), a read model
@@ -136,7 +140,8 @@ a command, its events and its read model a **slice**: the smallest unit of deliv
 `fitness` lens requires every story to have at least one command or query (G7) and every command
 to have an event for its success (G8).
 
-**Then Evans's tactical building blocks**, in `diagrams-{story}.md`:
+**Then Evans's tactical building blocks**, in the tactical design of each context,
+`docs/architecture/{bounded-context}.md`:
 
 - the **aggregate** is a consistency boundary: one root, invariants guaranteed inside, never
   across two aggregates ([Evans, 2003]({{ cites }}#cite-evans-ddd-2003)). Vaughn Vernon draws
@@ -160,6 +165,16 @@ force — read/write asymmetry, an audit trail a story asks for, a cross-service
 measured contention hotspot, a regulatory separation (`fitness` lens, G11). Before each attempt of
 the architect, the engine searches the code for the signatures of a CQRS bus, an event store or a
 saga (`structural-scan.json`) so that a commitment already present does not stay without an ADR.
+
+## A model that outlives the story
+
+The event model, the context map and the tactical design describe the domain, not one story. The
+architect writes them under `docs/` of the repository, on the story's branch, and the pull request
+shows them next to the code. The next run reads them before anything else and completes them
+rather than starting again; when they already cover its story, the architect says so, cites them
+and moves on. The scenarios DISTILL writes follow the same path, under `docs/features/`. The
+contracts and the consistency matrix belong to one story and stay in the run's tracking folder.
+The full list: [Durable documentation]({{ "/en/reference/run-journal" | relative_url }}#durable-docs).
 
 ## Consistency between artefacts
 

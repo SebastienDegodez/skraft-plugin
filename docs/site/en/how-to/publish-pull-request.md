@@ -16,7 +16,7 @@ description rendered from the journal.
 - A repository with a GitHub, GitHub Enterprise or Azure DevOps remote (`origin`, else the first remote).
 - `gh` installed (`az`, the Azure CLI, on Azure DevOps: see [On Azure DevOps](#azure-devops)); Git and ssh able to push without asking for a password.
 - Work on a branch of your own, not on the base branch.
-- `skraft` stands for `node "<plugin folder>/engine/drivers/cli/skraft.mjs"`.
+- `skraft` is the command that [`skraft install`]({{ "/en/how-to/install-on-a-host" | relative_url }}#skraft-command) sets up; the long line `node "<plugin folder>/engine/drivers/cli/skraft.mjs"` works without it.
 
 ## 1. Sign `gh` in to the remote's forge
 
@@ -25,7 +25,7 @@ gh auth login --hostname github.com
 ```
 
 Replace `github.com` with your GitHub Enterprise host if needed. skraft runs `gh` with
-`--repo <host>/<owner>/<repo>` from the remote's URL. When the host has a GitHub MCP server connected, the engine goes through it first for the issue and the pull request and falls back to `gh` otherwise ([GitHub MCP server first]({{ "/en/reference/skraft-config" | relative_url }}#github-mcp-server-first-gh-as-fallback)); the run's journal says which way served each operation.
+`--repo <host>/<owner>/<repo>` from the remote's URL. When the host has a GitHub MCP server connected, the engine goes through it first for the issue and the pull request and falls back to `gh` when the server is absent or fails, never when you or the host refuse a tool ([GitHub MCP server first]({{ "/en/reference/skraft-config" | relative_url }}#github-mcp-server-first-gh-as-fallback)); the run's journal says which way served each operation.
 
 ## 2. Give the consent
 
@@ -58,7 +58,7 @@ request, on the run's base (`baseBranch`, `--base`, else `main`). A pull request
 the branch is updated.
 
 Result: the notification `skraft <slug>: done — PUBLISH closed`, and the pull request on the
-forge, starting with `Refs #<issue>` (`Closes #<issue>` when it targets the default branch). A body past what the forge takes (60,000 characters on GitHub, 4,000 on Azure DevOps) has its longest sections cut with a mark; `pull-request.md` keeps it whole.
+forge, starting with `Refs #<issue>` (`Closes #<issue>` when it targets the default branch). A body past what the forge takes (60,000 characters on GitHub, 4,000 on Azure DevOps) keeps what decides and sends the folded sections to a kept comment; `pull-request.md` keeps the description whole.
 
 ### What the description holds
 
@@ -66,7 +66,11 @@ The description starts with `Refs #<issue>`; `Closes #<issue>` only when the pul
 
 - **Tests** shows the test plan DISTILL wrote (`details/<date>/test-plan-<slug>.md`); **Consistency matrix** the matrices DESIGN wrote (`details/<date>/consistency-matrix-<story>.md`, all those of the latest attempt that wrote any). A file the tracking folder does not hold, or holds empty, is said so in a fixed text.
 - These files are agent-written, so they are made inert before they enter the description: fenced code blocks are shown as written; everywhere else, code spans included, HTML comments and tags are dropped, `#` to `###` headings are lowered to level 4, and each closing keyword with its reference, each `@mention` and each bare `#12` goes in a code span. Only a fence opened at column 0 is a code block; a code block left open is dropped with what follows it.
-- On GitHub everything stays in the description. Past the forge's limit (Azure DevOps: 4,000 characters) the longest folded sections are cut first.
+- Below the forge's limit everything stays in the description, on GitHub up to 60,000 characters and on Azure DevOps up to 4,000, and no comment is written. Past it, the description keeps what decides (What changes, Why, Decisions applied, Out of scope, and every section open on a failed gate or a finding for a human) and ends with a fixed line that points to the comments. The other sections go to a comment of the pull request titled `skraft · run details` (`skraft · détails du run` for a French story: the engine tells French from English by the title and body of the issue or work item it kept, English when it cannot tell). Sections are never split across comments: when one comment is not enough (60,000 characters on GitHub, 140,000 on Azure DevOps, not measured), the details go to parts titled `skraft · run details 1/2`, `2/2`, and a part no longer needed is emptied, never deleted. Each part is rewritten in place on the next publication, and written only when its text changed. A section longer than a part is cut with a mark; what decides is cut the same way only when it alone is past the description's limit.
+- On GitHub the comment is an issue comment of the pull request. On Azure DevOps it is a thread of the pull request, posted `Closed` so that a branch policy on comment resolution is not blocked, through the host's Azure DevOps MCP server first (`repo_repository`, `repo_pull_request_thread`, `repo_pull_request_thread_write`), then `az devops invoke`. A read or a write the host refuses is final, on both forges: it is never retried with `gh` or `az`, and the run says so.
+- A comment is found again by the marker that opens it, never by a marker quoted further in: a reply that quotes the marker is not rewritten.
+- When the comment cannot be kept, the pull request is still published: the run says so, `pull-request.md` holds the whole description, and `skraft publish` keeps the details once the cause is fixed.
+- A part whose text did not change is not written again, and skraft does not ask the forge whether its comment is still there: a comment deleted by hand is posted again at the next change of the details.
 
 ## 4. Publish later with `skraft publish`
 
@@ -169,12 +173,16 @@ using the organization, project and repository the remote's URL names.
    personal access token.
 
 The body goes through a file (`--description=@<file>`), the pull request is linked to the story's
-work item (`--work-items`) and its body opens with `AB#<work item>`. A work item Azure DevOps
-refuses to link does not keep the pull request from opening: it opens without the link, and the
+work item (`--work-items`) and its body opens with `Fixes #<work item>` toward the default
+branch, which completes the work item when the pull request merges, `#<work item>` otherwise.
+Only Azure DevOps Services is reached: `az` does not manage Azure DevOps Server. A work item
+Azure DevOps refuses to link does not keep the pull request from opening: it opens without the link, and the
 run's reason says so. Under Windows, `az` runs only from the Azure CLI installer (MSI or winget):
 skraft starts its Python itself, so that no shell reads the title, and refuses any other `az.cmd`
-or `az.bat` (pip, scoop). skraft does not read Azure DevOps work items or review its pull requests
-yet ([Forge]({{ "/en/reference/skraft-config" | relative_url }}#forge)). `skraft doctor` reports
+or `az.bat` (pip, scoop). The run reads the story from its Azure Boards work item and keeps its
+progress in one comment on it, through the host's Azure DevOps MCP server first, `az` as the
+fallback, never when you or the host refuse a tool ([Forge]({{ "/en/reference/skraft-config" | relative_url }}#azure-devops-mcp-server-first-az-as-fallback));
+skraft does not review its pull requests yet. `skraft doctor` reports
 the forge a run uses on its `forge` line.
 
 ## Troubleshooting

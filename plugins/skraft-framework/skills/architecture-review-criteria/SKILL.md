@@ -25,6 +25,7 @@ each one.
 - **Not yours to report** — the engine already checks: a consistency matrix exists per story and
   reads `consistency-gate: PASS` (G10); no ADR file name carries a verdict (G14); every `**Supersedes:**` line of a new ADR has its row
   in `docs/adr/supersessions.md` (G2, G12).
+  The engine also refuses version pins, a `decision` longer than one sentence, a status outside the closed set, a missing index row and an in-place edit of a published ADR: do not report them.
 
 ## Gate checks
 
@@ -61,3 +62,7 @@ registration, the repository pattern as such. Suspect titles: `Apply CQS`, `Use 
 architecture`, `Use repositories`, `Register handlers via DI`. An ADR on a deviation from a
 baseline, or an addition on top of it (CQRS with a bus, Event Sourcing, a custom DI strategy), is
 valid.
+
+**G17 — eligibility.** A library ADR is eligible only through the constraint it imposes (layer boundary, data-loading model); a body about the library's usage is G17.
+
+**G18 — decision level.** A line that would change when the code is refactored without changing the decision belongs in the contracts or diagrams.

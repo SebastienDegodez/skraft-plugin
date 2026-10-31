@@ -40,16 +40,16 @@ test('a rejection decided offline relaunches the architect on the next run, and 
 })
 
 test('rejected as often as the REJECTED edge allows, the run stops at its max_visits with the last reason', async () => {
-  const answers = [...[1, 2, 3, 4].map((round) => ({ answer: 'REJECTED', reason: `round ${round}` })), { answer: 'STOP' }]
-  const host = scripted({ answers }, (it) => [agent()(it), ...[1, 2, 3, 4].map((round) => architect({ [ADR_1]: adrText({ title: `Card payment ${round}` }) })(it))])
+  const answers = [...[1, 2].map((round) => ({ answer: 'REJECTED', reason: `round ${round}` })), { answer: 'STOP' }]
+  const host = scripted({ answers }, (it) => [agent()(it), ...[1, 2].map((round) => architect({ [ADR_1]: adrText({ title: `Card payment ${round}` }) })(it))])
 
   const outcome = await host.start()
 
   assert.deepEqual(outcome, {
     status: 'blocked', slug: SLUG, phase: 'DESIGN', code: 'loop-ceiling',
-    reason: `adr -> design was already taken 3 times, its max_visits; ${ADR_1}: round 4`,
+    reason: `adr -> design was already taken 1 times, its max_visits; ${ADR_1}: round 2`,
   })
-  assert.equal(host.agentRunner.dispatches.length, 5)
+  assert.equal(host.agentRunner.dispatches.length, 3)
 })
 
 test('a published ADR the human rejects is not touched by the engine', async () => {

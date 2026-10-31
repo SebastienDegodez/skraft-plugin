@@ -20,7 +20,7 @@ This file provides the blank ADR template for direct copy-paste and a filled exa
 
 ## Decision
 
-{State the decision clearly and directly. One paragraph. Start with "We will..." or "We have decided to...". Do not explain why here — that belongs in Context and Alternatives Rejected.}
+{State the decision clearly and directly. One paragraph. Start with "We will..." or "We have decided to...". Do not explain why here — that belongs in Context and Alternatives Rejected. Name technologies or families, never a version.}
 
 ## Consequences
 

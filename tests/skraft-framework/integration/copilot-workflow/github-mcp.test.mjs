@@ -77,12 +77,22 @@ test('a review in Copilot reads its pull request and keeps its comment through t
 })
 
 const FALLBACKS = {
-  refused: (repo) => githubServer(repo.forge.state().pull, { answer: () => ({ resultType: 'rejected', textResultForLlm: 'The user rejected this tool call.' }) }),
   failed: (repo) => githubServer(repo.forge.state().pull, { answer: () => ({ resultType: 'failure', textResultForLlm: 'boom: secret-token' }) }),
   unlisted: (repo) => githubServer(repo.forge.state().pull, { list: async () => { throw new Error('MCP server "github-mcp-server" is not connected') } }),
   failing: (repo) => githubServer(repo.forge.state().pull, { list: async () => ({ servers: [{ name: SERVER, status: 'failed' }] }) }),
   thrown: (repo) => githubServer(repo.forge.state().pull, { answer: () => { throw new Error('secret-token') } }),
 }
+
+test('a GitHub MCP tool the user rejects is refused for good: the review stops with a fixed reason, gh is asked nothing, and no host text reaches the outcome', async (t) => {
+  const { repo, host } = onGithub(t, (forgeRepo) => githubServer(forgeRepo.forge.state().pull, { answer: () => ({ resultType: 'rejected', textResultForLlm: 'The user rejected this tool call: secret-token' }) }))
+  const { ctx, logs } = simulatedContext({ args: { pr: 12, publish: true }, otherwise: actsAs(reviewLlm()) })
+
+  const outcome = await runSkraftReviewWorkflow(ctx, host)
+
+  assert.deepEqual([outcome.status, outcome.code, outcome.reason], ['stopped', 'pr-unreadable', "the host refused the GitHub MCP server's pull_request_read, so skraft read nothing from GitHub and did not ask gh instead; allow it, or run again where it is allowed"])
+  assert.deepEqual([ghOnForge(repo), repo.forge.state().comments.length], [[], 0])
+  assert.ok(!JSON.stringify([outcome, logs]).includes('secret-token'))
+})
 
 for (const [name, serverOf] of Object.entries(FALLBACKS)) {
   test(`a GitHub MCP server that is ${name}: the review goes to gh, which keeps the comment, and no host text reaches the outcome`, async (t) => {

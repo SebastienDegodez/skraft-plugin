@@ -20,6 +20,7 @@ Why an engine and drivers, and the Copilot driver contract:
 | Node | 22 or later | the engine, the `skraft` command line, the Copilot extension; `skraft doctor` checks it |
 | Git | — | each component's base, commits, replays of red commits |
 | `gh` | signed in to the repository's host | only to read the story's issue (`--issue`), open the pull request, comment on the issue, `skraft review --pr`; on `github` the host's GitHub MCP server, when connected, serves these first and `gh` is the fallback (the `skraft` CLI and `skraft next` always use `gh`); see [Forge]({{ "/en/reference/skraft-config" | relative_url }}#forge) |
+| `az` | signed in to the organization, with its `azure-devops` extension | on Azure DevOps only, to read the story's work item (`--issue`), keep the run's comment on it, open the pull request, and review a pull request (`skraft review --pr`: read it, keep the review's thread); the host's Azure DevOps MCP server (`ado`), when connected, serves the work item, its comment and the review of a pull request first and `az` is the fallback (the `skraft` CLI and `skraft next` always use `az`); see [Forge]({{ "/en/reference/skraft-config" | relative_url }}#azure-devops-mcp-server-first-az-as-fallback) |
 | Copilot CLI | — | Copilot CLI; under VS Code, the SDK driver (`skraft-run.mjs`) starts it headless |
 
 ## Install {#install}
@@ -58,8 +59,8 @@ Use cases each driver calls:
 | Host | Start or resume a run | Answer a question | Follow the run |
 | --- | --- | --- | --- |
 | Claude Code | `/skraft <slug> [#issue] [title]`, or the `skraft-orchestrator` agent | the dialog, the pane's buttons, or `/skraft decide <answer>` | the Skraft pane, `/skraft` |
-| Copilot CLI | the `skraft:skraft-orchestrator` agent, which runs the `skraft-pipeline` workflow | Copilot's dialog in the chat; else the `skraft_decide` tool or `skraft decide` in a terminal | the `skraft-pipeline` canvas, the `/workflows` log, `skraft status` |
-| VS Code | `node "<plugin folder>/engine/drivers/copilot-sdk/skraft-run.mjs" <slug>`; without the Copilot SDK, the `skraft-orchestrator` agent, which conducts `skraft next` / `skraft record` | `skraft decide` in a terminal | `skraft status`, `WORKFLOW.md` |
+| Copilot CLI | `/skraft <slug> [#issue] [title…]` ([the command](#skraft-command)), or the `skraft:skraft-orchestrator` agent; both run the `skraft-pipeline` workflow | Copilot's dialog in the chat; else the `skraft_decide` tool or `skraft decide` in a terminal | the `skraft-pipeline` canvas, the `/workflows` log, `skraft status` |
+| VS Code | `/skraft` in the chat says what to type but starts no run from there; `node "<plugin folder>/engine/drivers/copilot-sdk/skraft-run.mjs" <slug>`; without the Copilot SDK, the `skraft-orchestrator` agent, which conducts `skraft next` / `skraft record` | `skraft decide` in a terminal | `skraft status`, `WORKFLOW.md` |
 
 Without a slug, the run resumes the working copy's active pipeline. One session drives a
 pipeline at a time: a second one is refused (`pipeline-locked`) while the first holds the run's
@@ -152,6 +153,54 @@ USD, approximate.
 The `com.github.copilot/extensions/skraft-pipeline/` extension registers the `skraft-pipeline`
 and `skraft-review` workflows, the `skraft_decide` tool and the `skraft-pipeline` canvas. The
 working directory is the session's, read again when a run starts and on each tool call.
+
+### `/skraft` command {#skraft-command}
+
+The `skraft` plugin ships `com.github.copilot/commands/skraft.md`, which gives Copilot the syntax of
+`/skraft` in Claude Code. Claude Code keeps the mod's `/skraft`: the plugin has no `commands/` folder
+for it. The command prose is not verified by Vally.
+
+**Name.** Measured by the host probe on Copilot CLI 1.0.105, in the SDK's command registry (the
+interactive menu was not read): a plugin command named like its plugin is exposed without a prefix,
+any other as `<plugin>:<command>`. The manifest of `skraft` is named `skraft`, so the command is
+`/skraft`; `skraft-refine` of `skraft-backlog` is `/skraft-backlog:skraft-refine`. With both plugins
+installed, each is listed once and none masks the other. The text typed after the command reaches
+the prompt, appended at its end.
+
+The first word picks the route. A route runs through Copilot only when the session offers the
+`skraft-pipeline` and `skraft-review` workflows; otherwise the command starts no run, no review and
+no agent, and says what to type.
+
+| Typed | With the workflows | Without them |
+| --- | --- | --- |
+| `/skraft`, `/skraft status`, `/skraft help` | opens the `skraft-pipeline` canvas on its Run tab; starts and resumes nothing | tells you to type `skraft status` |
+| `/skraft <slug> [#issue] [title…] [--base <ref>] [--from-artifacts]` | runs `skraft-pipeline` with `{ slug, issue, title, base, fromArtifacts }`, and relays its status, code and reason | starts nothing: gives the `skraft-run.mjs` line to type, or tells you to select the `Skraft - Orchestrator` agent |
+| `/skraft decide [<key>] <answer> [reason…]` | Copilot's dialog asks the question again; the typed answer is never recorded | tells you to type `skraft decide [<key>] <answer> [--reason "<reason>"]` |
+| `/skraft review <number> [--publish]` | runs `skraft-review` with `pr` and `publish` | tells you to type `skraft review --pr <number> [--publish]` |
+| `/skraft backlog [criteria…]` | hands over to the backlog agents (below) | same |
+
+Examples, the same as in Claude Code:
+
+```text
+/skraft paiement #42 Paiement par carte
+/skraft paiement --base develop
+/skraft paiement --from-artifacts
+```
+
+Two intended differences from Claude Code. `decide` records nothing from the typed words: under
+Copilot a human decision is recorded only after the host's dialog returns it. `backlog` is a
+reserved word, unless a pipeline named `backlog` already exists (`.copilot-tracking/skraft-plans/backlog/`): then
+`/skraft backlog …` takes the Run route, resumes or starts that pipeline, and says that for the backlog route you
+select `Skraft - Backlog Discoverer` as the chat's agent directly.
+
+`/skraft backlog [criteria…]` needs the optional `skraft-backlog` plugin; without it the command says so and
+gives `copilot plugin install skraft-backlog@skraft`, and every other route still works. With it, the command starts no
+agent: you select `Skraft - Backlog Discoverer` as the chat's agent and give it the criteria, then `Skraft - Backlog Planner` to
+refine the issue you choose, then `/skraft <slug> --from-artifacts` develops the story. Each step waits for you;
+nothing moves to development by itself.
+
+There is no `story` or `resume` subcommand, and no `--issue` or `--title` option in the chat. A typed `#42` alone is passed as a slug and the engine
+refuses it.
 
 ### `skraft-pipeline` workflow {#skraft-pipeline}
 
@@ -284,7 +333,9 @@ costs the loop cannot know. Synopsis, outputs and codes:
 | Question put in the host | yes: dialog and pane buttons | yes: dialog in the chat; refused in `autopilot` or without a dialog | no: `skraft decide` | no: `skraft decide` |
 | `by` journaled for an answer | `host` (dialog, button), `decide` (`/skraft decide`) | `host-confirmed` | `cli-tty` | `cli-tty` |
 | Run view | Skraft pane | `skraft-pipeline` canvas (read-only) | terminal | `skraft status`, `WORKFLOW.md` |
-| Review a pull request | `/skraft review <number>` | `skraft-review` workflow | `skraft review --pr` (loop) | `skraft review --pr` (loop) |
+| Review a pull request | `/skraft review <number>` | `/skraft review <number>`, or the `skraft-review` workflow | `skraft review --pr` (loop) | `skraft review --pr` (loop) |
+| `/skraft` command available | yes (the mod) | yes, measured as `/skraft` in the SDK registry (CLI 1.0.105; menu not read) | wired, not measured under VS Code | wired, not measured under VS Code |
+| Engineering run available | yes | yes | wired, tested on a simulated host, not yet run for real (#222) | wired, tested on a simulated host, not yet run for real (#222) |
 
 ## See also {#see-also}
 

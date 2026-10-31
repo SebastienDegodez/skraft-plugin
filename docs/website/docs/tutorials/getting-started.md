@@ -114,7 +114,8 @@ find ~/.claude/plugins -path '*engine/drivers/cli/skraft.mjs'
 
 The printed line is the script's full path; replace `<skraft plugin folder>` with what comes before
 `/engine/`. From here
-on, `skraft …` means that full command.
+on, `skraft …` means that full command, or the `skraft` command that
+[`skraft install`](../how-to/install-on-a-host.mdx#skraft-command) sets up.
 
 `skraft init` looks for the projects of the repository and writes one **component** per project: a
 part of the repository with its root, its stack, its paths and its commands. You see:
@@ -230,9 +231,11 @@ checkout: solution-researcher, attempt 1
 `solution-researcher` fills the research document the engine pre-created:
 `.copilot-tracking/skraft-plans/checkout/research/<YYYY-MM-DD>/checkout-research.md`.
 
-`solution-architect` then designs the story: its documents go under
-`.copilot-tracking/skraft-plans/checkout/details/<YYYY-MM-DD>/`, its ADRs under `docs/adr/`. Three
-lenses review the design (consistency, architecture-compliance, fitness).
+`solution-architect` then designs the story: the context map, the tactical design and the event
+model go under `docs/architecture/` and `docs/domain/event-model/`, its ADRs under `docs/adr/`; the
+contracts and the consistency matrix go under
+`.copilot-tracking/skraft-plans/checkout/details/<YYYY-MM-DD>/`. Three lenses review the design
+(consistency, architecture-compliance, fitness).
 
 When the design proposes an ADR, a dialog titled **ADR** asks:
 
@@ -245,7 +248,7 @@ itself: `git log --oneline -1 -- docs/adr` shows `docs(adr): ratify ADR-001`.
 
 ## 8. DISTILL and DELIVER
 
-`acceptance-designer` writes the scenarios and the test plan
+`acceptance-designer` writes the scenarios (under `docs/features/`) and the test plan
 (`details/<YYYY-MM-DD>/test-plan-checkout.md`) and commits the failing acceptance tests. Four
 lenses review it (coverage, business-alignment, testability, boundary-enforcement).
 

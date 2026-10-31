@@ -2,7 +2,7 @@
 layout: doc
 lang: en
 title: "Tracking folder and journal"
-description: "The .copilot-tracking/skraft-plans/ folder: layout, artifacts by phase, active pipeline, the hash-chained, signed events.jsonl journal and each of its events, questions to a human, and every status and code returned."
+description: "The .copilot-tracking/skraft-plans/ folder: layout, artifacts by phase, the durable documentation written under docs/, active pipeline, the hash-chained, signed events.jsonl journal and each of its events, questions to a human, and every status and code returned."
 persona: software-engineer
 ---
 
@@ -28,7 +28,6 @@ The tracking folder lives **in the working copy that starts the run**:
     ├── plans/<YYYY-MM-DD>/                         the story's issue, DISCUSS stories
     ├── research/<YYYY-MM-DD>/<slug>-research.md   research document
     ├── details/<YYYY-MM-DD>/                       DESIGN, DISTILL, PUBLISH documents
-    ├── features/                                  Gherkin scenarios
     ├── changes/<YYYY-MM-DD>/change-log.md         DELIVER change log
     ├── proposals/<node>-<visit>-g<n>.md            proposal for one file's surviving mutants
     ├── results/
@@ -38,7 +37,9 @@ The tracking folder lives **in the working copy that starts the run**:
     ├── reviews/<node>-<visit>/                    what the lenses of one review pass read
     │   ├── changes.patch                          changes since the base of the run
     │   ├── changed-files.txt                      paths those changes touch
-    │   ├── code.patch, code-files.txt             the same for a blind lens, without docs/adr
+    │   ├── code.patch, code-files.txt             the same for a blind lens, without docs/adr nor the durable documentation
+    │   ├── design.patch, design-files.txt         the same for `fitness`: the design documents only (written when the review has that lens)
+    │   ├── features.patch, features-files.txt     the same for `business-alignment`: any `docs/features/` folder only (written when the review has that lens)
     │   ├── context.md                             story, project rules, who wrote which document
     │   ├── components.json                        stack, mocking strategy, contract testing
     │   └── verdict.yaml                           the verdict of the pass, written by the engine
@@ -79,8 +80,9 @@ pipeline = one folder.
 
 ## Artifacts by phase {#artifacts}
 
-A phase's documents go in a subfolder dated `YYYY-MM-DD`; the engine gives the agent the path
-of each expected output, and pre-creates it when it has a template. Detail by phase:
+A phase's documents go in a subfolder dated `YYYY-MM-DD`, or under `docs/` of the repository for
+the [durable documentation](#durable-docs); the engine gives the agent the path of each expected
+output, and pre-creates it when it has a template. Detail by phase:
 [Phases]({{ "/en/reference/phases" | relative_url }}).
 
 | Phase | Artifact | Path |
@@ -88,10 +90,11 @@ of each expected output, and pre-creates it when it has a template. Detail by ph
 | DISCOVER (skraft-backlog) | triage report, sprint proposal | `research/{date}/triage-{date}.md`, `research/{date}/sprint-proposal.md` |
 | DISCUSS (skraft-backlog) | stories, acceptance-criteria drafts | `plans/{date}/stories-{milestone}.md`, `plans/{date}/ac-draft-{story}.md` |
 | RESEARCH | research document | `research/{date}/{slug}-research.md` |
-| DESIGN | context map, event model, diagrams, contracts, consistency matrix, supersession plan | `details/{date}/context-map.md`, `event-model-{story}.md`, `diagrams-{story}.md`, `contracts-{story}.md`, `consistency-matrix-{story}.md`, `supersession-plan-{story}.md`; `details/{date}/structural-scan.json` (written by the engine) |
+| DESIGN | consistency matrix, contracts, supersession plan | `details/{date}/consistency-matrix-{slug}.md`, `contracts-{story}.md`, `supersession-plan-{story}.md`; `details/{date}/structural-scan.json` (written by the engine) |
+| DESIGN | context map, tactical design, event model (in the repository, outside the tracking folder) | `docs/architecture/context-map.md`, `docs/architecture/{bounded-context}.md`, `docs/domain/event-model/{bounded-context}.md` |
 | DESIGN | ADRs (in the repository, outside the tracking folder) | `docs/adr/adr-{nnn}-{subject}.md`, `docs/adr/decisions-index.md`, `docs/adr/supersessions.md` |
 | DISTILL | test plan, implementation plan | `details/{date}/test-plan-{slug}.md`, `details/{date}/impl-plan-{story}.md` |
-| DISTILL | executable Gherkin scenarios | `features/{context}-{feature}.feature` |
+| DISTILL | Gherkin scenarios, not executable (in the repository, outside the tracking folder) | `docs/features/{bounded-context}/{feature}.feature` |
 | DELIVER | change log | `changes/{date}/change-log.md` |
 | DELIVER | proposals for surviving mutants | `proposals/kill_proposal-{visit}-g{n}.md` |
 | DELIVER | evidence of each gate; output of the e2e commands | `gates/{component}/{gate}-{n}.log`; `visuals/{component}/e2e-{n}.log` |
@@ -102,6 +105,34 @@ of each expected output, and pre-creates it when it has a template. Detail by ph
 Lenses write no file: they return findings, and the engine writes
 `reviews/{node}-{visit}/verdict.yaml`.
 
+## Durable documentation {#durable-docs}
+
+Some documents of a run are the repository's documentation, not the run's. The phase that
+produces them writes them under `docs/` in the working copy, on the story's branch: the pull
+request shows them, and the next runs read them again.
+
+| Document | Phase | Path in the repository |
+| --- | --- | --- |
+| context map: bounded contexts, subdomain class, relationships between contexts | DESIGN | `docs/architecture/context-map.md`, one file completed story after story |
+| tactical design: aggregates, entities, value objects, domain events, repositories | DESIGN | `docs/architecture/{bounded-context}.md` |
+| event model: commands, queries, domain events, read models, slices | DESIGN | `docs/domain/event-model/{bounded-context}.md` |
+| ADRs, decision index, supersession registry | DESIGN | `docs/adr/` |
+| Gherkin scenarios, not executable | DISTILL | `docs/features/{bounded-context}/{feature}.feature` |
+
+These stay in the tracking folder: the research document, `contracts-{story}.md`,
+`supersession-plan-{story}.md`, `consistency-matrix-{slug}.md`, `test-plan-{slug}.md`,
+`impl-plan-{story}.md`, the change log, the mutant proposals, the pull request prose, the journal
+and its reports.
+
+| Rule | Detail |
+| --- | --- |
+| Reading | instruction to the agents: RESEARCH and DESIGN read `docs/` before anything else; the engine does not check it |
+| Already covered | when `docs/` already covers the story, the phase says so in its declared output (the research document, the consistency matrix), cites the files of `docs/` and moves on. The engine checks only the matrix: its `docs-relied-on:` line must list at least one file of `docs/adr`, `docs/architecture`, `docs/domain/event-model` or `docs/features`, and each listed file must exist in the working copy; it does not read the research document for citations |
+| Updating | instruction to the agents: a phase completes an existing file of `docs/` and does not rewrite it; the engine does not check it |
+| ADRs | a published ADR is never edited; a new ADR may supersede it ([What is never rewritten](#append-only)) |
+| Write scope | DESIGN: `docs/adr/`, `docs/architecture/`, `docs/domain/event-model/`; DISTILL: `docs/features/` ([Phases]({{ "/en/reference/phases" | relative_url }})) |
+| Blind lens | `cold-reader` reads neither these files nor the ADRs: they are left out of `code.patch` and `code-files.txt` |
+
 ## What is never rewritten {#append-only}
 
 | Item | Rule |
@@ -109,7 +140,7 @@ Lenses write no file: they return findings, and the engine writes
 | `events.jsonl` | lines are only ever appended; an edited line breaks the chain or the signature, which the engine sees on its next read |
 | run state | recomputed from the journal on each read; no state file is written |
 | ADR not on the base branch yet | fixed in place, stays `Proposed`; no history of drafts ([Unpublished ADRs](#unpublished-adrs)) |
-| published ADR | never edited; the new ADR carries `**Supersedes:** ADR-MMM` and a row is appended to `docs/adr/supersessions.md`, which the engine checks at the end of each DESIGN attempt |
+| published ADR | only its status and replacement lines change, never deleted; the new ADR carries `**Supersedes:** ADR-MMM` and a row is appended to `docs/adr/supersessions.md`, which the engine checks at the end of each DESIGN attempt |
 
 ## `.active-slug` {#active-slug}
 
@@ -195,7 +226,9 @@ write arrived since it was opened, it stops with `journal-changed`:
 | `publish.requested` | `skraft publish` | `by` (`skraft publish`); `consent` (`publish.pullRequest` when the command ran) |
 | `pull-request.opened` | the `publish` node or `skraft publish` | `number`; `url`; `base`; `head`; `draft`; `bodyHash` |
 | `pull-request.updated` | the `publish` node or `skraft publish` | `number`; `url`; `bodyHash` |
-| `issue.commented`, `issue.comment-skipped` | the run, at each transition it reports on the story's issue | `issue`; `kind`; `phase`; `step`; `event`; `url` (commented) or `reason` (skipped) |
+| `pull-request.details-kept` | the `publish` node or `skraft publish`, once the pull request is opened, updated or up to date | `number`; `part`; `parts`; `url` of the comment; `bodyHash` of the part; `via` and `fallback` when an MCP server was offered |
+| `pull-request.details-skipped` | the same, when a part could not be kept | `number`; `part`; `parts`; `reason`; `via` and `fallback` |
+| `issue.commented`, `issue.comment-skipped` | the run, at each transition it reports on the story's issue | `issue`; `kind`; `phase`; `step`; `event`; `url` (commented) or `reason` (skipped); `via` (`mcp`, `gh` or `az`) and `fallback` when a host MCP server was offered |
 | `journal.adopted` | `skraft journal adopt` | `keyId` (the new key); `previousKeyId`; `unverified` (how many earlier lines stay unverified) |
 
 Each entry of `run.started.base`: `{ component, root, repository, ref, source, sha }`.
@@ -261,11 +294,15 @@ ADR the attempt changed that is not published must:
 - have the status `Proposed` (only the engine sets `Accepted`; changing an ADR ratified in this
   run means setting it back to `Proposed`, and it is asked again);
 - carry no `amended_by`, `amended_in_place` or `superseded_by` header field;
-- have no history section (`## History`, `## Historique`);
+- have no history section (`## History`, `## Historique`, `## Erratum`, `## Amendments`, `## Changelog`, `## Revisions`, at any heading depth);
+- name no version, image tag, digest or package pin in the body (`3.1.4`, `v3`, `node:20-alpine`, `react-router@6`): name the technology or the capability it brings;
+- hold a `decision` header of exactly one sentence;
 - not `supersedes` or `amends` another unpublished ADR, whether the link sits in the header or
   on a `**Supersedes:** ADR-MMM` line: edit that one in place instead.
 
-A published ADR is still superseded or amended the usual way. A breach refuses the attempt
+Every ADR the attempt changed, published or not, carries a status of the closed set: `Proposed`, `Accepted`, `Rejected`, `Deprecated`, `Superseded` or `Superseded by ADR-NNN`, whole and in English, in its header and its `**Status:**` line (`Superseded (partial)` is refused: a partial replacement is a new ADR that amends the old one).
+
+**Published ADRs.** An ADR the base holds changes only its `status`, `superseded_by` and `**Status:**` lines, compared with the text on the base; any other change, or its deletion, is refused. A published ADR is still superseded or amended the usual way. A breach refuses the attempt
 with the failure code `adr-lifecycle` and one line per breach, for example
 `docs/adr/adr-002-x.md supersedes ADR-001, which is not on the default branch yet: edit
 docs/adr/adr-001-y.md in place instead`. The agent retries with those lines.
@@ -328,7 +365,7 @@ for a human's answer), `done`.
 | `blocked` | `journal-tampered` | broken chain | `journal tampered: events.jsonl line N …; restore the file or start a new slug` | restore the file or start a new slug |
 | `blocked` | `journal-changed` | another run writes during this one | `<slug>: another run wrote events.jsonl meanwhile; run again once it stops` | wait for the other run to end, run again |
 | `blocked` | `missing-outputs` | outputs missing after the last attempt | `solution-researcher left required outputs missing after 3 attempts: <paths>` | a resume returns the same block; fix the cause and start a new slug |
-| `blocked` | `design-records` | the solution architect's DESIGN records still fail after its last attempt: no consistency matrix whose `consistency-gate` reads `PASS` (G10), an ADR named `*-rejected.md`, `*-accepted.md`, `*-deprecated.md` or `*-superseded.md` (G14), a `**Supersedes:**` line without its row in `docs/adr/supersessions.md` (G2, G12) | `solution-architect still failed after 3 attempts: <each record at fault>` | write the record, then start a new slug |
+| `blocked` | `design-records` | the solution architect's DESIGN records still fail after its last attempt: a consistency matrix whose `consistency-gate` does not read `PASS` (G10; a missing one stops with `missing-outputs`), an ADR named `*-rejected.md`, `*-accepted.md`, `*-deprecated.md` or `*-superseded.md` (G14), a `**Supersedes:**` line without its row in `docs/adr/supersessions.md` (G2, G12), an ADR without its row in `docs/adr/decisions-index.md` | `solution-architect still failed after 3 attempts: <each record at fault>` | write the record, then start a new slug |
 | `blocked` | `agent-blocked` | the agent answered `blocked`, and a human answered `STOP` to the `blocked` question | `<agent> is blocked: <summary>` | final: a new run of the slug stays blocked |
 | `blocked` | `agent-unavailable` | the host cannot start the agent | Claude Code: `skraft:solution-researcher could not be started: …`; Copilot: `agent "solution-researcher" is not available in this Copilot session (agents: …); install or enable the skraft plugin, or pass agentIds` | install or enable the plugin, then resume; the attempt is not consumed |
 | `blocked` | `agent-failed` | the agent stops without finishing and its outputs are missing | `<agent> stopped without finishing: <error>` | resume: the step stays open and the same attempt restarts |

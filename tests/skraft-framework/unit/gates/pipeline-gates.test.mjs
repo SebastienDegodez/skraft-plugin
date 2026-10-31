@@ -34,7 +34,7 @@ test('DELIVER does not close while a gate fails: the engineer gets a new pass wi
     '- /plugin/skills/mocking-inprocess-dotnet/SKILL.md',
     '- Read first:',
     `- ${TRACKING}/research/2026-10-11/${SLUG}-research.md`,
-    `- ${TRACKING}/details/2026-10-11/context-map.md`,
+    `- ${TRACKING}/details/2026-10-11/consistency-matrix-checkout.md`,
     `- ${TRACKING}/details/2026-10-11/test-plan-${SLUG}.md`,
     '- Fill each output in place; keep the path, create no other copy:',
   ].join('\n')), second.prompt)

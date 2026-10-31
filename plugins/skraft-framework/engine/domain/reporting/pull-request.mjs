@@ -2,6 +2,7 @@ import { durationText, reportTable } from './run-report.mjs'
 import { SUMMARY_LENGTH } from './pull-request-prose.mjs'
 import { cell, code, embedded, inert, oneLine, openFence } from './markdown-safety.mjs'
 import { screenshotLines } from './visuals.mjs'
+import { detailParts, pointerOf, roomOf } from './run-details.mjs'
 
 /**
  * The description of the pull request a run opens, as "Writing good CL descriptions" lays it
@@ -21,18 +22,21 @@ import { screenshotLines } from './visuals.mjs'
  *   reds: RedCommit[], gates: GateFact[], review: ReviewFacts, status: string,
  *   report: import('./run-report.mjs').RunReport, models: { families: string[], models: string[] },
  *   visuals: import('./visuals.mjs').Visuals | null, repository: import('./visuals.mjs').Repository,
- *   bodyLimit: number, testPlans: TrackedDocument[], matrices: TrackedDocument[],
+ *   bodyLimit: number, commentLimit: number, language: import('./language.mjs').Language,
+ *   testPlans: TrackedDocument[], matrices: TrackedDocument[],
  * }} PullRequestFacts
  *   link: the line that links the pull request to its story, as its forge writes it; null for none.
  *   visuals: what the run's last visuals step recorded, null without one; repository: the one the
  *   remote names on its forge, where the kept screenshots are shown from; bodyLimit: the
- *   longest body its forge takes; testPlans: the test plans DISTILL wrote, matrices: the
+ *   longest body its forge takes, commentLimit: the longest comment; language: the story's, which the
+ *   comments of the run details are titled in; testPlans: the test plans DISTILL wrote, matrices: the
  *   consistency matrices DESIGN wrote, those of the latest attempt that wrote any, none when the journal
  *   names none or the tracking folder lost them.
  * @typedef {{ path: string, text: string }} TrackedDocument
  *   path: relative to the tracking folder; text: as the agent wrote it.
- * @typedef {{ title: string, body: string, description: string }} PullRequest
- *   description: the title, a blank line, then the body.
+ * @typedef {{ title: string, body: string, description: string, details: string[] }} PullRequest
+ *   description: the title, a blank line, then the whole body; details: the comments that keep
+ *   the folded sections when the whole body is past bodyLimit, none otherwise.
  */
 
 /** The description of the pull request, kept in the tracking folder. */
@@ -44,40 +48,63 @@ export const PULL_REQUEST_BODY_FILE = 'pull-request-body.md'
 const CUT = `[cut: the description holds more than a pull request takes; read it whole in the tracking folder, ${PULL_REQUEST_FILE}]`
 
 /**
- * The description whole, and the body the pull request takes: the same, its longest sections cut
- * with CUT until it holds at most the forge's bodyLimit characters.
+ * The description whole, and the body the pull request takes: the same while it holds at most the
+ * forge's bodyLimit characters. Past it, the body keeps what decides (the sections shown under a
+ * heading, those open on a gate that failed or a finding for a human) and a fixed line that sends
+ * to the comments; the folded sections go to `details`, one comment per part. What decides is cut
+ * with CUT only when it alone is past the limit.
  * @param {PullRequestFacts} facts @returns {PullRequest}
  */
 export const renderPullRequest = (facts) => {
   const title = titleOf(facts)
   const sections = SECTIONS.map((section) => section(facts))
-  return { title, body: fitted(facts, sections), description: `${title}\n\n${bodyOf(facts, sections)}` }
+  const { body, details } = split(facts, sections)
+  return { title, body, description: `${title}\n\n${bodyOf(facts, sections)}`, details }
+}
+
+/** @param {PullRequestFacts} facts @param {Section[]} sections */
+const split = (facts, sections) => {
+  if (bodyOf(facts, sections).length <= facts.bodyLimit) return { body: bodyOf(facts, sections), details: [] }
+  const body = fitted(facts, sections.filter(({ detail }) => !detail), [pointerOf(facts.language)])
+  const folded = sections.filter(({ detail }) => detail)
+  const room = roomOf(facts, folded.length)
+  return { body, details: detailParts(facts, folded.map((section) => blockOf(section, room))) }
+}
+
+/** A section as one block of a comment, cut to the room a comment leaves it. @param {Section} section @param {number} room */
+const blockOf = (section, room) => {
+  const block = linesOf(section).join('\n')
+  return block.length <= room ? block : linesOf(cut(section, block.length - room)).join('\n')
 }
 
 /**
- * @typedef {{ head: string, text: string, foot: string[], open: boolean }} Section
+ * @typedef {{ head: string, text: string, foot: string[], open: boolean, detail: boolean }} Section
  *   head: the line that opens it, a heading or the summary of the block that folds it; foot: the
  *   lines that close that block, none under a heading; open: a block open on what blocks the
- *   work or waits on a human.
+ *   work or waits on a human; detail: a folded block not open, which goes to the run details
+ *   comments when the body is past the forge's limit.
  */
 
-/** @param {PullRequestFacts} facts @param {Section[]} sections */
-const bodyOf = (facts, sections) => [...issueLine(facts), ...sections.flatMap(({ head, text, foot }) => [head, '', text, ...foot, ''])].join('\n')
+/** @param {Section} section */
+const linesOf = ({ head, text, foot }) => [head, '', text, ...foot, '']
+
+/** @param {PullRequestFacts} facts @param {Section[]} sections @param {string[]} [tail] the lines that end the body, each its own paragraph */
+const bodyOf = (facts, sections, tail = []) => [...issueLine(facts), ...sections.flatMap(linesOf), ...tail.flatMap((line) => [line, ''])].join('\n')
 
 /**
  * The body, its sections cut one at a time until it holds at most bodyLimit characters: the
  * longest that yields first, an open one only once none yields. Once a cut gives nothing more,
  * the forge takes less than the headings and marks alone: the body is cut whole.
- * @param {PullRequestFacts} facts @param {Section[]} sections @returns {string}
+ * @param {PullRequestFacts} facts @param {Section[]} sections @param {string[]} tail @returns {string}
  */
-const fitted = (facts, sections) => {
-  const body = bodyOf(facts, sections)
+const fitted = (facts, sections, tail) => {
+  const body = bodyOf(facts, sections, tail)
   const excess = body.length - facts.bodyLimit
   // Stryker disable next-line EqualityOperator: a body of exactly bodyLimit cut by nothing is the same body
   if (excess <= 0) return body
   const first = sections.reduce((best, section, index) => (cutBefore(section, sections[best]) ? index : best), 0)
   const shorter = sections.map((section, index) => (index === first ? cut(section, excess) : section))
-  return bodyOf(facts, shorter).length < body.length ? fitted(facts, shorter) : cutWhole(body, facts.bodyLimit)
+  return bodyOf(facts, shorter, tail).length < body.length ? fitted(facts, shorter, tail) : cutWhole(body, facts.bodyLimit)
 }
 
 /** The body's first characters, without a tag or block left open, then a blank line and CUT. @param {string} body @param {number} limit */
@@ -94,7 +121,7 @@ const cutBefore = (section, other) => {
 const yields = ({ open, text }) => !open && text.length > CUT.length + 2
 
 /** The section without as many of its last characters as the excess takes, then a blank line and CUT. @param {Section} section @param {number} excess */
-const cut = ({ head, text, foot, open }, excess) => ({ head, foot, open, text: `${closed(text.slice(0, Math.max(0, text.length - excess - CUT.length - 2)))}\n\n${CUT}` })
+const cut = ({ head, text, foot, open, detail }, excess) => ({ head, foot, open, detail, text: `${closed(text.slice(0, Math.max(0, text.length - excess - CUT.length - 2)))}\n\n${CUT}` })
 
 /** A text cut inside a tag, inside a block it folds (the dark screenshots) or inside a code block, without that tag or block, nor the blanks it ends on. @param {string} text */
 const closed = (text) => {
@@ -121,7 +148,7 @@ const notWritten = (what) => [`Not written: the run has no pr-writer step that w
 /** @typedef {(facts: PullRequestFacts) => string[]} Lines */
 
 /** A section under its heading. @param {string} heading @param {Lines} lines @returns {(facts: PullRequestFacts) => Section} */
-const shown = (heading, lines) => (facts) => ({ head: `## ${heading}`, text: lines(facts).join('\n'), foot: [], open: false })
+const shown = (heading, lines) => (facts) => ({ head: `## ${heading}`, text: lines(facts).join('\n'), foot: [], open: false, detail: false })
 
 /**
  * @typedef {{ count: string | null, open: boolean }} Fold
@@ -139,7 +166,7 @@ const FOLDED = Object.freeze({ count: null, open: false })
  */
 const folded = (heading, lines, fold = () => FOLDED) => (facts) => {
   const { count, open } = fold(facts)
-  return { head: `<details${open ? ' open' : ''}><summary>${count === null ? heading : `${heading}: ${count}`}</summary>`, text: lines(facts).join('\n'), foot: ['', '</details>'], open }
+  return { head: `<details${open ? ' open' : ''}><summary>${count === null ? heading : `${heading}: ${count}`}</summary>`, text: lines(facts).join('\n'), foot: ['', '</details>'], open, detail: !open }
 }
 
 const SECTIONS = Object.freeze([

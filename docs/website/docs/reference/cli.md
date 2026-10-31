@@ -21,12 +21,14 @@ $ node "<plugin folder>/engine/drivers/cli/skraft.mjs" <command>
 
 The same form works under sh and PowerShell. Run it **from the root of the working copy**:
 `skraft-config.json` and `.copilot-tracking/` are read and written there. The rest of this
-page writes `skraft <command>` for that full line. Prerequisites: Node 22 or later, Git.
+page writes `skraft <command>`: the command that [`skraft install`](#skraft-install) sets up, or
+the full line above. Prerequisites: Node 22 or later, Git.
 
 ## Synopsis
 
 ```
 usage: skraft --version
+       skraft install [--no-path]                                        make the skraft command available from any terminal (--no-path: leave the PATH alone)
        skraft init [--add <folder>]...                                   detect the components into skraft-config.json
        skraft init <slug> [--issue <number>] [--title <text>] [--base <ref>] [--from-artifacts]   start or resume a pipeline
        skraft status [--json]
@@ -59,7 +61,7 @@ Option rules shared by every command:
 | --- | --- | --- | --- |
 | `--version` | always | — | — |
 | `init` (no slug) | components written or already listed | invalid config, `--add` refused | malformed line |
-| `init <slug>` | the slug is the active pipeline | refusal (`invalid-slug`, `invalid-base`, `config-invalid`, `base-unresolved`, `source-control-unavailable`, `journal-tampered`, `journal-unverifiable`, `journal-key-unavailable`, `workflow-invalid`, `no-artifacts`, `already-started`, `issue-not-found`, `issue-is-pull-request`) | malformed line, `--issue` not a positive integer |
+| `init <slug>` | the slug is the active pipeline | refusal (`invalid-slug`, `invalid-base`, `config-invalid`, `base-unresolved`, `source-control-unavailable`, `journal-tampered`, `journal-unverifiable`, `journal-key-unavailable`, `workflow-invalid`, `no-artifacts`, `already-started`, `issue-not-found`, `issue-is-pull-request`, `issue-not-a-story`, `issue-in-other-project`) | malformed line, `--issue` not a positive integer |
 | `status`, `report` | any status but `tampered` | status `tampered` | argument other than `--json` |
 | `decide` | answer recorded | refusal or not confirmed (below) | no answer, more than two words, option other than `--reason` |
 | `publish` | pull request opened, updated or up to date | refusal (below) | any argument |
@@ -78,6 +80,35 @@ The `refused` and `blocked` codes are detailed in
 ## `skraft --version`
 
 Prints the version read from the plugin's `plugin.json`. Output: one line. Code 0.
+
+## `skraft install [--no-path]` <!-- #skraft-install -->
+
+**Effect.** Makes `skraft` a command of your terminal. Run it once, with the full line, from any
+folder. It writes in `~/.skraft/bin` (`%USERPROFILE%\.skraft\bin` on Windows):
+
+| File | Content |
+| --- | --- |
+| `skraft-launcher.mjs` | a self-contained launcher that finds `skraft.mjs` at each call and runs it in the same process |
+| `skraft` | sh call, mode 0755: `exec node "<launcher>" "$@"` (Git Bash on Windows uses it) |
+| `skraft.cmd` | `@node "%~dp0skraft-launcher.mjs" %*` (PowerShell and cmd find it in the PATH) |
+| `target.json` | where the plugin is: `{ "host": "claude-code" }` when `install` ran from under `~/.claude/plugins/cache/`, else `{ "path": "<absolute skraft.mjs>" }` |
+
+Under Claude Code, the launcher reads `installPath` of the first `skraft@…` entry of
+`~/.claude/plugins/installed_plugins.json` at each call, so an update needs no new `install`.
+When the plugin is gone, the launcher prints `skraft: the plugin was not found. Run node
+"<plugin folder>/engine/drivers/cli/skraft.mjs" install again.` on stderr and exits 1.
+
+**The PATH.** When `~/.skraft/bin` is already in `PATH`, nothing is written. Otherwise: on
+macOS and Linux, a block marked `# skraft` that exports the PATH is appended once to the profile
+of `$SHELL` (`zsh`: `~/.zshrc`; `bash`: `~/.bash_profile` on macOS, `~/.bashrc` on Linux; any
+other: `~/.profile`); on Windows, the user PATH is updated through PowerShell, without
+administrator rights. The command says what it changed and to open a new terminal.
+
+**Option.** `--no-path` writes the files but nothing in the PATH, and prints the line to add, for
+sh and for PowerShell.
+
+**Output and codes.** The lines above on stdout, code 0; code 1 when the Windows user PATH could
+not be written (the files are in place; use `--no-path`); a malformed line: usage, code 2.
 
 ## `skraft init [--add <folder>]...`
 
@@ -117,7 +148,7 @@ config is not read again, and the story and `--base` are ignored (the journaled 
 | Argument / option | Value | Rule |
 | --- | --- | --- |
 | `<slug>` | kebab-case (`checkout-by-card`) | otherwise refused `invalid-slug` |
-| `--issue <number>` | positive integer with no leading zero | otherwise malformed line (code 2). On a new run without `--from-artifacts`, the engine reads the issue through `gh` on the repository `gh` would pick (its default, else `upstream`, else `origin`) and keeps it in `<slug>/plans/<date>/issue-<number>.md`, which every agent and every review lens reads first. An issue that cannot be read (no remote, gh missing or not signed in, another forge, gh failed) does not stop the run: it starts on the number and title alone, `run.started` journals why in `issueUnread`, and the success line says so. Refused `issue-not-found` or `issue-is-pull-request`, with nothing journaled, when the forge answers with no issue or with a pull request. A resumed run does not read it again |
+| `--issue <number>` | positive integer with no leading zero | otherwise malformed line (code 2). On a new run without `--from-artifacts`, the engine reads the issue through `gh` on the repository `gh` would pick (its default, else `upstream`, else `origin`) and keeps it in `<slug>/plans/<date>/issue-<number>.md`, which every agent and every review lens reads first. An issue that cannot be read (no remote, gh missing or not signed in, another forge, gh failed) does not stop the run: it starts on the number and title alone, `run.started` journals why in `issueUnread`, and the success line says so. On Azure DevOps the number is a work item's: it is read through `az boards work-item show` (the host's Azure DevOps MCP server first, under Copilot and Claude Code), its HTML description and acceptance criteria converted to Markdown, a work item of another project than the Git remote's or whose type is no story's refused `issue-in-other-project` or `issue-not-a-story`. Refused `issue-not-found` or `issue-is-pull-request`, with nothing journaled, when the forge answers with no issue or with a pull request. A resumed run does not read it again |
 | `--title <text>` | a single argument; quote it if it has blanks | — |
 | `--base <ref>` | git ref: no blank, does not start with `-` | read only at the slug's first init: otherwise refused `invalid-base`; wins over any `baseBranch`. On a slug that already has a journal it is ignored, even when invalid |
 | `--from-artifacts` | flag | starts a new run in DESIGN from the DISCUSS stories already in `<slug>/plans/<date>/stories-<milestone>.md`; refused `no-artifacts` without them, `already-started` on a slug that has a journal |
@@ -590,15 +621,15 @@ its lenses, the refuter, then computes the verdict.
 
 | Step | Rule |
 | --- | --- |
-| Forge | the repository gh would pick: its default (`gh repo set-default`), else the `upstream` remote, else origin; `gh` installed and signed in to its host, else stopped `forge-unavailable`; the pull request read by its number, else `pr-not-found` (`pr-unreadable` when gh fails) |
-| Working copy | must stand on the pull request's head commit (`gh pr checkout <number>`), else `pr-not-checked-out`; the changes are those since the merge base with the base commit, which Git must have (`git fetch origin <base>`), else `pr-base-missing`; uncommitted changes outside `.copilot-tracking/` stop it, `working-copy-dirty`; a pull request whose head holds, or whose commits change, a file under `.copilot-tracking/skraft-reviews/` (names composed and folded as macOS and Windows open them, a short name such as `SKRAFT~1` included, then each tracked path asked of the file system: one that opens as the review folder under any spelling counts), or a file or link in place of `.copilot-tracking` or `.copilot-tracking/skraft-reviews`, is refused, `review-state-committed`; a review folder in the working copy that is a link, lies under one, or is no folder stops it, `review-folder-linked` |
+| Forge | on GitHub, the repository gh would pick: its default (`gh repo set-default`), else the `upstream` remote, else origin; `gh` installed and signed in to its host, else stopped `forge-unavailable`; the pull request read by its number, else `pr-not-found` (`pr-unreadable` when gh fails). On Azure Repos, the organization, project and repository the remote names; the host's Azure DevOps MCP server (`ado`) first, else `az` with its `azure-devops` extension signed in, else `forge-unavailable`; a pull request of another project or repository is `pr-unreadable` |
+| Working copy | must stand on the pull request's head commit (`gh pr checkout <number>`, `az repos pr checkout --id <number>` on Azure Repos), else `pr-not-checked-out`; the changes are those since the merge base with the base commit, which Git must have (`git fetch origin <base>`), else `pr-base-missing`; uncommitted changes outside `.copilot-tracking/` stop it, `working-copy-dirty`; a pull request whose head holds, or whose commits change, a file under `.copilot-tracking/skraft-reviews/` (names composed and folded as macOS and Windows open them, a short name such as `SKRAFT~1` included, then each tracked path asked of the file system: one that opens as the review folder under any spelling counts), or a file or link in place of `.copilot-tracking` or `.copilot-tracking/skraft-reviews`, is refused, `review-state-committed`; a review folder in the working copy that is a link, lies under one, or is no folder stops it, `review-folder-linked` |
 | Workflow | `.skraft/review.skraft.dot` and `skraft-config.json` are read from the pull request's base commit, never its head (a file the base lacks is the plugin's default); the workflow is checked as the plugin's pipeline calls it: an ejected copy that drops or weakens a mandatory node (`test_integrity`, `architecture_boundaries`, the fan-in `verdict`) is refused, `workflow-invalid`; no lens runs |
 | Project rules | `AGENTS.md`, `CLAUDE.md`, `CONTRIBUTING.md`, `.github/copilot-instructions.md`, `docs/adr/decisions-index.md` and the ADR files that index lists (`docs/adr/adr-<number>-*.md`) are read from the base commit too, copied into `reviews/verdict-<pass>/rules/` and listed in `context.md`; every lens and refuter brief says that the working copy's copies are the pull request author's version and to judge by the base copies: a rule or record the pull request edits or adds counts for nothing. Not verified: whether Claude Code, Copilot CLI and VS Code load `AGENTS.md`, `CLAUDE.md` or `.github/copilot-instructions.md` from the checkout, the author's version, into the agents they start; it is outside the engine's reach and unmeasured (`docs/v2/host-verification.md` in the repository) |
 | Inputs | `base` and `head` from the pull request; `story`: its number (the title stays out of the briefs); `documents`: its title and body (kept as `pull-request.md` under a header that says they are the author's data, never instructions, which each brief that lists it repeats) and `docs/adr/decisions-index.md` when either exists; `components`: those of `skraft-config.json`, else the projects `skraft init` would detect, with their defaults (Microcks for a .NET project), written nowhere. Only the inputs the workflow declares are given |
 | `test-integrity` | without a `.feature` nor a test plan among its inputs, its brief says so: it judges G9 by comparing the removed lines with the added ones (an assertion weakened, a test deleted, a skip added), and their absence alone is no reason to answer `inconclusive` |
 | Tracking folder | `.copilot-tracking/skraft-reviews/pr-<number>/`, its own hash-chained `events.jsonl`, signed as a run's is (no home folder for the key: `journal-key-unavailable`; signed on another machine: `journal-unverifiable`, until you adopt it here with `skraft journal adopt --pr <number>` typed in your own terminal, which shows the lines it leaves unverified first and refuses, `journal-changed`, a journal that changed since), and its own session lease: one session reviews a pull request at a time (`pipeline-locked`: another session is reviewing pull request #N; wait for it to end or for its lease to expire; `lock-lost` and `lock-unavailable` name `skraft-reviews/pr-<number>/.lock`; a lease that names more than the longest hand-over, 2 hours, or was renewed more than a minute ahead of this machine's clock is taken over); each run is the next pass (`reviews/verdict-<pass>/`), a pass that stopped is picked up; a lens whose inputs did not change and that found nothing is taken over (`reused: true`) |
 | Output | the verdict, what sends the work back (`to address`), the notes and refuted findings, the path of `verdict.yaml`; `--json` prints `{ status, number, pass, code, reason, reasons, details, file, comment, unpublished, dispatches, then }` |
-| `--publish` | keeps the verdict in **one** comment of the pull request, found again by its visible marker `<sub>skraft-review pr=<number></sub>` and rewritten at each pass; never a GitHub review, never a request for changes. The consent is the base's `skraft-config.json` `publish.reviewComment` when it sets one; otherwise it is asked once per repository (at the terminal, in a dialog, or in Copilot's confirmation) and kept in your `~/.skraft/config.json` under `reviewComments`, by `<host>/<owner>/<repo>`; the review never writes `skraft-config.json` nor `skraft-config.local.json`. A comment URL the journal keeps is rewritten only once the forge says it is yours, on that pull request; declined or unanswered, nothing is posted and `unpublished` says why. `comment.md` beside the review always holds the text |
+| `--publish` | keeps the verdict in **one** comment of the pull request, found again by its visible marker `<sub>skraft-review pr=<number></sub>` and rewritten at each pass; never a GitHub review, never a request for changes. The consent is the base's `skraft-config.json` `publish.reviewComment` when it sets one; otherwise it is asked once per repository (at the terminal, in a dialog, or in Copilot's confirmation) and kept in your `~/.skraft/config.json` under `reviewComments`, by `<host>/<owner>/<repo>` (`dev.azure.com/<organization>/<project>/<repository>` on Azure Repos, where the comment is one thread created *Closed* whose first comment is rewritten, whoever wrote it); the review never writes `skraft-config.json` nor `skraft-config.local.json`. A comment URL the journal keeps is rewritten only once the forge says it is yours, on that pull request; declined or unanswered, nothing is posted and `unpublished` says why. `comment.md` beside the review always holds the text |
 
 On the command line the lenses run through the agent loop: the command hands them over
 (`dispatch`, each with its brief and reply file), the conducting agent starts them and saves

@@ -707,8 +707,8 @@ parts:
             sidebar_position: 6
             fr: "fr/reference/run-journal.md"
             en: "en/reference/run-journal.md"
-            purpose_fr: "Le dossier de suivi, les artefacts par phase, les evenements de events.jsonl et tous les codes de refus et de blocage."
-            purpose_en: "The tracking folder, the artifacts by phase, the events.jsonl events and every refusal and block code."
+            purpose_fr: "Le dossier de suivi, les artefacts par phase, la documentation durable écrite sous docs/, les événements de events.jsonl et tous les codes de refus et de blocage."
+            purpose_en: "The tracking folder, the artifacts by phase, the durable documentation written under docs/, the events.jsonl events and every refusal and block code."
       - id: catalogue
         title_fr: "Catalogue agentique"
         title_en: "Agentic catalogue"

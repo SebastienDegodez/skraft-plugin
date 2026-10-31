@@ -20,6 +20,7 @@ Pourquoi un moteur et des pilotes, et le contrat du pilote Copilot :
 | Node | 22 ou plus | le moteur, la ligne de commande `skraft`, l'extension Copilot ; `skraft doctor` le vérifie |
 | Git | — | la base de chaque composant, les commits, les rejeux de commits rouges |
 | `gh` | connecté à l'hôte du dépôt | seulement pour lire l'issue de la story (`--issue`), ouvrir la pull request, commenter l'issue, `skraft review --pr` ; sur `github`, le serveur MCP GitHub de l'hôte, quand il est connecté, les sert d'abord et `gh` est le repli (le CLI `skraft` et `skraft next` passent toujours par `gh`) ; voir [Forge]({{ "/fr/reference/skraft-config" | relative_url }}#forge) |
+| `az` | connecté à l'organisation, avec son extension `azure-devops` | sur Azure DevOps seulement, pour lire le work item de la story (`--issue`), y tenir le commentaire du run et ouvrir la pull request, et revoir une pull request (`skraft review --pr` : la lire, tenir le fil de revue) ; le serveur MCP Azure DevOps de l'hôte (`ado`), quand il est connecté, sert d'abord le work item, son commentaire et la revue d'une pull request et `az` est le repli (le CLI `skraft` et `skraft next` passent toujours par `az`) ; voir [Forge]({{ "/fr/reference/skraft-config" | relative_url }}#azure-devops-mcp-server-first-az-as-fallback) |
 | Copilot CLI | — | Copilot CLI ; sous VS Code, le pilote SDK (`skraft-run.mjs`) le lance sans interface |
 
 ## Installation {#install}
@@ -58,8 +59,8 @@ Cas d'usage appelés par chaque pilote :
 | Hôte | Démarrer ou reprendre un run | Répondre à une question | Suivre le run |
 | --- | --- | --- | --- |
 | Claude Code | `/skraft <slug> [#issue] [titre]`, ou l'agent `skraft-orchestrator` | la boîte de dialogue, les boutons du panneau, ou `/skraft decide <réponse>` | le panneau Skraft, `/skraft` |
-| Copilot CLI | l'agent `skraft:skraft-orchestrator`, qui lance le workflow `skraft-pipeline` | la boîte de dialogue de Copilot dans le chat ; sinon l'outil `skraft_decide` ou `skraft decide` dans un terminal | le canvas `skraft-pipeline`, le journal `/workflows`, `skraft status` |
-| VS Code | `node "<dossier du plugin>/engine/drivers/copilot-sdk/skraft-run.mjs" <slug>` ; sans SDK Copilot, l'agent `skraft-orchestrator`, qui conduit `skraft next` / `skraft record` | `skraft decide` dans un terminal | `skraft status`, `WORKFLOW.md` |
+| Copilot CLI | `/skraft <slug> [#issue] [titre…]` ([la commande](#skraft-command)), ou l'agent `skraft:skraft-orchestrator` ; les deux lancent le workflow `skraft-pipeline` | la boîte de dialogue de Copilot dans le chat ; sinon l'outil `skraft_decide` ou `skraft decide` dans un terminal | le canvas `skraft-pipeline`, le journal `/workflows`, `skraft status` |
+| VS Code | `/skraft` dans le chat dit quoi taper mais ne lance aucun run depuis là ; `node "<dossier du plugin>/engine/drivers/copilot-sdk/skraft-run.mjs" <slug>` ; sans SDK Copilot, l'agent `skraft-orchestrator`, qui conduit `skraft next` / `skraft record` | `skraft decide` dans un terminal | `skraft status`, `WORKFLOW.md` |
 
 Sans slug, le run reprend le pipeline actif de la copie de travail. Une seule session conduit un
 pipeline à la fois : une seconde est refusée (`pipeline-locked`) tant que la première tient le
@@ -156,6 +157,52 @@ L'extension `com.github.copilot/extensions/skraft-pipeline/` enregistre les work
 `skraft-pipeline` et `skraft-review`, l'outil `skraft_decide` et le canvas `skraft-pipeline`.
 Le répertoire de travail est celui de la session, relu au démarrage d'un run et à chaque appel
 d'outil.
+
+### Commande `/skraft` {#skraft-command}
+
+Le plugin `skraft` livre `com.github.copilot/commands/skraft.md`, qui donne à Copilot la syntaxe de
+`/skraft` sous Claude Code. Claude Code garde le `/skraft` du mod : le plugin n'a pas de dossier `commands/`
+pour lui. Le texte de la commande n'est pas vérifié par Vally.
+
+**Nom.** Mesuré par la sonde d'hôte sur Copilot CLI 1.0.105, dans le registre de commandes du SDK (le menu
+interactif n'a pas été lu) : une commande de plugin nommée comme son plugin est exposée sans préfixe, toute
+autre sous la forme `<plugin>:<commande>`. Le manifeste de `skraft` se nomme `skraft`, la commande est donc
+`/skraft` ; `skraft-refine` de `skraft-backlog` est `/skraft-backlog:skraft-refine`. Les deux plugins installés,
+chacune est listée une fois et aucune n'en masque une autre. Le texte tapé après la commande arrive au prompt,
+ajouté à sa fin.
+
+Le premier mot choisit la route. Une route passe par Copilot seulement quand la session propose les workflows
+`skraft-pipeline` et `skraft-review` ; sinon la commande ne lance ni run, ni revue, ni agent, et dit quoi taper.
+
+| Saisi | Avec les workflows | Sans eux |
+| --- | --- | --- |
+| `/skraft`, `/skraft status`, `/skraft help` | ouvre le canvas `skraft-pipeline` sur l'onglet Run ; ne démarre ni ne reprend rien | dit de taper `skraft status` |
+| `/skraft <slug> [#issue] [titre…] [--base <ref>] [--from-artifacts]` | lance `skraft-pipeline` avec `{ slug, issue, title, base, fromArtifacts }` et relaie son statut, son code et sa raison | ne lance rien : donne la ligne `skraft-run.mjs` à taper, ou dit de choisir l'agent `Skraft - Orchestrator` |
+| `/skraft decide [<clé>] <réponse> [raison…]` | le dialogue de Copilot pose de nouveau la question ; la réponse tapée n'est jamais enregistrée | dit de taper `skraft decide [<clé>] <réponse> [--reason "<raison>"]` |
+| `/skraft review <numéro> [--publish]` | lance `skraft-review` avec `pr` et `publish` | dit de taper `skraft review --pr <numéro> [--publish]` |
+| `/skraft backlog [critères…]` | passe la main aux agents du backlog (ci-dessous) | idem |
+
+Exemples, les mêmes que sous Claude Code :
+
+```text
+/skraft paiement #42 Paiement par carte
+/skraft paiement --base develop
+/skraft paiement --from-artifacts
+```
+
+Deux écarts voulus avec Claude Code. `decide` n'enregistre rien des mots tapés : sous Copilot, une décision humaine
+n'est enregistrée qu'après le dialogue de l'hôte. `backlog` est un mot réservé, sauf quand un pipeline nommé `backlog`
+existe déjà (`.copilot-tracking/skraft-plans/backlog/`) : `/skraft backlog …` prend alors la route Run, reprend ou démarre
+ce pipeline, et dit que, pour la route backlog, vous sélectionnez directement `Skraft - Backlog Discoverer` comme agent du chat.
+
+`/skraft backlog [critères…]` demande le plugin optionnel `skraft-backlog` ; sans lui la commande le dit et donne
+`copilot plugin install skraft-backlog@skraft`, et toutes les autres routes marchent. Avec lui, la commande ne lance
+aucun agent : vous choisissez `Skraft - Backlog Discoverer` comme agent du chat et lui donnez les critères, puis
+`Skraft - Backlog Planner` pour affiner l'issue choisie, puis `/skraft <slug> --from-artifacts` développe la story. Chaque étape
+vous attend ; rien ne passe seul au développement.
+
+Il n'y a ni sous-commande `story` ou `resume`, ni option `--issue` ou `--title` dans le chat. Un `#42` seul est passé comme slug et le
+moteur le refuse.
 
 ### Workflow `skraft-pipeline` {#skraft-pipeline}
 
@@ -289,7 +336,9 @@ modèles ni les coûts que la boucle ne peut pas connaître. Synopsis, sorties e
 | Question posée dans l'hôte | oui : dialogue et boutons du panneau | oui : dialogue dans le chat ; refusé en `autopilot` ou sans dialogue | non : `skraft decide` | non : `skraft decide` |
 | `by` journalisé pour une réponse | `host` (dialogue, bouton), `decide` (`/skraft decide`) | `host-confirmed` | `cli-tty` | `cli-tty` |
 | Vue du run | panneau Skraft | canvas `skraft-pipeline` (lecture seule) | terminal | `skraft status`, `WORKFLOW.md` |
-| Revue d'une pull request | `/skraft review <numéro>` | workflow `skraft-review` | `skraft review --pr` (boucle) | `skraft review --pr` (boucle) |
+| Revue d'une pull request | `/skraft review <numéro>` | `/skraft review <numéro>`, ou le workflow `skraft-review` | `skraft review --pr` (boucle) | `skraft review --pr` (boucle) |
+| Commande `/skraft` disponible | oui (le mod) | oui, mesurée `/skraft` dans le registre du SDK (CLI 1.0.105 ; menu non lu) | branchée, non mesurée sous VS Code | branchée, non mesurée sous VS Code |
+| Run d'ingénierie disponible | oui | oui | branché, testé sur hôte simulé, pas encore lancé pour de vrai (#222) | branché, testé sur hôte simulé, pas encore lancé pour de vrai (#222) |
 
 ## Voir aussi {#see-also}
 

@@ -114,7 +114,8 @@ find ~/.claude/plugins -path '*engine/drivers/cli/skraft.mjs'
 ```
 
 La ligne affichée est le chemin complet du script ; remplacez `<dossier du plugin skraft>` par ce
-qui précède `/engine/`. Dans la suite, `skraft …` veut dire cette commande complète.
+qui précède `/engine/`. Dans la suite, `skraft …` veut dire cette commande complète, ou la commande `skraft` que
+[`skraft install`](../how-to/install-on-a-host.mdx#skraft-command) met en place.
 
 `skraft init` cherche les projets du dépôt et écrit un **composant** par projet : une partie du
 dépôt avec sa racine, sa stack, ses chemins et ses commandes. Vous voyez :
@@ -230,9 +231,11 @@ checkout: solution-researcher, attempt 1
 `solution-researcher` remplit le document de recherche que le moteur a pré-créé :
 `.copilot-tracking/skraft-plans/checkout/research/<AAAA-MM-JJ>/checkout-research.md`.
 
-`solution-architect` conçoit ensuite la story : ses documents vont sous
-`.copilot-tracking/skraft-plans/checkout/details/<AAAA-MM-JJ>/`, ses ADR sous `docs/adr/`. Trois
-lentilles revoient la conception (consistency, architecture-compliance, fitness).
+`solution-architect` conçoit ensuite la story : la context map, la conception tactique et le
+modèle d'événements vont sous `docs/architecture/` et `docs/domain/event-model/`, ses ADR sous
+`docs/adr/` ; les contrats et la matrice de cohérence vont sous
+`.copilot-tracking/skraft-plans/checkout/details/<AAAA-MM-JJ>/`. Trois lentilles revoient la
+conception (consistency, architecture-compliance, fitness).
 
 Quand la conception propose un ADR, une boîte de dialogue intitulée **ADR** demande :
 
@@ -245,7 +248,7 @@ seul : `git log --oneline -1 -- docs/adr` montre `docs(adr): ratify ADR-001`.
 
 ## 8. DISTILL et DELIVER
 
-`acceptance-designer` écrit les scénarios et le plan de test
+`acceptance-designer` écrit les scénarios (sous `docs/features/`) et le plan de test
 (`details/<AAAA-MM-JJ>/test-plan-checkout.md`) et commite les tests d'acceptation en échec. Quatre
 lentilles le revoient (coverage, business-alignment, testability, boundary-enforcement).
 

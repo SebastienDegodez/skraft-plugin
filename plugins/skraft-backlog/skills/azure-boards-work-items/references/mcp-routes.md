@@ -28,9 +28,9 @@ mode, and take the az route for a tag or iteration query.
 |---|---|---|
 | Comment | `wit_work_item_comment_write` | `action: "add"`, `project`, `workItemId`, `text` (the file content), `format: "Markdown"` |
 | Tags or iteration | `wit_work_item_write` | `action: "update"`, `project`, `id`, `updates`: first `{ "op": "test", "path": "/rev", "value": <rev of your read> }`, then `{ "op": "add", "path": "/fields/System.Tags", "value": "a; b; c" }` and/or `{ "op": "add", "path": "/fields/System.IterationPath", "value": "{iteration path}" }` |
-| Child of a split story | `wit_work_item_write` | `action: "add_child"`, `project`, `parentId`, `workItemType` (the parent's), `items: [{ "title", "description", "format": "Markdown", "iterationPath" }]`; then tag each child with an `update` |
 | Work item the developer named | `wit_work_item_write` | `action: "create"`, `project`, `workItemType`, `fields: [{ "name": "System.Title", "value" }, { "name": "System.Description", "value", "format": "Markdown" }, { "name": "System.Tags", "value" }]` |
-| Link | `wit_work_item_link_write` | `action: "link"`, `project`, `updates: [{ "id", "linkToId", "type" }]`; `type` is `duplicate of` (on the newer item, towards the original), `related`, `parent` or `child` |
+| Part of a split story | the `create` row with `workItemType` of the original and `System.IterationPath` in `fields`; then a `related` link from the part to the original. Never `add_child` |
+| Link | `wit_work_item_link_write` | `action: "link"`, `project`, `updates: [{ "id", "linkToId", "type" }]`; `type` is `duplicate of` (on the newer item, towards the original) or `related`; `parent` or `child` only between items of different types (a task under a story) |
 
 - A `test` on `/rev` that fails means someone changed the item: read it again and rebuild the
   tag list before retrying.

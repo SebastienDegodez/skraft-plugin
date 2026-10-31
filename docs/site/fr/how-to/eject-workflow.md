@@ -13,8 +13,7 @@ DELIVER, et la garder à jour avec le plugin.
 
 ## Prérequis
 
-- Un dépôt configuré, Git, et un terminal à la racine de la copie de travail ; `skraft` désigne
-  `node "<dossier du plugin>/engine/drivers/cli/skraft.mjs"`.
+- Un dépôt configuré, Git, et un terminal à la racine de la copie de travail ; `skraft` est la commande que [`skraft install`]({{ "/fr/how-to/install-on-a-host" | relative_url }}#skraft-command) met en place ; la ligne longue `node "<dossier du plugin>/engine/drivers/cli/skraft.mjs"` marche sans elle.
 
 ## 1. Copier le workflow
 
@@ -37,7 +36,7 @@ Quelques modifications courantes, dans `.skraft/pipeline.skraft.dot` :
 | Pour… | Écrire |
 |---|---|
 | sauter une gate verrouillée (`gates`, `mutation`) | `unlock="<raison>"` sur le nœud, qui reste en place : `mutation [shape=parallelogram, gate="mutation", goal_gate=true, locked=true, unlock="aucun outil de mutation pour ce composant"]` |
-| permettre plus de reprises d'une boucle | changer `max_visits` sur l'arête retour : `design_review -> design [label="NEEDS_REWORK", max_visits=5]` |
+| permettre plus de reprises d'une boucle | changer `max_visits` sur l'arête retour : `design_review -> design [label="NEEDS_REWORK", max_visits=3]` |
 | retirer une lentille non obligatoire | supprimer son nœud `shape=note` et ses deux arêtes |
 | ajouter une lentille de l'équipe | [Ajouter une lentille à une revue]({{ "/fr/how-to/customise-review" | relative_url }}) |
 | ajouter une étape confiée à un agent du dépôt | [Ajouter un agent du dépôt au pipeline]({{ "/fr/how-to/add-repository-agent" | relative_url }}) |
@@ -70,7 +69,7 @@ Après la mise à jour du plugin, `diff` signale l'écart de version en premièr
 
 ```text
 skraft_version 2.0.0-alpha.17 → 2.0.0-alpha.19
-~ edge design_review -> design: max_visits 3 → 5
+~ edge design_review -> design: max_visits 1 → 3
 .skraft/pipeline.skraft.dot carries skraft_version 2.0.0-alpha.17, this plugin is 2.0.0-alpha.19; 1 changes from the skraft 2.0.0-alpha.19 workflow
 ```
 
