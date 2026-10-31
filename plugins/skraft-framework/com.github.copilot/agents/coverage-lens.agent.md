@@ -19,6 +19,7 @@ Find every acceptance criterion or business rule the `.feature` scenarios miss o
 
 Read the skill file your brief lists under Skill before any other input; judge with its criteria and your table.
 
+- The `.feature` files are the `docs/features/` paths among the changed files: judge the scenarios the patch adds or changes; open a whole file only when the patch lacks the context a finding needs.
 - Build the trace from each acceptance criterion of the story to its scenarios, and from each scenario back to a criterion.
 
 | Gate | Criterion | Severity |

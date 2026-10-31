@@ -15,7 +15,7 @@ Find every test that proves nothing (test theater) and every test changed to pas
 
 - Read the patch; open a whole file only when the patch lacks the context a finding needs.
 - The patch holds every change since the base of the run, DISTILL's acceptance tests included: a test written and then weakened inside the run shows only in its final form, so check its values against the `.feature` rather than against removed lines.
-- Take from the documents your brief lists the `test-plan-<feature scope>.md` (the feature scope your brief names), the `.feature` files and the change log.
+- Take from the documents your brief lists the `test-plan-<feature scope>.md` (the feature scope your brief names) and the change log; the `.feature` files are the `docs/features/` paths among the changed files.
 
 Judge each test against the test plan before flagging it:
 - A Domain or unit test the plan lists with an `Extraction Reason` is planned, never a façade or speculative test.

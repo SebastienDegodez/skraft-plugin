@@ -1,5 +1,5 @@
 import { joinRelative } from '../../domain/config/relative-path.mjs'
-import { inAdrFolder, indexOf, isAdr, isMatrix, recordFailures, registryOf } from '../../domain/pipeline/design-records.mjs'
+import { inAdrFolder, indexOf, isAdr, isMatrix, recordFailures, registryOf, reliedOn } from '../../domain/pipeline/design-records.mjs'
 import { readOrName } from '../shared/workspace-reading.mjs'
 
 /**
@@ -47,12 +47,23 @@ const recordsOf = async ({ files, workspace }, slug, { tracked, changed }) => {
   const fromWorkspace = (/** @type {string} */ path) => readOrName(workspace, path)
   const adrFolder = (await textsOf(changed.filter(inAdrFolder), fromWorkspace)).filter(({ text }) => text !== null)
   const adrs = adrFolder.filter(({ path }) => isAdr(path))
-  return {
-    matrices: await textsOf(tracked.filter(isMatrix), (path) => files.read(slug, path)),
-    written: adrFolder.map(({ path }) => path),
-    adrs,
-    registries: await textsOf([...new Set(adrs.map(({ path }) => registryOf(path)))], fromWorkspace),
-    indexes: await textsOf([...new Set(adrs.map(({ path }) => indexOf(path)))], fromWorkspace),
+  const matrices = await textsOf(tracked.filter(isMatrix), (path) => files.read(slug, path))
+  const relied = await textsOf([...new Set(matrices.flatMap(({ text }) => reliedOn(text)))], (path) => regularFile(workspace, path))
+  const registries = await textsOf([...new Set(adrs.map(({ path }) => registryOf(path)))], fromWorkspace)
+  const indexes = await textsOf([...new Set(adrs.map(({ path }) => indexOf(path)))], fromWorkspace)
+  return { matrices, relied, written: adrFolder.map(({ path }) => path), adrs, registries, indexes }
+}
+
+/**
+ * A listed file's text, null when the working copy has none or the path is no readable file (a folder, a device).
+ * @param {RecordDeps['workspace']} workspace @param {string} path
+ * @returns {Promise<string | null>}
+ */
+const regularFile = async (workspace, path) => {
+  try {
+    return await workspace.read(path)
+  } catch {
+    return null
   }
 }
 

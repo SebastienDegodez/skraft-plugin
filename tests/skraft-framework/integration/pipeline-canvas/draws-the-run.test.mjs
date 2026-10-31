@@ -16,7 +16,7 @@ const NO_ACTIVE_PIPELINE = 'no active pipeline in this working copy (.copilot-tr
 /** The architect's second pass, after the review sent DESIGN back. */
 const revises = (brief, { slug, cwd }) => {
   fillOutputs(brief, 'The provider is Acme Pay.\n')
-  commit(cwd, `docs(${slug}): name the payment provider`, { 'docs/adr/adr-001-card-payment.md': '# ADR-001 Card payment\n\n**Status:** Proposed\n\nAccepted: Acme Pay.\n' })
+  commit(cwd, `docs(${slug}): name the payment provider`, { 'docs/adr/adr-001-card-payment.md': '---\nstatus: Proposed\ndecision: We will pay by card.\n---\n# ADR-001 Card payment\n\n**Status:** Proposed\n\nAccepted: Acme Pay.\n' })
   writeResult(brief, { status: 'done', summary: 'provider named' })
 }
 

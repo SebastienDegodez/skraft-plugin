@@ -7,8 +7,11 @@ import { waitingOnEnvironment } from '../support/decisions.mjs'
 const unavailable = () => ({ ok: false, unavailable: true, text: '' })
 const recorded = (host, step) => host.events().filter((event) => event.type === 'step.recorded' && event.step === step)
 
-test('the architect writing in src/ is refused with the files at fault, and told so', async () => {
-  const hack = agent({ work: ({ git }) => { git.change('src/Checkout.cs', 'docs/adr/adr-001.md'); git.commit('docs(checkout): sketch', ['src/Sketch.cs']) } })
+/** The durable design documents an architect keeps under docs/. */
+const DESIGN_DOCUMENTS = Object.freeze(['docs/architecture/context-map.md', 'docs/architecture/payment.md', 'docs/domain/event-model/payment.md'])
+
+test('the architect writing in src/ is refused with the files at fault, and told so; its ADRs and design documents under docs/ are not', async () => {
+  const hack = agent({ work: ({ git }) => { git.change('src/Checkout.cs', 'docs/adr/adr-001.md', ...DESIGN_DOCUMENTS); git.commit('docs(checkout): sketch', ['src/Sketch.cs']) } })
   const host = scripted({}, (it) => [agent()(it), hack(it), agent()(it), unavailable])
 
   await host.start()
@@ -16,6 +19,14 @@ test('the architect writing in src/ is refused with the files at fault, and told
   const [refused] = recorded(host, 'design')
   assert.deepEqual([refused.outcome, refused.code, refused.failures], ['failed', 'write-scope', ['out of write scope: src/Sketch.cs', 'out of write scope: src/Checkout.cs']])
   assert.ok(host.agentRunner.dispatches[2].prompt.endsWith('\n\nRefused in attempt 1 of 3:\n- out of write scope: src/Sketch.cs\n- out of write scope: src/Checkout.cs'))
+})
+
+test('the researcher writing a design document under docs/ is refused: those are DESIGN\'s', async () => {
+  const host = scripted({}, (it) => [agent({ work: ({ git }) => git.change('docs/architecture/context-map.md', 'docs/features/payment/pay-by-card.feature') })(it), unavailable])
+
+  await host.start()
+
+  assert.deepEqual(recorded(host, 'research')[0].failures, ['out of write scope: docs/architecture/context-map.md', 'out of write scope: docs/features/payment/pay-by-card.feature'])
 })
 
 test('files out of scope stay refused on the next attempt of the pass, resumed or not, until they are reverted', async () => {
@@ -154,16 +165,20 @@ test('the agents writing a component\'s paths may change the files right in its 
   assert.deepEqual(recorded(architect, 'design')[0].failures, ['out of write scope: Checkout.sln'])
 })
 
-test('the acceptance designer writes the skeleton its failing test calls in the source paths, beside the test', async () => {
+test('the acceptance designer writes the skeleton its failing test calls in the source paths, beside the test, and its scenarios under docs/features', async () => {
   const host = scripted({}, (it) => [
     agent()(it), agent()(it),
-    agent({ work: ({ git }) => git.change('src/Checkout/Pay.cs', 'tests/Checkout.UnitTest/PayTests.cs') })(it),
+    agent({ work: ({ git }) => git.change('src/Checkout/Pay.cs', 'tests/Checkout.UnitTest/PayTests.cs', 'docs/features/payment/pay-by-card.feature') })(it),
     unavailable,
   ])
 
   await host.start()
 
   assert.deepEqual(recorded(host, 'distill').map((event) => [event.outcome, event.failures]), [['done', []]])
+
+  const designing = scripted({}, (it) => [agent()(it), agent()(it), agent({ work: ({ git }) => git.change(...DESIGN_DOCUMENTS) })(it), unavailable])
+  await designing.start()
+  assert.deepEqual(recorded(designing, 'distill')[0].failures, DESIGN_DOCUMENTS.map((path) => `out of write scope: ${path}`))
 })
 
 test('a component whose paths list no folder (no tests folder yet) is written anywhere in its root', async () => {

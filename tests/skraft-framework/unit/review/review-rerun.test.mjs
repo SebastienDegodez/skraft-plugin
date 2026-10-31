@@ -13,10 +13,10 @@ const askedOn = (host, step, visit) => host.agentRunner.reviewed()
   .filter((dispatch) => dispatch.agent !== 'finding-refuter' && dispatch.label.includes(` · ${step} · `) && (visit > 1 ? dispatch.label.includes(`· pass ${visit} ·`) : !dispatch.label.includes('· pass ')))
   .map((dispatch) => dispatch.agent)
 
-test('on the next pass only the lenses that had findings or whose inputs changed run again; the others keep their verdict', async () => {
+test('on the next pass a lens that had findings runs again; the clean ones whose inputs did not move keep their verdict', async () => {
   const host = scripted({}, (it) => [
     ...nominal(it).slice(0, 2),
-    agent({ fill: false, work: ({ git }) => git.commit('docs(checkout): ADR for the payment context', ['docs/adr/adr-002-payment-context.md']) })(it),
+    agent({ fill: false })(it),
     ...nominal(it).slice(2),
   ])
   host.agentRunner.review = lenses({ consistency: [blocker] })
@@ -24,18 +24,18 @@ test('on the next pass only the lenses that had findings or whose inputs changed
   await host.start()
 
   assert.deepEqual(askedOn(host, 'design_review', 1), ['consistency-lens', 'architecture-compliance-lens', 'fitness-lens'])
-  assert.deepEqual(askedOn(host, 'design_review', 2), ['consistency-lens', 'architecture-compliance-lens'])
+  assert.deepEqual(askedOn(host, 'design_review', 2), ['consistency-lens'])
   const second = host.events().filter((event) => event.type === 'review.lens' && event.step === 'design_review' && event.visit === 2)
   assert.deepEqual(second.map(({ lens, verdict, reused }) => [lens, verdict, reused]), [
+    ['architecture-compliance', 'pass', true],
     ['fitness', 'pass', true],
     ['consistency', 'pass', undefined],
-    ['architecture-compliance', 'pass', undefined],
   ])
   const first = host.events().find((event) => event.type === 'review.lens' && event.lens === 'fitness')
-  assert.equal(second[0].fingerprint, first.fingerprint)
+  assert.equal(second[1].fingerprint, first.fingerprint)
   assert.deepEqual(reviews(host).slice(0, 2), [['design_review', 1, 'needs-rework', 'design'], ['design_review', 2, 'approved', 'adr']])
   assert.ok((await host.tracking.read(SLUG, 'reviews/design_review-1/verdict.yaml')).endsWith('\nreused: []\n'))
-  assert.ok((await host.tracking.read(SLUG, 'reviews/design_review-2/verdict.yaml')).endsWith('\nrefutations: []\nreused:\n  - lens: "fitness"\n'))
+  assert.ok((await host.tracking.read(SLUG, 'reviews/design_review-2/verdict.yaml')).endsWith('\nrefutations: []\nreused:\n  - lens: "architecture-compliance"\n  - lens: "fitness"\n'))
 })
 
 test('a lens that passed with a low finding runs again on the next pass, its inputs unchanged', async () => {
@@ -163,7 +163,7 @@ test('a lens the repository adds to a review runs with the others, as a reposito
   assert.deepEqual(batch.map(({ agent: id, source }) => `${id} ${source}`), ['consistency-lens plugin', 'architecture-compliance-lens plugin', 'fitness-lens plugin', 'acme-threat-model-lens repository'])
   assert.ok(batch[3].prompt.startsWith('## Skraft review lens: acme-threat-model (DESIGN)\n- Story: #42 — Pay by card\n'), batch[3].prompt)
   assert.deepEqual(batch[3].prompt.split('\n').filter((line) => /^  - .+: \/work\//.test(line)).map((line) => line.split(':')[0].trim()), [
-    '- Review context (story, project rules, who wrote which document)', '- Documents of this phase', '- Documents of this phase', '- Documents of this phase', '- Documents of the story and of the other phases', '- Documents of the story and of the other phases',
+    '- Review context (story, project rules, who wrote which document)', '- Documents of this phase', '- Documents of this phase', '- Documents of the story and of the other phases', '- Documents of the story and of the other phases',
     '- Changes since the base of the run (open a whole file only when the patch lacks the context a finding needs)',
     '- Paths those changes touch (a path with no section in the patch is a new file',
   ])
@@ -297,7 +297,7 @@ test('each agent\'s documents in the tracking folder reach the lenses, by phase,
     agent({ work: ({ git, tracking }) => {
       tracking.write(SLUG, 'details/2026-10-11/contracts-checkout.md', '# Contracts\n')
       tracking.write(SLUG, 'results/notes.json', '{}')
-      git.commit('docs(checkout): ADR for the card payment', ['docs/adr/adr-001-card-payment.md'], REFS_42)
+      git.commit('docs(checkout): ADR for the card payment', ['docs/adr/adr-001-card-payment.md', 'docs/architecture/context-map.md'], REFS_42)
     } })(it),
     ...nominal(it, REFS_42).slice(2),
   ])
@@ -305,24 +305,26 @@ test('each agent\'s documents in the tracking folder reach the lenses, by phase,
   await host.start({ story: { issue: 42, title: 'Pay by card' } })
 
   const design = host.events().find((event) => event.type === 'step.recorded' && event.step === 'design')
-  assert.deepEqual(design.documents, ['details/2026-10-11/consistency-matrix-checkout.md', 'details/2026-10-11/context-map.md', 'details/2026-10-11/contracts-checkout.md', 'details/2026-10-11/structural-scan.json'])
+  assert.deepEqual(design.documents, ['details/2026-10-11/consistency-matrix-checkout.md', 'details/2026-10-11/contracts-checkout.md', 'details/2026-10-11/structural-scan.json'])
   const fitness = host.agentRunner.reviewed().find((dispatch) => dispatch.agent === 'fitness-lens').prompt
   assert.deepEqual(fitness.split('\n').filter((line) => /^  - .+: \//.test(line)), [
     `  - Review context (story, project rules, who wrote which document): ${TRACKING}/reviews/design_review-1/context.md`,
-    `  - Documents of this phase: ${TRACKING}/details/2026-10-11/context-map.md`,
     `  - Documents of this phase: ${TRACKING}/details/2026-10-11/consistency-matrix-checkout.md`,
     `  - Documents of this phase: ${TRACKING}/details/2026-10-11/contracts-checkout.md`,
     `  - Documents of this phase: ${TRACKING}/details/2026-10-11/structural-scan.json`,
     `  - Documents of the story and of the other phases: ${TRACKING}/plans/2026-10-11/issue-42.md`,
     `  - Documents of the story and of the other phases: ${TRACKING}/research/2026-10-11/checkout-research.md`,
+    `  - Changes since the base of the run (open a whole file only when the patch lacks the context a finding needs): ${TRACKING}/reviews/design_review-1/design.patch`,
+    `  - Paths those changes touch (a path with no section in the patch is a new file: open it): ${TRACKING}/reviews/design_review-1/design-files.txt`,
   ])
+  assert.equal(await host.tracking.read(SLUG, 'reviews/design_review-1/design-files.txt'), 'docs/adr/adr-001-card-payment.md\ndocs/architecture/context-map.md\n')
   assert.equal(await host.tracking.read(SLUG, 'reviews/design_review-1/context.md'), [
     '# Review context: design_review (DESIGN)',
     '', '## Story', '', '#42 — Pay by card', '', 'Story documents:', `- ${TRACKING}/plans/2026-10-11/issue-42.md`,
     '', '## Project rules', '', ...rules.map((path) => `- ${path}`),
     '', '## Documents by phase',
     '', '### RESEARCH', '', '- research (solution-researcher):', `  - ${TRACKING}/research/2026-10-11/checkout-research.md`,
-    '', '### DESIGN (under review)', '', '- design (solution-architect):', `  - ${TRACKING}/details/2026-10-11/context-map.md`, `  - ${TRACKING}/details/2026-10-11/consistency-matrix-checkout.md`,
+    '', '### DESIGN (under review)', '', '- design (solution-architect):', `  - ${TRACKING}/details/2026-10-11/consistency-matrix-checkout.md`,
     `  - ${TRACKING}/details/2026-10-11/contracts-checkout.md`, `  - ${TRACKING}/details/2026-10-11/structural-scan.json`,
     '',
   ].join('\n'))
@@ -346,7 +348,7 @@ test('a lens reading the changed paths runs again when a changed file\'s content
 
   await host.start()
 
-  assert.deepEqual(askedOn(host, 'design_review', 2), ['consistency-lens', 'architecture-compliance-lens'])
+  assert.deepEqual(askedOn(host, 'design_review', 2), ['consistency-lens', 'architecture-compliance-lens', 'fitness-lens'])
 })
 
 test('a lens answer that gives two findings the same id is asked again', async () => {

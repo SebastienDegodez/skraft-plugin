@@ -1,6 +1,6 @@
 import { readLensAnswer, readRefutations } from '../../domain/review/answers.mjs'
 import { composeReviewContext, DECISIONS_INDEX, listedRecords, RULE_FILES } from '../../domain/review/context.mjs'
-import { codeChanges, reviewedPatch, reviewedPaths } from '../../domain/review/changes.mjs'
+import { reviewedPatch, reviewedPaths, SCOPES, scopedChanges } from '../../domain/review/changes.mjs'
 import { composeLensBrief, composeRefuterBrief, reviewLabel } from '../../domain/review/lens-brief.mjs'
 import { citationOf, groupFindings } from '../../domain/review/finding-groups.mjs'
 import { lensAgent, planLenses, REFUTER } from '../../domain/review/lenses.mjs'
@@ -63,10 +63,11 @@ import { readOrName } from '../shared/workspace-reading.mjs'
  * @typedef {{ kind: InputKind, path: string }} TrackedInput path relative to the tracking folder
  * @typedef {{ path: string, text: string, location: string }} RuleFile path: relative to the working
  *   copy; location: what a lens reads, the copy beside the review when the rules come from a commit
- * @typedef {{ paths: string[], patch: string, rules: RuleFile[], inputs: Record<InputKind, string[]>, blind: { paths: string[], inputs: Partial<Record<InputKind, string[]>> }, scan: Finding[], layout: Finding[] }} Prepared
+ * @typedef {import('../../domain/review/changes.mjs').Scope} Scope
+ * @typedef {{ paths: string[], patch: string, rules: RuleFile[], inputs: Record<InputKind, string[]>, scoped: Partial<Record<Scope, { paths: string[], inputs: Partial<Record<InputKind, string[]>> }>>, scan: Finding[], layout: Finding[] }} Prepared
  *   paths: the changed paths, relative to the working copy; rules: the project's rule files that
- *   exist; inputs: the tracking files of each kind; blind: the changed paths and the change files
- *   of a blind lens, without the run's decision records; scan: the G9 findings the engine reads in the patch;
+ *   exist; inputs: the tracking files of each kind; scoped: for each scope a lens of the node
+ *   reads (the code always), its changed paths and change files, without or with only the run's documents; scan: the G9 findings the engine reads in the patch;
  *   layout: the G11 findings it reads in where the patch adds test files.
  * @typedef {{ stop: { code: string, reason: string } }} Stopped
  * @typedef {{ verdict: ReviewVerdict, costUsd: number | undefined, file: string }} Reviewed
@@ -210,25 +211,37 @@ const prepareChanges = async (review) => {
   if (changes === null) return { stop: { code: 'environment', reason: `Git could not tell what changed since the base of the run, so ${review.step.node.id} has nothing to review` } }
   const folder = folderOf(review)
   const rules = await rulesOf(review)
-  const code = codeChanges(changes)
+  const scopes = scopesOf(review, changes)
   const present = new Set(await review.deps.files.list(review.slug, ''))
-  await writeAll(review, folder, filesOf(review, { changes, code }, { rules, present }))
+  await writeAll(review, folder, filesOf(review, { changes, scopes }, { rules, present }))
   const changed = hasChanges(changes)
-  const blind = { paths: code.paths, inputs: changed ? { patch: [`${folder}/code.patch`], files: [`${folder}/code-files.txt`] } : {} }
-  return { ...changes, rules, inputs: inputsOf(review, folder, { changed, present }), blind, scan: scanPatch(changes.patch), layout: layoutFindings(changes.patch, review.inputs.components ?? []) }
+  const scoped = Object.fromEntries(Object.entries(scopes).map(([scope, part]) => [scope, { paths: part.paths, inputs: changed ? scopeInputs(folder, scope) : {} }]))
+  return { ...changes, rules, inputs: inputsOf(review, folder, { changed, present }), scoped, scan: scanPatch(changes.patch), layout: layoutFindings(changes.patch, review.inputs.components ?? []) }
 }
 
 /**
- * The files a review writes beside itself, by name: the changes, and a blind lens's copy of them.
- * @param {Review} review @param {Record<'changes' | 'code', { paths: string[], patch: string }>} changes
+ * The changes narrowed to each scope a lens of the node reads; the code scope always.
+ * @param {Review} review @param {{ paths: string[], patch: string }} changes
+ * @returns {Partial<Record<Scope, { paths: string[], patch: string }>>}
+ */
+const scopesOf = (review, changes) => {
+  const used = new Set(['code', ...planLenses(review.step.node.branches, changes).map(({ scope }) => scope)])
+  return Object.fromEntries(SCOPES.filter((scope) => used.has(scope)).map((scope) => [scope, scopedChanges(changes, scope)]))
+}
+
+/** The patch and the paths file of a scope. @param {string} folder @param {string} scope */
+const scopeInputs = (folder, scope) => ({ patch: [`${folder}/${scope}.patch`], files: [`${folder}/${scope}-files.txt`] })
+
+/**
+ * The files a review writes beside itself, by name: the changes, and a scoped lens's copy of them.
+ * @param {Review} review @param {{ changes: { paths: string[], patch: string }, scopes: Partial<Record<Scope, { paths: string[], patch: string }>> }} changes
  * @param {{ rules: RuleFile[], present: Set<string> }} found the rule files, and the files of the tracking folder
  * @returns {Array<[string, string]>}
  */
-const filesOf = (review, { changes, code }, { rules, present }) => [
+const filesOf = (review, { changes, scopes }, { rules, present }) => [
   ['changes.patch', changes.patch],
   ['changed-files.txt', lines(changes.paths)],
-  ['code.patch', code.patch],
-  ['code-files.txt', lines(code.paths)],
+  ...Object.entries(scopes).flatMap(([scope, part]) => [[`${scope}.patch`, part.patch], [`${scope}-files.txt`, lines(part.paths)]]),
   ...(review.inputs.documents === undefined ? [] : [/** @type {[string, string]} */ (['context.md', contextOf(review, rules, present)])]),
   ...(review.inputs.components === undefined ? [] : [/** @type {[string, string]} */ (['components.json', componentsOf(review)])]),
 ]
@@ -362,11 +375,11 @@ const copied = async (review, rules) => {
  */
 const planLensInputs = async (review, prepared) => Promise.all(planLenses(review.step.node.branches, prepared).map(async (lens) => {
   const kinds = lens.blind ? lens.inputs : [/** @type {InputKind} */ ('overview'), ...lens.inputs]
-  const tracked = lens.blind ? { ...prepared.inputs, ...prepared.blind.inputs } : prepared.inputs
+  const tracked = lens.scope === null ? prepared.inputs : { ...prepared.inputs, ...prepared.scoped[lens.scope].inputs }
   const inputs = kinds.flatMap((kind) => tracked[kind].map((path) => ({ kind, path })))
   const skills = (await review.deps.agentCatalog.skills(lens.agent)).found
   const known = engineChecks(prepared).filter(({ joins }) => joins === lens.name).flatMap(({ findings }) => findings)
-  const unchanged = !hasChanges(prepared) && lens.inputs.some((kind) => kind === 'patch' || kind === 'files')
+  const unchanged = !hasChanges(prepared)
   return { lens, inputs, skills, fingerprint: await fingerprintOf(review, { inputs, skills, prepared, lens }), known, unchanged }
 }))
 
@@ -382,7 +395,7 @@ const planLensInputs = async (review, prepared) => Promise.all(planLenses(review
 const fingerprintOf = async ({ deps, slug }, { inputs, skills, prepared, lens }) => {
   const texts = await Promise.all(inputs.map(({ path }) => deps.files.read(slug, path)))
   const keyed = inputs.map(({ kind, path }, index) => [kind === 'outputs' || kind === 'context' ? path : kind, texts[index]])
-  const changed = lens.inputs.includes('files') ? (lens.blind ? prepared.blind.paths : prepared.paths) : []
+  const changed = lens.inputs.includes('files') ? (lens.scope === null ? prepared.paths : prepared.scoped[lens.scope].paths) : []
   const contents = await Promise.all(changed.map(async (path) => [path, await readOrName(deps.workspace, path)]))
   const rules = lens.blind ? [] : prepared.rules.map(({ path, text }) => [path, text])
   const skillTexts = skills.map(({ name, text }) => [name, text])

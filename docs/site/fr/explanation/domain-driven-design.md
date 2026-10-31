@@ -65,9 +65,10 @@ ou réutilise). Vlad Khononov fait de cette classification le point de départ d
 conception ([Khononov, 2021]({{ cites }}#cite-khononov-lddd-2021)) ; skraft en fait la mesure
 de la profondeur de DDD à appliquer : modèle riche pour le Core, patterns standards ailleurs.
 
-Le `solution-architect` écrit tout cela dans `context-map.md`, la sortie que le moteur attend de
-lui en DESIGN (`details/{date}/context-map.md`). Scinder ou fusionner un contexte exige un ADR,
-et la lentille `fitness` refuse un contexte qu'aucune story ne demande (G9).
+Le `solution-architect` écrit tout cela dans la context map du dépôt,
+`docs/architecture/context-map.md` : un seul fichier, complété story après story, que les runs
+suivants lisent avant de concevoir. Scinder ou fusionner un contexte exige un ADR, et la lentille
+`fitness` refuse un contexte qu'aucune story ne demande (G9).
 
 ## La context map : nommer chaque relation
 
@@ -118,9 +119,10 @@ Event Sourcing et sagas seulement si une force le demande.
 ```mermaid
 flowchart TB
     S["Stories affinées<br/>DISCUSS"] --> SA
+    D["docs/ du dépôt<br/>lu d'abord"] --> SA
     subgraph SA["DESIGN — solution-architect"]
         direction LR
-        EM["event-model-{story}.md<br/>Event Modeling"] --> CM["context-map.md<br/>DDD stratégique"] --> TD["diagrams-{story}.md<br/>DDD tactique"] --> CT["contracts-{story}.md"] --> MX["ADR +<br/>consistency matrix"]
+        EM["docs/domain/event-model/{contexte}.md<br/>Event Modeling"] --> CM["docs/architecture/context-map.md<br/>DDD stratégique"] --> TD["docs/architecture/{contexte}.md<br/>DDD tactique"] --> CT["contracts-{story}.md"] --> MX["ADR +<br/>consistency matrix"]
     end
     SA --> RV["Revue DESIGN<br/>consistency · architecture-compliance · fitness"]
     RV --> H["Ratification humaine des ADR"] --> DI["DISTILL"]
@@ -128,7 +130,9 @@ flowchart TB
 
 *Figure 2 — Le chemin des artefacts de DESIGN, dans l'ordre où le `solution-architect` les écrit
 (`com.github.copilot/agents/solution-architect.agent.md`) et où le workflow les fait revoir puis
-ratifier (`pipeline.skraft.dot`).*
+ratifier (`pipeline.skraft.dot`). Le modèle d'événements, la context map, la conception tactique
+et les ADR vont sous `docs/` du dépôt ; les contrats et la matrice de cohérence restent dans le
+dossier de suivi du run.*
 
 **Event Modeling d'abord.** Avant de dessiner des agrégats, le `solution-architect` modélise le
 comportement sur une ligne de temps : une commande (une intention, qui peut être refusée), un
@@ -138,7 +142,8 @@ commande, ses événements et son modèle de lecture : la plus petite unité de 
 lentille `fitness` exige que chaque story ait au moins une commande ou une requête (G7) et que
 chaque commande ait un événement pour son succès (G8).
 
-**Puis les blocs tactiques d'Evans**, dans `diagrams-{story}.md` :
+**Puis les blocs tactiques d'Evans**, dans la conception tactique de chaque contexte,
+`docs/architecture/{bounded-context}.md` :
 
 - l'**agrégat** est une frontière de cohérence : une racine, des invariants garantis à
   l'intérieur, jamais à cheval sur deux agrégats ([Evans, 2003]({{ cites }}#cite-evans-ddd-2003)).
@@ -165,6 +170,17 @@ entre services, point de contention mesuré, séparation réglementaire (lentill
 Avant chaque tentative de l'architecte, le moteur cherche dans le code les signatures d'un bus
 CQRS, d'un event store ou d'une saga (`structural-scan.json`) pour qu'un engagement déjà présent
 ne reste pas sans ADR.
+
+## Un modèle qui survit à la story
+
+Le modèle d'événements, la context map et la conception tactique décrivent le domaine, pas une
+story. L'architecte les écrit sous `docs/` du dépôt, sur la branche de la story, et la pull
+request les montre à côté du code. Le run suivant les lit avant toute autre chose et les complète
+plutôt que de repartir de zéro ; quand ils couvrent déjà sa story, l'architecte le dit, les cite
+et passe à la suite. Les scénarios qu'écrit DISTILL suivent le même chemin, sous
+`docs/features/`. Les contrats et la matrice de cohérence appartiennent à une story et restent
+dans le dossier de suivi du run. La liste complète :
+[Documentation durable]({{ "/fr/reference/run-journal" | relative_url }}#durable-docs).
 
 ## La cohérence entre artefacts
 

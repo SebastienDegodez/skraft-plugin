@@ -60,7 +60,7 @@ export const pipelineHost = ({
     agentRunner: new ScriptedAgentRunner(behaviours),
     human: new ScriptedHuman(answers),
     progress: new RecordingProgress(),
-    workspace: new InMemoryWorkspace({ 'skraft-config.json': JSON.stringify({ ...answered, ...config, components }), ...files }),
+    workspace: new InMemoryWorkspace({ 'skraft-config.json': JSON.stringify({ ...answered, ...config, components }), 'docs/architecture/context-map.md': '# Context map\n', ...files }),
     userSettings: new InMemoryUserSettings(user),
     sourceControl: git,
     commandRunner: machine ?? new ScriptedMachine({ clock }),
@@ -128,18 +128,19 @@ const asked = (tracking) => tracking.journal(SLUG).filter((event) => event.type 
 
 /**
  * An agent that fills its outputs, writes its result, then does `work` (changes files, commits);
- * a solution architect also leaves a passing consistency matrix unless `records` is false.
+ * a solution architect leaves a passing consistency matrix as its output unless `records` is false.
  * @param {{ result?: object | string | null, fill?: boolean, records?: boolean, work?: (host: { git: InMemoryGit, tracking: InMemoryTracking }) => void, answer?: object }} [behaviour]
  *   result null writes none; a string is written as is.
  */
 /** The consistency matrix a solution architect leaves when its documents agree. */
-export const PASSING_MATRIX = Object.freeze(['details/2026-10-11/consistency-matrix-checkout.md', '| ADR | Verdict |\n- consistency-gate: PASS\n'])
+export const PASSING_MATRIX = Object.freeze(['details/2026-10-11/consistency-matrix-checkout.md', '| ADR | Verdict |\n- docs-relied-on: docs/architecture/context-map.md\n- consistency-gate: PASS\n'])
 
 export const agent = ({ result = { status: 'done', summary: 'done' }, fill = true, records = true, work = () => {}, answer } = {}) => (host) => async () => {
   const step = asked(host.tracking)
-  if (records && step.agent === 'solution-architect') await host.tracking.write(SLUG, ...PASSING_MATRIX)
+  const matrix = records && step.agent === 'solution-architect'
+  if (matrix) await host.tracking.write(SLUG, ...PASSING_MATRIX)
   if (fill) {
-    for (const path of step.outputs) {
+    for (const path of step.outputs.filter((output) => !(matrix && output === PASSING_MATRIX[0]))) {
       const before = (await host.tracking.read(SLUG, path)) ?? ''
       await host.tracking.write(SLUG, path, `${before.replace(/\{\{[^{}]*\}\}/g, 'filled in')}\nFindings for ${step.step}.\n`)
     }
