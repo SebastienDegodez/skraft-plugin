@@ -469,6 +469,14 @@ const reportHostSections = (text, page) => {
   report(page, 'extension', sections[0], `host sections (${hosts.join(', ')}): write Tabs groupId="host" by hand${rename}`)
 }
 
+/**
+ * What a converted page still holds that Docusaurus cannot read.
+ * @param {string} text a converted page
+ * @param {{ extension: '.md'|'.mdx', headingIds?: 'comment'|'classic' }} options
+ * @returns {{ rule: 'check', line: number, reason: string }[]}
+ */
+export const checkPage = () => []
+
 const DEFAULT_MDX_DOCS = ['index', 'reference/citations']
 
 /**
