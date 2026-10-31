@@ -39,6 +39,15 @@ test('skraft followed by a slug, not a command, is CLI output: console without a
   assert.equal(classify('text', ['skraft checkout started — progress in the Skraft pane.']).kind, 'cli-output')
 })
 
+test('a program name inside output is no command: an indented usage line, a word ending with a colon', () => {
+  assert.deepEqual(classify('', ['usage: skraft --version', '       skraft install [--no-path]']).kind, 'unchanged')
+  assert.deepEqual(classify('', ['skraft journal adopt: sign the journal on from here? [y/N]']), {
+    kind: 'cli-output',
+    info: 'console',
+    lines: ['skraft journal adopt: sign the journal on from here? [y/N]'],
+  })
+})
+
 test('an output format with placeholders, a file, a log or an unknown program stays as it is', () => {
   for (const [info, lines] of [
     ['', ['skraft <slug>: <status>', '  <PHASE>  <state>']],
