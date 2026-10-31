@@ -202,6 +202,11 @@ environment names no home folder …`.
 écriture est arrivée depuis l'ouverture, il s'arrête avec `journal-changed` :
 `<slug>: another run wrote events.jsonl meanwhile; run again once it stops`.
 
+Sous Copilot CLI, l'onglet **Journal** du canvas `skraft-pipeline` lit ce fichier
+([Hôtes](./hosts.md#canvas)) :
+
+![Canvas skraft-pipeline, onglet Journal : la chaîne de hachage intacte, 62 lignes chaînées chacune à la précédente et signées ; puis chaque étape avec sa phase, son passage et son résultat, et la décision humaine adr-1 RATIFIED par host-confirmed](/img/screenshots/shared/pipeline-canvas-journal.png)
+
 ## Événements <!-- #events -->
 
 | `type` | Écrit par | Champs |

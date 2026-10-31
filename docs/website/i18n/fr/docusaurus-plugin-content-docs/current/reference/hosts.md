@@ -130,6 +130,22 @@ panneau ne montre aucun bouton ; un appui est alors refusé (`skraft is running;
 dialog`). Un appui qui échoue pour une autre raison dit `skraft: the answer could not be recorded;
 answer with /skraft decide`.
 
+```console title="Panneau Skraft"
+skraft checkout — running
+▶ DESIGN
+  ✓ design — solution-architect: done, pass 2, ~$1.00
+  ▶ design_review — consistency, fitness: pass 2, ~$0.38
+  ✓ adr — adr-ratification: answered
+· DISTILL
+  · distill
+```
+
+:::note[Capture en attente d'un run réel]
+Une capture du panneau **Skraft** dans une session Claude Code remplacera ce bloc dès qu'un run
+réel la produira. D'ici là, le bloc montre le texte du panneau pour un run `checkout` en DESIGN,
+tel que le vérifient les tests de vue du mod.
+:::
+
 **Outil `mcp__skraft__run_pipeline`** (appelé par le modèle) : démarre ou reprend le
 pipeline et rend la main tout de suite ; le run continue en arrière-plan.
 
@@ -252,6 +268,8 @@ terminal.` ; il ne prend aucune réponse.
 
 Tant qu'une question attend, un bouton **On a besoin de vous** s'affiche dans l'en-tête. Il mène à la question sur l'onglet Run, comme la touche `n` hors d'un champ. Il ne répond à rien : la réponse passe par la boîte de dialogue de Copilot ou par `skraft decide`.
 
+![Canvas skraft-pipeline : statut WAITING, bouton « On a besoin de vous » dans l'en-tête, encadré « Pull request » avec la question et la façon d'y répondre, RESEARCH ouverte sur publish_consent, les autres phases à venir](/img/screenshots/shared/pipeline-canvas-question.png)
+
 La page parle la langue du navigateur, français ou anglais. Les phrases que le driver fixe (aucun répertoire de travail, un pipeline ou une configuration illisible, une configuration non enregistrée, où répondre à la question) et les mots propres de la page la suivent ; ce que le moteur écrit (les étapes et leurs résultats, les revues, la question, les refus du moteur) s'affiche tel que le moteur l'a écrit, et le modèle lit le texte anglais de `get_pipeline` et `get_configuration`. Chaque phase dit son état en un mot (close, en cours, à venir) et chaque étape en un mot que seul un lecteur d'écran lit ; une région vivante polie annonce un nouvel état du run et une question qui se met à attendre. Les consentements sont un seul arrêt de tabulation par groupe : les flèches, Début et Fin déplacent le choix. En couleurs forcées, le choix retenu, l'onglet sélectionné et la phase et l'étape en cours gardent un fond, une bordure ou un contour, et `prefers-contrast: more` assombrit le texte discret et les filets. Après cinq tentatives de rejoindre son serveur (environ 45 s), la page dit de fermer le canvas et de le rouvrir depuis Copilot : un serveur relancé a une nouvelle adresse et un nouveau jeton, qu'un rechargement n'atteint pas. Le tout est vérifié dans un navigateur aux couleurs et au contraste émulés ; il n'a été lu ni avec un lecteur d'écran ni avec le contraste élevé de Windows.
 
 Avant la première phase d'une copie de travail, le workflow ouvre le canvas sur son onglet Configuration et pose dans le chat la question `configuration` : *Démarrer ce run avec la configuration de cette copie de travail ?* `START` continue et est gardé dans `skraft-config.local.json` (`configurationConfirmed`), si bien que les runs suivants démarrent sans demander ; `STOP` ne démarre rien. Passez `configure: true` au workflow pour qu'on vous le redemande. Le CLI et le mod Claude Code ne la posent jamais.
@@ -305,6 +323,12 @@ $ node "<dossier du plugin>/engine/drivers/copilot-sdk/skraft-run.mjs" [<slug>] 
 | Question | un run en pause attend : `skraft decide` dans un terminal, puis `skraft-run.mjs` de nouveau |
 | Code de sortie | 0 run fini ou en attente ; 1 sinon ; 2 ligne mal formée |
 | Échecs | chaque appel au SDK a un délai (`rpc-timeout`), le suivi une échéance (`run-too-long`) ; Ctrl-C arrête le suivi ; aucun texte du SDK n'est repris |
+
+:::note[Capture en attente d'un run réel]
+Une capture de VS Code où `skraft-run.mjs` suit un run dans son terminal remplacera cette note
+dès qu'un run réel la produira. D'ici là, la commande ci-dessus est ce que vous tapez dans ce
+terminal.
+:::
 
 ### Boucle d'agent `next` / `record` <!-- #agent-loop -->
 

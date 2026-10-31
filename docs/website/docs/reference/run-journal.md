@@ -202,6 +202,11 @@ names no home folder …`.
 write arrived since it was opened, it stops with `journal-changed`:
 `<slug>: another run wrote events.jsonl meanwhile; run again once it stops`.
 
+Under Copilot CLI, the **Journal** tab of the `skraft-pipeline` canvas reads this file
+([Hosts](./hosts.md#canvas)):
+
+![skraft-pipeline canvas, Journal tab: the hash chain intact, 62 lines each chained to the one before and signed; then each step with its phase, pass and outcome, and the human decision adr-1 RATIFIED by host-confirmed](/img/screenshots/shared/pipeline-canvas-journal.png)
+
 ## Events <!-- #events -->
 
 | `type` | Written by | Fields |
