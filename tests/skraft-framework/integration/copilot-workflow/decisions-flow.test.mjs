@@ -8,6 +8,7 @@ import { ADR, ADR_PATH, decisionsIndex, INDEX_PATH, NOMINAL, SLUG, blocked, comm
 import { journal } from '../support/workspace.mjs'
 
 const REASON = 'use the bank gateway, not Stripe'
+const INSTRUCTION = 'Keep the bank gateway and revise the ADR'
 const host = (cwd) => copilotHost(cwd)
 /** The phase agents' calls, the review lenses left out. */
 const phaseCalls = (calls) => calls.filter((call) => !call.label.includes('_review · '))
@@ -59,7 +60,7 @@ test('a refusal whose reason the person leaves blank or dismisses is not recorde
   }
 })
 
-test('a start that refuses the ADR three times reaches the limit of five dialogs: the sixth, the third reason, is not put; nothing of it is recorded and the run pauses with a fixed message', async (t) => {
+test('a start that refuses the ADR twice, then gives design an instruction once its return is spent, reaches the limit of five dialogs: the sixth, the third ratification, is not put; nothing of it is recorded and the run pauses with a fixed message', async (t) => {
   const { cwd } = pipelineRepository(t)
   const revises = (text) => (brief, { cwd: dir, slug }) => {
     commit(dir, `docs(${slug}): ${text}`, { [ADR_PATH]: `${ADR}\n${text}.\n` })
@@ -67,12 +68,13 @@ test('a start that refuses the ADR three times reaches the limit of five dialogs
   }
   const llm = scriptedLlm({ cwd, acts: { 'solution-architect': [NOMINAL['solution-architect'], revises('revised once'), revises('revised twice')] } })
   const { ctx, logs } = simulatedContext({ args: { slug: SLUG }, otherwise: actsAs(llm) })
-  const session = answeringSession({ answers: ['REJECTED', REASON, 'REJECTED', REASON, 'REJECTED', REASON] })
+  const session = answeringSession({ answers: ['REJECTED', REASON, 'REJECTED', REASON, INSTRUCTION, 'RATIFIED'] })
 
   await assert.rejects(runSkraftPipelineWorkflow(ctx, copilotHost(cwd, PLUGIN_ROOT, session, { now: () => 0 })), { name: 'AbortError', message: 'paused at adr-3' })
 
-  assert.deepEqual(session.asked.map(({ kind }) => kind), ['select', 'input', 'select', 'input', 'select'])
-  assert.deepEqual(journal(cwd, SLUG).filter((event) => event.type === 'question.answered').map(({ key, answer }) => [key, answer]), [['adr-1', 'REJECTED'], ['adr-2', 'REJECTED']])
+  assert.deepEqual(session.asked.map(({ kind }) => kind), ['select', 'input', 'select', 'input', 'input'])
+  assert.match(session.asked[4].message, /^design is blocked: adr -> design was taken as often as its max_visits allows\./)
+  assert.deepEqual(journal(cwd, SLUG).filter((event) => event.type === 'question.answered').map(({ key, answer }) => [key, answer]), [['adr-1', 'REJECTED'], ['adr-2', 'REJECTED'], ['design-1', INSTRUCTION]])
   assert.equal(logs.at(-1), 'adr-3 was not answered: too many questions were put to you in a short time. Resume this run to be asked again, ask Copilot in the chat to put the question to you, or type skraft decide adr-3 RATIFIED|REJECTED in a terminal and resume this run.')
 })
 
