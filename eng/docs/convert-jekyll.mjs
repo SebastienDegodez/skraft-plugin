@@ -184,6 +184,18 @@ const convertRunningExample = (text, page) => {
 /** Rule 6: `{% raw %}` and `{% endraw %}` go everywhere (Liquid also read them inside fences). */
 const convertRawBlocks = (text) => text.replace(/\{%-?\s*(?:end)?raw\s*-?%\}/g, '')
 
+const CITATIONS_LOOP = /\{%-?\s*for\s+cite\s+in\s+site\.data\.citations\s*-?%\}[\s\S]*?\{%-?\s*endfor\s*-?%\}/
+
+/** Rule 7: the citations page's Liquid loop becomes `<Bibliography />`. */
+const convertCitationsPage = (text, page) => {
+  if (page.docId !== 'reference/citations' || !CITATIONS_LOOP.test(text)) return text
+  page.imports.push("import Bibliography from '@site/src/components/Bibliography';")
+  return text.replace(CITATIONS_LOOP, '<Bibliography />')
+}
+
+/** Imports go right after the front matter, between blank lines. */
+const withImports = (body, imports) => (imports.length ? `\n${imports.join('\n')}\n${body}` : body)
+
 const DEFAULT_MDX_DOCS = ['index', 'reference/citations']
 
 /**
@@ -194,7 +206,7 @@ const DEFAULT_MDX_DOCS = ['index', 'reference/citations']
  */
 export const convertPage = (source, options) => {
   const mdxDocs = new Set([...DEFAULT_MDX_DOCS, ...(options.mdxDocs ?? [])])
-  const page = { ...options, mdxDocs, source, seen: new Map(), findings: [], redirects: [], phase: null }
+  const page = { ...options, mdxDocs, source, seen: new Map(), findings: [], redirects: [], imports: [], phase: null }
   page.extension = extensionOf(page.docId, page)
   const { lines, body } = splitFrontMatter(source)
   let text = body
@@ -203,6 +215,7 @@ export const convertPage = (source, options) => {
   text = convertIncludes(text, page)
   text = convertRunningExample(text, page)
   text = convertRawBlocks(text)
-  text = convertFrontMatter(lines, page) + text
+  text = convertCitationsPage(text, page)
+  text = convertFrontMatter(lines, page) + withImports(text, page.imports)
   return { text, extension: page.extension, findings: page.findings, redirects: page.redirects }
 }
