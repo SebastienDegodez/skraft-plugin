@@ -3,7 +3,8 @@
 #   unzip it, then `npm run docs:serve -- --dir <unzipped folder>` (or `npx docusaurus serve --dir`).
 # The hosted preview is main's deploy: it builds integration/v2-next with
 # SKRAFT_DOCS_BASE_URL=/skraft-plugin/v2-next/ and publishes it under /v2-next/.
-# The end-to-end suite joins in WP10. This workflow does not deploy: only main publishes Pages.
+# The e2e job runs the Playwright suite (tests/site) on the built site. This workflow does not
+# deploy: only main publishes Pages.
 name: Docs website
 
 on:
@@ -24,6 +25,7 @@ on:
       - "plugins/skraft-framework/workflows/**"
       - "plugins/skraft-framework/engine/domain/workflow/**"
       - "package.json"
+      - "playwright.config.mjs"
       - ".github/workflows/docs-website.yml"
   push:
     branches: [integration/v2-next]
@@ -43,6 +45,7 @@ on:
       - "plugins/skraft-framework/workflows/**"
       - "plugins/skraft-framework/engine/domain/workflow/**"
       - "package.json"
+      - "playwright.config.mjs"
       - ".github/workflows/docs-website.yml"
 
 permissions:
@@ -106,3 +109,40 @@ jobs:
           path: docs/website/build
           retention-days: 14
           if-no-files-found: error
+
+  # The Playwright suite (tests/site/*.spec.mjs) against the built site, served by `docusaurus serve`
+  # (playwright.config.mjs): navigation, search, redirects, accessibility, workflow viewer, dashboard.
+  e2e:
+    name: e2e
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          fetch-depth: 0
+      - name: Set up Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: "22"
+      - name: Install the test tooling
+        run: npm install --no-audit --no-fund
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Install the site
+        run: npm ci --prefix docs/website
+      - name: Generate the dashboard data
+        run: node eng/catalog/scan.mjs && node eng/dashboard/build.mjs --out docs/website/static/dashboard/data/dashboard.json
+      - name: Build the site, both locales
+        run: npm run build --prefix docs/website
+      - name: Run the site suite
+        env:
+          SKRAFT_SITE_PREBUILT: "1"
+        run: npx playwright test
+      - name: Upload the Playwright report
+        if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: playwright-report
+          path: playwright-report
+          retention-days: 7
+          if-no-files-found: ignore
