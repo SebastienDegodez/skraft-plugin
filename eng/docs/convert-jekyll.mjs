@@ -196,6 +196,19 @@ const convertCitationsPage = (text, page) => {
 /** Imports go right after the front matter, between blank lines. */
 const withImports = (body, imports) => (imports.length ? `\n${imports.join('\n')}\n${body}` : body)
 
+const HEADING_ID = /^(\s{0,3}#{1,6}\s.*?)\s*(?:\{#([\w-]+)\}|<!--\s*#([\w-]+)\s*-->|\{\/\*\s*#([\w-]+)\s*\*\/\})\s*$/
+
+// Rule 8: `## T {#id}` becomes `## T <!-- #id -->` (.md) or `## T {/* #id */}` (.mdx).
+const convertHeadingIds = (text, page) => {
+  if (page.headingIds === 'classic') return text
+  return mapProse(text, (line) => {
+    const heading = HEADING_ID.exec(line)
+    if (!heading) return line
+    const id = heading[2] ?? heading[3] ?? heading[4]
+    return page.extension === '.mdx' ? `${heading[1]} {/* #${id} */}` : `${heading[1]} <!-- #${id} -->`
+  })
+}
+
 const DEFAULT_MDX_DOCS = ['index', 'reference/citations']
 
 /**
@@ -216,6 +229,7 @@ export const convertPage = (source, options) => {
   text = convertRunningExample(text, page)
   text = convertRawBlocks(text)
   text = convertCitationsPage(text, page)
+  text = convertHeadingIds(text, page)
   text = convertFrontMatter(lines, page) + withImports(text, page.imports)
   return { text, extension: page.extension, findings: page.findings, redirects: page.redirects }
 }
