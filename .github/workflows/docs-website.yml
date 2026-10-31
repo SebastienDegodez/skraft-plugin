@@ -1,6 +1,8 @@
 # Builds the Docusaurus handbook (docs/website) on every pull request and every push to
 # integration/v2-next. Until 2.0.0, `next` is previewed from the `docs-website-build` artifact:
 #   unzip it, then `npm run docs:serve -- --dir <unzipped folder>` (or `npx docusaurus serve --dir`).
+# The hosted preview is main's deploy: it builds integration/v2-next with
+# SKRAFT_DOCS_BASE_URL=/skraft-plugin/v2-next/ and publishes it under /v2-next/.
 # The end-to-end suite joins in WP10. This workflow does not deploy: only main publishes Pages.
 name: Docs website
 
@@ -21,6 +23,7 @@ on:
       - "tests/tooling/workflow-viewer/**"
       - "plugins/skraft-framework/workflows/**"
       - "plugins/skraft-framework/engine/domain/workflow/**"
+      - "package.json"
       - ".github/workflows/docs-website.yml"
   push:
     branches: [integration/v2-next]
@@ -39,6 +42,7 @@ on:
       - "tests/tooling/workflow-viewer/**"
       - "plugins/skraft-framework/workflows/**"
       - "plugins/skraft-framework/engine/domain/workflow/**"
+      - "package.json"
       - ".github/workflows/docs-website.yml"
 
 permissions:
@@ -69,6 +73,8 @@ jobs:
           node-version: "22"
       - name: Docs tooling tests
         run: node --test "tests/tooling/docs-*/**/*.test.mjs"
+      - name: Citation lint
+        run: npm run lint:citations
       - name: Install the site
         run: npm ci --prefix docs/website
       - name: Build the site, both locales
@@ -91,6 +97,8 @@ jobs:
         run: npm ci --prefix docs/website
       - name: Build the site, both locales
         run: npm run build --prefix docs/website
+      - name: Check the layout of the build
+        run: node eng/docs/check-build.mjs docs/website/build --versions docs/website/versions.json
       - name: Upload the build
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
