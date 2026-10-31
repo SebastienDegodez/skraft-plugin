@@ -378,6 +378,75 @@ const convertFence = (block, context, page) => {
   return [`${indent}${marker}${result.info}`, ...result.lines.map((line) => (line ? indent + line : line)), ...(closed ? [block.at(-1)] : [])]
 }
 
+/** Splits a paragraph into code spans and text (CommonMark backtick runs of equal length). */
+const splitCodeSpans = (paragraph) => {
+  const pieces = []
+  let text = ''
+  for (let index = 0; index < paragraph.length;) {
+    const run = /^`+/.exec(paragraph.slice(index))?.[0]
+    const escaped = paragraph[index] === '\\' && paragraph[index + 1] === '`'
+    if (escaped) { text += '\\`'; index += 2; continue }
+    if (!run) { text += paragraph[index]; index += 1; continue }
+    const close = closingRun(paragraph, index + run.length, run.length)
+    if (close < 0) { text += run; index += run.length; continue }
+    pieces.push({ code: false, text }, { code: true, text: paragraph.slice(index, close + run.length) })
+    text = ''
+    index = close + run.length
+  }
+  return [...pieces, { code: false, text }].filter((piece) => piece.text !== '')
+}
+
+const closingRun = (paragraph, from, length) => {
+  for (const match of paragraph.slice(from).matchAll(/`+/g)) {
+    if (match[0].length === length) return from + match.index
+  }
+  return -1
+}
+
+/** Applies `convert` to the prose text of every paragraph, outside fences and code spans. */
+const mapProseText = (text, convert) => {
+  const parts = segments(text.split('\n'))
+  for (const part of parts.filter((p) => !p.fence)) {
+    part.lines = part.lines.join('\n').split(/(\n[ \t]*\n)/).map((chunk) => splitCodeSpans(chunk)
+      .map((piece) => (piece.code ? piece.text : convert(piece.text, chunk)))
+      .join('')).join('').split('\n')
+  }
+  return joinSegments(parts)
+}
+
+const HTML_TAGS = new Set([
+  'a', 'abbr', 'b', 'br', 'cite', 'code', 'del', 'details', 'div', 'em', 'figcaption', 'figure', 'hr', 'i', 'img', 'kbd',
+  'li', 'mark', 'ol', 'p', 'pre', 'q', 's', 'small', 'span', 'strong', 'sub', 'summary', 'sup', 'table', 'td', 'th', 'tr',
+  'u', 'ul', 'wbr',
+])
+const VOID_TAGS = new Set(['br', 'hr', 'img', 'wbr'])
+const ANGLE = /<[^<>\n]*>|</g
+
+/** True when `<…>` is HTML, JSX, an autolink or a comment rather than a placeholder. */
+const isMarkup = (tag, paragraph) => {
+  if (/^<(?:!|https?:|mailto:)/.test(tag)) return true
+  const parts = /^<(\/?)([A-Za-z][\w.-]*)(\s+[^<>]*?)?\s*(\/?)>$/.exec(tag)
+  if (!parts) return false
+  const [, closing, name, attributes = '', selfClosing] = parts
+  const known = HTML_TAGS.has(name) || /^[A-Z][a-z]\w*$/.test(name)
+  if (!known) return false
+  if (closing || selfClosing || attributes.includes('=') || VOID_TAGS.has(name)) return true
+  return paragraph.includes(`</${name}>`)
+}
+
+/** Rule 11 (and the `<` half of rule 12 in .mdx): placeholders in prose become entities. */
+const convertPlaceholders = (text, page) => mapProseText(text, (prose, paragraph) => prose.replace(ANGLE, (match) => {
+  if (match === '<') return page.extension === '.mdx' ? '&lt;' : match
+  if (isMarkup(match, paragraph)) return match
+  return `&lt;${match.slice(1, -1)}&gt;`
+}))
+
+// Rule 12: in an .mdx page, `{` and `}` in prose are escaped; `{/* … */}` comments stay.
+const convertBraces = (text, page) => {
+  if (page.extension !== '.mdx') return text
+  return mapProseText(text, (prose) => prose.replace(/\{\/\*[\s\S]*?\*\/\}|\\[{}]|[{}]/g, (match) => (match.length === 1 ? `\\${match}` : match)))
+}
+
 const DEFAULT_MDX_DOCS = ['index', 'reference/citations']
 
 /**
@@ -401,6 +470,8 @@ export const convertPage = (source, options) => {
   text = convertHeadingIds(text, page)
   text = convertBlockquotes(text)
   text = convertFences(text, page)
+  text = convertPlaceholders(text, page)
+  text = convertBraces(text, page)
   text = convertFrontMatter(lines, page) + withImports(text, page.imports)
   return { text, extension: page.extension, findings: page.findings, redirects: page.redirects }
 }

@@ -11,5 +11,5 @@ On a refusal the summary carries the code: `skraft <slug>: gates refused
 A word with <code>&#124;</code> or <em>emphasis</em> is HTML, so is a<br/>break and <https://example.org>.
 
 ```text
-skraft decide <key> <answer>
+.copilot-tracking/skraft-plans/<slug>/gates/<component>/<gate>-<n>.log
 ```
