@@ -13,8 +13,7 @@ skraft's lenses.
 
 ## Prerequisites
 
-- A configured repository, Git, and a terminal at the root of the working copy; `skraft` stands
-  for `node "<plugin folder>/engine/drivers/cli/skraft.mjs"`.
+- A configured repository, Git, and a terminal at the root of the working copy; `skraft` is the command that [`skraft install`]({{ "/en/how-to/install-on-a-host" | relative_url }}#skraft-command) sets up; the long line `node "<plugin folder>/engine/drivers/cli/skraft.mjs"` works without it.
 - The lens's prompt, written as an agent of your repository named `<name>-lens`.
 
 ## 1. Write the lens's agent

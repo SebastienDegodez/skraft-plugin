@@ -42,8 +42,8 @@ Load when no Azure DevOps MCP tool serves the operation. `{skill}` is the folder
 | Comment | 1. `node {skill}/scripts/comment-request.mjs --in "{work}/comment.md" --out "{work}/comment.json"` 2. `az devops invoke --area wit --resource comments --route-parameters "project={project}" "workItemId={id}" --query-parameters "format=0" --http-method POST --in-file "{work}/comment.json" --api-version 7.2-preview.4 --org {org-url} --output json` |
 | Tags | `az boards work-item update --id {id} --fields "System.Tags={a; b; c}" --org {org-url} --output json` |
 | Iteration | `az boards work-item update --id {id} --iteration "{iteration path}" --org {org-url} --output json` |
-| Child of a split story | 1. write the description to `{work}/child-{n}.html` 2. `az boards work-item create --type "{parent type}" --title "{title}" --description "@{work}/child-{n}.html" --iteration "{iteration path}" --fields "System.Tags={tags}" --project "{project}" --org {org-url} --output json` 3. `az boards work-item relation add --id {child id} --relation-type Parent --target-id {parent id} --org {org-url} --output json` |
-| Work item the developer named | step 1 and 2 of the child row, without step 3 |
+| Part of a split story | 1. write the description to `{work}/part-{n}.html` 2. `az boards work-item create --type "{original type}" --title "{title}" --description "@{work}/part-{n}.html" --iteration "{iteration path}" --fields "System.Tags={tags}" --project "{project}" --org {org-url} --output json` 3. `az boards work-item relation add --id {part id} --relation-type Related --target-id {original id} --org {org-url} --output json`. Never `--relation-type Parent` between two items of the same type |
+| Work item the developer named | step 1 and 2 of the part row, without step 3 |
 | Duplicate | `az boards work-item relation add --id {newer id} --relation-type "Duplicate Of" --target-id {original id} --org {org-url} --output json` |
 | Related | the same with `--relation-type Related` |
 

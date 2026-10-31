@@ -14,8 +14,7 @@ persona: software-engineer
 
 - A run already started in this working copy (a slug, its journal
   `.copilot-tracking/skraft-plans/<slug>/events.jsonl`).
-- For the command line, `skraft` stands for
-  `node "<plugin folder>/engine/drivers/cli/skraft.mjs"`, run from the root of the working copy.
+- For the command line, `skraft` is the command that [`skraft install`]({{ "/en/how-to/install-on-a-host" | relative_url }}#skraft-command) sets up; the long line `node "<plugin folder>/engine/drivers/cli/skraft.mjs"` works without it. Run it from the root of the working copy.
 
 ## 1. See where the run stands
 
@@ -43,7 +42,7 @@ are already filled is not started again, and the journaled base stays.
 | Host | Resume the active pipeline |
 |---|---|
 | Claude Code | `/skraft <slug>` with the active pipeline's slug (`/skraft` alone shows the state and starts nothing) |
-| Copilot CLI | ask `skraft:skraft-orchestrator` to resume: it starts the `skraft-pipeline` workflow with no `slug`; a paused workflow is resumed from `/workflows` |
+| Copilot CLI | `/skraft <slug>` with the active pipeline's slug (`/skraft` alone shows the state and starts nothing), or ask `skraft:skraft-orchestrator` to resume: it starts the `skraft-pipeline` workflow with no `slug`; a paused workflow is resumed from `/workflows` |
 | VS Code, Copilot SDK | `node "<plugin folder>/engine/drivers/copilot-sdk/skraft-run.mjs"` with no slug |
 | VS Code, no SDK | ask the orchestrator agent to resume: it runs `skraft next`, or `skraft record` when agent replies are waiting |
 

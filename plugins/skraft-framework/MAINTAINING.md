@@ -19,6 +19,7 @@ plugins/skraft-framework/
 ├── hooks/skraft-mod.tsx              the mod module: `$` wiring, one line per call
 ├── com.github.copilot/
 │   ├── agents/                       19 flat `.agent.md` descriptors
+│   ├── commands/skraft.md            the `/skraft` command for Copilot (Claude Code keeps the mod's `/skraft`)
 │   └── extensions/skraft-pipeline/   the Copilot extension: the `skraft-pipeline` workflow and `skraft_decide`
 ├── com.anthropic.claude-code/agents/ 19 flat native Claude Code `.md` descriptors
 ├── engine/                           domain, application, infrastructure, drivers

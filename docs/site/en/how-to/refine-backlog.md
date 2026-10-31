@@ -2,7 +2,7 @@
 layout: doc
 lang: en
 title: "Refine a backlog issue"
-description: "Get the refinement proposal of a GitHub issue as a comment: from your editor with /skraft-refine, or on every new issue with the skraft-refine GitHub Agentic Workflow."
+description: "Get the refinement proposal of a GitHub issue as a comment: from your editor with /skraft-refine (/skraft-backlog:skraft-refine in Copilot CLI), or on every new issue with the skraft-refine GitHub Agentic Workflow."
 persona: tech-lead
 ---
 
@@ -22,11 +22,13 @@ criteria and the proposed story — on demand, or automatically on every new iss
 ## Refine one issue from your editor
 
 1. Open a session at the root of the repository, in Claude Code, Copilot CLI or VS Code.
-2. Type the command with the issue number:
+2. Type the command with the issue number. The name depends on the host:
 
-   ```text
-   /skraft-refine 42
-   ```
+   | Host | Command |
+   | --- | --- |
+   | Claude Code | `/skraft-refine 42` |
+   | Copilot CLI | `/skraft-backlog:skraft-refine 42` (measured on 1.0.105, in the SDK's command registry) |
+   | VS Code | not measured yet |
 
    The agent runs on your model and credentials. It reads the issue and the PRD or BRD it links
    under `docs/`, has three planning lenses review its proposal, then posts **one** comment. Its
@@ -36,11 +38,20 @@ criteria and the proposed story — on demand, or automatically on every new iss
    `skraft-refine v=<version> hash=<fingerprint>`.
 
 An issue a proposal already covers, for its title, its body and the plugin version, is skipped
-with its reason. To refine it anyway:
+with its reason. To refine it anyway, add `--force` after the number: `/skraft-refine 42 --force` in
+Claude Code, `/skraft-backlog:skraft-refine 42 --force` in Copilot CLI.
 
-```text
-/skraft-refine 42 --force
-```
+## Start from the backlog with `/skraft backlog`
+
+With the `skraft` plugin installed as well, `/skraft backlog [criteria…]` in Copilot tells you the next steps; it starts no agent and
+develops nothing by itself. Each step waits for you:
+
+1. Select `Skraft - Backlog Discoverer` as the chat's agent and give it the criteria. It triages and proposes a sprint.
+2. Select `Skraft - Backlog Planner` to refine the issue you choose.
+3. Once its stories are written, type `/skraft <slug> --from-artifacts` to develop the story.
+
+Without `skraft-backlog`, the command says so and gives `copilot plugin install skraft-backlog@skraft`; the other `/skraft` routes still work.
+When `.copilot-tracking/skraft-plans/backlog/` exists, `/skraft backlog …` resumes or starts that pipeline instead, and says that for the backlog steps you select `Skraft - Backlog Discoverer` as the chat's agent directly. Not verified by Vally.
 
 ## Refine every new issue with GitHub Actions
 

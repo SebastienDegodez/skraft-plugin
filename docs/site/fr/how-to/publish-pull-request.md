@@ -16,7 +16,7 @@ sa description rendue depuis le journal.
 - Un dépôt avec un remote GitHub, GitHub Enterprise ou Azure DevOps (`origin`, sinon le premier remote).
 - `gh` installé (`az`, le CLI Azure, sur Azure DevOps : voir [Sur Azure DevOps](#azure-devops)) ; Git et ssh capables de pousser sans demander de mot de passe.
 - Un travail sur une branche à vous, pas sur la branche de base.
-- `skraft` désigne `node "<dossier du plugin>/engine/drivers/cli/skraft.mjs"`.
+- `skraft` est la commande que [`skraft install`]({{ "/fr/how-to/install-on-a-host" | relative_url }}#skraft-command) met en place ; la ligne longue `node "<dossier du plugin>/engine/drivers/cli/skraft.mjs"` marche sans elle.
 
 ## 1. Connecter `gh` à la forge du remote
 
@@ -171,7 +171,9 @@ l'organisation, le projet et le dépôt que l'URL du remote nomme.
    avec un jeton d'accès personnel.
 
 Le corps passe par un fichier (`--description=@<fichier>`), la pull request est liée au work item
-de la story (`--work-items`) et son corps commence par `AB#<work item>`. Un work item qu'Azure
+de la story (`--work-items`) et son corps commence par `Fixes #<work item>` vers la branche par
+défaut, ce qui clôt le work item à la fusion de la pull request, `#<work item>` sinon. Seul Azure
+DevOps Services est atteint : `az` ne gère pas Azure DevOps Server. Un work item qu'Azure
 DevOps refuse de lier n'empêche pas d'ouvrir la pull request : elle s'ouvre sans le lien, et la
 raison du run le dit. Sous Windows, `az` ne s'exécute que depuis l'installeur du CLI Azure (MSI ou
 winget) : skraft lance lui-même son Python, pour qu'aucun shell ne lise le titre, et refuse tout

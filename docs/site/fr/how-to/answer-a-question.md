@@ -17,7 +17,7 @@ le relancer repose la même question, sans relancer d'agent.
 
 - Un run au statut `waiting` (`skraft status`, ou le panneau **Skraft**).
 - Pour la ligne de commande : un terminal interactif à la racine de la copie de travail ;
-  `skraft` désigne `node "<dossier du plugin>/engine/drivers/cli/skraft.mjs"`.
+  `skraft` est la commande que [`skraft install`]({{ "/fr/how-to/install-on-a-host" | relative_url }}#skraft-command) met en place ; la ligne longue `node "<dossier du plugin>/engine/drivers/cli/skraft.mjs"` marche sans elle.
 
 ## 1. Lire la question et sa clé
 
@@ -79,6 +79,10 @@ l'avez fermée, le workflow écrit `Waiting for you — <question>` et se met en
 - demandez à Copilot, dans le chat, de vous poser la question skraft en attente : l'outil
   `skraft_decide` vous la pose dans la boîte de dialogue, puis répond
   `Recorded: … Resume the paused skraft-pipeline run (/workflows).` Reprenez alors le workflow.
+
+`/skraft decide [<clé>] <réponse>` agit ici autrement que sous Claude Code : elle n'enregistre rien des mots
+tapés. Le dialogue de Copilot pose de nouveau la question et enregistre ce qu'il donne : répondez-y ;
+une fois enregistré, reprenez le run en pause depuis `/workflows`.
 
 Le canvas `skraft-pipeline` montre la question mais ne prend aucune réponse.
 

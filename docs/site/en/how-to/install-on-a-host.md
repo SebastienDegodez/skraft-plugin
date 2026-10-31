@@ -82,17 +82,30 @@ install separately, the same way:
 | Copilot CLI | `copilot plugin install skraft-backlog@skraft`, `copilot plugin install skraft-brownfield@skraft` |
 | VS Code | **Chat: Open Customizations**, **Browse**, the plugin's name |
 
-## 3. Check that the command line answers
+## 3. Make the `skraft` command available {#skraft-command}
 
-The command line is a Node script shipped in the plugin. From the root of your repository, under
-sh as under PowerShell, with `<plugin folder>` the folder where the host installed `skraft`:
+The command line is a Node script shipped in the plugin. Run it once, under sh as under
+PowerShell, with `<plugin folder>` the folder where the host installed `skraft`:
 
 ```text
-node "<plugin folder>/engine/drivers/cli/skraft.mjs" --version
+node "<plugin folder>/engine/drivers/cli/skraft.mjs" install
+```
+
+`skraft install` writes a launcher and the `skraft` and `skraft.cmd` calls in `~/.skraft/bin`
+(`%USERPROFILE%\.skraft\bin` on Windows), then adds that folder to your PATH: a marked line in the
+profile of your shell on macOS and Linux, your user PATH on Windows. It says what it changed.
+The launcher finds the plugin at each call, so a plugin update under Claude Code needs no new
+install.
+
+Open a new terminal, then, from the root of your repository:
+
+```text
+skraft --version
 ```
 
 You see the plugin's version, for instance `2.0.0-alpha.19`. The other guides write
-`skraft <command>` for this full line.
+`skraft <command>` for this command. Without the install, the long line still works:
+`node "<plugin folder>/engine/drivers/cli/skraft.mjs" <command>`.
 
 Then run `skraft doctor`. In a repository not configured yet:
 
@@ -115,7 +128,12 @@ conducts `skraft next` and `skraft record`.
 | --- | --- | --- |
 | Claude Code | `/skraft` in the conversation | the **Skraft** pane opens and shows `skraft — idle` |
 | Copilot CLI | `/agent` in a session | `skraft:skraft-orchestrator` is in the list |
+| Copilot CLI | `/skraft` in a session | the command answers and starts no run: it opens the run view, or tells you to type `skraft status` |
 | VS Code | the chat's agent picker | skraft's orchestrator agent is in the list |
+| VS Code | `/skraft` in the chat | not measured yet |
+
+Copilot exposes the command as `/skraft`, without a prefix (measured on Copilot CLI 1.0.105 in the SDK's command registry); the backlog plugin's `skraft-refine` is
+`/skraft-backlog:skraft-refine`. The Copilot CLI menu and VS Code were not measured: if `/skraft` is missing there, check the plugin list and open a new session.
 
 ## Troubleshooting
 
@@ -125,6 +143,12 @@ conducts `skraft next` and `skraft record`.
 - **`node: Node v20…; skraft needs Node 22 or later`**: install Node 22 or later, then run again.
 - **Copilot CLI: `skraft:skraft-orchestrator` missing**: check `copilot plugin list`, then open a
   new session; a run refused for that reason carries the code `agent-unavailable`.
+
+- **`skraft: command not found` after `skraft install`**: open a new terminal. If the PATH is
+  managed elsewhere, run `skraft install --no-path`: it writes the calls and prints the line to add
+  to your PATH, for sh and for PowerShell.
+- **`skraft: the plugin was not found`**: the plugin moved or was removed; run the long line
+  with `install` again.
 
 ## See also
 

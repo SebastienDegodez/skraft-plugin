@@ -246,7 +246,11 @@ The two plugins share files, not code. `backlog-planner` writes, under
 - `stories-{milestone}.md` — the milestone, its sprint plan and its stories;
 - `ac-draft-{story}.md` — one story with its acceptance criteria and DoR checklist.
 
-The `skraft` orchestrator reads those two files, whoever wrote them. The planner itself accepts
+The `skraft` orchestrator reads those two files, whoever wrote them. With the `skraft` plugin installed,
+`/skraft backlog [criteria…]` under Copilot tells you the order: select `Skraft - Backlog Discoverer`, then
+`Skraft - Backlog Planner`, then type `/skraft <slug> --from-artifacts`; each step waits for you and nothing
+moves to development by itself. Under Copilot this plugin's `skraft-refine` command is
+`/skraft-backlog:skraft-refine`. The planner itself accepts
 `research/{date}/triage-ingest-{date}.md` instead of a discoverer triage when priorities come
 from upstream planning.
 
@@ -268,18 +272,22 @@ assigns iterations and links work items:
 
 - **Azure DevOps MCP server first**, when you added it under the name `ado`. The agents are
   granted `mcp__ado__*` (Claude Code) and `ado/*` (Copilot); a server under another name is not
-  reachable from them. Local server: `npx -y @azure-devops/mcp <organization>` (Node 20+); remote
+  reachable from them. Local server: `npx -y @azure-devops/mcp@2.11.0 <organization>` (Node 20+;
+  pin the version, tool names change between releases); remote
   server: `https://mcp.dev.azure.com/<organization>` (Microsoft Entra ID; Claude Code needs an app
   registration). See
   [the server's documentation](https://learn.microsoft.com/en-us/azure/devops/mcp-server/remote-mcp-server).
 - **`az` otherwise**: the Azure CLI with `az extension add --name azure-devops`, signed in with
   `az login` (or `az devops login` and a personal access token). The agent announces it.
+- **Azure DevOps Services only**: `az` and its `azure-devops` extension do not manage Azure
+  DevOps Server.
 - Neither: the agent keeps its local files and reports each write as pending.
 
 skraft installs nothing, signs in to nothing and never edits a work item's title, description or
 acceptance criteria. GitHub words map as follows: a label is a tag with the same text, a
-milestone is the path of an existing iteration (none is created), a split story's sub-issues are
-child work items, a duplicate gets a `Duplicate Of` link. Triage never writes Story Points,
+milestone is the path of an existing iteration (none is created), a split story's parts are
+work items of its type with a `Related` link to it (no `Parent` link between two items of the
+same type), a duplicate gets a `Duplicate Of` link. Triage never writes Story Points,
 Effort or Priority fields.
 
 What stays GitHub-only:
