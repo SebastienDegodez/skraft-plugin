@@ -1,5 +1,6 @@
 ---
 title: "Changelog"
+description: "The changes a user sees in skraft, grouped by version: V2 alphas, the v1 ADR migration and the v0 bootstrap."
 ---
 
 # Changelog

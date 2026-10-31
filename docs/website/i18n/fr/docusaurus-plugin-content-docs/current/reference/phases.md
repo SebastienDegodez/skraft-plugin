@@ -1,6 +1,6 @@
 ---
 title: "Phases"
-description: "Chaque phase, de DISCOVER à PUBLISH : qui la conduit, ses entrées, ses sorties et leurs chemins, ses agents, ses lentilles et gates, ses arêtes de retour et les décisions humaines qu'elle demande."
+description: "Chaque phase de DISCOVER à PUBLISH : qui la conduit, entrées, sorties et chemins, agents, lentilles et gates, arêtes de retour et décisions humaines."
 persona: software-engineer
 ---
 

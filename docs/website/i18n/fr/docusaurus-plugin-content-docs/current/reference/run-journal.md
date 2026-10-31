@@ -1,6 +1,6 @@
 ---
 title: "Dossier de suivi et journal"
-description: "Le dossier .copilot-tracking/skraft-plans/ : arborescence, artefacts par phase, la documentation durable écrite sous docs/, pipeline actif, journal chaîné et signé events.jsonl et chacun de ses événements, questions à un humain, et tous les statuts et codes rendus."
+description: "Dossier de suivi, artefacts par phase, sorties sous docs/, pipeline actif, journal chaîné et signé events.jsonl et ses événements, questions, statuts et codes."
 persona: software-engineer
 ---
 

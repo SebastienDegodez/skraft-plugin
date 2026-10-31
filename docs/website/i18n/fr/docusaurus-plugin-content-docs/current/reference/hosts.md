@@ -1,6 +1,6 @@
 ---
 title: "Hôtes"
-description: "Claude Code, Copilot CLI et VS Code : prérequis, installation, pilote, commandes, questions humaines, suivi du run, et ce que chaque hôte peut ou ne peut pas faire."
+description: "Claude Code, Copilot CLI et VS Code : prérequis, installation, pilote, commandes, questions humaines, suivi du run et ce que chaque hôte peut faire ou non."
 persona: software-engineer
 ---
 

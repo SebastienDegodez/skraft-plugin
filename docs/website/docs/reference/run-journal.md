@@ -1,6 +1,6 @@
 ---
 title: "Tracking folder and journal"
-description: "The .copilot-tracking/skraft-plans/ folder: layout, artifacts by phase, the durable documentation written under docs/, active pipeline, the hash-chained, signed events.jsonl journal and each of its events, questions to a human, and every status and code returned."
+description: "The tracking folder, artifacts by phase, docs/ output, active pipeline, the signed hash-chained events.jsonl and its events, questions, statuses and codes."
 persona: software-engineer
 ---
 

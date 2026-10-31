@@ -1,6 +1,6 @@
 ---
 title: "skraft-config.json"
-description: "Le fichier de configuration des composants : emplacement, schéma complet, validation et messages, lignes de commande, gates, défauts de détection et règle de base."
+description: "Le fichier de configuration des composants : emplacement, schéma, validation et messages, lignes de commande, gates, défauts de détection et règle de base."
 persona: tech-lead
 ---
 

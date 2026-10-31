@@ -1,5 +1,6 @@
 ---
 title: "Changelog"
+description: "Les changements visibles par l'utilisateur de skraft, par version : les alphas de V2, la migration des ADRs de v1 et le bootstrap v0."
 ---
 
 # Changelog

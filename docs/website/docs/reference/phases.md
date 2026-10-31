@@ -1,6 +1,6 @@
 ---
 title: "Phases"
-description: "Each phase, from DISCOVER to PUBLISH: who drives it, its inputs, its outputs and their paths, its agents, its lenses and gates, its loop-back edges and the human decisions it asks for."
+description: "Each phase from DISCOVER to PUBLISH: who drives it, inputs, outputs and their paths, agents, lenses and gates, loop-back edges and human decisions."
 persona: software-engineer
 ---
 
