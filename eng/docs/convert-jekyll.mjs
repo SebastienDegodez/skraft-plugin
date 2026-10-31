@@ -453,11 +453,13 @@ const convertBraces = (text, page) => {
   return mapProseText(text, (prose) => prose.replace(/\{\/\*[\s\S]*?\*\/\}|\\[{}]|[{}]/g, (match) => (match.length === 1 ? `\\${match}` : match)))
 }
 
-const JSX = /^import\s.+\sfrom\s+['"][^'"]+['"];?\s*$|<[A-Z][a-z]\w*[\s/>]/m
+const IMPORT = /^import\s.+\sfrom\s+['"][^'"]+['"];?\s*$/m
+const COMPONENT = /<[A-Z][a-z]\w*[\s/>]/
 
-/** Rule 13: `.mdx` for the pages listed as such, or whose prose holds an import or a component. */
+/** Rule 13: `.mdx` for the pages listed as such, or whose prose (code aside) holds an import or a component. */
 const needsMdx = (docId, body, mdxDocs) => mdxDocs.has(docId)
-  || segments(body.split('\n')).some((part) => !part.fence && JSX.test(part.lines.join('\n')))
+  || segments(body.split('\n')).some((part) => !part.fence && IMPORT.test(part.lines.join('\n')))
+  || COMPONENT.test(maskCode(body))
 
 const HOST_SECTION = /^#{3,6}\s+(Claude Code|GitHub Copilot CLI|Copilot CLI|VS Code)\s*$/
 
