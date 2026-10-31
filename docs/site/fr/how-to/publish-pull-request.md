@@ -171,7 +171,9 @@ l'organisation, le projet et le dépôt que l'URL du remote nomme.
    avec un jeton d'accès personnel.
 
 Le corps passe par un fichier (`--description=@<fichier>`), la pull request est liée au work item
-de la story (`--work-items`) et son corps commence par `AB#<work item>`. Un work item qu'Azure
+de la story (`--work-items`) et son corps commence par `Fixes #<work item>` vers la branche par
+défaut, ce qui clôt le work item à la fusion de la pull request, `#<work item>` sinon. Seul Azure
+DevOps Services est atteint : `az` ne gère pas Azure DevOps Server. Un work item qu'Azure
 DevOps refuse de lier n'empêche pas d'ouvrir la pull request : elle s'ouvre sans le lien, et la
 raison du run le dit. Sous Windows, `az` ne s'exécute que depuis l'installeur du CLI Azure (MSI ou
 winget) : skraft lance lui-même son Python, pour qu'aucun shell ne lise le titre, et refuse tout

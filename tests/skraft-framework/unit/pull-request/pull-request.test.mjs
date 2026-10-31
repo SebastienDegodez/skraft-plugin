@@ -495,7 +495,7 @@ test('a pull request opened without the link to its story\'s work item says so i
 })
 
 test('a forge that takes a shorter body, as Azure DevOps takes 4,000 characters, gets the body cut to its limit; the description keeps it whole', async () => {
-  const host = scripted({ config: CONSENTED, codeHost: new InMemoryCodeHost({ bodyLimit: 4_000, link: (issue) => `AB#${issue}` }) }, (it) => nominal(it, REFS_42))
+  const host = scripted({ config: CONSENTED, codeHost: new InMemoryCodeHost({ bodyLimit: 4_000, link: (issue, closes) => `${closes ? 'Fixes ' : ''}#${issue}` }) }, (it) => nominal(it, REFS_42))
   host.prWriters.push(prWriter({ why: `${'Customers asked to pay by card.\n'.repeat(150)}End.` }))
 
   const outcome = await host.start(STORY)
@@ -503,7 +503,7 @@ test('a forge that takes a shorter body, as Azure DevOps takes 4,000 characters,
 
   const body = await host.tracking.read(SLUG, 'pull-request-body.md')
   assert.equal(body.length, 4_000)
-  assert.ok(body.startsWith('AB#42\n\n'), body.slice(0, 40))
+  assert.ok(body.startsWith('Fixes #42\n\n'), body.slice(0, 40))
   assert.match(section(body, 'Why'), /\n\n\[cut: the description holds more than a pull request takes; read it whole in the tracking folder, pull-request\.md\]$/)
   assert.ok((await host.tracking.read(SLUG, 'pull-request.md')).includes('pay by card.\nEnd.'))
   assert.equal(host.codeHost.pullRequests[0].body, body)

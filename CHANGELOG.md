@@ -3,6 +3,12 @@
 Toutes les modifications notables de ce projet sont documentées ici.
 Format basé sur [Conventional Commits](https://www.conventionalcommits.org/) — versionnage [SemVer](https://semver.org/).
 
+## [2.0.0-alpha.41](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.40...v2.0.0-alpha.41) (2026-10-31)
+
+### 🐛 Bug Fixes
+
+* **azure-devops:** an Azure Repos pull request links its work item with Fixes #N or #N; a split story's parts are Related ([#460](https://github.com/SebastienDegodez/skraft-plugin/issues/460)) ([bc9aa41](https://github.com/SebastienDegodez/skraft-plugin/commit/bc9aa41f562a427b78cdd91be05356bb511280ab)), closes [#N](https://github.com/SebastienDegodez/skraft-plugin/issues/N) [#N](https://github.com/SebastienDegodez/skraft-plugin/issues/N) [#417](https://github.com/SebastienDegodez/skraft-plugin/issues/417)
+
 ## [2.0.0-alpha.40](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.39...v2.0.0-alpha.40) (2026-10-30)
 
 ### ✨ Features
