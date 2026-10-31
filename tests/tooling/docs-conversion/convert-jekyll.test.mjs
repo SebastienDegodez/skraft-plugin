@@ -75,6 +75,23 @@ test('the citations page becomes an .mdx page whose Liquid loop is the Bibliogra
   assert.deepEqual(result.findings, [])
 })
 
+test('heading IDs become HTML comments in an .md page, code fences untouched', () => {
+  const { result, after } = convertFixture('heading-ids', { docId: 'reference/cli' })
+  assert.equal(result.text, after)
+})
+
+test('heading IDs become JSX comments in an .mdx page', () => {
+  const { result, after, extension } = convertFixture('heading-ids-mdx', { docId: 'index' })
+  assert.equal(result.text, after)
+  assert.equal(result.extension, extension)
+})
+
+test('with classic heading IDs, {#id} stays for mdx1Compat.headingIds', () => {
+  const { before } = fixture('heading-ids')
+  const { text } = convertPage(before, { docId: 'reference/cli', locale: 'en', headingIds: 'classic' })
+  assert.equal(text, before)
+})
+
 test('with the catalogue option, dashboard links point at the catalogue page', () => {
   const source = '# T\n\n[Catalogue]({{ "/en/dashboard/" | relative_url }}), [data]({{ "/dashboard/" | relative_url }})\n'
   const { text } = convertPage(source, { docId: 'how-to/run-gates', locale: 'en', dashboardLink: 'catalogue' })
