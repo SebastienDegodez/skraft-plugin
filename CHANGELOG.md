@@ -3,6 +3,13 @@
 Toutes les modifications notables de ce projet sont documentées ici.
 Format basé sur [Conventional Commits](https://www.conventionalcommits.org/) — versionnage [SemVer](https://semver.org/).
 
+## [2.0.0-alpha.42](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.41...v2.0.0-alpha.42) (2026-10-31)
+
+### ✨ Features
+
+* **engine:** an ADR states one decision, names no version, keeps a closed status and its index row; review and ratification loop once ([#457](https://github.com/SebastienDegodez/skraft-plugin/issues/457)) ([3449dff](https://github.com/SebastienDegodez/skraft-plugin/commit/3449dfffb355caeaec30f9d95d43db3e0460b61f)), closes [#333](https://github.com/SebastienDegodez/skraft-plugin/issues/333) [#451](https://github.com/SebastienDegodez/skraft-plugin/issues/451)
+* **engine:** Azure Boards — the run reads its story from the work item and keeps its tracking comment there, MCP first, az as fallback ([#458](https://github.com/SebastienDegodez/skraft-plugin/issues/458)) ([f7d45a0](https://github.com/SebastienDegodez/skraft-plugin/commit/f7d45a0e99fa5a0715c2f6b7e8df79c7a6a2bd95)), closes [#395](https://github.com/SebastienDegodez/skraft-plugin/issues/395) [#396](https://github.com/SebastienDegodez/skraft-plugin/issues/396)
+
 ## [2.0.0-alpha.41](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.40...v2.0.0-alpha.41) (2026-10-31)
 
 ### 🐛 Bug Fixes

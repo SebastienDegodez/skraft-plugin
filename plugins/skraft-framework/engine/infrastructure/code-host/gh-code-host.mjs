@@ -25,6 +25,8 @@ export const createGhCodeHost = ({ commandRunner }) => Object.freeze({
   storyLink: (issue, closes) => `${closes ? 'Closes' : 'Refs'} #${issue}`,
   // GitHub refuses a body past 65,536 characters; the margin leaves room for what it adds.
   bodyLimit: 60_000,
+  // gh takes the body file itself.
+  takesRequestFile: false,
 })
 
 /**

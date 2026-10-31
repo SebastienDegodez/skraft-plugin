@@ -104,7 +104,7 @@ every criterion that forbids one.
 | ID | Lens | Criterion | Severity |
 | --- | --- | --- | --- |
 | **G1** | `consistency` | Every structural commitment shown in a diagram or detected in the structural scan has an `Accepted` ADR, or a `Proposed` ADR of this pass, justifying it. | blocker |
-| **G2** | `consistency` | No two ADRs contradict each other; a superseded ADR's body is unchanged; every row of `docs/adr/supersessions.md` has its new ADR carrying the `**Supersedes:**` line. | blocker |
+| **G2** | `consistency` | No two ADRs contradict each other; every row of `docs/adr/supersessions.md` has its new ADR carrying the `**Supersedes:**` line. | blocker |
 | **G10** | `consistency` | The back-propagation journal of the consistency matrix explains every reconciliation rewrite. | blocker |
 | **G12** | `consistency` | Every `supersession-plan-{story}.md` row has its new ADR carrying `**Supersedes:**`, and no event model, diagram or contract still cites the superseded ADR as source of truth. | blocker |
 | **G14** | `consistency` | A `Status: Rejected` ADR stands only when a story or measurable force of this batch raised the question and its Alternatives section names the option adopted instead. | blocker |
@@ -119,6 +119,8 @@ every criterion that forbids one.
 | **G9** | `fitness` | Every aggregate, bounded context, Event Sourcing adoption or Saga traces to a story that requires it. | medium |
 | **G11** | `fitness` | Every ADR adopting CQRS, Event Sourcing, Saga, eventual consistency, a service split or an ACL cites an admissible force and evaluates the "do without" option. | high |
 | **G15** | `fitness` | No ADR ratifies a baseline already enforced by a `clean-architecture-*` skill or an architecture test. | high |
+| **G17** | `fitness` | Every ADR the pass wrote decides a layer boundary, an aggregate boundary, a bounded context, a pattern adding complexity or a cross-cutting concern, and weighs a real trade-off; another subject is `ADR-INFLATION`, no alternative weighed is `NON-DECISION`. | high |
+| **G18** | `fitness` | Every ADR the pass wrote holds one decision at decision level: no full signature, file path, enum values, Value Object inventory, route tree, or ticket, AC or PRD reference beyond the triggering story. | medium |
 | **F1** | `fitness` | Every quality attribute the story or research states has a design element that answers it. | high |
 
 **Engine checks.** After each `solution-architect` attempt, without a lens
@@ -130,6 +132,8 @@ every criterion that forbids one.
 | docs-relied-on | the matrix has a `docs-relied-on:` line (comma-separated repository-relative paths, backticks allowed, `/` or `\` separators) listing at least one file under `docs/adr/`, `docs/architecture/`, `docs/domain/event-model/` or `docs/features/`, and every listed path is a readable regular file of the working copy. A path counts only from its start (not re-rooted from `mydocs/`, an absolute path or `../docs/`), a path with a `.` or `..` segment is not listed, a trailing `:line`, `#anchor` or period is dropped, and a folder or any other file of `docs/` does not count |
 | G14 | no ADR the run wrote named `*-rejected.md`, `*-accepted.md`, `*-deprecated.md` or `*-superseded.md` |
 | G2, G12 | every `**Supersedes:** ADR-MMM` of an ADR the run wrote has its row in the `docs/adr/supersessions.md` registry |
+| G2 | every ADR the run wrote has its row in `docs/adr/decisions-index.md` |
+| G2 | an ADR on the base branch changes only its status lines and is never deleted (`adr-lifecycle`) |
 
 A failure sends the architect back with one line per record; after its last attempt, the run
 stops with `design-records`. The consistency matrix is also DESIGN's declared output: when it is

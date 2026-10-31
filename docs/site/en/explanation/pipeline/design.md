@@ -61,7 +61,7 @@ Three lenses review the design, each in a fresh context: **consistency** across 
 contracts and event model; **compliance** with the architecture (the dependency rule, where
 interfaces live, relations between contexts); **fitness** of the patterns, which refuses any
 aggregate or pattern no story justifies. The engine also checks, with no lens, the traces a
-human should not have to reread: consistency matrix, naming and register of superseded ADRs.
+human should not have to reread: consistency matrix, naming and register of superseded ADRs, the decisions index, and the ADR rules (no version, a one-sentence decision, a closed status vocabulary, a published ADR changed only in its status lines).
 
 The review happens **before** ratification. A human thus only reads ADRs that are already
 consistent; they answer `RATIFIED` or `REJECTED` with a reason that goes back to the architect.

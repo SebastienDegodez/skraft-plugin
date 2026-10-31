@@ -115,21 +115,21 @@ Verdict: `review-verdict.mjs --phase discuss`, same rules and same budget as DIS
 | Other outputs | in the tracking folder: `details/{date}/contracts-{story}.md`, `supersession-plan-{story}.md` (when an `Accepted` ADR is replaced); in the repository: `docs/architecture/context-map.md`, `docs/architecture/{bounded-context}.md` (tactical design), `docs/domain/event-model/{bounded-context}.md`, `docs/adr/adr-{NNN}-{subject}.md`, `docs/adr/decisions-index.md`, `docs/adr/supersessions.md` |
 | Allowed writes | the tracking folder, `docs/adr/`, `docs/architecture/` and `docs/domain/event-model/` |
 | Existing documentation | instruction to the agent: a file of `docs/` is completed, not rewritten. When `docs/` already covers the story, the consistency matrix says so and cites the files of `docs/`, and the phase moves on. Engine check: the matrix's `docs-relied-on:` line lists at least one file of `docs/adr`, `docs/architecture`, `docs/domain/event-model` or `docs/features`, and each listed file exists in the working copy |
-| Engine checks | DESIGN records after each attempt: a consistency matrix reading `consistency-gate: PASS` (G10), no ADR named `*-rejected.md`, `*-accepted.md`, `*-deprecated.md` or `*-superseded.md` (G14), each `**Supersedes:**` with its registry row (G2, G12), the `docs-relied-on:` line of the matrix (files of the durable `docs/` folders that exist); lifecycle of unpublished ADRs (`adr-lifecycle`) |
+| Engine checks | DESIGN records after each attempt: a consistency matrix reading `consistency-gate: PASS` (G10), no ADR named `*-rejected.md`, `*-accepted.md`, `*-deprecated.md` or `*-superseded.md` (G14), each `**Supersedes:**` with its registry row (G2, G12), the `docs-relied-on:` line of the matrix (files of the durable `docs/` folders that exist); an index row for each ADR written (`design-records`); draft ADRs: `Proposed`, no version, a one-sentence `decision`, no draft history; ADRs on the base: only their status lines change, never deleted; a status of the closed set (`adr-lifecycle`) |
 | Persistent failure | `missing-outputs` when the consistency matrix is missing after the last attempt, `design-records` otherwise |
 
 | Lens | Gates |
 | --- | --- |
 | `consistency` | G1, G2, G10, G12, G14, C1 |
 | `architecture-compliance` | G3, G4, G5, G6, G16 |
-| `fitness` | G7, G8, G9, G11, G15, F1 |
+| `fitness` | G7, G8, G9, G11, G15, G17, G18, F1 |
 
 | Edge | Label | `max_visits` |
 | --- | --- | --- |
-| `design_review -> design` | `NEEDS_REWORK` | 3 |
+| `design_review -> design` | `NEEDS_REWORK` | 1 |
 | `design_review -> adr` | `APPROVED` | — |
 | `adr -> distill` | `RATIFIED` | — |
-| `adr -> design` | `REJECTED` (reason required, sent back to the architect) | 3 |
+| `adr -> design` | `REJECTED` (reason required, sent back to the architect) | 1 |
 
 `RATIFIED` turns each ADR `Accepted` (`status: Accepted`, `ratified_by: "human YYYY-MM-DD"`, the
 `**Status:**` line, its row in `docs/adr/decisions-index.md`) and commits them alone as

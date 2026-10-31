@@ -40,12 +40,13 @@ export const API = Object.freeze({
  *   says otherwise, so that no question waits on a consent; files: more files of the working copy;
  *   answers: what the human at the host answers, in order; user: the text of ~/.skraft/config.json;
  *   tracking: the tracking folder, shared with another session's host; owner: this session's id;
- *   journalKeys: the machine's journal keys, the tracking folder's machine by default
+ *   journalKeys: the machine's journal keys, the tracking folder's machine by default;
+ *   forge: the forge the code host double stands for, github unless given
  */
 export const pipelineHost = ({
   components = [API], config = {}, files = {}, behaviours = [], git = new InMemoryGit(), machine, replay, catalog = new InMemoryAgentCatalog(),
   workflow, clock = new FixedClock('2026-10-11T09:00:00.000Z'), answers = [], user, codeHost = new InMemoryCodeHost(),
-  tracking = new InMemoryTracking(), owner = 'session-a', journalKeys = tracking.journalKeys,
+  tracking = new InMemoryTracking(), owner = 'session-a', journalKeys = tracking.journalKeys, forge = 'github',
 } = {}) => {
   const answered = answeredConsents(workflow ?? BUILT_IN_WORKFLOW)
   const deps = {
@@ -66,7 +67,7 @@ export const pipelineHost = ({
     commitReplay: replay ?? new ScriptedReplay({ clock }),
     workflowSource: new InMemoryWorkflowSource(workflow),
     agentCatalog: catalog,
-    forges: { github: { codeHost, pullRequests: new InMemoryPullRequests({ repository: codeHost.named }) } },
+    forges: { [forge]: { codeHost, pullRequests: new InMemoryPullRequests({ repository: codeHost.named }) } },
     runLock: new InMemoryRunLock(tracking, owner),
     timer: new ManualTimer(clock),
   }

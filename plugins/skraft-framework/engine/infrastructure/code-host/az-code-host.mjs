@@ -1,20 +1,20 @@
 import { forgeUnreachable } from '../../domain/config/forge.mjs'
+import { keepComment, workItem } from './az-boards.mjs'
+import { NO_AZURE_REMOTE, QUIET, repos, run, succeeded, unavailable, remoteOf, lines, readJson, refused } from './az-cli.mjs'
 
 /**
  * @typedef {import('../../application/ports/command-runner.mjs').CommandRunner} CommandRunner
  * @typedef {import('../../application/ports/command-runner.mjs').CommandResult} CommandResult
  * @typedef {import('../../application/ports/code-host.mjs').PullRequestRequest} PullRequestRequest
- * @typedef {{ name: string, organization: string, project: string, repository: string }} Remote
- *   name: the Git remote (origin when there is one); organization: its URL, as az's
- *   --organization takes it; project and repository: their names, decoded.
+ * @typedef {import('./az-cli.mjs').Remote} Remote
  */
 
 /**
  * CodeHost on `git` and `az`, the Azure CLI with its azure-devops extension, through any host's
  * CommandRunner: the organization, project and repository the remote's URL names. The body always
  * goes through a file (az reads `@<file>`); nothing is ever force-pushed. Every failure is a fixed
- * reason: no output of git or az reaches the caller. Issues, their comments and pull request
- * reviews are not reached on Azure DevOps yet. No Node API here.
+ * reason: no output of git or az reaches the caller. Pull request reviews are not reached on Azure
+ * DevOps yet. No Node API here.
  * @param {{ commandRunner: CommandRunner }} options
  * @returns {import('../../application/ports/code-host.mjs').CodeHost}
  */
@@ -24,12 +24,14 @@ export const createAzCodeHost = ({ commandRunner }) => Object.freeze({
   findPullRequest: (head) => findPullRequest(commandRunner, head),
   create: (request) => create(commandRunner, request),
   edit: (request) => edit(commandRunner, request),
-  keepIssueComment: async () => refused(UNREACHED),
-  issue: async () => ({ read: /** @type {const} */ ('failed'), reason: UNREACHED }),
+  keepIssueComment: (request) => keepComment(commandRunner, request),
+  issue: (number) => workItem(commandRunner, number),
   // Azure Repos links `#N`; `Fixes #N` also completes the work item when the pull request merges.
   storyLink: (issue, closes) => `${closes ? 'Fixes ' : ''}#${issue}`,
   // Azure DevOps refuses a pull request description past 4,000 characters.
   bodyLimit: 4_000,
+  // az sends a comment from a JSON file.
+  takesRequestFile: true,
 })
 
 /**
@@ -58,103 +60,6 @@ export const createAzPullRequests = () => Object.freeze({
 
 const UNREACHED = forgeUnreachable('azure-devops')
 
-export const NO_AZURE_REMOTE = 'the working copy has no Git remote whose URL names an Azure DevOps organization, project and repository'
-export const NO_AZ = 'az, the Azure CLI, is not installed'
-/** Why az does not start under Windows from anything but the installer's az.cmd (process/az-launch.mjs). */
-export const AZ_NOT_FROM_INSTALLER = 'skraft runs az under Windows only from the Azure CLI installer (MSI or winget), which starts it without cmd.exe; install the Azure CLI that way'
-export const NO_EXTENSION = 'the azure-devops extension of the Azure CLI is not installed; run az extension add --name azure-devops'
-
-/**
- * No program may wait for a human: git asks no password and ssh no passphrase; az installs no
- * extension on its own. The mod's runner cannot set the environment, so git is also told by its
- * own configuration, and az by --only-show-errors and stdin closed.
- */
-const NO_PROMPT = Object.freeze({ GIT_TERMINAL_PROMPT: '0', GIT_SSH_COMMAND: 'ssh -o BatchMode=yes', AZURE_EXTENSION_USE_DYNAMIC_INSTALL: 'no' })
-
-/** The longest a git or az call may run, a push included. */
-const CALL_TIMEOUT_MS = 120_000
-
-/** @param {CommandRunner} commandRunner @param {string[]} argv */
-// Stryker disable next-line StringLiteral: '' and '.' are both the working copy to the CommandRunner
-const run = (commandRunner, argv) => commandRunner.run({ argv, cwd: '.', env: NO_PROMPT, timeoutMs: CALL_TIMEOUT_MS })
-
-/**
- * What every call to az ends with: JSON, errors only, no repository guessed from the working copy.
- * Every value goes as `--option=value`, so that one starting with `-` (a title) is never read as an option.
- */
-const QUIET = ['--detect=false', '--only-show-errors', '--output=json']
-
-/** `az repos …` on the remote's organization, project and repository. @param {CommandRunner} commandRunner @param {Remote} remote @param {string[]} args */
-const repos = (commandRunner, remote, args) =>
-  run(commandRunner, ['az', 'repos', ...args, `--organization=${remote.organization}`, `--project=${remote.project}`, `--repository=${remote.repository}`, ...QUIET])
-
-/** @param {CommandResult} result */
-const succeeded = (result) => result.started && result.exitCode === 0
-
-/** Why no pull request can be opened from here; null when one can. @param {CommandRunner} commandRunner */
-const unavailable = async (commandRunner) => {
-  const version = await run(commandRunner, ['az', '--version'])
-  if (!version.started) return version.error === AZ_NOT_FROM_INSTALLER ? AZ_NOT_FROM_INSTALLER : NO_AZ
-  const remote = await remoteOf(commandRunner)
-  if (remote === null) return NO_AZURE_REMOTE
-  if (!succeeded(await run(commandRunner, ['az', 'extension', 'show', '--name=azure-devops', '--only-show-errors', '--output=json']))) return NO_EXTENSION
-  return succeeded(await repos(commandRunner, remote, ['show'])) ? null : notSignedIn(remote)
-}
-
-/** @param {Remote} remote */
-const notSignedIn = ({ organization, project, repository }) =>
-  `az is not signed in to the Azure DevOps organization ${organization}, or cannot read ${project}/${repository} there; run az login, or az devops login --organization ${organization}`
-
-/**
- * The remote pull requests go to: origin when there is one, else the first remote; null without
- * one whose URL names an Azure DevOps repository.
- * @param {CommandRunner} commandRunner @returns {Promise<Remote | null>}
- */
-const remoteOf = async (commandRunner) => {
-  const names = lines((await run(commandRunner, ['git', 'remote'])).stdout)
-  const name = names.includes('origin') ? 'origin' : names[0]
-  if (name === undefined) return null
-  const url = await run(commandRunner, ['git', 'remote', 'get-url', name])
-  const parsed = succeeded(url) ? parseRemote(url.stdout.trim()) : null
-  return parsed === null ? null : { name, ...parsed }
-}
-
-/**
- * The URLs Azure DevOps gives a remote, each with its organization, project and repository:
- * `https://[user@]dev.azure.com/<org>/[<project>/]_git/<repo>`, `git@ssh.dev.azure.com:v3/<org>/<project>/<repo>`
- * (or `ssh://…:22/v3/…`), `https://<org>.visualstudio.com/[DefaultCollection/][<project>/]_git/<repo>`
- * and `<org>@vs-ssh.visualstudio.com:v3/<org>/<project>/<repo>`; a URL without a project names
- * a repository of the project of the same name. visualstudio: the organization's URL is its own host.
- */
-const AZURE_REMOTES = Object.freeze([
-  { pattern: /^https:\/\/(?:[^@/]+@)?dev\.azure\.com\/([^/]+)\/(?:([^/]+)\/)?_git\/([^/]+?)\/?$/i, visualstudio: false },
-  { pattern: /^(?:ssh:\/\/)?[^@/]+@ssh\.dev\.azure\.com(?::22)?[:/]v3\/([^/]+)\/([^/]+)\/([^/]+?)\/?$/i, visualstudio: false },
-  { pattern: /^https:\/\/(?:[^@/]+@)?([^./@]+)\.visualstudio\.com\/(?:DefaultCollection\/)?(?:([^/]+)\/)?_git\/([^/]+?)\/?$/i, visualstudio: true },
-  { pattern: /^(?:ssh:\/\/)?[^@/]+@vs-ssh\.visualstudio\.com(?::22)?[:/]v3\/([^/]+)\/([^/]+)\/([^/]+?)\/?$/i, visualstudio: true },
-])
-
-/** @param {string} url @returns {Omit<Remote, 'name'> | null} */
-const parseRemote = (url) => {
-  for (const { pattern, visualstudio } of AZURE_REMOTES) {
-    const match = pattern.exec(url)
-    if (match !== null) return named(match, visualstudio)
-  }
-  return null
-}
-
-/** @param {RegExpExecArray} match @param {boolean} visualstudio @returns {Omit<Remote, 'name'> | null} */
-const named = ([, organization, project, repository], visualstudio) => {
-  try {
-    const decoded = { project: decodeURIComponent(project ?? repository), repository: decodeURIComponent(repository) }
-    return { organization: visualstudio ? `https://${organization}.visualstudio.com` : `https://dev.azure.com/${organization}`, ...decoded }
-  } catch {
-    return null
-  }
-}
-
-/** @param {string} text */
-const lines = (text) => text.split(/\r?\n/).map((line) => line.trim()).filter((line) => line !== '')
-
 /** The branch HEAD is on; null when it is detached. @param {CommandRunner} commandRunner */
 const currentBranch = async (commandRunner) => {
   const result = await run(commandRunner, ['git', 'symbolic-ref', '--quiet', '--short', 'HEAD'])
@@ -168,15 +73,6 @@ const defaultBranch = async (commandRunner) => {
   const result = await repos(commandRunner, remote, ['show'])
   const shown = succeeded(result) ? readJson(result.stdout) : null
   return typeof shown?.defaultBranch === 'string' ? shown.defaultBranch.replace(/^refs\/heads\//, '') : null
-}
-
-/** @param {string} text @returns {any} */
-const readJson = (text) => {
-  try {
-    return JSON.parse(text)
-  } catch {
-    return null
-  }
 }
 
 /**
@@ -270,6 +166,3 @@ const edit = async (commandRunner, { number, bodyFile }) => {
   const result = await run(commandRunner, ['az', 'repos', 'pr', 'update', `--id=${number}`, `--description=@${bodyFile}`, `--organization=${remote.organization}`, ...QUIET])
   return succeeded(result) ? { ok: /** @type {const} */ (true) } : refused(`az could not update pull request #${number} on ${remote.project}/${remote.repository}`)
 }
-
-/** @param {string} reason */
-const refused = (reason) => ({ ok: /** @type {const} */ (false), reason })

@@ -12,7 +12,7 @@ import { commitAll, envWithPath, git, tempFolder, toolFolders } from '../support
 // az stands for Azure DevOps, which no test reaches: a script that keeps each argv it is given
 // and answers from az-state.json. git is real, its remote a bare repository on disk.
 const FAKE_AZ = [
-  "import { appendFileSync, readFileSync } from 'node:fs'",
+  "import { appendFileSync, readFileSync, writeFileSync } from 'node:fs'",
   "import { dirname, join } from 'node:path'",
   "import { fileURLToPath } from 'node:url'",
   'const here = dirname(fileURLToPath(import.meta.url))',
@@ -24,6 +24,17 @@ const FAKE_AZ = [
   "if (args[0] === '--version') said('azure-cli 2.67.0')",
   "if (args[0] === 'extension') { if (state.extension) said({ name: 'azure-devops' }); process.stderr.write('SECRET-STDERR\\n'); process.exit(1) }",
   "if (state.fails || !state.signedIn) { process.stderr.write('SECRET-STDERR\\n'); process.exit(1) }",
+  "if (args[0] === 'boards') { const item = state.workItems?.[option('id')]; if (item !== undefined) said(item); process.stderr.write(state.workItemFails ? 'SECRET-STDERR\\n' : 'TF401232: SECRET-STDERR\\n'); process.exit(1) }",
+  "const kv = (name) => { const at = args.indexOf(`--${name}`); const pairs = []; for (let i = at + 1; at >= 0 && i < args.length && !args[i].startsWith('--'); i += 1) pairs.push(args[i].split(/=(.*)/s).slice(0, 2)); return Object.fromEntries(pairs) }",
+  "if (args[0] === 'devops' && args[1] === 'invoke') {",
+  "  const file = join(here, 'az-comments.json'); const comments = JSON.parse(readFileSync(file, 'utf8')); const route = kv('route-parameters'); const query = kv('query-parameters'); const method = option('http-method') ?? 'GET'",
+  "  if (method === 'GET') { const from = Number(query.continuationToken ?? 0); const size = state.pageSize ?? 100; const listed = { count: comments.length, comments: comments.slice(from, from + size), ...(from + size < comments.length ? { continuationToken: String(from + size) } : {}) }; said(state.unreadableList ? 'not json' : listed) }",
+  "  const text = JSON.parse(readFileSync(option('in-file'), 'utf8')).text",
+  "  appendFileSync(join(here, 'az-writes.jsonl'), `${JSON.stringify({ method, route, query, text })}\\n`)",
+  "  if (state.commentFails) { process.stderr.write('SECRET-STDERR\\n'); process.exit(1) }",
+  "  if (method === 'POST') { const comment = { id: 500 + comments.length, text }; comments.push(comment); writeFileSync(file, JSON.stringify(comments)); said(state.unreadableWrite ? 'not json' : comment) }",
+  "  const at = comments.findIndex((comment) => String(comment.id) === route.commentId); comments[at].text = text; writeFileSync(file, JSON.stringify(comments)); said(comments[at])",
+  "}",
   "if (args[1] === 'show') said({ name: option('repository'), defaultBranch: state.defaultBranch })",
   "if (args[2] === 'list') said(state.pulls)",
   "if (args[2] === 'create' && state.refusedWorkItem && option('work-items')) { process.stderr.write('SECRET-STDERR\\n'); process.exit(1) }",
@@ -63,6 +74,8 @@ const azFolder = (root, state) => {
   writeFileSync(join(bin, 'az.mjs'), FAKE_AZ)
   writeFileSync(join(bin, 'az-calls.jsonl'), '')
   writeFileSync(join(bin, 'az-bodies.txt'), '')
+  writeFileSync(join(bin, 'az-comments.json'), JSON.stringify(state.comments ?? []))
+  writeFileSync(join(bin, 'az-writes.jsonl'), '')
   writeFileSync(join(bin, 'az-state.json'), JSON.stringify(state))
   writeFileSync(join(bin, 'az'), `#!/bin/sh\nexec "${process.execPath}" "${join(bin, 'az.mjs')}" "$@"\n`)
   chmodSync(join(bin, 'az'), 0o755)
@@ -72,6 +85,8 @@ const azFolder = (root, state) => {
     env: { SKRAFT_FAKE_NODE: process.execPath, SKRAFT_FAKE_AZ: join(bin, 'az.mjs') },
     calls: () => readFileSync(join(bin, 'az-calls.jsonl'), 'utf8').split('\n').filter(Boolean).map((line) => JSON.parse(line)),
     bodies: () => readFileSync(join(bin, 'az-bodies.txt'), 'utf8'),
+    writes: () => readFileSync(join(bin, 'az-writes.jsonl'), 'utf8').split('\n').filter(Boolean).map((line) => JSON.parse(line)),
+    comments: () => JSON.parse(readFileSync(join(bin, 'az-comments.json'), 'utf8')),
     set: (more) => writeFileSync(join(bin, 'az-state.json'), JSON.stringify({ ...state, ...more })),
   }
 }
@@ -236,15 +251,161 @@ test('a work item Azure DevOps refuses to link leaves the pull request opened wi
   assert.deepEqual(forge.calls().slice(3).map((call) => call[2]), ['create', 'list'], 'a pull request Azure DevOps opened despite the refusal is not opened twice')
 })
 
-test('an Azure Repos pull request toward the default branch fixes its story\'s work item and names it otherwise; issues, their comments and pull request reviews are not reached on Azure DevOps yet', async (t) => {
+test('an Azure Repos pull request toward the default branch fixes its story\'s work item and names it otherwise; pull request reviews are not reached on Azure DevOps yet', async (t) => {
   const { forge, runner } = repository(t)
   const { codeHost, pullRequests } = createForges({ commandRunner: runner() })['azure-devops']
   const reason = 'skraft cannot reach the forge azure-devops yet (forge in skraft-config.json, else the host of the Git remote, chooses it)'
 
   assert.deepEqual([codeHost.storyLink(42, true), codeHost.storyLink(7, false)], ['Fixes #42', '#7'])
   assert.deepEqual(await codeHost.repository(), null, 'no screenshot link is built for a forge whose raw file URLs skraft does not write')
-  assert.deepEqual(await codeHost.issue(42), { read: 'failed', reason })
-  assert.deepEqual(await codeHost.keepIssueComment({ number: 42, marker: 'm', url: null, bodyFile: 'f' }), { ok: false, reason })
   assert.deepEqual([await pullRequests.unavailable(), await pullRequests.repository()], [reason, null])
   assert.deepEqual(forge.calls(), [])
+})
+
+const SHOP_STORY = {
+  id: 42,
+  url: 'https://dev.azure.com/acme/_apis/wit/workItems/42',
+  fields: {
+    'System.WorkItemType': 'User Story',
+    'System.TeamProject': 'Shop Team',
+    'System.Title': 'Pay by card',
+    'System.Description': '<p>As a shopper, I <strong>pay by card</strong> at checkout.</p><p>The card is charged once.</p>',
+    'Microsoft.VSTS.Common.AcceptanceCriteria': '<ul><li>A declined card shows an error</li><li>An accepted card creates the order</li></ul>',
+  },
+}
+const WORK_ITEM_42 = ['boards', 'work-item', 'show', '--id=42', '--organization=https://dev.azure.com/acme', '--detect=false', '--only-show-errors', '--output=json']
+
+test('the story is read from its Azure Boards work item through az: its HTML becomes the Markdown the MCP route gives, and only a story of the remote\'s project is read', async (t) => {
+  const { forge, codeHost } = repository(t, { az: { ...SIGNED_IN, workItems: { 42: SHOP_STORY } } })
+  const host = codeHost()
+
+  assert.deepEqual(await host.issue(42), {
+    read: 'issue',
+    issue: {
+      number: 42,
+      title: 'Pay by card',
+      url: 'https://dev.azure.com/acme/Shop%20Team/_workitems/edit/42',
+      body: 'As a shopper, I **pay by card** at checkout.\n\nThe card is charged once.\n\n## Acceptance criteria\n\n- A declined card shows an error\n- An accepted card creates the order',
+    },
+  })
+  assert.deepEqual(forge.calls().at(-1), WORK_ITEM_42)
+
+  forge.set({ workItems: { 42: { ...SHOP_STORY, fields: { ...SHOP_STORY.fields, 'System.WorkItemType': 'Epic' } } } })
+  assert.deepEqual(await host.issue(42), { read: 'not-a-story' })
+  forge.set({ workItems: { 42: { ...SHOP_STORY, fields: { ...SHOP_STORY.fields, 'System.TeamProject': 'Other' } } } })
+  assert.deepEqual(await host.issue(42), { read: 'other-project', project: 'Shop Team' })
+})
+
+test('a work item az does not find is missing; one az cannot read, or answers in a form skraft cannot read, or a sign-in az lacks, is a fixed reason that holds no output of az', async (t) => {
+  const { forge, codeHost } = repository(t, { az: { ...SIGNED_IN, workItems: {} } })
+  const host = codeHost()
+
+  assert.deepEqual(await host.issue(42), { read: 'missing' })
+  forge.set({ workItemFails: true })
+  assert.deepEqual(await host.issue(42), { read: 'failed', reason: 'az could not read work item #42 of https://dev.azure.com/acme' })
+  for (const answer of ['not JSON', { id: 7, fields: SHOP_STORY.fields }, { id: 42 }, { id: 42, fields: { ...SHOP_STORY.fields, 'System.Title': 7 } }, { id: 42, fields: { ...SHOP_STORY.fields, 'System.Description': 7 } }]) {
+    forge.set({ workItemFails: false, workItems: { 42: answer } })
+    assert.deepEqual(await host.issue(42), { read: 'failed', reason: 'Azure DevOps answered work item #42 in a form skraft cannot read' })
+  }
+  forge.set({ signedIn: false })
+  const calls = forge.calls().length
+  assert.deepEqual(await host.issue(42), { read: 'failed', reason: 'az is not signed in to the Azure DevOps organization https://dev.azure.com/acme, or cannot read Shop Team/payment there; run az login, or az devops login --organization https://dev.azure.com/acme' })
+  assert.ok(forge.calls().slice(calls).every(([command]) => command !== 'boards'), 'no work item is asked of an az that cannot be reached')
+  assert.deepEqual(await repository(t, { remote: null }).codeHost().issue(42), { read: 'failed', reason: 'the working copy has no Git remote whose URL names an Azure DevOps organization, project and repository' })
+})
+
+const MARKER = '<!-- skraft:issue-progress slug=checkout -->'
+const COMMENTS_ON_42 = ['--area=wit', '--resource=comments']
+const QUIET_INVOKE = ['--api-version=7.2-preview.4', '--organization=https://dev.azure.com/acme', '--only-show-errors', '--output=json']
+const COMMENT_URL = (id) => `https://dev.azure.com/acme/Shop%20Team/_apis/wit/workItems/42/comments/${id}`
+const IN_STORY = { workItems: { 42: SHOP_STORY } }
+
+/** The request a comment of the run is kept with: the body as the file az sends, as the engine writes it. */
+const commentRequest = (root, { url = null, body = `${MARKER}\n### skraft · checkout — RESEARCH closed\n` } = {}) => {
+  const requestFile = join(root, 'issue-progress.request.json')
+  writeFileSync(requestFile, JSON.stringify({ text: body }))
+  return { number: 42, marker: MARKER, url, bodyFile: join(root, 'issue-progress.md'), requestFile, body }
+}
+
+test('the run\'s comment is posted on its work item through az devops invoke, the Markdown sent from a JSON file, and the REST address of the comment is given back', async (t) => {
+  const { root, forge, codeHost } = repository(t, { az: { ...SIGNED_IN, ...IN_STORY } })
+  const request = commentRequest(root)
+
+  assert.deepEqual(await codeHost().keepIssueComment(request), { ok: true, url: COMMENT_URL(500) })
+  assert.deepEqual(forge.calls().slice(-3), [
+    WORK_ITEM_42,
+    ['devops', 'invoke', ...COMMENTS_ON_42, '--route-parameters', 'project=Shop Team', 'workItemId=42', ...QUIET_INVOKE],
+    ['devops', 'invoke', ...COMMENTS_ON_42, '--route-parameters', 'project=Shop Team', 'workItemId=42', '--http-method=POST', '--query-parameters', 'format=0', `--in-file=${request.requestFile}`, ...QUIET_INVOKE],
+  ])
+  assert.deepEqual(forge.writes().map(({ method, text }) => [method, text]), [['POST', request.body]])
+})
+
+test('the comment at the URL kept is rewritten in place; without one, the latest comment holding the marker, as written or as the MCP server escapes it; none holding it is posted', async (t) => {
+  const escaped = MARKER.replace('<', '&lt;').replace('>', '&gt;')
+  const comments = [{ id: 500, text: `${MARKER}\nolder` }, { id: 501, text: 'a person' }, { id: 502, text: `${escaped}\nlatest` }]
+  const { root, forge, codeHost } = repository(t, { az: { ...SIGNED_IN, ...IN_STORY, comments } })
+  const host = codeHost()
+
+  assert.deepEqual(await host.keepIssueComment(commentRequest(root, { url: COMMENT_URL(501) })), { ok: true, url: COMMENT_URL(501) })
+  assert.deepEqual(await host.keepIssueComment(commentRequest(root)), { ok: true, url: COMMENT_URL(502) })
+  assert.deepEqual(forge.writes().map(({ method, route, query }) => [method, route.commentId, query]), [['PATCH', '501', {}], ['PATCH', '502', {}]])
+  assert.deepEqual(forge.calls().at(-1), ['devops', 'invoke', ...COMMENTS_ON_42, '--route-parameters', 'project=Shop Team', 'workItemId=42', 'commentId=502', '--http-method=PATCH', `--in-file=${join(root, 'issue-progress.request.json')}`, ...QUIET_INVOKE])
+
+  const fresh = repository(t, { az: { ...SIGNED_IN, ...IN_STORY, comments: [{ id: 500, text: 'a person' }] } })
+  assert.deepEqual(await fresh.codeHost().keepIssueComment(commentRequest(fresh.root, { url: COMMENT_URL(999) })), { ok: true, url: COMMENT_URL(501) }, 'a comment a person deleted is posted again')
+  assert.deepEqual(fresh.forge.writes().map(({ method }) => method), ['POST'])
+})
+
+test('a conversation longer than one page is read page by page, up to ten pages; a longer one is never written to, since the run\'s comment could be past them', async (t) => {
+  const many = (count, marked) => Array.from({ length: count }, (_, index) => ({ id: 500 + index, text: index === marked ? `${MARKER}\nmine` : 'a person' }))
+  const paged = repository(t, { az: { ...SIGNED_IN, ...IN_STORY, pageSize: 2, comments: many(7, 6) } })
+  assert.deepEqual(await paged.codeHost().keepIssueComment(commentRequest(paged.root)), { ok: true, url: COMMENT_URL(506) })
+  assert.deepEqual(paged.forge.calls().filter((call) => call.includes('--query-parameters') && call.includes('continuationToken=2')).length, 1)
+  assert.deepEqual(paged.forge.calls().filter((call) => call.includes('--query-parameters')).map((call) => call[call.indexOf('--query-parameters') + 1]), ['continuationToken=2', 'continuationToken=4', 'continuationToken=6'])
+
+  const tooLong = repository(t, { az: { ...SIGNED_IN, ...IN_STORY, pageSize: 1, comments: many(30, 29) } })
+  assert.deepEqual(await tooLong.codeHost().keepIssueComment(commentRequest(tooLong.root)), { ok: false, reason: 'az could not comment work item #42 of Shop Team' })
+  assert.deepEqual(tooLong.forge.writes(), [])
+  assert.equal(tooLong.forge.calls().filter((call) => call[0] === 'devops').length, 10)
+})
+
+test('a work item of another project is never written to, an az that fails or answers what skraft cannot read writes nothing twice, and none of what az prints reaches a reason', async (t) => {
+  const elsewhere = repository(t, { az: { ...SIGNED_IN, workItems: { 42: { ...SHOP_STORY, fields: { ...SHOP_STORY.fields, 'System.TeamProject': 'Other' } } } } })
+  assert.deepEqual(await elsewhere.codeHost().keepIssueComment(commentRequest(elsewhere.root)), { ok: false, reason: 'work item #42 is not in project Shop Team of the Git remote, so skraft wrote nothing on it' })
+  assert.deepEqual(elsewhere.forge.calls().filter((call) => call[0] === 'devops'), [])
+
+  const failing = { commentFails: true }
+  for (const [state, reason] of [
+    [{ workItems: {} }, 'az could not read work item #42 of https://dev.azure.com/acme'],
+    [{ workItems: { 42: 'not json' } }, 'Azure DevOps answered work item #42 in a form skraft cannot read'],
+    [{ unreadableList: true }, 'az could not comment work item #42 of Shop Team'],
+    [{ unreadableWrite: true }, 'az could not comment work item #42 of Shop Team'],
+    [failing, 'az could not comment work item #42 of Shop Team'],
+  ]) {
+    const { root, forge, codeHost } = repository(t, { az: { ...SIGNED_IN, ...IN_STORY, ...state } })
+    const kept = await codeHost().keepIssueComment(commentRequest(root))
+
+    assert.deepEqual(kept, { ok: false, reason }, JSON.stringify(state))
+    assert.ok(forge.writes().length <= 1, 'never posted twice')
+  }
+
+  const signedOut = repository(t, { az: { ...SIGNED_IN, ...IN_STORY, signedIn: false } })
+  const refused = await signedOut.codeHost().keepIssueComment(commentRequest(signedOut.root))
+  assert.deepEqual(refused, { ok: false, reason: 'az is not signed in to the Azure DevOps organization https://dev.azure.com/acme, or cannot read Shop Team/payment there; run az login, or az devops login --organization https://dev.azure.com/acme' })
+  assert.deepEqual(signedOut.forge.calls().filter((call) => call[0] === 'boards' || call[0] === 'devops'), [])
+})
+
+test('through az, a comment that quotes the marker without starting with it is someone else\'s: never rewritten, the run posts its own; a comment without an integer id is never written to', async (t) => {
+  const reply = { id: 500, text: `> ${MARKER}\nI disagree` }
+  const { root, forge, codeHost } = repository(t, { az: { ...SIGNED_IN, ...IN_STORY, comments: [reply] } })
+
+  assert.deepEqual(await codeHost().keepIssueComment(commentRequest(root)), { ok: true, url: COMMENT_URL(501) })
+  assert.deepEqual(forge.writes().map(({ method }) => method), ['POST'])
+  assert.equal(forge.comments()[0].text, reply.text)
+
+  for (const comments of [[{ text: MARKER }], [{ id: '500', text: MARKER }]]) {
+    const unreadable = repository(t, { az: { ...SIGNED_IN, ...IN_STORY, comments } })
+    assert.deepEqual(await unreadable.codeHost().keepIssueComment(commentRequest(unreadable.root)), { ok: false, reason: 'az could not comment work item #42 of Shop Team' }, JSON.stringify(comments))
+    assert.deepEqual(unreadable.forge.writes(), [], JSON.stringify(comments))
+  }
 })

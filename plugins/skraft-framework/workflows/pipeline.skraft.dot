@@ -62,10 +62,10 @@ digraph skraft {
   design_review_lenses -> design_review_consistency -> design_review
   design_review_lenses -> design_review_architecture_compliance -> design_review
   design_review_lenses -> design_review_fitness -> design_review
-  design_review -> design  [label="NEEDS_REWORK", max_visits=3]
+  design_review -> design  [label="NEEDS_REWORK", max_visits=1]
   design_review -> adr     [label="APPROVED"]
   adr -> distill   [label="RATIFIED"]
-  adr -> design    [label="REJECTED", max_visits=3]
+  adr -> design    [label="REJECTED", max_visits=1]
   distill -> distill_review_lenses
   distill_review_lenses -> distill_review_coverage -> distill_review
   distill_review_lenses -> distill_review_business_alignment -> distill_review

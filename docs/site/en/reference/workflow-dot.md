@@ -319,10 +319,10 @@ from the predecessor.
 
 | Edge | Label | `max_visits` |
 | --- | --- | --- |
-| `design_review -> design` | `NEEDS_REWORK` | 3 |
+| `design_review -> design` | `NEEDS_REWORK` | 1 |
 | `design_review -> adr` | `APPROVED` | — |
 | `adr -> distill` | `RATIFIED` | — |
-| `adr -> design` | `REJECTED` | 3 |
+| `adr -> design` | `REJECTED` | 1 |
 | `distill_review -> distill` | `NEEDS_REWORK` | 3 |
 | `distill_review -> deliver` | `APPROVED` | — |
 | `gates -> deliver` | `FAIL` | 3 |

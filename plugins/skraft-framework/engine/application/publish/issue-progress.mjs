@@ -2,7 +2,7 @@ import { CONFIG_FILE } from '../../domain/config/skraft-config.mjs'
 import { consentOf } from '../../domain/decisions/consents.mjs'
 import { deriveRun } from '../../domain/journal/run-state.mjs'
 import { forgeAdapters } from '../config/forge.mjs'
-import { routeOf } from '../config/github-mcp.mjs'
+import { routeOf } from '../config/mcp-route.mjs'
 import { COMMENTED, ISSUE_PROGRESS_FILE, keptComment, markerOf, pendingTransitions, renderProgress, SKIPPED, transitionName } from '../../domain/reporting/issue-progress.mjs'
 
 /**
@@ -63,8 +63,20 @@ const keep = async (deps, { slug, journal, workflow, config }, { issue, last }) 
   const { codeHost } = await forgeAdapters(deps, config.forge)
   const unreachable = await codeHost.unavailable()
   if (unreachable !== null) return { ok: false, reason: unreachable }
-  return codeHost.keepIssueComment({ number: issue, marker: markerOf(slug), url: keptComment(journal.events), bodyFile: deps.files.location(slug, ISSUE_PROGRESS_FILE), body })
+  const requestFile = await requestFileOf(deps, { slug, codeHost, body })
+  const bodyFile = deps.files.location(slug, ISSUE_PROGRESS_FILE)
+  return codeHost.keepIssueComment({ number: issue, marker: markerOf(slug), url: keptComment(journal.events), bodyFile, requestFile, body })
 }
+
+/** The comment as JSON beside its body, written only for a forge whose client sends one; its path, else an empty one. @param {ProgressDeps} deps @param {{ slug: string, codeHost: import('../ports/code-host.mjs').CodeHost, body: string }} comment */
+const requestFileOf = async (deps, { slug, codeHost, body }) => {
+  if (!codeHost.takesRequestFile) return ''
+  await deps.files.write(slug, ISSUE_PROGRESS_REQUEST_FILE, JSON.stringify({ text: body }))
+  return deps.files.location(slug, ISSUE_PROGRESS_REQUEST_FILE)
+}
+
+/** The comment as the JSON a forge client sends, kept beside it in the tracking folder. */
+const ISSUE_PROGRESS_REQUEST_FILE = 'issue-progress.request.json'
 
 /**
  * Each pending transition journaled kept or skipped, in journal order.

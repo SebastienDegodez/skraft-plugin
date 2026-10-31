@@ -100,7 +100,7 @@ test('a DESIGN blocked on the ADR it drafted, resumed by a human instruction, st
   const [adr] = eventsOf(host, 'step.recorded').filter((event) => event.step === 'adr')
   assert.deepEqual({ outcome: adr.outcome, answer: adr.answer, next: adr.next }, { outcome: 'answered', answer: 'RATIFIED', next: 'distill' })
   assert.match(await host.workspace.read(ADR_1), /^title: Card payment in Application\nstatus: Accepted$/m)
-  assert.deepEqual(host.git.engineCommits.map(({ paths, message }) => [paths, message]), [[[ADR_1], 'docs(adr): ratify ADR-001']])
+  assert.deepEqual(host.git.engineCommits.map(({ paths, message }) => [paths, message]), [[[ADR_1, INDEX], 'docs(adr): ratify ADR-001']])
 })
 
 test('a host that asks in a dialog gets the answer in the same run', async () => {

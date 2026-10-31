@@ -62,7 +62,7 @@ ADR, diagrammes, contrats et modèle d'événements ; la **conformité** à l'ar
 de dépendance, la place des interfaces, les relations entre contextes) ; l'**adéquation** des
 patterns, qui refuse tout agrégat ou pattern qu'aucune story ne justifie. Le moteur vérifie en
 plus, sans lentille, les traces qu'un humain ne devrait pas avoir à relire : matrice de
-cohérence, nommage et registre des ADR remplacés.
+cohérence, nommage et registre des ADR remplacés, index des décisions, et règles des ADR (aucune version, une décision d'une phrase, un vocabulaire de statut fermé, un ADR publié modifié seulement sur ses lignes de statut).
 
 La revue a lieu **avant** la ratification. Un humain ne relit ainsi que des ADR déjà
 cohérents ; il répond `RATIFIED` ou `REJECTED` avec une raison qui repart chez l'architecte.

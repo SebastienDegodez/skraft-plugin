@@ -8,15 +8,16 @@ export const INDEX = 'docs/adr/decisions-index.md'
 
 /**
  * An ADR as the architecture-decisions skill lays it out.
- * @param {{ number?: number, title?: string, status?: string, header?: string, body?: string }} [adr]
- *   header: more header lines; body: more text after the status line
+ * @param {{ number?: number, title?: string, status?: string, decision?: string | null, header?: string, body?: string }} [adr]
+ *   decision: the header's value, as written, null for no field; header: more header lines; body: more text after the status line
  */
-export const adrText = ({ number = 1, title = 'Card payment', status = 'Proposed', header = '', body = '' } = {}) => [
+export const adrText = ({ number = 1, title = 'Card payment', status = 'Proposed', decision = 'We will pay by card.', header = '', body = '' } = {}) => [
   '<!-- markdownlint-disable-file -->',
   '---',
   `adr: ${number}`,
   `title: ${title}`,
   `status: ${status}`,
+  ...(decision === null ? [] : [`decision: ${decision}`]),
   'supersedes: null',
   'ratified_by: null',
   ...(header === '' ? [] : [header]),
@@ -46,9 +47,20 @@ export const indexText = (rows) => [
 export const architect = (files, body = '') => agent({
   work: ({ git, workspace }) => {
     for (const [path, text] of Object.entries(files)) workspace.files.set(path, text)
-    git.commit('docs(checkout): decide the card payment', Object.keys(files), body)
+    const rows = Object.keys(files).map((path) => /^docs\/adr\/adr-(\d+)/.exec(path)?.[1]).filter((digits) => digits !== undefined).map(Number)
+    if (rows.length > 0) workspace.files.set(INDEX, withRows(workspace.files.get(INDEX) ?? indexText([]), rows))
+    git.commit('docs(checkout): decide the card payment', [...Object.keys(files), ...(rows.length > 0 ? [INDEX] : [])], body)
   },
 })
+
+/** An index holding a row for each of these ADR numbers. @param {...number} numbers */
+export const indexFor = (...numbers) => withRows(indexText([]), numbers)
+
+/** The index with a row for each ADR number it lacks, as the architect appends them. @param {string} index @param {number[]} numbers */
+const withRows = (index, numbers) => numbers.reduce((text, number) => {
+  const label = `ADR-${String(number).padStart(3, '0')}`
+  return new RegExp(`^\\|\\s*\\[?ADR-0*${number}\\b`, 'm').test(text) ? text : text.replace(/\n*$/, `\n| ${label} | Card payment | Proposed | — | We will pay by card. | — | 2026-10-11 |\n`)
+}, index)
 
 /**
  * The agents after DESIGN: the acceptance designer, then the engineer's TDD cycle.

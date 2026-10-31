@@ -1,5 +1,5 @@
 import { joinRelative } from '../../domain/config/relative-path.mjs'
-import { inAdrFolder, isAdr, isMatrix, recordFailures, registryOf, reliedOn } from '../../domain/pipeline/design-records.mjs'
+import { inAdrFolder, indexOf, isAdr, isMatrix, recordFailures, registryOf, reliedOn } from '../../domain/pipeline/design-records.mjs'
 import { readOrName } from '../shared/workspace-reading.mjs'
 
 /**
@@ -50,7 +50,8 @@ const recordsOf = async ({ files, workspace }, slug, { tracked, changed }) => {
   const matrices = await textsOf(tracked.filter(isMatrix), (path) => files.read(slug, path))
   const relied = await textsOf([...new Set(matrices.flatMap(({ text }) => reliedOn(text)))], (path) => regularFile(workspace, path))
   const registries = await textsOf([...new Set(adrs.map(({ path }) => registryOf(path)))], fromWorkspace)
-  return { matrices, relied, written: adrFolder.map(({ path }) => path), adrs, registries }
+  const indexes = await textsOf([...new Set(adrs.map(({ path }) => indexOf(path)))], fromWorkspace)
+  return { matrices, relied, written: adrFolder.map(({ path }) => path), adrs, registries, indexes }
 }
 
 /**

@@ -634,10 +634,12 @@ export class InMemoryCodeHost {
    *   it, the forge has every issue, titled `Issue <number>`, its body `Acceptance criteria of #<number>`.
    *   An issue is read only from a forge that is available (unavailable null) and not told to fail.
    *   link: the line the forge links a pull request to its story with, GitHub's unless given;
-   *   bodyLimit: the longest body the forge takes, GitHub's unless given.
+   *   bodyLimit: the longest body the forge takes, GitHub's unless given; takesRequestFile: whether
+   *   its client sends a JSON request file (az), false unless given.
    */
-  constructor({ unavailable = null, branch = 'checkout', defaultBranch = 'main', remotes = ['origin'], open = [], fails = {}, repository = { host: 'github.com', repository: 'acme/shop' }, issues, link = (issue, closes) => `${closes ? 'Closes' : 'Refs'} #${issue}`, bodyLimit = 60_000, pages = 'https://github.example.com/acme/shop' } = {}) {
+  constructor({ unavailable = null, branch = 'checkout', defaultBranch = 'main', remotes = ['origin'], open = [], fails = {}, repository = { host: 'github.com', repository: 'acme/shop' }, issues, link = (issue, closes) => `${closes ? 'Closes' : 'Refs'} #${issue}`, bodyLimit = 60_000, takesRequestFile = false, pages = 'https://github.example.com/acme/shop' } = {}) {
     this.bodyLimit = bodyLimit
+    this.takesRequestFile = takesRequestFile
     /** where the forge's pages are */
     this.pages = pages
     this.issues = issues
@@ -945,4 +947,82 @@ const issueOn = (forge, number) => {
   const found = forge.issues === undefined ? { title: `Issue ${number}`, body: `Acceptance criteria of #${number}` } : forge.issues[number]
   if (found === 'pull-request') return { number, title: 'A pull request', html_url: `${forge.pages}/pull/${number}`, state: 'open' }
   return found ? { number, title: found.title, body: found.body, html_url: `${forge.pages}/issues/${number}`, state: 'open' } : null
+}
+
+/**
+ * The host's Azure DevOps MCP server (`ado`, @azure-devops/mcp) over work items it holds: its
+ * `wit_work_item` tool gets one or lists its comments, its `wit_work_item_comment_write` adds or
+ * updates one, as the signed-in user, the organization's pages its own. What each answers is the
+ * REST JSON as text, the shape skraft assumes (docs/v2/host-verification.md, not measured). Like
+ * 2.11.0 it rewrites `<`, `>` and `&` of a Markdown comment as HTML entities.
+ * `requests` lists each call (tool and arguments) in order, `calls` its `<server> <tool>`;
+ * `fails` gives, by tool, the reason it fails with (`mcp-refused`…), or `unreadable` for an
+ * answer that is no JSON; a tool it lacks answers `mcp-tool-missing`; `answers` replaces what a
+ * tool answers, given its arguments. `workItems` are the fields of each work item by id;
+ * `comments` the comments of the work items, which a test may remove, as a human deleting one;
+ * `pageSize` the most comments one listing answers before it gives a continuation token.
+ * `listed` counts how often the host listed its servers.
+ */
+export class InMemoryAzureMcp {
+  /** @param {{ servers?: string[], organization?: string, workItems?: Record<number, Record<string, unknown>>, fails?: Record<string, string>, answers?: Record<string, (args: any, mcp: InMemoryAzureMcp) => unknown>, pageSize?: number }} [options] */
+  constructor({ servers = ['ado'], organization = 'https://dev.azure.com/acme', workItems = {}, fails = {}, answers = {}, pageSize = 100 } = {}) {
+    this.names = servers
+    this.organization = organization
+    this.workItems = workItems
+    this.fails = fails
+    this.answers = answers
+    this.pageSize = pageSize
+    /** @type {Array<{ id: number, workItemId: number, project: string, text: string, texts: string[] }>} */
+    this.comments = []
+    /** @type {string[]} */
+    this.calls = []
+    /** @type {Array<{ tool: string, arguments: Record<string, unknown> }>} */
+    this.requests = []
+    this.listed = 0
+    this.posted = 0
+  }
+  async servers() {
+    this.listed += 1
+    return this.names
+  }
+  async call({ server, tool, arguments: args }) {
+    this.calls.push(`${server} ${tool}`)
+    this.requests.push({ tool, arguments: args })
+    const failure = this.fails[tool]
+    if (failure === 'unreadable') return { ok: true, text: 'not JSON' }
+    if (failure) return { ok: false, reason: failure }
+    const run = this.answers[tool] ?? (AZURE_TOOLS[tool] && ((given) => AZURE_TOOLS[tool](this, given)))
+    if (!run) return { ok: false, reason: 'mcp-tool-missing' }
+    const answer = run(args, this)
+    return answer === null ? { ok: false, reason: 'mcp-failed' } : { ok: true, text: JSON.stringify(answer) }
+  }
+}
+
+/** @param {InMemoryAzureMcp} mcp @param {{ id: number, workItemId: number, project: string }} comment */
+const commentUrl = (mcp, { id, workItemId, project }) => `${mcp.organization}/${encodeURIComponent(project)}/_apis/wit/workItems/${workItemId}/comments/${id}`
+
+/** The comment as the REST API answers it. @param {InMemoryAzureMcp} mcp @param {InMemoryAzureMcp['comments'][number]} comment */
+const commentAnswer = (mcp, comment) => ({ id: comment.id, workItemId: comment.workItemId, text: comment.text, format: 'markdown', url: commentUrl(mcp, comment) })
+
+/** The tools of @azure-devops/mcp 2.11.0 skraft calls, each on the work items of the double. */
+const AZURE_TOOLS = {
+  wit_work_item: (mcp, { action, id, workItemId, project }) => {
+    if (action === 'get') return mcp.workItems[id] ? { id, url: `${mcp.organization}/_apis/wit/workItems/${id}`, fields: mcp.workItems[id] } : null
+    if (action !== 'list_comments') return null
+    const comments = mcp.comments.filter((comment) => comment.workItemId === workItemId && comment.project === project)
+    return { count: comments.length, comments: comments.slice(0, mcp.pageSize).map((comment) => commentAnswer(mcp, comment)), ...(comments.length > mcp.pageSize ? { continuationToken: 'more' } : {}) }
+  },
+  wit_work_item_comment_write: (mcp, { action, project, workItemId, commentId, text }) => {
+    const escaped = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    if (action === 'add') {
+      mcp.posted += 1
+      const comment = { id: 700 + mcp.posted, workItemId, project, text: escaped, texts: [escaped] }
+      mcp.comments.push(comment)
+      return commentAnswer(mcp, comment)
+    }
+    const comment = mcp.comments.find((each) => each.id === commentId && each.workItemId === workItemId)
+    if (action !== 'update' || !comment) return null
+    Object.assign(comment, { text: escaped, texts: [...comment.texts, escaped] })
+    return commentAnswer(mcp, comment)
+  },
 }

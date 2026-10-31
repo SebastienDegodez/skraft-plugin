@@ -175,8 +175,10 @@ Only Azure DevOps Services is reached: `az` does not manage Azure DevOps Server.
 Azure DevOps refuses to link does not keep the pull request from opening: it opens without the link, and the
 run's reason says so. Under Windows, `az` runs only from the Azure CLI installer (MSI or winget):
 skraft starts its Python itself, so that no shell reads the title, and refuses any other `az.cmd`
-or `az.bat` (pip, scoop). skraft does not read Azure DevOps work items or review its pull requests
-yet ([Forge]({{ "/en/reference/skraft-config" | relative_url }}#forge)). `skraft doctor` reports
+or `az.bat` (pip, scoop). The run reads the story from its Azure Boards work item and keeps its
+progress in one comment on it, through the host's Azure DevOps MCP server first, `az` as the
+fallback ([Forge]({{ "/en/reference/skraft-config" | relative_url }}#azure-devops-mcp-server-first-az-as-fallback));
+skraft does not review its pull requests yet. `skraft doctor` reports
 the forge a run uses on its `forge` line.
 
 ## Troubleshooting

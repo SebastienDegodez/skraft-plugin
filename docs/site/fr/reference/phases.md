@@ -115,21 +115,21 @@ Verdict : `review-verdict.mjs --phase discuss`, mêmes règles et même budget q
 | Autres sorties | dans le dossier de suivi : `details/{date}/contracts-{story}.md`, `supersession-plan-{story}.md` (quand un ADR `Accepted` est remplacé) ; dans le dépôt : `docs/architecture/context-map.md`, `docs/architecture/{bounded-context}.md` (conception tactique), `docs/domain/event-model/{bounded-context}.md`, `docs/adr/adr-{NNN}-{sujet}.md`, `docs/adr/decisions-index.md`, `docs/adr/supersessions.md` |
 | Écriture permise | le dossier de suivi, `docs/adr/`, `docs/architecture/` et `docs/domain/event-model/` |
 | Documentation existante | consigne à l'agent : un fichier de `docs/` est complété, pas réécrit. Quand `docs/` couvre déjà la story, la matrice de cohérence le dit et cite les fichiers de `docs/`, et la phase passe à la suite. Contrôle du moteur : la ligne `docs-relied-on:` de la matrice liste au moins un fichier de `docs/adr`, `docs/architecture`, `docs/domain/event-model` ou `docs/features`, et chaque fichier listé existe dans la copie de travail |
-| Contrôles du moteur | traces DESIGN après chaque tentative : matrice de cohérence `consistency-gate: PASS` (G10), aucun ADR nommé `*-rejected.md`, `*-accepted.md`, `*-deprecated.md` ou `*-superseded.md` (G14), chaque `**Supersedes:**` avec sa ligne de registre (G2, G12), la ligne `docs-relied-on:` de la matrice (fichiers des dossiers durables de `docs/` qui existent) ; cycle de vie des ADR non publiés (`adr-lifecycle`) |
+| Contrôles du moteur | traces DESIGN après chaque tentative : matrice de cohérence `consistency-gate: PASS` (G10), aucun ADR nommé `*-rejected.md`, `*-accepted.md`, `*-deprecated.md` ou `*-superseded.md` (G14), chaque `**Supersedes:**` avec sa ligne de registre (G2, G12), la ligne `docs-relied-on:` de la matrice (fichiers des dossiers durables de `docs/` qui existent) ; une ligne d'index pour chaque ADR écrit (`design-records`) ; ADR brouillons : `Proposed`, aucune version, un `decision` d'une phrase, aucun historique de brouillon ; ADR de la base : seules leurs lignes de statut changent, jamais supprimés ; un statut du jeu fermé (`adr-lifecycle`) |
 | Échec persistant | `missing-outputs` quand la matrice de cohérence manque après la dernière tentative, `design-records` sinon |
 
 | Lentille | Gates |
 | --- | --- |
 | `consistency` | G1, G2, G10, G12, G14, C1 |
 | `architecture-compliance` | G3, G4, G5, G6, G16 |
-| `fitness` | G7, G8, G9, G11, G15, F1 |
+| `fitness` | G7, G8, G9, G11, G15, G17, G18, F1 |
 
 | Arête | Étiquette | `max_visits` |
 | --- | --- | --- |
-| `design_review -> design` | `NEEDS_REWORK` | 3 |
+| `design_review -> design` | `NEEDS_REWORK` | 1 |
 | `design_review -> adr` | `APPROVED` | — |
 | `adr -> distill` | `RATIFIED` | — |
-| `adr -> design` | `REJECTED` (raison obligatoire, renvoyée à l'architecte) | 3 |
+| `adr -> design` | `REJECTED` (raison obligatoire, renvoyée à l'architecte) | 1 |
 
 `RATIFIED` passe chaque ADR en `Accepted` (`status: Accepted`, `ratified_by: "human AAAA-MM-JJ"`,
 ligne `**Status:**`, ligne de `docs/adr/decisions-index.md`) et les commite seuls en

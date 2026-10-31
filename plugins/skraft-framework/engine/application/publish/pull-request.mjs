@@ -8,7 +8,7 @@ import { runReport } from '../../domain/reporting/run-report.mjs'
 import { statusLine } from '../../domain/reporting/run-status.mjs'
 import { branchOf } from '../../domain/reporting/branches.mjs'
 import { forgeAdapters } from '../config/forge.mjs'
-import { routeOf } from '../config/github-mcp.mjs'
+import { routeOf } from '../config/mcp-route.mjs'
 
 /**
  * The pull request of a run: its description rendered from the journal into the tracking
