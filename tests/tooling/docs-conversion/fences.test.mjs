@@ -82,6 +82,15 @@ test('host slash commands with no host or two hosts named are ambiguous and stay
   assert.equal(classify('text', ['/skraft x'], { paragraph: 'Under Claude Code or VS Code, type:' }).kind, 'ambiguous')
 })
 
+test('a table of commands and their descriptions is ambiguous: a reference list, not a session', () => {
+  assert.deepEqual(classify('text', ['./eng/run-vally-evals.sh                 every skill', './eng/run-vally-evals.sh <skill>         one skill']), {
+    kind: 'ambiguous',
+    info: 'text',
+    lines: ['./eng/run-vally-evals.sh                 every skill', './eng/run-vally-evals.sh <skill>         one skill'],
+    reason: 'commands followed by a description column: a reference table, not a terminal session',
+  })
+})
+
 test('commands that do not start the block are ambiguous', () => {
   assert.deepEqual(classify('text', ['# install the tools', 'npm ci']), {
     kind: 'ambiguous',
