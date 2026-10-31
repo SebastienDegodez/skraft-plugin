@@ -9,11 +9,11 @@
   },
   "link.item.label.Catalogue": {
     "message": "Catalogue",
-    "description": "The label of footer link with label=Catalogue linking to https://sebastiendegodez.github.io/skraft-plugin/dashboard/"
+    "description": "The label of footer link with label=Catalogue linking to pathname:///dashboard/"
   },
   "link.item.label.Presentation": {
     "message": "Présentation",
-    "description": "The label of footer link with label=Presentation linking to https://sebastiendegodez.github.io/skraft-plugin/skraft-basic-presentation.html"
+    "description": "The label of footer link with label=Presentation linking to pathname:///skraft-basic-presentation.html"
   },
   "link.item.label.Citations": {
     "message": "Bibliographie",

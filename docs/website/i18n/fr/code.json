@@ -390,5 +390,71 @@
   "theme.tags.tagsPageTitle": {
     "message": "Tags",
     "description": "The title of the tag list page"
+  },
+  "skraft.agentButton.label": {
+    "message": "Ouvrir cette page en Markdown pour un agent IA (nouvel onglet) et la copier"
+  },
+  "skraft.agentButton.copied": {
+    "message": "Markdown copié"
+  },
+  "skraft.agentButton.failed": {
+    "message": "Copie impossible ; le Markdown s'est ouvert dans un nouvel onglet"
+  },
+  "skraft.workflowViewer.leadsTo": {
+    "message": "Mène à"
+  },
+  "skraft.workflowViewer.close": {
+    "message": "Fermer le détail"
+  },
+  "skraft.workflowViewer.openCalled": {
+    "message": "Ouvrir le workflow {workflow}"
+  },
+  "skraft.workflowViewer.loading": {
+    "message": "Chargement du workflow…"
+  },
+  "skraft.workflowViewer.workflow": {
+    "message": "Workflow"
+  },
+  "skraft.workflowViewer.pipeline": {
+    "message": "Pipeline"
+  },
+  "skraft.workflowViewer.review": {
+    "message": "Revue"
+  },
+  "skraft.workflowViewer.layout": {
+    "message": "Disposition"
+  },
+  "skraft.workflowViewer.horizontal": {
+    "message": "Horizontale"
+  },
+  "skraft.workflowViewer.vertical": {
+    "message": "Verticale"
+  },
+  "skraft.workflowViewer.fit": {
+    "message": "Ajuster"
+  },
+  "skraft.workflowViewer.live": {
+    "message": "Lu en direct sur GitHub"
+  },
+  "skraft.workflowViewer.bundled": {
+    "message": "Copie construite avec cette page ({ref}) : la lecture en direct a échoué ({reason})"
+  },
+  "skraft.workflowViewer.none": {
+    "message": "Le workflow n'a pas pu être lu ({reason})"
+  },
+  "skraft.workflowViewer.diagram": {
+    "message": "Workflow {file}"
+  },
+  "skraft.workflowViewer.unlocked": {
+    "message": "déverrouillé"
+  },
+  "skraft.workflowViewer.locked": {
+    "message": "verrouillé"
+  },
+  "skraft.workflowViewer.mandatory": {
+    "message": "obligatoire"
+  },
+  "skraft.workflowViewer.verdict": {
+    "message": "verdict (fan-in)"
   }
 }

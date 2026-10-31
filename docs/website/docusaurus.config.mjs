@@ -1,11 +1,13 @@
 import { existsSync, readFileSync } from 'node:fs'
-import { themes as prism } from 'prism-react-renderer'
+import { codeThemeDark, codeThemeLight } from './src/css/code-themes.mjs'
 import remarkPendingLinks from './plugins/pending-pages/remark-pending-links.mjs' // TEMPORARY, deleted in WP1b
 import { archiveDropdownItem, archiveFooterItem, inEachLocale } from './src/config/beside-links.mjs'
 
 const at = (path) => new URL(path, import.meta.url)
 const released = existsSync(at('./versions.json')) ? JSON.parse(readFileSync(at('./versions.json'), 'utf8')) : []
-const BASE_URL = '/skraft-plugin/'
+const SITE_ROOT = '/skraft-plugin/'
+// main's deploy builds integration/v2-next with SKRAFT_DOCS_BASE_URL=/skraft-plugin/v2-next/ (preview until 2.0.0).
+const BASE_URL = process.env.SKRAFT_DOCS_BASE_URL || SITE_ROOT
 // The config is loaded once per locale build, after Docusaurus sets this variable (core 3.10.2 buildLocale).
 const LOCALE = process.env.DOCUSAURUS_CURRENT_LOCALE ?? 'en'
 // A raw HTML footer link has no entry in footer.json: its label is chosen here.
@@ -91,8 +93,10 @@ export default {
   plugins: [
     './plugins/skraft-data/index.mjs',
     './plugins/aliases/index.mjs',
+    './plugins/engine-domain/index.mjs', // workflow viewer: bundled DOT copies, client-only viewer chunk
     './plugins/pending-pages/index.mjs', // TEMPORARY, deleted in WP1b
     './plugins/redirects/index.mjs', // /en/<p> -> /<p> for the English build only
+    './plugins/markdown-twin/index.mjs', // .md twins + llms.txt / llms-full.txt per locale and version
     'docusaurus-plugin-image-zoom',
   ],
   customFields: { workflowRefs: { current: 'integration/v2-next', '2.x': 'v2.0.0' } },
@@ -114,8 +118,8 @@ export default {
           position: 'right',
           dropdownItemsAfter: [
             { type: 'html', value: '<hr class="dropdown__divider">' },
-            archiveDropdownItem({ baseUrl: BASE_URL, path: 'v1.15.3/', label: '1.15 (archived)' }),
-            archiveDropdownItem({ baseUrl: BASE_URL, path: 'v1/', label: 'All v1 versions' }),
+            archiveDropdownItem({ baseUrl: SITE_ROOT, path: 'v1.15.3/', label: '1.15 (archived)' }),
+            archiveDropdownItem({ baseUrl: SITE_ROOT, path: 'v1/', label: 'All v1 versions' }),
           ],
         },
         { type: 'localeDropdown', position: 'right' },
@@ -133,13 +137,13 @@ export default {
             { label: 'Citations', to: '/reference/citations' },
           ],
         },
-        { title: 'More', items: [{ label: 'GitHub', href: REPO }, archiveFooterItem({ baseUrl: BASE_URL, path: 'v1/', label: V1_ARCHIVE_LABEL })] },
+        { title: 'More', items: [{ label: 'GitHub', href: REPO }, archiveFooterItem({ baseUrl: SITE_ROOT, path: 'v1/', label: V1_ARCHIVE_LABEL })] },
       ],
     },
     mermaid: { theme: { light: 'neutral', dark: 'dark' } },
     prism: {
-      theme: prism.github,
-      darkTheme: prism.vsDark,
+      theme: codeThemeLight,
+      darkTheme: codeThemeDark,
       additionalLanguages: ['bash', 'powershell', 'json', 'yaml', 'diff', 'gherkin', 'dot', 'csharp', 'java', 'python'],
     },
   },
