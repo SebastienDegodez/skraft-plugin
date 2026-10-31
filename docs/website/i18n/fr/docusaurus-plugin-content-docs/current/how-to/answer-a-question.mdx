@@ -68,6 +68,11 @@ conversation :
 Les mots après la réponse forment la raison ; pour une question `blocked`, tous les mots après la
 clé forment la consigne. `/skraft decide` enregistre la réponse, puis reprend le run.
 
+:::note[Capture en attente d'un run réel]
+Une capture de la boîte de dialogue du mod (en-tête `ADR`, les options et **Other**) viendra après
+un run réel sous Claude Code.
+:::
+
 </TabItem>
 <TabItem value="copilot-cli" label="GitHub Copilot CLI">
 
@@ -148,4 +153,4 @@ Une réponse refusée n'enregistre rien ; le run attend toujours.
   `skraft_decide` et canvas, hôte par hôte.
 - [Phases](../reference/phases.md#human-questions) — qui pose chaque
   question.
-- [Reprendre ou débloquer un run](./resume-a-run.md)
+- [Reprendre ou débloquer un run](./resume-a-run.mdx)

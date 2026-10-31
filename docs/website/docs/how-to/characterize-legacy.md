@@ -32,6 +32,10 @@ and [Feathers, 2004](../reference/citations.mdx#cite-feathers-legacy-2004).
 Name the component as `skraft-config.json` lists it, or its folder. Without a target, the agent
 asks for it.
 
+:::note[Screenshot pending a real run]
+A capture of a `brownfield-harness-builder` session comes after a real run.
+:::
+
 ## 2. Let it establish the contract
 
 The agent first looks for an existing OpenAPI or AsyncAPI document; failing that it generates one

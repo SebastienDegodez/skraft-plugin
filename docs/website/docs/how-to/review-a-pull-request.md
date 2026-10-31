@@ -57,7 +57,7 @@ reply as it is to the `reply` file, then run the `then:` command. Repeat while t
 
 ## 3. Read the verdict
 
-```text
+```console
 skraft review #42: NEEDS_REWORK, pass 1 — <summary>
   to address: <what sends the work back>
   details: <working copy>/.copilot-tracking/skraft-reviews/pr-42/reviews/verdict-1/verdict.yaml
@@ -71,6 +71,11 @@ skraft review #42: NEEDS_REWORK, pass 1 — <summary>
 | `stopped`, `refused` | the review did not start or stopped; the code in brackets says why (Troubleshooting) |
 
 `verdict.yaml` details each lens, the refuted findings and the notes.
+
+:::note[Screenshot pending a real run]
+A capture of the `skraft review --pr` output replaces the verdict block above after a real run
+on a pull request.
+:::
 
 ## 4. Keep the verdict in a comment (optional)
 
@@ -88,6 +93,10 @@ comment is the one rewritten. Never a vote, never a reply. It asks your consent 
 can decide for everyone with `publish.reviewComment` in the base branch's `skraft-config.json`
 ([skraft-config.json](../reference/skraft-config.md#publish)). Without
 consent nothing is posted; `comment.md`, next to `verdict.yaml`, keeps the text.
+
+:::note[Screenshot pending a real run]
+A capture of the pull request and its review comment on GitHub comes after a real run.
+:::
 
 ## 5. Review again after a new push
 

@@ -59,6 +59,10 @@ Résultat : la notification `skraft <slug>: done — PUBLISH closed`, et la pull
 forge, qui commence par `Refs #<issue>` (`Closes #<issue>` quand elle vise la branche par
 défaut). Un corps qui dépasse ce que la forge accepte (60 000 caractères sur GitHub, 4 000 sur Azure DevOps) garde ce qui décide et envoie les sections repliées dans un commentaire conservé ; `pull-request.md` garde la description entière.
 
+:::note[Capture en attente d'un run réel]
+Une capture de la pull request que le run a ouverte sur GitHub viendra après un run réel.
+:::
+
 ### Ce que contient la description
 
 La description commence par `Refs #<issue>` ; `Closes #<issue>` seulement quand la pull request vise la branche par défaut. What changes, Why, Decisions applied et Out of scope s'affichent sous leur titre. Consistency matrix (juste sous Decisions applied), Tests, RED evidence, Quality gates, Review, Screenshots, Run summary et AI disclosure sont repliés dans un bloc `<details>` dont le résumé compte ce qu'il contient ; Quality gates reste ouvert quand une gate a échoué, Review quand un constat attend un humain.

@@ -33,6 +33,10 @@ session's main agent, never a subagent.
 | Claude Code | `claude --agent skraft-brownfield:brownfield-refactorer` |
 | Copilot CLI, VS Code | in a new session, pick the agent **Skraft - Brownfield Refactorer** before the first message |
 
+:::note[Screenshot pending a real run]
+A capture of a `brownfield-refactorer` session comes after a real run.
+:::
+
 ## 2. Give the goal and the net
 
 Write the goal as one value sentence, and say where the net is:
@@ -72,7 +76,7 @@ folder in the installed plugin):
 
 ```console
 $ sh "<skill>/scripts/validate-mikado.sh" .copilot-tracking/skraft-plans/<slug>/refactoring/<date>/mikado-<slug>.md
-powershell -NoProfile -ExecutionPolicy Bypass -File "<skill>/scripts/validate-mikado.ps1" <graph>
+PS> powershell -NoProfile -ExecutionPolicy Bypass -File "<skill>/scripts/validate-mikado.ps1" <graph>
 ```
 
 ```text

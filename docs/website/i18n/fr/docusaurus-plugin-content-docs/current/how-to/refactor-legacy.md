@@ -33,6 +33,10 @@ l'agent principal de la session, jamais un sous-agent.
 | Claude Code | `claude --agent skraft-brownfield:brownfield-refactorer` |
 | Copilot CLI, VS Code | dans une nouvelle session, choisissez l'agent **Skraft - Brownfield Refactorer** avant le premier message |
 
+:::note[Capture en attente d'un run réel]
+Une capture d'une session `brownfield-refactorer` viendra après un run réel.
+:::
+
 ## 2. Donner le but et le filet
 
 Écrivez le but en une phrase de valeur, et dites où est le filet :
@@ -72,7 +76,7 @@ skill `mikado-method` (`<skill>` est son dossier dans le plugin installé) :
 
 ```console
 $ sh "<skill>/scripts/validate-mikado.sh" .copilot-tracking/skraft-plans/<slug>/refactoring/<date>/mikado-<slug>.md
-powershell -NoProfile -ExecutionPolicy Bypass -File "<skill>/scripts/validate-mikado.ps1" <graphe>
+PS> powershell -NoProfile -ExecutionPolicy Bypass -File "<skill>/scripts/validate-mikado.ps1" <graphe>
 ```
 
 ```text

@@ -58,6 +58,10 @@ the branch is updated.
 Result: the notification `skraft <slug>: done — PUBLISH closed`, and the pull request on the
 forge, starting with `Refs #<issue>` (`Closes #<issue>` when it targets the default branch). A body past what the forge takes (60,000 characters on GitHub, 4,000 on Azure DevOps) keeps what decides and sends the folded sections to a kept comment; `pull-request.md` keeps the description whole.
 
+:::note[Screenshot pending a real run]
+A capture of the pull request the run opened on GitHub comes after a real run.
+:::
+
 ### What the description holds
 
 The description starts with `Refs #<issue>`; `Closes #<issue>` only when the pull request targets the default branch. What changes, Why, Decisions applied and Out of scope show under their headings. Consistency matrix (right under Decisions applied), Tests, RED evidence, Quality gates, Review, Screenshots, Run summary and AI disclosure are folded in a `<details>` block whose summary counts what it holds; Quality gates stays open when a gate failed, Review when a finding waits on a human.

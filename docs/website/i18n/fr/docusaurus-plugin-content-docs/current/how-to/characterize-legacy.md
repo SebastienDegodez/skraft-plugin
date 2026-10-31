@@ -33,6 +33,10 @@ et [Feathers, 2004](../reference/citations.mdx#cite-feathers-legacy-2004).
 Nommez le composant tel qu'il figure dans `skraft-config.json`, ou son dossier. Sans cible,
 l'agent vous la demande.
 
+:::note[Capture en attente d'un run réel]
+Une capture d'une session `brownfield-harness-builder` viendra après un run réel.
+:::
+
 ## 2. Laisser établir le contrat
 
 L'agent cherche d'abord un document OpenAPI ou AsyncAPI existant ; à défaut il le génère avec
