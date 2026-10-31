@@ -68,6 +68,13 @@ test('raw and endraw tags go, their content stays', () => {
   assert.equal(result.text, after)
 })
 
+test('the citations page becomes an .mdx page whose Liquid loop is the Bibliography component', () => {
+  const { result, after, extension } = convertFixture('citations-page', { docId: 'reference/citations' })
+  assert.equal(result.text, after)
+  assert.equal(result.extension, extension)
+  assert.deepEqual(result.findings, [])
+})
+
 test('with the catalogue option, dashboard links point at the catalogue page', () => {
   const source = '# T\n\n[Catalogue]({{ "/en/dashboard/" | relative_url }}), [data]({{ "/dashboard/" | relative_url }})\n'
   const { text } = convertPage(source, { docId: 'how-to/run-gates', locale: 'en', dashboardLink: 'catalogue' })
