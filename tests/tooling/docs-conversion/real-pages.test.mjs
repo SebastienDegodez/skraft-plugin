@@ -7,7 +7,7 @@ import { existsSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { test } from 'node:test'
 import { fileURLToPath } from 'node:url'
-import { convertPage } from '../../../eng/docs/convert-jekyll.mjs'
+import { checkPage, convertPage } from '../../../eng/docs/convert-jekyll.mjs'
 
 const root = fileURLToPath(new URL('./fixtures/real-pages/', import.meta.url))
 const PAGES = [
@@ -122,10 +122,13 @@ for (const locale of ['en', 'fr']) {
       assert.deepEqual(result.findings, FINDINGS[key] ?? [])
     })
 
-    test(`${key}: converting the output again changes nothing`, () => {
+    test(`${key}: converting the output again changes nothing, and the check passes`, () => {
       const source = readFileSync(join(root, 'jekyll', locale, `${docId}.md`), 'utf8')
       const once = convert(locale, docId, source)
       assert.equal(convert(locale, docId, once.text).text, once.text)
+      assert.deepEqual(checkPage(once.text, { extension: once.extension }), [])
+      const hand = handPage(locale, docId)
+      assert.deepEqual(checkPage(hand.text, { extension: hand.extension }), [])
     })
   }
 }
