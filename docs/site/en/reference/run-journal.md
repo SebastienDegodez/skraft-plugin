@@ -195,7 +195,7 @@ write arrived since it was opened, it stops with `journal-changed`:
 | `publish.requested` | `skraft publish` | `by` (`skraft publish`); `consent` (`publish.pullRequest` when the command ran) |
 | `pull-request.opened` | the `publish` node or `skraft publish` | `number`; `url`; `base`; `head`; `draft`; `bodyHash` |
 | `pull-request.updated` | the `publish` node or `skraft publish` | `number`; `url`; `bodyHash` |
-| `issue.commented`, `issue.comment-skipped` | the run, at each transition it reports on the story's issue | `issue`; `kind`; `phase`; `step`; `event`; `url` (commented) or `reason` (skipped) |
+| `issue.commented`, `issue.comment-skipped` | the run, at each transition it reports on the story's issue | `issue`; `kind`; `phase`; `step`; `event`; `url` (commented) or `reason` (skipped); `via` (`mcp`, `gh` or `az`) and `fallback` when a host MCP server was offered |
 | `journal.adopted` | `skraft journal adopt` | `keyId` (the new key); `previousKeyId`; `unverified` (how many earlier lines stay unverified) |
 
 Each entry of `run.started.base`: `{ component, root, repository, ref, source, sha }`.

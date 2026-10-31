@@ -20,6 +20,7 @@ Pourquoi un moteur et des pilotes, et le contrat du pilote Copilot :
 | Node | 22 ou plus | le moteur, la ligne de commande `skraft`, l'extension Copilot ; `skraft doctor` le vérifie |
 | Git | — | la base de chaque composant, les commits, les rejeux de commits rouges |
 | `gh` | connecté à l'hôte du dépôt | seulement pour lire l'issue de la story (`--issue`), ouvrir la pull request, commenter l'issue, `skraft review --pr` ; sur `github`, le serveur MCP GitHub de l'hôte, quand il est connecté, les sert d'abord et `gh` est le repli (le CLI `skraft` et `skraft next` passent toujours par `gh`) ; voir [Forge]({{ "/fr/reference/skraft-config" | relative_url }}#forge) |
+| `az` | connecté à l'organisation, avec son extension `azure-devops` | sur Azure DevOps seulement, pour lire le work item de la story (`--issue`), y tenir le commentaire du run et ouvrir la pull request ; le serveur MCP Azure DevOps de l'hôte (`ado`), quand il est connecté, sert d'abord le work item et son commentaire et `az` est le repli (le CLI `skraft` et `skraft next` passent toujours par `az`) ; voir [Forge]({{ "/fr/reference/skraft-config" | relative_url }}#azure-devops-mcp-server-first-az-as-fallback) |
 | Copilot CLI | — | Copilot CLI ; sous VS Code, le pilote SDK (`skraft-run.mjs`) le lance sans interface |
 
 ## Installation {#install}

@@ -39,6 +39,7 @@ test('a run from an issue keeps one comment on it, posted when the first phase c
   assert.equal(host.codeHost.posted, 1, 'one comment, so one notification')
   assert.deepEqual(kept(host), ['keep comment #42', ...Array(5).fill('keep comment #42 #issuecomment-901')])
   assert.equal(host.codeHost.calls.indexOf('push checkout'), 4, 'the four phases before PUBLISH are kept as they close, before the branch is pushed')
+  assert.deepEqual((await host.tracking.list(SLUG, '')).filter((path) => path.includes('issue-progress')), ['issue-progress.md'], 'GitHub takes the body file: no request file is written beside it')
   const [comment] = host.codeHost.comments
   assert.equal(comment.bodies[0], [
     MARKER,
@@ -60,7 +61,7 @@ test('a run from an issue keeps one comment on it, posted when the first phase c
     '',
     'Total: 3 attempts, 0 retries, 0 s, cost ~$0.75 (approximate: what the Claude Code session cost while each agent ran, anything else exchanged meanwhile included).',
     '',
-    `Run report and evidence: \`.copilot-tracking/skraft-plans/${SLUG}/\``,
+    `Run report and evidence: in the working copy, under the run's tracking folder (slug \`${SLUG}\`).`,
     '',
     '<details><summary>Steps</summary>',
     '',
@@ -92,7 +93,7 @@ test('a run from an issue keeps one comment on it, posted when the first phase c
     '',
     'Total: 15 attempts, 0 retries, 0 s, cost ~$0.75 (approximate: what the Claude Code session cost while each agent ran, anything else exchanged meanwhile included).',
     '',
-    `Run report and evidence: \`.copilot-tracking/skraft-plans/${SLUG}/\``,
+    `Run report and evidence: in the working copy, under the run's tracking folder (slug \`${SLUG}\`).`,
     '',
     '',
   ].join('\n') + comment.body.slice(comment.body.indexOf('<details>')))
@@ -279,7 +280,7 @@ test('a blocked run is summarised where it stopped by its status and code: neith
     '',
     'Total: 3 attempts, 0 retries, 0 s, cost -.',
     '',
-    `Run report and evidence: \`.copilot-tracking/skraft-plans/${SLUG}/\``,
+    `Run report and evidence: in the working copy, under the run's tracking folder (slug \`${SLUG}\`).`,
     '',
     '',
   ].join('\n'))

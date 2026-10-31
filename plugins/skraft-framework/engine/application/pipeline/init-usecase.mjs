@@ -3,7 +3,7 @@ import { discussArtifacts, ENTRY_AFTER_DISCUSS, issueDocument, issuePath } from 
 import { dayOf } from '../../domain/pipeline/outputs.mjs'
 import { loadConfig, resolveBases } from '../config/bases.mjs'
 import { forgeAdapters } from '../config/forge.mjs'
-import { routeOf } from '../config/github-mcp.mjs'
+import { routeOf } from '../config/mcp-route.mjs'
 import { loadWorkflow } from '../workflow/load-workflow.mjs'
 import { openJournal } from '../journal/run-journal.mjs'
 
@@ -11,7 +11,7 @@ import { openJournal } from '../journal/run-journal.mjs'
  * @typedef {import('../ports/active-pipeline.mjs').ActivePipeline} ActivePipeline
  * @typedef {{ issue?: number | null, title?: string | null } | null} Story
  * @typedef {'invalid-slug' | 'invalid-base' | 'journal-tampered' | 'journal-unverifiable' | 'config-invalid' | 'base-unresolved' | 'source-control-unavailable'
- *   | 'workflow-invalid' | 'already-started' | 'no-artifacts' | 'journal-key-unavailable' | 'issue-not-found' | 'issue-is-pull-request'} InitCode
+ *   | 'workflow-invalid' | 'already-started' | 'no-artifacts' | 'journal-key-unavailable' | 'issue-not-found' | 'issue-is-pull-request' | 'issue-not-a-story' | 'issue-in-other-project'} InitCode
  * @typedef {{ ok: boolean, slug: string | null, created: boolean, code: InitCode | null, reason: string }} InitOutcome
  * @typedef {{
  *   activePipeline: ActivePipeline,
@@ -142,19 +142,30 @@ const keepIssue = async (deps, { slug, story, fromArtifacts }, forge) => {
   const reading = await (await forgeAdapters(deps, forge)).codeHost.issue(number)
   const route = routeOf(reading)
   if (reading.read === 'failed') return { ...NO_ISSUE, unread: reading.reason, route }
-  if (reading.read !== 'issue') return { refusal: notAnIssue(slug, number, reading.read) }
+  if (reading.read !== 'issue') return { refusal: notAnIssue(slug, number, reading) }
   const path = issuePath({ date: dayOf(deps.clock.now()), number })
   await deps.files.write(slug, path, issueDocument(reading.issue))
   return { ...NO_ISSUE, artifacts: [path], route }
 }
 
+/** @typedef {Exclude<import('../ports/code-host.mjs').IssueReading, { read: 'issue' | 'failed' }>} NotAStory */
+
+/** The refusal of each answer that is no story: its code and its reason, given the work item's number. */
+const NOT_A_STORY = Object.freeze({
+  missing: { code: 'issue-not-found', reason: (/** @type {number} */ number) => `the forge has no issue #${number}; start the run with the number of the story's issue` },
+  'pull-request': { code: 'issue-is-pull-request', reason: (/** @type {number} */ number) => `#${number} is a pull request, not an issue; start the run with the number of the story's issue` },
+  'not-a-story': { code: 'issue-not-a-story', reason: (/** @type {number} */ number) => `work item #${number} is not a story (its type is not one skraft starts a run from); start the run with the number of a user story, product backlog item, requirement, issue or bug` },
+  'other-project': { code: 'issue-in-other-project', reason: (/** @type {number} */ number, /** @type {string} */ project) => `work item #${number} is in another project than ${project}, the Git remote's; start the run with a work item of ${project}` },
+})
+
 /**
- * The refusal of a number the forge answered for with no issue.
- * @param {string} slug @param {number} number @param {'missing' | 'pull-request'} read
+ * The refusal of a number the forge answered for with no story.
+ * @param {string} slug @param {number} number @param {NotAStory} reading
  */
-const notAnIssue = (slug, number, read) => (read === 'missing'
-  ? refusal(slug, 'issue-not-found', `the forge has no issue #${number}; start the run with the number of the story's issue`)
-  : refusal(slug, 'issue-is-pull-request', `#${number} is a pull request, not an issue; start the run with the number of the story's issue`))
+const notAnIssue = (slug, number, reading) => {
+  const { code, reason } = NOT_A_STORY[reading.read]
+  return refusal(slug, /** @type {InitCode} */ (code), reason(number, 'project' in reading ? reading.project : ''))
+}
 
 /**
  * @param {InitDeps} deps @param {string} slug
