@@ -95,6 +95,54 @@ const convertCitationLinks = (text, page) => mapProse(
   (line) => line.replace(/\{\{-?\s*cites\s*-?\}\}(#[\w-]+)?/g, (_, anchor = '') => linkTo('reference/citations', page, anchor)),
 )
 
+/** Records a page that needs a hand resolution, at the source line that holds `needle`. */
+const report = (page, rule, needle, reason) => {
+  const seen = page.seen.get(needle) ?? 0
+  page.seen.set(needle, seen + 1)
+  let at = -1
+  for (let n = 0; n <= seen; n += 1) at = page.source.indexOf(needle, at + 1)
+  const line = at < 0 ? 0 : page.source.slice(0, at).split('\n').length
+  page.findings.push({ rule, line, reason })
+}
+
+const LIQUID_LINK = /\{\{-?\s*["']([^"']+)["']\s*\|\s*relative_url\s*-?\}\}(#[\w-]+)?/g
+
+/** Doc id of a site path inside one locale: `/x/` is `x/index`, `/` is `index`. */
+const docIdOfPath = (path) => {
+  const trimmed = path.replace(/\.html$/, '').replace(/^\/+/, '')
+  if (trimmed === '') return 'index'
+  return trimmed.endsWith('/') ? `${trimmed}index` : trimmed
+}
+
+const DASHBOARD = /^\/(?:(en|fr)\/)?dashboard\/?$/
+
+/** What a Liquid site path becomes; null when the page needs a hand resolution. */
+const rewriteSitePath = (path, anchor, page) => {
+  const [pathname, inlineAnchor = ''] = path.split('#')
+  const hash = anchor || (inlineAnchor && `#${inlineAnchor}`)
+  const dashboard = DASHBOARD.exec(pathname)
+  if (dashboard) return dashboardLink(dashboard[1], page) + hash
+  if (pathname.startsWith('/assets/')) return `/img/${pathname.slice('/assets/'.length)}${hash}`
+  if (pathname === '/skraft-basic-presentation.html') return `pathname://${pathname}${hash}`
+  const locale = /^\/(en|fr)(\/.*)$/.exec(pathname)
+  if (!locale || locale[1] !== page.locale) return null
+  return linkTo(docIdOfPath(locale[2]), page, hash)
+}
+
+const dashboardLink = (locale, page) => {
+  if (page.dashboardLink === 'catalogue') return linkTo('reference/catalogue', page)
+  return locale === 'fr' ? 'pathname:///fr/dashboard/' : 'pathname:///dashboard/'
+}
+
+/** Rule 3: `{{ "/<lang>/<p>" | relative_url }}#a` becomes a relative file link. */
+const convertInternalLinks = (text, page) => mapProse(text, (line) => line.replace(LIQUID_LINK, (match, path, anchor) => {
+  const rewritten = rewriteSitePath(path, anchor ?? '', page)
+  if (rewritten !== null) return rewritten
+  const locale = /^\/(en|fr)\//.exec(path)
+  report(page, 'internal-links', match, locale ? `link to another locale: ${path}` : `unknown site path: ${path}`)
+  return match
+}))
+
 const DEFAULT_MDX_DOCS = ['index', 'reference/citations']
 
 /**
@@ -105,11 +153,12 @@ const DEFAULT_MDX_DOCS = ['index', 'reference/citations']
  */
 export const convertPage = (source, options) => {
   const mdxDocs = new Set([...DEFAULT_MDX_DOCS, ...(options.mdxDocs ?? [])])
-  const page = { ...options, mdxDocs, findings: [], redirects: [], phase: null }
+  const page = { ...options, mdxDocs, source, seen: new Map(), findings: [], redirects: [], phase: null }
   page.extension = extensionOf(page.docId, page)
   const { lines, body } = splitFrontMatter(source)
   let text = body
   text = convertCitationLinks(text, page)
+  text = convertInternalLinks(text, page)
   text = convertFrontMatter(lines, page) + text
   return { text, extension: page.extension, findings: page.findings, redirects: page.redirects }
 }
