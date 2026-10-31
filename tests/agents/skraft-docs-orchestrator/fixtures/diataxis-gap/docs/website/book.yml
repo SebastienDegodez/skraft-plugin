@@ -16,13 +16,15 @@ parts:
     sidebar_position: 1
     title_fr: "Référence"
     title_en: "Reference"
+    slug: /reference
     sections:
       - id: workers
         title_fr: "Workers"
         title_en: "Workers"
+        intro_fr: "Les sous-agents internes que dispatche un agent de phase."
+        intro_en: "The internal subagents a phase agent dispatches."
         generate:
           from: workers
           slug_from: basename
           start_position: 1
-          path_fr: "fr/reference/workers/{slug}.md"
-          path_en: "en/reference/workers/{slug}.md"
+          doc: "reference/workers/{slug}"

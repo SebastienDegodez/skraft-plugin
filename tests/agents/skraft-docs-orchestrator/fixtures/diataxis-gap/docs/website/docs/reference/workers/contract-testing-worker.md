@@ -1,6 +1,4 @@
 ---
-layout: doc
-lang: en
 title: "Contract-testing worker"
 description: "The internal subagent that emits the provider-side contract test."
 sidebar_position: 1

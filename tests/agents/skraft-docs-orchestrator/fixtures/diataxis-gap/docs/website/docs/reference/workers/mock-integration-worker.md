@@ -1,6 +1,4 @@
 ---
-layout: doc
-lang: en
 title: "Mock-integration worker"
 description: "The internal subagent that mocks the downstream dependency the system under test calls."
 sidebar_position: 2

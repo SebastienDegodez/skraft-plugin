@@ -1,6 +1,4 @@
 ---
-layout: doc
-lang: fr
 title: "Worker contract-testing"
 description: "Le subagent interne qui produit le test de contrat côté fournisseur."
 sidebar_position: 1

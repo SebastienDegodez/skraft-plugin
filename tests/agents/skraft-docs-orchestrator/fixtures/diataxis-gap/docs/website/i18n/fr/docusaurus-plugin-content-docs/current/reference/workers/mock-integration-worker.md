@@ -1,6 +1,4 @@
 ---
-layout: doc
-lang: fr
 title: "Worker mock-integration"
 description: "Le subagent interne qui bouchonne la dépendance aval appelée par le système sous test."
 sidebar_position: 2
