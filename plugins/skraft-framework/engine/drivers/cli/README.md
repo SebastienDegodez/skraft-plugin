@@ -6,7 +6,6 @@ Never imports another driver.
 
 | Command | Use case | Exit |
 | --- | --- | --- |
-| `skraft install [--no-path]` | Not a use case: writes `launcher.mjs` and the `skraft` / `skraft.cmd` calls in `~/.skraft/bin` (`install.mjs`; `install-host.mjs` holds the real home, environment and Windows PATH writer) and adds the folder to the PATH | 0, 1 user PATH not written |
 | `skraft init [--add <folder>]...` | ConfigureComponents: one component per project into `skraft-config.json` | 0, 1 invalid config |
 | `skraft init <slug> [--issue <n>] [--title <t>] [--base <ref>] [--from-artifacts]` | Init: active pipeline, journal, bases, the issue of `--issue` read through gh for every agent (when it cannot be read, the run starts on its number and title and says so); from the DISCUSS stories, starts in DESIGN | 0, 1 refused |
 | `skraft status [--json]` | Observe; a run that waits shows its question and how to answer it | 0, 1 tampered |
