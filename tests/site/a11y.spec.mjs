@@ -2,9 +2,8 @@ import { test, expect } from '@playwright/test'
 
 // axe finds no serious or critical issue on the home page and one page per Diátaxis mode, in both
 // locales and both colour modes, and no page scrolls sideways at 375px.
-// Runs against a served Docusaurus build: `npm run docs:build && npm run docs:serve`, then
-// DOCS_URL=http://localhost:3000/skraft-plugin npx playwright test tests/site/a11y.spec.mjs
-const DOCS_URL = process.env.DOCS_URL || 'http://localhost:3000/skraft-plugin'
+// Runs against the served Docusaurus build (playwright.config.mjs); BASE_URL keeps the base URL.
+const DOCS_URL = process.env.BASE_URL || 'http://localhost:4000/skraft-plugin'
 
 const PAGES = ['/', '/tutorials/getting-started', '/how-to/install-on-a-host', '/explanation/pipeline/design', '/reference/cli']
 const LOCALES = ['', '/fr']

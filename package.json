@@ -48,6 +48,7 @@
     "backlog:check": "node scripts/sync-backlog-copies.mjs --check"
   },
   "devDependencies": {
+    "@axe-core/playwright": "4.14.0",
     "@github/copilot": "1.0.78",
     "@github/copilot-sdk": "1.0.9",
     "@microsoft/vally": "0.12.0",
