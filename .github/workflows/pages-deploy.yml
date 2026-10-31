@@ -66,7 +66,8 @@ jobs:
       # Versioned docs: the latest line is the root (main); the 5 minor lines
       # before it, every patch tag of those lines, and the integration branch
       # (integration/v2-next, published under /v2-next/) are built under their own
-      # path. Selection rules: eng/docs/versions.mjs.
+      # path. Selection rules: eng/docs/versions.mjs. The integration branch is the
+      # Docusaurus handbook (docs/website, Node 22) when it has one, else its docs/site.
       - name: Build the versioned documentation
         env:
           BASE_PATH: ${{ steps.pages.outputs.base_path }}
@@ -84,12 +85,32 @@ jobs:
               --baseurl "$BASE_PATH/$2" --destination "$GITHUB_WORKSPACE/_site/$2")
             node eng/docs/inject-switcher.mjs "_site/$2" "$BASE_PATH" "$2"
           }
+          # The Docusaurus handbook (docs/website) of <ref>, built for <base>/<path>. Fails, and
+          # leaves _site/<path> alone, when <ref> has no handbook, the build fails, or the
+          # built pages do not use that base URL (docusaurus.config.mjs without
+          # SKRAFT_DOCS_BASE_URL). It needs the whole tree: the site imports eng/ and scripts/.
+          build_website() { # <ref> <path>
+            local src="$RUNNER_TEMP/website-src"
+            git cat-file -e "$1:docs/website/package.json" 2>/dev/null || return 1
+            git worktree remove --force "$src" 2>/dev/null || rm -rf "$src"
+            git worktree add --detach "$src" "$1" || return 1
+            npm ci --prefix "$src/docs/website" --no-audit --no-fund || return 1
+            SKRAFT_DOCS_BASE_URL="$BASE_PATH/$2" npm run build --prefix "$src/docs/website" || return 1
+            grep -Eq "(href|src)=\"?$BASE_PATH/${2}assets/" "$src/docs/website/build/index.html" || return 1
+            rm -rf "_site/$2" && mkdir -p "_site/$2" || return 1
+            cp -R "$src/docs/website/build/." "_site/$2" || return 1
+            node eng/docs/inject-switcher.mjs "_site/$2" "$BASE_PATH" "$2" || return 1
+          }
           node eng/docs/inject-switcher.mjs _site "$BASE_PATH" ""
           for tag in $(node -e 'const m=JSON.parse(require("fs").readFileSync("_site/versions.json"));for(const l of m.lines)for(const v of l.versions)console.log(v.tag)'); do
             build_ref "refs/tags/$tag" "$tag/"
           done
           if git rev-parse --verify -q "refs/remotes/origin/$INTEGRATION_BRANCH" >/dev/null; then
-            build_ref "refs/remotes/origin/$INTEGRATION_BRANCH" "$(node eng/docs/plan.mjs --integration "$INTEGRATION_BRANCH" --integration-path)"
+            integration_path="$(node eng/docs/plan.mjs --integration "$INTEGRATION_BRANCH" --integration-path)"
+            if ! build_website "refs/remotes/origin/$INTEGRATION_BRANCH" "$integration_path"; then
+              echo "::warning::no Docusaurus handbook built from $INTEGRATION_BRANCH, publishing its docs/site with Jekyll"
+              build_ref "refs/remotes/origin/$INTEGRATION_BRANCH" "$integration_path"
+            fi
           else
             node -e 'const f="_site/versions.json",m=JSON.parse(require("fs").readFileSync(f));m.integration=null;require("fs").writeFileSync(f,JSON.stringify(m))'
           fi
