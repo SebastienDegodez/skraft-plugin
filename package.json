@@ -20,7 +20,7 @@
     "dashboard:serve": "node eng/dashboard/serve.mjs",
     "dashboard:preview": "./eng/dashboard/preview.sh",
     "evals": "./eng/run-vally-evals.sh",
-    "lint:citations": "node scripts/check-citations.mjs --citations docs/website/data/citations.yml --pages \"docs/site/**/*.md\"",
+    "lint:citations": "node scripts/check-citations.mjs --citations docs/website/data/citations.yml --pages \"docs/website/docs/**/*.md*\" && node scripts/check-citations.mjs --citations docs/website/data/citations.yml --pages \"docs/website/i18n/fr/docusaurus-plugin-content-docs/current/**/*.md*\"",
     "docs:screenshots": "node eng/docs/screenshots.mjs",
     "docs:install": "npm ci --prefix docs/website",
     "docs:start": "npm run start --prefix docs/website --",

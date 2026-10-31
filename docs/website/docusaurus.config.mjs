@@ -1,6 +1,5 @@
 import { existsSync, readFileSync } from 'node:fs'
 import { codeThemeDark, codeThemeLight } from './src/css/code-themes.mjs'
-import remarkPendingLinks from './plugins/pending-pages/remark-pending-links.mjs' // TEMPORARY, deleted in WP1b
 import { archiveDropdownItem, archiveFooterItem, inEachLocale } from './src/config/beside-links.mjs'
 
 const at = (path) => new URL(path, import.meta.url)
@@ -78,7 +77,6 @@ export default {
           lastVersion: released.length ? '2.x' : 'current',
           versions,
           onlyIncludeVersions: process.env.SKRAFT_DOCS_CURRENT_ONLY ? ['current'] : undefined, // fast dev/preview
-          beforeDefaultRemarkPlugins: [remarkPendingLinks], // TEMPORARY, deleted in WP1b
           showLastUpdateTime: true, // needs fetch-depth: 0 in CI
           editUrl: ({ locale, versionDocsDirPath, docPath }) =>
             locale === 'en'
@@ -94,7 +92,6 @@ export default {
     './plugins/skraft-data/index.mjs',
     './plugins/aliases/index.mjs',
     './plugins/engine-domain/index.mjs', // workflow viewer: bundled DOT copies, client-only viewer chunk
-    './plugins/pending-pages/index.mjs', // TEMPORARY, deleted in WP1b
     './plugins/redirects/index.mjs', // /en/<p> -> /<p> for the English build only
     './plugins/markdown-twin/index.mjs', // .md twins + llms.txt / llms-full.txt per locale and version
     'docusaurus-plugin-image-zoom',

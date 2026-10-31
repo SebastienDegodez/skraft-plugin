@@ -91,9 +91,9 @@ $ git switch -c pay-by-card
 Open Claude Code in the `shop` folder. Type these two commands **in the conversation**, not in a
 terminal:
 
-```text
-/plugin marketplace add SebastienDegodez/skraft-plugin
-/plugin install skraft
+```console title="Claude Code"
+> /plugin marketplace add SebastienDegodez/skraft-plugin
+> /plugin install skraft
 ```
 
 Open `/plugin`: `skraft` is listed among the installed plugins.

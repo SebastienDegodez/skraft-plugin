@@ -134,8 +134,8 @@ $ copilot
 
 Type the command:
 
-```text
-/skraft checkout #42 Pay by card
+```console title="Copilot CLI"
+> /skraft checkout #42 Pay by card
 ```
 
 The command starts the `skraft-pipeline` dynamic workflow with `{ slug: "checkout", issue: 42, title:
@@ -239,7 +239,7 @@ run produced.
 
 ## Next pages
 
-- [Answer a run's question](../how-to/answer-a-question.md) — when the question could not be asked, or you closed it.
+- [Answer a run's question](../how-to/answer-a-question.mdx) — when the question could not be asked, or you closed it.
 - [Resume a run](../how-to/resume-a-run.md)
 - [Choose the agents' models](../how-to/choose-models.md) — to clear the `models/copilot` warning.
 - [Hosts](../reference/hosts.md#copilot-cli) — the workflow, the canvas and the `skraft_decide` tool.

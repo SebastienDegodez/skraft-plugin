@@ -28,7 +28,7 @@ ou non suivis). Pour chacun, les gates tournent dans l'ordre `build`, `format`, 
 `architecture`, `coverage`, `mutation` ; un composant s'arrête à sa première gate en échec, les
 autres continuent. Si rien n'a changé :
 
-```text
+```console
 skraft checkout: gates passed — no component changed since its base; no gate to run
 ```
 
@@ -80,7 +80,7 @@ result: fail (deterministic): exited 1
 
 Pendant un run, un échec `environment` n'arrête pas le run : il pose la question
 `<node> cannot run on this machine: <reason>. Fix it, then RETRY; or ABORT the run.` Réparez,
-puis répondez `RETRY` ([Répondre à une question du run](./answer-a-question.md)).
+puis répondez `RETRY` ([Répondre à une question du run](./answer-a-question.mdx)).
 
 ## Dépannage
 

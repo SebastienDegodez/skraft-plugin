@@ -736,7 +736,7 @@ parts:
             en: "en/dashboard/index.md"
             purpose_fr: "Catalogue factuel unique des agents, skills, workers, lentilles, racines et chaînes d'orchestration."
             purpose_en: "Single factual catalogue of agents, skills, workers, lenses, roots and orchestration chains."
-      - id: gates
+      - id: quality-gates
         title_fr: "Gates"
         title_en: "Gates"
         sidebar_position: 3
@@ -751,7 +751,7 @@ parts:
             source: "plugins/skraft-framework/skills/*-review-criteria/SKILL.md"
             purpose_fr: "Les gates de commandes du moteur et les criteres de revue (Gxx) de chaque lentille, par phase, et le calcul du verdict."
             purpose_en: "The engine's command gates and each lens's review criteria (Gxx), per phase, and how the verdict is computed."
-      - id: patterns
+      - id: architecture-patterns
         title_fr: "Patterns"
         title_en: "Patterns"
         sidebar_position: 4
