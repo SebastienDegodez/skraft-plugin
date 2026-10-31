@@ -228,12 +228,12 @@ const pullRequestOf = async ({ pullRequests }, number) => {
 
 /**
  * The merge base of the pull request's head, which the working copy stands on, with its base.
- * @param {ReviewDeps} deps @param {import('../ports/pull-requests.mjs').PullRequestFacts} pullRequest
+ * @param {OnForge} deps @param {import('../ports/pull-requests.mjs').PullRequestFacts} pullRequest
  * @returns {Promise<{ base: Prepared['base'] } | Stop>}
  */
-const baseOf = async ({ sourceControl, reviewFolder }, { number, base, head }) => {
+const baseOf = async ({ sourceControl, reviewFolder, pullRequests }, { number, base, head }) => {
   // Stryker disable next-line StringLiteral: '' and '.' are both the working copy to SourceControl
-  if ((await sourceControl.head('.')) !== head.sha) return stop('pr-not-checked-out', `the working copy is not on the head of pull request #${number} (${head.sha}); check it out first: gh pr checkout ${number}`)
+  if ((await sourceControl.head('.')) !== head.sha) return stop('pr-not-checked-out', `the working copy is not on the head of pull request #${number} (${head.sha}); check it out first: ${pullRequests.checkoutCommand(number)}`)
   const dirty = await uncommitted(sourceControl, head.sha)
   if (dirty !== null) return stop('working-copy-dirty', dirty)
   // Stryker disable next-line StringLiteral: '' and '.' are both the working copy to SourceControl

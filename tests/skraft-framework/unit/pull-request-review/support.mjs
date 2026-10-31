@@ -2,7 +2,7 @@
 // forge, its review folder; every port a hand-written double, the lenses a scripted LLM.
 import { createReviewPullRequest } from '../../../../plugins/skraft-framework/engine/application/review/review-pull-request-usecase.mjs'
 import {
-  FakeHasher, FixedClock, InMemoryAgentCatalog, InMemoryCodeHost, InMemoryGit, InMemoryPullRequests, InMemoryRunLock, InMemoryTracking, InMemoryUserSettings, InMemoryWorkflowSource, InMemoryWorkspace,
+  FakeHasher, FixedClock, InMemoryAgentCatalog, InMemoryAzureMcp, InMemoryCodeHost, InMemoryGit, InMemoryPullRequests, InMemoryRunLock, InMemoryTracking, InMemoryUserSettings, InMemoryWorkflowSource, InMemoryWorkspace,
   ManualTimer, RecordingProgress, ScriptedAgentRunner, ScriptedHuman,
 } from '../support/in-memory-host.mjs'
 import { API } from '../support/pipeline-host.mjs'
@@ -24,12 +24,32 @@ export const PULL_REQUEST = Object.freeze({
   head: Object.freeze({ ref: 'discount', sha: 'root-1' }),
 })
 
+/** The Azure Repos repository the working copy's remote names, in the project Shop Team. */
+export const AZURE_REMOTE = 'https://dev.azure.com/acme/Shop%20Team/_git/payment'
+
+/** The pull request as Azure Repos names its page. */
+export const AZURE_PULL_REQUEST = Object.freeze({ ...PULL_REQUEST, url: 'https://dev.azure.com/acme/Shop%20Team/_git/payment/pullrequest/12' })
+
+/**
+ * The pull request as the REST API of Azure Repos answers it: its branches by full name, the commits of its last merge.
+ * @param {typeof PULL_REQUEST} pullRequest @param {{ repository?: string, project?: string, organization?: string }} [where]
+ */
+export const azureJsonOf = ({ number, title, body, base, head }, { repository = 'payment', project = 'Shop Team', organization = 'https://dev.azure.com/acme' } = {}) => ({
+  pullRequestId: number, title, description: body,
+  sourceRefName: `refs/heads/${head.ref}`, targetRefName: `refs/heads/${base.ref}`,
+  lastMergeSourceCommit: { commitId: head.sha }, lastMergeTargetCommit: { commitId: base.sha },
+  repository: { name: repository, project: { name: project } },
+  url: `${organization}/${encodeURIComponent(project)}/_apis/git/repositories/${repository}/pullRequests/${number}`,
+})
+
 /**
  * @param {{
  *   config?: object | null, files?: Record<string, string>, pullRequest?: object, forge?: object, answers?: Array<object | null>,
  *   catalog?: InMemoryAgentCatalog, workflowSource?: InMemoryWorkflowSource,
- *   user?: string, base?: Record<string, string>, remote?: string,
+ *   user?: string, base?: Record<string, string>, remote?: string, azure?: boolean, mcp?: object | null,
  * }} [options] config: skraft-config.json at the pull request's base, none when null; files: more files of the working copy;
+ *   azure: the working copy is on an Azure Repos repository whose forge is the az double (not installed), the pull request its own;
+ *   mcp: the host's Azure DevOps MCP server, with these options, none when null;
  *   user: ~/.skraft/config.json; base: more files the base commit holds; remote: the URL of the working copy's remote
  */
 /**
@@ -49,14 +69,24 @@ class InMemoryReviewFolder {
   }
 }
 
-export const reviewHost = ({ config = { components: [API] }, files = {}, pullRequest = PULL_REQUEST, forge = {}, answers = [], catalog = new InMemoryAgentCatalog(), workflowSource = new InMemoryWorkflowSource(), user, base = {}, remote } = {}) => {
+/** What az, the double of the forge on Azure Repos, is told: not installed, so that a review it serves shows. */
+const AZURE_FORGE = Object.freeze({
+  unavailable: 'az, the Azure CLI, is not installed',
+  repository: { host: 'dev.azure.com', repository: 'acme/Shop Team/payment' },
+  pages: 'https://dev.azure.com/acme/Shop%20Team/_git/payment',
+  checkout: (/** @type {number} */ number) => `az repos pr checkout --id ${number}`,
+  takesRequestFile: true,
+})
+
+export const reviewHost = ({ config = { components: [API] }, files = {}, pullRequest, forge = {}, answers = [], catalog = new InMemoryAgentCatalog(), workflowSource = new InMemoryWorkflowSource(), user, base = {}, remote, azure = false, mcp = null } = {}) => {
   const reviews = new InMemoryTracking({ root: '/work/.copilot-tracking/skraft-reviews' })
-  const git = new InMemoryGit({ repositories: { '.': { mergeBases: { 'main-tip': 'root-0' } } }, remote })
+  const found = pullRequest ?? (azure ? AZURE_PULL_REQUEST : PULL_REQUEST)
+  const git = new InMemoryGit({ repositories: { '.': { mergeBases: { 'main-tip': 'root-0' } } }, remote: remote ?? (azure ? AZURE_REMOTE : undefined) })
   git.holds('main-tip', { ...(config === null ? {} : { 'skraft-config.json': JSON.stringify(config) }), ...base })
-  const pullRequests = new InMemoryPullRequests({ pullRequests: [pullRequest], ...forge })
+  const pullRequests = new InMemoryPullRequests({ pullRequests: [found], ...(azure ? AZURE_FORGE : {}), ...forge })
   pullRequests.read = (file) => reviews.files.get(file.slice(`${reviews.root}/`.length)) ?? ''
   const deps = {
-    forges: { github: { codeHost: new InMemoryCodeHost(), pullRequests } },
+    forges: { [azure ? 'azure-devops' : 'github']: { codeHost: new InMemoryCodeHost(), pullRequests } },
     reviewJournal: reviews,
     reviewFiles: reviews,
     workspace: new InMemoryWorkspace(files),
@@ -74,8 +104,11 @@ export const reviewHost = ({ config = { components: [API] }, files = {}, pullReq
     reviewFolder: new InMemoryReviewFolder(),
     timer: new ManualTimer(),
   }
+  const server = mcp === null ? null : new InMemoryAzureMcp({ pullRequests: { [found.number]: azureJsonOf(found) }, ...mcp })
+  if (server !== null) deps.mcpTools = server
   return {
     deps,
+    mcp: server,
     git,
     reviews,
     pullRequests,

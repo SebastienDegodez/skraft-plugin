@@ -14,7 +14,7 @@ persona: reviewer
 ## Prerequisites
 
 - The `skraft` plugin installed; `skraft` is the command that [`skraft install`]({{ "/en/how-to/install-on-a-host" | relative_url }}#skraft-command) sets up; the long line `node "<plugin folder>/engine/drivers/cli/skraft.mjs"` works without it.
-- `gh` installed and signed in to the repository's host (`gh auth status`).
+- On GitHub: `gh` installed and signed in to the repository's host (`gh auth status`). On Azure Repos: `az` with its `azure-devops` extension, signed in to the organization, or the Azure DevOps MCP server named `ado` connected in your host (Azure DevOps Services only).
 - A clone of the repository, at whose root you run everything.
 
 ## 1. Check out the pull request
@@ -24,6 +24,8 @@ gh pr checkout 42
 git fetch origin main
 git status
 ```
+
+On Azure Repos, check it out with `az repos pr checkout --id 42` instead of `gh pr checkout 42`.
 
 The working copy must be on the pull request's head commit, Git must know its base commit
 (`main` here), and nothing may stay uncommitted outside `.copilot-tracking/`.
@@ -81,7 +83,9 @@ skraft review #42: NEEDS_REWORK, pass 1 — <summary>
 | Terminal | `skraft review --pr 42 --publish` |
 
 skraft keeps **one** comment, found by its marker `<sub>skraft-review pr=42</sub>` and rewritten on
-every pass; never a GitHub review nor a change request. It asks your consent once per repository
+every pass; never a GitHub review nor a change request. On Azure Repos the comment is a **thread**,
+created with the status *Closed* so that a "comment resolution" branch policy does not wait on it; its first
+comment is the one rewritten. Never a vote, never a reply. It asks your consent once per repository
 (terminal, dialog, or Copilot's confirmation) and keeps it in your `~/.skraft/config.json`. A team
 can decide for everyone with `publish.reviewComment` in the base branch's `skraft-config.json`
 ([skraft-config.json]({{ "/en/reference/skraft-config" | relative_url }}#publish)). Without
@@ -100,9 +104,9 @@ that found nothing is reused without running again.
 
 | Code | Action |
 |---|---|
-| `forge-unavailable` | Install `gh` and sign in (`gh auth login --hostname <host>`); check that the working copy has a remote to the forge. |
-| `pr-not-found`, `pr-unreadable` | Check the number, and that `gh repo set-default` names the right repository. |
-| `pr-not-checked-out` | `gh pr checkout <number>`, then run again. |
+| `forge-unavailable` | Install `gh` and sign in (`gh auth login --hostname <host>`); on Azure Repos, install `az` and its extension and sign in (`az login`), or connect the `ado` MCP server; check that the working copy has a remote to the forge. |
+| `pr-not-found`, `pr-unreadable` | Check the number, and that `gh repo set-default` names the right repository. On Azure Repos, the pull request must be in the project and repository the Git remote names. |
+| `pr-not-checked-out` | `gh pr checkout <number>` (`az repos pr checkout --id <number>` on Azure Repos), then run again. |
 | `pr-base-missing` | `git fetch origin <base>`, then run again. |
 | `working-copy-dirty` | Commit or set aside the changes outside `.copilot-tracking/`. |
 | `workflow-invalid` | The base's `.skraft/review.skraft.dot` removes a mandatory node: fix it on the base branch. |

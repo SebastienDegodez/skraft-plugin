@@ -4,7 +4,8 @@ import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { tokenLineOf } from '../agent-loop/simulated-conductor.mjs'
 import { COMMENT_URL, NUMBER, pullRequestRepository, reviewLlm, TEST_FILE } from '../support/pull-request-repository.mjs'
-import { SKRAFT_COMMAND, skraft } from '../support/workspace.mjs'
+import { envWithPath, git, SKRAFT_COMMAND, skraft, toolFolders } from '../support/workspace.mjs'
+import { azFolder, SIGNED_IN } from '../support/fake-az.mjs'
 
 /** One review command, its step as `--json` prints it. @param {ReturnType<typeof pullRequestRepository>} repo @param {string[]} args @param {object} [options] */
 const review = async ({ cwd, env }, args, options = {}) => {
@@ -109,4 +110,36 @@ test('skraft review prints its verdict for a human and refuses a malformed comma
   assert.equal(record.stdout, 'skraft review #12: refused (not-recorded) — 3 handed over agents are not recorded yet: start each one, save its reply, then record\n')
   assert.equal(malformed.status, 2)
   assert.equal(nothing.stdout, 'skraft review #13: refused (nothing-to-record) — no agent was handed over; run the review without --record\n')
+})
+
+test('skraft review --pr --publish on an Azure Repos remote reads the pull request and keeps one thread across two passes through az, its consent kept for the organization, project and repository', async (t) => {
+  const repo = pullRequestRepository(t)
+  git(repo.cwd, 'remote', 'set-url', 'origin', 'https://dev.azure.com/acme/Shop%20Team/_git/payment')
+  const pull = {
+    pullRequestId: NUMBER, title: 'Discount at checkout', description: 'Applies a discount.',
+    sourceRefName: 'refs/heads/discount', targetRefName: 'refs/heads/main',
+    lastMergeSourceCommit: { commitId: repo.head }, lastMergeTargetCommit: { commitId: repo.base },
+    repository: { name: 'payment', project: { name: 'Shop Team' } },
+    url: `https://dev.azure.com/acme/Shop%20Team/_apis/git/repositories/payment/pullRequests/${NUMBER}`,
+  }
+  const az = azFolder(join(repo.root, 'az'), { ...SIGNED_IN, pullRequests: { [NUMBER]: pull } })
+  const env = { ...envWithPath([az.path, ...toolFolders()]), ...az.env }
+  const asked = []
+  const confirm = async (question) => {
+    asked.push(question)
+    return true
+  }
+
+  const first = await conduct({ cwd: repo.cwd, env }, reviewLlm(), ['--publish'], { confirm })
+  const second = await conduct({ cwd: repo.cwd, env }, reviewLlm(), ['--publish'], { confirm })
+
+  const thread = `https://dev.azure.com/acme/Shop%20Team/_apis/git/repositories/payment/pullRequests/${NUMBER}/threads/41/comments/1`
+  assert.deepEqual([first.step.status, first.step.comment, first.step.unpublished], ['NEEDS_REWORK', thread, null])
+  assert.deepEqual([second.step.status, second.step.comment], ['NEEDS_REWORK', thread])
+  assert.equal(asked.length, 1)
+  assert.deepEqual(JSON.parse(readFileSync(join(`${repo.cwd}-home`, '.skraft', 'config.json'), 'utf8')), { reviewComments: { 'dev.azure.com/acme/Shop Team/payment': { accepted: true, questionVersion: 1 } } })
+  assert.deepEqual(az.threadWrites().map(({ method, resource }) => [method, resource]), [['POST', 'pullRequestThreads'], ['PATCH', 'pullRequestThreadComments']])
+  assert.equal(az.threads().length, 1)
+  assert.ok(az.threads()[0].comments[0].content.includes('<sub>skraft-review pr=12</sub>'))
+  assert.deepEqual(repo.forge.calls(), [], 'gh asked nothing')
 })
