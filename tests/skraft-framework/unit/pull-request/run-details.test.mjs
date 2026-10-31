@@ -15,10 +15,10 @@ const POINTER = 'The run\'s other details (tests, consistency matrix, RED eviden
 const azure = (more = {}) => new InMemoryCodeHost({ bodyLimit: 4_000, commentLimit: 140_000, link: (issue, closes) => `${closes ? 'Fixes ' : ''}#${issue}`, ...more })
 
 /** A run that ends by opening its pull request on `codeHost`, the pr-writer's Why as given. */
-const opened = async (codeHost, why = LONG_WHY) => {
+const opened = async (codeHost, why = LONG_WHY, story = STORY) => {
   const host = scripted({ config: CONSENTED, codeHost }, (it) => nominal(it, REFS_42))
   host.prWriters.push(prWriter({ why }))
-  const outcome = await host.start(STORY)
+  const outcome = await host.start(story)
   assert.equal(outcome.status, 'done', outcome.reason)
   return host
 }
@@ -134,10 +134,11 @@ test('the details are titled in the language of the story, detected from the iss
     french: { title: 'Payer par carte', body: 'En tant que client, je veux payer par carte pour que la commande soit validée sans passer par la livraison.' },
     english: { title: 'Pay by card', body: 'As a shopper, I want to pay by card so that the order is placed without cash on delivery.' },
     neither: { title: 'Checkout #42', body: '42 / 17' },
+    tied: { title: 'Checkout #42', body: 'le the' },
   }
-  const expected = { french: ['skraft · détails du run', 'sont dans les commentaires de cette pull request intitulés skraft · détails du run.'], english: ['skraft · run details', 'are in this pull request\'s comments titled skraft · run details.'], neither: ['skraft · run details', 'are in this pull request\'s comments titled skraft · run details.'] }
+  const expected = { french: ['skraft · détails du run', 'sont dans les commentaires de cette pull request intitulés skraft · détails du run.'], english: ['skraft · run details', 'are in this pull request\'s comments titled skraft · run details.'], neither: ['skraft · run details', 'are in this pull request\'s comments titled skraft · run details.'], tied: ['skraft · run details', 'are in this pull request\'s comments titled skraft · run details.'] }
   for (const [language, issue] of Object.entries(issues)) {
-    const host = await opened(azure({ issues: { 42: issue } }))
+    const host = await opened(azure({ issues: { 42: issue } }), LONG_WHY, { story: { issue: 42, title: issue.title } })
 
     const [{ body }] = host.codeHost.pullRequestComments
     const description = await host.tracking.read(SLUG, 'pull-request-body.md')
@@ -153,4 +154,16 @@ test('a story whose run kept no issue is told by its title alone', async () => {
   assert.equal((await host.start({ story: { issue: 42, title: 'Payer la commande par carte pour les clients de la boutique' } })).status, 'done')
 
   assert.ok(host.codeHost.pullRequestComments[0].body.includes('\n# skraft · détails du run\n'))
+})
+
+test('details that fill the room of a comment exactly stay in one part, one character less makes two', async () => {
+  const whole = await opened(azure())
+  const [{ body }] = whole.codeHost.pullRequestComments
+  const header = `<!-- skraft:run-details slug=${SLUG} part=1 -->\n# skraft · run details\n\n`
+  const room = body.length - header.length
+
+  const fits = await opened(azure({ commentLimit: room + 200 }))
+  const tight = await opened(azure({ commentLimit: room + 199 }))
+
+  assert.deepEqual([fits.codeHost.pullRequestComments.length, tight.codeHost.pullRequestComments.length], [1, 2])
 })
