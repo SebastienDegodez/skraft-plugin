@@ -25,3 +25,9 @@ test('front matter keeps title, description and persona, drops layout, lang and 
   assert.equal(result.extension, '.md')
   assert.deepEqual(result.redirects, [{ from: '/en/how-to/gates/', to: 'how-to/run-gates' }])
 })
+
+test('citation links lose the cites variable and point at the citations page, anchor kept', () => {
+  const { result, after } = convertFixture('citation-links', { docId: 'explanation/pipeline/design' })
+  assert.equal(result.text, after)
+  assert.deepEqual(result.findings, [])
+})
