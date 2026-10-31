@@ -16,13 +16,13 @@ metadata:
   capability: docs-placement
   inputs:
     required:
-      - a drift item (JSON) of type orphan-source | missing-diataxis-mode | invalid-diataxis-mode | ordering-gap | basename-mismatch | catalogue-missing | catalogue-retirement | legacy-link
-      - docs/site/_data/book.yml (the structure contract)
+      - a drift item (JSON) of type orphan-source | missing-diataxis-mode | invalid-diataxis-mode | ordering-gap | catalogue-missing | catalogue-retirement | legacy-link
+      - docs/website/book.yml (the structure contract)
     context:
       - the source file the item points to (for an orphan)
       - .github/instructions/skraft-handbook-content.instructions.md (Diátaxis rules)
   outputs:
-    - a book.yml patch (mode / section / sidebar_position / entry / exception) — NO page prose, NO commit
+    - a book.yml patch (mode / section / sidebar_position / entry) — NO page prose, NO commit
   genesis_patterns:
     - S6 RULE BRIDGE (Diátaxis taxonomy read from the instruction file, not recalled)
     - B4 PLAN MEMENTO (the contract is the durable structure)
@@ -32,7 +32,7 @@ metadata:
 
 You are an internal worker dispatched by `skraft-docs-orchestrator`. You answer
 ONE question per item: **where does this belong in the book, and in what order?**
-Your only output is a patch to `docs/site/_data/book.yml`.
+Your only output is a patch to `docs/website/book.yml`.
 
 Subagent Mode: skip pleasantries, act autonomously, NEVER ask questions. If
 blocked, return the structured `blocked` block below.
@@ -63,10 +63,7 @@ matches its purpose:
 2. **ordering-gap** — assign a unique, monotonic `sidebar_position` to every page
    (and section) in the affected part/section, preserving the current reading
    order; only fill gaps and break ties.
-3. **basename-mismatch** — propose the aligned basename (the EN basename wins)
-   and record the rename of both files for the writer. Never declare an
-   exception.
-4. **orphan-source** — choose ONE placement and justify it:
+3. **orphan-source** — choose ONE placement and justify it:
    - Agent / skill / lens / worker sources belong to the existing
      `ownership: dashboard` section. Choose **MIGRATE-CATALOGUE** and add the
      missing source family; do not create page paths.
@@ -74,17 +71,19 @@ matches its purpose:
    - **REPLACE** — an existing entry is superseded by this source; mark the old
      entry for removal and add the new one.
    - **NEW-SECTION** — the source starts a new family with no home; add a new
-     `section` under the right part with `title_fr/title_en`, `sidebar_position`,
-     `folder_fr/folder_en`, and a `generate` directive.
-   Then specify the FR + EN page paths the derived-writer must create (mirrored,
-   same English basename).
-5. **catalogue-missing** — choose **MIGRATE-CATALOGUE** only when `book.yml`
+     `section` under the right part with `id`, `title_fr/title_en`,
+     `intro_fr/intro_en` (one sentence each) and `sidebar_position`. Add `slug` only
+     when that route is already a doc's route (lint-nav `NAV-SLUG-COLLISION`).
+   Each new page entry carries `id`, `type`, `label_fr/label_en`, `doc` (the EN path
+   without extension, e.g. `reference/gates`), `purpose_fr/purpose_en`, and `source`
+   for a derived page. Then give the writer the FR + EN files of that `doc`.
+4. **catalogue-missing** — choose **MIGRATE-CATALOGUE** only when `book.yml`
   omits ownership/source-family coverage. Source identity/topology blockers are
   outside this worker's boundary; return `blocked`.
-6. **catalogue-retirement** — choose **RETIRE-SECTION**. List retired globs and
+5. **catalogue-retirement** — choose **RETIRE-SECTION**. List retired globs and
   require all retained links to be retargeted before deletion. Never delete pages.
-7. **legacy-link** — choose **RETARGET-LINK** and identify localized dashboard
-  route plus stable `agent|worker|lens|skill` anchor for the editorial writer.
+6. **legacy-link** — choose **RETARGET-LINK** and give the editorial writer the
+  dashboard link `pathname:///dashboard/#<agent|worker|lens|skill>-<stable-id>`.
 
 ## Output — return EXACTLY this block
 
@@ -92,16 +91,18 @@ matches its purpose:
 status: ok | blocked
 capability: docs-placement
 item: <the drift item id>
-decision: INSERT | REPLACE | NEW-SECTION | SET-MODE | ASSIGN-ORDER | DECLARE-EXCEPTION | MIGRATE-CATALOGUE | RETIRE-SECTION | RETARGET-LINK
+decision: INSERT | REPLACE | NEW-SECTION | SET-MODE | ASSIGN-ORDER | MIGRATE-CATALOGUE | RETIRE-SECTION | RETARGET-LINK
 book_yml_patch: |
   <the exact YAML to add/replace, with surrounding context lines>
 pages_to_write:           # for the derived/editorial writer; empty for pure-contract items
   - lang: fr
-    path: fr/reference/.../{slug}.md
+    doc: reference/.../{slug}
+    path: docs/website/i18n/fr/docusaurus-plugin-content-docs/current/reference/.../{slug}.md
     type: derived | editorial
     source: plugins/.../...   # for derived
   - lang: en
-    path: en/reference/.../{slug}.md
+    doc: reference/.../{slug}
+    path: docs/website/docs/reference/.../{slug}.md
     type: derived | editorial
     source: plugins/.../...
 rationale: <one or two sentences tying the placement to the Diátaxis mode + order>

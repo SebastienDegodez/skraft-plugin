@@ -4,7 +4,7 @@ engine:
   id: copilot
 description: |
   Weekly completeness sweep of the SKRAFT book. Reads the contract
-  docs/site/_data/book.yml, compares what SHOULD exist (the contract) against
+  docs/website/book.yml, compares what SHOULD exist (the contract) against
   what exists (the files) and what is in the sources (patterns, gates and
   agentic descriptors). It writes a declared page that is missing or empty, in
   FR and EN and in the Diataxis mode of its part, repairs legacy links and
@@ -72,9 +72,10 @@ emit a finished repair, in FR and EN, ready for review.
 
 ## The three states to compare
 
-1. **The contract** — `docs/site/_data/book.yml`: every page that SHOULD exist,
+1. **The contract** — `docs/website/book.yml`: every page that SHOULD exist,
    with its part, its `type` and its `source`. Its header holds the hard rules.
-2. **The files** — the real pages under `docs/site/{fr,en}/`.
+2. **The files** — the real pages: EN under `docs/website/docs/`, FR at the same
+   path under `docs/website/i18n/fr/docusaurus-plugin-content-docs/current/`.
 3. **The sources** — the patterns, gates, lenses, agents and skills under
    `plugins/` (the `sources` key of `book.yml`).
 
@@ -98,9 +99,7 @@ Failing to `noop` when the book is complete fails the workflow.
    agent, skill, worker or lens is covered by the dashboard and its stable anchor,
    never by a new per-item Markdown page.
 4. **Placement** (`missing-diataxis-mode`, `invalid-diataxis-mode`,
-   `ordering-gap`, `basename-mismatch`). Propose the `book.yml` patch; a
-   basename mismatch is fixed by renaming both files to the same English
-   basename, never by an exception.
+   `ordering-gap`). Propose the `book.yml` patch.
 5. **Contract requirement.** A page that declares `requires_risk_section: true`
    (e.g. `customisation-trade-offs`) without a risk section gets that section.
 6. **Narrative or catalogue migration** (`narrative-orchestration`,
@@ -125,8 +124,7 @@ three-way diff in prose.
 
    The ledger encodes the three-way diff: `missing-page`, `empty-page`,
    `parity-break`, `orphan-source`, `missing-diataxis-mode`,
-   `invalid-diataxis-mode`, `ordering-gap`, `basename-mismatch`,
-   `catalogue-missing`, `catalogue-topology`, `narrative-orchestration`,
+   `invalid-diataxis-mode`, `ordering-gap`, `catalogue-missing`, `catalogue-topology`, `narrative-orchestration`,
    `legacy-link`, `catalogue-retirement`.
 
 2. **Activation guard.** If `summary.total == 0`, call `noop`
@@ -154,7 +152,12 @@ three-way diff in prose.
 - **No invented figure.** A quantitative claim you cannot trace to the code is
   phrased qualitatively, or left out.
 - **Sources through `citations.yml`.** A claim attributed to an author cites a key
-  of `docs/site/_data/citations.yml`; `scripts/check-citations.mjs` must pass.
+  of `docs/website/data/citations.yml`, linked as
+  `[Author, year](<relative path to reference/citations.mdx>#cite-<key>)`;
+  `scripts/check-citations.mjs` must pass.
+- **Relative file links.** Internal links point at the target file
+  (`../how-to/run-gates.md`); never a `/fr/…` or `/en/…` URL, never Liquid;
+  `scripts/lint-nav.mjs` must pass.
 - **Faithful to the skills' canonical vocabulary.** The
   `plugins/*/skills/*/SKILL.md` files are the terminology authority (e.g. Clean
   Architecture layers are **Domain / Application / Infrastructure / API** per
@@ -164,9 +167,12 @@ three-way diff in prose.
   never present another tool or host as supported by skraft.
 - **Understandable by everyone.** Short sentences, jargon defined inline or
   linked to the glossary.
-- **FR/EN mirror, shared basename.** Every page is written in both languages
-  with the same heading structure and the same English basename.
-- **No source modification.** Write only `docs/site/**`. Never recreate retired
+- **FR/EN mirror, shared `doc` id.** Every page is written in both languages at
+  the same relative path, with the same extension and heading structure.
+- **No source modification.** Write only the handbook pages (EN under
+  `docs/website/docs/`, FR under
+  `docs/website/i18n/fr/docusaurus-plugin-content-docs/current/`),
+  `docs/website/book.yml` and `docs/website/data/citations.yml`. Never recreate retired
   agent, skill, worker or lens catalogue pages; the dashboard owns those facts.
 
 ## Pull request body

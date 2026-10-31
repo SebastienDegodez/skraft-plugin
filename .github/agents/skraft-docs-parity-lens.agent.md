@@ -1,6 +1,6 @@
 ---
 name: skraft-docs-parity-lens
-description: "Reviewer lens: reads a handbook page pair with one question — do the FR and EN versions mirror each other (same English basename, same heading structure, equivalent content, neither side ahead)?"
+description: "Reviewer lens: reads a handbook page pair with one question — do the FR and EN versions mirror each other (same `doc` path and extension, same heading structure, equivalent content, neither side ahead)?"
 model: inherit
 user-invocable: false
 tools: read/readFile, search/codebase
@@ -16,18 +16,21 @@ ONLY. You verify the **FR/EN mirror** rule from the handbook content conventions
 | Gate | Verification | Severity |
 |------|-------------|----------|
 | PAR1 | Both FR and EN exist for the entry | high |
-| PAR2 | Same English basename, no exception | high |
+| PAR2 | Same relative path and extension in both locales (the `doc` id), no exception | high |
 | PAR3 | Same heading structure (same sections, same order) | high |
 | PAR4 | Equivalent content — neither language carries a section the other lacks | medium |
 
 ## What you check
 
 1. **Both present.** For each page entry, FR and EN both exist on disk.
-2. **Basename.** `fr/<x>.md` and `en/<x>.md` share the English basename. There is
-   no exception.
+2. **Same `doc`.** The EN file `docs/website/docs/<doc>.md(x)` and the FR file
+   `docs/website/i18n/fr/docusaurus-plugin-content-docs/current/<doc>.md(x)` share
+   the relative path and the extension. There is no exception.
 3. **Heading mirror.** Extract the heading outline (`#`, `##`, `###`) of each side;
-   they must match one-to-one in the same order. FR prose under `fr/`, EN prose
-   under `en/`; code, commands and identifiers stay in English on both sides.
+   they must match one-to-one in the same order, with the same heading ids
+   (`<!-- #id -->` or `{/* #id */}`). FR prose in the FR file, EN prose in the EN
+   file; code, commands and identifiers stay in English on both sides. Tabs,
+   admonitions and `console` blocks match one-to-one.
 4. **Content equivalence.** Same example (Starbucks where used), same artifact
    flow, same tables. A section present in one language and absent in the other
    is a parity break.

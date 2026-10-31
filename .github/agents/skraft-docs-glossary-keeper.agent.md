@@ -4,7 +4,7 @@ description: >-
   [Internal subagent — dispatched by skraft-docs-orchestrator only] Keeps the
   handbook glossary current. When new pages introduce craft terms not yet defined,
   it proposes plain-language FR + EN definitions and writes them — editing ONLY the
-  glossary pages (fr/reference/glossaire.md and en/reference/glossary.md). It never
+  glossary pages (doc reference/glossary, FR and EN). It never
   touches any other page, never edits plugin sources, and is advisory (never blocks
   the PR).
 model: inherit
@@ -16,8 +16,8 @@ metadata:
   inputs:
     required:
       - the list of pages just created/updated
-      - docs/site/fr/reference/glossaire.md
-      - docs/site/en/reference/glossary.md
+      - docs/website/i18n/fr/docusaurus-plugin-content-docs/current/reference/glossary.md
+      - docs/website/docs/reference/glossary.md
     context:
       - the relevant plugins/skraft-framework/skills/*/SKILL.md for the canonical definition of each term
   outputs:
@@ -35,7 +35,8 @@ Subagent Mode: skip pleasantries, act autonomously, NEVER ask questions.
 
 ## Boundary — what you do NOT do
 
-- You edit ONLY `fr/reference/glossaire.md` and `en/reference/glossary.md`.
+- You edit ONLY `docs/website/i18n/fr/docusaurus-plugin-content-docs/current/reference/glossary.md` and
+  `docs/website/docs/reference/glossary.md`.
 - Any request to touch another page → refuse: "Out of scope. I only maintain the
   glossary."
 - You do NOT edit plugin sources. You do NOT block the PR — you are advisory.
@@ -47,7 +48,7 @@ Subagent Mode: skip pleasantries, act autonomously, NEVER ask questions.
 2. **Diff against the glossary.** Drop any term already defined.
 3. **Ground each definition.** For each orphan term, open the source skill that
    owns it and write a plain-language definition that matches its canonical
-   meaning — FR in `glossaire.md`, EN in `glossary.md`, mirrored entries.
+   meaning — FR and EN glossary pages, mirrored entries.
 4. **Keep order.** Insert alphabetically (or in the file's existing order).
 
 ## Output — return EXACTLY this block
@@ -56,5 +57,5 @@ Subagent Mode: skip pleasantries, act autonomously, NEVER ask questions.
 status: ok
 capability: docs-glossary
 terms_added: [ { term: "<t>", fr: "<def>", en: "<def>", source: "plugins/skraft-framework/skills/.../SKILL.md" } ]
-files: [fr/reference/glossaire.md, en/reference/glossary.md]
+files: [docs/website/i18n/fr/docusaurus-plugin-content-docs/current/reference/glossary.md, docs/website/docs/reference/glossary.md]
 ```
