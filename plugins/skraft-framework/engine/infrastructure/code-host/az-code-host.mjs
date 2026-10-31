@@ -1,6 +1,7 @@
 import { pullRequestPage } from '../../domain/review/azure-pull-request.mjs'
 import { find as findByNumber, keepComment as keepThread, repositoryOf } from './az-repos.mjs'
 import { keepComment, workItem } from './az-boards.mjs'
+import { keepPullRequestComment } from './az-threads.mjs'
 import { NO_AZURE_REMOTE, QUIET, repos, run, succeeded, unavailable, remoteOf, lines, readJson, refused } from './az-cli.mjs'
 
 /**
@@ -24,7 +25,7 @@ export const createAzCodeHost = ({ commandRunner }) => Object.freeze({
   findPullRequest: (head) => findPullRequest(commandRunner, head),
   create: (request) => create(commandRunner, request),
   edit: (request) => edit(commandRunner, request),
-  keepIssueComment: (request) => keepComment(commandRunner, request),
+  ...comments(commandRunner),
   issue: (number) => workItem(commandRunner, number),
   // Azure Repos links `#N`; `Fixes #N` also completes the work item when the pull request merges.
   storyLink: (issue, closes) => `${closes ? 'Fixes ' : ''}#${issue}`,
@@ -32,6 +33,18 @@ export const createAzCodeHost = ({ commandRunner }) => Object.freeze({
   bodyLimit: 4_000,
   // az sends a comment from a JSON file.
   takesRequestFile: true,
+})
+
+/**
+ * What Azure DevOps keeps for a run: its comment on the work item, its run details on the pull
+ * request, as threads, and the longest comment it takes. Microsoft documents 150,000 characters
+ * for a comment; the engine takes 140,000, the margin GitHub's 65,536 gets to 60,000 (not
+ * measured: docs/v2/host-verification.md). @param {CommandRunner} commandRunner
+ */
+const comments = (commandRunner) => ({
+  keepIssueComment: (/** @type {import('../../application/ports/code-host.mjs').IssueCommentRequest} */ request) => keepComment(commandRunner, request),
+  keepPullRequestComment: (/** @type {import('../../application/ports/code-host.mjs').PullRequestCommentRequest} */ request) => keepPullRequestComment(commandRunner, request),
+  commentLimit: 140_000,
 })
 
 /**

@@ -20,7 +20,7 @@ import { refusalOf, served, UNREADABLE } from './mcp-route.mjs'
  */
 
 /** What a refusal of a tool of Azure Repos answers: refused for good, whatever the tool, never left to az. */
-const refused = refusalOf({ server: 'Azure DevOps', place: 'Azure Repos', cli: 'az', writes: ['repo_pull_request_thread_write'] })
+export const refused = refusalOf({ server: 'Azure DevOps', place: 'Azure Repos', cli: 'az', writes: ['repo_pull_request_thread_write'] })
 
 /**
  * The threads one listing answers at most (`top`; the server pages with `skip`, sorted by thread

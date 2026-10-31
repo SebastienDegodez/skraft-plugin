@@ -1,3 +1,4 @@
+import { ANYWHERE, holdsMarker, OPENS } from '../../domain/pipeline/forge-comment.mjs'
 import { once, served, answerOf, refusalOf, UNAVAILABLE, UNREADABLE } from './mcp-route.mjs'
 
 /**
@@ -64,7 +65,8 @@ const codeHostOf = (gh, { origin, reviewed }) => Object.freeze({
   findPullRequest: (head) => served(origin, (at) => pullRequestOf(at, head), () => gh.findPullRequest(head), 'gh', refused),
   create: (request) => served(origin, (at) => created(at, request), () => gh.create(request), 'gh', refused),
   edit: (request) => served(origin, (at) => edited(at, request), () => gh.edit(request), 'gh', refused),
-  keepIssueComment: (request) => served(origin, (at) => commentKept(at, request), () => gh.keepIssueComment(request), 'gh', refused),
+  keepIssueComment: (request) => served(origin, (at) => commentKept(at, request, OPENS), () => gh.keepIssueComment(request), 'gh', refused),
+  keepPullRequestComment: (request) => served(origin, (at) => commentKept(at, { ...request, requestFile: '' }, OPENS), () => gh.keepPullRequestComment(request), 'gh', refused),
 })
 
 /**
@@ -79,6 +81,7 @@ const onGit = (gh) => ({
   push: (/** @type {string} */ branch) => gh.push(branch),
   storyLink: (/** @type {number} */ issue, /** @type {boolean} */ closes) => gh.storyLink(issue, closes),
   bodyLimit: gh.bodyLimit,
+  commentLimit: gh.commentLimit,
   takesRequestFile: gh.takesRequestFile,
 })
 
@@ -89,7 +92,7 @@ const pullRequestsOf = (gh, reviewed) => Object.freeze({
   checkoutCommand: (number) => gh.checkoutCommand(number),
   takesRequestFile: gh.takesRequestFile,
   find: (number) => served(reviewed, (at) => pullRequestRead(at, number), () => gh.find(number), 'gh', refused),
-  keepComment: (request) => served(reviewed, (at) => commentKept(at, request), () => gh.keepComment(request), 'gh', refused),
+  keepComment: (request) => served(reviewed, (at) => commentKept(at, request, ANYWHERE), () => gh.keepComment(request), 'gh', refused),
 })
 
 /**
@@ -224,11 +227,12 @@ const PAGE = 100
  * The run's comment rewritten (the one at the URL kept, else the user's latest holding the marker)
  * or posted; left to gh when the server cannot tell whose comments are whose, so that none is
  * posted twice. @param {GitHub} github @param {import('../ports/code-host.mjs').IssueCommentRequest} request
+ * @param {import('../../domain/pipeline/forge-comment.mjs').MarkerAt} markerAt where the marker is in the comment: opening it, or anywhere (a review)
  */
-const commentKept = async (github, request) => {
+const commentKept = async (github, request, markerAt) => {
   const mine = await ownComments(github, request.number)
   if ('failure' in mine) return mine
-  const kept = mine.comments.find((comment) => urlOf(comment) === request.url) ?? mine.comments.findLast((comment) => textOf(comment.body).includes(request.marker))
+  const kept = mine.comments.find((comment) => urlOf(comment) === request.url) ?? mine.comments.findLast((comment) => holdsMarker(textOf(comment.body), { marker: request.marker, markerAt }))
   const tool = kept === undefined ? 'add_issue_comment' : 'update_issue_comment'
   const written = await github.call(tool, { ...github.at, ...(kept === undefined ? { issue_number: request.number } : { comment_id: kept.id }), body: request.body })
   if ('failure' in written) return written

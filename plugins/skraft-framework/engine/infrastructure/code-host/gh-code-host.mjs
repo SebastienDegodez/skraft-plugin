@@ -1,4 +1,7 @@
+import { ANYWHERE, holdsMarker, OPENS } from '../../domain/pipeline/forge-comment.mjs'
+
 /**
+ * @typedef {import('../../domain/pipeline/forge-comment.mjs').MarkerAt} MarkerAt
  * @typedef {import('../../application/ports/command-runner.mjs').CommandRunner} CommandRunner
  * @typedef {import('../../application/ports/command-runner.mjs').CommandResult} CommandResult
  * @typedef {import('../../application/ports/code-host.mjs').PullRequestRequest} PullRequestRequest
@@ -20,11 +23,19 @@ export const createGhCodeHost = ({ commandRunner }) => Object.freeze({
   findPullRequest: (head) => findPullRequest(commandRunner, head),
   create: (request) => create(commandRunner, request),
   edit: (request) => edit(commandRunner, request),
-  keepIssueComment: (request) => keepIssueComment(commandRunner, request),
+  keepIssueComment: (request) => keepIssueComment(commandRunner, request, remoteOf, OPENS),
+  // On GitHub a pull request is an issue: its comments go the same way, with no request file.
+  keepPullRequestComment: (request) => keepIssueComment(commandRunner, { ...request, requestFile: '' }, remoteOf, OPENS),
   issue: (number) => findIssue(commandRunner, number),
   storyLink: (issue, closes) => `${closes ? 'Closes' : 'Refs'} #${issue}`,
+  ...LIMITS,
+})
+
+const LIMITS = Object.freeze({
   // GitHub refuses a body past 65,536 characters; the margin leaves room for what it adds.
   bodyLimit: 60_000,
+  // A comment is refused past the same 65,536 characters (not measured); the same margin.
+  commentLimit: 60_000,
   // gh takes the body file itself.
   takesRequestFile: false,
 })
@@ -56,7 +67,7 @@ export const createGhPullRequests = ({ commandRunner }) => Object.freeze({
   // gh sends the comment from its body file.
   takesRequestFile: false,
   find: (number) => findByNumber(commandRunner, number),
-  keepComment: (request) => keepIssueComment(commandRunner, request, reviewedRemote),
+  keepComment: (request) => keepIssueComment(commandRunner, request, reviewedRemote, ANYWHERE),
 })
 
 export const NO_REMOTE = 'the working copy has no Git remote whose URL names a host and a repository'
@@ -277,25 +288,26 @@ const edit = async (commandRunner, { number, bodyFile }) => {
  * Rewrites the run's comment on the issue, or the pull request the number names: the one at the
  * URL kept, else the signed-in user's latest one holding the marker, else a new one. Through gh's
  * REST calls, on the forge the remote names; the body is read from its file by gh.
- * @param {CommandRunner} commandRunner @param {import('../../application/ports/code-host.mjs').IssueCommentRequest} request @param {RemoteLookup} [locate]
+ * @param {CommandRunner} commandRunner @param {import('../../application/ports/code-host.mjs').IssueCommentRequest} request @param {RemoteLookup} locate
+ * @param {MarkerAt} markerAt where the request's marker is in the body of its comment
  */
-const keepIssueComment = async (commandRunner, request, locate = remoteOf) => {
+const keepIssueComment = async (commandRunner, request, locate, markerAt) => {
   const remote = await locate(commandRunner)
   if (remote === null) return refused(NO_REMOTE)
-  return (await rewriteOrPost({ commandRunner, remote }, request)) ?? refused(`gh could not comment issue #${request.number} on ${remote.repository}`)
+  return (await rewriteOrPost({ commandRunner, remote }, request, markerAt)) ?? refused(`gh could not comment issue #${request.number} on ${remote.repository}`)
 }
 
 /**
  * The comment kept; null when gh failed, so that a comment gh could not reach is never posted
  * twice. Only a kept URL the forge says is gone, then no comment of the user's holding the marker,
  * lead to a new one: a comment found by its marker that the forge refuses to rewrite is a failure.
- * @param {Forge} forge @param {import('../../application/ports/code-host.mjs').IssueCommentRequest} request
+ * @param {Forge} forge @param {import('../../application/ports/code-host.mjs').IssueCommentRequest} request @param {MarkerAt} markerAt
  * @returns {Promise<KeptComment | Refusal | null>}
  */
-const rewriteOrPost = async (forge, { number, marker, url, bodyFile }) => {
+const rewriteOrPost = async (forge, { number, marker, url, bodyFile }, markerAt) => {
   const edited = url === null ? GONE : await editOwn(forge, { url, number, bodyFile })
   if (edited !== GONE) return edited
-  const found = await findComment(forge, number, marker)
+  const found = await findComment(forge, number, { marker, markerAt })
   if (found === undefined) return null
   if (found === null) return postComment(forge, number, bodyFile)
   if (typeof found !== 'string') return found
@@ -388,15 +400,15 @@ const LOGIN = /^[A-Za-z0-9][A-Za-z0-9-]*(?:\[bot\])?$/
  * The URL of the signed-in user's latest comment of the issue holding the marker: null when there
  * is none; undefined when gh cannot list them; a refusal when gh cannot say who the user is, the
  * token unable to read the authenticated user. Only the user's own comment is ever rewritten.
- * @param {Forge} forge @param {number} number @param {string} marker @returns {Promise<string | null | undefined | Refusal>}
+ * @param {Forge} forge @param {number} number @param {{ marker: string, markerAt: MarkerAt }} request @returns {Promise<string | null | undefined | Refusal>}
  */
-const findComment = async (forge, number, marker) => {
+const findComment = async (forge, number, request) => {
   const login = await signedIn(forge)
   if (login === null) return refused(`gh could not tell which user is signed in on ${forge.remote.host}, so the run's comment on issue #${number} is neither found nor posted`)
   const listed = await api(forge, `issues/${number}/comments`, ['--paginate', '--jq=.[]'])
   const comments = succeeded(listed) ? readComments(listed.stdout) : null
   if (comments === null) return undefined
-  const mine = comments.filter((comment) => comment.user?.login === login && String(comment.body).includes(marker) && COMMENT_URL.test(comment.html_url))
+  const mine = comments.filter((comment) => comment.user?.login === login && holdsMarker(String(comment.body), request) && COMMENT_URL.test(comment.html_url))
   return mine.at(-1)?.html_url ?? null
 }
 

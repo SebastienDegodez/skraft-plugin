@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { InMemoryCodeHost, InMemoryGit, ScriptedMachine } from '../support/in-memory-host.mjs'
 import { agent, API, scripted, SLUG } from '../support/pipeline-host.mjs'
 import { eventsOf } from '../support/decisions.mjs'
-import { section } from '../support/description.mjs'
+import { opening, section } from '../support/description.mjs'
 
 /** A React front end in web/, whose e2e command runs Playwright. */
 const WEB = Object.freeze({
@@ -355,39 +355,47 @@ test('the pull request shows six screenshots of each theme of a component, and s
 })
 
 /**
- * A run of one light and two dark screenshots whose body holds `whole` characters before any cut,
- * the e2e command of web padded to that length.
+ * A run on a forge whose body takes 1,000 characters, so that the folded sections go to the
+ * comments of the run details, each at most `commentLimit` characters.
  */
-const paddedTo = async (whole) => {
-  const run = async (pad) => {
-    const e2e = `npx playwright test --grep ${'c'.repeat(1 + pad)}`
-    const host = visualsRun({ web: { ...WEB, commands: { ...WEB.commands, e2e } }, screenshots: CHECKOUT.filter(({ title, theme }) => theme === 'dark' || title === 'Payment accepted') })
-    assert.equal((await host.start(STORY)).status, 'done')
-    return host
-  }
-  const bare = (await (await run(0)).tracking.read(SLUG, 'pull-request.md')).length - 'Pay by card\n\n'.length
-  return run(whole - bare)
+const detailsRun = async (commentLimit) => {
+  const host = visualsRun({ codeHost: new InMemoryCodeHost({ bodyLimit: 1_000, commentLimit }), screenshots: CHECKOUT.filter(({ title, theme }) => theme === 'dark' || title === 'Payment accepted') })
+  assert.equal((await host.start(STORY)).status, 'done')
+  return host
 }
 
-test('screenshots cut to fit a pull request drop their dark theme block whole, never leaving it open', async () => {
-  const host = await paddedTo(60_006)
+/** The comment of the run details that holds the Screenshots section. @param {Awaited<ReturnType<typeof detailsRun>>} host */
+const screenshotsComment = (host) => host.codeHost.pullRequestComments.find(({ body }) => body.includes('<summary>Screenshots')).body
 
-  const description = await host.tracking.read(SLUG, 'pull-request.md')
-  assert.equal(description.length - 'Pay by card\n\n'.length, 60_006)
+/** What a comment keeps for its marker and heading, out of the room its blocks have: the heading of a comment of one part, then « n/n » for the run's `n` folded blocks. @param {string} comment @param {number} blocks */
+const headerOf = (comment, blocks) => comment.indexOf('\n\n') + '\n\n'.length + ` ${blocks}/${blocks}`.length
+
+/** The limit of a comment that takes the Screenshots block whole, less `short` characters. @param {string} description @param {number} short @param {number} reserve */
+const limitShortBy = (description, short, reserve) => {
+  const block = section(description, 'Screenshots').length + opening(description, 'Screenshots').length + '\n\n'.length + '\n\n</details>\n'.length
+  return block - short + reserve
+}
+
+test('screenshots cut to fit a comment of the run details drop their dark theme block whole, never leaving it open', async () => {
+  const whole = await detailsRun(140_000)
+  const description = await whole.tracking.read(SLUG, 'pull-request.md')
   assert.ok(section(description, 'Screenshots').endsWith(`/dark-2.png)\n\n</details>`), section(description, 'Screenshots'))
-  const body = await host.tracking.read(SLUG, 'pull-request-body.md')
-  assert.ok(body.length <= 60_000, body.length)
-  assert.ok(section(body, 'Screenshots').endsWith([
+  assert.ok(screenshotsComment(whole).includes('/dark-2.png)'))
+  const body = await whole.tracking.read(SLUG, 'pull-request-body.md')
+  assert.ok(!body.includes('<summary>Screenshots'), body)
+
+  const reserve = headerOf(screenshotsComment(whole), screenshotsComment(whole).split('<details').length - 1)
+  const cut = screenshotsComment(await detailsRun(limitShortBy(description, 10, reserve)))
+  assert.ok(section(cut, 'Screenshots').endsWith([
     `![Payment accepted](${RAW}/${EVIDENCE}/web/light-1.png)`,
     '',
-    '[cut: the description holds more than a pull request takes; read it whole in the tracking folder, pull-request.md]',
-  ].join('\n')), section(body, 'Screenshots').slice(-600))
-  assert.equal(body.split('<details').length, body.split('</details>').length, body.slice(-1500))
+    CUT,
+  ].join('\n')), section(cut, 'Screenshots').slice(-600))
+  assert.equal(cut.split('<details').length, cut.split('</details>').length, cut.slice(-1500))
 
   const shots = section(description, 'Screenshots')
-  const intoTag = await paddedTo(60_000 + shots.length - shots.indexOf('<details>') - '<deta'.length - CUT.length - 2)
-  const tagCut = await intoTag.tracking.read(SLUG, 'pull-request-body.md')
-  assert.ok(section(tagCut, 'Screenshots').endsWith(`/web/light-1.png)\n\n${CUT}`), section(tagCut, 'Screenshots').slice(-300))
+  const intoTag = screenshotsComment(await detailsRun(limitShortBy(description, shots.length - shots.indexOf('<details>') - '<deta'.length - CUT.length - 2, reserve)))
+  assert.ok(section(intoTag, 'Screenshots').endsWith(`/web/light-1.png)\n\n${CUT}`), section(intoTag, 'Screenshots').slice(-300))
 })
 
 const CUT = '[cut: the description holds more than a pull request takes; read it whole in the tracking folder, pull-request.md]'

@@ -468,7 +468,7 @@ const writes = (host) => host.agentRunner.dispatches.filter(({ agent: id }) => i
 /** A Git double whose working copy has these merge bases. */
 const gitWith = (repository) => new InMemoryGit({ repositories: { '.': repository } })
 
-test('a body past 60,000 characters is cut in its longest section with a fixed mark; the description in the tracking folder keeps it whole', async () => {
+test('what decides, past the 60,000 characters of the body, is cut in its longest section with a fixed mark, and the line to the details ends the body; the description in the tracking folder keeps it whole', async () => {
   const host = scripted({ config: CONSENTED }, (it) => nominal(it, REFS_42))
   host.prWriters.push(prWriter({ why: `${'Customers asked to pay by card: fees<cash.\n'.repeat(1500)}End.`, what: `${'Checkout records it.\n'.repeat(400)}Done.` }))
 
@@ -476,12 +476,12 @@ test('a body past 60,000 characters is cut in its longest section with a fixed m
   assert.equal(outcome.status, 'done', outcome.reason)
 
   const body = await host.tracking.read(SLUG, 'pull-request-body.md')
-  assert.equal(body.length, 60_000)
+  assert.ok(body.length <= 60_000 && body.length > 59_900, String(body.length))
   const why = section(body, 'Why')
   assert.match(why, /^(?:Customers asked to pay by card: fees<cash\.\n)+[^\n]*\n\n\[cut: the description holds more than a pull request takes; read it whole in the tracking folder, pull-request\.md\]$/)
   assert.ok(section(body, 'What changes').endsWith('Checkout records it.\nDone.'))
-  assert.equal(body.split('<details>').length, body.split('</details>').length, body)
-  assert.ok(body.endsWith("A human reviews it before it merges.\n\n</details>\n"), body.slice(-200))
+  assert.ok(!body.includes('<details'), body)
+  assert.ok(body.endsWith(`\n\n${DETAILS_LINE}\n`), body.slice(-200))
   assert.ok((await host.tracking.read(SLUG, 'pull-request.md')).includes('fees<cash.\nEnd.'))
   assert.equal(host.codeHost.pullRequests[0].body, body)
 })
@@ -495,23 +495,36 @@ test('a pull request opened without the link to its story\'s work item says so i
   assert.equal(eventsOf(host, 'step.recorded').at(-1).reason, `pull request #42 opened as a draft: https://github.example.com/acme/shop/pull/42; ${note}`)
 })
 
-test('a forge that takes a shorter body, as Azure DevOps takes 4,000 characters, gets the body cut to its limit; the description keeps it whole', async () => {
-  const host = scripted({ config: CONSENTED, codeHost: new InMemoryCodeHost({ bodyLimit: 4_000, link: (issue, closes) => `${closes ? 'Fixes ' : ''}#${issue}` }) }, (it) => nominal(it, REFS_42))
-  host.prWriters.push(prWriter({ why: `${'Customers asked to pay by card.\n'.repeat(150)}End.` }))
+const AZURE_HOST = (more = {}) => new InMemoryCodeHost({ bodyLimit: 4_000, commentLimit: 140_000, link: (issue, closes) => `${closes ? 'Fixes ' : ''}#${issue}`, ...more })
+const DETAILS_LINE = 'The run\'s other details (tests, consistency matrix, RED evidence, quality gates, review, screenshots, run summary, AI disclosure) are in this pull request\'s comments titled skraft · run details.'
+const LONG_WHY = `${'Customers asked to pay by card.\n'.repeat(60)}End.`
+
+test('on a forge that takes 4,000 characters, the description keeps what decides and ends with the fixed line; the folded sections go to one kept comment, skraft · run details', async () => {
+  const host = scripted({ config: CONSENTED, codeHost: AZURE_HOST() }, (it) => nominal(it, REFS_42))
+  host.prWriters.push(prWriter({ why: LONG_WHY }))
 
   const outcome = await host.start(STORY)
   assert.equal(outcome.status, 'done', outcome.reason)
 
   const body = await host.tracking.read(SLUG, 'pull-request-body.md')
-  assert.equal(body.length, 4_000)
+  assert.ok(body.length <= 4_000, String(body.length))
   assert.ok(body.startsWith('Fixes #42\n\n'), body.slice(0, 40))
-  assert.match(section(body, 'Why'), /\n\n\[cut: the description holds more than a pull request takes; read it whole in the tracking folder, pull-request\.md\]$/)
-  assert.ok((await host.tracking.read(SLUG, 'pull-request.md')).includes('pay by card.\nEnd.'))
+  for (const heading of ['What changes', 'Why', 'Decisions applied', 'Out of scope and limitations']) assert.ok(opening(body, heading), heading)
+  assert.ok(!body.includes('<summary>Tests'), body)
+  assert.ok(body.endsWith(`\n\n${DETAILS_LINE}\n`), body.slice(-300))
   assert.equal(host.codeHost.pullRequests[0].body, body)
+  assert.ok((await host.tracking.read(SLUG, 'pull-request.md')).includes('<summary>Tests'))
+  const [comment, ...others] = host.codeHost.pullRequestComments
+  assert.equal(others.length, 0)
+  assert.equal(comment.number, 42)
+  assert.ok(comment.body.startsWith(`<!-- skraft:run-details slug=${SLUG} part=1 -->\n# skraft · run details\n\n`), comment.body.slice(0, 120))
+  for (const heading of ['Tests', 'Consistency matrix', 'Run summary']) assert.ok(comment.body.includes(`<summary>${heading}`), heading)
+  const kept = eventsOf(host, 'pull-request.details-kept')
+  assert.deepEqual(kept.map(({ number, part, parts, url }) => ({ number, part, parts, url })), [{ number: 42, part: 1, parts: 1, url: comment.url }])
 })
 
-test('a forge whose limit is shorter than every section can give still gets a body within it: the body cut whole, the fixed mark at its end, and the pull request opened', async () => {
-  for (const bodyLimit of [400, 1_200]) {
+test('a forge whose limit is shorter than what decides still gets a body within it: the fixed line to the details when it fits with it, else the body cut whole with the fixed mark at its end, and the pull request opened', async () => {
+  for (const [bodyLimit, end] of [[400, `\n\n${CUT}`], [700, `\n\n${DETAILS_LINE}\n`]]) {
     const host = scripted({ config: CONSENTED, codeHost: new InMemoryCodeHost({ bodyLimit }) }, (it) => nominal(it, REFS_42))
 
     const outcome = await host.start(STORY)
@@ -520,13 +533,13 @@ test('a forge whose limit is shorter than every section can give still gets a bo
     const body = await host.tracking.read(SLUG, 'pull-request-body.md')
     assert.ok(body.length <= bodyLimit, `${body.length} > ${bodyLimit}`)
     assert.ok(body.startsWith('Closes #42\n\n'), body.slice(0, 40))
-    assert.ok(body.endsWith('\n\n[cut: the description holds more than a pull request takes; read it whole in the tracking folder, pull-request.md]'), body.slice(-160))
-    assert.equal(eventsOf(host, 'step.recorded').at(-1).reason, 'pull request #42 opened as a draft: https://github.example.com/acme/shop/pull/42')
+    assert.ok(body.endsWith(end), body.slice(-160))
+    assert.equal(eventsOf(host, 'step.recorded').at(-1).reason, 'pull request #42 opened as a draft: https://github.example.com/acme/shop/pull/42; its run details were kept in 1 comment, the first at https://github.example.com/acme/shop/pull/42#details-1')
     assert.equal(host.codeHost.pullRequests[0].body, body)
   }
 })
 
-test('a body past 60,000 characters keeps what waits on a human: another section is cut before the open one', async () => {
+test('a body whose decisive sections are past 60,000 characters keeps what waits on a human: another section is cut before the open one', async () => {
   const lone = Array.from({ length: 20 }, (_, n) => finding(`F${n + 1}`, 'medium', `${'pay names no currency '.repeat(22)}${n + 1}`, { location: `src/Checkout.cs:${n + 1}` }))
   const host = scripted({ config: CONSENTED }, (it) => nominal(it, REFS_42))
   host.prWriters.push(prWriter({ what: `${'Checkout records it.\n'.repeat(900)}Done.`, why: `${'Customers asked to pay by card.\n'.repeat(600)}End.` }))
@@ -535,7 +548,7 @@ test('a body past 60,000 characters keeps what waits on a human: another section
   assert.equal((await host.start(STORY)).status, 'done')
 
   const body = await host.tracking.read(SLUG, 'pull-request-body.md')
-  assert.equal(body.length, 60_000)
+  assert.ok(body.length <= 60_000 && body.length > 59_900, String(body.length))
   assert.equal(opening(body, 'Review'), '<details open><summary>Review: 20 findings, 20 for a human</summary>')
   assert.equal(section(body, 'Review'), section(await host.tracking.read(SLUG, 'pull-request.md'), 'Review'))
   assert.ok(section(body, 'Review').endsWith(`pay names no currency 20 — refuted: ${'the map fixes it '.repeat(35).trim()}`), section(body, 'Review').slice(-200))
@@ -543,7 +556,7 @@ test('a body past 60,000 characters keeps what waits on a human: another section
   assert.ok(section(body, 'What changes').endsWith('Checkout records it.\nDone.'), section(body, 'What changes').slice(-200))
 })
 
-test('a body past 60,000 characters that only an open section can bring under the limit cuts every other section first, then that one', async () => {
+test('a body that only an open section can bring under the limit cuts every other decisive section first, then that one, the folded ones going to the comment', async () => {
   const filter = `dotnet test --filter=${'Pay'.repeat(22_000)}`
   const api = { ...API, commands: { ...API.commands, test: filter } }
   const host = scripted({ config: CONSENTED, workflow: ONWARD, components: [api], machine: new ScriptedMachine({ exits: { [`. $ ${filter}`]: 1 } }) }, (it) => [agent({ work: tddCycle() })(it)])
@@ -551,11 +564,12 @@ test('a body past 60,000 characters that only an open section can bring under th
   assert.equal((await host.start()).status, 'done')
 
   const body = await host.tracking.read(SLUG, 'pull-request-body.md')
-  assert.equal(body.length, 60_000)
+  assert.ok(body.length <= 60_000 && body.length > 59_900, String(body.length))
   assert.equal(opening(body, 'Quality gates'), '<details open><summary>Quality gates: 1 failed, 1 passed</summary>')
   assert.match(section(body, 'Quality gates'), /--filter=(?:Pay)+P?a?\n\n\[cut: [^\n]*\]$/, section(body, 'Quality gates').slice(-200))
-  assert.deepEqual(['Run summary', 'AI disclosure', 'RED evidence', 'Tests', 'Consistency matrix'].map((heading) => section(body, heading)), [CUT, CUT, CUT, NO_TEST_PLAN, NO_MATRIX])
+  assert.deepEqual(['Tests', 'Consistency matrix', 'RED evidence'].map((heading) => opening(body, heading)), [undefined, undefined, undefined])
   assert.equal(body.split('<details').length, body.split('</details>').length)
+  assert.ok(host.codeHost.pullRequestComments[0].body.includes('<summary>Run summary'))
 })
 
 const CUT = '[cut: the description holds more than a pull request takes; read it whole in the tracking folder, pull-request.md]'
@@ -597,7 +611,7 @@ test('every consistency matrix the attempt that wrote them left is shown, each u
   assert.ok(matrices.includes('| ADR-002 | refunds |'), matrices)
 })
 
-test('a test plan past the forge\'s limit is cut like any folded section, and a cut inside one of its code blocks drops that block instead of leaving it open', async () => {
+test('a test plan past the limit of a comment is cut in the comment like any folded section, and a cut inside one of its code blocks drops that block instead of leaving it open', async () => {
   const rows = Array.from({ length: 2_000 }, (_, n) => `| AC${n + 1} | Pays by card ${n + 1} | \`CheckoutTests.PaysByCard${n + 1}\` |`)
   for (const plan of [['| Criterion | Scenario | Test |', '| --- | --- | --- |', ...rows].join('\n'), ['Before the code.', '', '```text', ...rows, '```'].join('\n')]) {
     const host = scripted({ config: CONSENTED }, (it) => nominal(it, REFS_42))
@@ -607,10 +621,12 @@ test('a test plan past the forge\'s limit is cut like any folded section, and a 
     await host.publish()
 
     const body = await host.tracking.read(SLUG, 'pull-request-body.md')
-    assert.ok(body.length <= 60_000, `${body.length}`)
-    assert.ok(section(body, 'Tests').endsWith(`\n\n${CUT}`), section(body, 'Tests').slice(-200))
     assert.equal(section(body, 'Why'), 'Customers asked to pay by card instead of on delivery.')
-    assert.equal(body.split('\n').filter((line) => line.startsWith('```')).length % 2, 0, 'no code block left open')
-    assert.equal(body.split('<details').length, body.split('</details>').length)
+    const comments = host.codeHost.pullRequestComments.map((comment) => comment.body)
+    assert.ok(comments.every((comment) => comment.length <= 60_000), comments.map((comment) => comment.length).join())
+    const details = comments.find((comment) => comment.includes('<summary>Tests'))
+    assert.ok(section(details, 'Tests').endsWith(`\n\n${CUT}`), section(details, 'Tests').slice(-200))
+    assert.equal(details.split('\n').filter((line) => line.startsWith('```')).length % 2, 0, 'no code block left open')
+    assert.equal(details.split('<details').length, details.split('</details>').length)
   }
 })

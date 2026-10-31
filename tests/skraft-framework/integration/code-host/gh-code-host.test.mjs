@@ -255,6 +255,26 @@ test('the run\'s comment is kept on an issue, or the pull request its number nam
   assert.equal(forge.calls().filter(([command, , method]) => command === 'api' && method === '--method=POST').length, 2)
 })
 
+test('a comment the run\'s marker opens is found by that opening alone: the user\'s own comment that only quotes it further in is never rewritten, on an issue or a pull request, while a review comment, marked at its end, is still found', async (t) => {
+  const { root, forge, codeHost, pullRequests } = repository(t)
+  const details = '<!-- skraft:run-details slug=checkout part=1 -->'
+  const progress = '<!-- skraft:issue-progress slug=checkout -->'
+  const review = '<sub>skraft-review pr=12</sub>'
+  const file = (name, text) => { const path = join(root, name); writeFileSync(path, text); return path }
+  const quoting = { id: 960, number: 42, login: 'sebastien', body: `As said above:\n> ${details}\n> ${progress}\nI disagree\n` }
+  const reviewed = { id: 970, number: 12, login: 'sebastien', body: `a verdict\n${review}\n` }
+  forge.set({ comments: [quoting, reviewed] })
+  const bodies = () => JSON.parse(readFileSync(join(forge.bin, 'gh-state.json'), 'utf8')).comments.map(({ id, body }) => [id, body])
+  const base = 'https://github.example.com/acme/payment/issues'
+
+  const onPullRequest = await codeHost().keepPullRequestComment({ number: 42, marker: details, url: null, bodyFile: file('details.md', `${details}\n# details\n`), body: '', threadFile: '', commentFile: '' })
+  const onIssue = await codeHost().keepIssueComment({ number: 42, marker: progress, url: null, bodyFile: file('progress.md', `${progress}\nRESEARCH closed\n`) })
+  const verdict = await pullRequests().keepComment({ number: 12, marker: review, url: null, bodyFile: file('review.md', `a new verdict\n${review}\n`) })
+
+  assert.deepEqual([onPullRequest, onIssue, verdict], [{ ok: true, url: `${base}/42#issuecomment-971` }, { ok: true, url: `${base}/42#issuecomment-972` }, { ok: true, url: `${base}/12#issuecomment-970` }])
+  assert.deepEqual(bodies(), [[960, quoting.body], [970, `a new verdict\n${review}\n`], [971, `${details}\n# details\n`], [972, `${progress}\nRESEARCH closed\n`]])
+})
+
 test('without a remote, no push, no listing, no pull request is attempted', async (t) => {
   const { forge, codeHost } = repository(t, { remote: null })
   const host = codeHost()
@@ -375,4 +395,18 @@ test('in a clone of a fork, pull requests are read and commented on, and the sto
   assert.deepEqual(await pullRequests().repository(), { host: 'github.example.com', repository: 'payments-org/payment' })
   forge.set({ defaultRepo: 'not a repository; rm -rf' })
   assert.deepEqual(await pullRequests().repository(), { host: 'github.example.com', repository: 'acme/payment' })
+})
+
+test('the run details are kept on the pull request by the issue comment route, with no request file, and GitHub takes 60,000 characters in a comment', async (t) => {
+  const { root, forge, codeHost } = repository(t, { remote: 'git@ghe.acme.io:payments/payment.git' })
+  const host = codeHost()
+  const bodyFile = join(root, 'details.md')
+  const marker = '<!-- skraft:run-details slug=checkout part=1 -->'
+  writeFileSync(bodyFile, `${marker}\n# skraft · run details\n`)
+
+  const kept = await host.keepPullRequestComment({ number: 42, marker, url: null, bodyFile, body: '', threadFile: '', commentFile: '' })
+
+  assert.equal(kept.ok, true)
+  assert.deepEqual(forge.calls().at(-1), ['api', '--hostname=ghe.acme.io', '--method=POST', `--field=body=@${bodyFile}`, '--jq=.html_url', 'repos/payments/payment/issues/42/comments'])
+  assert.deepEqual([host.commentLimit, host.takesRequestFile], [60_000, false])
 })

@@ -1,8 +1,9 @@
 import { azureRemoteOf, isInOrganization } from '../../domain/config/azure-remote.mjs'
 import { inProject, workItemReading } from '../../domain/pipeline/work-item.mjs'
 import { areComments, commentUrl, keptCommentOf } from '../../domain/pipeline/work-item-comment.mjs'
+import { threadKept } from './azure-mcp-threads.mjs'
 import { answerOf, once, refusalOf, served, UNAVAILABLE, UNREADABLE } from './mcp-route.mjs'
-import { pullRequestsOf } from './azure-repos-mcp.mjs'
+import { pullRequestsOf, refused as reposRefused } from './azure-repos-mcp.mjs'
 
 /**
  * Azure DevOps's adapters served first by the host's Azure DevOps MCP server, then by az. An
@@ -16,14 +17,16 @@ import { pullRequestsOf } from './azure-repos-mcp.mjs'
  *
  * Tools of @azure-devops/mcp 2.11.0, read in its source (src/tools/work-items.ts) and as the azure-boards-work-items skill lists them
  * (plugins/skraft-backlog/skills/azure-boards-work-items/references/mcp-routes.md): `wit_work_item`
- * (`get`, `list_comments`) and `wit_work_item_comment_write` (`add`, `update`). What they answer
+ * (`get`, `list_comments`) and `wit_work_item_comment_write` (`add`, `update`); for the run details
+ * on a pull request (src/tools/repositories.ts) `repo_repository` (`get`), `repo_pull_request_thread`
+ * (`list`) and `repo_pull_request_thread_write` (`create`, `update`). What they answer
  * (the REST JSON as text) is not measured (docs/v2/host-verification.md).
  *
  * @typedef {import('./forge.mjs').ForgeAdapters} ForgeAdapters
  * @typedef {import('../ports/mcp-tools.mjs').McpTools} McpTools
  * @typedef {import('../ports/code-host.mjs').CodeHost} CodeHost
  * @typedef {import('./mcp-route.mjs').Failed} Failed
- * @typedef {{ organization: string, project: string, call: (tool: string, args: Record<string, unknown>) => Promise<{ json: any } | Failed> }} Azure
+ * @typedef {{ organization: string, project: string, repository: string, call: (tool: string, args: Record<string, unknown>) => Promise<{ json: any } | Failed> }} Azure
  * @typedef {Pick<import('../ports/source-control.mjs').SourceControl, 'remoteUrl'>} RemoteSource
  */
 
@@ -52,6 +55,7 @@ const codeHostOf = (az, route) => Object.freeze({
   unavailable: async () => ('failure' in await route() ? az.unavailable() : null),
   issue: (number) => served(route, (at) => issueOf(at, number), () => az.issue(number), 'az', issueRefused),
   keepIssueComment: (request) => served(route, (at) => commentKept(at, request), () => az.keepIssueComment(request), 'az', refused),
+  keepPullRequestComment: (request) => served(route, (at) => threadKept(at, request), () => az.keepPullRequestComment(request), 'az', reposRefused),
 })
 
 /** What git and az answer alone: the pull request, the remotes, the branches, the story's link and the body limit. @param {CodeHost} az */
@@ -67,10 +71,11 @@ const onAz = (az) => ({
   ...facts(az),
 })
 
-/** The story's link, the body limit and whether az takes a request file. @param {CodeHost} az */
+/** The story's link, the body and comment limits and whether az takes a request file. @param {CodeHost} az */
 const facts = (az) => ({
   storyLink: (/** @type {number} */ issue, /** @type {boolean} */ closes) => az.storyLink(issue, closes),
   bodyLimit: az.bodyLimit,
+  commentLimit: az.commentLimit,
   takesRequestFile: az.takesRequestFile,
 })
 

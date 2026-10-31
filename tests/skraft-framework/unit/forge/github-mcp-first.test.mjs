@@ -213,16 +213,56 @@ test('through the GitHub MCP server, a working copy not on the pull request\'s h
   assert.deepEqual([outcome.status, outcome.code, outcome.reason], ['stopped', 'pr-not-checked-out', 'the working copy is not on the head of pull request #12 (root-9); check it out first: gh pr checkout 12'])
 })
 
-test('through the GitHub MCP server, the pull request\'s body is cut at the same length as through gh', async () => {
+test('through the GitHub MCP server, the pull request\'s body keeps the same sections as through gh, the rest going to a comment', async () => {
   const opened = async (mcp) => {
     const codeHost = new InMemoryCodeHost({ pages: PAGES, bodyLimit: 4_000 })
     const host = scripted({ config: CONSENTED, codeHost }, (it) => nominal(it, REFS_42))
     host.prWriters.push(prWriter({ why: `${'Customers asked to pay by card.\n'.repeat(150)}End.` }))
     if (mcp) host.deps.mcpTools = new InMemoryGithubMcp({ forge: codeHost })
     await host.start(STORY)
-    return codeHost.pullRequests.map(({ body }) => body.length)
+    return { bodies: codeHost.pullRequests.map(({ body }) => body), comments: [...codeHost.comments, ...codeHost.pullRequestComments].filter(({ body }) => body.includes('<summary>Tests')).length }
   }
 
   assert.deepEqual(await opened(true), await opened(false))
-  assert.deepEqual(await opened(true), [4_000])
+  const { bodies, comments } = await opened(true)
+  assert.deepEqual([bodies.length, bodies[0].length <= 4_000, bodies[0].includes('<summary>Tests'), comments], [1, true, false, 1])
+})
+
+/** A run whose pull request description is too long for 4,000 characters, so that its folded sections go to a comment kept through the server; `fails` refuses tools. @param {Record<string, string>} fails */
+const withLongDescription = async (fails) => {
+  const codeHost = new InMemoryCodeHost({ pages: PAGES, bodyLimit: 4_000 })
+  const host = scripted({ config: CONSENTED, codeHost }, (it) => nominal(it, REFS_42))
+  host.prWriters.push(prWriter({ why: `${'Customers asked to pay by card.\n'.repeat(150)}End.` }))
+  host.deps.mcpTools = new InMemoryGithubMcp({ forge: codeHost, fails })
+  await host.start(STORY)
+  return { host, codeHost }
+}
+
+test('the run details of a pull request refused a read or a write by the host are not kept: gh is not asked, the keep is journaled skipped with the fixed reason, and the pull request stays opened', async () => {
+  const cases = [
+    ['get_me', 'read nothing from GitHub and did not ask gh instead'],
+    ['add_issue_comment', 'wrote nothing on GitHub'],
+  ]
+  for (const [tool, effect] of cases) {
+    const { host, codeHost } = await withLongDescription({ [tool]: 'mcp-refused' })
+
+    const skipped = host.events().filter(({ type }) => type === 'pull-request.details-skipped')
+    assert.deepEqual(skipped.map(({ reason, via }) => ({ reason, via })), [{ reason: `the host refused the GitHub MCP server's ${tool}, so skraft ${effect}; allow it, or run again where it is allowed`, via: 'mcp' }], tool)
+    assert.deepEqual([codeHost.calls.filter((call) => call.startsWith('keep pr comment')), codeHost.pullRequestComments, codeHost.pullRequests.length], [[], [], 1], tool)
+  }
+})
+
+test('through the GitHub MCP server, the run\'s comments are found by the marker that opens them: the user\'s own reply that only quotes a marker is never rewritten', async () => {
+  const codeHost = new InMemoryCodeHost({ pages: PAGES, bodyLimit: 4_000 })
+  const reply = (id, marker) => ({ number: 42, body: `As said above:\n> ${marker}\nI disagree\n`, bodies: [], edits: 0, url: `${PAGES}/issues/42#issuecomment-${id}` })
+  const replies = [reply(500, `<!-- skraft:issue-progress slug=${SLUG} -->`), reply(501, `<!-- skraft:run-details slug=${SLUG} part=1 -->`)]
+  codeHost.comments.push(...replies.map((each) => ({ ...each, bodies: [each.body] })))
+  const host = scripted({ config: CONSENTED, codeHost }, (it) => nominal(it, REFS_42))
+  host.prWriters.push(prWriter({ why: `${'Customers asked to pay by card.\n'.repeat(150)}End.` }))
+  host.deps.mcpTools = new InMemoryGithubMcp({ forge: codeHost })
+
+  await host.start(STORY)
+
+  assert.deepEqual(codeHost.comments.slice(0, 2).map(({ body, edits }) => [body, edits]), replies.map(({ body }) => [body, 0]))
+  assert.deepEqual(codeHost.comments.slice(2).map(({ body }) => body.split('\n')[0]), [`<!-- skraft:issue-progress slug=${SLUG} -->`, `<!-- skraft:run-details slug=${SLUG} part=1 -->`])
 })

@@ -75,11 +75,13 @@ const nowhereCodeHost = (reason) => Object.freeze({
   ...nowhere(reason),
   // Stryker disable next-line all: no run reaches them, every caller stops on unavailable() first
   remotes: async () => [], currentBranch: async () => null, defaultBranch: async () => null,
-  push: refusal(reason), findPullRequest: refusal(reason), create: refusal(reason), edit: refusal(reason), keepIssueComment: refusal(reason),
+  push: refusal(reason), findPullRequest: refusal(reason), create: refusal(reason), edit: refusal(reason), keepIssueComment: refusal(reason), keepPullRequestComment: refusal(reason),
   issue: async () => ({ read: /** @type {const} */ ('failed'), reason }),
   storyLink: () => null,
   // Stryker disable next-line all: a forge skraft cannot reach opens no pull request, whose body would be cut for it
   bodyLimit: Number.POSITIVE_INFINITY,
+  // Stryker disable next-line all: a forge skraft cannot reach opens no pull request, whose details would be split for it
+  commentLimit: Number.POSITIVE_INFINITY,
   // Stryker disable next-line all: a forge skraft cannot reach keeps no comment
   takesRequestFile: false,
 })

@@ -41,12 +41,13 @@ export const API = Object.freeze({
  *   answers: what the human at the host answers, in order; user: the text of ~/.skraft/config.json;
  *   tracking: the tracking folder, shared with another session's host; owner: this session's id;
  *   journalKeys: the machine's journal keys, the tracking folder's machine by default;
- *   forge: the forge the code host double stands for, github unless given
+ *   forge: the forge the code host double stands for, github unless given; slug: the run's slug, checkout unless given
  */
 export const pipelineHost = ({
   components = [API], config = {}, files = {}, behaviours = [], git = new InMemoryGit(), machine, replay, catalog = new InMemoryAgentCatalog(),
   workflow, clock = new FixedClock('2026-10-11T09:00:00.000Z'), answers = [], user, codeHost = new InMemoryCodeHost(),
   tracking = new InMemoryTracking(), owner = 'session-a', journalKeys = tracking.journalKeys, forge = 'github',
+  slug = SLUG,
 } = {}) => {
   const answered = answeredConsents(workflow ?? BUILT_IN_WORKFLOW)
   const deps = {
@@ -74,6 +75,7 @@ export const pipelineHost = ({
   strykerWritesItsReports(deps)
   const host = {
     deps,
+    slug,
     tracking,
     git,
     clock,
@@ -86,14 +88,14 @@ export const pipelineHost = ({
     codeHost,
     timer: deps.timer,
     /** The lock file of the pipeline, null when none. */
-    lock: () => tracking.files.get(`${SLUG}/.lock`) ?? null,
+    lock: () => tracking.files.get(`${slug}/.lock`) ?? null,
     /** What the next pr-writers do, in order; once spent, each writes PROSE. @type {Array<ReturnType<typeof prWriter>>} */
     prWriters: [],
-    events: () => tracking.journal(SLUG),
-    types: () => tracking.journal(SLUG).map((event) => event.type),
+    events: () => tracking.journal(slug),
+    types: () => tracking.journal(slug).map((event) => event.type),
     /** @param {object} [request] */
-    init: (request = {}) => createInit(deps).init({ slug: SLUG, ...request }),
-    run: () => createRunPipeline(deps).run({ slug: SLUG }),
+    init: (request = {}) => createInit(deps).init({ slug, ...request }),
+    run: () => createRunPipeline(deps).run({ slug }),
     view: () => createObserve(deps).view(),
     report: () => createObserve(deps).report(),
     /** @param {{ last: number }} [request] */
@@ -124,7 +126,7 @@ const answeredConsents = (workflow) => {
 }
 
 /** The last step.started of the journal: what the dispatched agent was asked for. */
-const asked = (tracking) => tracking.journal(SLUG).filter((event) => event.type === 'step.started').at(-1)
+const asked = (host) => host.tracking.journal(host.slug).filter((event) => event.type === 'step.started').at(-1)
 
 /**
  * An agent that fills its outputs, writes its result, then does `work` (changes files, commits);
@@ -133,19 +135,21 @@ const asked = (tracking) => tracking.journal(SLUG).filter((event) => event.type 
  *   result null writes none; a string is written as is.
  */
 /** The consistency matrix a solution architect leaves when its documents agree. */
-export const PASSING_MATRIX = Object.freeze(['details/2026-10-11/consistency-matrix-checkout.md', '| ADR | Verdict |\n- docs-relied-on: docs/architecture/context-map.md\n- consistency-gate: PASS\n'])
+const passingMatrix = (slug) => Object.freeze([`details/2026-10-11/consistency-matrix-${slug}.md`, '| ADR | Verdict |\n- docs-relied-on: docs/architecture/context-map.md\n- consistency-gate: PASS\n'])
+export const PASSING_MATRIX = passingMatrix(SLUG)
 
 export const agent = ({ result = { status: 'done', summary: 'done' }, fill = true, records = true, work = () => {}, answer } = {}) => (host) => async () => {
-  const step = asked(host.tracking)
+  const step = asked(host)
   const matrix = records && step.agent === 'solution-architect'
-  if (matrix) await host.tracking.write(SLUG, ...PASSING_MATRIX)
+  const [matrixPath, matrixText] = passingMatrix(host.slug)
+  if (matrix) await host.tracking.write(host.slug, matrixPath, matrixText)
   if (fill) {
-    for (const path of step.outputs.filter((output) => !(matrix && output === PASSING_MATRIX[0]))) {
-      const before = (await host.tracking.read(SLUG, path)) ?? ''
-      await host.tracking.write(SLUG, path, `${before.replace(/\{\{[^{}]*\}\}/g, 'filled in')}\nFindings for ${step.step}.\n`)
+    for (const path of step.outputs.filter((output) => !(matrix && output === matrixPath))) {
+      const before = (await host.tracking.read(host.slug, path)) ?? ''
+      await host.tracking.write(host.slug, path, `${before.replace(/\{\{[^{}]*\}\}/g, 'filled in')}\nFindings for ${step.step}.\n`)
     }
   }
-  if (result !== null) await host.tracking.write(SLUG, step.result, typeof result === 'string' ? result : JSON.stringify(result))
+  if (result !== null) await host.tracking.write(host.slug, step.result, typeof result === 'string' ? result : JSON.stringify(result))
   work(host)
   return answer
 }
@@ -163,11 +167,11 @@ export const PROSE = Object.freeze({
  * @param {Partial<typeof PROSE>} [prose]
  */
 export const prWriter = (prose = {}) => (host) => async () => {
-  const step = asked(host.tracking)
+  const step = asked(host)
   const { summary, what, why, limitations } = { ...PROSE, ...prose }
   const filled = PROSE_TEMPLATE.replace('{{summary}}', summary).replace('{{what}}', what).replace('{{why}}', why).replace('{{limitations}}', limitations)
-  await host.tracking.write(SLUG, step.outputs[0], filled)
-  await host.tracking.write(SLUG, step.result, JSON.stringify({ status: 'done', summary: 'prose written' }))
+  await host.tracking.write(host.slug, step.outputs[0], filled)
+  await host.tracking.write(host.slug, step.result, JSON.stringify({ status: 'done', summary: 'prose written' }))
 }
 
 /** The body of a commit for the story's issue 42. */

@@ -189,8 +189,11 @@ l'hôte quand il est connecté, sinon par `az` (l'Azure CLI avec son extension `
 seul serveur auquel skraft se fie est celui nommé `ado` (`@azure-devops/mcp`, comme le skill
 `azure-boards-work-items` du plugin backlog le liste) ; un serveur d'un autre nom, `ado-remote-mcp`
 ou `azure-devops` compris, n'est jamais utilisé. Ses outils : `wit_work_item` (`get`,
-`list_comments`) et `wit_work_item_comment_write` (`add`, `update`). Dans Claude Code, autorisez
-`mcp__ado__wit_work_item` et `mcp__ado__wit_work_item_comment_write`.
+`list_comments`), `wit_work_item_comment_write` (`add`, `update`) et, pour les détails du run d'une
+pull request, `repo_repository` (`get`), `repo_pull_request_thread` (`list`) et
+`repo_pull_request_thread_write` (`create`, `update`). Dans Claude Code, autorisez
+`mcp__ado__wit_work_item`, `mcp__ado__wit_work_item_comment_write`, `mcp__ado__repo_repository`,
+`mcp__ado__repo_pull_request_thread` et `mcp__ado__repo_pull_request_thread_write`.
 
 `skraft review --pr` sur une pull request Azure Repos la lit et garde son commentaire de revue par le même serveur :
 `repo_pull_request` (`get`), `repo_pull_request_thread` (`list`) et `repo_pull_request_thread_write` (`create`, `update`),
