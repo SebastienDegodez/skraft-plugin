@@ -88,7 +88,7 @@ consommateur puisse se fier à sa forme sans environnement end-to-end vivant.
 - [Architecture](../architecture.md) — la vue L1 + L2 d'où cette page zoome.
 - [Zoom L3 : mocking (Microcks)](./mocking-microcks.md) — le câblage frère, côté consommateur.
 - [DELIVER](../pipeline/deliver.md) — la phase qui possède ce câblage.
-- [Catalogue agentique](pathname:///fr/dashboard/) — chaque agent et lentille. Un terme vous échappe ? Voir le [glossaire](../../reference/glossary.md).
+- [Catalogue agentique](pathname:///dashboard/) — chaque agent et lentille. Un terme vous échappe ? Voir le [glossaire](../../reference/glossary.md).
 
 ## Sources
 

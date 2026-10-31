@@ -134,7 +134,7 @@ refusées rendent la main au développeur. Le détail des critères et du calcul
 - [Raffiner une issue du backlog](../how-to/refine-backlog.md) — `/skraft-refine` et le workflow gh-aw.
 - [Référence : DISCOVER et DISCUSS](../reference/phases.md#discover) — entrées, sorties, effets sur GitHub.
 - [Référence : critères de revue de DISCOVER et DISCUSS](../reference/gates.md#discover).
-- [Le catalogue des agents et skills](pathname:///fr/dashboard/).
+- [Le catalogue des agents et skills](pathname:///dashboard/).
 - [Le pipeline SKRAFT](./pipeline/index.md).
 
 ## Sources

@@ -81,7 +81,7 @@ revue par les pairs appliquée à chaque relais
 - [Le fil rouge](./fil-rouge.md) — les relais sur un exemple.
 - [Référence : phases](../../reference/phases.md) — producteur, lentilles et décision humaine de chaque phase.
 - [Référence : hôtes](../../reference/hosts.md) — ce que chaque pilote lance et comment.
-- [Le catalogue des agents](pathname:///fr/dashboard/).
+- [Le catalogue des agents](pathname:///dashboard/).
 - [La revue avant la revue](../deep-dive/review-before-review.md).
 
 ## Sources

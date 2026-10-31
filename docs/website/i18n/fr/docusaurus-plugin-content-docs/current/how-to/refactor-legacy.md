@@ -104,4 +104,4 @@ revient vers vous en `BLOCKED` : décidez si elle est voulue.
 - [Poser un filet de caractérisation](./characterize-legacy.md)
 - [Parcours Brownfield](../explanation/brownfield.md) — pourquoi le graphe
   reste piloté par l'humain.
-- [Le catalogue des agents et skills](pathname:///fr/dashboard/#agent-brownfield-refactorer)
+- [Le catalogue des agents et skills](pathname:///dashboard/#agent-brownfield-refactorer)

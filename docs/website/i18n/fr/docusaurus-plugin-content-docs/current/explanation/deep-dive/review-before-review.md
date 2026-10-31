@@ -123,7 +123,7 @@ honnête, pas les faits.
 
 - [L'équipe et les relais](../pipeline/team.md) — qui produit, qui juge.
 - [Référence : gates et verdict](../../reference/gates.md).
-- [Le catalogue des lentilles](pathname:///fr/dashboard/).
+- [Le catalogue des lentilles](pathname:///dashboard/).
 - [Pour décideurs](../for-executives.md) — l'effet sur le délai de livraison.
 
 ## Sources

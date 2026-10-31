@@ -83,7 +83,7 @@ déterministe tout en exerçant la vraie frontière dont le service dépend.
 - [Architecture](../architecture.md) — la vue L1 + L2 d'où cette page zoome.
 - [Zoom L3 : contract testing](./contract-testing.md) — le câblage frère, côté fournisseur.
 - [DELIVER](../pipeline/deliver.md) — la phase qui possède ce câblage.
-- [Catalogue agentique](pathname:///fr/dashboard/) — chaque agent et lentille. Un terme vous échappe ? Voir le [glossaire](../../reference/glossary.md).
+- [Catalogue agentique](pathname:///dashboard/) — chaque agent et lentille. Un terme vous échappe ? Voir le [glossaire](../../reference/glossary.md).
 
 ## Sources
 

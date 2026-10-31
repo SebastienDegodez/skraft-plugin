@@ -87,4 +87,4 @@ et tourne avec les gates de chaque run skraft.
 
 - [Refactorer un code existant sous filet](./refactor-legacy.md) — l'étape suivante.
 - [Parcours Brownfield](../explanation/brownfield.md)
-- [Le catalogue des agents et skills](pathname:///fr/dashboard/#agent-brownfield-harness-builder)
+- [Le catalogue des agents et skills](pathname:///dashboard/#agent-brownfield-harness-builder)

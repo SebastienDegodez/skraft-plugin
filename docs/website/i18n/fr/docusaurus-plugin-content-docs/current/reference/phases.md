@@ -252,7 +252,7 @@ end. Clés, réponses et journal : [Dossier de suivi et journal](./run-journal.m
 - [Le workflow DOT](./workflow-dot.md)
 - [Gates](./gates.md)
 - [Dossier de suivi et journal](./run-journal.md)
-- [Catalogue des agents et skills](pathname:///fr/dashboard/)
+- [Catalogue des agents et skills](pathname:///dashboard/)
 
 Termes à connaître : **phase**, **lentille**, **gate**, **ADR**, **DoR** — voir le
 [glossaire](./glossary.md).

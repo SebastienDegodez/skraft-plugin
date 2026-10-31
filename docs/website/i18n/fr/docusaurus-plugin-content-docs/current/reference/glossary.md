@@ -15,7 +15,7 @@ Un document court qui enregistre une décision d'architecture : le contexte, les
 
 **Agent**
 Dans SKRAFT, un programme IA spécialisé qui joue un rôle précis dans le pipeline (ex : `backlog-discoverer`, `solution-architect`). Un agent *exécuteur* produit des artefacts ; un agent *reviewer* émet des verdicts.
-→ Voir [Agents](pathname:///fr/dashboard/)
+→ Voir [Agents](pathname:///dashboard/)
 
 **Artefact**
 Tout fichier produit par le pipeline : stories raffinées, ADR, scénarios BDD, code, rapports de tests. Les artefacts constituent la trace auditable du travail.
@@ -125,7 +125,7 @@ Vocabulaire partagé entre développeurs et experts métier, utilisé aussi bien
 
 **Lentille (reviewer lens)**
 Dans SKRAFT, un point de vue spécialisé de la revue adverse, porté par un agent isolé en lecture seule `<nom>-lens`. Le pilote d'hôte lance les lentilles d'un nœud de revue et le moteur calcule le verdict à partir de leurs findings. Lentilles livrées avec le plugin : DESIGN `consistency`, `architecture-compliance`, `fitness` ; DISTILL `coverage`, `business-alignment`, `testability`, `boundary-enforcement` ; DELIVER `test-integrity`, `architecture-boundaries`, `cold-reader`, `mock-fidelity`, `contract-fidelity` (`quality-gates` est retirée en V2 : le moteur lance les gates lui-même).
-→ Voir [Lentilles](pathname:///fr/dashboard/)
+→ Voir [Lentilles](pathname:///dashboard/)
 
 ## M
 
@@ -160,7 +160,7 @@ Ensemble de 9 règles de conception appliquées au code orienté objet pour forc
 
 **Outside-In TDD**
 Variante du TDD où les tests commencent au niveau le plus externe (comportement observable) et descendent vers les détails internes. Aussi appelé "London School TDD".
-→ Voir [Skills](pathname:///fr/dashboard/)
+→ Voir [Skills](pathname:///dashboard/)
 
 ## P
 
@@ -210,7 +210,7 @@ Le statut d'un run dont la question n'a pas encore de réponse. Le run ne fait p
 
 **Skill**
 Dans SKRAFT, une pratique outillée encapsulée dans un fichier `SKILL.md`. Une skill définit quoi faire, comment le faire et quelles références la justifient.
-→ Voir [Skills](pathname:///fr/dashboard/)
+→ Voir [Skills](pathname:///dashboard/)
 
 **Slug**
 Le nom kebab-case d'un pipeline (`checkout-by-card`), choisi par le développeur. Un slug = un pipeline = un dossier `.copilot-tracking/skraft-plans/<slug>/`. Ni le moteur ni un agent ne le choisissent.

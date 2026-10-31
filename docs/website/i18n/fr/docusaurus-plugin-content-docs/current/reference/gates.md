@@ -292,7 +292,7 @@ sortie porte le verdict.
 
 - [Phases](./phases.md)
 - [Le workflow DOT](./workflow-dot.md)
-- [Catalogue des agents et lentilles](pathname:///fr/dashboard/)
+- [Catalogue des agents et lentilles](pathname:///dashboard/)
 - [Lancer les gates](../how-to/run-gates.md)
 - [La revue avant la revue](../explanation/deep-dive/review-before-review.md)
 
