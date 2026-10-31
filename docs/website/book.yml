@@ -19,7 +19,7 @@
 #      <-> `en/reference/glossary.md`, libelle "Glossaire"). Aucune exception :
 #      scan-drift signale tout ecart (`basename-mismatch`).
 #   4. Une affirmation attribuee a un auteur cite sa source depuis
-#      `_data/citations.yml` (auteur, ouvrage, annee) ; scripts/check-citations.mjs
+#      `data/citations.yml` (auteur, ouvrage, annee) ; scripts/check-citations.mjs
 #      refuse une cle inconnue. Une page sans affirmation attribuee ne porte pas
 #      de citation.
 #   5. Tout fait sur le produit est verifie dans le code du plugin. Un chiffre non
@@ -123,7 +123,7 @@ sources:
   skills: "plugins/*/skills/*/SKILL.md"
   gates: "plugins/*/skills/*-review-criteria/SKILL.md"
   patterns: "plugins/*/skills/architecture-patterns/SKILL.md"
-  citations: "docs/site/_data/citations.yml"
+  citations: "docs/website/data/citations.yml"
 
 # parts — une partie par mode Diataxis (plus l'accueil), dans l'ordre de la
 # sidebar ; une partie peut se decouper en `sections` (menu a 3 niveaux).
@@ -792,7 +792,7 @@ parts:
             sidebar_position: 1
             fr: "fr/reference/citations.md"
             en: "en/reference/citations.md"
-            source: "docs/site/_data/citations.yml"
+            source: "docs/website/data/citations.yml"
             purpose_fr: "Bibliographie complete : chaque reference (auteur, ouvrage, annee) qui fonde une pratique."
             purpose_en: "Full bibliography: each reference (author, work, year) grounding a practice."
           - id: glossaire

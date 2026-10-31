@@ -20,7 +20,7 @@
     "dashboard:serve": "node eng/dashboard/serve.mjs",
     "dashboard:preview": "./eng/dashboard/preview.sh",
     "evals": "./eng/run-vally-evals.sh",
-    "lint:citations": "node scripts/check-citations.mjs --citations docs/site/_data/citations.yml --pages \"docs/site/**/*.md\"",
+    "lint:citations": "node scripts/check-citations.mjs --citations docs/website/data/citations.yml --pages \"docs/site/**/*.md\"",
     "docs:screenshots": "node eng/docs/screenshots.mjs",
     "ci:local": "node scripts/local-ci.mjs",
     "plugin:build": "node scripts/project-plugin-adapters.mjs --apply && node scripts/project-plugin-adapters.mjs --apply --plugin-root plugins/skraft-backlog && node scripts/project-plugin-adapters.mjs --apply --plugin-root plugins/skraft-brownfield",

@@ -9,7 +9,7 @@
 // LLM assertion. The agents REPAIR; this script DECIDES what is broken.
 //
 // Usage:
-//   node scripts/scan-drift.mjs [--book docs/site/_data/book.yml] [--root .]
+//   node scripts/scan-drift.mjs [--book docs/website/book.yml] [--root .]
 //                               [--site-root docs/site] [--out path] [--empty-threshold 4]
 //
 // Path bases: `source:` globs resolve from --root (repo root); page `fr:`/`en:`
@@ -371,7 +371,7 @@ const isMain = process.argv[1] && resolve(process.argv[1]) === resolve(import.me
 if (isMain) {
   const { values } = parseArgs({
     options: {
-      book: { type: 'string', default: 'docs/site/_data/book.yml' },
+      book: { type: 'string', default: 'docs/website/book.yml' },
       root: { type: 'string', default: '.' },
       'site-root': { type: 'string', default: 'docs/site' },
       out: { type: 'string' },

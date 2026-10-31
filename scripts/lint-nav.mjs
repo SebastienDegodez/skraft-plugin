@@ -10,7 +10,7 @@
 // job). It checks STRUCTURE and LINKS — both fully deterministic.
 //
 // Usage:
-//   node scripts/lint-nav.mjs [--book docs/site/_data/book.yml] [--root .]
+//   node scripts/lint-nav.mjs [--book docs/website/book.yml] [--root .]
 //                             [--site-root docs/site] [--json]
 //
 // Exit code: 0 clean, 1 when problems were found, 2 on usage error.
@@ -156,7 +156,7 @@ const isMain = process.argv[1] && resolve(process.argv[1]) === resolve(import.me
 if (isMain) {
   const { values } = parseArgs({
     options: {
-      book: { type: 'string', default: 'docs/site/_data/book.yml' },
+      book: { type: 'string', default: 'docs/website/book.yml' },
       root: { type: 'string', default: '.' },
       'site-root': { type: 'string', default: 'docs/site' },
       json: { type: 'boolean', default: false },

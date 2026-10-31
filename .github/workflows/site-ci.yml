@@ -25,7 +25,7 @@ jobs:
         with:
           node-version: '22'
       - name: Citation lint
-        run: node scripts/check-citations.mjs --citations docs/site/_data/citations.yml --pages "docs/site/**/*.md"
+        run: node scripts/check-citations.mjs --citations docs/website/data/citations.yml --pages "docs/site/**/*.md"
 
       # The dashboard tooling tests import @microsoft/vally and @github/copilot-sdk,
       # both devDependencies: without them `node --test` cannot even resolve the
