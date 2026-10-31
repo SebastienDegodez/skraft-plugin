@@ -144,9 +144,8 @@ extension `azure-devops`), Azure DevOps Services seulement : son corps commence 
 de la pull request, `#<work item>` sinon, et la pull request est liée au work item de la story à
 sa création. La story est le work item (voir
 [Serveur MCP Azure DevOps d'abord, az en repli](#azure-devops-mcp-server-first-az-as-fallback)), et
-le run y tient son commentaire d'avancement. skraft ne revoit pas encore ses pull requests : sur
-`azure-devops`, `skraft review --pr` s'arrête sur `forge-unavailable` avec la raison
-`skraft cannot reach the forge azure-devops yet (forge in skraft-config.json, else the host of the Git remote, chooses it)`.
+le run y tient son commentaire d'avancement. `skraft review --pr` revoit aussi une pull request Azure Repos
+(voir [Serveur MCP Azure DevOps d'abord, az en repli](#azure-devops-mcp-server-first-az-as-fallback)).
 `gh` n'est jamais lancé sur un remote Azure DevOps. `skraft review --pr` ne lit `forge` que
 dans vos propres fichiers (`~/.skraft/config.json`, `skraft-config.local.json`), sinon depuis
 le remote : le `skraft-config.json` de la pull request en revue, écrit par son auteur, ne
@@ -191,6 +190,19 @@ seul serveur auquel skraft se fie est celui nommé `ado` (`@azure-devops/mcp`, c
 ou `azure-devops` compris, n'est jamais utilisé. Ses outils : `wit_work_item` (`get`,
 `list_comments`) et `wit_work_item_comment_write` (`add`, `update`). Dans Claude Code, autorisez
 `mcp__ado__wit_work_item` et `mcp__ado__wit_work_item_comment_write`.
+
+`skraft review --pr` sur une pull request Azure Repos la lit et garde son commentaire de revue par le même serveur :
+`repo_pull_request` (`get`), `repo_pull_request_thread` (`list`) et `repo_pull_request_thread_write` (`create`, `update`),
+comme `@azure-devops/mcp` 2.11.0 les nomme (`src/tools/repositories.ts`). Dans Claude Code, autorisez
+`mcp__ado__repo_pull_request`, `mcp__ado__repo_pull_request_thread` et `mcp__ado__repo_pull_request_thread_write`. Chaque
+opération retombe sur `az repos pr show` et `az devops invoke` (area `git`) quand le serveur est absent, n'a pas l'outil,
+échoue, ou répond ce que le moteur ne sait pas lire (une pull request d'une autre organisation, une liste de 100 fils ou
+plus) ; une écriture que vous ou l'hôte refusez n'est pas retentée par `az`. Le commentaire de revue est un fil, créé
+*Closed* ; son premier commentaire est réécrit à chaque passe. Le moteur le retrouve à l'adresse que garde le journal, sinon
+au dernier fil dont le premier commentaire commence comme le commentaire de revue et porte le marqueur (tel quel ou avec
+`<`, `>` et `&` échappés), quel qu'en soit l'auteur : Azure ne le dit pas ici. Une pull request d'un autre projet ou dépôt
+que celui du remote Git est refusée (`pr-unreadable`). Rien de cela n'est mesuré sur une vraie organisation : voir
+`docs/v2/host-verification.md`.
 
 Ce qu'un run lit est identique quelle que soit la voie : le titre et la page du work item, puis sa
 description, puis une section `## Acceptance criteria` tirée de `Microsoft.VSTS.Common.AcceptanceCriteria`,

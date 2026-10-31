@@ -8,9 +8,9 @@ import { served, UNREADABLE } from './mcp-route.mjs'
  * refused, never retried with az. The diff stays with git.
  *
  * Tools of @azure-devops/mcp 2.11.0, read in its source (src/tools/repositories.ts):
- * `repo_pull_request` (`get`; lines 242-270, 306-343), `repo_pull_request_thread` (`list`; lines
- * 494-555) and `repo_pull_request_thread_write` (`create`, `reply`, `update`, `update_status`;
- * lines 1090-1308). What they answer (the REST JSON as text) is not measured
+ * `repo_pull_request` (`get`: lines 242-343), `repo_pull_request_thread` (`list`: lines 494-566)
+ * and `repo_pull_request_thread_write` (`create`, `reply`, `update`, `update_status`: lines
+ * 1090-1310; `update` is lines 1277-1291, with `fullResponse` to answer the comment). What they answer (the REST JSON as text) is not measured
  * (docs/v2/host-verification.md).
  *
  * @typedef {import('../ports/pull-requests.mjs').PullRequests} PullRequests
