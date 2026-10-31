@@ -61,4 +61,10 @@ const main = async () => {
   for (const [version, files] of Object.entries(written)) console.log(`${version}: ${files.join(', ')}`)
 }
 
-if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) await main()
+// No top-level await: Docusaurus loads this module through jiti (CommonJS) from plugins/engine-domain.
+if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  main().catch((error) => {
+    console.error(error.message)
+    process.exitCode = 1
+  })
+}
