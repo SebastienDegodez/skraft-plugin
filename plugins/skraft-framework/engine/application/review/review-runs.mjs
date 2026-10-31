@@ -375,7 +375,7 @@ const copied = async (review, rules) => {
  */
 const planLensInputs = async (review, prepared) => Promise.all(planLenses(review.step.node.branches, prepared).map(async (lens) => {
   const kinds = lens.blind ? lens.inputs : [/** @type {InputKind} */ ('overview'), ...lens.inputs]
-  const tracked = lens.scope === null ? prepared.inputs : { ...prepared.inputs, ...prepared.scoped[lens.scope]?.inputs }
+  const tracked = lens.scope === null ? prepared.inputs : { ...prepared.inputs, ...prepared.scoped[lens.scope].inputs }
   const inputs = kinds.flatMap((kind) => tracked[kind].map((path) => ({ kind, path })))
   const skills = (await review.deps.agentCatalog.skills(lens.agent)).found
   const known = engineChecks(prepared).filter(({ joins }) => joins === lens.name).flatMap(({ findings }) => findings)
@@ -395,7 +395,7 @@ const planLensInputs = async (review, prepared) => Promise.all(planLenses(review
 const fingerprintOf = async ({ deps, slug }, { inputs, skills, prepared, lens }) => {
   const texts = await Promise.all(inputs.map(({ path }) => deps.files.read(slug, path)))
   const keyed = inputs.map(({ kind, path }, index) => [kind === 'outputs' || kind === 'context' ? path : kind, texts[index]])
-  const changed = lens.inputs.includes('files') ? (lens.scope === null ? prepared.paths : prepared.scoped[lens.scope]?.paths ?? []) : []
+  const changed = lens.inputs.includes('files') ? (lens.scope === null ? prepared.paths : prepared.scoped[lens.scope].paths) : []
   const contents = await Promise.all(changed.map(async (path) => [path, await readOrName(deps.workspace, path)]))
   const rules = lens.blind ? [] : prepared.rules.map(({ path, text }) => [path, text])
   const skillTexts = skills.map(({ name, text }) => [name, text])
