@@ -20,6 +20,12 @@ on:
 permissions:
   contents: read
 
+# Each failing node:test case becomes a check-run annotation, readable without the job log.
+env:
+  ANNOTATED_TESTS: >-
+    --test-reporter=spec --test-reporter-destination=stdout
+    --test-reporter=./scripts/lib/gh-annotations-reporter.mjs --test-reporter-destination=stdout
+
 jobs:
   test:
     name: Plugin lookup (${{ matrix.os }})
@@ -34,6 +40,8 @@ jobs:
         with:
           node-version: '22'
       - name: Run the plugin lookup tests
+        env:
+          NODE_OPTIONS: ${{ env.ANNOTATED_TESTS }}
         run: npm run test:cli
       - name: Check the package content
         working-directory: cli
