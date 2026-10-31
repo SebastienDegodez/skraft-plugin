@@ -129,7 +129,7 @@ test('in an .md page, braces in prose stay', () => {
 })
 
 test('a page stays .md unless it needs JSX: a component in its source makes it .mdx', () => {
-  const plain = convertPage('# Run the gates\n\nText.\n', { docId: 'how-to/run-gates', locale: 'en' })
+  const plain = convertPage('# Run the gates\n\nThe `<Context>.UnitTest` project.\n\n```text\n<Tabs>\n```\n', { docId: 'reference/gates', locale: 'en' })
   assert.equal(plain.extension, '.md')
   const tabs = "import Tabs from '@theme/Tabs';\n\n# Install {#install}\n\n<Tabs groupId=\"host\">\n</Tabs>\n"
   const converted = convertPage(tabs, { docId: 'how-to/install-on-a-host', locale: 'en' })
