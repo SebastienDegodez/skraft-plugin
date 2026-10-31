@@ -8,7 +8,7 @@ persona: software-engineer
 
 `skraft` is the command-line entry point to the engine: each command calls one use case and prints what it returns, deciding nothing itself.
 
-What the hosts offer in place of these commands (`/skraft`, the `skraft-pipeline` workflow, `skraft_decide`, the SDK driver): [Hosts](./hosts.md). The syntax of the workflows `skraft workflow` copies and validates: [The DOT workflow](./workflow-dot.md).
+What the hosts offer in place of these commands (`/skraft`, the `skraft-pipeline` workflow, `skraft_decide`, the SDK driver): [Hosts](./hosts.md). The syntax of the workflows `skraft workflow` copies and validates: [The DOT workflow](./workflow-dot.mdx).
 
 ## Calling skraft
 
@@ -537,7 +537,7 @@ follows the copy. `skraft workflow eject review` copies `review.skraft.dot` alon
 | copied | `.skraft/pipeline.skraft.dot holds the skraft <version> pipeline; the run follows it` (review: `… holds the skraft <version> review; every call to review runs it`) on stdout | 0 |
 | the copy exists | `<path> already exists; edit it, or remove it` on stderr | 1 |
 
-Syntax, validity rules and locked or mandatory nodes: [The DOT workflow](./workflow-dot.md).
+Syntax, validity rules and locked or mandatory nodes: [The DOT workflow](./workflow-dot.mdx).
 
 **`skraft workflow check`** validates the workflow a run would follow (the repository copy when
 there is one, else the plugin's) and the workflows it calls, against `skraft-config.json`: one
@@ -651,7 +651,7 @@ goes on (the refuter is handed over the same way).
 
 ## Going further <!-- #see-also -->
 - [Hosts](./hosts.md)
-- [The DOT workflow](./workflow-dot.md)
+- [The DOT workflow](./workflow-dot.mdx)
 - [Phases](./phases.md)
 - [Getting started](../tutorials/getting-started.md)
 - [Run the gates and read their evidence](../how-to/run-gates.md)

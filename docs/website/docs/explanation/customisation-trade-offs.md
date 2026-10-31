@@ -21,7 +21,7 @@ number of attempts, the verdicts, the gates and their thresholds.
 | Components, commands, gates, base, mocking | `skraft-config.json` | [Configure the components](../how-to/configure-components.md) |
 | Each agent's model and reasoning effort | `models`, `assign` (four layers) | [Choose the agents' models](../how-to/choose-models.md) |
 | A review's lenses | `.skraft/pipeline.skraft.dot`, `.skraft/review.skraft.dot` | [Add a lens to a review](../how-to/customise-review.md) |
-| Agents and questions of your repository | `.skraft/pipeline.skraft.dot` | [The DOT workflow](../reference/workflow-dot.md) |
+| Agents and questions of your repository | `.skraft/pipeline.skraft.dot` | [The DOT workflow](../reference/workflow-dot.mdx) |
 | Publishing the pull request and screenshots | `publish` | [Publish a run's pull request](../how-to/publish-pull-request.md) |
 
 What cannot be tuned, and why:
@@ -73,7 +73,7 @@ than optional.
 - [Architecture](./architecture.md) — why these decisions live in
   the engine.
 - [Gates](../reference/gates.md) and
-  [locked nodes](../reference/workflow-dot.md#locked-nodes).
+  [locked nodes](../reference/workflow-dot.mdx#locked-nodes).
 
 ## Sources
 

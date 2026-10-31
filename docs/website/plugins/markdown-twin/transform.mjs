@@ -70,6 +70,8 @@ const mdxLine = (line, page) => {
   const trimmed = line.trim()
   if (/^(import|export)\s/.test(trimmed) || /^<\/?Tabs[\s>]/.test(trimmed) || trimmed === '</TabItem>') return []
   if (/^\{\/\*.*\*\/\}$/.test(trimmed)) return []
+  const headingId = line.match(/^(\s{0,3}#{1,6}\s.*?)\s*\{\/\*\s*#([\w-]+)\s*\*\/\}\s*$/)
+  if (headingId) return [rewriteLinks(`${headingId[1]} <!-- #${headingId[2]} -->`, page)]
   const tab = trimmed.match(/^<TabItem\b.*\blabel="([^"]*)"/)
   if (tab) return [`#### ${tab[1]}`]
   const viewer = trimmed.match(/^<WorkflowViewer\b.*\bfile="([^"]*)".*\/>$/)

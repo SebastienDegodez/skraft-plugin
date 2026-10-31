@@ -169,7 +169,7 @@ A proven solution to a recurring problem. SKRAFT patterns (DDD, Clean Architectu
 
 **Pipeline**
 The four phases RESEARCH → DESIGN → DISTILL → DELIVER a story goes through. The engine decides every step and a host driver starts the agents. DISCOVER and DISCUSS stay optional product workflows, upstream.
-→ See [The pipeline](../explanation/pipeline/index.md)
+→ See [The pipeline](../explanation/pipeline/index.mdx)
 
 ## Q
 

@@ -158,6 +158,6 @@ what was not written down was not passed on.
 
 ## Going further
 
-- [Pipeline overview](./index.md)
+- [Pipeline overview](./index.mdx)
 - [Reference: the phases](../../reference/phases.md) — inputs, outputs, lenses of each phase
 - [The event journal](../event-journal.md) — where the run keeps the trace of each handoff

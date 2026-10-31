@@ -107,7 +107,7 @@ Reprenez ensuite le run depuis votre hôte, comme tout run V2
 |---|---|
 | `the environment names no home folder (HOME or USERPROFILE), where the key that signs the journal is kept; …` | Définir `HOME` (ou `USERPROFILE` sous Windows), puis relancer : la clé qui signe les journaux est rangée dans le dossier personnel. |
 | `base-unresolved` | Écrire `baseBranch` dans `skraft-config.json`, puis relancer. |
-| `workflow-invalid` | Le workflow éjecté sous `.skraft/` est invalide : `skraft workflow check` liste les erreurs ([Copier et adapter le workflow](./eject-workflow.md)). |
+| `workflow-invalid` | Le workflow éjecté sous `.skraft/` est invalide : `skraft workflow check` liste les erreurs ([Copier et adapter le workflow](./eject-workflow.mdx)). |
 | `config-invalid` | Corriger chaque erreur listée, puis relancer. |
 | la commande affiche l'aide et sort avec 2 | `migrate` ne prend que `--dry-run` et `--json`. |
 

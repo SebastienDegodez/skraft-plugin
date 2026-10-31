@@ -4,6 +4,8 @@ description: "Pourquoi SKRAFT sépare la préparation produit du pipeline d'ing�
 persona: tech-lead
 ---
 
+import WorkflowViewer from '@site/src/components/WorkflowViewer';
+
 # Le pipeline SKRAFT
 
 SKRAFT n'impose pas une chaîne unique : il propose des parcours, et dans chacun la sortie
@@ -52,6 +54,11 @@ Ce choix a une conséquence : une phase ne peut pas « se souvenir » d'une déc
 pas écrite. Ce qui n'est pas dans un artefact n'existe pas pour la phase suivante, ce qui rend
 chaque relais relisible par un humain. Quand les stories viennent déjà de DISCUSS,
 `skraft init <slug> --from-artifacts` démarre le run en DESIGN : la recherche a eu lieu en amont.
+
+Le moteur exécute ces phases comme les nœuds de `pipeline.skraft.dot`, dessinés ci-dessous tels
+que le moteur les lit ; ouvrez un nœud pour voir son agent, ses gates ou ses lentilles de revue.
+
+<WorkflowViewer file="pipeline" />
 
 :::info[☕ Fil rouge — Starbucks *(exemple illustratif)*]
 

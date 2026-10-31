@@ -1,9 +1,9 @@
 import { test, expect } from '@playwright/test'
 
 // The workflow viewer on the Docusaurus build (BASE_URL: the served build, base URL included).
-// Until the embedding commit it lives on the preview page; the viewer under test is the first one.
+// The page under test embeds one viewer: the pipeline, in the explanation of the pipeline.
 const BASE = process.env.BASE_URL || 'http://localhost:3000/skraft-plugin'
-const PAGE = `${BASE}/workflow-viewer-preview`
+const PAGE = `${BASE}/explanation/pipeline`
 const PIPELINE_NODES = [
   'start', 'publish_consent', 'visuals_consent', 'research', 'design', 'design_review', 'adr', 'distill',
   'distill_review', 'deliver', 'gates', 'deliver_review', 'mutation', 'kill_proposal', 'mutation_plan',

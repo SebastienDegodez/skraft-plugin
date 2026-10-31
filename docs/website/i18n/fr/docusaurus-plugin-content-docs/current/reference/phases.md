@@ -9,8 +9,8 @@ persona: software-engineer
 Pour chaque phase : ce qui entre, ce qui sort et où, qui produit, qui vérifie, et ce qu'un humain décide.
 
 Le rôle de chaque phase dans le parcours et le choix entre les parcours :
-[Le pipeline SKRAFT](../explanation/pipeline/index.md). La syntaxe du workflow
-qui les enchaîne : [Le workflow DOT](./workflow-dot.md). Le
+[Le pipeline SKRAFT](../explanation/pipeline/index.mdx). La syntaxe du workflow
+qui les enchaîne : [Le workflow DOT](./workflow-dot.mdx). Le
 détail de chaque gate citée : [Gates](./gates.md).
 
 ## Vue d'ensemble <!-- #overview -->
@@ -248,8 +248,8 @@ end. Clés, réponses et journal : [Dossier de suivi et journal](./run-journal.m
 
 ## Voir aussi <!-- #see-also -->
 
-- [Le pipeline SKRAFT](../explanation/pipeline/index.md)
-- [Le workflow DOT](./workflow-dot.md)
+- [Le pipeline SKRAFT](../explanation/pipeline/index.mdx)
+- [Le workflow DOT](./workflow-dot.mdx)
 - [Gates](./gates.md)
 - [Dossier de suivi et journal](./run-journal.md)
 - [Catalogue des agents et skills](pathname:///dashboard/)

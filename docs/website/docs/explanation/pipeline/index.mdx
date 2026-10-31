@@ -4,6 +4,8 @@ description: "Why SKRAFT separates product preparation from the engineering pipe
 persona: tech-lead
 ---
 
+import WorkflowViewer from '@site/src/components/WorkflowViewer';
+
 # The SKRAFT pipeline
 
 SKRAFT does not impose one chain: it offers journeys, and in each one the output of a step
@@ -51,6 +53,11 @@ This choice has a consequence: a phase cannot "remember" a decision it did not w
 What is not in an artifact does not exist for the next phase, which keeps every handoff
 readable by a human. When the stories already come from DISCUSS,
 `skraft init <slug> --from-artifacts` starts the run in DESIGN: the research happened upstream.
+
+The engine runs these phases as the nodes of `pipeline.skraft.dot`, drawn below as the engine
+reads them; open a node to see its agent, its gates or its review lenses.
+
+<WorkflowViewer file="pipeline" />
 
 :::info[☕ Running example — Starbucks *(illustrative)*]
 

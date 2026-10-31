@@ -47,7 +47,7 @@ racine du composant ; un composant s'arrête à sa première gate en échec.
 | Arêtes | toutes les gates du nœud passent : arête `PASS` ; une échoue : arête `FAIL` (`gates` : `PASS` vers `deliver_review`, `FAIL` vers `deliver` ; `mutation` : `PASS` vers `visuals`, `FAIL` vers `kill_proposal` ; `mutation_gates` : `PASS` vers `mutation`, `FAIL` vers `kill_mutants`) |
 | Mutation | le moteur lit le rapport de la commande `mutation` (`mutationReport`) et juge deux barres : **100 %** sur le cœur (Domain, Application), **80 %** sur la frontière (le reste) ; elle tourne une fois, après l'approbation de `deliver_review` ; en échec, `kill_proposal` écrit une proposition par fichier de survivants, la question `mutation-plan` laisse le développeur choisir (`APPLY`, sa consigne, `STOP`), puis `kill_mutants` applique le choix ([Phases](./phases.md#deliver)) |
 | Seuils | aucun n'est configurable |
-| Verrou | `gates` et `mutation` sont `locked=true` : une copie du workflow ne les retire qu'avec `unlock="<raison>"` ([Le workflow DOT](./workflow-dot.md#locked-nodes)) |
+| Verrou | `gates` et `mutation` sont `locked=true` : une copie du workflow ne les retire qu'avec `unlock="<raison>"` ([Le workflow DOT](./workflow-dot.mdx#locked-nodes)) |
 | Preuve | `gates/<composant>/<gate>-<n>.log` et un événement `gate.ran` ([Dossier de suivi et journal](./run-journal.md#gate-evidence)) |
 
 ## Critères de revue <!-- #review-criteria -->
@@ -192,7 +192,7 @@ lentilles jugent une pull request par `skraft review --pr`.
 
 `mock-fidelity` ne tourne que sur des changements qui touchent des mocks (`when="mock"`),
 `contract-fidelity` que sur des changements qui touchent des contrats (`when="contract"`)
-([déclencheurs](./workflow-dot.md#conditional-lenses)).
+([déclencheurs](./workflow-dot.mdx#conditional-lenses)).
 
 Le moteur vérifie aussi, sans identifiant de gate, les commits de chaque tentative
 (`commits.checked`) : message conventionnel, `Refs: #<issue>` en dernière ligne, aucune issue
@@ -291,7 +291,7 @@ sortie porte le verdict.
 ## Voir aussi <!-- #see-also -->
 
 - [Phases](./phases.md)
-- [Le workflow DOT](./workflow-dot.md)
+- [Le workflow DOT](./workflow-dot.mdx)
 - [Catalogue des agents et lentilles](pathname:///dashboard/)
 - [Lancer les gates](../how-to/run-gates.md)
 - [La revue avant la revue](../explanation/deep-dive/review-before-review.md)

@@ -16,7 +16,7 @@ Pour une relecture plutôt qu'une étape qui produit :
 
 - Un dépôt configuré, Git, et un terminal à la racine de la copie de travail ; `skraft` est la commande que [`skraft install`](./install-on-a-host.mdx#skraft-command) met en place ; la ligne longue `node "<dossier du plugin>/engine/drivers/cli/skraft.mjs"` marche sans elle.
 - Le workflow copié dans `.skraft/pipeline.skraft.dot`
-  ([Copier et adapter le workflow](./eject-workflow.md)).
+  ([Copier et adapter le workflow](./eject-workflow.mdx)).
 
 ## 1. Écrire l'agent
 
@@ -100,7 +100,7 @@ Commitez `.skraft/` et les fichiers de l'agent : l'étape tourne au prochain run
 
 ## Voir aussi
 
-- [Le workflow DOT](../reference/workflow-dot.md#node-attributes) — tous les
+- [Le workflow DOT](../reference/workflow-dot.mdx#node-attributes) — tous les
   attributs d'un nœud agent.
-- [Copier et adapter le workflow](./eject-workflow.md)
+- [Copier et adapter le workflow](./eject-workflow.mdx)
 - [Adapter skraft : ce que coûte chaque réglage](../explanation/customisation-trade-offs.md)

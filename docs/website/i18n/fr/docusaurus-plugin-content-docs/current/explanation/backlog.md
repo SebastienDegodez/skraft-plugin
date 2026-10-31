@@ -135,7 +135,7 @@ refusées rendent la main au développeur. Le détail des critères et du calcul
 - [Référence : DISCOVER et DISCUSS](../reference/phases.md#discover) — entrées, sorties, effets sur GitHub.
 - [Référence : critères de revue de DISCOVER et DISCUSS](../reference/gates.md#discover).
 - [Le catalogue des agents et skills](pathname:///dashboard/).
-- [Le pipeline SKRAFT](./pipeline/index.md).
+- [Le pipeline SKRAFT](./pipeline/index.mdx).
 
 ## Sources
 

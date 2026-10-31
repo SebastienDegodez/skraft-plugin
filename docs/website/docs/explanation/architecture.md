@@ -154,7 +154,7 @@ each step may write, through a git diff; the red and green TDD commits; the ADR 
 review verdict. Each of these checks is tested without a host, and behaves the same everywhere.
 Why they left the v1 hooks: [Guardrails](./guardrails.md). How
 the workflow that carries them is read and copied:
-[DOT workflow](../reference/workflow-dot.md).
+[DOT workflow](../reference/workflow-dot.mdx).
 
 ## Alternatives considered
 

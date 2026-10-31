@@ -9,8 +9,8 @@ persona: software-engineer
 For each phase: what goes in, what comes out and where, who produces, who checks, and what a human decides.
 
 The role of each phase in the journey and the choice between journeys:
-[The SKRAFT pipeline](../explanation/pipeline/index.md). The syntax of the
-workflow that chains them: [The DOT workflow](./workflow-dot.md).
+[The SKRAFT pipeline](../explanation/pipeline/index.mdx). The syntax of the
+workflow that chains them: [The DOT workflow](./workflow-dot.mdx).
 The detail of each gate cited: [Gates](./gates.md).
 
 ## Overview <!-- #overview -->
@@ -248,8 +248,8 @@ asked again, unless the text of its question changed since (`publish.questionVer
 
 ## See also <!-- #see-also -->
 
-- [The SKRAFT pipeline](../explanation/pipeline/index.md)
-- [The DOT workflow](./workflow-dot.md)
+- [The SKRAFT pipeline](../explanation/pipeline/index.mdx)
+- [The DOT workflow](./workflow-dot.mdx)
 - [Gates](./gates.md)
 - [Tracking folder and journal](./run-journal.md)
 - [Agent and skill catalogue](pathname:///dashboard/)

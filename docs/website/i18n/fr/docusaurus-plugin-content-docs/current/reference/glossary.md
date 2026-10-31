@@ -174,7 +174,7 @@ Solution éprouvée à un problème récurrent. Les patterns SKRAFT (DDD, Clean 
 
 **Pipeline**
 Les quatre phases RESEARCH → DESIGN → DISTILL → DELIVER qu'une story traverse. Le moteur décide de chaque étape et un pilote d'hôte lance les agents. DISCOVER et DISCUSS restent des workflows produit optionnels, en amont.
-→ Voir [Le pipeline](../explanation/pipeline/index.md)
+→ Voir [Le pipeline](../explanation/pipeline/index.mdx)
 
 **Pipeline actif**
 Le slug écrit dans `.copilot-tracking/skraft-plans/.active-slug` : le run sur lequel agissent `skraft status`, `skraft gate` et la reprise. Un par copie de travail (donc par worktree) ; il ne change que par un init explicite, jamais deviné.
