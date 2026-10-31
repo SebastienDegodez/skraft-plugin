@@ -255,6 +255,26 @@ test('the run\'s comment is kept on an issue, or the pull request its number nam
   assert.equal(forge.calls().filter(([command, , method]) => command === 'api' && method === '--method=POST').length, 2)
 })
 
+test('a comment the run\'s marker opens is found by that opening alone: the user\'s own comment that only quotes it further in is never rewritten, on an issue or a pull request, while a review comment, marked at its end, is still found', async (t) => {
+  const { root, forge, codeHost, pullRequests } = repository(t)
+  const details = '<!-- skraft:run-details slug=checkout part=1 -->'
+  const progress = '<!-- skraft:issue-progress slug=checkout -->'
+  const review = '<sub>skraft-review pr=12</sub>'
+  const file = (name, text) => { const path = join(root, name); writeFileSync(path, text); return path }
+  const quoting = { id: 960, number: 42, login: 'sebastien', body: `As said above:\n> ${details}\n> ${progress}\nI disagree\n` }
+  const reviewed = { id: 970, number: 12, login: 'sebastien', body: `a verdict\n${review}\n` }
+  forge.set({ comments: [quoting, reviewed] })
+  const bodies = () => JSON.parse(readFileSync(join(forge.bin, 'gh-state.json'), 'utf8')).comments.map(({ id, body }) => [id, body])
+  const base = 'https://github.example.com/acme/payment/issues'
+
+  const onPullRequest = await codeHost().keepPullRequestComment({ number: 42, marker: details, url: null, bodyFile: file('details.md', `${details}\n# details\n`), body: '', threadFile: '', commentFile: '' })
+  const onIssue = await codeHost().keepIssueComment({ number: 42, marker: progress, url: null, bodyFile: file('progress.md', `${progress}\nRESEARCH closed\n`) })
+  const verdict = await pullRequests().keepComment({ number: 12, marker: review, url: null, bodyFile: file('review.md', `a new verdict\n${review}\n`) })
+
+  assert.deepEqual([onPullRequest, onIssue, verdict], [{ ok: true, url: `${base}/42#issuecomment-971` }, { ok: true, url: `${base}/42#issuecomment-972` }, { ok: true, url: `${base}/12#issuecomment-970` }])
+  assert.deepEqual(bodies(), [[960, quoting.body], [970, `a new verdict\n${review}\n`], [971, `${details}\n# details\n`], [972, `${progress}\nRESEARCH closed\n`]])
+})
+
 test('without a remote, no push, no listing, no pull request is attempted', async (t) => {
   const { forge, codeHost } = repository(t, { remote: null })
   const host = codeHost()
