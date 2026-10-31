@@ -3,6 +3,12 @@
 Toutes les modifications notables de ce projet sont documentées ici.
 Format basé sur [Conventional Commits](https://www.conventionalcommits.org/) — versionnage [SemVer](https://semver.org/).
 
+## [2.0.0-alpha.44](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.43...v2.0.0-alpha.44) (2026-10-31)
+
+### ✨ Features
+
+* **engine:** past the forge's body limit, the PR keeps what decides and its run details go to a kept comment, on GitHub and Azure Repos ([#465](https://github.com/SebastienDegodez/skraft-plugin/issues/465)) ([9a8f183](https://github.com/SebastienDegodez/skraft-plugin/commit/9a8f18382e022eb3cac37fb7ee1df23b6129868b)), closes [#421](https://github.com/SebastienDegodez/skraft-plugin/issues/421)
+
 ## [2.0.0-alpha.43](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.42...v2.0.0-alpha.43) (2026-10-31)
 
 ### ✨ Features
