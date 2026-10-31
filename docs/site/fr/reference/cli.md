@@ -46,6 +46,7 @@ usage: skraft --version
        skraft workflow eject [review]                                    copy the plugin pipeline into .skraft/ (review: the review alone)
        skraft workflow check [--json]                                    validate the workflow a run follows
        skraft workflow diff [--json]                                     compare the repository workflow with the plugin one
+       skraft commands --json                                            every command, its synopsis and summary, as JSON (help and completion of the skraft command)
 ```
 
 Règles communes des options :
@@ -114,6 +115,14 @@ fois par jour, une session signale qu'un `@skraft/cli` plus récent existe
 (`SKRAFT_UPDATE_CHECK=0` coupe la vérification ; `SKRAFT_REGISTRY` nomme un autre registre). Quand aucun plugin n'est trouvé, elle écrit sur stderr
 un message fixe qui nomme les commandes d'installation et `SKRAFT_PLUGIN_ROOT`, et sort avec le
 code 1.
+
+## `skraft commands --json` {#skraft-commands}
+
+**Effet.** Affiche chaque ligne d'usage en JSON : `{ "schema": 1, "commands": [{ "command", "synopsis"?, "summary"? }] }`,
+dans l'ordre de l'usage. Le routage, l'usage et cette liste viennent d'une seule table du moteur.
+La commande `skraft` la lit pour l'aide de sa session (`help`, `help <commande>`), sa complétion
+par Tab (commandes, sous-commandes, options) et son « did you mean » sur une commande inconnue.
+Code 0 ; tout autre argument : l'usage, code 2.
 
 ## `skraft init [--add <folder>]...`
 

@@ -17,7 +17,8 @@ const withPlugin = (body) => {
     join(cliDir, 'skraft.mjs'),
     [
       "const args = process.argv.slice(2)",
-      "if (args.length === 0) { process.stderr.write('usage: skraft --version\\n       skraft status [--json]\\n       skraft decide <answer>\\n'); process.exitCode = 2 }",
+      "const commands = [{ command: '--version' }, { command: 'status', synopsis: '[--json]' }, { command: 'decide', synopsis: '[<key>] <answer> [--reason <text>]', summary: 'answer the question' }, { command: 'workflow', synopsis: 'eject [review]', summary: 'copy the pipeline' }]",
+      "if (args[0] === 'commands') console.log(JSON.stringify({ schema: 1, commands }))",
       "else console.log('engine', JSON.stringify(args))",
     ].join('\n'),
   )
@@ -52,11 +53,31 @@ test('each line runs as a skraft command, in order, with quoted words kept whole
   })
 })
 
-test('the welcome line names the commands of the engine usage, so the session follows the plugin', () => {
+test('the welcome line names the commands the engine lists, so the session follows the plugin', () => {
   withPlugin((home) => {
     const run = session(home, [])
 
-    assert.match(run.stderr, /^type a command \(--version, status, decide…\), help for the list, exit to leave$/m)
+    assert.match(run.stderr, /^type a command \(status, decide, workflow…\), help for the list, exit to leave$/m)
+  })
+})
+
+test('help lists the engine commands and the session ones; help <command> shows that command only', () => {
+  withPlugin((home) => {
+    const run = session(home, ['help', 'help decide'])
+    const out = run.stdout.replaceAll('skraft › ', '')
+
+    assert.match(out, /^ {2}decide \[<key>\] <answer> \[--reason <text>\] +answer the question$/m)
+    assert.match(out, /^ {2}upgrade +update the skraft command and the plugin in each host$/m)
+    assert.ok(out.endsWith('exit              leave the session (also quit, Ctrl-D)\n  decide [<key>] <answer> [--reason <text>]  answer the question\n'), out)
+  })
+})
+
+test('an unknown command is refused before the engine runs, with the closest name', () => {
+  withPlugin((home) => {
+    const run = session(home, ['statsu', 'deploy'])
+
+    assert.equal(run.stdout.replaceAll('skraft › ', ''), '')
+    assert.match(run.stderr, /skraft: no command statsu; did you mean status\?\nskraft: no command deploy\n/)
   })
 })
 
@@ -69,12 +90,12 @@ test('exit leaves the session: the lines after it never run', () => {
   })
 })
 
-test('help prints the engine usage; an unclosed quote is refused without running anything', () => {
+test('an unclosed quote is refused without running anything', () => {
   withPlugin((home) => {
-    const run = session(home, ['decide "open', 'help'])
+    const run = session(home, ['decide "open'])
 
     assert.equal(run.stdout.replaceAll('skraft › ', ''), '')
-    assert.match(run.stderr, /skraft: a quote is not closed\nusage: skraft --version/)
+    assert.match(run.stderr, /skraft: a quote is not closed/)
   })
 })
 
@@ -92,8 +113,6 @@ test('SKRAFT_INTERACTIVE=0 keeps `skraft` alone a one-shot call to the engine', 
   withPlugin((home) => {
     const run = session(home, ['status'], { SKRAFT_INTERACTIVE: '0' })
 
-    assert.equal(run.status, 2)
-    assert.equal(run.stdout, '')
-    assert.match(run.stderr, /^usage: skraft --version/)
+    assert.equal(run.stdout, 'engine []\n')
   })
 })

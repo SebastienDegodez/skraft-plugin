@@ -25,9 +25,11 @@ the host is followed at the next call: this package never needs updating with th
 ## Session
 
 `skraft` alone, in a terminal, opens a session: the banner sweeps in once, then each line is a
-skraft command (`doctor`, `status`, `decide yes`…), with Tab completion and history. Each line
-runs the engine in its own process and finds the plugin again, so a plugin update during the
-session is followed. `help` prints the engine's usage; `exit`, `quit` or Ctrl-D leaves.
+skraft command (`doctor`, `status`, `decide yes`…), with history. Each line runs the engine in
+its own process and finds the plugin again, so a plugin update during the session is followed.
+The commands come from the engine's `skraft commands --json`: `help` lists them, `help <command>`
+shows one, Tab completes commands, sub-commands and options, and a mistyped command is refused
+with the closest name before the engine runs. `exit`, `quit` or Ctrl-D leaves.
 
 - A one-shot command (`skraft doctor`) never shows the banner: its output is the engine's.
 - `NO_COLOR` keeps the banner uncoloured; `SKRAFT_BANNER=static` skips the animation,
