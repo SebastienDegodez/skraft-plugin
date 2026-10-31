@@ -1,5 +1,6 @@
 // Converts the Jekyll handbook pages (docs/site/{en,fr}) into Docusaurus pages (docs/website).
 // Plan: docs/v2/docusaurus-migration-plan.md, section 3. Zero dependency.
+import { posix } from 'node:path'
 
 const DROPPED_KEYS = new Set(['layout', 'lang', 'permalink'])
 
@@ -35,6 +36,67 @@ const convertFrontMatter = (lines, page) => {
   return `---\n${kept.join('\n')}\n---\n`
 }
 
+const FENCE = /^(\s*)(`{3,}|~{3,})(.*)$/
+
+/** Splits body lines into prose and fenced segments, keeping each line's index in the body. */
+const segments = (lines) => {
+  const out = []
+  let open = null
+  lines.forEach((line, index) => {
+    const fence = FENCE.exec(line)
+    if (open) {
+      open.lines.push(line)
+      if (fence && fence[2][0] === open.marker[0] && fence[2].length >= open.marker.length && !fence[3].trim()) open = null
+      return
+    }
+    if (fence) {
+      open = { fence: true, marker: fence[2], start: index, lines: [line] }
+      out.push(open)
+      return
+    }
+    if (!out.length || out.at(-1).fence) out.push({ fence: false, start: index, lines: [] })
+    out.at(-1).lines.push(line)
+  })
+  return out
+}
+
+const joinSegments = (parts) => parts.flatMap((part) => part.lines).join('\n')
+
+/** Applies `convert` to every prose line (outside fenced code). */
+const mapProse = (text, convert) => joinSegments(
+  segments(text.split('\n')).map((part) => (part.fence ? part : { ...part, lines: part.lines.map(convert) })),
+)
+
+/** Relative link from the page to another doc of the same locale: `./x.md`, `../y/z.mdx`. */
+const linkTo = (targetId, page, anchor = '') => {
+  const from = posix.dirname(page.docId)
+  const path = posix.relative(from, targetId) + extensionOf(targetId, page)
+  return (path.startsWith('.') ? path : `./${path}`) + anchor
+}
+
+const extensionOf = (docId, page) => (page.mdxDocs.has(docId) ? '.mdx' : '.md')
+
+/** Removes a line made of a Liquid tag only, with the blank line that follows it inside the body. */
+const removeTagLines = (text, isRemoved) => {
+  const lines = text.split('\n')
+  const out = []
+  for (let index = 0; index < lines.length; index += 1) {
+    if (!isRemoved(lines[index])) { out.push(lines[index]); continue }
+    if (out.length && out.at(-1).trim() === '' && lines[index + 1]?.trim() === '') index += 1
+  }
+  return out.join('\n')
+}
+
+const ASSIGN_CITES = /^\s*\{%-?\s*assign\s+cites\s*=.*%\}\s*$/
+
+/** Rule 2: `{% assign cites = … %}` goes; `{{ cites }}#cite-<key>` points at the citations page. */
+const convertCitationLinks = (text, page) => mapProse(
+  removeTagLines(text, (line) => ASSIGN_CITES.test(line)),
+  (line) => line.replace(/\{\{-?\s*cites\s*-?\}\}(#[\w-]+)?/g, (_, anchor = '') => linkTo('reference/citations', page, anchor)),
+)
+
+const DEFAULT_MDX_DOCS = ['index', 'reference/citations']
+
 /**
  * Converts one Jekyll page.
  * @param {string} source the Jekyll page
@@ -42,8 +104,12 @@ const convertFrontMatter = (lines, page) => {
  * @returns {{ text: string, extension: '.md'|'.mdx', findings: object[], redirects: object[] }}
  */
 export const convertPage = (source, options) => {
-  const page = { ...options, findings: [], redirects: [], phase: null, extension: '.md' }
+  const mdxDocs = new Set([...DEFAULT_MDX_DOCS, ...(options.mdxDocs ?? [])])
+  const page = { ...options, mdxDocs, findings: [], redirects: [], phase: null }
+  page.extension = extensionOf(page.docId, page)
   const { lines, body } = splitFrontMatter(source)
-  const text = convertFrontMatter(lines, page) + body
+  let text = body
+  text = convertCitationLinks(text, page)
+  text = convertFrontMatter(lines, page) + text
   return { text, extension: page.extension, findings: page.findings, redirects: page.redirects }
 }
