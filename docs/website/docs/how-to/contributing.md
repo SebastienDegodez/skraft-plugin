@@ -1,13 +1,12 @@
 ---
 title: "Propose a pattern or fix the documentation"
-description: "Propose a new pattern the genesis way (problem, solution, published reference), open the pull request that carries it, read the evaluation verdict, and fix a handbook page in FR and EN."
+description: "Propose a pattern the genesis way (problem, solution, published reference) through a pull request, and fix a handbook page in FR and EN."
 persona: tech-lead
 ---
 
 # Propose a pattern or fix the documentation
 
-**Goal**: bring a pattern into skraft, or fix a handbook page, through a pull request the team can
-accept.
+Bring a pattern into skraft, or fix a handbook page, through a pull request the team can accept.
 
 :::info[Genesis]
 A pattern enters skraft only with three things: an observed problem, a solution
@@ -58,7 +57,7 @@ A figure put forward without a source is rephrased qualitatively and suffixed `(
    Expected result: `All citations valid.`
 4. Open the pull request with a description of the change.
 
-## See also
+## Next steps <!-- #next-steps -->
 
 - [Patterns](../reference/patterns.md) — each pattern and its reference.
 - [Citations](../reference/citations.mdx)

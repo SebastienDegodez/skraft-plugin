@@ -1,13 +1,13 @@
 ---
 title: "Ajouter une lentille à une revue"
-description: "Ajouter une lentille de votre dépôt à la revue de conception ou à la revue DELIVER, changer la famille de modèle d'une lentille, et vérifier le workflow avec skraft workflow check et diff."
+description: "Ajouter une lentille du dépôt à la revue de conception ou DELIVER, changer la famille de modèle d'une lentille, vérifier avec check et diff."
 persona: tech-lead
 ---
 
 # Ajouter une lentille à une revue
 
-**But** : faire relire chaque run par une lentille de votre équipe (par exemple un modèle de
-menaces), en plus des lentilles de skraft.
+Faites relire chaque run par une lentille de votre équipe (par exemple un modèle de menaces), en
+plus des lentilles de skraft.
 
 ## Prérequis
 
@@ -93,7 +93,7 @@ autres.
 | Un nœud `lenses="a,b,c"` refusé | Workflow copié avant la forme actuelle : remplacer le nœud par les nœuds et arêtes que le message écrit. |
 | La lentille ne tourne pas | Vérifier qu'aucun `when` ne l'écarte, et que le run suit bien `.skraft/` (`skraft workflow check` nomme le fichier). |
 
-## Voir aussi
+## Étapes suivantes <!-- #next-steps -->
 
 - [Revue : fan-out, nœuds lentille, fan-in](../reference/workflow-dot.mdx#reviews)
   et [nœud d'appel](../reference/workflow-dot.mdx#call-node).

@@ -1,13 +1,13 @@
 ---
 title: "Review a pull request with skraft"
-description: "Put someone else's pull request through skraft's DELIVER review, with no run: check out its head, start the review from Claude Code, Copilot CLI or a terminal, read the verdict, keep a comment, review again after a new push."
+description: "Put someone else's pull request through skraft's DELIVER review with no run, read the verdict, keep it in a comment, review again after a push."
 persona: reviewer
 ---
 
 # Review a pull request with skraft
 
-**Goal**: get, on a pull request skraft did not produce, the verdict of its DELIVER review
-(lenses, refutation, computed verdict), and keep it in a comment if needed.
+Get, on a pull request skraft did not produce, the verdict of its DELIVER review (lenses,
+refutation, computed verdict), and keep it in a comment if needed.
 
 ## Prerequisites
 
@@ -112,7 +112,7 @@ that found nothing is reused without running again.
 | `journal-unverifiable` | The review started on another machine: `skraft journal adopt --pr <number>` in your terminal. |
 | `not-recorded` | Handed-over agents have no reply: finish the loop, then `--record`. |
 
-## See also
+## Next steps <!-- #next-steps -->
 
 - [`skraft review`](../reference/cli.md) — the rules of each step, `--json`
   output.

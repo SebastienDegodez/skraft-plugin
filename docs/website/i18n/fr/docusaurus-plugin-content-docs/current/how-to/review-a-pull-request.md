@@ -1,13 +1,13 @@
 ---
 title: "Revoir une pull request avec skraft"
-description: "Faire passer la pull request de quelqu'un d'autre par la revue DELIVER de skraft, sans run : extraire sa tête, lancer la revue depuis Claude Code, Copilot CLI ou un terminal, lire le verdict, garder un commentaire, revoir après un nouveau push."
+description: "Faire passer la pull request d'un autre par la revue DELIVER de skraft, sans run, lire le verdict, le garder en commentaire, revoir après un push."
 persona: reviewer
 ---
 
 # Revoir une pull request avec skraft
 
-**But** : obtenir sur une pull request que skraft n'a pas produite le verdict de sa revue DELIVER
-(lentilles, réfutation, verdict calculé), et le garder si besoin dans un commentaire.
+Obtenez sur une pull request que skraft n'a pas produite le verdict de sa revue DELIVER (lentilles,
+réfutation, verdict calculé), et gardez-le si besoin dans un commentaire.
 
 ## Prérequis
 
@@ -113,7 +113,7 @@ pas bougé et qui n'avait rien trouvé est reprise sans être relancée.
 | `journal-unverifiable` | La revue a commencé sur une autre machine : `skraft journal adopt --pr <numéro>` dans votre terminal. |
 | `not-recorded` | Des agents confiés n'ont pas de réponse : finir la boucle, puis `--record`. |
 
-## Voir aussi
+## Étapes suivantes <!-- #next-steps -->
 
 - [`skraft review`](../reference/cli.md) — règles de chaque étape, sortie
   `--json`.

@@ -1,13 +1,13 @@
 ---
 title: "Choisir les modèles des agents"
-description: "Choisir la famille de modèle de chaque agent, le modèle et le niveau de réflexion de chaque famille sous Claude Code et sous Copilot, pour vous seul ou pour l'équipe, et vérifier le résultat avec skraft doctor."
+description: "Choisir la famille de modèle de chaque agent, et le modèle et le niveau de chaque famille par hôte, pour vous ou l'équipe ; vérifier avec doctor."
 persona: tech-lead
 ---
 
 # Choisir les modèles des agents
 
-**But** : décider sur quel modèle, et avec quel niveau de réflexion, chaque agent de skraft
-tourne, sous Claude Code et sous Copilot.
+Décidez sur quel modèle, et avec quel niveau de réflexion, chaque agent de skraft tourne, sous
+Claude Code et sous Copilot.
 
 ## Prérequis
 
@@ -128,7 +128,7 @@ journalisé, quoi que disent les fichiers depuis.
 | Sous Claude Code, le niveau ne change pas | Attendu : le mod passe le modèle mais pas le niveau ; celui du fichier d'agent s'applique. |
 | Sous Copilot, le niveau ou le modèle est refusé | Copilot relance sans le niveau, puis essaie le modèle suivant de la liste, puis celui de la session. |
 
-## Voir aussi
+## Étapes suivantes <!-- #next-steps -->
 
 - [skraft-config.json](../reference/skraft-config.md#location) — les
   quatre couches et les clés `models` et `assign`.

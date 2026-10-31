@@ -6,7 +6,7 @@ persona: software-engineer
 
 # Resume or unblock a run
 
-**Goal**: start a stopped run again where it stopped, or lift what keeps it from going on.
+Start a stopped run again where it stopped, or lift what keeps it from going on.
 
 ## Prerequisites
 
@@ -80,7 +80,7 @@ The code shows in the Claude Code mod's final notification
 Every code, its message and its action:
 [Statuses and codes](../reference/run-journal.md#statuses-and-codes).
 
-## See also
+## Next steps <!-- #next-steps -->
 
 - [Answer a run's question](./answer-a-question.mdx)
 - [Hosts](../reference/hosts.md#at-a-glance) — start, answer and follow on

@@ -1,13 +1,13 @@
 ---
 title: "Publier la pull request d'un run"
-description: "Consentir à la publication, préparer gh et le remote, laisser le run ouvrir sa pull request ou la publier avec skraft publish, suivre le run sur son issue et joindre les captures d'un frontend."
+description: "Consentir, préparer gh, laisser le run ouvrir sa pull request ou la publier avec skraft publish, suivre son issue, joindre des captures."
 persona: software-engineer
 ---
 
 # Publier la pull request d'un run
 
-**But** : qu'un run terminé pousse sa branche et ouvre (ou mette à jour) sa pull request, avec
-sa description rendue depuis le journal.
+Faites qu'un run terminé pousse sa branche et ouvre (ou mette à jour) sa pull request, avec sa
+description rendue depuis le journal.
 
 ## Prérequis
 
@@ -201,7 +201,7 @@ skraft ne revoit pas encore ses pull requests.
 
 Tous les messages : [`skraft publish`](../reference/cli.md).
 
-## Voir aussi
+## Étapes suivantes <!-- #next-steps -->
 
 - [Phases — PUBLISH](../reference/phases.md#publish)
 - [skraft-config.json — `publish`](../reference/skraft-config.md#publish)

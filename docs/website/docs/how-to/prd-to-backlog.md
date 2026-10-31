@@ -1,13 +1,13 @@
 ---
 title: "Turn a PRD into a GitHub backlog"
-description: "Run the skraft-prd-backlog workflow on an approved PRD, answer the framing, approve the story map, validate the handoff, then publish epics and stories on GitHub with no duplicate."
+description: "Run skraft-prd-backlog on an approved PRD, answer the framing, approve the story map, validate the handoff, publish to GitHub with no duplicate."
 persona: tech-lead
 ---
 
 # Turn a PRD into a GitHub backlog
 
-**Goal**: go from an approved PRD to ready epics and stories on GitHub, with their dependencies
-and milestones.
+Go from an approved PRD to ready epics and stories on GitHub, with their dependencies and
+milestones.
 
 ## Prerequisites
 
@@ -124,7 +124,7 @@ never to the agent.
 | `destination binding: <repo> answers as <other>` | Pass the repository's exact name in `repo` (a renamed or transferred repository answers under its new name). |
 | Status `blocked` in PUBLISH, with `failed` or `skipped` | Resume: the publication goes on without creating again what exists; the detail is in `handoff-logs.md`. |
 
-## See also
+## Next steps <!-- #next-steps -->
 
 - [Refine a backlog issue](./refine-backlog.md)
 - [The backlog: from idea to ready story](../explanation/backlog.md) — why

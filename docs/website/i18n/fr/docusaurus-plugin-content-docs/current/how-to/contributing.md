@@ -1,13 +1,13 @@
 ---
 title: "Proposer un pattern ou corriger la documentation"
-description: "Proposer un nouveau pattern selon genesis (problème, solution, référence publiée), ouvrir la pull request qui l'accompagne, lire le verdict d'évaluation, et corriger une page du handbook en FR et en EN."
+description: "Proposer un pattern selon genesis (problème, solution, référence publiée) par une pull request, et corriger une page du handbook en FR et en EN."
 persona: tech-lead
 ---
 
 # Proposer un pattern ou corriger la documentation
 
-**But** : faire entrer un pattern dans skraft, ou corriger une page du handbook, par une pull
-request que l'équipe peut accepter.
+Faites entrer un pattern dans skraft, ou corrigez une page du handbook, par une pull request que
+l'équipe peut accepter.
 
 :::info[Genesis]
 Un pattern n'entre dans skraft qu'avec trois éléments : un problème observé, une
@@ -59,7 +59,7 @@ Un chiffre avancé sans source se reformule qualitativement et se suffixe `(esti
    Résultat attendu : `All citations valid.`
 4. Ouvrez la pull request avec une description du changement.
 
-## Voir aussi
+## Étapes suivantes <!-- #next-steps -->
 
 - [Patterns](../reference/patterns.md) — chaque pattern et sa référence.
 - [Citations](../reference/citations.mdx)

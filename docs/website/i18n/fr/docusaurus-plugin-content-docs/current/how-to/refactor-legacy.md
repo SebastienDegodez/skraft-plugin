@@ -1,13 +1,13 @@
 ---
 title: "Refactorer un code existant sous filet"
-description: "Lancer brownfield-refactorer comme agent principal, choisir Mikado ou Strangler Fig, suivre le graphe ou le plan de tranches, et répondre aux signaux ADVANCE, EXPAND, DONE et BLOCKED, le filet vert à chaque commit."
+description: "Lancer brownfield-refactorer comme agent principal, choisir Mikado ou Strangler Fig, et répondre à ses signaux, le filet vert à chaque commit."
 persona: software-engineer
 ---
 
 # Refactorer un code existant sous filet
 
-**But** : modifier en place ou remplacer une partie d'un code existant, une feuille ou une tranche
-à la fois, avec un commit vert à chaque pas.
+Modifiez en place ou remplacez une partie d'un code existant, une feuille ou une tranche à la fois,
+avec un commit vert à chaque pas.
 
 Pour comprendre les deux méthodes : [Parcours Brownfield](../explanation/brownfield.md),
 [Ellnestam & Brolund, 2014](../reference/citations.mdx#cite-ellnestam-brolund-mikado-2014) (Mikado),
@@ -99,7 +99,7 @@ revient vers vous en `BLOCKED` : décidez si elle est voulue.
 | Le validateur sort 1 sur un commit de découverte | Retitrer le commit en `refactor(mikado-graph): …` : le validateur refuse un `discovered:` sur un commit titré autrement. |
 | Une tranche reste en `CONCERNS` | Une différence entre ancien et nouveau attend votre décision ; la tranche reste sur l'ancien code d'ici là. |
 
-## Voir aussi
+## Étapes suivantes <!-- #next-steps -->
 
 - [Poser un filet de caractérisation](./characterize-legacy.md)
 - [Parcours Brownfield](../explanation/brownfield.md) — pourquoi le graphe

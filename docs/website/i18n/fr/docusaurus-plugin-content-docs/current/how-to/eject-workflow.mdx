@@ -1,6 +1,6 @@
 ---
 title: "Copier et adapter le workflow"
-description: "Copier le workflow du plugin dans .skraft/ avec skraft workflow eject, l'adapter (sauter une gate verrouillée avec sa raison, changer une boucle, retirer une lentille), le valider avec check, le comparer avec diff, le mettre à jour après une montée de version ou revenir au workflow du plugin."
+description: "Copier le workflow dans .skraft/, l'adapter, le valider avec check, le comparer avec diff, le mettre à jour, ou revenir à celui du plugin."
 persona: tech-lead
 ---
 
@@ -8,8 +8,8 @@ import WorkflowViewer from '@site/src/components/WorkflowViewer';
 
 # Copier et adapter le workflow
 
-**But** : faire suivre aux runs de votre dépôt une version adaptée du pipeline ou de la revue
-DELIVER, et la garder à jour avec le plugin.
+Faites suivre aux runs de votre dépôt une version adaptée du pipeline ou de la revue DELIVER, et
+gardez-la à jour avec le plugin.
 
 ## Prérequis
 
@@ -103,7 +103,7 @@ Supprimez la copie (`.skraft/pipeline.skraft.dot` ou `.skraft/review.skraft.dot`
 | `mandatory node … is missing; this node is mandatory and cannot be removed` | Remettre le nœud obligatoire. |
 | `the workflow has no node <id> any more; restore the workflow the run started with` | Un run en cours se trouvait sur le nœud retiré : remettre le nœud le temps de finir ce run, ou démarrer un nouveau slug. |
 
-## Voir aussi
+## Étapes suivantes {/* #next-steps */}
 
 - [Le workflow DOT](../reference/workflow-dot.mdx) — syntaxe, règles de
   validité, [nœuds verrouillés](../reference/workflow-dot.mdx#locked-nodes) et

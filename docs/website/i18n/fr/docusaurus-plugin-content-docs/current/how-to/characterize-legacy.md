@@ -1,13 +1,13 @@
 ---
 title: "Poser un filet de caractérisation sur un service existant"
-description: "Faire écrire par brownfield-harness-builder le contrat d'un service HTTP existant et des tests de caractérisation qui figent son comportement actuel, puis lire le verdict PASS, CONCERNS ou FAIL avant tout refactoring."
+description: "Faire figer par brownfield-harness-builder le comportement actuel d'un service HTTP (contrat, tests de caractérisation), puis lire le verdict."
 persona: software-engineer
 ---
 
 # Poser un filet de caractérisation sur un service existant
 
-**But** : rendre un service HTTP existant sûr à modifier, avec des tests qui figent ce qu'il fait
-aujourd'hui, bugs compris.
+Rendez un service HTTP existant sûr à modifier, avec des tests qui figent ce qu'il fait aujourd'hui,
+bugs compris.
 
 Pour comprendre la méthode : [Parcours Brownfield](../explanation/brownfield.md)
 et [Feathers, 2004](../reference/citations.mdx#cite-feathers-legacy-2004).
@@ -83,7 +83,7 @@ et tourne avec les gates de chaque run skraft.
 | Une dépendance aval refuse d'être mockée | Verdict `CONCERNS` : accepter le trou, ou changer `mocking` du composant ([Configurer les composants](./configure-components.md)). |
 | Pas de skill de contract testing pour la stack | L'agent prend l'hôte de test standard du framework et le dit dans son rapport. |
 
-## Voir aussi
+## Étapes suivantes <!-- #next-steps -->
 
 - [Refactorer un code existant sous filet](./refactor-legacy.md) — l'étape suivante.
 - [Parcours Brownfield](../explanation/brownfield.md)

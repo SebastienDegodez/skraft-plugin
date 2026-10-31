@@ -1,13 +1,13 @@
 ---
 title: "Configurer les composants de votre dépôt"
-description: "Détecter les composants dans skraft-config.json, ajouter un dépôt voisin, remplacer une commande, ajouter une gate, choisir la base, passer en mocks en mémoire et vérifier le tout avec skraft doctor."
+description: "Détecter les composants dans skraft-config.json, ajouter un dépôt voisin, remplacer une commande, ajouter une gate, choisir base et mocks, vérifier."
 persona: software-engineer
 ---
 
 # Configurer les composants de votre dépôt
 
-**But** : obtenir un `skraft-config.json` dont chaque commande tourne sur votre machine, avant
-de lancer un run.
+Obtenez un `skraft-config.json` dont chaque commande tourne sur votre machine, avant de lancer un
+run.
 
 ## Prérequis
 
@@ -150,7 +150,7 @@ ses erreurs séparées par `; ` :
 
 Toutes les clés et tous les messages : [skraft-config.json](../reference/skraft-config.md#validation).
 
-## Voir aussi
+## Étapes suivantes <!-- #next-steps -->
 
 - [skraft-config.json](../reference/skraft-config.md) — schéma, défauts
   par stack, détection.

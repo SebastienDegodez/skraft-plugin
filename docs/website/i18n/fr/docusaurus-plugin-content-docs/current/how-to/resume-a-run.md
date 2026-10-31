@@ -6,7 +6,7 @@ persona: software-engineer
 
 # Reprendre ou débloquer un run
 
-**But** : relancer un run arrêté là où il s'est arrêté, ou lever ce qui l'empêche d'avancer.
+Relancez un run arrêté là où il s'est arrêté, ou levez ce qui l'empêche d'avancer.
 
 ## Prérequis
 
@@ -81,7 +81,7 @@ Le code s'affiche dans la notification de fin du mod Claude Code
 Tous les codes, leur message et leur action :
 [Statuts et codes](../reference/run-journal.md#statuses-and-codes).
 
-## Voir aussi
+## Étapes suivantes <!-- #next-steps -->
 
 - [Répondre à une question du run](./answer-a-question.mdx)
 - [Hôtes](../reference/hosts.md#at-a-glance) — démarrer, répondre et suivre

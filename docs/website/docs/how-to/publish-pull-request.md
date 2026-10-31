@@ -1,13 +1,13 @@
 ---
 title: "Publish a run's pull request"
-description: "Consent to publishing, set up gh and the remote, let the run open its pull request or publish it with skraft publish, follow the run on its issue and attach a front end's screenshots."
+description: "Consent, set up gh, let the run open its pull request or publish it with skraft publish, follow its issue, attach a front end's screenshots."
 persona: software-engineer
 ---
 
 # Publish a run's pull request
 
-**Goal**: a completed run pushes its branch and opens (or updates) its pull request, with its
-description rendered from the journal.
+Have a completed run push its branch and open (or update) its pull request, with its description
+rendered from the journal.
 
 ## Prerequisites
 
@@ -199,7 +199,7 @@ the forge a run uses on its `forge` line.
 
 Every message: [`skraft publish`](../reference/cli.md).
 
-## See also
+## Next steps <!-- #next-steps -->
 
 - [Phases — PUBLISH](../reference/phases.md#publish)
 - [skraft-config.json — `publish`](../reference/skraft-config.md#publish)

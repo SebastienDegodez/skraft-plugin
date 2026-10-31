@@ -6,8 +6,7 @@ persona: software-engineer
 
 # Run the gates and read their evidence
 
-**Goal**: run your components' gates by hand, before or after a run, and know what to do with
-each failure.
+Run your components' gates by hand, before or after a run, and know what to do with each failure.
 
 ## Prerequisites
 
@@ -95,7 +94,7 @@ answer `RETRY` ([Answer a run's question](./answer-a-question.mdx)).
 
 To check that a program is found without running the gates: `skraft doctor`.
 
-## See also
+## Next steps <!-- #next-steps -->
 
 - [`skraft gate`](../reference/cli.md) — options, JSON output, codes.
 - [Gates](../reference/gates.md) — command gates and review gates.
