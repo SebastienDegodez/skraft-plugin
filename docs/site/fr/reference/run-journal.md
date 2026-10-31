@@ -39,7 +39,7 @@ Le dossier de suivi vit **dans la copie de travail qui lance le run** :
     │   ├── changed-files.txt                      chemins que ces changements touchent
     │   ├── code.patch, code-files.txt             les mêmes pour une lentille aveugle, sans docs/adr ni la documentation durable
     │   ├── design.patch, design-files.txt         les mêmes pour `fitness` : les documents de conception seulement (écrits quand la revue a cette lentille)
-    │   ├── features.patch, features-files.txt     les mêmes pour `business-alignment` : docs/features seulement (écrits quand la revue a cette lentille)
+    │   ├── features.patch, features-files.txt     les mêmes pour `business-alignment` : tout dossier `docs/features/` seulement (écrits quand la revue a cette lentille)
     │   ├── context.md                             story, règles du projet, qui a écrit quel document
     │   ├── components.json                        stack, stratégie de mocking, contract testing
     │   └── verdict.yaml                           le verdict de la passe, écrit par le moteur
@@ -127,7 +127,7 @@ la pull request, le journal et ses rapports.
 | Règle | Détail |
 | --- | --- |
 | Lecture | consigne aux agents : RESEARCH et DESIGN lisent `docs/` avant toute autre chose ; le moteur ne le contrôle pas |
-| Déjà couvert | quand `docs/` couvre déjà la story, la phase le dit dans sa sortie déclarée (le document de recherche, la matrice de cohérence), cite les fichiers de `docs/` et passe à la suite. Le moteur ne contrôle que la matrice : sa ligne `docs-relied-on:` doit lister au moins un fichier de `docs/`, et chaque fichier listé doit exister dans la copie de travail ; il ne cherche pas de citation dans le document de recherche |
+| Déjà couvert | quand `docs/` couvre déjà la story, la phase le dit dans sa sortie déclarée (le document de recherche, la matrice de cohérence), cite les fichiers de `docs/` et passe à la suite. Le moteur ne contrôle que la matrice : sa ligne `docs-relied-on:` doit lister au moins un fichier de `docs/adr`, `docs/architecture`, `docs/domain/event-model` ou `docs/features`, et chaque fichier listé doit exister dans la copie de travail ; il ne cherche pas de citation dans le document de recherche |
 | Mise à jour | consigne aux agents : une phase complète un fichier existant de `docs/` et ne le réécrit pas ; le moteur ne le contrôle pas |
 | ADR | un ADR publié n'est jamais édité ; un nouvel ADR peut le remplacer ([Ce qui n'est jamais réécrit](#append-only)) |
 | Écriture permise | DESIGN : `docs/adr/`, `docs/architecture/`, `docs/domain/event-model/` ; DISTILL : `docs/features/` ([Phases]({{ "/fr/reference/phases" | relative_url }})) |

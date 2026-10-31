@@ -39,7 +39,7 @@ The tracking folder lives **in the working copy that starts the run**:
     │   ├── changed-files.txt                      paths those changes touch
     │   ├── code.patch, code-files.txt             the same for a blind lens, without docs/adr nor the durable documentation
     │   ├── design.patch, design-files.txt         the same for `fitness`: the design documents only (written when the review has that lens)
-    │   ├── features.patch, features-files.txt     the same for `business-alignment`: docs/features only (written when the review has that lens)
+    │   ├── features.patch, features-files.txt     the same for `business-alignment`: any `docs/features/` folder only (written when the review has that lens)
     │   ├── context.md                             story, project rules, who wrote which document
     │   ├── components.json                        stack, mocking strategy, contract testing
     │   └── verdict.yaml                           the verdict of the pass, written by the engine
@@ -127,7 +127,7 @@ and its reports.
 | Rule | Detail |
 | --- | --- |
 | Reading | instruction to the agents: RESEARCH and DESIGN read `docs/` before anything else; the engine does not check it |
-| Already covered | when `docs/` already covers the story, the phase says so in its declared output (the research document, the consistency matrix), cites the files of `docs/` and moves on. The engine checks only the matrix: its `docs-relied-on:` line must list at least one `docs/` file, and each listed file must exist in the working copy; it does not read the research document for citations |
+| Already covered | when `docs/` already covers the story, the phase says so in its declared output (the research document, the consistency matrix), cites the files of `docs/` and moves on. The engine checks only the matrix: its `docs-relied-on:` line must list at least one file of `docs/adr`, `docs/architecture`, `docs/domain/event-model` or `docs/features`, and each listed file must exist in the working copy; it does not read the research document for citations |
 | Updating | instruction to the agents: a phase completes an existing file of `docs/` and does not rewrite it; the engine does not check it |
 | ADRs | a published ADR is never edited; a new ADR may supersede it ([What is never rewritten](#append-only)) |
 | Write scope | DESIGN: `docs/adr/`, `docs/architecture/`, `docs/domain/event-model/`; DISTILL: `docs/features/` ([Phases]({{ "/en/reference/phases" | relative_url }})) |
