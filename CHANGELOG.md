@@ -3,6 +3,16 @@
 Toutes les modifications notables de ce projet sont documentées ici.
 Format basé sur [Conventional Commits](https://www.conventionalcommits.org/) — versionnage [SemVer](https://semver.org/).
 
+## [2.0.0-alpha.43](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.42...v2.0.0-alpha.43) (2026-10-31)
+
+### ✨ Features
+
+* **engine:** skraft reviews an Azure Repos pull request, MCP first, az as fallback, and keeps one closed review thread ([#464](https://github.com/SebastienDegodez/skraft-plugin/issues/464)) ([8357210](https://github.com/SebastienDegodez/skraft-plugin/commit/83572108595dc81095f6df1e438b4b67ca61df75)), closes [#397](https://github.com/SebastienDegodez/skraft-plugin/issues/397) [#395](https://github.com/SebastienDegodez/skraft-plugin/issues/395) [#396](https://github.com/SebastienDegodez/skraft-plugin/issues/396) [#401](https://github.com/SebastienDegodez/skraft-plugin/issues/401)
+
+### 📝 Documentation
+
+* **host-verification:** Azure Repos work-item link and split parts, non mesuré ([#463](https://github.com/SebastienDegodez/skraft-plugin/issues/463)) ([e54f661](https://github.com/SebastienDegodez/skraft-plugin/commit/e54f661fe869bf10790a15f47caab6832d76fc52)), closes [#417](https://github.com/SebastienDegodez/skraft-plugin/issues/417)
+
 ## [2.0.0-alpha.42](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.41...v2.0.0-alpha.42) (2026-10-31)
 
 ### ✨ Features
