@@ -576,7 +576,8 @@ reason }` and `diff` prints `{ ok, name, changes, reason }`. `eject` takes no op
 ## `skraft doctor [--run] [--base <ref>] [--json]`
 
 **Effect.** Checks that every command of every component can run on this machine. Writes
-nothing to the journal.
+nothing to the journal. The first line names the plugin version that answers
+(`ok    plugin: skraft <version>`; `plugin` in the JSON); it is not counted as a check.
 
 | Option | Effect |
 | --- | --- |

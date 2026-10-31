@@ -312,7 +312,8 @@ const gateLines = (outcome) => [
 const doctor = async (args, services, console) => {
   const options = optionsOf(args, { flags: ['--run', '--json'], values: ['--base'] })
   if (options === undefined) return usage(console)
-  const report = await createDoctor(services.adapters()).check({ run: options['--run'] === true, base: /** @type {string | undefined} */ (options['--base']) ?? null })
+  const checked = await createDoctor(services.adapters()).check({ run: options['--run'] === true, base: /** @type {string | undefined} */ (options['--base']) ?? null })
+  const report = { plugin: services.pluginVersion(), ...checked }
   print(options['--json'] === true, report, doctorLines, console)
   return report.ok ? 0 : 1
 }
@@ -322,8 +323,9 @@ const DOCTOR_MARKS = Object.freeze({ ok: 'ok  ', warn: 'WARN', fail: 'FAIL' })
 
 /** @typedef {Awaited<ReturnType<ReturnType<typeof createDoctor>['check']>>} DoctorReport */
 
-/** @param {DoctorReport} report */
+/** The plugin's version first: the version the person runs, whatever launched it. @param {DoctorReport & { plugin: string }} report */
 const doctorLines = (report) => [
+  `${DOCTOR_MARKS.ok}  plugin: skraft ${report.plugin}`,
   ...report.checks.map(({ subject, status: state, detail }) => `${DOCTOR_MARKS[state]}  ${subject}: ${detail}`),
   ...assignmentLines(report.assignments),
   doctorSummary(report),

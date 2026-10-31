@@ -41,9 +41,10 @@ for (const [fixture, stack, commands, paths, skills = []] of [
     assert.equal(doctor.status, 0, doctor.stdout)
     const lines = doctor.stdout.trim().split(/\r?\n/)
     assert.deepEqual(checksOf(lines).map((line) => line.split(': ')[0]), [
-      'ok    node', 'ok    config', 'WARN  forge', ...commands.map((name) => `ok    ${fixture}/${name}`), ...skills, 'ok    models/claude-code', 'WARN  models/copilot', 'ok    vscode',
+      'ok    plugin', 'ok    node', 'ok    config', 'WARN  forge', ...commands.map((name) => `ok    ${fixture}/${name}`), ...skills, 'ok    models/claude-code', 'WARN  models/copilot', 'ok    vscode',
     ])
     assert.equal(lines.at(-1), `skraft doctor: no check failed, ${2 + skills.length} with a warning`)
+    assert.match(lines[0], /^ok {4}plugin: skraft \S+$/)
   })
 }
 
@@ -61,7 +62,7 @@ test('init lists skraft-config.local.json in .gitignore, and doctor reads it and
   assert.equal(await configLine(), 'FAIL  config: ~/.skraft/config.json is invalid: components belongs in skraft-config.json, never in ~/.skraft/config.json')
   writeFileSync(join(home, '.skraft', 'config.json'), JSON.stringify({ models: { 'gpt-codex': { copilot: { model: 'gpt-5.5-codex' } } } }))
   assert.equal(await configLine(), 'FAIL  config: the merged configuration is invalid: models.gpt-codex is a free family: give it a "tier" (economy, standard, frontier, premium)')
-  assert.deepEqual((await skraft(cwd, ['doctor'], { env, home })).stdout.split(/\r?\n/).slice(1), [
+  assert.deepEqual((await skraft(cwd, ['doctor'], { env, home })).stdout.split(/\r?\n/).slice(2), [
     'FAIL  config: the merged configuration is invalid: models.gpt-codex is a free family: give it a "tier" (economy, standard, frontier, premium)',
     `ok    vscode: no Copilot SDK under ${join(home, '.copilot', 'pkg')}: under VS Code, the Skraft - Orchestrator agent conducts skraft next and skraft record; install the Copilot CLI to run the pipeline through its SDK`,
     'skraft doctor: 1 checks failed', '',
@@ -180,7 +181,7 @@ test('python runs from the virtual environment of the component, laid out the wa
   const gate = await skraft(cwd, ['gate', '--all'], { env })
 
   assert.equal(doctor.status, 0, doctor.stdout)
-  assert.equal(doctor.stdout.split(/\r?\n/)[3], `ok    payment-fastapi/test: python → ${venv}`)
+  assert.equal(doctor.stdout.split(/\r?\n/)[4], `ok    payment-fastapi/test: python → ${venv}`)
   assert.equal(gate.status, 0, gate.stdout)
   const evidence = readFileSync(join(cwd, '.copilot-tracking', 'skraft-plans', 'checkout', 'gates', 'payment-fastapi', 'test-1.log'), 'utf8')
   assert.match(evidence, new RegExp(`--- stdout\\n${process.version.replaceAll('.', '\\.')}\\r?\\n`))
@@ -205,7 +206,7 @@ test('doctor --run starts each command once against the base it is given, main b
   assert.equal(onMain.status, 0, onMain.stdout)
   assert.deepEqual(JSON.parse(onMain.stdout).checks[3], { subject: 'payment/test', status: 'ok', detail: `node --version ${mainSha} passed` })
   assert.equal(onDevelop.status, 0, onDevelop.stdout)
-  assert.equal(onDevelop.stdout.split(/\r?\n/)[3], `ok    payment/test: node --version ${developSha} passed`)
+  assert.equal(onDevelop.stdout.split(/\r?\n/)[4], `ok    payment/test: node --version ${developSha} passed`)
   assert.match(JSON.parse(dry.stdout).checks[3].detail, /^node → /)
 })
 

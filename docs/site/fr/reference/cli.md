@@ -593,7 +593,8 @@ reason }` et `diff` affiche `{ ok, name, changes, reason }`. `eject` ne prend au
 ## `skraft doctor [--run] [--base <ref>] [--json]`
 
 **Effet.** Vérifie que chaque commande de chaque composant peut tourner sur cette machine.
-N'écrit rien dans le journal.
+N'écrit rien dans le journal. La première ligne nomme la version du plugin qui répond
+(`ok    plugin: skraft <version>` ; `plugin` dans le JSON) ; elle ne compte pas comme un contrôle.
 
 | Option | Effet |
 | --- | --- |
