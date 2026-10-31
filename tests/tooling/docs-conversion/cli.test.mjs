@@ -113,10 +113,13 @@ test('an unknown option is a usage error', () => {
   })
 })
 
-test('the script runs from the command line', () => {
+test('the script runs from the command line: a dry run, then the check of what it would write', () => {
   withTree(({ dir }) => {
-    const result = spawnSync(process.execPath, [script, '--check', '--dest', join(dir, 'website')], { encoding: 'utf8' })
+    const argv = [script, '--src', 'site', '--dest', 'website', '--locale', 'en', '--dry-run', '--check']
+    const result = spawnSync(process.execPath, argv, { cwd: dir, encoding: 'utf8' })
+    assert.equal(result.stderr, '')
     assert.equal(result.status, 0)
-    assert.match(result.stdout, /no problems in 1 page/)
+    assert.match(result.stdout, /converted 2 pages of 3 \(no \.mdx\), dry run: nothing written; 1 finding need a hand resolution; 1 skipped\n/)
+    assert.match(result.stdout, /no problems in 2 pages\n$/)
   })
 })
