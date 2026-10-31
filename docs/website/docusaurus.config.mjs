@@ -1,12 +1,15 @@
 import { existsSync, readFileSync } from 'node:fs'
 import { themes as prism } from 'prism-react-renderer'
 import remarkPendingLinks from './plugins/pending-pages/remark-pending-links.mjs' // TEMPORARY, deleted in WP1b
+import { archiveDropdownItem, archiveFooterItem, inEachLocale } from './src/config/beside-links.mjs'
 
 const at = (path) => new URL(path, import.meta.url)
 const released = existsSync(at('./versions.json')) ? JSON.parse(readFileSync(at('./versions.json'), 'utf8')) : []
 const BASE_URL = '/skraft-plugin/'
-// Static files and the v1 archive live beside the site: pathname:// keeps the base URL and leaves routing.
-const beside = (path) => `pathname://${BASE_URL}${path}`
+// The config is loaded once per locale build, after Docusaurus sets this variable (core 3.10.2 buildLocale).
+const LOCALE = process.env.DOCUSAURUS_CURRENT_LOCALE ?? 'en'
+// A raw HTML footer link has no entry in footer.json: its label is chosen here.
+const V1_ARCHIVE_LABEL = { en: 'v1 archive', fr: 'Archive v1' }[LOCALE] ?? 'v1 archive'
 const REPO = 'https://github.com/SebastienDegodez/skraft-plugin'
 const EDIT_BRANCH = process.env.SKRAFT_DOCS_EDIT_BRANCH ?? 'integration/v2-next' // 'main' after 2.0.0
 
@@ -110,8 +113,8 @@ export default {
           position: 'right',
           dropdownItemsAfter: [
             { type: 'html', value: '<hr class="dropdown__divider">' },
-            { href: beside('v1.15.3/'), label: '1.15 (archived)' },
-            { href: beside('v1/'), label: 'All v1 versions' },
+            archiveDropdownItem({ baseUrl: BASE_URL, path: 'v1.15.3/', label: '1.15 (archived)' }),
+            archiveDropdownItem({ baseUrl: BASE_URL, path: 'v1/', label: 'All v1 versions' }),
           ],
         },
         { type: 'localeDropdown', position: 'right' },
@@ -124,12 +127,12 @@ export default {
         {
           title: 'Handbook',
           items: [
-            { label: 'Catalogue', href: beside('dashboard/') },
-            { label: 'Presentation', href: beside('skraft-basic-presentation.html') },
+            { label: 'Catalogue', href: inEachLocale('dashboard/') },
+            { label: 'Presentation', href: inEachLocale('skraft-basic-presentation.html') },
             { label: 'Citations', to: '/reference/citations' },
           ],
         },
-        { title: 'More', items: [{ label: 'GitHub', href: REPO }, { label: 'v1 archive', href: beside('v1/') }] },
+        { title: 'More', items: [{ label: 'GitHub', href: REPO }, archiveFooterItem({ baseUrl: BASE_URL, path: 'v1/', label: V1_ARCHIVE_LABEL })] },
       ],
     },
     mermaid: { theme: { light: 'neutral', dark: 'dark' } },
