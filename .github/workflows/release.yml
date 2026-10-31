@@ -5,7 +5,7 @@ name: Release
 # Documentation-only pushes never reach it: paths-ignore skips the run, and the
 # commit-analyzer maps `docs` to no release, so a docs commit can never cut a tag.
 # The `skraft` command (cli/, npm package @skraft/cli) has its own version and its own
-# workflow (cli-publish.yml): a push that only touches it never releases the plugin, and
+# workflow (cli-release.yml): a push that only touches it never releases the plugin, and
 # commits scoped `cli` never bump the plugin's version.
 on:
   push:

@@ -51,18 +51,17 @@ anything by itself. `SKRAFT_UPDATE_CHECK=0` turns the check off (it is off in CI
 
 ## Versions
 
-`@skraft/cli` has its own version, independent of the plugin's. It changes only when the way
-the plugin is found changes. It is published by hand with the `Publish @skraft/cli` workflow (npm
-trusted publishing); plugin releases never publish it.
+`@skraft/cli` has its own version, independent of the plugin's, computed by semantic-release
+from the commits that touch this folder only (`.releaserc.json`, `semantic-release-monorepo`):
+`feat` → minor, `fix` → patch, `BREAKING CHANGE` → major. The `Release @skraft/cli` workflow
+runs on each push that touches `cli/`:
 
-- From `main`: the version of `package.json`, dist-tag `latest`, tag `cli-v<version>`.
-- From any other branch: `<version>-alpha.<run number>`, dist-tag `alpha`, no commit and no tag.
-  Install it with `npm i -g @skraft/cli@alpha`.
+- `integration/v2-next`: `1.0.0-alpha.N`, dist-tag `alpha` (`npm i -g @skraft/cli@alpha`);
+- `main`: stable, dist-tag `latest`, starting at `1.0.0`.
 
-`package.json` always holds the plain version (no `-alpha` suffix). `1.0.0` is the first stable
-release, published from `main`.
-Commits that touch only this folder use the `cli` scope (`feat(cli): …`): they never bump the
-plugin's version.
+Tags are `cli-v<version>`. Nothing is committed back: `package.json` keeps
+`0.0.0-development`, the version is written into the package at publish time. Commits that touch
+only this folder use the `cli` scope (`feat(cli): …`): the plugin's release ignores them.
 
 ## Development
 

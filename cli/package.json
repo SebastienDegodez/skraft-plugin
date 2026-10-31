@@ -1,6 +1,6 @@
 {
   "name": "@skraft/cli",
-  "version": "0.1.0",
+  "version": "0.0.0-development",
   "description": "The skraft command: finds the skraft plugin your host installed (GitHub Copilot CLI, then Claude Code) and runs its engine.",
   "type": "module",
   "bin": {

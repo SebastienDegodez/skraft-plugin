@@ -33,8 +33,8 @@ plugins/
 cli/                                 ← npm package @skraft/cli: the `skraft` command for humans. Holds no
                                        engine; finds the plugin a host installed (SKRAFT_PLUGIN_ROOT, then
                                        Copilot CLI, then Claude Code) and imports its drivers/cli/skraft.mjs.
-                                       Own version, published by hand from main (cli-publish.yml); commits
-                                       scoped `cli` never release the plugin. Agents keep the absolute path.
+                                       Own version from the commits touching cli/ (cli-release.yml, tags cli-v*);
+                                       commits scoped `cli` never release the plugin. Agents keep the absolute path.
 
 tests/
   skraft-framework/unit/<feature>/         ← engine use-case acceptance tests

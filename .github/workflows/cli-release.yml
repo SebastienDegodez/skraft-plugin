@@ -1,0 +1,60 @@
+name: Release @skraft/cli
+
+# The skraft command has its own version, computed from the commits that touch cli/ only
+# (semantic-release-monorepo): feat → minor, fix → patch, BREAKING → major. Tags cli-v<version>.
+# - main: stable, npm dist-tag latest.
+# - integration/v2-next: 1.0.0-alpha.N, npm dist-tag alpha (npm i -g @skraft/cli@alpha).
+# Nothing is committed back: cli/package.json keeps 0.0.0-development; the version is written
+# into the package at publish time.
+#
+# Publishing uses npm trusted publishing (OIDC, npm 11.5 or later): no token is stored. On
+# npmjs.com, @skraft/cli names this repository and this workflow file as its trusted publisher.
+on:
+  push:
+    branches: [main, integration/v2-next]
+    paths:
+      - 'cli/**'
+  workflow_dispatch:
+
+concurrency:
+  group: cli-release
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+  id-token: write
+
+jobs:
+  release:
+    name: semantic-release (cli/)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '24'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Run the skraft command tests
+        run: npm run test:cli
+
+      - name: Install release tooling
+        run: npm install --no-save
+          semantic-release@25
+          semantic-release-monorepo@8
+          @semantic-release/exec@7
+          conventional-changelog-conventionalcommits@8
+
+      - name: Run semantic-release on cli/
+        working-directory: cli
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: npx semantic-release
