@@ -13,7 +13,7 @@
 export const commentUrl = ({ organization, project }, number, id) => `${organization}/${encodeURIComponent(project)}/_apis/wit/workItems/${number}/comments/${id}`
 
 /** @param {string} text */
-const escapedAsHtml = (text) => text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+export const escapedAsHtml =(text) => text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
 
 /**
  * Whether the answer is a list of comments, each with the integer `id` an update needs.

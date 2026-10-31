@@ -85,4 +85,9 @@ const nowhereCodeHost = (reason) => Object.freeze({
 })
 
 /** @param {string} reason @returns {import('../ports/pull-requests.mjs').PullRequests} */
-const nowherePullRequests = (reason) => Object.freeze({ ...nowhere(reason), find: refusal(reason), keepComment: refusal(reason) })
+const nowherePullRequests = (reason) => Object.freeze({
+  ...nowhere(reason),
+  // Stryker disable next-line all: no run reaches them, every caller stops on unavailable() first
+  checkoutCommand: () => '', takesRequestFile: false,
+  find: refusal(reason), keepComment: refusal(reason),
+})

@@ -2,6 +2,7 @@ import { azureRemoteOf, isInOrganization } from '../../domain/config/azure-remot
 import { inProject, workItemReading } from '../../domain/pipeline/work-item.mjs'
 import { areComments, commentUrl, keptCommentOf } from '../../domain/pipeline/work-item-comment.mjs'
 import { answerOf, once, served, UNAVAILABLE, UNREADABLE } from './mcp-route.mjs'
+import { pullRequestsOf } from './azure-repos-mcp.mjs'
 
 /**
  * Azure DevOps's adapters served first by the host's Azure DevOps MCP server, then by az. An
@@ -10,7 +11,8 @@ import { answerOf, once, served, UNAVAILABLE, UNREADABLE } from './mcp-route.mjs
  * absent, lacks the tool, fails, or answers what skraft cannot read. A write the person or the
  * host refuses is refused, never retried with az. Each result says which way served it (`via`)
  * and, when az served after the server could not, why (`fallback`). The push, the remotes, the
- * branches and the pull requests stay with git and az.
+ * branches and the pull requests' opening stay with git and az; the review of a pull request is served
+ * by azure-repos-mcp.mjs.
  *
  * Tools of @azure-devops/mcp 2.11.0, read in its source (src/tools/work-items.ts) and as the azure-boards-work-items skill lists them
  * (plugins/skraft-backlog/skills/azure-boards-work-items/references/mcp-routes.md): `wit_work_item`
@@ -35,7 +37,7 @@ const AZURE_SERVERS = Object.freeze(['ado'])
 export const azureMcpFirst = (az, mcpTools, sourceControl) => {
   const servers = once(() => mcpTools.servers())
   const route = once(() => reach(mcpTools, servers, sourceControl))
-  return { codeHost: codeHostOf(az.codeHost, route), pullRequests: az.pullRequests }
+  return { codeHost: codeHostOf(az.codeHost, route), pullRequests: pullRequestsOf(az.pullRequests, route) }
 }
 
 /** @param {CodeHost} az @param {() => Promise<Azure | Failed>} route @returns {CodeHost} */

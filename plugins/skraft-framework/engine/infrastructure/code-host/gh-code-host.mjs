@@ -52,6 +52,9 @@ const whereTo = (commandRunner) => ({
 export const createGhPullRequests = ({ commandRunner }) => Object.freeze({
   unavailable: () => unavailable(commandRunner, reviewedRemote),
   repository: () => repositoryOf(commandRunner, reviewedRemote),
+  checkoutCommand: (number) => `gh pr checkout ${number}`,
+  // gh sends the comment from its body file.
+  takesRequestFile: false,
   find: (number) => findByNumber(commandRunner, number),
   keepComment: (request) => keepIssueComment(commandRunner, request, reviewedRemote),
 })
