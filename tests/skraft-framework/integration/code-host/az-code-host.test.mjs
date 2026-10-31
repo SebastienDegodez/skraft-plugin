@@ -427,6 +427,7 @@ test('through az, a pull request that cannot be read, of another repository, or 
     [{ pullRequests: { 12: PULL({ repository: { name: 'billing', project: { name: 'Shop Team' } } }) } }, 'pull request #12 is not in Shop Team/payment of the Git remote, so skraft does not review it', 0],
     [{ unreadableList: true }, couldNot, 0],
     [{ threads: [{ id: 'five', comments: [] }] }, couldNot, 0],
+    [{ threads: [{ id: 5, comments: [{ id: 1, content: 'a person' }] }], threadCount: 2 }, couldNot, 0],
     [{ unreadableWrite: true }, couldNot, 1],
     [{ commentFails: true }, couldNot, 1],
   ]

@@ -23,7 +23,7 @@ export const FAKE_AZ = [
   "const kv = (name) => { const at = args.indexOf(`--${name}`); const pairs = []; for (let i = at + 1; at >= 0 && i < args.length && !args[i].startsWith('--'); i += 1) pairs.push(args[i].split(/=(.*)/s).slice(0, 2)); return Object.fromEntries(pairs) }",
   "if (args[0] === 'devops' && args[1] === 'invoke' && option('area') === 'git') {",
   "  const file = join(here, 'az-threads.json'); const threads = JSON.parse(readFileSync(file, 'utf8')); const route = kv('route-parameters'); const method = option('http-method') ?? 'GET'",
-  "  if (method === 'GET') said(state.unreadableList ? 'not json' : { count: threads.length, value: threads })",
+  "  if (method === 'GET') said(state.unreadableList ? 'not json' : { count: state.threadCount ?? threads.length, value: threads })",
   "  const sent = JSON.parse(readFileSync(option('in-file'), 'utf8'))",
   "  appendFileSync(join(here, 'az-thread-writes.jsonl'), `${JSON.stringify({ method, resource: option('resource'), route, sent })}\\n`)",
   "  if (state.commentFails) { process.stderr.write('SECRET-STDERR\\n'); process.exit(1) }",
