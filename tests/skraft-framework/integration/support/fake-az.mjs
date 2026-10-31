@@ -28,7 +28,7 @@ export const FAKE_AZ = [
   "  appendFileSync(join(here, 'az-thread-writes.jsonl'), `${JSON.stringify({ method, resource: option('resource'), route, sent })}\\n`)",
   "  if (state.commentFails) { process.stderr.write('SECRET-STDERR\\n'); process.exit(1) }",
   "  if (method === 'POST') { const thread = { id: 41 + threads.length, status: sent.status, comments: [{ id: 1, content: sent.comments[0].content }] }; threads.push(thread); writeFileSync(file, JSON.stringify(threads)); said(state.unreadableWrite ? 'not json' : thread) }",
-  "  const thread = threads.find((each) => String(each.id) === route.threadId); const comment = thread.comments.find((each) => String(each.id) === route.commentId); comment.content = sent.content; writeFileSync(file, JSON.stringify(threads)); said(comment)",
+  "  const thread = threads.find((each) => String(each.id) === route.threadId); const comment = thread.comments.find((each) => String(each.id) === route.commentId); comment.content = sent.content; writeFileSync(file, JSON.stringify(threads)); said(state.rewriteAnswer ?? comment)",
   "}",
   "if (args[0] === 'devops' && args[1] === 'invoke') {",
   "  const file = join(here, 'az-comments.json'); const comments = JSON.parse(readFileSync(file, 'utf8')); const route = kv('route-parameters'); const query = kv('query-parameters'); const method = option('http-method') ?? 'GET'",

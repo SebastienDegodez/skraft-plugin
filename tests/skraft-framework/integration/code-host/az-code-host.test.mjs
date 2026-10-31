@@ -410,6 +410,18 @@ test('the review\'s thread is posted through az devops invoke, from a JSON file,
   assert.equal(forge.threads().length, 1)
 })
 
+test('a rewrite az answers for another comment than the one rewritten is unreadable: the review is not reported as commented at a URL nobody confirmed', async (t) => {
+  const first = { id: 41, comments: [{ id: 1, content: REVIEW }] }
+  for (const answer of [{ id: 99 }, { content: 'no id' }, 'not json']) {
+    const { root, forge, createdPullRequests } = pullRequestsOn(t, { az: { ...SIGNED_IN, ...PULL_12, threads: [first], rewriteAnswer: answer } })
+
+    const kept = await createdPullRequests().keepComment(threadRequest(root, { url: THREAD_URL(41) }))
+
+    assert.deepEqual(kept, { ok: false, reason: 'az could not comment pull request #12 of Shop Team/payment' }, JSON.stringify(answer))
+    assert.deepEqual(forge.threadWrites().map(({ method }) => method), ['PATCH'], JSON.stringify(answer))
+  }
+})
+
 test('a reply that quotes the review is not rewritten, nor a thread whose comment a person deleted: the review is posted as its own thread', async (t) => {
   const quoting = { id: 5, comments: [{ id: 1, content: `> ${REVIEW}\nno` }] }
   const deleted = { id: 6, comments: [{ id: 1, content: REVIEW, isDeleted: true }] }
