@@ -1,6 +1,6 @@
 ---
 title: "Le backlog : de l'idée à la story prête"
-description: "Pourquoi la préparation produit vit dans un plugin à part, skraft-backlog : du PRD au backlog GitHub, le raffinement d'une issue, les automatisations de triage et de sprint, et les lentilles de planification qui décident si une story est prête."
+description: "Pourquoi la préparation produit vit dans son propre plugin, skraft-backlog : du PRD au backlog GitHub, raffinement, automatisations, lentilles de préparation."
 persona: tech-lead
 ---
 
@@ -128,7 +128,13 @@ refusées rendent la main au développeur. Le détail des critères et du calcul
 - **Pas de moteur côté backlog.** DISCOVER et DISCUSS n'ont ni journal d'événements ni gates de
   commandes : leurs contrôles sont des scripts et des lentilles, pas un run reprenable.
 
-## Pour aller plus loin
+## Sources
+
+- [Adzic, G. *Specification by Example*, 2011.](../reference/citations.mdx#cite-adzic-specification-2011)
+- [Hunt, A. & Thomas, D. *The Pragmatic Programmer*, 20th anniversary ed., 2019.](../reference/citations.mdx#cite-hunt-pragmatic-2019)
+- [Wake, B. *INVEST in Good Stories, and SMART Tasks*, 2003.](../reference/citations.mdx#cite-wake-invest-2003)
+
+## Voir aussi <!-- #see-also -->
 
 - [Transformer un PRD en backlog GitHub](../how-to/prd-to-backlog.md) — le workflow `skraft-prd-backlog` pas à pas.
 - [Raffiner une issue du backlog](../how-to/refine-backlog.md) — `/skraft-refine` et le workflow gh-aw.
@@ -136,9 +142,3 @@ refusées rendent la main au développeur. Le détail des critères et du calcul
 - [Référence : critères de revue de DISCOVER et DISCUSS](../reference/gates.md#discover).
 - [Le catalogue des agents et skills](pathname:///dashboard/).
 - [Le pipeline SKRAFT](./pipeline/index.mdx).
-
-## Sources
-
-- [Adzic, G. *Specification by Example*, 2011.](../reference/citations.mdx#cite-adzic-specification-2011)
-- [Hunt, A. & Thomas, D. *The Pragmatic Programmer*, 20th anniversary ed., 2019.](../reference/citations.mdx#cite-hunt-pragmatic-2019)
-- [Wake, B. *INVEST in Good Stories, and SMART Tasks*, 2003.](../reference/citations.mdx#cite-wake-invest-2003)

@@ -159,16 +159,16 @@ formatting. Today that rendering is still delegated to the LLM, which represents
 non-trivial tax on reviewer output (estimated). This lever is designed; its
 implementation is not yet in the main pipeline.
 
-## See also
+## Sources
+
+> « The cost of queuing delays is determined by the shape of the flow, not by the
+> speed of individual activities. »
+> — Reinertsen, D. G., *The Principles of Product Development Flow*, 2009.
+
+## See also <!-- #see-also -->
 
 - [Glossary](../reference/glossary.md) — phases, agents, gates, artifacts
 - [Architecture](./architecture.md) — how the agents assemble
 - [The event journal](./event-journal.md) — the run's recorded facts, in the tracking folder inherited from HVE Core
 - [Review before review](./deep-dive/review-before-review.md) — why the lenses are non-negotiable
 - [Reference: patterns](../reference/patterns.md) — the complete Genesis pattern catalogue
-
-## Sources
-
-> « The cost of queuing delays is determined by the shape of the flow, not by the
-> speed of individual activities. »
-> — Reinertsen, D. G., *The Principles of Product Development Flow*, 2009.

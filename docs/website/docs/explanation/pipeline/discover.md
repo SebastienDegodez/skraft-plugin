@@ -60,14 +60,14 @@ developer.
 This is peer review scaled down to a triage report: several independent eyes, criteria written
 in advance ([Wiegers, 2002](../../reference/citations.mdx#cite-wiegers-peer-reviews-2002)).
 
-## Going further
+## Sources
+
+- [Reinertsen, D. G. *The Principles of Product Development Flow*, 2009.](../../reference/citations.mdx#cite-reinertsen-flow-2009)
+- [Wiegers, K. *Peer Reviews in Software*, 2002.](../../reference/citations.mdx#cite-wiegers-peer-reviews-2002)
+
+## See also <!-- #see-also -->
 
 - [The backlog](../backlog.md) — the `skraft-backlog` plugin as a whole.
 - [Reference: DISCOVER](../../reference/phases.md#discover) — modes, outputs, cap, effects on GitHub.
 - [Reference: DISCOVER review criteria](../../reference/gates.md#discover).
 - [DISCUSS](./discuss.md) — the next phase.
-
-## Sources
-
-- [Reinertsen, D. G. *The Principles of Product Development Flow*, 2009.](../../reference/citations.mdx#cite-reinertsen-flow-2009)
-- [Wiegers, K. *Peer Reviews in Software*, 2002.](../../reference/citations.mdx#cite-wiegers-peer-reviews-2002)

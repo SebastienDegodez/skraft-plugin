@@ -66,7 +66,7 @@ One more review would cost a round of lenses on a document the next phase reads 
 When the stories come from DISCUSS with `skraft init --from-artifacts`, the run starts in
 DESIGN: the research happened during product preparation.
 
-## Going further
+## See also <!-- #see-also -->
 
 - [Reference: RESEARCH](../../reference/phases.md#research) — nodes, output, check, attempts.
 - [Reference: the research document](../../reference/run-journal.md#research-document).

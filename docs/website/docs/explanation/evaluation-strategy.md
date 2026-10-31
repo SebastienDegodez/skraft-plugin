@@ -82,13 +82,13 @@ stays indicative.
 
 Missing data is never shown as a success: an `inconclusive` verdict says why it does not conclude.
 
-## Further reading
+## Sources
+
+- Jia, Y. & Harman, M., *An Analysis and Survey of the Development of Mutation Testing*, 2011.
+
+## See also <!-- #see-also -->
 
 - [Evaluate a skill](../how-to/evaluate-a-skill.md) — the steps.
 - [Read an evaluation verdict](./deep-dive/reading-a-verdict.md)
 - [Software craftsmanship](./software-craftsmanship.md) — the
   same bar applied to the delivered code.
-
-## Sources
-
-- Jia, Y. & Harman, M., *An Analysis and Survey of the Development of Mutation Testing*, 2011.

@@ -1,6 +1,6 @@
 ---
 title: "The team — the pipeline as a relay race"
-description: "Who produces, who judges, who decides and who starts: SKRAFT's agents, their lenses, the engine and the host driver, the only one that starts agents, at depth 1."
+description: "Who produces, judges, decides and starts: SKRAFT's agents, their lenses, the engine, and the host driver, the only one that starts agents, at depth 1."
 persona: tech-lead
 ---
 
@@ -72,14 +72,14 @@ produce the work and each run in a fresh context. RESEARCH is the exception: the
 its document is filled, and DESIGN remains its judge. This is peer review applied to every
 handoff ([Wiegers, 2002](../../reference/citations.mdx#cite-wiegers-peer-reviews-2002)).
 
-## Going further
+## Sources
+
+- [Wiegers, K. *Peer Reviews in Software*, 2002.](../../reference/citations.mdx#cite-wiegers-peer-reviews-2002)
+
+## See also <!-- #see-also -->
 
 - [The running example](./fil-rouge.md) — the handoffs on one example.
 - [Reference: phases](../../reference/phases.md) — producer, lenses and human decision of each phase.
 - [Reference: hosts](../../reference/hosts.md) — what each driver starts and how.
 - [The agent catalogue](pathname:///dashboard/).
 - [Review before review](../deep-dive/review-before-review.md).
-
-## Sources
-
-- [Wiegers, K. *Peer Reviews in Software*, 2002.](../../reference/citations.mdx#cite-wiegers-peer-reviews-2002)

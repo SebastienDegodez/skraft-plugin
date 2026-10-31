@@ -1,6 +1,6 @@
 ---
 title: "The event journal"
-description: "Why SKRAFT V2 replaced state.json with a chained, signed event journal from which the state is recomputed: exact resume, edits detected, two sessions that cannot overwrite each other."
+description: "Why SKRAFT V2 replaced state.json with a chained, signed event journal that recomputes the state: exact resume, edits detected, no session overwrites another."
 persona: tech-lead
 ---
 
@@ -100,14 +100,14 @@ active pipeline: two stories progress in parallel in two worktrees without shari
 - **The key stays on one machine.** Resuming a run elsewhere takes an explicit human act, rather
   than implicit trust.
 
-## Going further
+## Sources
+
+- [Fowler, M. *Event Sourcing*, 2005.](../reference/citations.mdx#cite-fowler-eventsourcing-2005)
+- [Fowler, M. *Bliki: CQRS*, 2011.](../reference/citations.mdx#cite-fowler-cqrs-2011)
+
+## See also <!-- #see-also -->
 
 - [Resume or unblock a run](../how-to/resume-a-run.mdx).
 - [Reference: tracking folder, `events.jsonl`, codes](../reference/run-journal.md).
 - [Guardrails](./guardrails.md) — what the journal replaces among the v1 hooks.
 - [Architecture](./architecture.md).
-
-## Sources
-
-- [Fowler, M. *Event Sourcing*, 2005.](../reference/citations.mdx#cite-fowler-eventsourcing-2005)
-- [Fowler, M. *Bliki: CQRS*, 2011.](../reference/citations.mdx#cite-fowler-cqrs-2011)

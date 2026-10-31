@@ -1,6 +1,6 @@
 ---
 title: "Review before review — why and how"
-description: "SKRAFT's core argument: independent lenses attack the work, a refuter checks their findings and the engine computes the verdict, so that human review receives work already filtered."
+description: "SKRAFT's core argument: independent lenses attack the work, a refuter checks their findings, the engine computes the verdict, and humans review filtered work."
 persona: reviewer
 ---
 
@@ -116,15 +116,15 @@ honest, not the facts.
 - **Infinite loop**: without a retry bound, a disagreement between agent and lens never reaches
   the human — SKRAFT bounds and escalates.
 
-## Going further
-
-- [The team and handoffs](../pipeline/team.md) — who produces, who judges.
-- [Reference: gates and verdict](../../reference/gates.md).
-- [The lens catalogue](pathname:///dashboard/).
-- [For executives](../for-executives.md) — the effect on lead time.
-
 ## Sources
 
 - [Forsgren, N., Humble, J. & Kim, G. *Accelerate*, 2018.](../../reference/citations.mdx#cite-forsgren-accelerate-2018)
 - [Meyer, B. *Object-Oriented Software Construction*, 2nd ed., 1997.](../../reference/citations.mdx#cite-meyer-oosc-1997)
 - [Wiegers, K. *Peer Reviews in Software*, 2002.](../../reference/citations.mdx#cite-wiegers-peer-reviews-2002)
+
+## See also <!-- #see-also -->
+
+- [The team and handoffs](../pipeline/team.md) — who produces, who judges.
+- [Reference: gates and verdict](../../reference/gates.md).
+- [The lens catalogue](pathname:///dashboard/).
+- [For executives](../for-executives.md) — the effect on lead time.

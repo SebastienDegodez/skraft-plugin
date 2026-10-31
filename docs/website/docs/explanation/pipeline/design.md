@@ -71,14 +71,14 @@ place: an architecture decision commits the team, not the model that proposed it
   amended; until then it is corrected in place. The decision history stays readable without
   filling up with stillborn ADRs.
 
-## Going further
+## Sources
+
+- [Evans, E. *Domain-Driven Design*, 2003.](../../reference/citations.mdx#cite-evans-ddd-2003)
+
+## See also <!-- #see-also -->
 
 - [Reference: DESIGN](../../reference/phases.md#design) — nodes, outputs, engine checks, edges.
 - [Reference: DESIGN review criteria](../../reference/gates.md#design).
 - [Reference: unpublished ADRs](../../reference/run-journal.md#unpublished-adrs).
 - [Reference: durable documentation](../../reference/run-journal.md#durable-docs) — what goes to `docs/`, what stays in the tracking folder.
 - [DISTILL](./distill.md) — the next phase.
-
-## Sources
-
-- [Evans, E. *Domain-Driven Design*, 2003.](../../reference/citations.mdx#cite-evans-ddd-2003)

@@ -1,6 +1,6 @@
 ---
 title: "La revue avant la revue — pourquoi et comment"
-description: "L'argument central de SKRAFT : des lentilles indépendantes attaquent le travail, un réfuteur vérifie leurs findings et le moteur calcule le verdict, pour que la revue humaine reçoive un travail déjà filtré."
+description: "L'argument central de SKRAFT : des lentilles indépendantes attaquent le travail, un réfuteur vérifie, le moteur tranche, l'humain relit un travail filtré."
 persona: reviewer
 ---
 
@@ -119,15 +119,15 @@ honnête, pas les faits.
 - **Boucle infinie** : sans borne de reprises, un désaccord entre agent et lentille ne remonte
   jamais à l'humain — SKRAFT borne et escalade.
 
-## Pour aller plus loin
-
-- [L'équipe et les relais](../pipeline/team.md) — qui produit, qui juge.
-- [Référence : gates et verdict](../../reference/gates.md).
-- [Le catalogue des lentilles](pathname:///dashboard/).
-- [Pour décideurs](../for-executives.md) — l'effet sur le délai de livraison.
-
 ## Sources
 
 - [Forsgren, N., Humble, J. & Kim, G. *Accelerate*, 2018.](../../reference/citations.mdx#cite-forsgren-accelerate-2018)
 - [Meyer, B. *Object-Oriented Software Construction*, 2nd ed., 1997.](../../reference/citations.mdx#cite-meyer-oosc-1997)
 - [Wiegers, K. *Peer Reviews in Software*, 2002.](../../reference/citations.mdx#cite-wiegers-peer-reviews-2002)
+
+## Voir aussi <!-- #see-also -->
+
+- [L'équipe et les relais](../pipeline/team.md) — qui produit, qui juge.
+- [Référence : gates et verdict](../../reference/gates.md).
+- [Le catalogue des lentilles](pathname:///dashboard/).
+- [Pour décideurs](../for-executives.md) — l'effet sur le délai de livraison.

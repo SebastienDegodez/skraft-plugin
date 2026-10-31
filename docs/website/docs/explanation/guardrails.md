@@ -1,6 +1,6 @@
 ---
 title: "Guardrails: from hook to engine"
-description: "Why SKRAFT V2 starts from zero command hooks, what in the engine replaces each v1 guardrail, what is lost by moving from preventing to detecting, and on what condition a hook may come back."
+description: "Why SKRAFT V2 ships zero command hooks, what in the engine replaces each v1 guardrail, what detecting instead of preventing costs, and when a hook may return."
 persona: tech-lead
 ---
 
@@ -109,13 +109,13 @@ order, outputs, integrity, gates — not the truth of its content. That remains 
 business acceptance tests and the human reviewer: peer review remains one of the most effective
 quality practices ([Wiegers, 2002](../reference/citations.mdx#cite-wiegers-peer-reviews-2002)).
 
-## Going further
+## Sources
+
+- [Wiegers, K. *Peer Reviews in Software*, 2002.](../reference/citations.mdx#cite-wiegers-peer-reviews-2002)
+
+## See also <!-- #see-also -->
 
 - [Architecture](./architecture.md) — the engine, the drivers, depth 1.
 - [The event journal](./event-journal.md) — the signed chain that replaces the ban on writing the state.
 - [Reference: tracking folder and journal](../reference/run-journal.md).
 - [Run the gates and read their evidence](../how-to/run-gates.md).
-
-## Sources
-
-- [Wiegers, K. *Peer Reviews in Software*, 2002.](../reference/citations.mdx#cite-wiegers-peer-reviews-2002)

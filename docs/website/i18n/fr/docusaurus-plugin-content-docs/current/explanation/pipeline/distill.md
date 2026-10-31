@@ -1,6 +1,6 @@
 ---
 title: "DISTILL"
-description: "Pourquoi DISTILL écrit le contrat exécutable avant le code : des scénarios dans la langue du métier, un test d'acceptation qui échoue pour la bonne raison, et un squelette sans comportement."
+description: "Pourquoi DISTILL écrit le contrat avant le code : scénarios métier, test d'acceptation qui échoue pour la bonne raison, squelette sans comportement."
 persona: software-engineer
 phase: distill
 ---
@@ -66,7 +66,12 @@ ses cas limites), l'**alignement métier** (aucun détail d'implémentation dans
 Le moteur calcule le verdict ; un `NEEDS_REWORK` renvoie l'acceptance-designer avec les findings
 retenus.
 
-## Pour aller plus loin
+## Sources
+
+- [Adzic, G. *Specification by Example*, 2011.](../../reference/citations.mdx#cite-adzic-specification-2011)
+- [Freeman, S. & Pryce, N. *Growing Object-Oriented Software, Guided by Tests*, 2009.](../../reference/citations.mdx#cite-freeman-goos-2009)
+
+## Voir aussi <!-- #see-also -->
 
 - [Référence : DISTILL](../../reference/phases.md#distill) — sorties, écriture permise, commits.
 - [Référence : critères de revue de DISTILL](../../reference/gates.md#distill).
@@ -74,8 +79,3 @@ retenus.
 - [Walking Skeleton](../deep-dive/walking-skeleton.md) et
   [Outside-In TDD](../deep-dive/outside-in-tdd.md).
 - [DELIVER](./deliver.md) — la phase suivante.
-
-## Sources
-
-- [Adzic, G. *Specification by Example*, 2011.](../../reference/citations.mdx#cite-adzic-specification-2011)
-- [Freeman, S. & Pryce, N. *Growing Object-Oriented Software, Guided by Tests*, 2009.](../../reference/citations.mdx#cite-freeman-goos-2009)

@@ -163,14 +163,14 @@ issue comment; `skraft review --pr` to review any pull request with the same len
 | QA team | The test plan and the coverage and mutation evidence |
 | SKRAFT maintainer | A tested engine, safe to change, where every check has a proven value |
 
-## Going further
+## Sources
+
+- Forsgren, N., Humble, J. & Kim, G., *Accelerate*, 2018.
+- Martin, R. C., *Clean Architecture*, 2017.
+
+## See also <!-- #see-also -->
 
 - [Architecture](./architecture.md) — the engine, the host drivers, depth 1.
 - [Guardrails: from hook to engine](./guardrails.md) — why V2 starts with zero hooks.
 - [The event journal](./event-journal.md) — the chained journal.
 - [Configure components](../how-to/configure-components.md).
-
-## Sources
-
-- Forsgren, N., Humble, J. & Kim, G., *Accelerate*, 2018.
-- Martin, R. C., *Clean Architecture*, 2017.

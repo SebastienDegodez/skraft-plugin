@@ -1,6 +1,6 @@
 ---
 title: "Architecture"
-description: "Pourquoi SKRAFT V2 sépare un moteur neutre vis-à-vis de l'hôte, qui décide de tout, des pilotes d'hôte qui ne font qu'exécuter, et pourquoi les contrôles vivent dans du code testé plutôt que dans la prose d'un agent."
+description: "Pourquoi SKRAFT V2 sépare un moteur neutre qui décide des pilotes d'hôte qui exécutent, et pourquoi les contrôles vivent dans du code testé, pas dans la prose."
 persona: tech-lead
 ---
 
@@ -176,13 +176,13 @@ boucle. Elle reste seulement comme repli sous VS Code.
 
 **Garder les hooks.** Voir [Garde-fous](./guardrails.md).
 
-## Pour aller plus loin
-
-- [Le journal d'événements](./event-journal.md) — l'état recalculé et la reprise.
-- [Clean Architecture](./clean-architecture.md) — la règle de dépendance, appliquée aussi au moteur.
-- [Référence : hôtes](../reference/hosts.md) et [la ligne de commande](../reference/cli.md).
-
 ## Sources
 
 - [Cockburn, A. *Hexagonal Architecture*, 2005.](../reference/citations.mdx#cite-cockburn-hexagonal-2005)
 - [Martin, R. C. *Clean Architecture*, 2017.](../reference/citations.mdx#cite-martin-cleanarch-2017)
+
+## Voir aussi <!-- #see-also -->
+
+- [Le journal d'événements](./event-journal.md) — l'état recalculé et la reprise.
+- [Clean Architecture](./clean-architecture.md) — la règle de dépendance, appliquée aussi au moteur.
+- [Référence : hôtes](../reference/hosts.md) et [la ligne de commande](../reference/cli.md).

@@ -1,6 +1,6 @@
 ---
 title: "The backlog: from idea to ready story"
-description: "Why product preparation lives in a plugin of its own, skraft-backlog: from PRD to GitHub backlog, refining one issue, the triage and sprint automations, and the planning lenses that decide whether a story is ready."
+description: "Why product preparation lives in its own plugin, skraft-backlog: PRD to GitHub backlog, refinement, triage and sprint automations, and the readiness lenses."
 persona: tech-lead
 ---
 
@@ -122,7 +122,13 @@ back to the developer. The detail of the criteria and the computation:
 - **No engine on the backlog side.** DISCOVER and DISCUSS have no event journal and no command
   gates: their checks are scripts and lenses, not a resumable run.
 
-## Going further
+## Sources
+
+- [Adzic, G. *Specification by Example*, 2011.](../reference/citations.mdx#cite-adzic-specification-2011)
+- [Hunt, A. & Thomas, D. *The Pragmatic Programmer*, 20th anniversary ed., 2019.](../reference/citations.mdx#cite-hunt-pragmatic-2019)
+- [Wake, B. *INVEST in Good Stories, and SMART Tasks*, 2003.](../reference/citations.mdx#cite-wake-invest-2003)
+
+## See also <!-- #see-also -->
 
 - [Turn a PRD into a GitHub backlog](../how-to/prd-to-backlog.md) — the `skraft-prd-backlog` workflow step by step.
 - [Refine a backlog issue](../how-to/refine-backlog.md) — `/skraft-refine` and the gh-aw workflow.
@@ -130,9 +136,3 @@ back to the developer. The detail of the criteria and the computation:
 - [Reference: DISCOVER and DISCUSS review criteria](../reference/gates.md#discover).
 - [The agent and skill catalogue](pathname:///dashboard/).
 - [The SKRAFT pipeline](./pipeline/index.mdx).
-
-## Sources
-
-- [Adzic, G. *Specification by Example*, 2011.](../reference/citations.mdx#cite-adzic-specification-2011)
-- [Hunt, A. & Thomas, D. *The Pragmatic Programmer*, 20th anniversary ed., 2019.](../reference/citations.mdx#cite-hunt-pragmatic-2019)
-- [Wake, B. *INVEST in Good Stories, and SMART Tasks*, 2003.](../reference/citations.mdx#cite-wake-invest-2003)

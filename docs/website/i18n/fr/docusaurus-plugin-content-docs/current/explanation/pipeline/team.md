@@ -76,14 +76,14 @@ exception : le moteur vérifie que son document est rempli, et DESIGN en reste j
 revue par les pairs appliquée à chaque relais
 ([Wiegers, 2002](../../reference/citations.mdx#cite-wiegers-peer-reviews-2002)).
 
-## Pour aller plus loin
+## Sources
+
+- [Wiegers, K. *Peer Reviews in Software*, 2002.](../../reference/citations.mdx#cite-wiegers-peer-reviews-2002)
+
+## Voir aussi <!-- #see-also -->
 
 - [Le fil rouge](./fil-rouge.md) — les relais sur un exemple.
 - [Référence : phases](../../reference/phases.md) — producteur, lentilles et décision humaine de chaque phase.
 - [Référence : hôtes](../../reference/hosts.md) — ce que chaque pilote lance et comment.
 - [Le catalogue des agents](pathname:///dashboard/).
 - [La revue avant la revue](../deep-dive/review-before-review.md).
-
-## Sources
-
-- [Wiegers, K. *Peer Reviews in Software*, 2002.](../../reference/citations.mdx#cite-wiegers-peer-reviews-2002)

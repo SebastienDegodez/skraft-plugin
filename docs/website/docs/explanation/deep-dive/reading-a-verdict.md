@@ -37,7 +37,11 @@ the model's own variance. What remains is attributable to the skill.
 
 Take `adr-eligibility-gate`, measured over 3 stimuli × 5 trials = **15 pairs**:
 
-> ℹ️ **9 wins · 4 ties · 2 losses**
+:::info[The tally]
+
+**9 wins · 4 ties · 2 losses**
+
+:::
 
 ---
 
@@ -94,9 +98,12 @@ this one-sided 6.5% of the time"*.
 
 The threshold (the *alpha*) is **0.05**. 6.5% > 5% → not significant. Barely.
 
-> ⚠️ **`p` is not the probability that the skill works.** And `1 − p` is not a
-> confidence level. `p` answers one question only: *is this result hard to explain
-> by chance?*
+:::note[`p` is not the probability that the skill works]
+
+And `1 − p` is not a confidence level. `p` answers one question only: *is this result hard
+to explain by chance?*
+
+:::
 
 ---
 
@@ -115,9 +122,12 @@ With 5 decisive pairs, even a flawless **5W/0L** scores 0.0625 — above the
 threshold. A coin lands heads five times running often enough that it proves
 nothing.
 
-> ℹ️ **Below six decisive pairs no result can conclude, however perfect.** That is why
-> the verdict is `inconclusive` rather than "no improvement": the skill is not
-> blamed for a trial budget that could never have concluded in either direction.
+:::info[Below six decisive pairs no result can conclude, however perfect]
+
+That is why the verdict is `inconclusive` rather than "no improvement": the skill is not
+blamed for a trial budget that could never have concluded in either direction.
+
+:::
 
 ### What each loss costs
 
@@ -266,7 +276,7 @@ behaviour, and this page does not use them.
 
 ---
 
-## See also
+## See also <!-- #see-also -->
 
 - [Evaluate a skill](../../how-to/evaluate-a-skill.md) — the full procedure, and how to open the replay
 - [Propose a pattern or fix the documentation](../../how-to/contributing.md)

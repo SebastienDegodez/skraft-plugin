@@ -1,6 +1,6 @@
 ---
 title: "DELIVER"
-description: "Why DELIVER turns the contract green in checked TDD cycles, why mutation runs last, once, on the reviewed code, and why the developer chooses how surviving mutants are treated."
+description: "Why DELIVER turns the contract green in checked TDD cycles, runs mutation last and once on reviewed code, and lets the developer treat surviving mutants."
 persona: software-engineer
 phase: deliver
 ---
@@ -109,15 +109,15 @@ contract, the matching fidelity lens joins the review. The why:
 - **No negotiable threshold.** 100 % on the core, 80 % on the boundary, whatever the repository:
   see [Software craftsmanship](../software-craftsmanship.md).
 
-## Going further
-
-- [Reference: DELIVER](../../reference/phases.md#deliver) — nodes, proposals, `mutation-plan` answers, edges.
-- [Reference: DELIVER review criteria](../../reference/gates.md#deliver).
-- [Review before review](../deep-dive/review-before-review.md).
-- [Run the gates](../../how-to/run-gates.md).
-
 ## Sources
 
 - [Beck, K. *Test-Driven Development by Example*, 2003.](../../reference/citations.mdx#cite-beck-tdd-2003)
 - [Freeman, S. & Pryce, N. *Growing Object-Oriented Software, Guided by Tests*, 2009.](../../reference/citations.mdx#cite-freeman-goos-2009)
 - [Jia, Y. & Harman, M. *An Analysis and Survey of the Development of Mutation Testing*, 2011.](../../reference/citations.mdx#cite-jia-mutation-2011)
+
+## See also <!-- #see-also -->
+
+- [Reference: DELIVER](../../reference/phases.md#deliver) — nodes, proposals, `mutation-plan` answers, edges.
+- [Reference: DELIVER review criteria](../../reference/gates.md#deliver).
+- [Review before review](../deep-dive/review-before-review.md).
+- [Run the gates](../../how-to/run-gates.md).

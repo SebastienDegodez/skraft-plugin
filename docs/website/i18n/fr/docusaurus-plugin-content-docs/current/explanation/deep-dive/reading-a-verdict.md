@@ -1,6 +1,6 @@
 ---
 title: "Lire un verdict d'évaluation"
-description: "Le test des signes, le test de rang et le plancher de six paires — expliqués avec des chiffres réels plutôt qu'avec des formules, puis ce qu'une paire rejouée montre du comportement."
+description: "Le test des signes, le test de rang et le plancher de six paires, expliqués avec des chiffres réels, puis ce qu'une paire rejouée montre du comportement."
 ---
 
 # Lire un verdict d'évaluation
@@ -38,7 +38,11 @@ skill.
 
 Prenons `adr-eligibility-gate`, mesurée sur 3 stimuli × 5 essais = **15 paires** :
 
-> ℹ️ **9 victoires · 4 égalités · 2 défaites**
+:::info[Le décompte]
+
+**9 victoires · 4 égalités · 2 défaites**
+
+:::
 
 ---
 
@@ -96,9 +100,12 @@ moins aussi tranché 6,5 % du temps »*.
 
 Le seuil (l'*alpha*) est **0,05**. 6,5 % > 5 % → pas significatif. De très peu.
 
-> ⚠️ **`p` n'est pas la probabilité que la skill marche.** Et `1 − p` n'est pas un
-> niveau de confiance. `p` répond à une seule question : *ce résultat est-il
-> difficile à expliquer par le hasard ?*
+:::note[`p` n'est pas la probabilité que la skill marche]
+
+Et `1 − p` n'est pas un niveau de confiance. `p` répond à une seule question : *ce résultat
+est-il difficile à expliquer par le hasard ?*
+
+:::
 
 ---
 
@@ -117,10 +124,13 @@ Avec 5 paires décisives, même un sans-faute **5V/0D** donne 0,0625 — au-dess
 seuil. Une pièce donne cinq faces d'affilée assez souvent pour que ça ne prouve
 rien.
 
-> ℹ️ **En dessous de six paires décisives, aucun résultat ne peut conclure, si parfait
-> soit-il.** C'est pourquoi le verdict est alors `inconclusive` et non « pas
-> d'amélioration » : on ne reproche pas à la skill un budget qui ne pouvait rien
-> trancher, dans un sens comme dans l'autre.
+:::info[En dessous de six paires décisives, aucun résultat ne peut conclure, si parfait soit-il]
+
+C'est pourquoi le verdict est alors `inconclusive` et non « pas d'amélioration » : on ne
+reproche pas à la skill un budget qui ne pouvait rien trancher, dans un sens comme dans
+l'autre.
+
+:::
 
 ### Ce que coûte chaque défaite
 
@@ -271,7 +281,7 @@ rien de ce comportement, et cette page ne s'en sert pas.
 
 ---
 
-## Voir aussi
+## Voir aussi <!-- #see-also -->
 
 - [Évaluer un skill](../../how-to/evaluate-a-skill.md) — la procédure complète, et comment ouvrir le rejeu
 - [Proposer un pattern ou corriger la documentation](../../how-to/contributing.md)

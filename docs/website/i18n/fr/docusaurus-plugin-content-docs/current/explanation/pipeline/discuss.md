@@ -1,6 +1,6 @@
 ---
 title: "DISCUSS"
-description: "Pourquoi affiner une issue triée en story INVEST avec des exemples du domaine et des critères d'acceptation, avant toute conception, et pourquoi la Definition of Ready tranche."
+description: "Pourquoi affiner une issue triée en story INVEST avec exemples et critères d'acceptation avant toute conception, et pourquoi la Definition of Ready tranche."
 persona: software-engineer
 phase: discuss
 ---
@@ -52,15 +52,15 @@ Quatre lentilles relisent les stories — INVEST, qualité des critères, cohér
 des dépendances, Definition of Ready — et le script `review-verdict.mjs` calcule le verdict,
 comme en DISCOVER. Le planner ne valide jamais ses propres stories.
 
-## Pour aller plus loin
-
-- [Le backlog](../backlog.md) — pourquoi chaque lentille de planification existe.
-- [Référence : DISCUSS](../../reference/phases.md#discuss) — entrées, sorties, labels.
-- [Référence : critères de revue de DISCUSS](../../reference/gates.md#discuss).
-- [RESEARCH](./research.md) — où l'ingénierie commence.
-
 ## Sources
 
 - [Adzic, G. *Specification by Example*, 2011.](../../reference/citations.mdx#cite-adzic-specification-2011)
 - [North, D. *Introducing BDD*, 2006.](../../reference/citations.mdx#cite-north-bdd-2006)
 - [Wake, B. *INVEST in Good Stories, and SMART Tasks*, 2003.](../../reference/citations.mdx#cite-wake-invest-2003)
+
+## Voir aussi <!-- #see-also -->
+
+- [Le backlog](../backlog.md) — pourquoi chaque lentille de planification existe.
+- [Référence : DISCUSS](../../reference/phases.md#discuss) — entrées, sorties, labels.
+- [Référence : critères de revue de DISCUSS](../../reference/gates.md#discuss).
+- [RESEARCH](./research.md) — où l'ingénierie commence.

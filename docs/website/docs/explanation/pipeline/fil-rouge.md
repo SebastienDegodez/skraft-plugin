@@ -12,8 +12,12 @@ This page is a **narrative**: it does not describe SKRAFT in the abstract, it wa
 you through **one concrete example** from end to end. The thread is the *artifact
 flow* — each phase's output becomes the next phase's input.
 
-> ☕ **Illustrative example.** The Starbucks case below is invented for teaching.
-> It is not derived from the plugin's code; no figure in it is real.
+:::info[☕ Running example — Starbucks *(illustrative)*]
+
+The Starbucks case below is invented for teaching. It is not derived from the plugin's code;
+no figure in it is real.
+
+:::
 
 ## What you will follow
 
@@ -156,7 +160,7 @@ pipeline, without losing its context:
 Each artifact became the **context** of the next step, and every handoff stayed readable:
 what was not written down was not passed on.
 
-## Going further
+## See also <!-- #see-also -->
 
 - [Pipeline overview](./index.mdx)
 - [Reference: the phases](../../reference/phases.md) — inputs, outputs, lenses of each phase

@@ -1,6 +1,6 @@
 ---
 title: "Pour les décideurs"
-description: "Pourquoi une organisation qui livre avec des assistants IA a besoin de SKRAFT : une discipline imposée par le code, la même sur chaque hôte, traçable et vérifiable."
+description: "Pourquoi une organisation qui livre avec des assistants IA a besoin de SKRAFT : une discipline imposée par le code, la même partout, traçable et vérifiable."
 persona: manager
 ---
 
@@ -170,14 +170,14 @@ quelconque avec les mêmes lentilles ; `skraft migrate` pour les runs commencés
 | Équipe de qualification | Le plan de test et les preuves de couverture et de mutation |
 | Mainteneur de SKRAFT | Un moteur testé, mutable sans peur, où chaque contrôle a une valeur prouvée |
 
-## Pour aller plus loin
+## Sources
+
+- Forsgren, N., Humble, J. & Kim, G., *Accelerate*, 2018.
+- Martin, R. C., *Clean Architecture*, 2017.
+
+## Voir aussi <!-- #see-also -->
 
 - [Architecture](./architecture.md) — le moteur, les pilotes d'hôte, la profondeur 1.
 - [Garde-fous : du hook au moteur](./guardrails.md) — pourquoi la V2 part de zéro hook.
 - [Le journal d'événements](./event-journal.md) — le journal chaîné.
 - [Configurer les composants](../how-to/configure-components.md).
-
-## Sources
-
-- Forsgren, N., Humble, J. & Kim, G., *Accelerate*, 2018.
-- Martin, R. C., *Clean Architecture*, 2017.

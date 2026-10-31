@@ -1,6 +1,6 @@
 ---
 title: "Économie de tokens"
-description: "Pourquoi le coût d'un pipeline agentique est une forme architecturale décidée au design, pas un réglage runtime — et comment SKRAFT la tient via les leviers de la discipline Genesis."
+description: "Pourquoi le coût d'un pipeline agentique est une forme décidée au design, pas un réglage runtime, et comment SKRAFT la tient par les leviers Genesis."
 ---
 
 # Économie de tokens
@@ -167,16 +167,16 @@ en forme. Ce rendu est aujourd'hui encore confié au LLM, ce qui représente une
 non négligeable sur la sortie des reviewers (estimé). Ce levier est conçu ; son
 implémentation n'est pas encore dans le pipeline principal.
 
-## Voir aussi
+## Sources
+
+> « The cost of queuing delays is determined by the shape of the flow, not by the
+> speed of individual activities. »
+> — Reinertsen, D. G., *The Principles of Product Development Flow*, 2009.
+
+## Voir aussi <!-- #see-also -->
 
 - [Glossaire](../reference/glossary.md) — phases, agents, gates, artefacts
 - [Architecture](./architecture.md) — comment les agents s'assemblent
 - [Le journal d'événements](./event-journal.md) — les faits du run, dans le dossier de suivi hérité de HVE Core
 - [La revue avant la revue](./deep-dive/review-before-review.md) — pourquoi les lentilles ne se négocient pas
 - [Référence : patterns](../reference/patterns.md) — le catalogue complet des motifs Genesis
-
-## Sources
-
-> « The cost of queuing delays is determined by the shape of the flow, not by the
-> speed of individual activities. »
-> — Reinertsen, D. G., *The Principles of Product Development Flow*, 2009.

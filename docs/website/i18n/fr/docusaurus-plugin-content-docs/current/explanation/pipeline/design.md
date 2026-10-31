@@ -1,6 +1,6 @@
 ---
 title: "DESIGN"
-description: "Pourquoi DESIGN rend chaque décision d'architecture explicite, la réutilise avant d'en créer, la fait relire par des lentilles puis ratifier par un humain avant toute spécification."
+description: "Pourquoi DESIGN rend chaque décision d'architecture explicite, réutilise avant de créer, et la fait relire par des lentilles puis ratifier par un humain."
 persona: software-engineer
 phase: design
 ---
@@ -73,14 +73,14 @@ proposée.
   remplace ou s'amende ; tant qu'il ne l'est pas, on le corrige sur place. L'historique des
   décisions reste lisible sans se remplir d'ADR mort-nés.
 
-## Pour aller plus loin
+## Sources
+
+- [Evans, E. *Domain-Driven Design*, 2003.](../../reference/citations.mdx#cite-evans-ddd-2003)
+
+## Voir aussi <!-- #see-also -->
 
 - [Référence : DESIGN](../../reference/phases.md#design) — nœuds, sorties, contrôles du moteur, arêtes.
 - [Référence : critères de revue de DESIGN](../../reference/gates.md#design).
 - [Référence : ADR non publiés](../../reference/run-journal.md#unpublished-adrs).
 - [Référence : documentation durable](../../reference/run-journal.md#durable-docs) — ce qui va dans `docs/`, ce qui reste dans le dossier de suivi.
 - [DISTILL](./distill.md) — la phase suivante.
-
-## Sources
-
-- [Evans, E. *Domain-Driven Design*, 2003.](../../reference/citations.mdx#cite-evans-ddd-2003)
