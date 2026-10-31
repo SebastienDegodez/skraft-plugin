@@ -86,6 +86,8 @@ const onGit = (gh) => ({
 const pullRequestsOf = (gh, reviewed) => Object.freeze({
   unavailable: async () => ('failure' in await reviewed() ? gh.unavailable() : null),
   repository: () => gh.repository(),
+  checkoutCommand: (number) => gh.checkoutCommand(number),
+  takesRequestFile: gh.takesRequestFile,
   find: (number) => served(reviewed, (at) => pullRequestRead(at, number), () => gh.find(number), 'gh', refused),
   keepComment: (request) => served(reviewed, (at) => commentKept(at, request), () => gh.keepComment(request), 'gh', refused),
 })

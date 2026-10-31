@@ -202,6 +202,17 @@ test('a review reads its pull request and keeps its comment through the GitHub M
   assert.deepEqual(byGh.host.events().filter(({ type }) => type === 'review.commented').map(({ via }) => via), [undefined, undefined])
 })
 
+test('through the GitHub MCP server, a working copy not on the pull request\'s head is a named stop that says how to check it out with gh', async () => {
+  const pullRequest = { ...PULL_REQUEST, url: `${PAGES}/pull/12`, head: { ref: 'discount', sha: 'root-9' } }
+  const host = reviewHost({ pullRequest, forge: { pages: PAGES } })
+  host.git.commit('feat: discount', ['src/Discount.cs'])
+  host.deps.mcpTools = new InMemoryGithubMcp({ forge: host.pullRequests })
+
+  const outcome = await host.review()
+
+  assert.deepEqual([outcome.status, outcome.code, outcome.reason], ['stopped', 'pr-not-checked-out', 'the working copy is not on the head of pull request #12 (root-9); check it out first: gh pr checkout 12'])
+})
+
 test('through the GitHub MCP server, the pull request\'s body is cut at the same length as through gh', async () => {
   const opened = async (mcp) => {
     const codeHost = new InMemoryCodeHost({ pages: PAGES, bodyLimit: 4_000 })
