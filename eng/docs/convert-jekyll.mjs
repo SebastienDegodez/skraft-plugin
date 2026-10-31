@@ -447,6 +447,24 @@ const convertBraces = (text, page) => {
   return mapProseText(text, (prose) => prose.replace(/\{\/\*[\s\S]*?\*\/\}|\\[{}]|[{}]/g, (match) => (match.length === 1 ? `\\${match}` : match)))
 }
 
+const JSX = /^import\s.+\sfrom\s+['"][^'"]+['"];?\s*$|<[A-Z][a-z]\w*[\s/>]/m
+
+/** Rule 13: `.mdx` for the pages listed as such, or whose prose holds an import or a component. */
+const needsMdx = (docId, body, mdxDocs) => mdxDocs.has(docId)
+  || segments(body.split('\n')).some((part) => !part.fence && JSX.test(part.lines.join('\n')))
+
+const HOST_SECTION = /^#{3,6}\s+(Claude Code|GitHub Copilot CLI|Copilot CLI|VS Code)\s*$/
+
+/** Rule 13, reported: per-host sections are Tabs a writer adds by hand (the page then needs .mdx). */
+const reportHostSections = (text, page) => {
+  if (page.extension === '.mdx') return
+  const sections = segments(text.split('\n')).filter((part) => !part.fence)
+    .flatMap((part) => part.lines.filter((line) => HOST_SECTION.test(line)))
+  const hosts = [...new Set(sections.map((line) => HOST_SECTION.exec(line)[1]))]
+  if (hosts.length < 2) return
+  report(page, 'extension', sections[0], `host sections (${hosts.join(', ')}): write Tabs groupId="host" by hand, then rename to .mdx`)
+}
+
 const DEFAULT_MDX_DOCS = ['index', 'reference/citations']
 
 /**
@@ -458,8 +476,8 @@ const DEFAULT_MDX_DOCS = ['index', 'reference/citations']
 export const convertPage = (source, options) => {
   const mdxDocs = new Set([...DEFAULT_MDX_DOCS, ...(options.mdxDocs ?? [])])
   const page = { ...options, mdxDocs, source, seen: new Map(), findings: [], redirects: [], imports: [], phase: null }
-  page.extension = extensionOf(page.docId, page)
   const { lines, body } = splitFrontMatter(source)
+  page.extension = needsMdx(page.docId, body, mdxDocs) ? '.mdx' : '.md'
   let text = body
   text = convertCitationLinks(text, page)
   text = convertInternalLinks(text, page)
@@ -472,6 +490,7 @@ export const convertPage = (source, options) => {
   text = convertFences(text, page)
   text = convertPlaceholders(text, page)
   text = convertBraces(text, page)
+  reportHostSections(text, page)
   text = convertFrontMatter(lines, page) + withImports(text, page.imports)
   return { text, extension: page.extension, findings: page.findings, redirects: page.redirects }
 }
