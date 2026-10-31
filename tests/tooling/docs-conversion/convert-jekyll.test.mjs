@@ -128,6 +128,26 @@ test('in an .md page, braces in prose stay', () => {
   assert.equal(convertPage(source, { docId: 'tutorials/first-run-copilot', locale: 'en' }).text, source)
 })
 
+test('a page stays .md unless it needs JSX: a component in its source makes it .mdx', () => {
+  const plain = convertPage('# Run the gates\n\nText.\n', { docId: 'how-to/run-gates', locale: 'en' })
+  assert.equal(plain.extension, '.md')
+  const tabs = "import Tabs from '@theme/Tabs';\n\n# Install {#install}\n\n<Tabs groupId=\"host\">\n</Tabs>\n"
+  const converted = convertPage(tabs, { docId: 'how-to/install-on-a-host', locale: 'en' })
+  assert.equal(converted.extension, '.mdx')
+  assert.match(converted.text, /# Install \{\/\* #install \*\/\}/)
+})
+
+test('host sections are reported as Tabs to write by hand', () => {
+  const source = '# Install\n\n## 1. Install the plugin\n\n### Claude Code\n\nA.\n\n### GitHub Copilot CLI\n\nB.\n\n### VS Code\n\nC.\n'
+  const { extension, findings } = convertPage(source, { docId: 'how-to/install-on-a-host', locale: 'en' })
+  assert.equal(extension, '.md')
+  assert.deepEqual(findings, [{
+    rule: 'extension',
+    line: 5,
+    reason: 'host sections (Claude Code, GitHub Copilot CLI, VS Code): write Tabs groupId="host" by hand, then rename to .mdx',
+  }])
+})
+
 test('with the catalogue option, dashboard links point at the catalogue page', () => {
   const source = '# T\n\n[Catalogue]({{ "/en/dashboard/" | relative_url }}), [data]({{ "/dashboard/" | relative_url }})\n'
   const { text } = convertPage(source, { docId: 'how-to/run-gates', locale: 'en', dashboardLink: 'catalogue' })
