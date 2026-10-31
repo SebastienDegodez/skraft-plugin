@@ -148,6 +148,30 @@ test('host sections are reported as Tabs to write by hand', () => {
   }])
 })
 
+test('the converter is idempotent: every fixture output converts to itself', () => {
+  const cases = {
+    'front-matter': {},
+    'citation-links': { docId: 'explanation/pipeline/design' },
+    'internal-links': { docId: 'tutorials/getting-started', mdxDocs: ['how-to/install-on-a-host'] },
+    'internal-links-fr': { docId: 'tutorials/getting-started', locale: 'fr' },
+    'phase-ribbon': { docId: 'explanation/pipeline/design' },
+    'running-example': { docId: 'explanation/pipeline/design', locale: 'fr' },
+    'raw-blocks': { docId: 'reference/phases' },
+    'citations-page': { docId: 'reference/citations' },
+    'heading-ids': { docId: 'reference/cli' },
+    'heading-ids-mdx': { docId: 'index' },
+    blockquotes: { docId: 'how-to/contributing' },
+    'code-fences': { docId: 'tutorials/getting-started' },
+    placeholders: { docId: 'reference/hosts' },
+    'braces-mdx': { docId: 'index' },
+  }
+  for (const [name, options] of Object.entries(cases)) {
+    const { after } = fixture(name)
+    const again = convertPage(after, { docId: 'how-to/run-gates', locale: 'en', ...options })
+    assert.equal(again.text, after, name)
+  }
+})
+
 test('with the catalogue option, dashboard links point at the catalogue page', () => {
   const source = '# T\n\n[Catalogue]({{ "/en/dashboard/" | relative_url }}), [data]({{ "/dashboard/" | relative_url }})\n'
   const { text } = convertPage(source, { docId: 'how-to/run-gates', locale: 'en', dashboardLink: 'catalogue' })
