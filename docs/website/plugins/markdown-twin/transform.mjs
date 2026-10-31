@@ -11,9 +11,6 @@ const ADMONITIONS = {
 }
 const DOT_SOURCE = { en: 'DOT source', fr: 'source DOT' }
 
-/** The site path of the twin of a page: its permalink plus `.md`, `index.md` for a directory permalink. */
-export const twinPathOf = (permalink) => (permalink.endsWith('/') ? `${permalink}index.md` : `${permalink}.md`)
-
 const ofLocale = (table, locale) => table[locale] ?? table.en
 
 const stripFrontMatter = (lines) => {
@@ -22,17 +19,19 @@ const stripFrontMatter = (lines) => {
   return end === -1 ? lines : lines.slice(end + 1)
 }
 
-// A permalink a doc would get by convention, for a link to a doc not built (yet).
-const conventionalPermalink = (versionPath, target) => {
+// The twin a doc would get by convention, for a link to a doc not built (yet): a folder's index
+// doc is served at the folder's path, the home of the version at index.md.
+const conventionalTwin = (versionPath, target) => {
   const slug = target.replace(/\.mdx?$/, '').replace(/(^|\/)index$/, '')
-  return `${versionPath.replace(/\/?$/, '/')}${slug}`
+  const root = versionPath.replace(/\/?$/, '/')
+  return slug === '' ? `${root}index.md` : `${root}${slug}.md`
 }
 
 const docTwinUrl = (target, page) => {
   const [path, anchor] = target.split('#')
   const resolved = posix.join(posix.dirname(page.docPath), path)
-  const permalink = page.permalinks.get(resolved) ?? conventionalPermalink(page.versionPath, resolved)
-  return `${page.siteUrl}${twinPathOf(permalink)}${anchor === undefined ? '' : `#${anchor}`}`
+  const twin = page.twins.get(resolved) ?? conventionalTwin(page.versionPath, resolved)
+  return `${page.siteUrl}${twin}${anchor === undefined ? '' : `#${anchor}`}`
 }
 
 const isExternal = (target) => /^[a-z][a-z0-9+.-]*:/i.test(target) || target.startsWith('#')
@@ -141,9 +140,9 @@ const sourceLine = (page) =>
 
 /**
  * @param {string} text the doc source (`.md` or `.mdx`)
- * @param {object} page what the twin needs to know about the page: title, permalink, docPath (relative to the
+ * @param {object} page what the twin needs to know about the page: title, permalink (as served), docPath (relative to the
  *   version's docs folder), locale, versionLabel, versionPath, updated (YYYY-MM-DD, optional), siteUrl, baseUrl,
- *   rawRepo (raw GitHub URL at the version ref, ending in `/`), sourceRepoPath, permalinks (docPath -> permalink
+ *   rawRepo (raw GitHub URL at the version ref, ending in `/`), sourceRepoPath, twins (docPath -> twin site path
  *   for the version), citations
  */
 export const toMarkdownTwin = (text, page) => {
