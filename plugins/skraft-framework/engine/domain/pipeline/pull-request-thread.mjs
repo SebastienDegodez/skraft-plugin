@@ -25,8 +25,13 @@ export const areThreads = (threads) => Array.isArray(threads) && threads.every((
  * a rewritten comment's own id in the thread kept; null for any other answer.
  * @param {any} answer @param {KeptThread | undefined} kept @returns {KeptThread | null}
  */
-export const writtenIds = (answer, kept) => {
-  if (kept !== undefined) return Number.isInteger(answer?.id) ? { threadId: kept.threadId, commentId: answer.id } : null
+export const writtenIds = (answer, kept) => (kept === undefined ? postedIds(answer) : rewrittenIds(answer, kept))
+
+/** @param {any} answer @param {KeptThread} kept @returns {KeptThread | null} */
+const rewrittenIds = (answer, { threadId }) => (Number.isInteger(answer?.id) ? { threadId, commentId: answer.id } : null)
+
+/** @param {any} answer @returns {KeptThread | null} */
+const postedIds = (answer) => {
   const commentId = answer?.comments?.[0]?.id
   return Number.isInteger(answer?.id) && Number.isInteger(commentId) ? { threadId: answer.id, commentId } : null
 }
