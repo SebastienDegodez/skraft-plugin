@@ -209,6 +209,60 @@ const convertHeadingIds = (text, page) => {
   })
 }
 
+const ADMONITIONS = new Map([
+  ['Decision', 'note'], ['Décision', 'note'],
+  ['Jargon', 'note'],
+  ['Genesis', 'info'],
+  ['Not verified on V2', 'caution'], ['Non vérifié sur V2', 'caution'],
+])
+const QUOTE = /^ {0,3}>/
+const LABELLED = /^ {0,3}>\s*\*\*([^*]+?)\s*[.:]?\s*\*\*\s*(?:[—:-]\s*)?(.*)$/
+const unquote = (line) => line.replace(/^ {0,3}> ?/, '')
+
+/** The admonition a labelled blockquote becomes, or null when its label maps to none. */
+const admonition = (quote) => {
+  const labelled = LABELLED.exec(quote[0])
+  const type = labelled && ADMONITIONS.get(labelled[1])
+  if (!type) return null
+  const body = [labelled[2], ...quote.slice(1).map(unquote)].filter((line, index) => index > 0 || line !== '')
+  return [`:::${type}[${labelled[1]}]`, ...body, ':::']
+}
+
+/** Index of the first line after the H1 that is not blank, or -1. */
+const afterHeading = (lines) => {
+  const h1 = lines.findIndex((line) => /^# /.test(line))
+  if (h1 < 0) return -1
+  let index = h1 + 1
+  while (index < lines.length && lines[index].trim() === '') index += 1
+  return index
+}
+
+/** Rule 9: the first blockquote right after the H1 becomes the lead; labelled ones become admonitions. */
+const convertBlockquotes = (text) => {
+  const parts = segments(text.split('\n'))
+  let leadDone = false
+  for (const part of parts.filter((p) => !p.fence)) {
+    const lead = leadDone ? -1 : afterHeading(part.lines)
+    if (part.lines.some((line) => /^# /.test(line))) leadDone = true
+    part.lines = convertQuotes(part.lines, lead)
+  }
+  return joinSegments(parts)
+}
+
+const convertQuotes = (lines, lead) => {
+  const out = []
+  for (let index = 0; index < lines.length;) {
+    if (!QUOTE.test(lines[index])) { out.push(lines[index]); index += 1; continue }
+    const quote = []
+    const start = index
+    while (index < lines.length && QUOTE.test(lines[index])) quote.push(lines[index++])
+    const converted = admonition(quote)
+    if (converted) out.push(...converted)
+    else out.push(...(start === lead ? quote.map(unquote) : quote))
+  }
+  return out
+}
+
 const DEFAULT_MDX_DOCS = ['index', 'reference/citations']
 
 /**
@@ -230,6 +284,7 @@ export const convertPage = (source, options) => {
   text = convertRawBlocks(text)
   text = convertCitationsPage(text, page)
   text = convertHeadingIds(text, page)
+  text = convertBlockquotes(text)
   text = convertFrontMatter(lines, page) + withImports(text, page.imports)
   return { text, extension: page.extension, findings: page.findings, redirects: page.redirects }
 }
