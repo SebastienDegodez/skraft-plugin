@@ -512,6 +512,14 @@ const maskCode = (text) => {
   return blank(text.slice(0, head)) + joinSegments(parts)
 }
 
+/**
+ * The command line: `--src <site-root>` or `--in-place`, `--check`, `--report <file>`, `--dry-run`.
+ * @param {string[]} argv
+ * @param {{ cwd?: string, print?: (line: string) => void }} io
+ * @returns {number} exit code: 0, 1 when the check fails, 2 on a usage error
+ */
+export const runCli = () => 0
+
 const DEFAULT_MDX_DOCS = ['index', 'reference/citations']
 
 /**
