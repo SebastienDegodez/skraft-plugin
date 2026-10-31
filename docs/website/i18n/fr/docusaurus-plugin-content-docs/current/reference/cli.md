@@ -8,6 +8,8 @@ persona: software-engineer
 
 `skraft` est la porte d'entrée en ligne de commande du moteur : chaque commande appelle un cas d'usage et affiche ce qu'il rend, sans rien décider elle-même.
 
+Pourquoi le moteur décide et les pilotes exécutent : [Architecture](../explanation/architecture.md).
+
 Ce que les hôtes offrent à la place de ces commandes (`/skraft`, workflow `skraft-pipeline`, `skraft_decide`, pilote SDK) : [Hôtes](./hosts.md). La syntaxe des workflows que `skraft workflow` copie et valide : [Le workflow DOT](./workflow-dot.mdx).
 
 ## Appeler skraft
@@ -668,7 +670,7 @@ revue continue (le réfuteur est confié de la même façon).
   retravaille.
 - **Répondre en modifiant `events.jsonl`** : la chaîne casse. Répondez par `skraft decide`.
 
-## Pour aller plus loin <!-- #see-also -->
+## Voir aussi <!-- #see-also -->
 - [Hôtes](./hosts.md)
 - [Le workflow DOT](./workflow-dot.mdx)
 - [Phases](./phases.md)

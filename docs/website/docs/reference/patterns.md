@@ -5,8 +5,11 @@ description: "The patterns structuring the DESIGN phase: Event Modeling, DDD, Cl
 
 # Architecture patterns
 
-Patterns do not stack at random. SKRAFT composes them in a precise order, each
-grounded in the book that defined it.
+The architecture patterns that structure the DESIGN phase, the order SKRAFT composes them in,
+and the book that defined each one: patterns do not stack at random.
+
+Why DESIGN makes every architecture decision explicit:
+[The DESIGN phase](../explanation/pipeline/design.md).
 
 ## Why — the problem it solves
 
@@ -47,12 +50,6 @@ Patterns are not an end in themselves: they keep the domain model at the centre.
 - **Big Design Up Front**: modelling the whole system before a single scenario exists
   — prefer the increment (see [walking skeleton](../explanation/deep-dive/walking-skeleton.md)).
 
-## Going further
-
-- [The DESIGN phase](../explanation/pipeline/design.md)
-- [Clean Architecture](../explanation/clean-architecture.md)
-- [DESIGN gates](gates.md)
-
 ## Sources
 
 - North, D. *Introducing BDD*, 2006.
@@ -61,6 +58,12 @@ Patterns are not an end in themselves: they keep the domain model at the centre.
 - Martin, R. C. *Clean Architecture*, 2017.
 - Cockburn, A. *Hexagonal Architecture*, 2005.
 - Fowler, M. *Bliki: CQRS*, 2011.
+
+## See also <!-- #see-also -->
+
+- [The DESIGN phase](../explanation/pipeline/design.md)
+- [Clean Architecture](../explanation/clean-architecture.md)
+- [DESIGN gates](gates.md)
 
 Terms to know: **bounded context**, **aggregate**, **value object**, **CQRS**,
 **Event Sourcing** — see the [glossary](./glossary.md).

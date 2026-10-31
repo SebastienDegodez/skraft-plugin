@@ -187,7 +187,7 @@ go when it closes, its verdicts stay.
 
 With no verdict, the dashboard shows the full catalogue and marks the rest unevaluated.
 
-## See also
+## See also <!-- #see-also -->
 
 - [Evaluate a skill](../how-to/evaluate-a-skill.md)
 - [Evaluation strategy](../explanation/evaluation-strategy.md)

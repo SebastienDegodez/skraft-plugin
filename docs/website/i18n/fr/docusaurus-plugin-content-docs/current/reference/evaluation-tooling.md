@@ -187,7 +187,7 @@ request disparaissent à sa fermeture, ses verdicts restent.
 
 Sans verdict, le tableau de bord montre le catalogue complet et marque le reste non évalué.
 
-## Voir aussi
+## Voir aussi <!-- #see-also -->
 
 - [Évaluer un skill](../how-to/evaluate-a-skill.md)
 - [Stratégie d'évaluation](../explanation/evaluation-strategy.md)

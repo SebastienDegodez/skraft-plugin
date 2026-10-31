@@ -404,7 +404,7 @@ A `step.started` or a `phase.closed` written after a `run.finished` reopens the 
 - **Setting an ADR to `Accepted` yourself in a run**: the attempt is refused
   (`adr-lifecycle`). Ratify it by answering the question.
 
-## Going further <!-- #see-also -->
+## See also <!-- #see-also -->
 
 - [Phases](./phases.md)
 - [Hosts](./hosts.md)

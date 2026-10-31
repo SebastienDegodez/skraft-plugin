@@ -262,3 +262,10 @@ The terms in this glossary are defined from their reference works:
 - Wake, B. *INVEST in Good Stories, and SMART Tasks*, 2003 — INVEST.
 
 The full bibliography is on the [Citations](./citations.mdx) page.
+
+## See also <!-- #see-also -->
+
+- [Bibliography](./citations.mdx)
+- [Architecture patterns](./patterns.md)
+- [Gates](./gates.md)
+- [Software craftsmanship — why skraft makes it a rule](../explanation/software-craftsmanship.md)

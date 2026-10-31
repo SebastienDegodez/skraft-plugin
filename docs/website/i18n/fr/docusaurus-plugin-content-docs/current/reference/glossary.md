@@ -264,3 +264,10 @@ Les termes de ce glossaire sont définis d'après leurs ouvrages de référence 
 - Wake, B. *INVEST in Good Stories, and SMART Tasks*, 2003 — INVEST.
 
 La bibliographie complète est sur la page [Citations](./citations.mdx).
+
+## Voir aussi <!-- #see-also -->
+
+- [Bibliographie](./citations.mdx)
+- [Patterns d'architecture](./patterns.md)
+- [Gates](./gates.md)
+- [Software craftsmanship — pourquoi skraft en fait une règle](../explanation/software-craftsmanship.md)

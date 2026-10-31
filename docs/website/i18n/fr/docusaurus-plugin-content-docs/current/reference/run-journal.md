@@ -403,7 +403,7 @@ Un `step.started` ou un `phase.closed` écrit après un `run.finished` rouvre le
 - **Passer soi-même un ADR en `Accepted` pendant un run** : la tentative est refusée
   (`adr-lifecycle`). Ratifiez-le en répondant à la question.
 
-## Pour aller plus loin <!-- #see-also -->
+## Voir aussi <!-- #see-also -->
 
 - [Phases](./phases.md)
 - [Hôtes](./hosts.md)

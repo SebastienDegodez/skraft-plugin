@@ -8,6 +8,8 @@ persona: software-engineer
 
 `skraft` is the command-line entry point to the engine: each command calls one use case and prints what it returns, deciding nothing itself.
 
+Why the engine decides and the drivers execute: [Architecture](../explanation/architecture.md).
+
 What the hosts offer in place of these commands (`/skraft`, the `skraft-pipeline` workflow, `skraft_decide`, the SDK driver): [Hosts](./hosts.md). The syntax of the workflows `skraft workflow` copies and validates: [The DOT workflow](./workflow-dot.mdx).
 
 ## Calling skraft
@@ -649,7 +651,7 @@ goes on (the refuter is handed over the same way).
   reworks from.
 - **Answering by editing `events.jsonl`**: the chain breaks. Answer with `skraft decide`.
 
-## Going further <!-- #see-also -->
+## See also <!-- #see-also -->
 - [Hosts](./hosts.md)
 - [The DOT workflow](./workflow-dot.mdx)
 - [Phases](./phases.md)
