@@ -117,6 +117,6 @@ test('the script runs from the command line', () => {
   withTree(({ dir }) => {
     const result = spawnSync(process.execPath, [script, '--check', '--dest', join(dir, 'website')], { encoding: 'utf8' })
     assert.equal(result.status, 0)
-    assert.match(result.stdout, /no problem in 1 page/)
+    assert.match(result.stdout, /no problems in 1 page/)
   })
 })

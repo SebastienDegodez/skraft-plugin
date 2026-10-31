@@ -1,6 +1,8 @@
 // Converts the Jekyll handbook pages (docs/site/{en,fr}) into Docusaurus pages (docs/website).
 // Plan: docs/v2/docusaurus-migration-plan.md, section 3. Zero dependency.
-import { posix } from 'node:path'
+import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { dirname, join, posix, resolve, sep } from 'node:path'
+import { pathToFileURL } from 'node:url'
 
 const DROPPED_KEYS = new Set(['layout', 'lang', 'permalink'])
 
@@ -518,7 +520,168 @@ const maskCode = (text) => {
  * @param {{ cwd?: string, print?: (line: string) => void }} io
  * @returns {number} exit code: 0, 1 when the check fails, 2 on a usage error
  */
-export const runCli = () => 0
+export const runCli = (argv, { cwd = process.cwd(), print = console.log } = {}) => {
+  const parsed = parseArguments(argv)
+  if (parsed.error) {
+    print(`convert-jekyll: ${parsed.error}`)
+    print(USAGE)
+    return 2
+  }
+  const options = { ...parsed.options, cwd, print }
+  const outputs = options.src || options.inPlace ? convertTree(options) : null
+  if (!options.check) return 0
+  return checkTree(options, options.dryRun ? outputs : null)
+}
+
+const USAGE = [
+  'usage: node eng/docs/convert-jekyll.mjs --src <site-root> [--dest docs/website] [--locale en|fr|all]',
+  '         [--report <file>] [--dry-run] [--overwrite] [--check] [--heading-ids comment|classic] [--dashboard-link static|catalogue]',
+  '       node eng/docs/convert-jekyll.mjs --in-place [--dest docs/website] [same options]',
+  '       node eng/docs/convert-jekyll.mjs --check [--dest docs/website] [--locale en|fr|all] [--heading-ids comment|classic]',
+].join('\n')
+
+const VALUES = {
+  '--src': 'src', '--dest': 'dest', '--locale': 'locale', '--report': 'report', '--heading-ids': 'headingIds', '--dashboard-link': 'dashboardLink',
+}
+const FLAGS = { '--check': 'check', '--dry-run': 'dryRun', '--in-place': 'inPlace', '--overwrite': 'overwrite' }
+const CHOICES = { locale: ['en', 'fr', 'all'], headingIds: ['comment', 'classic'], dashboardLink: ['static', 'catalogue'] }
+
+const parseArguments = (argv) => {
+  const options = { dest: 'docs/website', locale: 'all', headingIds: 'comment', dashboardLink: 'static' }
+  for (let index = 0; index < argv.length; index += 1) {
+    const argument = argv[index]
+    if (FLAGS[argument]) { options[FLAGS[argument]] = true; continue }
+    if (!VALUES[argument]) return { error: `unknown option ${argument}` }
+    if (argv[index + 1] === undefined) return { error: `${argument} needs a value` }
+    options[VALUES[argument]] = argv[++index]
+  }
+  return validate(options)
+}
+
+const validate = (options) => {
+  for (const [key, allowed] of Object.entries(CHOICES)) {
+    if (!allowed.includes(options[key])) return { error: `${key} must be one of ${allowed.join(', ')}` }
+  }
+  if (options.src && options.inPlace) return { error: '--src and --in-place exclude each other' }
+  if (!options.src && !options.inPlace && !options.check) return { error: 'give --src, --in-place or --check' }
+  return { options }
+}
+
+const LOCALE_DIRS = { en: 'docs', fr: 'i18n/fr/docusaurus-plugin-content-docs/current' }
+const localesOf = (options) => (options.locale === 'all' ? ['en', 'fr'] : [options.locale])
+const toPosix = (path) => path.split(sep).join('/')
+
+/** Markdown files under `dir`, as sorted posix paths relative to it. */
+const walk = (dir) => {
+  if (!existsSync(dir)) return []
+  return readdirSync(dir, { withFileTypes: true })
+    .flatMap((entry) => (entry.isDirectory()
+      ? walk(join(dir, entry.name)).map((path) => `${entry.name}/${path}`)
+      : /\.mdx?$/.test(entry.name) ? [entry.name] : []))
+    .sort()
+}
+
+/** The pages to convert: Jekyll pages under --src, or pages already moved under --dest. */
+const collectPages = (options) => localesOf(options).flatMap((locale) => {
+  const from = options.src ? resolve(options.cwd, options.src, locale) : resolve(options.cwd, options.dest, ...LOCALE_DIRS[locale].split('/'))
+  const files = walk(from).filter((path) => options.inPlace || path.endsWith('.md'))
+  return files.map((path) => ({
+    locale,
+    path: join(from, ...path.split('/')),
+    source: options.src ? `${locale}/${path}` : `${LOCALE_DIRS[locale]}/${path}`,
+    docId: path.replace(/\.mdx?$/, ''),
+    text: readFileSync(join(from, ...path.split('/')), 'utf8'),
+  }))
+})
+
+const targetOf = (options, locale, docId, extension) => `${LOCALE_DIRS[locale]}/${docId}${extension}`
+const destPath = (options, target) => resolve(options.cwd, options.dest, ...target.split('/'))
+const existingTarget = (options, locale, docId) => ['.md', '.mdx']
+  .map((extension) => targetOf(options, locale, docId, extension))
+  .find((target) => existsSync(destPath(options, target)))
+
+/** Why a page is not converted, or null. */
+const skipReason = (options, page) => {
+  const { lines } = splitFrontMatter(page.text)
+  if (lines?.some((line) => /^layout:\s*dashboard\s*$/.test(line))) {
+    const permalink = lines.find((line) => line.startsWith('permalink:'))?.slice('permalink:'.length).trim()
+    return `dashboard page: a static app outside the docs${permalink ? ` (permalink ${permalink})` : ''}`
+  }
+  const existing = options.src && !options.overwrite && existingTarget(options, page.locale, page.docId)
+  return existing ? `target exists: ${existing}` : null
+}
+
+/** Doc ids that are .mdx: an existing .mdx target, or a page the converter makes .mdx. */
+const mdxDocsOf = (options, pages) => {
+  const docs = new Set(pages.filter((page) => existingTarget(options, page.locale, page.docId)?.endsWith('.mdx')).map((page) => page.docId))
+  for (const page of pages) {
+    if (convertPage(page.text, pageOptions(options, page, docs)).extension === '.mdx') docs.add(page.docId)
+  }
+  return docs
+}
+
+const pageOptions = (options, page, mdxDocs) => ({
+  docId: page.docId, locale: page.locale, mdxDocs, headingIds: options.headingIds, dashboardLink: options.dashboardLink,
+})
+
+const convertTree = (options) => {
+  const pages = collectPages(options)
+  const skipped = pages.map((page) => ({ source: page.source, reason: skipReason(options, page) })).filter((entry) => entry.reason)
+  const kept = pages.filter((page) => !skipped.some((entry) => entry.source === page.source))
+  const mdxDocs = mdxDocsOf(options, pages)
+  const outputs = kept.map((page) => {
+    const result = convertPage(page.text, pageOptions(options, page, mdxDocs))
+    return { page, result, target: targetOf(options, page.locale, page.docId, result.extension) }
+  })
+  if (!options.dryRun) outputs.forEach((output) => writeOutput(options, output))
+  writeReport(options, pages, outputs, skipped)
+  return outputs.map(({ target, result }) => ({ file: target, text: result.text, extension: result.extension }))
+}
+
+const writeOutput = (options, { page, result, target }) => {
+  const path = destPath(options, target)
+  mkdirSync(dirname(path), { recursive: true })
+  writeFileSync(path, result.text)
+  if (options.inPlace && page.path !== path) rmSync(page.path)
+}
+
+const writeReport = (options, pages, outputs, skipped) => {
+  const handResolution = outputs.flatMap(({ page, result, target }) => result.findings
+    .map((finding) => ({ source: page.source, target, ...finding })))
+  const mdx = outputs.filter(({ result }) => result.extension === '.mdx').map(({ target }) => target)
+  options.print(`converted ${plural(outputs.length, 'page')} of ${pages.length} (${mdx.length} .mdx)${options.dryRun ? ', dry run: nothing written' : ''}; `
+    + `${plural(handResolution.length, 'finding')} need a hand resolution; ${skipped.length} skipped`)
+  if (!options.report) return
+  const report = {
+    pages: pages.length,
+    converted: outputs.length,
+    mdx,
+    handResolution,
+    redirects: outputs.flatMap(({ result }) => result.redirects),
+    skipped,
+  }
+  writeFileSync(resolve(options.cwd, options.report), `${JSON.stringify(report, null, 2)}\n`)
+}
+
+const plural = (count, word) => `${count === 0 ? 'no' : count} ${word}${count === 1 ? '' : 's'}`
+
+/** --check: every page under --dest (or the dry run's outputs) must hold nothing Docusaurus cannot read. */
+const checkTree = (options, outputs) => {
+  const files = outputs ?? localesOf(options).flatMap((locale) => walk(resolve(options.cwd, options.dest, ...LOCALE_DIRS[locale].split('/')))
+    .map((path) => {
+      const file = `${LOCALE_DIRS[locale]}/${path}`
+      return { file, text: readFileSync(destPath(options, file), 'utf8'), extension: posix.extname(path) }
+    }))
+  const problems = files.flatMap(({ file, text, extension }) => checkPage(text, { extension, headingIds: options.headingIds })
+    .map((problem) => `${toPosix(file)}:${problem.line}: ${problem.reason}`))
+  problems.forEach((line) => options.print(line))
+  options.print(`${plural(problems.length, 'problem')} in ${plural(files.length, 'page')}`)
+  return problems.length ? 1 : 0
+}
+
+if (process.argv[1] && pathToFileURL(resolve(process.argv[1])).href === import.meta.url) {
+  process.exitCode = runCli(process.argv.slice(2))
+}
 
 const DEFAULT_MDX_DOCS = ['index', 'reference/citations']
 
