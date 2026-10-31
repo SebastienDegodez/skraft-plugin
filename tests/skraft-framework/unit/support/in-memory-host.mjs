@@ -637,8 +637,11 @@ export class InMemoryCodeHost {
    *   bodyLimit: the longest body the forge takes, GitHub's unless given; takesRequestFile: whether
    *   its client sends a JSON request file (az), false unless given.
    */
-  constructor({ unavailable = null, branch = 'checkout', defaultBranch = 'main', remotes = ['origin'], open = [], fails = {}, repository = { host: 'github.com', repository: 'acme/shop' }, issues, link = (issue, closes) => `${closes ? 'Closes' : 'Refs'} #${issue}`, bodyLimit = 60_000, takesRequestFile = false, pages = 'https://github.example.com/acme/shop' } = {}) {
+  constructor({ unavailable = null, branch = 'checkout', defaultBranch = 'main', remotes = ['origin'], open = [], fails = {}, repository = { host: 'github.com', repository: 'acme/shop' }, issues, link = (issue, closes) => `${closes ? 'Closes' : 'Refs'} #${issue}`, bodyLimit = 60_000, commentLimit = 60_000, takesRequestFile = false, pages = 'https://github.example.com/acme/shop' } = {}) {
     this.bodyLimit = bodyLimit
+    this.commentLimit = commentLimit
+    /** @type {Array<{ number: number, body: string, bodies: string[], edits: number, url: string, threadFile: string, commentFile: string }>} the comments kept on pull requests, in the order they were posted */
+    this.pullRequestComments = []
     this.takesRequestFile = takesRequestFile
     /** where the forge's pages are */
     this.pages = pages
@@ -715,6 +718,19 @@ export class InMemoryCodeHost {
     this.posted += 1
     const comment = { number, bodyFile, body, bodies: [body], edits: 0, url: `${this.pages}/issues/${number}#issuecomment-${900 + this.posted}` }
     this.comments.push(comment)
+    return { ok: true, url: comment.url }
+  }
+  async keepPullRequestComment({ number, marker, url, bodyFile, threadFile, commentFile }) {
+    this.calls.push(`keep pr comment #${number}${url === null ? '' : ` ${url.slice(url.indexOf('#'))}`}`)
+    if (this.fails.pullRequestComment) return { ok: false, reason: this.fails.pullRequestComment }
+    const body = this.read(bodyFile)
+    const kept = this.pullRequestComments.find((comment) => comment.url === url) ?? this.pullRequestComments.findLast((comment) => comment.number === number && comment.body.startsWith(marker))
+    if (kept) {
+      Object.assign(kept, { body, bodies: [...kept.bodies, body], edits: kept.edits + 1 })
+      return { ok: true, url: kept.url }
+    }
+    const comment = { number, body, bodies: [body], edits: 0, url: `${this.pages}/pull/${number}#details-${this.pullRequestComments.length + 1}`, threadFile, commentFile }
+    this.pullRequestComments.push(comment)
     return { ok: true, url: comment.url }
   }
 }

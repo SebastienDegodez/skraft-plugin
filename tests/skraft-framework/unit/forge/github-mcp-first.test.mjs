@@ -195,16 +195,17 @@ test('a review reads its pull request and keeps its comment through the GitHub M
   assert.deepEqual(byGh.host.events().filter(({ type }) => type === 'review.commented').map(({ via }) => via), [undefined, undefined])
 })
 
-test('through the GitHub MCP server, the pull request\'s body is cut at the same length as through gh', async () => {
+test('through the GitHub MCP server, the pull request\'s body keeps the same sections as through gh, the rest going to a comment', async () => {
   const opened = async (mcp) => {
     const codeHost = new InMemoryCodeHost({ pages: PAGES, bodyLimit: 4_000 })
     const host = scripted({ config: CONSENTED, codeHost }, (it) => nominal(it, REFS_42))
     host.prWriters.push(prWriter({ why: `${'Customers asked to pay by card.\n'.repeat(150)}End.` }))
     if (mcp) host.deps.mcpTools = new InMemoryGithubMcp({ forge: codeHost })
     await host.start(STORY)
-    return codeHost.pullRequests.map(({ body }) => body.length)
+    return { bodies: codeHost.pullRequests.map(({ body }) => body), comments: [...codeHost.comments, ...codeHost.pullRequestComments].filter(({ body }) => body.includes('<summary>Tests')).length }
   }
 
   assert.deepEqual(await opened(true), await opened(false))
-  assert.deepEqual(await opened(true), [4_000])
+  const { bodies, comments } = await opened(true)
+  assert.deepEqual([bodies.length, bodies[0].length <= 4_000, bodies[0].includes('<summary>Tests'), comments], [1, true, false, 1])
 })
