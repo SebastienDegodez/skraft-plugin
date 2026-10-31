@@ -181,6 +181,9 @@ const convertRunningExample = (text, page) => {
   })
 }
 
+/** Rule 6: `{% raw %}` and `{% endraw %}` go everywhere (Liquid also read them inside fences). */
+const convertRawBlocks = (text) => text.replace(/\{%-?\s*(?:end)?raw\s*-?%\}/g, '')
+
 const DEFAULT_MDX_DOCS = ['index', 'reference/citations']
 
 /**
@@ -199,6 +202,7 @@ export const convertPage = (source, options) => {
   text = convertInternalLinks(text, page)
   text = convertIncludes(text, page)
   text = convertRunningExample(text, page)
+  text = convertRawBlocks(text)
   text = convertFrontMatter(lines, page) + text
   return { text, extension: page.extension, findings: page.findings, redirects: page.redirects }
 }
