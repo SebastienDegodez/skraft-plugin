@@ -96,7 +96,10 @@ enregistré : une mise à jour du plugin par l'hôte est suivie dès l'appel sui
 | 3 | `installPath` des entrées `skraft@…` de `<CLAUDE_CONFIG_DIR ou ~/.claude>/plugins/installed_plugins.json` | le dossier contient le moteur ; le `lastUpdated` le plus récent d'abord |
 
 Avec `--version`, la commande écrit aussi `plugin: <variable|copilot|claude-code> <dossier>` sur
-stderr ; stdout garde la ligne de version. Quand aucun plugin n'est trouvé, elle écrit sur stderr
+stderr ; stdout garde la ligne de version. Dans un terminal, la commande écrit d'abord la
+bannière skraft sur stderr ; elle est omise hors d'un terminal, en CI, et pour `--json` et
+`--version`. `NO_COLOR` la garde sans couleur, `SKRAFT_BANNER=0` la coupe et `SKRAFT_BANNER=1`
+la force. Quand aucun plugin n'est trouvé, elle écrit sur stderr
 un message fixe qui nomme les commandes d'installation et `SKRAFT_PLUGIN_ROOT`, et sort avec le
 code 1.
 

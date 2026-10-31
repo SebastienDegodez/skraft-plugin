@@ -42,7 +42,7 @@ const claudePlugin = (home, version, marker) =>
   fakePlugin(join(home, '.claude', 'plugins', 'cache', 'skraft', 'skraft', version), marker)
 
 const skraft = (home, args, extraEnv = {}) => {
-  const { CLAUDE_CONFIG_DIR: _c, COPILOT_HOME: _h, SKRAFT_PLUGIN_ROOT: _s, ...inherited } = process.env
+  const { CLAUDE_CONFIG_DIR: _c, COPILOT_HOME: _h, SKRAFT_PLUGIN_ROOT: _s, SKRAFT_BANNER: _b, NO_COLOR: _n, CI: _ci, ...inherited } = process.env
   return spawnSync(process.execPath, [bin, ...args], {
     encoding: 'utf8',
     env: { ...inherited, HOME: home, USERPROFILE: home, ...extraEnv },
@@ -172,4 +172,43 @@ test('honours COPILOT_HOME and CLAUDE_CONFIG_DIR', () => {
     writeFileSync(join(claudeDir, 'plugins', 'installed_plugins.json'), JSON.stringify({ plugins: { 'skraft@skraft': [{ installPath }] } }))
     assert.equal(skraft(home, ['status'], { CLAUDE_CONFIG_DIR: claudeDir }).stdout, 'custom claude ["status"]\n')
   })
+})
+
+test('outside a terminal, writes no banner: scripts and agents read the same output as before', () => {
+  withHome((home) => {
+    copilotPlugin(home, 'copilot')
+    const run = skraft(home, ['status'])
+
+    assert.equal(run.stderr, '')
+    assert.equal(run.stdout, 'copilot ["status"]\n')
+  })
+})
+
+test('the banner goes to stderr only, before the engine runs, and NO_COLOR leaves it uncoloured', () => {
+  withHome((home) => {
+    copilotPlugin(home, 'copilot')
+    const run = skraft(home, ['status', '--json'], { SKRAFT_BANNER: '1', NO_COLOR: '' })
+
+    assert.equal(run.stdout, 'copilot ["status","--json"]\n')
+    assert.match(run.stderr, /AI-powered digital craft · cli \d+\.\d+\.\d+/)
+    assert.doesNotMatch(run.stderr, /\x1b\[/)
+  })
+})
+
+test('SKRAFT_BANNER=0 turns the banner off', () => {
+  withHome((home) => {
+    copilotPlugin(home, 'copilot')
+
+    assert.equal(skraft(home, ['status'], { SKRAFT_BANNER: '0' }).stderr, '')
+  })
+})
+
+test('in a terminal, the banner is skipped for --json, --version and CI', async () => {
+  const { wantsBanner } = await import('../../../cli/src/banner.mjs')
+  const inTerminal = (argv, env = {}) => wantsBanner({ argv, env, isTTY: true })
+
+  assert.deepEqual(
+    [inTerminal(['status']), inTerminal(['status', '--json']), inTerminal(['--version']), inTerminal(['doctor'], { CI: 'true' })],
+    [true, false, false, false],
+  )
 })

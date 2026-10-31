@@ -96,7 +96,9 @@ so a plugin update by the host is followed at the next call.
 | 3 | `installPath` of the `skraft@…` entries of `<CLAUDE_CONFIG_DIR or ~/.claude>/plugins/installed_plugins.json` | the folder holds the engine; the latest `lastUpdated` first |
 
 With `--version`, the command also writes `plugin: <variable|copilot|claude-code> <folder>` on
-stderr; stdout keeps the one version line. When no plugin is found, it writes a fixed message
+stderr; stdout keeps the one version line. In a terminal, the command first writes the skraft
+banner on stderr; it is skipped outside a terminal, in CI, and for `--json` and `--version`.
+`NO_COLOR` keeps it uncoloured, `SKRAFT_BANNER=0` turns it off and `SKRAFT_BANNER=1` forces it. When no plugin is found, it writes a fixed message
 naming the install commands and `SKRAFT_PLUGIN_ROOT` on stderr and exits 1.
 
 ## `skraft init [--add <folder>]...`

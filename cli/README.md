@@ -22,6 +22,11 @@ When both hosts have the plugin, Copilot CLI wins. Nothing is recorded, so a plu
 the host is followed at the next call: this package never needs updating with the plugin.
 `skraft --version` also writes the host and folder it used on stderr.
 
+In a terminal, `skraft` first writes the skraft banner on stderr. It is skipped outside a
+terminal, in CI, and for `--json` and `--version`, so scripts and agents read the same output.
+`NO_COLOR` keeps it uncoloured; `SKRAFT_BANNER=0` turns it off, `SKRAFT_BANNER=1` forces it. On
+the legacy Windows console it falls back to plain ASCII letters.
+
 ## Versions
 
 `@skraft/cli` has its own version, independent of the plugin's. It changes only when the way
