@@ -1,4 +1,5 @@
-import { areThreads, createdThreadOf, ELSEWHERE, elsewhereReason, keptThreadOf, pullRequestFactsOf, rewrittenThreadOf, threadUrl } from '../../domain/review/azure-pull-request.mjs'
+import { ELSEWHERE, elsewhereReason, keptThreadOf, pullRequestFactsOf } from '../../domain/review/azure-pull-request.mjs'
+import { areThreads, createdThreadOf, rewrittenThreadOf, threadUrl } from '../../domain/pipeline/azure-thread.mjs'
 import { azureRepositoryKeyOf } from '../../domain/config/azure-remote.mjs'
 import { NO_AZURE_REMOTE, QUIET, readJson, refused, remoteOf, run, succeeded } from './az-cli.mjs'
 

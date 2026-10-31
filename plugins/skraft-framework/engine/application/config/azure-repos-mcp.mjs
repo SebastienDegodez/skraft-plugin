@@ -1,4 +1,5 @@
-import { areThreads, createdThreadOf, ELSEWHERE, elsewhereReason, keptThreadOf, pullRequestFactsOf, rewrittenThreadOf, threadUrl } from '../../domain/review/azure-pull-request.mjs'
+import { ELSEWHERE, elsewhereReason, keptThreadOf, pullRequestFactsOf } from '../../domain/review/azure-pull-request.mjs'
+import { areThreads, createdThreadOf, rewrittenThreadOf, threadUrl } from '../../domain/pipeline/azure-thread.mjs'
 import { refusalOf, served, UNREADABLE } from './mcp-route.mjs'
 
 /**
@@ -21,8 +22,13 @@ import { refusalOf, served, UNREADABLE } from './mcp-route.mjs'
 /** What a refusal of a tool of Azure Repos answers: refused for good, whatever the tool, never left to az. */
 const refused = refusalOf({ server: 'Azure DevOps', place: 'Azure Repos', cli: 'az', writes: ['repo_pull_request_thread_write'] })
 
-/** The most threads one listing answers: the tool's own default `top`, a page this adapter does not follow. */
-const LISTED = 100
+/**
+ * The threads one listing answers at most (`top`; the server pages with `skip`, sorted by thread
+ * id), and the most listings read: a pull request with more threads is never written to through
+ * the server, since the review's could be past them; az lists them all.
+ */
+const PAGE = 100
+const MAX_PAGES = 10
 
 /**
  * @param {PullRequests} az Azure Repos's pull requests on git and az @param {() => Promise<Azure | Failed>} route
@@ -59,11 +65,23 @@ const pullRequestRead = async (azure, number) => {
   return { served: read.facts === ELSEWHERE ? { ok: /** @type {const} */ (false), reason: elsewhereReason(azure, number) } : { ok: /** @type {const} */ (true), found: read.facts } }
 }
 
-/** The threads of the pull request, every one: failed when the listing may be cut at its page. @param {Azure} azure @param {number} number @returns {Promise<{ threads: any[] } | Failed>} */
+/** The threads of the pull request, every one, page by page: failed when there are more than the pages followed. @param {Azure} azure @param {number} number @returns {Promise<{ threads: any[] } | Failed>} */
 const threadsOf = async (azure, number) => {
-  const listed = await azure.call('repo_pull_request_thread', { action: 'list', ...where(azure, number), fullResponse: true })
+  const threads = []
+  for (let page = 0; page < MAX_PAGES; page += 1) {
+    const listed = await pageOf(azure, number, page)
+    if ('failure' in listed) return listed
+    threads.push(...listed.threads)
+    if (listed.threads.length < PAGE) return { threads }
+  }
+  return UNREADABLE
+}
+
+/** One page of threads, the deleted comments kept (`fullResponse`) so that they can be skipped. @param {Azure} azure @param {number} number @param {number} page @returns {Promise<{ threads: any[] } | Failed>} */
+const pageOf = async (azure, number, page) => {
+  const listed = await azure.call('repo_pull_request_thread', { action: 'list', ...where(azure, number), top: PAGE, skip: page * PAGE, fullResponse: true })
   if ('failure' in listed) return listed
-  return areThreads(listed.json) && listed.json.length < LISTED ? { threads: listed.json } : UNREADABLE
+  return areThreads(listed.json) ? { threads: listed.json } : UNREADABLE
 }
 
 /**
