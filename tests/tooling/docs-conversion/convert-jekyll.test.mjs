@@ -63,6 +63,11 @@ test('the running example block becomes an info admonition titled by its label',
   assert.deepEqual(result.findings, [])
 })
 
+test('raw and endraw tags go, their content stays', () => {
+  const { result, after } = convertFixture('raw-blocks', { docId: 'reference/phases' })
+  assert.equal(result.text, after)
+})
+
 test('with the catalogue option, dashboard links point at the catalogue page', () => {
   const source = '# T\n\n[Catalogue]({{ "/en/dashboard/" | relative_url }}), [data]({{ "/dashboard/" | relative_url }})\n'
   const { text } = convertPage(source, { docId: 'how-to/run-gates', locale: 'en', dashboardLink: 'catalogue' })
