@@ -1,6 +1,4 @@
 ---
-layout: doc
-lang: en
 title: "Adapting skraft: what each setting costs"
 description: "What skraft lets you adapt and what it keeps in the engine, why, and the proof each setting can remove without anyone noticing."
 persona: tech-lead
@@ -8,8 +6,8 @@ persona: tech-lead
 
 # Adapting skraft: what each setting costs
 
-> The engine runs what you write. It cannot tell whether your command really tests anything: each
-> setting that adapts skraft can also remove a proof.
+The engine runs what you write. It cannot tell whether your command really tests anything: each
+setting that adapts skraft can also remove a proof.
 
 ## What you describe, what the engine decides
 
@@ -20,11 +18,11 @@ number of attempts, the verdicts, the gates and their thresholds.
 
 | What you adapt | Where | Guide |
 | --- | --- | --- |
-| Components, commands, gates, base, mocking | `skraft-config.json` | [Configure the components]({{ "/en/how-to/configure-components" | relative_url }}) |
-| Each agent's model and reasoning effort | `models`, `assign` (four layers) | [Choose the agents' models]({{ "/en/how-to/choose-models" | relative_url }}) |
-| A review's lenses | `.skraft/pipeline.skraft.dot`, `.skraft/review.skraft.dot` | [Add a lens to a review]({{ "/en/how-to/customise-review" | relative_url }}) |
-| Agents and questions of your repository | `.skraft/pipeline.skraft.dot` | [The DOT workflow]({{ "/en/reference/workflow-dot" | relative_url }}) |
-| Publishing the pull request and screenshots | `publish` | [Publish a run's pull request]({{ "/en/how-to/publish-pull-request" | relative_url }}) |
+| Components, commands, gates, base, mocking | `skraft-config.json` | [Configure the components](../how-to/configure-components.md) |
+| Each agent's model and reasoning effort | `models`, `assign` (four layers) | [Choose the agents' models](../how-to/choose-models.md) |
+| A review's lenses | `.skraft/pipeline.skraft.dot`, `.skraft/review.skraft.dot` | [Add a lens to a review](../how-to/customise-review.md) |
+| Agents and questions of your repository | `.skraft/pipeline.skraft.dot` | [The DOT workflow](../reference/workflow-dot.md) |
+| Publishing the pull request and screenshots | `publish` | [Publish a run's pull request](../how-to/publish-pull-request.md) |
 
 What cannot be tuned, and why:
 
@@ -53,7 +51,7 @@ command that runs and proves nothing.
 | Leave a component with no gate | Any proof about that component; the engine reports it as an `environment` failure | `no gate command; …` from `skraft gate` |
 | Set `--base` or `baseBranch` to a ref that is too recent | Changed files fall outside the compared range | `no component changed since its base; no gate to run` while code did change |
 | Remove the `adr` ask node | Human ratification of the ADRs, which stay `Proposed` | `skraft workflow diff` shows the node gone |
-| Edit `events.jsonl` by hand to unblock a run | The journal as evidence: the run is blocked with `journal-tampered` | [Resume or unblock a run]({{ "/en/how-to/resume-a-run" | relative_url }}) |
+| Edit `events.jsonl` by hand to unblock a run | The journal as evidence: the run is blocked with `journal-tampered` | [Resume or unblock a run](../how-to/resume-a-run.md) |
 
 Before you reduce a control, write the reason down where the team will read it: the pull request's
 description, an ADR. To know whether a gate still proves something, open its evidence
@@ -70,12 +68,12 @@ than optional.
 
 ## Further reading
 
-- [Software craftsmanship]({{ "/en/explanation/software-craftsmanship" | relative_url }}) — why a
+- [Software craftsmanship](./software-craftsmanship.md) — why a
   fixed bar.
-- [Architecture]({{ "/en/explanation/architecture" | relative_url }}) — why these decisions live in
+- [Architecture](./architecture.md) — why these decisions live in
   the engine.
-- [Gates]({{ "/en/reference/gates" | relative_url }}) and
-  [locked nodes]({{ "/en/reference/workflow-dot" | relative_url }}#locked-nodes).
+- [Gates](../reference/gates.md) and
+  [locked nodes](../reference/workflow-dot.md#locked-nodes).
 
 ## Sources
 

@@ -1,6 +1,4 @@
 ---
-layout: doc
-lang: en
 title: "L3 zoom: contract testing"
 description: "Zoom on contract testing in DELIVER: how the software-engineer loads the contract-testing skills its brief names, the always-on WebApplicationFactory baseline, the additive Microcks opt-in, and how the contract-fidelity-lens audits the result."
 persona: software-engineer
@@ -8,9 +6,9 @@ persona: software-engineer
 
 # L3 zoom: contract testing
 
-> The [architecture]({{ "/en/explanation/architecture" | relative_url }}) view stops at
-> L2. This page zooms into the sibling L3 detail: how DELIVER verifies that **our own**
-> API behaves as its contract says.
+The [architecture](../architecture.md) view stops at
+L2. This page zooms into the sibling L3 detail: how DELIVER verifies that **our own**
+API behaves as its contract says.
 
 ## Why this zoom
 
@@ -20,7 +18,7 @@ that agent wires the provider-side contract test itself, with the `contract-test
 component that sets `"contractTesting": true` in `skraft-config.json`; contract testing is
 off by default. That is level **L3**, hidden from the main diagram to keep it readable.
 
-Unlike [mocking]({{ "/en/explanation/deep-dive/mocking-microcks" | relative_url }})
+Unlike [mocking](./mocking-microcks.md)
 (consumer-side, replaces what the service calls), contract testing is **provider-side**: it
 verifies our own API. The two never overlap.
 
@@ -86,10 +84,10 @@ its shape without a live end-to-end environment.
 
 ## Going further
 
-- [Architecture]({{ "/en/explanation/architecture" | relative_url }}) — the L1 + L2 view this page zooms out of.
-- [L3 zoom: mocking (Microcks)]({{ "/en/explanation/deep-dive/mocking-microcks" | relative_url }}) — the sibling consumer-side wiring.
-- [DELIVER]({{ "/en/explanation/pipeline/deliver" | relative_url }}) — the phase that owns this wiring.
-- [Agentic catalogue]({{ "/en/dashboard/" | relative_url }}) — every agent and lens. Unsure about a term? See the [glossary]({{ "/en/reference/glossary" | relative_url }}).
+- [Architecture](../architecture.md) — the L1 + L2 view this page zooms out of.
+- [L3 zoom: mocking (Microcks)](./mocking-microcks.md) — the sibling consumer-side wiring.
+- [DELIVER](../pipeline/deliver.md) — the phase that owns this wiring.
+- [Agentic catalogue](pathname:///dashboard/) — every agent and lens. Unsure about a term? See the [glossary](../../reference/glossary.md).
 
 ## Sources
 

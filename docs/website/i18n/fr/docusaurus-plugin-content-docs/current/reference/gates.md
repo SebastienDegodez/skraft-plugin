@@ -1,19 +1,17 @@
 ---
-layout: doc
-lang: fr
 title: "Gates"
 description: "Les gates de commandes que lance le moteur et les critères de revue (Gxx et autres identifiants) que jugent les lentilles, par phase, avec la réponse d'une lentille, la réfutation et le calcul du verdict."
 ---
 
 # Gates
 
-> Une gate est un critère binaire, écrit d'avance : une commande qui sort avec 0, ou un critère qu'une lentille de revue déclare tenu ou non.
+Une gate est un critère binaire, écrit d'avance : une commande qui sort avec 0, ou un critère qu'une lentille de revue déclare tenu ou non.
 
 Pourquoi des critères écrits et une revue indépendante :
-[La revue avant la revue]({{ "/fr/explanation/deep-dive/review-before-review" | relative_url }}).
-Où chaque revue se place dans le pipeline : [Phases]({{ "/fr/reference/phases" | relative_url }}).
+[La revue avant la revue](../explanation/deep-dive/review-before-review.md).
+Où chaque revue se place dans le pipeline : [Phases](./phases.md).
 
-## Deux sortes de gates {#kinds}
+## Deux sortes de gates <!-- #kinds -->
 
 | Sorte | Identifiants | Qui la juge | Où |
 | --- | --- | --- | --- |
@@ -25,7 +23,7 @@ Un identifiant `G<n>` n'est unique que dans sa phase : G1 de DESIGN n'est pas G1
 La table d'une lentille, dans son descripteur d'agent, fait foi ; une lentille met
 l'identifiant dans le champ `gate` de chaque finding.
 
-## Gates de commandes {#command-gates}
+## Gates de commandes <!-- #command-gates -->
 
 Les gates sont les commandes d'un composant dont le nom est l'un des sept ci-dessous, dans
 `skraft-config.json`. Elles tournent dans cet ordre, quel que soit l'ordre du fichier, depuis la
@@ -43,16 +41,16 @@ racine du composant ; un composant s'arrête à sa première gate en échec.
 
 | Règle | Détail |
 | --- | --- |
-| Résultat | `pass` (sortie 0) ou `fail`, classe `environment` ou `deterministic` ([classes d'échec]({{ "/fr/reference/skraft-config" | relative_url }}#failure-classes)) |
+| Résultat | `pass` (sortie 0) ou `fail`, classe `environment` ou `deterministic` ([classes d'échec](./skraft-config.md#failure-classes)) |
 | Composant sans commande de gate | gate `none`, `fail`, classe `environment` |
 | Portée | les composants modifiés depuis leur base ; `goal_gate=true` lance ensuite tous les autres ; `skraft gate --all` les lance tous |
 | Arêtes | toutes les gates du nœud passent : arête `PASS` ; une échoue : arête `FAIL` (`gates` : `PASS` vers `deliver_review`, `FAIL` vers `deliver` ; `mutation` : `PASS` vers `visuals`, `FAIL` vers `kill_proposal` ; `mutation_gates` : `PASS` vers `mutation`, `FAIL` vers `kill_mutants`) |
-| Mutation | le moteur lit le rapport de la commande `mutation` (`mutationReport`) et juge deux barres : **100 %** sur le cœur (Domain, Application), **80 %** sur la frontière (le reste) ; elle tourne une fois, après l'approbation de `deliver_review` ; en échec, `kill_proposal` écrit une proposition par fichier de survivants, la question `mutation-plan` laisse le développeur choisir (`APPLY`, sa consigne, `STOP`), puis `kill_mutants` applique le choix ([Phases]({{ "/fr/reference/phases" | relative_url }}#deliver)) |
+| Mutation | le moteur lit le rapport de la commande `mutation` (`mutationReport`) et juge deux barres : **100 %** sur le cœur (Domain, Application), **80 %** sur la frontière (le reste) ; elle tourne une fois, après l'approbation de `deliver_review` ; en échec, `kill_proposal` écrit une proposition par fichier de survivants, la question `mutation-plan` laisse le développeur choisir (`APPLY`, sa consigne, `STOP`), puis `kill_mutants` applique le choix ([Phases](./phases.md#deliver)) |
 | Seuils | aucun n'est configurable |
-| Verrou | `gates` et `mutation` sont `locked=true` : une copie du workflow ne les retire qu'avec `unlock="<raison>"` ([Le workflow DOT]({{ "/fr/reference/workflow-dot" | relative_url }}#locked-nodes)) |
-| Preuve | `gates/<composant>/<gate>-<n>.log` et un événement `gate.ran` ([Dossier de suivi et journal]({{ "/fr/reference/run-journal" | relative_url }}#gate-evidence)) |
+| Verrou | `gates` et `mutation` sont `locked=true` : une copie du workflow ne les retire qu'avec `unlock="<raison>"` ([Le workflow DOT](./workflow-dot.md#locked-nodes)) |
+| Preuve | `gates/<composant>/<gate>-<n>.log` et un événement `gate.ran` ([Dossier de suivi et journal](./run-journal.md#gate-evidence)) |
 
-## Critères de revue {#review-criteria}
+## Critères de revue <!-- #review-criteria -->
 
 | Sévérité | DISCOVER, DISCUSS (`review-verdict.mjs`) | DESIGN, DISTILL, DELIVER (moteur) |
 | --- | --- | --- |
@@ -63,7 +61,7 @@ racine du composant ; un composant s'arrête à sa première gate en échec.
 
 ---
 
-## DISCOVER — G1 à G6 {#discover}
+## DISCOVER — G1 à G6 <!-- #discover -->
 
 `backlog-discoverer` (plugin skraft-backlog) lance 3 lentilles ; `review-verdict.mjs --phase
 discover` calcule le verdict. Objet : le rapport de triage et la proposition de sprint.
@@ -77,7 +75,7 @@ discover` calcule le verdict. Objet : le rapport de triage et la proposition de 
 | **G5** | `discovery-duplicate-lens` | Deux issues triées ne décrivent pas le même problème sans être marquées doublons. | HIGH |
 | **G6** | `discovery-duplicate-lens` | Toute paire seulement liée est notée avec une recommandation. | MEDIUM |
 
-## DISCUSS — G1 à G8 {#discuss}
+## DISCUSS — G1 à G8 <!-- #discuss -->
 
 `backlog-planner` (plugin skraft-backlog) lance 4 lentilles ; `review-verdict.mjs --phase
 discuss` calcule le verdict. Objet : les stories et leurs critères d'acceptation.
@@ -96,7 +94,7 @@ discuss` calcule le verdict. Objet : les stories et leurs critères d'acceptatio
 Une story à qui manquent deux items du DoR ou plus (deux findings G7) rend le verdict
 `REJECTED`, quelle que soit leur sévérité.
 
-## DESIGN {#design}
+## DESIGN <!-- #design -->
 
 Revue `design_review` : 3 lentilles, verdict calculé par le moteur. Un ADR `Proposed` écrit par
 le passage en cours satisfait tout critère qui demande un ADR `Accepted` et tombe sous tout
@@ -125,7 +123,7 @@ critère qui en interdit un.
 | **F1** | `fitness` | Chaque attribut qualité que la story ou la recherche énonce a un élément de conception qui y répond. | high |
 
 **Contrôles du moteur.** Après chaque tentative de `solution-architect`, sans lentille
-([`design-records`]({{ "/fr/reference/run-journal" | relative_url }}#statuses-and-codes)) :
+([`design-records`](./run-journal.md#statuses-and-codes)) :
 
 | Critère | Contrôle |
 | --- | --- |
@@ -140,7 +138,7 @@ Un manquement renvoie l'architecte avec une ligne par trace ; après sa dernièr
 run s'arrête avec `design-records`. La matrice de cohérence est aussi la sortie déclarée de DESIGN : quand
 elle manque, le run s'arrête avec `missing-outputs`.
 
-## DISTILL {#distill}
+## DISTILL <!-- #distill -->
 
 Revue `distill_review` : 4 lentilles, verdict calculé par le moteur.
 
@@ -167,7 +165,7 @@ sous la lentille `testability#layout` (sévérité blocker) un test ajouté hors
 unitaire et intégration de la stack, et un composant qui gagne des tests sans aucun dans son
 emplacement unitaire.
 
-## DELIVER {#deliver}
+## DELIVER <!-- #deliver -->
 
 DELIVER passe par les gates `gates`, l'appel `deliver_review` du workflow `review`, puis la gate
 `mutation` ; quand elle échoue, la revue `mutation_review` (lentille `test-integrity`) juge les
@@ -194,19 +192,19 @@ lentilles jugent une pull request par `skraft review --pr`.
 
 `mock-fidelity` ne tourne que sur des changements qui touchent des mocks (`when="mock"`),
 `contract-fidelity` que sur des changements qui touchent des contrats (`when="contract"`)
-([déclencheurs]({{ "/fr/reference/workflow-dot" | relative_url }}#conditional-lenses)).
+([déclencheurs](./workflow-dot.md#conditional-lenses)).
 
 Le moteur vérifie aussi, sans identifiant de gate, les commits de chaque tentative
 (`commits.checked`) : message conventionnel, `Refs: #<issue>` en dernière ligne, aucune issue
 fermée, un commit vert précédé d'un rouge, chaque rouge rejoué en échec
-([`tdd.replay`]({{ "/fr/reference/skraft-config" | relative_url }}#tdd)).
+([`tdd.replay`](./skraft-config.md#tdd)).
 
-## Revue : réponse, réfutation, verdict {#review-run}
+## Revue : réponse, réfutation, verdict <!-- #review-run -->
 
 Ce qui suit vaut pour les revues que le moteur conduit (DESIGN, DISTILL, DELIVER, `skraft review
 --pr`).
 
-### Réponse d'une lentille {#lens-answer}
+### Réponse d'une lentille <!-- #lens-answer -->
 
 Une lentille termine son dernier message par un document YAML dans un bloc
 clôturé ; le moteur lit le dernier bloc clôturé du message.
@@ -232,7 +230,7 @@ findings:                # [] quand elle ne trouve rien
 | Textes | ramenés sur une ligne et tronqués (description : 500 caractères) ; `location` rendue relative à la copie de travail, séparée par `/`, sans `./`, son `:ligne` gardé (un chemin hors de la copie de travail reste absolu) |
 | Réponse refusée | la lentille est relancée une fois avec la raison ; une seconde réponse illisible arrête le run avec `lens-unreadable` ; une reprise ne relance que les lentilles dont la réponse était illisible |
 
-### G9 lu par le moteur {#g9-engine}
+### G9 lu par le moteur <!-- #g9-engine -->
 
 Quand `test-integrity` relit les changements, le moteur lit aussi le patch des
 fichiers de test (fichiers source sous un dossier `test`, `tests`, `spec` ou `__tests__`, ou
@@ -244,7 +242,7 @@ et testdata exclus) et journalise ce qu'il trouve sous la lentille `test-integri
 moins de lignes ajoutées (high). Le brief de `test-integrity` les liste pour que la lentille ne
 les signale pas une seconde fois ; ils partent au réfuteur comme ceux d'une lentille.
 
-### Réfutation {#refutation}
+### Réfutation <!-- #refutation -->
 
 Les findings de lentilles différentes au même `chemin:ligne` (le chemin normalisé
 comme ceux du patch : `./src\Checkout.cs:12` est `src/Checkout.cs:12`) et de même sévérité
@@ -255,7 +253,7 @@ lu) ou `unverifiable`, et la réponse vaut pour chaque finding du groupe. Un fin
 compte pas ; un finding invérifiable compte, comme celui dont la vérification a été illisible
 deux fois.
 
-### Verdict {#verdict}
+### Verdict <!-- #verdict -->
 
 Une lentille qui répond `inconclusive`, ou `fail` sans finding blocker, high ou
 medium, bloque la revue avec `lens-inconclusive`, en nommant chacune de ces lentilles et ce
@@ -270,7 +268,7 @@ Le résumé donne le statut, puis les findings réfutés et les notes mis de cô
 le journal du workflow) liste dessous chaque finding réfuté avec la raison du réfuteur et chaque note, puis
 l'emplacement de `verdict.yaml`, pour qu'un humain puisse quand même les faire corriger.
 
-### Re-revue incrémentale {#incremental}
+### Re-revue incrémentale <!-- #incremental -->
 
 À une passe suivante, une lentille dont le résultat précédent était
 `pass` sans finding, et dont l'empreinte n'a pas changé, n'est pas relancée : son résultat est
@@ -278,7 +276,7 @@ journalisé de nouveau avec `reused: true`. L'empreinte couvre ses entrées, le 
 `SKILL.md` qu'elle lit (par nom de skill : déplacer la copie de travail ou le plugin n'y change
 rien), les fichiers de règles du projet et le contenu de chaque chemin changé qu'elle lit.
 
-### Verdict de DISCOVER et DISCUSS {#backlog-verdict}
+### Verdict de DISCOVER et DISCUSS <!-- #backlog-verdict -->
 
 `review-verdict.mjs` lit les réponses des lentilles et écrit le fichier de revue ; son code de
 sortie porte le verdict.
@@ -290,13 +288,13 @@ sortie porte le verdict.
 | sinon (findings `low` seuls, ou aucun) | `APPROVED` | 0 |
 | ligne mal formée ou réponse illisible | — | 1 |
 
-## Voir aussi {#see-also}
+## Voir aussi <!-- #see-also -->
 
-- [Phases]({{ "/fr/reference/phases" | relative_url }})
-- [Le workflow DOT]({{ "/fr/reference/workflow-dot" | relative_url }})
-- [Catalogue des agents et lentilles]({{ "/fr/dashboard/" | relative_url }})
-- [Lancer les gates]({{ "/fr/how-to/run-gates" | relative_url }})
-- [La revue avant la revue]({{ "/fr/explanation/deep-dive/review-before-review" | relative_url }})
+- [Phases](./phases.md)
+- [Le workflow DOT](./workflow-dot.md)
+- [Catalogue des agents et lentilles](pathname:///fr/dashboard/)
+- [Lancer les gates](../how-to/run-gates.md)
+- [La revue avant la revue](../explanation/deep-dive/review-before-review.md)
 
 Termes à connaître : **gate**, **lentille**, **finding**, **BLOCKER**, **INVEST**, **walking
-skeleton** — voir le [glossaire]({{ "/fr/reference/glossary" | relative_url }}).
+skeleton** — voir le [glossaire](./glossary.md).

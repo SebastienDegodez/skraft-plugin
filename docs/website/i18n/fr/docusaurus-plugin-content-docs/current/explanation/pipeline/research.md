@@ -1,18 +1,14 @@
 ---
-layout: doc
-lang: fr
 title: "RESEARCH"
 description: "Pourquoi l'ingénierie commence par une investigation sourcée qui recommande sans décider : des preuves dans le code et les sources avant toute architecture."
 persona: tech-lead
+phase: research
 ---
-{% assign cites = "/fr/reference/citations" | relative_url %}
-
-{% include phase-ribbon.html current="research" %}
 
 # RESEARCH — réduire l'incertitude avant de concevoir
 
-> RESEARCH cherche des preuves dans le code, les conventions et les sources externes. Il
-> recommande une approche sans écrire de code ni prendre la décision d'architecture.
+RESEARCH cherche des preuves dans le code, les conventions et les sources externes. Il
+recommande une approche sans écrire de code ni prendre la décision d'architecture.
 
 ## Pourquoi cette phase existe
 
@@ -26,13 +22,12 @@ C'est la première phase que conduit le moteur. Avant de lancer le chercheur, le
 au développeur s'il consent à publier la pull request et, pour un front end, les captures : ces
 questions arrivent tôt pour ne pas interrompre le run plus tard.
 
-<div class="fil-rouge" markdown="1">
-<span class="fil-rouge__label">☕ Fil rouge — Starbucks <em>(exemple illustratif)</em></span>
+:::info[☕ Fil rouge — Starbucks *(exemple illustratif)*]
 
 La story « commander une boisson personnalisée » entre avec ses critères. RESEARCH repère le
 fournisseur de paiement existant, les contraintes du dépôt et les options d'intégration. Il
 transmet à DESIGN une recommandation sourcée, sans choisir l'ADR.
-</div>
+:::
 
 ## Une affirmation sans source est retirée
 
@@ -74,7 +69,7 @@ DESIGN : la recherche a eu lieu pendant la préparation produit.
 
 ## Pour aller plus loin
 
-- [Référence : RESEARCH]({{ "/fr/reference/phases" | relative_url }}#research) — nœuds, sortie, contrôle, tentatives.
-- [Référence : le document de recherche]({{ "/fr/reference/run-journal" | relative_url }}#research-document).
-- [Référence : documentation durable]({{ "/fr/reference/run-journal" | relative_url }}#durable-docs) — ce qui va dans `docs/`, ce qui reste dans le dossier de suivi.
-- [DESIGN]({{ "/fr/explanation/pipeline/design" | relative_url }}) — la phase qui décide.
+- [Référence : RESEARCH](../../reference/phases.md#research) — nœuds, sortie, contrôle, tentatives.
+- [Référence : le document de recherche](../../reference/run-journal.md#research-document).
+- [Référence : documentation durable](../../reference/run-journal.md#durable-docs) — ce qui va dans `docs/`, ce qui reste dans le dossier de suivi.
+- [DESIGN](./design.md) — la phase qui décide.

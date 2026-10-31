@@ -1,6 +1,4 @@
 ---
-layout: doc
-lang: en
 title: "For executives"
 description: "Why an organisation that delivers with AI assistants needs SKRAFT: discipline enforced by code, the same on every host, traceable and verifiable."
 persona: manager
@@ -8,8 +6,8 @@ persona: manager
 
 # For executives
 
-> SKRAFT makes AI assistants follow the same engineering pipeline, on every workstation and
-> every tool. The checks are made by a tested program, not left to the model's goodwill.
+SKRAFT makes AI assistants follow the same engineering pipeline, on every workstation and
+every tool. The checks are made by a tested program, not left to the model's goodwill.
 
 ## Situation
 
@@ -138,7 +136,7 @@ organisation's performance.
 4. **Extend.** Add repositories and teams; adapt the workflow in `.skraft/` where a team needs
    an extra agent, lens or question.
 
-The [getting started tutorial]({{ "/en/tutorials/getting-started" | relative_url }}) walks
+The [getting started tutorial](../tutorials/getting-started.md) walks
 through this step by step.
 
 ## Available today and roadmap
@@ -152,7 +150,7 @@ issue comment; `skraft review --pr` to review any pull request with the same len
 `skraft migrate` for runs started with v1; the `skraft-brownfield` plugin for existing code.
 
 **Coming next**: what remains before 2.0.0 is kept up to date in the home page's
-[roadmap]({{ "/en/#roadmap" | relative_url }}).
+[roadmap](../index.mdx#roadmap).
 
 ## Who it is for
 
@@ -167,10 +165,10 @@ issue comment; `skraft review --pr` to review any pull request with the same len
 
 ## Going further
 
-- [Architecture]({{ "/en/explanation/architecture" | relative_url }}) — the engine, the host drivers, depth 1.
-- [Guardrails: from hook to engine]({{ "/en/explanation/guardrails" | relative_url }}) — why V2 starts with zero hooks.
-- [The event journal]({{ "/en/explanation/event-journal" | relative_url }}) — the chained journal.
-- [Configure components]({{ "/en/how-to/configure-components" | relative_url }}).
+- [Architecture](./architecture.md) — the engine, the host drivers, depth 1.
+- [Guardrails: from hook to engine](./guardrails.md) — why V2 starts with zero hooks.
+- [The event journal](./event-journal.md) — the chained journal.
+- [Configure components](../how-to/configure-components.md).
 
 ## Sources
 

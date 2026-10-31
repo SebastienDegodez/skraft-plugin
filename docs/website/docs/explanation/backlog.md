@@ -1,16 +1,13 @@
 ---
-layout: doc
-lang: en
 title: "The backlog: from idea to ready story"
 description: "Why product preparation lives in a plugin of its own, skraft-backlog: from PRD to GitHub backlog, refining one issue, the triage and sprint automations, and the planning lenses that decide whether a story is ready."
 persona: tech-lead
 ---
-{% assign cites = "/en/reference/citations" | relative_url %}
 
 # The backlog: from idea to ready story
 
-> The engineering pipeline starts from a ready story. `skraft-backlog` is the half of SKRAFT that
-> prepares it — and refuses to call it ready until it is.
+The engineering pipeline starts from a ready story. `skraft-backlog` is the half of SKRAFT that
+prepares it — and refuses to call it ready until it is.
 
 ## Why a separate plugin
 
@@ -55,7 +52,7 @@ fits in one sentence: **it decides nothing a script or a human decides.**
 
 The first story of each epic is its **tracer bullet**: the thinnest path through every layer the
 epic touches, demonstrable when done. This is the *tracer bullets* idea
-([Hunt & Thomas, 2019]({{ cites }}#cite-hunt-pragmatic-2019)), a cousin of the walking skeleton
+([Hunt & Thomas, 2019](../reference/citations.mdx#cite-hunt-pragmatic-2019)), a cousin of the walking skeleton
 DISTILL demands later. A canvas, *skraft backlog*, shows the map and each story as a checklist.
 Marking a story reviewed and creating it on GitHub are the human's actions there: the agent can
 read the state, explain a story and simulate the creation, never publish.
@@ -63,15 +60,15 @@ read the state, explain a story and simulate the creation, never publish.
 ### Triage, then refine
 
 On a backlog that already exists, two agents take over: `backlog-discoverer` triages and proposes
-a sprint ([DISCOVER]({{ "/en/explanation/pipeline/discover" | relative_url }})), then
+a sprint ([DISCOVER](./pipeline/discover.md)), then
 `backlog-planner` refines the selected issues into stories
-([DISCUSS]({{ "/en/explanation/pipeline/discuss" | relative_url }})). The developer starts each as
+([DISCUSS](./pipeline/discuss.md)). The developer starts each as
 the main agent of their session; that producer starts its lenses, and no sub-agent starts
 another. Under Copilot, `/skraft backlog [criteria…]` is the entry to this path: it starts no
 agent, it tells the developer which agent to select next and, once the stories are written, to
 type `/skraft <slug> --from-artifacts`. It never moves to development on its own, because a
 router that started the producer would put its lenses at depth 2. How to do it:
-[Refine the backlog]({{ "/en/how-to/refine-backlog" | relative_url }}).
+[Refine the backlog](../how-to/refine-backlog.md).
 
 ### Refine a single issue
 
@@ -99,13 +96,13 @@ A story is not "ready" because its author says so. Four lenses, each read-only, 
 precise angle, and the `review-verdict.mjs` script computes the verdict.
 
 - **INVEST** (G1, G2): each story is independent, negotiable, valuable, estimable, small and
-  testable ([Wake, 2003]({{ cites }}#cite-wake-invest-2003)), and the sprint holds no circular
+  testable ([Wake, 2003](../reference/citations.mdx#cite-wake-invest-2003)), and the sprint holds no circular
   dependency. A story that silently depends on another betrays a split to redo.
 - **Acceptance-criteria quality** (G3, G4): at least three criteria, none dictating the
   implementation, and above all none a domain expert could read two ways. An ambiguous criterion
   (G4) is blocking: an HTTP status code, a class name or "the customer is notified" without saying
   how do not mean the same thing to everyone. The worked examples of specification by example
-  remove those ambiguities ([Adzic, 2011]({{ cites }}#cite-adzic-specification-2011)).
+  remove those ambiguities ([Adzic, 2011](../reference/citations.mdx#cite-adzic-specification-2011)).
 - **Coherence** (G5, G6): each story serves its milestone's theme, and the delivery order follows
   unambiguously from the dependency graph.
 - **Definition of Ready** (G7, G8): the eight checklist items pass, and no anti-pattern shows up —
@@ -114,7 +111,7 @@ precise angle, and the `review-verdict.mjs` script computes the verdict.
 
 A missing or inconclusive lens never counts as approval, and three refused attempts hand control
 back to the developer. The detail of the criteria and the computation:
-[Gates]({{ "/en/reference/gates" | relative_url }}#discuss).
+[Gates](../reference/gates.md#discuss).
 
 ## Trade-offs
 
@@ -127,15 +124,15 @@ back to the developer. The detail of the criteria and the computation:
 
 ## Going further
 
-- [Turn a PRD into a GitHub backlog]({{ "/en/how-to/prd-to-backlog" | relative_url }}) — the `skraft-prd-backlog` workflow step by step.
-- [Refine a backlog issue]({{ "/en/how-to/refine-backlog" | relative_url }}) — `/skraft-refine` and the gh-aw workflow.
-- [Reference: DISCOVER and DISCUSS]({{ "/en/reference/phases" | relative_url }}#discover) — inputs, outputs, effects on GitHub.
-- [Reference: DISCOVER and DISCUSS review criteria]({{ "/en/reference/gates" | relative_url }}#discover).
-- [The agent and skill catalogue]({{ "/en/dashboard/" | relative_url }}).
-- [The SKRAFT pipeline]({{ "/en/explanation/pipeline/" | relative_url }}).
+- [Turn a PRD into a GitHub backlog](../how-to/prd-to-backlog.md) — the `skraft-prd-backlog` workflow step by step.
+- [Refine a backlog issue](../how-to/refine-backlog.md) — `/skraft-refine` and the gh-aw workflow.
+- [Reference: DISCOVER and DISCUSS](../reference/phases.md#discover) — inputs, outputs, effects on GitHub.
+- [Reference: DISCOVER and DISCUSS review criteria](../reference/gates.md#discover).
+- [The agent and skill catalogue](pathname:///dashboard/).
+- [The SKRAFT pipeline](./pipeline/index.md).
 
 ## Sources
 
-- [Adzic, G. *Specification by Example*, 2011.]({{ cites }}#cite-adzic-specification-2011)
-- [Hunt, A. & Thomas, D. *The Pragmatic Programmer*, 20th anniversary ed., 2019.]({{ cites }}#cite-hunt-pragmatic-2019)
-- [Wake, B. *INVEST in Good Stories, and SMART Tasks*, 2003.]({{ cites }}#cite-wake-invest-2003)
+- [Adzic, G. *Specification by Example*, 2011.](../reference/citations.mdx#cite-adzic-specification-2011)
+- [Hunt, A. & Thomas, D. *The Pragmatic Programmer*, 20th anniversary ed., 2019.](../reference/citations.mdx#cite-hunt-pragmatic-2019)
+- [Wake, B. *INVEST in Good Stories, and SMART Tasks*, 2003.](../reference/citations.mdx#cite-wake-invest-2003)

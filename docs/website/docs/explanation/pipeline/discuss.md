@@ -1,18 +1,14 @@
 ---
-layout: doc
-lang: en
 title: "DISCUSS"
 description: "Why refine a triaged issue into an INVEST story with domain examples and acceptance criteria before any design, and why the Definition of Ready decides."
 persona: software-engineer
+phase: discuss
 ---
-{% assign cites = "/en/reference/citations" | relative_url %}
 
 # DISCUSS
 
-{% include phase-ribbon.html current="discuss" %}
-
-> Clarify before designing: DISCUSS turns a triaged issue into a story the business and the code
-> understand the same way.
+Clarify before designing: DISCUSS turns a triaged issue into a story the business and the code
+understand the same way.
 
 ## Why this phase exists
 
@@ -25,24 +21,23 @@ It is the second phase of the `skraft-backlog` plugin. The developer starts the
 planning). The planner touches neither the code nor the engine: it writes stories into the
 tracking folder and puts a label on each issue saying whether it is ready.
 
-<div class="fil-rouge" markdown="1">
-<span class="fil-rouge__label">☕ Running example — Starbucks <em>(illustrative)</em></span>
+:::info[☕ Running example — Starbucks *(illustrative)*]
 
 The triage report enters. DISCUSS derives the **INVEST story**: "As a customer, I order a
 customised drink to pick up in store." It exits with **3 acceptance criteria** (choice of size,
 milk, and payment before preparation). Engineering receives this story.
-</div>
+:::
 
 ## Examples before rules
 
 The planner starts from concrete domain examples, with real values, then derives the acceptance
 criteria in *Given / When / Then* form. The order matters: a worked example reveals a
 disagreement an abstract rule hides. This is specification by example
-([Adzic, 2011]({{ cites }}#cite-adzic-specification-2011)) and the *Given / When / Then*
-vocabulary of BDD ([North, 2006]({{ cites }}#cite-north-bdd-2006)).
+([Adzic, 2011](../../reference/citations.mdx#cite-adzic-specification-2011)) and the *Given / When / Then*
+vocabulary of BDD ([North, 2006](../../reference/citations.mdx#cite-north-bdd-2006)).
 
 The story itself follows INVEST: independent, negotiable, valuable, estimable, small, testable
-([Wake, 2003]({{ cites }}#cite-wake-invest-2003)). It names a specific role, never "the user":
+([Wake, 2003](../../reference/citations.mdx#cite-wake-invest-2003)). It names a specific role, never "the user":
 a vague persona lets everyone imagine their own.
 
 ## Ready, or not yet
@@ -58,13 +53,13 @@ DISCOVER. The planner never approves its own stories.
 
 ## Going further
 
-- [The backlog]({{ "/en/explanation/backlog" | relative_url }}) — why each planning lens exists.
-- [Reference: DISCUSS]({{ "/en/reference/phases" | relative_url }}#discuss) — inputs, outputs, labels.
-- [Reference: DISCUSS review criteria]({{ "/en/reference/gates" | relative_url }}#discuss).
-- [RESEARCH]({{ "/en/explanation/pipeline/research" | relative_url }}) — where engineering starts.
+- [The backlog](../backlog.md) — why each planning lens exists.
+- [Reference: DISCUSS](../../reference/phases.md#discuss) — inputs, outputs, labels.
+- [Reference: DISCUSS review criteria](../../reference/gates.md#discuss).
+- [RESEARCH](./research.md) — where engineering starts.
 
 ## Sources
 
-- [Adzic, G. *Specification by Example*, 2011.]({{ cites }}#cite-adzic-specification-2011)
-- [North, D. *Introducing BDD*, 2006.]({{ cites }}#cite-north-bdd-2006)
-- [Wake, B. *INVEST in Good Stories, and SMART Tasks*, 2003.]({{ cites }}#cite-wake-invest-2003)
+- [Adzic, G. *Specification by Example*, 2011.](../../reference/citations.mdx#cite-adzic-specification-2011)
+- [North, D. *Introducing BDD*, 2006.](../../reference/citations.mdx#cite-north-bdd-2006)
+- [Wake, B. *INVEST in Good Stories, and SMART Tasks*, 2003.](../../reference/citations.mdx#cite-wake-invest-2003)

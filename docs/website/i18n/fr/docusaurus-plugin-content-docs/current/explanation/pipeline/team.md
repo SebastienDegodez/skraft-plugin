@@ -1,16 +1,13 @@
 ---
-layout: doc
-lang: fr
 title: "L'équipe — le pipeline comme une course de relais"
 description: "Qui produit, qui juge, qui décide et qui lance : les agents de SKRAFT, leurs lentilles, le moteur et le pilote d'hôte, seul à lancer des agents, à profondeur 1."
 persona: tech-lead
 ---
-{% assign cites = "/fr/reference/citations" | relative_url %}
 
 # L'équipe — le pipeline comme une course de relais
 
-> Des agents qui produisent, des lentilles qui jugent, un moteur qui décide et un pilote qui
-> lance. Personne ne valide son propre travail, et aucun agent n'en lance un autre.
+Des agents qui produisent, des lentilles qui jugent, un moteur qui décide et un pilote qui
+lance. Personne ne valide son propre travail, et aucun agent n'en lance un autre.
 
 ## Quatre rôles, jamais confondus
 
@@ -51,7 +48,7 @@ produit rien et ne décide de rien. Sous Claude Code, son seul outil démarre le
 Copilot CLI, il lance le workflow `skraft-pipeline` ; sous VS Code sans SDK, il conduit la boucle
 `skraft next` / `skraft record` et lance les agents que l'étape liste. Il relaie ensuite ce que
 le run rapporte. En v1, l'ordre des phases et les verdicts vivaient dans sa prose ; en V2, ils
-sont dans le moteur, et l'état du run dans le [journal d'événements]({{ "/fr/explanation/event-journal" | relative_url }}).
+sont dans le moteur, et l'état du run dans le [journal d'événements](../event-journal.md).
 
 ## Pourquoi seul le pilote lance des agents
 
@@ -63,7 +60,7 @@ dépendait de ce que chaque hôte permettait à un sous-agent.
 À profondeur 1, le moteur voit chaque lancement dans son journal, le pilote peut lancer les
 lentilles d'une revue en parallèle quand l'hôte le permet, et une lentille ne peut pas
 déléguer son jugement. Le détail du mécanisme est dans
-[Architecture]({{ "/fr/explanation/architecture" | relative_url }}).
+[Architecture](../architecture.md).
 
 Deux cas sortent du pipeline d'ingénierie sans contredire la règle. Dans `skraft-backlog`, le
 développeur lance `backlog-discoverer` ou `backlog-planner` comme agent principal de sa
@@ -77,16 +74,16 @@ DISCOVER, DISCUSS, DESIGN, DISTILL et DELIVER ont chacune leur revue, par des le
 n'ont pas produit le travail et qui tournent chacune dans un contexte neuf. RESEARCH fait
 exception : le moteur vérifie que son document est rempli, et DESIGN en reste juge. C'est la
 revue par les pairs appliquée à chaque relais
-([Wiegers, 2002]({{ cites }}#cite-wiegers-peer-reviews-2002)).
+([Wiegers, 2002](../../reference/citations.mdx#cite-wiegers-peer-reviews-2002)).
 
 ## Pour aller plus loin
 
-- [Le fil rouge]({{ "/fr/explanation/pipeline/fil-rouge" | relative_url }}) — les relais sur un exemple.
-- [Référence : phases]({{ "/fr/reference/phases" | relative_url }}) — producteur, lentilles et décision humaine de chaque phase.
-- [Référence : hôtes]({{ "/fr/reference/hosts" | relative_url }}) — ce que chaque pilote lance et comment.
-- [Le catalogue des agents]({{ "/fr/dashboard/" | relative_url }}).
-- [La revue avant la revue]({{ "/fr/explanation/deep-dive/review-before-review" | relative_url }}).
+- [Le fil rouge](./fil-rouge.md) — les relais sur un exemple.
+- [Référence : phases](../../reference/phases.md) — producteur, lentilles et décision humaine de chaque phase.
+- [Référence : hôtes](../../reference/hosts.md) — ce que chaque pilote lance et comment.
+- [Le catalogue des agents](pathname:///fr/dashboard/).
+- [La revue avant la revue](../deep-dive/review-before-review.md).
 
 ## Sources
 
-- [Wiegers, K. *Peer Reviews in Software*, 2002.]({{ cites }}#cite-wiegers-peer-reviews-2002)
+- [Wiegers, K. *Peer Reviews in Software*, 2002.](../../reference/citations.mdx#cite-wiegers-peer-reviews-2002)

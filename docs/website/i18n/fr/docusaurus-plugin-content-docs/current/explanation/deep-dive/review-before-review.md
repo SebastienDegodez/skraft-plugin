@@ -1,17 +1,14 @@
 ---
-layout: doc
-lang: fr
 title: "La revue avant la revue — pourquoi et comment"
 description: "L'argument central de SKRAFT : des lentilles indépendantes attaquent le travail, un réfuteur vérifie leurs findings et le moteur calcule le verdict, pour que la revue humaine reçoive un travail déjà filtré."
 persona: reviewer
 ---
-{% assign cites = "/fr/reference/citations" | relative_url %}
 
 # La revue avant la revue — pourquoi et comment
 
-> Avant que l'humain ne relise, des lentilles indépendantes attaquent le travail sous plusieurs
-> angles et le moteur calcule un verdict sur ce qu'elles trouvent. La revue humaine reçoit un
-> artefact déjà filtré — pas un brouillon.
+Avant que l'humain ne relise, des lentilles indépendantes attaquent le travail sous plusieurs
+angles et le moteur calcule un verdict sur ce qu'elles trouvent. La revue humaine reçoit un
+artefact déjà filtré — pas un brouillon.
 
 ## Le problème : la revue humaine absorbe trop de bruit
 
@@ -32,19 +29,19 @@ Deux observations bien établies fondent cette approche.
 
 D'abord, la revue par les pairs reste l'une des pratiques qualité les plus efficaces, et
 plusieurs regards indépendants, guidés par des critères écrits, trouvent ce qu'un lecteur seul
-manque ([Wiegers, 2002]({{ cites }}#cite-wiegers-peer-reviews-2002)). Plus un défaut est trouvé
+manque ([Wiegers, 2002](../../reference/citations.mdx#cite-wiegers-peer-reviews-2002)). Plus un défaut est trouvé
 tôt, moins il coûte : la revue assistée déplace la détection en amont, avant même l'humain.
 
 Ensuite, vitesse et stabilité ne s'opposent pas : les équipes les plus performantes livrent
 souvent et cassent rarement, parce qu'elles automatisent les contrôles au lieu de les reporter
-sur une revue manuelle tardive ([Forsgren et al., 2018]({{ cites }}#cite-forsgren-accelerate-2018)).
+sur une revue manuelle tardive ([Forsgren et al., 2018](../../reference/citations.mdx#cite-forsgren-accelerate-2018)).
 
 ## Comment SKRAFT l'applique
 
 Chaque phase revue a sa propre **revue** : des lentilles qui n'ont pas produit le travail,
 chacune dans un contexte neuf, chacune sous un seul angle. Elles lisent et ne modifient rien :
 l'agent qui produit écrit, les lentilles ne font que questionner — la séparation des commandes
-et des requêtes de Meyer ([Meyer, 1997]({{ cites }}#cite-meyer-oosc-1997)) appliquée aux rôles.
+et des requêtes de Meyer ([Meyer, 1997](../../reference/citations.mdx#cite-meyer-oosc-1997)) appliquée aux rôles.
 
 ```mermaid
 flowchart TB
@@ -70,7 +67,7 @@ entrées de la revue — la *Dissent Rule* : une voix isolée n'est ni écartée
 sans vérification. Les reprises sont bornées avant de remonter à un humain, et le verdict garde
 ses findings : la revue humaine voit **pourquoi** le travail est passé.
 
-Le calcul exact du verdict : [Gates]({{ "/fr/reference/gates" | relative_url }}#review-run).
+Le calcul exact du verdict : [Gates](../../reference/gates.md#review-run).
 
 ## Les lentilles de DELIVER en pratique
 
@@ -86,12 +83,14 @@ indépendante et sur un angle différent.
 La revue n'est pas figée : quand le changement touche un mock ou un contrat que le
 `software-engineer` a câblé, la lentille de fidélité correspondante (`mock-fidelity` ou
 `contract-fidelity`) rejoint la revue, et ses findings passent par le même réfuteur et le même
-verdict. Voir [Mocking avec Microcks]({{ "/fr/explanation/deep-dive/mocking-microcks" | relative_url }})
-et [Contract testing]({{ "/fr/explanation/deep-dive/contract-testing" | relative_url }}).
+verdict. Voir [Mocking avec Microcks](./mocking-microcks.md)
+et [Contract testing](./contract-testing.md).
 
-> **Jargon** — *Domain / Application / Infrastructure / API* : les couches de la Clean
-> Architecture ; chacune a une responsabilité précise et ne dépend que des couches intérieures
-> ([Clean Architecture]({{ "/fr/explanation/clean-architecture" | relative_url }})).
+:::note[Jargon]
+*Domain / Application / Infrastructure / API* : les couches de la Clean
+Architecture ; chacune a une responsabilité précise et ne dépend que des couches intérieures
+([Clean Architecture](../clean-architecture.md)).
+:::
 
 ## Ce que ça change, et ce que ça ne change pas
 
@@ -122,13 +121,13 @@ honnête, pas les faits.
 
 ## Pour aller plus loin
 
-- [L'équipe et les relais]({{ "/fr/explanation/pipeline/team" | relative_url }}) — qui produit, qui juge.
-- [Référence : gates et verdict]({{ "/fr/reference/gates" | relative_url }}).
-- [Le catalogue des lentilles]({{ "/fr/dashboard/" | relative_url }}).
-- [Pour décideurs]({{ "/fr/explanation/for-executives" | relative_url }}) — l'effet sur le délai de livraison.
+- [L'équipe et les relais](../pipeline/team.md) — qui produit, qui juge.
+- [Référence : gates et verdict](../../reference/gates.md).
+- [Le catalogue des lentilles](pathname:///fr/dashboard/).
+- [Pour décideurs](../for-executives.md) — l'effet sur le délai de livraison.
 
 ## Sources
 
-- [Forsgren, N., Humble, J. & Kim, G. *Accelerate*, 2018.]({{ cites }}#cite-forsgren-accelerate-2018)
-- [Meyer, B. *Object-Oriented Software Construction*, 2nd ed., 1997.]({{ cites }}#cite-meyer-oosc-1997)
-- [Wiegers, K. *Peer Reviews in Software*, 2002.]({{ cites }}#cite-wiegers-peer-reviews-2002)
+- [Forsgren, N., Humble, J. & Kim, G. *Accelerate*, 2018.](../../reference/citations.mdx#cite-forsgren-accelerate-2018)
+- [Meyer, B. *Object-Oriented Software Construction*, 2nd ed., 1997.](../../reference/citations.mdx#cite-meyer-oosc-1997)
+- [Wiegers, K. *Peer Reviews in Software*, 2002.](../../reference/citations.mdx#cite-wiegers-peer-reviews-2002)

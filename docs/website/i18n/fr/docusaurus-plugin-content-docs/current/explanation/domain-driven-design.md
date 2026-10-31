@@ -1,17 +1,14 @@
 ---
-layout: doc
-lang: fr
 title: "Domain-Driven Design — du langage du métier au code"
 description: "Pourquoi skraft s'appuie sur le DDD d'Evans — langage omniprésent, bounded contexts, context map, conception stratégique puis tactique — et quelles phases, quels artefacts et quelles lentilles les produisent ou les vérifient."
 persona: tech-lead
 ---
-{% assign cites = "/fr/reference/citations" | relative_url %}
 
 # Domain-Driven Design — du langage du métier au code
 
-> Le logiciel vaut ce que vaut sa compréhension du métier. Le DDD donne les outils pour garder
-> cette compréhension intacte, de la story jusqu'au code ; skraft vérifie qu'elle ne se perd
-> pas en route.
+Le logiciel vaut ce que vaut sa compréhension du métier. Le DDD donne les outils pour garder
+cette compréhension intacte, de la story jusqu'au code ; skraft vérifie qu'elle ne se perd
+pas en route.
 
 ## Le problème : le modèle se perd en traduction
 
@@ -19,7 +16,7 @@ Le métier parle de « commande payée », la story de « commande validée », 
 `OrderStatus = 2`. Chaque traduction est une occasion de se tromper, et l'erreur ne se voit
 qu'en production. Eric Evans situe la complexité d'un logiciel d'abord dans son **domaine** : la
 technique se maîtrise, le modèle du métier se découvre et doit rester partagé entre experts et
-développeurs ([Evans, 2003]({{ cites }}#cite-evans-ddd-2003)).
+développeurs ([Evans, 2003](../reference/citations.mdx#cite-evans-ddd-2003)).
 
 Avec des agents, le risque grandit : chaque agent travaille dans son propre contexte et peut
 renommer un concept sans que personne ne le remarque. skraft répond en faisant du DDD un fil
@@ -33,7 +30,7 @@ documents, les tests et le code. Dans skraft, ce langage est écrit tôt puis co
 phase.
 
 - **DISCUSS** l'écrit. Les stories sont affinées selon INVEST
-  ([Wake, 2003]({{ cites }}#cite-wake-invest-2003) ; lentille `planning-invest-lens`, G1) ; la
+  ([Wake, 2003](../reference/citations.mdx#cite-wake-invest-2003) ; lentille `planning-invest-lens`, G1) ; la
   Definition of Ready exige au moins trois exemples du domaine avec des valeurs réelles
   (`planning-dor-lens`, G7), et aucun critère d'acceptation ne doit admettre deux lectures par
   un expert du métier (`planning-ac-quality-lens`, G4).
@@ -51,18 +48,18 @@ phase.
 
 Un même mot change de sens d'un sous-ensemble du métier à l'autre. Plutôt que de forcer un
 modèle unique, Evans délimite des **bounded contexts** : à l'intérieur, chaque terme a un seul
-sens ; à la frontière, on traduit ([Evans, 2003]({{ cites }}#cite-evans-ddd-2003)). Le skill
+sens ; à la frontière, on traduit ([Evans, 2003](../reference/citations.mdx#cite-evans-ddd-2003)). Le skill
 `architecture-patterns` en tire les signaux qu'utilise le `solution-architect` : même mot, sens
 différent ; terme qui doit être traduit en passant d'un module à l'autre ; équipes, rythmes de
 changement ou stockages différents. La frontière est linguistique, pas technique : un contexte
 peut couvrir plusieurs services, mais un service ne couvre jamais plusieurs contextes — c'est
 dans les bounded contexts que Sam Newman recommande lui aussi de chercher les frontières des
-microservices ([Newman, 2021]({{ cites }}#cite-newman-microservices-2021)).
+microservices ([Newman, 2021](../reference/citations.mdx#cite-newman-microservices-2021)).
 
 Chaque contexte reçoit une classe de sous-domaine : **Core** (l'avantage concurrentiel),
 **Supporting** (nécessaire sans être différenciant) ou **Generic** (une commodité qu'on achète
 ou réutilise). Vlad Khononov fait de cette classification le point de départ des choix de
-conception ([Khononov, 2021]({{ cites }}#cite-khononov-lddd-2021)) ; skraft en fait la mesure
+conception ([Khononov, 2021](../reference/citations.mdx#cite-khononov-lddd-2021)) ; skraft en fait la mesure
 de la profondeur de DDD à appliquer : modèle riche pour le Core, patterns standards ailleurs.
 
 Le `solution-architect` écrit tout cela dans la context map du dépôt,
@@ -75,8 +72,8 @@ suivants lisent avant de concevoir. Scinder ou fusionner un contexte exige un AD
 Deux contextes qui échangent ont une relation, et cette relation a un prix. Evans en nomme les
 formes — Conformist, Anti-Corruption Layer, Shared Kernel, Open Host Service, Published
 Language — et sa *DDD Reference* y ajoute Partnership
-([Evans, 2003]({{ cites }}#cite-evans-ddd-2003) ;
-[Evans, 2015]({{ cites }}#cite-evans-dddref-2015)). La context map les rend visibles.
+([Evans, 2003](../reference/citations.mdx#cite-evans-ddd-2003) ;
+[Evans, 2015](../reference/citations.mdx#cite-evans-dddref-2015)). La context map les rend visibles.
 
 skraft ajoute trois règles de choix, dans le skill `architecture-patterns`, à appliquer avant
 d'étiqueter une flèche :
@@ -97,7 +94,7 @@ flowchart LR
     ORD -- "Conformist" --> LOY
 ```
 
-*Figure 1 — Une context map d'illustration sur le [fil rouge]({{ "/fr/explanation/pipeline/fil-rouge" | relative_url }})
+*Figure 1 — Une context map d'illustration sur le [fil rouge](./pipeline/fil-rouge.md)
 (commande Starbucks) ; chaque flèche va du contexte amont au contexte aval. Les noms de
 relations viennent d'Evans (2003, 2015) ; le choix de chacune suit les trois règles du skill
 `architecture-patterns` : la Commande, Core, se protège du prestataire de paiement par une ACL, la Préparation consomme un événement publié, la Fidélité,
@@ -137,7 +134,7 @@ dossier de suivi du run.*
 **Event Modeling d'abord.** Avant de dessiner des agrégats, le `solution-architect` modélise le
 comportement sur une ligne de temps : une commande (une intention, qui peut être refusée), un
 événement (un fait passé), un modèle de lecture (ce que l'utilisateur voit)
-([Dymitruk, 2019]({{ cites }}#cite-dymitruk-eventmodeling-2019)). skraft appelle **tranche** une
+([Dymitruk, 2019](../reference/citations.mdx#cite-dymitruk-eventmodeling-2019)). skraft appelle **tranche** une
 commande, ses événements et son modèle de lecture : la plus petite unité de valeur livrable. La
 lentille `fitness` exige que chaque story ait au moins une commande ou une requête (G7) et que
 chaque commande ait un événement pour son succès (G8).
@@ -146,10 +143,10 @@ chaque commande ait un événement pour son succès (G8).
 `docs/architecture/{bounded-context}.md` :
 
 - l'**agrégat** est une frontière de cohérence : une racine, des invariants garantis à
-  l'intérieur, jamais à cheval sur deux agrégats ([Evans, 2003]({{ cites }}#cite-evans-ddd-2003)).
+  l'intérieur, jamais à cheval sur deux agrégats ([Evans, 2003](../reference/citations.mdx#cite-evans-ddd-2003)).
   Vaughn Vernon en tire des règles pratiques — des agrégats petits, référencés par leur
   identifiant, cohérents entre eux à terme par des événements
-  ([Vernon, 2013]({{ cites }}#cite-vernon-iddd-2013)) ; la lentille `architecture-compliance`
+  ([Vernon, 2013](../reference/citations.mdx#cite-vernon-iddd-2013)) ; la lentille `architecture-compliance`
   vérifie qu'un agrégat ne garantit que ses propres invariants et ne référence les autres que
   par identifiant (G5) ;
 - l'**entité** a une identité qui dure ; l'**objet valeur** est immuable, égal par sa valeur et
@@ -157,14 +154,14 @@ chaque commande ait un événement pour son succès (G8).
 - l'**événement de domaine** est un fait au passé, levé par la racine de l'agrégat après le
   changement d'état ;
 - le **repository**, un par agrégat, donne l'illusion d'une collection en mémoire
-  ([Evans, 2003]({{ cites }}#cite-evans-ddd-2003) ;
-  [Fowler, 2002]({{ cites }}#cite-fowler-peaa-2002)). Son interface vit dans Domain ou dans
+  ([Evans, 2003](../reference/citations.mdx#cite-evans-ddd-2003) ;
+  [Fowler, 2002](../reference/citations.mdx#cite-fowler-peaa-2002)). Son interface vit dans Domain ou dans
   Application, jamais dans Infrastructure, et l'ADR de l'agrégat note ce choix (lentille
   `architecture-compliance`, G4).
 
 **CQRS et Event Sourcing restent des options.** Séparer commandes et requêtes
-([Fowler, 2011]({{ cites }}#cite-fowler-cqrs-2011)) ou dériver l'état de l'historique des
-événements ([Fowler, 2005]({{ cites }}#cite-fowler-eventsourcing-2005)) exige un ADR qui cite une
+([Fowler, 2011](../reference/citations.mdx#cite-fowler-cqrs-2011)) ou dériver l'état de l'historique des
+événements ([Fowler, 2005](../reference/citations.mdx#cite-fowler-eventsourcing-2005)) exige un ADR qui cite une
 force admissible — asymétrie lecture/écriture, piste d'audit demandée par une story, transaction
 entre services, point de contention mesuré, séparation réglementaire (lentille `fitness`, G11).
 Avant chaque tentative de l'architecte, le moteur cherche dans le code les signatures d'un bus
@@ -180,7 +177,7 @@ plutôt que de repartir de zéro ; quand ils couvrent déjà sa story, l'archite
 et passe à la suite. Les scénarios qu'écrit DISTILL suivent le même chemin, sous
 `docs/features/`. Les contrats et la matrice de cohérence appartiennent à une story et restent
 dans le dossier de suivi du run. La liste complète :
-[Documentation durable]({{ "/fr/reference/run-journal" | relative_url }}#durable-docs).
+[Documentation durable](../reference/run-journal.md#durable-docs).
 
 ## La cohérence entre artefacts
 
@@ -189,7 +186,7 @@ tient une **consistency matrix** par story : une ligne par concept qu'un ADR nom
 par artefact, un verdict par ligne. Les ADR sont la source de vérité ; sur une divergence de
 libellé ou de classification, l'artefact descriptif est réécrit pour reprendre le libellé de
 l'ADR, et la réécriture est journalisée. Le moteur relit ces enregistrements à chaque tentative, et l'humain ratifie les ADR avant que DISTILL ne s'appuie dessus. Le détail
-de la phase est dans [DESIGN]({{ "/fr/explanation/pipeline/design" | relative_url }}).
+de la phase est dans [DESIGN](./pipeline/design.md).
 
 ## Les compromis
 
@@ -215,22 +212,22 @@ anti-patterns ; sa section de conception stratégique fixe la règle de nommage 
 
 ## Pour aller plus loin
 
-- [Clean Architecture et architecture hexagonale]({{ "/fr/explanation/clean-architecture" | relative_url }})
+- [Clean Architecture et architecture hexagonale](./clean-architecture.md)
   — où vivent les agrégats et les repositories une fois le modèle conçu.
-- [Software craftsmanship]({{ "/fr/explanation/software-craftsmanship" | relative_url }}) — la
+- [Software craftsmanship](./software-craftsmanship.md) — la
   discipline qui garde ce modèle propre.
-- [Les patterns]({{ "/fr/reference/patterns" | relative_url }}), [les gates]({{ "/fr/reference/gates" | relative_url }})
-  et [le glossaire]({{ "/fr/reference/glossary" | relative_url }}).
+- [Les patterns](../reference/patterns.md), [les gates](../reference/gates.md)
+  et [le glossaire](../reference/glossary.md).
 
 ## Sources
 
-- [Dymitruk, A. *Event Modeling: What is it?*, 2019.]({{ cites }}#cite-dymitruk-eventmodeling-2019)
-- [Evans, E. *Domain-Driven Design*, 2003.]({{ cites }}#cite-evans-ddd-2003)
-- [Evans, E. *Domain-Driven Design Reference*, 2015.]({{ cites }}#cite-evans-dddref-2015)
-- [Fowler, M. *Patterns of Enterprise Application Architecture*, 2002.]({{ cites }}#cite-fowler-peaa-2002)
-- [Fowler, M. *Event Sourcing*, 2005.]({{ cites }}#cite-fowler-eventsourcing-2005)
-- [Fowler, M. *Bliki: CQRS*, 2011.]({{ cites }}#cite-fowler-cqrs-2011)
-- [Khononov, V. *Learning Domain-Driven Design*, 2021.]({{ cites }}#cite-khononov-lddd-2021)
-- [Newman, S. *Building Microservices*, 2nd ed., 2021.]({{ cites }}#cite-newman-microservices-2021)
-- [Vernon, V. *Implementing Domain-Driven Design*, 2013.]({{ cites }}#cite-vernon-iddd-2013)
-- [Wake, B. *INVEST in Good Stories, and SMART Tasks*, 2003.]({{ cites }}#cite-wake-invest-2003)
+- [Dymitruk, A. *Event Modeling: What is it?*, 2019.](../reference/citations.mdx#cite-dymitruk-eventmodeling-2019)
+- [Evans, E. *Domain-Driven Design*, 2003.](../reference/citations.mdx#cite-evans-ddd-2003)
+- [Evans, E. *Domain-Driven Design Reference*, 2015.](../reference/citations.mdx#cite-evans-dddref-2015)
+- [Fowler, M. *Patterns of Enterprise Application Architecture*, 2002.](../reference/citations.mdx#cite-fowler-peaa-2002)
+- [Fowler, M. *Event Sourcing*, 2005.](../reference/citations.mdx#cite-fowler-eventsourcing-2005)
+- [Fowler, M. *Bliki: CQRS*, 2011.](../reference/citations.mdx#cite-fowler-cqrs-2011)
+- [Khononov, V. *Learning Domain-Driven Design*, 2021.](../reference/citations.mdx#cite-khononov-lddd-2021)
+- [Newman, S. *Building Microservices*, 2nd ed., 2021.](../reference/citations.mdx#cite-newman-microservices-2021)
+- [Vernon, V. *Implementing Domain-Driven Design*, 2013.](../reference/citations.mdx#cite-vernon-iddd-2013)
+- [Wake, B. *INVEST in Good Stories, and SMART Tasks*, 2003.](../reference/citations.mdx#cite-wake-invest-2003)

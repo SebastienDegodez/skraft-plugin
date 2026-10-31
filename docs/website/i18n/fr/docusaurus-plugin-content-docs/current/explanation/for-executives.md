@@ -1,6 +1,4 @@
 ---
-layout: doc
-lang: fr
 title: "Pour les décideurs"
 description: "Pourquoi une organisation qui livre avec des assistants IA a besoin de SKRAFT : une discipline imposée par le code, la même sur chaque hôte, traçable et vérifiable."
 persona: manager
@@ -8,9 +6,9 @@ persona: manager
 
 # Pour les décideurs
 
-> SKRAFT fait suivre aux assistants IA le même pipeline d'ingénierie, sur chaque poste et
-> chaque outil. Les contrôles sont faits par un programme testé, pas laissés à la bonne
-> volonté du modèle.
+SKRAFT fait suivre aux assistants IA le même pipeline d'ingénierie, sur chaque poste et
+chaque outil. Les contrôles sont faits par un programme testé, pas laissés à la bonne
+volonté du modèle.
 
 ## Situation
 
@@ -144,7 +142,7 @@ performance de l'organisation.
 4. **Étendre.** Ajoutez des dépôts et des équipes ; adaptez le workflow dans `.skraft/` là où
    une équipe a besoin d'un agent, d'une lentille ou d'une question de plus.
 
-Le [tutoriel des premiers pas]({{ "/fr/tutorials/getting-started" | relative_url }}) fait ce
+Le [tutoriel des premiers pas](../tutorials/getting-started.md) fait ce
 parcours pas à pas.
 
 ## Disponible aujourd'hui et feuille de route
@@ -159,7 +157,7 @@ pull request de fin de run avec ses captures et son commentaire d'issue ; le plu
 quelconque avec les mêmes lentilles ; `skraft migrate` pour les runs commencés en v1.
 
 **À venir** : ce qui reste avant la 2.0.0 est tenu à jour dans la
-[feuille de route]({{ "/fr/#roadmap" | relative_url }}) de l'accueil.
+[feuille de route](../index.mdx#roadmap) de l'accueil.
 
 ## Pour qui
 
@@ -174,10 +172,10 @@ quelconque avec les mêmes lentilles ; `skraft migrate` pour les runs commencés
 
 ## Pour aller plus loin
 
-- [Architecture]({{ "/fr/explanation/architecture" | relative_url }}) — le moteur, les pilotes d'hôte, la profondeur 1.
-- [Garde-fous : du hook au moteur]({{ "/fr/explanation/guardrails" | relative_url }}) — pourquoi la V2 part de zéro hook.
-- [Le journal d'événements]({{ "/fr/explanation/event-journal" | relative_url }}) — le journal chaîné.
-- [Configurer les composants]({{ "/fr/how-to/configure-components" | relative_url }}).
+- [Architecture](./architecture.md) — le moteur, les pilotes d'hôte, la profondeur 1.
+- [Garde-fous : du hook au moteur](./guardrails.md) — pourquoi la V2 part de zéro hook.
+- [Le journal d'événements](./event-journal.md) — le journal chaîné.
+- [Configurer les composants](../how-to/configure-components.md).
 
 ## Sources
 

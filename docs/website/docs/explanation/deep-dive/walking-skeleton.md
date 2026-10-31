@@ -1,15 +1,12 @@
 ---
-layout: doc
-lang: en
 title: "Walking Skeleton — why and how"
 description: "The Walking Skeleton deep dive: the thinnest end-to-end slice that works, and how SKRAFT delivers it first."
 ---
-{% assign cites = "/en/reference/citations" | relative_url %}
 
 # Walking Skeleton — why and how
 
-> A *walking skeleton* is the smallest implementation that crosses the whole system
-> end-to-end — and actually works. You wire the full path first, then flesh it out.
+A *walking skeleton* is the smallest implementation that crosses the whole system
+end-to-end — and actually works. You wire the full path first, then flesh it out.
 
 ## The problem (concrete context)
 
@@ -23,10 +20,10 @@ touches every layer and runs end-to-end.
 
 ## What the sources say
 
-The term comes from Alistair Cockburn ([Cockburn, 2004]({{ cites }}#cite-cockburn-crystal-2004)).
+The term comes from Alistair Cockburn ([Cockburn, 2004](../../reference/citations.mdx#cite-cockburn-crystal-2004)).
 Freeman & Pryce take it up, credit him, and make it the starting point of a project tested from
 the outside: the thinnest slice of real functionality that can be built, deployed and tested
-end-to-end automatically ([Freeman & Pryce, 2009]({{ cites }}#cite-freeman-goos-2009)).
+end-to-end automatically ([Freeman & Pryce, 2009](../../reference/citations.mdx#cite-freeman-goos-2009)).
 
 The idea is rooted in hexagonal architecture: isolating the domain behind ports makes
 this first traversal possible without freezing the infrastructure.
@@ -65,9 +62,9 @@ deferring it. Everything after adds to a system that already works.
 
 ## Sources
 
-- [Cockburn, A. *Crystal Clear: A Human-Powered Methodology for Small Teams*, 2004.]({{ cites }}#cite-cockburn-crystal-2004)
-- [Freeman, S. & Pryce, N. *Growing Object-Oriented Software, Guided by Tests*, 2009.]({{ cites }}#cite-freeman-goos-2009)
+- [Cockburn, A. *Crystal Clear: A Human-Powered Methodology for Small Teams*, 2004.](../../reference/citations.mdx#cite-cockburn-crystal-2004)
+- [Freeman, S. & Pryce, N. *Growing Object-Oriented Software, Guided by Tests*, 2009.](../../reference/citations.mdx#cite-freeman-goos-2009)
 - Cockburn, A. *Hexagonal Architecture*, 2005.
 
-Going further: [Outside-In TDD](outside-in-tdd.html),
-[the DELIVER phase]({{ "/en/explanation/pipeline/deliver" | relative_url }}), [DISTILL gates]({{ "/en/reference/gates" | relative_url }}).
+Going further: [Outside-In TDD](outside-in-tdd.md),
+[the DELIVER phase](../pipeline/deliver.md), [DISTILL gates](../../reference/gates.md).

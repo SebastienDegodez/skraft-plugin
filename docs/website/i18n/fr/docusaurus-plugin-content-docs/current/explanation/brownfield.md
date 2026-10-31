@@ -1,14 +1,12 @@
 ---
-layout: doc
-lang: fr
 title: "Parcours Brownfield"
 description: "Le parcours Brownfield de SKRAFT : comprendre un système existant ou le sécuriser avant de le transformer, avec trois agents directement sélectionnés par l'humain."
 ---
 
 # Parcours Brownfield
 
-> Brownfield est un parcours de premier niveau, frère du parcours principal. Il
-> part du code existant plutôt que d'une story affinée.
+Brownfield est un parcours de premier niveau, frère du parcours principal. Il
+part du code existant plutôt que d'une story affinée.
 
 ## Quand choisir ce parcours
 
@@ -38,8 +36,8 @@ sélectionne chaque agent directement. Aucun n'est une phase de
 
 | Besoin | Workflow | Ce qu'il produit |
 |--------|----------|------------------|
-| **Comprendre** un code sans documentation produit | [`brownfield-analyst`]({{ "/fr/dashboard/" | relative_url }}#agent-brownfield-analyst) | un PRD 17 sections, repris par l'outillage backlog amont pour créer des issues |
-| **Sécuriser puis transformer** un legacy | [`brownfield-harness-builder`]({{ "/fr/dashboard/" | relative_url }}#agent-brownfield-harness-builder) → [`brownfield-refactorer`]({{ "/fr/dashboard/" | relative_url }}#agent-brownfield-refactorer) | un filet de tests de caractérisation, puis un refactoring qui le garde vert |
+| **Comprendre** un code sans documentation produit | [`brownfield-analyst`](pathname:///fr/dashboard/#agent-brownfield-analyst) | un PRD 17 sections, repris par l'outillage backlog amont pour créer des issues |
+| **Sécuriser puis transformer** un legacy | [`brownfield-harness-builder`](pathname:///fr/dashboard/#agent-brownfield-harness-builder) → [`brownfield-refactorer`](pathname:///fr/dashboard/#agent-brownfield-refactorer) | un filet de tests de caractérisation, puis un refactoring qui le garde vert |
 
 Les deux chemins peuvent être choisis indépendamment. Dans le second,
 `brownfield-harness-builder` précède toujours `brownfield-refactorer` afin que la
@@ -64,7 +62,7 @@ flowchart LR
     BP -.-> ORCH["skraft-orchestrator"]
 ```
 
-[`characterize-brownfield`]({{ "/fr/dashboard/" | relative_url }}#skill-characterize-brownfield)
+[`characterize-brownfield`](pathname:///fr/dashboard/#skill-characterize-brownfield)
 reconstruit ce que fait le système : stack, inventaire de fonctionnalités, carte
 d'intégration, contrats d'API existants, dette technique. La règle centrale est
 l'**honnêteté sur la confiance** : chaque affirmation est soit un **fait** vérifié
@@ -75,7 +73,7 @@ test-architecture) classe chaque comportement `FULL` / `PARTIAL` / `NONE` et nou
 un **gate `PASS` / `CONCERNS` / `FAIL`** ; sous le seuil, l'humain confirme ou
 corrige avant d'aller plus loin.
 
-La même skill, [`characterize-brownfield`]({{ "/fr/dashboard/" | relative_url }}#skill-characterize-brownfield),
+La même skill, [`characterize-brownfield`](pathname:///fr/dashboard/#skill-characterize-brownfield),
 mappe ensuite cette caractérisation vers le **PRD 17 sections** (`FR-`/`NFR-`,
 traçabilité). Ce PRD n'est pas un cul-de-sac : il est le
 livrable que l'humain remet à l'**outillage backlog amont** (GitHub Backlog Manager, `prd-to-wit`)
@@ -101,15 +99,15 @@ flowchart LR
 ```
 
 D'abord le filet.
-[`characterize-with-contracts`]({{ "/fr/dashboard/" | relative_url }}#skill-characterize-with-contracts)
+[`characterize-with-contracts`](pathname:///fr/dashboard/#skill-characterize-with-contracts)
 découvre (ou reconstruit) le contrat d'API du service, monte les mocks Microcks pour
 ses dépendances, et écrit des **tests de caractérisation** — un *golden master* qui
 verrouille le comportement **actuel**, bugs compris. Un bug capturé ici est un bug
 documenté, pas un test à réparer. Ce filet réutilise tel quel les skills existants
-[`contract-testing-roster`]({{ "/fr/dashboard/" | relative_url }}#skill-contract-testing-roster)
-et [`mocking-strategy-roster`]({{ "/fr/dashboard/" | relative_url }}#skill-mocking-strategy-roster)
+[`contract-testing-roster`](pathname:///fr/dashboard/#skill-contract-testing-roster)
+et [`mocking-strategy-roster`](pathname:///fr/dashboard/#skill-mocking-strategy-roster)
 (v1 ciblée .NET. Le roster garde la stack extensible). Le
-[`brownfield-harness-builder`]({{ "/fr/dashboard/" | relative_url }}#agent-brownfield-harness-builder)
+[`brownfield-harness-builder`](pathname:///fr/dashboard/#agent-brownfield-harness-builder)
 ne franchit son gate que si le filet est **vert sur le code non modifié** : un test
 rouge avant tout refactoring signifie que le harnais est faux, pas le code.
 
@@ -117,23 +115,23 @@ rouge avant tout refactoring signifie que le harnais est faux, pas le code.
 > — Feathers, M., *Working Effectively with Legacy Code*, 2004.
 
 Une fois le filet vert, le
-[`brownfield-refactorer`]({{ "/fr/dashboard/" | relative_url }}#agent-brownfield-refactorer)
+[`brownfield-refactorer`](pathname:///fr/dashboard/#agent-brownfield-refactorer)
 **recommande** une stratégie — jamais ne l'impose : un changement de structure aussi
 conséquent reste une décision humaine.
 
-- [`mikado-method`]({{ "/fr/dashboard/" | relative_url }}#skill-mikado-method) —
+- [`mikado-method`](pathname:///fr/dashboard/#skill-mikado-method) —
   **modifier en place**. On tente le changement naïvement, on note ce qui casse
   comme prérequis dans un graphe, on **revert** tout, et on implémente en remontant
   des feuilles, chaque commit gardant le code vert. Le graphe est l'artefact ; le
   code de l'expérience est jetable.
-- [`strangler-fig-method`]({{ "/fr/dashboard/" | relative_url }}#skill-strangler-fig-method) —
+- [`strangler-fig-method`](pathname:///fr/dashboard/#skill-strangler-fig-method) —
   **remplacer** derrière une façade. La nouvelle implémentation pousse à côté de
   l'ancienne, le trafic bascule tranche par tranche, et le même contrat rejoué sur
   l'ancien et le nouveau **prouve l'équivalence** avant chaque bascule. L'ancien
   meurt étranglé.
 
 Chaque feuille (Mikado) ou tranche (Strangler) est confiée à un
-[`refactoring-worker`]({{ "/fr/dashboard/" | relative_url }}#worker-refactoring-worker)
+[`refactoring-worker`](pathname:///fr/dashboard/#worker-refactoring-worker)
 en contexte frais, qui rend un signal terminal `ADVANCE` / `EXPAND` / `DONE` /
 `BLOCKED`. Le filet est le **capteur** : toute régression comportementale à la
 frontière de l'API devient un test rouge — un prérequis Mikado découvert, ou une
@@ -180,8 +178,8 @@ décider quel prérequis attaquer est un jugement, pas une exécution.
 
 ## Pour aller plus loin
 
-- [Poser un filet de caractérisation sur un service existant]({{ "/fr/how-to/characterize-legacy" | relative_url }}) — le guide pas à pas du harness builder.
-- [Refactorer un code existant sous filet]({{ "/fr/how-to/refactor-legacy" | relative_url }}) — Mikado ou Strangler Fig, feuille par feuille.
+- [Poser un filet de caractérisation sur un service existant](../how-to/characterize-legacy.md) — le guide pas à pas du harness builder.
+- [Refactorer un code existant sous filet](../how-to/refactor-legacy.md) — Mikado ou Strangler Fig, feuille par feuille.
 
 ## Sources
 
@@ -193,4 +191,4 @@ décider quel prérequis attaquer est un jugement, pas une exécution.
   derrière une façade.
 
 Termes à connaître : **golden master**, **caractérisation**, **contrat**, **façade**
-— définis dans le [glossaire]({{ "/fr/reference/glossary" | relative_url }}).
+— définis dans le [glossaire](../reference/glossary.md).

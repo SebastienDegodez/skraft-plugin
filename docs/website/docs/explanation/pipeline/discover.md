@@ -1,18 +1,14 @@
 ---
-layout: doc
-lang: en
 title: "DISCOVER"
 description: "Why triage the backlog before choosing a story: priority, duplicates, effort in points and a sprint proposal, judged by lenses that did not do the triage."
 persona: software-engineer
+phase: discover
 ---
-{% assign cites = "/en/reference/citations" | relative_url %}
 
 # DISCOVER
 
-{% include phase-ribbon.html current="discover" %}
-
-> Triage before choosing: DISCOVER turns a stream of raw issues into a prioritised triage report
-> and a sprint proposal.
+Triage before choosing: DISCOVER turns a stream of raw issues into a prioritised triage report
+and a sprint proposal.
 
 ## Why this phase exists
 
@@ -26,13 +22,12 @@ issue (type, priority, effort), spots duplicates and related issues, then propos
 fits the declared capacity. It labels issues, but never creates one and never rewrites a body:
 the backlog stays the team's.
 
-<div class="fil-rouge" markdown="1">
-<span class="fil-rouge__label">☕ Running example — Starbucks <em>(illustrative)</em></span>
+:::info[☕ Running example — Starbucks *(illustrative)*]
 
 The idea "enable mobile ordering in the app" enters here as a **raw issue**. DISCOVER gives it
 priority **P1**, detects it overlaps an existing "in-app payment" request, and outputs it in a
 **triage report**. That report is what DISCUSS receives.
-</div>
+:::
 
 ## Three ways to find the work
 
@@ -52,7 +47,7 @@ conversion is a local convention, never a measurement nor a promised date.
 It is built to push towards splitting: the cost per point never falls as the card grows. An
 8-point card is worth more days than two cards of 3 and 5. Above 8, a card must be split before
 it enters a sprint. This is the small-batch principle: a smaller batch reduces the waiting and
-the risk it carries ([Reinertsen, 2009]({{ cites }}#cite-reinertsen-flow-2009)).
+the risk it carries ([Reinertsen, 2009](../../reference/citations.mdx#cite-reinertsen-flow-2009)).
 
 ## Whoever triages does not approve the triage
 
@@ -63,16 +58,16 @@ After three refused attempts, the run stops and hands the unresolved findings ba
 developer.
 
 This is peer review scaled down to a triage report: several independent eyes, criteria written
-in advance ([Wiegers, 2002]({{ cites }}#cite-wiegers-peer-reviews-2002)).
+in advance ([Wiegers, 2002](../../reference/citations.mdx#cite-wiegers-peer-reviews-2002)).
 
 ## Going further
 
-- [The backlog]({{ "/en/explanation/backlog" | relative_url }}) — the `skraft-backlog` plugin as a whole.
-- [Reference: DISCOVER]({{ "/en/reference/phases" | relative_url }}#discover) — modes, outputs, cap, effects on GitHub.
-- [Reference: DISCOVER review criteria]({{ "/en/reference/gates" | relative_url }}#discover).
-- [DISCUSS]({{ "/en/explanation/pipeline/discuss" | relative_url }}) — the next phase.
+- [The backlog](../backlog.md) — the `skraft-backlog` plugin as a whole.
+- [Reference: DISCOVER](../../reference/phases.md#discover) — modes, outputs, cap, effects on GitHub.
+- [Reference: DISCOVER review criteria](../../reference/gates.md#discover).
+- [DISCUSS](./discuss.md) — the next phase.
 
 ## Sources
 
-- [Reinertsen, D. G. *The Principles of Product Development Flow*, 2009.]({{ cites }}#cite-reinertsen-flow-2009)
-- [Wiegers, K. *Peer Reviews in Software*, 2002.]({{ cites }}#cite-wiegers-peer-reviews-2002)
+- [Reinertsen, D. G. *The Principles of Product Development Flow*, 2009.](../../reference/citations.mdx#cite-reinertsen-flow-2009)
+- [Wiegers, K. *Peer Reviews in Software*, 2002.](../../reference/citations.mdx#cite-wiegers-peer-reviews-2002)

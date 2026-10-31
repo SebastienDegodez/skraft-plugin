@@ -1,6 +1,4 @@
 ---
-layout: doc
-lang: fr
 title: "Transformer un PRD en backlog GitHub"
 description: "Lancer le workflow skraft-prd-backlog sur un PRD approuvé, répondre au cadrage, approuver la carte des stories, valider le handoff, puis publier epics et stories sur GitHub sans doublon."
 persona: tech-lead
@@ -14,7 +12,7 @@ dépendances et leurs milestones.
 ## Prérequis
 
 - Copilot CLI avec le plugin `skraft-backlog` installé
-  ([Installer skraft sur un hôte]({{ "/fr/how-to/install-on-a-host" | relative_url }})). Le
+  ([Installer skraft sur un hôte](./install-on-a-host.mdx)). Le
   workflow `skraft-prd-backlog` est un workflow dynamique de Copilot CLI.
 - `gh` connecté (`gh auth status`) avec le droit de créer des issues, labels et milestones sur le
   dépôt cible.
@@ -129,8 +127,8 @@ jamais à l'agent.
 
 ## Voir aussi
 
-- [Raffiner une issue du backlog]({{ "/fr/how-to/refine-backlog" | relative_url }})
-- [Le backlog : de l'idée à la story prête]({{ "/fr/explanation/backlog" | relative_url }}) —
+- [Raffiner une issue du backlog](./refine-backlog.md)
+- [Le backlog : de l'idée à la story prête](../explanation/backlog.md) —
   pourquoi deux arrêts humains et des lentilles de planification.
-- [Gates : DISCUSS]({{ "/fr/reference/gates" | relative_url }}#discuss) — critères des lentilles
+- [Gates : DISCUSS](../reference/gates.md#discuss) — critères des lentilles
   de planification.

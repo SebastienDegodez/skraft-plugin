@@ -1,16 +1,13 @@
 ---
-layout: doc
-lang: en
 title: "Clean Architecture and hexagonal architecture"
 description: "Why skraft protects the business from technical details: Cockburn's hexagonal architecture, Martin's Clean Architecture, the dependency rule, and where DESIGN, DISTILL and DELIVER check it."
 persona: tech-lead
 ---
-{% assign cites = "/en/reference/citations" | relative_url %}
 
 # Clean Architecture and hexagonal architecture
 
-> The business at the centre, the technical details at the edge, and dependencies that always
-> point inward. skraft does not just recommend it: a gate checks it.
+The business at the centre, the technical details at the edge, and dependencies that always
+point inward. skraft does not just recommend it: a gate checks it.
 
 ## The problem: a business held hostage by its tools
 
@@ -26,20 +23,20 @@ Two answers, born ten years apart, say the same thing in different words.
 Alistair Cockburn proposes to place the application at the centre of a hexagon and have it talk to
 the outside world only through **ports** — interfaces the application defines, according to its
 own needs — into which technology-specific **adapters** plug
-([Cockburn, 2005]({{ cites }}#cite-cockburn-hexagonal-2005)). He distinguishes two sides: the one
+([Cockburn, 2005](../reference/citations.mdx#cite-cockburn-hexagonal-2005)). He distinguishes two sides: the one
 that **drives** the application (a user interface, an automated test) and the one the application
 **drives** (a database, an external service). The stated goal is to let the application be run
 equally by a user or by tests, without a real interface or database.
 
 The word *adapter* echoes the "Gang of Four" Adapter pattern: converting an interface into the one
-the client expects ([Gamma et al., 1994]({{ cites }}#cite-gamma-patterns-1994)).
+the client expects ([Gamma et al., 1994](../reference/citations.mdx#cite-gamma-patterns-1994)).
 
 ## Clean Architecture: the dependency rule
 
 Robert C. Martin presents Clean Architecture as a synthesis of several earlier architectures,
 hexagonal among them, which share one objective: separating concerns and making the core
 independent of frameworks, the user interface, the database and any external agency
-([Martin, 2017]({{ cites }}#cite-martin-cleanarch-2017)). He derives a single rule from it, the
+([Martin, 2017](../reference/citations.mdx#cite-martin-cleanarch-2017)). He derives a single rule from it, the
 **dependency rule**: source code dependencies point only inward. An inner circle knows no name
 declared in an outer circle. When the flow of control has to go out — a use case that saves —, it
 goes through an interface declared inside and implemented outside: that is dependency inversion.
@@ -84,8 +81,8 @@ goes through Infrastructure depending on the stack. Adapted from Martin's concen
 
 The use case is the only way in: it echoes Fowler's *Service Layer*, which defines an
 application's boundary and its set of available operations
-([Fowler, 2002]({{ cites }}#cite-fowler-peaa-2002)). The precise rules per stack are in the
-`clean-architecture-<stack>` skills and in [the patterns reference]({{ "/en/reference/patterns" | relative_url }}).
+([Fowler, 2002](../reference/citations.mdx#cite-fowler-peaa-2002)). The precise rules per stack are in the
+`clean-architecture-<stack>` skills and in [the patterns reference](../reference/patterns.md).
 
 ## How skraft enforces the rule
 
@@ -115,14 +112,14 @@ Application for an entity without invariants or a read-oriented contract, never 
 Infrastructure; the aggregate's ADR records that choice and its reason. The
 `architecture-compliance` lens refuses a Domain or Application contract that names an
 Infrastructure or API type (G3) and an interface filed in Infrastructure (G4). The same lens checks
-the [Domain-Driven Design]({{ "/en/explanation/domain-driven-design" | relative_url }}) model.
+the [Domain-Driven Design](./domain-driven-design.md) model.
 
 **In DISTILL, you trace the full path.** The `acceptance-designer` writes, for each scenario, its
 use-case boundary, its layer and its double type, and commits red acceptance tests with the
 skeleton they call. The `boundary-enforcement` lens requires at least one walking skeleton per
 flow (G8): the thinnest slice that crosses every layer and proves the wiring exists
-([Freeman & Pryce, 2009]({{ cites }}#cite-freeman-goos-2009)). See
-[Walking Skeleton]({{ "/en/explanation/deep-dive/walking-skeleton" | relative_url }}).
+([Freeman & Pryce, 2009](../reference/citations.mdx#cite-freeman-goos-2009)). See
+[Walking Skeleton](./deep-dive/walking-skeleton.md).
 
 **In DELIVER, a gate checks it on every pass.** `architecture` is one of the gates of DELIVER's
 locked node, between `test` and `coverage`. Its command, declared per component in
@@ -133,7 +130,7 @@ mandatory in `review.skraft.dot`, checks that dependencies point inward (G5).
 
 **Doubles sit at the boundaries, not at the centre.** Gerard Meszaros named the *test double* and
 distinguishes its forms, among them the *fake* — a simplified, in-memory implementation
-([Meszaros, 2007]({{ cites }}#cite-meszaros-xunit-2007)). skraft accepts them only on outgoing
+([Meszaros, 2007](../reference/citations.mdx#cite-meszaros-xunit-2007)). skraft accepts them only on outgoing
 interfaces: no double of a Domain or Application type in a unit test (`architecture-boundaries`
 lens, G4); mocks or hand-written in-memory fakes on the outgoing gateways — repository, external
 service — (`clean-architecture-testing` skill); real containers or contract mocks to test
@@ -150,7 +147,7 @@ skraft's engine is built the same way: `domain/` imports only `domain/`, `applic
 its contracts in `application/ports/`, `infrastructure/` implements them, and each host driver
 plays the part of a driving-side adapter. An architecture test in the repository fails on any
 forbidden dependency. There, the word *port* stayed. See
-[Architecture]({{ "/en/explanation/architecture" | relative_url }}).
+[Architecture](./architecture.md).
 
 ## The trade-offs
 
@@ -173,20 +170,20 @@ forbidden dependency. There, the word *port* stayed. See
 
 ## Going further
 
-- [Domain-Driven Design]({{ "/en/explanation/domain-driven-design" | relative_url }}) — what lives
+- [Domain-Driven Design](./domain-driven-design.md) — what lives
   in Domain.
-- [Software craftsmanship]({{ "/en/explanation/software-craftsmanship" | relative_url }}) — why the
+- [Software craftsmanship](./software-craftsmanship.md) — why the
   gates are not negotiated.
-- [Outside-In TDD]({{ "/en/explanation/deep-dive/outside-in-tdd" | relative_url }}),
-  [the DELIVER phase]({{ "/en/explanation/pipeline/deliver" | relative_url }}),
-  [the gates]({{ "/en/reference/gates" | relative_url }}) and
-  [the glossary]({{ "/en/reference/glossary" | relative_url }}).
+- [Outside-In TDD](./deep-dive/outside-in-tdd.md),
+  [the DELIVER phase](./pipeline/deliver.md),
+  [the gates](../reference/gates.md) and
+  [the glossary](../reference/glossary.md).
 
 ## Sources
 
-- [Cockburn, A. *Hexagonal Architecture*, 2005.]({{ cites }}#cite-cockburn-hexagonal-2005)
-- [Fowler, M. *Patterns of Enterprise Application Architecture*, 2002.]({{ cites }}#cite-fowler-peaa-2002)
-- [Freeman, S. & Pryce, N. *Growing Object-Oriented Software, Guided by Tests*, 2009.]({{ cites }}#cite-freeman-goos-2009)
-- [Gamma, E., Helm, R., Johnson, R. & Vlissides, J. *Design Patterns*, 1994.]({{ cites }}#cite-gamma-patterns-1994)
-- [Martin, R. C. *Clean Architecture*, 2017.]({{ cites }}#cite-martin-cleanarch-2017)
-- [Meszaros, G. *xUnit Test Patterns*, 2007.]({{ cites }}#cite-meszaros-xunit-2007)
+- [Cockburn, A. *Hexagonal Architecture*, 2005.](../reference/citations.mdx#cite-cockburn-hexagonal-2005)
+- [Fowler, M. *Patterns of Enterprise Application Architecture*, 2002.](../reference/citations.mdx#cite-fowler-peaa-2002)
+- [Freeman, S. & Pryce, N. *Growing Object-Oriented Software, Guided by Tests*, 2009.](../reference/citations.mdx#cite-freeman-goos-2009)
+- [Gamma, E., Helm, R., Johnson, R. & Vlissides, J. *Design Patterns*, 1994.](../reference/citations.mdx#cite-gamma-patterns-1994)
+- [Martin, R. C. *Clean Architecture*, 2017.](../reference/citations.mdx#cite-martin-cleanarch-2017)
+- [Meszaros, G. *xUnit Test Patterns*, 2007.](../reference/citations.mdx#cite-meszaros-xunit-2007)

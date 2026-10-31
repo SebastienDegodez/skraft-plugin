@@ -1,37 +1,32 @@
 ---
-layout: doc
-lang: en
 title: "DELIVER"
 description: "Why DELIVER turns the contract green in checked TDD cycles, why mutation runs last, once, on the reviewed code, and why the developer chooses how surviving mutants are treated."
 persona: software-engineer
+phase: deliver
 ---
-{% assign cites = "/en/reference/citations" | relative_url %}
 
 # DELIVER
 
-{% include phase-ribbon.html current="deliver" %}
-
-> Turn the contract green in small proven steps, have the code reviewed, then test the tests —
-> once, last.
+Turn the contract green in small proven steps, have the code reviewed, then test the tests —
+once, last.
 
 ## Why this phase exists
 
 Code is the only artifact that goes to production. DELIVER grows it from the contract DISTILL
 left failing: the `software-engineer` works in **Outside-In TDD**, from the acceptance test to
-the unit tests, then to the code ([Freeman & Pryce, 2009]({{ cites }}#cite-freeman-goos-2009)).
+the unit tests, then to the code ([Freeman & Pryce, 2009](../../reference/citations.mdx#cite-freeman-goos-2009)).
 Each step is a commit: a red `test(…)`, a green `feat(…)` or `fix(…)`, a `refactor(…)`.
 
 The engine does not take the agent's word for it. It reads those commits, replays each red to
 check it fails, and refuses a green with no red before it. Test first
-([Beck, 2003]({{ cites }}#cite-beck-tdd-2003)) becomes a fact in the git history, not a promise.
+([Beck, 2003](../../reference/citations.mdx#cite-beck-tdd-2003)) becomes a fact in the git history, not a promise.
 
-<div class="fil-rouge" markdown="1">
-<span class="fil-rouge__label">☕ Running example — Starbucks <em>(illustrative)</em></span>
+:::info[☕ Running example — Starbucks *(illustrative)*]
 
 The scenario enters. DELIVER implements the total calculation and loyalty crediting in **red →
 green** cycles, the review reads the code, then **mutation** shows the tests genuinely protect the
 loyalty rule. The code goes into a pull request.
-</div>
+:::
 
 ## The order: gates, review, then mutation
 
@@ -62,7 +57,7 @@ back through `deliver` and the gates, never through mutation.
 ### Why mutation runs last
 
 Mutation testing injects small faults into the code and measures how many the tests catch
-([Jia & Harman, 2011]({{ cites }}#cite-jia-mutation-2011)). It is the only measure that tells
+([Jia & Harman, 2011](../../reference/citations.mdx#cite-jia-mutation-2011)). It is the only measure that tells
 whether a green suite would detect a mistake, and it is also the most expensive step of the
 pipeline.
 
@@ -83,7 +78,7 @@ A surviving mutant has no single right answer. It ends one of three ways:
 
 These three outcomes do not have the same consequences: the first adds protection, the second
 removes code, the third accepts a gap. Telling an equivalent mutant apart is a known hard
-problem no tool settles on its own ([Jia & Harman, 2011]({{ cites }}#cite-jia-mutation-2011)).
+problem no tool settles on its own ([Jia & Harman, 2011](../../reference/citations.mdx#cite-jia-mutation-2011)).
 Letting an agent "kill the mutants" as it sees fit invites tests tailored to the mutant rather
 than to a behaviour.
 
@@ -102,8 +97,8 @@ The `software-engineer` wires its own integration tests, within its own red / gr
 brief the engine composes names each component's mocking skills, and the contract-testing ones
 when the component turns it on. It starts no sub-agent. When the change touches a mock or a
 contract, the matching fidelity lens joins the review. The why:
-[Mocking with Microcks]({{ "/en/explanation/deep-dive/mocking-microcks" | relative_url }}) and
-[Contract testing]({{ "/en/explanation/deep-dive/contract-testing" | relative_url }}).
+[Mocking with Microcks](../deep-dive/mocking-microcks.md) and
+[Contract testing](../deep-dive/contract-testing.md).
 
 ## Trade-offs
 
@@ -112,17 +107,17 @@ contract, the matching fidelity lens joins the review. The why:
 - **A review rework does not re-measure mutation.** It goes back through the faster gates;
   mutation judges the code once it has settled.
 - **No negotiable threshold.** 100 % on the core, 80 % on the boundary, whatever the repository:
-  see [Software craftsmanship]({{ "/en/explanation/software-craftsmanship" | relative_url }}).
+  see [Software craftsmanship](../software-craftsmanship.md).
 
 ## Going further
 
-- [Reference: DELIVER]({{ "/en/reference/phases" | relative_url }}#deliver) — nodes, proposals, `mutation-plan` answers, edges.
-- [Reference: DELIVER review criteria]({{ "/en/reference/gates" | relative_url }}#deliver).
-- [Review before review]({{ "/en/explanation/deep-dive/review-before-review" | relative_url }}).
-- [Run the gates]({{ "/en/how-to/run-gates" | relative_url }}).
+- [Reference: DELIVER](../../reference/phases.md#deliver) — nodes, proposals, `mutation-plan` answers, edges.
+- [Reference: DELIVER review criteria](../../reference/gates.md#deliver).
+- [Review before review](../deep-dive/review-before-review.md).
+- [Run the gates](../../how-to/run-gates.md).
 
 ## Sources
 
-- [Beck, K. *Test-Driven Development by Example*, 2003.]({{ cites }}#cite-beck-tdd-2003)
-- [Freeman, S. & Pryce, N. *Growing Object-Oriented Software, Guided by Tests*, 2009.]({{ cites }}#cite-freeman-goos-2009)
-- [Jia, Y. & Harman, M. *An Analysis and Survey of the Development of Mutation Testing*, 2011.]({{ cites }}#cite-jia-mutation-2011)
+- [Beck, K. *Test-Driven Development by Example*, 2003.](../../reference/citations.mdx#cite-beck-tdd-2003)
+- [Freeman, S. & Pryce, N. *Growing Object-Oriented Software, Guided by Tests*, 2009.](../../reference/citations.mdx#cite-freeman-goos-2009)
+- [Jia, Y. & Harman, M. *An Analysis and Survey of the Development of Mutation Testing*, 2011.](../../reference/citations.mdx#cite-jia-mutation-2011)

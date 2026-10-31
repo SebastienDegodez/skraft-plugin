@@ -1,6 +1,4 @@
 ---
-layout: doc
-lang: fr
 title: "Hôtes"
 description: "Claude Code, Copilot CLI et VS Code : prérequis, installation, pilote, commandes, questions humaines, suivi du run, et ce que chaque hôte peut ou ne peut pas faire."
 persona: software-engineer
@@ -8,22 +6,22 @@ persona: software-engineer
 
 # Hôtes
 
-> skraft tourne sous trois hôtes, Claude Code, Copilot CLI et VS Code, chacun conduit par un pilote qui exécute ce que demande le même moteur.
+skraft tourne sous trois hôtes, Claude Code, Copilot CLI et VS Code, chacun conduit par un pilote qui exécute ce que demande le même moteur.
 
 Pourquoi un moteur et des pilotes, et le contrat du pilote Copilot :
-[Architecture]({{ "/fr/explanation/architecture" | relative_url }}).
+[Architecture](../explanation/architecture.md).
 
-## Prérequis {#prerequisites}
+## Prérequis <!-- #prerequisites -->
 
 | Outil | Version | Pour |
 | --- | --- | --- |
 | Node | 22 ou plus | le moteur, la ligne de commande `skraft`, l'extension Copilot ; `skraft doctor` le vérifie |
 | Git | — | la base de chaque composant, les commits, les rejeux de commits rouges |
-| `gh` | connecté à l'hôte du dépôt | seulement pour lire l'issue de la story (`--issue`), ouvrir la pull request, commenter l'issue, `skraft review --pr` ; sur `github`, le serveur MCP GitHub de l'hôte, quand il est connecté, les sert d'abord et `gh` est le repli (le CLI `skraft` et `skraft next` passent toujours par `gh`) ; voir [Forge]({{ "/fr/reference/skraft-config" | relative_url }}#forge) |
-| `az` | connecté à l'organisation, avec son extension `azure-devops` | sur Azure DevOps seulement, pour lire le work item de la story (`--issue`), y tenir le commentaire du run et ouvrir la pull request, et revoir une pull request (`skraft review --pr` : la lire, tenir le fil de revue) ; le serveur MCP Azure DevOps de l'hôte (`ado`), quand il est connecté, sert d'abord le work item, son commentaire et la revue d'une pull request et `az` est le repli (le CLI `skraft` et `skraft next` passent toujours par `az`) ; voir [Forge]({{ "/fr/reference/skraft-config" | relative_url }}#azure-devops-mcp-server-first-az-as-fallback) |
+| `gh` | connecté à l'hôte du dépôt | seulement pour lire l'issue de la story (`--issue`), ouvrir la pull request, commenter l'issue, `skraft review --pr` ; sur `github`, le serveur MCP GitHub de l'hôte, quand il est connecté, les sert d'abord et `gh` est le repli (le CLI `skraft` et `skraft next` passent toujours par `gh`) ; voir [Forge](./skraft-config.md#forge) |
+| `az` | connecté à l'organisation, avec son extension `azure-devops` | sur Azure DevOps seulement, pour lire le work item de la story (`--issue`), y tenir le commentaire du run et ouvrir la pull request, et revoir une pull request (`skraft review --pr` : la lire, tenir le fil de revue) ; le serveur MCP Azure DevOps de l'hôte (`ado`), quand il est connecté, sert d'abord le work item, son commentaire et la revue d'une pull request et `az` est le repli (le CLI `skraft` et `skraft next` passent toujours par `az`) ; voir [Forge](./skraft-config.md#azure-devops-mcp-server-first-az-as-fallback) |
 | Copilot CLI | — | Copilot CLI ; sous VS Code, le pilote SDK (`skraft-run.mjs`) le lance sans interface |
 
-## Installation {#install}
+## Installation <!-- #install -->
 
 | Hôte | Installation |
 | --- | --- |
@@ -34,7 +32,7 @@ Pourquoi un moteur et des pilotes, et le contrat du pilote Copilot :
 Le plugin `skraft-backlog` (DISCOVER, DISCUSS) s'installe à part, depuis la même marketplace ;
 il ne partage aucun code d'exécution avec `skraft`. Le plugin `skraft-brownfield` aussi.
 
-## Pilotes {#drivers}
+## Pilotes <!-- #drivers -->
 
 Un pilote exécute ce que le moteur demande ; il ne décide ni de l'ordre, ni du verdict, ni de
 l'avancement. Il est le seul à lancer des agents (profondeur 1).
@@ -54,7 +52,7 @@ Cas d'usage appelés par chaque pilote :
 | SDK Copilot | aucun directement : il lance le workflow `skraft-pipeline` dans le CLI Copilot |
 | ligne de commande | `Init`, `Observe`, `Decide`, `RunGate`, `Doctor`, `ConfigureComponents`, `WorkflowCommands`, `Publish`, `AdoptJournal`, `Migrate`, `ReviewPullRequest`, et `RunPipeline` par `next` / `record` |
 
-## Démarrer, répondre, suivre {#at-a-glance}
+## Démarrer, répondre, suivre <!-- #at-a-glance -->
 
 | Hôte | Démarrer ou reprendre un run | Répondre à une question | Suivre le run |
 | --- | --- | --- | --- |
@@ -71,7 +69,7 @@ L'agent `skraft-orchestrator` ne fait que lancer : sous Claude Code, son seul ou
 VS Code, il conduit la boucle `skraft next` / `skraft record` et n'écrit que les fichiers de
 réponse qu'elle liste.
 
-## Claude Code {#claude-code}
+## Claude Code <!-- #claude-code -->
 
 Le mod (`hooks/skraft-mod.tsx`, seul module déclaré dans `hooks/hooks.json`) appelle le moteur
 sans Node ni `import()` : il lance Git, les gates et les rejeux par `$.process.run`. Chaque
@@ -143,7 +141,7 @@ pipeline et rend la main tout de suite ; le run continue en arrière-plan.
 | `base` | string | ref git ; seulement pour un nouveau slug |
 | `fromArtifacts` | boolean | démarre en DESIGN depuis les stories DISCUSS, comme `--from-artifacts` |
 
-### Modèle et coût {#claude-code-models}
+### Modèle et coût <!-- #claude-code-models -->
 
 Le premier modèle Claude Code que la configuration donne à la famille de
 l'agent part dans `$.agent.spawn` comme `model` ; sans lui, le modèle du fichier agent décide.
@@ -151,14 +149,14 @@ Le niveau de réflexion n'est pas passé (`$.agent.spawn` ne prend pas d'`effort
 fichier agent s'applique ; `skraft doctor` montre quand même le niveau affecté. Le mod
 journalise le coût de la session avant et après chaque agent, en USD, approximatif.
 
-## Copilot CLI {#copilot-cli}
+## Copilot CLI <!-- #copilot-cli -->
 
 L'extension `com.github.copilot/extensions/skraft-pipeline/` enregistre les workflows
 `skraft-pipeline` et `skraft-review`, l'outil `skraft_decide` et le canvas `skraft-pipeline`.
 Le répertoire de travail est celui de la session, relu au démarrage d'un run et à chaque appel
 d'outil.
 
-### Commande `/skraft` {#skraft-command}
+### Commande `/skraft` <!-- #skraft-command -->
 
 Le plugin `skraft` livre `com.github.copilot/commands/skraft.md`, qui donne à Copilot la syntaxe de
 `/skraft` sous Claude Code. Claude Code garde le `/skraft` du mod : le plugin n'a pas de dossier `commands/`
@@ -184,10 +182,10 @@ Le premier mot choisit la route. Une route passe par Copilot seulement quand la 
 
 Exemples, les mêmes que sous Claude Code :
 
-```text
-/skraft paiement #42 Paiement par carte
-/skraft paiement --base develop
-/skraft paiement --from-artifacts
+```console title="Claude Code"
+> /skraft paiement #42 Paiement par carte
+> /skraft paiement --base develop
+> /skraft paiement --from-artifacts
 ```
 
 Deux écarts voulus avec Claude Code. `decide` n'enregistre rien des mots tapés : sous Copilot, une décision humaine
@@ -204,7 +202,7 @@ vous attend ; rien ne passe seul au développement.
 Il n'y a ni sous-commande `story` ou `resume`, ni option `--issue` ou `--title` dans le chat. Un `#42` seul est passé comme slug et le
 moteur le refuse.
 
-### Workflow `skraft-pipeline` {#skraft-pipeline}
+### Workflow `skraft-pipeline` <!-- #skraft-pipeline -->
 
 Le workflow dynamique `skraft-pipeline` lance les agents par `ctx.agent`.
 
@@ -239,7 +237,7 @@ Waiting for you — <question>
 adr-1 was not answered: <why>. Resume this run to be asked again, ask Copilot in the chat to put the question to you, or type skraft decide adr-1 RATIFIED|REJECTED in a terminal and resume this run.
 ```
 
-### Canvas `skraft-pipeline` {#canvas}
+### Canvas `skraft-pipeline` <!-- #canvas -->
 
 | Règle | Détail |
 | --- | --- |
@@ -258,7 +256,7 @@ La page parle la langue du navigateur, français ou anglais. Les phrases que le 
 
 Avant la première phase d'une copie de travail, le workflow ouvre le canvas sur son onglet Configuration et pose dans le chat la question `configuration` : *Démarrer ce run avec la configuration de cette copie de travail ?* `START` continue et est gardé dans `skraft-config.local.json` (`configurationConfirmed`), si bien que les runs suivants démarrent sans demander ; `STOP` ne démarre rien. Passez `configure: true` au workflow pour qu'on vous le redemande. Le CLI et le mod Claude Code ne la posent jamais.
 
-### Outil `skraft_decide` {#skraft-decide}
+### Outil `skraft_decide` <!-- #skraft-decide -->
 
 Sans argument ; toute clé est refusée. Il pose à la personne, une seule
 fois, la question qu'attend le pipeline actif, dans la boîte de dialogue de Copilot, comme le
@@ -271,7 +269,7 @@ again to go on. Resume the paused skraft-pipeline run (/workflows).`, ou `Refuse
 nothing was recorded.` Reprendre le run applique la réponse ; les agents déjà passés ne sont pas
 relancés.
 
-### Workflow `skraft-review` {#skraft-review}
+### Workflow `skraft-review` <!-- #skraft-review -->
 
 Arguments { `pr`, `publish`, `agentIds` }. Il revoit une pull request comme
 `skraft review --pr`, ses lentilles par `ctx.agent`. `pr` est un entier positif ; toute autre clé
@@ -281,7 +279,7 @@ est écrit au journal du workflow, puis confirmé par la personne dans le dialog
 `by: host-confirmed` ; en autopilot ou sans dialogue, rien n'est enregistré ni posté, et le journal
 renvoie à `skraft review --pr <numéro> --publish` dans un terminal. Il rend l'issue de la revue et écrit `skraft review #<numéro>: <status> (<code>): <reason>`.
 
-### Modèle et coût {#copilot-models}
+### Modèle et coût <!-- #copilot-models -->
 
 Un lancement porte les modèles Copilot que la configuration donne à la
 famille de l'agent (le préféré d'abord) dans l'option `model`, et son niveau dans
@@ -289,14 +287,14 @@ famille de l'agent (le préféré d'abord) dans l'option `model`, et son niveau 
 modèle : le suivant de la liste, puis le modèle de la session. Sans modèle configuré, l'agent
 tourne sur le modèle de la session. Aucun coût n'est journalisé : Copilot compte en crédits.
 
-## VS Code {#vs-code}
+## VS Code <!-- #vs-code -->
 
 `skraft doctor` dit lequel des deux pilotes s'applique (contrôle `vscode`).
 
-### Pilote SDK Copilot {#copilot-sdk}
+### Pilote SDK Copilot <!-- #copilot-sdk -->
 
-```
-node "<dossier du plugin>/engine/drivers/copilot-sdk/skraft-run.mjs" [<slug>] [--issue <number>] [--title <text>] [--base <ref>] [--from-artifacts] [--allow-all-tools]
+```console
+$ node "<dossier du plugin>/engine/drivers/copilot-sdk/skraft-run.mjs" [<slug>] [--issue <number>] [--title <text>] [--base <ref>] [--from-artifacts] [--allow-all-tools]
 ```
 
 | Règle | Détail |
@@ -308,7 +306,7 @@ node "<dossier du plugin>/engine/drivers/copilot-sdk/skraft-run.mjs" [<slug>] [-
 | Code de sortie | 0 run fini ou en attente ; 1 sinon ; 2 ligne mal formée |
 | Échecs | chaque appel au SDK a un délai (`rpc-timeout`), le suivi une échéance (`run-too-long`) ; Ctrl-C arrête le suivi ; aucun texte du SDK n'est repris |
 
-### Boucle d'agent `next` / `record` {#agent-loop}
+### Boucle d'agent `next` / `record` <!-- #agent-loop -->
 
 Sans SDK Copilot, l'agent `skraft-orchestrator` conduit la boucle de la ligne de commande :
 
@@ -323,9 +321,9 @@ Sans SDK Copilot, l'agent `skraft-orchestrator` conduit la boucle de la ligne de
 
 Les lentilles passent l'une après l'autre. Le journal est celui du workflow Copilot, sans les
 modèles ni les coûts que la boucle ne peut pas connaître. Synopsis, sorties et codes :
-[`skraft next` et `skraft record`]({{ "/fr/reference/cli" | relative_url }}).
+[`skraft next` et `skraft record`](./cli.md).
 
-## Ce que chaque hôte peut faire {#capabilities}
+## Ce que chaque hôte peut faire <!-- #capabilities -->
 
 | Capacité | Claude Code | Copilot CLI | VS Code + SDK | VS Code, boucle `next` / `record` |
 | --- | --- | --- | --- | --- |
@@ -340,12 +338,12 @@ modèles ni les coûts que la boucle ne peut pas connaître. Synopsis, sorties e
 | Commande `/skraft` disponible | oui (le mod) | oui, mesurée `/skraft` dans le registre du SDK (CLI 1.0.105 ; menu non lu) | branchée, non mesurée sous VS Code | branchée, non mesurée sous VS Code |
 | Run d'ingénierie disponible | oui | oui | branché, testé sur hôte simulé, pas encore lancé pour de vrai (#222) | branché, testé sur hôte simulé, pas encore lancé pour de vrai (#222) |
 
-## Voir aussi {#see-also}
+## Voir aussi <!-- #see-also -->
 
-- [La ligne de commande skraft]({{ "/fr/reference/cli" | relative_url }})
-- [Dossier de suivi et journal]({{ "/fr/reference/run-journal" | relative_url }})
-- [Choisir les modèles des agents]({{ "/fr/how-to/choose-models" | relative_url }}) — modèles et niveau par hôte
-- [Architecture]({{ "/fr/explanation/architecture" | relative_url }})
+- [La ligne de commande skraft](./cli.md)
+- [Dossier de suivi et journal](./run-journal.md)
+- [Choisir les modèles des agents](../how-to/choose-models.md) — modèles et niveau par hôte
+- [Architecture](../explanation/architecture.md)
 
 Termes à connaître : **hôte**, **pilote d'hôte**, **moteur**, **slug** — voir le
-[glossaire]({{ "/fr/reference/glossary" | relative_url }}).
+[glossaire](./glossary.md).

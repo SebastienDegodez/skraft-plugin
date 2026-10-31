@@ -1,6 +1,4 @@
 ---
-layout: doc
-lang: fr
 title: "Ajouter une lentille à une revue"
 description: "Ajouter une lentille de votre dépôt à la revue de conception ou à la revue DELIVER, changer la famille de modèle d'une lentille, et vérifier le workflow avec skraft workflow check et diff."
 persona: tech-lead
@@ -13,7 +11,7 @@ menaces), en plus des lentilles de skraft.
 
 ## Prérequis
 
-- Un dépôt configuré, Git, et un terminal à la racine de la copie de travail ; `skraft` est la commande que [`skraft install`]({{ "/fr/how-to/install-on-a-host" | relative_url }}#skraft-command) met en place ; la ligne longue `node "<dossier du plugin>/engine/drivers/cli/skraft.mjs"` marche sans elle.
+- Un dépôt configuré, Git, et un terminal à la racine de la copie de travail ; `skraft` est la commande que [`skraft install`](./install-on-a-host.mdx#skraft-command) met en place ; la ligne longue `node "<dossier du plugin>/engine/drivers/cli/skraft.mjs"` marche sans elle.
 - Le prompt de la lentille, écrit comme un agent de votre dépôt nommé `<nom>-lens`.
 
 ## 1. Écrire l'agent de la lentille
@@ -27,7 +25,7 @@ chaque hôte que l'équipe utilise :
 | Copilot CLI, VS Code | `.github/agents/threat-model-lens.agent.md` (ou `.md`) |
 
 La lentille rend sa réponse dans le format que lit le moteur :
-[Réponse d'une lentille]({{ "/fr/reference/gates" | relative_url }}#lens-answer).
+[Réponse d'une lentille](../reference/gates.md#lens-answer).
 
 ## 2. Copier le workflow de la revue visée
 
@@ -63,15 +61,15 @@ lenses -> threat_model -> verdict
 Options du nœud :
 
 - `model="<famille>"` choisit la famille de modèle de la lentille (une règle `assign.agents`
-  l'emporte, voir [Choisir les modèles des agents]({{ "/fr/how-to/choose-models" | relative_url }})) ;
+  l'emporte, voir [Choisir les modèles des agents](./choose-models.md)) ;
 - `when="mock"` ou `when="contract"` ne la lance que si les changements touchent des mocks ou
-  des contrats ([lentilles conditionnelles]({{ "/fr/reference/workflow-dot" | relative_url }}#conditional-lenses)).
+  des contrats ([lentilles conditionnelles](../reference/workflow-dot.md#conditional-lenses)).
 
 ## 4. Vérifier le workflow
 
-```text
-skraft workflow check
-skraft workflow diff
+```console
+$ skraft workflow check
+$ skraft workflow diff
 ```
 
 Résultat attendu :
@@ -90,15 +88,15 @@ autres.
 | Message | Action |
 |---|---|
 | `node deliver_review: lens threat-model (agent threat-model-lens) not found in the plugin, .claude/agents/ or .github/agents/` | Créer le fichier de l'agent sous le nom `<nom>-lens`. |
-| `mandatory node test_integrity (…) is missing; this node is mandatory and cannot be removed` | Remettre le nœud : les fan-in, `deliver_review` et les lentilles `test-integrity` et `architecture-boundaries` sont obligatoires ([nœuds obligatoires]({{ "/fr/reference/workflow-dot" | relative_url }}#mandatory-nodes)). |
+| `mandatory node test_integrity (…) is missing; this node is mandatory and cannot be removed` | Remettre le nœud : les fan-in, `deliver_review` et les lentilles `test-integrity` et `architecture-boundaries` sont obligatoires ([nœuds obligatoires](../reference/workflow-dot.md#mandatory-nodes)). |
 | `.skraft/pipeline.skraft.dot already exists; edit it, or remove it` | Modifier la copie existante. |
 | Un nœud `lenses="a,b,c"` refusé | Workflow copié avant la forme actuelle : remplacer le nœud par les nœuds et arêtes que le message écrit. |
 | La lentille ne tourne pas | Vérifier qu'aucun `when` ne l'écarte, et que le run suit bien `.skraft/` (`skraft workflow check` nomme le fichier). |
 
 ## Voir aussi
 
-- [Revue : fan-out, nœuds lentille, fan-in]({{ "/fr/reference/workflow-dot" | relative_url }}#reviews)
-  et [nœud d'appel]({{ "/fr/reference/workflow-dot" | relative_url }}#call-node).
-- [Gates]({{ "/fr/reference/gates" | relative_url }}#review-run) — réponse d'une lentille,
+- [Revue : fan-out, nœuds lentille, fan-in](../reference/workflow-dot.md#reviews)
+  et [nœud d'appel](../reference/workflow-dot.md#call-node).
+- [Gates](../reference/gates.md#review-run) — réponse d'une lentille,
   réfutation, verdict.
-- [Adapter skraft : ce que coûte chaque réglage]({{ "/fr/explanation/customisation-trade-offs" | relative_url }})
+- [Adapter skraft : ce que coûte chaque réglage](../explanation/customisation-trade-offs.md)

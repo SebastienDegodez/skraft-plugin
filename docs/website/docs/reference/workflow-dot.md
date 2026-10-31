@@ -1,6 +1,4 @@
 ---
-layout: doc
-lang: en
 title: "The DOT workflow"
 description: "The syntax of skraft workflows: files, graph attributes, node shapes and their attributes, edges, validity rules, locked and mandatory nodes, reviews, call node and review.skraft.dot."
 persona: tech-lead
@@ -8,15 +6,15 @@ persona: tech-lead
 
 # The DOT workflow
 
-> The pipeline and the DELIVER review are two DOT graphs the engine reads, validates and then runs; this page gives their full syntax.
+The pipeline and the DELIVER review are two DOT graphs the engine reads, validates and then runs; this page gives their full syntax.
 
 Why a pipeline is described by a graph rather than hard-coded:
-[Architecture]({{ "/en/explanation/architecture" | relative_url }}). The commands that copy,
-validate and compare a workflow: [`skraft workflow`]({{ "/en/reference/cli" | relative_url }}).
+[Architecture](../explanation/architecture.md). The commands that copy,
+validate and compare a workflow: [`skraft workflow`](./cli.md).
 What each phase of the shipped workflow produces:
-[Phases]({{ "/en/reference/phases" | relative_url }}).
+[Phases](./phases.md).
 
-## Files {#files}
+## Files <!-- #files -->
 
 | File | Role | Read from |
 | --- | --- | --- |
@@ -32,7 +30,7 @@ What each phase of the shipped workflow produces:
 | Writing | no agent may write in `.skraft/` |
 | Families | a model family a copy names (`model=`, `@<family>`, `refuter=`) counts whichever copies are ejected |
 
-## Graph {#graph}
+## Graph <!-- #graph -->
 
 ```dot
 // comment
@@ -54,7 +52,7 @@ digraph skraft {
 | Subgraph | `subgraph cluster_<x> { … }` groups its nodes in a drawing; its attributes (`label`) change nothing; a subgraph inside another is refused |
 | Node id | letters, digits, `_` and `-`, starting with a letter or `_`: it names the node's files in the tracking folder |
 
-## Node shapes {#node-shapes}
+## Node shapes <!-- #node-shapes -->
 
 | Shape | Kind | Required attributes | Optional attributes | Outgoing edges |
 | --- | --- | --- | --- | --- |
@@ -72,7 +70,7 @@ digraph skraft {
 Attributes common to every shape: `label`, `shape`, `phase`. Any other attribute is refused
 (`attribute <key> is not supported on a <shape> node (supported: …)`).
 
-## Node attributes {#node-attributes}
+## Node attributes <!-- #node-attributes -->
 
 | Attribute | Value | Rule |
 | --- | --- | --- |
@@ -93,19 +91,19 @@ Attributes common to every shape: `label`, `shape`, `phase`. Any other attribute
 | `when` (publication) | `frontend` | skips the node when no component is a front end |
 | `lens` | kebab-case name | the lens `<name>` is the agent `<name>-lens`; at most once per review |
 | `when` (lens) | `mock` or `contract` | see [Conditional lenses](#conditional-lenses) |
-| `question` | `adr-ratification`, `reporting-consent`, `publish-consent` or `mutation-plan` | see [Phases]({{ "/en/reference/phases" | relative_url }}#human-questions) |
+| `question` | `adr-ratification`, `reporting-consent`, `publish-consent` or `mutation-plan` | see [Phases](./phases.md#human-questions) |
 | `workflow` | kebab-case base name (`review`) | the called workflow |
 | `with_<input>` | `base`, `head`, `story`, `documents` or `components` | binds the called workflow's input `<input>` to this value of the run |
 | `mandatory` | `true` | see [Mandatory nodes](#mandatory-nodes); `mandatory=false` is refused |
 
-## Edges {#edges}
+## Edges <!-- #edges -->
 
 | Attribute | Value | Rule |
 | --- | --- | --- |
 | `label` | depends on the node it leaves | gate: `PASS`, `FAIL`; fan-in and call: `APPROVED`, `NEEDS_REWORK`; question: an answer of the question; any other edge takes none |
 | `max_visits` | positive integer | how many times the run may take the edge; required on every loop |
 
-## Validity rules {#validity}
+## Validity rules <!-- #validity -->
 
 `skraft workflow check`, `skraft init` and every driver validate the workflow before any run and
 return every error. A workflow is refused when:
@@ -131,7 +129,7 @@ return every error. A workflow is refused when:
 When valid, `skraft workflow check` prints `<file> is valid: phases RESEARCH, DESIGN, …` and, for
 each unlocked node, `; <node> is unlocked and skipped: <reason>`.
 
-## Locked nodes {#locked-nodes}
+## Locked nodes <!-- #locked-nodes -->
 
 The DELIVER gates of the plugin's workflow (`gates`, `mutation`) carry `locked=true`. A copy that
 removes or changes them is refused, unless it skips them with `unlock="<reason>"`, which the
@@ -149,7 +147,7 @@ A gate node that runs every gate of a locked node (its `goal_gate` included) and
 stands in for it in this check: in the plugin's workflow, `mutation_gates` stands in for `gates`
 on the path `kill_mutants -> … -> mutation`.
 
-## Mandatory nodes {#mandatory-nodes}
+## Mandatory nodes <!-- #mandatory-nodes -->
 
 The plugin's workflows mark `mandatory=true`:
 
@@ -173,13 +171,13 @@ Each refusal names the node and the rule it breaks, and ends with `this node is 
 cannot be removed`. `skraft workflow diff` marks `(mandatory)` each mandatory node it lists as
 removed or changed.
 
-## Review: fan-out, lens nodes, fan-in {#reviews}
+## Review: fan-out, lens nodes, fan-in <!-- #reviews -->
 
 A review is written as a fan-out (`shape=component`), one lens node per branch (`shape=note`)
 and a fan-in (`shape=tripleoctagon`). The journal names the review step after the fan-in
 (`distill_review`). The engine starts the lenses of a review together, in the order of the
 fan-out's edges, where the host allows it. What a review then computes (lens answers,
-refutation, verdict): [Gates]({{ "/en/reference/gates" | relative_url }}).
+refutation, verdict): [Gates](./gates.md).
 
 ```dot
 distill_review_lenses [shape=component]
@@ -199,13 +197,13 @@ distill_review -> deliver [label="APPROVED"]
 | Lens node (`shape=note`) | `lens="<name>"` required, kebab-case, at most once per review; `model="<family>"` and `when="mock"` or `when="contract"` optional. Entered by one edge from its fan-out, it leaves by one edge to its fan-in |
 | Fan-in (`shape=tripleoctagon`) | entered only by the lens nodes of one fan-out; `model=` (the family of its lenses that name none) and `refuter=` optional |
 | `lenses="…"` | the former form, refused: `skraft workflow check` names each such node and writes out, as DOT, the nodes and edges that replace it: ids included (`<review>_lenses`, `<review>_<lens>`), `when` for `mock-fidelity` and `contract-fidelity`, the node's `label`, `phase`, `model` and `refuter` on the fan-in, its incoming edges sent to the fan-out |
-| Model | a family is a tier (`economy`, `standard`, `frontier`), a role (`reviewer`, `researcher`, `implementer`, `planner`) or a free family with a `tier` (`gpt-codex`). A lens node's `model=`, else the fan-in's, names its family; an `assign.agents` rule still wins, and `skraft workflow check` warns of it. The plugin's workflows name none: the configuration's `assign` decides ([Choose the agents' models]({{ "/en/how-to/choose-models" | relative_url }})). `finding-refuter` runs one tier above the strongest lens of its group, `frontier` at most, unless a rule names its family. The journal records what each agent was assigned (`assignment`) and the model it ran on (`model`, null for the session's) |
+| Model | a family is a tier (`economy`, `standard`, `frontier`), a role (`reviewer`, `researcher`, `implementer`, `planner`) or a free family with a `tier` (`gpt-codex`). A lens node's `model=`, else the fan-in's, names its family; an `assign.agents` rule still wins, and `skraft workflow check` warns of it. The plugin's workflows name none: the configuration's `assign` decides ([Choose the agents' models](../how-to/choose-models.md)). `finding-refuter` runs one tier above the strongest lens of its group, `frontier` at most, unless a rule names its family. The journal records what each agent was assigned (`assignment`) and the model it ran on (`model`, null for the session's) |
 | Lens agent | the lens `<name>` is the agent `<name>-lens`, looked for in the plugin, then in `.claude/agents/` (Claude Code) or `.github/agents/` (Copilot); `finding-refuter` must be found too, or the workflow is refused |
 | `APPROVED` edge | exactly one; an unlabeled edge counts as `APPROVED` |
 | `NEEDS_REWORK` edge | at most one; without it, a `NEEDS_REWORK` stops the run with `review-rejected`; past its `max_visits`, with `loop-ceiling` |
 | Driver | the host driver starts the lenses and the refuter (depth 1); no agent starts another one |
 
-## Call node and `review.skraft.dot` {#call-node}
+## Call node and `review.skraft.dot` <!-- #call-node -->
 
 ```dot
 deliver_review [shape=house, workflow="review", mandatory=true]
@@ -246,18 +244,18 @@ digraph review {
 }
 ```
 
-## Lens inputs {#lens-inputs}
+## Lens inputs <!-- #lens-inputs -->
 
 Every lens but `cold-reader` also reads the review's `context.md` (story, project rules, who
 wrote which document), written only when the review is bound to the run's documents (every
 review of `pipeline.skraft.dot`, and `review` called by it). The files sit in
-`reviews/<node>-<visit>/` ([Tracking folder and journal]({{ "/en/reference/run-journal" | relative_url }})).
+`reviews/<node>-<visit>/` ([Tracking folder and journal](./run-journal.md)).
 
 | Lens | Reads |
 | --- | --- |
 | `architecture-compliance`, `testability`, `boundary-enforcement` | documents of the phase, patch, changed paths |
 | `architecture-boundaries` | documents of the story and of the other phases, patch, changed paths, `components.json` |
-| `cold-reader` | patch and changed paths only, without the ADRs nor the [durable documentation]({{ "/en/reference/run-journal" | relative_url }}#durable-docs): no story, no feature scope, no context |
+| `cold-reader` | patch and changed paths only, without the ADRs nor the [durable documentation](./run-journal.md#durable-docs): no story, no feature scope, no context |
 | `mock-fidelity`, `contract-fidelity` | patch, changed paths, `components.json` |
 | `fitness` | everything above, the patch and changed paths narrowed to any `docs/adr/`, `docs/architecture/` and `docs/domain/event-model/` folder (`design.patch`, `design-files.txt`) |
 | `business-alignment` | everything above, the patch and changed paths narrowed to any `docs/features/` folder (`features.patch`, `features-files.txt`) |
@@ -277,7 +275,7 @@ this run, in gate order).
 or `finding-refuter` lists and that is found nowhere refuses the workflow, naming the node, the
 agent and the skill.
 
-## Conditional lenses {#conditional-lenses}
+## Conditional lenses <!-- #conditional-lenses -->
 
 A lens node with `when=` runs only when a changed path or a line the patch adds or keeps matches
 its trigger; otherwise the review runs without it. A lens node without `when` always runs.
@@ -287,7 +285,7 @@ its trigger; otherwise the review runs without it. A lens node without `when` al
 | `mock` | a file name holding `mock`, `stub` or `fake` | `WireMock…`, `MockServer`, `Microcks…`, `Mountebank`, `HttpMessageHandler`, `nock`, `msw` |
 | `contract` | a file name holding `contract`, `.apiexamples`, `.apimetadata`, `openapi….yaml/json` | `VerifyAsync`, `Pact…`, `ProviderVerifier`, `ContractTest` |
 
-## The plugin's workflow {#plugin-workflow}
+## The plugin's workflow <!-- #plugin-workflow -->
 
 The nodes of `workflows/pipeline.skraft.dot`, in file order. A phase in brackets is inherited
 from the predecessor.
@@ -342,13 +340,13 @@ The other edges carry neither label nor ceiling: `start -> publish_consent -> vi
 `kill_proposal -> mutation_plan`, `kill_mutants -> mutation_review_lenses`, `visuals -> pr_writer -> publish -> exit`, and those of
 each review.
 
-## See also {#see-also}
+## See also <!-- #see-also -->
 
-- [The skraft command line]({{ "/en/reference/cli" | relative_url }}) — `skraft workflow eject|check|diff`
-- [Phases]({{ "/en/reference/phases" | relative_url }})
-- [Gates]({{ "/en/reference/gates" | relative_url }})
-- [Adapting skraft: what each setting costs]({{ "/en/explanation/customisation-trade-offs" | relative_url }})
-- [Architecture]({{ "/en/explanation/architecture" | relative_url }})
+- [The skraft command line](./cli.md) — `skraft workflow eject|check|diff`
+- [Phases](./phases.md)
+- [Gates](./gates.md)
+- [Adapting skraft: what each setting costs](../explanation/customisation-trade-offs.md)
+- [Architecture](../explanation/architecture.md)
 
 Terms to know: **workflow**, **lens**, **fan-out**, **fan-in**, **gate** — see the
-[glossary]({{ "/en/reference/glossary" | relative_url }}).
+[glossary](./glossary.md).

@@ -135,8 +135,8 @@ $ copilot
 
 Tapez la commande :
 
-```text
-/skraft checkout #42 Pay by card
+```console title="Copilot CLI"
+> /skraft checkout #42 Pay by card
 ```
 
 La commande lance le workflow dynamique `skraft-pipeline` avec `{ slug: "checkout", issue: 42, title:
@@ -242,7 +242,7 @@ la description de la pull request que votre run a produite.
 
 ## Pages suivantes
 
-- [Répondre à une question du run](../how-to/answer-a-question.md) — quand la question n'a pas pu être posée, ou que vous l'avez fermée.
+- [Répondre à une question du run](../how-to/answer-a-question.mdx) — quand la question n'a pas pu être posée, ou que vous l'avez fermée.
 - [Reprendre un run](../how-to/resume-a-run.md)
 - [Choisir les modèles des agents](../how-to/choose-models.md) — pour faire disparaître l'avertissement `models/copilot`.
 - [Hôtes](../reference/hosts.md#copilot-cli) — le workflow, le canvas et l'outil `skraft_decide`.

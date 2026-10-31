@@ -1,18 +1,14 @@
 ---
-layout: doc
-lang: en
 title: "DISTILL"
 description: "Why DISTILL writes the executable contract before the code: scenarios in the business's language, an acceptance test that fails for the right reason, and a skeleton with no behaviour."
 persona: software-engineer
+phase: distill
 ---
-{% assign cites = "/en/reference/citations" | relative_url %}
 
 # DISTILL
 
-{% include phase-ribbon.html current="distill" %}
-
-> Write the contract before the code: DISTILL turns DESIGN's decisions into scenarios the
-> business can read and an acceptance test that fails.
+Write the contract before the code: DISTILL turns DESIGN's decisions into scenarios the
+business can read and an acceptance test that fails.
 
 ## Why this phase exists
 
@@ -20,25 +16,24 @@ An acceptance criterion in prose gets interpreted; an executable scenario does n
 the expected behaviour into a **contract** between the business and the code: *Given / When /
 Then* scenarios written in the story's vocabulary, and a test plan that places each behaviour at
 the right level of the architecture. This is specification by example
-([Adzic, 2011]({{ cites }}#cite-adzic-specification-2011)) carried all the way to the test.
+([Adzic, 2011](../../reference/citations.mdx#cite-adzic-specification-2011)) carried all the way to the test.
 
 The `acceptance-designer` that writes this contract does not write the implementation. By
 separating the two, SKRAFT keeps one agent from fitting the test to its own code.
 
-<div class="fil-rouge" markdown="1">
-<span class="fil-rouge__label">☕ Running example — Starbucks <em>(illustrative)</em></span>
+:::info[☕ Running example — Starbucks *(illustrative)*]
 
 The ADR and the event model enter. DISTILL writes the **Gherkin scenario**: "Given a cart with a
 latte / When payment is approved / Then a receipt is issued and loyalty points are credited."
 This scenario becomes the contract DELIVER must turn green.
-</div>
+:::
 
 ## A red that proves something
 
 DISTILL does not stop at scenarios: it writes the first acceptance test and commits it
 **failing**. The engine replays that commit and checks the test really fails. This is the outer
 loop of outside-in TDD: start with a test that describes what the system must do, seen from the
-outside ([Freeman & Pryce, 2009]({{ cites }}#cite-freeman-goos-2009)).
+outside ([Freeman & Pryce, 2009](../../reference/citations.mdx#cite-freeman-goos-2009)).
 
 The failure still has to mean something. A test that fails because a module does not exist
 proves nothing: it would fail for a wrong story too. DISTILL therefore also writes the
@@ -71,14 +66,14 @@ only the use case, at least one walking skeleton per flow). The engine computes 
 
 ## Going further
 
-- [Reference: DISTILL]({{ "/en/reference/phases" | relative_url }}#distill) — outputs, write scope, commits.
-- [Reference: DISTILL review criteria]({{ "/en/reference/gates" | relative_url }}#distill).
-- [Reference: durable documentation]({{ "/en/reference/run-journal" | relative_url }}#durable-docs).
-- [Walking Skeleton]({{ "/en/explanation/deep-dive/walking-skeleton" | relative_url }}) and
-  [Outside-In TDD]({{ "/en/explanation/deep-dive/outside-in-tdd" | relative_url }}).
-- [DELIVER]({{ "/en/explanation/pipeline/deliver" | relative_url }}) — the next phase.
+- [Reference: DISTILL](../../reference/phases.md#distill) — outputs, write scope, commits.
+- [Reference: DISTILL review criteria](../../reference/gates.md#distill).
+- [Reference: durable documentation](../../reference/run-journal.md#durable-docs).
+- [Walking Skeleton](../deep-dive/walking-skeleton.md) and
+  [Outside-In TDD](../deep-dive/outside-in-tdd.md).
+- [DELIVER](./deliver.md) — the next phase.
 
 ## Sources
 
-- [Adzic, G. *Specification by Example*, 2011.]({{ cites }}#cite-adzic-specification-2011)
-- [Freeman, S. & Pryce, N. *Growing Object-Oriented Software, Guided by Tests*, 2009.]({{ cites }}#cite-freeman-goos-2009)
+- [Adzic, G. *Specification by Example*, 2011.](../../reference/citations.mdx#cite-adzic-specification-2011)
+- [Freeman, S. & Pryce, N. *Growing Object-Oriented Software, Guided by Tests*, 2009.](../../reference/citations.mdx#cite-freeman-goos-2009)

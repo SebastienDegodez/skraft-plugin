@@ -1,6 +1,4 @@
 ---
-layout: doc
-lang: fr
 title: "skraft-config.json"
 description: "Le fichier de configuration des composants : emplacement, schéma complet, validation et messages, lignes de commande, gates, défauts de détection et règle de base."
 persona: tech-lead
@@ -8,11 +6,11 @@ persona: tech-lead
 
 # skraft-config.json
 
-> `skraft-config.json` dit au moteur de quels composants est fait le dépôt et quelles commandes, toujours celles écrites par le développeur, les construisent et les testent.
+`skraft-config.json` dit au moteur de quels composants est fait le dépôt et quelles commandes, toujours celles écrites par le développeur, les construisent et les testent.
 
-Comment décrire les composants d'un dépôt pas à pas : [Configurer les composants]({{ "/fr/how-to/configure-components" | relative_url }}). Pourquoi des commandes écrites dans un fichier versionné plutôt que devinées : [Architecture]({{ "/fr/explanation/architecture" | relative_url }}).
+Comment décrire les composants d'un dépôt pas à pas : [Configurer les composants](../how-to/configure-components.md). Pourquoi des commandes écrites dans un fichier versionné plutôt que devinées : [Architecture](../explanation/architecture.md).
 
-## Emplacement {#location}
+## Emplacement <!-- #location -->
 
 Le fichier se trouve **à la racine du dépôt qui lance le run** (la copie de travail), à côté
 de `.copilot-tracking/`. Un fichier absent n'est pas une erreur : il vaut une config sans
@@ -42,7 +40,7 @@ flowchart TD
     F --> D[skraft doctor]
 ```
 
-## Exemple {#example}
+## Exemple <!-- #example -->
 
 ```json
 {
@@ -60,7 +58,7 @@ flowchart TD
 }
 ```
 
-## Schéma — premier niveau {#top-level}
+## Schéma — premier niveau <!-- #top-level -->
 
 | Clé | Type | Défaut | Règle |
 | --- | --- | --- | --- |
@@ -69,7 +67,7 @@ flowchart TD
 | `components` | array d'objets | `[]` | chaque entrée est un composant (ci-dessous) |
 | `tdd` | object | `{ "replay": "all" }` | `{ "replay": "all" }`, `{ "replay": "last-red" }` ; `replay` absent ou `null` vaut `all` ; voir [tdd](#tdd) |
 | `publish` | object | `{}` | voir [publish](#publish) |
-| `models` | object | les alias Claude Code du plugin par palier | famille de modèle → `tier` et, par hôte (`claude-code`, `copilot`), `{ "model": nom ou liste, "effort": niveau }` ; voir [Choisir les modèles des agents]({{ "/fr/how-to/choose-models" | relative_url }}) |
+| `models` | object | les alias Claude Code du plugin par palier | famille de modèle → `tier` et, par hôte (`claude-code`, `copilot`), `{ "model": nom ou liste, "effort": niveau }` ; voir [Choisir les modèles des agents](../how-to/choose-models.md) |
 | `assign` | object | lentilles `reviewer`, workers `implementer`, `solution-researcher` `researcher`, `solution-architect` `planner`, `pr-writer` `economy`, défaut `implementer` | `{ "default", "types", "agents" }` : une famille, `inherit`, ou `{ "family", "<hôte>": { "effort" } }` ; lu aussi dans `~/.skraft/config.json` et `skraft-config.local.json` |
 | `rank`, `workflow` | — | — | refusées : `rank is no key: …`, `workflow is no key: …` |
 | `configurationConfirmed` | booléen | `false` | dans `skraft-config.local.json` seulement (refusé dans ce fichier et dans `~/.skraft/config.json`). Écrit `true` par le moteur quand vous répondez START à *Démarrer ce run avec la configuration de cette copie de travail ?*, qu'un run Copilot pose avant sa première phase tant qu'il est absent, et de nouveau avec `configure: true`. L'onglet Configuration du canvas skraft modifie la forge, les composants et les consentements de ce fichier, et l'`assign` et les `models` de `skraft-config.local.json`, vérifiés comme un run les charge |
@@ -78,7 +76,7 @@ flowchart TD
 `components` n'est permis que dans `skraft-config.json` ; dans une couche personnelle :
 `components belongs in skraft-config.json, never in <fichier>`.
 
-## Schéma — un composant {#component}
+## Schéma — un composant <!-- #component -->
 
 Toute clé hors de cette liste est refusée.
 
@@ -97,7 +95,7 @@ Toute clé hors de cette liste est refusée.
 Les seuils qualité (couverture, mutation…) ne sont **pas** configurables : aucune clé ne les
 porte.
 
-## `tdd` {#tdd}
+## `tdd` <!-- #tdd -->
 
 | Clé | Valeur | Effet |
 | --- | --- | --- |
@@ -110,7 +108,7 @@ Avec `all`, quand les rejeux dépassent 20 % de la durée d'une phase, le moteur
 <PHASE>; set "tdd": { "replay": "last-red" } in skraft-config.json to replay only the last test
 commit of each story`. Toute autre valeur : `tdd must be { "replay": "all" or "last-red" }`.
 
-## `publish` {#publish}
+## `publish` <!-- #publish -->
 
 | Clé | Type | Défaut | Effet |
 | --- | --- | --- | --- |
@@ -124,7 +122,7 @@ Le moteur écrit `pullRequest` ou `visuals`, et leur `questionVersions`, quand u
 la question, toutes les autres clés du fichier conservées. Toute autre clé ou valeur :
 `publish must be an object of visuals, pullRequest, reviewComment and draft, each true or false`.
 
-## Forge {#forge}
+## Forge <!-- #forge -->
 
 La forge est l'endroit où le moteur lit l'issue de la story, y tient le commentaire du run,
 ouvre la pull request et lit celle qu'une revue commente. La clé `forge` la nomme ; sans elle,
@@ -151,9 +149,9 @@ dans vos propres fichiers (`~/.skraft/config.json`, `skraft-config.local.json`),
 le remote : le `skraft-config.json` de la pull request en revue, écrit par son auteur, ne
 choisit aucune forge.
 
-Sous Copilot, l'onglet **Configuration** du canvas skraft la choisit : son premier choix, *D’après le remote Git : <forge>*, laisse `forge` hors de `skraft-config.json` et nomme la forge que donne le remote ; *GitHub* ou *Azure DevOps* l'écrit. `skraft doctor` dit quelle forge un run utilise et ce qui l'a choisie, sur sa ligne `forge`.
+Sous Copilot, l'onglet **Configuration** du canvas skraft la choisit : son premier choix, *D’après le remote Git : &lt;forge&gt;*, laisse `forge` hors de `skraft-config.json` et nomme la forge que donne le remote ; *GitHub* ou *Azure DevOps* l'écrit. `skraft doctor` dit quelle forge un run utilise et ce qui l'a choisie, sur sa ligne `forge`.
 
-### MCP GitHub d'abord, gh en repli {#github-mcp-server-first-gh-as-fallback}
+### MCP GitHub d'abord, gh en repli <!-- #github-mcp-server-first-gh-as-fallback -->
 
 Quand l'hôte a un serveur MCP GitHub connu, connecté, et que le dépôt est sur `github.com`, le
 moteur lit l'issue, y tient son commentaire, retrouve, ouvre et édite la pull request, et lit et
@@ -181,7 +179,7 @@ son commentaire se passent de `gh` ; ouvrir la pull request demande encore à `g
 défaut du dépôt, et le push reste `git`. `skraft next` (la boucle d'agent de VS Code) et le CLI
 `skraft` n'atteignent aucun serveur MCP et passent toujours par `gh`.
 
-### Serveur MCP Azure DevOps d'abord, az en repli {#azure-devops-mcp-server-first-az-as-fallback}
+### Serveur MCP Azure DevOps d'abord, az en repli <!-- #azure-devops-mcp-server-first-az-as-fallback -->
 
 Sur `azure-devops`, un run démarré depuis un numéro de work item (`--issue 42`) lit ce work item,
 et tient l'avancement du run dans un seul commentaire sur lui, par le serveur MCP Azure DevOps de
@@ -237,7 +235,7 @@ servi après que le serveur n'a pas pu, `fallback` avec un code fixe (`mcp-unava
 `az`. L'ouverture de la pull request reste à `az`. Ce que les serveurs et az répondent pour un work
 item n'est pas encore mesuré : voir `docs/v2/host-verification.md`.
 
-## Validation et messages {#validation}
+## Validation et messages <!-- #validation -->
 
 Le moteur valide tout le fichier et rend **toutes** les erreurs d'un coup, jointes par `; `,
 sous la forme `skraft-config.json is invalid: <erreur>; <erreur>…` (code `config-invalid`).
@@ -271,7 +269,7 @@ Dans les messages, `<label>` vaut `component <name>` si le nom est une chaîne, 
 | `contractTesting` | `<label>: contractTesting must be true or false` |
 | `mutationReport` | `<label>: mutationReport must be a file inside the component root` |
 
-## Lignes de commande {#command-lines}
+## Lignes de commande <!-- #command-lines -->
 
 Une ligne de `commands` est lancée **sans shell**, depuis la racine du composant. La même
 ligne se comporte donc de la même façon sous sh, PowerShell et cmd.
@@ -298,7 +296,7 @@ Messages de refus d'une ligne (précédés de `command "<ligne>"` dans une gate,
 Pour enchaîner des étapes (`a && b`), écrivez-les dans un script du dépôt et appelez le
 script.
 
-## Gates {#gates}
+## Gates <!-- #gates -->
 
 Une **gate** est une commande dont le nom est l'un des sept noms ci-dessous. Elles tournent
 dans cet ordre, quel que soit l'ordre du fichier :
@@ -329,7 +327,7 @@ Avec Microcks (le défaut hors TypeScript, JavaScript et React), les tests qui l
 tourner Microcks dans un conteneur, Docker ou Podman. Le moteur n'en cherche pas : un tel test
 échoue quand aucun conteneur ne répond, comme tout test en échec.
 
-## Classes d'échec {#failure-classes}
+## Classes d'échec <!-- #failure-classes -->
 
 | Classe | Cas | Raison affichée | Qui agit |
 | --- | --- | --- | --- |
@@ -345,7 +343,7 @@ début et la fin autour de `… output cut …`, la commande va jusqu'au bout, e
 juge toujours la gate ; sa raison, réussie ou non, se termine par `; its output passed the
 runner's limit: the evidence keeps only its head and its tail`.
 
-## Composants modifiés {#changed-components}
+## Composants modifiés <!-- #changed-components -->
 
 Sans `--all`, `skraft gate` ne lance que les composants **modifiés depuis leur base** :
 fichiers changés depuis le SHA de base (commits, index, copie de travail) et fichiers non
@@ -356,7 +354,7 @@ dépôt Git), ou dont Git ne sait pas lister les changements, compte comme modif
 modifiés ; une fois qu'ils passent, une gate d'objectif (`goal_gate=true`) lance aussi les
 autres, si bien que DELIVER se clôt sur tous les composants.
 
-## Règle de base {#base}
+## Règle de base <!-- #base -->
 
 La **base** d'un dépôt est le commit depuis lequel on compare : `git merge-base HEAD <ref>`,
 calculé dans le dépôt de chaque composant et dans celui de la copie de travail.
@@ -379,7 +377,7 @@ calculé dans le dépôt de chaque composant et dans celui de la copie de travai
 - La base est journalisée dans `run.started.base` au **premier** init du slug. Une reprise
   garde la base journalisée.
 
-## Détection (`skraft init` sans slug) {#detection}
+## Détection (`skraft init` sans slug) <!-- #detection -->
 
 Le moteur cherche les projets dans la copie de travail et dans chaque dossier `--add`,
 jusqu'à **3 niveaux** de profondeur, en ignorant les dossiers cachés et `node_modules`. Un
@@ -427,13 +425,13 @@ pris. Une racine déjà listée n'est pas reproposée. Le moteur n'écrit ni `mo
 - **Oublier Docker ou Podman avec Microcks** : démarrez-en un avant les tests, ou passez le
   composant en `inprocess` s'il ne mocke pas avec Microcks.
 
-## Pour aller plus loin {#see-also}
+## Pour aller plus loin <!-- #see-also -->
 
-- [Configurer les composants]({{ "/fr/how-to/configure-components" | relative_url }})
-- [Lancer les gates et lire leurs preuves]({{ "/fr/how-to/run-gates" | relative_url }})
-- [Ce qu'on peut adapter et le risque]({{ "/fr/explanation/customisation-trade-offs" | relative_url }})
-- [La ligne de commande skraft]({{ "/fr/reference/cli" | relative_url }})
-- [Dossier de suivi et journal]({{ "/fr/reference/run-journal" | relative_url }})
+- [Configurer les composants](../how-to/configure-components.md)
+- [Lancer les gates et lire leurs preuves](../how-to/run-gates.md)
+- [Ce qu'on peut adapter et le risque](../explanation/customisation-trade-offs.md)
+- [La ligne de commande skraft](./cli.md)
+- [Dossier de suivi et journal](./run-journal.md)
 
 Termes à connaître : **composant**, **gate**, **base**, **Microcks** — voir le
-[glossaire]({{ "/fr/reference/glossary" | relative_url }}).
+[glossaire](./glossary.md).

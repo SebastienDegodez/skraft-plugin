@@ -1,6 +1,4 @@
 ---
-layout: doc
-lang: en
 title: "Refine a backlog issue"
 description: "Get the refinement proposal of a GitHub issue as a comment: from your editor with /skraft-refine (/skraft-backlog:skraft-refine in Copilot CLI), or on every new issue with the skraft-refine GitHub Agentic Workflow."
 persona: tech-lead
@@ -14,7 +12,7 @@ criteria and the proposed story — on demand, or automatically on every new iss
 ## Prerequisites
 
 - The `skraft-backlog` plugin installed
-  ([Install skraft on a host]({{ "/en/how-to/install-on-a-host" | relative_url }})).
+  ([Install skraft on a host](./install-on-a-host.mdx)).
 - Write access to the repository's issues: `gh` signed in, or the GitHub MCP server.
 - For the GitHub workflow: the `gh aw` extension (`gh extension install github/gh-aw`) and the
   right to write repository or organization secrets.
@@ -57,8 +55,8 @@ When `.copilot-tracking/skraft-plans/backlog/` exists, `/skraft backlog …` res
 
 1. At the root of the repository, install the workflow at the plugin's version:
 
-   ```sh
-   gh aw add SebastienDegodez/skraft-plugin/plugins/skraft-backlog@v2.0.0-alpha.19
+   ```console
+   $ gh aw add SebastienDegodez/skraft-plugin/plugins/skraft-backlog@v2.0.0-alpha.19
    ```
 
    The command installs `skraft-refine.md`, its import `shared/apm.md` and
@@ -94,8 +92,8 @@ outside contributor is refined only once a maintainer adds the label or comments
 
 ## See also
 
-- [Turn a PRD into a GitHub backlog]({{ "/en/how-to/prd-to-backlog" | relative_url }})
-- [The backlog: from idea to ready story]({{ "/en/explanation/backlog" | relative_url }}) — why
+- [Turn a PRD into a GitHub backlog](./prd-to-backlog.md)
+- [The backlog: from idea to ready story](../explanation/backlog.md) — why
   a comment and never a rewritten issue.
-- [Gates: DISCUSS]({{ "/en/reference/gates" | relative_url }}#discuss) — INVEST, acceptance
+- [Gates: DISCUSS](../reference/gates.md#discuss) — INVEST, acceptance
   criteria and Definition of Ready.

@@ -1,16 +1,13 @@
 ---
-layout: doc
-lang: en
 title: "Architecture"
 description: "Why SKRAFT V2 separates a host-neutral engine, which decides everything, from host drivers that only execute, and why the checks live in tested code rather than in an agent's prose."
 persona: tech-lead
 ---
-{% assign cites = "/en/reference/citations" | relative_url %}
 
 # Architecture
 
-> One engine decides everything; each host runs it with what it can do. Only the driver starts
-> agents, and no agent starts another.
+One engine decides everything; each host runs it with what it can do. Only the driver starts
+agents, and no agent starts another.
 
 ## The problem to solve
 
@@ -29,11 +26,11 @@ in tested code, the same everywhere.
 The **engine** (`plugins/skraft-framework/engine/`) follows the Clean Architecture dependency
 rule: the pure rules (`domain/`) depend on nothing, the use cases (`application/`) depend only on
 them, and the details — files, git, processes, hosts — are outside
-([Martin, 2017]({{ cites }}#cite-martin-cleanarch-2017)). A **use case** is a complete action from
+([Martin, 2017](../reference/citations.mdx#cite-martin-cleanarch-2017)). A **use case** is a complete action from
 the user's point of view: start a pipeline, move it forward, observe its state, run the gates,
 answer a question. It decides; it does no input or output itself, it goes through contracts the
 outside implements — the ports-and-adapters idea
-([Cockburn, 2005]({{ cites }}#cite-cockburn-hexagonal-2005)).
+([Cockburn, 2005](../reference/citations.mdx#cite-cockburn-hexagonal-2005)).
 
 This discipline is not aesthetic. `domain/` and `application/` use no `node:` modules, no
 `process`, no child processes. That is what lets the same code be loaded by the Claude Code mod
@@ -69,7 +66,7 @@ know its caller; the SDK driver goes through the Copilot workflow.*
 A **host driver** connects the engine to a host. It gives the engine the means to start an agent,
 ask a human a question and show progress, then calls the use case. It decides neither the order,
 nor the verdict, nor the progression. The list of drivers, what each one starts, how it asks
-questions and what each host can do are in the [Hosts]({{ "/en/reference/hosts" | relative_url }})
+questions and what each host can do are in the [Hosts](../reference/hosts.md)
 reference.
 
 This split has a direct consequence: adding a host means writing a driver, not a second
@@ -133,7 +130,7 @@ A missing output starts the agent again with the list of what is missing, within
 the same failure twice stops the run earlier, because a third identical attempt would teach
 nothing. A step the machine cannot run (program not found, git failing) is not blamed on the
 agent: the engine asks a human to repair, then retry or abort. The codes:
-[Tracking and journal]({{ "/en/reference/run-journal" | relative_url }}#statuses-and-codes).
+[Tracking and journal](../reference/run-journal.md#statuses-and-codes).
 
 ## Depth 1
 
@@ -146,8 +143,8 @@ A review follows this path. The lenses answer with typed findings; `finding-refu
 finding that would send the work back; when a single lens stands against the others, the refuter
 judges it with every input of the review (the *Dissent Rule*) rather than setting it aside
 without a reason. The engine computes the verdict on what remains. The why:
-[Review before review]({{ "/en/explanation/deep-dive/review-before-review" | relative_url }});
-the computation: [Gates]({{ "/en/reference/gates" | relative_url }}#review-run).
+[Review before review](./deep-dive/review-before-review.md);
+the computation: [Gates](../reference/gates.md#review-run).
 
 ## The checks live in the code
 
@@ -155,9 +152,9 @@ What an agent could forget, the engine checks: the phase order, computed from th
 the expected outputs, pre-created then checked; the journal's integrity; the command gates; what
 each step may write, through a git diff; the red and green TDD commits; the ADR lifecycle; the
 review verdict. Each of these checks is tested without a host, and behaves the same everywhere.
-Why they left the v1 hooks: [Guardrails]({{ "/en/explanation/guardrails" | relative_url }}). How
+Why they left the v1 hooks: [Guardrails](./guardrails.md). How
 the workflow that carries them is read and copied:
-[DOT workflow]({{ "/en/reference/workflow-dot" | relative_url }}).
+[DOT workflow](../reference/workflow-dot.md).
 
 ## Alternatives considered
 
@@ -172,15 +169,15 @@ event journal.
 sequence and leaves progression to a model that can stray from the loop. It remains only as a
 fallback under VS Code.
 
-**Keeping the hooks.** See [Guardrails]({{ "/en/explanation/guardrails" | relative_url }}).
+**Keeping the hooks.** See [Guardrails](./guardrails.md).
 
 ## Going further
 
-- [The event journal]({{ "/en/explanation/event-journal" | relative_url }}) — the recomputed state and resume.
-- [Clean Architecture]({{ "/en/explanation/clean-architecture" | relative_url }}) — the dependency rule, applied to the engine too.
-- [Reference: hosts]({{ "/en/reference/hosts" | relative_url }}) and [the command line]({{ "/en/reference/cli" | relative_url }}).
+- [The event journal](./event-journal.md) — the recomputed state and resume.
+- [Clean Architecture](./clean-architecture.md) — the dependency rule, applied to the engine too.
+- [Reference: hosts](../reference/hosts.md) and [the command line](../reference/cli.md).
 
 ## Sources
 
-- [Cockburn, A. *Hexagonal Architecture*, 2005.]({{ cites }}#cite-cockburn-hexagonal-2005)
-- [Martin, R. C. *Clean Architecture*, 2017.]({{ cites }}#cite-martin-cleanarch-2017)
+- [Cockburn, A. *Hexagonal Architecture*, 2005.](../reference/citations.mdx#cite-cockburn-hexagonal-2005)
+- [Martin, R. C. *Clean Architecture*, 2017.](../reference/citations.mdx#cite-martin-cleanarch-2017)

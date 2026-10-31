@@ -1,29 +1,26 @@
 ---
-layout: doc
-lang: fr
 title: "Poser un filet de caractérisation sur un service existant"
 description: "Faire écrire par brownfield-harness-builder le contrat d'un service HTTP existant et des tests de caractérisation qui figent son comportement actuel, puis lire le verdict PASS, CONCERNS ou FAIL avant tout refactoring."
 persona: software-engineer
 ---
-{% assign cites = "/fr/reference/citations" | relative_url %}
 
 # Poser un filet de caractérisation sur un service existant
 
 **But** : rendre un service HTTP existant sûr à modifier, avec des tests qui figent ce qu'il fait
 aujourd'hui, bugs compris.
 
-Pour comprendre la méthode : [Parcours Brownfield]({{ "/fr/explanation/brownfield" | relative_url }})
-et [Feathers, 2004]({{ cites }}#cite-feathers-legacy-2004).
+Pour comprendre la méthode : [Parcours Brownfield](../explanation/brownfield.md)
+et [Feathers, 2004](../reference/citations.mdx#cite-feathers-legacy-2004).
 
 ## Prérequis
 
 - Les plugins `skraft` **et** `skraft-brownfield` installés : le second reprend par leur nom les
   skills `contract-testing` et `mocking-strategy-roster` du premier
-  ([Installer skraft sur un hôte]({{ "/fr/how-to/install-on-a-host" | relative_url }})).
+  ([Installer skraft sur un hôte](./install-on-a-host.mdx)).
 - Un service HTTP .NET, Java, Python ou Node/TypeScript qui compile, et sa commande de test.
 - Conseillé : un `skraft-config.json` qui décrit le composant (`skraft init`) ; ses commandes
   `build` et `test` et son réglage `mocking` priment alors sur la détection
-  ([Configurer les composants]({{ "/fr/how-to/configure-components" | relative_url }})).
+  ([Configurer les composants](./configure-components.md)).
 - Une branche de travail propre : l'agent écrit et commite des fichiers de test.
 
 ## 1. Lancer l'agent sur le service
@@ -83,11 +80,11 @@ et tourne avec les gates de chaque run skraft.
 |---|---|
 | `[SKILL MISSING] contract-testing` (ou `mocking-strategy-roster`) | Installer le plugin `skraft` à côté de `skraft-brownfield`, puis relancer. |
 | `{"status": "blocked", "summary": …}` | L'agent tournait sans personne pour répondre : relancer en session interactive, ou fournir ce que `summary` nomme. |
-| Une dépendance aval refuse d'être mockée | Verdict `CONCERNS` : accepter le trou, ou changer `mocking` du composant ([Configurer les composants]({{ "/fr/how-to/configure-components" | relative_url }})). |
+| Une dépendance aval refuse d'être mockée | Verdict `CONCERNS` : accepter le trou, ou changer `mocking` du composant ([Configurer les composants](./configure-components.md)). |
 | Pas de skill de contract testing pour la stack | L'agent prend l'hôte de test standard du framework et le dit dans son rapport. |
 
 ## Voir aussi
 
-- [Refactorer un code existant sous filet]({{ "/fr/how-to/refactor-legacy" | relative_url }}) — l'étape suivante.
-- [Parcours Brownfield]({{ "/fr/explanation/brownfield" | relative_url }})
-- [Le catalogue des agents et skills]({{ "/fr/dashboard/" | relative_url }}#agent-brownfield-harness-builder)
+- [Refactorer un code existant sous filet](./refactor-legacy.md) — l'étape suivante.
+- [Parcours Brownfield](../explanation/brownfield.md)
+- [Le catalogue des agents et skills](pathname:///fr/dashboard/#agent-brownfield-harness-builder)

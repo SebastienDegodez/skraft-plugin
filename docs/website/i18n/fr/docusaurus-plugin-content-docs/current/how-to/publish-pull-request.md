@@ -1,6 +1,4 @@
 ---
-layout: doc
-lang: fr
 title: "Publier la pull request d'un run"
 description: "Consentir à la publication, préparer gh et le remote, laisser le run ouvrir sa pull request ou la publier avec skraft publish, suivre le run sur son issue et joindre les captures d'un frontend."
 persona: software-engineer
@@ -16,23 +14,23 @@ sa description rendue depuis le journal.
 - Un dépôt avec un remote GitHub, GitHub Enterprise ou Azure DevOps (`origin`, sinon le premier remote).
 - `gh` installé (`az`, le CLI Azure, sur Azure DevOps : voir [Sur Azure DevOps](#azure-devops)) ; Git et ssh capables de pousser sans demander de mot de passe.
 - Un travail sur une branche à vous, pas sur la branche de base.
-- `skraft` est la commande que [`skraft install`]({{ "/fr/how-to/install-on-a-host" | relative_url }}#skraft-command) met en place ; la ligne longue `node "<dossier du plugin>/engine/drivers/cli/skraft.mjs"` marche sans elle.
+- `skraft` est la commande que [`skraft install`](./install-on-a-host.mdx#skraft-command) met en place ; la ligne longue `node "<dossier du plugin>/engine/drivers/cli/skraft.mjs"` marche sans elle.
 
 ## 1. Connecter `gh` à la forge du remote
 
-```text
-gh auth login --hostname github.com
+```console
+$ gh auth login --hostname github.com
 ```
 
 Remplacez `github.com` par l'hôte de votre GitHub Enterprise le cas échéant. skraft lance `gh`
-avec `--repo <hôte>/<owner>/<dépôt>` d'après l'URL du remote. Quand l'hôte a un serveur MCP GitHub connecté, le moteur passe d'abord par lui pour l'issue et la pull request, et se replie sur `gh` quand le serveur est absent ou échoue, jamais quand vous ou l'hôte refusez un outil ([serveur MCP GitHub d'abord]({{ "/fr/reference/skraft-config" | relative_url }}#github-mcp-server-first-gh-as-fallback)) ; le journal du run dit par quelle voie chaque opération est passée.
+avec `--repo <hôte>/<owner>/<dépôt>` d'après l'URL du remote. Quand l'hôte a un serveur MCP GitHub connecté, le moteur passe d'abord par lui pour l'issue et la pull request, et se replie sur `gh` quand le serveur est absent ou échoue, jamais quand vous ou l'hôte refusez un outil ([serveur MCP GitHub d'abord](../reference/skraft-config.md#github-mcp-server-first-gh-as-fallback)) ; le journal du run dit par quelle voie chaque opération est passée.
 
 ## 2. Donner le consentement
 
 Au premier run du dépôt, la question `publish-consent` (en-tête `Pull request`) demande si skraft
 peut pousser la branche, ouvrir ou mettre à jour sa pull request, et tenir à jour un commentaire
 sur l'issue de la story. Répondez `ACCEPTED`
-([Répondre à une question du run]({{ "/fr/how-to/answer-a-question" | relative_url }})). La
+([Répondre à une question du run](./answer-a-question.mdx)). La
 réponse est écrite dans `skraft-config.json` :
 
 ```json
@@ -78,8 +76,8 @@ La description commence par `Refs #<issue>` ; `Closes #<issue>` seulement quand 
 Sans consentement, remote, `gh` ou connexion, le run se termine en local et garde la description
 dans `.copilot-tracking/skraft-plans/<slug>/pull-request.md`. Corrigez la cause, puis :
 
-```text
-skraft publish
+```console
+$ skraft publish
 ```
 
 ```text
@@ -164,7 +162,7 @@ Résultat : les captures sont commitées seules sur la branche
 montre, les sombres repliées. Les captures sont une preuve, pas une gate : un e2e en échec
 n'arrête pas le run.
 
-## Sur Azure DevOps {#azure-devops}
+## Sur Azure DevOps <!-- #azure-devops -->
 
 Avec `forge` à `azure-devops` dans `skraft-config.json`, ou un remote sur `dev.azure.com`,
 `ssh.dev.azure.com` ou `*.visualstudio.com`, le run publie avec `az repos` au lieu de `gh`, avec
@@ -183,7 +181,7 @@ raison du run le dit. Sous Windows, `az` ne s'exécute que depuis l'installeur d
 winget) : skraft lance lui-même son Python, pour qu'aucun shell ne lise le titre, et refuse tout
 autre `az.cmd` ou `az.bat` (pip, scoop). Le run lit la story dans son work item Azure Boards et
 tient son avancement dans un seul commentaire sur lui, par le serveur MCP Azure DevOps de l'hôte
-d'abord, `az` en repli, jamais quand vous ou l'hôte refusez un outil ([Forge]({{ "/fr/reference/skraft-config" | relative_url }}#azure-devops-mcp-server-first-az-as-fallback)) ;
+d'abord, `az` en repli, jamais quand vous ou l'hôte refusez un outil ([Forge](../reference/skraft-config.md#azure-devops-mcp-server-first-az-as-fallback)) ;
 skraft ne revoit pas encore ses pull requests.
 `skraft doctor` dit quelle forge un run utilise, sur sa ligne `forge`.
 
@@ -201,11 +199,11 @@ skraft ne revoit pas encore ses pull requests.
 | `not published (consent): skraft-config.json sets publish.visuals to false` | Écrire `"visuals": true` sous `publish` si les captures ne montrent aucune donnée privée. |
 | `skraft-visuals/manifest.json is missing or is not an object with a screenshots list` | Vérifier que le reporter est déclaré et que `commands.e2e` lance Playwright depuis la racine du composant. |
 
-Tous les messages : [`skraft publish`]({{ "/fr/reference/cli" | relative_url }}).
+Tous les messages : [`skraft publish`](../reference/cli.md).
 
 ## Voir aussi
 
-- [Phases — PUBLISH]({{ "/fr/reference/phases" | relative_url }}#publish)
-- [skraft-config.json — `publish`]({{ "/fr/reference/skraft-config" | relative_url }}#publish)
-- [Dossier de suivi et journal]({{ "/fr/reference/run-journal" | relative_url }}) —
+- [Phases — PUBLISH](../reference/phases.md#publish)
+- [skraft-config.json — `publish`](../reference/skraft-config.md#publish)
+- [Dossier de suivi et journal](../reference/run-journal.md) —
   `pull-request.md`, `issue-progress.md`, `qa-report.md`.

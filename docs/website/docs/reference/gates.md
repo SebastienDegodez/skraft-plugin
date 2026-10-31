@@ -1,19 +1,17 @@
 ---
-layout: doc
-lang: en
 title: "Gates"
 description: "The command gates the engine runs and the review criteria (Gxx and other ids) the lenses judge, per phase, with a lens's answer, the refutation and how the verdict is computed."
 ---
 
 # Gates
 
-> A gate is a binary criterion written in advance: a command that exits with 0, or a criterion a review lens declares held or not.
+A gate is a binary criterion written in advance: a command that exits with 0, or a criterion a review lens declares held or not.
 
 Why written criteria and an independent review:
-[Review before review]({{ "/en/explanation/deep-dive/review-before-review" | relative_url }}).
-Where each review sits in the pipeline: [Phases]({{ "/en/reference/phases" | relative_url }}).
+[Review before review](../explanation/deep-dive/review-before-review.md).
+Where each review sits in the pipeline: [Phases](./phases.md).
 
-## Two kinds of gates {#kinds}
+## Two kinds of gates <!-- #kinds -->
 
 | Kind | Ids | Who judges it | Where |
 | --- | --- | --- | --- |
@@ -24,7 +22,7 @@ Where each review sits in the pipeline: [Phases]({{ "/en/reference/phases" | rel
 A `G<n>` id is unique only within its phase: DESIGN's G1 is not DISTILL's G1. A lens's table, in
 its agent descriptor, is the source; a lens puts the id in the `gate` field of each finding.
 
-## Command gates {#command-gates}
+## Command gates <!-- #command-gates -->
 
 The gates are a component's commands whose name is one of the seven below, in
 `skraft-config.json`. They run in that order, whatever the file's order, from the component's
@@ -42,16 +40,16 @@ root; a component stops at its first failing gate.
 
 | Rule | Detail |
 | --- | --- |
-| Result | `pass` (exit 0) or `fail`, class `environment` or `deterministic` ([failure classes]({{ "/en/reference/skraft-config" | relative_url }}#failure-classes)) |
+| Result | `pass` (exit 0) or `fail`, class `environment` or `deterministic` ([failure classes](./skraft-config.md#failure-classes)) |
 | Component with no gate command | gate `none`, `fail`, class `environment` |
 | Scope | the components changed since their base; `goal_gate=true` then runs all the others; `skraft gate --all` runs them all |
 | Edges | every gate of the node passes: the `PASS` edge; one fails: the `FAIL` edge (`gates`: `PASS` to `deliver_review`, `FAIL` to `deliver`; `mutation`: `PASS` to `visuals`, `FAIL` to `kill_proposal`; `mutation_gates`: `PASS` to `mutation`, `FAIL` to `kill_mutants`) |
-| Mutation | the engine reads the report of the `mutation` command (`mutationReport`) and judges two bars: **100 %** on the core (Domain, Application), **80 %** on the boundary (the rest); it runs once, after `deliver_review` approved; on failure, `kill_proposal` writes one proposal per file of survivors, the `mutation-plan` question lets the developer choose (`APPLY`, their instruction, `STOP`), then `kill_mutants` applies the choice ([Phases]({{ "/en/reference/phases" | relative_url }}#deliver)) |
+| Mutation | the engine reads the report of the `mutation` command (`mutationReport`) and judges two bars: **100 %** on the core (Domain, Application), **80 %** on the boundary (the rest); it runs once, after `deliver_review` approved; on failure, `kill_proposal` writes one proposal per file of survivors, the `mutation-plan` question lets the developer choose (`APPLY`, their instruction, `STOP`), then `kill_mutants` applies the choice ([Phases](./phases.md#deliver)) |
 | Thresholds | none is configurable |
-| Lock | `gates` and `mutation` are `locked=true`: a copy of the workflow drops them only with `unlock="<reason>"` ([The DOT workflow]({{ "/en/reference/workflow-dot" | relative_url }}#locked-nodes)) |
-| Evidence | `gates/<component>/<gate>-<n>.log` and a `gate.ran` event ([Tracking folder and journal]({{ "/en/reference/run-journal" | relative_url }}#gate-evidence)) |
+| Lock | `gates` and `mutation` are `locked=true`: a copy of the workflow drops them only with `unlock="<reason>"` ([The DOT workflow](./workflow-dot.md#locked-nodes)) |
+| Evidence | `gates/<component>/<gate>-<n>.log` and a `gate.ran` event ([Tracking folder and journal](./run-journal.md#gate-evidence)) |
 
-## Review criteria {#review-criteria}
+## Review criteria <!-- #review-criteria -->
 
 | Severity | DISCOVER, DISCUSS (`review-verdict.mjs`) | DESIGN, DISTILL, DELIVER (engine) |
 | --- | --- | --- |
@@ -62,7 +60,7 @@ root; a component stops at its first failing gate.
 
 ---
 
-## DISCOVER — G1 to G6 {#discover}
+## DISCOVER — G1 to G6 <!-- #discover -->
 
 `backlog-discoverer` (skraft-backlog plugin) dispatches 3 lenses; `review-verdict.mjs --phase
 discover` computes the verdict. Subject: the triage report and the sprint proposal.
@@ -76,7 +74,7 @@ discover` computes the verdict. Subject: the triage report and the sprint propos
 | **G5** | `discovery-duplicate-lens` | No two triaged issues describe the same problem without being marked as duplicates. | HIGH |
 | **G6** | `discovery-duplicate-lens` | Every merely related pair is noted with a recommendation. | MEDIUM |
 
-## DISCUSS — G1 to G8 {#discuss}
+## DISCUSS — G1 to G8 <!-- #discuss -->
 
 `backlog-planner` (skraft-backlog plugin) dispatches 4 lenses; `review-verdict.mjs --phase
 discuss` computes the verdict. Subject: the stories and their acceptance criteria.
@@ -95,7 +93,7 @@ discuss` computes the verdict. Subject: the stories and their acceptance criteri
 A story missing two Definition of Ready items or more (two G7 findings) makes the verdict
 `REJECTED`, whatever their severity.
 
-## DESIGN {#design}
+## DESIGN <!-- #design -->
 
 The `design_review` review: 3 lenses, verdict computed by the engine. A `Proposed` ADR the pass
 under review wrote satisfies every criterion that asks for an `Accepted` ADR and falls under
@@ -124,7 +122,7 @@ every criterion that forbids one.
 | **F1** | `fitness` | Every quality attribute the story or research states has a design element that answers it. | high |
 
 **Engine checks.** After each `solution-architect` attempt, without a lens
-([`design-records`]({{ "/en/reference/run-journal" | relative_url }}#statuses-and-codes)):
+([`design-records`](./run-journal.md#statuses-and-codes)):
 
 | Criterion | Check |
 | --- | --- |
@@ -139,7 +137,7 @@ A failure sends the architect back with one line per record; after its last atte
 stops with `design-records`. The consistency matrix is also DESIGN's declared output: when it is
 missing, the run stops with `missing-outputs` instead.
 
-## DISTILL {#distill}
+## DISTILL <!-- #distill -->
 
 The `distill_review` review: 4 lenses, verdict computed by the engine.
 
@@ -165,7 +163,7 @@ The `distill_review` review: 4 lenses, verdict computed by the engine.
 lens `testability#layout` (severity blocker), a test added outside the stack's unit and
 integration places, and a component that gains tests with none in its unit place.
 
-## DELIVER {#deliver}
+## DELIVER <!-- #deliver -->
 
 DELIVER goes through the `gates` gates, the `deliver_review` call of the `review` workflow, then
 the `mutation` gate; when it fails, the `mutation_review` review (lens `test-integrity`) judges
@@ -192,19 +190,19 @@ a pull request through `skraft review --pr`.
 
 `mock-fidelity` runs only on changes that touch mocks (`when="mock"`), `contract-fidelity` only on
 changes that touch contracts (`when="contract"`)
-([triggers]({{ "/en/reference/workflow-dot" | relative_url }}#conditional-lenses)).
+([triggers](./workflow-dot.md#conditional-lenses)).
 
 The engine also checks, with no gate id, the commits of each attempt (`commits.checked`): a
 conventional message, `Refs: #<issue>` as the last line, no issue closed, a green commit preceded
 by a red one, each red one replayed and failing
-([`tdd.replay`]({{ "/en/reference/skraft-config" | relative_url }}#tdd)).
+([`tdd.replay`](./skraft-config.md#tdd)).
 
-## Review: answer, refutation, verdict {#review-run}
+## Review: answer, refutation, verdict <!-- #review-run -->
 
 What follows holds for the reviews the engine conducts (DESIGN, DISTILL, DELIVER, `skraft review
 --pr`).
 
-### A lens's answer {#lens-answer}
+### A lens's answer <!-- #lens-answer -->
 
 A lens ends its last message with one YAML document in a fenced block; the engine
 reads the last fenced block of the message.
@@ -230,7 +228,7 @@ findings:                # [] when it finds none
 | Texts | brought onto one line and cut (description: 500 characters); `location` made relative to the working copy, `/`-separated, `./` dropped, its `:line` kept (a path outside the working copy stays absolute) |
 | Refused answer | the lens is asked once more with the reason; a second unreadable answer stops the run with `lens-unreadable`; a resume asks again only the lenses whose answer could not be read |
 
-### G9 read by the engine {#g9-engine}
+### G9 read by the engine <!-- #g9-engine -->
 
 When `test-integrity` reviews the changes, the engine also reads the patch of
 the test files (source files under a `test`, `tests`, `spec` or `__tests__` folder, or named like
@@ -242,7 +240,7 @@ file deleted (blocker), assertion lines removed with fewer added back (high). Th
 `test-integrity` lists them so that the lens does not report them again; they go to the refuter
 like a lens's.
 
-### Refutation {#refutation}
+### Refutation <!-- #refutation -->
 
 Findings of different lenses at the same `path:line` (the path normalized as the
 patch's: `./src\Checkout.cs:12` is `src/Checkout.cs:12`) with the same severity form one group.
@@ -252,7 +250,7 @@ every lens of the group, with the inputs and skills of those lenses. It answers 
 to every finding of the group. A refuted finding does not count; an unverifiable one does, and
 so does a finding whose check was unreadable twice.
 
-### Verdict {#verdict}
+### Verdict <!-- #verdict -->
 
 A lens that answers `inconclusive`, or `fail` without a blocker, high or medium
 finding, blocks the review with `lens-inconclusive`, naming each such lens and what it noted:
@@ -266,7 +264,7 @@ The summary gives the status, then the refuted findings and the notes it set asi
 under it each refuted finding with the refuter's reason and each note, then where `verdict.yaml`
 is, so that a human can still have them fixed.
 
-### Incremental re-review {#incremental}
+### Incremental re-review <!-- #incremental -->
 
 On a later pass, a lens whose previous result was `pass` with no
 finding, and whose fingerprint has not changed, is not started again: its result is journaled
@@ -274,7 +272,7 @@ again with `reused: true`. The fingerprint covers its inputs, the content of eac
 reads (by skill name: moving the working copy or the plugin changes nothing), the project rule
 files and the content of each changed path it reads.
 
-### DISCOVER and DISCUSS verdict {#backlog-verdict}
+### DISCOVER and DISCUSS verdict <!-- #backlog-verdict -->
 
 `review-verdict.mjs` reads the lens answers and writes the review file; its exit code carries
 the verdict.
@@ -286,13 +284,13 @@ the verdict.
 | otherwise (`low` findings only, or none) | `APPROVED` | 0 |
 | malformed line or unreadable answer | — | 1 |
 
-## See also {#see-also}
+## See also <!-- #see-also -->
 
-- [Phases]({{ "/en/reference/phases" | relative_url }})
-- [The DOT workflow]({{ "/en/reference/workflow-dot" | relative_url }})
-- [Agent and lens catalogue]({{ "/en/dashboard/" | relative_url }})
-- [Run the gates]({{ "/en/how-to/run-gates" | relative_url }})
-- [Review before review]({{ "/en/explanation/deep-dive/review-before-review" | relative_url }})
+- [Phases](./phases.md)
+- [The DOT workflow](./workflow-dot.md)
+- [Agent and lens catalogue](pathname:///dashboard/)
+- [Run the gates](../how-to/run-gates.md)
+- [Review before review](../explanation/deep-dive/review-before-review.md)
 
 Terms to know: **gate**, **lens**, **finding**, **BLOCKER**, **INVEST**, **walking
-skeleton** — see the [glossary]({{ "/en/reference/glossary" | relative_url }}).
+skeleton** — see the [glossary](./glossary.md).

@@ -1,23 +1,21 @@
 ---
-layout: doc
-lang: fr
 title: "Changelog"
 ---
 
 # Changelog
 
-> Les changements visibles par l'utilisateur, regroupés par version ; le détail commit par commit est dans `CHANGELOG.md` à la racine du dépôt.
+Les changements visibles par l'utilisateur, regroupés par version ; le détail commit par commit est dans `CHANGELOG.md` à la racine du dépôt.
 
-## V2 — 2.0.0-alpha.1 à 2.0.0-alpha.19 (2026-10-28 → 2026-10-29) {#v2}
+## V2 — 2.0.0-alpha.1 à 2.0.0-alpha.19 (2026-10-28 → 2026-10-29) <!-- #v2 -->
 
-### Changements incompatibles {#v2-breaking}
+### Changements incompatibles <!-- #v2-breaking -->
 
 | Version | Changement |
 | --- | --- |
 | alpha.1 | Le plugin ne livre plus de hook de commande ni la CLI d'état et d'artefacts de la v1 : le moteur V2 les remplace. `events.jsonl` remplace `state.json`. |
 | alpha.1 | `skraft-config.json` décrit des composants (racine, stack, chemins, commandes). `skraft migrate` convertit la configuration et les runs v1 en cours. |
 
-### Moteur et pipeline {#v2-engine}
+### Moteur et pipeline <!-- #v2-engine -->
 
 | Version | Changement |
 | --- | --- |
@@ -40,7 +38,7 @@ title: "Changelog"
 | alpha.19 | La mutation tourne en dernier, une seule fois, sur le code que la revue DELIVER a approuvé. En échec, `kill_proposal` écrit une proposition par fichier de survivants sans toucher au code ; la question `mutation-plan` laisse le développeur choisir (`APPLY`, sa consigne, `STOP`) ; `kill_mutants` applique le choix, puis `mutation_gates` relance les gates avant une nouvelle mutation. |
 | prochaine | Règles des ADR dans le moteur : aucune version, `decision` d'une phrase, vocabulaire de statut fermé, ADR publiés modifiés seulement sur leurs lignes de statut, une ligne dans `decisions-index.md` pour chaque ADR écrit ; la revue DESIGN et la ratification ne reviennent qu'une fois (`max_visits` 1) ; gates de lentille G17 et G18. |
 
-### Fin de run et pull requests {#v2-publish}
+### Fin de run et pull requests <!-- #v2-publish -->
 
 | Version | Changement |
 | --- | --- |
@@ -50,7 +48,7 @@ title: "Changelog"
 | alpha.1 | `skraft review --pr` revoit une pull request seule avec le workflow `review`. |
 | alpha.12 | Sections de preuves repliées dans la pull request ; ce qui attend un humain reste ouvert. |
 
-### Hôtes {#v2-hosts}
+### Hôtes <!-- #v2-hosts -->
 
 | Version | Changement |
 | --- | --- |
@@ -62,7 +60,7 @@ title: "Changelog"
 | alpha.11 | Copilot CLI : une confirmation que Copilot ne montre pas renvoie au chat ou au terminal. |
 | alpha.17 | Copilot CLI : une question est posée une seule fois, dans le chat ; le canvas montre l'état du run, en lecture seule. |
 
-### Skills et plugins {#v2-skills}
+### Skills et plugins <!-- #v2-skills -->
 
 | Version | Changement |
 | --- | --- |
@@ -72,7 +70,7 @@ title: "Changelog"
 | alpha.5 | Skill `clean-architecture-typescript` pour un back end Node/TypeScript. |
 | alpha.9 | .NET : gates, noms des projets de test et gabarits d'architecture. |
 
-### Documentation {#v2-docs}
+### Documentation <!-- #v2-docs -->
 
 | Version | Changement |
 | --- | --- |
@@ -84,13 +82,13 @@ title: "Changelog"
 - Le script `scripts/migrate-adr-layout.mjs` renomme les fichiers en séquence globale (`adr-001-...md`, `adr-002-...md`, etc.) et réécrit les liens de référence.
 - Utilisation recommandée:
 
-```bash
-node scripts/migrate-adr-layout.mjs \
+```console
+$ node scripts/migrate-adr-layout.mjs \
 	--repo /chemin/vers/repo \
 	--renumber-global
 
 # appliquer réellement
-node scripts/migrate-adr-layout.mjs \
+$ node scripts/migrate-adr-layout.mjs \
 	--repo /chemin/vers/repo \
 	--renumber-global \
 	--apply

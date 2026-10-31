@@ -1,6 +1,4 @@
 ---
-layout: doc
-lang: en
 title: "Choose the agents' models"
 description: "Choose each agent's model family, and each family's model and reasoning effort on Claude Code and on Copilot, for you alone or for the team, and check the result with skraft doctor."
 persona: tech-lead
@@ -13,13 +11,13 @@ Code and on Copilot.
 
 ## Prerequisites
 
-- A configured repository ([Configure the components]({{ "/en/how-to/configure-components" | relative_url }})).
-- A terminal at the root of the working copy; `skraft` is the command that [`skraft install`]({{ "/en/how-to/install-on-a-host" | relative_url }}#skraft-command) sets up; the long line `node "<plugin folder>/engine/drivers/cli/skraft.mjs"` works without it.
+- A configured repository ([Configure the components](./configure-components.md)).
+- A terminal at the root of the working copy; `skraft` is the command that [`skraft install`](./install-on-a-host.mdx#skraft-command) sets up; the long line `node "<plugin folder>/engine/drivers/cli/skraft.mjs"` works without it.
 
 ## 1. See what each agent gets today
 
-```text
-skraft doctor
+```console
+$ skraft doctor
 ```
 
 The doctor prints one table per host:
@@ -99,8 +97,8 @@ strongest lens it checks, `frontier` at most, unless a rule names it.
 
 ## 5. Check
 
-```text
-skraft doctor
+```console
+$ skraft doctor
 ```
 
 The rows of the agents you targeted show the new family, model and effort, and where each comes
@@ -128,8 +126,8 @@ files say since.
 
 ## See also
 
-- [skraft-config.json]({{ "/en/reference/skraft-config" | relative_url }}#location) — the four
+- [skraft-config.json](../reference/skraft-config.md#location) — the four
   layers and the `models` and `assign` keys.
-- [Hosts]({{ "/en/reference/hosts" | relative_url }}#capabilities) — what each host passes to
+- [Hosts](../reference/hosts.md#capabilities) — what each host passes to
   the agent: model, effort, cost.
-- [Token economy]({{ "/en/explanation/token-economy" | relative_url }}) — why one family per role.
+- [Token economy](../explanation/token-economy.md) — why one family per role.

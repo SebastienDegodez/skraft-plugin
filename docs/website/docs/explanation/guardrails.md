@@ -1,16 +1,13 @@
 ---
-layout: doc
-lang: en
 title: "Guardrails: from hook to engine"
 description: "Why SKRAFT V2 starts from zero command hooks, what in the engine replaces each v1 guardrail, what is lost by moving from preventing to detecting, and on what condition a hook may come back."
 persona: tech-lead
 ---
-{% assign cites = "/en/reference/citations" | relative_url %}
 
 # Guardrails: from hook to engine
 
-> In v1, hooks watched the agent on every tool call. In V2, the engine that starts the agent
-> checks what matters itself, before and after each step.
+In v1, hooks watched the agent on every tool call. In V2, the engine that starts the agent
+checks what matters itself, before and after each step.
 
 ## What a guardrail was in v1
 
@@ -38,7 +35,7 @@ promises.
 **Checks the engine already does.** In V2, the engine composes each agent's brief itself, sets
 its outputs and writes the journal. It no longer needs to watch a model that would write the
 state through the shell: the state is no longer a file the agent modifies, it is a
-[journal]({{ "/en/explanation/event-journal" | relative_url }}) the engine rereads and verifies.
+[journal](./event-journal.md) the engine rereads and verifies.
 
 Result: no command hook ships. The `hooks/hooks.json` file declares only one **module**: the
 Claude Code mod's, which gives Claude Code the `/skraft` command, the tool that starts the
@@ -65,7 +62,7 @@ Copilot workflow does under Copilot.
 Two checks have no v1 equivalent: the **session lease**, which refuses a second session on a
 pipeline another one is conducting, and the workflow's **locked and mandatory nodes**, which a
 repository copy cannot silently remove
-([DOT workflow]({{ "/en/reference/workflow-dot" | relative_url }}#locked-nodes)).
+([DOT workflow](../reference/workflow-dot.md#locked-nodes)).
 
 ## Prevent or detect
 
@@ -102,7 +99,7 @@ A hook comes back only if it meets three conditions: it protects an **irreversib
 engine cannot detect afterwards; its per-call cost is **measured**; its behaviour is documented on
 Claude Code, Copilot CLI and VS Code. No hook has met them so far. The Copilot driver additionally
 forbids any hook before a tool call
-([Architecture]({{ "/en/explanation/architecture" | relative_url }}#the-copilot-driver-contract)).
+([Architecture](./architecture.md#the-copilot-driver-contract)).
 
 ## What no guardrail covers
 
@@ -110,15 +107,15 @@ Neither a hook nor the engine detects a **factual error**: an invented business 
 that does not exist, wrong domain knowledge in a test. They check the structure of the work —
 order, outputs, integrity, gates — not the truth of its content. That remains the job of review,
 business acceptance tests and the human reviewer: peer review remains one of the most effective
-quality practices ([Wiegers, 2002]({{ cites }}#cite-wiegers-peer-reviews-2002)).
+quality practices ([Wiegers, 2002](../reference/citations.mdx#cite-wiegers-peer-reviews-2002)).
 
 ## Going further
 
-- [Architecture]({{ "/en/explanation/architecture" | relative_url }}) — the engine, the drivers, depth 1.
-- [The event journal]({{ "/en/explanation/event-journal" | relative_url }}) — the signed chain that replaces the ban on writing the state.
-- [Reference: tracking folder and journal]({{ "/en/reference/run-journal" | relative_url }}).
-- [Run the gates and read their evidence]({{ "/en/how-to/run-gates" | relative_url }}).
+- [Architecture](./architecture.md) — the engine, the drivers, depth 1.
+- [The event journal](./event-journal.md) — the signed chain that replaces the ban on writing the state.
+- [Reference: tracking folder and journal](../reference/run-journal.md).
+- [Run the gates and read their evidence](../how-to/run-gates.md).
 
 ## Sources
 
-- [Wiegers, K. *Peer Reviews in Software*, 2002.]({{ cites }}#cite-wiegers-peer-reviews-2002)
+- [Wiegers, K. *Peer Reviews in Software*, 2002.](../reference/citations.mdx#cite-wiegers-peer-reviews-2002)

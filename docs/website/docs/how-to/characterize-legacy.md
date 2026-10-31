@@ -1,29 +1,26 @@
 ---
-layout: doc
-lang: en
 title: "Put a characterization net on an existing service"
 description: "Have brownfield-harness-builder write the contract of an existing HTTP service and characterization tests that pin its current behaviour, then read the PASS, CONCERNS or FAIL verdict before any refactoring."
 persona: software-engineer
 ---
-{% assign cites = "/en/reference/citations" | relative_url %}
 
 # Put a characterization net on an existing service
 
 **Goal**: make an existing HTTP service safe to change, with tests that pin what it does today,
 bugs included.
 
-To understand the method: [Brownfield journey]({{ "/en/explanation/brownfield" | relative_url }})
-and [Feathers, 2004]({{ cites }}#cite-feathers-legacy-2004).
+To understand the method: [Brownfield journey](../explanation/brownfield.md)
+and [Feathers, 2004](../reference/citations.mdx#cite-feathers-legacy-2004).
 
 ## Prerequisites
 
 - The `skraft` **and** `skraft-brownfield` plugins installed: the second reuses the first's
   `contract-testing` and `mocking-strategy-roster` skills by name
-  ([Install skraft on a host]({{ "/en/how-to/install-on-a-host" | relative_url }})).
+  ([Install skraft on a host](./install-on-a-host.mdx)).
 - A .NET, Java, Python or Node/TypeScript HTTP service that builds, and its test command.
 - Recommended: a `skraft-config.json` that describes the component (`skraft init`); its `build`
   and `test` commands and its `mocking` setting then win over detection
-  ([Configure components]({{ "/en/how-to/configure-components" | relative_url }})).
+  ([Configure components](./configure-components.md)).
 - A clean working branch: the agent writes and commits test files.
 
 ## 1. Start the agent on the service
@@ -82,11 +79,11 @@ gates of every skraft run.
 |---|---|
 | `[SKILL MISSING] contract-testing` (or `mocking-strategy-roster`) | Install the `skraft` plugin next to `skraft-brownfield`, then run again. |
 | `{"status": "blocked", "summary": …}` | The agent ran with nobody to answer: run it again in an interactive session, or provide what `summary` names. |
-| A downstream dependency cannot be mocked | Verdict `CONCERNS`: accept the gap, or change the component's `mocking` ([Configure components]({{ "/en/how-to/configure-components" | relative_url }})). |
+| A downstream dependency cannot be mocked | Verdict `CONCERNS`: accept the gap, or change the component's `mocking` ([Configure components](./configure-components.md)). |
 | No contract-testing skill for the stack | The agent uses the framework's standard test host and says so in its report. |
 
 ## See also
 
-- [Refactor existing code under a net]({{ "/en/how-to/refactor-legacy" | relative_url }}) — the next step.
-- [Brownfield journey]({{ "/en/explanation/brownfield" | relative_url }})
-- [The agent and skill catalogue]({{ "/en/dashboard/" | relative_url }}#agent-brownfield-harness-builder)
+- [Refactor existing code under a net](./refactor-legacy.md) — the next step.
+- [Brownfield journey](../explanation/brownfield.md)
+- [The agent and skill catalogue](pathname:///dashboard/#agent-brownfield-harness-builder)

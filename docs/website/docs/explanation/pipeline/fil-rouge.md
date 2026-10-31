@@ -1,6 +1,4 @@
 ---
-layout: doc
-lang: en
 title: "The running example — a Starbucks order end to end"
 description: "Follow one request through optional product preflight and then the SKRAFT engineering pipeline."
 persona: tech-lead
@@ -8,7 +6,7 @@ persona: tech-lead
 
 # The running example — a Starbucks order end to end
 
-> One request, followed from idea to delivered code, to see how each phase hands the baton to the next.
+One request, followed from idea to delivered code, to see how each phase hands the baton to the next.
 
 This page is a **narrative**: it does not describe SKRAFT in the abstract, it walks
 you through **one concrete example** from end to end. The thread is the *artifact
@@ -50,7 +48,7 @@ payment" request, and records it in a **triage report**.
 - **What enters:** "enable mobile ordering in the app".
 - **What exits:** a prioritised line in the triage report.
 
-➡️ Phase detail: [DISCOVER]({{ "/en/explanation/pipeline/discover" | relative_url }}).
+➡️ Phase detail: [DISCOVER](./discover.md).
 
 ### Step 2 — DISCUSS: turn it into a story
 
@@ -69,7 +67,7 @@ With its **acceptance criteria**:
 - **What enters:** the triage line.
 - **What exits:** the story + its 3 criteria.
 
-➡️ Phase detail: [DISCUSS]({{ "/en/explanation/pipeline/discuss" | relative_url }}).
+➡️ Phase detail: [DISCUSS](./discuss.md).
 
 ## Orchestrated engineering pipeline
 
@@ -82,14 +80,16 @@ or deciding the ADR.
 - **What enters:** the story and its criteria.
 - **What exits:** the cited research document and its handoff to DESIGN.
 
-➡️ Phase detail: [RESEARCH]({{ "/en/explanation/pipeline/research" | relative_url }}).
+➡️ Phase detail: [RESEARCH](./research.md).
 
 ### Step 4 — DESIGN: decide the architecture
 
 The `solution-architect` designs the solution. It proposes an **ADR**:
 
-> **Decision:** delegate payment to an external provider via an anti-corruption
-> layer (ACL), so the ordering domain is not coupled to the provider.
+:::note[Decision]
+delegate payment to an external provider via an anti-corruption
+layer (ACL), so the ordering domain is not coupled to the provider.
+:::
 
 And an **event model**:
 
@@ -103,7 +103,7 @@ DISTILL starts. A rejection sends the architect back to work, with the reason.
 - **What enters:** the story, its criteria, and the research document.
 - **What exits:** the ratified ADR + the event model + the contracts.
 
-➡️ Phase detail: [DESIGN]({{ "/en/explanation/pipeline/design" | relative_url }}).
+➡️ Phase detail: [DESIGN](./design.md).
 
 ### Step 5 — DISTILL: write the executable contract
 
@@ -124,7 +124,7 @@ It also writes the matching acceptance test and the code skeleton it calls, and 
 - **What enters:** the ADR + the event model.
 - **What exits:** the `.feature`, the test plan and the red acceptance test.
 
-➡️ Phase detail: [DISTILL]({{ "/en/explanation/pipeline/distill" | relative_url }}).
+➡️ Phase detail: [DISTILL](./distill.md).
 
 ### Step 6 — DELIVER: implement, guided by tests
 
@@ -137,7 +137,7 @@ proposes how to treat it and the developer chooses.
 - **What enters:** the red acceptance test + the plan.
 - **What exits:** the reviewed code, mutation passed, then the pull request.
 
-➡️ Phase detail: [DELIVER]({{ "/en/explanation/pipeline/deliver" | relative_url }}).
+➡️ Phase detail: [DELIVER](./deliver.md).
 
 ## What you have just seen
 
@@ -158,6 +158,6 @@ what was not written down was not passed on.
 
 ## Going further
 
-- [Pipeline overview]({{ "/en/explanation/pipeline/" | relative_url }})
-- [Reference: the phases]({{ "/en/reference/phases" | relative_url }}) — inputs, outputs, lenses of each phase
-- [The event journal]({{ "/en/explanation/event-journal" | relative_url }}) — where the run keeps the trace of each handoff
+- [Pipeline overview](./index.md)
+- [Reference: the phases](../../reference/phases.md) — inputs, outputs, lenses of each phase
+- [The event journal](../event-journal.md) — where the run keeps the trace of each handoff

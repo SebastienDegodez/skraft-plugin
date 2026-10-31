@@ -1,6 +1,4 @@
 ---
-layout: doc
-lang: fr
 title: "Revoir une pull request avec skraft"
 description: "Faire passer la pull request de quelqu'un d'autre par la revue DELIVER de skraft, sans run : extraire sa tête, lancer la revue depuis Claude Code, Copilot CLI ou un terminal, lire le verdict, garder un commentaire, revoir après un nouveau push."
 persona: reviewer
@@ -13,16 +11,16 @@ persona: reviewer
 
 ## Prérequis
 
-- Le plugin `skraft` installé ; `skraft` est la commande que [`skraft install`]({{ "/fr/how-to/install-on-a-host" | relative_url }}#skraft-command) met en place ; la ligne longue `node "<dossier du plugin>/engine/drivers/cli/skraft.mjs"` marche sans elle.
+- Le plugin `skraft` installé ; `skraft` est la commande que [`skraft install`](./install-on-a-host.mdx#skraft-command) met en place ; la ligne longue `node "<dossier du plugin>/engine/drivers/cli/skraft.mjs"` marche sans elle.
 - Sur GitHub : `gh` installé et connecté à l'hôte du dépôt (`gh auth status`). Sur Azure Repos : `az` avec son extension `azure-devops`, connecté à l'organisation, ou le serveur MCP Azure DevOps nommé `ado` connecté dans votre hôte (Azure DevOps Services seulement). Un outil de ce serveur que vous ou l'hôte refusez n'est jamais retenté par `az` : la revue le dit et s'arrête, ou laisse son commentaire non publié.
 - Un clone du dépôt, à la racine duquel vous lancez tout.
 
 ## 1. Extraire la pull request
 
-```sh
-gh pr checkout 42
-git fetch origin main
-git status
+```console
+$ gh pr checkout 42
+$ git fetch origin main
+$ git status
 ```
 
 Sur Azure Repos, extrayez-la avec `az repos pr checkout --id 42` à la place de `gh pr checkout 42`.
@@ -89,13 +87,13 @@ rien ; son premier commentaire est celui qui est réécrit. Jamais un vote, jama
 votre accord une fois par dépôt (terminal, dialogue, ou confirmation de Copilot) et le garde dans
 votre `~/.skraft/config.json`. Une équipe peut trancher pour tous avec `publish.reviewComment`
 dans le `skraft-config.json` de la branche de base
-([skraft-config.json]({{ "/fr/reference/skraft-config" | relative_url }}#publish)). Sans accord,
+([skraft-config.json](../reference/skraft-config.md#publish)). Sans accord,
 rien n'est posté ; `comment.md`, à côté de `verdict.yaml`, garde le texte.
 
 ## 5. Revoir après un nouveau push
 
-```sh
-gh pr checkout 42
+```console
+$ gh pr checkout 42
 ```
 
 Relancez la revue : c'est la passe suivante (`verdict-2/`). Une lentille dont les entrées n'ont
@@ -117,10 +115,10 @@ pas bougé et qui n'avait rien trouvé est reprise sans être relancée.
 
 ## Voir aussi
 
-- [`skraft review`]({{ "/fr/reference/cli" | relative_url }}) — règles de chaque étape, sortie
+- [`skraft review`](../reference/cli.md) — règles de chaque étape, sortie
   `--json`.
-- [Workflow `skraft-review`]({{ "/fr/reference/hosts" | relative_url }}#skraft-review)
-- [Ajouter une lentille à une revue]({{ "/fr/how-to/customise-review" | relative_url }}) — la
+- [Workflow `skraft-review`](../reference/hosts.md#skraft-review)
+- [Ajouter une lentille à une revue](./customise-review.md) — la
   revue suit `.skraft/review.skraft.dot` s'il existe.
-- [Gates : revue]({{ "/fr/reference/gates" | relative_url }}#review-run) — lentilles, réfutation,
+- [Gates : revue](../reference/gates.md#review-run) — lentilles, réfutation,
   verdict.

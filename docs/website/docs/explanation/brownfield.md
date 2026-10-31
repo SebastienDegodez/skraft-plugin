@@ -1,14 +1,12 @@
 ---
-layout: doc
-lang: en
 title: "Brownfield journey"
 description: "SKRAFT's Brownfield journey: understand an existing system or secure it before transformation, with three agents selected directly by the human."
 ---
 
 # Brownfield journey
 
-> Brownfield is a top-level journey, sibling to the core journey. It starts from
-> existing code rather than a refined story.
+Brownfield is a top-level journey, sibling to the core journey. It starts from
+existing code rather than a refined story.
 
 ## When to choose this journey
 
@@ -38,8 +36,8 @@ state.
 
 | Need | Workflow | What it produces |
 |------|----------|------------------|
-| **Understand** code without product documentation | [`brownfield-analyst`]({{ "/en/dashboard/" | relative_url }}#agent-brownfield-analyst) | a 17-section PRD, consumed by upstream backlog tooling to create issues |
-| **Secure then transform** a legacy | [`brownfield-harness-builder`]({{ "/en/dashboard/" | relative_url }}#agent-brownfield-harness-builder) → [`brownfield-refactorer`]({{ "/en/dashboard/" | relative_url }}#agent-brownfield-refactorer) | a characterization test safety net, then a refactor that keeps it green |
+| **Understand** code without product documentation | [`brownfield-analyst`](pathname:///dashboard/#agent-brownfield-analyst) | a 17-section PRD, consumed by upstream backlog tooling to create issues |
+| **Secure then transform** a legacy | [`brownfield-harness-builder`](pathname:///dashboard/#agent-brownfield-harness-builder) → [`brownfield-refactorer`](pathname:///dashboard/#agent-brownfield-refactorer) | a characterization test safety net, then a refactor that keeps it green |
 
 The two paths can be chosen independently. In the second,
 `brownfield-harness-builder` always precedes `brownfield-refactorer` so the
@@ -64,7 +62,7 @@ flowchart LR
     BP -.-> ORCH["skraft-orchestrator"]
 ```
 
-[`characterize-brownfield`]({{ "/en/dashboard/" | relative_url }}#skill-characterize-brownfield)
+[`characterize-brownfield`](pathname:///dashboard/#skill-characterize-brownfield)
 reconstructs what the system does: stack, feature inventory, integration map,
 existing API contracts, technical debt. Its central rule is **honesty about
 confidence**: every claim is either a **fact** verified by a tool call, or an
@@ -74,7 +72,7 @@ traceability** facet (adapted from test-architecture practice) rates each behavi
 `FULL` / `PARTIAL` / `NONE` and feeds a **`PASS` / `CONCERNS` / `FAIL` gate**; below
 the threshold, the human confirms or corrects before proceeding.
 
-The same skill, [`characterize-brownfield`]({{ "/en/dashboard/" | relative_url }}#skill-characterize-brownfield),
+The same skill, [`characterize-brownfield`](pathname:///dashboard/#skill-characterize-brownfield),
 then maps that characterization onto the **17-section PRD format** (`FR-`/`NFR-`
 IDs, traceability). This PRD is not a dead end: it is the deliverable the
 human hands to the **upstream backlog tooling** (GitHub Backlog Manager, `prd-to-wit`) that turns it
@@ -100,15 +98,15 @@ flowchart LR
 ```
 
 The net first.
-[`characterize-with-contracts`]({{ "/en/dashboard/" | relative_url }}#skill-characterize-with-contracts)
+[`characterize-with-contracts`](pathname:///dashboard/#skill-characterize-with-contracts)
 discovers (or reconstructs) the service's API contract, stands up Microcks mocks for
 its dependencies, and writes **characterization tests** — a *golden master* that
 locks in the **current** behavior, bugs included. A bug captured here is a documented
 bug, not a test to fix. This net reuses the existing
-[`contract-testing-roster`]({{ "/en/dashboard/" | relative_url }}#skill-contract-testing-roster)
-and [`mocking-strategy-roster`]({{ "/en/dashboard/" | relative_url }}#skill-mocking-strategy-roster)
+[`contract-testing-roster`](pathname:///dashboard/#skill-contract-testing-roster)
+and [`mocking-strategy-roster`](pathname:///dashboard/#skill-mocking-strategy-roster)
 skills as-is (v1 targets .NET. The roster keeps the stack extensible). The
-[`brownfield-harness-builder`]({{ "/en/dashboard/" | relative_url }}#agent-brownfield-harness-builder)
+[`brownfield-harness-builder`](pathname:///dashboard/#agent-brownfield-harness-builder)
 only clears its gate when the net is **green on unmodified code**: a red test before
 any refactoring means the harness is wrong, not the code.
 
@@ -116,22 +114,22 @@ any refactoring means the harness is wrong, not the code.
 > — Feathers, M., *Working Effectively with Legacy Code*, 2004.
 
 Once the net is green, the
-[`brownfield-refactorer`]({{ "/en/dashboard/" | relative_url }}#agent-brownfield-refactorer)
+[`brownfield-refactorer`](pathname:///dashboard/#agent-brownfield-refactorer)
 **recommends** a strategy — never imposes it: a structural change this consequential
 stays a human decision.
 
-- [`mikado-method`]({{ "/en/dashboard/" | relative_url }}#skill-mikado-method) —
+- [`mikado-method`](pathname:///dashboard/#skill-mikado-method) —
   **change in place**. Attempt the change naively, record what breaks as prerequisite
   nodes in a graph, **revert** everything, then implement bottom-up from the leaves,
   each commit keeping the code green. The graph is the artifact; the experiment's code
   is throwaway.
-- [`strangler-fig-method`]({{ "/en/dashboard/" | relative_url }}#skill-strangler-fig-method) —
+- [`strangler-fig-method`](pathname:///dashboard/#skill-strangler-fig-method) —
   **replace** behind a facade. The new implementation grows alongside the old, traffic
   cuts over slice by slice, and the same contract replayed against old and new
   **proves equivalence** before each cutover. The old is strangled away.
 
 Each leaf (Mikado) or slice (Strangler) goes to a fresh-context
-[`refactoring-worker`]({{ "/en/dashboard/" | relative_url }}#worker-refactoring-worker)
+[`refactoring-worker`](pathname:///dashboard/#worker-refactoring-worker)
 that returns a terminal `ADVANCE` / `EXPAND` / `DONE` / `BLOCKED` signal. The net is
 the **sensor**: any behavioral regression at the API boundary becomes a red test — a
 discovered Mikado prerequisite, or a Strangler slice that cannot cut over.
@@ -177,8 +175,8 @@ prerequisite to attack is judgment, not execution.
 
 ## Going further
 
-- [Put a characterization net on an existing service]({{ "/en/how-to/characterize-legacy" | relative_url }}) — the harness builder step by step.
-- [Refactor existing code under a net]({{ "/en/how-to/refactor-legacy" | relative_url }}) — Mikado or Strangler Fig, leaf by leaf.
+- [Put a characterization net on an existing service](../how-to/characterize-legacy.md) — the harness builder step by step.
+- [Refactor existing code under a net](../how-to/refactor-legacy.md) — Mikado or Strangler Fig, leaf by leaf.
 
 ## Sources
 
@@ -190,4 +188,4 @@ prerequisite to attack is judgment, not execution.
   a facade.
 
 Terms to know: **golden master**, **characterization**, **contract**, **facade** —
-defined in the [glossary]({{ "/en/reference/glossary" | relative_url }}).
+defined in the [glossary](../reference/glossary.md).

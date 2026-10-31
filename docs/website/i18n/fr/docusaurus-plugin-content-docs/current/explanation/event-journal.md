@@ -1,16 +1,13 @@
 ---
-layout: doc
-lang: fr
 title: "Le journal d'événements"
 description: "Pourquoi SKRAFT V2 a remplacé state.json par un journal d'événements chaîné et signé, d'où l'état est recalculé : reprise exacte, modifications détectées, deux sessions qui ne s'écrasent pas."
 persona: tech-lead
 ---
-{% assign cites = "/fr/reference/citations" | relative_url %}
 
 # Le journal d'événements
 
-> Le moteur n'écrit pas un état ; il écrit des faits. L'état se recalcule à chaque lecture, et
-> la reprise repart du dernier fait enregistré.
+Le moteur n'écrit pas un état ; il écrit des faits. L'état se recalcule à chaque lecture, et
+la reprise repart du dernier fait enregistré.
 
 ## Le problème : un état que tout le monde peut écrire
 
@@ -37,10 +34,10 @@ jamais une ligne déjà écrite : il ajoute.
 
 C'est l'idée de l'*event sourcing* : garder la suite des changements plutôt que leur résultat,
 et reconstruire l'état en les rejouant
-([Fowler, 2005]({{ cites }}#cite-fowler-eventsourcing-2005)). Le journal est le modèle
+([Fowler, 2005](../reference/citations.mdx#cite-fowler-eventsourcing-2005)). Le journal est le modèle
 d'écriture ; l'état — phase en cours, tentative, sorties manquantes, statut du run — est un
 modèle de lecture que le moteur recalcule à chaque lecture. Séparer ces deux modèles, c'est le
-principe de CQRS ([Fowler, 2011]({{ cites }}#cite-fowler-cqrs-2011)). Aucun fichier d'état ne
+principe de CQRS ([Fowler, 2011](../reference/citations.mdx#cite-fowler-cqrs-2011)). Aucun fichier d'état ne
 peut donc diverger du journal.
 
 ```mermaid
@@ -83,7 +80,7 @@ Ce contrôle remplace le hook de la v1 qui interdisait d'écrire l'état, sans c
 d'outil et de la même façon sur tous les hôtes. Un journal démarré sur une autre machine ne
 peut pas être vérifié ici ; une personne peut l'adopter explicitement, et seules les lignes
 suivantes sont alors signées sous une clé locale. Le format exact de la chaîne et de la
-signature : [Suivi et journal]({{ "/fr/reference/run-journal" | relative_url }}#events-jsonl).
+signature : [Suivi et journal](../reference/run-journal.md#events-jsonl).
 
 ## Deux sessions qui ne s'écrasent pas
 
@@ -111,12 +108,12 @@ sans partager d'état.
 
 ## Pour aller plus loin
 
-- [Reprendre ou débloquer un run]({{ "/fr/how-to/resume-a-run" | relative_url }}).
-- [Référence : dossier de suivi, `events.jsonl`, codes]({{ "/fr/reference/run-journal" | relative_url }}).
-- [Garde-fous]({{ "/fr/explanation/guardrails" | relative_url }}) — ce que le journal remplace dans les hooks de la v1.
-- [Architecture]({{ "/fr/explanation/architecture" | relative_url }}).
+- [Reprendre ou débloquer un run](../how-to/resume-a-run.md).
+- [Référence : dossier de suivi, `events.jsonl`, codes](../reference/run-journal.md).
+- [Garde-fous](./guardrails.md) — ce que le journal remplace dans les hooks de la v1.
+- [Architecture](./architecture.md).
 
 ## Sources
 
-- [Fowler, M. *Event Sourcing*, 2005.]({{ cites }}#cite-fowler-eventsourcing-2005)
-- [Fowler, M. *Bliki: CQRS*, 2011.]({{ cites }}#cite-fowler-cqrs-2011)
+- [Fowler, M. *Event Sourcing*, 2005.](../reference/citations.mdx#cite-fowler-eventsourcing-2005)
+- [Fowler, M. *Bliki: CQRS*, 2011.](../reference/citations.mdx#cite-fowler-cqrs-2011)

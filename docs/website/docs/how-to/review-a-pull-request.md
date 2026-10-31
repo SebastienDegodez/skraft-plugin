@@ -1,6 +1,4 @@
 ---
-layout: doc
-lang: en
 title: "Review a pull request with skraft"
 description: "Put someone else's pull request through skraft's DELIVER review, with no run: check out its head, start the review from Claude Code, Copilot CLI or a terminal, read the verdict, keep a comment, review again after a new push."
 persona: reviewer
@@ -13,16 +11,16 @@ persona: reviewer
 
 ## Prerequisites
 
-- The `skraft` plugin installed; `skraft` is the command that [`skraft install`]({{ "/en/how-to/install-on-a-host" | relative_url }}#skraft-command) sets up; the long line `node "<plugin folder>/engine/drivers/cli/skraft.mjs"` works without it.
+- The `skraft` plugin installed; `skraft` is the command that [`skraft install`](./install-on-a-host.mdx#skraft-command) sets up; the long line `node "<plugin folder>/engine/drivers/cli/skraft.mjs"` works without it.
 - On GitHub: `gh` installed and signed in to the repository's host (`gh auth status`). On Azure Repos: `az` with its `azure-devops` extension, signed in to the organization, or the Azure DevOps MCP server named `ado` connected in your host (Azure DevOps Services only). A tool of that server that you or the host refuse is never retried with `az`: the review says so and stops or leaves its comment unpublished.
 - A clone of the repository, at whose root you run everything.
 
 ## 1. Check out the pull request
 
-```sh
-gh pr checkout 42
-git fetch origin main
-git status
+```console
+$ gh pr checkout 42
+$ git fetch origin main
+$ git status
 ```
 
 On Azure Repos, check it out with `az repos pr checkout --id 42` instead of `gh pr checkout 42`.
@@ -88,13 +86,13 @@ created with the status *Closed* so that a "comment resolution" branch policy do
 comment is the one rewritten. Never a vote, never a reply. It asks your consent once per repository
 (terminal, dialog, or Copilot's confirmation) and keeps it in your `~/.skraft/config.json`. A team
 can decide for everyone with `publish.reviewComment` in the base branch's `skraft-config.json`
-([skraft-config.json]({{ "/en/reference/skraft-config" | relative_url }}#publish)). Without
+([skraft-config.json](../reference/skraft-config.md#publish)). Without
 consent nothing is posted; `comment.md`, next to `verdict.yaml`, keeps the text.
 
 ## 5. Review again after a new push
 
-```sh
-gh pr checkout 42
+```console
+$ gh pr checkout 42
 ```
 
 Start the review again: it is the next pass (`verdict-2/`). A lens whose inputs did not move and
@@ -116,10 +114,10 @@ that found nothing is reused without running again.
 
 ## See also
 
-- [`skraft review`]({{ "/en/reference/cli" | relative_url }}) — the rules of each step, `--json`
+- [`skraft review`](../reference/cli.md) — the rules of each step, `--json`
   output.
-- [`skraft-review` workflow]({{ "/en/reference/hosts" | relative_url }}#skraft-review)
-- [Add a lens to a review]({{ "/en/how-to/customise-review" | relative_url }}) — the review
+- [`skraft-review` workflow](../reference/hosts.md#skraft-review)
+- [Add a lens to a review](./customise-review.md) — the review
   follows `.skraft/review.skraft.dot` when it exists.
-- [Gates: review]({{ "/en/reference/gates" | relative_url }}#review-run) — lenses, refutation,
+- [Gates: review](../reference/gates.md#review-run) — lenses, refutation,
   verdict.

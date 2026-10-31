@@ -1,6 +1,4 @@
 ---
-layout: doc
-lang: en
 title: "Turn a PRD into a GitHub backlog"
 description: "Run the skraft-prd-backlog workflow on an approved PRD, answer the framing, approve the story map, validate the handoff, then publish epics and stories on GitHub with no duplicate."
 persona: tech-lead
@@ -14,7 +12,7 @@ and milestones.
 ## Prerequisites
 
 - Copilot CLI with the `skraft-backlog` plugin installed
-  ([Install skraft on a host]({{ "/en/how-to/install-on-a-host" | relative_url }})). The
+  ([Install skraft on a host](./install-on-a-host.mdx)). The
   `skraft-prd-backlog` workflow is a Copilot CLI dynamic workflow.
 - `gh` signed in (`gh auth status`) with the right to create issues, labels and milestones on
   the target repository.
@@ -128,8 +126,8 @@ never to the agent.
 
 ## See also
 
-- [Refine a backlog issue]({{ "/en/how-to/refine-backlog" | relative_url }})
-- [The backlog: from idea to ready story]({{ "/en/explanation/backlog" | relative_url }}) — why
+- [Refine a backlog issue](./refine-backlog.md)
+- [The backlog: from idea to ready story](../explanation/backlog.md) — why
   two human stops and planning lenses.
-- [Gates: DISCUSS]({{ "/en/reference/gates" | relative_url }}#discuss) — the planning lenses'
+- [Gates: DISCUSS](../reference/gates.md#discuss) — the planning lenses'
   criteria.

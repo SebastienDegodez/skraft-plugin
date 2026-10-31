@@ -1,6 +1,4 @@
 ---
-layout: doc
-lang: en
 title: "Evaluate a skill"
 description: "Write a skill's evaluation spec, validate it without spending quota, run the baseline-versus-skill comparison, read the verdict, look it up on the dashboard and replay a baseline-versus-skill pair."
 persona: tech-lead
@@ -55,26 +53,28 @@ versioned model.
 - [ ] One stimulus outside the skill's territory carries `tags: { intent: non-activation }`.
 - [ ] `stimuli × runs` gives 12 to 15 trials: below six discordant pairs, no verdict can pass.
 
-Why these rules: [Evaluation strategy]({{ "/en/explanation/evaluation-strategy" | relative_url }}).
+Why these rules: [Evaluation strategy](../explanation/evaluation-strategy.md).
 
 ## 3. Validate the spec without starting an agent
 
-> **Not verified on V2.** Vally evaluation is paused on V2 work: the commands of steps 3, 4 and 6
-> and of "Evaluate an agent" below (`vally`, `./eng/run-vally-evals.sh`,
-> `npm run dashboard:preview`) have not been run against V2. On Windows, `./eng/run-vally-evals.sh`
-> is a bash script: run it from Git Bash or WSL.
+:::caution[Not verified on V2]
+Vally evaluation is paused on V2 work: the commands of steps 3, 4 and 6
+and of "Evaluate an agent" below (`vally`, `./eng/run-vally-evals.sh`,
+`npm run dashboard:preview`) have not been run against V2. On Windows, `./eng/run-vally-evals.sh`
+is a bash script: run it from Git Bash or WSL.
+:::
 
-```bash
-npm install -g @microsoft/vally-cli@0.12.0
-vally lint --eval-spec tests/skills/<skill>/eval.yaml --strict
+```console
+$ npm install -g @microsoft/vally-cli@0.12.0
+$ vally lint --eval-spec tests/skills/<skill>/eval.yaml --strict
 ```
 
 The lint starts no agent and spends no quota.
 
 ## 4. Run the comparison
 
-```bash
-./eng/run-vally-evals.sh <skill>
+```console
+$ ./eng/run-vally-evals.sh <skill>
 ```
 
 The script plays each stimulus twice, with no skill (baseline) and with the evaluated skill
@@ -92,12 +92,12 @@ pilot is never a verdict.
 | `inconclusive` | An errored trial, an unmatched trial, fewer than 5 trials or fewer than 6 discordant pairs: read the verdict's reason before adding trials. |
 
 The line `9W/4T/2L (p=0.065)` is read figure by figure in
-[Read an evaluation verdict]({{ "/en/explanation/deep-dive/reading-a-verdict" | relative_url }}).
+[Read an evaluation verdict](../explanation/deep-dive/reading-a-verdict.md).
 
 ## 6. Look up the evidence
 
-```bash
-npm run dashboard:preview
+```console
+$ npm run dashboard:preview
 ```
 
 Open `http://127.0.0.1:4173/dashboard/`: the **Quality** tab shows the skill's verdict, its
@@ -112,7 +112,7 @@ app and does not show its entry.
 
 1. On the published dashboard, click **Open session replay**.
 
-   ![Dashboard: the catalogue figures, then the "Session replay" box and its "Open session replay" button, above the Catalogue, Quality, Efficiency and Models tabs]({{ "/assets/screenshots/en/dashboard-catalogue.png" | relative_url }})
+   ![Dashboard: the catalogue figures, then the "Session replay" box and its "Open session replay" button, above the Catalogue, Quality, Efficiency and Models tabs](/img/screenshots/en/dashboard-catalogue.png)
 
    *Figure 1 — The replay entry, under the catalogue figures.*
 
@@ -120,7 +120,7 @@ app and does not show its entry.
    session is named `<skill> / <scenario> (<arm>, run <n>)` and is tagged with the skill, the
    scenario and the arm, `baseline` or `skilled`.
 
-   ![AGENTVIZ, List view: the tags 2026-09-28, baseline, outside-in-tdd, the scenario, scheduled and skilled, then the scenario's two sessions, skilled and baseline arms, run 1]({{ "/assets/screenshots/shared/replay-sessions.png" | relative_url }})
+   ![AGENTVIZ, List view: the tags 2026-09-28, baseline, outside-in-tdd, the scenario, scheduled and skilled, then the scenario's two sessions, skilled and baseline arms, run 1](/img/screenshots/shared/replay-sessions.png)
 
    *Figure 2 — Both arms of trial 1 of an `outside-in-tdd` scenario.*
 
@@ -131,14 +131,14 @@ app and does not show its entry.
    loaded; without it, the pair compares two baselines.
 
 What one pair reveals, on a real example:
-[Read an evaluation verdict]({{ "/en/explanation/deep-dive/reading-a-verdict" | relative_url }}#replay).
+[Read an evaluation verdict](../explanation/deep-dive/reading-a-verdict.md#replay).
 
 ## Evaluate an agent
 
 An agent suite lives under `tests/agents/<suite>/eval.yaml` and runs with:
 
-```bash
-./eng/run-vally-evals.sh agents <suite>
+```console
+$ ./eng/run-vally-evals.sh agents <suite>
 ```
 
 It has no baseline: its verdict (`pass`, `flaky`, `regression`, `inconclusive`) attests a
@@ -155,8 +155,8 @@ conformance, and stays indicative.
 
 ## See also
 
-- [Evaluation strategy]({{ "/en/explanation/evaluation-strategy" | relative_url }})
-- [Read an evaluation verdict]({{ "/en/explanation/deep-dive/reading-a-verdict" | relative_url }})
-- [Dashboard]({{ "/dashboard/" | relative_url }})
-- [Evaluation tooling]({{ "/en/reference/evaluation-tooling" | relative_url }})
+- [Evaluation strategy](../explanation/evaluation-strategy.md)
+- [Read an evaluation verdict](../explanation/deep-dive/reading-a-verdict.md)
+- [Dashboard](pathname:///dashboard/)
+- [Evaluation tooling](../reference/evaluation-tooling.md)
   — data contracts, adapters, session retention.

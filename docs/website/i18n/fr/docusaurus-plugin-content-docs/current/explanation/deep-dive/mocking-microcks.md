@@ -1,6 +1,4 @@
 ---
-layout: doc
-lang: fr
 title: "Zoom L3 : mocking (Microcks)"
 description: "Zoom sur le mocking en DELIVER : comment le software-engineer charge la skill de mocking que son brief nomme, Microcks par défaut ou un double in-process, et comment la mock-fidelity-lens audite le résultat."
 persona: software-engineer
@@ -8,9 +6,9 @@ persona: software-engineer
 
 # Zoom L3 : mocking (Microcks)
 
-> La vue [architecture]({{ "/fr/explanation/architecture" | relative_url }}) s'arrête à
-> L2. Cette page zoome sur un détail L3 : comment DELIVER mocke un dépendant aval que
-> le service-sous-test appelle.
+La vue [architecture](../architecture.md) s'arrête à
+L2. Cette page zoome sur un détail L3 : comment DELIVER mocke un dépendant aval que
+le service-sous-test appelle.
 
 ## Pourquoi ce zoom
 
@@ -82,10 +80,10 @@ déterministe tout en exerçant la vraie frontière dont le service dépend.
 
 ## Pour aller plus loin
 
-- [Architecture]({{ "/fr/explanation/architecture" | relative_url }}) — la vue L1 + L2 d'où cette page zoome.
-- [Zoom L3 : contract testing]({{ "/fr/explanation/deep-dive/contract-testing" | relative_url }}) — le câblage frère, côté fournisseur.
-- [DELIVER]({{ "/fr/explanation/pipeline/deliver" | relative_url }}) — la phase qui possède ce câblage.
-- [Catalogue agentique]({{ "/fr/dashboard/" | relative_url }}) — chaque agent et lentille. Un terme vous échappe ? Voir le [glossaire]({{ "/fr/reference/glossary" | relative_url }}).
+- [Architecture](../architecture.md) — la vue L1 + L2 d'où cette page zoome.
+- [Zoom L3 : contract testing](./contract-testing.md) — le câblage frère, côté fournisseur.
+- [DELIVER](../pipeline/deliver.md) — la phase qui possède ce câblage.
+- [Catalogue agentique](pathname:///fr/dashboard/) — chaque agent et lentille. Un terme vous échappe ? Voir le [glossaire](../../reference/glossary.md).
 
 ## Sources
 

@@ -1,16 +1,13 @@
 ---
-layout: doc
-lang: en
 title: "The event journal"
 description: "Why SKRAFT V2 replaced state.json with a chained, signed event journal from which the state is recomputed: exact resume, edits detected, two sessions that cannot overwrite each other."
 persona: tech-lead
 ---
-{% assign cites = "/en/reference/citations" | relative_url %}
 
 # The event journal
 
-> The engine does not write a state; it writes facts. The state is recomputed on every read, and
-> resume starts from the last recorded fact.
+The engine does not write a state; it writes facts. The state is recomputed on every read, and
+resume starts from the last recorded fact.
 
 ## The problem: a state anyone can write
 
@@ -34,10 +31,10 @@ runs, a question is asked then answered, a phase closes, the run finishes. The e
 fact before deciding what comes next, and it never modifies a line already written: it appends.
 
 This is the idea of *event sourcing*: keep the sequence of changes rather than their result, and
-rebuild the state by replaying them ([Fowler, 2005]({{ cites }}#cite-fowler-eventsourcing-2005)).
+rebuild the state by replaying them ([Fowler, 2005](../reference/citations.mdx#cite-fowler-eventsourcing-2005)).
 The journal is the write model; the state — current phase, attempt, missing outputs, run status —
 is a read model the engine recomputes on every read. Separating the two models is the principle
-of CQRS ([Fowler, 2011]({{ cites }}#cite-fowler-cqrs-2011)). No state file can therefore drift
+of CQRS ([Fowler, 2011](../reference/citations.mdx#cite-fowler-cqrs-2011)). No state file can therefore drift
 from the journal.
 
 ```mermaid
@@ -79,7 +76,7 @@ This check replaces the v1 hook that forbade writing the state, at no cost per t
 same way on every host. A journal started on another machine cannot be verified here; a person
 can adopt it explicitly, and only the following lines are then signed under a local key. The
 exact format of the chain and the signature:
-[Tracking and journal]({{ "/en/reference/run-journal" | relative_url }}#events-jsonl).
+[Tracking and journal](../reference/run-journal.md#events-jsonl).
 
 ## Two sessions that cannot overwrite each other
 
@@ -105,12 +102,12 @@ active pipeline: two stories progress in parallel in two worktrees without shari
 
 ## Going further
 
-- [Resume or unblock a run]({{ "/en/how-to/resume-a-run" | relative_url }}).
-- [Reference: tracking folder, `events.jsonl`, codes]({{ "/en/reference/run-journal" | relative_url }}).
-- [Guardrails]({{ "/en/explanation/guardrails" | relative_url }}) — what the journal replaces among the v1 hooks.
-- [Architecture]({{ "/en/explanation/architecture" | relative_url }}).
+- [Resume or unblock a run](../how-to/resume-a-run.md).
+- [Reference: tracking folder, `events.jsonl`, codes](../reference/run-journal.md).
+- [Guardrails](./guardrails.md) — what the journal replaces among the v1 hooks.
+- [Architecture](./architecture.md).
 
 ## Sources
 
-- [Fowler, M. *Event Sourcing*, 2005.]({{ cites }}#cite-fowler-eventsourcing-2005)
-- [Fowler, M. *Bliki: CQRS*, 2011.]({{ cites }}#cite-fowler-cqrs-2011)
+- [Fowler, M. *Event Sourcing*, 2005.](../reference/citations.mdx#cite-fowler-eventsourcing-2005)
+- [Fowler, M. *Bliki: CQRS*, 2011.](../reference/citations.mdx#cite-fowler-cqrs-2011)

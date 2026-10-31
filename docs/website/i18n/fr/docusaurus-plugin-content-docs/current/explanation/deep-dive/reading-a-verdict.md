@@ -1,14 +1,12 @@
 ---
-layout: doc
-lang: fr
 title: "Lire un verdict d'évaluation"
 description: "Le test des signes, le test de rang et le plancher de six paires — expliqués avec des chiffres réels plutôt qu'avec des formules, puis ce qu'une paire rejouée montre du comportement."
 ---
 
 # Lire un verdict d'évaluation
 
-> Un verdict d'évaluation tient en une ligne : `9V/4E/2D (p=0.065)`. Cette page
-> déplie cette ligne, chiffre par chiffre, sur un cas réel du dépôt.
+Un verdict d'évaluation tient en une ligne : `9V/4E/2D (p=0.065)`. Cette page
+déplie cette ligne, chiffre par chiffre, sur un cas réel du dépôt.
 
 ---
 
@@ -227,13 +225,13 @@ Un résultat absent ou fragile n'est **jamais** affiché comme un succès.
 
 ---
 
-## 9. Derrière les nombres : ce que la skill a changé {#replay}
+## 9. Derrière les nombres : ce que la skill a changé <!-- #replay -->
 
 Le verdict compte des paires ; il ne dit pas *ce que* l'agent a fait autrement. Pour le voir, il faut
 relire les deux trajectoires d'une même paire. Prenons le run planifié du 28 septembre 2026
 d'`outside-in-tdd`, sur `claude-sonnet-5` :
 
-![Carte qualité du tableau de bord pour outside-in-tdd : baseline 0,806, avec skill 0,887, gain +0,081, 28 activations attendues, 14 observées, 0 inattendue, taux 50 %, 10 victoires, 12 égalités, 0 défaite, verdict validé]({{ "/assets/screenshots/fr/dashboard-quality.png" | relative_url }})
+![Carte qualité du tableau de bord pour outside-in-tdd : baseline 0,806, avec skill 0,887, gain +0,081, 28 activations attendues, 14 observées, 0 inattendue, taux 50 %, 10 victoires, 12 égalités, 0 défaite, verdict validé](/img/screenshots/fr/dashboard-quality.png)
 
 *Figure 1 — La carte qualité de ce run : `10V/12E/0D`, verdict `pass`, mais la skill ne s'est chargée
 que dans 14 des 28 essais où elle était attendue.*
@@ -247,7 +245,7 @@ Le stimulus « Reach a failure that witnesses the missing behaviour » demande d
 assez loin pour démontrer qu'un résultat approuvé (un client Gold paie 95,00 pour 100,00) manque
 encore, puis de s'arrêter. Voici l'essai 1 des deux bras, dans le rejeu AGENTVIZ :
 
-![AGENTVIZ, flux de preuves de la baseline, essai 1 : 8 appels bash, aucun fichier créé ; le rapport final dit que le résultat approuvé manque et qu'aucun test ne l'affirme]({{ "/assets/screenshots/shared/replay-baseline.png" | relative_url }})
+![AGENTVIZ, flux de preuves de la baseline, essai 1 : 8 appels bash, aucun fichier créé ; le rapport final dit que le résultat approuvé manque et qu'aucun test ne l'affirme](/img/screenshots/shared/replay-baseline.png)
 
 *Figure 2 — Baseline : l'agent explore avec `bash` (8 appels), constate l'absence du calcul et la
 décrit. Aucun test n'échoue pour en témoigner.*
@@ -255,7 +253,7 @@ décrit. Aucun test n'échoue pour en témoigner.*
 Son rapport affirme aussi que « `dotnet test` passes (2/2) ». Le rejeu montre qu'aucun des huit
 appels n'a lancé `dotnet test` : l'affirmation n'a pas été observée, elle a été supposée.
 
-![AGENTVIZ, flux de preuves du bras avec skill, essai 1 : outils bash 9 fois, create 2 fois, skill une fois ; le rapport final cite l'erreur de compilation CS0234 du nouveau test d'acceptation]({{ "/assets/screenshots/shared/replay-skilled.png" | relative_url }})
+![AGENTVIZ, flux de preuves du bras avec skill, essai 1 : outils bash 9 fois, create 2 fois, skill une fois ; le rapport final cite l'erreur de compilation CS0234 du nouveau test d'acceptation](/img/screenshots/shared/replay-skilled.png)
 
 *Figure 3 — Avec la skill : l'agent charge `outside-in-tdd` (`skill`, 1 appel), écrit un test
 d'acceptation à la frontière de l'application (`create`), le lance, et s'arrête sur son échec de
@@ -275,6 +273,6 @@ rien de ce comportement, et cette page ne s'en sert pas.
 
 ## Voir aussi
 
-- [Évaluer un skill]({{ "/fr/how-to/evaluate-a-skill" | relative_url }}) — la procédure complète, et comment ouvrir le rejeu
-- [Proposer un pattern ou corriger la documentation]({{ "/fr/how-to/contributing" | relative_url }})
-- [Tableau de bord]({{ "/dashboard/" | relative_url }}) — les verdicts et leur tendance
+- [Évaluer un skill](../../how-to/evaluate-a-skill.md) — la procédure complète, et comment ouvrir le rejeu
+- [Proposer un pattern ou corriger la documentation](../../how-to/contributing.md)
+- [Tableau de bord](pathname:///dashboard/) — les verdicts et leur tendance

@@ -1,6 +1,4 @@
 ---
-layout: doc
-lang: en
 title: "Phases"
 description: "Each phase, from DISCOVER to PUBLISH: who drives it, its inputs, its outputs and their paths, its agents, its lenses and gates, its loop-back edges and the human decisions it asks for."
 persona: software-engineer
@@ -8,14 +6,14 @@ persona: software-engineer
 
 # Phases
 
-> For each phase: what goes in, what comes out and where, who produces, who checks, and what a human decides.
+For each phase: what goes in, what comes out and where, who produces, who checks, and what a human decides.
 
 The role of each phase in the journey and the choice between journeys:
-[The SKRAFT pipeline]({{ "/en/explanation/pipeline/" | relative_url }}). The syntax of the
-workflow that chains them: [The DOT workflow]({{ "/en/reference/workflow-dot" | relative_url }}).
-The detail of each gate cited: [Gates]({{ "/en/reference/gates" | relative_url }}).
+[The SKRAFT pipeline](../explanation/pipeline/index.md). The syntax of the
+workflow that chains them: [The DOT workflow](./workflow-dot.md).
+The detail of each gate cited: [Gates](./gates.md).
 
-## Overview {#overview}
+## Overview <!-- #overview -->
 
 | Phase | Plugin | Driven by | Producing agent | Checks | Human decision |
 | --- | --- | --- | --- | --- | --- |
@@ -35,9 +33,9 @@ any engine phase, a human may get the `environment` and `blocked` questions
 Every relative path sits under the tracking folder `.copilot-tracking/skraft-plans/<slug>/`;
 `{date}` is a `YYYY-MM-DD` folder. A path that starts with `docs/` sits in the repository, outside
 the tracking folder: it is the repository's durable documentation
-([Durable documentation]({{ "/en/reference/run-journal" | relative_url }}#durable-docs)).
+([Durable documentation](./run-journal.md#durable-docs)).
 
-## DISCOVER {#discover}
+## DISCOVER <!-- #discover -->
 
 | | |
 | --- | --- |
@@ -59,7 +57,7 @@ Verdict: `node <backlog-review-lenses skill>/scripts/review-verdict.mjs --phase 
 `APPROVED` ends; `NEEDS_REWORK` or `REJECTED` runs the triage again, 3 attempts at most, then the
 unresolved findings are reported to the developer.
 
-## DISCUSS {#discuss}
+## DISCUSS <!-- #discuss -->
 
 | | |
 | --- | --- |
@@ -81,9 +79,9 @@ unresolved findings are reported to the developer.
 Verdict: `review-verdict.mjs --phase discuss`, same rules and same budget as DISCOVER.
 
 `skraft init <slug> --from-artifacts` starts an engine run in DESIGN from
-`plans/{date}/stories-{milestone}.md` ([CLI]({{ "/en/reference/cli" | relative_url }})).
+`plans/{date}/stories-{milestone}.md` ([CLI](./cli.md)).
 
-## RESEARCH {#research}
+## RESEARCH <!-- #research -->
 
 | Node | Kind | Role |
 | --- | --- | --- |
@@ -97,10 +95,10 @@ Verdict: `review-verdict.mjs --phase discuss`, same rules and same budget as DIS
 | Output | `research/{date}/{slug}-research.md`, pre-created from `research.template.md` |
 | Allowed writes | the tracking folder only |
 | `docs/` already covers the story | the research document says so and cites the files of `docs/`; the engine checks only that the document exists |
-| Check | output filled: not empty, different from the template, no {% raw %}`{{…}}`{% endraw %} left |
+| Check | output filled: not empty, different from the template, no `{{…}}` left |
 | Attempts | 3 (the `max_attempts` default); then `missing-outputs` |
 
-## DESIGN {#design}
+## DESIGN <!-- #design -->
 
 | Node | Kind | Role |
 | --- | --- | --- |
@@ -135,7 +133,7 @@ Verdict: `review-verdict.mjs --phase discuss`, same rules and same budget as DIS
 `**Status:**` line, its row in `docs/adr/decisions-index.md`) and commits them alone as
 `docs(adr): ratify ADR-001, ADR-002`. With no `Proposed` ADR, the question is skipped.
 
-## DISTILL {#distill}
+## DISTILL <!-- #distill -->
 
 | Node | Kind | Role |
 | --- | --- | --- |
@@ -148,7 +146,7 @@ Verdict: `review-verdict.mjs --phase discuss`, same rules and same budget as DIS
 | Declared output | `details/{date}/test-plan-{slug}.md` |
 | Other outputs | `details/{date}/impl-plan-{story}.md`; `docs/features/{bounded-context}/{feature}.feature` (Gherkin scenarios, not executable); in the components: failing acceptance tests (`tests` paths) and the skeleton they call (`src` paths) |
 | Allowed writes | the tracking folder, `docs/features/`, each component's `src` and `tests` paths, and the files at those components' roots |
-| Commits | `red` mode: only failing `test(<story>): …` commits, each replayed by its component's `test` command ([`tdd.replay`]({{ "/en/reference/skraft-config" | relative_url }}#tdd)) |
+| Commits | `red` mode: only failing `test(<story>): …` commits, each replayed by its component's `test` command ([`tdd.replay`](./skraft-config.md#tdd)) |
 | Engine check | where added test files sit (`testability#layout`, G11) |
 
 | Lens | Gates |
@@ -163,7 +161,7 @@ Verdict: `review-verdict.mjs --phase discuss`, same rules and same budget as DIS
 | `distill_review -> distill` | `NEEDS_REWORK` | 3 |
 | `distill_review -> deliver` | `APPROVED` | — |
 
-## DELIVER {#deliver}
+## DELIVER <!-- #deliver -->
 
 | Node | Kind | Role |
 | --- | --- | --- |
@@ -181,7 +179,7 @@ Verdict: `review-verdict.mjs --phase discuss`, same rules and same budget as DIS
 | | |
 | --- | --- |
 | Declared output | `changes/{date}/change-log.md` |
-| Proposals | `proposals/kill_proposal-<visit>-g<n>.md`, one per file of survivors, created by the engine with a section per mutant; each {% raw %}`{{outcome}}`{% endraw %} line becomes `test: …`, `delete: …` or `equivalent: …` |
+| Proposals | `proposals/kill_proposal-<visit>-g<n>.md`, one per file of survivors, created by the engine with a section per mutant; each `{{outcome}}` line becomes `test: …`, `delete: …` or `equivalent: …` |
 | Evidence | `gates/<component>/<gate>-<n>.log`; `visuals/<component>/e2e-<n>.log` |
 | Allowed writes | `deliver`, `kill_mutants`: the tracking folder, each component's `src` and `tests` paths, and the files at their roots; `kill_proposal`: the tracking folder only, no commit |
 | Commits | `deliver` in `cycle` mode: failing `test(<story>): …` (red, replayed), then `feat` or `fix` (green), `refactor`; `kill_mutants` in `kill` mode: tests that kill mutants and pass; each conventional message ends with `Refs: #<issue>` and closes no issue |
@@ -216,7 +214,7 @@ Verdict: `review-verdict.mjs --phase discuss`, same rules and same budget as DIS
 | `mutation_gates -> kill_mutants` | `FAIL` | 3 |
 | `mutation_gates -> mutation` | `PASS` | — |
 
-## PUBLISH {#publish}
+## PUBLISH <!-- #publish -->
 
 | Node | Kind | Role |
 | --- | --- | --- |
@@ -231,7 +229,7 @@ Verdict: `review-verdict.mjs --phase discuss`, same rules and same budget as DIS
 | Publication | with `publish.pullRequest` accepted: a draft pull request (unless `publish.draft: false`), described from the journal; without consent, a remote or `gh`: `pull-request.md` stays, and `skraft publish` opens it later |
 | End | `run.finished` `completed`, reason `PUBLISH closed` |
 
-## Questions to a human {#human-questions}
+## Questions to a human <!-- #human-questions -->
 
 | Question | Asked by | Options | Refusal (reason required) | Header |
 | --- | --- | --- | --- | --- |
@@ -246,15 +244,15 @@ Verdict: `review-verdict.mjs --phase discuss`, same rules and same budget as DIS
 A consent already given in `skraft-config.json` (`publish.pullRequest`, `publish.visuals`) is not
 asked again, unless the text of its question changed since (`publish.questionVersions`).
 `reporting-consent` is skipped when no component is a front end. Keys, answers and journal:
-[Tracking folder and journal]({{ "/en/reference/run-journal" | relative_url }}#human-questions).
+[Tracking folder and journal](./run-journal.md#human-questions).
 
-## See also {#see-also}
+## See also <!-- #see-also -->
 
-- [The SKRAFT pipeline]({{ "/en/explanation/pipeline/" | relative_url }})
-- [The DOT workflow]({{ "/en/reference/workflow-dot" | relative_url }})
-- [Gates]({{ "/en/reference/gates" | relative_url }})
-- [Tracking folder and journal]({{ "/en/reference/run-journal" | relative_url }})
-- [Agent and skill catalogue]({{ "/en/dashboard/" | relative_url }})
+- [The SKRAFT pipeline](../explanation/pipeline/index.md)
+- [The DOT workflow](./workflow-dot.md)
+- [Gates](./gates.md)
+- [Tracking folder and journal](./run-journal.md)
+- [Agent and skill catalogue](pathname:///dashboard/)
 
 Terms to know: **phase**, **lens**, **gate**, **ADR**, **DoR** — see the
-[glossary]({{ "/en/reference/glossary" | relative_url }}).
+[glossary](./glossary.md).

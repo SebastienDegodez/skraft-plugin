@@ -1,6 +1,4 @@
 ---
-layout: doc
-lang: fr
 title: "Phases"
 description: "Chaque phase, de DISCOVER à PUBLISH : qui la conduit, ses entrées, ses sorties et leurs chemins, ses agents, ses lentilles et gates, ses arêtes de retour et les décisions humaines qu'elle demande."
 persona: software-engineer
@@ -8,14 +6,14 @@ persona: software-engineer
 
 # Phases
 
-> Pour chaque phase : ce qui entre, ce qui sort et où, qui produit, qui vérifie, et ce qu'un humain décide.
+Pour chaque phase : ce qui entre, ce qui sort et où, qui produit, qui vérifie, et ce qu'un humain décide.
 
 Le rôle de chaque phase dans le parcours et le choix entre les parcours :
-[Le pipeline SKRAFT]({{ "/fr/explanation/pipeline/" | relative_url }}). La syntaxe du workflow
-qui les enchaîne : [Le workflow DOT]({{ "/fr/reference/workflow-dot" | relative_url }}). Le
-détail de chaque gate citée : [Gates]({{ "/fr/reference/gates" | relative_url }}).
+[Le pipeline SKRAFT](../explanation/pipeline/index.md). La syntaxe du workflow
+qui les enchaîne : [Le workflow DOT](./workflow-dot.md). Le
+détail de chaque gate citée : [Gates](./gates.md).
 
-## Vue d'ensemble {#overview}
+## Vue d'ensemble <!-- #overview -->
 
 | Phase | Plugin | Conduite par | Agent producteur | Vérification | Décision humaine |
 | --- | --- | --- | --- | --- | --- |
@@ -35,9 +33,9 @@ Les phases RESEARCH à PUBLISH sont celles de `workflows/pipeline.skraft.dot` ; 
 Tous les chemins relatifs sont sous le dossier de suivi
 `.copilot-tracking/skraft-plans/<slug>/` ; `{date}` est un dossier `AAAA-MM-JJ`. Un chemin qui
 commence par `docs/` est dans le dépôt, hors du dossier de suivi : c'est la documentation durable
-du dépôt ([Documentation durable]({{ "/fr/reference/run-journal" | relative_url }}#durable-docs)).
+du dépôt ([Documentation durable](./run-journal.md#durable-docs)).
 
-## DISCOVER {#discover}
+## DISCOVER <!-- #discover -->
 
 | | |
 | --- | --- |
@@ -59,7 +57,7 @@ Verdict : `node <skill backlog-review-lenses>/scripts/review-verdict.mjs --phase
 `APPROVED` termine ; `NEEDS_REWORK` ou `REJECTED` relance le triage, 3 tentatives au plus,
 puis les findings non résolus sont rapportés au développeur.
 
-## DISCUSS {#discuss}
+## DISCUSS <!-- #discuss -->
 
 | | |
 | --- | --- |
@@ -81,9 +79,9 @@ puis les findings non résolus sont rapportés au développeur.
 Verdict : `review-verdict.mjs --phase discuss`, mêmes règles et même budget que DISCOVER.
 
 `skraft init <slug> --from-artifacts` démarre un run du moteur en DESIGN depuis
-`plans/{date}/stories-{milestone}.md` ([CLI]({{ "/fr/reference/cli" | relative_url }})).
+`plans/{date}/stories-{milestone}.md` ([CLI](./cli.md)).
 
-## RESEARCH {#research}
+## RESEARCH <!-- #research -->
 
 | Nœud | Type | Rôle |
 | --- | --- | --- |
@@ -97,10 +95,10 @@ Verdict : `review-verdict.mjs --phase discuss`, mêmes règles et même budget q
 | Sortie | `research/{date}/{slug}-research.md`, pré-créé depuis `research.template.md` |
 | Écriture permise | le dossier de suivi seulement |
 | `docs/` couvre déjà la story | le document de recherche le dit et cite les fichiers de `docs/` ; le moteur contrôle seulement que le document existe |
-| Contrôle | sortie remplie : non vide, différente du gabarit, sans {% raw %}`{{…}}`{% endraw %} |
+| Contrôle | sortie remplie : non vide, différente du gabarit, sans `{{…}}` |
 | Tentatives | 3 (défaut de `max_attempts`) ; ensuite `missing-outputs` |
 
-## DESIGN {#design}
+## DESIGN <!-- #design -->
 
 | Nœud | Type | Rôle |
 | --- | --- | --- |
@@ -135,7 +133,7 @@ Verdict : `review-verdict.mjs --phase discuss`, mêmes règles et même budget q
 ligne `**Status:**`, ligne de `docs/adr/decisions-index.md`) et les commite seuls en
 `docs(adr): ratify ADR-001, ADR-002`. Sans ADR `Proposed`, la question est sautée.
 
-## DISTILL {#distill}
+## DISTILL <!-- #distill -->
 
 | Nœud | Type | Rôle |
 | --- | --- | --- |
@@ -148,7 +146,7 @@ ligne `**Status:**`, ligne de `docs/adr/decisions-index.md`) et les commite seul
 | Sortie déclarée | `details/{date}/test-plan-{slug}.md` |
 | Autres sorties | `details/{date}/impl-plan-{story}.md` ; `docs/features/{bounded-context}/{feature}.feature` (scénarios Gherkin, non exécutables) ; dans les composants : tests d'acceptation en échec (chemins `tests`) et squelette appelé par eux (chemins `src`) |
 | Écriture permise | le dossier de suivi, `docs/features/`, les chemins `src` et `tests` de chaque composant, et les fichiers à la racine de ces composants |
-| Commits | mode `red` : seulement des commits `test(<story>): …` en échec, chacun rejoué par la commande `test` de son composant ([`tdd.replay`]({{ "/fr/reference/skraft-config" | relative_url }}#tdd)) |
+| Commits | mode `red` : seulement des commits `test(<story>): …` en échec, chacun rejoué par la commande `test` de son composant ([`tdd.replay`](./skraft-config.md#tdd)) |
 | Contrôle du moteur | emplacement des fichiers de test ajoutés (`testability#layout`, G11) |
 
 | Lentille | Gates |
@@ -163,7 +161,7 @@ ligne `**Status:**`, ligne de `docs/adr/decisions-index.md`) et les commite seul
 | `distill_review -> distill` | `NEEDS_REWORK` | 3 |
 | `distill_review -> deliver` | `APPROVED` | — |
 
-## DELIVER {#deliver}
+## DELIVER <!-- #deliver -->
 
 | Nœud | Type | Rôle |
 | --- | --- | --- |
@@ -181,7 +179,7 @@ ligne `**Status:**`, ligne de `docs/adr/decisions-index.md`) et les commite seul
 | | |
 | --- | --- |
 | Sortie déclarée | `changes/{date}/change-log.md` |
-| Propositions | `proposals/kill_proposal-<visite>-g<n>.md`, une par fichier de survivants, créée par le moteur avec une section par mutant ; chaque ligne {% raw %}`{{outcome}}`{% endraw %} devient `test: …`, `delete: …` ou `equivalent: …` |
+| Propositions | `proposals/kill_proposal-<visite>-g<n>.md`, une par fichier de survivants, créée par le moteur avec une section par mutant ; chaque ligne `{{outcome}}` devient `test: …`, `delete: …` ou `equivalent: …` |
 | Preuves | `gates/<composant>/<gate>-<n>.log` ; `visuals/<composant>/e2e-<n>.log` |
 | Écriture permise | `deliver`, `kill_mutants` : le dossier de suivi, les chemins `src` et `tests` de chaque composant, et les fichiers à leur racine ; `kill_proposal` : le dossier de suivi seulement, aucun commit |
 | Commits | `deliver` en mode `cycle` : `test(<story>): …` en échec (rouge, rejoué), puis `feat` ou `fix` (vert), `refactor` ; `kill_mutants` en mode `kill` : des tests qui tuent les mutants et passent ; chaque message conventionnel finit par `Refs: #<issue>` et ne ferme aucune issue |
@@ -216,7 +214,7 @@ ligne `**Status:**`, ligne de `docs/adr/decisions-index.md`) et les commite seul
 | `mutation_gates -> kill_mutants` | `FAIL` | 3 |
 | `mutation_gates -> mutation` | `PASS` | — |
 
-## PUBLISH {#publish}
+## PUBLISH <!-- #publish -->
 
 | Nœud | Type | Rôle |
 | --- | --- | --- |
@@ -231,7 +229,7 @@ ligne `**Status:**`, ligne de `docs/adr/decisions-index.md`) et les commite seul
 | Publication | avec `publish.pullRequest` accepté : pull request en brouillon (sauf `publish.draft: false`), décrite depuis le journal ; sans consentement, remote ou `gh` : `pull-request.md` reste, et `skraft publish` l'ouvre plus tard |
 | Fin | `run.finished` `completed`, raison `PUBLISH closed` |
 
-## Questions à un humain {#human-questions}
+## Questions à un humain <!-- #human-questions -->
 
 | Question | Posée par | Options | Refus (raison obligatoire) | En-tête |
 | --- | --- | --- | --- | --- |
@@ -246,15 +244,15 @@ ligne `**Status:**`, ligne de `docs/adr/decisions-index.md`) et les commite seul
 Un consentement déjà donné dans `skraft-config.json` (`publish.pullRequest`,
 `publish.visuals`) n'est pas reposé, sauf si le texte de sa question a changé depuis
 (`publish.questionVersions`). `reporting-consent` est sauté quand aucun composant n'est un front
-end. Clés, réponses et journal : [Dossier de suivi et journal]({{ "/fr/reference/run-journal" | relative_url }}#human-questions).
+end. Clés, réponses et journal : [Dossier de suivi et journal](./run-journal.md#human-questions).
 
-## Voir aussi {#see-also}
+## Voir aussi <!-- #see-also -->
 
-- [Le pipeline SKRAFT]({{ "/fr/explanation/pipeline/" | relative_url }})
-- [Le workflow DOT]({{ "/fr/reference/workflow-dot" | relative_url }})
-- [Gates]({{ "/fr/reference/gates" | relative_url }})
-- [Dossier de suivi et journal]({{ "/fr/reference/run-journal" | relative_url }})
-- [Catalogue des agents et skills]({{ "/fr/dashboard/" | relative_url }})
+- [Le pipeline SKRAFT](../explanation/pipeline/index.md)
+- [Le workflow DOT](./workflow-dot.md)
+- [Gates](./gates.md)
+- [Dossier de suivi et journal](./run-journal.md)
+- [Catalogue des agents et skills](pathname:///fr/dashboard/)
 
 Termes à connaître : **phase**, **lentille**, **gate**, **ADR**, **DoR** — voir le
-[glossaire]({{ "/fr/reference/glossary" | relative_url }}).
+[glossaire](./glossary.md).

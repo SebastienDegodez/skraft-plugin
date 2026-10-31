@@ -1,14 +1,12 @@
 ---
-layout: doc
-lang: en
 title: "Architecture patterns"
 description: "The patterns structuring the DESIGN phase: Event Modeling, DDD, Clean Architecture, CQRS, Event Sourcing — with their reference."
 ---
 
 # Architecture patterns
 
-> Patterns do not stack at random. SKRAFT composes them in a precise order, each
-> grounded in the book that defined it.
+Patterns do not stack at random. SKRAFT composes them in a precise order, each
+grounded in the book that defined it.
 
 ## Why — the problem it solves
 
@@ -47,13 +45,13 @@ Patterns are not an end in themselves: they keep the domain model at the centre.
 - **Pattern-driven design**: adopting CQRS "because it is modern" without a concrete
   problem — the skill explicitly forbids it.
 - **Big Design Up Front**: modelling the whole system before a single scenario exists
-  — prefer the increment (see [walking skeleton]({{ "/en/explanation/deep-dive/walking-skeleton" | relative_url }})).
+  — prefer the increment (see [walking skeleton](../explanation/deep-dive/walking-skeleton.md)).
 
 ## Going further
 
-- [The DESIGN phase]({{ "/en/explanation/pipeline/design" | relative_url }})
-- [Clean Architecture]({{ "/en/explanation/clean-architecture" | relative_url }})
-- [DESIGN gates](gates.html)
+- [The DESIGN phase](../explanation/pipeline/design.md)
+- [Clean Architecture](../explanation/clean-architecture.md)
+- [DESIGN gates](gates.md)
 
 ## Sources
 
@@ -65,4 +63,4 @@ Patterns are not an end in themselves: they keep the domain model at the centre.
 - Fowler, M. *Bliki: CQRS*, 2011.
 
 Terms to know: **bounded context**, **aggregate**, **value object**, **CQRS**,
-**Event Sourcing** — see the [glossary]({{ "/en/reference/glossary" | relative_url }}).
+**Event Sourcing** — see the [glossary](./glossary.md).

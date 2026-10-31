@@ -1,16 +1,13 @@
 ---
-layout: doc
-lang: fr
 title: "Garde-fous : du hook au moteur"
 description: "Pourquoi SKRAFT V2 part de zéro hook de commande, ce qui remplace dans le moteur chaque garde-fou de la v1, ce que l'on perd en passant de prévenir à détecter, et à quelle condition un hook peut revenir."
 persona: tech-lead
 ---
-{% assign cites = "/fr/reference/citations" | relative_url %}
 
 # Garde-fous : du hook au moteur
 
-> En v1, des hooks surveillaient l'agent à chaque appel d'outil. En V2, le moteur qui lance
-> l'agent vérifie lui-même ce qui compte, avant et après chaque étape.
+En v1, des hooks surveillaient l'agent à chaque appel d'outil. En V2, le moteur qui lance
+l'agent vérifie lui-même ce qui compte, avant et après chaque étape.
 
 ## Ce qu'était un garde-fou en v1
 
@@ -39,7 +36,7 @@ différemment selon l'outil — le contraire de ce que SKRAFT promet.
 **Des contrôles que le moteur fait déjà.** En V2, le moteur compose lui-même le brief de chaque
 agent, fixe ses sorties et écrit le journal. Il n'a plus besoin de surveiller un modèle qui
 écrirait l'état par le shell : l'état n'est plus un fichier que l'agent modifie, c'est un
-[journal]({{ "/fr/explanation/event-journal" | relative_url }}) que le moteur relit et vérifie.
+[journal](./event-journal.md) que le moteur relit et vérifie.
 
 Résultat : aucun hook de commande n'est livré. Le fichier `hooks/hooks.json` ne déclare qu'un
 **module** : celui du mod Claude Code, qui donne à Claude Code la commande `/skraft`, l'outil qui
@@ -66,7 +63,7 @@ le moteur, comme le workflow Copilot sous Copilot.
 Deux contrôles n'ont pas d'équivalent en v1 : le **bail de session**, qui refuse une deuxième
 session sur un pipeline qu'une autre conduit, et les **nœuds verrouillés et obligatoires** du
 workflow, qu'une copie du dépôt ne peut pas retirer en silence
-([Workflow DOT]({{ "/fr/reference/workflow-dot" | relative_url }}#locked-nodes)).
+([Workflow DOT](../reference/workflow-dot.md#locked-nodes)).
 
 ## Prévenir ou détecter
 
@@ -103,7 +100,7 @@ Un hook revient seulement s'il remplit trois conditions : il protège une action
 **irréversible** que le moteur ne peut pas détecter après coup ; son coût par appel est
 **mesuré** ; son comportement est documenté sur Claude Code, Copilot CLI et VS Code. Aucun hook
 ne les a remplies à ce jour. Le pilote Copilot s'interdit en plus tout hook avant un appel
-d'outil ([Architecture]({{ "/fr/explanation/architecture" | relative_url }}#le-contrat-du-pilote-copilot)).
+d'outil ([Architecture](./architecture.md#le-contrat-du-pilote-copilot)).
 
 ## Ce qu'aucun garde-fou ne couvre
 
@@ -112,15 +109,15 @@ endpoint qui n'existe pas, une connaissance du domaine fausse dans un test. Ils 
 structure du travail — ordre, sorties, intégrité, gates — pas la vérité de son contenu. Cela
 reste le rôle de la revue, des tests d'acceptation métier et du relecteur humain : la revue par
 les pairs reste l'une des pratiques qualité les plus efficaces
-([Wiegers, 2002]({{ cites }}#cite-wiegers-peer-reviews-2002)).
+([Wiegers, 2002](../reference/citations.mdx#cite-wiegers-peer-reviews-2002)).
 
 ## Pour aller plus loin
 
-- [Architecture]({{ "/fr/explanation/architecture" | relative_url }}) — le moteur, les pilotes, la profondeur 1.
-- [Le journal d'événements]({{ "/fr/explanation/event-journal" | relative_url }}) — la chaîne signée qui remplace l'interdiction d'écrire l'état.
-- [Référence : dossier de suivi et journal]({{ "/fr/reference/run-journal" | relative_url }}).
-- [Lancer les gates et lire leurs preuves]({{ "/fr/how-to/run-gates" | relative_url }}).
+- [Architecture](./architecture.md) — le moteur, les pilotes, la profondeur 1.
+- [Le journal d'événements](./event-journal.md) — la chaîne signée qui remplace l'interdiction d'écrire l'état.
+- [Référence : dossier de suivi et journal](../reference/run-journal.md).
+- [Lancer les gates et lire leurs preuves](../how-to/run-gates.md).
 
 ## Sources
 
-- [Wiegers, K. *Peer Reviews in Software*, 2002.]({{ cites }}#cite-wiegers-peer-reviews-2002)
+- [Wiegers, K. *Peer Reviews in Software*, 2002.](../reference/citations.mdx#cite-wiegers-peer-reviews-2002)

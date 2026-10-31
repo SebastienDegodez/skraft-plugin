@@ -1,6 +1,4 @@
 ---
-layout: doc
-lang: en
 title: "Evaluation strategy"
 description: "Why skraft proves its quality in three layers (deterministic engine tests, paired skill comparison, real-agent conformance), and what each layer cannot tell."
 persona: tech-lead
@@ -8,8 +6,8 @@ persona: tech-lead
 
 # Evaluation strategy
 
-> A skill is a claim: an agent that loads this file does better than an agent that does not. Until
-> someone measures it, it is only a hunch.
+A skill is a claim: an agent that loads this file does better than an agent that does not. Until
+someone measures it, it is only a hunch.
 
 skraft answers three different questions, each with a layer of evidence of its own. None replaces
 the other two.
@@ -43,7 +41,7 @@ test**. A majority of wins is not enough: it must be unlikely under chance alone
 nothing and are set aside; below six discordant pairs, no tally, even a perfect one, reaches
 `p ≤ 0.05`. Hence a budget of 12 to 15 trials per spec, bought up front: adding trials to an
 already noisy comparison is the worst spend. The figures are worked through in
-[Read an evaluation verdict]({{ "/en/explanation/deep-dive/reading-a-verdict" | relative_url }}).
+[Read an evaluation verdict](./deep-dive/reading-a-verdict.md).
 
 Three writing rules keep the measurement from becoming a placebo:
 
@@ -86,9 +84,9 @@ Missing data is never shown as a success: an `inconclusive` verdict says why it 
 
 ## Further reading
 
-- [Evaluate a skill]({{ "/en/how-to/evaluate-a-skill" | relative_url }}) — the steps.
-- [Read an evaluation verdict]({{ "/en/explanation/deep-dive/reading-a-verdict" | relative_url }})
-- [Software craftsmanship]({{ "/en/explanation/software-craftsmanship" | relative_url }}) — the
+- [Evaluate a skill](../how-to/evaluate-a-skill.md) — the steps.
+- [Read an evaluation verdict](./deep-dive/reading-a-verdict.md)
+- [Software craftsmanship](./software-craftsmanship.md) — the
   same bar applied to the delivered code.
 
 ## Sources

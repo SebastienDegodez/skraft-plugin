@@ -1,27 +1,24 @@
 ---
-layout: doc
-lang: en
 title: "Refactor existing code under a net"
 description: "Start brownfield-refactorer as the main agent, choose Mikado or Strangler Fig, follow the graph or the slice plan, and act on the ADVANCE, EXPAND, DONE and BLOCKED signals, the net green at every commit."
 persona: software-engineer
 ---
-{% assign cites = "/en/reference/citations" | relative_url %}
 
 # Refactor existing code under a net
 
 **Goal**: change in place or replace part of an existing codebase, one leaf or slice at a time,
 with a green commit at every step.
 
-To understand the two methods: [Brownfield journey]({{ "/en/explanation/brownfield" | relative_url }}),
-[Ellnestam & Brolund, 2014]({{ cites }}#cite-ellnestam-brolund-mikado-2014) (Mikado),
-[Fowler, 2004]({{ cites }}#cite-fowler-strangler-2004) (Strangler Fig).
+To understand the two methods: [Brownfield journey](../explanation/brownfield.md),
+[Ellnestam & Brolund, 2014](../reference/citations.mdx#cite-ellnestam-brolund-mikado-2014) (Mikado),
+[Fowler, 2004](../reference/citations.mdx#cite-fowler-strangler-2004) (Strangler Fig).
 
 ## Prerequisites
 
 - The `skraft` and `skraft-brownfield` plugins installed.
 - A green net on the target code: the `brownfield-harness-builder` report with the verdict
   `PASS`, or `CONCERNS` whose gaps you accept
-  ([Put a characterization net]({{ "/en/how-to/characterize-legacy" | relative_url }})).
+  ([Put a characterization net](./characterize-legacy.md)).
 - The component's `build` and `test` commands in `skraft-config.json`, else those the harness
   report names.
 - A clean working branch.
@@ -73,8 +70,8 @@ its signal:
 To check the graph yourself, run the validator of the `mikado-method` skill (`<skill>` is its
 folder in the installed plugin):
 
-```text
-sh "<skill>/scripts/validate-mikado.sh" .copilot-tracking/skraft-plans/<slug>/refactoring/<date>/mikado-<slug>.md
+```console
+$ sh "<skill>/scripts/validate-mikado.sh" .copilot-tracking/skraft-plans/<slug>/refactoring/<date>/mikado-<slug>.md
 powershell -NoProfile -ExecutionPolicy Bypass -File "<skill>/scripts/validate-mikado.ps1" <graph>
 ```
 
@@ -103,7 +100,7 @@ against the old, and the whole net stays green. Any behaviour difference comes b
 
 ## See also
 
-- [Put a characterization net]({{ "/en/how-to/characterize-legacy" | relative_url }})
-- [Brownfield journey]({{ "/en/explanation/brownfield" | relative_url }}) — why the graph stays
+- [Put a characterization net](./characterize-legacy.md)
+- [Brownfield journey](../explanation/brownfield.md) — why the graph stays
   driven by the human.
-- [The agent and skill catalogue]({{ "/en/dashboard/" | relative_url }}#agent-brownfield-refactorer)
+- [The agent and skill catalogue](pathname:///dashboard/#agent-brownfield-refactorer)

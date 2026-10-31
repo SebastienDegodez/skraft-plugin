@@ -1,6 +1,4 @@
 ---
-layout: doc
-lang: fr
 title: "Évaluer un skill"
 description: "Écrire la spec d'évaluation d'un skill, la valider sans dépenser de quota, lancer la comparaison baseline contre skill, lire le verdict, le consulter sur le tableau de bord et rejouer une paire baseline contre skill."
 persona: tech-lead
@@ -55,26 +53,28 @@ modèle versionné.
 - [ ] `stimuli × runs` donne 12 à 15 essais : en dessous de six paires décisives, aucun verdict
   ne peut passer.
 
-Pourquoi ces règles : [Stratégie d'évaluation]({{ "/fr/explanation/evaluation-strategy" | relative_url }}).
+Pourquoi ces règles : [Stratégie d'évaluation](../explanation/evaluation-strategy.md).
 
 ## 3. Valider la spec sans lancer d'agent
 
-> **Non vérifié sur V2.** L'évaluation Vally est en pause sur le travail V2 : les commandes des
-> étapes 3, 4 et 6 et de « Évaluer un agent » ci-dessous (`vally`, `./eng/run-vally-evals.sh`,
-> `npm run dashboard:preview`) n'ont pas été relancées sur V2. Sous Windows,
-> `./eng/run-vally-evals.sh` est un script bash : lancez-le depuis Git Bash ou WSL.
+:::caution[Non vérifié sur V2]
+L'évaluation Vally est en pause sur le travail V2 : les commandes des
+étapes 3, 4 et 6 et de « Évaluer un agent » ci-dessous (`vally`, `./eng/run-vally-evals.sh`,
+`npm run dashboard:preview`) n'ont pas été relancées sur V2. Sous Windows,
+`./eng/run-vally-evals.sh` est un script bash : lancez-le depuis Git Bash ou WSL.
+:::
 
-```bash
-npm install -g @microsoft/vally-cli@0.12.0
-vally lint --eval-spec tests/skills/<skill>/eval.yaml --strict
+```console
+$ npm install -g @microsoft/vally-cli@0.12.0
+$ vally lint --eval-spec tests/skills/<skill>/eval.yaml --strict
 ```
 
 Le lint ne démarre aucun agent et ne consomme aucun quota.
 
 ## 4. Lancer la comparaison
 
-```bash
-./eng/run-vally-evals.sh <skill>
+```console
+$ ./eng/run-vally-evals.sh <skill>
 ```
 
 Le script joue chaque stimulus deux fois, sans skill (baseline) et avec le seul skill évalué,
@@ -92,12 +92,12 @@ un pilote n'est jamais un verdict.
 | `inconclusive` | Essai en erreur, essai non apparié, moins de 5 essais ou moins de 6 paires décisives : lire la raison du verdict avant d'ajouter des essais. |
 
 La ligne `9V/4E/2D (p=0,065)` se lit chiffre par chiffre dans
-[Lire un verdict d'évaluation]({{ "/fr/explanation/deep-dive/reading-a-verdict" | relative_url }}).
+[Lire un verdict d'évaluation](../explanation/deep-dive/reading-a-verdict.md).
 
 ## 6. Consulter la preuve
 
-```bash
-npm run dashboard:preview
+```console
+$ npm run dashboard:preview
 ```
 
 Ouvrez `http://127.0.0.1:4173/dashboard/` : l'onglet **Qualité** montre le verdict du skill, ses
@@ -112,7 +112,7 @@ l'application de rejeu et n'affiche pas son entrée.
 
 1. Sur le tableau de bord publié, cliquez sur **Ouvrir le replay**.
 
-   ![Tableau de bord : les chiffres du catalogue, puis l'encadré « Replay de session » et son bouton « Ouvrir le replay », au-dessus des onglets Catalogue, Qualité, Efficacité et Modèles]({{ "/assets/screenshots/fr/dashboard-catalogue.png" | relative_url }})
+   ![Tableau de bord : les chiffres du catalogue, puis l'encadré « Replay de session » et son bouton « Ouvrir le replay », au-dessus des onglets Catalogue, Qualité, Efficacité et Modèles](/img/screenshots/fr/dashboard-catalogue.png)
 
    *Figure 1 — L'entrée du rejeu, sous les chiffres du catalogue.*
 
@@ -120,7 +120,7 @@ l'application de rejeu et n'affiche pas son entrée.
    session se nomme `<skill> / <scénario> (<bras>, run <n>)` et porte en étiquettes le skill, le
    scénario et le bras, `baseline` ou `skilled`.
 
-   ![AGENTVIZ, vue List : les étiquettes 2026-09-28, baseline, outside-in-tdd, le scénario, scheduled et skilled, puis les deux sessions du scénario, bras skilled et baseline, run 1]({{ "/assets/screenshots/shared/replay-sessions.png" | relative_url }})
+   ![AGENTVIZ, vue List : les étiquettes 2026-09-28, baseline, outside-in-tdd, le scénario, scheduled et skilled, puis les deux sessions du scénario, bras skilled et baseline, run 1](/img/screenshots/shared/replay-sessions.png)
 
    *Figure 2 — Les deux bras de l'essai 1 d'un scénario d'`outside-in-tdd`.*
 
@@ -131,14 +131,14 @@ l'application de rejeu et n'affiche pas son entrée.
    le skill s'est chargé ; sans lui, la paire compare deux baselines.
 
 Ce qu'une paire révèle, sur un exemple réel :
-[Lire un verdict d'évaluation]({{ "/fr/explanation/deep-dive/reading-a-verdict" | relative_url }}#replay).
+[Lire un verdict d'évaluation](../explanation/deep-dive/reading-a-verdict.md#replay).
 
 ## Évaluer un agent
 
 Une suite agent se place sous `tests/agents/<suite>/eval.yaml` et se lance avec :
 
-```bash
-./eng/run-vally-evals.sh agents <suite>
+```console
+$ ./eng/run-vally-evals.sh agents <suite>
 ```
 
 Elle n'a pas de baseline : son verdict (`pass`, `flaky`, `regression`, `inconclusive`) atteste
@@ -155,8 +155,8 @@ une conformité, et reste indicatif.
 
 ## Voir aussi
 
-- [Stratégie d'évaluation]({{ "/fr/explanation/evaluation-strategy" | relative_url }})
-- [Lire un verdict d'évaluation]({{ "/fr/explanation/deep-dive/reading-a-verdict" | relative_url }})
-- [Tableau de bord]({{ "/dashboard/" | relative_url }})
-- [Outillage d'évaluation]({{ "/fr/reference/evaluation-tooling" | relative_url }})
+- [Stratégie d'évaluation](../explanation/evaluation-strategy.md)
+- [Lire un verdict d'évaluation](../explanation/deep-dive/reading-a-verdict.md)
+- [Tableau de bord](pathname:///dashboard/)
+- [Outillage d'évaluation](../reference/evaluation-tooling.md)
   — contrats de données, adaptateurs, rétention des sessions.

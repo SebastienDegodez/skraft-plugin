@@ -1,16 +1,13 @@
 ---
-layout: doc
-lang: fr
 title: "Architecture"
 description: "Pourquoi SKRAFT V2 sépare un moteur neutre vis-à-vis de l'hôte, qui décide de tout, des pilotes d'hôte qui ne font qu'exécuter, et pourquoi les contrôles vivent dans du code testé plutôt que dans la prose d'un agent."
 persona: tech-lead
 ---
-{% assign cites = "/fr/reference/citations" | relative_url %}
 
 # Architecture
 
-> Un seul moteur décide de tout ; chaque hôte le fait tourner avec ce qu'il sait faire. Seul
-> le pilote lance des agents, et aucun agent n'en lance un autre.
+Un seul moteur décide de tout ; chaque hôte le fait tourner avec ce qu'il sait faire. Seul
+le pilote lance des agents, et aucun agent n'en lance un autre.
 
 ## Le problème à résoudre
 
@@ -29,11 +26,11 @@ prose et les met dans du code testé, le même partout.
 Le **moteur** (`plugins/skraft-framework/engine/`) suit la règle de dépendance de la Clean
 Architecture : les règles pures (`domain/`) ne dépendent de rien, les cas d'usage
 (`application/`) ne dépendent que d'elles, et les détails — fichiers, git, processus, hôtes —
-sont à l'extérieur ([Martin, 2017]({{ cites }}#cite-martin-cleanarch-2017)). Un **cas
+sont à l'extérieur ([Martin, 2017](../reference/citations.mdx#cite-martin-cleanarch-2017)). Un **cas
 d'usage** est une action complète du point de vue de l'utilisateur : démarrer un pipeline, le
 faire avancer, observer son état, lancer les gates, répondre à une question. Il décide ; il ne
 fait aucune entrée-sortie lui-même, il passe par des contrats que l'extérieur implémente — l'idée
-des ports et adaptateurs ([Cockburn, 2005]({{ cites }}#cite-cockburn-hexagonal-2005)).
+des ports et adaptateurs ([Cockburn, 2005](../reference/citations.mdx#cite-cockburn-hexagonal-2005)).
 
 Cette discipline n'est pas esthétique. `domain/` et `application/` n'utilisent ni modules
 `node:`, ni `process`, ni processus enfants. C'est ce qui permet au même code d'être chargé par
@@ -70,7 +67,7 @@ Un **pilote d'hôte** relie le moteur à un hôte. Il fournit au moteur de quoi 
 poser une question à un humain et montrer la progression, puis appelle le cas d'usage. Il ne
 décide ni de l'ordre, ni du verdict, ni de l'avancement. La liste des pilotes, ce que chacun
 lance, comment il pose les questions et ce que chaque hôte peut faire sont dans la référence
-[Hôtes]({{ "/fr/reference/hosts" | relative_url }}).
+[Hôtes](../reference/hosts.md).
 
 Ce partage a une conséquence directe : ajouter un hôte, c'est écrire un pilote, pas un second
 pipeline. Et quand un hôte ne sait pas faire quelque chose — lancer des lentilles en parallèle,
@@ -137,7 +134,7 @@ Une sortie absente relance l'agent avec la liste de ce qui manque, dans la limit
 tentatives ; le même échec deux fois arrête le run plus tôt, parce qu'une troisième tentative
 identique n'apprendrait rien. Une étape que la machine ne peut pas exécuter (programme
 introuvable, git en échec) n'est pas imputée à l'agent : le moteur demande à un humain de
-réparer, puis de relancer ou d'abandonner. Les codes : [Suivi et journal]({{ "/fr/reference/run-journal" | relative_url }}#statuses-and-codes).
+réparer, puis de relancer ou d'abandonner. Les codes : [Suivi et journal](../reference/run-journal.md#statuses-and-codes).
 
 ## Profondeur 1
 
@@ -151,8 +148,8 @@ Une revue suit ce chemin. Les lentilles répondent par des findings typés ; `fi
 vérifie chaque finding qui renverrait le travail ; quand une seule lentille s'oppose aux autres,
 le réfuteur la juge avec toutes les entrées de la revue (la *Dissent Rule*) plutôt que de
 l'écarter sans raison. Le moteur calcule le verdict sur ce qui reste. Le pourquoi :
-[La revue avant la revue]({{ "/fr/explanation/deep-dive/review-before-review" | relative_url }}) ;
-le calcul : [Gates]({{ "/fr/reference/gates" | relative_url }}#review-run).
+[La revue avant la revue](./deep-dive/review-before-review.md) ;
+le calcul : [Gates](../reference/gates.md#review-run).
 
 ## Les contrôles vivent dans le code
 
@@ -161,8 +158,8 @@ graphe du workflow ; les sorties attendues, pré-créées puis vérifiées ; l'i
 les gates de commandes ; ce que chaque étape a le droit d'écrire, par un diff git ; les commits
 rouges et verts du TDD ; le cycle de vie des ADR ; le verdict des revues. Chacun de ces
 contrôles est testé sans hôte, et se comporte pareil partout. Pourquoi ils ont quitté les hooks
-de la v1 : [Garde-fous]({{ "/fr/explanation/guardrails" | relative_url }}). Comment le workflow
-qui les porte se lit et se copie : [Workflow DOT]({{ "/fr/reference/workflow-dot" | relative_url }}).
+de la v1 : [Garde-fous](./guardrails.md). Comment le workflow
+qui les porte se lit et se copie : [Workflow DOT](../reference/workflow-dot.md).
 
 ## Alternatives écartées
 
@@ -177,15 +174,15 @@ fait l'étape, appelle `skraft record`. Cela marche partout, mais coûte un alle
 met les lentilles en séquence et laisse l'avancement à un modèle qui peut s'écarter de la
 boucle. Elle reste seulement comme repli sous VS Code.
 
-**Garder les hooks.** Voir [Garde-fous]({{ "/fr/explanation/guardrails" | relative_url }}).
+**Garder les hooks.** Voir [Garde-fous](./guardrails.md).
 
 ## Pour aller plus loin
 
-- [Le journal d'événements]({{ "/fr/explanation/event-journal" | relative_url }}) — l'état recalculé et la reprise.
-- [Clean Architecture]({{ "/fr/explanation/clean-architecture" | relative_url }}) — la règle de dépendance, appliquée aussi au moteur.
-- [Référence : hôtes]({{ "/fr/reference/hosts" | relative_url }}) et [la ligne de commande]({{ "/fr/reference/cli" | relative_url }}).
+- [Le journal d'événements](./event-journal.md) — l'état recalculé et la reprise.
+- [Clean Architecture](./clean-architecture.md) — la règle de dépendance, appliquée aussi au moteur.
+- [Référence : hôtes](../reference/hosts.md) et [la ligne de commande](../reference/cli.md).
 
 ## Sources
 
-- [Cockburn, A. *Hexagonal Architecture*, 2005.]({{ cites }}#cite-cockburn-hexagonal-2005)
-- [Martin, R. C. *Clean Architecture*, 2017.]({{ cites }}#cite-martin-cleanarch-2017)
+- [Cockburn, A. *Hexagonal Architecture*, 2005.](../reference/citations.mdx#cite-cockburn-hexagonal-2005)
+- [Martin, R. C. *Clean Architecture*, 2017.](../reference/citations.mdx#cite-martin-cleanarch-2017)

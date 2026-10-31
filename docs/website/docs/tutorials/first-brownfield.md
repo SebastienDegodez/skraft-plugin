@@ -1,6 +1,4 @@
 ---
-layout: doc
-lang: en
 title: "First existing repository"
 description: "Under GitHub Copilot CLI, have the brownfield analyst describe a small undocumented codebase, then turn its PRD into a backlog reviewed in the skraft backlog canvas."
 persona: tech-lead
@@ -8,11 +6,11 @@ persona: tech-lead
 
 # First existing repository
 
-> In this tutorial, you start from a small existing codebase, with no tests and no documentation.
-> The `brownfield-analyst` agent draws a PRD from it; the `skraft-prd-backlog` workflow cuts that PRD
-> into epics and stories; you review the ready stories in the **skraft backlog** canvas. At the end,
-> the canvas shows your backlog, each ready story marked reviewed, and nothing is published to
-> GitHub yet.
+In this tutorial, you start from a small existing codebase, with no tests and no documentation.
+The `brownfield-analyst` agent draws a PRD from it; the `skraft-prd-backlog` workflow cuts that PRD
+into epics and stories; you review the ready stories in the **skraft backlog** canvas. At the end,
+the canvas shows your backlog, each ready story marked reviewed, and nothing is published to
+GitHub yet.
 
 One path; each step says what you should see. The agents are real: expect it to take a while and
 to use Copilot credits.
@@ -26,10 +24,10 @@ to use Copilot credits.
 
 In a terminal, create the `permis` folder:
 
-```text
-mkdir permis
-cd permis
-git init -b main
+```console
+$ mkdir permis
+$ cd permis
+$ git init -b main
 ```
 
 `package.json`:
@@ -73,9 +71,9 @@ export const lastDecision = (driverId, today = new Date()) => {
 
 Commit:
 
-```text
-git add .
-git commit -m "Eligibility as it runs today"
+```console
+$ git add .
+$ git commit -m "Eligibility as it runs today"
 ```
 
 `git log --oneline` shows a single commit. The repository has no tests, no documentation and no
@@ -83,12 +81,12 @@ backlog: it is your existing code.
 
 ## 2. Install the plugins
 
-```text
-copilot plugin marketplace add SebastienDegodez/skraft-plugin
-copilot plugin install skraft@skraft
-copilot plugin install skraft-brownfield@skraft
-copilot plugin install skraft-backlog@skraft
-copilot plugin list
+```console
+$ copilot plugin marketplace add SebastienDegodez/skraft-plugin
+$ copilot plugin install skraft@skraft
+$ copilot plugin install skraft-brownfield@skraft
+$ copilot plugin install skraft-backlog@skraft
+$ copilot plugin list
 ```
 
 The three plugins are in the list.
@@ -120,9 +118,9 @@ The analyst composes the PRD, then gives you its path under `docs/prds/`, the ch
 schema gate verdicts, and the number of open questions. Open the PRD: its functional requirements
 carry the ids `FR-001`, `FR-002`…, its non-functional requirements `NFR-…`. Commit it:
 
-```text
-git add docs/prds
-git commit -m "docs: PRD from the existing code"
+```console
+$ git add docs/prds
+$ git commit -m "docs: PRD from the existing code"
 ```
 
 ## 4. Cut the PRD into a backlog
@@ -154,7 +152,7 @@ Open the skraft backlog canvas.
 
 The canvas opens on the **Progress** tab:
 
-![skraft backlog canvas, Progress tab: the key figures (2 epics, 4 stories, 1 refused, 1 held back, 2 ready, 0/2 reviewed), the bar of stories by stage, then epic EP-001 with its review verdict, its expected outcome and its three stories]({{ "/assets/screenshots/en/backlog-canvas-progress.png" | relative_url }})
+![skraft backlog canvas, Progress tab: the key figures (2 epics, 4 stories, 1 refused, 1 held back, 2 ready, 0/2 reviewed), the bar of stories by stage, then epic EP-001 with its review verdict, its expected outcome and its three stories](/img/screenshots/en/backlog-canvas-progress.png)
 
 *Figure 1 — The Progress tab: each epic in its own frame, with its planning-review verdict and its
 stories. Captured on the canvas test workspace (an eligibility PRD close to yours, written in
@@ -163,7 +161,7 @@ French); your figures and stories depend on your PRD.*
 Read the top row: how many stories are **ready**, **held back** by the review, or **refused** by
 the checks. Click a refused story: the **Review** tab opens it as a checklist.
 
-![skraft backlog canvas, Review tab: story EP-001-S02 refused, its Vague Persona, No Examples and Technical AC defects, then the six INVEST letters, each with the value found]({{ "/assets/screenshots/en/backlog-canvas-review.png" | relative_url }})
+![skraft backlog canvas, Review tab: story EP-001-S02 refused, its Vague Persona, No Examples and Technical AC defects, then the six INVEST letters, each with the value found](/img/screenshots/en/backlog-canvas-review.png)
 
 *Figure 2 — The Review tab: each INVEST letter and each Definition of Ready item with what was
 found; a failing line says why and how to fix it.*
@@ -187,6 +185,6 @@ run, when you decide to.
 
 ## Next pages
 
-- [The backlog: from idea to ready story]({{ "/en/explanation/backlog" | relative_url }}) — why each check and each lens exists.
-- [Brownfield journey]({{ "/en/explanation/brownfield" | relative_url }}) — the characterization safety net, then Mikado or Strangler Fig refactoring.
-- [First run under GitHub Copilot CLI]({{ "/en/tutorials/first-run-copilot" | relative_url }}) — then take one story to its pull request.
+- [The backlog: from idea to ready story](../explanation/backlog.md) — why each check and each lens exists.
+- [Brownfield journey](../explanation/brownfield.md) — the characterization safety net, then Mikado or Strangler Fig refactoring.
+- [First run under GitHub Copilot CLI](./first-run-copilot.md) — then take one story to its pull request.

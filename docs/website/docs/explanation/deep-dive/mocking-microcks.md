@@ -1,6 +1,4 @@
 ---
-layout: doc
-lang: en
 title: "L3 zoom: mocking (Microcks)"
 description: "Zoom on mocking in DELIVER: how the software-engineer loads the mocking skill its brief names, Microcks by default or an in-process double, and how the mock-fidelity-lens audits the result."
 persona: software-engineer
@@ -8,9 +6,9 @@ persona: software-engineer
 
 # L3 zoom: mocking (Microcks)
 
-> The [architecture]({{ "/en/explanation/architecture" | relative_url }}) view stops at
-> L2. This page zooms into one L3 detail: how DELIVER mocks a downstream dependency
-> the service-under-test calls.
+The [architecture](../architecture.md) view stops at
+L2. This page zooms into one L3 detail: how DELIVER mocks a downstream dependency
+the service-under-test calls.
 
 ## Why this zoom
 
@@ -82,10 +80,10 @@ deterministic while still exercising the real boundary the service depends on.
 
 ## Going further
 
-- [Architecture]({{ "/en/explanation/architecture" | relative_url }}) — the L1 + L2 view this page zooms out of.
-- [L3 zoom: contract testing]({{ "/en/explanation/deep-dive/contract-testing" | relative_url }}) — the sibling provider-side wiring.
-- [DELIVER]({{ "/en/explanation/pipeline/deliver" | relative_url }}) — the phase that owns this wiring.
-- [Agentic catalogue]({{ "/en/dashboard/" | relative_url }}) — every agent and lens. Unsure about a term? See the [glossary]({{ "/en/reference/glossary" | relative_url }}).
+- [Architecture](../architecture.md) — the L1 + L2 view this page zooms out of.
+- [L3 zoom: contract testing](./contract-testing.md) — the sibling provider-side wiring.
+- [DELIVER](../pipeline/deliver.md) — the phase that owns this wiring.
+- [Agentic catalogue](pathname:///dashboard/) — every agent and lens. Unsure about a term? See the [glossary](../../reference/glossary.md).
 
 ## Sources
 

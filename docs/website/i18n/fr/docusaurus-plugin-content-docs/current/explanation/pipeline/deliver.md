@@ -1,39 +1,34 @@
 ---
-layout: doc
-lang: fr
 title: "DELIVER"
 description: "Pourquoi DELIVER fait passer le contrat au vert en cycles TDD vérifiés, pourquoi la mutation passe en dernier, une fois, sur le code revu, et pourquoi c'est le développeur qui choisit comment traiter les mutants survivants."
 persona: software-engineer
+phase: deliver
 ---
-{% assign cites = "/fr/reference/citations" | relative_url %}
 
 # DELIVER
 
-{% include phase-ribbon.html current="deliver" %}
-
-> Faire passer le contrat au vert en petits pas prouvés, faire relire le code, puis tester les
-> tests — une fois, en dernier.
+Faire passer le contrat au vert en petits pas prouvés, faire relire le code, puis tester les
+tests — une fois, en dernier.
 
 ## Pourquoi cette phase existe
 
 Le code est le seul artefact qui part en production. DELIVER le fait naître du contrat que
 DISTILL a laissé en échec : le `software-engineer` avance en **Outside-In TDD**, du test
 d'acceptation vers les tests unitaires, puis vers le code
-([Freeman & Pryce, 2009]({{ cites }}#cite-freeman-goos-2009)). Chaque pas est un commit : un
+([Freeman & Pryce, 2009](../../reference/citations.mdx#cite-freeman-goos-2009)). Chaque pas est un commit : un
 `test(…)` rouge, un `feat(…)` ou `fix(…)` vert, un `refactor(…)`.
 
 Le moteur ne croit pas l'agent sur parole. Il lit ces commits, rejoue chaque rouge pour
 vérifier qu'il échoue, et refuse un vert qui n'a pas de rouge avant lui. Le test d'abord
-([Beck, 2003]({{ cites }}#cite-beck-tdd-2003)) devient un fait dans l'historique git, pas une
+([Beck, 2003](../../reference/citations.mdx#cite-beck-tdd-2003)) devient un fait dans l'historique git, pas une
 promesse.
 
-<div class="fil-rouge" markdown="1">
-<span class="fil-rouge__label">☕ Fil rouge — Starbucks <em>(exemple illustratif)</em></span>
+:::info[☕ Fil rouge — Starbucks *(exemple illustratif)*]
 
 Le scénario entre. DELIVER implémente le calcul du total et l'attribution des points en cycles
 **rouge → vert**, la revue relit le code, puis la **mutation** atteste que les tests protègent
 réellement la règle de fidélité. Le code part en pull request.
-</div>
+:::
 
 ## L'ordre : gates, revue, puis mutation
 
@@ -65,7 +60,7 @@ jamais par la mutation.
 ### Pourquoi la mutation passe en dernier
 
 Le mutation testing injecte de petites fautes dans le code et mesure la part que les tests
-attrapent ([Jia & Harman, 2011]({{ cites }}#cite-jia-mutation-2011)). C'est la seule mesure qui
+attrapent ([Jia & Harman, 2011](../../reference/citations.mdx#cite-jia-mutation-2011)). C'est la seule mesure qui
 dit si une suite verte détecterait une erreur, et c'est aussi l'étape la plus coûteuse du
 pipeline.
 
@@ -88,7 +83,7 @@ Un mutant survivant n'a pas une seule bonne réponse. Il finit de l'une de trois
 Ces trois issues n'ont pas les mêmes conséquences : la première ajoute une protection, la
 deuxième retire du code, la troisième accepte un écart. Distinguer un mutant équivalent est un
 problème connu pour être difficile, qu'aucun outil ne tranche seul
-([Jia & Harman, 2011]({{ cites }}#cite-jia-mutation-2011)). Laisser un agent « tuer les mutants »
+([Jia & Harman, 2011](../../reference/citations.mdx#cite-jia-mutation-2011)). Laisser un agent « tuer les mutants »
 à sa guise l'invite à écrire des tests taillés pour le mutant plutôt que pour un comportement.
 
 Alors la décision est partagée. Pour chaque fichier qui garde des survivants, le
@@ -107,8 +102,8 @@ Le `software-engineer` câble lui-même ses tests d'intégration, dans ses propr
 vert : le brief que compose le moteur nomme les skills de mocking de chaque composant, et ceux
 de contract testing quand le composant l'active. Il ne lance aucun sous-agent. Quand le
 changement touche un mock ou un contrat, la lentille de fidélité correspondante rejoint la
-revue. Le pourquoi : [Mocking avec Microcks]({{ "/fr/explanation/deep-dive/mocking-microcks" | relative_url }})
-et [Contract testing]({{ "/fr/explanation/deep-dive/contract-testing" | relative_url }}).
+revue. Le pourquoi : [Mocking avec Microcks](../deep-dive/mocking-microcks.md)
+et [Contract testing](../deep-dive/contract-testing.md).
 
 ## Les compromis
 
@@ -117,17 +112,17 @@ et [Contract testing]({{ "/fr/explanation/deep-dive/contract-testing" | relative
 - **Une reprise de revue ne remesure pas la mutation.** Elle repasse par les gates, plus
   rapides ; la mutation juge une fois le code stabilisé.
 - **Pas de seuil négociable.** 100 % sur le cœur, 80 % sur la frontière, quel que soit le dépôt :
-  voir [Software craftsmanship]({{ "/fr/explanation/software-craftsmanship" | relative_url }}).
+  voir [Software craftsmanship](../software-craftsmanship.md).
 
 ## Pour aller plus loin
 
-- [Référence : DELIVER]({{ "/fr/reference/phases" | relative_url }}#deliver) — nœuds, propositions, réponses à `mutation-plan`, arêtes.
-- [Référence : critères de revue de DELIVER]({{ "/fr/reference/gates" | relative_url }}#deliver).
-- [La revue avant la revue]({{ "/fr/explanation/deep-dive/review-before-review" | relative_url }}).
-- [Lancer les gates]({{ "/fr/how-to/run-gates" | relative_url }}).
+- [Référence : DELIVER](../../reference/phases.md#deliver) — nœuds, propositions, réponses à `mutation-plan`, arêtes.
+- [Référence : critères de revue de DELIVER](../../reference/gates.md#deliver).
+- [La revue avant la revue](../deep-dive/review-before-review.md).
+- [Lancer les gates](../../how-to/run-gates.md).
 
 ## Sources
 
-- [Beck, K. *Test-Driven Development by Example*, 2003.]({{ cites }}#cite-beck-tdd-2003)
-- [Freeman, S. & Pryce, N. *Growing Object-Oriented Software, Guided by Tests*, 2009.]({{ cites }}#cite-freeman-goos-2009)
-- [Jia, Y. & Harman, M. *An Analysis and Survey of the Development of Mutation Testing*, 2011.]({{ cites }}#cite-jia-mutation-2011)
+- [Beck, K. *Test-Driven Development by Example*, 2003.](../../reference/citations.mdx#cite-beck-tdd-2003)
+- [Freeman, S. & Pryce, N. *Growing Object-Oriented Software, Guided by Tests*, 2009.](../../reference/citations.mdx#cite-freeman-goos-2009)
+- [Jia, Y. & Harman, M. *An Analysis and Survey of the Development of Mutation Testing*, 2011.](../../reference/citations.mdx#cite-jia-mutation-2011)

@@ -1,6 +1,4 @@
 ---
-layout: doc
-lang: fr
 title: "Ajouter un agent du dépôt au pipeline"
 description: "Confier une étape du pipeline à un agent écrit dans votre dépôt : écrire son fichier pour chaque hôte, l'ajouter comme nœud du workflow éjecté avec ses sorties et ses chemins d'écriture, le placer avant les gates, et vérifier avec check, diff et doctor."
 persona: tech-lead
@@ -12,13 +10,13 @@ persona: tech-lead
 le guide utilisateur), par un agent écrit dans votre dépôt.
 
 Pour une relecture plutôt qu'une étape qui produit :
-[Ajouter une lentille à une revue]({{ "/fr/how-to/customise-review" | relative_url }}).
+[Ajouter une lentille à une revue](./customise-review.md).
 
 ## Prérequis
 
-- Un dépôt configuré, Git, et un terminal à la racine de la copie de travail ; `skraft` est la commande que [`skraft install`]({{ "/fr/how-to/install-on-a-host" | relative_url }}#skraft-command) met en place ; la ligne longue `node "<dossier du plugin>/engine/drivers/cli/skraft.mjs"` marche sans elle.
+- Un dépôt configuré, Git, et un terminal à la racine de la copie de travail ; `skraft` est la commande que [`skraft install`](./install-on-a-host.mdx#skraft-command) met en place ; la ligne longue `node "<dossier du plugin>/engine/drivers/cli/skraft.mjs"` marche sans elle.
 - Le workflow copié dans `.skraft/pipeline.skraft.dot`
-  ([Copier et adapter le workflow]({{ "/fr/how-to/eject-workflow" | relative_url }})).
+  ([Copier et adapter le workflow](./eject-workflow.md)).
 
 ## 1. Écrire l'agent
 
@@ -58,7 +56,7 @@ et retirez l'arête `deliver -> gates` qu'elle remplace.
 | `outputs` | les fichiers que l'agent doit remplir, relatifs au dossier de suivi du run ; `{date}` et `{slug}` sont remplis au lancement |
 | `writes` | les chemins de la copie de travail qu'il peut modifier ; sans `writes`, il n'écrit que dans le dossier de suivi |
 | `max_attempts` | tentatives par passage ; défaut 3 |
-| `model` | sa famille de modèle ([Choisir les modèles des agents]({{ "/fr/how-to/choose-models" | relative_url }})) |
+| `model` | sa famille de modèle ([Choisir les modèles des agents](./choose-models.md)) |
 
 Le brief que le moteur donne à l'agent liste ces sorties, les chemins qu'il peut écrire et les
 sorties des autres étapes à lire. Après chaque tentative, le moteur vérifie que chaque sortie est
@@ -66,10 +64,10 @@ remplie et que rien n'a été écrit hors de ces chemins.
 
 ## 3. Vérifier
 
-```text
-skraft workflow check
-skraft workflow diff
-skraft doctor
+```console
+$ skraft workflow check
+$ skraft workflow diff
+$ skraft doctor
 ```
 
 Résultat attendu :
@@ -102,7 +100,7 @@ Commitez `.skraft/` et les fichiers de l'agent : l'étape tourne au prochain run
 
 ## Voir aussi
 
-- [Le workflow DOT]({{ "/fr/reference/workflow-dot" | relative_url }}#node-attributes) — tous les
+- [Le workflow DOT](../reference/workflow-dot.md#node-attributes) — tous les
   attributs d'un nœud agent.
-- [Copier et adapter le workflow]({{ "/fr/how-to/eject-workflow" | relative_url }})
-- [Adapter skraft : ce que coûte chaque réglage]({{ "/fr/explanation/customisation-trade-offs" | relative_url }})
+- [Copier et adapter le workflow](./eject-workflow.md)
+- [Adapter skraft : ce que coûte chaque réglage](../explanation/customisation-trade-offs.md)

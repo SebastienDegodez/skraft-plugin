@@ -1,6 +1,4 @@
 ---
-layout: doc
-lang: en
 title: "Add a lens to a review"
 description: "Add a lens of your own repository to the design review or to the DELIVER review, change a lens's model family, and check the workflow with skraft workflow check and diff."
 persona: tech-lead
@@ -13,7 +11,7 @@ skraft's lenses.
 
 ## Prerequisites
 
-- A configured repository, Git, and a terminal at the root of the working copy; `skraft` is the command that [`skraft install`]({{ "/en/how-to/install-on-a-host" | relative_url }}#skraft-command) sets up; the long line `node "<plugin folder>/engine/drivers/cli/skraft.mjs"` works without it.
+- A configured repository, Git, and a terminal at the root of the working copy; `skraft` is the command that [`skraft install`](./install-on-a-host.mdx#skraft-command) sets up; the long line `node "<plugin folder>/engine/drivers/cli/skraft.mjs"` works without it.
 - The lens's prompt, written as an agent of your repository named `<name>-lens`.
 
 ## 1. Write the lens's agent
@@ -27,7 +25,7 @@ team uses:
 | Copilot CLI, VS Code | `.github/agents/threat-model-lens.agent.md` (or `.md`) |
 
 The lens answers in the format the engine reads:
-[A lens's answer]({{ "/en/reference/gates" | relative_url }}#lens-answer).
+[A lens's answer](../reference/gates.md#lens-answer).
 
 ## 2. Copy the workflow of the review you target
 
@@ -63,15 +61,15 @@ lenses -> threat_model -> verdict
 Node options:
 
 - `model="<family>"` chooses the lens's model family (an `assign.agents` rule wins, see
-  [Choose the agents' models]({{ "/en/how-to/choose-models" | relative_url }}));
+  [Choose the agents' models](./choose-models.md));
 - `when="mock"` or `when="contract"` runs it only when the changes touch mocks or contracts
-  ([conditional lenses]({{ "/en/reference/workflow-dot" | relative_url }}#conditional-lenses)).
+  ([conditional lenses](../reference/workflow-dot.md#conditional-lenses)).
 
 ## 4. Check the workflow
 
-```text
-skraft workflow check
-skraft workflow diff
+```console
+$ skraft workflow check
+$ skraft workflow diff
 ```
 
 Expected result:
@@ -89,15 +87,15 @@ Commit `.skraft/` and the agent's file: the lens runs at the next review, with t
 | Message | Action |
 |---|---|
 | `node deliver_review: lens threat-model (agent threat-model-lens) not found in the plugin, .claude/agents/ or .github/agents/` | Create the agent's file under the name `<name>-lens`. |
-| `mandatory node test_integrity (…) is missing; this node is mandatory and cannot be removed` | Put the node back: the fan-ins, `deliver_review` and the `test-integrity` and `architecture-boundaries` lenses are mandatory ([mandatory nodes]({{ "/en/reference/workflow-dot" | relative_url }}#mandatory-nodes)). |
+| `mandatory node test_integrity (…) is missing; this node is mandatory and cannot be removed` | Put the node back: the fan-ins, `deliver_review` and the `test-integrity` and `architecture-boundaries` lenses are mandatory ([mandatory nodes](../reference/workflow-dot.md#mandatory-nodes)). |
 | `.skraft/pipeline.skraft.dot already exists; edit it, or remove it` | Edit the existing copy. |
 | A `lenses="a,b,c"` node refused | A workflow copied before the current form: replace the node with the nodes and edges the message writes out. |
 | The lens does not run | Check that no `when` leaves it out, and that the run follows `.skraft/` (`skraft workflow check` names the file). |
 
 ## See also
 
-- [Review: fan-out, lens nodes, fan-in]({{ "/en/reference/workflow-dot" | relative_url }}#reviews)
-  and [call node]({{ "/en/reference/workflow-dot" | relative_url }}#call-node).
-- [Gates]({{ "/en/reference/gates" | relative_url }}#review-run) — a lens's answer, refutation,
+- [Review: fan-out, lens nodes, fan-in](../reference/workflow-dot.md#reviews)
+  and [call node](../reference/workflow-dot.md#call-node).
+- [Gates](../reference/gates.md#review-run) — a lens's answer, refutation,
   verdict.
-- [Adapting skraft: what each setting costs]({{ "/en/explanation/customisation-trade-offs" | relative_url }})
+- [Adapting skraft: what each setting costs](../explanation/customisation-trade-offs.md)

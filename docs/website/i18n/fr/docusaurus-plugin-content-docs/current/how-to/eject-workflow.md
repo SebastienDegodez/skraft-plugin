@@ -1,6 +1,4 @@
 ---
-layout: doc
-lang: fr
 title: "Copier et adapter le workflow"
 description: "Copier le workflow du plugin dans .skraft/ avec skraft workflow eject, l'adapter (sauter une gate verrouillée avec sa raison, changer une boucle, retirer une lentille), le valider avec check, le comparer avec diff, le mettre à jour après une montée de version ou revenir au workflow du plugin."
 persona: tech-lead
@@ -13,7 +11,7 @@ DELIVER, et la garder à jour avec le plugin.
 
 ## Prérequis
 
-- Un dépôt configuré, Git, et un terminal à la racine de la copie de travail ; `skraft` est la commande que [`skraft install`]({{ "/fr/how-to/install-on-a-host" | relative_url }}#skraft-command) met en place ; la ligne longue `node "<dossier du plugin>/engine/drivers/cli/skraft.mjs"` marche sans elle.
+- Un dépôt configuré, Git, et un terminal à la racine de la copie de travail ; `skraft` est la commande que [`skraft install`](./install-on-a-host.mdx#skraft-command) met en place ; la ligne longue `node "<dossier du plugin>/engine/drivers/cli/skraft.mjs"` marche sans elle.
 
 ## 1. Copier le workflow
 
@@ -38,9 +36,9 @@ Quelques modifications courantes, dans `.skraft/pipeline.skraft.dot` :
 | sauter une gate verrouillée (`gates`, `mutation`) | `unlock="<raison>"` sur le nœud, qui reste en place : `mutation [shape=parallelogram, gate="mutation", goal_gate=true, locked=true, unlock="aucun outil de mutation pour ce composant"]` |
 | permettre plus de reprises d'une boucle | changer `max_visits` sur l'arête retour : `design_review -> design [label="NEEDS_REWORK", max_visits=3]` |
 | retirer une lentille non obligatoire | supprimer son nœud `shape=note` et ses deux arêtes |
-| ajouter une lentille de l'équipe | [Ajouter une lentille à une revue]({{ "/fr/how-to/customise-review" | relative_url }}) |
-| ajouter une étape confiée à un agent du dépôt | [Ajouter un agent du dépôt au pipeline]({{ "/fr/how-to/add-repository-agent" | relative_url }}) |
-| changer la famille de modèle d'un agent | `model="<famille>"` sur son nœud ([Choisir les modèles des agents]({{ "/fr/how-to/choose-models" | relative_url }})) |
+| ajouter une lentille de l'équipe | [Ajouter une lentille à une revue](./customise-review.md) |
+| ajouter une étape confiée à un agent du dépôt | [Ajouter un agent du dépôt au pipeline](./add-repository-agent.md) |
+| changer la famille de modèle d'un agent | `model="<famille>"` sur son nœud ([Choisir les modèles des agents](./choose-models.md)) |
 
 La raison d'un `unlock` est reprise dans le journal et dans la pull request du run. Les fan-in
 des revues, l'appel `deliver_review` et, dans la revue, `verdict`, `test_integrity` et
@@ -48,9 +46,9 @@ des revues, l'appel `deliver_review` et, dans la revue, `verdict`, `test_integri
 
 ## 3. Valider et comparer
 
-```text
-skraft workflow check
-skraft workflow diff
+```console
+$ skraft workflow check
+$ skraft workflow diff
 ```
 
 Résultat attendu, pour une gate de mutation sautée :
@@ -101,8 +99,8 @@ Supprimez la copie (`.skraft/pipeline.skraft.dot` ou `.skraft/review.skraft.dot`
 
 ## Voir aussi
 
-- [Le workflow DOT]({{ "/fr/reference/workflow-dot" | relative_url }}) — syntaxe, règles de
-  validité, [nœuds verrouillés]({{ "/fr/reference/workflow-dot" | relative_url }}#locked-nodes) et
-  [obligatoires]({{ "/fr/reference/workflow-dot" | relative_url }}#mandatory-nodes).
-- [`skraft workflow`]({{ "/fr/reference/cli" | relative_url }}) — sorties et codes de sortie.
-- [Adapter skraft : ce que coûte chaque réglage]({{ "/fr/explanation/customisation-trade-offs" | relative_url }})
+- [Le workflow DOT](../reference/workflow-dot.md) — syntaxe, règles de
+  validité, [nœuds verrouillés](../reference/workflow-dot.md#locked-nodes) et
+  [obligatoires](../reference/workflow-dot.md#mandatory-nodes).
+- [`skraft workflow`](../reference/cli.md) — sorties et codes de sortie.
+- [Adapter skraft : ce que coûte chaque réglage](../explanation/customisation-trade-offs.md)

@@ -28,7 +28,7 @@ For each, the gates run in the order `build`, `format`, `lint`, `test`, `archite
 `coverage`, `mutation`; a component stops at its first failing gate, the others go on. When
 nothing changed:
 
-```text
+```console
 skraft checkout: gates passed — no component changed since its base; no gate to run
 ```
 
@@ -79,7 +79,7 @@ result: fail (deterministic): exited 1
 
 During a run, an `environment` failure does not stop the run: it asks
 `<node> cannot run on this machine: <reason>. Fix it, then RETRY; or ABORT the run.` Repair, then
-answer `RETRY` ([Answer a run's question](./answer-a-question.md)).
+answer `RETRY` ([Answer a run's question](./answer-a-question.mdx)).
 
 ## Troubleshooting
 

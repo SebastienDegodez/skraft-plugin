@@ -1,6 +1,4 @@
 ---
-layout: doc
-lang: fr
 title: "Zoom L3 : contract testing"
 description: "Zoom sur le contract testing en DELIVER : comment le software-engineer charge les skills de contrat que son brief nomme, la baseline WebApplicationFactory toujours présente, l'opt-in Microcks additif, et comment la contract-fidelity-lens audite le résultat."
 persona: software-engineer
@@ -8,9 +6,9 @@ persona: software-engineer
 
 # Zoom L3 : contract testing
 
-> La vue [architecture]({{ "/fr/explanation/architecture" | relative_url }}) s'arrête à
-> L2. Cette page zoome sur le détail L3 frère : comment DELIVER vérifie que **notre
-> propre** API se comporte comme son contrat l'annonce.
+La vue [architecture](../architecture.md) s'arrête à
+L2. Cette page zoome sur le détail L3 frère : comment DELIVER vérifie que **notre
+propre** API se comporte comme son contrat l'annonce.
 
 ## Pourquoi ce zoom
 
@@ -21,7 +19,7 @@ que pour un composant qui porte `"contractTesting": true` dans `skraft-config.js
 contract testing est désactivé par défaut. C'est le niveau **L3**, masqué du schéma
 principal pour le garder lisible.
 
-Contrairement au [mocking]({{ "/fr/explanation/deep-dive/mocking-microcks" | relative_url }})
+Contrairement au [mocking](./mocking-microcks.md)
 (côté consommateur, remplace ce que le service appelle), le contract testing est **côté
 fournisseur** : il vérifie notre propre API. Les deux ne se recouvrent jamais.
 
@@ -87,10 +85,10 @@ consommateur puisse se fier à sa forme sans environnement end-to-end vivant.
 
 ## Pour aller plus loin
 
-- [Architecture]({{ "/fr/explanation/architecture" | relative_url }}) — la vue L1 + L2 d'où cette page zoome.
-- [Zoom L3 : mocking (Microcks)]({{ "/fr/explanation/deep-dive/mocking-microcks" | relative_url }}) — le câblage frère, côté consommateur.
-- [DELIVER]({{ "/fr/explanation/pipeline/deliver" | relative_url }}) — la phase qui possède ce câblage.
-- [Catalogue agentique]({{ "/fr/dashboard/" | relative_url }}) — chaque agent et lentille. Un terme vous échappe ? Voir le [glossaire]({{ "/fr/reference/glossary" | relative_url }}).
+- [Architecture](../architecture.md) — la vue L1 + L2 d'où cette page zoome.
+- [Zoom L3 : mocking (Microcks)](./mocking-microcks.md) — le câblage frère, côté consommateur.
+- [DELIVER](../pipeline/deliver.md) — la phase qui possède ce câblage.
+- [Catalogue agentique](pathname:///fr/dashboard/) — chaque agent et lentille. Un terme vous échappe ? Voir le [glossaire](../../reference/glossary.md).
 
 ## Sources
 

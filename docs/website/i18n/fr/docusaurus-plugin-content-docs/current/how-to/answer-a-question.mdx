@@ -1,10 +1,11 @@
 ---
-layout: doc
-lang: fr
 title: "Répondre à une question du run"
 description: "Répondre à la question qu'un run attend (ratifier un ADR, consentir à publier, réparer la machine, débloquer un agent, traiter les mutants) depuis Claude Code, Copilot ou un terminal, et savoir ce que devient un refus."
 persona: software-engineer
 ---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
 
 # Répondre à une question du run
 
@@ -17,12 +18,12 @@ le relancer repose la même question, sans relancer d'agent.
 
 - Un run au statut `waiting` (`skraft status`, ou le panneau **Skraft**).
 - Pour la ligne de commande : un terminal interactif à la racine de la copie de travail ;
-  `skraft` est la commande que [`skraft install`]({{ "/fr/how-to/install-on-a-host" | relative_url }}#skraft-command) met en place ; la ligne longue `node "<dossier du plugin>/engine/drivers/cli/skraft.mjs"` marche sans elle.
+  `skraft` est la commande que [`skraft install`](./install-on-a-host.mdx#skraft-command) met en place ; la ligne longue `node "<dossier du plugin>/engine/drivers/cli/skraft.mjs"` marche sans elle.
 
 ## 1. Lire la question et sa clé
 
-```text
-skraft status
+```console
+$ skraft status
 ```
 
 ```text
@@ -44,11 +45,12 @@ La ligne `answer:` donne la clé (`adr-1`) et les réponses permises :
 | `mutation-plan` | `APPLY`, une consigne à vous, ou `STOP` | — |
 | `blocked` | une consigne pour l'agent, ou `STOP` | — |
 
-Ce que chaque réponse déclenche : [Questions à un humain]({{ "/fr/reference/run-journal" | relative_url }}#human-questions).
+Ce que chaque réponse déclenche : [Questions à un humain](../reference/run-journal.md#human-questions).
 
 ## 2. Répondre depuis votre hôte
 
-### Claude Code
+<Tabs groupId="host" queryString="host">
+<TabItem value="claude-code" label="Claude Code" default>
 
 1. Choisissez une option dans la boîte de dialogue que le mod ouvre (en-tête `ADR`,
    `Pull request`, `Environment`…).
@@ -59,14 +61,15 @@ Ce que chaque réponse déclenche : [Questions à un humain]({{ "/fr/reference/r
 Boîte fermée, le run attend. Répondez plus tard par un bouton du panneau **Skraft**, ou dans la
 conversation :
 
-```text
-/skraft decide adr-1 REJECTED prendre le prestataire déjà sous contrat
+```console title="Claude Code"
+> /skraft decide adr-1 REJECTED prendre le prestataire déjà sous contrat
 ```
 
 Les mots après la réponse forment la raison ; pour une question `blocked`, tous les mots après la
 clé forment la consigne. `/skraft decide` enregistre la réponse, puis reprend le run.
 
-### GitHub Copilot CLI
+</TabItem>
+<TabItem value="copilot-cli" label="GitHub Copilot CLI">
 
 1. Copilot pose la question une seule fois, dans le chat : choisissez une option, ou tapez votre
    consigne.
@@ -86,10 +89,11 @@ une fois enregistré, reprenez le run en pause depuis `/workflows`.
 
 Le canvas `skraft-pipeline` montre la question mais ne prend aucune réponse.
 
-### VS Code ou terminal
+</TabItem>
+<TabItem value="vscode" label="VS Code ou terminal">
 
-```text
-skraft decide adr-1 REJECTED --reason "prendre le prestataire déjà sous contrat"
+```console
+$ skraft decide adr-1 REJECTED --reason "prendre le prestataire déjà sous contrat"
 ```
 
 Le terminal demande `skraft decide: record REJECTED for adr-1? [y/N]` : tapez `y`. Pour une
@@ -97,10 +101,13 @@ question `blocked`, la consigne va entre guillemets : `skraft decide design-1 "u
 passerelle bancaire"`. Puis reprenez le run : `skraft-run.mjs` de nouveau (SDK Copilot), ou
 demandez à l'agent orchestrateur de relancer `skraft next`.
 
+</TabItem>
+</Tabs>
+
 ## 3. Vérifier que le run est reparti
 
-```text
-skraft status
+```console
+$ skraft status
 ```
 
 Le statut n'est plus `waiting`. `skraft report` liste chaque réponse donnée, avec la façon dont
@@ -113,7 +120,7 @@ elle a été enregistrée (`host`, `decide`, `host-confirmed`, `cli-tty`).
   `STOP` termine le run (`loop-ceiling`).
 - **`DECLINED` sur un consentement** : la réponse est écrite dans `skraft-config.json`
   (`publish.pullRequest` ou `publish.visuals`) et n'est plus redemandée ; le run continue en
-  local ([Publier la pull request d'un run]({{ "/fr/how-to/publish-pull-request" | relative_url }})).
+  local ([Publier la pull request d'un run](./publish-pull-request.md)).
 - **`review-consent`** : la réponse (`ACCEPTED` ou `DECLINED`) est gardée une fois par dépôt dans
   votre propre `~/.skraft/config.json` (`reviewComments`), pas dans `skraft-config.json` ; un
   `DECLINED` laisse le commentaire de revue hors de la pull request.
@@ -136,9 +143,9 @@ Une réponse refusée n'enregistre rien ; le run attend toujours.
 
 ## Voir aussi
 
-- [`skraft decide`]({{ "/fr/reference/cli" | relative_url }}) — arguments, clés, messages.
-- [Hôtes]({{ "/fr/reference/hosts" | relative_url }}) — boîte de dialogue, panneau,
+- [`skraft decide`](../reference/cli.md) — arguments, clés, messages.
+- [Hôtes](../reference/hosts.md) — boîte de dialogue, panneau,
   `skraft_decide` et canvas, hôte par hôte.
-- [Phases]({{ "/fr/reference/phases" | relative_url }}#human-questions) — qui pose chaque
+- [Phases](../reference/phases.md#human-questions) — qui pose chaque
   question.
-- [Reprendre ou débloquer un run]({{ "/fr/how-to/resume-a-run" | relative_url }})
+- [Reprendre ou débloquer un run](./resume-a-run.md)

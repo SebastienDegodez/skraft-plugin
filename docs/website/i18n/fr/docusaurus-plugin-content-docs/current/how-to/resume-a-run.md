@@ -1,6 +1,4 @@
 ---
-layout: doc
-lang: fr
 title: "Reprendre ou débloquer un run"
 description: "Reprendre un run interrompu sans relancer l'agent déjà fini, changer de pipeline actif, et lever les refus et blocages les plus courants."
 persona: software-engineer
@@ -14,15 +12,15 @@ persona: software-engineer
 
 - Un run déjà démarré dans cette copie de travail (un slug, son journal
   `.copilot-tracking/skraft-plans/<slug>/events.jsonl`).
-- Pour la ligne de commande, `skraft` est la commande que [`skraft install`]({{ "/fr/how-to/install-on-a-host" | relative_url }}#skraft-command) met en place ; la ligne longue `node "<dossier du plugin>/engine/drivers/cli/skraft.mjs"` marche sans elle. Lancez-la depuis la racine de la copie de travail.
+- Pour la ligne de commande, `skraft` est la commande que [`skraft install`](./install-on-a-host.mdx#skraft-command) met en place ; la ligne longue `node "<dossier du plugin>/engine/drivers/cli/skraft.mjs"` marche sans elle. Lancez-la depuis la racine de la copie de travail.
 
 ## 1. Voir où en est le run
 
-```text
-skraft status
+```console
+$ skraft status
 ```
 
-```text
+```console
 skraft checkout: blocked
 RESEARCH  closed
 DESIGN  open
@@ -32,7 +30,7 @@ solution-architect stopped without finishing: …
 
 La dernière ligne donne la raison. Dans Claude Code, `/skraft` montre la même vue dans le
 panneau **Skraft**. Si le statut est `waiting`, le run attend une réponse :
-[Répondre à une question du run]({{ "/fr/how-to/answer-a-question" | relative_url }}).
+[Répondre à une question du run](./answer-a-question.mdx).
 
 ## 2. Reprendre le run
 
@@ -53,8 +51,8 @@ montre ensuite la phase reprise.
 
 Le moteur ne change jamais de slug de lui-même. Faites un init explicite :
 
-```text
-skraft init paiement-carte
+```console
+$ skraft init paiement-carte
 ```
 
 Réponse : `paiement-carte is the active pipeline`. La ligne de commande ne lance aucun agent :
@@ -76,17 +74,17 @@ Le code s'affiche dans la notification de fin du mod Claude Code
 | `journal-tampered` | `events.jsonl` a été modifié à la main : restaurer le fichier (Git, sauvegarde) ou démarrer un nouveau slug. Ne pas réparer la ligne. |
 | `journal-unverifiable` | Le run vient d'une autre machine : `skraft journal adopt`, puis reprendre. |
 | `no-active-pipeline`, `not-initialised` | `skraft init <slug>` ou `/skraft <slug>`. |
-| `config-invalid` | Corriger chaque erreur listée ([Configurer les composants]({{ "/fr/how-to/configure-components" | relative_url }})), puis reprendre. |
+| `config-invalid` | Corriger chaque erreur listée ([Configurer les composants](./configure-components.md)), puis reprendre. |
 | `base-unresolved` | Écrire `baseBranch` dans `skraft-config.json` ou passer `--base <ref>` au premier init. |
 | `missing-outputs`, `loop-ceiling`, `environment`, `stopped` | Définitif pour ce slug : lire la raison dans le journal, corriger la cause, démarrer un nouveau slug. |
 
 Tous les codes, leur message et leur action :
-[Statuts et codes]({{ "/fr/reference/run-journal" | relative_url }}#statuses-and-codes).
+[Statuts et codes](../reference/run-journal.md#statuses-and-codes).
 
 ## Voir aussi
 
-- [Répondre à une question du run]({{ "/fr/how-to/answer-a-question" | relative_url }})
-- [Hôtes]({{ "/fr/reference/hosts" | relative_url }}#at-a-glance) — démarrer, répondre et suivre
+- [Répondre à une question du run](./answer-a-question.mdx)
+- [Hôtes](../reference/hosts.md#at-a-glance) — démarrer, répondre et suivre
   sur chaque hôte.
-- [Dossier de suivi et journal]({{ "/fr/reference/run-journal" | relative_url }})
-- [État et reprise]({{ "/fr/explanation/event-journal" | relative_url }}) — pourquoi le journal est chaîné.
+- [Dossier de suivi et journal](../reference/run-journal.md)
+- [État et reprise](../explanation/event-journal.md) — pourquoi le journal est chaîné.

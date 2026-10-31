@@ -1,6 +1,4 @@
 ---
-layout: doc
-lang: fr
 title: "Outillage d'évaluation"
 description: "Les fichiers, le lanceur, ses variables, les états de verdict, le commentaire de pull request, les jobs de CI et le tableau de bord de l'évaluation des skills et des agents."
 persona: tech-lead
@@ -8,14 +6,14 @@ persona: tech-lead
 
 # Outillage d'évaluation
 
-> Ce que contient l'outillage qui évalue les skills et les agents de skraft avec Vally 0.12.0 :
-> fichiers, lanceur, états de verdict, commentaire de pull request, CI et tableau de bord.
+Ce que contient l'outillage qui évalue les skills et les agents de skraft avec Vally 0.12.0 :
+fichiers, lanceur, états de verdict, commentaire de pull request, CI et tableau de bord.
 
 Pourquoi trois couches de preuve et une comparaison appariée :
-[Stratégie d'évaluation]({{ "/fr/explanation/evaluation-strategy" | relative_url }}). Les étapes :
-[Évaluer un skill]({{ "/fr/how-to/evaluate-a-skill" | relative_url }}). La lecture d'une ligne de
+[Stratégie d'évaluation](../explanation/evaluation-strategy.md). Les étapes :
+[Évaluer un skill](../how-to/evaluate-a-skill.md). La lecture d'une ligne de
 verdict, chiffre par chiffre :
-[Lire un verdict d'évaluation]({{ "/fr/explanation/deep-dive/reading-a-verdict" | relative_url }}).
+[Lire un verdict d'évaluation](../explanation/deep-dive/reading-a-verdict.md).
 
 ## Fichiers
 
@@ -40,12 +38,12 @@ Ce que l'outillage écrit n'est jamais commité : `eval-results/`, `eval-results
 
 ## Le lanceur
 
-```text
-./eng/run-vally-evals.sh                         tous les skills et toutes les suites d'agent
-./eng/run-vally-evals.sh <skill>                 un skill
-./eng/run-vally-evals.sh agents                  toutes les suites d'agent
-./eng/run-vally-evals.sh agents <suite>          une suite d'agent
-```
+| Commande | Lance |
+|---|---|
+| `./eng/run-vally-evals.sh` | tous les skills et toutes les suites d'agent |
+| `./eng/run-vally-evals.sh <skill>` | un skill |
+| `./eng/run-vally-evals.sh agents` | toutes les suites d'agent |
+| `./eng/run-vally-evals.sh agents <suite>` | une suite d'agent |
 
 Un skill est joué deux fois : bras témoin avec un `--skill-dir` vide, bras « skill » avec le
 skill seul (plus les compagnons de `eval.skill-dir.yaml`, copiés et non liés). Une suite d'agent
@@ -82,7 +80,7 @@ version), et `COPILOT_GITHUB_TOKEN` (PAT à grain fin avec **Account › Copilot
   jamais `scoring.weights`.
 - Un grader `prompt` porte `scoring: scale_1_10`.
 
-## README d'une évaluation {#evaluation-readme}
+## README d'une évaluation <!-- #evaluation-readme -->
 
 `tests/skills/<skill>/README.md` garde le raisonnement qu'un `eval.yaml` ne peut pas porter :
 
@@ -181,17 +179,17 @@ Chaque essai enregistre sa trajectoire ; le rejeu AGENTVIZ est servi sous `/dash
 témoin et skill côte à côte. Les sessions planifiées sont gardées 14 jours ; celles d'une pull
 request disparaissent à sa fermeture, ses verdicts restent.
 
-```text
-npm run dashboard:preview                   http://127.0.0.1:4173/dashboard/
-npm run dashboard:preview -- --port 8080    autre port
-npm run dashboard:preview -- --no-serve     données seulement
-```
+| Commande | Effet |
+|---|---|
+| `npm run dashboard:preview` | `http://127.0.0.1:4173/dashboard/` |
+| `npm run dashboard:preview -- --port 8080` | autre port |
+| `npm run dashboard:preview -- --no-serve` | données seulement |
 
 Sans verdict, le tableau de bord montre le catalogue complet et marque le reste non évalué.
 
 ## Voir aussi
 
-- [Évaluer un skill]({{ "/fr/how-to/evaluate-a-skill" | relative_url }})
-- [Stratégie d'évaluation]({{ "/fr/explanation/evaluation-strategy" | relative_url }})
-- [Lire un verdict d'évaluation]({{ "/fr/explanation/deep-dive/reading-a-verdict" | relative_url }})
-- [Tableau de bord]({{ "/dashboard/" | relative_url }})
+- [Évaluer un skill](../how-to/evaluate-a-skill.md)
+- [Stratégie d'évaluation](../explanation/evaluation-strategy.md)
+- [Lire un verdict d'évaluation](../explanation/deep-dive/reading-a-verdict.md)
+- [Tableau de bord](pathname:///dashboard/)

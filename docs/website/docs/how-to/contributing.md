@@ -1,6 +1,4 @@
 ---
-layout: doc
-lang: en
 title: "Propose a pattern or fix the documentation"
 description: "Propose a new pattern the genesis way (problem, solution, published reference), open the pull request that carries it, read the evaluation verdict, and fix a handbook page in FR and EN."
 persona: tech-lead
@@ -11,11 +9,13 @@ persona: tech-lead
 **Goal**: bring a pattern into skraft, or fix a handbook page, through a pull request the team can
 accept.
 
-> **Genesis.** A pattern enters skraft only with three things: an observed problem, a solution
-> that worked in at least one real context, and a published reference that argues for the same
-> approach. Without them it is a preference, which everyone works around as soon as the context
-> changes. How skraft then makes each practice enforceable:
-> [Software craftsmanship]({{ "/en/explanation/software-craftsmanship" | relative_url }}).
+:::info[Genesis]
+A pattern enters skraft only with three things: an observed problem, a solution
+that worked in at least one real context, and a published reference that argues for the same
+approach. Without them it is a preference, which everyone works around as soon as the context
+changes. How skraft then makes each practice enforceable:
+[Software craftsmanship](../explanation/software-craftsmanship.md).
+:::
 
 ## Prerequisites
 
@@ -34,12 +34,12 @@ accept.
 4. **Write the pattern**: the `SKILL.md` under `plugins/<plugin>/skills/<skill>/`, or the agent
    descriptor in both agent trees, then `npm run plugin:sync` and `npm run plugin:check`.
 5. **Write its evaluation spec**:
-   [Evaluate a skill]({{ "/en/how-to/evaluate-a-skill" | relative_url }}).
+   [Evaluate a skill](./evaluate-a-skill.md).
 6. **Open the pull request**, with the problem, the solution and the reference in its
    description.
 7. **Read the verdict** CI posts as a comment (`9W/4T/2L (p=0.065)`): only a `regression` blocks
    the merge;
-   [Read an evaluation verdict]({{ "/en/explanation/deep-dive/reading-a-verdict" | relative_url }})
+   [Read an evaluation verdict](../explanation/deep-dive/reading-a-verdict.md)
    says what to do with the others.
 
 A figure put forward without a source is rephrased qualitatively and suffixed `(estimated)`.
@@ -51,8 +51,8 @@ A figure put forward without a source is rephrased qualitatively and suffixed `(
 2. For a new page, declare it in `docs/site/_data/book.yml`, in FR and EN.
 3. Check the citations:
 
-   ```bash
-   npm run lint:citations
+   ```console
+   $ npm run lint:citations
    ```
 
    Expected result: `All citations valid.`
@@ -60,6 +60,6 @@ A figure put forward without a source is rephrased qualitatively and suffixed `(
 
 ## See also
 
-- [Patterns]({{ "/en/reference/patterns" | relative_url }}) — each pattern and its reference.
-- [Citations]({{ "/en/reference/citations" | relative_url }})
-- [Evaluate a skill]({{ "/en/how-to/evaluate-a-skill" | relative_url }})
+- [Patterns](../reference/patterns.md) — each pattern and its reference.
+- [Citations](../reference/citations.mdx)
+- [Evaluate a skill](./evaluate-a-skill.md)

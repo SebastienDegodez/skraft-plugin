@@ -1,6 +1,4 @@
 ---
-layout: doc
-lang: fr
 title: "Proposer un pattern ou corriger la documentation"
 description: "Proposer un nouveau pattern selon genesis (problème, solution, référence publiée), ouvrir la pull request qui l'accompagne, lire le verdict d'évaluation, et corriger une page du handbook en FR et en EN."
 persona: tech-lead
@@ -11,11 +9,13 @@ persona: tech-lead
 **But** : faire entrer un pattern dans skraft, ou corriger une page du handbook, par une pull
 request que l'équipe peut accepter.
 
-> **Genesis.** Un pattern n'entre dans skraft qu'avec trois éléments : un problème observé, une
-> solution qui a marché dans au moins un contexte réel, et une référence publiée qui défend la
-> même approche. Sans eux, c'est une préférence, que chacun contourne dès que le contexte
-> change. Comment skraft rend ensuite chaque pratique opposable :
-> [Software craftsmanship]({{ "/fr/explanation/software-craftsmanship" | relative_url }}).
+:::info[Genesis]
+Un pattern n'entre dans skraft qu'avec trois éléments : un problème observé, une
+solution qui a marché dans au moins un contexte réel, et une référence publiée qui défend la
+même approche. Sans eux, c'est une préférence, que chacun contourne dès que le contexte
+change. Comment skraft rend ensuite chaque pratique opposable :
+[Software craftsmanship](../explanation/software-craftsmanship.md).
+:::
 
 ## Prérequis
 
@@ -35,12 +35,12 @@ request que l'équipe peut accepter.
    descripteur d'agent dans les deux arbres d'agents, puis `npm run plugin:sync` et
    `npm run plugin:check`.
 5. **Écrivez sa spec d'évaluation** :
-   [Évaluer un skill]({{ "/fr/how-to/evaluate-a-skill" | relative_url }}).
+   [Évaluer un skill](./evaluate-a-skill.md).
 6. **Ouvrez la pull request**, avec dans sa description le problème, la solution et la
    référence.
 7. **Lisez le verdict** que la CI poste en commentaire (`9V/4E/2D (p=0,065)`) : seule une
    `regression` bloque la fusion ;
-   [Lire un verdict d'évaluation]({{ "/fr/explanation/deep-dive/reading-a-verdict" | relative_url }})
+   [Lire un verdict d'évaluation](../explanation/deep-dive/reading-a-verdict.md)
    dit quoi faire des autres.
 
 Un chiffre avancé sans source se reformule qualitativement et se suffixe `(estimé)`.
@@ -52,8 +52,8 @@ Un chiffre avancé sans source se reformule qualitativement et se suffixe `(esti
 2. Pour une nouvelle page, déclarez-la dans `docs/site/_data/book.yml`, en FR et en EN.
 3. Vérifiez les citations :
 
-   ```bash
-   npm run lint:citations
+   ```console
+   $ npm run lint:citations
    ```
 
    Résultat attendu : `All citations valid.`
@@ -61,6 +61,6 @@ Un chiffre avancé sans source se reformule qualitativement et se suffixe `(esti
 
 ## Voir aussi
 
-- [Patterns]({{ "/fr/reference/patterns" | relative_url }}) — chaque pattern et sa référence.
-- [Citations]({{ "/fr/reference/citations" | relative_url }})
-- [Évaluer un skill]({{ "/fr/how-to/evaluate-a-skill" | relative_url }})
+- [Patterns](../reference/patterns.md) — chaque pattern et sa référence.
+- [Citations](../reference/citations.mdx)
+- [Évaluer un skill](./evaluate-a-skill.md)

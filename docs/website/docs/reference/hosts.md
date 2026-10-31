@@ -1,6 +1,4 @@
 ---
-layout: doc
-lang: en
 title: "Hosts"
 description: "Claude Code, Copilot CLI and VS Code: prerequisites, install, driver, commands, human questions, run tracking, and what each host can or cannot do."
 persona: software-engineer
@@ -8,22 +6,22 @@ persona: software-engineer
 
 # Hosts
 
-> skraft runs under three hosts, Claude Code, Copilot CLI and VS Code, each driven by a driver that carries out what the same engine asks.
+skraft runs under three hosts, Claude Code, Copilot CLI and VS Code, each driven by a driver that carries out what the same engine asks.
 
 Why an engine and drivers, and the Copilot driver contract:
-[Architecture]({{ "/en/explanation/architecture" | relative_url }}).
+[Architecture](../explanation/architecture.md).
 
-## Prerequisites {#prerequisites}
+## Prerequisites <!-- #prerequisites -->
 
 | Tool | Version | For |
 | --- | --- | --- |
 | Node | 22 or later | the engine, the `skraft` command line, the Copilot extension; `skraft doctor` checks it |
 | Git | — | each component's base, commits, replays of red commits |
-| `gh` | signed in to the repository's host | only to read the story's issue (`--issue`), open the pull request, comment on the issue, `skraft review --pr`; on `github` the host's GitHub MCP server, when connected, serves these first and `gh` is the fallback (the `skraft` CLI and `skraft next` always use `gh`); see [Forge]({{ "/en/reference/skraft-config" | relative_url }}#forge) |
-| `az` | signed in to the organization, with its `azure-devops` extension | on Azure DevOps only, to read the story's work item (`--issue`), keep the run's comment on it, open the pull request, and review a pull request (`skraft review --pr`: read it, keep the review's thread); the host's Azure DevOps MCP server (`ado`), when connected, serves the work item, its comment and the review of a pull request first and `az` is the fallback (the `skraft` CLI and `skraft next` always use `az`); see [Forge]({{ "/en/reference/skraft-config" | relative_url }}#azure-devops-mcp-server-first-az-as-fallback) |
+| `gh` | signed in to the repository's host | only to read the story's issue (`--issue`), open the pull request, comment on the issue, `skraft review --pr`; on `github` the host's GitHub MCP server, when connected, serves these first and `gh` is the fallback (the `skraft` CLI and `skraft next` always use `gh`); see [Forge](./skraft-config.md#forge) |
+| `az` | signed in to the organization, with its `azure-devops` extension | on Azure DevOps only, to read the story's work item (`--issue`), keep the run's comment on it, open the pull request, and review a pull request (`skraft review --pr`: read it, keep the review's thread); the host's Azure DevOps MCP server (`ado`), when connected, serves the work item, its comment and the review of a pull request first and `az` is the fallback (the `skraft` CLI and `skraft next` always use `az`); see [Forge](./skraft-config.md#azure-devops-mcp-server-first-az-as-fallback) |
 | Copilot CLI | — | Copilot CLI; under VS Code, the SDK driver (`skraft-run.mjs`) starts it headless |
 
-## Install {#install}
+## Install <!-- #install -->
 
 | Host | Install |
 | --- | --- |
@@ -34,7 +32,7 @@ Why an engine and drivers, and the Copilot driver contract:
 The `skraft-backlog` plugin (DISCOVER, DISCUSS) installs separately, from the same marketplace;
 it shares no runtime code with `skraft`. So does the `skraft-brownfield` plugin.
 
-## Drivers {#drivers}
+## Drivers <!-- #drivers -->
 
 A driver carries out what the engine asks; it decides neither the order, nor the verdict, nor
 the progress. It alone starts agents (depth 1).
@@ -54,7 +52,7 @@ Use cases each driver calls:
 | Copilot SDK | none directly: it runs the `skraft-pipeline` workflow in the Copilot CLI |
 | command line | `Init`, `Observe`, `Decide`, `RunGate`, `Doctor`, `ConfigureComponents`, `WorkflowCommands`, `Publish`, `AdoptJournal`, `Migrate`, `ReviewPullRequest`, and `RunPipeline` through `next` / `record` |
 
-## Start, answer, follow {#at-a-glance}
+## Start, answer, follow <!-- #at-a-glance -->
 
 | Host | Start or resume a run | Answer a question | Follow the run |
 | --- | --- | --- | --- |
@@ -71,7 +69,7 @@ The `skraft-orchestrator` agent only launches: under Claude Code its one tool is
 VS Code it conducts the `skraft next` / `skraft record` loop and writes only the reply files it
 lists.
 
-## Claude Code {#claude-code}
+## Claude Code <!-- #claude-code -->
 
 The mod (`hooks/skraft-mod.tsx`, the one module `hooks/hooks.json` declares) calls the engine
 without Node or `import()`: it runs Git, the gates and the replays through `$.process.run`.
@@ -140,7 +138,7 @@ and returns at once; the run goes on in the background.
 | `base` | string | git ref; only for a new slug |
 | `fromArtifacts` | boolean | start in DESIGN from the DISCUSS stories, as `--from-artifacts` |
 
-### Model and cost {#claude-code-models}
+### Model and cost <!-- #claude-code-models -->
 
 The first Claude Code model the configuration gives the agent's family goes
 to `$.agent.spawn` as `model`; without one, the agent file's model decides. The effort is not
@@ -148,13 +146,13 @@ passed (`$.agent.spawn` takes no `effort`): the agent file's own applies; `skraf
 shows the effort assigned. The mod journals the session's cost before and after each agent, in
 USD, approximate.
 
-## Copilot CLI {#copilot-cli}
+## Copilot CLI <!-- #copilot-cli -->
 
 The `com.github.copilot/extensions/skraft-pipeline/` extension registers the `skraft-pipeline`
 and `skraft-review` workflows, the `skraft_decide` tool and the `skraft-pipeline` canvas. The
 working directory is the session's, read again when a run starts and on each tool call.
 
-### `/skraft` command {#skraft-command}
+### `/skraft` command <!-- #skraft-command -->
 
 The `skraft` plugin ships `com.github.copilot/commands/skraft.md`, which gives Copilot the syntax of
 `/skraft` in Claude Code. Claude Code keeps the mod's `/skraft`: the plugin has no `commands/` folder
@@ -181,10 +179,10 @@ no agent, and says what to type.
 
 Examples, the same as in Claude Code:
 
-```text
-/skraft paiement #42 Paiement par carte
-/skraft paiement --base develop
-/skraft paiement --from-artifacts
+```console title="Claude Code"
+> /skraft paiement #42 Paiement par carte
+> /skraft paiement --base develop
+> /skraft paiement --from-artifacts
 ```
 
 Two intended differences from Claude Code. `decide` records nothing from the typed words: under
@@ -202,7 +200,7 @@ nothing moves to development by itself.
 There is no `story` or `resume` subcommand, and no `--issue` or `--title` option in the chat. A typed `#42` alone is passed as a slug and the engine
 refuses it.
 
-### `skraft-pipeline` workflow {#skraft-pipeline}
+### `skraft-pipeline` workflow <!-- #skraft-pipeline -->
 
 The `skraft-pipeline` dynamic workflow starts agents through `ctx.agent`.
 
@@ -236,7 +234,7 @@ Waiting for you — <question>
 adr-1 was not answered: <why>. Resume this run to be asked again, ask Copilot in the chat to put the question to you, or type skraft decide adr-1 RATIFIED|REJECTED in a terminal and resume this run.
 ```
 
-### `skraft-pipeline` canvas {#canvas}
+### `skraft-pipeline` canvas <!-- #canvas -->
 
 | Rule | Detail |
 | --- | --- |
@@ -255,7 +253,7 @@ The page speaks the browser's language, French or English. The sentences the dri
 
 Before the first phase of a working copy, the workflow opens the canvas on its Configuration tab and puts the `configuration` question in the chat: *Start this run with the configuration of this working copy?* `START` goes on and is kept in `skraft-config.local.json` (`configurationConfirmed`), so later runs start without asking; `STOP` starts nothing. Pass `configure: true` to the workflow to be asked again. The CLI and the Claude Code mod never ask it.
 
-### `skraft_decide` tool {#skraft-decide}
+### `skraft_decide` tool <!-- #skraft-decide -->
 
 No argument; any key is refused. It puts the question the active
 pipeline waits on to the person once, in Copilot's dialog, as the run does, and records what
@@ -267,7 +265,7 @@ answers `Recorded: <slug>: <key> answered <answer>; run the pipeline again to go
 paused skraft-pipeline run (/workflows).`, or `Refused: <reason>; nothing was recorded.`
 Resuming the run acts on the answer; agents already done are not run again.
 
-### `skraft-review` workflow {#skraft-review}
+### `skraft-review` workflow <!-- #skraft-review -->
 
 Arguments { `pr`, `publish`, `agentIds` }. It reviews one pull request as
 `skraft review --pr` does, its lenses through `ctx.agent`. `pr` is a positive integer; any other
@@ -278,7 +276,7 @@ dialog nothing is recorded or posted, and the log points to `skraft review --pr 
 in a terminal.
 It returns the review's outcome and logs `skraft review #<number>: <status> (<code>): <reason>`.
 
-### Model and cost {#copilot-models}
+### Model and cost <!-- #copilot-models -->
 
 A dispatch carries the Copilot models the configuration gives the agent's
 family (the preferred first) in the `model` option, and its effort in `reasoningEffort`. Copilot
@@ -286,14 +284,14 @@ refuses the effort: the same call goes again without it. Copilot refuses the mod
 in the list, then the session's model. With no model configured, the agent runs on the session's
 model. No cost is journaled: Copilot counts credits.
 
-## VS Code {#vs-code}
+## VS Code <!-- #vs-code -->
 
 `skraft doctor` says which of the two drivers applies (its `vscode` check).
 
-### Copilot SDK driver {#copilot-sdk}
+### Copilot SDK driver <!-- #copilot-sdk -->
 
-```
-node "<plugin folder>/engine/drivers/copilot-sdk/skraft-run.mjs" [<slug>] [--issue <number>] [--title <text>] [--base <ref>] [--from-artifacts] [--allow-all-tools]
+```console
+$ node "<plugin folder>/engine/drivers/copilot-sdk/skraft-run.mjs" [<slug>] [--issue <number>] [--title <text>] [--base <ref>] [--from-artifacts] [--allow-all-tools]
 ```
 
 | Rule | Detail |
@@ -305,7 +303,7 @@ node "<plugin folder>/engine/drivers/copilot-sdk/skraft-run.mjs" [<slug>] [--iss
 | Exit code | 0 run done or waiting; 1 otherwise; 2 malformed line |
 | Failures | each SDK call has a timeout (`rpc-timeout`), following the run a deadline (`run-too-long`); Ctrl-C stops the follow; no SDK text is passed on |
 
-### `next` / `record` agent loop {#agent-loop}
+### `next` / `record` agent loop <!-- #agent-loop -->
 
 Without the Copilot SDK, the `skraft-orchestrator` agent conducts the command line's loop:
 
@@ -320,9 +318,9 @@ Without the Copilot SDK, the `skraft-orchestrator` agent conducts the command li
 
 Lenses run one after the other. The journal is the Copilot workflow's, without the models and
 costs the loop cannot know. Synopsis, outputs and codes:
-[`skraft next` and `skraft record`]({{ "/en/reference/cli" | relative_url }}).
+[`skraft next` and `skraft record`](./cli.md).
 
-## What each host can do {#capabilities}
+## What each host can do <!-- #capabilities -->
 
 | Capability | Claude Code | Copilot CLI | VS Code + SDK | VS Code, `next` / `record` loop |
 | --- | --- | --- | --- | --- |
@@ -337,12 +335,12 @@ costs the loop cannot know. Synopsis, outputs and codes:
 | `/skraft` command available | yes (the mod) | yes, measured as `/skraft` in the SDK registry (CLI 1.0.105; menu not read) | wired, not measured under VS Code | wired, not measured under VS Code |
 | Engineering run available | yes | yes | wired, tested on a simulated host, not yet run for real (#222) | wired, tested on a simulated host, not yet run for real (#222) |
 
-## See also {#see-also}
+## See also <!-- #see-also -->
 
-- [The skraft command line]({{ "/en/reference/cli" | relative_url }})
-- [Tracking folder and journal]({{ "/en/reference/run-journal" | relative_url }})
-- [Choose the agents' models]({{ "/en/how-to/choose-models" | relative_url }}) — models and effort per host
-- [Architecture]({{ "/en/explanation/architecture" | relative_url }})
+- [The skraft command line](./cli.md)
+- [Tracking folder and journal](./run-journal.md)
+- [Choose the agents' models](../how-to/choose-models.md) — models and effort per host
+- [Architecture](../explanation/architecture.md)
 
 Terms to know: **host**, **host driver**, **engine**, **slug** — see the
-[glossary]({{ "/en/reference/glossary" | relative_url }}).
+[glossary](./glossary.md).

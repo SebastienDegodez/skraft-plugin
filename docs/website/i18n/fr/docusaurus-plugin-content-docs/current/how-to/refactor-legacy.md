@@ -1,27 +1,24 @@
 ---
-layout: doc
-lang: fr
 title: "Refactorer un code existant sous filet"
 description: "Lancer brownfield-refactorer comme agent principal, choisir Mikado ou Strangler Fig, suivre le graphe ou le plan de tranches, et répondre aux signaux ADVANCE, EXPAND, DONE et BLOCKED, le filet vert à chaque commit."
 persona: software-engineer
 ---
-{% assign cites = "/fr/reference/citations" | relative_url %}
 
 # Refactorer un code existant sous filet
 
 **But** : modifier en place ou remplacer une partie d'un code existant, une feuille ou une tranche
 à la fois, avec un commit vert à chaque pas.
 
-Pour comprendre les deux méthodes : [Parcours Brownfield]({{ "/fr/explanation/brownfield" | relative_url }}),
-[Ellnestam & Brolund, 2014]({{ cites }}#cite-ellnestam-brolund-mikado-2014) (Mikado),
-[Fowler, 2004]({{ cites }}#cite-fowler-strangler-2004) (Strangler Fig).
+Pour comprendre les deux méthodes : [Parcours Brownfield](../explanation/brownfield.md),
+[Ellnestam & Brolund, 2014](../reference/citations.mdx#cite-ellnestam-brolund-mikado-2014) (Mikado),
+[Fowler, 2004](../reference/citations.mdx#cite-fowler-strangler-2004) (Strangler Fig).
 
 ## Prérequis
 
 - Les plugins `skraft` et `skraft-brownfield` installés.
 - Un filet vert sur le code visé : le rapport de `brownfield-harness-builder` avec le verdict
   `PASS`, ou `CONCERNS` dont vous acceptez les trous
-  ([Poser un filet de caractérisation]({{ "/fr/how-to/characterize-legacy" | relative_url }})).
+  ([Poser un filet de caractérisation](./characterize-legacy.md)).
 - Les commandes `build` et `test` du composant dans `skraft-config.json`, sinon celles que nomme
   le rapport du harnais.
 - Une branche de travail propre.
@@ -73,8 +70,8 @@ son signal :
 `refactor(mikado-graph): <id> done`. Pour vérifier le graphe vous-même, lancez le validateur du
 skill `mikado-method` (`<skill>` est son dossier dans le plugin installé) :
 
-```text
-sh "<skill>/scripts/validate-mikado.sh" .copilot-tracking/skraft-plans/<slug>/refactoring/<date>/mikado-<slug>.md
+```console
+$ sh "<skill>/scripts/validate-mikado.sh" .copilot-tracking/skraft-plans/<slug>/refactoring/<date>/mikado-<slug>.md
 powershell -NoProfile -ExecutionPolicy Bypass -File "<skill>/scripts/validate-mikado.ps1" <graphe>
 ```
 
@@ -104,7 +101,7 @@ revient vers vous en `BLOCKED` : décidez si elle est voulue.
 
 ## Voir aussi
 
-- [Poser un filet de caractérisation]({{ "/fr/how-to/characterize-legacy" | relative_url }})
-- [Parcours Brownfield]({{ "/fr/explanation/brownfield" | relative_url }}) — pourquoi le graphe
+- [Poser un filet de caractérisation](./characterize-legacy.md)
+- [Parcours Brownfield](../explanation/brownfield.md) — pourquoi le graphe
   reste piloté par l'humain.
-- [Le catalogue des agents et skills]({{ "/fr/dashboard/" | relative_url }}#agent-brownfield-refactorer)
+- [Le catalogue des agents et skills](pathname:///fr/dashboard/#agent-brownfield-refactorer)

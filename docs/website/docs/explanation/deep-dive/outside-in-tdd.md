@@ -1,14 +1,12 @@
 ---
-layout: doc
-lang: en
 title: "Outside-In TDD — why and how"
 description: "The Outside-In TDD deep dive: double loop, boundary-to-boundary, a concrete example of the RED/GREEN cycle in SKRAFT."
 ---
 
 # Outside-In TDD — why and how
 
-> We grow software from the outside in: an acceptance test guides the unit tests,
-> which guide the implementation. The design *emerges* — it is not guessed up front.
+We grow software from the outside in: an acceptance test guides the unit tests,
+which guide the implementation. The design *emerges* — it is not guessed up front.
 
 ## The problem (concrete context)
 
@@ -70,5 +68,5 @@ until the slice is complete, which keeps the focus on business behaviour.
 - Beck, K. *Test-Driven Development by Example*, 2003.
 - Freeman, S. & Pryce, N. *Growing Object-Oriented Software, Guided by Tests*, 2009.
 
-Going further: [Walking Skeleton](walking-skeleton.html),
-[the DELIVER phase]({{ "/en/explanation/pipeline/deliver" | relative_url }}), [the glossary]({{ "/en/reference/glossary" | relative_url }}).
+Going further: [Walking Skeleton](walking-skeleton.md),
+[the DELIVER phase](../pipeline/deliver.md), [the glossary](../../reference/glossary.md).

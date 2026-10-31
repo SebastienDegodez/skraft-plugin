@@ -1,17 +1,14 @@
 ---
-layout: doc
-lang: en
 title: "Review before review — why and how"
 description: "SKRAFT's core argument: independent lenses attack the work, a refuter checks their findings and the engine computes the verdict, so that human review receives work already filtered."
 persona: reviewer
 ---
-{% assign cites = "/en/reference/citations" | relative_url %}
 
 # Review before review — why and how
 
-> Before a human reads it, independent lenses attack the work from several angles and the engine
-> computes a verdict from what they find. Human review receives an already-filtered artifact —
-> not a draft.
+Before a human reads it, independent lenses attack the work from several angles and the engine
+computes a verdict from what they find. Human review receives an already-filtered artifact —
+not a draft.
 
 ## The problem: human review absorbs too much noise
 
@@ -30,19 +27,19 @@ Two well-established observations ground this approach.
 
 First, peer review remains one of the most effective quality practices, and several independent
 eyes, guided by written criteria, find what a single reader misses
-([Wiegers, 2002]({{ cites }}#cite-wiegers-peer-reviews-2002)). The earlier a defect is found, the
+([Wiegers, 2002](../../reference/citations.mdx#cite-wiegers-peer-reviews-2002)). The earlier a defect is found, the
 less it costs: assisted review moves detection upstream, before the human even looks.
 
 Second, speed and stability are not a trade-off: the highest-performing teams ship often and
 break rarely, because they automate checks instead of deferring them to a late manual review
-([Forsgren et al., 2018]({{ cites }}#cite-forsgren-accelerate-2018)).
+([Forsgren et al., 2018](../../reference/citations.mdx#cite-forsgren-accelerate-2018)).
 
 ## How SKRAFT applies it
 
 Each reviewed phase has its own **review**: lenses that did not produce the work, each in a fresh
 context, each from a single angle. They read and modify nothing: the producing agent writes, the
 lenses only ask — Meyer's command-query separation
-([Meyer, 1997]({{ cites }}#cite-meyer-oosc-1997)) applied to roles.
+([Meyer, 1997](../../reference/citations.mdx#cite-meyer-oosc-1997)) applied to roles.
 
 ```mermaid
 flowchart TB
@@ -68,7 +65,7 @@ lone voice is neither set aside without a reason nor followed without a check. R
 before it reaches a human, and the verdict keeps its findings: human review sees **why** the work
 passed.
 
-The exact verdict computation: [Gates]({{ "/en/reference/gates" | relative_url }}#review-run).
+The exact verdict computation: [Gates](../../reference/gates.md#review-run).
 
 ## The DELIVER lenses in practice
 
@@ -84,12 +81,14 @@ different angle.
 The review is not fixed: when the change touches a mock or a contract the `software-engineer`
 wired, the matching fidelity lens (`mock-fidelity` or `contract-fidelity`) joins the review, and
 its findings go through the same refuter and the same verdict. See
-[Mocking with Microcks]({{ "/en/explanation/deep-dive/mocking-microcks" | relative_url }}) and
-[Contract testing]({{ "/en/explanation/deep-dive/contract-testing" | relative_url }}).
+[Mocking with Microcks](./mocking-microcks.md) and
+[Contract testing](./contract-testing.md).
 
-> **Jargon** — *Domain / Application / Infrastructure / API*: the Clean Architecture layers; each
-> has a precise responsibility and depends only on inner layers
-> ([Clean Architecture]({{ "/en/explanation/clean-architecture" | relative_url }})).
+:::note[Jargon]
+*Domain / Application / Infrastructure / API*: the Clean Architecture layers; each
+has a precise responsibility and depends only on inner layers
+([Clean Architecture](../clean-architecture.md)).
+:::
 
 ## What changes, and what does not
 
@@ -119,13 +118,13 @@ honest, not the facts.
 
 ## Going further
 
-- [The team and handoffs]({{ "/en/explanation/pipeline/team" | relative_url }}) — who produces, who judges.
-- [Reference: gates and verdict]({{ "/en/reference/gates" | relative_url }}).
-- [The lens catalogue]({{ "/en/dashboard/" | relative_url }}).
-- [For executives]({{ "/en/explanation/for-executives" | relative_url }}) — the effect on lead time.
+- [The team and handoffs](../pipeline/team.md) — who produces, who judges.
+- [Reference: gates and verdict](../../reference/gates.md).
+- [The lens catalogue](pathname:///dashboard/).
+- [For executives](../for-executives.md) — the effect on lead time.
 
 ## Sources
 
-- [Forsgren, N., Humble, J. & Kim, G. *Accelerate*, 2018.]({{ cites }}#cite-forsgren-accelerate-2018)
-- [Meyer, B. *Object-Oriented Software Construction*, 2nd ed., 1997.]({{ cites }}#cite-meyer-oosc-1997)
-- [Wiegers, K. *Peer Reviews in Software*, 2002.]({{ cites }}#cite-wiegers-peer-reviews-2002)
+- [Forsgren, N., Humble, J. & Kim, G. *Accelerate*, 2018.](../../reference/citations.mdx#cite-forsgren-accelerate-2018)
+- [Meyer, B. *Object-Oriented Software Construction*, 2nd ed., 1997.](../../reference/citations.mdx#cite-meyer-oosc-1997)
+- [Wiegers, K. *Peer Reviews in Software*, 2002.](../../reference/citations.mdx#cite-wiegers-peer-reviews-2002)

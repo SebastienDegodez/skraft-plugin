@@ -1,6 +1,4 @@
 ---
-layout: doc
-lang: fr
 title: "Premier dépôt existant"
 description: "Sous GitHub Copilot CLI, faire décrire un petit code existant sans documentation par l'analyste brownfield, puis transformer son PRD en backlog relu dans le canvas skraft backlog."
 persona: tech-lead
@@ -8,10 +6,10 @@ persona: tech-lead
 
 # Premier dépôt existant
 
-> Dans ce tutoriel, vous partez d'un petit code existant, sans test ni documentation. L'agent
-> `brownfield-analyst` en tire un PRD ; le workflow `skraft-prd-backlog` découpe ce PRD en epics et en
-> stories ; vous relisez les stories prêtes dans le canvas **skraft backlog**. À la fin, le canvas
-> affiche votre backlog, chaque story prête marquée relue, et rien n'est encore publié sur GitHub.
+Dans ce tutoriel, vous partez d'un petit code existant, sans test ni documentation. L'agent
+`brownfield-analyst` en tire un PRD ; le workflow `skraft-prd-backlog` découpe ce PRD en epics et en
+stories ; vous relisez les stories prêtes dans le canvas **skraft backlog**. À la fin, le canvas
+affiche votre backlog, chaque story prête marquée relue, et rien n'est encore publié sur GitHub.
 
 Un seul parcours ; chaque étape dit ce que vous devez voir. Les agents sont réels : comptez du
 temps et les crédits Copilot qu'ils consomment.
@@ -25,10 +23,10 @@ temps et les crédits Copilot qu'ils consomment.
 
 Dans un terminal, créez le dossier `permis` :
 
-```text
-mkdir permis
-cd permis
-git init -b main
+```console
+$ mkdir permis
+$ cd permis
+$ git init -b main
 ```
 
 `package.json` :
@@ -72,9 +70,9 @@ export const lastDecision = (driverId, today = new Date()) => {
 
 Commitez :
 
-```text
-git add .
-git commit -m "Eligibility as it runs today"
+```console
+$ git add .
+$ git commit -m "Eligibility as it runs today"
 ```
 
 `git log --oneline` montre un seul commit. Le dépôt n'a ni test, ni documentation, ni backlog :
@@ -82,12 +80,12 @@ c'est votre code existant.
 
 ## 2. Installer les plugins
 
-```text
-copilot plugin marketplace add SebastienDegodez/skraft-plugin
-copilot plugin install skraft@skraft
-copilot plugin install skraft-brownfield@skraft
-copilot plugin install skraft-backlog@skraft
-copilot plugin list
+```console
+$ copilot plugin marketplace add SebastienDegodez/skraft-plugin
+$ copilot plugin install skraft@skraft
+$ copilot plugin install skraft-brownfield@skraft
+$ copilot plugin install skraft-backlog@skraft
+$ copilot plugin list
 ```
 
 Les trois plugins figurent dans la liste.
@@ -122,9 +120,9 @@ fonctionnelles portent des identifiants `FR-001`, `FR-002`…, ses exigences non
 `NFR-…`.
 Commitez-le :
 
-```text
-git add docs/prds
-git commit -m "docs: PRD from the existing code"
+```console
+$ git add docs/prds
+$ git commit -m "docs: PRD from the existing code"
 ```
 
 ## 4. Découper le PRD en backlog
@@ -157,7 +155,7 @@ Ouvre le canvas skraft backlog.
 
 Le canvas s'ouvre sur l'onglet **Suivi** :
 
-![Canvas skraft backlog, onglet Suivi : les chiffres clés (2 épics, 4 stories, 1 refusée, 1 retenue, 2 prêtes, 0/2 relues), la barre des stories par état, puis l'epic EP-001 avec son verdict de revue, son résultat attendu et ses trois stories]({{ "/assets/screenshots/fr/backlog-canvas-progress.png" | relative_url }})
+![Canvas skraft backlog, onglet Suivi : les chiffres clés (2 épics, 4 stories, 1 refusée, 1 retenue, 2 prêtes, 0/2 relues), la barre des stories par état, puis l'epic EP-001 avec son verdict de revue, son résultat attendu et ses trois stories](/img/screenshots/fr/backlog-canvas-progress.png)
 
 *Figure 1 — L'onglet Suivi : chaque epic dans son cadre, avec le verdict de sa revue de
 planification et ses stories. Capture faite sur le jeu d'essai du canvas (un PRD d'éligibilité
@@ -167,7 +165,7 @@ Lisez la ligne du haut : combien de stories sont **prêtes**, **retenues** par l
 **refusées** par les contrôles. Cliquez sur une story refusée : l'onglet **Revue** l'ouvre comme une
 check-list.
 
-![Canvas skraft backlog, onglet Revue : la story EP-001-S02 « Être refusé avant 18 ans » refusée, ses défauts Vague Persona, No Examples et Technical AC, puis les six lettres INVEST, chacune avec la valeur trouvée]({{ "/assets/screenshots/fr/backlog-canvas-review.png" | relative_url }})
+![Canvas skraft backlog, onglet Revue : la story EP-001-S02 « Être refusé avant 18 ans » refusée, ses défauts Vague Persona, No Examples et Technical AC, puis les six lettres INVEST, chacune avec la valeur trouvée](/img/screenshots/fr/backlog-canvas-review.png)
 
 *Figure 2 — L'onglet Revue : chaque lettre INVEST et chaque item de la Definition of Ready avec ce
 qui a été trouvé ; une ligne en échec dit pourquoi et comment corriger.*
@@ -192,6 +190,6 @@ vous le déciderez.
 
 ## Pages suivantes
 
-- [Le backlog : de l'idée à la story prête]({{ "/fr/explanation/backlog" | relative_url }}) — pourquoi chaque contrôle et chaque lentille existe.
-- [Parcours Brownfield]({{ "/fr/explanation/brownfield" | relative_url }}) — le filet de caractérisation, puis le refactoring Mikado ou Strangler Fig.
-- [Premier run sous GitHub Copilot CLI]({{ "/fr/tutorials/first-run-copilot" | relative_url }}) — mener ensuite une story jusqu'à sa pull request.
+- [Le backlog : de l'idée à la story prête](../explanation/backlog.md) — pourquoi chaque contrôle et chaque lentille existe.
+- [Parcours Brownfield](../explanation/brownfield.md) — le filet de caractérisation, puis le refactoring Mikado ou Strangler Fig.
+- [Premier run sous GitHub Copilot CLI](./first-run-copilot.md) — mener ensuite une story jusqu'à sa pull request.

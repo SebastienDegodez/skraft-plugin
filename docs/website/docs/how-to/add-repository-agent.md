@@ -1,6 +1,4 @@
 ---
-layout: doc
-lang: en
 title: "Add a repository agent to the pipeline"
 description: "Hand a pipeline step to an agent written in your repository: write its file for each host, add it as a node of the ejected workflow with its outputs and write paths, place it before the gates, and check with check, diff and doctor."
 persona: tech-lead
@@ -12,13 +10,13 @@ persona: tech-lead
 instance), by an agent written in your repository.
 
 For a review rather than a step that produces:
-[Add a lens to a review]({{ "/en/how-to/customise-review" | relative_url }}).
+[Add a lens to a review](./customise-review.md).
 
 ## Prerequisites
 
-- A configured repository, Git, and a terminal at the root of the working copy; `skraft` is the command that [`skraft install`]({{ "/en/how-to/install-on-a-host" | relative_url }}#skraft-command) sets up; the long line `node "<plugin folder>/engine/drivers/cli/skraft.mjs"` works without it.
+- A configured repository, Git, and a terminal at the root of the working copy; `skraft` is the command that [`skraft install`](./install-on-a-host.mdx#skraft-command) sets up; the long line `node "<plugin folder>/engine/drivers/cli/skraft.mjs"` works without it.
 - The workflow copied into `.skraft/pipeline.skraft.dot`
-  ([Copy and adapt the workflow]({{ "/en/how-to/eject-workflow" | relative_url }})).
+  ([Copy and adapt the workflow](./eject-workflow.md)).
 
 ## 1. Write the agent
 
@@ -58,7 +56,7 @@ and remove the `deliver -> gates` edge it replaces.
 | `outputs` | the files the agent must fill, relative to the run's tracking folder; `{date}` and `{slug}` are filled at dispatch |
 | `writes` | the paths of the working copy it may change; without `writes`, it writes only in the tracking folder |
 | `max_attempts` | attempts per pass; default 3 |
-| `model` | its model family ([Choose the agents' models]({{ "/en/how-to/choose-models" | relative_url }})) |
+| `model` | its model family ([Choose the agents' models](./choose-models.md)) |
 
 The brief the engine gives the agent lists these outputs, the paths it may write and the other
 steps' outputs to read. After each attempt, the engine checks that every output is filled and
@@ -66,10 +64,10 @@ that nothing was written outside those paths.
 
 ## 3. Check
 
-```text
-skraft workflow check
-skraft workflow diff
-skraft doctor
+```console
+$ skraft workflow check
+$ skraft workflow diff
+$ skraft doctor
 ```
 
 Expected result:
@@ -102,7 +100,7 @@ Commit `.skraft/` and the agent's files: the step runs on the next run.
 
 ## See also
 
-- [The DOT workflow]({{ "/en/reference/workflow-dot" | relative_url }}#node-attributes) — every
+- [The DOT workflow](../reference/workflow-dot.md#node-attributes) — every
   attribute of an agent node.
-- [Copy and adapt the workflow]({{ "/en/how-to/eject-workflow" | relative_url }})
-- [Adapting skraft: what each setting costs]({{ "/en/explanation/customisation-trade-offs" | relative_url }})
+- [Copy and adapt the workflow](./eject-workflow.md)
+- [Adapting skraft: what each setting costs](../explanation/customisation-trade-offs.md)

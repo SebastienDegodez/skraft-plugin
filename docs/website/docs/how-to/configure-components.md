@@ -1,6 +1,4 @@
 ---
-layout: doc
-lang: en
 title: "Configure the components of your repository"
 description: "Detect the components into skraft-config.json, add a neighbour repository, replace a command, add a gate, choose the base, switch to in-memory mocks and check it all with skraft doctor."
 persona: software-engineer
@@ -13,14 +11,14 @@ run.
 
 ## Prerequisites
 
-- The skraft plugin installed ([Install skraft on a host]({{ "/en/how-to/install-on-a-host" | relative_url }})).
+- The skraft plugin installed ([Install skraft on a host](./install-on-a-host.mdx)).
 - Node 22 or later, Git; Docker or Podman if a component keeps Microcks mocking.
-- A terminal open at the root of your working copy. `skraft` is the command that [`skraft install`]({{ "/en/how-to/install-on-a-host" | relative_url }}#skraft-command) sets up; the long line `node "<plugin folder>/engine/drivers/cli/skraft.mjs"` works without it.
+- A terminal open at the root of your working copy. `skraft` is the command that [`skraft install`](./install-on-a-host.mdx#skraft-command) sets up; the long line `node "<plugin folder>/engine/drivers/cli/skraft.mjs"` works without it.
 
 ## 1. Detect the components
 
-```text
-skraft init
+```console
+$ skraft init
 ```
 
 The engine looks for projects up to three levels below the working copy, hidden folders and
@@ -37,8 +35,8 @@ rest of the file as it is.
 
 ## 2. Add a neighbour repository
 
-```text
-skraft init --add ../payment-web
+```console
+$ skraft init --add ../payment-web
 ```
 
 `--add` takes a folder relative to the working copy and can be repeated. The component it gives
@@ -93,7 +91,7 @@ Write `baseBranch`, global or per component:
 
 `--base <ref>` given to `skraft init <slug>` or `/skraft <slug>` wins, then the component's
 `baseBranch`, then the global one, then `main`
-([base rule]({{ "/en/reference/skraft-config" | relative_url }}#base)). The base is journaled at
+([base rule](../reference/skraft-config.md#base)). The base is journaled at
 a slug's first init: to change it, start a new slug.
 
 ## 6. Switch a component to in-memory mocks
@@ -106,12 +104,12 @@ JavaScript and React are in memory by default already):
   "mocking": { "strategy": "inprocess" } }
 ```
 
-What you give up: [Adapting skraft: what each setting costs]({{ "/en/explanation/customisation-trade-offs" | relative_url }}).
+What you give up: [Adapting skraft: what each setting costs](../explanation/customisation-trade-offs.md).
 
 ## 7. Check with `skraft doctor`
 
-```text
-skraft doctor
+```console
+$ skraft doctor
 ```
 
 Without `--run`, none of your commands runs: the doctor checks Node, the file, the forge, each component's
@@ -128,8 +126,8 @@ skraft doctor: 1 checks failed
 
 Fix each `FAIL`, then run each command once, with the computed base:
 
-```text
-skraft doctor --run
+```console
+$ skraft doctor --run
 ```
 
 Expected result: `skraft doctor: every check passed`, or `no check failed, N with a warning`.
@@ -149,11 +147,11 @@ error separated by `; `:
 | `component name api is used twice` | One unique name per component. |
 | `--add C:\work\payment-web is not relative to the working copy` | Give a relative path. |
 
-Every key and every message: [skraft-config.json]({{ "/en/reference/skraft-config" | relative_url }}#validation).
+Every key and every message: [skraft-config.json](../reference/skraft-config.md#validation).
 
 ## See also
 
-- [skraft-config.json]({{ "/en/reference/skraft-config" | relative_url }}) — schema, defaults
+- [skraft-config.json](../reference/skraft-config.md) — schema, defaults
   per stack, detection.
-- [Run the gates and read their evidence]({{ "/en/how-to/run-gates" | relative_url }})
-- [Choose the agents' models]({{ "/en/how-to/choose-models" | relative_url }})
+- [Run the gates and read their evidence](./run-gates.md)
+- [Choose the agents' models](./choose-models.md)

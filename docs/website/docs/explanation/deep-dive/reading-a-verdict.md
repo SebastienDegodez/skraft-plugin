@@ -1,14 +1,12 @@
 ---
-layout: doc
-lang: en
 title: "Reading an evaluation verdict"
 description: "The sign test, the rank test and the six-pair floor — explained with real numbers instead of formulas, then what a replayed pair shows of the behaviour."
 ---
 
 # Reading an evaluation verdict
 
-> An evaluation verdict fits on one line: `9W/4T/2L (p=0.065)`. This page unfolds
-> that line, number by number, on a real case from the repository.
+An evaluation verdict fits on one line: `9W/4T/2L (p=0.065)`. This page unfolds
+that line, number by number, on a real case from the repository.
 
 ---
 
@@ -223,13 +221,13 @@ A missing or fragile result is **never** displayed as a success.
 
 ---
 
-## 9. Behind the numbers: what the skill changed {#replay}
+## 9. Behind the numbers: what the skill changed <!-- #replay -->
 
 The verdict counts pairs; it does not say *what* the agent did differently. To see that, you read
 the two trajectories of one pair. Take the scheduled run of 28 September 2026 of `outside-in-tdd`,
 on `claude-sonnet-5`:
 
-![Dashboard quality card for outside-in-tdd: baseline 0.806, skilled 0.887, lift +0.081, 28 expected activations, 14 observed, 0 unexpected, rate 50%, 10 wins, 12 ties, 0 losses, verdict pass]({{ "/assets/screenshots/en/dashboard-quality.png" | relative_url }})
+![Dashboard quality card for outside-in-tdd: baseline 0.806, skilled 0.887, lift +0.081, 28 expected activations, 14 observed, 0 unexpected, rate 50%, 10 wins, 12 ties, 0 losses, verdict pass](/img/screenshots/en/dashboard-quality.png)
 
 *Figure 1 — The quality card of that run: `10W/12T/0L`, verdict `pass`, but the skill loaded in only
 14 of the 28 trials where it was expected.*
@@ -242,7 +240,7 @@ The stimulus "Reach a failure that witnesses the missing behaviour" asks to take
 far enough to show that an approved outcome (a Gold customer pays 95.00 for 100.00) is still
 missing, then stop. Here is trial 1 of both arms, in the AGENTVIZ replay:
 
-![AGENTVIZ, evidence stream of the baseline, trial 1: 8 bash calls, no file created; the final report says the approved outcome is missing and no test asserts it]({{ "/assets/screenshots/shared/replay-baseline.png" | relative_url }})
+![AGENTVIZ, evidence stream of the baseline, trial 1: 8 bash calls, no file created; the final report says the approved outcome is missing and no test asserts it](/img/screenshots/shared/replay-baseline.png)
 
 *Figure 2 — Baseline: the agent explores with `bash` (8 calls), finds the calculation missing and
 describes it. No failing test witnesses it.*
@@ -250,7 +248,7 @@ describes it. No failing test witnesses it.*
 Its report also claims that "`dotnet test` passes (2/2)". The replay shows that none of the eight
 calls ran `dotnet test`: the claim was not observed, it was assumed.
 
-![AGENTVIZ, evidence stream of the skilled arm, trial 1: tools bash 9 times, create twice, skill once; the final report quotes the CS0234 compile error of the new acceptance test]({{ "/assets/screenshots/shared/replay-skilled.png" | relative_url }})
+![AGENTVIZ, evidence stream of the skilled arm, trial 1: tools bash 9 times, create twice, skill once; the final report quotes the CS0234 compile error of the new acceptance test](/img/screenshots/shared/replay-skilled.png)
 
 *Figure 3 — With the skill: the agent loads `outside-in-tdd` (`skill`, 1 call), writes an acceptance
 test at the application boundary (`create`), runs it, and stops on its compile failure: the red
@@ -270,6 +268,6 @@ behaviour, and this page does not use them.
 
 ## See also
 
-- [Evaluate a skill]({{ "/en/how-to/evaluate-a-skill" | relative_url }}) — the full procedure, and how to open the replay
-- [Propose a pattern or fix the documentation]({{ "/en/how-to/contributing" | relative_url }})
-- [Dashboard]({{ "/dashboard/" | relative_url }}) — verdicts and their trend
+- [Evaluate a skill](../../how-to/evaluate-a-skill.md) — the full procedure, and how to open the replay
+- [Propose a pattern or fix the documentation](../../how-to/contributing.md)
+- [Dashboard](pathname:///dashboard/) — verdicts and their trend

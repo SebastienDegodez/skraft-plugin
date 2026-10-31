@@ -1,23 +1,21 @@
 ---
-layout: doc
-lang: en
 title: "Changelog"
 ---
 
 # Changelog
 
-> The changes a user sees, grouped by version; the commit-by-commit detail is in `CHANGELOG.md` at the root of the repository.
+The changes a user sees, grouped by version; the commit-by-commit detail is in `CHANGELOG.md` at the root of the repository.
 
-## V2 — 2.0.0-alpha.1 to 2.0.0-alpha.19 (2026-10-28 → 2026-10-29) {#v2}
+## V2 — 2.0.0-alpha.1 to 2.0.0-alpha.19 (2026-10-28 → 2026-10-29) <!-- #v2 -->
 
-### Breaking changes {#v2-breaking}
+### Breaking changes <!-- #v2-breaking -->
 
 | Version | Change |
 | --- | --- |
 | alpha.1 | The plugin no longer ships a command hook nor v1's state and artifact CLI: the V2 engine replaces them. `events.jsonl` replaces `state.json`. |
 | alpha.1 | `skraft-config.json` describes components (root, stack, paths, commands). `skraft migrate` converts the v1 configuration and the v1 runs in progress. |
 
-### Engine and pipeline {#v2-engine}
+### Engine and pipeline <!-- #v2-engine -->
 
 | Version | Change |
 | --- | --- |
@@ -40,7 +38,7 @@ title: "Changelog"
 | alpha.19 | Mutation runs last, once, on the code the DELIVER review approved. On failure, `kill_proposal` writes one proposal per file of survivors without touching the code; the `mutation-plan` question lets the developer choose (`APPLY`, their instruction, `STOP`); `kill_mutants` applies the choice, then `mutation_gates` runs the gates again before a new mutation run. |
 | next | ADR rules in the engine: no version, one-sentence `decision`, closed status vocabulary, published ADRs changed only in their status lines, a row in `decisions-index.md` for each ADR written; DESIGN review and ratification return once (`max_visits` 1); lens gates G17 and G18. |
 
-### End of run and pull requests {#v2-publish}
+### End of run and pull requests <!-- #v2-publish -->
 
 | Version | Change |
 | --- | --- |
@@ -50,7 +48,7 @@ title: "Changelog"
 | alpha.1 | `skraft review --pr` reviews a single pull request with the `review` workflow. |
 | alpha.12 | Evidence sections folded in the pull request; what waits on a human stays open. |
 
-### Hosts {#v2-hosts}
+### Hosts <!-- #v2-hosts -->
 
 | Version | Change |
 | --- | --- |
@@ -62,7 +60,7 @@ title: "Changelog"
 | alpha.11 | Copilot CLI: a confirmation Copilot never shows sends the person to the chat or a terminal. |
 | alpha.17 | Copilot CLI: a question is asked once, in the chat; the canvas shows the run's state, read-only. |
 
-### Skills and plugins {#v2-skills}
+### Skills and plugins <!-- #v2-skills -->
 
 | Version | Change |
 | --- | --- |
@@ -72,7 +70,7 @@ title: "Changelog"
 | alpha.5 | `clean-architecture-typescript` skill for a Node/TypeScript back end. |
 | alpha.9 | .NET: gates, test project names and architecture templates. |
 
-### Documentation {#v2-docs}
+### Documentation <!-- #v2-docs -->
 
 | Version | Change |
 | --- | --- |
@@ -84,13 +82,13 @@ title: "Changelog"
 - `scripts/migrate-adr-layout.mjs` renumbers ADR files into a single global sequence (`adr-001-...md`, `adr-002-...md`, etc.) and rewrites reference links.
 - Recommended usage:
 
-```bash
-node scripts/migrate-adr-layout.mjs \
+```console
+$ node scripts/migrate-adr-layout.mjs \
 	--repo /path/to/repo \
 	--renumber-global
 
 # apply for real
-node scripts/migrate-adr-layout.mjs \
+$ node scripts/migrate-adr-layout.mjs \
 	--repo /path/to/repo \
 	--renumber-global \
 	--apply

@@ -1,6 +1,4 @@
 ---
-layout: doc
-lang: fr
 title: "Le fil rouge — une commande Starbucks de bout en bout"
 description: "Suivez une demande à travers la préparation produit optionnelle puis le pipeline d'ingénierie SKRAFT."
 persona: tech-lead
@@ -8,7 +6,7 @@ persona: tech-lead
 
 # Le fil rouge — une commande Starbucks de bout en bout
 
-> Une seule demande, suivie de l'idée jusqu'au code livré, pour voir comment chaque phase passe le relais à la suivante.
+Une seule demande, suivie de l'idée jusqu'au code livré, pour voir comment chaque phase passe le relais à la suivante.
 
 Cette page est une **narration** : elle ne décrit pas SKRAFT dans l'abstrait, elle
 vous fait suivre **un exemple concret** d'un bout à l'autre. Le fil conducteur est
@@ -50,7 +48,7 @@ demande « paiement in-app », et l'inscrit dans un **rapport de triage**.
 - **Ce qui entre :** « permettre la commande mobile dans l'app ».
 - **Ce qui sort :** une ligne priorisée du rapport de triage.
 
-➡️ Détail de la phase : [DISCOVER]({{ "/fr/explanation/pipeline/discover" | relative_url }}).
+➡️ Détail de la phase : [DISCOVER](./discover.md).
 
 ### Étape 2 — DISCUSS : en faire une story
 
@@ -69,7 +67,7 @@ Avec ses **critères d'acceptation** :
 - **Ce qui entre :** la ligne de triage.
 - **Ce qui sort :** la story + ses 3 critères.
 
-➡️ Détail de la phase : [DISCUSS]({{ "/fr/explanation/pipeline/discuss" | relative_url }}).
+➡️ Détail de la phase : [DISCUSS](./discuss.md).
 
 ## Pipeline d'ingénierie orchestré
 
@@ -82,14 +80,16 @@ de code ni décider l'ADR.
 - **Ce qui entre :** la story et ses critères.
 - **Ce qui sort :** le document de recherche cité et son handoff vers DESIGN.
 
-➡️ Détail de la phase : [RESEARCH]({{ "/fr/explanation/pipeline/research" | relative_url }}).
+➡️ Détail de la phase : [RESEARCH](./research.md).
 
 ### Étape 4 — DESIGN : décider l'architecture
 
 Le `solution-architect` conçoit la solution. Il propose un **ADR** :
 
-> **Décision :** déléguer le paiement à un fournisseur externe via une couche
-> anti-corruption (ACL), pour ne pas coupler le domaine commande au prestataire.
+:::note[Décision]
+déléguer le paiement à un fournisseur externe via une couche
+anti-corruption (ACL), pour ne pas coupler le domaine commande au prestataire.
+:::
 
 Et un **modèle d'événements** :
 
@@ -103,7 +103,7 @@ avant que DISTILL commence. Un refus renvoie l'architecte au travail, avec la ra
 - **Ce qui entre :** la story, ses critères et le document de recherche.
 - **Ce qui sort :** l'ADR ratifié + le modèle d'événements + les contrats.
 
-➡️ Détail de la phase : [DESIGN]({{ "/fr/explanation/pipeline/design" | relative_url }}).
+➡️ Détail de la phase : [DESIGN](./design.md).
 
 ### Étape 5 — DISTILL : écrire le contrat exécutable
 
@@ -124,7 +124,7 @@ les commite **en échec** : le moteur rejoue le test pour vérifier qu'il échou
 - **Ce qui entre :** l'ADR + le modèle d'événements.
 - **Ce qui sort :** le `.feature`, le plan de test et le test d'acceptation rouge.
 
-➡️ Détail de la phase : [DISTILL]({{ "/fr/explanation/pipeline/distill" | relative_url }}).
+➡️ Détail de la phase : [DISTILL](./distill.md).
 
 ### Étape 6 — DELIVER : implémenter, guidé par les tests
 
@@ -138,7 +138,7 @@ qui choisit.
 - **Ce qui entre :** le test d'acceptation rouge + le plan.
 - **Ce qui sort :** le code revu, la mutation passée, puis la pull request.
 
-➡️ Détail de la phase : [DELIVER]({{ "/fr/explanation/pipeline/deliver" | relative_url }}).
+➡️ Détail de la phase : [DELIVER](./deliver.md).
 
 ## Ce que vous venez de voir
 
@@ -159,6 +159,6 @@ relisible : ce qui n'était pas écrit n'a pas été transmis.
 
 ## Pour aller plus loin
 
-- [Vue d'ensemble du pipeline]({{ "/fr/explanation/pipeline/" | relative_url }})
-- [Référence : les phases]({{ "/fr/reference/phases" | relative_url }}) — entrées, sorties, lentilles de chaque phase
-- [Le journal d'événements]({{ "/fr/explanation/event-journal" | relative_url }}) — où le run garde la trace de chaque relais
+- [Vue d'ensemble du pipeline](./index.md)
+- [Référence : les phases](../../reference/phases.md) — entrées, sorties, lentilles de chaque phase
+- [Le journal d'événements](../event-journal.md) — où le run garde la trace de chaque relais

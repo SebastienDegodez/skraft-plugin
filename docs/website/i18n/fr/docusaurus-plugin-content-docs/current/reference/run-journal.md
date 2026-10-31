@@ -1,6 +1,4 @@
 ---
-layout: doc
-lang: fr
 title: "Dossier de suivi et journal"
 description: "Le dossier .copilot-tracking/skraft-plans/ : arborescence, artefacts par phase, la documentation durable écrite sous docs/, pipeline actif, journal chaîné et signé events.jsonl et chacun de ses événements, questions à un humain, et tous les statuts et codes rendus."
 persona: software-engineer
@@ -8,12 +6,12 @@ persona: software-engineer
 
 # Dossier de suivi et journal
 
-> Tout ce que sait un run tient dans un dossier du dépôt et un journal chaîné, d'où le moteur recalcule l'état à chaque lecture sans rien stocker d'autre.
+Tout ce que sait un run tient dans un dossier du dépôt et un journal chaîné, d'où le moteur recalcule l'état à chaque lecture sans rien stocker d'autre.
 
 Pourquoi un journal d'événements plutôt qu'un fichier d'état, et ce que la reprise y gagne :
-[Le journal d'événements]({{ "/fr/explanation/event-journal" | relative_url }}).
+[Le journal d'événements](../explanation/event-journal.md).
 
-## Arborescence {#layout}
+## Arborescence <!-- #layout -->
 
 Le dossier de suivi vit **dans la copie de travail qui lance le run** :
 
@@ -78,12 +76,12 @@ reused:                         # les lentilles reprises de la passe précédent
 Le **slug** est le nom kebab-case d'un pipeline (`checkout-by-card`). Un slug = un pipeline =
 un dossier.
 
-## Artefacts par phase {#artifacts}
+## Artefacts par phase <!-- #artifacts -->
 
 Les documents d'une phase vont dans un sous-dossier daté `AAAA-MM-JJ`, ou sous `docs/` du dépôt
 pour la [documentation durable](#durable-docs) ; le moteur donne à l'agent le chemin de chaque
 sortie attendue, et la pré-crée quand elle a un gabarit. Détail par
-phase : [Phases]({{ "/fr/reference/phases" | relative_url }}).
+phase : [Phases](./phases.md).
 
 | Phase | Artefact | Chemin |
 | --- | --- | --- |
@@ -105,7 +103,7 @@ phase : [Phases]({{ "/fr/reference/phases" | relative_url }}).
 Les lentilles n'écrivent aucun fichier : elles rendent des findings, et le moteur écrit
 `reviews/{nœud}-{visite}/verdict.yaml`.
 
-## Documentation durable {#durable-docs}
+## Documentation durable <!-- #durable-docs -->
 
 Certains documents d'un run sont la documentation du dépôt, pas celle du run. La phase qui les
 produit les écrit sous `docs/` dans la copie de travail, sur la branche de la story : la pull
@@ -130,10 +128,10 @@ la pull request, le journal et ses rapports.
 | Déjà couvert | quand `docs/` couvre déjà la story, la phase le dit dans sa sortie déclarée (le document de recherche, la matrice de cohérence), cite les fichiers de `docs/` et passe à la suite. Le moteur ne contrôle que la matrice : sa ligne `docs-relied-on:` doit lister au moins un fichier de `docs/adr`, `docs/architecture`, `docs/domain/event-model` ou `docs/features`, et chaque fichier listé doit exister dans la copie de travail ; il ne cherche pas de citation dans le document de recherche |
 | Mise à jour | consigne aux agents : une phase complète un fichier existant de `docs/` et ne le réécrit pas ; le moteur ne le contrôle pas |
 | ADR | un ADR publié n'est jamais édité ; un nouvel ADR peut le remplacer ([Ce qui n'est jamais réécrit](#append-only)) |
-| Écriture permise | DESIGN : `docs/adr/`, `docs/architecture/`, `docs/domain/event-model/` ; DISTILL : `docs/features/` ([Phases]({{ "/fr/reference/phases" | relative_url }})) |
+| Écriture permise | DESIGN : `docs/adr/`, `docs/architecture/`, `docs/domain/event-model/` ; DISTILL : `docs/features/` ([Phases](./phases.md)) |
 | Lentille aveugle | `cold-reader` ne lit ni ces fichiers ni les ADR : ils sont retirés de `code.patch` et de `code-files.txt` |
 
-## Ce qui n'est jamais réécrit {#append-only}
+## Ce qui n'est jamais réécrit <!-- #append-only -->
 
 | Élément | Règle |
 | --- | --- |
@@ -142,7 +140,7 @@ la pull request, le journal et ses rapports.
 | ADR pas encore sur la branche de base | corrigé sur place, reste `Proposed` ; aucun historique de brouillons ([ADR non publiés](#unpublished-adrs)) |
 | ADR publié | seules ses lignes de statut et de remplacement changent, jamais supprimé ; le nouvel ADR porte `**Supersedes:** ADR-MMM` et une ligne est ajoutée à `docs/adr/supersessions.md`, que le moteur vérifie à la fin de chaque tentative de DESIGN |
 
-## `.active-slug` {#active-slug}
+## `.active-slug` <!-- #active-slug -->
 
 | Règle | Détail |
 | --- | --- |
@@ -151,7 +149,7 @@ la pull request, le journal et ses rapports.
 | Obligatoire | toute commande qui agit sur un run lit ce fichier ; le moteur ne devine jamais un slug |
 | Portée | une copie de travail ; un worktree Git a donc le sien |
 
-## `events.jsonl` {#events-jsonl}
+## `events.jsonl` <!-- #events-jsonl -->
 
 Un objet JSON par ligne, en UTF-8. Les lignes vides sont ignorées ; `\n` et `\r\n` sont
 acceptés. Chaque événement porte trois champs communs :
@@ -204,7 +202,7 @@ environment names no home folder …`.
 écriture est arrivée depuis l'ouverture, il s'arrête avec `journal-changed` :
 `<slug>: another run wrote events.jsonl meanwhile; run again once it stops`.
 
-## Événements {#events}
+## Événements <!-- #events -->
 
 | `type` | Écrit par | Champs |
 | --- | --- | --- |
@@ -234,7 +232,7 @@ environment names no home folder …`.
 Chaque entrée de `run.started.base` : `{ component, root, repository, ref, source, sha }`.
 `component` vaut `null` pour la copie de travail ; `ref` est la ref réellement utilisée
 (`main` ou `origin/main`) ; `source` vaut `flag`, `component`, `config` ou `default`. Règle de
-calcul : [skraft-config.json]({{ "/fr/reference/skraft-config" | relative_url }}).
+calcul : [skraft-config.json](./skraft-config.md).
 
 Le coût vient de l'hôte : le mod Claude Code journalise l'écart de coût de la session en
 USD ; le workflow Copilot n'en rend pas (Copilot compte en crédits, pas en USD). Cet écart
@@ -258,7 +256,7 @@ lentille, par phase, et écrit `reviews/<nœud>-<visite>/context.md` : la story,
 règles du projet trouvés (`AGENTS.md`, `CLAUDE.md`, `CONTRIBUTING.md`,
 `.github/copilot-instructions.md`, `docs/adr/decisions-index.md`) et quel agent a écrit quel document.
 
-## Questions à un humain {#human-questions}
+## Questions à un humain <!-- #human-questions -->
 
 Une question est posée une fois et journalisée (`question.asked`) ; sa réponse est
 journalisée (`question.answered`), puis appliquée. Sans réponse, le run **attend** (fail
@@ -285,7 +283,7 @@ reste ouverte. Le même échec après un `RETRY` pose une nouvelle question (`ga
 est invalide, le run s'arrête avec `config-invalid` avant de lancer quoi que ce soit, sans rien
 journaliser : une fois le fichier corrigé, relancer le run reprend l'étape ouverte.
 
-## ADR non publiés {#unpublished-adrs}
+## ADR non publiés <!-- #unpublished-adrs -->
 
 Un ADR est **publié** quand la base du run contient le fichier. Après chaque tentative
 d'agent, chaque ADR modifié par la tentative et non publié doit :
@@ -306,18 +304,18 @@ refuse la tentative avec le code d'échec `adr-lifecycle` et une ligne par manqu
 exemple `docs/adr/adr-002-x.md supersedes ADR-001, which is not on the default branch yet:
 edit docs/adr/adr-001-y.md in place instead`. L'agent recommence avec ces lignes.
 
-## Document de recherche {#research-document}
+## Document de recherche <!-- #research-document -->
 
 | Règle | Détail |
 | --- | --- |
 | Chemin | `<slug>/research/<AAAA-MM-JJ>/<slug>-research.md` ; la date est le jour UTC de la première tentative, réutilisée par la relance |
 | Pré-création | avant la tentative, le moteur l'écrit depuis le template `research.template.md` du plugin s'il n'existe pas |
-| Rempli | le fichier existe, n'est pas vide, diffère du template et ne contient plus aucun {% raw %}`{{…}}`{% endraw %} |
+| Rempli | le fichier existe, n'est pas vide, diffère du template et ne contient plus aucun `{{…}}` |
 | Relance | non rempli : tentative suivante, avec la liste des chemins manquants, jusqu'à `max_attempts` (3 par défaut) |
 | Arrêt | non rempli après la dernière tentative : `run.finished` `blocked`, code `missing-outputs` |
 | Reprise | une tentative ouverte dont les sorties sont déjà remplies est enregistrée sans relancer l'agent |
 
-## Preuves des gates {#gate-evidence}
+## Preuves des gates <!-- #gate-evidence -->
 
 Chaque gate lancée écrit `<slug>/gates/<composant>/<gate>-<n>.log`, où `<n>` vaut 1 plus le
 nombre de `gate.ran` déjà journalisés pour ce composant et cette gate. Format :
@@ -340,7 +338,7 @@ En échec, la ligne `result` vaut `fail (<classe>): <raison>`. Les sections `std
 `stderr` manquent quand rien n'a été lancé (ligne refusée). Un composant sans
 commande de gate n'écrit pas de preuve.
 
-## Statuts et codes {#statuses-and-codes}
+## Statuts et codes <!-- #statuses-and-codes -->
 
 Les commandes, le mod et le workflow rendent un **statut** et, en cas d'arrêt, un **code** :
 `refused` (rien n'a été fait), `blocked` (le run ne peut pas avancer), `waiting` (le run
@@ -379,9 +377,9 @@ attend la réponse d'un humain), `done`.
 | `done` | — | la dernière phase du workflow est close | `<PHASE> closed` (`PUBLISH closed` avec le workflow du plugin) | — |
 
 Les gates ont en plus leurs propres statuts `passed` et `failed` :
-[La ligne de commande skraft]({{ "/fr/reference/cli" | relative_url }}).
+[La ligne de commande skraft](./cli.md).
 
-## Statuts de `skraft status` {#status-values}
+## Statuts de `skraft status` <!-- #status-values -->
 
 | Statut | Condition | `reason` |
 | --- | --- | --- |
@@ -405,16 +403,16 @@ Un `step.started` ou un `phase.closed` écrit après un `run.finished` rouvre le
 - **Passer soi-même un ADR en `Accepted` pendant un run** : la tentative est refusée
   (`adr-lifecycle`). Ratifiez-le en répondant à la question.
 
-## Pour aller plus loin {#see-also}
+## Pour aller plus loin <!-- #see-also -->
 
-- [Phases]({{ "/fr/reference/phases" | relative_url }})
-- [Hôtes]({{ "/fr/reference/hosts" | relative_url }})
-- [Reprendre ou débloquer un run]({{ "/fr/how-to/resume-a-run" | relative_url }})
-- [Lancer les gates et lire leurs preuves]({{ "/fr/how-to/run-gates" | relative_url }})
-- [La ligne de commande skraft]({{ "/fr/reference/cli" | relative_url }})
-- [skraft-config.json]({{ "/fr/reference/skraft-config" | relative_url }})
-- [Le journal d'événements (chaîné)]({{ "/fr/explanation/event-journal" | relative_url }})
-- [Garde-fous : zéro hook, contrôles dans le moteur]({{ "/fr/explanation/guardrails" | relative_url }})
+- [Phases](./phases.md)
+- [Hôtes](./hosts.md)
+- [Reprendre ou débloquer un run](../how-to/resume-a-run.md)
+- [Lancer les gates et lire leurs preuves](../how-to/run-gates.md)
+- [La ligne de commande skraft](./cli.md)
+- [skraft-config.json](./skraft-config.md)
+- [Le journal d'événements (chaîné)](../explanation/event-journal.md)
+- [Garde-fous : zéro hook, contrôles dans le moteur](../explanation/guardrails.md)
 
 Termes à connaître : **slug**, **journal**, **pipeline actif**, **gate** — voir le
-[glossaire]({{ "/fr/reference/glossary" | relative_url }}).
+[glossaire](./glossary.md).

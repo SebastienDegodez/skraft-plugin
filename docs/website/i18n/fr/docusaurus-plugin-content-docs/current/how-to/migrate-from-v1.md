@@ -1,6 +1,4 @@
 ---
-layout: doc
-lang: fr
 title: "Migrer une copie de travail de la v1"
 description: "Convertir avec skraft migrate un skraft-config.json v1 et les runs v1 encore en cours en configuration à composants et en journaux signés, vérifier à blanc, reprendre un run migré, et lever les refus."
 persona: software-engineer
@@ -13,15 +11,15 @@ persona: software-engineer
 ## Prérequis
 
 - Le plugin `skraft` en version 2 installé
-  ([Installer skraft sur un hôte]({{ "/fr/how-to/install-on-a-host" | relative_url }})) ; `skraft` est la commande que [`skraft install`]({{ "/fr/how-to/install-on-a-host" | relative_url }}#skraft-command) met en place ; la ligne longue `node "<dossier du plugin>/engine/drivers/cli/skraft.mjs"` marche sans elle.
+  ([Installer skraft sur un hôte](./install-on-a-host.mdx)) ; `skraft` est la commande que [`skraft install`](./install-on-a-host.mdx#skraft-command) met en place ; la ligne longue `node "<dossier du plugin>/engine/drivers/cli/skraft.mjs"` marche sans elle.
 - Un terminal à la racine de la copie de travail, Git, Node 22 ou plus.
 - Les fichiers v1 commités, pour pouvoir revenir en arrière : `skraft-config.json` est réécrit en
   place.
 
 ## 1. Voir ce que la migration écrirait
 
-```text
-skraft migrate --dry-run
+```console
+$ skraft migrate --dry-run
 ```
 
 ```text
@@ -54,15 +52,15 @@ rien. Corrigez, puis relancez l'étape 1.
 
 | Ligne | Action |
 |---|---|
-| `skraft-config.json: <clés> map to no key of V2; it is left as it is: move or remove them, then migrate again` | Retirer ou déplacer ces clés : V2 ne lit au premier niveau que `components`, `baseBranch`, `tdd`, `publish`, `models`, `assign` ([skraft-config.json]({{ "/fr/reference/skraft-config" | relative_url }}#top-level)). |
+| `skraft-config.json: <clés> map to no key of V2; it is left as it is: move or remove them, then migrate again` | Retirer ou déplacer ces clés : V2 ne lit au premier niveau que `components`, `baseBranch`, `tdd`, `publish`, `models`, `assign` ([skraft-config.json](../reference/skraft-config.md#top-level)). |
 | `refused  <slug>: state.json holds a field the v1 state schema does not declare; nothing was migrated` | Ce `state.json` n'est pas un état v1 : le restaurer depuis Git, ou laisser ce run de côté et le redémarrer en V2. |
 | `refused  <slug>: state.json names a phase the workflow skraft does not hold; nothing was migrated` | Sa phase en cours n'existe pas dans le workflow V2 : redémarrer ce run sous un nouveau slug. |
 | `skipped  <slug>: already has a journal (events.jsonl); state.json is left as it is` | Rien à faire : ce run est déjà un run V2. |
 
 ## 3. Migrer
 
-```text
-skraft migrate
+```console
+$ skraft migrate
 ```
 
 ```text
@@ -78,18 +76,18 @@ au lancement suivant.
 
 ## 4. Vérifier la configuration
 
-```text
-skraft doctor
+```console
+$ skraft doctor
 ```
 
 Relisez les composants que `skraft-config.json` liste désormais et complétez leurs commandes si
-besoin ([Configurer les composants]({{ "/fr/how-to/configure-components" | relative_url }})).
+besoin ([Configurer les composants](./configure-components.md)).
 
 ## 5. Reprendre un run migré
 
-```text
-skraft init checkout-flow
-skraft status
+```console
+$ skraft init checkout-flow
+$ skraft status
 ```
 
 ```text
@@ -101,7 +99,7 @@ DISTILL  pending
 ```
 
 Reprenez ensuite le run depuis votre hôte, comme tout run V2
-([Reprendre ou débloquer un run]({{ "/fr/how-to/resume-a-run" | relative_url }})).
+([Reprendre ou débloquer un run](./resume-a-run.md)).
 
 ## Dépannage
 
@@ -109,13 +107,13 @@ Reprenez ensuite le run depuis votre hôte, comme tout run V2
 |---|---|
 | `the environment names no home folder (HOME or USERPROFILE), where the key that signs the journal is kept; …` | Définir `HOME` (ou `USERPROFILE` sous Windows), puis relancer : la clé qui signe les journaux est rangée dans le dossier personnel. |
 | `base-unresolved` | Écrire `baseBranch` dans `skraft-config.json`, puis relancer. |
-| `workflow-invalid` | Le workflow éjecté sous `.skraft/` est invalide : `skraft workflow check` liste les erreurs ([Copier et adapter le workflow]({{ "/fr/how-to/eject-workflow" | relative_url }})). |
+| `workflow-invalid` | Le workflow éjecté sous `.skraft/` est invalide : `skraft workflow check` liste les erreurs ([Copier et adapter le workflow](./eject-workflow.md)). |
 | `config-invalid` | Corriger chaque erreur listée, puis relancer. |
 | la commande affiche l'aide et sort avec 2 | `migrate` ne prend que `--dry-run` et `--json`. |
 
 ## Voir aussi
 
-- [`skraft migrate`]({{ "/fr/reference/cli" | relative_url }}) — sorties texte et JSON, codes de sortie.
-- [Dossier de suivi et journal]({{ "/fr/reference/run-journal" | relative_url }}) — ce que
+- [`skraft migrate`](../reference/cli.md) — sorties texte et JSON, codes de sortie.
+- [Dossier de suivi et journal](../reference/run-journal.md) — ce que
   remplace `state.json`.
-- [Changelog : ruptures de la V2]({{ "/fr/reference/changelog" | relative_url }}#v2-breaking)
+- [Changelog : ruptures de la V2](../reference/changelog.md#v2-breaking)

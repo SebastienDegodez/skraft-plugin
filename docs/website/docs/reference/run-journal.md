@@ -1,6 +1,4 @@
 ---
-layout: doc
-lang: en
 title: "Tracking folder and journal"
 description: "The .copilot-tracking/skraft-plans/ folder: layout, artifacts by phase, the durable documentation written under docs/, active pipeline, the hash-chained, signed events.jsonl journal and each of its events, questions to a human, and every status and code returned."
 persona: software-engineer
@@ -8,12 +6,12 @@ persona: software-engineer
 
 # Tracking folder and journal
 
-> Everything a run knows sits in one repository folder and one hash-chained journal, from which the engine recomputes the state on every read and stores nothing else.
+Everything a run knows sits in one repository folder and one hash-chained journal, from which the engine recomputes the state on every read and stores nothing else.
 
 Why an event journal rather than a state file, and what resuming gains from it:
-[The event journal]({{ "/en/explanation/event-journal" | relative_url }}).
+[The event journal](../explanation/event-journal.md).
 
-## Layout {#layout}
+## Layout <!-- #layout -->
 
 The tracking folder lives **in the working copy that starts the run**:
 
@@ -78,12 +76,12 @@ reused:                         # the lenses taken over from the previous pass
 The **slug** is the kebab-case name of a pipeline (`checkout-by-card`). One slug = one
 pipeline = one folder.
 
-## Artifacts by phase {#artifacts}
+## Artifacts by phase <!-- #artifacts -->
 
 A phase's documents go in a subfolder dated `YYYY-MM-DD`, or under `docs/` of the repository for
 the [durable documentation](#durable-docs); the engine gives the agent the path of each expected
 output, and pre-creates it when it has a template. Detail by phase:
-[Phases]({{ "/en/reference/phases" | relative_url }}).
+[Phases](./phases.md).
 
 | Phase | Artifact | Path |
 | --- | --- | --- |
@@ -105,7 +103,7 @@ output, and pre-creates it when it has a template. Detail by phase:
 Lenses write no file: they return findings, and the engine writes
 `reviews/{node}-{visit}/verdict.yaml`.
 
-## Durable documentation {#durable-docs}
+## Durable documentation <!-- #durable-docs -->
 
 Some documents of a run are the repository's documentation, not the run's. The phase that
 produces them writes them under `docs/` in the working copy, on the story's branch: the pull
@@ -130,10 +128,10 @@ and its reports.
 | Already covered | when `docs/` already covers the story, the phase says so in its declared output (the research document, the consistency matrix), cites the files of `docs/` and moves on. The engine checks only the matrix: its `docs-relied-on:` line must list at least one file of `docs/adr`, `docs/architecture`, `docs/domain/event-model` or `docs/features`, and each listed file must exist in the working copy; it does not read the research document for citations |
 | Updating | instruction to the agents: a phase completes an existing file of `docs/` and does not rewrite it; the engine does not check it |
 | ADRs | a published ADR is never edited; a new ADR may supersede it ([What is never rewritten](#append-only)) |
-| Write scope | DESIGN: `docs/adr/`, `docs/architecture/`, `docs/domain/event-model/`; DISTILL: `docs/features/` ([Phases]({{ "/en/reference/phases" | relative_url }})) |
+| Write scope | DESIGN: `docs/adr/`, `docs/architecture/`, `docs/domain/event-model/`; DISTILL: `docs/features/` ([Phases](./phases.md)) |
 | Blind lens | `cold-reader` reads neither these files nor the ADRs: they are left out of `code.patch` and `code-files.txt` |
 
-## What is never rewritten {#append-only}
+## What is never rewritten <!-- #append-only -->
 
 | Item | Rule |
 | --- | --- |
@@ -142,7 +140,7 @@ and its reports.
 | ADR not on the base branch yet | fixed in place, stays `Proposed`; no history of drafts ([Unpublished ADRs](#unpublished-adrs)) |
 | published ADR | only its status and replacement lines change, never deleted; the new ADR carries `**Supersedes:** ADR-MMM` and a row is appended to `docs/adr/supersessions.md`, which the engine checks at the end of each DESIGN attempt |
 
-## `.active-slug` {#active-slug}
+## `.active-slug` <!-- #active-slug -->
 
 | Rule | Detail |
 | --- | --- |
@@ -151,7 +149,7 @@ and its reports.
 | Mandatory | every command that acts on a run reads this file; the engine never guesses a slug |
 | Scope | one working copy; a Git worktree therefore has its own |
 
-## `events.jsonl` {#events-jsonl}
+## `events.jsonl` <!-- #events-jsonl -->
 
 One JSON object per line, in UTF-8. Blank lines are skipped; `\n` and `\r\n` are both
 accepted. Every event carries three shared fields:
@@ -204,7 +202,7 @@ names no home folder …`.
 write arrived since it was opened, it stops with `journal-changed`:
 `<slug>: another run wrote events.jsonl meanwhile; run again once it stops`.
 
-## Events {#events}
+## Events <!-- #events -->
 
 | `type` | Written by | Fields |
 | --- | --- | --- |
@@ -234,7 +232,7 @@ write arrived since it was opened, it stops with `journal-changed`:
 Each entry of `run.started.base`: `{ component, root, repository, ref, source, sha }`.
 `component` is `null` for the working copy; `ref` is the ref actually used (`main` or
 `origin/main`); `source` is `flag`, `component`, `config` or `default`. How it is computed:
-[skraft-config.json]({{ "/en/reference/skraft-config" | relative_url }}).
+[skraft-config.json](./skraft-config.md).
 
 The cost comes from the host: the Claude Code mod journals the session's cost difference in
 USD; the Copilot workflow reports none (Copilot counts in credits, not USD). That difference
@@ -258,7 +256,7 @@ by phase, and writes `reviews/<node>-<visit>/context.md`: the story, the project
 found (`AGENTS.md`, `CLAUDE.md`, `CONTRIBUTING.md`, `.github/copilot-instructions.md`,
 `docs/adr/decisions-index.md`) and which agent wrote which document.
 
-## Questions to a human {#human-questions}
+## Questions to a human <!-- #human-questions -->
 
 A question is asked once and journaled (`question.asked`); its answer is journaled
 (`question.answered`), then acted on. With no answer the run **waits** (fail closed): nothing
@@ -286,7 +284,7 @@ question (`gates-2`). After a `RETRY` given in a host dialog, the engine reads
 runs anything, journaling nothing: once the file is fixed, starting the run again resumes the
 open step.
 
-## Unpublished ADRs {#unpublished-adrs}
+## Unpublished ADRs <!-- #unpublished-adrs -->
 
 An ADR is **published** when the run's base holds the file. After each agent attempt, every
 ADR the attempt changed that is not published must:
@@ -307,18 +305,18 @@ with the failure code `adr-lifecycle` and one line per breach, for example
 `docs/adr/adr-002-x.md supersedes ADR-001, which is not on the default branch yet: edit
 docs/adr/adr-001-y.md in place instead`. The agent retries with those lines.
 
-## Research document {#research-document}
+## Research document <!-- #research-document -->
 
 | Rule | Detail |
 | --- | --- |
 | Path | `<slug>/research/<YYYY-MM-DD>/<slug>-research.md`; the date is the UTC day of the first attempt, reused by the retry |
 | Pre-creation | before the attempt, the engine writes it from the plugin's `research.template.md` template when it does not exist |
-| Filled | the file exists, is not empty, differs from the template and holds no {% raw %}`{{…}}`{% endraw %} any more |
+| Filled | the file exists, is not empty, differs from the template and holds no `{{…}}` any more |
 | Retry | not filled: the next attempt, with the list of missing paths, up to `max_attempts` (3 by default) |
 | Stop | not filled after the last attempt: `run.finished` `blocked`, code `missing-outputs` |
 | Resume | an open attempt whose outputs are already filled is recorded without restarting the agent |
 
-## Gate evidence {#gate-evidence}
+## Gate evidence <!-- #gate-evidence -->
 
 Each gate run writes `<slug>/gates/<component>/<gate>-<n>.log`, where `<n>` is 1 plus the
 number of `gate.ran` already journaled for that component and gate. Format:
@@ -341,7 +339,7 @@ On failure, the `result` line reads `fail (<class>): <reason>`. The `stdout` and
 sections are missing when nothing ran (line refused). A component with no
 gate command writes no evidence.
 
-## Statuses and codes {#statuses-and-codes}
+## Statuses and codes <!-- #statuses-and-codes -->
 
 The commands, the mod and the workflow return a **status** and, when they stop, a **code**:
 `refused` (nothing was done), `blocked` (the run cannot move on), `waiting` (the run waits
@@ -380,9 +378,9 @@ for a human's answer), `done`.
 | `done` | — | the workflow's last phase is closed | `<PHASE> closed` (`PUBLISH closed` with the plugin's workflow) | — |
 
 Gates also have their own `passed` and `failed` statuses:
-[The skraft command line]({{ "/en/reference/cli" | relative_url }}).
+[The skraft command line](./cli.md).
 
-## `skraft status` statuses {#status-values}
+## `skraft status` statuses <!-- #status-values -->
 
 | Status | Condition | `reason` |
 | --- | --- | --- |
@@ -406,16 +404,16 @@ A `step.started` or a `phase.closed` written after a `run.finished` reopens the 
 - **Setting an ADR to `Accepted` yourself in a run**: the attempt is refused
   (`adr-lifecycle`). Ratify it by answering the question.
 
-## Going further {#see-also}
+## Going further <!-- #see-also -->
 
-- [Phases]({{ "/en/reference/phases" | relative_url }})
-- [Hosts]({{ "/en/reference/hosts" | relative_url }})
-- [Resume or unblock a run]({{ "/en/how-to/resume-a-run" | relative_url }})
-- [Run the gates and read their evidence]({{ "/en/how-to/run-gates" | relative_url }})
-- [The skraft command line]({{ "/en/reference/cli" | relative_url }})
-- [skraft-config.json]({{ "/en/reference/skraft-config" | relative_url }})
-- [The event journal (hash-chained)]({{ "/en/explanation/event-journal" | relative_url }})
-- [Guardrails: zero hooks, checks in the engine]({{ "/en/explanation/guardrails" | relative_url }})
+- [Phases](./phases.md)
+- [Hosts](./hosts.md)
+- [Resume or unblock a run](../how-to/resume-a-run.md)
+- [Run the gates and read their evidence](../how-to/run-gates.md)
+- [The skraft command line](./cli.md)
+- [skraft-config.json](./skraft-config.md)
+- [The event journal (hash-chained)](../explanation/event-journal.md)
+- [Guardrails: zero hooks, checks in the engine](../explanation/guardrails.md)
 
 Terms to know: **slug**, **journal**, **active pipeline**, **gate** — see the
-[glossary]({{ "/en/reference/glossary" | relative_url }}).
+[glossary](./glossary.md).

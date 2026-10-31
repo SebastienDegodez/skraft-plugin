@@ -1,6 +1,4 @@
 ---
-layout: doc
-lang: fr
 title: "Choisir les modèles des agents"
 description: "Choisir la famille de modèle de chaque agent, le modèle et le niveau de réflexion de chaque famille sous Claude Code et sous Copilot, pour vous seul ou pour l'équipe, et vérifier le résultat avec skraft doctor."
 persona: tech-lead
@@ -13,13 +11,13 @@ tourne, sous Claude Code et sous Copilot.
 
 ## Prérequis
 
-- Un dépôt configuré ([Configurer les composants]({{ "/fr/how-to/configure-components" | relative_url }})).
-- Un terminal à la racine de la copie de travail ; `skraft` est la commande que [`skraft install`]({{ "/fr/how-to/install-on-a-host" | relative_url }}#skraft-command) met en place ; la ligne longue `node "<dossier du plugin>/engine/drivers/cli/skraft.mjs"` marche sans elle.
+- Un dépôt configuré ([Configurer les composants](./configure-components.md)).
+- Un terminal à la racine de la copie de travail ; `skraft` est la commande que [`skraft install`](./install-on-a-host.mdx#skraft-command) met en place ; la ligne longue `node "<dossier du plugin>/engine/drivers/cli/skraft.mjs"` marche sans elle.
 
 ## 1. Voir ce que chaque agent reçoit aujourd'hui
 
-```text
-skraft doctor
+```console
+$ skraft doctor
 ```
 
 Le doctor affiche une table par hôte :
@@ -103,8 +101,8 @@ qui le nomme.
 
 ## 5. Vérifier
 
-```text
-skraft doctor
+```console
+$ skraft doctor
 ```
 
 Les lignes des agents visés montrent la nouvelle famille, le modèle et le niveau, et d'où vient
@@ -132,9 +130,9 @@ journalisé, quoi que disent les fichiers depuis.
 
 ## Voir aussi
 
-- [skraft-config.json]({{ "/fr/reference/skraft-config" | relative_url }}#location) — les
+- [skraft-config.json](../reference/skraft-config.md#location) — les
   quatre couches et les clés `models` et `assign`.
-- [Hôtes]({{ "/fr/reference/hosts" | relative_url }}#capabilities) — ce que chaque hôte passe
+- [Hôtes](../reference/hosts.md#capabilities) — ce que chaque hôte passe
   à l'agent : modèle, niveau, coût.
-- [Économie de tokens]({{ "/fr/explanation/token-economy" | relative_url }}) — pourquoi une
+- [Économie de tokens](../explanation/token-economy.md) — pourquoi une
   famille par rôle.

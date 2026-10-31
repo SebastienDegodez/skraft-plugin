@@ -1,6 +1,4 @@
 ---
-layout: doc
-lang: fr
 title: "Stratégie d'évaluation"
 description: "Pourquoi skraft prouve sa qualité en trois couches (tests déterministes du moteur, comparaison appariée des skills, conformité des agents réels), et ce que chaque couche ne peut pas dire."
 persona: tech-lead
@@ -8,8 +6,8 @@ persona: tech-lead
 
 # Stratégie d'évaluation
 
-> Un skill est une affirmation : un agent qui charge ce fichier fait mieux qu'un agent qui ne le
-> charge pas. Tant que personne ne l'a mesurée, ce n'est qu'une intuition.
+Un skill est une affirmation : un agent qui charge ce fichier fait mieux qu'un agent qui ne le
+charge pas. Tant que personne ne l'a mesurée, ce n'est qu'une intuition.
 
 skraft répond à trois questions différentes, chacune par une couche de preuve à elle. Aucune ne
 remplace les deux autres.
@@ -45,7 +43,7 @@ improbable sous l'hypothèse du hasard. Les égalités ne départagent rien et s
 dessous de six paires décisives, aucun décompte, même parfait, n'atteint `p ≤ 0,05`. D'où un
 budget de 12 à 15 essais par spec, acheté d'emblée : ajouter des essais à une comparaison déjà
 bruitée est la pire dépense. Le détail chiffré est dans
-[Lire un verdict d'évaluation]({{ "/fr/explanation/deep-dive/reading-a-verdict" | relative_url }}).
+[Lire un verdict d'évaluation](./deep-dive/reading-a-verdict.md).
 
 Trois règles d'écriture empêchent la mesure de devenir un placebo :
 
@@ -89,9 +87,9 @@ pourquoi il ne conclut pas.
 
 ## Pour aller plus loin
 
-- [Évaluer un skill]({{ "/fr/how-to/evaluate-a-skill" | relative_url }}) — les étapes.
-- [Lire un verdict d'évaluation]({{ "/fr/explanation/deep-dive/reading-a-verdict" | relative_url }})
-- [Software craftsmanship]({{ "/fr/explanation/software-craftsmanship" | relative_url }}) — la
+- [Évaluer un skill](../how-to/evaluate-a-skill.md) — les étapes.
+- [Lire un verdict d'évaluation](./deep-dive/reading-a-verdict.md)
+- [Software craftsmanship](./software-craftsmanship.md) — la
   même exigence appliquée au code livré.
 
 ## Sources

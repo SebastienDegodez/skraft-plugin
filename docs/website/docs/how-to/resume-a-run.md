@@ -1,6 +1,4 @@
 ---
-layout: doc
-lang: en
 title: "Resume or unblock a run"
 description: "Resume an interrupted run without starting an agent that already finished, switch the active pipeline, and lift the most common refusals and blocks."
 persona: software-engineer
@@ -14,15 +12,15 @@ persona: software-engineer
 
 - A run already started in this working copy (a slug, its journal
   `.copilot-tracking/skraft-plans/<slug>/events.jsonl`).
-- For the command line, `skraft` is the command that [`skraft install`]({{ "/en/how-to/install-on-a-host" | relative_url }}#skraft-command) sets up; the long line `node "<plugin folder>/engine/drivers/cli/skraft.mjs"` works without it. Run it from the root of the working copy.
+- For the command line, `skraft` is the command that [`skraft install`](./install-on-a-host.mdx#skraft-command) sets up; the long line `node "<plugin folder>/engine/drivers/cli/skraft.mjs"` works without it. Run it from the root of the working copy.
 
 ## 1. See where the run stands
 
-```text
-skraft status
+```console
+$ skraft status
 ```
 
-```text
+```console
 skraft checkout: blocked
 RESEARCH  closed
 DESIGN  open
@@ -32,7 +30,7 @@ solution-architect stopped without finishing: …
 
 The last line gives the reason. In Claude Code, `/skraft` shows the same view in the **Skraft**
 pane. When the status is `waiting`, the run waits for an answer:
-[Answer a run's question]({{ "/en/how-to/answer-a-question" | relative_url }}).
+[Answer a run's question](./answer-a-question.mdx).
 
 ## 2. Resume the run
 
@@ -53,8 +51,8 @@ shows the resumed phase.
 
 The engine never switches slugs on its own. Run an explicit init:
 
-```text
-skraft init card-payment
+```console
+$ skraft init card-payment
 ```
 
 Answer: `card-payment is the active pipeline`. The command line starts no agent: resume or start
@@ -75,17 +73,17 @@ The code shows in the Claude Code mod's final notification
 | `journal-tampered` | `events.jsonl` was edited by hand: restore the file (Git, a backup) or start a new slug. Do not repair the line. |
 | `journal-unverifiable` | The run comes from another machine: `skraft journal adopt`, then resume. |
 | `no-active-pipeline`, `not-initialised` | `skraft init <slug>` or `/skraft <slug>`. |
-| `config-invalid` | Fix every listed error ([Configure the components]({{ "/en/how-to/configure-components" | relative_url }})), then resume. |
+| `config-invalid` | Fix every listed error ([Configure the components](./configure-components.md)), then resume. |
 | `base-unresolved` | Write `baseBranch` in `skraft-config.json` or pass `--base <ref>` at the first init. |
 | `missing-outputs`, `loop-ceiling`, `environment`, `stopped` | Final for this slug: read the reason in the journal, fix the cause, start a new slug. |
 
 Every code, its message and its action:
-[Statuses and codes]({{ "/en/reference/run-journal" | relative_url }}#statuses-and-codes).
+[Statuses and codes](../reference/run-journal.md#statuses-and-codes).
 
 ## See also
 
-- [Answer a run's question]({{ "/en/how-to/answer-a-question" | relative_url }})
-- [Hosts]({{ "/en/reference/hosts" | relative_url }}#at-a-glance) — start, answer and follow on
+- [Answer a run's question](./answer-a-question.mdx)
+- [Hosts](../reference/hosts.md#at-a-glance) — start, answer and follow on
   each host.
-- [Tracking folder and journal]({{ "/en/reference/run-journal" | relative_url }})
-- [State and resume]({{ "/en/explanation/event-journal" | relative_url }}) — why the journal is chained.
+- [Tracking folder and journal](../reference/run-journal.md)
+- [State and resume](../explanation/event-journal.md) — why the journal is chained.

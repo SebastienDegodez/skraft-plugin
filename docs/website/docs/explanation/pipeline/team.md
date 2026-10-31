@@ -1,16 +1,13 @@
 ---
-layout: doc
-lang: en
 title: "The team — the pipeline as a relay race"
 description: "Who produces, who judges, who decides and who starts: SKRAFT's agents, their lenses, the engine and the host driver, the only one that starts agents, at depth 1."
 persona: tech-lead
 ---
-{% assign cites = "/en/reference/citations" | relative_url %}
 
 # The team — the pipeline as a relay race
 
-> Agents that produce, lenses that judge, an engine that decides and a driver that starts.
-> Nobody approves their own work, and no agent starts another.
+Agents that produce, lenses that judge, an engine that decides and a driver that starts.
+Nobody approves their own work, and no agent starts another.
 
 ## Four roles, never mixed
 
@@ -49,7 +46,7 @@ and decides nothing. Under Claude Code, its only tool starts the pipeline; under
 starts the `skraft-pipeline` workflow; under VS Code without the SDK, it conducts the
 `skraft next` / `skraft record` loop and starts the agents the step lists. It then relays what
 the run reports. In v1, the phase order and the verdicts lived in its prose; in V2 they are in
-the engine, and the run state is in the [event journal]({{ "/en/explanation/event-journal" | relative_url }}).
+the engine, and the run state is in the [event journal](../event-journal.md).
 
 ## Why only the driver starts agents
 
@@ -60,7 +57,7 @@ do.
 
 At depth 1, the engine sees every start in its journal, the driver can start a review's lenses
 in parallel when the host allows it, and a lens cannot delegate its judgement. The detail of the
-mechanism is in [Architecture]({{ "/en/explanation/architecture" | relative_url }}).
+mechanism is in [Architecture](../architecture.md).
 
 Two cases sit outside the engineering pipeline without breaking the rule. In `skraft-backlog`,
 the developer starts `backlog-discoverer` or `backlog-planner` as the main agent of their
@@ -73,16 +70,16 @@ session, and that producer starts its own lenses: no sub-agent starts another. I
 DISCOVER, DISCUSS, DESIGN, DISTILL and DELIVER each have their review, by lenses that did not
 produce the work and each run in a fresh context. RESEARCH is the exception: the engine checks
 its document is filled, and DESIGN remains its judge. This is peer review applied to every
-handoff ([Wiegers, 2002]({{ cites }}#cite-wiegers-peer-reviews-2002)).
+handoff ([Wiegers, 2002](../../reference/citations.mdx#cite-wiegers-peer-reviews-2002)).
 
 ## Going further
 
-- [The running example]({{ "/en/explanation/pipeline/fil-rouge" | relative_url }}) — the handoffs on one example.
-- [Reference: phases]({{ "/en/reference/phases" | relative_url }}) — producer, lenses and human decision of each phase.
-- [Reference: hosts]({{ "/en/reference/hosts" | relative_url }}) — what each driver starts and how.
-- [The agent catalogue]({{ "/en/dashboard/" | relative_url }}).
-- [Review before review]({{ "/en/explanation/deep-dive/review-before-review" | relative_url }}).
+- [The running example](./fil-rouge.md) — the handoffs on one example.
+- [Reference: phases](../../reference/phases.md) — producer, lenses and human decision of each phase.
+- [Reference: hosts](../../reference/hosts.md) — what each driver starts and how.
+- [The agent catalogue](pathname:///dashboard/).
+- [Review before review](../deep-dive/review-before-review.md).
 
 ## Sources
 
-- [Wiegers, K. *Peer Reviews in Software*, 2002.]({{ cites }}#cite-wiegers-peer-reviews-2002)
+- [Wiegers, K. *Peer Reviews in Software*, 2002.](../../reference/citations.mdx#cite-wiegers-peer-reviews-2002)

@@ -1,6 +1,4 @@
 ---
-layout: doc
-lang: fr
 title: "Adapter skraft : ce que coûte chaque réglage"
 description: "Ce que skraft laisse adapter et ce qu'il garde dans le moteur, pourquoi, et la preuve que chaque réglage peut retirer sans que personne le remarque."
 persona: tech-lead
@@ -8,8 +6,8 @@ persona: tech-lead
 
 # Adapter skraft : ce que coûte chaque réglage
 
-> Le moteur fait tourner ce que vous écrivez. Il ne sait pas si votre commande teste vraiment
-> quelque chose : chaque réglage qui adapte skraft peut aussi retirer une preuve.
+Le moteur fait tourner ce que vous écrivez. Il ne sait pas si votre commande teste vraiment
+quelque chose : chaque réglage qui adapte skraft peut aussi retirer une preuve.
 
 ## Ce que vous décrivez, ce que le moteur décide
 
@@ -20,11 +18,11 @@ nombre de tentatives, les verdicts, les gates et leurs seuils.
 
 | Ce que vous adaptez | Où | Guide |
 | --- | --- | --- |
-| Composants, commandes, gates, base, mocking | `skraft-config.json` | [Configurer les composants]({{ "/fr/how-to/configure-components" | relative_url }}) |
-| Modèle et niveau de réflexion de chaque agent | `models`, `assign` (quatre couches) | [Choisir les modèles des agents]({{ "/fr/how-to/choose-models" | relative_url }}) |
-| Lentilles d'une revue | `.skraft/pipeline.skraft.dot`, `.skraft/review.skraft.dot` | [Ajouter une lentille à une revue]({{ "/fr/how-to/customise-review" | relative_url }}) |
-| Agents et questions de votre dépôt | `.skraft/pipeline.skraft.dot` | [Le workflow DOT]({{ "/fr/reference/workflow-dot" | relative_url }}) |
-| Publication de la pull request et des captures | `publish` | [Publier la pull request d'un run]({{ "/fr/how-to/publish-pull-request" | relative_url }}) |
+| Composants, commandes, gates, base, mocking | `skraft-config.json` | [Configurer les composants](../how-to/configure-components.md) |
+| Modèle et niveau de réflexion de chaque agent | `models`, `assign` (quatre couches) | [Choisir les modèles des agents](../how-to/choose-models.md) |
+| Lentilles d'une revue | `.skraft/pipeline.skraft.dot`, `.skraft/review.skraft.dot` | [Ajouter une lentille à une revue](../how-to/customise-review.md) |
+| Agents et questions de votre dépôt | `.skraft/pipeline.skraft.dot` | [Le workflow DOT](../reference/workflow-dot.md) |
+| Publication de la pull request et des captures | `publish` | [Publier la pull request d'un run](../how-to/publish-pull-request.md) |
 
 Ce qui ne se règle pas, et pourquoi :
 
@@ -53,7 +51,7 @@ peut pas voir, c'est une commande qui tourne et ne prouve rien.
 | Laisser un composant sans gate | Toute preuve sur ce composant ; le moteur le signale en échec `environment` | `no gate command; …` dans `skraft gate` |
 | Fixer `--base` ou `baseBranch` sur une ref trop récente | Des fichiers modifiés hors du périmètre comparé | `no component changed since its base; no gate to run` alors que du code a changé |
 | Retirer le nœud question `adr` | La ratification humaine des ADR, qui restent `Proposed` | `skraft workflow diff` montre le nœud disparu |
-| Modifier `events.jsonl` à la main pour débloquer un run | Le journal comme preuve : le run est bloqué en `journal-tampered` | [Reprendre ou débloquer un run]({{ "/fr/how-to/resume-a-run" | relative_url }}) |
+| Modifier `events.jsonl` à la main pour débloquer un run | Le journal comme preuve : le run est bloqué en `journal-tampered` | [Reprendre ou débloquer un run](../how-to/resume-a-run.md) |
 
 Avant de réduire un contrôle, écrivez la raison là où l'équipe la lira : la description de la
 pull request, un ADR. Pour savoir si une gate prouve encore quelque chose, ouvrez sa preuve
@@ -70,12 +68,12 @@ quelque chose. C'est pourquoi son nœud est verrouillé plutôt qu'optionnel.
 
 ## Pour aller plus loin
 
-- [Software craftsmanship]({{ "/fr/explanation/software-craftsmanship" | relative_url }}) —
+- [Software craftsmanship](./software-craftsmanship.md) —
   pourquoi un seuil fixe.
-- [Architecture]({{ "/fr/explanation/architecture" | relative_url }}) — pourquoi ces décisions
+- [Architecture](./architecture.md) — pourquoi ces décisions
   vivent dans le moteur.
-- [Gates]({{ "/fr/reference/gates" | relative_url }}) et
-  [nœuds verrouillés]({{ "/fr/reference/workflow-dot" | relative_url }}#locked-nodes).
+- [Gates](../reference/gates.md) et
+  [nœuds verrouillés](../reference/workflow-dot.md#locked-nodes).
 
 ## Sources
 

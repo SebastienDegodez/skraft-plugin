@@ -1,6 +1,4 @@
 ---
-layout: doc
-lang: en
 title: "Copy and adapt the workflow"
 description: "Copy the plugin's workflow into .skraft/ with skraft workflow eject, adapt it (skip a locked gate with its reason, change a loop, remove a lens), validate it with check, compare it with diff, update it after a plugin upgrade or go back to the plugin's workflow."
 persona: tech-lead
@@ -13,7 +11,7 @@ DELIVER review, and keep it up to date with the plugin.
 
 ## Prerequisites
 
-- A configured repository, Git, and a terminal at the root of the working copy; `skraft` is the command that [`skraft install`]({{ "/en/how-to/install-on-a-host" | relative_url }}#skraft-command) sets up; the long line `node "<plugin folder>/engine/drivers/cli/skraft.mjs"` works without it.
+- A configured repository, Git, and a terminal at the root of the working copy; `skraft` is the command that [`skraft install`](./install-on-a-host.mdx#skraft-command) sets up; the long line `node "<plugin folder>/engine/drivers/cli/skraft.mjs"` works without it.
 
 ## 1. Copy the workflow
 
@@ -38,9 +36,9 @@ Some common edits, in `.skraft/pipeline.skraft.dot`:
 | skip a locked gate (`gates`, `mutation`) | `unlock="<reason>"` on the node, which stays in place: `mutation [shape=parallelogram, gate="mutation", goal_gate=true, locked=true, unlock="no mutation tool for this component"]` |
 | allow more rework on a loop | change `max_visits` on the back edge: `design_review -> design [label="NEEDS_REWORK", max_visits=3]` |
 | remove a lens that is not mandatory | delete its `shape=note` node and its two edges |
-| add a lens of the team | [Add a lens to a review]({{ "/en/how-to/customise-review" | relative_url }}) |
-| add a step run by a repository agent | [Add a repository agent to the pipeline]({{ "/en/how-to/add-repository-agent" | relative_url }}) |
-| change an agent's model family | `model="<family>"` on its node ([Choose the agents' models]({{ "/en/how-to/choose-models" | relative_url }})) |
+| add a lens of the team | [Add a lens to a review](./customise-review.md) |
+| add a step run by a repository agent | [Add a repository agent to the pipeline](./add-repository-agent.md) |
+| change an agent's model family | `model="<family>"` on its node ([Choose the agents' models](./choose-models.md)) |
 
 The reason of an `unlock` is carried into the run's journal and pull request. The reviews' fan-ins,
 the `deliver_review` call and, in the review, `verdict`, `test_integrity` and
@@ -48,9 +46,9 @@ the `deliver_review` call and, in the review, `verdict`, `test_integrity` and
 
 ## 3. Validate and compare
 
-```text
-skraft workflow check
-skraft workflow diff
+```console
+$ skraft workflow check
+$ skraft workflow diff
 ```
 
 Expected result, for a skipped mutation gate:
@@ -101,8 +99,8 @@ Delete the copy (`.skraft/pipeline.skraft.dot` or `.skraft/review.skraft.dot`) a
 
 ## See also
 
-- [The DOT workflow]({{ "/en/reference/workflow-dot" | relative_url }}) — syntax, validity rules,
-  [locked]({{ "/en/reference/workflow-dot" | relative_url }}#locked-nodes) and
-  [mandatory nodes]({{ "/en/reference/workflow-dot" | relative_url }}#mandatory-nodes).
-- [`skraft workflow`]({{ "/en/reference/cli" | relative_url }}) — output and exit codes.
-- [Adapting skraft: what each setting costs]({{ "/en/explanation/customisation-trade-offs" | relative_url }})
+- [The DOT workflow](../reference/workflow-dot.md) — syntax, validity rules,
+  [locked](../reference/workflow-dot.md#locked-nodes) and
+  [mandatory nodes](../reference/workflow-dot.md#mandatory-nodes).
+- [`skraft workflow`](../reference/cli.md) — output and exit codes.
+- [Adapting skraft: what each setting costs](../explanation/customisation-trade-offs.md)

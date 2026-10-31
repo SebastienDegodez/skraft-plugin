@@ -1,15 +1,13 @@
 ---
-layout: doc
-lang: en
 title: "Token economy"
 description: "Why an agentic pipeline's cost is a design-time architectural form, not a runtime setting — and how SKRAFT holds it via the Genesis discipline levers."
 ---
 
 # Token economy
 
-> The cost of an agentic pipeline is not a dial to turn in production: it is a
-> constraint of form, decided at design time, like a memory budget or an acceptable
-> latency target.
+The cost of an agentic pipeline is not a dial to turn in production: it is a
+constraint of form, decided at design time, like a memory budget or an acceptable
+latency target.
 
 ## The thesis
 
@@ -73,7 +71,7 @@ for a recomputed token — ten times cheaper.
 
 The gain comes from the **form** of the prompts: a stable system prefix, not rewritten
 between turns, stays cache-eligible. This is precisely the lever that
-[engine guardrails]({{ "/en/explanation/guardrails" | relative_url }}) preserve on the infrastructure
+[engine guardrails](./guardrails.md) preserve on the infrastructure
 side — an invariant held by code does not shift the prefix, whereas an invariant
 re-injected as prose would make it miss.
 
@@ -107,7 +105,7 @@ acceptance score threshold are therefore outside the scope of the token economy.
 Reducing the number of lenses or lowering thresholds is not a cost lever — it is a
 quality degradation, and it is no longer expressible. To understand why these
 safeguards are non-negotiable, see the page
-[Review before review]({{ "/en/explanation/deep-dive/review-before-review" | relative_url }}).
+[Review before review](./deep-dive/review-before-review.md).
 
 ### What that costs
 
@@ -163,11 +161,11 @@ implementation is not yet in the main pipeline.
 
 ## See also
 
-- [Glossary]({{ "/en/reference/glossary" | relative_url }}) — phases, agents, gates, artifacts
-- [Architecture]({{ "/en/explanation/architecture" | relative_url }}) — how the agents assemble
-- [The event journal]({{ "/en/explanation/event-journal" | relative_url }}) — the run's recorded facts, in the tracking folder inherited from HVE Core
-- [Review before review]({{ "/en/explanation/deep-dive/review-before-review" | relative_url }}) — why the lenses are non-negotiable
-- [Reference: patterns]({{ "/en/reference/patterns" | relative_url }}) — the complete Genesis pattern catalogue
+- [Glossary](../reference/glossary.md) — phases, agents, gates, artifacts
+- [Architecture](./architecture.md) — how the agents assemble
+- [The event journal](./event-journal.md) — the run's recorded facts, in the tracking folder inherited from HVE Core
+- [Review before review](./deep-dive/review-before-review.md) — why the lenses are non-negotiable
+- [Reference: patterns](../reference/patterns.md) — the complete Genesis pattern catalogue
 
 ## Sources
 

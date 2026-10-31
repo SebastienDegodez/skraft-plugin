@@ -1,18 +1,14 @@
 ---
-layout: doc
-lang: fr
 title: "DISTILL"
 description: "Pourquoi DISTILL écrit le contrat exécutable avant le code : des scénarios dans la langue du métier, un test d'acceptation qui échoue pour la bonne raison, et un squelette sans comportement."
 persona: software-engineer
+phase: distill
 ---
-{% assign cites = "/fr/reference/citations" | relative_url %}
 
 # DISTILL
 
-{% include phase-ribbon.html current="distill" %}
-
-> Écrire le contrat avant le code : DISTILL transforme les décisions de DESIGN en scénarios que
-> le métier peut lire et en un test d'acceptation qui échoue.
+Écrire le contrat avant le code : DISTILL transforme les décisions de DESIGN en scénarios que
+le métier peut lire et en un test d'acceptation qui échoue.
 
 ## Pourquoi cette phase existe
 
@@ -20,25 +16,24 @@ Un critère d'acceptation en prose s'interprète ; un scénario exécutable, non
 comportement attendu un **contrat** entre le métier et le code : des scénarios
 *Given / When / Then* écrits avec le vocabulaire de la story, et un plan de test qui place
 chaque comportement au bon niveau de l'architecture. C'est la spécification par l'exemple
-([Adzic, 2011]({{ cites }}#cite-adzic-specification-2011)) portée jusqu'au test.
+([Adzic, 2011](../../reference/citations.mdx#cite-adzic-specification-2011)) portée jusqu'au test.
 
 L'`acceptance-designer` qui écrit ce contrat n'écrit pas l'implémentation. En séparant les deux,
 SKRAFT évite qu'un même agent ajuste le test à son code.
 
-<div class="fil-rouge" markdown="1">
-<span class="fil-rouge__label">☕ Fil rouge — Starbucks <em>(exemple illustratif)</em></span>
+:::info[☕ Fil rouge — Starbucks *(exemple illustratif)*]
 
 L'ADR et le modèle d'événements entrent. DISTILL écrit le **scénario Gherkin** : « Étant donné
 un panier avec un latte / Quand le paiement est validé / Alors un reçu est émis et des points
 fidélité sont crédités. » Ce scénario devient le contrat que DELIVER doit rendre vert.
-</div>
+:::
 
 ## Un rouge qui prouve quelque chose
 
 DISTILL ne s'arrête pas aux scénarios : il écrit le premier test d'acceptation et le commite
 **en échec**. Le moteur rejoue ce commit et vérifie que le test échoue vraiment. C'est la boucle
 externe du TDD outside-in : commencer par un test qui décrit ce que le système doit faire, vu
-de l'extérieur ([Freeman & Pryce, 2009]({{ cites }}#cite-freeman-goos-2009)).
+de l'extérieur ([Freeman & Pryce, 2009](../../reference/citations.mdx#cite-freeman-goos-2009)).
 
 Encore faut-il que l'échec ait du sens. Un test qui échoue parce qu'un module n'existe pas ne
 prouve rien : il échouerait aussi pour une story fausse. DISTILL écrit donc aussi le
@@ -73,14 +68,14 @@ retenus.
 
 ## Pour aller plus loin
 
-- [Référence : DISTILL]({{ "/fr/reference/phases" | relative_url }}#distill) — sorties, écriture permise, commits.
-- [Référence : critères de revue de DISTILL]({{ "/fr/reference/gates" | relative_url }}#distill).
-- [Référence : documentation durable]({{ "/fr/reference/run-journal" | relative_url }}#durable-docs).
-- [Walking Skeleton]({{ "/fr/explanation/deep-dive/walking-skeleton" | relative_url }}) et
-  [Outside-In TDD]({{ "/fr/explanation/deep-dive/outside-in-tdd" | relative_url }}).
-- [DELIVER]({{ "/fr/explanation/pipeline/deliver" | relative_url }}) — la phase suivante.
+- [Référence : DISTILL](../../reference/phases.md#distill) — sorties, écriture permise, commits.
+- [Référence : critères de revue de DISTILL](../../reference/gates.md#distill).
+- [Référence : documentation durable](../../reference/run-journal.md#durable-docs).
+- [Walking Skeleton](../deep-dive/walking-skeleton.md) et
+  [Outside-In TDD](../deep-dive/outside-in-tdd.md).
+- [DELIVER](./deliver.md) — la phase suivante.
 
 ## Sources
 
-- [Adzic, G. *Specification by Example*, 2011.]({{ cites }}#cite-adzic-specification-2011)
-- [Freeman, S. & Pryce, N. *Growing Object-Oriented Software, Guided by Tests*, 2009.]({{ cites }}#cite-freeman-goos-2009)
+- [Adzic, G. *Specification by Example*, 2011.](../../reference/citations.mdx#cite-adzic-specification-2011)
+- [Freeman, S. & Pryce, N. *Growing Object-Oriented Software, Guided by Tests*, 2009.](../../reference/citations.mdx#cite-freeman-goos-2009)
