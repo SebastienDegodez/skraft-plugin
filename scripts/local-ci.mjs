@@ -6,6 +6,7 @@
 //   node scripts/local-ci.mjs            # fast gates: tests + drift guards
 //   node scripts/local-ci.mjs --mutation # also run Stryker on the engine lines changed since origin/integration/v2-next
 //   node scripts/local-ci.mjs --dotnet   # also run the .NET gate scripts on real Stryker.NET
+//   node scripts/local-ci.mjs --docs     # also build the handbook (docs/website) and check its layout
 //
 // Cross-platform: spawns `node` directly, no shell globbing, no dependency.
 import { spawnSync } from 'node:child_process'
@@ -16,6 +17,7 @@ import { withoutRepositoryEnv } from '../eng/lib/repository-env.mjs'
 const flags = new Set(process.argv.slice(2))
 const withMutation = flags.has('--mutation') || flags.has('-m')
 const withDotnet = flags.has('--dotnet')
+const withDocs = flags.has('--docs')
 
 const ENGINE = join('plugins', 'skraft-framework', 'engine')
 
@@ -99,6 +101,14 @@ if (withMutation && results.every((r) => r.ok)) {
 // Needs the .NET 10 SDK and NuGet access, which the fast gates never do.
 if (withDotnet) {
   results.push(run({ name: '.NET quality-gate scripts (real Stryker.NET)', cmd: 'node', args: ['scripts/dotnet-quality-gates-smoke.mjs'] }))
+}
+
+// Mirrors docs-website.yml's build job; needs `npm ci --prefix docs/website` first.
+if (withDocs) {
+  const docusaurus = join('docs', 'website', 'node_modules', '@docusaurus', 'core', 'bin', 'docusaurus.mjs')
+  const site = join('docs', 'website')
+  results.push(run({ name: 'Handbook build (Docusaurus, both locales)', cmd: 'node', args: [docusaurus, 'build', site] }))
+  results.push(run({ name: 'Handbook build layout', cmd: 'node', args: [join('eng', 'docs', 'check-build.mjs'), join(site, 'build'), '--versions', join(site, 'versions.json')] }))
 }
 
 process.stdout.write('\n── local CI summary ──\n')

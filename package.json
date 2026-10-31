@@ -27,6 +27,7 @@
     "docs:start:fr": "npm run start --prefix docs/website -- --locale fr",
     "docs:build": "npm run build --prefix docs/website --",
     "docs:serve": "npm run serve --prefix docs/website --",
+    "docs:check-build": "node eng/docs/check-build.mjs docs/website/build --versions docs/website/versions.json",
     "ci:local": "node scripts/local-ci.mjs",
     "plugin:build": "node scripts/project-plugin-adapters.mjs --apply && node scripts/project-plugin-adapters.mjs --apply --plugin-root plugins/skraft-backlog && node scripts/project-plugin-adapters.mjs --apply --plugin-root plugins/skraft-brownfield",
     "plugin:sync": "node scripts/project-plugin-adapters.mjs --sync && node scripts/project-plugin-adapters.mjs --sync --plugin-root plugins/skraft-backlog && node scripts/project-plugin-adapters.mjs --sync --plugin-root plugins/skraft-brownfield",
