@@ -109,7 +109,7 @@ Lenses write no file: they return findings, and the engine writes
 | `events.jsonl` | lines are only ever appended; an edited line breaks the chain or the signature, which the engine sees on its next read |
 | run state | recomputed from the journal on each read; no state file is written |
 | ADR not on the base branch yet | fixed in place, stays `Proposed`; no history of drafts ([Unpublished ADRs](#unpublished-adrs)) |
-| published ADR | never edited; the new ADR carries `**Supersedes:** ADR-MMM` and a row is appended to `docs/adr/supersessions.md`, which the engine checks at the end of each DESIGN attempt |
+| published ADR | only its status and replacement lines change, never deleted; the new ADR carries `**Supersedes:** ADR-MMM` and a row is appended to `docs/adr/supersessions.md`, which the engine checks at the end of each DESIGN attempt |
 
 ## `.active-slug` {#active-slug}
 
@@ -261,11 +261,15 @@ ADR the attempt changed that is not published must:
 - have the status `Proposed` (only the engine sets `Accepted`; changing an ADR ratified in this
   run means setting it back to `Proposed`, and it is asked again);
 - carry no `amended_by`, `amended_in_place` or `superseded_by` header field;
-- have no history section (`## History`, `## Historique`);
+- have no history section (`## History`, `## Historique`, `## Erratum`, `## Amendments`, `## Changelog`, `## Revisions`, at any heading depth);
+- name no version, image tag, digest or package pin in the body (`3.1.4`, `v3`, `node:20-alpine`, `react-router@6`): name the technology or the capability it brings;
+- hold a `decision` header of exactly one sentence;
 - not `supersedes` or `amends` another unpublished ADR, whether the link sits in the header or
   on a `**Supersedes:** ADR-MMM` line: edit that one in place instead.
 
-A published ADR is still superseded or amended the usual way. A breach refuses the attempt
+Every ADR the attempt changed, published or not, carries a status of the closed set: `Proposed`, `Accepted`, `Rejected`, `Deprecated`, `Superseded` or `Superseded by ADR-NNN`, whole and in English, in its header and its `**Status:**` line (`Superseded (partial)` is refused: a partial replacement is a new ADR that amends the old one).
+
+**Published ADRs.** An ADR the base holds changes only its `status`, `superseded_by` and `**Status:**` lines, compared with the text on the base; any other change, or its deletion, is refused. A published ADR is still superseded or amended the usual way. A breach refuses the attempt
 with the failure code `adr-lifecycle` and one line per breach, for example
 `docs/adr/adr-002-x.md supersedes ADR-001, which is not on the default branch yet: edit
 docs/adr/adr-001-y.md in place instead`. The agent retries with those lines.
@@ -328,7 +332,7 @@ for a human's answer), `done`.
 | `blocked` | `journal-tampered` | broken chain | `journal tampered: events.jsonl line N …; restore the file or start a new slug` | restore the file or start a new slug |
 | `blocked` | `journal-changed` | another run writes during this one | `<slug>: another run wrote events.jsonl meanwhile; run again once it stops` | wait for the other run to end, run again |
 | `blocked` | `missing-outputs` | outputs missing after the last attempt | `solution-researcher left required outputs missing after 3 attempts: <paths>` | a resume returns the same block; fix the cause and start a new slug |
-| `blocked` | `design-records` | the solution architect's DESIGN records still fail after its last attempt: no consistency matrix whose `consistency-gate` reads `PASS` (G10), an ADR named `*-rejected.md`, `*-accepted.md`, `*-deprecated.md` or `*-superseded.md` (G14), a `**Supersedes:**` line without its row in `docs/adr/supersessions.md` (G2, G12) | `solution-architect still failed after 3 attempts: <each record at fault>` | write the record, then start a new slug |
+| `blocked` | `design-records` | the solution architect's DESIGN records still fail after its last attempt: no consistency matrix whose `consistency-gate` reads `PASS` (G10), an ADR named `*-rejected.md`, `*-accepted.md`, `*-deprecated.md` or `*-superseded.md` (G14), a `**Supersedes:**` line without its row in `docs/adr/supersessions.md` (G2, G12), an ADR without its row in `docs/adr/decisions-index.md` | `solution-architect still failed after 3 attempts: <each record at fault>` | write the record, then start a new slug |
 | `blocked` | `agent-blocked` | the agent answered `blocked`, and a human answered `STOP` to the `blocked` question | `<agent> is blocked: <summary>` | final: a new run of the slug stays blocked |
 | `blocked` | `agent-unavailable` | the host cannot start the agent | Claude Code: `skraft:solution-researcher could not be started: …`; Copilot: `agent "solution-researcher" is not available in this Copilot session (agents: …); install or enable the skraft plugin, or pass agentIds` | install or enable the plugin, then resume; the attempt is not consumed |
 | `blocked` | `agent-failed` | the agent stops without finishing and its outputs are missing | `<agent> stopped without finishing: <error>` | resume: the step stays open and the same attempt restarts |

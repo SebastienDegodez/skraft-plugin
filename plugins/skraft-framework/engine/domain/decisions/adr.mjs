@@ -12,7 +12,7 @@ const HEADER = /^(?:<!--[^\n]*-->\s*\n)?---\r?\n([\s\S]*?)\r?\n---/
 const DRAFT_HISTORY = Object.freeze(['amended_by', 'amended_in_place', 'superseded_by'])
 /** Header keys that point at another ADR: only at a published one. */
 const LINKS = Object.freeze(['supersedes', 'amends'])
-const HISTORY_SECTION = /^##\s+(?:Historique|History|Historic)\b/im
+const HISTORY_SECTION = /^#{2,}[ \t]+(?:Historique|History|Historic|Errat(?:um|a)|Amendments?|Changelog|Revisions?)\b/im
 
 /** The number of the ADR a path names; null for any other file. @param {string} path relative to the working copy */
 export const adrNumber = (path) => {
@@ -21,15 +21,15 @@ export const adrNumber = (path) => {
 }
 
 /** @param {string} text */
-const headerOf = (text) => HEADER.exec(text)?.[1] ?? null
+export const headerOf = (text) => HEADER.exec(text)?.[1] ?? null
 
 /**
  * A header field's value, unquoted; null when the header or the field is absent, or holds null.
  * @param {string} text @param {string} key
  */
-const field = (text, key) => {
+export const field = (text, key) => {
   const header = headerOf(text)
-  const line = header === null ? null : new RegExp(`^${key}:[ \\t]*(.*?)[ \\t]*(?:#.*)?$`, 'm').exec(header)
+  const line = header === null ? null : new RegExp(`^${key}:[ \\t]*(.*?)[ \\t]*(?:(?<!\\S)#.*)?$`, 'm').exec(header)
   const value = line?.[1].replace(/^["']|["']$/g, '').trim() ?? ''
   return value === '' || value === 'null' || value === '~' ? null : value
 }
@@ -79,7 +79,7 @@ export const ratifiedInIndex = (index, number, day) => {
 const cellsOf = (line) => line.trim().replace(/^\||\|$/g, '').split('|').map((cell) => cell.trim())
 
 /** @param {string} line */
-const rowNumber = (line) => {
+export const rowNumber = (line) => {
   const first = line.startsWith('|') ? cellsOf(line)[0] : null
   const digits = first === null ? null : /(\d+)/.exec(first)
   return digits === null ? null : Number(digits[1])

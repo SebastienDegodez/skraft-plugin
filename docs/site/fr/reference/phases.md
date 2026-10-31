@@ -111,21 +111,21 @@ Verdict : `review-verdict.mjs --phase discuss`, mêmes règles et même budget q
 | Sortie déclarée | `details/{date}/context-map.md` |
 | Autres sorties | `details/{date}/event-model-{story}.md`, `diagrams-{story}.md`, `contracts-{story}.md`, `consistency-matrix-{story}.md`, `supersession-plan-{story}.md` (quand un ADR `Accepted` est remplacé) ; `docs/adr/adr-{NNN}-{sujet}.md`, `docs/adr/decisions-index.md`, `docs/adr/supersessions.md` |
 | Écriture permise | le dossier de suivi et `docs/adr/` |
-| Contrôles du moteur | traces DESIGN après chaque tentative : matrice de cohérence `consistency-gate: PASS` (G10), aucun ADR nommé `*-rejected.md`, `*-accepted.md`, `*-deprecated.md` ou `*-superseded.md` (G14), chaque `**Supersedes:**` avec sa ligne de registre (G2, G12) ; cycle de vie des ADR non publiés (`adr-lifecycle`) |
+| Contrôles du moteur | traces DESIGN après chaque tentative : matrice de cohérence `consistency-gate: PASS` (G10), aucun ADR nommé `*-rejected.md`, `*-accepted.md`, `*-deprecated.md` ou `*-superseded.md` (G14), chaque `**Supersedes:**` avec sa ligne de registre (G2, G12) ; une ligne d'index pour chaque ADR écrit (`design-records`) ; ADR brouillons : `Proposed`, aucune version, un `decision` d'une phrase, aucun historique de brouillon ; ADR de la base : seules leurs lignes de statut changent, jamais supprimés ; un statut du jeu fermé (`adr-lifecycle`) |
 | Échec persistant | `design-records` après la dernière tentative |
 
 | Lentille | Gates |
 | --- | --- |
 | `consistency` | G1, G2, G10, G12, G14, C1 |
 | `architecture-compliance` | G3, G4, G5, G6, G16 |
-| `fitness` | G7, G8, G9, G11, G15, F1 |
+| `fitness` | G7, G8, G9, G11, G15, G17, G18, F1 |
 
 | Arête | Étiquette | `max_visits` |
 | --- | --- | --- |
-| `design_review -> design` | `NEEDS_REWORK` | 3 |
+| `design_review -> design` | `NEEDS_REWORK` | 1 |
 | `design_review -> adr` | `APPROVED` | — |
 | `adr -> distill` | `RATIFIED` | — |
-| `adr -> design` | `REJECTED` (raison obligatoire, renvoyée à l'architecte) | 3 |
+| `adr -> design` | `REJECTED` (raison obligatoire, renvoyée à l'architecte) | 1 |
 
 `RATIFIED` passe chaque ADR en `Accepted` (`status: Accepted`, `ratified_by: "human AAAA-MM-JJ"`,
 ligne `**Status:**`, ligne de `docs/adr/decisions-index.md`) et les commite seuls en

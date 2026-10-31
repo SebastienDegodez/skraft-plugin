@@ -55,10 +55,10 @@ test('a consistency-gate line reading PASS may carry a comment after it; one tha
 })
 
 test('an ADR whose verdict sits in its file name, or a supersession the registry lacks, sends the architect back', async () => {
-  const supersedes = '# ADR-002 Refunds\n\n**Status:** Proposed\n\n**Supersedes:** [ADR-001](./adr-001-card-payment.md) — refunds change the flow\n'
+  const supersedes = '---\nstatus: Proposed\ndecision: We will pay by card.\n---\n# ADR-002 Refunds\n\n**Status:** Proposed\n\n**Supersedes:** [ADR-001](./adr-001-card-payment.md) — refunds change the flow\n'
   const worker = { ...API, name: 'worker', root: 'worker' }
   const registry = '| date | superseded ADR | new ADR | reason |\n|---|---|---|---|\n| 2026-09-01 | ADR-001 | ADR-009 | an earlier change |\n| 2026-09-02 | ADR-0012 | ADR-0021 | another one |\n'
-  const files = { [ADR]: supersedes, 'docs/adr/supersessions.md': registry, 'docs/adr/adr-003-sagas-rejected.md': '# ADR-003\n\n**Status:** Proposed\n', 'docs/adr/adr-005-cqrs-accepted.md': '# ADR-005\n\n**Status:** Proposed\n' }
+  const files = { [ADR]: supersedes, 'docs/adr/supersessions.md': registry, 'docs/adr/adr-003-sagas-rejected.md': '---\nstatus: Proposed\ndecision: We will pay by card.\n---\n# ADR-003\n\n**Status:** Proposed\n', 'docs/adr/adr-005-cqrs-accepted.md': '---\nstatus: Proposed\ndecision: We will pay by card.\n---\n# ADR-005\n\n**Status:** Proposed\n' }
   const host = scripted({ components: [API, worker], files }, (it) => [
     agent()(it),
     agent({ work: ({ git }) => git.commit('docs(checkout): ADRs for refunds', [ADR, 'docs/adr/adr-003-sagas-rejected.md', 'docs/adr/adr-004-old-superseded.md', 'docs/adr/adr-005-cqrs-accepted.md']) })(it),
@@ -71,6 +71,9 @@ test('an ADR whose verdict sits in its file name, or a supersession the registry
     'docs/adr/adr-003-sagas-rejected.md: an ADR\'s verdict goes in its Status line, never in its file name (G14)',
     'docs/adr/adr-005-cqrs-accepted.md: an ADR\'s verdict goes in its Status line, never in its file name (G14)',
     `${ADR} supersedes ADR-001, and docs/adr/supersessions.md has no row naming ADR-001 and ADR-002 (G2, G12)`,
+    `${ADR} has no row in docs/adr/decisions-index.md: append it`,
+    'docs/adr/adr-003-sagas-rejected.md has no row in docs/adr/decisions-index.md: append it',
+    'docs/adr/adr-005-cqrs-accepted.md has no row in docs/adr/decisions-index.md: append it',
   ])
   assert.equal(design(host)[0].code, 'design-records')
 
@@ -83,7 +86,7 @@ test('an ADR whose verdict sits in its file name, or a supersession the registry
   ])
   assert.deepEqual(await unknown.start(), { status: 'waiting', slug: SLUG, phase: 'DESIGN', code: 'environment', reason: waitingOnEnvironment('design', 'Git cannot list what changed in . since root-0') })
 
-  const registered = scripted({ answers: [{ answer: 'RATIFIED' }], files: { [ADR]: supersedes.replace('[ADR-001]', '[ADR-1]'), 'docs/adr/supersessions.md': '| 2026-10-11 | ADR-001 | ADR-2 | refunds change the flow |\n' } }, (it) => [
+  const registered = scripted({ answers: [{ answer: 'RATIFIED' }], files: { [ADR]: supersedes.replace('[ADR-001]', '[ADR-1]'), 'docs/adr/supersessions.md': '| 2026-10-11 | ADR-001 | ADR-2 | refunds change the flow |\n', 'docs/adr/decisions-index.md': '| ADR | Title | Status |\n| --- | --- | --- |\n| [ADR-002](./adr-002-refunds.md) | Refunds | Proposed |\n' } }, (it) => [
     agent()(it),
     agent({ work: ({ git }) => git.commit('docs(checkout): ADR for refunds', [ADR]) })(it),
     ...nominal(it).slice(2),

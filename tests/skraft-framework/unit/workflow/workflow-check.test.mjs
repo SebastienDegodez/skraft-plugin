@@ -90,10 +90,10 @@ test('with no workflow designated, the plugin workflow runs and checks ok with i
         { from: 'visuals_consent', to: 'research', label: null, maxVisits: null },
         { from: 'research', to: 'design', label: null, maxVisits: null },
         { from: 'design', to: 'design_review', label: null, maxVisits: null },
-        { from: 'design_review', to: 'design', label: 'NEEDS_REWORK', maxVisits: 3 },
+        { from: 'design_review', to: 'design', label: 'NEEDS_REWORK', maxVisits: 1 },
         { from: 'design_review', to: 'adr', label: 'APPROVED', maxVisits: null },
         { from: 'adr', to: 'distill', label: 'RATIFIED', maxVisits: null },
-        { from: 'adr', to: 'design', label: 'REJECTED', maxVisits: 3 },
+        { from: 'adr', to: 'design', label: 'REJECTED', maxVisits: 1 },
         { from: 'distill', to: 'distill_review', label: null, maxVisits: null },
         { from: 'distill_review', to: 'distill', label: 'NEEDS_REWORK', maxVisits: 3 },
         { from: 'distill_review', to: 'deliver', label: 'APPROVED', maxVisits: null },
@@ -432,14 +432,14 @@ test('an ask node names a question the engine knows, and leads each of its answe
   const cases = [
     { dot: edit(BUILT_IN_WORKFLOW, ['question="adr-ratification"', 'question="budget"']), errors: ['node adr: question="budget" must be one of adr-ratification, reporting-consent, publish-consent, mutation-plan'] },
     { dot: edit(BUILT_IN_WORKFLOW, [', question="adr-ratification"', '']), errors: ['node adr: a hexagon node needs question="…"'] },
-    { dot: edit(BUILT_IN_WORKFLOW, ['  adr -> design    [label="REJECTED", max_visits=3]\n', '']), errors: ['node adr: REJECTED needs an edge of its own, back to the node whose work it refuses'] },
+    { dot: edit(BUILT_IN_WORKFLOW, ['  adr -> design    [label="REJECTED", max_visits=1]\n', '']), errors: ['node adr: REJECTED needs an edge of its own, back to the node whose work it refuses'] },
     { dot: edit(BUILT_IN_WORKFLOW, ['adr -> distill   [label="RATIFIED"]', 'adr -> distill']), errors: [] },
     { dot: edit(BUILT_IN_WORKFLOW, ['adr -> distill   [label="RATIFIED"]', 'adr -> distill   [label="PASS"]']), errors: ['edge adr -> distill: label="PASS" must be RATIFIED or REJECTED', 'node adr: no edge for RATIFIED; label one RATIFIED, or leave one unlabeled'] },
     {
       dot: edit(BUILT_IN_WORKFLOW, ['  exit     [shape=Msquare]', '  exit     [shape=Msquare]\n  note     [shape=box, agent="solution-researcher"]'], ['adr -> distill   [label="RATIFIED"]', 'adr -> distill\n  adr -> note\n  note -> distill']),
       errors: ['node adr: ask node takes at most one unlabeled edge, has 2'],
     },
-    { dot: edit(BUILT_IN_WORKFLOW, ['adr -> design    [label="REJECTED", max_visits=3]', 'adr -> design    [label="REJECTED", max_visits=3]\n  adr -> design    [label="REJECTED", max_visits=3]']), errors: ['node adr: ask node takes one REJECTED edge, has 2'] },
+    { dot: edit(BUILT_IN_WORKFLOW, ['adr -> design    [label="REJECTED", max_visits=1]', 'adr -> design    [label="REJECTED", max_visits=1]\n  adr -> design    [label="REJECTED", max_visits=1]']), errors: ['node adr: ask node takes one REJECTED edge, has 2'] },
     { dot: edit(BUILT_IN_WORKFLOW, ['mutation_plan -> kill_mutants [label="APPLY"]', 'mutation_plan -> kill_mutants']), errors: [] },
     {
       dot: edit(BUILT_IN_WORKFLOW, ['mutation_plan -> kill_mutants [label="APPLY"]', 'mutation_plan -> kill_mutants [label="STOP"]']),
@@ -578,7 +578,7 @@ test('a review is a fan-out whose every branch runs one lens node into the same 
     },
     {
       what: 'a verdict edge on the fan-out',
-      dot: edit(BUILT_IN_WORKFLOW, ['design_review -> design  [label="NEEDS_REWORK", max_visits=3]', 'design_review_lenses -> design  [label="NEEDS_REWORK", max_visits=3]']),
+      dot: edit(BUILT_IN_WORKFLOW, ['design_review -> design  [label="NEEDS_REWORK", max_visits=1]', 'design_review_lenses -> design  [label="NEEDS_REWORK", max_visits=1]']),
       errors: [
         "edge design_review_lenses -> design: only an edge leaving a gate, a review's fan-in (shape=tripleoctagon), a call (shape=house) or an ask node takes a label",
         'edge design_review_lenses -> design: each branch of a fan-out holds exactly one lens node (shape=note), then the fan-in',
