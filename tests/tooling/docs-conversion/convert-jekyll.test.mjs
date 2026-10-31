@@ -146,6 +146,10 @@ test('host sections are reported as Tabs to write by hand', () => {
     line: 5,
     reason: 'host sections (Claude Code, GitHub Copilot CLI, VS Code): write Tabs groupId="host" by hand, then rename to .mdx',
   }])
+  const already = convertPage(source, { docId: 'how-to/install-on-a-host', locale: 'en', mdxDocs: ['how-to/install-on-a-host'] })
+  assert.deepEqual(already.findings.map((finding) => finding.reason), [
+    'host sections (Claude Code, GitHub Copilot CLI, VS Code): write Tabs groupId="host" by hand',
+  ])
 })
 
 test('the converter is idempotent: every fixture output converts to itself', () => {
