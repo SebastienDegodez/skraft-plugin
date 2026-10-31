@@ -144,9 +144,8 @@ extension `azure-devops`), Azure DevOps Services seulement : son corps commence 
 de la pull request, `#<work item>` sinon, et la pull request est liée au work item de la story à
 sa création. La story est le work item (voir
 [Serveur MCP Azure DevOps d'abord, az en repli](#azure-devops-mcp-server-first-az-as-fallback)), et
-le run y tient son commentaire d'avancement. skraft ne revoit pas encore ses pull requests : sur
-`azure-devops`, `skraft review --pr` s'arrête sur `forge-unavailable` avec la raison
-`skraft cannot reach the forge azure-devops yet (forge in skraft-config.json, else the host of the Git remote, chooses it)`.
+le run y tient son commentaire d'avancement. `skraft review --pr` revoit aussi une pull request Azure Repos
+(voir [Serveur MCP Azure DevOps d'abord, az en repli](#azure-devops-mcp-server-first-az-as-fallback)).
 `gh` n'est jamais lancé sur un remote Azure DevOps. `skraft review --pr` ne lit `forge` que
 dans vos propres fichiers (`~/.skraft/config.json`, `skraft-config.local.json`), sinon depuis
 le remote : le `skraft-config.json` de la pull request en revue, écrit par son auteur, ne
@@ -167,15 +166,16 @@ connecteur claude.ai) ; un serveur d'un autre nom n'est jamais utilisé. L'issue
 dépôt où `gh` la lit (son dépôt par défaut, sinon `upstream`, sinon `origin`) ; la pull request
 et le commentaire d'issue vont sur `origin`.
 
-Chaque opération retombe sur `gh` quand le serveur est absent ou non connecté, qu'une lecture est
-refusée, que l'outil manque ou échoue, que le serveur répond ce que le moteur ne sait pas lire
-(une page hors du dépôt en cours comprise), ou que la conversation compte 100 commentaires ou
-plus. Une écriture que vous ou l'hôte refusez (sous Claude Code, un outil que vous n'avez pas
-autorisé) n'est pas retentée par `gh` : le run dit qu'il n'a rien écrit. Les garanties restent
+Chaque opération retombe sur `gh` quand le serveur est absent ou non connecté, que l'outil manque
+ou échoue, que le serveur répond ce que le moteur ne sait pas lire (une page hors du dépôt en
+cours comprise), ou que la conversation compte 100 commentaires ou plus. Un appel que vous ou
+l'hôte refusez (sous Claude Code, un outil que vous n'avez pas autorisé) est définitif, une
+lecture comme une écriture, sur chaque forge de cette section : il n'est jamais retenté par `gh`
+ni par `az`, et le run dit, avec une raison fixée par le moteur, qu'il n'a rien lu ou rien écrit. Les garanties restent
 celles de `gh` : la pull request est retrouvée avant d'en ouvrir une, seul votre propre
 commentaire est réécrit, les raisons sont fixées par le moteur. Le journal dit quelle voie a
 servi chaque opération : `via` (`mcp` ou `gh`) et, quand `gh` a servi parce que le serveur n'a
-pas pu, `fallback` avec un code fixe (`mcp-unavailable`, `mcp-tool-missing`, `mcp-refused`,
+pas pu, `fallback` avec un code fixe (`mcp-unavailable`, `mcp-tool-missing`,
 `mcp-failed`, `mcp-unreadable`) ; `run.started` le garde dans `issueRoute`. Lire l'issue et tenir
 son commentaire se passent de `gh` ; ouvrir la pull request demande encore à `gh` la branche par
 défaut du dépôt, et le push reste `git`. `skraft next` (la boucle d'agent de VS Code) et le CLI
@@ -192,6 +192,20 @@ ou `azure-devops` compris, n'est jamais utilisé. Ses outils : `wit_work_item` (
 `list_comments`) et `wit_work_item_comment_write` (`add`, `update`). Dans Claude Code, autorisez
 `mcp__ado__wit_work_item` et `mcp__ado__wit_work_item_comment_write`.
 
+`skraft review --pr` sur une pull request Azure Repos la lit et garde son commentaire de revue par le même serveur :
+`repo_pull_request` (`get`), `repo_pull_request_thread` (`list`) et `repo_pull_request_thread_write` (`create`, `update`),
+comme `@azure-devops/mcp` 2.11.0 les nomme (`src/tools/repositories.ts`). Dans Claude Code, autorisez
+`mcp__ado__repo_pull_request`, `mcp__ado__repo_pull_request_thread` et `mcp__ado__repo_pull_request_thread_write`. Chaque
+opération retombe sur `az repos pr show` et `az devops invoke` (area `git`) quand le serveur est absent, n'a pas l'outil,
+échoue, ou répond ce que le moteur ne sait pas lire (une pull request d'une autre organisation, plus de dix pages de 100 fils) ;
+un appel que vous ou l'hôte refusez, une lecture comme une écriture, est définitif, comme plus haut. Le moteur liste les fils
+page par page (`top` 100, `skip` ; le serveur les trie par identifiant de fil). Le commentaire de revue est un fil, créé
+*Closed* ; son premier commentaire est réécrit à chaque passe. Le moteur le retrouve à l'adresse que garde le journal, sinon
+au dernier fil dont le premier commentaire commence comme le commentaire de revue et porte le marqueur (tel quel, ou avec
+`<` et `>` en entités HTML, nommées ou numériques, et lu derrière un octet de marque d'ordre ou des lignes vides), quel qu'en soit l'auteur : Azure ne le dit pas ici. Une pull request d'un autre projet ou dépôt
+que celui du remote Git est refusée (`pr-unreadable`). Rien de cela n'est mesuré sur une vraie organisation : voir
+`docs/v2/host-verification.md`.
+
 Ce qu'un run lit est identique quelle que soit la voie : le titre et la page du work item, puis sa
 description, puis une section `## Acceptance criteria` tirée de `Microsoft.VSTS.Common.AcceptanceCriteria`,
 gardées dans `<slug>/plans/<date>/issue-<number>.md` pour tous les agents. Un champ écrit en HTML
@@ -203,11 +217,11 @@ sont `User Story`, `Product Backlog Item`, `Requirement`, `Issue` et `Bug`) ou e
 projet de l'organisation que celui que le remote Git nomme (`issue-in-other-project`) ; le projet
 est revérifié avant chaque écriture du commentaire, sautée sinon avec une raison fixe.
 
-Chaque opération se replie sur `az` quand le serveur est absent ou non connecté, qu'une lecture est
-refusée, que l'outil manque ou échoue, que le serveur répond ce que le moteur ne sait pas lire (un
+Chaque opération se replie sur `az` quand le serveur est absent ou non connecté,
+que l'outil manque ou échoue, que le serveur répond ce que le moteur ne sait pas lire (un
 work item d'une autre organisation compris), ou que le work item a plus de commentaires qu'une page
-n'en liste. Une écriture que vous ou l'hôte refusez n'est pas retentée avec `az` : le run dit
-qu'il n'a rien écrit. Le commentaire est réécrit sur place (retrouvé par l'URL que le journal a
+n'en liste. Un appel que vous ou l'hôte refusez est définitif, comme plus haut : le run dit
+qu'il n'a rien lu ou rien écrit. Le commentaire est réécrit sur place (retrouvé par l'URL que le journal a
 gardée, sinon le dernier commentaire qui commence par son marqueur caché, tel qu'écrit ou tel que le
 serveur l'échappe) et posté deux fois seulement si cette recherche échoue. Deux réserves : la façon
 dont Azure Boards stocke et affiche le marqueur échappé n'est pas mesurée, et la recherche ne
@@ -215,7 +229,7 @@ vérifie pas l'auteur d'un commentaire (Azure n'en donne aucun ici) : un comment
 d'autre ferait commencer par le marqueur serait réécrit. Son `url` est l'adresse REST du commentaire, Azure Boards ne documentant aucune ancre web
 pour un commentaire. Le journal dit quelle voie a servi : `via` (`mcp` ou `az`) et, quand `az` a
 servi après que le serveur n'a pas pu, `fallback` avec un code fixe (`mcp-unavailable`,
-`mcp-tool-missing`, `mcp-refused`, `mcp-failed`, `mcp-unreadable`) ; `run.started` le garde en
+`mcp-tool-missing`, `mcp-failed`, `mcp-unreadable`) ; `run.started` le garde en
 `issueRoute`. Le CLI `skraft` et `skraft next` n'atteignent aucun serveur MCP et passent toujours par
 `az`. L'ouverture de la pull request reste à `az`. Ce que les serveurs et az répondent pour un work
 item n'est pas encore mesuré : voir `docs/v2/host-verification.md`.

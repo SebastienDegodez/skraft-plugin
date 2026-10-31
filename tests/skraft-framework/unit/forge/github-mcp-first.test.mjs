@@ -82,11 +82,18 @@ test('every failure of the GitHub MCP server falls back on gh, which leaves what
     const why = failure === 'unreadable' ? 'mcp-unreadable' : failure
     assert.deepEqual([...new Set(routes(fallen.host).map(([, route]) => JSON.stringify(route)))], [JSON.stringify({ via: 'gh', fallback: why })], failure)
   }
+})
 
-  const readsRefused = await runOn({ mcp: { fails: Object.fromEntries(READS.map((tool) => [tool, 'mcp-refused'])) } })
-  assert.deepEqual(await seen(readsRefused), await seen(byGh), 'a read refused is read by gh')
-  assert.deepEqual(readsRefused.host.codeHost.calls, byGh.host.codeHost.calls.filter((call) => !call.startsWith('create')), 'the opening, a write the host allows, goes through the server')
-  assert.deepEqual(routes(readsRefused.host).find(([type]) => type === 'run.started'), ['run.started', { via: 'gh', fallback: 'mcp-refused' }])
+test('a read the person or the host refuses is refused too: gh does not read it, no comment is kept, no pull request is opened, and the journal says why', async () => {
+  const READ_REFUSED = (tool) => `the host refused the GitHub MCP server's ${tool}, so skraft read nothing from GitHub and did not ask gh instead; allow it, or run again where it is allowed`
+  const { host } = await runOn({ mcp: { fails: Object.fromEntries(READS.map((tool) => [tool, 'mcp-refused'])) } })
+
+  assert.deepEqual([host.codeHost.issuesRead, host.codeHost.comments, host.codeHost.pullRequests], [[], [], []])
+  assert.deepEqual(host.codeHost.calls.filter((call) => call !== 'push checkout'), [])
+  assert.equal(host.events().find(({ type }) => type === 'run.started').issueUnread, READ_REFUSED('issue_read'))
+  const skipped = host.events().filter(({ type }) => type === 'issue.comment-skipped')
+  assert.deepEqual([...new Set(skipped.map(({ reason, via }) => `${via}: ${reason}`))], [`mcp: ${READ_REFUSED('get_me')}`])
+  assert.equal(lastReason(host), `pull request not opened: ${READ_REFUSED('list_pull_requests')}; pull-request.md holds its description, and skraft publish opens it once that is fixed`)
 })
 
 test('a write the person or the host refuses is refused: nothing is posted nor opened, gh is not asked, and the journal says why', async () => {
@@ -193,6 +200,17 @@ test('a review reads its pull request and keeps its comment through the GitHub M
   assert.deepEqual(byMcp.host.pullRequests.calls, [])
   assert.deepEqual(byMcp.host.events().filter(({ type }) => type === 'review.commented').map(({ via }) => via), ['mcp', 'mcp'])
   assert.deepEqual(byGh.host.events().filter(({ type }) => type === 'review.commented').map(({ via }) => via), [undefined, undefined])
+})
+
+test('through the GitHub MCP server, a working copy not on the pull request\'s head is a named stop that says how to check it out with gh', async () => {
+  const pullRequest = { ...PULL_REQUEST, url: `${PAGES}/pull/12`, head: { ref: 'discount', sha: 'root-9' } }
+  const host = reviewHost({ pullRequest, forge: { pages: PAGES } })
+  host.git.commit('feat: discount', ['src/Discount.cs'])
+  host.deps.mcpTools = new InMemoryGithubMcp({ forge: host.pullRequests })
+
+  const outcome = await host.review()
+
+  assert.deepEqual([outcome.status, outcome.code, outcome.reason], ['stopped', 'pr-not-checked-out', 'the working copy is not on the head of pull request #12 (root-9); check it out first: gh pr checkout 12'])
 })
 
 test('through the GitHub MCP server, the pull request\'s body is cut at the same length as through gh', async () => {

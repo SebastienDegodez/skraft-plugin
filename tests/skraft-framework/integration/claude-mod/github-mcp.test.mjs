@@ -74,8 +74,18 @@ test('/skraft review 12 --publish in Claude Code reads the pull request and keep
   assert.deepEqual(ghOnForge(repo), [])
 })
 
+test('a GitHub MCP tool not granted is refused for good: the review stops with a fixed reason, gh is asked nothing, and no host text reaches the outcome', async (t) => {
+  const { repo, mod } = await modOnGithub(t, { refuse: "refused: Claude requested permissions to use mcp__github__pull_request_read, but you haven't granted it yet." })
+
+  await mod.command('review 12 --publish')
+  const outcome = await mod.settled()
+
+  assert.deepEqual([outcome.status, outcome.code, outcome.reason], ['stopped', 'pr-unreadable', "the host refused the GitHub MCP server's pull_request_read, so skraft read nothing from GitHub and did not ask gh instead; allow it, or run again where it is allowed"])
+  assert.deepEqual([ghOnForge(repo), repo.forge.state().comments.length], [[], 0])
+  assert.ok(!JSON.stringify([outcome, mod.notes, mod.published]).includes('granted'))
+})
+
 for (const [name, options] of Object.entries({
-  'not granted': { refuse: "refused: Claude requested permissions to use mcp__github__pull_request_read, but you haven't granted it yet." },
   'not connected': { refuse: 'no connected MCP tool "pull_request_read" on a server named "github"' },
   'not listed': { tools: [{ name: 'Bash' }, { name: 'mcp__skraft__run_pipeline' }] },
 })) {

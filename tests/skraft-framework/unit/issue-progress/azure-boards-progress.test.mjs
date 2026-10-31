@@ -107,11 +107,22 @@ test('a write the person or the host refuses is refused: nothing is posted, az i
   }
 })
 
+test('a read the person or the host refuses is refused too: the comment is skipped with a fixed reason, nothing is posted, and az is not asked', async () => {
+  const REFUSED = (tool) => `the host refused the Azure DevOps MCP server's ${tool}, so skraft read nothing from Azure Boards and did not ask az instead; allow it, or run again where it is allowed`
+  for (const action of ['get', 'list_comments']) {
+    const server = new InMemoryAzureMcp({ workItems: { 42: USER_STORY }, fails: { [`wit_work_item:${action}`]: 'mcp-refused' } })
+    const { host } = await runOn({ mcp: null, server })
+
+    assert.deepEqual([...new Set(progress(host).map(({ type, reason, via }) => `${type} ${via}: ${reason}`))], [`issue.comment-skipped mcp: ${REFUSED('wit_work_item')}`], action)
+    assert.deepEqual([host.codeHost.calls.filter((call) => call.startsWith('keep comment')), server.comments.length, writes(server)], [[], 0, []], action)
+  }
+})
+
 test('any other failure of the server, or a conversation too long to list in one page, sends the comment to az, which keeps it as it keeps it alone, the journal saying az served and why', async () => {
   const crowded = { pageSize: 1 }
   const cases = [
     [{ fails: { [WRITE]: 'mcp-failed' } }, 'mcp-failed'], [{ fails: { [WRITE]: 'unreadable' } }, 'mcp-unreadable'], [{ fails: { wit_work_item: 'mcp-tool-missing' } }, 'mcp-tool-missing'],
-    [{ fails: { wit_work_item: 'mcp-unavailable' } }, 'mcp-unavailable'], [{ fails: { wit_work_item: 'mcp-refused' } }, 'mcp-refused'], [crowded, 'mcp-unreadable'],
+    [{ fails: { wit_work_item: 'mcp-unavailable' } }, 'mcp-unavailable'], [crowded, 'mcp-unreadable'],
     [{ answers: { [WRITE]: () => ({ posted: true }) } }, 'mcp-unreadable'],
   ]
   for (const [options, why] of cases) {

@@ -1,4 +1,5 @@
-import { forgeUnreachable } from '../../domain/config/forge.mjs'
+import { pullRequestPage } from '../../domain/review/azure-pull-request.mjs'
+import { find as findByNumber, keepComment as keepThread, repositoryOf } from './az-repos.mjs'
 import { keepComment, workItem } from './az-boards.mjs'
 import { NO_AZURE_REMOTE, QUIET, repos, run, succeeded, unavailable, remoteOf, lines, readJson, refused } from './az-cli.mjs'
 
@@ -13,8 +14,7 @@ import { NO_AZURE_REMOTE, QUIET, repos, run, succeeded, unavailable, remoteOf, l
  * CodeHost on `git` and `az`, the Azure CLI with its azure-devops extension, through any host's
  * CommandRunner: the organization, project and repository the remote's URL names. The body always
  * goes through a file (az reads `@<file>`); nothing is ever force-pushed. Every failure is a fixed
- * reason: no output of git or az reaches the caller. Pull request reviews are not reached on Azure
- * DevOps yet. No Node API here.
+ * reason: no output of git or az reaches the caller. No Node API here.
  * @param {{ commandRunner: CommandRunner }} options
  * @returns {import('../../application/ports/code-host.mjs').CodeHost}
  */
@@ -48,17 +48,21 @@ const whereTo = (commandRunner) => ({
 })
 
 /**
- * PullRequests on Azure DevOps: not reached yet, a fixed reason.
+ * PullRequests on Azure Repos: a pull request read by its number, and the review's comment kept on
+ * it as one thread, rewritten at each pass. The consent is kept for the repository the remote
+ * names, from git alone. Every failure is a fixed reason.
+ * @param {{ commandRunner: CommandRunner }} options
  * @returns {import('../../application/ports/pull-requests.mjs').PullRequests}
  */
-export const createAzPullRequests = () => Object.freeze({
-  unavailable: async () => UNREACHED,
-  repository: async () => null,
-  find: async () => refused(UNREACHED),
-  keepComment: async () => refused(UNREACHED),
+export const createAzPullRequests = ({ commandRunner }) => Object.freeze({
+  unavailable: () => unavailable(commandRunner),
+  repository: () => repositoryOf(commandRunner),
+  checkoutCommand: (number) => `az repos pr checkout --id ${number}`,
+  // az sends a thread and a rewritten comment from JSON files.
+  takesRequestFile: true,
+  find: (number) => findByNumber(commandRunner, number),
+  keepComment: (request) => keepThread(commandRunner, request),
 })
-
-const UNREACHED = forgeUnreachable('azure-devops')
 
 /** The branch HEAD is on; null when it is detached. @param {CommandRunner} commandRunner */
 const currentBranch = async (commandRunner) => {
@@ -88,10 +92,6 @@ const push = async (commandRunner, branch) => {
 
 /** A pull request's state as Azure DevOps names it, as the CodeHost says it. */
 const STATES = Object.freeze({ __proto__: null, active: 'open', abandoned: 'closed', completed: 'merged' })
-
-/** The page of a pull request. @param {Remote} remote @param {number} number */
-const pageOf = ({ organization, project, repository }, number) =>
-  `${organization}/${encodeURIComponent(project)}/_git/${encodeURIComponent(repository)}/pullrequest/${number}`
 
 /** The latest pull request whose source is the branch, whatever its state. @param {CommandRunner} commandRunner @param {string} head */
 const findPullRequest = async (commandRunner, head) => {
@@ -124,7 +124,7 @@ const isTextOrNone = (description) => description === undefined || description =
 
 /** @param {Remote} remote @param {Pull} pull */
 const foundOf = (remote, { pullRequestId, status, description }) => ({
-  number: pullRequestId, url: pageOf(remote, pullRequestId), state: STATES[status] ?? 'closed', body: description ?? '',
+  number: pullRequestId, url: pullRequestPage(remote, pullRequestId), state: STATES[status] ?? 'closed', body: description ?? '',
 })
 
 /**
@@ -156,7 +156,7 @@ const open = async (commandRunner, remote, { base, head, title, bodyFile, draft,
   const result = await repos(commandRunner, remote, ['pr', 'create', `--source-branch=${head}`, `--target-branch=${base}`, `--title=${title}`, `--description=@${bodyFile}`, ...options])
   const made = succeeded(result) ? readJson(result.stdout) : null
   if (!Number.isInteger(made?.pullRequestId)) return refused(`az could not open the pull request of ${head} on ${remote.project}/${remote.repository}`)
-  return { ok: /** @type {const} */ (true), number: made.pullRequestId, url: pageOf(remote, made.pullRequestId) }
+  return { ok: /** @type {const} */ (true), number: made.pullRequestId, url: pullRequestPage(remote, made.pullRequestId) }
 }
 
 /** Replaces the pull request's description. @param {CommandRunner} commandRunner @param {{ number: number, bodyFile: string }} request */

@@ -726,10 +726,13 @@ export class InMemoryCodeHost {
  */
 export class InMemoryPullRequests {
   /**
-   * @param {{ unavailable?: string | null, pullRequests?: object[], fails?: Record<string, string> }} [forge]
+   * @param {{ unavailable?: string | null, pullRequests?: object[], fails?: Record<string, string>, checkout?: (number: number) => string, takesRequestFile?: boolean }} [forge]
+   *   checkout: the command that checks a pull request out; takesRequestFile: whether a comment goes as JSON files, which the double ignores
    */
-  constructor({ unavailable = null, pullRequests = [], fails = {}, repository = { host: 'github.com', repository: 'acme/shop' }, pages = 'https://github.example.com/acme/shop' } = {}) {
+  constructor({ unavailable = null, pullRequests = [], fails = {}, repository = { host: 'github.com', repository: 'acme/shop' }, pages = 'https://github.example.com/acme/shop', checkout = (number) => `gh pr checkout ${number}`, takesRequestFile = false } = {}) {
     this.pages = pages
+    this.checkout = checkout
+    this.takesRequestFile = takesRequestFile
     this.missing = unavailable
     this.named = repository
     this.pullRequests = pullRequests
@@ -746,6 +749,7 @@ export class InMemoryPullRequests {
     return this.missing
   }
   async repository() { return this.named }
+  checkoutCommand(number) { return this.checkout(number) }
   async find(number) {
     this.calls.push(`find #${number}`)
     if (this.fails.read) return { ok: false, reason: this.fails.read }
@@ -956,7 +960,7 @@ const issueOn = (forge, number) => {
  * REST JSON as text, the shape skraft assumes (docs/v2/host-verification.md, not measured). Like
  * 2.11.0 it rewrites `<`, `>` and `&` of a Markdown comment as HTML entities.
  * `requests` lists each call (tool and arguments) in order, `calls` its `<server> <tool>`;
- * `fails` gives, by tool, the reason it fails with (`mcp-refused`…), or `unreadable` for an
+ * `fails` gives, by tool or by `<tool>:<action>`, the reason it fails with (`mcp-refused`…), or `unreadable` for an
  * answer that is no JSON; a tool it lacks answers `mcp-tool-missing`; `answers` replaces what a
  * tool answers, given its arguments. `workItems` are the fields of each work item by id;
  * `comments` the comments of the work items, which a test may remove, as a human deleting one;
@@ -964,11 +968,15 @@ const issueOn = (forge, number) => {
  * `listed` counts how often the host listed its servers.
  */
 export class InMemoryAzureMcp {
-  /** @param {{ servers?: string[], organization?: string, workItems?: Record<number, Record<string, unknown>>, fails?: Record<string, string>, answers?: Record<string, (args: any, mcp: InMemoryAzureMcp) => unknown>, pageSize?: number }} [options] */
-  constructor({ servers = ['ado'], organization = 'https://dev.azure.com/acme', workItems = {}, fails = {}, answers = {}, pageSize = 100 } = {}) {
+  /** @param {{ servers?: string[], organization?: string, workItems?: Record<number, Record<string, unknown>>, pullRequests?: Record<number, Record<string, unknown>>, fails?: Record<string, string>, answers?: Record<string, (args: any, mcp: InMemoryAzureMcp) => unknown>, pageSize?: number }} [options]
+   *   pullRequests: the pull requests as the REST API answers them, by id; `threads` (below) their comment threads */
+  constructor({ servers = ['ado'], organization = 'https://dev.azure.com/acme', workItems = {}, pullRequests = {}, fails = {}, answers = {}, pageSize = 100 } = {}) {
     this.names = servers
     this.organization = organization
     this.workItems = workItems
+    this.pullRequests = pullRequests
+    /** @type {Array<{ pullRequestId: number, id: number, status?: string, comments: Array<{ id: number, content: string, isDeleted?: boolean }> }>} */
+    this.threads = []
     this.fails = fails
     this.answers = answers
     this.pageSize = pageSize
@@ -988,7 +996,7 @@ export class InMemoryAzureMcp {
   async call({ server, tool, arguments: args }) {
     this.calls.push(`${server} ${tool}`)
     this.requests.push({ tool, arguments: args })
-    const failure = this.fails[tool]
+    const failure = this.fails[`${tool}:${args.action}`] ?? this.fails[tool]
     if (failure === 'unreadable') return { ok: true, text: 'not JSON' }
     if (failure) return { ok: false, reason: failure }
     const run = this.answers[tool] ?? (AZURE_TOOLS[tool] && ((given) => AZURE_TOOLS[tool](this, given)))
@@ -1004,8 +1012,33 @@ const commentUrl = (mcp, { id, workItemId, project }) => `${mcp.organization}/${
 /** The comment as the REST API answers it. @param {InMemoryAzureMcp} mcp @param {InMemoryAzureMcp['comments'][number]} comment */
 const commentAnswer = (mcp, comment) => ({ id: comment.id, workItemId: comment.workItemId, text: comment.text, format: 'markdown', url: commentUrl(mcp, comment) })
 
+/** The thread as the tool answers it. @param {InMemoryAzureMcp['threads'][number]} thread */
+const threadAnswer = ({ pullRequestId, ...thread }) => thread
+
+/** The repository tools of @azure-devops/mcp 2.11.0 (src/tools/repositories.ts) skraft calls, on the pull requests and threads of the double. */
+const AZURE_REPOSITORY_TOOLS = {
+  repo_pull_request: (mcp, { action, pullRequestId }) => (action === 'get' ? mcp.pullRequests[pullRequestId] ?? null : null),
+  repo_pull_request_thread: (mcp, { action, pullRequestId, top = 100, skip = 0 }) => {
+    if (action !== 'list') return null
+    return mcp.threads.filter((thread) => thread.pullRequestId === pullRequestId).sort((a, b) => a.id - b.id).slice(skip, skip + top).map(threadAnswer)
+  },
+  repo_pull_request_thread_write: (mcp, { action, pullRequestId, threadId, commentId, content, status }) => {
+    if (action === 'create') {
+      mcp.posted += 1
+      const thread = { pullRequestId, id: 40 + mcp.posted, status, comments: [{ id: 1, content }] }
+      mcp.threads.push(thread)
+      return threadAnswer(thread)
+    }
+    const comment = mcp.threads.find((each) => each.pullRequestId === pullRequestId && each.id === threadId)?.comments.find((each) => each.id === commentId)
+    if (action !== 'update' || !comment) return null
+    comment.content = content
+    return comment
+  },
+}
+
 /** The tools of @azure-devops/mcp 2.11.0 skraft calls, each on the work items of the double. */
 const AZURE_TOOLS = {
+  ...AZURE_REPOSITORY_TOOLS,
   wit_work_item: (mcp, { action, id, workItemId, project }) => {
     if (action === 'get') return mcp.workItems[id] ? { id, url: `${mcp.organization}/_apis/wit/workItems/${id}`, fields: mcp.workItems[id] } : null
     if (action !== 'list_comments') return null

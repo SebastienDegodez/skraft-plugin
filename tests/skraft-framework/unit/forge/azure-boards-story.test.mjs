@@ -106,7 +106,7 @@ test('a work item the server names in another organization is not read: az serve
 })
 
 test('every failure of the Azure DevOps MCP server on a read falls back on az, which reads what it reads, and the journal says az served and why', async () => {
-  for (const [failure, why] of [['mcp-unavailable', 'mcp-unavailable'], ['mcp-tool-missing', 'mcp-tool-missing'], ['mcp-failed', 'mcp-failed'], ['mcp-refused', 'mcp-refused'], ['unreadable', 'mcp-unreadable']]) {
+  for (const [failure, why] of [['mcp-unavailable', 'mcp-unavailable'], ['mcp-tool-missing', 'mcp-tool-missing'], ['mcp-failed', 'mcp-failed'], ['unreadable', 'mcp-unreadable']]) {
     const { host, outcome } = await startOn({ az: { issues: { 42: AZ_STORY } }, mcp: { fails: { wit_work_item: failure } } })
 
     assert.equal(outcome.ok, true, failure)
@@ -115,6 +115,15 @@ test('every failure of the Azure DevOps MCP server on a read falls back on az, w
   const truncated = { wit_work_item: ({ id }) => ({ id, url: 'https://dev.azure.com/acme/_apis/wit/workItems/42', fields: { ...USER_STORY, 'System.Title': 7 } }) }
   const { host } = await startOn({ az: { issues: { 42: AZ_STORY } }, mcp: { answers: truncated } })
   assert.deepEqual(started(host).issueRoute, { via: 'az', fallback: 'mcp-unreadable' }, 'a work item without a title is no story')
+})
+
+test('a read the person or the host refuses is refused: the run starts on the story\'s number and title with a fixed reason, and az is not asked', async () => {
+  const { host, outcome } = await startOn({ az: { issues: { 42: AZ_STORY } }, mcp: { fails: { wit_work_item: 'mcp-refused' } } })
+
+  assert.equal(outcome.ok, true)
+  assert.equal(started(host).issueUnread, 'the host refused the Azure DevOps MCP server\'s wit_work_item, so skraft read nothing from Azure Boards and did not ask az instead; allow it, or run again where it is allowed')
+  assert.deepEqual([host.codeHost.issuesRead, started(host).issueRoute, started(host).story], [[], { via: 'mcp' }, { issue: 42, title: 'Pay by card' }])
+  assert.equal(await host.tracking.read(SLUG, ISSUE_42), null)
 })
 
 test('only the server named ado is asked: any other server goes unasked and az serves', async () => {

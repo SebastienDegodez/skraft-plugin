@@ -56,3 +56,11 @@ export const isInOrganization = (organization, url) => {
   const named = organizationOf(url)
   return named !== null && named === organizationOf(organization)
 }
+
+/**
+ * The repository a consent is kept for: the host and `<organization>/<project>/<repository>`, the
+ * same whichever form of the organization's address the remote is written in.
+ * @param {AzureRemote} remote @returns {{ host: string, repository: string }}
+ */
+export const azureRepositoryKeyOf = ({ organization, project, repository }) =>
+  ({ host: 'dev.azure.com', repository: `${organizationOf(organization)}/${project}/${repository}` })

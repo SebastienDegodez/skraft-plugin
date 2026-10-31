@@ -1,11 +1,11 @@
-import { once, served, answerOf, UNAVAILABLE, UNREADABLE } from './mcp-route.mjs'
+import { once, served, answerOf, refusalOf, UNAVAILABLE, UNREADABLE } from './mcp-route.mjs'
 
 /**
  * GitHub's adapters served first by the host's GitHub MCP server, then by gh. An operation goes
  * through the server's tools when the host has a known GitHub server connected and the
  * repository the operation acts on is on github.com; gh does it when the server is absent, lacks
- * the tool, fails, or answers what skraft cannot read. A write the person or the host refuses is
- * refused, never retried with gh. Each result says which way served it (`via`) and, when gh
+ * the tool, fails, or answers what skraft cannot read. A call the person or the host refuses, a read
+ * as a write, is refused, never retried with gh. Each result says which way served it (`via`) and, when gh
  * served after the server could not, why (`fallback`). The push, the remotes and the branches
  * stay with git and gh.
  *
@@ -32,6 +32,12 @@ import { once, served, answerOf, UNAVAILABLE, UNREADABLE } from './mcp-route.mjs
  * (`mcp__claude_ai_Github__<tool>`). Any other server, whatever its name holds, is never sent a body.
  */
 const GITHUB_SERVERS = Object.freeze(['github-mcp-server', 'github', 'claude_ai_Github'])
+/** What a refusal of a GitHub tool answers: refused for good, whatever the tool, never left to gh. */
+const refused = refusalOf({ server: 'GitHub', place: 'GitHub', cli: 'gh', writes: ['create_pull_request', 'update_pull_request', 'add_issue_comment', 'update_issue_comment'] })
+
+/** @param {string | undefined} tool @returns {{ read: 'failed', reason: string }} */
+const issueRefused = (tool) => ({ read: 'failed', reason: refused(tool).reason })
+
 /** The host the GitHub MCP server reaches. */
 const GITHUB_HOST = 'github.com'
 
@@ -54,11 +60,11 @@ export const githubMcpFirst = (gh, mcpTools) => {
 const codeHostOf = (gh, { origin, reviewed }) => Object.freeze({
   ...onGit(gh),
   unavailable: async () => ('failure' in await origin() ? gh.unavailable() : null),
-  issue: (number) => served(reviewed, (at) => issueOf(at, number), () => gh.issue(number), 'gh'),
-  findPullRequest: (head) => served(origin, (at) => pullRequestOf(at, head), () => gh.findPullRequest(head), 'gh'),
-  create: (request) => served(origin, (at) => created(at, request), () => gh.create(request), 'gh'),
-  edit: (request) => served(origin, (at) => edited(at, request), () => gh.edit(request), 'gh'),
-  keepIssueComment: (request) => served(origin, (at) => commentKept(at, request), () => gh.keepIssueComment(request), 'gh'),
+  issue: (number) => served(reviewed, (at) => issueOf(at, number), () => gh.issue(number), 'gh', issueRefused),
+  findPullRequest: (head) => served(origin, (at) => pullRequestOf(at, head), () => gh.findPullRequest(head), 'gh', refused),
+  create: (request) => served(origin, (at) => created(at, request), () => gh.create(request), 'gh', refused),
+  edit: (request) => served(origin, (at) => edited(at, request), () => gh.edit(request), 'gh', refused),
+  keepIssueComment: (request) => served(origin, (at) => commentKept(at, request), () => gh.keepIssueComment(request), 'gh', refused),
 })
 
 /**
@@ -80,8 +86,10 @@ const onGit = (gh) => ({
 const pullRequestsOf = (gh, reviewed) => Object.freeze({
   unavailable: async () => ('failure' in await reviewed() ? gh.unavailable() : null),
   repository: () => gh.repository(),
-  find: (number) => served(reviewed, (at) => pullRequestRead(at, number), () => gh.find(number), 'gh'),
-  keepComment: (request) => served(reviewed, (at) => commentKept(at, request), () => gh.keepComment(request), 'gh'),
+  checkoutCommand: (number) => gh.checkoutCommand(number),
+  takesRequestFile: gh.takesRequestFile,
+  find: (number) => served(reviewed, (at) => pullRequestRead(at, number), () => gh.find(number), 'gh', refused),
+  keepComment: (request) => served(reviewed, (at) => commentKept(at, request), () => gh.keepComment(request), 'gh', refused),
 })
 
 /**
@@ -165,12 +173,6 @@ const stateOf = ({ state, merged, merged_at: mergedAt }) => {
   return state === 'closed' && (merged === true || Boolean(mergedAt)) ? 'merged' : null
 }
 
-/** A write the person or the host refused: the run says so and writes nothing else. @param {string} tool */
-const refusedBy = (tool) => ({ served: { ok: /** @type {const} */ (false), reason: `the host refused the GitHub MCP server's ${tool}, so skraft wrote nothing on GitHub; allow it, or run again where it is allowed` } })
-
-/** A failed write: refused for good, else left to gh. @param {Failed} failed @param {string} tool */
-const writeFailed = (failed, tool) => (failed.failure === 'mcp-refused' ? refusedBy(tool) : failed)
-
 /**
  * Opens the pull request; an answer skraft cannot read is checked by finding the pull request
  * once, so that gh never tries to open it a second time.
@@ -178,7 +180,7 @@ const writeFailed = (failed, tool) => (failed.failure === 'mcp-refused' ? refuse
  */
 const created = async (github, { base, head, title, body, draft }) => {
   const made = await github.call('create_pull_request', { ...github.at, base, head, title, body, draft })
-  if ('failure' in made) return writeFailed(made, 'create_pull_request')
+  if ('failure' in made) return made
   const number = numberOn(github.pages.pull, urlOf(made.json))
   if (!Number.isNaN(number)) return { served: { ok: /** @type {const} */ (true), number, url: urlOf(made.json) } }
   return openedOf(await pullRequestOf(github, head))
@@ -194,7 +196,7 @@ const openedOf = (found) => {
 /** @param {GitHub} github @param {{ number: number, body: string }} request */
 const edited = async ({ at, pages, call }, { number, body }) => {
   const answer = await call('update_pull_request', { ...at, pullNumber: number, body })
-  if ('failure' in answer) return writeFailed(answer, 'update_pull_request')
+  if ('failure' in answer) return answer
   return numberOn(pages.pull, urlOf(answer.json)) === number ? { served: { ok: /** @type {const} */ (true) } } : UNREADABLE
 }
 
@@ -229,7 +231,7 @@ const commentKept = async (github, request) => {
   const kept = mine.comments.find((comment) => urlOf(comment) === request.url) ?? mine.comments.findLast((comment) => textOf(comment.body).includes(request.marker))
   const tool = kept === undefined ? 'add_issue_comment' : 'update_issue_comment'
   const written = await github.call(tool, { ...github.at, ...(kept === undefined ? { issue_number: request.number } : { comment_id: kept.id }), body: request.body })
-  if ('failure' in written) return writeFailed(written, tool)
+  if ('failure' in written) return written
   const url = urlOf(written.json)
   return numberOn(github.pages.comment, url) === request.number ? { served: { ok: /** @type {const} */ (true), url } } : UNREADABLE
 }

@@ -8,99 +8,7 @@ import { createAzCodeHost } from '../../../../plugins/skraft-framework/engine/in
 import { createForges } from '../../../../plugins/skraft-framework/engine/infrastructure/code-host/forges.mjs'
 import { createNodeCommandRunner } from '../../../../plugins/skraft-framework/engine/infrastructure/process/node-processes.mjs'
 import { commitAll, envWithPath, git, tempFolder, toolFolders } from '../support/workspace.mjs'
-
-// az stands for Azure DevOps, which no test reaches: a script that keeps each argv it is given
-// and answers from az-state.json. git is real, its remote a bare repository on disk.
-const FAKE_AZ = [
-  "import { appendFileSync, readFileSync, writeFileSync } from 'node:fs'",
-  "import { dirname, join } from 'node:path'",
-  "import { fileURLToPath } from 'node:url'",
-  'const here = dirname(fileURLToPath(import.meta.url))',
-  'const args = process.argv.slice(2)',
-  "appendFileSync(join(here, 'az-calls.jsonl'), `${JSON.stringify(args)}\\n`)",
-  "const state = JSON.parse(readFileSync(join(here, 'az-state.json'), 'utf8'))",
-  "const said = (value) => { process.stdout.write(`${typeof value === 'string' ? value : JSON.stringify(value)}\\n`); process.exit(0) }",
-  "const option = (name) => args.find((arg) => arg.startsWith(`--${name}=`))?.slice(name.length + 3)",
-  "if (args[0] === '--version') said('azure-cli 2.67.0')",
-  "if (args[0] === 'extension') { if (state.extension) said({ name: 'azure-devops' }); process.stderr.write('SECRET-STDERR\\n'); process.exit(1) }",
-  "if (state.fails || !state.signedIn) { process.stderr.write('SECRET-STDERR\\n'); process.exit(1) }",
-  "if (args[0] === 'boards') { const item = state.workItems?.[option('id')]; if (item !== undefined) said(item); process.stderr.write(state.workItemFails ? 'SECRET-STDERR\\n' : 'TF401232: SECRET-STDERR\\n'); process.exit(1) }",
-  "const kv = (name) => { const at = args.indexOf(`--${name}`); const pairs = []; for (let i = at + 1; at >= 0 && i < args.length && !args[i].startsWith('--'); i += 1) pairs.push(args[i].split(/=(.*)/s).slice(0, 2)); return Object.fromEntries(pairs) }",
-  "if (args[0] === 'devops' && args[1] === 'invoke') {",
-  "  const file = join(here, 'az-comments.json'); const comments = JSON.parse(readFileSync(file, 'utf8')); const route = kv('route-parameters'); const query = kv('query-parameters'); const method = option('http-method') ?? 'GET'",
-  "  if (method === 'GET') { const from = Number(query.continuationToken ?? 0); const size = state.pageSize ?? 100; const listed = { count: comments.length, comments: comments.slice(from, from + size), ...(from + size < comments.length ? { continuationToken: String(from + size) } : {}) }; said(state.unreadableList ? 'not json' : listed) }",
-  "  const text = JSON.parse(readFileSync(option('in-file'), 'utf8')).text",
-  "  appendFileSync(join(here, 'az-writes.jsonl'), `${JSON.stringify({ method, route, query, text })}\\n`)",
-  "  if (state.commentFails) { process.stderr.write('SECRET-STDERR\\n'); process.exit(1) }",
-  "  if (method === 'POST') { const comment = { id: 500 + comments.length, text }; comments.push(comment); writeFileSync(file, JSON.stringify(comments)); said(state.unreadableWrite ? 'not json' : comment) }",
-  "  const at = comments.findIndex((comment) => String(comment.id) === route.commentId); comments[at].text = text; writeFileSync(file, JSON.stringify(comments)); said(comments[at])",
-  "}",
-  "if (args[1] === 'show') said({ name: option('repository'), defaultBranch: state.defaultBranch })",
-  "if (args[2] === 'list') said(state.pulls)",
-  "if (args[2] === 'create' && state.refusedWorkItem && option('work-items')) { process.stderr.write('SECRET-STDERR\\n'); process.exit(1) }",
-  "if (args[2] === 'create') { appendFileSync(join(here, 'az-bodies.txt'), readFileSync(option('description').slice(1), 'utf8')); said(state.created) }",
-  "if (args[2] === 'update') said(state.created)",
-  'process.exit(2)',
-  '',
-].join('\n')
-
-const SIGNED_IN = { extension: true, signedIn: true, defaultBranch: 'refs/heads/main', pulls: [], created: { pullRequestId: 7, status: 'active' } }
-
-// Under Windows skraft starts az only as the Azure CLI installer lays it out: `<CLI2>\wbin\az.cmd` beside
-// `<CLI2>\python.exe`, run as `python.exe -IBm azure.cli <args>` (process/az-launch.mjs). The fake stands
-// there as a real Python's venv whose `azure.cli` package runs the fake az.mjs; one for the whole run.
-let installerFolder
-const installerWbin = () => {
-  if (installerFolder !== undefined) return installerFolder
-  const venv = mkdtempSync(join(tmpdir(), 'skraft-az-cli-'))
-  process.once('exit', () => rmSync(venv, { recursive: true, force: true }))
-  const python = spawnSync('where', ['python'], { encoding: 'utf8' }).stdout.split(/\r?\n/)[0].trim()
-  assert.equal(spawnSync(python, ['-m', 'venv', venv]).status, 0, 'a Python to stand for the Azure CLI installer\'s')
-  const cli = join(venv, 'Lib', 'site-packages', 'azure', 'cli')
-  mkdirSync(cli, { recursive: true })
-  writeFileSync(join(venv, 'Lib', 'site-packages', 'azure', '__init__.py'), '')
-  writeFileSync(join(cli, '__init__.py'), '')
-  writeFileSync(join(cli, '__main__.py'), "import os, subprocess, sys\nsys.exit(subprocess.call([os.environ['SKRAFT_FAKE_NODE'], os.environ['SKRAFT_FAKE_AZ'], *sys.argv[1:]]))\n")
-  installerFolder = join(venv, 'Scripts', 'wbin')
-  mkdirSync(installerFolder)
-  writeFileSync(join(installerFolder, 'az.cmd'), '')
-  return installerFolder
-}
-
-/** A folder holding the fake az, for POSIX and for Windows; path: the PATH folder az is found in. */
-const azFolder = (root, state) => {
-  const bin = join(root, 'bin')
-  mkdirSync(bin, { recursive: true })
-  writeFileSync(join(bin, 'az.mjs'), FAKE_AZ)
-  writeFileSync(join(bin, 'az-calls.jsonl'), '')
-  writeFileSync(join(bin, 'az-bodies.txt'), '')
-  writeFileSync(join(bin, 'az-comments.json'), JSON.stringify(state.comments ?? []))
-  writeFileSync(join(bin, 'az-writes.jsonl'), '')
-  writeFileSync(join(bin, 'az-state.json'), JSON.stringify(state))
-  writeFileSync(join(bin, 'az'), `#!/bin/sh\nexec "${process.execPath}" "${join(bin, 'az.mjs')}" "$@"\n`)
-  chmodSync(join(bin, 'az'), 0o755)
-  return {
-    bin,
-    path: process.platform === 'win32' ? installerWbin() : bin,
-    env: { SKRAFT_FAKE_NODE: process.execPath, SKRAFT_FAKE_AZ: join(bin, 'az.mjs') },
-    calls: () => readFileSync(join(bin, 'az-calls.jsonl'), 'utf8').split('\n').filter(Boolean).map((line) => JSON.parse(line)),
-    bodies: () => readFileSync(join(bin, 'az-bodies.txt'), 'utf8'),
-    writes: () => readFileSync(join(bin, 'az-writes.jsonl'), 'utf8').split('\n').filter(Boolean).map((line) => JSON.parse(line)),
-    comments: () => JSON.parse(readFileSync(join(bin, 'az-comments.json'), 'utf8')),
-    set: (more) => writeFileSync(join(bin, 'az-state.json'), JSON.stringify({ ...state, ...more })),
-  }
-}
-
-/** A folder holding git alone, which runs the machine's: a PATH without any az the machine has. */
-const gitAlone = (root) => {
-  const real = spawnSync(process.platform === 'win32' ? 'where' : 'which', ['git'], { encoding: 'utf8' }).stdout.split(/\r?\n/)[0].trim()
-  const bin = join(root, 'git-only')
-  mkdirSync(bin, { recursive: true })
-  writeFileSync(join(bin, 'git.cmd'), `@"${real}" %*\r\n`)
-  writeFileSync(join(bin, 'git'), `#!/bin/sh\nexec "${real}" "$@"\n`)
-  chmodSync(join(bin, 'git'), 0o755)
-  return bin
-}
+import { azFolder, gitAlone, SIGNED_IN } from '../support/fake-az.mjs'
 
 /** A working copy on the branch checkout, one commit ahead of main, its origin an Azure DevOps URL that pushes to a bare repository beside it. */
 const repository = (t, { remote = 'https://acme@dev.azure.com/acme/Shop%20Team/_git/payment', az = SIGNED_IN } = {}) => {
@@ -119,6 +27,12 @@ const repository = (t, { remote = 'https://acme@dev.azure.com/acme/Shop%20Team/_
   const forge = azFolder(root, az)
   const runner = (folders = [forge.path, ...toolFolders()]) => createNodeCommandRunner({ root: cwd, env: { ...envWithPath(folders), ...forge.env } })
   return { root, cwd, forge, codeHost: (folders) => createAzCodeHost({ commandRunner: runner(folders) }), runner, withoutAz: () => createAzCodeHost({ commandRunner: runner([gitAlone(root)]) }) }
+}
+
+/** The remote's pull requests, over the fake az: the working copy of `repository`, and a way to create the adapters of the Azure DevOps forge. */
+const pullRequestsOn = (t, options) => {
+  const on = repository(t, options)
+  return { ...on, createdPullRequests: () => createForges({ commandRunner: on.runner() })['azure-devops'].pullRequests }
 }
 
 /** What every call to Azure DevOps names: its organization, project and repository, as JSON, with no question asked. */
@@ -251,14 +165,14 @@ test('a work item Azure DevOps refuses to link leaves the pull request opened wi
   assert.deepEqual(forge.calls().slice(3).map((call) => call[2]), ['create', 'list'], 'a pull request Azure DevOps opened despite the refusal is not opened twice')
 })
 
-test('an Azure Repos pull request toward the default branch fixes its story\'s work item and names it otherwise; pull request reviews are not reached on Azure DevOps yet', async (t) => {
-  const { forge, runner } = repository(t)
+test('an Azure Repos pull request toward the default branch fixes its story\'s work item and names it otherwise; a review keeps its consent for the organization, project and repository of the remote, from the remote alone', async (t) => {
+  const { forge, runner } = repository(t, { remote: 'https://acme.visualstudio.com/DefaultCollection/Shop%20Team/_git/payment' })
   const { codeHost, pullRequests } = createForges({ commandRunner: runner() })['azure-devops']
-  const reason = 'skraft cannot reach the forge azure-devops yet (forge in skraft-config.json, else the host of the Git remote, chooses it)'
 
   assert.deepEqual([codeHost.storyLink(42, true), codeHost.storyLink(7, false)], ['Fixes #42', '#7'])
   assert.deepEqual(await codeHost.repository(), null, 'no screenshot link is built for a forge whose raw file URLs skraft does not write')
-  assert.deepEqual([await pullRequests.unavailable(), await pullRequests.repository()], [reason, null])
+  assert.deepEqual(await pullRequests.repository(), { host: 'dev.azure.com', repository: 'acme/Shop Team/payment' })
+  assert.deepEqual([pullRequests.checkoutCommand(12), pullRequests.takesRequestFile], ['az repos pr checkout --id 12', true])
   assert.deepEqual(forge.calls(), [])
 })
 
@@ -408,4 +322,132 @@ test('through az, a comment that quotes the marker without starting with it is s
     assert.deepEqual(await unreadable.codeHost().keepIssueComment(commentRequest(unreadable.root)), { ok: false, reason: 'az could not comment work item #42 of Shop Team' }, JSON.stringify(comments))
     assert.deepEqual(unreadable.forge.writes(), [], JSON.stringify(comments))
   }
+})
+
+
+const PULL = (more = {}) => ({
+  pullRequestId: 12, title: 'Discount at checkout', description: 'Applies a 10% discount.',
+  sourceRefName: 'refs/heads/discount', targetRefName: 'refs/heads/main',
+  lastMergeSourceCommit: { commitId: 'aaa111' }, lastMergeTargetCommit: { commitId: 'bbb222' },
+  repository: { name: 'payment', project: { name: 'Shop Team' } },
+  url: 'https://dev.azure.com/acme/Shop%20Team/_apis/git/repositories/payment/pullRequests/12',
+  ...more,
+})
+const PULL_12 = { pullRequests: { 12: PULL() } }
+const SHOW_12 = ['repos', 'pr', 'show', '--id=12', '--organization=https://dev.azure.com/acme', '--detect=false', '--only-show-errors', '--output=json']
+const ON_PULL_12 = ['--area=git', '--resource=pullRequestThreads', '--route-parameters', 'project=Shop Team', 'repositoryId=payment', 'pullRequestId=12']
+const GIT_API = ['--api-version=7.1', '--organization=https://dev.azure.com/acme', '--only-show-errors', '--output=json']
+const THREAD_URL = (thread, comment = 1) => `https://dev.azure.com/acme/Shop%20Team/_apis/git/repositories/payment/pullRequests/12/threads/${thread}/comments/${comment}`
+const REVIEW_MARKER = '<sub>skraft-review pr=12</sub>'
+const REVIEW = `### skraft review · #12 — NEEDS_REWORK (pass 1)\n\nNEEDS_REWORK: 1 reason to address\n\n${REVIEW_MARKER}\n`
+
+/** The request a review's comment is kept with: the body, and the two JSON files az sends, as the engine writes them. */
+const threadRequest = (root, { url = null, body = REVIEW } = {}) => {
+  const threadFile = join(root, 'comment.thread.json')
+  const contentFile = join(root, 'comment.content.json')
+  writeFileSync(threadFile, JSON.stringify({ comments: [{ parentCommentId: 0, content: body, commentType: 1 }], status: 4 }))
+  writeFileSync(contentFile, JSON.stringify({ content: body }))
+  return { number: 12, marker: REVIEW_MARKER, url, bodyFile: join(root, 'comment.md'), body, threadFile, contentFile }
+}
+
+test('a pull request is read through az repos pr show: title, description, branches and the commits of its last merge, its page built; one az does not find is missing', async (t) => {
+  const { forge, createdPullRequests } = pullRequestsOn(t, { az: { ...SIGNED_IN, ...PULL_12 } })
+  const pullRequests = createdPullRequests()
+
+  assert.deepEqual(await pullRequests.find(12), {
+    ok: true,
+    found: {
+      number: 12, url: 'https://dev.azure.com/acme/Shop%20Team/_git/payment/pullrequest/12', title: 'Discount at checkout', body: 'Applies a 10% discount.',
+      base: { ref: 'main', sha: 'bbb222' }, head: { ref: 'discount', sha: 'aaa111' },
+    },
+  })
+  assert.deepEqual(forge.calls().at(-1), SHOW_12)
+  assert.deepEqual(await pullRequests.find(13), { ok: true, found: null })
+  forge.set({ pullRequests: { 12: PULL({ description: null }) } })
+  assert.equal((await pullRequests.find(12)).found.body, '')
+})
+
+test('a pull request az cannot read, or answers in a form skraft cannot read, or of another repository or project, is a fixed reason that holds no output of az', async (t) => {
+  const reasons = [
+    [{ pullRequestFails: true }, 'az could not read pull request #12 of https://dev.azure.com/acme'],
+    [{ pullRequests: { 12: 'not json' } }, 'Azure DevOps answered pull request #12 in a form skraft cannot read'],
+    [{ pullRequests: { 12: PULL({ lastMergeSourceCommit: null }) } }, 'Azure DevOps answered pull request #12 in a form skraft cannot read'],
+    [{ pullRequests: { 12: PULL({ url: 'https://dev.azure.com/other/_apis/git/pullRequests/12' }) } }, 'Azure DevOps answered pull request #12 in a form skraft cannot read'],
+    [{ pullRequests: { 12: PULL({ repository: { name: 'billing', project: { name: 'Shop Team' } } }) } }, 'pull request #12 is not in Shop Team/payment of the Git remote, so skraft does not review it'],
+    [{ pullRequests: { 12: PULL({ repository: { name: 'payment', project: { name: 'Other' } } }) } }, 'pull request #12 is not in Shop Team/payment of the Git remote, so skraft does not review it'],
+  ]
+  for (const [state, reason] of reasons) {
+    const { createdPullRequests } = pullRequestsOn(t, { az: { ...SIGNED_IN, pullRequests: {}, ...state } })
+
+    assert.deepEqual(await createdPullRequests().find(12), { ok: false, reason }, JSON.stringify(state))
+  }
+  assert.deepEqual(await pullRequestsOn(t, { remote: null }).createdPullRequests().find(12), { ok: false, reason: 'the working copy has no Git remote whose URL names an Azure DevOps organization, project and repository' })
+  const cased = pullRequestsOn(t, { az: { ...SIGNED_IN, pullRequests: { 12: PULL({ repository: { name: 'PAYMENT', project: { name: 'shop team' } } }) } } })
+  assert.equal((await cased.createdPullRequests().find(12)).ok, true)
+})
+
+test('the review\'s thread is posted through az devops invoke, from a JSON file, then its first comment rewritten in place at the URL kept, and found again by its marker without one', async (t) => {
+  const { root, forge, createdPullRequests } = pullRequestsOn(t, { az: { ...SIGNED_IN, ...PULL_12 } })
+  const pullRequests = createdPullRequests()
+  const first = threadRequest(root)
+
+  assert.deepEqual(await pullRequests.keepComment(first), { ok: true, url: THREAD_URL(41) })
+  assert.deepEqual(forge.calls().slice(-3), [
+    SHOW_12,
+    ['devops', 'invoke', ...ON_PULL_12, ...GIT_API],
+    ['devops', 'invoke', ...ON_PULL_12, '--http-method=POST', `--in-file=${first.threadFile}`, ...GIT_API],
+  ])
+  assert.deepEqual(forge.threads().map(({ id, status, comments }) => [id, status, comments[0].content]), [[41, 4, REVIEW]])
+
+  const body = REVIEW.replace('pass 1', 'pass 2')
+  const second = threadRequest(root, { url: THREAD_URL(41), body })
+  assert.deepEqual(await pullRequests.keepComment(second), { ok: true, url: THREAD_URL(41) })
+  assert.deepEqual(forge.calls().at(-1), ['devops', 'invoke', '--area=git', '--resource=pullRequestThreadComments', '--route-parameters', 'project=Shop Team', 'repositoryId=payment', 'pullRequestId=12', 'threadId=41', 'commentId=1', '--http-method=PATCH', `--in-file=${second.contentFile}`, ...GIT_API])
+  assert.deepEqual(forge.threads().map(({ comments }) => comments[0].content), [body])
+
+  assert.deepEqual(await pullRequests.keepComment(threadRequest(root, { url: null, body: REVIEW })), { ok: true, url: THREAD_URL(41) }, 'found again by its marker, as the first pass was lost')
+  assert.deepEqual(forge.threadWrites().map(({ method, resource }) => [method, resource]), [['POST', 'pullRequestThreads'], ['PATCH', 'pullRequestThreadComments'], ['PATCH', 'pullRequestThreadComments']])
+  assert.equal(forge.threads().length, 1)
+})
+
+test('a rewrite az answers for another comment than the one rewritten is unreadable: the review is not reported as commented at a URL nobody confirmed', async (t) => {
+  const first = { id: 41, comments: [{ id: 1, content: REVIEW }] }
+  for (const answer of [{ id: 99 }, { content: 'no id' }, 'not json']) {
+    const { root, forge, createdPullRequests } = pullRequestsOn(t, { az: { ...SIGNED_IN, ...PULL_12, threads: [first], rewriteAnswer: answer } })
+
+    const kept = await createdPullRequests().keepComment(threadRequest(root, { url: THREAD_URL(41) }))
+
+    assert.deepEqual(kept, { ok: false, reason: 'az could not comment pull request #12 of Shop Team/payment' }, JSON.stringify(answer))
+    assert.deepEqual(forge.threadWrites().map(({ method }) => method), ['PATCH'], JSON.stringify(answer))
+  }
+})
+
+test('a reply that quotes the review is not rewritten, nor a thread whose comment a person deleted: the review is posted as its own thread', async (t) => {
+  const quoting = { id: 5, comments: [{ id: 1, content: `> ${REVIEW}\nno` }] }
+  const deleted = { id: 6, comments: [{ id: 1, content: REVIEW, isDeleted: true }] }
+  const { root, forge, createdPullRequests } = pullRequestsOn(t, { az: { ...SIGNED_IN, ...PULL_12, threads: [quoting, deleted] } })
+
+  assert.deepEqual(await createdPullRequests().keepComment(threadRequest(root)), { ok: true, url: THREAD_URL(43) })
+  assert.deepEqual(forge.threadWrites().map(({ method }) => method), ['POST'])
+})
+
+test('through az, a pull request that cannot be read, of another repository, or whose threads cannot be listed, is never written to; a write that fails writes nothing twice; nothing az prints reaches a reason', async (t) => {
+  const couldNot = 'az could not comment pull request #12 of Shop Team/payment'
+  const cases = [
+    [{ pullRequests: {} }, 'az could not read pull request #12 of https://dev.azure.com/acme', 0],
+    [{ pullRequests: {}, pullRequestFails: true }, 'az could not read pull request #12 of https://dev.azure.com/acme', 0],
+    [{ pullRequests: { 12: PULL({ repository: { name: 'billing', project: { name: 'Shop Team' } } }) } }, 'pull request #12 is not in Shop Team/payment of the Git remote, so skraft does not review it', 0],
+    [{ unreadableList: true }, couldNot, 0],
+    [{ threads: [{ id: 'five', comments: [] }] }, couldNot, 0],
+    [{ threads: [{ id: 5, comments: [{ id: 1, content: 'a person' }] }], threadCount: 2 }, couldNot, 0],
+    [{ unreadableWrite: true }, couldNot, 1],
+    [{ commentFails: true }, couldNot, 1],
+  ]
+  for (const [state, reason, writes] of cases) {
+    const { root, forge, createdPullRequests } = pullRequestsOn(t, { az: { ...SIGNED_IN, ...PULL_12, ...state } })
+
+    assert.deepEqual(await createdPullRequests().keepComment(threadRequest(root)), { ok: false, reason }, JSON.stringify(state))
+    assert.equal(forge.threadWrites().length, writes, JSON.stringify(state))
+  }
+  assert.deepEqual(await pullRequestsOn(t, { remote: null }).createdPullRequests().keepComment({ number: 12, marker: REVIEW_MARKER, url: null, bodyFile: '', body: '', threadFile: '', contentFile: '' }), { ok: false, reason: 'the working copy has no Git remote whose URL names an Azure DevOps organization, project and repository' })
 })
