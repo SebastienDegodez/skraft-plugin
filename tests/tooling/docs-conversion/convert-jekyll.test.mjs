@@ -113,6 +113,21 @@ test('shell fences become console blocks in place; an ambiguous one is reported 
   }])
 })
 
+test('placeholders in prose become entities; code spans, fences and real HTML stay', () => {
+  const { result, after } = convertFixture('placeholders', { docId: 'reference/hosts' })
+  assert.equal(result.text, after)
+})
+
+test('in an .mdx page, braces and a lone < in prose are escaped, code spans and heading IDs stay', () => {
+  const { result, after } = convertFixture('braces-mdx', { docId: 'index' })
+  assert.equal(result.text, after)
+})
+
+test('in an .md page, braces in prose stay', () => {
+  const source = '# T\n\nThe workflow starts with { slug: "checkout" }.\n'
+  assert.equal(convertPage(source, { docId: 'tutorials/first-run-copilot', locale: 'en' }).text, source)
+})
+
 test('with the catalogue option, dashboard links point at the catalogue page', () => {
   const source = '# T\n\n[Catalogue]({{ "/en/dashboard/" | relative_url }}), [data]({{ "/dashboard/" | relative_url }})\n'
   const { text } = convertPage(source, { docId: 'how-to/run-gates', locale: 'en', dashboardLink: 'catalogue' })
