@@ -19,6 +19,18 @@
     "message": "Bibliographie",
     "description": "The label of footer link with label=Citations linking to /reference/citations"
   },
+  "link.item.label.Changelog": {
+    "message": "Journal des versions",
+    "description": "The label of footer link with label=Changelog linking to /reference/changelog"
+  },
+  "link.item.label.Glossary": {
+    "message": "Glossaire",
+    "description": "The label of footer link with label=Glossary linking to /reference/glossary"
+  },
+  "link.item.label.For executives": {
+    "message": "Pour décideurs",
+    "description": "The label of footer link with label=For executives linking to /explanation/for-executives"
+  },
   "link.item.label.GitHub": {
     "message": "GitHub",
     "description": "The label of footer link with label=GitHub linking to https://github.com/SebastienDegodez/skraft-plugin"

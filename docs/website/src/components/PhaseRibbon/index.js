@@ -22,7 +22,7 @@ export default function PhaseRibbon({ current }) {
           ) : (
             <Link className={styles.step} to={`/explanation/pipeline/${phase}`}>{phase.toUpperCase()}</Link>
           )}
-          {index < phases.length - 1 && <span aria-hidden="true">→</span>}
+          {index < phases.length - 1 && <span className={styles.arrow} aria-hidden="true">→</span>}
         </React.Fragment>
       ))}
     </nav>

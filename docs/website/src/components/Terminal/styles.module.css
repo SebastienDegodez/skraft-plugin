@@ -1,29 +1,46 @@
-/* The card stays dark in both colour modes, like the SVG transcripts (eng/docs/terminal-svg.mjs). */
+/*
+ * The card stays dark in both colour modes. The --term-* colours equal COLOURS in
+ * eng/docs/terminal-svg.mjs (tests/tooling/docs-terminal/palette-parity.test.mjs), so the SVG
+ * transcripts and the live blocks look the same.
+ */
 .terminal {
-  --term-bg: #16181d;
+  --term-background: #16181d;
+  --term-border: #2c313a;
+  --term-bar: #20242b;
   --term-text: #d7dae0;
   --term-muted: #8b929c;
   --term-prompt: #7cc4ff;
+  --term-ok: #4fc27a;
+  --term-warn: #e3b341;
+  --term-fail: #f47067;
   margin: 0 0 var(--ifm-leading) 0;
-  border: 1px solid #2a2e36;
+  border: 1px solid var(--term-border);
   border-radius: 10px;
-  background: var(--term-bg);
+  background: var(--term-background);
   color: var(--term-text);
-  box-shadow: 0 6px 18px rgb(0 0 0 / 12%);
   overflow: hidden;
+  position: relative;
+}
+
+/* On a light page the dark card gets a soft shadow so it sits on the page rather than in it. */
+[data-theme='light'] .terminal {
+  box-shadow: 0 1px 2px rgb(0 0 0 / 8%), 0 8px 24px rgb(31 35 40 / 12%);
 }
 
 .bar {
-  display: flex;
+  display: grid;
+  grid-template-columns: 1fr minmax(0, auto) 1fr;
   align-items: center;
   gap: 0.75rem;
-  padding: 0.5rem 0.75rem;
-  background: #23262d;
+  min-height: 2.25rem;
+  padding: 0 0.5rem 0 0.85rem;
+  background: var(--term-bar);
+  border-bottom: 1px solid var(--term-border);
 }
 
 .dots {
   display: inline-flex;
-  gap: 6px;
+  gap: 8px;
 }
 
 .dots i {
@@ -33,52 +50,159 @@
   display: inline-block;
 }
 
+.close {
+  background: #ff5f57;
+}
+
+.minimize {
+  background: #febc2e;
+}
+
+.zoom {
+  background: #28c840;
+}
+
 .title {
-  flex: 1;
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   color: var(--term-muted);
-  font-size: 0.8125rem;
+  font-family: var(--ifm-font-family-monospace);
+  font-size: 0.75rem;
   text-align: center;
 }
 
-.copy {
+.actions {
+  display: inline-flex;
+  justify-content: flex-end;
+  gap: 0.25rem;
+}
+
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 1.75rem;
+  min-width: 1.75rem;
+  padding: 0.15rem 0.55rem;
   background: transparent;
-  border: 1px solid #3a3f49;
+  border: 1px solid var(--term-border);
   border-radius: 6px;
   color: var(--term-text);
   cursor: pointer;
+  font-family: var(--ifm-font-family-base);
   font-size: 0.75rem;
-  padding: 0.2rem 0.55rem;
+  white-space: nowrap;
 }
 
-.copy:hover {
+.button:hover,
+.button[aria-pressed='true'] {
   border-color: var(--term-prompt);
 }
 
+.button:focus-visible {
+  outline: 2px solid var(--term-prompt);
+  outline-offset: 1px;
+}
+
+.announce {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* Horizontal scroll stays inside the card; shadows at the edges say there is more. */
 .body {
   margin: 0;
   padding: 0.85rem 1rem;
   overflow-x: auto;
-  background: transparent;
+  border-radius: 0;
   color: inherit;
   font-size: 0.875rem;
-  line-height: 1.55;
+  line-height: 1.6;
   white-space: pre;
+  background:
+    linear-gradient(to right, var(--term-background) 30%, transparent) left / 2rem 100% no-repeat local,
+    linear-gradient(to left, var(--term-background) 30%, transparent) right / 2rem 100% no-repeat local,
+    linear-gradient(to right, rgb(0 0 0 / 55%), transparent) left / 0.75rem 100% no-repeat scroll,
+    linear-gradient(to left, rgb(0 0 0 / 55%), transparent) right / 0.75rem 100% no-repeat scroll,
+    var(--term-background);
 }
 
-.command,
-.continuation {
+.body:focus-visible {
+  outline: 2px solid var(--term-prompt);
+  outline-offset: -2px;
+}
+
+.body code {
+  display: block;
+  min-width: max-content;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font-size: inherit;
+}
+
+.wrapped,
+.wrapped code {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  min-width: 0;
+}
+
+.line {
+  min-height: 1.6em;
+}
+
+.prompt {
+  color: var(--term-prompt);
+  user-select: none;
+}
+
+.command {
   color: var(--term-text);
+  font-weight: 600;
 }
 
 .output {
   color: var(--term-muted);
 }
 
-.prompt {
-  color: var(--term-prompt);
-  user-select: none;
+.ok,
+.warn,
+.fail {
+  font-weight: 600;
+}
+
+.ok {
+  color: var(--term-ok);
+}
+
+.warn {
+  color: var(--term-warn);
+}
+
+.fail {
+  color: var(--term-fail);
+}
+
+@media (max-width: 600px) {
+  .body {
+    font-size: 0.8125rem;
+    padding: 0.75rem;
+  }
+
+  .bar {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+  }
+
+  .button {
+    min-height: 44px;
+    min-width: 44px;
+  }
 }
