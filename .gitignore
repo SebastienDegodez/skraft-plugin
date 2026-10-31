@@ -50,6 +50,8 @@ plugins/skraft-framework/logs/
 # These are not needed for the plugin to build or run, and they clutter the repo.
 # .NET build artifacts
 **/bin/
+# The skraft command's executable (npm package @skraft/cli) is source, not a build output.
+!cli/bin/
 **/obj/
 # .NET IDE configs
 **/*.user
