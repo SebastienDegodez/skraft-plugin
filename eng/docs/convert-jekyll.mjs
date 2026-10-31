@@ -475,7 +475,42 @@ const reportHostSections = (text, page) => {
  * @param {{ extension: '.md'|'.mdx', headingIds?: 'comment'|'classic' }} options
  * @returns {{ rule: 'check', line: number, reason: string }[]}
  */
-export const checkPage = () => []
+export const checkPage = (text, { extension, headingIds = 'comment' }) => {
+  const prose = maskCode(text)
+  const found = [
+    ...matches(prose, /\{\{[\s\S]*?\}\}|\{%[\s\S]*?%\}/g, (match) => `Liquid left in prose: ${match}`),
+    ...(headingIds === 'classic' ? [] : matches(prose, /^ {0,3}#{1,6}\s.*?(\{#[\w-]+\})[ \t]*$/gm, (_, id) => `kramdown heading ID left: ${id}`)),
+    ...(extension === '.mdx' ? mdxHazards(prose) : []),
+  ]
+  return found.sort((a, b) => a.index - b.index).map(({ index, reason }) => ({ rule: 'check', line: lineAt(prose, index), reason }))
+}
+
+const lineAt = (text, index) => text.slice(0, index).split('\n').length
+
+const matches = (text, pattern, describe) => [...text.matchAll(pattern)]
+  .map((match) => ({ index: match.index, reason: describe(...match) }))
+  .filter((found) => found.reason)
+
+const mdxHazards = (prose) => [
+  ...matches(prose, /\{\/\*[\s\S]*?\*\/\}|\\[{}]|[{}]/g, (match) => (match.length === 1 ? `unescaped ${match} in .mdx prose` : null)),
+  ...matches(prose, ANGLE, (match) => (match !== '<' && isMarkup(match, prose) ? null : `JSX hazard in .mdx prose: ${match}`)),
+]
+
+const blank = (text) => text.replace(/[^\n]/g, ' ')
+
+/** The page with its front matter, imports, fences and code spans blanked out, line breaks kept. */
+const maskCode = (text) => {
+  const head = text.length - splitFrontMatter(text).body.length
+  const parts = segments(text.slice(head).split('\n'))
+  for (const part of parts) {
+    part.lines = part.fence
+      ? part.lines.map(blank)
+      : part.lines.join('\n').split(/(\n[ \t]*\n)/).map((chunk) => splitCodeSpans(chunk)
+        .map((piece) => (piece.code ? blank(piece.text) : piece.text)).join('')).join('').split('\n')
+          .map((line) => (/^(?:import|export)\s/.test(line) ? blank(line) : line))
+  }
+  return blank(text.slice(0, head)) + joinSegments(parts)
+}
 
 const DEFAULT_MDX_DOCS = ['index', 'reference/citations']
 
