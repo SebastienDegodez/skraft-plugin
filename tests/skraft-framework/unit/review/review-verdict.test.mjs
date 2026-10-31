@@ -78,7 +78,6 @@ test('a lens reads only its own inputs; the cold reader gets neither the story n
     `- Feature scope: ${SLUG}`,
     '- Read these inputs and the files they name; search the repository for nothing else:',
     `  - Review context (story, project rules, who wrote which document): ${TRACKING}/reviews/design_review-1/context.md`,
-    `  - Documents of this phase: ${TRACKING}/${CONTEXT_MAP}`,
     `  - Documents of this phase: ${TRACKING}/${MATRIX}`,
     `  - Documents of this phase: ${TRACKING}/${SCAN}`,
     `  - Documents of the story and of the other phases: ${TRACKING}/${ISSUE}`,
@@ -94,11 +93,12 @@ test('a lens reads only its own inputs; the cold reader gets neither the story n
     `- Feature scope: ${SLUG}`,
     '- Read these inputs and the files they name; search the repository for nothing else:',
     `  - Review context (story, project rules, who wrote which document): ${TRACKING}/reviews/design_review-1/context.md`,
-    `  - Documents of this phase: ${TRACKING}/${CONTEXT_MAP}`,
     `  - Documents of this phase: ${TRACKING}/${MATRIX}`,
     `  - Documents of this phase: ${TRACKING}/${SCAN}`,
     `  - Documents of the story and of the other phases: ${TRACKING}/${ISSUE}`,
     `  - Documents of the story and of the other phases: ${TRACKING}/${RESEARCH}`,
+    `  - Changes since the base of the run (open a whole file only when the patch lacks the context a finding needs): ${TRACKING}/reviews/design_review-1/changes.patch`,
+    `  - Paths those changes touch (a path with no section in the patch is a new file: open it): ${TRACKING}/reviews/design_review-1/changed-files.txt`,
     '- Write no file, change nothing, start no agent.',
     ...answer('fitness'),
   ].join('\n'))
@@ -115,9 +115,9 @@ test('a lens reads only its own inputs; the cold reader gets neither the story n
   assert.deepEqual(Object.fromEntries(host.agentRunner.reviewed().map((dispatch) => [dispatch.agent, kinds(dispatch)])), {
     'consistency-lens': ['overview', 'outputs', 'context', 'patch', 'files'],
     'architecture-compliance-lens': ['overview', 'outputs', 'patch', 'files'],
-    'fitness-lens': ['overview', 'outputs', 'context'],
+    'fitness-lens': ['overview', 'outputs', 'context', 'patch', 'files'],
     'coverage-lens': ['overview', 'outputs', 'context', 'patch', 'files'],
-    'business-alignment-lens': ['overview', 'outputs', 'context'],
+    'business-alignment-lens': ['overview', 'outputs', 'context', 'patch', 'files'],
     'testability-lens': ['overview', 'outputs', 'patch', 'files'],
     'boundary-enforcement-lens': ['overview', 'outputs', 'patch', 'files'],
     'test-integrity-lens': ['overview', 'outputs', 'context', 'patch', 'files'],
@@ -128,7 +128,6 @@ test('a lens reads only its own inputs; the cold reader gets neither the story n
     `  - Documents of this phase: ${TRACKING}/${CHANGE_LOG}`,
     `  - Documents of the story and of the other phases: ${TRACKING}/${ISSUE}`,
     `  - Documents of the story and of the other phases: ${TRACKING}/${RESEARCH}`,
-    `  - Documents of the story and of the other phases: ${TRACKING}/${CONTEXT_MAP}`,
     `  - Documents of the story and of the other phases: ${TRACKING}/${MATRIX}`,
     `  - Documents of the story and of the other phases: ${TRACKING}/${SCAN}`,
     `  - Documents of the story and of the other phases: ${TRACKING}/${TEST_PLAN}`,
@@ -171,7 +170,8 @@ test('when the phase changed nothing outside the tracking folder, the lenses are
   ].join('\n')), compliance)
   assert.ok(!compliance.includes('changes.patch') && !compliance.includes('changed-files.txt'), compliance)
   const fitness = host.agentRunner.batches[0].find((dispatch) => dispatch.agent === 'fitness-lens').prompt
-  assert.ok(!fitness.includes('Changes since the base'), fitness)
+  assert.ok(fitness.includes('- Changes since the base of the run: none outside the tracking folder; judge the documents above.'), fitness)
+  assert.ok(!fitness.includes('changes.patch') && !fitness.includes('changed-files.txt'), fitness)
 })
 
 test('a lens whose trigger matches a changed path or an added line runs with the others; one that matches nothing does not', async () => {
@@ -221,11 +221,15 @@ test('a lens runs on the trigger its node names, whichever lens it is: none runs
   assert.deepEqual(host.events().find((event) => event.type === 'step.started' && event.step === 'deliver_review').lenses, ['test-integrity', 'architecture-boundaries', 'cold-reader', 'mock-fidelity', 'contract-fidelity'])
 })
 
-test('a blind lens reads the changes without the decision records of the run: no ADR, no supersession registry', async () => {
+test('a blind lens reads the changes without the decision records and design documents of the run: no ADR, no supersession registry, no context map, event model or scenario', async () => {
+  const records = ['docs/adr/adr-001-card-payment.md', 'docs/adr/supersessions.md']
+  const designs = ['docs/architecture/context-map.md', 'docs/architecture/payment.md', 'docs/domain/event-model/payment.md']
+  const scenarios = ['docs/features/payment/pay-by-card.feature']
   const host = scripted({}, (it) => [
     agent()(it),
-    agent({ work: ({ git }) => git.commit('docs(checkout): ADR for the card payment', ['docs/adr/adr-001-card-payment.md', 'docs/adr/supersessions.md']) })(it),
-    ...nominal(it).slice(2),
+    agent({ work: ({ git }) => git.commit('docs(checkout): ADR and design of the card payment', [...records, ...designs]) })(it),
+    agent({ work: ({ git }) => git.commit('test(checkout): acceptance of the card payment', ['tests/Acceptance/CheckoutAcceptanceTests.cs', ...scenarios]) })(it),
+    agent({ work: tddCycle() })(it),
   ])
 
   await host.start()
@@ -233,11 +237,13 @@ test('a blind lens reads the changes without the decision records of the run: no
   const folder = 'reviews/deliver_review-1'
   const all = await host.tracking.read(SLUG, `${folder}/changed-files.txt`)
   const code = await host.tracking.read(SLUG, `${folder}/code-files.txt`)
-  assert.ok(all.includes('docs/adr/adr-001-card-payment.md\n') && all.includes('docs/adr/supersessions.md\n'), all)
-  assert.equal(code, all.split('\n').filter((line) => line !== '' && !line.startsWith('docs/adr/')).map((line) => `${line}\n`).join(''))
-  assert.ok(code.length > 0)
+  const documents = [...records, ...designs, ...scenarios]
+  assert.ok(documents.every((path) => all.includes(`${path}\n`)), all)
+  assert.equal(code, all.split('\n').filter((line) => line !== '' && !documents.includes(line)).map((line) => `${line}\n`).join(''))
+  assert.ok(code.includes('tests/Acceptance/CheckoutAcceptanceTests.cs\n'), code)
   const patch = await host.tracking.read(SLUG, `${folder}/code.patch`)
-  assert.ok(!patch.includes('docs/adr/') && (await host.tracking.read(SLUG, `${folder}/changes.patch`)).includes('diff --git a/docs/adr/adr-001-card-payment.md'), patch)
+  const changes = await host.tracking.read(SLUG, `${folder}/changes.patch`)
+  assert.ok(documents.every((path) => !patch.includes(path) && changes.includes(`diff --git a/${path}`)), patch)
   const lens = host.agentRunner.reviewed().find((dispatch) => dispatch.agent === 'test-integrity-lens').prompt
   assert.ok(lens.includes(`${folder}/changes.patch`) && !lens.includes('code.patch'), lens)
 })
@@ -341,7 +347,6 @@ test('a refuted blocker or medium does not count; an unverifiable one does; the 
     '- Judge it as the reviewer, with every input of the review: confirm it only when the defect stands with all of them and warrants sending the work back; refute it when the story, a contract or a document shows the work is right as it is, or when its fix would change what they fix, and say why in reason.',
     '- Read these inputs and the files they name; search the repository for nothing else:',
     `  - Review context (story, project rules, who wrote which document): ${TRACKING}/reviews/design_review-1/context.md`,
-    `  - Documents of this phase: ${TRACKING}/${CONTEXT_MAP}`,
     `  - Documents of this phase: ${TRACKING}/${MATRIX}`,
     `  - Documents of this phase: ${TRACKING}/${SCAN}`,
     `  - Documents of the story and of the other phases: ${TRACKING}/${RESEARCH}`,
@@ -458,7 +463,6 @@ test('findings of different lenses at the same line with the same severity are c
     '- Skill (read it before any other input and judge with its criteria): /plugin/skills/clean-architecture/SKILL.md',
     '- Read these inputs and the files they name; search the repository for nothing else:',
     `  - Review context (story, project rules, who wrote which document): ${TRACKING}/reviews/design_review-1/context.md`,
-    `  - Documents of this phase: ${TRACKING}/${CONTEXT_MAP}`,
     `  - Documents of this phase: ${TRACKING}/${MATRIX}`,
     `  - Documents of this phase: ${TRACKING}/${SCAN}`,
     `  - Documents of the story and of the other phases: ${TRACKING}/${RESEARCH}`,

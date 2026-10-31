@@ -366,7 +366,7 @@ const planLensInputs = async (review, prepared) => Promise.all(planLenses(review
   const inputs = kinds.flatMap((kind) => tracked[kind].map((path) => ({ kind, path })))
   const skills = (await review.deps.agentCatalog.skills(lens.agent)).found
   const known = engineChecks(prepared).filter(({ joins }) => joins === lens.name).flatMap(({ findings }) => findings)
-  const unchanged = !hasChanges(prepared) && lens.inputs.some((kind) => kind === 'patch' || kind === 'files')
+  const unchanged = !hasChanges(prepared)
   return { lens, inputs, skills, fingerprint: await fingerprintOf(review, { inputs, skills, prepared, lens }), known, unchanged }
 }))
 

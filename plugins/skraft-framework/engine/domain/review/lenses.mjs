@@ -46,7 +46,6 @@ export const REFUTER = 'finding-refuter'
 export const lensAgent = (name) => `${name}-lens`
 
 const ALL = Object.freeze(/** @type {InputKind[]} */ (['outputs', 'context', 'patch', 'files']))
-const DOCUMENTS = Object.freeze(/** @type {InputKind[]} */ (['outputs', 'context']))
 const OWN_CHANGES = Object.freeze(/** @type {InputKind[]} */ (['outputs', 'patch', 'files']))
 const CHANGES = Object.freeze(/** @type {InputKind[]} */ (['patch', 'files']))
 const CHANGES_AND_COMPONENTS = Object.freeze(/** @type {InputKind[]} */ (['patch', 'files', 'components']))
@@ -72,8 +71,6 @@ export const TRIGGER_NAMES = Object.freeze(/** @type {TriggerName[]} */ (Object.
 const KNOWN = /** @type {Readonly<Record<string, { inputs: readonly InputKind[], blind?: boolean }>>} */ (/** @type {unknown} */ (Object.freeze({
   __proto__: null,
   'architecture-compliance': { inputs: OWN_CHANGES },
-  fitness: { inputs: DOCUMENTS },
-  'business-alignment': { inputs: DOCUMENTS },
   testability: { inputs: OWN_CHANGES },
   'boundary-enforcement': { inputs: OWN_CHANGES },
   'architecture-boundaries': { inputs: Object.freeze(/** @type {InputKind[]} */ (['context', 'patch', 'files', 'components'])) },

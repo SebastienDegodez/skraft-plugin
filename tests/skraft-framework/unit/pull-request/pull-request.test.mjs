@@ -156,7 +156,7 @@ test('the pr-writer is told where to write its prose and what to read; a summary
     '- Attempt: 1 of 3',
     '- Read first:',
     `- ${TRACKING}/research/2026-10-11/${SLUG}-research.md`,
-    `- ${TRACKING}/details/2026-10-11/context-map.md`,
+    `- ${TRACKING}/details/2026-10-11/consistency-matrix-checkout.md`,
     `- ${TRACKING}/details/2026-10-11/test-plan-${SLUG}.md`,
     `- ${TRACKING}/changes/2026-10-11/change-log.md`,
     '- Fill each output in place; keep the path, create no other copy:',
