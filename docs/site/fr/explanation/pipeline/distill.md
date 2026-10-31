@@ -47,6 +47,13 @@ valeur vide de son type, sans comportement — pour que le test échoue sur une 
 métier**. Remplacer le module manquant par une doublure dans les tests est refusé : le squelette
 est le vrai module, que DELIVER remplira.
 
+## Des scénarios gardés dans le dépôt
+
+DISTILL écrit ses scénarios dans `docs/features/<bounded-context>/<feature>.feature`, sur la
+branche de la story : la pull request les montre, et les runs suivants les relisent. Aucun
+lanceur de tests ne lit ces fichiers ; le test d'acceptation en reprend les valeurs mot pour mot,
+et la lentille `testability` le vérifie (T2).
+
 ## Ce qui n'est pas un scénario
 
 Un cas d'entrée purement technique — une valeur du mauvais type, `NaN`, `null`, un nombre écrit
@@ -68,6 +75,7 @@ retenus.
 
 - [Référence : DISTILL]({{ "/fr/reference/phases" | relative_url }}#distill) — sorties, écriture permise, commits.
 - [Référence : critères de revue de DISTILL]({{ "/fr/reference/gates" | relative_url }}#distill).
+- [Référence : documentation durable]({{ "/fr/reference/run-journal" | relative_url }}#durable-docs).
 - [Walking Skeleton]({{ "/fr/explanation/deep-dive/walking-skeleton" | relative_url }}) et
   [Outside-In TDD]({{ "/fr/explanation/deep-dive/outside-in-tdd" | relative_url }}).
 - [DELIVER]({{ "/fr/explanation/pipeline/deliver" | relative_url }}) — la phase suivante.

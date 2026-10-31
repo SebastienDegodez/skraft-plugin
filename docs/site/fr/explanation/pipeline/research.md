@@ -52,6 +52,14 @@ graph LR
 *Figure 1 — Le chemin d'une story dans RESEARCH : des questions aux preuves, des preuves aux
 approches comparées, puis le relais à DESIGN.*
 
+## Partir de ce que le dépôt documente
+
+Avant le code, le chercheur lit la documentation que les stories précédentes ont laissée sous
+`docs/` : la context map, la conception tactique, le modèle d'événements, les scénarios et les
+ADR. Quand elle répond déjà à la story, le document de recherche le dit, cite ces fichiers et
+s'arrête là ; le moteur contrôle ce document comme un autre. Le document de recherche lui-même
+reste dans le dossier de suivi : il sert une seule story.
+
 ## Pas de revue, mais un juge en aval
 
 RESEARCH est la seule phase d'ingénierie sans lentilles de revue. Le moteur vérifie seulement
@@ -68,4 +76,5 @@ DESIGN : la recherche a eu lieu pendant la préparation produit.
 
 - [Référence : RESEARCH]({{ "/fr/reference/phases" | relative_url }}#research) — nœuds, sortie, contrôle, tentatives.
 - [Référence : le document de recherche]({{ "/fr/reference/run-journal" | relative_url }}#research-document).
+- [Référence : documentation durable]({{ "/fr/reference/run-journal" | relative_url }}#durable-docs) — ce qui va dans `docs/`, ce qui reste dans le dossier de suivi.
 - [DESIGN]({{ "/fr/explanation/pipeline/design" | relative_url }}) — la phase qui décide.

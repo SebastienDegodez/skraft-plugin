@@ -255,12 +255,11 @@ review of `pipeline.skraft.dot`, and `review` called by it). The files sit in
 
 | Lens | Reads |
 | --- | --- |
-| `fitness`, `business-alignment` | documents of the phase, of the story and of the other phases |
 | `architecture-compliance`, `testability`, `boundary-enforcement` | documents of the phase, patch, changed paths |
 | `architecture-boundaries` | documents of the story and of the other phases, patch, changed paths, `components.json` |
-| `cold-reader` | patch and changed paths only: no story, no feature scope, no context |
+| `cold-reader` | patch and changed paths only, without the ADRs nor the [durable documentation]({{ "/en/reference/run-journal" | relative_url }}#durable-docs): no story, no feature scope, no context |
 | `mock-fidelity`, `contract-fidelity` | patch, changed paths, `components.json` |
-| any other lens (`consistency`, `coverage`, `test-integrity`, a repository's own) | everything above |
+| any other lens (`consistency`, `fitness`, `coverage`, `business-alignment`, `test-integrity`, a repository's own) | everything above |
 
 The patch holds every change since the base of the run, the tracking folder left out. When the
 run changed nothing outside the tracking folder, a lens that reads the changes gets neither file
