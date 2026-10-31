@@ -259,7 +259,9 @@ run (chaque revue de `pipeline.skraft.dot`, et `review` appelé par lui). Les fi
 | `architecture-boundaries` | documents de la story et des autres phases, patch, chemins changés, `components.json` |
 | `cold-reader` | patch et chemins changés seulement, sans les ADR ni la [documentation durable]({{ "/fr/reference/run-journal" | relative_url }}#durable-docs) : ni story, ni périmètre, ni contexte |
 | `mock-fidelity`, `contract-fidelity` | patch, chemins changés, `components.json` |
-| toute autre lentille (`consistency`, `fitness`, `coverage`, `business-alignment`, `test-integrity`, une lentille du dépôt) | tout ce qui précède |
+| `fitness` | tout ce qui précède, patch et chemins changés limités à `docs/adr/`, `docs/architecture/` et `docs/domain/event-model/` (`design.patch`, `design-files.txt`) |
+| `business-alignment` | tout ce qui précède, patch et chemins changés limités à `docs/features/` (`features.patch`, `features-files.txt`) |
+| toute autre lentille (`consistency`, `coverage`, `test-integrity`, une lentille du dépôt) | tout ce qui précède |
 
 Le patch contient tous les changements depuis la base du run, hors dossier de suivi. Quand le
 run n'a rien changé hors du dossier de suivi, une lentille qui lit les changements ne reçoit

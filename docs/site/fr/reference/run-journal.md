@@ -38,6 +38,8 @@ Le dossier de suivi vit **dans la copie de travail qui lance le run** :
     │   ├── changes.patch                          changements depuis la base du run
     │   ├── changed-files.txt                      chemins que ces changements touchent
     │   ├── code.patch, code-files.txt             les mêmes pour une lentille aveugle, sans docs/adr ni la documentation durable
+    │   ├── design.patch, design-files.txt         les mêmes pour `fitness` : les documents de conception seulement (écrits quand la revue a cette lentille)
+    │   ├── features.patch, features-files.txt     les mêmes pour `business-alignment` : docs/features seulement (écrits quand la revue a cette lentille)
     │   ├── context.md                             story, règles du projet, qui a écrit quel document
     │   ├── components.json                        stack, stratégie de mocking, contract testing
     │   └── verdict.yaml                           le verdict de la passe, écrit par le moteur

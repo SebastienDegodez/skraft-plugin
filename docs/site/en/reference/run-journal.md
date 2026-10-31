@@ -38,6 +38,8 @@ The tracking folder lives **in the working copy that starts the run**:
     │   ├── changes.patch                          changes since the base of the run
     │   ├── changed-files.txt                      paths those changes touch
     │   ├── code.patch, code-files.txt             the same for a blind lens, without docs/adr nor the durable documentation
+    │   ├── design.patch, design-files.txt         the same for `fitness`: the design documents only (written when the review has that lens)
+    │   ├── features.patch, features-files.txt     the same for `business-alignment`: docs/features only (written when the review has that lens)
     │   ├── context.md                             story, project rules, who wrote which document
     │   ├── components.json                        stack, mocking strategy, contract testing
     │   └── verdict.yaml                           the verdict of the pass, written by the engine
