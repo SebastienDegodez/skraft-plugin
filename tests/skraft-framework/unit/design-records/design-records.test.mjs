@@ -22,8 +22,8 @@ test('the solution architect is sent back while its consistency matrix is missin
   const host = scripted({}, (it) => [
     agent()(it),
     architect({})(it),
-    architect({ [MATRIX]: '| ADR | Verdict |\n- consistency-gate: PASS \\| FAIL\n' })(it),
-    architect({ [MATRIX]: '| ADR | Verdict |\n- **consistency-gate:** PASS\n' })(it),
+    architect({ [MATRIX]: '| ADR | Verdict |\n- docs-relied-on: docs/architecture/context-map.md\n- consistency-gate: PASS \\| FAIL\n' })(it),
+    architect({ [MATRIX]: '| ADR | Verdict |\n- docs-relied-on: docs/architecture/context-map.md\n- **consistency-gate:** PASS\n' })(it),
     ...nominal(it).slice(2),
   ])
 
@@ -48,7 +48,7 @@ test('a consistency-gate line reading PASS may carry a comment after it; one tha
     ['- consistency-gate: PASSED with gaps', false],
     ['- consistency-gate: FAIL (PASS once ADR-002 lands)', false],
   ]) {
-    const host = scripted({}, (it) => [agent()(it), architect({ [MATRIX]: `| ADR | Verdict |\n${line}\n` })(it), () => ({ ok: false, unavailable: true, text: '' })])
+    const host = scripted({}, (it) => [agent()(it), architect({ [MATRIX]: `| ADR | Verdict |\n- docs-relied-on: docs/architecture/context-map.md\n${line}\n` })(it), () => ({ ok: false, unavailable: true, text: '' })])
 
     await host.start()
 
@@ -93,9 +93,17 @@ test('an ADR whose verdict sits in its file name, or a supersession the registry
   assert.equal((await registered.start()).status, 'done')
 })
 
-test('an architect that finds the story covered by the design documents already under docs/ writes only its consistency matrix, and the run goes on to DISTILL', async () => {
+/** A solution architect that writes only a passing matrix whose docs-relied-on line reads `line`. @param {string} line */
+const citing = (line) => agent({
+  records: false,
+  fill: false,
+  work: ({ tracking }) => tracking.write(SLUG, MATRIX, `| ADR | Verdict |\n${line}\n- consistency-gate: PASS\n`),
+})
+
+test('an architect that finds the story covered by the design documents already under docs/ cites them in its consistency matrix, and the run goes on to DISTILL', async () => {
   const documented = { 'docs/architecture/context-map.md': '# Context map\n\nPayment: Core\n', 'docs/domain/event-model/payment.md': '# Payment\n\nCardPaid\n' }
-  const host = scripted({ files: documented }, (it) => [agent()(it), agent()(it), ...nominal(it).slice(2)])
+  const cited = citing('- docs-relied-on: `docs/architecture/context-map.md`, docs/domain/event-model/payment.md')
+  const host = scripted({ files: documented }, (it) => [agent()(it), cited(it), ...nominal(it).slice(2)])
 
   assert.equal((await host.start()).status, 'done')
 
@@ -104,6 +112,25 @@ test('an architect that finds the story covered by the design documents already 
   assert.deepEqual(design(host).map(({ attempt, outcome, code, failures, documents }) => [attempt, outcome, code, failures, documents]), [
     [1, 'done', null, [], [MATRIX, 'details/2026-10-11/structural-scan.json']],
   ])
+  assert.match(await host.tracking.read(SLUG, MATRIX), /docs-relied-on: `docs\/architecture\/context-map\.md`, docs\/domain\/event-model\/payment\.md/)
   assert.deepEqual(host.events().filter((event) => event.type === 'step.started').map((event) => event.step).filter((step) => ['design', 'design_review', 'distill'].includes(step)), ['design', 'design_review', 'distill'])
   for (const [path, text] of Object.entries(documented)) assert.equal(await host.workspace.read(path), text)
+})
+
+test('an architect whose consistency matrix lists no docs/ file, or a file the working copy lacks, is sent back', async () => {
+  const host = scripted({}, (it) => [
+    agent()(it),
+    citing('- docs-relied-on: docs/../skraft-config.json')(it),
+    citing('- docs-relied-on: docs/architecture/payment.md, docs/architecture/context-map.md')(it),
+    citing('- docs-relied-on: docs/architecture/context-map.md')(it),
+    ...nominal(it).slice(2),
+  ])
+
+  assert.equal((await host.start()).status, 'done')
+
+  assert.deepEqual(design(host).map(({ attempt, outcome, code, failures }) => [attempt, outcome, code, failures]), [
+    [1, 'failed', 'design-records', [`${MATRIX}: its docs-relied-on line lists no docs/ file the story relies on, created or cited (#410)`]],
+    [2, 'failed', 'design-records', ['docs-relied-on lists docs/architecture/payment.md, which is no file of the working copy (#410)']],
+    [3, 'done', null, []],
+  ])
 })

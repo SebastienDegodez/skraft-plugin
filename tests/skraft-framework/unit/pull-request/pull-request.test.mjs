@@ -45,6 +45,7 @@ test('the run ends by opening a draft pull request from its branch to its base, 
     'From `details/2026-10-11/consistency-matrix-checkout.md` in the tracking folder:',
     '',
     '| ADR | Verdict |',
+    '- docs-relied-on: docs/architecture/context-map.md',
     '- consistency-gate: PASS',
     '',
     '</details>',
@@ -581,7 +582,7 @@ test('every consistency matrix the attempt that wrote them left is shown, each u
   const host = scripted({ config: CONSENTED }, (it) => {
     const [research, design, ...rest] = nominal(it, REFS_42)
     return [research, async (dispatch) => {
-      await it.tracking.write(SLUG, 'details/2026-10-11/consistency-matrix-refunds.md', '| ADR | Verdict |\n| --- | --- |\n| ADR-002 | refunds |\n- consistency-gate: PASS\n')
+      await it.tracking.write(SLUG, 'details/2026-10-11/consistency-matrix-refunds.md', '| ADR | Verdict |\n| --- | --- |\n| ADR-002 | refunds |\n- docs-relied-on: docs/architecture/context-map.md\n- consistency-gate: PASS\n')
       return design(dispatch)
     }, ...rest]
   })

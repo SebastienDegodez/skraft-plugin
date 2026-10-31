@@ -59,7 +59,7 @@ export const pipelineHost = ({
     agentRunner: new ScriptedAgentRunner(behaviours),
     human: new ScriptedHuman(answers),
     progress: new RecordingProgress(),
-    workspace: new InMemoryWorkspace({ 'skraft-config.json': JSON.stringify({ ...answered, ...config, components }), ...files }),
+    workspace: new InMemoryWorkspace({ 'skraft-config.json': JSON.stringify({ ...answered, ...config, components }), 'docs/architecture/context-map.md': '# Context map\n', ...files }),
     userSettings: new InMemoryUserSettings(user),
     sourceControl: git,
     commandRunner: machine ?? new ScriptedMachine({ clock }),
@@ -132,7 +132,7 @@ const asked = (tracking) => tracking.journal(SLUG).filter((event) => event.type 
  *   result null writes none; a string is written as is.
  */
 /** The consistency matrix a solution architect leaves when its documents agree. */
-export const PASSING_MATRIX = Object.freeze(['details/2026-10-11/consistency-matrix-checkout.md', '| ADR | Verdict |\n- consistency-gate: PASS\n'])
+export const PASSING_MATRIX = Object.freeze(['details/2026-10-11/consistency-matrix-checkout.md', '| ADR | Verdict |\n- docs-relied-on: docs/architecture/context-map.md\n- consistency-gate: PASS\n'])
 
 export const agent = ({ result = { status: 'done', summary: 'done' }, fill = true, records = true, work = () => {}, answer } = {}) => (host) => async () => {
   const step = asked(host.tracking)

@@ -1,5 +1,5 @@
 import { joinRelative } from '../../domain/config/relative-path.mjs'
-import { inAdrFolder, isAdr, isMatrix, recordFailures, registryOf } from '../../domain/pipeline/design-records.mjs'
+import { inAdrFolder, isAdr, isMatrix, recordFailures, registryOf, reliedOn } from '../../domain/pipeline/design-records.mjs'
 import { readOrName } from '../shared/workspace-reading.mjs'
 
 /**
@@ -47,12 +47,10 @@ const recordsOf = async ({ files, workspace }, slug, { tracked, changed }) => {
   const fromWorkspace = (/** @type {string} */ path) => readOrName(workspace, path)
   const adrFolder = (await textsOf(changed.filter(inAdrFolder), fromWorkspace)).filter(({ text }) => text !== null)
   const adrs = adrFolder.filter(({ path }) => isAdr(path))
-  return {
-    matrices: await textsOf(tracked.filter(isMatrix), (path) => files.read(slug, path)),
-    written: adrFolder.map(({ path }) => path),
-    adrs,
-    registries: await textsOf([...new Set(adrs.map(({ path }) => registryOf(path)))], fromWorkspace),
-  }
+  const matrices = await textsOf(tracked.filter(isMatrix), (path) => files.read(slug, path))
+  const relied = await textsOf([...new Set(matrices.flatMap(({ text }) => reliedOn(text)))], fromWorkspace)
+  const registries = await textsOf([...new Set(adrs.map(({ path }) => registryOf(path)))], fromWorkspace)
+  return { matrices, relied, written: adrFolder.map(({ path }) => path), adrs, registries }
 }
 
 /** @param {string[]} paths @param {(path: string) => Promise<string | null>} read @returns {Promise<Text[]>} */

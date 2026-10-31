@@ -2,14 +2,17 @@
  * The DESIGN records the engine checks when the solution architect finishes, instead of a lens:
  *   G10       a consistency-matrix-<story>.md in the tracking folder, its consistency-gate PASS,
  *             a comment in brackets or after a dash allowed after it
+ *   docs      its docs-relied-on line lists every docs/ file the story relies on, created or cited, and
+ *             each listed file exists in the working copy (#410)
  *   G14      no ADR the run wrote is named *-rejected.md, *-accepted.md, *-deprecated.md or
  *             *-superseded.md
  *   G2, G12   every `**Supersedes:** ADR-MMM` of an ADR the run wrote has its registry row, ADR
  *             numbers compared without their leading zeros
  *
  * @typedef {{ path: string, text: string | null }} Text
- * @typedef {{ matrices: Text[], written: string[], adrs: Text[], registries: Text[] }} Records
- *   matrices: the consistency matrices of the tracking folder; written: the files under a
+ * @typedef {{ matrices: Text[], relied: Text[], written: string[], adrs: Text[], registries: Text[] }} Records
+ *   matrices: the consistency matrices of the tracking folder; relied: the docs/ files they list,
+ *   text null when the working copy has none; written: the files under a
  *   docs/adr folder the run changed and that exist; adrs: the ADRs among them; registries: the
  *   supersession registry beside each.
  */
@@ -21,7 +24,17 @@ const ADR_FOLDER = /(^|\/)docs\/adr\/[^/]+$/
 const VERDICT_NAME = /-(rejected|accepted|deprecated|superseded)\.md$/
 const ADR = /(^|\/)docs\/adr\/adr-(\d+)[^/]*\.md$/i
 const GATE_PASS = /^\s*(?:[-*]\s+)?(?:\*\*)?consistency-gate:(?:\*\*)?\s*(?:\*\*)?PASS(?:\*\*)?(?:\s+(?:\(.*\)|[—–-]\s.*))?\s*$/im
+const RELIED_LINE = /^\s*(?:[-*]\s+)?(?:\*\*)?docs-relied-on:(?:\*\*)?(.*)$/gim
+/** A path under docs/ with no `..` in it. */
+const DOC_PATH = /docs\/(?:(?!\.\.)[^\s,;`'"()[\]])+/g
 const ADR_ID = /ADR-(\d+)/gi
+
+/**
+ * The docs/ files a matrix lists on its `docs-relied-on:` lines, comma separated, backticks allowed.
+ * @param {string | null} text
+ * @returns {string[]}
+ */
+export const reliedOn = (text) => [...new Set([...(text ?? '').matchAll(RELIED_LINE)].flatMap((line) => line[1].match(DOC_PATH) ?? []))]
 
 /** @param {string} path relative to the tracking folder */
 export const isMatrix = (path) => MATRIX.test(path)
@@ -40,8 +53,9 @@ export const registryOf = (adr) => adr.replace(/[^/]+$/, 'supersessions.md')
  * @param {Records} records
  * @returns {string[]}
  */
-export const recordFailures = ({ matrices, written, adrs, registries }) => [
+export const recordFailures = ({ matrices, relied, written, adrs, registries }) => [
   ...matrixFailures(matrices),
+  ...reliedFailures(matrices, relied),
   ...written.filter((path) => VERDICT_NAME.test(path)).map((path) => `${path}: an ADR's verdict goes in its Status line, never in its file name (G14)`),
   ...adrs.flatMap((adr) => supersessionFailures(adr, registries)),
 ]
@@ -51,6 +65,15 @@ const matrixFailures = (matrices) => {
   if (matrices.length === 0) return ['no consistency-matrix-<story>.md in the tracking folder: write it, its consistency-gate line reading PASS (G10)']
   return matrices.filter(({ text }) => !GATE_PASS.test(text ?? '')).map(({ path }) => `${path}: its consistency-gate line does not read PASS (G10)`)
 }
+
+/**
+ * Each matrix that lists no docs/ file, and each listed file the working copy lacks.
+ * @param {Text[]} matrices @param {Text[]} relied
+ */
+const reliedFailures = (matrices, relied) => [
+  ...matrices.filter(({ text }) => reliedOn(text).length === 0).map(({ path }) => `${path}: its docs-relied-on line lists no docs/ file the story relies on, created or cited (#410)`),
+  ...relied.filter(({ text, path }) => text === null).map(({ path }) => `docs-relied-on lists ${path}, which is no file of the working copy (#410)`),
+]
 
 /**
  * Each ADR an ADR supersedes and its registry does not name on one row with it.

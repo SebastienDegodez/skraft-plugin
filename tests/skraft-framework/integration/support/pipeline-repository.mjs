@@ -520,6 +520,8 @@ export const twoRedsThenPay = (brief, { cwd, slug }) => {
   writeResult(brief, { status: 'done', summary: 'delivered' })
 }
 
+const CONTEXT_MAP = 'docs/architecture/context-map.md'
+
 /** What each agent of the plugin's workflow does when it does its job. @type {Record<string, Act>} */
 export const NOMINAL = Object.freeze({
   'solution-researcher': (brief) => {
@@ -528,9 +530,9 @@ export const NOMINAL = Object.freeze({
   },
   'solution-architect': (brief, { cwd, slug }) => {
     fillOutputs(brief, 'The payment lives in src/pay.mjs.\n')
-    writeFile(join(dirname(brief.outputs[0]), `consistency-matrix-${slug}.md`), '| ADR | Verdict |\n- consistency-gate: PASS\n')
+    writeFile(join(dirname(brief.outputs[0]), `consistency-matrix-${slug}.md`), '| ADR | Verdict |\n- docs-relied-on: docs/architecture/context-map.md\n- consistency-gate: PASS\n')
     const revising = brief.prompt.includes('A human refused the work')
-    commit(cwd, `docs(${slug}): ${revising ? 'revise' : 'record'} the card payment decision`, { [ADR_PATH]: revising ? `${ADR}\nRevised after the human's reason.\n` : ADR }, brief)
+    commit(cwd, `docs(${slug}): ${revising ? 'revise' : 'record'} the card payment decision`, { [ADR_PATH]: revising ? `${ADR}\nRevised after the human's reason.\n` : ADR, [CONTEXT_MAP]: revising ? 'Payment: Core, revised.\n' : 'Payment: Core.\n' }, brief)
 
     writeResult(brief, { status: 'done', summary: 'context map and ADR written' })
   },
