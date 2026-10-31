@@ -1,14 +1,19 @@
 // scripts/lib/book.mjs
 //
-// Zero-dependency reader for the SKRAFT book contract (docs/site/_data/book.yml)
-// and a recursive glob matcher, shared by scan-drift.mjs and lint-nav.mjs.
+// Zero-dependency reader for the SKRAFT book contract (docs/website/book.yml)
+// and a recursive glob matcher, shared by scan-drift.mjs, lint-nav.mjs and the
+// Docusaurus site (sidebars.mjs, scripts/book-translations.mjs).
+//
+// A page names one doc id (`doc: how-to/run-gates`). Its EN file is
+// <site root>/docs/<doc>.md(x); its FR file has the same relative path under
+// <site root>/i18n/fr/docusaurus-plugin-content-docs/current/ (see pageFiles).
 //
 // The YAML subset parser itself (`parseYaml`) lives in eng/lib/yaml-parser.mjs, shared
 // with the catalogue scan and the agent-policy tools. This module re-exports it and adds
 // the book-contract-specific loading/traversal helpers below.
 
-import { readFileSync, readdirSync, statSync } from 'node:fs';
-import { join, resolve } from 'node:path';
+import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
+import { join, resolve, sep } from 'node:path';
 import { parseYaml } from '../../eng/lib/yaml-parser.mjs';
 
 export { parseYaml };
@@ -31,6 +36,45 @@ export function sectionsOf(part) {
   return [{ id: null, section: null, pages: part.pages || [] }];
 }
 
+/** The docs folder of each locale, relative to the site root (docs/website). */
+export const LOCALE_DOCS = Object.freeze({
+  en: 'docs',
+  fr: join('i18n', 'fr', 'docusaurus-plugin-content-docs', 'current'),
+});
+
+const DOC_EXTENSIONS = ['.md', '.mdx'];
+
+/** The file of a doc id in one locale: the existing .md or .mdx, else the .md it should be. */
+function docFile(siteRoot, locale, doc) {
+  const base = join(siteRoot, LOCALE_DOCS[locale], ...doc.split('/'));
+  return DOC_EXTENSIONS.map((extension) => base + extension).find((file) => existsSync(file)) ?? base + '.md';
+}
+
+/** The EN and FR files of a page (absolute paths). */
+export function pageFiles(page, siteRoot) {
+  return { en: docFile(siteRoot, 'en', page.doc), fr: docFile(siteRoot, 'fr', page.doc) };
+}
+
+function listDocs(dir, prefix, out) {
+  let entries = [];
+  try { entries = readdirSync(dir, { withFileTypes: true }); } catch { return out; }
+  for (const entry of entries.sort((a, b) => a.name.localeCompare(b.name))) {
+    if (entry.name.startsWith('.') || entry.name.startsWith('_')) continue;
+    const full = join(dir, entry.name);
+    if (entry.isDirectory()) listDocs(full, `${prefix}${entry.name}/`, out);
+    else if (DOC_EXTENSIONS.some((extension) => entry.name.endsWith(extension))) {
+      out.push({ doc: prefix + entry.name.replace(/\.mdx?$/, ''), file: full });
+    }
+  }
+  return out;
+}
+
+/** Every doc file on disk, per locale: { locale, doc, file }, sorted by doc id. */
+export function docFilesOnDisk(siteRoot) {
+  return Object.entries(LOCALE_DOCS).flatMap(([locale, folder]) =>
+    listDocs(join(siteRoot, folder), '', []).map((entry) => ({ locale, ...entry })));
+}
+
 /** Derive a page slug from a source file path. */
 export function slugFromPath(file, mode = 'basename') {
   const segments = file.split('/');
@@ -49,8 +93,7 @@ export function slugFromPath(file, mode = 'basename') {
  *   generate:
  *     from: agents                 # a key of meta.sources
  *     slug_from: basename|parent   # how to derive the slug from the file path
- *     path_fr: "fr/reference/agents/{slug}.md"
- *     path_en: "en/reference/agents/{slug}.md"
+ *     doc: "reference/agents/{slug}"   # the doc id of each generated page
  *     start_position: 2            # sidebar_position of the first generated page
  */
 export function pagesOfSection(section, { sources = {}, root = process.cwd() } = {}) {
@@ -64,7 +107,7 @@ export function pagesOfSection(section, { sources = {}, root = process.cwd() } =
   const files = findFiles(pattern).sort();
   const start = Number.isInteger(gen.start_position) ? gen.start_position : explicit.length + 1;
   const generated = files.map((abs, i) => {
-    const rel = abs.startsWith(root) ? abs.slice(root.length + 1) : abs;
+    const rel = (abs.startsWith(root) ? abs.slice(root.length + 1) : abs).split(sep).join('/');
     const slug = slugFromPath(rel, gen.slug_from);
     return {
       id: `${section.id}-${slug}`,
@@ -73,8 +116,7 @@ export function pagesOfSection(section, { sources = {}, root = process.cwd() } =
       slug,
       source: rel,
       sidebar_position: start + i,
-      fr: (gen.path_fr || '').replace('{slug}', slug),
-      en: (gen.path_en || '').replace('{slug}', slug),
+      doc: (gen.doc || '').replace('{slug}', slug),
       label_fr: slug,
       label_en: slug,
     };

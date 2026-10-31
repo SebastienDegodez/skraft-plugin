@@ -9,11 +9,10 @@ import { iterPages, loadBook } from '../../../../scripts/lib/book.mjs'
 const docsDir = fileURLToPath(new URL('../../docs/', import.meta.url))
 const bookPath = fileURLToPath(new URL('../../book.yml', import.meta.url))
 
-const docIdOf = (page) => page.en.replace(/^en\//, '').replace(/\.mdx?$/, '')
 const onDisk = (id) => ['.md', '.mdx'].some((extension) => existsSync(`${docsDir}${id}${extension}`))
 
 /** Doc ids declared in book.yml (without the dashboard page) that have no file yet. */
 export const pendingDocIds = () => {
-  const declared = [...iterPages(loadBook(bookPath))].map(({ page }) => docIdOf(page)).filter((id) => id !== 'dashboard/index')
+  const declared = [...iterPages(loadBook(bookPath))].filter(({ page }) => page.type !== 'dashboard').map(({ page }) => page.doc)
   return new Set(declared.filter((id) => !onDisk(id)))
 }
