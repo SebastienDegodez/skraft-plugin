@@ -367,13 +367,13 @@ const detailsRun = async (commentLimit) => {
 /** The comment of the run details that holds the Screenshots section. @param {Awaited<ReturnType<typeof detailsRun>>} host */
 const screenshotsComment = (host) => host.codeHost.pullRequestComments.find(({ body }) => body.includes('<summary>Screenshots')).body
 
-/** The limit of a comment that takes the Screenshots block whole, less `short` characters. @param {string} description @param {number} short */
-/** What a comment keeps for its marker and heading, out of the room its blocks have. */
-const HEADER_RESERVE = 200
+/** What a comment keeps for its marker and heading, out of the room its blocks have: the heading of a comment of one part, then « n/n » for the run's `n` folded blocks. @param {string} comment @param {number} blocks */
+const headerOf = (comment, blocks) => comment.indexOf('\n\n') + '\n\n'.length + ` ${blocks}/${blocks}`.length
 
-const limitShortBy = (description, short) => {
+/** The limit of a comment that takes the Screenshots block whole, less `short` characters. @param {string} description @param {number} short @param {number} reserve */
+const limitShortBy = (description, short, reserve) => {
   const block = section(description, 'Screenshots').length + opening(description, 'Screenshots').length + '\n\n'.length + '\n\n</details>\n'.length
-  return block - short + HEADER_RESERVE
+  return block - short + reserve
 }
 
 test('screenshots cut to fit a comment of the run details drop their dark theme block whole, never leaving it open', async () => {
@@ -384,7 +384,8 @@ test('screenshots cut to fit a comment of the run details drop their dark theme 
   const body = await whole.tracking.read(SLUG, 'pull-request-body.md')
   assert.ok(!body.includes('<summary>Screenshots'), body)
 
-  const cut = screenshotsComment(await detailsRun(limitShortBy(description, 10)))
+  const reserve = headerOf(screenshotsComment(whole), screenshotsComment(whole).split('<details').length - 1)
+  const cut = screenshotsComment(await detailsRun(limitShortBy(description, 10, reserve)))
   assert.ok(section(cut, 'Screenshots').endsWith([
     `![Payment accepted](${RAW}/${EVIDENCE}/web/light-1.png)`,
     '',
@@ -393,7 +394,7 @@ test('screenshots cut to fit a comment of the run details drop their dark theme 
   assert.equal(cut.split('<details').length, cut.split('</details>').length, cut.slice(-1500))
 
   const shots = section(description, 'Screenshots')
-  const intoTag = screenshotsComment(await detailsRun(limitShortBy(description, shots.length - shots.indexOf('<details>') - '<deta'.length - CUT.length - 2)))
+  const intoTag = screenshotsComment(await detailsRun(limitShortBy(description, shots.length - shots.indexOf('<details>') - '<deta'.length - CUT.length - 2, reserve)))
   assert.ok(section(intoTag, 'Screenshots').endsWith(`/web/light-1.png)\n\n${CUT}`), section(intoTag, 'Screenshots').slice(-300))
 })
 

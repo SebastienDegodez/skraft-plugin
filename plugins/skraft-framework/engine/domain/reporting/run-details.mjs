@@ -21,9 +21,6 @@ const WORDS = Object.freeze({
   },
 })
 
-/** What a comment's marker and heading take, which a part leaves out of the room its blocks have. */
-export const HEADER_RESERVE = 200
-
 /** The line of the body that sends to the comments. @param {Language} language */
 export const pointerOf = (language) => WORDS[language].pointer
 
@@ -33,14 +30,24 @@ export const markerOf = (slug, part) => `<!-- skraft:run-details slug=${slug} pa
 /** @param {{ slug: string, language: Language }} run @param {number} part @param {number} parts */
 const headerOf = ({ slug, language }, part, parts) => `${markerOf(slug, part)}\n# ${WORDS[language].title}${parts > 1 ? ` ${part}/${parts}` : ''}\n\n`
 
+/** @typedef {{ slug: string, language: Language, commentLimit: number }} DetailsRun */
+
+/**
+ * The room a block has in a comment of one of `parts` parts: what the forge takes less the header
+ * of the last part, the longest, « k/n » included.
+ * @param {DetailsRun} run @param {number} parts
+ */
+export const roomOf = (run, parts) => run.commentLimit - headerOf(run, parts, parts).length
+
 /**
  * The comments of the run details: the blocks packed in order, whole, into as many parts as take
- * them within the comment limit.
- * @param {{ slug: string, language: Language, commentLimit: number }} run @param {string[]} blocks each at most the limit less HEADER_RESERVE
+ * them within the comment limit, each with its own header; no more parts than blocks, so that the
+ * header `roomOf` leaves room for is the longest a part can have.
+ * @param {DetailsRun} run @param {string[]} blocks each at most `roomOf(run, blocks.length)`
  * @returns {string[]}
  */
 export const detailParts = (run, blocks) => {
-  const groups = packed(blocks, run.commentLimit - HEADER_RESERVE)
+  const groups = packed(blocks, roomOf(run, blocks.length))
   return groups.map((group, index) => `${headerOf(run, index + 1, groups.length)}${group.join('\n')}`)
 }
 

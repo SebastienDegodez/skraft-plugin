@@ -15,8 +15,8 @@ const POINTER = 'The run\'s other details (tests, consistency matrix, RED eviden
 const azure = (more = {}) => new InMemoryCodeHost({ bodyLimit: 4_000, commentLimit: 140_000, link: (issue, closes) => `${closes ? 'Fixes ' : ''}#${issue}`, ...more })
 
 /** A run that ends by opening its pull request on `codeHost`, the pr-writer's Why as given. */
-const opened = async (codeHost, why = LONG_WHY, story = STORY) => {
-  const host = scripted({ config: CONSENTED, codeHost }, (it) => nominal(it, REFS_42))
+const opened = async (codeHost, why = LONG_WHY, story = STORY, slug = SLUG) => {
+  const host = scripted({ config: CONSENTED, codeHost, slug }, (it) => nominal(it, REFS_42))
   host.prWriters.push(prWriter({ why }))
   const outcome = await host.start(story)
   assert.equal(outcome.status, 'done', outcome.reason)
@@ -44,13 +44,13 @@ test('the details of a run republished after they changed, the description itsel
 
   await host.publish()
   assert.equal(comment.edits, 1, 'the run summary the first publish wrote said the run was still in progress')
-  assert.equal((await host.publish()).reason, `pull request #42 is up to date: ${host.codeHost.pullRequests[0].url}; its run details are in 1 comment, the first at ${comment.url}`)
+  assert.equal((await host.publish()).reason, `pull request #42 is up to date: ${host.codeHost.pullRequests[0].url}; its run details were kept in 1 comment, the first at ${comment.url}`)
   assert.deepEqual([host.codeHost.pullRequestComments.length, comment.edits], [1, 1])
 
   await host.tracking.write(SLUG, TEST_PLAN, 'A sharper test plan.')
   const reason = (await host.publish()).reason
 
-  assert.equal(reason, `pull request #42 is up to date: ${host.codeHost.pullRequests[0].url}; its run details are in 1 comment, the first at ${comment.url}`)
+  assert.equal(reason, `pull request #42 is up to date: ${host.codeHost.pullRequests[0].url}; its run details were kept in 1 comment, the first at ${comment.url}`)
   assert.deepEqual([host.codeHost.pullRequestComments.length, comment.edits, comment.body.includes('A sharper test plan.')], [1, 2, true])
   assert.equal(host.codeHost.calls.at(-1), `keep pr comment #42 ${comment.url.slice(comment.url.indexOf('#'))}`)
   assert.equal((await body()).endsWith(`\n\n${POINTER}\n`), true)
@@ -92,6 +92,20 @@ test('details past what one comment takes are packed whole into numbered parts, 
   }
 })
 
+test('a slug far longer than a usual one leaves less room to each part, and no comment is longer than the forge takes, whichever the slug\'s length', async () => {
+  for (let extra = 0; extra < 12; extra += 1) {
+    const slug = `checkout-${'with-a-very-long-name-'.repeat(8)}${'x'.repeat(extra)}end`
+    const host = await opened(azure({ commentLimit: 1_200 }), LONG_WHY, STORY, slug)
+    const parts = host.codeHost.pullRequestComments
+
+    assert.ok(parts.length >= 2, String(parts.length))
+    parts.forEach(({ body }, index) => {
+      assert.ok(body.length <= 1_200, `slug +${extra}, part ${index + 1}: ${body.length}`)
+      assert.ok(body.startsWith(`<!-- skraft:run-details slug=${slug} part=${index + 1} -->\n# skraft · run details ${index + 1}/${parts.length}\n\n`), body.slice(0, 260))
+    })
+  }
+})
+
 test('a body that fits its forge again empties every part kept before', async () => {
   const host = await opened(azure())
   assert.equal(host.codeHost.pullRequestComments.length, 1)
@@ -107,7 +121,7 @@ test('details the forge refused to keep do not unpublish the pull request: the r
   const refusal = 'az could not comment pull request #42 on Shop/payment'
   const host = await opened(azure({ fails: { pullRequestComment: refusal } }))
 
-  assert.equal(reasonOf(host), `pull request #42 opened as a draft: ${host.codeHost.pullRequests[0].url}; its run details were not kept: ${refusal}; pull-request-details-1.md holds them, and skraft publish keeps them once that is fixed`)
+  assert.equal(reasonOf(host), `pull request #42 opened as a draft: ${host.codeHost.pullRequests[0].url}; its run details were not kept: ${refusal}; pull-request.md holds them, and skraft publish keeps them once that is fixed`)
   assert.deepEqual(eventsOf(host, 'pull-request.details-skipped').map(({ number, part, parts, reason }) => ({ number, part, parts, reason })), [{ number: 42, part: 1, parts: 1, reason: refusal }])
   assert.deepEqual(eventsOf(host, 'pull-request.details-kept'), [])
   assert.ok((await host.tracking.read(SLUG, 'pull-request-details-1.md')).includes('<summary>Tests'))
@@ -115,7 +129,7 @@ test('details the forge refused to keep do not unpublish the pull request: the r
   host.codeHost.fails = {}
   const published = await host.publish()
 
-  assert.match(published.reason, /^pull request #42 is up to date: [^;]*; its run details are in 1 comment, the first at /)
+  assert.match(published.reason, /^pull request #42 is up to date: [^;]*; its run details were kept in 1 comment, the first at /)
   assert.equal(host.codeHost.pullRequestComments.length, 1)
   assert.equal(eventsOf(host, 'pull-request.details-kept').length, 1)
 })
@@ -156,14 +170,13 @@ test('a story whose run kept no issue is told by its title alone', async () => {
   assert.ok(host.codeHost.pullRequestComments[0].body.includes('\n# skraft · détails du run\n'))
 })
 
-test('details that fill the room of a comment exactly stay in one part, one character less makes two', async () => {
+test('details that fill a comment stay in one part, a comment too short for them makes two, none longer than the forge takes', async () => {
   const whole = await opened(azure())
   const [{ body }] = whole.codeHost.pullRequestComments
-  const header = `<!-- skraft:run-details slug=${SLUG} part=1 -->\n# skraft · run details\n\n`
-  const room = body.length - header.length
 
-  const fits = await opened(azure({ commentLimit: room + 200 }))
-  const tight = await opened(azure({ commentLimit: room + 199 }))
+  const fits = await opened(azure({ commentLimit: body.length + 10 }))
+  const tight = await opened(azure({ commentLimit: body.length - 1 }))
 
   assert.deepEqual([fits.codeHost.pullRequestComments.length, tight.codeHost.pullRequestComments.length], [1, 2])
+  assert.ok(tight.codeHost.pullRequestComments.every((comment) => comment.body.length <= body.length - 1))
 })

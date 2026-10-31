@@ -2,7 +2,7 @@ import { durationText, reportTable } from './run-report.mjs'
 import { SUMMARY_LENGTH } from './pull-request-prose.mjs'
 import { cell, code, embedded, inert, oneLine, openFence } from './markdown-safety.mjs'
 import { screenshotLines } from './visuals.mjs'
-import { detailParts, HEADER_RESERVE, pointerOf } from './run-details.mjs'
+import { detailParts, pointerOf, roomOf } from './run-details.mjs'
 
 /**
  * The description of the pull request a run opens, as "Writing good CL descriptions" lays it
@@ -66,12 +66,13 @@ export const renderPullRequest = (facts) => {
 const split = (facts, sections) => {
   if (bodyOf(facts, sections).length <= facts.bodyLimit) return { body: bodyOf(facts, sections), details: [] }
   const body = fitted(facts, sections.filter(({ detail }) => !detail), [pointerOf(facts.language)])
-  return { body, details: detailParts(facts, sections.filter(({ detail }) => detail).map((section) => blockOf(facts, section))) }
+  const folded = sections.filter(({ detail }) => detail)
+  const room = roomOf(facts, folded.length)
+  return { body, details: detailParts(facts, folded.map((section) => blockOf(section, room))) }
 }
 
-/** A section as one block of a comment, cut to the room a comment leaves it. @param {PullRequestFacts} facts @param {Section} section */
-const blockOf = (facts, section) => {
-  const room = facts.commentLimit - HEADER_RESERVE
+/** A section as one block of a comment, cut to the room a comment leaves it. @param {Section} section @param {number} room */
+const blockOf = (section, room) => {
   const block = linesOf(section).join('\n')
   return block.length <= room ? block : linesOf(cut(section, block.length - room)).join('\n')
 }
