@@ -1,6 +1,4 @@
 ---
-layout: doc
-lang: fr
 title: "SKRAFT — Le Handbook"
 description: "Ce qu'est SKRAFT V2, ce qui est disponible aujourd'hui, ce qui arrive, et où lire selon votre besoin ou votre rôle."
 persona: tech-lead
@@ -19,12 +17,11 @@ aucun agent n'en lance un autre, et aucun hook de commande ne ralentit vos appel
 
 ## Première visite
 
-Suivez le [tutoriel Premiers pas]({{ "/fr/tutorials/getting-started" | relative_url }}) : vous
+Suivez le [tutoriel Premiers pas](./tutorials/getting-started.md) : vous
 installez le plugin, décrivez votre dépôt dans `skraft-config.json`, et menez une story de
 RESEARCH à la description de sa pull request, sur un petit dépôt.
 
-## Disponible aujourd'hui, et ce qui arrive {#roadmap}
-
+## Disponible aujourd'hui, et ce qui arrive {/* #roadmap */}
 SKRAFT V2 se construit par **lots**, suivis dans l'epic [#211](https://github.com/SebastienDegodez/skraft-plugin/issues/211) et ses issues #212 à
 #223. Ce tableau est la seule feuille de route du projet ; chaque lot arrive sur la branche
 `integration/v2-next`, et une dernière pull request vers `main` livre la 2.0.0.
@@ -52,24 +49,24 @@ La documentation suit **Diátaxis** : quatre portes selon ce que vous cherchez.
 
 | Porte | Pour… | Pages |
 | --- | --- | --- |
-| **Apprendre** (tutoriel) | faire un premier parcours guidé | [Premiers pas]({{ "/fr/tutorials/getting-started" | relative_url }}) |
-| **Faire** (guide pratique) | réussir une tâche précise | [Installer skraft]({{ "/fr/how-to/install-on-a-host" | relative_url }}), [Configurer les composants]({{ "/fr/how-to/configure-components" | relative_url }}), [Lancer les gates]({{ "/fr/how-to/run-gates" | relative_url }}), [Reprendre ou débloquer un run]({{ "/fr/how-to/resume-a-run" | relative_url }}), [Répondre à une question]({{ "/fr/how-to/answer-a-question" | relative_url }}), [Choisir les modèles]({{ "/fr/how-to/choose-models" | relative_url }}), [Ajouter une lentille]({{ "/fr/how-to/customise-review" | relative_url }}), [Publier la pull request]({{ "/fr/how-to/publish-pull-request" | relative_url }}), [Évaluer un skill]({{ "/fr/how-to/evaluate-a-skill" | relative_url }}), [Contribuer]({{ "/fr/how-to/contributing" | relative_url }}) |
-| **Consulter** (référence) | retrouver un fait exact | [Hôtes]({{ "/fr/reference/hosts" | relative_url }}), [La ligne de commande `skraft`]({{ "/fr/reference/cli" | relative_url }}), [Workflow DOT]({{ "/fr/reference/workflow-dot" | relative_url }}), [Phases]({{ "/fr/reference/phases" | relative_url }}), [`skraft-config.json`]({{ "/fr/reference/skraft-config" | relative_url }}), [Journal du run]({{ "/fr/reference/run-journal" | relative_url }}), [Glossaire]({{ "/fr/reference/glossary" | relative_url }}), [Catalogue des agents et skills]({{ "/fr/dashboard/" | relative_url }}), [Gates]({{ "/fr/reference/gates" | relative_url }}) |
-| **Comprendre** (explication) | savoir *pourquoi* c'est construit ainsi | [Pour décideurs]({{ "/fr/explanation/for-executives" | relative_url }}), [Architecture]({{ "/fr/explanation/architecture" | relative_url }}), [Garde-fous]({{ "/fr/explanation/guardrails" | relative_url }}), [Le journal d'événements]({{ "/fr/explanation/event-journal" | relative_url }}), [Les phases]({{ "/fr/explanation/pipeline/" | relative_url }}), [Le backlog]({{ "/fr/explanation/backlog" | relative_url }}), [Clean Architecture]({{ "/fr/explanation/clean-architecture" | relative_url }}), [Outside-In TDD]({{ "/fr/explanation/deep-dive/outside-in-tdd" | relative_url }}), [Brownfield]({{ "/fr/explanation/brownfield" | relative_url }}) |
+| **Apprendre** (tutoriel) | faire un premier parcours guidé | [Premiers pas](./tutorials/getting-started.md) |
+| **Faire** (guide pratique) | réussir une tâche précise | [Installer skraft](./how-to/install-on-a-host.mdx), [Configurer les composants](./how-to/configure-components.md), [Lancer les gates](./how-to/run-gates.md), [Reprendre ou débloquer un run](./how-to/resume-a-run.md), [Répondre à une question](./how-to/answer-a-question.md), [Choisir les modèles](./how-to/choose-models.md), [Ajouter une lentille](./how-to/customise-review.md), [Publier la pull request](./how-to/publish-pull-request.md), [Évaluer un skill](./how-to/evaluate-a-skill.md), [Contribuer](./how-to/contributing.md) |
+| **Consulter** (référence) | retrouver un fait exact | [Hôtes](./reference/hosts.md), [La ligne de commande `skraft`](./reference/cli.md), [Workflow DOT](./reference/workflow-dot.md), [Phases](./reference/phases.md), [`skraft-config.json`](./reference/skraft-config.md), [Journal du run](./reference/run-journal.md), [Glossaire](./reference/glossary.md), [Catalogue des agents et skills](pathname:///fr/dashboard/), [Gates](./reference/gates.md) |
+| **Comprendre** (explication) | savoir *pourquoi* c'est construit ainsi | [Pour décideurs](./explanation/for-executives.md), [Architecture](./explanation/architecture.md), [Garde-fous](./explanation/guardrails.md), [Le journal d'événements](./explanation/event-journal.md), [Les phases](./explanation/pipeline/index.md), [Le backlog](./explanation/backlog.md), [Clean Architecture](./explanation/clean-architecture.md), [Outside-In TDD](./explanation/deep-dive/outside-in-tdd.md), [Brownfield](./explanation/brownfield.md) |
 
 ## Où aller selon votre rôle
 
 - **Décideur** — le problème que la V2 résout et les objectifs visés :
-  [Pour décideurs]({{ "/fr/explanation/for-executives" | relative_url }}).
-- **Développeur** — d'abord le [tutoriel]({{ "/fr/tutorials/getting-started" | relative_url }}),
-  puis les guides : [configurer les composants]({{ "/fr/how-to/configure-components" | relative_url }}),
-  [lancer les gates]({{ "/fr/how-to/run-gates" | relative_url }}),
-  [reprendre ou débloquer un run]({{ "/fr/how-to/resume-a-run" | relative_url }}).
+  [Pour décideurs](./explanation/for-executives.md).
+- **Développeur** — d'abord le [tutoriel](./tutorials/getting-started.md),
+  puis les guides : [configurer les composants](./how-to/configure-components.md),
+  [lancer les gates](./how-to/run-gates.md),
+  [reprendre ou débloquer un run](./how-to/resume-a-run.md).
 - **Architecte** — moteur, pilotes d'hôte, profondeur 1 :
-  [Architecture]({{ "/fr/explanation/architecture" | relative_url }}).
+  [Architecture](./explanation/architecture.md).
 - **Qualification** — où sont les preuves et comment les lire :
-  [Lancer les gates]({{ "/fr/how-to/run-gates" | relative_url }}),
-  [Journal du run]({{ "/fr/reference/run-journal" | relative_url }}).
+  [Lancer les gates](./how-to/run-gates.md),
+  [Journal du run](./reference/run-journal.md).
 
 ## SKRAFT V2 en une image
 

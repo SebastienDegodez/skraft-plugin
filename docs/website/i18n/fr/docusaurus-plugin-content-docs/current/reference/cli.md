@@ -1,6 +1,4 @@
 ---
-layout: doc
-lang: fr
 title: "La ligne de commande skraft"
 description: "Chaque commande de skraft : synopsis, options, effet, sortie texte et JSON, codes de sortie."
 persona: software-engineer
@@ -8,17 +6,17 @@ persona: software-engineer
 
 # La ligne de commande skraft
 
-> `skraft` est la porte d'entrée en ligne de commande du moteur : chaque commande appelle un cas d'usage et affiche ce qu'il rend, sans rien décider elle-même.
+`skraft` est la porte d'entrée en ligne de commande du moteur : chaque commande appelle un cas d'usage et affiche ce qu'il rend, sans rien décider elle-même.
 
-Ce que les hôtes offrent à la place de ces commandes (`/skraft`, workflow `skraft-pipeline`, `skraft_decide`, pilote SDK) : [Hôtes]({{ "/fr/reference/hosts" | relative_url }}). La syntaxe des workflows que `skraft workflow` copie et valide : [Le workflow DOT]({{ "/fr/reference/workflow-dot" | relative_url }}).
+Ce que les hôtes offrent à la place de ces commandes (`/skraft`, workflow `skraft-pipeline`, `skraft_decide`, pilote SDK) : [Hôtes](./hosts.md). La syntaxe des workflows que `skraft workflow` copie et valide : [Le workflow DOT](./workflow-dot.md).
 
 ## Appeler skraft
 
 Le point d'entrée est un script Node livré dans le plugin. Remplacez `<dossier du plugin>`
 par le dossier où l'hôte a installé le plugin skraft :
 
-```
-node "<dossier du plugin>/engine/drivers/cli/skraft.mjs" <commande>
+```console
+$ node "<dossier du plugin>/engine/drivers/cli/skraft.mjs" <commande>
 ```
 
 La même forme marche sous sh et sous PowerShell. Lancez-la **depuis la racine de la copie de
@@ -75,7 +73,7 @@ Règles communes des options :
 | commande inconnue | — | — | toujours |
 
 Les codes `refused` et `blocked` sont détaillés dans
-[Dossier de suivi et journal]({{ "/fr/reference/run-journal" | relative_url }}).
+[Dossier de suivi et journal](./run-journal.md).
 
 ## `skraft --version`
 
@@ -86,7 +84,7 @@ Affiche la version lue dans le `plugin.json` du plugin. Sortie : une ligne. Code
 **Effet.** Détecte un composant par projet trouvé dans la copie de travail et dans chaque
 dossier `--add`, et les ajoute à `skraft-config.json` (créé s'il manque). Les composants déjà
 listés et toutes les autres clés du fichier restent tels qu'écrits. Règles de détection et
-défauts par stack : [skraft-config.json]({{ "/fr/reference/skraft-config" | relative_url }}).
+défauts par stack : [skraft-config.json](./skraft-config.md).
 
 | Option | Valeur | Règle |
 | --- | --- | --- |
@@ -137,7 +135,7 @@ du moteur sur stderr, code 1, par exemple :
 | `journal-tampered` | `journal tampered: events.jsonl line N …; restore the file or start a new slug` |
 
 `init <slug>` ne lance aucun agent : c'est le mod, le workflow, le pilote SDK Copilot ou
-`skraft next` qui déroule le pipeline ([Hôtes]({{ "/fr/reference/hosts" | relative_url }})).
+`skraft next` qui déroule le pipeline ([Hôtes](./hosts.md)).
 
 ## `skraft status [--json]`
 
@@ -188,7 +186,7 @@ Ratify the Proposed ADRs docs/adr/adr-001-card-provider.md? RATIFIED marks them 
 | `gates` | `[{ component, gate, command, status, durationMs, evidence, survivors }]` | dernier résultat de chaque gate de chaque composant (les tests compris) ; `survivors` seulement pour `mutation` |
 
 Signification de chaque statut :
-[Dossier de suivi et journal]({{ "/fr/reference/run-journal" | relative_url }}). Code 1
+[Dossier de suivi et journal](./run-journal.md). Code 1
 seulement pour `tampered`.
 
 ## `skraft decide [<key>] <answer> [--reason <text>]`
@@ -246,7 +244,7 @@ sur stdout, code 0. Refus : le message sur stderr, code 1.
 
 | Code | Message |
 | --- | --- |
-| `no-active-pipeline`, `slug-mismatch` | voir [Dossier de suivi et journal]({{ "/fr/reference/run-journal" | relative_url }}) |
+| `no-active-pipeline`, `slug-mismatch` | voir [Dossier de suivi et journal](./run-journal.md) |
 | `no-question` | `no question adr-2; waiting: adr-1`, ou `no question to answer; no question is waiting` |
 | `already-answered` | `adr-1 was already answered RATIFIED` |
 | `invalid-answer` | `the answer must be one of RATIFIED, REJECTED` ; `REJECTED needs the reason, which goes back to the agent` ; pour une question `blocked`, `the answer must be an instruction, or STOP` (`… or APPLY or STOP` pour `mutation-plan`) et `an instruction is at most 1000 characters` (la valeur n'est jamais reprise) |
@@ -305,8 +303,8 @@ Chaque `GateResult` : `component`, `gate` (`none` pour un composant sans command
 Codes possibles : `no-active-pipeline`, `not-initialised`, `config-invalid`, `no-components`
 (refused) ; `journal-tampered`, `journal-changed` (blocked). Raisons d'échec, classes
 d'échec et format des preuves :
-[skraft-config.json]({{ "/fr/reference/skraft-config" | relative_url }}) et
-[Dossier de suivi et journal]({{ "/fr/reference/run-journal" | relative_url }}).
+[skraft-config.json](./skraft-config.md) et
+[Dossier de suivi et journal](./run-journal.md).
 
 ## `skraft report [--json]`
 
@@ -370,7 +368,7 @@ code 1) :
 
 | Code | Message |
 | --- | --- |
-| `no-active-pipeline`, `journal-tampered`, `journal-unverifiable` | voir [Dossier de suivi et journal]({{ "/fr/reference/run-journal" | relative_url }}) |
+| `no-active-pipeline`, `journal-tampered`, `journal-unverifiable` | voir [Dossier de suivi et journal](./run-journal.md) |
 | `not-done` | `<slug> has not completed; skraft publish opens the pull request of a completed run` |
 | `config-invalid`, `workflow-invalid` | le fichier invalide et ses erreurs |
 | `not-published` | `pull request not opened: <raison>; pull-request.md holds its description, and skraft publish opens it once that is fixed` |
@@ -463,7 +461,7 @@ slug, status, code, reason, events?, dropped? }] }`, `status` = `migrated`, `wou
 ## `skraft next [--json]` et `skraft record [--json]`
 
 **Effet.** La boucle d'agent, le pilote VS Code quand le SDK Copilot manque : l'agent
-`skraft-orchestrator` la conduit ([Hôtes]({{ "/fr/reference/hosts" | relative_url }}#agent-loop)). `next` fait tourner le pipeline actif jusqu'à ce qu'il ait
+`skraft-orchestrator` la conduit ([Hôtes](./hosts.md#agent-loop)). `next` fait tourner le pipeline actif jusqu'à ce qu'il ait
 besoin d'agents ou d'un humain. Pour chaque agent nécessaire, il écrit un brief et un fichier
 de réponse vide sous `.copilot-tracking/skraft-plans/<slug>/results/loop/`
 (`dispatch-<n>.brief.md`, `dispatch-<n>.reply.md`), les liste dans `pending.json`, laisse le
@@ -522,7 +520,7 @@ une copie.
 | copié | `.skraft/pipeline.skraft.dot holds the skraft <version> pipeline; the run follows it` (review : `… holds the skraft <version> review; every call to review runs it`) sur stdout | 0 |
 | la copie existe | `<chemin> already exists; edit it, or remove it` sur stderr | 1 |
 
-Syntaxe, règles de validité et nœuds verrouillés ou obligatoires : [Le workflow DOT]({{ "/fr/reference/workflow-dot" | relative_url }}).
+Syntaxe, règles de validité et nœuds verrouillés ou obligatoires : [Le workflow DOT](./workflow-dot.md).
 
 **`skraft workflow check`** valide le workflow qu'un run suivrait (la copie du dépôt s'il y en a
 une, sinon celui du plugin) et les workflows qu'il appelle, face à `skraft-config.json` : un
@@ -637,17 +635,16 @@ revue continue (le réfuteur est confié de la même façon).
   retravaille.
 - **Répondre en modifiant `events.jsonl`** : la chaîne casse. Répondez par `skraft decide`.
 
-## Pour aller plus loin {#see-also}
-
-- [Hôtes]({{ "/fr/reference/hosts" | relative_url }})
-- [Le workflow DOT]({{ "/fr/reference/workflow-dot" | relative_url }})
-- [Phases]({{ "/fr/reference/phases" | relative_url }})
-- [Premiers pas]({{ "/fr/tutorials/getting-started" | relative_url }})
-- [Lancer les gates et lire leurs preuves]({{ "/fr/how-to/run-gates" | relative_url }})
-- [Reprendre ou débloquer un run]({{ "/fr/how-to/resume-a-run" | relative_url }})
-- [skraft-config.json]({{ "/fr/reference/skraft-config" | relative_url }})
-- [Dossier de suivi et journal]({{ "/fr/reference/run-journal" | relative_url }})
-- [Moteur, pilotes, profondeur 1]({{ "/fr/explanation/architecture" | relative_url }})
+## Pour aller plus loin <!-- #see-also -->
+- [Hôtes](./hosts.md)
+- [Le workflow DOT](./workflow-dot.md)
+- [Phases](./phases.md)
+- [Premiers pas](../tutorials/getting-started.md)
+- [Lancer les gates et lire leurs preuves](../how-to/run-gates.md)
+- [Reprendre ou débloquer un run](../how-to/resume-a-run.md)
+- [skraft-config.json](./skraft-config.md)
+- [Dossier de suivi et journal](./run-journal.md)
+- [Moteur, pilotes, profondeur 1](../explanation/architecture.md)
 
 Termes à connaître : **moteur**, **pilote d'hôte**, **slug**, **gate** — voir le
-[glossaire]({{ "/fr/reference/glossary" | relative_url }}).
+[glossaire](./glossary.md).

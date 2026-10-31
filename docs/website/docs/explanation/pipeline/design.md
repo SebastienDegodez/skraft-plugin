@@ -1,18 +1,14 @@
 ---
-layout: doc
-lang: en
 title: "DESIGN"
 description: "Why DESIGN makes every architecture decision explicit, reuses before creating, has the lenses review it and a human ratify it before any specification."
 persona: software-engineer
+phase: design
 ---
-{% assign cites = "/en/reference/citations" | relative_url %}
 
 # DESIGN
 
-{% include phase-ribbon.html current="design" %}
-
-> Decide, write it down, have it ratified: DESIGN turns a story into explicit architecture
-> decisions, and none reaches specification until a human has accepted it.
+Decide, write it down, have it ratified: DESIGN turns a story into explicit architecture
+decisions, and none reaches specification until a human has accepted it.
 
 ## Why this phase exists
 
@@ -23,19 +19,18 @@ boundaries, chooses the patterns, then records each structural decision in an **
 (Architecture Decision Record) with its context, options and consequences.
 
 The model is not one more deliverable: it is the language the team, the business and the code
-share ([Evans, 2003]({{ cites }}#cite-evans-ddd-2003)). The why of this approach, from the
+share ([Evans, 2003](../../reference/citations.mdx#cite-evans-ddd-2003)). The why of this approach, from the
 ubiquitous language to aggregates, is developed in
-[Domain-Driven Design]({{ "/en/explanation/domain-driven-design" | relative_url }}); the
+[Domain-Driven Design](../domain-driven-design.md); the
 dependency rule the contracts follow, in
-[Clean Architecture]({{ "/en/explanation/clean-architecture" | relative_url }}).
+[Clean Architecture](../clean-architecture.md).
 
-<div class="fil-rouge" markdown="1">
-<span class="fil-rouge__label">☕ Running example — Starbucks <em>(illustrative)</em></span>
+:::info[☕ Running example — Starbucks *(illustrative)*]
 
 The ordering story enters. DESIGN proposes an **ADR** "delegate payment to an external provider
 via an anti-corruption layer (ACL)" and an **event model** `PlaceOrder` → `OrderPaid` →
 `OrderReady`. A human ratifies the ADR; this model feeds DISTILL.
-</div>
+:::
 
 ## Reuse before creating
 
@@ -72,11 +67,11 @@ place: an architecture decision commits the team, not the model that proposed it
 
 ## Going further
 
-- [Reference: DESIGN]({{ "/en/reference/phases" | relative_url }}#design) — nodes, outputs, engine checks, edges.
-- [Reference: DESIGN review criteria]({{ "/en/reference/gates" | relative_url }}#design).
-- [Reference: unpublished ADRs]({{ "/en/reference/run-journal" | relative_url }}#unpublished-adrs).
-- [DISTILL]({{ "/en/explanation/pipeline/distill" | relative_url }}) — the next phase.
+- [Reference: DESIGN](../../reference/phases.md#design) — nodes, outputs, engine checks, edges.
+- [Reference: DESIGN review criteria](../../reference/gates.md#design).
+- [Reference: unpublished ADRs](../../reference/run-journal.md#unpublished-adrs).
+- [DISTILL](./distill.md) — the next phase.
 
 ## Sources
 
-- [Evans, E. *Domain-Driven Design*, 2003.]({{ cites }}#cite-evans-ddd-2003)
+- [Evans, E. *Domain-Driven Design*, 2003.](../../reference/citations.mdx#cite-evans-ddd-2003)

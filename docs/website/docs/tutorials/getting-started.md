@@ -1,6 +1,4 @@
 ---
-layout: doc
-lang: en
 title: "Getting started"
 description: "Install SKRAFT V2 in Claude Code, describe a small repository, and run one story from RESEARCH to its pull request description."
 persona: software-engineer
@@ -8,10 +6,10 @@ persona: software-engineer
 
 # Getting started
 
-> In this tutorial, you install SKRAFT in Claude Code, describe a small repository in
-> `skraft-config.json`, and run the story "#42 Pay by card" through RESEARCH, DESIGN, DISTILL,
-> DELIVER and PUBLISH. At the end, `skraft status` shows every phase closed and the pull request
-> description waits for you in the tracking folder.
+In this tutorial, you install SKRAFT in Claude Code, describe a small repository in
+`skraft-config.json`, and run the story "#42 Pay by card" through RESEARCH, DESIGN, DISTILL,
+DELIVER and PUBLISH. At the end, `skraft status` shows every phase closed and the pull request
+description waits for you in the tracking folder.
 
 You follow one path, from start to finish. Each step says what you should see. A full run starts
 real agents: expect it to take a while and to cost what Claude Code charges for them.
@@ -26,8 +24,8 @@ real agents: expect it to take a while and to cost what Claude Code charges for 
 
 Create a `shop` folder, open a terminal in it and create the repository:
 
-```text
-git init -b main
+```console
+$ git init -b main
 ```
 
 Create `web/package.json`:
@@ -63,8 +61,8 @@ test('the total of a cart adds its prices', () => {
 
 The mutation gate runs StrykerJS. Install it in `web`:
 
-```text
-npm install --save-dev --prefix web @stryker-mutator/core@9.6.1 @stryker-mutator/tap-runner@9.6.1
+```console
+$ npm install --save-dev --prefix web @stryker-mutator/core@9.6.1 @stryker-mutator/tap-runner@9.6.1
 ```
 
 and create `web/stryker.config.json`:
@@ -80,10 +78,10 @@ and create `web/stryker.config.json`:
 Add `node_modules/` and `reports/` to a `.gitignore` at the root of `shop`, make a first commit,
 then work on a branch of your own:
 
-```text
-git add .
-git commit -m "Start the shop"
-git switch -c pay-by-card
+```console
+$ git add .
+$ git commit -m "Start the shop"
+$ git switch -c pay-by-card
 ```
 
 `git status` shows nothing left to commit.
@@ -104,8 +102,8 @@ Open `/plugin`: `skraft` is listed among the installed plugins.
 
 The `skraft` command line is a Node script shipped with the plugin. Run it from the root of `shop`:
 
-```text
-node "<skraft plugin folder>/engine/drivers/cli/skraft.mjs" init
+```console
+$ node "<skraft plugin folder>/engine/drivers/cli/skraft.mjs" init
 ```
 
 To find that folder, look for the script under Claude Code's plugins folder:
@@ -121,7 +119,7 @@ on, `skraft …` means that full command.
 `skraft init` looks for the projects of the repository and writes one **component** per project: a
 part of the repository with its root, its stack, its paths and its commands. You see:
 
-![Terminal: skraft init answers "skraft-config.json: web (javascript, web)"]({{ "/assets/screenshots/shared/terminal-init.svg" | relative_url }})
+![Terminal: skraft init answers "skraft-config.json: web (javascript, web)"](/img/screenshots/shared/terminal-init.svg)
 
 *Figure 1 — `skraft init` found one component, `web`, in JavaScript.*
 
@@ -152,8 +150,8 @@ also the **write scope** of DELIVER: the software engineer may write only in `we
 `web/test`. `skraft init` also added `skraft-config.local.json`, your personal layer, to
 `.gitignore`. Commit both files:
 
-```text
-git add skraft-config.json .gitignore
+```console
+$ git add skraft-config.json .gitignore
 git commit -m "chore: describe the shop for skraft"
 ```
 
@@ -162,13 +160,13 @@ git commit -m "chore: describe the shop for skraft"
 `skraft doctor` checks that every command can run on your machine and shows which model each agent
 will run on:
 
-```text
-skraft doctor
+```console
+$ skraft doctor
 ```
 
 You see, with your own paths and versions:
 
-![Terminal: skraft doctor, ok lines and three WARN lines, then the model table under Claude Code, and "no check failed, 3 with a warning"]({{ "/assets/screenshots/shared/terminal-doctor.svg" | relative_url }})
+![Terminal: skraft doctor, ok lines and three WARN lines, then the model table under Claude Code, and "no check failed, 3 with a warning"](/img/screenshots/shared/terminal-doctor.svg)
 
 *Figure 2 — `skraft doctor` on the `shop` repository: no check failed, three warnings. The model
 table is cut after its first rows.*
@@ -182,15 +180,15 @@ The last line is what matters: `no check failed`.
 
 In the Claude Code conversation, type:
 
-```text
-/skraft checkout #42 Pay by card
+```console title="Claude Code"
+> /skraft checkout #42 Pay by card
 ```
 
 `checkout` is the **slug**: the name of the pipeline, in kebab-case. `#42` is the issue number,
 `Pay by card` its title. The repository has no remote: the run starts anyway, and its agents get
 the issue's number and title only. Claude Code answers:
 
-```text
+```console
 skraft checkout started — progress in the Skraft pane.
 ```
 
@@ -204,11 +202,11 @@ pull request when the run ends. **Leave it open** for the next step.
 
 While the dialog waits, run in a terminal, at the root of `shop`:
 
-```text
-skraft status
+```console
+$ skraft status
 ```
 
-![Terminal: skraft status shows "skraft checkout: waiting", RESEARCH open, the other phases pending, and the publish-consent question]({{ "/assets/screenshots/shared/terminal-status-waiting.svg" | relative_url }})
+![Terminal: skraft status shows "skraft checkout: waiting", RESEARCH open, the other phases pending, and the publish-consent question](/img/screenshots/shared/terminal-status-waiting.svg)
 
 *Figure 3 — The run waits for your answer: RESEARCH is open, and the `publish-consent` question is
 the dialog's.*
@@ -270,7 +268,7 @@ checkout: publish: pull request not opened: skraft-config.json sets publish.pull
 
 The run ends on this notification:
 
-```text
+```console
 skraft checkout: done — PUBLISH closed
 ```
 
@@ -278,22 +276,22 @@ skraft checkout: done — PUBLISH closed
 
 In the terminal, at the root of `shop`:
 
-```text
-skraft status
+```console
+$ skraft status
 ```
 
-![Terminal: skraft status shows "skraft checkout: done" and RESEARCH to PUBLISH closed]({{ "/assets/screenshots/shared/terminal-status-done.svg" | relative_url }})
+![Terminal: skraft status shows "skraft checkout: done" and RESEARCH to PUBLISH closed](/img/screenshots/shared/terminal-status-done.svg)
 
 *Figure 4 — A finished run: every phase is `closed`. Captured on the integration tests' scripted
 repository; under Claude Code, a `cost:` line is added with the cost the host reported.*
 
 Run the gates yourself on the delivered code:
 
-```text
-skraft gate --all
+```console
+$ skraft gate --all
 ```
 
-![Terminal: skraft gate --all, pass web/test and pass web/mutation, "2 gates passed on web"]({{ "/assets/screenshots/shared/terminal-gates.svg" | relative_url }})
+![Terminal: skraft gate --all, pass web/test and pass web/mutation, "2 gates passed on web"](/img/screenshots/shared/terminal-gates.svg)
 
 *Figure 5 — Both gates of the `web` component pass.*
 
@@ -326,9 +324,9 @@ then the red and green commits of each TDD cycle.
 
 ## Next pages
 
-- [First run under GitHub Copilot CLI]({{ "/en/tutorials/first-run-copilot" | relative_url }}) — the same path, followed in the Copilot canvas.
-- [Publish a run's pull request]({{ "/en/how-to/publish-pull-request" | relative_url }})
-- [Configure components]({{ "/en/how-to/configure-components" | relative_url }})
-- [Install skraft on a host]({{ "/en/how-to/install-on-a-host" | relative_url }}) — Windows, VS Code, optional plugins.
-- [Hosts]({{ "/en/reference/hosts" | relative_url }}) — what each host shows and asks.
-- [Engine, drivers, depth 1]({{ "/en/explanation/architecture" | relative_url }})
+- [First run under GitHub Copilot CLI](./first-run-copilot.md) — the same path, followed in the Copilot canvas.
+- [Publish a run's pull request](../how-to/publish-pull-request.md)
+- [Configure components](../how-to/configure-components.md)
+- [Install skraft on a host](../how-to/install-on-a-host.mdx) — Windows, VS Code, optional plugins.
+- [Hosts](../reference/hosts.md) — what each host shows and asks.
+- [Engine, drivers, depth 1](../explanation/architecture.md)

@@ -1,6 +1,4 @@
 ---
-layout: doc
-lang: fr
 title: "Premiers pas"
 description: "Installer SKRAFT V2 dans Claude Code, décrire un petit dépôt, et mener une story de RESEARCH à la description de sa pull request."
 persona: software-engineer
@@ -8,10 +6,10 @@ persona: software-engineer
 
 # Premiers pas
 
-> Dans ce tutoriel, vous installez SKRAFT dans Claude Code, décrivez un petit dépôt dans
-> `skraft-config.json`, et menez la story « #42 Pay by card » à travers RESEARCH, DESIGN, DISTILL,
-> DELIVER et PUBLISH. À la fin, `skraft status` montre chaque phase fermée et la description de la
-> pull request vous attend dans le dossier de suivi.
+Dans ce tutoriel, vous installez SKRAFT dans Claude Code, décrivez un petit dépôt dans
+`skraft-config.json`, et menez la story « #42 Pay by card » à travers RESEARCH, DESIGN, DISTILL,
+DELIVER et PUBLISH. À la fin, `skraft status` montre chaque phase fermée et la description de la
+pull request vous attend dans le dossier de suivi.
 
 Vous suivez un seul parcours, du début à la fin. Chaque étape dit ce que vous devez voir. Un run
 complet lance de vrais agents : comptez du temps, et le coût que Claude Code facture pour eux.
@@ -26,8 +24,8 @@ complet lance de vrais agents : comptez du temps, et le coût que Claude Code fa
 
 Créez un dossier `shop`, ouvrez un terminal dedans et créez le dépôt :
 
-```text
-git init -b main
+```console
+$ git init -b main
 ```
 
 Créez `web/package.json` :
@@ -63,8 +61,8 @@ test('the total of a cart adds its prices', () => {
 
 La gate de mutation lance StrykerJS. Installez-le dans `web` :
 
-```text
-npm install --save-dev --prefix web @stryker-mutator/core@9.6.1 @stryker-mutator/tap-runner@9.6.1
+```console
+$ npm install --save-dev --prefix web @stryker-mutator/core@9.6.1 @stryker-mutator/tap-runner@9.6.1
 ```
 
 et créez `web/stryker.config.json` :
@@ -80,10 +78,10 @@ et créez `web/stryker.config.json` :
 Ajoutez `node_modules/` et `reports/` à un `.gitignore` à la racine de `shop`, enregistrez un
 premier commit, puis travaillez sur une branche à vous :
 
-```text
-git add .
-git commit -m "Start the shop"
-git switch -c pay-by-card
+```console
+$ git add .
+$ git commit -m "Start the shop"
+$ git switch -c pay-by-card
 ```
 
 `git status` ne montre plus rien à commiter.
@@ -105,8 +103,8 @@ Ouvrez `/plugin` : `skraft` apparaît dans les plugins installés.
 La ligne de commande `skraft` est un script Node livré avec le plugin. Lancez-la depuis la racine
 de `shop` :
 
-```text
-node "<dossier du plugin skraft>/engine/drivers/cli/skraft.mjs" init
+```console
+$ node "<dossier du plugin skraft>/engine/drivers/cli/skraft.mjs" init
 ```
 
 Pour trouver ce dossier, cherchez le script sous le dossier des plugins de Claude Code :
@@ -121,7 +119,7 @@ qui précède `/engine/`. Dans la suite, `skraft …` veut dire cette commande c
 `skraft init` cherche les projets du dépôt et écrit un **composant** par projet : une partie du
 dépôt avec sa racine, sa stack, ses chemins et ses commandes. Vous voyez :
 
-![Terminal : skraft init répond « skraft-config.json: web (javascript, web) »]({{ "/assets/screenshots/shared/terminal-init.svg" | relative_url }})
+![Terminal : skraft init répond « skraft-config.json: web (javascript, web) »](/img/screenshots/shared/terminal-init.svg)
 
 *Figure 1 — `skraft init` a trouvé un composant, `web`, en JavaScript.*
 
@@ -152,8 +150,8 @@ le **périmètre d'écriture** de DELIVER : le software engineer ne pourra écri
 `web/test`. `skraft init` a aussi ajouté `skraft-config.local.json`, votre couche personnelle, au
 `.gitignore`. Commitez les deux fichiers :
 
-```text
-git add skraft-config.json .gitignore
+```console
+$ git add skraft-config.json .gitignore
 git commit -m "chore: describe the shop for skraft"
 ```
 
@@ -162,13 +160,13 @@ git commit -m "chore: describe the shop for skraft"
 `skraft doctor` vérifie que chaque commande peut tourner sur votre machine et montre sur quel
 modèle chaque agent tournera :
 
-```text
-skraft doctor
+```console
+$ skraft doctor
 ```
 
 Vous voyez, avec vos propres chemins et versions :
 
-![Terminal : skraft doctor, des lignes ok et trois WARN, puis la table des modèles sous Claude Code, et « no check failed, 3 with a warning »]({{ "/assets/screenshots/shared/terminal-doctor.svg" | relative_url }})
+![Terminal : skraft doctor, des lignes ok et trois WARN, puis la table des modèles sous Claude Code, et « no check failed, 3 with a warning »](/img/screenshots/shared/terminal-doctor.svg)
 
 *Figure 2 — `skraft doctor` sur le dépôt `shop` : aucun contrôle en échec, trois avertissements.
 La table des modèles est coupée après ses premières lignes.*
@@ -182,15 +180,15 @@ concerne que Copilot. La dernière ligne compte : `no check failed`.
 
 Dans la conversation Claude Code, saisissez :
 
-```text
-/skraft checkout #42 Pay by card
+```console title="Claude Code"
+> /skraft checkout #42 Pay by card
 ```
 
 `checkout` est le **slug** : le nom du pipeline, en kebab-case. `#42` est le numéro de l'issue,
 `Pay by card` son titre. Le dépôt n'a pas de remote : le run démarre quand même, ses agents n'ont
 que le numéro et le titre de l'issue. Claude Code répond :
 
-```text
+```console
 skraft checkout started — progress in the Skraft pane.
 ```
 
@@ -204,11 +202,11 @@ branche et ouvrir la pull request à la fin du run. **Laissez-la ouverte** pour 
 
 Pendant que la boîte de dialogue attend, lancez dans un terminal, à la racine de `shop` :
 
-```text
-skraft status
+```console
+$ skraft status
 ```
 
-![Terminal : skraft status montre « skraft checkout: waiting », RESEARCH open, les autres phases pending, et la question publish-consent]({{ "/assets/screenshots/shared/terminal-status-waiting.svg" | relative_url }})
+![Terminal : skraft status montre « skraft checkout: waiting », RESEARCH open, les autres phases pending, et la question publish-consent](/img/screenshots/shared/terminal-status-waiting.svg)
 
 *Figure 3 — Le run attend votre réponse : RESEARCH est ouverte, la question `publish-consent` est
 celle de la boîte de dialogue.*
@@ -270,7 +268,7 @@ checkout: publish: pull request not opened: skraft-config.json sets publish.pull
 
 Le run se termine sur cette notification :
 
-```text
+```console
 skraft checkout: done — PUBLISH closed
 ```
 
@@ -278,22 +276,22 @@ skraft checkout: done — PUBLISH closed
 
 Dans le terminal, à la racine de `shop` :
 
-```text
-skraft status
+```console
+$ skraft status
 ```
 
-![Terminal : skraft status montre « skraft checkout: done » et RESEARCH à PUBLISH closed]({{ "/assets/screenshots/shared/terminal-status-done.svg" | relative_url }})
+![Terminal : skraft status montre « skraft checkout: done » et RESEARCH à PUBLISH closed](/img/screenshots/shared/terminal-status-done.svg)
 
 *Figure 4 — Un run terminé : chaque phase est `closed`. Capture faite sur le dépôt scripté des tests
 d'intégration ; sous Claude Code, une ligne `cost:` s'ajoute avec le coût que l'hôte a rapporté.*
 
 Relancez vous-même les gates sur le code livré :
 
-```text
-skraft gate --all
+```console
+$ skraft gate --all
 ```
 
-![Terminal : skraft gate --all, pass web/test et pass web/mutation, « 2 gates passed on web »]({{ "/assets/screenshots/shared/terminal-gates.svg" | relative_url }})
+![Terminal : skraft gate --all, pass web/test et pass web/mutation, « 2 gates passed on web »](/img/screenshots/shared/terminal-gates.svg)
 
 *Figure 5 — Les deux gates du composant `web` passent.*
 
@@ -326,9 +324,9 @@ en échec, puis les commits rouges et verts de chaque cycle TDD.
 
 ## Pages suivantes
 
-- [Premier run sous GitHub Copilot CLI]({{ "/fr/tutorials/first-run-copilot" | relative_url }}) — le même parcours, suivi dans le canvas Copilot.
-- [Publier la pull request d'un run]({{ "/fr/how-to/publish-pull-request" | relative_url }})
-- [Configurer les composants]({{ "/fr/how-to/configure-components" | relative_url }})
-- [Installer skraft sur un hôte]({{ "/fr/how-to/install-on-a-host" | relative_url }}) — Windows, VS Code, plugins optionnels.
-- [Hôtes]({{ "/fr/reference/hosts" | relative_url }}) — ce que chaque hôte montre et demande.
-- [Moteur, pilotes, profondeur 1]({{ "/fr/explanation/architecture" | relative_url }})
+- [Premier run sous GitHub Copilot CLI](./first-run-copilot.md) — le même parcours, suivi dans le canvas Copilot.
+- [Publier la pull request d'un run](../how-to/publish-pull-request.md)
+- [Configurer les composants](../how-to/configure-components.md)
+- [Installer skraft sur un hôte](../how-to/install-on-a-host.mdx) — Windows, VS Code, plugins optionnels.
+- [Hôtes](../reference/hosts.md) — ce que chaque hôte montre et demande.
+- [Moteur, pilotes, profondeur 1](../explanation/architecture.md)

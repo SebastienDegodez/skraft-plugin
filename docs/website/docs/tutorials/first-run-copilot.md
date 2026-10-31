@@ -1,6 +1,4 @@
 ---
-layout: doc
-lang: en
 title: "First run under GitHub Copilot CLI"
 description: "Install SKRAFT in GitHub Copilot CLI, start a story with the orchestrator agent, answer its questions in the chat and follow the run to PUBLISH."
 persona: software-engineer
@@ -8,10 +6,10 @@ persona: software-engineer
 
 # First run under GitHub Copilot CLI
 
-> In this tutorial, you install SKRAFT in GitHub Copilot CLI, start the story "#42 Pay by card" on
-> a small repository, answer its questions in the chat, and follow the run to the end. At the
-> end, the workflow log says `checkout: done: PUBLISH closed` and `skraft report` shows each step of
-> the run.
+In this tutorial, you install SKRAFT in GitHub Copilot CLI, start the story "#42 Pay by card" on
+a small repository, answer its questions in the chat, and follow the run to the end. At the
+end, the workflow log says `checkout: done: PUBLISH closed` and `skraft report` shows each step of
+the run.
 
 One path, from start to finish; each step says what you should see. The run starts real agents:
 expect it to take a while and to use Copilot credits.
@@ -26,10 +24,10 @@ expect it to take a while and to use Copilot credits.
 
 In a terminal, create the `shop` folder and its files:
 
-```text
-mkdir shop
-cd shop
-git init -b main
+```console
+$ mkdir shop
+$ cd shop
+$ git init -b main
 ```
 
 `web/package.json`:
@@ -76,11 +74,11 @@ test('the total of a cart adds its prices', () => {
 Create a `.gitignore` at the root holding two lines, `node_modules/` and `reports/`. Install
 StrykerJS, then commit on a branch of your own:
 
-```text
-npm install --save-dev --prefix web @stryker-mutator/core@9.6.1 @stryker-mutator/tap-runner@9.6.1
-git add .
-git commit -m "Start the shop"
-git switch -c pay-by-card
+```console
+$ npm install --save-dev --prefix web @stryker-mutator/core@9.6.1 @stryker-mutator/tap-runner@9.6.1
+$ git add .
+$ git commit -m "Start the shop"
+$ git switch -c pay-by-card
 ```
 
 `git status` shows nothing left to commit.
@@ -89,10 +87,10 @@ git switch -c pay-by-card
 
 Still in the terminal:
 
-```text
-copilot plugin marketplace add SebastienDegodez/skraft-plugin
-copilot plugin install skraft@skraft
-copilot plugin list
+```console
+$ copilot plugin marketplace add SebastienDegodez/skraft-plugin
+$ copilot plugin install skraft@skraft
+$ copilot plugin list
 ```
 
 `skraft` is in the list.
@@ -102,23 +100,23 @@ copilot plugin list
 The `skraft` command line is a Node script shipped with the plugin. From the root of `shop`, with
 `<skraft plugin folder>` the folder where Copilot installed the plugin:
 
-```text
-node "<skraft plugin folder>/engine/drivers/cli/skraft.mjs" init
+```console
+$ node "<skraft plugin folder>/engine/drivers/cli/skraft.mjs" init
 ```
 
 From here on, `skraft …` means that full command. You see:
 
-![Terminal: skraft init answers "skraft-config.json: web (javascript, web)"]({{ "/assets/screenshots/shared/terminal-init.svg" | relative_url }})
+![Terminal: skraft init answers "skraft-config.json: web (javascript, web)"](/img/screenshots/shared/terminal-init.svg)
 
 *Figure 1 — One component, `web`, with its `test` and `mutation` commands, is written to
 `skraft-config.json`.*
 
 Commit the configuration, then check the machine:
 
-```text
-git add skraft-config.json .gitignore
+```console
+$ git add skraft-config.json .gitignore
 git commit -m "chore: describe the shop for skraft"
-skraft doctor
+$ skraft doctor
 ```
 
 The last line of `skraft doctor` says `no check failed, 3 with a warning`. No warning blocks:
@@ -129,8 +127,8 @@ says that, with no model configured, each agent runs on your session's model.
 
 Open a Copilot session in `shop`:
 
-```text
-copilot
+```console
+$ copilot
 ```
 
 Type `/agent`, choose `skraft:skraft-orchestrator`, then write:
@@ -158,7 +156,7 @@ Copilot asks you one question in the chat, once: may skraft push the branch and 
 request when the run ends? If your Copilot client shows canvases, ask it to open the
 `skraft-pipeline` canvas: it shows the same question and the workflow.
 
-![skraft-pipeline canvas: status WAITING, a "We need you" button in the header and a "Pull request" box with the question and how to answer it, RESEARCH open on publish_consent, the other phases to come]({{ "/assets/screenshots/shared/pipeline-canvas-question.png" | relative_url }})
+![skraft-pipeline canvas: status WAITING, a "We need you" button in the header and a "Pull request" box with the question and how to answer it, RESEARCH open on publish_consent, the other phases to come](/img/screenshots/shared/pipeline-canvas-question.png)
 
 *Figure 2 — The `skraft-pipeline` canvas of the `shop` repository: the run waits for the answer to
 `publish_consent-1`. The canvas shows; you answer in the chat.*
@@ -177,7 +175,7 @@ checkout: solution-researcher, attempt 1 — researcher · standard · model cho
 Once the architect has proposed an ADR and the three design review lenses have approved it, Copilot
 asks you the next question: ratify the ADR. The canvas shows it too:
 
-![skraft-pipeline canvas: status WAITING with a "We need you" button on the ADR question adr-1, RESEARCH ticked, DESIGN open with design and design_review done, adr under way; below the workflow, the approved design_review and each agent's model]({{ "/assets/screenshots/shared/pipeline-canvas-adr.png" | relative_url }})
+![skraft-pipeline canvas: status WAITING with a "We need you" button on the ADR question adr-1, RESEARCH ticked, DESIGN open with design and design_review done, adr under way; below the workflow, the approved design_review and each agent's model](/img/screenshots/shared/pipeline-canvas-adr.png)
 
 *Figure 3 — The run waits for the ADR's ratification. Captured on the integration tests' scripted
 repository, whose ADR is named `adr-001-card-payment.md`; yours carries the title the architect
@@ -191,14 +189,14 @@ Open the ADR under `docs/adr/`, read it, then choose **RATIFIED** in the chat. T
 The run goes on without you: acceptance tests, TDD cycles, gates, the DELIVER review, mutation,
 then the pull request description. The `/workflows` log ends like this:
 
-![skraft-pipeline workflow log: phase PUBLISH, pr-writer, the pull request not opened as publish.pullRequest is false, PUBLISH closed, then checkout: done: PUBLISH closed]({{ "/assets/screenshots/shared/terminal-workflow-log.svg" | relative_url }})
+![skraft-pipeline workflow log: phase PUBLISH, pr-writer, the pull request not opened as publish.pullRequest is false, PUBLISH closed, then checkout: done: PUBLISH closed](/img/screenshots/shared/terminal-workflow-log.svg)
 
 *Figure 4 — The end of the log: the description is written to `pull-request.md`, nothing is pushed,
 the run is done.*
 
 The canvas then ticks every phase:
 
-![skraft-pipeline canvas: status DONE, "PUBLISH closed", RESEARCH to PUBLISH ticked with each step and its outcome, then the approved reviews and the passed gates]({{ "/assets/screenshots/shared/pipeline-canvas-done.png" | relative_url }})
+![skraft-pipeline canvas: status DONE, "PUBLISH closed", RESEARCH to PUBLISH ticked with each step and its outcome, then the approved reviews and the passed gates](/img/screenshots/shared/pipeline-canvas-done.png)
 
 *Figure 5 — A finished run in the canvas (integration tests' scripted repository). The steps from
 `kill_proposal` to `mutation_gates` stay grey: no mutant survived.*
@@ -207,11 +205,11 @@ The canvas then ticks every phase:
 
 In the terminal, at the root of `shop`:
 
-```text
-skraft report
+```console
+$ skraft report
 ```
 
-![Terminal: skraft report, a table of one row per step with its visits, attempts, retries, time, cost and outcome, a Total row, then the question adr-1 answered RATIFIED by host-confirmed]({{ "/assets/screenshots/shared/terminal-report-done.svg" | relative_url }})
+![Terminal: skraft report, a table of one row per step with its visits, attempts, retries, time, cost and outcome, a Total row, then the question adr-1 answered RATIFIED by host-confirmed](/img/screenshots/shared/terminal-report-done.svg)
 
 *Figure 6 — The report of a finished run. On the scripted repository the agents answer at once,
 hence the zero times; under Copilot, the Cost column stays empty: Copilot counts in credits.*
@@ -231,8 +229,8 @@ run produced.
 
 ## Next pages
 
-- [Answer a run's question]({{ "/en/how-to/answer-a-question" | relative_url }}) — when the question could not be asked, or you closed it.
-- [Resume a run]({{ "/en/how-to/resume-a-run" | relative_url }})
-- [Choose the agents' models]({{ "/en/how-to/choose-models" | relative_url }}) — to clear the `models/copilot` warning.
-- [Hosts]({{ "/en/reference/hosts" | relative_url }}#copilot-cli) — the workflow, the canvas and the `skraft_decide` tool.
-- [Getting started]({{ "/en/tutorials/getting-started" | relative_url }}) — the same path under Claude Code.
+- [Answer a run's question](../how-to/answer-a-question.md) — when the question could not be asked, or you closed it.
+- [Resume a run](../how-to/resume-a-run.md)
+- [Choose the agents' models](../how-to/choose-models.md) — to clear the `models/copilot` warning.
+- [Hosts](../reference/hosts.md#copilot-cli) — the workflow, the canvas and the `skraft_decide` tool.
+- [Getting started](./getting-started.md) — the same path under Claude Code.

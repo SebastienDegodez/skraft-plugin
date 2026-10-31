@@ -1,18 +1,14 @@
 ---
-layout: doc
-lang: fr
 title: "DESIGN"
 description: "Pourquoi DESIGN rend chaque décision d'architecture explicite, la réutilise avant d'en créer, la fait relire par des lentilles puis ratifier par un humain avant toute spécification."
 persona: software-engineer
+phase: design
 ---
-{% assign cites = "/fr/reference/citations" | relative_url %}
 
 # DESIGN
 
-{% include phase-ribbon.html current="design" %}
-
-> Décider, l'écrire, le faire ratifier : DESIGN traduit une story en décisions d'architecture
-> explicites, et aucune n'entre en spécification sans qu'un humain l'ait acceptée.
+Décider, l'écrire, le faire ratifier : DESIGN traduit une story en décisions d'architecture
+explicites, et aucune n'entre en spécification sans qu'un humain l'ait acceptée.
 
 ## Pourquoi cette phase existe
 
@@ -23,19 +19,18 @@ frontières de contexte, choisit les patterns, puis consigne chaque décision st
 un **ADR** (Architecture Decision Record) avec son contexte, ses options et ses conséquences.
 
 Le modèle n'est pas un livrable de plus : c'est le langage que l'équipe, le métier et le code
-partagent ([Evans, 2003]({{ cites }}#cite-evans-ddd-2003)). Le pourquoi de cette démarche, du
+partagent ([Evans, 2003](../../reference/citations.mdx#cite-evans-ddd-2003)). Le pourquoi de cette démarche, du
 langage omniprésent aux agrégats, est développé dans
-[Domain-Driven Design]({{ "/fr/explanation/domain-driven-design" | relative_url }}) ; la règle de
+[Domain-Driven Design](../domain-driven-design.md) ; la règle de
 dépendance que les contrats respectent, dans
-[Clean Architecture]({{ "/fr/explanation/clean-architecture" | relative_url }}).
+[Clean Architecture](../clean-architecture.md).
 
-<div class="fil-rouge" markdown="1">
-<span class="fil-rouge__label">☕ Fil rouge — Starbucks <em>(exemple illustratif)</em></span>
+:::info[☕ Fil rouge — Starbucks *(exemple illustratif)*]
 
 La story de commande entre. DESIGN propose un **ADR** « déléguer le paiement à un fournisseur
 externe via une couche anti-corruption (ACL) » et un **modèle d'événements** `PasserCommande` →
 `CommandePayée` → `CommandePrête`. Un humain ratifie l'ADR ; ce modèle alimente DISTILL.
-</div>
+:::
 
 ## Réutiliser avant de créer
 
@@ -74,11 +69,11 @@ proposée.
 
 ## Pour aller plus loin
 
-- [Référence : DESIGN]({{ "/fr/reference/phases" | relative_url }}#design) — nœuds, sorties, contrôles du moteur, arêtes.
-- [Référence : critères de revue de DESIGN]({{ "/fr/reference/gates" | relative_url }}#design).
-- [Référence : ADR non publiés]({{ "/fr/reference/run-journal" | relative_url }}#unpublished-adrs).
-- [DISTILL]({{ "/fr/explanation/pipeline/distill" | relative_url }}) — la phase suivante.
+- [Référence : DESIGN](../../reference/phases.md#design) — nœuds, sorties, contrôles du moteur, arêtes.
+- [Référence : critères de revue de DESIGN](../../reference/gates.md#design).
+- [Référence : ADR non publiés](../../reference/run-journal.md#unpublished-adrs).
+- [DISTILL](./distill.md) — la phase suivante.
 
 ## Sources
 
-- [Evans, E. *Domain-Driven Design*, 2003.]({{ cites }}#cite-evans-ddd-2003)
+- [Evans, E. *Domain-Driven Design*, 2003.](../../reference/citations.mdx#cite-evans-ddd-2003)

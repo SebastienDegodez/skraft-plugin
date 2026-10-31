@@ -1,6 +1,4 @@
 ---
-layout: doc
-lang: fr
 title: "Lancer les gates et lire leurs preuves"
 description: "Lancer les gates des composants modifiés ou de tous les composants, lire la sortie, ouvrir le fichier de preuve et traiter un échec environment ou deterministic."
 persona: software-engineer
@@ -14,7 +12,7 @@ faire de chaque échec.
 ## Prérequis
 
 - Un `skraft-config.json` avec au moins une gate par composant
-  ([Configurer les composants]({{ "/fr/how-to/configure-components" | relative_url }})).
+  ([Configurer les composants](./configure-components.md)).
 - Un pipeline actif : `skraft init <slug>` ou `/skraft <slug>` (sinon refus
   `no-active-pipeline`).
 - Un terminal à la racine de la copie de travail ; `skraft` désigne
@@ -22,8 +20,8 @@ faire de chaque échec.
 
 ## 1. Lancer les gates des composants modifiés
 
-```text
-skraft gate
+```console
+$ skraft gate
 ```
 
 Seuls les composants modifiés depuis leur base sont retenus (commits, index, fichiers modifiés
@@ -37,8 +35,8 @@ skraft checkout: gates passed — no component changed since its base; no gate t
 
 ## 2. Lancer les gates de tous les composants
 
-```text
-skraft gate --all
+```console
+$ skraft gate --all
 ```
 
 ## 3. Lire la sortie
@@ -83,7 +81,7 @@ result: fail (deterministic): exited 1
 
 Pendant un run, un échec `environment` n'arrête pas le run : il pose la question
 `<node> cannot run on this machine: <reason>. Fix it, then RETRY; or ABORT the run.` Réparez,
-puis répondez `RETRY` ([Répondre à une question du run]({{ "/fr/how-to/answer-a-question" | relative_url }})).
+puis répondez `RETRY` ([Répondre à une question du run](./answer-a-question.md)).
 
 ## Dépannage
 
@@ -94,15 +92,15 @@ puis répondez `RETRY` ([Répondre à une question du run]({{ "/fr/how-to/answer
 | `no gate command; give it at least one of build, format, lint, test, architecture, coverage, mutation in skraft-config.json` | Ajouter au moins une gate au composant. |
 | `npx was stopped by SIGKILL; run it again` | Relancer (mémoire, interruption). |
 | `… the mutation report web/reports/mutation/mutation.json is missing; have the command write it there, or name the file it writes with mutationReport …` | Faire écrire le rapport à cet endroit, ou le nommer avec `mutationReport` sur le composant. |
-| Un test qui a besoin de Microcks échoue faute de conteneur | Démarrer Docker ou Podman, puis `skraft gate` ; ou passer le composant en `"mocking": { "strategy": "inprocess" }` ([ce que vous perdez]({{ "/fr/explanation/customisation-trade-offs" | relative_url }})). |
+| Un test qui a besoin de Microcks échoue faute de conteneur | Démarrer Docker ou Podman, puis `skraft gate` ; ou passer le composant en `"mocking": { "strategy": "inprocess" }` ([ce que vous perdez](../explanation/customisation-trade-offs.md)). |
 | Windows : `npm.cmd` écrit dans la commande | Écrire `npm`, `npx` ou `gradlew.bat` : le moteur trouve le programme avec PATHEXT et lance `.cmd` et `.bat` par cmd.exe. |
 
 Pour vérifier qu'un programme est trouvé sans lancer les gates : `skraft doctor`.
 
 ## Voir aussi
 
-- [`skraft gate`]({{ "/fr/reference/cli" | relative_url }}) — options, sortie JSON, codes.
-- [Gates]({{ "/fr/reference/gates" | relative_url }}) — les gates de commandes et les gates
+- [`skraft gate`](../reference/cli.md) — options, sortie JSON, codes.
+- [Gates](../reference/gates.md) — les gates de commandes et les gates
   de revue.
-- [Preuves des gates]({{ "/fr/reference/run-journal" | relative_url }}#gate-evidence) — format
+- [Preuves des gates](../reference/run-journal.md#gate-evidence) — format
   et événement `gate.ran`.

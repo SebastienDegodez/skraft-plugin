@@ -1,0 +1,118 @@
+{
+  "version.label": {
+    "message": "Aperçu 2.0",
+    "description": "The label for version current"
+  },
+  "sidebar.tutorials.category.tutorials": {
+    "message": "Tutoriels — apprendre",
+    "description": "The label for category 'Tutorials — learn' in sidebar 'tutorials'"
+  },
+  "sidebar.tutorials.category.tutorials.link.generated-index.title": {
+    "message": "Tutoriels — apprendre",
+    "description": "The generated-index page title for category 'Tutorials — learn' in sidebar 'tutorials'"
+  },
+  "sidebar.tutorials.category.tutorials.link.generated-index.description": {
+    "message": "Des parcours guides ou vous executez : un premier run sous Claude Code, puis sous Copilot CLI, et un premier depot existant transforme en backlog.",
+    "description": "The generated-index page description for category 'Tutorials — learn' in sidebar 'tutorials'"
+  },
+  "sidebar.tutorials.doc.First steps": {
+    "message": "Premiers pas",
+    "description": "The label for the doc item 'First steps' in sidebar 'tutorials', linking to the doc tutorials/getting-started"
+  },
+  "sidebar.tutorials.doc.First run under Copilot CLI": {
+    "message": "Premier run sous Copilot CLI",
+    "description": "The label for the doc item 'First run under Copilot CLI' in sidebar 'tutorials', linking to the doc tutorials/first-run-copilot"
+  },
+  "sidebar.howTo.category.how-to": {
+    "message": "Guides pratiques — faire",
+    "description": "The label for category 'How-to guides — do' in sidebar 'howTo'"
+  },
+  "sidebar.howTo.category.how-to.link.generated-index.title": {
+    "message": "Guides pratiques — faire",
+    "description": "The generated-index page title for category 'How-to guides — do' in sidebar 'howTo'"
+  },
+  "sidebar.howTo.category.how-to.link.generated-index.description": {
+    "message": "Resoudre une tache precise : installer le plugin, configurer les composants, lancer les gates, reprendre un run, repondre a une question, choisir les modeles, ajouter une lentille, adapter le workflow, ajouter un agent du depot, revoir une pull request, publier la pull request, migrer depuis la v1, passer d'un PRD au backlog, raffiner une issue, caracteriser puis refactorer un existant, evaluer un skill, proposer un pattern.",
+    "description": "The generated-index page description for category 'How-to guides — do' in sidebar 'howTo'"
+  },
+  "sidebar.howTo.doc.Install skraft on a host": {
+    "message": "Installer skraft sur un hôte",
+    "description": "The label for the doc item 'Install skraft on a host' in sidebar 'howTo', linking to the doc how-to/install-on-a-host"
+  },
+  "sidebar.howTo.doc.Run the gates": {
+    "message": "Lancer les gates",
+    "description": "The label for the doc item 'Run the gates' in sidebar 'howTo', linking to the doc how-to/run-gates"
+  },
+  "sidebar.explanation.category.explanation": {
+    "message": "Explication — comprendre",
+    "description": "The label for category 'Explanation — understand' in sidebar 'explanation'"
+  },
+  "sidebar.explanation.category.explanation.link.generated-index.title": {
+    "message": "Explication — comprendre",
+    "description": "The generated-index page title for category 'Explanation — understand' in sidebar 'explanation'"
+  },
+  "sidebar.explanation.category.explanation.link.generated-index.description": {
+    "message": "Le pourquoi : choisir un parcours, suivre le flux d'artefacts, puis comprendre les mécanismes qui le protègent.",
+    "description": "The generated-index page description for category 'Explanation — understand' in sidebar 'explanation'"
+  },
+  "sidebar.explanation.category.orientation": {
+    "message": "Orientation",
+    "description": "The label for category 'Orientation' in sidebar 'explanation'"
+  },
+  "sidebar.explanation.category.orientation.link.generated-index.title": {
+    "message": "Orientation",
+    "description": "The generated-index page title for category 'Orientation' in sidebar 'explanation'"
+  },
+  "sidebar.explanation.category.core-journey": {
+    "message": "Parcours principal",
+    "description": "The label for category 'Core journey' in sidebar 'explanation'"
+  },
+  "sidebar.explanation.category.core-journey.link.generated-index.title": {
+    "message": "Parcours principal",
+    "description": "The generated-index page title for category 'Core journey' in sidebar 'explanation'"
+  },
+  "sidebar.explanation.doc.Overview": {
+    "message": "Vue d'ensemble",
+    "description": "The label for the doc item 'Overview' in sidebar 'explanation', linking to the doc explanation/pipeline/index"
+  },
+  "sidebar.explanation.doc.DESIGN": {
+    "message": "DESIGN",
+    "description": "The label for the doc item 'DESIGN' in sidebar 'explanation', linking to the doc explanation/pipeline/design"
+  },
+  "sidebar.reference.category.reference": {
+    "message": "Référence — consulter",
+    "description": "The label for category 'Reference — look up' in sidebar 'reference'"
+  },
+  "sidebar.reference.category.reference.link.generated-index.title": {
+    "message": "Référence — consulter",
+    "description": "The generated-index page title for category 'Reference — look up' in sidebar 'reference'"
+  },
+  "sidebar.reference.category.reference.link.generated-index.description": {
+    "message": "Tout le factuel : hôtes, commandes, workflow DOT, phases, configuration, journal, catalogue agentique, gates, patterns, outillage d'évaluation, citations, glossaire, changelog.",
+    "description": "The generated-index page description for category 'Reference — look up' in sidebar 'reference'"
+  },
+  "sidebar.reference.category.usage": {
+    "message": "Utiliser SKRAFT",
+    "description": "The label for category 'Using SKRAFT' in sidebar 'reference'"
+  },
+  "sidebar.reference.category.usage.link.generated-index.title": {
+    "message": "Utiliser SKRAFT",
+    "description": "The generated-index page title for category 'Using SKRAFT' in sidebar 'reference'"
+  },
+  "sidebar.reference.category.bibliography": {
+    "message": "Bibliographie & annexes",
+    "description": "The label for category 'Bibliography & appendix' in sidebar 'reference'"
+  },
+  "sidebar.reference.category.bibliography.link.generated-index.title": {
+    "message": "Bibliographie & annexes",
+    "description": "The generated-index page title for category 'Bibliography & appendix' in sidebar 'reference'"
+  },
+  "sidebar.reference.doc.Command line": {
+    "message": "Ligne de commande",
+    "description": "The label for the doc item 'Command line' in sidebar 'reference', linking to the doc reference/cli"
+  },
+  "sidebar.reference.doc.Citations": {
+    "message": "Citations",
+    "description": "The label for the doc item 'Citations' in sidebar 'reference', linking to the doc reference/citations"
+  }
+}

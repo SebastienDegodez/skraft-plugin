@@ -1,10 +1,11 @@
 ---
-layout: doc
-lang: fr
 title: "Installer skraft sur un hôte"
 description: "Installer le plugin skraft dans Claude Code, GitHub Copilot CLI ou VS Code, puis vérifier que l'hôte le voit et que la ligne de commande skraft répond."
 persona: software-engineer
 ---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
 
 # Installer skraft sur un hôte
 
@@ -16,31 +17,33 @@ depuis votre dépôt.
 - Node 22 ou plus, et Git.
 - Un hôte : Claude Code, GitHub Copilot CLI, ou VS Code avec GitHub Copilot.
 - `gh` connecté seulement pour lire l'issue d'une story ou ouvrir la pull request
-  ([Hôtes]({{ "/fr/reference/hosts" | relative_url }}#prerequisites)).
+  ([Hôtes](../reference/hosts.md#prerequisites)).
 
 ## 1. Installer le plugin
 
 Le dépôt `SebastienDegodez/skraft-plugin` est une marketplace nommée `skraft` ; le plugin du
 pipeline s'y appelle aussi `skraft`.
 
-### Claude Code
+<Tabs groupId="host" queryString="host">
+<TabItem value="claude-code" label="Claude Code" default>
 
 Saisissez dans la conversation, pas dans un terminal :
 
-```text
-/plugin marketplace add SebastienDegodez/skraft-plugin
-/plugin install skraft
+```console title="Claude Code"
+> /plugin marketplace add SebastienDegodez/skraft-plugin
+> /plugin install skraft
 ```
 
 Ouvrez `/plugin` : `skraft` figure parmi les plugins installés.
 
-### GitHub Copilot CLI
+</TabItem>
+<TabItem value="copilot-cli" label="GitHub Copilot CLI">
 
 Dans un terminal :
 
-```text
-copilot plugin marketplace add SebastienDegodez/skraft-plugin
-copilot plugin install skraft@skraft
+```console
+$ copilot plugin marketplace add SebastienDegodez/skraft-plugin
+$ copilot plugin install skraft@skraft
 ```
 
 Dans une session Copilot, les mêmes commandes s'écrivent `/plugin marketplace add …` et
@@ -49,7 +52,8 @@ Dans une session Copilot, les mêmes commandes s'écrivent `/plugin marketplace 
 Pour travailler sur un clone du plugin, installez-le depuis son dossier local :
 `copilot plugin install ./plugins/skraft-framework`.
 
-### VS Code
+</TabItem>
+<TabItem value="vscode" label="VS Code">
 
 1. Dans `settings.json`, activez les plugins d'agent et ajoutez la marketplace :
 
@@ -71,6 +75,9 @@ Pour travailler sur un clone du plugin, installez-le depuis son dossier local :
 
 Dans **Chat: Open Customizations**, section **Plugins**, `skraft` figure et est activé.
 
+</TabItem>
+</Tabs>
+
 ## 2. Ajouter les plugins optionnels
 
 `skraft-backlog` (DISCOVER, DISCUSS) et `skraft-brownfield` viennent de la même marketplace et
@@ -88,8 +95,8 @@ La ligne de commande est un script Node livré dans le plugin. Depuis la racine 
 sous sh comme sous PowerShell, avec `<dossier du plugin>` le dossier où l'hôte a installé
 `skraft` :
 
-```text
-node "<dossier du plugin>/engine/drivers/cli/skraft.mjs" --version
+```console
+$ node "<dossier du plugin>/engine/drivers/cli/skraft.mjs" --version
 ```
 
 Vous voyez la version du plugin, par exemple `2.0.0-alpha.19`. Les autres guides écrivent
@@ -105,7 +112,7 @@ skraft doctor: 1 checks failed
 ```
 
 Le `FAIL` sur `config` est attendu : il disparaît une fois les composants détectés
-([Configurer les composants]({{ "/fr/how-to/configure-components" | relative_url }})). Sous
+([Configurer les composants](./configure-components.md)). Sous
 VS Code, la ligne `vscode` dit quel pilote conduira le run : le SDK Copilot
 (`engine/drivers/copilot-sdk/skraft-run.mjs`) s'il est trouvé, sinon l'agent orchestrateur qui
 conduit `skraft next` et `skraft record`.
@@ -129,8 +136,8 @@ conduit `skraft next` et `skraft record`.
 
 ## Voir aussi
 
-- [Hôtes]({{ "/fr/reference/hosts" | relative_url }}) — installation, pilotes et capacités de
+- [Hôtes](../reference/hosts.md) — installation, pilotes et capacités de
   chaque hôte.
-- [Premiers pas]({{ "/fr/tutorials/getting-started" | relative_url }}) — le parcours complet,
+- [Premiers pas](../tutorials/getting-started.md) — le parcours complet,
   de l'installation à la pull request.
-- [Configurer les composants]({{ "/fr/how-to/configure-components" | relative_url }})
+- [Configurer les composants](./configure-components.md)
