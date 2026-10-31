@@ -38,17 +38,28 @@ test('served by the host\'s Azure DevOps MCP server, the run details are posted 
   const [created] = writes(server)
   assert.deepEqual([created.action, created.repositoryId, created.project, created.pullRequestId, created.status], ['create', 'payment', 'Shop Team', 42, 'Closed'])
   assert.ok(created.content.startsWith(`<!-- skraft:run-details slug=${SLUG} part=1 -->\n# skraft · run details\n\n`), created.content.slice(0, 100))
-  assert.deepEqual(server.threads.map(({ id, status, pullRequestId }) => [id, status, pullRequestId]), [[401, 'Closed', 42]])
-  const url = 'https://dev.azure.com/acme/Shop%20Team/_apis/git/repositories/payment/pullRequests/42/threads/401/comments/1'
+  assert.deepEqual(server.threads.map(({ id, status, pullRequestId }) => [id, status, pullRequestId]), [[41, 'Closed', 42]])
+  const url = 'https://dev.azure.com/acme/Shop%20Team/_apis/git/repositories/payment/pullRequests/42/threads/41/comments/1'
   assert.deepEqual(kept(host).map(({ part, parts, url: where, via, fallback }) => ({ part, parts, url: where, via, fallback })), [{ part: 1, parts: 1, url, via: 'mcp', fallback: undefined }])
   assert.deepEqual(server.requests.filter(({ tool }) => tool.startsWith('repo_')).slice(0, 2).map(({ tool, arguments: args }) => [tool, args.action, args.repositoryNameOrId ?? args.repositoryId]), [['repo_repository', 'get', 'payment'], ['repo_pull_request_thread', 'list', 'payment']])
 
   await host.publish()
 
   const rewritten = writes(server).at(-1)
-  assert.deepEqual({ action: rewritten.action, threadId: rewritten.threadId, commentId: rewritten.commentId, fullResponse: rewritten.fullResponse, pullRequestId: rewritten.pullRequestId }, { action: 'update', threadId: 401, commentId: 1, fullResponse: true, pullRequestId: 42 })
+  assert.deepEqual({ action: rewritten.action, threadId: rewritten.threadId, commentId: rewritten.commentId, fullResponse: rewritten.fullResponse, pullRequestId: rewritten.pullRequestId }, { action: 'update', threadId: 41, commentId: 1, fullResponse: true, pullRequestId: 42 })
   assert.equal(server.threads.length, 1)
   assert.deepEqual([azKept(codeHost), kept(host).at(-1).via], [[], 'mcp'])
+})
+
+test('a rewrite the server answers for another comment than the one rewritten is unreadable: az keeps the details and the run says why, never a URL nobody confirmed', async () => {
+  const { host, server, codeHost } = await run()
+  server.answers[WRITE] = () => ({ id: 99, content: 'another comment' })
+  await host.tracking.write(SLUG, `details/2026-10-11/test-plan-${SLUG}.md`, 'A sharper test plan.')
+
+  await host.publish()
+
+  assert.deepEqual(kept(host).at(-1).fallback, 'mcp-unreadable')
+  assert.equal(azKept(codeHost).length, 1)
 })
 
 test('a thread whose address the journal no longer holds is found again by the marker its first comment starts with', async () => {
@@ -82,10 +93,21 @@ test('with no server, a server without the tool, an unreadable answer, another o
 test('a write the host refuses is refused: nothing is retried with az, the reason is the fixed one, and the run goes on with its details journaled skipped', async () => {
   const { host, codeHost } = await run({ mcp: { fails: { [WRITE]: 'mcp-refused' } } })
 
-  const reason = 'the host refused the Azure DevOps MCP server\'s repo_pull_request_thread_write, so skraft wrote nothing on pull request #42; allow it, or run again where it is allowed'
+  const reason = 'the host refused the Azure DevOps MCP server\'s repo_pull_request_thread_write, so skraft wrote nothing on Azure Repos; allow it, or run again where it is allowed'
   assert.deepEqual(azKept(codeHost), [])
   assert.deepEqual(eventsOf(host, 'pull-request.details-skipped').map(({ part, reason: why, via }) => ({ part, reason: why, via })), [{ part: 1, reason, via: 'mcp' }])
-  assert.equal(eventsOf(host, 'step.recorded').at(-1).reason, `pull request #42 opened as a draft: https://dev.azure.com/acme/pull/42; its run details were not kept: ${reason}; pull-request-details-1.md holds them, and skraft publish keeps them once that is fixed`)
+  assert.equal(eventsOf(host, 'step.recorded').at(-1).reason, `pull request #42 opened as a draft: https://dev.azure.com/acme/pull/42; its run details were not kept: ${reason}; pull-request.md holds them, and skraft publish keeps them once that is fixed`)
+})
+
+test('a read the host refuses is refused too, the server\'s repository or the listing of the threads: az is not asked to read instead, nothing is written, and the details are journaled skipped with the fixed reason', async () => {
+  for (const tool of ['repo_repository', 'repo_pull_request_thread']) {
+    const { host, server, codeHost } = await run({ mcp: { fails: { [tool]: 'mcp-refused' } } })
+
+    const reason = `the host refused the Azure DevOps MCP server's ${tool}, so skraft read nothing from Azure Repos and did not ask az instead; allow it, or run again where it is allowed`
+    assert.deepEqual([azKept(codeHost), writes(server)], [[], []], tool)
+    assert.deepEqual(eventsOf(host, 'pull-request.details-skipped').map(({ part, reason: why, via }) => ({ part, reason: why, via })), [{ part: 1, reason, via: 'mcp' }], tool)
+    assert.equal(eventsOf(host, 'step.recorded').at(-1).reason, `pull request #42 opened as a draft: https://dev.azure.com/acme/pull/42; its run details were not kept: ${reason}; pull-request.md holds them, and skraft publish keeps them once that is fixed`, tool)
+  }
 })
 
 test('without any MCP server in the host, az keeps the details and no route is journaled', async () => {

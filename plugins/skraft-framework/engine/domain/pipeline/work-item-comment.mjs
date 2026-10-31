@@ -1,3 +1,5 @@
+import { escapedAsHtml } from './azure-thread.mjs'
+
 /**
  * The comment of a run on its work item, found again among the work item's comments: the same
  * choice whichever way the comments were listed (the host's MCP server or az).
@@ -11,9 +13,6 @@
  * @param {WorkItemSite} site @param {number} number @param {unknown} id
  */
 export const commentUrl = ({ organization, project }, number, id) => `${organization}/${encodeURIComponent(project)}/_apis/wit/workItems/${number}/comments/${id}`
-
-/** @param {string} text */
-const escapedAsHtml = (text) => text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
 
 /**
  * Whether the answer is a list of comments, each with the integer `id` an update needs.

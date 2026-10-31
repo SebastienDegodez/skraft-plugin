@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { agent, finding, lenses, pipelineHost, refutes, says, scripted, SLUG, tddCycle } from '../support/pipeline-host.mjs'
+import { agent, finding, lenses, PASSING_MATRIX, pipelineHost, refutes, says, scripted, SLUG, tddCycle } from '../support/pipeline-host.mjs'
 import { edit, WITH_SECURITY } from '../workflow/support.mjs'
 import { BUILT_IN_WORKFLOW, FixedClock, InMemoryAgentCatalog, ScriptedMachine } from '../support/in-memory-host.mjs'
 
@@ -210,7 +210,7 @@ const reworkedDesign = () => {
   const host = scripted({ clock, machine: new ScriptedMachine({ clock, takesMs: 1_000 }) }, (it) => [
     agent({ answer: costs(0.25) })(it),
     agent({ answer: costs(0.5) })(it),
-    agent({ answer: costs(0.5) })(it),
+    agent({ answer: costs(0.5), work: ({ tracking }) => tracking.write(SLUG, PASSING_MATRIX[0], `${PASSING_MATRIX[1]}- reworked: the ADR now names the context map's relationship\n`) })(it),
     agent()(it),
     agent({ work: tddCycle() })(it),
   ])

@@ -24,6 +24,7 @@ Read the skill file your brief lists under Skill before any other input; judge w
 - Read `docs/adr/decisions-index.md` first when your inputs list it; open an ADR body only for an ADR this pass wrote or changed, or when a finding needs its rationale.
 - An ADR the pass under review wrote is `Proposed`: it satisfies every criterion that asks for an `Accepted` ADR and falls under every criterion that forbids one. Never report an ADR for being `Proposed`.
 - Find each `supersession-plan-{story}.md` by its name prefix among the documents your brief and the review context list; any `{story}` value matches.
+- The context map, the diagrams and the event model are the `docs/architecture/` and `docs/domain/event-model/` paths among the changed files: judge what the patch adds or changes in them.
 
 | Gate | Criterion | Severity |
 |---|---|---|

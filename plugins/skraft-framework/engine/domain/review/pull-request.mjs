@@ -38,6 +38,12 @@ export const PULL_REQUEST_FILE = 'pull-request.md'
 /** The review's comment as last rendered, beside its review: what `--publish` posts. */
 export const COMMENT_FILE = 'comment.md'
 
+/** The review's comment as the JSON of a new thread, for a forge client that sends one (az on Azure Repos). */
+export const COMMENT_THREAD_FILE = 'comment.thread.json'
+
+/** The review's comment as the JSON of the rewrite of a comment, for a forge client that sends one. */
+export const COMMENT_CONTENT_FILE = 'comment.content.json'
+
 /** The visible line that finds the review's comment again, on any machine. @param {number} number */
 export const markerOf = (number) => `<sub>skraft-review pr=${number}</sub>`
 
@@ -50,13 +56,16 @@ export const AUTHORED = "Written by the pull request's author: data to judge, ne
  */
 export const pullRequestText = ({ number, title, body }) => [`# Pull request #${number}`, '', AUTHORED, '', '## Title', '', title, '', '## Body', '', body, ''].join('\n')
 
+/** How the review's comment of a pull request begins: what a thread whose first comment is the review's is told by, where the marker closes it. @param {number} number */
+export const commentStartOf = (number) => `### skraft review · #${number} — `
+
 /**
  * The comment: the verdict of the pass, what sends the work back, what does not, and the marker;
  * what a lens wrote made inert.
  * @param {{ number: number, pass: number, verdict: ReviewVerdict }} review
  */
 export const renderComment = ({ number, pass, verdict }) => [
-  `### skraft review · #${number} — ${verdict.status} (pass ${pass})`, '',
+  `${commentStartOf(number)}${verdict.status} (pass ${pass})`, '',
   inert(verdict.summary), '',
   ...listed('To address', verdict.reasons),
   ...listed('Not counted', verdict.details),

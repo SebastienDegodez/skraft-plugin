@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { agent, API, CONSENTS, nominal, pipelineHost, REFS_42, RESEARCH_TEMPLATE, scripted, SLUG, TRACKING } from '../support/pipeline-host.mjs'
 
 const RESEARCH = 'research/2026-10-11/checkout-research.md'
-const CONTEXT_MAP = 'details/2026-10-11/context-map.md'
+const MATRIX = 'details/2026-10-11/consistency-matrix-checkout.md'
 const TEST_PLAN = 'details/2026-10-11/test-plan-checkout.md'
 const CHANGE_LOG = 'changes/2026-10-11/change-log.md'
 /** The story's issue, as the run read it when it started. */
@@ -109,11 +109,13 @@ test('each agent is told its story, inputs, outputs, result file and the paths i
     `- ${TRACKING}/${RESEARCH}`,
     `- ${TRACKING}/details/2026-10-11/structural-scan.json`,
     '- Fill each output in place; keep the path, create no other copy:',
-    `- ${TRACKING}/${CONTEXT_MAP}`,
+    `- ${TRACKING}/${MATRIX}`,
     `- Write your result as JSON to ${TRACKING}/results/design-1-1.json: ${RESULT_SHAPE}`,
     '- Change nothing outside these paths of the working copy; the engine refuses the step otherwise:',
     `- .copilot-tracking/skraft-plans/${SLUG}`,
     '- docs/adr',
+    '- docs/architecture',
+    '- docs/domain/event-model',
     '- End every commit body with `Refs: #42`; never close the issue in a commit: the pull request closes it.',
   ].join('\n'))
   const distillRed = host.events().find((event) => event.type === 'commits.checked' && event.step === 'distill').commits[0].sha.slice(0, 7)
@@ -127,7 +129,7 @@ test('each agent is told its story, inputs, outputs, result file and the paths i
     '- Read first:',
     `- ${TRACKING}/${ISSUE}`,
     `- ${TRACKING}/${RESEARCH}`,
-    `- ${TRACKING}/${CONTEXT_MAP}`,
+    `- ${TRACKING}/${MATRIX}`,
     `- ${TRACKING}/${TEST_PLAN}`,
     '- Fill each output in place; keep the path, create no other copy:',
     `- ${TRACKING}/${CHANGE_LOG}`,
@@ -150,6 +152,8 @@ test('each agent is told its story, inputs, outputs, result file and the paths i
     `  your first commit is a failing \`test(<story>): …\` of the inner loop, never a \`feat\`. DISTILL's: ${distillRed} "test(checkout): acceptance of the card payment"`,
   ].join('\n'))
   assert.ok(host.agentRunner.dispatches[2].prompt.endsWith([
+    `- .copilot-tracking/skraft-plans/${SLUG}`,
+    '- docs/features',
     '- src',
     '- tests',
     '- ./* (the files right in the root of api)',
@@ -242,7 +246,7 @@ test('a missing document is asked again with its path, and a retry that fills it
   const recorded = host.events().filter((event) => event.type === 'step.recorded' && !CONSENTS.includes(event.step))
   assert.deepEqual(recorded.map(({ outcome, code, missing, next }) => [outcome, code, missing, next]), [['failed', 'missing-outputs', [RESEARCH], null], ['done', null, [], 'design']])
   assert.deepEqual(host.events().filter((event) => event.type === 'step.started' && !CONSENTS.includes(event.step)).map((event) => [event.attempt, event.missing, event.outputs]), [
-    [1, [], [RESEARCH]], [2, [RESEARCH], [RESEARCH]], [1, [], [CONTEXT_MAP]],
+    [1, [], [RESEARCH]], [2, [RESEARCH], [RESEARCH]], [1, [], [MATRIX]],
   ])
 })
 
@@ -251,7 +255,7 @@ test('a retry after midnight keeps the paths of the first attempt', async () => 
 
   await host.start()
 
-  assert.deepEqual(host.events().filter((event) => event.type === 'step.started').map((event) => event.outputs), [[], [], [RESEARCH], [RESEARCH], ['details/2026-10-12/context-map.md']])
+  assert.deepEqual(host.events().filter((event) => event.type === 'step.started').map((event) => event.outputs), [[], [], [RESEARCH], [RESEARCH], ['details/2026-10-12/consistency-matrix-checkout.md']])
 })
 
 test('an agent the host cannot start stops the run without spending the attempt; the next run dispatches it again', async () => {
@@ -383,12 +387,12 @@ test('the engineer works on every component, each with its test command when it 
 
   const deliver = host.agentRunner.dispatches[3].prompt
   assert.ok(deliver.includes(`- .copilot-tracking/skraft-plans/${SLUG}\n- src\n- tests\n- ../web/src\n- ./* (the files right in the root of api)\n- ../web/* (the files right in the root of web)\n- Components:\n- api: . (dotnet), mocking: inprocess, contract testing: off, tests: dotnet test\n- web: ../web (react), mocking: inprocess, contract testing: off\n`), deliver)
-  assert.ok(host.agentRunner.dispatches[2].prompt.includes(`- .copilot-tracking/skraft-plans/${SLUG}\n- src\n- tests\n- ../web/src\n- ./* (the files right in the root of api)`))
+  assert.ok(host.agentRunner.dispatches[2].prompt.includes(`- .copilot-tracking/skraft-plans/${SLUG}\n- docs/features\n- src\n- tests\n- ../web/src\n- ./* (the files right in the root of api)`))
 
   const partial = scripted({ components: [{ ...API, paths: { src: ['src'] } }, { ...WEB, paths: { tests: ['src'] } }] }, (it) => [agent()(it), agent()(it), agent()(it), () => ({ ok: false, unavailable: true, text: '' })])
   await partial.start()
   const [distill, engineer] = partial.agentRunner.dispatches.slice(2).map((dispatch) => dispatch.prompt)
-  assert.ok(distill.includes(`- .copilot-tracking/skraft-plans/${SLUG}\n- src\n- .\n- ../web\n- ../web/src\n- ./* (the files right in the root of api)`), distill)
+  assert.ok(distill.includes(`- .copilot-tracking/skraft-plans/${SLUG}\n- docs/features\n- src\n- .\n- ../web\n- ../web/src\n- ./* (the files right in the root of api)`), distill)
   assert.ok(engineer.includes(`- .copilot-tracking/skraft-plans/${SLUG}\n- src\n- .\n- ../web\n- ../web/src\n- ./* (the files right in the root of api)`), engineer)
 })
 

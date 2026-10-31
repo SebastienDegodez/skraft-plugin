@@ -9,5 +9,5 @@ import { createAzCodeHost, createAzPullRequests } from './az-code-host.mjs'
  */
 export const createForges = ({ commandRunner }) => Object.freeze({
   github: Object.freeze({ codeHost: createGhCodeHost({ commandRunner }), pullRequests: createGhPullRequests({ commandRunner }) }),
-  'azure-devops': Object.freeze({ codeHost: createAzCodeHost({ commandRunner }), pullRequests: createAzPullRequests() }),
+  'azure-devops': Object.freeze({ codeHost: createAzCodeHost({ commandRunner }), pullRequests: createAzPullRequests({ commandRunner }) }),
 })

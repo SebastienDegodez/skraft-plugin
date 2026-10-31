@@ -14,7 +14,7 @@ persona: reviewer
 ## Prérequis
 
 - Le plugin `skraft` installé ; `skraft` est la commande que [`skraft install`]({{ "/fr/how-to/install-on-a-host" | relative_url }}#skraft-command) met en place ; la ligne longue `node "<dossier du plugin>/engine/drivers/cli/skraft.mjs"` marche sans elle.
-- `gh` installé et connecté à l'hôte du dépôt (`gh auth status`).
+- Sur GitHub : `gh` installé et connecté à l'hôte du dépôt (`gh auth status`). Sur Azure Repos : `az` avec son extension `azure-devops`, connecté à l'organisation, ou le serveur MCP Azure DevOps nommé `ado` connecté dans votre hôte (Azure DevOps Services seulement). Un outil de ce serveur que vous ou l'hôte refusez n'est jamais retenté par `az` : la revue le dit et s'arrête, ou laisse son commentaire non publié.
 - Un clone du dépôt, à la racine duquel vous lancez tout.
 
 ## 1. Extraire la pull request
@@ -24,6 +24,8 @@ gh pr checkout 42
 git fetch origin main
 git status
 ```
+
+Sur Azure Repos, extrayez-la avec `az repos pr checkout --id 42` à la place de `gh pr checkout 42`.
 
 La copie de travail doit être sur le commit de tête de la pull request, Git doit connaître son
 commit de base (`main` ici), et rien ne doit rester non commité hors de `.copilot-tracking/`.
@@ -81,7 +83,9 @@ skraft review #42: NEEDS_REWORK, pass 1 — <résumé>
 | Terminal | `skraft review --pr 42 --publish` |
 
 skraft garde **un seul** commentaire, retrouvé par son marqueur `<sub>skraft-review pr=42</sub>`
-et réécrit à chaque passe ; jamais une review GitHub ni une demande de changements. Il demande
+et réécrit à chaque passe ; jamais une review GitHub ni une demande de changements. Sur Azure Repos, le commentaire est un
+**fil** (thread), créé avec le statut *Closed* pour qu'une politique de branche « résolution des commentaires » n'attende
+rien ; son premier commentaire est celui qui est réécrit. Jamais un vote, jamais une réponse. Il demande
 votre accord une fois par dépôt (terminal, dialogue, ou confirmation de Copilot) et le garde dans
 votre `~/.skraft/config.json`. Une équipe peut trancher pour tous avec `publish.reviewComment`
 dans le `skraft-config.json` de la branche de base
@@ -101,9 +105,9 @@ pas bougé et qui n'avait rien trouvé est reprise sans être relancée.
 
 | Code | Action |
 |---|---|
-| `forge-unavailable` | Installer `gh` et le connecter (`gh auth login --hostname <hôte>`) ; vérifier que la copie a un remote vers la forge. |
-| `pr-not-found`, `pr-unreadable` | Vérifier le numéro, et que `gh repo set-default` désigne le bon dépôt. |
-| `pr-not-checked-out` | `gh pr checkout <numéro>`, puis relancer. |
+| `forge-unavailable` | Installer `gh` et le connecter (`gh auth login --hostname <hôte>`) ; sur Azure Repos, installer `az` et son extension et le connecter (`az login`), ou connecter le serveur MCP `ado` ; vérifier que la copie a un remote vers la forge. |
+| `pr-not-found`, `pr-unreadable` | Vérifier le numéro, et que `gh repo set-default` désigne le bon dépôt. Sur Azure Repos, la pull request doit être dans le projet et le dépôt que nomme le remote Git. |
+| `pr-not-checked-out` | `gh pr checkout <numéro>` (`az repos pr checkout --id <numéro>` sur Azure Repos), puis relancer. |
 | `pr-base-missing` | `git fetch origin <base>`, puis relancer. |
 | `working-copy-dirty` | Commiter ou mettre de côté les changements hors de `.copilot-tracking/`. |
 | `workflow-invalid` | Le `.skraft/review.skraft.dot` de la base retire un nœud obligatoire : le corriger sur la branche de base. |

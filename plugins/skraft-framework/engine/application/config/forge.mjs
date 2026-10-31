@@ -87,4 +87,9 @@ const nowhereCodeHost = (reason) => Object.freeze({
 })
 
 /** @param {string} reason @returns {import('../ports/pull-requests.mjs').PullRequests} */
-const nowherePullRequests = (reason) => Object.freeze({ ...nowhere(reason), find: refusal(reason), keepComment: refusal(reason) })
+const nowherePullRequests = (reason) => Object.freeze({
+  ...nowhere(reason),
+  // Stryker disable next-line ArrowFunction,StringLiteral,BooleanLiteral: no run reaches the checkout command nor the request file of a forge skraft cannot reach, every caller stops on unavailable() first
+  checkoutCommand: () => '', takesRequestFile: false,
+  find: refusal(reason), keepComment: refusal(reason),
+})

@@ -25,7 +25,7 @@ gh auth login --hostname github.com
 ```
 
 Replace `github.com` with your GitHub Enterprise host if needed. skraft runs `gh` with
-`--repo <host>/<owner>/<repo>` from the remote's URL. When the host has a GitHub MCP server connected, the engine goes through it first for the issue and the pull request and falls back to `gh` otherwise ([GitHub MCP server first]({{ "/en/reference/skraft-config" | relative_url }}#github-mcp-server-first-gh-as-fallback)); the run's journal says which way served each operation.
+`--repo <host>/<owner>/<repo>` from the remote's URL. When the host has a GitHub MCP server connected, the engine goes through it first for the issue and the pull request and falls back to `gh` when the server is absent or fails, never when you or the host refuse a tool ([GitHub MCP server first]({{ "/en/reference/skraft-config" | relative_url }}#github-mcp-server-first-gh-as-fallback)); the run's journal says which way served each operation.
 
 ## 2. Give the consent
 
@@ -179,7 +179,7 @@ run's reason says so. Under Windows, `az` runs only from the Azure CLI installer
 skraft starts its Python itself, so that no shell reads the title, and refuses any other `az.cmd`
 or `az.bat` (pip, scoop). The run reads the story from its Azure Boards work item and keeps its
 progress in one comment on it, through the host's Azure DevOps MCP server first, `az` as the
-fallback ([Forge]({{ "/en/reference/skraft-config" | relative_url }}#azure-devops-mcp-server-first-az-as-fallback));
+fallback, never when you or the host refuse a tool ([Forge]({{ "/en/reference/skraft-config" | relative_url }}#azure-devops-mcp-server-first-az-as-fallback));
 skraft does not review its pull requests yet. `skraft doctor` reports
 the forge a run uses on its `forge` line.
 

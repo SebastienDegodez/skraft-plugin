@@ -129,13 +129,15 @@ every criterion that forbids one.
 | Criterion | Check |
 | --- | --- |
 | G10 | a `consistency-matrix-<story>.md` in the tracking folder, its `consistency-gate` line reading `PASS` |
+| docs-relied-on | the matrix has a `docs-relied-on:` line (comma-separated repository-relative paths, backticks allowed, `/` or `\` separators) listing at least one file under `docs/adr/`, `docs/architecture/`, `docs/domain/event-model/` or `docs/features/`, and every listed path is a readable regular file of the working copy. A path counts only from its start (not re-rooted from `mydocs/`, an absolute path or `../docs/`), a path with a `.` or `..` segment is not listed, a trailing `:line`, `#anchor` or period is dropped, and a folder or any other file of `docs/` does not count |
 | G14 | no ADR the run wrote named `*-rejected.md`, `*-accepted.md`, `*-deprecated.md` or `*-superseded.md` |
 | G2, G12 | every `**Supersedes:** ADR-MMM` of an ADR the run wrote has its row in the `docs/adr/supersessions.md` registry |
 | G2 | every ADR the run wrote has its row in `docs/adr/decisions-index.md` |
 | G2 | an ADR on the base branch changes only its status lines and is never deleted (`adr-lifecycle`) |
 
 A failure sends the architect back with one line per record; after its last attempt, the run
-stops with `design-records`.
+stops with `design-records`. The consistency matrix is also DESIGN's declared output: when it is
+missing, the run stops with `missing-outputs` instead.
 
 ## DISTILL {#distill}
 

@@ -17,7 +17,7 @@ metadata:
 
 # Business Alignment Lens
 
-Find every scenario a non-technical stakeholder could not read or would not recognise as the story. Judge the `.feature` files against the story and its domain vocabulary only. Report; never repair.
+Find every scenario a non-technical stakeholder could not read or would not recognise as the story. Judge the scenarios the patch adds or changes in the `.feature` files under `docs/features/`, against the story and its domain vocabulary only. Report; never repair.
 
 Read the skill file your brief lists under Skill before any other input; judge with its criteria and your table.
 

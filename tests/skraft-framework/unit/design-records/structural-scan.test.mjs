@@ -40,7 +40,7 @@ test('before each attempt of the architect, the engine scans the code the reposi
   assert.ok(dispatchOf(host, 'solution-architect').includes(`- Read first:\n- ${TRACKING}/research/2026-10-11/${SLUG}-research.md\n- ${TRACKING}/${SCAN}\n- Fill each output`), dispatchOf(host, 'solution-architect'))
   assert.ok(dispatchOf(host, 'consistency-lens').includes(`${TRACKING}/${SCAN}`), dispatchOf(host, 'consistency-lens'))
   assert.ok(!dispatchOf(host, 'acceptance-designer').includes(SCAN))
-  assert.deepEqual(designDocuments(host), ['details/2026-10-11/consistency-matrix-checkout.md', 'details/2026-10-11/context-map.md', SCAN])
+  assert.deepEqual(designDocuments(host), ['details/2026-10-11/consistency-matrix-checkout.md', SCAN])
 })
 
 test('a component in a neighbour repository is scanned in its own repository, its paths from the working copy, twenty hits kept per commitment', async () => {
@@ -76,5 +76,5 @@ test('when Git cannot list a component\'s files, no scan is written and the arch
 
   assert.equal(await host.tracking.read(SLUG, SCAN), null)
   assert.ok(!dispatchOf(host, 'solution-architect').includes('structural-scan'))
-  assert.deepEqual(designDocuments(host), ['details/2026-10-11/consistency-matrix-checkout.md', 'details/2026-10-11/context-map.md'])
+  assert.deepEqual(designDocuments(host), ['details/2026-10-11/consistency-matrix-checkout.md'])
 })
