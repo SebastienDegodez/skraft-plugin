@@ -461,12 +461,12 @@ const HOST_SECTION = /^#{3,6}\s+(Claude Code|GitHub Copilot CLI|Copilot CLI|VS C
 
 /** Rule 13, reported: per-host sections are Tabs a writer adds by hand (the page then needs .mdx). */
 const reportHostSections = (text, page) => {
-  if (page.extension === '.mdx') return
   const sections = segments(text.split('\n')).filter((part) => !part.fence)
     .flatMap((part) => part.lines.filter((line) => HOST_SECTION.test(line)))
   const hosts = [...new Set(sections.map((line) => HOST_SECTION.exec(line)[1]))]
   if (hosts.length < 2) return
-  report(page, 'extension', sections[0], `host sections (${hosts.join(', ')}): write Tabs groupId="host" by hand, then rename to .mdx`)
+  const rename = page.extension === '.md' ? ', then rename to .mdx' : ''
+  report(page, 'extension', sections[0], `host sections (${hosts.join(', ')}): write Tabs groupId="host" by hand${rename}`)
 }
 
 const DEFAULT_MDX_DOCS = ['index', 'reference/citations']
