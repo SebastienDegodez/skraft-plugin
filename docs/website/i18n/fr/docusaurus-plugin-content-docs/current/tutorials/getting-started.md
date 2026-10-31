@@ -14,13 +14,15 @@ pull request vous attend dans le dossier de suivi.
 Vous suivez un seul parcours, du début à la fin. Chaque étape dit ce que vous devez voir. Un run
 complet lance de vrais agents : comptez du temps, et le coût que Claude Code facture pour eux.
 
-## Ce dont vous avez besoin
+:::info[Avant de commencer]
 
 - **Node 22** ou plus, et npm ;
 - **Git** ;
 - **Claude Code**.
 
-## 1. Créer le petit dépôt
+:::
+
+## 1. Créer le petit dépôt {#1-create-the-small-repository}
 
 Créez un dossier `shop`, ouvrez un terminal dedans et créez le dépôt :
 
@@ -86,7 +88,7 @@ $ git switch -c pay-by-card
 
 `git status` ne montre plus rien à commiter.
 
-## 2. Installer le plugin
+## 2. Installer le plugin {#2-install-the-plugin}
 
 Ouvrez Claude Code dans le dossier `shop`. Saisissez ces deux commandes **dans la conversation**,
 pas dans un terminal :
@@ -98,7 +100,14 @@ pas dans un terminal :
 
 Ouvrez `/plugin` : `skraft` apparaît dans les plugins installés.
 
-## 3. Décrire le dépôt avec `skraft init`
+:::note[Capture en attente d'un vrai run]
+
+Une capture de `/plugin install` et de `skraft` dans les plugins installés demande une vraie
+session Claude Code. D'ici là, le bloc ci-dessus montre ce que vous saisissez.
+
+:::
+
+## 3. Décrire le dépôt avec `skraft init` {#3-describe-the-repository-with-skraft-init}
 
 La ligne de commande `skraft` est un script Node livré avec le plugin. Lancez-la depuis la racine
 de `shop` :
@@ -156,7 +165,7 @@ $ git add skraft-config.json .gitignore
 $ git commit -m "chore: describe the shop for skraft"
 ```
 
-## 4. Vérifier avec `skraft doctor`
+## 4. Vérifier avec `skraft doctor` {#4-check-with-skraft-doctor}
 
 `skraft doctor` vérifie que chaque commande peut tourner sur votre machine et montre sur quel
 modèle chaque agent tournera :
@@ -177,7 +186,7 @@ de remote (le run démarre quand même, étape 5) ; le deuxième, qu'aucune rece
 n'existe pour un composant JavaScript, et le petit dépôt n'appelle aucun service ; le troisième ne
 concerne que Copilot. La dernière ligne compte : `no check failed`.
 
-## 5. Lancer la story
+## 5. Lancer la story {#5-start-the-story}
 
 Dans la conversation Claude Code, saisissez :
 
@@ -196,10 +205,17 @@ skraft checkout started — progress in the Skraft pane.
 Le panneau **Skraft** s'ouvre. Il dessine le workflow, une ligne par phase suivie de ses étapes, et
 coche chaque étape à mesure qu'elle tourne.
 
+:::note[Capture en attente d'un vrai run]
+
+Une capture du panneau **Skraft** dans Claude Code demande une vraie session. D'ici là, le bloc
+ci-dessus montre ce que Claude Code affiche au démarrage du run.
+
+:::
+
 Aussitôt, une boîte de dialogue intitulée **Pull request** demande si skraft peut pousser la
 branche et ouvrir la pull request à la fin du run. **Laissez-la ouverte** pour l'étape suivante.
 
-## 6. Regarder le run depuis un terminal
+## 6. Regarder le run depuis un terminal {#6-watch-the-run-from-a-terminal}
 
 Pendant que la boîte de dialogue attend, lancez dans un terminal, à la racine de `shop` :
 
@@ -218,7 +234,7 @@ Revenez à la boîte de dialogue : ce dépôt n'a pas de remote, choisissez **DE
 écrite dans `skraft-config.json` (`"publish": { "pullRequest": false, … }`) et ne sera plus
 redemandée. Aucune question sur les captures d'écran n'est posée : aucun composant n'est un front.
 
-## 7. RESEARCH et DESIGN
+## 7. RESEARCH et DESIGN {#7-research-and-design}
 
 Le journal du panneau montre chaque étape, par exemple :
 
@@ -246,7 +262,7 @@ Ratify the Proposed ADRs docs/adr/adr-001-<title>.md? RATIFIED marks them Accept
 Ouvrez l'ADR, lisez-le, puis choisissez **RATIFIED**. Le moteur le passe `Accepted` et le commite
 seul : `git log --oneline -1 -- docs/adr` montre `docs(adr): ratify ADR-001`.
 
-## 8. DISTILL et DELIVER
+## 8. DISTILL et DELIVER {#8-distill-and-deliver}
 
 `acceptance-designer` écrit les scénarios (sous `docs/features/`) et le plan de test
 (`details/<AAAA-MM-JJ>/test-plan-checkout.md`) et commite les tests d'acceptation en échec. Quatre
@@ -260,7 +276,7 @@ Le moteur lance ensuite les gates du composant (`test`), puis la revue DELIVER (
 architecture-boundaries, cold-reader), puis la mutation, une seule fois, sur le code revu. Le
 panneau coche `gates`, `deliver_review` et `mutation`.
 
-## 9. PUBLISH
+## 9. PUBLISH {#9-publish}
 
 `pr-writer` écrit le résumé de la pull request ; le moteur rend le reste depuis le journal. Comme
 vous avez refusé la publication, rien n'est poussé ; le journal du panneau dit :
@@ -275,7 +291,7 @@ Le run se termine sur cette notification :
 skraft checkout: done — PUBLISH closed
 ```
 
-## 10. Lire le résultat
+## 10. Lire le résultat {#10-read-the-result}
 
 Dans le terminal, à la racine de `shop` :
 
@@ -314,7 +330,10 @@ Ouvrez `pull-request.md` : c'est le résultat de votre premier run. `git log --o
 `pay-by-card`, les documents de recherche et de conception, l'ADR ratifié, les tests d'acceptation
 en échec, puis les commits rouges et verts de chaque cycle TDD.
 
-## Ce que vous avez appris
+## Ce que vous avez construit {#what-you-built}
+
+Le dépôt `shop`, décrit dans `skraft-config.json`, porte maintenant une story livrée de RESEARCH à
+PUBLISH et la description de sa pull request. En chemin, vous avez appris que :
 
 - `skraft init` décrit votre dépôt en composants dans `skraft-config.json`, et leurs chemins sont le
   périmètre d'écriture de DELIVER ;
@@ -325,11 +344,12 @@ en échec, puis les commits rouges et verts de chaque cycle TDD.
 - `skraft status` relit le run depuis un terminal, et `skraft gate` repasse ses gates ;
 - le run se termine par une description de pull request, publiée quand vous y consentez.
 
-## Pages suivantes
+## Prochaines étapes {#next-steps}
 
 - [Premier run sous GitHub Copilot CLI](./first-run-copilot.md) — le même parcours, suivi dans le canvas Copilot.
 - [Publier la pull request d'un run](../how-to/publish-pull-request.md)
 - [Configurer les composants](../how-to/configure-components.md)
-- [Installer skraft sur un hôte](../how-to/install-on-a-host.mdx) — Windows, VS Code, plugins optionnels.
-- [Hôtes](../reference/hosts.md) — ce que chaque hôte montre et demande.
-- [Moteur, pilotes, profondeur 1](../explanation/architecture.md)
+
+Utiles aussi : [Installer skraft sur un hôte](../how-to/install-on-a-host.mdx) (Windows, VS Code,
+plugins optionnels), [Hôtes](../reference/hosts.md) (ce que chaque hôte montre et demande) et
+[Moteur, pilotes, profondeur 1](../explanation/architecture.md).

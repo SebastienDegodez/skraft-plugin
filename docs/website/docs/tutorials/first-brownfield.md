@@ -1,6 +1,6 @@
 ---
 title: "First existing repository"
-description: "Under GitHub Copilot CLI, have the brownfield analyst describe a small undocumented codebase, then turn its PRD into a backlog reviewed in the skraft backlog canvas."
+description: "Under GitHub Copilot CLI, have the brownfield analyst describe undocumented code, then turn its PRD into a backlog reviewed in the skraft backlog canvas."
 persona: tech-lead
 ---
 
@@ -15,12 +15,14 @@ GitHub yet.
 One path; each step says what you should see. The agents are real: expect it to take a while and
 to use Copilot credits.
 
-## What you need
+:::info[Before you start]
 
 - **Node 22** or later, and **Git**;
 - **GitHub Copilot CLI**, signed in, in a client that shows canvases.
 
-## 1. Create the existing code
+:::
+
+## 1. Create the existing code {#1-create-the-existing-code}
 
 In a terminal, create the `permis` folder:
 
@@ -79,7 +81,7 @@ $ git commit -m "Eligibility as it runs today"
 `git log --oneline` shows a single commit. The repository has no tests, no documentation and no
 backlog: it is your existing code.
 
-## 2. Install the plugins
+## 2. Install the plugins {#2-install-the-plugins}
 
 ```console
 $ copilot plugin marketplace add SebastienDegodez/skraft-plugin
@@ -91,7 +93,7 @@ $ copilot plugin list
 
 The three plugins are in the list.
 
-## 3. Have the analyst describe the code
+## 3. Have the analyst describe the code {#3-have-the-analyst-describe-the-code}
 
 Open a Copilot session in `permis` (`copilot`), type `/agent`, choose
 `skraft-brownfield:brownfield-analyst`, then write:
@@ -110,9 +112,16 @@ The repository has no tests: expect the **CONCERNS** verdict. The analyst then s
 validation checklist, every Low-confidence claim and every core feature without coverage, and
 waits. Read it: the 18-year rule and the 30-day retention should be on it. Answer:
 
-```text
-Confirmed.
+```console title="Copilot CLI"
+> Confirmed.
 ```
+
+:::note[Screenshot pending a real run]
+
+A capture of the analyst's session, its validation checklist then your answer, needs a real
+Copilot CLI session. Until then, the block above shows what you type.
+
+:::
 
 The analyst composes the PRD, then gives you its path under `docs/prds/`, the characterization and
 schema gate verdicts, and the number of open questions. Open the PRD: its functional requirements
@@ -123,7 +132,7 @@ $ git add docs/prds
 $ git commit -m "docs: PRD from the existing code"
 ```
 
-## 4. Cut the PRD into a backlog
+## 4. Cut the PRD into a backlog {#4-cut-the-prd-into-a-backlog}
 
 In the same session, write, with the path the analyst gave you:
 
@@ -142,7 +151,7 @@ One `story-writer` per story writes each story in full; a script checks it again
 of Ready; the four planning lenses review each epic. The run pauses again, at the handoff:
 **nothing is published until a human has reviewed it**.
 
-## 5. Review the backlog in the canvas
+## 5. Review the backlog in the canvas {#5-review-the-backlog-in-the-canvas}
 
 Ask Copilot:
 
@@ -174,7 +183,10 @@ The workflow stays paused and nothing is created on GitHub: creation goes throug
 **Create the issues** button, or through the Human Review box of `handoff.md` and then resuming the
 run, when you decide to.
 
-## What you learned
+## What you built {#what-you-built}
+
+The `permis` repository now has a PRD drawn from its code and a backlog of epics and stories, each
+ready story reviewed by you, with nothing published yet. On the way, you learned that:
 
 - `brownfield-analyst` describes existing code, telling facts from inferences, and asks you to
   validate what it could not prove before writing the PRD;
@@ -183,7 +195,7 @@ run, when you decide to.
 - the skraft backlog canvas shows why each story is ready, held back or refused, and you are the one
   who marks it reviewed.
 
-## Next pages
+## Next steps {#next-steps}
 
 - [The backlog: from idea to ready story](../explanation/backlog.md) — why each check and each lens exists.
 - [Brownfield journey](../explanation/brownfield.md) — the characterization safety net, then Mikado or Strangler Fig refactoring.
