@@ -97,8 +97,8 @@ test('a lens reads only its own inputs; the cold reader gets neither the story n
     `  - Documents of this phase: ${TRACKING}/${SCAN}`,
     `  - Documents of the story and of the other phases: ${TRACKING}/${ISSUE}`,
     `  - Documents of the story and of the other phases: ${TRACKING}/${RESEARCH}`,
-    `  - Changes since the base of the run (open a whole file only when the patch lacks the context a finding needs): ${TRACKING}/reviews/design_review-1/changes.patch`,
-    `  - Paths those changes touch (a path with no section in the patch is a new file: open it): ${TRACKING}/reviews/design_review-1/changed-files.txt`,
+    `  - Changes since the base of the run (open a whole file only when the patch lacks the context a finding needs): ${TRACKING}/reviews/design_review-1/design.patch`,
+    `  - Paths those changes touch (a path with no section in the patch is a new file: open it): ${TRACKING}/reviews/design_review-1/design-files.txt`,
     '- Write no file, change nothing, start no agent.',
     ...answer('fitness'),
   ].join('\n'))
@@ -224,7 +224,7 @@ test('a lens runs on the trigger its node names, whichever lens it is: none runs
 test('a blind lens reads the changes without the decision records and design documents of the run: no ADR, no supersession registry, no context map, event model or scenario', async () => {
   const records = ['docs/adr/adr-001-card-payment.md', 'docs/adr/supersessions.md']
   const designs = ['docs/architecture/context-map.md', 'docs/architecture/payment.md', 'docs/domain/event-model/payment.md']
-  const scenarios = ['docs/features/payment/pay-by-card.feature']
+  const scenarios = ['docs/features/payment/pay-by-card.feature', 'tests/docs/features/payment/nested.feature']
   const host = scripted({}, (it) => [
     agent()(it),
     agent({ work: ({ git }) => git.commit('docs(checkout): ADR and design of the card payment', [...records, ...designs]) })(it),
@@ -244,6 +244,10 @@ test('a blind lens reads the changes without the decision records and design doc
   const patch = await host.tracking.read(SLUG, `${folder}/code.patch`)
   const changes = await host.tracking.read(SLUG, `${folder}/changes.patch`)
   assert.ok(documents.every((path) => !patch.includes(path) && changes.includes(`diff --git a/${path}`)), patch)
+  assert.equal(await host.tracking.read(SLUG, 'reviews/distill_review-1/features-files.txt'), `${scenarios.join('\n')}\n`)
+  const featurePatch = await host.tracking.read(SLUG, 'reviews/distill_review-1/features.patch')
+  assert.ok(scenarios.every((path) => featurePatch.includes(`diff --git a/${path}`)) && !featurePatch.includes('CheckoutAcceptanceTests'), featurePatch)
+  assert.ok(host.agentRunner.reviewed().find((dispatch) => dispatch.agent === 'business-alignment-lens').prompt.includes('distill_review-1/features.patch'))
   const lens = host.agentRunner.reviewed().find((dispatch) => dispatch.agent === 'test-integrity-lens').prompt
   assert.ok(lens.includes(`${folder}/changes.patch`) && !lens.includes('code.patch'), lens)
 })
@@ -352,6 +356,8 @@ test('a refuted blocker or medium does not count; an unverifiable one does; the 
     `  - Documents of the story and of the other phases: ${TRACKING}/${RESEARCH}`,
     `  - Changes since the base of the run (open a whole file only when the patch lacks the context a finding needs): ${TRACKING}/reviews/design_review-1/changes.patch`,
     `  - Paths those changes touch (a path with no section in the patch is a new file: open it): ${TRACKING}/reviews/design_review-1/changed-files.txt`,
+    `  - Changes since the base of the run (open a whole file only when the patch lacks the context a finding needs): ${TRACKING}/reviews/design_review-1/design.patch`,
+    `  - Paths those changes touch (a path with no section in the patch is a new file: open it): ${TRACKING}/reviews/design_review-1/design-files.txt`,
     '- Confirm the finding only when these inputs show it; refute it when they show it is wrong, citing the path:line; say unverifiable when they cannot tell.',
     '- Write no file, change nothing, start no agent.',
     '- End your answer with this YAML document in a ```yaml block:',

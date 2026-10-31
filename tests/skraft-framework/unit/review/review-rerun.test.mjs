@@ -313,10 +313,10 @@ test('each agent\'s documents in the tracking folder reach the lenses, by phase,
     `  - Documents of this phase: ${TRACKING}/details/2026-10-11/structural-scan.json`,
     `  - Documents of the story and of the other phases: ${TRACKING}/plans/2026-10-11/issue-42.md`,
     `  - Documents of the story and of the other phases: ${TRACKING}/research/2026-10-11/checkout-research.md`,
-    `  - Changes since the base of the run (open a whole file only when the patch lacks the context a finding needs): ${TRACKING}/reviews/design_review-1/changes.patch`,
-    `  - Paths those changes touch (a path with no section in the patch is a new file: open it): ${TRACKING}/reviews/design_review-1/changed-files.txt`,
+    `  - Changes since the base of the run (open a whole file only when the patch lacks the context a finding needs): ${TRACKING}/reviews/design_review-1/design.patch`,
+    `  - Paths those changes touch (a path with no section in the patch is a new file: open it): ${TRACKING}/reviews/design_review-1/design-files.txt`,
   ])
-  assert.ok((await host.tracking.read(SLUG, 'reviews/design_review-1/changed-files.txt')).includes('docs/architecture/context-map.md\n'))
+  assert.equal(await host.tracking.read(SLUG, 'reviews/design_review-1/design-files.txt'), 'docs/adr/adr-001-card-payment.md\ndocs/architecture/context-map.md\n')
   assert.equal(await host.tracking.read(SLUG, 'reviews/design_review-1/context.md'), [
     '# Review context: design_review (DESIGN)',
     '', '## Story', '', '#42 — Pay by card', '', 'Story documents:', `- ${TRACKING}/plans/2026-10-11/issue-42.md`,

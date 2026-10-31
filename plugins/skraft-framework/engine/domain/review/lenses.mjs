@@ -18,12 +18,14 @@ import { FAMILY } from '../config/model-assignment.mjs'
  *   a lens with a trigger runs only when a changed path or a line the patch keeps matches.
  * @typedef {'mock' | 'contract'} TriggerName what a lens node's `when=` names
  * @typedef {string} Family a kebab-case word: economy, reviewer, gpt-codex…
+ * @typedef {import('./changes.mjs').Scope} Scope
  * @typedef {{ name: string, model: Family | null }} LensSpec
  * @typedef {{
- *   id: string, name: string, agent: string, inputs: readonly InputKind[], blind: boolean,
+ *   id: string, name: string, agent: string, inputs: readonly InputKind[], blind: boolean, scope: Scope | null,
  * }} Lens
  *   id: the lens in the journal and the briefs, its name for a lens an agent answers;
- *   blind: the lens gets neither the story nor the feature scope.
+ *   blind: the lens gets neither the story nor the feature scope; scope: the lens reads only
+ *   that part of the patch and of the changed paths (`changes.mjs`).
  */
 
 export { FAMILY }
@@ -68,13 +70,15 @@ const TRIGGERS = Object.freeze({ mock: MOCKS, contract: CONTRACTS })
 export const TRIGGER_NAMES = Object.freeze(/** @type {TriggerName[]} */ (Object.keys(TRIGGERS)))
 
 /** The lenses that read less than everything. */
-const KNOWN = /** @type {Readonly<Record<string, { inputs: readonly InputKind[], blind?: boolean }>>} */ (/** @type {unknown} */ (Object.freeze({
+const KNOWN = /** @type {Readonly<Record<string, { inputs: readonly InputKind[], blind?: boolean, scope?: Scope }>>} */ (/** @type {unknown} */ (Object.freeze({
   __proto__: null,
   'architecture-compliance': { inputs: OWN_CHANGES },
+  fitness: { inputs: ALL, scope: 'design' },
+  'business-alignment': { inputs: ALL, scope: 'features' },
   testability: { inputs: OWN_CHANGES },
   'boundary-enforcement': { inputs: OWN_CHANGES },
   'architecture-boundaries': { inputs: Object.freeze(/** @type {InputKind[]} */ (['context', 'patch', 'files', 'components'])) },
-  'cold-reader': { inputs: CHANGES, blind: true },
+  'cold-reader': { inputs: CHANGES, blind: true, scope: 'code' },
   'mock-fidelity': { inputs: CHANGES_AND_COMPONENTS },
   'contract-fidelity': { inputs: CHANGES_AND_COMPONENTS },
 })))
@@ -86,7 +90,7 @@ const KNOWN = /** @type {Readonly<Record<string, { inputs: readonly InputKind[],
 const lensOf = (spec) => {
   const { name } = /** @type {LensSpec} */ (readLensSpec(spec))
   const known = KNOWN[name]
-  return { id: name, name, agent: lensAgent(name), inputs: known?.inputs ?? ALL, blind: known?.blind === true }
+  return { id: name, name, agent: lensAgent(name), inputs: known?.inputs ?? ALL, blind: known?.blind === true, scope: known?.scope ?? null }
 }
 
 /**
