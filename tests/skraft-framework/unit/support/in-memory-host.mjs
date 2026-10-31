@@ -1018,9 +1018,9 @@ const threadAnswer = ({ pullRequestId, ...thread }) => thread
 /** The repository tools of @azure-devops/mcp 2.11.0 (src/tools/repositories.ts) skraft calls, on the pull requests and threads of the double. */
 const AZURE_REPOSITORY_TOOLS = {
   repo_pull_request: (mcp, { action, pullRequestId }) => (action === 'get' ? mcp.pullRequests[pullRequestId] ?? null : null),
-  repo_pull_request_thread: (mcp, { action, pullRequestId, top = 100 }) => {
+  repo_pull_request_thread: (mcp, { action, pullRequestId, top = 100, skip = 0 }) => {
     if (action !== 'list') return null
-    return mcp.threads.filter((thread) => thread.pullRequestId === pullRequestId).slice(0, top).map(threadAnswer)
+    return mcp.threads.filter((thread) => thread.pullRequestId === pullRequestId).sort((a, b) => a.id - b.id).slice(skip, skip + top).map(threadAnswer)
   },
   repo_pull_request_thread_write: (mcp, { action, pullRequestId, threadId, commentId, content, status }) => {
     if (action === 'create') {

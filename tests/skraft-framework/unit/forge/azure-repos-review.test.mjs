@@ -43,7 +43,7 @@ test('with the host\'s Azure DevOps MCP server, a review of pull request 12 on A
     ['repo_pull_request', 'get'], ['repo_pull_request', 'get'], ['repo_pull_request_thread', 'list'], ['repo_pull_request_thread_write', 'update'],
   ])
   assert.deepEqual(host.mcp.requests[0].arguments, { action: 'get', repositoryId: 'payment', project: 'Shop Team', pullRequestId: 12 })
-  assert.deepEqual(host.mcp.requests[2].arguments, { action: 'list', repositoryId: 'payment', project: 'Shop Team', pullRequestId: 12, fullResponse: true })
+  assert.deepEqual(host.mcp.requests[2].arguments, { action: 'list', repositoryId: 'payment', project: 'Shop Team', pullRequestId: 12, top: 100, skip: 0, fullResponse: true })
   assert.deepEqual(host.mcp.requests[3].arguments, { action: 'create', repositoryId: 'payment', project: 'Shop Team', pullRequestId: 12, content: firstBody, status: 'Closed' })
   assert.deepEqual(host.mcp.requests[7].arguments, { action: 'update', repositoryId: 'payment', project: 'Shop Team', pullRequestId: 12, threadId: 41, commentId: 1, content: host.mcp.threads[0].comments[0].content, fullResponse: true })
   assert.deepEqual(host.pullRequests.calls, [])
@@ -175,11 +175,34 @@ test('the thread the review kept is found again by its marker as the server wrot
   assert.deepEqual(await afterReview({}, {}), [[5, false], [6, true]])
 })
 
+test('the marker is found again however the server wrote it: with numeric entities, decimal or hexadecimal, behind a byte order mark or blank lines', async () => {
+  const decimal = COMMENT.replace('<sub>', '&#60;sub&#62;').replace('</sub>', '&#60;/sub&#62;')
+  const hexadecimal = COMMENT.replace('<sub>', '&#x3C;sub&#x3e;').replace('</sub>', '&#x3C;/sub&#x3E;')
+  const mixed = COMMENT.replace('<sub>', '&lt;sub&#62;').replace('</sub>', '&#x3C;/sub&gt;')
+
+  for (const content of [decimal, hexadecimal, mixed, `\uFEFF${COMMENT}`, `\n  ${COMMENT}`, `\uFEFF\r\n${ESCAPED}`]) {
+    assert.deepEqual(await afterReview({ comments: [{ id: 1, content }] }), [[5, true]], JSON.stringify(content))
+  }
+  assert.deepEqual(await afterReview({ comments: [{ id: 1, content: COMMENT.replace('NEEDS_REWORK:', '&#x110000; &#1114112; NEEDS_REWORK:') }] }), [[5, true]], 'an entity no character stands for is left as it is')
+  assert.deepEqual(await afterReview({ comments: [{ id: 1, content: COMMENT.replace('<sub>', '&amp;lt;sub&amp;gt;') }] }),[[5, false], [41, true]], 'decoded once: an entity of an entity is not the marker')
+  assert.deepEqual(await afterReview({ comments: [{ id: 1, content: `> ${decimal}` }] }), [[5, false], [41, true]], 'a quote of it is still a reply')
+})
+
 test('a reply that quotes the review, a thread a person deleted and a comment a person deleted are never rewritten: the review is posted again as a new thread', async () => {
   assert.deepEqual(await afterReview({ comments: [{ id: 1, content: QUOTING }] }), [[5, false], [41, true]])
   assert.deepEqual(await afterReview({ comments: [{ id: 1, content: COMMENT, isDeleted: true }] }), [[5, false], [41, true]])
   assert.deepEqual(await afterReview({ isDeleted: true }), [[5, false], [41, true]])
   assert.deepEqual(await afterReview({}, { comments: [{ id: 1, content: QUOTING }] }), [[5, true], [6, false]])
+})
+
+test('a first comment a person deleted is skipped: the next comment of the thread, if it is the review, is the one rewritten', async () => {
+  const host = reviewed()
+  host.mcp.threads.push({ pullRequestId: 12, id: 5, comments: [{ id: 1, content: 'removed', isDeleted: true }, { id: 2, content: COMMENT }] })
+
+  await host.review({ publish: true })
+
+  assert.deepEqual(host.mcp.threads.map(({ id, comments }) => [id, comments.map(({ content }) => content.includes('To address:'))]), [[5, [false, true]]])
+  assert.deepEqual(host.mcp.requests.at(-1).arguments.commentId, 2)
 })
 
 test('the thread at the URL the journal kept is rewritten, though a later thread holds the marker too', async () => {
@@ -195,14 +218,48 @@ test('the thread at the URL the journal kept is rewritten, though a later thread
   assert.deepEqual(host.mcp.threads.map(({ id, comments }) => [id, comments[0].content.startsWith('### skraft review · #12 — APPROVED')]), [[41, true], [99, false]])
 })
 
-test('a hundred threads or more may be cut by the server: az lists them all and keeps the thread', async () => {
-  const host = reviewed({ forge: { unavailable: null } })
-  for (let id = 1; id <= 100; id += 1) host.mcp.threads.push({ pullRequestId: 12, id, comments: [{ id: 1, content: `thread ${id}` }] })
+/** @param {ReturnType<typeof reviewed>} host @param {number} count threads of a person, ids 1 to count */
+const crowd = (host, count) => {
+  for (let id = 1; id <= count; id += 1) host.mcp.threads.push({ pullRequestId: 12, id, comments: [{ id: 1, content: `thread ${id}` }] })
+}
+
+/** The `top` and `skip` of each listing of the threads the server was asked. @param {ReturnType<typeof reviewed>} host */
+const skips = (host) => host.mcp.requests.filter(({ tool }) => tool === 'repo_pull_request_thread').map(({ arguments: args }) => [args.top, args.skip])
+
+test('the server lists the threads a hundred at a time, page by page: the thread past the first page is found and rewritten, none is posted twice', async () => {
+  const host = reviewed()
+  crowd(host, 250)
+  host.mcp.threads[204].comments[0].content = COMMENT
 
   await host.review({ publish: true })
 
+  assert.deepEqual(skips(host), [[100, 0], [100, 100], [100, 200]])
+  assert.deepEqual(routes(host), [['mcp', undefined]])
+  assert.deepEqual([host.mcp.threads.length, host.mcp.threads[204].comments[0].content.includes('To address:')], [250, true])
+})
+
+test('a pull request of exactly a hundred threads is read by the server in two listings, the second empty', async () => {
+  const host = reviewed()
+  crowd(host, 100)
+
+  await host.review({ publish: true })
+
+  assert.deepEqual(skips(host), [[100, 0], [100, 100]])
+  assert.deepEqual([routes(host), host.mcp.threads.length], [[['mcp', undefined]], 101])
+})
+
+test('past ten full pages of threads the server cannot say the review\'s is not among them: az lists them all, finds the thread and rewrites it, the server writes nothing', async () => {
+  const host = reviewed({ forge: { unavailable: null } })
+  crowd(host, 1000)
+  host.pullRequests.comments.push({ number: 12, body: COMMENT, bodies: [COMMENT], url: 'https://dev.azure.com/acme/Shop%20Team/_git/payment/pull/12#issuecomment-900' })
+
+  await host.review({ publish: true })
+
+  assert.equal(skips(host).length, 10)
   assert.deepEqual(routes(host), [['az', 'mcp-unreadable']])
-  assert.equal(host.mcp.threads.length, 100)
+  assert.deepEqual(host.mcp.requests.filter(({ tool }) => tool === 'repo_pull_request_thread_write'), [])
+  assert.deepEqual(host.pullRequests.calls.filter((call) => call.startsWith('keep')), ['keep comment #12'])
+  assert.deepEqual(host.pullRequests.comments.map(({ bodies }) => bodies.length), [2], 'the thread az found is rewritten, not posted again')
 })
 
 test('an answer of the server that skraft cannot read, from any of its three tools, goes to az', async () => {
