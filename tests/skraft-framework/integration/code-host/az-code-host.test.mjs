@@ -26,6 +26,15 @@ const FAKE_AZ = [
   "if (state.fails || !state.signedIn) { process.stderr.write('SECRET-STDERR\\n'); process.exit(1) }",
   "if (args[0] === 'boards') { const item = state.workItems?.[option('id')]; if (item !== undefined) said(item); process.stderr.write(state.workItemFails ? 'SECRET-STDERR\\n' : 'TF401232: SECRET-STDERR\\n'); process.exit(1) }",
   "const kv = (name) => { const at = args.indexOf(`--${name}`); const pairs = []; for (let i = at + 1; at >= 0 && i < args.length && !args[i].startsWith('--'); i += 1) pairs.push(args[i].split(/=(.*)/s).slice(0, 2)); return Object.fromEntries(pairs) }",
+  "if (args[0] === 'devops' && args[1] === 'invoke' && option('area') === 'git') {",
+  "  const file = join(here, 'az-threads.json'); const threads = JSON.parse(readFileSync(file, 'utf8')); const route = kv('route-parameters'); const method = option('http-method') ?? 'GET'",
+  "  if (method === 'GET') said(state.unreadableThreads ? 'not json' : state.threadsWithoutValue ? { count: 0 } : { value: threads, count: threads.length })",
+  "  const sent = JSON.parse(readFileSync(option('in-file'), 'utf8'))",
+  "  appendFileSync(join(here, 'az-thread-writes.jsonl'), `${JSON.stringify({ method, resource: option('resource'), route, sent })}\\n`)",
+  "  if (state.threadFails) { process.stderr.write('SECRET-STDERR\\n'); process.exit(1) }",
+  "  if (method === 'POST') { const thread = { id: 300 + threads.length, status: sent.status, comments: [{ id: 1, content: sent.comments[0].content }] }; threads.push(thread); writeFileSync(file, JSON.stringify(threads)); said(state.unreadableThreadWrite ? 'not json' : thread) }",
+  "  const kept = threads.find((thread) => String(thread.id) === route.threadId).comments.find((comment) => String(comment.id) === route.commentId); kept.content = sent.content; writeFileSync(file, JSON.stringify(threads)); said(kept)",
+  "}",
   "if (args[0] === 'devops' && args[1] === 'invoke') {",
   "  const file = join(here, 'az-comments.json'); const comments = JSON.parse(readFileSync(file, 'utf8')); const route = kv('route-parameters'); const query = kv('query-parameters'); const method = option('http-method') ?? 'GET'",
   "  if (method === 'GET') { const from = Number(query.continuationToken ?? 0); const size = state.pageSize ?? 100; const listed = { count: comments.length, comments: comments.slice(from, from + size), ...(from + size < comments.length ? { continuationToken: String(from + size) } : {}) }; said(state.unreadableList ? 'not json' : listed) }",
@@ -76,6 +85,8 @@ const azFolder = (root, state) => {
   writeFileSync(join(bin, 'az-bodies.txt'), '')
   writeFileSync(join(bin, 'az-comments.json'), JSON.stringify(state.comments ?? []))
   writeFileSync(join(bin, 'az-writes.jsonl'), '')
+  writeFileSync(join(bin, 'az-threads.json'), JSON.stringify(state.threads ?? []))
+  writeFileSync(join(bin, 'az-thread-writes.jsonl'), '')
   writeFileSync(join(bin, 'az-state.json'), JSON.stringify(state))
   writeFileSync(join(bin, 'az'), `#!/bin/sh\nexec "${process.execPath}" "${join(bin, 'az.mjs')}" "$@"\n`)
   chmodSync(join(bin, 'az'), 0o755)
@@ -87,6 +98,8 @@ const azFolder = (root, state) => {
     bodies: () => readFileSync(join(bin, 'az-bodies.txt'), 'utf8'),
     writes: () => readFileSync(join(bin, 'az-writes.jsonl'), 'utf8').split('\n').filter(Boolean).map((line) => JSON.parse(line)),
     comments: () => JSON.parse(readFileSync(join(bin, 'az-comments.json'), 'utf8')),
+    threads: () => JSON.parse(readFileSync(join(bin, 'az-threads.json'), 'utf8')),
+    threadWrites: () => readFileSync(join(bin, 'az-thread-writes.jsonl'), 'utf8').split('\n').filter(Boolean).map((line) => JSON.parse(line)),
     set: (more) => writeFileSync(join(bin, 'az-state.json'), JSON.stringify({ ...state, ...more })),
   }
 }
@@ -408,4 +421,88 @@ test('through az, a comment that quotes the marker without starting with it is s
     assert.deepEqual(await unreadable.codeHost().keepIssueComment(commentRequest(unreadable.root)), { ok: false, reason: 'az could not comment work item #42 of Shop Team' }, JSON.stringify(comments))
     assert.deepEqual(unreadable.forge.writes(), [], JSON.stringify(comments))
   }
+})
+
+const DETAILS_MARKER = '<!-- skraft:run-details slug=checkout part=1 -->'
+const THREADS_ON_42 = ['--area=git', '--resource=pullRequestThreads', '--route-parameters', 'project=Shop Team', 'repositoryId=payment', 'pullRequestId=42']
+const QUIET_THREADS = ['--api-version=7.1', '--organization=https://dev.azure.com/acme', '--only-show-errors', '--output=json']
+const THREAD_URL = (thread, comment) => `https://dev.azure.com/acme/Shop%20Team/_apis/git/repositories/payment/pullRequests/42/threads/${thread}/comments/${comment}`
+const DETAILS = `${DETAILS_MARKER}\n# skraft · run details\n\nThe folded sections.\n`
+
+/** The request a run details comment is kept with: the body, the thread to post and the comment to rewrite, as the engine writes them. */
+const threadRequest = (root, { url = null, body = DETAILS } = {}) => {
+  const threadFile = join(root, 'pull-request-details-1.thread.json')
+  const commentFile = join(root, 'pull-request-details-1.comment.json')
+  writeFileSync(threadFile, JSON.stringify({ comments: [{ parentCommentId: 0, content: body, commentType: 1 }], status: 4 }))
+  writeFileSync(commentFile, JSON.stringify({ content: body }))
+  return { number: 42, marker: DETAILS_MARKER, url, bodyFile: join(root, 'pull-request-details-1.md'), body, threadFile, commentFile }
+}
+
+test('the run details are posted as a thread of the pull request through az devops invoke, closed, sent from a JSON file, and the REST address of its comment is given back', async (t) => {
+  const { root, forge, codeHost } = repository(t)
+  const request = threadRequest(root)
+
+  assert.deepEqual(await codeHost().keepPullRequestComment(request), { ok: true, url: THREAD_URL(300, 1) })
+  assert.deepEqual(forge.calls().slice(-2), [
+    ['devops', 'invoke', ...THREADS_ON_42, ...QUIET_THREADS],
+    ['devops', 'invoke', ...THREADS_ON_42, '--http-method=POST', `--in-file=${request.threadFile}`, ...QUIET_THREADS],
+  ])
+  assert.deepEqual(forge.threadWrites().map(({ method, sent }) => [method, sent]), [['POST', { comments: [{ parentCommentId: 0, content: DETAILS, commentType: 1 }], status: 4 }]])
+})
+
+test('the comment of the thread at the URL kept is rewritten in place; without one, the first comment of the latest thread that starts with the marker, as written or escaped; none is posted again', async (t) => {
+  const escaped = DETAILS_MARKER.replace('<', '&lt;').replace('>', '&gt;')
+  const threads = [{ id: 300, comments: [{ id: 1, content: `${DETAILS_MARKER}\nolder` }] }, { id: 301, comments: [{ id: 1, content: 'a person' }] }, { id: 302, comments: [{ id: 4, content: `${escaped}\nlatest` }, { id: 5, content: 'a reply' }] }]
+  const { root, forge, codeHost } = repository(t, { az: { ...SIGNED_IN, threads } })
+  const host = codeHost()
+
+  assert.deepEqual(await host.keepPullRequestComment(threadRequest(root, { url: THREAD_URL(301, 1) })), { ok: true, url: THREAD_URL(301, 1) })
+  assert.deepEqual(await host.keepPullRequestComment(threadRequest(root)), { ok: true, url: THREAD_URL(302, 4) })
+  assert.deepEqual(forge.threadWrites().map(({ method, resource, route, sent }) => [method, resource, route.threadId, route.commentId, sent]), [
+    ['PATCH', 'pullRequestThreadComments', '301', '1', { content: DETAILS }],
+    ['PATCH', 'pullRequestThreadComments', '302', '4', { content: DETAILS }],
+  ])
+  assert.deepEqual(forge.calls().at(-1), ['devops', 'invoke', '--area=git', '--resource=pullRequestThreadComments', '--route-parameters', 'project=Shop Team', 'repositoryId=payment', 'pullRequestId=42', 'threadId=302', 'commentId=4', '--http-method=PATCH', `--in-file=${join(root, 'pull-request-details-1.comment.json')}`, ...QUIET_THREADS])
+
+  const gone = repository(t, { az: { ...SIGNED_IN, threads: [{ id: 300, comments: [{ id: 1, content: 'a person' }] }] } })
+  assert.deepEqual(await gone.codeHost().keepPullRequestComment(threadRequest(gone.root, { url: THREAD_URL(999, 1) })), { ok: true, url: THREAD_URL(301, 1) }, 'a thread a person deleted is posted again')
+  assert.deepEqual(gone.forge.threadWrites().map(({ method }) => method), ['POST'])
+})
+
+test('through az, a thread that quotes the marker without starting with it, or whose first comment was deleted, is someone else\'s: never rewritten, the run posts its own', async (t) => {
+  const threads = [{ id: 300, comments: [{ id: 1, content: `> ${DETAILS_MARKER}\nI disagree` }] }, { id: 301, comments: [{ id: 1, content: DETAILS_MARKER, isDeleted: true }, { id: 2, content: 'after' }] }]
+  const { root, forge, codeHost } = repository(t, { az: { ...SIGNED_IN, threads } })
+
+  assert.deepEqual(await codeHost().keepPullRequestComment(threadRequest(root)), { ok: true, url: THREAD_URL(302, 1) })
+  assert.deepEqual(forge.threadWrites().map(({ method }) => method), ['POST'])
+  assert.deepEqual(forge.threads().slice(0, 2), threads)
+})
+
+test('an az that cannot list the threads, fails, or answers what skraft cannot read writes nothing twice, none of what it prints reaches a reason, and one that is not signed in is not asked', async (t) => {
+  const listing = 'az could not list the comment threads of pull request #42 on Shop Team/payment'
+  const commenting = 'az could not comment pull request #42 on Shop Team/payment'
+  for (const [state, reason] of [
+    [{ unreadableThreads: true }, listing],
+    [{ threadsWithoutValue: true }, listing],
+    [{ threads: [{ id: 'one', comments: [] }] }, listing],
+    [{ unreadableThreadWrite: true }, commenting],
+    [{ threadFails: true }, commenting],
+    [{ threads: [{ id: 300, comments: [{ id: 1, content: DETAILS_MARKER }] }], threadFails: true }, commenting],
+  ]) {
+    const { root, forge, codeHost } = repository(t, { az: { ...SIGNED_IN, ...state } })
+
+    assert.deepEqual(await codeHost().keepPullRequestComment(threadRequest(root)), { ok: false, reason }, JSON.stringify(state))
+    assert.ok(forge.threadWrites().length <= 1, 'never posted twice')
+  }
+
+  const signedOut = repository(t, { az: { ...SIGNED_IN, signedIn: false } })
+  assert.deepEqual(await signedOut.codeHost().keepPullRequestComment(threadRequest(signedOut.root)), { ok: false, reason: 'az is not signed in to the Azure DevOps organization https://dev.azure.com/acme, or cannot read Shop Team/payment there; run az login, or az devops login --organization https://dev.azure.com/acme' })
+  assert.deepEqual(signedOut.forge.calls().filter((call) => call[0] === 'devops'), [])
+  assert.deepEqual(await repository(t, { remote: null }).codeHost().keepPullRequestComment(threadRequest(signedOut.root)), { ok: false, reason: 'the working copy has no Git remote whose URL names an Azure DevOps organization, project and repository' })
+})
+
+test('Azure DevOps takes 4,000 characters in a description and 140,000 in a comment', async (t) => {
+  const { codeHost } = repository(t)
+
+  assert.deepEqual([codeHost().bodyLimit, codeHost().commentLimit], [4_000, 140_000])
 })
