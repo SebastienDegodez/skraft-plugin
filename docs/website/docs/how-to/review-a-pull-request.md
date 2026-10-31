@@ -1,13 +1,13 @@
 ---
 title: "Review a pull request with skraft"
-description: "Put someone else's pull request through skraft's DELIVER review, with no run: check out its head, start the review from Claude Code, Copilot CLI or a terminal, read the verdict, keep a comment, review again after a new push."
+description: "Put someone else's pull request through skraft's DELIVER review with no run, read the verdict, keep it in a comment, review again after a push."
 persona: reviewer
 ---
 
 # Review a pull request with skraft
 
-**Goal**: get, on a pull request skraft did not produce, the verdict of its DELIVER review
-(lenses, refutation, computed verdict), and keep it in a comment if needed.
+Get, on a pull request skraft did not produce, the verdict of its DELIVER review (lenses,
+refutation, computed verdict), and keep it in a comment if needed.
 
 ## Prerequisites
 
@@ -57,7 +57,7 @@ reply as it is to the `reply` file, then run the `then:` command. Repeat while t
 
 ## 3. Read the verdict
 
-```text
+```console
 skraft review #42: NEEDS_REWORK, pass 1 — <summary>
   to address: <what sends the work back>
   details: <working copy>/.copilot-tracking/skraft-reviews/pr-42/reviews/verdict-1/verdict.yaml
@@ -71,6 +71,11 @@ skraft review #42: NEEDS_REWORK, pass 1 — <summary>
 | `stopped`, `refused` | the review did not start or stopped; the code in brackets says why (Troubleshooting) |
 
 `verdict.yaml` details each lens, the refuted findings and the notes.
+
+:::note[Screenshot pending a real run]
+A capture of the `skraft review --pr` output replaces the verdict block above after a real run
+on a pull request.
+:::
 
 ## 4. Keep the verdict in a comment (optional)
 
@@ -88,6 +93,10 @@ comment is the one rewritten. Never a vote, never a reply. It asks your consent 
 can decide for everyone with `publish.reviewComment` in the base branch's `skraft-config.json`
 ([skraft-config.json](../reference/skraft-config.md#publish)). Without
 consent nothing is posted; `comment.md`, next to `verdict.yaml`, keeps the text.
+
+:::note[Screenshot pending a real run]
+A capture of the pull request and its review comment on GitHub comes after a real run.
+:::
 
 ## 5. Review again after a new push
 
@@ -112,7 +121,7 @@ that found nothing is reused without running again.
 | `journal-unverifiable` | The review started on another machine: `skraft journal adopt --pr <number>` in your terminal. |
 | `not-recorded` | Handed-over agents have no reply: finish the loop, then `--record`. |
 
-## See also
+## Next steps <!-- #next-steps -->
 
 - [`skraft review`](../reference/cli.md) — the rules of each step, `--json`
   output.

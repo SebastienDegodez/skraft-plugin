@@ -1,6 +1,6 @@
 ---
 title: "Answer a run's question"
-description: "Answer the question a run waits on (ratify an ADR, consent to publish, repair the machine, unblock an agent, treat the mutants) from Claude Code, Copilot or a terminal, and know what becomes of a refusal."
+description: "Answer the question a run waits on (an ADR, a consent, the machine, a blocked agent, the mutants) from your host, and what becomes of a refusal."
 persona: software-engineer
 ---
 
@@ -9,7 +9,7 @@ import TabItem from '@theme/TabItem';
 
 # Answer a run's question
 
-**Goal**: give the human decision a run waits on, so that it goes on.
+Give the human decision a run waits on, so that it goes on.
 
 A run that asks a question **waits**: it does nothing more until someone answers, and starting it
 again asks the same question, without starting an agent again.
@@ -65,6 +65,11 @@ the conversation:
 
 The words after the answer form the reason; for a `blocked` question, every word after the key
 forms the instruction. `/skraft decide` records the answer, then resumes the run.
+
+:::note[Screenshot pending a real run]
+A capture of the mod's dialog (header `ADR`, the options and **Other**) comes after a real run in
+Claude Code.
+:::
 
 </TabItem>
 <TabItem value="copilot-cli" label="GitHub Copilot CLI">
@@ -138,10 +143,10 @@ A refused answer records nothing; the run still waits.
 | `skraft decide records a person's answer: run it yourself in an interactive terminal; nothing was recorded` | Run the command yourself, in an interactive terminal. |
 | `Refused: …; nothing was recorded.` (Copilot) | Answer with `skraft decide` in a terminal, then resume the workflow. |
 
-## See also
+## Next steps {/* #next-steps */}
 
 - [`skraft decide`](../reference/cli.md) — arguments, keys, messages.
 - [Hosts](../reference/hosts.md) — dialog, pane, `skraft_decide` and
   canvas, host by host.
 - [Phases](../reference/phases.md#human-questions) — who asks each question.
-- [Resume or unblock a run](./resume-a-run.md)
+- [Resume or unblock a run](./resume-a-run.mdx)

@@ -1,13 +1,13 @@
 ---
 title: "Ajouter un agent du dépôt au pipeline"
-description: "Confier une étape du pipeline à un agent écrit dans votre dépôt : écrire son fichier pour chaque hôte, l'ajouter comme nœud du workflow éjecté avec ses sorties et ses chemins d'écriture, le placer avant les gates, et vérifier avec check, diff et doctor."
+description: "Confier une étape du pipeline à un agent écrit dans votre dépôt : l'ajouter comme nœud du workflow éjecté, avant les gates, et vérifier."
 persona: tech-lead
 ---
 
 # Ajouter un agent du dépôt au pipeline
 
-**But** : faire exécuter à chaque run une étape propre à votre équipe (par exemple mettre à jour
-le guide utilisateur), par un agent écrit dans votre dépôt.
+Faites exécuter à chaque run une étape propre à votre équipe (par exemple mettre à jour le guide
+utilisateur), par un agent écrit dans votre dépôt.
 
 Pour une relecture plutôt qu'une étape qui produit :
 [Ajouter une lentille à une revue](./customise-review.md).
@@ -98,7 +98,7 @@ Commitez `.skraft/` et les fichiers de l'agent : l'étape tourne au prochain run
 | `missing-outputs` | L'agent n'a pas rempli une sortie de `outputs` après ses tentatives : corriger son prompt, puis démarrer un nouveau slug. |
 | L'agent du plugin tourne à la place du vôtre | Un agent de skraft porte le même identifiant : renommer le vôtre. |
 
-## Voir aussi
+## Étapes suivantes <!-- #next-steps -->
 
 - [Le workflow DOT](../reference/workflow-dot.mdx#node-attributes) — tous les
   attributs d'un nœud agent.

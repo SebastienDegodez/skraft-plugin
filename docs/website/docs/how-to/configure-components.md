@@ -1,13 +1,12 @@
 ---
 title: "Configure the components of your repository"
-description: "Detect the components into skraft-config.json, add a neighbour repository, replace a command, add a gate, choose the base, switch to in-memory mocks and check it all with skraft doctor."
+description: "Detect the components into skraft-config.json, add a neighbour repository, replace a command, add a gate, choose base and mocks, then check."
 persona: software-engineer
 ---
 
 # Configure the components of your repository
 
-**Goal**: a `skraft-config.json` whose every command runs on your machine, before you start a
-run.
+Get a `skraft-config.json` whose every command runs on your machine, before you start a run.
 
 ## Prerequisites
 
@@ -149,7 +148,7 @@ error separated by `; `:
 
 Every key and every message: [skraft-config.json](../reference/skraft-config.md#validation).
 
-## See also
+## Next steps <!-- #next-steps -->
 
 - [skraft-config.json](../reference/skraft-config.md) — schema, defaults
   per stack, detection.

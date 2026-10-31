@@ -1,13 +1,13 @@
 ---
 title: "Add a lens to a review"
-description: "Add a lens of your own repository to the design review or to the DELIVER review, change a lens's model family, and check the workflow with skraft workflow check and diff."
+description: "Add a repository lens to the design or DELIVER review, change a lens's model family, and check the workflow with check and diff."
 persona: tech-lead
 ---
 
 # Add a lens to a review
 
-**Goal**: have every run reviewed by a lens of your team (a threat model, for instance), on top of
-skraft's lenses.
+Have every run reviewed by a lens of your team (a threat model, for instance), on top of skraft's
+lenses.
 
 ## Prerequisites
 
@@ -92,7 +92,7 @@ Commit `.skraft/` and the agent's file: the lens runs at the next review, with t
 | A `lenses="a,b,c"` node refused | A workflow copied before the current form: replace the node with the nodes and edges the message writes out. |
 | The lens does not run | Check that no `when` leaves it out, and that the run follows `.skraft/` (`skraft workflow check` names the file). |
 
-## See also
+## Next steps <!-- #next-steps -->
 
 - [Review: fan-out, lens nodes, fan-in](../reference/workflow-dot.mdx#reviews)
   and [call node](../reference/workflow-dot.mdx#call-node).

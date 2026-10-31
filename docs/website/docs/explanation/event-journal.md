@@ -102,7 +102,7 @@ active pipeline: two stories progress in parallel in two worktrees without shari
 
 ## Going further
 
-- [Resume or unblock a run](../how-to/resume-a-run.md).
+- [Resume or unblock a run](../how-to/resume-a-run.mdx).
 - [Reference: tracking folder, `events.jsonl`, codes](../reference/run-journal.md).
 - [Guardrails](./guardrails.md) — what the journal replaces among the v1 hooks.
 - [Architecture](./architecture.md).

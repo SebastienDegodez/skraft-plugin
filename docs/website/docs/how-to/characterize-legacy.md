@@ -1,13 +1,12 @@
 ---
 title: "Put a characterization net on an existing service"
-description: "Have brownfield-harness-builder write the contract of an existing HTTP service and characterization tests that pin its current behaviour, then read the PASS, CONCERNS or FAIL verdict before any refactoring."
+description: "Have brownfield-harness-builder pin an existing HTTP service's current behaviour with a contract and characterization tests, then read the verdict."
 persona: software-engineer
 ---
 
 # Put a characterization net on an existing service
 
-**Goal**: make an existing HTTP service safe to change, with tests that pin what it does today,
-bugs included.
+Make an existing HTTP service safe to change, with tests that pin what it does today, bugs included.
 
 To understand the method: [Brownfield journey](../explanation/brownfield.md)
 and [Feathers, 2004](../reference/citations.mdx#cite-feathers-legacy-2004).
@@ -32,6 +31,10 @@ and [Feathers, 2004](../reference/citations.mdx#cite-feathers-legacy-2004).
 
 Name the component as `skraft-config.json` lists it, or its folder. Without a target, the agent
 asks for it.
+
+:::note[Screenshot pending a real run]
+A capture of a `brownfield-harness-builder` session comes after a real run.
+:::
 
 ## 2. Let it establish the contract
 
@@ -82,7 +85,7 @@ gates of every skraft run.
 | A downstream dependency cannot be mocked | Verdict `CONCERNS`: accept the gap, or change the component's `mocking` ([Configure components](./configure-components.md)). |
 | No contract-testing skill for the stack | The agent uses the framework's standard test host and says so in its report. |
 
-## See also
+## Next steps <!-- #next-steps -->
 
 - [Refactor existing code under a net](./refactor-legacy.md) — the next step.
 - [Brownfield journey](../explanation/brownfield.md)

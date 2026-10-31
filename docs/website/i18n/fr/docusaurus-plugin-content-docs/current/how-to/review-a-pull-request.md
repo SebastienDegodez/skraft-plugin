@@ -1,13 +1,13 @@
 ---
 title: "Revoir une pull request avec skraft"
-description: "Faire passer la pull request de quelqu'un d'autre par la revue DELIVER de skraft, sans run : extraire sa tête, lancer la revue depuis Claude Code, Copilot CLI ou un terminal, lire le verdict, garder un commentaire, revoir après un nouveau push."
+description: "Faire passer la pull request d'un autre par la revue DELIVER de skraft, sans run, lire le verdict, le garder en commentaire, revoir après un push."
 persona: reviewer
 ---
 
 # Revoir une pull request avec skraft
 
-**But** : obtenir sur une pull request que skraft n'a pas produite le verdict de sa revue DELIVER
-(lentilles, réfutation, verdict calculé), et le garder si besoin dans un commentaire.
+Obtenez sur une pull request que skraft n'a pas produite le verdict de sa revue DELIVER (lentilles,
+réfutation, verdict calculé), et gardez-le si besoin dans un commentaire.
 
 ## Prérequis
 
@@ -57,7 +57,7 @@ tant que la sortie dit `dispatch` : le réfuteur est confié de la même façon.
 
 ## 3. Lire le verdict
 
-```text
+```console
 skraft review #42: NEEDS_REWORK, pass 1 — <résumé>
   to address: <ce qui renvoie le travail>
   details: <copie de travail>/.copilot-tracking/skraft-reviews/pr-42/reviews/verdict-1/verdict.yaml
@@ -71,6 +71,11 @@ skraft review #42: NEEDS_REWORK, pass 1 — <résumé>
 | `stopped`, `refused` | la revue n'a pas démarré ou s'est arrêtée ; le code entre parenthèses dit pourquoi (Dépannage) |
 
 `verdict.yaml` détaille chaque lentille, les findings réfutés et les notes.
+
+:::note[Capture en attente d'un run réel]
+Une capture de la sortie de `skraft review --pr` remplacera le bloc du verdict ci-dessus après
+un run réel sur une pull request.
+:::
 
 ## 4. Garder le verdict dans un commentaire (facultatif)
 
@@ -89,6 +94,11 @@ votre `~/.skraft/config.json`. Une équipe peut trancher pour tous avec `publish
 dans le `skraft-config.json` de la branche de base
 ([skraft-config.json](../reference/skraft-config.md#publish)). Sans accord,
 rien n'est posté ; `comment.md`, à côté de `verdict.yaml`, garde le texte.
+
+:::note[Capture en attente d'un run réel]
+Une capture de la pull request et de son commentaire de revue sur GitHub viendra après un run
+réel.
+:::
 
 ## 5. Revoir après un nouveau push
 
@@ -113,7 +123,7 @@ pas bougé et qui n'avait rien trouvé est reprise sans être relancée.
 | `journal-unverifiable` | La revue a commencé sur une autre machine : `skraft journal adopt --pr <numéro>` dans votre terminal. |
 | `not-recorded` | Des agents confiés n'ont pas de réponse : finir la boucle, puis `--record`. |
 
-## Voir aussi
+## Étapes suivantes <!-- #next-steps -->
 
 - [`skraft review`](../reference/cli.md) — règles de chaque étape, sortie
   `--json`.

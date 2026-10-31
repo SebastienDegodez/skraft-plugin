@@ -1,13 +1,13 @@
 ---
 title: "Choose the agents' models"
-description: "Choose each agent's model family, and each family's model and reasoning effort on Claude Code and on Copilot, for you alone or for the team, and check the result with skraft doctor."
+description: "Choose each agent's model family, and each family's model and effort on Claude Code and Copilot, for you or the team; check with skraft doctor."
 persona: tech-lead
 ---
 
 # Choose the agents' models
 
-**Goal**: decide which model, and which reasoning effort, each skraft agent runs on, on Claude
-Code and on Copilot.
+Decide which model, and which reasoning effort, each skraft agent runs on, on Claude Code and on
+Copilot.
 
 ## Prerequisites
 
@@ -124,7 +124,7 @@ files say since.
 | On Claude Code, the effort does not change | Expected: the mod passes the model but not the effort; the agent file's effort applies. |
 | On Copilot, the effort or the model is refused | Copilot retries without the effort, then tries the next model of the list, then the session's. |
 
-## See also
+## Next steps <!-- #next-steps -->
 
 - [skraft-config.json](../reference/skraft-config.md#location) — the four
   layers and the `models` and `assign` keys.

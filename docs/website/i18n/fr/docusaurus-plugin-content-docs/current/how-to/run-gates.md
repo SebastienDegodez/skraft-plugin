@@ -1,13 +1,13 @@
 ---
 title: "Lancer les gates et lire leurs preuves"
-description: "Lancer les gates des composants modifiés ou de tous les composants, lire la sortie, ouvrir le fichier de preuve et traiter un échec environment ou deterministic."
+description: "Lancer les gates des composants modifiés ou de tous, lire la sortie, ouvrir le fichier de preuve et traiter un échec environment ou deterministic."
 persona: software-engineer
 ---
 
 # Lancer les gates et lire leurs preuves
 
-**But** : lancer à la main les gates de vos composants, avant ou après un run, et savoir quoi
-faire de chaque échec.
+Lancez à la main les gates de vos composants, avant ou après un run, et sachez quoi faire de chaque
+échec.
 
 ## Prérequis
 
@@ -96,7 +96,7 @@ puis répondez `RETRY` ([Répondre à une question du run](./answer-a-question.m
 
 Pour vérifier qu'un programme est trouvé sans lancer les gates : `skraft doctor`.
 
-## Voir aussi
+## Étapes suivantes <!-- #next-steps -->
 
 - [`skraft gate`](../reference/cli.md) — options, sortie JSON, codes.
 - [Gates](../reference/gates.md) — les gates de commandes et les gates

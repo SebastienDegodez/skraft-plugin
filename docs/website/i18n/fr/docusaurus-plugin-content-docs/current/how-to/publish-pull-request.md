@@ -1,13 +1,13 @@
 ---
 title: "Publier la pull request d'un run"
-description: "Consentir à la publication, préparer gh et le remote, laisser le run ouvrir sa pull request ou la publier avec skraft publish, suivre le run sur son issue et joindre les captures d'un frontend."
+description: "Consentir, préparer gh, laisser le run ouvrir sa pull request ou la publier avec skraft publish, suivre son issue, joindre des captures."
 persona: software-engineer
 ---
 
 # Publier la pull request d'un run
 
-**But** : qu'un run terminé pousse sa branche et ouvre (ou mette à jour) sa pull request, avec
-sa description rendue depuis le journal.
+Faites qu'un run terminé pousse sa branche et ouvre (ou mette à jour) sa pull request, avec sa
+description rendue depuis le journal.
 
 ## Prérequis
 
@@ -58,6 +58,10 @@ branche est mise à jour.
 Résultat : la notification `skraft <slug>: done — PUBLISH closed`, et la pull request sur la
 forge, qui commence par `Refs #<issue>` (`Closes #<issue>` quand elle vise la branche par
 défaut). Un corps qui dépasse ce que la forge accepte (60 000 caractères sur GitHub, 4 000 sur Azure DevOps) garde ce qui décide et envoie les sections repliées dans un commentaire conservé ; `pull-request.md` garde la description entière.
+
+:::note[Capture en attente d'un run réel]
+Une capture de la pull request que le run a ouverte sur GitHub viendra après un run réel.
+:::
 
 ### Ce que contient la description
 
@@ -201,7 +205,7 @@ skraft ne revoit pas encore ses pull requests.
 
 Tous les messages : [`skraft publish`](../reference/cli.md).
 
-## Voir aussi
+## Étapes suivantes <!-- #next-steps -->
 
 - [Phases — PUBLISH](../reference/phases.md#publish)
 - [skraft-config.json — `publish`](../reference/skraft-config.md#publish)

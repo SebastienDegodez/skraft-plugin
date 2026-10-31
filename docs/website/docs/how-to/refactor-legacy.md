@@ -1,13 +1,13 @@
 ---
 title: "Refactor existing code under a net"
-description: "Start brownfield-refactorer as the main agent, choose Mikado or Strangler Fig, follow the graph or the slice plan, and act on the ADVANCE, EXPAND, DONE and BLOCKED signals, the net green at every commit."
+description: "Start brownfield-refactorer as the main agent, choose Mikado or Strangler Fig, and act on its signals, the net green at every commit."
 persona: software-engineer
 ---
 
 # Refactor existing code under a net
 
-**Goal**: change in place or replace part of an existing codebase, one leaf or slice at a time,
-with a green commit at every step.
+Change in place or replace part of an existing codebase, one leaf or slice at a time, with a green
+commit at every step.
 
 To understand the two methods: [Brownfield journey](../explanation/brownfield.md),
 [Ellnestam & Brolund, 2014](../reference/citations.mdx#cite-ellnestam-brolund-mikado-2014) (Mikado),
@@ -32,6 +32,10 @@ session's main agent, never a subagent.
 |---|---|
 | Claude Code | `claude --agent skraft-brownfield:brownfield-refactorer` |
 | Copilot CLI, VS Code | in a new session, pick the agent **Skraft - Brownfield Refactorer** before the first message |
+
+:::note[Screenshot pending a real run]
+A capture of a `brownfield-refactorer` session comes after a real run.
+:::
 
 ## 2. Give the goal and the net
 
@@ -72,7 +76,7 @@ folder in the installed plugin):
 
 ```console
 $ sh "<skill>/scripts/validate-mikado.sh" .copilot-tracking/skraft-plans/<slug>/refactoring/<date>/mikado-<slug>.md
-powershell -NoProfile -ExecutionPolicy Bypass -File "<skill>/scripts/validate-mikado.ps1" <graph>
+PS> powershell -NoProfile -ExecutionPolicy Bypass -File "<skill>/scripts/validate-mikado.ps1" <graph>
 ```
 
 ```text
@@ -98,7 +102,7 @@ against the old, and the whole net stays green. Any behaviour difference comes b
 | The validator exits 1 on a discovery commit | Retitle the commit `refactor(mikado-graph): …`: the validator rejects a `discovered:` commit titled otherwise. |
 | A slice stays at `CONCERNS` | A difference between old and new waits on your decision; the slice stays on the old code until then. |
 
-## See also
+## Next steps <!-- #next-steps -->
 
 - [Put a characterization net](./characterize-legacy.md)
 - [Brownfield journey](../explanation/brownfield.md) — why the graph stays

@@ -1,6 +1,6 @@
 ---
 title: "Copy and adapt the workflow"
-description: "Copy the plugin's workflow into .skraft/ with skraft workflow eject, adapt it (skip a locked gate with its reason, change a loop, remove a lens), validate it with check, compare it with diff, update it after a plugin upgrade or go back to the plugin's workflow."
+description: "Copy the workflow into .skraft/, adapt it, validate it with check, compare it with diff, update it after an upgrade, or go back to the plugin's."
 persona: tech-lead
 ---
 
@@ -8,8 +8,8 @@ import WorkflowViewer from '@site/src/components/WorkflowViewer';
 
 # Copy and adapt the workflow
 
-**Goal**: have the runs of your repository follow an adapted version of the pipeline or of the
-DELIVER review, and keep it up to date with the plugin.
+Have the runs of your repository follow an adapted version of the pipeline or of the DELIVER review,
+and keep it up to date with the plugin.
 
 ## Prerequisites
 
@@ -103,7 +103,7 @@ Delete the copy (`.skraft/pipeline.skraft.dot` or `.skraft/review.skraft.dot`) a
 | `mandatory node … is missing; this node is mandatory and cannot be removed` | Put the mandatory node back. |
 | `the workflow has no node <id> any more; restore the workflow the run started with` | A run in progress was on the removed node: put the node back until that run finishes, or start a new slug. |
 
-## See also
+## Next steps {/* #next-steps */}
 
 - [The DOT workflow](../reference/workflow-dot.mdx) — syntax, validity rules,
   [locked](../reference/workflow-dot.mdx#locked-nodes) and

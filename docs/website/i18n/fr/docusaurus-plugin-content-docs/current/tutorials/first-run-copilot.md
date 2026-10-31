@@ -269,7 +269,7 @@ la description de sa pull request. En chemin, vous avez appris que :
 ## Prochaines étapes {#next-steps}
 
 - [Répondre à une question du run](../how-to/answer-a-question.mdx) — quand la question n'a pas pu être posée, ou que vous l'avez fermée.
-- [Reprendre un run](../how-to/resume-a-run.md)
+- [Reprendre un run](../how-to/resume-a-run.mdx)
 - [Choisir les modèles des agents](../how-to/choose-models.md) — pour faire disparaître l'avertissement `models/copilot`.
 
 Utiles aussi : [Hôtes](../reference/hosts.md#copilot-cli) (le workflow, le canvas et l'outil

@@ -4,9 +4,12 @@ description: "Reprendre un run interrompu sans relancer l'agent déjà fini, cha
 persona: software-engineer
 ---
 
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
 # Reprendre ou débloquer un run
 
-**But** : relancer un run arrêté là où il s'est arrêté, ou lever ce qui l'empêche d'avancer.
+Relancez un run arrêté là où il s'est arrêté, ou levez ce qui l'empêche d'avancer.
 
 ## Prérequis
 
@@ -37,12 +40,29 @@ panneau **Skraft**. Si le statut est `waiting`, le run attend une réponse :
 La reprise relit le journal et repart de la première étape non terminée ; un agent dont les
 sorties sont déjà remplies n'est pas relancé, et la base journalisée reste.
 
-| Hôte | Reprendre le pipeline actif |
-|---|---|
-| Claude Code | `/skraft <slug>` avec le slug du pipeline actif (`/skraft` seul affiche l'état sans rien relancer) |
-| Copilot CLI | `/skraft <slug>` avec le slug du pipeline actif (`/skraft` seul montre l'état et ne lance rien), ou demander à `skraft:skraft-orchestrator` de reprendre : il lance le workflow `skraft-pipeline` sans `slug` ; un workflow en pause se reprend depuis `/workflows` |
-| VS Code, SDK Copilot | `node "<dossier du plugin>/engine/drivers/copilot-sdk/skraft-run.mjs"` sans slug |
-| VS Code, sans SDK | demander à l'agent orchestrateur de reprendre : il lance `skraft next`, ou `skraft record` si des réponses d'agent attendent |
+<Tabs groupId="host" queryString="host">
+<TabItem value="claude-code" label="Claude Code" default>
+
+Tapez `/skraft <slug>` avec le slug du pipeline actif (`/skraft` seul affiche l'état sans rien
+relancer).
+
+</TabItem>
+<TabItem value="copilot-cli" label="GitHub Copilot CLI">
+
+Tapez `/skraft <slug>` avec le slug du pipeline actif (`/skraft` seul montre l'état et ne lance
+rien), ou demandez à `skraft:skraft-orchestrator` de reprendre : il lance le workflow
+`skraft-pipeline` sans `slug`. Un workflow en pause se reprend depuis `/workflows`.
+
+</TabItem>
+<TabItem value="vscode" label="VS Code">
+
+- Avec le SDK Copilot : lancez `node "<dossier du plugin>/engine/drivers/copilot-sdk/skraft-run.mjs"`
+  sans slug.
+- Sans SDK : demandez à l'agent orchestrateur de reprendre : il lance `skraft next`, ou
+  `skraft record` si des réponses d'agent attendent.
+
+</TabItem>
+</Tabs>
 
 Claude Code répond `skraft <slug> started — progress in the Skraft pane.` ; `skraft status`
 montre ensuite la phase reprise.
@@ -81,7 +101,7 @@ Le code s'affiche dans la notification de fin du mod Claude Code
 Tous les codes, leur message et leur action :
 [Statuts et codes](../reference/run-journal.md#statuses-and-codes).
 
-## Voir aussi
+## Étapes suivantes {/* #next-steps */}
 
 - [Répondre à une question du run](./answer-a-question.mdx)
 - [Hôtes](../reference/hosts.md#at-a-glance) — démarrer, répondre et suivre

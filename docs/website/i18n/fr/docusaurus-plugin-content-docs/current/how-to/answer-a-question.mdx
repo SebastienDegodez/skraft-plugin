@@ -1,6 +1,6 @@
 ---
 title: "Répondre à une question du run"
-description: "Répondre à la question qu'un run attend (ratifier un ADR, consentir à publier, réparer la machine, débloquer un agent, traiter les mutants) depuis Claude Code, Copilot ou un terminal, et savoir ce que devient un refus."
+description: "Répondre à la question qu'un run attend (ADR, consentement, machine, agent bloqué, mutants) depuis votre hôte, et ce que devient un refus."
 persona: software-engineer
 ---
 
@@ -9,7 +9,7 @@ import TabItem from '@theme/TabItem';
 
 # Répondre à une question du run
 
-**But** : donner la décision humaine qu'un run attend, pour qu'il reparte.
+Donnez la décision humaine qu'un run attend, pour qu'il reparte.
 
 Un run qui pose une question **attend** : il ne fait plus rien tant que personne n'a répondu, et
 le relancer repose la même question, sans relancer d'agent.
@@ -67,6 +67,11 @@ conversation :
 
 Les mots après la réponse forment la raison ; pour une question `blocked`, tous les mots après la
 clé forment la consigne. `/skraft decide` enregistre la réponse, puis reprend le run.
+
+:::note[Capture en attente d'un run réel]
+Une capture de la boîte de dialogue du mod (en-tête `ADR`, les options et **Other**) viendra après
+un run réel sous Claude Code.
+:::
 
 </TabItem>
 <TabItem value="copilot-cli" label="GitHub Copilot CLI">
@@ -141,11 +146,11 @@ Une réponse refusée n'enregistre rien ; le run attend toujours.
 | `skraft decide records a person's answer: run it yourself in an interactive terminal; nothing was recorded` | Lancer la commande vous-même, dans un terminal interactif. |
 | `Refused: …; nothing was recorded.` (Copilot) | Répondre par `skraft decide` dans un terminal, puis reprendre le workflow. |
 
-## Voir aussi
+## Étapes suivantes {/* #next-steps */}
 
 - [`skraft decide`](../reference/cli.md) — arguments, clés, messages.
 - [Hôtes](../reference/hosts.md) — boîte de dialogue, panneau,
   `skraft_decide` et canvas, hôte par hôte.
 - [Phases](../reference/phases.md#human-questions) — qui pose chaque
   question.
-- [Reprendre ou débloquer un run](./resume-a-run.md)
+- [Reprendre ou débloquer un run](./resume-a-run.mdx)

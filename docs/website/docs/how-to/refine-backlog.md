@@ -1,13 +1,13 @@
 ---
 title: "Refine a backlog issue"
-description: "Get the refinement proposal of a GitHub issue as a comment: from your editor with /skraft-refine (/skraft-backlog:skraft-refine in Copilot CLI), or on every new issue with the skraft-refine GitHub Agentic Workflow."
+description: "Get a GitHub issue's refinement proposal as a comment: from your editor with /skraft-refine, or on every new issue with the skraft-refine workflow."
 persona: tech-lead
 ---
 
 # Refine a backlog issue
 
-**Goal**: get on an issue a comment that says whether it is ready, its size, the defects of its
-criteria and the proposed story — on demand, or automatically on every new issue.
+Get on an issue a comment that says whether it is ready, its size, the defects of its criteria and
+the proposed story — on demand, or automatically on every new issue.
 
 ## Prerequisites
 
@@ -90,7 +90,7 @@ outside contributor is refined only once a maintainer adds the label or comments
 | The workflow posts nothing after a label | The label must be exactly `skraft-refine`. |
 | An issue already refined from the editor is skipped by the workflow | Expected: the comment carries the same marker. |
 
-## See also
+## Next steps <!-- #next-steps -->
 
 - [Turn a PRD into a GitHub backlog](./prd-to-backlog.md)
 - [The backlog: from idea to ready story](../explanation/backlog.md) — why

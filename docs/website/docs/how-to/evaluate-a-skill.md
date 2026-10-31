@@ -1,13 +1,13 @@
 ---
 title: "Evaluate a skill"
-description: "Write a skill's evaluation spec, validate it without spending quota, run the baseline-versus-skill comparison, read the verdict, look it up on the dashboard and replay a baseline-versus-skill pair."
+description: "Write a skill's evaluation spec, validate it for free, run the baseline-versus-skill comparison, read the verdict, look it up, replay a pair."
 persona: tech-lead
 ---
 
 # Evaluate a skill
 
-**Goal**: a measured verdict (`pass`, `regression`, `no-improvement` or `inconclusive`) that says
-whether a skill improves the agent's answer.
+Get a measured verdict (`pass`, `regression`, `no-improvement` or `inconclusive`) that says whether
+a skill improves the agent's answer.
 
 ## Prerequisites
 
@@ -153,7 +153,7 @@ conformance, and stays indicative.
 | `inconclusive` with fewer than 6 discordant pairs | Raise the spec's `defaults.runs`, then run the whole spec again. |
 | `inconclusive` on an errored trial | Read the result's `eval.log`; adding trials does not fix it. |
 
-## See also
+## Next steps <!-- #next-steps -->
 
 - [Evaluation strategy](../explanation/evaluation-strategy.md)
 - [Read an evaluation verdict](../explanation/deep-dive/reading-a-verdict.md)

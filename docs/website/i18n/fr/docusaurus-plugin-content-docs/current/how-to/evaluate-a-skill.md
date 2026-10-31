@@ -1,13 +1,13 @@
 ---
 title: "Évaluer un skill"
-description: "Écrire la spec d'évaluation d'un skill, la valider sans dépenser de quota, lancer la comparaison baseline contre skill, lire le verdict, le consulter sur le tableau de bord et rejouer une paire baseline contre skill."
+description: "Écrire la spec d'évaluation d'un skill, la valider sans quota, lancer la comparaison baseline contre skill, lire le verdict, rejouer une paire."
 persona: tech-lead
 ---
 
 # Évaluer un skill
 
-**But** : obtenir un verdict mesuré (`pass`, `regression`, `no-improvement` ou `inconclusive`)
-qui dit si un skill améliore la réponse de l'agent.
+Obtenez un verdict mesuré (`pass`, `regression`, `no-improvement` ou `inconclusive`) qui dit si un
+skill améliore la réponse de l'agent.
 
 ## Prérequis
 
@@ -153,7 +153,7 @@ une conformité, et reste indicatif.
 | `inconclusive` avec moins de 6 paires décisives | Augmenter `defaults.runs` de la spec, puis relancer la spec entière. |
 | `inconclusive` sur un essai en erreur | Lire `eval.log` du résultat ; ajouter des essais ne le corrige pas. |
 
-## Voir aussi
+## Étapes suivantes <!-- #next-steps -->
 
 - [Stratégie d'évaluation](../explanation/evaluation-strategy.md)
 - [Lire un verdict d'évaluation](../explanation/deep-dive/reading-a-verdict.md)

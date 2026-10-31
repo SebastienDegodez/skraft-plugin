@@ -1,12 +1,12 @@
 ---
 title: "Migrate a working copy from v1"
-description: "Convert a v1 skraft-config.json and the v1 runs still in progress into a components configuration and signed journals with skraft migrate, check with a dry run, resume a migrated run, and lift the refusals."
+description: "Convert a v1 configuration and the v1 runs in progress with skraft migrate, check with a dry run, resume a migrated run, lift the refusals."
 persona: software-engineer
 ---
 
 # Migrate a working copy from v1
 
-**Goal**: take over in V2 a repository left by skraft v1, without losing the runs in progress.
+Take over in V2 a repository left by skraft v1, without losing the runs in progress.
 
 ## Prerequisites
 
@@ -98,7 +98,7 @@ DISTILL  pending
 ```
 
 Then resume the run from your host, like any V2 run
-([Resume or unblock a run](./resume-a-run.md)).
+([Resume or unblock a run](./resume-a-run.mdx)).
 
 ## Troubleshooting
 
@@ -110,7 +110,7 @@ Then resume the run from your host, like any V2 run
 | `config-invalid` | Fix every error listed, then run again. |
 | the command prints the usage and exits with 2 | `migrate` takes only `--dry-run` and `--json`. |
 
-## See also
+## Next steps <!-- #next-steps -->
 
 - [`skraft migrate`](../reference/cli.md) — text and JSON output, exit codes.
 - [Tracking folder and journal](../reference/run-journal.md) — what

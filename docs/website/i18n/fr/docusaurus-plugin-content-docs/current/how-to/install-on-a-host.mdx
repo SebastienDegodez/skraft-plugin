@@ -9,8 +9,8 @@ import TabItem from '@theme/TabItem';
 
 # Installer skraft sur un hôte
 
-**But** : le plugin `skraft` est installé sur votre hôte, et la ligne de commande `skraft` répond
-depuis votre dépôt.
+Installez le plugin `skraft` sur votre hôte, et faites répondre la ligne de commande `skraft` depuis
+votre dépôt.
 
 ## Prérequis
 
@@ -36,6 +36,11 @@ Saisissez dans la conversation, pas dans un terminal :
 
 Ouvrez `/plugin` : `skraft` figure parmi les plugins installés.
 
+:::note[Capture en attente d'un run réel]
+Une capture de l'installation depuis la marketplace de Claude Code remplacera le bloc ci-dessus
+après un run réel sous Claude Code.
+:::
+
 </TabItem>
 <TabItem value="copilot-cli" label="GitHub Copilot CLI">
 
@@ -48,6 +53,11 @@ $ copilot plugin install skraft@skraft
 
 Dans une session Copilot, les mêmes commandes s'écrivent `/plugin marketplace add …` et
 `/plugin install skraft@skraft`. Vérifiez avec `copilot plugin list` : `skraft` y figure.
+
+:::note[Capture en attente d'un run réel]
+Une capture de `copilot plugin install` remplacera le bloc ci-dessus après un run réel sous
+Copilot CLI.
+:::
 
 Pour travailler sur un clone du plugin, installez-le depuis son dossier local :
 `copilot plugin install ./plugins/skraft-framework`.
@@ -75,6 +85,11 @@ Pour travailler sur un clone du plugin, installez-le depuis son dossier local :
 
 Dans **Chat: Open Customizations**, section **Plugins**, `skraft` figure et est activé.
 
+:::note[Capture en attente d'un run réel]
+Une capture de l'onglet **Browse** et de la section **Plugins** viendra après un run réel sous
+VS Code.
+:::
+
 </TabItem>
 </Tabs>
 
@@ -83,11 +98,30 @@ Dans **Chat: Open Customizations**, section **Plugins**, `skraft` figure et est 
 `skraft-backlog` (DISCOVER, DISCUSS) et `skraft-brownfield` viennent de la même marketplace et
 s'installent à part, de la même façon :
 
-| Hôte | Commande |
-| --- | --- |
-| Claude Code | `/plugin install skraft-backlog`, `/plugin install skraft-brownfield` |
-| Copilot CLI | `copilot plugin install skraft-backlog@skraft`, `copilot plugin install skraft-brownfield@skraft` |
-| VS Code | **Chat: Open Customizations**, **Browse**, le nom du plugin |
+<Tabs groupId="host" queryString="host">
+<TabItem value="claude-code" label="Claude Code" default>
+
+```console title="Claude Code"
+> /plugin install skraft-backlog
+> /plugin install skraft-brownfield
+```
+
+</TabItem>
+<TabItem value="copilot-cli" label="GitHub Copilot CLI">
+
+```console
+$ copilot plugin install skraft-backlog@skraft
+$ copilot plugin install skraft-brownfield@skraft
+```
+
+</TabItem>
+<TabItem value="vscode" label="VS Code">
+
+Lancez **Chat: Open Customizations**, onglet **Browse**, cherchez le nom du plugin, puis
+**Install**.
+
+</TabItem>
+</Tabs>
 
 ## 3. Rendre la commande `skraft` disponible {/* #skraft-command */}
 
@@ -131,33 +165,57 @@ conduit `skraft next` et `skraft record`.
 
 ## 4. Vérifier que l'hôte voit skraft
 
-| Hôte | Vérification | Résultat attendu |
-| --- | --- | --- |
-| Claude Code | `/skraft` dans la conversation | le panneau **Skraft** s'ouvre et affiche `skraft — idle` |
-| Copilot CLI | `/agent` dans une session | `skraft:skraft-orchestrator` figure dans la liste |
-| Copilot CLI | `/skraft` dans une session | la commande répond et ne lance aucun run : elle ouvre la vue du run, ou dit de taper `skraft status` |
-| VS Code | le sélecteur d'agent du chat | l'agent orchestrateur de skraft figure dans la liste |
-| VS Code | `/skraft` dans le chat | non mesuré |
+<Tabs groupId="host" queryString="host">
+<TabItem value="claude-code" label="Claude Code" default>
+
+Tapez `/skraft` dans la conversation : le panneau **Skraft** s'ouvre et affiche `skraft — idle`.
+
+</TabItem>
+<TabItem value="copilot-cli" label="GitHub Copilot CLI">
+
+- `/agent` dans une session : `skraft:skraft-orchestrator` figure dans la liste.
+- `/skraft` dans une session : la commande répond et ne lance aucun run : elle ouvre la vue du
+  run, ou dit de taper `skraft status`.
+
+</TabItem>
+<TabItem value="vscode" label="VS Code">
+
+- Le sélecteur d'agent du chat : l'agent orchestrateur de skraft figure dans la liste.
+- `/skraft` dans le chat : non mesuré.
+
+</TabItem>
+</Tabs>
 
 Copilot expose la commande sous le nom `/skraft`, sans préfixe (mesuré sur Copilot CLI 1.0.105 dans le registre de commandes du SDK) ; `skraft-refine` du plugin backlog est
 `/skraft-backlog:skraft-refine`. Le menu de Copilot CLI et VS Code n'ont pas été mesurés : si `/skraft` y manque, vérifiez la liste des plugins et ouvrez une nouvelle session.
 
 ## Dépannage
 
-- **Windows, `/plugin marketplace add` échoue sur un chemin trop long** : clonez le dépôt dans
-  un chemin court (`git clone https://github.com/SebastienDegodez/skraft-plugin C:\s\skraft`),
-  puis `/plugin marketplace add C:\s\skraft` et `/plugin install skraft`.
-- **`node: Node v20…; skraft needs Node 22 or later`** : installez Node 22 ou plus, puis relancez.
-- **Copilot CLI : `skraft:skraft-orchestrator` absent** : vérifiez `copilot plugin list`, puis
-  ouvrez une nouvelle session ; un run refusé pour cette raison porte le code `agent-unavailable`.
+### Windows : `/plugin marketplace add` échoue sur un chemin trop long
 
-- **`skraft: command not found` après `skraft install`** : ouvrez un nouveau terminal. Si le PATH
-  est géré ailleurs, lancez `skraft install --no-path` : il écrit les appels et affiche la ligne à
-  ajouter à votre PATH, pour sh et pour PowerShell.
-- **`skraft: the plugin was not found`** : le plugin a bougé ou a été retiré ; relancez la ligne
-  longue avec `install`.
+Clonez le dépôt dans un chemin court
+(`git clone https://github.com/SebastienDegodez/skraft-plugin C:\s\skraft`), puis
+`/plugin marketplace add C:\s\skraft` et `/plugin install skraft`.
 
-## Voir aussi
+### `node: Node v20…; skraft needs Node 22 or later`
+
+Installez Node 22 ou plus, puis relancez.
+
+### Copilot CLI : `skraft:skraft-orchestrator` absent
+
+Vérifiez `copilot plugin list`, puis ouvrez une nouvelle session ; un run refusé pour cette raison
+porte le code `agent-unavailable`.
+
+### `skraft: command not found` après `skraft install`
+
+Ouvrez un nouveau terminal. Si le PATH est géré ailleurs, lancez `skraft install --no-path` : il
+écrit les appels et affiche la ligne à ajouter à votre PATH, pour sh et pour PowerShell.
+
+### `skraft: the plugin was not found`
+
+Le plugin a bougé ou a été retiré ; relancez la ligne longue avec `install`.
+
+## Étapes suivantes {/* #next-steps */}
 
 - [Hôtes](../reference/hosts.md) — installation, pilotes et capacités de
   chaque hôte.

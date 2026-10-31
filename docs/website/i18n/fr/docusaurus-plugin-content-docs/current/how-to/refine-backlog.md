@@ -1,13 +1,13 @@
 ---
 title: "Raffiner une issue du backlog"
-description: "Obtenir la proposition de raffinement d'une issue GitHub en commentaire : depuis l'éditeur avec /skraft-refine (/skraft-backlog:skraft-refine sous Copilot CLI), ou à chaque nouvelle issue avec le workflow GitHub Agentic skraft-refine."
+description: "Obtenir en commentaire le raffinement d'une issue GitHub : depuis l'éditeur avec /skraft-refine, ou à chaque nouvelle issue avec son workflow."
 persona: tech-lead
 ---
 
 # Raffiner une issue du backlog
 
-**But** : obtenir sur une issue un commentaire qui dit si elle est prête, sa taille, les défauts
-de ses critères et la story proposée — à la demande, ou automatiquement à chaque nouvelle issue.
+Obtenez sur une issue un commentaire qui dit si elle est prête, sa taille, les défauts de ses
+critères et la story proposée — à la demande, ou automatiquement à chaque nouvelle issue.
 
 ## Prérequis
 
@@ -92,7 +92,7 @@ label ou commente la commande.
 | Le workflow ne poste pas après un label | Le label doit s'appeler exactement `skraft-refine`. |
 | Une issue déjà raffinée depuis l'éditeur est sautée par le workflow | Normal : le commentaire porte le même marqueur. |
 
-## Voir aussi
+## Étapes suivantes <!-- #next-steps -->
 
 - [Transformer un PRD en backlog GitHub](./prd-to-backlog.md)
 - [Le backlog : de l'idée à la story prête](../explanation/backlog.md) —

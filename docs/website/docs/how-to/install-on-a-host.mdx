@@ -9,8 +9,8 @@ import TabItem from '@theme/TabItem';
 
 # Install skraft on a host
 
-**Goal**: the `skraft` plugin is installed on your host, and the `skraft` command line answers
-from your repository.
+Install the `skraft` plugin on your host, and get the `skraft` command line answering from your
+repository.
 
 ## Prerequisites
 
@@ -36,6 +36,11 @@ Type in the conversation, not in a terminal:
 
 Open `/plugin`: `skraft` is among the installed plugins.
 
+:::note[Screenshot pending a real run]
+A capture of the Claude Code marketplace install replaces the block above after a real run in
+Claude Code.
+:::
+
 </TabItem>
 <TabItem value="copilot-cli" label="GitHub Copilot CLI">
 
@@ -48,6 +53,10 @@ $ copilot plugin install skraft@skraft
 
 In a Copilot session, the same commands read `/plugin marketplace add …` and
 `/plugin install skraft@skraft`. Check with `copilot plugin list`: `skraft` is listed.
+
+:::note[Screenshot pending a real run]
+A capture of `copilot plugin install` replaces the block above after a real run in Copilot CLI.
+:::
 
 To work on a clone of the plugin, install it from its local folder:
 `copilot plugin install ./plugins/skraft-framework`.
@@ -75,6 +84,10 @@ To work on a clone of the plugin, install it from its local folder:
 
 In **Chat: Open Customizations**, **Plugins** section, `skraft` is listed and enabled.
 
+:::note[Screenshot pending a real run]
+A capture of the **Browse** tab and of the **Plugins** section comes after a real run in VS Code.
+:::
+
 </TabItem>
 </Tabs>
 
@@ -83,11 +96,29 @@ In **Chat: Open Customizations**, **Plugins** section, `skraft` is listed and en
 `skraft-backlog` (DISCOVER, DISCUSS) and `skraft-brownfield` come from the same marketplace and
 install separately, the same way:
 
-| Host | Command |
-| --- | --- |
-| Claude Code | `/plugin install skraft-backlog`, `/plugin install skraft-brownfield` |
-| Copilot CLI | `copilot plugin install skraft-backlog@skraft`, `copilot plugin install skraft-brownfield@skraft` |
-| VS Code | **Chat: Open Customizations**, **Browse**, the plugin's name |
+<Tabs groupId="host" queryString="host">
+<TabItem value="claude-code" label="Claude Code" default>
+
+```console title="Claude Code"
+> /plugin install skraft-backlog
+> /plugin install skraft-brownfield
+```
+
+</TabItem>
+<TabItem value="copilot-cli" label="GitHub Copilot CLI">
+
+```console
+$ copilot plugin install skraft-backlog@skraft
+$ copilot plugin install skraft-brownfield@skraft
+```
+
+</TabItem>
+<TabItem value="vscode" label="VS Code">
+
+Run **Chat: Open Customizations**, **Browse** tab, search for the plugin's name, then **Install**.
+
+</TabItem>
+</Tabs>
 
 ## 3. Make the `skraft` command available {/* #skraft-command */}
 
@@ -131,33 +162,57 @@ conducts `skraft next` and `skraft record`.
 
 ## 4. Check that the host sees skraft
 
-| Host | Check | Expected result |
-| --- | --- | --- |
-| Claude Code | `/skraft` in the conversation | the **Skraft** pane opens and shows `skraft — idle` |
-| Copilot CLI | `/agent` in a session | `skraft:skraft-orchestrator` is in the list |
-| Copilot CLI | `/skraft` in a session | the command answers and starts no run: it opens the run view, or tells you to type `skraft status` |
-| VS Code | the chat's agent picker | skraft's orchestrator agent is in the list |
-| VS Code | `/skraft` in the chat | not measured yet |
+<Tabs groupId="host" queryString="host">
+<TabItem value="claude-code" label="Claude Code" default>
+
+Type `/skraft` in the conversation: the **Skraft** pane opens and shows `skraft — idle`.
+
+</TabItem>
+<TabItem value="copilot-cli" label="GitHub Copilot CLI">
+
+- `/agent` in a session: `skraft:skraft-orchestrator` is in the list.
+- `/skraft` in a session: the command answers and starts no run: it opens the run view, or tells
+  you to type `skraft status`.
+
+</TabItem>
+<TabItem value="vscode" label="VS Code">
+
+- The chat's agent picker: skraft's orchestrator agent is in the list.
+- `/skraft` in the chat: not measured yet.
+
+</TabItem>
+</Tabs>
 
 Copilot exposes the command as `/skraft`, without a prefix (measured on Copilot CLI 1.0.105 in the SDK's command registry); the backlog plugin's `skraft-refine` is
 `/skraft-backlog:skraft-refine`. The Copilot CLI menu and VS Code were not measured: if `/skraft` is missing there, check the plugin list and open a new session.
 
 ## Troubleshooting
 
-- **Windows, `/plugin marketplace add` fails on a path that is too long**: clone the repository
-  to a short path (`git clone https://github.com/SebastienDegodez/skraft-plugin C:\s\skraft`),
-  then `/plugin marketplace add C:\s\skraft` and `/plugin install skraft`.
-- **`node: Node v20…; skraft needs Node 22 or later`**: install Node 22 or later, then run again.
-- **Copilot CLI: `skraft:skraft-orchestrator` missing**: check `copilot plugin list`, then open a
-  new session; a run refused for that reason carries the code `agent-unavailable`.
+### Windows: `/plugin marketplace add` fails on a path that is too long
 
-- **`skraft: command not found` after `skraft install`**: open a new terminal. If the PATH is
-  managed elsewhere, run `skraft install --no-path`: it writes the calls and prints the line to add
-  to your PATH, for sh and for PowerShell.
-- **`skraft: the plugin was not found`**: the plugin moved or was removed; run the long line
-  with `install` again.
+Clone the repository to a short path
+(`git clone https://github.com/SebastienDegodez/skraft-plugin C:\s\skraft`), then
+`/plugin marketplace add C:\s\skraft` and `/plugin install skraft`.
 
-## See also
+### `node: Node v20…; skraft needs Node 22 or later`
+
+Install Node 22 or later, then run again.
+
+### Copilot CLI: `skraft:skraft-orchestrator` missing
+
+Check `copilot plugin list`, then open a new session; a run refused for that reason carries the
+code `agent-unavailable`.
+
+### `skraft: command not found` after `skraft install`
+
+Open a new terminal. If the PATH is managed elsewhere, run `skraft install --no-path`: it writes the
+calls and prints the line to add to your PATH, for sh and for PowerShell.
+
+### `skraft: the plugin was not found`
+
+The plugin moved or was removed; run the long line with `install` again.
+
+## Next steps {/* #next-steps */}
 
 - [Hosts](../reference/hosts.md) — install, drivers and capabilities of
   each host.

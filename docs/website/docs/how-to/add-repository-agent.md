@@ -1,13 +1,13 @@
 ---
 title: "Add a repository agent to the pipeline"
-description: "Hand a pipeline step to an agent written in your repository: write its file for each host, add it as a node of the ejected workflow with its outputs and write paths, place it before the gates, and check with check, diff and doctor."
+description: "Hand a pipeline step to an agent written in your repository: add it as a node of the ejected workflow, before the gates, and check it."
 persona: tech-lead
 ---
 
 # Add a repository agent to the pipeline
 
-**Goal**: have every run perform a step of your team's own (updating the user guide, for
-instance), by an agent written in your repository.
+Have every run perform a step of your team's own (updating the user guide, for instance), by an
+agent written in your repository.
 
 For a review rather than a step that produces:
 [Add a lens to a review](./customise-review.md).
@@ -98,7 +98,7 @@ Commit `.skraft/` and the agent's files: the step runs on the next run.
 | `missing-outputs` | The agent did not fill an output of `outputs` after its attempts: fix its prompt, then start a new slug. |
 | The plugin's agent runs instead of yours | A skraft agent carries the same id: rename yours. |
 
-## See also
+## Next steps <!-- #next-steps -->
 
 - [The DOT workflow](../reference/workflow-dot.mdx#node-attributes) — every
   attribute of an agent node.

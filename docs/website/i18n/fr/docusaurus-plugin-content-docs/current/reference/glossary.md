@@ -184,7 +184,7 @@ Le slug écrit dans `.copilot-tracking/skraft-plans/.active-slug` : le run sur l
 
 **Question d'environnement**
 La question que le moteur pose quand la machine ne peut pas exécuter une étape (programme introuvable, Git en échec) : `Fix it, then RETRY; or ABORT the run.` `RETRY` revérifie ou relance la même étape ; `ABORT` bloque le run.
-→ Voir [Reprendre ou débloquer un run](../how-to/resume-a-run.md)
+→ Voir [Reprendre ou débloquer un run](../how-to/resume-a-run.mdx)
 
 ## R
 
@@ -204,7 +204,7 @@ Travail à refaire parce qu'il n'a pas passé la revue. SKRAFT vise à réduire 
 
 **Run en attente (waiting)**
 Le statut d'un run dont la question n'a pas encore de réponse. Le run ne fait plus rien (fail closed) tant qu'un humain n'a pas répondu par `skraft decide`, `/skraft decide` ou `skraft_decide` ; le relancer repose la même question.
-→ Voir [Reprendre ou débloquer un run](../how-to/resume-a-run.md)
+→ Voir [Reprendre ou débloquer un run](../how-to/resume-a-run.mdx)
 
 ## S
 

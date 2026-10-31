@@ -1,12 +1,12 @@
 ---
 title: "Migrer une copie de travail de la v1"
-description: "Convertir avec skraft migrate un skraft-config.json v1 et les runs v1 encore en cours en configuration à composants et en journaux signés, vérifier à blanc, reprendre un run migré, et lever les refus."
+description: "Convertir avec skraft migrate une configuration et les runs v1 en cours, vérifier à blanc, reprendre un run migré et lever les refus."
 persona: software-engineer
 ---
 
 # Migrer une copie de travail de la v1
 
-**But** : reprendre en V2 un dépôt laissé par skraft v1, sans perdre les runs en cours.
+Reprenez en V2 un dépôt laissé par skraft v1, sans perdre les runs en cours.
 
 ## Prérequis
 
@@ -99,7 +99,7 @@ DISTILL  pending
 ```
 
 Reprenez ensuite le run depuis votre hôte, comme tout run V2
-([Reprendre ou débloquer un run](./resume-a-run.md)).
+([Reprendre ou débloquer un run](./resume-a-run.mdx)).
 
 ## Dépannage
 
@@ -111,7 +111,7 @@ Reprenez ensuite le run depuis votre hôte, comme tout run V2
 | `config-invalid` | Corriger chaque erreur listée, puis relancer. |
 | la commande affiche l'aide et sort avec 2 | `migrate` ne prend que `--dry-run` et `--json`. |
 
-## Voir aussi
+## Étapes suivantes <!-- #next-steps -->
 
 - [`skraft migrate`](../reference/cli.md) — sorties texte et JSON, codes de sortie.
 - [Dossier de suivi et journal](../reference/run-journal.md) — ce que
