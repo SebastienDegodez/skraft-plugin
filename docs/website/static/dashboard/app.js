@@ -8,6 +8,8 @@
 //
 // A skill with no runtime evidence is shown as such. No data is not a pass.
 
+import { applyPageText, pageLanguage } from './page-text.mjs'
+
 const summaryNode = document.querySelector('#summary')
 const catalogNode = document.querySelector('#catalog')
 const statusNode = document.querySelector('#status')
@@ -21,8 +23,11 @@ const topologyNode = document.querySelector('#topology')
 const tabs = [...document.querySelectorAll('.tab')]
 const modelFilterNode = document.querySelector('#model-filter')
 const clearFiltersNode = document.querySelector('#clear-filters')
-const lang = document.body.dataset.lang === 'fr' ? 'fr' : 'en'
-const dashboardBase = document.body.dataset.dashboardBase || './'
+// One static page serves /dashboard/ and /fr/dashboard/: its address names its language, and
+// every file it reads sits next to it.
+const lang = pageLanguage(location.pathname)
+applyPageText(document, lang)
+const dashboardBase = './'
 
 const messages = {
   en: {

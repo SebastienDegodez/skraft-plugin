@@ -100,9 +100,12 @@ jobs:
           rm -rf "$RUNNER_TEMP/agentviz" && mkdir -p "$RUNNER_TEMP/agentviz"
           (cd "$RUNNER_TEMP/agentviz" && npm pack "agentviz@${AGENTVIZ_VERSION}" --silent >/dev/null && tar -xzf agentviz-*.tgz)
           test -f "$RUNNER_TEMP/agentviz/package/dist/index.html" || { echo "::error::agentviz@${AGENTVIZ_VERSION} ships no dist/index.html"; exit 1; }
-          mkdir -p docs/website/build/dashboard/replay
-          cp -r "$RUNNER_TEMP/agentviz/package/dist/." docs/website/build/dashboard/replay/
-          echo "agentviz@${AGENTVIZ_VERSION}" > docs/website/build/dashboard/replay/.agentviz-version
+          # The dashboard is copied into each locale build (/dashboard/, /fr/dashboard/); so is its replay.
+          for replay in docs/website/build/dashboard/replay docs/website/build/fr/dashboard/replay; do
+            mkdir -p "$replay"
+            cp -r "$RUNNER_TEMP/agentviz/package/dist/." "$replay/"
+            echo "agentviz@${AGENTVIZ_VERSION}" > "$replay/.agentviz-version"
+          done
 
       - name: Add the v1 archive
         env:
