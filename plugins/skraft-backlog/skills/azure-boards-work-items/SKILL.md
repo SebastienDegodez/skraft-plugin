@@ -1,6 +1,6 @@
 ---
 name: azure-boards-work-items
-description: "Use when the forge is Azure DevOps and work items must be found, read, created, updated, commented on or linked in Azure Boards: backlog discovery with WIQL or work item search, triage tags, iteration assignment, refinement comments, parent/child and duplicate links. Covers the Azure DevOps MCP server first and the az CLI (azure-devops extension) as fallback. Not for GitHub issues, pull requests, pipelines or pipeline reports."
+description: "Use when the forge is Azure DevOps and work items must be found, read, created, updated, commented on or linked in Azure Boards: backlog discovery with WIQL or work item search, triage tags, iteration assignment, refinement comments, related, parent/child (across work item types) and duplicate links. Covers the Azure DevOps MCP server first and the az CLI (azure-devops extension) as fallback. Not for GitHub issues, pull requests, pipelines or pipeline reports."
 ---
 
 # Azure Boards Work Items
@@ -54,7 +54,7 @@ Agent and skill instructions written for GitHub apply here with this mapping:
 | issue, issue number | work item, work item ID |
 | label (`type/…`, `priority/…`, `effort/…`, `status/…`) | tag with the same text in `System.Tags` |
 | milestone | iteration path (`System.IterationPath`) of an iteration that already exists |
-| sub-issue of a split story | child work item, `Parent` link to the original |
+| sub-issue of a split story | work item of the original's type, `Related` link to the original; never a `Parent` link between two items of the same type |
 | `status/duplicate` and a link to the original | tag `status/duplicate` and a `Duplicate Of` link to the original |
 | `related-to:#N` | `Related` link |
 | open | state not in `Closed`, `Done`, `Removed` |
@@ -103,8 +103,9 @@ mode 2. The WIQL text and the MCP calls of each mode are in
   included. Create a new comment; never edit another author's comment.
 - Tags: read the current `System.Tags`, add yours, send the whole list (`a; b; c`): Azure
   Boards replaces the list with what it receives. Remove no tag.
-- Create a work item only for a child of a split story, or for an item the developer named.
-  Give a child the work item type of its parent.
+- Create a work item only for a part of a split story, or for an item the developer named.
+  Give a part the work item type of the original and a `Related` link to it. Leave the original
+  story unchanged and report its ID and the IDs of its parts to the developer.
 - A failed or uncertain write is not repeated blind: re-read the comments, tags or links, and
   write again only when yours is absent. On HTTP 429, wait the `Retry-After` seconds (60 when
   absent) and retry once.

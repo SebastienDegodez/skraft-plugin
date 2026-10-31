@@ -26,7 +26,8 @@ export const createAzCodeHost = ({ commandRunner }) => Object.freeze({
   edit: (request) => edit(commandRunner, request),
   keepIssueComment: (request) => keepComment(commandRunner, request),
   issue: (number) => workItem(commandRunner, number),
-  storyLink: (issue) => `AB#${issue}`,
+  // Azure Repos links `#N`; `Fixes #N` also completes the work item when the pull request merges.
+  storyLink: (issue, closes) => `${closes ? 'Fixes ' : ''}#${issue}`,
   // Azure DevOps refuses a pull request description past 4,000 characters.
   bodyLimit: 4_000,
   // az sends a comment from a JSON file.

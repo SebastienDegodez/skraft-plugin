@@ -18,7 +18,7 @@ const WRITE = 'wit_work_item_comment_write'
  *   server's options, none without a server; server: a server to give, in place of one built from mcp
  */
 const begin = async ({ az = {}, mcp = {}, server = mcp === null ? null : new InMemoryAzureMcp({ workItems: { 42: USER_STORY }, ...mcp }) } = {}) => {
-  const codeHost = new InMemoryCodeHost({ pages: 'https://dev.azure.com/acme', link: (number) => `AB#${number}`, bodyLimit: 4_000, takesRequestFile: true, repository: null, ...az })
+  const codeHost = new InMemoryCodeHost({ pages: 'https://dev.azure.com/acme', link: (number, closes) => `${closes ? 'Fixes ' : ''}#${number}`, bodyLimit: 4_000, takesRequestFile: true, repository: null, ...az })
   const host = scripted({ config: CONSENTED, forge: 'azure-devops', codeHost, git: new InMemoryGit({ remote: REMOTE }) }, (it) => nominal(it, REFS_42))
   if (server !== null) host.deps.mcpTools = server
   const initialised = await host.init(STORY)

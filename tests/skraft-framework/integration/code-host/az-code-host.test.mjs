@@ -196,13 +196,13 @@ test('the pull request is opened from a body file, linked to the story\'s work i
   const { root, forge, codeHost } = repository(t)
   const host = codeHost()
   const bodyFile = join(root, 'body.md')
-  writeFileSync(bodyFile, 'AB#42\n\n## What changes\n')
+  writeFileSync(bodyFile, 'Fixes #42\n\n## What changes\n')
   const url = 'https://dev.azure.com/acme/Shop%20Team/_git/payment/pullrequest/7'
 
   assert.deepEqual(await host.findPullRequest('checkout'), { ok: true, found: null })
   assert.deepEqual(await host.create({ base: 'main', head: 'checkout', title: '-x Pay by card', bodyFile, draft: true, issue: 42 }), { ok: true, number: 7, url })
   await host.create({ base: 'main', head: 'checkout', title: 'Pay by card', bodyFile, draft: false, issue: null })
-  assert.equal(forge.bodies(), 'AB#42\n\n## What changes\n'.repeat(2))
+  assert.equal(forge.bodies(), 'Fixes #42\n\n## What changes\n'.repeat(2))
   for (const [status, state] of [['active', 'open'], ['abandoned', 'closed'], ['completed', 'merged']]) {
     forge.set({ pulls: [{ pullRequestId: 7, status, description: 'Paid.' }] })
     assert.deepEqual(await host.findPullRequest('checkout'), { ok: true, found: { number: 7, url, state, body: 'Paid.' } })
@@ -237,7 +237,7 @@ test('a work item Azure DevOps refuses to link leaves the pull request opened wi
   const { root, forge, codeHost } = repository(t, { az: { ...SIGNED_IN, refusedWorkItem: true } })
   const host = codeHost()
   const bodyFile = join(root, 'body.md')
-  writeFileSync(bodyFile, 'AB#999\n')
+  writeFileSync(bodyFile, 'Fixes #999\n')
   const note = 'it is not linked to work item #999, which Azure DevOps refused to link'
   const page = (number) => `https://dev.azure.com/acme/Shop%20Team/_git/payment/pullrequest/${number}`
 
@@ -246,17 +246,17 @@ test('a work item Azure DevOps refuses to link leaves the pull request opened wi
     ['repos', 'pr', 'create', '--work-items=999'], ['repos', 'pr', 'list'], ['repos', 'pr', 'create'],
   ])
 
-  forge.set({ refusedWorkItem: true, pulls: [{ pullRequestId: 8, status: 'active', description: 'AB#999' }] })
+  forge.set({ refusedWorkItem: true, pulls: [{ pullRequestId: 8, status: 'active', description: 'Fixes #999' }] })
   assert.deepEqual(await host.create({ base: 'main', head: 'checkout', title: 'Pay', bodyFile, draft: false, issue: 999 }), { ok: true, number: 8, url: page(8), note })
   assert.deepEqual(forge.calls().slice(3).map((call) => call[2]), ['create', 'list'], 'a pull request Azure DevOps opened despite the refusal is not opened twice')
 })
 
-test('a pull request links its story\'s work item as Azure Boards reads it; pull request reviews are not reached on Azure DevOps yet', async (t) => {
+test('an Azure Repos pull request toward the default branch fixes its story\'s work item and names it otherwise; pull request reviews are not reached on Azure DevOps yet', async (t) => {
   const { forge, runner } = repository(t)
   const { codeHost, pullRequests } = createForges({ commandRunner: runner() })['azure-devops']
   const reason = 'skraft cannot reach the forge azure-devops yet (forge in skraft-config.json, else the host of the Git remote, chooses it)'
 
-  assert.deepEqual([codeHost.storyLink(42, true), codeHost.storyLink(7, false)], ['AB#42', 'AB#7'])
+  assert.deepEqual([codeHost.storyLink(42, true), codeHost.storyLink(7, false)], ['Fixes #42', '#7'])
   assert.deepEqual(await codeHost.repository(), null, 'no screenshot link is built for a forge whose raw file URLs skraft does not write')
   assert.deepEqual([await pullRequests.unavailable(), await pullRequests.repository()], [reason, null])
   assert.deepEqual(forge.calls(), [])

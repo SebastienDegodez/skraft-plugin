@@ -1,7 +1,7 @@
 // A simulated Copilot SDK for the host probe: sessions, tools, workflows and elicitation behave
 // as the issues the probe measures describe. The skraft extension is registered through the
 // real register, so the skraft checks measure the driver as it is.
-import { readdirSync } from 'node:fs'
+import { existsSync, readdirSync, readFileSync } from 'node:fs'
 import { createServer } from 'node:http'
 import { basename, isAbsolute, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -27,7 +27,9 @@ export const notRegistered = (name) => `No workflow registered with name "${name
 export const NATIVE_TOOLS = Object.freeze(['bash', 'view', 'edit'])
 
 /**
- * @param {{ preload?: 'preloads' | 'ignores' | 'everyone-knows', skraftLoads?: boolean, models?: string[], agents?: Array<{ id: string, name: string }>, refusals?: { model: string | null, effort: string | null }, staleSnapshot?: boolean, nativeTools?: string[], workflowRunError?: string | null, refuseCanvases?: boolean, canvasConfirmUnheard?: boolean, refuseCanvasOpen?: boolean, joinedElicitation?: boolean, dropCanvasQuery?: boolean, reopenFocusesOnly?: boolean, askedUnanswered?: boolean, undeclaredPhase?: 'listed' | 'throws' | 'ignored', mcp?: SimulatedMcp }} [host]
+ * @param {{ commands?: 'listed' | 'none' | 'duplicate', commandInput?: 'appended' | 'absent', preload?: 'preloads' | 'ignores' | 'everyone-knows', skraftLoads?: boolean, models?: string[], agents?: Array<{ id: string, name: string }>, refusals?: { model: string | null, effort: string | null }, staleSnapshot?: boolean, nativeTools?: string[], workflowRunError?: string | null, refuseCanvases?: boolean, canvasConfirmUnheard?: boolean, refuseCanvasOpen?: boolean, joinedElicitation?: boolean, dropCanvasQuery?: boolean, reopenFocusesOnly?: boolean, askedUnanswered?: boolean, undeclaredPhase?: 'listed' | 'throws' | 'ignored', mcp?: SimulatedMcp }} [host]
+ *   commands: whether the plugins' com.github.copilot/commands/*.md files are listed (named by the plugin name rule),
+ *   not listed, or listed twice; commandInput: whether a command's typed input reaches its prompt;
  *   refusals: what ctx.agent throws, null when it accepts the call; staleSnapshot: metadata.snapshot
  *   keeps the first working directory after a change; nativeTools: the host's own tools;
  *   workflowRunError: what every rpc.workflow.run throws, as a host with no login does (WORKFLOWS_UNAVAILABLE);
@@ -41,20 +43,20 @@ export const NATIVE_TOOLS = Object.freeze(['bash', 'view', 'edit'])
  *   title meta.phases does not declare (listed with no ordinal, throws, or dropped); mcp: how the session's MCP servers
  *   depart from what CLI 1.0.102-1 does (SimulatedMcp)
  */
-export const simulatedSdk = ({ preload = 'ignores', skraftLoads = true, models = CATALOGUE, agents, refusals = REFUSALS, staleSnapshot = false, home, nativeTools = NATIVE_TOOLS, workflowRunError = null, refuseCanvases = false, canvasConfirmUnheard = false, refuseCanvasOpen = false, joinedElicitation = true, dropCanvasQuery = false, reopenFocusesOnly = false, askedUnanswered = false, undeclaredPhase = 'listed', mcp = {} } = {}) => {
+export const simulatedSdk = ({ preload = 'ignores', skraftLoads = true, models = CATALOGUE, agents, refusals = REFUSALS, staleSnapshot = false, home, nativeTools = NATIVE_TOOLS, workflowRunError = null, refuseCanvases = false, canvasConfirmUnheard = false, refuseCanvasOpen = false, joinedElicitation = true, dropCanvasQuery = false, reopenFocusesOnly = false, askedUnanswered = false, undeclaredPhase = 'listed', mcp = {}, commands = 'listed', commandInput = 'appended' } = {}) => {
   class CopilotClient {
     async start() {}
     async stop() { return [] }
     async listModels() { return models.map((id) => ({ id, name: id, capabilities: {} })) }
     async createSession(config) {
       if (mcp.refusesConfig && config.mcpServers) throw new Error('mcpServers is not supported')
-      return simulatedSession(config, { preload, skraftLoads, agents, refusals, models, staleSnapshot, home, nativeTools, workflowRunError, refuseCanvases, canvasConfirmUnheard, refuseCanvasOpen, joinedElicitation, dropCanvasQuery, reopenFocusesOnly, askedUnanswered, undeclaredPhase, mcp }).ready
+      return simulatedSession(config, { preload, skraftLoads, agents, refusals, models, staleSnapshot, home, nativeTools, workflowRunError, refuseCanvases, canvasConfirmUnheard, refuseCanvasOpen, joinedElicitation, dropCanvasQuery, reopenFocusesOnly, askedUnanswered, undeclaredPhase, mcp, commands, commandInput }).ready
     }
   }
   return { CopilotClient, approveAll: () => ({ kind: 'approve-once' }) }
 }
 
-const simulatedSession = (config, { preload, skraftLoads, agents, refusals, models, staleSnapshot, home, nativeTools, workflowRunError, refuseCanvases, canvasConfirmUnheard, refuseCanvasOpen, joinedElicitation, dropCanvasQuery, reopenFocusesOnly, askedUnanswered, undeclaredPhase, mcp: mcpHost }) => {
+const simulatedSession = (config, { preload, skraftLoads, agents, refusals, models, staleSnapshot, home, nativeTools, workflowRunError, refuseCanvases, canvasConfirmUnheard, refuseCanvasOpen, joinedElicitation, dropCanvasQuery, reopenFocusesOnly, askedUnanswered, undeclaredPhase, mcp: mcpHost, commands: commandsHost, commandInput }) => {
   const atLoad = config.workingDirectory
   let mode = 'interactive'
   let tracked = null
@@ -205,6 +207,7 @@ const simulatedSession = (config, { preload, skraftLoads, agents, refusals, mode
     mode: { get: async () => mode, set: async ({ mode: next }) => { mode = next; return mode } },
     extensions: { list: async () => ({ extensions: [] }) },
     agent: { list: async () => ({ agents: agents ?? [...defaultAgents(), ...probeAgents()] }) },
+    ...simulatedCommands(config.pluginDirectories, { commands: commandsHost, commandInput }),
   }
   rpc.canvas = canvases.rpc
   const session = { rpc, disconnect: async () => { await canvases.closeAll() } }
@@ -399,4 +402,37 @@ const simulatedMcp = (config, host) => {
     }
   }
   return { seen }
+}
+
+/** The name a plugin command gets: bare when it is the plugin's own name, else `<plugin>:<command>`. */
+const commandName = (plugin, file) => (plugin === file ? file : `${plugin}:${file}`)
+
+/** The commands the session's plugins ship under com.github.copilot/commands/, as `rpc.commands` and `rpc.skills` show them. */
+const pluginCommands = (pluginDirectories) => pluginDirectories.flatMap((dir) => {
+  const folder = join(dir, 'com.github.copilot', 'commands')
+  if (!existsSync(folder)) return []
+  const plugin = JSON.parse(readFileSync(join(dir, 'plugin.json'), 'utf8')).name
+  return readdirSync(folder).filter((name) => name.endsWith('.md')).sort().map((name) => {
+    const file = name.replace(/\.md$/, '')
+    const text = readFileSync(join(folder, name), 'utf8')
+    return { plugin, file, name: commandName(plugin, file), hint: /^argument-hint:\s*(.*)$/m.exec(text)?.[1] ?? '', body: text.replace(/^---[\s\S]*?---\r?\n/, '') }
+  })
+})
+
+/** `rpc.commands.list`, `rpc.commands.invoke` and `rpc.skills.list`, as CLI 1.0.105 types them. */
+const simulatedCommands = (pluginDirectories, { commands, commandInput }) => {
+  const found = commands === 'none' ? [] : pluginCommands(pluginDirectories)
+  const listed = commands === 'duplicate' ? [...found, ...found.filter((item) => item.plugin === item.file)] : found
+  return {
+    commands: {
+      list: async () => ({ commands: [{ name: 'help', description: 'help', kind: 'builtin', allowDuringAgentExecution: true }, ...listed.map((item) => ({ name: item.name, description: item.file, kind: 'skill', input: { hint: item.hint }, allowDuringAgentExecution: false }))] }),
+      invoke: async ({ name, input }) => {
+        const item = found.find((candidate) => candidate.name === name.replace(/^\//, ''))
+        if (!item) throw new Error(`Unknown command: ${name}`)
+        const prompt = commandInput === 'appended' ? `${item.body}\n\n${input ?? ''}` : item.body
+        return { kind: 'agent-prompt', prompt, displayPrompt: `/${item.name}` }
+      },
+    },
+    skills: { list: async () => ({ skills: found.map((item) => ({ name: item.file, description: item.file, source: 'plugin', userInvocable: true, enabled: true, pluginName: item.plugin, argumentHint: item.hint })) }) },
+  }
 }

@@ -128,7 +128,12 @@ conduit `skraft next` et `skraft record`.
 | --- | --- | --- |
 | Claude Code | `/skraft` dans la conversation | le panneau **Skraft** s'ouvre et affiche `skraft — idle` |
 | Copilot CLI | `/agent` dans une session | `skraft:skraft-orchestrator` figure dans la liste |
+| Copilot CLI | `/skraft` dans une session | la commande répond et ne lance aucun run : elle ouvre la vue du run, ou dit de taper `skraft status` |
 | VS Code | le sélecteur d'agent du chat | l'agent orchestrateur de skraft figure dans la liste |
+| VS Code | `/skraft` dans le chat | non mesuré |
+
+Copilot expose la commande sous le nom `/skraft`, sans préfixe (mesuré sur Copilot CLI 1.0.105 dans le registre de commandes du SDK) ; `skraft-refine` du plugin backlog est
+`/skraft-backlog:skraft-refine`. Le menu de Copilot CLI et VS Code n'ont pas été mesurés : si `/skraft` y manque, vérifiez la liste des plugins et ouvrez une nouvelle session.
 
 ## Dépannage
 

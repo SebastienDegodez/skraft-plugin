@@ -128,7 +128,12 @@ conducts `skraft next` and `skraft record`.
 | --- | --- | --- |
 | Claude Code | `/skraft` in the conversation | the **Skraft** pane opens and shows `skraft — idle` |
 | Copilot CLI | `/agent` in a session | `skraft:skraft-orchestrator` is in the list |
+| Copilot CLI | `/skraft` in a session | the command answers and starts no run: it opens the run view, or tells you to type `skraft status` |
 | VS Code | the chat's agent picker | skraft's orchestrator agent is in the list |
+| VS Code | `/skraft` in the chat | not measured yet |
+
+Copilot exposes the command as `/skraft`, without a prefix (measured on Copilot CLI 1.0.105 in the SDK's command registry); the backlog plugin's `skraft-refine` is
+`/skraft-backlog:skraft-refine`. The Copilot CLI menu and VS Code were not measured: if `/skraft` is missing there, check the plugin list and open a new session.
 
 ## Troubleshooting
 

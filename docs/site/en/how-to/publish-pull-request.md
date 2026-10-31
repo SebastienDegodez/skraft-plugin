@@ -169,8 +169,10 @@ using the organization, project and repository the remote's URL names.
    personal access token.
 
 The body goes through a file (`--description=@<file>`), the pull request is linked to the story's
-work item (`--work-items`) and its body opens with `AB#<work item>`. A work item Azure DevOps
-refuses to link does not keep the pull request from opening: it opens without the link, and the
+work item (`--work-items`) and its body opens with `Fixes #<work item>` toward the default
+branch, which completes the work item when the pull request merges, `#<work item>` otherwise.
+Only Azure DevOps Services is reached: `az` does not manage Azure DevOps Server. A work item
+Azure DevOps refuses to link does not keep the pull request from opening: it opens without the link, and the
 run's reason says so. Under Windows, `az` runs only from the Azure CLI installer (MSI or winget):
 skraft starts its Python itself, so that no shell reads the title, and refuses any other `az.cmd`
 or `az.bat` (pip, scoop). The run reads the story from its Azure Boards work item and keeps its

@@ -42,7 +42,7 @@ are already filled is not started again, and the journaled base stays.
 | Host | Resume the active pipeline |
 |---|---|
 | Claude Code | `/skraft <slug>` with the active pipeline's slug (`/skraft` alone shows the state and starts nothing) |
-| Copilot CLI | ask `skraft:skraft-orchestrator` to resume: it starts the `skraft-pipeline` workflow with no `slug`; a paused workflow is resumed from `/workflows` |
+| Copilot CLI | `/skraft <slug>` with the active pipeline's slug (`/skraft` alone shows the state and starts nothing), or ask `skraft:skraft-orchestrator` to resume: it starts the `skraft-pipeline` workflow with no `slug`; a paused workflow is resumed from `/workflows` |
 | VS Code, Copilot SDK | `node "<plugin folder>/engine/drivers/copilot-sdk/skraft-run.mjs"` with no slug |
 | VS Code, no SDK | ask the orchestrator agent to resume: it runs `skraft next`, or `skraft record` when agent replies are waiting |
 
