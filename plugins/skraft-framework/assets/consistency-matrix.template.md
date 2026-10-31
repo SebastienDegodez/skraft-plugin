@@ -95,7 +95,7 @@ Reviewer use: G10 reads the registry to know which artefacts are in scope for th
 
 ## Final verdict
 
-- docs-relied-on: {docs/ files the story relies on, comma separated; each exists in the working copy}
+- docs-relied-on: {files under docs/adr, docs/architecture, docs/domain/event-model or docs/features the story relies on, forward slashes, comma separated; each exists in the working copy}
 - consistency-gate: PASS \| FAIL
 - back-propagation rounds used: {n} (max 1 per artefact)
 ```
