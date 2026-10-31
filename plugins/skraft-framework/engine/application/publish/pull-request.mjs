@@ -222,11 +222,11 @@ const settled = async (deps, request, { pull, open }) => {
 const detailsNote = (outcome) => {
   if (!outcome.ok) return `; its run details were not kept: ${outcome.reason}; ${DETAILS_FILE} holds them, and skraft publish keeps them once that is fixed`
   if (outcome.parts === 0) return ''
-  return `; its run details are in ${outcome.parts} comment${outcome.parts === 1 ? '' : 's'}, the first at ${outcome.first}`
+  return `; its run details were kept in ${outcome.parts} comment${outcome.parts === 1 ? '' : 's'}, the first at ${outcome.first}`
 }
 
-/** The first part of the run details, as the tracking folder keeps it. */
-const DETAILS_FILE = 'pull-request-details-1.md'
+/** The file that holds the whole description, the run details included, as the tracking folder keeps it. */
+const DETAILS_FILE = PULL_REQUEST_FILE
 
 /**
  * The publication, its reason followed by where the run details are, or why they were not kept.

@@ -534,7 +534,7 @@ test('a forge whose limit is shorter than what decides still gets a body within 
     assert.ok(body.length <= bodyLimit, `${body.length} > ${bodyLimit}`)
     assert.ok(body.startsWith('Closes #42\n\n'), body.slice(0, 40))
     assert.ok(body.endsWith(end), body.slice(-160))
-    assert.equal(eventsOf(host, 'step.recorded').at(-1).reason, 'pull request #42 opened as a draft: https://github.example.com/acme/shop/pull/42; its run details are in 1 comment, the first at https://github.example.com/acme/shop/pull/42#details-1')
+    assert.equal(eventsOf(host, 'step.recorded').at(-1).reason, 'pull request #42 opened as a draft: https://github.example.com/acme/shop/pull/42; its run details were kept in 1 comment, the first at https://github.example.com/acme/shop/pull/42#details-1')
     assert.equal(host.codeHost.pullRequests[0].body, body)
   }
 })
