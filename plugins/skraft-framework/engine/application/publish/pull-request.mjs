@@ -7,6 +7,8 @@ import { finalGates, matrixPaths, modelsOf, redCommits, reviewFacts, testPlanPat
 import { runReport } from '../../domain/reporting/run-report.mjs'
 import { statusLine } from '../../domain/reporting/run-status.mjs'
 import { branchOf } from '../../domain/reporting/branches.mjs'
+import { languageOf } from '../../domain/reporting/language.mjs'
+import { keepRunDetails } from './run-details.mjs'
 import { forgeAdapters } from '../config/forge.mjs'
 import { routeOf } from '../config/mcp-route.mjs'
 
@@ -31,7 +33,7 @@ import { routeOf } from '../config/mcp-route.mjs'
  * }} PublishRequest
  *   requested: the developer typed skraft publish, which consents for this publication whatever
  *   skraft-config.json answers.
- * @typedef {{ published: boolean, reason: string }} Publication
+ * @typedef {{ published: boolean, reason: string, number?: number }} Publication
  * @typedef {{ ok: true, base: string, head: string, defaultBranch: string } | { ok: false, reason: string }} Target
  */
 
@@ -45,11 +47,12 @@ export const publishPullRequest = async (deps, request) => {
 const publishOn = async (deps, request) => {
   const run = deriveRun(request.journal.events)
   const target = await targetOf(deps, request, run)
-  const rendered = renderPullRequest({ ...(await factsOf(deps, request, run)), link: linkOf(deps.codeHost, run.story, target), bodyLimit: deps.codeHost.bodyLimit })
+  const facts = { ...(await factsOf(deps, request, run)), link: linkOf(deps.codeHost, run.story, target), bodyLimit: deps.codeHost.bodyLimit, commentLimit: deps.codeHost.commentLimit }
+  const rendered = renderPullRequest(facts)
   await deps.files.write(request.slug, PULL_REQUEST_FILE, rendered.description)
   await deps.files.write(request.slug, PULL_REQUEST_BODY_FILE, rendered.body)
   if (!target.ok) return notOpened(target.reason)
-  return pushAndOpen(deps, request, { target, title: rendered.title, body: rendered.body })
+  return pushAndOpen(deps, request, { target, title: rendered.title, body: rendered.body, details: rendered.details, language: facts.language })
 }
 
 /**
@@ -103,6 +106,7 @@ const branchesOf = async (codeHost, base) => {
 const factsOf = async (deps, { slug, journal }, run) => ({
   slug,
   story: run.story,
+  language: await languageIn(deps, slug, run),
   prose: await proseOf(deps, slug, journal.events),
   adrs: await ratifiedAdrs(deps, journal.events),
   repository: await deps.codeHost.repository(),
@@ -110,6 +114,17 @@ const factsOf = async (deps, { slug, journal }, run) => ({
   matrices: await trackedDocuments(deps, slug, matrixPaths(journal.events)),
   ...journalFacts(journal.events, run),
 })
+
+/**
+ * The story's language, French or English, from its title and the issue the run kept in the
+ * tracking folder (title and body as the forge gave them); English when it has neither.
+ * @param {OnForge} deps @param {string} slug @param {import('../../domain/journal/run-state.mjs').RunState} run
+ */
+const languageIn = async ({ files }, slug, run) => {
+  const kept = run.artifacts.find((path) => /(?:^|\/)issue-\d+\.md$/.test(path))
+  const text = kept === undefined ? null : await files.read(slug, kept)
+  return languageOf(`${run.story?.title ?? ''}\n${text ?? ''}`)
+}
 
 /**
  * The documents of the tracking folder the journal names, each with its path; those the folder lost are left out.
@@ -174,9 +189,10 @@ const ratifiedAdrs = async ({ workspace }, events) => {
 }
 
 /**
- * Pushes the branch, then opens its pull request, or updates the open one when its body changed.
+ * Pushes the branch, then opens its pull request, or updates the open one when its body changed;
+ * once it is up to date, its run details are kept in comments when the body sends to them.
  * @param {OnForge} deps @param {PublishRequest} request
- * @param {{ target: Extract<Target, { ok: true }>, title: string, body: string }} pull
+ * @param {{ target: Extract<Target, { ok: true }>, title: string, body: string, details: string[], language: import('../../domain/reporting/language.mjs').Language }} pull
  * @returns {Promise<Publication>}
  */
 const pushAndOpen = async (deps, request, pull) => {
@@ -184,10 +200,42 @@ const pushAndOpen = async (deps, request, pull) => {
   if (!pushed.ok) return notOpened(pushed.reason)
   const open = await deps.codeHost.findPullRequest(pull.target.head)
   if (!open.ok) return notOpened(open.reason)
+  const done = await settled(deps, request, { pull, open })
+  return done.published ? withDetails(deps, request, { done, details: pull.details, language: pull.language }) : done
+}
+
+/**
+ * @param {OnForge} deps @param {PublishRequest} request
+ * @param {{ pull: { target: Extract<Target, { ok: true }>, title: string, body: string }, open: { found: FoundPullRequest | null } }} found
+ * @returns {Promise<Publication & { number?: number }>}
+ */
+const settled = async (deps, request, { pull, open }) => {
   const located = { ...pull, bodyFile: deps.files.location(request.slug, PULL_REQUEST_BODY_FILE), bodyHash: await hashOf(deps, pull.body) }
   if (open.found === null) return opened(deps, request, located)
   if (open.found.state !== 'open') return notOpened(`pull request #${open.found.number} of ${pull.target.head} is ${open.found.state}, and skraft opens no other one`)
   return updated(deps, request, { ...located, found: open.found, liveHash: await hashOf(deps, open.found.body) })
+}
+
+/** @typedef {import('../ports/code-host.mjs').FoundPullRequest} FoundPullRequest */
+
+/** What follows the reason of a publication about its run details: nothing for a body that holds them. @param {import('./run-details.mjs').DetailsOutcome} outcome */
+const detailsNote = (outcome) => {
+  if (!outcome.ok) return `; its run details were not kept: ${outcome.reason}; ${DETAILS_FILE} holds them, and skraft publish keeps them once that is fixed`
+  if (outcome.parts === 0) return ''
+  return `; its run details are in ${outcome.parts} comment${outcome.parts === 1 ? '' : 's'}, the first at ${outcome.first}`
+}
+
+/** The first part of the run details, as the tracking folder keeps it. */
+const DETAILS_FILE = 'pull-request-details-1.md'
+
+/**
+ * The publication, its reason followed by where the run details are, or why they were not kept.
+ * @param {OnForge} deps @param {PublishRequest} request @param {{ done: Publication & { number?: number }, details: string[], language: import('../../domain/reporting/language.mjs').Language }} kept
+ * @returns {Promise<Publication>}
+ */
+const withDetails = async (deps, request, { done, details, language }) => {
+  const outcome = await keepRunDetails(deps, request, { number: /** @type {number} */ (done.number), details, language })
+  return { published: true, reason: `${done.reason}${detailsNote(outcome)}` }
 }
 
 /** A body's hash, its line endings and trailing blanks as the forge may change them left out. @param {OnForge} deps @param {string} body */
@@ -203,7 +251,7 @@ const opened = async ({ codeHost }, { journal, config }, { target, title, bodyFi
   const made = await codeHost.create({ base, head, title, bodyFile, body, draft: config.publish.draft, issue: deriveRun(journal.events).story?.issue ?? null })
   if (!made.ok) return notOpened(made.reason)
   await journal.append('pull-request.opened', { number: made.number, url: made.url, base, head, draft: config.publish.draft, bodyHash, ...routeOf(made) })
-  return { published: true, reason: `pull request #${made.number} opened${config.publish.draft ? ' as a draft' : ''}: ${made.url}${made.note === undefined ? '' : `; ${made.note}`}` }
+  return { published: true, number: made.number, reason: `pull request #${made.number} opened${config.publish.draft ? ' as a draft' : ''}: ${made.url}${made.note === undefined ? '' : `; ${made.note}`}` }
 }
 
 /**
@@ -213,13 +261,16 @@ const opened = async ({ codeHost }, { journal, config }, { target, title, bodyFi
  * @returns {Promise<Publication>}
  */
 const updated = async ({ codeHost }, { journal }, { found, bodyFile, body, bodyHash, liveHash }) => {
-  if (liveHash === bodyHash) return { published: true, reason: `pull request #${found.number} is up to date: ${found.url}` }
+  if (liveHash === bodyHash) return { published: true, number: found.number, reason: `pull request #${found.number} is up to date: ${found.url}` }
   if (lastHash(journal.events, found.number) !== liveHash) return notOpened(`pull request #${found.number} was edited since skraft last wrote its body, which stays as it is`)
   const edited = await codeHost.edit({ number: found.number, bodyFile, body })
   if (!edited.ok) return notOpened(edited.reason)
   await journal.append('pull-request.updated', { number: found.number, url: found.url, bodyHash, ...routeOf(edited) })
-  return { published: true, reason: `pull request #${found.number} updated: ${found.url}` }
+  return { published: true, number: found.number, reason: `pull request #${found.number} updated: ${found.url}` }
 }
 
 /** @param {import('../../domain/journal/run-state.mjs').RunEvent[]} events @param {number} number */
-const lastHash = (events, number) => events.findLast((event) => event.number === number)?.bodyHash
+const lastHash = (events, number) => events.findLast((event) => event.number === number && BODY_EVENTS.includes(event.type))?.bodyHash
+
+/** The events that tell the body skraft last wrote. */
+const BODY_EVENTS = ['pull-request.opened', 'pull-request.updated']

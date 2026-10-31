@@ -376,3 +376,17 @@ test('in a clone of a fork, pull requests are read and commented on, and the sto
   forge.set({ defaultRepo: 'not a repository; rm -rf' })
   assert.deepEqual(await pullRequests().repository(), { host: 'github.example.com', repository: 'acme/payment' })
 })
+
+test('the run details are kept on the pull request by the issue comment route, with no request file, and GitHub takes 60,000 characters in a comment', async (t) => {
+  const { root, forge, codeHost } = repository(t, { remote: 'git@ghe.acme.io:payments/payment.git' })
+  const host = codeHost()
+  const bodyFile = join(root, 'details.md')
+  const marker = '<!-- skraft:run-details slug=checkout part=1 -->'
+  writeFileSync(bodyFile, `${marker}\n# skraft · run details\n`)
+
+  const kept = await host.keepPullRequestComment({ number: 42, marker, url: null, bodyFile, body: '', threadFile: '', commentFile: '' })
+
+  assert.equal(kept.ok, true)
+  assert.deepEqual(forge.calls().at(-1), ['api', '--hostname=ghe.acme.io', '--method=POST', `--field=body=@${bodyFile}`, '--jq=.html_url', 'repos/payments/payment/issues/42/comments'])
+  assert.deepEqual([host.commentLimit, host.takesRequestFile], [60_000, false])
+})

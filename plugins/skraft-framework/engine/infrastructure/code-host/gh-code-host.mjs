@@ -21,10 +21,18 @@ export const createGhCodeHost = ({ commandRunner }) => Object.freeze({
   create: (request) => create(commandRunner, request),
   edit: (request) => edit(commandRunner, request),
   keepIssueComment: (request) => keepIssueComment(commandRunner, request),
+  // On GitHub a pull request is an issue: its comments go the same way, with no request file.
+  keepPullRequestComment: (request) => keepIssueComment(commandRunner, { ...request, requestFile: '' }),
   issue: (number) => findIssue(commandRunner, number),
   storyLink: (issue, closes) => `${closes ? 'Closes' : 'Refs'} #${issue}`,
+  ...LIMITS,
+})
+
+const LIMITS = Object.freeze({
   // GitHub refuses a body past 65,536 characters; the margin leaves room for what it adds.
   bodyLimit: 60_000,
+  // A comment is refused past the same 65,536 characters (not measured); the same margin.
+  commentLimit: 60_000,
   // gh takes the body file itself.
   takesRequestFile: false,
 })

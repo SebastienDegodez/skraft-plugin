@@ -59,6 +59,7 @@ const codeHostOf = (gh, { origin, reviewed }) => Object.freeze({
   create: (request) => served(origin, (at) => created(at, request), () => gh.create(request), 'gh'),
   edit: (request) => served(origin, (at) => edited(at, request), () => gh.edit(request), 'gh'),
   keepIssueComment: (request) => served(origin, (at) => commentKept(at, request), () => gh.keepIssueComment(request), 'gh'),
+  keepPullRequestComment: (request) => served(origin, (at) => commentKept(at, { ...request, requestFile: '' }), () => gh.keepPullRequestComment(request), 'gh'),
 })
 
 /**
@@ -73,6 +74,7 @@ const onGit = (gh) => ({
   push: (/** @type {string} */ branch) => gh.push(branch),
   storyLink: (/** @type {number} */ issue, /** @type {boolean} */ closes) => gh.storyLink(issue, closes),
   bodyLimit: gh.bodyLimit,
+  commentLimit: gh.commentLimit,
   takesRequestFile: gh.takesRequestFile,
 })
 
