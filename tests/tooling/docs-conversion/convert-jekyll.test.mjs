@@ -103,6 +103,16 @@ test('the lead blockquote is found after a removed phase ribbon, not after a par
   assert.equal(text, '---\ntitle: "DESIGN"\nphase: design\n---\n\n# DESIGN\n\nDecide.\n\nText.\n\n> Quoted.\n')
 })
 
+test('shell fences become console blocks in place; an ambiguous one is reported at its line', () => {
+  const { result, after } = convertFixture('code-fences', { docId: 'tutorials/getting-started' })
+  assert.equal(result.text, after)
+  assert.deepEqual(result.findings, [{
+    rule: 'code-fences',
+    line: 13,
+    reason: 'host slash commands, but no single host named above the block',
+  }])
+})
+
 test('with the catalogue option, dashboard links point at the catalogue page', () => {
   const source = '# T\n\n[Catalogue]({{ "/en/dashboard/" | relative_url }}), [data]({{ "/dashboard/" | relative_url }})\n'
   const { text } = convertPage(source, { docId: 'how-to/run-gates', locale: 'en', dashboardLink: 'catalogue' })

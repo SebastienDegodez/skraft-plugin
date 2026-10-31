@@ -263,6 +263,9 @@ const convertQuotes = (lines, lead) => {
   return out
 }
 
+/** Rule 10: what a fenced block becomes (§2.5 of the plan). */
+export const classifyFence = ({ info, lines }) => ({ kind: 'unchanged', info, lines })
+
 const DEFAULT_MDX_DOCS = ['index', 'reference/citations']
 
 /**
