@@ -263,8 +263,120 @@ const convertQuotes = (lines, lead) => {
   return out
 }
 
-/** Rule 10: what a fenced block becomes (§2.5 of the plan). */
-export const classifyFence = ({ info, lines }) => ({ kind: 'unchanged', info, lines })
+const SHELL_LANGUAGES = new Set(['', 'text', 'bash', 'sh', 'shell'])
+const PROGRAMS = new Set(['skraft', 'node', 'npm', 'npx', 'git', 'gh', 'claude', 'copilot', 'dotnet', 'vally', 'sh', 'az', 'mkdir', 'cd'])
+const SKRAFT_COMMANDS = new Set([
+  'install', 'init', 'status', 'report', 'decide', 'publish', 'journal', 'migrate', 'next', 'record', 'gate', 'doctor',
+  'review', 'workflow',
+])
+const HOSTS = [['Claude Code', /Claude Code/], ['GitHub Copilot CLI', /Copilot/], ['VS Code', /VS Code|Visual Studio Code/]]
+const PLACEHOLDER_IN_CODE = /<[^\s<>][^<>]*>/
+
+/** A line that runs a known program: `git add .`, `skraft gate --all`, but not `skraft checkout: done`. */
+const isCommand = (line) => {
+  const [program, first] = line.trim().split(/\s+/)
+  if (!PROGRAMS.has(program) && !program.startsWith('./eng/')) return false
+  if (program !== 'skraft') return true
+  return first === undefined || first.startsWith('-') || SKRAFT_COMMANDS.has(first)
+}
+
+/** Role of each line: blank, command, continuation (after a trailing backslash) or other. */
+const lineRoles = (lines) => {
+  let continued = false
+  return lines.map((line) => {
+    const role = continued ? 'continuation' : line.trim() === '' ? 'blank' : isCommand(line) ? 'command' : 'other'
+    continued = role !== 'blank' && /\\\s*$/.test(line)
+    return role
+  })
+}
+
+const hostsNamed = (text) => HOSTS.filter(([, pattern]) => pattern.test(text)).map(([name]) => name)
+
+/** The single host named in the paragraph above the block, else in the heading above it. */
+const hostOf = ({ paragraph, heading }) => {
+  const inParagraph = hostsNamed(paragraph)
+  if (inParagraph.length) return inParagraph.length === 1 ? inParagraph[0] : null
+  const inHeading = hostsNamed(heading)
+  return inHeading.length === 1 ? inHeading[0] : null
+}
+
+const consoleInfo = (meta, title) => ['console', title && !/\btitle=/.test(meta) ? `title="${title}"` : '', meta]
+  .filter(Boolean).join(' ')
+
+const ambiguous = (info, lines, reason) => ({ kind: 'ambiguous', info, lines, reason })
+
+const classifyHost = (info, meta, lines, context) => {
+  const host = hostOf(context)
+  if (!host) return ambiguous(info, lines, 'host slash commands, but no single host named above the block')
+  return { kind: 'host', info: consoleInfo(meta, host), lines: lines.map((line) => (line.trim() ? `> ${line}` : line)) }
+}
+
+const classifyCommands = (info, meta, lines, roles) => {
+  const first = roles.find((role) => role !== 'blank')
+  if (first !== 'command') return ambiguous(info, lines, 'commands mixed with other lines, the first line is not a command')
+  const kind = roles.includes('other') ? 'command-output' : 'commands'
+  return { kind, info: consoleInfo(meta), lines: lines.map((line, index) => (roles[index] === 'command' ? `$ ${line}` : line)) }
+}
+
+const isCliOutput = (lines) => {
+  const first = lines.find((line) => line.trim() !== '') ?? ''
+  return /^skraft \S/.test(first) && !lines.some((line) => PLACEHOLDER_IN_CODE.test(line))
+}
+
+/**
+ * Rule 10: what a fenced block becomes (§2.5 of the plan).
+ * @param {{ info: string, lines: string[], context: { paragraph: string, heading: string } }} fence
+ * @returns {{ kind: 'commands'|'command-output'|'cli-output'|'host'|'ambiguous'|'unchanged', info: string, lines: string[], reason?: string }}
+ */
+export const classifyFence = ({ info, lines, context }) => {
+  const [language = '', ...rest] = info.trim().split(/\s+/)
+  const meta = rest.join(' ')
+  const unchanged = { kind: 'unchanged', info, lines }
+  if (!SHELL_LANGUAGES.has(language)) return unchanged
+  const filled = lines.filter((line) => line.trim() !== '')
+  if (!filled.length) return unchanged
+  if (filled.every((line) => /^\/[a-z]/.test(line.trim()))) return classifyHost(info, meta, lines, context)
+  const roles = lineRoles(lines)
+  if (roles.includes('command')) return classifyCommands(info, meta, lines, roles)
+  if (isCliOutput(lines)) return { kind: 'cli-output', info: consoleInfo(meta), lines }
+  return unchanged
+}
+
+const dedent = (line, indent) => (line.startsWith(indent) ? line.slice(indent.length) : line.trimStart())
+
+/** Applies the classifier to every fence of the page, with the paragraph and heading above it. */
+const convertFences = (text, page) => {
+  const parts = segments(text.split('\n'))
+  let heading = ''
+  let paragraph = ''
+  for (const part of parts) {
+    if (!part.fence) {
+      heading = part.lines.filter((line) => /^#{1,6}\s/.test(line)).at(-1) ?? heading
+      paragraph = lastParagraph(part.lines)
+      continue
+    }
+    part.lines = convertFence(part.lines, { paragraph, heading }, page)
+    paragraph = ''
+  }
+  return joinSegments(parts)
+}
+
+const lastParagraph = (lines) => {
+  const end = lines.findLastIndex((line) => line.trim() !== '')
+  let start = end
+  while (start > 0 && lines[start - 1].trim() !== '') start -= 1
+  return end < 0 ? '' : lines.slice(start, end + 1).join('\n')
+}
+
+const convertFence = (block, context, page) => {
+  const [, indent, marker, info] = FENCE.exec(block[0])
+  const closed = block.length > 1 && FENCE.test(block.at(-1))
+  const body = block.slice(1, closed ? -1 : undefined)
+  const result = classifyFence({ info, lines: body.map((line) => dedent(line, indent)), context })
+  if (result.kind === 'ambiguous') report(page, 'code-fences', block.join('\n'), result.reason)
+  if (result.kind === 'unchanged' || result.kind === 'ambiguous') return block
+  return [`${indent}${marker}${result.info}`, ...result.lines.map((line) => (line ? indent + line : line)), ...(closed ? [block.at(-1)] : [])]
+}
 
 const DEFAULT_MDX_DOCS = ['index', 'reference/citations']
 
@@ -288,6 +400,7 @@ export const convertPage = (source, options) => {
   text = convertCitationsPage(text, page)
   text = convertHeadingIds(text, page)
   text = convertBlockquotes(text)
+  text = convertFences(text, page)
   text = convertFrontMatter(lines, page) + withImports(text, page.imports)
   return { text, extension: page.extension, findings: page.findings, redirects: page.redirects }
 }
