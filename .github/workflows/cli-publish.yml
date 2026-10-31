@@ -1,8 +1,12 @@
 name: Publish @skraft/cli
 
 # The skraft command has its own version, independent of the plugin's: it only changes when the
-# way it finds the plugin changes. It is published by hand, from main only, at the version
-# written in cli/package.json; the plugin releases never publish it.
+# way it finds the plugin changes. It is published by hand; the plugin releases never publish it.
+#
+# - From main: the version written in cli/package.json (no pre-release suffix), dist-tag latest,
+#   tag cli-v<version>.
+# - From any other branch: <version>-alpha.<run number>, dist-tag alpha, nothing committed and no
+#   tag; installed with npm i -g @skraft/cli@alpha.
 #
 # Publishing uses npm trusted publishing (OIDC): no token is stored. On npmjs.com, the package
 # @skraft/cli names this repository and this workflow file as its trusted publisher.
@@ -20,7 +24,6 @@ concurrency:
 jobs:
   publish:
     name: npm publish
-    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -37,21 +40,34 @@ jobs:
       - name: Run the plugin lookup tests
         run: npm run test:cli
 
-      - name: Refuse a version already on npm
+      - name: Choose the version and the dist-tag
         working-directory: cli
         run: |
           version=$(node -p "require('./package.json').version")
+          case "$version" in *-*)
+            echo "::error::cli/package.json carries a pre-release suffix ($version); write the plain version, the workflow adds -alpha.N off main"
+            exit 1;;
+          esac
+          if [ "$GITHUB_REF" = "refs/heads/main" ]; then
+            tag=latest
+          else
+            version="${version}-alpha.${GITHUB_RUN_NUMBER}"
+            tag=alpha
+            npm version "$version" --no-git-tag-version >/dev/null
+          fi
           if npm view "@skraft/cli@${version}" version >/dev/null 2>&1; then
             echo "::error::@skraft/cli@${version} is already published; raise the version in cli/package.json"
             exit 1
           fi
           echo "VERSION=${version}" >> "$GITHUB_ENV"
+          echo "DIST_TAG=${tag}" >> "$GITHUB_ENV"
 
       - name: Publish
         working-directory: cli
-        run: npm publish --access public
+        run: npm publish --access public --tag "$DIST_TAG"
 
       - name: Tag the published version
+        if: github.ref == 'refs/heads/main'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: gh api "repos/${{ github.repository }}/git/refs" -f ref="refs/tags/cli-v${VERSION}" -f sha="${{ github.sha }}"

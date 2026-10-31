@@ -25,8 +25,15 @@ the host is followed at the next call: this package never needs updating with th
 ## Versions
 
 `@skraft/cli` has its own version, independent of the plugin's. It changes only when the way
-the plugin is found changes. It is published by hand from `main` with the `Publish @skraft/cli`
-workflow (npm trusted publishing, tag `cli-v<version>`); plugin releases never publish it.
+the plugin is found changes. It is published by hand with the `Publish @skraft/cli` workflow (npm
+trusted publishing); plugin releases never publish it.
+
+- From `main`: the version of `package.json`, dist-tag `latest`, tag `cli-v<version>`.
+- From any other branch: `<version>-alpha.<run number>`, dist-tag `alpha`, no commit and no tag.
+  Install it with `npm i -g @skraft/cli@alpha`.
+
+`package.json` always holds the plain version (no `-alpha` suffix). `1.0.0` is the first stable
+release, published from `main`.
 Commits that touch only this folder use the `cli` scope (`feat(cli): …`): they never bump the
 plugin's version.
 
