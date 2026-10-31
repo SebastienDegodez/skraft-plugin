@@ -56,8 +56,8 @@ compared approaches, then the handoff to DESIGN.*
 
 Before the code, the researcher reads the documentation earlier stories left under `docs/`: the
 context map, the tactical design, the event model, the scenarios and the ADRs. When it already
-answers the story, the research document says so, cites those files and goes no further; the
-engine checks that document like any other. The research document itself stays in the tracking
+answers the story, the research document says so, cites those files and goes no further. The
+engine checks only that the document exists, not what it cites. The research document itself stays in the tracking
 folder: it serves one story.
 
 ## No review, but a judge downstream

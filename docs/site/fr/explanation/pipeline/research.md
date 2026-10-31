@@ -57,7 +57,7 @@ approches comparées, puis le relais à DESIGN.*
 Avant le code, le chercheur lit la documentation que les stories précédentes ont laissée sous
 `docs/` : la context map, la conception tactique, le modèle d'événements, les scénarios et les
 ADR. Quand elle répond déjà à la story, le document de recherche le dit, cite ces fichiers et
-s'arrête là ; le moteur contrôle ce document comme un autre. Le document de recherche lui-même
+s'arrête là. Le moteur contrôle seulement que le document existe, pas ce qu'il cite. Le document de recherche lui-même
 reste dans le dossier de suivi : il sert une seule story.
 
 ## Pas de revue, mais un juge en aval

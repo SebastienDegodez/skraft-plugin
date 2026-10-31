@@ -96,7 +96,7 @@ Verdict : `review-verdict.mjs --phase discuss`, mêmes règles et même budget q
 | Entrées | la story (`plans/{date}/issue-<numéro>.md` quand le run a démarré avec `--issue`) ; la documentation durable sous `docs/`, lue d'abord |
 | Sortie | `research/{date}/{slug}-research.md`, pré-créé depuis `research.template.md` |
 | Écriture permise | le dossier de suivi seulement |
-| `docs/` couvre déjà la story | le document de recherche le dit et cite les fichiers de `docs/` ; le moteur le contrôle comme un autre |
+| `docs/` couvre déjà la story | le document de recherche le dit et cite les fichiers de `docs/` ; le moteur contrôle seulement que le document existe |
 | Contrôle | sortie remplie : non vide, différente du gabarit, sans {% raw %}`{{…}}`{% endraw %} |
 | Tentatives | 3 (défaut de `max_attempts`) ; ensuite `missing-outputs` |
 
@@ -114,7 +114,7 @@ Verdict : `review-verdict.mjs --phase discuss`, mêmes règles et même budget q
 | Sortie déclarée | `details/{date}/consistency-matrix-{slug}.md` |
 | Autres sorties | dans le dossier de suivi : `details/{date}/contracts-{story}.md`, `supersession-plan-{story}.md` (quand un ADR `Accepted` est remplacé) ; dans le dépôt : `docs/architecture/context-map.md`, `docs/architecture/{bounded-context}.md` (conception tactique), `docs/domain/event-model/{bounded-context}.md`, `docs/adr/adr-{NNN}-{sujet}.md`, `docs/adr/decisions-index.md`, `docs/adr/supersessions.md` |
 | Écriture permise | le dossier de suivi, `docs/adr/`, `docs/architecture/` et `docs/domain/event-model/` |
-| Documentation existante | un fichier de `docs/` est complété, pas réécrit ; quand `docs/` couvre déjà la story, la matrice de cohérence le dit et cite les fichiers de `docs/`, et la phase passe à la suite |
+| Documentation existante | consigne à l'agent : un fichier de `docs/` est complété, pas réécrit. Quand `docs/` couvre déjà la story, la matrice de cohérence le dit et cite les fichiers de `docs/`, et la phase passe à la suite. Contrôle du moteur : la ligne `docs-relied-on:` de la matrice liste au moins un fichier de `docs/`, et chaque fichier listé existe dans la copie de travail |
 | Contrôles du moteur | traces DESIGN après chaque tentative : matrice de cohérence `consistency-gate: PASS` (G10), aucun ADR nommé `*-rejected.md`, `*-accepted.md`, `*-deprecated.md` ou `*-superseded.md` (G14), chaque `**Supersedes:**` avec sa ligne de registre (G2, G12) ; cycle de vie des ADR non publiés (`adr-lifecycle`) |
 | Échec persistant | `missing-outputs` quand la matrice de cohérence manque après la dernière tentative, `design-records` sinon |
 

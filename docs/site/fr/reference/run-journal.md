@@ -124,9 +124,9 @@ la pull request, le journal et ses rapports.
 
 | Règle | Détail |
 | --- | --- |
-| Lecture | RESEARCH et DESIGN lisent `docs/` avant toute autre chose |
-| Déjà couvert | quand `docs/` couvre déjà la story, la phase le dit dans sa sortie déclarée (le document de recherche, la matrice de cohérence), cite les fichiers de `docs/` et passe à la suite ; le moteur contrôle cette sortie comme une autre |
-| Mise à jour | une phase complète un fichier existant de `docs/` ; elle ne le réécrit pas |
+| Lecture | consigne aux agents : RESEARCH et DESIGN lisent `docs/` avant toute autre chose ; le moteur ne le contrôle pas |
+| Déjà couvert | quand `docs/` couvre déjà la story, la phase le dit dans sa sortie déclarée (le document de recherche, la matrice de cohérence), cite les fichiers de `docs/` et passe à la suite. Le moteur ne contrôle que la matrice : sa ligne `docs-relied-on:` doit lister au moins un fichier de `docs/`, et chaque fichier listé doit exister dans la copie de travail ; il ne cherche pas de citation dans le document de recherche |
+| Mise à jour | consigne aux agents : une phase complète un fichier existant de `docs/` et ne le réécrit pas ; le moteur ne le contrôle pas |
 | ADR | un ADR publié n'est jamais édité ; un nouvel ADR peut le remplacer ([Ce qui n'est jamais réécrit](#append-only)) |
 | Écriture permise | DESIGN : `docs/adr/`, `docs/architecture/`, `docs/domain/event-model/` ; DISTILL : `docs/features/` ([Phases]({{ "/fr/reference/phases" | relative_url }})) |
 | Lentille aveugle | `cold-reader` ne lit ni ces fichiers ni les ADR : ils sont retirés de `code.patch` et de `code-files.txt` |

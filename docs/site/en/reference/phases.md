@@ -96,7 +96,7 @@ Verdict: `review-verdict.mjs --phase discuss`, same rules and same budget as DIS
 | Inputs | the story (`plans/{date}/issue-<number>.md` when the run started with `--issue`); the durable documentation under `docs/`, read first |
 | Output | `research/{date}/{slug}-research.md`, pre-created from `research.template.md` |
 | Allowed writes | the tracking folder only |
-| `docs/` already covers the story | the research document says so and cites the files of `docs/`; the engine checks it like any other |
+| `docs/` already covers the story | the research document says so and cites the files of `docs/`; the engine checks only that the document exists |
 | Check | output filled: not empty, different from the template, no {% raw %}`{{…}}`{% endraw %} left |
 | Attempts | 3 (the `max_attempts` default); then `missing-outputs` |
 
@@ -114,7 +114,7 @@ Verdict: `review-verdict.mjs --phase discuss`, same rules and same budget as DIS
 | Declared output | `details/{date}/consistency-matrix-{slug}.md` |
 | Other outputs | in the tracking folder: `details/{date}/contracts-{story}.md`, `supersession-plan-{story}.md` (when an `Accepted` ADR is replaced); in the repository: `docs/architecture/context-map.md`, `docs/architecture/{bounded-context}.md` (tactical design), `docs/domain/event-model/{bounded-context}.md`, `docs/adr/adr-{NNN}-{subject}.md`, `docs/adr/decisions-index.md`, `docs/adr/supersessions.md` |
 | Allowed writes | the tracking folder, `docs/adr/`, `docs/architecture/` and `docs/domain/event-model/` |
-| Existing documentation | a file of `docs/` is completed, not rewritten; when `docs/` already covers the story, the consistency matrix says so and cites the files of `docs/`, and the phase moves on |
+| Existing documentation | instruction to the agent: a file of `docs/` is completed, not rewritten. When `docs/` already covers the story, the consistency matrix says so and cites the files of `docs/`, and the phase moves on. Engine check: the matrix's `docs-relied-on:` line lists at least one `docs/` file, and each listed file exists in the working copy |
 | Engine checks | DESIGN records after each attempt: a consistency matrix reading `consistency-gate: PASS` (G10), no ADR named `*-rejected.md`, `*-accepted.md`, `*-deprecated.md` or `*-superseded.md` (G14), each `**Supersedes:**` with its registry row (G2, G12); lifecycle of unpublished ADRs (`adr-lifecycle`) |
 | Persistent failure | `missing-outputs` when the consistency matrix is missing after the last attempt, `design-records` otherwise |
 
