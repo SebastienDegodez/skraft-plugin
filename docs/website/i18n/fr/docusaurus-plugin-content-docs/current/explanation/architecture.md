@@ -159,7 +159,7 @@ les gates de commandes ; ce que chaque étape a le droit d'écrire, par un diff 
 rouges et verts du TDD ; le cycle de vie des ADR ; le verdict des revues. Chacun de ces
 contrôles est testé sans hôte, et se comporte pareil partout. Pourquoi ils ont quitté les hooks
 de la v1 : [Garde-fous](./guardrails.md). Comment le workflow
-qui les porte se lit et se copie : [Workflow DOT](../reference/workflow-dot.md).
+qui les porte se lit et se copie : [Workflow DOT](../reference/workflow-dot.mdx).
 
 ## Alternatives écartées
 

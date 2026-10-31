@@ -159,6 +159,6 @@ relisible : ce qui n'était pas écrit n'a pas été transmis.
 
 ## Pour aller plus loin
 
-- [Vue d'ensemble du pipeline](./index.md)
+- [Vue d'ensemble du pipeline](./index.mdx)
 - [Référence : les phases](../../reference/phases.md) — entrées, sorties, lentilles de chaque phase
 - [Le journal d'événements](../event-journal.md) — où le run garde la trace de chaque relais

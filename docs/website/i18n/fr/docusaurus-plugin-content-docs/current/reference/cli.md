@@ -8,7 +8,7 @@ persona: software-engineer
 
 `skraft` est la porte d'entrée en ligne de commande du moteur : chaque commande appelle un cas d'usage et affiche ce qu'il rend, sans rien décider elle-même.
 
-Ce que les hôtes offrent à la place de ces commandes (`/skraft`, workflow `skraft-pipeline`, `skraft_decide`, pilote SDK) : [Hôtes](./hosts.md). La syntaxe des workflows que `skraft workflow` copie et valide : [Le workflow DOT](./workflow-dot.md).
+Ce que les hôtes offrent à la place de ces commandes (`/skraft`, workflow `skraft-pipeline`, `skraft_decide`, pilote SDK) : [Hôtes](./hosts.md). La syntaxe des workflows que `skraft workflow` copie et valide : [Le workflow DOT](./workflow-dot.mdx).
 
 ## Appeler skraft
 
@@ -553,7 +553,7 @@ une copie.
 | copié | `.skraft/pipeline.skraft.dot holds the skraft <version> pipeline; the run follows it` (review : `… holds the skraft <version> review; every call to review runs it`) sur stdout | 0 |
 | la copie existe | `<chemin> already exists; edit it, or remove it` sur stderr | 1 |
 
-Syntaxe, règles de validité et nœuds verrouillés ou obligatoires : [Le workflow DOT](./workflow-dot.md).
+Syntaxe, règles de validité et nœuds verrouillés ou obligatoires : [Le workflow DOT](./workflow-dot.mdx).
 
 **`skraft workflow check`** valide le workflow qu'un run suivrait (la copie du dépôt s'il y en a
 une, sinon celui du plugin) et les workflows qu'il appelle, face à `skraft-config.json` : un
@@ -670,7 +670,7 @@ revue continue (le réfuteur est confié de la même façon).
 
 ## Pour aller plus loin <!-- #see-also -->
 - [Hôtes](./hosts.md)
-- [Le workflow DOT](./workflow-dot.md)
+- [Le workflow DOT](./workflow-dot.mdx)
 - [Phases](./phases.md)
 - [Premiers pas](../tutorials/getting-started.md)
 - [Lancer les gates et lire leurs preuves](../how-to/run-gates.md)

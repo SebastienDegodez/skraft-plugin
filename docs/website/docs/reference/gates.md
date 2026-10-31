@@ -46,7 +46,7 @@ root; a component stops at its first failing gate.
 | Edges | every gate of the node passes: the `PASS` edge; one fails: the `FAIL` edge (`gates`: `PASS` to `deliver_review`, `FAIL` to `deliver`; `mutation`: `PASS` to `visuals`, `FAIL` to `kill_proposal`; `mutation_gates`: `PASS` to `mutation`, `FAIL` to `kill_mutants`) |
 | Mutation | the engine reads the report of the `mutation` command (`mutationReport`) and judges two bars: **100 %** on the core (Domain, Application), **80 %** on the boundary (the rest); it runs once, after `deliver_review` approved; on failure, `kill_proposal` writes one proposal per file of survivors, the `mutation-plan` question lets the developer choose (`APPLY`, their instruction, `STOP`), then `kill_mutants` applies the choice ([Phases](./phases.md#deliver)) |
 | Thresholds | none is configurable |
-| Lock | `gates` and `mutation` are `locked=true`: a copy of the workflow drops them only with `unlock="<reason>"` ([The DOT workflow](./workflow-dot.md#locked-nodes)) |
+| Lock | `gates` and `mutation` are `locked=true`: a copy of the workflow drops them only with `unlock="<reason>"` ([The DOT workflow](./workflow-dot.mdx#locked-nodes)) |
 | Evidence | `gates/<component>/<gate>-<n>.log` and a `gate.ran` event ([Tracking folder and journal](./run-journal.md#gate-evidence)) |
 
 ## Review criteria <!-- #review-criteria -->
@@ -190,7 +190,7 @@ a pull request through `skraft review --pr`.
 
 `mock-fidelity` runs only on changes that touch mocks (`when="mock"`), `contract-fidelity` only on
 changes that touch contracts (`when="contract"`)
-([triggers](./workflow-dot.md#conditional-lenses)).
+([triggers](./workflow-dot.mdx#conditional-lenses)).
 
 The engine also checks, with no gate id, the commits of each attempt (`commits.checked`): a
 conventional message, `Refs: #<issue>` as the last line, no issue closed, a green commit preceded
@@ -287,7 +287,7 @@ the verdict.
 ## See also <!-- #see-also -->
 
 - [Phases](./phases.md)
-- [The DOT workflow](./workflow-dot.md)
+- [The DOT workflow](./workflow-dot.mdx)
 - [Agent and lens catalogue](pathname:///dashboard/)
 - [Run the gates](../how-to/run-gates.md)
 - [Review before review](../explanation/deep-dive/review-before-review.md)

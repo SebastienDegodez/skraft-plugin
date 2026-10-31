@@ -129,7 +129,7 @@ back to the developer. The detail of the criteria and the computation:
 - [Reference: DISCOVER and DISCUSS](../reference/phases.md#discover) — inputs, outputs, effects on GitHub.
 - [Reference: DISCOVER and DISCUSS review criteria](../reference/gates.md#discover).
 - [The agent and skill catalogue](pathname:///dashboard/).
-- [The SKRAFT pipeline](./pipeline/index.md).
+- [The SKRAFT pipeline](./pipeline/index.mdx).
 
 ## Sources
 

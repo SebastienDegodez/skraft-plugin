@@ -16,7 +16,7 @@ For a review rather than a step that produces:
 
 - A configured repository, Git, and a terminal at the root of the working copy; `skraft` is the command that [`skraft install`](./install-on-a-host.mdx#skraft-command) sets up; the long line `node "<plugin folder>/engine/drivers/cli/skraft.mjs"` works without it.
 - The workflow copied into `.skraft/pipeline.skraft.dot`
-  ([Copy and adapt the workflow](./eject-workflow.md)).
+  ([Copy and adapt the workflow](./eject-workflow.mdx)).
 
 ## 1. Write the agent
 
@@ -100,7 +100,7 @@ Commit `.skraft/` and the agent's files: the step runs on the next run.
 
 ## See also
 
-- [The DOT workflow](../reference/workflow-dot.md#node-attributes) — every
+- [The DOT workflow](../reference/workflow-dot.mdx#node-attributes) — every
   attribute of an agent node.
-- [Copy and adapt the workflow](./eject-workflow.md)
+- [Copy and adapt the workflow](./eject-workflow.mdx)
 - [Adapting skraft: what each setting costs](../explanation/customisation-trade-offs.md)

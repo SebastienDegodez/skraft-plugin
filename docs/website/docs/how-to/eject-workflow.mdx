@@ -4,6 +4,8 @@ description: "Copy the plugin's workflow into .skraft/ with skraft workflow ejec
 persona: tech-lead
 ---
 
+import WorkflowViewer from '@site/src/components/WorkflowViewer';
+
 # Copy and adapt the workflow
 
 **Goal**: have the runs of your repository follow an adapted version of the pipeline or of the
@@ -26,6 +28,10 @@ DELIVER review, and keep it up to date with the plugin.
 
 The copy carries `skraft_version="2.0.0-alpha.19"` in its `graph [...]`. As soon as it exists,
 every run of the working copy follows it. An existing copy is never overwritten.
+
+The workflow you copy, as the engine reads it; **Review** shows the DELIVER review:
+
+<WorkflowViewer file="pipeline" />
 
 ## 2. Edit the copy
 
@@ -99,8 +105,8 @@ Delete the copy (`.skraft/pipeline.skraft.dot` or `.skraft/review.skraft.dot`) a
 
 ## See also
 
-- [The DOT workflow](../reference/workflow-dot.md) — syntax, validity rules,
-  [locked](../reference/workflow-dot.md#locked-nodes) and
-  [mandatory nodes](../reference/workflow-dot.md#mandatory-nodes).
+- [The DOT workflow](../reference/workflow-dot.mdx) — syntax, validity rules,
+  [locked](../reference/workflow-dot.mdx#locked-nodes) and
+  [mandatory nodes](../reference/workflow-dot.mdx#mandatory-nodes).
 - [`skraft workflow`](../reference/cli.md) — output and exit codes.
 - [Adapting skraft: what each setting costs](../explanation/customisation-trade-offs.md)

@@ -62,7 +62,7 @@ Copilot workflow does under Copilot.
 Two checks have no v1 equivalent: the **session lease**, which refuses a second session on a
 pipeline another one is conducting, and the workflow's **locked and mandatory nodes**, which a
 repository copy cannot silently remove
-([DOT workflow](../reference/workflow-dot.md#locked-nodes)).
+([DOT workflow](../reference/workflow-dot.mdx#locked-nodes)).
 
 ## Prevent or detect
 

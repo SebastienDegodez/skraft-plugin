@@ -4,6 +4,8 @@ description: "La syntaxe des workflows skraft : fichiers, attributs de graphe, f
 persona: tech-lead
 ---
 
+import WorkflowViewer from '@site/src/components/WorkflowViewer';
+
 # Le workflow DOT
 
 Le pipeline et la revue DELIVER sont deux graphes DOT que le moteur lit, valide puis exécute ; cette page en donne la syntaxe complète.
@@ -14,7 +16,7 @@ copient, valident et comparent un workflow :
 [`skraft workflow`](./cli.md). Ce que chaque phase du
 workflow livré produit : [Phases](./phases.md).
 
-## Fichiers <!-- #files -->
+## Fichiers {/* #files */}
 
 | Fichier | Rôle | Lu depuis |
 | --- | --- | --- |
@@ -30,7 +32,7 @@ workflow livré produit : [Phases](./phases.md).
 | Écriture | aucun agent ne peut écrire dans `.skraft/` |
 | Familles | une famille de modèle que nomme une copie (`model=`, `@<famille>`, `refuter=`) compte, quelles que soient les copies éjectées |
 
-## Graphe <!-- #graph -->
+## Graphe {/* #graph */}
 
 ```dot
 // commentaire
@@ -52,7 +54,7 @@ digraph skraft {
 | Sous-graphe | `subgraph cluster_<x> { … }` regroupe ses nœuds dans un dessin ; ses attributs (`label`) ne changent rien ; un sous-graphe dans un autre est refusé |
 | Identifiant de nœud | lettres, chiffres, `_` et `-`, commençant par une lettre ou `_` : il nomme les fichiers du nœud dans le dossier de suivi |
 
-## Formes de nœud <!-- #node-shapes -->
+## Formes de nœud {/* #node-shapes */}
 
 | Forme | Type | Attributs obligatoires | Attributs facultatifs | Arêtes sortantes |
 | --- | --- | --- | --- | --- |
@@ -70,7 +72,7 @@ digraph skraft {
 Attributs communs à toutes les formes : `label`, `shape`, `phase`. Tout autre attribut est
 refusé (`attribute <clé> is not supported on a <forme> node (supported: …)`).
 
-## Attributs de nœud <!-- #node-attributes -->
+## Attributs de nœud {/* #node-attributes */}
 
 | Attribut | Valeur | Règle |
 | --- | --- | --- |
@@ -96,14 +98,14 @@ refusé (`attribute <clé> is not supported on a <forme> node (supported: …)`)
 | `with_<entrée>` | `base`, `head`, `story`, `documents` ou `components` | lie l'entrée `<entrée>` du workflow appelé à cette valeur du run |
 | `mandatory` | `true` | voir [Nœuds obligatoires](#mandatory-nodes) ; `mandatory=false` est refusé |
 
-## Arêtes <!-- #edges -->
+## Arêtes {/* #edges */}
 
 | Attribut | Valeur | Règle |
 | --- | --- | --- |
 | `label` | selon le nœud de départ | gate : `PASS`, `FAIL` ; fan-in et appel : `APPROVED`, `NEEDS_REWORK` ; question : une réponse de la question ; toute autre arête n'en prend aucun |
 | `max_visits` | entier positif | nombre de fois où le run peut prendre l'arête ; obligatoire sur toute boucle |
 
-## Règles de validité <!-- #validity -->
+## Règles de validité {/* #validity */}
 
 `skraft workflow check`, `skraft init` et chaque pilote valident le workflow avant tout run et
 rendent toutes les erreurs. Un workflow est refusé quand :
@@ -129,7 +131,7 @@ rendent toutes les erreurs. Un workflow est refusé quand :
 Valide, `skraft workflow check` affiche `<fichier> is valid: phases RESEARCH, DESIGN, …` et, pour
 chaque nœud déverrouillé, `; <nœud> is unlocked and skipped: <raison>`.
 
-## Nœuds verrouillés <!-- #locked-nodes -->
+## Nœuds verrouillés {/* #locked-nodes */}
 
 Les gates de DELIVER du workflow du plugin (`gates`, `mutation`) portent `locked=true`. Une copie
 qui les retire ou les change est refusée, sauf à les sauter avec `unlock="<raison>"`, que le
@@ -147,7 +149,7 @@ Un nœud de gates qui lance toutes les gates d'un nœud verrouillé (son `goal_g
 n'est pas déverrouillé tient lieu de lui pour ce contrôle : dans le workflow du plugin,
 `mutation_gates` tient lieu de `gates` sur le chemin `kill_mutants -> … -> mutation`.
 
-## Nœuds obligatoires <!-- #mandatory-nodes -->
+## Nœuds obligatoires {/* #mandatory-nodes */}
 
 Les workflows du plugin marquent `mandatory=true` :
 
@@ -171,7 +173,7 @@ Chaque refus nomme le nœud et la règle violée, et finit par `this node is man
 removed`. `skraft workflow diff` marque `(mandatory)` chaque nœud obligatoire qu'il liste comme
 retiré ou modifié.
 
-## Revue : fan-out, nœuds lentille, fan-in <!-- #reviews -->
+## Revue : fan-out, nœuds lentille, fan-in {/* #reviews */}
 
 Une revue s'écrit en un fan-out (`shape=component`), un nœud lentille par branche
 (`shape=note`) et un fan-in (`shape=tripleoctagon`). Le journal nomme l'étape de revue d'après
@@ -203,7 +205,7 @@ distill_review -> deliver [label="APPROVED"]
 | Arête `NEEDS_REWORK` | au plus une ; sans elle, un `NEEDS_REWORK` arrête le run avec `review-rejected` ; au-delà de son `max_visits`, avec `loop-ceiling` |
 | Pilote | le pilote d'hôte lance les lentilles et le réfuteur (profondeur 1) ; aucun agent n'en lance un autre |
 
-## Nœud d'appel et `review.skraft.dot` <!-- #call-node -->
+## Nœud d'appel et `review.skraft.dot` {/* #call-node */}
 
 ```dot
 deliver_review [shape=house, workflow="review", mandatory=true]
@@ -244,7 +246,9 @@ digraph review {
 }
 ```
 
-## Entrées des lentilles <!-- #lens-inputs -->
+<WorkflowViewer file="review" direction="TB" />
+
+## Entrées des lentilles {/* #lens-inputs */}
 
 Toutes les lentilles sauf `cold-reader` lisent aussi le `context.md` de la revue (story, règles
 du projet, qui a écrit quel document), écrit seulement quand la revue est liée aux documents du
@@ -276,7 +280,7 @@ liste sous `metadata.skills`, pris dans le plugin, puis dans `.claude/skills/` o
 `.github/skills/`. Une skill qu'une lentille ou `finding-refuter` liste et qui est introuvable
 refuse le workflow, en nommant le nœud, l'agent et la skill.
 
-## Lentilles conditionnelles <!-- #conditional-lenses -->
+## Lentilles conditionnelles {/* #conditional-lenses */}
 
 Un nœud lentille avec `when=` ne tourne que si un chemin changé ou une ligne que le patch ajoute
 ou garde correspond à son déclencheur ; sinon la revue tourne sans lui. Un nœud lentille sans
@@ -287,10 +291,12 @@ ou garde correspond à son déclencheur ; sinon la revue tourne sans lui. Un nœ
 | `mock` | un nom de fichier contenant `mock`, `stub` ou `fake` | `WireMock…`, `MockServer`, `Microcks…`, `Mountebank`, `HttpMessageHandler`, `nock`, `msw` |
 | `contract` | un nom de fichier contenant `contract`, `.apiexamples`, `.apimetadata`, `openapi….yaml/json` | `VerifyAsync`, `Pact…`, `ProviderVerifier`, `ContractTest` |
 
-## Workflow du plugin <!-- #plugin-workflow -->
+## Workflow du plugin {/* #plugin-workflow */}
 
 Les nœuds de `workflows/pipeline.skraft.dot`, dans l'ordre du fichier. La phase entre
 parenthèses est héritée du prédécesseur.
+
+<WorkflowViewer file="pipeline" direction="TB" />
 
 | Nœud | Forme | Attributs | Phase |
 | --- | --- | --- | --- |
@@ -342,7 +348,7 @@ Les autres arêtes n'ont ni étiquette ni plafond : `start -> publish_consent ->
 `kill_proposal -> mutation_plan`, `kill_mutants -> mutation_review_lenses`, `visuals -> pr_writer -> publish -> exit`, et celles
 de chaque revue.
 
-## Voir aussi <!-- #see-also -->
+## Voir aussi {/* #see-also */}
 
 - [La ligne de commande skraft](./cli.md) — `skraft workflow eject|check|diff`
 - [Phases](./phases.md)

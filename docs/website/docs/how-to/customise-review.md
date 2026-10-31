@@ -63,7 +63,7 @@ Node options:
 - `model="<family>"` chooses the lens's model family (an `assign.agents` rule wins, see
   [Choose the agents' models](./choose-models.md));
 - `when="mock"` or `when="contract"` runs it only when the changes touch mocks or contracts
-  ([conditional lenses](../reference/workflow-dot.md#conditional-lenses)).
+  ([conditional lenses](../reference/workflow-dot.mdx#conditional-lenses)).
 
 ## 4. Check the workflow
 
@@ -87,15 +87,15 @@ Commit `.skraft/` and the agent's file: the lens runs at the next review, with t
 | Message | Action |
 |---|---|
 | `node deliver_review: lens threat-model (agent threat-model-lens) not found in the plugin, .claude/agents/ or .github/agents/` | Create the agent's file under the name `<name>-lens`. |
-| `mandatory node test_integrity (…) is missing; this node is mandatory and cannot be removed` | Put the node back: the fan-ins, `deliver_review` and the `test-integrity` and `architecture-boundaries` lenses are mandatory ([mandatory nodes](../reference/workflow-dot.md#mandatory-nodes)). |
+| `mandatory node test_integrity (…) is missing; this node is mandatory and cannot be removed` | Put the node back: the fan-ins, `deliver_review` and the `test-integrity` and `architecture-boundaries` lenses are mandatory ([mandatory nodes](../reference/workflow-dot.mdx#mandatory-nodes)). |
 | `.skraft/pipeline.skraft.dot already exists; edit it, or remove it` | Edit the existing copy. |
 | A `lenses="a,b,c"` node refused | A workflow copied before the current form: replace the node with the nodes and edges the message writes out. |
 | The lens does not run | Check that no `when` leaves it out, and that the run follows `.skraft/` (`skraft workflow check` names the file). |
 
 ## See also
 
-- [Review: fan-out, lens nodes, fan-in](../reference/workflow-dot.md#reviews)
-  and [call node](../reference/workflow-dot.md#call-node).
+- [Review: fan-out, lens nodes, fan-in](../reference/workflow-dot.mdx#reviews)
+  and [call node](../reference/workflow-dot.mdx#call-node).
 - [Gates](../reference/gates.md#review-run) — a lens's answer, refutation,
   verdict.
 - [Adapting skraft: what each setting costs](../explanation/customisation-trade-offs.md)

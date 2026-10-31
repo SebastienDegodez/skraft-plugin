@@ -21,7 +21,7 @@ nombre de tentatives, les verdicts, les gates et leurs seuils.
 | Composants, commandes, gates, base, mocking | `skraft-config.json` | [Configurer les composants](../how-to/configure-components.md) |
 | Modèle et niveau de réflexion de chaque agent | `models`, `assign` (quatre couches) | [Choisir les modèles des agents](../how-to/choose-models.md) |
 | Lentilles d'une revue | `.skraft/pipeline.skraft.dot`, `.skraft/review.skraft.dot` | [Ajouter une lentille à une revue](../how-to/customise-review.md) |
-| Agents et questions de votre dépôt | `.skraft/pipeline.skraft.dot` | [Le workflow DOT](../reference/workflow-dot.md) |
+| Agents et questions de votre dépôt | `.skraft/pipeline.skraft.dot` | [Le workflow DOT](../reference/workflow-dot.mdx) |
 | Publication de la pull request et des captures | `publish` | [Publier la pull request d'un run](../how-to/publish-pull-request.md) |
 
 Ce qui ne se règle pas, et pourquoi :
@@ -73,7 +73,7 @@ quelque chose. C'est pourquoi son nœud est verrouillé plutôt qu'optionnel.
 - [Architecture](./architecture.md) — pourquoi ces décisions
   vivent dans le moteur.
 - [Gates](../reference/gates.md) et
-  [nœuds verrouillés](../reference/workflow-dot.md#locked-nodes).
+  [nœuds verrouillés](../reference/workflow-dot.mdx#locked-nodes).
 
 ## Sources
 

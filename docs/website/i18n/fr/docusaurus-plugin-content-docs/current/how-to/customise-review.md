@@ -63,7 +63,7 @@ Options du nœud :
 - `model="<famille>"` choisit la famille de modèle de la lentille (une règle `assign.agents`
   l'emporte, voir [Choisir les modèles des agents](./choose-models.md)) ;
 - `when="mock"` ou `when="contract"` ne la lance que si les changements touchent des mocks ou
-  des contrats ([lentilles conditionnelles](../reference/workflow-dot.md#conditional-lenses)).
+  des contrats ([lentilles conditionnelles](../reference/workflow-dot.mdx#conditional-lenses)).
 
 ## 4. Vérifier le workflow
 
@@ -88,15 +88,15 @@ autres.
 | Message | Action |
 |---|---|
 | `node deliver_review: lens threat-model (agent threat-model-lens) not found in the plugin, .claude/agents/ or .github/agents/` | Créer le fichier de l'agent sous le nom `<nom>-lens`. |
-| `mandatory node test_integrity (…) is missing; this node is mandatory and cannot be removed` | Remettre le nœud : les fan-in, `deliver_review` et les lentilles `test-integrity` et `architecture-boundaries` sont obligatoires ([nœuds obligatoires](../reference/workflow-dot.md#mandatory-nodes)). |
+| `mandatory node test_integrity (…) is missing; this node is mandatory and cannot be removed` | Remettre le nœud : les fan-in, `deliver_review` et les lentilles `test-integrity` et `architecture-boundaries` sont obligatoires ([nœuds obligatoires](../reference/workflow-dot.mdx#mandatory-nodes)). |
 | `.skraft/pipeline.skraft.dot already exists; edit it, or remove it` | Modifier la copie existante. |
 | Un nœud `lenses="a,b,c"` refusé | Workflow copié avant la forme actuelle : remplacer le nœud par les nœuds et arêtes que le message écrit. |
 | La lentille ne tourne pas | Vérifier qu'aucun `when` ne l'écarte, et que le run suit bien `.skraft/` (`skraft workflow check` nomme le fichier). |
 
 ## Voir aussi
 
-- [Revue : fan-out, nœuds lentille, fan-in](../reference/workflow-dot.md#reviews)
-  et [nœud d'appel](../reference/workflow-dot.md#call-node).
+- [Revue : fan-out, nœuds lentille, fan-in](../reference/workflow-dot.mdx#reviews)
+  et [nœud d'appel](../reference/workflow-dot.mdx#call-node).
 - [Gates](../reference/gates.md#review-run) — réponse d'une lentille,
   réfutation, verdict.
 - [Adapter skraft : ce que coûte chaque réglage](../explanation/customisation-trade-offs.md)
