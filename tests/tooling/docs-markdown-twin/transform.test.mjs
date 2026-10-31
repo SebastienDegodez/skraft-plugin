@@ -127,11 +127,22 @@ test('MDX imports go, and Tabs become one level-4 section per tab', () => {
 })
 
 test('the workflow viewer becomes a link to the DOT file at the version ref', () => {
-  const twin = toMarkdownTwin('<WorkflowViewer file="pipeline" />\n', page())
+  const twin = toMarkdownTwin('<WorkflowViewer file="pipeline" />\n\n<WorkflowViewer file="review" direction="TB" />\n', page())
   assert.match(
     twin,
     new RegExp(`\\[Workflow \`pipeline\` \\(DOT source\\)\\]\\(${RAW}plugins/skraft-framework/workflows/pipeline\\.skraft\\.dot\\)`),
   )
+  assert.match(
+    twin,
+    new RegExp(`\\[Workflow \`review\` \\(DOT source\\)\\]\\(${RAW}plugins/skraft-framework/workflows/review\\.skraft\\.dot\\)`),
+  )
+  assert.doesNotMatch(twin, /WorkflowViewer/)
+})
+
+test('a heading id written as an MDX comment keeps the HTML comment of the .md pages', () => {
+  const twin = toMarkdownTwin('## Files {/* #files */}\n\nText.\n', page())
+  assert.match(twin, /^## Files <!-- #files -->$/m)
+  assert.doesNotMatch(twin, /\{\/\*/)
 })
 
 test('the bibliography becomes the list of citations', () => {
