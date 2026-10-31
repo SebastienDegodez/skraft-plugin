@@ -1,4 +1,4 @@
-import { mkdir, stat, writeFile } from 'node:fs/promises'
+import { copyFile, mkdir, stat, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 
 // A redirect page keeps the query and the anchor (`/en/reference/cli.html#see-also`): the script
@@ -19,6 +19,8 @@ const exists = async (path) => (await stat(path).catch(() => null)) !== null
 
 // Jekyll served `/explanation/pipeline/` as a directory index. The build has `explanation/pipeline.html`
 // and an `explanation/pipeline/` folder of sub-pages without `index.html`, so that address 404s.
+// The index is a copy of the page, never a redirect to it: `docusaurus serve` (3.10.2) answers
+// `/explanation/pipeline` with the folder's `index.html`, so a redirect there reloads itself forever.
 export async function writeDirectoryIndexes({ routesPaths, baseUrl, outDir }) {
   for (const route of routesPaths) {
     const page = route.slice(baseUrl.length - 1)
@@ -26,7 +28,7 @@ export async function writeDirectoryIndexes({ routesPaths, baseUrl, outDir }) {
     if (page === '/' || !(await isDirectory(folder))) continue
     const file = join(folder, 'index.html')
     if (await exists(file)) continue
-    await writeFile(file, redirectPage(route))
+    await copyFile(`${folder}.html`, file)
   }
 }
 

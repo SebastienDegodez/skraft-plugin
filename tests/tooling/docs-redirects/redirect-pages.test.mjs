@@ -13,7 +13,7 @@ const withSite = async (files, run) => {
   try {
     for (const file of files) {
       await mkdir(join(outDir, file, '..'), { recursive: true })
-      await writeFile(join(outDir, file), '<html></html>')
+      await writeFile(join(outDir, file), `<html>${file}</html>`)
     }
     await run(outDir)
   } finally {
@@ -33,13 +33,13 @@ test('the redirect target cannot close the script tag', () => {
   assert.equal(script, 'location.replace("/a\\u003c/script>\\u003cb>"+location.search+location.hash)')
 })
 
-test('a French page with a same-named folder gets a directory index that redirects to the page', async () => {
+test('a French page with a same-named folder gets a directory index that is the page itself, never a redirect to it', async () => {
   const files = ['explanation/pipeline.html', 'explanation/pipeline/stages.html', 'explanation/guardrails.html']
   await withSite(files, async (outDir) => {
     const routesPaths = ['/fr/', '/fr/explanation/pipeline', '/fr/explanation/pipeline/stages', '/fr/explanation/guardrails']
     await writeDirectoryIndexes({ routesPaths, baseUrl: '/fr/', outDir })
     const index = await readFile(join(outDir, 'explanation/pipeline/index.html'), 'utf8')
-    assert.match(index, /location\.replace\("\/fr\/explanation\/pipeline"/)
+    assert.equal(index, '<html>explanation/pipeline.html</html>')
     await assert.rejects(stat(join(outDir, 'explanation/guardrails/index.html')))
     await assert.rejects(stat(join(outDir, 'explanation/pipeline/stages/index.html')))
   })
@@ -48,6 +48,6 @@ test('a French page with a same-named folder gets a directory index that redirec
 test('a directory that already has an index keeps it', async () => {
   await withSite(['how-to.html', 'how-to/index.html'], async (outDir) => {
     await writeDirectoryIndexes({ routesPaths: ['/how-to'], baseUrl: '/', outDir })
-    assert.equal(await readFile(join(outDir, 'how-to/index.html'), 'utf8'), '<html></html>')
+    assert.equal(await readFile(join(outDir, 'how-to/index.html'), 'utf8'), '<html>how-to/index.html</html>')
   })
 })
