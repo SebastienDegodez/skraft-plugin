@@ -1,6 +1,6 @@
 ---
 title: "Stratégie d'évaluation"
-description: "Pourquoi skraft prouve sa qualité en trois couches (tests déterministes du moteur, comparaison appariée des skills, conformité des agents réels), et ce que chaque couche ne peut pas dire."
+description: "Pourquoi skraft prouve sa qualité en trois couches (tests du moteur, comparaison appariée des skills, conformité des agents réels) et ce que chacune ne dit pas."
 persona: tech-lead
 ---
 
@@ -85,13 +85,13 @@ ceux des skills, mais reste indicatif.
 Une absence de donnée n'est jamais affichée comme un succès : un verdict `inconclusive` dit
 pourquoi il ne conclut pas.
 
-## Pour aller plus loin
+## Sources
+
+- Jia, Y. & Harman, M., *An Analysis and Survey of the Development of Mutation Testing*, 2011.
+
+## Voir aussi <!-- #see-also -->
 
 - [Évaluer un skill](../how-to/evaluate-a-skill.md) — les étapes.
 - [Lire un verdict d'évaluation](./deep-dive/reading-a-verdict.md)
 - [Software craftsmanship](./software-craftsmanship.md) — la
   même exigence appliquée au code livré.
-
-## Sources
-
-- Jia, Y. & Harman, M., *An Analysis and Survey of the Development of Mutation Testing*, 2011.

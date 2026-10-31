@@ -51,15 +51,15 @@ Four lenses review the stories — INVEST, acceptance-criteria quality, mileston
 coherence, Definition of Ready — and the `review-verdict.mjs` script computes the verdict, as in
 DISCOVER. The planner never approves its own stories.
 
-## Going further
-
-- [The backlog](../backlog.md) — why each planning lens exists.
-- [Reference: DISCUSS](../../reference/phases.md#discuss) — inputs, outputs, labels.
-- [Reference: DISCUSS review criteria](../../reference/gates.md#discuss).
-- [RESEARCH](./research.md) — where engineering starts.
-
 ## Sources
 
 - [Adzic, G. *Specification by Example*, 2011.](../../reference/citations.mdx#cite-adzic-specification-2011)
 - [North, D. *Introducing BDD*, 2006.](../../reference/citations.mdx#cite-north-bdd-2006)
 - [Wake, B. *INVEST in Good Stories, and SMART Tasks*, 2003.](../../reference/citations.mdx#cite-wake-invest-2003)
+
+## See also <!-- #see-also -->
+
+- [The backlog](../backlog.md) — why each planning lens exists.
+- [Reference: DISCUSS](../../reference/phases.md#discuss) — inputs, outputs, labels.
+- [Reference: DISCUSS review criteria](../../reference/gates.md#discuss).
+- [RESEARCH](./research.md) — where engineering starts.

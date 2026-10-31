@@ -1,6 +1,6 @@
 ---
 title: "DISTILL"
-description: "Why DISTILL writes the executable contract before the code: scenarios in the business's language, an acceptance test that fails for the right reason, and a skeleton with no behaviour."
+description: "Why DISTILL writes the executable contract before the code: business-language scenarios, a test failing for the right reason, a skeleton with no behaviour."
 persona: software-engineer
 phase: distill
 ---
@@ -64,7 +64,12 @@ can be implemented, the red is the right one), and **boundaries** (the acceptanc
 only the use case, at least one walking skeleton per flow). The engine computes the verdict; a
 `NEEDS_REWORK` sends the acceptance-designer back with the findings that stand.
 
-## Going further
+## Sources
+
+- [Adzic, G. *Specification by Example*, 2011.](../../reference/citations.mdx#cite-adzic-specification-2011)
+- [Freeman, S. & Pryce, N. *Growing Object-Oriented Software, Guided by Tests*, 2009.](../../reference/citations.mdx#cite-freeman-goos-2009)
+
+## See also <!-- #see-also -->
 
 - [Reference: DISTILL](../../reference/phases.md#distill) — outputs, write scope, commits.
 - [Reference: DISTILL review criteria](../../reference/gates.md#distill).
@@ -72,8 +77,3 @@ only the use case, at least one walking skeleton per flow). The engine computes 
 - [Walking Skeleton](../deep-dive/walking-skeleton.md) and
   [Outside-In TDD](../deep-dive/outside-in-tdd.md).
 - [DELIVER](./deliver.md) — the next phase.
-
-## Sources
-
-- [Adzic, G. *Specification by Example*, 2011.](../../reference/citations.mdx#cite-adzic-specification-2011)
-- [Freeman, S. & Pryce, N. *Growing Object-Oriented Software, Guided by Tests*, 2009.](../../reference/citations.mdx#cite-freeman-goos-2009)

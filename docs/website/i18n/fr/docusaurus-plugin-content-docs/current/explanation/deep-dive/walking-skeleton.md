@@ -70,5 +70,8 @@ repousser. Tout ce qui suit s'ajoute à un système qui marche déjà.
 - [Freeman, S. & Pryce, N. *Growing Object-Oriented Software, Guided by Tests*, 2009.](../../reference/citations.mdx#cite-freeman-goos-2009)
 - Cockburn, A. *Hexagonal Architecture*, 2005.
 
-Pour aller plus loin : [Outside-In TDD](outside-in-tdd.md),
-[la phase DELIVER](../pipeline/deliver.md), [les gates DISTILL](../../reference/gates.md).
+## Voir aussi <!-- #see-also -->
+
+- [Outside-In TDD](outside-in-tdd.md)
+- [La phase DELIVER](../pipeline/deliver.md)
+- [Les gates DISTILL](../../reference/gates.md)

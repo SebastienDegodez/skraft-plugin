@@ -1,6 +1,6 @@
 ---
 title: "Parcours Brownfield"
-description: "Le parcours Brownfield de SKRAFT : comprendre un système existant ou le sécuriser avant de le transformer, avec trois agents directement sélectionnés par l'humain."
+description: "Le parcours Brownfield de SKRAFT : comprendre un système existant ou le sécuriser avant de le transformer, avec trois agents choisis par l'humain."
 ---
 
 # Parcours Brownfield
@@ -176,11 +176,6 @@ stratégie de refactoring, confirme les gates sous le seuil, et — pour Mikado 
 **pilote le graphe** : la seule étape que la méthode ne délègue pas, parce que
 décider quel prérequis attaquer est un jugement, pas une exécution.
 
-## Pour aller plus loin
-
-- [Poser un filet de caractérisation sur un service existant](../how-to/characterize-legacy.md) — le guide pas à pas du harness builder.
-- [Refactorer un code existant sous filet](../how-to/refactor-legacy.md) — Mikado ou Strangler Fig, feuille par feuille.
-
 ## Sources
 
 - Feathers, M., *Working Effectively with Legacy Code*, 2004 — tests de
@@ -192,3 +187,8 @@ décider quel prérequis attaquer est un jugement, pas une exécution.
 
 Termes à connaître : **golden master**, **caractérisation**, **contrat**, **façade**
 — définis dans le [glossaire](../reference/glossary.md).
+
+## Voir aussi <!-- #see-also -->
+
+- [Poser un filet de caractérisation sur un service existant](../how-to/characterize-legacy.md) — le guide pas à pas du harness builder.
+- [Refactorer un code existant sous filet](../how-to/refactor-legacy.md) — Mikado ou Strangler Fig, feuille par feuille.

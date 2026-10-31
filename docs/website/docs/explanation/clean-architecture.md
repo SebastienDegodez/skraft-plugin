@@ -1,6 +1,6 @@
 ---
 title: "Clean Architecture and hexagonal architecture"
-description: "Why skraft protects the business from technical details: Cockburn's hexagonal architecture, Martin's Clean Architecture, the dependency rule, and where DESIGN, DISTILL and DELIVER check it."
+description: "Why skraft shields the business from technical details: hexagonal and Clean Architecture, the dependency rule, and where DESIGN, DISTILL and DELIVER check it."
 persona: tech-lead
 ---
 
@@ -168,7 +168,16 @@ forbidden dependency. There, the word *port* stayed. See
 - **Believing a review is enough**: the `clean-architecture-testing` skill says it plainly, layer
   discipline is enforced by CI, not by reading.
 
-## Going further
+## Sources
+
+- [Cockburn, A. *Hexagonal Architecture*, 2005.](../reference/citations.mdx#cite-cockburn-hexagonal-2005)
+- [Fowler, M. *Patterns of Enterprise Application Architecture*, 2002.](../reference/citations.mdx#cite-fowler-peaa-2002)
+- [Freeman, S. & Pryce, N. *Growing Object-Oriented Software, Guided by Tests*, 2009.](../reference/citations.mdx#cite-freeman-goos-2009)
+- [Gamma, E., Helm, R., Johnson, R. & Vlissides, J. *Design Patterns*, 1994.](../reference/citations.mdx#cite-gamma-patterns-1994)
+- [Martin, R. C. *Clean Architecture*, 2017.](../reference/citations.mdx#cite-martin-cleanarch-2017)
+- [Meszaros, G. *xUnit Test Patterns*, 2007.](../reference/citations.mdx#cite-meszaros-xunit-2007)
+
+## See also <!-- #see-also -->
 
 - [Domain-Driven Design](./domain-driven-design.md) — what lives
   in Domain.
@@ -178,12 +187,3 @@ forbidden dependency. There, the word *port* stayed. See
   [the DELIVER phase](./pipeline/deliver.md),
   [the gates](../reference/gates.md) and
   [the glossary](../reference/glossary.md).
-
-## Sources
-
-- [Cockburn, A. *Hexagonal Architecture*, 2005.](../reference/citations.mdx#cite-cockburn-hexagonal-2005)
-- [Fowler, M. *Patterns of Enterprise Application Architecture*, 2002.](../reference/citations.mdx#cite-fowler-peaa-2002)
-- [Freeman, S. & Pryce, N. *Growing Object-Oriented Software, Guided by Tests*, 2009.](../reference/citations.mdx#cite-freeman-goos-2009)
-- [Gamma, E., Helm, R., Johnson, R. & Vlissides, J. *Design Patterns*, 1994.](../reference/citations.mdx#cite-gamma-patterns-1994)
-- [Martin, R. C. *Clean Architecture*, 2017.](../reference/citations.mdx#cite-martin-cleanarch-2017)
-- [Meszaros, G. *xUnit Test Patterns*, 2007.](../reference/citations.mdx#cite-meszaros-xunit-2007)

@@ -1,6 +1,6 @@
 ---
 title: "DELIVER"
-description: "Pourquoi DELIVER fait passer le contrat au vert en cycles TDD vérifiés, pourquoi la mutation passe en dernier, une fois, sur le code revu, et pourquoi c'est le développeur qui choisit comment traiter les mutants survivants."
+description: "Pourquoi DELIVER passe le contrat au vert en cycles TDD vérifiés, mute le code revu une seule fois, en dernier, et confie au développeur les mutants survivants."
 persona: software-engineer
 phase: deliver
 ---
@@ -114,15 +114,15 @@ et [Contract testing](../deep-dive/contract-testing.md).
 - **Pas de seuil négociable.** 100 % sur le cœur, 80 % sur la frontière, quel que soit le dépôt :
   voir [Software craftsmanship](../software-craftsmanship.md).
 
-## Pour aller plus loin
-
-- [Référence : DELIVER](../../reference/phases.md#deliver) — nœuds, propositions, réponses à `mutation-plan`, arêtes.
-- [Référence : critères de revue de DELIVER](../../reference/gates.md#deliver).
-- [La revue avant la revue](../deep-dive/review-before-review.md).
-- [Lancer les gates](../../how-to/run-gates.md).
-
 ## Sources
 
 - [Beck, K. *Test-Driven Development by Example*, 2003.](../../reference/citations.mdx#cite-beck-tdd-2003)
 - [Freeman, S. & Pryce, N. *Growing Object-Oriented Software, Guided by Tests*, 2009.](../../reference/citations.mdx#cite-freeman-goos-2009)
 - [Jia, Y. & Harman, M. *An Analysis and Survey of the Development of Mutation Testing*, 2011.](../../reference/citations.mdx#cite-jia-mutation-2011)
+
+## Voir aussi <!-- #see-also -->
+
+- [Référence : DELIVER](../../reference/phases.md#deliver) — nœuds, propositions, réponses à `mutation-plan`, arêtes.
+- [Référence : critères de revue de DELIVER](../../reference/gates.md#deliver).
+- [La revue avant la revue](../deep-dive/review-before-review.md).
+- [Lancer les gates](../../how-to/run-gates.md).

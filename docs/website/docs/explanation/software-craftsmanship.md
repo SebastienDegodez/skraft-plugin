@@ -1,6 +1,6 @@
 ---
 title: "Software craftsmanship — why skraft makes it a rule"
-description: "What craftsmanship means (manifesto, professionalism, quality as a non-negotiable) and how skraft turns it into checks the engine runs: outside-in TDD, walking skeleton, mutation testing, review before review, human decisions."
+description: "What craftsmanship means and how skraft turns it into engine checks: outside-in TDD, walking skeleton, mutation testing, review before review, human decisions."
 persona: tech-lead
 ---
 
@@ -161,15 +161,6 @@ Enforceable craftsmanship has a cost, and skraft owns it.
 - **Believing the engine replaces judgement.** The gates prove what can be measured; design
   choices are still ratified by a human.
 
-## Going further
-
-- [Domain-Driven Design](./domain-driven-design.md) — the
-  business model craftsmanship protects.
-- [Clean Architecture and hexagonal architecture](./clean-architecture.md)
-  — the dependency rule checked by the `architecture` gate.
-- [The DELIVER phase](./pipeline/deliver.md) and
-  [the glossary](../reference/glossary.md).
-
 ## Sources
 
 - [Bay, J. *Object Calisthenics*, 2008.](../reference/citations.mdx#cite-bay-calisthenics-2008)
@@ -181,3 +172,12 @@ Enforceable craftsmanship has a cost, and skraft owns it.
 - [Martin, R. C. *Clean Code*, 2008.](../reference/citations.mdx#cite-martin-cleancode-2008)
 - [McBreen, P. *Software Craftsmanship: The New Imperative*, 2001.](../reference/citations.mdx#cite-mcbreen-craftsmanship-2001)
 - [Wiegers, K. *Peer Reviews in Software*, 2002.](../reference/citations.mdx#cite-wiegers-peer-reviews-2002)
+
+## See also <!-- #see-also -->
+
+- [Domain-Driven Design](./domain-driven-design.md) — the
+  business model craftsmanship protects.
+- [Clean Architecture and hexagonal architecture](./clean-architecture.md)
+  — the dependency rule checked by the `architecture` gate.
+- [The DELIVER phase](./pipeline/deliver.md) and
+  [the glossary](../reference/glossary.md).

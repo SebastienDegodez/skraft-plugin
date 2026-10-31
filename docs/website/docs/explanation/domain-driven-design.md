@@ -1,6 +1,6 @@
 ---
 title: "Domain-Driven Design — from the business language to the code"
-description: "Why skraft relies on Evans's DDD — ubiquitous language, bounded contexts, context map, strategic then tactical design — and which phases, artefacts and lenses produce or check them."
+description: "Why skraft relies on Evans's DDD (ubiquitous language, bounded contexts, context map, strategic then tactical design) and where the pipeline checks it."
 persona: tech-lead
 ---
 
@@ -204,15 +204,6 @@ anti-patterns; its strategic design section sets the rule on naming contexts.
 - **The fat aggregate**: one aggregate that owns Driver, Vehicle, Coverage, Claim and Billing.
   Split by which invariants must be atomic, reference the rest by id.
 
-## Going further
-
-- [Clean Architecture and hexagonal architecture](./clean-architecture.md)
-  — where aggregates and repositories live once the model is designed.
-- [Software craftsmanship](./software-craftsmanship.md) — the
-  discipline that keeps this model clean.
-- [The patterns](../reference/patterns.md), [the gates](../reference/gates.md)
-  and [the glossary](../reference/glossary.md).
-
 ## Sources
 
 - [Dymitruk, A. *Event Modeling: What is it?*, 2019.](../reference/citations.mdx#cite-dymitruk-eventmodeling-2019)
@@ -225,3 +216,12 @@ anti-patterns; its strategic design section sets the rule on naming contexts.
 - [Newman, S. *Building Microservices*, 2nd ed., 2021.](../reference/citations.mdx#cite-newman-microservices-2021)
 - [Vernon, V. *Implementing Domain-Driven Design*, 2013.](../reference/citations.mdx#cite-vernon-iddd-2013)
 - [Wake, B. *INVEST in Good Stories, and SMART Tasks*, 2003.](../reference/citations.mdx#cite-wake-invest-2003)
+
+## See also <!-- #see-also -->
+
+- [Clean Architecture and hexagonal architecture](./clean-architecture.md)
+  — where aggregates and repositories live once the model is designed.
+- [Software craftsmanship](./software-craftsmanship.md) — the
+  discipline that keeps this model clean.
+- [The patterns](../reference/patterns.md), [the gates](../reference/gates.md)
+  and [the glossary](../reference/glossary.md).

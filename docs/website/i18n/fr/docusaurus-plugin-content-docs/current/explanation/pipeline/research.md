@@ -67,7 +67,7 @@ relit de toute façon.
 Quand les stories arrivent de DISCUSS avec `skraft init --from-artifacts`, le run démarre en
 DESIGN : la recherche a eu lieu pendant la préparation produit.
 
-## Pour aller plus loin
+## Voir aussi <!-- #see-also -->
 
 - [Référence : RESEARCH](../../reference/phases.md#research) — nœuds, sortie, contrôle, tentatives.
 - [Référence : le document de recherche](../../reference/run-journal.md#research-document).

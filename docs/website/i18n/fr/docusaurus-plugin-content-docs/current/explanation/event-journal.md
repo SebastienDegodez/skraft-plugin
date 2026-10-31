@@ -1,6 +1,6 @@
 ---
 title: "Le journal d'événements"
-description: "Pourquoi SKRAFT V2 a remplacé state.json par un journal d'événements chaîné et signé, d'où l'état est recalculé : reprise exacte, modifications détectées, deux sessions qui ne s'écrasent pas."
+description: "Pourquoi SKRAFT V2 a remplacé state.json par un journal d'événements chaîné et signé qui recalcule l'état : reprise exacte, retouches détectées, nul écrasement."
 persona: tech-lead
 ---
 
@@ -106,14 +106,14 @@ sans partager d'état.
 - **La clé reste sur une machine.** Reprendre un run ailleurs demande un geste humain explicite,
   plutôt qu'une confiance implicite.
 
-## Pour aller plus loin
+## Sources
+
+- [Fowler, M. *Event Sourcing*, 2005.](../reference/citations.mdx#cite-fowler-eventsourcing-2005)
+- [Fowler, M. *Bliki: CQRS*, 2011.](../reference/citations.mdx#cite-fowler-cqrs-2011)
+
+## Voir aussi <!-- #see-also -->
 
 - [Reprendre ou débloquer un run](../how-to/resume-a-run.md).
 - [Référence : dossier de suivi, `events.jsonl`, codes](../reference/run-journal.md).
 - [Garde-fous](./guardrails.md) — ce que le journal remplace dans les hooks de la v1.
 - [Architecture](./architecture.md).
-
-## Sources
-
-- [Fowler, M. *Event Sourcing*, 2005.](../reference/citations.mdx#cite-fowler-eventsourcing-2005)
-- [Fowler, M. *Bliki: CQRS*, 2011.](../reference/citations.mdx#cite-fowler-cqrs-2011)

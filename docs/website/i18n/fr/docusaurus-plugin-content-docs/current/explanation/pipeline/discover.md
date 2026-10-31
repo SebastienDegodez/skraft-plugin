@@ -1,6 +1,6 @@
 ---
 title: "DISCOVER"
-description: "Pourquoi trier le backlog avant de choisir une story : priorité, doublons, effort en points et proposition de sprint, jugés par des lentilles qui n'ont pas fait le tri."
+description: "Pourquoi trier le backlog avant de choisir une story : priorité, doublons, effort en points, proposition de sprint, jugés par des lentilles qui n'ont pas trié."
 persona: software-engineer
 phase: discover
 ---
@@ -62,14 +62,14 @@ C'est la revue par les pairs ramenée à l'échelle d'un rapport de triage : plu
 indépendants, des critères écrits à l'avance
 ([Wiegers, 2002](../../reference/citations.mdx#cite-wiegers-peer-reviews-2002)).
 
-## Pour aller plus loin
+## Sources
+
+- [Reinertsen, D. G. *The Principles of Product Development Flow*, 2009.](../../reference/citations.mdx#cite-reinertsen-flow-2009)
+- [Wiegers, K. *Peer Reviews in Software*, 2002.](../../reference/citations.mdx#cite-wiegers-peer-reviews-2002)
+
+## Voir aussi <!-- #see-also -->
 
 - [Le backlog](../backlog.md) — le plugin `skraft-backlog` dans son ensemble.
 - [Référence : DISCOVER](../../reference/phases.md#discover) — modes, sorties, plafond, effets sur GitHub.
 - [Référence : critères de revue de DISCOVER](../../reference/gates.md#discover).
 - [DISCUSS](./discuss.md) — la phase suivante.
-
-## Sources
-
-- [Reinertsen, D. G. *The Principles of Product Development Flow*, 2009.](../../reference/citations.mdx#cite-reinertsen-flow-2009)
-- [Wiegers, K. *Peer Reviews in Software*, 2002.](../../reference/citations.mdx#cite-wiegers-peer-reviews-2002)

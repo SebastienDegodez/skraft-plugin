@@ -1,6 +1,6 @@
 ---
 title: "Zoom L3 : contract testing"
-description: "Zoom sur le contract testing en DELIVER : comment le software-engineer charge les skills de contrat que son brief nomme, la baseline WebApplicationFactory toujours présente, l'opt-in Microcks additif, et comment la contract-fidelity-lens audite le résultat."
+description: "Zoom sur le contract testing en DELIVER : les skills que nomme le brief, la baseline WebApplicationFactory l'opt-in Microcks, l'audit contract-fidelity-lens."
 persona: software-engineer
 ---
 
@@ -83,13 +83,13 @@ consommateur puisse se fier à sa forme sans environnement end-to-end vivant.
 - **Un hostname vivant** qui fuit dans le test fournisseur au lieu du host in-process
   (K5).
 
-## Pour aller plus loin
+## Sources
+
+- Freeman, S. & Pryce, N., *Growing Object-Oriented Software, Guided by Tests*, 2009.
+
+## Voir aussi <!-- #see-also -->
 
 - [Architecture](../architecture.md) — la vue L1 + L2 d'où cette page zoome.
 - [Zoom L3 : mocking (Microcks)](./mocking-microcks.md) — le câblage frère, côté consommateur.
 - [DELIVER](../pipeline/deliver.md) — la phase qui possède ce câblage.
 - [Catalogue agentique](pathname:///dashboard/) — chaque agent et lentille. Un terme vous échappe ? Voir le [glossaire](../../reference/glossary.md).
-
-## Sources
-
-- Freeman, S. & Pryce, N., *Growing Object-Oriented Software, Guided by Tests*, 2009.

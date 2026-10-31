@@ -1,6 +1,6 @@
 ---
 title: "Software craftsmanship — pourquoi skraft en fait une règle"
-description: "Ce que veut dire le craft (manifeste, professionnalisme, qualité non négociable) et comment skraft le transforme en contrôles exécutés par le moteur : TDD outside-in, walking skeleton, mutation testing, revue avant la revue, décisions humaines."
+description: "Ce que veut dire le craft et comment skraft en fait des contrôles moteur : TDD outside-in, walking skeleton, mutation, revue avant la revue, décisions humaines."
 persona: tech-lead
 ---
 
@@ -168,15 +168,6 @@ Le craft opposable a un coût, et skraft l'assume.
 - **Croire que le moteur remplace le jugement.** Les gates prouvent ce qui se mesure ; les
   choix de conception restent ratifiés par un humain.
 
-## Pour aller plus loin
-
-- [Domain-Driven Design](./domain-driven-design.md) — le
-  modèle métier que le craft protège.
-- [Clean Architecture et architecture hexagonale](./clean-architecture.md)
-  — la règle de dépendance vérifiée par la gate `architecture`.
-- [La phase DELIVER](./pipeline/deliver.md) et
-  [le glossaire](../reference/glossary.md).
-
 ## Sources
 
 - [Bay, J. *Object Calisthenics*, 2008.](../reference/citations.mdx#cite-bay-calisthenics-2008)
@@ -188,3 +179,12 @@ Le craft opposable a un coût, et skraft l'assume.
 - [Martin, R. C. *Clean Code*, 2008.](../reference/citations.mdx#cite-martin-cleancode-2008)
 - [McBreen, P. *Software Craftsmanship: The New Imperative*, 2001.](../reference/citations.mdx#cite-mcbreen-craftsmanship-2001)
 - [Wiegers, K. *Peer Reviews in Software*, 2002.](../reference/citations.mdx#cite-wiegers-peer-reviews-2002)
+
+## Voir aussi <!-- #see-also -->
+
+- [Domain-Driven Design](./domain-driven-design.md) — le
+  modèle métier que le craft protège.
+- [Clean Architecture et architecture hexagonale](./clean-architecture.md)
+  — la règle de dépendance vérifiée par la gate `architecture`.
+- [La phase DELIVER](./pipeline/deliver.md) et
+  [le glossaire](../reference/glossary.md).

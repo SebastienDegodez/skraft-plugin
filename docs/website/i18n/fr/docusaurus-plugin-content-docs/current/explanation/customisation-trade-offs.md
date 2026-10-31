@@ -66,7 +66,11 @@ couverture de 100 % dit que le code a tourné, pas qu'un test aurait remarqué q
 retirer ne raccourcit pas seulement un run ; cela retire la preuve que les autres gates prouvent
 quelque chose. C'est pourquoi son nœud est verrouillé plutôt qu'optionnel.
 
-## Pour aller plus loin
+## Sources
+
+- Jia, Y. & Harman, M., *An Analysis and Survey of the Development of Mutation Testing*, 2011.
+
+## Voir aussi <!-- #see-also -->
 
 - [Software craftsmanship](./software-craftsmanship.md) —
   pourquoi un seuil fixe.
@@ -74,7 +78,3 @@ quelque chose. C'est pourquoi son nœud est verrouillé plutôt qu'optionnel.
   vivent dans le moteur.
 - [Gates](../reference/gates.md) et
   [nœuds verrouillés](../reference/workflow-dot.mdx#locked-nodes).
-
-## Sources
-
-- Jia, Y. & Harman, M., *An Analysis and Survey of the Development of Mutation Testing*, 2011.

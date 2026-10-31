@@ -1,6 +1,6 @@
 ---
 title: "Garde-fous : du hook au moteur"
-description: "Pourquoi SKRAFT V2 part de zéro hook de commande, ce qui remplace dans le moteur chaque garde-fou de la v1, ce que l'on perd en passant de prévenir à détecter, et à quelle condition un hook peut revenir."
+description: "Pourquoi SKRAFT V2 part de zéro hook de commande, ce qui remplace chaque garde-fou v1, ce que coûte détecter plutôt que prévenir, et quand un hook revient."
 persona: tech-lead
 ---
 
@@ -111,13 +111,13 @@ reste le rôle de la revue, des tests d'acceptation métier et du relecteur huma
 les pairs reste l'une des pratiques qualité les plus efficaces
 ([Wiegers, 2002](../reference/citations.mdx#cite-wiegers-peer-reviews-2002)).
 
-## Pour aller plus loin
+## Sources
+
+- [Wiegers, K. *Peer Reviews in Software*, 2002.](../reference/citations.mdx#cite-wiegers-peer-reviews-2002)
+
+## Voir aussi <!-- #see-also -->
 
 - [Architecture](./architecture.md) — le moteur, les pilotes, la profondeur 1.
 - [Le journal d'événements](./event-journal.md) — la chaîne signée qui remplace l'interdiction d'écrire l'état.
 - [Référence : dossier de suivi et journal](../reference/run-journal.md).
 - [Lancer les gates et lire leurs preuves](../how-to/run-gates.md).
-
-## Sources
-
-- [Wiegers, K. *Peer Reviews in Software*, 2002.](../reference/citations.mdx#cite-wiegers-peer-reviews-2002)

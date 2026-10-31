@@ -66,7 +66,11 @@ code ran, not that a test would have noticed it change. Removing it does not jus
 it removes the proof that the other gates prove anything. That is why its node is locked rather
 than optional.
 
-## Further reading
+## Sources
+
+- Jia, Y. & Harman, M., *An Analysis and Survey of the Development of Mutation Testing*, 2011.
+
+## See also <!-- #see-also -->
 
 - [Software craftsmanship](./software-craftsmanship.md) — why a
   fixed bar.
@@ -74,7 +78,3 @@ than optional.
   the engine.
 - [Gates](../reference/gates.md) and
   [locked nodes](../reference/workflow-dot.mdx#locked-nodes).
-
-## Sources
-
-- Jia, Y. & Harman, M., *An Analysis and Survey of the Development of Mutation Testing*, 2011.

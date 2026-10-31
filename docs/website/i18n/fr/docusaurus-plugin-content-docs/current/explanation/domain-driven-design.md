@@ -1,6 +1,6 @@
 ---
 title: "Domain-Driven Design — du langage du métier au code"
-description: "Pourquoi skraft s'appuie sur le DDD d'Evans — langage omniprésent, bounded contexts, context map, conception stratégique puis tactique — et quelles phases, quels artefacts et quelles lentilles les produisent ou les vérifient."
+description: "Pourquoi skraft s'appuie sur le DDD d'Evans (langage omniprésent, bounded contexts, context map, design stratégique puis tactique) et où skraft le vérifie."
 persona: tech-lead
 ---
 
@@ -210,15 +210,6 @@ anti-patterns ; sa section de conception stratégique fixe la règle de nommage 
 - **L'agrégat obèse** : un seul agrégat qui possède Driver, Vehicle, Coverage, Claim et Billing.
   On découpe selon les invariants qui doivent être atomiques, le reste se référence par id.
 
-## Pour aller plus loin
-
-- [Clean Architecture et architecture hexagonale](./clean-architecture.md)
-  — où vivent les agrégats et les repositories une fois le modèle conçu.
-- [Software craftsmanship](./software-craftsmanship.md) — la
-  discipline qui garde ce modèle propre.
-- [Les patterns](../reference/patterns.md), [les gates](../reference/gates.md)
-  et [le glossaire](../reference/glossary.md).
-
 ## Sources
 
 - [Dymitruk, A. *Event Modeling: What is it?*, 2019.](../reference/citations.mdx#cite-dymitruk-eventmodeling-2019)
@@ -231,3 +222,12 @@ anti-patterns ; sa section de conception stratégique fixe la règle de nommage 
 - [Newman, S. *Building Microservices*, 2nd ed., 2021.](../reference/citations.mdx#cite-newman-microservices-2021)
 - [Vernon, V. *Implementing Domain-Driven Design*, 2013.](../reference/citations.mdx#cite-vernon-iddd-2013)
 - [Wake, B. *INVEST in Good Stories, and SMART Tasks*, 2003.](../reference/citations.mdx#cite-wake-invest-2003)
+
+## Voir aussi <!-- #see-also -->
+
+- [Clean Architecture et architecture hexagonale](./clean-architecture.md)
+  — où vivent les agrégats et les repositories une fois le modèle conçu.
+- [Software craftsmanship](./software-craftsmanship.md) — la
+  discipline qui garde ce modèle propre.
+- [Les patterns](../reference/patterns.md), [les gates](../reference/gates.md)
+  et [le glossaire](../reference/glossary.md).

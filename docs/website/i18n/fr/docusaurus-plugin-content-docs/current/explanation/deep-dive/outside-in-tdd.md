@@ -72,5 +72,8 @@ sur le comportement métier.
 - Beck, K. *Test-Driven Development by Example*, 2003.
 - Freeman, S. & Pryce, N. *Growing Object-Oriented Software, Guided by Tests*, 2009.
 
-Pour aller plus loin : [Walking Skeleton](walking-skeleton.md),
-[la phase DELIVER](../pipeline/deliver.md), [le glossaire](../../reference/glossary.md).
+## Voir aussi <!-- #see-also -->
+
+- [Walking Skeleton](walking-skeleton.md)
+- [La phase DELIVER](../pipeline/deliver.md)
+- [Le glossaire](../../reference/glossary.md)

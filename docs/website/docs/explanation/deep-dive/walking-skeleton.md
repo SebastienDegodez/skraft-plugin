@@ -66,5 +66,8 @@ deferring it. Everything after adds to a system that already works.
 - [Freeman, S. & Pryce, N. *Growing Object-Oriented Software, Guided by Tests*, 2009.](../../reference/citations.mdx#cite-freeman-goos-2009)
 - Cockburn, A. *Hexagonal Architecture*, 2005.
 
-Going further: [Outside-In TDD](outside-in-tdd.md),
-[the DELIVER phase](../pipeline/deliver.md), [DISTILL gates](../../reference/gates.md).
+## See also <!-- #see-also -->
+
+- [Outside-In TDD](outside-in-tdd.md)
+- [The DELIVER phase](../pipeline/deliver.md)
+- [DISTILL gates](../../reference/gates.md)

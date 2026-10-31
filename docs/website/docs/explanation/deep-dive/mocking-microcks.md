@@ -1,6 +1,6 @@
 ---
 title: "L3 zoom: mocking (Microcks)"
-description: "Zoom on mocking in DELIVER: how the software-engineer loads the mocking skill its brief names, Microcks by default or an in-process double, and how the mock-fidelity-lens audits the result."
+description: "Zoom on mocking in DELIVER: the mocking skill the brief names, Microcks by default or an in-process double, and the mock-fidelity-lens audit."
 persona: software-engineer
 ---
 
@@ -78,13 +78,13 @@ deterministic while still exercising the real boundary the service depends on.
 - **Hardcoding `dotnet test`** instead of the component's test command — the brief
   names it.
 
-## Going further
+## Sources
+
+- Freeman, S. & Pryce, N., *Growing Object-Oriented Software, Guided by Tests*, 2009.
+
+## See also <!-- #see-also -->
 
 - [Architecture](../architecture.md) — the L1 + L2 view this page zooms out of.
 - [L3 zoom: contract testing](./contract-testing.md) — the sibling provider-side wiring.
 - [DELIVER](../pipeline/deliver.md) — the phase that owns this wiring.
 - [Agentic catalogue](pathname:///dashboard/) — every agent and lens. Unsure about a term? See the [glossary](../../reference/glossary.md).
-
-## Sources
-
-- Freeman, S. & Pryce, N., *Growing Object-Oriented Software, Guided by Tests*, 2009.

@@ -12,8 +12,12 @@ Cette page est une **narration** : elle ne décrit pas SKRAFT dans l'abstrait, e
 vous fait suivre **un exemple concret** d'un bout à l'autre. Le fil conducteur est
 le *flux d'artefacts* — la sortie d'une phase devient l'entrée de la suivante.
 
-> ☕ **Exemple illustratif.** Le cas Starbucks ci-dessous est inventé pour la
-> pédagogie. Il n'est pas tiré du code du plugin ; aucun chiffre n'y est réel.
+:::info[☕ Fil rouge — Starbucks *(exemple illustratif)*]
+
+Le cas Starbucks ci-dessous est inventé pour la pédagogie. Il n'est pas tiré du code du
+plugin ; aucun chiffre n'y est réel.
+
+:::
 
 ## Ce que vous allez suivre
 
@@ -157,7 +161,7 @@ d'ingénierie, sans perdre son contexte :
 Chaque artefact est devenu le **contexte** de l'étape suivante, et chaque relais est resté
 relisible : ce qui n'était pas écrit n'a pas été transmis.
 
-## Pour aller plus loin
+## Voir aussi <!-- #see-also -->
 
 - [Vue d'ensemble du pipeline](./index.mdx)
 - [Référence : les phases](../../reference/phases.md) — entrées, sorties, lentilles de chaque phase

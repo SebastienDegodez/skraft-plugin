@@ -68,5 +68,8 @@ until the slice is complete, which keeps the focus on business behaviour.
 - Beck, K. *Test-Driven Development by Example*, 2003.
 - Freeman, S. & Pryce, N. *Growing Object-Oriented Software, Guided by Tests*, 2009.
 
-Going further: [Walking Skeleton](walking-skeleton.md),
-[the DELIVER phase](../pipeline/deliver.md), [the glossary](../../reference/glossary.md).
+## See also <!-- #see-also -->
+
+- [Walking Skeleton](walking-skeleton.md)
+- [The DELIVER phase](../pipeline/deliver.md)
+- [The glossary](../../reference/glossary.md)

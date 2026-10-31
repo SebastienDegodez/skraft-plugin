@@ -1,6 +1,6 @@
 ---
 title: "Architecture"
-description: "Why SKRAFT V2 separates a host-neutral engine, which decides everything, from host drivers that only execute, and why the checks live in tested code rather than in an agent's prose."
+description: "Why SKRAFT V2 splits a host-neutral engine that decides from host drivers that only execute, and why checks live in tested code, not in an agent's prose."
 persona: tech-lead
 ---
 
@@ -171,13 +171,13 @@ fallback under VS Code.
 
 **Keeping the hooks.** See [Guardrails](./guardrails.md).
 
-## Going further
-
-- [The event journal](./event-journal.md) — the recomputed state and resume.
-- [Clean Architecture](./clean-architecture.md) — the dependency rule, applied to the engine too.
-- [Reference: hosts](../reference/hosts.md) and [the command line](../reference/cli.md).
-
 ## Sources
 
 - [Cockburn, A. *Hexagonal Architecture*, 2005.](../reference/citations.mdx#cite-cockburn-hexagonal-2005)
 - [Martin, R. C. *Clean Architecture*, 2017.](../reference/citations.mdx#cite-martin-cleanarch-2017)
+
+## See also <!-- #see-also -->
+
+- [The event journal](./event-journal.md) — the recomputed state and resume.
+- [Clean Architecture](./clean-architecture.md) — the dependency rule, applied to the engine too.
+- [Reference: hosts](../reference/hosts.md) and [the command line](../reference/cli.md).
