@@ -1,7 +1,8 @@
 // scripts/scan-drift.mjs
 //
 // Deterministic three-way diff for the SKRAFT handbook: contract (book.yml) vs
-// files (docs/site/{fr,en}/**) vs sources (plugins/**, .agents/**). Emits a drift
+// files (docs/website/docs/** for EN, docs/website/i18n/fr/docusaurus-plugin-content-docs/
+// current/** for FR) vs sources (plugins/**, .agents/**). Emits a drift
 // ledger (JSON) that the docs reconciler agent chain consumes — ONE item per
 // drift, each with the context a worker needs to repair it.
 //
@@ -10,10 +11,11 @@
 //
 // Usage:
 //   node scripts/scan-drift.mjs [--book docs/website/book.yml] [--root .]
-//                               [--site-root docs/site] [--out path] [--empty-threshold 4]
+//                               [--site-root docs/website] [--out path] [--empty-threshold 4]
 //
-// Path bases: `source:` globs resolve from --root (repo root); page `fr:`/`en:`
-// paths resolve from --site-root (where the Jekyll site lives).
+// Path bases: `source:` and `retire` globs resolve from --root (repo root); a page's
+// `doc` id resolves from --site-root (the Docusaurus site), .md or .mdx. The ledger
+// gives each page's `doc` and its `fr`/`en` files relative to --root.
 //
 // Output: a JSON object { generatedAt, root, summary, items[] } on stdout (or --out).
 // Exit code: 0 when no drift, 1 when drift was found (so CI can branch), 2 on usage error.
@@ -21,7 +23,7 @@
 import { readFileSync, existsSync, writeFileSync, mkdirSync } from 'node:fs';
 import { resolve, join, basename, dirname, relative } from 'node:path';
 import { parseArgs } from 'node:util';
-import { loadBook, iterPages, findFiles, sectionsOf, pagesOfSection, parseYaml } from './lib/book.mjs';
+import { loadBook, iterPages, findFiles, sectionsOf, pagesOfSection, pageFiles, parseYaml } from './lib/book.mjs';
 import { buildCatalogueTopology } from '../eng/lib/catalogue-topology.mjs';
 import { findDynamicWorkflows } from '../eng/lib/dynamic-workflows.mjs';
 
@@ -72,6 +74,14 @@ function dashboardSections(book) {
   return (book.parts || []).flatMap((part) => sectionsOf(part))
     .filter(({ section }) => section?.ownership === 'dashboard')
     .map(({ id, section }) => ({ id, section }));
+}
+
+/** The ledger fields of the catalogue page: the `type: dashboard` page of a dashboard-owned section. */
+function dashboardFields(book, siteRoot, fromRoot) {
+  const page = dashboardSections(book).flatMap(({ section }) => section.pages || []).find((p) => p.type === 'dashboard');
+  if (!page?.doc) return { pageId: page?.id ?? null, pageType: 'dashboard', doc: null, fr: null, en: null };
+  const files = pageFiles(page, siteRoot);
+  return { pageId: page.id, pageType: 'dashboard', doc: page.doc, fr: fromRoot(files.fr), en: fromRoot(files.en) };
 }
 
 function catalogueTopology(root, book) {
@@ -128,53 +138,45 @@ export function scanDrift({ bookPath, root, siteRoot, emptyThreshold }) {
   const book = loadBook(bookPath);
   const sources = book.sources || {};
   const items = [];
+  const fromRoot = (abs) => posix(relative(root, abs));
+  const dashboard = dashboardFields(book, siteRoot, fromRoot);
 
-  // ---- 1. Per-page structural drift (existence, emptiness, parity, ordering) ----
+  // ---- 1. Per-page structural drift (existence, emptiness, parity) ----
+  // FR and EN share the doc id, so their relative path and name match by construction.
   for (const { part, sectionId, section, page } of iterPages(book, { sources, root })) {
-    const frRel = page.fr;
-    const enRel = page.en;
-    const frAbs = frRel ? join(siteRoot, frRel) : null;
-    const enAbs = enRel ? join(siteRoot, enRel) : null;
-    const frExists = frAbs ? existsSync(frAbs) : false;
-    const enExists = enAbs ? existsSync(enAbs) : false;
+    if (!page.doc) continue; // lint-nav reports a page without a doc id (NAV-PAGE-DOC)
+    const files = pageFiles(page, siteRoot);
+    const frAbs = files.fr;
+    const enAbs = files.en;
+    const frRel = fromRoot(frAbs);
+    const enRel = fromRoot(enAbs);
+    const frExists = existsSync(frAbs);
+    const enExists = existsSync(enAbs);
 
     const base = {
       part: part.id,
       section: sectionId,
       pageId: page.id,
       pageType: page.type || null,
-      fr: frRel || null,
-      en: enRel || null,
+      doc: page.doc,
+      fr: frRel,
+      en: enRel,
       source: page.source || null,
       generated: page.generated === true,
     };
 
-    // Missing pages.
-    if (frRel && !frExists && enRel && !enExists) {
+    if (!frExists && !enExists) {
       makeItem(items, {
         type: 'missing-page', severity: 'high', lang: 'both', ...base,
-        detail: `Both FR and EN pages are declared in book.yml but absent on disk.`,
-        desiredState: `Create ${frRel} and ${enRel} (${page.type || 'page'}), mirrored, same basename.`,
+        detail: `The doc ${page.doc} is declared in book.yml but has no file in either locale.`,
+        desiredState: `Create ${enRel} and ${frRel} (${page.type || 'page'}), with the same heading structure.`,
       });
-    } else if (frRel && enRel && frExists !== enExists) {
+    } else if (frExists !== enExists) {
       const missingLang = frExists ? 'en' : 'fr';
       makeItem(items, {
         type: 'parity-break', severity: 'high', lang: missingLang, ...base,
         detail: `Parity break: ${frExists ? frRel : enRel} exists but ${frExists ? enRel : frRel} is missing.`,
         desiredState: `Create the missing ${missingLang.toUpperCase()} mirror with the same heading structure.`,
-      });
-    } else if (frRel && !frExists) {
-      makeItem(items, { type: 'missing-page', severity: 'high', lang: 'fr', ...base, detail: `Declared FR page ${frRel} is absent.`, desiredState: `Create ${frRel}.` });
-    } else if (enRel && !enExists) {
-      makeItem(items, { type: 'missing-page', severity: 'high', lang: 'en', ...base, detail: `Declared EN page ${enRel} is absent.`, desiredState: `Create ${enRel}.` });
-    }
-
-    // Basename parity (book.yml hard rule 3: FR and EN share the English basename, no exception).
-    if (frRel && enRel && basename(frRel) !== basename(enRel)) {
-      makeItem(items, {
-        type: 'basename-mismatch', severity: 'high', lang: 'both', ...base,
-        detail: `FR basename "${basename(frRel)}" != EN basename "${basename(enRel)}".`,
-        desiredState: `Rename both files to the same English basename.`,
       });
     }
 
@@ -287,8 +289,8 @@ export function scanDrift({ bookPath, root, siteRoot, emptyThreshold }) {
     makeItem(items, {
       type: 'catalogue-topology',
       severity: topologyFinding.severity === 'error' ? 'blocker' : 'medium',
-      part: 'reference', section: 'catalogue', pageId: 'dashboard', pageType: 'dashboard',
-      lang: 'both', fr: 'fr/dashboard/index.md', en: 'en/dashboard/index.md', source: topologyFinding.path,
+      part: 'reference', section: 'catalogue', ...dashboard,
+      lang: 'both', source: topologyFinding.path,
       detail: `${topologyFinding.code}: ${topologyFinding.message}`,
       desiredState: 'Align descriptors, generated config and product-to-engineering ordering before publishing the catalogue.',
     });
@@ -297,7 +299,7 @@ export function scanDrift({ bookPath, root, siteRoot, emptyThreshold }) {
     if (!entity.id || !entity.anchor || !entity.path) {
       makeItem(items, {
         type: 'catalogue-missing', severity: 'blocker', part: 'reference', section: 'catalogue',
-        pageId: 'dashboard', pageType: 'dashboard', lang: 'both', fr: 'fr/dashboard/index.md', en: 'en/dashboard/index.md',
+        ...dashboard, lang: 'both',
         source: entity.path || null,
         detail: `Catalogue entity '${entity.id || entity.name || 'unknown'}' has no stable id, anchor or source path.`,
         desiredState: 'Emit every dashboard-owned source exactly once with a stable anchor.',
@@ -308,16 +310,20 @@ export function scanDrift({ bookPath, root, siteRoot, emptyThreshold }) {
   // ---- 6. Retained narrative must use current orchestration and dashboard links ----
   const checkedPages = new Set();
   for (const { page } of iterPages(book, { sources, root })) {
-    for (const [lang, rel] of [['fr', page.fr], ['en', page.en]]) {
-      if (!rel || checkedPages.has(rel)) continue;
+    if (!page.doc) continue;
+    const files = pageFiles(page, siteRoot);
+    const paths = { doc: page.doc, fr: fromRoot(files.fr), en: fromRoot(files.en) };
+    for (const lang of ['fr', 'en']) {
+      const rel = paths[lang];
+      if (checkedPages.has(rel)) continue;
       checkedPages.add(rel);
-      const parsed = readPage(join(siteRoot, rel));
+      const parsed = readPage(files[lang]);
       if (!parsed) continue;
       const legacyLinks = parsed.body.match(LEGACY_CATALOGUE_LINK) || [];
       if (legacyLinks.length > 0) {
         makeItem(items, {
           type: 'legacy-link', severity: 'high', part: null, section: null, pageId: page.id,
-          pageType: page.type || null, lang, fr: page.fr || null, en: page.en || null, source: null,
+          pageType: page.type || null, lang, ...paths, source: null,
           detail: `${rel} links to retired catalogue routes: ${[...new Set(legacyLinks)].join(', ')}.`,
           desiredState: `Retarget links to the localized dashboard route and stable entity anchors.`,
         });
@@ -326,7 +332,7 @@ export function scanDrift({ bookPath, root, siteRoot, emptyThreshold }) {
       if (stale) {
         makeItem(items, {
           type: 'narrative-orchestration', severity: 'blocker', part: null, section: null, pageId: page.id,
-          pageType: page.type || null, lang, fr: page.fr || null, en: page.en || null, source: null,
+          pageType: page.type || null, lang, ...paths, source: null,
           detail: `${rel} still presents the retired global-entrypoint or five-phase orchestration narrative.`,
           desiredState: 'Present optional product preflight before the engineering-only RESEARCH → DESIGN → DISTILL → DELIVER orchestrator.',
         });
@@ -340,7 +346,7 @@ export function scanDrift({ bookPath, root, siteRoot, emptyThreshold }) {
     if (remaining.length > 0) {
       makeItem(items, {
         type: 'catalogue-retirement', severity: 'high', part: 'reference', section: 'catalogue',
-        pageId: 'dashboard', pageType: 'dashboard', lang: 'both', fr: 'fr/dashboard/index.md', en: 'en/dashboard/index.md', source: null,
+        ...dashboard, lang: 'both', source: null,
         detail: `${remaining.length} superseded catalogue Markdown page(s) remain under dashboard-owned families.`,
         desiredState: 'Retarget retained handbook links, verify legacy routing, then remove superseded catalogue pages.',
       });
@@ -373,7 +379,7 @@ if (isMain) {
     options: {
       book: { type: 'string', default: 'docs/website/book.yml' },
       root: { type: 'string', default: '.' },
-      'site-root': { type: 'string', default: 'docs/site' },
+      'site-root': { type: 'string', default: 'docs/website' },
       out: { type: 'string' },
       'empty-threshold': { type: 'string', default: '4' },
     },

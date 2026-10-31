@@ -1,9 +1,12 @@
 # book.yml — CONTRAT DE STRUCTURE DU LIVRE SKRAFT (source de verite unique)
 #
 # Ce manifeste est lu par :
+#   - docs/website/sidebars.mjs (via src/book/sidebars-from-book.mjs) : une sidebar
+#     Docusaurus par partie Diataxis, une categorie par section, un doc par page ;
+#   - docs/website/scripts/book-translations.mjs : les libelles FR de ces sidebars
+#     (i18n/fr/docusaurus-plugin-content-docs/current.json, verifie par --check) ;
 #   - scripts/scan-drift.mjs et scripts/lint-nav.mjs (via scripts/lib/book.mjs) :
 #     detection deterministe des ecarts contrat <-> fichiers <-> sources ;
-#   - _layouts/doc.html : la sidebar est construite depuis `parts` ;
 #   - les workflows gh-aw skraft-docs-sync et skraft-docs-gaps, qui reparent
 #     les ecarts que scan-drift signale, par une pull request relue par un humain.
 #
@@ -12,12 +15,13 @@
 #      (`diataxis_mode` : tutorial | how-to | reference | explanation). Une page
 #      de reference decrit, elle n'explique pas le pourquoi : elle renvoie a la
 #      page d'explication. Une page d'explication ne donne pas de marche a suivre.
-#   2. Toute page listee ici existe en FR (`fr`) ET en EN (`en`), avec la meme
-#      structure de titres.
-#   3. La page FR et la page EN d'une meme entree portent le MEME basename
-#      anglais ; seul le dossier `fr/` ou `en/` change (ex. `fr/reference/glossary.md`
-#      <-> `en/reference/glossary.md`, libelle "Glossaire"). Aucune exception :
-#      scan-drift signale tout ecart (`basename-mismatch`).
+#   2. Toute page listee ici existe en EN (docs/website/docs/<doc>.md) ET en FR
+#      (docs/website/i18n/fr/docusaurus-plugin-content-docs/current/<doc>.md),
+#      avec la meme structure de titres. `.mdx` seulement quand la page contient
+#      du JSX (lint-nav : NAV-MDX-NO-JSX).
+#   3. Une page porte un seul identifiant `doc` : son chemin anglais, sans
+#      extension (ex. `reference/glossary`). Les fichiers FR et EN ont donc le meme
+#      chemin relatif et le meme nom, par construction.
 #   4. Une affirmation attribuee a un auteur cite sa source depuis
 #      `data/citations.yml` (auteur, ouvrage, annee) ; scripts/check-citations.mjs
 #      refuse une cle inconnue. Une page sans affirmation attribuee ne porte pas
@@ -29,6 +33,12 @@
 #   7. Tout pattern / gate present dans `sources` est couvert par une page
 #      `derived`. Agents, skills, workers et lentilles sont couverts exactement
 #      une fois par le catalogue dashboard (section `ownership: dashboard`).
+#
+# Navigation : une partie Diataxis porte `slug` (la route de sa page d'index
+# generee) ; une section porte `intro_fr`/`intro_en` (une phrase, la description
+# de sa page d'index generee, route `<slug de la partie>/<id>`). Une section ne
+# porte `slug` que si cette route est deja celle d'un doc (lint-nav :
+# NAV-SLUG-COLLISION).
 #
 # `type` : derived   (regenerable depuis `source` par skraft-docs-sync)
 #        | editorial (redigee et relue par un humain ; un workflow ne la cree
@@ -42,17 +52,18 @@ meta:
   title_en: "SKRAFT — the book"
   langs: [fr, en]
 
-  # Design : sidebar groupee par partie + contenu max ~820px, theme liquid-glass.
+  # Design : une sidebar Docusaurus par partie Diataxis (les quatre portes de la
+  # navbar), theme classique, mesure du contenu ~72 caracteres.
   design:
-    layout: doc                 # sidebar (parties) + contenu
-    sidebar_grouped_by: parts   # chaque `part` = une section de sidebar (h3 majuscule)
-    theme: liquid-glass
-    content_max_width: 820px
-    # Artefacts qui materialisent ce design (une page l'active via
-    # `layout: doc` dans son frontmatter ; la sidebar est lue depuis `parts`).
+    layout: docusaurus-docs       # docs Docusaurus, sidebars derivees de `parts`
+    sidebar_grouped_by: parts     # une sidebar par partie, une categorie par section
+    theme: docusaurus-classic
+    content_measure: 72ch
     artifacts:
-      layout: "docs/site/_layouts/doc.html"
-      stylesheet: "docs/site/assets/css/doc.css"
+      sidebars: "docs/website/sidebars.mjs"
+      sidebars_generator: "docs/website/src/book/sidebars-from-book.mjs"
+      translations: "docs/website/scripts/book-translations.mjs"
+      stylesheet: "docs/website/src/css/custom.css"
 
   # Admonitions colorees, rendues depuis des fences `:::type ... :::` ou des
   # blockquotes. A utiliser pour signaler risques et notes.
@@ -64,7 +75,7 @@ meta:
   # d'explication liee, en une ligne de renvoi.
   reference_template:
     frontmatter:
-      required: [layout, lang, title, description]
+      required: [title, description]
       optional: [persona, sidebar_position]
     blocks:
       - id: title
@@ -96,7 +107,7 @@ meta:
   # Le corps suit le mode Diataxis de la partie, et lui seul.
   editorial_template:
     frontmatter:
-      required: [layout, lang, title, description]
+      required: [title, description]
       optional: [persona, sidebar_position]
     blocks:
       - id: title
@@ -126,9 +137,10 @@ sources:
   citations: "docs/website/data/citations.yml"
 
 # parts — une partie par mode Diataxis (plus l'accueil), dans l'ordre de la
-# sidebar ; une partie peut se decouper en `sections` (menu a 3 niveaux).
-# Chaque page porte label_fr/label_en (libelle affiche dans la sidebar, voir
-# _layouts/doc.html) ; type/source/purpose servent a scan-drift et aux workflows.
+# navbar ; une partie peut se decouper en `sections` (menu a 3 niveaux).
+# Chaque page porte label_fr/label_en (libelle de la sidebar : EN dans
+# sidebars.mjs, FR dans current.json) ; type/source/purpose servent a
+# scan-drift et aux workflows.
 parts:
   # ----------------------------------------------------------------- ACCUEIL
   - id: accueil
@@ -143,8 +155,7 @@ parts:
         type: editorial
         label_fr: "Accueil"
         label_en: "Home"
-        fr: "fr/index.md"
-        en: "en/index.md"
+        doc: index
         purpose_fr: "Page d'accueil : pitch, promesse, routage Diataxis par role."
         purpose_en: "Landing page: pitch, promise, Diataxis routing by role."
 
@@ -152,6 +163,7 @@ parts:
   - id: tutorials
     icon: "fa-solid fa-graduation-cap"
     diataxis_mode: tutorial
+    slug: /tutorials
     sidebar_position: 1
     title_fr: "Tutoriels — apprendre"
     title_en: "Tutorials — learn"
@@ -162,24 +174,21 @@ parts:
         type: editorial
         label_fr: "Premiers pas"
         label_en: "First steps"
-        fr: "fr/tutorials/getting-started.md"
-        en: "en/tutorials/getting-started.md"
+        doc: tutorials/getting-started
         purpose_fr: "Sous Claude Code : installer le plugin, ecrire skraft-config.json, verifier avec doctor, mener une story jusqu'a la description de sa pull request, sur un petit depot."
         purpose_en: "Under Claude Code: install the plugin, write skraft-config.json, check with doctor, run one story to its pull request description, on a small repository."
       - id: first-run-copilot
         type: editorial
         label_fr: "Premier run sous Copilot CLI"
         label_en: "First run under Copilot CLI"
-        fr: "fr/tutorials/first-run-copilot.md"
-        en: "en/tutorials/first-run-copilot.md"
+        doc: tutorials/first-run-copilot
         purpose_fr: "Sous GitHub Copilot CLI : lancer une story avec l'agent orchestrateur, repondre dans le chat, suivre le run dans /workflows et le canvas skraft-pipeline, lire skraft report."
         purpose_en: "Under GitHub Copilot CLI: start a story with the orchestrator agent, answer in the chat, follow the run in /workflows and the skraft-pipeline canvas, read skraft report."
       - id: first-brownfield
         type: editorial
         label_fr: "Premier dépôt existant"
         label_en: "First existing repository"
-        fr: "fr/tutorials/first-brownfield.md"
-        en: "en/tutorials/first-brownfield.md"
+        doc: tutorials/first-brownfield
         purpose_fr: "Faire decrire un code existant par brownfield-analyst, decouper son PRD avec skraft-prd-backlog et relire les stories dans le canvas skraft backlog."
         purpose_en: "Have brownfield-analyst describe existing code, cut its PRD with skraft-prd-backlog and review the stories in the skraft backlog canvas."
 
@@ -187,161 +196,194 @@ parts:
   - id: how-to
     icon: "fa-solid fa-screwdriver-wrench"
     diataxis_mode: how-to
+    slug: /how-to
     sidebar_position: 2
     title_fr: "Guides pratiques — faire"
     title_en: "How-to guides — do"
     intro_fr: "Resoudre une tache precise : installer le plugin, configurer les composants, lancer les gates, reprendre un run, repondre a une question, choisir les modeles, ajouter une lentille, adapter le workflow, ajouter un agent du depot, revoir une pull request, publier la pull request, migrer depuis la v1, passer d'un PRD au backlog, raffiner une issue, caracteriser puis refactorer un existant, evaluer un skill, proposer un pattern."
     intro_en: "Solve a precise task: install the plugin, configure components, run the gates, resume a run, answer a question, choose the models, add a lens, adapt the workflow, add a repository agent, review a pull request, publish the pull request, migrate from v1, go from a PRD to a backlog, refine an issue, characterize then refactor existing code, evaluate a skill, propose a pattern."
-    pages:
-      - id: install-on-a-host
-        type: editorial
-        label_fr: "Installer skraft sur un hôte"
-        label_en: "Install skraft on a host"
-        fr: "fr/how-to/install-on-a-host.md"
-        en: "en/how-to/install-on-a-host.md"
-        purpose_fr: "Installer le plugin dans Claude Code, Copilot CLI ou VS Code, puis verifier que l'hote le voit et que la ligne de commande repond."
-        purpose_en: "Install the plugin in Claude Code, Copilot CLI or VS Code, then check that the host sees it and that the command line answers."
-      - id: configure-components
-        type: editorial
-        label_fr: "Configurer les composants"
-        label_en: "Configure components"
-        fr: "fr/how-to/configure-components.md"
-        en: "en/how-to/configure-components.md"
-        purpose_fr: "Detecter les composants, remplacer une commande, ajouter un depot voisin, choisir la base et le mocking, verifier avec doctor."
-        purpose_en: "Detect components, replace a command, add a neighbour repository, choose the base and the mocking, check with doctor."
-      - id: run-gates
-        type: editorial
-        label_fr: "Lancer les gates"
-        label_en: "Run the gates"
-        fr: "fr/how-to/run-gates.md"
-        en: "en/how-to/run-gates.md"
-        purpose_fr: "Lancer les gates des composants modifies ou de tous, lire leurs preuves, traiter un echec environment ou deterministic."
-        purpose_en: "Run the gates of the changed components or of all, read their evidence, handle an environment or deterministic failure."
-      - id: resume-a-run
-        type: editorial
-        label_fr: "Reprendre un run"
-        label_en: "Resume a run"
-        fr: "fr/how-to/resume-a-run.md"
-        en: "en/how-to/resume-a-run.md"
-        purpose_fr: "Reprendre apres une interruption, changer de pipeline actif, et lever les refus et blocages courants."
-        purpose_en: "Resume after an interruption, switch the active pipeline, and lift the common refusals and blocks."
-      - id: answer-a-question
-        type: editorial
-        label_fr: "Répondre à une question du run"
-        label_en: "Answer a run's question"
-        fr: "fr/how-to/answer-a-question.md"
-        en: "en/how-to/answer-a-question.md"
-        purpose_fr: "Repondre a la question qu'un run attend depuis Claude Code (/skraft decide), Copilot (dialogue, skraft_decide) ou un terminal, et ce que devient un refus."
-        purpose_en: "Answer the question a run waits on from Claude Code (/skraft decide), Copilot (dialog, skraft_decide) or a terminal, and what becomes of a refusal."
-      - id: choose-models
-        type: editorial
-        label_fr: "Choisir les modèles des agents"
-        label_en: "Choose the agents' models"
-        fr: "fr/how-to/choose-models.md"
-        en: "en/how-to/choose-models.md"
-        purpose_fr: "Affecter une famille de modele a chaque agent, un modele et un niveau a chaque famille par hote, et verifier avec doctor."
-        purpose_en: "Assign a model family to each agent, a model and an effort to each family per host, and check with doctor."
-      - id: customise-review
-        type: editorial
-        label_fr: "Ajouter une lentille à une revue"
-        label_en: "Add a lens to a review"
-        fr: "fr/how-to/customise-review.md"
-        en: "en/how-to/customise-review.md"
-        purpose_fr: "Ajouter une lentille du depot a la revue de conception ou a la revue DELIVER et verifier le workflow."
-        purpose_en: "Add a repository lens to the design review or to the DELIVER review and check the workflow."
-      - id: eject-workflow
-        type: editorial
-        label_fr: "Copier et adapter le workflow"
-        label_en: "Copy and adapt the workflow"
-        fr: "fr/how-to/eject-workflow.md"
-        en: "en/how-to/eject-workflow.md"
-        purpose_fr: "Copier le workflow dans .skraft/, sauter une gate verrouillee avec sa raison, valider avec check, comparer avec diff, le mettre a jour apres une montee de version."
-        purpose_en: "Copy the workflow into .skraft/, skip a locked gate with its reason, validate with check, compare with diff, update it after a plugin upgrade."
-      - id: add-repository-agent
-        type: editorial
-        label_fr: "Ajouter un agent du dépôt au pipeline"
-        label_en: "Add a repository agent to the pipeline"
-        fr: "fr/how-to/add-repository-agent.md"
-        en: "en/how-to/add-repository-agent.md"
-        purpose_fr: "Ecrire un agent du depot, l'ajouter comme noeud du workflow ejecte avec ses sorties et ses chemins d'ecriture, et verifier."
-        purpose_en: "Write a repository agent, add it as a node of the ejected workflow with its outputs and write paths, and check."
-      - id: review-a-pull-request
-        type: editorial
-        label_fr: "Revoir une pull request avec skraft"
-        label_en: "Review a pull request with skraft"
-        fr: "fr/how-to/review-a-pull-request.md"
-        en: "en/how-to/review-a-pull-request.md"
-        purpose_fr: "Faire passer une pull request par la revue DELIVER sans run, lire le verdict, le garder dans un commentaire."
-        purpose_en: "Put a pull request through the DELIVER review with no run, read the verdict, keep it in a comment."
-      - id: publish-pull-request
-        type: editorial
-        label_fr: "Publier la pull request"
-        label_en: "Publish the pull request"
-        fr: "fr/how-to/publish-pull-request.md"
-        en: "en/how-to/publish-pull-request.md"
-        purpose_fr: "Consentir, preparer gh, laisser le run ouvrir sa pull request ou la publier avec skraft publish, suivre l'issue, joindre les captures d'un frontend."
-        purpose_en: "Consent, set up gh, let the run open its pull request or publish it with skraft publish, follow the issue, attach a front end's screenshots."
-      - id: migrate-from-v1
-        type: editorial
-        label_fr: "Migrer une copie de travail de la v1"
-        label_en: "Migrate a working copy from v1"
-        fr: "fr/how-to/migrate-from-v1.md"
-        en: "en/how-to/migrate-from-v1.md"
-        purpose_fr: "Convertir la configuration et les runs v1 en cours avec skraft migrate, verifier a blanc, reprendre un run migre, lever les refus."
-        purpose_en: "Convert the v1 configuration and runs in progress with skraft migrate, check with a dry run, resume a migrated run, lift the refusals."
-      - id: prd-to-backlog
-        type: editorial
-        label_fr: "Transformer un PRD en backlog GitHub"
-        label_en: "Turn a PRD into a GitHub backlog"
-        fr: "fr/how-to/prd-to-backlog.md"
-        en: "en/how-to/prd-to-backlog.md"
-        purpose_fr: "Lancer skraft-prd-backlog sur un PRD, repondre au cadrage, approuver la carte des stories, valider le handoff et publier."
-        purpose_en: "Run skraft-prd-backlog on a PRD, answer the framing, approve the story map, validate the handoff and publish."
-      - id: refine-backlog
-        type: editorial
-        label_fr: "Raffiner une issue du backlog"
-        label_en: "Refine a backlog issue"
-        fr: "fr/how-to/refine-backlog.md"
-        en: "en/how-to/refine-backlog.md"
-        purpose_fr: "Obtenir la proposition de raffinement d'une issue avec /skraft-refine, ou a chaque nouvelle issue avec le workflow gh-aw skraft-refine."
-        purpose_en: "Get an issue's refinement proposal with /skraft-refine, or on every new issue with the skraft-refine gh-aw workflow."
-      - id: characterize-legacy
-        type: editorial
-        label_fr: "Poser un filet de caractérisation"
-        label_en: "Put a characterization net"
-        fr: "fr/how-to/characterize-legacy.md"
-        en: "en/how-to/characterize-legacy.md"
-        purpose_fr: "Faire ecrire le contrat et les tests de caracterisation d'un service existant par brownfield-harness-builder, puis lire le verdict."
-        purpose_en: "Have brownfield-harness-builder write an existing service's contract and characterization tests, then read the verdict."
-      - id: refactor-legacy
-        type: editorial
-        label_fr: "Refactorer un code existant sous filet"
-        label_en: "Refactor existing code under a net"
-        fr: "fr/how-to/refactor-legacy.md"
-        en: "en/how-to/refactor-legacy.md"
-        purpose_fr: "Lancer brownfield-refactorer, choisir Mikado ou Strangler Fig et suivre la boucle feuille par feuille ou tranche par tranche."
-        purpose_en: "Start brownfield-refactorer, choose Mikado or Strangler Fig and follow the loop leaf by leaf or slice by slice."
-      - id: evaluate-a-skill
-        type: editorial
-        label_fr: "Évaluer un skill"
-        label_en: "Evaluate a skill"
-        fr: "fr/how-to/evaluate-a-skill.md"
-        en: "en/how-to/evaluate-a-skill.md"
-        purpose_fr: "Ecrire la spec d'evaluation, la valider, lancer la comparaison baseline/skill, lire le verdict et le consulter."
-        purpose_en: "Write the evaluation spec, validate it, run the baseline/skill comparison, read the verdict and look it up."
-      - id: contributing
-        type: editorial
-        label_fr: "Proposer un pattern"
-        label_en: "Propose a pattern"
-        fr: "fr/how-to/contributing.md"
-        en: "en/how-to/contributing.md"
-        purpose_fr: "Proposer un pattern selon genesis (probleme, solution, reference) et corriger une page du handbook en FR et EN."
-        purpose_en: "Propose a pattern the genesis way (problem, solution, reference) and fix a handbook page in FR and EN."
+    sections:
+      - id: set-up
+        title_fr: "Mettre en place"
+        title_en: "Set up"
+        intro_fr: "Installer skraft, décrire les composants du dépôt, choisir les modèles, migrer depuis la v1."
+        intro_en: "Install skraft, describe the repository's components, choose the models, migrate from v1."
+        sidebar_position: 1
+        pages:
+          - id: install-on-a-host
+            type: editorial
+            label_fr: "Installer skraft sur un hôte"
+            label_en: "Install skraft on a host"
+            doc: how-to/install-on-a-host
+            purpose_fr: "Installer le plugin dans Claude Code, Copilot CLI ou VS Code, puis verifier que l'hote le voit et que la ligne de commande repond."
+            purpose_en: "Install the plugin in Claude Code, Copilot CLI or VS Code, then check that the host sees it and that the command line answers."
+          - id: configure-components
+            type: editorial
+            label_fr: "Configurer les composants"
+            label_en: "Configure components"
+            doc: how-to/configure-components
+            purpose_fr: "Detecter les composants, remplacer une commande, ajouter un depot voisin, choisir la base et le mocking, verifier avec doctor."
+            purpose_en: "Detect components, replace a command, add a neighbour repository, choose the base and the mocking, check with doctor."
+          - id: choose-models
+            type: editorial
+            label_fr: "Choisir les modèles des agents"
+            label_en: "Choose the agents' models"
+            doc: how-to/choose-models
+            purpose_fr: "Affecter une famille de modele a chaque agent, un modele et un niveau a chaque famille par hote, et verifier avec doctor."
+            purpose_en: "Assign a model family to each agent, a model and an effort to each family per host, and check with doctor."
+          - id: migrate-from-v1
+            type: editorial
+            label_fr: "Migrer une copie de travail de la v1"
+            label_en: "Migrate a working copy from v1"
+            doc: how-to/migrate-from-v1
+            purpose_fr: "Convertir la configuration et les runs v1 en cours avec skraft migrate, verifier a blanc, reprendre un run migre, lever les refus."
+            purpose_en: "Convert the v1 configuration and runs in progress with skraft migrate, check with a dry run, resume a migrated run, lift the refusals."
+      - id: run-a-story
+        title_fr: "Mener une story"
+        title_en: "Run a story"
+        intro_fr: "Lancer les gates, reprendre un run, répondre à ses questions, publier sa pull request."
+        intro_en: "Run the gates, resume a run, answer its questions, publish its pull request."
+        sidebar_position: 2
+        pages:
+          - id: run-gates
+            type: editorial
+            label_fr: "Lancer les gates"
+            label_en: "Run the gates"
+            doc: how-to/run-gates
+            purpose_fr: "Lancer les gates des composants modifies ou de tous, lire leurs preuves, traiter un echec environment ou deterministic."
+            purpose_en: "Run the gates of the changed components or of all, read their evidence, handle an environment or deterministic failure."
+          - id: resume-a-run
+            type: editorial
+            label_fr: "Reprendre un run"
+            label_en: "Resume a run"
+            doc: how-to/resume-a-run
+            purpose_fr: "Reprendre apres une interruption, changer de pipeline actif, et lever les refus et blocages courants."
+            purpose_en: "Resume after an interruption, switch the active pipeline, and lift the common refusals and blocks."
+          - id: answer-a-question
+            type: editorial
+            label_fr: "Répondre à une question du run"
+            label_en: "Answer a run's question"
+            doc: how-to/answer-a-question
+            purpose_fr: "Repondre a la question qu'un run attend depuis Claude Code (/skraft decide), Copilot (dialogue, skraft_decide) ou un terminal, et ce que devient un refus."
+            purpose_en: "Answer the question a run waits on from Claude Code (/skraft decide), Copilot (dialog, skraft_decide) or a terminal, and what becomes of a refusal."
+          - id: publish-pull-request
+            type: editorial
+            label_fr: "Publier la pull request"
+            label_en: "Publish the pull request"
+            doc: how-to/publish-pull-request
+            purpose_fr: "Consentir, preparer gh, laisser le run ouvrir sa pull request ou la publier avec skraft publish, suivre l'issue, joindre les captures d'un frontend."
+            purpose_en: "Consent, set up gh, let the run open its pull request or publish it with skraft publish, follow the issue, attach a front end's screenshots."
+      - id: review
+        title_fr: "Revoir"
+        title_en: "Review"
+        intro_fr: "Faire revoir une pull request et ajouter une lentille à une revue."
+        intro_en: "Have a pull request reviewed and add a lens to a review."
+        sidebar_position: 3
+        pages:
+          - id: review-a-pull-request
+            type: editorial
+            label_fr: "Revoir une pull request avec skraft"
+            label_en: "Review a pull request with skraft"
+            doc: how-to/review-a-pull-request
+            purpose_fr: "Faire passer une pull request par la revue DELIVER sans run, lire le verdict, le garder dans un commentaire."
+            purpose_en: "Put a pull request through the DELIVER review with no run, read the verdict, keep it in a comment."
+          - id: customise-review
+            type: editorial
+            label_fr: "Ajouter une lentille à une revue"
+            label_en: "Add a lens to a review"
+            doc: how-to/customise-review
+            purpose_fr: "Ajouter une lentille du depot a la revue de conception ou a la revue DELIVER et verifier le workflow."
+            purpose_en: "Add a repository lens to the design review or to the DELIVER review and check the workflow."
+      - id: adapt-the-workflow
+        title_fr: "Adapter le workflow"
+        title_en: "Adapt the workflow"
+        intro_fr: "Copier le workflow dans le dépôt et y ajouter un agent du dépôt."
+        intro_en: "Copy the workflow into the repository and add a repository agent to it."
+        sidebar_position: 4
+        pages:
+          - id: eject-workflow
+            type: editorial
+            label_fr: "Copier et adapter le workflow"
+            label_en: "Copy and adapt the workflow"
+            doc: how-to/eject-workflow
+            purpose_fr: "Copier le workflow dans .skraft/, sauter une gate verrouillee avec sa raison, valider avec check, comparer avec diff, le mettre a jour apres une montee de version."
+            purpose_en: "Copy the workflow into .skraft/, skip a locked gate with its reason, validate with check, compare with diff, update it after a plugin upgrade."
+          - id: add-repository-agent
+            type: editorial
+            label_fr: "Ajouter un agent du dépôt au pipeline"
+            label_en: "Add a repository agent to the pipeline"
+            doc: how-to/add-repository-agent
+            purpose_fr: "Ecrire un agent du depot, l'ajouter comme noeud du workflow ejecte avec ses sorties et ses chemins d'ecriture, et verifier."
+            purpose_en: "Write a repository agent, add it as a node of the ejected workflow with its outputs and write paths, and check."
+      - id: backlog
+        title_fr: "Backlog"
+        title_en: "Backlog"
+        intro_fr: "Passer d'un PRD à un backlog GitHub, puis raffiner une issue."
+        intro_en: "Go from a PRD to a GitHub backlog, then refine an issue."
+        sidebar_position: 5
+        pages:
+          - id: prd-to-backlog
+            type: editorial
+            label_fr: "Transformer un PRD en backlog GitHub"
+            label_en: "Turn a PRD into a GitHub backlog"
+            doc: how-to/prd-to-backlog
+            purpose_fr: "Lancer skraft-prd-backlog sur un PRD, repondre au cadrage, approuver la carte des stories, valider le handoff et publier."
+            purpose_en: "Run skraft-prd-backlog on a PRD, answer the framing, approve the story map, validate the handoff and publish."
+          - id: refine-backlog
+            type: editorial
+            label_fr: "Raffiner une issue du backlog"
+            label_en: "Refine a backlog issue"
+            doc: how-to/refine-backlog
+            purpose_fr: "Obtenir la proposition de raffinement d'une issue avec /skraft-refine, ou a chaque nouvelle issue avec le workflow gh-aw skraft-refine."
+            purpose_en: "Get an issue's refinement proposal with /skraft-refine, or on every new issue with the skraft-refine gh-aw workflow."
+      - id: existing-code
+        title_fr: "Code existant"
+        title_en: "Existing code"
+        intro_fr: "Poser un filet de caractérisation, puis refactorer sous ce filet."
+        intro_en: "Put a characterization net in place, then refactor under it."
+        sidebar_position: 6
+        pages:
+          - id: characterize-legacy
+            type: editorial
+            label_fr: "Poser un filet de caractérisation"
+            label_en: "Put a characterization net"
+            doc: how-to/characterize-legacy
+            purpose_fr: "Faire ecrire le contrat et les tests de caracterisation d'un service existant par brownfield-harness-builder, puis lire le verdict."
+            purpose_en: "Have brownfield-harness-builder write an existing service's contract and characterization tests, then read the verdict."
+          - id: refactor-legacy
+            type: editorial
+            label_fr: "Refactorer un code existant sous filet"
+            label_en: "Refactor existing code under a net"
+            doc: how-to/refactor-legacy
+            purpose_fr: "Lancer brownfield-refactorer, choisir Mikado ou Strangler Fig et suivre la boucle feuille par feuille ou tranche par tranche."
+            purpose_en: "Start brownfield-refactorer, choose Mikado or Strangler Fig and follow the loop leaf by leaf or slice by slice."
+      - id: contribute
+        title_fr: "Contribuer"
+        title_en: "Contribute"
+        intro_fr: "Évaluer un skill et proposer un pattern."
+        intro_en: "Evaluate a skill and propose a pattern."
+        sidebar_position: 7
+        pages:
+          - id: evaluate-a-skill
+            type: editorial
+            label_fr: "Évaluer un skill"
+            label_en: "Evaluate a skill"
+            doc: how-to/evaluate-a-skill
+            purpose_fr: "Ecrire la spec d'evaluation, la valider, lancer la comparaison baseline/skill, lire le verdict et le consulter."
+            purpose_en: "Write the evaluation spec, validate it, run the baseline/skill comparison, read the verdict and look it up."
+          - id: contributing
+            type: editorial
+            label_fr: "Proposer un pattern"
+            label_en: "Propose a pattern"
+            doc: how-to/contributing
+            purpose_fr: "Proposer un pattern selon genesis (probleme, solution, reference) et corriger une page du handbook en FR et EN."
+            purpose_en: "Propose a pattern the genesis way (problem, solution, reference) and fix a handbook page in FR and EN."
 
   # -------------------------------------------------------------- EXPLICATION
   - id: explanation
     icon: "fa-solid fa-lightbulb"
     diataxis_mode: explanation
+    slug: /explanation
     sidebar_position: 3
     title_fr: "Explication — comprendre"
     title_en: "Explanation — understand"
@@ -351,6 +393,8 @@ parts:
       - id: orientation
         title_fr: "Orientation"
         title_en: "Orientation"
+        intro_fr: "Par où entrer : les trois parcours et la liste des pages d'explication."
+        intro_en: "Where to enter: the three journeys and the list of explanation pages."
         sidebar_position: 1
         pages:
           - id: phases
@@ -358,14 +402,15 @@ parts:
             label_fr: "Vue d'ensemble"
             label_en: "Overview"
             sidebar_position: 1
-            fr: "fr/explanation/pipeline/index.md"
-            en: "en/explanation/pipeline/index.md"
+            doc: explanation/pipeline/index
             source: "plugins/skraft-framework/com.github.copilot/agents/*.agent.md"
             purpose_fr: "Choisir entre préparation produit, pipeline d'ingénierie et parcours Brownfield ; la liste des pages d'explication."
             purpose_en: "Choose between product preparation, the engineering pipeline, and the Brownfield journey; the list of explanation pages."
       - id: core-journey
         title_fr: "Parcours principal"
         title_en: "Core journey"
+        intro_fr: "Le fil rouge suivi du backlog jusqu'à DELIVER, phase par phase."
+        intro_en: "The running example followed from the backlog to DELIVER, phase by phase."
         sidebar_position: 2
         pages:
           - id: fil-rouge
@@ -373,8 +418,7 @@ parts:
             label_fr: "Le fil rouge"
             label_en: "The running example"
             sidebar_position: 1
-            fr: "fr/explanation/pipeline/fil-rouge.md"
-            en: "en/explanation/pipeline/fil-rouge.md"
+            doc: explanation/pipeline/fil-rouge
             purpose_fr: "Une commande Starbucks suivie à travers deux workflows produit optionnels puis quatre phases d'ingénierie."
             purpose_en: "A Starbucks order followed through two optional product workflows and then four engineering phases."
           - id: backlog
@@ -382,8 +426,7 @@ parts:
             label_fr: "Le backlog"
             label_en: "The backlog"
             sidebar_position: 2
-            fr: "fr/explanation/backlog.md"
-            en: "en/explanation/backlog.md"
+            doc: explanation/backlog
             purpose_fr: "Le plugin skraft-backlog : du PRD au backlog, raffinement d'une issue, automatisations de triage et de sprint, et pourquoi chaque lentille de planification existe."
             purpose_en: "The skraft-backlog plugin: from PRD to backlog, refining one issue, triage and sprint automations, and why each planning lens exists."
           - id: discover
@@ -391,8 +434,7 @@ parts:
             label_fr: "DISCOVER"
             label_en: "DISCOVER"
             sidebar_position: 3
-            fr: "fr/explanation/pipeline/discover.md"
-            en: "en/explanation/pipeline/discover.md"
+            doc: explanation/pipeline/discover
             source: "plugins/skraft-backlog/com.github.copilot/agents/backlog-discoverer.agent.md"
             purpose_fr: "Workflow DISCOVER : triage et priorisation du backlog."
             purpose_en: "DISCOVER workflow: backlog triage and prioritization."
@@ -401,8 +443,7 @@ parts:
             label_fr: "DISCUSS"
             label_en: "DISCUSS"
             sidebar_position: 4
-            fr: "fr/explanation/pipeline/discuss.md"
-            en: "en/explanation/pipeline/discuss.md"
+            doc: explanation/pipeline/discuss
             source: "plugins/skraft-backlog/com.github.copilot/agents/backlog-planner.agent.md"
             purpose_fr: "Workflow DISCUSS : raffinage des stories selon INVEST et la DoR."
             purpose_en: "DISCUSS workflow: story refinement against INVEST and the DoR."
@@ -411,8 +452,7 @@ parts:
             label_fr: "RESEARCH"
             label_en: "RESEARCH"
             sidebar_position: 5
-            fr: "fr/explanation/pipeline/research.md"
-            en: "en/explanation/pipeline/research.md"
+            doc: explanation/pipeline/research
             source: "plugins/skraft-framework/com.github.copilot/agents/solution-researcher.agent.md"
             purpose_fr: "Phase RESEARCH : investigation sourcée et recommandation avant la conception."
             purpose_en: "RESEARCH phase: sourced investigation and recommendation before design."
@@ -421,8 +461,7 @@ parts:
             label_fr: "DESIGN"
             label_en: "DESIGN"
             sidebar_position: 6
-            fr: "fr/explanation/pipeline/design.md"
-            en: "en/explanation/pipeline/design.md"
+            doc: explanation/pipeline/design
             source: "plugins/skraft-framework/com.github.copilot/agents/solution-architect.agent.md"
             purpose_fr: "Phase DESIGN : Event Modeling, DDD, ADR et contrats d'interface."
             purpose_en: "DESIGN phase: Event Modeling, DDD, ADRs, and interface contracts."
@@ -431,8 +470,7 @@ parts:
             label_fr: "DISTILL"
             label_en: "DISTILL"
             sidebar_position: 7
-            fr: "fr/explanation/pipeline/distill.md"
-            en: "en/explanation/pipeline/distill.md"
+            doc: explanation/pipeline/distill
             source: "plugins/skraft-framework/com.github.copilot/agents/acceptance-designer.agent.md"
             purpose_fr: "Phase DISTILL : scénarios BDD exécutables et plan de tests."
             purpose_en: "DISTILL phase: executable BDD scenarios and test plan."
@@ -441,14 +479,15 @@ parts:
             label_fr: "DELIVER"
             label_en: "DELIVER"
             sidebar_position: 8
-            fr: "fr/explanation/pipeline/deliver.md"
-            en: "en/explanation/pipeline/deliver.md"
+            doc: explanation/pipeline/deliver
             source: "plugins/skraft-framework/com.github.copilot/agents/software-engineer.agent.md"
             purpose_fr: "Phase DELIVER : Outside-In TDD vérifié, revue, puis mutation en dernier avec le choix du développeur sur les survivants."
             purpose_en: "DELIVER phase: checked Outside-In TDD, review, then mutation last with the developer's choice on survivors."
       - id: brownfield-journey
         title_fr: "Parcours Brownfield"
         title_en: "Brownfield journey"
+        intro_fr: "Reprendre un code existant : l'analyser, le mettre sous filet, le refactorer."
+        intro_en: "Taking over existing code: analyse it, put it under a net, refactor it."
         sidebar_position: 3
         pages:
           - id: brownfield
@@ -456,13 +495,14 @@ parts:
             label_fr: "Reprendre un existant"
             label_en: "Take over an existing system"
             sidebar_position: 1
-            fr: "fr/explanation/brownfield.md"
-            en: "en/explanation/brownfield.md"
+            doc: explanation/brownfield
             purpose_fr: "Analyser un code existant, construire un filet de sécurité, le refactorer, puis rejoindre le parcours principal."
             purpose_en: "Analyze existing code, build a safety net, refactor it, then join the core journey."
       - id: system-understanding
         title_fr: "Comprendre le système"
         title_en: "Understand the system"
+        intro_fr: "Les mécanismes qui protègent le pipeline : équipe, moteur, journal, garde-fous, coûts."
+        intro_en: "The mechanisms that protect the pipeline: team, engine, journal, guardrails, costs."
         sidebar_position: 4
         pages:
           - id: team
@@ -470,8 +510,7 @@ parts:
             label_fr: "L'équipe et les relais"
             label_en: "The team and handoffs"
             sidebar_position: 1
-            fr: "fr/explanation/pipeline/team.md"
-            en: "en/explanation/pipeline/team.md"
+            doc: explanation/pipeline/team
             purpose_fr: "Producteurs, lentilles, moteur et pilote d'hôte : qui produit, qui juge, qui décide, et pourquoi seul le pilote lance des agents."
             purpose_en: "Producers, lenses, engine and host driver: who produces, who judges, who decides, and why only the driver starts agents."
           - id: architecture
@@ -479,8 +518,7 @@ parts:
             label_fr: "Architecture"
             label_en: "Architecture"
             sidebar_position: 2
-            fr: "fr/explanation/architecture.md"
-            en: "en/explanation/architecture.md"
+            doc: explanation/architecture
             purpose_fr: "Le moteur a cas d'usage, les pilotes d'hote seuls a lancer des agents, la profondeur 1, et les controles qui vivent dans le code."
             purpose_en: "The use-case engine, the host drivers that alone start agents, depth 1, and the checks that live in the code."
           - id: event-journal
@@ -488,8 +526,7 @@ parts:
             label_fr: "Le journal d'événements"
             label_en: "The event journal"
             sidebar_position: 3
-            fr: "fr/explanation/event-journal.md"
-            en: "en/explanation/event-journal.md"
+            doc: explanation/event-journal
             purpose_fr: "Le journal d'evenements chaine qui remplace state.json : etat recalcule, reprise exacte, modifications detectees."
             purpose_en: "The chained event journal that replaces state.json: state recomputed, exact resume, edits detected."
           - id: guardrails
@@ -497,8 +534,7 @@ parts:
             label_fr: "Garde-fous : du hook au moteur"
             label_en: "Guardrails: from hook to engine"
             sidebar_position: 4
-            fr: "fr/explanation/guardrails.md"
-            en: "en/explanation/guardrails.md"
+            doc: explanation/guardrails
             purpose_fr: "Pourquoi la V2 part de zero hook et ce qui remplace chaque garde-fou de la v1 dans le moteur."
             purpose_en: "Why V2 starts from zero hooks and what replaces each v1 guardrail in the engine."
           - id: token-economy
@@ -506,8 +542,7 @@ parts:
             label_fr: "Économie de tokens"
             label_en: "Token economy"
             sidebar_position: 5
-            fr: "fr/explanation/token-economy.md"
-            en: "en/explanation/token-economy.md"
+            doc: explanation/token-economy
             purpose_fr: "Pourquoi le coût d'un pipeline agentique est décidé au design et comment SKRAFT le maîtrise."
             purpose_en: "Why an agentic pipeline's cost is decided at design time and how SKRAFT controls it."
           - id: customisation-trade-offs
@@ -515,14 +550,15 @@ parts:
             label_fr: "Adapter skraft : ce que coûte chaque réglage"
             label_en: "Adapting skraft: what each setting costs"
             sidebar_position: 8
-            fr: "fr/explanation/customisation-trade-offs.md"
-            en: "en/explanation/customisation-trade-offs.md"
+            doc: explanation/customisation-trade-offs
             purpose_fr: "Ce que skraft laisse adapter et ce qu'il garde dans le moteur, et le RISQUE de chaque controle reduit (gates, commandes, mocking, revues)."
             purpose_en: "What skraft lets you adapt and what it keeps in the engine, and the RISK of each control reduced (gates, commands, mocking, reviews)."
             requires_risk_section: true
       - id: craft-foundations
         title_fr: "Fondations du craft"
         title_en: "Craft foundations"
+        intro_fr: "Les pratiques du craft que skraft rend opposables : craftsmanship, DDD, Clean Architecture."
+        intro_en: "The craft practices skraft makes enforceable: craftsmanship, DDD, Clean Architecture."
         sidebar_position: 5
         pages:
           - id: software-craftsmanship
@@ -530,8 +566,7 @@ parts:
             label_fr: "Software craftsmanship"
             label_en: "Software craftsmanship"
             sidebar_position: 1
-            fr: "fr/explanation/software-craftsmanship.md"
-            en: "en/explanation/software-craftsmanship.md"
+            doc: explanation/software-craftsmanship
             purpose_fr: "Ce que veut dire le craft et comment skraft le rend opposable : seuil fixe, TDD vérifié, mutation testing, revue avant la revue, décisions humaines."
             purpose_en: "What craftsmanship means and how skraft makes it enforceable: fixed bar, checked TDD, mutation testing, review before review, human decisions."
           - id: domain-driven-design
@@ -539,8 +574,7 @@ parts:
             label_fr: "Domain-Driven Design"
             label_en: "Domain-Driven Design"
             sidebar_position: 2
-            fr: "fr/explanation/domain-driven-design.md"
-            en: "en/explanation/domain-driven-design.md"
+            doc: explanation/domain-driven-design
             purpose_fr: "Langage omniprésent, bounded contexts, context map, conception stratégique puis tactique : où DISCUSS et DESIGN les produisent et quelles lentilles les vérifient."
             purpose_en: "Ubiquitous language, bounded contexts, context map, strategic then tactical design: where DISCUSS and DESIGN produce them and which lenses check them."
           - id: clean-architecture
@@ -548,13 +582,14 @@ parts:
             label_fr: "Clean Architecture et hexagonale"
             label_en: "Clean & hexagonal architecture"
             sidebar_position: 3
-            fr: "fr/explanation/clean-architecture.md"
-            en: "en/explanation/clean-architecture.md"
+            doc: explanation/clean-architecture
             purpose_fr: "Ports et adaptateurs (Cockburn), règle de dépendance (Martin), et comment la gate architecture, les lentilles et le walking skeleton la font respecter."
             purpose_en: "Ports and adapters (Cockburn), the dependency rule (Martin), and how the architecture gate, the lenses and the walking skeleton enforce it."
       - id: deep-dives
         title_fr: "Approfondissements"
         title_en: "Deep dives"
+        intro_fr: "Un mécanisme à la fois, en détail : revue, TDD, walking skeleton, mocking, contrats, évaluation."
+        intro_en: "One mechanism at a time, in depth: review, TDD, walking skeleton, mocking, contracts, evaluation."
         sidebar_position: 6
         pages:
           - id: review-deep
@@ -562,8 +597,7 @@ parts:
             label_fr: "La revue avant la revue"
             label_en: "Review before review"
             sidebar_position: 1
-            fr: "fr/explanation/deep-dive/review-before-review.md"
-            en: "en/explanation/deep-dive/review-before-review.md"
+            doc: explanation/deep-dive/review-before-review
             purpose_fr: "Pourquoi la revue adverse assistée filtre le bruit avant la revue humaine : lentilles indépendantes, réfutation, verdict calculé, et ce qu'elle ne voit pas."
             purpose_en: "Why assisted adversarial review filters noise before human review: independent lenses, refutation, computed verdict, and what it does not see."
           - id: outside-in-tdd
@@ -571,8 +605,7 @@ parts:
             label_fr: "Outside-In TDD"
             label_en: "Outside-In TDD"
             sidebar_position: 2
-            fr: "fr/explanation/deep-dive/outside-in-tdd.md"
-            en: "en/explanation/deep-dive/outside-in-tdd.md"
+            doc: explanation/deep-dive/outside-in-tdd
             purpose_fr: "Double boucle, boundary-to-boundary et walking skeleton."
             purpose_en: "Double loop, boundary-to-boundary, and walking skeleton."
           - id: walking-skeleton
@@ -580,8 +613,7 @@ parts:
             label_fr: "Walking Skeleton"
             label_en: "Walking Skeleton"
             sidebar_position: 3
-            fr: "fr/explanation/deep-dive/walking-skeleton.md"
-            en: "en/explanation/deep-dive/walking-skeleton.md"
+            doc: explanation/deep-dive/walking-skeleton
             purpose_fr: "La plus fine tranche end-to-end qui fonctionne."
             purpose_en: "The thinnest end-to-end slice that works."
           - id: zoom-mocking
@@ -589,8 +621,7 @@ parts:
             label_fr: "Mocking avec Microcks"
             label_en: "Mocking with Microcks"
             sidebar_position: 4
-            fr: "fr/explanation/deep-dive/mocking-microcks.md"
-            en: "en/explanation/deep-dive/mocking-microcks.md"
+            doc: explanation/deep-dive/mocking-microcks
             source: "plugins/skraft-framework/com.github.copilot/agents/*.agent.md"
             purpose_fr: "Fan-out interne de DELIVER pour le mocking et sa lentille conditionnelle."
             purpose_en: "DELIVER internal fan-out for mocking and its conditional lens."
@@ -599,8 +630,7 @@ parts:
             label_fr: "Contract testing"
             label_en: "Contract testing"
             sidebar_position: 5
-            fr: "fr/explanation/deep-dive/contract-testing.md"
-            en: "en/explanation/deep-dive/contract-testing.md"
+            doc: explanation/deep-dive/contract-testing
             source: "plugins/skraft-framework/com.github.copilot/agents/*.agent.md"
             purpose_fr: "Fan-out interne de DELIVER pour les tests de contrat et sa lentille conditionnelle."
             purpose_en: "DELIVER internal fan-out for contract testing and its conditional lens."
@@ -609,8 +639,7 @@ parts:
             label_fr: "Lire un verdict d'évaluation"
             label_en: "Read an evaluation verdict"
             sidebar_position: 6
-            fr: "fr/explanation/deep-dive/reading-a-verdict.md"
-            en: "en/explanation/deep-dive/reading-a-verdict.md"
+            doc: explanation/deep-dive/reading-a-verdict
             purpose_fr: "Le test des signes, le test de rang, le plancher de six paires, et ce qu'une paire rejouée montre du comportement."
             purpose_en: "The sign test, rank test, and six-pair floor, and what a replayed pair shows of the behaviour."
           - id: evaluation-strategy
@@ -618,13 +647,14 @@ parts:
             label_fr: "Stratégie d'évaluation"
             label_en: "Evaluation strategy"
             sidebar_position: 8
-            fr: "fr/explanation/evaluation-strategy.md"
-            en: "en/explanation/evaluation-strategy.md"
+            doc: explanation/evaluation-strategy
             purpose_fr: "Les trois couches de preuve : tests deterministes du moteur, comparaison appariee des skills, conformite des agents reels."
             purpose_en: "The three layers of evidence: deterministic engine tests, paired skill comparison, real-agent conformance."
       - id: special-contexts
         title_fr: "Contextes particuliers"
         title_en: "Special contexts"
+        intro_fr: "skraft vu par un décideur."
+        intro_en: "skraft seen by a decision maker."
         sidebar_position: 7
         pages:
           - id: for-executives
@@ -632,8 +662,7 @@ parts:
             label_fr: "Pour décideurs"
             label_en: "For executives"
             sidebar_position: 1
-            fr: "fr/explanation/for-executives.md"
-            en: "en/explanation/for-executives.md"
+            doc: explanation/for-executives
             purpose_fr: "Pourquoi une organisation qui livre avec des assistants IA a besoin d'une discipline imposee par un moteur teste, ce qui est disponible aujourd'hui et les objectifs du plan V2."
             purpose_en: "Why an organisation that ships with AI assistants needs a discipline enforced by a tested engine, what is available today and the V2 plan's goals."
 
@@ -641,6 +670,7 @@ parts:
   - id: reference
     icon: "fa-solid fa-book"
     diataxis_mode: reference
+    slug: /reference
     sidebar_position: 4
     title_fr: "Référence — consulter"
     title_en: "Reference — look up"
@@ -653,6 +683,8 @@ parts:
       - id: usage
         title_fr: "Utiliser SKRAFT"
         title_en: "Using SKRAFT"
+        intro_fr: "Hôtes, commandes, workflow DOT, phases, configuration et journal d'un run."
+        intro_en: "Hosts, commands, DOT workflow, phases, configuration and a run's journal."
         sidebar_position: 1
         pages:
           - id: hosts
@@ -660,8 +692,7 @@ parts:
             label_fr: "Hôtes"
             label_en: "Hosts"
             sidebar_position: 1
-            fr: "fr/reference/hosts.md"
-            en: "en/reference/hosts.md"
+            doc: reference/hosts
             purpose_fr: "Claude Code, Copilot CLI et VS Code : prerequis, installation, pilote, commandes, questions humaines, suivi et capacites de chaque hote."
             purpose_en: "Claude Code, Copilot CLI and VS Code: prerequisites, install, driver, commands, human questions, tracking and capabilities of each host."
           - id: cli
@@ -669,8 +700,7 @@ parts:
             label_fr: "Ligne de commande"
             label_en: "Command line"
             sidebar_position: 2
-            fr: "fr/reference/cli.md"
-            en: "en/reference/cli.md"
+            doc: reference/cli
             purpose_fr: "Chaque commande skraft : synopsis, options, sorties texte et JSON, codes de sortie."
             purpose_en: "Every skraft command: synopsis, options, text and JSON outputs, exit codes."
           - id: workflow-dot
@@ -678,8 +708,7 @@ parts:
             label_fr: "Workflow DOT"
             label_en: "DOT workflow"
             sidebar_position: 3
-            fr: "fr/reference/workflow-dot.md"
-            en: "en/reference/workflow-dot.md"
+            doc: reference/workflow-dot
             purpose_fr: "La syntaxe des workflows .skraft.dot : formes de noeud, attributs, aretes, regles de validite, noeuds verrouilles et obligatoires, revues, noeud d'appel."
             purpose_en: "The syntax of .skraft.dot workflows: node shapes, attributes, edges, validity rules, locked and mandatory nodes, reviews, call node."
           - id: phases-reference
@@ -687,8 +716,7 @@ parts:
             label_fr: "Phases"
             label_en: "Phases"
             sidebar_position: 4
-            fr: "fr/reference/phases.md"
-            en: "en/reference/phases.md"
+            doc: reference/phases
             purpose_fr: "Chaque phase de DISCOVER a PUBLISH : entrees, sorties et leurs chemins, agents, lentilles et gates, aretes de retour, decisions humaines."
             purpose_en: "Each phase from DISCOVER to PUBLISH: inputs, outputs and their paths, agents, lenses and gates, loop-back edges, human decisions."
           - id: skraft-config
@@ -696,8 +724,7 @@ parts:
             label_fr: "skraft-config.json"
             label_en: "skraft-config.json"
             sidebar_position: 5
-            fr: "fr/reference/skraft-config.md"
-            en: "en/reference/skraft-config.md"
+            doc: reference/skraft-config
             purpose_fr: "Le schema complet de la configuration et de ses couches, ses regles de validation, les lignes de commande et les defauts de detection."
             purpose_en: "The full schema of the configuration and its layers, its validation rules, command lines and detection defaults."
           - id: run-journal
@@ -705,40 +732,44 @@ parts:
             label_fr: "Suivi et journal"
             label_en: "Tracking and journal"
             sidebar_position: 6
-            fr: "fr/reference/run-journal.md"
-            en: "en/reference/run-journal.md"
+            doc: reference/run-journal
             purpose_fr: "Le dossier de suivi, les artefacts par phase, la documentation durable écrite sous docs/, les événements de events.jsonl et tous les codes de refus et de blocage."
             purpose_en: "The tracking folder, the artifacts by phase, the durable documentation written under docs/, the events.jsonl events and every refusal and block code."
       - id: catalogue
         title_fr: "Catalogue agentique"
         title_en: "Agentic catalogue"
+        intro_fr: "Les agents, skills, workers et lentilles des plugins, et leurs chaînes."
+        intro_en: "The plugins' agents, skills, workers and lenses, and their chains."
+        slug: /reference/agentic-catalogue
         sidebar_position: 2
         ownership: dashboard
         source_families: [agents, skills, workers, lenses]
         retire:
-          - "docs/site/fr/reference/agents/*.md"
-          - "docs/site/en/reference/agents/*.md"
-          - "docs/site/fr/reference/skills/*.md"
-          - "docs/site/en/reference/skills/*.md"
-          - "docs/site/fr/reference/workers/*.md"
-          - "docs/site/en/reference/workers/*.md"
-          - "docs/site/fr/reference/lenses/*.md"
-          - "docs/site/en/reference/lenses/*.md"
-          - "docs/site/fr/reference/lens.md"
-          - "docs/site/en/reference/lens.md"
+          - "docs/website/i18n/fr/docusaurus-plugin-content-docs/current/reference/agents/*.md"
+          - "docs/website/docs/reference/agents/*.md"
+          - "docs/website/i18n/fr/docusaurus-plugin-content-docs/current/reference/skills/*.md"
+          - "docs/website/docs/reference/skills/*.md"
+          - "docs/website/i18n/fr/docusaurus-plugin-content-docs/current/reference/workers/*.md"
+          - "docs/website/docs/reference/workers/*.md"
+          - "docs/website/i18n/fr/docusaurus-plugin-content-docs/current/reference/lenses/*.md"
+          - "docs/website/docs/reference/lenses/*.md"
+          - "docs/website/i18n/fr/docusaurus-plugin-content-docs/current/reference/lens.md"
+          - "docs/website/docs/reference/lens.md"
         pages:
           - id: dashboard
             type: dashboard
             label_fr: "Agents, skills et chaînes"
             label_en: "Agents, skills and chains"
             sidebar_position: 1
-            fr: "fr/dashboard/index.md"
-            en: "en/dashboard/index.md"
+            doc: reference/catalogue
             purpose_fr: "Catalogue factuel unique des agents, skills, workers, lentilles, racines et chaînes d'orchestration."
             purpose_en: "Single factual catalogue of agents, skills, workers, lenses, roots and orchestration chains."
-      - id: quality-gates
+      - id: gates
         title_fr: "Gates"
         title_en: "Gates"
+        intro_fr: "Les gates de commandes et les critères de revue de chaque lentille."
+        intro_en: "The command gates and each lens's review criteria."
+        slug: /reference/quality-gates
         sidebar_position: 3
         pages:
           - id: gates
@@ -746,14 +777,16 @@ parts:
             label_fr: "Gates"
             label_en: "Gates"
             sidebar_position: 1
-            fr: "fr/reference/gates.md"
-            en: "en/reference/gates.md"
+            doc: reference/gates
             source: "plugins/skraft-framework/skills/*-review-criteria/SKILL.md"
             purpose_fr: "Les gates de commandes du moteur et les criteres de revue (Gxx) de chaque lentille, par phase, et le calcul du verdict."
             purpose_en: "The engine's command gates and each lens's review criteria (Gxx), per phase, and how the verdict is computed."
-      - id: architecture-patterns
+      - id: patterns
         title_fr: "Patterns"
         title_en: "Patterns"
+        intro_fr: "Les patterns d'architecture et leur référence."
+        intro_en: "The architecture patterns and their reference."
+        slug: /reference/architecture-patterns
         sidebar_position: 4
         pages:
           - id: patterns
@@ -761,14 +794,15 @@ parts:
             label_fr: "Patterns"
             label_en: "Patterns"
             sidebar_position: 1
-            fr: "fr/reference/patterns.md"
-            en: "en/reference/patterns.md"
+            doc: reference/patterns
             source: "plugins/skraft-framework/skills/architecture-patterns/SKILL.md"
             purpose_fr: "Les patterns d'architecture (Event Modeling, DDD, Clean Architecture, CQRS...) avec leur reference."
             purpose_en: "Architecture patterns (Event Modeling, DDD, Clean Architecture, CQRS...) with their reference."
       - id: evaluation
         title_fr: "Évaluation"
         title_en: "Evaluation"
+        intro_fr: "Les fichiers, le lanceur et les verdicts de l'évaluation des skills et des agents."
+        intro_en: "The files, runner and verdicts of skill and agent evaluation."
         sidebar_position: 5
         pages:
           - id: evaluation-tooling
@@ -776,13 +810,14 @@ parts:
             label_fr: "Outillage d'évaluation"
             label_en: "Evaluation tooling"
             sidebar_position: 1
-            fr: "fr/reference/evaluation-tooling.md"
-            en: "en/reference/evaluation-tooling.md"
+            doc: reference/evaluation-tooling
             purpose_fr: "Les fichiers, le lanceur run-vally-evals.sh et ses variables, les etats de verdict d'un skill et d'une suite d'agent, le commentaire de PR, les jobs de CI et le tableau de bord."
             purpose_en: "The files, the run-vally-evals.sh runner and its variables, the verdict states of a skill and of an agent suite, the PR comment, the CI jobs and the dashboard."
       - id: bibliography
         title_fr: "Bibliographie & annexes"
         title_en: "Bibliography & appendix"
+        intro_fr: "Les citations, le glossaire et l'historique des versions."
+        intro_en: "Citations, glossary and version history."
         sidebar_position: 6
         pages:
           - id: citations
@@ -790,8 +825,7 @@ parts:
             label_fr: "Citations"
             label_en: "Citations"
             sidebar_position: 1
-            fr: "fr/reference/citations.md"
-            en: "en/reference/citations.md"
+            doc: reference/citations
             source: "docs/website/data/citations.yml"
             purpose_fr: "Bibliographie complete : chaque reference (auteur, ouvrage, annee) qui fonde une pratique."
             purpose_en: "Full bibliography: each reference (author, work, year) grounding a practice."
@@ -800,8 +834,7 @@ parts:
             label_fr: "Glossaire"
             label_en: "Glossary"
             sidebar_position: 2
-            fr: "fr/reference/glossary.md"
-            en: "en/reference/glossary.md"
+            doc: reference/glossary
             purpose_fr: "Glossaire global : chaque terme du craft explique simplement."
             purpose_en: "Global glossary: every craft term explained plainly."
           - id: changelog
@@ -809,7 +842,6 @@ parts:
             label_fr: "Changelog"
             label_en: "Changelog"
             sidebar_position: 3
-            fr: "fr/reference/changelog.md"
-            en: "en/reference/changelog.md"
+            doc: reference/changelog
             purpose_fr: "L'historique des evolutions du handbook et du plugin."
             purpose_en: "The history of handbook and plugin changes."

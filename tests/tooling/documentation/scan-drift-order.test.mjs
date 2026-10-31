@@ -9,10 +9,11 @@ import { scanDrift } from '../../../scripts/scan-drift.mjs'
 // deliberately underivable label proves topology resolution reads descriptors.
 const RESEARCHER_LABEL = 'Agent 7 / Evidence Cartographer'
 
-const bookYml = ({ retire = false, enDashboard = 'en/dashboard/index.md' } = {}) => `meta:
-  basename_exceptions:
-    - fr: fr/dashboard/index.md
-      en: en/dashboard/home.md
+const FR_DOCS = 'docs/website/i18n/fr/docusaurus-plugin-content-docs/current'
+const EN_DOCS = 'docs/website/docs'
+
+const bookYml = ({ retire = false, guides = false } = {}) => `meta:
+  title_en: Book
 sources:
   agents: "plugins/skraft-framework/com.github.copilot/agents/*.agent.md"
   workers: "plugins/skraft-framework/com.github.copilot/agents/*-worker.agent.md"
@@ -27,13 +28,21 @@ parts:
         title_en: Catalogue
         ownership: dashboard
         source_families: [agents, skills, workers, lenses]
-${retire ? '        retire:\n          - "docs/site/fr/reference/agents/*.md"\n' : ''}        pages:
+${retire ? `        retire:\n          - "${FR_DOCS}/reference/agents/*.md"\n` : ''}        pages:
           - id: dashboard
             type: dashboard
             sidebar_position: 1
-            fr: fr/dashboard/index.md
-            en: ${enDashboard}
-`
+            doc: reference/catalogue
+${guides ? `  - id: how-to
+    diataxis_mode: how-to
+    pages:
+      - id: install-on-a-host
+        type: editorial
+        doc: how-to/install-on-a-host
+      - id: run-gates
+        type: editorial
+        doc: how-to/run-gates
+` : ''}`
 
 const orchestratorAgent = `---
 name: Engineering entry
@@ -67,21 +76,24 @@ metadata:
 ---
 `
 
-async function withFixture({ enDashboard = 'en/dashboard/index.md', brokenParent = false, retire = false, enDashboardBody = '', frDashboardBody = '', workflow = null } = {}) {
+async function withFixture({ brokenParent = false, retire = false, enDashboardBody = '', frDashboardBody = '', workflow = null, guides = null } = {}) {
   const root = await mkdtemp(join(tmpdir(), 'scan-drift-topology-'))
-  const siteRoot = join(root, 'docs/site')
+  const siteRoot = join(root, 'docs/website')
   const directories = [
-    'docs/site/_data',
-    'docs/site/fr/dashboard',
-    'docs/site/en/dashboard',
+    `${FR_DOCS}/reference`,
+    `${EN_DOCS}/reference`,
     'plugins/skraft-framework/com.github.copilot/agents',
     'plugins/skraft-framework/skills/routing',
   ]
   await Promise.all(directories.map((path) => mkdir(join(root, path), { recursive: true })))
 
-  await writeFile(join(root, 'docs/site/_data/book.yml'), bookYml({ retire, enDashboard }))
-  await writeFile(join(root, 'docs/site/fr/dashboard/index.md'), `---\nlayout: dashboard\nlang: fr\n---\n${frDashboardBody}`)
-  await writeFile(join(siteRoot, enDashboard), `---\nlayout: dashboard\nlang: en\n---\n${enDashboardBody}`)
+  await writeFile(join(root, 'docs/website/book.yml'), bookYml({ retire, guides: guides !== null }))
+  await writeFile(join(root, FR_DOCS, 'reference/catalogue.md'), `---\ntitle: Catalogue\n---\n${frDashboardBody}`)
+  await writeFile(join(root, EN_DOCS, 'reference/catalogue.md'), `---\ntitle: Catalogue\n---\n${enDashboardBody}`)
+  for (const file of guides ?? []) {
+    await mkdir(join(root, file, '..'), { recursive: true })
+    await writeFile(join(root, file), '---\ntitle: Guide\n---\n# Guide\n')
+  }
   await writeFile(join(root, 'plugins/skraft-framework/skills/routing/SKILL.md'), '---\nname: routing\n---\n')
   await writeFile(join(root, 'plugins/skraft-framework/com.github.copilot/agents/skraft-orchestrator.agent.md'), orchestratorAgent)
   await writeFile(join(root, 'plugins/skraft-framework/com.github.copilot/agents/solution-researcher.agent.md'), brokenParent ? researcherAgent.replace('Engineering entry', 'Missing dispatcher') : researcherAgent)
@@ -97,15 +109,15 @@ async function withFixture({ enDashboard = 'en/dashboard/index.md', brokenParent
   }
 
   if (retire) {
-    await mkdir(join(root, 'docs/site/fr/reference/agents'), { recursive: true })
-    await writeFile(join(root, 'docs/site/fr/reference/agents/old-agent.md'), '# Retired catalogue page\n')
+    await mkdir(join(root, FR_DOCS, 'reference/agents'), { recursive: true })
+    await writeFile(join(root, FR_DOCS, 'reference/agents/old-agent.md'), '# Retired catalogue page\n')
   }
 
   return {
     root,
     siteRoot,
     ledger: () => scanDrift({
-      bookPath: join(root, 'docs/site/_data/book.yml'),
+      bookPath: join(root, 'docs/website/book.yml'),
       root,
       siteRoot,
       emptyThreshold: 1,
@@ -127,12 +139,29 @@ test('scan-drift covers dashboard source families without per-item Markdown page
   }
 })
 
-test('scan-drift reports an FR/EN basename mismatch as high, even when book.yml declares it an exception', async () => {
-  const fixture = await withFixture({ enDashboard: 'en/dashboard/home.md' })
+test('scan-drift reads a doc in docs/ and in the French i18n tree, .md or .mdx, and reports a page one locale lacks as a parity break', async () => {
+  const fixture = await withFixture({
+    guides: [`${EN_DOCS}/how-to/install-on-a-host.mdx`, `${FR_DOCS}/how-to/install-on-a-host.mdx`, `${EN_DOCS}/how-to/run-gates.md`],
+  })
   try {
-    const mismatches = fixture.ledger().items.filter(({ type }) => type === 'basename-mismatch')
-    assert.deepEqual(mismatches.map(({ fr, en, severity }) => ({ fr, en, severity })), [
-      { fr: 'fr/dashboard/index.md', en: 'en/dashboard/home.md', severity: 'high' },
+    const items = fixture.ledger().items.filter(({ type }) => ['parity-break', 'missing-page'].includes(type))
+    assert.deepEqual(items.map(({ type, severity, lang, doc, fr, en }) => ({ type, severity, lang, doc, fr, en })), [
+      {
+        type: 'parity-break', severity: 'high', lang: 'fr', doc: 'how-to/run-gates',
+        fr: `${FR_DOCS}/how-to/run-gates.md`, en: `${EN_DOCS}/how-to/run-gates.md`,
+      },
+    ])
+  } finally {
+    await fixture.cleanup()
+  }
+})
+
+test('scan-drift reports a declared doc with no file in either locale as one missing page', async () => {
+  const fixture = await withFixture({ guides: [`${EN_DOCS}/how-to/install-on-a-host.md`, `${FR_DOCS}/how-to/install-on-a-host.md`] })
+  try {
+    const items = fixture.ledger().items.filter(({ type }) => ['parity-break', 'missing-page'].includes(type))
+    assert.deepEqual(items.map(({ type, lang, doc, detail }) => ({ type, lang, doc, detail })), [
+      { type: 'missing-page', lang: 'both', doc: 'how-to/run-gates', detail: 'The doc how-to/run-gates is declared in book.yml but has no file in either locale.' },
     ])
   } finally {
     await fixture.cleanup()
@@ -184,6 +213,9 @@ test('scan-drift identifies superseded catalogue pages for controlled retirement
     const item = fixture.ledger().items.find(({ type }) => type === 'catalogue-retirement')
     assert.ok(item)
     assert.match(item.detail, /1 superseded catalogue Markdown page/)
+    assert.deepEqual([item.pageId, item.doc, item.fr, item.en], [
+      'dashboard', 'reference/catalogue', `${FR_DOCS}/reference/catalogue.md`, `${EN_DOCS}/reference/catalogue.md`,
+    ])
   } finally {
     await fixture.cleanup()
   }

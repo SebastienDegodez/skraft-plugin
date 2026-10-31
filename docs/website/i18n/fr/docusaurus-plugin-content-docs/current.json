@@ -15,13 +15,17 @@
     "message": "Des parcours guides ou vous executez : un premier run sous Claude Code, puis sous Copilot CLI, et un premier depot existant transforme en backlog.",
     "description": "The generated-index page description for category 'Tutorials — learn' in sidebar 'tutorials'"
   },
-  "sidebar.tutorials.doc.First steps": {
+  "sidebar.tutorials.doc.tutorials/getting-started": {
     "message": "Premiers pas",
     "description": "The label for the doc item 'First steps' in sidebar 'tutorials', linking to the doc tutorials/getting-started"
   },
-  "sidebar.tutorials.doc.First run under Copilot CLI": {
+  "sidebar.tutorials.doc.tutorials/first-run-copilot": {
     "message": "Premier run sous Copilot CLI",
     "description": "The label for the doc item 'First run under Copilot CLI' in sidebar 'tutorials', linking to the doc tutorials/first-run-copilot"
+  },
+  "sidebar.tutorials.doc.tutorials/first-brownfield": {
+    "message": "Premier dépôt existant",
+    "description": "The label for the doc item 'First existing repository' in sidebar 'tutorials', linking to the doc tutorials/first-brownfield"
   },
   "sidebar.howTo.category.how-to": {
     "message": "Guides pratiques — faire",
@@ -35,13 +39,161 @@
     "message": "Resoudre une tache precise : installer le plugin, configurer les composants, lancer les gates, reprendre un run, repondre a une question, choisir les modeles, ajouter une lentille, adapter le workflow, ajouter un agent du depot, revoir une pull request, publier la pull request, migrer depuis la v1, passer d'un PRD au backlog, raffiner une issue, caracteriser puis refactorer un existant, evaluer un skill, proposer un pattern.",
     "description": "The generated-index page description for category 'How-to guides — do' in sidebar 'howTo'"
   },
-  "sidebar.howTo.doc.Install skraft on a host": {
+  "sidebar.howTo.category.set-up": {
+    "message": "Mettre en place",
+    "description": "The label for category 'Set up' in sidebar 'howTo'"
+  },
+  "sidebar.howTo.category.set-up.link.generated-index.title": {
+    "message": "Mettre en place",
+    "description": "The generated-index page title for category 'Set up' in sidebar 'howTo'"
+  },
+  "sidebar.howTo.category.set-up.link.generated-index.description": {
+    "message": "Installer skraft, décrire les composants du dépôt, choisir les modèles, migrer depuis la v1.",
+    "description": "The generated-index page description for category 'Set up' in sidebar 'howTo'"
+  },
+  "sidebar.howTo.category.run-a-story": {
+    "message": "Mener une story",
+    "description": "The label for category 'Run a story' in sidebar 'howTo'"
+  },
+  "sidebar.howTo.category.run-a-story.link.generated-index.title": {
+    "message": "Mener une story",
+    "description": "The generated-index page title for category 'Run a story' in sidebar 'howTo'"
+  },
+  "sidebar.howTo.category.run-a-story.link.generated-index.description": {
+    "message": "Lancer les gates, reprendre un run, répondre à ses questions, publier sa pull request.",
+    "description": "The generated-index page description for category 'Run a story' in sidebar 'howTo'"
+  },
+  "sidebar.howTo.category.review": {
+    "message": "Revoir",
+    "description": "The label for category 'Review' in sidebar 'howTo'"
+  },
+  "sidebar.howTo.category.review.link.generated-index.title": {
+    "message": "Revoir",
+    "description": "The generated-index page title for category 'Review' in sidebar 'howTo'"
+  },
+  "sidebar.howTo.category.review.link.generated-index.description": {
+    "message": "Faire revoir une pull request et ajouter une lentille à une revue.",
+    "description": "The generated-index page description for category 'Review' in sidebar 'howTo'"
+  },
+  "sidebar.howTo.category.adapt-the-workflow": {
+    "message": "Adapter le workflow",
+    "description": "The label for category 'Adapt the workflow' in sidebar 'howTo'"
+  },
+  "sidebar.howTo.category.adapt-the-workflow.link.generated-index.title": {
+    "message": "Adapter le workflow",
+    "description": "The generated-index page title for category 'Adapt the workflow' in sidebar 'howTo'"
+  },
+  "sidebar.howTo.category.adapt-the-workflow.link.generated-index.description": {
+    "message": "Copier le workflow dans le dépôt et y ajouter un agent du dépôt.",
+    "description": "The generated-index page description for category 'Adapt the workflow' in sidebar 'howTo'"
+  },
+  "sidebar.howTo.category.backlog": {
+    "message": "Backlog",
+    "description": "The label for category 'Backlog' in sidebar 'howTo'"
+  },
+  "sidebar.howTo.category.backlog.link.generated-index.title": {
+    "message": "Backlog",
+    "description": "The generated-index page title for category 'Backlog' in sidebar 'howTo'"
+  },
+  "sidebar.howTo.category.backlog.link.generated-index.description": {
+    "message": "Passer d'un PRD à un backlog GitHub, puis raffiner une issue.",
+    "description": "The generated-index page description for category 'Backlog' in sidebar 'howTo'"
+  },
+  "sidebar.howTo.category.existing-code": {
+    "message": "Code existant",
+    "description": "The label for category 'Existing code' in sidebar 'howTo'"
+  },
+  "sidebar.howTo.category.existing-code.link.generated-index.title": {
+    "message": "Code existant",
+    "description": "The generated-index page title for category 'Existing code' in sidebar 'howTo'"
+  },
+  "sidebar.howTo.category.existing-code.link.generated-index.description": {
+    "message": "Poser un filet de caractérisation, puis refactorer sous ce filet.",
+    "description": "The generated-index page description for category 'Existing code' in sidebar 'howTo'"
+  },
+  "sidebar.howTo.category.contribute": {
+    "message": "Contribuer",
+    "description": "The label for category 'Contribute' in sidebar 'howTo'"
+  },
+  "sidebar.howTo.category.contribute.link.generated-index.title": {
+    "message": "Contribuer",
+    "description": "The generated-index page title for category 'Contribute' in sidebar 'howTo'"
+  },
+  "sidebar.howTo.category.contribute.link.generated-index.description": {
+    "message": "Évaluer un skill et proposer un pattern.",
+    "description": "The generated-index page description for category 'Contribute' in sidebar 'howTo'"
+  },
+  "sidebar.howTo.doc.how-to/install-on-a-host": {
     "message": "Installer skraft sur un hôte",
     "description": "The label for the doc item 'Install skraft on a host' in sidebar 'howTo', linking to the doc how-to/install-on-a-host"
   },
-  "sidebar.howTo.doc.Run the gates": {
+  "sidebar.howTo.doc.how-to/configure-components": {
+    "message": "Configurer les composants",
+    "description": "The label for the doc item 'Configure components' in sidebar 'howTo', linking to the doc how-to/configure-components"
+  },
+  "sidebar.howTo.doc.how-to/choose-models": {
+    "message": "Choisir les modèles des agents",
+    "description": "The label for the doc item 'Choose the agents' models' in sidebar 'howTo', linking to the doc how-to/choose-models"
+  },
+  "sidebar.howTo.doc.how-to/migrate-from-v1": {
+    "message": "Migrer une copie de travail de la v1",
+    "description": "The label for the doc item 'Migrate a working copy from v1' in sidebar 'howTo', linking to the doc how-to/migrate-from-v1"
+  },
+  "sidebar.howTo.doc.how-to/run-gates": {
     "message": "Lancer les gates",
     "description": "The label for the doc item 'Run the gates' in sidebar 'howTo', linking to the doc how-to/run-gates"
+  },
+  "sidebar.howTo.doc.how-to/resume-a-run": {
+    "message": "Reprendre un run",
+    "description": "The label for the doc item 'Resume a run' in sidebar 'howTo', linking to the doc how-to/resume-a-run"
+  },
+  "sidebar.howTo.doc.how-to/answer-a-question": {
+    "message": "Répondre à une question du run",
+    "description": "The label for the doc item 'Answer a run's question' in sidebar 'howTo', linking to the doc how-to/answer-a-question"
+  },
+  "sidebar.howTo.doc.how-to/publish-pull-request": {
+    "message": "Publier la pull request",
+    "description": "The label for the doc item 'Publish the pull request' in sidebar 'howTo', linking to the doc how-to/publish-pull-request"
+  },
+  "sidebar.howTo.doc.how-to/review-a-pull-request": {
+    "message": "Revoir une pull request avec skraft",
+    "description": "The label for the doc item 'Review a pull request with skraft' in sidebar 'howTo', linking to the doc how-to/review-a-pull-request"
+  },
+  "sidebar.howTo.doc.how-to/customise-review": {
+    "message": "Ajouter une lentille à une revue",
+    "description": "The label for the doc item 'Add a lens to a review' in sidebar 'howTo', linking to the doc how-to/customise-review"
+  },
+  "sidebar.howTo.doc.how-to/eject-workflow": {
+    "message": "Copier et adapter le workflow",
+    "description": "The label for the doc item 'Copy and adapt the workflow' in sidebar 'howTo', linking to the doc how-to/eject-workflow"
+  },
+  "sidebar.howTo.doc.how-to/add-repository-agent": {
+    "message": "Ajouter un agent du dépôt au pipeline",
+    "description": "The label for the doc item 'Add a repository agent to the pipeline' in sidebar 'howTo', linking to the doc how-to/add-repository-agent"
+  },
+  "sidebar.howTo.doc.how-to/prd-to-backlog": {
+    "message": "Transformer un PRD en backlog GitHub",
+    "description": "The label for the doc item 'Turn a PRD into a GitHub backlog' in sidebar 'howTo', linking to the doc how-to/prd-to-backlog"
+  },
+  "sidebar.howTo.doc.how-to/refine-backlog": {
+    "message": "Raffiner une issue du backlog",
+    "description": "The label for the doc item 'Refine a backlog issue' in sidebar 'howTo', linking to the doc how-to/refine-backlog"
+  },
+  "sidebar.howTo.doc.how-to/characterize-legacy": {
+    "message": "Poser un filet de caractérisation",
+    "description": "The label for the doc item 'Put a characterization net' in sidebar 'howTo', linking to the doc how-to/characterize-legacy"
+  },
+  "sidebar.howTo.doc.how-to/refactor-legacy": {
+    "message": "Refactorer un code existant sous filet",
+    "description": "The label for the doc item 'Refactor existing code under a net' in sidebar 'howTo', linking to the doc how-to/refactor-legacy"
+  },
+  "sidebar.howTo.doc.how-to/evaluate-a-skill": {
+    "message": "Évaluer un skill",
+    "description": "The label for the doc item 'Evaluate a skill' in sidebar 'howTo', linking to the doc how-to/evaluate-a-skill"
+  },
+  "sidebar.howTo.doc.how-to/contributing": {
+    "message": "Proposer un pattern",
+    "description": "The label for the doc item 'Propose a pattern' in sidebar 'howTo', linking to the doc how-to/contributing"
   },
   "sidebar.explanation.category.explanation": {
     "message": "Explication — comprendre",
@@ -63,6 +215,10 @@
     "message": "Orientation",
     "description": "The generated-index page title for category 'Orientation' in sidebar 'explanation'"
   },
+  "sidebar.explanation.category.orientation.link.generated-index.description": {
+    "message": "Par où entrer : les trois parcours et la liste des pages d'explication.",
+    "description": "The generated-index page description for category 'Orientation' in sidebar 'explanation'"
+  },
   "sidebar.explanation.category.core-journey": {
     "message": "Parcours principal",
     "description": "The label for category 'Core journey' in sidebar 'explanation'"
@@ -71,13 +227,177 @@
     "message": "Parcours principal",
     "description": "The generated-index page title for category 'Core journey' in sidebar 'explanation'"
   },
-  "sidebar.explanation.doc.Overview": {
+  "sidebar.explanation.category.core-journey.link.generated-index.description": {
+    "message": "Le fil rouge suivi du backlog jusqu'à DELIVER, phase par phase.",
+    "description": "The generated-index page description for category 'Core journey' in sidebar 'explanation'"
+  },
+  "sidebar.explanation.category.brownfield-journey": {
+    "message": "Parcours Brownfield",
+    "description": "The label for category 'Brownfield journey' in sidebar 'explanation'"
+  },
+  "sidebar.explanation.category.brownfield-journey.link.generated-index.title": {
+    "message": "Parcours Brownfield",
+    "description": "The generated-index page title for category 'Brownfield journey' in sidebar 'explanation'"
+  },
+  "sidebar.explanation.category.brownfield-journey.link.generated-index.description": {
+    "message": "Reprendre un code existant : l'analyser, le mettre sous filet, le refactorer.",
+    "description": "The generated-index page description for category 'Brownfield journey' in sidebar 'explanation'"
+  },
+  "sidebar.explanation.category.system-understanding": {
+    "message": "Comprendre le système",
+    "description": "The label for category 'Understand the system' in sidebar 'explanation'"
+  },
+  "sidebar.explanation.category.system-understanding.link.generated-index.title": {
+    "message": "Comprendre le système",
+    "description": "The generated-index page title for category 'Understand the system' in sidebar 'explanation'"
+  },
+  "sidebar.explanation.category.system-understanding.link.generated-index.description": {
+    "message": "Les mécanismes qui protègent le pipeline : équipe, moteur, journal, garde-fous, coûts.",
+    "description": "The generated-index page description for category 'Understand the system' in sidebar 'explanation'"
+  },
+  "sidebar.explanation.category.craft-foundations": {
+    "message": "Fondations du craft",
+    "description": "The label for category 'Craft foundations' in sidebar 'explanation'"
+  },
+  "sidebar.explanation.category.craft-foundations.link.generated-index.title": {
+    "message": "Fondations du craft",
+    "description": "The generated-index page title for category 'Craft foundations' in sidebar 'explanation'"
+  },
+  "sidebar.explanation.category.craft-foundations.link.generated-index.description": {
+    "message": "Les pratiques du craft que skraft rend opposables : craftsmanship, DDD, Clean Architecture.",
+    "description": "The generated-index page description for category 'Craft foundations' in sidebar 'explanation'"
+  },
+  "sidebar.explanation.category.deep-dives": {
+    "message": "Approfondissements",
+    "description": "The label for category 'Deep dives' in sidebar 'explanation'"
+  },
+  "sidebar.explanation.category.deep-dives.link.generated-index.title": {
+    "message": "Approfondissements",
+    "description": "The generated-index page title for category 'Deep dives' in sidebar 'explanation'"
+  },
+  "sidebar.explanation.category.deep-dives.link.generated-index.description": {
+    "message": "Un mécanisme à la fois, en détail : revue, TDD, walking skeleton, mocking, contrats, évaluation.",
+    "description": "The generated-index page description for category 'Deep dives' in sidebar 'explanation'"
+  },
+  "sidebar.explanation.category.special-contexts": {
+    "message": "Contextes particuliers",
+    "description": "The label for category 'Special contexts' in sidebar 'explanation'"
+  },
+  "sidebar.explanation.category.special-contexts.link.generated-index.title": {
+    "message": "Contextes particuliers",
+    "description": "The generated-index page title for category 'Special contexts' in sidebar 'explanation'"
+  },
+  "sidebar.explanation.category.special-contexts.link.generated-index.description": {
+    "message": "skraft vu par un décideur.",
+    "description": "The generated-index page description for category 'Special contexts' in sidebar 'explanation'"
+  },
+  "sidebar.explanation.doc.explanation/pipeline/index": {
     "message": "Vue d'ensemble",
     "description": "The label for the doc item 'Overview' in sidebar 'explanation', linking to the doc explanation/pipeline/index"
   },
-  "sidebar.explanation.doc.DESIGN": {
+  "sidebar.explanation.doc.explanation/pipeline/fil-rouge": {
+    "message": "Le fil rouge",
+    "description": "The label for the doc item 'The running example' in sidebar 'explanation', linking to the doc explanation/pipeline/fil-rouge"
+  },
+  "sidebar.explanation.doc.explanation/backlog": {
+    "message": "Le backlog",
+    "description": "The label for the doc item 'The backlog' in sidebar 'explanation', linking to the doc explanation/backlog"
+  },
+  "sidebar.explanation.doc.explanation/pipeline/discover": {
+    "message": "DISCOVER",
+    "description": "The label for the doc item 'DISCOVER' in sidebar 'explanation', linking to the doc explanation/pipeline/discover"
+  },
+  "sidebar.explanation.doc.explanation/pipeline/discuss": {
+    "message": "DISCUSS",
+    "description": "The label for the doc item 'DISCUSS' in sidebar 'explanation', linking to the doc explanation/pipeline/discuss"
+  },
+  "sidebar.explanation.doc.explanation/pipeline/research": {
+    "message": "RESEARCH",
+    "description": "The label for the doc item 'RESEARCH' in sidebar 'explanation', linking to the doc explanation/pipeline/research"
+  },
+  "sidebar.explanation.doc.explanation/pipeline/design": {
     "message": "DESIGN",
     "description": "The label for the doc item 'DESIGN' in sidebar 'explanation', linking to the doc explanation/pipeline/design"
+  },
+  "sidebar.explanation.doc.explanation/pipeline/distill": {
+    "message": "DISTILL",
+    "description": "The label for the doc item 'DISTILL' in sidebar 'explanation', linking to the doc explanation/pipeline/distill"
+  },
+  "sidebar.explanation.doc.explanation/pipeline/deliver": {
+    "message": "DELIVER",
+    "description": "The label for the doc item 'DELIVER' in sidebar 'explanation', linking to the doc explanation/pipeline/deliver"
+  },
+  "sidebar.explanation.doc.explanation/brownfield": {
+    "message": "Reprendre un existant",
+    "description": "The label for the doc item 'Take over an existing system' in sidebar 'explanation', linking to the doc explanation/brownfield"
+  },
+  "sidebar.explanation.doc.explanation/pipeline/team": {
+    "message": "L'équipe et les relais",
+    "description": "The label for the doc item 'The team and handoffs' in sidebar 'explanation', linking to the doc explanation/pipeline/team"
+  },
+  "sidebar.explanation.doc.explanation/architecture": {
+    "message": "Architecture",
+    "description": "The label for the doc item 'Architecture' in sidebar 'explanation', linking to the doc explanation/architecture"
+  },
+  "sidebar.explanation.doc.explanation/event-journal": {
+    "message": "Le journal d'événements",
+    "description": "The label for the doc item 'The event journal' in sidebar 'explanation', linking to the doc explanation/event-journal"
+  },
+  "sidebar.explanation.doc.explanation/guardrails": {
+    "message": "Garde-fous : du hook au moteur",
+    "description": "The label for the doc item 'Guardrails: from hook to engine' in sidebar 'explanation', linking to the doc explanation/guardrails"
+  },
+  "sidebar.explanation.doc.explanation/token-economy": {
+    "message": "Économie de tokens",
+    "description": "The label for the doc item 'Token economy' in sidebar 'explanation', linking to the doc explanation/token-economy"
+  },
+  "sidebar.explanation.doc.explanation/customisation-trade-offs": {
+    "message": "Adapter skraft : ce que coûte chaque réglage",
+    "description": "The label for the doc item 'Adapting skraft: what each setting costs' in sidebar 'explanation', linking to the doc explanation/customisation-trade-offs"
+  },
+  "sidebar.explanation.doc.explanation/software-craftsmanship": {
+    "message": "Software craftsmanship",
+    "description": "The label for the doc item 'Software craftsmanship' in sidebar 'explanation', linking to the doc explanation/software-craftsmanship"
+  },
+  "sidebar.explanation.doc.explanation/domain-driven-design": {
+    "message": "Domain-Driven Design",
+    "description": "The label for the doc item 'Domain-Driven Design' in sidebar 'explanation', linking to the doc explanation/domain-driven-design"
+  },
+  "sidebar.explanation.doc.explanation/clean-architecture": {
+    "message": "Clean Architecture et hexagonale",
+    "description": "The label for the doc item 'Clean & hexagonal architecture' in sidebar 'explanation', linking to the doc explanation/clean-architecture"
+  },
+  "sidebar.explanation.doc.explanation/deep-dive/review-before-review": {
+    "message": "La revue avant la revue",
+    "description": "The label for the doc item 'Review before review' in sidebar 'explanation', linking to the doc explanation/deep-dive/review-before-review"
+  },
+  "sidebar.explanation.doc.explanation/deep-dive/outside-in-tdd": {
+    "message": "Outside-In TDD",
+    "description": "The label for the doc item 'Outside-In TDD' in sidebar 'explanation', linking to the doc explanation/deep-dive/outside-in-tdd"
+  },
+  "sidebar.explanation.doc.explanation/deep-dive/walking-skeleton": {
+    "message": "Walking Skeleton",
+    "description": "The label for the doc item 'Walking Skeleton' in sidebar 'explanation', linking to the doc explanation/deep-dive/walking-skeleton"
+  },
+  "sidebar.explanation.doc.explanation/deep-dive/mocking-microcks": {
+    "message": "Mocking avec Microcks",
+    "description": "The label for the doc item 'Mocking with Microcks' in sidebar 'explanation', linking to the doc explanation/deep-dive/mocking-microcks"
+  },
+  "sidebar.explanation.doc.explanation/deep-dive/contract-testing": {
+    "message": "Contract testing",
+    "description": "The label for the doc item 'Contract testing' in sidebar 'explanation', linking to the doc explanation/deep-dive/contract-testing"
+  },
+  "sidebar.explanation.doc.explanation/deep-dive/reading-a-verdict": {
+    "message": "Lire un verdict d'évaluation",
+    "description": "The label for the doc item 'Read an evaluation verdict' in sidebar 'explanation', linking to the doc explanation/deep-dive/reading-a-verdict"
+  },
+  "sidebar.explanation.doc.explanation/evaluation-strategy": {
+    "message": "Stratégie d'évaluation",
+    "description": "The label for the doc item 'Evaluation strategy' in sidebar 'explanation', linking to the doc explanation/evaluation-strategy"
+  },
+  "sidebar.explanation.doc.explanation/for-executives": {
+    "message": "Pour décideurs",
+    "description": "The label for the doc item 'For executives' in sidebar 'explanation', linking to the doc explanation/for-executives"
   },
   "sidebar.reference.category.reference": {
     "message": "Référence — consulter",
@@ -99,6 +419,58 @@
     "message": "Utiliser SKRAFT",
     "description": "The generated-index page title for category 'Using SKRAFT' in sidebar 'reference'"
   },
+  "sidebar.reference.category.usage.link.generated-index.description": {
+    "message": "Hôtes, commandes, workflow DOT, phases, configuration et journal d'un run.",
+    "description": "The generated-index page description for category 'Using SKRAFT' in sidebar 'reference'"
+  },
+  "sidebar.reference.category.catalogue": {
+    "message": "Catalogue agentique",
+    "description": "The label for category 'Agentic catalogue' in sidebar 'reference'"
+  },
+  "sidebar.reference.category.catalogue.link.generated-index.title": {
+    "message": "Catalogue agentique",
+    "description": "The generated-index page title for category 'Agentic catalogue' in sidebar 'reference'"
+  },
+  "sidebar.reference.category.catalogue.link.generated-index.description": {
+    "message": "Les agents, skills, workers et lentilles des plugins, et leurs chaînes.",
+    "description": "The generated-index page description for category 'Agentic catalogue' in sidebar 'reference'"
+  },
+  "sidebar.reference.category.gates": {
+    "message": "Gates",
+    "description": "The label for category 'Gates' in sidebar 'reference'"
+  },
+  "sidebar.reference.category.gates.link.generated-index.title": {
+    "message": "Gates",
+    "description": "The generated-index page title for category 'Gates' in sidebar 'reference'"
+  },
+  "sidebar.reference.category.gates.link.generated-index.description": {
+    "message": "Les gates de commandes et les critères de revue de chaque lentille.",
+    "description": "The generated-index page description for category 'Gates' in sidebar 'reference'"
+  },
+  "sidebar.reference.category.patterns": {
+    "message": "Patterns",
+    "description": "The label for category 'Patterns' in sidebar 'reference'"
+  },
+  "sidebar.reference.category.patterns.link.generated-index.title": {
+    "message": "Patterns",
+    "description": "The generated-index page title for category 'Patterns' in sidebar 'reference'"
+  },
+  "sidebar.reference.category.patterns.link.generated-index.description": {
+    "message": "Les patterns d'architecture et leur référence.",
+    "description": "The generated-index page description for category 'Patterns' in sidebar 'reference'"
+  },
+  "sidebar.reference.category.evaluation": {
+    "message": "Évaluation",
+    "description": "The label for category 'Evaluation' in sidebar 'reference'"
+  },
+  "sidebar.reference.category.evaluation.link.generated-index.title": {
+    "message": "Évaluation",
+    "description": "The generated-index page title for category 'Evaluation' in sidebar 'reference'"
+  },
+  "sidebar.reference.category.evaluation.link.generated-index.description": {
+    "message": "Les fichiers, le lanceur et les verdicts de l'évaluation des skills et des agents.",
+    "description": "The generated-index page description for category 'Evaluation' in sidebar 'reference'"
+  },
   "sidebar.reference.category.bibliography": {
     "message": "Bibliographie & annexes",
     "description": "The label for category 'Bibliography & appendix' in sidebar 'reference'"
@@ -107,12 +479,60 @@
     "message": "Bibliographie & annexes",
     "description": "The generated-index page title for category 'Bibliography & appendix' in sidebar 'reference'"
   },
-  "sidebar.reference.doc.Command line": {
+  "sidebar.reference.category.bibliography.link.generated-index.description": {
+    "message": "Les citations, le glossaire et l'historique des versions.",
+    "description": "The generated-index page description for category 'Bibliography & appendix' in sidebar 'reference'"
+  },
+  "sidebar.reference.doc.reference/hosts": {
+    "message": "Hôtes",
+    "description": "The label for the doc item 'Hosts' in sidebar 'reference', linking to the doc reference/hosts"
+  },
+  "sidebar.reference.doc.reference/cli": {
     "message": "Ligne de commande",
     "description": "The label for the doc item 'Command line' in sidebar 'reference', linking to the doc reference/cli"
   },
-  "sidebar.reference.doc.Citations": {
+  "sidebar.reference.doc.reference/workflow-dot": {
+    "message": "Workflow DOT",
+    "description": "The label for the doc item 'DOT workflow' in sidebar 'reference', linking to the doc reference/workflow-dot"
+  },
+  "sidebar.reference.doc.reference/phases": {
+    "message": "Phases",
+    "description": "The label for the doc item 'Phases' in sidebar 'reference', linking to the doc reference/phases"
+  },
+  "sidebar.reference.doc.reference/skraft-config": {
+    "message": "skraft-config.json",
+    "description": "The label for the doc item 'skraft-config.json' in sidebar 'reference', linking to the doc reference/skraft-config"
+  },
+  "sidebar.reference.doc.reference/run-journal": {
+    "message": "Suivi et journal",
+    "description": "The label for the doc item 'Tracking and journal' in sidebar 'reference', linking to the doc reference/run-journal"
+  },
+  "sidebar.reference.doc.reference/catalogue": {
+    "message": "Agents, skills et chaînes",
+    "description": "The label for the doc item 'Agents, skills and chains' in sidebar 'reference', linking to the doc reference/catalogue"
+  },
+  "sidebar.reference.doc.reference/gates": {
+    "message": "Gates",
+    "description": "The label for the doc item 'Gates' in sidebar 'reference', linking to the doc reference/gates"
+  },
+  "sidebar.reference.doc.reference/patterns": {
+    "message": "Patterns",
+    "description": "The label for the doc item 'Patterns' in sidebar 'reference', linking to the doc reference/patterns"
+  },
+  "sidebar.reference.doc.reference/evaluation-tooling": {
+    "message": "Outillage d'évaluation",
+    "description": "The label for the doc item 'Evaluation tooling' in sidebar 'reference', linking to the doc reference/evaluation-tooling"
+  },
+  "sidebar.reference.doc.reference/citations": {
     "message": "Citations",
     "description": "The label for the doc item 'Citations' in sidebar 'reference', linking to the doc reference/citations"
+  },
+  "sidebar.reference.doc.reference/glossary": {
+    "message": "Glossaire",
+    "description": "The label for the doc item 'Glossary' in sidebar 'reference', linking to the doc reference/glossary"
+  },
+  "sidebar.reference.doc.reference/changelog": {
+    "message": "Changelog",
+    "description": "The label for the doc item 'Changelog' in sidebar 'reference', linking to the doc reference/changelog"
   }
 }

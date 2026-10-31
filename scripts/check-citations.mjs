@@ -1,6 +1,19 @@
-import { readFileSync, readdirSync, statSync } from 'node:fs';
-import { join, relative, resolve } from 'node:path';
+// scripts/check-citations.mjs
+//
+// Checks the handbook pages against the bibliography (docs/website/data/citations.yml):
+// a quote attributed to an author is at most 25 words and names an author and year the
+// bibliography holds; a link to the citations page (`…/reference/citations.mdx#cite-<key>`)
+// names a key the bibliography holds.
+//
+//   node scripts/check-citations.mjs --citations docs/website/data/citations.yml \
+//     --pages "docs/website/docs/**/*.md*" \
+//     --pages "docs/website/i18n/fr/docusaurus-plugin-content-docs/current/**/*.md*"
+
+import { readFileSync } from 'node:fs';
+import { relative, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { parseArgs } from 'node:util';
+import { findFiles } from './lib/book.mjs';
 
 /**
  * Minimal YAML parser for the flat list-of-objects format used by citations.yml.
@@ -34,71 +47,6 @@ function unquote(s) {
     return s.slice(1, -1);
   }
   return s;
-}
-
-/**
- * Recursively find files matching a simple glob pattern.
- * Supports `**` (any depth) and `*` (single segment wildcard).
- */
-function findFiles(pattern) {
-  const absPattern = resolve(pattern);
-
-  if (!absPattern.includes('*')) {
-    try {
-      statSync(absPattern);
-      return [absPattern];
-    } catch {
-      return [];
-    }
-  }
-
-  const parts = absPattern.split('/');
-  const rootParts = [];
-  let i = 0;
-  while (i < parts.length && !parts[i].includes('*')) {
-    rootParts.push(parts[i]);
-    i++;
-  }
-  const root = rootParts.join('/') || '/';
-  const globParts = parts.slice(i);
-
-  const results = [];
-  matchRecursive(root, globParts, results);
-  return results;
-}
-
-function matchRecursive(dir, patterns, results) {
-  if (patterns.length === 0) return;
-
-  const [current, ...rest] = patterns;
-
-  if (current === '**') {
-    // Match zero or more directories
-    matchRecursive(dir, rest, results);
-    try {
-      for (const entry of readdirSync(dir, { withFileTypes: true })) {
-        if (entry.isDirectory() && !entry.name.startsWith('.')) {
-          matchRecursive(join(dir, entry.name), patterns, results);
-        }
-      }
-    } catch { /* ignore permission errors */ }
-    return;
-  }
-
-  const regex = new RegExp('^' + current.replace(/\./g, '\\.').replace(/\*/g, '[^/]*') + '$');
-
-  try {
-    for (const entry of readdirSync(dir, { withFileTypes: true })) {
-      if (regex.test(entry.name)) {
-        const full = join(dir, entry.name);
-        if (rest.length === 0) {
-          if (entry.isFile()) results.push(full);
-        } else if (entry.isDirectory()) {
-          matchRecursive(full, rest, results);
-        }
-      }
-    }
-  } catch { /* ignore permission errors */ }
 }
 
 const WORD_LIMIT = 25;
@@ -174,19 +122,38 @@ function countWords(text) {
   return text.split(/\s+/).filter(w => w.length > 0).length;
 }
 
+// A link to an entry of the citations page: `…/reference/citations.mdx#cite-<key>`.
+const CITE_LINK_RE = /citations\.mdx?#cite-([a-z0-9][a-z0-9-]*)/g;
+
+function unknownCiteKeys(content, file, keys) {
+  const errors = [];
+  content.split('\n').forEach((line, i) => {
+    for (const [, key] of line.matchAll(CITE_LINK_RE)) {
+      if (!keys.has(key)) errors.push({ file, line: i + 1, message: `Unknown citation key: ${key}` });
+    }
+  });
+  return errors;
+}
+
+/**
+ * @param {{ citationsPath: string, pagesGlob: string | string[] }} options one glob or several
+ * (the EN docs/ tree and the FR i18n tree)
+ */
 export async function checkCitations({ citationsPath, pagesGlob }) {
   const errors = [];
 
   // Load bibliography
   const yamlText = readFileSync(resolve(citationsPath), 'utf-8');
   const bibliography = parseCitationsYaml(yamlText);
+  const keys = new Set(bibliography.map((entry) => entry.key));
 
   // Find pages
-  const files = findFiles(pagesGlob);
+  const files = [pagesGlob].flat().flatMap((glob) => findFiles(glob).sort());
 
   for (const filePath of files) {
     const content = readFileSync(filePath, 'utf-8');
     const rel = relative(process.cwd(), filePath);
+    errors.push(...unknownCiteKeys(content, rel, keys));
     const citations = extractCitations(content, rel);
 
     for (const cite of citations) {
@@ -221,18 +188,18 @@ export async function checkCitations({ citationsPath, pagesGlob }) {
 }
 
 // CLI entry point
-const isMain = process.argv[1] && resolve(process.argv[1]) === resolve(import.meta.url.replace('file://', ''));
+const isMain = process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url);
 
 if (isMain) {
   const { values } = parseArgs({
     options: {
       citations: { type: 'string' },
-      pages: { type: 'string' },
+      pages: { type: 'string', multiple: true },
     },
   });
 
   if (!values.citations || !values.pages) {
-    console.error('Usage: node scripts/check-citations.mjs --citations PATH --pages GLOB');
+    console.error('Usage: node scripts/check-citations.mjs --citations PATH --pages GLOB [--pages GLOB]');
     process.exit(2);
   }
 
