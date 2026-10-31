@@ -320,6 +320,8 @@ const classifyHost = (info, meta, lines, context) => {
 const classifyCommands = (info, meta, lines, roles) => {
   const first = roles.find((role) => role !== 'blank')
   if (first !== 'command') return ambiguous(info, lines, 'commands mixed with other lines, the first line is not a command')
+  const described = lines.some((line, index) => roles[index] === 'command' && /\S {3,}\S/.test(line.replace(/"[^"]*"|'[^']*'/g, '""')))
+  if (described) return ambiguous(info, lines, 'commands followed by a description column: a reference table, not a terminal session')
   const kind = roles.includes('other') ? 'command-output' : 'commands'
   return { kind, info: consoleInfo(meta), lines: lines.map((line, index) => (roles[index] === 'command' ? `$ ${line}` : line)) }
 }
