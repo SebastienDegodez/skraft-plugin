@@ -22,7 +22,7 @@ to use Copilot credits.
 
 :::
 
-## 1. Create the existing code {#1-create-the-existing-code}
+## 1. Create the existing code <!-- #1-create-the-existing-code -->
 
 In a terminal, create the `permis` folder:
 
@@ -81,7 +81,7 @@ $ git commit -m "Eligibility as it runs today"
 `git log --oneline` shows a single commit. The repository has no tests, no documentation and no
 backlog: it is your existing code.
 
-## 2. Install the plugins {#2-install-the-plugins}
+## 2. Install the plugins <!-- #2-install-the-plugins -->
 
 ```console
 $ copilot plugin marketplace add SebastienDegodez/skraft-plugin
@@ -93,7 +93,7 @@ $ copilot plugin list
 
 The three plugins are in the list.
 
-## 3. Have the analyst describe the code {#3-have-the-analyst-describe-the-code}
+## 3. Have the analyst describe the code <!-- #3-have-the-analyst-describe-the-code -->
 
 Open a Copilot session in `permis` (`copilot`), type `/agent`, choose
 `skraft-brownfield:brownfield-analyst`, then write:
@@ -132,7 +132,7 @@ $ git add docs/prds
 $ git commit -m "docs: PRD from the existing code"
 ```
 
-## 4. Cut the PRD into a backlog {#4-cut-the-prd-into-a-backlog}
+## 4. Cut the PRD into a backlog <!-- #4-cut-the-prd-into-a-backlog -->
 
 In the same session, write, with the path the analyst gave you:
 
@@ -151,7 +151,7 @@ One `story-writer` per story writes each story in full; a script checks it again
 of Ready; the four planning lenses review each epic. The run pauses again, at the handoff:
 **nothing is published until a human has reviewed it**.
 
-## 5. Review the backlog in the canvas {#5-review-the-backlog-in-the-canvas}
+## 5. Review the backlog in the canvas <!-- #5-review-the-backlog-in-the-canvas -->
 
 Ask Copilot:
 
@@ -183,7 +183,7 @@ The workflow stays paused and nothing is created on GitHub: creation goes throug
 **Create the issues** button, or through the Human Review box of `handoff.md` and then resuming the
 run, when you decide to.
 
-## What you built {#what-you-built}
+## What you built <!-- #what-you-built -->
 
 The `permis` repository now has a PRD drawn from its code and a backlog of epics and stories, each
 ready story reviewed by you, with nothing published yet. On the way, you learned that:
@@ -195,7 +195,7 @@ ready story reviewed by you, with nothing published yet. On the way, you learned
 - the skraft backlog canvas shows why each story is ready, held back or refused, and you are the one
   who marks it reviewed.
 
-## Next steps {#next-steps}
+## Next steps <!-- #next-steps -->
 
 - [The backlog: from idea to ready story](../explanation/backlog.md) — why each check and each lens exists.
 - [Brownfield journey](../explanation/brownfield.md) — the characterization safety net, then Mikado or Strangler Fig refactoring.

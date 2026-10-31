@@ -21,7 +21,7 @@ temps et les crédits Copilot qu'ils consomment.
 
 :::
 
-## 1. Créer le code existant {#1-create-the-existing-code}
+## 1. Créer le code existant <!-- #1-create-the-existing-code -->
 
 Dans un terminal, créez le dossier `permis` :
 
@@ -80,7 +80,7 @@ $ git commit -m "Eligibility as it runs today"
 `git log --oneline` montre un seul commit. Le dépôt n'a ni test, ni documentation, ni backlog :
 c'est votre code existant.
 
-## 2. Installer les plugins {#2-install-the-plugins}
+## 2. Installer les plugins <!-- #2-install-the-plugins -->
 
 ```console
 $ copilot plugin marketplace add SebastienDegodez/skraft-plugin
@@ -92,7 +92,7 @@ $ copilot plugin list
 
 Les trois plugins figurent dans la liste.
 
-## 3. Faire décrire le code par l'analyste {#3-have-the-analyst-describe-the-code}
+## 3. Faire décrire le code par l'analyste <!-- #3-have-the-analyst-describe-the-code -->
 
 Ouvrez une session Copilot dans `permis` (`copilot`), tapez `/agent`, choisissez
 `skraft-brownfield:brownfield-analyst`, puis écrivez :
@@ -116,7 +116,7 @@ figurer. Répondez :
 > Confirmé.
 ```
 
-:::note[Capture en attente d'un vrai run]
+:::note[Capture en attente d'un run réel]
 
 Une capture de la session de l'analyste, sa liste de vérification puis votre réponse, demande une
 vraie session Copilot CLI. D'ici là, le bloc ci-dessus montre ce que vous saisissez.
@@ -134,7 +134,7 @@ $ git add docs/prds
 $ git commit -m "docs: PRD from the existing code"
 ```
 
-## 4. Découper le PRD en backlog {#4-cut-the-prd-into-a-backlog}
+## 4. Découper le PRD en backlog <!-- #4-cut-the-prd-into-a-backlog -->
 
 Dans la même session, écrivez, avec le chemin que l'analyste vous a donné :
 
@@ -154,7 +154,7 @@ Un `story-writer` par story écrit chaque story en entier ; un script la confron
 Ready ; les quatre lentilles de planification relisent chaque epic. Le run se met de nouveau en
 pause, à la remise : **rien n'est publié tant qu'un humain n'a pas relu**.
 
-## 5. Relire le backlog dans le canvas {#5-review-the-backlog-in-the-canvas}
+## 5. Relire le backlog dans le canvas <!-- #5-review-the-backlog-in-the-canvas -->
 
 Demandez à Copilot :
 
@@ -188,7 +188,7 @@ Le workflow reste en pause et rien n'est créé sur GitHub : la création passe 
 les issues** du canvas, ou par la case Human Review de `handoff.md` puis la reprise du run, quand
 vous le déciderez.
 
-## Ce que vous avez construit {#what-you-built}
+## Ce que vous avez construit <!-- #what-you-built -->
 
 Le dépôt `permis` a maintenant un PRD tiré de son code et un backlog d'epics et de stories, chaque
 story prête relue par vous, sans rien de publié. En chemin, vous avez appris que :
@@ -200,7 +200,7 @@ story prête relue par vous, sans rien de publié. En chemin, vous avez appris q
 - le canvas skraft backlog montre pourquoi chaque story est prête, retenue ou refusée, et c'est vous
   qui la marquez relue.
 
-## Prochaines étapes {#next-steps}
+## Prochaines étapes <!-- #next-steps -->
 
 - [Le backlog : de l'idée à la story prête](../explanation/backlog.md) — pourquoi chaque contrôle et chaque lentille existe.
 - [Parcours Brownfield](../explanation/brownfield.md) — le filet de caractérisation, puis le refactoring Mikado ou Strangler Fig.

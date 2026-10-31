@@ -204,7 +204,7 @@ function lintFiles(siteRoot, root, declared, problems) {
     const length = typeof description === 'string' ? [...description].length : 0;
     if (length > DESCRIPTION_LIMIT) {
       // A warning until the readability pass (WP9) shortens the ~75 Jekyll-era descriptions over the limit.
-      problem(problems, { severity: 'warning', code: 'NAV-DESCRIPTION-LONG', where: rel, message: `Front matter description has ${length} characters; keep it at ${DESCRIPTION_LIMIT} or fewer.` });
+      problem(problems, { severity: 'error', code: 'NAV-DESCRIPTION-LONG', where: rel, message: `Front matter description has ${length} characters; keep it at ${DESCRIPTION_LIMIT} or fewer.` });
     }
   }
 }

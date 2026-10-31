@@ -109,7 +109,7 @@ test('an .mdx page without JSX is reported; an import, an export or a component 
   assert.deepEqual(codes(problems), ['NAV-MDX-NO-JSX docs/website/docs/how-to/install.mdx'])
 })
 
-test('a front matter description over 160 characters is reported as a warning', async () => {
+test('a front matter description over 160 characters is an error', async () => {
   const problems = await lint({
     files: {
       'docs/how-to/install.md': page('Text.', 'é'.repeat(161)),
@@ -118,7 +118,7 @@ test('a front matter description over 160 characters is reported as a warning', 
   })
   assert.deepEqual(codes(problems), ['NAV-DESCRIPTION-LONG docs/website/docs/how-to/install.md'])
   assert.match(problems[0].message, /161 characters/)
-  assert.equal(problems[0].severity, 'warning')
+  assert.equal(problems[0].severity, 'error')
 })
 
 test('a page without a doc id, a doc declared twice, a part without slug and a section without intro are reported', async () => {

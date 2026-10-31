@@ -22,7 +22,7 @@ expect it to take a while and to use Copilot credits.
 
 :::
 
-## 1. Create the small repository {#1-create-the-small-repository}
+## 1. Create the small repository <!-- #1-create-the-small-repository -->
 
 In a terminal, create the `shop` folder and its files:
 
@@ -85,7 +85,7 @@ $ git switch -c pay-by-card
 
 `git status` shows nothing left to commit.
 
-## 2. Install the plugin {#2-install-the-plugin}
+## 2. Install the plugin <!-- #2-install-the-plugin -->
 
 Still in the terminal:
 
@@ -97,7 +97,7 @@ $ copilot plugin list
 
 `skraft` is in the list.
 
-## 3. Describe the repository {#3-describe-the-repository}
+## 3. Describe the repository <!-- #3-describe-the-repository -->
 
 The `skraft` command line is a Node script shipped with the plugin. From the root of `shop`, with
 `<skraft plugin folder>` the folder where Copilot installed the plugin:
@@ -126,7 +126,7 @@ The last line of `skraft doctor` says `no check failed, 3 with a warning`. No wa
 `forge` says the repository has no remote yet, `web` has no JavaScript mocking recipe, and the small repository calls no service; `models/copilot`
 says that, with no model configured, each agent runs on your session's model.
 
-## 4. Start the story {#4-start-the-story}
+## 4. Start the story <!-- #4-start-the-story -->
 
 Open a Copilot session in `shop`:
 
@@ -154,7 +154,7 @@ STOP starts nothing. Pass `configure: true` to the workflow to be asked again. T
 **Run** tab (where the run stands) and a **Workflow** tab (each workflow the run can follow, the
 current step highlighted).
 
-## 5. Answer the first question {#5-answer-the-first-question}
+## 5. Answer the first question <!-- #5-answer-the-first-question -->
 
 Copilot asks you one question in the chat, once: may skraft push the branch and open the pull
 request when the run ends? The question reads:
@@ -181,7 +181,7 @@ If your Copilot client shows canvases, ask it to open the
 Choose **DECLINED**: this repository has no remote. The answer is written to `skraft-config.json`
 and is not asked again.
 
-## 6. Follow RESEARCH and DESIGN {#6-follow-research-and-design}
+## 6. Follow RESEARCH and DESIGN <!-- #6-follow-research-and-design -->
 
 Type `/workflows` to see the run's log. Each agent appears there with its model family:
 
@@ -209,7 +209,7 @@ gave it.*
 Open the ADR under `docs/adr/`, read it, then choose **RATIFIED** in the chat. The engine marks it
 `Accepted` and commits it: `docs(adr): ratify ADR-001`.
 
-## 7. Let DISTILL, DELIVER and PUBLISH finish {#7-let-distill-deliver-and-publish-finish}
+## 7. Let DISTILL, DELIVER and PUBLISH finish <!-- #7-let-distill-deliver-and-publish-finish -->
 
 The run goes on without you: acceptance tests, TDD cycles, gates, the DELIVER review, mutation,
 then the pull request description. The `/workflows` log ends like this:
@@ -234,7 +234,7 @@ step and each human decision, with who confirmed it.
 *Figure 6 — The Journal tab of the finished run: `adr-1` was ratified through Copilot's own
 confirmation dialog (`host-confirmed`).*
 
-## 8. Read the run's report {#8-read-the-runs-report}
+## 8. Read the run's report <!-- #8-read-the-runs-report -->
 
 In the terminal, at the root of `shop`:
 
@@ -251,7 +251,7 @@ The last table says who answered: `host-confirmed`, that is you, in Copilot's di
 `.copilot-tracking/skraft-plans/checkout/pull-request.md`: it is the pull request description your
 run produced.
 
-## What you built {#what-you-built}
+## What you built <!-- #what-you-built -->
 
 The `shop` repository now carries a story run to PUBLISH under Copilot CLI, its journal and its
 pull request description. On the way, you learned that:
@@ -263,7 +263,7 @@ pull request description. On the way, you learned that:
   question, never taking an answer;
 - `skraft report` reads the run from the journal: each step, its passes and its answers.
 
-## Next steps {#next-steps}
+## Next steps <!-- #next-steps -->
 
 - [Answer a run's question](../how-to/answer-a-question.mdx) — when the question could not be asked, or you closed it.
 - [Resume a run](../how-to/resume-a-run.mdx)

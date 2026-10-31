@@ -22,7 +22,7 @@ real agents: expect it to take a while and to cost what Claude Code charges for 
 
 :::
 
-## 1. Create the small repository {#1-create-the-small-repository}
+## 1. Create the small repository <!-- #1-create-the-small-repository -->
 
 Create a `shop` folder, open a terminal in it and create the repository:
 
@@ -88,7 +88,7 @@ $ git switch -c pay-by-card
 
 `git status` shows nothing left to commit.
 
-## 2. Install the plugin {#2-install-the-plugin}
+## 2. Install the plugin <!-- #2-install-the-plugin -->
 
 Open Claude Code in the `shop` folder. Type these two commands **in the conversation**, not in a
 terminal:
@@ -107,7 +107,7 @@ session. Until then, the block above shows what you type.
 
 :::
 
-## 3. Describe the repository with `skraft init` {#3-describe-the-repository-with-skraft-init}
+## 3. Describe the repository with `skraft init` <!-- #3-describe-the-repository-with-skraft-init -->
 
 The `skraft` command line is a Node script shipped with the plugin. Run it from the root of `shop`:
 
@@ -165,7 +165,7 @@ $ git add skraft-config.json .gitignore
 $ git commit -m "chore: describe the shop for skraft"
 ```
 
-## 4. Check with `skraft doctor` {#4-check-with-skraft-doctor}
+## 4. Check with `skraft doctor` <!-- #4-check-with-skraft-doctor -->
 
 `skraft doctor` checks that every command can run on your machine and shows which model each agent
 will run on:
@@ -186,7 +186,7 @@ run starts all the same, step 5); the second says no mocking recipe exists for a
 component, and the small repository calls no service; the third only concerns Copilot.
 The last line is what matters: `no check failed`.
 
-## 5. Start the story {#5-start-the-story}
+## 5. Start the story <!-- #5-start-the-story -->
 
 In the Claude Code conversation, type:
 
@@ -215,7 +215,7 @@ shows what Claude Code prints when the run starts.
 Right away, a dialog titled **Pull request** asks whether skraft may push the branch and open the
 pull request when the run ends. **Leave it open** for the next step.
 
-## 6. Watch the run from a terminal {#6-watch-the-run-from-a-terminal}
+## 6. Watch the run from a terminal <!-- #6-watch-the-run-from-a-terminal -->
 
 While the dialog waits, run in a terminal, at the root of `shop`:
 
@@ -234,7 +234,7 @@ Go back to the dialog: this repository has no remote, choose **DECLINED**. The a
 `skraft-config.json` (`"publish": { "pullRequest": false, … }`) and is not asked again. No question
 about screenshots is asked: no component is a front end.
 
-## 7. RESEARCH and DESIGN {#7-research-and-design}
+## 7. RESEARCH and DESIGN <!-- #7-research-and-design -->
 
 The pane's log shows each step, for example:
 
@@ -262,7 +262,7 @@ Ratify the Proposed ADRs docs/adr/adr-001-<title>.md? RATIFIED marks them Accept
 Open the ADR, read it, then choose **RATIFIED**. The engine marks it `Accepted` and commits it
 itself: `git log --oneline -1 -- docs/adr` shows `docs(adr): ratify ADR-001`.
 
-## 8. DISTILL and DELIVER {#8-distill-and-deliver}
+## 8. DISTILL and DELIVER <!-- #8-distill-and-deliver -->
 
 `acceptance-designer` writes the scenarios (under `docs/features/`) and the test plan
 (`details/<YYYY-MM-DD>/test-plan-checkout.md`) and commits the failing acceptance tests. Four
@@ -276,7 +276,7 @@ The engine then runs the component's gates (`test`), then the DELIVER review (te
 architecture-boundaries, cold-reader), then mutation, once, on the reviewed code. The pane ticks
 `gates`, `deliver_review` and `mutation`.
 
-## 9. PUBLISH {#9-publish}
+## 9. PUBLISH <!-- #9-publish -->
 
 `pr-writer` writes the summary of the pull request; the engine renders the rest from the journal.
 As you declined publishing, nothing is pushed; the pane's log says:
@@ -291,7 +291,7 @@ The run ends on this notification:
 skraft checkout: done — PUBLISH closed
 ```
 
-## 10. Read the result {#10-read-the-result}
+## 10. Read the result <!-- #10-read-the-result -->
 
 In the terminal, at the root of `shop`:
 
@@ -330,7 +330,7 @@ Open `pull-request.md`: it is the result of your first run. `git log --oneline` 
 `pay-by-card`, the research and design documents, the ratified ADR, the failing acceptance tests,
 then the red and green commits of each TDD cycle.
 
-## What you built {#what-you-built}
+## What you built <!-- #what-you-built -->
 
 The `shop` repository, described in `skraft-config.json`, now carries a story delivered from
 RESEARCH to PUBLISH and its pull request description. On the way, you learned that:
@@ -344,7 +344,7 @@ RESEARCH to PUBLISH and its pull request description. On the way, you learned th
 - `skraft status` reads the run from a terminal, and `skraft gate` runs its gates again;
 - the run ends with a pull request description, published when you consent.
 
-## Next steps {#next-steps}
+## Next steps <!-- #next-steps -->
 
 - [First run under GitHub Copilot CLI](./first-run-copilot.md) — the same path, followed in the Copilot canvas.
 - [Publish a run's pull request](../how-to/publish-pull-request.md)
