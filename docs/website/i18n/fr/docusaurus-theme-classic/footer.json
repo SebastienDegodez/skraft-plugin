@@ -1,0 +1,30 @@
+{
+  "link.title.Handbook": {
+    "message": "Handbook",
+    "description": "The title of the footer links column with title=Handbook in the footer"
+  },
+  "link.title.More": {
+    "message": "Plus",
+    "description": "The title of the footer links column with title=More in the footer"
+  },
+  "link.item.label.Catalogue": {
+    "message": "Catalogue",
+    "description": "The label of footer link with label=Catalogue linking to https://sebastiendegodez.github.io/skraft-plugin/dashboard/"
+  },
+  "link.item.label.Presentation": {
+    "message": "Présentation",
+    "description": "The label of footer link with label=Presentation linking to https://sebastiendegodez.github.io/skraft-plugin/skraft-basic-presentation.html"
+  },
+  "link.item.label.Citations": {
+    "message": "Bibliographie",
+    "description": "The label of footer link with label=Citations linking to /reference/citations"
+  },
+  "link.item.label.GitHub": {
+    "message": "GitHub",
+    "description": "The label of footer link with label=GitHub linking to https://github.com/SebastienDegodez/skraft-plugin"
+  },
+  "link.item.label.v1 archive": {
+    "message": "Archive v1",
+    "description": "The label of footer link with label=v1 archive linking to https://sebastiendegodez.github.io/skraft-plugin/v1/"
+  }
+}
