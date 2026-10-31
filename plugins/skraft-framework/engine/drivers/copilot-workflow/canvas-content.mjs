@@ -111,7 +111,8 @@ export const journalContent = async (host) => {
 /**
  * The digest is taken before the tabs are read: an edit between the two gives another digest on
  * the next call, and so another read. Tabs a read could not draw are kept under no digest: the
- * next call reads again, though nothing a person edits changed.
+ * next call reads again, though nothing a person edits changed: a read that keeps failing costs
+ * a full read on every poll (one a second) for as long as it fails.
  * @param {ContentHost} host @param {Memo} kept @param {boolean} fresh
  */
 const editedTabs = async (host, kept, fresh) => {
