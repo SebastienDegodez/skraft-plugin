@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { toMarkdownTwin, twinPathOf } from '../../../docs/website/plugins/markdown-twin/transform.mjs'
+import { toMarkdownTwin } from '../../../docs/website/plugins/markdown-twin/transform.mjs'
+import { htmlPathOf, twinPathOf } from '../../../docs/website/plugins/markdown-twin/twin-path.mjs'
 
 const SITE = 'https://sebastiendegodez.github.io'
 const RAW = 'https://raw.githubusercontent.com/SebastienDegodez/skraft-plugin/integration/v2-next/'
@@ -17,11 +18,11 @@ const page = (overrides = {}) => ({
   baseUrl: '/skraft-plugin/',
   rawRepo: RAW,
   sourceRepoPath: 'docs/website/docs/how-to/run-gates.md',
-  permalinks: new Map([
-    ['how-to/run-gates.md', '/skraft-plugin/how-to/run-gates'],
-    ['how-to/install-on-a-host.mdx', '/skraft-plugin/how-to/install-on-a-host'],
-    ['explanation/pipeline/index.md', '/skraft-plugin/explanation/pipeline'],
-    ['index.mdx', '/skraft-plugin/'],
+  twins: new Map([
+    ['how-to/run-gates.md', '/skraft-plugin/how-to/run-gates.md'],
+    ['how-to/install-on-a-host.mdx', '/skraft-plugin/how-to/install-on-a-host.md'],
+    ['explanation/pipeline/index.md', '/skraft-plugin/explanation/pipeline.md'],
+    ['index.mdx', '/skraft-plugin/index.md'],
   ]),
   citations: [],
   ...overrides,
@@ -56,9 +57,10 @@ test('a relative doc link points to the absolute URL of the target twin, anchor 
 })
 
 test('a link to the home doc points to index.md, and a doc not built yet to its conventional twin', () => {
-  const twin = toMarkdownTwin('[Home](../index.mdx) · [Hosts](../reference/hosts.md#copilot-cli)\n', page())
+  const twin = toMarkdownTwin('[Home](../index.mdx) · [Hosts](../reference/hosts.md#copilot-cli) · [Backlog](../explanation/backlog/index.md)\n', page())
   assert.match(twin, new RegExp(`\\[Home\\]\\(${SITE}/skraft-plugin/index\\.md\\)`))
   assert.match(twin, new RegExp(`\\[Hosts\\]\\(${SITE}/skraft-plugin/reference/hosts\\.md#copilot-cli\\)`))
+  assert.match(twin, new RegExp(`\\[Backlog\\]\\(${SITE}/skraft-plugin/explanation/backlog\\.md\\)`))
 })
 
 test('French and next permalinks give French and next twin URLs', () => {
@@ -67,7 +69,7 @@ test('French and next permalinks give French and next twin URLs', () => {
     versionLabel: 'next',
     permalink: '/skraft-plugin/fr/next/how-to/run-gates',
     versionPath: '/skraft-plugin/fr/next',
-    permalinks: new Map([['how-to/install-on-a-host.mdx', '/skraft-plugin/fr/next/how-to/install-on-a-host']]),
+    twins: new Map([['how-to/install-on-a-host.mdx', '/skraft-plugin/fr/next/how-to/install-on-a-host.md']]),
   })
   const twin = toMarkdownTwin('[installer](./install-on-a-host.mdx) · [hôtes](../reference/hosts.md)\n', fr)
   assert.equal(lines(twin)[2], `> Source: ${SITE}/skraft-plugin/fr/next/how-to/run-gates · Version next · fr · Updated 2026-10-30`)
@@ -75,9 +77,12 @@ test('French and next permalinks give French and next twin URLs', () => {
   assert.match(twin, new RegExp(`\\(${SITE}/skraft-plugin/fr/next/reference/hosts\\.md\\)`))
 })
 
-test('the twin of a page is its permalink plus .md, index.md for a directory permalink', () => {
-  assert.equal(twinPathOf('/skraft-plugin/fr/next/how-to/run-gates'), '/skraft-plugin/fr/next/how-to/run-gates.md')
-  assert.equal(twinPathOf('/skraft-plugin/fr/'), '/skraft-plugin/fr/index.md')
+test('the twin of a page is its served path plus .md, index.md for the home of a version', () => {
+  assert.equal(twinPathOf({ permalink: '/skraft-plugin/fr/next/how-to/run-gates', slug: '/how-to/run-gates' }), '/skraft-plugin/fr/next/how-to/run-gates.md')
+  assert.equal(twinPathOf({ permalink: '/skraft-plugin/explanation/pipeline/', slug: '/explanation/pipeline/' }), '/skraft-plugin/explanation/pipeline.md')
+  assert.equal(htmlPathOf({ permalink: '/skraft-plugin/explanation/pipeline/', slug: '/explanation/pipeline/' }), '/skraft-plugin/explanation/pipeline')
+  assert.equal(twinPathOf({ permalink: '/skraft-plugin/fr/', slug: '/' }), '/skraft-plugin/fr/index.md')
+  assert.equal(twinPathOf({ permalink: '/skraft-plugin/next', slug: '/' }), '/skraft-plugin/next/index.md')
 })
 
 test('an admonition becomes a blockquote with its type and title, in the page language', () => {

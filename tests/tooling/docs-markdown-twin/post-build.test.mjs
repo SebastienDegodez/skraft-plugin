@@ -48,10 +48,12 @@ const version = ({ name, label, path, isLast, contentDir, labels }) => ({
   docs: [
     doc(contentDir, 'how-to/run-gates.md', `${path.replace(/\/?$/, '/')}how-to/run-gates`, 'Run the gates', {
       id: 'how-to/run-gates',
+      slug: '/how-to/run-gates',
     }),
-    doc(contentDir, 'index.mdx', path.replace(/\/?$/, '/'), 'skraft', { id: 'index' }),
+    doc(contentDir, 'index.mdx', path.replace(/\/?$/, '/'), 'skraft', { id: 'index', slug: '/' }),
     doc(contentDir, 'tutorials/getting-started.md', `${path.replace(/\/?$/, '/')}tutorials/getting-started`, 'First steps', {
       id: 'tutorials/getting-started',
+      slug: '/tutorials/getting-started',
     }),
   ],
 })
