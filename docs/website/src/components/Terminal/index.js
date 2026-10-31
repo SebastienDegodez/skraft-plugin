@@ -34,7 +34,7 @@ export default function Terminal({ children, metastring }) {
           </button>
         )}
       </div>
-      <pre className={styles.body}>
+      <pre className={styles.body} tabIndex={0}>
         {rows.map((row, index) => (
           <div key={index} className={styles[row.kind]}>
             {row.prompt && <span className={styles.prompt}>{row.prompt} </span>}

@@ -4,7 +4,9 @@ import remarkPendingLinks from './plugins/pending-pages/remark-pending-links.mjs
 
 const at = (path) => new URL(path, import.meta.url)
 const released = existsSync(at('./versions.json')) ? JSON.parse(readFileSync(at('./versions.json'), 'utf8')) : []
-const SITE = 'https://sebastiendegodez.github.io/skraft-plugin'
+const BASE_URL = '/skraft-plugin/'
+// Static files and the v1 archive live beside the site: pathname:// keeps the base URL and leaves routing.
+const beside = (path) => `pathname://${BASE_URL}${path}`
 const REPO = 'https://github.com/SebastienDegodez/skraft-plugin'
 const EDIT_BRANCH = process.env.SKRAFT_DOCS_EDIT_BRANCH ?? 'integration/v2-next' // 'main' after 2.0.0
 
@@ -25,7 +27,7 @@ export default {
   title: 'skraft',
   tagline: 'An AI-agent SDLC pipeline: every phase delivered by one agent, reviewed by another.',
   url: 'https://sebastiendegodez.github.io',
-  baseUrl: '/skraft-plugin/',
+  baseUrl: BASE_URL,
   trailingSlash: false, // /how-to/run-gates -> how-to/run-gates.html (GitHub Pages)
   favicon: 'img/favicon.png',
   organizationName: 'SebastienDegodez',
@@ -108,8 +110,8 @@ export default {
           position: 'right',
           dropdownItemsAfter: [
             { type: 'html', value: '<hr class="dropdown__divider">' },
-            { href: `${SITE}/v1.15.3/`, label: '1.15 (archived)' },
-            { href: `${SITE}/v1/`, label: 'All v1 versions' },
+            { href: beside('v1.15.3/'), label: '1.15 (archived)' },
+            { href: beside('v1/'), label: 'All v1 versions' },
           ],
         },
         { type: 'localeDropdown', position: 'right' },
@@ -122,12 +124,12 @@ export default {
         {
           title: 'Handbook',
           items: [
-            { label: 'Catalogue', href: `${SITE}/dashboard/` },
-            { label: 'Presentation', href: `${SITE}/skraft-basic-presentation.html` },
+            { label: 'Catalogue', href: beside('dashboard/') },
+            { label: 'Presentation', href: beside('skraft-basic-presentation.html') },
             { label: 'Citations', to: '/reference/citations' },
           ],
         },
-        { title: 'More', items: [{ label: 'GitHub', href: REPO }, { label: 'v1 archive', href: `${SITE}/v1/` }] },
+        { title: 'More', items: [{ label: 'GitHub', href: REPO }, { label: 'v1 archive', href: beside('v1/') }] },
       ],
     },
     mermaid: { theme: { light: 'neutral', dark: 'dark' } },
