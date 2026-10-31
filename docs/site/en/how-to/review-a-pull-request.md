@@ -37,7 +37,7 @@ commit**: a rule the pull request changes does not count.
 | Host | Command |
 |---|---|
 | Claude Code | `/skraft review 42`: the review runs in the background, the **Skraft** pane follows it |
-| Copilot CLI | ask to run the `skraft-review` workflow with `pr` set to `42` |
+| Copilot CLI | `/skraft review 42`, or ask to run the `skraft-review` workflow with `pr` set to `42` |
 | VS Code, terminal | `skraft review --pr 42`, then the loop below |
 
 **On the command line**, the review hands its lenses to the conducting agent, then waits:
@@ -77,7 +77,7 @@ skraft review #42: NEEDS_REWORK, pass 1 — <summary>
 | Host | Command |
 |---|---|
 | Claude Code | `/skraft review 42 --publish` |
-| Copilot CLI | `skraft-review` workflow with `pr` set to `42` and `publish` to `true` |
+| Copilot CLI | `/skraft review 42 --publish`, or the `skraft-review` workflow with `pr` set to `42` and `publish` to `true` |
 | Terminal | `skraft review --pr 42 --publish` |
 
 skraft keeps **one** comment, found by its marker `<sub>skraft-review pr=42</sub>` and rewritten on

@@ -245,8 +245,9 @@ When the forge is `azure-devops`, apply the GitHub conventions above through
 `azure-boards-work-items`, with these substitutions:
 
 - Labels → work item tags with the same text.
-- Sub-issues of a split story → child work items of the original, with the original's work item
-  type and a `Parent` link to it.
+- Sub-issues of a split story → work items of the original's type, each with a `Related` link to
+  the original; never a `Parent` link between two items of the same type. Leave the original
+  unchanged and report its ID and the IDs of its parts to the developer.
 - Milestone → the iteration path of an existing iteration whose name matches the milestone;
   none matches → report the assignment as pending, never create an iteration.
 

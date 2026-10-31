@@ -31,7 +31,7 @@ flowchart LR
     PRD["approved PRD"] -->|skraft-prd-backlog<br/>workflow| BL["epics + stories<br/>on GitHub"]
     IS["existing issues"] -->|backlog-discoverer| TR["triage +<br/>sprint proposal"]
     TR -->|backlog-planner| ST["ready stories<br/>in the tracking folder"]
-    ONE["one issue"] -->|/skraft-refine<br/>or gh-aw workflow| CO["refinement proposal<br/>as a comment"]
+    ONE["one issue"] -->|/skraft-refine (Claude Code)<br/>/skraft-backlog:skraft-refine (Copilot CLI)<br/>or gh-aw workflow| CO["refinement proposal<br/>as a comment"]
     ST -->|skraft init --from-artifacts| ENG["engineering pipeline<br/>in DESIGN"]
 ```
 
@@ -67,14 +67,19 @@ a sprint ([DISCOVER]({{ "/en/explanation/pipeline/discover" | relative_url }})),
 `backlog-planner` refines the selected issues into stories
 ([DISCUSS]({{ "/en/explanation/pipeline/discuss" | relative_url }})). The developer starts each as
 the main agent of their session; that producer starts its lenses, and no sub-agent starts
-another.
+another. Under Copilot, `/skraft backlog [criteria…]` is the entry to this path: it starts no
+agent, it tells the developer which agent to select next and, once the stories are written, to
+type `/skraft <slug> --from-artifacts`. It never moves to development on its own, because a
+router that started the producer would put its lenses at depth 2. How to do it:
+[Refine the backlog]({{ "/en/how-to/refine-backlog" | relative_url }}).
 
 ### Refine a single issue
 
 For a single issue, `refinement-proposal` posts **one comment**: the issue's Definition of Ready
 as written, a ready or needs-refinement verdict, a size, the defects of the current criteria and a
-proposed story with its examples. The developer runs it with `/skraft-refine <number>`, on their
-own model; a team can also install the `skraft-refine` GitHub Agentic Workflow, which runs it when
+proposed story with its examples. The developer runs it on their
+own model, with `/skraft-refine <number>` in Claude Code or `/skraft-backlog:skraft-refine <number>` in
+Copilot CLI (measured; VS Code not measured yet); a team can also install the `skraft-refine` GitHub Agentic Workflow, which runs it when
 an issue is opened or on a label. A marker in the comment avoids proposing twice for the same
 version of the issue, and scripts do everything that must not depend on the model: finding the
 linked PRD, validating the proposal, rendering the comment.

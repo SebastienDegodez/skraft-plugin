@@ -139,7 +139,9 @@ Git liste) :
 Sur `github`, le moteur passe par le serveur MCP GitHub de l'hôte, sinon par `gh` (voir plus bas), et le corps de la pull request commence par
 `Closes #<issue>` quand elle vise la branche par défaut, `Refs #<issue>` sinon. Sur
 `azure-devops`, le moteur ouvre la pull request sur Azure Repos par `az` (l'Azure CLI avec son
-extension `azure-devops`) : son corps commence par `AB#<work item>`, et la pull request est liée
+extension `azure-devops`), Azure DevOps Services seulement : son corps commence par
+`Fixes #<work item>` quand elle vise la branche par défaut, ce qui clôt le work item à la fusion
+de la pull request, `#<work item>` sinon, et la pull request est liée
 au work item de la story à sa création. skraft ne lit pas encore les work items Azure DevOps, ne
 les commente pas et ne revoit pas ses pull requests : sur `azure-devops`, le run démarre sans le
 corps de son issue et n'y tient rien, `skraft review --pr` s'arrête sur
