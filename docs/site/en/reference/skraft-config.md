@@ -162,15 +162,16 @@ v2.0.3 names them). The known servers, by exact name, in this order: `github-mcp
 of any other name is never used. Issues are read on the repository `gh` reads them on (its
 default, else `upstream`, else `origin`); pull requests and the issue comment go to `origin`.
 
-Each operation falls back to `gh` when the server is absent or not connected, a read is
-refused, the tool is missing or fails, the server answers what the engine cannot read (a page
-outside the repository in use included), or the conversation holds 100 comments or more. A
-write you or the host refuse (in Claude Code, a tool you have not allowed) is not retried with
-`gh`: the run says it wrote nothing. The guarantees stay those of `gh`: the pull request is
+Each operation falls back to `gh` when the server is absent or not connected, the tool is
+missing or fails, the server answers what the engine cannot read (a page outside the repository
+in use included), or the conversation holds 100 comments or more. A call you or the host refuse
+(in Claude Code, a tool you have not allowed) is final, a read as much as a write, on every
+forge in this section: it is never retried with `gh` or `az`, and the run says, with a reason
+fixed by the engine, that it read or wrote nothing. The guarantees stay those of `gh`: the pull request is
 found before one is opened, only your own comment is rewritten, the reasons are fixed by the
 engine. The journal says which way served each operation: `via` (`mcp` or `gh`) and, when
 `gh` served after the server could not, `fallback` with a fixed code (`mcp-unavailable`,
-`mcp-tool-missing`, `mcp-refused`, `mcp-failed`, `mcp-unreadable`); `run.started` keeps it as
+`mcp-tool-missing`, `mcp-failed`, `mcp-unreadable`); `run.started` keeps it as
 `issueRoute`. Reading the issue and keeping its comment need no `gh`; opening the pull request
 still asks `gh` for the repository's default branch, and the push stays `git`. `skraft next`
 (the VS Code agent loop) and the `skraft` CLI reach no MCP server and always use `gh`.
@@ -192,10 +193,12 @@ same server: `repo_pull_request` (`get`), `repo_pull_request_thread` (`list`) an
 (`src/tools/repositories.ts`). In Claude Code, allow `mcp__ado__repo_pull_request`,
 `mcp__ado__repo_pull_request_thread` and `mcp__ado__repo_pull_request_thread_write`. Each operation falls back to
 `az repos pr show` and `az devops invoke` (area `git`) when the server is absent, lacks the tool, fails, answers what the
-engine cannot read (a pull request of another organization, a listing of 100 threads or more); a write you or the host
-refuse is not retried with `az`. The review comment is one thread, created *Closed*; its first comment is rewritten at
+engine cannot read (a pull request of another organization, more than ten pages of 100 threads); a call you or the host
+refuse, a read as much as a write, is final, as above. The engine lists the threads page by page (`top` 100, `skip`; the
+server sorts them by thread id). The review comment is one thread, created *Closed*; its first comment is rewritten at
 each pass. The engine finds it again at the address the journal keeps, else the last thread whose first comment begins
-as the review's comment does and holds the marker (raw or with `<`, `>` and `&` escaped), whoever wrote it: Azure does not
+as the review's comment does and holds the marker (raw, or with `<` and `>` as HTML entities, named or numeric, and read behind a byte order mark or blank
+lines), whoever wrote it: Azure does not
 tell the author here. A pull request of another project or repository than the Git remote's is refused
 (`pr-unreadable`). None of this is measured on a real organization: see `docs/v2/host-verification.md`.
 
@@ -210,10 +213,10 @@ with nothing journaled, when the work item is not a story (`issue-not-a-story`; 
 of the organization than the one the Git remote names (`issue-in-other-project`); the project is
 checked again before every write of the comment, which is skipped with a fixed reason otherwise.
 
-Each operation falls back to `az` when the server is absent or not connected, a read is refused,
+Each operation falls back to `az` when the server is absent or not connected,
 the tool is missing or fails, the server answers what the engine cannot read (a work item of
-another organization included), or the work item has more comments than one page lists. A write
-you or the host refuse is not retried with `az`: the run says it wrote nothing. The comment is
+another organization included), or the work item has more comments than one page lists. A call
+you or the host refuse is final, as above: the run says it read or wrote nothing. The comment is
 rewritten in place (found by the URL the journal kept, else the last comment that starts with its
 hidden marker, as written or as the server escapes it) and posted twice only if that search fails.
 Two reservations: how Azure Boards renders and stores the escaped marker is not measured, and the
@@ -221,7 +224,7 @@ search does not check who wrote a comment (Azure gives no author there), so a co
 else started with the marker would be rewritten. Its `url` is the REST address of the comment, since
 Azure Boards documents no web anchor for one. The journal says which way served: `via` (`mcp` or
 `az`) and, when `az` served after the server could not, `fallback` with a fixed code
-(`mcp-unavailable`, `mcp-tool-missing`, `mcp-refused`, `mcp-failed`, `mcp-unreadable`);
+(`mcp-unavailable`, `mcp-tool-missing`, `mcp-failed`, `mcp-unreadable`);
 `run.started` keeps it as `issueRoute`. The `skraft` CLI and `skraft next` reach no MCP server and
 always use `az`. Opening the pull request stays with `az`. What the servers and az answer for a
 work item is not measured yet: see `docs/v2/host-verification.md`.
