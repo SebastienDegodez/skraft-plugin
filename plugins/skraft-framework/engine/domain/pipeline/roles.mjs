@@ -36,9 +36,11 @@ const ROLES = Object.freeze({
     prose: false,
     proposal: false,
   }),
+  // The architect keeps the repository's durable design documents under docs/; the consistency
+  // matrix of the story stays in the tracking folder.
   'solution-architect': Object.freeze({
-    outputs: Object.freeze([Object.freeze({ path: 'details/{date}/context-map.md', template: null })]),
-    writes: Object.freeze(['docs/adr']),
+    outputs: Object.freeze([Object.freeze({ path: 'details/{date}/consistency-matrix-{slug}.md', template: null })]),
+    writes: Object.freeze(['docs/adr', 'docs/architecture', 'docs/domain/event-model']),
     components: Object.freeze([]),
     records: true,
     scan: true,
@@ -46,10 +48,11 @@ const ROLES = Object.freeze({
     prose: false,
     proposal: false,
   }),
-  // The acceptance designer commits failing tests only; the skeleton they call goes in the source paths.
+  // The acceptance designer commits failing tests only; the skeleton they call goes in the source
+  // paths, its Gherkin scenarios under docs/features.
   'acceptance-designer': Object.freeze({
     outputs: Object.freeze([Object.freeze({ path: 'details/{date}/test-plan-{slug}.md', template: null })]),
-    writes: Object.freeze([]),
+    writes: Object.freeze(['docs/features']),
     components: Object.freeze(/** @type {ComponentPaths[]} */ (['src', 'tests'])),
     records: false,
     scan: false,

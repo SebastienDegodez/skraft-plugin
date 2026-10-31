@@ -47,6 +47,13 @@ of its type, with no behaviour — so the test fails on a **business assertion**
 missing module with a test double is refused: the skeleton is the real module, which DELIVER
 will fill in.
 
+## Scenarios kept in the repository
+
+DISTILL writes its scenarios in `docs/features/<bounded-context>/<feature>.feature`, on the
+story's branch: the pull request shows them, and the next runs read them. No test runner reads
+these files; the acceptance test carries their values verbatim, and the `testability` lens checks
+it (T2).
+
 ## What is not a scenario
 
 A purely technical input case — a value of the wrong type, `NaN`, `null`, a number written as
@@ -66,6 +73,7 @@ only the use case, at least one walking skeleton per flow). The engine computes 
 
 - [Reference: DISTILL]({{ "/en/reference/phases" | relative_url }}#distill) — outputs, write scope, commits.
 - [Reference: DISTILL review criteria]({{ "/en/reference/gates" | relative_url }}#distill).
+- [Reference: durable documentation]({{ "/en/reference/run-journal" | relative_url }}#durable-docs).
 - [Walking Skeleton]({{ "/en/explanation/deep-dive/walking-skeleton" | relative_url }}) and
   [Outside-In TDD]({{ "/en/explanation/deep-dive/outside-in-tdd" | relative_url }}).
 - [DELIVER]({{ "/en/explanation/pipeline/deliver" | relative_url }}) — the next phase.

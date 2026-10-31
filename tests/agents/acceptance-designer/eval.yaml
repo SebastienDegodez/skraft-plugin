@@ -89,7 +89,7 @@ stimuli:
           command: bash
           args:
             - '-lc'
-            - 'ls .copilot-tracking/skraft-plans/pricing/features/*.feature >/dev/null 2>&1'
+            - 'ls docs/features/*/*.feature >/dev/null 2>&1'
           expected_exit_code: 0
           timeout: 30s
       - type: run-command
@@ -98,7 +98,7 @@ stimuli:
           command: bash
           args:
             - '-lc'
-            - 'for v in 9500 9000 8500; do grep -rq "$v" .copilot-tracking/skraft-plans/pricing/features || exit 1; done'
+            - 'for v in 9500 9000 8500; do grep -rq "$v" docs/features || exit 1; done'
           expected_exit_code: 0
           timeout: 30s
       - type: run-command
@@ -151,7 +151,7 @@ stimuli:
             - '-lc'
             - |-
               set -f
-              files=$(find .copilot-tracking/skraft-plans/pricing/features tests \
+              files=$(find docs/features tests \
                 -type f \( -name '*.feature' -o -name '*.cs' -o -name '*.md' \) \
                 ! -path '*/bin/*' ! -path '*/obj/*' 2>/dev/null)
               [ -n "$files" ] || exit 0
@@ -206,7 +206,7 @@ stimuli:
           command: bash
           args:
             - '-lc'
-            - 'grep -rq 9500 .copilot-tracking/skraft-plans/pricing/features'
+            - 'grep -rq 9500 docs/features'
           expected_exit_code: 0
           timeout: 30s
       # A conformance failure has to say whether the skills even loaded.

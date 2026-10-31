@@ -33,7 +33,9 @@ any engine phase, a human may get the `environment` and `blocked` questions
 ([below](#human-questions)).
 
 Every relative path sits under the tracking folder `.copilot-tracking/skraft-plans/<slug>/`;
-`{date}` is a `YYYY-MM-DD` folder.
+`{date}` is a `YYYY-MM-DD` folder. A path that starts with `docs/` sits in the repository, outside
+the tracking folder: it is the repository's durable documentation
+([Durable documentation]({{ "/en/reference/run-journal" | relative_url }}#durable-docs)).
 
 ## DISCOVER {#discover}
 
@@ -91,9 +93,10 @@ Verdict: `review-verdict.mjs --phase discuss`, same rules and same budget as DIS
 
 | | |
 | --- | --- |
-| Inputs | the story (`plans/{date}/issue-<number>.md` when the run started with `--issue`) |
+| Inputs | the story (`plans/{date}/issue-<number>.md` when the run started with `--issue`); the durable documentation under `docs/`, read first |
 | Output | `research/{date}/{slug}-research.md`, pre-created from `research.template.md` |
 | Allowed writes | the tracking folder only |
+| `docs/` already covers the story | the research document says so and cites the files of `docs/`; the engine checks only that the document exists |
 | Check | output filled: not empty, different from the template, no {% raw %}`{{…}}`{% endraw %} left |
 | Attempts | 3 (the `max_attempts` default); then `missing-outputs` |
 
@@ -107,12 +110,13 @@ Verdict: `review-verdict.mjs --phase discuss`, same rules and same budget as DIS
 
 | | |
 | --- | --- |
-| Inputs | research document; `details/{date}/structural-scan.json`, written by the engine before each attempt; story |
-| Declared output | `details/{date}/context-map.md` |
-| Other outputs | `details/{date}/event-model-{story}.md`, `diagrams-{story}.md`, `contracts-{story}.md`, `consistency-matrix-{story}.md`, `supersession-plan-{story}.md` (when an `Accepted` ADR is replaced); `docs/adr/adr-{NNN}-{subject}.md`, `docs/adr/decisions-index.md`, `docs/adr/supersessions.md` |
-| Allowed writes | the tracking folder and `docs/adr/` |
-| Engine checks | DESIGN records after each attempt: a consistency matrix reading `consistency-gate: PASS` (G10), no ADR named `*-rejected.md`, `*-accepted.md`, `*-deprecated.md` or `*-superseded.md` (G14), each `**Supersedes:**` with its registry row (G2, G12); an index row for each ADR written (`design-records`); draft ADRs: `Proposed`, no version, a one-sentence `decision`, no draft history; ADRs on the base: only their status lines change, never deleted; a status of the closed set (`adr-lifecycle`) |
-| Persistent failure | `design-records` after the last attempt |
+| Inputs | the durable documentation under `docs/`, read first; research document; `details/{date}/structural-scan.json`, written by the engine before each attempt; story |
+| Declared output | `details/{date}/consistency-matrix-{slug}.md` |
+| Other outputs | in the tracking folder: `details/{date}/contracts-{story}.md`, `supersession-plan-{story}.md` (when an `Accepted` ADR is replaced); in the repository: `docs/architecture/context-map.md`, `docs/architecture/{bounded-context}.md` (tactical design), `docs/domain/event-model/{bounded-context}.md`, `docs/adr/adr-{NNN}-{subject}.md`, `docs/adr/decisions-index.md`, `docs/adr/supersessions.md` |
+| Allowed writes | the tracking folder, `docs/adr/`, `docs/architecture/` and `docs/domain/event-model/` |
+| Existing documentation | instruction to the agent: a file of `docs/` is completed, not rewritten. When `docs/` already covers the story, the consistency matrix says so and cites the files of `docs/`, and the phase moves on. Engine check: the matrix's `docs-relied-on:` line lists at least one file of `docs/adr`, `docs/architecture`, `docs/domain/event-model` or `docs/features`, and each listed file exists in the working copy |
+| Engine checks | DESIGN records after each attempt: a consistency matrix reading `consistency-gate: PASS` (G10), no ADR named `*-rejected.md`, `*-accepted.md`, `*-deprecated.md` or `*-superseded.md` (G14), each `**Supersedes:**` with its registry row (G2, G12), the `docs-relied-on:` line of the matrix (files of the durable `docs/` folders that exist); an index row for each ADR written (`design-records`); draft ADRs: `Proposed`, no version, a one-sentence `decision`, no draft history; ADRs on the base: only their status lines change, never deleted; a status of the closed set (`adr-lifecycle`) |
+| Persistent failure | `missing-outputs` when the consistency matrix is missing after the last attempt, `design-records` otherwise |
 
 | Lens | Gates |
 | --- | --- |
@@ -140,10 +144,10 @@ Verdict: `review-verdict.mjs --phase discuss`, same rules and same budget as DIS
 
 | | |
 | --- | --- |
-| Inputs | stories, DESIGN documents |
+| Inputs | stories, DESIGN documents (in the tracking folder and under `docs/`) |
 | Declared output | `details/{date}/test-plan-{slug}.md` |
-| Other outputs | `details/{date}/impl-plan-{story}.md`; `features/{bounded-context}-{feature}.feature`; in the components: failing acceptance tests (`tests` paths) and the skeleton they call (`src` paths) |
-| Allowed writes | the tracking folder, each component's `src` and `tests` paths, and the files at those components' roots |
+| Other outputs | `details/{date}/impl-plan-{story}.md`; `docs/features/{bounded-context}/{feature}.feature` (Gherkin scenarios, not executable); in the components: failing acceptance tests (`tests` paths) and the skeleton they call (`src` paths) |
+| Allowed writes | the tracking folder, `docs/features/`, each component's `src` and `tests` paths, and the files at those components' roots |
 | Commits | `red` mode: only failing `test(<story>): …` commits, each replayed by its component's `test` command ([`tdd.replay`]({{ "/en/reference/skraft-config" | relative_url }}#tdd)) |
 | Engine check | where added test files sit (`testability#layout`, G11) |
 
