@@ -84,27 +84,32 @@ install separately, the same way:
 
 ## 3. Make the `skraft` command available {#skraft-command}
 
-The command line is a Node script shipped in the plugin. Run it once, under sh as under
-PowerShell, with `<plugin folder>` the folder where the host installed `skraft`:
+Install the command once per machine, under sh as under PowerShell (Node 22 or later):
 
 ```text
-node "<plugin folder>/engine/drivers/cli/skraft.mjs" install
+npm i -g @skraft/cli
 ```
 
-`skraft install` writes a launcher and the `skraft` and `skraft.cmd` calls in `~/.skraft/bin`
-(`%USERPROFILE%\.skraft\bin` on Windows), then adds that folder to your PATH: a marked line in the
-profile of your shell on macOS and Linux, your user PATH on Windows. It says what it changed.
-The launcher finds the plugin at each call, so a plugin update under Claude Code needs no new
-install.
+npm puts `skraft` in its global folder, which is already in your PATH (with a `skraft.cmd` on
+Windows). The package holds no engine: at each call, `skraft` finds the plugin your host
+installed and runs its engine, in this order:
 
-Open a new terminal, then, from the root of your repository:
+1. the folder named by `SKRAFT_PLUGIN_ROOT`, when the variable is set;
+2. GitHub Copilot CLI: `~/.copilot/installed-plugins/<marketplace>/skraft/`;
+3. Claude Code: the current folder of `skraft@…` in `~/.claude/plugins/installed_plugins.json`.
+
+When both hosts have the plugin, Copilot CLI wins. A plugin update by the host is followed at
+the next call: the command itself never needs updating with the plugin.
+
+From the root of your repository:
 
 ```text
 skraft --version
 ```
 
-You see the plugin's version, for instance `2.0.0-alpha.19`. The other guides write
-`skraft <command>` for this command. Without the install, the long line still works:
+You see the plugin's version, for instance `2.0.0-alpha.19`, and on stderr the host and folder
+that answered (`plugin: copilot …`). The other guides write `skraft <command>` for this command.
+Without the package, the long line still works:
 `node "<plugin folder>/engine/drivers/cli/skraft.mjs" <command>`.
 
 Then run `skraft doctor`. In a repository not configured yet:
@@ -144,11 +149,14 @@ Copilot exposes the command as `/skraft`, without a prefix (measured on Copilot 
 - **Copilot CLI: `skraft:skraft-orchestrator` missing**: check `copilot plugin list`, then open a
   new session; a run refused for that reason carries the code `agent-unavailable`.
 
-- **`skraft: command not found` after `skraft install`**: open a new terminal. If the PATH is
-  managed elsewhere, run `skraft install --no-path`: it writes the calls and prints the line to add
-  to your PATH, for sh and for PowerShell.
-- **`skraft: the plugin was not found`**: the plugin moved or was removed; run the long line
-  with `install` again.
+- **`skraft: command not found` after `npm i -g @skraft/cli`**: open a new terminal; `npm prefix -g`
+  shows the folder npm installs into, which must be in your PATH.
+- **`skraft: the skraft plugin was not found in GitHub Copilot CLI nor in Claude Code`**: install the
+  plugin in a host (step 1), or set `SKRAFT_PLUGIN_ROOT` to the plugin folder, for instance a clone.
+- **`skraft` runs the wrong plugin**: `skraft --version` names the host and folder it used. Set
+  `SKRAFT_PLUGIN_ROOT` to choose another one.
+- **You ran `skraft install` with an earlier version**: remove `~/.skraft/bin` (and its line in your
+  shell profile, or from your user PATH on Windows), then install the package.
 
 ## See also
 

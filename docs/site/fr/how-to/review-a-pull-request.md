@@ -13,7 +13,7 @@ persona: reviewer
 
 ## Prérequis
 
-- Le plugin `skraft` installé ; `skraft` est la commande que [`skraft install`]({{ "/fr/how-to/install-on-a-host" | relative_url }}#skraft-command) met en place ; la ligne longue `node "<dossier du plugin>/engine/drivers/cli/skraft.mjs"` marche sans elle.
+- Le plugin `skraft` installé ; `skraft` est la commande que [`npm i -g @skraft/cli`]({{ "/fr/how-to/install-on-a-host" | relative_url }}#skraft-command) met en place ; la ligne longue `node "<dossier du plugin>/engine/drivers/cli/skraft.mjs"` marche sans elle.
 - Sur GitHub : `gh` installé et connecté à l'hôte du dépôt (`gh auth status`). Sur Azure Repos : `az` avec son extension `azure-devops`, connecté à l'organisation, ou le serveur MCP Azure DevOps nommé `ado` connecté dans votre hôte (Azure DevOps Services seulement). Un outil de ce serveur que vous ou l'hôte refusez n'est jamais retenté par `az` : la revue le dit et s'arrête, ou laisse son commentaire non publié.
 - Un clone du dépôt, à la racine duquel vous lancez tout.
 

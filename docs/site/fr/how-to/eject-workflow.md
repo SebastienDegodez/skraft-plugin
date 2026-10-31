@@ -13,7 +13,7 @@ DELIVER, et la garder à jour avec le plugin.
 
 ## Prérequis
 
-- Un dépôt configuré, Git, et un terminal à la racine de la copie de travail ; `skraft` est la commande que [`skraft install`]({{ "/fr/how-to/install-on-a-host" | relative_url }}#skraft-command) met en place ; la ligne longue `node "<dossier du plugin>/engine/drivers/cli/skraft.mjs"` marche sans elle.
+- Un dépôt configuré, Git, et un terminal à la racine de la copie de travail ; `skraft` est la commande que [`npm i -g @skraft/cli`]({{ "/fr/how-to/install-on-a-host" | relative_url }}#skraft-command) met en place ; la ligne longue `node "<dossier du plugin>/engine/drivers/cli/skraft.mjs"` marche sans elle.
 
 ## 1. Copier le workflow
 

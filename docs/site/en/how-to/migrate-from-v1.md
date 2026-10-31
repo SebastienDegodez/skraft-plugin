@@ -13,7 +13,7 @@ persona: software-engineer
 ## Prerequisites
 
 - The `skraft` plugin at version 2 installed
-  ([Install skraft on a host]({{ "/en/how-to/install-on-a-host" | relative_url }})); `skraft` is the command that [`skraft install`]({{ "/en/how-to/install-on-a-host" | relative_url }}#skraft-command) sets up; the long line `node "<plugin folder>/engine/drivers/cli/skraft.mjs"` works without it.
+  ([Install skraft on a host]({{ "/en/how-to/install-on-a-host" | relative_url }})); `skraft` is the command that [`npm i -g @skraft/cli`]({{ "/en/how-to/install-on-a-host" | relative_url }}#skraft-command) sets up; the long line `node "<plugin folder>/engine/drivers/cli/skraft.mjs"` works without it.
 - A terminal at the root of the working copy, Git, Node 22 or later.
 - The v1 files committed, so you can go back: `skraft-config.json` is rewritten in place.
 

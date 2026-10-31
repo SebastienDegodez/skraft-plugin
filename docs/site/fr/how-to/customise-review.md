@@ -13,7 +13,7 @@ menaces), en plus des lentilles de skraft.
 
 ## Prérequis
 
-- Un dépôt configuré, Git, et un terminal à la racine de la copie de travail ; `skraft` est la commande que [`skraft install`]({{ "/fr/how-to/install-on-a-host" | relative_url }}#skraft-command) met en place ; la ligne longue `node "<dossier du plugin>/engine/drivers/cli/skraft.mjs"` marche sans elle.
+- Un dépôt configuré, Git, et un terminal à la racine de la copie de travail ; `skraft` est la commande que [`npm i -g @skraft/cli`]({{ "/fr/how-to/install-on-a-host" | relative_url }}#skraft-command) met en place ; la ligne longue `node "<dossier du plugin>/engine/drivers/cli/skraft.mjs"` marche sans elle.
 - Le prompt de la lentille, écrit comme un agent de votre dépôt nommé `<nom>-lens`.
 
 ## 1. Écrire l'agent de la lentille

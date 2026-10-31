@@ -14,7 +14,7 @@ persona: software-engineer
 
 - Un run déjà démarré dans cette copie de travail (un slug, son journal
   `.copilot-tracking/skraft-plans/<slug>/events.jsonl`).
-- Pour la ligne de commande, `skraft` est la commande que [`skraft install`]({{ "/fr/how-to/install-on-a-host" | relative_url }}#skraft-command) met en place ; la ligne longue `node "<dossier du plugin>/engine/drivers/cli/skraft.mjs"` marche sans elle. Lancez-la depuis la racine de la copie de travail.
+- Pour la ligne de commande, `skraft` est la commande que [`npm i -g @skraft/cli`]({{ "/fr/how-to/install-on-a-host" | relative_url }}#skraft-command) met en place ; la ligne longue `node "<dossier du plugin>/engine/drivers/cli/skraft.mjs"` marche sans elle. Lancez-la depuis la racine de la copie de travail.
 
 ## 1. Voir où en est le run
 

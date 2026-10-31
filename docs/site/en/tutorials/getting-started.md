@@ -117,7 +117,7 @@ find ~/.claude/plugins -path '*engine/drivers/cli/skraft.mjs'
 The printed line is the script's full path; replace `<skraft plugin folder>` with what comes before
 `/engine/`. From here
 on, `skraft …` means that full command, or the `skraft` command that
-[`skraft install`]({{ "/en/how-to/install-on-a-host" | relative_url }}#skraft-command) sets up.
+[`npm i -g @skraft/cli`]({{ "/en/how-to/install-on-a-host" | relative_url }}#skraft-command) sets up.
 
 `skraft init` looks for the projects of the repository and writes one **component** per project: a
 part of the repository with its root, its stack, its paths and its commands. You see:

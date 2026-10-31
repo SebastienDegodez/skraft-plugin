@@ -14,7 +14,7 @@ tourne, sous Claude Code et sous Copilot.
 ## Prérequis
 
 - Un dépôt configuré ([Configurer les composants]({{ "/fr/how-to/configure-components" | relative_url }})).
-- Un terminal à la racine de la copie de travail ; `skraft` est la commande que [`skraft install`]({{ "/fr/how-to/install-on-a-host" | relative_url }}#skraft-command) met en place ; la ligne longue `node "<dossier du plugin>/engine/drivers/cli/skraft.mjs"` marche sans elle.
+- Un terminal à la racine de la copie de travail ; `skraft` est la commande que [`npm i -g @skraft/cli`]({{ "/fr/how-to/install-on-a-host" | relative_url }}#skraft-command) met en place ; la ligne longue `node "<dossier du plugin>/engine/drivers/cli/skraft.mjs"` marche sans elle.
 
 ## 1. Voir ce que chaque agent reçoit aujourd'hui
 

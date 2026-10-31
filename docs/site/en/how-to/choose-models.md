@@ -14,7 +14,7 @@ Code and on Copilot.
 ## Prerequisites
 
 - A configured repository ([Configure the components]({{ "/en/how-to/configure-components" | relative_url }})).
-- A terminal at the root of the working copy; `skraft` is the command that [`skraft install`]({{ "/en/how-to/install-on-a-host" | relative_url }}#skraft-command) sets up; the long line `node "<plugin folder>/engine/drivers/cli/skraft.mjs"` works without it.
+- A terminal at the root of the working copy; `skraft` is the command that [`npm i -g @skraft/cli`]({{ "/en/how-to/install-on-a-host" | relative_url }}#skraft-command) sets up; the long line `node "<plugin folder>/engine/drivers/cli/skraft.mjs"` works without it.
 
 ## 1. See what each agent gets today
 
