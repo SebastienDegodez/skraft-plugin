@@ -1119,3 +1119,91 @@ Agreed on https://github.com/SebastienDegodez/skraft-plugin/issues/367#issuecomm
 - WP1b: in `explanation/pipeline/deliver` (EN and FR, the page becomes `.mdx`), the Jekyll include of the figure becomes `<FlowFigure flow="deliver" />`. If the figures PR has not landed when WP1b runs, keep a `:::note` placeholder and leave the swap to whichever lands second.
 - The figures follow the new theme tokens (Infima variables, light and dark), not the old green palette; asked on the issue.
 - The version picker of #405 is not ported (native `docsVersionDropdown`, see §1.4/§1.5).
+
+## 11. WP0 handback (decisions D1–D10)
+
+Measured on 2026-10-31 on `docs/docusaurus` at `8cc5480e` (Linux x64, 2 vCPU, Node 22.23.4, Docusaurus 3.10.2, Chromium through Playwright). Probes that were not committed ran on a scratch copy of `docs/website` outside git (its build needs `future.experimental_vcs: false` there: "This Docusaurus site is outside any Git worktree"). Three defects were fixed on the way (§11.1).
+
+- **D1 · `.md` CommonMark mode — keep `.md`.**
+  - Probe pages `probe-md.md` / `probe-mdx.mdx`, EN and FR, built with `npx docusaurus build`.
+  - Admonitions: `:::note[Jargon]` and `:::warning` give `theme-admonition-note`/`-warning` with the title.
+  - Tables: render. `&lt;a&gt; -&gt; &lt;b&gt; with &lt;slug&gt;` in a table cell comes out as `<td>&lt;a> -> &lt;b> with &lt;slug>`. Bare `{ x }` in `.md` prose stays text.
+  - Mermaid: Playwright counted `.docusaurus-mermaid-container svg` = 1 on `/tutorials/probe-md`, `/tutorials/probe-mdx` and `/fr/tutorials/probe-md`.
+  - Heading-ID comments: see D2. The real `.md` pages `explanation/pipeline/index.md` and `design.md` already use `:::` admonitions.
+  - Only the bracket title form works (`mdx1Compat` is off under `v4`): the converter writes `:::note[Title]`, never `:::note Title`.
+- **D2 · Heading IDs — native comments, no `mdx1Compat`.**
+  - `## Install the thing <!-- #install -->` (`.md`) and `{/* #install */}` (`.mdx`) both give `<h2 … id=install>`, in EN and FR.
+  - Links to `#install` across the two files resolve in both locales.
+  - The real shared anchors resolve too: `#skraft-command` in `how-to/install-on-a-host.html` and `fr/…`, and `#skraft-install` in `reference/cli.html` and `fr/…`. No comment text leaks (`grep -c '<!-- #\|{/\*'` = 0).
+  - Negative check: with the FR `{/* #install */}` removed, `npx docusaurus build --locale fr` exits 1 with "Docusaurus found broken anchors! … linking to /skraft-plugin/tutorials/probe-mdx#install".
+- **D3 · Versions — pass, with two fixes and a cut checklist.**
+  - Procedure on the scratch copy: `npx docusaurus docs:version 2.x` ("version 2.x created!"), then copy `i18n/fr/…/current` to `version-2.x` and `current.json` to `version-2.x.json`, then build (exit 0).
+  - Routes: `/`, `/next`, `/fr/`, `/fr/next` and `…/tutorials/getting-started` under each answer 200.
+  - Navbar parts follow the version: `/skraft-plugin/next/tutorials` … on `/next/`, `/skraft-plugin/fr/next/…` on `/fr/next/`.
+  - The dropdown lists `next`, `2.x`, `1.15 (archived)` and `All v1 versions`. EN links keep the base URL (`/skraft-plugin/v1.15.3/`). FR links were `/skraft-plugin/fr/skraft-plugin/v1.15.3/` (**fixed**, §11.1).
+  - Banner: on `/next/` only ("This is unreleased documentation for skraft next version."); badge "Version: 2.x" at the root.
+  - Search is scoped per version and locale. The `next` index first held 0 pages (**fixed**, §11.1). After the fix, `search?q=gates` returns:
+    - 8 pages under `/skraft-plugin/{how-to,reference,…}`;
+    - `&version=next/`: 8 pages under `/skraft-plugin/next`;
+    - FR: 7 pages under `/skraft-plugin/fr/…`, and 7 under `/skraft-plugin/fr/next` for `next`.
+  - `/next/` keeps `noindex` and stays out of `sitemap.xml` (0 matches).
+  - `check-build.mjs` does not exist yet (WP7). WP7 must run it on its own scratch cut.
+  - **Cut checklist** (final PR):
+    1. Copying `current.json` carries `version.label` "Aperçu 2.0", so FR showed "Aperçu 2.0" for both versions. Set `version-2.x.json` → "2.x" and `current.json` → "next".
+    2. The temporary `remark-pending-links` only knows `docs/` and `i18n/fr/…/current/`. A cut before WP1b fails with "Markdown link … couldn't be resolved"; WP1b deletes the plugin first.
+- **D4 · Static copy per locale — pass.** `diff <(cd build && find img -type f | sort) <(cd build/fr && find img -type f | sort)` is empty, so `static/` is copied whole into `build/fr/`.
+- **D5 · Redirects — pass.**
+  - `build/en/` holds 137 redirect files (pages, `.html` twins, directory indexes). `build/fr/en` does not exist, and there is no `en/next` or `en/search*`.
+  - `en/how-to/run-gates.html` → `location.replace("/skraft-plugin/how-to/run-gates"+location.search+location.hash)`. Covered by `tests/tooling/docs-redirects`.
+- **D6 · Image zoom — keep `docusaurus-plugin-image-zoom`.**
+  - On `/tutorials/getting-started`, 5 of 5 content images carry `medium-zoom-image`.
+  - A click opens `.medium-zoom-overlay` with `body.medium-zoom--opened`, in light (`rgba(255, 255, 255, 0.92)`) and dark (`rgba(22, 25, 31, 0.92)`). No console errors.
+- **D7 · `docSidebar` navbar items — keep them, no `index.mdx` per part.**
+  - Clicking Tutorials / How-to guides / Explanation / Reference lands on `/skraft-plugin/{tutorials,how-to,explanation,reference}`, each a generated-index page. FR uses `/skraft-plugin/fr/…`.
+  - On `/next/` they point to `/skraft-plugin/next/…` (D3).
+- **D8 · Terminal wrap props — pass.** A scratch probe in the `CodeBlock` wrap rendered `data-probe-class=language-console data-probe-meta='title="Probe terminal"'` from both `.md` and `.mdx`, EN and FR (`title="Terminal sonde"`).
+- **D9 · Windows and macOS — pass (CI).**
+  - Here: Linux only. `npm ci --prefix docs/website` took 26 s and installed `@node-rs/jieba-linux-x64-gnu`. The lockfile pins the `win32-x64-msvc`, `darwin-arm64` and `darwin-x64` prebuilds.
+  - Windows and macOS: workflow `docs-website.yml`, job `checks`, run 41237377313 on `8cc5480e`.
+    - `checks (windows-latest)`, `checks (macos-latest)`, `checks (ubuntu-latest)` and `build` all succeeded.
+    - Install took 45–79 s; the build of both locales took 12–23 s.
+- **D10 · Measurements.**
+  - **Build of both locales (`npm run docs:build`):**
+    - CI: 12 s (`build`), 16 s (ubuntu), 17 s (macOS), 23 s (Windows).
+    - Here: 19 s with a warm cache; 43–88 s cold or while a browser and other servers shared the 2 vCPU.
+  - **Doc page JS (`how-to/run-gates`, gzip -9):**
+    - up front: `runtime~main` 3.1 kB + `main` 187.0 kB = 190 kB;
+    - all JS fetched after load: 19 files, 228 kB.
+  - **axe 4.14.0** (`wcag2a/aa`, `wcag21a/aa`, `wcag22aa`), 4 modes × 2 locales × 2 themes, on `tutorials/getting-started`, `how-to/run-gates`, `explanation/pipeline` and `reference/cli`. EN and FR give identical results.
+
+    | Page | Light | Dark |
+    |---|---|---|
+    | getting-started | 45 contrast nodes | 0 |
+    | run-gates | 1 | 0 |
+    | pipeline | 1 | 6 |
+    | cli | 1 + `scrollable-region-focusable` | `scrollable-region-focusable` |
+
+  - **Causes, all for WP3:**
+    - The search shortcut `<kbd>` is #bec3c9 on #ebedf0, 1.51:1, on every light page.
+    - Prism `github` tokens on #f6f8fa: #36acaa 2.58:1, #e3116c 4.32:1, #d73a49 4.29:1, in JSON blocks.
+    - Mermaid `dark` edge labels are #cccccc on #585858, 4.43:1.
+    - A wide table in `reference/cli` scrolls without keyboard focus.
+
+### 11.1 Fixes committed with this handback
+
+- `a42befe6 fix(docs-site): keep the v1 archive links off the French base URL`
+  - **Cause:** `pathname://` links get the locale base URL.
+  - **Fix:** the v1 archive becomes a raw HTML item; the catalogue and deck links become `pathname:///<path>` (one copy per locale, §2.6).
+  - **Test:** `tests/tooling/docs-links/`.
+- `ac284ab9 fix(docs-site): index the noIndex next preview for its own search`
+  - **Fix:** `forceIgnoreNoIndex: true`.
+- `800a864e fix(docs-site): a directory index is a copy of its page, not a redirect`
+  - **Cause:** `docusaurus serve` answers `/explanation/pipeline` with `explanation/pipeline/index.html`, so the redirect index reloaded itself (122–146 navigations in 3 s).
+  - **Pages affected:** the four part landings in both locales, and `explanation/pipeline`.
+  - **Test:** `tests/tooling/docs-redirects` (seen failing against the old code).
+
+### 11.2 For the coordinator
+
+- **GitHub Pages and `/explanation/pipeline`.** It is not measured whether GitHub Pages serves the `.html` file or the folder for this address. The index is now a copy of the page, so both cases render it.
+- **"See all results" link.** The search box's link is `…/search/?q=` with a trailing slash. Client-side navigation works. A new tab hits `/search/`, which has no `index.html`. The fix belongs to WP7/WP10: a copy at `search/index.html`, or the e2e suite.
+- **Main bundle size.** `main` is 187 kB gzip before any page component. WP3/WP5 should check what mermaid, search and `@xyflow/react` add before setting a budget.

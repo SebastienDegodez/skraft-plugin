@@ -22,9 +22,5 @@
   "link.item.label.GitHub": {
     "message": "GitHub",
     "description": "The label of footer link with label=GitHub linking to https://github.com/SebastienDegodez/skraft-plugin"
-  },
-  "link.item.label.v1 archive": {
-    "message": "Archive v1",
-    "description": "The label of footer link with label=v1 archive linking to https://sebastiendegodez.github.io/skraft-plugin/v1/"
   }
 }
