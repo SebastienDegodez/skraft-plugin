@@ -960,7 +960,7 @@ const issueOn = (forge, number) => {
  * REST JSON as text, the shape skraft assumes (docs/v2/host-verification.md, not measured). Like
  * 2.11.0 it rewrites `<`, `>` and `&` of a Markdown comment as HTML entities.
  * `requests` lists each call (tool and arguments) in order, `calls` its `<server> <tool>`;
- * `fails` gives, by tool, the reason it fails with (`mcp-refused`…), or `unreadable` for an
+ * `fails` gives, by tool or by `<tool>:<action>`, the reason it fails with (`mcp-refused`…), or `unreadable` for an
  * answer that is no JSON; a tool it lacks answers `mcp-tool-missing`; `answers` replaces what a
  * tool answers, given its arguments. `workItems` are the fields of each work item by id;
  * `comments` the comments of the work items, which a test may remove, as a human deleting one;
@@ -996,7 +996,7 @@ export class InMemoryAzureMcp {
   async call({ server, tool, arguments: args }) {
     this.calls.push(`${server} ${tool}`)
     this.requests.push({ tool, arguments: args })
-    const failure = this.fails[tool]
+    const failure = this.fails[`${tool}:${args.action}`] ?? this.fails[tool]
     if (failure === 'unreadable') return { ok: true, text: 'not JSON' }
     if (failure) return { ok: false, reason: failure }
     const run = this.answers[tool] ?? (AZURE_TOOLS[tool] && ((given) => AZURE_TOOLS[tool](this, given)))

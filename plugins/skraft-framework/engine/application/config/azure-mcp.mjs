@@ -1,15 +1,15 @@
 import { azureRemoteOf, isInOrganization } from '../../domain/config/azure-remote.mjs'
 import { inProject, workItemReading } from '../../domain/pipeline/work-item.mjs'
 import { areComments, commentUrl, keptCommentOf } from '../../domain/pipeline/work-item-comment.mjs'
-import { answerOf, once, served, UNAVAILABLE, UNREADABLE } from './mcp-route.mjs'
+import { answerOf, once, refusalOf, served, UNAVAILABLE, UNREADABLE } from './mcp-route.mjs'
 import { pullRequestsOf } from './azure-repos-mcp.mjs'
 
 /**
  * Azure DevOps's adapters served first by the host's Azure DevOps MCP server, then by az. An
  * operation goes through the server's tools when the host has the server connected under a
  * known name and the Git remote names an Azure DevOps repository; az does it when the server is
- * absent, lacks the tool, fails, or answers what skraft cannot read. A write the person or the
- * host refuses is refused, never retried with az. Each result says which way served it (`via`)
+ * absent, lacks the tool, fails, or answers what skraft cannot read. A call the person or the
+ * host refuses, a read as a write, is refused, never retried with az. Each result says which way served it (`via`)
  * and, when az served after the server could not, why (`fallback`). The push, the remotes, the
  * branches and the pull requests' opening stay with git and az; the review of a pull request is served
  * by azure-repos-mcp.mjs.
@@ -33,6 +33,12 @@ import { pullRequestsOf } from './azure-repos-mcp.mjs'
  */
 const AZURE_SERVERS = Object.freeze(['ado'])
 
+/** What a refusal of a tool of Azure Boards answers: refused for good, whatever the tool, never left to az. */
+const refused = refusalOf({ server: 'Azure DevOps', place: 'Azure Boards', cli: 'az', writes: ['wit_work_item_comment_write'] })
+
+/** @param {string | undefined} tool @returns {{ read: 'failed', reason: string }} */
+const issueRefused = (tool) => ({ read: 'failed', reason: refused(tool).reason })
+
 /** @param {ForgeAdapters} az Azure DevOps's adapters on git and az @param {McpTools} mcpTools @param {RemoteSource} sourceControl @returns {ForgeAdapters} */
 export const azureMcpFirst = (az, mcpTools, sourceControl) => {
   const servers = once(() => mcpTools.servers())
@@ -44,8 +50,8 @@ export const azureMcpFirst = (az, mcpTools, sourceControl) => {
 const codeHostOf = (az, route) => Object.freeze({
   ...onAz(az),
   unavailable: async () => ('failure' in await route() ? az.unavailable() : null),
-  issue: (number) => served(route, (at) => issueOf(at, number), () => az.issue(number), 'az'),
-  keepIssueComment: (request) => served(route, (at) => commentKept(at, request), () => az.keepIssueComment(request), 'az'),
+  issue: (number) => served(route, (at) => issueOf(at, number), () => az.issue(number), 'az', issueRefused),
+  keepIssueComment: (request) => served(route, (at) => commentKept(at, request), () => az.keepIssueComment(request), 'az', refused),
 })
 
 /** What git and az answer alone: the pull request, the remotes, the branches, the story's link and the body limit. @param {CodeHost} az */
@@ -99,9 +105,6 @@ const issueOf = async ({ organization, project, call }, number) => {
   return reading === null ? UNREADABLE : { served: reading }
 }
 
-/** A write the person or the host refused: the run says so and writes nothing else. */
-const REFUSED = { served: { ok: /** @type {const} */ (false), reason: 'the host refused the Azure DevOps MCP server\'s wit_work_item_comment_write, so skraft wrote nothing on Azure Boards; allow it, or run again where it is allowed' } }
-
 /** A work item of another project than the remote's is never written. @param {number} number @param {string} project */
 const elsewhere = (number, project) => ({ served: { ok: /** @type {const} */ (false), reason: `work item #${number} is not in project ${project} of the Git remote, so skraft wrote nothing on it` } })
 
@@ -132,7 +135,7 @@ const commentsOf = async (azure, number) => {
 const write = async (azure, { number, body }, kept) => {
   const target = kept === undefined ? { action: 'add' } : { action: 'update', commentId: kept.id }
   const written = await azure.call('wit_work_item_comment_write', { ...target, project: azure.project, workItemId: number, text: body, format: 'Markdown' })
-  if ('failure' in written) return written.failure === 'mcp-refused' ? REFUSED : written
+  if ('failure' in written) return written
   const id = written.json?.id
   return Number.isInteger(id) ? { served: { ok: /** @type {const} */ (true), url: commentUrl(azure, number, id) } } : UNREADABLE
 }

@@ -1,11 +1,11 @@
 import { areThreads, createdThreadOf, ELSEWHERE, elsewhereReason, keptThreadOf, pullRequestFactsOf, rewrittenThreadOf, threadUrl } from '../../domain/review/azure-pull-request.mjs'
-import { served, UNREADABLE } from './mcp-route.mjs'
+import { refusalOf, served, UNREADABLE } from './mcp-route.mjs'
 
 /**
  * The review of an Azure Repos pull request served first by the host's Azure DevOps MCP server,
  * then by az: the pull request read, its threads listed to find the review's thread again, and
- * that thread posted or its first comment rewritten. A write the person or the host refuses is
- * refused, never retried with az. The diff stays with git.
+ * that thread posted or its first comment rewritten. A call the person or the host refuses, a read
+ * as a write, is refused, never retried with az. The diff stays with git.
  *
  * Tools of @azure-devops/mcp 2.11.0, read in its source (src/tools/repositories.ts):
  * `repo_pull_request` (`get`: lines 242-343), `repo_pull_request_thread` (`list`: lines 494-566)
@@ -17,6 +17,9 @@ import { served, UNREADABLE } from './mcp-route.mjs'
  * @typedef {import('./mcp-route.mjs').Failed} Failed
  * @typedef {import('./azure-mcp.mjs').Azure} Azure
  */
+
+/** What a refusal of a tool of Azure Repos answers: refused for good, whatever the tool, never left to az. */
+const refused = refusalOf({ server: 'Azure DevOps', place: 'Azure Repos', cli: 'az', writes: ['repo_pull_request_thread_write'] })
 
 /** The most threads one listing answers: the tool's own default `top`, a page this adapter does not follow. */
 const LISTED = 100
@@ -30,8 +33,8 @@ export const pullRequestsOf = (az, route) => Object.freeze({
   repository: () => az.repository(),
   checkoutCommand: (number) => az.checkoutCommand(number),
   takesRequestFile: az.takesRequestFile,
-  find: (number) => served(route, (at) => pullRequestRead(at, number), () => az.find(number), 'az'),
-  keepComment: (request) => served(route, (at) => threadKept(at, request), () => az.keepComment(request), 'az'),
+  find: (number) => served(route, (at) => pullRequestRead(at, number), () => az.find(number), 'az', refused),
+  keepComment: (request) => served(route, (at) => threadKept(at, request), () => az.keepComment(request), 'az', refused),
 })
 
 /** What every tool of one pull request is asked. @param {Azure} azure @param {number} number */
@@ -77,9 +80,6 @@ const threadKept = async (azure, request) => {
   return 'failure' in listed ? listed : write(azure, request, keptThreadOf(azure, request, listed.threads))
 }
 
-/** A write the person or the host refused: the run says so and writes nothing else. */
-const REFUSED = { served: { ok: /** @type {const} */ (false), reason: 'the host refused the Azure DevOps MCP server\'s repo_pull_request_thread_write, so skraft wrote nothing on Azure Repos; allow it, or run again where it is allowed' } }
-
 /** The new thread, Closed so that no branch policy waits on it, or the rewrite of the first comment of the thread kept. @param {import('../../domain/review/azure-pull-request.mjs').KeptThread | undefined} kept @param {string} body */
 const requestOf = (kept, body) => (kept === undefined
   ? { action: 'create', status: 'Closed', content: body }
@@ -88,7 +88,7 @@ const requestOf = (kept, body) => (kept === undefined
 /** @param {Azure} azure @param {import('../ports/pull-requests.mjs').ThreadCommentRequest} request @param {import('../../domain/review/azure-pull-request.mjs').KeptThread | undefined} kept */
 const write = async (azure, { number, body }, kept) => {
   const written = await azure.call('repo_pull_request_thread_write', { ...requestOf(kept, body), ...where(azure, number) })
-  if ('failure' in written) return written.failure === 'mcp-refused' ? REFUSED : written
+  if ('failure' in written) return written
   const at = kept === undefined ? createdThreadOf(written.json) : rewrittenThreadOf(kept, written.json)
   return at === null ? UNREADABLE : { served: { ok: /** @type {const} */ (true), url: threadUrl(azure, number, at.threadId, at.commentId) } }
 }

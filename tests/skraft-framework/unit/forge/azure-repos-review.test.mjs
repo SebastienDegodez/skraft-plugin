@@ -113,6 +113,22 @@ test('a write the person or the host refuses posts nothing, is not asked of az, 
   assert.deepEqual(host.mcp.threads, [])
 })
 
+test('a read the person or the host refuses is refused too: the pull request is not read, nothing is posted, and az is not asked', async () => {
+  const refused = (tool) => `the host refused the Azure DevOps MCP server's ${tool}, so skraft read nothing from Azure Repos and did not ask az instead; allow it, or run again where it is allowed`
+  const get = reviewed({ mcp: { fails: { repo_pull_request: 'mcp-refused' } }, forge: { unavailable: null } })
+  const stopped = await get.review({ publish: true })
+
+  assert.deepEqual([stopped.status, stopped.code, stopped.reason], ['stopped', 'pr-unreadable', refused('repo_pull_request')])
+  assert.deepEqual([get.pullRequests.calls, get.mcp.threads], [[], []])
+
+  const list = reviewed({ mcp: { fails: { repo_pull_request_thread: 'mcp-refused' } }, forge: { unavailable: null } })
+  const outcome = await list.review({ publish: true })
+
+  assert.deepEqual([outcome.status, outcome.comment, outcome.unpublished], ['NEEDS_REWORK', null, `not published: ${refused('repo_pull_request_thread')}`])
+  assert.deepEqual(commentEvents(list), [{ type: 'review.comment-skipped', pass: 1, via: 'mcp', fallback: undefined, reason: `not published: ${refused('repo_pull_request_thread')}` }])
+  assert.deepEqual([list.pullRequests.calls.filter((call) => call.startsWith('keep')), list.mcp.threads], [[], []])
+})
+
 test('a pull request the server places in another organization is unreadable, so az reads it', async () => {
   const host = reviewed({ forge: { unavailable: null } })
   host.mcp.pullRequests[12] = azureJsonOf(AZURE_PULL_REQUEST, { organization: 'https://dev.azure.com/other' })
