@@ -137,9 +137,10 @@ remote Git lists):
 On `github`, the engine goes through the host's GitHub MCP server, else `gh` (see below), and the pull request's body opens with
 `Closes #<issue>` when it targets the default branch, `Refs #<issue>` otherwise. On
 `azure-devops`, the engine opens the pull request on Azure Repos through `az` (the Azure CLI
-with its `azure-devops` extension): its body opens with `AB#<work item>`, and the pull request
-is linked to the story's work item when it is created. skraft does not read Azure DevOps work
-items, comment on them or review its pull requests yet: on `azure-devops`, the run starts
+with its `azure-devops` extension), Azure DevOps Services only: its body opens with
+`Fixes #<work item>` when it targets the default branch, which completes the work item when the
+pull request merges, `#<work item>` otherwise, and the pull request is linked to the story's
+work item when it is created. skraft does not read Azure DevOps work items, comment on them or review its pull requests yet: on `azure-devops`, the run starts
 without the body of its issue and keeps nothing on it, `skraft review --pr` stops with
 `forge-unavailable`, each with the reason
 `skraft cannot reach the forge azure-devops yet (forge in skraft-config.json, else the host of the Git remote, chooses it)`.

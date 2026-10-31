@@ -64,6 +64,9 @@ test('on a host that behaves as the issues say, every host premise is measured, 
     'session-agents': 'pass',
     'copilot-models-available': 'pass',
     'skraft-tool-names-free': 'pass',
+    'plugin-command-listed': 'pass',
+    'plugin-command-input': 'pass',
+    'skraft-command-listed': 'pass',
   })
   assert.deepEqual(report.checks.find((item) => item.id === 'skraft-tool-names-free').observed, { native: ['bash', 'edit', 'view'], skraft: ['skraft_decide'], collisions: [] })
   assert.deepEqual(report.checks.find((item) => item.id === 'bad-tool-name-isolation').observed, { status: 'rpc-error', error: notRegistered('skraft-probe-iso') })
@@ -406,4 +409,36 @@ test('a tool result is read from a string or from an expanded result', () => {
   assert.equal(toolText('plain'), 'plain')
   assert.equal(toolText({ textResultForLlm: 'expanded', resultType: 'success' }), 'expanded')
   assert.equal(toolText(undefined), '')
+})
+
+test('a host that lists the fixture plugin\'s commands passes plugin-command-listed and reports their names, aliases, kinds and hints; the typed input is measured where it lands', async (t) => {
+  const { report, verdicts } = await probe(t)
+  const observed = (id) => report.checks.find((item) => item.id === id).observed
+
+  assert.equal(verdicts['plugin-command-listed'], 'pass')
+  assert.deepEqual(observed('plugin-command-listed').commands, [
+    { name: 'skraft-probe-cmd:other', aliases: [], kind: 'skill', hint: '' },
+    { name: 'skraft-probe-cmd', aliases: [], kind: 'skill', hint: 'probe hint' },
+  ])
+  assert.deepEqual(observed('plugin-command-input'), { name: 'skraft-probe-cmd', kind: 'agent-prompt', placement: 'appended', placeholderLeft: true, input: 'checkout #42 Pay by card --base develop' })
+  assert.deepEqual(observed('skraft-command-listed').names, ['skraft', 'skraft-backlog:skraft-refine'])
+  assert.deepEqual(observed('skraft-command-listed').typed, { name: 'skraft', kind: 'agent-prompt', placement: 'appended', placeholderLeft: false })
+  assert.deepEqual(observed('skraft-command-listed').skills, [{ name: 'skraft', pluginName: 'skraft', argumentHint: true }, { name: 'skraft-refine', pluginName: 'skraft-backlog', argumentHint: true }])
+  assert.equal(report.checks.some((item) => item.id === 'plugin-command-not-model-invoked'), false)
+})
+
+test('a host that lists no plugin command, or lists a command twice, fails plugin-command-listed and opens an issue; a host that drops the typed input fails plugin-command-input and skraft-command-listed', async (t) => {
+  const none = await probe(t, { commands: 'none' })
+  assert.deepEqual([none.verdicts['plugin-command-listed'], none.verdicts['plugin-command-input'], none.verdicts['skraft-command-listed']], ['fail', 'inconclusive', 'fail'])
+  assert.deepEqual(planIssueActions(none.report, { openTitles: new Set() }).filter((action) => action.kind === 'open').map((action) => action.check), ['plugin-command-listed', 'skraft-command-listed'])
+
+  const twice = await probe(t, { commands: 'duplicate' })
+  assert.equal(twice.verdicts['plugin-command-listed'], 'fail')
+  assert.deepEqual(twice.report.checks.find((item) => item.id === 'plugin-command-listed').observed.duplicates, ['skraft-probe-cmd'])
+  assert.equal(twice.verdicts['skraft-command-listed'], 'fail')
+
+  const dropped = await probe(t, { commandInput: 'absent' })
+  assert.deepEqual([dropped.verdicts['plugin-command-input'], dropped.report.checks.find((item) => item.id === 'plugin-command-input').observed.placement], ['fail', 'absent'])
+  assert.equal(dropped.verdicts['skraft-command-listed'], 'fail')
+  assert.equal(dropped.report.checks.find((item) => item.id === 'skraft-command-listed').observed.typed.placement, 'absent')
 })

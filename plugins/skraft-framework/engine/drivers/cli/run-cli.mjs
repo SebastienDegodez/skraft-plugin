@@ -12,11 +12,12 @@ import { answersTable, costText, reportTable } from '../../domain/reporting/run-
 import { decideUsage } from '../../domain/decisions/questions.mjs'
 import { createAgentLoop } from './agent-loop.mjs'
 import { reviewThroughLoop } from './review-loop.mjs'
+import { installShims } from './install.mjs'
 
 /**
  * @typedef {{ out: (line: string) => void, err: (line: string) => void }} Console
  * @typedef {Parameters<typeof createInit>[0] & Parameters<typeof createRunGate>[0] & Parameters<typeof createDoctor>[0] & Parameters<typeof createConfigureComponents>[0] & Parameters<typeof createWorkflowCommands>[0] & import('./agent-loop.mjs').LoopAdapters & Parameters<typeof createPublish>[0] & Parameters<typeof createAdoptJournal>[0]} CliAdapters
- * @typedef {{ pluginVersion: () => string, workingCopyName: () => string, adapters: (agentHost?: 'copilot') => CliAdapters, command: () => string, confirm: (question: string) => Promise<boolean | null> }} CliServices
+ * @typedef {{ pluginVersion: () => string, workingCopyName: () => string, adapters: (agentHost?: 'copilot') => CliAdapters, command: () => string, confirm: (question: string) => Promise<boolean | null>, installHost: () => import('./install.mjs').InstallHost }} CliServices
  *   adapters: for the host whose agents the run starts, none to check for both; command: how an
  *   agent runs this command line, `node "<absolute path of skraft.mjs>"`; confirm: the person's
  *   yes to a question asked at the terminal, null when no one can type there.
@@ -27,6 +28,7 @@ import { reviewThroughLoop } from './review-loop.mjs'
 
 export const USAGE = [
   'usage: skraft --version',
+  '       skraft install [--no-path]                                        make the skraft command available from any terminal (--no-path: leave the PATH alone)',
   '       skraft init [--add <folder>]...                                   detect the components into skraft-config.json',
   '       skraft init <slug> [--issue <number>] [--title <text>] [--base <ref>] [--from-artifacts]   start or resume a pipeline',
   '       skraft status [--json]',
@@ -255,6 +257,13 @@ const decisionOf = (args) => {
   return { key, given, options }
 }
 
+/** `install [--no-path]`. @param {string[]} args @param {CliServices} services @param {Console} console */
+const install = (args, services, console) => {
+  const options = optionsOf(args, { flags: ['--no-path'] })
+  if (options === undefined) return usage(console)
+  return installShims(services.installHost(), { path: options['--no-path'] !== true }, console)
+}
+
 /** `publish`: no argument. @param {string[]} args @param {CliServices} services @param {Console} console */
 const publish = async (args, services, console) => {
   if (args.length > 0) return usage(console)
@@ -442,6 +451,7 @@ const unknown = (_args, _services, console) => usage(console)
 /** What each first argument runs; any other is a usage error. @type {Map<string | undefined, Command>} */
 const COMMANDS = new Map([
   ['--version', version],
+  ['install', install],
   ['init', initOrConfigure],
   ['status', status],
   ['report', report],

@@ -12,7 +12,7 @@ import { mkdir, mkdtemp, realpath, rm, writeFile } from 'node:fs/promises'
 import { homedir, platform, release, tmpdir } from 'node:os'
 import { basename, dirname, isAbsolute, join, resolve } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
-import { GITHUB_MCP_SERVER, PROBE_CANVAS, PROBE_CANVAS_QUERY, PROBE_MCP, PROBE_PRELOAD, QUESTION_KEY, QUESTION_SLUG, questionEvents, writeCanvasPlugin, writeIsolationPlugins, writeProbeMcpServers, writeProbePlugins, writeQuestionRepo } from './fixtures.mjs'
+import { GITHUB_MCP_SERVER, PROBE_CANVAS, PROBE_CANVAS_QUERY, PROBE_COMMAND, PROBE_MCP, PROBE_PRELOAD, QUESTION_KEY, QUESTION_SLUG, questionEvents, writeCanvasPlugin, writeCommandPlugin, writeIsolationPlugins, writeProbeMcpServers, writeProbePlugins, writeQuestionRepo } from './fixtures.mjs'
 import { DEFAULT_REPO, reportToGitHub } from './issues.mjs'
 import { mergePatch } from '../../plugins/skraft-framework/engine/domain/config/merge-patch.mjs'
 
@@ -1050,6 +1050,119 @@ const nativeToolNames = async (sdk, client, dirs) => {
 const TOOL_NAMES_EXPECTED = "Aucun outil natif d'une session Copilot sans plugin ne porte le nom d'un outil de l'extension `skraft-pipeline`."
 
 // ---------------------------------------------------------------------------------------------
+// Checks: plugin commands (com.github.copilot/commands/*.md)
+
+const lastSegment = (name) => name.split(':').pop()
+const listCommands = async (session) => (await withTimeout(session.rpc.commands.list({ includeSkills: true }), T.rpc, 'commands.list'))?.commands ?? []
+const commandSeen = ({ name, aliases, kind, input }) => ({ name, aliases: aliases ?? [], kind, hint: input?.hint ?? '' })
+const duplicatesIn = (names) => [...new Set(names.filter((name, index) => names.indexOf(name) !== index))]
+
+const commandSession = ({ sdk, client, dirs }, pluginDirectories) => client.createSession({
+  ...dirs.session, workingDirectory: dirs.repoA, pluginDirectories, requestExtensions: false, onPermissionRequest: permissionHandler(sdk),
+})
+
+const COMMAND_LISTED_EXPECTED = "Les commandes d'un plugin placées sous `com.github.copilot/commands/` sont listées par `session.rpc.commands.list`, chacune une fois ; la sonde rapporte leur nom exact (préfixe du plugin ou non), leurs alias, leur genre et leur indice d'argument."
+const COMMAND_INPUT_EXPECTED = "`session.rpc.commands.invoke` d'une commande de plugin avec un texte tapé rend un `agent-prompt` ; la sonde mesure si le texte est ajouté, substitué à `$ARGUMENTS` ou absent du prompt."
+const SKRAFT_COMMAND_EXPECTED = "Une session avec les vrais plugins skraft-framework et skraft-backlog liste la commande skraft et `skraft-refine`, chacune une fois, sans qu'un nom en masque un autre, et le texte tapé après `/skraft` figure dans son prompt ; la sonde rapporte les noms exposés et les entrées de `session.rpc.skills.list`."
+
+const commandChecks = async (context) => {
+  const probe = await probeCommandChecks(context)
+  const skraft = await skraftCommandCheck(context)
+  return [...probe, skraft]
+}
+
+const commandFailure = (error) => [
+  check({ id: 'plugin-command-listed', ...COMMAND_REQUIREMENT, observed: { error: messageOf(error) } }),
+  check({ id: 'plugin-command-input', expected: COMMAND_INPUT_EXPECTED, observed: { error: messageOf(error) } }),
+]
+
+const probeCommandChecks = async (context) => {
+  let session
+  try { session = await commandSession(context, [context.dirs.plugins.command]) } catch (error) { return commandFailure(error) }
+  try {
+    const listed = await listCommands(session)
+    const relevant = listed.filter(({ name }) => name === PROBE_COMMAND.plugin || name === PROBE_COMMAND.other || name.startsWith(`${PROBE_COMMAND.plugin}:`))
+    const own = relevant.find(({ name }) => lastSegment(name) === PROBE_COMMAND.plugin)
+    const duplicates = duplicatesIn(listed.map(({ name }) => name))
+    const found = [PROBE_COMMAND.plugin, PROBE_COMMAND.other].every((name) => relevant.some((item) => lastSegment(item.name) === name))
+    return [
+      check({ id: 'plugin-command-listed', ...COMMAND_REQUIREMENT, verdict: found && duplicates.length === 0 ? 'pass' : 'fail', observed: { commands: relevant.map(commandSeen), duplicates } }),
+      await commandInputCheck(session, own?.name ?? null),
+    ]
+  } catch (error) {
+    return commandFailure(error)
+  } finally {
+    await session.disconnect?.().catch(() => undefined)
+  }
+}
+const COMMAND_REQUIREMENT = Object.freeze({
+  expected: COMMAND_LISTED_EXPECTED,
+  title: "V2 — Copilot ne liste pas les commandes d'un plugin sous com.github.copilot/commands/", labels: ['bug', 'gain:reliability'],
+  body: "La sonde ne retrouve pas, ou retrouve en double, les commandes d'un plugin Agent Plugins placées sous `com.github.copilot/commands/` dans `session.rpc.commands.list` : `/skraft` ne serait pas proposé sous Copilot.",
+})
+
+const placementOf = (prompt, input) => {
+  if (!prompt.includes(input)) return 'absent'
+  return prompt.includes(`Arguments: ${input}`) ? 'substituted' : 'appended'
+}
+
+/** What the host's prompt for a command does with the text typed after it: `{ name, kind, placement, placeholderLeft }`. */
+const typedInput = async (session, name) => {
+  const { input } = PROBE_COMMAND
+  const invoked = await withTimeout(session.rpc.commands.invoke({ name, input }), T.rpc, 'commands.invoke')
+  if (invoked?.kind !== 'agent-prompt') return { name, kind: invoked?.kind ?? null }
+  const prompt = String(invoked.prompt)
+  return { name, kind: invoked.kind, placement: placementOf(prompt, input), placeholderLeft: prompt.includes('$ARGUMENTS') }
+}
+
+const COMMAND_INPUT_ISSUE = Object.freeze({
+  title: "V2 — Copilot n'ajoute pas le texte tapé après une commande de plugin au prompt", labels: ['bug', 'gain:reliability'],
+  body: "Le prompt rendu par `session.rpc.commands.invoke` pour une commande de plugin ne contient pas le texte tapé après la commande : `/skraft <argument>` perdrait son argument sous Copilot.",
+})
+const inputVerdict = (seen) => {
+  if (seen.kind !== 'agent-prompt') return 'inconclusive'
+  return seen.placement === 'absent' ? 'fail' : 'pass'
+}
+
+const commandInputCheck = async (session, name) => {
+  if (name === null) return check({ id: 'plugin-command-input', expected: COMMAND_INPUT_EXPECTED, observed: { reason: 'the probe command is not listed' } })
+  const seen = await typedInput(session, name)
+  return check({ id: 'plugin-command-input', expected: COMMAND_INPUT_EXPECTED, verdict: inputVerdict(seen), observed: { ...seen, input: PROBE_COMMAND.input }, ...COMMAND_INPUT_ISSUE })
+}
+
+const SKRAFT_COMMANDS = Object.freeze(['skraft', 'skraft-refine'])
+const SKRAFT_COMMAND_REQUIREMENT = Object.freeze({
+  expected: SKRAFT_COMMAND_EXPECTED,
+  title: 'V2 — la commande /skraft ou /skraft-refine est absente ou masquée sous Copilot', labels: ['bug', 'gain:reliability'],
+  body: "Une session Copilot avec les plugins skraft-framework et skraft-backlog ne liste pas `skraft` et `skraft-refine` chacune exactement une fois : une commande est absente ou masquée par une autre de même nom.",
+})
+const skillSeen = ({ name, pluginName, argumentHint, commandName }) => ({ name, pluginName: pluginName ?? null, argumentHint: Boolean(argumentHint), ...(commandName !== undefined && { commandName }) })
+
+const skraftTyped = async (session, listed) => {
+  const own = listed.find(({ name }) => lastSegment(name) === 'skraft')
+  return own === undefined ? null : typedInput(session, own.name)
+}
+
+const skraftCommandCheck = async (context) => {
+  const id = 'skraft-command-listed'
+  let session
+  try { session = await commandSession(context, [join(REPO_ROOT, 'plugins', 'skraft-framework'), join(REPO_ROOT, 'plugins', 'skraft-backlog')]) } catch (error) {
+    return check({ id, ...SKRAFT_COMMAND_REQUIREMENT, observed: { error: messageOf(error) } })
+  }
+  try {
+    const listed = (await listCommands(session)).filter(({ name }) => SKRAFT_COMMANDS.includes(lastSegment(name)))
+    const skills = ((await withTimeout(session.rpc.skills.list(), T.rpc, 'skills.list'))?.skills ?? []).filter(({ name }) => SKRAFT_COMMANDS.includes(name))
+    const typed = await skraftTyped(session, listed)
+    const once = SKRAFT_COMMANDS.every((name) => listed.filter((item) => lastSegment(item.name) === name).length === 1)
+    return check({ id, ...SKRAFT_COMMAND_REQUIREMENT, verdict: once && typed?.placement !== 'absent' ? 'pass' : 'fail', observed: { names: listed.map(({ name }) => name), typed, skills: skills.map(skillSeen) } })
+  } catch (error) {
+    return check({ id, ...SKRAFT_COMMAND_REQUIREMENT, observed: { error: messageOf(error) } })
+  } finally {
+    await session.disconnect?.().catch(() => undefined)
+  }
+}
+
+// ---------------------------------------------------------------------------------------------
 // Run, report
 
 /**
@@ -1065,7 +1178,7 @@ export const runProbe = async ({ sdk, sdkPath, environment, workRoot, home = hom
   dirs.session = sdkPath ? { extensionSdkPath: sdkPath } : {}
   await mkdir(dirs.repoA, { recursive: true })
   await mkdir(dirs.repoB, { recursive: true })
-  dirs.plugins = await writeProbePlugins(root)
+  dirs.plugins = { ...await writeProbePlugins(root), command: await writeCommandPlugin(root) }
   const client = new sdk.CopilotClient({ logLevel: 'error' })
   await client.start()
   const checks = []
@@ -1081,6 +1194,8 @@ export const runProbe = async ({ sdk, sdkPath, environment, workRoot, home = hom
     checks.push(...await mcpChecks({ sdk, client, dirs, layout: probe.layout }))
     log('skraft-framework plugin…')
     checks.push(...await skraftChecks({ sdk, client, dirs, models }))
+    log('plugin commands…')
+    checks.push(...await commandChecks({ sdk, client, dirs, agentCalls }))
     log('native tools…')
     checks.push(await nativeToolNames(sdk, client, dirs))
   } finally {

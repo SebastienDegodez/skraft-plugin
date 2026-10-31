@@ -360,6 +360,27 @@ export const writeCanvasPlugin = async (root, layout) => {
   return dir
 }
 
+/** The command probe: a plugin and its two commands, one named like the plugin and one not, and the text typed after the first. */
+export const PROBE_COMMAND = Object.freeze({ plugin: 'skraft-probe-cmd', other: 'other', hint: 'probe hint', input: 'checkout #42 Pay by card --base develop' })
+
+const commandSource = (description, hint) => [
+  '---', `description: ${description}`, ...(hint ? [`argument-hint: ${hint}`] : []), '---', '',
+  'skraft host probe command (generated, throwaway). Arguments: $ARGUMENTS', '',
+].join('\n')
+
+/** The command plugin: an Agent Plugins manifest and two commands under com.github.copilot/commands/, no extension. */
+export const writeCommandPlugin = async (root) => {
+  const dir = join(root, 'probe-command')
+  await write(join(dir, 'plugin.json'), json({
+    $schema: 'https://agent-plugins.org/schemas/1.0.0/plugin.schema.json',
+    name: PROBE_COMMAND.plugin, version: '0.0.0', description: 'skraft host probe fixture',
+    extensions: { 'com.github.copilot': {} },
+  }))
+  await write(join(dir, 'com.github.copilot', 'commands', `${PROBE_COMMAND.plugin}.md`), commandSource('skraft host probe command named like its plugin', PROBE_COMMAND.hint))
+  await write(join(dir, 'com.github.copilot', 'commands', `${PROBE_COMMAND.other}.md`), commandSource('skraft host probe command named otherwise'))
+  return dir
+}
+
 export const QUESTION_SLUG = 'probe-question'
 export const QUESTION_KEY = 'adr-0'
 

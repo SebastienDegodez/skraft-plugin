@@ -1,12 +1,12 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { createAgentAnswers, createSpawnAgentRunner } from '../../../../plugins/skraft-framework/engine/drivers/claude-mod/agent-runner.mjs'
+import { createAgentAnswers, createAgentEfforts, createSpawnAgentRunner } from '../../../../plugins/skraft-framework/engine/drivers/claude-mod/agent-runner.mjs'
 
 const DISPATCH = { agent: 'solution-researcher', source: 'plugin', label: 'skraft checkout · research · attempt 1', prompt: '## Skraft dispatch' }
 const REPOSITORY_DISPATCH = { agent: 'acme-security-reviewer', source: 'repository', label: 'skraft checkout · security · attempt 1', prompt: '## Skraft dispatch' }
 
 /** A scripted `$.agent.spawn` and `$.session.usage` cost, around one answers registry. */
-const runnerWith = ({ spawn, costs = [] }) => {
+const runnerWith = ({ spawn, costs = [], efforts }) => {
   const answers = createAgentAnswers()
   const spawned = []
   const queue = [...costs]
@@ -18,6 +18,7 @@ const runnerWith = ({ spawn, costs = [] }) => {
     answers,
     pluginName: 'skraft',
     sessionCostUsd: async () => (queue.length > 0 ? queue.shift() : null),
+    efforts,
   })
   return { runner, answers, spawned }
 }
@@ -54,7 +55,7 @@ test('a dispatch spawns the subagent on the first Claude Code model skraft-confi
   assert.deepEqual(answers.map(({ model }) => model), ['claude-sonnet-test', 'opus', null, null])
 })
 
-test('a Claude Code effort is not passed to $.agent.spawn, which takes none as of Claude Code 2.1.305: the agent file\'s effort decides', async () => {
+test('a Claude Code effort is not passed to $.agent.spawn, which takes none (Claude Code 2.1.291 and 2.1.314 ignore the field): the turn.step hook sets it', async () => {
   const { runner, spawned } = runnerWith({
     spawn: (args, answers) => {
       answers.complete({ agentId: 'e1', answer: 'done', reason: 'answer' })
@@ -65,6 +66,21 @@ test('a Claude Code effort is not passed to $.agent.spawn, which takes none as o
   await runner.run({ ...DISPATCH, model: 'frontier', models: { 'claude-code': ['opus'] }, effort: { 'claude-code': 'max', copilot: 'xhigh' } })
 
   assert.deepEqual(spawned, [{ prompt: '## Skraft dispatch', subagentType: 'skraft:solution-researcher', description: 'skraft checkout · research · attempt 1', model: 'opus' }])
+})
+
+test('a Claude Code effort is kept for the subagent\'s model requests from its start to its answer, by agentId, and for no other agent', async () => {
+  const efforts = createAgentEfforts()
+  const { runner, answers } = runnerWith({ efforts, spawn: (args) => ({ agentId: args.description === 'high one' ? 'h1' : args.description === 'plain one' ? 'p1' : 'm1' }) })
+  const dispatch = (label, effort) => ({ ...DISPATCH, label, ...(effort ? { effort } : {}) })
+
+  const pending = runner.runMany([dispatch('high one', { 'claude-code': 'high', copilot: 'low' }), dispatch('plain one', { copilot: 'xhigh' }), dispatch('max one', { 'claude-code': 'max' })])
+  await new Promise((resolve) => setImmediate(resolve))
+  const during = ['h1', 'p1', 'm1', 'other', undefined].map((agentId) => efforts.of(agentId))
+  for (const agentId of ['h1', 'p1', 'm1']) answers.complete({ agentId, answer: 'done', reason: 'answer' })
+  await pending
+
+  assert.deepEqual(during, ['high', undefined, 'max', undefined, undefined])
+  assert.deepEqual(['h1', 'p1', 'm1'].map((agentId) => efforts.of(agentId)), [undefined, undefined, undefined])
 })
 
 test('the answer names the model Claude Code says it spawned, else the model asked, else none', async () => {
