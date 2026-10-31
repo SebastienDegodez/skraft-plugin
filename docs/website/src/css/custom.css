@@ -1,0 +1,85 @@
+/*
+ * skraft handbook: DRAFT theme tokens (WP0). A calm blue on neutral surfaces; WP3 finishes the theme.
+ * Contrast (WCAG AA, computed): text 15.80 / 14.90, secondary 6.11 / 6.04, primary on background 6.33 / 7.38,
+ * primary on surface 5.94 / 6.68, text on primary 6.33 / 7.38. The terminal card stays dark in both modes.
+ * The 7 primary shades come from the Infima default lightness offsets applied to the primary colour;
+ * WP3 replaces them with the output of the official generator.
+ */
+:root {
+  --ifm-color-primary: #2b59c3;
+  --ifm-color-primary-dark: #264fac;
+  --ifm-color-primary-darker: #2349a1;
+  --ifm-color-primary-darkest: #1c397d;
+  --ifm-color-primary-light: #3c6ad4;
+  --ifm-color-primary-lighter: #5980da;
+  --ifm-color-primary-lightest: #7e9ce2;
+  --skraft-on-primary: #ffffff;
+
+  --ifm-background-color: #ffffff;
+  --ifm-background-surface-color: #f6f8fa;
+  --ifm-font-color-base: #1f2328;
+  --ifm-color-emphasis-700: #59636e;
+
+  --ifm-font-size-base: 106.25%;
+  --ifm-line-height-base: 1.7;
+  --ifm-heading-font-weight: 650;
+  --ifm-code-font-size: 90%;
+  --ifm-font-family-monospace: ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace;
+  --docusaurus-highlighted-code-line-bg: rgb(43 89 195 / 10%);
+}
+
+[data-theme='dark'] {
+  --ifm-color-primary: #7aa7ff;
+  --ifm-color-primary-dark: #669aff;
+  --ifm-color-primary-darker: #5b93ff;
+  --ifm-color-primary-darkest: #3d7fff;
+  --ifm-color-primary-light: #8eb4ff;
+  --ifm-color-primary-lighter: #9ebfff;
+  --ifm-color-primary-lightest: #adc9ff;
+  --skraft-on-primary: #16191f;
+
+  --ifm-background-color: #16191f;
+  --ifm-background-surface-color: #1e222a;
+  --ifm-font-color-base: #e6edf3;
+  --ifm-color-emphasis-700: #9198a1;
+  --docusaurus-highlighted-code-line-bg: rgb(122 167 255 / 16%);
+}
+
+/* Prose measure: text keeps a readable line, tables, diagrams and terminals keep the full column. */
+.theme-doc-markdown :is(p, li, blockquote) {
+  max-width: 72ch;
+}
+
+.theme-doc-markdown h2 {
+  font-size: 1.5rem;
+  margin-top: 2.5rem;
+}
+
+/* Links are underlined in prose so they do not rely on colour alone. */
+.theme-doc-markdown :is(p, li, td) a:not(.badge) {
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
+}
+
+/* Lead paragraph: the first paragraph after the title. */
+.theme-doc-markdown > header + p,
+.theme-doc-markdown > h1 + p {
+  font-size: 1.15rem;
+  color: var(--ifm-color-emphasis-700);
+}
+
+/* Images in both colour modes: GitHub-style fragments on plain Markdown images. */
+[data-theme='dark'] img[src$='#gh-light-mode-only'],
+[data-theme='light'] img[src$='#gh-dark-mode-only'] {
+  display: none;
+}
+
+/* Single-theme captures read in both modes inside a thin frame. */
+.theme-doc-markdown img {
+  border: 1px solid var(--ifm-color-emphasis-200);
+  border-radius: 8px;
+}
+
+.citation-entry {
+  scroll-margin-top: calc(var(--ifm-navbar-height) + 1rem);
+}
