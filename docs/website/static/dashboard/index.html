@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <script>
+    // Every address on this page is relative to the dashboard folder, and the page answers at
+    // `…/dashboard/` (GitHub Pages) as well as `…/dashboard` (docusaurus serve, trailingSlash: false).
+    (function () {
+      var path = location.pathname.replace(/index\.html$/, '')
+      var base = document.createElement('base')
+      base.href = /\/$/.test(path) ? path : path + '/'
+      document.head.appendChild(base)
+    })()
+  </script>
+  <meta name="description" content="Factual catalogue of SKRAFT agents, skills, workers, lenses, roots and orchestration chains, with their evaluation evidence." data-i18n-attr="content:metaDescription" />
+  <title data-i18n="title">Agentic catalogue and quality — SKRAFT</title>
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="icon" type="image/png" href="../img/favicon.png" />
+</head>
+<body class="dashboard-page">
+  <header class="topbar">
+    <nav class="nav" aria-label="Site" data-i18n-attr="aria-label:siteNav">
+      <a class="brand" href="../">skraft</a>
+      <a class="handbook-link" href="../" data-i18n="handbook">Handbook</a>
+      <span class="spacer"></span>
+      <a class="lang-link" id="lang-link" href="../fr/dashboard/" hreflang="fr" lang="fr" data-i18n="otherLanguage">Français</a>
+    </nav>
+  </header>
+
+  <header class="hero">
+    <div class="hero-content">
+      <p class="eyebrow" data-i18n="eyebrow">Plugin quality dashboard</p>
+      <h1 data-i18n-html="headline">Skills that make delivery <em>disciplined.</em></h1>
+      <p class="lead" data-i18n="lead">Everything the SKRAFT plugin ships — skills, agents, workers, review lenses — with its context profile, its evaluation coverage, and the evidence from controlled skill-versus-baseline runs.</p>
+    </div>
+  </header>
+
+  <main class="dashboard-main">
+    <section id="summary" class="summary" aria-label="Plugin summary" data-i18n-attr="aria-label:summaryLabel"></section>
+
+    <section class="callout" id="replay-callout" hidden>
+      <p><strong data-i18n="replayTitle">Session replay.</strong> <span data-i18n="replayText">Compare recorded skilled and baseline trajectories side by side.</span></p>
+      <a class="button primary" id="replay-link" href="#" data-i18n="replayOpen">Open session replay</a>
+    </section>
+
+    <nav class="tabs" aria-label="Dashboard views" data-i18n-attr="aria-label:viewsLabel">
+      <button class="tab active" id="tab-overview" type="button" data-panel="overview" aria-controls="panel-overview" aria-selected="true" data-i18n="tabCatalogue">Catalogue</button>
+      <button class="tab" id="tab-quality" type="button" data-panel="quality" aria-controls="panel-quality" aria-selected="false" data-i18n="tabQuality">Quality</button>
+      <button class="tab" id="tab-efficiency" type="button" data-panel="efficiency" aria-controls="panel-efficiency" aria-selected="false" data-i18n="tabEfficiency">Efficiency</button>
+      <button class="tab" id="tab-models" type="button" data-panel="models" aria-controls="panel-models" aria-selected="false" data-i18n="tabModels">Models</button>
+    </nav>
+
+    <section class="dashboard-filters" aria-label="Dashboard filters" data-i18n-attr="aria-label:filtersLabel">
+      <label class="search"><span data-i18n="searchLabel">Search every view</span><input id="search" type="search" placeholder="Skill, agent, model, description…" data-i18n-attr="placeholder:searchPlaceholder" autocomplete="off"></label>
+      <label class="select-filter"><span data-i18n="modelLabel">Agent model</span><select id="model-filter"><option value="" data-i18n="allModels">All evaluated models</option></select></label>
+      <button class="button filter-clear" id="clear-filters" type="button" data-i18n="clearFilters">Clear filters</button>
+      <p data-i18n="filtersNote">These filters apply to catalogue, quality, efficiency and model comparison.</p>
+    </section>
+
+    <section class="panel active" id="panel-overview" aria-labelledby="tab-overview">
+      <section id="chains" class="view-heading">
+        <p class="eyebrow" data-i18n="usageEyebrow">Usage order</p>
+        <h2 data-i18n="usageTitle">Product preflight, then engineering</h2>
+        <p data-i18n="usageText">Optional standalone product workflows precede the single engineering entrypoint. Brownfield and other roots stay independent.</p>
+      </section>
+      <section id="topology" class="topology" aria-live="polite"></section>
+
+      <section class="catalog-heading">
+        <div><p class="eyebrow" data-i18n="catalogueEyebrow">Source-derived catalogue</p><h2 data-i18n="catalogueTitle">Agents, workers, lenses and skills</h2></div>
+      </section>
+      <div id="status" class="status" role="status" data-i18n="loading">Loading catalogue…</div>
+      <section id="catalog" class="catalog" aria-live="polite"></section>
+    </section>
+
+    <section class="panel" id="panel-quality" aria-labelledby="tab-quality">
+      <div class="view-heading"><p class="eyebrow" data-i18n="qualityEyebrow">Controlled comparison</p><h2 data-i18n="qualityTitle">Quality and activation</h2></div>
+      <section class="indicator-guide" aria-labelledby="quality-guide-title">
+        <h3 id="quality-guide-title" data-i18n="qualityGuideTitle">How to read quality</h3>
+        <p data-i18n="qualityGuide">Each model is compared with and without the skill. Models appear together only when the same judge scored them; “highest score” applies to this skill and judge, not to every task.</p>
+        <dl class="indicator-definitions">
+          <div><dt data-i18n="baselineTerm">Baseline</dt><dd data-i18n="baselineDef">Score without the skill.</dd></div>
+          <div><dt data-i18n="skilledTerm">Skilled</dt><dd data-i18n="skilledDef">Score from the same model with the skill available.</dd></div>
+          <div><dt data-i18n="liftTerm">Lift</dt><dd data-i18n="liftDef">Skilled minus baseline. Positive means the skill helped on this run set.</dd></div>
+          <div><dt data-i18n="activationTerm">Activation rate</dt><dd data-i18n="activationDef">How often the skill loaded when expected.</dd></div>
+          <div><dt data-i18n="unexpectedTerm">Unexpected</dt><dd data-i18n="unexpectedDef">Loads on prompts where the skill should have stayed inactive. Zero is the target.</dd></div>
+          <div><dt data-i18n="verdictTerm">Verdict</dt><dd data-i18n="verdictDef">Statistical conclusion across paired trials, not a single success or failure.</dd></div>
+        </dl>
+      </section>
+      <section id="quality-grid" class="catalog" aria-live="polite"></section>
+    </section>
+
+    <section class="panel" id="panel-efficiency" aria-labelledby="tab-efficiency">
+      <div class="view-heading"><p class="eyebrow" data-i18n="efficiencyEyebrow">Runtime profile</p><h2 data-i18n="efficiencyTitle">Efficiency</h2></div>
+      <section class="indicator-guide" aria-labelledby="efficiency-guide-title">
+        <h3 id="efficiency-guide-title" data-i18n="efficiencyGuideTitle">How to read efficiency</h3>
+        <p data-i18n="efficiencyGuide">Compare each model with its own baseline. Lower resource use is useful only when quality remains acceptable; efficiency alone does not identify the best model.</p>
+        <dl class="indicator-definitions">
+          <div><dt data-i18n="durationTerm">Duration</dt><dd data-i18n="durationDef">Median elapsed time per trial.</dd></div>
+          <div><dt data-i18n="tokensTerm">Tokens</dt><dd data-i18n="tokensDef">Median model input and output volume per trial.</dd></div>
+          <div><dt data-i18n="turnsTerm">Turns</dt><dd data-i18n="turnsDef">Median number of agent reasoning cycles.</dd></div>
+          <div><dt data-i18n="toolCallsTerm">Tool calls</dt><dd data-i18n="toolCallsDef">Median number of external actions taken by the agent.</dd></div>
+          <div><dt data-i18n="deltaTerm">Delta</dt><dd data-i18n="deltaDef">Change from baseline. A negative percentage means the skilled run used less.</dd></div>
+        </dl>
+      </section>
+      <section id="efficiency-grid" class="catalog" aria-live="polite"></section>
+    </section>
+
+    <section class="panel" id="panel-models" aria-labelledby="tab-models">
+      <div class="view-heading"><p class="eyebrow" data-i18n="modelsEyebrow">One arm per agent model</p><h2 data-i18n="modelsTitle">Model comparison</h2></div>
+      <section class="indicator-guide" aria-labelledby="models-guide-title">
+        <h3 id="models-guide-title" data-i18n="modelsGuideTitle">How to compare models</h3>
+        <p data-i18n="modelsGuide">One row is one agent model. Compare rows only inside the same table: they used the same skill and were scored by the same judge. “Highest score” is local evidence, never a universal model ranking.</p>
+        <dl class="indicator-definitions">
+          <div><dt data-i18n="agentModelTerm">Agent model</dt><dd data-i18n="agentModelDef">Model that performed the task.</dd></div>
+          <div><dt data-i18n="judgeTerm">Judge</dt><dd data-i18n="judgeDef">Model that scored the outputs against the rubric.</dd></div>
+          <div><dt data-i18n="highestTerm">Highest score</dt><dd data-i18n="highestDef">Largest skilled score in this table; inspect lift and efficiency before deciding.</dd></div>
+        </dl>
+      </section>
+      <section id="model-grid" class="catalog" aria-live="polite"></section>
+    </section>
+  </main>
+
+  <footer class="dashboard-footer"><p data-i18n="footer">Generated from repository contracts and maintainer-approved Vally evaluations.</p></footer>
+  <script type="module" src="app.js"></script>
+</body>
+</html>
