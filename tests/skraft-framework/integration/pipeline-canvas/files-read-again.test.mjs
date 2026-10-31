@@ -154,3 +154,28 @@ test('a read that threw is not kept while nothing a person edits changed: the ne
   const healed = await within(t, 10_000, stream.next((content) => content.configuration.status === 'ok'))
   assert.notEqual(healed, 'still waiting')
 })
+
+test('a Workflow tab whose read threw is not kept while nothing a person edits changed: the next poll reads again and heals', { ...BOUNDED, skip: NO_CHMOD }, async (t) => {
+  const { cwd, cleanup } = await workingCopy()
+  t.after(cleanup)
+  git(cwd, 'init', '-q', '-b', 'main')
+  git(cwd, 'commit', '-q', '--allow-empty', '-m', 'start')
+  assert.equal((await createInit(createNodeAdapters(copilotHost(cwd))).init({ slug: 'checkout' })).ok, true)
+  const events = join(cwd, '.copilot-tracking', 'skraft-plans', 'checkout', 'events.jsonl')
+  const { open } = pipelineCanvas(t, { directory: () => cwd, home: `${cwd}-home` })
+  const { url } = await open()
+  const token = await tokenOf(url)
+  const stream = contentStream(t, url, token)
+  assert.equal((await stream.next()).workflows.length > 0, true)
+
+  // The active run grows by events, not by edits: the digest tells its size and stays the same while the engine cannot read the journal.
+  chmodSync(events, 0o000)
+  t.after(() => { if (existsSync(events)) chmodSync(events, 0o644) })
+  const failed = await within(t, 10_000, contentStream(t, url, token).next())
+  assert.deepEqual(failed.workflows, [])
+
+  chmodSync(events, 0o644)
+
+  const healed = await within(t, 10_000, stream.next((content) => content.workflows.length > 0))
+  assert.notEqual(healed, 'still waiting')
+})
