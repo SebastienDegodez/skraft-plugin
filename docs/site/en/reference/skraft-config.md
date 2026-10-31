@@ -184,8 +184,11 @@ when it is connected, else through `az` (the Azure CLI with its `azure-devops` e
 only server skraft trusts is the one named `ado` (`@azure-devops/mcp`, as the
 `azure-boards-work-items` skill of the backlog plugin lists it); a server of any other name,
 `ado-remote-mcp` or `azure-devops` included, is never used. Its tools: `wit_work_item`
-(`get`, `list_comments`) and `wit_work_item_comment_write` (`add`, `update`). In Claude Code,
-allow `mcp__ado__wit_work_item` and `mcp__ado__wit_work_item_comment_write`.
+(`get`, `list_comments`), `wit_work_item_comment_write` (`add`, `update`), and, for the run details
+of a pull request, `repo_repository` (`get`), `repo_pull_request_thread` (`list`) and
+`repo_pull_request_thread_write` (`create`, `update`). In Claude Code, allow `mcp__ado__wit_work_item`,
+`mcp__ado__wit_work_item_comment_write`, `mcp__ado__repo_repository`,
+`mcp__ado__repo_pull_request_thread` and `mcp__ado__repo_pull_request_thread_write`.
 
 What a run reads is the same whichever way: the work item's title and page, then its
 description, then an `## Acceptance criteria` section from `Microsoft.VSTS.Common.AcceptanceCriteria`,
