@@ -30,7 +30,7 @@ changes. How skraft then makes each practice enforceable:
 2. **Describe the solution as observable behaviour**: what it changes in the pipeline, the
    artifacts or the code produced, and what it does not change.
 3. **Find the published reference** (book, article, talk) and add it to
-   `docs/site/_data/citations.yml` if it is not there.
+   `docs/website/data/citations.yml` if it is not there.
 4. **Write the pattern**: the `SKILL.md` under `plugins/<plugin>/skills/<skill>/`, or the agent
    descriptor in both agent trees, then `npm run plugin:sync` and `npm run plugin:check`.
 5. **Write its evaluation spec**:
@@ -46,9 +46,9 @@ A figure put forward without a source is rephrased qualitatively and suffixed `(
 
 ## Fix a handbook page
 
-1. Edit the page under `docs/site/fr/` **and** its twin under `docs/site/en/` (same English file
-   name).
-2. For a new page, declare it in `docs/site/_data/book.yml`, in FR and EN.
+1. Edit the page under `docs/website/docs/` **and** its French twin at the same path under
+   `docs/website/i18n/fr/docusaurus-plugin-content-docs/current/`.
+2. For a new page, declare it in `docs/website/book.yml` (its `doc` id, labels in FR and EN).
 3. Check the citations:
 
    ```console

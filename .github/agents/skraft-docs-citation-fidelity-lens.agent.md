@@ -18,7 +18,7 @@ are sourced and that reference pages follow the template. Your citation verdict 
 |------|-------------|----------|
 | CIT1 | Every citation resolves to `citations.yml` (author + year) | blocker |
 | CIT2 | Quotes are ≤ 25 words and formatted `> « … »` / `> — Author, *Title*, Year.` | high |
-| CIT3 | Reference pages carry the required `reference_template` blocks (title, intro callout) and no "why" section of their own | high |
+| CIT3 | Reference pages carry the required `reference_template` blocks (title, lead paragraph) and no "why" section of their own | high |
 | CIT4 | Craft vocabulary matches the source skill verbatim (no competing terminology) | blocker |
 
 ## What you do
@@ -26,13 +26,13 @@ are sourced and that reference pages follow the template. Your citation verdict 
 1. **Run the deterministic citation checker** and read its output:
 
    ```bash
-   node scripts/check-citations.mjs --citations docs/site/_data/citations.yml --pages "<the touched pages>"
+   node scripts/check-citations.mjs --citations docs/website/data/citations.yml --pages "<the touched pages>"
    ```
 
    Any "Unknown citation" → CIT1 (BLOCKER). Any "Quote exceeds 25 words" → CIT2.
 2. **Check the template blocks (CIT3).** For each reference page, confirm the
    `reference_template` required blocks exist: the `# Title` and the one-sentence
-   intro callout. A reference page needs no citation and no Pourquoi/Why section:
+   lead paragraph. A reference page needs no citation and no Pourquoi/Why section:
    the why belongs to the linked explanation page, and a reference page that
    argues it fails CIT3. A `## Sources` section is required only when the page
    cites.

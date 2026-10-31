@@ -3,15 +3,16 @@ version: 0.1.0
 description: >-
   Verifies that the SKRAFT handbook reconciler repairs documentation drift the way its boundaries
   say it must: detection is a deterministic tool call and never an assertion from recall, plugin
-  sources are read-only, a derived page lands in FR and EN with the same basename, and a
+  sources are read-only, a derived page lands in FR and EN at the same doc path, and a
   structural gap is fixed in the contract rather than papered over in prose.
   Migrated from the GENESIS content evals at evals/skraft-docs-orchestrator/content.yml
   (removed by 97705d8, "feat(evals): adopt vally evaluation pipeline"). The GENESIS
   with_skill/without_skill delta has no equivalent here — an agent suite is single-arm — so each
   fixture's `value_delta` became a grader on the behaviour it claimed. The 18 trigger evals have
   no vally equivalent at all and are preserved verbatim in ./triggers.yml.
-  Every fixture in this suite was verified by running the real scripts/scan-drift.mjs and
+  Every fixture in this suite was checked by running the real scripts/scan-drift.mjs and
   scripts/lint-nav.mjs against it, so the drift each stimulus starts from is a fact, not a claim.
+  Not verified under Vally since the move to docs/website (Vally paused).
   DISABLED: listed in eng/vally-adapter/skip-evals.txt. See ./README.md.
 type: capability
 defaults:
@@ -28,8 +29,8 @@ scoring:
   threshold: 0.9
 stimuli:
   # C-01-orphan-agent-gets-individual-page.
-  # Verified: scan-drift.mjs on this fixture reports exactly one item —
-  # missing-page / workers-mock-integration-worker (high, lang "both").
+  # scan-drift.mjs on this fixture reports missing-page / reference/workers/mock-integration-worker
+  # (high, lang "both"), plus 3 catalogue-topology blockers (see README.md).
   - name: An orphan source becomes an individually listed page, mirrored FR and EN
     prompt: |
       Reconcile the handbook with the plugin sources.
@@ -60,12 +61,18 @@ stimuli:
           dest: scripts/lib/book.mjs
         - src: ../../../eng/lib/yaml-parser.mjs
           dest: eng/lib/yaml-parser.mjs
-        - src: fixtures/orphan-worker/docs/site/_data/book.yml
-          dest: docs/site/_data/book.yml
-        - src: fixtures/orphan-worker/docs/site/fr/reference/workers/contract-testing-worker.md
-          dest: docs/site/fr/reference/workers/contract-testing-worker.md
-        - src: fixtures/orphan-worker/docs/site/en/reference/workers/contract-testing-worker.md
-          dest: docs/site/en/reference/workers/contract-testing-worker.md
+        - src: ../../../eng/lib/catalogue-topology.mjs
+          dest: eng/lib/catalogue-topology.mjs
+        - src: ../../../eng/lib/dynamic-workflows.mjs
+          dest: eng/lib/dynamic-workflows.mjs
+        - src: ../../../docs/website/src/book/sidebars-from-book.mjs
+          dest: docs/website/src/book/sidebars-from-book.mjs
+        - src: fixtures/orphan-worker/docs/website/book.yml
+          dest: docs/website/book.yml
+        - src: fixtures/orphan-worker/fr/reference/workers/contract-testing-worker.md
+          dest: docs/website/i18n/fr/docusaurus-plugin-content-docs/current/reference/workers/contract-testing-worker.md
+        - src: fixtures/orphan-worker/docs/website/docs/reference/workers/contract-testing-worker.md
+          dest: docs/website/docs/reference/workers/contract-testing-worker.md
         - src: fixtures/orphan-worker/plugins/skraft-framework/com.github.copilot/agents/contract-testing-worker.agent.md
           dest: plugins/skraft-framework/com.github.copilot/agents/contract-testing-worker.agent.md
         - src: fixtures/orphan-worker/plugins/skraft-framework/com.github.copilot/agents/mock-integration-worker.agent.md
@@ -82,32 +89,32 @@ stimuli:
       - type: file-exists
         name: The FR page for the orphan source exists
         config:
-          path: 'docs/site/fr/reference/workers/mock-integration-worker.md'
+          path: 'docs/website/i18n/fr/docusaurus-plugin-content-docs/current/reference/workers/mock-integration-worker.md'
       - type: file-exists
-        name: The EN mirror exists under the same basename
+        name: The EN mirror exists at the same doc path
         config:
-          path: 'docs/site/en/reference/workers/mock-integration-worker.md'
+          path: 'docs/website/docs/reference/workers/mock-integration-worker.md'
       - type: file-matches
-        name: The FR page declares its language and a position in the menu
+        name: The FR page declares its card description
         config:
-          path: 'docs/site/fr/reference/workers/mock-integration-worker.md'
-          pattern: '(?m)^lang:\s*fr\s*$'
+          path: 'docs/website/i18n/fr/docusaurus-plugin-content-docs/current/reference/workers/mock-integration-worker.md'
+          pattern: '(?m)^description:\s*\S'
       - type: file-matches
-        name: The EN page declares its language
+        name: The EN page declares its card description
         config:
-          path: 'docs/site/en/reference/workers/mock-integration-worker.md'
-          pattern: '(?m)^lang:\s*en\s*$'
+          path: 'docs/website/docs/reference/workers/mock-integration-worker.md'
+          pattern: '(?m)^description:\s*\S'
       # The page is DERIVED: it must reuse the worker's own vocabulary rather
       # than paraphrase it into something the source never says.
       - type: file-matches
         name: The page reuses the source's canonical vocabulary
         config:
-          path: 'docs/site/en/reference/workers/mock-integration-worker.md'
+          path: 'docs/website/docs/reference/workers/mock-integration-worker.md'
           pattern: '(?i)microcks'
       - type: file-matches
         name: The override the worker actually implements is named
         config:
-          path: 'docs/site/en/reference/workers/mock-integration-worker.md'
+          path: 'docs/website/docs/reference/workers/mock-integration-worker.md'
           pattern: '(?i)inprocess|in-process'
       - type: diff-not-contains
         name: The plugin source was read, never edited
@@ -124,9 +131,9 @@ stimuli:
             - '--root'
             - '.'
             - '--book'
-            - 'docs/site/_data/book.yml'
+            - 'docs/website/book.yml'
             - '--site-root'
-            - 'docs/site'
+            - 'docs/website'
           expected_exit_code: 0
           timeout: 2m
       - type: run-command
@@ -138,9 +145,9 @@ stimuli:
             - '--root'
             - '.'
             - '--book'
-            - 'docs/site/_data/book.yml'
+            - 'docs/website/book.yml'
             - '--site-root'
-            - 'docs/site'
+            - 'docs/website'
           expected_exit_code: 0
           timeout: 2m
       - type: output-not-matches
@@ -178,16 +185,22 @@ stimuli:
           dest: scripts/lib/book.mjs
         - src: ../../../eng/lib/yaml-parser.mjs
           dest: eng/lib/yaml-parser.mjs
-        - src: fixtures/diataxis-gap/docs/site/_data/book.yml
-          dest: docs/site/_data/book.yml
-        - src: fixtures/diataxis-gap/docs/site/fr/reference/workers/contract-testing-worker.md
-          dest: docs/site/fr/reference/workers/contract-testing-worker.md
-        - src: fixtures/diataxis-gap/docs/site/en/reference/workers/contract-testing-worker.md
-          dest: docs/site/en/reference/workers/contract-testing-worker.md
-        - src: fixtures/diataxis-gap/docs/site/fr/reference/workers/mock-integration-worker.md
-          dest: docs/site/fr/reference/workers/mock-integration-worker.md
-        - src: fixtures/diataxis-gap/docs/site/en/reference/workers/mock-integration-worker.md
-          dest: docs/site/en/reference/workers/mock-integration-worker.md
+        - src: ../../../eng/lib/catalogue-topology.mjs
+          dest: eng/lib/catalogue-topology.mjs
+        - src: ../../../eng/lib/dynamic-workflows.mjs
+          dest: eng/lib/dynamic-workflows.mjs
+        - src: ../../../docs/website/src/book/sidebars-from-book.mjs
+          dest: docs/website/src/book/sidebars-from-book.mjs
+        - src: fixtures/diataxis-gap/docs/website/book.yml
+          dest: docs/website/book.yml
+        - src: fixtures/diataxis-gap/fr/reference/workers/contract-testing-worker.md
+          dest: docs/website/i18n/fr/docusaurus-plugin-content-docs/current/reference/workers/contract-testing-worker.md
+        - src: fixtures/diataxis-gap/docs/website/docs/reference/workers/contract-testing-worker.md
+          dest: docs/website/docs/reference/workers/contract-testing-worker.md
+        - src: fixtures/diataxis-gap/fr/reference/workers/mock-integration-worker.md
+          dest: docs/website/i18n/fr/docusaurus-plugin-content-docs/current/reference/workers/mock-integration-worker.md
+        - src: fixtures/diataxis-gap/docs/website/docs/reference/workers/mock-integration-worker.md
+          dest: docs/website/docs/reference/workers/mock-integration-worker.md
         - src: fixtures/diataxis-gap/plugins/skraft-framework/com.github.copilot/agents/contract-testing-worker.agent.md
           dest: plugins/skraft-framework/com.github.copilot/agents/contract-testing-worker.agent.md
         - src: fixtures/diataxis-gap/plugins/skraft-framework/com.github.copilot/agents/mock-integration-worker.agent.md
@@ -210,27 +223,27 @@ stimuli:
             - '--root'
             - '.'
             - '--book'
-            - 'docs/site/_data/book.yml'
+            - 'docs/website/book.yml'
             - '--site-root'
-            - 'docs/site'
+            - 'docs/website'
           expected_exit_code: 0
           timeout: 2m
       - type: file-matches
         name: The mode was declared on the part, in the contract
         config:
-          path: 'docs/site/_data/book.yml'
+          path: 'docs/website/book.yml'
           pattern: '(?m)^\s*diataxis_mode:\s*reference\s*$'
       - type: file-not-matches
         name: No mode outside the four the contract allows was invented
         config:
-          path: 'docs/site/_data/book.yml'
+          path: 'docs/website/book.yml'
           pattern: '(?m)^\s*diataxis_mode:\s*(?!tutorial|how-to|explanation|reference)\S'
       # A structural fix is a one-line contract patch. Rewriting page bodies to
       # "fix" a contract field is the miss this stimulus exists to catch.
       - type: diff-not-contains
         name: No page prose was rewritten for a contract-level gap
         config:
-          pattern: '(?m)^diff --git a/docs/site/(?:fr|en)/'
+          pattern: '(?m)^diff --git a/docs/website/(?:docs|i18n)/'
       - type: diff-not-contains
         name: The plugin sources were read, never edited
         config:
@@ -241,8 +254,8 @@ stimuli:
           pattern: '(?i)(?:\[SKILL MISSING\]|skills? could not be loaded|skill directory not present)'
 
   # C-03-no-invented-metric-in-editorial.
-  # Verified: scan-drift.mjs on this fixture reports exactly one item —
-  # missing-page / for-executives, pageType editorial.
+  # scan-drift.mjs on this fixture reports missing-page / for-executives, pageType editorial,
+  # plus 3 catalogue-topology blockers (see README.md).
   - name: An editorial gap is written complete, with untraceable figures marked as estimates
     prompt: |
       Reconcile the handbook with the plugin sources.
@@ -271,16 +284,22 @@ stimuli:
           dest: scripts/lib/book.mjs
         - src: ../../../eng/lib/yaml-parser.mjs
           dest: eng/lib/yaml-parser.mjs
-        - src: fixtures/editorial-gap/docs/site/_data/book.yml
-          dest: docs/site/_data/book.yml
-        - src: fixtures/editorial-gap/docs/site/fr/reference/workers/contract-testing-worker.md
-          dest: docs/site/fr/reference/workers/contract-testing-worker.md
-        - src: fixtures/editorial-gap/docs/site/en/reference/workers/contract-testing-worker.md
-          dest: docs/site/en/reference/workers/contract-testing-worker.md
-        - src: fixtures/editorial-gap/docs/site/fr/reference/workers/mock-integration-worker.md
-          dest: docs/site/fr/reference/workers/mock-integration-worker.md
-        - src: fixtures/editorial-gap/docs/site/en/reference/workers/mock-integration-worker.md
-          dest: docs/site/en/reference/workers/mock-integration-worker.md
+        - src: ../../../eng/lib/catalogue-topology.mjs
+          dest: eng/lib/catalogue-topology.mjs
+        - src: ../../../eng/lib/dynamic-workflows.mjs
+          dest: eng/lib/dynamic-workflows.mjs
+        - src: ../../../docs/website/src/book/sidebars-from-book.mjs
+          dest: docs/website/src/book/sidebars-from-book.mjs
+        - src: fixtures/editorial-gap/docs/website/book.yml
+          dest: docs/website/book.yml
+        - src: fixtures/editorial-gap/fr/reference/workers/contract-testing-worker.md
+          dest: docs/website/i18n/fr/docusaurus-plugin-content-docs/current/reference/workers/contract-testing-worker.md
+        - src: fixtures/editorial-gap/docs/website/docs/reference/workers/contract-testing-worker.md
+          dest: docs/website/docs/reference/workers/contract-testing-worker.md
+        - src: fixtures/editorial-gap/fr/reference/workers/mock-integration-worker.md
+          dest: docs/website/i18n/fr/docusaurus-plugin-content-docs/current/reference/workers/mock-integration-worker.md
+        - src: fixtures/editorial-gap/docs/website/docs/reference/workers/mock-integration-worker.md
+          dest: docs/website/docs/reference/workers/mock-integration-worker.md
         - src: fixtures/editorial-gap/plugins/skraft-framework/com.github.copilot/agents/contract-testing-worker.agent.md
           dest: plugins/skraft-framework/com.github.copilot/agents/contract-testing-worker.agent.md
         - src: fixtures/editorial-gap/plugins/skraft-framework/com.github.copilot/agents/mock-integration-worker.agent.md
@@ -297,20 +316,20 @@ stimuli:
       - type: file-exists
         name: The FR editorial page exists
         config:
-          path: 'docs/site/fr/for-executives.md'
+          path: 'docs/website/i18n/fr/docusaurus-plugin-content-docs/current/for-executives.md'
       - type: file-exists
-        name: The EN editorial page exists under the same basename
+        name: The EN editorial page exists at the same doc path
         config:
-          path: 'docs/site/en/for-executives.md'
+          path: 'docs/website/docs/for-executives.md'
       - type: file-not-matches
         name: The FR page was written complete, not left as a skeleton
         config:
-          path: 'docs/site/fr/for-executives.md'
+          path: 'docs/website/i18n/fr/docusaurus-plugin-content-docs/current/for-executives.md'
           pattern: '(?i)\bTODO\b|\bTBD\b|à compléter|<!--\s*fill'
       - type: file-not-matches
         name: The EN page was written complete, not left as a skeleton
         config:
-          path: 'docs/site/en/for-executives.md'
+          path: 'docs/website/docs/for-executives.md'
           pattern: '(?i)\bTODO\b|\bTBD\b|to be completed|<!--\s*fill'
       # The failure worth catching on an editorial page is a confident number:
       # an ROI, a percentage or a timeline the code cannot back. Either the
@@ -325,7 +344,7 @@ stimuli:
               const { readFileSync } = require('node:fs')
               const hedge = /\((?:estimated|estimé|estime)\)/i
               let failed = false
-              for (const page of ['docs/site/fr/for-executives.md', 'docs/site/en/for-executives.md']) {
+              for (const page of ['docs/website/i18n/fr/docusaurus-plugin-content-docs/current/for-executives.md', 'docs/website/docs/for-executives.md']) {
                 for (const line of readFileSync(page, 'utf8').split('\n')) {
                   if (/^\s*(?:[-*+]|\d+\.)?\s*(?:\||#)/.test(line)) continue
                   const figure = /\b\d+(?:[.,]\d+)?\s*(?:%|x\b|×|weeks?|semaines?|months?|mois|days?|jours?)/i
@@ -347,9 +366,9 @@ stimuli:
             - '--root'
             - '.'
             - '--book'
-            - 'docs/site/_data/book.yml'
+            - 'docs/website/book.yml'
             - '--site-root'
-            - 'docs/site'
+            - 'docs/website'
           expected_exit_code: 0
           timeout: 2m
       - type: diff-not-contains

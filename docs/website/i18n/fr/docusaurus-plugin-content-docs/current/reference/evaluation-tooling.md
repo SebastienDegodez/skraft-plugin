@@ -34,7 +34,7 @@ verdict, chiffre par chiffre :
 | `.github/workflows/evaluation-evidence.yml` | Publication des preuves d'une pull request, nettoyage à sa fermeture. |
 
 Ce que l'outillage écrit n'est jamais commité : `eval-results/`, `eval-results-pilot/`,
-`eval-baseline-cache/`, `dashboard-data/`, `docs/site/dashboard/data/`.
+`eval-baseline-cache/`, `dashboard-data/`, `docs/website/static/dashboard/data/`.
 
 ## Le lanceur
 

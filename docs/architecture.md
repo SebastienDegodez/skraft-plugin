@@ -4,7 +4,7 @@ Ce document s'adresse à qui contribue au dépôt : où vit chaque morceau, qui 
 d'importer quoi, et comment un run avance. Les règles opposables sont dans
 [`AGENTS.md`](../AGENTS.md) ; les décisions (moteur neutre vis-à-vis de l'hôte, pilotes, zéro hook,
 contrat du pilote Copilot) sont expliquées sur la page
-[Architecture](site/fr/explanation/architecture.md) du site.
+[Architecture](website/i18n/fr/docusaurus-plugin-content-docs/current/explanation/architecture.md) du site.
 
 > **Conventions** : [`conventions.md`](./conventions.md). La documentation utilisateur vit sur
 > le [site](site/) (FR et EN) ; ce document ne la répète pas et renvoie à ses pages de
@@ -93,7 +93,7 @@ de réponse que la boucle liste.
 Le CLI (`drivers/cli/skraft.mjs`) expose `init`, `status`, `report`, `decide`, `gate`,
 `doctor`, `workflow eject|check|diff`, `journal adopt`, `publish`, `migrate`, `review --pr`, et
 la boucle `next` / `record` du repli VS Code. La référence complète est sur le site :
-[La ligne de commande](site/fr/reference/cli.md).
+[La ligne de commande](website/i18n/fr/docusaurus-plugin-content-docs/current/reference/cli.md).
 
 ## 4. Le workflow : un graphe DOT
 
@@ -128,7 +128,7 @@ arêtes, attributs, sous-graphes, commentaires).
   plugin sans rien écraser.
 
 Les contrôles du moteur (journal, périmètre d'écriture, sorties attendues) ne sont pas des
-nœuds : aucune copie ne les retire. Syntaxe complète : [Workflow DOT](site/fr/reference/workflow-dot.md).
+nœuds : aucune copie ne les retire. Syntaxe complète : [Workflow DOT](website/i18n/fr/docusaurus-plugin-content-docs/current/reference/workflow-dot.md).
 
 ## 5. État : journal, pipeline actif, bail
 
@@ -150,7 +150,7 @@ Tout vit dans `.copilot-tracking/skraft-plans/` de la copie de travail qui lance
   s'arrête (`lock-lost`). Quand la boucle `next` / `record` confie des agents, le bail reste
   laissé le temps de leur travail, borné, et `record` le reprend.
 
-Chaque fichier, événement et code de refus : [Suivi et journal](site/fr/reference/run-journal.md).
+Chaque fichier, événement et code de refus : [Suivi et journal](website/i18n/fr/docusaurus-plugin-content-docs/current/reference/run-journal.md).
 
 ## 6. Configuration
 
@@ -162,7 +162,7 @@ un autre dépôt. `skraft init` les détecte, `skraft doctor` vérifie chaque co
 
 La configuration se fusionne en quatre couches (JSON Merge Patch) : défauts du plugin,
 `~/.skraft/config.json`, `skraft-config.json`, `skraft-config.local.json` non commité. Schéma
-complet : [skraft-config.json](site/fr/reference/skraft-config.md).
+complet : [skraft-config.json](website/i18n/fr/docusaurus-plugin-content-docs/current/reference/skraft-config.md).
 
 **Modèles.** Un agent tourne sur une **famille** : un palier (`economy` < `standard` <
 `frontier` < `premium`), un rôle au palier intégré (`reviewer`, `researcher`, `implementer`,
@@ -197,7 +197,7 @@ software-engineer une fois par fichier de survivants pour écrire une propositio
 code supprimé, mutant équivalent) sans toucher au code ; la question `mutation-plan` demande au
 dev `APPLY`, sa propre consigne ou `STOP` ; `kill_mutants` applique le choix, sous la lentille
 test-integrity, puis `mutation_gates` relance les gates avant une nouvelle mutation. Gates et
-critères de chaque lentille : [Gates](site/fr/reference/gates.md).
+critères de chaque lentille : [Gates](website/i18n/fr/docusaurus-plugin-content-docs/current/reference/gates.md).
 
 ## 8. Revue
 
@@ -240,8 +240,8 @@ description ; en-têtes propres à chaque client préservés) ; tout agent est e
 spécialistes, `pr-writer`, `finding-refuter` et douze lentilles. Une skill embarque chaque script
 qu'elle lance ; les copies déclarées sont tenues par `npm run skills:sync`. Chaque changement
 d'agent ou de skill se juge avec Vally :
-[Évaluer un skill](site/fr/how-to/evaluate-a-skill.md),
-[Outillage d'évaluation](site/fr/reference/evaluation-tooling.md).
+[Évaluer un skill](website/i18n/fr/docusaurus-plugin-content-docs/current/how-to/evaluate-a-skill.md),
+[Outillage d'évaluation](website/i18n/fr/docusaurus-plugin-content-docs/current/reference/evaluation-tooling.md).
 
 `skraft-brownfield` est un plugin autonome : `brownfield-analyst`, `brownfield-harness-builder`,
 `brownfield-refactorer`, `refactoring-worker`, et les skills `characterize-brownfield`,
@@ -275,5 +275,5 @@ ESLint). L'essentiel :
   signé marqué `migratedFrom: "v1"`, ses phases terminées closes ; `state.json` n'est jamais
   touché, la commande est idempotente.
 
-Ce qui reste avant la 2.0.0 est dans la [feuille de route](site/fr/index.md#roadmap) de
+Ce qui reste avant la 2.0.0 est dans la [feuille de route](website/i18n/fr/docusaurus-plugin-content-docs/current/index.mdx#roadmap) de
 l'accueil du handbook.

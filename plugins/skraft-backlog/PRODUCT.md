@@ -63,7 +63,7 @@ The canvas shows the check and its evidence, not a score.
 
 ## Brand Commitments
 
-The skraft identity of the documentation site (`docs/site/assets/css/design-tokens.css`):
+The skraft identity of the documentation site (`docs/website/src/css/custom.css`):
 - cyan accent `#24b5ff` / `#7fd3ff` on deep navy `#0f1722`;
 - Lato for text, Fira Code for code.
 

@@ -123,9 +123,9 @@ VS Code, where it is expected to say what to type without starting a run from th
 | Handbook (FR and EN) | [sebastiendegodez.github.io/skraft-plugin](https://sebastiendegodez.github.io/skraft-plugin/) |
 | Installing and running the plugin | [`plugins/skraft-framework/README.md`](plugins/skraft-framework/README.md) |
 | Repository architecture | [`docs/architecture.md`](docs/architecture.md) |
-| V2 design decisions | [Architecture](docs/site/en/explanation/architecture.md) |
+| V2 design decisions | [Architecture](docs/website/docs/explanation/architecture.md) |
 | Maintaining the plugin | [`plugins/skraft-framework/MAINTAINING.md`](plugins/skraft-framework/MAINTAINING.md) |
-| Skill evaluation | [Evaluation tooling](docs/site/en/reference/evaluation-tooling.md), [Evaluate a skill](docs/site/en/how-to/evaluate-a-skill.md) |
+| Skill evaluation | [Evaluation tooling](docs/website/docs/reference/evaluation-tooling.md), [Evaluate a skill](docs/website/docs/how-to/evaluate-a-skill.md) |
 
 ## Development
 

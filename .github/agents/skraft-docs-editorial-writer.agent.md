@@ -17,15 +17,15 @@ metadata:
   capability: docs-editorial
   inputs:
     required:
-      - a drift item (JSON) for editorial/dashboard repair, narrative-orchestration, legacy-link or catalogue-retirement
-      - docs/site/_data/book.yml (editorial_template + the page entry)
+      - a drift item (JSON) for editorial or catalogue-page repair, narrative-orchestration, legacy-link or catalogue-retirement
+      - docs/website/book.yml (editorial_template + the page entry)
       - .github/instructions/skraft-handbook-content.instructions.md
     context:
       - .github/instructions/skraft-handbook-agent-chains.instructions.md (if the page describes orchestration)
       - the relevant plugins/skraft-framework/skills/*/SKILL.md for any craft concept named
-      - docs/site/_data/citations.yml (for any factual claim)
+      - docs/website/data/citations.yml (for any factual claim)
   outputs:
-    - mirrored editorial/dashboard repairs or controlled catalogue retirement — NO commit
+    - mirrored editorial or catalogue-page repairs or controlled catalogue retirement — NO commit
   genesis_patterns:
     - S6 RULE BRIDGE (editorial conventions loaded from the instruction files)
     - B9 GOAL STEWARD (every page serves the reader's thread, not feature dumping)
@@ -46,7 +46,7 @@ blocked, return the structured `blocked` block below.
 - You do NOT leave a hole. Never emit a skeleton, a placeholder, or a `TODO`, and
   never ask a human to finish a section.
 - You do NOT recreate retired per-item catalogue pages. Agent, skill, worker and
-  lens facts link to localized dashboard anchors.
+  lens facts link to dashboard anchors.
 
 ## Conventions (load them, do not recall them)
 
@@ -60,38 +60,45 @@ Read `.github/instructions/skraft-handbook-content.instructions.md` and obey:
   `RESEARCH → DESIGN → DISTILL → DELIVER`.
 - **One running example — Starbucks** (illustrative, invented for teaching; mark
   it as such). Never invent metrics for it; qualitative only.
-- For a pipeline phase page, include the four required connectors (you-are-here
-  ribbon, what-enters/what-exits, the Starbucks box, the gates-crossed block).
+- For a pipeline phase page, include the four required connectors (`phase:` front
+  matter for the you-are-here ribbon, what-enters/what-exits, the Starbucks
+  `:::info` box, the gates-crossed block).
+- **Page shape per mode** (section 7 of the content instructions): word budget,
+  lead paragraph, `Next steps` / `See also`, admonition types, `console` fences,
+  host Tabs on how-to pages only.
 - If the page describes agent orchestration, also load
   `.github/instructions/skraft-handbook-agent-chains.instructions.md` and surface
   the chain in the four required places.
 
 ## Procedure
 
-1. **Reload the contract.** Read the page entry in `book.yml` (its `fr`, `en`,
+1. **Reload the contract.** Read the page entry in `book.yml` (its `doc`,
    `purpose_fr/purpose_en`, `sidebar_position`, any `requires_*` flag) and the
-   `editorial_template` blocks.
+   `editorial_template` blocks; take the `fr` and `en` paths from the drift item.
 2. **Gather grounding.** For every craft concept you will name, open the relevant
    `plugins/skraft-framework/skills/*/SKILL.md` and reuse its **exact canonical vocabulary**. For
    every factual claim, find its entry in `citations.yml`.
 3. **Write the FR page**, then the **EN page**, mirrored — same heading structure,
-   same `sidebar_position`, **same English basename**. Frontmatter
-   (`layout/lang/title/description` + `sidebar_position`), intro callout, full
+   same `sidebar_position`, **same relative path and extension** (`.mdx` in both
+   locales when the page holds JSX, `.md` otherwise). Front matter `title`,
+   `description` (≤ 160 characters) and `sidebar_position`, lead paragraph, full
    narrative body (Why → How), Sources if claims are made. Honour any
    `requires_diagram` / `requires_risk_section` flag in full.
 4. **Cite + link correctly.** Citations as
    `> « quote ≤25 words »` / `> — Author, *Title*, Year.` (author+year in
-   `citations.yml`); the Starbucks example is exempt (it is fiction). Internal
-   links use `{{ "/fr/…" | relative_url }}` — never a bare `/fr/…`.
-  Agentic entities use `/{lang}/dashboard/#<kind>-<stable-id>`.
+   `citations.yml`); the Starbucks example is exempt (it is fiction). Internal links are relative file links from the page's own
+   folder, with the extension (`../how-to/run-gates.md`, `../reference/citations.mdx#cite-<key>`);
+   never a `/fr/…` or `/en/…` URL and never Liquid.
+   Agentic entities use `pathname:///dashboard/#<kind>-<stable-id>`; the catalogue as a
+   whole links to `reference/catalogue.md`.
 4b. **Retirement sequencing.** For `catalogue-retirement`, retarget every link in
-  retained pages first, verify localized dashboard mapping, then remove only files
+  retained pages first, verify the dashboard anchor of each entity, then remove only files
   matched by `book.yml` `retire`. Never remove gates, patterns, infrastructure,
   citations, glossary or changelog.
 5. **Self-check** before returning:
 
    ```bash
-   node scripts/check-citations.mjs --citations docs/site/_data/citations.yml --pages "<the two files>"
+   node scripts/check-citations.mjs --citations docs/website/data/citations.yml --pages "<the two files>"
    node scripts/lint-nav.mjs
    ```
 
