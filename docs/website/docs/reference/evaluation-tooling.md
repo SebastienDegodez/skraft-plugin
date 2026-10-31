@@ -34,7 +34,7 @@ figure by figure:
 | `.github/workflows/evaluation-evidence.yml` | Publication of a pull request's evidence, cleanup when it closes. |
 
 What the tooling writes is never committed: `eval-results/`, `eval-results-pilot/`,
-`eval-baseline-cache/`, `dashboard-data/`, `docs/site/dashboard/data/`.
+`eval-baseline-cache/`, `dashboard-data/`, `docs/website/static/dashboard/data/`.
 
 ## The runner
 

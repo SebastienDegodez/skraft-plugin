@@ -30,7 +30,7 @@ change. Comment skraft rend ensuite chaque pratique opposable :
 2. **Décrivez la solution en comportement observable** : ce qu'elle change dans le pipeline, les
    artefacts ou le code produit, et ce qu'elle ne change pas.
 3. **Trouvez la référence publiée** (livre, article, conférence) et ajoutez-la à
-   `docs/site/_data/citations.yml` si elle n'y est pas.
+   `docs/website/data/citations.yml` si elle n'y est pas.
 4. **Écrivez le pattern** : le `SKILL.md` sous `plugins/<plugin>/skills/<skill>/`, ou le
    descripteur d'agent dans les deux arbres d'agents, puis `npm run plugin:sync` et
    `npm run plugin:check`.
@@ -47,9 +47,9 @@ Un chiffre avancé sans source se reformule qualitativement et se suffixe `(esti
 
 ## Corriger une page du handbook
 
-1. Modifiez la page sous `docs/site/fr/` **et** sa jumelle sous `docs/site/en/` (même nom de
-   fichier anglais).
-2. Pour une nouvelle page, déclarez-la dans `docs/site/_data/book.yml`, en FR et en EN.
+1. Modifiez la page sous `docs/website/docs/` **et** sa jumelle française au même chemin sous
+   `docs/website/i18n/fr/docusaurus-plugin-content-docs/current/`.
+2. Pour une nouvelle page, déclarez-la dans `docs/website/book.yml` (son identifiant `doc`, libellés FR et EN).
 3. Vérifiez les citations :
 
    ```console

@@ -4,7 +4,7 @@ Cette page définit les **conventions visuelles et structurelles** de la
 documentation de `skraft-plugin` : badges, gabarits de fiche, signalement des
 éléments non encore implémentés, nommage des fichiers. Le contrat du site
 (un mode Diátaxis par page, parité FR/EN, gabarits de page, citations) est
-l'en-tête de [`site/_data/book.yml`](./site/_data/book.yml) ; cette page ne le
+l'en-tête de [`website/book.yml`](./website/book.yml) ; cette page ne le
 répète pas.
 
 ---
@@ -20,7 +20,7 @@ Chaque fiche (agent, skill, composant) commence par une ligne de badge :
 | `Statut : 📝 Partiel` | Le composant existe mais des fonctionnalités/comportements documentés ne sont pas encore opérationnels. | Skill avec sections incomplètes, agent avec capacités planifiées. |
 
 > Règle : tout élément **🚧** ou **📝** doit aussi apparaître dans la
-> [feuille de route](./site/fr/index.md#roadmap) de l'accueil du handbook.
+> [feuille de route](./website/i18n/fr/docusaurus-plugin-content-docs/current/index.mdx#roadmap) de l'accueil du handbook.
 > Si ce n'est pas le cas, c'est un bug de documentation.
 
 ---
@@ -32,18 +32,18 @@ implémenté, on l'encadre par cet encart standard :
 
 ```markdown
 > 🚧 **À venir** — Cette section décrit un comportement non encore
-> implémenté. Voir la [feuille de route]({{ "/fr/#roadmap" | relative_url }}).
+> implémenté. Voir la [feuille de route](../index.mdx#roadmap).
 ```
 
-Le lien pointe vers la feuille de route de l'accueil du handbook
-(`/fr/#roadmap`, `/en/#roadmap`).
+Le lien est un lien de fichier relatif vers l'accueil du handbook (`index.mdx#roadmap`) ;
+le chemin relatif dépend de la profondeur de la page (ici, une page à un niveau).
 
 ---
 
 ## 3. Gabarit — Fiche d'agent
 
 Les agents et les skills n'ont plus de fiche Markdown écrite à la main : le catalogue du
-site (`docs/site/fr/dashboard/`, `docs/site/en/dashboard/`), généré par
+site (`docs/website/static/dashboard/`, servi sous `/dashboard/` et `/fr/dashboard/`), généré par
 `eng/catalog/scan.mjs` depuis `plugins/*/com.github.copilot/agents/` et `plugins/*/skills/`,
 les couvre chacun une fois. Ce gabarit sert quand une page du site décrit un agent en détail.
 
@@ -123,9 +123,9 @@ Pas de format imposé, mais :
 
 | Règle | Détail |
 |---|---|
-| Langue | **Français** pour `docs/` ; le site (`docs/site/`) est bilingue, chaque page `fr/` a sa jumelle `en/`. |
+| Langue | **Français** pour `docs/` ; le site (`docs/website/`) est bilingue, chaque page EN de `docs/website/docs/` a sa jumelle FR au même chemin sous `docs/website/i18n/fr/docusaurus-plugin-content-docs/current/`. |
 | Encodage | UTF-8, sauts de ligne LF. |
-| Liens | Relatifs depuis le fichier courant dans `docs/` ; dans le site, `{{ "/fr/…" \| relative_url }}`, jamais un `/fr/…` nu. |
+| Liens | Relatifs depuis le fichier courant dans `docs/` ; dans le site aussi, lien de fichier relatif (`../how-to/run-gates.md`), jamais un `/fr/…` ou `/en/…` absolu. |
 | Titres | Un seul `H1` par fichier, hiérarchie stricte ensuite. |
 | Diagrammes | Mermaid, blocs <code>```mermaid</code>. |
 | Code | Bloc clos avec langage : ```` ```csharp ```` , ```` ```json ```` , etc. |
@@ -139,10 +139,10 @@ Pas de format imposé, mais :
 |---|---|---|
 | Index | `docs/README.md` | — |
 | Architecture | `docs/architecture.md` | — |
-| Roadmap | renvoi `docs/roadmap.md` ; tableau dans `docs/site/<fr\|en>/index.md#roadmap` | — |
+| Roadmap | renvoi `docs/roadmap.md` ; tableau dans `index.mdx#roadmap` de chaque locale du site | — |
 | Conventions | `docs/conventions.md` | — |
-| Page du site | `docs/site/<fr\|en>/<partie>/<nom-anglais>.md`, déclarée dans `docs/site/_data/book.yml` | `docs/site/fr/explanation/architecture.md` |
-| Agents et skills | catalogue généré, `docs/site/<fr\|en>/dashboard/` | — |
+| Page du site | EN `docs/website/docs/<doc>.md`, FR `docs/website/i18n/fr/docusaurus-plugin-content-docs/current/<doc>.md` (`.mdx` seulement avec du JSX), déclarée par son `doc` dans `docs/website/book.yml` | `explanation/architecture` |
+| Agents et skills | catalogue généré, `docs/website/static/dashboard/` | — |
 
 ---
 
