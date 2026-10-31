@@ -92,6 +92,17 @@ test('with classic heading IDs, {#id} stays for mdx1Compat.headingIds', () => {
   assert.equal(text, before)
 })
 
+test('the blockquote right after the H1 becomes the lead; the labelled ones become admonitions; a quotation stays', () => {
+  const { result, after } = convertFixture('blockquotes', { docId: 'how-to/contributing' })
+  assert.equal(result.text, after)
+})
+
+test('the lead blockquote is found after a removed phase ribbon, not after a paragraph', () => {
+  const source = '---\ntitle: "DESIGN"\n---\n\n# DESIGN\n\n{% include phase-ribbon.html current="design" %}\n\n> Decide.\n\nText.\n\n> Quoted.\n'
+  const { text } = convertPage(source, { docId: 'explanation/pipeline/design', locale: 'en' })
+  assert.equal(text, '---\ntitle: "DESIGN"\nphase: design\n---\n\n# DESIGN\n\nDecide.\n\nText.\n\n> Quoted.\n')
+})
+
 test('with the catalogue option, dashboard links point at the catalogue page', () => {
   const source = '# T\n\n[Catalogue]({{ "/en/dashboard/" | relative_url }}), [data]({{ "/dashboard/" | relative_url }})\n'
   const { text } = convertPage(source, { docId: 'how-to/run-gates', locale: 'en', dashboardLink: 'catalogue' })
