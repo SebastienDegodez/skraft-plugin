@@ -650,7 +650,7 @@ const writeReport = (options, pages, outputs, skipped) => {
     .map((finding) => ({ source: page.source, target, ...finding })))
   const mdx = outputs.filter(({ result }) => result.extension === '.mdx').map(({ target }) => target)
   options.print(`converted ${plural(outputs.length, 'page')} of ${pages.length} (${mdx.length} .mdx)${options.dryRun ? ', dry run: nothing written' : ''}; `
-    + `${plural(handResolution.length, 'finding')} need a hand resolution; ${skipped.length} skipped`)
+    + `${plural(handResolution.length, 'finding')} need${handResolution.length === 1 ? 's' : ''} a hand resolution; ${skipped.length} skipped`)
   if (!options.report) return
   const report = {
     pages: pages.length,
@@ -679,9 +679,6 @@ const checkTree = (options, outputs) => {
   return problems.length ? 1 : 0
 }
 
-if (process.argv[1] && pathToFileURL(resolve(process.argv[1])).href === import.meta.url) {
-  process.exitCode = runCli(process.argv.slice(2))
-}
 
 const DEFAULT_MDX_DOCS = ['index', 'reference/citations']
 
@@ -711,4 +708,9 @@ export const convertPage = (source, options) => {
   reportHostSections(text, page)
   text = convertFrontMatter(lines, page) + withImports(text, page.imports)
   return { text, extension: page.extension, findings: page.findings, redirects: page.redirects }
+}
+
+// Last, once every module-level binding above is initialised.
+if (process.argv[1] && pathToFileURL(resolve(process.argv[1])).href === import.meta.url) {
+  process.exitCode = runCli(process.argv.slice(2))
 }

@@ -119,7 +119,7 @@ test('the script runs from the command line: a dry run, then the check of what i
     const result = spawnSync(process.execPath, argv, { cwd: dir, encoding: 'utf8' })
     assert.equal(result.stderr, '')
     assert.equal(result.status, 0)
-    assert.match(result.stdout, /converted 2 pages of 3 \(no \.mdx\), dry run: nothing written; 1 finding need a hand resolution; 1 skipped\n/)
+    assert.match(result.stdout, /converted 2 pages of 4 \(0 \.mdx\), dry run: nothing written; 1 finding needs a hand resolution; 2 skipped\n/)
     assert.match(result.stdout, /no problems in 2 pages\n$/)
   })
 })
