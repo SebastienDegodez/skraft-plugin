@@ -122,17 +122,9 @@ const editedTabs = async (host, kept, fresh) => {
 
 /** @param {ContentHost} host @param {string | null} digest */
 const readKept = async (host, digest) => {
-  const tabs = await readTabs(host)
-  return { digest: fellBack(tabs) ? null : digest, tabs }
+  const { tabs, failed } = await readTabs(host)
+  return { digest: failed ? null : digest, tabs }
 }
-
-/**
- * A read that threw: the configuration that could not be read, or the workflows whose read
- * threw. A workflow the engine refuses (a syntax error, a locked gate dropped) is no failure: the
- * engine answers none, the files say so, and the digest tells when they change.
- * @param {{ configuration: { status: string }, workflows: unknown[] }} tabs
- */
-const fellBack = ({ configuration, workflows }) => configuration.status === 'unreadable' || THROWN.has(workflows)
 
 /** @param {ContentHost} host @returns {Promise<string | null>} */
 const digestOf = async (host) => {
@@ -141,7 +133,11 @@ const digestOf = async (host) => {
 }
 
 /** @param {ContentHost} host */
-const readTabs = async (host) => ({ configuration: await configurationContent(host), workflows: await workflowsContent(host) })
+const readTabs = async (host) => {
+  const configuration = await configurationContent(host)
+  const { workflows, threw } = await workflowsContent(host)
+  return { tabs: { configuration, workflows }, failed: configuration.status === 'unreadable' || threw }
+}
 
 const UNREADABLE_CONFIGURATION = 'skraft could not read the configuration of this working copy; run skraft doctor in a terminal.'
 const UNSAVED = 'skraft could not save the configuration; run skraft doctor in a terminal.'
@@ -175,26 +171,21 @@ export const saveConfiguration = async (host, edit) => {
   }
 }
 
-/** The empty lists a workflows read that threw gave, told from the engine's own by identity. @type {WeakSet<object>} */
-const THROWN = new WeakSet()
-
-/** The Workflow tab: each workflow a run can follow, none when they cannot be read. @param {ContentHost} host */
+/**
+ * The Workflow tab: each workflow a run can follow, none when they cannot be read; `threw` tells a
+ * read that threw (the journal cannot be read) from the engine's own none: a workflow it refuses (a
+ * syntax error, a locked gate dropped) is no failure, the files say so and the digest tells when
+ * they change.
+ * @param {ContentHost} host @returns {Promise<{ workflows: import('../../domain/reporting/workflow-drawing.mjs').WorkflowDrawing[], threw: boolean }>}
+ */
 const workflowsContent = async (host) => {
   const cwd = host.directory()
-  if (cwd === null) return []
+  if (cwd === null) return { workflows: [], threw: false }
   try {
-    return await createObserve(adaptersIn(host, cwd)).workflows()
+    return { workflows: await createObserve(adaptersIn(host, cwd)).workflows(), threw: false }
   } catch {
-    return thrown()
+    return { workflows: [], threw: true }
   }
-}
-
-/** @returns {import('../../domain/reporting/workflow-drawing.mjs').WorkflowDrawing[]} */
-const thrown = () => {
-  /** @type {import('../../domain/reporting/workflow-drawing.mjs').WorkflowDrawing[]} */
-  const none = []
-  THROWN.add(none)
-  return none
 }
 
 /** @param {ContentHost} host @param {string} cwd */

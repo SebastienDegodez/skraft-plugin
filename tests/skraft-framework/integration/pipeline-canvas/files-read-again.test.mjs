@@ -127,6 +127,7 @@ test('an ejected workflow the engine refuses shows no workflow, and while nothin
   const asked = remoteAsks()
   assert.equal(asked > 0, true)
 
+  // The test host polls every 20 ms (canvas-host.mjs): a second is about fifty polls, so a read repeated on each poll shows.
   await delay(1000, undefined, { signal: t.signal, ref: false })
 
   assert.equal(remoteAsks(), asked)
