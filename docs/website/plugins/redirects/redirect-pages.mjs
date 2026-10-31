@@ -32,6 +32,16 @@ export async function writeDirectoryIndexes({ routesPaths, baseUrl, outDir }) {
   }
 }
 
+// The search box's "See all results" link is `<baseUrl>search/?q=…` whatever `trailingSlash` says
+// (@easyops-cn/docusaurus-search-local 0.55.3). With trailingSlash: false the build has `search.html`
+// only, so a new tab on `search/` 404s on GitHub Pages: the folder index is a copy of the page.
+export async function writeSearchFolderIndex({ outDir }) {
+  const page = join(outDir, 'search.html')
+  if (!(await exists(page))) return
+  await mkdir(join(outDir, 'search'), { recursive: true })
+  await copyFile(page, join(outDir, 'search', 'index.html'))
+}
+
 export async function writeRedirectPage(file, toUrl) {
   await mkdir(dirname(file), { recursive: true })
   await writeFile(file, redirectPage(toUrl), { flag: 'wx' })
