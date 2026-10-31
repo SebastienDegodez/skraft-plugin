@@ -1,0 +1,245 @@
+/*
+ * figure.skraft-flow — scenario-driven flow figures.
+ * No colour of its own: every --sf-* variable points at the site theme's Infima variable
+ * (Docusaurus), light and dark ([data-theme='dark'] on <html>), with a neutral fallback.
+ */
+.skraft-flow {
+  --sf-bg: var(--ifm-background-color, transparent);
+  --sf-surface: var(--ifm-background-surface-color, var(--sf-bg));
+  --sf-card: var(--ifm-card-background-color, var(--ifm-background-surface-color, #fff));
+  --sf-on-primary: var(--ifm-color-emphasis-0, #fff);
+  --sf-ink: var(--ifm-font-color-base, #1c1e21);
+  --sf-muted: var(--ifm-color-emphasis-700, #606770);
+  --sf-soft: var(--ifm-color-emphasis-500, #8d949e);
+  --sf-line: var(--ifm-color-emphasis-300, #dadde1);
+  --sf-faint: var(--ifm-color-emphasis-200, #ebedf0);
+  --sf-primary: var(--ifm-color-primary, #2e8555);
+  --sf-primary-strong: var(--ifm-color-primary-dark, #29784c);
+  --sf-primary-soft: color-mix(in srgb, var(--sf-primary) 14%, transparent);
+  --sf-success: var(--ifm-color-success, #00a400);
+  --sf-danger: var(--ifm-color-danger, #fa383e);
+  --sf-warning: var(--ifm-color-warning, #ffba00);
+  --sf-info: var(--ifm-color-info, #54c7ec);
+  --sf-sans: var(--ifm-font-family-base, system-ui, sans-serif);
+  --sf-mono: var(--ifm-font-family-monospace, ui-monospace, SFMono-Regular, Menlo, monospace);
+  --sf-radius: var(--ifm-global-radius, 0.4rem);
+  --sf-dim: 0.32;
+  --sf-panel-w: 360px;
+
+  contain: inline-size;
+  max-width: 100%;
+  margin: 1.5rem 0 2rem;
+  border: 1px solid var(--sf-line);
+  border-radius: calc(var(--sf-radius) * 2);
+  background: var(--sf-bg);
+  color: var(--sf-ink);
+  font-family: var(--sf-sans);
+  overflow: hidden;
+}
+
+/* ---------- scenario bar: a segmented control ---------- */
+.skraft-flow .sf-bar {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  padding: 8px 12px; border-bottom: 1px solid var(--sf-line); background: var(--sf-surface); font-size: 13px;
+}
+.skraft-flow .sf-bar__label { font-size: 11px; font-weight: 800; letter-spacing: 1.2px; text-transform: uppercase; color: var(--sf-muted); }
+.skraft-flow .sf-seg { display: inline-flex; flex-wrap: wrap; border: 1px solid var(--sf-line); border-radius: var(--sf-radius); padding: 1px; }
+.skraft-flow .sf-seg__btn, .skraft-flow .sf-replay {
+  font: inherit; font-size: 13px; line-height: 22px; color: var(--sf-muted); background: none; border: 0;
+  border-radius: calc(var(--sf-radius) - 1px); padding: 1px 10px; cursor: pointer;
+}
+.skraft-flow .sf-seg__btn:hover, .skraft-flow .sf-replay:hover { color: var(--sf-ink); }
+.skraft-flow .sf-seg__btn[aria-pressed='true'] { background: var(--sf-primary-soft); color: var(--sf-primary-strong); font-weight: 700; }
+[data-theme='dark'] .skraft-flow .sf-seg__btn[aria-pressed='true'] { color: var(--ifm-color-primary-lighter, var(--sf-primary)); }
+.skraft-flow .sf-replay { margin-left: auto; border: 1px solid var(--sf-line); font-size: 15px; padding: 0 9px; }
+.skraft-flow button:focus-visible, .skraft-flow .sf-node[role='button']:focus-visible, .skraft-flow summary:focus-visible {
+  outline: 2px solid var(--sf-primary); outline-offset: 2px;
+}
+.skraft-flow .sf-node[role='button']:focus { outline: none; }
+.skraft-flow .sf-node[role='button']:focus-visible .sf-node__box { stroke-width: 3; }
+.skraft-flow:not(.is-ready) .sf-bar { display: none; }
+
+/* ---------- stage: dotted canvas, panels over it ---------- */
+.skraft-flow .sf-stage { position: relative; }
+/* wide figure: the panel sits beside the column, which moves over; never over a card */
+.skraft-flow.is-wide.has-panel .sf-stage { display: flex; align-items: flex-start; }
+.skraft-flow.is-wide.has-panel .sf-board { flex: 1 1 auto; min-width: 0; }
+.skraft-flow.is-wide.has-panel .sf-panels { flex: 0 0 var(--sf-panel-w); padding: 8px 12px 8px 0; }
+/* otherwise: under the figure, full width */
+.skraft-flow:not(.is-wide) .sf-panels { padding: 0 8px; }
+.skraft-flow.has-panel:not(.is-wide) .sf-panels { padding: 8px; border-top: 1px solid var(--sf-line); }
+.skraft-flow .sf-board {
+  overflow-x: auto; overflow-y: hidden; padding: 4px 2px;
+  background: radial-gradient(circle, var(--sf-line) 1px, transparent 1.3px) 0 0 / 16px 16px, var(--sf-bg);
+}
+.skraft-flow .sf-svg { display: block; width: 100%; max-width: 760px; height: auto; margin: 0 auto; overflow: visible; }
+
+/* ---------- cards ---------- */
+.skraft-flow .sf-node[role='button'] { cursor: pointer; }
+.skraft-flow .sf-node__box {
+  fill: var(--sf-card); stroke: var(--sf-primary); stroke-width: 1.6;
+  transition: stroke 200ms ease, stroke-width 200ms ease, filter 260ms ease;
+}
+.skraft-flow .sf-node--question .sf-node__box { stroke: var(--sf-warning); }
+.skraft-flow .sf-node--terminal .sf-node__box, .skraft-flow .is-optional .sf-node__box { stroke-dasharray: 5 4; }
+.skraft-flow .sf-node--terminal .sf-node__box { stroke: var(--sf-soft); fill: var(--sf-surface); }
+.skraft-flow .sf-node:hover .sf-node__box { stroke-width: 2.4; }
+.skraft-flow .sf-node__badge { fill: var(--sf-primary); }
+.skraft-flow .sf-node--question .sf-node__badge { fill: var(--sf-warning); }
+.skraft-flow .sf-node__num { fill: var(--sf-on-primary); font: 800 12px var(--sf-sans); text-anchor: middle; }
+.skraft-flow .sf-node__num--small { font-size: 10px; }
+.skraft-flow .sf-node__title { fill: var(--sf-ink); font: 700 15px var(--sf-sans); }
+.skraft-flow .sf-node__iotitle { fill: var(--sf-muted); font: 700 13px var(--sf-sans); }
+.skraft-flow .sf-node__mono { fill: var(--sf-muted); font: 400 13px var(--sf-mono); }
+.skraft-flow .sf-node__io { fill: var(--sf-muted); font: 400 12px var(--sf-mono); }
+.skraft-flow .sf-chip rect { fill: var(--sf-primary-soft); stroke: var(--sf-primary); stroke-width: 1; }
+.skraft-flow .sf-chip text { fill: var(--sf-ink); font: 400 12px var(--sf-mono); text-anchor: middle; }
+.skraft-flow .sf-chip--when rect, .skraft-flow .sf-chip--note rect { fill: none; stroke: var(--sf-soft); stroke-dasharray: 3 2; }
+.skraft-flow .sf-chip--each rect { fill: none; stroke: var(--sf-info); }
+.skraft-flow .sf-chip--ok rect { fill: color-mix(in srgb, var(--sf-success) 12%, transparent); stroke: var(--sf-success); }
+.skraft-flow .sf-chip--ko rect { fill: color-mix(in srgb, var(--sf-danger) 10%, transparent); stroke: var(--sf-danger); }
+.skraft-flow .sf-chip--answer { opacity: 0.45; }
+.skraft-flow .sf-chip.is-chosen { opacity: 1; }
+.skraft-flow .sf-chip.is-chosen rect { stroke-width: 2.2; }
+.skraft-flow .sf-counter rect { fill: var(--sf-surface); stroke: var(--sf-line); }
+.skraft-flow .sf-node:hover .sf-counter rect, .skraft-flow .sf-node[aria-expanded='true'] .sf-counter rect { stroke: var(--sf-primary); }
+.skraft-flow .sf-counter text { fill: var(--sf-ink); font: 600 12px var(--sf-mono); }
+
+/* ---------- icons: line style, the tone of who acts ---------- */
+.skraft-flow .sf-icon { fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; color: var(--sf-muted); }
+.skraft-flow .sf-icon__hit { stroke: none; fill: transparent; }
+.skraft-flow .sf-actor--human { color: var(--sf-warning); }
+.skraft-flow .sf-actor--agent, .skraft-flow .sf-actor--lens, .skraft-flow .sf-actor--review { color: var(--sf-primary); }
+.skraft-flow .sf-actor--gate { color: var(--sf-info); }
+.skraft-flow .sf-actor--code { color: var(--sf-muted); }
+.skraft-flow .sf-actor--verdict { color: var(--sf-success); }
+.skraft-flow .sf-refute { color: var(--sf-danger); }
+.skraft-flow .sf-seal { color: var(--sf-soft); }
+.skraft-flow .sf-fan { color: var(--sf-primary); }
+.skraft-flow .sf-more { color: var(--sf-soft); }
+.skraft-flow .sf-gatebar { transform-box: fill-box; transform-origin: left center; transition: transform 150ms ease, stroke 150ms ease; }
+.skraft-flow .is-pass .sf-gatebar { transform: rotate(-38deg); stroke: var(--sf-success); }
+.skraft-flow .is-fail .sf-gatebar { stroke: var(--sf-danger); }
+.skraft-flow .sf-sub.is-pass .sf-node__box { stroke: var(--sf-success); }
+.skraft-flow .sf-sub.is-fail .sf-node__box { stroke: var(--sf-danger); stroke-width: 2.4; }
+
+/* ---------- arrows: the canvas's routes, the theme's colours ---------- */
+.skraft-flow .edge, .skraft-flow .sf-subedge { fill: none; stroke: var(--sf-soft); stroke-width: 1.5; transition: stroke 200ms ease, opacity 260ms ease; }
+.skraft-flow .e-back { stroke: var(--sf-primary); stroke-dasharray: 5 4; }
+.skraft-flow .e-loop { stroke: var(--sf-primary); stroke-dasharray: 2 3; }
+.skraft-flow .edge[data-label='FAIL'], .skraft-flow .sf-subedge.e-fail { stroke: var(--sf-danger); stroke-dasharray: 5 4; }
+.skraft-flow .edge[data-loop] { stroke: var(--sf-warning); }
+.skraft-flow .leader { stroke: var(--sf-line); stroke-dasharray: 1 3; fill: none; }
+.skraft-flow .edge-label { fill: var(--sf-muted); font: 400 12px var(--sf-mono); }
+.skraft-flow .edge-label.l-back, .skraft-flow .edge-label.l-loop { fill: var(--sf-primary-strong); }
+.skraft-flow .edge-label.l-fail { fill: var(--sf-danger); }
+.skraft-flow .sf-lanelabel { font: 400 11px var(--sf-mono); fill: var(--sf-muted); paint-order: stroke; stroke: var(--sf-card); stroke-width: 4; }
+.skraft-flow .head path { stroke: none; fill: var(--sf-soft); }
+.skraft-flow .head-back path, .skraft-flow .head-loop path { fill: var(--sf-primary); }
+.skraft-flow .head-fail path { fill: var(--sf-danger); }
+.skraft-flow.is-ready .e-back, .skraft-flow.is-ready .edge[data-label='FAIL'], .skraft-flow.is-ready .sf-subedge.e-back, .skraft-flow.is-ready .sf-subedge.e-fail {
+  animation: sf-creep 1.6s linear infinite;
+}
+@keyframes sf-creep { to { stroke-dashoffset: -18; } }
+.skraft-flow .edge.is-live, .skraft-flow .edge.is-done, .skraft-flow .sf-subedge.is-live, .skraft-flow .sf-subedge.is-done { stroke-width: 2.4; }
+.skraft-flow .e-down.is-live, .skraft-flow .e-down.is-done, .skraft-flow .sf-subedge.e-down.is-done, .skraft-flow .sf-subedge.is-done:not(.e-fail):not(.e-back) { stroke: var(--sf-primary); }
+.skraft-flow .sf-fanpoint circle { fill: var(--sf-primary); stroke: var(--sf-card); stroke-width: 2; }
+
+/* ---------- landing: steps settle one by one, then the arrows ---------- */
+.skraft-flow.is-pre .sf-node__body, .skraft-flow.is-pre .sf-arrows, .skraft-flow.is-pre .sf-legend { opacity: 0; }
+.skraft-flow.is-pre .sf-node__body { transform: translateY(6px); }
+.skraft-flow .sf-node__body, .skraft-flow .sf-arrows, .skraft-flow .sf-legend { transition: opacity 180ms ease, transform 180ms ease; }
+.skraft-flow .sf-node.is-landed .sf-node__body { opacity: 1; transform: none; }
+.skraft-flow.is-drawn .sf-arrows, .skraft-flow.is-drawn .sf-legend { opacity: 1; transition-duration: 480ms; }
+
+/* ---------- playback ---------- */
+.skraft-flow .sf-svg.is-focus .sf-node:not(.is-on), .skraft-flow .sf-svg.is-focus .edge:not(.is-on), .skraft-flow .sf-svg.is-focus .edge-label, .skraft-flow .sf-svg.is-focus .leader { opacity: var(--sf-dim); }
+.skraft-flow .sf-node, .skraft-flow .sf-sub { transition: opacity 260ms ease; }
+.skraft-flow .is-hit > .sf-node__box, .skraft-flow .is-hit > .sf-node__body > .sf-node__box {
+  stroke: var(--sf-primary); stroke-width: 2.6;
+  filter: drop-shadow(0 0 6px color-mix(in srgb, var(--sf-primary) 55%, transparent));
+}
+.skraft-flow .sf-node--question.is-hit .sf-node__box, .skraft-flow .sf-sub.sf-node--question.is-hit .sf-node__box {
+  stroke: var(--sf-warning); filter: drop-shadow(0 0 6px color-mix(in srgb, var(--sf-warning) 60%, transparent));
+}
+.skraft-flow .is-refuted > .sf-node__box { stroke: var(--sf-danger); }
+.skraft-flow .is-now .sf-node__box { animation: sf-pulse 800ms ease-out 1; }
+@keyframes sf-pulse { 0% { stroke-width: 5; } 100% { stroke-width: 2.6; } }
+.skraft-flow .sf-token { fill: var(--sf-primary); }
+.skraft-flow .sf-token-halo { fill: color-mix(in srgb, var(--sf-primary) 22%, transparent); }
+.skraft-flow .is-fail .sf-token { fill: var(--sf-danger); }
+.skraft-flow .is-fail .sf-token-halo { fill: color-mix(in srgb, var(--sf-danger) 22%, transparent); }
+
+/* ---------- legend ---------- */
+.skraft-flow .sf-legend text { fill: var(--sf-muted); font: 400 12.5px var(--sf-sans); }
+.skraft-flow .sf-legend .sf-legend__head { fill: var(--sf-ink); font: 800 11px var(--sf-sans); letter-spacing: 1px; text-transform: uppercase; }
+.skraft-flow .sf-legend__line { stroke-width: 1.6; fill: none; }
+.skraft-flow .sf-legend__line.e-down { stroke: var(--sf-soft); }
+.skraft-flow .sf-legend__line.e-fail { stroke: var(--sf-danger); stroke-dasharray: 5 4; }
+.skraft-flow .sf-legend__dashed { fill: none; stroke: var(--sf-soft); stroke-dasharray: 3 2; }
+
+
+/* ---------- panels, like the canvas's step inspector ---------- */
+.skraft-flow .sf-panel {
+  position: static; width: auto; max-width: 640px; margin: 0 auto;
+  padding: 10px 12px 12px; background: var(--sf-card); color: var(--sf-ink);
+  border: 1px solid var(--sf-line); border-radius: calc(var(--sf-radius) * 1.5);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.18); font-size: 14px; line-height: 1.45;
+}
+.skraft-flow .sf-panel[hidden] { display: none; }
+
+.skraft-flow .sf-panel__head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.skraft-flow .sf-panel__head h3 { margin: 0; font-size: 11px; font-weight: 800; letter-spacing: 1.2px; text-transform: uppercase; color: var(--sf-muted); }
+.skraft-flow .sf-panel__head code { text-transform: none; letter-spacing: 0; font-size: 13px; color: var(--sf-ink); background: none; border: 0; padding: 0; }
+.skraft-flow .sf-panel__close { font: inherit; font-size: 18px; line-height: 1; border: 0; background: none; color: var(--sf-muted); cursor: pointer; padding: 2px 6px; border-radius: var(--sf-radius); }
+.skraft-flow .sf-panel__close:hover { color: var(--sf-ink); background: var(--sf-faint); }
+.skraft-flow .sf-panel p { margin: 6px 0; }
+.skraft-flow .sf-panel__who { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; font-weight: 700; }
+.skraft-flow .sf-picon { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+.skraft-flow .sf-panel__who.sf-actor--human .sf-picon:first-child { color: var(--sf-warning); }
+.skraft-flow .sf-panel__seal { display: inline-flex; align-items: center; gap: 3px; font-weight: 400; font-size: 12px; color: var(--sf-muted); }
+.skraft-flow .sf-panel__mono code, .skraft-flow .sf-panel code { font-family: var(--sf-mono); font-size: 12.5px; }
+.skraft-flow .sf-panel__role { color: var(--sf-muted); }
+.skraft-flow .sf-panel__io { display: grid; grid-template-columns: auto 1fr; gap: 4px 8px; margin: 6px 0; align-items: center; }
+.skraft-flow .sf-panel__io dt { font: 12px var(--sf-mono); color: var(--sf-muted); }
+.skraft-flow .sf-panel__io dd { margin: 0; display: flex; flex-wrap: wrap; gap: 4px; }
+.skraft-flow .sf-pchip { font: 12px var(--sf-mono); padding: 0 8px; border: 1px solid var(--sf-primary); border-radius: 999px; background: var(--sf-primary-soft); }
+.skraft-flow .sf-pchip.sf-chip--when { border-style: dashed; border-color: var(--sf-soft); background: none; font-weight: 400; }
+.skraft-flow .sf-panel__sub { margin: 10px 0 6px; font-size: 11px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; color: var(--sf-muted); }
+.skraft-flow .sf-subsvg { display: block; width: 100%; height: auto; margin: 0 auto; overflow: visible; }
+.skraft-flow .sf-sub__title { fill: var(--sf-ink); font: 700 14px var(--sf-sans); }
+.skraft-flow .sf-sub__mono { fill: var(--sf-muted); font: 400 13px var(--sf-mono); }
+.skraft-flow .sf-sub.is-entry .sf-node__box { fill: var(--sf-surface); }
+
+/* ---------- caption, figcaption, text version ---------- */
+.skraft-flow .sf-caption { margin: 0; padding: 12px 16px 4px; min-height: 3.4em; font-size: 16px; line-height: 1.5; color: var(--sf-muted); border-top: 1px solid var(--sf-line); }
+.skraft-flow .sf-caption b { color: var(--sf-primary-strong); font-weight: 800; }
+[data-theme='dark'] .skraft-flow .sf-caption b { color: var(--ifm-color-primary-lighter, var(--sf-primary)); }
+.skraft-flow code { font-family: var(--sf-mono); font-size: 0.86em; background: var(--sf-faint); padding: 0.1em 0.35em; border-radius: 4px; }
+.skraft-flow .sf-figcaption { padding: 2px 16px 12px; font-size: 13.5px; line-height: 1.5; font-style: italic; color: var(--sf-muted); }
+.skraft-flow .sf-hint { display: none; margin: 0; padding: 6px 16px 0; font-size: 12px; color: var(--sf-muted); }
+.skraft-flow .sf-alt { padding: 8px 16px 12px; border-top: 1px solid var(--sf-line); background: var(--sf-surface); font-size: 14px; color: var(--sf-muted); }
+.skraft-flow .sf-alt summary { cursor: pointer; font-weight: 700; color: var(--sf-ink); font-size: 13px; }
+.skraft-flow .sf-alt ul { list-style: none; margin: 10px 0 0; padding: 0; }
+.skraft-flow .sf-alt h4 { margin: 12px 0 0; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; }
+.skraft-flow .sf-alt li > p { margin: 10px 0 4px; }
+.skraft-flow .sf-alt__steps { display: flex; flex-wrap: wrap; gap: 4px 0; margin: 0 0 6px; padding: 0; list-style: none; }
+.skraft-flow .sf-alt__steps li + li::before { content: '→'; margin: 0 6px; }
+.skraft-flow .sf-alt__actor { font-size: 12px; font-weight: 700; color: var(--sf-ink); }
+
+/*
+ * Under 640px the column keeps the canvas's geometry and scrolls sideways inside its frame;
+ * the panel leaves the board and opens under it, full width.
+ */
+@media (max-width: 640px) {
+  .skraft-flow .sf-svg { width: 640px; max-width: none; }
+  .skraft-flow .sf-hint { display: block; }
+  .skraft-flow .sf-replay { margin-left: 0; }
+  .skraft-flow .sf-legend { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .skraft-flow *, .skraft-flow *::before { animation: none !important; transition: none !important; }
+}
+@media (forced-colors: active) {
+  .skraft-flow .sf-node__box, .skraft-flow .edge { stroke: CanvasText; }
+}
