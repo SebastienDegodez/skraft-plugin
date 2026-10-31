@@ -1,6 +1,6 @@
 ---
 title: "skraft-config.json"
-description: "Le fichier de configuration des composants : emplacement, schéma complet, validation et messages, lignes de commande, gates, défauts de détection et règle de base."
+description: "Le fichier de configuration des composants : emplacement, schéma, validation et messages, lignes de commande, gates, défauts de détection et règle de base."
 persona: tech-lead
 ---
 
@@ -425,7 +425,7 @@ pris. Une racine déjà listée n'est pas reproposée. Le moteur n'écrit ni `mo
 - **Oublier Docker ou Podman avec Microcks** : démarrez-en un avant les tests, ou passez le
   composant en `inprocess` s'il ne mocke pas avec Microcks.
 
-## Pour aller plus loin <!-- #see-also -->
+## Voir aussi <!-- #see-also -->
 
 - [Configurer les composants](../how-to/configure-components.md)
 - [Lancer les gates et lire leurs preuves](../how-to/run-gates.md)

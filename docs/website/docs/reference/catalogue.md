@@ -11,6 +11,9 @@ skills, the orchestration chains that link them, and, for each one, its context 
 the evidence of its controlled evaluations. It is built from the plugin sources each time the
 handbook is published, so it never lists a component the plugin no longer ships.
 
+Why three layers of evidence and a paired comparison:
+[Evaluation strategy](../explanation/evaluation-strategy.md).
+
 **[Open the catalogue](pathname:///dashboard/)**
 
 ![The catalogue: the number of skills, of agents, workers and review lenses, of skills with an evaluation spec and of subjects with published evidence, then the Catalogue, Quality, Efficiency and Models tabs and their filters](/img/screenshots/en/dashboard-catalogue-light.png#gh-light-mode-only)
@@ -27,3 +30,10 @@ handbook is published, so it never lists a component the plugin no longer ships.
 
 The search box and the agent-model filter apply to every view. A component with no published
 run says so: no data is not a pass.
+
+## See also <!-- #see-also -->
+
+- [Evaluation tooling](./evaluation-tooling.md)
+- [Evaluate a skill](../how-to/evaluate-a-skill.md)
+- [Read an evaluation verdict](../explanation/deep-dive/reading-a-verdict.md)
+- [Evaluation strategy](../explanation/evaluation-strategy.md)

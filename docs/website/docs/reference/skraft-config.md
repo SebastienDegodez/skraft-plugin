@@ -417,7 +417,7 @@ taken. A root already listed is not proposed again. The engine writes neither `m
 - **Forgetting Docker or Podman with Microcks**: start one before the tests, or switch the
   component to `inprocess` when it does not mock with Microcks.
 
-## Going further <!-- #see-also -->
+## See also <!-- #see-also -->
 
 - [Configure the components](../how-to/configure-components.md)
 - [Run the gates and read their evidence](../how-to/run-gates.md)

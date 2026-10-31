@@ -5,8 +5,11 @@ description: "Les patterns qui structurent la phase DESIGN : Event Modeling, DDD
 
 # Patterns d'architecture
 
-Les patterns ne s'empilent pas au hasard. SKRAFT les compose dans un ordre précis,
-chacun appuyé sur l'ouvrage qui l'a défini.
+Les patterns d'architecture qui structurent la phase DESIGN, l'ordre dans lequel SKRAFT les
+compose et l'ouvrage qui a défini chacun : les patterns ne s'empilent pas au hasard.
+
+Pourquoi DESIGN rend explicite chaque décision d'architecture :
+[La phase DESIGN](../explanation/pipeline/design.md).
 
 ## Pourquoi — le problème que ça résout
 
@@ -48,12 +51,6 @@ Les patterns ne sont pas une fin : ils servent à garder le modèle du domaine a
 - **Big Design Up Front** : modéliser l'ensemble du système avant d'avoir un seul
   scénario — préférer l'incrément (voir [walking skeleton](../explanation/deep-dive/walking-skeleton.md)).
 
-## Pour aller plus loin
-
-- [La phase DESIGN](../explanation/pipeline/design.md)
-- [Clean Architecture](../explanation/clean-architecture.md)
-- [Les gates DESIGN](gates.md)
-
 ## Sources
 
 - North, D. *Introducing BDD*, 2006.
@@ -62,6 +59,12 @@ Les patterns ne sont pas une fin : ils servent à garder le modèle du domaine a
 - Martin, R. C. *Clean Architecture*, 2017.
 - Cockburn, A. *Hexagonal Architecture*, 2005.
 - Fowler, M. *Bliki: CQRS*, 2011.
+
+## Voir aussi <!-- #see-also -->
+
+- [La phase DESIGN](../explanation/pipeline/design.md)
+- [Clean Architecture](../explanation/clean-architecture.md)
+- [Les gates DESIGN](gates.md)
 
 Termes à connaître : **bounded context**, **agrégat**, **value object**, **CQRS**,
 **Event Sourcing** — voir le [glossaire](./glossary.md).

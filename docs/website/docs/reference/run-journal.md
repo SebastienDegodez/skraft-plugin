@@ -1,6 +1,6 @@
 ---
 title: "Tracking folder and journal"
-description: "The .copilot-tracking/skraft-plans/ folder: layout, artifacts by phase, the durable documentation written under docs/, active pipeline, the hash-chained, signed events.jsonl journal and each of its events, questions to a human, and every status and code returned."
+description: "The tracking folder, artifacts by phase, docs/ output, active pipeline, the signed hash-chained events.jsonl and its events, questions, statuses and codes."
 persona: software-engineer
 ---
 
@@ -201,6 +201,11 @@ names no home folder …`.
 **Concurrent writes.** Before each append, the engine reads the journal again. If another
 write arrived since it was opened, it stops with `journal-changed`:
 `<slug>: another run wrote events.jsonl meanwhile; run again once it stops`.
+
+Under Copilot CLI, the **Journal** tab of the `skraft-pipeline` canvas reads this file
+([Hosts](./hosts.md#canvas)):
+
+![skraft-pipeline canvas, Journal tab: the hash chain intact, 62 lines each chained to the one before and signed; then each step with its phase, pass and outcome, and the human decision adr-1 RATIFIED by host-confirmed](/img/screenshots/shared/pipeline-canvas-journal.png)
 
 ## Events <!-- #events -->
 
@@ -404,7 +409,7 @@ A `step.started` or a `phase.closed` written after a `run.finished` reopens the 
 - **Setting an ADR to `Accepted` yourself in a run**: the attempt is refused
   (`adr-lifecycle`). Ratify it by answering the question.
 
-## Going further <!-- #see-also -->
+## See also <!-- #see-also -->
 
 - [Phases](./phases.md)
 - [Hosts](./hosts.md)

@@ -11,6 +11,9 @@ skills, les chaînes d'orchestration qui les relient et, pour chacun, son profil
 les preuves de ses évaluations contrôlées. Il est construit depuis les sources du plugin à
 chaque publication du manuel : il ne liste jamais un composant que le plugin ne livre plus.
 
+Pourquoi trois couches de preuves et une comparaison appariée :
+[Stratégie d'évaluation](../explanation/evaluation-strategy.md).
+
 **[Ouvrir le catalogue](pathname:///dashboard/)**
 
 ![Le catalogue : le nombre de skills, d'agents, workers et lentilles de revue, de skills avec une spec d'évaluation et de sujets avec des preuves publiées, puis les onglets Catalogue, Qualité, Efficacité et Modèles et leurs filtres](/img/screenshots/fr/dashboard-catalogue-light.png#gh-light-mode-only)
@@ -27,3 +30,10 @@ chaque publication du manuel : il ne liste jamais un composant que le plugin ne 
 
 La recherche et le filtre par modèle agent s'appliquent à toutes les vues. Un composant sans
 essai publié le dit : pas de données ne vaut pas succès.
+
+## Voir aussi <!-- #see-also -->
+
+- [Outillage d'évaluation](./evaluation-tooling.md)
+- [Évaluer un skill](../how-to/evaluate-a-skill.md)
+- [Lire un verdict d'évaluation](../explanation/deep-dive/reading-a-verdict.md)
+- [Stratégie d'évaluation](../explanation/evaluation-strategy.md)

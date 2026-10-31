@@ -1,6 +1,6 @@
 ---
 title: "Dossier de suivi et journal"
-description: "Le dossier .copilot-tracking/skraft-plans/ : arborescence, artefacts par phase, la documentation durable écrite sous docs/, pipeline actif, journal chaîné et signé events.jsonl et chacun de ses événements, questions à un humain, et tous les statuts et codes rendus."
+description: "Dossier de suivi, artefacts par phase, sorties sous docs/, pipeline actif, journal chaîné et signé events.jsonl et ses événements, questions, statuts et codes."
 persona: software-engineer
 ---
 
@@ -201,6 +201,11 @@ environment names no home folder …`.
 **Écritures concurrentes.** Avant chaque ajout, le moteur relit le journal. Si une autre
 écriture est arrivée depuis l'ouverture, il s'arrête avec `journal-changed` :
 `<slug>: another run wrote events.jsonl meanwhile; run again once it stops`.
+
+Sous Copilot CLI, l'onglet **Journal** du canvas `skraft-pipeline` lit ce fichier
+([Hôtes](./hosts.md#canvas)) :
+
+![Canvas skraft-pipeline, onglet Journal : la chaîne de hachage intacte, 62 lignes chaînées chacune à la précédente et signées ; puis chaque étape avec sa phase, son passage et son résultat, et la décision humaine adr-1 RATIFIED par host-confirmed](/img/screenshots/shared/pipeline-canvas-journal.png)
 
 ## Événements <!-- #events -->
 
@@ -403,7 +408,7 @@ Un `step.started` ou un `phase.closed` écrit après un `run.finished` rouvre le
 - **Passer soi-même un ADR en `Accepted` pendant un run** : la tentative est refusée
   (`adr-lifecycle`). Ratifiez-le en répondant à la question.
 
-## Pour aller plus loin <!-- #see-also -->
+## Voir aussi <!-- #see-also -->
 
 - [Phases](./phases.md)
 - [Hôtes](./hosts.md)

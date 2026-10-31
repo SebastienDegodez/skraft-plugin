@@ -1,5 +1,6 @@
 ---
 title: "Changelog"
+description: "The changes a user sees in skraft, grouped by version: V2 alphas, the v1 ADR migration and the v0 bootstrap."
 ---
 
 # Changelog
@@ -102,3 +103,9 @@ $ node scripts/migrate-adr-layout.mjs \
 - Created the SKRAFT public documentation site.
 - Pages: landing, pipeline, architecture, concepts, customisation, agent and skill reference.
 - Integrated citation lint.
+
+## See also <!-- #see-also -->
+
+- [Migrate a working copy from v1](../how-to/migrate-from-v1.md)
+- [Hosts](./hosts.md)
+- [Glossary](./glossary.md)

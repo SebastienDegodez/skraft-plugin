@@ -1,6 +1,6 @@
 ---
 title: "Gates"
-description: "The command gates the engine runs and the review criteria (Gxx and other ids) the lenses judge, per phase, with a lens's answer, the refutation and how the verdict is computed."
+description: "The engine's command gates and the review criteria (Gxx and other ids) the lenses judge, per phase, with a lens's answer, the refutation and the verdict."
 ---
 
 # Gates

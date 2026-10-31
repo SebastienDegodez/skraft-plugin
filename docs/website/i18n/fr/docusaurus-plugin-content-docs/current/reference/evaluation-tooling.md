@@ -1,6 +1,6 @@
 ---
 title: "Outillage d'évaluation"
-description: "Les fichiers, le lanceur, ses variables, les états de verdict, le commentaire de pull request, les jobs de CI et le tableau de bord de l'évaluation des skills et des agents."
+description: "Fichiers, lanceur et variables, états de verdict, commentaire de pull request, jobs de CI et tableau de bord de l'évaluation des skills et des agents."
 persona: tech-lead
 ---
 
@@ -187,7 +187,7 @@ request disparaissent à sa fermeture, ses verdicts restent.
 
 Sans verdict, le tableau de bord montre le catalogue complet et marque le reste non évalué.
 
-## Voir aussi
+## Voir aussi <!-- #see-also -->
 
 - [Évaluer un skill](../how-to/evaluate-a-skill.md)
 - [Stratégie d'évaluation](../explanation/evaluation-strategy.md)

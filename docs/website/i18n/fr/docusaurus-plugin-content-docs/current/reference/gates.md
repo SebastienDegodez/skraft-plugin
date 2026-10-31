@@ -1,6 +1,6 @@
 ---
 title: "Gates"
-description: "Les gates de commandes que lance le moteur et les critères de revue (Gxx et autres identifiants) que jugent les lentilles, par phase, avec la réponse d'une lentille, la réfutation et le calcul du verdict."
+description: "Les gates de commandes du moteur et les critères de revue (Gxx et autres) des lentilles, par phase, avec la réponse d'une lentille, la réfutation et le verdict."
 ---
 
 # Gates

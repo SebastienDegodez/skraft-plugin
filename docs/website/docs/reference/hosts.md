@@ -127,6 +127,22 @@ While a run of the session drives the pipeline, its own dialog asks and the pane
 button; a press then is refused (`skraft is running; answer in its dialog`). A press that fails
 for another reason says `skraft: the answer could not be recorded; answer with /skraft decide`.
 
+```console title="Skraft pane"
+skraft checkout — running
+▶ DESIGN
+  ✓ design — solution-architect: done, pass 2, ~$1.00
+  ▶ design_review — consistency, fitness: pass 2, ~$0.38
+  ✓ adr — adr-ratification: answered
+· DISTILL
+  · distill
+```
+
+:::note[Screenshot pending a real run]
+A capture of the **Skraft** pane in a Claude Code session replaces this block once a real run
+produces it. Until then, the block shows the pane's text for a `checkout` run in DESIGN, as the
+mod's view tests check it.
+:::
+
 **Tool `mcp__skraft__run_pipeline`** (called by the model): starts or resumes the pipeline
 and returns at once; the run goes on in the background.
 
@@ -249,6 +265,8 @@ terminal.`; it takes no answer.
 
 While a question waits, a **We need you** button shows in the header. It leads to the question on the Run tab, and so does the `n` key outside a field. It answers nothing: the answer goes through Copilot's dialog or `skraft decide`.
 
+![skraft-pipeline canvas: status WAITING, a "We need you" button in the header and a "Pull request" box with the question and how to answer it, RESEARCH open on publish_consent, the other phases to come](/img/screenshots/shared/pipeline-canvas-question.png)
+
 The page speaks the browser's language, French or English. The sentences the driver fixes (no working directory, an unreadable pipeline or configuration, a configuration that could not be saved, where to answer the question) and the page's own words follow it; what the engine writes (steps and their outcomes, reviews, the question, the engine's refusals) shows as the engine wrote it, and the model reads the English text of `get_pipeline` and `get_configuration`. Each phase says its state in a word (closed, under way, to come) and each step in a word only a screen reader reads; a polite live region announces a new run status and a question that comes to wait. The consents are one tab stop per choice group: the arrow keys, Home and End move the choice. Under forced colours the chosen choice, the selected tab and the phase and step under way keep a fill, a border or an outline, and `prefers-contrast: more` darkens the soft text and the rules. After five attempts to reach its server again (about 45 s) the page says to close the canvas and open it again from Copilot: a server started again has a new address and token, which a reload cannot reach. All of this is checked in a browser with emulated colours and contrast; it was not read with a screen reader nor with Windows High Contrast.
 
 Before the first phase of a working copy, the workflow opens the canvas on its Configuration tab and puts the `configuration` question in the chat: *Start this run with the configuration of this working copy?* `START` goes on and is kept in `skraft-config.local.json` (`configurationConfirmed`), so later runs start without asking; `STOP` starts nothing. Pass `configure: true` to the workflow to be asked again. The CLI and the Claude Code mod never ask it.
@@ -302,6 +320,11 @@ $ node "<plugin folder>/engine/drivers/copilot-sdk/skraft-run.mjs" [<slug>] [--i
 | Question | a paused run waits: `skraft decide` in a terminal, then `skraft-run.mjs` again |
 | Exit code | 0 run done or waiting; 1 otherwise; 2 malformed line |
 | Failures | each SDK call has a timeout (`rpc-timeout`), following the run a deadline (`run-too-long`); Ctrl-C stops the follow; no SDK text is passed on |
+
+:::note[Screenshot pending a real run]
+A capture of VS Code with `skraft-run.mjs` following a run in its terminal replaces this note
+once a real run produces it. Until then, the command above is what you type in that terminal.
+:::
 
 ### `next` / `record` agent loop <!-- #agent-loop -->
 
