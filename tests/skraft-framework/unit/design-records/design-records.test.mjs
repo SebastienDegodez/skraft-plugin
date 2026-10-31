@@ -117,20 +117,27 @@ test('an architect that finds the story covered by the design documents already 
   for (const [path, text] of Object.entries(documented)) assert.equal(await host.workspace.read(path), text)
 })
 
-test('an architect whose consistency matrix lists no docs/ file, or a file the working copy lacks, is sent back', async () => {
-  const host = scripted({}, (it) => [
+test('an architect whose consistency matrix lists no file of a durable docs/ folder, or a file the working copy lacks, is sent back, and one citing its files with back slashes, lines and anchors goes on', async () => {
+  const documented = { 'docs/README.md': '# Docs\n', 'docs/domain/event-model/payment.md': '# Payment\n', 'docs/architecture/legacy/old.md': '# Old\n' }
+  const host = scripted({ files: documented }, (it) => [
     agent()(it),
-    citing('- docs-relied-on: docs/../skraft-config.json')(it),
-    citing('- docs-relied-on: docs/architecture/payment.md, docs/architecture/context-map.md')(it),
-    citing('- docs-relied-on: docs/architecture/context-map.md')(it),
+    citing('- docs-relied-on: docs/adr, docs/adr/../../package.json, docs/architecture/legacy/../../../package.json, docs/README.md, docs/domain/, mydocs/architecture/context-map.md, /repo/docs/architecture/context-map.md, C:/repo/docs/architecture/context-map.md, ../docs/architecture/context-map.md, src/docs/architecture/context-map.md')(it),
+    citing('- docs-relied-on: docs/architecture/payment.md, docs/architecture/legacy, docs/architecture/context-map.md')(it),
+    citing('- docs-relied-on: docs\\architecture\\context-map.md:12:3, (docs/domain/event-model/payment.md#flow).')(it),
     ...nominal(it).slice(2),
   ])
+  const read = host.workspace.read.bind(host.workspace)
+  host.workspace.read = async (path) => {
+    if (path === 'docs/architecture/legacy') throw new Error('EISDIR')
+    return read(path)
+  }
 
   assert.equal((await host.start()).status, 'done')
 
+  const lacks = (/** @type {string} */ path) => `docs-relied-on lists ${path}, which is no file of the working copy (#410)`
   assert.deepEqual(design(host).map(({ attempt, outcome, code, failures }) => [attempt, outcome, code, failures]), [
     [1, 'failed', 'design-records', [`${MATRIX}: its docs-relied-on line lists no docs/ file the story relies on, created or cited (#410)`]],
-    [2, 'failed', 'design-records', ['docs-relied-on lists docs/architecture/payment.md, which is no file of the working copy (#410)']],
+    [2, 'failed', 'design-records', [lacks('docs/architecture/payment.md'), lacks('docs/architecture/legacy')]],
     [3, 'done', null, []],
   ])
 })

@@ -48,9 +48,22 @@ const recordsOf = async ({ files, workspace }, slug, { tracked, changed }) => {
   const adrFolder = (await textsOf(changed.filter(inAdrFolder), fromWorkspace)).filter(({ text }) => text !== null)
   const adrs = adrFolder.filter(({ path }) => isAdr(path))
   const matrices = await textsOf(tracked.filter(isMatrix), (path) => files.read(slug, path))
-  const relied = await textsOf([...new Set(matrices.flatMap(({ text }) => reliedOn(text)))], fromWorkspace)
+  const relied = await textsOf([...new Set(matrices.flatMap(({ text }) => reliedOn(text)))], (path) => regularFile(workspace, path))
   const registries = await textsOf([...new Set(adrs.map(({ path }) => registryOf(path)))], fromWorkspace)
   return { matrices, relied, written: adrFolder.map(({ path }) => path), adrs, registries }
+}
+
+/**
+ * A listed file's text, null when the working copy has none or the path is no readable file (a folder, a device).
+ * @param {RecordDeps['workspace']} workspace @param {string} path
+ * @returns {Promise<string | null>}
+ */
+const regularFile = async (workspace, path) => {
+  try {
+    return await workspace.read(path)
+  } catch {
+    return null
+  }
 }
 
 /** @param {string[]} paths @param {(path: string) => Promise<string | null>} read @returns {Promise<Text[]>} */

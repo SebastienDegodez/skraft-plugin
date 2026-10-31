@@ -2,8 +2,9 @@
  * The DESIGN records the engine checks when the solution architect finishes, instead of a lens:
  *   G10       a consistency-matrix-<story>.md in the tracking folder, its consistency-gate PASS,
  *             a comment in brackets or after a dash allowed after it
- *   docs      its docs-relied-on line lists every docs/ file the story relies on, created or cited, and
- *             each listed file exists in the working copy (#410)
+ *   docs      its docs-relied-on line lists every file of docs/adr, docs/architecture, docs/domain/event-model
+ *             or docs/features the story relies on, created or cited, and each listed file is a readable
+ *             file of the working copy (#410)
  *   G14      no ADR the run wrote is named *-rejected.md, *-accepted.md, *-deprecated.md or
  *             *-superseded.md
  *   G2, G12   every `**Supersedes:** ADR-MMM` of an ADR the run wrote has its registry row, ADR
@@ -25,16 +26,28 @@ const VERDICT_NAME = /-(rejected|accepted|deprecated|superseded)\.md$/
 const ADR = /(^|\/)docs\/adr\/adr-(\d+)[^/]*\.md$/i
 const GATE_PASS = /^\s*(?:[-*]\s+)?(?:\*\*)?consistency-gate:(?:\*\*)?\s*(?:\*\*)?PASS(?:\*\*)?(?:\s+(?:\(.*\)|[—–-]\s.*))?\s*$/im
 const RELIED_LINE = /^\s*(?:[-*]\s+)?(?:\*\*)?docs-relied-on:(?:\*\*)?(.*)$/gim
-/** A path under docs/ with no `..` in it. */
-const DOC_PATH = /docs\/(?:(?!\.\.)[^\s,;`'"()[\]])+/g
+/** A path of a durable docs/ folder, starting at a path boundary: the value's start, a space, a comma, a backtick, a quote or a parenthesis. */
+const DOC_PATH = /(?<=^|[\s,`'"(])docs\/(?:adr|architecture|domain\/event-model|features)\/[^\s,;`'"()[\]]+/g
+/** What a citation adds after the path: `#anchor`, `:line`, `:line:column`, trailing periods. */
+const CITED_SUFFIX = /(?:#.*|(?::\d+)+)?\.*$/
+const FILE_NAME = /[^/]$/
 const ADR_ID = /ADR-(\d+)/gi
 
 /**
- * The docs/ files a matrix lists on its `docs-relied-on:` lines, comma separated, backticks allowed.
+ * The files of docs/adr, docs/architecture, docs/domain/event-model and docs/features a matrix lists on
+ * its `docs-relied-on:` lines, comma separated, backticks allowed, forward or back slashes. A path
+ * starts at a boundary, has no `.` or `..` segment, and loses a `#anchor`, a `:line` and trailing periods.
  * @param {string | null} text
  * @returns {string[]}
  */
-export const reliedOn = (text) => [...new Set([...(text ?? '').matchAll(RELIED_LINE)].flatMap((line) => line[1].match(DOC_PATH) ?? []))]
+export const reliedOn = (text) => {
+  const lines = [...(text ?? '').replaceAll('\\', '/').matchAll(RELIED_LINE)]
+  const cited = lines.flatMap((line) => line[1].match(DOC_PATH) ?? []).map((path) => path.replace(CITED_SUFFIX, ''))
+  return [...new Set(cited.filter(isDurableFile))]
+}
+
+/** @param {string} path */
+const isDurableFile = (path) => FILE_NAME.test(path) && !path.split('/').some((part) => part === '.' || part === '..')
 
 /** @param {string} path relative to the tracking folder */
 export const isMatrix = (path) => MATRIX.test(path)
