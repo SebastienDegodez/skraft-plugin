@@ -1,0 +1,84 @@
+/* The card stays dark in both colour modes, like the SVG transcripts (eng/docs/terminal-svg.mjs). */
+.terminal {
+  --term-bg: #16181d;
+  --term-text: #d7dae0;
+  --term-muted: #8b929c;
+  --term-prompt: #7cc4ff;
+  margin: 0 0 var(--ifm-leading) 0;
+  border: 1px solid #2a2e36;
+  border-radius: 10px;
+  background: var(--term-bg);
+  color: var(--term-text);
+  box-shadow: 0 6px 18px rgb(0 0 0 / 12%);
+  overflow: hidden;
+}
+
+.bar {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem 0.75rem;
+  background: #23262d;
+}
+
+.dots {
+  display: inline-flex;
+  gap: 6px;
+}
+
+.dots i {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--term-muted);
+  font-size: 0.8125rem;
+  text-align: center;
+}
+
+.copy {
+  background: transparent;
+  border: 1px solid #3a3f49;
+  border-radius: 6px;
+  color: var(--term-text);
+  cursor: pointer;
+  font-size: 0.75rem;
+  padding: 0.2rem 0.55rem;
+}
+
+.copy:hover {
+  border-color: var(--term-prompt);
+}
+
+.body {
+  margin: 0;
+  padding: 0.85rem 1rem;
+  overflow-x: auto;
+  background: transparent;
+  color: inherit;
+  font-size: 0.875rem;
+  line-height: 1.55;
+  white-space: pre;
+}
+
+.command,
+.continuation {
+  color: var(--term-text);
+}
+
+.output {
+  color: var(--term-muted);
+}
+
+.prompt {
+  color: var(--term-prompt);
+  user-select: none;
+}
