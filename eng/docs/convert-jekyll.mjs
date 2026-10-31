@@ -62,9 +62,11 @@ const segments = (lines) => {
 
 const joinSegments = (parts) => parts.flatMap((part) => part.lines).join('\n')
 
-/** Applies `convert` to every prose line (outside fenced code). */
+/** Applies `convert` to every prose line (outside fenced code); a null result drops the line. */
 const mapProse = (text, convert) => joinSegments(
-  segments(text.split('\n')).map((part) => (part.fence ? part : { ...part, lines: part.lines.map(convert) })),
+  segments(text.split('\n')).map((part) => (part.fence
+    ? part
+    : { ...part, lines: part.lines.map(convert).filter((line) => line !== null) })),
 )
 
 /** Relative link from the page to another doc of the same locale: `./x.md`, `../y/z.mdx`. */
@@ -160,6 +162,25 @@ const convertIncludes = (text, page) => {
   return removed
 }
 
+const FIL_ROUGE_OPEN = /^\s*<div class="fil-rouge"[^>]*>\s*$/
+const FIL_ROUGE_LABEL = /^\s*<span class="fil-rouge__label">(.*)<\/span>\s*$/
+
+const markdownLabel = (html) => html
+  .replace(/<em>(.*?)<\/em>/g, '*$1*')
+  .replace(/<strong>(.*?)<\/strong>/g, '**$1**')
+
+/** Rule 5: the fil-rouge `<div>` and its label `<span>` become `:::info[label]` … `:::`. */
+const convertRunningExample = (text, page) => {
+  let inside = false
+  return mapProse(text, (line) => {
+    if (FIL_ROUGE_OPEN.test(line)) { inside = true; return null }
+    const label = inside && FIL_ROUGE_LABEL.exec(line)
+    if (label) return `:::info[${markdownLabel(label[1])}]`
+    if (inside && /^\s*<\/div>\s*$/.test(line)) { inside = false; return ':::' }
+    return line
+  })
+}
+
 const DEFAULT_MDX_DOCS = ['index', 'reference/citations']
 
 /**
@@ -177,6 +198,7 @@ export const convertPage = (source, options) => {
   text = convertCitationLinks(text, page)
   text = convertInternalLinks(text, page)
   text = convertIncludes(text, page)
+  text = convertRunningExample(text, page)
   text = convertFrontMatter(lines, page) + text
   return { text, extension: page.extension, findings: page.findings, redirects: page.redirects }
 }
