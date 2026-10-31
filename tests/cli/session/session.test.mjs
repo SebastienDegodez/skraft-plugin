@@ -101,7 +101,8 @@ test('an unclosed quote is refused without running anything', () => {
 
 test('the session opens with the banner on stderr, uncoloured with NO_COLOR', () => {
   withPlugin((home) => {
-    const run = session(home, ['exit'], { SKRAFT_BANNER: '1', NO_COLOR: '' })
+    // WT_SESSION: Windows Terminal, so Windows too gets the box-drawing letters.
+    const run = session(home, ['exit'], { SKRAFT_BANNER: '1', NO_COLOR: '', WT_SESSION: '1' })
 
     assert.equal(run.stdout.replaceAll('skraft › ', ''), '')
     assert.match(run.stderr, /██.*\n[\s\S]*AI-powered digital craft · cli \d+\.\d+\.\d+/)
@@ -114,5 +115,19 @@ test('SKRAFT_INTERACTIVE=0 keeps `skraft` alone a one-shot call to the engine', 
     const run = session(home, ['status'], { SKRAFT_INTERACTIVE: '0' })
 
     assert.equal(run.stdout, 'engine []\n')
+  })
+})
+
+test('the legacy Windows console gets plain ASCII letters', { skip: process.platform !== 'win32' && 'the legacy console exists on Windows only' }, () => {
+  withPlugin((home) => {
+    const { WT_SESSION: _w, TERM_PROGRAM: _t, ...rest } = process.env
+    const run = spawnSync(process.execPath, [bin], {
+      encoding: 'utf8',
+      input: 'exit\n',
+      env: { ...rest, HOME: home, USERPROFILE: home, SKRAFT_INTERACTIVE: '1', SKRAFT_BANNER: '1', SKRAFT_UPDATE_CHECK: '0', NO_COLOR: '' },
+    })
+
+    assert.match(run.stderr, /\|___\/_\|\\_\\_\|/)
+    assert.doesNotMatch(run.stderr, /█/)
   })
 })
