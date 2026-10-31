@@ -40,7 +40,7 @@ stimuli:
       - Skills (read each before you start):
       - mocking-microcks-dotnet
       - Read first:
-      - .copilot-tracking/skraft-plans/orders/features/order-discount.feature
+      - docs/features/orders/order-discount.feature
       - .copilot-tracking/skraft-plans/orders/details/2026-08-28/impl-plan-order-discount.md
       - Fill each output in place; keep the path, create no other copy:
       - .copilot-tracking/skraft-plans/orders/changes/2026-08-28/change-log.md
@@ -106,7 +106,7 @@ stimuli:
         - src: fixtures/canonical-ready/tests/Orders.IntegrationTests/ReceiptStoreTests.cs
           dest: tests/Orders.IntegrationTests/ReceiptStoreTests.cs
         - src: fixtures/canonical-ready/.copilot-tracking/skraft-plans/orders/features/order-discount.feature
-          dest: .copilot-tracking/skraft-plans/orders/features/order-discount.feature
+          dest: docs/features/orders/order-discount.feature
         - src: fixtures/canonical-ready/.copilot-tracking/skraft-plans/orders/details/2026-08-28/impl-plan-order-discount.md
           dest: .copilot-tracking/skraft-plans/orders/details/2026-08-28/impl-plan-order-discount.md
         - src: fixtures/toolchain/.eval-bin/dotnet
@@ -155,7 +155,7 @@ stimuli:
       - Skills (read each before you start):
       - mocking-microcks-dotnet
       - Read first:
-      - .copilot-tracking/skraft-plans/storefront/features/basket-price.feature
+      - docs/features/storefront/basket-price.feature
       - .copilot-tracking/skraft-plans/storefront/details/2026-08-28/impl-plan-basket-price.md
       - Fill each output in place; keep the path, create no other copy:
       - .copilot-tracking/skraft-plans/storefront/changes/2026-08-28/change-log.md
@@ -213,7 +213,7 @@ stimuli:
         - src: fixtures/bff-ready/tests/Storefront.IntegrationTests/PriceResponseTests.cs
           dest: tests/Storefront.IntegrationTests/PriceResponseTests.cs
         - src: fixtures/bff-ready/.copilot-tracking/skraft-plans/storefront/features/basket-price.feature
-          dest: .copilot-tracking/skraft-plans/storefront/features/basket-price.feature
+          dest: docs/features/storefront/basket-price.feature
         - src: fixtures/bff-ready/.copilot-tracking/skraft-plans/storefront/details/2026-08-28/impl-plan-basket-price.md
           dest: .copilot-tracking/skraft-plans/storefront/details/2026-08-28/impl-plan-basket-price.md
         - src: fixtures/toolchain/.eval-bin/dotnet
@@ -255,7 +255,7 @@ stimuli:
       - Skills (read each before you start):
       - mocking-microcks-dotnet
       - Read first:
-      - .copilot-tracking/skraft-plans/orders/features/order-discount.feature
+      - docs/features/orders/order-discount.feature
       - .copilot-tracking/skraft-plans/orders/details/2026-08-28/impl-plan-order-discount.md
       - Fill each output in place; keep the path, create no other copy:
       - .copilot-tracking/skraft-plans/orders/changes/2026-08-28/change-log.md
@@ -321,7 +321,7 @@ stimuli:
         - src: fixtures/canonical-ready/tests/Orders.IntegrationTests/ReceiptStoreTests.cs
           dest: tests/Orders.IntegrationTests/ReceiptStoreTests.cs
         - src: fixtures/canonical-ready/.copilot-tracking/skraft-plans/orders/features/order-discount.feature
-          dest: .copilot-tracking/skraft-plans/orders/features/order-discount.feature
+          dest: docs/features/orders/order-discount.feature
         - src: fixtures/canonical-ready/.copilot-tracking/skraft-plans/orders/details/2026-08-28/impl-plan-order-discount.md
           dest: .copilot-tracking/skraft-plans/orders/details/2026-08-28/impl-plan-order-discount.md
         - src: fixtures/toolchain/.eval-bin/dotnet
@@ -375,7 +375,7 @@ stimuli:
       - Skills (read each before you start):
       - mocking-microcks-dotnet
       - Read first:
-      - .copilot-tracking/skraft-plans/orders/features/order-discount.feature
+      - docs/features/orders/order-discount.feature
       - .copilot-tracking/skraft-plans/orders/details/2026-08-28/impl-plan-order-discount.md
       - Fill each output in place; keep the path, create no other copy:
       - .copilot-tracking/skraft-plans/orders/changes/2026-08-28/change-log.md
@@ -441,7 +441,7 @@ stimuli:
         - src: fixtures/canonical-ready/tests/Orders.IntegrationTests/ReceiptStoreTests.cs
           dest: tests/Orders.IntegrationTests/ReceiptStoreTests.cs
         - src: fixtures/canonical-ready/.copilot-tracking/skraft-plans/orders/features/order-discount.feature
-          dest: .copilot-tracking/skraft-plans/orders/features/order-discount.feature
+          dest: docs/features/orders/order-discount.feature
         - src: fixtures/canonical-ready/.copilot-tracking/skraft-plans/orders/details/2026-08-28/impl-plan-order-discount.md
           dest: .copilot-tracking/skraft-plans/orders/details/2026-08-28/impl-plan-order-discount.md
         - src: fixtures/toolchain/.eval-bin/dotnet

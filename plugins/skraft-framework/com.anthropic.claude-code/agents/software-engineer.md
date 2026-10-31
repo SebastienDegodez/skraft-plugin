@@ -43,7 +43,7 @@ Each component line of your brief gives its `mocking:` strategy and whether `con
 
 ## Inputs
 
-- The `.feature`, the test plan, the implementation plan and the contracts among your inputs are settled: never re-plan the story.
+- The story's `.feature` under `docs/features/` (the one holding the scenarios the implementation plan names), the test plan, the implementation plan and the contracts among your inputs are settled: never re-plan the story.
 - Never re-author an acceptance test DISTILL committed and never change one of its input or expected values.
 - Take project conventions from the research document's `Project conventions` section; do not re-derive them from the code.
 - Run tests with the component's test command from your brief, filtered to the test at hand when its runner allows; never hardcode another command.

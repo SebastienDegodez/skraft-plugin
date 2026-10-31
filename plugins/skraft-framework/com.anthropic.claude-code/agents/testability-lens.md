@@ -23,6 +23,7 @@ Read the skill file your brief lists under Skill before any other input; judge w
 
 - Read the patch; open a whole file only when the patch lacks the context a finding needs.
 - Judge test files from the changed-files list and the patch, never from what a plan says exists.
+- The `.feature` files are the `docs/features/` paths among the changed files: judge the scenarios the patch adds or changes.
 
 | Gate | Criterion | Severity |
 |---|---|---|

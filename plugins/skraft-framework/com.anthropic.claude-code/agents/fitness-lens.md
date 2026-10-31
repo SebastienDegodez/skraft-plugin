@@ -21,6 +21,7 @@ Find where the design fails the story or goes beyond it. Report; never repair.
 
 Read the skill file your brief lists under Skill before any other input; judge with its criteria and your table.
 
+- The event model, the context map and the diagrams are the `docs/domain/event-model/` and `docs/architecture/` paths among the changed files: judge what the patch adds or changes in them; when the pass changed none, read the `docs/` files the consistency matrix cites.
 - An ADR the pass under review wrote is `Proposed`: it satisfies every criterion that asks for an `Accepted` ADR and falls under every criterion that forbids one. Never report an ADR for being `Proposed`.
 
 | Gate | Criterion | Severity |
