@@ -10,6 +10,7 @@
       {
         "preset": "conventionalcommits",
         "releaseRules": [
+          { "scope": "cli", "release": false },
           { "breaking": true, "release": "major" },
           { "type": "docs", "release": false },
           { "type": "refactor", "release": "patch" },

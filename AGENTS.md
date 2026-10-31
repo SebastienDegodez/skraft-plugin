@@ -30,11 +30,18 @@ plugins/
   skraft-backlog/                    ← backlog plugin; shares no runtime code with the core
   skraft-brownfield/                 ← lot 9; independent plugin, installed next to the core
 
+cli/                                 ← npm package @skraft/cli: the `skraft` command for humans. Holds no
+                                       engine; finds the plugin a host installed (SKRAFT_PLUGIN_ROOT, then
+                                       Copilot CLI, then Claude Code) and imports its drivers/cli/skraft.mjs.
+                                       Own version, published by hand from main (cli-publish.yml); commits
+                                       scoped `cli` never release the plugin. Agents keep the absolute path.
+
 tests/
   skraft-framework/unit/<feature>/         ← engine use-case acceptance tests
   skraft-framework/integration/<feature>/  ← real adapters, CLI, drivers, architecture rules
   skill-scripts/<feature>/                 ← skill script tests and fixtures
   tooling/<feature>/                       ← repo tooling tests
+  cli/<feature>/                           ← the `skraft` command (cli/), real processes on a temp HOME
   dashboard/  skraft-backlog/  site/       ← eval/dashboard tooling, backlog plugin, docs site
   skills/<skill>/eval.yaml                 ← Vally skill specs
   agents/<suite>/eval.yaml                 ← Vally real-agent specs and fixtures

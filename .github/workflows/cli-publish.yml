@@ -1,0 +1,57 @@
+name: Publish @skraft/cli
+
+# The skraft command has its own version, independent of the plugin's: it only changes when the
+# way it finds the plugin changes. It is published by hand, from main only, at the version
+# written in cli/package.json; the plugin releases never publish it.
+#
+# Publishing uses npm trusted publishing (OIDC): no token is stored. On npmjs.com, the package
+# @skraft/cli names this repository and this workflow file as its trusted publisher.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  id-token: write
+
+concurrency:
+  group: cli-publish
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: npm publish
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '24'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Run the plugin lookup tests
+        run: npm run test:cli
+
+      - name: Refuse a version already on npm
+        working-directory: cli
+        run: |
+          version=$(node -p "require('./package.json').version")
+          if npm view "@skraft/cli@${version}" version >/dev/null 2>&1; then
+            echo "::error::@skraft/cli@${version} is already published; raise the version in cli/package.json"
+            exit 1
+          fi
+          echo "VERSION=${version}" >> "$GITHUB_ENV"
+
+      - name: Publish
+        working-directory: cli
+        run: npm publish --access public
+
+      - name: Tag the published version
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh api "repos/${{ github.repository }}/git/refs" -f ref="refs/tags/cli-v${VERSION}" -f sha="${{ github.sha }}"

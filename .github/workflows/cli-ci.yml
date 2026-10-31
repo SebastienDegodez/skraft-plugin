@@ -1,0 +1,40 @@
+name: skraft command (@skraft/cli) CI
+
+# The skraft command finds the plugin a host installed and runs its engine. It runs on the
+# developer's machine: its lookup must work, unchanged, on Linux, macOS and Windows.
+on:
+  push:
+    branches: [main, integration/v2-next]
+    paths:
+      - 'cli/**'
+      - 'tests/cli/**'
+      - '.github/workflows/cli-ci.yml'
+  pull_request:
+    branches: [main, integration/v2-next, 'v2/lot-*']
+    paths:
+      - 'cli/**'
+      - 'tests/cli/**'
+      - '.github/workflows/cli-ci.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Plugin lookup (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Run the plugin lookup tests
+        run: npm run test:cli
+      - name: Check the package content
+        working-directory: cli
+        run: npm pack --dry-run

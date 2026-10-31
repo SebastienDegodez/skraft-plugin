@@ -1,0 +1,34 @@
+{
+  "name": "@skraft/cli",
+  "version": "1.0.0",
+  "description": "The skraft command: finds the skraft plugin your host installed (GitHub Copilot CLI, then Claude Code) and runs its engine.",
+  "type": "module",
+  "bin": {
+    "skraft": "bin/skraft.mjs"
+  },
+  "files": [
+    "bin/",
+    "src/",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SebastienDegodez/skraft-plugin.git",
+    "directory": "cli"
+  },
+  "homepage": "https://github.com/SebastienDegodez/skraft-plugin/tree/main/cli#readme",
+  "license": "GPL-3.0-or-later",
+  "keywords": [
+    "skraft",
+    "copilot",
+    "claude-code",
+    "cli"
+  ],
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  }
+}

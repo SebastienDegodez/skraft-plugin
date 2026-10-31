@@ -11,6 +11,8 @@ Ce que le pilote suppose déjà sans mesure ; la prochaine passe de la sonde rem
 
 | Contrôle | Issue | Verdict | Supposé par |
 | --- | --- | --- | --- |
+| Copilot CLI : le plugin installé est un clone git dans `<COPILOT_HOME ou ~/.copilot>/installed-plugins/<marketplace>/skraft/`, mis à jour en place par `copilot plugin update` (même chemin après mise à jour), sous Linux et Windows | #467 | not measured ; affirmé par le mainteneur | `cli/src/locate-plugin.mjs` (commande `skraft`, paquet `@skraft/cli`) |
+| Claude Code : `installed_plugins.json` sous `<CLAUDE_CONFIG_DIR ou ~/.claude>/plugins/` liste `installPath` (et `lastUpdated`) de la version courante de chaque `skraft@<marketplace>`, réécrit à chaque mise à jour | #447, #467 | not measured ; repris de #447 | `cli/src/locate-plugin.mjs` |
 | agent lancé : charge-t-il `AGENTS.md`, `CLAUDE.md` ou `.github/copilot-instructions.md` de la copie de travail (Copilot CLI) | — | not measured, aucun contrôle de sonde | rien : la revue d'une pull request (#240) n'en suppose rien ; si l'hôte les charge, ses lentilles lisent la version de l'auteur de la pull request à côté des copies de la base que leur brief désigne |
 | agent lancé : même question sous Claude Code et sous VS Code | — | not measured, hors de cette sonde | idem |
 | Claude Code (mod) : effort d'un sous-agent réécrit par `turn.step` avec `CLAUDE_CODE_EFFORT_LEVEL` posée, lancements en parallèle, autre modèle que `sonnet`, session interactive | #258 | not measured | `agent-runner.mjs` (`createAgentEfforts`), `claude-mod-driver.mjs` (`turnStep`), `skraft-mod.tsx` (`turn.step`) ; mesuré sur 2.1.291 et 2.1.314 sous `-p`, lancements en parallèle compris (3 simultanés, 60 pas), voir la section #258 |
