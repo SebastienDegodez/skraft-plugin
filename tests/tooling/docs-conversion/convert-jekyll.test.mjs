@@ -57,6 +57,12 @@ test('the phase-ribbon include becomes the phase front matter key; another inclu
   assert.deepEqual(result.findings, [{ rule: 'includes', line: 14, reason: 'include with no Docusaurus equivalent: doc-pager.html' }])
 })
 
+test('the running example block becomes an info admonition titled by its label', () => {
+  const { result, after } = convertFixture('running-example', { docId: 'explanation/pipeline/design', locale: 'fr' })
+  assert.equal(result.text, after)
+  assert.deepEqual(result.findings, [])
+})
+
 test('with the catalogue option, dashboard links point at the catalogue page', () => {
   const source = '# T\n\n[Catalogue]({{ "/en/dashboard/" | relative_url }}), [data]({{ "/dashboard/" | relative_url }})\n'
   const { text } = convertPage(source, { docId: 'how-to/run-gates', locale: 'en', dashboardLink: 'catalogue' })
