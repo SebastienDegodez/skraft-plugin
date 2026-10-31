@@ -36,8 +36,8 @@ Each fixture is a Docusaurus layout: `docs/website/book.yml` (pages and generate
 two worker descriptors, not the product and engineering roots the topology rules require. Until
 the fixtures carry those roots, the "scans clean" graders cannot pass.
 
-Once the topology blockers are gone, that is why the graders can afford to be exit-code assertions on the same two scripts: the
-before-state is known exactly, so "scans clean afterwards" is a real repair and not a tautology.
+Once the topology blockers are gone, the graders can be exit-code assertions on the same two
+scripts: the before-state is known exactly, so "scans clean afterwards" is a real repair and not a tautology.
 
 ## The toolchain is staged from the repository, not copied
 
@@ -68,10 +68,9 @@ Before it can be taken off that list:
 4. **The agent's real habitat is gh-aw** — it runs under safe-outputs with no write token and
    emits a pull request. The stimuli grade the repair in the workspace and stop short of the PR,
    which is the honest boundary of what this executor can observe.
-
 5. **Not verified after the Docusaurus migration.** The fixtures and paths moved from
-   `docs/site/` to `docs/website/` without a Vally run (Vally is paused), and the
-   `catalogue-topology` blockers above predate that move.
+   `docs/site/` to `docs/website/` without a Vally run (Vally is paused). The
+   `catalogue-topology` blockers above come from the topology rules, not from the layout.
 
 ## Running it once the above is settled
 
