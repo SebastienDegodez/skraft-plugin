@@ -143,6 +143,23 @@ const convertInternalLinks = (text, page) => mapProse(text, (line) => line.repla
   return match
 }))
 
+const PHASE_RIBBON = /^\s*\{%-?\s*include\s+phase-ribbon\.html\s+current="([\w-]+)"\s*-?%\}\s*$/
+const INCLUDE = /\{%-?\s*include\s+(\S+)[^%]*%\}/g
+
+/** Rule 4: the phase-ribbon include goes (it became `phase`); any other include is reported. */
+const convertIncludes = (text, page) => {
+  const removed = removeTagLines(text, (line) => {
+    const ribbon = PHASE_RIBBON.exec(line)
+    if (ribbon) page.phase = ribbon[1]
+    return Boolean(ribbon)
+  })
+  mapProse(removed, (line) => {
+    for (const [match, name] of line.matchAll(INCLUDE)) report(page, 'includes', match, `include with no Docusaurus equivalent: ${name}`)
+    return line
+  })
+  return removed
+}
+
 const DEFAULT_MDX_DOCS = ['index', 'reference/citations']
 
 /**
@@ -159,6 +176,7 @@ export const convertPage = (source, options) => {
   let text = body
   text = convertCitationLinks(text, page)
   text = convertInternalLinks(text, page)
+  text = convertIncludes(text, page)
   text = convertFrontMatter(lines, page) + text
   return { text, extension: page.extension, findings: page.findings, redirects: page.redirects }
 }
