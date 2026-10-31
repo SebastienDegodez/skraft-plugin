@@ -132,7 +132,8 @@ critère qui en interdit un.
 | G2, G12 | chaque `**Supersedes:** ADR-MMM` d'un ADR écrit par le run a sa ligne dans le registre `docs/adr/supersessions.md` |
 
 Un manquement renvoie l'architecte avec une ligne par trace ; après sa dernière tentative, le
-run s'arrête avec `design-records`.
+run s'arrête avec `design-records`. La matrice de cohérence est aussi la sortie déclarée de DESIGN : quand
+elle manque, le run s'arrête avec `missing-outputs`.
 
 ## DISTILL {#distill}
 

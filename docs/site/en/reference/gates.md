@@ -131,7 +131,8 @@ every criterion that forbids one.
 | G2, G12 | every `**Supersedes:** ADR-MMM` of an ADR the run wrote has its row in the `docs/adr/supersessions.md` registry |
 
 A failure sends the architect back with one line per record; after its last attempt, the run
-stops with `design-records`.
+stops with `design-records`. The consistency matrix is also DESIGN's declared output: when it is
+missing, the run stops with `missing-outputs` instead.
 
 ## DISTILL {#distill}
 

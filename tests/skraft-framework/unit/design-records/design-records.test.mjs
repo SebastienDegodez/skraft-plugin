@@ -6,9 +6,10 @@ import { waitingOnEnvironment } from '../support/decisions.mjs'
 const MATRIX = 'details/2026-10-11/consistency-matrix-checkout.md'
 const ADR = 'docs/adr/adr-002-refunds.md'
 
-/** A solution architect that commits an ADR and writes what `records` gives in the tracking folder. @param {Record<string, string>} records */
+/** A solution architect that commits an ADR and writes in the tracking folder what `records` gives, its consistency matrix included. @param {Record<string, string>} records */
 const architect = (records) => agent({
   records: false,
+  fill: false,
   work: ({ git, tracking }) => {
     for (const [path, text] of Object.entries(records)) tracking.write(SLUG, path, text)
     git.commit('docs(checkout): ADR for the card payment', ['docs/adr/adr-001-card-payment.md'])
@@ -29,10 +30,11 @@ test('the solution architect is sent back while its consistency matrix is missin
   assert.equal((await host.start()).status, 'done')
 
   assert.deepEqual(design(host).map(({ attempt, outcome, code, failures }) => [attempt, outcome, code, failures]), [
-    [1, 'failed', 'design-records', ['no consistency-matrix-<story>.md in the tracking folder: write it, its consistency-gate line reading PASS (G10)']],
+    [1, 'failed', 'missing-outputs', ['no consistency-matrix-<story>.md in the tracking folder: write it, its consistency-gate line reading PASS (G10)']],
     [2, 'failed', 'design-records', [`${MATRIX}: its consistency-gate line does not read PASS (G10)`]],
     [3, 'done', null, []],
   ])
+  assert.deepEqual(design(host)[0].missing, [MATRIX])
   assert.ok(host.agentRunner.dispatches[2].prompt.endsWith([
     '', 'Refused in attempt 1 of 3:', '- no consistency-matrix-<story>.md in the tracking folder: write it, its consistency-gate line reading PASS (G10)',
   ].join('\n')), host.agentRunner.dispatches[2].prompt)
@@ -89,4 +91,19 @@ test('an ADR whose verdict sits in its file name, or a supersession the registry
     ...nominal(it).slice(2),
   ])
   assert.equal((await registered.start()).status, 'done')
+})
+
+test('an architect that finds the story covered by the design documents already under docs/ writes only its consistency matrix, and the run goes on to DISTILL', async () => {
+  const documented = { 'docs/architecture/context-map.md': '# Context map\n\nPayment: Core\n', 'docs/domain/event-model/payment.md': '# Payment\n\nCardPaid\n' }
+  const host = scripted({ files: documented }, (it) => [agent()(it), agent()(it), ...nominal(it).slice(2)])
+
+  assert.equal((await host.start()).status, 'done')
+
+  const [started] = host.events().filter((event) => event.type === 'step.started' && event.step === 'design')
+  assert.deepEqual(started.outputs, [MATRIX])
+  assert.deepEqual(design(host).map(({ attempt, outcome, code, failures, documents }) => [attempt, outcome, code, failures, documents]), [
+    [1, 'done', null, [], [MATRIX, 'details/2026-10-11/structural-scan.json']],
+  ])
+  assert.deepEqual(host.events().filter((event) => event.type === 'step.started').map((event) => event.step).filter((step) => ['design', 'design_review', 'distill'].includes(step)), ['design', 'design_review', 'distill'])
+  for (const [path, text] of Object.entries(documented)) assert.equal(await host.workspace.read(path), text)
 })

@@ -35,7 +35,7 @@ stimuli:
       - Skills (read each before you start):
       - mocking-microcks-dotnet
       - Read first:
-      - .copilot-tracking/skraft-plans/pricing/features/discount.feature
+      - docs/features/pricing/discount.feature
       - .copilot-tracking/skraft-plans/pricing/details/2026-08-07/impl.md
       - Fill each output in place; keep the path, create no other copy:
       - .copilot-tracking/skraft-plans/pricing/changes/2026-08-07/change-log.md
@@ -101,7 +101,7 @@ stimuli:
         - src: fixtures/approved-red/tests/CheckoutPricing.IntegrationTest/Architecture/ArchitectureTests.cs
           dest: tests/CheckoutPricing.IntegrationTest/Architecture/ArchitectureTests.cs
         - src: fixtures/approved-red/.copilot-tracking/skraft-plans/pricing/features/discount.feature
-          dest: .copilot-tracking/skraft-plans/pricing/features/discount.feature
+          dest: docs/features/pricing/discount.feature
         - src: fixtures/approved-red/.copilot-tracking/skraft-plans/pricing/details/2026-08-07/impl.md
           dest: .copilot-tracking/skraft-plans/pricing/details/2026-08-07/impl.md
       commands:
@@ -125,7 +125,7 @@ stimuli:
           tests/CheckoutPricing.UnitTest/LoyaltyDiscount/DiscountTests.cs
           tests/CheckoutPricing.IntegrationTest/CheckoutPricing.IntegrationTest.csproj
           tests/CheckoutPricing.IntegrationTest/Architecture/ArchitectureTests.cs
-          .copilot-tracking/skraft-plans/pricing/features/discount.feature
+          docs/features/pricing/discount.feature
           .copilot-tracking/skraft-plans/pricing/details/2026-08-07/impl.md
         - 'git commit --quiet -m "test: approved DISTILL fixture"'
     graders:

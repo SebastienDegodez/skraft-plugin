@@ -13,6 +13,7 @@ The matrix is the supervised-execution artefact for the cross-artefact consisten
 |---|---|---|
 | `{project-slug}` | `state.json::projectSlug` | kebab-case project identifier |
 | `{date}` | persona invocation date | `YYYY-MM-DD` |
+| `{bounded-context}` | context map | kebab-case bounded context name |
 | `{story-id}` | story metadata | e.g. `story-41` |
 | `{concept-name}` | persona Phase 9 PLAN step | one row per structural concept named in any ADR |
 | `{adr-truth}` | ADR-{NNN} | the ratified classification (source of truth) |
@@ -47,13 +48,13 @@ shared_artifact_registry:
     integration_risk: high
     validation: G2
   event-model:
-    source_of_truth: .copilot-tracking/skraft-plans/{project-slug}/details/{date}/event-model-{story-id}.md
+    source_of_truth: docs/domain/event-model/{bounded-context}.md
     consumers: [DISTILL]
     owner: solution-architect
     integration_risk: medium
     validation: G10
   diagrams:
-    source_of_truth: .copilot-tracking/skraft-plans/{project-slug}/details/{date}/diagrams-{story-id}.md
+    source_of_truth: docs/architecture/{bounded-context}.md
     consumers: [DELIVER]
     owner: solution-architect
     integration_risk: medium
@@ -82,7 +83,7 @@ Reviewer use: G10 reads the registry to know which artefacts are in scope for th
 
 ## Matrix
 
-| Concept | ADR (source of truth) | event-model-{story-id}.md | diagrams-{story-id}.md | contracts-{story-id}.md | Cause | Verdict |
+| Concept | ADR (source of truth) | event-model | diagrams | contracts | Cause | Verdict |
 |---|---|---|---|---|---|---|
 | `{concept-name}` | `{adr-truth}` (ADR-{NNN}) | `{cell-value}` | `{cell-value}` | `{cell-value}` | n/a \| LABEL_DRIFT \| CLASSIFICATION_DRIFT \| STRUCTURAL_DRIFT | PASS \| FAIL |
 

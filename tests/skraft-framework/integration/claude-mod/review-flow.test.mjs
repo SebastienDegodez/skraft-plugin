@@ -256,13 +256,10 @@ test('a blocker two lenses give at the same line is checked in one call, each fi
   assert.deepEqual(reviewsOf(events)[0], ['design_review', 1, 'approved', 'adr'])
 })
 
-test('on pass 2 only the lenses that had findings or whose inputs changed run again; a clean one whose inputs did not move is taken over', async (t) => {
+test('on pass 2 a lens that had findings runs again; the clean ones whose inputs did not move are taken over', async (t) => {
   const { cwd } = pipelineRepository(t)
   const blocker = finding('F1', 'blocker', 'The ADR names no payment provider')
-  const reworks = (brief, { slug }) => {
-    commit(cwd, `docs(${slug}): name the payment provider`, { 'docs/adr/adr-001-card-payment.md': '# ADR-001 Card payment\n\n**Status:** Proposed\n\nAccepted: Acme Pay.\n' })
-    writeResult(brief, { status: 'done', summary: 'provider named' })
-  }
+  const reworks = (brief) => writeResult(brief, { status: 'done', summary: 'the provider is named in the research the ADR cites' })
 
   const { outcome, spawns, events } = await runOn(cwd, {
     acts: { 'solution-architect': [NOMINAL['solution-architect'], reworks] },
@@ -271,9 +268,9 @@ test('on pass 2 only the lenses that had findings or whose inputs changed run ag
 
   assert.equal(outcome.status, 'done')
   assert.deepEqual(spawns.filter((item) => / · design_review · .* · pass 2 · /.test(item.description)).map((item) => item.description).sort(), [
-    `skraft ${SLUG} · design_review · architecture-compliance · pass 2 · attempt 1`, `skraft ${SLUG} · design_review · consistency · pass 2 · attempt 1`,
+    `skraft ${SLUG} · design_review · consistency · pass 2 · attempt 1`,
   ])
   assert.deepEqual(lensEvents(events, 'design_review').filter((event) => event.visit === 2).map(({ lens, reused }) => [lens, reused ?? false]).sort(), [
-    ['architecture-compliance', false], ['consistency', false], ['fitness', true],
+    ['architecture-compliance', true], ['consistency', false], ['fitness', true],
   ])
 })

@@ -16,7 +16,7 @@ test('a lens alone in finding what sends the work back is judged with every inpu
   const host = scripted({}, nominal)
   host.agentRunner.review = lenses({
     'cold-reader': [says('cold-reader', 'fail', [finding('F1', 'medium', 'pay names no currency', { location: 'src/Checkout.cs:3' })])],
-    refuter: [refutes('refuted', 'details/2026-10-11/context-map.md:12 fixes pay(amount) and no currency: the code answers the story as it is')],
+    refuter: [refutes('refuted', 'docs/architecture/context-map.md:12 fixes pay(amount) and no currency: the code answers the story as it is')],
   })
 
   assert.equal((await host.start()).status, 'done')
@@ -27,7 +27,7 @@ test('a lens alone in finding what sends the work back is judged with every inpu
     '- Judge it as the reviewer, with every input of the review: confirm it only when the defect stands with all of them and warrants sending the work back; refute it when the story, a contract or a document shows the work is right as it is, or when its fix would change what they fix, and say why in reason.',
   ].join('\n')), check.prompt)
   assert.ok(check.prompt.includes(`  - Review context (story, project rules, who wrote which document): ${TRACKING}/reviews/deliver_review-1/context.md`), check.prompt)
-  assert.ok(check.prompt.includes(`  - Documents of the story and of the other phases: ${TRACKING}/details/2026-10-11/context-map.md`), check.prompt)
+  assert.ok(check.prompt.includes(`  - Documents of the story and of the other phases: ${TRACKING}/details/2026-10-11/consistency-matrix-checkout.md`), check.prompt)
   assert.deepEqual(refuted(host), ['cold-reader F1 refuted true'])
   const verdict = await host.tracking.read(SLUG, 'reviews/deliver_review-1/verdict.yaml')
   assert.ok(verdict.includes('    dissent: true\n'), verdict)

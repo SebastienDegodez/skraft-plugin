@@ -52,6 +52,14 @@ graph LR
 *Figure 1 — A story's path through RESEARCH: from questions to evidence, from evidence to
 compared approaches, then the handoff to DESIGN.*
 
+## Start from what the repository documents
+
+Before the code, the researcher reads the documentation earlier stories left under `docs/`: the
+context map, the tactical design, the event model, the scenarios and the ADRs. When it already
+answers the story, the research document says so, cites those files and goes no further; the
+engine checks that document like any other. The research document itself stays in the tracking
+folder: it serves one story.
+
 ## No review, but a judge downstream
 
 RESEARCH is the only engineering phase without review lenses. The engine only checks that the
@@ -67,4 +75,5 @@ DESIGN: the research happened during product preparation.
 
 - [Reference: RESEARCH]({{ "/en/reference/phases" | relative_url }}#research) — nodes, output, check, attempts.
 - [Reference: the research document]({{ "/en/reference/run-journal" | relative_url }}#research-document).
+- [Reference: durable documentation]({{ "/en/reference/run-journal" | relative_url }}#durable-docs) — what goes to `docs/`, what stays in the tracking folder.
 - [DESIGN]({{ "/en/explanation/pipeline/design" | relative_url }}) — the phase that decides.

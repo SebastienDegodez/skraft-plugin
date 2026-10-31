@@ -5,7 +5,8 @@ import { joinRelative } from '../config/relative-path.mjs'
  * lens that reads documents gets those of the run by their paths, and a blind lens reads none.
  * The tracking folder is the one at the top of a repository: a `.copilot-tracking` folder
  * deeper in the code is code like any other. A blind lens reads the code changes only: the
- * decision records of the run (the files of a `docs/adr` folder) are left out of its copy too.
+ * decision records of the run (the files of a `docs/adr` folder) and its design documents (those
+ * of `docs/architecture`, `docs/domain/event-model` and `docs/features`) are left out of its copy too.
  */
 
 const TRACKING = '.copilot-tracking/'
@@ -47,14 +48,15 @@ const sectionsOf = (patch) => patch.split(/(?=^diff --git )/m)
 /** The path a section changes, '' for text before the first section. @param {string} section */
 const pathOf = (section) => HEADER.exec(section)?.[1] ?? ''
 
-const DECISIONS = /(^|\/)docs\/adr\//
+/** The run's decision records and durable design documents: its ADRs, context map, design, event model and scenarios. */
+const DOCUMENTS = /(^|\/)docs\/(adr|architecture|domain\/event-model|features)\//
 
 /**
  * The changes as a blind lens reads them: without the sections and paths of the run's decision
- * records.
+ * records and design documents.
  * @param {{ paths: string[], patch: string }} changes relative to the working copy
  */
 export const codeChanges = ({ paths, patch }) => ({
-  paths: paths.filter((path) => !DECISIONS.test(path)),
-  patch: sectionsOf(patch).filter((section) => !DECISIONS.test(pathOf(section))).join(''),
+  paths: paths.filter((path) => !DOCUMENTS.test(path)),
+  patch: sectionsOf(patch).filter((section) => !DOCUMENTS.test(pathOf(section))).join(''),
 })

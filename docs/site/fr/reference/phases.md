@@ -33,7 +33,9 @@ Les phases RESEARCH à PUBLISH sont celles de `workflows/pipeline.skraft.dot` ; 
 `environment` et `blocked` ([ci-dessous](#human-questions)).
 
 Tous les chemins relatifs sont sous le dossier de suivi
-`.copilot-tracking/skraft-plans/<slug>/` ; `{date}` est un dossier `AAAA-MM-JJ`.
+`.copilot-tracking/skraft-plans/<slug>/` ; `{date}` est un dossier `AAAA-MM-JJ`. Un chemin qui
+commence par `docs/` est dans le dépôt, hors du dossier de suivi : c'est la documentation durable
+du dépôt ([Documentation durable]({{ "/fr/reference/run-journal" | relative_url }}#durable-docs)).
 
 ## DISCOVER {#discover}
 
@@ -91,9 +93,10 @@ Verdict : `review-verdict.mjs --phase discuss`, mêmes règles et même budget q
 
 | | |
 | --- | --- |
-| Entrées | la story (`plans/{date}/issue-<numéro>.md` quand le run a démarré avec `--issue`) |
+| Entrées | la story (`plans/{date}/issue-<numéro>.md` quand le run a démarré avec `--issue`) ; la documentation durable sous `docs/`, lue d'abord |
 | Sortie | `research/{date}/{slug}-research.md`, pré-créé depuis `research.template.md` |
 | Écriture permise | le dossier de suivi seulement |
+| `docs/` couvre déjà la story | le document de recherche le dit et cite les fichiers de `docs/` ; le moteur le contrôle comme un autre |
 | Contrôle | sortie remplie : non vide, différente du gabarit, sans {% raw %}`{{…}}`{% endraw %} |
 | Tentatives | 3 (défaut de `max_attempts`) ; ensuite `missing-outputs` |
 
@@ -107,12 +110,13 @@ Verdict : `review-verdict.mjs --phase discuss`, mêmes règles et même budget q
 
 | | |
 | --- | --- |
-| Entrées | document de recherche ; `details/{date}/structural-scan.json`, écrit par le moteur avant chaque tentative ; story |
-| Sortie déclarée | `details/{date}/context-map.md` |
-| Autres sorties | `details/{date}/event-model-{story}.md`, `diagrams-{story}.md`, `contracts-{story}.md`, `consistency-matrix-{story}.md`, `supersession-plan-{story}.md` (quand un ADR `Accepted` est remplacé) ; `docs/adr/adr-{NNN}-{sujet}.md`, `docs/adr/decisions-index.md`, `docs/adr/supersessions.md` |
-| Écriture permise | le dossier de suivi et `docs/adr/` |
+| Entrées | la documentation durable sous `docs/`, lue d'abord ; document de recherche ; `details/{date}/structural-scan.json`, écrit par le moteur avant chaque tentative ; story |
+| Sortie déclarée | `details/{date}/consistency-matrix-{slug}.md` |
+| Autres sorties | dans le dossier de suivi : `details/{date}/contracts-{story}.md`, `supersession-plan-{story}.md` (quand un ADR `Accepted` est remplacé) ; dans le dépôt : `docs/architecture/context-map.md`, `docs/architecture/{bounded-context}.md` (conception tactique), `docs/domain/event-model/{bounded-context}.md`, `docs/adr/adr-{NNN}-{sujet}.md`, `docs/adr/decisions-index.md`, `docs/adr/supersessions.md` |
+| Écriture permise | le dossier de suivi, `docs/adr/`, `docs/architecture/` et `docs/domain/event-model/` |
+| Documentation existante | un fichier de `docs/` est complété, pas réécrit ; quand `docs/` couvre déjà la story, la matrice de cohérence le dit et cite les fichiers de `docs/`, et la phase passe à la suite |
 | Contrôles du moteur | traces DESIGN après chaque tentative : matrice de cohérence `consistency-gate: PASS` (G10), aucun ADR nommé `*-rejected.md`, `*-accepted.md`, `*-deprecated.md` ou `*-superseded.md` (G14), chaque `**Supersedes:**` avec sa ligne de registre (G2, G12) ; cycle de vie des ADR non publiés (`adr-lifecycle`) |
-| Échec persistant | `design-records` après la dernière tentative |
+| Échec persistant | `missing-outputs` quand la matrice de cohérence manque après la dernière tentative, `design-records` sinon |
 
 | Lentille | Gates |
 | --- | --- |
@@ -140,10 +144,10 @@ ligne `**Status:**`, ligne de `docs/adr/decisions-index.md`) et les commite seul
 
 | | |
 | --- | --- |
-| Entrées | stories, documents de DESIGN |
+| Entrées | stories, documents de DESIGN (dans le dossier de suivi et sous `docs/`) |
 | Sortie déclarée | `details/{date}/test-plan-{slug}.md` |
-| Autres sorties | `details/{date}/impl-plan-{story}.md` ; `features/{bounded-context}-{feature}.feature` ; dans les composants : tests d'acceptation en échec (chemins `tests`) et squelette appelé par eux (chemins `src`) |
-| Écriture permise | le dossier de suivi, les chemins `src` et `tests` de chaque composant, et les fichiers à la racine de ces composants |
+| Autres sorties | `details/{date}/impl-plan-{story}.md` ; `docs/features/{bounded-context}/{feature}.feature` (scénarios Gherkin, non exécutables) ; dans les composants : tests d'acceptation en échec (chemins `tests`) et squelette appelé par eux (chemins `src`) |
+| Écriture permise | le dossier de suivi, `docs/features/`, les chemins `src` et `tests` de chaque composant, et les fichiers à la racine de ces composants |
 | Commits | mode `red` : seulement des commits `test(<story>): …` en échec, chacun rejoué par la commande `test` de son composant ([`tdd.replay`]({{ "/fr/reference/skraft-config" | relative_url }}#tdd)) |
 | Contrôle du moteur | emplacement des fichiers de test ajoutés (`testability#layout`, G11) |
 

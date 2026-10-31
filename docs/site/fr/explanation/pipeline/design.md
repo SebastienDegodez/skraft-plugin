@@ -46,6 +46,12 @@ réutilisé tel quel, étendu ou nouveau — en citant la recherche ou le scan, 
 code que pour ce qu'ils laissent ouvert. Un engagement que le scan détecte sans ADR accepté qui
 le couvre reçoit un ADR de rattrapage : il devient une décision écrite, pas un fait accompli.
 
+Avant le code, il lit ce que les stories précédentes ont laissé dans le dépôt : la context map,
+la conception tactique de chaque contexte et le modèle d'événements sous `docs/`, et les ADR. Il
+complète ces fichiers sur la branche de la story plutôt que de les réécrire, pour que la pull
+request montre ce qui a changé dans le modèle. Quand ils couvrent déjà la story, l'architecte le
+dit dans sa matrice de cohérence, les cite et passe à la suite.
+
 Ce choix économise des tokens, mais surtout il empêche une conception qui ignore l'existant :
 c'est la même source, le scan, que les lentilles relisent ensuite.
 
@@ -77,6 +83,7 @@ proposée.
 - [Référence : DESIGN]({{ "/fr/reference/phases" | relative_url }}#design) — nœuds, sorties, contrôles du moteur, arêtes.
 - [Référence : critères de revue de DESIGN]({{ "/fr/reference/gates" | relative_url }}#design).
 - [Référence : ADR non publiés]({{ "/fr/reference/run-journal" | relative_url }}#unpublished-adrs).
+- [Référence : documentation durable]({{ "/fr/reference/run-journal" | relative_url }}#durable-docs) — ce qui va dans `docs/`, ce qui reste dans le dossier de suivi.
 - [DISTILL]({{ "/fr/explanation/pipeline/distill" | relative_url }}) — la phase suivante.
 
 ## Sources
