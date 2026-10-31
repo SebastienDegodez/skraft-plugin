@@ -240,7 +240,7 @@ run produced.
 ## Next pages
 
 - [Answer a run's question](../how-to/answer-a-question.mdx) — when the question could not be asked, or you closed it.
-- [Resume a run](../how-to/resume-a-run.md)
+- [Resume a run](../how-to/resume-a-run.mdx)
 - [Choose the agents' models](../how-to/choose-models.md) — to clear the `models/copilot` warning.
 - [Hosts](../reference/hosts.md#copilot-cli) — the workflow, the canvas and the `skraft_decide` tool.
 - [Getting started](./getting-started.md) — the same path under Claude Code.

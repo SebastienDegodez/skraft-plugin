@@ -108,7 +108,7 @@ sans partager d'état.
 
 ## Pour aller plus loin
 
-- [Reprendre ou débloquer un run](../how-to/resume-a-run.md).
+- [Reprendre ou débloquer un run](../how-to/resume-a-run.mdx).
 - [Référence : dossier de suivi, `events.jsonl`, codes](../reference/run-journal.md).
 - [Garde-fous](./guardrails.md) — ce que le journal remplace dans les hooks de la v1.
 - [Architecture](./architecture.md).

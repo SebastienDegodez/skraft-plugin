@@ -674,7 +674,7 @@ revue continue (le réfuteur est confié de la même façon).
 - [Phases](./phases.md)
 - [Premiers pas](../tutorials/getting-started.md)
 - [Lancer les gates et lire leurs preuves](../how-to/run-gates.md)
-- [Reprendre ou débloquer un run](../how-to/resume-a-run.md)
+- [Reprendre ou débloquer un run](../how-to/resume-a-run.mdx)
 - [skraft-config.json](./skraft-config.md)
 - [Dossier de suivi et journal](./run-journal.md)
 - [Moteur, pilotes, profondeur 1](../explanation/architecture.md)

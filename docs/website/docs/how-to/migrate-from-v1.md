@@ -98,7 +98,7 @@ DISTILL  pending
 ```
 
 Then resume the run from your host, like any V2 run
-([Resume or unblock a run](./resume-a-run.md)).
+([Resume or unblock a run](./resume-a-run.mdx)).
 
 ## Troubleshooting
 

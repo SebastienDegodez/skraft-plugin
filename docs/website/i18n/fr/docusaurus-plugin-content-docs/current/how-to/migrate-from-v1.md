@@ -99,7 +99,7 @@ DISTILL  pending
 ```
 
 Reprenez ensuite le run depuis votre hôte, comme tout run V2
-([Reprendre ou débloquer un run](./resume-a-run.md)).
+([Reprendre ou débloquer un run](./resume-a-run.mdx)).
 
 ## Dépannage
 

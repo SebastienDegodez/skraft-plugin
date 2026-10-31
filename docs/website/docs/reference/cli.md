@@ -655,7 +655,7 @@ goes on (the refuter is handed over the same way).
 - [Phases](./phases.md)
 - [Getting started](../tutorials/getting-started.md)
 - [Run the gates and read their evidence](../how-to/run-gates.md)
-- [Resume or unblock a run](../how-to/resume-a-run.md)
+- [Resume or unblock a run](../how-to/resume-a-run.mdx)
 - [skraft-config.json](./skraft-config.md)
 - [Tracking folder and journal](./run-journal.md)
 - [Engine, drivers, depth 1](../explanation/architecture.md)

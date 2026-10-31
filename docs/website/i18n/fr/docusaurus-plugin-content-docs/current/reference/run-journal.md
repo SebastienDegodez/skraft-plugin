@@ -407,7 +407,7 @@ Un `step.started` ou un `phase.closed` écrit après un `run.finished` rouvre le
 
 - [Phases](./phases.md)
 - [Hôtes](./hosts.md)
-- [Reprendre ou débloquer un run](../how-to/resume-a-run.md)
+- [Reprendre ou débloquer un run](../how-to/resume-a-run.mdx)
 - [Lancer les gates et lire leurs preuves](../how-to/run-gates.md)
 - [La ligne de commande skraft](./cli.md)
 - [skraft-config.json](./skraft-config.md)

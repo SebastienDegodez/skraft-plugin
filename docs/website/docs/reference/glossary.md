@@ -85,7 +85,7 @@ The SKRAFT code that decides every pipeline step (order, expected outputs, retri
 
 **Environment question**
 The question the engine asks when the machine cannot run a step (program not found, Git failing): `Fix it, then RETRY; or ABORT the run.` `RETRY` checks or runs the same step again; `ABORT` blocks the run.
-→ See [Resume or unblock a run](../how-to/resume-a-run.md)
+→ See [Resume or unblock a run](../how-to/resume-a-run.mdx)
 
 **Event Modeling**
 A specification technique that describes a system as a sequence of events over time. Facilitates communication between technical and business teams.
@@ -244,7 +244,7 @@ The result of a review. In V2 the engine computes it from the lenses' typed find
 
 **Waiting (run)**
 The status of a run whose question has no answer yet. The run does nothing more (fail closed) until a human answers with `skraft decide`, `/skraft decide` or `skraft_decide`; starting it again asks the same question.
-→ See [Resume or unblock a run](../how-to/resume-a-run.md)
+→ See [Resume or unblock a run](../how-to/resume-a-run.mdx)
 
 **Walking Skeleton**
 The first iteration of a project that cuts through all architecture layers end to end with a minimal feature. Validates the architecture before building the details.

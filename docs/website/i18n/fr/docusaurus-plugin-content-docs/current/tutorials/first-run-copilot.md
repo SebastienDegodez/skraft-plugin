@@ -243,7 +243,7 @@ la description de la pull request que votre run a produite.
 ## Pages suivantes
 
 - [Répondre à une question du run](../how-to/answer-a-question.mdx) — quand la question n'a pas pu être posée, ou que vous l'avez fermée.
-- [Reprendre un run](../how-to/resume-a-run.md)
+- [Reprendre un run](../how-to/resume-a-run.mdx)
 - [Choisir les modèles des agents](../how-to/choose-models.md) — pour faire disparaître l'avertissement `models/copilot`.
 - [Hôtes](../reference/hosts.md#copilot-cli) — le workflow, le canvas et l'outil `skraft_decide`.
 - [Premiers pas](./getting-started.md) — le même parcours sous Claude Code.
