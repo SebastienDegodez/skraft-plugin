@@ -51,6 +51,12 @@ test('a French page links inside the French tree; a link to the other locale is 
   }])
 })
 
+test('the phase-ribbon include becomes the phase front matter key; another include is left for a hand resolution', () => {
+  const { result, after } = convertFixture('phase-ribbon', { docId: 'explanation/pipeline/design' })
+  assert.equal(result.text, after)
+  assert.deepEqual(result.findings, [{ rule: 'includes', line: 14, reason: 'include with no Docusaurus equivalent: doc-pager.html' }])
+})
+
 test('with the catalogue option, dashboard links point at the catalogue page', () => {
   const source = '# T\n\n[Catalogue]({{ "/en/dashboard/" | relative_url }}), [data]({{ "/dashboard/" | relative_url }})\n'
   const { text } = convertPage(source, { docId: 'how-to/run-gates', locale: 'en', dashboardLink: 'catalogue' })
