@@ -89,3 +89,6 @@ export const locatePlugin = (machine) => {
   const found = copilot(machine) ?? claudeCode(machine)
   return found ? { found } : { missing: 'hosts' }
 }
+
+/** Which hosts installed the plugin, for `skraft upgrade`. @param {Machine} machine */
+export const installedHosts = (machine) => ({ copilot: copilot(machine) !== undefined, claudeCode: claudeCode(machine) !== undefined })

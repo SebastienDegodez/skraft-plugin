@@ -22,10 +22,30 @@ When both hosts have the plugin, Copilot CLI wins. Nothing is recorded, so a plu
 the host is followed at the next call: this package never needs updating with the plugin.
 `skraft --version` also writes the host and folder it used on stderr.
 
-In a terminal, `skraft` first writes the skraft banner on stderr. It is skipped outside a
-terminal, in CI, and for `--json` and `--version`, so scripts and agents read the same output.
-`NO_COLOR` keeps it uncoloured; `SKRAFT_BANNER=0` turns it off, `SKRAFT_BANNER=1` forces it. On
-the legacy Windows console it falls back to plain ASCII letters.
+## Session
+
+`skraft` alone, in a terminal, opens a session: the banner sweeps in once, then each line is a
+skraft command (`doctor`, `status`, `decide yes`…), with Tab completion and history. Each line
+runs the engine in its own process and finds the plugin again, so a plugin update during the
+session is followed. `help` prints the engine's usage; `exit`, `quit` or Ctrl-D leaves.
+
+- A one-shot command (`skraft doctor`) never shows the banner: its output is the engine's.
+- `NO_COLOR` keeps the banner uncoloured; `SKRAFT_BANNER=static` skips the animation,
+  `SKRAFT_BANNER=0` turns it off. The legacy Windows console gets plain ASCII letters.
+- `SKRAFT_INTERACTIVE=0` keeps `skraft` alone a call to the engine (its usage).
+
+## Upgrade
+
+`skraft upgrade` installs the latest `@skraft/cli` of its channel (`latest`, or `alpha` when the
+installed version is an alpha), then updates the plugin in each host that has it
+(`copilot plugin update skraft`, `claude plugin update skraft@<marketplace>`; Claude Code loads it
+at its next session). A step whose program is not on the PATH is skipped; a failed step makes the
+command exit 1 and the others still run.
+
+A session asks the registry, at most once a day (cache `~/.skraft/cli-update.json`, 1.5 s
+timeout, silent on any failure), whether a newer version exists, and says so. It never installs
+anything by itself. `SKRAFT_UPDATE_CHECK=0` turns the check off (it is off in CI);
+`SKRAFT_REGISTRY` names another registry, for instance a company mirror.
 
 ## Versions
 

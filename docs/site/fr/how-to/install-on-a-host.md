@@ -100,7 +100,8 @@ votre hôte a installé et lance son moteur, dans cet ordre :
 
 Quand les deux hôtes ont le plugin, Copilot CLI l'emporte. Une mise à jour du plugin par l'hôte
 est suivie dès l'appel suivant : la commande elle-même n'a jamais besoin d'être mise à jour avec
-le plugin.
+le plugin. `skraft upgrade` met à jour la commande et le plugin dans chaque hôte ; `skraft` seul
+ouvre une session où vous tapez les commandes l'une après l'autre.
 
 Depuis la racine de votre dépôt :
 

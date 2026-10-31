@@ -184,31 +184,10 @@ test('outside a terminal, writes no banner: scripts and agents read the same out
   })
 })
 
-test('the banner goes to stderr only, before the engine runs, and NO_COLOR leaves it uncoloured', () => {
-  withHome((home) => {
-    copilotPlugin(home, 'copilot')
-    const run = skraft(home, ['status', '--json'], { SKRAFT_BANNER: '1', NO_COLOR: '' })
-
-    assert.equal(run.stdout, 'copilot ["status","--json"]\n')
-    assert.match(run.stderr, /AI-powered digital craft · cli \d+\.\d+\.\d+/)
-    assert.doesNotMatch(run.stderr, /\x1b\[/)
-  })
-})
-
-test('SKRAFT_BANNER=0 turns the banner off', () => {
+test('a one-shot command never shows the banner, even with SKRAFT_BANNER set', () => {
   withHome((home) => {
     copilotPlugin(home, 'copilot')
 
-    assert.equal(skraft(home, ['status'], { SKRAFT_BANNER: '0' }).stderr, '')
+    assert.equal(skraft(home, ['status'], { SKRAFT_BANNER: '1' }).stderr, '')
   })
-})
-
-test('in a terminal, the banner is skipped for --json, --version and CI', async () => {
-  const { wantsBanner } = await import('../../../cli/src/banner.mjs')
-  const inTerminal = (argv, env = {}) => wantsBanner({ argv, env, isTTY: true })
-
-  assert.deepEqual(
-    [inTerminal(['status']), inTerminal(['status', '--json']), inTerminal(['--version']), inTerminal(['doctor'], { CI: 'true' })],
-    [true, false, false, false],
-  )
 })

@@ -96,9 +96,21 @@ so a plugin update by the host is followed at the next call.
 | 3 | `installPath` of the `skraft@…` entries of `<CLAUDE_CONFIG_DIR or ~/.claude>/plugins/installed_plugins.json` | the folder holds the engine; the latest `lastUpdated` first |
 
 With `--version`, the command also writes `plugin: <variable|copilot|claude-code> <folder>` on
-stderr; stdout keeps the one version line. In a terminal, the command first writes the skraft
-banner on stderr; it is skipped outside a terminal, in CI, and for `--json` and `--version`.
-`NO_COLOR` keeps it uncoloured, `SKRAFT_BANNER=0` turns it off and `SKRAFT_BANNER=1` forces it. When no plugin is found, it writes a fixed message
+stderr; stdout keeps the one version line.
+
+**Session.** `skraft` alone, in a terminal, opens a session: the skraft banner (animated, on
+stderr) once, then a `skraft ›` prompt where each line is a command (`doctor`, `status`,
+`decide yes`…), with Tab completion and history. Each line runs in its own process, on the plugin
+found at that moment. `help` prints the usage; `exit`, `quit` or Ctrl-D leaves. A one-shot command
+never shows the banner. `NO_COLOR` uncolours it, `SKRAFT_BANNER=static` skips the animation,
+`SKRAFT_BANNER=0` turns it off; `SKRAFT_INTERACTIVE=0` keeps `skraft` alone a call to the engine.
+
+**`skraft upgrade`.** Installs the latest `@skraft/cli` of its channel (`latest`, or `alpha` for an
+alpha), then runs `copilot plugin update skraft` and `claude plugin update skraft@<marketplace>`
+for each host that has the plugin (Claude Code loads it at its next session). A program missing
+from the PATH is skipped; a failed step exits 1. Once a day, a session says when a newer
+`@skraft/cli` exists (`SKRAFT_UPDATE_CHECK=0` turns the check off; `SKRAFT_REGISTRY` names
+another registry). When no plugin is found, it writes a fixed message
 naming the install commands and `SKRAFT_PLUGIN_ROOT` on stderr and exits 1.
 
 ## `skraft init [--add <folder>]...`

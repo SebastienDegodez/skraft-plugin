@@ -96,10 +96,22 @@ enregistré : une mise à jour du plugin par l'hôte est suivie dès l'appel sui
 | 3 | `installPath` des entrées `skraft@…` de `<CLAUDE_CONFIG_DIR ou ~/.claude>/plugins/installed_plugins.json` | le dossier contient le moteur ; le `lastUpdated` le plus récent d'abord |
 
 Avec `--version`, la commande écrit aussi `plugin: <variable|copilot|claude-code> <dossier>` sur
-stderr ; stdout garde la ligne de version. Dans un terminal, la commande écrit d'abord la
-bannière skraft sur stderr ; elle est omise hors d'un terminal, en CI, et pour `--json` et
-`--version`. `NO_COLOR` la garde sans couleur, `SKRAFT_BANNER=0` la coupe et `SKRAFT_BANNER=1`
-la force. Quand aucun plugin n'est trouvé, elle écrit sur stderr
+stderr ; stdout garde la ligne de version.
+
+**Session.** `skraft` seul, dans un terminal, ouvre une session : la bannière skraft (animée, sur
+stderr) une fois, puis une invite `skraft ›` où chaque ligne est une commande (`doctor`, `status`,
+`decide yes`…), avec complétion par Tab et historique. Chaque ligne tourne dans son propre
+processus, sur le plugin trouvé à ce moment. `help` affiche l'usage ; `exit`, `quit` ou Ctrl-D
+quitte. Une commande isolée n'affiche jamais la bannière. `NO_COLOR` la décolore,
+`SKRAFT_BANNER=static` coupe l'animation, `SKRAFT_BANNER=0` la coupe ; `SKRAFT_INTERACTIVE=0`
+garde `skraft` seul comme un appel au moteur.
+
+**`skraft upgrade`.** Installe le dernier `@skraft/cli` de son canal (`latest`, ou `alpha` pour
+une alpha), puis lance `copilot plugin update skraft` et `claude plugin update
+skraft@<marketplace>` pour chaque hôte qui a le plugin (Claude Code le charge à la session
+suivante). Un programme absent du PATH est sauté ; une étape en échec sort avec le code 1. Une
+fois par jour, une session signale qu'un `@skraft/cli` plus récent existe
+(`SKRAFT_UPDATE_CHECK=0` coupe la vérification ; `SKRAFT_REGISTRY` nomme un autre registre). Quand aucun plugin n'est trouvé, elle écrit sur stderr
 un message fixe qui nomme les commandes d'installation et `SKRAFT_PLUGIN_ROOT`, et sort avec le
 code 1.
 

@@ -1,6 +1,6 @@
 /**
- * The skraft banner, written on stderr when a person starts the command in a terminal.
- * stdout is never touched: `--json` output and the version line stay machine-readable.
+ * The skraft banner, written on stderr once, when a person opens a session (`skraft` alone in a
+ * terminal). A one-shot command never shows it: its output stays exactly the engine's.
  */
 
 /** Box-drawing letters: Windows Terminal, macOS and Linux terminals. */
@@ -31,14 +31,6 @@ const STOPS = [
   [0x3b, 0x82, 0xf6],
 ]
 
-/** @param {{ argv: string[], env: Record<string, string | undefined>, isTTY: boolean }} call @returns {boolean} */
-export const wantsBanner = ({ argv, env, isTTY }) => {
-  if (env.SKRAFT_BANNER === '0') return false
-  if (env.SKRAFT_BANNER === '1') return true
-  if (!isTTY || env.CI) return false
-  return !argv.some((arg) => arg === '--json' || arg === '--version')
-}
-
 /** @param {number} at 0..1 @returns {number[]} */
 const colourAt = (at) => {
   const scaled = at * (STOPS.length - 1)
@@ -59,16 +51,64 @@ const painted = (line, width, trueColour) =>
 const legacyConsole = (env, platform) => platform === 'win32' && !env.WT_SESSION && !env.TERM_PROGRAM
 
 /**
+ * @param {{ env: Record<string, string | undefined>, platform: string }} terminal
+ * @returns {{ letters: string[], width: number, colour: boolean, trueColour: boolean }}
+ */
+const styleOf = ({ env, platform }) => {
+  const letters = legacyConsole(env, platform) ? PLAIN : SHADOW
+  return {
+    letters,
+    width: Math.max(...letters.map((line) => line.length)),
+    colour: !('NO_COLOR' in env) && env.TERM !== 'dumb',
+    trueColour: /truecolor|24bit/i.test(env.COLORTERM ?? '') || Boolean(env.WT_SESSION),
+  }
+}
+
+/** @param {ReturnType<typeof styleOf>} style @param {string} version */
+const footerOf = ({ width, colour }, version) => {
+  const text = `${TAGLINE} · cli ${version}`.padStart(width)
+  return colour ? `\x1b[2m${text}\x1b[0m` : text
+}
+
+/** @param {ReturnType<typeof styleOf>} style @param {number} shown columns revealed */
+const logoOf = ({ letters, width, colour, trueColour }, shown) =>
+  letters.map((line) => {
+    const visible = line.slice(0, shown)
+    return colour ? painted(visible, width, trueColour) : visible
+  })
+
+/**
  * @param {{ env: Record<string, string | undefined>, platform: string, version: string }} terminal
  * @returns {string} the banner, newline-terminated
  */
 export const banner = ({ env, platform, version }) => {
-  const letters = legacyConsole(env, platform) ? PLAIN : SHADOW
-  const width = Math.max(...letters.map((line) => line.length))
-  const colour = !('NO_COLOR' in env) && env.TERM !== 'dumb'
-  const trueColour = /truecolor|24bit/i.test(env.COLORTERM ?? '') || Boolean(env.WT_SESSION)
-  const logo = letters.map((line) => (colour ? painted(line, width, trueColour) : line))
-  const footer = `${TAGLINE} · cli ${version}`
-  const dim = (text) => (colour ? `\x1b[2m${text}\x1b[0m` : text)
-  return `\n${logo.join('\n')}\n${dim(footer.padStart(width))}\n\n`
+  const style = styleOf({ env, platform })
+  return `\n${logoOf(style, style.width).join('\n')}\n${footerOf(style, version)}\n\n`
+}
+
+/**
+ * The banner sweeps in from the left, in about 400 ms, then the tagline appears. Animated only on
+ * a colour terminal; otherwise, or with SKRAFT_BANNER=static, it is written at once.
+ * @param {{ env: Record<string, string | undefined>, platform: string, version: string, write: (text: string) => void, animate: boolean }} terminal
+ * @returns {Promise<void>}
+ */
+export const showBanner = async ({ env, platform, version, write, animate }) => {
+  const style = styleOf({ env, platform })
+  if (!animate || !style.colour || env.SKRAFT_BANNER === 'static') {
+    write(banner({ env, platform, version }))
+    return
+  }
+  const frames = 16
+  const rows = style.letters.length
+  write(`\x1b[?25l\n${'\n'.repeat(rows)}`)
+  try {
+    for (let frame = 1; frame <= frames; frame += 1) {
+      const shown = Math.ceil((style.width * frame) / frames)
+      write(`\x1b[${rows}A\r${logoOf(style, shown).map((line) => `${line}\x1b[K`).join('\n')}\n`)
+      await new Promise((resolve) => setTimeout(resolve, 25))
+    }
+    write(`${footerOf(style, version)}\n\n`)
+  } finally {
+    write('\x1b[?25h')
+  }
 }

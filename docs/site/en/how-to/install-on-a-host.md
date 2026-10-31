@@ -99,7 +99,9 @@ installed and runs its engine, in this order:
 3. Claude Code: the current folder of `skraft@…` in `~/.claude/plugins/installed_plugins.json`.
 
 When both hosts have the plugin, Copilot CLI wins. A plugin update by the host is followed at
-the next call: the command itself never needs updating with the plugin.
+the next call: the command itself never needs updating with the plugin. `skraft upgrade` updates
+both the command and the plugin in each host; `skraft` alone opens a session where you type the
+commands one after the other.
 
 From the root of your repository:
 
