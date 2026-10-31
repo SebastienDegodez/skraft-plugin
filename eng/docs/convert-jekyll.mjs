@@ -274,10 +274,14 @@ const PLACEHOLDER_IN_CODE = /<[^\s<>][^<>]*>/
 
 /** A line that runs a known program: `git add .`, `skraft gate --all`, but not `skraft checkout: done`. */
 const isCommand = (line) => {
-  const [program, first] = line.trim().split(/\s+/)
+  if (/^\s/.test(line)) return false
+  const [program, ...words] = line.trim().split(/\s+/)
   if (!PROGRAMS.has(program) && !program.startsWith('./eng/')) return false
+  const firstArgument = words.findIndex((word) => /^[-"'<]/.test(word))
+  const leading = firstArgument < 0 ? words : words.slice(0, firstArgument)
+  if (leading.some((word) => word.endsWith(':'))) return false
   if (program !== 'skraft') return true
-  return first === undefined || first.startsWith('-') || SKRAFT_COMMANDS.has(first)
+  return words.length === 0 || words[0].startsWith('-') || SKRAFT_COMMANDS.has(words[0])
 }
 
 /** Role of each line: blank, command, continuation (after a trailing backslash) or other. */
