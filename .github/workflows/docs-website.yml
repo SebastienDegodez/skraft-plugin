@@ -1,0 +1,98 @@
+# Builds the Docusaurus handbook (docs/website) on every pull request and every push to
+# integration/v2-next. Until 2.0.0, `next` is previewed from the `docs-website-build` artifact:
+#   unzip it, then `npm run docs:serve -- --dir <unzipped folder>` (or `npx docusaurus serve --dir`).
+# The end-to-end suite joins in WP10. This workflow does not deploy: only main publishes Pages.
+name: Docs website
+
+on:
+  pull_request:
+    paths:
+      - "docs/website/**"
+      - "docs/site/**"
+      - "scripts/scan-drift.mjs"
+      - "scripts/lint-nav.mjs"
+      - "scripts/check-citations.mjs"
+      - "scripts/lib/book.mjs"
+      - "eng/docs/**"
+      - "eng/dashboard/**"
+      - "tests/site/**"
+      - "tests/tooling/docs-*/**"
+      - "tests/tooling/workflow-viewer/**"
+      - "plugins/skraft-framework/workflows/**"
+      - "plugins/skraft-framework/engine/domain/workflow/**"
+      - ".github/workflows/docs-website.yml"
+  push:
+    branches: [integration/v2-next]
+    paths:
+      - "docs/website/**"
+      - "docs/site/**"
+      - "scripts/scan-drift.mjs"
+      - "scripts/lint-nav.mjs"
+      - "scripts/check-citations.mjs"
+      - "scripts/lib/book.mjs"
+      - "eng/docs/**"
+      - "eng/dashboard/**"
+      - "tests/site/**"
+      - "tests/tooling/docs-*/**"
+      - "tests/tooling/workflow-viewer/**"
+      - "plugins/skraft-framework/workflows/**"
+      - "plugins/skraft-framework/engine/domain/workflow/**"
+      - ".github/workflows/docs-website.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: docs-website-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # The docs tooling tests, then install and build on each OS: the search plugin ships a native
+  # dependency (@node-rs/jieba, prebuilt per platform), so Windows and macOS are checked here.
+  checks:
+    name: checks (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    steps:
+      - name: Check out
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          fetch-depth: 0 # last-update dates of the pages
+      - name: Set up Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: "22"
+      - name: Docs tooling tests
+        run: node --test "tests/tooling/docs-*/**/*.test.mjs"
+      - name: Install the site
+        run: npm ci --prefix docs/website
+      - name: Build the site, both locales
+        run: npm run build --prefix docs/website
+
+  # The preview of `next`: the site as built on Ubuntu, kept 14 days.
+  build:
+    name: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          fetch-depth: 0
+      - name: Set up Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: "22"
+      - name: Install the site
+        run: npm ci --prefix docs/website
+      - name: Build the site, both locales
+        run: npm run build --prefix docs/website
+      - name: Upload the build
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: docs-website-build
+          path: docs/website/build
+          retention-days: 14
+          if-no-files-found: error
