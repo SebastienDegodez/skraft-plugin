@@ -20,10 +20,11 @@ The GENESIS eval described each starting state in prose (`seed_context`). Here e
 mini-handbook, and the real `scripts/scan-drift.mjs` and `scripts/lint-nav.mjs` were run against
 it to confirm the drift the stimulus starts from:
 
-Each fixture is a Docusaurus layout: `docs/website/book.yml` (pages and generated sections by
-`doc` id), EN pages under `docs/website/docs/`, FR pages under
-`docs/website/i18n/fr/docusaurus-plugin-content-docs/current/`. Re-run on the migrated layout
-(scripts of `docs/docusaurus`, 2026-10-31):
+Each fixture holds `docs/website/book.yml` (pages and generated sections by `doc` id), EN pages
+under `docs/website/docs/` and FR pages under `fr/`; the spec stages `fr/` at
+`docs/website/i18n/fr/docusaurus-plugin-content-docs/current/`, a path too long for the
+145-character Windows marketplace budget if committed under the fixture. Re-run on the staged
+Docusaurus layout (scripts of `docs/docusaurus`, 2026-10-31):
 
 | Fixture | Starting state |
 |---|---|
