@@ -60,6 +60,7 @@ export default {
         indexBlog: false,
         highlightSearchTermsOnTargetPage: true,
         explicitSearchResultPath: true,
+        forceIgnoreNoIndex: true, // `next` is noIndex for robots, but its own search must still find its pages
       },
     ],
   ],
