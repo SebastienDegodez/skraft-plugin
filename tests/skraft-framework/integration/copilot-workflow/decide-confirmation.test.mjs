@@ -55,6 +55,18 @@ test('nothing is recorded unless the dialog gives one of the options in time; a 
   assert.deepEqual(await answers(cwd), [])
 })
 
+test('a dialog the person answers after the wait is over records nothing, however late: the answer is lost and the refusal stands', async (t) => {
+  const cwd = await waitingOnRatification(t)
+  const lateRatified = () => new Promise((give) => setTimeout(() => give('RATIFIED'), 60))
+  const session = answeringSession({ answers: [lateRatified] })
+
+  const timedOut = await decideTool(cwd, session, { waits: { modeMs: 1000, answerMs: 20 } }).handler({})
+  await new Promise((done) => setTimeout(done, 100))
+
+  assert.equal(timedOut, `Refused: you did not answer the question in Copilot; ${TERMINAL}; nothing was recorded.`)
+  assert.deepEqual(await answers(cwd), [])
+})
+
 test('without a dialog, in autopilot, or with a mode the host does not tell in time, nothing is asked nor recorded, and the person is sent to a terminal', async (t) => {
   const cwd = await waitingOnRatification(t)
   const cases = [

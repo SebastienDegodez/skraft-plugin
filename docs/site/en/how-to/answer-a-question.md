@@ -16,8 +16,7 @@ again asks the same question, without starting an agent again.
 ## Prerequisites
 
 - A run with the status `waiting` (`skraft status`, or the **Skraft** pane).
-- For the command line: an interactive terminal at the root of the working copy; `skraft` stands
-  for `node "<plugin folder>/engine/drivers/cli/skraft.mjs"`.
+- For the command line: an interactive terminal at the root of the working copy; `skraft` is the command that [`skraft install`]({{ "/en/how-to/install-on-a-host" | relative_url }}#skraft-command) sets up; the long line `node "<plugin folder>/engine/drivers/cli/skraft.mjs"` works without it.
 
 ## 1. Read the question and its key
 
@@ -77,6 +76,10 @@ writes `Waiting for you — <question>` and pauses. Either:
 - ask Copilot, in the chat, to put the waiting skraft question to you: the `skraft_decide` tool
   asks it in the dialog, then answers
   `Recorded: … Resume the paused skraft-pipeline run (/workflows).` Then resume the workflow.
+
+`/skraft decide [<key>] <answer>` works differently here than in Claude Code: it records nothing from
+the words you type. Copilot's dialog asks the question again and records what the dialog gives, so
+answer there; once recorded, resume the paused run from `/workflows`.
 
 The `skraft-pipeline` canvas shows the question but takes no answer.
 

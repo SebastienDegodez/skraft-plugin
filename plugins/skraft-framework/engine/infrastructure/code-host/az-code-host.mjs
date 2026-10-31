@@ -26,7 +26,8 @@ export const createAzCodeHost = ({ commandRunner }) => Object.freeze({
   edit: (request) => edit(commandRunner, request),
   keepIssueComment: async () => refused(UNREACHED),
   issue: async () => ({ read: /** @type {const} */ ('failed'), reason: UNREACHED }),
-  storyLink: (issue) => `AB#${issue}`,
+  // Azure Repos links `#N`; `Fixes #N` also completes the work item when the pull request merges.
+  storyLink: (issue, closes) => `${closes ? 'Fixes ' : ''}#${issue}`,
   // Azure DevOps refuses a pull request description past 4,000 characters.
   bodyLimit: 4_000,
 })

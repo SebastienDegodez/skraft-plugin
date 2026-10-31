@@ -15,8 +15,7 @@ de lancer un run.
 
 - Le plugin skraft installé ([Installer skraft sur un hôte]({{ "/fr/how-to/install-on-a-host" | relative_url }})).
 - Node 22 ou plus, Git ; Docker ou Podman si un composant garde le mocking Microcks.
-- Un terminal ouvert à la racine de votre copie de travail. `skraft` désigne
-  `node "<dossier du plugin>/engine/drivers/cli/skraft.mjs"`.
+- Un terminal ouvert à la racine de votre copie de travail. `skraft` est la commande que [`skraft install`]({{ "/fr/how-to/install-on-a-host" | relative_url }}#skraft-command) met en place ; la ligne longue `node "<dossier du plugin>/engine/drivers/cli/skraft.mjs"` marche sans elle.
 
 ## 1. Détecter les composants
 
