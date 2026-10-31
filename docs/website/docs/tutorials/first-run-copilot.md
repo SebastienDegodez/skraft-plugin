@@ -115,7 +115,7 @@ Commit the configuration, then check the machine:
 
 ```console
 $ git add skraft-config.json .gitignore
-git commit -m "chore: describe the shop for skraft"
+$ git commit -m "chore: describe the shop for skraft"
 $ skraft doctor
 ```
 

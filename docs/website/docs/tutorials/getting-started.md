@@ -152,7 +152,7 @@ also the **write scope** of DELIVER: the software engineer may write only in `we
 
 ```console
 $ git add skraft-config.json .gitignore
-git commit -m "chore: describe the shop for skraft"
+$ git commit -m "chore: describe the shop for skraft"
 ```
 
 ## 4. Check with `skraft doctor`

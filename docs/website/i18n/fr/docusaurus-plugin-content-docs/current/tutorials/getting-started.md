@@ -152,7 +152,7 @@ le **périmètre d'écriture** de DELIVER : le software engineer ne pourra écri
 
 ```console
 $ git add skraft-config.json .gitignore
-git commit -m "chore: describe the shop for skraft"
+$ git commit -m "chore: describe the shop for skraft"
 ```
 
 ## 4. Vérifier avec `skraft doctor`
