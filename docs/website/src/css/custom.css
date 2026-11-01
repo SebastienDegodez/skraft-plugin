@@ -1,5 +1,6 @@
 /*
- * skraft handbook theme: a calm blue on neutral surfaces, Infima variables only (no swizzle for styling).
+ * skraft handbook theme: a calm blue on white in light mode, the brand's navy and sky blue in dark
+ * mode; Infima variables only (no swizzle for styling).
  * Every text/background pair below is checked at >= 4.5:1 (WCAG AA) in both modes by
  * tests/tooling/docs-theme/contrast.test.mjs, which also checks that the six primary shades are the
  * output of the official generator (docusaurus.io/docs/styling-layout: HSL lightness -10/-15/-30 %
@@ -46,36 +47,39 @@
 }
 
 [data-theme='dark'] {
-  --ifm-color-primary: #7aa7ff;
-  --ifm-color-primary-dark: #548eff;
-  --ifm-color-primary-darker: #4182ff;
-  --ifm-color-primary-darkest: #095cff;
-  --ifm-color-primary-light: #a0c0ff;
-  --ifm-color-primary-lighter: #b3ccff;
-  --ifm-color-primary-lightest: #ebf2ff;
-  --skraft-on-primary: #16191f;
+  /* The navy and sky blue of the skraft brand (the first handbook's design tokens). */
+  --ifm-color-primary: #24b5ff;
+  --ifm-color-primary-dark: #07abff;
+  --ifm-color-primary-darker: #00a4f7;
+  --ifm-color-primary-darkest: #0087cc;
+  --ifm-color-primary-light: #41bfff;
+  --ifm-color-primary-lighter: #50c4ff;
+  --ifm-color-primary-lightest: #7bd2ff;
+  --skraft-on-primary: #0f1722;
 
-  --ifm-background-color: #16191f;
-  --ifm-background-surface-color: #1e222a;
-  --ifm-font-color-base: #e6edf3;
-  --ifm-color-emphasis-700: #9198a1;
-  --ifm-footer-background-color: #1e222a;
-  --ifm-footer-link-color: #e6edf3;
-  --ifm-footer-title-color: #e6edf3;
+  --ifm-background-color: #0f1722;
+  --ifm-background-surface-color: #152231;
+  --ifm-font-color-base: #eef6ff;
+  --ifm-color-emphasis-700: #b7c6d8;
+  --ifm-footer-background-color: #152231;
+  --ifm-footer-link-color: #eef6ff;
+  --ifm-footer-title-color: #7fd3ff;
+  --ifm-navbar-background-color: #111c28;
+  --ifm-heading-color: #eef6ff;
 
-  --ifm-color-secondary-contrast-background: #1e222a;
-  --ifm-color-secondary-contrast-foreground: #e6edf3;
-  --ifm-color-success-contrast-background: #12261e;
+  --ifm-color-secondary-contrast-background: #152231;
+  --ifm-color-secondary-contrast-foreground: #eef6ff;
+  --ifm-color-success-contrast-background: #10261f;
   --ifm-color-success-contrast-foreground: #aff5b4;
   --ifm-color-info-contrast-background: #0c2d4b;
   --ifm-color-info-contrast-foreground: #cae8ff;
-  --ifm-color-warning-contrast-background: #2e2610;
+  --ifm-color-warning-contrast-background: #2b2513;
   --ifm-color-warning-contrast-foreground: #f8e3a1;
-  --ifm-color-danger-contrast-background: #3a1416;
+  --ifm-color-danger-contrast-background: #36161c;
   --ifm-color-danger-contrast-foreground: #ffdcd7;
 
-  --docusaurus-highlighted-code-line-bg: rgb(122 167 255 / 16%);
-  --skraft-card-border: #353b45;
+  --docusaurus-highlighted-code-line-bg: rgb(36 181 255 / 16%);
+  --skraft-card-border: #2c485c;
 }
 
 /* Navbar: the four doors, version, language and GitHub stay on one line from 997px. */
