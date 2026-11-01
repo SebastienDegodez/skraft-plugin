@@ -254,7 +254,7 @@ test('the run\'s comment is posted on its work item through az devops invoke, th
   assert.deepEqual(forge.writes().map(({ method, text }) => [method, text]), [['POST', request.body]])
 })
 
-test('the comment at the URL kept is rewritten in place; without one, the latest comment holding the marker, as written or as the MCP server escapes it; none holding it is posted', async (t) => {
+test('the comment at the URL kept is rewritten in place; without one, the latest comment holding the marker, as written or escaped as HTML; none holding it is posted', async (t) => {
   const escaped = MARKER.replace('<', '&lt;').replace('>', '&gt;')
   const comments = [{ id: 500, text: `${MARKER}\nolder` }, { id: 501, text: 'a person' }, { id: 502, text: `${escaped}\nlatest` }]
   const { root, forge, codeHost } = repository(t, { az: { ...SIGNED_IN, ...IN_STORY, comments } })
@@ -544,4 +544,41 @@ test('through az, a pull request that cannot be read, of another repository, or 
     assert.equal(forge.threadWrites().length, writes, JSON.stringify(state))
   }
   assert.deepEqual(await pullRequestsOn(t, { remote: null }).createdPullRequests().keepComment({ number: 12, marker: REVIEW_MARKER, url: null, bodyFile: '', body: '', threadFile: '', contentFile: '' }), { ok: false, reason: 'the working copy has no Git remote whose URL names an Azure DevOps organization, project and repository' })
+})
+
+test('through az, a push is read back by git ls-remote, a write az got no answer for is unknown, and a work item comment or a thread comment is read back at the REST address skraft built', async (t) => {
+  const { root, cwd, forge, codeHost } = repository(t, { az: { ...SIGNED_IN, workItems: { 42: { id: 42, fields: { 'System.TeamProject': 'Shop Team', 'System.WorkItemType': 'User Story', 'System.Title': 'Pay' } } } } })
+  const host = codeHost()
+  const tip = git(cwd, 'rev-parse', 'HEAD')
+
+  assert.equal(await host.localTip('checkout'), tip)
+  assert.deepEqual(await host.push('checkout'), { ok: true })
+  assert.deepEqual(await host.remoteTip('checkout'), { ok: true, sha: tip })
+  assert.deepEqual(await repository(t, { remote: null }).codeHost().remoteTip('checkout'), { ok: false, reason: 'the working copy has no Git remote whose URL names an Azure DevOps organization, project and repository' })
+
+  const bodyFile = join(root, 'body.md')
+  const requestFile = join(root, 'request.json')
+  const marker = '<!-- skraft:issue-progress slug=checkout -->'
+  writeFileSync(bodyFile, `${marker}\nRESEARCH closed\n`)
+  writeFileSync(requestFile, JSON.stringify({ text: `${marker}\nRESEARCH closed\n` }))
+  forge.set({ ...SIGNED_IN, workItems: { 42: { id: 42, fields: { 'System.TeamProject': 'Shop Team' } } }, cut: true })
+  assert.deepEqual(await host.create({ base: 'main', head: 'checkout', title: 'Pay', bodyFile, draft: true, issue: null }), { ok: false, reason: 'az could not open the pull request of checkout on Shop Team/payment', outcome: 'unknown' })
+  assert.deepEqual(await host.edit({ number: 7, bodyFile }), { ok: false, reason: 'az could not update pull request #7 on Shop Team/payment', outcome: 'unknown' })
+  assert.deepEqual(await host.keepIssueComment({ number: 42, marker, url: null, bodyFile, requestFile, body: '' }), { ok: false, reason: 'az could not comment work item #42 of Shop Team', outcome: 'unknown' })
+
+  forge.set({ ...SIGNED_IN, workItems: { 42: { id: 42, fields: { 'System.TeamProject': 'Shop Team' } } } })
+  const kept = await host.keepIssueComment({ number: 42, marker, url: null, bodyFile, requestFile, body: '' })
+  assert.deepEqual(await host.readComment(kept.url), { ok: true, body: `${marker}\nRESEARCH closed\n` })
+  assert.deepEqual(forge.calls().at(-1), ['az', 'devops', 'invoke', '--area=wit', '--resource=comments', '--route-parameters', 'project=Shop Team', 'workItemId=42', `commentId=${kept.url.split('/').at(-1)}`, '--api-version=7.2-preview.4', '--organization=https://dev.azure.com/acme', '--only-show-errors', '--output=json'].slice(1))
+
+  const threadFile = join(root, 'thread.json')
+  writeFileSync(threadFile, JSON.stringify({ comments: [{ parentCommentId: 0, content: '&lt;!-- skraft:run-details slug=checkout part=1 --&gt;\ndetails', commentType: 1 }], status: 4 }))
+  const thread = await host.keepPullRequestComment({ number: 7, marker: '<!-- skraft:run-details slug=checkout part=1 -->', url: null, bodyFile, body: '', threadFile, commentFile: '' })
+  assert.deepEqual(await host.readComment(thread.url), { ok: true, body: '<!-- skraft:run-details slug=checkout part=1 -->\ndetails' }, 'read as written, its entities decoded')
+
+  assert.deepEqual(await host.readComment(thread.url.replace('acme', 'other')), { ok: false, reason: `${thread.url.replace('acme', 'other')} names no comment of Shop Team/payment` })
+  assert.deepEqual(await host.readComment(thread.url.replace(/comments\/\d+$/, 'comments/99')), { ok: false, reason: `az could not read back the comment at ${thread.url.replace(/comments\/\d+$/, 'comments/99')}` })
+  assert.deepEqual(await host.readComment('https://dev.azure.com/acme/somewhere'), { ok: false, reason: 'https://dev.azure.com/acme/somewhere names no comment of Shop Team/payment' })
+  assert.deepEqual(await repository(t, { remote: null }).codeHost().readComment(kept.url), { ok: false, reason: 'the working copy has no Git remote whose URL names an Azure DevOps organization, project and repository' })
+  assert.ok(!JSON.stringify(forge.calls()).includes('SECRET'), 'nothing az prints reaches a reason')
 })

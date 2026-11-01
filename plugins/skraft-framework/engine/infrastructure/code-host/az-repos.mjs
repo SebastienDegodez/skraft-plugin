@@ -1,7 +1,7 @@
 import { ELSEWHERE, elsewhereReason, keptThreadOf, pullRequestFactsOf } from '../../domain/review/azure-pull-request.mjs'
 import { areThreads, createdThreadOf, rewrittenThreadOf, threadUrl } from '../../domain/pipeline/azure-thread.mjs'
 import { azureRepositoryKeyOf } from '../../domain/config/azure-remote.mjs'
-import { NO_AZURE_REMOTE, QUIET, readJson, refused, remoteOf, run, succeeded } from './az-cli.mjs'
+import { failedWrite, NO_AZURE_REMOTE, QUIET, readJson, refused, remoteOf, run, succeeded } from './az-cli.mjs'
 
 /**
  * The pull requests of Azure Repos through az, the Azure CLI with its azure-devops extension: one
@@ -91,5 +91,5 @@ const write = async (commandRunner, remote, { number, threadFile, contentFile },
     : await invoke(commandRunner, remote, 'pullRequestThreadComments', [...route, `threadId=${kept.threadId}`, `commentId=${kept.commentId}`], ['--http-method=PATCH', `--in-file=${contentFile}`])
   const json = succeeded(written) ? readJson(written.stdout) : null
   const at = kept === undefined ? createdThreadOf(json) : rewrittenThreadOf(kept, json)
-  return at === null ? couldNotComment(remote, number) : { ok: /** @type {const} */ (true), url: threadUrl(remote, number, at.threadId, at.commentId) }
+  return at === null ? failedWrite(written, `az could not comment pull request #${number} of ${remote.project}/${remote.repository}`) : { ok: /** @type {const} */ (true), url: threadUrl(remote, number, at.threadId, at.commentId) }
 }

@@ -100,7 +100,7 @@ test('a run from an issue keeps one comment on it, posted when the first phase c
   assert.ok(comment.bodies[4].includes('\n- [x] PUBLISH\n\nNext: the end of the workflow.\n'), comment.bodies[4])
   assert.equal(await host.tracking.read(SLUG, 'issue-progress.md'), comment.body)
   assert.deepEqual(journaled(host), [...PHASES.map((phase) => ['issue.commented', 'phase', phase, COMMENT]), ['issue.commented', 'summary', null, COMMENT]])
-  assert.deepEqual(host.types().slice(-2), ['run.finished', 'issue.commented'])
+  assert.deepEqual(host.types().slice(-3), ['run.finished', 'forge.write', 'issue.commented'])
   assert.ok(host.progress.lines.includes(`${SLUG}: issue #42 updated (RESEARCH closed): ${COMMENT}`), host.progress.lines.join('\n'))
 })
 

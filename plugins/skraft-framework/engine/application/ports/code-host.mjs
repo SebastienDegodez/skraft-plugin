@@ -9,7 +9,15 @@
  *   the file that holds its body; body: that body, for a forge reached without files; issue: the
  *   story's issue, or work item, that a forge linking one at creation links it to; null for a run
  *   from none.
- * @typedef {{ ok: true } | { ok: false, reason: string }} Done
+ * @typedef {'refused' | 'unknown'} Unapplied
+ *   refused: the write did not happen (the forge or git said no, or it was never sent); unknown:
+ *   no answer came (a time limit, a cut), so it may have happened.
+ * @typedef {{ ok: false, reason: string, outcome?: Unapplied }} Failed
+ *   outcome: refused when absent.
+ * @typedef {{ ok: true } | Failed} Done
+ * @typedef {{ ok: true, body: string | null } | { ok: false, reason: string }} CommentReading
+ *   body: the comment's text as written (on Azure DevOps decoded as `normalisedComment` reads it),
+ *   null when the forge has no comment there.
  * @typedef {{ number: number, title: string, url: string, body: string }} Issue
  * @typedef {{ read: 'issue', issue: Issue } | { read: 'missing' } | { read: 'pull-request' } | { read: 'other-project', project: string } | { read: 'not-a-story' } | { read: 'failed', reason: string }} IssueReading
  *   missing: the forge answered and has no issue of that number; pull-request: the number is a
@@ -38,11 +46,14 @@
  *   currentBranch: () => Promise<string | null>,
  *   defaultBranch: () => Promise<string | null>,
  *   push: (branch: string) => Promise<Done>,
+ *   localTip: (branch: string) => Promise<string | null>,
+ *   remoteTip: (branch: string) => Promise<{ ok: true, sha: string | null } | { ok: false, reason: string }>,
  *   findPullRequest: (head: string) => Promise<{ ok: true, found: FoundPullRequest | null } | { ok: false, reason: string }>,
- *   create: (request: PullRequestRequest) => Promise<({ ok: true, note?: string } & PullRequest) | { ok: false, reason: string }>,
+ *   create: (request: PullRequestRequest) => Promise<({ ok: true, note?: string } & PullRequest) | Failed>,
  *   edit: (request: { number: number, bodyFile: string, body: string }) => Promise<Done>,
- *   keepIssueComment: (request: IssueCommentRequest) => Promise<{ ok: true, url: string } | { ok: false, reason: string }>,
- *   keepPullRequestComment: (request: PullRequestCommentRequest) => Promise<{ ok: true, url: string } | { ok: false, reason: string }>,
+ *   keepIssueComment: (request: IssueCommentRequest) => Promise<{ ok: true, url: string } | Failed>,
+ *   keepPullRequestComment: (request: PullRequestCommentRequest) => Promise<{ ok: true, url: string } | Failed>,
+ *   readComment: (url: string) => Promise<CommentReading>,
  *   issue: (number: number) => Promise<IssueReading>,
  *   storyLink: (issue: number, closes: boolean) => string | null,
  *   bodyLimit: number,
@@ -53,7 +64,10 @@
  *   signed in), null when one can. remotes: the names of the repository's remotes. repository:
  *   the host and `<owner>/<repo>` the remote pull requests go to names, null when it names none. currentBranch: the branch HEAD is on, null when HEAD is
  *   detached. defaultBranch: the repository's default branch on the forge, null when it cannot
- *   tell. push: the branch to the same branch of the remote, never forced. findPullRequest: the
+ *   tell. push: the branch to the same branch of the remote, never forced. localTip: the commit
+ *   the branch points at in the working copy, null when it has none. remoteTip: the commit the
+ *   branch points at where it is pushed, as `git ls-remote` reads it, null when the remote has no
+ *   such branch. findPullRequest: the
  *   latest pull request whose head is that branch, open, closed or merged, with its body; null
  *   when there is none. create: opens one; note: a fixed line on what it could not do (link the issue).
  *   edit: replaces the body of one. keepIssueComment: rewrites the comment at url; without one, or
@@ -62,7 +76,8 @@
  *   number on the repository gh would pick in a clone of a fork, its body as written; failed when
  *   there is no remote, no forge client, no sign-in to that forge, or the forge refused.
  *   keepPullRequestComment: keepIssueComment on a pull request (GitHub: the same comment route; Azure
- *   Repos: a thread of the pull request, posted closed, its first comment rewritten). bodyLimit: the
+ *   Repos: a thread of the pull request, posted closed, its first comment rewritten). readComment:
+ *   the comment at a URL keepIssueComment or keepPullRequestComment gave, read back. bodyLimit: the
  *   longest body the forge takes, in characters; commentLimit: the longest comment. takesRequestFile: whether the
  *   forge's client sends a JSON request file (az on Azure Boards), which keepIssueComment is then
  *   handed; false: no such file is written.

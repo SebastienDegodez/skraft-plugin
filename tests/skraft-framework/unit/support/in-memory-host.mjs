@@ -624,7 +624,12 @@ export class InMemoryAgentCatalog {
  * the pull requests by head, each with its state and body. `calls` lists what the engine asked,
  * in order; `fails` gives the reason a push, a listing, an opening, an edit, keeping an issue comment or reading an issue fails with; `read`
  * reads a body file, as gh does (the pipeline host hands it the tracking folder). `issuesRead`
- * lists the issues the engine read, in order.
+ * lists the issues the engine read, in order. `cut` gives, by write (push, create, edit, comment,
+ * pullRequestComment), the reason of a write whose answer is lost: the forge did it, the engine
+ * is told nothing came back. `unseen` names the writes the forge answers done and does not show
+ * when read back: a push that never reaches the remote, a pull request no listing shows, a body
+ * left as it was, a comment not there. `reads` lists the read backs (`ls-remote <branch>`,
+ * `read <comment url>`), in order.
  */
 export class InMemoryCodeHost {
   /**
@@ -638,7 +643,15 @@ export class InMemoryCodeHost {
    *   bodyLimit: the longest body the forge takes, GitHub's unless given; takesRequestFile: whether
    *   its client sends a JSON request file (az), false unless given.
    */
-  constructor({ unavailable = null, branch = 'checkout', defaultBranch = 'main', remotes = ['origin'], open = [], fails = {}, repository = { host: 'github.com', repository: 'acme/shop' }, issues, link = (issue, closes) => `${closes ? 'Closes' : 'Refs'} #${issue}`, bodyLimit = 60_000, commentLimit = 60_000, takesRequestFile = false, pages = 'https://github.example.com/acme/shop' } = {}) {
+  constructor({ unavailable = null, branch = 'checkout', defaultBranch = 'main', remotes = ['origin'], open = [], fails = {}, repository = { host: 'github.com', repository: 'acme/shop' }, issues, link = (issue, closes) => `${closes ? 'Closes' : 'Refs'} #${issue}`, bodyLimit = 60_000, commentLimit = 60_000, takesRequestFile = false, pages = 'https://github.example.com/acme/shop', cut = {}, unseen = [] } = {}) {
+    this.cut = cut
+    this.unseen = new Set(unseen)
+    /** @type {string[]} */
+    this.reads = []
+    /** @type {Record<string, string>} the commit each branch points at on the remote */
+    this.remote = {}
+    /** the commit the local branch points at */
+    this.tip = 'tip-1'
     this.bodyLimit = bodyLimit
     this.commentLimit = commentLimit
     /** @type {Array<{ number: number, body: string, bodies: string[], edits: number, url: string, threadFile: string, commentFile: string }>} the comments kept on pull requests, in the order they were posted */
@@ -684,12 +697,23 @@ export class InMemoryCodeHost {
   async defaultBranch() { return this.default }
   async push(branch) {
     this.calls.push(`push ${branch}`)
-    return this.fails.push ? { ok: false, reason: this.fails.push } : { ok: true }
+    if (this.fails.push) return { ok: false, reason: this.fails.push }
+    if (!this.unseen.has('push')) this.remote[branch] = this.tip
+    return this.answered('push')
+  }
+  async localTip() { return this.tip }
+  async remoteTip(branch) {
+    this.reads.push(`ls-remote ${branch}`)
+    return { ok: true, sha: this.remote[branch] ?? null }
+  }
+  /** What a write that the forge did answers: done, unless its answer is cut. @param {string} write */
+  answered(write, done = {}) {
+    return this.cut[write] ? { ok: false, reason: this.cut[write], outcome: 'unknown' } : { ok: true, ...done }
   }
   async findPullRequest(head) {
     this.calls.push(`find ${head}`)
     if (this.fails.find) return { ok: false, reason: this.fails.find }
-    const found = this.pullRequests.findLast((pull) => pull.head === head)
+    const found = this.pullRequests.findLast((pull) => pull.head === head && !pull.hidden)
     return { ok: true, found: found ? { number: found.number, url: found.url, state: found.state, body: found.body } : null }
   }
   async create({ base, head, title, bodyFile, draft, issue }) {
@@ -697,14 +721,14 @@ export class InMemoryCodeHost {
     if (this.fails.create) return { ok: false, reason: this.fails.create }
     const number = 41 + this.pullRequests.length + 1
     const url = `${this.pages}/pull/${number}`
-    this.pullRequests.push({ number, url, head, base, title, bodyFile, draft, issue, state: 'open', body: this.read(bodyFile) })
-    return { ok: true, number, url, ...(this.fails.link ? { note: this.fails.link } : {}) }
+    this.pullRequests.push({ number, url, head, base, title, bodyFile, draft, issue, state: 'open', body: this.read(bodyFile), hidden: this.unseen.has('create') })
+    return this.answered('create', { number, url, ...(this.fails.link ? { note: this.fails.link } : {}) })
   }
   async edit({ number, bodyFile }) {
     this.calls.push(`edit #${number} ${bodyFile}`)
     if (this.fails.edit) return { ok: false, reason: this.fails.edit }
-    this.pullRequests.find((pull) => pull.number === number).body = this.read(bodyFile)
-    return { ok: true }
+    if (!this.unseen.has('edit')) this.pullRequests.find((pull) => pull.number === number).body = this.read(bodyFile)
+    return this.answered('edit')
   }
   async keepIssueComment({ number, marker, url, bodyFile }) {
     this.calls.push(`keep comment #${number}${url === null ? '' : ` ${url.slice(url.indexOf('#'))}`}`)
@@ -715,12 +739,13 @@ export class InMemoryCodeHost {
       kept.body = body
       kept.bodies.push(body)
       kept.edits += 1
-      return { ok: true, url: kept.url }
+      kept.hidden = this.unseen.has('comment')
+      return this.answered('comment', { url: kept.url })
     }
     this.posted += 1
-    const comment = { number, bodyFile, body, bodies: [body], edits: 0, url: `${this.pages}/issues/${number}#issuecomment-${900 + this.posted}` }
+    const comment = { number, bodyFile, body, bodies: [body], edits: 0, url: `${this.pages}/issues/${number}#issuecomment-${900 + this.posted}`, hidden: this.unseen.has('comment') }
     this.comments.push(comment)
-    return { ok: true, url: comment.url }
+    return this.answered('comment', { url: comment.url })
   }
   async keepPullRequestComment({ number, marker, url, bodyFile, threadFile, commentFile }) {
     this.calls.push(`keep pr comment #${number}${url === null ? '' : ` ${url.slice(url.indexOf('#'))}`}`)
@@ -728,12 +753,17 @@ export class InMemoryCodeHost {
     const body = this.read(bodyFile)
     const kept = this.pullRequestComments.find((comment) => comment.url === url) ?? this.pullRequestComments.findLast((comment) => comment.number === number && comment.body.startsWith(marker))
     if (kept) {
-      Object.assign(kept, { body, bodies: [...kept.bodies, body], edits: kept.edits + 1 })
-      return { ok: true, url: kept.url }
+      Object.assign(kept, { body, bodies: [...kept.bodies, body], edits: kept.edits + 1, hidden: this.unseen.has('pullRequestComment') })
+      return this.answered('pullRequestComment', { url: kept.url })
     }
-    const comment = { number, body, bodies: [body], edits: 0, url: `${this.pages}/pull/${number}#details-${this.pullRequestComments.length + 1}`, threadFile, commentFile }
+    const comment = { number, body, bodies: [body], edits: 0, url: `${this.pages}/pull/${number}#details-${this.pullRequestComments.length + 1}`, threadFile, commentFile, hidden: this.unseen.has('pullRequestComment') }
     this.pullRequestComments.push(comment)
-    return { ok: true, url: comment.url }
+    return this.answered('pullRequestComment', { url: comment.url })
+  }
+  async readComment(url) {
+    this.reads.push(`read ${url.slice(url.indexOf('#'))}`)
+    const found = [...this.comments, ...this.pullRequestComments].find((comment) => comment.url === url && !comment.hidden)
+    return { ok: true, body: found?.body ?? null }
   }
 }
 
@@ -747,7 +777,9 @@ export class InMemoryPullRequests {
    * @param {{ unavailable?: string | null, pullRequests?: object[], fails?: Record<string, string>, checkout?: (number: number) => string, takesRequestFile?: boolean }} [forge]
    *   checkout: the command that checks a pull request out; takesRequestFile: whether a comment goes as JSON files, which the double ignores
    */
-  constructor({ unavailable = null, pullRequests = [], fails = {}, repository = { host: 'github.com', repository: 'acme/shop' }, pages = 'https://github.example.com/acme/shop', checkout = (number) => `gh pr checkout ${number}`, takesRequestFile = false } = {}) {
+  constructor({ unavailable = null, pullRequests = [], fails = {}, repository = { host: 'github.com', repository: 'acme/shop' }, pages = 'https://github.example.com/acme/shop', checkout = (number) => `gh pr checkout ${number}`, takesRequestFile = false, cut = {}, unseen = [] } = {}) {
+    this.cut = cut
+    this.unseen = new Set(unseen)
     this.pages = pages
     this.checkout = checkout
     this.takesRequestFile = takesRequestFile
@@ -778,14 +810,19 @@ export class InMemoryPullRequests {
     if (this.fails.comment) return { ok: false, reason: this.fails.comment }
     const body = this.read(bodyFile)
     const kept = this.comments.find((comment) => comment.url === url) ?? this.comments.findLast((comment) => comment.number === number && comment.body.includes(marker))
+    const answer = (url) => (this.cut.comment ? { ok: false, reason: this.cut.comment, outcome: 'unknown' } : { ok: true, url })
     if (kept) {
       kept.body = body
       kept.bodies.push(body)
-      return { ok: true, url: kept.url }
+      return answer(kept.url)
     }
-    const comment = { number, body, bodies: [body], url: `${this.pages}/pull/${number}#issuecomment-${900 + this.comments.length + 1}` }
+    const comment = { number, body, bodies: [body], url: `${this.pages}/pull/${number}#issuecomment-${900 + this.comments.length + 1}`, hidden: this.unseen.has('comment') }
     this.comments.push(comment)
-    return { ok: true, url: comment.url }
+    return answer(comment.url)
+  }
+  async readComment(url) {
+    const found = this.comments.find((comment) => comment.url === url && !comment.hidden)
+    return { ok: true, body: found?.body ?? null }
   }
 }
 

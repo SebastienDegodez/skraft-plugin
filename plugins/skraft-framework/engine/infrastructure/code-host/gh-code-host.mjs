@@ -1,4 +1,5 @@
 import { ANYWHERE, holdsMarker, OPENS } from '../../domain/pipeline/forge-comment.mjs'
+import { branchOnRemote } from './git-push.mjs'
 
 /**
  * @typedef {import('../../domain/pipeline/forge-comment.mjs').MarkerAt} MarkerAt
@@ -19,16 +20,25 @@ import { ANYWHERE, holdsMarker, OPENS } from '../../domain/pipeline/forge-commen
  */
 export const createGhCodeHost = ({ commandRunner }) => Object.freeze({
   ...whereTo(commandRunner),
-  push: (branch) => push(commandRunner, branch),
+  ...branchOnRemote((argv) => run(commandRunner, argv), () => remoteOf(commandRunner), NO_REMOTE),
   findPullRequest: (head) => findPullRequest(commandRunner, head),
   create: (request) => create(commandRunner, request),
   edit: (request) => edit(commandRunner, request),
-  keepIssueComment: (request) => keepIssueComment(commandRunner, request, remoteOf, OPENS),
-  // On GitHub a pull request is an issue: its comments go the same way, with no request file.
-  keepPullRequestComment: (request) => keepIssueComment(commandRunner, { ...request, requestFile: '' }, remoteOf, OPENS),
+  ...comments(commandRunner),
   issue: (number) => findIssue(commandRunner, number),
   storyLink: (issue, closes) => `${closes ? 'Closes' : 'Refs'} #${issue}`,
   ...LIMITS,
+})
+
+/**
+ * The run's comments on an issue and on a pull request, and their read back. On GitHub a pull
+ * request is an issue: its comments go the same way, with no request file.
+ * @param {CommandRunner} commandRunner
+ */
+const comments = (commandRunner) => ({
+  keepIssueComment: (/** @type {import('../../application/ports/code-host.mjs').IssueCommentRequest} */ request) => keepIssueComment(commandRunner, request, remoteOf, OPENS),
+  keepPullRequestComment: (/** @type {import('../../application/ports/code-host.mjs').PullRequestCommentRequest} */ request) => keepIssueComment(commandRunner, { ...request, requestFile: '' }, remoteOf, OPENS),
+  readComment: (/** @type {string} */ url) => readComment(commandRunner, url, remoteOf),
 })
 
 const LIMITS = Object.freeze({
@@ -68,6 +78,7 @@ export const createGhPullRequests = ({ commandRunner }) => Object.freeze({
   takesRequestFile: false,
   find: (number) => findByNumber(commandRunner, number),
   keepComment: (request) => keepIssueComment(commandRunner, request, reviewedRemote, ANYWHERE),
+  readComment: (url) => readComment(commandRunner, url, reviewedRemote),
 })
 
 export const NO_REMOTE = 'the working copy has no Git remote whose URL names a host and a repository'
@@ -89,6 +100,15 @@ const CALL_TIMEOUT_MS = 120_000
 
 /** @param {CommandResult} result */
 const succeeded = (result) => result.started && result.exitCode === 0
+
+/** Whether a program started and was stopped before it answered (its time limit, a cut): what it did is unknown. @param {CommandResult} result */
+const unanswered = (result) => result.started && result.exitCode === null
+
+/**
+ * A failed write: unknown when the program got no answer, refused otherwise.
+ * @param {CommandResult} result @param {string} reason
+ */
+const failedWrite = (result, reason) => (unanswered(result) ? { ...refused(reason), outcome: /** @type {const} */ ('unknown') } : refused(reason))
 
 /**
  * @typedef {(commandRunner: CommandRunner) => Promise<Remote | null>} RemoteLookup
@@ -167,17 +187,6 @@ const defaultBranch = async (commandRunner) => {
   if (remote === null) return null
   const result = await run(commandRunner, ['gh', 'repo', 'view', remote.repository, '--json', 'defaultBranchRef', '--jq', '.defaultBranchRef.name'])
   return succeeded(result) ? result.stdout.trim() || null : null
-}
-
-/**
- * Pushes the branch to the same branch of the remote, never forced: a remote that moved refuses it.
- * @param {CommandRunner} commandRunner @param {string} branch
- */
-const push = async (commandRunner, branch) => {
-  const remote = await remoteOf(commandRunner)
-  if (remote === null) return refused(NO_REMOTE)
-  const result = await run(commandRunner, ['git', '-c', 'core.sshCommand=ssh -o BatchMode=yes', '-c', 'credential.interactive=never', 'push', '--porcelain', remote.name, `refs/heads/${branch}:refs/heads/${branch}`])
-  return succeeded(result) ? { ok: /** @type {const} */ (true) } : refused(`git push of ${branch} to ${remote.name} failed or was refused`)
 }
 
 /** The latest pull request whose head is the branch, whatever its state. @param {CommandRunner} commandRunner @param {string} head */
@@ -273,7 +282,7 @@ const create = async (commandRunner, { base, head, title, bodyFile, draft }) => 
   if (remote === null) return refused(NO_REMOTE)
   const result = await run(commandRunner, ['gh', 'pr', 'create', `--repo=${remote.repository}`, `--base=${base}`, `--head=${head}`, `--title=${title}`, `--body-file=${bodyFile}`, ...(draft ? ['--draft'] : [])])
   const url = succeeded(result) ? /https?:\/\/\S+\/pull\/(\d+)/.exec(result.stdout) : null
-  return url === null ? refused(`gh could not open the pull request of ${head} on ${remote.repository}`) : { ok: /** @type {const} */ (true), number: Number(url[1]), url: url[0] }
+  return url === null ? failedWrite(result, `gh could not open the pull request of ${head} on ${remote.repository}`) : { ok: /** @type {const} */ (true), number: Number(url[1]), url: url[0] }
 }
 
 /** Replaces the pull request's body. @param {CommandRunner} commandRunner @param {{ number: number, bodyFile: string }} request */
@@ -281,7 +290,7 @@ const edit = async (commandRunner, { number, bodyFile }) => {
   const remote = await remoteOf(commandRunner)
   if (remote === null) return refused(NO_REMOTE)
   const result = await run(commandRunner, ['gh', 'pr', 'edit', String(number), `--repo=${remote.repository}`, `--body-file=${bodyFile}`])
-  return succeeded(result) ? { ok: /** @type {const} */ (true) } : refused(`gh could not update pull request #${number} on ${remote.repository}`)
+  return succeeded(result) ? { ok: /** @type {const} */ (true) } : failedWrite(result, `gh could not update pull request #${number} on ${remote.repository}`)
 }
 
 /**
@@ -294,7 +303,26 @@ const edit = async (commandRunner, { number, bodyFile }) => {
 const keepIssueComment = async (commandRunner, request, locate, markerAt) => {
   const remote = await locate(commandRunner)
   if (remote === null) return refused(NO_REMOTE)
-  return (await rewriteOrPost({ commandRunner, remote }, request, markerAt)) ?? refused(`gh could not comment issue #${request.number} on ${remote.repository}`)
+  const kept = await rewriteOrPost({ commandRunner, remote }, request, markerAt)
+  const reason = `gh could not comment issue #${request.number} on ${remote.repository}`
+  if (kept === LOST) return { ...refused(`${reason}: gh got no answer`), outcome: /** @type {const} */ ('unknown') }
+  return kept ?? refused(reason)
+}
+
+/** A comment written that gh got no answer for: it may be on the forge. */
+const LOST = Symbol('lost')
+
+/**
+ * The comment at a URL the run kept, read back on the forge the remote names: its body, null when
+ * the forge has none there. @param {CommandRunner} commandRunner @param {string} url @param {RemoteLookup} locate
+ * @returns {Promise<import('../../application/ports/code-host.mjs').CommentReading>}
+ */
+const readComment = async (commandRunner, url, locate) => {
+  const remote = await locate(commandRunner)
+  if (remote === null) return refused(NO_REMOTE)
+  const result = await api({ commandRunner, remote }, `issues/comments/${url.slice(url.lastIndexOf('-') + 1)}`, ['--jq=.body'])
+  if (succeeded(result)) return { ok: true, body: result.stdout.replace(/\n$/, '') }
+  return NOT_THERE.test(result.stderr) ? { ok: true, body: null } : refused(`gh could not read back the comment at ${url}`)
 }
 
 /**
@@ -302,7 +330,7 @@ const keepIssueComment = async (commandRunner, request, locate, markerAt) => {
  * twice. Only a kept URL the forge says is gone, then no comment of the user's holding the marker,
  * lead to a new one: a comment found by its marker that the forge refuses to rewrite is a failure.
  * @param {Forge} forge @param {import('../../application/ports/code-host.mjs').IssueCommentRequest} request @param {MarkerAt} markerAt
- * @returns {Promise<KeptComment | Refusal | null>}
+ * @returns {Promise<KeptComment | Refusal | typeof LOST | null>}
  */
 const rewriteOrPost = async (forge, { number, marker, url, bodyFile }, markerAt) => {
   const edited = url === null ? GONE : await editOwn(forge, { url, number, bodyFile })
@@ -334,8 +362,9 @@ const COMMENT_URL = /^https:\/\/\S+\/(?:issues|pull)\/\d+#issuecomment-\d+$/
 const api = ({ commandRunner, remote }, path, options) =>
   run(commandRunner, ['gh', 'api', `--hostname=${remote.host}`, ...options, `repos/${remote.repository.slice(remote.host.length + 1)}/${path}`])
 
-/** The URL gh printed for the comment it wrote; null when it wrote none. @param {CommandResult} result @returns {KeptComment | null} */
+/** The URL gh printed for the comment it wrote; null when it wrote none; LOST when it got no answer. @param {CommandResult} result @returns {KeptComment | null | typeof LOST} */
 const keptOf = (result) => {
+  if (unanswered(result)) return LOST
   const url = result.stdout.trim()
   return succeeded(result) && COMMENT_URL.test(url) ? { ok: true, url } : null
 }
@@ -346,7 +375,7 @@ const NOT_THERE = /\(HTTP 40[34]\)/
 /**
  * The comment at the URL rewritten; GONE when the forge says it is not there to rewrite; null
  * when gh failed. @param {Forge} forge @param {string} url @param {string} bodyFile
- * @returns {Promise<KeptComment | typeof GONE | null>}
+ * @returns {Promise<KeptComment | typeof GONE | typeof LOST | null>}
  */
 const editComment = async (forge, url, bodyFile) => {
   const result = await api(forge, `issues/comments/${url.slice(url.lastIndexOf('-') + 1)}`, ['--method=PATCH', `--field=body=@${bodyFile}`, '--jq=.html_url'])
@@ -357,7 +386,7 @@ const editComment = async (forge, url, bodyFile) => {
  * The kept comment rewritten once the forge says it is the signed-in user's comment on that
  * issue; GONE when it is not, or not there, so that the user's own is found or posted instead.
  * @param {Forge} forge @param {{ url: string, number: number, bodyFile: string }} kept
- * @returns {Promise<KeptComment | Refusal | typeof GONE | null>}
+ * @returns {Promise<KeptComment | Refusal | typeof GONE | typeof LOST | null>}
  */
 const editOwn = async (forge, { url, number, bodyFile }) => {
   const owner = await commentOwner(forge, url)
@@ -390,7 +419,7 @@ const signedIn = async (forge) => {
   return succeeded(me) && LOGIN.test(login) ? login : null
 }
 
-/** @param {Forge} forge @param {number} number @param {string} bodyFile @returns {Promise<KeptComment | null>} */
+/** @param {Forge} forge @param {number} number @param {string} bodyFile @returns {Promise<KeptComment | typeof LOST | null>} */
 const postComment = async (forge, number, bodyFile) => keptOf(await api(forge, `issues/${number}/comments`, ['--method=POST', `--field=body=@${bodyFile}`, '--jq=.html_url']))
 
 /** A login as the forge spells one, a bot's included. */

@@ -186,3 +186,22 @@ test('the comment lists what does not send the work back under Not counted', asy
 
   assert.ok(host.pullRequests.comments[0].body.includes('\n\nNot counted:\n- note: cold-reader F1 C2 low at src/Checkout.cs:12: name the total\n\n<sub>skraft-review pr=12</sub>\n'), host.pullRequests.comments[0].body)
 })
+
+test('a review comment is commented once read back at its URL; one the forge does not show is verification-failed, one whose answer is lost unknown: neither is said published', async () => {
+  for (const azure of [false, true]) {
+    const kept = reviewed({ azure, config: { components: [API], publish: { reviewComment: true } } })
+    await kept.review({ publish: true })
+    assert.deepEqual(kept.events().filter(({ type }) => type === 'forge.write').map(({ write, subject, outcome, reason }) => [write, subject, outcome, reason]), [['review-comment', '12', 'applied', null]])
+
+    const unseen = reviewed({ azure, config: { components: [API], publish: { reviewComment: true } }, forge: { unseen: ['comment'] } })
+    const hidden = await unseen.review({ publish: true })
+    const reason = `the forge said it kept the comment on #12, but reading it back at ${unseen.pullRequests.comments[0].url} does not show it`
+    assert.deepEqual([hidden.comment, hidden.unpublished], [null, `not published: ${reason}`])
+    assert.equal(unseen.events().find(({ type }) => type === 'forge.write').outcome, 'verification-failed')
+
+    const cut = reviewed({ azure, config: { components: [API], publish: { reviewComment: true } }, forge: { cut: { comment: 'gh got no answer within 120 s' } } })
+    const lost = await cut.review({ publish: true })
+    assert.deepEqual([lost.comment, lost.unpublished], [null, 'not published: gh got no answer within 120 s'])
+    assert.deepEqual(cut.events().filter(({ type }) => type === 'forge.write' || type.startsWith('review.comment')).map(({ type, outcome }) => [type, outcome]), [['forge.write', 'unknown'], ['review.comment-skipped', undefined]])
+  }
+})

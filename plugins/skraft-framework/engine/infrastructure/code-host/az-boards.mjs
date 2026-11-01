@@ -1,6 +1,6 @@
 import { inProject, workItemReading } from '../../domain/pipeline/work-item.mjs'
 import { areComments, commentUrl, keptCommentOf } from '../../domain/pipeline/work-item-comment.mjs'
-import { NO_AZURE_REMOTE, QUIET, readJson, refused, remoteOf, run, succeeded, unavailable } from './az-cli.mjs'
+import { failedWrite, NO_AZURE_REMOTE, QUIET, readJson, refused, remoteOf, run, succeeded, unavailable } from './az-cli.mjs'
 
 /**
  * The work items of Azure Boards through az, the Azure CLI with its azure-devops extension: the
@@ -106,5 +106,5 @@ const write = async (commandRunner, remote, { number, requestFile }, kept) => {
   const more = kept === undefined ? ['--http-method=POST', '--query-parameters', 'format=0'] : ['--http-method=PATCH']
   const written = await invoke(commandRunner, remote, kept === undefined ? route : [...route, `commentId=${kept.id}`], [...more, `--in-file=${requestFile}`])
   const id = succeeded(written) ? readJson(written.stdout)?.id : null
-  return Number.isInteger(id) ? { ok: /** @type {const} */ (true), url: commentUrl(remote, number, id) } : couldNotComment(remote, number)
+  return Number.isInteger(id) ? { ok: /** @type {const} */ (true), url: commentUrl(remote, number, id) } : failedWrite(written, `az could not comment work item #${number} of ${remote.project}`)
 }

@@ -43,6 +43,7 @@ const FAKE_GH = [
   "const urlOf = (id) => `https://${option('hostname')}/acme/shop/issues/${state.pull.number}#issuecomment-${id}`",
   "const body = () => readFileSync(option('field').slice('body=@'.length), 'utf8')",
   "const edited = /\\/issues\\/comments\\/(\\d+)$/.exec(args.at(-1))",
+  "if (edited && args.includes('--jq=.body')) { const comment = state.comments.find((one) => one.id === Number(edited[1])); if (!comment) { process.stderr.write('gh: Not Found (HTTP 404)\\n'); process.exit(1) } said(comment.body) }",
   "if (edited) { const comment = state.comments.find((one) => one.id === Number(edited[1])); comment.body = body(); save(); said(urlOf(comment.id)) }",
   "if (option('method') === 'POST') { const id = 901 + state.comments.length; state.comments.push({ id, body: body() }); save(); said(urlOf(id)) }",
   "if (args.includes('--paginate')) said(state.comments.map((one) => JSON.stringify({ user: { login: 'sebastien' }, body: one.body, html_url: urlOf(one.id) })).join('\\n'))",

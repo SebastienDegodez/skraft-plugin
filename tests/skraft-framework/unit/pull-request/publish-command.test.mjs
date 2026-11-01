@@ -19,18 +19,18 @@ test('skraft publish opens the pull request a run left local once the consent is
   const opened = await host.publish()
 
   assert.deepEqual(opened, { ok: true, slug: SLUG, code: null, reason: 'pull request #42 opened as a draft: https://github.example.com/acme/shop/pull/42' })
-  assert.deepEqual(host.codeHost.calls, ['push checkout', 'find checkout', 'create main <- checkout (draft): Pay by card at checkout'])
+  assert.deepEqual(host.codeHost.calls, ['push checkout', 'find checkout', 'create main <- checkout (draft): Pay by card at checkout', 'find checkout'])
   assert.deepEqual(eventsOf(host, 'pull-request.opened').map(({ number, head, base }) => [number, head, base]), [[42, 'checkout', 'main']])
   assert.ok(section(await host.tracking.read(SLUG, 'pull-request-body.md'), 'Run summary').startsWith('done: PUBLISH closed\n'))
 
   host.deps.agentCatalog.plugin.delete('pr-writer')
   assert.deepEqual(await host.publish(), { ok: true, slug: SLUG, code: null, reason: 'pull request #42 is up to date: https://github.example.com/acme/shop/pull/42' })
-  assert.deepEqual(host.codeHost.calls.slice(3), ['push checkout', 'find checkout'])
+  assert.deepEqual(host.codeHost.calls.slice(4), ['push checkout', 'find checkout'])
 
   const prose = host.events().find((event) => event.type === 'step.started' && event.step === 'pr_writer').outputs[0]
   await host.tracking.write(SLUG, prose, (await host.tracking.read(SLUG, prose)).replace('Refunds are out of scope.', 'Refunds and partial captures are out of scope.'))
   assert.deepEqual(await host.publish(), { ok: true, slug: SLUG, code: null, reason: 'pull request #42 updated: https://github.example.com/acme/shop/pull/42' })
-  assert.deepEqual(host.codeHost.calls.slice(5), ['push checkout', 'find checkout', `edit #42 ${TRACKING}/pull-request-body.md`])
+  assert.deepEqual(host.codeHost.calls.slice(6), ['push checkout', 'find checkout', `edit #42 ${TRACKING}/pull-request-body.md`, 'find checkout'])
   assert.deepEqual(eventsOf(host, 'pull-request.updated').map(({ number }) => number), [42])
 
   host.codeHost.fails.edit = 'gh could not update pull request #42'
@@ -47,7 +47,7 @@ test('skraft publish typed by the developer is the consent for that run: the sto
   assert.deepEqual(declined.workspace.config().publish, { pullRequest: false, visuals: false })
   const [requested] = eventsOf(declined, 'publish.requested')
   assert.deepEqual({ by: requested.by, consent: requested.consent }, { by: 'skraft publish', consent: false })
-  assert.deepEqual(declined.types().slice(-2), ['publish.requested', 'pull-request.opened'])
+  assert.deepEqual(declined.types().slice(-5), ['publish.requested', 'forge.write', 'pull-request.create-started', 'pull-request.opened', 'forge.write'])
 })
 
 test('skraft publish says why it opens nothing: no forge, a run not done, no active pipeline', async () => {

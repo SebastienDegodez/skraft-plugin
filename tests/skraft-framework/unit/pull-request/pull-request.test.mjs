@@ -18,7 +18,7 @@ test('the run ends by opening a draft pull request from its branch to its base, 
 
   assert.deepEqual(outcome, { status: 'done', slug: SLUG, phase: 'PUBLISH', code: null, reason: 'PUBLISH closed' })
   assert.deepEqual(host.codeHost.calls, [
-    'keep comment #42', ...Array(3).fill('keep comment #42 #issuecomment-901'), 'push checkout', 'find checkout', 'create main <- checkout (draft): Pay by card at checkout',
+    'keep comment #42', ...Array(3).fill('keep comment #42 #issuecomment-901'), 'push checkout', 'find checkout', 'create main <- checkout (draft): Pay by card at checkout', 'find checkout',
     ...Array(2).fill('keep comment #42 #issuecomment-901'),
   ])
   assert.deepEqual([host.codeHost.pullRequests[0].bodyFile, host.codeHost.pullRequests[0].issue], [BODY_FILE, 42])
@@ -445,7 +445,7 @@ test('a pr-writer alone before the publish node needs no design record, and a pu
   host.codeHost.push = async () => { throw new TypeError('the machine stopped') }
 
   await assert.rejects(host.start(), TypeError)
-  host.codeHost.push = async () => ({ ok: true })
+  delete host.codeHost.push
   assert.equal((await host.run()).status, 'done')
 
   assert.deepEqual(eventsOf(host, 'step.recorded').map(({ step, outcome }) => [step, outcome]), [['pr_writer', 'done'], ['publish', 'published']])
