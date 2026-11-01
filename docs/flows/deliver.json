@@ -411,7 +411,7 @@
             "confirmed",
             "refuted"
           ],
-          "seal": "engine",
+          "seal": "mandatory",
           "role": {
             "fr": "Conteste chaque constat bloquant avant qu'il compte, un palier au-dessus de la lentille la plus forte.",
             "en": "Challenges each blocking finding before it counts, a tier above the strongest lens."
