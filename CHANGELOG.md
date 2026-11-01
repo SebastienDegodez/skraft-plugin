@@ -3,6 +3,16 @@
 Toutes les modifications notables de ce projet sont documentées ici.
 Format basé sur [Conventional Commits](https://www.conventionalcommits.org/) — versionnage [SemVer](https://semver.org/).
 
+## [2.0.0-alpha.50](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.49...v2.0.0-alpha.50) (2026-11-01)
+
+### ✨ Features
+
+* **engine:** declare the refuter as a mandatory node of every review ([#488](https://github.com/SebastienDegodez/skraft-plugin/issues/488)) ([24b47ad](https://github.com/SebastienDegodez/skraft-plugin/commit/24b47ad05f774ba0e4997b47369ced7a99f475c6)), closes [#459](https://github.com/SebastienDegodez/skraft-plugin/issues/459)
+
+### 📝 Documentation
+
+* bring over-budget handbook pages under their word budget ([#475](https://github.com/SebastienDegodez/skraft-plugin/issues/475)) ([#489](https://github.com/SebastienDegodez/skraft-plugin/issues/489)) ([63768e5](https://github.com/SebastienDegodez/skraft-plugin/commit/63768e5c320cfa4290121dda95cae554ace9896c))
+
 ## [2.0.0-alpha.49](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.48...v2.0.0-alpha.49) (2026-11-01)
 
 ### 🐛 Bug Fixes
