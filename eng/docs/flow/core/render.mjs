@@ -15,7 +15,7 @@ const UI = {
     inputs: 'Entrées', outputs: 'Sorties', lenses: (n) => `${n} lentilles`, gates: (n) => `${n} gates`, loop: () => 'boucle mutants',
     each: '× fichier', when: (w) => `si ${{ mock: 'mock', contract: 'contrat', frontend: 'front' }[w] ?? w}`, optional: 'optionnelle',
     severities: (s) => `si ${s.join('·')}`, tier: 'palier ↑', fanout: 'fan-out', fanin: 'fan-in',
-    mandatory: 'obligatoire', locked: 'verrouillé', engine: 'lancé par le moteur dans chaque revue',
+    mandatory: 'obligatoire', locked: 'verrouillé',
     edgesTitle: 'Arêtes', next: 'étape suivante', rework: 'reprise', fail: 'échec de gate', fold: 'boucle repliée',
     marks: 'Marques', dashed: 'optionnelle',
     actors: { human: 'Humain', agent: 'Agent IA', lens: 'Lentille', review: 'Revue', gate: 'Gate', code: 'Code', verdict: 'Verdict' },
@@ -26,7 +26,7 @@ const UI = {
     inputs: 'Inputs', outputs: 'Outputs', lenses: (n) => `${n} lenses`, gates: (n) => `${n} gates`, loop: () => 'mutant loop',
     each: '× file', when: (w) => `if ${{ mock: 'mock', contract: 'contract', frontend: 'front end' }[w] ?? w}`, optional: 'optional',
     severities: (s) => `if ${s.join('·')}`, tier: 'tier ↑', fanout: 'fan-out', fanin: 'fan-in',
-    mandatory: 'mandatory', locked: 'locked', engine: 'run by the engine in every review',
+    mandatory: 'mandatory', locked: 'locked',
     edgesTitle: 'Edges', next: 'next step', rework: 'rework', fail: 'gate failure', fold: 'folded loop',
     marks: 'Marks', dashed: 'optional',
     actors: { human: 'Human', agent: 'AI agent', lens: 'Lens', review: 'Review', gate: 'Gate', code: 'Code', verdict: 'Verdict' },
@@ -76,7 +76,6 @@ const ICONS = {
   refute: '<circle cx="12.25" cy="12.25" r="3.25"/><path d="m11 11 2.5 2.5M13.5 11 11 13.5"/>',
   locked: '<rect x="3.5" y="7" width="9" height="7" rx="1.5"/><path d="M5.5 7V5a2.5 2.5 0 0 1 5 0v2"/>',
   mandatory: '<circle cx="8" cy="6.5" r="4.25"/><path d="M5.75 10.25 4.75 14.5 8 13l3.25 1.5-1-4.25M6.25 6.5l1.25 1.25 2.25-2.25"/>',
-  engine: '<circle cx="8" cy="8" r="2.25"/><path d="M8 1.75v2M8 12.25v2M1.75 8h2M12.25 8h2M3.6 3.6l1.4 1.4M11 11l1.4 1.4M3.6 12.4 5 11M11 5l1.4-1.4"/>',
   fan: '<path d="M1 6c5 0 5-5 10-5s5 5 10 5M1 6h20M1 6c5 0 5 5 10 5s5-5 10-5"/>',
   chevron: '<path d="m6 3.5 4.5 4.5L6 12.5"/>',
 }
@@ -327,7 +326,7 @@ function lensesFigure(sub, lang) {
   const ry = rBox.y + 20
   edges.push(`<path ${attrs({ class: 'sf-subedge', 'data-edge': `${sub.fanIn}#in->${refuter.id}`, d: `M${join.x} ${join.y + 6} C${join.x} ${ry} ${join.x} ${ry} ${left + w + 1} ${ry}` })}/>`)
   const tier = chipWidth(t.tier)
-  let rInner = `${icon('agent', 8, 10, { title: t.actors.agent, cls: 'sf-actor sf-actor--agent' })}${icon('refute', 8, 10, { cls: 'sf-refute' })}<text class="sf-sub__title" x="30" y="23">refuter</text>${sealIcon('engine', lang, w - 22, 9)}`
+  let rInner = `${icon('agent', 8, 10, { title: t.actors.agent, cls: 'sf-actor sf-actor--agent' })}${icon('refute', 8, 10, { cls: 'sf-refute' })}<text class="sf-sub__title" x="30" y="23">${escapeHtml(refuter.id)}</text>${sealIcon(refuter.seal, lang, w - 22, 9)}`
   rInner += chip(t.tier, w - 28 - tier, 7, 'sf-chip--note').markup
   rInner += `<text class="sf-sub__mono" x="10" y="42">${escapeHtml(refuter.mono)}</text>`
   rInner += chip(t.severities(refuter.severities), 10, 50, 'sf-chip--note').markup

@@ -41,12 +41,16 @@ test('the DELIVER column, its folds and its sub-tasks come from the workflow the
   assert.deepEqual(flow.nodes.map((n) => n.kind), ['terminal', 'agent', 'gate', 'review', 'gate', 'code', 'agent', 'code', 'terminal'])
 })
 
-test('the refuter, which no .dot names, sits between the fan-in and the verdict of every review', async () => {
+test('the refuter is read from the node of review.skraft.dot its lenses join, sealed by its mandatory=, between them and the verdict', async () => {
   const flow = await buildFlow(layout(), texts())
   const review = sub(flow, 'deliver_review')
   const refuter = review.nodes.find((n) => n.refuter)
-  assert.equal(refuter.mono, 'finding-refuter')
+  assert.deepEqual([refuter.id, refuter.mono, refuter.seal], ['refuter', 'finding-refuter', 'mandatory'])
   assert.deepEqual(refuter.severities, ['blocker', 'high', 'medium'])
+  const t = texts()
+  t.review = t.review.replaceAll('refuter', 'challenger').replace('challenger [shape=octagon, mandatory=true]', 'challenger [shape=octagon]')
+  const renamed = sub(await buildFlow({ ...layout(), texts: { ...layout().texts, challenger: layout().texts.refuter, refuter: undefined } }, t), 'deliver_review').nodes.find((n) => n.refuter)
+  assert.deepEqual([renamed.id, renamed.seal, renamed.optional], ['challenger', undefined, true])
   assert.ok(review.edges.some((e) => e.id === 'verdict#in->refuter'))
   assert.ok(review.edges.some((e) => e.id === 'refuter->verdict'))
   const steps = flow.scenarios.find((s) => s.id === 'refuted').steps
@@ -58,9 +62,9 @@ test('a lens added to or removed from the review, a command dropped from a gate,
   const t = texts()
   t.review = t.review
     .replace('  verdict [shape=tripleoctagon', '  security [shape=note, lens="security", when="contract"]\n  verdict [shape=tripleoctagon')
-    .replace('  verdict -> exit', '  lenses -> security -> verdict\n  verdict -> exit')
+    .replace('  verdict -> exit', '  lenses -> security -> refuter\n  verdict -> exit')
     .replace(/\s+cold_reader\s+\[shape=note, lens="cold-reader"\]/, '')
-    .replace('  lenses -> cold_reader -> verdict\n', '')
+    .replace('  lenses -> cold_reader -> refuter\n', '')
   t.pipeline = t.pipeline
     .replace('gates    [shape=parallelogram, gate="build,format,lint,test,architecture,coverage"', 'gates    [shape=parallelogram, gate="build,lint,test,architecture,coverage"')
     .replace('gates -> deliver [label="FAIL", max_visits=3]', 'gates -> deliver [label="FAIL", max_visits=4]')

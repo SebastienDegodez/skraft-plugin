@@ -136,7 +136,7 @@ test('the canvas opens on a tab it has only: any other tab, or any other key, is
 /** The pipeline workflow with the lens `lens` added to the design review, and nothing else changed. @param {string} workflow @param {string} lens */
 const withLens = (workflow, lens) => workflow
   .replace('  design_review [shape=tripleoctagon, mandatory=true]\n', `  design_review_${lens} [shape=note, lens="${lens}"]\n  design_review [shape=tripleoctagon, mandatory=true]\n`)
-  .replace('  design_review_lenses -> design_review_fitness -> design_review\n', `  design_review_lenses -> design_review_fitness -> design_review\n  design_review_lenses -> design_review_${lens} -> design_review\n`)
+  .replace('  design_review_lenses -> design_review_fitness -> design_review_refuter\n', `  design_review_lenses -> design_review_fitness -> design_review_refuter\n  design_review_lenses -> design_review_${lens} -> design_review_refuter\n`)
 
 /** The agent of the lens `lens`, as the working copy of `side` (.claude or .github) names its file, listing the skill `<lens>-rules`. */
 const lensAgent = (cwd, side, lens) => {

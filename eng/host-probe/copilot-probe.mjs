@@ -12,7 +12,7 @@ import { mkdir, mkdtemp, realpath, rm, writeFile } from 'node:fs/promises'
 import { homedir, platform, release, tmpdir } from 'node:os'
 import { basename, dirname, isAbsolute, join, resolve } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
-import { GITHUB_MCP_SERVER, PROBE_CANVAS, PROBE_CANVAS_QUERY, PROBE_COMMAND, PROBE_MCP, PROBE_PRELOAD, QUESTION_KEY, QUESTION_SLUG, questionEvents, writeCanvasPlugin, writeCommandPlugin, writeIsolationPlugins, writeProbeMcpServers, writeProbePlugins, writeQuestionRepo } from './fixtures.mjs'
+import { PROBE_CANVAS, PROBE_CANVAS_QUERY, PROBE_COMMAND, PROBE_PRELOAD, QUESTION_KEY, QUESTION_SLUG, questionEvents, writeCanvasPlugin, writeCommandPlugin, writeIsolationPlugins, writeProbePlugins, writeQuestionRepo } from './fixtures.mjs'
 import { DEFAULT_REPO, reportToGitHub } from './issues.mjs'
 import { mergePatch } from '../../plugins/skraft-framework/engine/domain/config/merge-patch.mjs'
 
@@ -639,120 +639,6 @@ const postJson = async (url) => {
 }
 
 // ---------------------------------------------------------------------------------------------
-// Checks: the session's MCP servers, reached from inside a workflow run without the model (#400)
-
-const MCP_IDS = Object.freeze(['mcp-tool-from-workflow', 'mcp-permission-from-workflow', 'mcp-unavailable-from-workflow', 'mcp-tool-error-from-workflow', 'github-mcp-in-session'])
-const MCP_EXPECTED = Object.freeze({
-  'mcp-tool-from-workflow': `Dans un run de workflow, la session jointe de l'extension liste le serveur MCP de la session (\`rpc.mcp.list()\`, \`connected\`) et ses outils (\`rpc.mcp.listTools\`), puis appelle son outil \`echo\` par \`rpc.tools.execute({ name: '<serveur>-<outil>' })\` et lit son résultat (\`echo:${PROBE_MCP.sentinel}\`), sans modèle.`,
-  'mcp-permission-from-workflow': "Un outil MCP sans `readOnlyHint` appelé depuis l'extension passe par le gestionnaire de permissions de l'hôte (`kind: 'mcp'`), lui seul et une fois par appel : approuvé, il s'exécute ; refusé, il rend `resultType: 'rejected'` sans lever. Un outil `readOnlyHint` ne demande rien.",
-  'mcp-unavailable-from-workflow': "Ce que l'extension reçoit quand le serveur manque : `rpc.mcp.listTools` d'un serveur non configuré lève « not connected » ; un serveur dont le processus meurt est listé `failed` ; `rpc.tools.execute` d'un outil absent rend `resultType: 'failure'` sans lever.",
-  'mcp-tool-error-from-workflow': `Un outil MCP qui répond une erreur (\`isError: true\`) rend, par \`rpc.tools.execute\`, \`resultType: 'failure'\` avec son texte (\`${PROBE_MCP.failure}\`), sans lever.`,
-  'github-mcp-in-session': `Le serveur MCP GitHub (\`${GITHUB_MCP_SERVER}\`, intégré à Copilot CLI ou configuré par le développeur) figure, connecté, dans \`rpc.mcp.list()\` de la session jointe, et \`rpc.mcp.listTools\` en rend les outils. Non concluant quand il n'y est pas : il dépend de la connexion et de la configuration de la machine.`,
-})
-
-/** A permission handler that records each MCP request and approves or rejects it as `seen.mode` says. */
-const mcpPermissionRecorder = (sdk) => {
-  const seen = { mode: 'approve', requests: [] }
-  const approve = permissionHandler(sdk)
-  const handler = async (request, invocation) => {
-    if (request?.kind !== 'mcp') return approve(request, invocation)
-    seen.requests.push(request.toolName ?? null)
-    return seen.mode === 'reject' ? { kind: 'reject' } : approve(request, invocation)
-  }
-  return { seen, handler }
-}
-
-/** Every MCP check inconclusive, with what stopped the measure. */
-const mcpUnmeasured = (observed) => MCP_IDS.map((id) => check({ id, issue: 400, expected: MCP_EXPECTED[id], observed }))
-
-const mcpChecks = async ({ sdk, client, dirs, layout }) => {
-  if (layout === null) return mcpUnmeasured({ reason: 'no probe extension loaded' })
-  const suffix = layout === 'agent-plugins' ? 'a' : 'l'
-  const permissions = mcpPermissionRecorder(sdk)
-  let session
-  try {
-    session = await client.createSession({
-      ...dirs.session, workingDirectory: dirs.repoA, pluginDirectories: [suffix === 'a' ? dirs.plugins.agent : dirs.plugins.legacy], requestExtensions: true,
-      onPermissionRequest: permissions.handler, mcpServers: await writeProbeMcpServers(dirs.root, process.execPath),
-    })
-  } catch (error) {
-    return mcpUnmeasured({ sessionError: messageOf(error) })
-  }
-  try {
-    await waitForTools(session, [`skraft_probe_state_${suffix}`])
-    const approved = await runWorkflow(session, `skraft-probe-${suffix}`, { mcp: true })
-    const approvedAsked = permissions.seen.requests.splice(0)
-    permissions.seen.mode = 'reject'
-    const rejected = await runWorkflow(session, `skraft-probe-${suffix}`, { mcp: true })
-    const rejectedAsked = permissions.seen.requests.splice(0)
-    return [mcpToolCheck(approved), mcpPermissionCheck({ approved, approvedAsked, rejected, rejectedAsked }), mcpUnavailableCheck(approved), mcpToolErrorCheck(approved), githubMcpCheck(approved)]
-  } finally {
-    await session.disconnect?.().catch(() => undefined)
-  }
-}
-
-/** The probe's servers a run saw still `pending`: what they answer is not yet theirs. */
-const pendingServers = (run) => (Array.isArray(run.result?.servers) ? run.result.servers.filter(({ status }) => status === 'pending').map(({ name }) => name) : [])
-
-/** The check when the run did not complete, or saw a server still pending: inconclusive, with why; null otherwise. */
-const mcpRunFailed = (id, run) => {
-  if (run.status !== 'completed') return check({ id, issue: 400, expected: MCP_EXPECTED[id], observed: { status: run.status, error: run.error ?? null } })
-  const pending = pendingServers(run)
-  return pending.length === 0 ? null : check({ id, issue: 400, expected: MCP_EXPECTED[id], observed: { pending } })
-}
-
-/** A server as the run listed it, null when it is not listed. */
-const listedServer = (run, name) => (Array.isArray(run.result?.servers) ? run.result.servers.find((server) => server.name === name) ?? null : null)
-
-const mcpToolCheck = (run) => {
-  const id = 'mcp-tool-from-workflow'
-  const seen = run.result ?? {}
-  const connected = listedServer(run, PROBE_MCP.server)?.status === 'connected'
-  const listed = Array.isArray(seen.tools) && seen.tools.includes('echo')
-  const answered = seen.echo?.text === `echo:${PROBE_MCP.sentinel}`
-  return mcpRunFailed(id, run) ?? check({ id, issue: 400, expected: MCP_EXPECTED[id], verdict: connected && listed && answered ? 'pass' : 'fail', observed: { servers: seen.servers ?? null, tools: seen.tools ?? null, echo: seen.echo ?? null } })
-}
-
-/** Whether a run asked the host for the side-effect tool alone, once. */
-const asksForTouchOnly = (asked) => asked.length === 1 && asked[0] === `${PROBE_MCP.server}-touch`
-
-const mcpPermissionCheck = ({ approved, approvedAsked, rejected, rejectedAsked }) => {
-  const id = 'mcp-permission-from-workflow'
-  const runs = asksForTouchOnly(approvedAsked) && approved.result?.touch?.type === 'success'
-  const refused = asksForTouchOnly(rejectedAsked) && rejected.result?.touch?.type === 'rejected'
-  return mcpRunFailed(id, approved) ?? mcpRunFailed(id, rejected) ?? check({
-    id, issue: 400, expected: MCP_EXPECTED[id], verdict: runs && refused ? 'pass' : 'fail',
-    observed: { approvedAsked, approved: approved.result?.touch ?? null, rejectedAsked, rejected: rejected.result?.touch ?? null },
-  })
-}
-
-const mcpUnavailableCheck = (run) => {
-  const id = 'mcp-unavailable-from-workflow'
-  const seen = run.result ?? {}
-  const failing = listedServer(run, PROBE_MCP.failing)
-  const notConnected = /not connected/.test(seen.absentServer?.error ?? '')
-  const pass = notConnected && failing?.status === 'failed' && seen.absentTool?.type === 'failure'
-  return mcpRunFailed(id, run) ?? check({ id, issue: 400, expected: MCP_EXPECTED[id], verdict: pass ? 'pass' : 'fail', observed: { absentServer: seen.absentServer ?? null, failing, absentTool: seen.absentTool?.type ?? seen.absentTool ?? null } })
-}
-
-const mcpToolErrorCheck = (run) => {
-  const id = 'mcp-tool-error-from-workflow'
-  const seen = run.result ?? {}
-  const pass = seen.fail?.type === 'failure' && String(seen.fail?.text ?? '').includes(PROBE_MCP.failure)
-  return mcpRunFailed(id, run) ?? check({ id, issue: 400, expected: MCP_EXPECTED[id], verdict: pass ? 'pass' : 'fail', observed: { fail: seen.fail ?? null } })
-}
-
-/** pass when the GitHub MCP server is connected and lists tools; never fail: its presence hangs on the login and the configuration. */
-const githubMcpCheck = (run) => {
-  const id = 'github-mcp-in-session'
-  const seen = run.result ?? {}
-  const server = listedServer(run, GITHUB_MCP_SERVER)
-  const reachable = server?.status === 'connected' && seen.github?.tools > 0
-  if (run.status !== 'completed') return check({ id, issue: 400, expected: MCP_EXPECTED[id], observed: { status: run.status, error: run.error ?? null } })
-  return check({ id, issue: 400, expected: MCP_EXPECTED[id], verdict: reachable ? 'pass' : 'inconclusive', observed: { listed: server !== null, status: server?.status ?? null, github: seen.github ?? null } })
-}
-
-// ---------------------------------------------------------------------------------------------
 // Checks: the real skraft-framework plugin
 
 const skraftChecks = async ({ sdk, client, dirs, models }) => {
@@ -1190,8 +1076,6 @@ export const runProbe = async ({ sdk, sdkPath, environment, workRoot, home = hom
     checks.push(...await isolationChecks({ sdk, client, dirs, layout: probe.layout }))
     log('canvas…')
     checks.push(...await canvasChecks({ sdk, client, dirs, layout: probe.layout }))
-    log('MCP servers from the extension…')
-    checks.push(...await mcpChecks({ sdk, client, dirs, layout: probe.layout }))
     log('skraft-framework plugin…')
     checks.push(...await skraftChecks({ sdk, client, dirs, models }))
     log('plugin commands…')

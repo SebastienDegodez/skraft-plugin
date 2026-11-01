@@ -229,9 +229,9 @@ Sous Copilot CLI, l'onglet **Journal** du canvas `skraft-pipeline` lit ce fichie
 | `publish.requested` | `skraft publish` | `by` (`skraft publish`) ; `consent` (`publish.pullRequest` au moment de la commande) |
 | `pull-request.opened` | le nœud `publish` ou `skraft publish` | `number` ; `url` ; `base` ; `head` ; `draft` ; `bodyHash` |
 | `pull-request.updated` | le nœud `publish` ou `skraft publish` | `number` ; `url` ; `bodyHash` |
-| `pull-request.details-kept` | le nœud `publish` ou `skraft publish`, une fois la pull request ouverte, mise à jour ou à jour | `number` ; `part` ; `parts` ; `url` du commentaire ; `bodyHash` de la partie ; `via` et `fallback` quand un serveur MCP était proposé |
-| `pull-request.details-skipped` | idem, quand une partie n'a pas pu être gardée | `number` ; `part` ; `parts` ; `reason` ; `via` et `fallback` |
-| `issue.commented`, `issue.comment-skipped` | le run, à chaque transition qu'il rapporte sur l'issue de la story | `issue` ; `kind` ; `phase` ; `step` ; `event` ; `url` (commenté) ou `reason` (sauté) ; `via` (`mcp`, `gh` ou `az`) et `fallback` quand un serveur MCP de l'hôte était offert |
+| `pull-request.details-kept` | le nœud `publish` ou `skraft publish`, une fois la pull request ouverte, mise à jour ou à jour | `number` ; `part` ; `parts` ; `url` du commentaire ; `bodyHash` de la partie |
+| `pull-request.details-skipped` | idem, quand une partie n'a pas pu être gardée | `number` ; `part` ; `parts` ; `reason` |
+| `issue.commented`, `issue.comment-skipped` | le run, à chaque transition qu'il rapporte sur l'issue de la story | `issue` ; `kind` ; `phase` ; `step` ; `event` ; `url` (commenté) ou `reason` (sauté) |
 | `journal.adopted` | `skraft journal adopt` | `keyId` (la nouvelle clé) ; `previousKeyId` ; `unverified` (nombre de lignes d'avant non vérifiées) |
 
 Chaque entrée de `run.started.base` : `{ component, root, repository, ref, source, sha }`.

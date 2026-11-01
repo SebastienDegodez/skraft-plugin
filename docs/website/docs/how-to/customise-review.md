@@ -42,20 +42,20 @@ Once a file is copied, every run of the working copy follows it.
 
 ## 3. Add the lens node and its two edges
 
-A lens is a `shape=note` node between the review's fan-out and its fan-in.
+A lens is a `shape=note` node between the review's fan-out and its refuter (`shape=octagon`), which leads to the fan-in.
 
 **Design review**, in `.skraft/pipeline.skraft.dot`:
 
 ```text
 design_review_threat_model [shape=note, lens="threat-model"]
-design_review_lenses -> design_review_threat_model -> design_review
+design_review_lenses -> design_review_threat_model -> design_review_refuter
 ```
 
-**DELIVER review**, in `.skraft/review.skraft.dot`, between `lenses` and `verdict`:
+**DELIVER review**, in `.skraft/review.skraft.dot`, between `lenses` and `refuter`:
 
 ```text
 threat_model [shape=note, lens="threat-model"]
-lenses -> threat_model -> verdict
+lenses -> threat_model -> refuter
 ```
 
 Node options:
@@ -94,7 +94,7 @@ Commit `.skraft/` and the agent's file: the lens runs at the next review, with t
 
 ## Next steps <!-- #next-steps -->
 
-- [Review: fan-out, lens nodes, fan-in](../reference/workflow-dot.mdx#reviews)
+- [Review: fan-out, lens nodes, refuter, fan-in](../reference/workflow-dot.mdx#reviews)
   and [call node](../reference/workflow-dot.mdx#call-node).
 - [Gates](../reference/gates.md#review-run) — a lens's answer, refutation,
   verdict.

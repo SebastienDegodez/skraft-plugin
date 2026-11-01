@@ -3,6 +3,27 @@
 Toutes les modifications notables de ce projet sont documentées ici.
 Format basé sur [Conventional Commits](https://www.conventionalcommits.org/) — versionnage [SemVer](https://semver.org/).
 
+## [2.0.0-alpha.49](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.48...v2.0.0-alpha.49) (2026-11-01)
+
+### 🐛 Bug Fixes
+
+* **docs:** orphan MCP copies dropped; no-remote tutorials say an unreadable issue refuses the run ([#481](https://github.com/SebastienDegodez/skraft-plugin/issues/481)) ([8b0a98b](https://github.com/SebastienDegodez/skraft-plugin/commit/8b0a98b5136f2145499bd6a333d9a2b719ece852)), closes [#473](https://github.com/SebastienDegodez/skraft-plugin/issues/473) [#476](https://github.com/SebastienDegodez/skraft-plugin/issues/476) [#473](https://github.com/SebastienDegodez/skraft-plugin/issues/473) [#474](https://github.com/SebastienDegodez/skraft-plugin/issues/474) [#473](https://github.com/SebastienDegodez/skraft-plugin/issues/473) [#473](https://github.com/SebastienDegodez/skraft-plugin/issues/473) [#476](https://github.com/SebastienDegodez/skraft-plugin/issues/476)
+
+### 📝 Documentation
+
+* pull-request.details-skipped carries no via nor fallback; host-verification names no removed MCP module ([#484](https://github.com/SebastienDegodez/skraft-plugin/issues/484)) ([418ad28](https://github.com/SebastienDegodez/skraft-plugin/commit/418ad28e73f97784989d8f0115766f7a8edae965)), closes [#483](https://github.com/SebastienDegodez/skraft-plugin/issues/483) [#473](https://github.com/SebastienDegodez/skraft-plugin/issues/473)
+* the engine reads and writes the forge through gh and az only; MCP probes of the engine retired ([#483](https://github.com/SebastienDegodez/skraft-plugin/issues/483)) ([84a12b7](https://github.com/SebastienDegodez/skraft-plugin/commit/84a12b749f0be5bf15fddadb11273b2e43670bf4)), closes [#github-through-gh](https://github.com/SebastienDegodez/skraft-plugin/issues/github-through-gh) [#azure-devops-through-az](https://github.com/SebastienDegodez/skraft-plugin/issues/azure-devops-through-az) [#473](https://github.com/SebastienDegodez/skraft-plugin/issues/473) [#476](https://github.com/SebastienDegodez/skraft-plugin/issues/476) [#476](https://github.com/SebastienDegodez/skraft-plugin/issues/476)
+
+## [2.0.0-alpha.48](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.47...v2.0.0-alpha.48) (2026-11-01)
+
+### ✨ Features
+
+* **engine:** skraft commands --json, doctor names the plugin; @skraft/cli, the skraft command for humans ([#467](https://github.com/SebastienDegodez/skraft-plugin/issues/467)) ([#468](https://github.com/SebastienDegodez/skraft-plugin/issues/468)) ([bd07c55](https://github.com/SebastienDegodez/skraft-plugin/commit/bd07c55e10b75afa80d9a8f9d7b379631d321d1a))
+
+### 🐛 Bug Fixes
+
+* **canvas:** gaps ported into lots B and D ([#456](https://github.com/SebastienDegodez/skraft-plugin/issues/456)) ([ec306eb](https://github.com/SebastienDegodez/skraft-plugin/commit/ec306eb5f8d3d049cb52b9c64ef84b47dd217a9a)), closes [#418](https://github.com/SebastienDegodez/skraft-plugin/issues/418)
+
 ## [2.0.0-alpha.47](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.46...v2.0.0-alpha.47) (2026-11-01)
 
 ### ✨ Features

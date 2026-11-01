@@ -20,7 +20,7 @@
 // Sub-tasks are placed automatically: a lens or a command added to the .dot appears with no
 // change to the sidecar. What the figure fixes is only what the engine fixes: steps marked
 // mandatory, locked or goal_gate, human questions, their FAIL / NEEDS_REWORK edges, and the
-// refuter, which is no node of the .dot but a step the engine runs inside every review.
+// refuter node each review joins its lenses in (shape=octagon), read from the .dot like the rest.
 //
 // Usage:
 //   node eng/docs/flow-from-dot.mjs            regenerate every docs/flows/*.layout.json
@@ -37,16 +37,12 @@ const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..')
 export const FLOWS_DIR = join(ROOT, 'docs', 'flows')
 
 /**
- * The refuter is no node of any .skraft.dot: the engine runs it inside every review step,
- * between the lenses and the verdict.
- *  - engine/application/README.md l.4-5: review-runs.mjs runs "its lenses through
- *    AgentRunner.runMany, the refuter on blocker, high and medium findings, then the domain verdict";
- *  - engine/domain/review/lenses.mjs: REFUTER, the agent that checks each finding before it counts;
+ * What the figure says of a refuter node beside its id, which the .dot gives (WorkflowNode.refutedBy):
+ *  - engine/domain/review/lenses.mjs: REFUTER, the agent the node runs;
  *  - engine/domain/review/verdict.mjs: BLOCKING, the severities it checks;
- *  - engine/application/config/agent-models.mjs: it runs a tier above the strongest lens, unless
- *    the review names a refuter= family.
+ *  - the two answers a scenario may mark on it.
  */
-export const ENGINE_REFUTER = Object.freeze({ id: 'refuter', agent: REFUTER, severities: BLOCKING, outcomes: ['confirmed', 'refuted'] })
+const REFUTING = Object.freeze({ agent: REFUTER, severities: BLOCKING, outcomes: ['confirmed', 'refuted'] })
 
 /** The labels that send a run back: the canvas's DETOURS (domain/reporting/workflow-drawing.mjs). */
 const DETOURS = ['FAIL', 'NEEDS_REWORK', 'REJECTED']
@@ -136,14 +132,15 @@ function lensesSub(node, parentVerdicts) {
     return lens
   })
   const refuter = {
-    id: ENGINE_REFUTER.id,
+    id: node.refutedBy.id,
     kind: 'agent',
     refuter: true,
-    mono: node.refuter ? `${ENGINE_REFUTER.agent} @${node.refuter}` : ENGINE_REFUTER.agent,
-    severities: [...ENGINE_REFUTER.severities],
-    out: [...ENGINE_REFUTER.outcomes],
-    seal: 'engine',
+    mono: node.refuter ? `${REFUTING.agent} @${node.refuter}` : REFUTING.agent,
+    severities: [...REFUTING.severities],
+    out: [...REFUTING.outcomes],
   }
+  if (node.refutedBy.mandatory === true) refuter.seal = 'mandatory'
+  else refuter.optional = true
   const verdict = { id: fanIn, kind: 'verdict', mono: 'verdict', out: parentVerdicts }
   if (node.call ? node.call.mandatory === true : node.mandatory === true) verdict.seal = 'mandatory'
   return {
@@ -195,8 +192,9 @@ export async function buildFlow(layout, texts) {
   const workflow = await readFlowWorkflow(texts)
   const column = columnOf(workflow, layout.start)
   const [input, output] = [column[0], column.at(-1)]
-  for (const id of Object.keys(layout.texts ?? {})) {
-    if (!workflow.nodes[id] && id !== ENGINE_REFUTER.id) throw new Error(`layout text for ${id}, a node the workflow does not have`)
+  const refuters = Object.values(workflow.nodes).flatMap((n) => (n.refutedBy ? [n.refutedBy.id] : []))
+  for (const [id, t] of Object.entries(layout.texts ?? {})) {
+    if (t !== undefined && !workflow.nodes[id] && !refuters.includes(id)) throw new Error(`layout text for ${id}, a node the workflow does not have`)
   }
   const text = (id) => layout.texts?.[id] ?? {}
 
@@ -282,8 +280,8 @@ export async function buildFlow(layout, texts) {
 /**
  * What the figure must show whatever the copy of the workflow says: the steps of the column and
  * of its folds marked locked, mandatory or goal_gate, human questions, the mandatory lenses of
- * a review, the FAIL / NEEDS_REWORK / REJECTED edges leaving those steps, and the refuter of
- * every review. Lenses without mandatory=, commands, max_visits and labels move with the .dot.
+ * a review, the FAIL / NEEDS_REWORK / REJECTED edges leaving those steps, and the mandatory
+ * refuter of every review. Lenses without mandatory=, commands, max_visits and labels move with the .dot.
  */
 export function invariantsOf(workflow, layout) {
   const column = columnOf(workflow, layout.start)
@@ -296,7 +294,7 @@ export function invariantsOf(workflow, layout) {
   for (const id of inFigure) {
     const n = workflow.nodes[id]
     for (const b of n.branches) if (b.mandatory === true && n.kind === 'call') out.push({ lens: b.id, of: id })
-    if ((n.kind === 'call' || n.kind === 'review') && n.branches.length && steps.includes(id)) out.push({ refuter: id })
+    if ((n.kind === 'call' || n.kind === 'review') && n.refutedBy?.mandatory === true && steps.includes(id)) out.push({ refuter: id })
   }
   for (const e of workflow.edges) if (fixed.includes(e.from) && isDetour(e)) out.push({ edge: `${e.from}->${e.to}`, label: e.label })
   return out
@@ -312,7 +310,7 @@ export function missingInvariants(flow, invariants) {
   return invariants.filter((inv) => {
     if (inv.node) return !nodes.some((n) => n.id === inv.node && n.seal)
     if (inv.lens) return !flow.subs[inv.of]?.nodes.some((n) => n.id === inv.lens && n.seal === 'mandatory')
-    if (inv.refuter) return !flow.subs[inv.refuter]?.nodes.some((n) => n.refuter && n.seal === 'engine')
+    if (inv.refuter) return !flow.subs[inv.refuter]?.nodes.some((n) => n.refuter && n.seal === 'mandatory')
     const [from, to] = inv.edge.split('->')
     return !edges.some((e) => e.from === from && (e.to === to || e.via === to) && e.label === inv.label)
   })
@@ -375,15 +373,16 @@ function inside(s, entry, prev, subs, steps, trail) {
     return
   }
   if (sub.kind === 'lenses') {
-    if (!ENGINE_REFUTER.outcomes.includes(entry.refuter)) throw new Error(`scenario ${s.id}: the refuter answers ${ENGINE_REFUTER.outcomes.join(' or ')}`)
+    if (!REFUTING.outcomes.includes(entry.refuter)) throw new Error(`scenario ${s.id}: the refuter answers ${REFUTING.outcomes.join(' or ')}`)
+    const refuter = sub.nodes.find((n) => n.refuter).id
     const verdict = sub.nodes.find((n) => n.kind === 'verdict')
     if (!verdict.out.includes(entry.verdict)) throw new Error(`scenario ${s.id}: the verdict cannot be ${entry.verdict}`)
     push({ nodes: [sub.fanOut] })
     push({ edges: sub.all.map((l) => `${sub.fanOut}->${l}`), nodes: sub.all }, { nodes: sub.all })
     push({ edges: sub.all.map((l) => `${l}->${sub.fanIn}#in`), nodes: [`${sub.fanIn}#in`] })
-    push({ edges: [`${sub.fanIn}#in->${ENGINE_REFUTER.id}`], nodes: [ENGINE_REFUTER.id] })
-    push({ mark: entry.refuter, chip: { node: ENGINE_REFUTER.id, text: entry.refuter } }, { nodes: [ENGINE_REFUTER.id], via: entry.refuter })
-    push({ edges: [`${ENGINE_REFUTER.id}->${sub.fanIn}`], nodes: [sub.fanIn] })
+    push({ edges: [`${sub.fanIn}#in->${refuter}`], nodes: [refuter] })
+    push({ mark: entry.refuter, chip: { node: refuter, text: entry.refuter } }, { nodes: [refuter], via: entry.refuter })
+    push({ edges: [`${refuter}->${sub.fanIn}`], nodes: [sub.fanIn] })
     push({ chip: { node: sub.fanIn, text: entry.verdict } }, { nodes: [sub.fanIn], via: entry.verdict })
     return
   }

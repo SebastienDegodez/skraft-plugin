@@ -130,16 +130,18 @@ export const SECURITY_WORKFLOW = `digraph skraft {
   exit     [shape=Msquare]
   design_review_lenses [shape=component]
   design_review_consistency [shape=note, lens="consistency"]
+  design_review_refuter [shape=octagon]
   design_review [shape=tripleoctagon, mandatory=true]
   distill_review_lenses [shape=component]
   distill_review_coverage [shape=note, lens="coverage"]
+  distill_review_refuter [shape=octagon]
   distill_review [shape=tripleoctagon, mandatory=true]
   deliver_review [shape=house, workflow="review", mandatory=true]
 
-  start -> research -> design -> security -> design_review_lenses -> design_review_consistency -> design_review
+  start -> research -> design -> security -> design_review_lenses -> design_review_consistency -> design_review_refuter -> design_review
   design_review -> design [label="NEEDS_REWORK", max_visits=3]
   design_review -> distill [label="APPROVED"]
-  distill -> distill_review_lenses -> distill_review_coverage -> distill_review
+  distill -> distill_review_lenses -> distill_review_coverage -> distill_review_refuter -> distill_review
   distill_review -> distill [label="NEEDS_REWORK", max_visits=3]
   distill_review -> deliver [label="APPROVED"]
   deliver -> gates
@@ -149,8 +151,9 @@ export const SECURITY_WORKFLOW = `digraph skraft {
   kill_mutants [shape=box, agent="software-engineer", each="survivor-file"]
   mutation_review_lenses [shape=component]
   mutation_review_test_integrity [shape=note, lens="test-integrity"]
+  mutation_review_refuter [shape=octagon]
   mutation_review [shape=tripleoctagon, mandatory=true]
-  kill_mutants -> mutation_review_lenses -> mutation_review_test_integrity -> mutation_review
+  kill_mutants -> mutation_review_lenses -> mutation_review_test_integrity -> mutation_review_refuter -> mutation_review
   mutation_review -> kill_mutants [label="NEEDS_REWORK", max_visits=3]
   mutation_review -> gates [label="APPROVED"]
   mutation -> deliver_review [label="PASS"]
@@ -212,7 +215,7 @@ export const dropMandatoryLens = (cwd) => {
   const shipped = readFileSync(join(PLUGIN_ROOT, 'workflows', 'review.skraft.dot'), 'utf8')
   const dropped = shipped
     .replace('  test_integrity          [shape=note, lens="test-integrity", mandatory=true]\n', '')
-    .replace('  lenses -> test_integrity -> verdict\n', '')
+    .replace('  lenses -> test_integrity -> refuter\n', '')
   if (dropped.length >= shipped.length - 60) throw new Error('the plugin review.skraft.dot no longer holds test_integrity')
   mkdirSync(join(cwd, '.skraft'), { recursive: true })
   writeFileSync(join(cwd, '.skraft/review.skraft.dot'), dropped)
@@ -222,7 +225,7 @@ export const dropMandatoryLens = (cwd) => {
 /** A repository workflow: the plugin's, its design review with the repository lens last. */
 export const LENS_WORKFLOW = readFileSync(join(PLUGIN_ROOT, 'workflows', 'pipeline.skraft.dot'), 'utf8')
   .replace('  design_review [shape=tripleoctagon, mandatory=true]\n', `  design_review_acme_security [shape=note, lens="${SECURITY_LENS}"]\n  design_review [shape=tripleoctagon, mandatory=true]\n`)
-  .replace('  design_review_lenses -> design_review_fitness -> design_review\n', '  design_review_lenses -> design_review_fitness -> design_review\n  design_review_lenses -> design_review_acme_security -> design_review\n')
+  .replace('  design_review_lenses -> design_review_fitness -> design_review_refuter\n', '  design_review_lenses -> design_review_fitness -> design_review_refuter\n  design_review_lenses -> design_review_acme_security -> design_review_refuter\n')
 
 /** @param {string} cwd @param {string} agent @param {string} description @param {string[]} [skills] the skills its front matter lists */
 const repositoryAgent = (cwd, agent, description, skills = []) => {

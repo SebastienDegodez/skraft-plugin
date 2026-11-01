@@ -264,6 +264,8 @@ input[type='text']:hover, select:hover { border-color: var(--accent); }
 .what { margin-top: 0.35rem; color: var(--ink-soft); font-size: 0.875rem; }
 .what code { color: var(--ink); }
 .chips { display: flex; flex-wrap: wrap; gap: 0.3rem; margin-top: 0.45rem; }
+.refuter { display: flex; flex-wrap: wrap; align-items: center; gap: 0.3rem; margin-top: 0.45rem; color: var(--ink-soft); font-size: 0.875rem; }
+.refuter code { color: var(--ink); }
 .chip { padding: 0.1rem 0.5rem; border: 1px solid var(--rule-strong); border-radius: 4px; background: var(--raise); font-family: var(--mono); font-size: 0.75rem; }
 .chip em { color: var(--warn); font-family: var(--sans); font-style: normal; }
 .branches { display: grid; gap: 0.25rem; margin-top: 0.6rem; padding-top: 0.55rem; border-top: 1px dashed var(--rule-strong); }

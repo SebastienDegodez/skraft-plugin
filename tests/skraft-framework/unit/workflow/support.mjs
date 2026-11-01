@@ -15,24 +15,24 @@ export const edit = (text, ...replacements) => replacements.reduce((edited, [old
  * The workflow with the lens nodes of the review closed by the fan-in `review` replaced by one
  * per lens given, in order: `<lens>`, `<lens>@<family>` (the node's model=) or
  * `<lens> when=<trigger>`. Each lens node is `<review>_<lens>`, between `<review>_lenses` and
- * `review`, as `skraft workflow check` names it.
+ * `<review>_refuter`, as `skraft workflow check` names it.
  * @param {string} text @param {string} review @param {string[]} lenses
  */
 export const withLenses = (text, review, lenses) => {
   const fanOut = `  ${review}_lenses [shape=component]\n`
   if (!text.includes(fanOut)) throw new Error(`${review} has no fan-out ${review}_lenses in the workflow`)
   const nodes = new RegExp(`^ +${review}_(?!lenses )\\w+ \\[shape=note.*\\]\\n`, 'gm')
-  const branches = new RegExp(`^  ${review}_lenses -> \\w+ -> ${review}\\n`, 'gm')
+  const branches = new RegExp(`^  ${review}_lenses -> \\w+ -> ${review}_refuter\\n`, 'gm')
   const added = lenses.map((spec) => lensBranch(review, spec)).join('')
   return text.replace(nodes, '').replace(branches, '').replace(fanOut, `${fanOut}${added}`)
 }
 
 /** @param {string} review @param {string} spec */
-const lensBranch = (review, spec) => branchOf(`${review}_`, `${review}_lenses`, review, spec)
+const lensBranch = (review, spec) => branchOf(`${review}_`, `${review}_lenses`, `${review}_refuter`, spec)
 
 /**
- * A lens node and its branch from the fan-out to the fan-in.
- * @param {string} prefix of the lens node's id @param {string} fanOut @param {string} fanIn @param {string} spec as `withLenses` takes it
+ * A lens node and its branch from the fan-out to the refuter.
+ * @param {string} prefix of the lens node's id @param {string} fanOut @param {string} fanIn the refuter @param {string} spec as `withLenses` takes it
  */
 const branchOf = (prefix, fanOut, fanIn, spec) => {
   const [lensAndFamily, trigger] = spec.split(' when=')
@@ -44,13 +44,13 @@ const branchOf = (prefix, fanOut, fanIn, spec) => {
 
 /**
  * The plugin's .skraft/review.skraft.dot with its lens nodes replaced by one per lens given, as `withLenses`
- * takes them; each lens node is named after its lens, between `lenses` and `verdict`.
+ * takes them; each lens node is named after its lens, between `lenses` and `refuter`.
  * @param {string[]} lenses @param {string} [text]
  */
 export const reviewWithLenses = (lenses, text = BUILT_IN_REVIEW) => {
   const fanOut = '  lenses [shape=component]\n'
-  const added = lenses.map((spec) => branchOf('', 'lenses', 'verdict', spec)).join('')
-  return text.replace(/^  \w+ +\[shape=note.*\]\n/gm, '').replace(/^  lenses -> \w+ -> verdict\n/gm, '').replace(fanOut, `${fanOut}${added}`)
+  const added = lenses.map((spec) => branchOf('', 'lenses', 'refuter', spec)).join('')
+  return text.replace(/^  \w+ +\[shape=note.*\]\n/gm, '').replace(/^  lenses -> \w+ -> refuter\n/gm, '').replace(fanOut, `${fanOut}${added}`)
 }
 
 /** The DELIVER lenses of the plugin's .skraft/review.skraft.dot, as `withLenses` takes them. */

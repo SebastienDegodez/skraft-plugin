@@ -2,7 +2,7 @@
 // agents, lenses, gates or questions; `skraft workflow check` validates it, `skraft workflow diff`
 // compares it with this one. A node marked locked=true can only be dropped with unlock="<reason>"; a node marked
 // mandatory=true can never be dropped, bypassed or weakened, whatever the copy says.
-// A review fans out (shape=component) to one lens node per branch (shape=note, lens="<name>", run as the agent `<name>-lens`) and closes in a fan-in (shape=tripleoctagon) that refutes the findings, computes the verdict and carries the APPROVED and NEEDS_REWORK edges. A lens with when="mock" or when="contract" runs only when the changes touch mocks or contracts; one without when always runs. skraft-config.json's `assign` chooses each agent's model family, `models` what a family runs on per host; model= on an agent, a lens or a fan-in (for its lenses that name none) and refuter= on a fan-in name a family too, under `assign.agents`.
+// A review fans out (shape=component) to one lens node per branch (shape=note, lens="<name>", run as the agent `<name>-lens`) joins its branches in the refuter (shape=octagon, finding-refuter, which checks each blocker, high and medium finding) and closes in a fan-in (shape=tripleoctagon) that computes the verdict and carries the APPROVED and NEEDS_REWORK edges. A lens with when="mock" or when="contract" runs only when the changes touch mocks or contracts; one without when always runs. skraft-config.json's `assign` chooses each agent's model family, `models` what a family runs on per host; model= on an agent, a lens or a fan-in (for its lenses that name none) and refuter= on a fan-in name a family too, under `assign.agents`.
 // The DESIGN and DISTILL reviews sit in subgraph clusters, which only group them in a drawing.
 // A house calls another workflow by its base name (workflow="<name>": .skraft/<name>.skraft.dot, else the plugin's) and leaves
 // by the verdict it returns: deliver_review runs review, the review a pull request gets too. The called workflow declares its inputs
@@ -29,6 +29,7 @@ digraph skraft {
     design_review_consistency [shape=note, lens="consistency"]
     design_review_architecture_compliance [shape=note, lens="architecture-compliance"]
     design_review_fitness [shape=note, lens="fitness"]
+    design_review_refuter [shape=octagon, mandatory=true]
     design_review [shape=tripleoctagon, mandatory=true]
   }
   adr      [shape=hexagon, question="adr-ratification"]
@@ -40,6 +41,7 @@ digraph skraft {
     distill_review_business_alignment [shape=note, lens="business-alignment"]
     distill_review_testability [shape=note, lens="testability"]
     distill_review_boundary_enforcement [shape=note, lens="boundary-enforcement"]
+    distill_review_refuter [shape=octagon, mandatory=true]
     distill_review [shape=tripleoctagon, mandatory=true]
   }
   deliver  [shape=box, agent="software-engineer", phase="DELIVER"]
@@ -51,6 +53,7 @@ digraph skraft {
   kill_mutants [shape=box, agent="software-engineer", each="survivor-file"]
   mutation_review_lenses [shape=component]
   mutation_review_test_integrity [shape=note, lens="test-integrity"]
+  mutation_review_refuter [shape=octagon, mandatory=true]
   mutation_review [shape=tripleoctagon, mandatory=true]
   mutation_gates [shape=parallelogram, gate="build,format,lint,test,architecture,coverage", goal_gate=true]
   visuals  [shape=parallelogram, publish="playwright-visuals", when="frontend"]
@@ -59,18 +62,20 @@ digraph skraft {
   exit     [shape=Msquare]
 
   start -> publish_consent -> visuals_consent -> research -> design -> design_review_lenses
-  design_review_lenses -> design_review_consistency -> design_review
-  design_review_lenses -> design_review_architecture_compliance -> design_review
-  design_review_lenses -> design_review_fitness -> design_review
+  design_review_lenses -> design_review_consistency -> design_review_refuter
+  design_review_lenses -> design_review_architecture_compliance -> design_review_refuter
+  design_review_lenses -> design_review_fitness -> design_review_refuter
+  design_review_refuter -> design_review
   design_review -> design  [label="NEEDS_REWORK", max_visits=1]
   design_review -> adr     [label="APPROVED"]
   adr -> distill   [label="RATIFIED"]
   adr -> design    [label="REJECTED", max_visits=1]
   distill -> distill_review_lenses
-  distill_review_lenses -> distill_review_coverage -> distill_review
-  distill_review_lenses -> distill_review_business_alignment -> distill_review
-  distill_review_lenses -> distill_review_testability -> distill_review
-  distill_review_lenses -> distill_review_boundary_enforcement -> distill_review
+  distill_review_lenses -> distill_review_coverage -> distill_review_refuter
+  distill_review_lenses -> distill_review_business_alignment -> distill_review_refuter
+  distill_review_lenses -> distill_review_testability -> distill_review_refuter
+  distill_review_lenses -> distill_review_boundary_enforcement -> distill_review_refuter
+  distill_review_refuter -> distill_review
   distill_review -> distill [label="NEEDS_REWORK", max_visits=3]
   distill_review -> deliver [label="APPROVED"]
   deliver -> gates
@@ -83,7 +88,8 @@ digraph skraft {
   kill_proposal -> mutation_plan
   mutation_plan -> kill_mutants [label="APPLY"]
   kill_mutants -> mutation_review_lenses
-  mutation_review_lenses -> mutation_review_test_integrity -> mutation_review
+  mutation_review_lenses -> mutation_review_test_integrity -> mutation_review_refuter
+  mutation_review_refuter -> mutation_review
   mutation_review -> kill_mutants [label="NEEDS_REWORK", max_visits=3]
   mutation_review -> mutation_gates [label="APPROVED"]
   mutation_gates -> kill_mutants [label="FAIL", max_visits=3]
