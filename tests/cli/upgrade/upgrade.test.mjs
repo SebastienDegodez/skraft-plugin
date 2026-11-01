@@ -35,12 +35,12 @@ const claudePlugin = (home, marketplace) => {
   )
 }
 
-/** npm, copilot and claude stand-ins that log how they were called; `fails` exit 1. */
-const fakePrograms = (home, fails = []) => {
+/** npm, copilot and claude stand-ins that log how they were called; `fails` exit 1, `absent` are not written. */
+const fakePrograms = (home, fails = [], absent = []) => {
   const dir = join(home, 'fake bin')
   const log = join(home, 'calls.log')
   mkdirSync(dir, { recursive: true })
-  for (const name of ['npm', 'copilot', 'claude']) {
+  for (const name of ['npm', 'copilot', 'claude'].filter((program) => !absent.includes(program))) {
     const code = fails.includes(name) ? 1 : 0
     if (process.platform === 'win32') {
       writeFileSync(join(dir, `${name}.cmd`), `@echo ${name} %*>>"${log}"\r\n@exit /b ${code}\r\n`)
@@ -57,8 +57,10 @@ const cleanEnv = (home, extra = {}) => {
   return { ...inherited, HOME: home, USERPROFILE: home, ...extra }
 }
 
+/** The PATH holds the stand-ins and the system folders only, so a real copilot or claude is never reached. */
 const upgrade = (home, programs) => {
-  const PATH = `${programs.dir}${delimiter}${process.env.PATH ?? process.env.Path ?? ''}`
+  const system = process.platform === 'win32' ? [join(process.env.SystemRoot ?? 'C:\\Windows', 'System32')] : ['/usr/bin', '/bin']
+  const PATH = [programs.dir, ...system].join(delimiter)
   return spawnSync(process.execPath, [bin, 'upgrade'], { encoding: 'utf8', env: cleanEnv(home, { PATH, Path: PATH }) })
 }
 
@@ -99,6 +101,20 @@ test('a failed step makes upgrade exit 1 and says which one, without stopping th
     assert.equal(run.status, 1)
     assert.equal(programs.calls().length, 3)
     assert.match(run.stderr, /skraft upgrade: the plugin in GitHub Copilot CLI failed \(code 1\)/)
+  })
+})
+
+test('a host whose command is not on the PATH is skipped: upgrade still succeeds and says so', async () => {
+  await withHome((home) => {
+    copilotPlugin(home)
+    claudePlugin(home, 'skraft')
+    const programs = fakePrograms(home, [], ['copilot'])
+    const run = upgrade(home, programs)
+
+    assert.equal(run.status, 0, run.stderr)
+    assert.deepEqual(programs.calls(), ['npm install --global @skraft/cli@latest', 'claude plugin update skraft@skraft'])
+    assert.match(run.stderr, /skraft upgrade: the plugin in GitHub Copilot CLI skipped, its command is not on the PATH/)
+    assert.doesNotMatch(run.stderr, /DEP0190|DeprecationWarning/)
   })
 })
 

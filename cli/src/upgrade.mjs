@@ -1,6 +1,6 @@
 import { spawn } from 'node:child_process'
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
-import { join } from 'node:path'
+import { mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs'
+import { delimiter, join } from 'node:path'
 
 /**
  * `skraft upgrade` and the update notice of a session.
@@ -35,18 +35,62 @@ export const isNewer = (candidate, current) => {
   return false
 }
 
+/** @param {string} file @returns {boolean} */
+const isFile = (file) => {
+  try {
+    return statSync(file).isFile()
+  } catch {
+    return false
+  }
+}
+
 /**
- * A program of the person's PATH, run without a shell outside Windows. On Windows, npm, copilot
- * and claude are `.cmd` files, which Node only starts through the shell; the arguments are then
- * fixed words of this file or a marketplace name checked against MARKETPLACE.
+ * The file a program name resolves to on the PATH, with the PATHEXT extensions on Windows;
+ * undefined when it is nowhere, so a missing host command is skipped instead of failing.
+ * @param {string} program @param {Record<string, string | undefined>} env @param {string} platform
+ * @returns {string | undefined}
+ */
+export const whichOf = (program, env, platform) => {
+  const folders = (env.PATH ?? env.Path ?? '').split(delimiter).filter(Boolean)
+  const extensions = platform === 'win32' ? (env.PATHEXT ?? '.COM;.EXE;.BAT;.CMD').split(';').filter(Boolean) : ['']
+  for (const folder of folders) {
+    for (const extension of extensions) {
+      const file = join(folder, `${program}${extension}`)
+      if (isFile(file)) return file
+    }
+  }
+  return undefined
+}
+
+/** Words a command line of this file may carry: fixed words and checked marketplace names. */
+const PLAIN_WORD = /^[A-Za-z0-9@._/:-]+$/
+
+/**
+ * How to start a resolved program without a shell string. A Windows `.cmd` or `.bat` (npm,
+ * copilot, claude) only runs through cmd.exe: the line is built from plain words only.
+ * @param {string} file @param {string[]} args @param {Record<string, string | undefined>} env @param {string} platform
+ * @returns {{ command: string, argv: string[], verbatim: boolean }}
+ */
+const launchOf = (file, args, env, platform) => {
+  if (platform !== 'win32' || !/\.(cmd|bat)$/i.test(file)) return { command: file, argv: args, verbatim: false }
+  return { command: env.ComSpec || 'cmd.exe', argv: ['/d', '/s', '/c', `""${file}" ${args.join(' ')}"`], verbatim: true }
+}
+
+/**
+ * A program of the person's PATH, run with an argv array, never a shell string.
  * @param {string} program @param {string[]} args @param {Record<string, string | undefined>} env
  * @returns {Promise<number | 'missing'>}
  */
 const runProgram = (program, args, env) =>
   new Promise((resolve) => {
-    const child = spawn(program, args, { stdio: 'inherit', env, shell: process.platform === 'win32' })
-    child.on('error', () => resolve('missing'))
+    const file = whichOf(program, env, process.platform)
+    if (file === undefined) return resolve('missing')
+    if (!args.every((arg) => PLAIN_WORD.test(arg))) return resolve(1)
+    const { command, argv, verbatim } = launchOf(file, args, env, process.platform)
+    const child = spawn(command, argv, { stdio: 'inherit', env, windowsVerbatimArguments: verbatim })
+    child.on('error', () => resolve(1))
     child.on('exit', (code) => resolve(code ?? 1))
+    return undefined
   })
 
 const MARKETPLACE = /^[A-Za-z0-9._-]+$/
