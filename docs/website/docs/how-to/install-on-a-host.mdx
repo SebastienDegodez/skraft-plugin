@@ -130,16 +130,9 @@ $ npm i -g @skraft/cli
 
 npm puts `skraft` in its global folder, which is already in your PATH (with a `skraft.cmd` on
 Windows). The package holds no engine: at each call, `skraft` finds the plugin your host
-installed and runs its engine, in this order:
-
-1. the folder named by `SKRAFT_PLUGIN_ROOT`, when the variable is set;
-2. GitHub Copilot CLI: `~/.copilot/installed-plugins/<marketplace>/skraft/`;
-3. Claude Code: the current folder of `skraft@…` in `~/.claude/plugins/installed_plugins.json`.
-
-When both hosts have the plugin, Copilot CLI wins. A plugin update by the host is followed at
-the next call: the command itself never needs updating with the plugin. `skraft upgrade` updates
-both the command and the plugin in each host; `skraft` alone opens a session where you type the
-commands one after the other.
+installed and runs its engine ([lookup order](../reference/cli.md#skraft-command)). A plugin
+update by the host is followed at the next call. `skraft upgrade` updates both the command and
+the plugin in each host.
 
 From the root of your repository:
 
@@ -149,8 +142,6 @@ $ skraft --version
 
 You see the plugin's version, for instance `2.0.0-alpha.19`, and on stderr the host and folder
 that answered (`plugin: copilot …`). The other guides write `skraft <command>` for this command.
-Without the package, the long line still works:
-`node "<plugin folder>/engine/drivers/cli/skraft.mjs" <command>`.
 
 Then run `skraft doctor`. In a repository not configured yet:
 
@@ -190,8 +181,8 @@ Type `/skraft` in the conversation: the **Skraft** pane opens and shows `skraft 
 </TabItem>
 </Tabs>
 
-Copilot exposes the command as `/skraft`, without a prefix (measured on Copilot CLI 1.0.105 in the SDK's command registry); the backlog plugin's `skraft-refine` is
-`/skraft-backlog:skraft-refine`. The Copilot CLI menu and VS Code were not measured: if `/skraft` is missing there, check the plugin list and open a new session.
+Copilot exposes the command as `/skraft`, without a prefix (measured on Copilot CLI 1.0.105). If
+`/skraft` is missing, check the plugin list and open a new session.
 
 ## Troubleshooting
 
