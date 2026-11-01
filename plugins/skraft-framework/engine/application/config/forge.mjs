@@ -39,6 +39,14 @@ export const forgeAdapters = async ({ forges, sourceControl }, named) => {
 }
 
 /**
+ * What this machine misses to reach the forge a run uses (no remote, no forge client, not signed
+ * in), as the forge's adapter fixes it; null when it reaches it.
+ * @param {ForgeDeps} deps @param {Forge | null} named the forge skraft-config.json names, null for none
+ * @returns {Promise<string | null>}
+ */
+export const forgeMissing = async (deps, named) => (await forgeAdapters(deps, named)).codeHost.unavailable()
+
+/**
  * Adapters that reach nothing: the forge cannot be asked, no issue is read, the remote names no
  * repository on it, no line links a pull request to its story, and every other call is refused
  * with the same reason.

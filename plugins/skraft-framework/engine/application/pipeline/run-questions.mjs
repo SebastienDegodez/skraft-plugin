@@ -7,6 +7,7 @@ import { dayOf } from '../../domain/pipeline/outputs.mjs'
 import { isFrontend, NO_FRONT_END } from '../../domain/reporting/visuals.mjs'
 import { proposedAdrs, ratify } from '../decisions/adr-ratification.mjs'
 import { loadConfig } from '../config/bases.mjs'
+import { forgeMissing } from '../config/forge.mjs'
 import { leave } from './run-routes.mjs'
 import { verdictPath } from '../review/review-runs.mjs'
 
@@ -49,18 +50,36 @@ const RATIFICATION = {
 /**
  * A consent asked once per repository, and again when its question's text changed since an
  * acceptance, kept in skraft-config.json under publish; not asked, and nothing kept, while the
- * configuration has nothing it is about.
+ * configuration has nothing it is about. Accepted, kept or given now, it asks to fix this machine
+ * when it misses what the consent needs, before anything goes on.
  * @param {'visuals' | 'pullRequest'} key
  * @param {(config: import('../../domain/config/skraft-config.mjs').SkraftConfig) => string | null} [moot] why there is nothing to consent to
+ * @param {(context: Context) => Promise<string | null>} [needs] what this machine misses to act on the consent, null for nothing
  * @returns {Questionnaire}
  */
-const consent = (key, moot = () => null) => ({
-  plan: async ({ config }) => {
-    const why = moot(config)
-    return why === null ? consentPlan(key, config.publish) : { answered: { answer: 'DECLINED', reason: why } }
+const consent = (key, moot = () => null, needs = async () => null) => ({
+  plan: async (context) => {
+    const why = moot(context.config)
+    if (why !== null) return { answered: { answer: 'DECLINED', reason: why } }
+    const plan = consentPlan(key, context.config.publish)
+    return unlessMissing(plan, 'answered' in plan && plan.answered.answer === 'ACCEPTED', () => needs(context))
   },
-  act: async (context, asked) => keepConsent(context, key, asked.answer === 'ACCEPTED'),
+  act: async (context, asked) => unlessMissing(await keepConsent(context, key, asked.answer === 'ACCEPTED'), asked.answer === 'ACCEPTED', () => needs(context)),
 })
+
+/**
+ * What a consent accepted turns into when the machine misses what it needs: the environment question.
+ * @template {Plan | Act} T @param {T} done @param {boolean} accepted @param {() => Promise<string | null>} needs
+ * @returns {Promise<T | { environment: string }>}
+ */
+const unlessMissing = async (done, accepted, needs) => {
+  if (!accepted || 'environment' in done) return done
+  const missing = await needs()
+  return missing === null ? done : { environment: missing }
+}
+
+/** The forge the pull request is opened on, out of this machine's reach. @param {Context} context */
+const forgeOutOfReach = ({ deps, config }) => forgeMissing(deps, config.forge)
 
 /** @param {import('../../domain/config/skraft-config.mjs').SkraftConfig} config */
 const noFrontEnd = (config) => (config.components.some(isFrontend) ? null : `${NO_FRONT_END}, so no screenshot is taken`)
@@ -100,7 +119,7 @@ const planChosen = ({ deps, slug }, { answer, subjects, step }) => {
 }
 
 /** @type {Readonly<Record<NodeQuestion, Questionnaire>>} */
-const QUESTIONNAIRES = Object.freeze({ 'adr-ratification': RATIFICATION, 'reporting-consent': consent('visuals', noFrontEnd), 'publish-consent': consent('pullRequest'), 'mutation-plan': MUTATION_PLAN })
+const QUESTIONNAIRES = Object.freeze({ 'adr-ratification': RATIFICATION, 'reporting-consent': consent('visuals', noFrontEnd), 'publish-consent': consent('pullRequest', undefined, forgeOutOfReach), 'mutation-plan': MUTATION_PLAN })
 
 /** @param {string[] | string} adrs a string: why they cannot be listed @returns {Plan} */
 const adrPlan = (adrs) => {

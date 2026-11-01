@@ -1,6 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { agent, API, scripted } from '../support/pipeline-host.mjs'
+import { InMemoryCodeHost } from '../support/in-memory-host.mjs'
+import { agent, API, scripted, SLUG } from '../support/pipeline-host.mjs'
 import { eventsOf } from '../support/decisions.mjs'
 
 const CONSENT = 'May skraft push this branch and open or update its pull request when a run ends, and keep one comment on its story\'s issue up to date with the run\'s progress, time and cost? ' +
@@ -85,4 +86,35 @@ test('publish takes visuals, pullRequest, reviewComment and draft, each true or 
     assert.deepEqual([initialised.ok, initialised.reason], [false, 'skraft-config.json is invalid: publish must be an object of visuals, pullRequest, reviewComment and draft, each true or false'])
   }
   assert.equal((await consenting({ config: { publish: { visuals: true, pullRequest: false, draft: false } } }).init()).ok, true)
+})
+
+const NO_GH = 'gh, the GitHub CLI, is not installed'
+const UNREACHABLE = `publish_consent cannot run on this machine: ${NO_GH}. Fix it, then RETRY; or ABORT the run.`
+
+test('a consent to publish, kept or given now, on a machine that cannot reach the forge asks to fix it before the first agent; RETRY once fixed goes on', async () => {
+  const kept = consenting({ config: { publish: { pullRequest: true, questionVersions: { pullRequest: 2 } } }, codeHost: new InMemoryCodeHost({ unavailable: NO_GH }) })
+  const given = consenting({ config: { publish: { visuals: false } }, codeHost: new InMemoryCodeHost({ unavailable: NO_GH }) })
+
+  const waiting = await kept.start()
+  assert.equal((await given.start()).code, 'publish-consent')
+  assert.equal((await given.decide({ answer: 'accepted' })).ok, true)
+  const answered = await given.run()
+
+  for (const [host, outcome] of [[kept, waiting], [given, answered]]) {
+    assert.deepEqual(outcome, { status: 'waiting', slug: SLUG, phase: 'RESEARCH', code: 'environment', reason: `${UNREACHABLE} Answer with skraft decide publish_consent-${host === kept ? 1 : 2} RETRY|ABORT.` })
+    assert.deepEqual(host.agentRunner.dispatches, [])
+    host.codeHost.missing = null
+    assert.equal((await host.decide({ answer: 'retry' })).ok, true)
+    assert.equal((await host.run()).status, 'done')
+    assert.deepEqual(eventsOf(host, 'step.recorded').map(({ step, answer }) => [step, answer ?? null]), [['publish_consent', 'ACCEPTED'], ['research', null]])
+  }
+  assert.equal(given.workspace.config().publish.pullRequest, true)
+})
+
+test('a consent declined, or never asked, checks no forge: the run goes on without it', async () => {
+  const declined = consenting({ config: { publish: { pullRequest: false } }, codeHost: new InMemoryCodeHost({ unavailable: NO_GH }) })
+
+  assert.equal((await declined.start()).status, 'done')
+
+  assert.deepEqual([declined.human.questions, declined.codeHost.calls], [[], []])
 })

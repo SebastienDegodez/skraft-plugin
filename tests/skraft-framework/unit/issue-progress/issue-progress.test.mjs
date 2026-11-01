@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { BUILT_IN_WORKFLOW, InMemoryCodeHost, ScriptedMachine } from '../support/in-memory-host.mjs'
-import { agent, finding, lenses, nominal, REFS_42, says, scripted, SLUG, TRACKING } from '../support/pipeline-host.mjs'
+import { agent, finding, forgeLostAtFirstAgent, lenses, nominal, REFS_42, says, scripted, SLUG, TRACKING } from '../support/pipeline-host.mjs'
 import { ADR_1, adrText, afterDesign, architect, eventsOf } from '../support/decisions.mjs'
 import { strykerReport } from '../support/mutation-reports.mjs'
 import { edit } from '../workflow/support.mjs'
@@ -145,12 +145,10 @@ test('a run started from artifacts tells the phases it ran, not those it found c
 })
 
 test('a transition the forge cannot take is journaled skipped with its reason and said; the next one keeps the whole run; a run already done tries nothing again', async () => {
-  const unreachable = scripted({ config: CONSENTED }, (it) => nominal(it, REFS_42))
+  const unreachable = scripted({ config: CONSENTED }, forgeLostAtFirstAgent((it) => nominal(it, REFS_42), 'gh, the GitHub CLI, is not installed'))
   const refusing = scripted({ config: CONSENTED, codeHost: new InMemoryCodeHost({ fails: { comment: 'gh could not comment issue #42 on github.com/acme/shop' } }) }, (it) => nominal(it, REFS_42))
 
-  assert.equal((await unreachable.init(STORY)).ok, true)
-  unreachable.codeHost.missing = 'gh, the GitHub CLI, is not installed'
-  assert.equal((await unreachable.run()).status, 'done')
+  assert.equal((await unreachable.start(STORY)).status, 'done')
   assert.equal((await refusing.start(STORY)).status, 'done')
 
   assert.deepEqual(kept(unreachable), [])
