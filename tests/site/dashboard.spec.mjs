@@ -35,8 +35,9 @@ const publishedHistory = {
   agents: {},
 }
 
-// The dashboard is a static page fed by data/dashboard.json, which the site
-// server regenerates from the plugin sources before Jekyll starts. These checks
+// The dashboard is a static page of docs/website/static/dashboard/, fed by
+// data/dashboard.json, which the site server regenerates from the plugin sources
+// before the handbook is built; the build copies it into each locale. These checks
 // prove the page renders the catalogue it was given — never that an evaluation
 // passed, which is evidence the page reports rather than something it owns.
 test.describe('quality dashboard', () => {
@@ -194,7 +195,41 @@ test.describe('quality dashboard', () => {
     }
   })
 
-  test('is reachable from the handbook', async ({ page }) => {
-    await expect(page.locator('.site-nav__links a', { hasText: 'Handbook' })).toHaveAttribute('href', /\/en\/explanation\/pipeline\/$/)
+  test('leads back to the handbook in its own language', async ({ page }) => {
+    await page.locator('.nav a', { hasText: 'Handbook' }).click()
+    await expect(page).toHaveURL(/\/skraft-plugin\/?$/)
+
+    await page.goto(`${BASE}/fr/dashboard/`)
+    await expect(page.locator('html')).toHaveAttribute('lang', 'fr')
+    await page.locator('.nav a', { hasText: 'Manuel' }).click()
+    await expect(page).toHaveURL(/\/skraft-plugin\/fr\/?$/)
+  })
+
+  test('switches to the same page in the other language', async ({ page }) => {
+    await page.locator('#lang-link').click()
+    await expect(page).toHaveURL(/\/fr\/dashboard\/?$/)
+    await expect(page.locator('h1')).toContainText('disciplinée')
+
+    await page.locator('#lang-link').click()
+    await expect(page).toHaveURL(/\/skraft-plugin\/dashboard\/?$/)
+  })
+
+  test('keeps the old English address working', async ({ page }) => {
+    await page.goto(`${BASE}/en/dashboard/#quality`)
+    await expect(page).toHaveURL(/\/skraft-plugin\/dashboard\/?#quality$/)
+    await expect(page.locator('#panel-quality')).toBeVisible()
   })
 })
+
+// The page follows the reader's system theme; it never reads the handbook's stored choice.
+for (const [colorScheme, background] of [['light', 'rgb(245, 248, 246)'], ['dark', 'rgb(7, 17, 15)']]) {
+  test(`renders the dashboard in the ${colorScheme} theme`, async ({ browser }) => {
+    const context = await browser.newContext({ colorScheme })
+    const page = await context.newPage()
+    await page.goto(`${BASE}/dashboard/`)
+    await expect(page.locator('#status')).not.toHaveText('Loading catalogue…')
+
+    await expect(page.locator('body')).toHaveCSS('background-color', background)
+    await context.close()
+  })
+}

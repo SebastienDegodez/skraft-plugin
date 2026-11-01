@@ -8,15 +8,18 @@
 //     engine, the driver and the gates real) waiting on its ADR and done, its Journal tab, with `skraft status`,
 //     `skraft report` and the end of the workflow log of that finished run;
 //   - backlog: the skraft-backlog canvas over its browser-test workspace, in French and English;
-//   - dashboard: the dashboard page built from the plugin sources (eng/catalog/scan.mjs,
-//     eng/dashboard/build.mjs), its evidence and replay manifest read from tests/docs/replay;
+//   - dashboard: the static dashboard of docs/website/static/dashboard/, served as it is, with its
+//     data built from the plugin sources (eng/catalog/scan.mjs, eng/dashboard/build.mjs) and its
+//     evidence and replay manifest read from tests/docs/replay; one capture per --theme, since the
+//     page follows prefers-color-scheme (<name>-light.png, <name>-dark.png);
 //   - replay: AGENTVIZ (npm package agentviz@1.2.0, the only download besides the tutorial's
 //     StrykerJS) opened from the dashboard's replay link on one recorded baseline/skilled pair.
 //
-//   node eng/docs/screenshots.mjs [--out docs/site/assets/screenshots] [--only terminal,pipeline,backlog,dashboard,replay]
+//   node eng/docs/screenshots.mjs [--out docs/website/static/img/screenshots]
+//                                 [--only terminal,pipeline,backlog,dashboard,replay] [--theme light,dark]
 //
 // It writes PNG and SVG files under <out>/{fr,en,shared}/ and fails when one cannot be produced,
-// is empty, or is larger than 250 KB. Nothing it starts outlives it; its temp folders are removed.
+// is empty, or is larger than 250 KB. The other captures stay dark: their UIs have no light theme. Nothing it starts outlives it; its temp folders are removed.
 import { spawnSync } from 'node:child_process'
 import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, realpathSync, rmSync, statSync, writeFileSync } from 'node:fs'
 import { createServer } from 'node:http'
@@ -30,7 +33,7 @@ import UPNG from 'upng-js'
 import { terminalSvg } from './terminal-svg.mjs'
 
 const REPO = resolve(dirname(fileURLToPath(import.meta.url)), '../..')
-const SITE = join(REPO, 'docs', 'site')
+const STATIC = join(REPO, 'docs', 'website', 'static')
 const PLUGIN_ROOT = join(REPO, 'plugins', 'skraft-framework')
 const REPLAY_FIXTURE = join(REPO, 'tests', 'docs', 'replay')
 const AGENTVIZ = 'agentviz@1.2.0'
@@ -39,22 +42,27 @@ const VIEWPORT = Object.freeze({ width: 1280, height: 800 })
 // Relative dates ("2d ago") and the dashboard's freshness read the clock: fix it.
 const CLOCK = new Date('2026-09-30T09:00:00Z')
 const GROUPS = ['terminal', 'pipeline', 'backlog', 'dashboard', 'replay']
+const THEMES = ['light', 'dark']
 
 const { values } = parseArgs({
   options: {
-    out: { type: 'string', default: 'docs/site/assets/screenshots' },
+    out: { type: 'string', default: 'docs/website/static/img/screenshots' },
     only: { type: 'string', default: GROUPS.join(',') },
+    theme: { type: 'string', default: THEMES.join(',') },
     help: { type: 'boolean', default: false },
   },
   strict: true,
 })
 if (values.help) {
-  console.log(`Usage: node eng/docs/screenshots.mjs [--out dir] [--only ${GROUPS.join(',')}]`)
+  console.log(`Usage: node eng/docs/screenshots.mjs [--out dir] [--only ${GROUPS.join(',')}] [--theme ${THEMES.join(',')}]`)
   process.exit(0)
 }
 const OUT = resolve(REPO, values.out)
 const ONLY = new Set(values.only.split(',').map((group) => group.trim()).filter(Boolean))
 for (const group of ONLY) if (!GROUPS.includes(group)) throw new Error(`unknown group ${group}; known: ${GROUPS.join(', ')}`)
+const THEME = values.theme.split(',').map((theme) => theme.trim()).filter(Boolean)
+for (const theme of THEME) if (!THEMES.includes(theme)) throw new Error(`unknown theme ${theme}; known: ${THEMES.join(', ')}`)
+if (THEME.length === 0) throw new Error(`--theme names no theme; known: ${THEMES.join(', ')}`)
 
 const cleanups = []
 const scratch = (prefix) => {
@@ -85,18 +93,17 @@ const TYPES = {
 }
 
 /**
- * A loopback server: `pages` answers exact paths with generated HTML, `mounts` maps a URL prefix
- * to a folder. HEAD is answered like GET without a body.
- * @param {{ pages?: Record<string, () => string>, mounts: Array<[string, string]> }} routes
+ * A loopback server: `mounts` maps a URL prefix to a folder (the first match wins). HEAD is
+ * answered like GET without a body.
+ * @param {{ mounts: Array<[string, string]> }} routes
  */
-const serve = async ({ pages = {}, mounts }) => {
+const serve = async ({ mounts }) => {
   const server = createServer((req, res) => {
     const pathname = decodeURIComponent(new URL(req.url, 'http://localhost').pathname)
     const send = (status, type, body) => {
       res.writeHead(status, { 'content-type': type, 'cache-control': 'no-store' })
       res.end(req.method === 'HEAD' ? undefined : body)
     }
-    if (pages[pathname]) return send(200, TYPES['.html'], pages[pathname]())
     for (const [prefix, folder] of mounts) {
       if (!pathname.startsWith(prefix)) continue
       const candidate = resolve(folder, `.${normalize(`/${pathname.slice(prefix.length)}`)}`)
@@ -371,31 +378,11 @@ const agentviz = () => {
   return agentvizDist
 }
 
-/** _data/nav.yml, a top-level list the repository's YAML reader takes under a key. */
-const navigation = (parseYaml) => parseYaml(`nav:\n${readFileSync(join(SITE, '_data', 'nav.yml'), 'utf8').split('\n').map((line) => `  ${line}`).join('\n')}`).nav
-
-/** Scrolls so that `selector` sits just below the site's fixed navigation bar. */
-const scrollBelowNav = (page, selector) => page.evaluate((target) => {
+/** Scrolls so that `selector` sits at the top of the viewport, with a small margin. */
+const scrollTo = (page, selector) => page.evaluate((target) => {
   const element = document.querySelector(target)
-  window.scrollTo(0, element.getBoundingClientRect().top + window.scrollY - 76)
+  window.scrollTo(0, element.getBoundingClientRect().top + window.scrollY - 16)
 }, selector)
-
-/** The dashboard page as Jekyll renders it, from the same layout and includes. */
-const renderDashboard = async (lang, base) => {
-  const { Liquid } = await import('liquidjs')
-  const { parseYaml } = await import('../lib/yaml-parser.mjs')
-  const engine = new Liquid({ root: join(SITE, '_includes'), partials: join(SITE, '_includes'), extname: '', jekyllInclude: true, dynamicPartials: false })
-  engine.registerFilter('relative_url', (path) => `${base}${path}`)
-  const front = (file) => {
-    const text = readFileSync(file, 'utf8')
-    const match = text.match(/^---\n([\s\S]*?)\n---\n?([\s\S]*)$/)
-    return match ? { data: parseYaml(match[1]), body: match[2] } : { data: {}, body: text }
-  }
-  const page = front(join(SITE, lang === 'fr' ? 'fr/dashboard/index.md' : 'dashboard/index.html')).data
-  const layout = front(join(SITE, '_layouts', 'dashboard.html'))
-  const site = { url: 'https://sebastiendegodez.github.io', baseurl: base, data: { nav: navigation(parseYaml) } }
-  return engine.parseAndRender(layout.body, { page: { ...page, url: page.permalink }, site })
-}
 
 const dashboardAndReplayCaptures = async () => {
   const wantDashboard = ONLY.has('dashboard')
@@ -404,44 +391,42 @@ const dashboardAndReplayCaptures = async () => {
   const data = scratch('skraft-dashboard-')
   run(process.execPath, ['eng/catalog/scan.mjs', '--out', join(data, 'report.json')], REPO)
   run(process.execPath, ['eng/dashboard/build.mjs', '--report', join(data, 'report.json'), '--history', join(data, 'no-history.json'), '--out', join(data, 'dashboard.json')], REPO)
+  // The handbook build copies static/ into each locale: /dashboard/ and /fr/dashboard/ are the same files.
   const base = '/skraft-plugin'
-  const pages = {}
+  const locales = [`${base}/fr`, base]
   const origin = await serve({
-    pages,
     mounts: [
-      [`${base}/dashboard/data/`, data],
-      [`${base}/dashboard/replay/`, agentviz()],
+      ...locales.flatMap((root) => [[`${root}/dashboard/data/`, data], [`${root}/dashboard/replay/`, agentviz()]]),
       [`${base}/replay-data/`, REPLAY_FIXTURE],
-      [`${base}/`, SITE],
+      ...locales.map((root) => [`${root}/`, STATIC]),
     ],
   })
   // The evidence and the sessions come from the fixture, not from the data branch.
   const dashboard = JSON.parse(readFileSync(join(data, 'dashboard.json'), 'utf8'))
   dashboard.sources = { ...dashboard.sources, history: `${origin}${base}/replay-data/history.json`, replayManifest: `${origin}${base}/replay-data/manifest.json` }
   writeFileSync(join(data, 'dashboard.json'), JSON.stringify(dashboard))
-  const html = { fr: await renderDashboard('fr', base), en: await renderDashboard('en', base) }
-  pages[`${base}/fr/dashboard/`] = () => html.fr
-  pages[`${base}/dashboard/`] = () => html.en
 
   let replayUrl = null
   for (const lang of ['fr', 'en']) {
-    const page = await newPage({ clock: true })
-    await page.goto(`${origin}${base}${lang === 'fr' ? '/fr/dashboard/' : '/dashboard/'}`)
-    await page.locator('#replay-callout').waitFor({ state: 'visible' })
-    await page.locator('#catalog .catalog-group, #catalog table, #catalog article').first().waitFor()
-    replayUrl = await page.locator('#replay-link').getAttribute('href')
-    if (wantDashboard) {
-      await scrollBelowNav(page, '#summary')
-      await page.waitForTimeout(300)
-      await shoot(page, target(lang, 'dashboard-catalogue.png'))
-      await page.locator('#tab-quality').click()
-      await page.locator('#search').fill('outside-in-tdd')
-      await page.locator('#panel-quality .evidence-card').first().waitFor()
-      await scrollBelowNav(page, '#panel-quality .evidence-cohort')
-      await page.waitForTimeout(300)
-      await shoot(page, target(lang, 'dashboard-quality.png'))
+    for (const theme of wantDashboard ? THEME : ['dark']) {
+      const page = await newPage({ clock: true, colorScheme: theme })
+      await page.goto(`${origin}${base}${lang === 'fr' ? '/fr/dashboard/' : '/dashboard/'}`)
+      await page.locator('#replay-callout').waitFor({ state: 'visible' })
+      await page.locator('#catalog .catalog-group, #catalog table, #catalog article').first().waitFor()
+      replayUrl = await page.locator('#replay-link').getAttribute('href')
+      if (wantDashboard) {
+        await scrollTo(page, '#summary')
+        await page.waitForTimeout(300)
+        await shoot(page, target(lang, `dashboard-catalogue-${theme}.png`))
+        await page.locator('#tab-quality').click()
+        await page.locator('#search').fill('outside-in-tdd')
+        await page.locator('#panel-quality .evidence-card').first().waitFor()
+        await scrollTo(page, '#panel-quality .evidence-cohort')
+        await page.waitForTimeout(300)
+        await shoot(page, target(lang, `dashboard-quality-${theme}.png`))
+      }
+      await page.context().close()
     }
-    await page.context().close()
   }
   if (!wantReplay) return
 

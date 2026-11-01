@@ -1,4 +1,4 @@
-import { chosenForge, forgeAdapters } from '../config/forge.mjs'
+import { chosenForge, forgeMissing } from '../config/forge.mjs'
 
 /** How doctor says what chose the forge. */
 const CHOSEN_BY = Object.freeze({ config: 'named in the configuration', remote: 'deduced from the Git remote' })
@@ -11,7 +11,7 @@ const CHOSEN_BY = Object.freeze({ config: 'named in the configuration', remote: 
  */
 export const forgeCheck = async (deps, named) => {
   const { forge, by } = await chosenForge(deps, named)
-  const missing = await (await forgeAdapters(deps, forge)).codeHost.unavailable()
+  const missing = await forgeMissing(deps, forge)
   const chosen = `${forge}, ${CHOSEN_BY[by]}`
   return missing === null ? { subject: 'forge', status: 'ok', detail: chosen } : { subject: 'forge', status: 'warn', detail: `${chosen}: ${missing}` }
 }

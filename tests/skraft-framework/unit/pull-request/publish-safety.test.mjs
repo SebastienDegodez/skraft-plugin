@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { InMemoryCodeHost, InMemoryGit } from '../support/in-memory-host.mjs'
-import { finding, lenses, nominal, prWriter, REFS_42, says, scripted, SLUG } from '../support/pipeline-host.mjs'
+import { finding, forgeLostAtFirstAgent, lenses, nominal, prWriter, REFS_42, says, scripted, SLUG } from '../support/pipeline-host.mjs'
 import { eventsOf } from '../support/decisions.mjs'
 import { opening, section } from '../support/description.mjs'
 
@@ -133,7 +133,7 @@ test('a pr-writer that leaves a placeholder is refused, its output still missing
 })
 
 test('skraft publish finds the prose by the journal, even once the workflow no longer names the pr-writer step', async () => {
-  const host = scripted({ config: CONSENTED, codeHost: new InMemoryCodeHost({ unavailable: 'gh is not signed in' }) }, (it) => nominal(it))
+  const host = scripted({ config: CONSENTED }, forgeLostAtFirstAgent((it) => nominal(it), 'gh is not signed in'))
   await host.start()
   host.deps.workflowSource.text = host.deps.workflowSource.text.replaceAll('pr_writer', 'prose_writer')
   host.codeHost.missing = null

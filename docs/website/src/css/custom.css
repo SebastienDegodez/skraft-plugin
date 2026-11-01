@@ -1,0 +1,237 @@
+/*
+ * skraft handbook theme: a calm blue on white in light mode, the brand's navy and sky blue in dark
+ * mode; Infima variables only (no swizzle for styling).
+ * Every text/background pair below is checked at >= 4.5:1 (WCAG AA) in both modes by
+ * tests/tooling/docs-theme/contrast.test.mjs, which also checks that the six primary shades are the
+ * output of the official generator (docusaurus.io/docs/styling-layout: HSL lightness -10/-15/-30 %
+ * for dark/darker/darkest, +10/+15/+30 % for light/lighter/lightest).
+ * The terminal card keeps its own dark palette in both modes (src/components/Terminal).
+ */
+:root {
+  --ifm-color-primary: #2b59c3;
+  --ifm-color-primary-dark: #2750b0;
+  --ifm-color-primary-darker: #254ca6;
+  --ifm-color-primary-darkest: #1e3e89;
+  --ifm-color-primary-light: #3464d2;
+  --ifm-color-primary-lighter: #3d6bd4;
+  --ifm-color-primary-lightest: #5b81db;
+  --skraft-on-primary: #ffffff;
+
+  --ifm-background-color: #ffffff;
+  --ifm-background-surface-color: #f6f8fa;
+  --ifm-font-color-base: #1f2328;
+  --ifm-color-emphasis-700: #59636e;
+  --ifm-footer-background-color: #f6f8fa;
+  --ifm-footer-link-color: #1f2328;
+  --ifm-footer-title-color: #1f2328;
+
+  /* Admonitions: note = secondary, tip = success, info, warning and caution = warning, danger. */
+  --ifm-color-secondary-contrast-background: #f6f8fa;
+  --ifm-color-secondary-contrast-foreground: #1f2328;
+  --ifm-color-success-contrast-background: #dafbe1;
+  --ifm-color-success-contrast-foreground: #1a4d2e;
+  --ifm-color-info-contrast-background: #ddf4ff;
+  --ifm-color-info-contrast-foreground: #0a3069;
+  --ifm-color-warning-contrast-background: #fff8c5;
+  --ifm-color-warning-contrast-foreground: #5c3c00;
+  --ifm-color-danger-contrast-background: #ffebe9;
+  --ifm-color-danger-contrast-foreground: #82071e;
+
+  --ifm-font-size-base: 106.25%;
+  --ifm-line-height-base: 1.7;
+  --ifm-heading-font-weight: 650;
+  --ifm-code-font-size: 90%;
+  --ifm-font-family-monospace: ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace;
+  --docusaurus-highlighted-code-line-bg: rgb(43 89 195 / 10%);
+  --skraft-card-border: #d0d7de;
+}
+
+[data-theme='dark'] {
+  /* The navy and sky blue of the skraft brand (the first handbook's design tokens). */
+  --ifm-color-primary: #24b5ff;
+  --ifm-color-primary-dark: #07abff;
+  --ifm-color-primary-darker: #00a4f7;
+  --ifm-color-primary-darkest: #0087cc;
+  --ifm-color-primary-light: #41bfff;
+  --ifm-color-primary-lighter: #50c4ff;
+  --ifm-color-primary-lightest: #7bd2ff;
+  --skraft-on-primary: #0f1722;
+
+  --ifm-background-color: #0f1722;
+  --ifm-background-surface-color: #152231;
+  --ifm-font-color-base: #eef6ff;
+  --ifm-color-emphasis-700: #b7c6d8;
+  --ifm-footer-background-color: #152231;
+  --ifm-footer-link-color: #eef6ff;
+  --ifm-footer-title-color: #7fd3ff;
+  --ifm-navbar-background-color: #111c28;
+  --ifm-heading-color: #eef6ff;
+
+  --ifm-color-secondary-contrast-background: #152231;
+  --ifm-color-secondary-contrast-foreground: #eef6ff;
+  --ifm-color-success-contrast-background: #10261f;
+  --ifm-color-success-contrast-foreground: #aff5b4;
+  --ifm-color-info-contrast-background: #0c2d4b;
+  --ifm-color-info-contrast-foreground: #cae8ff;
+  --ifm-color-warning-contrast-background: #2b2513;
+  --ifm-color-warning-contrast-foreground: #f8e3a1;
+  --ifm-color-danger-contrast-background: #36161c;
+  --ifm-color-danger-contrast-foreground: #ffdcd7;
+
+  --docusaurus-highlighted-code-line-bg: rgb(36 181 255 / 16%);
+  --skraft-card-border: #2c485c;
+}
+
+/* Navbar: the four doors, version, language and GitHub stay on one line from 997px. */
+.navbar {
+  --ifm-navbar-item-padding-horizontal: 0.6rem;
+  font-size: 0.9375rem;
+}
+
+.navbar__link,
+.navbar__title {
+  white-space: nowrap;
+}
+
+.navbar__title {
+  overflow: visible;
+}
+
+/* Typography: prose keeps a readable line; tables, diagrams, terminals and the viewer keep the full column. */
+.theme-doc-markdown :is(p, li, blockquote) {
+  max-width: 72ch;
+}
+
+.theme-doc-markdown h2 {
+  font-size: 1.5rem;
+  margin-top: 2.5rem;
+}
+
+/* Links are underlined in prose so they do not rely on colour alone. */
+.theme-doc-markdown :is(p, li, td) a:not(.badge),
+.alert a {
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
+}
+
+/* Lead paragraph: the first paragraph after the title. */
+.theme-doc-markdown > header + p,
+.theme-doc-markdown > h1 + p {
+  font-size: 1.15rem;
+  color: var(--ifm-color-emphasis-700);
+}
+
+/*
+ * Tables fit the column instead of scrolling: a scrolling table is a region a keyboard cannot reach.
+ * Long code and words in cells break so the table never pushes the page sideways.
+ */
+.theme-doc-markdown table {
+  display: table;
+  width: 100%;
+}
+
+.theme-doc-markdown :is(td, th) {
+  overflow-wrap: anywhere;
+}
+
+/* The search shortcut hint reads at AA on the navbar. */
+kbd[class*='searchHint'] {
+  color: var(--ifm-color-emphasis-700);
+  background: var(--ifm-background-surface-color);
+  border-color: var(--skraft-card-border);
+  box-shadow: none;
+}
+
+/* Images in both colour modes: GitHub-style fragments on plain Markdown images. */
+[data-theme='dark'] img[src*='#gh-light-mode-only'],
+[data-theme='light'] img[src*='#gh-dark-mode-only'] {
+  display: none;
+}
+
+/* Single-theme captures read in both modes inside a thin frame; SVG transcripts draw their own. */
+.theme-doc-markdown img:not([src$='.svg']),
+.theme-doc-markdown figure {
+  border: 1px solid var(--skraft-card-border);
+  border-radius: 8px;
+}
+
+.theme-doc-markdown img {
+  max-width: 100%;
+  height: auto;
+}
+
+.theme-doc-markdown figure {
+  margin: 0 0 var(--ifm-leading);
+  padding: 0.75rem;
+  background: var(--ifm-background-surface-color);
+}
+
+.theme-doc-markdown figure img {
+  border: 0;
+  display: block;
+  margin: 0 auto;
+}
+
+.theme-doc-markdown figcaption {
+  margin-top: 0.5rem;
+  font-size: 0.875rem;
+  color: var(--ifm-color-emphasis-700);
+}
+
+.citation-entry {
+  scroll-margin-top: calc(var(--ifm-navbar-height) + 1rem);
+}
+
+/* Home page (docs/index.mdx). */
+.skraft-start {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin: 1rem 0 2rem;
+}
+
+.skraft-start .button {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  white-space: normal;
+}
+
+.skraft-start .button--primary:not(.button--outline),
+.skraft-start .button--outline:hover {
+  color: var(--skraft-on-primary);
+}
+
+.skraft-doors {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr));
+  gap: 1rem;
+  margin: 1rem 0 2rem;
+}
+
+.skraft-door {
+  display: block;
+  padding: 1rem 1.25rem;
+  border: 1px solid var(--skraft-card-border);
+  border-radius: 10px;
+  background: var(--ifm-background-surface-color);
+  color: var(--ifm-font-color-base);
+  text-decoration: none;
+}
+
+.skraft-door:hover {
+  border-color: var(--ifm-color-primary);
+  color: var(--ifm-font-color-base);
+  text-decoration: none;
+}
+
+.skraft-door strong {
+  display: block;
+  margin-bottom: 0.25rem;
+  color: var(--ifm-color-primary);
+  font-size: 1.1rem;
+}
+
+.skraft-door span {
+  color: var(--ifm-color-emphasis-700);
+}

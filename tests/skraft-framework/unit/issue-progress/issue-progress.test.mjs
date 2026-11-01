@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { BUILT_IN_WORKFLOW, InMemoryCodeHost, ScriptedMachine } from '../support/in-memory-host.mjs'
-import { agent, finding, lenses, nominal, REFS_42, says, scripted, SLUG, TRACKING } from '../support/pipeline-host.mjs'
+import { agent, finding, forgeLostAtFirstAgent, lenses, nominal, REFS_42, says, scripted, SLUG, TRACKING } from '../support/pipeline-host.mjs'
 import { ADR_1, adrText, afterDesign, architect, eventsOf } from '../support/decisions.mjs'
 import { strykerReport } from '../support/mutation-reports.mjs'
 import { edit } from '../workflow/support.mjs'
@@ -145,14 +145,13 @@ test('a run started from artifacts tells the phases it ran, not those it found c
 })
 
 test('a transition the forge cannot take is journaled skipped with its reason and said; the next one keeps the whole run; a run already done tries nothing again', async () => {
-  const unreachable = scripted({ config: CONSENTED, codeHost: new InMemoryCodeHost({ unavailable: 'gh, the GitHub CLI, is not installed' }) }, (it) => nominal(it, REFS_42))
+  const unreachable = scripted({ config: CONSENTED }, forgeLostAtFirstAgent((it) => nominal(it, REFS_42), 'gh, the GitHub CLI, is not installed'))
   const refusing = scripted({ config: CONSENTED, codeHost: new InMemoryCodeHost({ fails: { comment: 'gh could not comment issue #42 on github.com/acme/shop' } }) }, (it) => nominal(it, REFS_42))
 
   assert.equal((await unreachable.start(STORY)).status, 'done')
   assert.equal((await refusing.start(STORY)).status, 'done')
 
   assert.deepEqual(kept(unreachable), [])
-  assert.equal(unreachable.events()[0].issueUnread, 'gh, the GitHub CLI, is not installed', 'the run started without the body of its issue')
   assert.deepEqual(journaled(unreachable), [...PHASES, null].map((phase) => ['issue.comment-skipped', phase === null ? 'summary' : 'phase', phase, 'gh, the GitHub CLI, is not installed']))
   assert.ok((await unreachable.tracking.read(SLUG, 'issue-progress.md')).includes('run done'), 'the comment stays in the tracking folder')
   assert.ok(unreachable.progress.lines.includes(`${SLUG}: issue #42 not updated (RESEARCH closed): gh, the GitHub CLI, is not installed`), unreachable.progress.lines.join('\n'))

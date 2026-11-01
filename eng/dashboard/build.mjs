@@ -11,7 +11,7 @@
 // This script writes the catalogue and tells the page where the evidence lives.
 //
 //   node eng/dashboard/build.mjs [--report artifacts/catalog/report.json]
-//                                [--out docs/site/dashboard/data/dashboard.json]
+//                                [--out docs/website/static/dashboard/data/dashboard.json]
 //                                [--history dashboard-data/history.json]
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname, join, relative, resolve } from 'node:path'
@@ -22,7 +22,7 @@ const { values } = parseArgs({
   options: {
     report: { type: 'string', default: 'artifacts/catalog/report.json' },
     history: { type: 'string', default: 'dashboard-data/history.json' },
-    out: { type: 'string', default: 'docs/site/dashboard/data/dashboard.json' },
+    out: { type: 'string', default: 'docs/website/static/dashboard/data/dashboard.json' },
     repository: { type: 'string', default: 'SebastienDegodez/skraft-plugin' },
     'data-branch': { type: 'string', default: 'dashboard-data' },
     help: { type: 'boolean', default: false },

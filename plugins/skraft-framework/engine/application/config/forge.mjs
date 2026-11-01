@@ -1,6 +1,4 @@
 import { forgeOfRemote, forgeUnreachable } from '../../domain/config/forge.mjs'
-import { azureMcpFirst } from './azure-mcp.mjs'
-import { githubMcpFirst } from './github-mcp.mjs'
 
 /**
  * The adapters of the forge the working copy reads its stories from and opens its pull requests
@@ -16,10 +14,9 @@ import { githubMcpFirst } from './github-mcp.mjs'
  * @typedef {{
  *   forges: Partial<Record<Forge, ForgeAdapters>>,
  *   sourceControl: Pick<import('../ports/source-control.mjs').SourceControl, 'remoteUrl'>,
- *   mcpTools?: import('../ports/mcp-tools.mjs').McpTools,
  * }} ForgeDeps
- *   forges: the adapters of each forge skraft reaches, by forge; mcpTools: the host's MCP
- *   servers, which serve GitHub before gh does; none where the host offers none.
+ *   forges: the adapters of each forge skraft reaches, by forge, each through the forge's command
+ *   line (gh, az). The engine never calls an MCP server: that is an agent's tool.
  */
 
 /** The forge the working copy's Git remote names. @param {Pick<import('../ports/source-control.mjs').SourceControl, 'remoteUrl'>} sourceControl @returns {Promise<Forge>} */
@@ -36,18 +33,18 @@ export const chosenForge = async ({ sourceControl }, named) => (named === null ?
  * @param {ForgeDeps} deps @param {Forge | null} named the forge skraft-config.json names, null for none
  * @returns {Promise<ForgeAdapters>}
  */
-export const forgeAdapters = async ({ forges, sourceControl, mcpTools }, named) => {
+export const forgeAdapters = async ({ forges, sourceControl }, named) => {
   const { forge } = await chosenForge({ sourceControl }, named)
-  const adapters = forges[forge]
-  if (adapters === undefined) return unreachable(forge)
-  return mcpTools === undefined ? adapters : mcpFirst(forge, adapters, { mcpTools, sourceControl })
+  return forges[forge] ?? unreachable(forge)
 }
 
-/** The adapters of the forge served first by the host's MCP server, when skraft knows one for that forge. @param {Forge} forge @param {ForgeAdapters} adapters @param {{ mcpTools: import('../ports/mcp-tools.mjs').McpTools, sourceControl: ForgeDeps['sourceControl'] }} host */
-const mcpFirst = (forge, adapters, { mcpTools, sourceControl }) => {
-  if (forge === 'github') return githubMcpFirst(adapters, mcpTools)
-  return forge === 'azure-devops' ? azureMcpFirst(adapters, mcpTools, sourceControl) : adapters
-}
+/**
+ * What this machine misses to reach the forge a run uses (no remote, no forge client, not signed
+ * in), as the forge's adapter fixes it; null when it reaches it.
+ * @param {ForgeDeps} deps @param {Forge | null} named the forge skraft-config.json names, null for none
+ * @returns {Promise<string | null>}
+ */
+export const forgeMissing = async (deps, named) => (await forgeAdapters(deps, named)).codeHost.unavailable()
 
 /**
  * Adapters that reach nothing: the forge cannot be asked, no issue is read, the remote names no

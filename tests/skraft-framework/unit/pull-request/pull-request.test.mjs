@@ -2,7 +2,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { BUILT_IN_WORKFLOW, InMemoryCodeHost, InMemoryGit, ScriptedMachine, ScriptedReplay } from '../support/in-memory-host.mjs'
 import { edit } from '../workflow/support.mjs'
-import { agent, API, finding, lenses, nominal, prWriter, PROSE_TEMPLATE, refutes, REFS_42, says, scripted, SLUG, tddCycle, TRACKING } from '../support/pipeline-host.mjs'
+import { agent, API, finding, forgeLostAtFirstAgent, lenses, nominal, prWriter, PROSE_TEMPLATE, refutes, REFS_42, says, scripted, SLUG, tddCycle, TRACKING } from '../support/pipeline-host.mjs'
 import { passing } from '../support/in-memory-host.mjs'
 import { eventsOf } from '../support/decisions.mjs'
 import { opening, section } from '../support/description.mjs'
@@ -226,7 +226,7 @@ test('a repository workflow with no consent question and no pr-writer: nothing i
 test('without the consent, a forge, a branch apart from the base, the run completes locally, says why, and keeps the description', async () => {
   const cases = [
     [{ config: { publish: { pullRequest: false } } }, 'skraft-config.json sets publish.pullRequest to false', 'Refs'],
-    [{ config: CONSENTED, codeHost: new InMemoryCodeHost({ unavailable: 'gh, the GitHub CLI, is not installed' }) }, 'gh, the GitHub CLI, is not installed', 'Refs'],
+    [{ config: CONSENTED }, 'gh, the GitHub CLI, is not installed', 'Refs', 'gh, the GitHub CLI, is not installed'],
     [{ config: CONSENTED, codeHost: new InMemoryCodeHost({ branch: null }) }, 'HEAD is detached, on no branch to push', 'Refs'],
     [{ config: CONSENTED, codeHost: new InMemoryCodeHost({ branch: 'main' }) }, 'HEAD is on main, the branch the pull request would merge into', 'Refs'],
     [{ config: CONSENTED, codeHost: new InMemoryCodeHost({ branch: 'trunk', defaultBranch: 'trunk' }) }, 'HEAD is on trunk, the branch the pull request would merge into', 'Refs'],
@@ -234,8 +234,9 @@ test('without the consent, a forge, a branch apart from the base, the run comple
     [{ config: CONSENTED, codeHost: new InMemoryCodeHost({ fails: { find: 'gh could not list the pull requests' } }) }, 'gh could not list the pull requests', 'Closes'],
     [{ config: CONSENTED, codeHost: new InMemoryCodeHost({ fails: { create: 'gh could not open the pull request' } }) }, 'gh could not open the pull request', 'Closes'],
   ]
-  for (const [options, why, issueLine] of cases) {
-    const host = scripted(options, (it) => nominal(it, REFS_42))
+  for (const [options, why, issueLine, lostOnceStarted = null] of cases) {
+    const script = (it) => nominal(it, REFS_42)
+    const host = scripted(options, lostOnceStarted === null ? script : forgeLostAtFirstAgent(script, lostOnceStarted))
 
     const outcome = await host.start(STORY)
 

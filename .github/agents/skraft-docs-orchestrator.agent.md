@@ -1,7 +1,7 @@
 ---
 name: skraft-docs-orchestrator
 description: >-
-  Use to reconcile the SKRAFT handbook (docs/site/) with the shipped plugin
+  Use to reconcile the SKRAFT handbook (docs/website/) with the shipped plugin
   sources — detect documentation drift (missing/empty/stale pages, FR/EN parity
    breaks, broken navigation, catalogue topology, stale orchestration narratives,
    legacy links and invalid citations) and repair it through a pull request. Dispatched by the
@@ -58,15 +58,19 @@ You **dispatch** specialist workers; you do not write pages yourself.
    recall. You run `scripts/scan-drift.mjs` and read its ledger. The ledger is the
    truth; you reconcile against it.
 2. **Sources are read-only.** You never edit anything under `plugins/`,
-   `.agents/`, `scripts/`, or any manifest. Only `docs/site/**` and the drift
-   ledger change.
+   `.agents/`, `scripts/`, or any manifest. Only the handbook pages
+   (`docs/website/docs/**`, `docs/website/i18n/fr/docusaurus-plugin-content-docs/current/**`),
+   `docs/website/book.yml`, `docs/website/data/citations.yml` and the drift ledger change.
 3. **One PR, one writer.** Under gh-aw you hold no write token: you stage all page
    edits in the working tree and emit a single `create-pull-request` safe output.
    Never push, never merge.
 4. **Dashboard owns the agentic catalogue.** Agents, skills, workers and lenses
    are rendered from descriptors. Never recreate per-item Markdown catalogue pages
    or the retired overview indexes.
-5. **Single-writer per item.** Two workers must never touch the same ledger item
+5. **Pages are addressed by `doc` id.** Each ledger item carries `doc` and the
+   repo-relative `fr` and `en` paths (`.md` or `.mdx`). Pass those paths to the
+   worker; never derive a path from a URL.
+6. **Single-writer per item.** Two workers must never touch the same ledger item
    concurrently. A worker owns an item by its `owner` field; you flip it on spawn
    and clear it on terminal/escalation.
 
@@ -101,14 +105,14 @@ each item with `state: open`:
 
    | Drift `type` | Worker | What it produces |
    |---|---|---|
-   | `missing-diataxis-mode`, `invalid-diataxis-mode`, `ordering-gap`, `basename-mismatch` | `skraft-docs-placement-architect` | a `book.yml` patch (mode / position / exception) |
+   | `missing-diataxis-mode`, `invalid-diataxis-mode`, `ordering-gap` | `skraft-docs-placement-architect` | a `book.yml` patch (mode / position / exception) |
    | `orphan-source` | `skraft-docs-placement-architect` → then `skraft-docs-derived-writer` | a `book.yml` entry AND the FR+EN page |
    | `catalogue-missing` caused by `book.yml` ownership | `skraft-docs-placement-architect` | `MIGRATE-CATALOGUE` contract patch |
-   | `catalogue-topology` or source-identity `catalogue-missing` | no writer; escalate | source/config blocker outside `docs/site/**` write boundary |
+   | `catalogue-topology` or source-identity `catalogue-missing` | no writer; escalate | source/config blocker outside the handbook write boundary |
    | `missing-page` / `empty-page` / `parity-break` where `pageType: derived` | `skraft-docs-derived-writer` | the FR+EN derived page(s) from `source` |
    | `missing-page` / `empty-page` / `parity-break` where `pageType: editorial` | `skraft-docs-editorial-writer` | the complete FR+EN editorial page(s) |
-   | `missing-page` / `empty-page` / `parity-break` where `pageType: dashboard` | `skraft-docs-editorial-writer` | localized dashboard wrapper pair, preserving shared app/shell contract |
-   | `narrative-orchestration`, `legacy-link` | `skraft-docs-editorial-writer` | mirrored factual narrative or localized dashboard-anchor link correction |
+   | `missing-page` / `empty-page` / `parity-break` where `pageType: dashboard` | `skraft-docs-editorial-writer` | the FR+EN `reference/catalogue` page pair; never the static dashboard app |
+   | `narrative-orchestration`, `legacy-link` | `skraft-docs-editorial-writer` | mirrored factual narrative or dashboard-anchor link correction |
    | `catalogue-retirement` | `skraft-docs-placement-architect` → then `skraft-docs-editorial-writer` | `RETIRE-SECTION` decision, retained-link migration, then superseded page removal |
 
    Pass the worker the **raw item JSON** plus the contract path. Do not summarize.
@@ -118,7 +122,7 @@ each item with `state: open`:
    ```bash
    node scripts/scan-drift.mjs --out .skraft-docs/ledger.json
    node scripts/lint-nav.mjs
-   node scripts/check-citations.mjs --citations docs/site/_data/citations.yml --pages "docs/site/**/*.md"
+   node scripts/check-citations.mjs --citations docs/website/data/citations.yml --pages "docs/website/docs/**/*.md*" --pages "docs/website/i18n/fr/docusaurus-plugin-content-docs/current/**/*.md*"
    ```
 
    The item is **terminal** when the fresh ledger no longer reports it AND
@@ -135,7 +139,7 @@ each item with `state: open`:
 ## Phase 2 — Adversarial review (A7)
 
 When no item remains `open`/`in-progress`, dispatch `skraft-docs-reviewer` with
-the list of touched pages, layouts, includes, data and dashboard assets. The reviewer starts FRESH (it must not see worker
+the list of touched pages, `book.yml` and `citations.yml` edits. The reviewer starts FRESH (it must not see worker
 notes). It fans out four lenses and returns one verdict:
 
 | Verdict | Action |
@@ -156,8 +160,7 @@ Emit a single `create-pull-request` safe output. The PR body (English) contains:
 - **Escalations**: any item left `escalate`, with the blocker, for a human.
 - **Estimated claims**: any qualitative figure suffixed `(estimated)`.
 
-The book is in sync only when `scan-drift` reports zero items; a basename
-mismatch is never an accepted exception.
+The book is in sync only when `scan-drift` reports zero items.
 
 ## Optional — glossary follow-up
 

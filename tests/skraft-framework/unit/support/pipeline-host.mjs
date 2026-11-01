@@ -200,6 +200,16 @@ export const nominal = (host, body = '') => [
 ]
 
 /** A host whose agents behave as given, scripted after the host exists. @param {Parameters<typeof pipelineHost>[0]} options @param {(host: ReturnType<typeof pipelineHost>) => Function[]} script */
+/**
+ * A script whose forge stops being reachable once the run is past its start (and its consent),
+ * as the first agent works: the reason the forge's adapter then gives.
+ * @param {(host: any) => Array<() => Promise<unknown>>} script @param {string} reason
+ */
+export const forgeLostAtFirstAgent = (script, reason) => (host) => {
+  const [first, ...rest] = script(host)
+  return [async () => { host.codeHost.missing = reason; return first() }, ...rest]
+}
+
 export const scripted = (options, script) => {
   const host = pipelineHost(options)
   host.agentRunner.behaviours.push(...script(host))

@@ -628,9 +628,10 @@ export class InMemoryAgentCatalog {
  */
 export class InMemoryCodeHost {
   /**
-   * @param {{ unavailable?: string | null, branch?: string | null, defaultBranch?: string | null, remotes?: string[], open?: Array<{ number: number, head: string, state?: string, body?: string }>, fails?: Record<string, string>, repository?: { host: string, repository: string } | null, issues?: Record<number, { title: string, body: string } | 'pull-request'> }} [forge]
+   * @param {{ unavailable?: string | null, branch?: string | null, defaultBranch?: string | null, remotes?: string[], open?: Array<{ number: number, head: string, state?: string, body?: string }>, fails?: Record<string, string>, repository?: { host: string, repository: string } | null, issues?: Record<number, { title: string, body: string } | 'pull-request' | 'not-a-story' | { project: string }> }} [forge]
    *   repository: the host and `<owner>/<repo>` the remote names, null when it names none;
-   *   issues: the issues of the forge by number, 'pull-request' for a number that is one; without
+   *   issues: the issues of the forge by number, 'pull-request' for a number that is one,
+   *   'not-a-story' for a work item of another type, `{ project }` for one of another project than the remote's, which it names; without
    *   it, the forge has every issue, titled `Issue <number>`, its body `Acceptance criteria of #<number>`.
    *   An issue is read only from a forge that is available (unavailable null) and not told to fail.
    *   link: the line the forge links a pull request to its story with, GitHub's unless given;
@@ -673,7 +674,8 @@ export class InMemoryCodeHost {
     const unreadable = this.missing ?? this.fails.issue
     if (unreadable) return { read: 'failed', reason: unreadable }
     const found = this.issues === undefined ? { title: `Issue ${number}`, body: `Acceptance criteria of #${number}` } : this.issues[number]
-    if (found === 'pull-request') return { read: 'pull-request' }
+    if (found === 'pull-request' || found === 'not-a-story') return { read: found }
+    if (found?.project !== undefined) return { read: 'other-project', project: found.project }
     return found ? { read: 'issue', issue: { number, title: found.title, url: `${this.pages}/issues/${number}`, body: found.body } } : { read: 'missing' }
   }
   async remotes() { return this.remoteNames }
@@ -876,204 +878,3 @@ export const inMemoryDeps = ({ tracking = new InMemoryTracking(), config, local,
   timer: new ManualTimer(),
   ...given,
 })
-
-/**
- * The host's GitHub MCP server over the same forge double gh reaches (an InMemoryCodeHost or an
- * InMemoryPullRequests): its tools read and write that forge's issues, pull requests and comments,
- * on the repository `repository` names only, as the signed-in user, its pages the forge's.
- * `calls` lists `<server> <tool>` in order, `asked` the repository of each call that names one;
- * `fails` gives, by tool, the reason it fails with (`mcp-refused`…), or `unreadable` for an answer
- * that is no JSON; a tool it lacks answers `mcp-tool-missing`; `answers` replaces what a tool
- * answers, given its arguments. `listed` counts how often the host listed its servers.
- */
-export class InMemoryGithubMcp {
-  /** @param {{ forge: InMemoryCodeHost | InMemoryPullRequests, servers?: string[], login?: string, fails?: Record<string, string>, repository?: string, answers?: Record<string, (args: object, mcp: InMemoryGithubMcp) => unknown> }} options */
-  constructor({ forge, servers = ['github-mcp-server'], login = 'skraft-dev', fails = {}, repository = 'acme/shop', answers = {} }) {
-    this.forge = forge
-    this.names = servers
-    this.login = login
-    this.fails = fails
-    this.repository = repository
-    this.answers = answers
-    /** @type {string[]} */
-    this.calls = []
-    /** @type {string[]} */
-    this.asked = []
-    this.listed = 0
-    this.page = forge instanceof InMemoryPullRequests ? 'pull' : 'issues'
-  }
-  async servers() {
-    this.listed += 1
-    return this.names
-  }
-  async call({ server, tool, arguments: args }) {
-    this.calls.push(`${server} ${tool}`)
-    if (args.owner !== undefined) this.asked.push(`${args.owner}/${args.repo}`)
-    const failure = this.fails[tool]
-    if (failure === 'unreadable') return { ok: true, text: 'not JSON' }
-    if (failure) return { ok: false, reason: failure }
-    const run = this.answers[tool] ?? (TOOLS[tool] && ((given) => TOOLS[tool](this, given)))
-    if (!run) return { ok: false, reason: 'mcp-tool-missing' }
-    const onRepository = args.owner === undefined || `${args.owner}/${args.repo}` === this.repository
-    const answer = onRepository ? run(args, this) : null
-    return answer === null ? { ok: false, reason: 'mcp-failed' } : { ok: true, text: JSON.stringify(answer) }
-  }
-}
-
-/** @param {string} url */
-const commentId = (url) => Number(url.slice(url.lastIndexOf('-') + 1))
-
-/** The tools of github/github-mcp-server v2.0.3 skraft calls, each on the forge double. */
-const TOOLS = {
-  get_me: (mcp) => ({ login: mcp.login }),
-  issue_read: (mcp, { method, issue_number: number }) => (method === 'get' ? issueOn(mcp.forge, number) : mcp.forge.comments
-    .filter((comment) => comment.number === number)
-    .map((comment) => ({ id: commentId(comment.url), body: comment.body, html_url: comment.url, user: { login: comment.login ?? mcp.login } }))),
-  add_issue_comment: (mcp, { issue_number: number, body }) => {
-    const index = mcp.forge.posted === undefined ? mcp.forge.comments.length + 1 : (mcp.forge.posted += 1)
-    const comment = { number, body, bodies: [body], edits: 0, url: `${mcp.forge.pages}/${mcp.page}/${number}#issuecomment-${900 + index}` }
-    mcp.forge.comments.push(comment)
-    return { id: String(commentId(comment.url)), url: comment.url }
-  },
-  update_issue_comment: (mcp, { comment_id: id, body }) => {
-    const comment = mcp.forge.comments.find((each) => commentId(each.url) === id)
-    if (!comment) return null
-    Object.assign(comment, { body, bodies: [...comment.bodies, body], edits: (comment.edits ?? 0) + 1 })
-    return { id: String(id), url: comment.url }
-  },
-  list_pull_requests: (mcp, { head, state }) => (state !== 'all' ? null : mcp.forge.pullRequests
-    .filter((pull) => `${mcp.repository.split('/')[0]}:${pull.head}` === head).reverse().slice(0, 1)
-    .map(({ number, url, state: now, body }) => ({ number, html_url: url, state: now === 'open' ? 'open' : 'closed', merged: false, ...(now === 'merged' ? { merged_at: '2026-10-01T00:00:00Z' } : {}), body }))),
-  create_pull_request: (mcp, { base, head, title, body, draft }) => {
-    const number = 41 + mcp.forge.pullRequests.length + 1
-    const url = `${mcp.forge.pages}/pull/${number}`
-    mcp.forge.pullRequests.push({ number, url, head, base, title, draft, state: 'open', body })
-    return { id: String(number * 1000), url }
-  },
-  update_pull_request: (mcp, { pullNumber, body }) => {
-    const pull = mcp.forge.pullRequests.find((each) => each.number === pullNumber)
-    if (!pull) return null
-    pull.body = body
-    return { id: String(pullNumber * 1000), url: pull.url }
-  },
-  pull_request_read: (mcp, { method, pullNumber }) => {
-    const pull = method === 'get' ? mcp.forge.pullRequests.find((each) => each.number === pullNumber) : undefined
-    return pull ? { number: pull.number, title: pull.title, body: pull.body, state: 'open', html_url: pull.url, base: pull.base, head: pull.head } : null
-  },
-}
-
-/** @param {InMemoryCodeHost} forge @param {number} number */
-const issueOn = (forge, number) => {
-  const found = forge.issues === undefined ? { title: `Issue ${number}`, body: `Acceptance criteria of #${number}` } : forge.issues[number]
-  if (found === 'pull-request') return { number, title: 'A pull request', html_url: `${forge.pages}/pull/${number}`, state: 'open' }
-  return found ? { number, title: found.title, body: found.body, html_url: `${forge.pages}/issues/${number}`, state: 'open' } : null
-}
-
-/**
- * The host's Azure DevOps MCP server (`ado`, @azure-devops/mcp) over work items it holds: its
- * `wit_work_item` tool gets one or lists its comments, its `wit_work_item_comment_write` adds or
- * updates one, as the signed-in user, the organization's pages its own. What each answers is the
- * REST JSON as text, the shape skraft assumes (docs/v2/host-verification.md, not measured). Like
- * 2.11.0 it rewrites `<`, `>` and `&` of a Markdown comment as HTML entities.
- * `requests` lists each call (tool and arguments) in order, `calls` its `<server> <tool>`;
- * `fails` gives, by tool or by `<tool>:<action>`, the reason it fails with (`mcp-refused`…), or `unreadable` for an
- * answer that is no JSON; a tool it lacks answers `mcp-tool-missing`; `answers` replaces what a
- * tool answers, given its arguments. `workItems` are the fields of each work item by id;
- * `comments` the comments of the work items, which a test may remove, as a human deleting one;
- * `pageSize` the most comments one listing answers before it gives a continuation token.
- * `listed` counts how often the host listed its servers.
- */
-export class InMemoryAzureMcp {
-  /** @param {{ servers?: string[], organization?: string, workItems?: Record<number, Record<string, unknown>>, pullRequests?: Record<number, Record<string, unknown>>, fails?: Record<string, string>, answers?: Record<string, (args: any, mcp: InMemoryAzureMcp) => unknown>, pageSize?: number }} [options]
-   *   pullRequests: the pull requests as the REST API answers them, by id; `threads` (below) their comment threads */
-  constructor({ servers = ['ado'], organization = 'https://dev.azure.com/acme', workItems = {}, pullRequests = {}, fails = {}, answers = {}, pageSize = 100 } = {}) {
-    this.names = servers
-    this.organization = organization
-    this.workItems = workItems
-    this.pullRequests = pullRequests
-    this.fails = fails
-    this.answers = answers
-    this.pageSize = pageSize
-    /** @type {Array<{ id: number, workItemId: number, project: string, text: string, texts: string[] }>} */
-    this.comments = []
-    /** @type {Array<{ id: number, pullRequestId: number, project?: string, status?: string, comments: Array<{ id: number, content: string, isDeleted?: boolean }> }>} the threads of the pull requests, in the order they were posted */
-    this.threads = []
-    this.threadsPosted = 0
-    /** @type {string[]} */
-    this.calls = []
-    /** @type {Array<{ tool: string, arguments: Record<string, unknown> }>} */
-    this.requests = []
-    this.listed = 0
-    this.posted = 0
-  }
-  async servers() {
-    this.listed += 1
-    return this.names
-  }
-  async call({ server, tool, arguments: args }) {
-    this.calls.push(`${server} ${tool}`)
-    this.requests.push({ tool, arguments: args })
-    const failure = this.fails[`${tool}:${args.action}`] ?? this.fails[tool]
-    if (failure === 'unreadable') return { ok: true, text: 'not JSON' }
-    if (failure) return { ok: false, reason: failure }
-    const run = this.answers[tool] ?? (AZURE_TOOLS[tool] && ((given) => AZURE_TOOLS[tool](this, given)))
-    if (!run) return { ok: false, reason: 'mcp-tool-missing' }
-    const answer = run(args, this)
-    return answer === null ? { ok: false, reason: 'mcp-failed' } : { ok: true, text: JSON.stringify(answer) }
-  }
-}
-
-/** @param {InMemoryAzureMcp} mcp @param {{ id: number, workItemId: number, project: string }} comment */
-const commentUrl = (mcp, { id, workItemId, project }) => `${mcp.organization}/${encodeURIComponent(project)}/_apis/wit/workItems/${workItemId}/comments/${id}`
-
-/** The comment as the REST API answers it. @param {InMemoryAzureMcp} mcp @param {InMemoryAzureMcp['comments'][number]} comment */
-const commentAnswer = (mcp, comment) => ({ id: comment.id, workItemId: comment.workItemId, text: comment.text, format: 'markdown', url: commentUrl(mcp, comment) })
-
-/** The thread as the tool answers it: whole with `fullResponse`, else as the server trims it, the id and content of each comment. @param {InMemoryAzureMcp['threads'][number]} thread @param {boolean} [full] */
-const threadAnswer = ({ pullRequestId, project, ...thread }, full = true) => (full ? thread : { id: thread.id, comments: thread.comments.map(({ id, content }) => ({ id, content })) })
-
-/** The repository tools of @azure-devops/mcp 2.11.0 (src/tools/repositories.ts) skraft calls, on the pull requests and threads of the double. */
-const AZURE_REPOSITORY_TOOLS = {
-  repo_repository: (mcp, { action, project, repositoryNameOrId }) => (action === 'get' ? { id: 'r-1', name: repositoryNameOrId, url: `${mcp.organization}/p-1/_apis/git/repositories/r-1`, webUrl: `${mcp.organization}/${encodeURIComponent(project)}/_git/${repositoryNameOrId}` } : null),
-  repo_pull_request: (mcp, { action, pullRequestId }) => (action === 'get' ? mcp.pullRequests[pullRequestId] ?? null : null),
-  repo_pull_request_thread: (mcp, { action, project, pullRequestId, top = 100, skip = 0, fullResponse }) => {
-    if (action !== 'list') return null
-    return mcp.threads.filter((thread) => thread.pullRequestId === pullRequestId && (thread.project ?? project) === project).sort((a, b) => a.id - b.id).slice(skip, skip + top).map((thread) => threadAnswer(thread, fullResponse === true))
-  },
-  repo_pull_request_thread_write: (mcp, { action, project, pullRequestId, threadId, commentId, content, status, fullResponse }) => {
-    if (action === 'create') {
-      mcp.threadsPosted += 1
-      const thread = { pullRequestId, project, id: 40 + mcp.threadsPosted, status, comments: [{ id: 1, content }] }
-      mcp.threads.push(thread)
-      return threadAnswer(thread)
-    }
-    const comment = mcp.threads.find((each) => each.pullRequestId === pullRequestId && each.id === threadId)?.comments.find((each) => each.id === commentId)
-    if (action !== 'update' || !comment) return null
-    Object.assign(comment, { content })
-    return fullResponse ? { id: comment.id, content } : `Comment ${commentId} successfully updated`
-  },
-}
-
-/** The tools of @azure-devops/mcp 2.11.0 skraft calls, each on the work items of the double. */
-const AZURE_TOOLS = {
-  ...AZURE_REPOSITORY_TOOLS,
-  wit_work_item: (mcp, { action, id, workItemId, project }) => {
-    if (action === 'get') return mcp.workItems[id] ? { id, url: `${mcp.organization}/_apis/wit/workItems/${id}`, fields: mcp.workItems[id] } : null
-    if (action !== 'list_comments') return null
-    const comments = mcp.comments.filter((comment) => comment.workItemId === workItemId && comment.project === project)
-    return { count: comments.length, comments: comments.slice(0, mcp.pageSize).map((comment) => commentAnswer(mcp, comment)), ...(comments.length > mcp.pageSize ? { continuationToken: 'more' } : {}) }
-  },
-  wit_work_item_comment_write: (mcp, { action, project, workItemId, commentId, text }) => {
-    const escaped = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-    if (action === 'add') {
-      mcp.posted += 1
-      const comment = { id: 700 + mcp.posted, workItemId, project, text: escaped, texts: [escaped] }
-      mcp.comments.push(comment)
-      return commentAnswer(mcp, comment)
-    }
-    const comment = mcp.comments.find((each) => each.id === commentId && each.workItemId === workItemId)
-    if (action !== 'update' || !comment) return null
-    Object.assign(comment, { text: escaped, texts: [...comment.texts, escaped] })
-    return commentAnswer(mcp, comment)
-  },
-}

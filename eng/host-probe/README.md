@@ -1,7 +1,7 @@
 # eng/host-probe
 
 Measures the GitHub Copilot host behaviours the `skraft-pipeline` driver relies on
-([the Copilot driver contract](../../docs/site/en/explanation/architecture.md#the-copilot-driver-contract)). It drives a headless Copilot SDK
+([the Copilot driver contract](../../docs/website/docs/explanation/architecture.md#the-copilot-driver-contract)). It drives a headless Copilot SDK
 host: **no model call, no AI credit** unless `--agent-calls` is given. The skraft workflow is
 only started with an invalid slug, which the engine refuses before any agent.
 
@@ -48,7 +48,7 @@ The session asks for extension access once: the probe approves it for its own fi
 | `select-joined-session-from-workflow` | opens one on failure | the joined session's `session.ui.select` inside a workflow run reaches the host's handler with the options, and returns the chosen one (`null` when declined): how the `skraft-pipeline` run asks a question with options |
 | `input-joined-session-from-workflow` | opens one on failure | the joined session's `session.ui.input` inside a workflow run reaches the host's handler as a text field, and returns the text (`null` when declined): how the run asks a blocked step's instruction and a refusal's reason |
 | `throwing-workflow` | #247 | what the host returns for a workflow that throws |
-| `workflow-undeclared-phase` | — | `ctx.phase` of a title `meta.phases` does not declare does not throw, the run completes, and `getRunDetail` lists the phase entered with a null ordinal (a phase only an ejected workflow names, #429); a measurement |
+| `workflow-undeclared-phase` | — | `ctx.phase` of a title `meta.phases` does not declare does not throw, the run completes, and `getRunDetail` lists the phase entered with a null ordinal, and a declared phase opened before and after it keeps its ordinal and counts both entries (a phase only an ejected workflow names, #429); a measurement |
 | `broken-workflow-isolation` | #246 | a workflow without `phases` takes the tool of the same join down |
 | `bad-tool-name-isolation` | #246 | a refused tool name takes the workflow of the same join down |
 | `canvas-accepted-at-join` | opens one on failure | a join carrying a canvas (`createCanvas`) and a tool is accepted: `session.rpc.canvas.list()` names the canvas and the tool is offered |

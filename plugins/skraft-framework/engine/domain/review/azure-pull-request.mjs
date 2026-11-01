@@ -4,7 +4,7 @@ import { commentStartOf } from './pull-request.mjs'
 
 /**
  * A pull request of Azure Repos and its review thread: the same reading whichever way they were
- * fetched (the host's Azure DevOps MCP server or az), as REST answers them. The threads are
+ * fetched by az, as REST answers them. The threads are
  * kept as azure-thread.mjs says.
  *
  * @typedef {import('../../application/ports/pull-requests.mjs').PullRequestFacts} PullRequestFacts

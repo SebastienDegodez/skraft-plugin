@@ -1,14 +1,14 @@
 /**
  * A comment of a run on a pull request of Azure Repos, kept as the first comment of a thread and
  * found again among the pull request's threads: the same choice whichever way the threads were
- * listed (the host's Azure DevOps MCP server or az) and whatever the comment is (the review, the
+ * listed by az and whatever the comment is (the review, the
  * run's details). Each caller says what starts its thread.
  *
  * @typedef {{ organization: string, project: string, repository: string }} ThreadSite the organization, project and repository of the Git remote
  * @typedef {{ threadId: number, commentId: number }} KeptThread the thread and its first comment
  */
 
-/** CommentThreadStatus.Closed as the REST API takes it (4 in @azure-devops/mcp's enum, whose name 'Closed' the server's tool takes). */
+/** CommentThreadStatus.Closed as the REST API takes it (CommentThreadStatus 4). */
 export const THREAD_CLOSED = 4
 
 /** @param {string} text */

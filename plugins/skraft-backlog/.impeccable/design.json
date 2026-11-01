@@ -52,7 +52,7 @@
       "committed": ["Lato", "Fira Code"],
       "selfHosted": false,
       "renderedToday": "Fallbacks: Avenir Next / Segoe UI for text, SFMono-Regular / Menlo / Consolas for code.",
-      "note": "Brand commitment of skraft (docs/site/assets/css/design-tokens.css). Fetching the OFL woff2 files needed a network approval that was denied. Open defect, not a system choice."
+      "note": "Brand commitment of skraft (docs/website/src/css/custom.css). Fetching the OFL woff2 files needed a network approval that was denied. Open defect, not a system choice."
     },
     "shadows": [
       { "name": "float", "value": "0 10px 30px rgb(0 0 0 / 35%)", "purpose": "Dark theme: the toast and the plan drawer under 880px. Nothing at rest." },

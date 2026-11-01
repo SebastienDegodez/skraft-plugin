@@ -162,10 +162,10 @@ test('the details are titled in the language of the story, detected from the iss
 })
 
 test('a story whose run kept no issue is told by its title alone', async () => {
-  const host = scripted({ config: CONSENTED, codeHost: azure({ fails: { issue: 'the forge could not be asked' } }) }, (it) => nominal(it, REFS_42))
+  const host = scripted({ config: CONSENTED, codeHost: azure() }, (it) => nominal(it))
   host.prWriters.push(prWriter({ why: LONG_WHY }))
 
-  assert.equal((await host.start({ story: { issue: 42, title: 'Payer la commande par carte pour les clients de la boutique' } })).status, 'done')
+  assert.equal((await host.start({ story: { issue: null, title: 'Payer la commande par carte pour les clients de la boutique' } })).status, 'done')
 
   assert.ok(host.codeHost.pullRequestComments[0].body.includes('\n# skraft · détails du run\n'))
 })

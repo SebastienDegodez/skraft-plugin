@@ -5,7 +5,7 @@ La documentation publique de SKRAFT V2 est le handbook, en français et en angla
 > **[https://sebastiendegodez.github.io/skraft-plugin/](https://sebastiendegodez.github.io/skraft-plugin/)**
 
 Son contenu vit dans [`site/`](./site/) ; sa structure (parties Diátaxis, pages, parité FR/EN)
-est déclarée dans [`site/_data/book.yml`](./site/_data/book.yml).
+est déclarée dans [`website/book.yml`](./website/book.yml).
 
 ---
 
@@ -24,4 +24,4 @@ est déclarée dans [`site/_data/book.yml`](./site/_data/book.yml).
 2. Consulter le [handbook](https://sebastiendegodez.github.io/skraft-plugin/fr/) : tutoriel,
    guides pratiques, référence, explications, et le
    [catalogue des agents et skills](https://sebastiendegodez.github.io/skraft-plugin/fr/dashboard/).
-3. Consulter la [feuille de route](./site/fr/index.md#roadmap) pour ce qui reste avant la 2.0.0.
+3. Consulter la [feuille de route](./website/i18n/fr/docusaurus-plugin-content-docs/current/index.mdx#roadmap) pour ce qui reste avant la 2.0.0.

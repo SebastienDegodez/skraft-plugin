@@ -20,12 +20,17 @@ test('a PATH holding an az is refused, whichever folder holds it', async (t) => 
   await assertNoAz(envWithPath([tempFolder(t)]), dir)
 })
 
-test('the PATH of a test without az holds a node shim, never the folder node lives in, which may hold az', async (t) => {
+test('the PATH of a test without az never holds the folder node lives in when az sits there: a node shim, or under Windows a refusal', async (t) => {
   const nodeFolder = folderWithAz(t)
   const node = join(nodeFolder, 'node')
   writeFileSync(node, '')
   const before = process.env.PATH
 
+  if (process.platform === 'win32') {
+    await assert.rejects(withoutAz(t, { execPath: node }), /az sits beside a program of the test PATH in /)
+    assert.equal(process.env.PATH, before)
+    return
+  }
   await withoutAz(t, { execPath: node })
 
   assert.notEqual(process.env.PATH, before)

@@ -2,7 +2,7 @@ import { escapedAsHtml } from './azure-thread.mjs'
 
 /**
  * The comment of a run on its work item, found again among the work item's comments: the same
- * choice whichever way the comments were listed (the host's MCP server or az).
+ * choice on the comments az lists.
  *
  * @typedef {{ organization: string, project: string }} WorkItemSite the organization and project of the Git remote
  */
@@ -22,9 +22,9 @@ export const areComments = (comments) => Array.isArray(comments) && comments.eve
 
 /**
  * The comment to rewrite: the one at the URL the journal kept, else the last whose text STARTS
- * with the marker (the first line of a comment of the run), as written or with `<`, `>` and `&` as
- * the MCP server rewrites them (2.11.0, as the azure-boards-work-items skill says; not measured
- * through az). A reply that quotes the marker further in is someone else's, never rewritten; who
+ * with the marker (the first line of a comment of the run), as written or with `<`, `>` and `&`
+ * escaped as the Azure DevOps MCP server 2.11.0 writes them for an agent (as the
+ * azure-boards-work-items skill says; not measured). A reply that quotes the marker further in is someone else's, never rewritten; who
  * wrote a comment is not checked, since Azure does not tell it here (docs/v2/host-verification.md).
  * @param {WorkItemSite} site @param {{ number: number, marker: string, url: string | null }} request
  * @param {any[]} comments the work item's comments, as REST answers them: `id` and `text`

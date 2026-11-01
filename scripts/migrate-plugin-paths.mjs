@@ -33,6 +33,7 @@ const excludedPrefixes = Object.freeze([
   'dashboard-data/',
   'docs/adr/',
   'docs/site/dashboard/data/',
+  'docs/website/static/dashboard/data/',
   'docs/superpowers/plans/',
   'docs/superpowers/specs/',
   'eval-results/',

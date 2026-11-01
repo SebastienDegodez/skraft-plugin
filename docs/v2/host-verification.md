@@ -1,7 +1,7 @@
 <!-- markdownlint-disable-file -->
 # Vérification d'hôte Copilot — index d'évidence
 
-Ce que le pilote Copilot suppose de l'hôte, mesuré par `eng/host-probe/copilot-probe.mjs` (hôte SDK headless, aucun appel de modèle) — [contrat du pilote Copilot](../site/fr/explanation/architecture.md#le-contrat-du-pilote-copilot), issue #251. Chaque passage de la sonde ajoute sa section en tête, avec les versions mesurées.
+Ce que le pilote Copilot suppose de l'hôte, mesuré par `eng/host-probe/copilot-probe.mjs` (hôte SDK headless, aucun appel de modèle) — [contrat du pilote Copilot](../website/i18n/fr/docusaurus-plugin-content-docs/current/explanation/architecture.md#le-contrat-du-pilote-copilot), issue #251. Chaque passage de la sonde ajoute sa section en tête, avec les versions mesurées.
 
 ## Mesures
 
@@ -11,6 +11,11 @@ Ce que le pilote suppose déjà sans mesure ; la prochaine passe de la sonde rem
 
 | Contrôle | Issue | Verdict | Supposé par |
 | --- | --- | --- | --- |
+| Copilot CLI : le plugin installé est un clone git dans `<COPILOT_HOME ou ~/.copilot>/installed-plugins/<marketplace>/skraft/`, mis à jour en place par `copilot plugin update` (même chemin après mise à jour), sous Linux et Windows | #467 | not measured ; affirmé par le mainteneur | `cli/src/locate-plugin.mjs` (commande `skraft`, paquet `@skraft/cli`) |
+| Copilot CLI : `copilot plugin update skraft` met à jour le plugin installé depuis son marketplace, sans interaction, avec un code de sortie 0 en cas de succès (Linux, Windows via `copilot.cmd`) | #467 | not measured ; syntaxe de la référence CLI de GitHub | `cli/src/upgrade.mjs` (`skraft upgrade`) |
+| Claude Code : `claude plugin update skraft@<marketplace>` met à jour hors session, sans interaction, code 0 en cas de succès ; la session ouverte garde l'ancienne version jusqu'au redémarrage | #467 | not measured ; syntaxe de la doc Claude Code | `cli/src/upgrade.mjs` |
+| Claude Code : une entrée `scope: project` ou `local` de `installed_plugins.json` porte `projectPath`, le dossier du dépôt auquel elle s'applique (champ non documenté) | #467 | not measured ; la doc ne nomme pas le champ | `cli/src/locate-plugin.mjs` (`fitOf` : une entrée sans `projectPath` passe après celle de `user`) |
+| Claude Code : `installed_plugins.json` sous `<CLAUDE_CONFIG_DIR ou ~/.claude>/plugins/` liste `installPath` (et `lastUpdated`) de la version courante de chaque `skraft@<marketplace>`, réécrit à chaque mise à jour | #447, #467 | not measured ; repris de #447 | `cli/src/locate-plugin.mjs` |
 | agent lancé : charge-t-il `AGENTS.md`, `CLAUDE.md` ou `.github/copilot-instructions.md` de la copie de travail (Copilot CLI) | — | not measured, aucun contrôle de sonde | rien : la revue d'une pull request (#240) n'en suppose rien ; si l'hôte les charge, ses lentilles lisent la version de l'auteur de la pull request à côté des copies de la base que leur brief désigne |
 | agent lancé : même question sous Claude Code et sous VS Code | — | not measured, hors de cette sonde | idem |
 | Claude Code (mod) : effort d'un sous-agent réécrit par `turn.step` avec `CLAUDE_CODE_EFFORT_LEVEL` posée, lancements en parallèle, autre modèle que `sonnet`, session interactive | #258 | not measured | `agent-runner.mjs` (`createAgentEfforts`), `claude-mod-driver.mjs` (`turnStep`), `skraft-mod.tsx` (`turn.step`) ; mesuré sur 2.1.291 et 2.1.314 sous `-p`, lancements en parallèle compris (3 simultanés, 60 pas), voir la section #258 |
@@ -111,6 +116,18 @@ Question : dans un run, `ctx.phase` d'un titre que `meta.phases` ne déclare pas
 | `workflow-undeclared-phase`, mutation à la main : `UNDECLARED_PHASE = 'Probe'` (titre déclaré) | — | fail | seule `Probe` est listée : le contrôle ne passe que si la phase entrée est listée sans ordinal. Restauré, `pass` |
 
 Lecture : `pass`. Copilot CLI 1.0.105 garde une phase que la meta ne déclare pas comme une phase à part, sans ordinal ; `ctx.phase` ne lève pas. Décision : le pilote garde le relais tel quel (branche KEEP), sans filtre ni `try`. « Déclarer les phases depuis le DOT » ne pourrait de toute façon épingler que celles du DOT du plugin (la meta est figée à l'enregistrement) ; un test épingle la liste déclarée sur les phases du DOT du plugin.
+
+### Sonde d'hôte Copilot — 2026-10-30 (branche fix/418-canvas-gaps, phase non déclarée ouverte avant une phase déclarée)
+
+Copilot CLI GitHub Copilot CLI 1.0.105. · SDK 1.0.105 · Node v22.17.1 · darwin 25.5.0. Aucun appel de modèle (`npm run probe:copilot -- --require workflow-undeclared-phase`, sans `--agent-calls` ni `--report-issues`), CLI connecté.
+
+Question : la phase déclarée (`Probe`) ouverte après une phase non déclarée (`UNDECLARED`) garde-t-elle son ordinal ? Le pilote relaie les phases d'un workflow éjecté dans l'ordre du DOT, une phase que `meta.phases` ne déclare pas pouvant précéder une phase déclarée. Le contrôle ouvre désormais `Probe`, puis `UNDECLARED`, puis `Probe`. Il passe seulement si `UNDECLARED` est listée avec `ordinal: null` et `entryCount` > 0, et si `Probe` est listée avec `ordinal` 0 et `entryCount` 2 (ses deux entrées comptées). `currentPhase` n'entre pas dans le verdict : l'hôte la rend `null` une fois le run terminé.
+
+| Contrôle | Issue | Verdict | Observé |
+| --- | --- | --- | --- |
+| `workflow-undeclared-phase` | — | pass | run `completed`, `threw: false` ; `getRunDetail` liste `Probe` (`ordinal` 0, `entryCount` 2) puis `UNDECLARED` (`ordinal: null`, `entryCount` 1) ; `declaredPhaseCount` 1, `currentPhase` `null` |
+
+Lecture : `pass`. Copilot CLI 1.0.105 laisse à la phase déclarée son ordinal (0) et compte ses deux entrées quand une phase non déclarée s'est intercalée. Le contrôle échoue (`fail`) sur un hôte qui retirerait l'ordinal (hôte simulé `shifts`) ou oublierait l'entrée ouverte après la phase non déclarée (hôte simulé `forgets`) ; ces deux échecs sont mesurés sur l'hôte simulé des tests d'outillage, non sur le vrai. Comment l'app Copilot, la vue `/workflows` et VS Code dessinent ces phases reste non mesuré (la sonde lit `getRunDetail`, pas un rendu).
 
 ### Mod Claude Code : forme de `$.tool.list()` et permission de `$.mcp.call` — 2026-10-30 (branche test/422-mod-mcp-wiring, #422)
 

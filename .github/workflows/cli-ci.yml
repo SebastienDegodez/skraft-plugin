@@ -1,0 +1,52 @@
+name: skraft command (@skraft/cli) CI
+
+# The skraft command finds the plugin a host installed and runs its engine. It runs on the
+# developer's machine: its lookup must work, unchanged, on Linux, macOS and Windows.
+on:
+  push:
+    branches: [main, integration/v2-next]
+    paths:
+      - 'cli/**'
+      - 'tests/cli/**'
+      # The contract the session reads (skraft commands --json) and the CLI the command imports.
+      - 'plugins/skraft-framework/engine/drivers/cli/**'
+      - '.github/workflows/cli-ci.yml'
+  pull_request:
+    branches: [main, integration/v2-next, 'v2/lot-*']
+    paths:
+      - 'cli/**'
+      - 'tests/cli/**'
+      # The contract the session reads (skraft commands --json) and the CLI the command imports.
+      - 'plugins/skraft-framework/engine/drivers/cli/**'
+      - '.github/workflows/cli-ci.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Each failing node:test case becomes a check-run annotation, readable without the job log.
+env:
+  ANNOTATED_TESTS: >-
+    --test-reporter=spec --test-reporter-destination=stdout
+    --test-reporter=./scripts/lib/gh-annotations-reporter.mjs --test-reporter-destination=stdout
+
+jobs:
+  test:
+    name: Plugin lookup (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '22'
+      - name: Run the plugin lookup tests
+        env:
+          NODE_OPTIONS: ${{ env.ANNOTATED_TESTS }}
+        run: npm run test:cli
+      - name: Check the package content
+        working-directory: cli
+        run: npm pack --dry-run

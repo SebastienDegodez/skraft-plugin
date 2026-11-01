@@ -13,8 +13,8 @@ import { verdictState } from './verdict.mjs'
 const DOCS = 'https://sebastiendegodez.github.io/skraft-plugin'
 const DEEP_DIVE =
   '📐 **Full explanation, with worked numbers:** ' +
-  `[🇫🇷 Lire un verdict d'évaluation](${DOCS}/fr/explanation/deep-dive/reading-a-verdict.html) · ` +
-  `[🇬🇧 Reading an evaluation verdict](${DOCS}/en/explanation/deep-dive/reading-a-verdict.html)`
+  `[🇫🇷 Lire un verdict d'évaluation](${DOCS}/fr/explanation/deep-dive/reading-a-verdict) · ` +
+  `[🇬🇧 Reading an evaluation verdict](${DOCS}/explanation/deep-dive/reading-a-verdict)`
 
 const BADGE = {
   pass: '✅ pass',
@@ -139,7 +139,7 @@ const SKILL_LEGEND = [
   '*at the ceiling* means the baseline already scored full marks, so that stimulus cannot discriminate',
   'no matter how good the skill is — and whether the LLM judge read the same runs differently.',
   '',
-  `Each spec budgets its own trials through \`defaults.runs\`; see [Evaluation tooling](${DOCS}/en/reference/evaluation-tooling.html).`,
+  `Each spec budgets its own trials through \`defaults.runs\`; see [Evaluation tooling](${DOCS}/reference/evaluation-tooling).`,
   '',
   DEEP_DIVE,
   '',

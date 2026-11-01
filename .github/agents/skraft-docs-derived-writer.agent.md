@@ -5,8 +5,8 @@ description: >-
   retained `type: derived` handbook page from its plugin source (a gate, pattern,
   infrastructure contract or citations data), in FR and EN mirrored. Copies the
   source's canonical vocabulary VERBATIM, follows the reference_template block
-  contract, and keeps the FR/EN basename identical. It writes only derived pages
-  under docs/site/ — never editorial pages, never plugin sources, never invented
+  contract, and keeps the FR/EN path identical (the page's `doc` id). It writes only
+  derived pages under docs/website/ — never editorial pages, never plugin sources, never invented
   facts.
 model: inherit
 user-invocable: false
@@ -16,11 +16,11 @@ metadata:
   capability: docs-derived
   inputs:
     required:
-      - a drift item (JSON) for a retained derived page (missing/empty/parity), with fr, en, source
-      - docs/site/_data/book.yml (reference_template + the page entry)
+      - a drift item (JSON) for a retained derived page (missing/empty/parity), with doc, fr, en, source
+      - docs/website/book.yml (reference_template + the page entry)
       - the source file(s) named by the item's `source`
     context:
-      - docs/site/_data/citations.yml (for the why-citation block)
+      - docs/website/data/citations.yml (for the why-citation block)
   outputs:
     - the FR and EN derived page(s), mirrored — NO commit
   genesis_patterns:
@@ -57,25 +57,28 @@ Entities / Use Cases / Interface Adapters.
 
 ## Procedure
 
-1. **Reload the contract.** Read the page entry in `book.yml` (its `fr`, `en`,
-   `source`, `sidebar_position`) and the `reference_template` block list.
+1. **Reload the contract.** Read the page entry in `book.yml` (its `doc`,
+   `source`, `sidebar_position`) and take the `fr` and `en` paths from the drift item and the `reference_template` block list.
 2. **Read the source.** Open every file matched by `source`. Extract the role,
    the canonical terms, the gates/lenses/patterns it defines.
 3. **Write the FR page**, then the **EN page**, mirrored — same heading structure,
-   same `sidebar_position`, **same English basename** (only the `fr/` vs `en/`
-   folder differs). Follow `reference_template`: frontmatter
-   (`layout/lang/title/description` + `sidebar_position`), `# Title`, the
-   one-sentence intro callout, then factual sections (synopsis, tables, mermaid)
+   same `sidebar_position`, **same relative path and extension** (EN under
+   `docs/website/docs/`, FR under
+   `docs/website/i18n/fr/docusaurus-plugin-content-docs/current/`; `.mdx` only when the
+   page holds JSX). Follow `reference_template`: front matter `title`, `description`
+   (≤ 160 characters) and `sidebar_position`, `# Title`, the one-sentence lead
+   paragraph (no blockquote), then factual sections (synopsis, tables, mermaid)
    in the source's canonical terms. Do not explain why: link to the explanation
    page in one line. Add `## Sources` only when the page cites.
 4. **Cite correctly.** Cite only a claim attributed to an author. A quotation uses
    `> « quote ≤25 words »` then `> — Author, *Title*, Year.` with author+year
-   present in `citations.yml`. Internal links use
-   `{{ "/fr/…" | relative_url }}` — never a bare `/fr/…`.
+   present in `citations.yml`. Internal links are relative file links from the page's own
+   folder, with the extension (`../how-to/run-gates.md`, `../reference/citations.mdx#cite-<key>`);
+   never a `/fr/…` or `/en/…` URL and never Liquid.
 5. **Self-check** before returning:
 
    ```bash
-   node scripts/check-citations.mjs --citations docs/site/_data/citations.yml --pages "<the two files>"
+   node scripts/check-citations.mjs --citations docs/website/data/citations.yml --pages "<the two files>"
    node scripts/lint-nav.mjs
    ```
 

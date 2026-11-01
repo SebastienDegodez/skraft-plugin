@@ -1,0 +1,29 @@
+{
+  "extends": "semantic-release-monorepo",
+  "branches": [
+    "main",
+    { "name": "integration/v2-next", "prerelease": "alpha", "channel": "alpha" }
+  ],
+  "tagFormat": "cli-v${version}",
+  "plugins": [
+    ["@semantic-release/commit-analyzer", {
+      "preset": "conventionalcommits",
+      "releaseRules": [
+        { "breaking": true, "release": "major" },
+        { "type": "docs", "release": false },
+        { "type": "refactor", "release": "patch" },
+        { "type": "perf", "release": "patch" }
+      ]
+    }],
+    ["@semantic-release/release-notes-generator", { "preset": "conventionalcommits" }],
+    ["@semantic-release/exec", {
+      "prepareCmd": "npm version ${nextRelease.version} --no-git-tag-version --allow-same-version",
+      "publishCmd": "npm publish --access public --provenance --tag ${nextRelease.channel || 'latest'}"
+    }],
+    ["@semantic-release/github", {
+      "successComment": false,
+      "failComment": false,
+      "releasedLabels": false
+    }]
+  ]
+}
