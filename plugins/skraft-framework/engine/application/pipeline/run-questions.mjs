@@ -73,7 +73,7 @@ const consent = (key, moot = () => null, needs = async () => null) => ({
  * @returns {Promise<T | { environment: string }>}
  */
 const unlessMissing = async (done, accepted, needs) => {
-  if (!accepted || 'environment' in done) return done
+  if (!accepted) return done
   const missing = await needs()
   return missing === null ? done : { environment: missing }
 }

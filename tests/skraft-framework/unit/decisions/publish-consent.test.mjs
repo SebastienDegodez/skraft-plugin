@@ -111,10 +111,14 @@ test('a consent to publish, kept or given now, on a machine that cannot reach th
   assert.equal(given.workspace.config().publish.pullRequest, true)
 })
 
-test('a consent declined, or never asked, checks no forge: the run goes on without it', async () => {
-  const declined = consenting({ config: { publish: { pullRequest: false } }, codeHost: new InMemoryCodeHost({ unavailable: NO_GH }) })
+test('a consent declined, kept or given now, checks no forge: the run goes on without it', async () => {
+  const kept = consenting({ config: { publish: { pullRequest: false } }, codeHost: new InMemoryCodeHost({ unavailable: NO_GH }) })
+  const given = consenting({ config: { publish: { visuals: false } }, codeHost: new InMemoryCodeHost({ unavailable: NO_GH }), answers: [{ answer: 'DECLINED' }] })
 
-  assert.equal((await declined.start()).status, 'done')
+  assert.equal((await kept.start()).status, 'done')
+  assert.equal((await given.start()).status, 'done')
 
-  assert.deepEqual([declined.human.questions, declined.codeHost.calls], [[], []])
+  assert.deepEqual(kept.human.questions, [])
+  assert.deepEqual(given.human.questions.map(({ key }) => key), ['publish_consent-1'])
+  assert.equal(given.workspace.config().publish.pullRequest, false)
 })
