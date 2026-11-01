@@ -317,7 +317,7 @@ const pipelineCaptures = async () => {
   const { cwd } = repository.pipelineRepository(testContext)
   cleanups.push(() => rmSync(`${cwd}-home`, { recursive: true, force: true }))
   const person = host.answeringSession({ answers: [null, 'RATIFIED'] })
-  const { ctx, logs } = host.simulatedContext({ args: { slug: repository.SLUG, issue: 42, title: 'Pay by card' }, otherwise: host.actsAs(repository.scriptedLlm({ cwd })) })
+  const { ctx, logs } = host.simulatedContext({ args: { slug: repository.SLUG, title: 'Pay by card' }, otherwise: host.actsAs(repository.scriptedLlm({ cwd })) })
   const paused = await runSkraftPipelineWorkflow(ctx, host.copilotHost(cwd, PLUGIN_ROOT, person)).then(() => null, (error) => error.message)
   if (paused !== 'paused at adr-1') throw new Error(`the scripted run did not pause at its ADR: ${paused}`)
   await canvasShot(cwd, `${cwd}-home`, 'pipeline-canvas-adr.png')
