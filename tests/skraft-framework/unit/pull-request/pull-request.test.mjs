@@ -2,7 +2,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { BUILT_IN_WORKFLOW, InMemoryCodeHost, InMemoryGit, ScriptedMachine, ScriptedReplay } from '../support/in-memory-host.mjs'
 import { edit } from '../workflow/support.mjs'
-import { agent, API, finding, lenses, nominal, prWriter, PROSE_TEMPLATE, refutes, REFS_42, says, scripted, SLUG, tddCycle, TRACKING } from '../support/pipeline-host.mjs'
+import { agent, API, finding, forgeLostAtFirstAgent, lenses, nominal, prWriter, PROSE_TEMPLATE, refutes, REFS_42, says, scripted, SLUG, tddCycle, TRACKING } from '../support/pipeline-host.mjs'
 import { passing } from '../support/in-memory-host.mjs'
 import { eventsOf } from '../support/decisions.mjs'
 import { opening, section } from '../support/description.mjs'
@@ -232,12 +232,11 @@ test('without the consent, a forge, a branch apart from the base, the run comple
     [{ config: CONSENTED, codeHost: new InMemoryCodeHost({ fails: { find: 'gh could not list the pull requests' } }) }, 'gh could not list the pull requests', 'Closes'],
     [{ config: CONSENTED, codeHost: new InMemoryCodeHost({ fails: { create: 'gh could not open the pull request' } }) }, 'gh could not open the pull request', 'Closes'],
   ]
-  for (const [options, why, issueLine, unreachableOnceRead = null] of cases) {
-    const host = scripted(options, (it) => nominal(it, REFS_42))
-    assert.equal((await host.init(STORY)).ok, true, why)
-    if (unreachableOnceRead !== null) host.codeHost.missing = unreachableOnceRead
+  for (const [options, why, issueLine, lostOnceStarted = null] of cases) {
+    const script = (it) => nominal(it, REFS_42)
+    const host = scripted(options, lostOnceStarted === null ? script : forgeLostAtFirstAgent(script, lostOnceStarted))
 
-    const outcome = await host.run()
+    const outcome = await host.start(STORY)
 
     const reason = `pull request not opened: ${why}; pull-request.md holds its description, and skraft publish opens it once that is fixed`
     assert.deepEqual([outcome.status, outcome.reason], ['done', 'PUBLISH closed'])
