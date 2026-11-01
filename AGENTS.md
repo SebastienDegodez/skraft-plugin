@@ -7,7 +7,7 @@ PR; one final PR `integration/v2-next` → `main` ships 2.0.0.
 Sources of truth, in this order:
 
 1. This file — engine, drivers, zero hooks, and the Copilot driver contract (rules below). The
-   handbook page [Architecture](docs/site/en/explanation/architecture.md) explains them.
+   handbook page [Architecture](docs/website/docs/explanation/architecture.md) explains them.
 2. Epic [#211](https://github.com/SebastienDegodez/skraft-plugin/issues/211) and its lot issues
    #212–#223: scope and done criteria of each lot.
 
@@ -45,6 +45,9 @@ eng/
   catalog/  vally-adapter/  vally-agent-executor/  dashboard/  run-vally-evals.sh
 scripts/
   agent-policy/    ← dispatch-tree and model-policy checks for both agent trees
+
+docs/website/      ← handbook (Docusaurus): book.yml (structure contract), docs/ (EN pages),
+                     i18n/fr/docusaurus-plugin-content-docs/current/ (FR twins), data/citations.yml
 ```
 
 ## Engine rules
@@ -73,7 +76,7 @@ scripts/
 
 ## Copilot host driver rules
 
-[Architecture](docs/site/en/explanation/architecture.md#the-copilot-driver-contract) explains them; these are the rules a
+[Architecture](docs/website/docs/explanation/architecture.md#the-copilot-driver-contract) explains them; these are the rules a
 change to `drivers/copilot-workflow/` or `com.github.copilot/extensions/` must keep. Each is
 load-bearing and easy to break: a change that "looks more correct" is presumed a regression until
 the probe or a test says otherwise.
@@ -290,7 +293,7 @@ Descriptors are prompts an agent pays for on every run, not documentation.
   the paired tests; its results carry `baselineProvenance.publishable: false` and are never
   published, committed or quoted as a measurement.
 - Generated output (`artifacts/`, `eval-results/`, `eval-results-pilot/`, `dashboard-data/`,
-  `docs/site/dashboard/data/`, `eval-baseline-cache/`) is never committed.
+  `docs/website/static/dashboard/data/`, `eval-baseline-cache/`) is never committed.
 
 ## Git rules
 
@@ -328,4 +331,7 @@ claude plugin validate plugins/skraft-framework                    # the Claude 
 node tests/skraft-framework/integration/claude-mod/run-plugin-test.mjs  # `claude plugin test` on a copy
 node scripts/local-ci.mjs      # mirrors CI locally
 npm run probe:copilot -- --report-issues   # Copilot host probe (local Copilot CLI, no model call); see eng/host-probe/README.md
+npm run docs:check             # handbook: book.yml schema, translations, lint-nav, citations, scan-drift
+npm run docs:start             # handbook dev server (docs:start:fr for French; docs:install first)
+npm run docs:build             # handbook build, both locales; broken links fail the build
 ```

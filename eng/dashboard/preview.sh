@@ -48,7 +48,7 @@ node eng/catalog/scan.mjs
 node eng/dashboard/build.mjs
 
 if [[ "$SERVE" == false ]]; then
-  echo "Dashboard data built. Open docs/site/dashboard/ with any static server."
+  echo "Dashboard data built. Run npm run dashboard:serve, or open docs/website/static/dashboard/ with any static server."
   exit 0
 fi
 

@@ -1,11 +1,11 @@
 ---
-description: "Use when writing or editing SKRAFT handbook pages under docs/site/ (FR or EN). Enforces Diátaxis, the Starbucks artifact flow, current product-to-engineering ordering, dashboard catalogue ownership, and FR/EN parity."
-applyTo: "docs/site/**/*.md"
+description: "Use when writing or editing SKRAFT handbook pages under docs/website/ (FR or EN). Enforces Diátaxis, the Starbucks artifact flow, current product-to-engineering ordering, dashboard catalogue ownership, and FR/EN parity."
+applyTo: "docs/website/{docs,i18n}/**/*.{md,mdx}"
 ---
 
 # SKRAFT Handbook — Content Conventions
 
-The SKRAFT site (`docs/site/`) is a **handbook**, not a pile of reference pages.
+The SKRAFT site (`docs/website/`, Docusaurus) is a **handbook**, not a pile of reference pages.
 Every page must serve a reader following a thread, not just document a feature.
 These rules apply to FR and EN pages equally.
 
@@ -21,12 +21,14 @@ Never mix modes on the same page.
 | **Explanation** | Understand *why* | discursive, cites sources | principles, review-before-review, deep-dives |
 | **Reference** | Look up facts | terse, tabular, no "why" (link to the explanation) | hosts, cli, gates, patterns, glossary |
 
-The sidebar (`_data/book.yml` `parts`) is grouped by these modes, and the **folder
-layout mirrors them** (per language):
+`docs/website/book.yml` `parts` gives one sidebar per mode, and the **folder layout mirrors
+them**. A page's `doc` id is its EN path without extension; EN lives at
+`docs/website/docs/<doc>.md`, FR at the same path under
+`docs/website/i18n/fr/docusaurus-plugin-content-docs/current/`:
 
 ```
-fr/
-  index.md                 (home — router)
+docs/website/docs/         (EN; the FR tree has the same shape)
+  index.mdx                (home — router)
   tutorials/               Learn      — guided first runs
   how-to/                  Do         — one task per page (install, configure, gates,
                                         resume, answer, models, lens, eject, agent,
@@ -39,12 +41,13 @@ fr/
     architecture, event-journal, guardrails, token-economy, customisation-trade-offs,
     backlog, brownfield, software-craftsmanship, domain-driven-design,
     clean-architecture, evaluation-strategy, for-executives
-  dashboard/               Look up — agents, skills, workers, lenses, chains
-  reference/               Look up — hosts, cli, workflow-dot, phases, skraft-config,
-                           run-journal, gates, patterns, citations, glossary, changelog
+  reference/               Look up — catalogue (links to the dashboard), hosts, cli,
+                           workflow-dot, phases, skraft-config, run-journal, gates,
+                           patterns, evaluation-tooling, citations, glossary, changelog
 ```
 
-A new page must declare which mode it belongs to and live in the matching folder.
+A new page must be declared by its `doc` id in `book.yml`, under the part of its mode, and
+live in the matching folder.
 The Starbucks running example is **narrative**, so it lives under `explanation/pipeline/`,
 not `tutorials/`. Task-oriented pages (customise the pipeline, propose a pattern)
 are **how-to**, so they live under `how-to/`, not `tutorials/`.
@@ -94,21 +97,20 @@ Per-phase artifact the example produces:
 
 ## 4. Connectors required on every pipeline phase page
 
-Each `docs/site/{fr,en}/explanation/pipeline/{phase}.md` MUST include:
+Each `explanation/pipeline/{phase}.md` (EN and FR) MUST include:
 
-1. A localized **"you are here" ribbon** at the top showing optional
-  product preflight before `RESEARCH → DESIGN → DISTILL → DELIVER`, with the current step
-   highlighted (use `{% include phase-ribbon.html current="<phase>" %}`).
+1. The **"you are here" ribbon**: front matter `phase: <phase>`; the site renders the
+   ribbon from it. Never write the ribbon in the body.
 2. A localized **"What enters / What exits"** block naming
    the upstream artifact consumed and the downstream artifact produced.
 3. The **Starbucks running-example box** showing what the example looks like at this phase.
 4. The existing localized **"Gates crossed here"** block linking
-   to the reference gates page (`{{ "/fr/reference/gates" | relative_url }}`).
+   to the reference gates page (`../../reference/gates.md`).
 
 ## 5. FR/EN parity is mandatory
 
-- Every page exists in BOTH `fr/` and `en/` with the **same English basename**,
-  no exception.
+- Every page exists in BOTH locales at the **same relative path and file name** (the
+  `doc` id), with the same extension, no exception.
 - Content is equivalent in both languages — same sections, same example, same
   artifact flow. Do not let one language drift ahead.
 
@@ -116,30 +118,65 @@ Each `docs/site/{fr,en}/explanation/pipeline/{phase}.md` MUST include:
 
 - Dashboard is sole catalogue for agents, skills, workers and lenses. Never add
   or regenerate one Markdown page per descriptor.
-- Link catalogue entities to localized dashboard anchors:
-  `/{lang}/dashboard/#agent-<id>`, `#worker-<id>`, `#lens-<id>`, or `#skill-<id>`.
+- Link the catalogue as a whole to the `reference/catalogue.md` doc (relative file link).
+  Link one catalogue entity to its dashboard anchor, the same in both locales:
+  `pathname:///dashboard/#agent-<id>`, `#worker-<id>`, `#lens-<id>`, or `#skill-<id>`.
 - Keep factual orchestration in architecture, pipeline narrative and L3
   deep-dives; dashboard owns exhaustive rows and relationships.
 
-- Internal links use `{{ "/fr/…" | relative_url }}` — never a bare `/fr/…`
-  (the baseurl `/skraft-plugin` must be applied, or the link 404s).
+- Internal links are relative file links with the extension (`../how-to/run-gates.md`,
+  `../reference/citations.mdx#cite-<key>`), resolved from the page's own folder in its
+  own locale. Never a site-absolute link (`/fr/…`, `/en/…`, `/how-to/…`) and never Liquid
+  (`{{ … }}`, `{% … %}`): `lint-nav` refuses both. Static files outside the docs
+  (dashboard, deck) use `pathname:///<path>`; images use `/img/<path>`.
 - A claim attributed to an author carries a citation whose key exists in
-  `_data/citations.yml`: `[Author, year]({{ cites }}#cite-<key>)`, or a quotation
+  `docs/website/data/citations.yml`:
+  `[Author, year](<relative path to reference/citations.mdx>#cite-<key>)`, or a quotation
   `> "quote of 25 words or fewer"` then `> — Author, *Title*, Year.`. The Starbucks
   example is exempt (it is fiction). A page with no attributed claim carries none.
-- Reference pages follow `reference_template` from `_data/book.yml`: a title and a
-  one-sentence intro callout are required; the why lives in the linked explanation.
+- Reference pages follow `reference_template` from `book.yml`: a title and a
+  one-sentence lead are required; the why lives in the linked explanation.
 - Every product fact is checked in the plugin code; never describe a v1 behaviour
   as current.
 
-## 7. Validation before considering a page done
+## 7. Page shape
+
+Every page:
+
+- Front matter `title` and `description` (at most 160 characters: it is the card text and the
+  search snippet). One H1. The first paragraph after the H1 is the lead; no intro blockquote.
+- `.md` unless the page holds JSX (Tabs, a component, an import); then `.mdx`, in both locales.
+- Heading ids shared by FR and EN: `## Title <!-- #id -->` in `.md`, `## Title {/* #id */}` in
+  `.mdx`. An anchor a link targets keeps its id.
+- Tutorials and how-tos end on `## Next steps` (2–3 links); reference and explanation pages end
+  on `## See also`.
+
+Per mode (prose words, code and tables excluded):
+
+| Mode | Budget | Shape |
+|---|---|---|
+| Tutorial | ≤ 1,500 | Lead = what the reader will have built. `:::info[Before you start]` (≤ 5 bullets). One H2 per step, each ending on a visible result (a `console` block or a screenshot). "What you built", then Next steps. One host per tutorial: no Tabs. |
+| How-to | ≤ 800 | Lead = the goal in one sentence. "Prerequisites" (≤ 5 bullets). Numbered steps. Host differences in `<Tabs groupId="host" queryString="host">` with one `<TabItem>` per host (Claude Code, Copilot CLI, VS Code). "Troubleshooting" with one H3 per symptom. |
+| Explanation | ≤ 1,500 | Lead = the question answered. Why, then how. At most one diagram per H2. Jargon defined inline or in `:::note[Jargon]`. No steps. |
+| Reference | ≤ 2,500 | Lead = what it describes. One link to the explanation that gives the why. Tables and `console` blocks. |
+
+Admonitions: `:::<type>[Title]` … `:::`, bracket titles only. `note` aside, `tip` shortcut,
+`info` context and the running example (EN `:::info[☕ Running example — Starbucks *(illustrative)*]`, FR
+`:::info[☕ Fil rouge — Starbucks *(exemple illustratif)*]`),
+`warning` something that loses work, `danger` an irreversible action, `caution` not verified on
+a host (`:::caution[Not verified on V2]`). Decisions and jargon use `:::note[Decision]` and
+`:::note[Jargon]`.
+
+Terminal blocks: fence language `console`, optional `title="<name>"`. `$ ` starts a POSIX
+command, `PS> ` a PowerShell command, `> ` a command typed in a host prompt (title the block with
+the host name); a trailing `\` continues a command; every other line is output. Files,
+templates and trees keep their own language (`text`, `json`, `yaml`…).
+
+Diagrams: ` ```mermaid ` fences. Screenshots: `![alt](/img/screenshots/<lang>/<file>)`.
+
+## 8. Validation before considering a page done
 
 ```bash
-# citations
-node scripts/check-citations.mjs --citations docs/site/_data/citations.yml --pages "docs/site/**/*.md"
-# build (Ruby is keg-only — export PATH first)
-export PATH="/opt/homebrew/opt/ruby/bin:/opt/homebrew/lib/ruby/gems/4.0.0/bin:$PATH"
-cd docs/site && bundle exec jekyll build
-# smoke tests
-npx playwright test
+npm run docs:check     # book.yml schema, FR labels, lint-nav, citations, scan-drift
+npm run docs:build     # both locales; a broken link, anchor or image fails the build
 ```

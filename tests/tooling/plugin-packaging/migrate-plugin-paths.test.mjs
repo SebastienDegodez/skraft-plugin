@@ -51,6 +51,7 @@ test('migrate-plugin-paths preserves historical and generated evidence', () => {
     'docs/superpowers/specs/old-spec.md',
     'eval-results/example/results.json',
     'graphify-out/graph.json',
+    'docs/website/static/dashboard/data/dashboard.json',
   ]) {
     assert.equal(isHistoricalOrGeneratedPath(path), true, path)
   }

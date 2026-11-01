@@ -1,25 +1,13 @@
+# Jekyll stub. The skraft handbook now lives in docs/website (Docusaurus).
+# This file and index.md keep `main`'s deploy, which builds /v2-next/ from this folder with
+# `git archive … docs/site`, green until the final PR to main removes docs/site
+# (docs/v2/docusaurus-migration-plan.md, §1.6 and §6).
 title: "SKRAFT"
-description: "Pipeline SDLC piloté par agents IA — documentation publique"
+description: "The skraft handbook has moved to docs/website."
 baseurl: "/skraft-plugin"
 url: "https://sebastiendegodez.github.io"
-lang: fr
+lang: en
 
 markdown: kramdown
 kramdown:
   input: GFM
-  syntax_highlighter: rouge
-
-collections: {}
-
-defaults:
-  - scope: { path: "fr" }
-    values: { lang: fr, layout: default }
-  - scope: { path: "en" }
-    values: { lang: en, layout: default }
-
-exclude:
-  - Gemfile
-  - Gemfile.lock
-  - node_modules
-  - vendor
-  - README.md

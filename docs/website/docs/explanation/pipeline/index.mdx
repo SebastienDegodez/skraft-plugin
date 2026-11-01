@@ -1,0 +1,141 @@
+---
+title: "The SKRAFT pipeline"
+description: "Why SKRAFT separates product preparation from the engineering pipeline, why each phase hands an artifact to the next, and which explanation page to start with."
+persona: tech-lead
+---
+
+import WorkflowViewer from '@site/src/components/WorkflowViewer';
+
+# The SKRAFT pipeline
+
+SKRAFT does not impose one chain: it offers journeys, and in each one the output of a step
+becomes the input of the next.
+
+## Why several journeys
+
+A team does not always start from the same place. Sometimes the story is ready, sometimes the
+backlog is a pile of raw issues, sometimes there is only inherited code with no written intent.
+One pipeline for all three would force you either to invent a story where there is none, or to
+skip checks where one already exists.
+
+SKRAFT therefore separates three things:
+
+- **product preparation** — DISCOVER then DISCUSS, in the `skraft-backlog` plugin. It is
+  optional and the developer starts it; see [The backlog](../backlog.md);
+- **the engineering pipeline** — RESEARCH, DESIGN, DISTILL, DELIVER and then publication, which
+  the engine conducts for one refined story; the `skraft-orchestrator` agent only starts or
+  resumes it;
+- **the Brownfield journey** — a sibling journey to take over an existing system, not a
+  preliminary phase; see [Take over an existing system](../brownfield.md).
+
+The two plugins share files, never code: the stories DISCUSS writes into the tracking folder are
+the ones the engine can read. Each installs and runs without the other.
+
+## The artifact flow
+
+In the core journey, the thread is not an agent but an **artifact**: each phase reads what the
+previous one wrote, and the engine checks the expected output is there before moving on.
+
+```mermaid
+graph LR
+    D[DISCOVER<br/>optional] -.->|triage report| DI[DISCUSS<br/>optional]
+    DI -.->|ready stories| R[RESEARCH]
+    R -->|sourced research| DE[DESIGN]
+    DE -->|ratified ADRs,<br/>event model| DIS[DISTILL]
+    DIS -->|failing<br/>acceptance tests| DEL[DELIVER]
+    DEL -->|reviewed code,<br/>mutation passed| P[PUBLISH]
+```
+
+*Figure 1 — The artifact flow of the core journey: dotted, the optional product preparation;
+solid, the phases the engine conducts.*
+
+This choice has a consequence: a phase cannot "remember" a decision it did not write down.
+What is not in an artifact does not exist for the next phase, which keeps every handoff
+readable by a human. When the stories already come from DISCUSS,
+`skraft init <slug> --from-artifacts` starts the run in DESIGN: the research happened upstream.
+
+The engine runs these phases as the nodes of `pipeline.skraft.dot`, drawn below as the engine
+reads them; open a node to see its agent, its gates or its review lenses.
+
+<WorkflowViewer file="pipeline" />
+
+:::info[☕ Running example — Starbucks *(illustrative)*]
+
+To see this flow in action, follow one request — "order and pay for a drink in the Starbucks
+app" — from idea to code, phase by phase:
+[Follow an end-to-end example](./fil-rouge.md).
+:::
+
+## What each phase brings
+
+- [DISCOVER](./discover.md) — triage before choosing:
+  know what is worth working on.
+- [DISCUSS](./discuss.md) — clarify before
+  designing: a story the business and the code understand the same way.
+- [RESEARCH](./research.md) — look for evidence
+  before deciding.
+- [DESIGN](./design.md) — decide the architecture and
+  have a human ratify it.
+- [DISTILL](./distill.md) — write the executable
+  contract, failing, before the code.
+- [DELIVER](./deliver.mdx) — make that contract pass
+  in small proven steps, then test the tests.
+
+The inputs, outputs, paths, agents, lenses and loop-back edges of each phase are in the
+[Phases](../../reference/phases.md) reference; what each gate checks, in
+[Gates](../../reference/gates.md).
+
+## Why each phase has its review
+
+Whoever produces an artifact is not who judges it. DESIGN, DISTILL and DELIVER go before
+read-only review lenses; DISCOVER and DISCUSS have their own lenses in `skraft-backlog`.
+RESEARCH has no review: the engine only checks its document is filled, and DESIGN, which reads
+it, remains its judge. This is peer review applied to every handoff: a defect caught in the
+phase that introduced it costs less than in the next one
+([Wiegers, 2002](../../reference/citations.mdx#cite-wiegers-peer-reviews-2002)). The full reasoning:
+[Review before review](../deep-dive/review-before-review.md).
+
+## The explanation pages
+
+**Orientation and journeys**
+
+- [The running example](./fil-rouge.md) — one example followed end to end.
+- [The team and handoffs](./team.md) — who produces, who judges, who starts.
+- [The backlog](../backlog.md) — the `skraft-backlog` plugin and its automations.
+- [Take over an existing system](../brownfield.md) — the Brownfield journey.
+
+**Understand the system**
+
+- [Architecture](../architecture.md) — a neutral engine, one driver per host.
+- [The event journal](../event-journal.md) — why `events.jsonl` replaced the written state.
+- [Guardrails](../guardrails.md) — why the checks live in the engine, not in hooks.
+- [Token economy](../token-economy.md) — why cost is decided at design time.
+
+**Craft foundations**
+
+- [Software craftsmanship](../software-craftsmanship.md),
+  [Domain-Driven Design](../domain-driven-design.md),
+  [Clean Architecture](../clean-architecture.md).
+
+**Deep dives**
+
+- [Review before review](../deep-dive/review-before-review.md),
+  [Outside-In TDD](../deep-dive/outside-in-tdd.md),
+  [Walking Skeleton](../deep-dive/walking-skeleton.md),
+  [Mocking with Microcks](../deep-dive/mocking-microcks.md),
+  [Contract testing](../deep-dive/contract-testing.md),
+  [Read an evaluation verdict](../deep-dive/reading-a-verdict.md).
+
+**For executives**
+
+- [For executives](../for-executives.md).
+
+## Sources
+
+- [Wiegers, K. *Peer Reviews in Software*, 2002.](../../reference/citations.mdx#cite-wiegers-peer-reviews-2002)
+
+## See also {/* #see-also */}
+
+- [Reference: phases](../../reference/phases.md) — each phase's inputs, outputs and gates.
+- [Reference: the DOT workflow](../../reference/workflow-dot.mdx) — the graph the viewer above draws.
+- [Copy and adapt the workflow](../../how-to/eject-workflow.mdx) — adapt the pipeline in your repository.

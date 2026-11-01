@@ -1,0 +1,30 @@
+{
+  "title": {
+    "message": "skraft",
+    "description": "The title in the navbar"
+  },
+  "logo.alt": {
+    "message": "skraft",
+    "description": "The alt text of navbar logo"
+  },
+  "item.label.Tutorials": {
+    "message": "Tutoriels",
+    "description": "Navbar item with label Tutorials"
+  },
+  "item.label.How-to guides": {
+    "message": "Guides pratiques",
+    "description": "Navbar item with label How-to guides"
+  },
+  "item.label.Explanation": {
+    "message": "Explication",
+    "description": "Navbar item with label Explanation"
+  },
+  "item.label.Reference": {
+    "message": "Référence",
+    "description": "Navbar item with label Reference"
+  },
+  "item.label.GitHub": {
+    "message": "GitHub",
+    "description": "Navbar item with label GitHub"
+  }
+}

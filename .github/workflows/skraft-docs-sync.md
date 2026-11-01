@@ -23,10 +23,10 @@ on:
       - 'scripts/lib/book.mjs'
       - '.github/agents/skraft-docs-*.agent.md'
       - '.github/instructions/skraft-handbook-*.instructions.md'
-      - 'docs/site/_data/book.yml'
-      - 'docs/site/_data/citations.yml'
-      - '!docs/site/fr/**'
-      - '!docs/site/en/**'
+      - 'docs/website/book.yml'
+      - 'docs/website/data/citations.yml'
+      - '!docs/website/docs/**'
+      - '!docs/website/i18n/**'
   schedule:
     # Weekly safety net: catches any drift missed by a push.
     - cron: "weekly on monday"
@@ -85,17 +85,23 @@ dashboard data owns the exhaustive agents, skills, workers, lenses, roots and
 chains. The handbook owns tutorials, how-to guides, reference and explanation
 pages. Never modify a source and never invent a fact.
 
-## Structure contract: `docs/site/_data/book.yml`
+## Structure contract: `docs/website/book.yml`
 
 Read the header of `book.yml` first: its hard rules are the contract.
 
 - **Diataxis strict.** A page has the single mode of its part (`diataxis_mode`).
   A reference page describes and does not explain why: it links to the
   explanation page. An explanation page gives no procedure.
-- **FR and EN mirrored.** Every page exists under `docs/site/fr/` and
-  `docs/site/en/`, with the same English basename and the same heading structure.
+- **FR and EN mirrored.** A page is identified by its `doc` id (its EN path
+  without extension). It exists at `docs/website/docs/<doc>.md` and at the same
+  path under `docs/website/i18n/fr/docusaurus-plugin-content-docs/current/`, with
+  the same extension (`.mdx` only when the page holds JSX) and the same heading
+  structure.
+- **Relative file links.** Internal links point at the target file
+  (`../how-to/run-gates.md`); never a `/fr/…` or `/en/…` URL, never Liquid.
 - **Sources through `citations.yml`.** A claim attributed to an author cites a key
-  of `docs/site/_data/citations.yml` (`[Author, year]({{ cites }}#cite-<key>)`).
+  of `docs/website/data/citations.yml`, linked as
+  `[Author, year](<relative path to reference/citations.mdx>#cite-<key>)`.
   A page with no attributed claim carries no citation; a reference page is never
   required to cite.
 - **`type: derived`** pages are regenerated from the file(s) named by `source`.
@@ -141,16 +147,18 @@ Stop. Do NOT proceed with steps 1-2.
    a fresh review.
 
 2. **Open the PR.** Emit one `create-pull-request` containing the staged
-   `docs/site/**` repairs. If the orchestrator changed nothing, call `noop`.
+   handbook repairs. If the orchestrator changed nothing, call `noop`.
 
 ## Constraints
 
 - **Only handbook and dashboard presentation changes.** No file under `plugins/`,
   `eng/`, `.agents/`, `scripts/`, nor any manifest. The PR contains only
-  `docs/site/**`.
+  the EN pages under `docs/website/docs/` and their FR twins at the same path under
+  `docs/website/i18n/fr/docusaurus-plugin-content-docs/current/`,
+  `docs/website/book.yml` and `docs/website/data/citations.yml`.
 - **No duplicated catalogue.** Never recreate per-agent, per-skill, per-worker or
   per-lens pages, nor retired overview indexes.
-- **Bilingual site always mirrored.** Never leave the `fr/` or the `en/` side ahead.
+- **Bilingual site always mirrored.** Never leave the FR or the EN side ahead.
 - **Traceability required.** Each update cites the commit or source file that
   justifies it. No claim that is not traceable to the code.
 - **Faithful to the source vocabulary.** A derived page reuses the canonical terms

@@ -5,10 +5,10 @@ pin its current behaviour under characterization tests, then refactor it safely 
 Method or a Strangler Fig. It installs next to the engineering plugin (`skraft`) and reuses its
 `contract-testing` and `mocking-strategy-roster` skills by name; it holds no path into it.
 
-User guides live in the [SKRAFT handbook](https://sebastiendegodez.github.io/skraft-plugin/en/) (FR and EN):
-[Brownfield journey](https://sebastiendegodez.github.io/skraft-plugin/en/explanation/brownfield) explains the two workflows and how they rejoin
-the engineering pipeline; [Put a characterization net](https://sebastiendegodez.github.io/skraft-plugin/en/how-to/characterize-legacy) and
-[Refactor existing code under a net](https://sebastiendegodez.github.io/skraft-plugin/en/how-to/refactor-legacy) give the steps.
+User guides live in the [SKRAFT handbook](https://sebastiendegodez.github.io/skraft-plugin/) (FR and EN):
+[Brownfield journey](https://sebastiendegodez.github.io/skraft-plugin/explanation/brownfield) explains the two workflows and how they rejoin
+the engineering pipeline; [Put a characterization net](https://sebastiendegodez.github.io/skraft-plugin/how-to/characterize-legacy) and
+[Refactor existing code under a net](https://sebastiendegodez.github.io/skraft-plugin/how-to/refactor-legacy) give the steps.
 
 ## Install
 

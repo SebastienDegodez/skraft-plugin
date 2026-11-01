@@ -10,6 +10,7 @@ on:
       - main
       - integration/v2-next
     paths-ignore:
+      - 'docs/website/**'
       - 'docs/site/**'
       - 'docs/**/*.md'
   workflow_dispatch:
