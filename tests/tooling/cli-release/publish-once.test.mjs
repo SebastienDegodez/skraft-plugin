@@ -3,8 +3,9 @@ import assert from 'node:assert/strict'
 import { decide, nextVersion } from '../../../eng/cli-next-version.mjs'
 
 const DRY_RUN = `[9:15:09 PM] [semantic-release] › ✔  Run automated release from branch integration/v2-next
-[9:15:10 PM] [semantic-release] › ℹ  The next release version is 1.0.0-alpha.2
-[9:15:10 PM] [semantic-release] › ⚠  Skip step "prepare" of plugin "@semantic-release/exec" in dry-run mode`
+[9:15:10 PM] [semantic-release] › ⚠  Skip step "prepare" of plugin "@semantic-release/exec" in dry-run mode
+[9:15:10 PM] [semantic-release] › ‼  Skip cli-v1.0.0-alpha.2 tag creation in dry-run mode
+[9:15:10 PM] [semantic-release] › √  Published release 1.0.0-alpha.2 on alpha channel`
 
 test('a version semantic-release announces and npm has never seen is published', () => {
   const version = nextVersion(DRY_RUN)
