@@ -271,8 +271,15 @@ parts:
             label_fr: "Publier la pull request"
             label_en: "Publish the pull request"
             doc: how-to/publish-pull-request
-            purpose_fr: "Consentir, preparer gh, laisser le run ouvrir sa pull request ou la publier avec skraft publish, suivre l'issue, joindre les captures d'un frontend."
-            purpose_en: "Consent, set up gh, let the run open its pull request or publish it with skraft publish, follow the issue, attach a front end's screenshots."
+            purpose_fr: "Consentir, preparer gh, laisser le run ouvrir sa pull request ou la publier avec skraft publish, suivre l'issue."
+            purpose_en: "Consent, set up gh, let the run open its pull request or publish it with skraft publish, follow the issue."
+          - id: attach-screenshots
+            type: editorial
+            label_fr: "Joindre les captures"
+            label_en: "Attach screenshots"
+            doc: how-to/attach-screenshots
+            purpose_fr: "Declarer la commande e2e d'un frontend et laisser le run joindre ses captures claires et sombres a la pull request."
+            purpose_en: "Declare a front end's e2e command and let the run attach its light and dark screenshots to the pull request."
       - id: review
         title_fr: "Revoir"
         title_en: "Review"

@@ -155,6 +155,10 @@
     "message": "Publier la pull request",
     "description": "The label for the doc item 'Publish the pull request' in sidebar 'howTo', linking to the doc how-to/publish-pull-request"
   },
+  "sidebar.howTo.doc.how-to/attach-screenshots": {
+    "message": "Joindre les captures",
+    "description": "The label for the doc item 'Attach screenshots' in sidebar 'howTo', linking to the doc how-to/attach-screenshots"
+  },
   "sidebar.howTo.doc.how-to/review-a-pull-request": {
     "message": "Revoir une pull request avec skraft",
     "description": "The label for the doc item 'Review a pull request with skraft' in sidebar 'howTo', linking to the doc how-to/review-a-pull-request"
