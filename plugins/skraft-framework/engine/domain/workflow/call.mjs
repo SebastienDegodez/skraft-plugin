@@ -28,7 +28,7 @@ export const calledReasons = (file, called) => {
   const calls = working.filter(({ kind }) => kind === 'call')
   if (calls.length > 0) return calls.map(({ id, call }) => `${file}: node ${id} calls ${/** @type {NonNullable<WorkflowNode['call']>} */ (call).workflow}; a called workflow calls no other workflow`)
   const broken = working.length !== 1 || working[0].kind !== 'review' || called.edges.some(({ label }) => label === 'NEEDS_REWORK')
-  return when(broken, `${file} must run one review, start -> fan-out -> lens nodes -> fan-in -> exit, with no NEEDS_REWORK edge: the calling node carries it`)
+  return when(broken, `${file} must run one review, start -> fan-out -> lens nodes -> refuter -> fan-in -> exit, with no NEEDS_REWORK edge: the calling node carries it`)
 }
 
 /**
@@ -65,8 +65,8 @@ const boundTo = (given, input) => {
 }
 
 /**
- * The call node with the review of the workflow it calls: its fan-out, branches and lenses, the
- * families its fan-in names, and its fan-in.
+ * The call node with the review of the workflow it calls: its fan-out, branches and lenses, its
+ * refuter, the families its fan-in names, and its fan-in.
  * @param {WorkflowNode} node a call node @param {Workflow} called a workflow `calledReasons` accepts
  * @param {Record<string, string>} inputs as `bindInputs` binds them
  * @returns {WorkflowNode}
@@ -74,6 +74,6 @@ const boundTo = (given, input) => {
 export const foldCall = (node, called, inputs) => {
   const review = /** @type {WorkflowNode} */ (Object.values(called.nodes).find(({ kind }) => kind === 'review'))
   const call = /** @type {NonNullable<WorkflowNode['call']>} */ (node.call)
-  const { fanOut, branches, lenses, model, refuter } = review
-  return { ...node, fanOut, branches, lenses, model, refuter, call: { ...call, inputs, fanIn: review.id, mandatory: review.mandatory } }
+  const { fanOut, branches, lenses, model, refuter, refutedBy } = review
+  return { ...node, fanOut, branches, lenses, model, refuter, refutedBy, call: { ...call, inputs, fanIn: review.id, mandatory: review.mandatory } }
 }

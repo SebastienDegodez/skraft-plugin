@@ -313,9 +313,14 @@ const stepBody = (step, lang) => {
   if (step.kind === 'ask') return `<p class="what">${esc(step.question)}</p>`
   if (step.kind === 'gate') return `<p class="chips">${step.gates.map((gate) => `<span class="chip">${esc(gate)}</span>`).join('')}</p>`
   if (step.kind === 'publish') return `<p class="what">${esc(step.publish)}</p>`
-  const lenses = `<p class="chips">${step.lenses.map(({ lens, when }) => `<span class="chip">${esc(lens)}${when ? ` <em>${esc(ui(lang, 'runsWhen', { when }))}</em>` : ''}</span>`).join('')}</p>`
+  const lenses = `<p class="chips">${step.lenses.map(({ lens, when }) => `<span class="chip">${esc(lens)}${when ? ` <em>${esc(ui(lang, 'runsWhen', { when }))}</em>` : ''}</span>`).join('')}</p>${refuterLine(step.refuter, lang)}`
   return step.kind === 'call' ? `<p class="what">${icon('call')} ${esc(ui(lang, 'calls', { name: step.calls }))}</p>${lenses}` : lenses
 }
+
+/** The refuter the lenses of a review join, the agent it runs, mandatory or not. */
+const refuterLine = (refuter, lang) => (refuter
+  ? `<p class="refuter">${icon('review')} <code>${esc(refuter.id)}</code> ${esc(ui(lang, 'refuterRuns'))} <code>${esc(refuter.agent)}</code>${refuter.mandatory ? ` <span class="badge">${esc(ui(lang, 'mandatory'))}</span>` : ''}</p>`
+  : '')
 
 /** Whether an edge sends the run back: a refusal, a rework, a failed gate. */
 const isBack = (edge) => /REWORK|FAIL|REJECTED/.test(edge.label ?? '')

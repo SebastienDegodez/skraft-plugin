@@ -42,20 +42,20 @@ Dès qu'un fichier est copié, chaque run de la copie de travail le suit.
 
 ## 3. Ajouter le nœud lentille et ses deux arêtes
 
-Une lentille est un nœud `shape=note` entre le fan-out de la revue et son fan-in.
+Une lentille est un nœud `shape=note` entre le fan-out de la revue et son réfuteur (`shape=octagon`), qui mène au fan-in.
 
 **Revue de conception**, dans `.skraft/pipeline.skraft.dot` :
 
 ```text
 design_review_threat_model [shape=note, lens="threat-model"]
-design_review_lenses -> design_review_threat_model -> design_review
+design_review_lenses -> design_review_threat_model -> design_review_refuter
 ```
 
-**Revue DELIVER**, dans `.skraft/review.skraft.dot`, entre `lenses` et `verdict` :
+**Revue DELIVER**, dans `.skraft/review.skraft.dot`, entre `lenses` et `refuter` :
 
 ```text
 threat_model [shape=note, lens="threat-model"]
-lenses -> threat_model -> verdict
+lenses -> threat_model -> refuter
 ```
 
 Options du nœud :
@@ -95,7 +95,7 @@ autres.
 
 ## Étapes suivantes <!-- #next-steps -->
 
-- [Revue : fan-out, nœuds lentille, fan-in](../reference/workflow-dot.mdx#reviews)
+- [Revue : fan-out, nœuds lentille, réfuteur, fan-in](../reference/workflow-dot.mdx#reviews)
   et [nœud d'appel](../reference/workflow-dot.mdx#call-node).
 - [Gates](../reference/gates.md#review-run) — réponse d'une lentille,
   réfutation, verdict.
