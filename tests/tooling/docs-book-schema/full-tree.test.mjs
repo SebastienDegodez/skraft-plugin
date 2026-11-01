@@ -45,6 +45,6 @@ test('the real book.yml gives the four Diataxis sidebars, the how-to one cut int
   const sidebars = sidebarsFromBook(loadBook(bookPath))
   assert.deepEqual(Object.keys(sidebars), ['tutorials', 'howTo', 'explanation', 'reference'])
   assert.deepEqual(sidebars.howTo[0].items.map(({ key, items }) => `${key}:${items.length}`), [
-    'set-up:4', 'run-a-story:4', 'review:2', 'adapt-the-workflow:2', 'backlog:2', 'existing-code:2', 'contribute:2',
+    'set-up:4', 'run-a-story:5', 'review:2', 'adapt-the-workflow:2', 'backlog:2', 'existing-code:2', 'contribute:2',
   ])
 })

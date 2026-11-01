@@ -115,9 +115,8 @@ The V2 plan sets targets. They are **goals**, not measured results.
 | `skraft next` and `skraft record` (VS Code fallback) | Under 300 ms each |
 | Overhead per tool call | 0 ms (no hook) |
 
-The path to these targets is itself checked. Each lot is compared with v1 on the same test
-projects: phases reached, verdicts, gates, artefacts, duration, cost, retries. A regression
-blocks the lot's PR. The engine is covered by acceptance tests per use case and by mutation
+Each lot is compared with v1 through real runs on the same projects: phases reached, verdicts,
+gates, artefacts, duration, cost, retries. No tool automates this comparison. The engine is covered by acceptance tests per use case and by mutation
 testing in CI (80 % global threshold; the core aims at 100 %).
 
 The same research (*Accelerate*, 2018) links software delivery performance to the

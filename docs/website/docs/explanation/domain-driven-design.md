@@ -93,11 +93,8 @@ flowchart LR
     ORD -- "Conformist" --> LOY
 ```
 
-*Figure 1 — An illustrative context map on the [running example](./pipeline/fil-rouge.md)
-(a Starbucks order); each arrow goes from the upstream context to the downstream one. The
-relationship names come from Evans (2003, 2015); the choice of each follows the three rules of the
-`architecture-patterns` skill: Ordering, the Core, protects itself from the payment provider with
-an ACL, Preparation consumes a published event, Loyalty, a Supporting context, may conform.*
+*Figure 1 — An illustrative context map on the [running example](./pipeline/fil-rouge.md) (a
+Starbucks order); arrows go from upstream to downstream.*
 
 The `architecture-compliance` lens of the DESIGN review requires every relationship between
 contexts to carry an explicit pattern and no dependency to stay undeclared (G6). An ACL always
@@ -124,11 +121,7 @@ flowchart TB
     RV --> H["Human ADR ratification"] --> DI["DISTILL"]
 ```
 
-*Figure 2 — The path of the DESIGN artefacts, in the order the `solution-architect` writes them
-(`com.github.copilot/agents/solution-architect.agent.md`) and the workflow has them reviewed then
-ratified (`pipeline.skraft.dot`). The event model, the context map, the tactical design and the
-ADRs go under `docs/` of the repository; the contracts and the consistency matrix stay in the
-run's tracking folder.*
+*Figure 2 — The DESIGN artefacts, in the order the `solution-architect` writes them.*
 
 **Event Modeling first.** Before drawing aggregates, the `solution-architect` models behaviour on
 a timeline: a command (an intent, which may be rejected), an event (a past fact), a read model
@@ -187,22 +180,7 @@ phase is detailed in [DESIGN](./pipeline/design.md).
 - **No full DDD everywhere.** CRUD with no rule is served by Clean Architecture and a repository;
   the depth follows the subdomain class.
 - **Too many contexts costs as much as too few.** Twenty contexts for one domain, or "one
-  microservice = one context", multiply the translations; the `architecture-patterns` skill
-  recommends merging contexts that share a language and a team.
-- **An ACL is a translation to maintain.** It is the price of the Core's independence, and the
-  reason it goes through an ADR.
-
-## Pitfalls and misreadings
-
-The `architecture-patterns` skill lists the anaemic model and the fat aggregate among its
-anti-patterns; its strategic design section sets the rule on naming contexts.
-
-- **The anaemic model**: domain objects that are only data bags, the logic in services. Invariants
-  belong in the aggregates.
-- **Splitting by technical layer**: a context is named after its language (`EligibilityContext`),
-  never after a layer.
-- **The fat aggregate**: one aggregate that owns Driver, Vehicle, Coverage, Claim and Billing.
-  Split by which invariants must be atomic, reference the rest by id.
+  microservice = one context", multiply the translations.
 
 ## Sources
 
