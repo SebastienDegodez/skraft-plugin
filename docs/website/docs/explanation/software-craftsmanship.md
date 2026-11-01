@@ -179,5 +179,5 @@ Enforceable craftsmanship has a cost, and skraft owns it.
   business model craftsmanship protects.
 - [Clean Architecture and hexagonal architecture](./clean-architecture.md)
   — the dependency rule checked by the `architecture` gate.
-- [The DELIVER phase](./pipeline/deliver.md) and
+- [The DELIVER phase](./pipeline/deliver.mdx) and
   [the glossary](../reference/glossary.md).

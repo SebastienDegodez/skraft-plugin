@@ -187,6 +187,6 @@ dépôt fait échouer toute dépendance interdite. Là, le mot *port* est resté
 - [Software craftsmanship](./software-craftsmanship.md) — pourquoi
   les gates ne se négocient pas.
 - [Outside-In TDD](./deep-dive/outside-in-tdd.md),
-  [la phase DELIVER](./pipeline/deliver.md),
+  [la phase DELIVER](./pipeline/deliver.mdx),
   [les gates](../reference/gates.md) et
   [le glossaire](../reference/glossary.md).

@@ -141,7 +141,7 @@ proposes how to treat it and the developer chooses.
 - **What enters:** the red acceptance test + the plan.
 - **What exits:** the reviewed code, mutation passed, then the pull request.
 
-➡️ Phase detail: [DELIVER](./deliver.md).
+➡️ Phase detail: [DELIVER](./deliver.mdx).
 
 ## What you have just seen
 

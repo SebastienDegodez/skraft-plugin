@@ -86,5 +86,5 @@ deterministic while still exercising the real boundary the service depends on.
 
 - [Architecture](../architecture.md) — the L1 + L2 view this page zooms out of.
 - [L3 zoom: contract testing](./contract-testing.md) — the sibling provider-side wiring.
-- [DELIVER](../pipeline/deliver.md) — the phase that owns this wiring.
+- [DELIVER](../pipeline/deliver.mdx) — the phase that owns this wiring.
 - [Agentic catalogue](pathname:///dashboard/) — every agent and lens. Unsure about a term? See the [glossary](../../reference/glossary.md).

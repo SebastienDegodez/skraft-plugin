@@ -69,5 +69,5 @@ deferring it. Everything after adds to a system that already works.
 ## See also <!-- #see-also -->
 
 - [Outside-In TDD](outside-in-tdd.md)
-- [The DELIVER phase](../pipeline/deliver.md)
+- [The DELIVER phase](../pipeline/deliver.mdx)
 - [DISTILL gates](../../reference/gates.md)

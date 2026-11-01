@@ -142,7 +142,7 @@ Le code de SKRAFT qui décide de chaque étape du pipeline (ordre, sorties atten
 
 **Mutant survivant**
 Une modification du code que les tests n'attrapent pas. Il finit de l'une de trois façons : un test qui le tue, le code supprimé, ou le mutant déclaré équivalent. En DELIVER, l'agent le propose et le développeur choisit (question `mutation-plan`).
-→ Voir [DELIVER](../explanation/pipeline/deliver.md)
+→ Voir [DELIVER](../explanation/pipeline/deliver.mdx)
 
 **Mutation testing**
 Technique qui modifie légèrement le code source (introduit des "mutants") pour vérifier que les tests les détectent. Un test qui ne détecte pas un mutant est un test faible.

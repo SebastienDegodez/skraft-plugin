@@ -209,7 +209,7 @@ The v1 state file (`.copilot-tracking/skraft-plans/<slug>/state.json`), rewritte
 
 **Surviving mutant**
 A change to the code the tests do not catch. It ends one of three ways: a test that kills it, the code deleted, or the mutant declared equivalent. In DELIVER the agent proposes and the developer chooses (`mutation-plan` question).
-→ See [DELIVER](../explanation/pipeline/deliver.md)
+→ See [DELIVER](../explanation/pipeline/deliver.mdx)
 
 ## T
 

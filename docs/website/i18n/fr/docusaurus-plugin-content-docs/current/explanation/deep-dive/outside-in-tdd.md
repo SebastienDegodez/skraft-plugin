@@ -75,5 +75,5 @@ sur le comportement métier.
 ## Voir aussi <!-- #see-also -->
 
 - [Walking Skeleton](walking-skeleton.md)
-- [La phase DELIVER](../pipeline/deliver.md)
+- [La phase DELIVER](../pipeline/deliver.mdx)
 - [Le glossaire](../../reference/glossary.md)

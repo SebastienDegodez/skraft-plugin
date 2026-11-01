@@ -73,5 +73,5 @@ repousser. Tout ce qui suit s'ajoute à un système qui marche déjà.
 ## Voir aussi <!-- #see-also -->
 
 - [Outside-In TDD](outside-in-tdd.md)
-- [La phase DELIVER](../pipeline/deliver.md)
+- [La phase DELIVER](../pipeline/deliver.mdx)
 - [Les gates DISTILL](../../reference/gates.md)

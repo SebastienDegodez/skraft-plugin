@@ -142,7 +142,7 @@ qui choisit.
 - **Ce qui entre :** le test d'acceptation rouge + le plan.
 - **Ce qui sort :** le code revu, la mutation passée, puis la pull request.
 
-➡️ Détail de la phase : [DELIVER](./deliver.md).
+➡️ Détail de la phase : [DELIVER](./deliver.mdx).
 
 ## Ce que vous venez de voir
 

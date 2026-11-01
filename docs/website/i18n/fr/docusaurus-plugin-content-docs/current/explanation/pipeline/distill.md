@@ -78,4 +78,4 @@ retenus.
 - [Référence : documentation durable](../../reference/run-journal.md#durable-docs).
 - [Walking Skeleton](../deep-dive/walking-skeleton.md) et
   [Outside-In TDD](../deep-dive/outside-in-tdd.md).
-- [DELIVER](./deliver.md) — la phase suivante.
+- [DELIVER](./deliver.mdx) — la phase suivante.

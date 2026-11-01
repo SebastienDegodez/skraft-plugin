@@ -76,4 +76,4 @@ only the use case, at least one walking skeleton per flow). The engine computes 
 - [Reference: durable documentation](../../reference/run-journal.md#durable-docs).
 - [Walking Skeleton](../deep-dive/walking-skeleton.md) and
   [Outside-In TDD](../deep-dive/outside-in-tdd.md).
-- [DELIVER](./deliver.md) — the next phase.
+- [DELIVER](./deliver.mdx) — the next phase.

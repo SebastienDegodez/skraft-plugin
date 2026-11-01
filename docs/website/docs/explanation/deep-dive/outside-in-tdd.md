@@ -71,5 +71,5 @@ until the slice is complete, which keeps the focus on business behaviour.
 ## See also <!-- #see-also -->
 
 - [Walking Skeleton](walking-skeleton.md)
-- [The DELIVER phase](../pipeline/deliver.md)
+- [The DELIVER phase](../pipeline/deliver.mdx)
 - [The glossary](../../reference/glossary.md)

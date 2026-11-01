@@ -184,6 +184,6 @@ forbidden dependency. There, the word *port* stayed. See
 - [Software craftsmanship](./software-craftsmanship.md) — why the
   gates are not negotiated.
 - [Outside-In TDD](./deep-dive/outside-in-tdd.md),
-  [the DELIVER phase](./pipeline/deliver.md),
+  [the DELIVER phase](./pipeline/deliver.mdx),
   [the gates](../reference/gates.md) and
   [the glossary](../reference/glossary.md).

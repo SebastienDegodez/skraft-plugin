@@ -186,5 +186,5 @@ Le craft opposable a un coût, et skraft l'assume.
   modèle métier que le craft protège.
 - [Clean Architecture et architecture hexagonale](./clean-architecture.md)
   — la règle de dépendance vérifiée par la gate `architecture`.
-- [La phase DELIVER](./pipeline/deliver.md) et
+- [La phase DELIVER](./pipeline/deliver.mdx) et
   [le glossaire](../reference/glossary.md).

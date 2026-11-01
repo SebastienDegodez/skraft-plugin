@@ -90,5 +90,5 @@ its shape without a live end-to-end environment.
 
 - [Architecture](../architecture.md) — the L1 + L2 view this page zooms out of.
 - [L3 zoom: mocking (Microcks)](./mocking-microcks.md) — the sibling consumer-side wiring.
-- [DELIVER](../pipeline/deliver.md) — the phase that owns this wiring.
+- [DELIVER](../pipeline/deliver.mdx) — the phase that owns this wiring.
 - [Agentic catalogue](pathname:///dashboard/) — every agent and lens. Unsure about a term? See the [glossary](../../reference/glossary.md).
