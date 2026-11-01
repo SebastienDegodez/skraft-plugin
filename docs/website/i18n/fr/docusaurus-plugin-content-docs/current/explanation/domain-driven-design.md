@@ -94,11 +94,8 @@ flowchart LR
     ORD -- "Conformist" --> LOY
 ```
 
-*Figure 1 — Une context map d'illustration sur le [fil rouge](./pipeline/fil-rouge.md)
-(commande Starbucks) ; chaque flèche va du contexte amont au contexte aval. Les noms de
-relations viennent d'Evans (2003, 2015) ; le choix de chacune suit les trois règles du skill
-`architecture-patterns` : la Commande, Core, se protège du prestataire de paiement par une ACL, la Préparation consomme un événement publié, la Fidélité,
-Supporting, peut se conformer.*
+*Figure 1 — Une context map d'illustration sur le [fil rouge](./pipeline/fil-rouge.md) (commande
+Starbucks).*
 
 La lentille `architecture-compliance` de la revue DESIGN exige que chaque relation entre
 contextes porte un pattern explicite et qu'aucune dépendance ne reste non déclarée (G6). Une
@@ -125,11 +122,7 @@ flowchart TB
     RV --> H["Ratification humaine des ADR"] --> DI["DISTILL"]
 ```
 
-*Figure 2 — Le chemin des artefacts de DESIGN, dans l'ordre où le `solution-architect` les écrit
-(`com.github.copilot/agents/solution-architect.agent.md`) et où le workflow les fait revoir puis
-ratifier (`pipeline.skraft.dot`). Le modèle d'événements, la context map, la conception tactique
-et les ADR vont sous `docs/` du dépôt ; les contrats et la matrice de cohérence restent dans le
-dossier de suivi du run.*
+*Figure 2 — Les artefacts de DESIGN, dans l'ordre où le `solution-architect` les écrit.*
 
 **Event Modeling d'abord.** Avant de dessiner des agrégats, le `solution-architect` modélise le
 comportement sur une ligne de temps : une commande (une intention, qui peut être refusée), un
@@ -193,22 +186,7 @@ de la phase est dans [DESIGN](./pipeline/design.md).
 - **Pas de DDD complet partout.** Un CRUD sans règle se contente de Clean Architecture et d'un
   repository ; la profondeur suit la classe du sous-domaine.
 - **Trop de contextes coûte autant que pas assez.** Vingt contextes pour un domaine, ou « un
-  microservice = un contexte », multiplient les traductions ; le skill
-  `architecture-patterns` recommande de fusionner les contextes qui partagent langage et équipe.
-- **Une ACL est une traduction à maintenir.** C'est le prix de l'indépendance du Core, et c'est
-  pourquoi elle passe par un ADR.
-
-## Pièges et contresens
-
-Le skill `architecture-patterns` range le modèle anémique et l'agrégat obèse parmi ses
-anti-patterns ; sa section de conception stratégique fixe la règle de nommage des contextes.
-
-- **Le modèle anémique** : des objets du domaine qui ne sont que des sacs de données, la logique
-  dans des services. Les invariants vont dans les agrégats.
-- **Découper par couche technique** : un contexte se nomme d'après son langage
-  (`EligibilityContext`), jamais d'après une couche.
-- **L'agrégat obèse** : un seul agrégat qui possède Driver, Vehicle, Coverage, Claim et Billing.
-  On découpe selon les invariants qui doivent être atomiques, le reste se référence par id.
+  microservice = un contexte », multiplient les traductions.
 
 ## Sources
 

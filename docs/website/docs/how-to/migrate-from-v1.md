@@ -112,7 +112,7 @@ Then resume the run from your host, like any V2 run
 
 ## Next steps <!-- #next-steps -->
 
-- [`skraft migrate`](../reference/cli.md) — text and JSON output, exit codes.
+- [`skraft migrate`](../reference/cli-maintenance.md) — text and JSON output, exit codes.
 - [Tracking folder and journal](../reference/run-journal.md) — what
   replaces `state.json`.
 - [Changelog: V2 breaking changes](../reference/changelog.md#v2-breaking)

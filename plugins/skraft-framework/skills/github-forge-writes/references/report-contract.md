@@ -105,7 +105,7 @@ packets, decisions and publication receipts; the host supplies observations, not
 reviewers consume the data interfaces above, not transport procedures.
 
 When a brief asks for publication, load
-[host publication lifecycle](mcp-publication.md) for consent, CLI commands,
+host publication lifecycle (the `qa-reporting` publication reference) for consent, CLI commands,
 observation/readback schemas, reconciliation and receipt semantics. When the selected
 provider is `github`, also load
 `github-forge-writes` for its

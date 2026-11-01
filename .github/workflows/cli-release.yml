@@ -13,15 +13,14 @@ name: Release @skraft/cli
 # publish uses the NPM_TOKEN secret (a granular token limited to @skraft). Once the package
 # exists, configure the trusted publisher and delete the secret: without it, npm uses OIDC.
 #
-# It runs after the plugin's Release workflow, never beside it: Release pushes its own
-# chore(release) commit, and semantic-release publishes nothing from a branch that moved under
-# it ("the local branch is behind the remote one"), while still exiting 0. So this job checks out
-# the branch as Release left it, and publishes only a version npm has never seen.
+# It runs as the last job of the plugin's Release workflow (release.yml calls it), never beside
+# it: Release pushes its own chore(release) commit, and semantic-release publishes nothing from a
+# branch that moved under it ("the local branch is behind the remote one"), while still exiting 0.
+# So this job checks out the branch as Release left it, and publishes only a version npm has never
+# seen. A workflow_run trigger would not do: GitHub reads workflow_run from the default branch only,
+# and main is v1.
 on:
-  workflow_run:
-    workflows: [Release]
-    types: [completed]
-    branches: [main, integration/v2-next]
+  workflow_call:
   workflow_dispatch:
 
 concurrency:
@@ -37,13 +36,12 @@ permissions:
 jobs:
   release:
     name: semantic-release (cli/)
-    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
-          ref: ${{ github.event.workflow_run.head_branch || github.ref_name }}
+          ref: ${{ github.ref_name }}
           fetch-depth: 0
           persist-credentials: false
 
