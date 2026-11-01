@@ -16,7 +16,9 @@ unchanged:
 2. GitHub Copilot CLI: `<COPILOT_HOME or ~/.copilot>/installed-plugins/<marketplace>/skraft/`
    (the marketplace named `skraft` first);
 3. Claude Code: the current folder of `skraft@…` in
-   `<CLAUDE_CONFIG_DIR or ~/.claude>/plugins/installed_plugins.json` (latest update first).
+   `<CLAUDE_CONFIG_DIR or ~/.claude>/plugins/installed_plugins.json`: an install scoped to a
+   repository (`local`, then `project`) only inside that repository, then the `user` one; the
+   latest update first among equals.
 
 When both hosts have the plugin, Copilot CLI wins. Nothing is recorded, so a plugin update by
 the host is followed at the next call: this package never needs updating with the plugin.
@@ -29,7 +31,8 @@ skraft command (`doctor`, `status`, `decide yes`…), with history. Each line ru
 its own process and finds the plugin again, so a plugin update during the session is followed.
 The commands come from the engine's `skraft commands --json`: `help` lists them, `help <command>`
 shows one, Tab completes commands, sub-commands and options, and a mistyped command is refused
-with the closest name before the engine runs. `exit`, `quit` or Ctrl-D leaves.
+with the closest name before the engine runs. While a command runs, the terminal is its own:
+Ctrl-C stops the command, not the session. `exit`, `quit` or Ctrl-D leaves.
 
 - A one-shot command (`skraft doctor`) never shows the banner: its output is the engine's.
 - `NO_COLOR` keeps the banner uncoloured; `SKRAFT_BANNER=static` skips the animation,
@@ -41,8 +44,10 @@ with the closest name before the engine runs. `exit`, `quit` or Ctrl-D leaves.
 `skraft upgrade` installs the latest `@skraft/cli` of its channel (`latest`, or `alpha` when the
 installed version is an alpha), then updates the plugin in each host that has it
 (`copilot plugin update skraft`, `claude plugin update skraft@<marketplace>`; Claude Code loads it
-at its next session). A step whose program is not on the PATH is skipped; a failed step makes the
-command exit 1 and the others still run.
+at its next session). Each program is found on the PATH and started with an argument list, never
+through a shell (a Windows `.cmd` runs through cmd.exe, with plain words only). A step whose
+program is not on the PATH is skipped; a failed step makes the command exit 1 and the others
+still run.
 
 A session asks the registry, at most once a day (cache `~/.skraft/cli-update.json`, 1.5 s
 timeout, silent on any failure), whether a newer version exists, and says so. It never installs

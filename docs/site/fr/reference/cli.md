@@ -94,7 +94,7 @@ enregistré : une mise à jour du plugin par l'hôte est suivie dès l'appel sui
 | --- | --- | --- |
 | 1 | `SKRAFT_PLUGIN_ROOT` | la variable est posée ; un dossier sans moteur arrête là, sans repli |
 | 2 | `<COPILOT_HOME ou ~/.copilot>/installed-plugins/<marketplace>/skraft/` | le dossier contient le moteur ; le marketplace nommé `skraft` d'abord, puis les autres par nom |
-| 3 | `installPath` des entrées `skraft@…` de `<CLAUDE_CONFIG_DIR ou ~/.claude>/plugins/installed_plugins.json` | le dossier contient le moteur ; le `lastUpdated` le plus récent d'abord |
+| 3 | `installPath` des entrées `skraft@…` de `<CLAUDE_CONFIG_DIR ou ~/.claude>/plugins/installed_plugins.json` | le dossier contient le moteur ; une entrée liée à un dépôt (`local`, puis `project`, par son `projectPath`) seulement dans ce dépôt, puis celle de `user` ; à égalité, le `lastUpdated` le plus récent d'abord |
 
 Avec `--version`, la commande écrit aussi `plugin: <variable|copilot|claude-code> <dossier>` sur
 stderr ; stdout garde la ligne de version.
@@ -102,7 +102,8 @@ stderr ; stdout garde la ligne de version.
 **Session.** `skraft` seul, dans un terminal, ouvre une session : la bannière skraft (animée, sur
 stderr) une fois, puis une invite `skraft ›` où chaque ligne est une commande (`doctor`, `status`,
 `decide yes`…), avec complétion par Tab et historique. Chaque ligne tourne dans son propre
-processus, sur le plugin trouvé à ce moment. `help` affiche l'usage ; `exit`, `quit` ou Ctrl-D
+processus, sur le plugin trouvé à ce moment ; pendant qu'elle tourne, Ctrl-C arrête la commande,
+pas la session. `help` affiche l'usage ; `exit`, `quit` ou Ctrl-D
 quitte. Une commande isolée n'affiche jamais la bannière. `NO_COLOR` la décolore,
 `SKRAFT_BANNER=static` coupe l'animation, `SKRAFT_BANNER=0` la coupe ; `SKRAFT_INTERACTIVE=0`
 garde `skraft` seul comme un appel au moteur.

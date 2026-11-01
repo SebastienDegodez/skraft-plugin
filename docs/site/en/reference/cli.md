@@ -94,7 +94,7 @@ so a plugin update by the host is followed at the next call.
 | --- | --- | --- |
 | 1 | `SKRAFT_PLUGIN_ROOT` | the variable is set; a folder without the engine stops there, with no fallback |
 | 2 | `<COPILOT_HOME or ~/.copilot>/installed-plugins/<marketplace>/skraft/` | the folder holds the engine; the marketplace named `skraft` first, then the others by name |
-| 3 | `installPath` of the `skraft@…` entries of `<CLAUDE_CONFIG_DIR or ~/.claude>/plugins/installed_plugins.json` | the folder holds the engine; the latest `lastUpdated` first |
+| 3 | `installPath` of the `skraft@…` entries of `<CLAUDE_CONFIG_DIR or ~/.claude>/plugins/installed_plugins.json` | the folder holds the engine; an entry scoped to a repository (`local`, then `project`, by its `projectPath`) only inside it, then the `user` one; the latest `lastUpdated` first among equals |
 
 With `--version`, the command also writes `plugin: <variable|copilot|claude-code> <folder>` on
 stderr; stdout keeps the one version line.
@@ -102,7 +102,7 @@ stderr; stdout keeps the one version line.
 **Session.** `skraft` alone, in a terminal, opens a session: the skraft banner (animated, on
 stderr) once, then a `skraft ›` prompt where each line is a command (`doctor`, `status`,
 `decide yes`…), with Tab completion and history. Each line runs in its own process, on the plugin
-found at that moment. `help` prints the usage; `exit`, `quit` or Ctrl-D leaves. A one-shot command
+found at that moment; while it runs, Ctrl-C stops the command, not the session. `help` prints the usage; `exit`, `quit` or Ctrl-D leaves. A one-shot command
 never shows the banner. `NO_COLOR` uncolours it, `SKRAFT_BANNER=static` skips the animation,
 `SKRAFT_BANNER=0` turns it off; `SKRAFT_INTERACTIVE=0` keeps `skraft` alone a call to the engine.
 
