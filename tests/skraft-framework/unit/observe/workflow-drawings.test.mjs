@@ -74,6 +74,7 @@ test('a rework a review sends to a step of its own is drawn right after the revi
   const [pipeline] = await createObserve(pipelineHost({ workflow: REWORK }).deps).workflows()
 
   assert.deepEqual(pipeline.steps.map(({ id }) => id), ['research', 'check', 'fix', 'pr_writer'])
+  assert.deepEqual(pipeline.steps.find(({ id }) => id === 'check').refuter, { id: 'refuter', agent: 'finding-refuter', mandatory: false })
 })
 
 const WORKFLOW = `digraph consent {
