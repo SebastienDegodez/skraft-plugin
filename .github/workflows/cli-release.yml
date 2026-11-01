@@ -12,11 +12,16 @@ name: Release @skraft/cli
 # First release only: npm sets a trusted publisher on an existing package, so the very first
 # publish uses the NPM_TOKEN secret (a granular token limited to @skraft). Once the package
 # exists, configure the trusted publisher and delete the secret: without it, npm uses OIDC.
+#
+# It runs after the plugin's Release workflow, never beside it: Release pushes its own
+# chore(release) commit, and semantic-release publishes nothing from a branch that moved under
+# it ("the local branch is behind the remote one"), while still exiting 0. So this job checks out
+# the branch as Release left it, and publishes only a version npm has never seen.
 on:
-  push:
+  workflow_run:
+    workflows: [Release]
+    types: [completed]
     branches: [main, integration/v2-next]
-    paths:
-      - 'cli/**'
   workflow_dispatch:
 
 concurrency:
@@ -32,11 +37,13 @@ permissions:
 jobs:
   release:
     name: semantic-release (cli/)
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
+          ref: ${{ github.event.workflow_run.head_branch || github.ref_name }}
           fetch-depth: 0
           persist-credentials: false
 
@@ -56,9 +63,17 @@ jobs:
           @semantic-release/exec@7
           conventional-changelog-conventionalcommits@8
 
+      - name: Find the next version, and whether npm already has it
+        id: next
+        working-directory: cli
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: node ../eng/cli-next-version.mjs
+
       - name: Run semantic-release on cli/
+        if: steps.next.outputs.publish == 'true'
         working-directory: cli
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: npx semantic-release
+        run: npx semantic-release --no-ci
