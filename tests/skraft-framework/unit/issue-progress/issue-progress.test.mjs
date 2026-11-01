@@ -17,10 +17,10 @@ const CHECKOUT_SURVIVORS = strykerReport({ '/work/src/Checkout.cs': [[12, 'Equal
 /** A software-engineer that commits a test to kill the checkout's mutants. */
 const killer = agent({ work: ({ git }) => git.commit(`test(${SLUG}): kill the mutants of Checkout`, ['tests/CheckoutTests.cs'], REFS_42) })
 /** A repository review `<id>` the consistency lens alone runs: its fan-out, its lens, its fan-in. @param {string} id */
-const reviewNodes = (id) => `  ${id}_lenses [shape=component]\n  ${id}_consistency [shape=note, lens="consistency"]\n  ${id} [shape=tripleoctagon]`
+const reviewNodes = (id) => `  ${id}_lenses [shape=component]\n  ${id}_consistency [shape=note, lens="consistency"]\n  ${id}_refuter [shape=octagon]\n  ${id} [shape=tripleoctagon]`
 /** Its edges: the lens between fan-out and fan-in, NEEDS_REWORK to `rework`, APPROVED to `approved`. @param {string} id @param {string} rework @param {string} approved */
 const reviewEdges = (id, rework, approved) => [
-  `  ${id}_lenses -> ${id}_consistency -> ${id}`,
+  `  ${id}_lenses -> ${id}_consistency -> ${id}_refuter -> ${id}`,
   `  ${id} -> ${rework} [label="NEEDS_REWORK", max_visits=3]`,
   `  ${id} -> ${approved} [label="APPROVED"]`,
 ].join('\n')

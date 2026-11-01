@@ -30,7 +30,8 @@ test('an ejected .skraft/review.skraft.dot that drops a mandatory lens is refuse
 test('a mandatory call dropped, turned into a review, or calling a file that lacks the mandatory lenses is refused; one calling a file that keeps them is accepted', async () => {
   const call = '  deliver_review [shape=house, workflow="review", mandatory=true]\n'
   const fanIn = withLenses(edit(BUILT_IN_WORKFLOW,
-    [call, '  deliver_review_lenses [shape=component]\n  deliver_review [shape=tripleoctagon, mandatory=true]\n'],
+    [call, '  deliver_review_lenses [shape=component]\n  deliver_review_refuter [shape=octagon]\n  deliver_review [shape=tripleoctagon, mandatory=true]\n'],
+    ['  deliver_review -> deliver [label="NEEDS_REWORK"', '  deliver_review_refuter -> deliver_review\n  deliver_review -> deliver [label="NEEDS_REWORK"'],
     ['gates -> deliver_review [label="PASS"]', 'gates -> deliver_review_lenses [label="PASS"]']), 'deliver_review', DELIVER_LENSES)
   assert.deepEqual(await checked(fanIn), [
     `mandatory node deliver_review is missing as a call (shape=house); ${MANDATORY}`,
@@ -52,6 +53,23 @@ test('the fan-in of review stays, under its id and without mandatory=false, what
   const elsewhere = edit(BUILT_IN_WORKFLOW, ['workflow="review"', 'workflow="team-review"'])
   assert.deepEqual(await checked(elsewhere, [], { '.skraft/team-review.skraft.dot': BUILT_IN_REVIEW.replaceAll('verdict', 'decision') }), [
     `mandatory node verdict (the fan-in of team-review) is missing; ${MANDATORY}`,
+  ])
+})
+
+test('a .skraft/review.skraft.dot ejected before the refuter node, its lens nodes led straight to verdict, is refused with the node and the edges to add; one that renames the refuter or says mandatory=false is refused', async () => {
+  const before = BUILT_IN_REVIEW.replace('  refuter [shape=octagon, mandatory=true]\n', '').replace('  refuter -> verdict\n', '').replaceAll(' -> refuter\n', ' -> verdict\n')
+  const added = 'node verdict: its lens nodes lead straight to it, the form before the refuter node; add refuter [shape=octagon],'
+    + ' lead test_integrity, architecture_boundaries, cold_reader, mock_fidelity, contract_fidelity to refuter instead, and add refuter -> verdict'
+  assert.deepEqual(await checkedReview(before), [`.skraft/review.skraft.dot: ${added}`])
+  assert.deepEqual(await checked(BUILT_IN_WORKFLOW, [], { '.skraft/review.skraft.dot': before }), [`.skraft/review.skraft.dot: ${added}`])
+
+  assert.deepEqual(await checkedReview(BUILT_IN_REVIEW.replaceAll('refuter', 'challenger')), [`mandatory node refuter (the refuter of review) is missing; ${MANDATORY}`])
+  assert.deepEqual(await checkedReview(edit(BUILT_IN_REVIEW, ['refuter [shape=octagon, mandatory=true]', 'refuter [shape=octagon, mandatory=false]'])), [
+    `mandatory node refuter says mandatory=false, which changes nothing; ${MANDATORY}`,
+  ])
+  const pipeline = edit(BUILT_IN_WORKFLOW, ['design_review_refuter [shape=octagon, mandatory=true]', 'design_review_check [shape=octagon]'])
+  assert.deepEqual(await checked(pipeline.replaceAll('-> design_review_refuter', '-> design_review_check').replace('design_review_refuter -> design_review', 'design_review_check -> design_review')), [
+    `mandatory node design_review_refuter (the refuter of design_review) is missing; ${MANDATORY}`,
   ])
 })
 
@@ -88,8 +106,8 @@ test('mandatory=false written on a mandatory node changes nothing: the copy is r
 
 test('a mandatory lens dropped from review.skraft.dot stays missing when the pipeline holds a decoy review whose lens node takes its id', async () => {
   const decoy = edit(BUILT_IN_WORKFLOW,
-    ['  exit     [shape=Msquare]', '  exit     [shape=Msquare]\n  lenses [shape=component]\n  test_integrity [shape=note, lens="test-integrity"]\n  decoy [shape=tripleoctagon]'],
-    ['  visuals -> pr_writer -> publish -> exit', '  visuals -> lenses -> test_integrity -> decoy -> pr_writer -> publish -> exit'])
+    ['  exit     [shape=Msquare]', '  exit     [shape=Msquare]\n  lenses [shape=component]\n  test_integrity [shape=note, lens="test-integrity"]\n  decoy_refuter [shape=octagon]\n  decoy [shape=tripleoctagon]'],
+    ['  visuals -> pr_writer -> publish -> exit', '  visuals -> lenses -> test_integrity -> decoy_refuter -> decoy -> pr_writer -> publish -> exit'])
   const withoutIntegrity = reviewWithLenses(DELIVER_LENSES.filter((lens) => lens !== 'test-integrity'))
 
   assert.deepEqual(await checked(decoy, [], { '.skraft/review.skraft.dot': withoutIntegrity }), [lensMissing('test_integrity', 'test-integrity')])
@@ -115,7 +133,7 @@ test('a mandatory lens behind another fan-out, or running another lens, is refus
 test('a mandatory review dropped, bypassed, or sending NEEDS_REWORK nowhere or to another phase is refused', async () => {
   const dropped = edit(BUILT_IN_WORKFLOW,
     [/  subgraph cluster_design_review \{\n[^}]*\n  \}\n/.exec(BUILT_IN_WORKFLOW)[0], ''],
-    [/(  design_review_lenses -> \w+ -> design_review\n)+/.exec(BUILT_IN_WORKFLOW)[0], ''],
+    [/(  design_review_lenses -> \w+ -> design_review_refuter\n)+  design_review_refuter -> design_review\n/.exec(BUILT_IN_WORKFLOW)[0], ''],
     ['research -> design -> design_review_lenses', 'research -> design -> adr'],
     ['  design_review -> design  [label="NEEDS_REWORK", max_visits=1]\n  design_review -> adr     [label="APPROVED"]\n', ''])
   assert.deepEqual(await checked(dropped), [`mandatory node design_review is missing as a review fan-in (shape=tripleoctagon); ${MANDATORY}`])

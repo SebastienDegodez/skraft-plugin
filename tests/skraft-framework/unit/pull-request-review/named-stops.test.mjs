@@ -200,7 +200,7 @@ test('an invalid skraft-config.json at the base stops the review before any lens
 })
 
 test('an ejected review.skraft.dot at the base without test-integrity is refused before any lens runs: the node is mandatory', async () => {
-  const review = edit(BUILT_IN_REVIEW, ['  test_integrity          [shape=note, lens="test-integrity", mandatory=true]\n', ''], ['  lenses -> test_integrity -> verdict\n', ''])
+  const review = edit(BUILT_IN_REVIEW, ['  test_integrity          [shape=note, lens="test-integrity", mandatory=true]\n', ''], ['  lenses -> test_integrity -> refuter\n', ''])
   const host = reviewHost({ base: { '.skraft/review.skraft.dot': review } })
   host.git.commit('feat: discount', ['src/Discount.cs'])
 
@@ -231,8 +231,8 @@ test('an ejected review.skraft.dot that does not parse is refused with what is w
 
 test('every mandatory node an ejected copy drops is named, one reason after the other', async () => {
   const review = edit(BUILT_IN_REVIEW,
-    ['  test_integrity          [shape=note, lens="test-integrity", mandatory=true]\n', ''], ['  lenses -> test_integrity -> verdict\n', ''],
-    ['  architecture_boundaries [shape=note, lens="architecture-boundaries", mandatory=true]\n', ''], ['  lenses -> architecture_boundaries -> verdict\n', ''])
+    ['  test_integrity          [shape=note, lens="test-integrity", mandatory=true]\n', ''], ['  lenses -> test_integrity -> refuter\n', ''],
+    ['  architecture_boundaries [shape=note, lens="architecture-boundaries", mandatory=true]\n', ''], ['  lenses -> architecture_boundaries -> refuter\n', ''])
   const host = reviewHost({ base: { '.skraft/review.skraft.dot': review } })
   host.git.commit('feat: discount', ['src/Discount.cs'])
 

@@ -2,8 +2,10 @@
 // request. Copy it into .skraft/review.skraft.dot with `skraft workflow eject review`, then add lenses; every call to
 // review runs the copy. It reads only its inputs, never a run's journal: base and head
 // bound the changes, story and documents tell what they are for, components how each one is built and tested.
-// A called workflow runs one review: start -> fan-out -> one lens node per branch -> fan-in -> exit; the calling node
-// carries NEEDS_REWORK and max_visits. A node marked mandatory=true can never be dropped, bypassed or weakened,
+// A called workflow runs one review: start -> fan-out -> one lens node per branch -> refuter -> fan-in -> exit; the
+// calling node carries NEEDS_REWORK and max_visits. The refuter (shape=octagon) is finding-refuter: it checks each
+// blocker, high and medium finding of the lenses before the fan-in counts it, one tier above the strongest lens it
+// checks unless the fan-in names its family with refuter=. A node marked mandatory=true can never be dropped, bypassed or weakened,
 // whatever the copy says.
 digraph review {
   graph [version="2", goal="Review the changes", input_base="required", input_head="required", input_story="optional", input_documents="optional", input_components="optional"]
@@ -15,14 +17,16 @@ digraph review {
   cold_reader             [shape=note, lens="cold-reader"]
   mock_fidelity           [shape=note, lens="mock-fidelity", when="mock"]
   contract_fidelity       [shape=note, lens="contract-fidelity", when="contract"]
+  refuter [shape=octagon, mandatory=true]
   verdict [shape=tripleoctagon, mandatory=true]
   exit   [shape=Msquare]
 
   start -> lenses
-  lenses -> test_integrity -> verdict
-  lenses -> architecture_boundaries -> verdict
-  lenses -> cold_reader -> verdict
-  lenses -> mock_fidelity -> verdict
-  lenses -> contract_fidelity -> verdict
+  lenses -> test_integrity -> refuter
+  lenses -> architecture_boundaries -> refuter
+  lenses -> cold_reader -> refuter
+  lenses -> mock_fidelity -> refuter
+  lenses -> contract_fidelity -> refuter
+  refuter -> verdict
   verdict -> exit [label="APPROVED"]
 }

@@ -4,15 +4,16 @@ import { GATE_ORDER } from '../gates/gate-plan.mjs'
 import { FAMILY, readLensSpec, TRIGGER_NAMES } from '../review/lenses.mjs'
 import { RUN_VALUES } from './call.mjs'
 import { isKeyword, isSymbol, parseDot, tokenizeDot } from './dot.mjs'
-import { branchReasons, foldReviews, formerReviewReasons } from './review-branches.mjs'
+import { branchReasons, foldReviews, formerFanInReasons, formerReviewReasons } from './review-branches.mjs'
 
 /**
  * A skraft workflow: the DOT graph read as the pipeline the engine runs, and checked before any
  * run.
  *
- * @typedef {'start' | 'exit' | 'agent' | 'gate' | 'review' | 'ask' | 'publish' | 'fan-out' | 'lens' | 'call'} NodeKind
- *   review: a review's fan-in (shape=tripleoctagon); fan-out (shape=component) and lens
- *   (shape=note) nodes are folded into it (`review-branches.mjs`) and never reach a Workflow.
+ * @typedef {'start' | 'exit' | 'agent' | 'gate' | 'review' | 'ask' | 'publish' | 'fan-out' | 'lens' | 'refuter' | 'call'} NodeKind
+ *   review: a review's fan-in (shape=tripleoctagon); fan-out (shape=component), lens
+ *   (shape=note) and refuter (shape=octagon) nodes are folded into it (`review-branches.mjs`) and
+ *   never reach a Workflow.
  *   call: a node (shape=house) that runs the review of another workflow (`call.mjs`).
  * @typedef {'frontend' | import('../review/lenses.mjs').TriggerName} When
  * @typedef {{ id: string, lens: string, when: import('../review/lenses.mjs').TriggerName | null, mandatory: boolean | null }} Branch
@@ -23,7 +24,7 @@ import { branchReasons, foldReviews, formerReviewReasons } from './review-branch
  *   goal: boolean, locked: boolean, unlock: string | null, outputs: string[], writes: string[],
  *   maxAttempts: number | null, model: string | null, refuter: string | null, each: 'survivor-file' | null, proposal: boolean,
  *   publish: Publication | null, when: When | null, fanOut: string | null, branches: Branch[],
- *   mandatory: boolean | null, call: Call | null,
+ *   mandatory: boolean | null, call: Call | null, refutedBy: Refuter | null,
  * }} WorkflowNode
  *   phase: its own, else the phase of its first predecessor in `order`. lenses: the lenses a
  *   review node runs, each as the agent `<lens>-lens`, written `<lens>` or `<lens>@<family>`
@@ -36,7 +37,10 @@ import { branchReasons, foldReviews, formerReviewReasons } from './review-branch
  *   mutants to runs its agent once per file that holds some. publish: what a publish node (a
  *   parallelogram with `publish=`) publishes: the run's pull request, or the screenshots of the
  *   e2e runs of its front ends. when: a publish node runs only when skraft-config.json has a
- *   component of that kind, and is skipped otherwise.
+ *   component of that kind, and is skipped otherwise. refutedBy: the refuter node a review (or the
+ *   review a call runs) joins its lenses in, null for any other node.
+ * @typedef {{ id: string, mandatory: boolean | null }} Refuter
+ *   the node that runs finding-refuter on the findings of a review's lenses, and its mandatory=.
  * @typedef {{ workflow: string, with: Record<string, string>, inputs: Record<string, string>, fanIn: string | null, mandatory: boolean | null }} Call
  *   what a call node calls: the workflow file, its with_ bindings by input; once the called
  *   workflow is read, the run value each input is bound to, and the id and mandatory= of its
@@ -60,7 +64,7 @@ import { branchReasons, foldReviews, formerReviewReasons } from './review-branch
  */
 
 /** @type {ReadonlyMap<string, NodeKind>} */
-const KINDS = new Map([['Mdiamond', 'start'], ['Msquare', 'exit'], ['box', 'agent'], ['parallelogram', 'gate'], ['component', 'fan-out'], ['note', 'lens'], ['tripleoctagon', 'review'], ['hexagon', 'ask'], ['house', 'call']])
+const KINDS = new Map([['Mdiamond', 'start'], ['Msquare', 'exit'], ['box', 'agent'], ['parallelogram', 'gate'], ['component', 'fan-out'], ['note', 'lens'], ['octagon', 'refuter'], ['tripleoctagon', 'review'], ['hexagon', 'ask'], ['house', 'call']])
 const COMMON = Object.freeze(['label', 'shape', 'phase'])
 /** The prefix of a call node's bindings, and of a workflow's inputs. */
 const WITH = 'with_'
@@ -75,6 +79,7 @@ const ATTRIBUTES = Object.freeze({
   gate: { required: ['gate'], optional: ['goal_gate', 'locked', 'unlock'] },
   'fan-out': { required: [], optional: [] },
   lens: { required: ['lens'], optional: ['model', 'when', 'mandatory'] },
+  refuter: { required: [], optional: ['mandatory'] },
   review: { required: [], optional: ['model', 'refuter', 'mandatory'] },
   ask: { required: ['question'], optional: [] },
   publish: { required: ['publish'], optional: ['when'] },
@@ -177,7 +182,7 @@ const EDGE_CHECKS = {
 export const readWorkflow = (text, { called = false, calls = {} } = {}) => {
   const parsed = parseDot(text)
   if (!parsed.ok) return parsed
-  const former = formerReviewReasons(parsed.graph, calls)
+  const former = [...formerReviewReasons(parsed.graph, calls), ...formerFanInReasons(parsed.graph, called)]
   if (former.length > 0) return { ok: false, errors: former }
   const draft = draftOf(parsed.graph)
   const errors = WORKFLOW_CHECKS.filter((check) => !called || check !== missingPhaseReasons).flatMap((check) => check(draft))
@@ -282,10 +287,12 @@ const stepSettingsOf = (attributes) => ({
   proposal: attributes.proposal === 'true',
   publish: PUBLICATIONS.find((known) => known === attributes.publish) ?? null,
   when: /** @type {When | undefined} */ (attributes.when) ?? null,
-  fanOut: null,
-  branches: [],
   mandatory: attributes.mandatory === undefined ? null : attributes.mandatory === 'true',
+  ...REVIEW_UNFOLDED,
 })
+
+/** What a review holds before its fan-out, lens nodes and refuter are folded into it (`foldReviews`). */
+const REVIEW_UNFOLDED = Object.freeze({ fanOut: null, branches: Object.freeze([]), refutedBy: null })
 
 /** @param {import('./dot.mjs').DotEdge} edge @param {WorkflowNode | undefined} source the node of `from` @returns {WorkflowEdge} */
 const edgeOf = ({ from, to, attributes }, source) => ({
@@ -325,7 +332,7 @@ const nodeReasons = ({ id, attributes }) => {
 
 /** @param {string} id @param {string | undefined} shape */
 const shapeReason = (id, shape) => (shape === undefined
-  ? `node ${id} has no shape; declare it with shape=Mdiamond, Msquare, box, parallelogram, component, note, tripleoctagon, hexagon or house`
+  ? `node ${id} has no shape; declare it with shape=Mdiamond, Msquare, box, parallelogram, component, note, octagon, tripleoctagon, hexagon or house`
   : `node ${id}: shape ${shape} is not supported (supported: ${[...KINDS.keys()].join(', ')})`)
 
 /** @param {string} name @param {string} shape @param {NodeKind} kind @param {string[]} allowed @param {string} key @param {string} value */
@@ -438,6 +445,7 @@ const OUTGOING = Object.freeze({
   // A fan-out's edges are its branches: branchReasons checks them.
   'fan-out': () => [],
   lens: oneOutgoing,
+  refuter: oneOutgoing,
 })
 
 /** An agent proposes for the surviving mutants it takes by file. @param {Draft} draft */

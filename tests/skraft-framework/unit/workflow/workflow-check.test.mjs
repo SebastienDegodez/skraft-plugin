@@ -17,7 +17,7 @@ const PLUGIN_AGENTS = {
 }
 /** The line, from 1, of the first line of the text that starts with `start`. */
 const lineOf = (text, start) => text.split('\n').findIndex((line) => line.startsWith(start)) + 1
-const node = (id, kind, fields = {}) => ({ id, kind, phase: null, agent: null, gates: [], lenses: [], question: null, goal: false, locked: false, unlock: null, outputs: [], writes: [], maxAttempts: null, model: null, refuter: null, each: null, proposal: false, publish: null, when: null, fanOut: null, branches: [], mandatory: null, call: null, ...fields })
+const node = (id, kind, fields = {}) => ({ id, kind, phase: null, agent: null, gates: [], lenses: [], question: null, goal: false, locked: false, unlock: null, outputs: [], writes: [], maxAttempts: null, model: null, refuter: null, each: null, proposal: false, publish: null, when: null, fanOut: null, branches: [], mandatory: null, call: null, refutedBy: null, ...fields })
 /**
  * A review fan-in as the run follows it: its lenses read from the branches of `<id>_lenses`, each lens node `<id>_<lens>`.
  * @param {{ triggers?: Record<string, string>, mandatory?: string[] }} [marks] the lenses' when=; the lenses marked mandatory=true, `review` for the fan-in
@@ -27,6 +27,7 @@ const review = (id, phase, { triggers = {}, mandatory = [] } = {}) => node(id, '
   lenses: LENSES[id],
   fanOut: `${id}_lenses`,
   mandatory: mandatory.includes('review') ? true : null,
+  refutedBy: { id: `${id}_refuter`, mandatory: true },
   branches: LENSES[id].map((lens) => ({ id: `${id}_${lens.replaceAll('-', '_')}`, lens, when: triggers[lens] ?? null, mandatory: mandatory.includes(lens) ? true : null })),
 })
 
@@ -37,6 +38,7 @@ const DELIVER_CALL = node('deliver_review', 'call', {
   fanOut: 'lenses',
   mandatory: true,
   branches: LENSES.deliver_review.map((lens) => ({ id: lens.replaceAll('-', '_'), lens, when: { 'mock-fidelity': 'mock', 'contract-fidelity': 'contract' }[lens] ?? null, mandatory: ['test-integrity', 'architecture-boundaries'].includes(lens) ? true : null })),
+  refutedBy: { id: 'refuter', mandatory: true },
   call: { workflow: 'review', with: {}, inputs: { base: 'base', head: 'head', story: 'story', documents: 'documents', components: 'components' }, fanIn: 'verdict', mandatory: true },
 })
 
@@ -256,7 +258,7 @@ test('the locked gates node kept with unlock is skipped and said so; dropping ga
 test('a node with a shape the engine does not run, or with none, is refused', async () => {
   const ellipse = host({ files: ejectedPipeline(edit(BUILT_IN_WORKFLOW, ['design   [shape=box,', 'design   [shape=ellipse,'], ['"acceptance-designer", phase="DISTILL"', '"acceptance-designer"'])) })
   assert.deepEqual(await ellipse.commands.check(), refused('.skraft/pipeline.skraft.dot', [
-    'node design: shape ellipse is not supported (supported: Mdiamond, Msquare, box, parallelogram, component, note, tripleoctagon, hexagon, house)',
+    'node design: shape ellipse is not supported (supported: Mdiamond, Msquare, box, parallelogram, component, note, octagon, tripleoctagon, hexagon, house)',
     'node design_review has no phase; set phase="<PHASE>" on it or on a node before it',
     'node adr has no phase; set phase="<PHASE>" on it or on a node before it',
     'node distill has no phase; set phase="<PHASE>" on it or on a node before it',
@@ -264,7 +266,7 @@ test('a node with a shape the engine does not run, or with none, is refused', as
   ]))
 
   const typo = host({ files: ejectedPipeline(edit(BUILT_IN_WORKFLOW, ['research -> design ->', 'research -> desing -> design ->'])) })
-  assert.deepEqual(await typo.commands.check(), refused('.skraft/pipeline.skraft.dot', ['node desing has no shape; declare it with shape=Mdiamond, Msquare, box, parallelogram, component, note, tripleoctagon, hexagon or house']))
+  assert.deepEqual(await typo.commands.check(), refused('.skraft/pipeline.skraft.dot', ['node desing has no shape; declare it with shape=Mdiamond, Msquare, box, parallelogram, component, note, octagon, tripleoctagon, hexagon or house']))
 })
 
 test('a workflow the DOT parser refuses is refused with the line at fault', async () => {
@@ -521,21 +523,52 @@ test('in an ejected workflow, a model=, a lens\'s @family or a refuter= that an 
   assert.deepEqual((await host({ files: unmasked }).commands.check()).warnings.map((warning) => warning.split(' is masked')[0]), ['node design_review: model="frontier"'])
 })
 
-test('a review is a fan-out whose every branch runs one lens node into the same fan-in; each other shape is refused with its reason', async () => {
+test('a review is a fan-out whose every branch runs one lens node into the same refuter, then its fan-in; each other shape is refused with its reason', async () => {
   const cases = [
     {
-      what: 'a branch that skips its fan-in',
-      dot: edit(BUILT_IN_WORKFLOW, ['design_review_fitness -> design_review', 'design_review_fitness -> adr']),
-      errors: ["node design_review_fitness: a lens node leads to its review's fan-in (shape=tripleoctagon), not to adr"],
+      what: 'a branch that skips its refuter',
+      dot: edit(BUILT_IN_WORKFLOW, ['design_review_fitness -> design_review_refuter', 'design_review_fitness -> adr']),
+      errors: ["node design_review_fitness: a lens node leads to its review's refuter (shape=octagon), not to adr"],
+    },
+    {
+      what: 'a refuter that skips its fan-in',
+      dot: edit(BUILT_IN_WORKFLOW, ['design_review_refuter -> design_review\n', 'design_review_refuter -> adr\n']),
+      errors: [
+        "node design_review_refuter: a refuter leads to its review's fan-in (shape=tripleoctagon), not to adr",
+        'node design_review is unreachable from start',
+      ],
+    },
+    {
+      what: 'a lens node that enters the fan-in beside the refuter',
+      dot: edit(BUILT_IN_WORKFLOW, ['design_review_fitness -> design_review_refuter', 'design_review_fitness -> design_review']),
+      errors: [
+        "node design_review_fitness: a lens node leads to its review's refuter (shape=octagon), not to design_review",
+        'node design_review: a fan-in is entered only by its refuter (shape=octagon), not by design_review_fitness',
+      ],
+    },
+    {
+      what: 'a refuter entered by something else than a lens node',
+      dot: edit(BUILT_IN_WORKFLOW, ['  adr -> design    [label="REJECTED", max_visits=1]', '  adr -> design_review_refuter    [label="REJECTED", max_visits=1]']),
+      errors: ['node design_review_refuter: a refuter is entered only by the lens nodes of one fan-out, not by adr'],
+    },
+    {
+      what: 'a fan-in two refuters enter',
+      dot: edit(BUILT_IN_WORKFLOW,
+        ['    design_review_refuter [shape=octagon, mandatory=true]', '    design_review_refuter [shape=octagon, mandatory=true]\n    design_review_second [shape=octagon]'],
+        ['design_review_fitness -> design_review_refuter', 'design_review_fitness -> design_review_second -> design_review']),
+      errors: [
+        'node design_review_lenses: its branches end in design_review_refuter, design_review_second; every branch of a fan-out ends in the same refuter',
+        'node design_review: it is entered by design_review_second, design_review_refuter; a fan-in closes one refuter',
+      ],
     },
     {
       what: 'a branch with no lens node',
-      dot: edit(BUILT_IN_WORKFLOW, ['design_review_lenses -> design_review_fitness -> design_review', 'design_review_lenses -> design_review']),
+      dot: edit(BUILT_IN_WORKFLOW, ['design_review_lenses -> design_review_fitness -> design_review_refuter', 'design_review_lenses -> design_review_refuter']),
       errors: [
         'node design_review_fitness: lens node needs exactly one outgoing edge, has 0',
-        'edge design_review_lenses -> design_review: each branch of a fan-out holds exactly one lens node (shape=note), then the fan-in',
+        'edge design_review_lenses -> design_review_refuter: each branch of a fan-out holds exactly one lens node (shape=note), then the refuter',
         'node design_review_fitness: a lens node is entered by exactly one edge, from a fan-out (shape=component)',
-        'node design_review: a fan-in is entered only by the lens nodes of one fan-out, not by design_review_lenses',
+        'node design_review_refuter: a refuter is entered only by the lens nodes of one fan-out, not by design_review_lenses',
         'node design_review_fitness is unreachable from start',
         'node design_review_fitness never reaches an exit',
       ],
@@ -544,8 +577,8 @@ test('a review is a fan-out whose every branch runs one lens node into the same 
       what: 'a fan-in without a fan-out',
       dot: edit(BUILT_IN_WORKFLOW, ['design -> design_review_lenses', 'design -> design_review']),
       errors: [
-        'node design_review: a fan-in is entered only by the lens nodes of one fan-out, not by design',
-        ...['design_review_lenses', 'design_review_consistency', 'design_review_architecture_compliance', 'design_review_fitness'].map((id) => `node ${id} is unreachable from start`),
+        'node design_review: a fan-in is entered only by its refuter (shape=octagon), not by design',
+        ...['design_review_lenses', 'design_review_consistency', 'design_review_architecture_compliance', 'design_review_fitness', 'design_review_refuter'].map((id) => `node ${id} is unreachable from start`),
       ],
     },
     {
@@ -553,7 +586,7 @@ test('a review is a fan-out whose every branch runs one lens node into the same 
       dot: edit(BUILT_IN_WORKFLOW, ['adr -> distill   [label="RATIFIED"]', 'adr -> stray   [label="RATIFIED"]\n  stray [shape=note, lens="fitness"]\n  stray -> distill']),
       errors: [
         'node stray: a lens node is entered by exactly one edge, from a fan-out (shape=component)',
-        "node stray: a lens node leads to its review's fan-in (shape=tripleoctagon), not to distill",
+        "node stray: a lens node leads to its review's refuter (shape=octagon), not to distill",
       ],
     },
     {
@@ -561,19 +594,10 @@ test('a review is a fan-out whose every branch runs one lens node into the same 
       dot: edit(BUILT_IN_WORKFLOW, ['  distill_review_lenses -> distill_review_coverage', '  distill_review_lenses -> design_review_fitness\n  distill_review_lenses -> distill_review_coverage']),
       errors: [
         'node design_review_fitness: a lens node is entered by exactly one edge, from a fan-out (shape=component)',
-        'node design_review: its lens nodes come from design_review_lenses, distill_review_lenses; a fan-in closes one fan-out',
-        'node distill_review_lenses: its branches end in design_review, distill_review; every branch of a fan-out ends in the same fan-in',
-        'loop design_review_fitness -> design_review -> adr -> distill -> distill_review_lenses -> design_review_fitness has no max_visits',
+        'node design_review_refuter: its lens nodes come from design_review_lenses, distill_review_lenses; a refuter closes one fan-out',
+        'node distill_review_lenses: its branches end in design_review_refuter, distill_review_refuter; every branch of a fan-out ends in the same refuter',
+        'loop design_review_fitness -> design_review_refuter -> design_review -> adr -> distill -> distill_review_lenses -> design_review_fitness has no max_visits',
         'edge distill_review_lenses -> design_review_fitness goes back from DISTILL to DESIGN',
-      ],
-    },
-    {
-      what: 'a fan-out whose branches end in two fan-ins',
-      dot: edit(BUILT_IN_WORKFLOW, ['design_review_fitness -> design_review', 'design_review_fitness -> distill_review']),
-      errors: [
-        'node design_review_lenses: its branches end in design_review, distill_review; every branch of a fan-out ends in the same fan-in',
-        'node distill_review: its lens nodes come from design_review_lenses, distill_review_lenses; a fan-in closes one fan-out',
-        ...['coverage', 'business_alignment', 'testability', 'boundary_enforcement'].map((lens) => `edge distill_review_${lens} -> distill_review goes back from DISTILL to DESIGN`),
       ],
     },
     {
@@ -581,17 +605,22 @@ test('a review is a fan-out whose every branch runs one lens node into the same 
       dot: edit(BUILT_IN_WORKFLOW, ['design_review -> design  [label="NEEDS_REWORK", max_visits=1]', 'design_review_lenses -> design  [label="NEEDS_REWORK", max_visits=1]']),
       errors: [
         "edge design_review_lenses -> design: only an edge leaving a gate, a review's fan-in (shape=tripleoctagon), a call (shape=house) or an ask node takes a label",
-        'edge design_review_lenses -> design: each branch of a fan-out holds exactly one lens node (shape=note), then the fan-in',
+        'edge design_review_lenses -> design: each branch of a fan-out holds exactly one lens node (shape=note), then the refuter',
       ],
     },
     {
       what: 'a fan-out with no branch',
       dot: edit(BUILT_IN_WORKFLOW, ['design -> design_review_lenses', 'design -> design_review_lenses\n  side_lenses [shape=component]\n  design_review_lenses -> side_lenses']),
       errors: [
-        'edge design_review_lenses -> side_lenses: each branch of a fan-out holds exactly one lens node (shape=note), then the fan-in',
+        'edge design_review_lenses -> side_lenses: each branch of a fan-out holds exactly one lens node (shape=note), then the refuter',
         'node side_lenses: a fan-out needs one branch per lens, has none',
         'node side_lenses never reaches an exit',
       ],
+    },
+    {
+      what: 'a refuter with an attribute it does not take',
+      dot: edit(BUILT_IN_WORKFLOW, ['design_review_refuter [shape=octagon, mandatory=true]', 'design_review_refuter [shape=octagon, mandatory=true, model="frontier"]']),
+      errors: ['node design_review_refuter: attribute model is not supported on a octagon node (supported: label, shape, phase, mandatory)'],
     },
     {
       what: 'a trigger the engine does not know',
@@ -608,8 +637,8 @@ test('a workflow still written with lenses= on a review node is refused, each su
   const former = edit(BUILT_IN_WORKFLOW,
     ['  deliver_review [shape=house, workflow="review", mandatory=true]\n',
       '  deliver_review [shape=component, lenses="test-integrity, cold-reader@frontier,mock-fidelity,contract-fidelity", label="Delivery review", phase="DELIVER", model="economy", refuter="frontier", mandatory=true]\n'],
-    ['  mutation_review_lenses [shape=component]\n  mutation_review_test_integrity [shape=note, lens="test-integrity"]\n  mutation_review [shape=tripleoctagon, mandatory=true]\n', '  mutation_review [shape=component, lenses="test-integrity", label="Mutation review", phase="DELIVER", model="economy", refuter="frontier"]\n'],
-    ['kill_mutants -> mutation_review_lenses\n  mutation_review_lenses -> mutation_review_test_integrity -> mutation_review\n', 'kill_mutants -> mutation_review\n'])
+    ['  mutation_review_lenses [shape=component]\n  mutation_review_test_integrity [shape=note, lens="test-integrity"]\n  mutation_review_refuter [shape=octagon, mandatory=true]\n  mutation_review [shape=tripleoctagon, mandatory=true]\n', '  mutation_review [shape=component, lenses="test-integrity", label="Mutation review", phase="DELIVER", model="economy", refuter="frontier"]\n'],
+    ['kill_mutants -> mutation_review_lenses\n  mutation_review_lenses -> mutation_review_test_integrity -> mutation_review_refuter\n  mutation_review_refuter -> mutation_review\n', 'kill_mutants -> mutation_review\n'])
 
   const checked = await host({ files: ejectedPipeline(former) }).commands.check()
 
@@ -620,9 +649,10 @@ test('a workflow still written with lenses= on a review node is refused, each su
       + ' keep the edges entering and leaving deliver_review; its lenses live in review: skraft workflow eject review copies it into .skraft/review.skraft.dot,'
       + ' where its fan-in takes model="economy" and refuter="frontier"; the plugin\'s mandatory=true stays on deliver_review',
     'node mutation_review: lenses="test-integrity" is the former review form, no longer read; replace node mutation_review with:'
-      + ' mutation_review_lenses [shape=component]; mutation_review_test_integrity [shape=note, lens="test-integrity"];'
+      + ' mutation_review_lenses [shape=component]; mutation_review_test_integrity [shape=note, lens="test-integrity"]; mutation_review_refuter [shape=octagon];'
       + ' mutation_review [shape=tripleoctagon, label="Mutation review", phase="DELIVER", model="economy", refuter="frontier"];'
-      + ` kill_mutants -> mutation_review_lenses; mutation_review_lenses -> mutation_review_test_integrity -> mutation_review; ${keep('mutation_review')}`,
+      + ' kill_mutants -> mutation_review_lenses; mutation_review_lenses -> mutation_review_test_integrity -> mutation_review_refuter;'
+      + ` mutation_review_refuter -> mutation_review; ${keep('mutation_review')}`,
   ])
   const plain = edit(BUILT_IN_WORKFLOW, ['  deliver_review [shape=house, workflow="review", mandatory=true]\n', '  deliver_review [shape=component, lenses="test-integrity"]\n'])
   assert.deepEqual((await host({ files: ejectedPipeline(plain) }).commands.check()).errors, [

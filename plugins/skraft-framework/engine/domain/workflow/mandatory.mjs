@@ -25,14 +25,29 @@ const lensOf = (spec) => spec.split('@')[0]
  * A kept mandatory review stays a fan-in on every path from the start and from the agents of its
  * phase to the exit that the plugin's workflow holds it on, with its NEEDS_REWORK edge back to an
  * agent of the plugin's phase; a kept mandatory
- * lens stays between the same fan-out and fan-in, runs the same lens, on every review.
+ * lens stays between the same fan-out and fan-in, runs the same lens, on every review; a kept
+ * review keeps its mandatory refuter under the same id.
  * @param {Workflow} builtIn @param {Workflow} custom
  * @returns {string[]}
  */
 export const checkMandatory = (builtIn, custom) => Object.values(builtIn.nodes).flatMap((node) => [
   ...(node.mandatory === true ? reviewReasons(builtIn, custom, node) : []),
   ...node.branches.filter((branch) => branch.mandatory === true).flatMap((branch) => lensReasons(custom, node, branch)),
+  ...(node.refutedBy?.mandatory === true ? refuterReasons(custom, node) : []),
 ])
+
+/**
+ * A review the copy keeps, under its kind, joins its lenses in the refuter of the plugin's id;
+ * one the copy drops is refused for itself when it is mandatory.
+ * @param {Workflow} custom @param {WorkflowNode} node a review or call of the plugin's workflow, with a mandatory refuter
+ */
+const refuterReasons = (custom, node) => {
+  const kept = custom.nodes[node.id]
+  if (kept?.kind !== node.kind) return []
+  const { id } = /** @type {import('./workflow.mjs').Refuter} */ (node.refutedBy)
+  if (kept.refutedBy?.id !== id) return [refusal(id, `(the refuter of ${node.call?.workflow ?? node.id}) is missing`)]
+  return falseFlag({ id, mandatory: kept.refutedBy.mandatory })
+}
 
 /** What a mandatory review of the plugin's workflow is, by its kind. @type {Readonly<Record<string, string>>} */
 const SHAPES = Object.freeze({ __proto__: null, review: 'a review fan-in (shape=tripleoctagon)', call: 'a call (shape=house)' })

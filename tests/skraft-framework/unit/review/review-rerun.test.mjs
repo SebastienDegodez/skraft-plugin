@@ -382,7 +382,7 @@ test('a review resumed after a stop still counts what its lenses cost before the
 test('a review running a lens twice, a lens node without a lens name, or a lens with a model family it cannot run on, is refused', async () => {
   const refusal = async (workflow) => (await scripted({ files: ejectedPipeline(workflow, { components: [API] }) }, () => []).init()).reason
   const twice = edit(withLenses(BUILT_IN_WORKFLOW, 'design_review', ['consistency', 'fitness']),
-    ['  design_review_lenses -> design_review_fitness -> design_review\n', '  design_review_lenses -> design_review_fitness -> design_review\n  design_review_again [shape=note, lens="consistency", model="sonnet"]\n  design_review_lenses -> design_review_again -> design_review\n'])
+    ['  design_review_lenses -> design_review_fitness -> design_review_refuter\n', '  design_review_lenses -> design_review_fitness -> design_review_refuter\n  design_review_again [shape=note, lens="consistency", model="sonnet"]\n  design_review_lenses -> design_review_again -> design_review_refuter\n'])
 
   assert.match(await refusal(twice), /node design_review_lenses: lens consistency runs twice; a lens runs at most once per review/)
   assert.match(await refusal(edit(BUILT_IN_WORKFLOW, ['lens="consistency"', 'lens="consistency:2"'])), /node design_review_consistency: lens="consistency:2" must be a kebab-case lens name/)
