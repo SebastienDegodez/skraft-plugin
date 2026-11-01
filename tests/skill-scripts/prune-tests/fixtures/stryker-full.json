@@ -1,0 +1,159 @@
+{
+  "schemaVersion": "1.0",
+  "thresholds": {
+    "high": 80,
+    "low": 60
+  },
+  "files": {
+    "src/price.js": {
+      "language": "javascript",
+      "source": "",
+      "mutants": [
+        {
+          "id": "1",
+          "mutatorName": "ConditionalExpression",
+          "replacement": "true",
+          "location": {
+            "start": {
+              "line": 2,
+              "column": 7
+            },
+            "end": {
+              "line": 2,
+              "column": 17
+            }
+          },
+          "status": "Killed",
+          "killedBy": [
+            "t1",
+            "t2"
+          ],
+          "coveredBy": [
+            "t1",
+            "t2",
+            "t3"
+          ]
+        },
+        {
+          "id": "2",
+          "mutatorName": "EqualityOperator",
+          "replacement": "qty > 10",
+          "location": {
+            "start": {
+              "line": 2,
+              "column": 7
+            },
+            "end": {
+              "line": 2,
+              "column": 17
+            }
+          },
+          "status": "Killed",
+          "killedBy": [
+            "t1"
+          ],
+          "coveredBy": [
+            "t1",
+            "t3"
+          ]
+        },
+        {
+          "id": "3",
+          "mutatorName": "StringLiteral",
+          "replacement": "\"\"",
+          "location": {
+            "start": {
+              "line": 5,
+              "column": 10
+            },
+            "end": {
+              "line": 5,
+              "column": 16
+            }
+          },
+          "status": "Survived",
+          "killedBy": [],
+          "coveredBy": [
+            "t3"
+          ]
+        },
+        {
+          "id": "4",
+          "mutatorName": "BlockStatement",
+          "replacement": "{}",
+          "location": {
+            "start": {
+              "line": 9,
+              "column": 22
+            },
+            "end": {
+              "line": 11,
+              "column": 2
+            }
+          },
+          "status": "NoCoverage",
+          "killedBy": [],
+          "coveredBy": []
+        },
+        {
+          "id": "5",
+          "mutatorName": "NumericLiteral",
+          "replacement": "0",
+          "static": true,
+          "location": {
+            "start": {
+              "line": 1,
+              "column": 22
+            },
+            "end": {
+              "line": 1,
+              "column": 26
+            }
+          },
+          "status": "Killed",
+          "killedBy": [
+            "t1",
+            "t5"
+          ]
+        }
+      ]
+    }
+  },
+  "testFiles": {
+    "test/price.test.js": {
+      "source": "",
+      "tests": [
+        {
+          "id": "t1",
+          "name": "discounts from ten items"
+        },
+        {
+          "id": "t2",
+          "name": "charges full price below ten"
+        },
+        {
+          "id": "t3",
+          "name": "formats the label"
+        },
+        {
+          "id": "t4",
+          "name": "loads the module"
+        }
+      ]
+    },
+    "test/rate.test.js": {
+      "source": "",
+      "tests": [
+        {
+          "id": "t5",
+          "name": "reads the default rate"
+        }
+      ]
+    }
+  },
+  "config": {
+    "disableBail": true,
+    "coverageAnalysis": "perTest",
+    "testRunner": "tap"
+  }
+}

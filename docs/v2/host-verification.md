@@ -60,6 +60,8 @@ Ce que le pilote suppose déjà sans mesure ; la prochaine passe de la sonde rem
 | Copilot CLI, TUI interactive : `/skraft` dans le menu `/` | #252 | not measured, la sonde est headless | `com.github.copilot/commands/skraft.md` |
 | Copilot CLI, TUI interactive : les outils de canvas offerts au modèle pour la route Status | #252 | not measured, la sonde est headless | `com.github.copilot/commands/skraft.md` (Status) |
 | Copilot CLI : un message qui parle de skraft sans `/` ne lance pas la commande (déclencheur `agent-invoked`) | #252 | en attente de mesure (aucun contrôle de sonde écrit ; la mesure payante viendra avec son lot) | `com.github.copilot/commands/skraft.md` (aucun `disable-model-invocation`) |
+| Claude Code : la skill `prune-tests` exposée sous `/skraft:prune-tests`, appelable par le développeur, jamais chargée par le modèle (`disable-model-invocation: true`) | #341 | not measured ; nom supposé par la règle `<plugin>:<skill>`, ni la doc how-to ni la référence des commandes ne sont écrites avant la mesure | `skills/prune-tests/SKILL.md`, `domain/reporting/pull-request.mjs` (ligne qui suggère la commande) |
+| Copilot CLI et VS Code : la skill `prune-tests` listée par `session.rpc.commands.list({ includeSkills: true })` sous `skraft:prune-tests`, et `disable-model-invocation` respecté | #341 | not measured ; même règle de nom que `/skraft-backlog:skraft-refine` (sonde #252), non vérifiée pour une skill | `skills/prune-tests/SKILL.md` |
 
 ### Sonde d'hôte Copilot — 2026-10-30 (branche feat/252-skraft-command, commandes de plugin, #252)
 
