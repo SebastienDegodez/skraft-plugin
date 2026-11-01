@@ -336,7 +336,8 @@ Descriptors are prompts an agent pays for on every run, not documentation.
   may still point there.
 - Conventional commit titles. A squash merge keeps the PR title as the only commit message: a PR
   that changes the plugin carries the plugin's scope in its title (`feat(engine): …`), never
-  `cli`, whose commits never release the plugin. A PR that only touches `cli/` is scoped `cli`.
+  `cli`, whose commits never release the plugin (a breaking one neither). A PR that only
+  touches `cli/` is scoped `cli`. `pr-title.yml` (`scripts/check-pr-title.mjs`) checks it.
 - Lot PRs reference their issue (`Refs #212`) without closing it;
   only the final PR to `main` closes issues.
 
