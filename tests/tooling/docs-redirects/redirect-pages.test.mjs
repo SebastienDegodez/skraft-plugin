@@ -6,6 +6,7 @@ import { test } from 'node:test'
 import {
   redirectPage,
   writeDirectoryIndexes,
+  writeSearchFolderIndex,
 } from '../../../docs/website/plugins/redirects/redirect-pages.mjs'
 
 const withSite = async (files, run) => {
@@ -49,5 +50,21 @@ test('a directory that already has an index keeps it', async () => {
   await withSite(['how-to.html', 'how-to/index.html'], async (outDir) => {
     await writeDirectoryIndexes({ routesPaths: ['/how-to'], baseUrl: '/', outDir })
     assert.equal(await readFile(join(outDir, 'how-to/index.html'), 'utf8'), '<html>how-to/index.html</html>')
+  })
+})
+
+test('the search page also answers at search/, where the search box sends "See all results"', async () => {
+  await withSite(['search.html', 'fr/search.html'], async (outDir) => {
+    await writeSearchFolderIndex({ outDir })
+    await writeSearchFolderIndex({ outDir: join(outDir, 'fr') })
+    assert.equal(await readFile(join(outDir, 'search/index.html'), 'utf8'), '<html>search.html</html>')
+    assert.equal(await readFile(join(outDir, 'fr/search/index.html'), 'utf8'), '<html>fr/search.html</html>')
+  })
+})
+
+test('a build without a search page gets no search folder', async () => {
+  await withSite(['index.html'], async (outDir) => {
+    await writeSearchFolderIndex({ outDir })
+    await assert.rejects(stat(join(outDir, 'search')))
   })
 })

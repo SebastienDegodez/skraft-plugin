@@ -1,11 +1,12 @@
 import { join } from 'node:path'
 import clientRedirects from '@docusaurus/plugin-client-redirects'
-import { writeDirectoryIndexes, writeRedirectPage } from './redirect-pages.mjs'
+import { writeDirectoryIndexes, writeRedirectPage, writeSearchFolderIndex } from './redirect-pages.mjs'
 
 // The Jekyll handbook served English pages at `/en/<page>` and `/en/<page>.html`; they now live at
 // `/<page>`. The redirect plugin runs once per locale build and sees locale-less paths, so only the
 // English build keeps it: the French build would otherwise write `/fr/en/<page>`. Both builds write
-// the directory indexes Jekyll served (`/fr/explanation/pipeline/`).
+// the directory indexes Jekyll served (`/fr/explanation/pipeline/`) and `search/`, where the search
+// box sends "See all results".
 // `/404.html`, the search page and the `/next` preview never existed under `/en`: no redirect for them.
 const NEVER_UNDER_EN = /\.html$|^\/search$|^\/next(\/|$)/
 
@@ -22,9 +23,14 @@ async function writeOldHtmlAddresses({ routesPaths, baseUrl, outDir }) {
   }
 }
 
+async function writeFolderIndexes(props) {
+  await writeDirectoryIndexes(props)
+  await writeSearchFolderIndex(props)
+}
+
 export default function redirectsPlugin(context) {
   if (context.i18n.currentLocale !== context.i18n.defaultLocale) {
-    return { name: 'skraft-directory-indexes', postBuild: writeDirectoryIndexes }
+    return { name: 'skraft-directory-indexes', postBuild: writeFolderIndexes }
   }
   const options = { fromExtensions: [], toExtensions: [], redirects: [], createRedirects: oldEnglishPaths }
   const plugin = clientRedirects(context, options)
@@ -33,7 +39,7 @@ export default function redirectsPlugin(context) {
     async postBuild(props) {
       await plugin.postBuild(props)
       await writeOldHtmlAddresses(props)
-      await writeDirectoryIndexes(props)
+      await writeFolderIndexes(props)
     },
   }
 }

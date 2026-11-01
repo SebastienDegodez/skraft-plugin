@@ -1,6 +1,7 @@
 # Jekyll stub. The skraft handbook now lives in docs/website (Docusaurus).
-# This file and index.md keep `main`'s deploy, which builds /v2-next/ from this folder,
-# green until the final PR to main removes docs/site (docs/v2/docusaurus-migration-plan.md, WP10).
+# This file and index.md keep `main`'s deploy, which builds /v2-next/ from this folder with
+# `git archive … docs/site`, green until the final PR to main removes docs/site
+# (docs/v2/docusaurus-migration-plan.md, §1.6 and §6).
 title: "SKRAFT"
 description: "The skraft handbook has moved to docs/website."
 baseurl: "/skraft-plugin"
@@ -10,20 +11,3 @@ lang: en
 markdown: kramdown
 kramdown:
   input: GFM
-
-# The rest of the old Jekyll site stays in the tree until WP1 moves its pages; it is not built.
-exclude:
-  - Gemfile
-  - Gemfile.lock
-  - node_modules
-  - vendor
-  - README.md
-  - _data
-  - _includes
-  - _layouts
-  - assets
-  - dashboard
-  - en
-  - fr
-  - index.html
-  - skraft-basic-presentation.html

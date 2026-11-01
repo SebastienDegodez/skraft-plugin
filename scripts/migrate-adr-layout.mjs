@@ -9,6 +9,8 @@ const DEFAULT_IGNORES = new Set([
   'node_modules',
   '.jekyll-cache',
   '_site',
+  'build',
+  '.docusaurus',
   'bin',
   'obj',
   'dist',
