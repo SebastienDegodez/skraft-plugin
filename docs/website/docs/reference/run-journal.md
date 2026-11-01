@@ -230,7 +230,7 @@ Under Copilot CLI, the **Journal** tab of the `skraft-pipeline` canvas reads thi
 | `pull-request.opened` | the `publish` node or `skraft publish` | `number`; `url`; `base`; `head`; `draft`; `bodyHash` |
 | `pull-request.updated` | the `publish` node or `skraft publish` | `number`; `url`; `bodyHash` |
 | `pull-request.details-kept` | the `publish` node or `skraft publish`, once the pull request is opened, updated or up to date | `number`; `part`; `parts`; `url` of the comment; `bodyHash` of the part |
-| `pull-request.details-skipped` | the same, when a part could not be kept | `number`; `part`; `parts`; `reason`; `via` and `fallback` |
+| `pull-request.details-skipped` | the same, when a part could not be kept | `number`; `part`; `parts`; `reason` |
 | `issue.commented`, `issue.comment-skipped` | the run, at each transition it reports on the story's issue | `issue`; `kind`; `phase`; `step`; `event`; `url` (commented) or `reason` (skipped) |
 | `journal.adopted` | `skraft journal adopt` | `keyId` (the new key); `previousKeyId`; `unverified` (how many earlier lines stay unverified) |
 
