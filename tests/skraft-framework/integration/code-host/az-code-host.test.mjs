@@ -7,7 +7,7 @@ import { join } from 'node:path'
 import { createAzCodeHost } from '../../../../plugins/skraft-framework/engine/infrastructure/code-host/az-code-host.mjs'
 import { createForges } from '../../../../plugins/skraft-framework/engine/infrastructure/code-host/forges.mjs'
 import { createNodeCommandRunner } from '../../../../plugins/skraft-framework/engine/infrastructure/process/node-processes.mjs'
-import { commitAll, envWithPath, git, tempFolder, toolFolders } from '../support/workspace.mjs'
+import { commitAll, envWithPath, git, shortLimit, tempFolder, toolFolders } from '../support/workspace.mjs'
 import { azFolder, gitAlone, SIGNED_IN } from '../support/fake-az.mjs'
 
 /** A working copy on the branch checkout, one commit ahead of main, its origin an Azure DevOps URL that pushes to a bare repository beside it. */
@@ -561,10 +561,13 @@ test('through az, a push is read back by git ls-remote, a write az got no answer
   const marker = '<!-- skraft:issue-progress slug=checkout -->'
   writeFileSync(bodyFile, `${marker}\nRESEARCH closed\n`)
   writeFileSync(requestFile, JSON.stringify({ text: `${marker}\nRESEARCH closed\n` }))
+  // A cut is an az that never answers: the runner's time limit stops it, the one way a write goes
+  // unanswered on every OS. The limit stands for the adapter's 120 s.
   forge.set({ ...SIGNED_IN, workItems: { 42: { id: 42, fields: { 'System.TeamProject': 'Shop Team' } } }, cut: true })
-  assert.deepEqual(await host.create({ base: 'main', head: 'checkout', title: 'Pay', bodyFile, draft: true, issue: null }), { ok: false, reason: 'az could not open the pull request of checkout on Shop Team/payment', outcome: 'unknown' })
-  assert.deepEqual(await host.edit({ number: 7, bodyFile }), { ok: false, reason: 'az could not update pull request #7 on Shop Team/payment', outcome: 'unknown' })
-  assert.deepEqual(await host.keepIssueComment({ number: 42, marker, url: null, bodyFile, requestFile, body: '' }), { ok: false, reason: 'az could not comment work item #42 of Shop Team', outcome: 'unknown' })
+  const cut = createAzCodeHost({ commandRunner: shortLimit(createNodeCommandRunner({ root: cwd, env: { ...envWithPath([forge.path, ...toolFolders()]), ...forge.env } })) })
+  assert.deepEqual(await cut.create({ base: 'main', head: 'checkout', title: 'Pay', bodyFile, draft: true, issue: null }), { ok: false, reason: 'az could not open the pull request of checkout on Shop Team/payment', outcome: 'unknown' })
+  assert.deepEqual(await cut.edit({ number: 7, bodyFile }), { ok: false, reason: 'az could not update pull request #7 on Shop Team/payment', outcome: 'unknown' })
+  assert.deepEqual(await cut.keepIssueComment({ number: 42, marker, url: null, bodyFile, requestFile, body: '' }), { ok: false, reason: 'az could not comment work item #42 of Shop Team', outcome: 'unknown' })
 
   forge.set({ ...SIGNED_IN, workItems: { 42: { id: 42, fields: { 'System.TeamProject': 'Shop Team' } } } })
   const kept = await host.keepIssueComment({ number: 42, marker, url: null, bodyFile, requestFile, body: '' })

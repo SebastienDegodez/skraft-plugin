@@ -19,7 +19,7 @@ export const FAKE_AZ = [
   "if (args[0] === '--version') said('azure-cli 2.67.0')",
   "if (args[0] === 'extension') { if (state.extension) said({ name: 'azure-devops' }); process.stderr.write('SECRET-STDERR\\n'); process.exit(1) }",
   "if (state.fails || !state.signedIn) { process.stderr.write('SECRET-STDERR\\n'); process.exit(1) }",
-  "if (state.cut && (args[2] === 'create' || args[2] === 'update' || ['POST', 'PATCH'].includes(option('http-method')))) process.kill(process.pid, 'SIGKILL')",
+  "if (state.cut && (args[2] === 'create' || args[2] === 'update' || ['POST', 'PATCH'].includes(option('http-method')))) { setInterval(() => {}, 60_000); await new Promise(() => {}) }",
   "if (args[0] === 'boards') { const item = state.workItems?.[option('id')]; if (item !== undefined) said(item); process.stderr.write(state.workItemFails ? 'SECRET-STDERR\\n' : 'TF401232: SECRET-STDERR\\n'); process.exit(1) }",
   "const kv = (name) => { const at = args.indexOf(`--${name}`); const pairs = []; for (let i = at + 1; at >= 0 && i < args.length && !args[i].startsWith('--'); i += 1) pairs.push(args[i].split(/=(.*)/s).slice(0, 2)); return Object.fromEntries(pairs) }",
   "if (args[0] === 'devops' && args[1] === 'invoke' && option('area') === 'git') {",

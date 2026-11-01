@@ -5,7 +5,7 @@ import { spawnSync } from 'node:child_process'
 import { join } from 'node:path'
 import { createGhCodeHost, createGhPullRequests } from '../../../../plugins/skraft-framework/engine/infrastructure/code-host/gh-code-host.mjs'
 import { createNodeCommandRunner } from '../../../../plugins/skraft-framework/engine/infrastructure/process/node-processes.mjs'
-import { commitAll, envWithPath, git, tempFolder, toolFolders } from '../support/workspace.mjs'
+import { commitAll, envWithPath, git, shortLimit, tempFolder, toolFolders } from '../support/workspace.mjs'
 
 // gh stands for the forge, which no test reaches: a script that keeps each argv it is given
 // and answers from gh-state.json. git is real, its remote a bare repository on disk.
@@ -19,7 +19,7 @@ const FAKE_GH = [
   "const state = JSON.parse(readFileSync(join(here, 'gh-state.json'), 'utf8'))",
   "const said = (text, code = 0) => { process.stdout.write(`${text}\\n`); process.exit(code) }",
   "if (state.fails) { process.stderr.write('SECRET-STDERR\\n'); process.exit(1) }",
-  "if (state.cut && (args[1] === 'create' || args[1] === 'edit' || args.includes('--method=POST'))) process.kill(process.pid, 'SIGKILL')",
+  "if (state.cut && (args[1] === 'create' || args[1] === 'edit' || args.includes('--method=POST'))) { setInterval(() => {}, 60_000); await new Promise(() => {}) }",
   "if (args[0] === '--version') said('gh version 2.62.0')",
   "if (args[0] === 'auth') process.exit(state.signedIn ? 0 : 1)",
   "if (args[1] === 'set-default') { if (state.defaultRepo) said(state.defaultRepo); process.stderr.write('no default repository has been set\\n'); process.exit(1) }",
@@ -431,11 +431,15 @@ test('a push is read back by git ls-remote where it goes, at the commit the bran
 
   const bodyFile = join(root, 'body.md')
   writeFileSync(bodyFile, '<!-- skraft:issue-progress slug=checkout -->\nRESEARCH closed\n')
+  // A cut is a gh that never answers: the runner's time limit stops it (taskkill /T under Windows,
+  // its process group elsewhere), the one way a write goes unanswered on every OS. The limit stands
+  // for the adapter's 120 s.
   forge.set({ cut: true })
+  const cut = createGhCodeHost({ commandRunner: shortLimit(createNodeCommandRunner({ root: cwd, env: envWithPath([forge.bin, ...toolFolders()]) })) })
   const lost = { ok: false, reason: 'gh could not open the pull request of checkout on github.example.com/acme/payment', outcome: 'unknown' }
-  assert.deepEqual(await host.create({ base: 'main', head: 'checkout', title: 'Pay', bodyFile, draft: true }), lost)
-  assert.deepEqual(await host.edit({ number: 7, bodyFile }), { ok: false, reason: 'gh could not update pull request #7 on github.example.com/acme/payment', outcome: 'unknown' })
-  assert.deepEqual(await host.keepIssueComment({ number: 42, marker: '<!-- skraft:issue-progress slug=checkout -->', url: null, bodyFile }), { ok: false, reason: 'gh could not comment issue #42 on github.example.com/acme/payment: gh got no answer', outcome: 'unknown' })
+  assert.deepEqual(await cut.create({ base: 'main', head: 'checkout', title: 'Pay', bodyFile, draft: true }), lost)
+  assert.deepEqual(await cut.edit({ number: 7, bodyFile }), { ok: false, reason: 'gh could not update pull request #7 on github.example.com/acme/payment', outcome: 'unknown' })
+  assert.deepEqual(await cut.keepIssueComment({ number: 42, marker: '<!-- skraft:issue-progress slug=checkout -->', url: null, bodyFile }), { ok: false, reason: 'gh could not comment issue #42 on github.example.com/acme/payment: gh got no answer', outcome: 'unknown' })
 
   forge.set({ cut: false })
   const kept = await host.keepIssueComment({ number: 42, marker: '<!-- skraft:issue-progress slug=checkout -->', url: null, bodyFile })
