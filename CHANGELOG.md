@@ -3,6 +3,12 @@
 Toutes les modifications notables de ce projet sont documentées ici.
 Format basé sur [Conventional Commits](https://www.conventionalcommits.org/) — versionnage [SemVer](https://semver.org/).
 
+## [2.0.0-alpha.47](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.46...v2.0.0-alpha.47) (2026-11-01)
+
+### ✨ Features
+
+* **engine:** a publish consent on a machine that cannot reach the forge asks to fix it before the first agent ([#479](https://github.com/SebastienDegodez/skraft-plugin/issues/479)) ([daa1716](https://github.com/SebastienDegodez/skraft-plugin/commit/daa1716cb6fbc3f921f6c006669e27b9dbedf468)), closes [#471](https://github.com/SebastienDegodez/skraft-plugin/issues/471)
+
 ## [2.0.0-alpha.46](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.45...v2.0.0-alpha.46) (2026-11-01)
 
 ### ✨ Features
