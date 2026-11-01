@@ -142,8 +142,8 @@ Type the command:
 
 The command starts the `skraft-pipeline` dynamic workflow with `{ slug: "checkout", issue: 42, title:
 "Pay by card" }`. (You can also type `/agent`, choose `skraft:skraft-orchestrator`, then write: *Start the
-checkout pipeline for issue 42, titled "Pay by card".* It starts the same workflow.) The repository has no remote: the run starts anyway, and its agents get the
-issue's number and title only.
+checkout pipeline for issue 42, titled "Pay by card".* It starts the same workflow.) The repository has no remote, so the issue cannot be read: the run is refused
+(`issue-unreadable`) and nothing is journaled. Without `issue` the run starts, and its agents get no issue.
 
 Before any phase, on the first run of a working copy, Copilot asks once in the chat: *Start this run
 with the configuration of this working copy?* If your client shows canvases, the `skraft-pipeline`
