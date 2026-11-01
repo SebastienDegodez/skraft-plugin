@@ -1,4 +1,4 @@
-import { existsSync, readdirSync, readFileSync } from 'node:fs'
+import { existsSync, readdirSync, readFileSync, realpathSync } from 'node:fs'
 import { join, relative, isAbsolute } from 'node:path'
 
 /**
@@ -63,9 +63,18 @@ const skraftInstalls = (listed) =>
     .flatMap(([, entry]) => [entry].flat())
     .filter((install) => typeof install?.installPath === 'string')
 
-/** @param {string} folder @param {string} cwd @returns {boolean} cwd is the folder or inside it */
+/** The real path, links resolved (macOS: /var is /private/var); the path itself when it is gone. @param {string} path */
+const real = (path) => {
+  try {
+    return realpathSync.native(path)
+  } catch {
+    return path
+  }
+}
+
+/** @param {string} folder @param {string} cwd @returns {boolean} cwd is the folder or inside it, links resolved */
 const within = (folder, cwd) => {
-  const path = relative(folder, cwd)
+  const path = relative(real(folder), real(cwd))
   return path === '' || (!path.startsWith('..') && !isAbsolute(path))
 }
 
