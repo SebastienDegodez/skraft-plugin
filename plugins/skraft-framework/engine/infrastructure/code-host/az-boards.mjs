@@ -37,7 +37,7 @@ const failed = (reason) => ({ read: 'failed', reason })
 /** The most pages of comments one work item's conversation is read in; a longer one is never written to. */
 const MAX_PAGES = 10
 
-/** The version of the comments API the MCP server 2.11.0 sends; not measured through az (docs/v2/host-verification.md). */
+/** The version of the comments API; not measured through az (docs/v2/host-verification.md). */
 const COMMENTS_API = '--api-version=7.2-preview.4'
 
 /**

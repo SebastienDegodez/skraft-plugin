@@ -37,10 +37,6 @@ const hostOf = ($: EngineInterface) => ({
   publish: (snapshot: SkraftPipelineSnapshot) => update($, pipeline, () => snapshot),
   status: (text: string | undefined) => void $.ui.status(text),
   notify: (line: string) => void $.ui.log(line),
-  mcp: {
-    tools: () => $.tool.list(),
-    call: (server: string, tool: string, args: Record<string, unknown>) => $.mcp.call(server, tool, args),
-  },
 })
 
 const openPane = ($: EngineInterface) => $.ui.open({ id: PANE_ID, title: PANE_TITLE })

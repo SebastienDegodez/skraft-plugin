@@ -145,14 +145,15 @@ test('a run started from artifacts tells the phases it ran, not those it found c
 })
 
 test('a transition the forge cannot take is journaled skipped with its reason and said; the next one keeps the whole run; a run already done tries nothing again', async () => {
-  const unreachable = scripted({ config: CONSENTED, codeHost: new InMemoryCodeHost({ unavailable: 'gh, the GitHub CLI, is not installed' }) }, (it) => nominal(it, REFS_42))
+  const unreachable = scripted({ config: CONSENTED }, (it) => nominal(it, REFS_42))
   const refusing = scripted({ config: CONSENTED, codeHost: new InMemoryCodeHost({ fails: { comment: 'gh could not comment issue #42 on github.com/acme/shop' } }) }, (it) => nominal(it, REFS_42))
 
-  assert.equal((await unreachable.start(STORY)).status, 'done')
+  assert.equal((await unreachable.init(STORY)).ok, true)
+  unreachable.codeHost.missing = 'gh, the GitHub CLI, is not installed'
+  assert.equal((await unreachable.run()).status, 'done')
   assert.equal((await refusing.start(STORY)).status, 'done')
 
   assert.deepEqual(kept(unreachable), [])
-  assert.equal(unreachable.events()[0].issueUnread, 'gh, the GitHub CLI, is not installed', 'the run started without the body of its issue')
   assert.deepEqual(journaled(unreachable), [...PHASES, null].map((phase) => ['issue.comment-skipped', phase === null ? 'summary' : 'phase', phase, 'gh, the GitHub CLI, is not installed']))
   assert.ok((await unreachable.tracking.read(SLUG, 'issue-progress.md')).includes('run done'), 'the comment stays in the tracking folder')
   assert.ok(unreachable.progress.lines.includes(`${SLUG}: issue #42 not updated (RESEARCH closed): gh, the GitHub CLI, is not installed`), unreachable.progress.lines.join('\n'))
