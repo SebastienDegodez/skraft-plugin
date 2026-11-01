@@ -64,7 +64,8 @@ digraph skraft {
 | `parallelogram` | gate de commandes | `gate` | `goal_gate`, `locked`, `unlock` | une `PASS` (une arête sans étiquette vaut `PASS`), au plus une `FAIL` |
 | `parallelogram` + `publish=` | publication | `publish` | `when` | exactement une, sans étiquette |
 | `component` | fan-out d'une revue | — | — | une par nœud lentille |
-| `note` | nœud lentille | `lens` | `model`, `when`, `mandatory` | exactement une, vers le fan-in |
+| `note` | nœud lentille | `lens` | `model`, `when`, `mandatory` | exactement une, vers le réfuteur |
+| `octagon` | réfuteur d'une revue | — | `mandatory` | exactement une, vers le fan-in |
 | `tripleoctagon` | fan-in d'une revue | — | `model`, `refuter`, `mandatory` | une `APPROVED` (une arête sans étiquette vaut `APPROVED`), au plus une `NEEDS_REWORK` |
 | `hexagon` | question à un humain | `question` | — | une par réponse ; au plus une sans étiquette, qui vaut toute réponse sauf un refus ; un refus a sa propre arête ; `STOP` d'une question qui prend une consigne n'a pas d'arête (il termine le run), et une consigne suit l'arête de la première option |
 | `house` | appel d'un workflow | `workflow` | `mandatory`, `with_<entrée>` | comme un fan-in : une `APPROVED`, au plus une `NEEDS_REWORK` |
@@ -153,10 +154,11 @@ n'est pas déverrouillé tient lieu de lui pour ce contrôle : dans le workflow 
 
 Les workflows du plugin marquent `mandatory=true` :
 
-- dans `pipeline.skraft.dot` : les fan-in `design_review`, `distill_review`, `mutation_review`
+- dans `pipeline.skraft.dot` : les fan-in `design_review`, `distill_review`, `mutation_review`,
+  leurs réfuteurs `design_review_refuter`, `distill_review_refuter`, `mutation_review_refuter`,
   et l'appel `deliver_review` ;
-- dans `review.skraft.dot` : le fan-in `verdict` et les lentilles `test_integrity` et
-  `architecture_boundaries`.
+- dans `review.skraft.dot` : le fan-in `verdict`, son réfuteur `refuter` et les lentilles
+  `test_integrity` et `architecture_boundaries`.
 
 Rien ne permet à un dépôt d'en sauter un : pas d'`unlock`, pas d'option CLI, pas de réglage
 dans `skraft-config.json`. Le workflow du plugin décide : retirer l'attribut de la copie ne
@@ -168,37 +170,44 @@ change rien, et `mandatory=false` est refusé.
 | Appel | il reste un appel (`shape=house`) de même id, aux mêmes règles qu'un fan-in de revue. Il peut appeler un autre workflow : celui-ci doit garder les nœuds obligatoires du `review.skraft.dot` du plugin |
 | Nœud lentille | il garde son id, sa lentille (son `model=` peut changer), son fan-out et son fan-in, et ne porte aucun `when`. Ceux de `review.skraft.dot` sont vérifiés dans le fichier que lit l'appel, éjecté ou non |
 | Fan-in de `review.skraft.dot` | il garde son id (`verdict`), dans le workflow qu'appelle l'appel obligatoire, quel qu'il soit |
+| Réfuteur | sa revue garde un réfuteur (`shape=octagon`) de même id entre ses lentilles et son fan-in (`refuter` dans `review.skraft.dot`, `<revue>_refuter` dans `pipeline.skraft.dot`), dans le workflow qu'appelle l'appel obligatoire, quel qu'il soit |
 
 Chaque refus nomme le nœud et la règle violée, et finit par `this node is mandatory and cannot be
 removed`. `skraft workflow diff` marque `(mandatory)` chaque nœud obligatoire qu'il liste comme
 retiré ou modifié.
 
-## Revue : fan-out, nœuds lentille, fan-in {/* #reviews */}
+## Revue : fan-out, nœuds lentille, réfuteur, fan-in {/* #reviews */}
 
 Une revue s'écrit en un fan-out (`shape=component`), un nœud lentille par branche
-(`shape=note`) et un fan-in (`shape=tripleoctagon`). Le journal nomme l'étape de revue d'après
-le fan-in (`distill_review`). Le moteur lance les lentilles d'une revue ensemble, dans l'ordre
-des arêtes du fan-out, là où l'hôte le permet. Ce qu'une revue calcule ensuite (réponse des
-lentilles, réfutation, verdict) : [Gates](./gates.md).
+(`shape=note`), le réfuteur où se rejoignent ses branches (`shape=octagon`) et un fan-in
+(`shape=tripleoctagon`). Le journal nomme l'étape de revue d'après le fan-in
+(`distill_review`). Le moteur lance les lentilles d'une revue ensemble, dans l'ordre des arêtes
+du fan-out, là où l'hôte le permet, puis `finding-refuter` depuis le nœud réfuteur sur leurs
+findings blocker, high et medium. Ce qu'une revue calcule ensuite (réponse des lentilles,
+réfutation, verdict) : [Gates](./gates.md).
 
 ```dot
 distill_review_lenses [shape=component]
 distill_review_coverage    [shape=note, lens="coverage"]
 distill_review_testability [shape=note, lens="testability", when="mock"]
+distill_review_refuter [shape=octagon]
 distill_review [shape=tripleoctagon]
 distill -> distill_review_lenses
-distill_review_lenses -> distill_review_coverage -> distill_review
-distill_review_lenses -> distill_review_testability -> distill_review
+distill_review_lenses -> distill_review_coverage -> distill_review_refuter
+distill_review_lenses -> distill_review_testability -> distill_review_refuter
+distill_review_refuter -> distill_review
 distill_review -> distill [label="NEEDS_REWORK", max_visits=3]
 distill_review -> deliver [label="APPROVED"]
 ```
 
 | Règle | Détail |
 | --- | --- |
-| Fan-out (`shape=component`) | aucun attribut propre ; chaque arête qui en part est une branche qui porte exactement un nœud lentille, et toutes les branches aboutissent au même fan-in. Il ne prend aucune étiquette |
-| Nœud lentille (`shape=note`) | `lens="<nom>"` obligatoire, kebab-case, une fois au plus par revue ; `model="<famille>"` et `when="mock"` ou `when="contract"` facultatifs. Entré par une arête venue de son fan-out, il sort par une arête vers son fan-in |
-| Fan-in (`shape=tripleoctagon`) | entré seulement par les nœuds lentille d'un même fan-out ; `model=` (la famille de ses lentilles qui n'en nomment aucune) et `refuter=` facultatifs |
-| `lenses="…"` | l'ancienne forme, refusée : `skraft workflow check` nomme chaque nœud qui l'utilise et écrit, en DOT, les nœuds et arêtes qui le remplacent : identifiants compris (`<revue>_lenses`, `<revue>_<lentille>`), `when` pour `mock-fidelity` et `contract-fidelity`, `label`, `phase`, `model` et `refuter` du nœud sur le fan-in, ses arêtes entrantes envoyées au fan-out |
+| Fan-out (`shape=component`) | aucun attribut propre ; chaque arête qui en part est une branche qui porte exactement un nœud lentille, et toutes les branches aboutissent au même réfuteur. Il ne prend aucune étiquette |
+| Nœud lentille (`shape=note`) | `lens="<nom>"` obligatoire, kebab-case, une fois au plus par revue ; `model="<famille>"` et `when="mock"` ou `when="contract"` facultatifs. Entré par une arête venue de son fan-out, il sort par une arête vers son réfuteur |
+| Réfuteur (`shape=octagon`) | lance `finding-refuter` sur les findings blocker, high et medium des lentilles, sauf si une lentille bloque déjà la revue ; entré seulement par les nœuds lentille d'un même fan-out, il sort par une arête vers son fan-in. `mandatory` facultatif, rien d'autre : sa famille est le `refuter=` du fan-in |
+| Fan-in (`shape=tripleoctagon`) | entré seulement par son réfuteur ; `model=` (la famille de ses lentilles qui n'en nomment aucune) et `refuter=` (la famille de `finding-refuter`) facultatifs |
+| Ancien fan-in | un fan-in où entrent directement ses nœuds lentille, écrit avant le nœud réfuteur, est refusé : `node <fan-in>: its lens nodes lead straight to it, the form before the refuter node; add <refuter> [shape=octagon], lead <lens nodes> to <refuter> instead, and add <refuter> -> <fan-in>` (`<refuter>` vaut `refuter` dans un workflow appelé, `<fan-in>_refuter` ailleurs) |
+| `lenses="…"` | l'ancienne forme, refusée : `skraft workflow check` nomme chaque nœud qui l'utilise et écrit, en DOT, les nœuds et arêtes qui le remplacent : identifiants compris (`<revue>_lenses`, `<revue>_<lentille>`, `<revue>_refuter`), `when` pour `mock-fidelity` et `contract-fidelity`, `label`, `phase`, `model` et `refuter` du nœud sur le fan-in, ses arêtes entrantes envoyées au fan-out |
 | Modèle | une famille est un palier (`economy`, `standard`, `frontier`), un rôle (`reviewer`, `researcher`, `implementer`, `planner`) ou une famille libre avec un `tier` (`gpt-codex`). Le `model=` d'un nœud lentille, sinon celui du fan-in, nomme sa famille ; une règle `assign.agents` l'emporte quand même, et `skraft workflow check` le signale. Les workflows du plugin n'en nomment aucune : `assign` de la configuration décide ([Choisir les modèles des agents](../how-to/choose-models.md)). `finding-refuter` tourne un palier au-dessus de la lentille la plus forte de son groupe, `frontier` au plus, sauf si une règle nomme sa famille. Le journal enregistre l'affectation de chaque agent (`assignment`) et le modèle sur lequel il a tourné (`model`, null pour celui de la session) |
 | Agent d'une lentille | la lentille `<nom>` est l'agent `<nom>-lens`, cherché dans le plugin, puis dans `.claude/agents/` (Claude Code) ou `.github/agents/` (Copilot) ; `finding-refuter` doit aussi être trouvé, sinon le workflow est refusé |
 | Arête `APPROVED` | exactement une ; une arête sans étiquette compte comme `APPROVED` |
@@ -217,7 +226,7 @@ deliver_review -> mutation [label="APPROVED"]
 | Règle | Détail |
 | --- | --- |
 | Nœud d'appel (`shape=house`) | `workflow="<nom>"` obligatoire : le nom de base d'un workflow, en kebab-case (`review`) ; `mandatory`, `label`, `phase` et `with_<entrée>` facultatifs, rien d'autre (ni `model=` ni `refuter=` : le fan-in appelé les nomme). Ses arêtes sont celles d'un fan-in : une `APPROVED`, au plus une `NEEDS_REWORK`, avec `max_visits` |
-| Workflow appelé | ne lance qu'une revue : start → fan-out → un nœud lentille par branche → fan-in → exit, sans arête `NEEDS_REWORK` (l'appel la porte). Ses nœuds prennent la phase de l'appel. Un appel en son sein est refusé |
+| Workflow appelé | ne lance qu'une revue : start → fan-out → un nœud lentille par branche → réfuteur → fan-in → exit, sans arête `NEEDS_REWORK` (l'appel la porte). Ses nœuds prennent la phase de l'appel. Un appel en son sein est refusé |
 | Entrées | chacune un attribut de graphe du workflow appelé, `input_<nom>="required"` ou `"optional"`. L'appel lie chacune par son nom à ce que le run détient : `base` et `head` (les changements que la revue lit), `story`, `documents` (ce que les agents ont rempli ou écrit, par phase), `components` (chaque composant avec les gates passées dessus). `with_<nom>="<valeur>"` la lie à une autre de ces valeurs. Une entrée requise non liée, un `with_` qui ne lie aucune entrée, ou un workflow appelé qui ne lie rien à `base` ou à `head` est refusé |
 | Journal | celui d'un fan-in : `step.started` et `step.recorded` sous l'id de l'appel (`deliver_review`), `review.lens`, `review.refuted`. `NEEDS_REWORK` renvoie le travail à l'agent avec les findings (`sentBy: review`) |
 | Entrée non liée | aucune lentille n'en reçoit rien : sans `documents`, pas de `context.md` ni de document du run ; sans `story`, le brief dit `Story: none` ; sans `components`, pas de `components.json` |
@@ -234,14 +243,16 @@ digraph review {
   cold_reader             [shape=note, lens="cold-reader"]
   mock_fidelity           [shape=note, lens="mock-fidelity", when="mock"]
   contract_fidelity       [shape=note, lens="contract-fidelity", when="contract"]
+  refuter [shape=octagon, mandatory=true]
   verdict [shape=tripleoctagon, mandatory=true]
   exit   [shape=Msquare]
   start -> lenses
-  lenses -> test_integrity -> verdict
-  lenses -> architecture_boundaries -> verdict
-  lenses -> cold_reader -> verdict
-  lenses -> mock_fidelity -> verdict
-  lenses -> contract_fidelity -> verdict
+  lenses -> test_integrity -> refuter
+  lenses -> architecture_boundaries -> refuter
+  lenses -> cold_reader -> refuter
+  lenses -> mock_fidelity -> refuter
+  lenses -> contract_fidelity -> refuter
+  refuter -> verdict
   verdict -> exit [label="APPROVED"]
 }
 ```

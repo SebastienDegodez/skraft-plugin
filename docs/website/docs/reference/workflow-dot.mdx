@@ -64,7 +64,8 @@ digraph skraft {
 | `parallelogram` | command gate | `gate` | `goal_gate`, `locked`, `unlock` | one `PASS` (an unlabeled edge is `PASS`), at most one `FAIL` |
 | `parallelogram` + `publish=` | publication | `publish` | `when` | exactly one, unlabeled |
 | `component` | review fan-out | — | — | one per lens node |
-| `note` | lens node | `lens` | `model`, `when`, `mandatory` | exactly one, to the fan-in |
+| `note` | lens node | `lens` | `model`, `when`, `mandatory` | exactly one, to the refuter |
+| `octagon` | review refuter | — | `mandatory` | exactly one, to the fan-in |
 | `tripleoctagon` | review fan-in | — | `model`, `refuter`, `mandatory` | one `APPROVED` (an unlabeled edge is `APPROVED`), at most one `NEEDS_REWORK` |
 | `hexagon` | question to a human | `question` | — | one per answer; at most one unlabeled, which stands for every answer but a refusal; a refusal has its own edge; `STOP` of a question that takes an instruction has no edge (it ends the run), and an instruction takes the edge of the first option |
 | `house` | workflow call | `workflow` | `mandatory`, `with_<input>` | as a fan-in: one `APPROVED`, at most one `NEEDS_REWORK` |
@@ -153,10 +154,11 @@ on the path `kill_mutants -> … -> mutation`.
 
 The plugin's workflows mark `mandatory=true`:
 
-- in `pipeline.skraft.dot`: the fan-ins `design_review`, `distill_review`, `mutation_review`
+- in `pipeline.skraft.dot`: the fan-ins `design_review`, `distill_review`, `mutation_review`,
+  their refuters `design_review_refuter`, `distill_review_refuter`, `mutation_review_refuter`,
   and the call `deliver_review`;
-- in `review.skraft.dot`: the fan-in `verdict` and the lenses `test_integrity` and
-  `architecture_boundaries`.
+- in `review.skraft.dot`: the fan-in `verdict`, its refuter `refuter` and the lenses
+  `test_integrity` and `architecture_boundaries`.
 
 Nothing lets a repository skip one: no `unlock`, no CLI option, no setting in
 `skraft-config.json`. The plugin's workflow decides: removing the attribute from the copy
@@ -168,37 +170,43 @@ changes nothing, and `mandatory=false` is refused.
 | Call | it is still a call (`shape=house`) with the same id, under the same rules as a review fan-in. It may call another workflow: that one must keep the mandatory nodes of the plugin's `review.skraft.dot` |
 | Lens node | it keeps its id, its lens (its `model=` may change), its fan-out and its fan-in, and carries no `when`. Those of `review.skraft.dot` are checked in the file the call reads, ejected or not |
 | Fan-in of `review.skraft.dot` | it keeps its id (`verdict`), in whatever workflow the mandatory call calls |
+| Refuter | its review keeps a refuter (`shape=octagon`) of the same id between its lenses and its fan-in (`refuter` in `review.skraft.dot`, `<review>_refuter` in `pipeline.skraft.dot`), in whatever workflow the mandatory call calls |
 
 Each refusal names the node and the rule it breaks, and ends with `this node is mandatory and
 cannot be removed`. `skraft workflow diff` marks `(mandatory)` each mandatory node it lists as
 removed or changed.
 
-## Review: fan-out, lens nodes, fan-in {/* #reviews */}
+## Review: fan-out, lens nodes, refuter, fan-in {/* #reviews */}
 
-A review is written as a fan-out (`shape=component`), one lens node per branch (`shape=note`)
-and a fan-in (`shape=tripleoctagon`). The journal names the review step after the fan-in
-(`distill_review`). The engine starts the lenses of a review together, in the order of the
-fan-out's edges, where the host allows it. What a review then computes (lens answers,
-refutation, verdict): [Gates](./gates.md).
+A review is written as a fan-out (`shape=component`), one lens node per branch (`shape=note`),
+the refuter its branches join (`shape=octagon`) and a fan-in (`shape=tripleoctagon`). The
+journal names the review step after the fan-in (`distill_review`). The engine starts the lenses
+of a review together, in the order of the fan-out's edges, where the host allows it, then
+`finding-refuter` from the refuter node on their blocker, high and medium findings. What a
+review then computes (lens answers, refutation, verdict): [Gates](./gates.md).
 
 ```dot
 distill_review_lenses [shape=component]
 distill_review_coverage    [shape=note, lens="coverage"]
 distill_review_testability [shape=note, lens="testability", when="mock"]
+distill_review_refuter [shape=octagon]
 distill_review [shape=tripleoctagon]
 distill -> distill_review_lenses
-distill_review_lenses -> distill_review_coverage -> distill_review
-distill_review_lenses -> distill_review_testability -> distill_review
+distill_review_lenses -> distill_review_coverage -> distill_review_refuter
+distill_review_lenses -> distill_review_testability -> distill_review_refuter
+distill_review_refuter -> distill_review
 distill_review -> distill [label="NEEDS_REWORK", max_visits=3]
 distill_review -> deliver [label="APPROVED"]
 ```
 
 | Rule | Detail |
 | --- | --- |
-| Fan-out (`shape=component`) | no attribute of its own; every edge leaving it is a branch that holds exactly one lens node, and every branch ends in the same fan-in. It takes no label |
-| Lens node (`shape=note`) | `lens="<name>"` required, kebab-case, at most once per review; `model="<family>"` and `when="mock"` or `when="contract"` optional. Entered by one edge from its fan-out, it leaves by one edge to its fan-in |
-| Fan-in (`shape=tripleoctagon`) | entered only by the lens nodes of one fan-out; `model=` (the family of its lenses that name none) and `refuter=` optional |
-| `lenses="…"` | the former form, refused: `skraft workflow check` names each such node and writes out, as DOT, the nodes and edges that replace it: ids included (`<review>_lenses`, `<review>_<lens>`), `when` for `mock-fidelity` and `contract-fidelity`, the node's `label`, `phase`, `model` and `refuter` on the fan-in, its incoming edges sent to the fan-out |
+| Fan-out (`shape=component`) | no attribute of its own; every edge leaving it is a branch that holds exactly one lens node, and every branch ends in the same refuter. It takes no label |
+| Lens node (`shape=note`) | `lens="<name>"` required, kebab-case, at most once per review; `model="<family>"` and `when="mock"` or `when="contract"` optional. Entered by one edge from its fan-out, it leaves by one edge to its refuter |
+| Refuter (`shape=octagon`) | runs `finding-refuter` on the blocker, high and medium findings of the lenses, unless a lens already blocks the review; entered only by the lens nodes of one fan-out, it leaves by one edge to its fan-in. `mandatory` optional, nothing else: its family is the fan-in's `refuter=` |
+| Fan-in (`shape=tripleoctagon`) | entered only by its refuter; `model=` (the family of its lenses that name none) and `refuter=` (the family of `finding-refuter`) optional |
+| Former fan-in | a fan-in its lens nodes enter directly, as written before the refuter node, is refused: `node <fan-in>: its lens nodes lead straight to it, the form before the refuter node; add <refuter> [shape=octagon], lead <lens nodes> to <refuter> instead, and add <refuter> -> <fan-in>` (`<refuter>` is `refuter` in a called workflow, `<fan-in>_refuter` elsewhere) |
+| `lenses="…"` | the former form, refused: `skraft workflow check` names each such node and writes out, as DOT, the nodes and edges that replace it: ids included (`<review>_lenses`, `<review>_<lens>`, `<review>_refuter`), `when` for `mock-fidelity` and `contract-fidelity`, the node's `label`, `phase`, `model` and `refuter` on the fan-in, its incoming edges sent to the fan-out |
 | Model | a family is a tier (`economy`, `standard`, `frontier`), a role (`reviewer`, `researcher`, `implementer`, `planner`) or a free family with a `tier` (`gpt-codex`). A lens node's `model=`, else the fan-in's, names its family; an `assign.agents` rule still wins, and `skraft workflow check` warns of it. The plugin's workflows name none: the configuration's `assign` decides ([Choose the agents' models](../how-to/choose-models.md)). `finding-refuter` runs one tier above the strongest lens of its group, `frontier` at most, unless a rule names its family. The journal records what each agent was assigned (`assignment`) and the model it ran on (`model`, null for the session's) |
 | Lens agent | the lens `<name>` is the agent `<name>-lens`, looked for in the plugin, then in `.claude/agents/` (Claude Code) or `.github/agents/` (Copilot); `finding-refuter` must be found too, or the workflow is refused |
 | `APPROVED` edge | exactly one; an unlabeled edge counts as `APPROVED` |
@@ -217,7 +225,7 @@ deliver_review -> mutation [label="APPROVED"]
 | Rule | Detail |
 | --- | --- |
 | Call node (`shape=house`) | `workflow="<name>"` required: the base name of a workflow, kebab-case (`review`); `mandatory`, `label`, `phase` and `with_<input>` optional, nothing else (no `model=` or `refuter=`: the called fan-in names them). Its edges are those of a fan-in: one `APPROVED`, at most one `NEEDS_REWORK`, with `max_visits` |
-| Called workflow | runs one review and nothing else: start → fan-out → one lens node per branch → fan-in → exit, without a `NEEDS_REWORK` edge (the call carries it). Its nodes take the call's phase. A call inside it is refused |
+| Called workflow | runs one review and nothing else: start → fan-out → one lens node per branch → refuter → fan-in → exit, without a `NEEDS_REWORK` edge (the call carries it). Its nodes take the call's phase. A call inside it is refused |
 | Inputs | each one a graph attribute of the called workflow, `input_<name>="required"` or `"optional"`. The call binds each one by name to what the run holds: `base` and `head` (the changes the review reads), `story`, `documents` (what the agents filled or wrote, by phase), `components` (each component with the gates that passed on it). `with_<name>="<value>"` binds it to another of these. A required input left unbound, a `with_` that binds no input, or a called workflow that binds nothing to `base` or `head` is refused |
 | Journal | that of a fan-in: `step.started` and `step.recorded` under the call's id (`deliver_review`), `review.lens`, `review.refuted`. `NEEDS_REWORK` sends the work back to the agent with the findings (`sentBy: review`) |
 | Unbound input | a lens gets nothing from it: without `documents`, no `context.md` and no document of the run; without `story`, the brief says `Story: none`; without `components`, no `components.json` |
@@ -234,14 +242,16 @@ digraph review {
   cold_reader             [shape=note, lens="cold-reader"]
   mock_fidelity           [shape=note, lens="mock-fidelity", when="mock"]
   contract_fidelity       [shape=note, lens="contract-fidelity", when="contract"]
+  refuter [shape=octagon, mandatory=true]
   verdict [shape=tripleoctagon, mandatory=true]
   exit   [shape=Msquare]
   start -> lenses
-  lenses -> test_integrity -> verdict
-  lenses -> architecture_boundaries -> verdict
-  lenses -> cold_reader -> verdict
-  lenses -> mock_fidelity -> verdict
-  lenses -> contract_fidelity -> verdict
+  lenses -> test_integrity -> refuter
+  lenses -> architecture_boundaries -> refuter
+  lenses -> cold_reader -> refuter
+  lenses -> mock_fidelity -> refuter
+  lenses -> contract_fidelity -> refuter
+  refuter -> verdict
   verdict -> exit [label="APPROVED"]
 }
 ```
