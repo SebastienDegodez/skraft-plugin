@@ -110,14 +110,29 @@ export const journalContent = async (host) => {
 
 /**
  * The digest is taken before the tabs are read: an edit between the two gives another digest on
- * the next call, and so another read.
+ * the next call, and so another read. Tabs a read could not draw are kept under no digest: the
+ * next call reads again, though nothing a person edits changed.
  * @param {ContentHost} host @param {Memo} kept @param {boolean} fresh
  */
 const editedTabs = async (host, kept, fresh) => {
   const digest = await digestOf(host)
-  if (fresh || digest === null || digest !== kept.digest) Object.assign(kept, { digest, tabs: await readTabs(host) })
+  if (fresh || digest === null || digest !== kept.digest) Object.assign(kept, await readKept(host, digest))
   return kept.tabs
 }
+
+/** @param {ContentHost} host @param {string | null} digest */
+const readKept = async (host, digest) => {
+  const tabs = await readTabs(host)
+  return { digest: fellBack(tabs) ? null : digest, tabs }
+}
+
+/**
+ * A read that threw: the configuration that could not be read, or the workflows whose read
+ * threw. A workflow the engine refuses (a syntax error, a locked gate dropped) is no failure: the
+ * engine answers none, the files say so, and the digest tells when they change.
+ * @param {{ configuration: { status: string }, workflows: unknown[] }} tabs
+ */
+const fellBack = ({ configuration, workflows }) => configuration.status === 'unreadable' || THROWN.has(workflows)
 
 /** @param {ContentHost} host @returns {Promise<string | null>} */
 const digestOf = async (host) => {
@@ -160,6 +175,9 @@ export const saveConfiguration = async (host, edit) => {
   }
 }
 
+/** The empty lists a workflows read that threw gave, told from the engine's own by identity. @type {WeakSet<object>} */
+const THROWN = new WeakSet()
+
 /** The Workflow tab: each workflow a run can follow, none when they cannot be read. @param {ContentHost} host */
 const workflowsContent = async (host) => {
   const cwd = host.directory()
@@ -167,8 +185,16 @@ const workflowsContent = async (host) => {
   try {
     return await createObserve(adaptersIn(host, cwd)).workflows()
   } catch {
-    return []
+    return thrown()
   }
+}
+
+/** @returns {import('../../domain/reporting/workflow-drawing.mjs').WorkflowDrawing[]} */
+const thrown = () => {
+  /** @type {import('../../domain/reporting/workflow-drawing.mjs').WorkflowDrawing[]} */
+  const none = []
+  THROWN.add(none)
+  return none
 }
 
 /** @param {ContentHost} host @param {string} cwd */
