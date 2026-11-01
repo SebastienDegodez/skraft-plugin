@@ -18,6 +18,10 @@
 ### Project conventions
 - {{conventions_and_instructions_followed}}
 - Stack, test framework, project layout, and the files that declare build/test commands: {{paths}}
+### Existing tests
+| Test file | Test name | Behaviour covered |
+|---|---|---|
+| {{workspace_relative_path}} | {{test_name}} | {{behaviour}} |
 
 ## Key discoveries
 {{patterns_examples_pitfalls}}

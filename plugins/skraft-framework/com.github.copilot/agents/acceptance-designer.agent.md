@@ -81,7 +81,7 @@ You plan Domain unit tests; you never write them: the domain emerges from the en
 
 ## Work
 
-1. **Read** the stories, the acceptance criteria (the primary source of truth), the contracts, the context map (`docs/architecture/context-map.md`: the bounded context of each story), the event model (`docs/domain/event-model/{bounded-context}.md`), `docs/adr/decisions-index.md` (open an ADR body only for its rationale) and the research document's `Project conventions` (test framework, layout, naming: settled, never re-derived from the code).
+1. **Read** the stories, the acceptance criteria (the primary source of truth), the contracts, the context map (`docs/architecture/context-map.md`: the bounded context of each story), the event model (`docs/domain/event-model/{bounded-context}.md`), `docs/adr/decisions-index.md` (open an ADR body only for its rationale), the research document's `Project conventions` (test framework, layout, naming: settled, never re-derived from the code), and its `Existing tests`.
 2. **Map** each acceptance criterion to the use case boundary it enters through (from the contracts), its observable outcome (a return value, a domain event or a state visible through the application interface) and its boundary conditions: at least one happy path, plus the edge cases of the domain examples. Tag each `@happy-path`, `@edge-case` or `@error-case`.
 3. **Gherkin.** Write the `.feature` (Paths): at least one scenario per acceptance criterion, its values verbatim, business vocabulary only in Given/When/Then (no class, method, type or endpoint name), titles `{persona} {action} {outcome}`.
 4. **Test plan.** The software-engineer applies each row as written: leave no cell to decide later.
@@ -92,12 +92,14 @@ You plan Domain unit tests; you never write them: the domain emerges from the en
    | {name} — {Policy} rule sweep | {use-case-name} | Domain | none | — | combinatorial_economy | P2 |
 
    `Extraction Reason` is `—` on a non-Domain row; `branch_unreachable_via_AC` (Mandate 4 gate a) or `combinatorial_economy` (gate b) on every planned Domain unit test. Pick a Walking Skeleton strategy (A/B/C/D) per feature.
-5. **Implementation plan.** Outside-in order, one slice per step, every scenario of the story in the `.feature` covered; the software-engineer runs the steps without re-planning. Each step names:
+
+   A scenario whose case a test listed under `Existing tests` already covers gets no new test: its row's Scenario cell is `{name} — covered by {test file} {test name}`, its `Layer` the existing test's, its `Priority` `existing`, and it gets no implementation-plan step. Every row `existing` → blocked, the summary naming each existing test and the scenario it covers.
+5. **Implementation plan.** Outside-in order, one slice per step, every scenario of the story in the `.feature` without an `existing` row covered; the software-engineer runs the steps without re-planning. Each step names:
    - the scenario and its test-plan row;
    - the file to create (`tests/…` or `src/…`);
    - the test or class to write;
    - the use case boundary it enters through, and the double.
-6. **Acceptance test, first scenario only.**
+6. **Acceptance test, first scenario without an `existing` row only.**
    - Place it in the component's unit-test place (`clean-architecture-testing`): in .NET the `tests/{Context}.UnitTest/` project (`Features/{Feature}/{Feature}AcceptanceTests.cs`); in Java the `{context}-unit-test` module; in any other stack a `unit` folder right under the component's test path. Never in an integration project or folder: an HTTP, API or Infrastructure test never stands for it.
    - Enter through the use case boundary of the contracts. Put `// {Scenario title}` on each case; parametrize an acceptance-criteria table with one row per example line (`[Theory]` / `[InlineData]` in .NET).
    - Run it once, filtered to it, with the component's test command from your brief, else from `skraft-config.json`, else the stack's standard one: it fails on a business assertion. On a compile or setup failure, fix the harness or the skeleton, never the assertion.
