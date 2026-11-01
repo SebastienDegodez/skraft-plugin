@@ -5,7 +5,6 @@ import { readPluginVersion } from '../../infrastructure/plugin-manifest.mjs'
 import { createNodeAdapters } from '../../infrastructure/node-adapters.mjs'
 import { runCli } from './run-cli.mjs'
 import { terminalConfirm } from './terminal-confirm.mjs'
-import { nodeInstallHost } from './install-host.mjs'
 
 const pluginRoot = new URL('../../../', import.meta.url)
 
@@ -16,7 +15,6 @@ process.exitCode = await runCli(
     workingCopyName: () => basename(process.cwd()),
     adapters: (agentHost) => createNodeAdapters({ cwd: process.cwd(), pluginRoot: fileURLToPath(pluginRoot), agentHost }),
     command: () => `node "${fileURLToPath(import.meta.url)}"`,
-    installHost: () => nodeInstallHost(import.meta.url),
     confirm: terminalConfirm({ input: process.stdin, output: process.stderr }),
   },
   { out: (line) => process.stdout.write(`${line}\n`), err: (line) => process.stderr.write(`${line}\n`) },

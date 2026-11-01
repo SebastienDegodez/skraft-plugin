@@ -30,11 +30,15 @@ plugins/
   skraft-backlog/                    ← backlog plugin; shares no runtime code with the core
   skraft-brownfield/                 ← lot 9; independent plugin, installed next to the core
 
+cli/                                 ← npm package @skraft/cli: the `skraft` command for humans (rules below).
+  bin/skraft.mjs  src/               ← cli/bin/ is source: excepted from the repository's **/bin/ ignore rule
+
 tests/
   skraft-framework/unit/<feature>/         ← engine use-case acceptance tests
   skraft-framework/integration/<feature>/  ← real adapters, CLI, drivers, architecture rules
   skill-scripts/<feature>/                 ← skill script tests and fixtures
   tooling/<feature>/                       ← repo tooling tests
+  cli/<feature>/                           ← the `skraft` command (cli/), real processes on a temp HOME
   dashboard/  skraft-backlog/  site/       ← eval/dashboard tooling, backlog plugin, docs site
   skills/<skill>/eval.yaml                 ← Vally skill specs
   agents/<suite>/eval.yaml                 ← Vally real-agent specs and fixtures
@@ -109,11 +113,43 @@ the probe or a test says otherwise.
 - **No pre-tool hook**, ever; a returning post-tool hook gives `additionalContext` only.
 - **A check counts once seen failing**, and a report says what it examined.
 
+## `skraft` command rules (`cli/`, package `@skraft/cli`)
+
+- It holds no engine. At each call it finds the plugin a host installed and imports its
+  `engine/drivers/cli/skraft.mjs` in the same process, arguments unchanged: `SKRAFT_PLUGIN_ROOT`
+  (no fallback when invalid), then Copilot CLI, then Claude Code (an install scoped to a
+  repository, `local` then `project`, only inside it; then `user`; the latest update among
+  equals). It records nothing, so a plugin update by the host is followed at the next call.
+- The plugin is the reference: never align the command's version on the plugin's, never check
+  them against each other. `skraft doctor` names the plugin version, that is all.
+- A one-shot command writes only what the engine writes. The banner, the update notice and
+  `plugin: <host> <folder>` of `--version` go to stderr; stdout stays the engine's, so `--json`
+  stays machine-readable.
+- `skraft` alone in a terminal opens a session. Its commands come from the engine's
+  `skraft commands --json`: never list an engine command in `cli/`. While a command runs, the
+  session hands the terminal over (no raw mode, input paused), so Ctrl-C stops the command.
+- The engine's commands live in one table of `drivers/cli/run-cli.mjs` (name, handler, usage
+  lines): the dispatch, `USAGE` and `commands --json` are generated from it. A new command is a
+  new row with its usage lines; never write a usage line elsewhere.
+- `skraft upgrade` finds each host program on the PATH and starts it with an argument list,
+  never `shell: true`; a Windows `.cmd` runs through cmd.exe with plain words only. A program
+  missing from the PATH is skipped, never a failure.
+- Release: semantic-release scoped to `cli/` (`cli/.releaserc.json`, `cli-release.yml`, tags
+  `cli-v*`): `integration/v2-next` publishes `1.0.0-alpha.N` under the npm dist-tag `alpha`,
+  `main` the stable. Nothing is committed back; `cli/package.json` keeps `0.0.0-development`.
+  Publishing uses npm trusted publishing (OIDC); never store an npm token beyond the first
+  release.
+- Tests: `tests/cli/<feature>/`, real processes on a temporary HOME whose name holds a space, on
+  Linux, macOS and Windows (`cli-ci.yml`); a test that depends on the terminal names it
+  (`WT_SESSION`, `NO_COLOR`, `SKRAFT_INTERACTIVE`). Agents never call `skraft`: they keep the
+  absolute `node "<plugin>/engine/drivers/cli/skraft.mjs"` form (portability rules).
+
 ## Portability rules
 
 Everything must run on Windows and macOS, under Claude Code, Copilot CLI and VS Code.
 
-- Node code: `node:path` for paths, `spawnSync`/`spawn` with an argv array, never a shell string.
+- Node code: `node:path` for paths, `spawnSync`/`spawn` with an argv array, never a shell string
+  and never `shell: true` (it hides a missing program behind cmd.exe's exit code).
 - Commands that an agent runs: no environment variable (`$SKRAFT_PLUGIN_ROOT` and the like), no
   heredoc, no pipe; data goes through files at paths the engine gives; the command form
   `node "<absolute path>" <subcommand> --option value` works in sh and PowerShell.
@@ -189,6 +225,8 @@ gaps. Follow the plugin's `outside-in-tdd` skill; these rules add what the engin
   (`npm run mutation:engine:changed` against `integration/v2-next`, uncommitted changes
   included; `node scripts/local-ci.mjs --mutation` runs the same). Mutation runs locally only:
   the CI job is switched off (`if: false`) because a runner is slower.
+- Run Stryker as a non-root user: as root, a test that relies on a read-only file
+  (`agent-loop/loop-lease.test.mjs`) passes no more and the initial run fails.
 - Kill a surviving mutant with a sharper acceptance scenario, never with a test written for that
   mutant. Exclude an equivalent mutant only with its reason.
 
@@ -303,7 +341,11 @@ Descriptors are prompts an agent pays for on every run, not documentation.
 
 - Move files with `git mv`; keep a symlink at the old location when something outside the repo
   may still point there.
-- Conventional commit titles. Lot PRs reference their issue (`Refs #212`) without closing it;
+- Conventional commit titles. A squash merge keeps the PR title as the only commit message: a PR
+  that changes the plugin carries the plugin's scope in its title (`feat(engine): …`), never
+  `cli`, whose commits never release the plugin (a breaking one neither). A PR that only
+  touches `cli/` is scoped `cli`. `pr-title.yml` (`scripts/check-pr-title.mjs`) checks it.
+- Lot PRs reference their issue (`Refs #212`) without closing it;
   only the final PR to `main` closes issues.
 
 ## gh-aw workflow rules
@@ -325,6 +367,7 @@ Descriptors are prompts an agent pays for on every run, not documentation.
 ```bash
 npm run test:engine            # engine unit + integration
 npm run test:tooling           # repo tooling
+npm run test:cli               # the skraft command (cli/)
 npm run test:skill-scripts     # skill scripts (needs npm ci --prefix plugins/skraft-framework/engine)
 npm run mutation:engine        # Stryker, incremental
 npm run mutation:engine:changed  # Stryker on the engine lines changed since integration/v2-next

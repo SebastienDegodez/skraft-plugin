@@ -14,7 +14,7 @@ rendered from the journal.
 - A repository with a GitHub, GitHub Enterprise or Azure DevOps remote (`origin`, else the first remote).
 - `gh` installed (`az`, the Azure CLI, on Azure DevOps: see [On Azure DevOps](#azure-devops)); Git and ssh able to push without asking for a password.
 - Work on a branch of your own, not on the base branch.
-- `skraft` is the command that [`skraft install`](./install-on-a-host.mdx#skraft-command) sets up; the long line `node "<plugin folder>/engine/drivers/cli/skraft.mjs"` works without it.
+- `skraft` is the command that [`npm i -g @skraft/cli`](./install-on-a-host.mdx#skraft-command) sets up; the long line `node "<plugin folder>/engine/drivers/cli/skraft.mjs"` works without it.
 
 ## 1. Sign `gh` in to the remote's forge
 

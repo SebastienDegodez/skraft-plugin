@@ -28,7 +28,7 @@ test('an unknown command or a malformed option prints the usage on stderr and ex
     ['deploy'], ['status', '--verbose'], ['status', '--json', '--json'], ['gate', '--touched'], ['gate', '--all', '--all'],
     ['journal'], ['journal', 'adopt', '--force'], ['journal', 'rotate'],
     ['doctor', '--fix'], ['doctor', '--base'], ['doctor', '--base', 'main', '--base', 'develop'], ['init', '--add'], ['init', '--force'],
-    ['review'], ['review', '--pr'], ['review', '--pr', '0'], ['review', '--pr', 'twelve'], ['review', '--pr', '12', '--force'],
+    ['commands'], ['commands', '--yaml'], ['commands', '--json', '--json'], ['review'], ['review', '--pr'], ['review', '--pr', '0'], ['review', '--pr', 'twelve'], ['review', '--pr', '12', '--force'],
   ]) {
     const { lines, console } = consoleOf()
     const code = await runCli(args, { pluginVersion: () => '0.0.0', adapters: unused }, console)
@@ -37,7 +37,6 @@ test('an unknown command or a malformed option prints the usage on stderr and ex
   }
   assert.deepEqual(USAGE.split('\n').map((line) => line.trim().split(/\s{2,}/)[0]), [
     'usage: skraft --version',
-    'skraft install [--no-path]',
     'skraft init [--add <folder>]...',
     'skraft init <slug> [--issue <number>] [--title <text>] [--base <ref>] [--from-artifacts]',
     'skraft status [--json]',
@@ -54,5 +53,24 @@ test('an unknown command or a malformed option prints the usage on stderr and ex
     'skraft workflow eject [review]',
     'skraft workflow check [--json]',
     'skraft workflow diff [--json]',
+    'skraft commands --json',
   ])
+})
+
+test('commands --json lists every usage line as data: the help of the skraft command and the usage come from one table', async () => {
+  const { lines, console } = consoleOf()
+  const code = await runCli(['commands', '--json'], { pluginVersion: () => '0.0.0', adapters: unused }, console)
+  const listed = JSON.parse(lines.out.join('\n'))
+
+  assert.equal(code, 0)
+  assert.equal(listed.schema, 1)
+  assert.deepEqual(
+    listed.commands.map(({ command, synopsis }) => `skraft ${[command, synopsis].filter(Boolean).join(' ')}`),
+    USAGE.split('\n').map((line) => line.replace(/^usage: /, '').trim().split(/\s{2,}/)[0]),
+  )
+  assert.deepEqual(listed.commands.find(({ command }) => command === 'decide'), {
+    command: 'decide', synopsis: '[<key>] <answer> [--reason <text>]', summary: 'answer the question the active pipeline waits on',
+  })
+  assert.deepEqual(listed.commands.filter(({ command }) => command === 'workflow').map(({ synopsis }) => synopsis), ['eject [review]', 'check [--json]', 'diff [--json]'])
+  assert.deepEqual(lines.err, [])
 })

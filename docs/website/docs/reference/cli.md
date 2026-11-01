@@ -23,14 +23,13 @@ $ node "<plugin folder>/engine/drivers/cli/skraft.mjs" <command>
 
 The same form works under sh and PowerShell. Run it **from the root of the working copy**:
 `skraft-config.json` and `.copilot-tracking/` are read and written there. The rest of this
-page writes `skraft <command>`: the command that [`skraft install`](#skraft-install) sets up, or
-the full line above. Prerequisites: Node 22 or later, Git.
+page writes `skraft <command>`: the command the npm package `@skraft/cli` installs
+([the `skraft` command](#skraft-command)), or the full line above. Prerequisites: Node 22 or later, Git.
 
 ## Synopsis
 
 ```
 usage: skraft --version
-       skraft install [--no-path]                                        make the skraft command available from any terminal (--no-path: leave the PATH alone)
        skraft init [--add <folder>]...                                   detect the components into skraft-config.json
        skraft init <slug> [--issue <number>] [--title <text>] [--base <ref>] [--from-artifacts]   start or resume a pipeline
        skraft status [--json]
@@ -47,6 +46,7 @@ usage: skraft --version
        skraft workflow eject [review]                                    copy the plugin pipeline into .skraft/ (review: the review alone)
        skraft workflow check [--json]                                    validate the workflow a run follows
        skraft workflow diff [--json]                                     compare the repository workflow with the plugin one
+       skraft commands --json                                            every command, its synopsis and summary, as JSON (help and completion of the skraft command)
 ```
 
 Option rules shared by every command:
@@ -83,34 +83,44 @@ The `refused` and `blocked` codes are detailed in
 
 Prints the version read from the plugin's `plugin.json`. Output: one line. Code 0.
 
-## `skraft install [--no-path]` <!-- #skraft-install -->
+## The `skraft` command <!-- #skraft-command -->
 
-**Effect.** Makes `skraft` a command of your terminal. Run it once, with the full line, from any
-folder. It writes in `~/.skraft/bin` (`%USERPROFILE%\.skraft\bin` on Windows):
+`npm i -g @skraft/cli` installs `skraft` once per machine. The package has its own version and
+holds no engine: at each call it looks for the plugin a host installed and imports its
+`engine/drivers/cli/skraft.mjs` in the same process, arguments unchanged. Nothing is recorded,
+so a plugin update by the host is followed at the next call.
 
-| File | Content |
-| --- | --- |
-| `skraft-launcher.mjs` | a self-contained launcher that finds `skraft.mjs` at each call and runs it in the same process |
-| `skraft` | sh call, mode 0755: `exec node "<launcher>" "$@"` (Git Bash on Windows uses it) |
-| `skraft.cmd` | `@node "%~dp0skraft-launcher.mjs" %*` (PowerShell and cmd find it in the PATH) |
-| `target.json` | where the plugin is: `{ "host": "claude-code" }` when `install` ran from under `~/.claude/plugins/cache/`, else `{ "path": "<absolute skraft.mjs>" }` |
+| Order | Where | Used when |
+| --- | --- | --- |
+| 1 | `SKRAFT_PLUGIN_ROOT` | the variable is set; a folder without the engine stops there, with no fallback |
+| 2 | `<COPILOT_HOME or ~/.copilot>/installed-plugins/<marketplace>/skraft/` | the folder holds the engine; the marketplace named `skraft` first, then the others by name |
+| 3 | `installPath` of the `skraft@…` entries of `<CLAUDE_CONFIG_DIR or ~/.claude>/plugins/installed_plugins.json` | the folder holds the engine; an entry scoped to a repository (`local`, then `project`, by its `projectPath`) only inside it, then the `user` one; the latest `lastUpdated` first among equals |
 
-Under Claude Code, the launcher reads `installPath` of the first `skraft@…` entry of
-`~/.claude/plugins/installed_plugins.json` at each call, so an update needs no new `install`.
-When the plugin is gone, the launcher prints `skraft: the plugin was not found. Run node
-"<plugin folder>/engine/drivers/cli/skraft.mjs" install again.` on stderr and exits 1.
+With `--version`, the command also writes `plugin: <variable|copilot|claude-code> <folder>` on
+stderr; stdout keeps the one version line.
 
-**The PATH.** When `~/.skraft/bin` is already in `PATH`, nothing is written. Otherwise: on
-macOS and Linux, a block marked `# skraft` that exports the PATH is appended once to the profile
-of `$SHELL` (`zsh`: `~/.zshrc`; `bash`: `~/.bash_profile` on macOS, `~/.bashrc` on Linux; any
-other: `~/.profile`); on Windows, the user PATH is updated through PowerShell, without
-administrator rights. The command says what it changed and to open a new terminal.
+**Session.** `skraft` alone, in a terminal, opens a session: the skraft banner (animated, on
+stderr) once, then a `skraft ›` prompt where each line is a command (`doctor`, `status`,
+`decide yes`…), with Tab completion and history. Each line runs in its own process, on the plugin
+found at that moment; while it runs, Ctrl-C stops the command, not the session. `help` prints the usage; `exit`, `quit` or Ctrl-D leaves. A one-shot command
+never shows the banner. `NO_COLOR` uncolours it, `SKRAFT_BANNER=static` skips the animation,
+`SKRAFT_BANNER=0` turns it off; `SKRAFT_INTERACTIVE=0` keeps `skraft` alone a call to the engine.
 
-**Option.** `--no-path` writes the files but nothing in the PATH, and prints the line to add, for
-sh and for PowerShell.
+**`skraft upgrade`.** Installs the latest `@skraft/cli` of its channel (`latest`, or `alpha` for an
+alpha), then runs `copilot plugin update skraft` and `claude plugin update skraft@<marketplace>`
+for each host that has the plugin (Claude Code loads it at its next session). A program missing
+from the PATH is skipped; a failed step exits 1. Once a day, a session says when a newer
+`@skraft/cli` exists (`SKRAFT_UPDATE_CHECK=0` turns the check off; `SKRAFT_REGISTRY` names
+another registry). When no plugin is found, it writes a fixed message
+naming the install commands and `SKRAFT_PLUGIN_ROOT` on stderr and exits 1.
 
-**Output and codes.** The lines above on stdout, code 0; code 1 when the Windows user PATH could
-not be written (the files are in place; use `--no-path`); a malformed line: usage, code 2.
+## `skraft commands --json` <!-- #skraft-commands -->
+
+**Effect.** Prints every usage line as JSON: `{ "schema": 1, "commands": [{ "command", "synopsis"?, "summary"? }] }`,
+in the order of the usage. The dispatch, the usage and this list come from one table of the
+engine. The `skraft` command reads it for its session help (`help`, `help <command>`), its Tab
+completion (commands, sub-commands, options) and its "did you mean" on an unknown command.
+Code 0; any other argument: usage, code 2.
 
 ## `skraft init [--add <folder>]...`
 
@@ -566,7 +576,8 @@ reason }` and `diff` prints `{ ok, name, changes, reason }`. `eject` takes no op
 ## `skraft doctor [--run] [--base <ref>] [--json]`
 
 **Effect.** Checks that every command of every component can run on this machine. Writes
-nothing to the journal.
+nothing to the journal. The first line names the plugin version that answers
+(`ok    plugin: skraft <version>`; `plugin` in the JSON); it is not counted as a check.
 
 | Option | Effect |
 | --- | --- |

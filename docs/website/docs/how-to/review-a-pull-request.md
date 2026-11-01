@@ -11,7 +11,7 @@ refutation, computed verdict), and keep it in a comment if needed.
 
 ## Prerequisites
 
-- The `skraft` plugin installed; `skraft` is the command that [`skraft install`](./install-on-a-host.mdx#skraft-command) sets up; the long line `node "<plugin folder>/engine/drivers/cli/skraft.mjs"` works without it.
+- The `skraft` plugin installed; `skraft` is the command that [`npm i -g @skraft/cli`](./install-on-a-host.mdx#skraft-command) sets up; the long line `node "<plugin folder>/engine/drivers/cli/skraft.mjs"` works without it.
 - On GitHub: `gh` installed and signed in to the repository's host (`gh auth status`). On Azure Repos: `az` with its `azure-devops` extension, signed in to the organization, or the Azure DevOps MCP server named `ado` connected in your host (Azure DevOps Services only). A tool of that server that you or the host refuse is never retried with `az`: the review says so and stops or leaves its comment unpublished.
 - A clone of the repository, at whose root you run everything.
 
