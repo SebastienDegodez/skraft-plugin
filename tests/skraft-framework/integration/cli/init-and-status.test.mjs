@@ -61,15 +61,14 @@ test('skraft init makes the slug the active pipeline and opens its journal with 
   assert.equal(existsSync(tracking(cwd, 'chargeback', 'events.jsonl')), false)
 })
 
-test('skraft init on a working copy with no remote starts the run from its issue anyway, says the body was not read, and journals why', async (t) => {
+test('skraft init on a working copy with no remote refuses a run from an issue it cannot read, says why, and journals nothing', async (t) => {
   const cwd = workingCopy(t)
   const reason = 'the working copy has no Git remote whose URL names a host and a repository'
 
   const run = await inProcess(cwd, ['init', 'checkout', '--issue', '42', '--title', 'Pay by card'])
 
-  assert.deepEqual(run, { code: 0, out: [`checkout is the active pipeline; the body of issue #42 was not read (${reason}): its agents get its number and title only`], err: [] })
-  const [started] = journal(cwd, 'checkout')
-  assert.deepEqual([started.story, started.artifacts, started.issueUnread], [{ issue: 42, title: 'Pay by card' }, [], reason])
+  assert.deepEqual(run, { code: 1, out: [], err: [`issue #42 could not be read (${reason}); make the forge readable, or start the run without an issue`] })
+  assert.equal(existsSync(tracking(cwd, 'checkout', 'events.jsonl')), false)
 })
 
 test('skraft init refuses a slug that is not kebab-case, or a malformed option, and changes nothing', async (t) => {

@@ -101,21 +101,19 @@ test('a new run journals its slug, story, workflow, bases, DISCUSS artefacts, en
   ].join('\n'))
 })
 
-test('a run from an issue the forge cannot be asked about starts on its number and title alone, and journals why', async () => {
+test('a run from an issue the forge cannot be asked about starts nothing, spawns no agent and says why in a fixed reason', async () => {
   const unreachable = 'gh is not signed in to github.com; run gh auth login --hostname github.com'
   const host = scripted({ codeHost: new InMemoryCodeHost({ unavailable: unreachable }) }, (it) => [agent()(it), unavailable])
 
   const initialised = await host.init({ story: { issue: 42, title: 'Pay by card' } })
-  await host.run()
 
   assert.deepEqual(initialised, {
-    ok: true, slug: SLUG, created: true, code: null,
-    reason: `${SLUG} is the active pipeline; the body of issue #42 was not read (${unreachable}): its agents get its number and title only`,
+    ok: false, slug: SLUG, created: false, code: 'issue-unreadable',
+    reason: `issue #42 could not be read (${unreachable}); make the forge readable, or start the run without an issue`,
   })
-  const [started] = host.events()
-  assert.deepEqual([started.story, started.artifacts, started.issueUnread], [{ issue: 42, title: 'Pay by card' }, [], unreachable])
-  assert.deepEqual([host.codeHost.issuesRead, await host.tracking.list(SLUG, 'plans')], [[42], []])
-  assert.ok(host.agentRunner.dispatches[0].prompt.startsWith(`## Skraft dispatch: solution-researcher (RESEARCH)\n- Story: #42 — Pay by card\n- Feature scope: ${SLUG}\n- Attempt: 1 of 3\n- Fill each output`), host.agentRunner.dispatches[0].prompt)
+  assert.deepEqual([host.events(), host.codeHost.issuesRead, await host.tracking.list(SLUG, 'plans')], [[], [42], []])
+  assert.deepEqual(host.agentRunner.dispatches, [])
+  assert.equal(await host.tracking.current(), null)
 })
 
 test('a run from an issue the forge reads journals no reason for an unread body', async () => {
@@ -127,15 +125,19 @@ test('a run from an issue the forge reads journals no reason for an unread body'
   assert.equal('issueUnread' in host.events()[0], false)
 })
 
-test('a number the forge answers for that is no issue, missing or a pull request, starts nothing and says so in a fixed reason', async () => {
-  const host = pipelineHost({ codeHost: new InMemoryCodeHost({ issues: { 7: 'pull-request' } }) })
+test('a number the forge answers for that is no story, missing, a pull request, another type of work item or one of another project, starts nothing and says so in a fixed reason', async () => {
+  const host = pipelineHost({ codeHost: new InMemoryCodeHost({ issues: { 7: 'pull-request', 8: 'not-a-story', 9: { project: 'Billing' } } }) })
 
   const missing = await host.init({ story: { issue: 42, title: 'Pay by card' } })
   const pull = await host.init({ story: { issue: 7, title: 'Pay by card' } })
+  const task = await host.init({ story: { issue: 8, title: 'Pay by card' } })
+  const elsewhere = await host.init({ story: { issue: 9, title: 'Pay by card' } })
 
   assert.deepEqual(missing, { ok: false, slug: SLUG, created: false, code: 'issue-not-found', reason: "the forge has no issue #42; start the run with the number of the story's issue" })
   assert.deepEqual(pull, { ok: false, slug: SLUG, created: false, code: 'issue-is-pull-request', reason: "#7 is a pull request, not an issue; start the run with the number of the story's issue" })
-  assert.deepEqual([host.events(), await host.tracking.list(SLUG, 'plans'), host.codeHost.issuesRead], [[], [], [42, 7]])
+  assert.deepEqual(task, { ok: false, slug: SLUG, created: false, code: 'issue-not-a-story', reason: 'work item #8 is not a story (its type is not one skraft starts a run from); start the run with the number of a user story, product backlog item, requirement, issue or bug' })
+  assert.deepEqual(elsewhere, { ok: false, slug: SLUG, created: false, code: 'issue-in-other-project', reason: 'work item #9 is in another project than Billing, the Git remote\'s; start the run with a work item of Billing' })
+  assert.deepEqual([host.events(), await host.tracking.list(SLUG, 'plans'), host.codeHost.issuesRead], [[], [], [42, 7, 8, 9]])
   assert.equal(await host.tracking.current(), null)
 })
 

@@ -1,5 +1,4 @@
 import { emptiedPart, markerOf } from '../../domain/reporting/run-details.mjs'
-import { routeOf } from '../config/mcp-route.mjs'
 
 /**
  * The run details of a pull request, kept in comments of it when its body would not hold them:
@@ -52,14 +51,14 @@ const keepPart = async (deps, request, part) => {
   const made = await deps.codeHost.keepPullRequestComment(await requestOf(deps, request.slug, { ...part, url: before?.url ?? null }))
   const fields = { number: part.number, part: part.part, parts: part.details.length }
   if (!made.ok) return skipped(request, fields, made)
-  await request.journal.append('pull-request.details-kept', { ...fields, url: made.url, bodyHash, ...routeOf(made) })
+  await request.journal.append('pull-request.details-kept', { ...fields, url: made.url, bodyHash })
   part.kept.set(part.part, { url: made.url, bodyHash })
   return null
 }
 
 /** @param {DetailsRequest} request @param {Record<string, number>} fields @param {{ reason: string }} made @returns {Promise<DetailsOutcome>} */
 const skipped = async ({ journal }, fields, made) => {
-  await journal.append('pull-request.details-skipped', { ...fields, reason: made.reason, ...routeOf(made) })
+  await journal.append('pull-request.details-skipped', { ...fields, reason: made.reason })
   return { ok: false, reason: made.reason }
 }
 

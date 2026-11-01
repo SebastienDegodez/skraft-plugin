@@ -63,6 +63,10 @@ docs/website/      ← handbook (Docusaurus): book.yml (structure contract), doc
   one.
 - Checks live in the engine, not in hooks or prose: phase order, expected outputs, write scope
   (git diff per step), gates, review verdict, TDD red/green commits.
+- Engine code never calls an MCP server: a server is a tool for an agent. The engine reads and
+  writes the forge only through its command line, `gh` (GitHub) or `az` (Azure DevOps), with no
+  fallback between them; an issue it cannot read refuses the run. An agent writes to the forge
+  only through a skill that lists what it may do (#474).
 - V2 ships **no command hooks**. A hook comes back only if it protects an irreversible action the
   engine cannot detect afterwards, with a measured cost and a documented behaviour on Claude
   Code, Copilot CLI and VS Code. `hooks/hooks.json` may only declare the mod module.

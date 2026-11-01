@@ -2,7 +2,7 @@ import { markdownOf } from './html-markdown.mjs'
 
 /**
  * A work item of Azure Boards as the story a run starts from: the same reading whichever way
- * the work item was fetched (the host's MCP server or az), as REST answers it.
+ * the work item was fetched by az, as REST answers it.
  *
  * @typedef {import('../../application/ports/code-host.mjs').IssueReading} IssueReading
  */

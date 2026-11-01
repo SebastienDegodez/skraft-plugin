@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { existsSync } from 'node:fs'
+import { existsSync, rmSync } from 'node:fs'
 import { readdir, readFile } from 'node:fs/promises'
 import { join, relative, sep } from 'node:path'
 import { register } from '../../../../plugins/skraft-framework/engine/drivers/copilot-workflow/register.mjs'
@@ -296,6 +296,22 @@ test('the registered run puts its question in the joined session\'s dialog; dism
   await assert.rejects(workflow.run(ctx), { name: 'AbortError', message: 'paused at research-1' })
   assert.deepEqual(asked.map(([kind]) => kind), ['input'])
   assert.match(asked[0][1], /^research is blocked: solution-researcher says it cannot go on; /)
+})
+
+test('the registered run opens the canvas of the joined session on its Configuration tab when nobody confirmed the configuration', async (t) => {
+  const repositories = await twoRepositories(t)
+  rmSync(join(repositories.first, 'skraft-config.local.json'), { force: true })
+  const asked = []
+  const sdk = dismissingSession(repositories, asked)
+  const opens = []
+  sdk.session.rpc.canvas = { open: async (opened) => { opens.push(opened) } }
+  await registerWith(sdk, `${repositories.first}-home`)
+  const [workflow] = sdk.joins[0].workflows
+
+  await workflow.run(simulatedContext({ args: { slug: 'checkout' }, behaviours: [writesNothing] }).ctx).catch(() => {})
+
+  assert.deepEqual(opens, [{ canvasId: 'skraft-pipeline', instanceId: 'skraft-run', input: { tab: 'configuration' } }])
+  assert.deepEqual(asked.map(([kind]) => kind), ['select'])
 })
 
 test('the registered tool puts the question once in the joined session\'s dialog, with no confirmation after it', async (t) => {
