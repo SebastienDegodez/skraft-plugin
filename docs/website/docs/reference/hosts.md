@@ -17,8 +17,8 @@ Why an engine and drivers, and the Copilot driver contract:
 | --- | --- | --- |
 | Node | 22 or later | the engine, the `skraft` command line, the Copilot extension; `skraft doctor` checks it |
 | Git | — | each component's base, commits, replays of red commits |
-| `gh` | signed in to the repository's host | only to read the story's issue (`--issue`), open the pull request, comment on the issue, `skraft review --pr`; on `github` the host's GitHub MCP server, when connected, serves these first and `gh` is the fallback (the `skraft` CLI and `skraft next` always use `gh`); see [Forge](./skraft-config.md#forge) |
-| `az` | signed in to the organization, with its `azure-devops` extension | on Azure DevOps only, to read the story's work item (`--issue`), keep the run's comment on it, open the pull request, and review a pull request (`skraft review --pr`: read it, keep the review's thread); the host's Azure DevOps MCP server (`ado`), when connected, serves the work item, its comment and the review of a pull request first and `az` is the fallback (the `skraft` CLI and `skraft next` always use `az`); see [Forge](./skraft-config.md#azure-devops-mcp-server-first-az-as-fallback) |
+| `gh` | signed in to the repository's host | only to read the story's issue (`--issue`), open the pull request, comment on the issue, `skraft review --pr`; the `skraft` CLI and `skraft next` use it the same way (see [Forge](./skraft-config.md#forge)) |
+| `az` | signed in to the organization, with its `azure-devops` extension | on Azure DevOps only, to read the story's work item (`--issue`), keep the run's comment on it, open the pull request, and review a pull request (`skraft review --pr`: read it, keep the review's thread); the `skraft` CLI and `skraft next` use it the same way (see [Forge](./skraft-config.md#azure-devops-az)) |
 | Copilot CLI | — | Copilot CLI; under VS Code, the SDK driver (`skraft-run.mjs`) starts it headless |
 
 ## Install <!-- #install -->
