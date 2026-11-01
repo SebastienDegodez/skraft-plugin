@@ -294,7 +294,7 @@ const shopCaptures = async () => {
   if (doctor.code !== 0) throw new Error(`skraft doctor: ${doctor.lines.join('\n')}`)
   writeSvg('terminal-doctor.svg', ['$ skraft doctor', ...doctorShown(doctor.lines)], '~/shop', `skraft doctor: ${doctor.lines.at(-1)}`, 132)
 
-  const start = await say(['init', 'checkout', '--issue', '42', '--title', 'Pay by card'])
+  const start = await say(['init', 'checkout', '--title', 'Pay by card'])
   const next = await say(['next'])
   const status = await say(['status'])
   if (start.code !== 0) throw new Error(`skraft init checkout: ${start.lines.join('\n')}`)
@@ -317,7 +317,7 @@ const pipelineCaptures = async () => {
   const { cwd } = repository.pipelineRepository(testContext)
   cleanups.push(() => rmSync(`${cwd}-home`, { recursive: true, force: true }))
   const person = host.answeringSession({ answers: [null, 'RATIFIED'] })
-  const { ctx, logs } = host.simulatedContext({ args: { slug: repository.SLUG, issue: 42, title: 'Pay by card' }, otherwise: host.actsAs(repository.scriptedLlm({ cwd })) })
+  const { ctx, logs } = host.simulatedContext({ args: { slug: repository.SLUG, title: 'Pay by card' }, otherwise: host.actsAs(repository.scriptedLlm({ cwd })) })
   const paused = await runSkraftPipelineWorkflow(ctx, host.copilotHost(cwd, PLUGIN_ROOT, person)).then(() => null, (error) => error.message)
   if (paused !== 'paused at adr-1') throw new Error(`the scripted run did not pause at its ADR: ${paused}`)
   await canvasShot(cwd, `${cwd}-home`, 'pipeline-canvas-adr.png')
