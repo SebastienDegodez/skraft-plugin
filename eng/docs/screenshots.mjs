@@ -294,7 +294,7 @@ const shopCaptures = async () => {
   if (doctor.code !== 0) throw new Error(`skraft doctor: ${doctor.lines.join('\n')}`)
   writeSvg('terminal-doctor.svg', ['$ skraft doctor', ...doctorShown(doctor.lines)], '~/shop', `skraft doctor: ${doctor.lines.at(-1)}`, 132)
 
-  const start = await say(['init', 'checkout', '--issue', '42', '--title', 'Pay by card'])
+  const start = await say(['init', 'checkout', '--title', 'Pay by card'])
   const next = await say(['next'])
   const status = await say(['status'])
   if (start.code !== 0) throw new Error(`skraft init checkout: ${start.lines.join('\n')}`)
