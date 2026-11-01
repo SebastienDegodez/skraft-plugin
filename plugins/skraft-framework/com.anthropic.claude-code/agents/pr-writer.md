@@ -9,14 +9,8 @@ tools:
   - Glob
   - Edit
   - Write
-skills:
-  - github-forge-writes
-  - azure-devops-forge-writes
 metadata:
   dispatched_by: skraft-engine
-  skills:
-    - github-forge-writes
-    - azure-devops-forge-writes
 ---
 
 # PR Writer
@@ -32,4 +26,3 @@ Write the prose of the pull request a skraft run opens. The engine renders every
 - Write only what a file you read shows: never a figure, a test result, a gate, a reviewer or an issue number of your own.
 - Write paths as plain text, never as links.
 - Change no file but your output and the result file your brief names.
-- Write to the forge only when your brief asks you to, and only as `github-forge-writes` (GitHub) or `azure-devops-forge-writes` (Azure DevOps) allows.
