@@ -1,9 +1,10 @@
 import { edgeKey } from '../journal/run-state.mjs'
+import { REFUTER } from '../review/lenses.mjs'
 
 /**
  * A workflow as a page draws it, step by step in the order a run meets them: what each step
- * runs, asks or publishes, the lenses of a review with when each runs, the workflow a step
- * calls; each edge with its label, its max_visits and how often the run took it; and, for the
+ * runs, asks or publishes, the lenses of a review with when each runs and the refuter they
+ * join, the workflow a step calls; each edge with its label, its max_visits and how often the run took it; and, for the
  * workflow a run follows, where the run stands on each step. Start and exit are no steps.
  *
  * @typedef {import('../workflow/workflow.mjs').Workflow} Workflow
@@ -11,9 +12,10 @@ import { edgeKey } from '../journal/run-state.mjs'
  * @typedef {import('../journal/run-state.mjs').RunState} RunState
  * @typedef {{
  *   id: string, kind: string, phase: string | null, agent: string | null, gates: string[], question: string | null,
- *   publish: string | null, calls: string | null, lenses: Array<{ lens: string, when: string | null }>,
+ *   publish: string | null, calls: string | null, lenses: Array<{ lens: string, when: string | null }>, refuter: DrawnRefuter | null,
  *   mandatory: boolean, locked: boolean, state: 'pending' | 'open' | 'done', visits: number,
  * }} DrawnStep
+ * @typedef {{ id: string, agent: string, mandatory: boolean }} DrawnRefuter the refuter node of a review, the agent it runs
  * @typedef {{ from: string, to: string, label: string | null, maxVisits: number | null, taken: number }} DrawnEdge
  * @typedef {{ name: string, file: string | null, goal: string | null, steps: DrawnStep[], edges: DrawnEdge[] }} WorkflowDrawing
  *   file: the working copy's copy it was read from, null for the plugin's.
@@ -63,7 +65,7 @@ const successorsOf = (workflow, id) => {
 /** @param {WorkflowNode} node @param {RunState | null} run @returns {DrawnStep} */
 const drawnStep = (node, run) => ({
   id: node.id, kind: node.kind, phase: node.phase, agent: node.agent, gates: node.gates, question: node.question,
-  publish: node.publish, calls: node.call?.workflow ?? null, lenses: lensesOf(node),
+  publish: node.publish, calls: node.call?.workflow ?? null, lenses: lensesOf(node), refuter: refuterOf(node),
   mandatory: node.mandatory === true, locked: node.locked, ...stateOf(run?.nodes[node.id]),
 })
 
@@ -71,6 +73,9 @@ const drawnStep = (node, run) => ({
 const lensesOf = (node) => (node.branches.length > 0
   ? node.branches.map(({ lens, when }) => ({ lens, when }))
   : node.lenses.map((lens) => ({ lens, when: null })))
+
+/** The refuter node a review joins its lenses in, null for any other step. @param {WorkflowNode} node @returns {DrawnRefuter | null} */
+const refuterOf = ({ refutedBy }) => (refutedBy === null ? null : { id: refutedBy.id, agent: REFUTER, mandatory: refutedBy.mandatory === true })
 
 /** @param {import('../journal/run-state.mjs').NodeState | undefined} state */
 const stateOf = (state) => {
