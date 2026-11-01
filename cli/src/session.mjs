@@ -162,9 +162,25 @@ export const runSession = ({ input, output, terminal, catalog, run, say }) =>
       if (args[0] === 'help') return output.write(helpOf(catalog, args[1]))
       if (catalog.length > 0 && !known.has(args[0])) return say(helpOf(catalog, args[0]).trimEnd())
       running = true
+      handOver()
       await run(args)
+      takeBack()
       running = false
       return undefined
+    }
+    /**
+     * While a command runs, the terminal is its own: the session stops reading (a `decide`
+     * confirmation reads the same stdin) and leaves raw mode, so Ctrl-C is a signal the command
+     * receives, not a key the session swallows.
+     */
+    const rawCapable = terminal && typeof (/** @type {any} */ (input).setRawMode) === 'function'
+    const handOver = () => {
+      reader.pause()
+      if (rawCapable) /** @type {any} */ (input).setRawMode(false)
+    }
+    const takeBack = () => {
+      if (rawCapable) /** @type {any} */ (input).setRawMode(true)
+      reader.resume()
     }
     reader.on('line', (line) => {
       queue = queue.then(() => handle(line)).then(() => {
