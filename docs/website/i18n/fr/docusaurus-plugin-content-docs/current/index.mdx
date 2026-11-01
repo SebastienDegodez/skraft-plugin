@@ -1,0 +1,71 @@
+---
+title: "SKRAFT — Le Handbook"
+description: "Ce qu'est SKRAFT V2, par où commencer, et laquelle des quatre portes ouvrir selon votre besoin."
+persona: tech-lead
+hide_table_of_contents: true
+---
+
+import Link from '@docusaurus/Link'
+import PhaseRibbon from '@site/src/components/PhaseRibbon'
+
+# SKRAFT — Le Handbook
+
+SKRAFT conduit une story de la recherche à sa pull request en quatre phases, chacune livrée par un
+agent et relue par un autre, sous Claude Code, GitHub Copilot CLI et VS Code.
+
+<PhaseRibbon />
+
+Un **moteur** unique décide de l'ordre des phases, des sorties attendues, des relances, des
+verdicts et des gates. Les **pilotes d'hôte** exécutent ce qu'il demande et sont les seuls à lancer
+des agents ; aucun agent n'en lance un autre, et aucun hook de commande ne ralentit vos appels
+d'outils.
+
+## Commencer ici
+
+<div className="skraft-start">
+  <Link className="button button--primary button--lg" to="/how-to/install-on-a-host">1. Installer skraft</Link>
+  <Link className="button button--outline button--primary button--lg" to="/tutorials/getting-started">2. Mener votre première story</Link>
+</div>
+
+## Quatre portes
+
+<div className="skraft-doors">
+  <Link className="skraft-door" to="/tutorials">
+    <strong>Tutoriels</strong>
+    <span>Apprendre en faisant : un premier run sous Claude Code, puis sous Copilot CLI.</span>
+  </Link>
+  <Link className="skraft-door" to="/how-to">
+    <strong>Guides pratiques</strong>
+    <span>Réussir une tâche précise : installer, configurer, lancer les gates, reprendre un run.</span>
+  </Link>
+  <Link className="skraft-door" to="/explanation">
+    <strong>Explication</strong>
+    <span>Comprendre pourquoi le moteur, les phases et les garde-fous fonctionnent ainsi.</span>
+  </Link>
+  <Link className="skraft-door" to="/reference">
+    <strong>Référence</strong>
+    <span>Retrouver un fait exact : commandes, configuration, workflow, journal, gates.</span>
+  </Link>
+</div>
+
+Vous décidez de l'adopter ? Lisez [Pour décideurs](./explanation/for-executives.md). Vous voulez
+savoir ce qui est disponible aujourd'hui ? Voyez la [feuille de route](#roadmap).
+
+## Disponible aujourd'hui, et ce qui arrive {/* #roadmap */}
+
+SKRAFT V2 se construit par **lots**, suivis dans l'epic [#211](https://github.com/SebastienDegodez/skraft-plugin/issues/211) et ses issues #212 à
+#223. Ce tableau est la seule feuille de route du projet ; chaque lot arrive sur la branche
+`integration/v2-next`, et une dernière pull request vers `main` livre la 2.0.0.
+
+| Lot | Capacité | État |
+| --- | --- | --- |
+| 0 – 2 | Phase **RESEARCH** de bout en bout (document pré-créé, relance si manquant, arrêt au plafond), journal chaîné, reprise, `skraft-config.json` à composants, détection (`skraft init`), `skraft doctor`, base par dépôt, gates lancées à la main (`skraft gate`) | Disponible |
+| 3 | DESIGN, DISTILL et DELIVER conduits par le moteur sur un workflow DOT ; droits d'écriture par diff git ; gates étapes du pipeline | Disponible |
+| 4 | Revue du code par lentilles isolées, réfutateur, verdict calculé, re-revue incrémentale | Disponible |
+| 5 | Décisions humaines (`skraft decide`, boîtes de dialogue, boutons du panneau), ratification d'ADR | Disponible |
+| 6 | Agents et skills de la v1 élagués | Disponible |
+| 7 | Boucle de clôture mutation (100 % cœur, 80 % frontière) | Disponible |
+| 8 | Vue du panneau, rapports de run et QA, pull request de fin de run, publication des captures, progression sur l'issue | Disponible ; affichage du Canvas Copilot dans l'app à vérifier à la main |
+| 9 | Plugin `skraft-brownfield` | Disponible |
+| 10 | VS Code : pilote SDK Copilot, puis repli `skraft next` / `skraft record` | Disponible |
+| 11 | `skraft migrate`, `skraft review --pr`, documentation V2, run de référence chronométré sur Mac et Windows, version 2.0.0 | `migrate` et `review --pr` disponibles ; documentation en cours ([#367](https://github.com/SebastienDegodez/skraft-plugin/issues/367)) ; run de référence et 2.0.0 à venir |

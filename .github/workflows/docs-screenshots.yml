@@ -7,7 +7,7 @@ name: Docs screenshots
 on:
   pull_request:
     paths:
-      - 'docs/site/**'
+      - 'docs/website/**'
       - 'eng/docs/**'
       - 'eng/catalog/**'
       - 'eng/dashboard/build.mjs'

@@ -2,9 +2,9 @@
 
 Packaging facts and the maintainer workflow. The contributor rules are in
 [AGENTS.md](../../AGENTS.md); the design, including the Copilot driver contract, is explained on the
-[Architecture](../../docs/site/en/explanation/architecture.md) page of the handbook, and the
+[Architecture](../../docs/website/docs/explanation/architecture.md) page of the handbook, and the
 repository layout in [docs/architecture.md](../../docs/architecture.md). User documentation lives
-in the handbook only (`docs/site/`, FR and EN, structure in `docs/site/_data/book.yml`); this file
+in the handbook only (`docs/website/`, FR and EN, structure in `docs/website/book.yml`); this file
 does not repeat it.
 
 ## Packaging
@@ -72,8 +72,8 @@ by hand, and an entry in the Claude Code manifest. Commit both trees and the bas
 marketplace Git installs do not build.
 
 A change to an agent or a skill is judged with Vally (`eng/run-vally-evals.sh`): the steps are in
-[Evaluate a skill](../../docs/site/en/how-to/evaluate-a-skill.md), the runner, verdicts and CI in
-[Evaluation tooling](../../docs/site/en/reference/evaluation-tooling.md).
+[Evaluate a skill](../../docs/website/docs/how-to/evaluate-a-skill.md), the runner, verdicts and CI in
+[Evaluation tooling](../../docs/website/docs/reference/evaluation-tooling.md).
 
 ### Skills
 

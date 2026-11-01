@@ -1,7 +1,7 @@
 <!-- markdownlint-disable-file -->
 # Vérification d'hôte Copilot — index d'évidence
 
-Ce que le pilote Copilot suppose de l'hôte, mesuré par `eng/host-probe/copilot-probe.mjs` (hôte SDK headless, aucun appel de modèle) — [contrat du pilote Copilot](../site/fr/explanation/architecture.md#le-contrat-du-pilote-copilot), issue #251. Chaque passage de la sonde ajoute sa section en tête, avec les versions mesurées.
+Ce que le pilote Copilot suppose de l'hôte, mesuré par `eng/host-probe/copilot-probe.mjs` (hôte SDK headless, aucun appel de modèle) — [contrat du pilote Copilot](../website/i18n/fr/docusaurus-plugin-content-docs/current/explanation/architecture.md#le-contrat-du-pilote-copilot), issue #251. Chaque passage de la sonde ajoute sa section en tête, avec les versions mesurées.
 
 ## Mesures
 

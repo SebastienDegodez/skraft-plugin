@@ -3,6 +3,12 @@
 Toutes les modifications notables de ce projet sont documentées ici.
 Format basé sur [Conventional Commits](https://www.conventionalcommits.org/) — versionnage [SemVer](https://semver.org/).
 
+## [2.0.0-alpha.45](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.44...v2.0.0-alpha.45) (2026-11-01)
+
+### ✨ Features
+
+* **docs:** figure DELIVER animée par scénarios, lue par le moteur (prototype) ([#454](https://github.com/SebastienDegodez/skraft-plugin/issues/454)) ([e7bef4f](https://github.com/SebastienDegodez/skraft-plugin/commit/e7bef4f46cd464d7f4fe52cfd0428e0d2cc4ddd0)), closes [#367](https://github.com/SebastienDegodez/skraft-plugin/issues/367)
+
 ## [2.0.0-alpha.44](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.43...v2.0.0-alpha.44) (2026-10-31)
 
 ### ✨ Features

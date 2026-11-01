@@ -1,20 +1,25 @@
 # Only main deploys: the github-pages environment refuses every other branch.
-# The build always checks out main for the root and builds integration/v2-next
-# under /v2-next/, so the site is the same whichever ref triggered it. A push to
-# integration/v2-next therefore dispatches this workflow on main instead of
-# deploying itself.
+#
+# From 2.0.0 (this file on main): one Docusaurus build of docs/website holds the whole site.
+# 2.x at / and /fr/, next at /next/ and /fr/next/, the dashboard, and the v1 trees taken from
+# the docs-archive-v1 release asset (sha256 pinned below). Nothing outside the artifact
+# survives a Pages deployment, so every version is in it.
+#
+# Until 2.0.0 main runs its own copy of this workflow, which builds integration/v2-next under
+# /v2-next/ with SKRAFT_DOCS_BASE_URL. A push to integration/v2-next therefore dispatches the
+# workflow on main instead of deploying itself (request-deploy, deleted by the final PR).
 name: Deploy SKRAFT docs site to GitHub Pages
 
 on:
   push:
     branches: [main, integration/v2-next]
     paths:
+      - "docs/website/**"
       - "docs/site/**"
       - "eng/**"
       - "plugins/skraft-framework/**"
       - "tests/skills/**"
       - ".github/workflows/pages-deploy.yml"
-  # Re-published by the docs-tag workflow after it creates a patch tag.
   workflow_dispatch:
 
 permissions: {}
@@ -22,6 +27,11 @@ permissions: {}
 concurrency:
   group: pages
   cancel-in-progress: false
+
+env:
+  # Set by the final PR from the docs-archive-v1 run summary (docs/v2/docusaurus-migration-plan.md §6).
+  DOCS_V1_ARCHIVE_SHA256: ""
+  V1_TAGS: "v1.15.3,v1.15.2,v1.15.1,v1.15.0,v1.14.1,v1.14.0,v1.13.0,v1.12.0,v1.11.0"
 
 jobs:
   request-deploy:
@@ -47,15 +57,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
-          ref: main
-          fetch-depth: 0
-
-      - name: Setup Ruby
-        uses: ruby/setup-ruby@762794c140bbeda0f1224786aa33b4b46783a6c1 # v1.326.0
-        with:
-          ruby-version: "3.3"
-          bundler-cache: true
-          working-directory: docs/site
+          fetch-depth: 0 # last-update dates of the pages
 
       - name: Setup Node
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
@@ -63,55 +65,28 @@ jobs:
           node-version: "22"
 
       - name: Setup Pages
-        id: pages
         uses: actions/configure-pages@983d7736d9b0ae728b81ab479565c72886d7745b # v5.0.0
+
+      - name: Install
+        run: |
+          npm ci
+          npm ci --prefix docs/website
 
       # The dashboard catalogue is derived from the plugin sources at build time,
       # so the published page can never drift from what the plugin ships.
       - name: Build the dashboard catalogue
         run: |
           node eng/catalog/scan.mjs
-          node eng/dashboard/build.mjs --repository "${{ github.repository }}"
+          node eng/dashboard/build.mjs --repository "${{ github.repository }}" --out docs/website/static/dashboard/data/dashboard.json
 
-      - name: Build with Jekyll
-        working-directory: docs/site
-        env:
-          JEKYLL_ENV: production
-        run: |
-          bundle exec jekyll build \
-            --baseurl "${{ steps.pages.outputs.base_path }}" \
-            --destination ../../_site
+      - name: Copy the workflow graphs of each version
+        if: hashFiles('eng/docs/workflow-copies.mjs') != ''
+        run: node eng/docs/workflow-copies.mjs --out docs/website/static/workflows
 
-      # Versioned docs: the latest line is the root (main); the 5 minor lines
-      # before it, every patch tag of those lines, and the integration branch
-      # (integration/v2-next, published under /v2-next/) are built under their own
-      # path. Selection rules: eng/docs/versions.mjs.
-      - name: Build the versioned documentation
+      - name: Build the handbook, all locales and versions
         env:
-          BASE_PATH: ${{ steps.pages.outputs.base_path }}
-          INTEGRATION_BRANCH: integration/v2-next
-        run: |
-          set -euo pipefail
-          git fetch origin "$INTEGRATION_BRANCH:refs/remotes/origin/$INTEGRATION_BRANCH" \
-            || echo "::warning::integration branch $INTEGRATION_BRANCH not found, its documentation is not published"
-          node eng/docs/plan.mjs --integration "$INTEGRATION_BRANCH" > _site/versions.json
-          export BUNDLE_GEMFILE="$PWD/docs/site/Gemfile"
-          build_ref() { # <ref> <path>
-            rm -rf /tmp/docsrc && mkdir -p /tmp/docsrc
-            git archive "$1" docs/site | tar -x -C /tmp/docsrc
-            (cd /tmp/docsrc/docs/site && JEKYLL_ENV=production bundle exec jekyll build \
-              --baseurl "$BASE_PATH/$2" --destination "$GITHUB_WORKSPACE/_site/$2")
-            node eng/docs/inject-switcher.mjs "_site/$2" "$BASE_PATH" "$2"
-          }
-          node eng/docs/inject-switcher.mjs _site "$BASE_PATH" ""
-          for tag in $(node -e 'const m=JSON.parse(require("fs").readFileSync("_site/versions.json"));for(const l of m.lines)for(const v of l.versions)console.log(v.tag)'); do
-            build_ref "refs/tags/$tag" "$tag/"
-          done
-          if git rev-parse --verify -q "refs/remotes/origin/$INTEGRATION_BRANCH" >/dev/null; then
-            build_ref "refs/remotes/origin/$INTEGRATION_BRANCH" "$(node eng/docs/plan.mjs --integration "$INTEGRATION_BRANCH" --integration-path)"
-          else
-            node -e 'const f="_site/versions.json",m=JSON.parse(require("fs").readFileSync(f));m.integration=null;require("fs").writeFileSync(f,JSON.stringify(m))'
-          fi
+          SKRAFT_DOCS_EDIT_BRANCH: main
+        run: npm run build --prefix docs/website
 
       # AGENTVIZ replays the raw agent trajectories the evaluation runs record.
       # It is a third-party SPA taken from its npm package, which ships the built
@@ -122,17 +97,37 @@ jobs:
           AGENTVIZ_VERSION: "1.2.0"
         run: |
           set -euo pipefail
-          rm -rf /tmp/agentviz && mkdir -p /tmp/agentviz
-          (cd /tmp/agentviz && npm pack "agentviz@${AGENTVIZ_VERSION}" --silent >/dev/null && tar -xzf agentviz-*.tgz)
-          test -f /tmp/agentviz/package/dist/index.html || { echo "::error::agentviz@${AGENTVIZ_VERSION} ships no dist/index.html"; exit 1; }
-          mkdir -p _site/dashboard/replay
-          cp -r /tmp/agentviz/package/dist/* _site/dashboard/replay/
-          echo "agentviz@${AGENTVIZ_VERSION}" > _site/dashboard/replay/.agentviz-version
+          rm -rf "$RUNNER_TEMP/agentviz" && mkdir -p "$RUNNER_TEMP/agentviz"
+          (cd "$RUNNER_TEMP/agentviz" && npm pack "agentviz@${AGENTVIZ_VERSION}" --silent >/dev/null && tar -xzf agentviz-*.tgz)
+          test -f "$RUNNER_TEMP/agentviz/package/dist/index.html" || { echo "::error::agentviz@${AGENTVIZ_VERSION} ships no dist/index.html"; exit 1; }
+          # The dashboard is copied into each locale build (/dashboard/, /fr/dashboard/); so is its replay.
+          for replay in docs/website/build/dashboard/replay docs/website/build/fr/dashboard/replay; do
+            mkdir -p "$replay"
+            cp -r "$RUNNER_TEMP/agentviz/package/dist/." "$replay/"
+            echo "agentviz@${AGENTVIZ_VERSION}" > "$replay/.agentviz-version"
+          done
+
+      - name: Add the v1 archive
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          test -n "$DOCS_V1_ARCHIVE_SHA256" || { echo "::error::DOCS_V1_ARCHIVE_SHA256 is not pinned"; exit 1; }
+          cd "$RUNNER_TEMP"
+          gh release download docs-archive-v1 --pattern docs-v1-archive.tar.gz --clobber
+          echo "$DOCS_V1_ARCHIVE_SHA256  docs-v1-archive.tar.gz" | sha256sum -c -
+          tar -xzf docs-v1-archive.tar.gz -C "$GITHUB_WORKSPACE/docs/website/build"
+
+      - name: Check the layout of the site
+        run: >-
+          node eng/docs/check-build.mjs docs/website/build
+          --versions docs/website/versions.json --dashboard --archive "$V1_TAGS"
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa # v3.0.1
         with:
-          path: _site
+          path: docs/website/build
 
   deploy:
     needs: build

@@ -5,10 +5,10 @@ issues or Azure Boards work items — classify them, and refine them into storie
 Definition of Ready. It installs and
 runs without the engineering plugin (`skraft`), and the engineering plugin runs without it.
 
-User guides live in the [SKRAFT handbook](https://sebastiendegodez.github.io/skraft-plugin/en/) (FR and EN):
-[The backlog](https://sebastiendegodez.github.io/skraft-plugin/en/explanation/backlog) explains the three paths and each planning lens;
-[Turn a PRD into a GitHub backlog](https://sebastiendegodez.github.io/skraft-plugin/en/how-to/prd-to-backlog) and
-[Refine a backlog issue](https://sebastiendegodez.github.io/skraft-plugin/en/how-to/refine-backlog) give the steps. This file keeps what the
+User guides live in the [SKRAFT handbook](https://sebastiendegodez.github.io/skraft-plugin/) (FR and EN):
+[The backlog](https://sebastiendegodez.github.io/skraft-plugin/explanation/backlog) explains the three paths and each planning lens;
+[Turn a PRD into a GitHub backlog](https://sebastiendegodez.github.io/skraft-plugin/how-to/prd-to-backlog) and
+[Refine a backlog issue](https://sebastiendegodez.github.io/skraft-plugin/how-to/refine-backlog) give the steps. This file keeps what the
 plugin itself ships and how it behaves.
 
 ## Install
@@ -52,7 +52,7 @@ Run the skraft-prd-backlog workflow with prd docs/project-planning/my-prd.md
 
 Its arguments (`prd`, `slug`, `repo`, `epics`, `approve`, `dryRun`, `frame`, `corrections`) and
 the two pauses are described step by step in
-[Turn a PRD into a GitHub backlog](https://sebastiendegodez.github.io/skraft-plugin/en/how-to/prd-to-backlog); any other key is refused. The
+[Turn a PRD into a GitHub backlog](https://sebastiendegodez.github.io/skraft-plugin/how-to/prd-to-backlog); any other key is refused. The
 agents are the plugin's and run on the session's model.
 
 | Phase | Who decides | What happens |
@@ -161,7 +161,7 @@ used.
 
 Run it yourself with the `/skraft-refine <issue number>` command (Claude Code, Copilot CLI,
 VS Code), on your own model and credentials; add `--force` to redo an issue already covered.
-Steps and troubleshooting: [Refine a backlog issue](https://sebastiendegodez.github.io/skraft-plugin/en/how-to/refine-backlog).
+Steps and troubleshooting: [Refine a backlog issue](https://sebastiendegodez.github.io/skraft-plugin/how-to/refine-backlog).
 
 Its scripts do everything that must not depend on the model:
 

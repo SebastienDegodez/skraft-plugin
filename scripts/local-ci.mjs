@@ -6,6 +6,8 @@
 //   node scripts/local-ci.mjs            # fast gates: tests + drift guards
 //   node scripts/local-ci.mjs --mutation # also run Stryker on the engine lines changed since origin/integration/v2-next
 //   node scripts/local-ci.mjs --dotnet   # also run the .NET gate scripts on real Stryker.NET
+//   node scripts/local-ci.mjs --docs     # also build the handbook (docs/website), check its layout
+//                                        # and run the Playwright site suite on it (tests/site)
 //
 // Cross-platform: spawns `node` directly, no shell globbing, no dependency.
 import { spawnSync } from 'node:child_process'
@@ -16,6 +18,7 @@ import { withoutRepositoryEnv } from '../eng/lib/repository-env.mjs'
 const flags = new Set(process.argv.slice(2))
 const withMutation = flags.has('--mutation') || flags.has('-m')
 const withDotnet = flags.has('--dotnet')
+const withDocs = flags.has('--docs')
 
 const ENGINE = join('plugins', 'skraft-framework', 'engine')
 
@@ -77,7 +80,7 @@ const env = withoutRepositoryEnv(process.env)
 
 const run = (gate) => {
   process.stdout.write(`\n▶ ${gate.name}\n`)
-  const result = spawnSync(gate.cmd, gate.args, { env, stdio: gate.quiet ? ['inherit', 'ignore', 'inherit'] : 'inherit' })
+  const result = spawnSync(gate.cmd, gate.args, { cwd: gate.cwd, env: { ...env, ...gate.env }, stdio: gate.quiet ? ['inherit', 'ignore', 'inherit'] : 'inherit' })
   return { name: gate.name, ok: result.status === 0 }
 }
 
@@ -99,6 +102,22 @@ if (withMutation && results.every((r) => r.ok)) {
 // Needs the .NET 10 SDK and NuGet access, which the fast gates never do.
 if (withDotnet) {
   results.push(run({ name: '.NET quality-gate scripts (real Stryker.NET)', cmd: 'node', args: ['scripts/dotnet-quality-gates-smoke.mjs'] }))
+}
+
+// Mirrors docs-website.yml's build and e2e jobs; needs `npm ci --prefix docs/website` first, and
+// a Chromium for Playwright (`npx playwright install chromium`, or PLAYWRIGHT_CHROMIUM_PATH).
+if (withDocs) {
+  const site = join('docs', 'website')
+  // Built from its own folder, as `npm run docs:build` does: built from the repository root, the
+  // stylesheet came out different and failed the axe contrast checks (Docusaurus 3.10.2).
+  const docusaurus = join('node_modules', '@docusaurus', 'core', 'bin', 'docusaurus.mjs')
+  const dashboardData = join(site, 'static', 'dashboard', 'data', 'dashboard.json')
+  results.push(run({ name: 'Catalogue scan', cmd: 'node', args: [join('eng', 'catalog', 'scan.mjs')], quiet: true }))
+  results.push(run({ name: 'Dashboard data', cmd: 'node', args: [join('eng', 'dashboard', 'build.mjs'), '--out', dashboardData] }))
+  results.push(run({ name: 'Handbook build (Docusaurus, both locales)', cmd: 'node', args: [docusaurus, 'build'], cwd: site }))
+  results.push(run({ name: 'Handbook build layout', cmd: 'node', args: [join('eng', 'docs', 'check-build.mjs'), join(site, 'build'), '--versions', join(site, 'versions.json')] }))
+  const playwright = join('node_modules', '@playwright', 'test', 'cli.js')
+  results.push(run({ name: 'Handbook site suite (Playwright)', cmd: 'node', args: [playwright, 'test'], env: { SKRAFT_SITE_PREBUILT: '1' } }))
 }
 
 process.stdout.write('\n── local CI summary ──\n')

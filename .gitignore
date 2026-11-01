@@ -18,6 +18,13 @@ docs/site/.jekyll-cache/
 plugins/skraft-framework/src/node_modules/
 # package-lock.json IS committed (CI mutation job uses `npm ci`, which needs it)
 !plugins/skraft-framework/src/package-lock.json
+
+# Docusaurus handbook (docs/website): the lockfile is committed (CI uses `npm ci`)
+!docs/website/package-lock.json
+docs/website/build/
+docs/website/.docusaurus/
+docs/website/static/dashboard/data/
+docs/website/static/workflows/
 .stryker-tmp/
 reports/mutation/
 

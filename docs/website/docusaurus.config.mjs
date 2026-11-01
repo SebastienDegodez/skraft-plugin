@@ -1,0 +1,147 @@
+import { existsSync, readFileSync } from 'node:fs'
+import { codeThemeDark, codeThemeLight } from './src/css/code-themes.mjs'
+import { archiveDropdownItem, archiveFooterItem, inEachLocale } from './src/config/beside-links.mjs'
+
+const at = (path) => new URL(path, import.meta.url)
+const released = existsSync(at('./versions.json')) ? JSON.parse(readFileSync(at('./versions.json'), 'utf8')) : []
+const SITE_ROOT = '/skraft-plugin/'
+// main's deploy builds integration/v2-next with SKRAFT_DOCS_BASE_URL=/skraft-plugin/v2-next/ (preview until 2.0.0).
+const BASE_URL = process.env.SKRAFT_DOCS_BASE_URL || SITE_ROOT
+// The config is loaded once per locale build, after Docusaurus sets this variable (core 3.10.2 buildLocale).
+const LOCALE = process.env.DOCUSAURUS_CURRENT_LOCALE ?? 'en'
+// A raw HTML footer link has no entry in footer.json: its label is chosen here.
+const V1_ARCHIVE_LABEL = { en: 'v1 archive', fr: 'Archive v1' }[LOCALE] ?? 'v1 archive'
+const REPO = 'https://github.com/SebastienDegodez/skraft-plugin'
+const EDIT_BRANCH = process.env.SKRAFT_DOCS_EDIT_BRANCH ?? 'integration/v2-next' // 'main' after 2.0.0
+
+// Before the 2.x cut: only `current`, served at the root. After it: 2.x at the root, current at /next.
+const versions = released.length === 0
+  ? { current: { label: '2.0 preview', path: '/', banner: 'none' } }
+  : {
+      current: { label: 'next', path: 'next', banner: 'unreleased', noIndex: true },
+      '2.x': { label: '2.x', path: '/', banner: 'none' },
+    }
+
+/** The folder of the translated docs of a version: `docs` is `current`, `versioned_docs/version-X` is `version-X`. */
+const translatedDocsDir = (versionDocsDirPath) =>
+  versionDocsDirPath === 'docs' ? 'current' : versionDocsDirPath.replace('versioned_docs/', '')
+
+/** @type {import('@docusaurus/types').Config} */
+export default {
+  title: 'skraft',
+  tagline: 'An AI-agent SDLC pipeline: every phase delivered by one agent, reviewed by another.',
+  url: 'https://sebastiendegodez.github.io',
+  baseUrl: BASE_URL,
+  trailingSlash: false, // /how-to/run-gates -> how-to/run-gates.html (GitHub Pages)
+  favicon: 'img/favicon.png',
+  organizationName: 'SebastienDegodez',
+  projectName: 'skraft-plugin',
+  onBrokenLinks: 'throw',
+  onBrokenAnchors: 'throw',
+  onDuplicateRoutes: 'throw',
+  future: { v4: true }, // with "@docusaurus/faster" in dependencies
+  i18n: {
+    defaultLocale: 'en',
+    locales: ['en', 'fr'],
+    localeConfigs: { en: { label: 'English', htmlLang: 'en' }, fr: { label: 'Français', htmlLang: 'fr' } },
+  },
+  markdown: {
+    format: 'detect', // .md is CommonMark, .mdx is MDX
+    mermaid: true,
+    hooks: { onBrokenMarkdownLinks: 'throw', onBrokenMarkdownImages: 'throw' },
+  },
+  themes: [
+    '@docusaurus/theme-mermaid',
+    [
+      '@easyops-cn/docusaurus-search-local',
+      {
+        hashed: true,
+        language: ['en', 'fr'],
+        docsRouteBasePath: '/',
+        indexBlog: false,
+        highlightSearchTermsOnTargetPage: true,
+        explicitSearchResultPath: true,
+        forceIgnoreNoIndex: true, // `next` is noIndex for robots, but its own search must still find its pages
+      },
+    ],
+  ],
+  presets: [
+    [
+      'classic',
+      /** @type {import('@docusaurus/preset-classic').Options} */
+      ({
+        blog: false,
+        docs: {
+          routeBasePath: '/',
+          sidebarPath: './sidebars.mjs',
+          lastVersion: released.length ? '2.x' : 'current',
+          versions,
+          onlyIncludeVersions: process.env.SKRAFT_DOCS_CURRENT_ONLY ? ['current'] : undefined, // fast dev/preview
+          showLastUpdateTime: true, // needs fetch-depth: 0 in CI
+          editUrl: ({ locale, versionDocsDirPath, docPath }) =>
+            locale === 'en'
+              ? `${REPO}/edit/${EDIT_BRANCH}/docs/website/${versionDocsDirPath}/${docPath}`
+              : `${REPO}/edit/${EDIT_BRANCH}/docs/website/i18n/${locale}/docusaurus-plugin-content-docs/${translatedDocsDir(versionDocsDirPath)}/${docPath}`,
+        },
+        theme: { customCss: './src/css/custom.css' },
+        sitemap: { lastmod: 'date', ignorePatterns: ['/skraft-plugin/next/**', '/skraft-plugin/fr/next/**'] },
+      }),
+    ],
+  ],
+  plugins: [
+    './plugins/skraft-data/index.mjs',
+    './plugins/aliases/index.mjs',
+    './plugins/engine-domain/index.mjs', // workflow viewer: bundled DOT copies, client-only viewer chunk
+    './plugins/redirects/index.mjs', // /en/<p> -> /<p> for the English build only
+    './plugins/markdown-twin/index.mjs', // .md twins + llms.txt / llms-full.txt per locale and version
+    'docusaurus-plugin-image-zoom',
+  ],
+  customFields: { workflowRefs: { current: 'integration/v2-next', '2.x': 'v2.0.0' } },
+  themeConfig: {
+    colorMode: { defaultMode: 'light', respectPrefersColorScheme: true },
+    docs: { sidebar: { hideable: true, autoCollapseCategories: true } },
+    tableOfContents: { minHeadingLevel: 2, maxHeadingLevel: 3 },
+    zoom: { selector: '.theme-doc-markdown img:not(a img)', background: { light: 'rgba(255,255,255,0.92)', dark: 'rgba(22,25,31,0.92)' } },
+    navbar: {
+      title: 'skraft',
+      logo: { alt: 'skraft', src: 'img/logo.png' },
+      items: [
+        { type: 'docSidebar', sidebarId: 'tutorials', label: 'Tutorials', position: 'left' },
+        { type: 'docSidebar', sidebarId: 'howTo', label: 'How-to guides', position: 'left' },
+        { type: 'docSidebar', sidebarId: 'explanation', label: 'Explanation', position: 'left' },
+        { type: 'docSidebar', sidebarId: 'reference', label: 'Reference', position: 'left' },
+        {
+          type: 'docsVersionDropdown',
+          position: 'right',
+          dropdownItemsAfter: [
+            { type: 'html', value: '<hr class="dropdown__divider">' },
+            archiveDropdownItem({ baseUrl: SITE_ROOT, path: 'v1.15.3/', label: '1.15 (archived)' }),
+            archiveDropdownItem({ baseUrl: SITE_ROOT, path: 'v1/', label: 'All v1 versions' }),
+          ],
+        },
+        { type: 'localeDropdown', position: 'right' },
+        { href: REPO, label: 'GitHub', position: 'right' },
+      ],
+    },
+    footer: {
+      style: 'light',
+      links: [
+        {
+          title: 'Handbook',
+          items: [
+            { label: 'Catalogue', href: inEachLocale('dashboard/') },
+            { label: 'Presentation', href: inEachLocale('skraft-basic-presentation.html') },
+            { label: 'Citations', to: '/reference/citations' },
+          ],
+        },
+        { title: 'More', items: [{ label: 'GitHub', href: REPO }, archiveFooterItem({ baseUrl: SITE_ROOT, path: 'v1/', label: V1_ARCHIVE_LABEL })] },
+      ],
+    },
+    mermaid: { theme: { light: 'neutral', dark: 'dark' } },
+    prism: {
+      theme: codeThemeLight,
+      darkTheme: codeThemeDark,
+      additionalLanguages: ['bash', 'powershell', 'json', 'yaml', 'diff', 'gherkin', 'dot', 'csharp', 'java', 'python'],
+    },
+  },
+}

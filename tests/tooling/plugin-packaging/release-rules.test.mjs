@@ -59,7 +59,7 @@ test('release-rules: documentation-only pushes never start the workflow', () => 
   const workflow = read('.github/workflows/release.yml')
 
   assert.match(workflow, /paths-ignore:/, 'docs-only pushes must be filtered out before the job starts')
-  for (const pattern of ['docs/site/**', "docs/**/*.md"]) {
+  for (const pattern of ['docs/website/**', 'docs/site/**', "docs/**/*.md"]) {
     assert.ok(workflow.includes(pattern), `paths-ignore must cover ${pattern}`)
   }
 })
