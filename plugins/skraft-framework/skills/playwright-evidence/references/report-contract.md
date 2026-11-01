@@ -108,7 +108,7 @@ When a brief asks for publication, load
 [host publication lifecycle](mcp-publication.md) for consent, CLI commands,
 observation/readback schemas, reconciliation and receipt semantics. When the selected
 provider is `github`, also load
-`github-publication` for its
+`github-forge-writes` for its
 publication route.
 
 Publication status is separate from engineering approval. Approved DISTILL supplies
