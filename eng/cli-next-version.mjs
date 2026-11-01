@@ -8,10 +8,13 @@ import { spawnSync } from 'node:child_process'
 import { appendFileSync } from 'node:fs'
 import { pathToFileURL } from 'node:url'
 
-const NEXT = /The next release version is (\S+)/
+// semantic-release 25 with semantic-release-monorepo announces the version only through the
+// dry-run lines below (measured on 2026-11-02): « Skip cli-v<v> tag creation in dry-run mode »
+// and « Published release <v> on <channel> channel ». « The next release version is » never shows.
+const NEXT = [/Skip cli-v(\S+) tag creation/, /Published release (\S+) on /, /The next release version is (\S+)/]
 
 /** @param {string} dryRunOutput @returns {string | null} */
-export const nextVersion = (dryRunOutput) => NEXT.exec(dryRunOutput)?.[1] ?? null
+export const nextVersion = (dryRunOutput) => NEXT.map((line) => line.exec(dryRunOutput)?.[1]).find(Boolean) ?? null
 
 /**
  * @param {{ version: string | null, published: boolean }} facts
