@@ -132,78 +132,63 @@ remote Git lists):
 | `dev.azure.com`, `ssh.dev.azure.com`, any `*.visualstudio.com` | `azure-devops` |
 | any other host (GitHub, GitHub Enterprise…), or no remote | `github` |
 
-On `github`, the engine goes through the host's GitHub MCP server, else `gh` (see below), and the pull request's body opens with
+On `github`, the engine goes through `gh` (see below), and the pull request's body opens with
 `Closes #<issue>` when it targets the default branch, `Refs #<issue>` otherwise. On
 `azure-devops`, the engine opens the pull request on Azure Repos through `az` (the Azure CLI
 with its `azure-devops` extension), Azure DevOps Services only: its body opens with
 `Fixes #<work item>` when it targets the default branch, which completes the work item when the
 pull request merges, `#<work item>` otherwise, and the pull request is linked to the story's
 work item when it is created. The story is the work item (see
-[Azure DevOps MCP server first, az as fallback](#azure-devops-mcp-server-first-az-as-fallback)),
+[Azure DevOps through az](#azure-devops-through-az)),
 and the run keeps its progress comment on it. `skraft review --pr` reviews an Azure Repos pull request too
-(see [Azure DevOps MCP server first, az as fallback](#azure-devops-mcp-server-first-az-as-fallback)).
+(see [Azure DevOps through az](#azure-devops-through-az)).
 `gh` is never run on an Azure DevOps remote. `skraft review --pr` reads `forge` only in your
 own files (`~/.skraft/config.json`, `skraft-config.local.json`), else from the remote: the
 `skraft-config.json` of the pull request under review, which its author wrote, chooses no forge.
 
 Under Copilot, the **Configuration** tab of the skraft canvas chooses it: its first choice, *From the Git remote: &lt;forge&gt;*, leaves `forge` out of `skraft-config.json` and names the forge the remote gives; *GitHub* or *Azure DevOps* writes it. `skraft doctor` says which forge a run uses and what chose it, on its `forge` line.
 
-### GitHub MCP server first, gh as fallback <!-- #github-mcp-server-first-gh-as-fallback -->
+### The engine and MCP servers <!-- #engine-and-mcp -->
 
-When the host has a known GitHub MCP server connected and the repository is on `github.com`,
-the engine reads the issue, keeps its comment, finds, opens and edits the pull request, and
-reads and comments the pull request under review through that server's tools (`issue_read`,
-`add_issue_comment`, `update_issue_comment`, `get_me`, `list_pull_requests`,
-`create_pull_request`, `update_pull_request`, `pull_request_read`, as github/github-mcp-server
-v2.0.3 names them). The known servers, by exact name, in this order: `github-mcp-server`
-(Copilot CLI's built-in one), `github`, `claude_ai_Github` (the claude.ai connector); a server
-of any other name is never used. Issues are read on the repository `gh` reads them on (its
+The engine never calls an MCP server: a server is a tool for an agent. It reads and writes the
+forge only through the forge's command line, `gh` on `github`, `az` on `azure-devops`, with no
+fallback from one to the other. A GitHub or Azure DevOps MCP server you connect in your host
+serves the agents that use it (the backlog plugin's skills, for instance), never the engine.
+
+A run started from an issue that the forge's command line cannot read (no remote, `gh` or `az`
+missing, not signed in) is refused before anything is journaled (`issue-unreadable`). A run whose
+publish consent is given, kept in `skraft-config.json` or answered at its start, checks the
+forge right after that answer, before the first agent: out of reach, the run asks an
+environment question (`publish_consent cannot run on this machine: <reason>. Fix it, then RETRY;
+or ABORT the run.`). The reason is the one `skraft doctor` gives on its `forge` line.
+
+### GitHub through gh <!-- #github-through-gh -->
+
+On `github`, the engine reads the issue, keeps its comment, finds, opens and edits the pull
+request, and reads and comments the pull request under review through `gh`, installed and
+signed in to the repository's host. Issues are read on the repository `gh` reads them on (its
 default, else `upstream`, else `origin`); pull requests and the issue comment go to `origin`.
+The pull request is found before one is opened, only your own comment is rewritten, and every
+reason is fixed by the engine, never `gh`'s output. The push stays `git`.
 
-Each operation falls back to `gh` when the server is absent or not connected, the tool is
-missing or fails, the server answers what the engine cannot read (a page outside the repository
-in use included), or the conversation holds 100 comments or more. A call you or the host refuse
-(in Claude Code, a tool you have not allowed) is final, a read as much as a write, on every
-forge in this section: it is never retried with `gh` or `az`, and the run says, with a reason
-fixed by the engine, that it read or wrote nothing. The guarantees stay those of `gh`: the pull request is
-found before one is opened, only your own comment is rewritten, the reasons are fixed by the
-engine. The journal says which way served each operation: `via` (`mcp` or `gh`) and, when
-`gh` served after the server could not, `fallback` with a fixed code (`mcp-unavailable`,
-`mcp-tool-missing`, `mcp-failed`, `mcp-unreadable`); `run.started` keeps it as
-`issueRoute`. Reading the issue and keeping its comment need no `gh`; opening the pull request
-still asks `gh` for the repository's default branch, and the push stays `git`. `skraft next`
-(the VS Code agent loop) and the `skraft` CLI reach no MCP server and always use `gh`.
-
-### Azure DevOps MCP server first, az as fallback <!-- #azure-devops-mcp-server-first-az-as-fallback -->
+### Azure DevOps through az <!-- #azure-devops-through-az -->
 
 On `azure-devops`, a run started from a work item number (`--issue 42`) reads that work item,
-and keeps the run's progress in one comment on it, through the host's Azure DevOps MCP server
-when it is connected, else through `az` (the Azure CLI with its `azure-devops` extension). The
-only server skraft trusts is the one named `ado` (`@azure-devops/mcp`, as the
-`azure-boards-work-items` skill of the backlog plugin lists it); a server of any other name,
-`ado-remote-mcp` or `azure-devops` included, is never used. Its tools: `wit_work_item`
-(`get`, `list_comments`), `wit_work_item_comment_write` (`add`, `update`), and, for the run details
-of a pull request, `repo_repository` (`get`), `repo_pull_request_thread` (`list`) and
-`repo_pull_request_thread_write` (`create`, `update`). In Claude Code, allow `mcp__ado__wit_work_item`,
-`mcp__ado__wit_work_item_comment_write`, `mcp__ado__repo_repository`,
-`mcp__ado__repo_pull_request_thread` and `mcp__ado__repo_pull_request_thread_write`.
+and keeps the run's progress in one comment on it, through `az` (the Azure CLI with its
+`azure-devops` extension, signed in to the organization). The run details of a pull request are
+kept as one thread of it, through `az devops invoke` (area `git`).
 
-`skraft review --pr` on an Azure Repos pull request reads it and keeps its review comment through the
-same server: `repo_pull_request` (`get`), `repo_pull_request_thread` (`list`) and
-`repo_pull_request_thread_write` (`create`, `update`), as `@azure-devops/mcp` 2.11.0 names them
-(`src/tools/repositories.ts`). In Claude Code, allow `mcp__ado__repo_pull_request`,
-`mcp__ado__repo_pull_request_thread` and `mcp__ado__repo_pull_request_thread_write`. Each operation falls back to
-`az repos pr show` and `az devops invoke` (area `git`) when the server is absent, lacks the tool, fails, answers what the
-engine cannot read (a pull request of another organization, more than ten pages of 100 threads); a call you or the host
-refuse, a read as much as a write, is final, as above. The engine lists the threads page by page (`top` 100, `skip`; the
-server sorts them by thread id). The review comment is one thread, created *Closed*; its first comment is rewritten at
-each pass. The engine finds it again at the address the journal keeps, else the last thread whose first comment begins
-as the review's comment does and holds the marker (raw, or with `<` and `>` as HTML entities, named or numeric, and read behind a byte order mark or blank
-lines), whoever wrote it: Azure does not
-tell the author here. A pull request of another project or repository than the Git remote's is refused
-(`pr-unreadable`). None of this is measured on a real organization: see `docs/v2/host-verification.md`.
+`skraft review --pr` on an Azure Repos pull request reads it through `az repos pr show` and keeps
+its review comment through `az devops invoke` (area `git`). The engine lists the threads page by
+page (100 at a time), up to ten pages. The review comment is one thread, created *Closed*; its
+first comment is rewritten at each pass. The engine finds it again at the address the journal
+keeps, else the last thread whose first comment begins as the review's comment does and holds the
+marker (raw, or with `<` and `>` as HTML entities, named or numeric, and read behind a byte order
+mark or blank lines), whoever wrote it: Azure does not tell the author here. A pull request of
+another project or repository than the Git remote's is refused (`pr-unreadable`). None of this is
+measured on a real organization: see `docs/v2/host-verification.md`.
 
-What a run reads is the same whichever way: the work item's title and page, then its
+What a run reads: the work item's title and page, then its
 description, then an `## Acceptance criteria` section from `Microsoft.VSTS.Common.AcceptanceCriteria`,
 kept in `<slug>/plans/<date>/issue-<number>.md` for every agent. A field written in HTML (a work
 item made by hand) becomes Markdown; a field already in Markdown stays as written. A field the work
@@ -214,21 +199,14 @@ with nothing journaled, when the work item is not a story (`issue-not-a-story`; 
 of the organization than the one the Git remote names (`issue-in-other-project`); the project is
 checked again before every write of the comment, which is skipped with a fixed reason otherwise.
 
-Each operation falls back to `az` when the server is absent or not connected,
-the tool is missing or fails, the server answers what the engine cannot read (a work item of
-another organization included), or the work item has more comments than one page lists. A call
-you or the host refuse is final, as above: the run says it read or wrote nothing. The comment is
-rewritten in place (found by the URL the journal kept, else the last comment that starts with its
-hidden marker, as written or as the server escapes it) and posted twice only if that search fails.
-Two reservations: how Azure Boards renders and stores the escaped marker is not measured, and the
-search does not check who wrote a comment (Azure gives no author there), so a comment that someone
-else started with the marker would be rewritten. Its `url` is the REST address of the comment, since
-Azure Boards documents no web anchor for one. The journal says which way served: `via` (`mcp` or
-`az`) and, when `az` served after the server could not, `fallback` with a fixed code
-(`mcp-unavailable`, `mcp-tool-missing`, `mcp-failed`, `mcp-unreadable`);
-`run.started` keeps it as `issueRoute`. The `skraft` CLI and `skraft next` reach no MCP server and
-always use `az`. Opening the pull request stays with `az`. What the servers and az answer for a
-work item is not measured yet: see `docs/v2/host-verification.md`.
+The comment is rewritten in place (found by the URL the journal kept, else the last comment that
+starts with its hidden marker, as written or with `<`, `>` and `&` escaped as an agent's MCP server
+may have written it) and posted again only if that search fails. Two reservations: how Azure Boards
+renders and stores the escaped marker is not measured, and the search does not check who wrote a
+comment (Azure gives no author there), so a comment that someone else started with the marker would
+be rewritten. Its `url` is the REST address of the comment, since Azure Boards documents no web
+anchor for one. What `az` answers for a work item is not measured yet: see
+`docs/v2/host-verification.md`.
 
 ## Validation and messages <!-- #validation -->
 

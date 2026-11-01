@@ -12,12 +12,11 @@ import { answersTable, costText, reportTable } from '../../domain/reporting/run-
 import { decideUsage } from '../../domain/decisions/questions.mjs'
 import { createAgentLoop } from './agent-loop.mjs'
 import { reviewThroughLoop } from './review-loop.mjs'
-import { installShims } from './install.mjs'
 
 /**
  * @typedef {{ out: (line: string) => void, err: (line: string) => void }} Console
  * @typedef {Parameters<typeof createInit>[0] & Parameters<typeof createRunGate>[0] & Parameters<typeof createDoctor>[0] & Parameters<typeof createConfigureComponents>[0] & Parameters<typeof createWorkflowCommands>[0] & import('./agent-loop.mjs').LoopAdapters & Parameters<typeof createPublish>[0] & Parameters<typeof createAdoptJournal>[0]} CliAdapters
- * @typedef {{ pluginVersion: () => string, workingCopyName: () => string, adapters: (agentHost?: 'copilot') => CliAdapters, command: () => string, confirm: (question: string) => Promise<boolean | null>, installHost: () => import('./install.mjs').InstallHost }} CliServices
+ * @typedef {{ pluginVersion: () => string, workingCopyName: () => string, adapters: (agentHost?: 'copilot') => CliAdapters, command: () => string, confirm: (question: string) => Promise<boolean | null> }} CliServices
  *   adapters: for the host whose agents the run starts, none to check for both; command: how an
  *   agent runs this command line, `node "<absolute path of skraft.mjs>"`; confirm: the person's
  *   yes to a question asked at the terminal, null when no one can type there.
@@ -26,26 +25,15 @@ import { installShims } from './install.mjs'
  * @typedef {(commands: WorkflowCommands, request: { json: boolean, services: CliServices }, console: Console) => Promise<number>} WorkflowAction
  */
 
-export const USAGE = [
-  'usage: skraft --version',
-  '       skraft install [--no-path]                                        make the skraft command available from any terminal (--no-path: leave the PATH alone)',
-  '       skraft init [--add <folder>]...                                   detect the components into skraft-config.json',
-  '       skraft init <slug> [--issue <number>] [--title <text>] [--base <ref>] [--from-artifacts]   start or resume a pipeline',
-  '       skraft status [--json]',
-  '       skraft report [--json]                                            time, cost and retries of each step of the active pipeline',
-  '       skraft decide [<key>] <answer> [--reason <text>]                answer the question the active pipeline waits on',
-  '       skraft publish                                                    push the branch and open or update the pull request of the completed run',
-  '       skraft journal adopt [--pr <number>]                              sign a journal this machine cannot verify with a key of this machine (--pr: a pull request\'s review journal)',
-  '       skraft migrate [--dry-run] [--json]                               turn the v1 runs in progress and skraft-config.json into V2 ones',
-  '       skraft next [--json]                                              run the active pipeline until it needs agents or a human',
-  '       skraft record [--json]                                            hand the saved agent replies to the run, then go on',
-  '       skraft gate [--all] [--json]                                      run the gates of the changed components (all with --all)',
-  '       skraft doctor [--run] [--base <ref>] [--json]                     check every command can run (--run: run each once)',
-  '       skraft review --pr <number> [--publish] [--record] [--json]       review one pull request with the review workflow (--publish: keep its verdict in a comment)',
-  '       skraft workflow eject [review]                                    copy the plugin pipeline into .skraft/ (review: the review alone)',
-  '       skraft workflow check [--json]                                    validate the workflow a run follows',
-  '       skraft workflow diff [--json]                                     compare the repository workflow with the plugin one',
-].join('\n')
+/**
+ * Every command, its handler and its usage lines, in one table: the dispatch, the usage the engine
+ * prints and `skraft commands --json` (read by the `skraft` command of @skraft/cli for its help
+ * and completion) all come from it, so they cannot drift apart.
+ * @typedef {{ synopsis?: string, summary?: string }} UsageLine
+ * @typedef {(args: string[], services: CliServices, console: Console) => number | Promise<number>} Handler
+ */
+
+const SUMMARY_COLUMN = 73
 
 /**
  * @param {string[]} args command-line arguments after the script path
@@ -257,13 +245,6 @@ const decisionOf = (args) => {
   return { key, given, options }
 }
 
-/** `install [--no-path]`. @param {string[]} args @param {CliServices} services @param {Console} console */
-const install = (args, services, console) => {
-  const options = optionsOf(args, { flags: ['--no-path'] })
-  if (options === undefined) return usage(console)
-  return installShims(services.installHost(), { path: options['--no-path'] !== true }, console)
-}
-
 /** `publish`: no argument. @param {string[]} args @param {CliServices} services @param {Console} console */
 const publish = async (args, services, console) => {
   if (args.length > 0) return usage(console)
@@ -331,7 +312,8 @@ const gateLines = (outcome) => [
 const doctor = async (args, services, console) => {
   const options = optionsOf(args, { flags: ['--run', '--json'], values: ['--base'] })
   if (options === undefined) return usage(console)
-  const report = await createDoctor(services.adapters()).check({ run: options['--run'] === true, base: /** @type {string | undefined} */ (options['--base']) ?? null })
+  const checked = await createDoctor(services.adapters()).check({ run: options['--run'] === true, base: /** @type {string | undefined} */ (options['--base']) ?? null })
+  const report = { plugin: services.pluginVersion(), ...checked }
   print(options['--json'] === true, report, doctorLines, console)
   return report.ok ? 0 : 1
 }
@@ -341,8 +323,9 @@ const DOCTOR_MARKS = Object.freeze({ ok: 'ok  ', warn: 'WARN', fail: 'FAIL' })
 
 /** @typedef {Awaited<ReturnType<ReturnType<typeof createDoctor>['check']>>} DoctorReport */
 
-/** @param {DoctorReport} report */
+/** The plugin's version first: the version the person runs, whatever launched it. @param {DoctorReport & { plugin: string }} report */
 const doctorLines = (report) => [
+  `${DOCTOR_MARKS.ok}  plugin: skraft ${report.plugin}`,
   ...report.checks.map(({ subject, status: state, detail }) => `${DOCTOR_MARKS[state]}  ${subject}: ${detail}`),
   ...assignmentLines(report.assignments),
   doctorSummary(report),
@@ -449,23 +432,52 @@ const pipelineLines = ({ status: state, reason, events = [] }) => [`${state}  ${
 const unknown = (_args, _services, console) => usage(console)
 
 /** What each first argument runs; any other is a usage error. @type {Map<string | undefined, Command>} */
-const COMMANDS = new Map([
-  ['--version', version],
-  ['install', install],
-  ['init', initOrConfigure],
-  ['status', status],
-  ['report', report],
-  ['decide', decide],
-  ['publish', publish],
-  ['next', loopStep('next')],
-  ['record', loopStep('record')],
-  ['gate', gate],
-  ['doctor', doctor],
-  ['workflow', workflow],
-  ['review', review],
-  ['journal', journalCommand],
-  ['migrate', migrate],
-])
+/** @type {[string, Handler, UsageLine[]][]} */
+const TABLE = [
+  ['--version', version, [{}]],
+  ['init', initOrConfigure, [
+    { synopsis: '[--add <folder>]...', summary: 'detect the components into skraft-config.json' },
+    { synopsis: '<slug> [--issue <number>] [--title <text>] [--base <ref>] [--from-artifacts]', summary: 'start or resume a pipeline' },
+  ]],
+  ['status', status, [{ synopsis: '[--json]' }]],
+  ['report', report, [{ synopsis: '[--json]', summary: 'time, cost and retries of each step of the active pipeline' }]],
+  ['decide', decide, [{ synopsis: '[<key>] <answer> [--reason <text>]', summary: 'answer the question the active pipeline waits on' }]],
+  ['publish', publish, [{ summary: 'push the branch and open or update the pull request of the completed run' }]],
+  ['journal', journalCommand, [{ synopsis: 'adopt [--pr <number>]', summary: "sign a journal this machine cannot verify with a key of this machine (--pr: a pull request's review journal)" }]],
+  ['migrate', migrate, [{ synopsis: '[--dry-run] [--json]', summary: 'turn the v1 runs in progress and skraft-config.json into V2 ones' }]],
+  ['next', loopStep('next'), [{ synopsis: '[--json]', summary: 'run the active pipeline until it needs agents or a human' }]],
+  ['record', loopStep('record'), [{ synopsis: '[--json]', summary: 'hand the saved agent replies to the run, then go on' }]],
+  ['gate', gate, [{ synopsis: '[--all] [--json]', summary: 'run the gates of the changed components (all with --all)' }]],
+  ['doctor', doctor, [{ synopsis: '[--run] [--base <ref>] [--json]', summary: 'check every command can run (--run: run each once)' }]],
+  ['review', review, [{ synopsis: '--pr <number> [--publish] [--record] [--json]', summary: 'review one pull request with the review workflow (--publish: keep its verdict in a comment)' }]],
+  ['workflow', workflow, [
+    { synopsis: 'eject [review]', summary: 'copy the plugin pipeline into .skraft/ (review: the review alone)' },
+    { synopsis: 'check [--json]', summary: 'validate the workflow a run follows' },
+    { synopsis: 'diff [--json]', summary: 'compare the repository workflow with the plugin one' },
+  ]],
+  ['commands', commands, [{ synopsis: '--json', summary: 'every command, its synopsis and summary, as JSON (help and completion of the skraft command)' }]],
+]
+
+const COMMANDS = new Map(TABLE.map(([name, handler]) => [name, handler]))
+
+/** @returns {{ command: string, synopsis?: string, summary?: string }[]} every usage line, in order */
+const usageLines = () => TABLE.flatMap(([command, , lines]) => lines.map((line) => ({ command, ...line })))
+
+/** @param {{ command: string, synopsis?: string, summary?: string }} line @param {number} index */
+const usageLine = ({ command, synopsis, summary }, index) => {
+  const left = `${index === 0 ? 'usage: ' : '       '}skraft ${[command, synopsis].filter(Boolean).join(' ')}`
+  if (summary === undefined) return left
+  return left.length < SUMMARY_COLUMN - 1 ? `${left.padEnd(SUMMARY_COLUMN)}${summary}` : `${left}   ${summary}`
+}
+
+export const USAGE = usageLines().map(usageLine).join('\n')
+
+/** `commands --json`: the usage lines as data, schema 1. @param {string[]} args @param {CliServices} _services @param {Console} console */
+function commands(args, _services, console) {
+  if (args.length !== 1 || args[0] !== '--json') return usage(console)
+  console.out(JSON.stringify({ schema: 1, commands: usageLines() }, null, 2))
+  return 0
+}
 
 /** `skraft` followed by the slug, when there is one. @param {string | null | undefined} slug */
 const skraftOf = (slug) => `skraft${slug ? ` ${slug}` : ''}`

@@ -1,0 +1,35 @@
+name: Pull request title
+
+# A squash merge keeps the pull request title as the only commit message: the title decides which
+# release (the plugin's, the skraft command's) the change goes into. scripts/check-pr-title.mjs
+# checks it against the files the pull request changes; AGENTS.md (Git rules) says why.
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened]
+    branches: [main, integration/v2-next, 'v2/lot-*']
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  title:
+    name: Title fits the changed files
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '22'
+      - name: List the changed files
+        env:
+          GH_TOKEN: ${{ github.token }}
+          NUMBER: ${{ github.event.pull_request.number }}
+        run: gh api --paginate "repos/$GITHUB_REPOSITORY/pulls/$NUMBER/files" --jq '.[].filename' > "$RUNNER_TEMP/files.txt"
+      - name: Check the title
+        # The title reaches the script through the environment, never through the shell line.
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+        run: node scripts/check-pr-title.mjs --files "$RUNNER_TEMP/files.txt"

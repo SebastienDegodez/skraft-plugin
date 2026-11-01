@@ -23,14 +23,13 @@ $ node "<dossier du plugin>/engine/drivers/cli/skraft.mjs" <commande>
 
 La même forme marche sous sh et sous PowerShell. Lancez-la **depuis la racine de la copie de
 travail** : `skraft-config.json` et `.copilot-tracking/` y sont lus et écrits. La suite de la
-page écrit `skraft <commande>` : la commande que [`skraft install`](#skraft-install) met en
-place, ou la ligne complète ci-dessus. Prérequis : Node 22 ou plus, Git.
+page écrit `skraft <commande>` : la commande qu'installe le paquet npm `@skraft/cli`
+([la commande `skraft`](#skraft-command)), ou la ligne complète ci-dessus. Prérequis : Node 22 ou plus, Git.
 
 ## Synopsis
 
 ```
 usage: skraft --version
-       skraft install [--no-path]                                        make the skraft command available from any terminal (--no-path: leave the PATH alone)
        skraft init [--add <folder>]...                                   detect the components into skraft-config.json
        skraft init <slug> [--issue <number>] [--title <text>] [--base <ref>] [--from-artifacts]   start or resume a pipeline
        skraft status [--json]
@@ -47,6 +46,7 @@ usage: skraft --version
        skraft workflow eject [review]                                    copy the plugin pipeline into .skraft/ (review: the review alone)
        skraft workflow check [--json]                                    validate the workflow a run follows
        skraft workflow diff [--json]                                     compare the repository workflow with the plugin one
+       skraft commands --json                                            every command, its synopsis and summary, as JSON (help and completion of the skraft command)
 ```
 
 Règles communes des options :
@@ -83,36 +83,47 @@ Les codes `refused` et `blocked` sont détaillés dans
 
 Affiche la version lue dans le `plugin.json` du plugin. Sortie : une ligne. Code 0.
 
-## `skraft install [--no-path]` <!-- #skraft-install -->
+## La commande `skraft` <!-- #skraft-command -->
 
-**Effet.** Fait de `skraft` une commande de votre terminal. Lancez-la une fois, avec la ligne
-complète, depuis n'importe quel dossier. Elle écrit dans `~/.skraft/bin`
-(`%USERPROFILE%\.skraft\bin` sous Windows) :
+`npm i -g @skraft/cli` installe `skraft` une fois par machine. Le paquet a sa propre version et ne
+contient aucun moteur : à chaque appel, il cherche le plugin qu'un hôte a installé et importe son
+`engine/drivers/cli/skraft.mjs` dans le même processus, arguments inchangés. Rien n'est
+enregistré : une mise à jour du plugin par l'hôte est suivie dès l'appel suivant.
 
-| Fichier | Contenu |
-| --- | --- |
-| `skraft-launcher.mjs` | un lanceur autonome qui trouve `skraft.mjs` à chaque appel et l'exécute dans le même processus |
-| `skraft` | appel sh, mode 0755 : `exec node "<lanceur>" "$@"` (Git Bash sous Windows l'utilise) |
-| `skraft.cmd` | `@node "%~dp0skraft-launcher.mjs" %*` (PowerShell et cmd le trouvent dans le PATH) |
-| `target.json` | où est le plugin : `{ "host": "claude-code" }` quand `install` a été lancé depuis `~/.claude/plugins/cache/`, sinon `{ "path": "<skraft.mjs absolu>" }` |
+| Ordre | Où | Retenu quand |
+| --- | --- | --- |
+| 1 | `SKRAFT_PLUGIN_ROOT` | la variable est posée ; un dossier sans moteur arrête là, sans repli |
+| 2 | `<COPILOT_HOME ou ~/.copilot>/installed-plugins/<marketplace>/skraft/` | le dossier contient le moteur ; le marketplace nommé `skraft` d'abord, puis les autres par nom |
+| 3 | `installPath` des entrées `skraft@…` de `<CLAUDE_CONFIG_DIR ou ~/.claude>/plugins/installed_plugins.json` | le dossier contient le moteur ; une entrée liée à un dépôt (`local`, puis `project`, par son `projectPath`) seulement dans ce dépôt, puis celle de `user` ; à égalité, le `lastUpdated` le plus récent d'abord |
 
-Sous Claude Code, le lanceur lit à chaque appel `installPath` de la première entrée `skraft@…` de
-`~/.claude/plugins/installed_plugins.json` : une mise à jour n'oblige pas à relancer `install`.
-Quand le plugin a disparu, le lanceur affiche sur stderr `skraft: the plugin was not found. Run
-node "<plugin folder>/engine/drivers/cli/skraft.mjs" install again.` et sort avec le code 1.
+Avec `--version`, la commande écrit aussi `plugin: <variable|copilot|claude-code> <dossier>` sur
+stderr ; stdout garde la ligne de version.
 
-**Le PATH.** Quand `~/.skraft/bin` est déjà dans `PATH`, rien n'est écrit. Sinon : sous macOS et
-Linux, un bloc marqué `# skraft` qui exporte le PATH est ajouté une fois au profil de `$SHELL`
-(`zsh` : `~/.zshrc` ; `bash` : `~/.bash_profile` sous macOS, `~/.bashrc` sous Linux ; autre :
-`~/.profile`) ; sous Windows, le PATH utilisateur est mis à jour par PowerShell, sans droits
-d'administration. La commande dit ce qu'elle a changé et qu'il faut ouvrir un nouveau terminal.
+**Session.** `skraft` seul, dans un terminal, ouvre une session : la bannière skraft (animée, sur
+stderr) une fois, puis une invite `skraft ›` où chaque ligne est une commande (`doctor`, `status`,
+`decide yes`…), avec complétion par Tab et historique. Chaque ligne tourne dans son propre
+processus, sur le plugin trouvé à ce moment ; pendant qu'elle tourne, Ctrl-C arrête la commande,
+pas la session. `help` affiche l'usage ; `exit`, `quit` ou Ctrl-D
+quitte. Une commande isolée n'affiche jamais la bannière. `NO_COLOR` la décolore,
+`SKRAFT_BANNER=static` coupe l'animation, `SKRAFT_BANNER=0` la coupe ; `SKRAFT_INTERACTIVE=0`
+garde `skraft` seul comme un appel au moteur.
 
-**Option.** `--no-path` écrit les fichiers mais rien dans le PATH, et affiche la ligne à ajouter,
-pour sh et pour PowerShell.
+**`skraft upgrade`.** Installe le dernier `@skraft/cli` de son canal (`latest`, ou `alpha` pour
+une alpha), puis lance `copilot plugin update skraft` et `claude plugin update
+skraft@<marketplace>` pour chaque hôte qui a le plugin (Claude Code le charge à la session
+suivante). Un programme absent du PATH est sauté ; une étape en échec sort avec le code 1. Une
+fois par jour, une session signale qu'un `@skraft/cli` plus récent existe
+(`SKRAFT_UPDATE_CHECK=0` coupe la vérification ; `SKRAFT_REGISTRY` nomme un autre registre). Quand aucun plugin n'est trouvé, elle écrit sur stderr
+un message fixe qui nomme les commandes d'installation et `SKRAFT_PLUGIN_ROOT`, et sort avec le
+code 1.
 
-**Sortie et codes.** Les lignes ci-dessus sur stdout, code 0 ; code 1 quand le PATH utilisateur
-Windows n'a pas pu être écrit (les fichiers sont en place ; utilisez `--no-path`) ; une ligne
-mal formée : l'usage, code 2.
+## `skraft commands --json` <!-- #skraft-commands -->
+
+**Effet.** Affiche chaque ligne d'usage en JSON : `{ "schema": 1, "commands": [{ "command", "synopsis"?, "summary"? }] }`,
+dans l'ordre de l'usage. Le routage, l'usage et cette liste viennent d'une seule table du moteur.
+La commande `skraft` la lit pour l'aide de sa session (`help`, `help <commande>`), sa complétion
+par Tab (commandes, sous-commandes, options) et son « did you mean » sur une commande inconnue.
+Code 0 ; tout autre argument : l'usage, code 2.
 
 ## `skraft init [--add <folder>]...`
 
@@ -152,7 +163,7 @@ n'est pas relue, et la story et `--base` sont ignorés (la base journalisée res
 | Argument / option | Valeur | Règle |
 | --- | --- | --- |
 | `<slug>` | kebab-case (`checkout-by-card`) | sinon refus `invalid-slug` |
-| `--issue <number>` | entier positif sans zéro initial | sinon ligne mal formée (code 2). Sur un nouveau run sans `--from-artifacts`, le moteur lit l'issue par `gh` sur le dépôt que `gh` choisirait (son défaut, sinon `upstream`, sinon `origin`) et la garde dans `<slug>/plans/<date>/issue-<number>.md`, que chaque agent et chaque lentille de revue lit en premier. Une issue illisible (pas de remote, gh absent ou non connecté, autre forge, échec de gh) n'arrête pas le run : il démarre sur le numéro et le titre seuls, `run.started` journalise pourquoi dans `issueUnread`, et la ligne de succès le dit. Sur Azure DevOps, le numéro est celui d'un work item : il est lu par `az boards work-item show` (le serveur MCP Azure DevOps de l'hôte d'abord, sous Copilot et Claude Code), sa description et ses critères d'acceptation HTML convertis en Markdown, un work item d'un autre projet que celui du remote Git ou dont le type n'est pas celui d'une story refusé `issue-in-other-project` ou `issue-not-a-story`. Refus `issue-not-found` ou `issue-is-pull-request`, sans rien journaliser, quand la forge répond sans issue ou avec une pull request. Un run repris ne la relit pas |
+| `--issue <number>` | entier positif sans zéro initial | sinon ligne mal formée (code 2). Sur un nouveau run sans `--from-artifacts`, le moteur lit l'issue par `gh` sur le dépôt que `gh` choisirait (son défaut, sinon `upstream`, sinon `origin`) et la garde dans `<slug>/plans/<date>/issue-<number>.md`, que chaque agent et chaque lentille de revue lit en premier. Une issue illisible (pas de remote, gh absent ou non connecté, autre forge, échec de gh) refuse le run `issue-unreadable`, sans rien journaliser ; la raison dit pourquoi. Sur Azure DevOps, le numéro est celui d'un work item : il est lu par `az boards work-item show`, sa description et ses critères d'acceptation HTML convertis en Markdown, un work item d'un autre projet que celui du remote Git ou dont le type n'est pas celui d'une story refusé `issue-in-other-project` ou `issue-not-a-story`. Refus `issue-not-found` ou `issue-is-pull-request`, sans rien journaliser, quand la forge répond sans issue ou avec une pull request. Un run repris ne la relit pas |
 | `--title <text>` | un seul argument ; mettez-le entre guillemets s'il a des blancs | — |
 | `--base <ref>` | ref git : sans blanc, ne commence pas par `-` | lu seulement au premier init du slug : sinon refus `invalid-base` ; prioritaire sur tout `baseBranch`. Sur un slug qui a déjà un journal, il est ignoré, même invalide |
 | `--from-artifacts` | drapeau | démarre un nouveau run en DESIGN depuis les stories DISCUSS déjà présentes dans `<slug>/plans/<date>/stories-<milestone>.md` ; refus `no-artifacts` sans elles, `already-started` sur un slug qui a un journal |
@@ -583,7 +594,8 @@ reason }` et `diff` affiche `{ ok, name, changes, reason }`. `eject` ne prend au
 ## `skraft doctor [--run] [--base <ref>] [--json]`
 
 **Effet.** Vérifie que chaque commande de chaque composant peut tourner sur cette machine.
-N'écrit rien dans le journal.
+N'écrit rien dans le journal. La première ligne nomme la version du plugin qui répond
+(`ok    plugin: skraft <version>` ; `plugin` dans le JSON) ; elle ne compte pas comme un contrôle.
 
 | Option | Effet |
 | --- | --- |
@@ -642,7 +654,7 @@ celui du plugin) lance ses lentilles, le réfuteur, puis calcule le verdict.
 
 | Étape | Règle |
 | --- | --- |
-| Forge | sur GitHub, le dépôt que gh choisirait : son défaut (`gh repo set-default`), sinon le remote `upstream`, sinon origin ; `gh` installé et connecté à son hôte, sinon arrêt `forge-unavailable` ; la pull request lue par son numéro, sinon `pr-not-found` (`pr-unreadable` quand gh échoue). Sur Azure Repos, l'organisation, le projet et le dépôt que nomme le remote ; le serveur MCP Azure DevOps de l'hôte (`ado`) d'abord, sinon `az` avec son extension `azure-devops` connecté, sinon `forge-unavailable` ; une pull request d'un autre projet ou dépôt est `pr-unreadable` |
+| Forge | sur GitHub, le dépôt que gh choisirait : son défaut (`gh repo set-default`), sinon le remote `upstream`, sinon origin ; `gh` installé et connecté à son hôte, sinon arrêt `forge-unavailable` ; la pull request lue par son numéro, sinon `pr-not-found` (`pr-unreadable` quand gh échoue). Sur Azure Repos, l'organisation, le projet et le dépôt que nomme le remote ; `az` avec son extension `azure-devops` connecté, sinon `forge-unavailable` ; une pull request d'un autre projet ou dépôt est `pr-unreadable` |
 | Copie de travail | doit être sur le commit de tête de la pull request (`gh pr checkout <numéro>`, `az repos pr checkout --id <numéro>` sur Azure Repos), sinon `pr-not-checked-out` ; les changements sont ceux depuis la base de fusion avec le commit de base, que Git doit avoir (`git fetch origin <base>`), sinon `pr-base-missing` ; des changements non commités hors de `.copilot-tracking/` l'arrêtent, `working-copy-dirty` ; une pull request dont la tête contient, ou dont les commits changent, un fichier sous `.copilot-tracking/skraft-reviews/` (noms composés et repliés comme macOS et Windows les ouvrent, nom court comme `SKRAFT~1` compris, puis chaque chemin suivi demandé au système de fichiers : un chemin qui s'ouvre comme le dossier des revues, quelle que soit son écriture, compte), ou un fichier ou un lien à la place de `.copilot-tracking` ou de `.copilot-tracking/skraft-reviews`, est refusée, `review-state-committed` ; un dossier des revues de la copie de travail qui est un lien, se trouve sous un lien ou n'est pas un dossier l'arrête, `review-folder-linked` |
 | Workflow | `.skraft/review.skraft.dot` et `skraft-config.json` sont lus au commit de base de la pull request, jamais à sa tête (un fichier absent de la base vaut le défaut du plugin) ; le workflow est vérifié comme l'appelle le pipeline du plugin : une copie éjectée qui retire ou affaiblit un nœud obligatoire (`test_integrity`, `architecture_boundaries`, le fan-in `verdict`) est refusée, `workflow-invalid` ; aucune lentille ne part |
 | Règles du projet | `AGENTS.md`, `CLAUDE.md`, `CONTRIBUTING.md`, `.github/copilot-instructions.md`, `docs/adr/decisions-index.md` et les ADR que cet index liste (`docs/adr/adr-<numéro>-*.md`) sont lus eux aussi au commit de base, copiés dans `reviews/verdict-<passe>/rules/` et listés dans `context.md` ; chaque brief de lentille et de réfutation dit que les exemplaires de la copie de travail sont la version de l'auteur de la pull request et qu'il faut juger d'après les copies de la base : une règle ou une décision que la pull request modifie ou ajoute ne compte pas. Non vérifié : si Claude Code, Copilot CLI et VS Code chargent `AGENTS.md`, `CLAUDE.md` ou `.github/copilot-instructions.md` depuis la copie de travail, la version de l'auteur, dans les agents qu'ils lancent ; cela échappe au moteur et n'est pas mesuré (`docs/v2/host-verification.md` dans le dépôt) |

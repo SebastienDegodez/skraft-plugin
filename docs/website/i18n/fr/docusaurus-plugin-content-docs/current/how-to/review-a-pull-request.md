@@ -11,8 +11,8 @@ réfutation, verdict calculé), et gardez-le si besoin dans un commentaire.
 
 ## Prérequis
 
-- Le plugin `skraft` installé ; `skraft` est la commande que [`skraft install`](./install-on-a-host.mdx#skraft-command) met en place ; la ligne longue `node "<dossier du plugin>/engine/drivers/cli/skraft.mjs"` marche sans elle.
-- Sur GitHub : `gh` installé et connecté à l'hôte du dépôt (`gh auth status`). Sur Azure Repos : `az` avec son extension `azure-devops`, connecté à l'organisation, ou le serveur MCP Azure DevOps nommé `ado` connecté dans votre hôte (Azure DevOps Services seulement). Un outil de ce serveur que vous ou l'hôte refusez n'est jamais retenté par `az` : la revue le dit et s'arrête, ou laisse son commentaire non publié.
+- Le plugin `skraft` installé ; `skraft` est la commande que [`npm i -g @skraft/cli`](./install-on-a-host.mdx#skraft-command) met en place ; la ligne longue `node "<dossier du plugin>/engine/drivers/cli/skraft.mjs"` marche sans elle.
+- Sur GitHub : `gh` installé et connecté à l'hôte du dépôt (`gh auth status`). Sur Azure Repos : `az` avec son extension `azure-devops`, connecté à l'organisation (Azure DevOps Services seulement). La revue ne passe jamais par un serveur MCP.
 - Un clone du dépôt, à la racine duquel vous lancez tout.
 
 ## 1. Extraire la pull request
@@ -113,7 +113,7 @@ pas bougé et qui n'avait rien trouvé est reprise sans être relancée.
 
 | Code | Action |
 |---|---|
-| `forge-unavailable` | Installer `gh` et le connecter (`gh auth login --hostname <hôte>`) ; sur Azure Repos, installer `az` et son extension et le connecter (`az login`), ou connecter le serveur MCP `ado` ; vérifier que la copie a un remote vers la forge. |
+| `forge-unavailable` | Installer `gh` et le connecter (`gh auth login --hostname <hôte>`) ; sur Azure Repos, installer `az` et son extension et le connecter (`az login`) ; vérifier que la copie a un remote vers la forge. |
 | `pr-not-found`, `pr-unreadable` | Vérifier le numéro, et que `gh repo set-default` désigne le bon dépôt. Sur Azure Repos, la pull request doit être dans le projet et le dépôt que nomme le remote Git. |
 | `pr-not-checked-out` | `gh pr checkout <numéro>` (`az repos pr checkout --id <numéro>` sur Azure Repos), puis relancer. |
 | `pr-base-missing` | `git fetch origin <base>`, puis relancer. |

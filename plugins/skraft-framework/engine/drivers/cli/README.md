@@ -6,7 +6,6 @@ Never imports another driver.
 
 | Command | Use case | Exit |
 | --- | --- | --- |
-| `skraft install [--no-path]` | Not a use case: writes `launcher.mjs` and the `skraft` / `skraft.cmd` calls in `~/.skraft/bin` (`install.mjs`; `install-host.mjs` holds the real home, environment and Windows PATH writer) and adds the folder to the PATH | 0, 1 user PATH not written |
 | `skraft init [--add <folder>]...` | ConfigureComponents: one component per project into `skraft-config.json` | 0, 1 invalid config |
 | `skraft init <slug> [--issue <n>] [--title <t>] [--base <ref>] [--from-artifacts]` | Init: active pipeline, journal, bases, the issue of `--issue` read through gh for every agent (when it cannot be read, the run starts on its number and title and says so); from the DISCUSS stories, starts in DESIGN | 0, 1 refused |
 | `skraft status [--json]` | Observe; a run that waits shows its question and how to answer it | 0, 1 tampered |
@@ -17,6 +16,7 @@ Never imports another driver.
 | `skraft record [--json]` | Hands the saved replies of the handed over agents to the run, then runs on as `next` does | as `next` |
 | `skraft gate [--all] [--json]` | RunGate: touched components, or all | 0 passed, 1 otherwise |
 | `skraft doctor [--run] [--base <ref>] [--json]` | Doctor | 0 every check ok, 1 otherwise |
+| `skraft commands --json` | Not a use case: every usage line as data, from the same table as the dispatch and the usage (read by the `skraft` command of `@skraft/cli`) | 0, 2 malformed |
 | `skraft review --pr <n> [--publish] [--record] [--json]` | ReviewPullRequest through the agent loop: hands the lenses, then the refuter, over; `--record` hands their replies back; `--publish` keeps the verdict in one comment of the pull request once the consent is given at the terminal | 0 approved or dispatch, 1 otherwise |
 
 A malformed command line prints the usage and exits 2.

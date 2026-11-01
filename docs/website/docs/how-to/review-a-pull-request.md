@@ -11,8 +11,8 @@ refutation, computed verdict), and keep it in a comment if needed.
 
 ## Prerequisites
 
-- The `skraft` plugin installed; `skraft` is the command that [`skraft install`](./install-on-a-host.mdx#skraft-command) sets up; the long line `node "<plugin folder>/engine/drivers/cli/skraft.mjs"` works without it.
-- On GitHub: `gh` installed and signed in to the repository's host (`gh auth status`). On Azure Repos: `az` with its `azure-devops` extension, signed in to the organization, or the Azure DevOps MCP server named `ado` connected in your host (Azure DevOps Services only). A tool of that server that you or the host refuse is never retried with `az`: the review says so and stops or leaves its comment unpublished.
+- The `skraft` plugin installed; `skraft` is the command that [`npm i -g @skraft/cli`](./install-on-a-host.mdx#skraft-command) sets up; the long line `node "<plugin folder>/engine/drivers/cli/skraft.mjs"` works without it.
+- On GitHub: `gh` installed and signed in to the repository's host (`gh auth status`). On Azure Repos: `az` with its `azure-devops` extension, signed in to the organization (Azure DevOps Services only). The review never goes through an MCP server.
 - A clone of the repository, at whose root you run everything.
 
 ## 1. Check out the pull request
@@ -111,7 +111,7 @@ that found nothing is reused without running again.
 
 | Code | Action |
 |---|---|
-| `forge-unavailable` | Install `gh` and sign in (`gh auth login --hostname <host>`); on Azure Repos, install `az` and its extension and sign in (`az login`), or connect the `ado` MCP server; check that the working copy has a remote to the forge. |
+| `forge-unavailable` | Install `gh` and sign in (`gh auth login --hostname <host>`); on Azure Repos, install `az` and its extension and sign in (`az login`); check that the working copy has a remote to the forge. |
 | `pr-not-found`, `pr-unreadable` | Check the number, and that `gh repo set-default` names the right repository. On Azure Repos, the pull request must be in the project and repository the Git remote names. |
 | `pr-not-checked-out` | `gh pr checkout <number>` (`az repos pr checkout --id <number>` on Azure Repos), then run again. |
 | `pr-base-missing` | `git fetch origin <base>`, then run again. |

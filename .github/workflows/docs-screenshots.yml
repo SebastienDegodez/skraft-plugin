@@ -12,7 +12,12 @@ on:
       - 'eng/catalog/**'
       - 'eng/dashboard/build.mjs'
       - 'plugins/skraft-backlog/prd-backlog/canvas/**'
-      - 'plugins/skraft-framework/engine/drivers/copilot-workflow/canvas-ui/**'
+      # The captures run the engine itself (skraft init, next, status, gate, report and a scripted
+      # Copilot run), so any engine change can break them.
+      - 'plugins/skraft-framework/engine/**'
+      - 'plugins/skraft-framework/workflows/**'
+      - 'tests/skraft-framework/integration/copilot-workflow/simulated-host.mjs'
+      - 'tests/skraft-framework/integration/support/**'
       - 'tests/skraft-backlog/canvas/**'
       - 'tests/docs/replay/**'
       - '.github/workflows/docs-screenshots.yml'

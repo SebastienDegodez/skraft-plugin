@@ -6,7 +6,7 @@ import { createServer } from 'node:http'
 import { basename, isAbsolute, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { register } from '../../../plugins/skraft-framework/engine/drivers/copilot-workflow/register.mjs'
-import { GITHUB_MCP_SERVER, PROBE_MCP, PROBE_PRELOAD } from '../../../eng/host-probe/fixtures.mjs'
+import { PROBE_PRELOAD } from '../../../eng/host-probe/fixtures.mjs'
 
 export const PLUGIN_ROOT = fileURLToPath(new URL('../../../plugins/skraft-framework/', import.meta.url))
 
@@ -27,7 +27,7 @@ export const notRegistered = (name) => `No workflow registered with name "${name
 export const NATIVE_TOOLS = Object.freeze(['bash', 'view', 'edit'])
 
 /**
- * @param {{ commands?: 'listed' | 'none' | 'duplicate', commandInput?: 'appended' | 'absent', preload?: 'preloads' | 'ignores' | 'everyone-knows', skraftLoads?: boolean, models?: string[], agents?: Array<{ id: string, name: string }>, refusals?: { model: string | null, effort: string | null }, staleSnapshot?: boolean, nativeTools?: string[], workflowRunError?: string | null, refuseCanvases?: boolean, canvasConfirmUnheard?: boolean, refuseCanvasOpen?: boolean, joinedElicitation?: boolean, dropCanvasQuery?: boolean, reopenFocusesOnly?: boolean, askedUnanswered?: boolean, undeclaredPhase?: 'listed' | 'throws' | 'ignored', mcp?: SimulatedMcp }} [host]
+ * @param {{ commands?: 'listed' | 'none' | 'duplicate', commandInput?: 'appended' | 'absent', preload?: 'preloads' | 'ignores' | 'everyone-knows', skraftLoads?: boolean, models?: string[], agents?: Array<{ id: string, name: string }>, refusals?: { model: string | null, effort: string | null }, staleSnapshot?: boolean, nativeTools?: string[], workflowRunError?: string | null, refuseCanvases?: boolean, canvasConfirmUnheard?: boolean, refuseCanvasOpen?: boolean, joinedElicitation?: boolean, dropCanvasQuery?: boolean, reopenFocusesOnly?: boolean, askedUnanswered?: boolean, undeclaredPhase?: 'listed' | 'throws' | 'ignored' | 'shifts' | 'forgets' }} [host]
  *   commands: whether the plugins' com.github.copilot/commands/*.md files are listed (named by the plugin name rule),
  *   not listed, or listed twice; commandInput: whether a command's typed input reaches its prompt;
  *   refusals: what ctx.agent throws, null when it accepts the call; staleSnapshot: metadata.snapshot
@@ -40,23 +40,21 @@ export const NATIVE_TOOLS = Object.freeze(['bash', 'view', 'edit'])
  *   rpc.canvas.open gives back loses its query string; reopenFocusesOnly: rpc.canvas.open on an
  *   instance already open gives its snapshot back without calling the canvas's open; askedUnanswered: select and input reach the
  *   host's handler, but its answer never comes back (null); undeclaredPhase: what ctx.phase does with a
- *   title meta.phases does not declare (listed with no ordinal, throws, or dropped); mcp: how the session's MCP servers
- *   depart from what CLI 1.0.102-1 does (SimulatedMcp)
+ *   title meta.phases does not declare (listed with no ordinal, throws, dropped, shifts: the declared phase opened after it loses its ordinal, or forgets: it is left out of the run detail)
  */
-export const simulatedSdk = ({ preload = 'ignores', skraftLoads = true, models = CATALOGUE, agents, refusals = REFUSALS, staleSnapshot = false, home, nativeTools = NATIVE_TOOLS, workflowRunError = null, refuseCanvases = false, canvasConfirmUnheard = false, refuseCanvasOpen = false, joinedElicitation = true, dropCanvasQuery = false, reopenFocusesOnly = false, askedUnanswered = false, undeclaredPhase = 'listed', mcp = {}, commands = 'listed', commandInput = 'appended' } = {}) => {
+export const simulatedSdk = ({ preload = 'ignores', skraftLoads = true, models = CATALOGUE, agents, refusals = REFUSALS, staleSnapshot = false, home, nativeTools = NATIVE_TOOLS, workflowRunError = null, refuseCanvases = false, canvasConfirmUnheard = false, refuseCanvasOpen = false, joinedElicitation = true, dropCanvasQuery = false, reopenFocusesOnly = false, askedUnanswered = false, undeclaredPhase = 'listed', commands = 'listed', commandInput = 'appended' } = {}) => {
   class CopilotClient {
     async start() {}
     async stop() { return [] }
     async listModels() { return models.map((id) => ({ id, name: id, capabilities: {} })) }
     async createSession(config) {
-      if (mcp.refusesConfig && config.mcpServers) throw new Error('mcpServers is not supported')
-      return simulatedSession(config, { preload, skraftLoads, agents, refusals, models, staleSnapshot, home, nativeTools, workflowRunError, refuseCanvases, canvasConfirmUnheard, refuseCanvasOpen, joinedElicitation, dropCanvasQuery, reopenFocusesOnly, askedUnanswered, undeclaredPhase, mcp, commands, commandInput }).ready
+      return simulatedSession(config, { preload, skraftLoads, agents, refusals, models, staleSnapshot, home, nativeTools, workflowRunError, refuseCanvases, canvasConfirmUnheard, refuseCanvasOpen, joinedElicitation, dropCanvasQuery, reopenFocusesOnly, askedUnanswered, undeclaredPhase, commands, commandInput }).ready
     }
   }
   return { CopilotClient, approveAll: () => ({ kind: 'approve-once' }) }
 }
 
-const simulatedSession = (config, { preload, skraftLoads, agents, refusals, models, staleSnapshot, home, nativeTools, workflowRunError, refuseCanvases, canvasConfirmUnheard, refuseCanvasOpen, joinedElicitation, dropCanvasQuery, reopenFocusesOnly, askedUnanswered, undeclaredPhase, mcp: mcpHost, commands: commandsHost, commandInput }) => {
+const simulatedSession = (config, { preload, skraftLoads, agents, refusals, models, staleSnapshot, home, nativeTools, workflowRunError, refuseCanvases, canvasConfirmUnheard, refuseCanvasOpen, joinedElicitation, dropCanvasQuery, reopenFocusesOnly, askedUnanswered, undeclaredPhase, commands: commandsHost, commandInput }) => {
   const atLoad = config.workingDirectory
   let mode = 'interactive'
   let tracked = null
@@ -78,7 +76,6 @@ const simulatedSession = (config, { preload, skraftLoads, agents, refusals, mode
   const canvases = simulatedCanvases({ refuseOpen: refuseCanvasOpen, dropQuery: dropCanvasQuery, reopenFocusesOnly })
   const workflows = new Map()
   const listeners = []
-  const mcp = simulatedMcp(config, mcpHost)
   const joined = {
     capabilities: { ui: { elicitation: elicitation && joinedElicitation } },
     ui: { confirm, select, input },
@@ -116,10 +113,9 @@ const simulatedSession = (config, { preload, skraftLoads, agents, refusals, mode
       try { return JSON.stringify({ value: await confirm('probe') }) } catch (error) { return JSON.stringify({ error: error.message }) }
     })
     workflows.set(`skraft-probe-${suffix}`, { declared: ['Probe'], body: async (ctx) => {
-      ctx.phase('Probe')
       if (typeof ctx.args?.undeclaredPhase === 'string') return undeclared(ctx)
+      ctx.phase('Probe')
       if (ctx.args?.throw === true) throw new Error('skraft-probe-sentinel')
-      if (ctx.args?.mcp === true) return mcp.seen()
       if (ctx.args?.agentCall) return agentCall(ctx.args.agentCall)
       if (ctx.args?.confirm === true) return { hasSession: true, elicitation, value: await confirm('probe') }
       if (ctx.args?.joinedConfirm === true) return { elicitation, mode, value: await confirm('probe') }
@@ -130,7 +126,7 @@ const simulatedSession = (config, { preload, skraftLoads, agents, refusals, mode
   }
 
   function undeclared(ctx) {
-    try { ctx.phase(ctx.args.undeclaredPhase) } catch (error) { return { threw: true, error: error.message } }
+    try { ctx.phase('Probe'); ctx.phase(ctx.args.undeclaredPhase); ctx.phase('Probe') } catch (error) { return { threw: true, error: error.message } }
     return { threw: false }
   }
 
@@ -217,17 +213,21 @@ const simulatedSession = (config, { preload, skraftLoads, agents, refusals, mode
 /**
  * The phases of one simulated run as `session.rpc.workflow.getRunDetail` lists them (SDK 1.0.105
  * typings): each declared title with its ordinal, each undeclared one entered with a null ordinal.
- * `mode` says what the host does with an undeclared title.
+ * `mode` says what the host does with an undeclared title: `shifts` lists it, and gives no ordinal
+ * to a declared title entered after it; `forgets` lists it, and drops a declared title entered after it.
  */
 const simulatedPhases = (declared, mode) => {
   const entered = []
+  const undeclaredAt = () => entered.findIndex((name) => !declared.includes(name))
+  const isKept = (title) => (declared.includes(title) ? !(mode === 'forgets' && undeclaredAt() !== -1) : ['listed', 'shifts', 'forgets'].includes(mode))
   const enter = (title) => {
     if (!declared.includes(title) && mode === 'throws') throw new Error(`phase "${title}" is not declared`)
-    if (declared.includes(title) || mode === 'listed') entered.push(title)
+    if (isKept(title)) entered.push(title)
   }
   const listed = (title, ordinal) => ({ title, ordinal, status: 'completed', entryCount: entered.filter((name) => name === title).length })
+  const afterUndeclared = (title) => mode === 'shifts' && undeclaredAt() !== -1 && undeclaredAt() < entered.lastIndexOf(title)
   const detail = async () => ({
-    phases: [...declared.map(listed), ...[...new Set(entered.filter((title) => !declared.includes(title)))].map((title) => listed(title, null))],
+    phases: [...declared.map((title, index) => listed(title, afterUndeclared(title) ? null : index)), ...[...new Set(entered.filter((title) => !declared.includes(title)))].map((title) => listed(title, null))],
     currentPhase: entered.at(-1) ?? null, declaredPhaseCount: declared.length,
   })
   return { enter, detail }
@@ -315,94 +315,6 @@ const asDeclared = (options) => ({
   onClose: options.onClose,
   actions: Object.fromEntries((options.actions ?? []).map((action) => [action.name, action.handler])),
 })
-
-/**
- * How a simulated session's MCP servers depart from CLI 1.0.102-1, one way each.
- * @typedef {{
- *   reachable?: boolean, listedStatus?: string, listedTools?: string[], echoText?: string,
- *   asksReadOnly?: boolean, firstUnasked?: boolean, rejectsUnasked?: boolean, ignoresReject?: boolean,
- *   touchFails?: boolean, failingStatus?: string, absentServerError?: string, absentToolThrows?: boolean,
- *   errorAsSuccess?: boolean, withoutFailTool?: boolean, githubTools?: number | null, githubStatus?: string, refusesConfig?: boolean,
- * }} SimulatedMcp
- *   reachable: false when the joined session has no `rpc.mcp` and offers no MCP tool; listedStatus:
- *   the probe server's status in `mcp.list` (its tools still answer); listedTools: what `listTools`
- *   names for it; echoText: what `echo` answers; asksReadOnly: the read-only tools ask permission too;
- *   firstUnasked: the first call of a side-effect tool runs without asking; rejectsUnasked: from the
- *   second such call on, the host rejects it without asking; ignoresReject: a rejected call runs
- *   anyway; touchFails: an approved `touch` fails; failingStatus: the dying server's status;
- *   absentServerError: what `listTools` of an absent server throws; absentToolThrows: executing an
- *   absent tool throws instead of failing; errorAsSuccess: a tool error comes back as a success; withoutFailTool: the probe server offers no `fail`;
- *   githubTools: a `github-mcp-server` with that many tools, none when null; githubStatus: its
- *   status in `mcp.list` (its tools still answer); refusesConfig: `createSession` with `mcpServers` throws.
- */
-
-/**
- * The session's MCP servers as CLI 1.0.102-1 gives them to an extension inside a workflow run
- * (docs/v2/host-verification.md, 2026-10-30): each configured server connected with its tools,
- * the probe's failing one `failed` with its error; an MCP tool offered as `<server>-<tool>`; a
- * tool without `readOnlyHint` put to the host's permission handler first; a tool error a
- * `failure`. `seen` answers as the probe extension's `mcpSeen` does.
- * @param {SimulatedMcp} host
- */
-const simulatedMcp = (config, host) => {
-  const { reachable = true, githubTools = null, githubStatus = 'connected' } = host
-  const servers = [
-    ...(githubTools === null ? [] : [{ name: GITHUB_MCP_SERVER, status: 'connected', tools: Array.from({ length: githubTools }, (_, index) => `tool_${index}`) }]),
-    ...Object.keys(config.mcpServers ?? {}).map((name) => (name === PROBE_MCP.failing
-      ? { name, status: host.failingStatus ?? 'failed', error: 'MCP server process exited before completing the MCP initialize handshake (exit code 3)', tools: [] }
-      : { name, status: 'connected', tools: host.withoutFailTool ? ['echo', 'touch'] : ['echo', 'touch', 'fail'] })),
-  ]
-  const listed = ({ name, status, error }) => {
-    if (name === PROBE_MCP.failing) return { name, status, error }
-    if (name === GITHUB_MCP_SERVER) return { name, status: githubStatus }
-    return { name, status: name === PROBE_MCP.server ? host.listedStatus ?? status : status }
-  }
-  const listTools = (serverName) => {
-    if (!reachable) throw new Error("Cannot read properties of undefined (reading 'listTools')")
-    const server = servers.find(({ name, status }) => name === serverName && status === 'connected')
-    if (!server) throw new Error(host.absentServerError ?? `Request session.mcp.listTools failed with message: MCP server "${serverName}" is not connected`)
-    return serverName === PROBE_MCP.server ? host.listedTools ?? server.tools : server.tools
-  }
-  let sideEffectCalls = 0
-  const asked = async (server, name) => (await config.onPermissionRequest({ kind: 'mcp', serverName: server.name, toolName: name, readOnly: false }))?.kind !== 'reject'
-  const touch = async (server, name) => {
-    sideEffectCalls += 1
-    if (host.firstUnasked && sideEffectCalls === 1) return { type: 'success', text: 'touched' }
-    if (host.rejectsUnasked && sideEffectCalls > 1) return { type: 'rejected', text: 'The user rejected this tool call.' }
-    const approved = await asked(server, name)
-    if (!approved && !host.ignoresReject) return { type: 'rejected', text: 'The user rejected this tool call.' }
-    return host.touchFails ? { type: 'failure', text: 'touch failed' } : { type: 'success', text: 'touched' }
-  }
-  const readOnly = async (server, name, args) => {
-    if (host.asksReadOnly) await asked(server, name)
-    if (name.endsWith('-fail')) return { type: host.errorAsSuccess ? 'success' : 'failure', text: PROBE_MCP.failure }
-    return { type: 'success', text: host.echoText ?? `echo:${args.text}` }
-  }
-  const execute = async (name, args) => {
-    const server = reachable ? servers.find((candidate) => candidate.status === 'connected' && candidate.tools.some((tool) => `${candidate.name}-${tool}` === name)) : undefined
-    if (!server && host.absentToolThrows) throw new Error(`unknown tool ${name}`)
-    if (!server) return { type: 'failure', text: `Tool '${name}' does not exist.` }
-    return name.endsWith('-touch') ? touch(server, name) : readOnly(server, name, args)
-  }
-  const attempt = async (call) => { try { return { value: await call() } } catch (error) { return { error: error.message } } }
-  const result = async (call) => { const { value, error } = await attempt(call); return error !== undefined ? { error } : value }
-  const seen = async () => {
-    const tools = await attempt(() => listTools(PROBE_MCP.server))
-    const github = await attempt(() => listTools(GITHUB_MCP_SERVER))
-    const absent = await attempt(() => listTools(PROBE_MCP.absent))
-    return {
-      servers: reachable ? servers.map(listed) : { error: "Cannot read properties of undefined (reading 'list')" },
-      tools: tools.error !== undefined ? { error: tools.error } : tools.value,
-      echo: await result(() => execute(`${PROBE_MCP.server}-echo`, { text: PROBE_MCP.sentinel })),
-      touch: await result(() => execute(`${PROBE_MCP.server}-touch`, {})),
-      fail: await result(() => execute(`${PROBE_MCP.server}-fail`, {})),
-      absentServer: absent.error !== undefined ? { error: absent.error } : { listed: true },
-      absentTool: await result(() => execute(`${PROBE_MCP.absent}-echo`, {})),
-      github: github.error !== undefined ? { error: github.error } : { tools: github.value.length },
-    }
-  }
-  return { seen }
-}
 
 /** The name a plugin command gets: bare when it is the plugin's own name, else `<plugin>:<command>`. */
 const commandName = (plugin, file) => (plugin === file ? file : `${plugin}:${file}`)
