@@ -41,9 +41,10 @@ const claudePlugins = (home, installs) => {
 const claudePlugin = (home, version, marker) =>
   fakePlugin(join(home, '.claude', 'plugins', 'cache', 'skraft', 'skraft', version), marker)
 
-const skraft = (home, args, extraEnv = {}) => {
+const skraft = (home, args, extraEnv = {}, cwd = home) => {
   const { CLAUDE_CONFIG_DIR: _c, COPILOT_HOME: _h, SKRAFT_PLUGIN_ROOT: _s, SKRAFT_BANNER: _b, NO_COLOR: _n, CI: _ci, ...inherited } = process.env
   return spawnSync(process.execPath, [bin, ...args], {
+    cwd,
     encoding: 'utf8',
     env: { ...inherited, HOME: home, USERPROFILE: home, ...extraEnv },
   })
@@ -101,6 +102,26 @@ test('prefers the marketplace named skraft over another Copilot CLI marketplace'
     copilotPlugin(home, 'official', 'skraft')
 
     assert.equal(skraft(home, ['status']).stdout, 'official ["status"]\n')
+  })
+})
+
+test('a Claude Code install scoped to another repository never wins; one scoped to this repository wins over the user one', () => {
+  withHome((home) => {
+    const here = join(home, 'work', 'payment')
+    const elsewhere = join(home, 'work', 'other')
+    mkdirSync(join(here, 'src'), { recursive: true })
+    mkdirSync(elsewhere, { recursive: true })
+    const user = { scope: 'user', installPath: claudePlugin(home, '2.0.0', 'user'), lastUpdated: '2026-10-01T00:00:00Z' }
+    const other = { scope: 'project', projectPath: elsewhere, installPath: claudePlugin(home, '2.2.0', 'other repository'), lastUpdated: '2026-10-30T00:00:00Z' }
+    claudePlugins(home, { 'skraft@skraft': [other, user] })
+
+    assert.equal(skraft(home, ['status'], {}, join(here, 'src')).stdout, 'user ["status"]\n')
+
+    const mine = { scope: 'local', projectPath: here, installPath: claudePlugin(home, '2.1.0', 'this repository'), lastUpdated: '2026-10-02T00:00:00Z' }
+    claudePlugins(home, { 'skraft@skraft': [other, user, mine] })
+
+    assert.equal(skraft(home, ['status'], {}, join(here, 'src')).stdout, 'this repository ["status"]\n')
+    assert.equal(skraft(home, ['status'], {}, elsewhere).stdout, 'other repository ["status"]\n')
   })
 })
 

@@ -23,7 +23,7 @@ const argv = process.argv.slice(2)
 const home = homedir()
 const env = process.env
 const say = (line) => process.stderr.write(`${line}\n`)
-const machine = { home, env }
+const machine = { home, env, cwd: process.cwd() }
 const { version } = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8'))
 
 /** `skraft` alone: a session in a terminal (SKRAFT_INTERACTIVE=1 forces it, 0 turns it off). */
