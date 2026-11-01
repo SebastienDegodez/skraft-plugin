@@ -143,8 +143,8 @@ Tapez la commande :
 
 La commande lance le workflow dynamique `skraft-pipeline` avec `{ slug: "checkout", issue: 42, title:
 "Pay by card" }`. (Vous pouvez aussi taper `/agent`, choisir `skraft:skraft-orchestrator`, puis écrire :
-*Lance le pipeline checkout pour l'issue 42, titre « Pay by card ».* Il lance le même workflow.) Le dépôt n'a pas de remote : le run démarre quand même, ses agents n'ont que le
-numéro et le titre de l'issue.
+*Lance le pipeline checkout pour l'issue 42, titre « Pay by card ».* Il lance le même workflow.) Le dépôt n'a pas de remote, donc l'issue ne peut pas être lue : le run est refusé
+(`issue-unreadable`) et rien n'est journalisé. Sans `issue`, le run démarre, et ses agents n'ont aucune issue.
 
 Avant toute phase, au premier run d'une copie de travail, Copilot pose une fois dans le chat :
 *Démarrer ce run avec la configuration de cette copie de travail ?* Si votre client affiche les

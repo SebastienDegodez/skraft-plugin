@@ -182,7 +182,7 @@ Vous voyez, avec vos propres chemins et versions :
 La table des modèles est coupée après ses premières lignes.*
 
 Les trois avertissements ne bloquent pas ce tutoriel : le premier dit que le dépôt n'a pas encore
-de remote (le run démarre quand même, étape 5) ; le deuxième, qu'aucune recette de mocking
+de remote (un run avec un numéro d'issue est refusé sans remote, étape 5) ; le deuxième, qu'aucune recette de mocking
 n'existe pour un composant JavaScript, et le petit dépôt n'appelle aucun service ; le troisième ne
 concerne que Copilot. La dernière ligne compte : `no check failed`.
 
@@ -195,8 +195,9 @@ Dans la conversation Claude Code, saisissez :
 ```
 
 `checkout` est le **slug** : le nom du pipeline, en kebab-case. `#42` est le numéro de l'issue,
-`Pay by card` son titre. Le dépôt n'a pas de remote : le run démarre quand même, ses agents n'ont
-que le numéro et le titre de l'issue. Claude Code répond :
+`Pay by card` son titre. Le dépôt n'a pas de remote, donc l'issue ne peut pas être lue : le run est
+refusé (`issue-unreadable`) et rien n'est journalisé. Sans `#42`, le run démarre, et ses agents n'ont
+aucune issue. Claude Code répond :
 
 ```console
 skraft checkout started — progress in the Skraft pane.

@@ -181,8 +181,8 @@ You see, with your own paths and versions:
 *Figure 2 — `skraft doctor` on the `shop` repository: no check failed, three warnings. The model
 table is cut after its first rows.*
 
-The three warnings do not block this tutorial: the first says the repository has no remote yet (the
-run starts all the same, step 5); the second says no mocking recipe exists for a JavaScript
+The three warnings do not block this tutorial: the first says the repository has no remote yet (a run
+with an issue number is refused without one, step 5); the second says no mocking recipe exists for a JavaScript
 component, and the small repository calls no service; the third only concerns Copilot.
 The last line is what matters: `no check failed`.
 
@@ -195,8 +195,9 @@ In the Claude Code conversation, type:
 ```
 
 `checkout` is the **slug**: the name of the pipeline, in kebab-case. `#42` is the issue number,
-`Pay by card` its title. The repository has no remote: the run starts anyway, and its agents get
-the issue's number and title only. Claude Code answers:
+`Pay by card` its title. The repository has no remote, so the issue cannot be read: the run is refused
+(`issue-unreadable`) and nothing is journaled. Without `#42` the run starts, and its agents get no issue.
+Claude Code answers:
 
 ```console
 skraft checkout started — progress in the Skraft pane.
