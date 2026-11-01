@@ -9,6 +9,7 @@
     "test:engine:unit": "node --test \"tests/skraft-framework/unit/**/*.test.mjs\"",
     "test:engine:integration": "node --test \"tests/skraft-framework/integration/**/*.test.mjs\"",
     "test:engine": "npm run test:engine:unit && npm run test:engine:integration",
+    "test:cli": "node --test \"tests/cli/**/*.test.mjs\"",
     "mutation:engine": "npx --prefix plugins/skraft-framework/engine stryker run plugins/skraft-framework/engine/stryker.config.mjs",
     "mutation:engine:changed": "node eng/mutation-scope.mjs --base origin/integration/v2-next --run",
     "lint:engine": "npm run lint --prefix plugins/skraft-framework/engine",

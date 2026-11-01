@@ -11,7 +11,7 @@ Take over in V2 a repository left by skraft v1, without losing the runs in progr
 ## Prerequisites
 
 - The `skraft` plugin at version 2 installed
-  ([Install skraft on a host](./install-on-a-host.mdx)); `skraft` is the command that [`skraft install`](./install-on-a-host.mdx#skraft-command) sets up; the long line `node "<plugin folder>/engine/drivers/cli/skraft.mjs"` works without it.
+  ([Install skraft on a host](./install-on-a-host.mdx)); `skraft` is the command that [`npm i -g @skraft/cli`](./install-on-a-host.mdx#skraft-command) sets up; the long line `node "<plugin folder>/engine/drivers/cli/skraft.mjs"` works without it.
 - A terminal at the root of the working copy, Git, Node 22 or later.
 - The v1 files committed, so you can go back: `skraft-config.json` is rewritten in place.
 

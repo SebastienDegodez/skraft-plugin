@@ -107,7 +107,7 @@ $ node "<skraft plugin folder>/engine/drivers/cli/skraft.mjs" init
 ```
 
 From here on, `skraft …` means that full command, or the `skraft` command that
-[`skraft install`](../how-to/install-on-a-host.mdx#skraft-command) sets up. You see:
+[`npm i -g @skraft/cli`](../how-to/install-on-a-host.mdx#skraft-command) sets up. You see:
 
 ![Terminal: skraft init answers "skraft-config.json: web (javascript, web)"](/img/screenshots/shared/terminal-init.svg)
 

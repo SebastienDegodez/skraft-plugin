@@ -3,6 +3,16 @@
 Toutes les modifications notables de ce projet sont documentées ici.
 Format basé sur [Conventional Commits](https://www.conventionalcommits.org/) — versionnage [SemVer](https://semver.org/).
 
+## [2.0.0-alpha.48](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.47...v2.0.0-alpha.48) (2026-11-01)
+
+### ✨ Features
+
+* **engine:** skraft commands --json, doctor names the plugin; @skraft/cli, the skraft command for humans ([#467](https://github.com/SebastienDegodez/skraft-plugin/issues/467)) ([#468](https://github.com/SebastienDegodez/skraft-plugin/issues/468)) ([bd07c55](https://github.com/SebastienDegodez/skraft-plugin/commit/bd07c55e10b75afa80d9a8f9d7b379631d321d1a))
+
+### 🐛 Bug Fixes
+
+* **canvas:** gaps ported into lots B and D ([#456](https://github.com/SebastienDegodez/skraft-plugin/issues/456)) ([ec306eb](https://github.com/SebastienDegodez/skraft-plugin/commit/ec306eb5f8d3d049cb52b9c64ef84b47dd217a9a)), closes [#418](https://github.com/SebastienDegodez/skraft-plugin/issues/418)
+
 ## [2.0.0-alpha.47](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.46...v2.0.0-alpha.47) (2026-11-01)
 
 ### ✨ Features

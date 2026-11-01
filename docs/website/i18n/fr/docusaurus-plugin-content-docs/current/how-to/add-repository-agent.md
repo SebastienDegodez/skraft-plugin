@@ -14,7 +14,7 @@ Pour une relecture plutôt qu'une étape qui produit :
 
 ## Prérequis
 
-- Un dépôt configuré, Git, et un terminal à la racine de la copie de travail ; `skraft` est la commande que [`skraft install`](./install-on-a-host.mdx#skraft-command) met en place ; la ligne longue `node "<dossier du plugin>/engine/drivers/cli/skraft.mjs"` marche sans elle.
+- Un dépôt configuré, Git, et un terminal à la racine de la copie de travail ; `skraft` est la commande que [`npm i -g @skraft/cli`](./install-on-a-host.mdx#skraft-command) met en place ; la ligne longue `node "<dossier du plugin>/engine/drivers/cli/skraft.mjs"` marche sans elle.
 - Le workflow copié dans `.skraft/pipeline.skraft.dot`
   ([Copier et adapter le workflow](./eject-workflow.mdx)).
 

@@ -11,8 +11,8 @@ réfutation, verdict calculé), et gardez-le si besoin dans un commentaire.
 
 ## Prérequis
 
-- Le plugin `skraft` installé ; `skraft` est la commande que [`skraft install`](./install-on-a-host.mdx#skraft-command) met en place ; la ligne longue `node "<dossier du plugin>/engine/drivers/cli/skraft.mjs"` marche sans elle.
-- Sur GitHub : `gh` installé et connecté à l'hôte du dépôt (`gh auth status`). Sur Azure Repos : `az` avec son extension `azure-devops`, connecté à l'organisation (Azure DevOps Services seulement).
+- Le plugin `skraft` installé ; `skraft` est la commande que [`npm i -g @skraft/cli`](./install-on-a-host.mdx#skraft-command) met en place ; la ligne longue `node "<dossier du plugin>/engine/drivers/cli/skraft.mjs"` marche sans elle.
+- Sur GitHub : `gh` installé et connecté à l'hôte du dépôt (`gh auth status`). Sur Azure Repos : `az` avec son extension `azure-devops`, connecté à l'organisation (Azure DevOps Services seulement). La revue ne passe jamais par un serveur MCP.
 - Un clone du dépôt, à la racine duquel vous lancez tout.
 
 ## 1. Extraire la pull request

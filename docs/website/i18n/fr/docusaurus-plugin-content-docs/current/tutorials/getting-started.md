@@ -124,7 +124,7 @@ find ~/.claude/plugins -path '*engine/drivers/cli/skraft.mjs'
 
 La ligne affichée est le chemin complet du script ; remplacez `<dossier du plugin skraft>` par ce
 qui précède `/engine/`. Dans la suite, `skraft …` veut dire cette commande complète, ou la commande `skraft` que
-[`skraft install`](../how-to/install-on-a-host.mdx#skraft-command) met en place.
+[`npm i -g @skraft/cli`](../how-to/install-on-a-host.mdx#skraft-command) met en place.
 
 `skraft init` cherche les projets du dépôt et écrit un **composant** par projet : une partie du
 dépôt avec sa racine, sa stack, ses chemins et ses commandes. Vous voyez :

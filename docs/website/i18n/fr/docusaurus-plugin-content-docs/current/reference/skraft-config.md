@@ -124,90 +124,93 @@ la question, toutes les autres clés du fichier conservées. Toute autre clé ou
 
 ## Forge <!-- #forge -->
 
-La forge est l'endroit où le moteur lit l'issue de la story, y garde le commentaire du run, ouvre
-la pull request et lit la pull request qu'une revue commente. La clé `forge` la nomme ; sans elle,
-le moteur lit l'URL du remote de la copie de travail (`origin`, sinon le premier remote que Git
-liste) :
+La forge est l'endroit où le moteur lit l'issue de la story, y tient le commentaire du run,
+ouvre la pull request et lit celle qu'une revue commente. La clé `forge` la nomme ; sans elle,
+le moteur lit l'URL du remote de la copie de travail (`origin`, sinon le premier remote que
+Git liste) :
 
-| Hôte du remote | Forge | Ligne de commande utilisée par le moteur |
-| --- | --- | --- |
-| `dev.azure.com`, `ssh.dev.azure.com`, tout `*.visualstudio.com` | `azure-devops` | `az` (la CLI Azure avec son extension `azure-devops`) |
-| tout autre hôte (GitHub, GitHub Enterprise…), ou pas de remote | `github` | `gh` |
+| Hôte du remote | Forge |
+| --- | --- |
+| `dev.azure.com`, `ssh.dev.azure.com`, tout `*.visualstudio.com` | `azure-devops` |
+| tout autre hôte (GitHub, GitHub Enterprise…), ou aucun remote | `github` |
 
-Le moteur n'atteint la forge que par cette ligne de commande. Il n'appelle jamais un serveur MCP et
-ne passe jamais de `gh` à `az` ni l'inverse : une opération que la ligne de commande ne peut pas
-servir arrête le run ou la revue, avec une raison fixe. Un serveur MCP de l'hôte, s'il est connecté,
-est un outil pour un agent, pas une voie du moteur.
-
-Sur `github`, le corps de la pull request commence par `Closes #<issue>` quand elle vise la branche
-par défaut, `Refs #<issue>` sinon. Sur `azure-devops`, la pull request est ouverte sur Azure Repos
-par `az`, Azure DevOps Services seulement : son corps commence par `Fixes #<work item>` quand elle
-vise la branche par défaut, ce qui termine le work item à la fusion, `#<work item>` sinon, et la
-pull request est liée au work item de la story à sa création. La story est le work item (voir
-[Azure DevOps par az](#azure-devops-az)). `gh` n'est jamais lancé sur un remote Azure DevOps, et
-`az` jamais sur un remote GitHub. `skraft review --pr` revoit une pull request sur l'une ou l'autre
-forge. Il ne lit `forge` que dans vos fichiers (`~/.skraft/config.json`, `skraft-config.local.json`),
-sinon dans le remote : le `skraft-config.json` de la pull request revue, écrit par son auteur, ne
+Sur `github`, le moteur passe par `gh` (voir plus bas), et le corps de la pull request commence par
+`Closes #<issue>` quand elle vise la branche par défaut, `Refs #<issue>` sinon. Sur
+`azure-devops`, le moteur ouvre la pull request sur Azure Repos par `az` (l'Azure CLI avec son
+extension `azure-devops`), Azure DevOps Services seulement : son corps commence par
+`Fixes #<work item>` quand elle vise la branche par défaut, ce qui clôt le work item à la fusion
+de la pull request, `#<work item>` sinon, et la pull request est liée au work item de la story à
+sa création. La story est le work item (voir
+[Azure DevOps par az](#azure-devops-through-az)), et
+le run y tient son commentaire d'avancement. `skraft review --pr` revoit aussi une pull request Azure Repos
+(voir [Azure DevOps par az](#azure-devops-through-az)).
+`gh` n'est jamais lancé sur un remote Azure DevOps. `skraft review --pr` ne lit `forge` que
+dans vos propres fichiers (`~/.skraft/config.json`, `skraft-config.local.json`), sinon depuis
+le remote : le `skraft-config.json` de la pull request en revue, écrit par son auteur, ne
 choisit aucune forge.
 
-Sous Copilot, l'onglet **Configuration** du canvas skraft le choisit : son premier choix, *Depuis le
-remote Git : &lt;forge&gt;*, laisse `forge` hors de `skraft-config.json` et nomme la forge que donne le
-remote ; *GitHub* ou *Azure DevOps* l'écrit. `skraft doctor` dit quelle forge un run utilise et ce
-qui l'a choisie, sur sa ligne `forge`, et signale ce qui manque à cette machine pour la ligne de
-commande (pas de remote, pas de `gh` ou de `az`, pas connecté).
+Sous Copilot, l'onglet **Configuration** du canvas skraft la choisit : son premier choix, *D’après le remote Git : &lt;forge&gt;*, laisse `forge` hors de `skraft-config.json` et nomme la forge que donne le remote ; *GitHub* ou *Azure DevOps* l'écrit. `skraft doctor` dit quelle forge un run utilise et ce qui l'a choisie, sur sa ligne `forge`.
 
-### GitHub par gh <!-- #github-gh -->
+### Le moteur et les serveurs MCP <!-- #engine-and-mcp -->
 
-Sur `github`, chaque opération de forge du moteur est un appel à `gh` :
+Le moteur n'appelle jamais un serveur MCP : un serveur est un outil pour un agent. Il lit et écrit
+la forge uniquement par sa ligne de commande, `gh` sur `github`, `az` sur `azure-devops`, sans
+repli de l'une vers l'autre. Un serveur MCP GitHub ou Azure DevOps que vous connectez dans votre
+hôte sert les agents qui s'en servent (les skills du plugin backlog, par exemple), jamais le moteur.
 
-- lire l'issue de la story (`--issue`), sur le dépôt que `gh` choisit : son dépôt par défaut
-  (`gh repo set-default`), sinon `upstream`, sinon `origin` ;
-- garder la progression du run dans un commentaire de l'issue, et les détails de publication de la
-  pull request ;
-- chercher, ouvrir et modifier la pull request, sur `origin` ;
-- lire la pull request qu'une revue commente (`skraft review --pr`), par son numéro.
+Un run démarré depuis une issue que la ligne de commande de la forge ne peut pas lire (pas de
+remote, `gh` ou `az` absent, pas connecté) est refusé avant que rien ne soit journalisé
+(`issue-unreadable`). Un run dont le consentement de publication est donné, gardé dans
+`skraft-config.json` ou répondu à son démarrage, vérifie la forge juste après cette réponse, avant
+le premier agent : hors de portée, le run pose une question environment (`publish_consent cannot
+run on this machine: <raison>. Fix it, then RETRY; or ABORT the run.`). La raison est celle que
+`skraft doctor` donne sur sa ligne `forge`.
 
-Une issue que `gh` ne peut pas lire refuse le run (`issue-unreadable`), et rien n'est écrit. Une pull
-request que `gh` ne peut pas lire arrête la revue avec `pr-unreadable` (`pr-not-found` quand le numéro
-n'en correspond à aucune). Le push reste `git`.
+### GitHub par gh <!-- #github-through-gh -->
 
-### Azure DevOps par az <!-- #azure-devops-az -->
+Sur `github`, le moteur lit l'issue, y tient son commentaire, retrouve, ouvre et édite la pull
+request, et lit et commente la pull request en revue par `gh`, installé et connecté à l'hôte du
+dépôt. L'issue est lue sur le dépôt où `gh` la lit (son dépôt par défaut, sinon `upstream`, sinon
+`origin`) ; la pull request et le commentaire d'issue vont sur `origin`. La pull request est
+retrouvée avant d'en ouvrir une, seul votre propre commentaire est réécrit, et chaque raison est
+fixée par le moteur, jamais la sortie de `gh`. Le push reste `git`.
 
-Sur `azure-devops`, un run lancé depuis un numéro de work item (`--issue 42`) lit ce work item, et
-garde la progression du run dans un commentaire dessus, par `az boards work-item show` et
-`az devops invoke` (area `wit`, resource `comments`). Les détails de pull request d'un run et sa
-revue passent par `az repos pr show` et `az devops invoke` (area `git`, ressources
-`pullRequestThreads` et `pullRequestThreadComments`). Le moteur liste les fils page par page
-(`top` 100, `skip`). Rien de ce chemin n'exige un serveur MCP.
+### Azure DevOps par az <!-- #azure-devops-through-az -->
 
-Le commentaire de revue est un seul fil, créé *Closed* ; son premier commentaire est réécrit à
-chaque passe. Le moteur le retrouve à l'adresse que le journal garde, sinon au dernier fil dont le
-premier commentaire commence comme le commentaire de la revue et porte le marqueur (brut, ou avec `<`
-et `>` en entités HTML, nommées ou numériques, lu après une marque d'ordre d'octets ou des lignes
-vides), quel qu'en soit l'auteur : Azure ne le dit pas ici. Une pull request d'un autre projet ou
-dépôt que celui du remote Git est refusée (`pr-unreadable`). Rien de cela n'est mesuré sur une vraie
-organisation : voir `docs/v2/host-verification.md`.
+Sur `azure-devops`, un run démarré depuis un numéro de work item (`--issue 42`) lit ce work item,
+et tient l'avancement du run dans un seul commentaire sur lui, par `az` (l'Azure CLI avec son
+extension `azure-devops`, connectée à l'organisation). Les détails du run d'une pull request sont
+gardés dans un fil de celle-ci, par `az devops invoke` (area `git`).
 
-Ce qu'un run lit est le même quelle que soit la voie : le titre et la page du work item, puis sa
+`skraft review --pr` sur une pull request Azure Repos la lit par `az repos pr show` et garde son
+commentaire de revue par `az devops invoke` (area `git`). Le moteur liste les fils page par page
+(100 à la fois), jusqu'à dix pages. Le commentaire de revue est un fil, créé *Closed* ; son premier
+commentaire est réécrit à chaque passe. Le moteur le retrouve à l'adresse que garde le journal,
+sinon au dernier fil dont le premier commentaire commence comme le commentaire de revue et porte le
+marqueur (tel quel, ou avec `<` et `>` en entités HTML, nommées ou numériques, et lu derrière un
+octet de marque d'ordre ou des lignes vides), quel qu'en soit l'auteur : Azure ne le dit pas ici.
+Une pull request d'un autre projet ou dépôt que celui du remote Git est refusée (`pr-unreadable`).
+Rien de cela n'est mesuré sur une vraie organisation : voir `docs/v2/host-verification.md`.
+
+Ce qu'un run lit : le titre et la page du work item, puis sa
 description, puis une section `## Acceptance criteria` tirée de `Microsoft.VSTS.Common.AcceptanceCriteria`,
-gardée dans `<slug>/plans/<date>/issue-<number>.md` pour chaque agent. Un champ écrit en HTML (un work
-item fait à la main) devient du Markdown ; un champ déjà en Markdown reste tel quel. Un champ absent du
-work item le dit en une ligne fixe (`The work item has no description …`,
-`The work item has no acceptance criteria: … is empty, or its work item type does not have it.`). Le run
-est refusé, sans rien journaliser, quand le work item n'est pas une story (`issue-not-a-story` ; les types
-lus sont `User Story`, `Product Backlog Item`, `Requirement`, `Issue` et `Bug`), ou quand il est dans un
-autre projet de l'organisation que celui du remote Git (`issue-in-other-project`) ; le projet est
-vérifié de nouveau avant chaque écriture du commentaire, qui est sinon sauté avec une raison fixe.
+gardées dans `<slug>/plans/<date>/issue-<number>.md` pour tous les agents. Un champ écrit en HTML
+(un work item créé à la main) devient du Markdown ; un champ déjà en Markdown reste tel quel. Un
+champ que le work item n'a pas le dit en une ligne fixe (`The work item has no description …`,
+`The work item has no acceptance criteria: … is empty, or its work item type does not have it.`). Le run est refusé,
+sans rien journaliser, quand le work item n'est pas une story (`issue-not-a-story` ; les types lus
+sont `User Story`, `Product Backlog Item`, `Requirement`, `Issue` et `Bug`) ou est dans un autre
+projet de l'organisation que celui que le remote Git nomme (`issue-in-other-project`) ; le projet
+est revérifié avant chaque écriture du commentaire, sautée sinon avec une raison fixe.
 
-Le commentaire est réécrit sur place (retrouvé à l'URL que le journal a gardée, sinon au dernier
-commentaire qui commence par son marqueur caché, tel quel ou avec `<`, `>` et `&` échappés en entités
-HTML), et n'est posté deux fois que si cette recherche échoue. Deux réserves : la façon dont Azure
-Boards rend et stocke le marqueur échappé n'est pas mesurée, et la recherche ne vérifie pas qui a écrit
-un commentaire (Azure ne donne pas d'auteur ici), si bien qu'un commentaire commencé par le marqueur
-par quelqu'un d'autre serait réécrit. Son `url` est l'adresse REST du commentaire, Azure Boards ne
-documentant aucune ancre web pour lui. Une écriture de commentaire échouée est journalisée
-`issue.comment-skipped` avec sa raison. La CLI `skraft` et `skraft next` utilisent les mêmes lignes de
-commande. Ce qu'`az` répond pour un work item n'est pas encore mesuré : voir `docs/v2/host-verification.md`.
+Le commentaire est réécrit sur place (retrouvé par l'URL que le journal a gardée, sinon le dernier
+commentaire qui commence par son marqueur caché, tel qu'écrit ou avec `<`, `>` et `&` échappés comme
+le serveur MCP d'un agent a pu l'écrire) et reposté seulement si cette recherche échoue. Deux
+réserves : la façon dont Azure Boards stocke et affiche le marqueur échappé n'est pas mesurée, et la
+recherche ne vérifie pas l'auteur d'un commentaire (Azure n'en donne aucun ici) : un commentaire que
+quelqu'un d'autre ferait commencer par le marqueur serait réécrit. Son `url` est l'adresse REST du
+commentaire, Azure Boards ne documentant aucune ancre web pour un commentaire. Ce que `az` répond
+pour un work item n'est pas encore mesuré : voir `docs/v2/host-verification.md`.
 
 ## Validation et messages <!-- #validation -->
 

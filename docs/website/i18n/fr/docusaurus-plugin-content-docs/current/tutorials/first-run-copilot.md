@@ -107,7 +107,7 @@ $ node "<dossier du plugin skraft>/engine/drivers/cli/skraft.mjs" init
 ```
 
 Dans la suite, `skraft …` veut dire cette commande complète, ou la commande `skraft` que
-[`skraft install`](../how-to/install-on-a-host.mdx#skraft-command) met en place. Vous voyez :
+[`npm i -g @skraft/cli`](../how-to/install-on-a-host.mdx#skraft-command) met en place. Vous voyez :
 
 ![Terminal : skraft init répond « skraft-config.json: web (javascript, web) »](/img/screenshots/shared/terminal-init.svg)
 

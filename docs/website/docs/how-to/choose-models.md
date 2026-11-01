@@ -12,7 +12,7 @@ Copilot.
 ## Prerequisites
 
 - A configured repository ([Configure the components](./configure-components.md)).
-- A terminal at the root of the working copy; `skraft` is the command that [`skraft install`](./install-on-a-host.mdx#skraft-command) sets up; the long line `node "<plugin folder>/engine/drivers/cli/skraft.mjs"` works without it.
+- A terminal at the root of the working copy; `skraft` is the command that [`npm i -g @skraft/cli`](./install-on-a-host.mdx#skraft-command) sets up; the long line `node "<plugin folder>/engine/drivers/cli/skraft.mjs"` works without it.
 
 ## 1. See what each agent gets today
 

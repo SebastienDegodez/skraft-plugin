@@ -11,8 +11,8 @@ refutation, computed verdict), and keep it in a comment if needed.
 
 ## Prerequisites
 
-- The `skraft` plugin installed; `skraft` is the command that [`skraft install`](./install-on-a-host.mdx#skraft-command) sets up; the long line `node "<plugin folder>/engine/drivers/cli/skraft.mjs"` works without it.
-- On GitHub: `gh` installed and signed in to the repository's host (`gh auth status`). On Azure Repos: `az` with its `azure-devops` extension, signed in to the organization (Azure DevOps Services only).
+- The `skraft` plugin installed; `skraft` is the command that [`npm i -g @skraft/cli`](./install-on-a-host.mdx#skraft-command) sets up; the long line `node "<plugin folder>/engine/drivers/cli/skraft.mjs"` works without it.
+- On GitHub: `gh` installed and signed in to the repository's host (`gh auth status`). On Azure Repos: `az` with its `azure-devops` extension, signed in to the organization (Azure DevOps Services only). The review never goes through an MCP server.
 - A clone of the repository, at whose root you run everything.
 
 ## 1. Check out the pull request

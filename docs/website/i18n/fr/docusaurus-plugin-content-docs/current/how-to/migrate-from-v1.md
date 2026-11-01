@@ -11,7 +11,7 @@ Reprenez en V2 un dépôt laissé par skraft v1, sans perdre les runs en cours.
 ## Prérequis
 
 - Le plugin `skraft` en version 2 installé
-  ([Installer skraft sur un hôte](./install-on-a-host.mdx)) ; `skraft` est la commande que [`skraft install`](./install-on-a-host.mdx#skraft-command) met en place ; la ligne longue `node "<dossier du plugin>/engine/drivers/cli/skraft.mjs"` marche sans elle.
+  ([Installer skraft sur un hôte](./install-on-a-host.mdx)) ; `skraft` est la commande que [`npm i -g @skraft/cli`](./install-on-a-host.mdx#skraft-command) met en place ; la ligne longue `node "<dossier du plugin>/engine/drivers/cli/skraft.mjs"` marche sans elle.
 - Un terminal à la racine de la copie de travail, Git, Node 22 ou plus.
 - Les fichiers v1 commités, pour pouvoir revenir en arrière : `skraft-config.json` est réécrit en
   place.

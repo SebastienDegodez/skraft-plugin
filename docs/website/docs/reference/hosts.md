@@ -17,8 +17,8 @@ Why an engine and drivers, and the Copilot driver contract:
 | --- | --- | --- |
 | Node | 22 or later | the engine, the `skraft` command line, the Copilot extension; `skraft doctor` checks it |
 | Git | — | each component's base, commits, replays of red commits |
-| `gh` | signed in to the repository's host | only to read the story's issue (`--issue`), open the pull request, comment on the issue, `skraft review --pr`; the `skraft` CLI and `skraft next` use it the same way (see [Forge](./skraft-config.md#forge)) |
-| `az` | signed in to the organization, with its `azure-devops` extension | on Azure DevOps only, to read the story's work item (`--issue`), keep the run's comment on it, open the pull request, and review a pull request (`skraft review --pr`: read it, keep the review's thread); the `skraft` CLI and `skraft next` use it the same way (see [Forge](./skraft-config.md#azure-devops-az)) |
+| `gh` | signed in to the repository's host | only to read the story's issue (`--issue`), open the pull request, comment on the issue, `skraft review --pr`; the engine never goes through an MCP server; see [Forge](./skraft-config.md#github-through-gh) |
+| `az` | signed in to the organization, with its `azure-devops` extension | on Azure DevOps only, to read the story's work item (`--issue`), keep the run's comment on it, open the pull request, and review a pull request (`skraft review --pr`: read it, keep the review's thread); the engine never goes through an MCP server; see [Forge](./skraft-config.md#azure-devops-through-az) |
 | Copilot CLI | — | Copilot CLI; under VS Code, the SDK driver (`skraft-run.mjs`) starts it headless |
 
 ## Install <!-- #install -->

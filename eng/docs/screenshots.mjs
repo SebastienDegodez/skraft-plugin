@@ -294,7 +294,6 @@ const shopCaptures = async () => {
   if (doctor.code !== 0) throw new Error(`skraft doctor: ${doctor.lines.join('\n')}`)
   writeSvg('terminal-doctor.svg', ['$ skraft doctor', ...doctorShown(doctor.lines)], '~/shop', `skraft doctor: ${doctor.lines.at(-1)}`, 132)
 
-  // No --issue: the shop has no remote, so the forge cannot be read and an issue would refuse the run (issue-unreadable).
   const start = await say(['init', 'checkout', '--title', 'Pay by card'])
   const next = await say(['next'])
   const status = await say(['status'])
@@ -314,14 +313,11 @@ const pipelineCaptures = async () => {
   const { runSkraftPipelineWorkflow } = await import('../../plugins/skraft-framework/engine/drivers/copilot-workflow/skraft-pipeline-workflow.mjs')
   const host = await import('../../tests/skraft-framework/integration/copilot-workflow/simulated-host.mjs')
   const repository = await import('../../tests/skraft-framework/integration/support/pipeline-repository.mjs')
-  const { issueForge } = await import('../../tests/skraft-framework/integration/support/issue-forge.mjs')
 
   const { cwd } = repository.pipelineRepository(testContext)
-  // The story's issue is read through gh: a fake gh on PATH shows it, as the integration tests do.
-  issueForge(testContext, cwd)
   cleanups.push(() => rmSync(`${cwd}-home`, { recursive: true, force: true }))
   const person = host.answeringSession({ answers: [null, 'RATIFIED'] })
-  const { ctx, logs } = host.simulatedContext({ args: { slug: repository.SLUG, issue: 42, title: 'Pay by card' }, otherwise: host.actsAs(repository.scriptedLlm({ cwd })) })
+  const { ctx, logs } = host.simulatedContext({ args: { slug: repository.SLUG, title: 'Pay by card' }, otherwise: host.actsAs(repository.scriptedLlm({ cwd })) })
   const paused = await runSkraftPipelineWorkflow(ctx, host.copilotHost(cwd, PLUGIN_ROOT, person)).then(() => null, (error) => error.message)
   if (paused !== 'paused at adr-1') throw new Error(`the scripted run did not pause at its ADR: ${paused}`)
   await canvasShot(cwd, `${cwd}-home`, 'pipeline-canvas-adr.png')
