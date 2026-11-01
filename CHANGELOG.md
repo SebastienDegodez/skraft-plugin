@@ -3,6 +3,16 @@
 Toutes les modifications notables de ce projet sont documentées ici.
 Format basé sur [Conventional Commits](https://www.conventionalcommits.org/) — versionnage [SemVer](https://semver.org/).
 
+## [2.0.0-alpha.46](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.45...v2.0.0-alpha.46) (2026-11-01)
+
+### ✨ Features
+
+* **engine:** the engine calls no MCP server; the forge is read and written by gh and az, an unreadable issue refuses the run ([#476](https://github.com/SebastienDegodez/skraft-plugin/issues/476)) ([d6bd6fd](https://github.com/SebastienDegodez/skraft-plugin/commit/d6bd6fd75a038d2b469c26b30323a09f0b569d6d)), closes [#470](https://github.com/SebastienDegodez/skraft-plugin/issues/470)
+
+### 📝 Documentation
+
+* **site:** the handbook moves to Docusaurus — readable, versioned, bilingual ([#462](https://github.com/SebastienDegodez/skraft-plugin/issues/462)) ([8b8143b](https://github.com/SebastienDegodez/skraft-plugin/commit/8b8143b06f8658ac9a0db7f3c8f991157e887d01)), closes [#id](https://github.com/SebastienDegodez/skraft-plugin/issues/id) [#id](https://github.com/SebastienDegodez/skraft-plugin/issues/id) [#211](https://github.com/SebastienDegodez/skraft-plugin/issues/211) [#id](https://github.com/SebastienDegodez/skraft-plugin/issues/id) [#id](https://github.com/SebastienDegodez/skraft-plugin/issues/id) [#id](https://github.com/SebastienDegodez/skraft-plugin/issues/id) [#next-steps](https://github.com/SebastienDegodez/skraft-plugin/issues/next-steps) [#see-also](https://github.com/SebastienDegodez/skraft-plugin/issues/see-also) [#see-also](https://github.com/SebastienDegodez/skraft-plugin/issues/see-also) [#id](https://github.com/SebastienDegodez/skraft-plugin/issues/id) [#367](https://github.com/SebastienDegodez/skraft-plugin/issues/367)
+
 ## [2.0.0-alpha.45](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.44...v2.0.0-alpha.45) (2026-11-01)
 
 ### ✨ Features
