@@ -294,7 +294,8 @@ const shopCaptures = async () => {
   if (doctor.code !== 0) throw new Error(`skraft doctor: ${doctor.lines.join('\n')}`)
   writeSvg('terminal-doctor.svg', ['$ skraft doctor', ...doctorShown(doctor.lines)], '~/shop', `skraft doctor: ${doctor.lines.at(-1)}`, 132)
 
-  const start = await say(['init', 'checkout', '--issue', '42', '--title', 'Pay by card'])
+  // No --issue: the shop has no remote, so the forge cannot be read and an issue would refuse the run (issue-unreadable).
+  const start = await say(['init', 'checkout', '--title', 'Pay by card'])
   const next = await say(['next'])
   const status = await say(['status'])
   if (start.code !== 0) throw new Error(`skraft init checkout: ${start.lines.join('\n')}`)
@@ -313,8 +314,11 @@ const pipelineCaptures = async () => {
   const { runSkraftPipelineWorkflow } = await import('../../plugins/skraft-framework/engine/drivers/copilot-workflow/skraft-pipeline-workflow.mjs')
   const host = await import('../../tests/skraft-framework/integration/copilot-workflow/simulated-host.mjs')
   const repository = await import('../../tests/skraft-framework/integration/support/pipeline-repository.mjs')
+  const { issueForge } = await import('../../tests/skraft-framework/integration/support/issue-forge.mjs')
 
   const { cwd } = repository.pipelineRepository(testContext)
+  // The story's issue is read through gh: a fake gh on PATH shows it, as the integration tests do.
+  issueForge(testContext, cwd)
   cleanups.push(() => rmSync(`${cwd}-home`, { recursive: true, force: true }))
   const person = host.answeringSession({ answers: [null, 'RATIFIED'] })
   const { ctx, logs } = host.simulatedContext({ args: { slug: repository.SLUG, issue: 42, title: 'Pay by card' }, otherwise: host.actsAs(repository.scriptedLlm({ cwd })) })
