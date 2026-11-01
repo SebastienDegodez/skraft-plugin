@@ -59,11 +59,6 @@ The session asks for extension access once: the probe approves it for its own fi
 | `canvas-open-from-extension` | — | from a tool call, the extension's joined session opens its own canvas with `session.rpc.canvas.open`: the host calls the extension's `open` with the input given (`{ tab: 'configuration' }`), checked against the canvas's `inputSchema` |
 | `canvas-reopen-other-tab` | — | reopening an open instance with another input calls the extension's open with that input; reports the url the host returns and keeps (listOpen) and its session.canvas.opened events |
 | `canvas-agent-tools` | — | the model gets no canvas tool without `requestCanvasRenderer`, and `list_canvas_capabilities`, `open_canvas`, `invoke_canvas_action` with it |
-| `mcp-tool-from-workflow` | #400 | inside a workflow run (after waiting, at most 15 s, until no probe server is `pending`; still pending, every MCP check is inconclusive), the extension's joined session lists the session's MCP servers (`rpc.mcp.list`) and a server's tools (`rpc.mcp.listTools`), calls a tool with `rpc.tools.execute({ name: '<server>-<tool>' })` and reads its result, with no model call; the session runs a dependency-free stdio MCP server the probe writes |
-| `mcp-permission-from-workflow` | #400 | an MCP tool without `readOnlyHint` called that way reaches the host's permission handler (`kind: 'mcp'`); approved it runs, rejected it returns `resultType: 'rejected'`; a read-only tool asks nothing |
-| `mcp-unavailable-from-workflow` | #400 | what the extension gets for a server not configured (`listTools` throws "not connected"), a server whose process exits (listed `failed`) and a tool that does not exist (`resultType: 'failure'`) |
-| `mcp-tool-error-from-workflow` | #400 | an MCP tool that answers `isError: true` comes back from `rpc.tools.execute` as `resultType: 'failure'` with its text |
-| `github-mcp-in-session` | #400 | `github-mcp-server` (Copilot's built-in GitHub MCP server, or the developer's of that name) is listed connected with tools; inconclusive otherwise, never failed: it hangs on the login and the machine's configuration |
 | `skraft-extension-loaded` | opens one on failure | `skraft_decide` is offered |
 | `skraft-workflow-registered` | opens one on failure | `skraft-pipeline` runs and refuses an invalid slug |
 | `unknown-arg-ignored` | #249 | an unknown workflow argument is silently ignored |
@@ -87,14 +82,6 @@ A check linked to an issue states the issue's premise: `pass` means the premise 
 the issue says. Paste the Markdown report into `docs/v2/host-verification.md`.
 
 Tests: `tests/tooling/host-probe/` runs the probe against a simulated SDK.
-
-Claude Code: `node eng/host-probe/claude-mod-mcp-trial.mjs [--claude <claude binary>] [--keep]` is a
-trial, not a check (#400, #422). It runs `claude -p` three times on a throwaway mod whose `prompt.submit` hook
-calls `$.mcp.call` on the probe's MCP server, writes what it got and drops the prompt, so no turn
-starts (the model it names does not exist); once with the read-only probe tools granted
-(`--allowedTools`), once with nothing granted, once with the server granted by `permissions.allow` in
-the project's `.claude/settings.json`. It prints what each call gave and the raw shape of the entries
-`$.tool.list()` returns.
 
 CI: `.github/workflows/copilot-host-smoke.yml` runs the probe on the pinned CLI with no login and no
 secret, and requires only the checks that hold without a login; the host refuses every workflow

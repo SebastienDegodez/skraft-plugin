@@ -23,7 +23,7 @@ $ gh auth login --hostname github.com
 ```
 
 Remplacez `github.com` par l'hôte de votre GitHub Enterprise le cas échéant. skraft lance `gh`
-avec `--repo <hôte>/<owner>/<dépôt>` d'après l'URL du remote. Quand l'hôte a un serveur MCP GitHub connecté, le moteur passe d'abord par lui pour l'issue et la pull request, et se replie sur `gh` quand le serveur est absent ou échoue, jamais quand vous ou l'hôte refusez un outil ([serveur MCP GitHub d'abord](../reference/skraft-config.md#github-mcp-server-first-gh-as-fallback)) ; le journal du run dit par quelle voie chaque opération est passée.
+avec `--repo <hôte>/<owner>/<dépôt>` d'après l'URL du remote. Le moteur lit l'issue et ouvre la pull request par `gh` seulement, jamais par un serveur MCP ([GitHub par gh](../reference/skraft-config.md#github-through-gh)). Consentement donné, une forge que `gh` ne peut pas joindre arrête le run dès son démarrage, avant le premier agent, par une question environment : réparez (`gh auth login`), puis répondez RETRY.
 
 ## 2. Donner le consentement
 
@@ -70,7 +70,7 @@ La description commence par `Refs #<issue>` ; `Closes #<issue>` seulement quand 
 - **Tests** montre le plan de test écrit par DISTILL (`details/<date>/test-plan-<slug>.md`) ; **Consistency matrix** les matrices écrites par DESIGN (`details/<date>/consistency-matrix-<story>.md`, toutes celles de la dernière tentative qui en a écrit). Un fichier absent du dossier de suivi, ou vide, est signalé par un texte fixe.
 - Ces fichiers sont écrits par des agents : ils sont neutralisés avant d'entrer dans la description. Les blocs de code restent tels quels ; partout ailleurs, code en ligne compris, les commentaires et balises HTML sont retirés, les titres `#` à `###` descendent au niveau 4, et chaque mot-clé de fermeture avec sa référence, chaque `@mention` et chaque `#12` nu passent en code. Seul un bloc ouvert en colonne 0 est un bloc de code ; un bloc laissé ouvert est retiré avec ce qui suit.
 - En dessous de la limite de la forge, tout reste dans la description (GitHub jusqu'à 60 000 caractères, Azure DevOps jusqu'à 4 000) et aucun commentaire n'est écrit. Au-delà, la description garde ce qui décide (What changes, Why, Decisions applied, Out of scope, et toute section ouverte sur une gate échouée ou un constat pour un humain) et finit par une ligne fixe qui renvoie aux commentaires. Les autres sections vont dans un commentaire de la pull request intitulé `skraft · run details` (`skraft · détails du run` pour une histoire en français : le moteur distingue le français de l'anglais d'après le titre et le corps de l'issue ou du work item qu'il a gardés, l'anglais quand il ne peut pas trancher). Une section n'est jamais coupée entre deux commentaires : quand un commentaire ne suffit pas (60 000 caractères sur GitHub, 140 000 sur Azure DevOps, non mesuré), les détails vont dans des parties intitulées `skraft · détails du run 1/2`, `2/2`, et une partie devenue inutile est vidée, jamais supprimée. Chaque partie est réécrite en place à la publication suivante, et seulement quand son texte a changé. Une section plus longue qu'une partie est coupée avec une marque ; ce qui décide n'est coupé de la même façon que s'il dépasse à lui seul la limite de la description.
-- Sur GitHub, le commentaire est un commentaire d'issue de la pull request. Sur Azure DevOps, c'est un fil de la pull request, posté `Closed` pour qu'une politique de branche sur la résolution des commentaires ne soit pas bloquée, par le serveur MCP Azure DevOps de l'hôte d'abord (`repo_repository`, `repo_pull_request_thread`, `repo_pull_request_thread_write`), puis `az devops invoke`. Une lecture ou une écriture que l'hôte refuse est définitive, sur les deux forges : elle n'est jamais retentée avec `gh` ni `az`, et le run le dit.
+- Sur GitHub, le commentaire est un commentaire d'issue de la pull request. Sur Azure DevOps, c'est un fil de la pull request, posté `Closed` pour qu'une politique de branche sur la résolution des commentaires ne soit pas bloquée, par `az devops invoke`.
 - Un commentaire est retrouvé par le marqueur qui l'ouvre, jamais par un marqueur cité plus loin : une réponse qui cite le marqueur n'est pas réécrite.
 - Quand le commentaire ne peut pas être gardé, la pull request est tout de même publiée : le run le dit, `pull-request.md` garde toute la description, et `skraft publish` garde les détails une fois la cause corrigée.
 - Une partie dont le texte n'a pas changé n'est pas réécrite, et skraft ne demande pas à la forge si son commentaire existe encore : un commentaire supprimé à la main est posté de nouveau au prochain changement des détails.
@@ -184,8 +184,7 @@ DevOps refuse de lier n'empêche pas d'ouvrir la pull request : elle s'ouvre san
 raison du run le dit. Sous Windows, `az` ne s'exécute que depuis l'installeur du CLI Azure (MSI ou
 winget) : skraft lance lui-même son Python, pour qu'aucun shell ne lise le titre, et refuse tout
 autre `az.cmd` ou `az.bat` (pip, scoop). Le run lit la story dans son work item Azure Boards et
-tient son avancement dans un seul commentaire sur lui, par le serveur MCP Azure DevOps de l'hôte
-d'abord, `az` en repli, jamais quand vous ou l'hôte refusez un outil ([Forge](../reference/skraft-config.md#azure-devops-mcp-server-first-az-as-fallback)) ;
+tient son avancement dans un seul commentaire sur lui, par `az` seulement ([Forge](../reference/skraft-config.md#azure-devops-through-az)) ;
 skraft ne revoit pas encore ses pull requests.
 `skraft doctor` dit quelle forge un run utilise, sur sa ligne `forge`.
 
