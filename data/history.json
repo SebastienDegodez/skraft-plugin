@@ -4441,33 +4441,6 @@
     ],
     "acceptance-designer": [
       {
-        "id": "39173039115:agent:acceptance-designer:2026-10-18T22:45:36.181Z",
-        "timestamp": "2026-10-18T22:45:36.181Z",
-        "commit": "3d413f7349b87ec592b80543de5f0cbc38babe74",
-        "run": "39173039115",
-        "url": "https://github.com/SebastienDegodez/skraft-plugin/actions/runs/39173039115",
-        "runner": "vally-agent",
-        "model": "claude-sonnet-5.5",
-        "judgeModel": "none",
-        "state": "pass",
-        "reason": "conforms on every trial (9/9 at or above 0.9)",
-        "descriptorSha": "ddac1d90c5ca3276c0765a98b0674dc036544c7488b5907ab9c15da424dacd11",
-        "netWin": 1,
-        "trialCount": 9,
-        "meanScore": 1,
-        "confidenceInterval": {
-          "low": null,
-          "high": null
-        },
-        "signTest": {
-          "wins": 0,
-          "ties": 0,
-          "losses": 0,
-          "pValue": null
-        },
-        "metrics": null
-      },
-      {
         "id": "39457690106:agent:acceptance-designer:2026-10-20T16:35:06.220Z",
         "timestamp": "2026-10-20T16:35:06.220Z",
         "commit": "e5001a3ae2929e48bce73f3cbbcd360c1e58bc3f",
@@ -4698,6 +4671,33 @@
         "netWin": 0.7777777777777778,
         "trialCount": 9,
         "meanScore": 0.958,
+        "confidenceInterval": {
+          "low": null,
+          "high": null
+        },
+        "signTest": {
+          "wins": 0,
+          "ties": 0,
+          "losses": 0,
+          "pValue": null
+        },
+        "metrics": null
+      },
+      {
+        "id": "41282851895:agent:acceptance-designer:2026-11-01T07:03:38.494Z",
+        "timestamp": "2026-11-01T07:03:38.494Z",
+        "commit": "29a84098a303c3fa640c422da81fd7ec64e247af",
+        "run": "41282851895",
+        "url": "https://github.com/SebastienDegodez/skraft-plugin/actions/runs/41282851895",
+        "runner": "vally-agent",
+        "model": "claude-sonnet-5.5",
+        "judgeModel": "none",
+        "state": "pass",
+        "reason": "conforms on every trial (9/9 at or above 0.9)",
+        "descriptorSha": "25894a6f1880340ca5274a910d57b528e24c6f596651509399ae05292f20d069",
+        "netWin": 1,
+        "trialCount": 9,
+        "meanScore": 1,
         "confidenceInterval": {
           "low": null,
           "high": null
