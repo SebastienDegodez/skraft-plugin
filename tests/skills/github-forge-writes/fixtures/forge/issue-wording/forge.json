@@ -1,0 +1,30 @@
+{
+  "repo": "skraft-eval-sandbox/shop",
+  "viewer": {
+    "login": "skraft-bot",
+    "id": 5001
+  },
+  "nextId": 960,
+  "items": {
+    "42": {
+      "number": 42,
+      "title": "Pay by card at checkout",
+      "state": "open",
+      "body": "## Acceptance criteria\n\n- The shopper can pay by card.\n",
+      "user": {
+        "login": "mlopez",
+        "id": 7001
+      },
+      "labels": [
+        {
+          "name": "type/feature"
+        }
+      ],
+      "assignees": [],
+      "milestone": null
+    }
+  },
+  "comments": {
+    "42": []
+  }
+}
