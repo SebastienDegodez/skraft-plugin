@@ -93,7 +93,11 @@ You plan Domain unit tests; you never write them: the domain emerges from the en
 
    `Extraction Reason` is `—` on a non-Domain row; `branch_unreachable_via_AC` (Mandate 4 gate a) or `combinatorial_economy` (gate b) on every planned Domain unit test. Pick a Walking Skeleton strategy (A/B/C/D) per feature.
 
-   A scenario whose case a test listed under `Existing tests` already covers gets no new test: its row's Scenario cell is `{name} — covered by {test file} {test name}`, its `Layer` the existing test's, its `Priority` `existing`, and it gets no implementation-plan step. Every row `existing` → blocked, the summary naming each existing test and the scenario it covers.
+   A row is `existing` only when both hold, otherwise plan a new test for the scenario:
+   - the test it cites is a row of the research document's `Existing tests` and covers the scenario's case;
+   - you ran that test once, filtered to it, with the component's test command, and it passed.
+
+   An `existing` row: Scenario cell `{name} — covered by {test file} {test name}; ran \`{filtered command}\`: passed`, `Layer` the existing test's, `Priority` `existing`, no implementation-plan step. Every row `existing` → blocked, the summary naming each existing test and the scenario it covers.
 5. **Implementation plan.** Outside-in order, one slice per step, every scenario of the story in the `.feature` without an `existing` row covered; the software-engineer runs the steps without re-planning. Each step names:
    - the scenario and its test-plan row;
    - the file to create (`tests/…` or `src/…`);

@@ -23,7 +23,7 @@ Read the skill file your brief lists under Skill before any other input; judge w
 
 | Gate | Criterion | Severity |
 |---|---|---|
-| G7 | Every scenario in the test plan targets the Application use case the contracts name, except a row whose `Priority` is `existing`. | blocker |
+| G7 | Every scenario in the test plan targets the Application use case the contracts name, except a row whose `Priority` is `existing` and whose Scenario cell names the covering test (file and test name), the filtered command that ran it and its result `passed`; an `existing` row missing one of the three, or with another result, is a finding. | blocker |
 | G8 | The test plan identifies at least one walking-skeleton scenario per feature flow. | high |
 | E1 | The acceptance test drives only that use case: it never calls, constructs or asserts on a domain internal, a repository implementation or an infrastructure class directly. | blocker |
 | E2 | Test doubles replace only dependencies at the outer edge (external systems, clock, file or network access); never a domain object or the use case under test. The skeleton DISTILL writes in the production code is the real module, not a double. | high |
