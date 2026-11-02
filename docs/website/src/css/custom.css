@@ -130,7 +130,13 @@
   width: 100%;
 }
 
+/* Words break only when longer than the column: `anywhere` would let a column shrink to one letter. */
 .theme-doc-markdown :is(td, th) {
+  min-width: 6ch;
+  overflow-wrap: break-word;
+}
+
+.theme-doc-markdown :is(td, th) code {
   overflow-wrap: anywhere;
 }
 
