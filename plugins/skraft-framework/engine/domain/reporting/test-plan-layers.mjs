@@ -1,7 +1,9 @@
 /**
  * How many rows of the run's test plans sit on the Domain layer, and how many are acceptance rows
  * (Application and E2E): the rows of each Markdown table whose header names a `Layer` column next
- * to a `Scenario` column, the test plan's own table; a totals table has no Scenario column.
+ * to a `Scenario` column, the test plan's own table; a totals table has no Scenario column. A
+ * Domain row whose `Priority` is `existing` plans no new test: an existing one covers it, so it
+ * is not counted.
  *
  * @typedef {{ path: string, text: string }} TrackedDocument
  * @typedef {{ domain: number, acceptance: number }} LayerCounts
@@ -9,21 +11,28 @@
 
 const ACCEPTANCE = Object.freeze(['application', 'e2e'])
 
+/** @typedef {{ layer: string | undefined, priority: string | undefined }} PlanRow the Layer and Priority cells of a row, lower case; undefined for a cell the row lacks */
+
 /** @param {TrackedDocument[]} documents @returns {LayerCounts} */
 export const layerCounts = (documents) => {
-  const layers = documents.flatMap(({ text }) => planLayers(text.split('\n')))
+  const rows = documents.flatMap(({ text }) => planRows(text.split('\n')))
   return {
-    domain: layers.filter((layer) => layer === 'domain').length,
-    acceptance: layers.filter((layer) => ACCEPTANCE.includes(layer)).length,
+    domain: rows.filter(({ layer, priority }) => layer === 'domain' && priority !== 'existing').length,
+    acceptance: rows.filter(({ layer }) => ACCEPTANCE.includes(/** @type {string} */ (layer))).length,
   }
 }
 
-/** The Layer cell of each row of each test-plan table, lower case. @param {string[]} lines @returns {string[]} */
-const planLayers = (lines) => lines.flatMap((line, index) => {
+/** The Layer and Priority cells of each row of each test-plan table. @param {string[]} lines @returns {PlanRow[]} */
+const planRows = (lines) => lines.flatMap((line, index) => {
   const header = isRow(line) ? cellsOf(line).map((cell) => cell.toLowerCase()) : []
-  const column = header.indexOf('layer')
-  return column >= 0 && header.includes('scenario') ? rowsAfter(lines, index + 1).map((row) => (cellsOf(row)[column] ?? '').toLowerCase()) : []
+  return header.includes('layer') && header.includes('scenario') ? rowsAfter(lines, index + 1).map((row) => rowOf(header, row)) : []
 })
+
+/** @param {string[]} header @param {string} row @returns {PlanRow} */
+const rowOf = (header, row) => {
+  const cells = cellsOf(row).map((cell) => cell.toLowerCase())
+  return { layer: cells[header.indexOf('layer')], priority: cells[header.indexOf('priority')] }
+}
 
 /** The rows of the table whose header is just before `from`, up to its first line that is not a row. @param {string[]} lines @param {number} from */
 const rowsAfter = (lines, from) => {

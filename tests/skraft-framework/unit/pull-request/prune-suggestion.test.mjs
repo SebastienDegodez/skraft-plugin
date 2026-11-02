@@ -10,13 +10,19 @@ const TEST_PLAN = `details/2026-10-11/test-plan-${SLUG}.md`
 const PRUNE_LINE = 'To find the tests that kill no mutant on their own, the developer runs `/skraft:prune-tests` on a component; it proposes, the developer decides each test.'
 const HEADING = 'More Domain tests than acceptance tests'
 
-/** A test plan whose rows sit on the layers given, one row each. @param {string[]} layers */
+/**
+ * A test plan whose rows sit on the layers given, one row each; a layer written `Layer:priority`
+ * gives that row its Priority, P1 otherwise. @param {string[]} layers
+ */
 const planOf = (layers) => [
   '# Test plan — checkout',
   '',
   '| Scenario | Use Case Boundary | Layer | Double Type | Walking Skeleton | Extraction Reason | Priority |',
   '|---|---|---|---|---|---|---|',
-  ...layers.map((layer, n) => `| Scenario ${n + 1} | PayByCard | ${layer} | none | — | — | P1 |`),
+  ...layers.map((spec, n) => {
+    const [layer, priority = 'P1'] = spec.split(':')
+    return `| Scenario ${n + 1} | PayByCard | ${layer} | none | — | — | ${priority} |`
+  }),
 ].join('\n')
 
 /** The body of the pull request a run publishes once its test plan says what the layers give. @param {string | null} plan */
@@ -53,6 +59,13 @@ test('Application and E2E rows both count as acceptance rows: as many Domain row
 
     assert.equal(opening(body, HEADING), undefined, layers.join(', '))
   }
+})
+
+test('a Domain row an existing test already covers plans no new Domain test: it leaves the count, and the suggestion stays folded', async () => {
+  const body = await publishedWith(planOf(['Application', 'Domain:P2', 'Domain:existing', 'Domain: Existing ', 'E2E:existing']))
+
+  assert.equal(opening(body, HEADING), undefined, body)
+  assert.ok(section(body, 'Run summary').endsWith(`\n\n${PRUNE_LINE}`), section(body, 'Run summary'))
 })
 
 test('only the rows of a table with a Layer column count: prose, other tables and the totals table say nothing', async () => {
