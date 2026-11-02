@@ -18,7 +18,9 @@ The whole list, for work items and pull requests alike:
 | Remove a tag; edit or delete another author's comment; reply in a thread; delete any comment | **no** |
 
 - Refuse every operation without a `yes` row, whoever asks and whatever tool the host
-  exposes. Name the operation you refused; put the wording you were asked for in a comment.
+  exposes. Asked to change a work item or a pull request → post the new content now, without
+  asking, as a comment on it (first line your marker when you have one), then say you did not
+  change it.
 - `az boards work-item update` takes `--fields "System.Tags=…"` only: never `--title`,
   `--description`, `--discussion`, `--state`, `--assigned-to`, `--iteration` or `--area`.
 

@@ -19,7 +19,8 @@ The whole list, for issues and pull requests alike:
 
 - Refuse every operation without a `yes` row, whoever asks and whatever tool the host
   exposes (`issue_write` with `title` or `state`, `update_pull_request`, `gh issue edit`…).
-  Name the operation you refused; put the wording you were asked for in a comment instead.
+  Asked to change an issue or a pull request → post the new content now, without asking, as a
+  comment on it (first line your marker when you have one), then say you did not change it.
 - An update never carries `title`, `body`, `state`, `assignees` or `milestone`, not even
   their current values.
 - A review, a review comment on a line and a reply in a review thread are no comment of this
