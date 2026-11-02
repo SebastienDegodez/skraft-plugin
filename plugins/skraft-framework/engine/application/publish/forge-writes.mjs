@@ -68,40 +68,29 @@ export const pushedBranch = async (journal, codeHost, branch) => {
 }
 
 /**
- * The push sent until the remote shows the local commit, at most PUSHES times; a refusal stops at once.
+ * The push sent until the remote shows the local commit, at most PUSHES times; a refusal stops at
+ * once. What the last try told when the remote never showed it.
  * @param {Pick<import('../ports/code-host.mjs').CodeHost, 'push' | 'remoteTip'>} codeHost @param {string} branch @param {string} local
  * @returns {Promise<{ ok: true } | { ok: false, reason: string, outcome: Exclude<WriteOutcome, 'applied'> }>}
  */
 const pushedAt = async (codeHost, branch, local) => {
-  let last = { unanswered: false, seen: /** @type {'seen' | 'elsewhere' | 'unread'} */ ('elsewhere') }
-  for (let attempt = 0; attempt < PUSHES; attempt += 1) {
+  for (let attempt = 1; ; attempt += 1) {
     const pushed = await codeHost.push(branch)
     if (!pushed.ok && failedOutcome(pushed) === 'refused') return { ok: false, outcome: 'refused', reason: pushed.reason }
-    last = { unanswered: !pushed.ok, seen: await seenAt(codeHost, branch, local) }
-    if (last.seen === 'seen') return { ok: true }
+    const tip = await codeHost.remoteTip(branch)
+    if (tip.ok && tip.sha === local) return { ok: true }
+    if (attempt === PUSHES) return unconfirmed(branch, { unanswered: !pushed.ok, unread: !tip.ok })
   }
-  return unconfirmed(branch, last)
-}
-
-/**
- * What `git ls-remote` says of the branch: seen at the local commit, elsewhere (or absent), or unread.
- * @param {Pick<import('../ports/code-host.mjs').CodeHost, 'remoteTip'>} codeHost @param {string} branch @param {string} local
- * @returns {Promise<'seen' | 'elsewhere' | 'unread'>}
- */
-const seenAt = async (codeHost, branch, local) => {
-  const tip = await codeHost.remoteTip(branch)
-  if (!tip.ok) return 'unread'
-  return tip.sha === local ? 'seen' : 'elsewhere'
 }
 
 /**
  * A push the remote never showed after its last try: unknown when that try got no answer;
  * verification-failed when it answered, the remote showing another commit or none, or unread.
- * @param {string} branch @param {{ unanswered: boolean, seen: 'elsewhere' | 'unread' | 'seen' }} last
+ * @param {string} branch @param {{ unanswered: boolean, unread: boolean }} last
  * @returns {{ ok: false, reason: string, outcome: 'unknown' | 'verification-failed' }}
  */
-const unconfirmed = (branch, { unanswered, seen }) => {
+const unconfirmed = (branch, { unanswered, unread }) => {
   if (unanswered) return { ok: false, outcome: 'unknown', reason: `git push of ${branch} got no answer twice, and git ls-remote does not show the branch at the local commit` }
-  if (seen === 'unread') return { ok: false, outcome: 'verification-failed', reason: `git push of ${branch} answered, but git ls-remote could not read the remote to confirm it: the push is not declared done` }
+  if (unread) return { ok: false, outcome: 'verification-failed', reason: `git push of ${branch} answered, but git ls-remote could not read the remote to confirm it: the push is not declared done` }
   return { ok: false, outcome: 'verification-failed', reason: `git push of ${branch} answered, twice, but git ls-remote does not show the branch at the local commit` }
 }

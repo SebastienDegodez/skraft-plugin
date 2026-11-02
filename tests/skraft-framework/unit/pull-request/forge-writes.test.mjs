@@ -179,3 +179,34 @@ for (const forge of Object.keys(FORGES)) {
     assert.equal(lastReason(host), notOpened(reason))
   })
 }
+
+for (const forge of Object.keys(FORGES)) {
+  test(`${forge}: a run that stopped between the start of its opening and any answer resumes on the pull request it opened, never opening another`, async () => {
+    const codeHost = FORGES[forge]()
+    const create = codeHost.create.bind(codeHost)
+    codeHost.create = async (request) => {
+      await create(request)
+      throw new TypeError('the machine stopped')
+    }
+    const host = scripted({ config: CONSENTED, codeHost, forge, ...(REMOTES[forge] ? { git: new InMemoryGit({ remote: REMOTES[forge] }) } : {}) }, (it) => nominal(it, REFS_42))
+    await assert.rejects(host.start(STORY), TypeError)
+    assert.deepEqual(writes(host).filter(([write]) => write.startsWith('pull-request')), [], 'the opening started and was never told')
+    codeHost.create = create
+
+    assert.equal((await host.run()).status, 'done')
+
+    assert.equal(host.codeHost.calls.filter((call) => call.startsWith('create ')).length, 1)
+    assert.match(lastReason(host), /^found again after an opening that was cut; pull request #42 /)
+  })
+
+  test(`${forge}: an update the forge does not show when the pull request is read back by its number is verification-failed, never updated`, async () => {
+    const { host } = await runOn(forge, { unseen: ['edit'] })
+    const prose = host.events().find((event) => event.type === 'step.started' && event.step === 'pr_writer').outputs[0]
+    await host.tracking.write(SLUG, prose, (await host.tracking.read(SLUG, prose)).replace('Refunds are out of scope.', 'Refunds stay out of scope.'))
+
+    const reason = 'the forge said it updated pull request #42, but reading it back does not show the new body'
+    assert.equal((await host.publish()).reason, notOpened(reason))
+    assert.deepEqual(writes(host).at(-1), ['pull-request-edit', '42', 'verification-failed', reason])
+    assert.deepEqual(eventsOf(host, 'pull-request.updated'), [])
+  })
+}
