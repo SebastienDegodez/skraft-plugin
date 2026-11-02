@@ -130,8 +130,31 @@
   width: 100%;
 }
 
+/* Words break only when longer than the column: `anywhere` would let a column shrink to one letter. */
 .theme-doc-markdown :is(td, th) {
+  min-width: 6ch;
+  overflow-wrap: break-word;
+}
+
+.theme-doc-markdown :is(td, th) code {
   overflow-wrap: anywhere;
+}
+
+/* Below the desktop layout, six columns of 6ch overflow a 375px screen (measured on reference/phases). */
+@media (max-width: 996px) {
+  .theme-doc-markdown table {
+    --ifm-table-cell-padding: 0.5rem;
+  }
+
+  .theme-doc-markdown :is(td, th) {
+    min-width: 4.5ch;
+    overflow-wrap: anywhere;
+  }
+}
+
+/* main's deploy injects the v1 version select into every page; the navbar dropdown replaces it here. */
+body > select[aria-label='Documentation version'] {
+  display: none;
 }
 
 /* The search shortcut hint reads at AA on the navbar. */
