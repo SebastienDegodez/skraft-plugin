@@ -3,6 +3,12 @@
 Toutes les modifications notables de ce projet sont documentées ici.
 Format basé sur [Conventional Commits](https://www.conventionalcommits.org/) — versionnage [SemVer](https://semver.org/).
 
+## [2.0.0-alpha.53](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.52...v2.0.0-alpha.53) (2026-11-02)
+
+### ✨ Features
+
+* **skills:** agents write to the forge only through github-forge-writes and azure-devops-forge-writes ([#487](https://github.com/SebastienDegodez/skraft-plugin/issues/487)) ([d9feed2](https://github.com/SebastienDegodez/skraft-plugin/commit/d9feed2730772c414f75009be4ca7919411a4a30)), closes [#474](https://github.com/SebastienDegodez/skraft-plugin/issues/474) [#474](https://github.com/SebastienDegodez/skraft-plugin/issues/474) [#474](https://github.com/SebastienDegodez/skraft-plugin/issues/474) [#474](https://github.com/SebastienDegodez/skraft-plugin/issues/474) [#474](https://github.com/SebastienDegodez/skraft-plugin/issues/474) [#474](https://github.com/SebastienDegodez/skraft-plugin/issues/474) [#42](https://github.com/SebastienDegodez/skraft-plugin/issues/42) [#474](https://github.com/SebastienDegodez/skraft-plugin/issues/474)
+
 ## [2.0.0-alpha.52](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.51...v2.0.0-alpha.52) (2026-11-02)
 
 ### ✨ Features
