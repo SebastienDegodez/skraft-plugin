@@ -25,6 +25,6 @@ export const codeThemeLight = theme(
 )
 
 export const codeThemeDark = theme(
-  { color: '#eef6ff', backgroundColor: '#152231' },
+  { color: '#e9f7ef', backgroundColor: '#13221e' },
   { comment: '#9198a1', string: '#a5d6ff', constant: '#79c0ff', keyword: '#ff7b72', function: '#d2a8ff', tag: '#7ee787', parameter: '#ffa657' },
 )
