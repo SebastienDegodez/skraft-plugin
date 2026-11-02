@@ -128,8 +128,11 @@ Lancez **Chat: Open Customizations**, onglet **Browse**, cherchez le nom du plug
 Installez la commande une fois par machine, sous sh comme sous PowerShell (Node 22 ou plus) :
 
 ```console
-$ npm i -g @skraft/cli
+$ npm i -g @skraft/cli@alpha
 ```
+
+Jusqu'à skraft 2.0.0, la commande est publiée sous le tag npm `alpha` : sans lui, npm installe une
+alpha plus ancienne. `skraft upgrade` garde ensuite la commande sur ce tag.
 
 npm place `skraft` dans son dossier global, déjà présent dans votre PATH (avec un `skraft.cmd`
 sous Windows). Le paquet ne contient aucun moteur : à chaque appel, `skraft` trouve le plugin que
@@ -150,6 +153,7 @@ commande.
 Lancez ensuite `skraft doctor`. Dans un dépôt pas encore configuré :
 
 ```text
+ok    plugin: skraft 2.0.0-alpha.…
 ok    node: Node v22.…
 FAIL  config: no skraft-config.json; run skraft init to detect the components
 ok    vscode: …

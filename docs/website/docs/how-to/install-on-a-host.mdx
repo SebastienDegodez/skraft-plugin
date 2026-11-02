@@ -125,8 +125,11 @@ Run **Chat: Open Customizations**, **Browse** tab, search for the plugin's name,
 Install the command once per machine, under sh as under PowerShell (Node 22 or later):
 
 ```console
-$ npm i -g @skraft/cli
+$ npm i -g @skraft/cli@alpha
 ```
+
+Until skraft 2.0.0, the command is published under the npm tag `alpha`: without it, npm installs
+an older alpha. `skraft upgrade` then keeps the command on that tag.
 
 npm puts `skraft` in its global folder, which is already in your PATH (with a `skraft.cmd` on
 Windows). The package holds no engine: at each call, `skraft` finds the plugin your host
@@ -146,6 +149,7 @@ that answered (`plugin: copilot …`). The other guides write `skraft <command>`
 Then run `skraft doctor`. In a repository not configured yet:
 
 ```text
+ok    plugin: skraft 2.0.0-alpha.…
 ok    node: Node v22.…
 FAIL  config: no skraft-config.json; run skraft init to detect the components
 ok    vscode: …
