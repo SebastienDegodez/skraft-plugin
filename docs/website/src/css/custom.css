@@ -232,7 +232,8 @@ kbd[class*='searchHint'] {
   margin: 1rem 0 2rem;
 }
 
-.skraft-door {
+.skraft-door,
+.skraft-plugin {
   display: block;
   padding: 1rem 1.25rem;
   border: 1px solid var(--skraft-card-border);
@@ -242,19 +243,22 @@ kbd[class*='searchHint'] {
   text-decoration: none;
 }
 
-.skraft-door:hover {
+.skraft-door:hover,
+.skraft-plugin:hover {
   border-color: var(--ifm-color-primary);
   color: var(--ifm-font-color-base);
   text-decoration: none;
 }
 
-.skraft-door strong {
+.skraft-door strong,
+.skraft-plugin strong {
   display: block;
   margin-bottom: 0.25rem;
   color: var(--ifm-color-primary);
   font-size: 1.1rem;
 }
 
-.skraft-door span {
+.skraft-door span,
+.skraft-plugin span {
   color: var(--ifm-color-emphasis-700);
 }
