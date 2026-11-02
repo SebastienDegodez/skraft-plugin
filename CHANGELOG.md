@@ -3,6 +3,19 @@
 Toutes les modifications notables de ce projet sont documentées ici.
 Format basé sur [Conventional Commits](https://www.conventionalcommits.org/) — versionnage [SemVer](https://semver.org/).
 
+## [2.0.0-alpha.54](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.53...v2.0.0-alpha.54) (2026-11-02)
+
+### 🐛 Bug Fixes
+
+* **engine:** double braces the template did not hold no longer make an output missing ([#497](https://github.com/SebastienDegodez/skraft-plugin/issues/497)) ([fb8334d](https://github.com/SebastienDegodez/skraft-plugin/commit/fb8334dbcf55b8900e1eefad9785df5d5a97684a))
+
+### 📝 Documentation
+
+* **docs-site:** dark by default, readable tables, home page as three plugins ([#495](https://github.com/SebastienDegodez/skraft-plugin/issues/495)) ([06715ca](https://github.com/SebastienDegodez/skraft-plugin/commit/06715ca915bc975b045ed7a28c67b5c03040d927))
+* **docs-site:** dark mode takes the first handbook's green Tech Glass palette ([#482](https://github.com/SebastienDegodez/skraft-plugin/issues/482)) ([c8e97bc](https://github.com/SebastienDegodez/skraft-plugin/commit/c8e97bcbb5869bf9bc5b18c9b64084deecb27a53)), closes [#0e1618](https://github.com/SebastienDegodez/skraft-plugin/issues/0e1618) [#e9f7ef](https://github.com/SebastienDegodez/skraft-plugin/issues/e9f7ef) [#4ed58a](https://github.com/SebastienDegodez/skraft-plugin/issues/4ed58a) [#8be5b1](https://github.com/SebastienDegodez/skraft-plugin/issues/8be5b1)
+* **docs-site:** the home page's plugin cards no longer count as Diátaxis doors ([#496](https://github.com/SebastienDegodez/skraft-plugin/issues/496)) ([bca2265](https://github.com/SebastienDegodez/skraft-plugin/commit/bca22657d84bb56ce4768e61842935dd382c8b0b))
+* **site:** install the skraft command from the npm tag alpha until 2.0.0 ([#494](https://github.com/SebastienDegodez/skraft-plugin/issues/494)) ([fa8034d](https://github.com/SebastienDegodez/skraft-plugin/commit/fa8034d32c334d06ceb63b9a971d50fc1b3884be))
+
 ## [2.0.0-alpha.53](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.52...v2.0.0-alpha.53) (2026-11-02)
 
 ### ✨ Features
