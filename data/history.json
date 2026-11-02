@@ -4515,33 +4515,6 @@
     ],
     "acceptance-designer": [
       {
-        "id": "39457690106:agent:acceptance-designer:2026-10-20T16:35:06.220Z",
-        "timestamp": "2026-10-20T16:35:06.220Z",
-        "commit": "e5001a3ae2929e48bce73f3cbbcd360c1e58bc3f",
-        "run": "39457690106",
-        "url": "https://github.com/SebastienDegodez/skraft-plugin/actions/runs/39457690106",
-        "runner": "vally-agent",
-        "model": "claude-sonnet-5.5",
-        "judgeModel": "none",
-        "state": "regression",
-        "reason": "broke conformance on 7 of 9 trial(s) (threshold 0.9)",
-        "descriptorSha": "67826845e07751fde6c313e47b6cf66adc60ef57c8509f68d1cf084918ff0d07",
-        "netWin": -0.5555555555555556,
-        "trialCount": 9,
-        "meanScore": 0.811,
-        "confidenceInterval": {
-          "low": null,
-          "high": null
-        },
-        "signTest": {
-          "wins": 0,
-          "ties": 0,
-          "losses": 0,
-          "pValue": null
-        },
-        "metrics": null
-      },
-      {
         "id": "39461034605:agent:acceptance-designer:2026-10-20T16:57:59.649Z",
         "timestamp": "2026-10-20T16:57:59.649Z",
         "commit": "d917657c3e3278ef400df3c1770babe39c7e54ff",
@@ -4772,6 +4745,33 @@
         "netWin": 1,
         "trialCount": 9,
         "meanScore": 1,
+        "confidenceInterval": {
+          "low": null,
+          "high": null
+        },
+        "signTest": {
+          "wins": 0,
+          "ties": 0,
+          "losses": 0,
+          "pValue": null
+        },
+        "metrics": null
+      },
+      {
+        "id": "41365285786:agent:acceptance-designer:2026-11-02T00:18:38.286Z",
+        "timestamp": "2026-11-02T00:18:38.286Z",
+        "commit": "cca9edcfc49ec136ec93f324882a355376d48a26",
+        "run": "41365285786",
+        "url": "https://github.com/SebastienDegodez/skraft-plugin/actions/runs/41365285786",
+        "runner": "vally-agent",
+        "model": "claude-sonnet-5.5",
+        "judgeModel": "none",
+        "state": "flaky",
+        "reason": "conforms on 19 of 20 trial(s); every scenario at or above 2/3 (threshold 0.9)",
+        "descriptorSha": "937a3bd4131744c81bfbe45a678b9b34a03570f5975a5f964a9da5eec55c3be7",
+        "netWin": 0.9,
+        "trialCount": 20,
+        "meanScore": 0.983,
         "confidenceInterval": {
           "low": null,
           "high": null
