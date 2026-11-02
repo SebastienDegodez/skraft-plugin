@@ -98,7 +98,7 @@ export default {
   ],
   customFields: { workflowRefs: { current: 'integration/v2-next', '2.x': 'v2.0.0' } },
   themeConfig: {
-    colorMode: { defaultMode: 'light', respectPrefersColorScheme: true },
+    colorMode: { defaultMode: 'dark', respectPrefersColorScheme: false },
     docs: { sidebar: { hideable: true, autoCollapseCategories: true } },
     tableOfContents: { minHeadingLevel: 2, maxHeadingLevel: 3 },
     zoom: { selector: '.theme-doc-markdown img:not(a img)', background: { light: 'rgba(255,255,255,0.92)', dark: 'rgba(22,25,31,0.92)' } },
