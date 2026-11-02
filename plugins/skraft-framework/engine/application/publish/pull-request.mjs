@@ -214,23 +214,29 @@ const pushAndOpen = async (deps, request, pull) => {
 const settled = async (deps, request, { pull, open }) => {
   const located = { ...pull, bodyFile: deps.files.location(request.slug, PULL_REQUEST_BODY_FILE), bodyHash: await hashOf(deps, pull.body) }
   const unsettled = unsettledOpening(request.journal.events, pull.target.head)
-  if (open.found === null) return unsettled ? notOpened(unsettledReason(pull.target.head)) : opened(deps, request, located)
+  if (open.found === null) return unsettled === null ? opened(deps, request, located) : notOpened(unsettledReason(pull.target.head))
   if (open.found.state !== 'open') return notOpened(`pull request #${open.found.number} of ${pull.target.head} is ${open.found.state}, and skraft opens no other one`)
-  const live = { ...located, found: open.found, liveHash: await hashOf(deps, open.found.body) }
-  return unsettled ? reconciled(deps, request, live) : updated(deps, request, live)
+  const whole = await deps.codeHost.readPullRequest(open.found.number)
+  if (!whole.ok || whole.found === null) return notOpened(whole.ok ? unreadReason(open.found.number) : whole.reason)
+  const live = { ...located, found: whole.found, liveHash: await hashOf(deps, whole.found.body) }
+  return unsettled === null ? updated(deps, request, live) : reconciled(deps, request, { ...live, sent: unsettled.bodyHash })
 }
 
+/** @param {number} number */
+const unreadReason = (number) => `pull request #${number} is listed by its branch, but the forge does not give it by its number`
+
 /**
- * Whether the last opening of the branch's pull request started and never settled: cut before
- * the forge answered, answered without an answer, or not shown when read back. A refusal settles
- * it: nothing was opened.
+ * The last opening of the branch's pull request when it started and never settled: cut before
+ * the forge answered, answered without an answer, or not shown when read back; null otherwise. A
+ * refusal settles it: nothing was opened.
  * @param {import('../../domain/journal/run-state.mjs').RunEvent[]} events @param {string} head
+ * @returns {import('../../domain/journal/run-state.mjs').RunEvent | null}
  */
 const unsettledOpening = (events, head) => {
   const started = events.findLastIndex((event) => event.type === CREATE_STARTED && event.head === head)
-  if (started === -1) return false
+  if (started === -1) return null
   const told = events.slice(started).findLast((event) => event.type === FORGE_WRITE && event.write === CREATE)
-  return told === undefined || UNSETTLED.includes(told.outcome)
+  return told === undefined || UNSETTLED.includes(told.outcome) ? events[started] : null
 }
 
 /** The outcomes of an opening that may have opened a pull request skraft never saw. */
@@ -243,12 +249,35 @@ const CREATE = 'pull-request-create'
 const unsettledReason = (head) => `an earlier opening of the pull request of ${head} was cut or not shown, and the forge lists none for ${head}: skraft opens no other one; open it by hand, or check the forge`
 
 /**
- * The pull request an unsettled opening left, found again by its head: journaled opened with the
- * body the forge holds, then brought up to date like any other.
- * @param {OnForge} deps @param {PublishRequest} request @param {Located & { found: { number: number, url: string }, liveHash: string }} pull
+ * The pull request an unsettled opening left, found again by its head: taken only when it comes
+ * from the repository skraft pushed to and holds the very description that opening sent, so that
+ * a pull request a human opened, or a fork's of the same branch name, is never written to; then
+ * journaled opened and brought up to date like any other.
+ * @param {OnForge} deps @param {PublishRequest} request
+ * @param {Located & { found: import('../ports/code-host.mjs').ReadPullRequest, liveHash: string, sent: string }} pull
  * @returns {Promise<Publication>}
  */
 const reconciled = async (deps, request, pull) => {
+  const refusal = foreignReason(pull)
+  return refusal === null ? adopted(deps, request, pull) : notOpened(refusal)
+}
+
+/**
+ * Why the pull request found is not the one the opening left; null when it is.
+ * @param {{ found: import('../ports/code-host.mjs').ReadPullRequest, target: Extract<Target, { ok: true }>, liveHash: string, sent: string }} pull
+ */
+const foreignReason = ({ found, target, liveHash, sent }) => {
+  if (found.fromFork) return `pull request #${found.number} of ${target.head} comes from a fork, not from the repository skraft pushed to: skraft writes nothing on it`
+  if (liveHash !== sent) return `pull request #${found.number} of ${target.head} does not hold the description skraft sent when it opened one, so skraft did not open it and does not overwrite it`
+  return null
+}
+
+/**
+ * The opening's pull request, journaled opened with the body it sent, then brought up to date.
+ * @param {OnForge} deps @param {PublishRequest} request @param {Located & { found: import('../ports/code-host.mjs').ReadPullRequest, liveHash: string }} pull
+ * @returns {Promise<Publication>}
+ */
+const adopted = async (deps, request, pull) => {
   const { found, target, liveHash } = pull
   await request.journal.append('pull-request.opened', { number: found.number, url: found.url, base: target.base, head: target.head, draft: request.config.publish.draft, bodyHash: liveHash, reconciled: true })
   await journalWrite(request.journal, { write: CREATE, subject: target.head }, { outcome: 'applied' })
@@ -293,7 +322,7 @@ const hashOf = ({ hasher }, body) => hasher.sha256(body.replace(/\r\n/g, '\n').t
 const opened = async ({ codeHost }, { journal, config }, { target, title, bodyFile, body, bodyHash }) => {
   const { base, head } = target
   const write = { write: CREATE, subject: head }
-  await journal.append(CREATE_STARTED, { base, head })
+  await journal.append(CREATE_STARTED, { base, head, bodyHash })
   const made = await codeHost.create({ base, head, title, bodyFile, body, draft: config.publish.draft, issue: deriveRun(journal.events).story?.issue ?? null })
   if (!made.ok) return unwritten(journal, write, made)
   if (!(await listed(codeHost, head, made.number))) return unwritten(journal, write, { reason: `the forge said it opened pull request #${made.number} of ${head}, but listing the pull requests of ${head} does not show it`, outcome: 'verification-failed' })
@@ -325,21 +354,21 @@ const unwritten = async (journal, write, failed) => {
  * @param {OnForge} deps @param {PublishRequest} request @param {Located & { found: { number: number, url: string }, liveHash: string }} pull
  * @returns {Promise<Publication>}
  */
-const updated = async (deps, { journal }, { found, target, bodyFile, body, bodyHash, liveHash }) => {
+const updated = async (deps, { journal }, { found, bodyFile, body, bodyHash, liveHash }) => {
   if (liveHash === bodyHash) return { published: true, number: found.number, reason: `pull request #${found.number} is up to date: ${found.url}` }
   if (lastHash(journal.events, found.number) !== liveHash) return notOpened(`pull request #${found.number} was edited since skraft last wrote its body, which stays as it is`)
   const write = { write: 'pull-request-edit', subject: String(found.number) }
   const edited = await deps.codeHost.edit({ number: found.number, bodyFile, body })
   if (!edited.ok) return unwritten(journal, write, edited)
-  if (!(await bodyShown(deps, target.head, bodyHash))) return unwritten(journal, write, { reason: `the forge said it updated pull request #${found.number}, but reading it back does not show the new body`, outcome: 'verification-failed' })
+  if (!(await bodyShown(deps, found.number, bodyHash))) return unwritten(journal, write, { reason: `the forge said it updated pull request #${found.number}, but reading it back does not show the new body`, outcome: 'verification-failed' })
   await journal.append('pull-request.updated', { number: found.number, url: found.url, bodyHash })
   await journalWrite(journal, write, { outcome: 'applied' })
   return { published: true, number: found.number, reason: `pull request #${found.number} updated: ${found.url}` }
 }
 
-/** Whether the branch's pull request, read back, holds the body of that hash. @param {OnForge} deps @param {string} head @param {string} bodyHash */
-const bodyShown = async (deps, head, bodyHash) => {
-  const read = await deps.codeHost.findPullRequest(head)
+/** Whether the pull request, read back by its number, holds the whole body of that hash. @param {OnForge} deps @param {number} number @param {string} bodyHash */
+const bodyShown = async (deps, number, bodyHash) => {
+  const read = await deps.codeHost.readPullRequest(number)
   return read.ok && read.found !== null && (await hashOf(deps, read.found.body)) === bodyHash
 }
 

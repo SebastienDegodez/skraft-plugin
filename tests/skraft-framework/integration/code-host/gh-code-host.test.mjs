@@ -30,6 +30,7 @@ const FAKE_GH = [
   "if (args[0] === 'issue' && state.issue === undefined) { process.stderr.write(`GraphQL: Could not resolve to an issue or pull request with the number of ${args[2]}. (repository.issue)\\n`); process.exit(1) }",
   "if (args[0] === 'issue' && state.issueFails) { process.stderr.write('SECRET-STDERR\\n'); process.exit(1) }",
   "if (args[0] === 'issue') said(typeof state.issue === 'string' ? state.issue : JSON.stringify(state.issue))",
+  "if (args[1] === 'view' && state.own !== undefined) { const pull = state.own[args[2]]; if (pull === undefined) { process.stderr.write(`GraphQL: Could not resolve to a PullRequest with the number of ${args[2]}.\\n`); process.exit(1) } said(typeof pull === 'string' ? pull : JSON.stringify(pull)) }",
   "if (args[1] === 'view' && state.pull === undefined) { process.stderr.write(`GraphQL: Could not resolve to a PullRequest with the number of ${args[2]}. (repository.pullRequest)\\n`); process.exit(1) }",
   "if (args[1] === 'view') said(typeof state.pull === 'string' ? state.pull : JSON.stringify(state.pull))",
   "if (args[0] === 'api') {",
@@ -450,4 +451,18 @@ test('a push is read back by git ls-remote where it goes, at the commit the bran
   forge.set({ readFails: true, comments: [{ id: 901, number: 42, login: 'sebastien', body: 'x' }] })
   assert.deepEqual(await host.readComment(kept.url), { ok: false, reason: `gh could not read back the comment at ${kept.url}` })
   assert.deepEqual(await repository(t, { remote: null }).codeHost().readComment(kept.url), { ok: false, reason: 'the working copy has no Git remote whose URL names a host and a repository' })
+})
+
+test('a pull request the run opened is read back by its number through gh pr view, its body whole, and whether it comes from a fork', async (t) => {
+  const { forge, codeHost } = repository(t)
+  const host = codeHost()
+  const own = { number: 7, url: 'https://github.example.com/acme/payment/pull/7', state: 'OPEN', body: 'Paid.', headRefName: 'checkout', isCrossRepository: false }
+  forge.set({ own: { 7: own, 8: { ...own, number: 8, isCrossRepository: true }, 9: 'Not JSON', 10: { ...own, number: 10, body: null } } })
+
+  assert.deepEqual(await host.readPullRequest(7), { ok: true, found: { number: 7, url: own.url, state: 'open', body: 'Paid.', head: 'checkout', fromFork: false } })
+  assert.deepEqual(forge.calls().at(-1), ['pr', 'view', '7', '--repo=github.example.com/acme/payment', '--json=number,url,state,body,headRefName,isCrossRepository'])
+  assert.equal((await host.readPullRequest(8)).found.fromFork, true)
+  assert.deepEqual(await host.readPullRequest(11), { ok: true, found: null })
+  for (const number of [9, 10]) assert.deepEqual(await host.readPullRequest(number), { ok: false, reason: `gh could not read pull request #${number} of github.example.com/acme/payment` })
+  assert.deepEqual(await repository(t, { remote: null }).codeHost().readPullRequest(7), { ok: false, reason: 'the working copy has no Git remote whose URL names a host and a repository' })
 })

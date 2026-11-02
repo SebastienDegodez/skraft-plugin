@@ -11,7 +11,7 @@ const notOpened = (why) => `pull request not opened: ${why}; pull-request.md hol
 /** GitHub's forge, or Azure DevOps' with its limits, its link and its pages: the same guarantees on both. */
 const FORGES = {
   github: (more = {}) => new InMemoryCodeHost(more),
-  'azure-devops': (more = {}) => new InMemoryCodeHost({ bodyLimit: 4_000, commentLimit: 140_000, takesRequestFile: true, link: (issue, closes) => `${closes ? 'Fixes ' : ''}#${issue}`, pages: 'https://dev.azure.com/acme/Shop%20Team/_git/payment', repository: null, ...more }),
+  'azure-devops': (more = {}) => new InMemoryCodeHost({ listBodyLimit: 400, bodyLimit: 4_000, commentLimit: 140_000, takesRequestFile: true, link: (issue, closes) => `${closes ? 'Fixes ' : ''}#${issue}`, pages: 'https://dev.azure.com/acme/Shop%20Team/_git/payment', repository: null, ...more }),
 }
 const REMOTES = { github: undefined, 'azure-devops': 'https://dev.azure.com/acme/Shop%20Team/_git/payment' }
 
@@ -131,5 +131,51 @@ for (const forge of Object.keys(FORGES)) {
     const never = await runOn(forge, { cut: { push: lost }, unseen: ['push'] })
     assert.deepEqual(never.host.codeHost.calls.filter((call) => call.startsWith('push')), ['push checkout', 'push checkout'])
     assert.deepEqual(writes(never.host).filter(([write]) => write === 'push'), [['push', 'checkout', 'unknown', 'git push of checkout got no answer twice, and git ls-remote does not show the branch at the local commit']])
+  })
+}
+
+for (const forge of Object.keys(FORGES)) {
+  test(`${forge}: a description longer than the 400 characters a listing keeps is read back whole by its number: up to date, then updated and applied`, async () => {
+    const { host } = await runOn(forge)
+    const [pull] = host.codeHost.pullRequests
+    assert.ok(pull.body.length > 400, String(pull.body.length))
+
+    assert.equal((await host.publish()).reason, `pull request #42 updated: ${host.codeHost.pages}/pull/42`, 'the run summary now says done')
+    assert.equal((await host.publish()).reason, `pull request #42 is up to date: ${host.codeHost.pages}/pull/42`)
+    assert.ok(host.codeHost.calls.includes('view #42'), 'read by its number')
+
+    const prose = host.events().find((event) => event.type === 'step.started' && event.step === 'pr_writer').outputs[0]
+    await host.tracking.write(SLUG, prose, (await host.tracking.read(SLUG, prose)).replace('Refunds are out of scope.', 'Refunds stay out of scope.'))
+    assert.equal((await host.publish()).reason, `pull request #42 updated: ${host.codeHost.pages}/pull/42`)
+    assert.deepEqual(writes(host).at(-1), ['pull-request-edit', '42', 'applied', null])
+    assert.equal(eventsOf(host, 'pull-request.updated').at(-1).bodyHash, await host.deps.hasher.sha256(host.codeHost.pullRequests[0].body.trimEnd()))
+  })
+
+  test(`${forge}: a resume never writes on a pull request of the branch that skraft did not open, nor on one from a fork`, async () => {
+    const cut = 'the forge got no answer within 120 s'
+    const byHand = (await runOn(forge, { cut: { create: cut } })).host
+    const [started] = eventsOf(byHand, 'pull-request.create-started')
+    assert.equal(started.bodyHash, await byHand.deps.hasher.sha256(byHand.codeHost.pullRequests[0].body.trimEnd()), 'the opening keeps the hash of the body it sends')
+    Object.assign(byHand.codeHost.pullRequests[0], { body: 'Opened by hand after skraft said so.' })
+    byHand.codeHost.cut = {}
+
+    assert.equal((await byHand.publish()).reason, notOpened('pull request #42 of checkout does not hold the description skraft sent when it opened one, so skraft did not open it and does not overwrite it'))
+    assert.deepEqual([byHand.codeHost.calls.filter((call) => /^(create|edit) /.test(call)).length, eventsOf(byHand, 'pull-request.opened')], [1, []])
+
+    const fork = (await runOn(forge, { cut: { create: cut } })).host
+    fork.codeHost.pullRequests[0].fork = true
+    fork.codeHost.cut = {}
+
+    assert.equal((await fork.publish()).reason, notOpened('pull request #42 of checkout comes from a fork, not from the repository skraft pushed to: skraft writes nothing on it'))
+    assert.deepEqual([fork.codeHost.calls.filter((call) => /^(create|edit) /.test(call)).length, eventsOf(fork, 'pull-request.opened')], [1, []])
+  })
+
+  test(`${forge}: a push whose read back git ls-remote cannot make is verification-failed, and says the remote could not be read`, async () => {
+    const { host } = await runOn(forge, { fails: { lsRemote: 'git ls-remote of checkout on origin failed' } })
+
+    assert.deepEqual(host.codeHost.calls.filter((call) => call.startsWith('push')), ['push checkout', 'push checkout'])
+    const reason = 'git push of checkout answered, but git ls-remote could not read the remote to confirm it: the push is not declared done'
+    assert.deepEqual(writes(host).filter(([write]) => write === 'push'), [['push', 'checkout', 'verification-failed', reason]])
+    assert.equal(lastReason(host), notOpened(reason))
   })
 }

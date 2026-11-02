@@ -585,3 +585,23 @@ test('through az, a push is read back by git ls-remote, a write az got no answer
   assert.deepEqual(await repository(t, { remote: null }).codeHost().readComment(kept.url), { ok: false, reason: 'the working copy has no Git remote whose URL names an Azure DevOps organization, project and repository' })
   assert.ok(!JSON.stringify(forge.calls()).includes('SECRET'), 'nothing az prints reaches a reason')
 })
+
+test('a pull request the run opened is read back by its number through az repos pr show, its description whole past the 400 characters a listing keeps; a fork\'s is told, another repository\'s refused', async (t) => {
+  const description = `${'Checkout takes a card payment. '.repeat(30)}End.`
+  const pull = { pullRequestId: 7, status: 'active', description, sourceRefName: 'refs/heads/checkout', repository: { name: 'payment' } }
+  const { forge, codeHost } = repository(t, { az: { ...SIGNED_IN, pulls: [{ ...pull, description: description.slice(0, 400) }], pullRequests: { 7: pull, 8: { ...pull, pullRequestId: 8, forkSource: { repository: { name: 'payment' } } }, 9: { ...pull, pullRequestId: 9, repository: { name: 'other' } }, 10: { pullRequestId: 10 }, 12: pull } } })
+  const host = codeHost()
+
+  assert.equal((await host.findPullRequest('checkout')).found.body.length, 400, 'a listing cuts the description')
+  assert.deepEqual(await host.readPullRequest(7), { ok: true, found: { number: 7, url: 'https://dev.azure.com/acme/Shop%20Team/_git/payment/pullrequest/7', state: 'open', body: description, head: 'checkout', fromFork: false } })
+  assert.deepEqual(forge.calls().at(-1), ['repos', 'pr', 'show', '--id=7', '--organization=https://dev.azure.com/acme', '--detect=false', '--only-show-errors', '--output=json'])
+  assert.equal((await host.readPullRequest(8)).found.fromFork, true)
+  const unreadable = (number) => ({ ok: false, reason: `Azure DevOps answered pull request #${number} in a form skraft cannot read, or of another repository than Shop Team/payment` })
+  assert.deepEqual(await host.readPullRequest(9), unreadable(9))
+  assert.deepEqual(await host.readPullRequest(10), unreadable(10))
+  assert.deepEqual(await host.readPullRequest(12), unreadable(12), 'an answer for another pull request than the one asked')
+  assert.deepEqual(await host.readPullRequest(11), { ok: true, found: null })
+  forge.set({ ...SIGNED_IN, pullRequests: {}, pullRequestFails: true })
+  assert.deepEqual(await host.readPullRequest(7), { ok: false, reason: 'az could not read pull request #7 of https://dev.azure.com/acme' })
+  assert.deepEqual(await repository(t, { remote: null }).codeHost().readPullRequest(7), { ok: false, reason: 'the working copy has no Git remote whose URL names an Azure DevOps organization, project and repository' })
+})

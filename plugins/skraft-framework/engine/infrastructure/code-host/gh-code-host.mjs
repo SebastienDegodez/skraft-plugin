@@ -22,6 +22,7 @@ export const createGhCodeHost = ({ commandRunner }) => Object.freeze({
   ...whereTo(commandRunner),
   ...branchOnRemote((argv) => run(commandRunner, argv), () => remoteOf(commandRunner), NO_REMOTE),
   findPullRequest: (head) => findPullRequest(commandRunner, head),
+  readPullRequest: (number) => readOwn(commandRunner, number),
   create: (request) => create(commandRunner, request),
   edit: (request) => edit(commandRunner, request),
   ...comments(commandRunner),
@@ -203,6 +204,34 @@ const readList = (text) => {
   try {
     const parsed = JSON.parse(text)
     return Array.isArray(parsed) ? parsed.map(({ number, url, state, body }) => ({ number, url, state: String(state).toLowerCase(), body })) : null
+  } catch {
+    return null
+  }
+}
+
+/** What `gh pr view` prints of a pull request the run opened, read back. */
+const OWN_VIEWED = 'number,url,state,body,headRefName,isCrossRepository'
+
+/**
+ * The pull request of that number on the remote pull requests go to, its body whole (a listing
+ * gives it too, but `gh pr view` is the read the forge documents for one): null when the forge has
+ * none. @param {CommandRunner} commandRunner @param {number} number
+ * @returns {Promise<{ ok: true, found: import('../../application/ports/code-host.mjs').ReadPullRequest | null } | { ok: false, reason: string }>}
+ */
+const readOwn = async (commandRunner, number) => {
+  const remote = await remoteOf(commandRunner)
+  if (remote === null) return refused(NO_REMOTE)
+  const result = await run(commandRunner, ['gh', 'pr', 'view', String(number), `--repo=${remote.repository}`, `--json=${OWN_VIEWED}`])
+  if (result.started && NO_SUCH_PULL_REQUEST.test(result.stderr)) return { ok: /** @type {const} */ (true), found: null }
+  const found = succeeded(result) ? readOwnJson(result.stdout) : null
+  return found === null ? refused(`gh could not read pull request #${number} of ${remote.repository}`) : { ok: /** @type {const} */ (true), found }
+}
+
+/** @param {string} text @returns {import('../../application/ports/code-host.mjs').ReadPullRequest | null} */
+const readOwnJson = (text) => {
+  try {
+    const { number, url, state, body, headRefName, isCrossRepository } = JSON.parse(text)
+    return typeof body === 'string' && typeof headRefName === 'string' ? { number, url, state: /** @type {any} */ (String(state).toLowerCase()), body, head: headRefName, fromFork: isCrossRepository !== false } : null
   } catch {
     return null
   }

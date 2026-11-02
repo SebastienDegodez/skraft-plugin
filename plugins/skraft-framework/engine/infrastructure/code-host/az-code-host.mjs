@@ -24,9 +24,7 @@ import { readComment } from './az-read-back.mjs'
 export const createAzCodeHost = ({ commandRunner }) => Object.freeze({
   ...whereTo(commandRunner),
   ...branchOnRemote((argv) => run(commandRunner, argv), () => remoteOf(commandRunner), NO_AZURE_REMOTE),
-  findPullRequest: (head) => findPullRequest(commandRunner, head),
-  create: (request) => create(commandRunner, request),
-  edit: (request) => edit(commandRunner, request),
+  ...pullRequestsOf(commandRunner),
   ...comments(commandRunner),
   issue: (number) => workItem(commandRunner, number),
   // Azure Repos links `#N`; `Fixes #N` also completes the work item when the pull request merges.
@@ -35,6 +33,17 @@ export const createAzCodeHost = ({ commandRunner }) => Object.freeze({
   bodyLimit: 4_000,
   // az sends a comment from a JSON file.
   takesRequestFile: true,
+})
+
+/**
+ * The pull request of a branch, found, read whole by its number, opened, its description replaced.
+ * @param {CommandRunner} commandRunner
+ */
+const pullRequestsOf = (commandRunner) => ({
+  findPullRequest: (/** @type {string} */ head) => findPullRequest(commandRunner, head),
+  readPullRequest: (/** @type {number} */ number) => readOwn(commandRunner, number),
+  create: (/** @type {PullRequestRequest} */ request) => create(commandRunner, request),
+  edit: (/** @type {{ number: number, bodyFile: string }} */ request) => edit(commandRunner, request),
 })
 
 /**
@@ -132,6 +141,35 @@ const isTextOrNone = (description) => description === undefined || description =
 const foundOf = (remote, { pullRequestId, status, description }) => ({
   number: pullRequestId, url: pullRequestPage(remote, pullRequestId), state: STATES[status] ?? 'closed', body: description ?? '',
 })
+
+/**
+ * The pull request of that number, as `az repos pr show` prints it: its description whole, where a
+ * listing keeps only its first 400 characters. null when Azure DevOps says it has none; one of
+ * another repository or project than the remote's is refused.
+ * @param {CommandRunner} commandRunner @param {number} number
+ */
+const readOwn = async (commandRunner, number) => {
+  const remote = await remoteOf(commandRunner)
+  if (remote === null) return refused(NO_AZURE_REMOTE)
+  const shown = await run(commandRunner, ['az', 'repos', 'pr', 'show', `--id=${number}`, `--organization=${remote.organization}`, ...QUIET])
+  if (!succeeded(shown)) return NO_SUCH_PULL_REQUEST.test(shown.stderr) ? { ok: /** @type {const} */ (true), found: null } : refused(`az could not read pull request #${number} of ${remote.organization}`)
+  const read = ownPullRequestOf(remote, number, readJson(shown.stdout))
+  return read === null ? refused(`Azure DevOps answered pull request #${number} in a form skraft cannot read, or of another repository than ${remote.project}/${remote.repository}`) : { ok: /** @type {const} */ (true), found: read }
+}
+
+/** What az prints for a pull request that does not exist; read only to tell that case apart, never passed on. Not measured: docs/v2/host-verification.md. */
+const NO_SUCH_PULL_REQUEST = /TF401180/
+
+/**
+ * The pull request az showed, when it is of the remote's repository: forkSource names the fork a
+ * pull request comes from. @param {Remote} remote @param {number} number @param {any} json
+ * @returns {import('../../application/ports/code-host.mjs').ReadPullRequest | null}
+ */
+const ownPullRequestOf = (remote, number, json) => {
+  if (json?.pullRequestId !== number || typeof json.sourceRefName !== 'string' || !isTextOrNone(json.description)) return null
+  if (String(json.repository?.name).toLowerCase() !== remote.repository.toLowerCase()) return null
+  return { ...foundOf(remote, json), head: json.sourceRefName.replace(/^refs\/heads\//, ''), fromFork: json.forkSource != null }
+}
 
 /**
  * Opens the pull request, linked to the story's work item when there is one. When that fails, a

@@ -25,12 +25,12 @@ test('skraft publish opens the pull request a run left local once the consent is
 
   host.deps.agentCatalog.plugin.delete('pr-writer')
   assert.deepEqual(await host.publish(), { ok: true, slug: SLUG, code: null, reason: 'pull request #42 is up to date: https://github.example.com/acme/shop/pull/42' })
-  assert.deepEqual(host.codeHost.calls.slice(4), ['push checkout', 'find checkout'])
+  assert.deepEqual(host.codeHost.calls.slice(4), ['push checkout', 'find checkout', 'view #42'])
 
   const prose = host.events().find((event) => event.type === 'step.started' && event.step === 'pr_writer').outputs[0]
   await host.tracking.write(SLUG, prose, (await host.tracking.read(SLUG, prose)).replace('Refunds are out of scope.', 'Refunds and partial captures are out of scope.'))
   assert.deepEqual(await host.publish(), { ok: true, slug: SLUG, code: null, reason: 'pull request #42 updated: https://github.example.com/acme/shop/pull/42' })
-  assert.deepEqual(host.codeHost.calls.slice(6), ['push checkout', 'find checkout', `edit #42 ${TRACKING}/pull-request-body.md`, 'find checkout'])
+  assert.deepEqual(host.codeHost.calls.slice(7), ['push checkout', 'find checkout', 'view #42', `edit #42 ${TRACKING}/pull-request-body.md`, 'view #42'])
   assert.deepEqual(eventsOf(host, 'pull-request.updated').map(({ number }) => number), [42])
 
   host.codeHost.fails.edit = 'gh could not update pull request #42'

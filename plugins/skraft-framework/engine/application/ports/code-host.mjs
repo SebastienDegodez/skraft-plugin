@@ -4,6 +4,9 @@
  *
  * @typedef {{ number: number, url: string }} PullRequest
  * @typedef {PullRequest & { state: 'open' | 'closed' | 'merged', body: string }} FoundPullRequest
+ * @typedef {FoundPullRequest & { head: string, fromFork: boolean }} ReadPullRequest
+ *   body: the whole description; head: its source branch, as the forge names it; fromFork: it comes from a fork of the
+ *   remote's repository, not from the repository itself.
  * @typedef {{ base: string, head: string, title: string, bodyFile: string, body: string, draft: boolean, issue: number | null }} PullRequestRequest
  *   base: the branch it merges into; head: the branch it brings; bodyFile: the absolute path of
  *   the file that holds its body; body: that body, for a forge reached without files; issue: the
@@ -49,6 +52,7 @@
  *   localTip: (branch: string) => Promise<string | null>,
  *   remoteTip: (branch: string) => Promise<{ ok: true, sha: string | null } | { ok: false, reason: string }>,
  *   findPullRequest: (head: string) => Promise<{ ok: true, found: FoundPullRequest | null } | { ok: false, reason: string }>,
+ *   readPullRequest: (number: number) => Promise<{ ok: true, found: ReadPullRequest | null } | { ok: false, reason: string }>,
  *   create: (request: PullRequestRequest) => Promise<({ ok: true, note?: string } & PullRequest) | Failed>,
  *   edit: (request: { number: number, bodyFile: string, body: string }) => Promise<Done>,
  *   keepIssueComment: (request: IssueCommentRequest) => Promise<{ ok: true, url: string } | Failed>,
@@ -69,7 +73,9 @@
  *   branch points at where it is pushed, as `git ls-remote` reads it, null when the remote has no
  *   such branch. findPullRequest: the
  *   latest pull request whose head is that branch, open, closed or merged, with its body; null
- *   when there is none. create: opens one; note: a fixed line on what it could not do (link the issue).
+ *   when there is none; its body may be cut (Azure DevOps lists 400 characters of a description).
+ *   readPullRequest: the pull request of that number, its description whole; null when the forge
+ *   has none. create: opens one; note: a fixed line on what it could not do (link the issue).
  *   edit: replaces the body of one. keepIssueComment: rewrites the comment at url; without one, or
  *   when it is gone, the signed-in user's latest comment of that issue holding the marker; without
  *   one either, posts a new comment. Gives the URL of the comment kept. issue: the issue of that

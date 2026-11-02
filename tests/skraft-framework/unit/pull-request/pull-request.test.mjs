@@ -230,6 +230,8 @@ test('without the consent, a forge, a branch apart from the base, the run comple
     [{ config: CONSENTED, codeHost: new InMemoryCodeHost({ branch: 'trunk', defaultBranch: 'trunk' }) }, 'HEAD is on trunk, the branch the pull request would merge into', 'Refs'],
     [{ config: CONSENTED, codeHost: new InMemoryCodeHost({ fails: { push: 'git push of checkout to origin failed or was refused' } }) }, 'git push of checkout to origin failed or was refused', 'Closes'],
     [{ config: CONSENTED, codeHost: new InMemoryCodeHost({ fails: { find: 'gh could not list the pull requests' } }) }, 'gh could not list the pull requests', 'Closes'],
+    [{ config: CONSENTED, codeHost: new InMemoryCodeHost({ open: [{ number: 7, head: 'checkout' }], fails: { view: 'gh could not read pull request #7 of github.com/acme/shop' } }) }, 'gh could not read pull request #7 of github.com/acme/shop', 'Closes'],
+    [{ config: CONSENTED, codeHost: new InMemoryCodeHost({ open: [{ number: 7, head: 'checkout' }], unseen: ['view'] }) }, 'pull request #7 is listed by its branch, but the forge does not give it by its number', 'Closes'],
     [{ config: CONSENTED, codeHost: new InMemoryCodeHost({ fails: { create: 'gh could not open the pull request' } }) }, 'gh could not open the pull request', 'Closes'],
   ]
   for (const [options, why, issueLine, lostOnceStarted = null] of cases) {

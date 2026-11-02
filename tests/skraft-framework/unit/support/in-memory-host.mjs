@@ -629,7 +629,8 @@ export class InMemoryAgentCatalog {
  * is told nothing came back. `unseen` names the writes the forge answers done and does not show
  * when read back: a push that never reaches the remote, a pull request no listing shows, a body
  * left as it was, a comment not there. `reads` lists the read backs (`ls-remote <branch>`,
- * `read <comment url>`), in order.
+ * `read <comment url>`), in order. A pull request with `fork: true` comes from a fork of the
+ * remote's repository; `listBodyLimit` cuts the description a listing by branch gives, as Azure's does.
  */
 export class InMemoryCodeHost {
   /**
@@ -643,7 +644,9 @@ export class InMemoryCodeHost {
    *   bodyLimit: the longest body the forge takes, GitHub's unless given; takesRequestFile: whether
    *   its client sends a JSON request file (az), false unless given.
    */
-  constructor({ unavailable = null, branch = 'checkout', defaultBranch = 'main', remotes = ['origin'], open = [], fails = {}, repository = { host: 'github.com', repository: 'acme/shop' }, issues, link = (issue, closes) => `${closes ? 'Closes' : 'Refs'} #${issue}`, bodyLimit = 60_000, commentLimit = 60_000, takesRequestFile = false, pages = 'https://github.example.com/acme/shop', cut = {}, unseen = [] } = {}) {
+  constructor({ unavailable = null, branch = 'checkout', defaultBranch = 'main', remotes = ['origin'], open = [], fails = {}, repository = { host: 'github.com', repository: 'acme/shop' }, issues, link = (issue, closes) => `${closes ? 'Closes' : 'Refs'} #${issue}`, bodyLimit = 60_000, commentLimit = 60_000, takesRequestFile = false, pages = 'https://github.example.com/acme/shop', cut = {}, unseen = [], listBodyLimit = Number.POSITIVE_INFINITY } = {}) {
+    /** the longest description a listing by branch gives (Azure's Get Pull Requests: 400); a read by number gives it whole */
+    this.listBodyLimit = listBodyLimit
     this.cut = cut
     this.unseen = new Set(unseen)
     /** @type {string[]} */
@@ -704,6 +707,7 @@ export class InMemoryCodeHost {
   async localTip() { return this.tip }
   async remoteTip(branch) {
     this.reads.push(`ls-remote ${branch}`)
+    if (this.fails.lsRemote) return { ok: false, reason: this.fails.lsRemote }
     return { ok: true, sha: this.remote[branch] ?? null }
   }
   /** What a write that the forge did answers: done, unless its answer is cut. @param {string} write */
@@ -714,7 +718,13 @@ export class InMemoryCodeHost {
     this.calls.push(`find ${head}`)
     if (this.fails.find) return { ok: false, reason: this.fails.find }
     const found = this.pullRequests.findLast((pull) => pull.head === head && !pull.hidden)
-    return { ok: true, found: found ? { number: found.number, url: found.url, state: found.state, body: found.body } : null }
+    return { ok: true, found: found ? { number: found.number, url: found.url, state: found.state, body: found.body.slice(0, this.listBodyLimit) } : null }
+  }
+  async readPullRequest(number) {
+    this.calls.push(`view #${number}`)
+    if (this.fails.view) return { ok: false, reason: this.fails.view }
+    const found = this.unseen.has('view') ? undefined : this.pullRequests.find((pull) => pull.number === number && !pull.hidden)
+    return { ok: true, found: found ? { number: found.number, url: found.url, state: found.state, body: found.body, head: found.head, fromFork: found.fork === true } : null }
   }
   async create({ base, head, title, bodyFile, draft, issue }) {
     this.calls.push(`create ${base} <- ${head}${draft ? ' (draft)' : ''}: ${title}`)
