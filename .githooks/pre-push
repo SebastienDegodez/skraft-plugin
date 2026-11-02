@@ -3,4 +3,16 @@
 # Installed into .git/hooks/pre-push by: npm run hooks:install
 # Runs the fast gates before every push. Use `npm run ci:local -- --mutation` to
 # also run mutation locally.
+# A push that only deletes refs (a stale tag, a release note) sends no code: git
+# gives each deleted ref an all-zero local sha, and the gates have nothing to check.
+sends_code=false
+while read -r local_ref local_sha remote_ref remote_sha; do
+  case "$local_sha" in
+    *[!0]*) sends_code=true ;;
+  esac
+done
+if [ "$sends_code" = false ]; then
+  echo "↷ local CI skipped: this push only deletes refs."
+  exit 0
+fi
 exec node scripts/local-ci.mjs
