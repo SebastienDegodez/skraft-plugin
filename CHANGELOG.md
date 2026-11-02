@@ -3,6 +3,12 @@
 Toutes les modifications notables de ce projet sont documentées ici.
 Format basé sur [Conventional Commits](https://www.conventionalcommits.org/) — versionnage [SemVer](https://semver.org/).
 
+## [2.0.0-alpha.51](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.50...v2.0.0-alpha.51) (2026-11-02)
+
+### ✨ Features
+
+* **engine:** a forge write is applied only once read back; a resume never opens a second pull request ([#472](https://github.com/SebastienDegodez/skraft-plugin/issues/472)) ([#486](https://github.com/SebastienDegodez/skraft-plugin/issues/486)) ([9d72b57](https://github.com/SebastienDegodez/skraft-plugin/commit/9d72b57bcda56bf3b4d026245e1628b67e4bcaa3))
+
 ## [2.0.0-alpha.50](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.49...v2.0.0-alpha.50) (2026-11-01)
 
 ### ✨ Features
