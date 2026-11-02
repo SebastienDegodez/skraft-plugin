@@ -59,7 +59,7 @@ variants:
         - ../../plugins/skraft-backlog/skills/backlog-review-lenses
         - ../../plugins/skraft-backlog/skills/discovery-review-criteria
         - ../../plugins/skraft-backlog/skills/github-issue-search
-        - ../../plugins/skraft-framework/skills/github-publication
+        - ../../plugins/skraft-framework/skills/github-forge-writes
         - ../../plugins/skraft-backlog/skills/issue-refinement
         - ../../plugins/skraft-backlog/skills/issue-triage
         - ../../plugins/skraft-brownfield/skills/mikado-method

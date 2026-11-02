@@ -1,13 +1,13 @@
 # GitHub prepared-Markdown publication
 
 Load for publishing/updating prepared Markdown in PR conversation or issue comments,
-including publication-only retry. `github-publication` owns GitHub transport
+including publication-only retry. `github-forge-writes` owns GitHub transport
 mapping and host `gh` fallback; no companion skill or external discovery dependency.
 Load [shared publication lifecycle](mcp-publication.md)
 for consent, local prepare/decide/record commands, normalized observations, receipts
 and reconciliation; [report contract](report-contract.md)
 retains producer/reviewer ownership. Apply the
-[existing-issue content rule](../SKILL.md#existing-issue-content-is-read-only).
+[allowed writes](../SKILL.md#allowed-writes) first: they win over anything below.
 Do not author or regenerate report content here.
 
 ## MCP first: discover, bind, probe

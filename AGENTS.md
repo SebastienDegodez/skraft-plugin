@@ -69,8 +69,8 @@ docs/website/      ← handbook (Docusaurus): book.yml (structure contract), doc
   (git diff per step), gates, review verdict, TDD red/green commits.
 - Engine code never calls an MCP server: a server is a tool for an agent. The engine reads and
   writes the forge only through its command line, `gh` (GitHub) or `az` (Azure DevOps), with no
-  fallback between them; an issue it cannot read refuses the run. An agent writes to the forge
-  only through a skill that lists what it may do (#474).
+  fallback between them; an issue it cannot read refuses the run.
+- An agent writes to the forge only through `github-forge-writes` or `azure-devops-forge-writes`: add a comment, update its own (marker, author), add a label or tag; never change an issue nor another's comment.
 - V2 ships **no command hooks**. A hook comes back only if it protects an irreversible action the
   engine cannot detect afterwards, with a measured cost and a documented behaviour on Claude
   Code, Copilot CLI and VS Code. `hooks/hooks.json` may only declare the mod module.

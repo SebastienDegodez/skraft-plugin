@@ -39,6 +39,19 @@ test('the request body carries the prepared comment unchanged', (t) => {
   assert.equal(body.text, comment)
 })
 
+test('a pull request thread is created closed, its first comment carrying the prepared comment unchanged', (t) => {
+  const dir = workspace(t)
+  const result = spawnSync(process.execPath, [script, '--in', join(dir, 'comment.md'), '--out', join(dir, 'thread.json'), '--kind', 'thread'], { encoding: 'utf8' })
+  assert.equal(result.status, 0, result.stdout + result.stderr)
+  assert.deepEqual(JSON.parse(readFileSync(join(dir, 'thread.json'), 'utf8')), { comments: [{ parentCommentId: 0, content: comment, commentType: 1 }], status: 4 })
+})
+
+test('the rewrite of a thread comment carries the prepared comment unchanged', (t) => {
+  const dir = workspace(t)
+  assert.equal(main(['--kind', 'thread-comment', '--in', join(dir, 'comment.md'), '--out', join(dir, 'content.json')], { log: () => {} }), 0)
+  assert.deepEqual(JSON.parse(readFileSync(join(dir, 'content.json'), 'utf8')), { content: comment })
+})
+
 test('an existing request body is never overwritten', (t) => {
   const dir = workspace(t)
   writeFileSync(join(dir, 'comment.json'), '{"text":"older"}', 'utf8')
@@ -59,7 +72,7 @@ test('a missing comment file writes nothing', (t) => {
 })
 
 test('an unknown or missing argument is refused', () => {
-  for (const argv of [[], ['--in', 'a.md'], ['--in', 'a.md', '--out'], ['--body', 'a.md', '--out', 'b.json']]) {
+  for (const argv of [[], ['--in', 'a.md'], ['--in', 'a.md', '--out'], ['--body', 'a.md', '--out', 'b.json'], ['--in', 'a.md', '--out', 'b.json', '--kind', 'issue'], ['--in', 'a.md', '--out', 'b.json', '--kind', 'toString']]) {
     const lines = []
     assert.equal(main(argv, { log: (line) => lines.push(line) }), 2, argv.join(' '))
     assert.match(lines[0], /^usage: /)

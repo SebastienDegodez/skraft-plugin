@@ -3,7 +3,8 @@
 // copied into the skill, byte for byte, from one source of truth. `--apply` writes the
 // copies, `--check` fails when one is missing or stale.
 //
-// COPIES are single files.
+// COPIES are single files; paths are relative to the framework plugin, a source may sit in a
+// sibling plugin.
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -12,9 +13,14 @@ const repo = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 export const pluginRoot = join(repo, 'plugins', 'skraft-framework')
 
 export const COPIES = [
-	// The reporting pair links to each other: github-publication loads both, playwright-evidence loads the contract.
-	{ source: 'skills/qa-reporting/references/mcp-publication.md', targets: ['skills/github-publication/references/mcp-publication.md'] },
-	{ source: 'skills/qa-reporting/references/report-contract.md', targets: ['skills/github-publication/references/report-contract.md', 'skills/playwright-evidence/references/report-contract.md'] },
+	// The reporting pair links to each other: github-forge-writes loads both, playwright-evidence loads the contract.
+	{ source: 'skills/qa-reporting/references/mcp-publication.md', targets: ['skills/github-forge-writes/references/mcp-publication.md'] },
+	{ source: 'skills/qa-reporting/references/report-contract.md', targets: ['skills/github-forge-writes/references/report-contract.md', 'skills/playwright-evidence/references/report-contract.md'] },
+	// The Azure DevOps comment request body: skraft-backlog owns it, the framework's write skill carries it.
+	{
+		source: '../skraft-backlog/skills/azure-boards-work-items/scripts/comment-request.mjs',
+		targets: ['skills/azure-devops-forge-writes/scripts/comment-request.mjs'],
+	},
 ]
 
 export function expectedFiles() {
