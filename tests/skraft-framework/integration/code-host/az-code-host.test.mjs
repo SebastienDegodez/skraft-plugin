@@ -589,7 +589,7 @@ test('through az, a push is read back by git ls-remote, a write az got no answer
 test('a pull request the run opened is read back by its number through az repos pr show, its description whole past the 400 characters a listing keeps; a fork\'s is told, another repository\'s refused', async (t) => {
   const description = `${'Checkout takes a card payment. '.repeat(30)}End.`
   const pull = { pullRequestId: 7, status: 'active', description, sourceRefName: 'refs/heads/checkout', repository: { name: 'payment' } }
-  const { forge, codeHost } = repository(t, { az: { ...SIGNED_IN, pulls: [{ ...pull, description: description.slice(0, 400) }], pullRequests: { 7: pull, 8: { ...pull, pullRequestId: 8, forkSource: { repository: { name: 'payment' } } }, 9: { ...pull, pullRequestId: 9, repository: { name: 'other' } }, 10: { pullRequestId: 10 }, 12: pull } } })
+  const { forge, codeHost } = repository(t, { az: { ...SIGNED_IN, pulls: [{ ...pull, description: description.slice(0, 400) }], pullRequests: { 7: pull, 8: { ...pull, pullRequestId: 8, forkSource: { repository: { name: 'payment' } } }, 9: { ...pull, pullRequestId: 9, repository: { name: 'other' } }, 10: { pullRequestId: 10 }, 12: pull, 13: { ...pull, pullRequestId: 13, sourceRefName: 42 }, 14: { ...pull, pullRequestId: 14, description: 42 } } } })
   const host = codeHost()
 
   assert.equal((await host.findPullRequest('checkout')).found.body.length, 400, 'a listing cuts the description')
@@ -600,6 +600,8 @@ test('a pull request the run opened is read back by its number through az repos 
   assert.deepEqual(await host.readPullRequest(9), unreadable(9))
   assert.deepEqual(await host.readPullRequest(10), unreadable(10))
   assert.deepEqual(await host.readPullRequest(12), unreadable(12), 'an answer for another pull request than the one asked')
+  assert.deepEqual(await host.readPullRequest(13), unreadable(13), 'no source branch')
+  assert.deepEqual(await host.readPullRequest(14), unreadable(14), 'a description that is not text')
   assert.deepEqual(await host.readPullRequest(11), { ok: true, found: null })
   forge.set({ ...SIGNED_IN, pullRequests: {}, pullRequestFails: true })
   assert.deepEqual(await host.readPullRequest(7), { ok: false, reason: 'az could not read pull request #7 of https://dev.azure.com/acme' })
