@@ -10,7 +10,8 @@ The `skraft` commands that set up, check and maintain a repository's runs: how t
 
 ## The `skraft` command <!-- #skraft-command -->
 
-`npm i -g @skraft/cli` installs `skraft` once per machine. The package has its own version and
+`npm i -g @skraft/cli@alpha` installs `skraft` once per machine (until skraft 2.0.0 the command is
+published under the npm tag `alpha`; afterwards, `npm i -g @skraft/cli`). The package has its own version and
 holds no engine: at each call it looks for the plugin a host installed and imports its
 `engine/drivers/cli/skraft.mjs` in the same process, arguments unchanged. Nothing is recorded,
 so a plugin update by the host is followed at the next call.
