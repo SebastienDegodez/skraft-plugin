@@ -221,6 +221,18 @@ test('a document left as its template, with a placeholder left, blank or deleted
   }
 })
 
+test('a document that quotes double braces of its subject, not of its template, is filled', async () => {
+  const host = scripted({}, (it) => [
+    agent({ fill: false, work: () => it.tracking.write(SLUG, RESEARCH, '# Research: Checkout\nThe collection calls {{baseUrl}}/pay.\n') })(it),
+    () => ({ ok: false, unavailable: true, text: '' }),
+  ])
+
+  await host.start()
+
+  const recorded = host.events().filter((event) => event.type === 'step.recorded' && !CONSENTS.includes(event.step))
+  assert.deepEqual(recorded.map(({ step, outcome, missing }) => [step, outcome, missing]), [['research', 'done', []]])
+})
+
 test('a missing document is asked again with its path, and a retry that fills it goes on', async () => {
   const host = scripted({}, (it) => [agent({ fill: false })(it), agent()(it), () => ({ ok: false, unavailable: true, text: '' })])
 
