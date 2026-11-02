@@ -22,7 +22,8 @@
  *   takesRequestFile: boolean,
  *   repository: () => Promise<{ host: string, repository: string } | null>,
  *   find: (number: number) => Promise<{ ok: true, found: PullRequestFacts | null } | { ok: false, reason: string }>,
- *   keepComment: (request: ThreadCommentRequest) => Promise<{ ok: true, url: string } | { ok: false, reason: string }>,
+ *   keepComment: (request: ThreadCommentRequest) => Promise<{ ok: true, url: string } | import('./code-host.mjs').Failed>,
+ *   readComment: (url: string) => Promise<import('./code-host.mjs').CommentReading>,
  * }} PullRequests
  *   unavailable: why no pull request can be read from here (no remote, no forge client, not
  *   signed in), null when one can. repository: the host and `<owner>/<repo>` the remote names, null
@@ -33,6 +34,7 @@
  *   one, or when it is gone, the signed-in user's latest comment of the pull request holding the
  *   marker (on Azure Repos, the latest thread whose first comment starts with it, whoever wrote
  *   it); without one either, posts a new comment. Gives the URL of the comment kept. Never a
- *   review, never a vote, never a request for changes.
+ *   review, never a vote, never a request for changes. readComment: the comment at a URL keepComment
+ *   gave, read back.
  */
 export {}

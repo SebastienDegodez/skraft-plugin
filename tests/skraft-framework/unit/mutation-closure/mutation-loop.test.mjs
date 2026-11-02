@@ -245,7 +245,7 @@ const MUTATION_FIRST = BUILT_IN_WORKFLOW
     '  gates -> mutation [label="PASS"]',
     '  mutation -> kill_mutants [label="FAIL", max_visits=5]',
     '  kill_mutants -> mutation_review_lenses',
-    '  mutation_review_lenses -> mutation_review_test_integrity -> mutation_review',
+    '  mutation_review_lenses -> mutation_review_test_integrity -> mutation_review_refuter -> mutation_review',
     '  mutation_review -> kill_mutants [label="NEEDS_REWORK", max_visits=3]',
     '  mutation_review -> gates [label="APPROVED"]',
     '  mutation -> deliver_review [label="PASS"]',

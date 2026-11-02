@@ -106,7 +106,7 @@ arêtes, attributs, sous-graphes, commentaires).
 | `Mdiamond`, `Msquare` | début, fin |
 | `box` | agent (`agent=`, `outputs=`, `writes=`, `each="survivor-file"`) |
 | `parallelogram` | gate de commandes (`gate=`), ou publication (`publish="pull-request"`, `publish="playwright-visuals"`) |
-| `component` → `note` → `tripleoctagon` | revue : fan-out, une lentille par branche (`lens=`, `when="mock"`/`"contract"`), fan-in qui réfute et calcule le verdict |
+| `component` → `note` → `octagon` → `tripleoctagon` | revue : fan-out, une lentille par branche (`lens=`, `when="mock"`/`"contract"`), réfuteur (`finding-refuter` sur les findings blocker, high et medium), fan-in qui calcule le verdict |
 | `hexagon` | question humaine (`question=`) |
 | `house` | appel d'un autre workflow (`workflow="review"`) |
 

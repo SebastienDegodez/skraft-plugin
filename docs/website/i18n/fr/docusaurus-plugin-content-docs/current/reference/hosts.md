@@ -17,8 +17,8 @@ Pourquoi un moteur et des pilotes, et le contrat du pilote Copilot :
 | --- | --- | --- |
 | Node | 22 ou plus | le moteur, la ligne de commande `skraft`, l'extension Copilot ; `skraft doctor` le vérifie |
 | Git | — | la base de chaque composant, les commits, les rejeux de commits rouges |
-| `gh` | connecté à l'hôte du dépôt | seulement pour lire l'issue de la story (`--issue`), ouvrir la pull request, commenter l'issue, `skraft review --pr` ; sur `github`, le serveur MCP GitHub de l'hôte, quand il est connecté, les sert d'abord et `gh` est le repli (le CLI `skraft` et `skraft next` passent toujours par `gh`) ; voir [Forge](./skraft-config.md#forge) |
-| `az` | connecté à l'organisation, avec son extension `azure-devops` | sur Azure DevOps seulement, pour lire le work item de la story (`--issue`), y tenir le commentaire du run et ouvrir la pull request, et revoir une pull request (`skraft review --pr` : la lire, tenir le fil de revue) ; le serveur MCP Azure DevOps de l'hôte (`ado`), quand il est connecté, sert d'abord le work item, son commentaire et la revue d'une pull request et `az` est le repli (le CLI `skraft` et `skraft next` passent toujours par `az`) ; voir [Forge](./skraft-config.md#azure-devops-mcp-server-first-az-as-fallback) |
+| `gh` | connecté à l'hôte du dépôt | seulement pour lire l'issue de la story (`--issue`), ouvrir la pull request, commenter l'issue, `skraft review --pr` ; le moteur ne passe jamais par un serveur MCP ; voir [Forge](./skraft-config.md#github-through-gh) |
+| `az` | connecté à l'organisation, avec son extension `azure-devops` | sur Azure DevOps seulement, pour lire le work item de la story (`--issue`), y tenir le commentaire du run et ouvrir la pull request, et revoir une pull request (`skraft review --pr` : la lire, tenir le fil de revue) ; le moteur ne passe jamais par un serveur MCP ; voir [Forge](./skraft-config.md#azure-devops-through-az) |
 | Copilot CLI | — | Copilot CLI ; sous VS Code, le pilote SDK (`skraft-run.mjs`) le lance sans interface |
 
 ## Installation <!-- #install -->

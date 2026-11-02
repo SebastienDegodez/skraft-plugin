@@ -62,6 +62,13 @@ export const readJson = (text) => {
 /** @param {string} reason */
 export const refused = (reason) => ({ ok: /** @type {const} */ (false), reason })
 
+/**
+ * A failed write: unknown when az or git was stopped before it answered (its time limit, a cut),
+ * since the write may have reached Azure DevOps; refused otherwise.
+ * @param {CommandResult} result @param {string} reason
+ */
+export const failedWrite = (result, reason) => (result.started && result.exitCode === null ? { ...refused(reason), outcome: /** @type {const} */ ('unknown') } : refused(reason))
+
 export const NO_AZURE_REMOTE = 'the working copy has no Git remote whose URL names an Azure DevOps organization, project and repository'
 export const NO_AZ = 'az, the Azure CLI, is not installed'
 /** Why az does not start under Windows from anything but the installer's az.cmd (process/az-launch.mjs). */

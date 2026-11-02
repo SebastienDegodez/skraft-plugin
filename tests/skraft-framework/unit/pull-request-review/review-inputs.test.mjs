@@ -153,7 +153,7 @@ test('a base whose files Git cannot list still hands the review its rule files, 
 })
 
 test('the review reads skraft-config.json and .skraft/review.skraft.dot from the base, never from the pull request\'s head', async () => {
-  const dropped = edit(BUILT_IN_REVIEW, ['  test_integrity          [shape=note, lens="test-integrity", mandatory=true]\n', ''], ['  lenses -> test_integrity -> verdict\n', ''])
+  const dropped = edit(BUILT_IN_REVIEW, ['  test_integrity          [shape=note, lens="test-integrity", mandatory=true]\n', ''], ['  lenses -> test_integrity -> refuter\n', ''])
   const host = reviewHost({ files: { '.skraft/review.skraft.dot': dropped, 'skraft-config.json': JSON.stringify({ components: [], publish: { reviewComment: true } }) } })
   host.git.commit('feat: discount', ['src/Discount.cs'])
 

@@ -70,7 +70,7 @@ test('skraft workflow eject review copies the plugin\'s .skraft/review.skraft.do
   assert.equal(ejected, REVIEW.replace('input_components="optional"]', 'input_components="optional", skraft_version="in-process"]'))
   assert.deepEqual(await skraft(cwd, ['workflow', 'eject', 'review']), { status: 1, stdout: '', stderr: '.skraft/review.skraft.dot already exists; edit it, or remove it\n' })
 
-  writeFileSync(join(cwd, '.skraft/review.skraft.dot'), ejected.replace('  lenses -> cold_reader -> verdict\n', '').replace('  cold_reader             [shape=note, lens="cold-reader"]\n', ''))
+  writeFileSync(join(cwd, '.skraft/review.skraft.dot'), ejected.replace('  lenses -> cold_reader -> refuter\n', '').replace('  cold_reader             [shape=note, lens="cold-reader"]\n', ''))
   assert.deepEqual(await skraft(cwd, ['workflow', 'check']), { status: 0, stdout: `skraft and .skraft/review.skraft.dot are valid: ${PHASES}\n`, stderr: '' })
   assert.deepEqual(await skraft(cwd, ['workflow', 'diff']), {
     status: 0, stdout: '.skraft/review.skraft.dot: - node cold_reader\n.skraft/review.skraft.dot: 1 changes from the skraft in-process workflow\n', stderr: '',

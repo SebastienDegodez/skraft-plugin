@@ -68,6 +68,12 @@ const Chip = ({ branch }) => (
 const Review = ({ data }) => (
   <Card data={data}>
     {data.branches.map((branch) => <Chip key={branch.id} branch={branch} />)}
+    {data.refutedBy && (
+      <div className={`${styles.chip} ${styles.verdict}`}>
+        <span>{`${data.refutedBy.id} · finding-refuter`}</span>
+        {data.refutedBy.mandatory && <Mandatory />}
+      </div>
+    )}
     <div className={`${styles.chip} ${styles.verdict}`}>
       {translate({ id: 'skraft.workflowViewer.verdict', message: 'verdict (fan-in)' })}
     </div>

@@ -1,0 +1,67 @@
+{
+  "repo": "skraft-eval-sandbox/shop",
+  "viewer": {
+    "login": "skraft-bot",
+    "id": 5001
+  },
+  "nextId": 960,
+  "items": {
+    "57": {
+      "number": 57,
+      "title": "Round discounts half up",
+      "state": "open",
+      "body": "Rounds every discount half up.",
+      "user": {
+        "login": "skraft-bot",
+        "id": 5001
+      },
+      "labels": [
+        {
+          "name": "type/fix"
+        }
+      ],
+      "assignees": [],
+      "milestone": null,
+      "pull_request": {
+        "url": "https://api.github.com/repos/skraft-eval-sandbox/shop/pulls/57"
+      },
+      "head": {
+        "ref": "discount-rounding"
+      }
+    }
+  },
+  "comments": {
+    "57": [
+      {
+        "id": 948,
+        "user": {
+          "login": "mlopez",
+          "id": 7001
+        },
+        "body": "Thanks, looking at it after lunch.",
+        "html_url": "https://github.com/skraft-eval-sandbox/shop/issues/57#issuecomment-948",
+        "issue_url": "https://api.github.com/repos/skraft-eval-sandbox/shop/issues/57"
+      },
+      {
+        "id": 950,
+        "user": {
+          "login": "skraft-bot",
+          "id": 5001
+        },
+        "body": "<sub>skraft-review pr=57</sub>\n\n## Review \u2014 pass 1\n\nVerdict: NEEDS_REWORK\n\n- test-integrity: an assertion on the rounded amount was removed\n",
+        "html_url": "https://github.com/skraft-eval-sandbox/shop/issues/57#issuecomment-950",
+        "issue_url": "https://api.github.com/repos/skraft-eval-sandbox/shop/issues/57"
+      },
+      {
+        "id": 951,
+        "user": {
+          "login": "mlopez",
+          "id": 7001
+        },
+        "body": "> <sub>skraft-review pr=57</sub>\n\nI put the assertion back.",
+        "html_url": "https://github.com/skraft-eval-sandbox/shop/issues/57#issuecomment-951",
+        "issue_url": "https://api.github.com/repos/skraft-eval-sandbox/shop/issues/57"
+      }
+    ]
+  }
+}

@@ -119,10 +119,10 @@ test('diff names a publish node added, a node turned from publish to gate, a con
   const reshaped = edit(
     withLenses(BUILT_IN_WORKFLOW, 'mutation_review', ['cold-reader', 'test-integrity']),
     ['    design_review_fitness [shape=note, lens="fitness"]\n', ''],
-    ['  design_review_lenses -> design_review_fitness -> design_review\n', ''],
+    ['  design_review_lenses -> design_review_fitness -> design_review_refuter\n', ''],
     ['lens="coverage"', 'lens="coverage", when="mock", model="frontier"'],
-    ['  distill_review_lenses -> distill_review_testability -> distill_review\n', ''],
-    ['  mutation_review_lenses -> mutation_review_cold_reader', '  mutation_review_lenses -> distill_review_testability -> mutation_review\n  mutation_review_lenses -> mutation_review_cold_reader'],
+    ['  distill_review_lenses -> distill_review_testability -> distill_review_refuter\n', ''],
+    ['  mutation_review_lenses -> mutation_review_cold_reader', '  mutation_review_lenses -> distill_review_testability -> mutation_review_refuter\n  mutation_review_lenses -> mutation_review_cold_reader'],
     ['publish  [shape=parallelogram, publish="pull-request"]', 'publish  [shape=parallelogram, gate="build"]\n  notify   [shape=parallelogram, publish="pull-request"]'],
     ['pr_writer -> publish -> exit', 'pr_writer -> publish -> notify -> exit'],
     ['question="publish-consent"', 'question="reporting-consent"'],

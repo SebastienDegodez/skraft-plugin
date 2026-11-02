@@ -3,6 +3,7 @@ import { SUMMARY_LENGTH } from './pull-request-prose.mjs'
 import { cell, code, embedded, inert, oneLine, openFence } from './markdown-safety.mjs'
 import { screenshotLines } from './visuals.mjs'
 import { detailParts, pointerOf, roomOf } from './run-details.mjs'
+import { layerCounts } from './test-plan-layers.mjs'
 
 /**
  * The description of the pull request a run opens, as "Writing good CL descriptions" lays it
@@ -57,7 +58,8 @@ const CUT = `[cut: the description holds more than a pull request takes; read it
  */
 export const renderPullRequest = (facts) => {
   const title = titleOf(facts)
-  const sections = SECTIONS.map((section) => section(facts))
+  const counts = layerCounts(facts.testPlans)
+  const sections = SECTIONS.flatMap((section) => section(facts, counts) ?? [])
   const { body, details } = split(facts, sections)
   return { title, body, description: `${title}\n\n${bodyOf(facts, sections)}`, details }
 }
@@ -169,6 +171,22 @@ const folded = (heading, lines, fold = () => FOLDED) => (facts) => {
   return { head: `<details${open ? ' open' : ''}><summary>${count === null ? heading : `${heading}: ${count}`}</summary>`, text: lines(facts).join('\n'), foot: ['', '</details>'], open, detail: !open }
 }
 
+/** The command a developer runs to find the tests that kill no mutant on their own. */
+const PRUNE_LINE = 'To find the tests that kill no mutant on their own, the developer runs `/skraft:prune-tests` on a component; it proposes, the developer decides each test.'
+const DOMAIN_HEAVY = 'More Domain tests than acceptance tests'
+
+/** @typedef {import('./test-plan-layers.mjs').LayerCounts} LayerCounts */
+
+/** The test plans plan more Domain tests than acceptance tests. @param {LayerCounts} counts */
+const domainHeavy = ({ domain, acceptance }) => domain > acceptance
+
+/** @param {LayerCounts} counts */
+const domainHeavyLine = ({ domain, acceptance }) => `The test plans count ${counted(domain, 'Domain row')} against ${counted(acceptance, 'acceptance row')} (Application and E2E). ${PRUNE_LINE}`
+
+/** The suggestion in the clear, under its heading, when the test plans are Domain heavy. @param {PullRequestFacts} facts @param {LayerCounts} counts */
+const domainHeavySection = (facts, counts) => (domainHeavy(counts) ? shown(DOMAIN_HEAVY, () => [domainHeavyLine(counts)])(facts) : null)
+
+/** @type {ReadonlyArray<(facts: PullRequestFacts, counts: LayerCounts) => Section | null>} */
 const SECTIONS = Object.freeze([
   shown('What changes', ({ prose }) => (prose === null ? notWritten('what changes') : [inert(prose.what)])),
   shown('Why', ({ prose }) => (prose === null ? notWritten('why') : [inert(prose.why)])),
@@ -179,8 +197,9 @@ const SECTIONS = Object.freeze([
   folded('Quality gates', ({ gates }) => gateLines(gates), ({ gates }) => gateFold(gates)),
   folded('Review', ({ review }) => reviewLines(review), ({ review }) => reviewFold(review)),
   folded('Screenshots', ({ visuals, repository }) => screenshotLines(visuals, repository)),
+  domainHeavySection,
   shown('Out of scope and limitations', ({ prose }) => (prose === null ? notWritten('what is out of scope') : [inert(prose.limitations)])),
-  folded('Run summary', ({ status, report }) => [status, '', ...reportTable(report)]),
+  (facts, counts) => folded('Run summary', ({ status, report }) => [status, '', ...reportTable(report), ...(domainHeavy(counts) ? [] : ['', PRUNE_LINE])])(facts),
   folded('AI disclosure', ({ models }) => [disclosure(models)]),
 ])
 

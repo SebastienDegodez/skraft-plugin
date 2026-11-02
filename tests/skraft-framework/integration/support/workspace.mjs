@@ -114,3 +114,10 @@ export const skraft = async (cwd, args, { env = process.env, home = `${cwd}-home
 export const readJson = (/** @type {string} */ path) => JSON.parse(readFileSync(path, 'utf8'))
 export const journal = (/** @type {string} */ cwd, /** @type {string} */ slug) =>
   readFileSync(join(cwd, '.copilot-tracking', 'skraft-plans', slug, 'events.jsonl'), 'utf8').split(/\r?\n/).filter(Boolean).map((line) => JSON.parse(line))
+
+/**
+ * A runner whose every command has a short time limit in place of the one the adapter asks for:
+ * a program that never answers is stopped by the runner, as it would be past the adapter's own limit.
+ * @param {import('../../../../plugins/skraft-framework/engine/application/ports/command-runner.mjs').CommandRunner} runner @param {number} [timeoutMs]
+ */
+export const shortLimit = (runner, timeoutMs = 8_000) => ({ run: (request) => runner.run({ ...request, timeoutMs }) })

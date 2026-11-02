@@ -120,9 +120,9 @@ Le plan V2 fixe des cibles. Ce sont des **objectifs**, pas des résultats mesur�
 | `skraft next` et `skraft record` (repli VS Code) | Sous 300 ms chacun |
 | Surcoût par appel d'outil | 0 ms (aucun hook) |
 
-Le chemin vers ces cibles est lui-même contrôlé. Chaque lot est comparé à la v1 sur les
-mêmes projets d'essai : phases atteintes, verdicts, gates, artefacts, durée, coût, relances.
-Une régression bloque la PR du lot. Le moteur est couvert par des tests d'acceptation par
+Chaque lot est comparé à la v1 par des runs réels sur les mêmes projets : phases atteintes,
+verdicts, gates, artefacts, durée, coût, relances. Aucun outil n'automatise cette comparaison.
+Le moteur est couvert par des tests d'acceptation par
 cas d'usage et par du mutation testing en CI (seuil 80 % global ; le cœur vise 100 %).
 
 Les mêmes travaux (*Accelerate*, 2018) relient la performance de livraison logicielle à la

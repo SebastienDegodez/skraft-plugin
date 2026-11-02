@@ -8,7 +8,7 @@ import dagre from '@dagrejs/dagre'
  * @typedef {{ x: number, y: number }} Point
  * @typedef {{
  *   id: string, type: string, position: Point, width: number, height: number,
- *   data: { node?: object, title: string, rows?: string[], branches?: object[], answers?: string[], calls?: string | null },
+ *   data: { node?: object, title: string, rows?: string[], branches?: object[], refutedBy?: object | null, answers?: string[], calls?: string | null },
  * }} FlowNode
  * @typedef {{ id: string, source: string, target: string, type: 'route', data: { label: string | null, maxVisits: number | null, points: Point[], labelAt: Point | null } }} FlowEdge
  * @typedef {{ nodes: FlowNode[], edges: FlowEdge[], width: number, height: number }} Flow
@@ -66,11 +66,11 @@ const flowNodeOf = (node, workflow, answersOf) => {
   if (node.kind === 'start' || node.kind === 'exit') return { id: node.id, type: node.kind, position: { x: 0, y: 0 }, ...PILL, data: { node, title: node.kind } }
   const answers = node.kind === 'ask' ? answersFor(node, workflow, answersOf) : []
   const rows = (ROWS[node.kind] ?? (() => []))(node, answers)
-  const chips = node.kind === 'review' ? node.branches.length + 1 : 0 // the lenses, then the verdict
+  const chips = node.kind === 'review' ? node.branches.length + 2 : 0 // the lenses, the refuter, then the verdict
   const height = HEADER + rows.length * ROW + chips * CHIP + PADDING
   return {
     id: node.id, type: node.kind, position: { x: 0, y: 0 }, width: CARD, height,
-    data: { node, title: titleOf(node), rows, branches: node.branches, answers, calls: node.call?.workflow ?? null },
+    data: { node, title: titleOf(node), rows, branches: node.branches, refutedBy: node.refutedBy ?? null, answers, calls: node.call?.workflow ?? null },
   }
 }
 
@@ -178,6 +178,7 @@ const FIELD_LINKS = {
   branches: (node) => [at('reviews'), ...(node.branches.some(({ when }) => when) ? [at('conditional-lenses')] : [])],
   mandatory: () => [at('mandatory-nodes')],
   call: () => [at('call-node')],
+  refutedBy: () => [at('reviews')],
 }
 
 const branchText = ({ lens, when, mandatory }) => `${lens}${mandatory ? ' (mandatory)' : ''}${when ? ` (when=${when})` : ''}`
@@ -185,6 +186,7 @@ const branchText = ({ lens, when, mandatory }) => `${lens}${mandatory ? ' (manda
 const VALUES = {
   branches: (branches) => branches.map(branchText).join(', '),
   call: (call) => call.workflow,
+  refutedBy: ({ id, mandatory }) => `${id}${mandatory ? ' (mandatory)' : ''}`,
 }
 
 /** A field the node sets: not null, not false, not an empty list. */

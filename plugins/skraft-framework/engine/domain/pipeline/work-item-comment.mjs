@@ -23,8 +23,8 @@ export const areComments = (comments) => Array.isArray(comments) && comments.eve
 /**
  * The comment to rewrite: the one at the URL the journal kept, else the last whose text STARTS
  * with the marker (the first line of a comment of the run), as written or with `<`, `>` and `&`
- * escaped as the Azure DevOps MCP server 2.11.0 writes them for an agent (as the
- * azure-boards-work-items skill says; not measured). A reply that quotes the marker further in is someone else's, never rewritten; who
+ * escaped as HTML: the form Azure Boards keeps when the comment's text was sent escaped, by an
+ * agent's client rather than by az (not measured: docs/v2/host-verification.md). A reply that quotes the marker further in is someone else's, never rewritten; who
  * wrote a comment is not checked, since Azure does not tell it here (docs/v2/host-verification.md).
  * @param {WorkItemSite} site @param {{ number: number, marker: string, url: string | null }} request
  * @param {any[]} comments the work item's comments, as REST answers them: `id` and `text`

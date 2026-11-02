@@ -4,7 +4,7 @@ La documentation publique de SKRAFT V2 est le handbook, en français et en angla
 
 > **[https://sebastiendegodez.github.io/skraft-plugin/](https://sebastiendegodez.github.io/skraft-plugin/)**
 
-Son contenu vit dans [`site/`](./site/) ; sa structure (parties Diátaxis, pages, parité FR/EN)
+Son contenu vit dans [`website/`](./website/) (Docusaurus) ; sa structure (parties Diátaxis, pages, parité FR/EN)
 est déclarée dans [`website/book.yml`](./website/book.yml).
 
 ---

@@ -10,7 +10,7 @@ defaults:
   executor: skraft-agent-runner
   timeout: 10m
   model: standard
-  runs: 3
+  runs: 5
 scoring:
   # 0.9, not 1.0. A trial that misses one grader and a trial that misses six
   # score identically at 1.0, which erases the difference between an arm that
@@ -219,6 +219,115 @@ stimuli:
             - bdd-methodology
             - test-design-mandates
             - outside-in-tdd
+
+  - name: A criterion an existing test already covers is relied on only once that test is run, else tested anew
+    prompt: |
+      Same loyalty tier pricing story; the research on it is done. Produce the executable
+      specification and the plan the implementer will follow. This repository already has
+      some pricing tests: the team does not want to write a test twice, nor to ship a
+      criterion that nothing checks.
+    tags:
+      agent: acceptance-designer
+      scenario: existing-test-covers-a-criterion
+      permissions: workspace-write
+      cost: high
+    supported_executors:
+      - skraft-agent-runner
+    environment:
+      files:
+        - src: fixtures/designed-story/.gitignore
+          dest: .gitignore
+        - src: fixtures/designed-story/skraft-config.json
+          dest: skraft-config.json
+        - src: fixtures/designed-story/CheckoutPricing.slnx
+          dest: CheckoutPricing.slnx
+        - src: fixtures/designed-story/Directory.Build.props
+          dest: Directory.Build.props
+        - src: fixtures/designed-story/Directory.Packages.props
+          dest: Directory.Packages.props
+        - src: fixtures/designed-story/.copilot-tracking/skraft-plans/pricing/plans/2026-08-12/stories-m1.md
+          dest: .copilot-tracking/skraft-plans/pricing/plans/2026-08-12/stories-m1.md
+        - src: fixtures/designed-story/.copilot-tracking/skraft-plans/pricing/plans/2026-08-12/ac.md
+          dest: .copilot-tracking/skraft-plans/pricing/plans/2026-08-12/ac.md
+        - src: fixtures/designed-story/.copilot-tracking/skraft-plans/pricing/details/2026-08-12/contracts.md
+          dest: .copilot-tracking/skraft-plans/pricing/details/2026-08-12/contracts.md
+        - src: fixtures/designed-story/.copilot-tracking/skraft-plans/pricing/research/2026-08-12/pricing-research.md
+          dest: .copilot-tracking/skraft-plans/pricing/research/2026-08-12/pricing-research.md
+        - src: fixtures/designed-story/docs/adr/decisions-index.md
+          dest: docs/adr/decisions-index.md
+        - src: fixtures/designed-story/src/CheckoutPricing.Domain/CheckoutPricing.Domain.csproj
+          dest: src/CheckoutPricing.Domain/CheckoutPricing.Domain.csproj
+        - src: fixtures/designed-story/src/CheckoutPricing.Domain/LoyaltyTier.cs
+          dest: src/CheckoutPricing.Domain/LoyaltyTier.cs
+        - src: fixtures/designed-story/src/CheckoutPricing.Application/CheckoutPricing.Application.csproj
+          dest: src/CheckoutPricing.Application/CheckoutPricing.Application.csproj
+        - src: fixtures/designed-story/src/CheckoutPricing.Application/CalculateLoyaltyDiscount.cs
+          dest: src/CheckoutPricing.Application/CalculateLoyaltyDiscount.cs
+        - src: fixtures/designed-story/tests/CheckoutPricing.UnitTest/CheckoutPricing.UnitTest.csproj
+          dest: tests/CheckoutPricing.UnitTest/CheckoutPricing.UnitTest.csproj
+        - src: fixtures/designed-story/tests/CheckoutPricing.UnitTest/Pricing/WholeCentPricingTests.cs
+          dest: tests/CheckoutPricing.UnitTest/Pricing/WholeCentPricingTests.cs
+      commands: *designed-setup
+    graders:
+      - type: completed
+      - type: run-command
+        name: The whole-cent criterion rests on the named, run and passing existing test, or gets a new planned test
+        config:
+          command: bash
+          args:
+            - '-lc'
+            - |-
+              plan=$(ls .copilot-tracking/skraft-plans/pricing/details/*/test-plan-*.md 2>/dev/null | head -n 1)
+              [ -n "$plan" ] || { echo "no test plan"; exit 1; }
+              rows=$(grep -E '^[[:space:]]*\|' "$plan")
+              relied=$(printf '%s\n' "$rows" | grep -iE '\|[[:space:]]*existing[[:space:]]*\|')
+              if [ -n "$relied" ]; then
+                printf '%s\n' "$relied" | grep -viqE 'WholeCentPricingTests|Bronze_customer_pricing_a_7_cent_basket_is_charged_7_cents' && { echo "an existing row cites a test the research does not list"; exit 1; }
+                printf '%s\n' "$relied" | grep -viq 'passed' && { echo "an existing row carries no passing run"; exit 1; }
+                exit 0
+              fi
+              printf '%s\n' "$rows" | grep -iqE '(^|[^0-9])7([^0-9]|$)|whole[ -]cent|round' || { echo "the whole-cent criterion has no planned test"; exit 1; }
+          expected_exit_code: 0
+          timeout: 30s
+      - type: run-command
+        name: The existing test is left as it was
+        config:
+          command: bash
+          args:
+            - '-lc'
+            - 'test -f tests/CheckoutPricing.UnitTest/Pricing/WholeCentPricingTests.cs && git diff --quiet HEAD -- tests/CheckoutPricing.UnitTest/Pricing/WholeCentPricingTests.cs'
+          expected_exit_code: 0
+          timeout: 30s
+      - type: run-command
+        name: The basket criteria still get their own planned tests
+        config:
+          command: bash
+          args:
+            - '-lc'
+            - |-
+              plan=$(ls .copilot-tracking/skraft-plans/pricing/details/*/test-plan-*.md 2>/dev/null | head -n 1)
+              [ -n "$plan" ] || exit 1
+              for tier in bronze silver gold; do
+                grep -E '^[[:space:]]*\|' "$plan" | grep -i "$tier" | grep -viqE '\|[[:space:]]*existing[[:space:]]*\|' || exit 1
+              done
+          expected_exit_code: 0
+          timeout: 30s
+      - type: prompt
+        config:
+          scoring: scale_1_10
+      - type: skill-invocation
+        name: Mandatory specification skills are loaded
+        config:
+          required:
+            - bdd-methodology
+            - test-design-mandates
+            - outside-in-tdd
+    rubric:
+      - The 7-cent Bronze criterion ends either relying on the test the research lists for it, named by file and test name, or with a new test planned for it; it is never left with neither.
+      - When it relies on that test, the session ran that one test on its own before relying on it, and saw it pass; reading the test is not enough.
+      - The plan records, where it relies on that test, the command that ran it and that it passed.
+      - The Bronze, Silver and Gold basket criteria each still get a new test planned.
+      - The test that already existed is left unchanged.
 
   - name: Absent acceptance criteria halt the distillation
     prompt: |

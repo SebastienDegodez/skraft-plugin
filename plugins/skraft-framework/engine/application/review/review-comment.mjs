@@ -3,6 +3,8 @@ import { reviewConsentOf, withReviewConsent } from '../../domain/decisions/revie
 import { questionKey, questionOf, readAnswer, REVIEW_CONSENT_TEXT } from '../../domain/decisions/questions.mjs'
 import { COMMENT_FILE, COMMENT_THREAD_FILE, COMMENT_CONTENT_FILE, markerOf, renderComment } from '../../domain/review/pull-request.mjs'
 import { contentRequestOf, threadRequestOf } from '../../domain/review/azure-pull-request.mjs'
+import { ANYWHERE } from '../../domain/pipeline/forge-comment.mjs'
+import { keptComment } from '../publish/forge-writes.mjs'
 
 /**
  * The review's comment: rendered beside the review on every pass, then, with `--publish`, kept as
@@ -40,11 +42,18 @@ export const keepComment = async (context, review) => {
 /** @param {string} reason */
 const unpublishedOf = (reason) => `not published: ${reason}`
 
-/** The comment rewritten, or posted. @param {CommentContext} context @param {string} body */
-const posted = async ({ deps, slug, number, journal }, body) => deps.pullRequests.keepComment({
-  number, marker: markerOf(number), url: journal.events.findLast((event) => event.type === 'review.commented')?.url ?? null,
-  bodyFile: deps.reviewFiles.location(slug, COMMENT_FILE), body, ...(await requestFilesOf(deps, slug, body)),
-})
+/** The comment rewritten, or posted, then read back. @param {CommentContext} context @param {string} body */
+const posted = async ({ deps, slug, number, journal }, body) => {
+  const marker = markerOf(number)
+  const request = {
+    number, marker, url: journal.events.findLast((event) => event.type === 'review.commented')?.url ?? null,
+    bodyFile: deps.reviewFiles.location(slug, COMMENT_FILE), body, ...(await requestFilesOf(deps, slug, body)),
+  }
+  return keptComment(journal, { write: 'review-comment', subject: String(number), marker, markerAt: ANYWHERE }, {
+    keep: () => deps.pullRequests.keepComment(request),
+    read: (url) => deps.pullRequests.readComment(url),
+  })
+}
 
 /**
  * The comment as the JSON of a new thread and of the rewrite of a comment, kept beside it, written

@@ -1,4 +1,6 @@
 import { emptiedPart, markerOf } from '../../domain/reporting/run-details.mjs'
+import { OPENS } from '../../domain/pipeline/forge-comment.mjs'
+import { keptComment } from './forge-writes.mjs'
 
 /**
  * The run details of a pull request, kept in comments of it when its body would not hold them:
@@ -48,13 +50,22 @@ const keepPart = async (deps, request, part) => {
   const bodyHash = await deps.hasher.sha256(part.body)
   const before = part.kept.get(part.part)
   if (before?.bodyHash === bodyHash) return null
-  const made = await deps.codeHost.keepPullRequestComment(await requestOf(deps, request.slug, { ...part, url: before?.url ?? null }))
+  const made = await verifiedPart(deps, request.journal, await requestOf(deps, request.slug, { ...part, url: before?.url ?? null }))
   const fields = { number: part.number, part: part.part, parts: part.details.length }
   if (!made.ok) return skipped(request, fields, made)
   await request.journal.append('pull-request.details-kept', { ...fields, url: made.url, bodyHash })
   part.kept.set(part.part, { url: made.url, bodyHash })
   return null
 }
+
+/**
+ * The part kept on the pull request, then read back at the URL the forge gave.
+ * @param {DetailsDeps} deps @param {DetailsRequest['journal']} journal @param {import('../ports/code-host.mjs').PullRequestCommentRequest} asked
+ */
+const verifiedPart = (deps, journal, asked) => keptComment(journal, { write: 'pull-request-comment', subject: String(asked.number), marker: asked.marker, markerAt: OPENS }, {
+  keep: () => deps.codeHost.keepPullRequestComment(asked),
+  read: (url) => deps.codeHost.readComment(url),
+})
 
 /** @param {DetailsRequest} request @param {Record<string, number>} fields @param {{ reason: string }} made @returns {Promise<DetailsOutcome>} */
 const skipped = async ({ journal }, fields, made) => {

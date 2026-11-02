@@ -271,8 +271,15 @@ parts:
             label_fr: "Publier la pull request"
             label_en: "Publish the pull request"
             doc: how-to/publish-pull-request
-            purpose_fr: "Consentir, preparer gh, laisser le run ouvrir sa pull request ou la publier avec skraft publish, suivre l'issue, joindre les captures d'un frontend."
-            purpose_en: "Consent, set up gh, let the run open its pull request or publish it with skraft publish, follow the issue, attach a front end's screenshots."
+            purpose_fr: "Consentir, preparer gh, laisser le run ouvrir sa pull request ou la publier avec skraft publish, suivre l'issue."
+            purpose_en: "Consent, set up gh, let the run open its pull request or publish it with skraft publish, follow the issue."
+          - id: attach-screenshots
+            type: editorial
+            label_fr: "Joindre les captures"
+            label_en: "Attach screenshots"
+            doc: how-to/attach-screenshots
+            purpose_fr: "Declarer la commande e2e d'un frontend et laisser le run joindre ses captures claires et sombres a la pull request."
+            purpose_en: "Declare a front end's e2e command and let the run attach its light and dark screenshots to the pull request."
       - id: review
         title_fr: "Revoir"
         title_en: "Review"
@@ -701,13 +708,21 @@ parts:
             label_en: "Command line"
             sidebar_position: 2
             doc: reference/cli
-            purpose_fr: "Chaque commande skraft : synopsis, options, sorties texte et JSON, codes de sortie."
-            purpose_en: "Every skraft command: synopsis, options, text and JSON outputs, exit codes."
+            purpose_fr: "Les commandes skraft qui conduisent un run : synopsis, options, sorties texte et JSON, codes de sortie."
+            purpose_en: "The skraft commands that drive a run: synopsis, options, text and JSON outputs, exit codes."
+          - id: cli-maintenance
+            type: editorial
+            label_fr: "Installation et maintenance"
+            label_en: "Setup and maintenance"
+            sidebar_position: 3
+            doc: reference/cli-maintenance
+            purpose_fr: "Ou skraft trouve le plugin, puis doctor, migrate, journal adopt, workflow et la liste des commandes."
+            purpose_en: "Where skraft finds the plugin, then doctor, migrate, journal adopt, workflow and the commands listing."
           - id: workflow-dot
             type: editorial
             label_fr: "Workflow DOT"
             label_en: "DOT workflow"
-            sidebar_position: 3
+            sidebar_position: 4
             doc: reference/workflow-dot
             purpose_fr: "La syntaxe des workflows .skraft.dot : formes de noeud, attributs, aretes, regles de validite, noeuds verrouilles et obligatoires, revues, noeud d'appel."
             purpose_en: "The syntax of .skraft.dot workflows: node shapes, attributes, edges, validity rules, locked and mandatory nodes, reviews, call node."
@@ -715,7 +730,7 @@ parts:
             type: editorial
             label_fr: "Phases"
             label_en: "Phases"
-            sidebar_position: 4
+            sidebar_position: 5
             doc: reference/phases
             purpose_fr: "Chaque phase de DISCOVER a PUBLISH : entrees, sorties et leurs chemins, agents, lentilles et gates, aretes de retour, decisions humaines."
             purpose_en: "Each phase from DISCOVER to PUBLISH: inputs, outputs and their paths, agents, lenses and gates, loop-back edges, human decisions."
@@ -723,7 +738,7 @@ parts:
             type: editorial
             label_fr: "skraft-config.json"
             label_en: "skraft-config.json"
-            sidebar_position: 5
+            sidebar_position: 6
             doc: reference/skraft-config
             purpose_fr: "Le schema complet de la configuration et de ses couches, ses regles de validation, les lignes de commande et les defauts de detection."
             purpose_en: "The full schema of the configuration and its layers, its validation rules, command lines and detection defaults."
@@ -731,7 +746,7 @@ parts:
             type: editorial
             label_fr: "Suivi et journal"
             label_en: "Tracking and journal"
-            sidebar_position: 6
+            sidebar_position: 7
             doc: reference/run-journal
             purpose_fr: "Le dossier de suivi, les artefacts par phase, la documentation durable écrite sous docs/, les événements de events.jsonl et tous les codes de refus et de blocage."
             purpose_en: "The tracking folder, the artifacts by phase, the durable documentation written under docs/, the events.jsonl events and every refusal and block code."

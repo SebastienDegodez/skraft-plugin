@@ -3,6 +3,45 @@
 Toutes les modifications notables de ce projet sont documentées ici.
 Format basé sur [Conventional Commits](https://www.conventionalcommits.org/) — versionnage [SemVer](https://semver.org/).
 
+## [2.0.0-alpha.53](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.52...v2.0.0-alpha.53) (2026-11-02)
+
+### ✨ Features
+
+* **skills:** agents write to the forge only through github-forge-writes and azure-devops-forge-writes ([#487](https://github.com/SebastienDegodez/skraft-plugin/issues/487)) ([d9feed2](https://github.com/SebastienDegodez/skraft-plugin/commit/d9feed2730772c414f75009be4ca7919411a4a30)), closes [#474](https://github.com/SebastienDegodez/skraft-plugin/issues/474) [#474](https://github.com/SebastienDegodez/skraft-plugin/issues/474) [#474](https://github.com/SebastienDegodez/skraft-plugin/issues/474) [#474](https://github.com/SebastienDegodez/skraft-plugin/issues/474) [#474](https://github.com/SebastienDegodez/skraft-plugin/issues/474) [#474](https://github.com/SebastienDegodez/skraft-plugin/issues/474) [#42](https://github.com/SebastienDegodez/skraft-plugin/issues/42) [#474](https://github.com/SebastienDegodez/skraft-plugin/issues/474)
+
+## [2.0.0-alpha.52](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.51...v2.0.0-alpha.52) (2026-11-02)
+
+### ✨ Features
+
+* **skills:** tests existants relus en RESEARCH, skill prune-tests, suggestion dans la PR ([#341](https://github.com/SebastienDegodez/skraft-plugin/issues/341)) ([#469](https://github.com/SebastienDegodez/skraft-plugin/issues/469)) ([dc6634e](https://github.com/SebastienDegodez/skraft-plugin/commit/dc6634e14fbd17a4f281c95c1f19ef339676a6bc))
+
+## [2.0.0-alpha.51](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.50...v2.0.0-alpha.51) (2026-11-02)
+
+### ✨ Features
+
+* **engine:** a forge write is applied only once read back; a resume never opens a second pull request ([#472](https://github.com/SebastienDegodez/skraft-plugin/issues/472)) ([#486](https://github.com/SebastienDegodez/skraft-plugin/issues/486)) ([9d72b57](https://github.com/SebastienDegodez/skraft-plugin/commit/9d72b57bcda56bf3b4d026245e1628b67e4bcaa3))
+
+## [2.0.0-alpha.50](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.49...v2.0.0-alpha.50) (2026-11-01)
+
+### ✨ Features
+
+* **engine:** declare the refuter as a mandatory node of every review ([#488](https://github.com/SebastienDegodez/skraft-plugin/issues/488)) ([24b47ad](https://github.com/SebastienDegodez/skraft-plugin/commit/24b47ad05f774ba0e4997b47369ced7a99f475c6)), closes [#459](https://github.com/SebastienDegodez/skraft-plugin/issues/459)
+
+### 📝 Documentation
+
+* bring over-budget handbook pages under their word budget ([#475](https://github.com/SebastienDegodez/skraft-plugin/issues/475)) ([#489](https://github.com/SebastienDegodez/skraft-plugin/issues/489)) ([63768e5](https://github.com/SebastienDegodez/skraft-plugin/commit/63768e5c320cfa4290121dda95cae554ace9896c))
+
+## [2.0.0-alpha.49](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.48...v2.0.0-alpha.49) (2026-11-01)
+
+### 🐛 Bug Fixes
+
+* **docs:** orphan MCP copies dropped; no-remote tutorials say an unreadable issue refuses the run ([#481](https://github.com/SebastienDegodez/skraft-plugin/issues/481)) ([8b0a98b](https://github.com/SebastienDegodez/skraft-plugin/commit/8b0a98b5136f2145499bd6a333d9a2b719ece852)), closes [#473](https://github.com/SebastienDegodez/skraft-plugin/issues/473) [#476](https://github.com/SebastienDegodez/skraft-plugin/issues/476) [#473](https://github.com/SebastienDegodez/skraft-plugin/issues/473) [#474](https://github.com/SebastienDegodez/skraft-plugin/issues/474) [#473](https://github.com/SebastienDegodez/skraft-plugin/issues/473) [#473](https://github.com/SebastienDegodez/skraft-plugin/issues/473) [#476](https://github.com/SebastienDegodez/skraft-plugin/issues/476)
+
+### 📝 Documentation
+
+* pull-request.details-skipped carries no via nor fallback; host-verification names no removed MCP module ([#484](https://github.com/SebastienDegodez/skraft-plugin/issues/484)) ([418ad28](https://github.com/SebastienDegodez/skraft-plugin/commit/418ad28e73f97784989d8f0115766f7a8edae965)), closes [#483](https://github.com/SebastienDegodez/skraft-plugin/issues/483) [#473](https://github.com/SebastienDegodez/skraft-plugin/issues/473)
+* the engine reads and writes the forge through gh and az only; MCP probes of the engine retired ([#483](https://github.com/SebastienDegodez/skraft-plugin/issues/483)) ([84a12b7](https://github.com/SebastienDegodez/skraft-plugin/commit/84a12b749f0be5bf15fddadb11273b2e43670bf4)), closes [#github-through-gh](https://github.com/SebastienDegodez/skraft-plugin/issues/github-through-gh) [#azure-devops-through-az](https://github.com/SebastienDegodez/skraft-plugin/issues/azure-devops-through-az) [#473](https://github.com/SebastienDegodez/skraft-plugin/issues/473) [#476](https://github.com/SebastienDegodez/skraft-plugin/issues/476) [#476](https://github.com/SebastienDegodez/skraft-plugin/issues/476)
+
 ## [2.0.0-alpha.48](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.47...v2.0.0-alpha.48) (2026-11-01)
 
 ### ✨ Features

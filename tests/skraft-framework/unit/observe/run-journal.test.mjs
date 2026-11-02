@@ -66,12 +66,14 @@ const WORKFLOW = `digraph report {
   design_lenses [shape=component]
   design_consistency [shape=note, lens="consistency"]
   design_fitness [shape=note, lens="fitness"]
+  design_refuter [shape=octagon]
   design_review [shape=tripleoctagon]
   adr           [shape=hexagon, question="adr-ratification"]
   exit          [shape=Msquare]
   start -> research -> design -> design_lenses
-  design_lenses -> design_consistency -> design_review
-  design_lenses -> design_fitness -> design_review
+  design_lenses -> design_consistency -> design_refuter
+  design_lenses -> design_fitness -> design_refuter
+  design_refuter -> design_review
   design_review -> design [label="NEEDS_REWORK", max_visits=2]
   design_review -> adr [label="APPROVED"]
   adr -> exit [label="RATIFIED"]

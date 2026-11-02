@@ -229,9 +229,9 @@ Under Copilot CLI, the **Journal** tab of the `skraft-pipeline` canvas reads thi
 | `publish.requested` | `skraft publish` | `by` (`skraft publish`); `consent` (`publish.pullRequest` when the command ran) |
 | `pull-request.opened` | the `publish` node or `skraft publish` | `number`; `url`; `base`; `head`; `draft`; `bodyHash` |
 | `pull-request.updated` | the `publish` node or `skraft publish` | `number`; `url`; `bodyHash` |
-| `pull-request.details-kept` | the `publish` node or `skraft publish`, once the pull request is opened, updated or up to date | `number`; `part`; `parts`; `url` of the comment; `bodyHash` of the part; `via` and `fallback` when an MCP server was offered |
-| `pull-request.details-skipped` | the same, when a part could not be kept | `number`; `part`; `parts`; `reason`; `via` and `fallback` |
-| `issue.commented`, `issue.comment-skipped` | the run, at each transition it reports on the story's issue | `issue`; `kind`; `phase`; `step`; `event`; `url` (commented) or `reason` (skipped); `via` (`mcp`, `gh` or `az`) and `fallback` when a host MCP server was offered |
+| `pull-request.details-kept` | the `publish` node or `skraft publish`, once the pull request is opened, updated or up to date | `number`; `part`; `parts`; `url` of the comment; `bodyHash` of the part |
+| `pull-request.details-skipped` | the same, when a part could not be kept | `number`; `part`; `parts`; `reason` |
+| `issue.commented`, `issue.comment-skipped` | the run, at each transition it reports on the story's issue | `issue`; `kind`; `phase`; `step`; `event`; `url` (commented) or `reason` (skipped) |
 | `journal.adopted` | `skraft journal adopt` | `keyId` (the new key); `previousKeyId`; `unverified` (how many earlier lines stay unverified) |
 
 Each entry of `run.started.base`: `{ component, root, repository, ref, source, sha }`.

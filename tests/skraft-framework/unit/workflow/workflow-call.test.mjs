@@ -88,7 +88,7 @@ test('a call to a workflow found nowhere, named with a folder, or to one that ru
   const nested = edit(BUILT_IN_REVIEW, ['  verdict -> exit [label="APPROVED"]', '  verdict -> second [label="APPROVED"]\n  second [shape=house, workflow="other"]\n  second -> exit'])
   assert.deepEqual(await errorsOf({ '.skraft/review.skraft.dot': nested }), ['.skraft/review.skraft.dot: node second calls other; a called workflow calls no other workflow'])
 
-  const ONE_REVIEW = '.skraft/review.skraft.dot must run one review, start -> fan-out -> lens nodes -> fan-in -> exit, with no NEEDS_REWORK edge: the calling node carries it'
+  const ONE_REVIEW = '.skraft/review.skraft.dot must run one review, start -> fan-out -> lens nodes -> refuter -> fan-in -> exit, with no NEEDS_REWORK edge: the calling node carries it'
   const withAgent = edit(BUILT_IN_REVIEW, ['  verdict -> exit [label="APPROVED"]', '  verdict -> fix [label="APPROVED"]\n  fix [shape=box, agent="software-engineer"]\n  fix -> exit'])
   assert.deepEqual(await errorsOf({ '.skraft/review.skraft.dot': withAgent }), [ONE_REVIEW])
   const reworking = edit(BUILT_IN_REVIEW, ['  verdict -> exit [label="APPROVED"]', '  verdict -> exit [label="APPROVED"]\n  verdict -> exit [label="NEEDS_REWORK"]'])

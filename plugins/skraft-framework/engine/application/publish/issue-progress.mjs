@@ -2,6 +2,8 @@ import { CONFIG_FILE } from '../../domain/config/skraft-config.mjs'
 import { consentOf } from '../../domain/decisions/consents.mjs'
 import { deriveRun } from '../../domain/journal/run-state.mjs'
 import { forgeAdapters } from '../config/forge.mjs'
+import { keptComment as verifiedComment } from './forge-writes.mjs'
+import { OPENS } from '../../domain/pipeline/forge-comment.mjs'
 import { COMMENTED, ISSUE_PROGRESS_FILE, keptComment, markerOf, pendingTransitions, renderProgress, SKIPPED, transitionName } from '../../domain/reporting/issue-progress.mjs'
 
 /**
@@ -62,9 +64,11 @@ const keep = async (deps, { slug, journal, workflow, config }, { issue, last }) 
   const { codeHost } = await forgeAdapters(deps, config.forge)
   const unreachable = await codeHost.unavailable()
   if (unreachable !== null) return { ok: false, reason: unreachable }
-  const requestFile = await requestFileOf(deps, { slug, codeHost, body })
-  const bodyFile = deps.files.location(slug, ISSUE_PROGRESS_FILE)
-  return codeHost.keepIssueComment({ number: issue, marker: markerOf(slug), url: keptComment(journal.events), bodyFile, requestFile, body })
+  const asked = { number: issue, marker: markerOf(slug), url: keptComment(journal.events), bodyFile: deps.files.location(slug, ISSUE_PROGRESS_FILE), requestFile: await requestFileOf(deps, { slug, codeHost, body }), body }
+  return verifiedComment(journal, { write: 'issue-comment', subject: String(issue), marker: asked.marker, markerAt: OPENS }, {
+    keep: () => codeHost.keepIssueComment(asked),
+    read: (url) => codeHost.readComment(url),
+  })
 }
 
 /** The comment as JSON beside its body, written only for a forge whose client sends one; its path, else an empty one. @param {ProgressDeps} deps @param {{ slug: string, codeHost: import('../ports/code-host.mjs').CodeHost, body: string }} comment */

@@ -141,6 +141,9 @@ describe('the side panel of a node', () => {
     assert.equal(branches.value, 'test-integrity (mandatory), architecture-boundaries (mandatory), cold-reader, mock-fidelity (when=mock), contract-fidelity (when=contract)')
     assert.deepEqual(branches.links.map(({ to }) => to), ['reference/workflow-dot#reviews', 'reference/workflow-dot#conditional-lenses'])
     assert.equal(fields.find(({ key }) => key === 'mandatory').value, 'true')
+    const refutedBy = fields.find(({ key }) => key === 'refutedBy')
+    assert.equal(refutedBy.value, 'refuter (mandatory)')
+    assert.deepEqual(refutedBy.links.map(({ to }) => to), ['reference/workflow-dot#reviews'])
   })
 
   test('shows a call with the workflow it runs', () => {

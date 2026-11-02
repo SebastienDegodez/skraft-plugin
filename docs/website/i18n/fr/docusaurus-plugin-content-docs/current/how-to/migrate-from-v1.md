@@ -113,7 +113,7 @@ Reprenez ensuite le run depuis votre hôte, comme tout run V2
 
 ## Étapes suivantes <!-- #next-steps -->
 
-- [`skraft migrate`](../reference/cli.md) — sorties texte et JSON, codes de sortie.
+- [`skraft migrate`](../reference/cli-maintenance.md) — sorties texte et JSON, codes de sortie.
 - [Dossier de suivi et journal](../reference/run-journal.md) — ce que
   remplace `state.json`.
 - [Changelog : ruptures de la V2](../reference/changelog.md#v2-breaking)

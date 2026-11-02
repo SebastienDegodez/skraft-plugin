@@ -1,0 +1,47 @@
+{
+  "repo": "skraft-eval-sandbox/shop",
+  "viewer": {
+    "login": "skraft-bot",
+    "id": 5001
+  },
+  "nextId": 960,
+  "items": {
+    "57": {
+      "number": 57,
+      "title": "Round discounts half up",
+      "state": "open",
+      "body": "Rounds every discount half up.",
+      "user": {
+        "login": "skraft-bot",
+        "id": 5001
+      },
+      "labels": [
+        {
+          "name": "type/fix"
+        }
+      ],
+      "assignees": [],
+      "milestone": null,
+      "pull_request": {
+        "url": "https://api.github.com/repos/skraft-eval-sandbox/shop/pulls/57"
+      },
+      "head": {
+        "ref": "discount-rounding"
+      }
+    }
+  },
+  "comments": {
+    "57": [
+      {
+        "id": 901,
+        "user": {
+          "login": "mlopez",
+          "id": 7001
+        },
+        "body": "The discount rounding is wrong: 0.125 rounds to 0.12 here, it should be 0.13.",
+        "html_url": "https://github.com/skraft-eval-sandbox/shop/issues/57#issuecomment-901",
+        "issue_url": "https://api.github.com/repos/skraft-eval-sandbox/shop/issues/57"
+      }
+    ]
+  }
+}
