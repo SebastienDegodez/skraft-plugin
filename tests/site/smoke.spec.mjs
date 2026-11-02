@@ -4,7 +4,7 @@ import { test, expect } from '@playwright/test';
 const BASE = process.env.BASE_URL || 'http://localhost:4000/skraft-plugin';
 
 test.describe('skraft handbook', () => {
-  test('the English home routes the reader through the four Diátaxis doors and the pipeline', async ({ page }) => {
+  test('the English home presents the three plugins, the four Diátaxis doors and the pipeline', async ({ page }) => {
     await page.goto(`${BASE}/`);
     await expect(page.locator('h1').first()).toContainText('SKRAFT');
     const doors = page.locator('main a.skraft-door');
@@ -12,17 +12,25 @@ test.describe('skraft handbook', () => {
     for (const part of ['tutorials', 'how-to', 'explanation', 'reference']) {
       await expect(page.locator(`main a.skraft-door[href="/skraft-plugin/${part}"]`)).toHaveCount(1);
     }
+    await expect(page.locator('main a.skraft-plugin')).toHaveCount(3);
+    for (const part of ['backlog', 'pipeline', 'brownfield']) {
+      await expect(page.locator(`main a.skraft-plugin[href="/skraft-plugin/explanation/${part}"]`)).toHaveCount(1);
+    }
     for (const phase of ['RESEARCH', 'DESIGN', 'DISTILL', 'DELIVER']) {
       await expect(page.locator('main')).toContainText(phase);
     }
   });
 
-  test('the French home is in French and its doors stay under /fr', async ({ page }) => {
+  test('the French home is in French and its plugins and doors stay under /fr', async ({ page }) => {
     await page.goto(`${BASE}/fr/`);
     await expect(page.locator('html')).toHaveAttribute('lang', 'fr');
     await expect(page.locator('h1').first()).toContainText('SKRAFT');
     await expect(page.locator('main a.skraft-door')).toHaveCount(4);
     await expect(page.locator('main a.skraft-door[href="/skraft-plugin/fr/tutorials"]')).toHaveCount(1);
+    await expect(page.locator('main a.skraft-plugin')).toHaveCount(3);
+    for (const part of ['backlog', 'pipeline', 'brownfield']) {
+      await expect(page.locator(`main a.skraft-plugin[href="/skraft-plugin/fr/explanation/${part}"]`)).toHaveCount(1);
+    }
   });
 
   test('the pipeline page draws its Mermaid diagram', async ({ page }) => {
