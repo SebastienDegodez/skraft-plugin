@@ -140,6 +140,11 @@
   overflow-wrap: anywhere;
 }
 
+/* main's deploy injects the v1 version select into every page; the navbar dropdown replaces it here. */
+body > select[aria-label='Documentation version'] {
+  display: none;
+}
+
 /* The search shortcut hint reads at AA on the navbar. */
 kbd[class*='searchHint'] {
   color: var(--ifm-color-emphasis-700);
