@@ -29,7 +29,7 @@ const translatedDocsDir = (versionDocsDirPath) =>
 /** @type {import('@docusaurus/types').Config} */
 export default {
   title: 'skraft',
-  tagline: 'An AI-agent SDLC pipeline: every phase delivered by one agent, reviewed by another.',
+  tagline: 'Three AI-agent plugins: the backlog, the development pipeline and brownfield code.',
   url: 'https://sebastiendegodez.github.io',
   baseUrl: BASE_URL,
   trailingSlash: false, // /how-to/run-gates -> how-to/run-gates.html (GitHub Pages)

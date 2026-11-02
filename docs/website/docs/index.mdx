@@ -1,6 +1,6 @@
 ---
 title: "SKRAFT — The Handbook"
-description: "What SKRAFT V2 is, where to start, and which of the four doors to open for your need."
+description: "SKRAFT V2, a suite of three plugins (backlog, development, brownfield): where to start, and which of the four doors to open for your need."
 persona: tech-lead
 hide_table_of_contents: true
 ---
@@ -10,8 +10,27 @@ import PhaseRibbon from '@site/src/components/PhaseRibbon'
 
 # SKRAFT — The Handbook
 
-SKRAFT takes a story from research to its pull request through four phases, each delivered by one
-agent and reviewed by another, under Claude Code, GitHub Copilot CLI and VS Code.
+SKRAFT is a suite of three plugins installed from one marketplace, under Claude Code, GitHub
+Copilot CLI and VS Code. Each covers one moment of a product's life; install the ones you need.
+
+<div className="skraft-doors">
+  <Link className="skraft-door" to="/explanation/backlog">
+    <strong>skraft-backlog — the backlog</strong>
+    <span>Before the code: turn a PRD into GitHub issues, triage them and refine each into a ready story.</span>
+  </Link>
+  <Link className="skraft-door" to="/explanation/pipeline">
+    <strong>skraft — development</strong>
+    <span>A ready story to its pull request in four phases, each delivered by one agent and reviewed by another.</span>
+  </Link>
+  <Link className="skraft-door" to="/explanation/brownfield">
+    <strong>skraft-brownfield — legacy code</strong>
+    <span>Characterize an existing codebase, lock its behaviour under tests, then refactor it safely.</span>
+  </Link>
+</div>
+
+## The development plugin
+
+The `skraft` plugin takes a story from research to its pull request through four phases:
 
 <PhaseRibbon />
 
