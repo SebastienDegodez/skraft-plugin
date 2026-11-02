@@ -3,6 +3,12 @@
 Toutes les modifications notables de ce projet sont documentées ici.
 Format basé sur [Conventional Commits](https://www.conventionalcommits.org/) — versionnage [SemVer](https://semver.org/).
 
+## [2.0.0-alpha.52](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.51...v2.0.0-alpha.52) (2026-11-02)
+
+### ✨ Features
+
+* **skills:** tests existants relus en RESEARCH, skill prune-tests, suggestion dans la PR ([#341](https://github.com/SebastienDegodez/skraft-plugin/issues/341)) ([#469](https://github.com/SebastienDegodez/skraft-plugin/issues/469)) ([dc6634e](https://github.com/SebastienDegodez/skraft-plugin/commit/dc6634e14fbd17a4f281c95c1f19ef339676a6bc))
+
 ## [2.0.0-alpha.51](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.50...v2.0.0-alpha.51) (2026-11-02)
 
 ### ✨ Features
