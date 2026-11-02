@@ -51,6 +51,7 @@ test('a test plan with more Domain rows than Application and E2E rows shows the 
   assert.equal(section(body, HEADING), `The test plans count 3 Domain rows against 1 acceptance row (Application and E2E). ${PRUNE_LINE}`)
   assert.ok(body.indexOf(`## ${HEADING}`) < body.indexOf('## Out of scope and limitations'), body)
   assert.ok(!section(body, 'Run summary').includes(PRUNE_LINE), 'the suggestion leaves the folded run summary')
+  assert.ok(section(body, 'Run summary').trimEnd().endsWith('|'), 'the run summary ends on its report table')
 })
 
 test('Application and E2E rows both count as acceptance rows: as many Domain rows as acceptance rows keep the suggestion folded', async () => {
@@ -106,6 +107,15 @@ test('a test plan table counts wherever its Layer column sits and however far it
     '   |---|---|',
     '   | Domain | rule sweep |',
     '',
+    '   | Scenario | Layer',
+    '   |---|---',
+    '   | pays | Application',
+    '| refunds | Domain',
+    '',
+    '| Scenario | Layer |',
+    '|---|---|',
+    '   | pays | Domain |',
+    '',
     '| Scenario | Use Case Boundary | Layer |',
     '|---|---|---|',
     '',
@@ -115,7 +125,7 @@ test('a test plan table counts wherever its Layer column sits and however far it
     '| refunds | Domain | Domain |',
   ].join('\n')
 
-  assert.deepEqual(layerCounts([{ path: 'plan.md', text: plan }]), { domain: 1, acceptance: 0 })
+  assert.deepEqual(layerCounts([{ path: 'plan.md', text: plan }]), { domain: 3, acceptance: 1 })
 })
 
 test('a table without a Scenario column is no test plan, whatever its Layer column says', () => {
