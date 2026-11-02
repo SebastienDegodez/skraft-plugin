@@ -2,7 +2,9 @@ import { pullRequestPage } from '../../domain/review/azure-pull-request.mjs'
 import { find as findByNumber, keepComment as keepThread, repositoryOf } from './az-repos.mjs'
 import { keepComment, workItem } from './az-boards.mjs'
 import { keepPullRequestComment } from './az-threads.mjs'
-import { NO_AZURE_REMOTE, QUIET, repos, run, succeeded, unavailable, remoteOf, lines, readJson, refused } from './az-cli.mjs'
+import { NO_AZURE_REMOTE, QUIET, repos, run, succeeded, unavailable, remoteOf, lines, readJson, refused, failedWrite } from './az-cli.mjs'
+import { branchOnRemote } from './git-push.mjs'
+import { readComment } from './az-read-back.mjs'
 
 /**
  * @typedef {import('../../application/ports/command-runner.mjs').CommandRunner} CommandRunner
@@ -21,10 +23,8 @@ import { NO_AZURE_REMOTE, QUIET, repos, run, succeeded, unavailable, remoteOf, l
  */
 export const createAzCodeHost = ({ commandRunner }) => Object.freeze({
   ...whereTo(commandRunner),
-  push: (branch) => push(commandRunner, branch),
-  findPullRequest: (head) => findPullRequest(commandRunner, head),
-  create: (request) => create(commandRunner, request),
-  edit: (request) => edit(commandRunner, request),
+  ...branchOnRemote((argv) => run(commandRunner, argv), () => remoteOf(commandRunner), NO_AZURE_REMOTE),
+  ...pullRequestsOf(commandRunner),
   ...comments(commandRunner),
   issue: (number) => workItem(commandRunner, number),
   // Azure Repos links `#N`; `Fixes #N` also completes the work item when the pull request merges.
@@ -36,6 +36,17 @@ export const createAzCodeHost = ({ commandRunner }) => Object.freeze({
 })
 
 /**
+ * The pull request of a branch, found, read whole by its number, opened, its description replaced.
+ * @param {CommandRunner} commandRunner
+ */
+const pullRequestsOf = (commandRunner) => ({
+  findPullRequest: (/** @type {string} */ head) => findPullRequest(commandRunner, head),
+  readPullRequest: (/** @type {number} */ number) => readOwn(commandRunner, number),
+  create: (/** @type {PullRequestRequest} */ request) => create(commandRunner, request),
+  edit: (/** @type {{ number: number, bodyFile: string }} */ request) => edit(commandRunner, request),
+})
+
+/**
  * What Azure DevOps keeps for a run: its comment on the work item, its run details on the pull
  * request, as threads, and the longest comment it takes. Microsoft documents 150,000 characters
  * for a comment; the engine takes 140,000, the margin GitHub's 65,536 gets to 60,000 (not
@@ -44,6 +55,7 @@ export const createAzCodeHost = ({ commandRunner }) => Object.freeze({
 const comments = (commandRunner) => ({
   keepIssueComment: (/** @type {import('../../application/ports/code-host.mjs').IssueCommentRequest} */ request) => keepComment(commandRunner, request),
   keepPullRequestComment: (/** @type {import('../../application/ports/code-host.mjs').PullRequestCommentRequest} */ request) => keepPullRequestComment(commandRunner, request),
+  readComment: (/** @type {string} */ url) => readComment(commandRunner, url),
   commentLimit: 140_000,
 })
 
@@ -75,6 +87,7 @@ export const createAzPullRequests = ({ commandRunner }) => Object.freeze({
   takesRequestFile: true,
   find: (number) => findByNumber(commandRunner, number),
   keepComment: (request) => keepThread(commandRunner, request),
+  readComment: (url) => readComment(commandRunner, url),
 })
 
 /** The branch HEAD is on; null when it is detached. @param {CommandRunner} commandRunner */
@@ -90,17 +103,6 @@ const defaultBranch = async (commandRunner) => {
   const result = await repos(commandRunner, remote, ['show'])
   const shown = succeeded(result) ? readJson(result.stdout) : null
   return typeof shown?.defaultBranch === 'string' ? shown.defaultBranch.replace(/^refs\/heads\//, '') : null
-}
-
-/**
- * Pushes the branch to the same branch of the remote, never forced: a remote that moved refuses it.
- * @param {CommandRunner} commandRunner @param {string} branch
- */
-const push = async (commandRunner, branch) => {
-  const remote = await remoteOf(commandRunner)
-  if (remote === null) return refused(NO_AZURE_REMOTE)
-  const result = await run(commandRunner, ['git', '-c', 'core.sshCommand=ssh -o BatchMode=yes', '-c', 'credential.interactive=never', 'push', '--porcelain', remote.name, `refs/heads/${branch}:refs/heads/${branch}`])
-  return succeeded(result) ? { ok: /** @type {const} */ (true) } : refused(`git push of ${branch} to ${remote.name} failed or was refused`)
 }
 
 /** A pull request's state as Azure DevOps names it, as the CodeHost says it. */
@@ -141,6 +143,35 @@ const foundOf = (remote, { pullRequestId, status, description }) => ({
 })
 
 /**
+ * The pull request of that number, as `az repos pr show` prints it: its description whole, where a
+ * listing keeps only its first 400 characters. null when Azure DevOps says it has none; one of
+ * another repository or project than the remote's is refused.
+ * @param {CommandRunner} commandRunner @param {number} number
+ */
+const readOwn = async (commandRunner, number) => {
+  const remote = await remoteOf(commandRunner)
+  if (remote === null) return refused(NO_AZURE_REMOTE)
+  const shown = await run(commandRunner, ['az', 'repos', 'pr', 'show', `--id=${number}`, `--organization=${remote.organization}`, ...QUIET])
+  if (!succeeded(shown)) return NO_SUCH_PULL_REQUEST.test(shown.stderr) ? { ok: /** @type {const} */ (true), found: null } : refused(`az could not read pull request #${number} of ${remote.organization}`)
+  const read = ownPullRequestOf(remote, number, readJson(shown.stdout))
+  return read === null ? refused(`Azure DevOps answered pull request #${number} in a form skraft cannot read, or of another repository than ${remote.project}/${remote.repository}`) : { ok: /** @type {const} */ (true), found: read }
+}
+
+/** What az prints for a pull request that does not exist; read only to tell that case apart, never passed on. Not measured: docs/v2/host-verification.md. */
+const NO_SUCH_PULL_REQUEST = /TF401180/
+
+/**
+ * The pull request az showed, when it is of the remote's repository: forkSource names the fork a
+ * pull request comes from. @param {Remote} remote @param {number} number @param {any} json
+ * @returns {import('../../application/ports/code-host.mjs').ReadPullRequest | null}
+ */
+const ownPullRequestOf = (remote, number, json) => {
+  if (json?.pullRequestId !== number || typeof json.sourceRefName !== 'string' || !isTextOrNone(json.description)) return null
+  if (String(json.repository?.name).toLowerCase() !== remote.repository.toLowerCase()) return null
+  return { ...foundOf(remote, json), head: json.sourceRefName.replace(/^refs\/heads\//, ''), fromFork: json.forkSource != null }
+}
+
+/**
  * Opens the pull request, linked to the story's work item when there is one. When that fails, a
  * work item Azure DevOps refuses to link (a wrong id, another project's) must not keep the pull
  * request from opening: the one Azure DevOps opened anyway is kept, else it is opened again
@@ -168,7 +199,7 @@ const open = async (commandRunner, remote, { base, head, title, bodyFile, draft,
   const options = [...(draft ? ['--draft=true'] : []), ...(issue === null ? [] : [`--work-items=${issue}`])]
   const result = await repos(commandRunner, remote, ['pr', 'create', `--source-branch=${head}`, `--target-branch=${base}`, `--title=${title}`, `--description=@${bodyFile}`, ...options])
   const made = succeeded(result) ? readJson(result.stdout) : null
-  if (!Number.isInteger(made?.pullRequestId)) return refused(`az could not open the pull request of ${head} on ${remote.project}/${remote.repository}`)
+  if (!Number.isInteger(made?.pullRequestId)) return failedWrite(result, `az could not open the pull request of ${head} on ${remote.project}/${remote.repository}`)
   return { ok: /** @type {const} */ (true), number: made.pullRequestId, url: pullRequestPage(remote, made.pullRequestId) }
 }
 
@@ -177,5 +208,5 @@ const edit = async (commandRunner, { number, bodyFile }) => {
   const remote = await remoteOf(commandRunner)
   if (remote === null) return refused(NO_AZURE_REMOTE)
   const result = await run(commandRunner, ['az', 'repos', 'pr', 'update', `--id=${number}`, `--description=@${bodyFile}`, `--organization=${remote.organization}`, ...QUIET])
-  return succeeded(result) ? { ok: /** @type {const} */ (true) } : refused(`az could not update pull request #${number} on ${remote.project}/${remote.repository}`)
+  return succeeded(result) ? { ok: /** @type {const} */ (true) } : failedWrite(result, `az could not update pull request #${number} on ${remote.project}/${remote.repository}`)
 }

@@ -5,7 +5,7 @@ import { spawnSync } from 'node:child_process'
 import { join } from 'node:path'
 import { createGhCodeHost, createGhPullRequests } from '../../../../plugins/skraft-framework/engine/infrastructure/code-host/gh-code-host.mjs'
 import { createNodeCommandRunner } from '../../../../plugins/skraft-framework/engine/infrastructure/process/node-processes.mjs'
-import { commitAll, envWithPath, git, tempFolder, toolFolders } from '../support/workspace.mjs'
+import { commitAll, envWithPath, git, shortLimit, tempFolder, toolFolders } from '../support/workspace.mjs'
 
 // gh stands for the forge, which no test reaches: a script that keeps each argv it is given
 // and answers from gh-state.json. git is real, its remote a bare repository on disk.
@@ -19,6 +19,7 @@ const FAKE_GH = [
   "const state = JSON.parse(readFileSync(join(here, 'gh-state.json'), 'utf8'))",
   "const said = (text, code = 0) => { process.stdout.write(`${text}\\n`); process.exit(code) }",
   "if (state.fails) { process.stderr.write('SECRET-STDERR\\n'); process.exit(1) }",
+  "if (state.cut && (args[1] === 'create' || args[1] === 'edit' || args.includes('--method=POST'))) { setInterval(() => {}, 60_000); await new Promise(() => {}) }",
   "if (args[0] === '--version') said('gh version 2.62.0')",
   "if (args[0] === 'auth') process.exit(state.signedIn ? 0 : 1)",
   "if (args[1] === 'set-default') { if (state.defaultRepo) said(state.defaultRepo); process.stderr.write('no default repository has been set\\n'); process.exit(1) }",
@@ -29,12 +30,14 @@ const FAKE_GH = [
   "if (args[0] === 'issue' && state.issue === undefined) { process.stderr.write(`GraphQL: Could not resolve to an issue or pull request with the number of ${args[2]}. (repository.issue)\\n`); process.exit(1) }",
   "if (args[0] === 'issue' && state.issueFails) { process.stderr.write('SECRET-STDERR\\n'); process.exit(1) }",
   "if (args[0] === 'issue') said(typeof state.issue === 'string' ? state.issue : JSON.stringify(state.issue))",
+  "if (args[1] === 'view' && state.own !== undefined) { const pull = state.own[args[2]]; if (pull === undefined) { process.stderr.write(`GraphQL: Could not resolve to a PullRequest with the number of ${args[2]}.\\n`); process.exit(1) } said(typeof pull === 'string' ? pull : JSON.stringify(pull)) }",
   "if (args[1] === 'view' && state.pull === undefined) { process.stderr.write(`GraphQL: Could not resolve to a PullRequest with the number of ${args[2]}. (repository.pullRequest)\\n`); process.exit(1) }",
   "if (args[1] === 'view') said(typeof state.pull === 'string' ? state.pull : JSON.stringify(state.pull))",
   "if (args[0] === 'api') {",
   "  const option = (name) => args.find((arg) => arg.startsWith(`--${name}=`))?.slice(name.length + 3)",
   "  const path = args.at(-1)",
   "  if (path === 'user') said(state.login)",
+  "  if (args.includes('--jq=.body')) { const comment = state.comments.find((one) => one.id === Number(path.split('/').at(-1))); if (state.readFails) process.exit(1); if (!comment) { process.stderr.write('gh: Not Found (HTTP 404)\\n'); process.exit(1) } said(comment.body) }",
   "  if (state.printed !== undefined && option('method')) said(state.printed)",
   "  if (state.patchFails && option('method') === 'PATCH') { process.stderr.write('gh: Server Error (HTTP 500)\\n'); process.exit(1) }",
   "  if (state.patchForbidden && option('method') === 'PATCH') { process.stderr.write('gh: Forbidden (HTTP 403)\\n'); process.exit(1) }",
@@ -409,4 +412,57 @@ test('the run details are kept on the pull request by the issue comment route, w
   assert.equal(kept.ok, true)
   assert.deepEqual(forge.calls().at(-1), ['api', '--hostname=ghe.acme.io', '--method=POST', `--field=body=@${bodyFile}`, '--jq=.html_url', 'repos/payments/payment/issues/42/comments'])
   assert.deepEqual([host.commentLimit, host.takesRequestFile], [60_000, false])
+})
+
+test('a push is read back by git ls-remote where it goes, at the commit the branch points at; a push and a write gh got no answer for are unknown, a comment is read back at its URL', async (t) => {
+  const { root, cwd, forge, codeHost, pullRequests } = repository(t)
+  const host = codeHost()
+  const tip = git(cwd, 'rev-parse', 'HEAD')
+
+  assert.equal(await host.localTip('checkout'), tip)
+  assert.equal(await host.localTip('nowhere'), null)
+  assert.deepEqual(await host.remoteTip('checkout'), { ok: true, sha: null })
+  assert.deepEqual(await host.push('checkout'), { ok: true })
+  assert.deepEqual(await host.remoteTip('checkout'), { ok: true, sha: tip })
+  git(root, '--git-dir', join(root, 'remote.git'), 'branch', 'checkout-old', 'checkout')
+  assert.deepEqual(await host.remoteTip('checkout'), { ok: true, sha: tip }, 'only the branch named exactly')
+  git(cwd, 'config', 'remote.origin.pushurl', join(root, 'gone.git'))
+  assert.deepEqual(await host.remoteTip('checkout'), { ok: false, reason: 'git ls-remote of checkout on origin failed' })
+  assert.deepEqual(await repository(t, { remote: null }).codeHost().remoteTip('checkout'), { ok: false, reason: 'the working copy has no Git remote whose URL names a host and a repository' })
+
+  const bodyFile = join(root, 'body.md')
+  writeFileSync(bodyFile, '<!-- skraft:issue-progress slug=checkout -->\nRESEARCH closed\n')
+  // A cut is a gh that never answers: the runner's time limit stops it (taskkill /T under Windows,
+  // its process group elsewhere), the one way a write goes unanswered on every OS. The limit stands
+  // for the adapter's 120 s.
+  forge.set({ cut: true })
+  const cut = createGhCodeHost({ commandRunner: shortLimit(createNodeCommandRunner({ root: cwd, env: envWithPath([forge.bin, ...toolFolders()]) })) })
+  const lost = { ok: false, reason: 'gh could not open the pull request of checkout on github.example.com/acme/payment', outcome: 'unknown' }
+  assert.deepEqual(await cut.create({ base: 'main', head: 'checkout', title: 'Pay', bodyFile, draft: true }), lost)
+  assert.deepEqual(await cut.edit({ number: 7, bodyFile }), { ok: false, reason: 'gh could not update pull request #7 on github.example.com/acme/payment', outcome: 'unknown' })
+  assert.deepEqual(await cut.keepIssueComment({ number: 42, marker: '<!-- skraft:issue-progress slug=checkout -->', url: null, bodyFile }), { ok: false, reason: 'gh could not comment issue #42 on github.example.com/acme/payment: gh got no answer', outcome: 'unknown' })
+
+  forge.set({ cut: false })
+  const kept = await host.keepIssueComment({ number: 42, marker: '<!-- skraft:issue-progress slug=checkout -->', url: null, bodyFile })
+  assert.deepEqual(await host.readComment(kept.url), { ok: true, body: '<!-- skraft:issue-progress slug=checkout -->\nRESEARCH closed\n' })
+  assert.deepEqual(forge.calls().at(-1), ['api', '--hostname=github.example.com', '--jq=.body', `repos/acme/payment/issues/comments/${kept.url.split('-').at(-1)}`])
+  assert.deepEqual(await pullRequests().readComment(kept.url), { ok: true, body: '<!-- skraft:issue-progress slug=checkout -->\nRESEARCH closed\n' })
+  assert.deepEqual(await host.readComment('https://github.example.com/acme/payment/issues/42#issuecomment-999'), { ok: true, body: null })
+  forge.set({ readFails: true, comments: [{ id: 901, number: 42, login: 'sebastien', body: 'x' }] })
+  assert.deepEqual(await host.readComment(kept.url), { ok: false, reason: `gh could not read back the comment at ${kept.url}` })
+  assert.deepEqual(await repository(t, { remote: null }).codeHost().readComment(kept.url), { ok: false, reason: 'the working copy has no Git remote whose URL names a host and a repository' })
+})
+
+test('a pull request the run opened is read back by its number through gh pr view, its body whole, and whether it comes from a fork', async (t) => {
+  const { forge, codeHost } = repository(t)
+  const host = codeHost()
+  const own = { number: 7, url: 'https://github.example.com/acme/payment/pull/7', state: 'OPEN', body: 'Paid.', headRefName: 'checkout', isCrossRepository: false }
+  forge.set({ own: { 7: own, 8: { ...own, number: 8, isCrossRepository: true }, 9: 'Not JSON', 10: { ...own, number: 10, body: null } } })
+
+  assert.deepEqual(await host.readPullRequest(7), { ok: true, found: { number: 7, url: own.url, state: 'open', body: 'Paid.', head: 'checkout', fromFork: false } })
+  assert.deepEqual(forge.calls().at(-1), ['pr', 'view', '7', '--repo=github.example.com/acme/payment', '--json=number,url,state,body,headRefName,isCrossRepository'])
+  assert.equal((await host.readPullRequest(8)).found.fromFork, true)
+  assert.deepEqual(await host.readPullRequest(11), { ok: true, found: null })
+  for (const number of [9, 10]) assert.deepEqual(await host.readPullRequest(number), { ok: false, reason: `gh could not read pull request #${number} of github.example.com/acme/payment` })
+  assert.deepEqual(await repository(t, { remote: null }).codeHost().readPullRequest(7), { ok: false, reason: 'the working copy has no Git remote whose URL names a host and a repository' })
 })

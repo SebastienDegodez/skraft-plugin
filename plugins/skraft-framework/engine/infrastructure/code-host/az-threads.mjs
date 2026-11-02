@@ -1,5 +1,5 @@
 import { areThreads, createdThreadOf, keptThreadBy, rewrittenThreadOf, threadUrl } from '../../domain/pipeline/azure-thread.mjs'
-import { NO_AZURE_REMOTE, readJson, refused, remoteOf, run, succeeded, unavailable } from './az-cli.mjs'
+import { failedWrite, NO_AZURE_REMOTE, readJson, refused, remoteOf, run, succeeded, unavailable } from './az-cli.mjs'
 
 /**
  * The comment of a run on a pull request of Azure Repos through az, the Azure CLI with its
@@ -47,5 +47,5 @@ const write = async (commandRunner, remote, { number, threadFile, commentFile },
     ? await invoke(commandRunner, remote, 'pullRequestThreads', route, ['--http-method=POST', `--in-file=${threadFile}`])
     : await invoke(commandRunner, remote, 'pullRequestThreadComments', [...route, `threadId=${kept.threadId}`, `commentId=${kept.commentId}`], ['--http-method=PATCH', `--in-file=${commentFile}`])
   const ids = succeeded(written) ? writtenThread(readJson(written.stdout), kept) : null
-  return ids === null ? refused(`az could not comment pull request #${number} on ${remote.project}/${remote.repository}`) : { ok: /** @type {const} */ (true), url: threadUrl(remote, number, ids.threadId, ids.commentId) }
+  return ids === null ? failedWrite(written, `az could not comment pull request #${number} on ${remote.project}/${remote.repository}`) : { ok: /** @type {const} */ (true), url: threadUrl(remote, number, ids.threadId, ids.commentId) }
 }

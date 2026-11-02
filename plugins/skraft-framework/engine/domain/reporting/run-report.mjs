@@ -1,5 +1,6 @@
 import { cell } from './markdown-safety.mjs'
 import { agentModels, modelName } from './agent-models.mjs'
+import { forgeWrites, forgeWritesTable } from './forge-writes.mjs'
 
 /**
  * The run report: time, cost and retries of each step, and every answer a human gave, read from
@@ -16,8 +17,10 @@ import { agentModels, modelName } from './agent-models.mjs'
  * @typedef {{ key: string, kind: string, step: string, answer: string, reason: string | null, by: string }} HumanAnswer
  *   step: the node the question was about; by: how the journal knows a person gave it.
  * @typedef {import('./agent-models.mjs').AgentModel} AgentModel
- * @typedef {{ steps: StepReport[], totals: ReportTotals, answers: HumanAnswer[], agents: AgentModel[], startedAt: string | null, elapsedMs: number }} RunReport
- *   steps: in the order they first started; answers: in the order they were given; agents: what
+ * @typedef {import('./forge-writes.mjs').ForgeWrite} ForgeWrite
+ * @typedef {{ steps: StepReport[], totals: ReportTotals, answers: HumanAnswer[], agents: AgentModel[], writes: ForgeWrite[], startedAt: string | null, elapsedMs: number }} RunReport
+ *   steps: in the order they first started; answers: in the order they were given; writes: each
+ *   write on the forge with its outcome, in journal order; agents: what
  *   each agent ran on, in the order it first started; startedAt: the first event's; elapsedMs:
  *   from the first event to the last.
  * @typedef {{ step: string, phase: string, visits: number, attempts: number, durationMs: number, costUsd: number | null, outcome: string | null, open: boolean }} Row
@@ -31,7 +34,7 @@ export const runReport = (events) => {
   const rows = new Map()
   for (const event of events) ON_EVENT[event.type]?.(rows, event)
   const steps = [...rows.values()].map(stepOf)
-  return { steps, totals: totalsOf(steps), answers: answersOf(events), agents: agentModels(events), startedAt: events[0]?.at ?? null, elapsedMs: elapsedOf(events) }
+  return { steps, totals: totalsOf(steps), answers: answersOf(events), agents: agentModels(events), writes: forgeWrites(events), startedAt: events[0]?.at ?? null, elapsedMs: elapsedOf(events) }
 }
 
 /** Each answer a human gave, with the question it answers. @param {RunEvent[]} events @returns {HumanAnswer[]} */
@@ -88,7 +91,7 @@ const elapsedOf = (events) => (events.length === 0 ? 0 : Date.parse(events[event
 
 /**
  * run-report.md: the status line, one row per step, the totals, what each agent ran on, the
- * answers humans gave, when the run started.
+ * answers humans gave, each write on the forge with its outcome, when the run started.
  * @param {{ slug: string, status: string, report: RunReport }} report
  */
 export const renderRunReport = ({ slug, status, report }) => [
@@ -99,6 +102,7 @@ export const renderRunReport = ({ slug, status, report }) => [
   '',
   ...section('## Agents', report.agents, agentsTable),
   ...section('## Human answers', report.answers, answersTable),
+  ...section('## Forge writes', report.writes, forgeWritesTable),
   `Started at ${report.startedAt}; ${durationText(report.elapsedMs)} from the first event to the last.`,
   '',
 ].join('\n')

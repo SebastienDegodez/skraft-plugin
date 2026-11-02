@@ -180,3 +180,18 @@ test('details that fill a comment stay in one part, a comment too short for them
   assert.deepEqual([fits.codeHost.pullRequestComments.length, tight.codeHost.pullRequestComments.length], [1, 2])
   assert.ok(tight.codeHost.pullRequestComments.every((comment) => comment.body.length <= body.length - 1))
 })
+
+test('details the forge says it kept but does not show at their URL are verification-failed, journaled skipped, and kept again by the next publish', async () => {
+  const host = await opened(azure({ unseen: ['pullRequestComment'] }))
+
+  const [details] = eventsOf(host, 'forge.write').filter(({ write }) => write === 'pull-request-comment')
+  const reason = `the forge said it kept the comment on #42, but reading it back at ${host.codeHost.pullRequestComments[0].url} does not show it`
+  assert.deepEqual([details.subject, details.outcome, details.reason], ['42', 'verification-failed', reason])
+  assert.deepEqual(eventsOf(host, 'pull-request.details-kept'), [])
+  assert.equal(eventsOf(host, 'pull-request.details-skipped')[0].reason, reason)
+
+  host.codeHost.unseen.clear()
+  await host.publish()
+  assert.equal(eventsOf(host, 'forge.write').filter(({ write }) => write === 'pull-request-comment').at(-1).outcome, 'applied')
+  assert.equal(host.codeHost.pullRequestComments.length, 1, 'kept again in the same comment, never a second one')
+})
