@@ -121,7 +121,7 @@ test('skraft report prints the time, cost and retries of each step of the active
   assert.equal(text.code, 0)
   assert.deepEqual(text.out.slice(0, 3), [`skraft ${SLUG}: waiting`, '| Step | Phase | Visits | Attempts | Retries | Time | Cost | Outcome |', '| --- | --- | ---: | ---: | ---: | ---: | ---: | --- |'])
   assert.match(text.out.at(-2), /^\| Total \| \| \| \d+ \| 0 \| \d+ s \| - \| \|$/)
-  assert.equal(text.out.at(-1), `design is blocked: solution-architect says it cannot go on; its reason is in ${tracking(cwd, SLUG, 'results', 'design-1-1.json')}. An instruction runs design again on a new pass with it; STOP ends the run.`)
+  assert.equal(text.out.at(-1), `design is blocked: solution-architect says it cannot go on; its reason is in ${tracking(cwd, SLUG, 'results', 'design-1-1.json')}.\nLeft by design (1):\n- stop after the research\n An instruction runs design again on a new pass with what is left above and the instruction; STOP ends the run.`)
   const json = JSON.parse((await inProcess(cwd, ['report', '--json'])).out.join('\n'))
   assert.deepEqual(json.steps.find((step) => step.step === 'design'), { step: 'design', phase: 'DESIGN', visits: 1, attempts: 1, retries: 0, durationMs: json.steps.find((step) => step.step === 'design').durationMs, costUsd: null, outcome: 'failed' })
   assert.deepEqual(await inProcess(cwd, ['report', '--all']), { code: 2, out: [], err: [USAGE] })

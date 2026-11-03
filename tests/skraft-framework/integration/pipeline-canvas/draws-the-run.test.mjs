@@ -89,9 +89,9 @@ test('the canvas shows a blocked step\'s question and says to answer it in the c
   await assert.rejects(runSkraftPipelineWorkflow(ctx, copilotHost(cwd)), { message: 'paused at design-1' })
 
   const { question } = await shown()
-  assert.deepEqual({ ...question, text: question.text.replace(/; its reason is in .*?\. An/, '; its reason is in <result>. An') }, {
+  assert.deepEqual({ ...question, text: question.text.replace(/; its reason is in .*?\.json\./, '; its reason is in <result>.') }, {
     key: 'design-1', header: 'Blocked',
-    text: 'design is blocked: solution-architect says it cannot go on; its reason is in <result>. An instruction runs design again on a new pass with it; STOP ends the run.',
+    text: 'design is blocked: solution-architect says it cannot go on; its reason is in <result>.\nLeft by design (1):\n- which payment provider?\n An instruction runs design again on a new pass with what is left above and the instruction; STOP ends the run.',
     usage: '"<instruction>"|STOP',
     how: 'Answer it in the Copilot chat, where Copilot puts it to you; or type skraft decide design-1 "<instruction>"|STOP in a terminal.',
   })

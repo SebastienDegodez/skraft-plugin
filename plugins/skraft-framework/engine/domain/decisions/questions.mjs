@@ -123,12 +123,21 @@ export const environmentText = (step, reason) => `${step} cannot run on this mac
  * from what the engine checked only; the agent's own words stay in the file it names.
  * @param {Block} block
  */
-export const blockText = (block) => `${block.step} is blocked: ${BLOCKS[block.code](block)}. An instruction runs ${block.step} again on a new pass with it; ${STOP} ends the run.`
+export const blockText = (block) => `${block.step} is blocked: ${BLOCKS[block.code](block)}.${leftBy(block)} An instruction runs ${block.step} again on a new pass with ${block.failures.length > 0 ? 'what is left above and the instruction' : 'it'}; ${STOP} ends the run.`
 
 /**
- * @typedef {{ step: string, code: string, from: string, agent: string | null, details: string | null }} Block
+ * What the step that blocked left (a review's findings, the gates' failures, an agent's reason),
+ * one per line, so that a human sees what the agent will be sent before writing an instruction;
+ * nothing when it left nothing.
+ * @param {Block} block
+ */
+const leftBy = ({ from, failures }) => (failures.length === 0 ? '' : `\nLeft by ${from} (${failures.length}):\n${failures.map((failure) => `- ${failure}`).join('\n')}\n`)
+
+/**
+ * @typedef {{ step: string, code: string, from: string, agent: string | null, details: string | null, failures: readonly string[] }} Block
  *   step: the node an instruction runs again; code: what its step recorded; from: the node that
- *   recorded it; details: the file holding the agent's reason or the review's verdict.
+ *   recorded it; details: the file holding the agent's reason or the review's verdict;
+ *   failures: what the step that blocked left, the findings of a review at its loop ceiling.
  */
 
 /** Why a block stops the run, by the code its step recorded. @type {Readonly<Record<string, (block: Block) => string>>} */

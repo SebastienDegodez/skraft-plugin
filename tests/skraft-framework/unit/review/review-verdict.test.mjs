@@ -580,6 +580,22 @@ test('a review sent back more often than its edge allows stops the run, naming t
   })
 })
 
+test('a review at its loop ceiling shows its findings in the question, and an instruction sends them to the producer with the instruction after them (#500)', async () => {
+  const host = scripted({}, (it) => [...nominal(it).slice(0, 2), agent()(it), agent()(it), () => ({ ok: false, unavailable: true, text: '' })])
+  const blocker = says('consistency', 'fail', [finding('F1', 'blocker', 'the ADR contradicts the context map')])
+  host.agentRunner.review = lenses({ consistency: [blocker, blocker] })
+  const left = 'consistency F1 G1 blocker at src/Checkout.cs:12: the ADR contradicts the context map'
+
+  await host.start()
+  await host.decide({ answer: 'Follow the context map' })
+  await host.run()
+
+  const [asked] = host.human.questions
+  assert.equal(asked.text, `design is blocked: design_review -> design was taken as often as its max_visits allows.\nLeft by design_review (1):\n- ${left}\n An instruction runs design again on a new pass with what is left above and the instruction; STOP ends the run.`)
+  const pass = host.agentRunner.dispatches.find((dispatch) => dispatch.label === `skraft ${SLUG} · design · pass 3 · attempt 1`)
+  assert.ok(pass.prompt.endsWith(`\n\nWhat pass 2 left when it was blocked:\n- ${left}\n\nA human refused the work of pass 2:\n- Follow the context map`), pass.prompt)
+})
+
 test('the changes of a component in a neighbour repository are read from that repository, each repository once, its paths rebased whole', async () => {
   const WEB = { name: 'web', root: '../web', stack: 'react', paths: { src: ['src'], tests: ['src'] }, commands: { build: 'npm run build', test: 'npx vitest run' } }
   const git = new InMemoryGit({ repositories: { '.': { mergeBases: { main: 'root-0' } }, '../web': { mergeBases: { main: 'up-web-0' } } } })

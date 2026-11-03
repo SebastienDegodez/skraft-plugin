@@ -108,10 +108,18 @@ const missingLines = ({ missing, attempt, maxAttempts }) => (missing.length > 0
   ? ['', `Missing outputs from attempt ${attempt - 1} of ${maxAttempts}:`, ...missing.map((path) => `- ${path}`)]
   : [])
 
-/** Why the previous attempt was refused, or why the gates sent the work back. @param {Brief} brief */
-const feedbackLines = ({ feedback, attempt, maxAttempts, visit, sentBy }) => (feedback.length > 0
-  ? ['', feedbackTitle({ attempt, maxAttempts, visit, sentBy }), ...feedback.map((line) => `- ${line}`)]
-  : [])
+/**
+ * Why the previous attempt was refused, or why the gates sent the work back. A pass a human
+ * reopened after a block carries what the block left first and the human's instruction last.
+ * @param {Brief} brief
+ */
+const feedbackLines = ({ feedback, attempt, maxAttempts, visit, sentBy }) => {
+  if (feedback.length === 0) return []
+  if (attempt === 1 && sentBy === 'ask' && feedback.length > 1) {
+    return ['', `What pass ${visit - 1} left when it was blocked:`, ...feedback.slice(0, -1).map((line) => `- ${line}`), '', `A human refused the work of pass ${visit - 1}:`, `- ${feedback.at(-1)}`]
+  }
+  return ['', feedbackTitle({ attempt, maxAttempts, visit, sentBy }), ...feedback.map((line) => `- ${line}`)]
+}
 
 /** @param {Pick<Brief, 'attempt' | 'maxAttempts' | 'visit' | 'sentBy'>} brief */
 const feedbackTitle = ({ attempt, maxAttempts, visit, sentBy }) => {

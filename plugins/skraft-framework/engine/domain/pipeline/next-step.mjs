@@ -65,14 +65,17 @@ const resume = (workflow, run, [id, { open: attempt }]) => {
 }
 
 /**
- * A human's instruction lifts the block: the node runs again on a new pass, with it.
+ * A human's instruction lifts the block: the node runs again on a new pass, with the failures
+ * the block left (the findings of a review at its loop ceiling) and the instruction after them,
+ * so that the agent never works from the instruction alone (#500).
  * @param {Workflow} workflow @param {RunState} run @param {string} id @param {string} instruction
  * @returns {NextStep}
  */
 const reopen = (workflow, run, id, instruction) => {
   const node = workflow.nodes[id]
   if (!node) return changed(id)
-  return enter(node, { visit: run.nodes[id].visit + 1, attempt: 1, missing: [], feedback: [instruction], sentBy: 'ask', resumed: null, group: null, groups: [] }, run)
+  const left = run.last?.failures ?? []
+  return enter(node, { visit: run.nodes[id].visit + 1, attempt: 1, missing: [], feedback: [...left, instruction], sentBy: 'ask', resumed: null, group: null, groups: [] }, run)
 }
 
 /**

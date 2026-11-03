@@ -88,7 +88,7 @@ test('a blocked step asks the person for an instruction in a text field; the ins
 
   assert.deepEqual([outcome.status, outcome.code, outcome.reason], ['blocked', 'agent-blocked', 'solution-architect is blocked: still unsure'])
   assert.deepEqual(session.asked.map(({ kind }) => kind), ['input', 'input'])
-  assert.match(session.asked[0].message, /^design is blocked: solution-architect says it cannot go on; .* An instruction runs design again on a new pass with it; STOP ends the run\.$/)
+  assert.match(session.asked[0].message, /^design is blocked: solution-architect says it cannot go on; [^]* An instruction runs design again on a new pass with what is left above and the instruction; STOP ends the run\.$/)
   assert.ok(phaseCalls(calls)[2].prompt.includes('\nA human refused the work of pass 1:\n- Use the bank gateway'), phaseCalls(calls)[2].prompt)
   assert.deepEqual(journal(cwd, SLUG).filter((event) => event.type === 'question.answered').map(({ key, answer, by }) => [key, answer, by]), [['design-1', 'Use the bank gateway', 'host-confirmed'], ['design-2', 'STOP', 'host-confirmed']])
 })

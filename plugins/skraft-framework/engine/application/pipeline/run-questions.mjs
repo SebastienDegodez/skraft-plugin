@@ -373,8 +373,8 @@ export const blockQuestion = async (context, run, next) => {
  * @returns {import('../../domain/decisions/questions.mjs').Block}
  */
 const blockOf = (context, { node, last }, step) => {
-  const { code, step: from } = /** @type {RunEvent} */ (last)
-  return { step, code, from, agent: /** @type {WorkStep['node']} */ (node).agent, details: detailsOf(context, /** @type {RunEvent} */ (last)) }
+  const { code, step: from, failures } = /** @type {RunEvent} */ (last)
+  return { step, code, from, agent: /** @type {WorkStep['node']} */ (node).agent, details: detailsOf(context, /** @type {RunEvent} */ (last)), failures }
 }
 
 /**
