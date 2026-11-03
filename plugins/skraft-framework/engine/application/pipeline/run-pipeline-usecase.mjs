@@ -6,7 +6,7 @@ import { dayOf, isFilled, outputPath } from '../../domain/pipeline/outputs.mjs'
 import { isDocument, writtenDocuments } from '../../domain/pipeline/documents.mjs'
 import { SCAN_FILE } from '../../domain/pipeline/structural-scan.mjs'
 import { proposalPath, proposalTemplate } from '../../domain/pipeline/proposals.mjs'
-import { allowedPaths, makesCommits, roleOf } from '../../domain/pipeline/roles.mjs'
+import { allowedPaths, makesCommits, roleFolders, roleOf } from '../../domain/pipeline/roles.mjs'
 import { writesComponentTests } from '../../domain/pipeline/component-skills.mjs'
 import { REPLAY_SHARE } from '../../domain/pipeline/commits.mjs'
 import { RUN_REPORT_FILE, renderRunReport, runReport } from '../../domain/reporting/run-report.mjs'
@@ -422,6 +422,7 @@ const openStart = (journal) => /** @type {import('../../domain/journal/run-state
  */
 const openAttempt = async (context, run, next, job) => {
   if (next.resumed?.heads) return next.resumed.heads
+  await createRoleFolders(context.deps, next.node)
   await precreate(context, job)
   await context.deps.files.write(context.slug, snapshotOf(job.result), JSON.stringify(await documentHashes(context)))
   const heads = await headsOf(context.deps, run.base)
@@ -460,6 +461,18 @@ const documentsWritten = async (context, { result, scan }) => {
   const before = await context.deps.files.read(context.slug, snapshotOf(result))
   const written = writtenDocuments(before === null ? {} : JSON.parse(before), await documentHashes(context))
   return [...new Set([...written, ...(scan === null ? [] : [scan])])].sort()
+}
+
+/**
+ * Creates each folder of the node's role that the working copy does not have yet, with an empty
+ * `.gitkeep` so that git keeps it: DESIGN on a fresh repository writes its first ADR, event model
+ * and context map there. A folder the machine cannot list is left to the checks that ask a human.
+ * @param {PipelineDeps} deps @param {WorkStep['node']} node
+ */
+const createRoleFolders = async ({ workspace }, node) => {
+  for (const folder of roleFolders(node)) {
+    if ((await workspace.list(folder).catch(() => [])) === null) await workspace.write(`${folder}/.gitkeep`, '')
+  }
 }
 
 /** Writes each output that has a template and does not exist yet. @param {Context} context @param {Job} job */

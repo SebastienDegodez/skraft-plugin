@@ -95,8 +95,8 @@ test('lenses that all pass approve each review, started together, each agent on 
     ['architecture-compliance', 'architecture-compliance-lens', 'pass', []], ['consistency', 'consistency-lens', 'pass', []], ['fitness', 'fitness-lens', 'pass', []],
   ])
   const review = join(trackingDir(cwd, SLUG), 'reviews', 'design_review-1')
-  assert.match(readFileSync(join(review, 'changes.patch'), 'utf8'), /^diff --git a\/docs\/adr\/adr-001-card-payment\.md b\/docs\/adr\/adr-001-card-payment\.md\n/)
-  assert.equal(readFileSync(join(review, 'changed-files.txt'), 'utf8').split('\n').filter((line) => !line.startsWith('.copilot-tracking/')).join('\n'), 'docs/adr/adr-001-card-payment.md\ndocs/adr/decisions-index.md\ndocs/architecture/context-map.md\n')
+  assert.match(readFileSync(join(review, 'changes.patch'), 'utf8'), /^diff --git a\/docs\/adr\/\.gitkeep b\/docs\/adr\/\.gitkeep\nnew file mode 100644\n[^]*?\ndiff --git a\/docs\/adr\/adr-001-card-payment\.md b\/docs\/adr\/adr-001-card-payment\.md\n/)
+  assert.equal(readFileSync(join(review, 'changed-files.txt'), 'utf8').split('\n').filter((line) => !line.startsWith('.copilot-tracking/')).join('\n'), 'docs/adr/.gitkeep\ndocs/adr/adr-001-card-payment.md\ndocs/adr/decisions-index.md\ndocs/architecture/.gitkeep\ndocs/architecture/context-map.md\ndocs/domain/event-model/.gitkeep\n')
   assert.match(readFileSync(join(review, 'verdict.yaml'), 'utf8'), /^status: "APPROVED"\ncode: null\nsummary: "APPROVED: every lens passed"\nfindings: \[\]\n/)
 })
 
