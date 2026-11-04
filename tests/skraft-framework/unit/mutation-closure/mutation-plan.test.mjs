@@ -76,7 +76,7 @@ test('a failing mutation run gets a proposal per file of survivors, then one que
   ].join('\n')), proposal)
 
   assert.deepEqual(host.human.questions.map(({ key, kind, options, header, text }) => [key, kind, options, header, text]), [[
-    'mutation_plan-1', 'mutation-plan', ['APPLY', 'STOP'], 'Mutation plan',
+    'mutation_plan-1', 'mutation-plan', ['APPLY', 'STOP'], 'Mutation',
     `The mutation gate failed; a proposal for its surviving mutants is in ${PROPOSALS.join(', ')}. APPLY applies it; or write how to treat them instead; STOP ends the run.`,
   ]])
   const asked = host.events().find((event) => event.type === 'question.asked')

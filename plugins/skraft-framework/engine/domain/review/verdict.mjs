@@ -1,7 +1,9 @@
 /**
  * The verdict of a review, computed from its lens results and refutations; no agent decides
- * it. A refuted finding does not count; an unverifiable one does. Findings of different lenses
- * at the same line with the same severity are one reason, citing each lens.
+ * it. A refuted finding does not count; an unverifiable one does. A finding a later pass of
+ * the review carried over as refuted, or found new on a line the agent left as it was
+ * (`repeats.mjs`), does not count either: the first is refuted, the second a note. Findings of
+ * different lenses at the same line with the same severity are one reason, citing each lens.
  *   a lens that answered inconclusive                            BLOCKED, code lens-inconclusive
  *   otherwise, a finding that counts, of any severity            NEEDS_REWORK
  *   otherwise (refuted findings, notes)                          APPROVED
@@ -14,8 +16,12 @@
  *
  * @typedef {import('./answers.mjs').LensResult} LensResult
  * @typedef {import('./answers.mjs').Finding} Finding
- * @typedef {{ lens: string, finding: string, verdict: 'confirmed' | 'refuted' | 'unverifiable', reason: string, dissent?: boolean }} RecordedRefutation
- *   dissent: the finding's lens stood alone, and the refuter judged it with every input of the review
+ * @typedef {{ lens: string, finding: string, verdict: 'confirmed' | 'refuted' | 'unverifiable', reason: string, dissent?: boolean, carried?: number }} RecordedRefutation
+ *   dissent: the finding's lens stood alone, and the refuter judged it with every input of the
+ *   review; carried: the pass whose refutation of a finding at the same place this one repeats,
+ *   with its reason, the refuter not asked again
+ * @typedef {{ lens: string, finding: string, since: number }} UnchangedFinding
+ *   a blocker, high or medium finding new on a line unchanged since the pass `since`: a note
  * @typedef {{ lens: string, id: string, gate: string, severity: Finding['severity'], location: string, description: string, suggestion: string | null, severityReason?: string | null, drift?: Finding['drift'], occurrences?: string[] }} LeftFinding
  *   a finding as the review leaves it to the agent or to a human, with the lens that gave it
  * @typedef {{ status: 'APPROVED' | 'NEEDS_REWORK' | 'BLOCKED', code: 'lens-inconclusive' | null, reasons: string[], summary: string, details: string[], findings: LeftFinding[] }} ReviewVerdict
@@ -59,55 +65,77 @@ export const blocksReview = (results) => results.some((result) => inconclusiveLi
 /**
  * @param {LensResult[]} results in the node's lens order
  * @param {RecordedRefutation[]} refutations
+ * @param {UnchangedFinding[]} unchanged
  * @returns {ReviewVerdict}
  */
-export const decideReview = (results, refutations) => {
+export const decideReview = (results, refutations, unchanged) => {
   const blocking = results.map(inconclusiveLine).filter((line) => line !== null)
   if (blocking.length > 0) return { status: 'BLOCKED', code: 'lens-inconclusive', reasons: blocking, summary: blocking.join('; '), details: [], findings: [] }
-  const counted = countedOf(results, refutations)
+  const counted = countedOf(results, refutations, unchanged)
   const reasons = groupFindings(counted).map(groupLine)
   const status = reasons.length > 0 ? 'NEEDS_REWORK' : 'APPROVED'
-  const set = { refuted: refutedFindings(results, refutations), notes: noteFindings(results) }
+  const set = { refuted: refutedFindings(results, refutations), notes: noteFindings(results, unchanged) }
   const findings = counted.map(({ lens, finding }) => findingEntry(lens, finding))
   return { status, code: null, reasons, summary: summaryOf(status, results, reasons, set), details: detailsOf(set), findings }
 }
 
 /**
  * Every finding that sends the work back, the blocker, high and medium ones first, each group in
- * the node's lens order.
- * @param {LensResult[]} results @param {RecordedRefutation[]} refutations
+ * the node's lens order; never one new on a line unchanged since an earlier pass.
+ * @param {LensResult[]} results @param {RecordedRefutation[]} refutations @param {UnchangedFinding[]} unchanged
  * @returns {Counted[]}
  */
-const countedOf = (results, refutations) => [
-  ...results.flatMap((result) => countedFindings(result, refutations)),
+const countedOf = (results, refutations, unchanged) => [
+  ...results.flatMap((result) => countedFindings(result, refutations, unchanged)),
   ...results.flatMap(countedLows),
 ]
 
 /**
  * @typedef {{ lens: string, finding: Finding }} Cited
- * @typedef {{ refuted: Array<Cited & { reason: string }>, notes: Cited[] }} SetAside
- *   the findings that do not send the work back: refuted, and the low ones of a lens that did not fail
+ * @typedef {{ refuted: Array<Cited & { reason: string, carried: number | undefined }>, notes: Array<Cited & { since: number | undefined }> }} SetAside
+ *   the findings that do not send the work back: refuted, and notes (the low ones of a lens that
+ *   did not fail, and those new on a line unchanged since an earlier pass)
  */
 
 /** @param {LensResult[]} results @param {RecordedRefutation[]} refutations */
 const refutedFindings = (results, refutations) => results.flatMap(({ lens, findings }) => findings.flatMap((finding) => {
   const refutation = refutationOf(refutations, lens, finding.id)
-  return refutation?.verdict === 'refuted' ? [{ lens, finding, reason: refutation.reason }] : []
+  return refutation?.verdict === 'refuted' ? [{ lens, finding, reason: refutation.reason, carried: refutation.carried }] : []
 }))
 
-/** The low findings of the lenses that did not fail: a pass's, and an inconclusive one's naming what it could not read. @param {LensResult[]} results @returns {Cited[]} */
-const noteFindings = (results) => results.flatMap((result) => (result.verdict === 'fail' ? [] : lowsOf(result)))
+/**
+ * The notes, in lens order: the findings new on a line unchanged since an earlier pass, whatever
+ * their lens answered, and the low ones of a lens that did not fail: a pass's, and an
+ * inconclusive one's naming what it could not read.
+ * @param {LensResult[]} results @param {UnchangedFinding[]} unchanged
+ * @returns {Array<Cited & { since: number | undefined }>}
+ */
+const noteFindings = (results, unchanged) => results.flatMap((result) => result.findings.flatMap((finding) => {
+  const since = unchangedOf(unchanged, result.lens, finding.id)?.since
+  return since !== undefined || isNotedLow(result, finding) ? [{ lens: result.lens, finding, since }] : []
+}))
 
-/** The low findings of a lens that failed, which count with no refuter: the producer fixes them too. @param {LensResult} result @returns {Counted[]} */
+/** A low finding of a lens that did not fail. @param {LensResult} result @param {Finding} finding */
+const isNotedLow = (result, finding) => result.verdict !== 'fail' && !BLOCKING.includes(finding.severity)
+
+/**
+ * The low findings of a lens that failed, which count with no refuter: the producer fixes them
+ * too. A finding a later pass took as new on an unchanged line keeps its blocker, high or medium
+ * severity, so it is never one of them: it stays a note.
+ * @param {LensResult} result @returns {Counted[]}
+ */
 const countedLows = (result) => (result.verdict === 'fail' ? lowsOf(result).map((cited) => ({ ...cited, refutation: undefined })) : [])
 
 /** @param {LensResult} result @returns {Cited[]} */
 const lowsOf = ({ lens, findings }) => findings.filter((finding) => !BLOCKING.includes(finding.severity)).map((finding) => ({ lens, finding }))
 
+/** @param {UnchangedFinding[]} unchanged @param {string} lens @param {string} id */
+const unchangedOf = (unchanged, lens, id) => unchanged.find((entry) => entry.lens === lens && entry.finding === id)
+
 /** @param {SetAside} set */
 const detailsOf = ({ refuted, notes }) => [
-  ...refuted.map(({ lens, finding, reason }) => `refuted: ${citeLine(lens, finding)} — ${reason}`),
-  ...notes.map(({ lens, finding }) => `note: ${citeLine(lens, finding)}${finding.suggestion === null ? '' : ` (suggestion: ${finding.suggestion})`}`),
+  ...refuted.map(({ lens, finding, reason, carried }) => `refuted: ${citeLine(lens, finding)} — ${reason}${carried === undefined ? '' : ` (carried over from pass ${carried})`}`),
+  ...notes.map(({ lens, finding, since }) => `note: ${citeLine(lens, finding)}${since === undefined ? '' : ` (new on a line unchanged since pass ${since})`}${finding.suggestion === null ? '' : ` (suggestion: ${finding.suggestion})`}`),
 ]
 
 /** `<lens> <id> <gate> <severity> at <location>: <description>`. @param {string} lens @param {Finding} finding */
@@ -122,12 +150,13 @@ const inconclusiveLine = ({ lens, verdict, findings }) => (verdict === 'inconclu
  */
 
 /**
- * The blocker, high and medium findings of a lens that count: those the refuter did not refute.
- * @param {LensResult} result @param {RecordedRefutation[]} refutations
+ * The blocker, high and medium findings of a lens that count: those the refuter did not refute,
+ * but those new on a line unchanged since an earlier pass.
+ * @param {LensResult} result @param {RecordedRefutation[]} refutations @param {UnchangedFinding[]} unchanged
  * @returns {Counted[]}
  */
-const countedFindings = ({ lens, findings }, refutations) => findings
-  .filter((finding) => BLOCKING.includes(finding.severity))
+const countedFindings = ({ lens, findings }, refutations, unchanged) => findings
+  .filter((finding) => BLOCKING.includes(finding.severity) && unchangedOf(unchanged, lens, finding.id) === undefined)
   .map((finding) => ({ lens, finding, refutation: refutationOf(refutations, lens, finding.id) }))
   .filter(({ refutation }) => refutation?.verdict !== 'refuted')
 
@@ -178,18 +207,19 @@ const ids = (cited) => cited.map(({ lens, finding }) => `${lens} ${finding.id}`)
 const counted = (count, noun) => `${count} ${noun}${count > 1 ? 's' : ''}`
 
 /**
- * The verdict file of a review pass: its status, the findings that count, the notes, every
- * refutation, and the lenses taken over from the previous pass.
- * @param {{ verdict: ReviewVerdict, results: LensResult[], refutations: RecordedRefutation[], reused: string[] }} pass
+ * The verdict file of a review pass: its status, the findings that count, the notes (`since`:
+ * the pass since which the line of a finding new on it is unchanged), every refutation
+ * (`carried`: the pass whose refutation it repeats), and the lenses taken over from the previous pass.
+ * @param {{ verdict: ReviewVerdict, results: LensResult[], refutations: RecordedRefutation[], reused: string[], unchanged: UnchangedFinding[] }} pass
  *   reused: the lenses whose result was kept from the previous pass, in the node's order
  */
-export const composeVerdictFile = ({ verdict, results, refutations, reused }) => emitYaml({
+export const composeVerdictFile = ({ verdict, results, refutations, reused, unchanged }) => emitYaml({
   status: verdict.status,
   code: verdict.code,
   summary: verdict.summary,
-  findings: countedOf(results, refutations).map(entryOf).map(fileEntry),
-  notes: noteFindings(results).map(entryOf).map(fileEntry),
-  refutations: refutations.map(({ lens, finding, verdict: said, reason, dissent }) => ({ lens, finding, verdict: said, reason, ...(dissent ? { dissent } : {}) })),
+  findings: countedOf(results, refutations, unchanged).map(entryOf).map(fileEntry),
+  notes: noteFindings(results, unchanged).map(({ lens, finding, since }) => ({ ...fileEntry(findingEntry(lens, finding)), ...(since === undefined ? {} : { since }) })),
+  refutations: refutations.map(({ lens, finding, verdict: said, reason, dissent, carried }) => ({ lens, finding, verdict: said, reason, ...(dissent ? { dissent } : {}), ...(carried === undefined ? {} : { carried }) })),
   reused: reused.map((lens) => ({ lens })),
 })
 

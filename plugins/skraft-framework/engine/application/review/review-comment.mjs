@@ -5,6 +5,7 @@ import { COMMENT_FILE, COMMENT_THREAD_FILE, COMMENT_CONTENT_FILE, markerOf, rend
 import { contentRequestOf, threadRequestOf } from '../../domain/review/azure-pull-request.mjs'
 import { ANYWHERE } from '../../domain/pipeline/forge-comment.mjs'
 import { keptComment } from '../publish/forge-writes.mjs'
+import { reviewFacts } from '../../domain/reporting/run-facts.mjs'
 
 /**
  * The review's comment: rendered beside the review on every pass, then, with `--publish`, kept as
@@ -18,9 +19,10 @@ import { keptComment } from '../publish/forge-writes.mjs'
  * @typedef {{
  *   deps: import('./review-pull-request-usecase.mjs').OnForge, slug: string, number: number, publish: boolean,
  *   journal: import('../journal/run-journal.mjs').OpenJournal,
- *   team: unknown,
+ *   team: unknown, language: import('../../domain/reporting/language.mjs').Language,
  * }} CommentContext
- *   team: what the repository's skraft-config.json sets publish.reviewComment to, if anything.
+ *   team: what the repository's skraft-config.json sets publish.reviewComment to, if anything;
+ *   language: the pull request's, from its title and body, which the comment is written in.
  * @typedef {{ comment: string | null, unpublished: string | null }} Published
  *   comment: the URL of the comment kept; unpublished: why `--publish` posted nothing.
  */
@@ -30,7 +32,7 @@ const CONSENT_STEP = 'review_consent'
 
 /** @param {CommentContext} context @param {{ pass: number, verdict: ReviewVerdict }} review @returns {Promise<Published>} */
 export const keepComment = async (context, review) => {
-  const body = renderComment({ number: context.number, ...review })
+  const body = renderComment({ number: context.number, ...review, review: reviewFacts(context.journal.events), language: context.language })
   await context.deps.reviewFiles.write(context.slug, COMMENT_FILE, body)
   if (!context.publish) return { comment: null, unpublished: null }
   const refusal = await consentRefusal(context)

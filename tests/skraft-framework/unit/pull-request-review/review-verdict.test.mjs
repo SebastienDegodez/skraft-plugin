@@ -81,7 +81,7 @@ test('a clean pull request is approved; a low finding stays a note, the refuter 
   assert.equal(host.progress.lines.at(-2), 'pr-12: review of pull request #12, pass 2 (test-integrity, architecture-boundaries, cold-reader, mock-fidelity, contract-fidelity) — reviewer · economy · haiku')
 })
 
-test('a lens that answers inconclusive blocks the review: BLOCKED, journaled blocked, no finding checked', async () => {
+test('a lens that answers inconclusive blocks the review: BLOCKED, journaled blocked, no finding checked, the comment saying why without a table', async () => {
   const host = reviewHost()
   host.git.commit('feat: discount', ['src/Discount.cs'])
   const unread = finding('F1', 'low', 'the patch file could not be read', { gate: 'G7', location: '' })
@@ -92,4 +92,5 @@ test('a lens that answers inconclusive blocks the review: BLOCKED, journaled blo
   assert.deepEqual([outcome.status, outcome.code, outcome.reason], ['BLOCKED', 'lens-inconclusive', 'test-integrity: inconclusive: the patch file could not be read'])
   assert.deepEqual([host.events().at(-1).outcome, host.events().at(-1).code], ['blocked', 'lens-inconclusive'])
   assert.equal(host.agentRunner.batches.length, 1)
+  assert.equal(await host.reviews.read(SLUG, 'comment.md'), '### skraft review · #12 — BLOCKED (pass 1)\n\ntest-integrity: inconclusive: the patch file could not be read\n\n<sub>skraft-review pr=12</sub>\n')
 })

@@ -1,4 +1,6 @@
 import { inert } from '../reporting/markdown-safety.mjs'
+import { DESCRIPTION_WORDS } from '../reporting/pull-request-words.mjs'
+import { reviewCount, stepTable } from '../reporting/review-table.mjs'
 
 /**
  * A pull request reviewed alone, by `skraft review --pr <number>`: its folder, the document that
@@ -6,6 +8,8 @@ import { inert } from '../reporting/markdown-safety.mjs'
  * reader sees.
  *
  * @typedef {import('./verdict.mjs').ReviewVerdict} ReviewVerdict
+ * @typedef {import('../reporting/run-facts.mjs').ReviewFacts} ReviewFacts
+ * @typedef {import('../reporting/language.mjs').Language} Language
  */
 
 /** The folder of a pull request's review under `.copilot-tracking/skraft-reviews/`. @param {number} number */
@@ -60,17 +64,18 @@ export const pullRequestText = ({ number, title, body }) => [`# Pull request #${
 export const commentStartOf = (number) => `### skraft review · #${number} — `
 
 /**
- * The comment: the verdict of the pass, what sends the work back, what does not, and the marker;
- * what a lens wrote made inert.
- * @param {{ number: number, pass: number, verdict: ReviewVerdict }} review
+ * The comment: the verdict of the pass, how many findings of each status its last pass holds,
+ * their table (`review-table.mjs`), and the marker; in the pull request's language. A pass a lens
+ * blocked, or one without a finding, says its verdict's summary instead.
+ * @param {{ number: number, pass: number, verdict: ReviewVerdict, review: ReviewFacts, language: Language }} review
  */
-export const renderComment = ({ number, pass, verdict }) => [
-  `${commentStartOf(number)}${verdict.status} (pass ${pass})`, '',
-  inert(verdict.summary), '',
-  ...listed('To address', verdict.reasons),
-  ...listed('Not counted', verdict.details),
-  markerOf(number), '',
-].join('\n')
-
-/** @param {string} title @param {string[]} lines */
-const listed = (title, lines) => (lines.length === 0 ? [] : [`${title}:`, ...lines.map((line) => `- ${inert(line)}`), ''])
+export const renderComment = ({ number, pass, verdict, review, language }) => {
+  const words = DESCRIPTION_WORDS[language]
+  const count = verdict.status === 'BLOCKED' ? null : reviewCount(review, words)
+  return [
+    `${commentStartOf(number)}${verdict.status} (${words.review.pass(pass)})`, '',
+    count === null ? inert(verdict.summary) : `${words.review.lead}${count}`, '',
+    ...(count === null ? [] : [...review.flatMap(({ lines }) => stepTable(lines, words)), '']),
+    markerOf(number), '',
+  ].join('\n')
+}

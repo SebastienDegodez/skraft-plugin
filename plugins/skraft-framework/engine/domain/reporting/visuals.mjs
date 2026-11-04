@@ -95,48 +95,81 @@ export const evidenceCopies = (evidence, component, screenshots) => screenshots.
 /** @param {Screenshot[]} screenshots @param {Screenshot} screenshot */
 const rankIn = (screenshots, screenshot) => screenshots.filter(({ theme }) => theme === screenshot.theme).indexOf(screenshot) + 1
 
+/** What the Screenshots section says, per language. */
+const WORDS = Object.freeze({
+  en: Object.freeze({
+    none: `None recorded: this run took no screenshots (no visuals step, or no front end in ${CONFIG_FILE}).`,
+    noFrontEnd: `None recorded: ${NO_FRONT_END}.`,
+    colon: ': ',
+    /** @param {string} e2e @param {string} command @param {string} evidence */
+    ran: (e2e, command, evidence) => `e2e run ${e2e} (${command}, evidence ${evidence}); `,
+    /** @param {string} commit */
+    noRepository: (commit) => `The remote names no repository on a forge: each image links its path at commit ${commit}, which the forge does not show.`,
+    dark: 'Dark theme',
+    /** @param {number} more @param {Theme} theme @param {string} component @param {string} folder */
+    more: (more, theme, component, folder) => `${more} more ${theme} screenshot${more === 1 ? '' : 's'} of ${component} in ${folder}`,
+  }),
+  fr: Object.freeze({
+    none: `Aucune consignée : ce run n'a pris aucune capture d'écran (pas d'étape visuals, ou pas de front end dans ${CONFIG_FILE}).`,
+    noFrontEnd: `Aucune consignée : aucun composant de ${CONFIG_FILE} n'est un front end (stack react, ou une commande e2e).`,
+    colon: ' : ',
+    /** @param {string} e2e @param {string} command @param {string} evidence */
+    ran: (e2e, command, evidence) => `run e2e ${e2e} (${command}, preuve ${evidence}) ; `,
+    /** @param {string} commit */
+    noRepository: (commit) => `Le remote ne nomme aucun dépôt sur une forge : chaque image pointe vers son chemin au commit ${commit}, que la forge n'affiche pas.`,
+    dark: 'Thème sombre',
+    /** @param {number} more @param {Theme} theme @param {string} component @param {string} folder */
+    more: (more, theme, component, folder) => `${more} ${more > 1 ? 'autres captures' : 'autre capture'} du thème ${theme === 'dark' ? 'sombre' : 'clair'} de ${component} dans ${folder}`,
+  }),
+})
+
 /**
  * The Screenshots section of a pull request: what each front end's e2e run gave, then the light
- * screenshots, the dark ones folded below.
- * @param {Visuals | null} visuals @param {Repository} repository
+ * screenshots, the dark ones folded below; in the story's language.
+ * @param {Visuals | null} visuals @param {Repository} repository @param {import('./language.mjs').Language} language
  */
-export const screenshotLines = (visuals, repository) => {
-  if (visuals === null) return ['None recorded: this run took no screenshots (no visuals step, or no front end in skraft-config.json).']
-  if (visuals.components.length === 0) return [`None recorded: ${NO_FRONT_END}.`]
-  return [...visuals.components.map(componentLine), ...imageLines(visuals, repository)]
+export const screenshotLines = (visuals, repository, language) => {
+  const words = WORDS[language]
+  if (visuals === null) return [words.none]
+  if (visuals.components.length === 0) return [words.noFrontEnd]
+  return [...visuals.components.map((component) => componentLine(component, words)), ...imageLines(visuals, { repository, words })]
 }
 
-/** @param {ComponentVisuals} visuals */
-const componentLine = ({ component, command, e2e, detail, evidence }) => {
-  if (command === null) return `- ${component}: ${detail}`
-  return `- ${component}: e2e run ${e2e} (${code(command)}, evidence ${code(/** @type {string} */ (evidence))}); ${detail}`
+/** @typedef {typeof WORDS.en} Words */
+
+/** @param {ComponentVisuals} visuals @param {Words} words */
+const componentLine = ({ component, command, e2e, detail, evidence }, words) => {
+  if (command === null) return `- ${component}${words.colon}${detail}`
+  return `- ${component}${words.colon}${words.ran(e2e, code(command), code(/** @type {string} */ (evidence)))}${detail}`
 }
 
 /** A pull request shows at most this many screenshots of each theme of a component. */
 const SHOWN_PER_THEME = 6
 
-/** @param {Visuals} visuals @param {Repository} repository */
-const imageLines = ({ components, commit }, repository) => {
+/** @typedef {{ repository: Repository, commit: string, words: Words }} At */
+
+/** @param {Visuals} visuals @param {{ repository: Repository, words: Words }} shown */
+const imageLines = ({ components, commit }, { repository, words }) => {
   if (components.every(({ screenshots }) => screenshots.length === 0)) return []
-  const at = { repository, commit: /** @type {string} */ (commit) }
+  const at = { repository, commit: /** @type {string} */ (commit), words }
   const dark = themeLines(components, 'dark', at)
   return [
-    ...(repository === null ? ['', `The remote names no repository on a forge: each image links its path at commit ${code(at.commit)}, which the forge does not show.`] : []),
+    ...(repository === null ? ['', words.noRepository(code(at.commit))] : []),
     ...themeLines(components, 'light', at),
-    ...(dark.length === 0 ? [] : ['', '<details><summary>Dark theme</summary>', ...dark, '', '</details>']),
+    ...(dark.length === 0 ? [] : ['', `<details><summary>${words.dark}</summary>`, ...dark, '', '</details>']),
   ]
 }
 
 /**
  * The screenshots of a theme, the first SHOWN_PER_THEME of each component, then where its others are.
- * @param {ComponentVisuals[]} components @param {Theme} theme @param {{ repository: Repository, commit: string }} at
+ * @param {ComponentVisuals[]} components @param {Theme} theme @param {At} at
  */
 const themeLines = (components, theme, at) => components.flatMap(({ component, screenshots }) => {
   const own = screenshots.filter((screenshot) => screenshot.theme === theme)
   const more = own.length - SHOWN_PER_THEME
   return [
     ...own.slice(0, SHOWN_PER_THEME).flatMap(({ title, path }) => ['', `![${title}](${urlOf(at.repository, at.commit, path)})`]),
-    ...(more > 0 ? ['', `${more} more ${theme} screenshot${more === 1 ? '' : 's'} of ${component} in ${code(own[0].path.slice(0, own[0].path.lastIndexOf('/')))}`] : []),
+    ...(more > 0 ? ['', at.words.more(more, theme, component, code(own[0].path.slice(0, own[0].path.lastIndexOf('/'))))] : []),
   ]
 })
 

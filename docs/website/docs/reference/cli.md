@@ -240,8 +240,9 @@ workflow) is not sent back again. Its question says that the producer did not fi
 finding, shows each blocker and high finding with its context (why that severity, the kind of
 drift, every place it holds at, the fix), the medium and low ones in a table, and where the
 verdict file is. With only medium and low findings left, it is the `review-ceiling` question:
-`ACCEPT` takes them as they stand and goes on by the review's `APPROVED` edge; the run report and
-the pull request list them under *Accepted findings*. With a blocker or high finding left, it is
+`ACCEPT` takes them as they stand and goes on by the review's `APPROVED` edge; the run report lists
+them under *Accepted findings*, and the pull request shows them in its review table with the
+status *Accepted*. With a blocker or high finding left, it is
 the `blocked` question: those are never accepted. In both, an instruction runs the producer
 again with every finding, and `STOP` ends the run.
 

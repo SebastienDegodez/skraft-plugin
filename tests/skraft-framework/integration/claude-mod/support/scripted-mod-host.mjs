@@ -118,6 +118,7 @@ export const scriptedModHost = async ({ cwd, behaviours = [], costs = [], otherw
   let agents = 0
   let started = 0
   let sessionCost = 0
+  let sessionCwd = root
 
   /** @param {any} spawn @param {string} agentId @param {object} turn */
   const complete = (spawn, agentId, turn) => {
@@ -145,7 +146,7 @@ export const scriptedModHost = async ({ cwd, behaviours = [], costs = [], otherw
 
   const host = {
     fs: nodeModFs,
-    cwd: async () => root,
+    cwd: async () => sessionCwd,
     home: async () => homeFolder,
     pluginRoot: PLUGIN_ROOT,
     pluginName: 'skraft',
@@ -198,6 +199,8 @@ export const scriptedModHost = async ({ cwd, behaviours = [], costs = [], otherw
     /** An answer button of the pane, pressed. */
     press: (/** @type {any} */ choice) => driver.answer(host, choice),
     settled: () => driver.settled(),
+    /** The conversation's Bash `cd`: `$.session.cwd()` answers that folder of the working copy from now on. @param {string} folder relative to the working copy */
+    moveTo: (folder) => { sessionCwd = join(root, folder) },
     /** How many spawns the host answered. */
     started: () => started,
     journalPath: (/** @type {string} */ slug) => join(tracking, slug, 'events.jsonl'),

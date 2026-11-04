@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { readFileSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { actsAs, scriptedModHost } from './support/scripted-mod-host.mjs'
 import { answerChoices } from '../../../../plugins/skraft-framework/engine/drivers/claude-mod/run-view.mjs'
@@ -55,6 +55,24 @@ test('a dismissed dialog leaves the run waiting; /skraft decide records the answ
   assert.deepEqual(descriptions(mod), [
     `skraft ${SLUG} · research · attempt 1`, `skraft ${SLUG} · design · attempt 1`, `skraft ${SLUG} · distill · attempt 1`, `skraft ${SLUG} · deliver · attempt 1`, `skraft ${SLUG} · pr_writer · attempt 1`,
   ])
+})
+
+test('after the conversation moved into a subfolder of the working copy, /skraft and /skraft decide still drive the run at its root', async (t) => {
+  const { cwd } = pipelineRepository(t)
+  const { mod } = await runOn(cwd, [null])
+  const subfolder = join('.copilot-tracking', 'skraft-plans', SLUG, 'reviews', 'design_review-1')
+  mkdirSync(join(cwd, subfolder), { recursive: true })
+  mod.moveTo(subfolder)
+
+  assert.match(await mod.command(''), new RegExp(`^skraft ${SLUG} — waiting\n`))
+  const text = await mod.command('decide RATIFIED')
+
+  assert.equal(text, `${SLUG}: adr-1 answered RATIFIED; run the pipeline again to go on\nskraft ${SLUG} started — progress in the Skraft pane.`)
+  assert.equal((await mod.settled()).status, 'done')
+  assert.deepEqual(descriptions(mod), [
+    `skraft ${SLUG} · research · attempt 1`, `skraft ${SLUG} · design · attempt 1`, `skraft ${SLUG} · distill · attempt 1`, `skraft ${SLUG} · deliver · attempt 1`, `skraft ${SLUG} · pr_writer · attempt 1`,
+  ])
+  assert.ok(!existsSync(join(cwd, subfolder, '.copilot-tracking')))
 })
 
 test('a blocked architect is asked in a dialog; the instruction typed under Other sends it back with it in the same run', async (t) => {

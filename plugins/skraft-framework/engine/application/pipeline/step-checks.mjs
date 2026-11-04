@@ -7,7 +7,7 @@ import { readResult } from '../../domain/pipeline/agent-result.mjs'
 import { breaksConvention, commitFailure, issueOf, judgeCommits, redsToReplay } from '../../domain/pipeline/commits.mjs'
 import { isFilled } from '../../domain/pipeline/outputs.mjs'
 import { proseProblems, readProse } from '../../domain/reporting/pull-request-prose.mjs'
-import { allowedPaths, rootFiles } from '../../domain/pipeline/roles.mjs'
+import { allowedPaths, makesCommits, rootFiles, trackingFolder } from '../../domain/pipeline/roles.mjs'
 import { adrFailures } from '../decisions/adr-checks.mjs'
 import { baseOf } from '../config/bases.mjs'
 import { checkDesignRecords } from './design-records.mjs'
@@ -17,17 +17,21 @@ import { EJECTED } from '../workflow/called-workflows.mjs'
  * @typedef {import('../../domain/journal/run-state.mjs').Head} Head
  * @typedef {import('../../domain/pipeline/commits.mjs').JudgedCommit} JudgedCommit
  * @typedef {import('../../domain/config/skraft-config.mjs').Component} Component
- * @typedef {'missing-outputs' | 'invalid-result' | 'design-records' | 'pull-request-prose' | 'agent-blocked' | 'write-scope' | 'adr-lifecycle' | 'commit-convention' | 'tdd'} FailureCode
+ * @typedef {'missing-outputs' | 'invalid-result' | 'design-records' | 'pull-request-prose' | 'agent-blocked' | 'write-scope' | 'uncommitted' | 'adr-lifecycle' | 'commit-convention' | 'tdd'} FailureCode
  * @typedef {{
  *   repository: string, sha: string, subject: string, kind: string, verdict: string,
  *   replay: { component: string, command: ReplayedCommand, exitCode: number | null, durationMs: number } | null,
  * }} CheckedCommit
  * @typedef {{
  *   missing: string[], failures: string[], code: FailureCode | null, commits: CheckedCommit[],
- *   environment: null, replayMs: number,
+ *   environment: null, replayMs: number, uncommitted?: UncommittedFile[],
  * } | { commits: CheckedCommit[], environment: string }} StepCheck
  *   environment: why the machine could not check the step (a missing test command, Git
- *   failing); the step then stays open.
+ *   failing); the step then stays open. uncommitted: the files in its scope the agent changed
+ *   and left uncommitted, which the engine commits once the step is done: only an agent with no
+ *   shell gets there, one with a shell is refused for them; absent when the agent is blocked.
+ * @typedef {{ repository: string, file: string, path: string }} UncommittedFile
+ *   file: relative to its repository; path: relative to the working copy.
  * @typedef {Map<string, { verdict: string, replay: CheckedCommit['replay'] }>} KnownCommits
  *   what earlier attempts of the pass found for each commit they checked, by sha.
  * @typedef {{
@@ -49,7 +53,7 @@ import { EJECTED } from '../workflow/called-workflows.mjs'
  */
 
 /** Failure codes, the first one found naming the step's refusal. */
-const PRIORITY = /** @type {const} */ (['missing-outputs', 'invalid-result', 'design-records', 'pull-request-prose', 'write-scope', 'adr-lifecycle', 'commit-convention', 'tdd'])
+const PRIORITY = /** @type {const} */ (['missing-outputs', 'invalid-result', 'design-records', 'pull-request-prose', 'write-scope', 'uncommitted', 'adr-lifecycle', 'commit-convention', 'tdd'])
 
 /**
  * Where each repository of the run stands before an attempt: its HEAD and the files already
@@ -96,16 +100,16 @@ export const checkStep = async (context, step) => {
   if (commits.environment !== null) return { ...environmentOnly(commits.environment), commits: commits.checked }
   const adr = await adrFailures(context.deps, { base: context.base, touched: read.touched })
   if (typeof adr === 'string') return { ...environmentOnly(adr), commits: commits.checked }
-  const found = [...resultFailures(read.reading), ...recordFailures(read.records), ...read.prose, ...scopeFailures(read.scope), ...adrLines(adr), ...commits.found]
-  return refusal(read.missing, found, commits)
+  const found = [...resultFailures(read.reading), ...recordFailures(read.records), ...read.prose, ...read.scope.failures, ...adrLines(adr), ...commits.found]
+  return { ...refusal(read.missing, found, commits), uncommitted: read.scope.uncommitted }
 }
 
 /**
  * What the attempt left before its commits: its outputs, its result, the files out of its scope
- * and its DESIGN records; the check that stops the step when one does.
+ * or left uncommitted, and its DESIGN records; the check that stops the step when one does.
  * @param {CheckContext} context
  * @param {Parameters<typeof checkStep>[1]} step
- * @returns {Promise<{ stop: StepCheck } | { missing: string[], reading: import('../../domain/pipeline/agent-result.mjs').ResultReading, touched: string[], scope: string[], records: string[], prose: Failure[] }>}
+ * @returns {Promise<{ stop: StepCheck } | { missing: string[], reading: import('../../domain/pipeline/agent-result.mjs').ResultReading, touched: string[], scope: { failures: Failure[], uncommitted: UncommittedFile[] }, records: string[], prose: Failure[] }>}
  */
 const readAttempt = async ({ deps, slug, config, base }, step) => {
   const missing = await missingOutputs(deps, slug, step)
@@ -113,9 +117,11 @@ const readAttempt = async ({ deps, slug, config, base }, step) => {
   if (reading.ok && reading.result.status === 'blocked') return { stop: blockedBy(reading.result.summary) }
   const touched = await touchedPaths(deps, step.visitHeads)
   if (typeof touched === 'string') return { stop: environmentOnly(touched) }
+  const scope = await scopeFailures(deps, step, { slug, config, touched })
+  if (typeof scope === 'string') return { stop: environmentOnly(scope) }
   const records = step.role.records ? await checkDesignRecords(deps, { slug, base }) : []
   if (typeof records === 'string') return { stop: environmentOnly(records) }
-  return { missing, reading, touched, scope: outOfScope(touched, writeScopeOf(step.role, { slug, config })), records, prose: await proseFailures(deps, slug, step, missing) }
+  return { missing, reading, touched, scope, records, prose: await proseFailures(deps, slug, step, missing) }
 }
 
 /**
@@ -156,8 +162,46 @@ const blockedBy = (summary) => ({ missing: [], failures: [summary], code: 'agent
 /** @param {import('../../domain/pipeline/agent-result.mjs').ResultReading} reading @returns {Failure[]} */
 const resultFailures = (reading) => (reading.ok ? [] : [{ code: 'invalid-result', line: `result ${reading.errors.join('; ')}` }])
 
-/** @param {string[]} paths @returns {Failure[]} */
-const scopeFailures = (paths) => paths.map((path) => ({ code: /** @type {const} */ ('write-scope'), line: `out of write scope: ${path}` }))
+/**
+ * The files the attempt changed out of its write scope, then those in its scope it left
+ * uncommitted outside the tracking folder: an agent with a shell commits its changes, refused
+ * otherwise; the engine commits those of an agent with none, once its step is done.
+ * @param {Pick<CheckDeps, 'sourceControl'>} deps
+ * @param {{ role: import('../../domain/pipeline/roles.mjs').Role, visitHeads: Head[] }} step
+ * @param {{ slug: string, config: import('../../domain/config/skraft-config.mjs').SkraftConfig, touched: string[] }} attempt
+ * @returns {Promise<{ failures: Failure[], uncommitted: UncommittedFile[] } | string>} a string: why Git cannot tell
+ */
+const scopeFailures = async (deps, { role, visitHeads }, { slug, config, touched }) => {
+  const left = await uncommittedPaths(deps, visitHeads)
+  if (typeof left === 'string') return left
+  const refused = outOfScope(touched, writeScopeOf(role, { slug, config }))
+  const kept = left.filter(({ path }) => touched.includes(path) && !refused.includes(path) && pathUnder(path, trackingFolder(slug)) === null)
+  const failures = [...refused.map((path) => failure('write-scope', `out of write scope: ${path}`)), ...(makesCommits(role) ? kept.map(uncommittedLine) : [])]
+  return { failures, uncommitted: kept }
+}
+
+/** @param {UncommittedFile} file @returns {Failure} */
+const uncommittedLine = ({ path }) => failure('uncommitted', `left uncommitted: ${path}; commit it or undo the change`)
+
+/** @param {FailureCode} code @param {string} line @returns {Failure} */
+const failure = (code, line) => ({ code, line })
+
+/**
+ * The files of every repository of the run that differ from its HEAD now; a string when Git
+ * cannot tell.
+ * @param {Pick<CheckDeps, 'sourceControl'>} deps @param {Head[]} visitHeads
+ * @returns {Promise<UncommittedFile[] | string>}
+ */
+const uncommittedPaths = async ({ sourceControl }, visitHeads) => {
+  const left = []
+  for (const { repository } of visitHeads) {
+    const head = /** @type {string} */ (await sourceControl.head(repository))
+    const changed = await sourceControl.changedFiles(repository, head)
+    if (changed === null) return `Git cannot list what changed in ${repository} since ${head}`
+    left.push(...changed.map((file) => ({ repository, file, path: joinRelative(repository, file) })))
+  }
+  return left
+}
 
 /**
  * The step's refusal: every failure found, the code of the first one by priority.

@@ -2,7 +2,10 @@ import { RESULT_SHAPE } from './agent-result.mjs'
 import { issueOf } from './commits.mjs'
 
 /**
- * @typedef {{ name: string, root: string, stack: string, mocking: string, contractTesting: boolean, test: string | null }} BriefComponent
+ * @typedef {{ name: string, root: string, stack: string, mocking: string, contractTesting: boolean, test: string | null, gates: BriefGate[] }} BriefComponent
+ *   gates: the gate commands of the component the agent runs before its result, in the order the
+ *   gates step runs them, mutation left out.
+ * @typedef {{ gate: string, line: string }} BriefGate
  * @typedef {{
  *   agent: string, phase: string, slug: string,
  *   story: { issue?: number | null, title?: string | null } | null,
@@ -11,7 +14,7 @@ import { issueOf } from './commits.mjs'
  *   allowed: string[], components: BriefComponent[], tdd: import('./roles.mjs').TddMode, commits: boolean,
  *   missing: string[], feedback: string[], instruction: string | null, sentBy: 'gate' | 'review' | 'ask' | 'answer' | null, acceptance: string[],
  *   mutants: { file: string, mutants: string[], group: number, of: number } | null,
- *   drafts: string[], proposal: boolean,
+ *   drafts: string[], proposal: boolean, language: import('../reporting/language.mjs').Language | null, checklists: string[],
  * }} Brief
  *   skills (the SKILL.md files of its components the agent reads first), inputs, outputs, result and missing are absolute paths;
  *   nowhere: the skills its components ask for that neither the plugin nor the working copy provides; allowed is relative to the working
@@ -25,7 +28,9 @@ import { issueOf } from './commits.mjs'
  *   test of its own. mutants: the group of surviving mutants the agent kills, one file's.
  *   drafts: the Proposed ADRs of the working copy, relative to it, told to an agent that keeps
  *   the DESIGN records; empty for any other. proposal: the agent proposes how to treat its
- *   mutants and changes no code.
+ *   mutants and changes no code. language: the story's, for an agent that writes the prose of the
+ *   pull request; null for any other. checklists: the absolute paths of the skills whose gates the
+ *   review of its phase judges its outputs by, which it checks them against before its result.
  */
 
 /**
@@ -37,6 +42,7 @@ export const composeBrief = (brief) => [
   ...section('- Skills (read each before you start):', brief.skills),
   ...section(NOWHERE, brief.nowhere.map(({ component, skill }) => `${skill} (${component})`)),
   ...workLines(brief),
+  ...selfCheckLines(brief),
   ...section(DRAFTS, brief.drafts),
   ...mutantLines(brief),
   ...missingLines(brief),
@@ -48,9 +54,10 @@ const DRAFTS = '- Proposed ADRs, drafts no human has ratified: rewrite each in p
 const NOWHERE ='- Skills your components ask for that exist nowhere, in the plugin or the working copy; mocking-strategy-roster and contract-testing say which recipe to use instead, or to stop:'
 
 /** Who is dispatched, for which story, on which pass and attempt. @param {Brief} brief */
-const headerLines = ({ agent, phase, slug, story, visit, attempt, maxAttempts, sentBy }) => [
+const headerLines = ({ agent, phase, slug, story, visit, attempt, maxAttempts, sentBy, language }) => [
   `## Skraft dispatch: ${agent} (${phase})`,
   `- Story: ${storyLine(story)}`,
+  ...(language === null ? [] : [`- Write in ${LANGUAGE_NAMES[language]}, the story's language.`]),
   `- Feature scope: ${slug}`,
   ...(visit > 1 ? [`- Pass: ${visit}, after ${PASS_CAUSE[sentBy ?? 'gate']}`] : []),
   `- Attempt: ${attempt} of ${maxAttempts}`,
@@ -65,9 +72,17 @@ const workLines = ({ inputs, outputs, result, allowed, components, tdd, commits,
   ...section('- Components:', components.map(componentLine)),
   ...commitLines(tdd, sentBy),
   ...(proposal ? [PROPOSAL_RULES] : []),
-  ...(commits ? [issueLine(story)] : []),
+  ...(commits ? [COMMIT_EVERY_CHANGE, issueLine(story)] : []),
   ...acceptanceLines(tdd, acceptance),
 ]
+
+/** What the agent checks its work against before it writes its result. @param {Brief} brief */
+const selfCheckLines = ({ tdd, components, checklists }) => [
+  ...gateLines(tdd, components),
+  ...checklists.map((path) => `- Before you write your result, check your outputs against every gate of ${path}, the gates the review of your phase judges them by, and fix each one they fail.`),
+]
+
+const COMMIT_EVERY_CHANGE = '- Commit every file you change outside the tracking folder before you write your result, as `type(<story>): subject` (`docs(<story>): …` for a document); the engine refuses a change left uncommitted.'
 
 /** How an agent's commits reference the story's issue. @param {Brief['story']} story */
 const issueLine = (story) => {
@@ -93,6 +108,20 @@ const writablePaths = (allowed, components) => [
 
 /** @param {BriefComponent} component */
 const componentLine = ({ name, root, stack, mocking, contractTesting, test }) => `${name}: ${root} (${stack}), mocking: ${mocking}, contract testing: ${contractTesting ? 'on' : 'off'}${test ? `, tests: ${test}` : ''}`
+
+/** The commits whose code the gates step runs its commands on next: a TDD cycle's, a mutant killer's. */
+const GATED = Object.freeze(['cycle', 'kill'])
+
+const GATES_TITLE = '- Gate commands: before you write your result, run those of each component you changed, from its root, and fix every failure; the gates step runs them next and sends a failure back as a new pass:'
+
+/**
+ * The gate commands an agent whose code the gates step judges next runs first, by component.
+ * @param {Brief['tdd']} tdd @param {BriefComponent[]} components
+ */
+const gateLines = (tdd, components) => (GATED.includes(/** @type {string} */ (tdd)) ? section(GATES_TITLE, components.flatMap(gatesLine)) : [])
+
+/** @param {BriefComponent} component */
+const gatesLine = ({ name, gates }) => (gates.length === 0 ? [] : [`${name}: ${gates.map(({ gate, line }) => `${gate}: ${line}`).join('; ')}`])
 
 /** The surviving mutants of the file the agent kills, or proposes how to treat. @param {Brief} brief */
 const mutantLines = ({ mutants, proposal }) => (mutants === null
@@ -136,6 +165,9 @@ const feedbackTitle = ({ attempt, maxAttempts, visit, sentBy }) => {
   if (sentBy === 'answer') return 'A human chose how to go on:'
   return sentBy === 'ask' ? `A human refused the work of pass ${visit - 1}:` : `The gates failed on pass ${visit - 1}:`
 }
+
+/** A language as the brief names it. */
+const LANGUAGE_NAMES = Object.freeze({ en: 'English', fr: 'French' })
 
 /** What sent the work back into a new pass, by the kind of node that did. */
 const PASS_CAUSE = Object.freeze({ gate: 'the gates sent the work back', review: 'the review sent the work back', ask: 'a human refused the work', answer: 'a human chose how to go on' })

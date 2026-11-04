@@ -242,8 +242,8 @@ tous les findings, montre chaque finding blocker et high avec son contexte (la r
 sévérité, le type de dérive, tous les endroits où il se trouve, la correction), les medium et low
 dans un tableau, et où se trouve le fichier de verdict. Quand il ne reste que des medium et des
 low, c'est la question `review-ceiling` : `ACCEPT` les prend tels quels et continue par l'arête
-`APPROVED` de la revue ; le rapport du run et la pull request les listent sous *Accepted
-findings*. Quand il reste un blocker ou un high, c'est la question `blocked` : ceux-là ne sont
+`APPROVED` de la revue ; le rapport du run les liste sous *Accepted findings*, et la pull request
+les montre dans son tableau de revue avec le statut *Accepté* (*Accepted* en anglais). Quand il reste un blocker ou un high, c'est la question `blocked` : ceux-là ne sont
 jamais acceptés. Dans les deux cas, une consigne relance le producteur avec tous les findings, et
 `STOP` termine le run.
 

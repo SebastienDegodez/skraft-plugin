@@ -261,7 +261,10 @@ lens and what it noted: the work is not sent back, no finding is checked, and th
 `blocked` question on the review node. Otherwise `NEEDS_REWORK` when a finding counts, else
 `APPROVED`. A blocker, high or medium finding counts unless the refuter refuted it; a low finding
 counts, unchecked, when its lens answered `fail`, so that the producer fixes every severity while
-the review may send its work back; a low finding of a lens that answered `pass` is a note. The
+the review may send its work back; a low finding of a lens that answered `pass` is a note. From
+the second pass, a finding at the place of one the refuter refuted is carried over as refuted, and
+a blocker, high or medium finding new on a line the producer left as it was is a note: neither
+counts, goes back to the producer nor reaches the `review-ceiling` question. The
 findings that count go to the next brief of the phase agent, a group on one line citing each of
 its lenses. When the loop back to the producer reaches its `max_visits`, the run asks a human
 instead of sending the work back again: the `review-ceiling` question (`ACCEPT`, an instruction

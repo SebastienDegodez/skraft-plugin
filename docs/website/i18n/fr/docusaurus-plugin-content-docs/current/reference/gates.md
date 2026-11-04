@@ -265,7 +265,11 @@ n'est vérifié, et le run pose la question `blocked` sur le nœud de revue. Sin
 quand un finding compte, sinon `APPROVED`. Un finding blocker, high ou medium compte sauf si le
 réfuteur l'a réfuté ; un finding low compte, sans vérification, quand sa lentille a répondu
 `fail`, pour que le producteur corrige toutes les sévérités tant que la revue peut lui renvoyer
-son travail ; un finding low d'une lentille qui a répondu `pass` est une note. Les findings
+son travail ; un finding low d'une lentille qui a répondu `pass` est une note. À partir de la
+deuxième passe, un finding à l'endroit d'un finding que le réfuteur a réfuté est reporté comme
+réfuté, et un finding blocker, high ou medium nouveau sur une ligne que le producteur a laissée
+telle quelle est une note : aucun des deux ne compte, ne retourne au producteur ni n'apparaît dans
+la question `review-ceiling`. Les findings
 retenus vont dans le brief suivant de l'agent de la phase, un groupe sur une ligne qui cite
 chacune de ses lentilles. Quand la boucle vers le producteur atteint son `max_visits`, le run
 interroge un humain au lieu de renvoyer encore le travail : la question `review-ceiling`

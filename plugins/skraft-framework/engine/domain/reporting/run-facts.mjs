@@ -1,5 +1,7 @@
 import { groupFindings } from '../review/finding-groups.mjs'
 import { isMatrix } from '../pipeline/design-records.mjs'
+import { BLOCKING } from '../review/verdict.mjs'
+import { acceptedFindings } from './accepted-findings.mjs'
 
 /**
  * The facts of a run a pull request description shows, read from its journal alone: the red
@@ -11,14 +13,24 @@ import { isMatrix } from '../pipeline/design-records.mjs'
  *   exitCode: that of the replay that proved the commit red (its test or e2e command), null when it was not replayed (a test that kills mutants).
  * @typedef {{ component: string, gate: string, command: string, status: string, durationMs: number, evidence: string, survivors?: number | null }} GateFact
  *   survivors: the mutants a mutation gate handed out, null when it passed or could not tell; absent for any other gate.
- * @typedef {{ step: string, lens: string, id: string, severity: string, location: string, description: string, verdict: string | null, reason: string | null, dissent: boolean }} FindingFact
- *   verdict: the refuter's, null for a finding it does not check (low).
- * @typedef {{ cited: string, finding: FindingFact }} FindingLine
- *   cited: `<lens> <id>` of each lens that found it at that line, with that severity.
- * @typedef {{ counted: FindingLine[], refuted: FindingLine[], forHuman: FindingLine[] }} ReviewFacts
- *   forHuman: one lens alone found it, against the lenses that passed (the Dissent Rule), whatever
- *   the refuter said. A finding the refuter confirmed or could not settle keeps the work back, so
- *   on an approved review only the ones it did not check (low) count, and a lone lens's is refuted.
+ * @typedef {{ step: string, lens: string, id: string, gate: string, severity: string, location: string, description: string, verdict: string | null, reason: string | null, dissent: boolean, carried: number | null, since: number | null, failed: boolean, accepted: boolean }} FindingFact
+ *   verdict: the refuter's, null for a finding it does not check (low, or noted); carried: the pass
+ *   whose refutation this one repeats, null when the refuter judged it on this pass; since: the
+ *   pass since which its line is unchanged when the review noted it, null otherwise; failed: its
+ *   lens answered fail; accepted: a human accepted it as it stands at the review's ceiling.
+ * @typedef {'fix' | 'decide' | 'accepted' | 'note' | 'refuted'} ReviewStatus
+ *   fix: it counts (confirmed, the refuter could not settle it, or low from a lens that failed);
+ *   decide: one lens alone found it, against the lenses that passed (the Dissent Rule), and the
+ *   refuter refuted it: a human decides; accepted: it counted, and a human accepted it as it
+ *   stands at the review's ceiling; note: low from a lens that did not fail, or new on a line
+ *   unchanged since an earlier pass: it never counts; refuted: the refuter refuted it, on this
+ *   pass or an earlier one.
+ * @typedef {{ status: ReviewStatus, cited: string, finding: FindingFact }} FindingLine
+ *   cited: `<lens> <id> <gate>` of each lens that found it at that line, with that severity and status.
+ * @typedef {{ step: string, lines: FindingLine[] }} StepReview
+ *   lines: grouped by status, in the order of REVIEW_STATUSES.
+ * @typedef {StepReview[]} ReviewFacts
+ *   the review steps whose last pass found something, in the order they ran.
  */
 
 /**
@@ -49,45 +61,66 @@ export const finalGates = (events) => {
 /** @param {RunEvent} event @returns {GateFact} */
 const gateOf = ({ component, gate, command, status, durationMs, evidence, survivors }) => ({ component, gate, command, status, durationMs, evidence, survivors })
 
+/** The statuses of a review's findings, in the order a review shows them. */
+export const REVIEW_STATUSES = Object.freeze(/** @type {const} */ (['fix', 'decide', 'accepted', 'note', 'refuted']))
+
 /**
- * What the last pass of each review step found: the findings that count, those the refuter
- * refuted, those left for a human; findings of several lenses at one line go together.
+ * What the last pass of each review step found, each finding with its status; findings of
+ * several lenses at one line with one status go together.
  * @param {RunEvent[]} events @returns {ReviewFacts}
  */
 export const reviewFacts = (events) => {
   const lenses = events.filter((event) => event.type === 'review.lens')
   const last = lenses.filter((lens) => !lenses.some((other) => other.step === lens.step && other.visit > lens.visit))
-  const findings = last.flatMap((lens) => findingsOf(events, lens))
-  return {
-    counted: linesOf(findings.filter((finding) => finding.verdict !== 'refuted')),
-    refuted: linesOf(findings.filter((finding) => !forHuman(finding) && finding.verdict === 'refuted')),
-    forHuman: linesOf(findings.filter(forHuman)),
-  }
+  const steps = [...new Set(last.map(({ step }) => step))]
+  const accepted = acceptedFindings(events).map(({ review, lens, id }) => `${review} ${lens} ${id}`)
+  return steps.map((step) => ({ step, lines: linesOf(last.filter((lens) => lens.step === step).flatMap((lens) => findingsOf(events, lens, accepted))) }))
+    .filter(({ lines }) => lines.length > 0)
 }
 
-/** A finding one lens alone held against the others. @param {FindingFact} finding */
-const forHuman = (finding) => finding.dissent
+/** A finding that counts becomes accepted when a human accepted it. @param {FindingFact} finding @returns {ReviewStatus} */
+const statusOf = (finding) => {
+  const status = countedStatus(finding)
+  return status === 'fix' && finding.accepted ? 'accepted' : status
+}
+
+/** @param {FindingFact} finding @returns {ReviewStatus} */
+const countedStatus = (finding) => {
+  if (finding.since !== null) return 'note'
+  if (!BLOCKING.includes(finding.severity)) return finding.failed ? 'fix' : 'note'
+  if (finding.verdict !== 'refuted') return 'fix'
+  return finding.dissent ? 'decide' : 'refuted'
+}
 
 /**
- * The findings of one lens on the last pass of its review step, each with what the refuter said.
- * @param {RunEvent[]} events @param {RunEvent} lens a review.lens event @returns {FindingFact[]}
+ * The findings of one lens on the last pass of its review step, each with what the pass journaled
+ * of it: the refuter's word (`review.refuted`) or a note (`review.noted`), never both; only those
+ * two events name a finding.
+ * @param {RunEvent[]} events @param {RunEvent} lens a review.lens event
+ * @param {string[]} accepted `<step> <lens> <id>` of each finding a human accepted at a review's ceiling
+ * @returns {FindingFact[]}
  */
-const findingsOf = (events, { step, visit, lens, findings }) => {
-  // Stryker disable next-line ConditionalExpression: only a review.refuted carries a finding id, which the lookup matches
-  const refutations = events.filter((event) => event.type === 'review.refuted' && event.step === step && event.visit === visit)
-  return findings.map((/** @type {any} */ finding) => findingFact(step, lens, finding, refutations))
+const findingsOf = (events, { step, visit, lens, verdict, findings }, accepted) => {
+  const said = events.filter((event) => event.step === step && event.visit === visit && event.lens === lens)
+  const of = { step, lens, failed: verdict === 'fail' }
+  return findings.map((/** @type {any} */ finding) => findingFact(of, finding, said.findLast((event) => event.finding === finding.id), accepted))
 }
 
-/** @param {string} step @param {string} lens @param {any} finding @param {RunEvent[]} refutations */
-const findingFact = (step, lens, finding, refutations) => {
-  const checked = refutations.findLast((event) => event.lens === lens && event.finding === finding.id)
-  const { id, severity, location, description } = finding
-  return { step, lens, id, severity, location, description, verdict: checked?.verdict ?? null, reason: checked?.reason ?? null, dissent: checked?.dissent === true }
-}
+/**
+ * @param {{ step: string, lens: string, failed: boolean }} of @param {any} finding
+ * @param {RunEvent | undefined} said what the pass journaled last of that finding @param {string[]} accepted
+ * @returns {FindingFact}
+ */
+const findingFact = ({ step, lens, failed }, { id, gate, severity, location, description }, said, accepted) => ({
+  step, lens, id, gate, severity, location, description, ...saidOf(said ?? {}), failed, accepted: accepted.includes(`${step} ${lens} ${id}`),
+})
 
-/** @param {FindingFact[]} findings @returns {FindingLine[]} */
-const linesOf = (findings) => groupFindings(findings.map((finding) => ({ lens: finding.lens, finding })))
-  .map((members) => ({ cited: members.map(({ lens, finding }) => `${lens} ${finding.id}`).join(', '), finding: members[0].finding }))
+/** @param {Partial<RunEvent>} said */
+const saidOf = ({ verdict = null, reason = null, dissent, carried = null, since = null }) => ({ verdict, reason, dissent: dissent === true, carried, since })
+
+/** The findings as lines, grouped by status in the order of REVIEW_STATUSES. @param {FindingFact[]} findings @returns {FindingLine[]} */
+const linesOf = (findings) => REVIEW_STATUSES.flatMap((status) => groupFindings(findings.filter((finding) => statusOf(finding) === status).map((finding) => ({ lens: finding.lens, finding })))
+  .map((members) => ({ status, cited: members.map(({ lens, finding }) => `${lens} ${finding.id} ${finding.gate}`).join(', '), finding: members[0].finding })))
 
 /**
  * The model families the agents were assigned and the models their hosts named, each once, sorted:
