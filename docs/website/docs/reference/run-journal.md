@@ -251,9 +251,10 @@ question about the review node; `reason` names each such lens and what it noted)
 `failures` (the findings that count, which the next brief of
 the phase agent lists) and `cost` (its lenses, checks and batches of this pass, resumed or not). A step the run was sent back into, by the gates, a review or a human's refusal, has `sentBy`
 (`gate`, `review` or `ask`) on its `step.started`; a step nothing sent back has none. A human's
-instruction to a `blocked` question opens the node's next pass with `sentBy` `ask` and the
-instruction as its `feedback`; a review node's `step.started` carries `feedback` too, which each
-lens of that pass reads when `sentBy` is `ask`.
+instruction to a `blocked` question opens the node's next pass with `sentBy` `ask`, the
+instruction in `instruction` and what the block left (its step's `failures`) as its `feedback`;
+a review node's `step.started` carries them too, and each lens of that pass reads the
+`instruction`.
 An agent's `step.recorded` lists in `documents` the files of the tracking folder its attempt
 created or changed (the engine's own files left out), and for the solution architect the
 `details/<date>/structural-scan.json` the engine wrote before the attempt; a review gives each lens these documents
@@ -276,7 +277,7 @@ way.
 | `reporting-consent` | `<node>-<n>` | `publish.visuals` is not set in `skraft-config.json` and a component is a front end (stack `react`, or `commands.e2e`); none: `step.recorded` `skipped`, answer `DECLINED`, nothing written | the answer written as `"publish": { "visuals": true\|false }`, and kept for the rest of the run: a loop back through the node does not ask again |
 | `mutation-plan` | `<node>-<n>` (`mutation_plan-1`) | the mutation gate failed and `kill_proposal` wrote its proposals | `APPLY`: `kill_mutants` applies the proposals; an instruction: `kill_mutants` gets it with the proposals it departs from; `STOP`: `run.finished` `blocked`, code `stopped` |
 | `environment` | `<node>-<n>`, the node that cannot run (`gates-1`) | a step cannot run on this machine | `RETRY`: the same step is checked or run again, its agent only if its outputs were still missing; `ABORT`: run blocked |
-| `blocked` | `<node>-<n>`, the node an instruction runs again (`design-1`) | an agent answered `blocked` (the agent's node), a loop reached its `max_visits` (the node its capped edge leads back to), a lens answered `inconclusive` (the review node) | an instruction: the same run enters that node on a new pass, the instruction as its `feedback` (`sentBy` `ask`), and no edge into the node counts as taken any more; `STOP`: `run.finished` `blocked` with the block's code and reason, nothing else |
+| `blocked` | `<node>-<n>`, the node an instruction runs again (`design-1`) | an agent answered `blocked` (the agent's node), a loop reached its `max_visits` (the node its capped edge leads back to), a lens answered `inconclusive` (the review node) | an instruction: the same run enters that node on a new pass, the instruction in `instruction` and what the block left as its `feedback` (`sentBy` `ask`), and no edge into the node counts as taken any more; `STOP`: `run.finished` `blocked` with the block's code and reason, nothing else |
 
 The `environment` question reads `<node> cannot run on this machine: <reason>. Fix it, then
 RETRY; or ABORT the run.` It is asked when a gate program is not found, a red commit cannot be
