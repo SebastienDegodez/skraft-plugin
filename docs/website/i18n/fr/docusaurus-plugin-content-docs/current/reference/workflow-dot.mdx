@@ -183,7 +183,7 @@ Une revue s'écrit en un fan-out (`shape=component`), un nœud lentille par bran
 (`shape=tripleoctagon`). Le journal nomme l'étape de revue d'après le fan-in
 (`distill_review`). Le moteur lance les lentilles d'une revue ensemble, dans l'ordre des arêtes
 du fan-out, là où l'hôte le permet, puis `finding-refuter` depuis le nœud réfuteur sur leurs
-findings blocker, high et medium. Ce qu'une revue calcule ensuite (réponse des lentilles,
+findings, de toute sévérité. Ce qu'une revue calcule ensuite (réponse des lentilles,
 réfutation, verdict) : [Gates](./gates.md).
 
 ```dot
@@ -204,7 +204,7 @@ distill_review -> deliver [label="APPROVED"]
 | --- | --- |
 | Fan-out (`shape=component`) | aucun attribut propre ; chaque arête qui en part est une branche qui porte exactement un nœud lentille, et toutes les branches aboutissent au même réfuteur. Il ne prend aucune étiquette |
 | Nœud lentille (`shape=note`) | `lens="<nom>"` obligatoire, kebab-case, une fois au plus par revue ; `model="<famille>"` et `when="mock"` ou `when="contract"` facultatifs. Entré par une arête venue de son fan-out, il sort par une arête vers son réfuteur |
-| Réfuteur (`shape=octagon`) | lance `finding-refuter` sur les findings blocker, high et medium des lentilles, sauf si une lentille bloque déjà la revue ; entré seulement par les nœuds lentille d'un même fan-out, il sort par une arête vers son fan-in. `mandatory` facultatif, rien d'autre : sa famille est le `refuter=` du fan-in |
+| Réfuteur (`shape=octagon`) | lance `finding-refuter` sur tous les findings des lentilles, de toute sévérité, sauf si une lentille bloque déjà la revue ; entré seulement par les nœuds lentille d'un même fan-out, il sort par une arête vers son fan-in. `mandatory` facultatif, rien d'autre : sa famille est le `refuter=` du fan-in |
 | Fan-in (`shape=tripleoctagon`) | entré seulement par son réfuteur ; `model=` (la famille de ses lentilles qui n'en nomment aucune) et `refuter=` (la famille de `finding-refuter`) facultatifs |
 | Ancien fan-in | un fan-in où entrent directement ses nœuds lentille, écrit avant le nœud réfuteur, est refusé : `node <fan-in>: its lens nodes lead straight to it, the form before the refuter node; add <refuter> [shape=octagon], lead <lens nodes> to <refuter> instead, and add <refuter> -> <fan-in>` (`<refuter>` vaut `refuter` dans un workflow appelé, `<fan-in>_refuter` ailleurs) |
 | `lenses="…"` | l'ancienne forme, refusée : `skraft workflow check` nomme chaque nœud qui l'utilise et écrit, en DOT, les nœuds et arêtes qui le remplacent : identifiants compris (`<revue>_lenses`, `<revue>_<lentille>`, `<revue>_refuter`), `when` pour `mock-fidelity` et `contract-fidelity`, `label`, `phase`, `model` et `refuter` du nœud sur le fan-in, ses arêtes entrantes envoyées au fan-out |

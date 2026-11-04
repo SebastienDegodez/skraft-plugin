@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { InMemoryCodeHost, InMemoryGit } from '../support/in-memory-host.mjs'
-import { finding, forgeLostAtFirstAgent, lenses, nominal, prWriter, REFS_42, says, scripted, SLUG } from '../support/pipeline-host.mjs'
+import { finding, forgeLostAtFirstAgent, lenses, nominal, prWriter, REFS_42, refutes, says, scripted, SLUG } from '../support/pipeline-host.mjs'
 import { eventsOf } from '../support/decisions.mjs'
 import { opening, section } from '../support/description.mjs'
 
@@ -59,16 +59,19 @@ test('closing keywords, mentions and HTML an agent writes are made inert, a tag 
   const what = 'Closes #12, fixes GH-3 and Resolved acme/shop#4; see fix https://github.com/acme/shop/issues/5 — thanks @alice <b>bold</b><img src=x onerror=alert(1)> <</details>/details>then<<details>details> end'
   const host = scripted({ config: CONSENTED }, (it) => nominal(it, REFS_42))
   host.prWriters.push(prWriter({ what, summary: 'Pay by card, closes #9' }))
-  host.agentRunner.review = lenses({ 'cold-reader': [says('cold-reader', 'pass', [finding('F1', 'low', 'ping @bob<</details>/details>, this fixes #8', { location: 'src/`odd`.cs:3' })])] })
+  host.agentRunner.review = lenses({
+    'cold-reader': [says('cold-reader', 'pass', [finding('F1', 'low', 'ping @bob<</details>/details>, this fixes #8', { location: 'src/`odd`.cs:3' })])],
+    refuter: [refutes('refuted', 'odd.cs:3 reads plainly, cc @carol <b>x</b>')],
+  })
 
   await host.start({ story: { issue: 42, title: 'Pay by card' } })
 
   const body = await host.tracking.read(SLUG, 'pull-request-body.md')
   assert.ok(body.startsWith('Closes #42\n\n'), body)
   assert.equal(section(body, 'What changes'), '`Closes #12`, `fixes GH-3` and `Resolved acme/shop#4`; see `fix https://github.com/acme/shop/issues/5` — thanks `@alice` bold then end')
-  assert.equal(section(body, 'Review').split('\n').at(-1), '| Note | low | cold-reader F1 G1 | `` src/`odd`.cs:3 `` | ping `@bob`, this `fixes #8` |  |')
-  assert.equal(opening(body, 'Review'), '<details><summary>Review: 1 note</summary>')
-  assert.deepEqual([body.split('<details').length, body.split('</details>').length], [9, 9])
+  assert.equal(section(body, 'Review').split('\n').at(-3), '| Refuted | low | cold-reader F1 G1 | `` src/`odd`.cs:3 `` | ping `@bob`, this `fixes #8` | odd.cs:3 reads plainly, cc `@carol` x |')
+  assert.equal(opening(body, 'Review'), '<details><summary>Review: 1 refuted</summary>')
+  assert.deepEqual([body.split('<details').length, body.split('</details>').length], [10, 10])
   assert.equal(host.codeHost.calls.find((call) => call.startsWith('create ')), 'create main <- checkout (draft): Pay by card, `closes #9`')
 })
 

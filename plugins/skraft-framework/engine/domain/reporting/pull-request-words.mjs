@@ -49,7 +49,6 @@ const EN = Object.freeze({
     confirmed: 'confirmed: ',
     unverifiable: 'not verified: ',
     alone: 'one lens alone, against the lenses that passed; refuted: ',
-    unrefuted: 'low, from a lens that failed: it counts unrefuted',
     accepted: 'a human accepted it as it stands at the review\'s ceiling',
     /** @param {number} pass */
     carried: (pass) => ` (refuted on pass ${pass})`,
@@ -114,7 +113,6 @@ const FR = Object.freeze({
     confirmed: 'confirmé : ',
     unverifiable: 'non vérifié : ',
     alone: 'une seule lentille, contre celles qui sont passées ; réfuté : ',
-    unrefuted: 'faible, d\'une lentille en échec : il compte sans réfutation',
     accepted: 'un humain l\'a accepté tel quel au plafond de la revue',
     carried: (pass) => ` (réfuté à la passe ${pass})`,
     unchanged: (pass) => `nouveau sur une ligne inchangée depuis la passe ${pass}`,

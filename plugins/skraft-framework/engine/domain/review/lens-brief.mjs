@@ -50,11 +50,11 @@ export const composeLensBrief = ({ lens, phase, slug, story, inputs, skills, kno
   ...retryLines(retry),
 ].join('\n')
 
-/** How a lens answers: the document, the context of every finding, what its verdict does with low findings. @param {string} name */
+/** How a lens answers: the document, the context of every finding, that every finding counts. @param {string} name */
 const answerLines = (name) => [
   `- End your answer with this YAML document in a \`\`\`yaml block, at most ${MAX_FINDINGS} findings, every free text in double quotes:`,
   `- Every finding gives ${CONTEXT_KEYS.join(', ')}: an answer with a finding lacking one is refused.`,
-  '- verdict fail sends every finding back to be fixed, a low one too; pass keeps low findings as notes only.',
+  '- Every finding the refuter does not refute sends the work back to be fixed, a low one too, whether you answer pass or fail; pass names low findings only.',
   ...fenced(lensShape(name)),
 ]
 

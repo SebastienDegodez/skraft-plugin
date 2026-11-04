@@ -41,7 +41,7 @@ export const readLensSpec = (spec) => {
   return match === null ? null : { name: match[1], model: /** @type {Family | undefined} */ (match[2]) ?? null }
 }
 
-/** The read-only agent that checks each blocker, high and medium finding before it counts. */
+/** The read-only agent that checks each finding before it counts. */
 export const REFUTER = 'finding-refuter'
 
 /** @param {string} name @returns {string} */

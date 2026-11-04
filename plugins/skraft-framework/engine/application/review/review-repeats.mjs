@@ -5,7 +5,7 @@ import { readOrName } from '../shared/workspace-reading.mjs'
 /**
  * What a review pass takes from the pass before it of the same step (`repeats.mjs`). Each pass
  * keeps beside it, in snapshot.json, what each file it reviewed held: the changed paths, the
- * documents its lenses read, and the files its blocker, high and medium findings cite. From the
+ * documents its lenses read, and the files its findings cite. From the
  * second pass, with the last pass's snapshot, it journals each finding carried over as refuted
  * (`review.refuted` with `carried`: the pass the refuter refuted it on, its reason, assignment
  * and model) and each finding noted as new on an unchanged line (`review.noted`, `since` the

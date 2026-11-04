@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { API } from '../support/pipeline-host.mjs'
-import { finding, lenses, REVIEWS, reviewHost, says, SLUG, TEST_FILE, weakensAssertion } from './support.mjs'
+import { finding, lenses, REVIEWS, refutes, reviewHost, says, SLUG, TEST_FILE, weakensAssertion } from './support.mjs'
 
 const NO_COPIES = "- In this review, docs/adr/decisions-index.md, the ADRs and the rule files in the working copy are the pull request author's version, and no base copies are given: judge without them."
 const DEGRADED = '- No `.feature` file and no test plan among these inputs: judge G9 by comparing the lines the patch removes with the lines it adds (an assertion weakened, a test deleted, a skip or a focus added); their absence alone is no reason to answer inconclusive.'
@@ -53,27 +53,27 @@ test('a pull request of the .NET fixture that weakens an assertion needs rework:
   assert.deepEqual([started.phase, started.pullRequest, started.base, started.head, started.lenses], ['DELIVER', 12, 'root-0', 'root-1', ['test-integrity', 'architecture-boundaries', 'cold-reader', 'mock-fidelity', 'contract-fidelity']])
 })
 
-test('a clean pull request is approved; a low finding stays a note, the refuter asked nothing, and a second run on the same head is pass 2', async () => {
+test('a clean pull request is approved; a low finding the refuter refuted does not count, and a second run on the same head is pass 2', async () => {
   const host = reviewHost()
   host.git.commit('feat: discount at checkout', ['src/Checkout/Discount.cs'])
   host.git.adds('src/Checkout/Discount.cs', 'public decimal Apply(decimal total) => total > 100 ? total * 0.9m : total;')
   const low = finding('F1', 'low', 'name the discount threshold', { gate: 'C2', location: 'src/Checkout/Discount.cs:1', suggestion: 'DiscountThreshold' })
-  host.agentRunner.review = lenses({ 'cold-reader': [says('cold-reader', 'pass', [low])] })
+  host.agentRunner.review = lenses({ 'cold-reader': [says('cold-reader', 'pass', [low])], refuter: [refutes('refuted', 'Discount.cs:1 reads plainly')] })
 
   const outcome = await host.review()
 
   assert.deepEqual(outcome, {
     status: 'APPROVED', number: 12, pass: 1, code: null,
-    reason: 'APPROVED: no finding counts; 1 note (cold-reader F1)',
+    reason: 'APPROVED: no finding counts; 1 refuted (cold-reader F1)',
     reasons: [],
-    details: ['note: cold-reader F1 C2 low at src/Checkout/Discount.cs:1: name the discount threshold (suggestion: DiscountThreshold)'],
+    details: ['refuted: cold-reader F1 C2 low at src/Checkout/Discount.cs:1: name the discount threshold — Discount.cs:1 reads plainly'],
     file: `${REVIEWS}/reviews/verdict-1/verdict.yaml`,
     comment: null,
     unpublished: null,
   })
-  assert.equal(host.agentRunner.batches.length, 1)
+  assert.deepEqual(host.agentRunner.reviewed().filter((dispatch) => dispatch.agent === 'finding-refuter').map(({ label }) => label.split(' · ')[2]), ['refute cold-reader F1'])
   assert.equal(host.events().at(-1).outcome, 'approved')
-  assert.equal(host.progress.lines.at(-1), 'pr-12: APPROVED: no finding counts; 1 note (cold-reader F1)')
+  assert.equal(host.progress.lines.at(-1), 'pr-12: APPROVED: no finding counts; 1 refuted (cold-reader F1)')
 
   const again = await host.review()
 

@@ -4,6 +4,7 @@ import { BUILT_IN_WORKFLOW, InMemoryCodeHost, ScriptedMachine } from '../support
 import { edit } from '../workflow/support.mjs'
 import { agent, finding, lenses, nominal, prWriter, PROSE_TEMPLATE_FR, refutes, REFS_42, says, scripted, SLUG, tddCycle } from '../support/pipeline-host.mjs'
 import { opening, section } from '../support/description.mjs'
+import { answerYaml } from '../support/answer-yaml.mjs'
 
 const CONSENTED = { publish: { pullRequest: true, questionVersions: { pullRequest: 2 } } }
 const FRENCH_ISSUE = { title: 'Payer par carte', body: 'En tant que client, je veux payer par carte pour que la commande soit validée sans passer par la livraison.' }
@@ -148,11 +149,15 @@ test('a French story\'s review, failed gate, decisions and costs are told in Fre
     'test-integrity': [says('test-integrity', 'pass', [finding('F1', 'low', 'long name')])],
     'architecture-boundaries': [says('architecture-boundaries', 'pass', [finding('F1', 'low', 'long name too', { location: './src/Checkout.cs:12' })])],
     'cold-reader': [says('cold-reader', 'fail', [finding('F1', 'medium', 'pay names no currency', { location: 'src/Checkout.cs:3' })])],
-    refuter: [refutes('refuted', 'details/x.md:3 names EUR'), refutes('refuted', 'nothing is cached'), refutes('refuted', 'context-map.md:12 fixes pay(amount)')],
+    refuter: [
+      refutes('refuted', 'details/x.md:3 names EUR'), refutes('refuted', 'nothing is cached'),
+      answerYaml({ checks: [{ finding: 'test-integrity F1', verdict: 'refuted', reason: 'Checkout.cs:12 is short' }, { finding: 'architecture-boundaries F1', verdict: 'refuted', reason: 'Checkout.cs:12 is short' }] }),
+      refutes('refuted', 'context-map.md:12 fixes pay(amount)'),
+    ],
   })
   await reviewed.start(FRENCH)
   const body = await bodyOf(reviewed)
-  assert.equal(opening(body, 'Revue'), '<details open><summary>Revue: 1 à trancher, 1 note, 2 réfutés</summary>')
+  assert.equal(opening(body, 'Revue'), '<details open><summary>Revue: 1 à trancher, 3 réfutés</summary>')
   assert.equal(section(body, 'Revue'), [
     '**design_review**',
     '',
@@ -168,7 +173,13 @@ test('a French story\'s review, failed gate, decisions and costs are told in Fre
     '',
     FR_HEADER, FR_RULE,
     '| À trancher | medium | cold-reader F1 G1 | `src/Checkout.cs:3` | pay names no currency | une seule lentille, contre celles qui sont passées ; réfuté : context-map.md:12 fixes pay(amount) |',
-    '| Note | low | test-integrity F1 G1, architecture-boundaries F1 G1 | `src/Checkout.cs:12` | long name |  |',
+    '',
+    '<details><summary>1 réfuté</summary>',
+    '',
+    FR_HEADER, FR_RULE,
+    '| Réfuté | low | test-integrity F1 G1, architecture-boundaries F1 G1 | `src/Checkout.cs:12` | long name | Checkout.cs:12 is short |',
+    '',
+    '</details>',
   ].join('\n'))
 
   const onward = 'digraph p {\n  start [shape=Mdiamond]\n  deliver [shape=box, agent="software-engineer", phase="DELIVER"]\n  gates [shape=parallelogram, gate="build,test"]\n  publish [shape=parallelogram, publish="pull-request", phase="PUBLISH"]\n  exit [shape=Msquare]\n  start -> deliver -> gates\n  gates -> publish\n  gates -> publish [label="FAIL"]\n  publish -> exit\n}'

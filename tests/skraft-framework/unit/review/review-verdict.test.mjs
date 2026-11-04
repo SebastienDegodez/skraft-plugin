@@ -62,7 +62,7 @@ test('a lens reads only its own inputs; the cold reader gets neither the story n
   const answer = (lens) => [
     '- End your answer with this YAML document in a ```yaml block, at most 20 findings, every free text in double quotes:',
     '- Every finding gives severityReason, drift, occurrences: an answer with a finding lacking one is refused.',
-    '- verdict fail sends every finding back to be fixed, a low one too; pass keeps low findings as notes only.',
+    '- Every finding the refuter does not refute sends the work back to be fixed, a low one too, whether you answer pass or fail; pass names low findings only.',
     '```yaml',
     `lens: ${lens}`,
     'verdict: fail            # pass | fail | inconclusive',
@@ -315,7 +315,9 @@ test('a confirmed blocker sends the work back to the phase agent with the findin
     ],
     'NEEDS_REWORK: 5 reasons to address',
   ])
-  assert.deepEqual(host.events().filter((event) => event.type === 'review.refuted').map(({ visit, lens, finding: id, verdict }) => [visit, lens, id, verdict]), [[1, 'consistency', 'F1', 'confirmed'], [1, 'consistency', 'F3', 'confirmed'], [1, 'consistency', 'F4', 'confirmed']])
+  assert.deepEqual(host.events().filter((event) => event.type === 'review.refuted').map(({ visit, lens, finding: id, verdict }) => [visit, lens, id, verdict]), [
+    [1, 'consistency', 'F1', 'confirmed'], [1, 'consistency', 'F2', 'confirmed'], [1, 'consistency', 'F3', 'confirmed'], [1, 'consistency', 'F4', 'confirmed'], [1, 'consistency', 'F5', 'confirmed'],
+  ])
   assert.deepEqual(host.events().find((event) => event.type === 'review.lens' && event.lens === 'consistency').findings.map(({ location }) => location), [
     'src/Checkout.cs:12', '', `.copilot-tracking/skraft-plans/${SLUG}/${CONTEXT_MAP}:44-45`, 'docs/adr/adr-001-card-payment.md:3', '/plugin/skills/architecture-review-criteria/SKILL.md:55',
   ])
@@ -390,7 +392,7 @@ test('a refuted blocker or medium does not count; an unverifiable one does; the 
       finding('F1', 'medium', 'no latency budget', { location: 'docs/adr/adr-001.md:4' }),
       finding('F2', 'medium', 'no error budget', { location: 'docs/adr/adr-001.md:9' }),
     ])],
-    refuter: [refutes('refuted'), refutes('unverifiable', 'the context map does not say'), refutes('confirmed'), refutes('refuted', 'docs/adr/adr-001.md:9 sets one')],
+    refuter: [refutes('refuted'), refutes('unverifiable', 'the context map does not say'), refutes('confirmed', 'the map spells it C:\\pay'), refutes('confirmed'), refutes('refuted', 'docs/adr/adr-001.md:9 sets one')],
   })
 
   await kept.start()
@@ -400,12 +402,13 @@ test('a refuted blocker or medium does not count; an unverifiable one does; the 
   assert.deepEqual([recorded.outcome, recorded.failures], ['needs-rework', [
     'consistency F2 G1 high at src/Checkout.cs:12: two contexts own payments (not verified)',
     'fitness F1 G1 medium at docs/adr/adr-001.md:4: no latency budget',
-    // A low finding of a lens that failed counts like any other (#499): the producer fixes it on the pass that goes back.
+    // A low finding the refuter confirmed counts like any other (#499): the producer fixes it on the pass that goes back.
     'consistency F3 G1 low at src/Checkout.cs:12: the "Payments" context is named C:\\pay (suggestion: one name)',
   ]])
   assert.deepEqual(kept.events().filter((event) => event.type === 'review.refuted').map(({ lens, finding: id, verdict, reason }) => [lens, id, verdict, reason]), [
     ['consistency', 'F1', 'refuted', 'refuted by the patch'],
     ['consistency', 'F2', 'unverifiable', 'the context map does not say'],
+    ['consistency', 'F3', 'confirmed', 'the map spells it C:\\pay'],
     ['fitness', 'F1', 'confirmed', 'confirmed by the patch'],
     ['fitness', 'F2', 'refuted', 'docs/adr/adr-001.md:9 sets one'],
   ])
@@ -425,6 +428,7 @@ test('a refuted blocker or medium does not count; an unverifiable one does; the 
     'refutations:',
     '  - lens: "consistency"', '    finding: "F1"', '    verdict: "refuted"', '    reason: "refuted by the patch"',
     '  - lens: "consistency"', '    finding: "F2"', '    verdict: "unverifiable"', '    reason: "the context map does not say"',
+    '  - lens: "consistency"', '    finding: "F3"', '    verdict: "confirmed"', '    reason: "the map spells it C:\\\\pay"',
     '  - lens: "fitness"', '    finding: "F1"', '    verdict: "confirmed"', '    reason: "confirmed by the patch"',
     '  - lens: "fitness"', '    finding: "F2"', '    verdict: "refuted"', '    reason: "docs/adr/adr-001.md:9 sets one"',
     'reused: []',
@@ -543,31 +547,34 @@ test('a check of several findings that does not give each its own verdict is ref
   ])
 })
 
-test('a lens failing with low findings only sends the work back: the producer fixes them with no refuter asked; a lens passing with a low finding approves, the finding noted (#499)', async () => {
+test('a low finding sends the work back whatever its lens answered, once the refuter, one tier above the lens, did not refute it; a refuted low is set aside (#499)', async () => {
   const host = scripted({}, (it) => [...nominal(it).slice(0, 2), agent()(it), ...nominal(it).slice(2)])
   host.agentRunner.review = lenses({
     consistency: [says('consistency', 'fail', [finding('F1', 'low', 'the caller has two names'), finding('F2', 'low', 'a typo in the title', { location: '' })])],
-    fitness: [says('fitness', 'pass', [finding('F1', 'low', 'name the latency budget')])],
+    fitness: [says('fitness', 'pass', [finding('F1', 'low', 'name the latency budget', { location: 'docs/adr/adr-001.md:4' })])],
+    refuter: [refutes('confirmed'), refutes('refuted', 'the title has no typo'), refutes('unverifiable', 'the ADR does not say')],
   })
 
   assert.equal((await host.start()).status, 'done')
 
   const recorded = host.events().find((event) => event.type === 'step.recorded' && event.step === 'design_review')
-  assert.deepEqual([recorded.outcome, recorded.code, recorded.next, recorded.reason], ['needs-rework', null, 'design', 'NEEDS_REWORK: 2 reasons to address; 1 note (fitness F1)'])
-  assert.deepEqual(recorded.failures, ['consistency F1 G1 low at src/Checkout.cs:12: the caller has two names', 'consistency F2 G1 low: a typo in the title'])
-  assert.deepEqual(recorded.findings.map(({ lens, id, severity }) => `${lens} ${id} ${severity}`), ['consistency F1 low', 'consistency F2 low'])
-  assert.deepEqual(host.agentRunner.reviewed().filter((dispatch) => dispatch.agent === 'finding-refuter'), [])
+  assert.deepEqual([recorded.outcome, recorded.code, recorded.next, recorded.reason], ['needs-rework', null, 'design', 'NEEDS_REWORK: 2 reasons to address; 1 refuted (consistency F2)'])
+  assert.deepEqual(recorded.failures, ['consistency F1 G1 low at src/Checkout.cs:12: the caller has two names', 'fitness F1 G1 low at docs/adr/adr-001.md:4: name the latency budget (not verified)'])
+  assert.deepEqual(recorded.findings.map(({ lens, id, severity }) => `${lens} ${id} ${severity}`), ['consistency F1 low', 'fitness F1 low'])
+  const checks = host.agentRunner.reviewed().filter((dispatch) => dispatch.agent === 'finding-refuter')
+  assert.deepEqual(checks.map(({ label, model }) => `${label.split(' · ')[2]} ${model}`), ['refute consistency F1 standard', 'refute consistency F2 standard', 'refute fitness F1 standard'])
+  assert.deepEqual(host.events().filter((event) => event.type === 'review.refuted').map(({ lens, finding: id, verdict }) => `${lens} ${id} ${verdict}`), ['consistency F1 confirmed', 'consistency F2 refuted', 'fitness F1 unverifiable'])
   const second = host.agentRunner.dispatches.find((dispatch) => dispatch.label === `skraft ${SLUG} · design · pass 2 · attempt 1`)
-  assert.ok(second.prompt.endsWith('The review sent the work back on pass 1, with these findings:\n- consistency F1 G1 low at src/Checkout.cs:12: the caller has two names\n- consistency F2 G1 low: a typo in the title'), second.prompt)
+  assert.ok(second.prompt.endsWith('The review sent the work back on pass 1, with these findings:\n- consistency F1 G1 low at src/Checkout.cs:12: the caller has two names\n- fitness F1 G1 low at docs/adr/adr-001.md:4: name the latency budget (not verified)'), second.prompt)
   assert.deepEqual(reviews(host).slice(0, 2), [['design_review', 1, 'needs-rework', 'design'], ['design_review', 2, 'approved', 'adr']])
   const approved = host.events().filter((event) => event.type === 'step.recorded' && event.step === 'design_review')[1]
   assert.equal(approved.reason, 'APPROVED: every lens passed')
 
-  const noted = scripted({}, nominal)
-  noted.agentRunner.review = lenses({ fitness: [says('fitness', 'pass', [finding('F1', 'low', 'name the latency budget')])] })
-  assert.equal((await noted.start()).status, 'done')
-  const kept = noted.events().find((event) => event.type === 'step.recorded' && event.step === 'design_review')
-  assert.deepEqual([kept.outcome, kept.next, kept.reason, kept.findings], ['approved', 'adr', 'APPROVED: no finding counts; 1 note (fitness F1)', undefined])
+  const refuted = scripted({}, nominal)
+  refuted.agentRunner.review = lenses({ fitness: [says('fitness', 'pass', [finding('F1', 'low', 'name the latency budget')])], refuter: [refutes('refuted', 'the ADR names it')] })
+  assert.equal((await refuted.start()).status, 'done')
+  const kept = refuted.events().find((event) => event.type === 'step.recorded' && event.step === 'design_review')
+  assert.deepEqual([kept.outcome, kept.next, kept.reason, kept.findings], ['approved', 'adr', 'APPROVED: no finding counts; 1 refuted (fitness F1)', undefined])
 })
 
 test('a lens that answers inconclusive blocks the review without sending the work back; one that fails with low findings only does not; the other lenses\' findings are journaled', async () => {

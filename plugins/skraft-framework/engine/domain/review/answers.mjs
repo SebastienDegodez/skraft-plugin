@@ -31,7 +31,7 @@ const MAX_OCCURRENCES = 20
 const REFUTATION_KEYS = Object.freeze(['verdict', 'reason'])
 const CHECK_KEYS = Object.freeze(['finding', 'verdict', 'reason'])
 const GATE = /^[A-Za-z][\w.-]{0,23}$/
-/** The most findings a lens may give; each blocker, high or medium one costs a refuter. */
+/** The most findings a lens may give; each costs a refuter. */
 export const MAX_FINDINGS = 20
 /** How long each text may be once on one line. */
 const LIMITS = Object.freeze({ id: 24, location: 200, description: 500, suggestion: 300, reason: 600, severityReason: 300 })

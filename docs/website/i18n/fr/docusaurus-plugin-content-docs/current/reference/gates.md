@@ -57,7 +57,7 @@ racine du composant ; un composant s'arrête à sa première gate en échec.
 | `blocker` | `REJECTED` | `NEEDS_REWORK` une fois confirmé par `finding-refuter` |
 | `high` | `NEEDS_REWORK` | `NEEDS_REWORK` une fois confirmé |
 | `medium` | `NEEDS_REWORK` | `NEEDS_REWORK` une fois confirmé |
-| `low` | `APPROVED`, noté | `NEEDS_REWORK` d'une lentille qui répond `fail`, sans réfuteur ; noté d'une lentille qui répond `pass` |
+| `low` | `APPROVED`, noté | `NEEDS_REWORK` une fois confirmé, que sa lentille ait répondu `fail` ou `pass` |
 
 ---
 
@@ -255,7 +255,7 @@ les signale pas une seconde fois ; ils partent au réfuteur comme ceux d'une len
 
 Les findings de lentilles différentes au même `chemin:ligne` (le chemin normalisé
 comme ceux du patch : `./src\Checkout.cs:12` est `src/Checkout.cs:12`) et de même sévérité
-forment un groupe. Chaque groupe de findings blocker, high ou medium part une fois chez
+forment un groupe. Chaque groupe de findings, de toute sévérité, part une fois chez
 `finding-refuter`, son libellé et son brief nommant chaque lentille du groupe, avec les entrées, les
 skills et le descripteur de ces lentilles (pour un contrôle du moteur, les skills et le descripteur
 de la lentille à laquelle il se rattache). Il juge selon la règle du gate que cite le finding, telle
@@ -272,13 +272,12 @@ Comment chaque réponse se voit dans une pull request : [Du constat au statut](.
 Une lentille qui répond `inconclusive` bloque la revue avec `lens-inconclusive`, en nommant
 chacune de ces lentilles et ce qu'elle a noté : le travail n'est pas renvoyé, aucun finding
 n'est vérifié, et le run pose la question `blocked` sur le nœud de revue. Sinon `NEEDS_REWORK`
-quand un finding compte, sinon `APPROVED`. Un finding blocker, high ou medium compte sauf si le
-réfuteur l'a réfuté ; un finding low compte, sans vérification, quand sa lentille a répondu
-`fail`, pour que le producteur corrige toutes les sévérités tant que la revue peut lui renvoyer
-son travail ; un finding low d'une lentille qui a répondu `pass` est une note. À partir de la
-deuxième passe, un finding à l'endroit d'un finding que le réfuteur a réfuté est reporté comme
-réfuté, et un finding blocker, high ou medium nouveau sur une ligne que le producteur a laissée
-telle quelle est une note : aucun des deux ne compte, ne retourne au producteur ni n'apparaît dans
+quand un finding compte, sinon `APPROVED`. Tout finding que le réfuteur n'a pas réfuté compte, un
+low aussi, que sa lentille ait répondu `fail` ou `pass`, pour que le producteur corrige toutes les
+sévérités tant que la revue peut lui renvoyer son travail. À partir de la deuxième passe, un
+finding à l'endroit d'un finding que le réfuteur a réfuté est reporté comme réfuté, et un finding
+nouveau sur une ligne que le producteur a laissée telle quelle est une note, la seule sorte de
+note qu'une revue met de côté : aucun des deux ne compte, ne retourne au producteur ni n'apparaît dans
 la question `review-ceiling`. Les findings
 retenus vont dans le brief suivant de l'agent de la phase, un groupe sur une ligne qui cite
 chacune de ses lentilles. Quand la boucle vers le producteur atteint son `max_visits`, le run
@@ -302,7 +301,7 @@ journalisé de nouveau avec `reused: true`. L'empreinte couvre ses entrées, le 
 `SKILL.md` qu'elle lit (par nom de skill : déplacer la copie de travail ou le plugin n'y change
 rien), les fichiers de règles du projet et le contenu de chaque chemin changé qu'elle lit.
 
-À partir de la deuxième passe, la revue compare chaque finding blocker, high ou medium à ceux de
+À partir de la deuxième passe, la revue compare chaque finding, de toute sévérité, à ceux de
 la passe précédente de la même étape, avant d'interroger le réfuteur. Deux findings d'une même
 lentille et d'un même gate sont au même endroit quand ils citent le même chemin et que le texte de
 leurs lignes apparaît exactement une fois dans ce fichier à chaque passe (une ligne déplacée reste

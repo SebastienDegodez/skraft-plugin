@@ -162,18 +162,18 @@ The counts line reads like `Review: 2 to fix, 1 note, 13 refuted`. Each review s
 
 ### From finding to status <!-- #finding-to-status -->
 
-The refuter checks each blocker, high or medium finding; its answer and two facts give the status. A finding that would be To fix and that a human accepted at the review's ceiling (`review-ceiling`, `ACCEPT`) is Accepted, its Why column `a human accepted it as it stands at the review's ceiling`.
+The refuter checks each finding, of any severity and whatever its lens answered; its answer and two facts give the status. A finding that would be To fix and that a human accepted at the review's ceiling (`review-ceiling`, `ACCEPT`) is Accepted, its Why column `a human accepted it as it stands at the review's ceiling`.
 
-| Severity | Line | Refuter's answer | One lens alone, others passed | Status | Why column |
-|---|---|---|---|---|---|
-| low, from a lens that answered `fail` | any | not asked | — | To fix | `low, from a lens that failed: it counts unrefuted` |
-| low, from a lens that did not fail | any | not asked | — | Note | empty |
-| blocker, high, medium | unchanged since pass N | not asked | — | Note | `new on a line unchanged since pass N` |
-| blocker, high, medium | changed | `confirmed` | — | To fix | `confirmed: <reason>` |
-| blocker, high, medium | changed | `unverifiable`, or its check unreadable twice | — | To fix | `not verified: <reason>` |
-| blocker, high, medium | changed | `refuted` | yes | To decide | `one lens alone, against the lenses that passed; refuted: <reason>` |
-| blocker, high, medium | changed | `refuted` | no | Refuted | `<reason>` |
-| blocker, high, medium | same place as a finding refuted on pass N | not asked again | — | Refuted | `<reason> (refuted on pass N)` |
+| Line | Refuter's answer | One lens alone, others passed | Status | Why column |
+|---|---|---|---|---|
+| unchanged since pass N, the finding new there | not asked | — | Note | `new on a line unchanged since pass N` |
+| changed | `confirmed` | — | To fix | `confirmed: <reason>` |
+| changed | `unverifiable`, or its check unreadable twice | — | To fix | `not verified: <reason>` |
+| changed | `refuted` | yes | To decide | `one lens alone, against the lenses that passed; refuted: <reason>` |
+| changed | `refuted` | no | Refuted | `<reason>` |
+| same place as a finding refuted on pass N | not asked again | — | Refuted | `<reason> (refuted on pass N)` |
+
+A low finding counts like any other: To fix while the refuter does not refute it, whether its lens answered `fail` or `pass`.
 
 How the refuter works and how a later pass reuses it: [Refutation](./gates.md#refutation), [Incremental re-review](./gates.md#incremental).
 

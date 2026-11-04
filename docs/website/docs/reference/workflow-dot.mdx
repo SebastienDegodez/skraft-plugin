@@ -182,7 +182,7 @@ A review is written as a fan-out (`shape=component`), one lens node per branch (
 the refuter its branches join (`shape=octagon`) and a fan-in (`shape=tripleoctagon`). The
 journal names the review step after the fan-in (`distill_review`). The engine starts the lenses
 of a review together, in the order of the fan-out's edges, where the host allows it, then
-`finding-refuter` from the refuter node on their blocker, high and medium findings. What a
+`finding-refuter` from the refuter node on their findings, of any severity. What a
 review then computes (lens answers, refutation, verdict): [Gates](./gates.md).
 
 ```dot
@@ -203,7 +203,7 @@ distill_review -> deliver [label="APPROVED"]
 | --- | --- |
 | Fan-out (`shape=component`) | no attribute of its own; every edge leaving it is a branch that holds exactly one lens node, and every branch ends in the same refuter. It takes no label |
 | Lens node (`shape=note`) | `lens="<name>"` required, kebab-case, at most once per review; `model="<family>"` and `when="mock"` or `when="contract"` optional. Entered by one edge from its fan-out, it leaves by one edge to its refuter |
-| Refuter (`shape=octagon`) | runs `finding-refuter` on the blocker, high and medium findings of the lenses, unless a lens already blocks the review; entered only by the lens nodes of one fan-out, it leaves by one edge to its fan-in. `mandatory` optional, nothing else: its family is the fan-in's `refuter=` |
+| Refuter (`shape=octagon`) | runs `finding-refuter` on every finding of the lenses, of any severity, unless a lens already blocks the review; entered only by the lens nodes of one fan-out, it leaves by one edge to its fan-in. `mandatory` optional, nothing else: its family is the fan-in's `refuter=` |
 | Fan-in (`shape=tripleoctagon`) | entered only by its refuter; `model=` (the family of its lenses that name none) and `refuter=` (the family of `finding-refuter`) optional |
 | Former fan-in | a fan-in its lens nodes enter directly, as written before the refuter node, is refused: `node <fan-in>: its lens nodes lead straight to it, the form before the refuter node; add <refuter> [shape=octagon], lead <lens nodes> to <refuter> instead, and add <refuter> -> <fan-in>` (`<refuter>` is `refuter` in a called workflow, `<fan-in>_refuter` elsewhere) |
 | `lenses="…"` | the former form, refused: `skraft workflow check` names each such node and writes out, as DOT, the nodes and edges that replace it: ids included (`<review>_lenses`, `<review>_<lens>`, `<review>_refuter`), `when` for `mock-fidelity` and `contract-fidelity`, the node's `label`, `phase`, `model` and `refuter` on the fan-in, its incoming edges sent to the fan-out |
