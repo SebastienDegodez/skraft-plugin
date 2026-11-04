@@ -3,6 +3,12 @@
 Toutes les modifications notables de ce projet sont documentées ici.
 Format basé sur [Conventional Commits](https://www.conventionalcommits.org/) — versionnage [SemVer](https://semver.org/).
 
+## [2.0.0-alpha.59](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.58...v2.0.0-alpha.59) (2026-11-04)
+
+### 🐛 Bug Fixes
+
+* **engine:** an agent commits its own changes unless it has no shell ([#513](https://github.com/SebastienDegodez/skraft-plugin/issues/513)) ([9a95c10](https://github.com/SebastienDegodez/skraft-plugin/commit/9a95c105cc372ba586e04a6065fc9c65e08859be)), closes [#509](https://github.com/SebastienDegodez/skraft-plugin/issues/509)
+
 ## [2.0.0-alpha.58](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.57...v2.0.0-alpha.58) (2026-11-04)
 
 ### 🐛 Bug Fixes
