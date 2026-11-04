@@ -4,6 +4,7 @@ description: Use when designing software architecture for refined stories using 
 user-invocable: false
 tools:
   - read/readFile
+  - edit/createDirectory
   - edit/createFile
   - edit/editFiles
   - search/codebase

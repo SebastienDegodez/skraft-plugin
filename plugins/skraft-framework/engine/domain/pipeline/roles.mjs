@@ -134,6 +134,15 @@ const ownRole = (node) => {
   }
 }
 
+/**
+ * The folders the engine creates before an attempt of an agent node, so that an agent whose
+ * tools only create files in existing folders can write on a repository that has none yet: the
+ * folders its plugin role writes in. A node's own `writes=` may name files, so it adds none.
+ * @param {WorkflowNode} node an agent node
+ * @returns {readonly string[]}
+ */
+export const roleFolders = (node) => (node.proposal ? [] : (ROLES[/** @type {string} */ (node.agent)]?.writes ?? []))
+
 /** What an agent with no role of its own (a repository agent) starts from. @type {Role} */
 const NO_ROLE = Object.freeze({ outputs: Object.freeze([]), writes: Object.freeze([]), components: Object.freeze([]), records: false, scan: false, tdd: null, prose: false, proposal: false })
 
