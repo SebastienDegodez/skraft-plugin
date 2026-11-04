@@ -64,7 +64,8 @@ ses cas limites), l'**alignement métier** (aucun détail d'implémentation dans
 **testabilité** (chaque étape est implémentable, le rouge est le bon), et les **frontières**
 (le test d'acceptation ne pilote que le cas d'usage, au moins un walking skeleton par flux).
 Le moteur calcule le verdict ; un `NEEDS_REWORK` renvoie l'acceptance-designer avec les findings
-retenus.
+retenus. Son brief donne le chemin d'`acceptance-review-criteria`, les gates selon lesquels ces
+lentilles jugent : il vérifie ses sorties contre chacun avant d'écrire son résultat.
 
 ## Sources
 

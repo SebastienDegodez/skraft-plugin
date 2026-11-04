@@ -100,12 +100,14 @@ terminal:
 
 Open `/plugin`: `skraft` is listed among the installed plugins.
 
-:::note[Screenshot pending a real run]
+From a terminal, `claude plugin` does the same and answers:
 
-A capture of `/plugin install` and of `skraft` in the installed plugins needs a real Claude Code
-session. Until then, the block above shows what you type.
-
-:::
+```console
+$ claude plugin marketplace add SebastienDegodez/skraft-plugin
+✔ Successfully added marketplace: skraft (declared in user settings)
+$ claude plugin install skraft@skraft
+✔ Successfully installed plugin: skraft@skraft (scope: user)
+```
 
 ## 3. Describe the repository with `skraft init` <!-- #3-describe-the-repository-with-skraft-init -->
 
@@ -206,15 +208,20 @@ skraft checkout started — progress in the Skraft pane.
 The **Skraft** pane opens. It draws the workflow, one line per phase followed by its steps, and
 ticks each step as it runs.
 
-:::note[Screenshot pending a real run]
+![Claude Code: /skraft checkout Pay by card answers "skraft checkout started — progress in the Skraft pane"; on the left the Pull request dialog with ACCEPTED, DECLINED and Type something; on the right the Skraft pane, "skraft checkout — waiting", RESEARCH open on publish_consent, the steps of the other phases to come, then the question and how to answer it](/img/screenshots/shared/claude-skraft-pane.png)
 
-A capture of the **Skraft** pane in Claude Code needs a real session. Until then, the block above
-shows what Claude Code prints when the run starts.
-
-:::
+*Figure 3 — The run has just started: the **Skraft** pane on the right, the **Pull request**
+dialog on the left.*
 
 Right away, a dialog titled **Pull request** asks whether skraft may push the branch and open the
 pull request when the run ends. **Leave it open** for the next step.
+
+:::tip[Fewer permission prompts]
+The agents run the repository's commands (`npm`, `git`, `node`…). Claude Code asks your permission for
+each command it does not allow yet, and the run waits meanwhile. To let it go on, start Claude Code with
+those commands allowed, for example
+`claude --permission-mode acceptEdits --allowedTools 'Bash(npm:*)' 'Bash(git:*)' 'Bash(node:*)'`.
+:::
 
 ## 6. Watch the run from a terminal <!-- #6-watch-the-run-from-a-terminal -->
 
@@ -226,7 +233,7 @@ $ skraft status
 
 ![Terminal: skraft status shows "skraft checkout: waiting", RESEARCH open, the other phases pending, and the publish-consent question](/img/screenshots/shared/terminal-status-waiting.svg)
 
-*Figure 3 — The run waits for your answer: RESEARCH is open, and the `publish-consent` question is
+*Figure 4 — The run waits for your answer: RESEARCH is open, and the `publish-consent` question is
 the dialog's.*
 
 `skraft status` reads the journal the engine writes; it changes nothing in the run.
@@ -302,7 +309,7 @@ $ skraft status
 
 ![Terminal: skraft status shows "skraft checkout: done" and RESEARCH to PUBLISH closed](/img/screenshots/shared/terminal-status-done.svg)
 
-*Figure 4 — A finished run: every phase is `closed`. Captured on the integration tests' scripted
+*Figure 5 — A finished run: every phase is `closed`. Captured on the integration tests' scripted
 repository; under Claude Code, a `cost:` line is added with the cost the host reported.*
 
 Run the gates yourself on the delivered code:
@@ -313,7 +320,7 @@ $ skraft gate --all
 
 ![Terminal: skraft gate --all, pass web/test and pass web/mutation, "2 gates passed on web"](/img/screenshots/shared/terminal-gates.svg)
 
-*Figure 5 — Both gates of the `web` component pass.*
+*Figure 6 — Both gates of the `web` component pass.*
 
 The tracking folder `.copilot-tracking/skraft-plans/checkout/` now holds:
 

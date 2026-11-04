@@ -146,6 +146,9 @@ La commande lance le workflow dynamique `skraft-pipeline` avec `{ slug: "checkou
 *Lance le pipeline checkout pour l'issue 42, titre « Pay by card ».* Il lance le même workflow.) Le dépôt n'a pas de remote, donc l'issue ne peut pas être lue : le run est refusé
 (`issue-unreadable`) et rien n'est journalisé. Sans `issue`, le run démarre, et ses agents n'ont aucune issue.
 
+Copilot vous demande d'abord d'approuver le lancement du workflow et ses limites : répondez **Yes**,
+ou **Yes, and always approve this workflow at these limits in this repo**.
+
 Avant toute phase, au premier run d'une copie de travail, Copilot pose une fois dans le chat :
 *Démarrer ce run avec la configuration de cette copie de travail ?* Si votre client affiche les
 canvases, le canvas `skraft-pipeline` s'ouvre sur son onglet **Configuration** : la forge, les
@@ -165,12 +168,21 @@ ouvrir la pull request à la fin du run ? La question s'affiche ainsi :
 May skraft push this branch and open or update its pull request when a run ends, and keep one comment on its story's issue up to date with the run's progress, time and cost? ACCEPTED or DECLINED; the answer is kept in skraft-config.json (publish.pullRequest) for every later run.
 ```
 
-:::note[Capture en attente d'un run réel]
+Copilot CLI l'affiche ainsi :
 
-Une capture de la boîte de confirmation de Copilot pour cette question demande une vraie session
-Copilot CLI. D'ici là, le bloc ci-dessus montre son texte.
+```text title="Copilot CLI"
+Copilot needs information.
+May skraft push this branch and open or update its pull request when a run ends, and keep one
+comment on its story's issue up to date with the run's progress, time and cost? ACCEPTED or
+DECLINED; the answer is kept in skraft-config.json (publish.pullRequest) for every later run.
 
-:::
+selection:
+❯ ACCEPTED
+  DECLINED
+  Other (type your answer)
+
+↑/↓ select · enter accept · ctrl+d decline · esc cancel
+```
 
 Si votre client Copilot affiche les canvas, demandez-lui
 d'ouvrir le canvas `skraft-pipeline` : il montre la même question et le workflow.
@@ -192,12 +204,15 @@ Tapez `/workflows` pour voir le journal du run. Chaque agent y apparaît avec sa
 checkout: solution-researcher, attempt 1 — researcher · standard · model chosen by the host
 ```
 
-:::note[Capture en attente d'un run réel]
+Dans le chat, le début de RESEARCH s'affiche ainsi :
 
-Une capture de la liste `/workflows` dans Copilot CLI demande une vraie session. D'ici là, le bloc
-ci-dessus montre la ligne du journal.
-
-:::
+```text title="Copilot CLI"
+● phase RESEARCH
+● checkout: publish_consent DECLINED
+● checkout: visuals_consent DECLINED (no component of skraft-config.json is a front end (stack
+  react, or an e2e command), so no screenshot is taken)
+● checkout: solution-researcher, attempt 1 — researcher · standard · model chosen by the host
+```
 
 Quand l'architecte propose un ADR et que les trois lentilles de la revue de conception l'ont
 approuvé, Copilot vous pose la question suivante : ratifier l'ADR. Le canvas la montre aussi :

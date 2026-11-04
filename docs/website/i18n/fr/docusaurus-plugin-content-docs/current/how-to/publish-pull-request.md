@@ -46,7 +46,6 @@ réponse est écrite dans `skraft-config.json` :
 - `draft` : sans lui, la pull request est ouverte en brouillon ; `false` l'ouvre prête à relire.
 - Un run lancé avec `--from-artifacts` ne pose pas la question : écrivez ces deux clés
   `pullRequest` et `questionVersions` à la main.
-- Commitez `skraft-config.json` pour que l'équipe partage la réponse.
 
 ## 3. Laisser le run publier
 
@@ -59,22 +58,13 @@ Résultat : la notification `skraft <slug>: done — PUBLISH closed`, et la pull
 forge, qui commence par `Refs #<issue>` (`Closes #<issue>` quand elle vise la branche par
 défaut).
 
-:::note[Capture en attente d'un run réel]
-Une capture de la pull request que le run a ouverte sur GitHub viendra après un run réel.
-:::
+![GitHub : pull request brouillon n° 4 « Refuse a driver whose licence is suspended », 11 commits de suspended-licence vers main, 18 fichiers modifiés ; sa description commence par Closes #2, puis What changes (HTTP, Domain, Application, Specs) et Why](/img/screenshots/shared/github-pr-published.png)
+
+*Figure 1 — La pull request qu'un run a ouverte sur le [dépôt de démonstration](https://github.com/SebastienDegodez/skraft-demo-meetup/pull/4), en brouillon.*
 
 ### Ce que contient la description
 
-La description commence par `Refs #<issue>`. What changes, Why, Decisions applied et Out of scope
-s'affichent sous leur titre ; les autres sections (Tests, Quality gates, Review, Screenshots, Run
-summary, AI disclosure) sont repliées dans un bloc `<details>`. Quality gates reste ouvert quand une
-gate a échoué, Review quand un constat attend un humain.
-
-Au-delà de la limite de la forge, les sections repliées vont dans un commentaire de la pull
-request intitulé `skraft · run details` (`skraft · détails du run` pour une histoire en français).
-Si ce commentaire ne peut pas être gardé, la pull request est tout de même publiée,
-`pull-request.md` garde toute la description, et `skraft publish` garde les détails une fois la
-cause corrigée.
+La description commence par `Refs #<issue>` ; ce qui décide s'affiche sous des titres, le reste est replié et s'ouvre seul sur une porte en échec ou un constat à corriger ou à trancher. Elle est écrite dans la langue de la story ; au-delà de la limite de la forge, les sections repliées vont dans un commentaire `skraft · détails du run`. Chaque section, à quoi elle sert et quand agir : [Pull request et commentaire de revue](../reference/pull-request.md#description).
 
 ## 4. Publier plus tard avec `skraft publish`
 
@@ -97,8 +87,9 @@ Tapée par vous, la commande vaut consentement pour cette publication, même ave
 Démarrez le run avec le numéro de l'issue : `/skraft checkout #42 Pay by card`,
 `skraft init checkout --issue 42`, ou l'argument `issue` du workflow Copilot. Avec le
 consentement de l'étape 2, le run tient un seul commentaire sur l'issue, réécrit à chaque phase
-close, revue renvoyée et fin de run. Son dernier corps reste dans
-`.copilot-tracking/skraft-plans/<slug>/issue-progress.md`.
+close, revue renvoyée et fin de run, dans la langue de la story, la pull request nommée une seule
+fois par son URL. Son dernier corps reste dans
+`.copilot-tracking/skraft-plans/<slug>/issue-progress.md`. Chaque ligne de ce commentaire : [Commentaires d'issue](../reference/issue-comments.md#progress).
 
 ## Sur Azure DevOps <!-- #azure-devops -->
 

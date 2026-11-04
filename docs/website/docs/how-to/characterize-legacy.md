@@ -32,9 +32,27 @@ and [Feathers, 2004](../reference/citations.mdx#cite-feathers-legacy-2004).
 Name the component as `skraft-config.json` lists it, or its folder. Without a target, the agent
 asks for it.
 
-:::note[Screenshot pending a real run]
-A capture of a `brownfield-harness-builder` session comes after a real run.
-:::
+An example session (illustrative: the agent's wording, the files and the counts change from run
+to run; the order of the steps, the verdict and the question it asks come from its instructions):
+
+```text title="Copilot CLI"
+> Put a characterization net on services/orders.
+
+Component orders, from skraft-config.json: stack dotnet, test command "dotnet test --nologo", mocking microcks.
+Contract: none found; generated with Swashbuckle (dotnet swagger tofile), 4 operations,
+committed under the component's test paths.
+Characterization tests: one per operation and response family; the payment API it calls is mocked with Microcks.
+Test command on the unmodified code: dotnet test --nologo, all green.
+
+Verdict: CONCERNS
+Gap: POST /orders/{id}/cancel, the refund call to the payment API could not be mocked cleanly.
+Suspected bug: GET /orders?page=0 answers 500, asserted as it is (CHARACTERIZATION comment).
+Strengthen the net for this gap, or accept the risk?
+
+> Accept the risk.
+
+Verdict accepted. Next step: brownfield-refactorer.
+```
 
 ## 2. Let it establish the contract
 

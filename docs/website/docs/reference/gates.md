@@ -118,7 +118,7 @@ every criterion that forbids one.
 | **G11** | `fitness` | Every ADR adopting CQRS, Event Sourcing, Saga, eventual consistency, a service split or an ACL cites an admissible force and evaluates the "do without" option. | high |
 | **G15** | `fitness` | No ADR ratifies a baseline already enforced by a `clean-architecture-*` skill or an architecture test. | high |
 | **G17** | `fitness` | Every ADR the pass wrote decides a layer boundary, an aggregate boundary, a bounded context, a pattern adding complexity or a cross-cutting concern, and weighs a real trade-off; another subject is `ADR-INFLATION`, no alternative weighed is `NON-DECISION`. | high |
-| **G18** | `fitness` | Every ADR the pass wrote holds one decision at decision level: no full signature, file path, enum values, Value Object inventory, route tree, or ticket, AC or PRD reference beyond the triggering story. | medium |
+| **G18** | `fitness` | Every ADR the pass wrote holds one decision at decision level: no full signature, file path, enum values, Value Object inventory, route tree, or traceability reference (ticket, AC, PRD or requirement id cited as a source) beyond the triggering story. A quality attribute stated with its measure as a force of the decision is allowed. | medium |
 | **F1** | `fitness` | Every quality attribute the story or research states has a design element that answers it. | high |
 
 **Engine checks.** After each `solution-architect` attempt, without a lens
@@ -144,24 +144,29 @@ The `distill_review` review: 4 lenses, verdict computed by the engine.
 | ID | Lens | Criterion | Severity |
 | --- | --- | --- | --- |
 | **G1** | `coverage` | Every acceptance criterion has at least one scenario; no scenario lacks a source criterion; every business value in a scenario equals its criterion's. | blocker |
-| **G2** | `coverage` | Every business rule has its boundary conditions and negative or error cases from the story's examples; a technical input case is never asked for. | high |
+| **G2** | `coverage` | Every business rule has its boundary conditions and negative or error cases from the story's examples; a Gherkin mapping or example written in a DESIGN document is no story example, and a variant an earlier rule already decides adds no boundary; a technical input case is never asked for. | high |
 | **G3** | `business-alignment` | Every term in Given/When/Then steps comes from the story's domain vocabulary; no class, method or framework name. | high |
 | **G4** | `business-alignment` | No step carries an implementation detail (HTTP verb or status, ORM or database term, `Repository`, `Service`, `Handler`, `Controller`, `UseCase`, technical input case). | blocker |
 | **B1** | `business-alignment` | Every scenario expresses an outcome the story asks for; none describes behaviour it does not ask for. | high |
 | **G5** | `testability` | Every step is unambiguous and implementable on its own. | high |
 | **G6** | `testability` | Every scenario has an entry in the implementation plan. | high |
-| **G11** | `testability` | Every use case new to the story has its acceptance test in its language's unit-test place (.NET: the `<Context>.UnitTest` project; Java: the `-unit-test` module; otherwise `<test path>/unit/`). | blocker |
+| **G11** | `testability` | Every use case new to the story has its acceptance test in its language's unit-test place (.NET: the `<Context>.UnitTest`, `<Context>.UnitTests` or `<Context>.Tests` project; Java: the `-unit-test(s)` module; Python, TypeScript, JavaScript, React: `<test path>/unit/`). | blocker |
 | **T1** | `testability` | Each scenario and test checks one behaviour through an observable outcome and depends on no time, order or randomness it does not fix. | high |
 | **T2** | `testability` | Every input and expected value the outer acceptance test holds equals the `.feature` verbatim; the test holds the first scenario only. | blocker |
 | **T3** | `testability` | The outer acceptance test exists and its first scenario fails on a business assertion; the patch's production code is a skeleton whose signatures answer the empty value of their type. | blocker |
-| **G7** | `boundary-enforcement` | Every scenario in the test plan targets the Application use case the contracts name. | blocker |
+| **G7** | `boundary-enforcement` | Every scenario in the test plan targets the Application use case the contracts name; an implementation-plan step that writes no scenario's acceptance test (an API or HTTP test of a later circle) is out of its scope. | blocker |
 | **G8** | `boundary-enforcement` | The test plan identifies at least one walking-skeleton scenario per flow. | high |
-| **E1** | `boundary-enforcement` | The acceptance test drives only that use case: it never calls, constructs or asserts on a domain internal, a repository or an infrastructure class. | blocker |
+| **E1** | `boundary-enforcement` | The acceptance test drives only that use case: it never calls or asserts on a domain internal, a repository or an infrastructure class. Constructing the use case's real collaborators to hand them to its constructor is wiring, not a finding. | blocker |
 | **E2** | `boundary-enforcement` | Test doubles replace only outer-edge dependencies, never a domain object or the use case; DISTILL's skeleton is the real module. | high |
 
 **Engine check.** G11: the engine reads where the patch adds test files and reports, under the
 lens `testability#layout` (severity blocker), a test added outside the stack's unit and
-integration places, and a component that gains tests with none in its unit place.
+integration places, and a component that gains tests with none in its unit place. A test counts
+only under a test path the component configures (`paths.tests`); a test path that is itself a
+place counts as it (`tests/unit`, `tests/Orders.UnitTests`). .NET names its places
+`<Context>.UnitTest(s)`, `<Context>.Unit.Tests` or `<Context>.Tests` and
+`<Context>.IntegrationTest(s)` or `<Context>.Integration.Tests`; Java `<context>-unit-test(s)` and
+`<context>-integration-test(s)`; any other stack `unit/` and `integration/` under the test path.
 
 ## DELIVER <!-- #deliver -->
 
@@ -245,10 +250,15 @@ like a lens's.
 Findings of different lenses at the same `path:line` (the path normalized as the
 patch's: `./src\Checkout.cs:12` is `src/Checkout.cs:12`) with the same severity form one group.
 Each group of blocker, high or medium findings goes once to `finding-refuter`, its label and brief naming
-every lens of the group, with the inputs and skills of those lenses. It answers `confirmed`,
+every lens of the group, with the inputs, skills and descriptor of those lenses (for an engine
+check, the skills and descriptor of the lens it reports for). It judges by the rule of the gate the
+finding cites, as the lens descriptor's gate table, those skills and their references state it; a rule no input states is no reason to refute, and makes
+the finding `unverifiable`. It answers `confirmed`,
 `refuted` (its `reason` cites the `path:line` it read) or `unverifiable`, and the answer applies
 to every finding of the group. A refuted finding does not count; an unverifiable one does, and
 so does a finding whose check was unreadable twice.
+
+How each answer shows in a pull request: [From finding to status](./pull-request.md#finding-to-status).
 
 ### Verdict <!-- #verdict -->
 
@@ -264,6 +274,8 @@ The summary gives the status, then the refuted findings and the notes it set asi
 under it each refuted finding with the refuter's reason and each note, then where `verdict.yaml`
 is, so that a human can still have them fixed.
 
+The table a reviewer reads: [Review table](./pull-request.md#review-table).
+
 ### Incremental re-review <!-- #incremental -->
 
 On a later pass, a lens whose previous result was `pass` with no
@@ -271,6 +283,20 @@ finding, and whose fingerprint has not changed, is not started again: its result
 again with `reused: true`. The fingerprint covers its inputs, the content of each `SKILL.md` it
 reads (by skill name: moving the working copy or the plugin changes nothing), the project rule
 files and the content of each changed path it reads.
+
+From the second pass, the review compares each blocker, high or medium finding with those of the
+last pass of the same step, before any refuter is asked. Two findings of one lens and one gate
+stand at the same place when they cite the same path and the text of their lines appears exactly
+once in that file at each pass (a line that moved is the same, an edited or repeated one is not);
+without a line, when their location and claim are the same word for word. Each pass keeps what
+the files it reviewed held in `snapshot.json`, beside its verdict.
+
+| Finding of this pass | Becomes |
+| --- | --- |
+| at the place of one the last pass refuted | refuted, carried over with that reason, the refuter not asked (`review.refuted` with `carried`) |
+| at the place of one the last pass did not refute | checked by the refuter as usual |
+| new, from a lens, on a line the last pass read with the same text | a note: it never sends the work back (`review.noted`) |
+| any other | checked by the refuter as usual |
 
 ### DISCOVER and DISCUSS verdict <!-- #backlog-verdict -->
 

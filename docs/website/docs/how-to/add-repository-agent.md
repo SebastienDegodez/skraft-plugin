@@ -60,7 +60,8 @@ and remove the `deliver -> gates` edge it replaces.
 
 The brief the engine gives the agent lists these outputs, the paths it may write and the other
 steps' outputs to read. After each attempt, the engine checks that every output is filled and
-that nothing was written outside those paths.
+that nothing was written outside those paths. The brief asks for no commit: once the step is
+done, the engine commits what the agent left changed in `writes` as `docs(<story>): <node> <story>`.
 
 ## 3. Check
 

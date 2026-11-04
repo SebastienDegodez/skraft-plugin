@@ -33,9 +33,26 @@ l'agent principal de la session, jamais un sous-agent.
 | Claude Code | `claude --agent skraft-brownfield:brownfield-refactorer` |
 | Copilot CLI, VS Code | dans une nouvelle session, choisissez l'agent **Skraft - Brownfield Refactorer** avant le premier message |
 
-:::note[Capture en attente d'un run réel]
-Une capture d'une session `brownfield-refactorer` viendra après un run réel.
-:::
+Un exemple de session (illustratif : la formulation de l'agent et les commits changent d'un run à
+l'autre ; la question de stratégie, l'artefact, un worker par feuille et les signaux viennent de
+ses instructions) :
+
+```text title="Copilot CLI"
+> But : les factures s'émettent sans que la facturation sache comment le client est notifié.
+> Filet : rapport du harness builder pour services/billing, verdict PASS.
+
+Filet : services/billing, verdict PASS.
+Je recommande Mikado : le but modifie BillingService en place (il cesse d'appeler SmtpClient
+directement) ; rien n'est remplacé. Mikado ou Strangler Fig ?
+
+> Mikado.
+
+Graphe : .copilot-tracking/skraft-plans/<slug>/refactoring/<date>/mikado-billing.md, validateur exit 0.
+Feuilles prêtes : {N3} Golden Master on BillingService.SendInvoice, {N4} Create NotificationGateway interface.
+refactoring-worker sur {N3} : ADVANCE, commit « refactor(mikado-graph): N3 done », tests au vert.
+refactoring-worker sur {N4} : ADVANCE, commit « refactor(mikado-graph): N4 done », tests au vert.
+Feuille suivante : {N2} Update BillingService constructor to accept NotificationGateway.
+```
 
 ## 2. Donner le but et le filet
 

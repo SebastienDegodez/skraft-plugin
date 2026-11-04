@@ -112,6 +112,7 @@ Verdict : `review-verdict.mjs --phase discuss`, mêmes règles et même budget q
 | Sortie déclarée | `details/{date}/consistency-matrix-{slug}.md` |
 | Autres sorties | dans le dossier de suivi : `details/{date}/contracts-{story}.md`, `supersession-plan-{story}.md` (quand un ADR `Accepted` est remplacé) ; dans le dépôt : `docs/architecture/context-map.md`, `docs/architecture/{bounded-context}.md` (conception tactique), `docs/domain/event-model/{bounded-context}.md`, `docs/adr/adr-{NNN}-{sujet}.md`, `docs/adr/decisions-index.md`, `docs/adr/supersessions.md` |
 | Écriture permise | le dossier de suivi, `docs/adr/`, `docs/architecture/` et `docs/domain/event-model/` |
+| Commits | aucun par l'architecte, qui n'a pas de shell : une fois `design` réussi, le moteur commite ce qu'il a changé dans ses chemins permis en `docs(<story>): design <story>`, terminé par `Refs: #<issue>` quand la story en a une, et le journalise en `committed` sur le `step.recorded` de l'étape |
 | Documentation existante | consigne à l'agent : un fichier de `docs/` est complété, pas réécrit. Quand `docs/` couvre déjà la story, la matrice de cohérence le dit et cite les fichiers de `docs/`, et la phase passe à la suite. Contrôle du moteur : la ligne `docs-relied-on:` de la matrice liste au moins un fichier de `docs/adr`, `docs/architecture`, `docs/domain/event-model` ou `docs/features`, et chaque fichier listé existe dans la copie de travail |
 | Contrôles du moteur | traces DESIGN après chaque tentative : matrice de cohérence `consistency-gate: PASS` (G10), aucun ADR nommé `*-rejected.md`, `*-accepted.md`, `*-deprecated.md` ou `*-superseded.md` (G14), chaque `**Supersedes:**` avec sa ligne de registre (G2, G12), la ligne `docs-relied-on:` de la matrice (fichiers des dossiers durables de `docs/` qui existent) ; une ligne d'index pour chaque ADR écrit (`design-records`) ; ADR brouillons : `Proposed`, aucune version, un `decision` d'une phrase, aucun historique de brouillon ; ADR de la base : seules leurs lignes de statut changent, jamais supprimés ; un statut du jeu fermé (`adr-lifecycle`) |
 | Échec persistant | `missing-outputs` quand la matrice de cohérence manque après la dernière tentative, `design-records` sinon |
@@ -146,7 +147,7 @@ ligne `**Status:**`, ligne de `docs/adr/decisions-index.md`) et les commite seul
 | Sortie déclarée | `details/{date}/test-plan-{slug}.md` |
 | Autres sorties | `details/{date}/impl-plan-{story}.md` ; `docs/features/{bounded-context}/{feature}.feature` (scénarios Gherkin, non exécutables) ; dans les composants : tests d'acceptation en échec (chemins `tests`) et squelette appelé par eux (chemins `src`) |
 | Écriture permise | le dossier de suivi, `docs/features/`, les chemins `src` et `tests` de chaque composant, et les fichiers à la racine de ces composants |
-| Commits | mode `red` : seulement des commits `test(<story>): …` en échec, chacun rejoué par la commande `test` de son composant ([`tdd.replay`](./skraft-config.md#tdd)) |
+| Commits | mode `red` : seulement des commits `test(<story>): …` en échec, chacun rejoué par la commande `test` de son composant ([`tdd.replay`](./skraft-config.md#tdd)) ; un changement des seuls scénarios dans un commit `docs(<story>): …` ; un changement laissé non commité est refusé (`uncommitted`) |
 | Contrôle du moteur | emplacement des fichiers de test ajoutés (`testability#layout`, G11) |
 
 | Lentille | Gates |
@@ -182,7 +183,7 @@ ligne `**Status:**`, ligne de `docs/adr/decisions-index.md`) et les commite seul
 | Propositions | `proposals/kill_proposal-<visite>-g<n>.md`, une par fichier de survivants, créée par le moteur avec une section par mutant ; chaque ligne `{{outcome}}` devient `test: …`, `delete: …` ou `equivalent: …` |
 | Preuves | `gates/<composant>/<gate>-<n>.log` ; `visuals/<composant>/e2e-<n>.log` |
 | Écriture permise | `deliver`, `kill_mutants` : le dossier de suivi, les chemins `src` et `tests` de chaque composant, et les fichiers à leur racine ; `kill_proposal` : le dossier de suivi seulement, aucun commit |
-| Commits | `deliver` en mode `cycle` : `test(<story>): …` en échec (rouge, rejoué), puis `feat` ou `fix` (vert), `refactor` ; `kill_mutants` en mode `kill` : des tests qui tuent les mutants et passent ; chaque message conventionnel finit par `Refs: #<issue>` et ne ferme aucune issue |
+| Commits | `deliver` en mode `cycle` : `test(<story>): …` en échec (rouge, rejoué), puis `feat` ou `fix` (vert), `refactor` ; `kill_mutants` en mode `kill` : des tests qui tuent les mutants et passent ; chaque message conventionnel finit par `Refs: #<issue>` et ne ferme aucune issue ; un changement laissé non commité est refusé (`uncommitted`) |
 | Barre de mutation | 100 % sur le cœur, 80 % sur la frontière ; non configurable |
 
 | Réponse à `mutation-plan` | Effet |
@@ -223,7 +224,7 @@ ligne `**Status:**`, ligne de `docs/adr/decisions-index.md`) et les commite seul
 
 | | |
 | --- | --- |
-| Sortie déclarée | `details/{date}/pull-request-prose-{slug}.md`, pré-créé depuis `pull-request-prose.template.md` |
+| Sortie déclarée | `details/{date}/pull-request-prose-{slug}.md`, pré-créé depuis `pull-request-prose.<langue>.template.md` (`en` ou `fr`, la langue de la story) |
 | Écriture permise | le dossier de suivi seulement |
 | Contrôle du moteur | ligne de résumé d'au plus 72 caractères, aucune section vide |
 | Publication | avec `publish.pullRequest` accepté : pull request en brouillon (sauf `publish.draft: false`), décrite depuis le journal ; sans consentement, remote ou `gh` : `pull-request.md` reste, et `skraft publish` l'ouvre plus tard |
@@ -236,10 +237,10 @@ ligne `**Status:**`, ligne de `docs/adr/decisions-index.md`) et les commite seul
 | `publish-consent` | nœud `publish_consent` | `ACCEPTED`, `DECLINED` | — | `Pull request` |
 | `reporting-consent` | nœud `visuals_consent` | `ACCEPTED`, `DECLINED` | — | `Reporting` |
 | `adr-ratification` | nœud `adr` | `RATIFIED`, `REJECTED` | `REJECTED` | `ADR` |
-| `mutation-plan` | nœud `mutation_plan` | `APPLY`, une consigne, ou `STOP` | — | `Mutation plan` |
+| `mutation-plan` | nœud `mutation_plan` | `APPLY`, une consigne, ou `STOP` | — | `Mutation` |
 | `environment` | le moteur, quand une étape ne peut pas tourner sur la machine | `RETRY`, `ABORT` | — | `Environment` |
 | `blocked` | le moteur, quand un agent répond `blocked`, qu'une boucle atteint son `max_visits` ou qu'une lentille répond `inconclusive` | une consigne, ou `STOP` | — | `Blocked` |
-| `review-consent` | `skraft review --pr --publish` | `ACCEPTED`, `DECLINED` | — | `Review comment` |
+| `review-consent` | `skraft review --pr --publish` | `ACCEPTED`, `DECLINED` | — | `PR comment` |
 
 Un consentement déjà donné dans `skraft-config.json` (`publish.pullRequest`,
 `publish.visuals`) n'est pas reposé, sauf si le texte de sa question a changé depuis

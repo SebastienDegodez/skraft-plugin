@@ -36,10 +36,14 @@ Saisissez dans la conversation, pas dans un terminal :
 
 Ouvrez `/plugin` : `skraft` figure parmi les plugins installés.
 
-:::note[Capture en attente d'un run réel]
-Une capture de l'installation depuis la marketplace de Claude Code remplacera le bloc ci-dessus
-après un run réel sous Claude Code.
-:::
+Depuis un terminal, `claude plugin` fait la même chose et répond :
+
+```console
+$ claude plugin marketplace add SebastienDegodez/skraft-plugin
+✔ Successfully added marketplace: skraft (declared in user settings)
+$ claude plugin install skraft@skraft
+✔ Successfully installed plugin: skraft@skraft (scope: user)
+```
 
 </TabItem>
 <TabItem value="copilot-cli" label="GitHub Copilot CLI">
@@ -54,10 +58,7 @@ $ copilot plugin install skraft@skraft
 Dans une session Copilot, les mêmes commandes s'écrivent `/plugin marketplace add …` et
 `/plugin install skraft@skraft`. Vérifiez avec `copilot plugin list` : `skraft` y figure.
 
-:::note[Capture en attente d'un run réel]
-Une capture de `copilot plugin install` remplacera le bloc ci-dessus après un run réel sous
-Copilot CLI.
-:::
+![Terminal : copilot plugin marketplace add SebastienDegodez/skraft-plugin répond que la marketplace skraft est ajoutée, copilot plugin install skraft@skraft installe 36 skills, puis copilot plugin list affiche skraft@skraft parmi les plugins installés](/img/screenshots/shared/install-copilot-cli.png)
 
 Pour travailler sur un clone du plugin, installez-le depuis son dossier local :
 `copilot plugin install ./plugins/skraft-framework`.
@@ -85,10 +86,7 @@ Pour travailler sur un clone du plugin, installez-le depuis son dossier local :
 
 Dans **Chat: Open Customizations**, section **Plugins**, `skraft` figure et est activé.
 
-:::note[Capture en attente d'un run réel]
-Une capture de l'onglet **Browse** et de la section **Plugins** viendra après un run réel sous
-VS Code.
-:::
+![VS Code, Customizations, section Plugins : sous User, skraft installé depuis github.com/SebastienDegodez/skraft-plugin, 20 agents et 43 skills, son interrupteur activé](/img/screenshots/shared/install-vscode-browse.png)
 
 </TabItem>
 </Tabs>

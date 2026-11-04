@@ -93,6 +93,11 @@ le développeur n'en a pas créé une automatisation, en choisissant lui-même l
 permissions. L'idée est de faire du tri un rendez-vous plutôt qu'une corvée qu'on repousse, sans
 jamais lancer un agent que personne n'a autorisé.
 
+| Modèle, tel que VS Code le liste | Planification | Agent |
+|---|---|---|
+| **Weekly backlog triage** | lundi 08:45, heure locale (`45 8 * * 1`) | `Skraft - Backlog Discoverer` |
+| **Refine the proposed sprint** | manuelle | `Skraft - Backlog Planner` |
+
 ## Les lentilles de planification : pourquoi chacune
 
 Une story n'est pas « prête » parce que son auteur le dit. Quatre lentilles, chacune en lecture

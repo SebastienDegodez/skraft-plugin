@@ -42,13 +42,20 @@ commit**: a rule the pull request changes does not count.
 
 **On the command line**, the review hands its lenses to the conducting agent, then waits:
 
-```text
+```console
+$ skraft review --pr 42
+pr-42: review of pull request #42 (test-integrity, architecture-boundaries, cold-reader, mock-fidelity, contract-fidelity) — reviewer · economy · model chosen by the host
 skraft review #42: dispatch — start these 3 agents, one after the other, save each final reply as it is to its reply file, then record
 agent 1: test-integrity-lens on the session's model
-  prompt: Your brief is the file <…>. Read it whole and do what it asks. Your last message is the reply it asks for.
-  reply: <…>
-…
-then: skraft review --pr 42 --record
+  prompt: Your brief is the file ~/shop/.copilot-tracking/skraft-reviews/pr-42/results/loop/dispatch-1.brief.md. Read it whole and do what it asks. Your last message is the reply it asks for.
+  reply: ~/shop/.copilot-tracking/skraft-reviews/pr-42/results/loop/dispatch-1.reply.md
+agent 2: architecture-boundaries-lens on the session's model
+  prompt: Your brief is the file ~/shop/.copilot-tracking/skraft-reviews/pr-42/results/loop/dispatch-2.brief.md. Read it whole and do what it asks. Your last message is the reply it asks for.
+  reply: ~/shop/.copilot-tracking/skraft-reviews/pr-42/results/loop/dispatch-2.reply.md
+agent 3: cold-reader-lens on the session's model
+  prompt: Your brief is the file ~/shop/.copilot-tracking/skraft-reviews/pr-42/results/loop/dispatch-3.brief.md. Read it whole and do what it asks. Your last message is the reply it asks for.
+  reply: ~/shop/.copilot-tracking/skraft-reviews/pr-42/results/loop/dispatch-3.reply.md
+then: node "<plugin folder>/engine/drivers/cli/skraft.mjs" review --pr 42 --record
 ```
 
 Have each agent started with its `prompt` (by your chat's agent, or by hand), save its final
@@ -57,10 +64,17 @@ reply as it is to the `reply` file, then run the `then:` command. Repeat while t
 
 ## 3. Read the verdict
 
+Here the pull request turned `Assert.Equal(90m, total)` into `Assert.NotNull(total)`: the
+`test-integrity` lens flags it, the refuter confirms it. Progress lines start with `pr-42:`.
+
 ```console
-skraft review #42: NEEDS_REWORK, pass 1 — <summary>
-  to address: <what sends the work back>
-  details: <working copy>/.copilot-tracking/skraft-reviews/pr-42/reviews/verdict-1/verdict.yaml
+$ skraft review --pr 42 --record
+pr-42: review of pull request #42 (test-integrity, architecture-boundaries, cold-reader, mock-fidelity, contract-fidelity) — reviewer · economy · model chosen by the host
+pr-42: verdict refutes test-integrity F1 — standard · model chosen by the host
+pr-42: NEEDS_REWORK: 1 reason to address
+skraft review #42: NEEDS_REWORK, pass 1 — NEEDS_REWORK: 1 reason to address
+  to address: test-integrity F1 G9 blocker at tests/Checkout.UnitTest/CheckoutTests.cs:7: Assert.Equal(90m, total) became Assert.NotNull(total)
+  details: ~/shop/.copilot-tracking/skraft-reviews/pr-42/reviews/verdict-1/verdict.yaml
 ```
 
 | Status | Meaning |
@@ -70,12 +84,9 @@ skraft review #42: NEEDS_REWORK, pass 1 — <summary>
 | `BLOCKED` (`lens-inconclusive`) | a lens did not conclude: run the review again, or read its answer in `verdict.yaml` |
 | `stopped`, `refused` | the review did not start or stopped; the code in brackets says why (Troubleshooting) |
 
-`verdict.yaml` details each lens, the refuted findings and the notes.
+How the refuter's answer turns a finding into a status: [From finding to status](../reference/pull-request.md#finding-to-status).
 
-:::note[Screenshot pending a real run]
-A capture of the `skraft review --pr` output replaces the verdict block above after a real run
-on a pull request.
-:::
+`verdict.yaml` details each lens, the refuted findings and the notes.
 
 ## 4. Keep the verdict in a comment (optional)
 
@@ -94,9 +105,11 @@ can decide for everyone with `publish.reviewComment` in the base branch's `skraf
 ([skraft-config.json](../reference/skraft-config.md#publish)). Without
 consent nothing is posted; `comment.md`, next to `verdict.yaml`, keeps the text.
 
-:::note[Screenshot pending a real run]
-A capture of the pull request and its review comment on GitHub comes after a real run.
-:::
+The comment is in the pull request's language. It holds a heading, a counts line and one table by status, described in [Review comment](../reference/pull-request.md#review-comment).
+
+![GitHub: comment on pull request #4, "skraft review · #4 — NEEDS_REWORK (pass 1)", the summary line, the two findings to address with their file, line and suggestion, then the marker skraft-review pr=4](/img/screenshots/shared/github-pr-review-comment.png)
+
+*Figure 1 — The review comment on the [demo pull request](https://github.com/SebastienDegodez/skraft-demo-meetup/pull/4), as an earlier version laid it out, before its findings became one table by status.*
 
 ## 5. Review again after a new push
 
@@ -105,7 +118,16 @@ $ gh pr checkout 42
 ```
 
 Start the review again: it is the next pass (`verdict-2/`). A lens whose inputs did not move and
-that found nothing is reused without running again.
+that found nothing is reused without running again. A finding the last pass refuted, at the same
+place, stays refuted without a new check; one new on a line the push did not touch is a note
+([incremental re-review](../reference/gates.md#incremental)).
+
+When a skraft run of this working copy opened the pull request, and its tracking folder
+`.copilot-tracking/skraft-plans/<slug>/` is still there, the review also reads the documents that
+run's own review read (the story, the plans, the change-log and its `PLAN_DEVIATION` lines),
+copied under `.copilot-tracking/skraft-reviews/pr-<number>/run/`. It ignores them when no run or
+several name the pull request, or when the pull request itself holds a file under
+`.copilot-tracking/`. The project rules stay those of the base.
 
 ## Troubleshooting
 
@@ -115,7 +137,7 @@ that found nothing is reused without running again.
 | `pr-not-found`, `pr-unreadable` | Check the number, and that `gh repo set-default` names the right repository. On Azure Repos, the pull request must be in the project and repository the Git remote names. |
 | `pr-not-checked-out` | `gh pr checkout <number>` (`az repos pr checkout --id <number>` on Azure Repos), then run again. |
 | `pr-base-missing` | `git fetch origin <base>`, then run again. |
-| `working-copy-dirty` | Commit or set aside the changes outside `.copilot-tracking/`. |
+| `working-copy-dirty` | Commit or set aside the changes outside `.copilot-tracking/`. A finished run can leave some (a design diagram, an event model): commit them, or `git stash -u`, then review again. |
 | `workflow-invalid` | The base's `.skraft/review.skraft.dot` removes a mandatory node: fix it on the base branch. |
 | `pipeline-locked` | Another session reviews this pull request: wait until it finishes. |
 | `journal-unverifiable` | The review started on another machine: `skraft journal adopt --pr <number>` in your terminal. |
