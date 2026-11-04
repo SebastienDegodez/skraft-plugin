@@ -182,7 +182,7 @@ Verdict: `review-verdict.mjs --phase discuss`, same rules and same budget as DIS
 | Declared output | `changes/{date}/change-log.md` |
 | Proposals | `proposals/kill_proposal-<visit>-g<n>.md`, one per file of survivors, created by the engine with a section per mutant; each `{{outcome}}` line becomes `test: …`, `delete: …` or `equivalent: …` |
 | Evidence | `gates/<component>/<gate>-<n>.log`; `visuals/<component>/e2e-<n>.log` |
-| Allowed writes | `deliver`, `kill_mutants`: the tracking folder, each component's `src` and `tests` paths, and the files at their roots; `kill_proposal`: the tracking folder only, no commit |
+| Allowed writes | `deliver`, `kill_mutants`: the tracking folder, each component's `src` and `tests` paths, and the files at their roots; `kill_proposal`: the tracking folder only, so nothing to commit; a change outside it is refused |
 | Commits | `deliver` in `cycle` mode: failing `test(<story>): …` (red, replayed), then `feat` or `fix` (green), `refactor`; `kill_mutants` in `kill` mode: tests that kill mutants and pass; each conventional message ends with `Refs: #<issue>` and closes no issue; a change left uncommitted is refused (`uncommitted`) |
 | Mutation bar | 100 % on the core, 80 % on the boundary; not configurable |
 

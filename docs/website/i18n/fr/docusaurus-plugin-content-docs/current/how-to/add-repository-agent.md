@@ -60,9 +60,10 @@ et retirez l'arête `deliver -> gates` qu'elle remplace.
 
 Le brief que le moteur donne à l'agent liste ces sorties, les chemins qu'il peut écrire et les
 sorties des autres étapes à lire. Après chaque tentative, le moteur vérifie que chaque sortie est
-remplie et que rien n'a été écrit hors de ces chemins. Le brief ne demande aucun commit : une fois
-l'étape réussie, le moteur commite ce que l'agent a laissé modifié dans `writes` en
-`docs(<story>): <nœud> <story>`.
+remplie et que rien n'a été écrit hors de ces chemins. L'agent commite ses propres changements :
+le brief lui demande de commiter chaque fichier qu'il change hors du dossier de suivi, et un
+changement laissé non commité est refusé (`uncommitted`). Le moteur ne commite que pour les agents
+du plugin qui n'ont pas de shell (`solution-researcher`, `solution-architect`, `pr-writer`).
 
 ## 3. Vérifier
 
