@@ -9,7 +9,7 @@ import { issueOf } from './commits.mjs'
  *   visit: number, attempt: number, maxAttempts: number,
  *   skills: string[], nowhere: import('./component-skills.mjs').ComponentSkill[], inputs: string[], outputs: string[], result: string,
  *   allowed: string[], components: BriefComponent[], tdd: import('./roles.mjs').TddMode, commits: boolean,
- *   missing: string[], feedback: string[], sentBy: 'gate' | 'review' | 'ask' | 'answer' | null, acceptance: string[],
+ *   missing: string[], feedback: string[], instruction: string | null, sentBy: 'gate' | 'review' | 'ask' | 'answer' | null, acceptance: string[],
  *   mutants: { file: string, mutants: string[], group: number, of: number } | null,
  *   drafts: string[], proposal: boolean,
  * }} Brief
@@ -19,7 +19,8 @@ import { issueOf } from './commits.mjs'
  *   the agent makes, a whole TDD cycle or failing tests only. commits: whether the agent commits,
  *   told how its commits reference the story's issue. feedback: on a retry, why the
  *   previous attempt was refused; on a new pass, the gate failures, the review findings or the
- *   human's refusal or choice behind it, sentBy naming which. acceptance: the failing acceptance tests an
+ *   human's refusal or choice behind it, sentBy naming which; instruction: the human's answer to
+ *   a block that opened this pass, told after what the block left. acceptance: the failing acceptance tests an
  *   earlier agent committed (`<sha> "<subject>"`), told to a TDD cycle so that it opens with a
  *   test of its own. mutants: the group of surviving mutants the agent kills, one file's.
  *   drafts: the Proposed ADRs of the working copy, relative to it, told to an agent that keeps
@@ -110,16 +111,23 @@ const missingLines = ({ missing, attempt, maxAttempts }) => (missing.length > 0
 
 /**
  * Why the previous attempt was refused, or why the gates sent the work back. A pass a human
- * reopened after a block carries what the block left first and the human's instruction last.
+ * reopened after a block carries what the block left, then the human's instruction.
  * @param {Brief} brief
  */
-const feedbackLines = ({ feedback, attempt, maxAttempts, visit, sentBy }) => {
-  if (feedback.length === 0) return []
-  if (attempt === 1 && sentBy === 'ask' && feedback.length > 1) {
-    return ['', `What pass ${visit - 1} left when it was blocked:`, ...feedback.slice(0, -1).map((line) => `- ${line}`), '', `A human refused the work of pass ${visit - 1}:`, `- ${feedback.at(-1)}`]
-  }
-  return ['', feedbackTitle({ attempt, maxAttempts, visit, sentBy }), ...feedback.map((line) => `- ${line}`)]
+const feedbackLines = (brief) => {
+  if (brief.instruction !== null) return reopenedLines(brief, brief.instruction)
+  if (brief.feedback.length === 0) return []
+  return ['', feedbackTitle(brief), ...brief.feedback.map((line) => `- ${line}`)]
 }
+
+/**
+ * What a block left, when it left something, and the instruction a human lifted it with.
+ * @param {Pick<Brief, 'feedback' | 'visit'>} brief @param {string} instruction
+ */
+const reopenedLines = ({ feedback, visit }, instruction) => [
+  ...(feedback.length > 0 ? ['', `What pass ${visit - 1} left when it was blocked:`, ...feedback.map((line) => `- ${line}`)] : []),
+  '', `A human refused the work of pass ${visit - 1}:`, `- ${instruction}`,
+]
 
 /** @param {Pick<Brief, 'attempt' | 'maxAttempts' | 'visit' | 'sentBy'>} brief */
 const feedbackTitle = ({ attempt, maxAttempts, visit, sentBy }) => {

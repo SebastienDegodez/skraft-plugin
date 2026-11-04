@@ -10,13 +10,14 @@ import { instructionOf, questionSpec } from '../decisions/questions.mjs'
  * @typedef {import('../journal/run-state.mjs').AskedQuestion} AskedQuestion
  * @typedef {import('../gates/mutation-report.mjs').SurvivorGroup} SurvivorGroup
  * @typedef {{
- *   visit: number, attempt: number, missing: string[], feedback: string[],
+ *   visit: number, attempt: number, missing: string[], feedback: string[], instruction: string | null,
  *   sentBy: 'gate' | 'review' | 'ask' | 'answer' | null, resumed: OpenAttempt | null,
  *   group: number | null, groups: SurvivorGroup[],
  * }} Entry
  *   missing and feedback: what the previous attempt left missing or got refused for, or for a
  *   new pass the gate failures, review findings, human refusal or human choice that sent the run
- *   on, sentBy naming which; resumed: the open attempt a resumed run picks up. groups: the surviving mutants
+ *   on, sentBy naming which; instruction: the instruction a human answered a block with, on the
+ *   pass it reopened, null otherwise; resumed: the open attempt a resumed run picks up. groups: the surviving mutants
  *   of a visit the mutation gate opened on a node that takes them by file; group: the one this
  *   attempt works on, from 1; null with no groups.
  * @typedef {Entry & { kind: 'agent' | 'gate' | 'review' | 'ask' | 'publish' | 'call', phase: string, node: WorkflowNode }} WorkStep
@@ -30,6 +31,13 @@ import { instructionOf, questionSpec } from '../decisions/questions.mjs'
  * @typedef {{ kind: 'done', phase: string | null }} DoneStep
  * @typedef {WorkStep | SkipStep | BlockedStep | ClosePhaseStep | DoneStep} NextStep
  */
+
+/**
+ * What opened a step's visit, as its step.started journals it: the kind of node that sent the
+ * run there and the instruction a human lifted a block with, each only when there is one.
+ * @param {Pick<Entry, 'sentBy' | 'instruction'>} entry
+ */
+export const causeFields = ({ sentBy, instruction }) => ({ ...(sentBy === null ? {} : { sentBy }), ...(instruction === null ? {} : { instruction }) })
 
 /** Attempts an agent node gets per pass when its node sets no max_attempts. */
 export const DEFAULT_ATTEMPTS = 3
@@ -61,13 +69,13 @@ export const nextStep = (workflow, run) => {
 const resume = (workflow, run, [id, { open: attempt }]) => {
   const node = workflow.nodes[id]
   if (!node) return changed(id)
-  return enter(node, { visit: attempt.visit, attempt: attempt.attempt, missing: attempt.missing, feedback: attempt.feedback, sentBy: attempt.sentBy, resumed: attempt, ...groupOf(run, id, attempt.group) }, run)
+  return enter(node, { visit: attempt.visit, attempt: attempt.attempt, missing: attempt.missing, feedback: attempt.feedback, instruction: attempt.instruction, sentBy: attempt.sentBy, resumed: attempt, ...groupOf(run, id, attempt.group) }, run)
 }
 
 /**
  * A human's instruction lifts the block: the node runs again on a new pass, with the failures
- * the block left (the findings of a review at its loop ceiling) and the instruction after them,
- * so that the agent never works from the instruction alone (#500).
+ * the block left (the findings of a review at its loop ceiling) as its feedback and the
+ * instruction apart, so that the agent never works from the instruction alone (#500).
  * @param {Workflow} workflow @param {RunState} run @param {string} id @param {string} instruction
  * @returns {NextStep}
  */
@@ -75,7 +83,7 @@ const reopen = (workflow, run, id, instruction) => {
   const node = workflow.nodes[id]
   if (!node) return changed(id)
   const left = run.last?.failures ?? []
-  return enter(node, { visit: run.nodes[id].visit + 1, attempt: 1, missing: [], feedback: [...left, instruction], sentBy: 'ask', resumed: null, group: null, groups: [] }, run)
+  return enter(node, { visit: run.nodes[id].visit + 1, attempt: 1, missing: [], feedback: left, instruction, sentBy: 'ask', resumed: null, group: null, groups: [] }, run)
 }
 
 /**
@@ -85,7 +93,7 @@ const reopen = (workflow, run, id, instruction) => {
  */
 const begin = (workflow, run) => {
   const first = run.start ?? /** @type {{ to: string }} */ (workflow.edges.find((edge) => edge.from === workflow.start)).to
-  return enter(workflow.nodes[first], { visit: 1, attempt: 1, missing: [], feedback: [], sentBy: null, resumed: null, group: null, groups: [] }, run)
+  return enter(workflow.nodes[first], { visit: 1, attempt: 1, missing: [], feedback: [], instruction: null, sentBy: null, resumed: null, group: null, groups: [] }, run)
 }
 
 /**
@@ -98,7 +106,7 @@ const retry = (node, run, last) => {
   const cause = refusalBlock(node, previous, last)
   // The agent that says it is blocked runs again on a human's instruction; a breaker or a ceiling is no question to a human.
   if (cause !== null) return { kind: 'blocked', phase: node.phase, node, cause, last, previous, missingNode: null, reopens: cause === 'agent-blocked' ? node.id : null }
-  return enter(node, { visit: last.visit, attempt: last.attempt + 1, missing: last.missing, feedback: last.failures, sentBy: run.nodes[last.step].sentBy, resumed: null, ...groupOf(run, last.step, last.group) }, run)
+  return enter(node, { visit: last.visit, attempt: last.attempt + 1, missing: last.missing, feedback: last.failures, instruction: null, sentBy: run.nodes[last.step].sentBy, resumed: null, ...groupOf(run, last.step, last.group) }, run)
 }
 
 /** @param {RunState} run @param {string} id @param {number | null | undefined} group @returns {Pick<Entry, 'group' | 'groups'>} */
@@ -114,7 +122,7 @@ const hasNextGroup = (run, last) => typeof last.group === 'number' && last.group
  */
 const nextGroup = (node, run, last) => {
   const { sentBy, groups } = run.nodes[last.step]
-  return enter(node, { visit: last.visit, attempt: 1, missing: [], feedback: [], sentBy, resumed: null, group: last.group + 1, groups }, run)
+  return enter(node, { visit: last.visit, attempt: 1, missing: [], feedback: [], instruction: null, sentBy, resumed: null, group: last.group + 1, groups }, run)
 }
 
 /**
@@ -146,7 +154,7 @@ const advance = (workflow, run, node, last) => {
   const visit = (run.nodes[target.id]?.visit ?? 0) + 1
   const groups = firstGroup(target, last)
   // A group of survivors gets its own mutants, not the gates' summary of every file.
-  return enter(target, { visit, attempt: 1, missing: [], feedback: groups.group === null ? last.failures : [], sentBy: sentBy(node, last), resumed: null, ...groups }, run)
+  return enter(target, { visit, attempt: 1, missing: [], feedback: groups.group === null ? last.failures : [], instruction: null, sentBy: sentBy(node, last), resumed: null, ...groups }, run)
 }
 
 /**

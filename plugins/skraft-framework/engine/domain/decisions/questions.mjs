@@ -119,8 +119,10 @@ export const mutationPlanText = (proposals) =>
 export const environmentText = (step, reason) => `${step} cannot run on this machine: ${reason}. Fix it, then RETRY; or ABORT the run.`
 
 /**
- * The text of a blocked question: the node an instruction runs again, and why it is blocked,
- * from what the engine checked only; the agent's own words stay in the file it names.
+ * The text of a blocked question: the node an instruction runs again, why it is blocked, from
+ * what the engine checked, and what the step that blocked left, one per line (a review's
+ * findings, the gates' failures, the reason a blocked agent gave in its result), which the
+ * reopened pass is sent with the instruction.
  * @param {Block} block
  */
 export const blockText = (block) => `${block.step} is blocked: ${BLOCKS[block.code](block)}.${leftBy(block)} An instruction runs ${block.step} again on a new pass with ${block.failures.length > 0 ? 'what is left above and the instruction' : 'it'}; ${STOP} ends the run.`
