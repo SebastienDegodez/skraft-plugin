@@ -4,7 +4,7 @@
 // bound the changes, story and documents tell what they are for, components how each one is built and tested.
 // A called workflow runs one review: start -> fan-out -> one lens node per branch -> refuter -> fan-in -> exit; the
 // calling node carries NEEDS_REWORK and max_visits. The refuter (shape=octagon) is finding-refuter: it checks each
-// blocker, high and medium finding of the lenses before the fan-in counts it, one tier above the strongest lens it
+// finding of the lenses, of any severity, before the fan-in counts it, one tier above the strongest lens it
 // checks unless the fan-in names its family with refuter=. A node marked mandatory=true can never be dropped, bypassed or weakened,
 // whatever the copy says.
 digraph review {

@@ -20,6 +20,8 @@ test('a Proposed ADR and nobody to answer: the run waits on the question, and ru
   assert.deepEqual(dispatched(host), [`skraft ${SLUG} · research · attempt 1`, `skraft ${SLUG} · design · attempt 1`])
   assert.deepEqual(host.human.questions, [{ key: 'adr-1', kind: 'adr-ratification', text: RATIFY, options: ['RATIFIED', 'REJECTED'], refusals: ['REJECTED'], header: 'ADR' }])
   assert.deepEqual(host.types().slice(-2), ['step.started', 'question.asked'])
+  const opened = eventsOf(host, 'step.started').at(-1)
+  assert.deepEqual([opened.step, opened.question, opened.outputs, opened.missing, opened.feedback, opened.heads], ['adr', 'adr-ratification', [], [], [], []])
   const [asked] = eventsOf(host, 'question.asked')
   assert.deepEqual({ key: asked.key, step: asked.step, visit: asked.visit, subjects: asked.subjects }, { key: 'adr-1', step: 'adr', visit: 1, subjects: [ADR_1] })
   const view = await host.view()

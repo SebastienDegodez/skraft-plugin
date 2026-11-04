@@ -28,6 +28,7 @@ test('--publish twice keeps one comment on the pull request, rewritten with each
   host.agentRunner.review = lenses({
     'test-integrity': [says('test-integrity', 'fail', [finding('F1', 'blocker', 'the assertion @alice wrote is gone', { gate: 'G9', location: `${TEST_FILE}:14` }), finding('F2', 'low', 'name the total', { gate: 'G9', location: `${TEST_FILE}:20` })])],
     'cold-reader': [says('cold-reader', 'pass', [finding('F1', 'low', 'name the discount', { gate: 'C2' })])],
+    refuter: [refutes('confirmed'), refutes('confirmed', 'the total has no name'), refutes('refuted', 'Discount.cs names it')],
   })
 
   const first = await host.review({ publish: true })
@@ -38,11 +39,17 @@ test('--publish twice keeps one comment on the pull request, rewritten with each
   assert.equal(await host.workspace.read('skraft-config.json'), null)
   assert.equal(host.pullRequests.comments[0].body, [
     '### skraft review · #12 — NEEDS_REWORK (pass 1)', '',
-    'Review: 2 to fix, 1 note', '',
+    'Review: 2 to fix, 1 refuted', '',
     HEADER, RULE,
     `| To fix | blocker | test-integrity F1 G9 | \`${TEST_FILE}:14\` | the assertion \`@alice\` wrote is gone | confirmed: confirmed by the patch |`,
-    `| To fix | low | test-integrity F2 G9 | \`${TEST_FILE}:20\` | name the total | low, from a lens that failed: it counts unrefuted |`,
-    '| Note | low | cold-reader F1 C2 | `src/Checkout.cs:12` | name the discount |  |', '',
+    `| To fix | low | test-integrity F2 G9 | \`${TEST_FILE}:20\` | name the total | confirmed: the total has no name |`,
+    '',
+    '<details><summary>1 refuted</summary>',
+    '',
+    HEADER, RULE,
+    '| Refuted | low | cold-reader F1 C2 | `src/Checkout.cs:12` | name the discount | Discount.cs names it |',
+    '',
+    '</details>', '',
     '<sub>skraft-review pr=12</sub>', '',
   ].join('\n'))
   assert.equal(await host.reviews.read(SLUG, 'comment.md'), host.pullRequests.comments[0].body)
@@ -189,7 +196,7 @@ test('a stopped review publishes nothing', async () => {
   assert.deepEqual(host.pullRequests.comments, [])
 })
 
-test('the comment is one table by status: what to fix, what one lens alone found to decide, the notes, the refuted ones folded with the refuter\'s reason, long texts cut', async () => {
+test('the comment is one table by status: what to fix, what one lens alone found to decide, the refuted ones folded, a low one among them, with the refuter\'s reason, long texts cut', async () => {
   const host = reviewed({ config: { components: [API], publish: { reviewComment: true } } })
   host.agentRunner.review = lenses({
     'test-integrity': [says('test-integrity', 'fail', [
@@ -198,23 +205,23 @@ test('the comment is one table by status: what to fix, what one lens alone found
     ])],
     'cold-reader': [says('cold-reader', 'fail', [finding('F1', 'medium', 'Apply hides the threshold', { gate: 'C1', location: 'src/Discount.cs:3' }), finding('F2', 'low', 'name the total', { gate: 'C2' })])],
     'architecture-boundaries': [says('architecture-boundaries', 'pass', [finding('F1', 'low', 'name the rate', { gate: 'G10', location: 'src/Discount.cs:5' })])],
-    refuter: [refutes('confirmed', 'the patch drops the assertion'), refutes('unverifiable', 'no rule names the discount test'), refutes('refuted', LONG_REASON)],
+    refuter: [refutes('confirmed', 'the patch drops the assertion'), refutes('unverifiable', 'no rule names the discount test'), refutes('refuted', 'Discount.cs:5 names the rate'), refutes('refuted', LONG_REASON), refutes('confirmed', 'the total has no name')],
   })
 
   await host.review({ publish: true })
 
   assert.equal(host.pullRequests.comments[0].body, [
     '### skraft review · #12 — NEEDS_REWORK (pass 1)', '',
-    'Review: 3 to fix, 1 note, 1 refuted', '',
+    'Review: 3 to fix, 2 refuted', '',
     HEADER, RULE,
     `| To fix | blocker | test-integrity F1 G9 | \`${TEST_FILE}:14\` | the assertion that checked the discount above 100 is gone, so a refactoring of Apply can drop the r… | confirmed: the patch drops the assertion |`,
     `| To fix | high | test-integrity F2 G7 | \`${TEST_FILE}:20\` | the discount rule has no test | not verified: no rule names the discount test |`,
-    '| To fix | low | cold-reader F2 C2 | `src/Checkout.cs:12` | name the total | low, from a lens that failed: it counts unrefuted |',
-    '| Note | low | architecture-boundaries F1 G10 | `src/Discount.cs:5` | name the rate |  |',
+    '| To fix | low | cold-reader F2 C2 | `src/Checkout.cs:12` | name the total | confirmed: the total has no name |',
     '',
-    '<details><summary>1 refuted</summary>',
+    '<details><summary>2 refuted</summary>',
     '',
     HEADER, RULE,
+    '| Refuted | low | architecture-boundaries F1 G10 | `src/Discount.cs:5` | name the rate | Discount.cs:5 names the rate |',
     '| Refuted | medium | cold-reader F1 C1 | `src/Discount.cs:3` | Apply hides the threshold | Discount.cs:3 names the threshold in a constant, MinimumOrder, which the test file quotes word for… |',
     '',
     '</details>',
@@ -242,7 +249,11 @@ test('the comment on a French pull request is in French: what one lens alone fou
       ]),
       says('test-integrity', 'pass', [finding('F3', 'low', 'the currency could be tested', { gate: 'G7', location: `${TEST_FILE}:8` })]),
     ],
-    refuter: [refutes('refuted', 'line 3 tests 100 and 101'), refutes('refuted', 'line 5 rounds'), refutes('confirmed', 'Apply names no threshold'), refutes('unverifiable', 'no rule names the order')],
+    refuter: [
+      refutes('refuted', 'line 3 tests 100 and 101'), refutes('refuted', 'line 5 rounds'),
+      refutes('confirmed', 'the total has no name'), refutes('confirmed', 'Apply names no threshold'), refutes('unverifiable', 'no rule names the order'),
+      refutes('refuted', 'line 8 tests the currency'),
+    ],
   })
 
   await host.review({ publish: true })
@@ -262,7 +273,7 @@ test('the comment on a French pull request is in French: what one lens alone fou
     '### skraft review · #12 — NEEDS_REWORK (passe 2)', '',
     'Revue : 3 à corriger, 1 note, 1 réfuté', '',
     FR_HEADER, RULE,
-    "| À corriger | low | test-integrity F4 G7 | `src/Checkout.cs:12` | name the total | faible, d'une lentille en échec : il compte sans réfutation |",
+    '| À corriger | low | test-integrity F4 G7 | `src/Checkout.cs:12` | name the total | confirmé : the total has no name |',
     '| À corriger | medium | test-integrity F5 G9 | `src/Discount.cs:2` | Apply hides the threshold | confirmé : Apply names no threshold |',
     `| À corriger | high | test-integrity F6 G9 | \`src/Discount.cs:4\` | ${CLAIM_100} | non vérifié : no rule names the order |`,
     `| Note | high | test-integrity F3 G7 | \`${TEST_FILE}:8\` | the currency is not tested | nouveau sur une ligne inchangée depuis la passe 1 |`,
@@ -281,9 +292,13 @@ test('the comment on a French pull request is in French: what one lens alone fou
 
   assert.equal(host.pullRequests.comments[0].body, [
     '### skraft review · #12 — APPROVED (passe 3)', '',
-    'Revue : 1 note', '',
+    'Revue : 1 réfuté', '',
+    '<details><summary>1 réfuté</summary>',
+    '',
     FR_HEADER, RULE,
-    `| Note | low | test-integrity F3 G7 | \`${TEST_FILE}:8\` | the currency could be tested |  |`, '',
+    `| Réfuté | low | test-integrity F3 G7 | \`${TEST_FILE}:8\` | the currency could be tested | line 8 tests the currency |`,
+    '',
+    '</details>', '',
     '<sub>skraft-review pr=12</sub>', '',
   ].join('\n'))
 })

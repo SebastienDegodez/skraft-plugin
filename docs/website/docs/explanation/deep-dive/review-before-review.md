@@ -45,9 +45,8 @@ lenses only ask — Meyer's command-query separation
 flowchart TB
     W["Produced work<br/>(phase N)"] --> L1["lens A"] & L2["lens B"] & L3["lens C"]
     L1 & L2 & L3 --> F["typed findings"]
-    F -->|blocker, high, medium| R["finding-refuter<br/>confirms or refutes"]
+    F -->|every severity| R["finding-refuter<br/>confirms or refutes"]
     R --> V{"verdict computed<br/>by the engine"}
-    F -->|low| V
     V -->|APPROVED| N["next phase,<br/>then human review"]
     V -->|NEEDS_REWORK| W
     V -->|BLOCKED| H["question to a human"]
@@ -56,10 +55,10 @@ flowchart TB
 *Figure 1 — A SKRAFT review: the lenses find, the refuter checks, the engine decides; a single
 finding that stands is enough to send the work back.*
 
-Each blocker, high or medium finding goes to `finding-refuter`, which rereads the cited location
-and confirms or refutes it, saying why. A single finding that stands is enough to send the work
-back (`NEEDS_REWORK`); a low finding stands unchecked when its lens failed, so the producer fixes
-every severity, and stays a note when its lens passed. After the third pass the run sends nothing
+Each finding, of any severity, goes to `finding-refuter`, which rereads the cited location and
+confirms or refutes it, saying why. A single finding that stands is enough to send the work back
+(`NEEDS_REWORK`), a low one too, whether its lens failed or passed: the producer fixes every
+severity. After the third pass the run sends nothing
 back: a human accepts what is left when only medium and low findings are, or tells the producer
 what to do. A lens that cannot conclude blocks the review
 instead of counting as approval. When only one lens finds what would send the work back while

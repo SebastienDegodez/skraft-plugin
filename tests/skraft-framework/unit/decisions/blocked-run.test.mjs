@@ -1,12 +1,14 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { BUILT_IN_WORKFLOW, InMemoryAgentCatalog, ScriptedMachine } from '../support/in-memory-host.mjs'
-import { agent, finding, lenses, nominal, reviews, says, scripted, SLUG, tddCycle, TRACKING } from '../support/pipeline-host.mjs'
+import { BUILT_IN_WORKFLOW, InMemoryAgentCatalog, InMemoryGit, ScriptedMachine } from '../support/in-memory-host.mjs'
+import { agent, API, finding, lenses, nominal, reviews, says, scripted, SLUG, tddCycle, TRACKING } from '../support/pipeline-host.mjs'
 import { dispatched, eventsOf } from '../support/decisions.mjs'
 import { WITH_SECURITY } from '../workflow/support.mjs'
 
 const withSecurity = { files: { '.skraft/pipeline.skraft.dot': WITH_SECURITY }, catalog: new InMemoryAgentCatalog({ repository: ['acme-security-reviewer'] }) }
 const unavailable = () => ({ ok: false, unavailable: true, text: '' })
+/** A front end in a repository of its own. */
+const WEB = Object.freeze({ name: 'web', root: '../web', stack: 'react', mocking: { strategy: 'inprocess' }, paths: { src: ['src'], tests: ['src'] }, commands: { lint: 'npx eslint .', mutation: 'npx stryker run' } })
 const INSTRUCTION = 'Use the bank gateway of Acme'
 const NO_PROVIDER = 'The story names no payment provider.'
 const blockedAgent = (it) => agent({ result: { status: 'blocked', summary: NO_PROVIDER } })(it)
@@ -51,16 +53,21 @@ test('an instruction runs the blocked node again on a new pass of the same run, 
 })
 
 test('a loop that reached its max_visits asks a human; an instruction runs the node it loops back to again, its loop budget reset', async () => {
-  const machine = new ScriptedMachine({ exits: { '. $ dotnet test': 1 } })
-  const passes = [1, 2, 3, 4, 5, 6].map((n) => (it) => agent({ work: (h) => { if (n === 6) machine.exits['. $ dotnet test'] = 0; tddCycle(SLUG, `Pass${n}`)(h) } })(it))
-  const host = scripted({ machine }, (it) => [agent()(it), agent()(it), agent()(it), ...passes.map((pass) => pass(it))])
+  const machine = new ScriptedMachine({ exits: { '. $ dotnet test': 1, '../web $ npx eslint .': 1 } })
+  const passes = [1, 2, 3, 4, 5, 6].map((n) => (it) => agent({ work: (h) => {
+    if (n === 6) Object.assign(machine.exits, { '. $ dotnet test': 0, '../web $ npx eslint .': 0 })
+    tddCycle(SLUG, `Pass${n}`)(h)
+    h.git.commit(`refactor(checkout): pass ${n} of the cart`, ['../web/src/Cart.tsx'])
+  } })(it))
+  const git = new InMemoryGit({ repositories: { '.': { mergeBases: { main: 'root-0' } }, '../web': { mergeBases: { main: 'up-web-0' } } } })
+  const host = scripted({ machine, git, components: [API, WEB] }, (it) => [agent()(it), agent()(it), agent()(it), ...passes.map((pass) => pass(it))])
 
   const waiting = await host.start()
   await host.decide({ answer: 'Mock the bank gateway in the tests' })
   const outcome = await host.run()
 
-  const failure = `api/test: exited 1 (evidence: ${TRACKING}/gates/api/test-4.log)`
-  const text = `deliver is blocked: gates -> deliver was taken as often as its max_visits allows.\nLeft by gates (1):\n- ${failure}\n An instruction runs deliver again on a new pass with what is left above and the instruction; STOP ends the run.`
+  const failures = [`api/test: exited 1 (evidence: ${TRACKING}/gates/api/test-4.log)`, `web/lint: exited 1 (evidence: ${TRACKING}/gates/web/lint-4.log)`]
+  const text = `deliver is blocked: gates -> deliver was taken as often as its max_visits allows.\nLeft by gates (2):\n- ${failures[0]}\n- ${failures[1]}\n An instruction runs deliver again on a new pass with what is left above and the instruction; STOP ends the run.`
   assert.deepEqual(waiting, { status: 'waiting', slug: SLUG, phase: 'DELIVER', code: 'blocked', reason: `${text} Answer with skraft decide deliver-1 "<instruction>"|STOP.` })
   assert.deepEqual(eventsOf(host, 'question.asked').map(({ key, step, visit, text: asked }) => [key, step, visit, asked]), [['deliver-1', 'deliver', 4, text]])
   assert.equal(outcome.status, 'done')
@@ -68,7 +75,7 @@ test('a loop that reached its max_visits asks a human; an instruction runs the n
     [1, 'fail', null, 'deliver', undefined], [2, 'fail', null, 'deliver', undefined], [3, 'fail', null, 'deliver', undefined], [4, 'fail', 'loop-ceiling', null, 'deliver'], [5, 'fail', null, 'deliver', undefined], [6, 'pass', null, 'deliver_review', undefined],
   ])
   const resumed = host.agentRunner.dispatches.find((dispatch) => dispatch.label === `skraft ${SLUG} · deliver · pass 5 · attempt 1`)
-  assert.ok(resumed.prompt.endsWith(`\n\nWhat pass 4 left when it was blocked:\n- ${failure}\n\nA human refused the work of pass 4:\n- Mock the bank gateway in the tests`), resumed.prompt)
+  assert.ok(resumed.prompt.endsWith(`\n\nWhat pass 4 left when it was blocked:\n- ${failures[0]}\n- ${failures[1]}\n\nA human refused the work of pass 4:\n- Mock the bank gateway in the tests`), resumed.prompt)
 })
 
 /** The journal's lines chained and signed again, after an edit, as the machine that wrote them would. */

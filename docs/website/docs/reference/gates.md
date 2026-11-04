@@ -56,7 +56,7 @@ root; a component stops at its first failing gate.
 | `blocker` | `REJECTED` | `NEEDS_REWORK` once confirmed by `finding-refuter` |
 | `high` | `NEEDS_REWORK` | `NEEDS_REWORK` once confirmed |
 | `medium` | `NEEDS_REWORK` | `NEEDS_REWORK` once confirmed |
-| `low` | `APPROVED`, noted | `NEEDS_REWORK` from a lens answering `fail`, with no refuter; noted from a lens answering `pass` |
+| `low` | `APPROVED`, noted | `NEEDS_REWORK` once confirmed, whether its lens answered `fail` or `pass` |
 
 ---
 
@@ -253,7 +253,7 @@ like a lens's.
 
 Findings of different lenses at the same `path:line` (the path normalized as the
 patch's: `./src\Checkout.cs:12` is `src/Checkout.cs:12`) with the same severity form one group.
-Each group of blocker, high or medium findings goes once to `finding-refuter`, its label and brief naming
+Each group of findings, of any severity, goes once to `finding-refuter`, its label and brief naming
 every lens of the group, with the inputs, skills and descriptor of those lenses (for an engine
 check, the skills and descriptor of the lens it reports for). It judges by the rule of the gate the
 finding cites, as the lens descriptor's gate table, those skills and their references state it; a rule no input states is no reason to refute, and makes
@@ -269,11 +269,11 @@ How each answer shows in a pull request: [From finding to status](./pull-request
 A lens that answers `inconclusive` blocks the review with `lens-inconclusive`, naming each such
 lens and what it noted: the work is not sent back, no finding is checked, and the run asks the
 `blocked` question on the review node. Otherwise `NEEDS_REWORK` when a finding counts, else
-`APPROVED`. A blocker, high or medium finding counts unless the refuter refuted it; a low finding
-counts, unchecked, when its lens answered `fail`, so that the producer fixes every severity while
-the review may send its work back; a low finding of a lens that answered `pass` is a note. From
-the second pass, a finding at the place of one the refuter refuted is carried over as refuted, and
-a blocker, high or medium finding new on a line the producer left as it was is a note: neither
+`APPROVED`. Every finding the refuter did not refute counts, a low one too, whether its lens
+answered `fail` or `pass`, so that the producer fixes every severity while the review may send its
+work back. From the second pass, a finding at the place of one the refuter refuted is carried over
+as refuted, and a finding new on a line the producer left as it was is a note, the only kind of
+note a review sets aside: neither
 counts, goes back to the producer nor reaches the `review-ceiling` question. The
 findings that count go to the next brief of the phase agent, a group on one line citing each of
 its lenses. When the loop back to the producer reaches its `max_visits`, the run asks a human
@@ -296,7 +296,7 @@ again with `reused: true`. The fingerprint covers its inputs, the content of eac
 reads (by skill name: moving the working copy or the plugin changes nothing), the project rule
 files and the content of each changed path it reads.
 
-From the second pass, the review compares each blocker, high or medium finding with those of the
+From the second pass, the review compares each finding, of any severity, with those of the
 last pass of the same step, before any refuter is asked. Two findings of one lens and one gate
 stand at the same place when they cite the same path and the text of their lines appears exactly
 once in that file at each pass (a line that moved is the same, an edited or repeated one is not);

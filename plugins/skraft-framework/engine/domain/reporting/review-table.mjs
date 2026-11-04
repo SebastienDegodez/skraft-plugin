@@ -67,14 +67,13 @@ const rowOf = ({ status, cited, finding }, words) =>
   `| ${words.review.status[status]} | ${finding.severity} | ${cell(cited)} | ${cell(code(finding.location))} | ${cell(shortened(finding.description))} | ${cell(whyOf({ status, finding }, words))} |`
 
 /**
- * What the row says of its status: why a note is one, that a human accepted it, that a low
- * finding of a lens that failed counts unrefuted, else the refuter's word and reason.
+ * What the row says of its status: why a note is one, that a human accepted it, else the
+ * refuter's word and reason, which every other finding has.
  * @param {Pick<FindingLine, 'status' | 'finding'>} line @param {Words} words
  */
 const whyOf = ({ status, finding }, words) => {
-  if (status === 'note') return finding.since === null ? '' : words.review.unchanged(finding.since)
+  if (status === 'note') return words.review.unchanged(/** @type {number} */ (finding.since))
   if (status === 'accepted') return words.review.accepted
-  if (finding.verdict === null) return words.review.unrefuted
   return refuterWord({ status, finding }, words)
 }
 

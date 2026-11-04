@@ -4,6 +4,7 @@ import { acceptedOf, instructionOf, questionSpec } from '../decisions/questions.
 /**
  * @typedef {import('../workflow/workflow.mjs').Workflow} Workflow
  * @typedef {import('../workflow/workflow.mjs').WorkflowNode} WorkflowNode
+ * @typedef {import('../workflow/workflow.mjs').WorkflowEdge} WorkflowEdge
  * @typedef {import('../journal/run-state.mjs').RunState} RunState
  * @typedef {import('../journal/run-state.mjs').RunEvent} RunEvent
  * @typedef {import('../journal/run-state.mjs').OpenAttempt} OpenAttempt
@@ -38,6 +39,17 @@ import { acceptedOf, instructionOf, questionSpec } from '../decisions/questions.
  * @param {Pick<Entry, 'sentBy' | 'instruction'>} entry
  */
 export const causeFields = ({ sentBy, instruction }) => ({ ...(sentBy === null ? {} : { sentBy }), ...(instruction === null ? {} : { instruction }) })
+
+/**
+ * The first attempt of a pass that nothing sent back: no output missing, no feedback, no
+ * instruction, no mutant group; a pass a human opened adds what it was told.
+ * @type {Readonly<Omit<Entry, 'visit'>>}
+ */
+const FRESH = Object.freeze({
+  attempt: 1, missing: [], feedback: [], instruction: null, sentBy: null, resumed: null, group: null,
+  // Stryker disable next-line ArrayDeclaration: with group null nothing reads groups (label, brief, route and journal all ask group first)
+  groups: [],
+})
 
 /** Attempts an agent node gets per pass when its node sets no max_attempts. */
 export const DEFAULT_ATTEMPTS = 3
@@ -82,8 +94,8 @@ const resume = (workflow, run, [id, { open: attempt }]) => {
 const reopen = (workflow, run, id, instruction) => {
   const node = workflow.nodes[id]
   if (!node) return changed(id)
-  const left = run.last?.failures ?? []
-  return enter(node, { visit: run.nodes[id].visit + 1, attempt: 1, missing: [], feedback: left, instruction, sentBy: 'ask', resumed: null, group: null, groups: [] }, run)
+  const left = /** @type {RunEvent} */ (run.last).failures
+  return enter(node, { ...FRESH, visit: run.nodes[id].visit + 1, feedback: left, instruction, sentBy: 'ask' }, run)
 }
 
 /**
@@ -95,7 +107,7 @@ const reopen = (workflow, run, id, instruction) => {
 const humanDecision = (workflow, run) => {
   const told = instructionOf(run.question)
   if (told !== null) return reopen(workflow, run, /** @type {AskedQuestion} */ (run.question).step, told)
-  return acceptedOf(run.question) && run.last !== null ? accept(workflow, run, run.last) : null
+  return acceptedOf(run.question) ? accept(workflow, run, /** @type {RunEvent} */ (run.last)) : null
 }
 
 /**
@@ -105,19 +117,14 @@ const humanDecision = (workflow, run) => {
  * @returns {NextStep}
  */
 const accept = (workflow, run, last) => {
-  const to = approvedTarget(workflow, last.step)
-  const target = workflow.nodes[to]
-  if (!target || to === last.step) return changed(to)
-  const phase = /** @type {string} */ (workflow.nodes[last.step].phase)
+  const review = workflow.nodes[last.step]
+  if (!review) return changed(last.step)
+  // A valid workflow gives every review one APPROVED edge, to a node it has.
+  const target = workflow.nodes[/** @type {WorkflowEdge} */ (edgeOut(workflow, last.step, 'APPROVED')).to]
+  const phase = /** @type {string} */ (review.phase)
   if (closes(run, phase, target)) return { kind: 'close-phase', phase }
-  return enter(target, { visit: (run.nodes[target.id]?.visit ?? 0) + 1, attempt: 1, missing: [], feedback: [], instruction: null, sentBy: null, resumed: null, group: null, groups: [] }, run)
+  return enter(target, { ...FRESH, visit: (run.nodes[target.id]?.visit ?? 0) + 1 }, run)
 }
-
-/**
- * Where a review's APPROVED edge leads; the review itself when the workflow no longer has it or that edge.
- * @param {Workflow} workflow @param {string} review
- */
-const approvedTarget = (workflow, review) => (workflow.nodes[review] ? edgeOut(workflow, review, 'APPROVED')?.to ?? review : review)
 
 /**
  * A run with nothing recorded yet enters its start node, or the node it was started at.
@@ -126,7 +133,7 @@ const approvedTarget = (workflow, review) => (workflow.nodes[review] ? edgeOut(w
  */
 const begin = (workflow, run) => {
   const first = run.start ?? /** @type {{ to: string }} */ (workflow.edges.find((edge) => edge.from === workflow.start)).to
-  return enter(workflow.nodes[first], { visit: 1, attempt: 1, missing: [], feedback: [], instruction: null, sentBy: null, resumed: null, group: null, groups: [] }, run)
+  return enter(workflow.nodes[first], { ...FRESH, visit: 1 }, run)
 }
 
 /**

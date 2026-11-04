@@ -10,7 +10,7 @@ import { modelOf } from '../config/agent-models.mjs'
 import { SCAN, SCANNED_WITH, scanPatch } from '../../domain/review/patch-scan.mjs'
 import { LAID_OUT_WITH, LAYOUT, layoutFindings } from '../../domain/review/test-layout.mjs'
 import { shortLocation, workingCopyOf } from '../../domain/review/locations.mjs'
-import { BLOCKING, blocksReview, composeVerdictFile, decideReview, dissentOf } from '../../domain/review/verdict.mjs'
+import { blocksReview, composeVerdictFile, decideReview, dissentOf } from '../../domain/review/verdict.mjs'
 import { readOrName } from '../shared/workspace-reading.mjs'
 import { takeFromLastPass } from './review-repeats.mjs'
 
@@ -87,8 +87,8 @@ const MAX_ASKS = 2
 /**
  * A review node: the lenses read what the run prepared for them, beside test-integrity the
  * engine reads the patch for G9, the pass takes from the last one what it refuted and what the
- * agent left as it was (`review-repeats.mjs`), the refuter checks the other blocker, high and
- * medium findings unless a lens already blocks the review, then the verdict is computed from
+ * agent left as it was (`review-repeats.mjs`), the refuter checks the other findings, of any
+ * severity, unless a lens already blocks the review, then the verdict is computed from
  * what they answered and written beside the pass's inputs.
  * @param {Review} given
  * @returns {Promise<Stopped | Reviewed>}
@@ -584,7 +584,7 @@ const recordLens = async ({ journal, step, assignments }, { lens, fingerprint },
 }
 
 /**
- * The refuter's word on each group of blocker, high and medium findings the lenses gave in this pass
+ * The refuter's word on each group of findings the lenses gave in this pass
  * (a result kept from the last pass found nothing), one verdict per finding of the group; a
  * group this pass already holds is not asked again, one it answers unreadably twice stays
  * unverifiable.
@@ -634,9 +634,8 @@ const refuterAsking = (review) => ({
  */
 const toRefute = (results, planned, refuterOf) => {
   const dissent = dissentOf(results, ENGINE)
-  return groupFindings(results.flatMap(({ lens, findings }) => findings
-    .filter((finding) => BLOCKING.includes(finding.severity))
-    .map((finding) => ({ lens, finding })))).map((members) => suspectOf(members, planned, { refuterOf, dissent }))
+  return groupFindings(results.flatMap(({ lens, findings }) => findings.map((finding) => ({ lens, finding }))))
+    .map((members) => suspectOf(members, planned, { refuterOf, dissent }))
 }
 
 /** @typedef {(checked: PlannedLens[]) => ResolvedAssignment} RefuterOf */

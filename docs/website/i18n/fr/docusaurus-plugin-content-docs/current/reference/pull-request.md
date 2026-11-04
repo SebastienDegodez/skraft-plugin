@@ -162,18 +162,18 @@ La ligne de décompte ressemble à `Revue : 2 à corriger, 1 note, 13 réfutés`
 
 ### Du constat au statut <!-- #finding-to-status -->
 
-Le réfuteur vérifie chaque constat blocker, high ou medium ; sa réponse et deux faits donnent le statut. Un constat qui serait À corriger et qu'un humain a accepté au plafond de la revue (`review-ceiling`, `ACCEPT`) est Accepté, sa colonne Pourquoi `un humain l'a accepté tel quel au plafond de la revue`.
+Le réfuteur vérifie chaque constat, de toute sévérité et quoi qu'ait répondu sa lentille ; sa réponse et deux faits donnent le statut. Un constat qui serait À corriger et qu'un humain a accepté au plafond de la revue (`review-ceiling`, `ACCEPT`) est Accepté, sa colonne Pourquoi `un humain l'a accepté tel quel au plafond de la revue`.
 
-| Sévérité | Ligne | Réponse du réfuteur | Une lentille seule, les autres passées | Statut | Colonne Pourquoi |
-|---|---|---|---|---|---|
-| low, d'une lentille qui a répondu `fail` | toute | non sollicité | — | À corriger | `faible, d'une lentille en échec : il compte sans réfutation` |
-| low, d'une lentille qui n'a pas échoué | toute | non sollicité | — | Note | vide |
-| blocker, high, medium | inchangée depuis la passe N | non sollicité | — | Note | `nouveau sur une ligne inchangée depuis la passe N` |
-| blocker, high, medium | modifiée | `confirmed` | — | À corriger | `confirmé : <raison>` |
-| blocker, high, medium | modifiée | `unverifiable`, ou sa vérification illisible deux fois | — | À corriger | `non vérifié : <raison>` |
-| blocker, high, medium | modifiée | `refuted` | oui | À trancher | `une seule lentille, contre celles qui sont passées ; réfuté : <raison>` |
-| blocker, high, medium | modifiée | `refuted` | non | Réfuté | `<raison>` |
-| blocker, high, medium | même endroit qu'un constat réfuté à la passe N | non sollicité de nouveau | — | Réfuté | `<raison> (réfuté à la passe N)` |
+| Ligne | Réponse du réfuteur | Une lentille seule, les autres passées | Statut | Colonne Pourquoi |
+|---|---|---|---|---|
+| inchangée depuis la passe N, le constat nouveau à cet endroit | non sollicité | — | Note | `nouveau sur une ligne inchangée depuis la passe N` |
+| modifiée | `confirmed` | — | À corriger | `confirmé : <raison>` |
+| modifiée | `unverifiable`, ou sa vérification illisible deux fois | — | À corriger | `non vérifié : <raison>` |
+| modifiée | `refuted` | oui | À trancher | `une seule lentille, contre celles qui sont passées ; réfuté : <raison>` |
+| modifiée | `refuted` | non | Réfuté | `<raison>` |
+| même endroit qu'un constat réfuté à la passe N | non sollicité de nouveau | — | Réfuté | `<raison> (réfuté à la passe N)` |
+
+Un constat low compte comme les autres : À corriger tant que le réfuteur ne le réfute pas, que sa lentille ait répondu `fail` ou `pass`.
 
 Comment le réfuteur travaille et comment une passe suivante le réutilise : [Réfutation](./gates.md#refutation), [Re-revue incrémentale](./gates.md#incremental).
 

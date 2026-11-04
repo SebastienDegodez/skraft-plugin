@@ -16,15 +16,18 @@ export const acceptedFindings = (events) => events
   .flatMap((answer) => findingsAccepted(events, answer.key))
 
 /**
- * The findings a review-ceiling question asked about; none for a question of another kind.
+ * The findings a review-ceiling question asked about: those of the review step recorded just
+ * before it, which always has some; none for a question of another kind (ACCEPT typed at a
+ * blocked question is an instruction). An answer is journaled only to a question asked before it.
  * @param {RunEvent[]} events @param {string} key
  * @returns {AcceptedFinding[]}
  */
 const findingsAccepted = (events, key) => {
+  // Stryker disable next-line ConditionalExpression: the first event with a question's key is its question.asked: its answer is journaled after it
   const at = events.findIndex((event) => event.type === 'question.asked' && event.key === key)
-  if (at < 0 || events[at].kind !== 'review-ceiling') return []
-  const review = events.slice(0, at).findLast((event) => event.type === 'step.recorded')
-  return (review?.findings ?? []).map((/** @type {import('../review/verdict.mjs').LeftFinding} */ finding) => ({ review: review?.step, ...finding }))
+  if (events[at].kind !== 'review-ceiling') return []
+  const review = /** @type {RunEvent} */ (events.slice(0, at).findLast((event) => event.type === 'step.recorded'))
+  return review.findings.map((/** @type {import('../review/verdict.mjs').LeftFinding} */ finding) => ({ review: review.step, ...finding }))
 }
 
 /**

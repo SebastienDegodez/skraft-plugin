@@ -57,7 +57,7 @@ test('from the second pass, a finding at the place of one the refuter refuted on
         at('F3', 'medium', 'the reworded line hides the owner', 3),
       ]),
     ],
-    'architecture-compliance': [says('architecture-compliance', 'pass'), says('architecture-compliance', 'pass', [at('F5', 'low', 'a name could be clearer', 17)])],
+    'architecture-compliance': [says('architecture-compliance', 'pass'), says('architecture-compliance', 'pass', [at('F5', 'low', 'a name could be clearer', 17, { suggestion: 'name it Owner' })])],
     fitness: [fails('fitness', [at('F1', 'high', 'the latency budget is missing', 3)]), fails('fitness', [at('F1', 'high', 'the latency budget is still missing', 3)])],
     refuter: [refutes('refuted', 'ADR line 12 shows the ADR agrees with the map'), refutes('confirmed'), refutes('refuted', 'line 3 names the owner'), refutes('refuted', 'line 3 states the budget')],
   })
@@ -71,7 +71,7 @@ test('from the second pass, a finding at the place of one the refuter refuted on
     ['consistency', 'F3', 'refuted', 'line 3 names the owner', undefined, passEvents(host, 'review.refuted', 1)[0].assignment.family],
     ['fitness', 'F1', 'refuted', 'line 3 states the budget', undefined, passEvents(host, 'review.refuted', 1)[0].assignment.family],
   ])
-  assert.deepEqual(notedOn(host, 2), ['consistency F2 since 1'])
+  assert.deepEqual(notedOn(host, 2), ['consistency F2 since 1', 'architecture-compliance F5 since 1'])
   assert.deepEqual(reviews(host).slice(0, 2), [['design_review', 1, 'needs-rework', 'design'], ['design_review', 2, 'approved', 'adr']])
   const recorded = host.events().find((event) => event.type === 'step.recorded' && event.step === 'design_review' && event.visit === 2)
   assert.equal(recorded.reason, 'APPROVED: no finding counts; 3 refuted (consistency F1, consistency F3, fitness F1); 2 notes (consistency F2, architecture-compliance F5)')
@@ -79,7 +79,8 @@ test('from the second pass, a finding at the place of one the refuter refuted on
   assert.ok(verdict.includes(`\nfindings: []\nnotes:\n  - lens: "consistency"\n    id: "F2"\n    gate: "G1"\n    severity: "high"\n    location: "${ADR}:15"\n    description: "two contexts own payments"\n    suggestion: null\n    severityReason: "high by the criterion"\n    drift: "structural"\n    occurrences: "${ADR}:15"\n    since: 1\n  - lens: "architecture-compliance"\n    id: "F5"`), verdict)
   assert.ok(verdict.includes('\nrefutations:\n  - lens: "consistency"\n    finding: "F1"\n    verdict: "refuted"\n    reason: "ADR line 12 shows the ADR agrees with the map"\n    carried: 1\n  - lens: "consistency"\n    finding: "F3"\n    verdict: "refuted"\n    reason: "line 3 names the owner"\n  - lens: "fitness"\n    finding: "F1"\n    verdict: "refuted"\n    reason: "line 3 states the budget"\nreused:'), verdict)
   assert.ok(host.progress.lines.some((line) => line.includes(`refuted: consistency F1 G1 blocker at ${ADR}:12:5: the ADR still contradicts the map, worded anew — ADR line 12 shows the ADR agrees with the map (carried over from pass 1)`)), host.progress.lines.join('\n'))
-  assert.ok(host.progress.lines.some((line) => line.includes(`note: consistency F2 G1 high at ${ADR}:15: two contexts own payments (new on a line unchanged since pass 1)`)), host.progress.lines.join('\n'))
+  assert.ok(host.progress.lines.includes(`  note: consistency F2 G1 high at ${ADR}:15: two contexts own payments (new on a line unchanged since pass 1)`), host.progress.lines.join('\n'))
+  assert.ok(host.progress.lines.includes(`  note: architecture-compliance F5 G1 low at ${ADR}:17: a name could be clearer (new on a line unchanged since pass 1) (suggestion: name it Owner)`), host.progress.lines.join('\n'))
   const snapshot = JSON.parse(await host.tracking.read(SLUG, 'reviews/design_review-2/snapshot.json'))
   assert.equal(snapshot[ADR], adr({ third: 'line 3, reworked' }))
   const description = await host.tracking.read(SLUG, 'pull-request.md')
@@ -90,7 +91,7 @@ test('from the second pass, a finding at the place of one the refuter refuted on
     '| Status | Severity | Lens | Location | Finding | Why |',
     '| --- | --- | --- | --- | --- | --- |',
     `| Note | high | consistency F2 G1 | \`${ADR}:15\` | two contexts own payments | new on a line unchanged since pass 1 |`,
-    `| Note | low | architecture-compliance F5 G1 | \`${ADR}:17\` | a name could be clearer |  |`,
+    `| Note | low | architecture-compliance F5 G1 | \`${ADR}:17\` | a name could be clearer | new on a line unchanged since pass 1 |`,
     '',
     '<details><summary>3 refuted</summary>',
     '',
@@ -138,7 +139,7 @@ test('a finding on a line the agent changed, at a place the refuter confirmed, o
   assert.equal(ceiling.text.includes('consistency F7'), false, ceiling.text)
 })
 
-test('a finding at a line whose text the file now holds twice, in a file one pass could not read, or without a line where the last one had one, is no repeat: the refuter checks it again; a new one of another gate, another path, another lens or a low one before is a note on an unchanged line', async () => {
+test('a finding at a line whose text the file now holds twice, in a file one pass could not read, or without a line where the last one had one, is no repeat: the refuter checks it again; a new one of another gate, another path or another lens is a note on an unchanged line; one where a low one was refuted carries that refutation', async () => {
   const host = scripted({ files: { [ADR]: adr() } }, designReworking({ seventh: 'line 12' }))
   host.agentRunner.review = lenses({
     consistency: [
@@ -154,14 +155,14 @@ test('a finding at a line whose text the file now holds twice, in a file one pas
       ]),
     ],
     fitness: [fails('fitness', [at('F1', 'high', 'the latency budget is missing', 5), at('F2', 'high', 'the latency budget is missing', 16)])],
-    refuter: answers('refuted', 'refuted', 'refuted', 'refuted', 'refuted', 'refuted', 'refuted', 'confirmed', 'refuted', 'refuted', 'refuted', 'refuted'),
+    refuter: answers('refuted', 'refuted', 'refuted', 'refuted', 'refuted', 'refuted', 'refuted', 'refuted', 'confirmed', 'refuted', 'refuted', 'refuted', 'refuted'),
   })
 
   await host.start()
 
   assert.deepEqual(checkedOn(host, 2), ['refute consistency F1', 'refute consistency F3', 'refute consistency F8'])
-  assert.deepEqual(passEvents(host, 'review.refuted', 2).map(({ finding: id, carried }) => [id, carried]), [['F1', undefined], ['F3', undefined], ['F8', undefined]])
-  assert.deepEqual(notedOn(host, 2), ['consistency F2 since 1', 'consistency F4 since 1', 'consistency F6 since 1', 'consistency F7 since 1', 'consistency F9 since 1', 'consistency F11 since 1'])
+  assert.deepEqual(passEvents(host, 'review.refuted', 2).map(({ finding: id, carried }) => [id, carried]), [['F4', 1], ['F1', undefined], ['F3', undefined], ['F8', undefined]])
+  assert.deepEqual(notedOn(host, 2), ['consistency F2 since 1', 'consistency F6 since 1', 'consistency F7 since 1', 'consistency F9 since 1', 'consistency F11 since 1'])
   assert.deepEqual(reviews(host)[1], ['design_review', 2, 'approved', 'adr'])
   const snapshot = JSON.parse(await host.tracking.read(SLUG, 'reviews/design_review-1/snapshot.json'))
   assert.equal(snapshot['docs/missing.md'], null)
