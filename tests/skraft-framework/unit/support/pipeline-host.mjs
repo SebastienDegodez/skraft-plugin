@@ -15,6 +15,11 @@ import {
 } from './in-memory-host.mjs'
 
 export const SLUG = 'checkout'
+/**
+ * The docs folders the plugin's agents write in, as a repository that already has them holds
+ * them; a scenario of a repository without them deletes them from the workspace.
+ */
+export const DOCS_FOLDERS = Object.freeze({ 'docs/adr/.gitkeep': '', 'docs/domain/event-model/.gitkeep': '', 'docs/features/.gitkeep': '' })
 /** The consent questions the default workflow asks before its first agent. */
 export const CONSENTS = Object.freeze(['publish_consent', 'visuals_consent'])
 export const RESEARCH_TEMPLATE = '<!-- markdownlint-disable-file -->\n# Research: {{topic}}\n'
@@ -61,7 +66,7 @@ export const pipelineHost = ({
     agentRunner: new ScriptedAgentRunner(behaviours),
     human: new ScriptedHuman(answers),
     progress: new RecordingProgress(),
-    workspace: new InMemoryWorkspace({ 'skraft-config.json': JSON.stringify({ ...answered, ...config, components }), 'docs/architecture/context-map.md': '# Context map\n', ...files }),
+    workspace: new InMemoryWorkspace({ 'skraft-config.json': JSON.stringify({ ...answered, ...config, components }), ...DOCS_FOLDERS, 'docs/architecture/context-map.md': '# Context map\n', ...files }),
     userSettings: new InMemoryUserSettings(user),
     sourceControl: git,
     commandRunner: machine ?? new ScriptedMachine({ clock }),
