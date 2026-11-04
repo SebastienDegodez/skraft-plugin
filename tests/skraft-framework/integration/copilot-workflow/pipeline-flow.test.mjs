@@ -59,10 +59,12 @@ test('the four phases run on a real repository: each agent commits its part, the
   assert.deepEqual(events.filter((event) => event.type === 'phase.closed').map((event) => event.phase), ['RESEARCH', 'DESIGN', 'DISTILL', 'DELIVER', 'PUBLISH'])
   assert.deepEqual(events.filter((event) => event.type === 'gate.ran').map(({ component, gate, status }) => `${component}/${gate} ${status}`), ['app/test pass', 'app/mutation pass'])
   assert.deepEqual(events.filter((event) => event.type === 'commits.checked').map(({ step, commits }) => [step, commits.map(({ subject, kind, verdict, replay }) => [subject, kind, verdict, replay?.exitCode ?? null])]), [
-    ['design', [[`docs(${SLUG}): record the card payment decision`, 'other', 'ok', null]]],
     ['distill', [[`test(${SLUG}): pay by card`, 'red', 'ok', 1]]],
     ['deliver', [[`test(${SLUG}): pay a card amount`, 'red', 'ok', 1], [`feat(${SLUG}): pay by card`, 'green', 'ok', null]]],
   ])
+  assert.deepEqual(events.filter((event) => event.type === 'step.recorded' && event.step === 'design').map((event) => event.committed.subject), [`docs(${SLUG}): design ${SLUG}`])
+  assert.equal(git(cwd, 'log', '--format=%B', '--fixed-strings', `--grep=docs(${SLUG}): design ${SLUG}`), `docs(${SLUG}): design ${SLUG}\n\nRefs: #42`)
+  assert.equal(git(cwd, 'status', '--porcelain'), '')
   const finished = events.filter((event) => event.type === 'run.finished')
   assert.deepEqual(finished.map(({ status, reason }) => [status, reason]), [['completed', 'PUBLISH closed']])
   issueProgressKept(cwd, events)
@@ -206,13 +208,13 @@ test('replaying red commits for more than a fifth of a phase warns the developer
   const last = await runOn(lastRed.cwd, { acts })
 
   assert.deepEqual([all.outcome.status, last.outcome.status], ['done', 'done'], `${all.outcome.reason} / ${last.outcome.reason}`)
-  assert.deepEqual(replaysOf(all.events), [['design', [null]], ['distill', [1]], ['deliver', [1, 1, null]]])
+  assert.deepEqual(replaysOf(all.events), [['distill', [1]], ['deliver', [1, 1, null]]])
   const slow = all.events.filter((event) => event.type === 'tdd.replay-slow')
   assert.deepEqual(slow.map(({ phase }) => phase), ['DISTILL', 'DELIVER'])
   assert.ok(slow.every(({ replayMs, phaseMs }) => replayMs >= 1000 && replayMs > 0.2 * phaseMs), JSON.stringify(slow))
   const warnings = (logs) => logs.filter((line) => line.includes('replaying test commits took'))
   assert.deepEqual(warnings(all.logs).map((line) => line.replace(/took \d+%/, 'took N%')), ['DISTILL', 'DELIVER'].map((phase) => `${SLUG}: replaying test commits took N% of ${phase}; set "tdd": { "replay": "last-red" } in skraft-config.json to replay only the last test commit of each story`))
-  assert.deepEqual(replaysOf(last.events), [['design', [null]], ['distill', [1]], ['deliver', [null, 1, null]]])
+  assert.deepEqual(replaysOf(last.events), [['distill', [1]], ['deliver', [null, 1, null]]])
   assert.deepEqual(last.events.filter((event) => event.type === 'tdd.replay-slow'), [])
   assert.deepEqual(warnings(last.logs), [])
 })

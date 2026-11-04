@@ -110,3 +110,16 @@ test('a skill found nowhere is named in the brief with its component, never read
   assert.deepEqual(sectionLines(distill, NOWHERE), [])
   assert.ok(deliver.includes('- orders: orders (java), mocking: microcks, contract testing: on, tests: mvn test\n'), deliver)
 })
+
+test('the acceptance designer is told the review criteria to check its outputs against, wherever they are found, and nothing when nobody provides them', async () => {
+  const CHECK = (path) => `- Before you write your result, check your outputs against every gate of ${path}, the gates the review of your phase judges them by, and fix each one they fail.`
+  const repository = scripted({ catalog: new InMemoryAgentCatalog({ skillRoot: '/work/.github/skills', skillFiles: { 'acceptance-review-criteria': SKILL_TEXT } }) }, (it) => nominal(it, REFS_42))
+  await repository.start({ story: { issue: 42, title: 'Pay by card' } })
+  const [, design, distill, deliver] = repository.agentRunner.dispatches.map((dispatch) => dispatch.prompt)
+  assert.ok(distill.endsWith(`\n${CHECK('/work/.github/skills/acceptance-review-criteria/SKILL.md')}`), distill)
+  assert.ok(![design, deliver].some((prompt) => prompt.includes('check your outputs against every gate')))
+
+  const nowhere = scripted({ catalog: catalogOf({}, []) }, (it) => nominal(it, REFS_42))
+  await nowhere.start({ story: { issue: 42, title: 'Pay by card' } })
+  assert.ok(!nowhere.agentRunner.dispatches[2].prompt.includes('check your outputs against every gate'), nowhere.agentRunner.dispatches[2].prompt)
+})

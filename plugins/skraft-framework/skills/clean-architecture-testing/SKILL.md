@@ -41,11 +41,14 @@ A test asserting `new PolicyNumber("abc").value == "abc"` is noise. It tests the
 
 | Ecosystem | `UnitTest` project | `IntegrationTest` project |
 |---|---|---|
-| .NET | `tests/<Context>.UnitTest/` csproj | `tests/<Context>.IntegrationTest/` csproj |
-| Java (Maven / Gradle) | `<context>-unit-test` module | `<context>-integration-test` module |
+| .NET | `tests/<Context>.UnitTest/` csproj; an existing `.UnitTests`, `.Unit.Test(s)` or `.Test(s)` project is it | `tests/<Context>.IntegrationTest/` csproj; an existing `.IntegrationTests` or `.Integration.Test(s)` project is it |
+| Java (Maven / Gradle) | `<context>-unit-test` module (`-unit-tests` too) | `<context>-integration-test` module (`-integration-tests` too) |
 | Python | `tests/unit/` package | `tests/integration/` package |
 | React front end (Vitest) | `tests/unit/` folder | `tests/integration/` folder |
 | TypeScript / Node | `tests/unit/` folder | `tests/integration/` folder |
+
+Name a new project or module in the singular. `tests/` stands for the component's test path in
+`skraft-config.json` (`paths.tests`); a test path itself named `unit` or `integration` is that place.
 
 ### Multi-context solutions
 

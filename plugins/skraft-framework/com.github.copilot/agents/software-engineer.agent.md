@@ -68,6 +68,7 @@ Work one scenario at a time, in the order of the implementation plan. DISTILL wr
    Then commit the code.
 6. **Refactor commit** only for test code (`test-refactoring-catalog`) or a change your brief's feedback names, under green; never to clean up a green written dirty.
 7. Append one line per commit to the change log your brief lists: `<short sha> <subject>`, plus its `PLAN_DEVIATION` if any.
+8. **Before writing your result**, on every pass: run the component's `build`, `format`, `lint` and `test` commands (`craft-discipline` C3, C4: your brief, else `commands` of the component in `skraft-config.json`) and fix every failure; commit format and lint fixes as `style`.
 
 ## Commits
 
@@ -87,6 +88,6 @@ Work one scenario at a time, in the order of the implementation plan. DISTILL wr
 - A test that fails because no container runtime answers (Testcontainers or Microcks cannot reach Docker or Podman): change no mocking strategy, skip no test; stop, blocked, naming the component and asking for Docker or Podman to be started before its tests run again.
 - Never edit a failing test to make it pass; change the production code. After three failed attempts at the same green, reset to the last green commit and stop, blocked, naming the test and the approaches tried.
 - Make no architecture choice that the ADRs among your inputs do not cover: stop, blocked, naming it.
-- On a new pass, the feedback in your brief is the whole scope: the plans, the acceptance tests and your previous commits stand. Change only what a finding or a failing gate names.
+- On a new pass, the feedback in your brief is the whole scope: the plans, the acceptance tests and your previous commits stand. Change only what a finding or a failing gate names, at every place of your change that breaks the same rule, not only the line it cites; check `craft-discipline` C7 and C10 on every class you write in the pass.
 - A brief that asks you to propose how to treat surviving mutants: read the code and the tests each mutant touches, run no mutation tool, and pick one outcome per mutant, in this order: `test:` when an input an acceptance criterion allows tells the mutant from the code; `delete:` when no behaviour of the story and no existing test asks for that code; `equivalent:` only when no input can tell them apart, with the reason.
 - A brief whose feedback is the developer's choice for the surviving mutants: apply, mutant by mutant, the outcome that choice names, from the proposal files it cites or from its own words where they differ; make no other change.

@@ -151,17 +151,28 @@ const answerOf = async ({ answers, efforts }, agentId, effort) => {
  * @returns {Promise<{ agentId: string, model: string | null } | { refused: AgentAnswer }>}
  */
 const spawnSubagent = async (spawn, args) => {
-  /** @type {SpawnResult} */
-  let spawned
-  try {
-    spawned = await spawn(args)
-  } catch {
-    return { refused: notStarted(`${args.subagentType} could not be started`) }
-  }
+  const spawned = await spawnTwice(spawn, args)
+  if (spawned === null) return { refused: notStarted(`${args.subagentType} could not be started`) }
   if (typeof spawned.deny === 'string' || typeof spawned.agentId !== 'string') {
     return { refused: notStarted(spawned.deny ?? `${args.subagentType} was not started`) }
   }
   return { agentId: spawned.agentId, model: typeof spawned.model === 'string' ? spawned.model : args.model ?? null }
+}
+
+/**
+ * What `$.agent.spawn` answers, asked once more when it rejects: one spawn of many in a review
+ * rejected while the others started (Claude Code 2.1.316). Null when it rejects twice.
+ * @param {SpawnHost['spawn']} spawn @param {SpawnArgs} args @returns {Promise<SpawnResult | null>}
+ */
+const spawnTwice = async (spawn, args) => (await spawnOnce(spawn, args)) ?? spawnOnce(spawn, args)
+
+/** @param {SpawnHost['spawn']} spawn @param {SpawnArgs} args @returns {Promise<SpawnResult | null>} */
+const spawnOnce = async (spawn, args) => {
+  try {
+    return await spawn(args)
+  } catch {
+    return null
+  }
 }
 
 /** @param {string} error @returns {AgentAnswer} */

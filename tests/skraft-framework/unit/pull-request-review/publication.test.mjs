@@ -1,10 +1,16 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { API } from '../support/pipeline-host.mjs'
-import { finding, lenses, PULL_REQUEST, REVIEWS, reviewHost, says, SLUG, TEST_FILE, weakensAssertion } from './support.mjs'
+import { finding, lenses, PULL_REQUEST, refutes, REVIEWS, reviewHost, says, SLUG, TEST_FILE, weakensAssertion } from './support.mjs'
 
 const CONSENT = 'May skraft keep one comment on the pull request it reviews with skraft review --pr --publish, rewritten at each review, with the verdict and the findings? It is posted as you. ACCEPTED or DECLINED; the answer is kept in ~/.skraft/config.json for this repository, for every later review.'
 const URL = 'https://github.example.com/acme/shop/pull/12#issuecomment-901'
+const HEADER = '| Status | Severity | Lens | Location | Finding | Why |'
+const RULE = '| --- | --- | --- | --- | --- | --- |'
+const LONG_CLAIM = 'the assertion that checked the discount above 100 is gone, so a refactoring of Apply can drop the rule unseen'
+const LONG_REASON = 'Discount.cs:3 names the threshold in a constant, MinimumOrder, which the test file quotes word for word'
+const FR_HEADER = '| Statut | Sévérité | Lentille | Emplacement | Constat | Pourquoi |'
+const CLAIM_100 = 'the discount applies after the tax is computed, which skews the total of every order above 100 euros'
 const KEPT = (accepted) => ({ reviewComments: { 'github.com/acme/shop': { accepted, questionVersion: 1 } } })
 
 /** A pull request whose head commit the working copy stands on. @param {Parameters<typeof reviewHost>[0]} [options] */
@@ -24,14 +30,14 @@ test('--publish twice keeps one comment on the pull request, rewritten with each
   const first = await host.review({ publish: true })
 
   assert.deepEqual([first.status, first.comment, first.unpublished], ['NEEDS_REWORK', URL, null])
-  assert.deepEqual(host.human.questions.map(({ key, kind, text, options, refusals, header }) => [key, kind, text, options, refusals, header]), [['review_consent-1', 'review-consent', CONSENT, ['ACCEPTED', 'DECLINED'], [], 'Review comment']])
+  assert.deepEqual(host.human.questions.map(({ key, kind, text, options, refusals, header }) => [key, kind, text, options, refusals, header]), [['review_consent-1', 'review-consent', CONSENT, ['ACCEPTED', 'DECLINED'], [], 'PR comment']])
   assert.deepEqual(host.userSettings.json(), KEPT(true))
   assert.equal(await host.workspace.read('skraft-config.json'), null)
   assert.equal(host.pullRequests.comments[0].body, [
     '### skraft review · #12 — NEEDS_REWORK (pass 1)', '',
-    'NEEDS_REWORK: 1 reason to address', '',
-    'To address:',
-    `- test-integrity F1 G9 blocker at ${TEST_FILE}:14: the assertion \`@alice\` wrote is gone`, '',
+    'Review: 1 to fix', '',
+    HEADER, RULE,
+    `| To fix | blocker | test-integrity F1 G9 | \`${TEST_FILE}:14\` | the assertion \`@alice\` wrote is gone | confirmed: confirmed by the patch |`, '',
     '<sub>skraft-review pr=12</sub>', '',
   ].join('\n'))
   assert.equal(await host.reviews.read(SLUG, 'comment.md'), host.pullRequests.comments[0].body)
@@ -178,13 +184,101 @@ test('a stopped review publishes nothing', async () => {
   assert.deepEqual(host.pullRequests.comments, [])
 })
 
-test('the comment lists what does not send the work back under Not counted', async () => {
+test('the comment is one table by status: what to fix, what one lens alone found to decide, the notes, the refuted ones folded with the refuter\'s reason, long texts cut', async () => {
   const host = reviewed({ config: { components: [API], publish: { reviewComment: true } } })
-  host.agentRunner.review = lenses({ 'cold-reader': [says('cold-reader', 'pass', [finding('F1', 'low', 'name the total', { gate: 'C2' })])] })
+  host.agentRunner.review = lenses({
+    'test-integrity': [says('test-integrity', 'fail', [
+      finding('F1', 'blocker', LONG_CLAIM, { gate: 'G9', location: `${TEST_FILE}:14` }),
+      finding('F2', 'high', 'the discount rule has no test', { gate: 'G7', location: `${TEST_FILE}:20` }),
+    ])],
+    'cold-reader': [says('cold-reader', 'fail', [finding('F1', 'medium', 'Apply hides the threshold', { gate: 'C1', location: 'src/Discount.cs:3' }), finding('F2', 'low', 'name the total', { gate: 'C2' })])],
+    refuter: [refutes('confirmed', 'the patch drops the assertion'), refutes('unverifiable', 'no rule names the discount test'), refutes('refuted', LONG_REASON)],
+  })
 
   await host.review({ publish: true })
 
-  assert.ok(host.pullRequests.comments[0].body.includes('\n\nNot counted:\n- note: cold-reader F1 C2 low at src/Checkout.cs:12: name the total\n\n<sub>skraft-review pr=12</sub>\n'), host.pullRequests.comments[0].body)
+  assert.equal(host.pullRequests.comments[0].body, [
+    '### skraft review · #12 — NEEDS_REWORK (pass 1)', '',
+    'Review: 2 to fix, 1 note, 1 refuted', '',
+    HEADER, RULE,
+    `| To fix | blocker | test-integrity F1 G9 | \`${TEST_FILE}:14\` | the assertion that checked the discount above 100 is gone, so a refactoring of Apply can drop the r… | confirmed: the patch drops the assertion |`,
+    `| To fix | high | test-integrity F2 G7 | \`${TEST_FILE}:20\` | the discount rule has no test | not verified: no rule names the discount test |`,
+    '| Note | low | cold-reader F2 C2 | `src/Checkout.cs:12` | name the total |  |',
+    '',
+    '<details><summary>1 refuted</summary>',
+    '',
+    HEADER, RULE,
+    '| Refuted | medium | cold-reader F1 C1 | `src/Discount.cs:3` | Apply hides the threshold | Discount.cs:3 names the threshold in a constant, MinimumOrder, which the test file quotes word for… |',
+    '',
+    '</details>',
+    '',
+    '<sub>skraft-review pr=12</sub>', '',
+  ].join('\n'))
+})
+
+test('the comment on a French pull request is in French: what one lens alone found and the refuter refuted is to decide; on the next pass a refutation carried over is folded, a finding new on an unchanged line is a note, a claim of 100 characters is shown whole; each pass shows its own findings', async () => {
+  const french = { ...PULL_REQUEST, title: 'Remise au panier', body: 'Applique une remise de 10 % sur les commandes de plus de 100 euros, pour les clients qui ont un compte.' }
+  const lines = Array.from({ length: 12 }, (_, n) => `        // ligne ${n + 1}`).join('\n')
+  const host = reviewed({ pullRequest: french, files: { [TEST_FILE]: `${lines}\n` }, config: { components: [API], publish: { reviewComment: true } } })
+  host.agentRunner.review = lenses({
+    'test-integrity': [
+      says('test-integrity', 'fail', [
+        finding('F1', 'high', 'the threshold is not tested', { gate: 'G7', location: `${TEST_FILE}:3` }),
+        finding('F2', 'medium', 'the rounding is not tested', { gate: 'G7', location: `${TEST_FILE}:5` }),
+      ]),
+      says('test-integrity', 'fail', [
+        finding('F1', 'high', 'the threshold is still not tested', { gate: 'G7', location: `${TEST_FILE}:3` }),
+        finding('F3', 'high', 'the currency is not tested', { gate: 'G7', location: `${TEST_FILE}:8` }),
+        finding('F4', 'low', 'name the total', { gate: 'G7' }),
+        finding('F5', 'medium', 'Apply hides the threshold', { gate: 'G9', location: 'src/Discount.cs:2' }),
+        finding('F6', 'high', CLAIM_100, { gate: 'G9', location: 'src/Discount.cs:4' }),
+      ]),
+      says('test-integrity', 'pass', [finding('F3', 'low', 'the currency could be tested', { gate: 'G7', location: `${TEST_FILE}:8` })]),
+    ],
+    refuter: [refutes('refuted', 'line 3 tests 100 and 101'), refutes('refuted', 'line 5 rounds'), refutes('confirmed', 'Apply names no threshold'), refutes('unverifiable', 'no rule names the order')],
+  })
+
+  await host.review({ publish: true })
+
+  assert.equal(host.pullRequests.comments[0].body, [
+    '### skraft review · #12 — APPROVED (passe 1)', '',
+    'Revue : 2 à trancher', '',
+    FR_HEADER, RULE,
+    `| À trancher | high | test-integrity F1 G7 | \`${TEST_FILE}:3\` | the threshold is not tested | une seule lentille, contre celles qui sont passées ; réfuté : line 3 tests 100 and 101 |`,
+    `| À trancher | medium | test-integrity F2 G7 | \`${TEST_FILE}:5\` | the rounding is not tested | une seule lentille, contre celles qui sont passées ; réfuté : line 5 rounds |`, '',
+    '<sub>skraft-review pr=12</sub>', '',
+  ].join('\n'))
+
+  await host.review({ publish: true })
+
+  assert.equal(host.pullRequests.comments[0].body, [
+    '### skraft review · #12 — NEEDS_REWORK (passe 2)', '',
+    'Revue : 2 à corriger, 2 notes, 1 réfuté', '',
+    FR_HEADER, RULE,
+    '| À corriger | medium | test-integrity F5 G9 | `src/Discount.cs:2` | Apply hides the threshold | confirmé : Apply names no threshold |',
+    `| À corriger | high | test-integrity F6 G9 | \`src/Discount.cs:4\` | ${CLAIM_100} | non vérifié : no rule names the order |`,
+    `| Note | high | test-integrity F3 G7 | \`${TEST_FILE}:8\` | the currency is not tested | nouveau sur une ligne inchangée depuis la passe 1 |`,
+    '| Note | low | test-integrity F4 G7 | `src/Checkout.cs:12` | name the total |  |',
+    '',
+    '<details><summary>1 réfuté</summary>',
+    '',
+    FR_HEADER, RULE,
+    `| Réfuté | high | test-integrity F1 G7 | \`${TEST_FILE}:3\` | the threshold is still not tested | line 3 tests 100 and 101 (réfuté à la passe 1) |`,
+    '',
+    '</details>',
+    '',
+    '<sub>skraft-review pr=12</sub>', '',
+  ].join('\n'))
+
+  await host.review({ publish: true })
+
+  assert.equal(host.pullRequests.comments[0].body, [
+    '### skraft review · #12 — APPROVED (passe 3)', '',
+    'Revue : 1 note', '',
+    FR_HEADER, RULE,
+    `| Note | low | test-integrity F3 G7 | \`${TEST_FILE}:8\` | the currency could be tested |  |`, '',
+    '<sub>skraft-review pr=12</sub>', '',
+  ].join('\n'))
 })
 
 test('a review comment is commented once read back at its URL; one the forge does not show is verification-failed, one whose answer is lost unknown: neither is said published', async () => {

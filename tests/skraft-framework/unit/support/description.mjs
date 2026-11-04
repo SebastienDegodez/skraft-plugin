@@ -4,12 +4,15 @@ import assert from 'node:assert/strict'
 /** Where a section starts: its heading, or the summary of the block that folds it. */
 const START = /\n(?:## |<details(?: open)?><summary>)/g
 
+/** A block folded inside a section: the dark screenshots, a review's refuted findings under their count. */
+const nested = (summary) => ['Dark theme', 'Thème sombre'].some((name) => summary.startsWith(name)) || /^\d+ (?:refuted|réfutés?)</.test(summary)
+
 /**
  * The text of a section of a description, between its heading, or the summary that folds it, and
  * the next section; a folded section without the end of its block.
  */
 export const section = (text, heading) => {
-  const starts = [...text.matchAll(START)].filter((start) => !text.startsWith('Dark theme', start.index + start[0].length))
+  const starts = [...text.matchAll(START)].filter((start) => !nested(text.slice(start.index + start[0].length)))
   const own = starts.findIndex((start) => new RegExp(`^${heading}(?:: [^\\n]*)?(?:</summary>)?\\n`).test(text.slice(start.index + start[0].length)))
   assert.ok(own >= 0, `no section ${heading} in\n${text}`)
   const from = text.indexOf('\n', starts[own].index + 1)

@@ -12,6 +12,7 @@ import { LAID_OUT_WITH, LAYOUT, layoutFindings } from '../../domain/review/test-
 import { shortLocation, workingCopyOf } from '../../domain/review/locations.mjs'
 import { BLOCKING, blocksReview, composeVerdictFile, decideReview, dissentOf } from '../../domain/review/verdict.mjs'
 import { readOrName } from '../shared/workspace-reading.mjs'
+import { takeFromLastPass } from './review-repeats.mjs'
 
 /**
  * @typedef {import('../../domain/review/lenses.mjs').Lens} Lens
@@ -75,7 +76,7 @@ import { readOrName } from '../shared/workspace-reading.mjs'
  *   where the pass's verdict.yaml is, absolute.
  * @typedef {import('../ports/agent-catalog.mjs').SkillFile} SkillFile
  * @typedef {import('../../domain/config/model-assignment.mjs').ResolvedAssignment} ResolvedAssignment
- * @typedef {{ lens: Lens, inputs: TrackedInput[], skills: SkillFile[], fingerprint: string, known: Finding[], unchanged: boolean }} PlannedLens
+ * @typedef {{ lens: Lens, inputs: TrackedInput[], skills: SkillFile[], descriptor: string, fingerprint: string, known: Finding[], unchanged: boolean }} PlannedLens
  *   skills: the skills the lens declares, with their SKILL.md; known: the engine's findings the
  *   lens is told not to report again.
  */
@@ -85,9 +86,10 @@ const MAX_ASKS = 2
 
 /**
  * A review node: the lenses read what the run prepared for them, beside test-integrity the
- * engine reads the patch for G9, the refuter checks the blocker, high and medium findings unless
- * a lens already blocks the review, then the verdict is computed from what they answered and
- * written beside the pass's inputs.
+ * engine reads the patch for G9, the pass takes from the last one what it refuted and what the
+ * agent left as it was (`review-repeats.mjs`), the refuter checks the other blocker, high and
+ * medium findings unless a lens already blocks the review, then the verdict is computed from
+ * what they answered and written beside the pass's inputs.
  * @param {Review} given
  * @returns {Promise<Stopped | Reviewed>}
  */
@@ -108,10 +110,28 @@ const reviewPrepared = async (review, prepared) => {
   if ('stop' in lensed) return lensed
   const scanned = await scanOf(review, planned, prepared)
   const results = [...lensed.results, ...scanned.map(({ result }) => result)]
-  const refuted = blocksReview(results) ? { refutations: [] } : await refutations(review, [...planned, ...scanned.map(({ entry }) => entry)], results)
+  const taken = await takeFromLastPass(review, { prepared, results, engine: ENGINE, journaled: (type) => eventsOfThisPass(review, type), last: (type) => eventsOf(review, type).filter(({ visit }) => visit === review.step.visit - 1) })
+  const refuted = blocksReview(results) ? { refutations: [] } : await refutations(review, [...planned, ...scanned.map(({ entry }) => entry)], openResults(results, taken))
   if ('stop' in refuted) return refuted
-  return reviewed(review, await decide(review, { results, reused: lensed.reused, ...refuted }))
+  return reviewed(review, await decide(review, { results, reused: lensed.reused, refutations: withCarried(taken.carried, refuted.refutations), unchanged: taken.unchanged }))
 }
+
+/**
+ * The refutations of the pass, those it carried over first, each once: a carried one, journaled,
+ * also stands among the checks a resumed pass holds.
+ * @param {RecordedRefutation[]} carried @param {RecordedRefutation[]} checked
+ */
+const withCarried = (carried, checked) => [...carried, ...checked.filter((one) => !carried.some(({ lens, finding }) => lens === one.lens && finding === one.finding))]
+
+/**
+ * The results without the findings the pass took from the last one: the refuter checks only the others.
+ * @param {LensResult[]} results @param {import('./review-repeats.mjs').Taken} taken
+ * @returns {LensResult[]}
+ */
+const openResults = (results, { carried, unchanged }) => results.map((result) => ({
+  ...result,
+  findings: result.findings.filter((finding) => ![...carried, ...unchanged].some(({ lens, finding: id }) => lens === result.lens && id === finding.id)),
+}))
 
 /**
  * What the briefs say of the working copy's rule files: nothing when they are the project's; when
@@ -156,7 +176,7 @@ const scanOf = async (review, planned, prepared) => {
   for (const check of found) {
     const result = /** @type {LensResult} */ ({ lens: check.id, verdict: 'fail', findings: check.findings })
     if (!journaled.some((event) => event.lens === check.id)) await recordScan(review, result)
-    scanned.push({ result, entry: scanEntry(prepared, check) })
+    scanned.push({ result, entry: scanEntry(prepared, check, planned) })
   }
   return scanned
 }
@@ -168,26 +188,32 @@ const recordScan = ({ journal, step }, { lens, verdict, findings }) => journal.a
 const SCAN_AGENT = 'skraft-engine'
 
 /**
- * An engine check as the refuter sees it: the patch and the changed paths, no skill, under the
- * name of the lens it reports for; only the id and the name of its lens are read.
- * @param {Prepared} prepared @param {EngineCheck} check @returns {PlannedLens}
+ * An engine check as the refuter sees it: the patch and the changed paths, and the skills and
+ * the descriptor of the lens it reports for, which state the gate it checks, under that lens's
+ * name; only the id and the name of its lens are read.
+ * @param {Prepared} prepared @param {EngineCheck} check @param {PlannedLens[]} planned
+ * @returns {PlannedLens}
  */
-const scanEntry = (prepared, { id, joins }) => ({
+const scanEntry = (prepared, { id, joins }, planned) => ({
   lens: /** @type {Lens} */ ({ id, name: joins }),
   inputs: [...prepared.inputs.patch.map((path) => ({ kind: /** @type {InputKind} */ ('patch'), path })), ...prepared.inputs.files.map((path) => ({ kind: /** @type {InputKind} */ ('files'), path }))],
-  skills: [],
+  ...skillsAndDescriptor(/** @type {PlannedLens} */ (planned.find(({ lens }) => lens.name === joins))),
   fingerprint: '',
   known: [],
   unchanged: false,
 })
 
+/** What states the rules of a lens: its skills and its descriptor. @param {PlannedLens} entry */
+const skillsAndDescriptor = ({ skills, descriptor }) => ({ skills, descriptor })
+
 /**
  * The verdict of the pass, written beside its inputs.
- * @param {Review} review @param {{ results: LensResult[], refutations: RecordedRefutation[], reused: string[] }} pass
+ * @param {Review} review
+ * @param {{ results: LensResult[], refutations: RecordedRefutation[], reused: string[], unchanged: import('../../domain/review/verdict.mjs').UnchangedFinding[] }} pass
  */
-const decide = async (review, { results, refutations: checked, reused }) => {
-  const verdict = decideReview(results, checked)
-  await review.deps.files.write(review.slug, verdictPath(review.step.node.id, review.step.visit), composeVerdictFile({ verdict, results, refutations: checked, reused }))
+const decide = async (review, { results, refutations: checked, reused, unchanged }) => {
+  const verdict = decideReview(results, checked, unchanged)
+  await review.deps.files.write(review.slug, verdictPath(review.step.node.id, review.step.visit), composeVerdictFile({ verdict, results, refutations: checked, reused, unchanged }))
   return verdict
 }
 
@@ -378,9 +404,11 @@ const planLensInputs = async (review, prepared) => Promise.all(planLenses(review
   const tracked = lens.scope === null ? prepared.inputs : { ...prepared.inputs, ...prepared.scoped[lens.scope].inputs }
   const inputs = kinds.flatMap((kind) => tracked[kind].map((path) => ({ kind, path })))
   const skills = (await review.deps.agentCatalog.skills(lens.agent)).found
+  // A lens the review runs is one the catalog located when the workflow loaded, so its descriptor is there.
+  const descriptor = /** @type {string} */ (await review.deps.agentCatalog.descriptor(lens.agent))
   const known = engineChecks(prepared).filter(({ joins }) => joins === lens.name).flatMap(({ findings }) => findings)
   const unchanged = !hasChanges(prepared)
-  return { lens, inputs, skills, fingerprint: await fingerprintOf(review, { inputs, skills, prepared, lens }), known, unchanged }
+  return { lens, inputs, skills, descriptor, fingerprint: await fingerprintOf(review, { inputs, skills, prepared, lens }), known, unchanged }
 }))
 
 /**
@@ -593,9 +621,9 @@ const refuterAsking = (review) => ({
 })
 
 /**
- * @typedef {{ members: Array<{ lens: string, finding: Finding }>, inputs: TrackedInput[], skills: SkillFile[], assignment: ResolvedAssignment, passed: string[] | null }} Suspect
- *   a group of findings to check, one per lens, with what their lenses read and what the
- *   refuter checks it on. A group is journaled member after member, so its first member stands
+ * @typedef {{ members: Array<{ lens: string, finding: Finding }>, inputs: TrackedInput[], skills: SkillFile[], descriptors: string[], assignment: ResolvedAssignment, passed: string[] | null }} Suspect
+ *   a group of findings to check, one per lens, with what their lenses read, the descriptors that
+ *   state their gates, and what the refuter checks it on. A group is journaled member after member, so its first member stands
  *   for it on a resume.
  */
 
@@ -621,7 +649,7 @@ const toRefute = (results, planned, refuterOf) => {
 const refuterOf = ({ assignments }) => (checked) => assignments.refuter[/** @type {'standard' | 'frontier'} */ (escalatedTier(checked.map(({ lens }) => assignments.lenses[lensAgent(lens.name)].tier)))]
 
 /**
- * The group, with the inputs and skills of its lenses, each once, and the refuter's family; a
+ * The group, with the inputs, skills and descriptors of its lenses, each once, and the refuter's family; a
  * lens that stands alone is judged with the inputs of every lens of the review.
  * @param {Suspect['members']} members @param {PlannedLens[]} planned
  * @param {{ refuterOf: RefuterOf, dissent: ReturnType<typeof dissentOf> }} rule
@@ -635,6 +663,7 @@ const suspectOf = (members, planned, { refuterOf, dissent }) => {
     assignment: refuterOf(read),
     inputs: uniqueBy((passed === null ? read : planned).flatMap(({ inputs }) => inputs), ({ kind, path }) => `${kind} ${path}`),
     skills: uniqueBy(read.flatMap(({ skills }) => skills), ({ name }) => name),
+    descriptors: [...new Set(read.map(({ descriptor }) => descriptor))],
     passed,
   }
 }
@@ -646,11 +675,11 @@ const uniqueBy = (items, keyOf) => items.filter((item, index) => items.findIndex
 const refutationOf = ({ lens, finding, verdict, reason, dissent }) => ({ lens, finding, verdict, reason, ...(dissent ? { dissent } : {}) })
 
 /** @param {Review} review @param {Suspect} suspect @param {number} attempt @param {string | null} retry @returns {AgentDispatch} */
-const refuterDispatch = ({ deps, slug, sources, step, rulesBrief }, { members, inputs, skills, assignment, passed }, attempt, retry) => ({
+const refuterDispatch = ({ deps, slug, sources, step, rulesBrief }, { members, inputs, skills, descriptors, assignment, passed }, attempt, retry) => ({
   agent: REFUTER,
   source: sources[REFUTER],
   label: reviewLabel({ slug, step: step.node.id, visit: step.visit, what: `refute ${citationOf(members)}`, attempt }),
-  prompt: composeRefuterBrief({ members, inputs: located(deps, slug, inputs), skills: pathsOf(skills), passed, retry, baseRules: rulesBrief ?? null }),
+  prompt: composeRefuterBrief({ members, inputs: located(deps, slug, inputs), skills: pathsOf(skills), descriptors, passed, retry, baseRules: rulesBrief ?? null }),
   ...modelOf(assignment),
 })
 

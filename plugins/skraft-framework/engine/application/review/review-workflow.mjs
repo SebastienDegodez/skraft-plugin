@@ -6,11 +6,12 @@ import { locateAgents, readShippedCalls } from '../workflow/load-workflow.mjs'
  * @typedef {import('../../domain/workflow/workflow.mjs').WorkflowNode} WorkflowNode
  * @typedef {import('../workflow/load-workflow.mjs').WorkflowDeps} WorkflowDeps
  * @typedef {{
- *   ok: true, node: WorkflowNode, phase: string, inputs: Workflow['inputs'],
+ *   ok: true, node: WorkflowNode, phase: string, inputs: Workflow['inputs'], pipeline: Workflow,
  *   sources: Record<string, import('../ports/agent-catalog.mjs').AgentSource>,
  * }} LoadedReview
  *   node: the fan-in of the called review, with its fan-out, lenses and families; phase: the
- *   phase of the call that runs it in the plugin's pipeline; inputs: what it declares it reads.
+ *   phase of the call that runs it in the plugin's pipeline; inputs: what it declares it reads;
+ *   pipeline: the plugin's pipeline that calls it, by which a run's documents are told apart by phase.
  */
 
 /** The workflow a pull request review runs, by its base name. */
@@ -29,7 +30,7 @@ export const loadReview = async (deps) => {
   const { node, phase, inputs } = calledReview(read.workflow)
   const located = await locateAgents(deps.agentCatalog, { nodes: { [node.id]: node } })
   const errors = [...checkMandatory(builtIn, read.workflow), ...located.errors]
-  return errors.length > 0 ? refused(errors) : { ok: true, node, phase, inputs, sources: located.sources }
+  return errors.length > 0 ? refused(errors) : { ok: true, node, phase, inputs, pipeline: read.workflow, sources: located.sources }
 }
 
 /**

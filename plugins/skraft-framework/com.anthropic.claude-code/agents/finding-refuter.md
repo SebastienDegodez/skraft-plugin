@@ -15,11 +15,12 @@ metadata:
 
 Decide whether one review finding holds, using only the inputs your brief lists.
 
-- Read the skill files your brief lists under Skill, when it lists any, before any other input; judge the finding with their criteria.
+- Read the skill files your brief lists under Skill, when it lists any, before any other input, and each reference file they name for the finding's gate; judge the finding with their criteria.
 - Open the location the finding cites first, then each input its claim depends on.
 - `confirmed`: an input shows the defect the finding describes.
 - `refuted`: an input shows the claim is false — the cited text is absent or says otherwise, or another input satisfies the criterion.
 - `unverifiable`: the inputs cannot settle it, or an input it depends on cannot be read.
+- A rule the finding applies that you cannot find in your inputs makes it `unverifiable`, never `refuted`.
 - A finding whose fix adds a fact no input holds (a currency, a unit, a party) shows no defect, only a decision nobody made: `refuted`, citing the line that does what its name says.
 - Judge the finding as written: never widen it, change its severity or report another defect.
 - When your brief says this lens alone found what sends the work back (the Dissent Rule), every input of the review is yours: confirm the finding only when the defect stands with all of them; refute it when the story, a contract or a document shows the work is right as it is, or when its fix would change what they fix. Your `reason` is the record of that decision: never refute without one.

@@ -28,7 +28,7 @@ Formal checklist for the DISTILL review lenses the engine runs. One section per 
 
 ### G2 — Edge Case Representation
 
-**Definition:** Boundary conditions and negative cases from the domain examples in the story are represented as scenarios.
+**Definition:** Boundary conditions and negative cases from the domain examples in the story are represented as scenarios. Only the story and its acceptance criteria give examples: a Gherkin mapping, an example or a variant a DESIGN document writes (event model, contracts) is none, and a variant an earlier rule of the story already decides (a precedence) adds no boundary.
 
 **How to check:**
 1. Read the domain examples section of the story
@@ -124,9 +124,9 @@ If YES → ambiguous → flag.
 
 | Language | Unit-test place |
 |---|---|
-| .NET | the `tests/<Context>.UnitTest/` project — mandatory, a project with another name never passes |
-| Java | the `<context>-unit-test` module |
-| Any other (TypeScript, JavaScript, Python, React…) | a `unit` folder right under the component's test path in `skraft-config.json` (`tests/unit/`, `test/unit/`) |
+| .NET | a `tests/<Context>.UnitTest/` project (`.UnitTests`, `.Unit.Test`, `.Unit.Tests`, `.Test` and `.Tests` too); a project whose name ends in none of these never passes |
+| Java | the `<context>-unit-test` or `<context>-unit-tests` module |
+| Any other (TypeScript, JavaScript, Python, React…) | a `unit` folder right under the component's test path in `skraft-config.json` (`tests/unit/`, `test/unit/`), or that test path itself when it is named `unit` |
 
 **Why this gate exists:** `outside-in-tdd`'s Concentric Circle Expansion mandates Phase 1 (Application-layer acceptance test + domain unit tests) GREEN before Phase 2 (API/HTTP integration test) or Phase 3 (Infrastructure) begins. A DISTILL pass that ships only HTTP/Integration tests for a brand-new use case has silently skipped Phase 1 — G1–G10 do not detect this because they check Gherkin/plan artefacts, never the actual test files on disk.
 
@@ -134,7 +134,7 @@ If YES → ambiguous → flag.
 1. From the boundary-enforcement coverage matrix (see G7), list every use case boundary named in `test-plan-{story}.md` / `contracts-{story}.md`.
 2. Mark which use cases are NEW to this story (introduced here) vs REUSED (already existed before this story, only extended).
 3. For each NEW use case, use `search/codebase` to look for its acceptance test file in the component's unit-test place (table above).
-4. If no such file exists, or the only test coverage for that use case lives in the integration project or folder (`*.IntegrationTest`, `*-integration-test`, `<test path>/integration/`) or elsewhere under the test path, flag it.
+4. If no such file exists, or the only test coverage for that use case lives in the integration project or folder (`*.IntegrationTest(s)`, `*.Integration.Test(s)`, `*-integration-test(s)`, `<test path>/integration/`) or elsewhere under the test path, flag it.
 
 **Auto-fail example:**
 ```
@@ -157,7 +157,7 @@ Repo search: tests/pay.test.mjs (found, at the test path root)
 
 ### G7 — Layer Boundary Compliance
 
-**Definition:** Each row in the coverage matrix (`test-plan-{story}.md`) targets an Application layer use case named in `contracts-{story}.md`. No scenario targets an Infrastructure adapter as its primary entry point.
+**Definition:** Each row in the coverage matrix (`test-plan-{story}.md`) targets an Application layer use case named in `contracts-{story}.md`. No scenario targets an Infrastructure adapter as its primary entry point. An implementation-plan step that writes no scenario's acceptance test (an API, HTTP or Infrastructure test of a later circle) is no row of the matrix: never a G7 finding.
 
 **How to check:**
 1. Read `contracts-{story}.md` — extract the list of valid use case boundaries
