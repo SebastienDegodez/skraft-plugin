@@ -375,13 +375,15 @@ export const blockQuestion = async (context, run, next) => {
 
 /**
  * What a review that reached its ceiling left (#499): its findings with their context and where
- * its verdict is; null for any other block, and for a review step journaled without findings.
+ * its verdict is; null for any other block an instruction lifts (an agent's, a lens's, a gate's
+ * ceiling), whose step journals no findings, and for a review step journaled without them.
  * @param {Context} context @param {BlockedStep} next @param {string} step the node it loops back to
  * @returns {import('../../domain/decisions/questions.mjs').Ceiling | null}
  */
 const reviewCeilingOf = ({ deps, slug }, { last }, step) => {
-  if (last === null || last.code !== 'loop-ceiling' || !Array.isArray(last.findings) || last.findings.length === 0) return null
-  return { review: last.step, step, passes: last.visit, findings: last.findings, verdict: deps.files.location(slug, verdictPath(last.step, last.visit)) }
+  const { step: review, visit, findings = [] } = /** @type {RunEvent} */ (last)
+  if (findings.length === 0) return null
+  return { review, step, passes: visit, findings, verdict: deps.files.location(slug, verdictPath(review, visit)) }
 }
 
 /**

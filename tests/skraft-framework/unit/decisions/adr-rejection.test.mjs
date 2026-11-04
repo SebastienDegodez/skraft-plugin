@@ -50,6 +50,8 @@ test('rejected as often as the REJECTED edge allows, the run stops at its max_vi
     reason: `adr -> design was already taken 1 times, its max_visits; ${ADR_1}: round 2`,
   })
   assert.equal(host.agentRunner.dispatches.length, 3)
+  // An ask node at its ceiling is no review: the question is the blocked one, with what the rejection left.
+  assert.deepEqual(eventsOf(host, 'question.asked').at(-1).text, `design is blocked: adr -> design was taken as often as its max_visits allows.\nLeft by adr (1):\n- ${ADR_1}: round 2\n An instruction runs design again on a new pass with what is left above and the instruction; STOP ends the run.`)
 })
 
 test('a published ADR the human rejects is not touched by the engine', async () => {

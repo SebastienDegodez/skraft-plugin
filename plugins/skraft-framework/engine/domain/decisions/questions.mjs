@@ -245,7 +245,7 @@ const cell = (text) => {
  */
 export const instructionOf = (question) => {
   if (question?.kind !== BLOCKED && question?.kind !== REVIEW_CEILING) return null
-  return question.answer === null || QUESTIONS[question.kind].options.includes(question.answer) ? null : question.answer
+  return QUESTIONS[question.kind].options.includes(/** @type {string} */ (question.answer)) ? null : question.answer
 }
 
 /**

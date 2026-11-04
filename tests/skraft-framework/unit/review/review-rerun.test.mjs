@@ -223,6 +223,8 @@ test('each way an answer cannot be read is told to the lens on its second ask', 
     ['lens: consistency\nverdict: fail\nfindings:\n  - gate: G1\n    severity: high\n    description: "the port', notYaml(6, 'has a double-quoted value that does not close')],
     ['lens: consistency\nverdict: pass\nfindings: []\n  extra: 1', notYaml(4, 'is indented where a top-level key belongs')],
     ['lens: consistency\n\tverdict: pass', notYaml(2, 'is indented with a tab')],
+    ['lens: consistency\nverdict: fail\nfindings:\n  - gate: G1\n    occurrences: "a.md:1"\n      - "b.md:2"', notYaml(6, 'is not a `key: value` line')],
+    ['lens: consistency\nverdict: fail\nfindings:\n  - gate: G1\n    occurrences:\n      - "a.md:1"\n    - "b.md:2"', notYaml(7, 'is not a `key: value` line')],
     [says('consistency', 'fail', [finding('F1', 'high', 'one'), { gate: 'G2', severity: 'major', description: 'two' }]), 'finding 2: severity must be one of blocker, high, medium, low'],
     [says('consistency', 'fail', [{ gate: 'G1', severity: 'high', description: '  ' }]), 'finding 1: description is empty'],
     [says('consistency', 'fail', [{ severity: 'high', description: 'no gate named' }]), 'finding 1: gate must name the gate of your table, such as G1'],
@@ -250,7 +252,8 @@ test('each way an answer cannot be read is told to the lens on its second ask', 
 test('the last fenced block of an answer is read whatever its tag, its words in any case; a finding without id takes the first free number, its text on one line', async () => {
   const host = scripted({}, (it) => [...nominal(it).slice(0, 2), agent()(it), ...nominal(it).slice(2)])
   const answer = says('consistency-lens', 'FAIL', [finding('F1', 'low', 'a note'), withContext({ gate: 'G2', severity: 'Medium', location: '', description: 'no owner\n   for refunds' }), finding('F3', 'low', 'another note')])
-  host.agentRunner.review = lenses({ consistency: [`Notes first.\n\`\`\`text\n${answer}\n\`\`\``] })
+  // The answer ends on a key left empty.
+  host.agentRunner.review = lenses({ consistency: [`Notes first.\n\`\`\`text\n${answer}\n    suggestion:\n\`\`\``] })
 
   await host.start()
 
@@ -581,7 +584,7 @@ test('a changed path that is no readable file, such as a nested repository, is r
   assert.ok((await host.tracking.read(SLUG, 'reviews/deliver_review-1/changed-files.txt')).includes('src/PaymentsSdk\n'))
 })
 
-test('an answer in the usual YAML forms is read: comments, single quotes, blocks, a bare dash, an id given as a number, an empty suggestion', async () => {
+test('an answer in the usual YAML forms is read: comments, single quotes, blocks, a bare dash, an id given as a number, an empty suggestion; a long reason is cut, at most 20 places are kept', async () => {
   const host = scripted({}, (it) => [...nominal(it).slice(0, 2), agent()(it), ...nominal(it).slice(2)])
   const answer = [
     '# my verdict',
@@ -592,7 +595,6 @@ test('an answer in the usual YAML forms is read: comments, single quotes, blocks
     '  - id: 7',
     '    gate: G2',
     '    severity: high',
-    "    location: 'docs/adr/adr-001.md:3'",
     '    description: |',
     "      The ADR's provider",
     '      is not named.',
@@ -605,6 +607,7 @@ test('an answer in the usual YAML forms is read: comments, single quotes, blocks
     "      - 'docs/adr/adr-001.md:3'",
     '      - "docs/a, b.md:4"   # a path with a comma',
     '      - docs/adr/adr-001.md:3',
+    '    location:',
     '  -',
     '    gate: C1',
     '    severity: low',
@@ -615,6 +618,14 @@ test('an answer in the usual YAML forms is read: comments, single quotes, blocks
     '    severityReason: "a reader hesitates"',
     '    drift: label',
     '    occurrences: "docs/a.md:1; docs/b.md:2,docs/a.md:1"',
+    '  - gate: C2',
+    '    severity: low',
+    '    description: "a long finding"',
+    '    suggestion:',
+    `    severityReason: "${'r'.repeat(301)}"`,
+    '    drift: label',
+    '    occurrences:',
+    ...Array.from({ length: 21 }, (_, index) => `    - "docs/c.md:${index + 1}"`),
   ].join('\n')
   host.agentRunner.review = lenses({ consistency: [answer] })
 
@@ -622,7 +633,9 @@ test('an answer in the usual YAML forms is read: comments, single quotes, blocks
 
   const lensed = host.events().find((event) => event.type === 'review.lens' && event.lens === 'consistency')
   assert.deepEqual(lensed.findings, [
-    { id: '7', gate: 'G2', severity: 'high', location: 'docs/adr/adr-001.md:3', description: "The ADR's provider is not named.", suggestion: null, severityReason: 'billing reads the provider', drift: 'structural', occurrences: ['docs/adr/adr-001.md:3', 'docs/a, b.md:4'] },
+    { id: '7', gate: 'G2', severity: 'high', location: '', description: "The ADR's provider is not named.", suggestion: null, severityReason: 'billing reads the provider', drift: 'structural', occurrences: ['docs/adr/adr-001.md:3', 'docs/a, b.md:4'] },
     { id: 'F1', gate: 'C1', severity: 'low', location: '', description: 'two names for one context', suggestion: 'name it "Payments"', severityReason: 'a reader hesitates', drift: 'label', occurrences: ['docs/a.md:1', 'docs/b.md:2'] },
+    // At most 20 places, a reason cut at 300 characters.
+    { id: 'F2', gate: 'C2', severity: 'low', location: '', description: 'a long finding', suggestion: null, severityReason: `${'r'.repeat(299)}…`, drift: 'label', occurrences: Array.from({ length: 20 }, (_, index) => `docs/c.md:${index + 1}`) },
   ])
 })

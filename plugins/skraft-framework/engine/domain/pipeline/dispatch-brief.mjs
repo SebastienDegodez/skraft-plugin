@@ -150,11 +150,13 @@ const feedbackLines = (brief) => {
 }
 
 /**
- * What a block left, when it left something, and the instruction a human lifted it with.
+ * What a block left and the instruction a human lifted it with. A block that reopens an agent
+ * always left something: its own reason, the gates' failures, the review's or the rejection's
+ * findings (a lens's block reopens its review, which reads the instruction in its own brief).
  * @param {Pick<Brief, 'feedback' | 'visit'>} brief @param {string} instruction
  */
 const reopenedLines = ({ feedback, visit }, instruction) => [
-  ...(feedback.length > 0 ? ['', `What pass ${visit - 1} left when it was blocked:`, ...feedback.map((line) => `- ${line}`)] : []),
+  '', `What pass ${visit - 1} left when it was blocked:`, ...feedback.map((line) => `- ${line}`),
   '', `A human refused the work of pass ${visit - 1}:`, `- ${instruction}`,
 ]
 

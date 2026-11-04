@@ -79,6 +79,7 @@ export const reviewFacts = (events) => {
 /** A finding that counts becomes accepted when a human accepted it. @param {FindingFact} finding @returns {ReviewStatus} */
 const statusOf = (finding) => {
   const status = countedStatus(finding)
+  // Stryker disable next-line ConditionalExpression: a finding a human accepted is one of the last pass that counts, so always one to fix
   return status === 'fix' && finding.accepted ? 'accepted' : status
 }
 

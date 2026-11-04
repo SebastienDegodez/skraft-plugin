@@ -70,7 +70,7 @@ export const blocksReview = (results) => results.some((result) => inconclusiveLi
  */
 export const decideReview = (results, refutations, unchanged) => {
   const blocking = results.map(inconclusiveLine).filter((line) => line !== null)
-  if (blocking.length > 0) return { status: 'BLOCKED', code: 'lens-inconclusive', reasons: blocking, summary: blocking.join('; '), details: [], findings: [] }
+  if (blocking.length > 0) return blocked(blocking)
   const counted = countedOf(results, refutations, unchanged)
   const reasons = groupFindings(counted).map(groupLine)
   const status = reasons.length > 0 ? 'NEEDS_REWORK' : 'APPROVED'
@@ -78,6 +78,16 @@ export const decideReview = (results, refutations, unchanged) => {
   const findings = counted.map(({ lens, finding }) => findingEntry(lens, finding))
   return { status, code: null, reasons, summary: summaryOf(status, results, reasons, set), details: detailsOf(set), findings }
 }
+
+/**
+ * A review a lens left without a verdict it can act on: it sends nothing back, and nothing is set aside.
+ * @param {string[]} blocking one line per such lens @returns {ReviewVerdict}
+ */
+const blocked = (blocking) => ({
+  status: 'BLOCKED', code: 'lens-inconclusive', reasons: blocking, summary: blocking.join('; '), details: [],
+  // Stryker disable next-line ArrayDeclaration: nothing reads the findings of a blocked review, which asks no ceiling question
+  findings: [],
+})
 
 /**
  * Every finding that sends the work back, the blocker, high and medium ones first, then the low

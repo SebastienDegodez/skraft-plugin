@@ -89,7 +89,7 @@ test('a lens that answers inconclusive blocks the review: BLOCKED, journaled blo
 
   const outcome = await host.review()
 
-  assert.deepEqual([outcome.status, outcome.code, outcome.reason], ['BLOCKED', 'lens-inconclusive', 'test-integrity: inconclusive: the patch file could not be read'])
+  assert.deepEqual([outcome.status, outcome.code, outcome.reason, outcome.reasons, outcome.details], ['BLOCKED', 'lens-inconclusive', 'test-integrity: inconclusive: the patch file could not be read', ['test-integrity: inconclusive: the patch file could not be read'], []])
   assert.deepEqual([host.events().at(-1).outcome, host.events().at(-1).code], ['blocked', 'lens-inconclusive'])
   assert.equal(host.agentRunner.batches.length, 1)
   assert.equal(await host.reviews.read(SLUG, 'comment.md'), '### skraft review · #12 — BLOCKED (pass 1)\n\ntest-integrity: inconclusive: the patch file could not be read\n\n<sub>skraft-review pr=12</sub>\n')
