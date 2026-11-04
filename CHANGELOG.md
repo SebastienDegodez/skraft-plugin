@@ -3,6 +3,16 @@
 Toutes les modifications notables de ce projet sont documentées ici.
 Format basé sur [Conventional Commits](https://www.conventionalcommits.org/) — versionnage [SemVer](https://semver.org/).
 
+## [2.0.0-alpha.56](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.55...v2.0.0-alpha.56) (2026-11-04)
+
+### 🐛 Bug Fixes
+
+* **engine:** create a role's docs folders before dispatching its agent ([#501](https://github.com/SebastienDegodez/skraft-plugin/issues/501)) ([ad67204](https://github.com/SebastienDegodez/skraft-plugin/commit/ad672044263f804ae6309e95a2b25e5a6e7da501)), closes [#498](https://github.com/SebastienDegodez/skraft-plugin/issues/498) [#498](https://github.com/SebastienDegodez/skraft-plugin/issues/498)
+
+### 📝 Documentation
+
+* capture the workflows in real sessions ([#506](https://github.com/SebastienDegodez/skraft-plugin/issues/506)) ([f488c80](https://github.com/SebastienDegodez/skraft-plugin/commit/f488c80fb3c6130d4ce8635bfd0b231be301eb9a)), closes [#478](https://github.com/SebastienDegodez/skraft-plugin/issues/478)
+
 ## [2.0.0-alpha.55](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.54...v2.0.0-alpha.55) (2026-11-04)
 
 ### 🐛 Bug Fixes
