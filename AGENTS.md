@@ -148,6 +148,12 @@ the probe or a test says otherwise.
 
 Everything must run on Windows and macOS, under Claude Code, Copilot CLI and VS Code.
 
+- CI: every workflow with a macOS job runs once per pull request. A new push cancels the
+  previous run of the same pull request (`concurrency`, `cancel-in-progress` on `pull_request`
+  only), so macOS runners do not queue behind stale runs; pushes to `main` and
+  `integration/v2-next` are never cancelled. A new workflow with a macOS job carries the same
+  `concurrency` block.
+
 - Node code: `node:path` for paths, `spawnSync`/`spawn` with an argv array, never a shell string
   and never `shell: true` (it hides a missing program behind cmd.exe's exit code).
 - Commands that an agent runs: no environment variable (`$SKRAFT_PLUGIN_ROOT` and the like), no
