@@ -1,5 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
+import { withContext } from '../support/answer-yaml.mjs'
 import { agent, API, finding, lenses, nominal, REFS_42, refutes, reviews, says, scripted, SLUG, tddCycle, TRACKING } from '../support/pipeline-host.mjs'
 import { ejectedPipeline, edit, withLenses } from '../workflow/support.mjs'
 import { BUILT_IN_WORKFLOW, InMemoryAgentCatalog, PLUGIN_AGENTS } from '../support/in-memory-host.mjs'
@@ -226,7 +227,12 @@ test('each way an answer cannot be read is told to the lens on its second ask', 
     [says('consistency', 'fail', [{ gate: 'G1', severity: 'high', description: '  ' }]), 'finding 1: description is empty'],
     [says('consistency', 'fail', [{ severity: 'high', description: 'no gate named' }]), 'finding 1: gate must name the gate of your table, such as G1'],
     [says('consistency', 'fail', [finding('F1', 'high', 'one', { rule: 'R1' })]), 'finding 1: the key rule is not in the contract; the keys are id, gate, severity, location, description, suggestion, severityReason, drift, occurrences'],
-    [says('consistency', 'fail', [finding('F1', 'high', 'one', { drift: 'naming' })]), 'finding 1: drift must be one of label, classification, structural, or left out'],
+    [says('consistency', 'fail', [finding('F1', 'high', 'one', { drift: 'naming' })]), 'finding 1: drift must be one of label, classification, structural'],
+    [says('consistency', 'fail', [finding('F1', 'low', 'one'), { gate: 'G1', severity: 'low', location: 'a.md:1', description: 'two', drift: 'label', occurrences: 'a.md:1' }]), 'finding 2: severityReason is missing; say why this severity: what it breaks, for whom'],
+    [says('consistency', 'fail', [{ gate: 'G1', severity: 'medium', location: 'a.md:1', description: 'one', severityReason: '  ', drift: 'label', occurrences: 'a.md:1' }]), 'finding 1: severityReason is missing; say why this severity: what it breaks, for whom'],
+    [says('consistency', 'fail', [{ gate: 'G1', severity: 'high', location: 'a.md:1', description: 'one', severityReason: 'billing breaks', occurrences: 'a.md:1' }]), 'finding 1: drift must be one of label, classification, structural'],
+    [says('consistency', 'fail', [{ gate: 'G1', severity: 'blocker', location: 'a.md:1', description: 'one', severityReason: 'billing breaks', drift: 'label' }]), 'finding 1: occurrences is missing; list every `path:line` the same fact is wrong at, the location first'],
+    [says('consistency', 'fail', [finding('F1', 'high', 'one', { occurrences: ' , ; ' })]), 'finding 1: occurrences is missing; list every `path:line` the same fact is wrong at, the location first'],
     [says('consistency', 'pass', [finding('F1', 'high', 'the ADR is missing')]), 'verdict is pass but finding F1 is high'],
     [says('consistency', 'fail', many), '21 findings; give at most 20, the most severe first'],
   ]
@@ -243,7 +249,7 @@ test('each way an answer cannot be read is told to the lens on its second ask', 
 
 test('the last fenced block of an answer is read whatever its tag, its words in any case; a finding without id takes the first free number, its text on one line', async () => {
   const host = scripted({}, (it) => [...nominal(it).slice(0, 2), agent()(it), ...nominal(it).slice(2)])
-  const answer = says('consistency-lens', 'FAIL', [finding('F1', 'low', 'a note'), { gate: 'G2', severity: 'Medium', location: '', description: 'no owner\n   for refunds' }, finding('F3', 'low', 'another note')])
+  const answer = says('consistency-lens', 'FAIL', [finding('F1', 'low', 'a note'), withContext({ gate: 'G2', severity: 'Medium', location: '', description: 'no owner\n   for refunds' }), finding('F3', 'low', 'another note')])
   host.agentRunner.review = lenses({ consistency: [`Notes first.\n\`\`\`text\n${answer}\n\`\`\``] })
 
   await host.start()
@@ -591,6 +597,14 @@ test('an answer in the usual YAML forms is read: comments, single quotes, blocks
     "      The ADR's provider",
     '      is not named.',
     '    suggestion: ~',
+    '    severityReason: >',
+    '      billing reads',
+    '      the provider',
+    '    drift: Structural',
+    '    occurrences:',
+    "      - 'docs/adr/adr-001.md:3'",
+    '      - "docs/a, b.md:4"   # a path with a comma',
+    '      - docs/adr/adr-001.md:3',
     '  -',
     '    gate: C1',
     '    severity: low',
@@ -598,6 +612,9 @@ test('an answer in the usual YAML forms is read: comments, single quotes, blocks
     '      two names',
     '      for one context',
     '    suggestion: "name it \\"Payments\\"" # a note',
+    '    severityReason: "a reader hesitates"',
+    '    drift: label',
+    '    occurrences: "docs/a.md:1; docs/b.md:2,docs/a.md:1"',
   ].join('\n')
   host.agentRunner.review = lenses({ consistency: [answer] })
 
@@ -605,7 +622,7 @@ test('an answer in the usual YAML forms is read: comments, single quotes, blocks
 
   const lensed = host.events().find((event) => event.type === 'review.lens' && event.lens === 'consistency')
   assert.deepEqual(lensed.findings, [
-    { id: '7', gate: 'G2', severity: 'high', location: 'docs/adr/adr-001.md:3', description: "The ADR's provider is not named.", suggestion: null },
-    { id: 'F1', gate: 'C1', severity: 'low', location: '', description: 'two names for one context', suggestion: 'name it "Payments"' },
+    { id: '7', gate: 'G2', severity: 'high', location: 'docs/adr/adr-001.md:3', description: "The ADR's provider is not named.", suggestion: null, severityReason: 'billing reads the provider', drift: 'structural', occurrences: ['docs/adr/adr-001.md:3', 'docs/a, b.md:4'] },
+    { id: 'F1', gate: 'C1', severity: 'low', location: '', description: 'two names for one context', suggestion: 'name it "Payments"', severityReason: 'a reader hesitates', drift: 'label', occurrences: ['docs/a.md:1', 'docs/b.md:2'] },
   ])
 })

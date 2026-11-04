@@ -3,7 +3,7 @@
 // review's lenses and the refuter from their briefs. No doubles of the engine's ports.
 import { chmodSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { answerYaml } from '../../unit/support/answer-yaml.mjs'
+import { answerYaml, withContext } from '../../unit/support/answer-yaml.mjs'
 import { commitAll, envWithPath, git, tempFolder, toolFolders } from './workspace.mjs'
 
 export const NUMBER = 12
@@ -97,7 +97,7 @@ const fakeGh = (root, state) => {
 }
 
 /** The finding test-integrity gives on the weakened assertion. */
-export const WEAKENED = Object.freeze({ id: 'F1', gate: 'G9', severity: 'blocker', location: `${TEST_FILE}:7`, description: 'Assert.Equal(90m, total) became Assert.NotNull(total)' })
+export const WEAKENED = Object.freeze(withContext({ id: 'F1', gate: 'G9', severity: 'blocker', location: `${TEST_FILE}:7`, description: 'Assert.Equal(90m, total) became Assert.NotNull(total)' }))
 
 /**
  * The scripted LLM of a review: a lens answers from its brief's heading, test-integrity with the

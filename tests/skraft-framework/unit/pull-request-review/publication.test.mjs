@@ -19,7 +19,10 @@ const pushed = (host, sha) => { host.pullRequests.pullRequests[0] = { ...PULL_RE
 
 test('--publish twice keeps one comment on the pull request, rewritten with each pass; the consent is asked once and kept in ~/.skraft/config.json for the repository, nothing written in the working copy', async () => {
   const host = reviewed({ answers: [{ answer: 'ACCEPTED' }] })
-  host.agentRunner.review = lenses({ 'test-integrity': [says('test-integrity', 'fail', [finding('F1', 'blocker', 'the assertion @alice wrote is gone', { gate: 'G9', location: `${TEST_FILE}:14` })])] })
+  host.agentRunner.review = lenses({
+    'test-integrity': [says('test-integrity', 'fail', [finding('F1', 'blocker', 'the assertion @alice wrote is gone', { gate: 'G9', location: `${TEST_FILE}:14` }), finding('F2', 'low', 'name the total', { gate: 'G9', location: `${TEST_FILE}:20` })])],
+    'cold-reader': [says('cold-reader', 'pass', [finding('F1', 'low', 'name the discount', { gate: 'C2' })])],
+  })
 
   const first = await host.review({ publish: true })
 
@@ -29,9 +32,12 @@ test('--publish twice keeps one comment on the pull request, rewritten with each
   assert.equal(await host.workspace.read('skraft-config.json'), null)
   assert.equal(host.pullRequests.comments[0].body, [
     '### skraft review · #12 — NEEDS_REWORK (pass 1)', '',
-    'NEEDS_REWORK: 1 reason to address', '',
+    'NEEDS_REWORK: 2 reasons to address; 1 note (cold-reader F1)', '',
     'To address:',
-    `- test-integrity F1 G9 blocker at ${TEST_FILE}:14: the assertion \`@alice\` wrote is gone`, '',
+    `- test-integrity F1 G9 blocker at ${TEST_FILE}:14: the assertion \`@alice\` wrote is gone`,
+    `- test-integrity F2 G9 low at ${TEST_FILE}:20: name the total`, '',
+    'Not counted:',
+    '- note: cold-reader F1 C2 low at src/Checkout.cs:12: name the discount', '',
     '<sub>skraft-review pr=12</sub>', '',
   ].join('\n'))
   assert.equal(await host.reviews.read(SLUG, 'comment.md'), host.pullRequests.comments[0].body)

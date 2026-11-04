@@ -36,5 +36,5 @@ Read the skill file your brief lists under Skill before any other input; judge w
 - Answer `verdict: inconclusive` only when an input your brief lists cannot be read, with one `low` finding naming that input and what it lacks; an input that exists but is empty is read, not missing.
 - Put each finding's gate in its `gate` field.
 - Give a one-line `suggestion` only when the fix is evident; otherwise leave the key out.
-- For each finding give `severityReason` (what it breaks, for whom), `occurrences` (every `path:line` of the same fact, the location first) and, for an inconsistency, `drift`: a human decides on it from these alone.
+- Every finding, of any severity, gives `severityReason` (what it breaks, for whom), `drift` (`label` when a name differs, `classification` when a kind differs, `structural` otherwise) and `occurrences` (a list of every `path:line` of the same fact, the location first); the engine refuses an answer whose finding lacks one.
 - Write every free text value between double quotes.
