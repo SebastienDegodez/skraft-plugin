@@ -3,6 +3,12 @@
 Toutes les modifications notables de ce projet sont documentées ici.
 Format basé sur [Conventional Commits](https://www.conventionalcommits.org/) — versionnage [SemVer](https://semver.org/).
 
+## [2.0.0-alpha.57](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.56...v2.0.0-alpha.57) (2026-11-04)
+
+### 🐛 Bug Fixes
+
+* **engine:** keep a block's findings for the human and the agent ([#502](https://github.com/SebastienDegodez/skraft-plugin/issues/502)) ([bae04c1](https://github.com/SebastienDegodez/skraft-plugin/commit/bae04c1ee9a4194dc7aeae1b9a846e202459f58d)), closes [#500](https://github.com/SebastienDegodez/skraft-plugin/issues/500) [#500](https://github.com/SebastienDegodez/skraft-plugin/issues/500) [#500](https://github.com/SebastienDegodez/skraft-plugin/issues/500) [#500](https://github.com/SebastienDegodez/skraft-plugin/issues/500)
+
 ## [2.0.0-alpha.56](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.55...v2.0.0-alpha.56) (2026-11-04)
 
 ### 🐛 Bug Fixes
