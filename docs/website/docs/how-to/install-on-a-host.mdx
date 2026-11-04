@@ -36,10 +36,14 @@ Type in the conversation, not in a terminal:
 
 Open `/plugin`: `skraft` is among the installed plugins.
 
-:::note[Screenshot pending a real run]
-A capture of the Claude Code marketplace install replaces the block above after a real run in
-Claude Code.
-:::
+From a terminal, `claude plugin` does the same and answers:
+
+```console
+$ claude plugin marketplace add SebastienDegodez/skraft-plugin
+✔ Successfully added marketplace: skraft (declared in user settings)
+$ claude plugin install skraft@skraft
+✔ Successfully installed plugin: skraft@skraft (scope: user)
+```
 
 </TabItem>
 <TabItem value="copilot-cli" label="GitHub Copilot CLI">
@@ -54,9 +58,7 @@ $ copilot plugin install skraft@skraft
 In a Copilot session, the same commands read `/plugin marketplace add …` and
 `/plugin install skraft@skraft`. Check with `copilot plugin list`: `skraft` is listed.
 
-:::note[Screenshot pending a real run]
-A capture of `copilot plugin install` replaces the block above after a real run in Copilot CLI.
-:::
+![Terminal: copilot plugin marketplace add SebastienDegodez/skraft-plugin answers that the skraft marketplace is added, copilot plugin install skraft@skraft installs 36 skills, then copilot plugin list shows skraft@skraft among the installed plugins](/img/screenshots/shared/install-copilot-cli.png)
 
 To work on a clone of the plugin, install it from its local folder:
 `copilot plugin install ./plugins/skraft-framework`.
@@ -84,9 +86,7 @@ To work on a clone of the plugin, install it from its local folder:
 
 In **Chat: Open Customizations**, **Plugins** section, `skraft` is listed and enabled.
 
-:::note[Screenshot pending a real run]
-A capture of the **Browse** tab and of the **Plugins** section comes after a real run in VS Code.
-:::
+![VS Code, Customizations, Plugins section: under User, skraft installed from github.com/SebastienDegodez/skraft-plugin, 20 agents and 43 skills, its toggle on](/img/screenshots/shared/install-vscode-browse.png)
 
 </TabItem>
 </Tabs>

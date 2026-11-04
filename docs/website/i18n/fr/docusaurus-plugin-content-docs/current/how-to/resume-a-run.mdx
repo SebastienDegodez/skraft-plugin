@@ -88,7 +88,7 @@ Le code s'affiche dans la notification de fin du mod Claude Code
 | Code | Action |
 |---|---|
 | `agent-failed` | Reprendre : la même tentative est relancée. |
-| `agent-unavailable` | Installer ou activer le plugin, accepter le lancement de l'agent, puis reprendre ; la tentative n'est pas consommée. |
+| `agent-unavailable` | Installer ou activer le plugin, accepter le lancement de l'agent, puis reprendre ; la tentative n'est pas consommée. Quand d'autres appels du même agent ont abouti dans ce run, l'échec était passager : reprendre tel quel. |
 | `pipeline-locked` | Une autre session conduit le run : la laisser finir. Un bail non renouvelé depuis 2 minutes est repris par la reprise suivante. |
 | `journal-changed` | Un autre terminal écrit dans le même journal : attendre qu'il s'arrête, puis reprendre. |
 | `journal-tampered` | `events.jsonl` a été modifié à la main : restaurer le fichier (Git, sauvegarde) ou démarrer un nouveau slug. Ne pas réparer la ligne. |

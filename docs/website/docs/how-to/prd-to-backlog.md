@@ -70,14 +70,18 @@ from `/workflows`.
 
    A question left unanswered takes its recommended option.
 2. **Story map** (`story-map-approved`): read `story-map.md`. To change the slicing, edit
-   `story-map.json`: the resume checks it again as it reads now.
+   `story-map.json`: the resume checks it again as it reads now. Its tables: [story-map.md](../reference/backlog-canvas.md#story-map).
 
 ## 4. Let the stories be written and reviewed
 
 One `story-writer` per story, then the four planning lenses, epic by epic. Follow progress in the
 canvas, **Progress** tab (**Suivi** for a French PRD: the canvas follows the PRD's language):
 each story is approved, refused, or held back because it waits on a refused story. The
-**Review** tab says why a story does not pass and how to fix it.
+**Review** tab says why a story does not pass and how to fix it. Each counter, status and tab: [Backlog canvas](../reference/backlog-canvas.md#progress-tab).
+
+![skraft backlog canvas, Suivi tab, during ELABORATE: "8 agents au travail", one story-writer per story with its attempt and how long it has run, then 3 epics, 16 stories, 9/16 written, none refused yet](/img/screenshots/fr/backlog-canvas-elaborate.png)
+
+*Figure 1 — ELABORATE on an extract of a real PRD, written in French ([demo repository](https://github.com/SebastienDegodez/skraft-demo-event-storming)): eight `story-writer` agents at work.*
 
 ## 5. Fix a held story (if needed)
 
@@ -88,10 +92,21 @@ dependency, sharpen a criterion…) or answer its open questions, then run again
 Run the skraft-prd-backlog workflow with prd docs/prds/online-ordering.md and corrections true
 ```
 
+![skraft backlog canvas, Revue tab: story EP-001-S05 "Attribuer un rôle applicatif" held back, the three reasons of its review, a "Répondre 2" button for its open questions, then the INVEST letters, each with the value found; on the left the stories of EP-001, two ready and three held back](/img/screenshots/fr/backlog-canvas-handoff-review.png)
+
+*Figure 2 — A held story of the same run: the review says why, and its two open questions wait
+for an answer.*
+
 Only the stories touched are rewritten and reviewed. With no accepted correction and no pending
 answer, the run is refused and nothing changes.
 
 ## 6. Validate the handoff and publish
+
+When the run pauses on the handoff, the canvas sums up the backlog:
+
+![skraft backlog canvas, Suivi tab, at the handoff: 3 epics, 16 stories, 16/16 written, 0 refused, 4 held back, 12 ready, 0/12 reviewed, 0 published, then epic EP-001 rejected at attempt 3 and its stories, ready or held back; at the bottom the "Aperçu à blanc" and "Créer les issues" buttons towards SebastienDegodez/skraft-demo-event-storming](/img/screenshots/fr/backlog-canvas-handoff-progress.png)
+
+*Figure 3 — The handoff of the demo run: 12 stories ready to create, 4 held back.*
 
 The run stops on `.copilot-tracking/github-issues/prds/<slug>/handoff.md` (`handoff-reviewed`).
 Read the planned operations, then check the box:

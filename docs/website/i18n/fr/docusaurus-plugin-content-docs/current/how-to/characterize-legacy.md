@@ -33,9 +33,28 @@ et [Feathers, 2004](../reference/citations.mdx#cite-feathers-legacy-2004).
 Nommez le composant tel qu'il figure dans `skraft-config.json`, ou son dossier. Sans cible,
 l'agent vous la demande.
 
-:::note[Capture en attente d'un run réel]
-Une capture d'une session `brownfield-harness-builder` viendra après un run réel.
-:::
+Un exemple de session (illustratif : la formulation de l'agent, les fichiers et les nombres changent
+d'un run à l'autre ; l'ordre des étapes, le verdict et la question qu'il pose viennent de ses
+instructions) :
+
+```text title="Copilot CLI"
+> Pose un filet de caractérisation sur services/orders.
+
+Composant orders, d'après skraft-config.json : stack dotnet, commande de test « dotnet test --nologo », mocking microcks.
+Contrat : aucun trouvé ; généré avec Swashbuckle (dotnet swagger tofile), 4 opérations,
+commité sous les chemins de test du composant.
+Tests de caractérisation : un par opération et famille de réponses ; l'API de paiement qu'il appelle est simulée avec Microcks.
+Commande de test sur le code non modifié : dotnet test --nologo, tout au vert.
+
+Verdict : CONCERNS
+Manque : POST /orders/{id}/cancel, l'appel de remboursement à l'API de paiement n'a pas pu être simulé proprement.
+Bug suspecté : GET /orders?page=0 répond 500, affirmé tel quel (commentaire CHARACTERIZATION).
+Renforcer le filet pour ce manque, ou accepter le risque ?
+
+> J'accepte le risque.
+
+Verdict accepté. Étape suivante : brownfield-refactorer.
+```
 
 ## 2. Laisser établir le contrat
 

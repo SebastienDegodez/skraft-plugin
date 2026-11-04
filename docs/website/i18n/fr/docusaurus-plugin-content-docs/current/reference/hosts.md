@@ -79,7 +79,7 @@ sans Node ni `import()` : il lance Git, les gates et les rejeux par `$.process.r
 | --- | --- | --- |
 | `/skraft <slug> [#issue] [titre…] [--base <ref>] [--from-artifacts]` | Init du slug, puis run en arrière-plan | `skraft <slug> started — progress in the Skraft pane.` |
 | `/skraft`, `/skraft status`, `/skraft help` | vue du pipeline actif | `skraft <slug> — <status>`, une ligne par phase (`✓` closed, `▶` open, `·` pending), raison, agent, `cost: ~$<montant> (approximate: it includes anything else exchanged in this session while an agent ran)` |
-| `/skraft review <numéro> [--publish]` | revoit la pull request `<numéro>` en arrière-plan, comme `skraft review --pr`, ses lentilles lancées ensemble ; le consentement à publier demandé dans un dialogue (en-tête `Review comment`) | `skraft review #<numéro> started — progress in the Skraft pane.` ; à la fin la notification `skraft review #<numéro>: <status> (<code>) — <reason>` ; sans numéro : `skraft: /skraft review <pull request number> [--publish]` |
+| `/skraft review [--pr] <numéro> [--publish]` | revoit la pull request `<numéro>` en arrière-plan, comme `skraft review --pr`, ses lentilles lancées ensemble ; le consentement à publier demandé dans un dialogue (en-tête `PR comment`) | `skraft review #<numéro> started — progress in the Skraft pane.` ; à la fin la notification `skraft review #<numéro>: <status> (<code>) — <reason>` ; sans numéro : `skraft: /skraft review <pull request number> [--publish]` |
 | `/skraft decide [<clé>] <réponse> [raison…]` | enregistre la réponse (mêmes règles et refus que `skraft decide`), puis reprend le pipeline actif | `<slug>: <key> answered <answer>; run the pipeline again to go on`, puis la ligne de démarrage ; refus : `skraft: not recorded — <raison>` |
 
 Dans `/skraft <slug> …`, `#<nombre>` placé juste après le slug donne l'issue ; le reste des
@@ -140,11 +140,10 @@ skraft checkout — running
   · distill
 ```
 
-:::note[Capture en attente d'un run réel]
-Une capture du panneau **Skraft** dans une session Claude Code remplacera ce bloc dès qu'un run
-réel la produira. D'ici là, le bloc montre le texte du panneau pour un run `checkout` en DESIGN,
-tel que le vérifient les tests de vue du mod.
-:::
+Le bloc montre le texte du panneau pour un run `checkout` en DESIGN, tel que le vérifient les tests
+de vue du mod. Au démarrage d'un run, à côté de sa première boîte de dialogue :
+
+![Claude Code : à gauche la boîte de dialogue Pull request avec ACCEPTED, DECLINED et Type something ; à droite le panneau Skraft, « skraft checkout — waiting », RESEARCH ouverte sur publish_consent, les étapes des autres phases à venir, puis la question et la façon d'y répondre](/img/screenshots/shared/claude-skraft-pane.png)
 
 **Outil `mcp__skraft__run_pipeline`** (appelé par le modèle) : démarre ou reprend le
 pipeline et rend la main tout de suite ; le run continue en arrière-plan.
@@ -324,11 +323,30 @@ $ node "<dossier du plugin>/engine/drivers/copilot-sdk/skraft-run.mjs" [<slug>] 
 | Code de sortie | 0 run fini ou en attente ; 1 sinon ; 2 ligne mal formée |
 | Échecs | chaque appel au SDK a un délai (`rpc-timeout`), le suivi une échéance (`run-too-long`) ; Ctrl-C arrête le suivi ; aucun texte du SDK n'est repris |
 
-:::note[Capture en attente d'un run réel]
-Une capture de VS Code où `skraft-run.mjs` suit un run dans son terminal remplacera cette note
-dès qu'un run réel la produira. D'ici là, la commande ci-dessus est ce que vous tapez dans ce
-terminal.
-:::
+Un run qui s'arrête sur la question de l'ADR, reçoit sa réponse par `skraft decide`, puis est relancé :
+
+```console title="Terminal VS Code"
+$ node "<plugin folder>/engine/drivers/copilot-sdk/skraft-run.mjs" checkout --issue 42 --title "Pay by card"
+skraft-run: skraft-pipeline running
+skraft-run: skraft-pipeline paused
+skraft: waiting (paused) — the run waits on a question: see it with skraft status, answer it with skraft decide, then start skraft-run again
+$ skraft status
+skraft checkout: waiting
+RESEARCH  closed
+DESIGN  open
+DISTILL  pending
+DELIVER  pending
+PUBLISH  pending
+question: adr-ratification (adr)
+answer: skraft decide adr-1 RATIFIED|REJECTED (--reason <text> with REJECTED)
+Ratify the Proposed ADRs docs/adr/adr-001-card-payment.md? RATIFIED marks them Accepted; REJECTED sends DESIGN back with your reason.
+$ skraft decide adr-1 RATIFIED
+checkout: adr-1 answered RATIFIED; run the pipeline again to go on
+$ node "<plugin folder>/engine/drivers/copilot-sdk/skraft-run.mjs"
+skraft-run: skraft-pipeline running
+skraft-run: skraft-pipeline completed
+skraft checkout: done in PUBLISH — PUBLISH closed
+```
 
 ### Boucle d'agent `next` / `record` <!-- #agent-loop -->
 

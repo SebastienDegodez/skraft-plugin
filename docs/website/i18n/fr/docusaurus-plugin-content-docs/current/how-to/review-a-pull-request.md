@@ -42,13 +42,20 @@ base** : une règle que la pull request modifie ne compte pas.
 
 **En ligne de commande**, la revue confie ses lentilles à l'agent qui conduit, puis attend :
 
-```text
+```console
+$ skraft review --pr 42
+pr-42: review of pull request #42 (test-integrity, architecture-boundaries, cold-reader, mock-fidelity, contract-fidelity) — reviewer · economy · model chosen by the host
 skraft review #42: dispatch — start these 3 agents, one after the other, save each final reply as it is to its reply file, then record
 agent 1: test-integrity-lens on the session's model
-  prompt: Your brief is the file <…>. Read it whole and do what it asks. Your last message is the reply it asks for.
-  reply: <…>
-…
-then: skraft review --pr 42 --record
+  prompt: Your brief is the file ~/shop/.copilot-tracking/skraft-reviews/pr-42/results/loop/dispatch-1.brief.md. Read it whole and do what it asks. Your last message is the reply it asks for.
+  reply: ~/shop/.copilot-tracking/skraft-reviews/pr-42/results/loop/dispatch-1.reply.md
+agent 2: architecture-boundaries-lens on the session's model
+  prompt: Your brief is the file ~/shop/.copilot-tracking/skraft-reviews/pr-42/results/loop/dispatch-2.brief.md. Read it whole and do what it asks. Your last message is the reply it asks for.
+  reply: ~/shop/.copilot-tracking/skraft-reviews/pr-42/results/loop/dispatch-2.reply.md
+agent 3: cold-reader-lens on the session's model
+  prompt: Your brief is the file ~/shop/.copilot-tracking/skraft-reviews/pr-42/results/loop/dispatch-3.brief.md. Read it whole and do what it asks. Your last message is the reply it asks for.
+  reply: ~/shop/.copilot-tracking/skraft-reviews/pr-42/results/loop/dispatch-3.reply.md
+then: node "<plugin folder>/engine/drivers/cli/skraft.mjs" review --pr 42 --record
 ```
 
 Faites lancer chaque agent avec son `prompt` (par l'agent de votre chat, ou à la main), enregistrez
@@ -57,10 +64,17 @@ tant que la sortie dit `dispatch` : le réfuteur est confié de la même façon.
 
 ## 3. Lire le verdict
 
+Ici la pull request a changé `Assert.Equal(90m, total)` en `Assert.NotNull(total)` : la lentille
+`test-integrity` le relève, le réfuteur le confirme. Les lignes de progression commencent par `pr-42:`.
+
 ```console
-skraft review #42: NEEDS_REWORK, pass 1 — <résumé>
-  to address: <ce qui renvoie le travail>
-  details: <copie de travail>/.copilot-tracking/skraft-reviews/pr-42/reviews/verdict-1/verdict.yaml
+$ skraft review --pr 42 --record
+pr-42: review of pull request #42 (test-integrity, architecture-boundaries, cold-reader, mock-fidelity, contract-fidelity) — reviewer · economy · model chosen by the host
+pr-42: verdict refutes test-integrity F1 — standard · model chosen by the host
+pr-42: NEEDS_REWORK: 1 reason to address
+skraft review #42: NEEDS_REWORK, pass 1 — NEEDS_REWORK: 1 reason to address
+  to address: test-integrity F1 G9 blocker at tests/Checkout.UnitTest/CheckoutTests.cs:7: Assert.Equal(90m, total) became Assert.NotNull(total)
+  details: ~/shop/.copilot-tracking/skraft-reviews/pr-42/reviews/verdict-1/verdict.yaml
 ```
 
 | Statut | Signification |
@@ -70,12 +84,9 @@ skraft review #42: NEEDS_REWORK, pass 1 — <résumé>
 | `BLOCKED` (`lens-inconclusive`) | une lentille n'a pas conclu : relancer la revue, ou lire sa réponse dans `verdict.yaml` |
 | `stopped`, `refused` | la revue n'a pas démarré ou s'est arrêtée ; le code entre parenthèses dit pourquoi (Dépannage) |
 
-`verdict.yaml` détaille chaque lentille, les findings réfutés et les notes.
+Comment la réponse du réfuteur change un constat en statut : [Du constat au statut](../reference/pull-request.md#finding-to-status).
 
-:::note[Capture en attente d'un run réel]
-Une capture de la sortie de `skraft review --pr` remplacera le bloc du verdict ci-dessus après
-un run réel sur une pull request.
-:::
+`verdict.yaml` détaille chaque lentille, les findings réfutés et les notes.
 
 ## 4. Garder le verdict dans un commentaire (facultatif)
 
@@ -95,10 +106,11 @@ dans le `skraft-config.json` de la branche de base
 ([skraft-config.json](../reference/skraft-config.md#publish)). Sans accord,
 rien n'est posté ; `comment.md`, à côté de `verdict.yaml`, garde le texte.
 
-:::note[Capture en attente d'un run réel]
-Une capture de la pull request et de son commentaire de revue sur GitHub viendra après un run
-réel.
-:::
+Le commentaire est dans la langue de la pull request. Il contient un titre, une ligne de décompte et un tableau par statut, décrits dans [Commentaire de revue](../reference/pull-request.md#review-comment).
+
+![GitHub : commentaire sur la pull request n° 4, « skraft review · #4 — NEEDS_REWORK (pass 1) », la ligne de synthèse, les deux constats à traiter avec leur fichier, leur ligne et leur suggestion, puis le marqueur skraft-review pr=4](/img/screenshots/shared/github-pr-review-comment.png)
+
+*Figure 1 — Le commentaire de revue sur la [pull request de démonstration](https://github.com/SebastienDegodez/skraft-demo-meetup/pull/4), tel qu'une version antérieure le présentait, avant que ses constats deviennent un tableau par statut.*
 
 ## 5. Revoir après un nouveau push
 
@@ -107,7 +119,17 @@ $ gh pr checkout 42
 ```
 
 Relancez la revue : c'est la passe suivante (`verdict-2/`). Une lentille dont les entrées n'ont
-pas bougé et qui n'avait rien trouvé est reprise sans être relancée.
+pas bougé et qui n'avait rien trouvé est reprise sans être relancée. Un finding que la passe
+précédente a réfuté, au même endroit, reste réfuté sans nouvelle vérification ; un finding nouveau
+sur une ligne que le push n'a pas touchée est une note
+([re-revue incrémentale](../reference/gates.md#incremental)).
+
+Quand un run skraft de cette copie de travail a ouvert la pull request, et que son dossier de
+suivi `.copilot-tracking/skraft-plans/<slug>/` est toujours là, la revue lit aussi les documents
+qu'a lus la revue de ce run (la story, les plans, le change-log et ses lignes `PLAN_DEVIATION`),
+copiés sous `.copilot-tracking/skraft-reviews/pr-<number>/run/`. Elle les ignore quand aucun run
+ou plusieurs nomment la pull request, ou quand la pull request contient elle-même un fichier sous
+`.copilot-tracking/`. Les règles du projet restent celles de la base.
 
 ## Dépannage
 
@@ -117,7 +139,7 @@ pas bougé et qui n'avait rien trouvé est reprise sans être relancée.
 | `pr-not-found`, `pr-unreadable` | Vérifier le numéro, et que `gh repo set-default` désigne le bon dépôt. Sur Azure Repos, la pull request doit être dans le projet et le dépôt que nomme le remote Git. |
 | `pr-not-checked-out` | `gh pr checkout <numéro>` (`az repos pr checkout --id <numéro>` sur Azure Repos), puis relancer. |
 | `pr-base-missing` | `git fetch origin <base>`, puis relancer. |
-| `working-copy-dirty` | Commiter ou mettre de côté les changements hors de `.copilot-tracking/`. |
+| `working-copy-dirty` | Commiter ou mettre de côté les changements hors de `.copilot-tracking/`. Un run terminé peut en laisser (un diagramme de conception, un event model) : les commiter, ou `git stash -u`, puis relancer la revue. |
 | `workflow-invalid` | Le `.skraft/review.skraft.dot` de la base retire un nœud obligatoire : le corriger sur la branche de base. |
 | `pipeline-locked` | Une autre session revoit cette pull request : attendre qu'elle finisse. |
 | `journal-unverifiable` | La revue a commencé sur une autre machine : `skraft journal adopt --pr <numéro>` dans votre terminal. |
