@@ -37,3 +37,31 @@ test('a research document that cites a path the working copy has not sends the r
   ])
   assert.equal(outcome.status, 'done')
 })
+
+test('a line range cited past the end of its file sends the researcher back, and the file it names is read once', async () => {
+  const host = scripted({}, (it) => [
+    researcher(citing(['docs/architecture/context-map.md:1-9']))(it),
+    researcher(citing(['docs/architecture/context-map.md:1']))(it),
+    ...nominal(it).slice(1),
+  ])
+
+  const outcome = await host.start()
+
+  assert.deepEqual(research(host).map(({ attempt, outcome, code, failures }) => [attempt, outcome, code, failures]), [
+    [1, 'failed', 'research-records', [`${RESEARCH} cites docs/architecture/context-map.md:1-9, past the end of a 1-line file (#517)`]],
+    [2, 'done', null, []],
+  ])
+  assert.equal(outcome.status, 'done')
+})
+
+test('a range on a path the working copy has not is reported once, as a path it has not', async () => {
+  const host = scripted({}, (it) => [
+    researcher(citing(['src/Pricing/Discount.cs:120-160']))(it),
+    researcher(citing([]))(it),
+    ...nominal(it).slice(1),
+  ])
+
+  await host.start()
+
+  assert.deepEqual(research(host)[0].failures, [`${RESEARCH} cites src/Pricing/Discount.cs, which is no file of the working copy (#517)`])
+})
