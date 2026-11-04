@@ -7,7 +7,7 @@
  * `select-joined-session-from-workflow`, `input-joined-session-from-workflow`), Copilot CLI
  * 1.0.102-1. Refused, with a fixed reason, when the host declares no elicitation, in `autopilot`
  * (the host may still relay the dialog there: `confirm-in-autopilot`), when the mode cannot be
- * read in time, and past the rate limit of this process. A no, a dismissed dialog or no answer
+ * read in time. The run asks as often as it needs: no number of dialogs is capped. A no, a dismissed dialog or no answer
  * within the time is `not-answered`. Any other result, a throw included, means the host never put
  * the question (`not-asked`): VS Code Insiders, Copilot agent host 1.0.101, shows no dialog for a
  * request made outside a chat turn, though it does for a tool call in one.
@@ -36,8 +36,6 @@
 
 /** How long the host has to say its mode, and the person to answer. */
 const WAITS = Object.freeze({ modeMs: 5000, answerMs: 120_000 })
-/** At most five requests per 10 min in this process, a dialog the host never put not counted; one after another is fine (a run asks in turn). */
-const RATE = Object.freeze({ windowMs: 600_000, perWindow: 5 })
 const TIMED_OUT = Symbol('timed out')
 
 // Stryker disable StringLiteral: text shown to the model and the person; the code is what callers read
@@ -45,20 +43,19 @@ const REFUSALS = Object.freeze({
   'no-elicitation': 'this Copilot host cannot put a question to you',
   autopilot: 'Copilot does not put a question to you in autopilot',
   'mode-unknown': 'Copilot did not say whether a person is there',
-  'rate-limited': 'too many questions were put to you in a short time',
   'not-answered': 'you did not answer the question in Copilot',
   'not-asked': 'Copilot did not put the question to you',
 })
 // Stryker restore StringLiteral
 
 /**
- * @param {{ session: () => ConfirmingSession | null, now?: () => number, waits?: Waits }} host
+ * @param {{ session: () => ConfirmingSession | null, waits?: Waits }} host
  *   session: the joined session, null before the join
  * @returns {HostDialog}
  */
 // Stryker disable next-line ObjectLiteral: the tests that keep these waits answer at once; the times themselves are not observable there
-export const createHostConfirmation = ({ session, now = Date.now, waits = WAITS }) => {
-  const state = { session, now, waits, asked: /** @type {number[]} */ ([]) }
+export const createHostConfirmation = ({ session, waits = WAITS }) => {
+  const state = { session, waits }
   return Object.freeze({
     by: 'host-confirmed',
     ask: (message) => put(state, { call: (ui) => ui.confirm?.(message), takes: (value) => value === true, declined: false }),
@@ -68,28 +65,16 @@ export const createHostConfirmation = ({ session, now = Date.now, waits = WAITS 
 }
 
 /**
- * One dialog, once the person can be asked and the rate limit admits it: its answer, or why not.
- * @param {{ session: () => ConfirmingSession | null, now: () => number, waits: Waits, asked: number[] }} state
+ * One dialog, once the person can be asked: its answer, or why not.
+ * @param {{ session: () => ConfirmingSession | null, waits: Waits }} state
  * @param {Dialog} dialog @returns {Promise<Answered>}
  */
 const put = async (state, dialog) => {
   const joined = state.session()
   const barred = await personBarred(joined, state.waits.modeMs)
   if (barred !== null) return refused(barred)
-  const slot = admitted(state)
-  if (slot === null) return refused('rate-limited')
   const value = await within(() => dialog.call(/** @type {NonNullable<ConfirmingSession['ui']>} */ (joined?.ui)), state.waits.answerMs)
-  return counted(state, slot, answered(dialog, value))
-}
-
-/**
- * A dialog the host never put takes no place in the rate limit: its slot is given back, so that
- * the chat, where the host does ask, stays open.
- * @param {{ asked: number[] }} state @param {number} slot @param {Answered} answer @returns {Answered}
- */
-const counted = (state, slot, answer) => {
-  if (/** @type {{ code?: string }} */ (answer).code === 'not-asked') state.asked.splice(state.asked.indexOf(slot), 1)
-  return answer
+  return answered(dialog, value)
 }
 
 /**
@@ -112,18 +97,6 @@ const personBarred = async (joined, modeMs) => {
   const mode = await within(() => joined.rpc?.mode?.get?.(), modeMs)
   if (typeof mode !== 'string') return 'mode-unknown'
   return mode === 'autopilot' ? 'autopilot' : null
-}
-
-/**
- * The slot of one more request, counted, when it fits the rate limit; null when it does not.
- * @param {{ now: () => number, asked: number[] }} state @returns {number | null}
- */
-const admitted = (state) => {
-  const at = state.now()
-  const recent = state.asked.filter((time) => at - time < RATE.windowMs)
-  if (recent.length >= RATE.perWindow) return null
-  state.asked.push(at)
-  return at
 }
 
 /**

@@ -127,7 +127,6 @@ const refusalOf = (code, number) => {
     'no-elicitation': `this Copilot host cannot ask you to confirm; ${terminal}`,
     autopilot: `a consent is not recorded in autopilot; ${terminal}`,
     'mode-unknown': `Copilot did not say whether a person is there; ${terminal}`,
-    'rate-limited': `too many questions asked in a short time; wait, or ${terminal}`,
     'not-asked': `Copilot did not ask you to confirm; ${terminal}`,
   })[code] ?? `you did not confirm keeping a review comment on pull request #${number}`
 }

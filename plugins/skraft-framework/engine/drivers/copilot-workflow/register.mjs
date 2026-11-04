@@ -46,7 +46,7 @@ const CANVAS_JOURNAL_ROWS = 200
  * nothing starts (the canvas starts its server when a panel opens). The working directory
  * follows the session (session-dir.mjs): a run reads it when it starts, the tool on each call,
  * the canvas on each open, action and refresh. The run and the tool put each question to the
- * person in the joined session's own dialog (host-confirmation.mjs), sharing its rate limit; the
+ * person in the joined session's own dialog (host-confirmation.mjs); the
  * canvas only shows the run.
  * @param {Registration} registration
  * @returns {Promise<JoinedSession | null>} null when the host refuses every join

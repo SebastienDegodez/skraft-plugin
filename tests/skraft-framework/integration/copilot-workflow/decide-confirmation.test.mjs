@@ -86,26 +86,20 @@ test('without a dialog, in autopilot, or with a mode the host does not tell in t
   assert.deepEqual(await answers(cwd), [])
 })
 
-test('the person may be asked one question after another, and at most five times in ten minutes', async (t) => {
+test('the person may be asked one question after another, as often as the run needs: no number of dialogs is capped', async (t) => {
   const cwd = await waitingOnRatification(t)
-  const clock = { now: 0 }
   const session = answeringSession()
-  const tool = decideTool(cwd, session, { now: () => clock.now })
-  const askedAt = async (seconds) => {
-    clock.now = seconds * 1000
-    return (await tool.handler({})).includes('too many questions')
-  }
+  const tool = decideTool(cwd, session)
 
-  assert.deepEqual([await askedAt(0), await askedAt(1), await askedAt(2), await askedAt(3), await askedAt(599), await askedAt(599.5)], [false, false, false, false, false, true])
-  assert.deepEqual([await askedAt(600), await askedAt(600.5), await askedAt(601)], [false, true, false])
-  assert.equal(session.asked.length, 7)
+  for (let tries = 0; tries < 12; tries += 1) assert.equal(await tool.handler({}), `Refused: you did not answer the question in Copilot; ${TERMINAL}; nothing was recorded.`)
+  assert.equal(session.asked.length, 12)
 })
 
-test('a dialog the host never shows takes no place in the limit: after six unasked tries, the option the person then chooses is still recorded', async (t) => {
+test('a dialog the host never shows records nothing: after six unasked tries, the option the person then chooses is still recorded', async (t) => {
   const cwd = await waitingOnRatification(t)
   const unshown = () => undefined
   const session = answeringSession({ answers: [unshown, unshown, unshown, unshown, unshown, unshown, 'RATIFIED'] })
-  const tool = decideTool(cwd, session, { now: () => 0 })
+  const tool = decideTool(cwd, session)
   const unasked = `Refused: Copilot did not put the question to you; ${TERMINAL}; nothing was recorded.`
 
   for (let tries = 0; tries < 6; tries += 1) assert.equal(await tool.handler({}), unasked)

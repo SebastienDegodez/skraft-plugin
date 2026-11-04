@@ -242,10 +242,11 @@ boîte de dialogue de Copilot, dans le chat : un choix parmi ses options (`sessi
 un champ texte pour une question qui prend une consigne, celle d'une étape `blocked` ou le
 `mutation-plan`, où la personne écrit une option ou sa consigne (`session.ui.input`). Un refus
 (`REJECTED`) demande ensuite sa raison, dans un champ texte. La valeur que rend la boîte de
-dialogue est la réponse, journalisée `by: "host-confirmed"` ; rien ne demande de la confirmer, et
-le run continue. Quand Copilot ne peut pas poser la question (pas de boîte de dialogue, mode
-`autopilot`, mode qu'il ne dit pas, trop de questions en peu de temps) ou que la personne la
-ferme, le workflow écrit pourquoi et comment répondre, puis se met en pause durable par
+dialogue est la réponse, journalisée `by: "host-confirmed"`, et le run continue ; une consigne
+écrite dans le champ texte est d'abord montrée en retour et n'est enregistrée qu'une fois que la
+personne la confirme. Le run pose autant de questions qu'il lui faut. Quand Copilot ne peut pas
+poser la question (pas de boîte de dialogue, mode `autopilot`, mode qu'il ne dit pas) ou que la
+personne la ferme, le workflow écrit pourquoi et comment répondre, puis se met en pause durable par
 `ctx.pause(<clé>)` :
 
 ```

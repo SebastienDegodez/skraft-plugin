@@ -60,22 +60,21 @@ test('a refusal whose reason the person leaves blank or dismisses is not recorde
   }
 })
 
-test('a start that refuses the ADR twice, then writes design an instruction once its return is spent, reaches the limit of five dialogs: the sixth, the instruction\'s confirmation, is not put; the instruction is not recorded and the run pauses with a fixed message', async (t) => {
+test('a start that refuses the ADR twice, then writes design an instruction once its return is spent, puts every dialog it needs: the instruction confirmed, the third ratification recorded', async (t) => {
   const { cwd } = pipelineRepository(t)
   const revises = (text) => (brief, { cwd: dir, slug }) => {
     commit(dir, `docs(${slug}): ${text}`, { [ADR_PATH]: `${ADR}\n${text}.\n` })
     writeResult(brief, { status: 'done', summary: text })
   }
-  const llm = scriptedLlm({ cwd, acts: { 'solution-architect': [NOMINAL['solution-architect'], revises('revised once'), revises('revised twice')] } })
-  const { ctx, logs } = simulatedContext({ args: { slug: SLUG }, otherwise: actsAs(llm) })
-  const session = answeringSession({ answers: ['REJECTED', REASON, 'REJECTED', REASON, INSTRUCTION, 'RATIFIED'] })
+  const llm = scriptedLlm({ cwd, acts: { 'solution-architect': [NOMINAL['solution-architect'], revises('revised once'), revises('revised twice'), revises('revised thrice')] } })
+  const { ctx } = simulatedContext({ args: { slug: SLUG }, otherwise: actsAs(llm) })
+  const session = answeringSession({ answers: ['REJECTED', REASON, 'REJECTED', REASON, INSTRUCTION, true, 'RATIFIED'] })
 
-  await assert.rejects(runSkraftPipelineWorkflow(ctx, copilotHost(cwd, PLUGIN_ROOT, session, { now: () => 0 })), { name: 'AbortError', message: 'paused at design-1' })
+  await runSkraftPipelineWorkflow(ctx, copilotHost(cwd, PLUGIN_ROOT, session)).catch(() => null)
 
-  assert.deepEqual(session.asked.map(({ kind }) => kind), ['select', 'input', 'select', 'input', 'input'])
+  assert.deepEqual(session.asked.slice(0, 7).map(({ kind }) => kind), ['select', 'input', 'select', 'input', 'input', 'confirm', 'select'])
   assert.match(session.asked[4].message, /^design is blocked: adr -> design was taken as often as its max_visits allows\./)
-  assert.deepEqual(journal(cwd, SLUG).filter((event) => event.type === 'question.answered').map(({ key, answer }) => [key, answer]), [['adr-1', 'REJECTED'], ['adr-2', 'REJECTED']])
-  assert.equal(logs.at(-1), 'design-1 was not answered: too many questions were put to you in a short time. Resume this run to be asked again, ask Copilot in the chat to put the question to you, or type skraft decide design-1 "<instruction>"|STOP in a terminal and resume this run.')
+  assert.deepEqual(journal(cwd, SLUG).filter((event) => event.type === 'question.answered').slice(0, 4).map(({ key, answer }) => [key, answer]), [['adr-1', 'REJECTED'], ['adr-2', 'REJECTED'], ['design-1', INSTRUCTION], ['adr-3', 'RATIFIED']])
 })
 
 test('a blocked step asks the person for an instruction in a text field, then to confirm it; the instruction runs it again in the same run, and STOP typed there ends it', async (t) => {

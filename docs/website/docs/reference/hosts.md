@@ -240,9 +240,10 @@ dialog in the chat: a choice among its options (`session.ui.select`), or a text 
 question that takes an instruction, a `blocked` step's or the `mutation-plan`, where the person
 writes an option or the instruction (`session.ui.input`). A refusal (`REJECTED`) asks its
 reason next, in a text field. The value the dialog gives is the answer, journaled
-`by: "host-confirmed"`; nothing asks to confirm it again, and the run goes on. When Copilot cannot
-put the question (no dialog, `autopilot` mode, a mode it does not tell, too many questions in a
-short time) or the person dismisses it, the workflow logs why and how to answer, then pauses
+`by: "host-confirmed"`, and the run goes on; an instruction written in the text field is first
+shown back and recorded only once the person confirms it. The run asks as often as it needs.
+When Copilot cannot put the question (no dialog, `autopilot` mode, a mode it does not tell) or
+the person dismisses it, the workflow logs why and how to answer, then pauses
 durably with `ctx.pause(<key>)`:
 
 ```
