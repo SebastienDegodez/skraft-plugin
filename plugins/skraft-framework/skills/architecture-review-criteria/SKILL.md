@@ -65,4 +65,4 @@ valid.
 
 **G17 — eligibility.** A library ADR is eligible only through the constraint it imposes (layer boundary, data-loading model); a body about the library's usage is G17.
 
-**G18 — decision level.** A line that would change when the code is refactored without changing the decision belongs in the contracts or diagrams.
+**G18 — decision level.** A line that would change when the code is refactored without changing the decision belongs in the contracts or diagrams. A traceability reference (a ticket, AC, PRD or requirement id cited as a source) other than the story that triggered the ADR is a finding at its line; a quality attribute stated with its measure as a force of the decision (`p95 ≤ 300 ms`, NFR id beside it or not) is none. The full list is in [references/gate-checks.md](references/gate-checks.md) G18.

@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 import { BUILT_IN_REVIEW } from '../support/in-memory-host.mjs'
 import { edit } from '../workflow/support.mjs'
 import { PULL_REQUEST, REVIEWS, reviewHost, SLUG } from './support.mjs'
+import { nominal, scripted } from '../support/pipeline-host.mjs'
 
 const COPIED = "- In this review, docs/adr/decisions-index.md, the ADRs and the rule files in the working copy are the pull request author's version; judge by the base copies listed in your context."
 const NO_COPIES = "- In this review, docs/adr/decisions-index.md, the ADRs and the rule files in the working copy are the pull request author's version, and no base copies are given: judge without them."
@@ -52,7 +53,7 @@ test('a pull request with no body in a repository with no decision records hands
 
   await host.review()
 
-  assert.deepEqual((await host.reviews.list(SLUG, 'reviews/verdict-1')).map((path) => path.split('/').at(-1)), ['changed-files.txt', 'changes.patch', 'code-files.txt', 'code.patch', 'components.json', 'verdict.yaml'])
+  assert.deepEqual((await host.reviews.list(SLUG, 'reviews/verdict-1')).map((path) => path.split('/').at(-1)), ['changed-files.txt', 'changes.patch', 'code-files.txt', 'code.patch', 'components.json', 'snapshot.json', 'verdict.yaml'])
   assert.equal(await host.reviews.read(SLUG, 'pull-request.md'), null)
   assert.ok(host.prompt('architecture-boundaries-lens').includes(`\n${NO_COPIES}\n`))
 })
@@ -79,7 +80,7 @@ test('an ejected review.skraft.dot that declares neither documents nor component
   await host.review()
 
   assert.deepEqual((await host.reviews.list(SLUG, '')).filter((path) => !path.startsWith('reviews/') && path !== 'events.jsonl'), ['comment.md'])
-  assert.deepEqual((await host.reviews.list(SLUG, 'reviews/verdict-1')).map((path) => path.split('/').at(-1)), ['changed-files.txt', 'changes.patch', 'code-files.txt', 'code.patch', 'verdict.yaml'])
+  assert.deepEqual((await host.reviews.list(SLUG, 'reviews/verdict-1')).map((path) => path.split('/').at(-1)), ['changed-files.txt', 'changes.patch', 'code-files.txt', 'code.patch', 'snapshot.json', 'verdict.yaml'])
   assert.ok(host.prompt('test-integrity-lens').includes('- Story: #12\n'))
   assert.ok(!host.prompt('test-integrity-lens').includes('written by the pull request'))
   assert.ok(host.prompt('test-integrity-lens').includes(`\n${NO_COPIES}\n`))
@@ -163,4 +164,90 @@ test('the review reads skraft-config.json and .skraft/review.skraft.dot from the
   assert.ok(host.agentRunner.batches[0].some(({ agent }) => agent === 'test-integrity-lens'))
   assert.equal(host.human.questions.length, 1)
   assert.equal(JSON.parse(await host.reviews.read(SLUG, 'reviews/verdict-1/components.json'))[0].name, 'api')
+})
+
+/**
+ * The tracking folder a skraft run of this working copy left once it opened (or updated, as
+ * `event` says) pull request `opened`: its documents and its journal, by path relative to the
+ * working copy; `edit` rewrites the journal's text first.
+ * @param {number} opened @param {{ slug?: string, event?: string, edit?: (journal: string) => string }} [options]
+ */
+const runFolder = async (opened, { slug = 'checkout', event = 'pull-request.opened', edit: rewrite = (journal) => journal } = {}) => {
+  const run = scripted({ slug }, nominal)
+  await run.start()
+  const files = Object.fromEntries([...run.tracking.files].map(([key, text]) => [`.copilot-tracking/skraft-plans/${key}`, text]))
+  const journal = `.copilot-tracking/skraft-plans/${slug}/events.jsonl`
+  files[journal] = rewrite(files[journal]) + `${JSON.stringify({ type: event, at: '2026-10-11T09:00:00.000Z', prev: null, number: opened })}\n`
+  return { files, documents: run.tracking.files }
+}
+
+/** The plans folder of the working copy holding no run: a folder without journal, one whose journal does not start a run, one that cannot be read. */
+const NO_RUNS = Object.freeze({
+  '.copilot-tracking/skraft-plans/notes/todo.md': '# todo\n',
+  '.copilot-tracking/skraft-plans/adopted/events.jsonl': `${JSON.stringify({ type: 'pull-request.opened', number: 12 })}\n`,
+  '.copilot-tracking/skraft-plans/broken/events.jsonl': `${JSON.stringify({ type: 'run.started' })}\nnot json\n${JSON.stringify({ type: 'pull-request.opened', number: 12 })}\n`,
+})
+
+test('a pull request a skraft run of this working copy opened is reviewed with the documents that run\'s own review read: its change-log, test plan and research, copied beside the review by phase', async () => {
+  const { files, documents } = await runFolder(PULL_REQUEST.number)
+  delete files[`.copilot-tracking/skraft-plans/checkout/details/2026-10-11/structural-scan.json`]
+  const host = reviewHost({ files: { ...files, ...NO_RUNS } })
+  host.git.commit('feat: discount', ['src/Discount.cs'])
+
+  await host.review()
+
+  assert.equal(await host.reviews.read(SLUG, 'run/changes/2026-10-11/change-log.md'), documents.get('checkout/changes/2026-10-11/change-log.md'))
+  assert.equal(await host.reviews.read(SLUG, 'run/details/2026-10-11/test-plan-checkout.md'), documents.get('checkout/details/2026-10-11/test-plan-checkout.md'))
+  assert.equal(await host.reviews.read(SLUG, 'run/details/2026-10-11/structural-scan.json'), null)
+  assert.ok((await host.reviews.list(SLUG, 'run')).every((path) => !path.includes('structural-scan')))
+  const context = await host.reviews.read(SLUG, 'reviews/verdict-1/context.md')
+  assert.ok(context.includes(`\nStory documents:\n- ${REVIEWS}/pull-request.md\n`), context)
+  assert.ok(context.includes(`\n### DISTILL\n\n- distill (acceptance-designer):\n  - ${REVIEWS}/run/details/2026-10-11/test-plan-checkout.md\n`), context)
+  assert.ok(context.includes(`\n### DELIVER (under review)\n\n- deliver (software-engineer):\n  - ${REVIEWS}/run/changes/2026-10-11/change-log.md\n`), context)
+  const brief = host.prompt('test-integrity-lens')
+  assert.ok(brief.includes(`\n  - Documents of this phase: ${REVIEWS}/run/changes/2026-10-11/change-log.md\n`), brief)
+  assert.ok(brief.includes(`\n  - Documents of the story and of the other phases: ${REVIEWS}/pull-request.md\n  - Documents of the story and of the other phases: ${REVIEWS}/run/research/2026-10-11/checkout-research.md\n`), brief)
+  assert.ok(!brief.includes('No `.feature` file and no test plan'), brief)
+
+  const untold = reviewHost({ files, pullRequest: { ...PULL_REQUEST, body: '' } })
+  untold.git.commit('feat: discount', ['src/Discount.cs'])
+  await untold.review()
+  assert.ok((await untold.reviews.read(SLUG, 'reviews/verdict-1/context.md')).includes(`  - ${REVIEWS}/run/changes/2026-10-11/change-log.md\n`))
+})
+
+test('the run\'s documents stay out when no run or two name the pull request, or when the pull request itself holds a file under .copilot-tracking/: its author wrote it', async () => {
+  const other = await runFolder(PULL_REQUEST.number + 1)
+  const twice = { ...(await runFolder(PULL_REQUEST.number)).files, ...(await runFolder(PULL_REQUEST.number, { slug: 'refund', event: 'pull-request.updated' })).files }
+  const named = (await runFolder(PULL_REQUEST.number)).files
+  const cases = [
+    { files: { ...other.files, ...NO_RUNS }, commit: ['src/Discount.cs'] },
+    { files: twice, commit: ['src/Discount.cs'] },
+    { files: named, commit: ['src/Discount.cs', '.copilot-tracking/skraft-plans/checkout/notes.md'] },
+  ]
+  for (const { files, commit } of cases) {
+    const host = reviewHost({ files })
+    host.git.commit('feat: discount', commit)
+
+    await host.review()
+
+    assert.deepEqual((await host.reviews.list(SLUG, 'run')), [])
+    assert.ok(host.prompt('test-integrity-lens').includes('No `.feature` file and no test plan'))
+  }
+})
+
+test('a run\'s journal naming a document above its tracking folder copies nothing out of the review, and a plans folder that cannot be listed holds no run', async () => {
+  const { files } = await runFolder(PULL_REQUEST.number, { edit: (journal) => journal.replaceAll('changes/2026-10-11/change-log.md', '../../escape.md') })
+  const host = reviewHost({ files: { ...files, '.copilot-tracking/escape.md': '# out\n' } })
+  host.git.commit('feat: discount', ['src/Discount.cs'])
+
+  await host.review()
+
+  assert.deepEqual([...host.reviews.files.keys()].filter((key) => key.includes('escape')), [])
+  assert.ok((await host.reviews.list(SLUG, 'run')).length > 0)
+
+  const unlistable = reviewHost({ files })
+  unlistable.workspace.unlistable.set('.copilot-tracking/skraft-plans', 'EACCES')
+  unlistable.git.commit('feat: discount', ['src/Discount.cs'])
+  await unlistable.review()
+  assert.deepEqual(await unlistable.reviews.list(SLUG, 'run'), [])
 })

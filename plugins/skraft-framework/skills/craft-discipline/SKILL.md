@@ -7,11 +7,11 @@ description: Use when a change looks finished and is about to be committed, or a
 
 ## Overview
 
-10 self-discipline checkpoints for the `software-engineer`.
+12 self-discipline checkpoints for the `software-engineer`.
 Run at every COMMIT & VERIFY phase, before committing.
 
-**What this skill is NOT:** a review contract. The reviewer does not read
-this skill. It audits artifacts independently through its own gates.
+**What this skill is NOT:** a review contract. A review lens that declares
+it judges only with C10, C12 and the references; it never runs a command below.
 
 ## Checkpoints
 
@@ -35,15 +35,17 @@ Zero red tests. Zero ignored tests.
 
 ### C3 — Build passes
 
-```bash
-dotnet build
-```
+Run the component's `build` command: your brief's, else `commands.build` of the component in
+`skraft-config.json`, else the stack's standard one (`dotnet build`).
 
 All projects compile without warnings. Treat warnings as errors.
 
-### C4 — Static analysis passes
+### C4 — Format and static analysis pass
 
-Verify that the linter/analyzer reports no new findings.
+Run the component's `format` and `lint` commands the same way (brief, else `commands.format` and
+`commands.lint` in `skraft-config.json`); a missing command is skipped. When the formatter has a
+fix mode, run it first, then the check. Both report no finding, including one on a line the change
+did not write; commit those fixes as `style`.
 
 ### C5 — No skipped tests or placeholder assertions
 
@@ -95,6 +97,13 @@ Multiple input variants for the same behavior MUST be a single parameterized tes
 (`[Theory]/[InlineData]` in .NET, `@ParameterizedTest` in Java, `pytest.mark.parametrize` in Python),
 not duplicated test methods. One test method per behavior, one row per case.
 
+### C12 — Every test is planned
+
+Every test the change adds is a row of the test plan or a step of the implementation plan, or the
+change-log line of its commit records `PLAN_DEVIATION: {row} — {planned} → {actual} — {rule}`.
+A Domain or unit test the test plan lists with an `Extraction Reason` is planned. A test in neither
+plan with no such line: add the line, or remove the test.
+
 ## When to Execute
 
 A pre-approved, staged documentation-only change with no applicable executable tests, build, or mutation targets is not a code COMMIT & VERIFY cycle. Check the exact approved content and changed paths, run applicable whitespace checks, and apply C9; do not invent code-gate results or create code-evidence artifacts.
@@ -104,7 +113,7 @@ A pre-approved, staged documentation-only change with no applicable executable t
 | PREPARE | None |
 | RED | None |
 | SYNTHESIZE-GREEN | C3 only (build) |
-| COMMIT & VERIFY | **All (C1-C11)** |
+| COMMIT & VERIFY | **All (C1-C12)** |
 
 ## On Failure
 

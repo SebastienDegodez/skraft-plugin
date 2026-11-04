@@ -11,7 +11,7 @@ const agentFile = (root, ...parts) => {
   writeFileSync(join(root, ...parts), '---\nname: agent\n---\n')
 }
 
-test('an agent skraft ships comes from the plugin; one the working copy defines comes from the repository', async (t) => {
+test('an agent skraft ships comes from the plugin; one the working copy defines comes from the repository; its descriptor is the file found', async (t) => {
   const cwd = tempFolder(t)
   agentFile(cwd, '.claude', 'agents', 'acme-security-reviewer.md')
   agentFile(cwd, '.github', 'agents', 'acme-copilot-reviewer.agent.md')
@@ -24,6 +24,9 @@ test('an agent skraft ships comes from the plugin; one the working copy defines 
   assert.equal(await agentCatalog.locate('acme-copilot-reviewer'), 'repository')
   assert.equal(await agentCatalog.locate('acme-plain-reviewer'), 'repository')
   assert.equal(await agentCatalog.locate('acme-unknown'), null)
+  assert.equal(await agentCatalog.descriptor('solution-researcher'), join(PLUGIN_ROOT, 'com.anthropic.claude-code', 'agents', 'solution-researcher.md'))
+  assert.equal(await agentCatalog.descriptor('acme-copilot-reviewer'), join(cwd, '.github', 'agents', 'acme-copilot-reviewer.agent.md'))
+  assert.equal(await agentCatalog.descriptor('acme-unknown'), null)
 })
 
 test('an agent shipped in only one of the plugin trees still comes from the plugin', async (t) => {
@@ -113,11 +116,11 @@ test('the skills an agent lists under skills:, as a block or a flow list, quoted
   assert.equal(await agentCatalog.skill('../skills/review-criteria'), null)
 })
 
-test('the plugin ships the mocking skill of each strategy and the contract testing skills a component brief can name', async (t) => {
+test('the plugin ships the mocking skill of each strategy, the contract testing skills a component brief can name and the review criteria a brief tells to check against', async (t) => {
   const { agentCatalog } = createNodeAdapters({ cwd: tempFolder(t), pluginRoot: PLUGIN_ROOT })
   const names = [
     ...['dotnet', 'python', 'typescript'].flatMap((family) => [`mocking-microcks-${family}`, `mocking-inprocess-${family}`]),
-    'contract-testing', 'contract-testing-dotnet', 'contract-testing-python',
+    'contract-testing', 'contract-testing-dotnet', 'contract-testing-python', 'acceptance-review-criteria',
   ]
 
   const located = await Promise.all(names.map(async (name) => (await agentCatalog.skill(name))?.path ?? null))

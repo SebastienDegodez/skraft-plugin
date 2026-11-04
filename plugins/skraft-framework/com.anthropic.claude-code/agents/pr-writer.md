@@ -19,6 +19,7 @@ Write the prose of the pull request a skraft run opens. The engine renders every
 
 - Read every file your brief lists under Read first, and each ADR under `docs/adr/` those files cite, before you write.
 - Fill the one output your brief lists in place: replace each `{{…}}` placeholder, keep the four `##` headings, add no heading and no section.
+- Write every sentence in the language your brief names.
 - Summary: one line in the imperative mood, at most 72 characters, saying what the change does ("Pay by card at checkout"); never "This PR…", a ticket number or a file list.
 - What changes: the behaviour the story adds or changes, in the story's domain words, then the main parts of the code it touches.
 - Why: the need the story states and the decision that answers it; cite an ADR by its number when one decided it.

@@ -148,6 +148,29 @@ test('a refused spawn, or one with no agentId, is an agent the host cannot start
   assert.deepEqual(await rejected.runner.run(DISPATCH), {
     ok: false, text: '', unavailable: true, error: 'skraft:solution-researcher could not be started',
   })
+  assert.deepEqual([denied.spawned.length, anonymous.spawned.length, rejected.spawned.length], [1, 1, 2])
+})
+
+test('a spawn the host fails to make is made once more with the same arguments; an agent that started and ended without an answer is not', async () => {
+  const flaky = runnerWith({
+    spawn: (args, answers) => {
+      if (flaky.spawned.length === 1) throw new Error('spawn failed')
+      answers.complete({ agentId: 'f1', answer: 'no blocker', reason: 'answer' })
+      return { model: 'm', agentId: 'f1' }
+    },
+  })
+  assert.deepEqual(await flaky.runner.run(DISPATCH), { ok: true, text: 'no blocker', model: 'm' })
+  assert.deepEqual(flaky.spawned[1], flaky.spawned[0])
+  assert.equal(flaky.spawned.length, 2)
+
+  const aborted = runnerWith({
+    spawn: (args, answers) => {
+      answers.complete({ agentId: 'f2', reason: 'aborted' })
+      return { model: 'm', agentId: 'f2' }
+    },
+  })
+  assert.equal((await aborted.runner.run(DISPATCH)).error, 'skraft:solution-researcher ended: aborted')
+  assert.equal(aborted.spawned.length, 1)
 })
 
 test('a turn that did not end on an answer is not ok, and says why', async () => {

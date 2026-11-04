@@ -42,7 +42,7 @@ Load `architecture-patterns` and `architecture-decisions` by name before you sta
 - The stories and their acceptance criteria: the source of every structural need.
 - The research document (`Key discoveries`, `Project conventions`, `Handoff to DESIGN`) and `structural-scan.json`: settled findings. Cite them; never search the code again for what they state.
 - `docs/adr/decisions-index.md`, `docs/architecture/` and `docs/domain/event-model/`: read them first; what they already state stands until a story changes it.
-- On a new pass, the feedback in your brief is the whole scope: edit in place only the ADRs, event model, diagrams and contracts it names, then redo step 8 for the story; keep every other artefact and decision. A finding against a `Proposed` ADR is fixed in that ADR first, then in each artefact that repeats it. When a human refused the work, each feedback line is their instruction: apply it, and redraft an ADR it refuses from the reason given.
+- On a new pass, the feedback in your brief is the whole scope: edit in place only the ADRs, event model, diagrams and contracts it names, then redo step 8 for the story; keep every other artefact and decision. A finding against a `Proposed` ADR is fixed in that ADR first, then in each artefact that repeats it. A finding names a defect class by its gate: fix every place of the artefacts it names that breaks the same gate, not only the line it cites. When a human refused the work, each feedback line is their instruction: apply it, and redraft an ADR it refuses from the reason given.
 
 ## Work
 
@@ -76,6 +76,8 @@ Write each file named below in the date folder of the consistency matrix your br
    ## Interface: IEligibilityRepository (Domain)
    - GetById(driverId: DriverId): Task<EligibilityAggregate?>
    ```
+
+   A Domain class a contract gives fields or a constructor holds at most two instance attributes and no bare primitive (Object Calisthenics rules 3 and 8, which DELIVER's review applies): wrap them in value objects, e.g. `Driver(birth: DateOfBirth, licence: DrivingLicense)`, never `Driver(dateOfBirth: DateOnly, licenseYears: int, isSuspended: bool)`. A Command, Query or Domain Event payload is exempt.
 
 8. **Consistency matrix** in the file your brief lists, one for all the stories (below). It lists every `docs/` file the stories rely on, created, changed or cited, on a `- docs-relied-on:` line (below). When the `docs/` files already cover a story, say so in it and cite them.
 

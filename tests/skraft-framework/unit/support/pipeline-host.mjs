@@ -24,8 +24,9 @@ export const DOCS_FOLDERS = Object.freeze({ 'docs/adr/.gitkeep': '', 'docs/domai
 export const CONSENTS = Object.freeze(['publish_consent', 'visuals_consent'])
 export const RESEARCH_TEMPLATE = '<!-- markdownlint-disable-file -->\n# Research: {{topic}}\n'
 export const TRACKING = `/work/.copilot-tracking/skraft-plans/${SLUG}`
-/** The plugin's template of the pull request prose the pr-writer fills. */
-export const PROSE_TEMPLATE = readFileSync(new URL('../../../../plugins/skraft-framework/assets/templates/pull-request-prose.template.md', import.meta.url), 'utf8')
+/** The plugin's templates of the pull request prose the pr-writer fills, for an English story and a French one. */
+export const PROSE_TEMPLATE = readFileSync(new URL('../../../../plugins/skraft-framework/assets/templates/pull-request-prose.en.template.md', import.meta.url), 'utf8')
+export const PROSE_TEMPLATE_FR = readFileSync(new URL('../../../../plugins/skraft-framework/assets/templates/pull-request-prose.fr.template.md', import.meta.url), 'utf8')
 
 /** One .NET component at the root of the working copy, its tests under tests/, mutated by Stryker.NET. */
 export const API = Object.freeze({
@@ -59,7 +60,7 @@ export const pipelineHost = ({
     journal: tracking,
     activePipeline: tracking,
     files: tracking,
-    templates: new InMemoryTemplates({ 'research.template.md': RESEARCH_TEMPLATE, 'pull-request-prose.template.md': PROSE_TEMPLATE }),
+    templates: new InMemoryTemplates({ 'research.template.md': RESEARCH_TEMPLATE, 'pull-request-prose.en.template.md': PROSE_TEMPLATE, 'pull-request-prose.fr.template.md': PROSE_TEMPLATE_FR }),
     clock,
     hasher: new FakeHasher(),
     journalKeys,
@@ -168,13 +169,15 @@ export const PROSE = Object.freeze({
 })
 
 /**
- * A pr-writer that fills its template with the prose given, then writes its result.
+ * A pr-writer that fills its template, the French one when the engine pre-created it, with the
+ * prose given, then writes its result.
  * @param {Partial<typeof PROSE>} [prose]
  */
 export const prWriter = (prose = {}) => (host) => async () => {
   const step = asked(host)
   const { summary, what, why, limitations } = { ...PROSE, ...prose }
-  const filled = PROSE_TEMPLATE.replace('{{summary}}', summary).replace('{{what}}', what).replace('{{why}}', why).replace('{{limitations}}', limitations)
+  const precreated = (await host.tracking.read(host.slug, step.outputs[0])) ?? ''
+  const filled = (precreated.includes('\n## Ce qui change\n') ? PROSE_TEMPLATE_FR : PROSE_TEMPLATE).replace('{{summary}}', summary).replace('{{what}}', what).replace('{{why}}', why).replace('{{limitations}}', limitations)
   await host.tracking.write(host.slug, step.outputs[0], filled)
   await host.tracking.write(host.slug, step.result, JSON.stringify({ status: 'done', summary: 'prose written' }))
 }
@@ -199,7 +202,7 @@ export const tddCycle = (story = SLUG, name = 'Checkout', body = '') => ({ git }
  */
 export const nominal = (host, body = '') => [
   agent()(host),
-  agent({ work: ({ git }) => git.commit('docs(checkout): ADR for the card payment', ['docs/adr/adr-001-card-payment.md'], body) })(host),
+  agent({ work: ({ git }) => git.change('docs/adr/adr-001-card-payment.md') })(host),
   agent({ work: ({ git }) => git.commit('test(checkout): acceptance of the card payment', ['tests/Acceptance/CheckoutAcceptanceTests.cs'], body) })(host),
   agent({ work: tddCycle(SLUG, 'Checkout', body) })(host),
 ]

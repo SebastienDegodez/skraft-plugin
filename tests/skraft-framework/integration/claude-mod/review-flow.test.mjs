@@ -100,6 +100,7 @@ test('a blocker the refuter confirms sends DESIGN back as pass 2 with the findin
   ])
   assert.equal(spawns[5].subagentType, 'skraft:finding-refuter')
   assert.match(spawns[5].prompt, /^## Skraft finding check: consistency F1\n- Finding: G1 blocker at docs\/adr\/adr-001-card-payment\.md:3: The ADR names no payment provider\n/)
+  assert.match(spawns[5].prompt, /\n- Lens \(read it with the skills: its gate table states the rule of each gate a finding cites\): [^\n]+[\\/]com\.anthropic\.claude-code[\\/]agents[\\/]consistency-lens\.md\n/)
   assert.deepEqual(events.filter((event) => event.type === 'review.refuted').map(({ step, visit, lens, finding: id, verdict }) => [step, visit, lens, id, verdict]), [['design_review', 1, 'consistency', 'F1', 'confirmed']])
   assert.deepEqual(recorded(events, 'design_review')[0].failures, [FINDING_LINE])
   assert.ok(spawns[6].prompt.includes('- Pass: 2, after the review sent the work back'), spawns[6].prompt)

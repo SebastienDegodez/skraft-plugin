@@ -2,26 +2,28 @@ import { readConfig, writeConfig } from '../../domain/config/skraft-config.mjs'
 import { RULE_FILES } from '../../domain/review/context.mjs'
 import { PULL_REQUEST_FILE, pullRequestText } from '../../domain/review/pull-request.mjs'
 import { newComponents } from '../config/detected-components.mjs'
+import { runDocuments } from './run-documents.mjs'
 
 /**
  * What a pull request hands its review: the changes from the merge base to its head, its number
  * as the story (its title and body only in pull-request.md, framed as its author's), the repository's decision records as documents, and the components of
- * skraft-config.json, else those `skraft init` would detect, written nowhere.
+ * skraft-config.json, else those `skraft init` would detect, written nowhere. When a skraft run of
+ * this working copy opened the pull request, the documents its own review read come too
+ * (`run-documents.mjs`).
  *
  * @typedef {import('./review-runs.mjs').ReviewInputs} ReviewInputs
  * @typedef {import('../ports/pull-requests.mjs').PullRequestFacts} PullRequestFacts
  * @typedef {import('../../domain/config/skraft-config.mjs').Component} Component
- * @typedef {{
- *   reviewFiles: import('../ports/tracking-files.mjs').TrackingFiles,
- *   workspace: import('../ports/workspace.mjs').Workspace,
- * }} InputDeps
+ * @typedef {import('./run-documents.mjs').RunDeps} InputDeps
  * @typedef {{
  *   slug: string, pullRequest: PullRequestFacts, base: ReviewInputs['base'], components: Component[],
  *   declared: Record<string, 'required' | 'optional'>, workingCopyName: string,
  *   committed: import('../ports/workspace.mjs').ConfigSource,
+ *   workflow: import('../../domain/workflow/workflow.mjs').Workflow, phase: string,
  * }} InputFacts
  *   components: those of skraft-config.json; declared: the inputs the review reads; committed:
- *   the files as the pull request's base holds them, where the decision records are read.
+ *   the files as the pull request's base holds them, where the decision records are read;
+ *   workflow and phase: the pipeline that calls the review, and the phase of that call.
  */
 
 /** Whether the base holds any of the project's rule files, its decision records' index included. @param {InputFacts['committed']} committed */
@@ -42,19 +44,31 @@ export const pullRequestInputs = async (deps, facts) => {
 }
 
 /**
- * The pull request's body, kept beside the review, and the decision records the review reads as
- * a project rule; none when it has neither.
+ * The pull request's body, kept beside the review, the documents of the run that opened it, and
+ * the decision records the review reads as a project rule; none when it has none of them.
  * @param {InputDeps} deps @param {InputFacts} facts
  * @returns {Promise<import('./review-runs.mjs').ReviewDocuments | undefined>}
  */
-const documentsOf = async (deps, { slug, pullRequest, committed }) => {
+const documentsOf = async (deps, facts) => {
+  const { slug, pullRequest, committed } = facts
   const told = pullRequest.body.trim() !== ''
-  if (!told && !(await holdsRules(committed))) return undefined
+  const run = await runDocuments(deps, { slug, number: pullRequest.number, head: pullRequest.head.sha, workflow: facts.workflow, phase: facts.phase })
+  if (!told && run === null && !(await holdsRules(committed))) return undefined
   if (told) await deps.reviewFiles.write(slug, PULL_REQUEST_FILE, pullRequestText(pullRequest))
   // Stryker disable next-line ArrayDeclaration: the review hands a lens only the documents the tracking folder holds
   const artifacts = told ? [PULL_REQUEST_FILE] : []
+  return withRun(artifacts, run)
+}
+
+/**
+ * The pull request's own documents, then the run's.
+ * @param {string[]} artifacts @param {import('./review-runs.mjs').ReviewDocuments | null} run
+ * @returns {import('./review-runs.mjs').ReviewDocuments}
+ */
+const withRun = (artifacts, run) => {
   // Stryker disable next-line ArrayDeclaration: the review hands a lens only the documents the tracking folder holds
-  return { outputs: [], context: artifacts, artifacts, phases: [] }
+  if (run === null) return { outputs: [], context: artifacts, artifacts, phases: [] }
+  return { outputs: run.outputs, context: [...artifacts, ...run.context], artifacts: [...artifacts, ...run.artifacts], phases: run.phases }
 }
 
 /**

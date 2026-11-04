@@ -120,6 +120,7 @@ test('a blocker the refuter confirms sends DESIGN back as pass 2 with the findin
   const refute = calls.filter((call) => call.label.includes(' · refute '))
   assert.deepEqual(refute.map(({ agent, label }) => `${agent} | ${label}`), [`skraft:finding-refuter | skraft ${SLUG} · design_review · refute consistency F1 · attempt 1`])
   assert.match(refute[0].prompt, /^## Skraft finding check: consistency F1\n- Finding: G1 blocker at docs\/adr\/adr-001-card-payment\.md:3: The ADR names no payment provider\n/)
+  assert.match(refute[0].prompt, /\n- Lens \(read it with the skills: its gate table states the rule of each gate a finding cites\): [^\n]+[\\/]com\.github\.copilot[\\/]agents[\\/]consistency-lens\.agent\.md\n/)
   assert.deepEqual(events.filter((event) => event.type === 'review.refuted').map(({ step, visit, lens, finding: id, verdict }) => [step, visit, lens, id, verdict]), [['design_review', 1, 'consistency', 'F1', 'confirmed']])
   const second = calls.find((call) => call.label === `skraft ${SLUG} · design · pass 2 · attempt 1`)
   assert.ok(second.prompt.includes('- Pass: 2, after the review sent the work back'), second.prompt)
@@ -134,7 +135,6 @@ test('a blocker the refuter confirms sends DESIGN back as pass 2 with the findin
   // The architect changed the ADR and its document, so every lens reads pass 2 afresh.
   assert.deepEqual(batchesSorted(calls.filter((call) => / · design_review · .* · pass 2 · /.test(call.label)).map((call) => call.label)), batchesSorted(lensLabels('design_review', { visit: 2 })))
   assert.deepEqual(events.filter((event) => event.type === 'commits.checked' && event.step === 'design').map(({ visit, commits }) => [visit, commits.map(({ subject }) => subject)]), [
-    [1, [`docs(${SLUG}): record the card payment decision`]],
     [2, [`docs(${SLUG}): name the payment provider`]],
   ])
   assert.equal(git(cwd, 'show', 'HEAD:docs/adr/adr-001-card-payment.md'), '---\nstatus: Accepted\ndecision: We will pay by card.\n---\n# ADR-001 Card payment\n\n**Status:** Accepted\n\nAccepted: Acme Pay.')

@@ -11,7 +11,7 @@ const recorded = (host, step) => host.events().filter((event) => event.type === 
 const DESIGN_DOCUMENTS = Object.freeze(['docs/architecture/context-map.md', 'docs/architecture/payment.md', 'docs/domain/event-model/payment.md'])
 
 test('the architect writing in src/ is refused with the files at fault, and told so; its ADRs and design documents under docs/ are not', async () => {
-  const hack = agent({ work: ({ git }) => { git.change('src/Checkout.cs', 'docs/adr/adr-001.md', ...DESIGN_DOCUMENTS); git.commit('docs(checkout): sketch', ['src/Sketch.cs']) } })
+  const hack = agent({ work: ({ git }) => { git.change('src/Checkout.cs'); git.commit('docs(checkout): design the card payment', ['docs/adr/adr-001.md', ...DESIGN_DOCUMENTS]); git.commit('docs(checkout): sketch', ['src/Sketch.cs']) } })
   const host = scripted({}, (it) => [agent()(it), hack(it), agent()(it), unavailable])
 
   await host.start()
@@ -70,7 +70,7 @@ test('files out of scope stay refused on the next attempt of the pass, resumed o
 })
 
 test('the software engineer writing the source and test paths of its components is accepted', async () => {
-  const host = scripted({}, (it) => [agent()(it), agent()(it), agent()(it), agent({ work: (h) => { tddCycle()(h); h.git.change('tests/Fixtures/card.json', `.copilot-tracking/skraft-plans/${SLUG}/notes.md`) } })(it)])
+  const host = scripted({}, (it) => [agent()(it), agent()(it), agent()(it), agent({ work: (h) => { tddCycle()(h); h.git.commit('refactor(checkout): a card fixture', ['tests/Fixtures/card.json']); h.git.change(`.copilot-tracking/skraft-plans/${SLUG}/notes.md`) } })(it)])
 
   const outcome = await host.start()
 
@@ -91,7 +91,7 @@ test('no agent may change skraft-config.json or the workflow file, even inside i
   const everywhere = { ...API, paths: { src: ['.'], tests: ['.'] } }
   const host = scripted({ components: [everywhere], files: { '.skraft/pipeline.skraft.dot': BUILT_IN_WORKFLOW } }, (it) => [
     agent()(it), agent()(it), agent()(it),
-    agent({ work: ({ git }) => { tddCycle()({ git }); git.change('skraft-config.json', '.skraft/pipeline.skraft.dot', 'README.md') } })(it),
+    agent({ work: ({ git }) => { tddCycle()({ git }); git.commit('docs(checkout): the card payment in the README', ['README.md']); git.change('skraft-config.json', '.skraft/pipeline.skraft.dot') } })(it),
     unavailable,
   ])
 
@@ -105,7 +105,7 @@ test('a component in a neighbour repository is checked in that repository, again
   const git = new InMemoryGit({ repositories: { '.': { mergeBases: { main: 'root-0' } }, '../web': { mergeBases: { main: 'up-web-0' } } } })
   const host = scripted({ components: [API, WEB], git }, (it) => [
     agent()(it), agent()(it), agent()(it),
-    agent({ work: ({ git: repos }) => { repos.commit('test(checkout): cart', ['../web/src/Cart.test.tsx']); repos.commit('feat(checkout): cart', ['../web/src/Cart.tsx']); repos.change('../web/package.json', '../web/scripts/release.sh') } })(it),
+    agent({ work: ({ git: repos }) => { repos.commit('test(checkout): cart', ['../web/src/Cart.test.tsx']); repos.commit('feat(checkout): cart', ['../web/src/Cart.tsx']); repos.commit('build(checkout): the cart\'s dependencies', ['../web/package.json']); repos.change('../web/scripts/release.sh', '../web/src/Draft.tsx') } })(it),
     unavailable,
   ])
 
@@ -113,7 +113,7 @@ test('a component in a neighbour repository is checked in that repository, again
 
   const started = host.events().find((event) => event.type === 'step.started' && event.step === 'deliver')
   assert.deepEqual(started.heads, [{ repository: '.', sha: 'root-0', dirty: [] }, { repository: '../web', sha: 'up-web-0', dirty: [] }])
-  assert.deepEqual(recorded(host, 'deliver')[0].failures, ['out of write scope: ../web/scripts/release.sh'])
+  assert.deepEqual(recorded(host, 'deliver')[0].failures, ['out of write scope: ../web/scripts/release.sh', 'left uncommitted: ../web/src/Draft.tsx; commit it or undo the change'])
   assert.deepEqual(host.replay.lines(), ['up-web-1 ../web/. $ npx vitest run'])
 })
 
@@ -152,7 +152,7 @@ test('a file already changed before the pass is held against the agent once it c
 test('the agents writing a component\'s paths may change the files right in its root, not those of its other folders; the others may not', async () => {
   const host = scripted({}, (it) => [
     agent()(it), agent()(it),
-    agent({ work: ({ git }) => git.change('Checkout.sln', 'tests/Acceptance/Pay.cs', 'build/props.xml') })(it),
+    agent({ work: ({ git }) => { git.commit('test(checkout): acceptance of the card payment', ['Checkout.sln', 'tests/Acceptance/Pay.cs']); git.change('build/props.xml') } })(it),
     unavailable,
   ])
 
@@ -168,7 +168,7 @@ test('the agents writing a component\'s paths may change the files right in its 
 test('the acceptance designer writes the skeleton its failing test calls in the source paths, beside the test, and its scenarios under docs/features', async () => {
   const host = scripted({}, (it) => [
     agent()(it), agent()(it),
-    agent({ work: ({ git }) => git.change('src/Checkout/Pay.cs', 'tests/Checkout.UnitTest/PayTests.cs', 'docs/features/payment/pay-by-card.feature') })(it),
+    agent({ work: ({ git }) => git.commit('test(checkout): pay by card', ['src/Checkout/Pay.cs', 'tests/Checkout.UnitTest/PayTests.cs', 'docs/features/payment/pay-by-card.feature']) })(it),
     unavailable,
   ])
 
@@ -183,10 +183,95 @@ test('the acceptance designer writes the skeleton its failing test calls in the 
 
 test('a component whose paths list no folder (no tests folder yet) is written anywhere in its root', async () => {
   const host = scripted({ components: [{ ...API, paths: { src: [], tests: [] } }] }, (it) => [
-    agent()(it), agent()(it), agent({ work: ({ git }) => git.change('Checkout.Tests/PayTests.cs') })(it), unavailable,
+    agent()(it), agent()(it), agent({ work: ({ git }) => git.commit('test(checkout): pay by card', ['Checkout.Tests/PayTests.cs']) })(it), unavailable,
   ])
 
   await host.start()
 
   assert.deepEqual(recorded(host, 'distill').map((event) => [event.outcome, event.failures]), [['done', []]])
+})
+
+test('a change an agent leaves uncommitted in its paths is refused, and told so, until its commit holds it; the tracking folder needs none', async () => {
+  const FEATURE = 'docs/features/payment/pay-by-card.feature'
+  const host = scripted({}, (it) => [
+    agent()(it), agent()(it),
+    agent({ work: ({ git }) => { git.commit('test(checkout): acceptance of the card payment', ['tests/Acceptance/Pay.cs']); git.change(FEATURE, `.copilot-tracking/skraft-plans/${SLUG}/notes.md`) } })(it),
+    agent({ work: ({ git }) => git.commit('docs(checkout): state the card holder\'s age', [FEATURE]) })(it),
+    unavailable,
+  ])
+
+  await host.start()
+
+  assert.deepEqual(recorded(host, 'distill').map((event) => [event.attempt, event.outcome, event.code, event.failures]), [
+    [1, 'failed', 'uncommitted', [`left uncommitted: ${FEATURE}; commit it or undo the change`]],
+    [2, 'done', null, []],
+  ])
+  assert.ok(host.agentRunner.dispatches[3].prompt.endsWith(`\n\nRefused in attempt 1 of 3:\n- left uncommitted: ${FEATURE}; commit it or undo the change`))
+  const checked = host.events().filter((event) => event.type === 'commits.checked' && event.step === 'distill').at(-1)
+  assert.deepEqual(checked.commits.map((commit) => [commit.subject, commit.verdict]), [
+    ['test(checkout): acceptance of the card payment', 'ok'],
+    ['docs(checkout): state the card holder\'s age', 'ok'],
+  ])
+})
+
+test('an architect, with no shell, is told to commit nothing; once DESIGN is done the engine commits what it wrote in its paths, journaled with the step, and nothing stays uncommitted', async () => {
+  const notes = `.copilot-tracking/skraft-plans/${SLUG}/notes.md`
+  const host = scripted({}, (it) => [
+    agent()(it),
+    agent({ work: ({ git }) => git.change('docs/adr/adr-001-card-payment.md', ...DESIGN_DOCUMENTS, notes) })(it),
+    unavailable,
+  ])
+
+  await host.start({ story: { issue: 42, title: 'Pay by card' } })
+
+  const [design] = recorded(host, 'design')
+  const written = ['docs/adr/adr-001-card-payment.md', ...DESIGN_DOCUMENTS]
+  assert.deepEqual([design.outcome, design.failures, design.committed], ['done', [], { subject: `docs(${SLUG}): design ${SLUG}`, files: written }])
+  assert.deepEqual(host.git.engineCommits, [{ dir: '.', paths: written, message: `docs(${SLUG}): design ${SLUG}\n\nRefs: #42` }])
+  assert.deepEqual(await host.git.changedFiles('.', await host.git.head('.')), [notes])
+  const prompt = host.agentRunner.dispatches[1].prompt
+  assert.ok(!prompt.includes('Commit every file') && !prompt.includes('Refs: #42'), prompt)
+})
+
+test('the engine commits what an agent with no shell left in a neighbour repository in that repository, and nothing for a refused attempt', async () => {
+  const WEB = { name: 'web', root: '../web', stack: 'react', mocking: { strategy: 'inprocess' }, paths: { src: ['src'], tests: ['src'] }, commands: { test: 'npx vitest run' } }
+  const git = new InMemoryGit({ repositories: { '.': { mergeBases: { main: 'root-0' } }, '../web': { mergeBases: { main: 'up-web-0' } } } })
+  const host = scripted({ components: [API, WEB], git, files: { '.skraft/pipeline.skraft.dot': BUILT_IN_WORKFLOW.replace('agent="solution-architect"', 'agent="solution-architect", writes="../web/docs"') } }, (it) => [
+    agent()(it),
+    agent({ work: ({ git: repos }) => repos.change('docs/architecture/context-map.md', '../web/docs/payment.md', 'src/Checkout.cs') })(it),
+    agent({ work: ({ git: repos }) => repos.revert('src/Checkout.cs') })(it),
+    unavailable,
+  ])
+
+  await host.start()
+
+  assert.deepEqual(recorded(host, 'design').map((event) => [event.outcome, event.committed]), [
+    ['failed', undefined],
+    ['done', { subject: `docs(${SLUG}): design ${SLUG}`, files: ['docs/architecture/context-map.md', '../web/docs/payment.md'] }],
+  ])
+  assert.deepEqual(host.git.engineCommits.map(({ dir, paths }) => [dir, paths]), [['.', ['docs/architecture/context-map.md']], ['../web', ['docs/payment.md']]])
+})
+
+test('Git refusing the engine\'s commit of an architect\'s documents asks the human to fix the machine, with a message of its own', async () => {
+  const host = scripted({ git: new InMemoryGit({ commitFails: 'fatal: index.lock exists' }) }, (it) => [
+    agent()(it),
+    agent({ work: ({ git }) => git.change(...DESIGN_DOCUMENTS) })(it),
+    unavailable,
+  ])
+
+  const outcome = await host.start()
+
+  assert.deepEqual(outcome, { status: 'waiting', slug: SLUG, phase: 'DESIGN', code: 'environment', reason: waitingOnEnvironment('design', 'Git refused to commit what design wrote in .; check git status, then retry') })
+  assert.deepEqual(recorded(host, 'design'), [])
+})
+
+test('Git that cannot list what a repository holds uncommitted since the agent\'s last commit waits for a human', async () => {
+  const notes = `.copilot-tracking/skraft-plans/${SLUG}/notes.md`
+  const host = scripted({}, (it) => [agent({ work: ({ git }) => git.commit('docs(checkout): research notes', [notes]) })(it), unavailable])
+  const listing = host.git.changedFiles.bind(host.git)
+  host.git.changedFiles = async (dir, sha) => (sha === 'root-1' ? null : listing(dir, sha))
+
+  const outcome = await host.start()
+
+  assert.deepEqual(outcome, { status: 'waiting', slug: SLUG, phase: 'RESEARCH', code: 'environment', reason: waitingOnEnvironment('research', 'Git cannot list what changed in . since root-1') })
 })

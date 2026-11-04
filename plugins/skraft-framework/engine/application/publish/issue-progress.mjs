@@ -2,6 +2,7 @@ import { CONFIG_FILE } from '../../domain/config/skraft-config.mjs'
 import { consentOf } from '../../domain/decisions/consents.mjs'
 import { deriveRun } from '../../domain/journal/run-state.mjs'
 import { forgeAdapters } from '../config/forge.mjs'
+import { storyLanguage } from './story-language.mjs'
 import { keptComment as verifiedComment } from './forge-writes.mjs'
 import { OPENS } from '../../domain/pipeline/forge-comment.mjs'
 import { COMMENTED, ISSUE_PROGRESS_FILE, keptComment, markerOf, pendingTransitions, renderProgress, SKIPPED, transitionName } from '../../domain/reporting/issue-progress.mjs'
@@ -59,7 +60,7 @@ export const reportProgress = async (deps, request) => {
  * @returns {Promise<Kept>}
  */
 const keep = async (deps, { slug, journal, workflow, config }, { issue, last }) => {
-  const body = renderProgress({ slug, phases: workflow.phases, events: journal.events }, last)
+  const body = await progressBody(deps, { slug, journal, workflow }, last)
   await deps.files.write(slug, ISSUE_PROGRESS_FILE, body)
   const { codeHost } = await forgeAdapters(deps, config.forge)
   const unreachable = await codeHost.unavailable()
@@ -69,6 +70,15 @@ const keep = async (deps, { slug, journal, workflow, config }, { issue, last }) 
     keep: () => codeHost.keepIssueComment(asked),
     read: (url) => codeHost.readComment(url),
   })
+}
+
+/**
+ * The comment rendered from the journal, in the story's language.
+ * @param {ProgressDeps} deps @param {Pick<ProgressRequest, 'slug' | 'journal' | 'workflow'>} request @param {Transition} last
+ */
+const progressBody = async (deps, { slug, journal, workflow }, last) => {
+  const language = await storyLanguage(deps, slug, deriveRun(journal.events))
+  return renderProgress({ slug, phases: workflow.phases, events: journal.events, language }, last)
 }
 
 /** The comment as JSON beside its body, written only for a forge whose client sends one; its path, else an empty one. @param {ProgressDeps} deps @param {{ slug: string, codeHost: import('../ports/code-host.mjs').CodeHost, body: string }} comment */

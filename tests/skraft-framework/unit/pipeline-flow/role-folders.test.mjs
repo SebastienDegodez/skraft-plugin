@@ -9,6 +9,9 @@ import { UNLISTABLE_ADRS, waitingOnEnvironment } from '../support/decisions.mjs'
 // folders, so the engine creates the folders of the agent's role before dispatching it.
 
 /** A host on a repository that has none of the docs folders the plugin's agents write in. */
+/** The paths of each commit the engine made to create a role's folders, its own commits for an agent with no shell left out. */
+const folderCommits = (host) => host.git.engineCommits.filter(({ message }) => message.startsWith('chore: create the folders ')).map(({ paths }) => paths)
+
 const withoutDocsFolders = (options, script) => {
   const host = scripted(options, script)
   for (const path of Object.keys(DOCS_FOLDERS)) host.workspace.files.delete(path)
@@ -27,6 +30,7 @@ test('the engine creates the docs folders of a role that the repository does not
   assert.equal(host.workspace.files.get('docs/architecture/context-map.md'), '# Context map\n')
   assert.deepEqual(host.git.engineCommits, [
     { dir: '.', paths: ['docs/adr/.gitkeep', 'docs/domain/event-model/.gitkeep'], message: 'chore: create the folders solution-architect writes in\n\nRefs: #42' },
+    { dir: '.', paths: ['docs/adr/adr-001-card-payment.md'], message: `docs(${SLUG}): design ${SLUG}\n\nRefs: #42` },
     { dir: '.', paths: ['docs/features/.gitkeep'], message: 'chore: create the folders acceptance-designer writes in\n\nRefs: #42' },
   ])
   const started = host.events().filter((event) => event.type === 'step.started' && event.agent !== undefined)
@@ -47,7 +51,7 @@ test('a folder of the role the machine cannot list gets no .gitkeep: the run ask
 
   assert.deepEqual(outcome, { status: 'waiting', slug: SLUG, phase: 'DESIGN', code: 'environment', reason: waitingOnEnvironment('adr', UNLISTABLE_ADRS) })
   assert.equal(host.workspace.files.has('docs/adr/.gitkeep'), false)
-  assert.deepEqual(host.git.engineCommits.map(({ paths }) => paths), [['docs/domain/event-model/.gitkeep']])
+  assert.deepEqual(folderCommits(host), [['docs/domain/event-model/.gitkeep']])
 })
 
 const REPORT = 'StrykerOutput/reports/mutation-report.json'
@@ -77,5 +81,5 @@ test('a node that proposes for surviving mutants gets no folder of its agent\'s 
   assert.equal(outcome.status, 'done', outcome.reason)
   assert.ok(host.agentRunner.dispatches.some(({ label }) => label === `skraft ${SLUG} · kill_proposal · group 1 of 1 · attempt 1`), host.agentRunner.dispatches.map(({ label }) => label).join('\n'))
   assert.equal(host.workspace.files.has('docs/features/.gitkeep'), false)
-  assert.deepEqual(host.git.engineCommits.map(({ paths }) => paths), [['docs/adr/.gitkeep', 'docs/domain/event-model/.gitkeep'], ['docs/features/.gitkeep']])
+  assert.deepEqual(folderCommits(host), [['docs/adr/.gitkeep', 'docs/domain/event-model/.gitkeep'], ['docs/features/.gitkeep']])
 })

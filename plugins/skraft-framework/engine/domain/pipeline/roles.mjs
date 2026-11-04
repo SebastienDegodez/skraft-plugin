@@ -7,19 +7,22 @@ import { joinRelative } from '../config/relative-path.mjs'
  *
  * @typedef {{ path: string, template: string | null }} OutputSpec
  *   path relative to the pipeline's tracking folder; `{date}` and `{slug}` filled at dispatch.
+ *   template: a file of the plugin's templates, `{language}` filled with the story's at dispatch.
  * @typedef {'src' | 'tests'} ComponentPaths
  * @typedef {'cycle' | 'red' | 'kill' | null} TddMode
  *   cycle: each failing test commit, then the code that passes it; red: failing acceptance tests
  *   only, with the skeleton they call; kill: tests that kill surviving mutants, which pass on the
  *   code they test; null: no test commit.
- * @typedef {{ outputs: readonly OutputSpec[], writes: readonly string[], components: readonly ComponentPaths[], records: boolean, scan: boolean, tdd: TddMode, prose: boolean, proposal: boolean }} Role
+ * @typedef {{ outputs: readonly OutputSpec[], writes: readonly string[], components: readonly ComponentPaths[], records: boolean, scan: boolean, tdd: TddMode, prose: boolean, proposal: boolean, shell?: boolean }} Role
  *   writes: paths relative to the working copy; components: which paths of every component of
  *   skraft-config.json the agent may write; records: the engine checks the DESIGN records
  *   (consistency matrix, ADR names and supersessions) its attempts leave;
  *   scan: the engine scans the code for its structural commitments before each attempt;
  *   tdd: how its commits drive the tests; prose: the engine checks the pull request prose its
  *   output holds (a summary line of at most 72 characters, no section left empty); proposal: it
- *   writes a proposal for surviving mutants in the file the engine creates, and changes no code.
+ *   writes a proposal for surviving mutants in the file the engine creates, and changes no code;
+ *   shell: its descriptor grants a shell, so it commits its own changes; the engine commits those
+ *   of an agent with none once its step is done; absent for a repository agent and a proposal: no shell.
  * @typedef {import('../workflow/workflow.mjs').WorkflowNode} WorkflowNode
  * @typedef {import('../config/skraft-config.mjs').Component} Component
  */
@@ -35,6 +38,7 @@ const ROLES = Object.freeze({
     tdd: null,
     prose: false,
     proposal: false,
+    shell: false,
   }),
   // The architect keeps the repository's durable design documents under docs/; the consistency
   // matrix of the story stays in the tracking folder.
@@ -47,6 +51,7 @@ const ROLES = Object.freeze({
     tdd: null,
     prose: false,
     proposal: false,
+    shell: false,
   }),
   // The acceptance designer commits failing tests only; the skeleton they call goes in the source
   // paths, its Gherkin scenarios under docs/features.
@@ -59,6 +64,7 @@ const ROLES = Object.freeze({
     tdd: 'red',
     prose: false,
     proposal: false,
+    shell: true,
   }),
   'software-engineer': Object.freeze({
     outputs: Object.freeze([Object.freeze({ path: 'changes/{date}/change-log.md', template: null })]),
@@ -69,10 +75,11 @@ const ROLES = Object.freeze({
     tdd: 'cycle',
     prose: false,
     proposal: false,
+    shell: true,
   }),
   // The pr-writer writes the prose of the pull request the publish node opens, nothing else.
   'pr-writer': Object.freeze({
-    outputs: Object.freeze([Object.freeze({ path: 'details/{date}/pull-request-prose-{slug}.md', template: 'pull-request-prose.template.md' })]),
+    outputs: Object.freeze([Object.freeze({ path: 'details/{date}/pull-request-prose-{slug}.md', template: 'pull-request-prose.{language}.template.md' })]),
     writes: Object.freeze([]),
     components: Object.freeze([]),
     records: false,
@@ -80,15 +87,27 @@ const ROLES = Object.freeze({
     tdd: null,
     prose: true,
     proposal: false,
+    shell: false,
   }),
 })
 
+/** The skills whose gates the review of an agent's phase judges its outputs by, by agent. */
+const CHECKLISTS = /** @type {Readonly<Record<string, readonly string[]>>} */ (Object.freeze({ 'acceptance-designer': Object.freeze(['acceptance-review-criteria']) }))
+
 /**
- * Whether the agent commits to the working copy: test and code commits, or the files its role
- * or its node lets it write outside the tracking folder.
+ * The skills an agent checks its outputs against before its result: the gates the review of its
+ * phase judges them by; none for an agent whose review names none.
+ * @param {string} agent
+ */
+// Stryker disable next-line ArrayDeclaration: a name that is no skill id is found nowhere, so it adds no line, as no name does
+export const checklistsOf = (agent) => CHECKLISTS[agent] ?? []
+
+/**
+ * Whether the agent commits to the working copy itself: one with a shell. The engine commits
+ * what an agent with none changes outside the tracking folder.
  * @param {Role} role
  */
-export const makesCommits = (role) => role.tdd !== null || role.writes.length > 0
+export const makesCommits = (role) => role.shell === true
 
 /** The tracking folder of a pipeline, relative to the working copy. @param {string} slug */
 export const trackingFolder = (slug) => `.copilot-tracking/skraft-plans/${slug}`
