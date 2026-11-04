@@ -223,13 +223,40 @@ Un blocage ne termine plus le run à lui seul. Quand un agent répond `blocked`,
 atteint son `max_visits` ou qu'une lentille d'une revue répond `inconclusive`, le moteur pose la
 question `blocked` sur le nœud à relancer : l'agent lui-même, le nœud vers lequel revient l'arête
 plafonnée (l'ingénieur après les gates, l'architecte après une revue ou un ADR rejeté), ou la
-revue. Son texte ne porte que ce que le moteur a vérifié, et le fichier qui garde les mots de
-l'agent :
+revue. Son texte porte ce que le moteur a vérifié, ce que l'étape bloquée a laissé (la raison
+de l'agent, les échecs des gates) et le fichier qui garde les mots de l'agent :
 
 ```
-design is blocked: solution-architect says it cannot go on; its reason is in <dossier de suivi>/results/design-1-1.json. An instruction runs design again on a new pass with it; STOP ends the run.
-design is blocked: design_review -> design was taken as often as its max_visits allows. An instruction runs design again on a new pass with it; STOP ends the run.
+design is blocked: solution-architect says it cannot go on; its reason is in <dossier de suivi>/results/design-1-1.json.
+Left by design (1):
+- which payment provider?
+ An instruction runs design again on a new pass with what is left above and the instruction; STOP ends the run.
 design_review is blocked: a lens answered inconclusive; the verdict is in <dossier de suivi>/reviews/design_review-1/verdict.yaml. An instruction runs design_review again on a new pass with it; STOP ends the run.
+```
+
+L'agent relancé reçoit d'abord ce que le blocage a laissé, puis la consigne.
+
+Une revue dont la boucle vers son producteur atteint `max_visits` (3 pour chaque revue du
+workflow livré) ne renvoie plus le travail. Sa question dit que le producteur n'a pas corrigé
+tous les findings, montre chaque finding blocker et high avec son contexte (la raison de sa
+sévérité, le type de dérive, tous les endroits où il se trouve, la correction), les medium et low
+dans un tableau, et où se trouve le fichier de verdict. Quand il ne reste que des medium et des
+low, c'est la question `review-ceiling` : `ACCEPT` les prend tels quels et continue par l'arête
+`APPROVED` de la revue ; le rapport du run et la pull request les listent sous *Accepted
+findings*. Quand il reste un blocker ou un high, c'est la question `blocked` : ceux-là ne sont
+jamais acceptés. Dans les deux cas, une consigne relance le producteur avec tous les findings, et
+`STOP` termine le run.
+
+```
+design_review: design did not fix every finding after 4 passes, so the run does not send it back again.
+
+Medium and low (1):
+| Severity | Finding | Where | What |
+|---|---|---|---|
+| medium | consistency F1 | docs/architecture/payments.md:7 | a read model is classified twice |
+
+Every finding with its context: <dossier de suivi>/reviews/design_review-4/verdict.yaml
+ACCEPT takes these findings as they stand and goes on (they are listed in the run report and the pull request); an instruction runs design again with every finding and the instruction; STOP ends the run.
 ```
 
 `skraft decide design-1 "Utiliser la passerelle bancaire d'Acme"` : le run suivant du pipeline,

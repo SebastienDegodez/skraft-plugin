@@ -225,7 +225,8 @@ test('each way an answer cannot be read is told to the lens on its second ask', 
     [says('consistency', 'fail', [finding('F1', 'high', 'one'), { gate: 'G2', severity: 'major', description: 'two' }]), 'finding 2: severity must be one of blocker, high, medium, low'],
     [says('consistency', 'fail', [{ gate: 'G1', severity: 'high', description: '  ' }]), 'finding 1: description is empty'],
     [says('consistency', 'fail', [{ severity: 'high', description: 'no gate named' }]), 'finding 1: gate must name the gate of your table, such as G1'],
-    [says('consistency', 'fail', [finding('F1', 'high', 'one', { rule: 'R1' })]), 'finding 1: the key rule is not in the contract; the keys are id, gate, severity, location, description, suggestion'],
+    [says('consistency', 'fail', [finding('F1', 'high', 'one', { rule: 'R1' })]), 'finding 1: the key rule is not in the contract; the keys are id, gate, severity, location, description, suggestion, severityReason, drift, occurrences'],
+    [says('consistency', 'fail', [finding('F1', 'high', 'one', { drift: 'naming' })]), 'finding 1: drift must be one of label, classification, structural, or left out'],
     [says('consistency', 'pass', [finding('F1', 'high', 'the ADR is missing')]), 'verdict is pass but finding F1 is high'],
     [says('consistency', 'fail', many), '21 findings; give at most 20, the most severe first'],
   ]
@@ -248,7 +249,7 @@ test('the last fenced block of an answer is read whatever its tag, its words in 
   await host.start()
 
   const recorded = host.events().find((event) => event.type === 'step.recorded' && event.step === 'design_review')
-  assert.deepEqual(recorded.failures, ['consistency F2 G2 medium: no owner for refunds'])
+  assert.deepEqual(recorded.failures, ['consistency F2 G2 medium: no owner for refunds', 'consistency F1 G1 low at src/Checkout.cs:12: a note', 'consistency F3 G1 low at src/Checkout.cs:12: another note'])
   assert.deepEqual(host.events().find((event) => event.type === 'review.lens' && event.lens === 'consistency').findings.map(({ id }) => id), ['F1', 'F2', 'F3'])
 })
 

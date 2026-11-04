@@ -1,5 +1,5 @@
 import { CONFIG_FILE, withPublishSetting } from '../../domain/config/skraft-config.mjs'
-import { APPLY, BLOCKED, CONSENT_TEXT, PUBLISH_CONSENT_TEXT, STOP, blockText, decideUsage, edgeAnswerOf, environmentText, mutationPlanText, questionKey, questionOf, ratificationText, readAnswer } from '../../domain/decisions/questions.mjs'
+import { APPLY, BLOCKED, CONSENT_TEXT, REVIEW_CEILING, acceptable, reviewCeilingText, PUBLISH_CONSENT_TEXT, STOP, blockText, decideUsage, edgeAnswerOf, environmentText, mutationPlanText, questionKey, questionOf, ratificationText, readAnswer } from '../../domain/decisions/questions.mjs'
 import { trackingFolder } from '../../domain/pipeline/roles.mjs'
 import { issueOf } from '../../domain/pipeline/commits.mjs'
 import { CONSENT_VERSIONS, consentOf } from '../../domain/decisions/consents.mjs'
@@ -360,10 +360,26 @@ export const settleEnvironment = async (context, run, asked) => {
  * @returns {Promise<AskedQuestion | null>}
  */
 export const blockQuestion = async (context, run, next) => {
-  if (run.question?.kind === BLOCKED) return run.question
+  if (run.question?.kind === BLOCKED || run.question?.kind === REVIEW_CEILING) return run.question
   if (next.reopens === null) return null
   const step = next.reopens
+  const ceiling = reviewCeilingOf(context, next, step)
+  if (ceiling !== null) {
+    const kind = acceptable(ceiling.findings) ? REVIEW_CEILING : BLOCKED
+    return askQuestion(context, { kind, step, visit: run.nodes[step].visit }, { text: reviewCeilingText(ceiling), subjects: [] })
+  }
   return askQuestion(context, { kind: BLOCKED, step, visit: run.nodes[step].visit }, { text: blockText(blockOf(context, next, step)), subjects: [] })
+}
+
+/**
+ * What a review that reached its ceiling left (#499): its findings with their context and where
+ * its verdict is; null for any other block, and for a review step journaled without findings.
+ * @param {Context} context @param {BlockedStep} next @param {string} step the node it loops back to
+ * @returns {import('../../domain/decisions/questions.mjs').Ceiling | null}
+ */
+const reviewCeilingOf = ({ deps, slug }, { last }, step) => {
+  if (last === null || last.code !== 'loop-ceiling' || !Array.isArray(last.findings) || last.findings.length === 0) return null
+  return { review: last.step, step, passes: last.visit, findings: last.findings, verdict: deps.files.location(slug, verdictPath(last.step, last.visit)) }
 }
 
 /**

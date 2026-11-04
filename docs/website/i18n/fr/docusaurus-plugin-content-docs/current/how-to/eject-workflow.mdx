@@ -40,7 +40,7 @@ Quelques modifications courantes, dans `.skraft/pipeline.skraft.dot` :
 | Pour… | Écrire |
 |---|---|
 | sauter une gate verrouillée (`gates`, `mutation`) | `unlock="<raison>"` sur le nœud, qui reste en place : `mutation [shape=parallelogram, gate="mutation", goal_gate=true, locked=true, unlock="aucun outil de mutation pour ce composant"]` |
-| permettre plus de reprises d'une boucle | changer `max_visits` sur l'arête retour : `design_review -> design [label="NEEDS_REWORK", max_visits=3]` |
+| permettre plus de reprises d'une boucle | changer `max_visits` sur l'arête retour : `design_review -> design [label="NEEDS_REWORK", max_visits=5]` |
 | retirer une lentille non obligatoire | supprimer son nœud `shape=note` et ses deux arêtes |
 | ajouter une lentille de l'équipe | [Ajouter une lentille à une revue](./customise-review.md) |
 | ajouter une étape confiée à un agent du dépôt | [Ajouter un agent du dépôt au pipeline](./add-repository-agent.md) |

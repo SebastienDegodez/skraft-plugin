@@ -14,9 +14,13 @@
  * @typedef {import('./answers.mjs').Finding} Finding
  * @typedef {{ lens: string, finding: string, verdict: 'confirmed' | 'refuted' | 'unverifiable', reason: string, dissent?: boolean }} RecordedRefutation
  *   dissent: the finding's lens stood alone, and the refuter judged it with every input of the review
- * @typedef {{ status: 'APPROVED' | 'NEEDS_REWORK' | 'BLOCKED', code: 'lens-inconclusive' | null, reasons: string[], summary: string, details: string[] }} ReviewVerdict
- *   reasons: one line per finding that sends the work back, for the next brief, or per lens that
- *   blocks the review. summary: the status, then how many findings were refuted and how many are
+ * @typedef {{ lens: string, id: string, gate: string, severity: Finding['severity'], location: string, description: string, suggestion: string | null, severityReason?: string | null, drift?: Finding['drift'], occurrences?: string[] }} LeftFinding
+ *   a finding as the review leaves it to the agent or to a human, with the lens that gave it
+ * @typedef {{ status: 'APPROVED' | 'NEEDS_REWORK' | 'BLOCKED', code: 'lens-inconclusive' | null, reasons: string[], summary: string, details: string[], findings: LeftFinding[] }} ReviewVerdict
+ *   reasons: one line per finding that sends the work back, for the next brief, then, when it
+ *   sends the work back, one line per low finding, which the agent fixes on the same pass; or one
+ *   line per lens that blocks the review. findings: the same findings with their context, the
+ *   blocking ones first, for the question a human answers when the review reaches its ceiling. summary: the status, then how many findings were refuted and how many are
  *   notes, each cited; details: one line per refuted finding with the refuter's reason and per
  *   note, so a human sees what does not send the work back and decides whether to fix it anyway. A lens result's verdict (pass, fail, inconclusive) and a refutation's
  *   (confirmed, refuted, unverifiable) feed this status; the journal records it as the outcome
@@ -56,11 +60,15 @@ export const blocksReview = (results) => results.some((result) => inconclusiveLi
  */
 export const decideReview = (results, refutations) => {
   const blocking = results.map(inconclusiveLine).filter((line) => line !== null)
-  if (blocking.length > 0) return { status: 'BLOCKED', code: 'lens-inconclusive', reasons: blocking, summary: blocking.join('; '), details: [] }
-  const reasons = groupFindings(results.flatMap((result) => countedFindings(result, refutations))).map(groupLine)
+  if (blocking.length > 0) return { status: 'BLOCKED', code: 'lens-inconclusive', reasons: blocking, summary: blocking.join('; '), details: [], findings: [] }
+  const counted = results.flatMap((result) => countedFindings(result, refutations))
+  const reasons = groupFindings(counted).map(groupLine)
   const status = reasons.length > 0 ? 'NEEDS_REWORK' : 'APPROVED'
   const set = { refuted: refutedFindings(results, refutations), notes: noteFindings(results) }
-  return { status, code: null, reasons, summary: summaryOf(status, results, reasons, set), details: detailsOf(set) }
+  // Low findings ride along: they never send the work back alone, but the pass that goes back fixes them too.
+  const lows = status === 'NEEDS_REWORK' ? set.notes.map(({ lens, finding }) => `${citeLine(lens, finding)}${finding.suggestion === null ? '' : ` (suggestion: ${finding.suggestion})`}`) : []
+  const findings = [...counted, ...set.notes].map(({ lens, finding }) => findingEntry(lens, finding))
+  return { status, code: null, reasons: [...reasons, ...lows], summary: summaryOf(status, results, reasons, set), details: detailsOf(set), findings }
 }
 
 /**
@@ -161,11 +169,22 @@ export const composeVerdictFile = ({ verdict, results, refutations, reused }) =>
   status: verdict.status,
   code: verdict.code,
   summary: verdict.summary,
-  findings: results.flatMap((result) => countedFindings(result, refutations).map(({ lens, finding }) => findingEntry(lens, finding))),
-  notes: results.flatMap(({ lens, findings }) => findings.filter((finding) => !BLOCKING.includes(finding.severity)).map((finding) => findingEntry(lens, finding))),
+  findings: results.flatMap((result) => countedFindings(result, refutations).map(({ lens, finding }) => fileEntry(findingEntry(lens, finding)))),
+  notes: results.flatMap(({ lens, findings }) => findings.filter((finding) => !BLOCKING.includes(finding.severity)).map((finding) => fileEntry(findingEntry(lens, finding)))),
   refutations: refutations.map(({ lens, finding, verdict: said, reason, dissent }) => ({ lens, finding, verdict: said, reason, ...(dissent ? { dissent } : {}) })),
   reused: reused.map((lens) => ({ lens })),
 })
 
-/** @param {string} lens @param {Finding} finding */
-const findingEntry = (lens, { id, gate, severity, location, description, suggestion }) => ({ lens, id, gate, severity, location, description, suggestion })
+/**
+ * A finding as the verdict file, the journal and the question show it: its context only when the lens gave one.
+ * @param {string} lens @param {Finding} finding @returns {LeftFinding}
+ */
+const findingEntry = (lens, { id, gate, severity, location, description, suggestion, severityReason, drift, occurrences }) => ({
+  lens, id, gate, severity, location, description, suggestion,
+  ...(severityReason ? { severityReason } : {}),
+  ...(drift ? { drift } : {}),
+  ...(occurrences?.length ? { occurrences } : {}),
+})
+
+/** A finding as the verdict file holds it: flat, its occurrences on one line. @param {LeftFinding} entry */
+const fileEntry = ({ occurrences, ...entry }) => (occurrences ? { ...entry, occurrences: occurrences.join(', ') } : entry)

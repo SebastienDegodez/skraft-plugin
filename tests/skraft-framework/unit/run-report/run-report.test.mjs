@@ -118,6 +118,7 @@ test('after each step the tracking folder holds run-report.md, with the time, co
     ],
     totals: { attempts: 5, retries: 1, durationMs: 9000, costUsd: 2.1 },
     answers: [],
+    accepted: [],
     agents: [
       { step: 'research', agent: 'solution-researcher', family: 'researcher', tier: 'standard', host: 'claude-code', models: ['sonnet'], effort: null },
       { step: 'design', agent: 'solution-architect', family: 'planner', tier: 'frontier', host: 'claude-code', models: null, effort: null },
@@ -190,7 +191,7 @@ test('times read in seconds, minutes or hours, and WORKFLOW.md names what each k
 })
 
 test('the report of a journal edited by hand, or of a slug with no journal, is empty and says why', async () => {
-  const empty = { steps: [], totals: { attempts: 0, retries: 0, durationMs: 0, costUsd: null }, answers: [], agents: [], writes: [], startedAt: null, elapsedMs: 0 }
+  const empty = { steps: [], totals: { attempts: 0, retries: 0, durationMs: 0, costUsd: null }, answers: [], accepted: [], agents: [], writes: [], startedAt: null, elapsedMs: 0 }
   const host = pipelineHost()
   await host.tracking.activate(SLUG)
   assert.deepEqual(await host.report(), { slug: SLUG, status: 'not-initialised', reason: `${SLUG} has no journal (events.jsonl)`, ...empty })
@@ -210,6 +211,7 @@ test('the report of a working copy with no active pipeline is empty and says why
     steps: [],
     totals: { attempts: 0, retries: 0, durationMs: 0, costUsd: null },
     answers: [],
+    accepted: [],
     agents: [],
     writes: [],
     startedAt: null,

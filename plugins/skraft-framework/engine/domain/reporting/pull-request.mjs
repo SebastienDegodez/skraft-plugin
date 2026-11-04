@@ -4,6 +4,7 @@ import { cell, code, embedded, inert, oneLine, openFence } from './markdown-safe
 import { screenshotLines } from './visuals.mjs'
 import { detailParts, pointerOf, roomOf } from './run-details.mjs'
 import { layerCounts } from './test-plan-layers.mjs'
+import { acceptedTable } from './accepted-findings.mjs'
 
 /**
  * The description of the pull request a run opens, as "Writing good CL descriptions" lays it
@@ -171,6 +172,8 @@ const folded = (heading, lines, fold = () => FOLDED) => (facts) => {
   return { head: `<details${open ? ' open' : ''}><summary>${count === null ? heading : `${heading}: ${count}`}</summary>`, text: lines(facts).join('\n'), foot: ['', '</details>'], open, detail: !open }
 }
 
+const ACCEPTED_LINE = 'A review could not get these fixed after its passes; a human accepted them as they stand.'
+
 /** The command a developer runs to find the tests that kill no mutant on their own. */
 const PRUNE_LINE = 'To find the tests that kill no mutant on their own, the developer runs `/skraft:prune-tests` on a component; it proposes, the developer decides each test.'
 const DOMAIN_HEAVY = 'More Domain tests than acceptance tests'
@@ -191,6 +194,8 @@ const SECTIONS = Object.freeze([
   shown('What changes', ({ prose }) => (prose === null ? notWritten('what changes') : [inert(prose.what)])),
   shown('Why', ({ prose }) => (prose === null ? notWritten('why') : [inert(prose.why)])),
   shown('Decisions applied', (facts) => decisionLines(facts)),
+  // What a human took as it stands at a review's ceiling, shown to the reviewer, none when nothing was accepted.
+  ({ report }) => (report.accepted.length === 0 ? null : shown('Accepted findings', () => [ACCEPTED_LINE, '', ...acceptedTable(report.accepted)])({ report })),
   folded('Consistency matrix', ({ matrices }) => documentLines(matrices, NO_MATRIX)),
   folded('Tests', ({ testPlans }) => documentLines(testPlans, NO_TEST_PLAN)),
   folded('RED evidence', ({ reds }) => redLines(reds), ({ reds }) => ({ count: counted(reds.length, 'red commit'), open: false })),
