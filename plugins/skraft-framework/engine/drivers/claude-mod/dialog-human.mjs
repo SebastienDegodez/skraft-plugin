@@ -5,8 +5,9 @@ import { readAnswer, takesInstruction } from '../../domain/decisions/questions.m
  * choices. A refusal chosen there, or typed in any case, asks for its reason next; other text
  * typed under "Other" is a refusal's reason when the question has one refusal. An instruction
  * typed under "Other" is shown back and recorded only once sent (#500); a text the engine refuses
- * (no word in it), or an instruction not sent, puts the question again, at most MAX_ROUNDS times.
- * A dismissed dialog, or no one to ask, is no answer: the run waits for `/skraft decide`.
+ * (no word in it), or an instruction CANCELled, puts the question again, at most MAX_ROUNDS times.
+ * A dismissed dialog, the one that shows an instruction back included, or no one to ask, is no
+ * answer: the run waits for `/skraft decide`.
  *
  * @typedef {(question: string, options: { options: readonly string[], header: string }) => Promise<string>} AskDialog
  *   `$.ui.ask`: the label chosen, or the text typed under "Other"; rejects when dismissed.
@@ -42,7 +43,7 @@ const answered = async (ask, question) => {
 
 /**
  * An option, or an instruction the person sent once shown it back; asked again after a text the
- * engine refuses or an instruction not sent, null once the rounds are spent or the dialog dismissed.
+ * engine refuses or an instruction CANCELled, null once the rounds are spent or a dialog dismissed.
  * @param {AskDialog} ask @param {Question} question @param {number} rounds @returns {Promise<HumanAnswer | null>}
  */
 const instructed = async (ask, question, rounds) => {
@@ -51,11 +52,19 @@ const instructed = async (ask, question, rounds) => {
   if (given === null) return null
   const reading = readAnswer(question, given)
   if (reading.ok && question.options.includes(reading.answer)) return given
-  return reading.ok && (await sent(ask, question, reading.answer)) ? given : instructed(ask, question, rounds - 1)
+  const sending = reading.ok ? await sent(ask, question, reading.answer) : false
+  if (sending === null) return null
+  return sending ? given : instructed(ask, question, rounds - 1)
 }
 
-/** Whether the person sends the instruction shown back to them. @param {AskDialog} ask @param {Question} question @param {string} instruction */
-const sent = async (ask, question, instruction) => (await dialog(ask, `Send this instruction to ${question.key.replace(/-\d+$/, '')}? ${instruction}`, { options: SEND, header: question.header })) === SEND[0]
+/**
+ * Whether the person sends the instruction shown back to them; null when they close the dialog.
+ * @param {AskDialog} ask @param {Question} question @param {string} instruction @returns {Promise<boolean | null>}
+ */
+const sent = async (ask, question, instruction) => {
+  const chosen = await dialog(ask, `Send this instruction to ${question.key.replace(/-\d+$/, '')}? ${instruction}`, { options: SEND, header: question.header })
+  return chosen === null ? null : chosen === SEND[0]
+}
 
 /** @param {AskDialog} ask @param {string} text @param {{ options: readonly string[], header: string }} options */
 const dialog = async (ask, text, options) => {

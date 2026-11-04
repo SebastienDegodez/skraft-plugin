@@ -103,8 +103,16 @@ options and a header (`ADR`, `Reporting`, `Environment`):
 | --- | --- |
 | an option that is not a refusal | recorded as the answer; the run goes on |
 | a refusal (`REJECTED`) | a second dialog: `Why REJECTED? Type the reason under Other; it goes back to the agent.`; the text typed under Other is the reason; `Not now` or `Answer later` give no answer |
-| text typed under Other in the first dialog | an option typed in any case is that option; other text is a refusal with that text as its reason when the question has one (`adr-ratification`), the instruction for a `blocked` question (whose only option is `STOP`), and is refused as an answer otherwise (the run waits) |
-| dialog dismissed | no answer: the run waits |
+| text typed under Other in the first dialog | an option typed in any case is that option; other text is a refusal with that text as its reason when the question has one (`adr-ratification`), the instruction for a `blocked` or `mutation-plan` question, and is refused as an answer otherwise (the run waits) |
+| an instruction typed under Other | shown back in a dialog `Send this instruction to <step>? <instruction>` with `SEND` and `CANCEL`: `SEND` records it and the run goes on; `CANCEL` puts the question again |
+| a text with no word typed as an instruction (`5`, `42?`, `ok`) | refused without being shown back, and the question is put again |
+| dialog dismissed, the `SEND`/`CANCEL` one included | no answer: the run waits for `/skraft decide` |
+
+A question that takes an instruction is put at most 3 times: after three texts refused or
+instructions cancelled, the run waits for `/skraft decide`, nothing recorded. An instruction holds
+a word: three letters in a row, combining marks counted (`करो`, `été`), or two letters of a
+script written without spaces (Chinese, Japanese kana, Korean: `修复`); a digit, a sign or two
+Latin letters alone is refused on every host, with a message that never repeats the text.
 
 The **Skraft** pane shows the phases, each followed by its steps of the workflow graph
 (`  ✓ design — solution-architect: done, pass 2, $1.00`: `✓` done, `▶` in progress, `·` to
@@ -241,15 +249,22 @@ question that takes an instruction, a `blocked` step's or the `mutation-plan`, w
 writes an option or the instruction (`session.ui.input`). A refusal (`REJECTED`) asks its
 reason next, in a text field. The value the dialog gives is the answer, journaled
 `by: "host-confirmed"`, and the run goes on; an instruction written in the text field is first
-shown back and recorded only once the person confirms it. The run asks as often as it needs.
-When Copilot cannot put the question (no dialog, `autopilot` mode, a mode it does not tell) or
-the person dismisses it, the workflow logs why and how to answer, then pauses
+shown back (`Send this instruction to <step>? <instruction>`, `session.ui.confirm`) and recorded
+only once the person confirms it. The run asks as often as it needs.
+When Copilot cannot put the question (no dialog, `autopilot` mode, a mode it does not tell), the
+person dismisses it, or they do not send the instruction they wrote (`<why>` is then `you did not
+send the instruction you wrote`), the workflow logs why and how to answer, then pauses
 durably with `ctx.pause(<key>)`:
 
 ```
 Waiting for you — <question>
 adr-1 was not answered: <why>. Resume this run to be asked again, ask Copilot in the chat to put the question to you, or type skraft decide adr-1 RATIFIED|REJECTED in a terminal and resume this run.
 ```
+
+Unlike the Claude Code mod, a text with no word written as the instruction is not asked again:
+the run logs `<slug>: <key> not answered: an instruction tells the agent in words what to do;
+write a sentence, or STOP` and ends `waiting`, to be answered with `skraft decide` or the
+`skraft_decide` tool.
 
 ### `skraft-pipeline` canvas <!-- #canvas -->
 
@@ -277,7 +292,8 @@ Before the first phase of a working copy, the workflow opens the canvas on its C
 No argument; any key is refused. It puts the question the active
 pipeline waits on to the person once, in Copilot's dialog, as the run does, and records what
 they give through the same use case as `skraft decide` (same rules and refusals: an instruction
-over 1000 characters is refused), journaled `by: "host-confirmed"`. Neither the question nor the
+over 1000 characters, or with no word, is refused; one written is shown back and recorded only
+once confirmed), journaled `by: "host-confirmed"`. Neither the question nor the
 answer comes from the model. Without a dialog, in `autopilot` mode, or when the person does not
 answer, nothing is recorded and the person answers with `skraft decide` in a terminal. It
 answers `Recorded: <slug>: <key> answered <answer>; run the pipeline again to go on. Resume the

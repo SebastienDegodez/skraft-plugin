@@ -57,6 +57,34 @@ test('a dismissed dialog leaves the run waiting; /skraft decide records the answ
   ])
 })
 
+test('a blocked architect answered three times without an instruction sent leaves the run waiting for /skraft decide, nothing recorded', async (t) => {
+  const { cwd } = pipelineRepository(t)
+  const llm = scriptedLlm({ cwd, acts: { 'solution-architect': [blocked('which payment provider?')] } })
+  const mod = await scriptedModHost({ cwd, otherwise: actsAs(llm), answers: ['5', 'Use the bank gateway', 'CANCEL', '#1', 'Use the bank gateway'] })
+
+  await mod.command(SLUG)
+  const outcome = await mod.settled()
+
+  assert.deepEqual({ status: outcome.status, code: outcome.code }, { status: 'waiting', code: 'blocked' })
+  // Three rounds: a text with no word, an instruction not sent, a text with no word; the fifth answer is never asked for.
+  assert.deepEqual(mod.asked.map(({ options }) => options.options), [['STOP'], ['STOP'], ['SEND', 'CANCEL'], ['STOP']])
+  assert.match(mod.notes.at(-1), /^skraft checkout: waiting \(blocked\) — design is blocked: [^]* Answer with skraft decide design-1 "<instruction>"\|STOP\.$/)
+  assert.deepEqual(journal(cwd, SLUG).filter((event) => event.type === 'question.answered'), [])
+})
+
+test('closing the dialog that shows an instruction back is no answer, as closing any dialog: the run waits for /skraft decide without asking again', async (t) => {
+  const { cwd } = pipelineRepository(t)
+  const llm = scriptedLlm({ cwd, acts: { 'solution-architect': [blocked('which payment provider?')] } })
+  const mod = await scriptedModHost({ cwd, otherwise: actsAs(llm), answers: ['Use the bank gateway', null, 'Use the bank gateway', 'SEND'] })
+
+  await mod.command(SLUG)
+  const outcome = await mod.settled()
+
+  assert.deepEqual({ status: outcome.status, code: outcome.code }, { status: 'waiting', code: 'blocked' })
+  assert.deepEqual(mod.asked.map(({ options }) => options.options), [['STOP'], ['SEND', 'CANCEL']])
+  assert.deepEqual(journal(cwd, SLUG).filter((event) => event.type === 'question.answered'), [])
+})
+
 test('a blocked architect is asked in a dialog; the instruction typed under Other, once confirmed, sends it back with it in the same run', async (t) => {
   const { cwd } = pipelineRepository(t)
   const llm = scriptedLlm({ cwd, acts: { 'solution-architect': [blocked('which payment provider?')] } })

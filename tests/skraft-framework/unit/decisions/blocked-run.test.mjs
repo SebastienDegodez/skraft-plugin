@@ -165,6 +165,21 @@ test('an answer to a blocked question is refused, without echoing it, when it ho
   assert.deepEqual(await host.decide({ answer: 'STOP' }), { ok: false, slug: SLUG, key: null, code: 'already-answered', reason: 'research-1 was already answered' })
 })
 
+test('an instruction written in any script is taken: a word counts its combining marks, and two letters of a script written without spaces are a word', async () => {
+  const NFD_ETE = 'e\u0301te\u0301'
+  for (const [written, recorded] of [['करो', 'करो'], ['ठीक है', 'ठीक है'], [NFD_ETE, '\u00e9t\u00e9'], ['修复', '修复'], ['みて', 'みて'], ['メモ', 'メモ'], ['고쳐', '고쳐']]) {
+    const host = scripted({}, (it) => [blockedAgent(it)])
+    await host.start()
+
+    assert.deepEqual(await host.decide({ answer: written }), { ok: true, slug: SLUG, key: 'research-1', code: null, reason: `${SLUG}: research-1 answered ${recorded}; run the pipeline again to go on` }, written)
+    assert.equal(eventsOf(host, 'question.answered')[0].answer, recorded)
+  }
+  const host = scripted({}, (it) => [blockedAgent(it)])
+  await host.start()
+  // A mark alone, or two Latin letters, is still no word.
+  for (const wordless of ['\u0301\u0301\u0301', 'e\u0301', 'ok', '修']) assert.deepEqual(await host.decide({ answer: wordless }), { ok: false, slug: SLUG, key: 'research-1', code: 'invalid-answer', reason: NO_WORD }, wordless)
+})
+
 test('an instruction for a node the workflow no longer has stops the run as changed', async () => {
   const host = scripted(withSecurity, (it) => [agent()(it), agent()(it), agent({ result: { status: 'blocked', summary: 'No threat model.' } })(it)])
   await host.start()

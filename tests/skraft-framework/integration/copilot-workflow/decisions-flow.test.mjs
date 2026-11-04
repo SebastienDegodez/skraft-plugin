@@ -94,6 +94,28 @@ test('a blocked step asks the person for an instruction in a text field, then to
   assert.deepEqual(journal(cwd, SLUG).filter((event) => event.type === 'question.answered').map(({ key, answer, by }) => [key, answer, by]), [['design-1', 'Use the bank gateway', 'host-confirmed'], ['design-2', 'STOP', 'host-confirmed']])
 })
 
+test('an instruction the person writes in Copilot, then does not send, pauses the run as any question not answered, and its log says it was not sent; a text with no word is not asked again', async (t) => {
+  const { cwd } = pipelineRepository(t)
+  const llm = scriptedLlm({ cwd, acts: { 'solution-architect': [blocked('which payment provider?')] } })
+  const { ctx, logs } = simulatedContext({ args: { slug: SLUG }, otherwise: actsAs(llm) })
+
+  await assert.rejects(runSkraftPipelineWorkflow(ctx, copilotHost(cwd, PLUGIN_ROOT, answeringSession({ answers: ['Use the bank gateway', false] }))), { name: 'AbortError', message: 'paused at design-1' })
+  assert.equal(logs.at(-1), 'design-1 was not answered: you did not send the instruction you wrote. Resume this run to be asked again, ask Copilot in the chat to put the question to you, or type skraft decide design-1 "<instruction>"|STOP in a terminal and resume this run.')
+  const unshown = () => { throw new Error('no dialog outside a chat turn') }
+  const again = simulatedContext({ args: { slug: SLUG }, otherwise: actsAs(llm) })
+  await assert.rejects(runSkraftPipelineWorkflow(again.ctx, copilotHost(cwd, PLUGIN_ROOT, answeringSession({ answers: ['Use the bank gateway', unshown] }))), { name: 'AbortError', message: 'paused at design-1' })
+  // A confirmation Copilot never showed keeps its own reason.
+  assert.match(again.logs.at(-1), /^design-1 was not answered: Copilot did not put the question to you\. /)
+  const wordless = answeringSession({ answers: ['5'] })
+  const outcome = await runSkraftPipelineWorkflow(ctx, copilotHost(cwd, PLUGIN_ROOT, wordless))
+
+  // Unlike the Claude Code mod, which puts the question again, the run ends waiting for skraft decide.
+  assert.deepEqual([outcome.status, outcome.code], ['waiting', 'blocked'])
+  assert.deepEqual(wordless.asked.map(({ kind }) => kind), ['input'])
+  assert.ok(logs.includes(`${SLUG}: design-1 not answered: an instruction tells the agent in words what to do; write a sentence, or STOP`), logs.join('\n'))
+  assert.deepEqual(journal(cwd, SLUG).filter((event) => event.type === 'question.answered'), [])
+})
+
 test('a question the person dismisses in Copilot pauses the run, which says how to answer it; resumed, it puts the question again', async (t) => {
   const { cwd } = pipelineRepository(t)
   const { ctx, logs } = simulatedContext({ args: { slug: SLUG }, otherwise: actsAs(scriptedLlm({ cwd })) })
@@ -143,7 +165,8 @@ test('skraft_decide asks a blocked step its instruction in a text field; one Dec
 
   assert.equal(await decideTool(cwd, person).handler({}), 'Refused: an instruction is at most 1000 characters; nothing was recorded.')
   assert.equal(await decideTool(cwd, person).handler({}), 'Refused: an instruction tells the agent in words what to do; write a sentence, or STOP; nothing was recorded.')
-  assert.equal(await decideTool(cwd, person).handler({}), 'Refused: you did not answer the question in Copilot; answer it with skraft decide design-1 "<instruction>"|STOP typed in a terminal; nothing was recorded.')
+  // The person answered and said no to sending it: no answer, but not « you did not answer ».
+  assert.equal(await decideTool(cwd, person).handler({}), 'Refused: you did not send the instruction you wrote; answer it with skraft decide design-1 "<instruction>"|STOP typed in a terminal; nothing was recorded.')
   assert.equal(await decideTool(cwd, person).handler({}), `Recorded: ${SLUG}: design-1 answered Use the bank gateway; run the pipeline again to go on. Resume the paused skraft-pipeline run (/workflows).`)
   // A refused text asks no confirmation; a confirmation declined records nothing.
   assert.deepEqual(person.asked.map(({ kind }) => kind), ['input', 'input', 'input', 'confirm', 'input', 'confirm'])
