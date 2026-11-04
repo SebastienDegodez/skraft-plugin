@@ -430,3 +430,42 @@ test('a second visit runs the e2e command again with a log of its own, and shows
   assert.deepEqual(eventsOf(host, 'visuals.recorded').map(({ visit, commit, components }) => [visit, commit, components[0].evidence, components[0].screenshots.length]), [[1, 'root-1', 'visuals/web/e2e-1.log', 1], [2, 'root-2', 'visuals/web/e2e-2.log', 2]])
   assert.ok((await screenshots(host)).includes(`/root-2/${EVIDENCE}/web/light-2.png`))
 })
+
+const FRENCH_ISSUE = { title: 'Payer par carte', body: 'En tant que client, je veux payer par carte pour que la commande soit validée sans passer par la livraison.' }
+const FRENCH = { story: { issue: 42, title: FRENCH_ISSUE.title } }
+/** The Screenshots section, under its French heading, of the body the run wrote. */
+const frenchShots = async (host) => section(await host.tracking.read(SLUG, 'pull-request-body.md'), 'Captures d\'écran')
+
+test('a French story\'s screenshots are told in French: each e2e run, the dark theme, the screenshots left out, a remote on no forge, no front end', async () => {
+  const host = visualsRun({ codeHost: new InMemoryCodeHost({ issues: { 42: FRENCH_ISSUE } }) })
+  await host.start(FRENCH)
+  assert.equal(await frenchShots(host), [
+    '- web : run e2e passed (`npx playwright test`, preuve `visuals/web/e2e-1.log`) ; 4 screenshots committed',
+    '',
+    `![Checkout form, card filled in](${RAW}/${EVIDENCE}/web/light-1.png)`,
+    '',
+    `![Payment accepted](${RAW}/${EVIDENCE}/web/light-2.png)`,
+    '',
+    '<details><summary>Thème sombre</summary>',
+    '',
+    `![Checkout form, card filled in](${RAW}/${EVIDENCE}/web/dark-1.png)`,
+    '',
+    `![Payment accepted](${RAW}/${EVIDENCE}/web/dark-2.png)`,
+    '',
+    '</details>',
+  ].join('\n'))
+
+  const shot = (theme, n) => ({ title: `Step ${n}`, theme, path: `skraft-visuals/${theme}-${n}.png`, bytes: 'PNG' })
+  const admin = { ...WEB, name: 'admin', root: 'admin', commands: { build: 'npm run build' } }
+  const many = visualsRun({ codeHost: new InMemoryCodeHost({ issues: { 42: FRENCH_ISSUE }, repository: null }), components: [API, WEB, admin], screenshots: [...[1, 2, 3, 4, 5, 6, 7, 8].map((n) => shot('light', n)), ...[1, 2, 3, 4, 5, 6, 7].map((n) => shot('dark', n))] })
+  await many.start(FRENCH)
+  const lines = (await frenchShots(many)).split('\n')
+  assert.equal(lines[1], '- admin : no e2e command; give it commands.e2e in skraft-config.json')
+  assert.equal(lines[3], 'Le remote ne nomme aucun dépôt sur une forge : chaque image pointe vers son chemin au commit `root-1`, que la forge n\'affiche pas.')
+  assert.ok(lines.includes(`2 autres captures du thème clair de web dans \`${EVIDENCE}/web\``), lines.join('\n'))
+  assert.ok(lines.includes(`1 autre capture du thème sombre de web dans \`${EVIDENCE}/web\``), lines.join('\n'))
+
+  const always = scripted({ workflow: WORKFLOW.replace(', when="frontend"', ''), codeHost: new InMemoryCodeHost({ issues: { 42: FRENCH_ISSUE } }), components: [API], config: { publish: { pullRequest: true, questionVersions: { pullRequest: 2 }, visuals: true } } }, (it) => [agent()(it)])
+  await always.start(FRENCH)
+  assert.equal(await frenchShots(always), 'Aucune consignée : aucun composant de skraft-config.json n\'est un front end (stack react, ou une commande e2e).')
+})

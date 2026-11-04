@@ -1,7 +1,8 @@
 /**
  * The prose of a pull request the pr-writer agent writes in the template the engine gives it:
  * the summary line, what changes, why, and what is out of scope. Everything else in the
- * description is rendered by the engine from the journal.
+ * description is rendered by the engine from the journal. The template is in the story's
+ * language, English or French; either one's headings are read.
  *
  * @typedef {{ summary: string, what: string, why: string, limitations: string }} Prose
  */
@@ -9,13 +10,16 @@
 /** A summary line, as the first line of a commit: at most this long. */
 export const SUMMARY_LENGTH = 72
 
-/** Each section of the template, by its heading. */
-const SECTIONS = Object.freeze(/** @type {const} */ ([['summary', 'Summary'], ['what', 'What changes'], ['why', 'Why'], ['limitations', 'Out of scope and limitations']]))
+/** Each section of the template, by its English heading, then its French one. */
+const SECTIONS = Object.freeze(/** @type {const} */ ([
+  ['summary', 'Summary', 'Résumé'], ['what', 'What changes', 'Ce qui change'], ['why', 'Why', 'Pourquoi'],
+  ['limitations', 'Out of scope and limitations', 'Hors périmètre et limites'],
+]))
 
 /** @param {string} text the filled template @returns {Prose} */
 export const readProse = (text) => {
   const bodies = sectionsOf(text.replace(/<!--[\s\S]*?-->/g, ''))
-  return /** @type {Prose} */ (Object.fromEntries(SECTIONS.map(([key, heading]) => [key, (bodies.get(heading) ?? '').trim()])))
+  return /** @type {Prose} */ (Object.fromEntries(SECTIONS.map(([key, english, french]) => [key, (bodies.get(english) ?? bodies.get(french) ?? '').trim()])))
 }
 
 /** The text under each `## ` heading, by heading; what comes before the first one under null. @param {string} text */

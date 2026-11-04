@@ -16,6 +16,7 @@
  *   'decide RATIFIED'           → decide the open question
  *   'decide adr-1 REJECTED why' → decide adr-1, with the reason after the answer
  *   'review 12 --publish'       → review pull request 12, its verdict kept in a comment
+ *   'review --pr 12'            → the same review, typed as the CLI takes it
  *   'checkout #42 Pay by card'  → run checkout, story { issue: 42, title: 'Pay by card' }
  *   'checkout --base develop'   → run checkout on the base develop
  *   'checkout --from-artifacts' → run checkout from its DISCUSS stories
@@ -49,16 +50,19 @@ const runRequest = (slug, typed) => {
 const FROM_ARTIFACTS = '--from-artifacts'
 const PUBLISH = '--publish'
 
+const PULL_REQUEST = '--pr'
+
 /**
- * `<number> [--publish]`, `--publish` anywhere; a number that is not one positive whole number,
- * or any other word, is none.
+ * `[--pr] <number> [--publish]`, `--publish` anywhere, `--pr` right before the number as the CLI
+ * types it; a number that is not one positive whole number, or any other word, is none.
  * @param {string[]} words
  * @returns {{ command: 'review', number: number | null, publish: boolean }}
  */
 const reviewRequest = (words) => {
-  const numbers = words.filter((word) => word !== PUBLISH)
+  const typed = words.filter((word) => word !== PUBLISH)
+  const numbers = typed[0] === PULL_REQUEST ? typed.slice(1) : typed
   const number = numbers.length === 1 && /^[1-9]\d*$/.test(numbers[0]) ? Number(numbers[0]) : null
-  return { command: 'review', number, publish: numbers.length < words.length }
+  return { command: 'review', number, publish: typed.length < words.length }
 }
 const QUESTION_KEY = /^[A-Za-z_][A-Za-z0-9_-]*-\d+$/
 

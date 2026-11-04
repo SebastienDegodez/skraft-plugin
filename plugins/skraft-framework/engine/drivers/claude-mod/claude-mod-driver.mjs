@@ -66,7 +66,7 @@ export const COMMAND = Object.freeze({
   // Stryker disable next-line StringLiteral: text shown to the host and the model; no engine behaviour reads it
   description: 'Run the skraft pipeline for one story, or show where the active one stands',
   // Stryker disable next-line StringLiteral: text shown to the host and the model; no engine behaviour reads it
-  argumentHint: '[<slug> [#issue] [title…] [--base <ref>] [--from-artifacts]] | decide [<key>] <answer> [reason…] | review <pull request> [--publish]',
+  argumentHint: '[<slug> [#issue] [title…] [--base <ref>] [--from-artifacts]] | decide [<key>] <answer> [reason…] | review [--pr] <pull request> [--publish]',
 })
 export const TOOL = Object.freeze({
   name: 'run_pipeline',
@@ -177,7 +177,7 @@ const userSettingsOf = (home, files) => Object.freeze({
 /** @param {ModHost} host */
 const compose = async (host) => {
   const files = createModFiles(host.fs, { run: host.run })
-  const root = await host.cwd()
+  const root = await workingCopyOf(host)
   return {
     ...trackingPorts(files, root),
     ...sessionPorts(host, files, root),
@@ -187,6 +187,22 @@ const compose = async (host) => {
     ...gitPorts(createModCommandRunner({ run: host.run, root })),
   }
 }
+
+/**
+ * The working copy the session is in, read at each request: the top of its Git repository, never
+ * the subfolder a Bash `cd` of the conversation moved `$.session.cwd()` to (measured on Claude Code
+ * 2.1.316); the session's folder itself outside a repository. `--show-cdup` keeps the folder's own
+ * spelling, where `--show-toplevel` would resolve its links.
+ * @param {ModHost} host @returns {Promise<string>}
+ */
+const workingCopyOf = async (host) => {
+  const cwd = await host.cwd()
+  const { stdout } = await createModCommandRunner({ run: host.run, root: cwd }).run({ argv: ['git', 'rev-parse', '--show-cdup'], cwd })
+  return parentFolder(cwd, stdout.split(/[\\/]/).filter((part) => part === '..').length)
+}
+
+/** The folder `levels` above the path, `/` or `\\` separated. @param {string} path @param {number} levels @returns {string} */
+const parentFolder = (path, levels) => (levels === 0 ? path : parentFolder(path.replace(/[\\/][^\\/]*$/, ''), levels - 1))
 
 /**
  * This session's lease on the pipeline and on the pull request reviews, the timer that renews
@@ -486,7 +502,7 @@ const driveReview = async (driver, host, deps, { number, publish }) => {
  */
 const reviewToEnd = async (driver, host, deps, { number, publish }) => {
   try {
-    const outcome = await reviewOf(driver, host, deps).review({ number, publish, workingCopyName: folderName(await host.cwd()) })
+    const outcome = await reviewOf(driver, host, deps).review({ number, publish, workingCopyName: folderName(await workingCopyOf(host)) })
     return { outcome, line: `skraft review #${number}: ${outcome.status}${outcome.code ? ` (${outcome.code})` : ''} — ${outcome.reason}` }
   } catch {
     return { outcome: null, line: `skraft review #${number}: error — ${UNEXPECTED_REVIEW}` }

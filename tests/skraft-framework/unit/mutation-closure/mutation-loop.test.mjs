@@ -61,7 +61,7 @@ const twoFiles = strykerReport({
 /** As StrykerJS writes it: each file relative to the folder the command ran in, that folder its project root. */
 const checkoutOnly = strykerReport({ 'src/Checkout.cs': [[12, 'Equality', '!=', 'Survived'], [31, 'String', null, 'Timeout']] }, { projectRoot: '/work' })
 
-test('surviving mutants of the files the story changed get one proposal per file, with the component\'s skills; the kill the developer chose, then test-integrity and the gates again until mutation passes', async () => {
+test('surviving mutants of the files the story changed get one proposal per file, with the component\'s skills; the kill the developer chose, its gate commands run first, then test-integrity and the gates again until mutation passes', async () => {
   const catalog = new InMemoryAgentCatalog({ skillFiles: { 'mocking-inprocess-dotnet': '# skill\n' } })
   const host = scripted({ machine: new ScriptedMachine(), catalog, answers: APPLYING }, (it) => [...upToDeliver(it), ...round(it, 2)])
   mutationRounds(host, [twoFiles])
@@ -91,6 +91,9 @@ test('surviving mutants of the files the story changed get one proposal per file
     '  Delete code that no behaviour asks for in a `refactor(<story>): …` commit. A bug a new test reveals takes that failing `test` commit, then `fix(<story>): …`.',
     '  A mutant no test can tell apart from the code: change nothing for it; name it in your result summary, `<file>:<line>` and why.',
   ].join('\n')), kill.prompt)
+  const GATES = '- Gate commands: before you write your result, run those of each component you changed, from its root, and fix every failure; the gates step runs them next and sends a failure back as a new pass:\n- api: build: dotnet build; test: dotnet test\n'
+  assert.ok(kill.prompt.includes(GATES), kill.prompt)
+  assert.ok(!first.prompt.includes(GATES), first.prompt)
   assert.deepEqual(recorded(host, 'mutation').map(({ visit, outcome: result, failures, next, survivors }) => [visit, result, failures, next, survivors]), [
     [1, 'fail', [`api/mutation: exited 1, boundary 25% < 80%, 3 mutants survive (evidence: ${TRACKING}/gates/api/mutation-1.log)`], 'kill_proposal', [
       { file: 'src/Checkout.cs', mutants: [CHECKOUT_12, 'src/Checkout.cs:20 Boolean (false) has no test covering it'] },
