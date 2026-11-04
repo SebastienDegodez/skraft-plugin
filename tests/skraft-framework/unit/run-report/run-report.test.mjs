@@ -139,7 +139,7 @@ test('a step sent back counts each visit, a step the run stopped in shows open i
   ])
   let reviews = 0
   host.agentRunner.review = (dispatch) => (dispatch.agent === 'fitness-lens' && reviews++ === 0
-    ? 'lens: fitness\nverdict: fail\nfindings:\n  - id: F1\n    gate: G1\n    severity: blocker\n    location: "docs/adr/adr-001-card-payment.md:1"\n    description: "speculative"\n'
+    ? 'lens: fitness\nverdict: fail\nfindings:\n  - id: F1\n    gate: G1\n    severity: blocker\n    location: "docs/adr/adr-001-card-payment.md:1"\n    description: "speculative"\n    severityReason: "nothing asks for it"\n    drift: structural\n    occurrences: "docs/adr/adr-001-card-payment.md:1"\n'
     : dispatch.agent === 'finding-refuter' ? 'verdict: confirmed\nreason: "the ADR shows it"\n' : `lens: ${dispatch.agent.replace(/-lens$/, '')}\nverdict: pass\nfindings: []\n`)
 
   const waiting = await host.start()

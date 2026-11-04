@@ -1,3 +1,5 @@
+import { inert } from '../reporting/markdown-safety.mjs'
+
 /**
  * The questions a run asks a human, and how an answer to one is read. A question node of the
  * workflow (`shape=hexagon, question="<kind>"`) asks one of the node questions; the engine asks
@@ -128,8 +130,10 @@ export const mutationPlanText = (proposals) =>
 export const environmentText = (step, reason) => `${step} cannot run on this machine: ${reason}. Fix it, then RETRY; or ABORT the run.`
 
 /**
- * The text of a blocked question: the node an instruction runs again, and why it is blocked,
- * from what the engine checked only; the agent's own words stay in the file it names.
+ * The text of a blocked question: the node an instruction runs again, why it is blocked, from
+ * what the engine checked, and what the step that blocked left, one per line (a review's
+ * findings, the gates' failures, the reason a blocked agent gave in its result), which the
+ * reopened pass is sent with the instruction.
  * @param {Block} block
  */
 export const blockText = (block) => `${block.step} is blocked: ${BLOCKS[block.code](block)}.${leftBy(block)} An instruction runs ${block.step} again on a new pass with ${block.failures.length > 0 ? 'what is left above and the instruction' : 'it'}; ${STOP} ends the run.`
@@ -195,11 +199,15 @@ const choicesOf = (step, acceptable_) => (acceptable_
   ? `${ACCEPT} takes these findings as they stand and goes on (they are listed in the run report and the pull request); an instruction runs ${step} again with every finding and the instruction; ${STOP} ends the run.`
   : `A blocker or high finding cannot be accepted: an instruction runs ${step} again with every finding and the instruction; ${STOP} ends the run.`)
 
-/** A blocker or high finding in full: what, why this severity, the kind of drift, every place, the fix. @param {LeftFinding} finding */
+/**
+ * A blocker or high finding in full: what, why this severity, the kind of drift, every place, the
+ * fix; what its lens wrote made inert, as the run report and the pull request show it.
+ * @param {LeftFinding} finding
+ */
 const severeLines = (finding) => {
   const { lens, id, gate, severity, location, description, suggestion, severityReason, drift } = finding
   return [
-    `- ${severity} · ${lens} ${id} ${gate}${location === '' ? '' : ` at ${location}`}: ${description}`,
+    `- ${severity} · ${lens} ${id} ${gate}${location === '' ? '' : ` at ${inert(location)}`}: ${inert(description)}`,
     ...labelled(`why ${severity}`, severityReason),
     ...labelled('drift', drift),
     ...elsewhere(finding),
@@ -207,20 +215,20 @@ const severeLines = (finding) => {
   ]
 }
 
-/** An indented `label: value` line, none when there is no value. @param {string} label @param {string | null | undefined} value */
-const labelled = (label, value) => (value ? [`  ${label}: ${value}`] : [])
+/** An indented `label: value` line, the value inert; none when there is no value. @param {string} label @param {string | null | undefined} value */
+const labelled = (label, value) => (value ? [`  ${label}: ${inert(value)}`] : [])
 
 /** The other places a finding holds at, when it names any. @param {LeftFinding} finding */
 const elsewhere = ({ location, occurrences = [] }) => {
   const others = occurrences.filter((place) => place !== location)
-  return others.length === 0 ? [] : [`  also at: ${others.join(', ')}`]
+  return others.length === 0 ? [] : [`  also at: ${inert(others.join(', '))}`]
 }
 
 /** The longest cell of the table of medium and low findings. */
 const CELL = 120
 
 /** A medium or low finding as one row of the table. @param {LeftFinding} finding */
-const minorRow = ({ lens, id, severity, location, description }) => `| ${severity} | ${lens} ${id} | ${cell(location || '-')} | ${cell(description)} |`
+const minorRow = ({ lens, id, severity, location, description }) => `| ${severity} | ${lens} ${id} | ${cell(inert(location || '-'))} | ${cell(inert(description))} |`
 
 /** A table cell on one line, its pipes escaped, cut to CELL characters. @param {string} text */
 const cell = (text) => {

@@ -324,7 +324,8 @@ test('the review the description shows: what counts, what the refuter refuted an
     consistency: [says('consistency', 'fail', [finding('F1', 'medium', 'the map names no currency', { location: 'details/x.md:3' })])],
     fitness: [says('fitness', 'fail', [finding('F1', 'high', 'speculative cache', { location: 'details/x.md:9' })])],
     'test-integrity': [says('test-integrity', 'pass', [finding('F1', 'low', 'long name')])],
-    'cold-reader': [says('cold-reader', 'fail', [finding('F1', 'medium', 'pay names no currency', { location: 'src/Checkout.cs:3' }), finding('F2', 'low', 'long name too', { location: './src/Checkout.cs:12' })])],
+    'architecture-boundaries': [says('architecture-boundaries', 'pass', [finding('F1', 'low', 'long name too', { location: './src/Checkout.cs:12' })])],
+    'cold-reader': [says('cold-reader', 'fail', [finding('F1', 'medium', 'pay names no currency', { location: 'src/Checkout.cs:3' })])],
     refuter: [refutes('refuted', 'details/x.md:3 names EUR'), refutes('refuted', 'nothing is cached'), refutes('refuted', 'context-map.md:12 fixes pay(amount)')],
   })
 
@@ -336,7 +337,7 @@ test('the review the description shows: what counts, what the refuter refuted an
   assert.equal(section(body, 'Review'), [
     'Findings that count:',
     '',
-    '- deliver_review · test-integrity F1, cold-reader F2 (low) `src/Checkout.cs:12`: long name',
+    '- deliver_review · test-integrity F1, architecture-boundaries F1 (low) `src/Checkout.cs:12`: long name',
     '',
     'Refuted by the finding refuter:',
     '',

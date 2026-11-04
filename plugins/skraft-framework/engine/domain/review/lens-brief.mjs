@@ -1,5 +1,5 @@
 import { storyLine } from '../pipeline/dispatch-brief.mjs'
-import { checksShape, lensShape, MAX_FINDINGS, REFUTATION_SHAPE } from './answers.mjs'
+import { checksShape, CONTEXT_KEYS, lensShape, MAX_FINDINGS, REFUTATION_SHAPE } from './answers.mjs'
 import { citationOf } from './finding-groups.mjs'
 import { SCANNED_WITH } from './patch-scan.mjs'
 import { PULL_REQUEST_FILE } from './pull-request.mjs'
@@ -45,10 +45,17 @@ export const composeLensBrief = ({ lens, phase, slug, story, inputs, skills, kno
   ...degradedLines(lens, inputs),
   ...passLines({ unchanged, known, instructions }),
   '- Write no file, change nothing, start no agent.',
-  `- End your answer with this YAML document in a \`\`\`yaml block, at most ${MAX_FINDINGS} findings, every free text in double quotes:`,
-  ...fenced(lensShape(lens.name)),
+  ...answerLines(lens.name),
   ...retryLines(retry),
 ].join('\n')
+
+/** How a lens answers: the document, the context of every finding, what its verdict does with low findings. @param {string} name */
+const answerLines = (name) => [
+  `- End your answer with this YAML document in a \`\`\`yaml block, at most ${MAX_FINDINGS} findings, every free text in double quotes:`,
+  `- Every finding gives ${CONTEXT_KEYS.join(', ')}: an answer with a finding lacking one is refused.`,
+  '- verdict fail sends every finding back to be fixed, a low one too; pass keeps low findings as notes only.',
+  ...fenced(lensShape(name)),
+]
 
 /**
  * What this pass adds to the inputs: that nothing changed outside the tracking folder, the

@@ -47,7 +47,7 @@ flowchart TB
     L1 & L2 & L3 --> F["typed findings"]
     F -->|blocker, high, medium| R["finding-refuter<br/>confirms or refutes"]
     R --> V{"verdict computed<br/>by the engine"}
-    F -->|low: notes| V
+    F -->|low| V
     V -->|APPROVED| N["next phase,<br/>then human review"]
     V -->|NEEDS_REWORK| W
     V -->|BLOCKED| H["question to a human"]
@@ -58,7 +58,10 @@ finding that stands is enough to send the work back.*
 
 Each blocker, high or medium finding goes to `finding-refuter`, which rereads the cited location
 and confirms or refutes it, saying why. A single finding that stands is enough to send the work
-back (`NEEDS_REWORK`); low findings remain notes. A lens that cannot conclude blocks the review
+back (`NEEDS_REWORK`); a low finding stands unchecked when its lens failed, so the producer fixes
+every severity, and stays a note when its lens passed. After the third pass the run sends nothing
+back: a human accepts what is left when only medium and low findings are, or tells the producer
+what to do. A lens that cannot conclude blocks the review
 instead of counting as approval. When only one lens finds what would send the work back while
 the others passed, the refuter judges it with every input of the review — the *Dissent Rule*: a
 lone voice is neither set aside without a reason nor followed without a check. Rework is bounded

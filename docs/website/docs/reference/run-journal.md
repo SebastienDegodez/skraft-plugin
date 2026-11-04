@@ -54,7 +54,7 @@ review never hands them to a lens as one.
 status: "NEEDS_REWORK"          # APPROVED | NEEDS_REWORK | BLOCKED
 code: null                      # lens-inconclusive when BLOCKED
 summary: "NEEDS_REWORK: 1 reason to address"
-findings:                       # the blocker, high and medium findings that count
+findings:                       # the findings that count: blocker, high and medium first, then the low ones of a lens that failed
   - lens: "consistency"
     id: "F2"
     gate: "G1"
@@ -62,7 +62,10 @@ findings:                       # the blocker, high and medium findings that cou
     location: "docs/adr/adr-001-card-payment.md:3"
     description: "two contexts own payments"
     suggestion: null
-notes: []                       # the low findings, same keys
+    severityReason: "billing and checkout would both write a payment"
+    drift: "structural"         # label | classification | structural
+    occurrences: "docs/adr/adr-001-card-payment.md:3, docs/architecture/context-map.md:12"
+notes: []                       # the low findings of a lens that passed, same keys
 refutations:                    # every check of this pass
   - lens: "consistency"
     finding: "F1"
@@ -214,12 +217,12 @@ Under Copilot CLI, the **Journal** tab of the `skraft-pipeline` canvas reads thi
 | `run.started` | Init, at the first init of the slug | `slug`; `story` (`{ issue, title }` or `null`); `workflow` (`skraft`); `base` (list, see below) |
 | `step.started` | the pipeline, before starting an agent | `step` (`research`); `phase` (`RESEARCH`); `agent` (`solution-researcher`); `attempt` (1, 2…); `outputs` (expected paths, relative to the slug folder); `missing` (paths missing at the previous attempt, empty on the first); `assignment`: what the agent runs on — `family`, `tier`, `source` (`agent`, `workflow`, `type`, `default`, `escalation`, `host`) and, per host, `model` (list or null), `effort` (or null) and the `source` of each; a resumed attempt runs on it again, whatever the configuration says since; `host` (`claude-code`, `copilot`): the host that starts the agent, whose `model` and `effort` it runs on (no model: the host chooses). The `/workflows` log, the Observe view (`agents`) and `run-report.md` (`## Agents`) show each agent's family, tier, model on that host (or `model chosen by the host`) and effort, then the model the host says it ran on once it answers. On an ask node, `question` (the question kind) instead of `agent` |
 | `step.recorded` | the pipeline, after the agent | `step`; `attempt`; `outcome` (`outputs-complete` or `missing-outputs`; on an ask node `answered`, or `skipped` when no human was needed, with `answer`; `aborted`, code `environment`, after an `ABORT`); `missing`; `durationMs`; `cost` (absent when the host reports none); `model` (the model the agent ran on, null for the session's; absent on a resume that did not start it); `ceiling` on a step no edge leads on from: the node the edge at its `max_visits` leads to (`loop-ceiling`), the one a human's instruction runs again, `null` when no edge leads on |
-| `question.asked` | the pipeline, when it puts a question to a human | `key` (`adr-1`, `gates-1`), the node that asks the question then its rank among that node's questions in the run; `kind` (`publish-consent`, `adr-ratification`, `reporting-consent`, `mutation-plan`, `environment`, `blocked`); `text`; `options`; `refusals`; `header`; `step`; `visit`; `subjects` (the ADRs to ratify, otherwise empty) |
-| `question.answered` | the host's dialog, or `skraft decide` | `key`; `answer` (for a `blocked` question, the human's instruction as they wrote it, on one line, or `STOP`); `reason` (`null` without one); `by` (`host`, `decide`, `host-confirmed` or `cli-tty`) |
+| `question.asked` | the pipeline, when it puts a question to a human | `key` (`adr-1`, `gates-1`), the node that asks the question then its rank among that node's questions in the run; `kind` (`publish-consent`, `adr-ratification`, `reporting-consent`, `mutation-plan`, `environment`, `blocked`, `review-ceiling`); `text`; `options`; `refusals`; `header`; `step`; `visit`; `subjects` (the ADRs to ratify, otherwise empty) |
+| `question.answered` | the host's dialog, or `skraft decide` | `key`; `answer` (for a `blocked` or `review-ceiling` question, the human's instruction as they wrote it, on one line, or `STOP`, or `ACCEPT` for a `review-ceiling` one); `reason` (`null` without one); `by` (`host`, `decide`, `host-confirmed` or `cli-tty`) |
 | `phase.closed` | the pipeline | `phase` |
 | `run.finished` | the pipeline | `status` (`completed` when the last phase is closed, `blocked` when the run stops); `code` (with `blocked`); `reason` (`<PHASE> closed` with `completed`) |
 | `run.stopped` | the pipeline, when the agent does not start or stops, or a lens answers twice without a readable verdict | `code` (`agent-unavailable`, `agent-failed` or `lens-unreadable`); `reason`. Never written when the machine cannot run a step: the engine asks the `environment` question instead |
-| `review.lens` | a review node, once per lens, and once per pass for each of the engine's own checks that finds something | `step`; `visit`; `lens` (`consistency`; `test-integrity#patch` for the engine's G9 findings, `testability#layout` for its G11 findings, which carry no `fingerprint`); `agent` (`consistency-lens`); `model` (the model it ran on, `claude-haiku-5.5`; null for the session's); `fingerprint` (hash of the lens's inputs); `verdict` (`pass`, `fail` or `inconclusive`); `findings` (`{ id, gate, severity, location, description, suggestion }`, `gate` being the id of the lens's table: `G7`, `M2`…); `cost` (absent when unknown); `reused` (`true` when kept from the previous pass: same inputs, nothing found) |
+| `review.lens` | a review node, once per lens, and once per pass for each of the engine's own checks that finds something | `step`; `visit`; `lens` (`consistency`; `test-integrity#patch` for the engine's G9 findings, `testability#layout` for its G11 findings, which carry no `fingerprint`); `agent` (`consistency-lens`); `model` (the model it ran on, `claude-haiku-5.5`; null for the session's); `fingerprint` (hash of the lens's inputs); `verdict` (`pass`, `fail` or `inconclusive`); `findings` (`{ id, gate, severity, location, description, suggestion, severityReason, drift, occurrences }`, `gate` being the id of the lens's table: `G7`, `M2`…, `occurrences` a list of `path:line`; the engine's own findings have no `severityReason`, `drift` nor `occurrences`); `cost` (absent when unknown); `reused` (`true` when kept from the previous pass: same inputs, nothing found) |
 | `review.refuted` | a review node, once per blocker, high or medium finding checked by `finding-refuter`; findings of several lenses at one line, checked in one call, give one each with its own verdict, its `cost` on the first | `step`; `visit`; `lens`; `finding` (its id); `verdict` (`confirmed`, `refuted` or `unverifiable`); `reason`; `dissent` (`true` when the finding's lens alone found what sends the work back, and the refuter judged it with every input of the review); `model`; `cost` |
 | `review.cost` | a review node, once per batch the host costs as a whole (the Claude Code mod) | `step`; `visit`; `cost` |
 | `gate.ran` | `skraft gate`, once per gate | `component`; `gate` (`build`… or `none`); `scope` (`touched` or `all`); `command` (`null` for `none`); `status` (`pass` or `fail`); `failure` (`environment`, `deterministic` or `null`); `exitCode` (`null` when nothing ran); `durationMs`; `evidence` (path relative to the slug folder, `null` for `none`) |
@@ -246,14 +249,18 @@ report show it as approximate (`~$0.42`) with a note.
 
 A review node's `step.started` carries `lenses` instead of `agent`, `assignments` (each lens agent's assignment) and `refuter` (the refuter's, by the tier it escalates to: `standard`, `frontier`), which a resumed review replays, and `host`; each `review.lens` and `review.refuted` carries the `assignment` it ran on; its `step.recorded` has
 `outcome` `approved`, `needs-rework` or `blocked` (`code` `lens-inconclusive` when a lens answered
-`inconclusive` or failed with no blocker, high or medium finding: the run asks the `blocked`
+`inconclusive`: the run asks the `blocked`
 question about the review node; `reason` names each such lens and what it noted),
 `failures` (the findings that count, which the next brief of
-the phase agent lists) and `cost` (its lenses, checks and batches of this pass, resumed or not). A step the run was sent back into, by the gates, a review or a human's refusal, has `sentBy`
+the phase agent lists), `findings` on a `needs-rework` review (the same findings with their
+context, each `{ lens, id, gate, severity, location, description, suggestion, severityReason,
+drift, occurrences }`: what the `review-ceiling` or `blocked` question shows when the review
+reaches its ceiling, and what the run report and the pull request list once accepted) and `cost` (its lenses, checks and batches of this pass, resumed or not). A step the run was sent back into, by the gates, a review or a human's refusal, has `sentBy`
 (`gate`, `review` or `ask`) on its `step.started`; a step nothing sent back has none. A human's
-instruction to a `blocked` question opens the node's next pass with `sentBy` `ask` and the
-instruction as its `feedback`; a review node's `step.started` carries `feedback` too, which each
-lens of that pass reads when `sentBy` is `ask`.
+instruction to a `blocked` question opens the node's next pass with `sentBy` `ask`, the
+instruction in `instruction` and what the block left (its step's `failures`) as its `feedback`;
+a review node's `step.started` carries them too, and each lens of that pass reads the
+`instruction`.
 An agent's `step.recorded` lists in `documents` the files of the tracking folder its attempt
 created or changed (the engine's own files left out), and for the solution architect the
 `details/<date>/structural-scan.json` the engine wrote before the attempt; a review gives each lens these documents
@@ -276,7 +283,8 @@ way.
 | `reporting-consent` | `<node>-<n>` | `publish.visuals` is not set in `skraft-config.json` and a component is a front end (stack `react`, or `commands.e2e`); none: `step.recorded` `skipped`, answer `DECLINED`, nothing written | the answer written as `"publish": { "visuals": true\|false }`, and kept for the rest of the run: a loop back through the node does not ask again |
 | `mutation-plan` | `<node>-<n>` (`mutation_plan-1`) | the mutation gate failed and `kill_proposal` wrote its proposals | `APPLY`: `kill_mutants` applies the proposals; an instruction: `kill_mutants` gets it with the proposals it departs from; `STOP`: `run.finished` `blocked`, code `stopped` |
 | `environment` | `<node>-<n>`, the node that cannot run (`gates-1`) | a step cannot run on this machine | `RETRY`: the same step is checked or run again, its agent only if its outputs were still missing; `ABORT`: run blocked |
-| `blocked` | `<node>-<n>`, the node an instruction runs again (`design-1`) | an agent answered `blocked` (the agent's node), a loop reached its `max_visits` (the node its capped edge leads back to), a lens answered `inconclusive` (the review node) | an instruction: the same run enters that node on a new pass, the instruction as its `feedback` (`sentBy` `ask`), and no edge into the node counts as taken any more; `STOP`: `run.finished` `blocked` with the block's code and reason, nothing else |
+| `blocked` | `<node>-<n>`, the node an instruction runs again (`design-1`) | an agent answered `blocked` (the agent's node), a loop reached its `max_visits` (the node its capped edge leads back to; for a review, only while a blocker or high finding is left), a lens answered `inconclusive` (the review node) | an instruction: the same run enters that node on a new pass, the instruction in `instruction` and what the block left as its `feedback` (`sentBy` `ask`), and no edge into the node counts as taken any more; `STOP`: `run.finished` `blocked` with the block's code and reason, nothing else |
+| `review-ceiling` | `<node>-<n>`, the producer the review loops back to (`design-1`) | a review's loop to its producer reached its `max_visits` with only medium and low findings left | `ACCEPT`: the run goes on by the review's `APPROVED` edge (closing its phase when that edge leaves it), and the run report and the pull request list the accepted findings; an instruction: as for `blocked`; `STOP`: `run.finished` `blocked`, code `loop-ceiling` |
 
 The `environment` question reads `<node> cannot run on this machine: <reason>. Fix it, then
 RETRY; or ABORT the run.` It is asked when a gate program is not found, a red commit cannot be
@@ -373,9 +381,9 @@ for a human's answer), `done`.
 | `blocked` | `agent-unavailable` | the host cannot start the agent | Claude Code: `skraft:solution-researcher could not be started: …`; Copilot: `agent "solution-researcher" is not available in this Copilot session (agents: …); install or enable the skraft plugin, or pass agentIds` | install or enable the plugin, then resume; the attempt is not consumed |
 | `blocked` | `agent-failed` | the agent stops without finishing and its outputs are missing | `<agent> stopped without finishing: <error>` | resume: the step stays open and the same attempt restarts |
 | `blocked` | `review-rejected` | a review answers `NEEDS_REWORK` and its node has no `NEEDS_REWORK` edge | `<node> asked for rework and the workflow has no NEEDS_REWORK edge out of it; <findings>` | fix the findings in a new slug, or add the edge to the workflow |
-| `blocked` | `lens-inconclusive` | a lens answered `inconclusive` (a lens answering `fail` with low findings only passes, its findings noted) | `<lens>: inconclusive: <notes>`, one per lens, separated by `; ` | asked first as the `blocked` question; after `STOP`, final: a new run of the slug stays blocked |
+| `blocked` | `lens-inconclusive` | a lens answered `inconclusive` | `<lens>: inconclusive: <notes>`, one per lens, separated by `; ` | asked first as the `blocked` question; after `STOP`, final: a new run of the slug stays blocked |
 | `blocked` | `lens-unreadable` | a lens answered twice without a readable verdict (`run.stopped`) | `<lens>-lens answered 2 times without a readable verdict: <error>` | resume: the lenses this pass already journaled are kept, the unreadable ones are asked again |
-| `blocked` | `loop-ceiling` | a refusal or a failure would take an edge past its `max_visits`, and a human answered `STOP` to the `blocked` question | `<from> -> <to> was already taken N times, its max_visits` | final: a new run of the slug stays blocked |
+| `blocked` | `loop-ceiling` | a refusal or a failure would take an edge past its `max_visits`, and a human answered `STOP` to the `blocked` or `review-ceiling` question | `<from> -> <to> was already taken N times, its max_visits` | final: a new run of the slug stays blocked |
 | `blocked` | `stopped` | a human answered `STOP` to the `mutation-plan` question | `a human stopped the run at <node>; the proposals are in <paths>` | final |
 | `blocked` | `environment` | a human answered `ABORT` | `aborted by a human: <question>` | fix the machine, start a new slug |
 | `waiting` | `publish-consent`, `adr-ratification`, `reporting-consent`, `mutation-plan`, `environment` | a question has no answer | `<question> Answer with skraft decide <key> <A>\|<B>`, plus ` (a refusal with its reason)` when the question has a refusal | answer with `skraft decide`, `/skraft decide` or `skraft_decide` |

@@ -1,6 +1,7 @@
 /**
  * The small YAML a lens and the refuter answer with: top-level `key: value` lines and one list
- * of flat mappings (`findings`). A value is a quoted string, a plain word, a `|` or `>` block,
+ * of mappings (`findings`), whose keys hold a value or a list of values (`- "<value>"` lines
+ * under the key). A value is a quoted string, a plain word, a `|` or `>` block,
  * or nothing (null). Anchors, aliases, tags, flow collections and tabs are refused rather than
  * guessed, and so is a plain value holding `: ` or ` #`, which a reader cannot cut safely.
  *
@@ -119,7 +120,24 @@ const readItem = (cursor, dash) => {
 /** @param {Cursor} cursor @param {Record<string, any>} item @param {Line} line */
 const readEntryInto = (cursor, item, line) => {
   const { key, rest } = entryOf(line)
-  put(item, line, key, readValue(cursor, line, rest))
+  put(item, line, key, rest === '' && holdsValues(cursor, line) ? readValues(cursor) : readValue(cursor, line, rest))
+}
+
+/** Whether `- <value>` lines follow a key of an item, at its indentation or deeper. @param {Cursor} cursor @param {Line} key */
+const holdsValues = (cursor, key) => {
+  const following = next(cursor)
+  return following !== null && following.indent >= key.indent && isItem(following)
+}
+
+/** The `- <value>` lines under a key of an item, each a value, all at the first one's indentation. @param {Cursor} cursor */
+const readValues = (cursor) => {
+  const { indent } = /** @type {Line} */ (next(cursor))
+  const values = []
+  for (let line = next(cursor); line !== null && line.indent === indent && isItem(line); line = next(cursor)) {
+    cursor.at += 1
+    values.push(scalarOf(line, line.text.slice(1).trim()))
+  }
+  return values
 }
 
 /** @param {Cursor} cursor @param {Line} line @param {string} rest @returns {string | null} */

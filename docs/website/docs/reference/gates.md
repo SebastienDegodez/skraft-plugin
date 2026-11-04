@@ -56,7 +56,7 @@ root; a component stops at its first failing gate.
 | `blocker` | `REJECTED` | `NEEDS_REWORK` once confirmed by `finding-refuter` |
 | `high` | `NEEDS_REWORK` | `NEEDS_REWORK` once confirmed |
 | `medium` | `NEEDS_REWORK` | `NEEDS_REWORK` once confirmed |
-| `low` | `APPROVED`, noted | `APPROVED`, noted |
+| `low` | `APPROVED`, noted | `NEEDS_REWORK` from a lens answering `fail`, with no refuter; noted from a lens answering `pass` |
 
 ---
 
@@ -217,12 +217,16 @@ findings:                # [] when it finds none
     location: "tests/Orders.UnitTest/RefundTests.cs:42"
     description: "the expected amount 90 became Assert.NotNull"
     suggestion: "restore Assert.Equal(90, refund.Amount)"   # optional
+    severityReason: "the refund amount is no longer checked"
+    drift: structural    # label | classification | structural
+    occurrences:
+      - "tests/Orders.UnitTest/RefundTests.cs:42"
 ```
 
 | Rule | Detail |
 | --- | --- |
-| Keys | only `lens`, `verdict`, `findings`; per finding `id`, `gate`, `severity`, `location`, `description`, `suggestion`; any other key refuses the answer |
-| Required | `gate` and `description`; a missing `id` becomes the first free `F<n>` |
+| Keys | only `lens`, `verdict`, `findings`; per finding `id`, `gate`, `severity`, `location`, `description`, `suggestion`, `severityReason`, `drift`, `occurrences`; any other key refuses the answer |
+| Required | `gate`, `description`, `severityReason` (why this severity), `drift` (`label`, `classification` or `structural`) and `occurrences` (every `path:line` of the same fact, as a list or one line separated by `,` or `;`); a missing `id` becomes the first free `F<n>` |
 | Values | free texts in double quotes or a literal block scalar; no anchor, alias or tag; case of `verdict` and `severity` normalized |
 | Ceiling | at most 20 findings; a `pass` with a blocker, high or medium finding is refused |
 | Texts | brought onto one line and cut (description: 500 characters); `location` made relative to the working copy, `/`-separated, `./` dropped, its `:line` kept (a path outside the working copy stays absolute) |
@@ -252,12 +256,17 @@ so does a finding whose check was unreadable twice.
 
 ### Verdict <!-- #verdict -->
 
-A lens that answers `inconclusive`, or `fail` without a blocker, high or medium
-finding, blocks the review with `lens-inconclusive`, naming each such lens and what it noted:
-the work is not sent back, no finding is checked, and the run asks the `blocked` question on
-the review node. Otherwise `NEEDS_REWORK` when a blocker,
-high or medium finding counts, else `APPROVED` (low findings are notes). The findings that count
-go to the next brief of the phase agent, a group on one line citing each of its lenses.
+A lens that answers `inconclusive` blocks the review with `lens-inconclusive`, naming each such
+lens and what it noted: the work is not sent back, no finding is checked, and the run asks the
+`blocked` question on the review node. Otherwise `NEEDS_REWORK` when a finding counts, else
+`APPROVED`. A blocker, high or medium finding counts unless the refuter refuted it; a low finding
+counts, unchecked, when its lens answered `fail`, so that the producer fixes every severity while
+the review may send its work back; a low finding of a lens that answered `pass` is a note. The
+findings that count go to the next brief of the phase agent, a group on one line citing each of
+its lenses. When the loop back to the producer reaches its `max_visits`, the run asks a human
+instead of sending the work back again: the `review-ceiling` question (`ACCEPT`, an instruction
+or `STOP`) when only medium and low findings are left, the `blocked` question (an instruction or
+`STOP`) while a blocker or high one is ([Tracking folder and journal](./run-journal.md)).
 The summary gives the status, then the refuted findings and the notes it set aside, each cited
 (`APPROVED: no finding counts; 2 refuted (consistency F1, fitness F1); 1 note (coverage F3)`,
 `APPROVED: every lens passed` when no lens found anything); the progress (the pane, the workflow log) lists

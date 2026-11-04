@@ -40,9 +40,9 @@ test('an instruction runs the blocked node again on a new pass of the same run, 
   assert.ok(brief.includes('- Pass: 2, after a human refused the work'), brief)
   // #500: the agent gets what the block left, not the instruction alone.
   assert.ok(brief.endsWith(`\n\nWhat pass 1 left when it was blocked:\n- ${NO_PROVIDER}\n\nA human refused the work of pass 1:\n- ${INSTRUCTION}`), brief)
-  assert.deepEqual(eventsOf(host, 'step.started').filter((event) => event.step === 'research').map(({ visit, attempt, feedback, sentBy }) => [visit, attempt, feedback, sentBy]), [
-    [1, 1, [], undefined],
-    [2, 1, [NO_PROVIDER, INSTRUCTION], 'ask'],
+  assert.deepEqual(eventsOf(host, 'step.started').filter((event) => event.step === 'research').map(({ visit, attempt, feedback, instruction, sentBy }) => [visit, attempt, feedback, instruction, sentBy]), [
+    [1, 1, [], undefined, undefined],
+    [2, 1, [NO_PROVIDER], INSTRUCTION, 'ask'],
   ])
   assert.deepEqual(eventsOf(host, 'question.answered').map(({ key, answer, reason, by }) => [key, answer, reason, by]), [['research-1', INSTRUCTION, null, 'decide']])
   assert.equal(eventsOf(host, 'run.started').length, 1)
@@ -121,7 +121,7 @@ test('a lens that reaches no verdict asks a human; an instruction runs the revie
   assert.deepEqual(second.map((dispatch) => dispatch.agent), ['fitness-lens'])
   assert.ok(second[0].prompt.includes(`\n- A human's instruction for this pass, after the last one was blocked: ${INSTRUCTION}\n`), second[0].prompt)
   assert.ok(!host.agentRunner.reviewed()[0].prompt.includes("A human's instruction"))
-  assert.deepEqual(eventsOf(host, 'step.started').filter((event) => event.step === 'design_review').map(({ visit, feedback, sentBy }) => [visit, feedback, sentBy]), [[1, [], undefined], [2, [INSTRUCTION], 'ask']])
+  assert.deepEqual(eventsOf(host, 'step.started').filter((event) => event.step === 'design_review').map(({ visit, feedback, instruction, sentBy }) => [visit, feedback, instruction, sentBy]), [[1, [], undefined, undefined], [2, [], INSTRUCTION, 'ask']])
 })
 
 test('the node run again that blocks again asks again; STOP then ends the run blocked, and nothing more runs', async () => {
