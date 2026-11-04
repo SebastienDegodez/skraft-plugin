@@ -37,6 +37,12 @@ on:
       - '.github/workflows/skraft-brownfield-ci.yml'
   workflow_dispatch:
 
+# A new push to a pull request cancels its previous run, so runners do not queue behind stale runs (#515).
+# Pushes to main and integration/v2-next are never cancelled.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 permissions:
   contents: read
 

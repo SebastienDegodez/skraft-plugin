@@ -148,11 +148,13 @@ the probe or a test says otherwise.
 
 Everything must run on Windows and macOS, under Claude Code, Copilot CLI and VS Code.
 
-- CI: every workflow with a macOS job runs once per pull request. A new push cancels the
-  previous run of the same pull request (`concurrency`, `cancel-in-progress` on `pull_request`
-  only), so macOS runners do not queue behind stale runs; pushes to `main` and
-  `integration/v2-next` are never cancelled. A new workflow with a macOS job carries the same
-  `concurrency` block.
+- CI: every workflow a pull request triggers keeps one run per pull request. A new push
+  cancels the previous run of the same pull request (`concurrency` grouped by workflow and pull
+  request number, `cancel-in-progress` on `pull_request` only), so runners do not queue behind
+  stale runs; two pull requests never cancel each other, and pushes to `main` and
+  `integration/v2-next` are never cancelled. A new workflow triggered by pull requests carries
+  the same `concurrency` block; a workflow that publishes results (`evaluation-evidence.yml`)
+  does not.
 
 - Node code: `node:path` for paths, `spawnSync`/`spawn` with an argv array, never a shell string
   and never `shell: true` (it hides a missing program behind cmd.exe's exit code).
