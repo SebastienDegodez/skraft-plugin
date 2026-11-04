@@ -95,6 +95,11 @@ test('a run the host cancels while a gate runs ends that command with every proc
 
   assert.equal(existsSync(marker), true, 'the run ended or stood still before its mutation gate started')
   assert.equal(ended.name, 'AbortError')
+  // A command the cancellation ended is not the machine's fault: once the run is cancelled no question is put to the
+  // person, so none is answered RETRY and asked again (it looped, unseen, while dialogs were capped).
+  const events = await journalEvents(cwd, SLUG)
+  assert.ok(events.filter((event) => event.type === 'question.asked' && event.kind === 'environment').length <= 1)
+  assert.deepEqual(events.filter((event) => event.type === 'question.answered' && event.answer === 'RETRY'), [])
   const sleeper = Number(readFileSync(marker, 'utf8'))
   let alive = true
   for (const deadline = Date.now() + 10_000; alive && Date.now() < deadline; await new Promise((done) => setTimeout(done, 50))) {
