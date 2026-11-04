@@ -36,6 +36,13 @@ critères et la story proposée — à la demande, ou automatiquement à chaque 
    du commentaire. Le commentaire finit par un marqueur visible
    `skraft-refine v=<version> hash=<empreinte>`.
 
+   Sur l'[issue n° 1 du dépôt de démonstration](https://github.com/SebastienDegodez/skraft-demo-meetup/issues/1),
+   le commentaire commence et finit ainsi :
+
+   ![Commentaire skraft-refine sur une issue GitHub : « Proposition de refinement — à retravailler », taille 3 points, type feature, priorité P1, Definition of Ready 3/8, puis le premier point qui l'empêche d'être prête ; en bas le pied de page et le marqueur skraft-refine v=2.0.0-alpha.53 hash=917239c6a6dde836](/img/screenshots/fr/github-refine-comment.png)
+
+   Chaque partie du commentaire et quand agir : [Proposition de refinement](../reference/issue-comments.md#refinement).
+
 Une issue qu'une proposition couvre déjà, pour son titre, son corps et la version du plugin, est
 sautée avec sa raison. Pour la raffiner quand même, ajoutez `--force` après le numéro : `/skraft-refine 42 --force` sous Claude Code,
 `/skraft-backlog:skraft-refine 42 --force` sous Copilot CLI.

@@ -48,7 +48,9 @@ Le dossier de suivi vit **dans la copie de travail qui lance le run** :
 `results/` et `reviews/` appartiennent au moteur : ce ne sont pas des documents du run, et une
 revue ne les donne jamais à une lentille comme tels.
 
-`verdict.yaml` est écrit à la fin de chaque passe de revue, chaque texte entre guillemets doubles :
+`verdict.yaml` est écrit à la fin de chaque passe de revue, chaque texte entre guillemets doubles ;
+à côté, `snapshot.json` garde ce que contenait chaque fichier revu par la passe, auquel la passe
+suivante se compare ([re-revue incrémentale](./gates.md#incremental)) :
 
 ```yaml
 status: "NEEDS_REWORK"          # APPROVED | NEEDS_REWORK | BLOCKED
@@ -65,13 +67,14 @@ findings:                       # les findings retenus : blocker, high et medium
     severityReason: "billing and checkout would both write a payment"
     drift: "structural"         # label | classification | structural
     occurrences: "docs/adr/adr-001-card-payment.md:3, docs/architecture/context-map.md:12"
-notes: []                       # les findings low d'une lentille qui a passé, mêmes clés
+notes: []                       # les findings low d'une lentille qui n'a pas échoué, et ceux nouveaux sur une ligne inchangée depuis la passe `since`, mêmes clés
 refutations:                    # chaque vérification de cette passe
   - lens: "consistency"
     finding: "F1"
     verdict: "refuted"          # confirmed | refuted | unverifiable
     reason: "docs/adr/adr-001-card-payment.md:3 names Acme Pay"
     dissent: true               # seulement quand la lentille était seule (Dissent Rule)
+    # carried: 1                 # seulement quand reporté de la réfutation de cette passe
 reused:                         # les lentilles reprises de la passe précédente
   - lens: "fitness"
 ```
@@ -99,9 +102,9 @@ phase : [Phases](./phases.md).
 | DELIVER | journal des changements | `changes/{date}/change-log.md` |
 | DELIVER | propositions pour les mutants survivants | `proposals/kill_proposal-{visite}-g{n}.md` |
 | DELIVER | preuve de chaque gate ; sortie des commandes e2e | `gates/{composant}/{gate}-{n}.log` ; `visuals/{composant}/e2e-{n}.log` |
-| PUBLISH | prose et description de la pull request | `details/{date}/pull-request-prose-{slug}.md`, `pull-request.md` |
+| PUBLISH | prose et description de la pull request | `details/{date}/pull-request-prose-{slug}.md`, `pull-request.md` ([sections](./pull-request.md#description)) |
 | revues DESIGN, DISTILL, DELIVER | entrées des lentilles et verdict écrit par le moteur | `reviews/{nœud}-{visite}/` |
-| tout le run | journal, rapports recalculés après chaque étape | `events.jsonl`, `run-report.md`, `qa-report.md`, `WORKFLOW.md`, `issue-progress.md` |
+| tout le run | journal, rapports recalculés après chaque étape | `events.jsonl`, `run-report.md`, `qa-report.md`, `WORKFLOW.md`, `issue-progress.md` ([lignes](./issue-comments.md#progress)) |
 
 Les lentilles n'écrivent aucun fichier : elles rendent des findings, et le moteur écrit
 `reviews/{nœud}-{visite}/verdict.yaml`.
@@ -223,7 +226,8 @@ Sous Copilot CLI, l'onglet **Journal** du canvas `skraft-pipeline` lit ce fichie
 | `run.finished` | le pipeline | `status` (`completed` quand la dernière phase est close, `blocked` quand le run s'arrête) ; `code` (avec `blocked`) ; `reason` (`<PHASE> closed` avec `completed`) |
 | `run.stopped` | le pipeline, quand l'agent ne démarre pas ou s'arrête, ou qu'une lentille répond deux fois sans verdict lisible | `code` (`agent-unavailable`, `agent-failed` ou `lens-unreadable`) ; `reason`. Jamais écrit quand la machine ne peut pas exécuter une étape : le moteur pose alors la question `environment` |
 | `review.lens` | un nœud de revue, une fois par lentille, et une fois par passe pour chaque contrôle du moteur qui trouve quelque chose | `step` ; `visit` ; `lens` (`consistency` ; `test-integrity#patch` pour les findings G9 du moteur, `testability#layout` pour ses findings G11, sans `fingerprint`) ; `agent` (`consistency-lens`) ; `model` (le modèle sur lequel elle a tourné, `claude-haiku-5.5` ; null pour celui de la session) ; `fingerprint` (empreinte des entrées de la lentille) ; `verdict` (`pass`, `fail` ou `inconclusive`) ; `findings` (`{ id, gate, severity, location, description, suggestion, severityReason, drift, occurrences }`, `gate` étant l'identifiant de la table de la lentille : `G7`, `M2`…, `occurrences` une liste de `chemin:ligne` ; les findings propres au moteur n'ont ni `severityReason`, ni `drift`, ni `occurrences`) ; `cost` (absent s'il est inconnu) ; `reused` (`true` quand le résultat est repris de la passe précédente : mêmes entrées, rien trouvé) |
-| `review.refuted` | un nœud de revue, une fois par finding blocker, high ou medium vérifié par `finding-refuter` ; les findings de plusieurs lentilles à une même ligne, vérifiés en un appel, en donnent un chacun avec son propre verdict, son `cost` sur le premier | `step` ; `visit` ; `lens` ; `finding` (son id) ; `verdict` (`confirmed`, `refuted` ou `unverifiable`) ; `reason` ; `dissent` (`true` quand la lentille du finding était seule à renvoyer le travail, et que le réfuteur l'a jugé avec toutes les entrées de la revue) ; `model` ; `cost` |
+| `review.refuted` | un nœud de revue, une fois par finding blocker, high ou medium vérifié par `finding-refuter` ; les findings de plusieurs lentilles à une même ligne, vérifiés en un appel, en donnent un chacun avec son propre verdict, son `cost` sur le premier | `step` ; `visit` ; `lens` ; `finding` (son id) ; `verdict` (`confirmed`, `refuted` ou `unverifiable`) ; `reason` ; `dissent` (`true` quand la lentille du finding était seule à renvoyer le travail, et que le réfuteur l'a jugé avec toutes les entrées de la revue) ; `carried` (à une passe suivante, la passe dont il reporte la réfutation d'un finding au même endroit, sans interroger le réfuteur : sa `reason`, son `assignment` et son `model` sont ceux de cette réfutation, pas de `cost`) ; `model` ; `cost` |
+| `review.noted` | un nœud de revue, à partir de sa deuxième passe, une fois par finding blocker, high ou medium nouveau sur une ligne que la passe précédente a lue avec le même texte ([re-revue incrémentale](./gates.md#incremental)) : une note, non vérifiée par le réfuteur | `step` ; `visit` ; `lens` ; `finding` (son id) ; `since` (la passe précédente) |
 | `review.cost` | un nœud de revue, une fois par lot que l'hôte chiffre d'un bloc (le mod Claude Code) | `step` ; `visit` ; `cost` |
 | `gate.ran` | `skraft gate`, une fois par gate | `component` ; `gate` (`build`… ou `none`) ; `scope` (`touched` ou `all`) ; `command` (`null` pour `none`) ; `status` (`pass` ou `fail`) ; `failure` (`environment`, `deterministic` ou `null`) ; `exitCode` (`null` si rien n'a tourné) ; `durationMs` ; `evidence` (chemin relatif au dossier du slug, `null` pour `none`) |
 | `commits.checked` | le pipeline, après une tentative d'une étape d'agent qui a fait des commits | `step` ; `visit` ; `attempt` ; `commits`, chacun `{ repository, sha, subject, kind, verdict, replay }` : `kind` (`red`, `green`, `refactor`, `other`, `invalid`), `verdict` (`ok`, `not-conventional`, `issue-reference-missing`, `issue-closed`, `issue-not-in-story`, `green-without-red`, `not-red`, `no-component`), `replay` (`{ component, command, exitCode, durationMs }` du rejeu que le commit rapporte, `null` quand il n'a pas été rejoué) ; `settled` (`false` quand la machine a arrêté la vérification, une question `environment` posée : ses verdicts sont ceux d'avant les rejeux qu'elle n'a pas pu lancer, si bien que ni une tentative suivante ni les rapports ne les tiennent pour définitifs, et la tentative après `RETRY` rejoue de nouveau ses commits rouges). `settled` est absent d'une vérification allée à son terme, et des journaux écrits avant que le champ existe : absent veut dire réglé |

@@ -10,6 +10,10 @@ import { opening, section } from '../support/description.mjs'
 const CONSENTED = { publish: { pullRequest: true, questionVersions: { pullRequest: 2 } } }
 const STORY = { story: { issue: 42, title: 'Pay by card' } }
 const BODY_FILE = `${TRACKING}/pull-request-body.md`
+const HEADER = '| Status | Severity | Lens | Location | Finding | Why |'
+const RULE = '| --- | --- | --- | --- | --- | --- |'
+const LONG_CLAIM = 'pay names no currency, so a refund cannot tell euros from dollars and the ledger rounds each one its own way'
+const LONG_REASON = 'context-map.md:12 fixes pay(amount) in euros for the whole checkout context, and the ADR states it in its decision'
 
 test('the run ends by opening a draft pull request from its branch to its base, the pr-writer\'s prose around the facts the engine read in the journal', async () => {
   const host = scripted({ config: CONSENTED }, (it) => nominal(it, REFS_42))
@@ -79,7 +83,7 @@ test('the run ends by opening a draft pull request from its branch to its base, 
     '',
     '</details>',
     '',
-    '<details><summary>Review: 0 findings</summary>',
+    '<details><summary>Review</summary>',
     '',
     'Every lens of the last pass of each review passed without a finding.',
     '',
@@ -155,6 +159,7 @@ test('the pr-writer is told where to write its prose and what to read; a summary
   assert.equal(writes(host)[0].prompt, [
     '## Skraft dispatch: pr-writer (PUBLISH)',
     '- Story: none',
+    '- Write in English, the story\'s language.',
     `- Feature scope: ${SLUG}`,
     '- Attempt: 1 of 3',
     '- Read first:',
@@ -318,35 +323,38 @@ test('a draft is asked only when publish.draft is not false', async () => {
   assert.equal(eventsOf(ready, 'step.recorded').at(-1).reason, 'pull request #42 opened: https://github.example.com/acme/shop/pull/42')
 })
 
-test('the review the description shows: what counts, what the refuter refuted and why, and what one lens alone found for the human, duplicates together, open while a finding waits on a human', async () => {
+test('the review the description shows: one table per review, a row per finding by status, what one lens alone found to decide, the notes, the refuted ones folded with the refuter\'s reason, long texts cut, duplicates together, open while a finding waits on a human', async () => {
   const host = scripted({ config: CONSENTED }, (it) => nominal(it))
   host.agentRunner.review = lenses({
     consistency: [says('consistency', 'fail', [finding('F1', 'medium', 'the map names no currency', { location: 'details/x.md:3' })])],
     fitness: [says('fitness', 'fail', [finding('F1', 'high', 'speculative cache', { location: 'details/x.md:9' })])],
     'test-integrity': [says('test-integrity', 'pass', [finding('F1', 'low', 'long name')])],
     'architecture-boundaries': [says('architecture-boundaries', 'pass', [finding('F1', 'low', 'long name too', { location: './src/Checkout.cs:12' })])],
-    'cold-reader': [says('cold-reader', 'fail', [finding('F1', 'medium', 'pay names no currency', { location: 'src/Checkout.cs:3' })])],
-    refuter: [refutes('refuted', 'details/x.md:3 names EUR'), refutes('refuted', 'nothing is cached'), refutes('refuted', 'context-map.md:12 fixes pay(amount)')],
+    'cold-reader': [says('cold-reader', 'fail', [finding('F1', 'medium', LONG_CLAIM, { location: 'src/Checkout.cs:3' })])],
+    refuter: [refutes('refuted', 'details/x.md:3 names EUR'), refutes('refuted', 'nothing is cached'), refutes('refuted', LONG_REASON)],
   })
 
   assert.equal((await host.start()).status, 'done')
 
   const body = await host.tracking.read(SLUG, 'pull-request-body.md')
-  assert.equal(opening(body, 'Review'), '<details open><summary>Review: 4 findings, 1 for a human</summary>')
-  assert.equal(opening(await host.tracking.read(SLUG, 'pull-request.md'), 'Review'), '<details open><summary>Review: 4 findings, 1 for a human</summary>')
+  assert.equal(opening(body, 'Review'), '<details open><summary>Review: 1 to decide, 1 note, 2 refuted</summary>')
+  assert.equal(opening(await host.tracking.read(SLUG, 'pull-request.md'), 'Review'), '<details open><summary>Review: 1 to decide, 1 note, 2 refuted</summary>')
   assert.equal(section(body, 'Review'), [
-    'Findings that count:',
+    '**design_review**',
     '',
-    '- deliver_review · test-integrity F1, architecture-boundaries F1 (low) `src/Checkout.cs:12`: long name',
+    '<details><summary>2 refuted</summary>',
     '',
-    'Refuted by the finding refuter:',
+    HEADER, RULE,
+    '| Refuted | medium | consistency F1 G1 | `details/x.md:3` | the map names no currency | details/x.md:3 names EUR |',
+    '| Refuted | high | fitness F1 G1 | `details/x.md:9` | speculative cache | nothing is cached |',
     '',
-    '- design_review · consistency F1 (medium) `details/x.md:3`: the map names no currency — refuted: details/x.md:3 names EUR',
-    '- design_review · fitness F1 (high) `details/x.md:9`: speculative cache — refuted: nothing is cached',
+    '</details>',
     '',
-    'For the human: found by one lens alone, against the lenses that passed:',
+    '**deliver_review**',
     '',
-    '- deliver_review · cold-reader F1 (medium) `src/Checkout.cs:3`: pay names no currency — refuted: context-map.md:12 fixes pay(amount)',
+    HEADER, RULE,
+    '| To decide | medium | cold-reader F1 G1 | `src/Checkout.cs:3` | pay names no currency, so a refund cannot tell euros from dollars and the ledger rounds each one it… | one lens alone, against the lenses that passed; refuted: context-map.md:12 fixes pay(amount) in euros for the whole checkout context, and the ADR states it… |',
+    '| Note | low | test-integrity F1 G1, architecture-boundaries F1 G1 | `src/Checkout.cs:12` | long name |  |',
   ].join('\n'))
 
   const reworked = scripted({ config: CONSENTED }, (it) => [...nominal(it).slice(0, 2), agent()(it), ...nominal(it).slice(2)])
@@ -360,20 +368,65 @@ test('the review the description shows: what counts, what the refuter refuted an
   })
   await reworked.start()
   const reworkedBody = await reworked.tracking.read(SLUG, 'pull-request-body.md')
-  assert.equal(opening(reworkedBody, 'Review'), '<details><summary>Review: 2 findings</summary>')
+  assert.equal(opening(reworkedBody, 'Review'), '<details><summary>Review: 2 notes</summary>')
   assert.equal(section(reworkedBody, 'Review'), [
-    'Findings that count:',
+    '**design_review**',
     '',
-    '- design_review · consistency F1 (low) `details/x.md:3`: a long heading',
-    '- deliver_review · cold-reader F1 (low) `src/Checkout.cs:12`: long name',
+    HEADER, RULE,
+    '| Note | low | consistency F1 G1 | `details/x.md:3` | a long heading |  |',
+    '',
+    '**deliver_review**',
+    '',
+    HEADER, RULE,
+    '| Note | low | cold-reader F1 G1 | `src/Checkout.cs:12` | long name |  |',
   ].join('\n'))
 
   const minor = scripted({ config: CONSENTED }, (it) => nominal(it))
   minor.agentRunner.review = lenses({ 'cold-reader': [says('cold-reader', 'pass', [finding('F1', 'low', 'long name')])] })
   await minor.start()
   const minorBody = await minor.tracking.read(SLUG, 'pull-request-body.md')
-  assert.equal(section(minorBody, 'Review'), 'Findings that count:\n\n- deliver_review · cold-reader F1 (low) `src/Checkout.cs:12`: long name')
-  assert.equal(opening(minorBody, 'Review'), '<details><summary>Review: 1 finding</summary>')
+  assert.equal(section(minorBody, 'Review'), ['**deliver_review**', '', HEADER, RULE, '| Note | low | cold-reader F1 G1 | `src/Checkout.cs:12` | long name |  |'].join('\n'))
+  assert.equal(opening(minorBody, 'Review'), '<details><summary>Review: 1 note</summary>')
+})
+
+test('a review whose rework the workflow sends onward shows what is to fix, open, with the refuter\'s word', async () => {
+  const workflow = edit(BUILT_IN_WORKFLOW,
+    ['design_review [shape=tripleoctagon, mandatory=true]', 'design_review [shape=tripleoctagon]'],
+    ['  design_review -> design  [label="NEEDS_REWORK", max_visits=3]\n', '  design_review -> adr  [label="NEEDS_REWORK"]\n'])
+  const host = scripted({ config: CONSENTED, workflow }, (it) => nominal(it))
+  host.agentRunner.review = lenses({
+    consistency: [says('consistency', 'fail', [finding('F1', 'medium', 'no owner for refunds', { location: 'details/x.md:3' })])],
+    fitness: [says('fitness', 'fail', [finding('F1', 'high', 'speculative cache', { location: 'details/x.md:9' })])],
+    refuter: [refutes('confirmed', 'nobody owns refunds'), refutes('unverifiable', 'no rule names the cache')],
+  })
+
+  assert.equal((await host.start()).status, 'done')
+
+  const body = await host.tracking.read(SLUG, 'pull-request-body.md')
+  assert.equal(opening(body, 'Review'), '<details open><summary>Review: 2 to fix</summary>')
+  assert.ok(body.includes('<details open><summary>Review: 2 to fix</summary>\n\n**design_review**\n\n'), body)
+  assert.equal(section(body, 'Review'), [
+    '**design_review**',
+    '',
+    HEADER, RULE,
+    '| To fix | medium | consistency F1 G1 | `details/x.md:3` | no owner for refunds | confirmed: nobody owns refunds |',
+    '| To fix | high | fitness F1 G1 | `details/x.md:9` | speculative cache | not verified: no rule names the cache |',
+  ].join('\n'))
+})
+
+test('two reviews with the same lens each show what the refuter said of their own finding', async () => {
+  const twice = 'digraph p {\n  start [shape=Mdiamond]\n  deliver [shape=box, agent="software-engineer", phase="DELIVER"]\n  first_review [shape=house, workflow="review"]\n  second_review [shape=house, workflow="review"]\n  publish [shape=parallelogram, publish="pull-request", phase="PUBLISH"]\n  exit [shape=Msquare]\n  start -> deliver -> first_review\n  first_review -> second_review [label="APPROVED"]\n  second_review -> publish [label="APPROVED"]\n  publish -> exit\n}'
+  const host = scripted({ config: CONSENTED, workflow: twice }, (it) => [agent({ work: tddCycle() })(it)])
+  host.agentRunner.review = lenses({
+    'test-integrity': [says('test-integrity', 'fail', [finding('F1', 'medium', 'the total is not asserted')]), says('test-integrity', 'fail', [finding('F1', 'medium', 'the total is still not asserted')])],
+    refuter: [refutes('refuted', 'line 12 asserts 90'), refutes('refuted', 'line 12 still asserts 90')],
+  })
+
+  assert.equal((await host.start()).status, 'done')
+
+  const review = section(await host.tracking.read(SLUG, 'pull-request-body.md'), 'Review')
+  assert.ok(review.includes('**first_review**\n\n' + HEADER + '\n' + RULE + '\n| To decide | medium | test-integrity F1 G1 | `src/Checkout.cs:12` | the total is not asserted | one lens alone, against the lenses that passed; refuted: line 12 asserts 90 |'), review)
+  assert.ok(review.includes('**second_review**\n\n' + HEADER + '\n' + RULE + '\n| To decide | medium | test-integrity F1 G1 | `src/Checkout.cs:12` | the total is still not asserted | one lens alone, against the lenses that passed; refuted: line 12 still asserts 90 |'), review)
 })
 
 test('a red commit the engine refused is not shown as evidence, only the one that replaced it', async () => {
@@ -548,16 +601,16 @@ test('a forge whose limit is shorter than what decides still gets a body within 
 test('a body whose decisive sections are past 60,000 characters keeps what waits on a human: another section is cut before the open one', async () => {
   const lone = Array.from({ length: 20 }, (_, n) => finding(`F${n + 1}`, 'medium', `${'pay names no currency '.repeat(22)}${n + 1}`, { location: `src/Checkout.cs:${n + 1}` }))
   const host = scripted({ config: CONSENTED }, (it) => nominal(it, REFS_42))
-  host.prWriters.push(prWriter({ what: `${'Checkout records it.\n'.repeat(900)}Done.`, why: `${'Customers asked to pay by card.\n'.repeat(600)}End.` }))
+  host.prWriters.push(prWriter({ what: `${'Checkout records it.\n'.repeat(900)}Done.`, why: `${'Customers asked to pay by card.\n'.repeat(1200)}End.` }))
   host.agentRunner.review = lenses({ 'cold-reader': [says('cold-reader', 'fail', lone)], refuter: Array(20).fill(refutes('refuted', 'the map fixes it '.repeat(35))) })
 
   assert.equal((await host.start(STORY)).status, 'done')
 
   const body = await host.tracking.read(SLUG, 'pull-request-body.md')
   assert.ok(body.length <= 60_000 && body.length > 59_900, String(body.length))
-  assert.equal(opening(body, 'Review'), '<details open><summary>Review: 20 findings, 20 for a human</summary>')
+  assert.equal(opening(body, 'Review'), '<details open><summary>Review: 20 to decide</summary>')
   assert.equal(section(body, 'Review'), section(await host.tracking.read(SLUG, 'pull-request.md'), 'Review'))
-  assert.ok(section(body, 'Review').endsWith(`pay names no currency 20 — refuted: ${'the map fixes it '.repeat(35).trim()}`), section(body, 'Review').slice(-200))
+  assert.equal(section(body, 'Review').split('\n').at(-1), `| To decide | medium | cold-reader F20 G1 | \`src/Checkout.cs:20\` | ${'pay names no currency '.repeat(5).slice(0, 99)}… | one lens alone, against the lenses that passed; refuted: ${'the map fixes it '.repeat(6).slice(0, 99).trimEnd()}… |`)
   assert.ok(section(body, 'Why').endsWith(`\n\n${CUT}`), section(body, 'Why').slice(-200))
   assert.ok(section(body, 'What changes').endsWith('Checkout records it.\nDone.'), section(body, 'What changes').slice(-200))
 })

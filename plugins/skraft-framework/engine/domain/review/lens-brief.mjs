@@ -20,11 +20,12 @@ import { PULL_REQUEST_FILE } from './pull-request.mjs'
  *   changed nothing outside the tracking folder; retry: why the previous answer was refused, on the
  *   one retry; baseRules: what the brief says of the working copy's rule files, when the
  *   pull request author wrote them; instructions: what a human told this pass to do.
- * @typedef {{ members: Array<{ lens: string, finding: Finding }>, inputs: LensInput[], skills: string[], passed: string[] | null, retry: string | null, baseRules: BaseRules }} RefuterBrief
+ * @typedef {{ members: Array<{ lens: string, finding: Finding }>, inputs: LensInput[], skills: string[], descriptors: string[], passed: string[] | null, retry: string | null, baseRules: BaseRules }} RefuterBrief
  * @typedef {'copied' | 'uncopied' | null} BaseRules
  *   copied: the base's copies are beside the review, listed in its context; uncopied: none are
  *   given; null: the working copy's rule files are the project's.
  *   members: the findings of one group, one per lens; inputs and skills: those of their lenses,
+ *   descriptors: the absolute paths of their descriptors, whose gate tables state the rules;
  *   every input of the review when the lens stands alone; passed: then, the lenses that found nothing.
  */
 
@@ -69,11 +70,12 @@ const passLines = ({ unchanged, known, instructions }) => [
 ]
 
 /** @param {RefuterBrief} brief */
-export const composeRefuterBrief = ({ members, inputs, skills, passed, retry, baseRules }) => [
+export const composeRefuterBrief = ({ members, inputs, skills, descriptors, passed, retry, baseRules }) => [
   `## Skraft finding check: ${citationOf(members)}`,
   ...members.map((member) => findingLine(member, members.length > 1)),
   ...dissentLines(members, passed),
   ...skillLines(skills),
+  ...descriptors.map((path) => `- Lens (read it with the skills: its gate table states the rule of each gate a finding cites): ${path}`),
   ...inputLines(inputs, baseRules),
   ...checkLines(members),
   ...retryLines(retry),
@@ -84,6 +86,12 @@ export const composeRefuterBrief = ({ members, inputs, skills, passed, retry, ba
  */
 const findingLine = ({ lens, finding }, named) => `- Finding${named ? ` (${lens} ${finding.id})` : ''}: ${finding.gate} ${finding.severity}${finding.location === '' ? '' : ` at ${finding.location}`}: ${finding.description}`
 
+/**
+ * The rule a finding is judged by: its gate's, as the lens's descriptor and skills state it; never the absence
+ * of a rule among the inputs, which would refute a finding the lens holds by a rule it was given.
+ */
+const RULE_LINE = '- Judge by the rule of the gate a finding cites, as the lens, the skills and the inputs above state it, with the references a skill names for that gate; a rule no input states is no reason to refute: say unverifiable.'
+
 /** How to judge and answer: one verdict on one finding, a check each on several at one line. @param {RefuterBrief['members']} members */
 const checkLines = (members) => {
   const several = members.length > 1
@@ -91,6 +99,7 @@ const checkLines = (members) => {
     several
       ? '- Check each finding on its own, though they share a line: confirm it only when these inputs show it; refute it when they show it is wrong, citing the path:line; say unverifiable when they cannot tell.'
       : '- Confirm the finding only when these inputs show it; refute it when they show it is wrong, citing the path:line; say unverifiable when they cannot tell.',
+    RULE_LINE,
     '- Write no file, change nothing, start no agent.',
     '- End your answer with this YAML document in a ```yaml block:',
     ...fenced(several ? checksShape(members.map(({ lens, finding }) => `${lens} ${finding.id}`)) : REFUTATION_SHAPE),

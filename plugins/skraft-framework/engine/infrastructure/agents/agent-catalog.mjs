@@ -31,6 +31,7 @@ export const createAgentCatalog = ({ files, pluginRoot, root, host }) => {
   const places = host ? [PLACES[host]] : Object.values(PLACES)
   return Object.freeze({
     locate: (agent) => locateAgent({ files, pluginRoot, root, places }, agent),
+    descriptor: (agent) => descriptorPath({ files, pluginRoot, root, places }, agent),
     skills: (agent) => skillsOf({ files, pluginRoot, root, places }, agent),
     skill: (name) => namedSkill({ files, pluginRoot, root, places }, name),
   })
@@ -82,6 +83,9 @@ const skillsOf = async (catalog, agent) => {
     missing: names.filter((_, index) => files[index] === null),
   }
 }
+
+/** Where the agent's descriptor is, the plugin's first; null when nobody provides it. @param {Catalog} catalog @param {string} agent */
+const descriptorPath = async (catalog, agent) => (await descriptorOf(catalog, agent))?.path ?? null
 
 /** The agent's descriptor, the plugin's first; null for a name that is no agent id. @param {Catalog} catalog @param {string} agent */
 const descriptorOf = async ({ files, places, pluginRoot, root }, agent) => {

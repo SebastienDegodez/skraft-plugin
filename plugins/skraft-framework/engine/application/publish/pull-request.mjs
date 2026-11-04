@@ -7,7 +7,7 @@ import { finalGates, matrixPaths, modelsOf, redCommits, reviewFacts, testPlanPat
 import { runReport } from '../../domain/reporting/run-report.mjs'
 import { statusLine } from '../../domain/reporting/run-status.mjs'
 import { branchOf } from '../../domain/reporting/branches.mjs'
-import { languageOf } from '../../domain/reporting/language.mjs'
+import { storyLanguage } from './story-language.mjs'
 import { keepRunDetails } from './run-details.mjs'
 import { failedOutcome, journalWrite, pushedBranch } from './forge-writes.mjs'
 import { CREATE_STARTED, FORGE_WRITE } from '../../domain/reporting/forge-writes.mjs'
@@ -104,28 +104,23 @@ const branchesOf = async (codeHost, base) => {
  * The facts the description shows, from the journal, the pr-writer's prose and the ADRs.
  * @param {OnForge} deps @param {PublishRequest} request @param {import('../../domain/journal/run-state.mjs').RunState} run
  */
-const factsOf = async (deps, { slug, journal }, run) => ({
+const factsOf = async (deps, request, run) => factsIn(deps, request, { run, language: await storyLanguage(deps, request.slug, run) })
+
+/**
+ * @param {OnForge} deps @param {PublishRequest} request
+ * @param {{ run: import('../../domain/journal/run-state.mjs').RunState, language: import('../../domain/reporting/language.mjs').Language }} story
+ */
+const factsIn = async (deps, { slug, journal }, { run, language }) => ({
   slug,
   story: run.story,
-  language: await languageIn(deps, slug, run),
+  language,
   prose: await proseOf(deps, slug, journal.events),
   adrs: await ratifiedAdrs(deps, journal.events),
   repository: await deps.codeHost.repository(),
   testPlans: await trackedDocuments(deps, slug, testPlanPaths(journal.events)),
   matrices: await trackedDocuments(deps, slug, matrixPaths(journal.events)),
-  ...journalFacts(journal.events, run),
+  ...journalFacts(journal.events, run, language),
 })
-
-/**
- * The story's language, French or English, from its title and the issue the run kept in the
- * tracking folder (title and body as the forge gave them); English when it has neither.
- * @param {OnForge} deps @param {string} slug @param {import('../../domain/journal/run-state.mjs').RunState} run
- */
-const languageIn = async ({ files }, slug, run) => {
-  const kept = run.artifacts.find((path) => /(?:^|\/)issue-\d+\.md$/.test(path))
-  const text = kept === undefined ? null : await files.read(slug, kept)
-  return languageOf(`${run.story?.title ?? ''}\n${text ?? ''}`)
-}
 
 /**
  * The documents of the tracking folder the journal names, each with its path; those the folder lost are left out.
@@ -138,15 +133,16 @@ const trackedDocuments = async ({ files }, slug, paths) => {
 
 /**
  * What the journal alone tells: the gates unlocked, the red commits, the gates, the review, the
- * run report and the models.
+ * run report and the models; the run's status in the story's language.
  * @param {import('../../domain/journal/run-state.mjs').RunEvent[]} events @param {import('../../domain/journal/run-state.mjs').RunState} run
+ * @param {import('../../domain/reporting/language.mjs').Language} language
  */
-const journalFacts = (events, run) => ({
+const journalFacts = (events, run, language) => ({
   unlocked: events[0].unlocked,
   reds: redCommits(events),
   gates: finalGates(events),
   review: reviewFacts(events),
-  status: statusLine(run),
+  status: statusLine(run, language),
   report: runReport(events),
   models: modelsOf(events),
   visuals: lastVisuals(events),

@@ -3,6 +3,12 @@
 Toutes les modifications notables de ce projet sont documentées ici.
 Format basé sur [Conventional Commits](https://www.conventionalcommits.org/) — versionnage [SemVer](https://semver.org/).
 
+## [2.0.0-alpha.55](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.54...v2.0.0-alpha.55) (2026-11-04)
+
+### 🐛 Bug Fixes
+
+* **engine:** fix what a real demo run showed ([#505](https://github.com/SebastienDegodez/skraft-plugin/issues/505)) ([c0c1ed9](https://github.com/SebastienDegodez/skraft-plugin/commit/c0c1ed9ad16dc76b37631e1db80a41081a778e9c)), closes [#478](https://github.com/SebastienDegodez/skraft-plugin/issues/478)
+
 ## [2.0.0-alpha.54](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.53...v2.0.0-alpha.54) (2026-11-02)
 
 ### 🐛 Bug Fixes

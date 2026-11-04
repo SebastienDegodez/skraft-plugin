@@ -12,7 +12,8 @@ import { inert } from '../reporting/markdown-safety.mjs'
  * @typedef {NodeQuestion | 'environment' | 'review-consent' | 'blocked' | 'review-ceiling' | 'configuration'} QuestionKind
  * @typedef {{ options: readonly string[], refusals: readonly string[], header: string, instruction: boolean }} QuestionSpec
  *   options: the answers, the one that lets the run go on first; refusals: the answers that send
- *   the work back and need a reason; header: a short label a dialog shows beside the question;
+ *   the work back and need a reason; header: a short label a dialog shows beside the question, at
+ *   most 12 characters (Claude Code 2.1.316 cuts a longer `$.ui.ask` header);
  *   instruction: a human may answer with words of their own, STOP among the options ending the run.
  * @typedef {{ key: string, kind: QuestionKind, text: string, options: string[], refusals: string[], header: string }} Question
  *   key: stable across a resume, the name `skraft decide` and a host pause use.
@@ -42,12 +43,12 @@ const QUESTIONS = Object.freeze({
   'adr-ratification': Object.freeze({ options: Object.freeze(['RATIFIED', 'REJECTED']), refusals: Object.freeze(['REJECTED']), header: 'ADR', instruction: false }),
   'reporting-consent': Object.freeze({ options: Object.freeze(['ACCEPTED', 'DECLINED']), refusals: Object.freeze([]), header: 'Reporting', instruction: false }),
   'publish-consent': Object.freeze({ options: Object.freeze(['ACCEPTED', 'DECLINED']), refusals: Object.freeze([]), header: 'Pull request', instruction: false }),
-  'mutation-plan': Object.freeze({ options: Object.freeze([APPLY, STOP]), refusals: Object.freeze([]), header: 'Mutation plan', instruction: true }),
+  'mutation-plan': Object.freeze({ options: Object.freeze([APPLY, STOP]), refusals: Object.freeze([]), header: 'Mutation', instruction: true }),
   environment: Object.freeze({ options: Object.freeze(['RETRY', 'ABORT']), refusals: Object.freeze([]), header: 'Environment', instruction: false }),
-  'review-consent': Object.freeze({ options: Object.freeze(['ACCEPTED', 'DECLINED']), refusals: Object.freeze([]), header: 'Review comment', instruction: false }),
+  'review-consent': Object.freeze({ options: Object.freeze(['ACCEPTED', 'DECLINED']), refusals: Object.freeze([]), header: 'PR comment', instruction: false }),
   [BLOCKED]: Object.freeze({ options: Object.freeze([STOP]), refusals: Object.freeze([]), header: 'Blocked', instruction: true }),
   [REVIEW_CEILING]: Object.freeze({ options: Object.freeze([ACCEPT, STOP]), refusals: Object.freeze([]), header: 'Review', instruction: true }),
-  [CONFIGURATION]: Object.freeze({ options: Object.freeze([START, STOP]), refusals: Object.freeze([]), header: 'Configuration', instruction: false }),
+  [CONFIGURATION]: Object.freeze({ options: Object.freeze([START, STOP]), refusals: Object.freeze([]), header: 'Config', instruction: false }),
 })
 
 /** The node questions the configuration answers once kept: a run asks them only while it does not. */

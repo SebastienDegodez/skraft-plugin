@@ -35,7 +35,7 @@ test('a .skraft/review.skraft.dot bound to neither story nor documents reviews t
 
   assert.equal((await host.start({ story: { issue: 42, title: 'Pay by card' } })).status, 'done')
 
-  assert.deepEqual(await written(host, 'reviews/deliver_review-1'), ['changed-files.txt', 'changes.patch', 'code-files.txt', 'code.patch', 'components.json', 'verdict.yaml'])
+  assert.deepEqual(await written(host, 'reviews/deliver_review-1'), ['changed-files.txt', 'changes.patch', 'code-files.txt', 'code.patch', 'components.json', 'snapshot.json', 'verdict.yaml'])
   const boundaries = prompt(host, 'architecture-boundaries-lens', 'deliver_review')
   assert.equal(boundaries.slice(0, boundaries.indexOf('\n- Write no file')), [
     '## Skraft review lens: architecture-boundaries (DELIVER)',
@@ -58,7 +58,7 @@ test('a .skraft/review.skraft.dot bound to no components writes no components.js
 
   assert.equal((await host.start()).status, 'done')
 
-  assert.deepEqual(await written(host, 'reviews/deliver_review-1'), ['changed-files.txt', 'changes.patch', 'code-files.txt', 'code.patch', 'context.md', 'verdict.yaml'])
+  assert.deepEqual(await written(host, 'reviews/deliver_review-1'), ['changed-files.txt', 'changes.patch', 'code-files.txt', 'code.patch', 'context.md', 'snapshot.json', 'verdict.yaml'])
   assert.ok(!prompt(host, 'architecture-boundaries-lens', 'deliver_review').includes('Components'))
   assert.ok((await written(host, 'reviews/design_review-1')).includes('components.json'))
 })

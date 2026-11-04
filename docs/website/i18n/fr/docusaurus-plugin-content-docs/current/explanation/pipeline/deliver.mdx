@@ -43,6 +43,12 @@ tests, frontières d'architecture, lisibilité à froid, et, quand le changement
 des mocks et des contrats. Une reprise demandée par la revue repart par `deliver` et les gates,
 jamais par la mutation.
 
+L'engineer lance les mêmes commandes avant de rendre la main. Son brief liste les commandes de
+gates de chaque composant qu'il peut modifier, mutation exclue, avec la base du run à la place de
+`{baseSha}`, et lui demande de corriger chaque échec avant d'écrire son résultat, à une passe de
+reprise aussi. L'étape des gates reste le contrôle ; le brief évite la passe que coûterait un
+échec de format ou de build découvert là seulement.
+
 ### Pourquoi la mutation passe en dernier
 
 Le mutation testing injecte de petites fautes dans le code et mesure la part que les tests

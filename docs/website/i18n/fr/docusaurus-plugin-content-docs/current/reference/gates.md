@@ -119,7 +119,7 @@ critère qui en interdit un.
 | **G11** | `fitness` | Tout ADR adoptant CQRS, Event Sourcing, Saga, cohérence éventuelle, découpage de service ou ACL cite une force admissible et évalue l'option « faire sans ». | high |
 | **G15** | `fitness` | Aucun ADR ne ratifie un socle déjà imposé par un skill `clean-architecture-*` ou un test d'architecture. | high |
 | **G17** | `fitness` | Chaque ADR de la passe décide d'une frontière de couche, d'une frontière d'agrégat, d'un contexte borné, d'un pattern ajoutant de la complexité ou d'une préoccupation transverse, et pèse un vrai compromis ; un autre sujet est `ADR-INFLATION`, aucune alternative pesée est `NON-DECISION`. | high |
-| **G18** | `fitness` | Chaque ADR de la passe tient une décision au niveau décision : ni signature complète, ni chemin de fichier, ni valeurs d'enum, ni inventaire de Value Objects, ni arbre de routes, ni référence ticket, AC ou PRD au-delà de la story déclencheuse. | medium |
+| **G18** | `fitness` | Chaque ADR de la passe tient une décision au niveau décision : ni signature complète, ni chemin de fichier, ni valeurs d'enum, ni inventaire de Value Objects, ni arbre de routes, ni référence de traçabilité (id de ticket, d'AC, de PRD ou d'exigence cité comme source) au-delà de la story déclencheuse. Un attribut de qualité cité avec sa mesure comme force de la décision est admis. | medium |
 | **F1** | `fitness` | Chaque attribut qualité que la story ou la recherche énonce a un élément de conception qui y répond. | high |
 
 **Contrôles du moteur.** Après chaque tentative de `solution-architect`, sans lentille
@@ -145,25 +145,30 @@ Revue `distill_review` : 4 lentilles, verdict calculé par le moteur.
 | ID | Lentille | Critère | Sévérité |
 | --- | --- | --- | --- |
 | **G1** | `coverage` | Chaque critère d'acceptation a au moins un scénario ; aucun scénario sans critère source ; chaque valeur métier d'un scénario égale celle de son critère. | blocker |
-| **G2** | `coverage` | Chaque règle métier a ses cas limites et ses cas négatifs ou d'erreur, tirés des exemples de la story ; un cas d'entrée technique n'est jamais demandé. | high |
+| **G2** | `coverage` | Chaque règle métier a ses cas limites et ses cas négatifs ou d'erreur, tirés des exemples de la story ; un mapping Gherkin ou un exemple écrit dans un document DESIGN n'est pas un exemple de la story, et une variante qu'une règle antérieure décide déjà n'ajoute aucune frontière ; un cas d'entrée technique n'est jamais demandé. | high |
 | **G3** | `business-alignment` | Chaque terme des étapes Given/When/Then vient du vocabulaire métier de la story ; aucun nom de classe, de méthode ni de framework. | high |
 | **G4** | `business-alignment` | Aucune étape ne porte un détail d'implémentation (verbe ou code HTTP, terme ORM ou base de données, `Repository`, `Service`, `Handler`, `Controller`, `UseCase`, cas d'entrée technique). | blocker |
 | **B1** | `business-alignment` | Chaque scénario exprime un résultat que la story demande ; aucun ne décrit un comportement qu'elle ne demande pas. | high |
 | **G5** | `testability` | Chaque étape est sans ambiguïté et implémentable seule. | high |
 | **G6** | `testability` | Chaque scénario a une entrée dans le plan d'implémentation. | high |
-| **G11** | `testability` | Chaque cas d'usage nouveau a son test d'acceptation à l'emplacement des tests unitaires de son langage (.NET : projet `<Context>.UnitTest` ; Java : module `-unit-test` ; sinon `<chemin des tests>/unit/`). | blocker |
+| **G11** | `testability` | Chaque cas d'usage nouveau a son test d'acceptation à l'emplacement des tests unitaires de son langage (.NET : projet `<Context>.UnitTest`, `<Context>.UnitTests` ou `<Context>.Tests` ; Java : module `-unit-test(s)` ; Python, TypeScript, JavaScript, React : `<chemin des tests>/unit/`). | blocker |
 | **T1** | `testability` | Chaque scénario et chaque test vérifient un comportement par un résultat observable et ne dépendent d'aucun temps, ordre ou aléa qu'ils ne fixent pas. | high |
 | **T2** | `testability` | Chaque valeur d'entrée et attendue du test d'acceptation externe égale le `.feature` mot pour mot ; le test ne porte que le premier scénario. | blocker |
 | **T3** | `testability` | Le test d'acceptation externe existe et son premier scénario échoue sur une assertion métier ; le code de production du patch est un squelette dont les signatures rendent la valeur vide de leur type. | blocker |
-| **G7** | `boundary-enforcement` | Chaque scénario du plan de test vise le cas d'usage Application que nomment les contrats. | blocker |
+| **G7** | `boundary-enforcement` | Chaque scénario du plan de test vise le cas d'usage Application que nomment les contrats ; une étape du plan d'implémentation qui n'écrit le test d'acceptation d'aucun scénario (un test API ou HTTP d'un cercle suivant) est hors de sa portée. | blocker |
 | **G8** | `boundary-enforcement` | Le plan de test identifie au moins un scénario walking skeleton par flux. | high |
-| **E1** | `boundary-enforcement` | Le test d'acceptation ne pilote que ce cas d'usage : jamais d'appel, de construction ni d'assertion sur un élément interne du domaine, un repository ou une classe d'infrastructure. | blocker |
+| **E1** | `boundary-enforcement` | Le test d'acceptation ne pilote que ce cas d'usage : jamais d'appel ni d'assertion sur un élément interne du domaine, un repository ou une classe d'infrastructure. Construire les vrais collaborateurs du cas d'usage pour les passer à son constructeur est du câblage, pas un finding. | blocker |
 | **E2** | `boundary-enforcement` | Les doublures ne remplacent que des dépendances du bord extérieur, jamais un objet du domaine ni le cas d'usage ; le squelette de DISTILL est le vrai module. | high |
 
 **Contrôle du moteur.** G11 : le moteur lit où le patch ajoute des fichiers de test et rapporte
 sous la lentille `testability#layout` (sévérité blocker) un test ajouté hors des emplacements
 unitaire et intégration de la stack, et un composant qui gagne des tests sans aucun dans son
-emplacement unitaire.
+emplacement unitaire. Un test ne compte que sous un chemin de tests que le composant configure
+(`paths.tests`) ; un chemin de tests qui est lui-même un emplacement compte comme tel
+(`tests/unit`, `tests/Orders.UnitTests`). .NET nomme ses emplacements
+`<Context>.UnitTest(s)`, `<Context>.Unit.Tests` ou `<Context>.Tests` et
+`<Context>.IntegrationTest(s)` ou `<Context>.Integration.Tests` ; Java `<context>-unit-test(s)` et
+`<context>-integration-test(s)` ; toute autre stack `unit/` et `integration/` sous le chemin des tests.
 
 ## DELIVER <!-- #deliver -->
 
@@ -251,11 +256,16 @@ les signale pas une seconde fois ; ils partent au réfuteur comme ceux d'une len
 Les findings de lentilles différentes au même `chemin:ligne` (le chemin normalisé
 comme ceux du patch : `./src\Checkout.cs:12` est `src/Checkout.cs:12`) et de même sévérité
 forment un groupe. Chaque groupe de findings blocker, high ou medium part une fois chez
-`finding-refuter`, son libellé et son brief nommant chaque lentille du groupe, avec les entrées et
-les skills de ces lentilles. Il répond `confirmed`, `refuted` (sa `reason` cite le `chemin:ligne`
+`finding-refuter`, son libellé et son brief nommant chaque lentille du groupe, avec les entrées, les
+skills et le descripteur de ces lentilles (pour un contrôle du moteur, les skills et le descripteur
+de la lentille à laquelle il se rattache). Il juge selon la règle du gate que cite le finding, telle
+que la table des gates du descripteur, ces skills et leurs références l'énoncent ; une règle qu'aucune entrée n'énonce n'est pas une raison de réfuter, et
+rend le finding `unverifiable`. Il répond `confirmed`, `refuted` (sa `reason` cite le `chemin:ligne`
 lu) ou `unverifiable`, et la réponse vaut pour chaque finding du groupe. Un finding réfuté ne
 compte pas ; un finding invérifiable compte, comme celui dont la vérification a été illisible
 deux fois.
+
+Comment chaque réponse se voit dans une pull request : [Du constat au statut](./pull-request.md#finding-to-status).
 
 ### Verdict <!-- #verdict -->
 
@@ -265,7 +275,11 @@ n'est vérifié, et le run pose la question `blocked` sur le nœud de revue. Sin
 quand un finding compte, sinon `APPROVED`. Un finding blocker, high ou medium compte sauf si le
 réfuteur l'a réfuté ; un finding low compte, sans vérification, quand sa lentille a répondu
 `fail`, pour que le producteur corrige toutes les sévérités tant que la revue peut lui renvoyer
-son travail ; un finding low d'une lentille qui a répondu `pass` est une note. Les findings
+son travail ; un finding low d'une lentille qui a répondu `pass` est une note. À partir de la
+deuxième passe, un finding à l'endroit d'un finding que le réfuteur a réfuté est reporté comme
+réfuté, et un finding blocker, high ou medium nouveau sur une ligne que le producteur a laissée
+telle quelle est une note : aucun des deux ne compte, ne retourne au producteur ni n'apparaît dans
+la question `review-ceiling`. Les findings
 retenus vont dans le brief suivant de l'agent de la phase, un groupe sur une ligne qui cite
 chacune de ses lentilles. Quand la boucle vers le producteur atteint son `max_visits`, le run
 interroge un humain au lieu de renvoyer encore le travail : la question `review-ceiling`
@@ -278,6 +292,8 @@ Le résumé donne le statut, puis les findings réfutés et les notes mis de cô
 le journal du workflow) liste dessous chaque finding réfuté avec la raison du réfuteur et chaque note, puis
 l'emplacement de `verdict.yaml`, pour qu'un humain puisse quand même les faire corriger.
 
+Le tableau que lit un relecteur : [Tableau de revue](./pull-request.md#review-table).
+
 ### Re-revue incrémentale <!-- #incremental -->
 
 À une passe suivante, une lentille dont le résultat précédent était
@@ -285,6 +301,21 @@ l'emplacement de `verdict.yaml`, pour qu'un humain puisse quand même les faire 
 journalisé de nouveau avec `reused: true`. L'empreinte couvre ses entrées, le contenu de chaque
 `SKILL.md` qu'elle lit (par nom de skill : déplacer la copie de travail ou le plugin n'y change
 rien), les fichiers de règles du projet et le contenu de chaque chemin changé qu'elle lit.
+
+À partir de la deuxième passe, la revue compare chaque finding blocker, high ou medium à ceux de
+la passe précédente de la même étape, avant d'interroger le réfuteur. Deux findings d'une même
+lentille et d'un même gate sont au même endroit quand ils citent le même chemin et que le texte de
+leurs lignes apparaît exactement une fois dans ce fichier à chaque passe (une ligne déplacée reste
+la même, une ligne modifiée ou répétée non) ; sans ligne, quand leur emplacement et leur constat
+sont identiques mot pour mot. Chaque passe garde ce que contenaient les fichiers revus dans
+`snapshot.json`, à côté de son verdict.
+
+| Finding de cette passe | Devient |
+| --- | --- |
+| à l'endroit d'un finding que la passe précédente a réfuté | réfuté, reporté avec cette raison, sans interroger le réfuteur (`review.refuted` avec `carried`) |
+| à l'endroit d'un finding que la passe précédente n'a pas réfuté | vérifié par le réfuteur comme d'habitude |
+| nouveau, d'une lentille, sur une ligne que la passe précédente a lue avec le même texte | une note : il ne renvoie jamais le travail (`review.noted`) |
+| tout autre | vérifié par le réfuteur comme d'habitude |
 
 ### Verdict de DISCOVER et DISCUSS <!-- #backlog-verdict -->
 

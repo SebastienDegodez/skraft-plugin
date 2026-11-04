@@ -39,7 +39,7 @@ The `answer:` line gives the key (`adr-1`) and the allowed answers:
 |---|---|---|
 | `adr-ratification` | `RATIFIED`, `REJECTED` | with `REJECTED` |
 | `publish-consent`, `reporting-consent` | `ACCEPTED`, `DECLINED` | — |
-| `review-consent` (`skraft review --pr --publish`, header `Review comment`) | `ACCEPTED`, `DECLINED` | — |
+| `review-consent` (`skraft review --pr --publish`, header `PR comment`) | `ACCEPTED`, `DECLINED` | — |
 | `environment` | `RETRY` (once the machine is repaired), `ABORT` | — |
 | `mutation-plan` | `APPLY`, an instruction of your own, or `STOP` | — |
 | `blocked` | an instruction for the agent, or `STOP` | — |
@@ -66,10 +66,22 @@ the conversation:
 The words after the answer form the reason; for a `blocked` question, every word after the key
 forms the instruction. `/skraft decide` records the answer, then resumes the run.
 
-:::note[Screenshot pending a real run]
-A capture of the mod's dialog (header `ADR`, the options and **Other**) comes after a real run in
-Claude Code.
-:::
+Claude Code draws the dialog this way; **Type something.** is the **Other** field:
+
+```text title="Claude Code"
+☐ ADR
+
+Ratify the Proposed ADRs docs/adr/adr-001-card-provider.md? RATIFIED marks them Accepted;
+REJECTED sends DESIGN back with your reason.
+
+❯ 1. RATIFIED
+  2. REJECTED
+  3. Type something.
+─────────────────────────────────────────────────────────────
+  4. Chat about this
+
+Enter to select · ↑/↓ to navigate · Esc to cancel
+```
 
 </TabItem>
 <TabItem value="copilot-cli" label="GitHub Copilot CLI">
@@ -142,6 +154,8 @@ A refused answer records nothing; the run still waits.
 | `the answer must be one of RATIFIED, REJECTED` | Write one of the options. |
 | `skraft decide records a person's answer: run it yourself in an interactive terminal; nothing was recorded` | Run the command yourself, in an interactive terminal. |
 | `Refused: …; nothing was recorded.` (Copilot) | Answer with `skraft decide` in a terminal, then resume the workflow. |
+| `not recorded — no active pipeline in this working copy` (Claude Code), while `skraft status` shows the run waiting | Answer with `skraft decide <key> …` in a terminal, then `/skraft <slug>` in Claude Code. |
+| You typed your answer in the conversation instead of the dialog | It is no answer: the run still waits. Use `/skraft decide`. |
 
 ## Next steps {/* #next-steps */}
 

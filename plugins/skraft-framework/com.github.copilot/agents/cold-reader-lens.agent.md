@@ -28,7 +28,8 @@ Read the changed code and tests as a developer who finds them in the repository 
 3. **Assertion messages** are understandable by a domain expert.
 4. **Production method names** express intent.
    - Good: `CalculatePremium()`, `RejectApplication()`
-   - Bad: `ProcessData()`, `DoStuff()`, `Handle()`
+   - Bad: `ProcessData()`, `DoStuff()`
+   - A name a framework or convention requires (a handler's `Handle`, `Main`, a test framework's `SetUp`/`Dispose`, an interface method the class implements) is never a finding.
 5. **Unmotivated abstractions**: an interface or class with no clear domain reason.
 
 - Report clarity, never correctness, architecture or formatting.

@@ -547,7 +547,7 @@ export const NOMINAL = Object.freeze({
     const revising = brief.prompt.includes('A human refused the work')
     const adr = revising ? `${ADR}\nRevised after the human's reason.\n` : ADR
     const contextMap = revising ? 'Payment: Core, revised.\n' : 'Payment: Core.\n'
-    commit(cwd, `docs(${slug}): ${revising ? 'revise' : 'record'} the card payment decision`, { [ADR_PATH]: adr, [INDEX_PATH]: decisionsIndex(1), [CONTEXT_MAP]: contextMap }, brief)
+    for (const [path, text] of Object.entries({ [ADR_PATH]: adr, [INDEX_PATH]: decisionsIndex(1), [CONTEXT_MAP]: contextMap })) writeFile(join(cwd, ...path.split('/')), text)
 
     writeResult(brief, { status: 'done', summary: 'context map and ADR written' })
   },

@@ -681,8 +681,8 @@ parts:
     sidebar_position: 4
     title_fr: "Référence — consulter"
     title_en: "Reference — look up"
-    intro_fr: "Tout le factuel : hôtes, commandes, workflow DOT, phases, configuration, journal, catalogue agentique, gates, patterns, outillage d'évaluation, citations, glossaire, changelog."
-    intro_en: "All the facts: hosts, commands, DOT workflow, phases, configuration, journal, agentic catalogue, gates, patterns, evaluation tooling, citations, glossary, changelog."
+    intro_fr: "Tout le factuel : hôtes, commandes, workflow DOT, phases, configuration, journal, pull request et commentaires, canvas du backlog, catalogue agentique, gates, patterns, outillage d'évaluation, citations, glossaire, changelog."
+    intro_en: "All the facts: hosts, commands, DOT workflow, phases, configuration, journal, pull request and comments, backlog canvas, agentic catalogue, gates, patterns, evaluation tooling, citations, glossary, changelog."
     # Menu a 3 niveaux : partie -> section -> page. Le catalogue dashboard couvre
     # agents, skills, workers et lentilles sans materialiser une page Markdown par
     # source. Les autres sections conservent leurs pages handbook explicites.
@@ -690,8 +690,8 @@ parts:
       - id: usage
         title_fr: "Utiliser SKRAFT"
         title_en: "Using SKRAFT"
-        intro_fr: "Hôtes, commandes, workflow DOT, phases, configuration et journal d'un run."
-        intro_en: "Hosts, commands, DOT workflow, phases, configuration and a run's journal."
+        intro_fr: "Hôtes, commandes, workflow DOT, phases, configuration, journal d'un run, pull request et commentaires, canvas du backlog."
+        intro_en: "Hosts, commands, DOT workflow, phases, configuration, a run's journal, pull request and comments, backlog canvas."
         sidebar_position: 1
         pages:
           - id: hosts
@@ -750,6 +750,30 @@ parts:
             doc: reference/run-journal
             purpose_fr: "Le dossier de suivi, les artefacts par phase, la documentation durable écrite sous docs/, les événements de events.jsonl et tous les codes de refus et de blocage."
             purpose_en: "The tracking folder, the artifacts by phase, the durable documentation written under docs/, the events.jsonl events and every refusal and block code."
+          - id: pull-request
+            type: editorial
+            label_fr: "Pull request et commentaire de revue"
+            label_en: "Pull request and review comment"
+            sidebar_position: 8
+            doc: reference/pull-request
+            purpose_fr: "Chaque section de la pull request ouverte par un run, le commentaire de details, le tableau de revue et ses statuts, et le commentaire de skraft review --publish."
+            purpose_en: "Each section of the pull request a run opens, its run details comment, the review table and its statuses, and the comment of skraft review --publish."
+          - id: issue-comments
+            type: editorial
+            label_fr: "Commentaires d'issue"
+            label_en: "Issue comments"
+            sidebar_position: 9
+            doc: reference/issue-comments
+            purpose_fr: "Les deux commentaires que skraft garde sur l'issue d'une story : le suivi du run et la proposition de raffinement, chaque partie et quand agir."
+            purpose_en: "The two comments skraft keeps on a story's issue: the run's progress comment and the refinement proposal, each part and when to act."
+          - id: backlog-canvas
+            type: editorial
+            label_fr: "Canvas du backlog et carte des stories"
+            label_en: "Backlog canvas and story map"
+            sidebar_position: 10
+            doc: reference/backlog-canvas
+            purpose_fr: "Chaque partie du canvas du backlog et de story-map.md : ce qu'elle contient, comment la lire, quand agir."
+            purpose_en: "Each part of the backlog canvas and of story-map.md: what it holds, how to read it, when to act."
       - id: catalogue
         title_fr: "Catalogue agentique"
         title_en: "Agentic catalogue"

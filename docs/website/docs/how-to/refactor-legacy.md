@@ -33,9 +33,25 @@ session's main agent, never a subagent.
 | Claude Code | `claude --agent skraft-brownfield:brownfield-refactorer` |
 | Copilot CLI, VS Code | in a new session, pick the agent **Skraft - Brownfield Refactorer** before the first message |
 
-:::note[Screenshot pending a real run]
-A capture of a `brownfield-refactorer` session comes after a real run.
-:::
+An example session (illustrative: the agent's wording and the commits change from run to run; the
+strategy question, the artifact, one worker per leaf and the signals come from its instructions):
+
+```text title="Copilot CLI"
+> Goal: invoices are issued without the billing logic knowing how the customer is notified.
+> Net: harness builder report for services/billing, verdict PASS.
+
+Net: services/billing, verdict PASS.
+I recommend Mikado: the goal changes BillingService in place (it stops calling SmtpClient
+directly); nothing is replaced. Mikado or Strangler Fig?
+
+> Mikado.
+
+Graph: .copilot-tracking/skraft-plans/<slug>/refactoring/<date>/mikado-billing.md, validator exit 0.
+Leaves ready: {N3} Golden Master on BillingService.SendInvoice, {N4} Create NotificationGateway interface.
+refactoring-worker on {N3}: ADVANCE, commit "refactor(mikado-graph): N3 done", tests green.
+refactoring-worker on {N4}: ADVANCE, commit "refactor(mikado-graph): N4 done", tests green.
+Next leaf: {N2} Update BillingService constructor to accept NotificationGateway.
+```
 
 ## 2. Give the goal and the net
 

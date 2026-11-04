@@ -67,7 +67,7 @@ test('the engine\'s own G9 findings are never a dissent, even when no lens finds
     agent({ work: ({ git }) => {
       tddCycle()({ git })
       git.patched('tests/CheckoutTests.cs', ['--- a/tests/CheckoutTests.cs', '+++ b/tests/CheckoutTests.cs', '@@ -9,1 +9,1 @@', '-    [Fact]', '+    [Fact(Skip = "flaky")]'])
-      git.change('tests/CheckoutTests.cs')
+      git.commit('refactor(checkout): skip the flaky test', ['tests/CheckoutTests.cs'])
     } })(it),
     () => ({ ok: false, unavailable: true, text: '', error: 'stop here' }),
   ])

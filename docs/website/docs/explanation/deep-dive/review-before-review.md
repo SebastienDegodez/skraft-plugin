@@ -68,6 +68,10 @@ lone voice is neither set aside without a reason nor followed without a check. R
 before it reaches a human, and the verdict keeps its findings: human review sees **why** the work
 passed.
 
+A rework pass converges instead of reopening what was settled: a finding the refuter refuted on
+the last pass stays refuted when it comes back at the same place, and a new finding on a line the
+agent left as it was becomes a note, so the next pass judges what the agent changed.
+
 The exact verdict computation: [Gates](../../reference/gates.md#review-run).
 
 ## The DELIVER lenses in practice

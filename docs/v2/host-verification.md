@@ -55,6 +55,16 @@ Ce que le pilote suppose déjà sans mesure ; la prochaine passe de la sonde rem
 | Claude Code : la skill `prune-tests` exposée sous `/skraft:prune-tests`, appelable par le développeur, jamais chargée par le modèle (`disable-model-invocation: true`) | #341 | not measured ; nom supposé par la règle `<plugin>:<skill>`, ni la doc how-to ni la référence des commandes ne sont écrites avant la mesure | `skills/prune-tests/SKILL.md`, `domain/reporting/pull-request.mjs` (ligne qui suggère la commande) |
 | Copilot CLI et VS Code : la skill `prune-tests` listée par `session.rpc.commands.list({ includeSkills: true })` sous `skraft:prune-tests`, et `disable-model-invocation` respecté | #341 | not measured ; même règle de nom que `/skraft-backlog:skraft-refine` (sonde #252), non vérifiée pour une skill | `skills/prune-tests/SKILL.md` |
 
+### Mod Claude Code : dossier de session, en-tête de dialogue, lancement d'agent — 2026-11-02 (session réelle, dépôt de démonstration)
+
+Observé dans une session Claude Code interactive (`skraft-demo-meetup`, run `suspended-licence`, revue `pr-4`), pas par une sonde.
+
+| Hôte | Comportement | Verdict | Version | Preuve |
+| --- | --- | --- | --- | --- |
+| Claude Code (mod) | `$.session.cwd()` suit le `cd` d'une commande Bash de la conversation : après `cd .copilot-tracking/skraft-plans/<slug>/reviews/design_review-2 && …`, `/skraft decide` ne trouvait plus `.active-slug`, une reprise repartait de RESEARCH et le périmètre d'écriture préfixait `../../../../../` | oui | 2.1.316 | journal `events.jsonl` du run ; le mod prend désormais le haut du dépôt Git (`git rev-parse --show-cdup`) à chaque requête (`workingCopyOf`, `claude-mod-driver.mjs`) |
+| Claude Code (mod) | `$.ui.ask(…, { header })` affiche au plus 12 caractères de l'en-tête : `Review comment` s'affiche `Review comme` | oui | 2.1.316 | capture de la session ; les en-têtes de `questions.mjs` tiennent en 12 caractères |
+| Claude Code (mod) | `$.agent.spawn` rejette parfois un lancement parmi d'autres du même type qui démarrent (1 `skraft:finding-refuter` sur environ 15 d'une revue de DESIGN) ; la reprise le lance sans erreur | oui | 2.1.316 | `agent-unavailable` « skraft:finding-refuter could not be started » ; le mod relance une fois un lancement rejeté (`spawnTwice`, `agent-runner.mjs`) |
+
 ### Sonde d'hôte Copilot — 2026-10-30 (branche feat/252-skraft-command, commandes de plugin, #252)
 
 Copilot CLI GitHub Copilot CLI 1.0.105. · SDK 1.0.105 · Node v22.17.1 · darwin 25.5.0. Aucun appel de modèle (`npm run probe:copilot`, sans `--agent-calls` ni `--report-issues`), CLI connecté.

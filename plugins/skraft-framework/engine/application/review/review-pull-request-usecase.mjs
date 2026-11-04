@@ -8,6 +8,7 @@ import { JournalConflict, openJournal } from '../journal/run-journal.mjs'
 import { holdRun, LockLost, writingWhileHeld } from '../pipeline/run-lock.mjs'
 import { pullRequestInputs } from './pull-request-inputs.mjs'
 import { keepComment } from './review-comment.mjs'
+import { languageOf } from '../../domain/reporting/language.mjs'
 import { runReview } from './review-runs.mjs'
 import { loadReview } from './review-workflow.mjs'
 import { assignmentsText } from '../../domain/reporting/agent-models.mjs'
@@ -346,7 +347,7 @@ const reviewRun = ({ deps, slug, journal, review, pullRequest }, { visit, assign
 /** @param {Context} context */
 const inputsOf = ({ deps, slug, pullRequest, base, config, review, request }) => pullRequestInputs(deps, {
   slug, pullRequest, base, components: config.components, declared: review.inputs, workingCopyName: request.workingCopyName,
-  committed: committedAt(deps.sourceControl, pullRequest.base.sha),
+  committed: committedAt(deps.sourceControl, pullRequest.base.sha), workflow: review.pipeline, phase: review.phase,
 })
 
 /**
@@ -380,7 +381,7 @@ const recordVerdict = async ({ deps, journal, review }, { visit }, { reviewed: {
 const OUTCOMES = Object.freeze({ APPROVED: 'approved', NEEDS_REWORK: 'needs-rework', BLOCKED: 'blocked' })
 
 /** @param {Context} context @param {Pass} pass @param {import('../../domain/review/verdict.mjs').ReviewVerdict} verdict */
-const commentOf = ({ deps, slug, request, journal, team }, { visit }, verdict) => keepComment({ deps, slug, number: request.number, publish: request.publish, journal, team }, { pass: visit, verdict })
+const commentOf = ({ deps, slug, request, journal, team, pullRequest }, { visit }, verdict) => keepComment({ deps, slug, number: request.number, publish: request.publish, journal, team, language: languageOf(`${pullRequest.title}\n${pullRequest.body}`) }, { pass: visit, verdict })
 
 /**
  * @param {Context} context @param {Pass} pass
