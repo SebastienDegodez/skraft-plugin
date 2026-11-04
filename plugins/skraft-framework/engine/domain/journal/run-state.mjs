@@ -7,10 +7,11 @@ import { instructionOf } from '../decisions/questions.mjs'
  *   (relative to the working copy), with the hash of their content (null: deleted).
  * @typedef {{
  *   visit: number, attempt: number, phase: string, agent: string | null, gates: string[] | null,
- *   question: string | null, outputs: string[], missing: string[], feedback: string[], sentBy: 'gate' | 'review' | 'ask' | 'answer' | null, heads: Head[],
- *   group: number | null,
+ *   question: string | null, outputs: string[], missing: string[], feedback: string[], instruction: string | null,
+ *   sentBy: 'gate' | 'review' | 'ask' | 'answer' | null, heads: Head[], group: number | null,
  * }} OpenAttempt
- *   sentBy: the kind of node whose failures or refusal opened this visit, null otherwise; group:
+ *   sentBy: the kind of node whose failures or refusal opened this visit, null otherwise;
+ *   instruction: the human's answer to a block that opened this visit, apart from its feedback; group:
  *   which of the visit's groups of surviving mutants the attempt works on, from 1.
  * @typedef {{
  *   visit: number, attempt: number, outputs: string[], documents: string[], heads: Head[],
@@ -150,10 +151,13 @@ const openAttempt = (event) => ({
   outputs: event.outputs ?? [],
   missing: event.missing,
   feedback: event.feedback,
-  sentBy: event.sentBy ?? null,
+  ...causeOf(event),
   heads: event.heads,
   group: event.group ?? null,
 })
+
+/** What opened the attempt's visit: the kind of node, a human's instruction. @param {RunEvent} event */
+const causeOf = (event) => ({ instruction: event.instruction ?? null, sentBy: event.sentBy ?? null })
 
 /** What the open node is: its agent, its gates or its question. @param {RunEvent} event */
 const nodeOf = (event) => ({ agent: event.agent ?? null, gates: event.gates ?? null, question: event.question ?? null })
