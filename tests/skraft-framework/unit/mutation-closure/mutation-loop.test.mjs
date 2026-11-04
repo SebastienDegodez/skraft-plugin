@@ -449,6 +449,20 @@ test('a run stopped in a group resumes there: the groups already done are not di
   ])
 })
 
+test('a proposal commits as its agent does: one played by an agent with no shell is told to commit nothing', async () => {
+  const workflow = BUILT_IN_WORKFLOW.replace('kill_proposal [shape=box, agent="software-engineer"', 'kill_proposal [shape=box, agent="solution-researcher"')
+  const host = scripted({ machine: new ScriptedMachine(), files: { '.skraft/pipeline.skraft.dot': workflow }, answers: APPLYING }, (it) => [...upToDeliver(it, undefined, REFS_42), ...round(it, 1, 'Checkout', REFS_42)])
+  mutationRounds(host, [checkoutOnly])
+
+  const outcome = await host.start({ story: { issue: 42, title: 'Pay by card' } })
+
+  assert.equal(outcome.status, 'done', outcome.reason)
+
+  const proposal = host.agentRunner.dispatches.find(({ label }) => label === `skraft ${SLUG} · kill_proposal · group 1 of 1 · attempt 1`)
+  assert.equal(proposal.agent, 'solution-researcher')
+  assert.ok(!proposal.prompt.includes('Commit every file') && !proposal.prompt.includes('Refs: #42'), proposal.prompt)
+})
+
 test('a refused attempt of a group is tried again on the same group, its mutants still listed; a kill commit of a story with an issue references it', async () => {
   const host = scripted({ machine: new ScriptedMachine(), answers: APPLYING }, (it) => [
     ...upToDeliver(it, undefined, REFS_42),
@@ -473,7 +487,7 @@ test('a refused attempt of a group is tried again on the same group, its mutants
   ])
   assert.ok(after[1].prompt.includes(`Propose how to treat the surviving mutants of src/Checkout.cs (group 1 of 2):\n- ${CHECKOUT_12}`), after[1].prompt)
   assert.ok(after[1].prompt.includes(`Missing outputs from attempt 1 of 3:\n- ${TRACKING}/proposals/kill_proposal-1-g1.md`), after[1].prompt)
-  assert.ok(!after[0].prompt.includes('Refs: #42'), after[0].prompt)
+  for (const proposal of after.slice(0, 3)) assert.ok(proposal.prompt.includes('- Commit every file you change outside the tracking folder before you write your result, as `type(<story>): subject` (`docs(<story>): …` for a document); the engine refuses a change left uncommitted.\n- End every commit body with `Refs: #42`; never close the issue in a commit: the pull request closes it.'), proposal.prompt)
   assert.ok(after[3].prompt.includes('- End every commit body with `Refs: #42`; never close the issue in a commit: the pull request closes it.'), after[3].prompt)
   assert.ok(after[4].prompt.includes(`Refused in attempt 1 of 3:\n- commit root-3 "test(${SLUG}): kill the mutants of Checkout" does not end its message with "Refs: #42"`), after[4].prompt)
   assert.deepEqual(recorded(host, 'kill_proposal').map(({ group, attempt, outcome: result }) => [group, attempt, result]), [[1, 1, 'failed'], [1, 2, 'done'], [2, 1, 'done']])

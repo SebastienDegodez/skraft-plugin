@@ -60,8 +60,10 @@ and remove the `deliver -> gates` edge it replaces.
 
 The brief the engine gives the agent lists these outputs, the paths it may write and the other
 steps' outputs to read. After each attempt, the engine checks that every output is filled and
-that nothing was written outside those paths. The brief asks for no commit: once the step is
-done, the engine commits what the agent left changed in `writes` as `docs(<story>): <node> <story>`.
+that nothing was written outside those paths. The agent commits its own changes: the brief asks it
+to commit every file it changes outside the tracking folder, and a change it leaves uncommitted is
+refused (`uncommitted`). The engine commits only for the plugin's agents that have no shell
+(`solution-researcher`, `solution-architect`, `pr-writer`).
 
 ## 3. Check
 

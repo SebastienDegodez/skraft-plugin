@@ -17,7 +17,7 @@ test('a repository agent between DESIGN and DISTILL is launched in its place, as
   const edgesLast = edit(WITH_SECURITY, [chain, ''], [around, ''], [last, `${last}${around}${chain}`])
   const host = scripted({ ...withSecurity, ...repositoryWorkflow(edgesLast) }, (it) => {
     const [research, design, ...rest] = nominal(it)
-    return [research, design, agent({ work: ({ git }) => git.change('docs/security/threat-model.md') })(it), ...rest]
+    return [research, design, agent({ work: ({ git }) => git.commit(`docs(${SLUG}): threat model`, ['docs/security/threat-model.md']) })(it), ...rest]
   })
 
   const outcome = await host.start()
@@ -26,6 +26,10 @@ test('a repository agent between DESIGN and DISTILL is launched in its place, as
   assert.deepEqual(host.agentRunner.dispatches.map(({ agent: id, source }) => `${id} ${source}`), [
     'solution-researcher plugin', 'solution-architect plugin', 'acme-security-reviewer repository', 'acceptance-designer plugin', 'software-engineer plugin', 'pr-writer plugin',
   ])
+  assert.deepEqual(host.agentRunner.dispatches.map(({ agent: id, prompt }) => [id, prompt.includes('- Commit every file you change outside the tracking folder')]), [
+    ['solution-researcher', false], ['solution-architect', false], ['acme-security-reviewer', true], ['acceptance-designer', true], ['software-engineer', true], ['pr-writer', false],
+  ])
+  assert.deepEqual(host.git.engineCommits.map(({ message }) => message.split('\n')[0]), [`docs(${SLUG}): design ${SLUG}`])
   assert.equal(host.events()[0].workflow, '.skraft/pipeline.skraft.dot')
   assert.deepEqual(host.git.engineCommits.filter(({ message }) => message.startsWith('chore: create the folders ')), [], 'a repository agent has no role folder: its writes= may name files')
   assert.deepEqual(host.events().filter((event) => event.type === 'phase.closed').map((event) => event.phase), ['RESEARCH', 'DESIGN', 'DISTILL', 'DELIVER', 'PUBLISH'])
@@ -47,6 +51,8 @@ test('a repository agent between DESIGN and DISTILL is launched in its place, as
     `- .copilot-tracking/skraft-plans/${SLUG}`,
     '- docs/security',
     '- src',
+    '- Commit every file you change outside the tracking folder before you write your result, as `type(<story>): subject` (`docs(<story>): …` for a document); the engine refuses a change left uncommitted.',
+    '- Reference no issue in a commit.',
   ].join('\n'))
 })
 
@@ -116,10 +122,10 @@ test('the model each agent, lens and check ran on is journaled, null when the ho
   assert.deepEqual(host.events().filter((event) => event.type === 'review.refuted').map(({ lens, model }) => `${lens} ${model}`), ['fitness claude-standard-5.5'])
 })
 
-test('a repository agent leaving its outputs empty and writing outside its declared paths is refused for both, and stops at its own max_attempts', async () => {
+test('a repository agent leaving its outputs empty, writing outside its declared paths and leaving a change uncommitted in them is refused for each, and stops at its own max_attempts', async () => {
   const host = scripted(withSecurity, (it) => {
     const [research, design] = nominal(it)
-    const outside = agent({ fill: false, work: ({ git }) => git.change('tests/Hack.cs') })
+    const outside = agent({ fill: false, work: ({ git }) => git.change('tests/Hack.cs', 'docs/security/threat-model.md') })
     return [research, design, outside(it), outside(it)]
   })
 
@@ -127,8 +133,9 @@ test('a repository agent leaving its outputs empty and writing outside its decla
 
   assert.deepEqual([outcome.code, outcome.reason], [
     'missing-outputs',
-    `acme-security-reviewer failed the same way on attempts 1 and 2: missing outputs: ${TRACKING}/security/2026-10-11/${SLUG}-review.md, ${TRACKING}/notes.md; out of write scope: tests/Hack.cs`,
+    `acme-security-reviewer failed the same way on attempts 1 and 2: missing outputs: ${TRACKING}/security/2026-10-11/${SLUG}-review.md, ${TRACKING}/notes.md; out of write scope: tests/Hack.cs; left uncommitted: docs/security/threat-model.md; commit it or undo the change`,
   ])
+  assert.deepEqual(host.git.engineCommits.map(({ paths }) => paths), [['docs/adr/adr-001-card-payment.md']])
 })
 
 test('a repository agent that declares no outputs is asked for its result only', async () => {

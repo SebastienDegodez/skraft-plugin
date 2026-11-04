@@ -182,7 +182,7 @@ ligne `**Status:**`, ligne de `docs/adr/decisions-index.md`) et les commite seul
 | Sortie déclarée | `changes/{date}/change-log.md` |
 | Propositions | `proposals/kill_proposal-<visite>-g<n>.md`, une par fichier de survivants, créée par le moteur avec une section par mutant ; chaque ligne `{{outcome}}` devient `test: …`, `delete: …` ou `equivalent: …` |
 | Preuves | `gates/<composant>/<gate>-<n>.log` ; `visuals/<composant>/e2e-<n>.log` |
-| Écriture permise | `deliver`, `kill_mutants` : le dossier de suivi, les chemins `src` et `tests` de chaque composant, et les fichiers à leur racine ; `kill_proposal` : le dossier de suivi seulement, aucun commit |
+| Écriture permise | `deliver`, `kill_mutants` : le dossier de suivi, les chemins `src` et `tests` de chaque composant, et les fichiers à leur racine ; `kill_proposal` : le dossier de suivi seulement, donc rien à commiter ; un changement hors de lui est refusé |
 | Commits | `deliver` en mode `cycle` : `test(<story>): …` en échec (rouge, rejoué), puis `feat` ou `fix` (vert), `refactor` ; `kill_mutants` en mode `kill` : des tests qui tuent les mutants et passent ; chaque message conventionnel finit par `Refs: #<issue>` et ne ferme aucune issue ; un changement laissé non commité est refusé (`uncommitted`) |
 | Barre de mutation | 100 % sur le cœur, 80 % sur la frontière ; non configurable |
 
