@@ -85,7 +85,7 @@ test('a blocked architect is asked in a dialog; the instruction typed under Othe
 
   assert.equal(outcome.status, 'done')
   assert.deepEqual(mod.asked[0].options, { options: ['STOP'], header: 'Blocked' })
-  assert.match(mod.asked[0].question, /^design is blocked: solution-architect says it cannot go on; its reason is in .*design-1-1\.json\. An instruction runs design again on a new pass with it; STOP ends the run\.$/)
+  assert.match(mod.asked[0].question, /^design is blocked: solution-architect says it cannot go on; its reason is in .*design-1-1\.json\.\nLeft by design \(1\):\n- .+\n An instruction runs design again on a new pass with what is left above and the instruction; STOP ends the run\.$/)
   assert.ok(spawnOf(mod, 'design · pass 2 · attempt 1').prompt.includes('\nA human refused the work of pass 1:\n- Use the bank gateway'))
   assert.deepEqual(journal(cwd, SLUG).filter((event) => event.type === 'question.answered').map(({ key, answer, by }) => [key, answer, by]), [['design-1', 'Use the bank gateway', 'host'], ['adr-1', 'RATIFIED', 'host']])
 })

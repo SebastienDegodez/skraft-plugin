@@ -566,7 +566,7 @@ const lensDispatch = ({ deps, slug, sources, step, assignments, inputs: given, r
 })
 
 /** What a human told this pass of the review to do, when their answer to a block opened it. @param {Review['step']} step */
-const humanInstructions = ({ feedback, sentBy }) => (sentBy === 'ask' ? feedback : [])
+const humanInstructions = ({ instruction }) => (instruction === null ? [] : [instruction])
 
 /** @param {SkillFile[]} skills */
 const pathsOf = (skills) => skills.map(({ path }) => path)

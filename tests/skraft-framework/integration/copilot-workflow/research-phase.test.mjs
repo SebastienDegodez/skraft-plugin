@@ -117,7 +117,7 @@ test('a filled output and a done result close RESEARCH; a blocked architect then
   ])
   assert.deepEqual(events.filter((event) => event.type === 'step.started' && event.agent !== undefined).map((event) => [event.agent, event.host]), [['solution-researcher', 'copilot'], ['solution-architect', 'copilot']])
   const reason = join(trackingDir(cwd, 'checkout'), 'results', 'design-1-1.json')
-  assert.equal(logs.at(-2), `Waiting for you — design is blocked: solution-architect says it cannot go on; its reason is in ${reason}. An instruction runs design again on a new pass with it; STOP ends the run.`)
+  assert.equal(logs.at(-2), `Waiting for you — design is blocked: solution-architect says it cannot go on; its reason is in ${reason}.\nLeft by design (1):\n- needs a decision on the payment provider\n An instruction runs design again on a new pass with what is left above and the instruction; STOP ends the run.`)
 })
 
 test('an absent output is dispatched again with its path listed missing; the same failure twice blocks the run', async (t) => {

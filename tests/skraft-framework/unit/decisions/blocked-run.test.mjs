@@ -10,7 +10,7 @@ const unavailable = () => ({ ok: false, unavailable: true, text: '' })
 const INSTRUCTION = 'Use the bank gateway of Acme'
 const NO_PROVIDER = 'The story names no payment provider.'
 const blockedAgent = (it) => agent({ result: { status: 'blocked', summary: NO_PROVIDER } })(it)
-const RESEARCH_BLOCKED = `research is blocked: solution-researcher says it cannot go on; its reason is in ${TRACKING}/results/research-1-1.json. An instruction runs research again on a new pass with it; STOP ends the run.`
+const RESEARCH_BLOCKED = `research is blocked: solution-researcher says it cannot go on; its reason is in ${TRACKING}/results/research-1-1.json.\nLeft by research (1):\n- ${NO_PROVIDER}\n An instruction runs research again on a new pass with what is left above and the instruction; STOP ends the run.`
 
 test('an agent that says it is blocked asks a human what to do instead of ending the run', async () => {
   const host = scripted({}, (it) => [blockedAgent(it)])
@@ -37,10 +37,11 @@ test('an instruction runs the blocked node again on a new pass of the same run, 
   assert.deepEqual(dispatched(host), [`skraft ${SLUG} · research · attempt 1`, `skraft ${SLUG} · research · pass 2 · attempt 1`, `skraft ${SLUG} · design · attempt 1`])
   const brief = host.agentRunner.dispatches[1].prompt
   assert.ok(brief.includes('- Pass: 2, after a human refused the work'), brief)
-  assert.ok(brief.endsWith(`\n\nA human refused the work of pass 1:\n- ${INSTRUCTION}`), brief)
-  assert.deepEqual(eventsOf(host, 'step.started').filter((event) => event.step === 'research').map(({ visit, attempt, feedback, sentBy }) => [visit, attempt, feedback, sentBy]), [
-    [1, 1, [], undefined],
-    [2, 1, [INSTRUCTION], 'ask'],
+  // #500: the agent gets what the block left, not the instruction alone.
+  assert.ok(brief.endsWith(`\n\nWhat pass 1 left when it was blocked:\n- ${NO_PROVIDER}\n\nA human refused the work of pass 1:\n- ${INSTRUCTION}`), brief)
+  assert.deepEqual(eventsOf(host, 'step.started').filter((event) => event.step === 'research').map(({ visit, attempt, feedback, instruction, sentBy }) => [visit, attempt, feedback, instruction, sentBy]), [
+    [1, 1, [], undefined, undefined],
+    [2, 1, [NO_PROVIDER], INSTRUCTION, 'ask'],
   ])
   assert.deepEqual(eventsOf(host, 'question.answered').map(({ key, answer, reason, by }) => [key, answer, reason, by]), [['research-1', INSTRUCTION, null, 'decide']])
   assert.equal(eventsOf(host, 'run.started').length, 1)
@@ -57,7 +58,8 @@ test('a loop that reached its max_visits asks a human; an instruction runs the n
   await host.decide({ answer: 'Mock the bank gateway in the tests' })
   const outcome = await host.run()
 
-  const text = 'deliver is blocked: gates -> deliver was taken as often as its max_visits allows. An instruction runs deliver again on a new pass with it; STOP ends the run.'
+  const failure = `api/test: exited 1 (evidence: ${TRACKING}/gates/api/test-4.log)`
+  const text = `deliver is blocked: gates -> deliver was taken as often as its max_visits allows.\nLeft by gates (1):\n- ${failure}\n An instruction runs deliver again on a new pass with what is left above and the instruction; STOP ends the run.`
   assert.deepEqual(waiting, { status: 'waiting', slug: SLUG, phase: 'DELIVER', code: 'blocked', reason: `${text} Answer with skraft decide deliver-1 "<instruction>"|STOP.` })
   assert.deepEqual(eventsOf(host, 'question.asked').map(({ key, step, visit, text: asked }) => [key, step, visit, asked]), [['deliver-1', 'deliver', 4, text]])
   assert.equal(outcome.status, 'done')
@@ -65,7 +67,7 @@ test('a loop that reached its max_visits asks a human; an instruction runs the n
     [1, 'fail', null, 'deliver', undefined], [2, 'fail', null, 'deliver', undefined], [3, 'fail', null, 'deliver', undefined], [4, 'fail', 'loop-ceiling', null, 'deliver'], [5, 'fail', null, 'deliver', undefined], [6, 'pass', null, 'deliver_review', undefined],
   ])
   const resumed = host.agentRunner.dispatches.find((dispatch) => dispatch.label === `skraft ${SLUG} · deliver · pass 5 · attempt 1`)
-  assert.ok(resumed.prompt.endsWith('\n\nA human refused the work of pass 4:\n- Mock the bank gateway in the tests'), resumed.prompt)
+  assert.ok(resumed.prompt.endsWith(`\n\nWhat pass 4 left when it was blocked:\n- ${failure}\n\nA human refused the work of pass 4:\n- Mock the bank gateway in the tests`), resumed.prompt)
 })
 
 /** The journal's lines chained and signed again, after an edit, as the machine that wrote them would. */
@@ -118,7 +120,7 @@ test('a lens that reaches no verdict asks a human; an instruction runs the revie
   assert.deepEqual(second.map((dispatch) => dispatch.agent), ['fitness-lens'])
   assert.ok(second[0].prompt.includes(`\n- A human's instruction for this pass, after the last one was blocked: ${INSTRUCTION}\n`), second[0].prompt)
   assert.ok(!host.agentRunner.reviewed()[0].prompt.includes("A human's instruction"))
-  assert.deepEqual(eventsOf(host, 'step.started').filter((event) => event.step === 'design_review').map(({ visit, feedback, sentBy }) => [visit, feedback, sentBy]), [[1, [], undefined], [2, [INSTRUCTION], 'ask']])
+  assert.deepEqual(eventsOf(host, 'step.started').filter((event) => event.step === 'design_review').map(({ visit, feedback, instruction, sentBy }) => [visit, feedback, instruction, sentBy]), [[1, [], undefined, undefined], [2, [], INSTRUCTION, 'ask']])
 })
 
 test('the node run again that blocks again asks again; STOP then ends the run blocked, and nothing more runs', async () => {
@@ -132,8 +134,8 @@ test('the node run again that blocks again asks again; STOP then ends the run bl
 
   assert.deepEqual([again.status, again.code], ['waiting', 'blocked'])
   assert.deepEqual(eventsOf(host, 'question.asked').map(({ key, visit, text }) => [key, visit, text.split('; ')[1]]), [
-    ['research-1', 1, `its reason is in ${TRACKING}/results/research-1-1.json. An instruction runs research again on a new pass with it`],
-    ['research-2', 2, `its reason is in ${TRACKING}/results/research-2-1.json. An instruction runs research again on a new pass with it`],
+    ['research-1', 1, `its reason is in ${TRACKING}/results/research-1-1.json.\nLeft by research (1):\n- ${NO_PROVIDER}\n An instruction runs research again on a new pass with what is left above and the instruction`],
+    ['research-2', 2, `its reason is in ${TRACKING}/results/research-2-1.json.\nLeft by research (1):\n- Still no provider.\n An instruction runs research again on a new pass with what is left above and the instruction`],
   ])
   assert.equal(stop.reason, `${SLUG}: research-2 answered STOP; run the pipeline again to go on`)
   assert.deepEqual(stopped, { status: 'blocked', slug: SLUG, phase: 'RESEARCH', code: 'agent-blocked', reason: 'solution-researcher is blocked: Still no provider.' })

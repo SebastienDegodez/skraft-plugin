@@ -256,8 +256,9 @@ de ces lentilles et ce qu'elle a noté), `failures` (les findings retenus, que l
 de l'agent de la phase liste) et `cost` (ses lentilles, ses vérifications et ses lots de cette passe, reprise comprise). Une étape où le run a été renvoyé, par les gates, une revue ou le refus d'un humain, porte
 `sentBy` (`gate`, `review` ou `ask`) sur son `step.started` ; une étape que rien n'a renvoyée n'en a pas.
 La consigne d'un humain à une question `blocked` ouvre le passage suivant du nœud avec `sentBy`
-`ask` et la consigne pour `feedback` ; le `step.started` d'un nœud de revue porte aussi
-`feedback`, que lit chaque lentille de ce passage quand `sentBy` vaut `ask`.
+`ask`, la consigne dans `instruction` et ce que le blocage a laissé (les `failures` de son étape)
+pour `feedback` ; le `step.started` d'un nœud de revue les porte aussi, et chaque lentille de ce
+passage lit l'`instruction`.
 Le `step.recorded` d'un agent liste dans `documents` les fichiers du dossier de suivi que sa
 tentative a créés ou modifiés (hors fichiers du moteur), et pour le solution architect le
 `details/<date>/structural-scan.json` que le moteur a écrit avant la tentative ; une revue donne ces documents à chaque
@@ -280,7 +281,7 @@ de la même façon.
 | `reporting-consent` | `<nœud>-<n>` | `publish.visuals` n'est pas réglé dans `skraft-config.json` et un composant est un frontend (stack `react`, ou `commands.e2e`) ; sinon : `step.recorded` `skipped`, réponse `DECLINED`, rien n'est écrit | la réponse écrite en `"publish": { "visuals": true\|false }`, et gardée pour la suite du run : une boucle qui repasse par le nœud ne la redemande pas |
 | `mutation-plan` | `<nœud>-<n>` (`mutation_plan-1`) | la gate de mutation a échoué et `kill_proposal` a écrit ses propositions | `APPLY` : `kill_mutants` applique les propositions ; une consigne : `kill_mutants` la reçoit avec les propositions dont elle s'écarte ; `STOP` : `run.finished` `blocked`, code `stopped` |
 | `environment` | `<nœud>-<n>`, le nœud qui ne peut pas tourner (`gates-1`) | une étape ne peut pas tourner sur cette machine | `RETRY` : la même étape est revérifiée ou relancée, son agent seulement si ses sorties manquaient encore ; `ABORT` : run bloqué |
-| `blocked` | `<nœud>-<n>`, le nœud qu'une consigne relance (`design-1`) | un agent a répondu `blocked` (le nœud de l'agent), une boucle a atteint son `max_visits` (le nœud vers lequel revient l'arête plafonnée), une lentille a répondu `inconclusive` (le nœud de revue) | une consigne : le même run entre dans ce nœud sur un nouveau passage, la consigne pour `feedback` (`sentBy` `ask`), et aucune arête vers ce nœud ne compte plus comme empruntée ; `STOP` : `run.finished` `blocked` avec le code et la raison du blocage, rien d'autre |
+| `blocked` | `<nœud>-<n>`, le nœud qu'une consigne relance (`design-1`) | un agent a répondu `blocked` (le nœud de l'agent), une boucle a atteint son `max_visits` (le nœud vers lequel revient l'arête plafonnée), une lentille a répondu `inconclusive` (le nœud de revue) | une consigne : le même run entre dans ce nœud sur un nouveau passage, la consigne dans `instruction` et ce que le blocage a laissé pour `feedback` (`sentBy` `ask`), et aucune arête vers ce nœud ne compte plus comme empruntée ; `STOP` : `run.finished` `blocked` avec le code et la raison du blocage, rien d'autre |
 
 La question `environment` se lit `<node> cannot run on this machine: <reason>. Fix it, then
 RETRY; or ABORT the run.` Elle est posée quand un programme de gate est introuvable, qu'un

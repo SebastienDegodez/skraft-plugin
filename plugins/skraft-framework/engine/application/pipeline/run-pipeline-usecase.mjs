@@ -1,6 +1,6 @@
 import { CONFIG_FILE } from '../../domain/config/skraft-config.mjs'
 import { deriveRun, redByGates } from '../../domain/journal/run-state.mjs'
-import { DEFAULT_ATTEMPTS, nextStep } from '../../domain/pipeline/next-step.mjs'
+import { DEFAULT_ATTEMPTS, causeFields, nextStep } from '../../domain/pipeline/next-step.mjs'
 import { composeBrief, dispatchLabel } from '../../domain/pipeline/dispatch-brief.mjs'
 import { dayOf, isFilled, outputPath, templateName } from '../../domain/pipeline/outputs.mjs'
 import { isDocument, writtenDocuments } from '../../domain/pipeline/documents.mjs'
@@ -440,9 +440,9 @@ const openAttempt = async (context, run, next, job) => {
   await precreate(context, job)
   await context.deps.files.write(context.slug, snapshotOf(job.result), JSON.stringify(await documentHashes(context)))
   const heads = await headsOf(context.deps, run.base)
-  const { phase, node, visit, attempt, missing, feedback, sentBy } = next
+  const { phase, node, visit, attempt, missing, feedback } = next
   const { agent, outputs, result, assignment } = job
-  await context.journal.append('step.started', { step: node.id, phase, agent, visit, attempt, outputs, result, missing, feedback, ...(sentBy === null ? {} : { sentBy }), ...groupFields(next), heads, assignment, host: context.deps.agentRunner.host })
+  await context.journal.append('step.started', { step: node.id, phase, agent, visit, attempt, outputs, result, missing, feedback, ...causeFields(next), ...groupFields(next), heads, assignment, host: context.deps.agentRunner.host })
   return heads
 }
 
@@ -576,11 +576,13 @@ const briefOf = (context, run, next, job) => ({
   ...briefPaths(context, run, next, job),
   ...briefStack(context, run, job.role),
   missing: next.missing.map((path) => context.deps.files.location(context.slug, path)),
-  feedback: next.feedback,
-  sentBy: next.sentBy,
+  ...briefFeedback(next),
   acceptance: acceptanceCommits(context),
   ...briefRole(next, job),
 })
+
+/** What the agent is told sent it there: the failures, a human's instruction, the kind of node. @param {WorkStep} next */
+const briefFeedback = ({ feedback, instruction, sentBy }) => ({ feedback, instruction, sentBy })
 
 /**
  * The group of surviving mutants the agent works on, whether it only proposes how to treat them,
@@ -881,10 +883,11 @@ const review = async (context, run, next) => {
  * @param {Context} context @param {WorkStep} next
  * @returns {Promise<import('../config/agent-models.mjs').ReviewAssignments>}
  */
-const openReview = async ({ deps, slug, journal, config }, { phase, node, visit, feedback, sentBy, resumed }) => {
+const openReview = async ({ deps, slug, journal, config }, next) => {
+  const { phase, node, visit, feedback, resumed } = next
   if (!resumed) {
     const { lenses, refuter } = reviewAssignmentsOf(config, node)
-    await journal.append('step.started', { step: node.id, phase, lenses: node.lenses, visit, attempt: 1, feedback, ...(sentBy === null ? {} : { sentBy }), assignments: lenses, refuter, host: deps.agentRunner.host })
+    await journal.append('step.started', { step: node.id, phase, lenses: node.lenses, visit, attempt: 1, feedback, ...causeFields(next), assignments: lenses, refuter, host: deps.agentRunner.host })
   }
   const { assignments, refuter } = openStart(journal)
   deps.progress.log(`${slug}: ${node.id} (${node.lenses.join(', ')})${passOf(visit)} — ${assignmentsText(assignments, deps.agentRunner.host)}`)

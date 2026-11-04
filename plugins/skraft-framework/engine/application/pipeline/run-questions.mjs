@@ -1,6 +1,7 @@
 import { CONFIG_FILE, withPublishSetting } from '../../domain/config/skraft-config.mjs'
 import { APPLY, BLOCKED, CONSENT_TEXT, PUBLISH_CONSENT_TEXT, STOP, blockText, decideUsage, edgeAnswerOf, environmentText, mutationPlanText, questionKey, questionOf, ratificationText, readAnswer } from '../../domain/decisions/questions.mjs'
 import { trackingFolder } from '../../domain/pipeline/roles.mjs'
+import { causeFields } from '../../domain/pipeline/next-step.mjs'
 import { issueOf } from '../../domain/pipeline/commits.mjs'
 import { CONSENT_VERSIONS, consentOf } from '../../domain/decisions/consents.mjs'
 import { dayOf } from '../../domain/pipeline/outputs.mjs'
@@ -201,9 +202,10 @@ export const askStep = async (context, run, next) => {
 const nextKey = (journal, step) => questionKey(step, journal.events.filter((event) => event.type === 'question.asked' && event.step === step).length)
 
 /** @param {Context} context @param {WorkStep} next */
-const openAsk = async ({ journal }, { node, phase, visit, feedback, sentBy, resumed }) => {
+const openAsk = async ({ journal }, next) => {
+  const { node, phase, visit, feedback, resumed } = next
   if (resumed) return
-  await journal.append('step.started', { step: node.id, phase, question: node.question, visit, attempt: 1, outputs: [], missing: [], feedback, ...(sentBy === null ? {} : { sentBy }), heads: [] })
+  await journal.append('step.started', { step: node.id, phase, question: node.question, visit, attempt: 1, outputs: [], missing: [], feedback, ...causeFields(next), heads: [] })
 }
 
 /**
@@ -373,8 +375,8 @@ export const blockQuestion = async (context, run, next) => {
  * @returns {import('../../domain/decisions/questions.mjs').Block}
  */
 const blockOf = (context, { node, last }, step) => {
-  const { code, step: from } = /** @type {RunEvent} */ (last)
-  return { step, code, from, agent: /** @type {WorkStep['node']} */ (node).agent, details: detailsOf(context, /** @type {RunEvent} */ (last)) }
+  const { code, step: from, failures } = /** @type {RunEvent} */ (last)
+  return { step, code, from, agent: /** @type {WorkStep['node']} */ (node).agent, details: detailsOf(context, /** @type {RunEvent} */ (last)), failures }
 }
 
 /**
