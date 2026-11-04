@@ -19,7 +19,7 @@ détail de chaque gate citée : [Gates](./gates.md).
 | --- | --- | --- | --- | --- | --- |
 | DISCOVER | `skraft-backlog` | l'agent, lancé par le développeur | `backlog-discoverer` | 3 lentilles, verdict de `review-verdict.mjs` | dépôt cible, capacité |
 | DISCUSS | `skraft-backlog` | l'agent, lancé par le développeur | `backlog-planner` | 4 lentilles, verdict de `review-verdict.mjs` | — |
-| RESEARCH | `skraft` | le moteur | `solution-researcher` | sortie remplie | consentements `publish-consent`, `reporting-consent` |
+| RESEARCH | `skraft` | le moteur | `solution-researcher` | sortie remplie, traces RESEARCH | consentements `publish-consent`, `reporting-consent` |
 | DESIGN | `skraft` | le moteur | `solution-architect` | traces DESIGN, scan structurel, revue à 3 lentilles | `adr-ratification` |
 | DISTILL | `skraft` | le moteur | `acceptance-designer` | commits rouges rejoués, revue à 4 lentilles | — |
 | DELIVER | `skraft` | le moteur | `software-engineer` | commits TDD, gates, revue `review`, mutation | `mutation-plan` quand la mutation échoue |
@@ -94,9 +94,9 @@ Verdict : `review-verdict.mjs --phase discuss`, mêmes règles et même budget q
 | Entrées | la story (`plans/{date}/issue-<numéro>.md` quand le run a démarré avec `--issue`) ; la documentation durable sous `docs/`, lue d'abord |
 | Sortie | `research/{date}/{slug}-research.md`, pré-créé depuis `research.template.md` |
 | Écriture permise | le dossier de suivi seulement |
-| `docs/` couvre déjà la story | le document de recherche le dit et cite les fichiers de `docs/` ; le moteur contrôle seulement que le document existe |
-| Contrôle | sortie remplie : non vide, différente du gabarit, sans `{{…}}` |
-| Tentatives | 3 (défaut de `max_attempts`) ; ensuite `missing-outputs` |
+| `docs/` couvre déjà la story | le document de recherche le dit et cite les fichiers de `docs/` ; le moteur lit ces citations, donc un chemin qu'il nomme doit exister |
+| Contrôle | sortie remplie : non vide, différente du gabarit, sans `{{…}}`. Traces RESEARCH après chaque tentative : chaque chemin de la copie de travail que le document cite est un fichier lisible, et chaque plage `chemin:ligne` ou `chemin:ligne-ligne` tient dans la longueur de ce fichier (`research-records`) |
+| Tentatives | 3 (défaut de `max_attempts`) ; ensuite `missing-outputs`, ou `research-records` quand le document est là et que ses citations échouent encore |
 
 ## DESIGN <!-- #design -->
 
