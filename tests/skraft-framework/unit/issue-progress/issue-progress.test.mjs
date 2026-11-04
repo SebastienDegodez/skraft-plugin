@@ -89,7 +89,7 @@ test('a run from an issue keeps one comment on it, posted when the first phase c
     '- api/test pass · `gates/api/test-1.log`',
     '- api/mutation pass · `gates/api/mutation-1.log`',
     '',
-    'Pull request: #42 https://github.example.com/acme/shop/pull/42',
+    'Pull request: https://github.example.com/acme/shop/pull/42',
     '',
     'Total: 15 attempts, 0 retries, 0 s, cost ~$0.75 (approximate: what the Claude Code session cost while each agent ran, anything else exchanged meanwhile included).',
     '',
@@ -224,8 +224,8 @@ test('a pull request the run updated after opening it is said updated', async ()
 
   const { bodies } = host.codeHost.comments[0]
   const told = bodies.find((body) => body.includes('publish_review asked for rework'))
-  assert.ok(told.includes('\nPull request: #42 https://github.example.com/acme/shop/pull/42\n'), told)
-  assert.ok(bodies.at(-1).includes('\nPull request: #42 https://github.example.com/acme/shop/pull/42 (updated)\n'), bodies.at(-1))
+  assert.ok(told.includes('\nPull request: https://github.example.com/acme/shop/pull/42\n'), told)
+  assert.ok(bodies.at(-1).includes('\nPull request: https://github.example.com/acme/shop/pull/42 (updated)\n'), bodies.at(-1))
 })
 
 test('each gate shows its last result and its log, a mutation gate that handed mutants out how many survive', async () => {
@@ -305,4 +305,106 @@ test('a review told after the run was stopped twice keeps the phase of its own s
 
   const rework = eventsOf(host, 'issue.commented').find((event) => event.kind === 'rework')
   assert.deepEqual({ phase: rework.phase, step: rework.step }, { phase: 'DESIGN', step: 'adr_review' })
+})
+
+const FRENCH_ISSUE = { title: 'Payer par carte', body: 'En tant que client, je veux payer par carte pour que la commande soit validée sans passer par la livraison.' }
+const FRENCH = { story: { issue: 42, title: FRENCH_ISSUE.title } }
+/** A forge whose issue 42 is the French story. */
+const french = () => new InMemoryCodeHost({ issues: { 42: FRENCH_ISSUE } })
+
+test('a French story\'s comment is in French, the pull request shown once by its URL, the marker unchanged', async () => {
+  const host = scripted({ config: CONSENTED, codeHost: french() }, (it) => [agent({ answer: { ok: true, text: 'done', costUsd: 0.75 } })(it), ...nominal(it, REFS_42).slice(1)])
+
+  assert.equal((await host.start(FRENCH)).status, 'done')
+
+  const [comment] = host.codeHost.comments
+  assert.equal(comment.bodies[0], [
+    MARKER,
+    '### skraft · checkout — RESEARCH terminée',
+    '',
+    '- [x] RESEARCH',
+    '- [ ] DESIGN',
+    '- [ ] DISTILL',
+    '- [ ] DELIVER',
+    '- [ ] PUBLISH',
+    '',
+    'Suite : DESIGN.',
+    '',
+    'Revues : aucune pour l\'instant.',
+    '',
+    'Portes de qualité : aucune n\'a tourné.',
+    '',
+    'Pull request : aucune ouverte ni mise à jour par ce run.',
+    '',
+    'Total : 3 tentatives, 0 reprises, 0 s, coût ~$0.75 (approximatif : ce que la session Claude Code a coûté pendant que chaque agent tournait, tout autre échange de cette session inclus).',
+    '',
+    `Rapport du run et preuves : dans la copie de travail, sous le dossier de suivi du run (slug \`${SLUG}\`).`,
+    '',
+    '<details><summary>Étapes</summary>',
+    '',
+    '| Phase | Étape | Visites | Tentatives | Reprises | Durée | Coût | Résultat |',
+    '| --- | --- | ---: | ---: | ---: | ---: | ---: | --- |',
+    '| RESEARCH | publish_consent | 1 | 1 | 0 | 0 s | - | skipped |',
+    '| RESEARCH | visuals_consent | 1 | 1 | 0 | 0 s | - | skipped |',
+    '| RESEARCH | research | 1 | 1 | 0 | 0 s | ~$0.75 | done |',
+    '',
+    '</details>',
+    '',
+  ].join('\n'))
+  assert.ok(comment.bodies[4].includes('\n- [x] PUBLISH\n\nSuite : la fin du workflow.\n'), comment.bodies[4])
+  assert.equal(comment.body.slice(0, comment.body.indexOf('<details>')), [
+    MARKER,
+    '### skraft · checkout — run terminé',
+    '',
+    'terminé',
+    '',
+    ...PHASES.map((phase) => `- [x] ${phase}`),
+    '',
+    'Revues : design_review approved (1 passe), distill_review approved (1 passe), deliver_review approved (1 passe).',
+    '',
+    'Portes de qualité :',
+    '- api/build pass · `gates/api/build-1.log`',
+    '- api/test pass · `gates/api/test-1.log`',
+    '- api/mutation pass · `gates/api/mutation-1.log`',
+    '',
+    'Pull request : https://github.example.com/acme/shop/pull/42',
+    '',
+    'Total : 15 tentatives, 0 reprises, 0 s, coût ~$0.75 (approximatif : ce que la session Claude Code a coûté pendant que chaque agent tournait, tout autre échange de cette session inclus).',
+    '',
+    `Rapport du run et preuves : dans la copie de travail, sous le dossier de suivi du run (slug \`${SLUG}\`).`,
+    '',
+    '',
+  ].join('\n'))
+  assert.ok(host.progress.lines.includes(`${SLUG}: issue #42 updated (RESEARCH closed): ${COMMENT}`), host.progress.lines.join('\n'))
+})
+
+test('a French story\'s comment tells in French a review that sent the work back, a pull request updated, surviving mutants and where a blocked run stopped', async () => {
+  const blocker = says('consistency', 'fail', [finding('F1', 'blocker', 'the ADR contradicts the context map')])
+  const reworked = scripted({ config: CONSENTED, codeHost: french() }, (it) => [...nominal(it, REFS_42).slice(0, 2), agent()(it), ...nominal(it, REFS_42).slice(2)])
+  reworked.agentRunner.review = lenses({ consistency: [blocker] })
+  await reworked.start(FRENCH)
+  const told = reworked.codeHost.comments[0].bodies[1]
+  assert.ok(told.startsWith(`${MARKER}\n### skraft · checkout — design_review demande une reprise\n`), told)
+  assert.ok(told.includes('\n- [x] RESEARCH\n- [ ] DESIGN — en cours\n- [ ] DISTILL\n'), told)
+  assert.ok(told.includes('\nRevues : design_review needs-rework (1 passe).\n'), told)
+  assert.ok(reworked.codeHost.comments[0].body.includes('Revues : design_review approved (2 passes), '), reworked.codeHost.comments[0].body)
+
+  const dot = edit(BUILT_IN_WORKFLOW,
+    ['  exit     [shape=Msquare]', `  exit     [shape=Msquare]\n${reviewNodes('publish_review')}`],
+    ['  visuals -> pr_writer -> publish -> exit', `  visuals -> pr_writer -> publish -> publish_review_lenses\n${reviewEdges('publish_review', 'pr_writer', 'exit')}`])
+  const updated = scripted({ config: CONSENTED, codeHost: french(), files: { '.skraft/pipeline.skraft.dot': dot } }, (it) => nominal(it, REFS_42))
+  updated.agentRunner.review = lenses({ consistency: [says('consistency', 'pass'), says('consistency', 'fail', [finding('F1', 'blocker', 'the description names no test')])] })
+  await updated.start(FRENCH)
+  assert.ok(updated.codeHost.comments[0].body.includes('\nPull request : https://github.example.com/acme/shop/pull/42 (mise à jour)\n'), updated.codeHost.comments[0].body)
+
+  const mutated = scripted({ config: CONSENTED, codeHost: french(), machine: new ScriptedMachine(), answers: [{ answer: 'APPLY' }, { answer: 'APPLY' }] }, (it) => [...nominal(it, REFS_42), agent()(it), killer(it), agent()(it), killer(it)])
+  mutated.machine.meanwhile[STRYKER] = async () => {
+    mutated.machine.exits[STRYKER] = 1
+    await mutated.workspace.write(MUTATION_REPORT, CHECKOUT_SURVIVORS)
+  }
+  assert.equal((await mutated.start(FRENCH)).code, 'mutation-stalled')
+  const stalled = mutated.codeHost.comments[0].body
+  assert.ok(stalled.includes('\n- api/mutation fail, 2 mutants survivants · `gates/api/mutation-3.log`\n'), stalled)
+  assert.ok(stalled.includes('\n### skraft · checkout — run bloqué\n\nbloqué (mutation-stalled)\n\n'), stalled)
+  assert.ok(stalled.includes('\n- [ ] DELIVER — arrêté ici\n'), stalled)
 })

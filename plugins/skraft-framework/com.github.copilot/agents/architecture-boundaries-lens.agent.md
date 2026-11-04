@@ -7,17 +7,19 @@ tools:
   - search/codebase
 skills:
   - clean-architecture-testing
+  - craft-discipline
 metadata:
   dispatched_by: skraft-engine
   skills:
     - clean-architecture-testing
+    - craft-discipline
 ---
 
 # Architecture Boundaries Lens
 
 Find every Clean Architecture breach in the production code and unit tests the DELIVER changes hold. Report; never repair.
 
-Read the skill file your brief lists under Skill before any other input; judge with its criteria and your table.
+Read the skill files your brief lists under Skill before any other input; judge with their criteria and your table.
 
 - Read the patch; open a whole file only when the patch lacks the context a finding needs.
 - Open `docs/adr/decisions-index.md` and every `contracts-*.md` the documents your brief lists hold.
@@ -33,7 +35,7 @@ Read the skill file your brief lists under Skill before any other input; judge w
 
 ## G4 — no double on Domain or Application
 
-Scan every unit test file the patch touches (`*.UnitTest`, `tests/unit/` or the unit test project your skill maps to the stack):
+Scan every unit test file the patch touches (`*.UnitTest(s)`, `*.Tests`, `tests/unit/` or the unit test project your skill maps to the stack):
 - `A.Fake<>`, `Mock<>`, `Substitute.For<>` or the stack's equivalent on a Domain or Application type → blocker.
 - A double of an output gateway interface (repository, gateway, publisher) → not a finding.
 
@@ -44,7 +46,9 @@ Scan every unit test file the patch touches (`*.UnitTest`, `tests/unit/` or the 
 
 ## G10 — Object Calisthenics on Domain
 
-1. One level of indentation per method
+Judge each rule by its definition in `craft-discipline` C10 and its reference `references/object-calisthenics.md`:
+
+1. One level of indentation per method: no control structure nested inside another; guard clauses in sequence are one level, never a finding
 2. No `else` keyword
 3. Wrap primitive types
 4. First-class collections

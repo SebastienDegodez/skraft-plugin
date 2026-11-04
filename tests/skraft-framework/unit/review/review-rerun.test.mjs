@@ -562,7 +562,7 @@ test('a lens reads the skills its descriptor lists before any other input, and s
 test('a changed path that is no readable file, such as a nested repository, is reviewed by its name', async () => {
   const host = scripted({}, (it) => [
     ...nominal(it).slice(0, 3),
-    agent({ work: (work) => { tddCycle()(work); work.git.change('src/PaymentsSdk') } })(it),
+    agent({ work: (work) => { tddCycle()(work); work.git.commit('chore(checkout): vendor the payments SDK', ['src/PaymentsSdk']) } })(it),
   ])
   const read = host.deps.workspace.read.bind(host.deps.workspace)
   host.deps.workspace.read = async (path) => {

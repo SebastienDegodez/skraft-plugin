@@ -5,8 +5,9 @@ Calisthenics rules applied to Domain layer code in the skraft context.
 ## Verified Rules (G10)
 
 ### 1. One level of indentation per method
-No nested `if` inside a `for` inside an `if`.
-Extract to private methods or collaborating objects.
+No control structure nested inside another (`if` inside a `for` inside an `if`).
+Guard clauses in sequence (`if (…) return …;` one after the other) are one level, never a violation.
+Extract nesting to private methods or collaborating objects.
 
 ### 2. No `else` keyword
 Use early return, polymorphism, or strategy pattern.

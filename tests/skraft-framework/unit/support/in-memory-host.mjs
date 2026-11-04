@@ -591,6 +591,9 @@ export const SHIPPED_COMPONENT_SKILLS = Object.freeze([
   'contract-testing', 'contract-testing-dotnet', 'contract-testing-python',
 ])
 
+/** The skills holding the gates a producer's review judges its outputs by. */
+export const SHIPPED_CHECKLIST_SKILLS = Object.freeze(['acceptance-review-criteria'])
+
 /**
  * Agents by where they come from; the plugin ships the pipeline's own by default. Each agent
  * declares skill names; a skill is provided when `skillFiles` holds its SKILL.md text, found at
@@ -601,7 +604,7 @@ export class InMemoryAgentCatalog {
    * @param {{ plugin?: string[], repository?: string[], skills?: Record<string, string[]>, skillFiles?: Record<string, string>, skillRoot?: string }} [agents]
    *   skills: the skill names each agent declares; skillFiles: SKILL.md text by skill name
    */
-  constructor({ plugin = PLUGIN_AGENTS, repository = [], skills = {}, skillFiles = Object.fromEntries(SHIPPED_COMPONENT_SKILLS.map((name) => [name, '# skill\n'])), skillRoot = '/plugin/skills' } = {}) {
+  constructor({ plugin = PLUGIN_AGENTS, repository = [], skills = {}, skillFiles = Object.fromEntries([...SHIPPED_COMPONENT_SKILLS, ...SHIPPED_CHECKLIST_SKILLS].map((name) => [name, '# skill\n'])), skillRoot = '/plugin/skills' } = {}) {
     this.plugin = new Set(plugin)
     this.repository = new Set(repository)
     this.skillsByAgent = skills
@@ -609,6 +612,7 @@ export class InMemoryAgentCatalog {
     this.skillRoot = skillRoot
   }
   async locate(agent) { return this.plugin.has(agent) ? 'plugin' : this.repository.has(agent) ? 'repository' : null }
+  async descriptor(agent) { return this.plugin.has(agent) ? `/plugin/agents/${agent}.md` : this.repository.has(agent) ? `/work/.claude/agents/${agent}.md` : null }
   async skill(name) { return name in this.skillFiles ? { name, path: `${this.skillRoot}/${name}/SKILL.md`, text: this.skillFiles[name] } : null }
   async skills(agent) {
     const names = this.skillsByAgent[agent] ?? []

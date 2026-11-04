@@ -4,6 +4,9 @@
  */
 export const outputPath = (pattern, { date, slug }) => pattern.replaceAll('{date}', date).replaceAll('{slug}', slug)
 
+/** The template an output starts from, in the story's language. @param {string} pattern a template name, `{language}` in it or not @param {import('../reporting/language.mjs').Language} language */
+export const templateName = (pattern, language) => pattern.replaceAll('{language}', language)
+
 /** The UTC calendar day of an instant, `YYYY-MM-DD`. @param {Date} instant */
 export const dayOf = (instant) => instant.toISOString().slice(0, 10)
 

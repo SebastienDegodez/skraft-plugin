@@ -4,19 +4,20 @@ import { cell, code, embedded, inert, oneLine, openFence } from './markdown-safe
 import { screenshotLines } from './visuals.mjs'
 import { detailParts, pointerOf, roomOf } from './run-details.mjs'
 import { layerCounts } from './test-plan-layers.mjs'
+import { counted, DESCRIPTION_WORDS, PULL_REQUEST_FILE } from './pull-request-words.mjs'
+import { asksAction, reviewCount, stepTable } from './review-table.mjs'
 
 /**
  * The description of the pull request a run opens, as "Writing good CL descriptions" lays it
  * out: a summary line, then what and why, then the facts the engine read in the journal, each
- * section saying so when this run recorded nothing for it. Only What changes, Why and Out of
- * scope come from the pr-writer agent. What a reviewer decides on shows under a heading; the
+ * section saying so when this run recorded nothing for it, every fixed text in the story's
+ * language. Only What changes, Why and Out of scope come from the pr-writer agent. What a reviewer decides on shows under a heading; the
  * details fold in a block that opens on a click, its summary the heading and what it counts.
  *
  * @typedef {import('./pull-request-prose.mjs').Prose} Prose
  * @typedef {import('./run-facts.mjs').RedCommit} RedCommit
  * @typedef {import('./run-facts.mjs').GateFact} GateFact
  * @typedef {import('./run-facts.mjs').ReviewFacts} ReviewFacts
- * @typedef {import('./run-facts.mjs').FindingLine} FindingLine
  * @typedef {{
  *   slug: string, story: { issue?: number | null, title?: string | null } | null, link: string | null, prose: Prose | null,
  *   adrs: Array<{ path: string, number: number, title: string | null }>, unlocked: Array<{ node: string, reason: string }>,
@@ -30,7 +31,7 @@ import { layerCounts } from './test-plan-layers.mjs'
  *   visuals: what the run's last visuals step recorded, null without one; repository: the one the
  *   remote names on its forge, where the kept screenshots are shown from; bodyLimit: the
  *   longest body its forge takes, commentLimit: the longest comment; language: the story's, which the
- *   comments of the run details are titled in; testPlans: the test plans DISTILL wrote, matrices: the
+ *   description and the comments of the run details are written in; testPlans: the test plans DISTILL wrote, matrices: the
  *   consistency matrices DESIGN wrote, those of the latest attempt that wrote any, none when the journal
  *   names none or the tracking folder lost them.
  * @typedef {{ path: string, text: string }} TrackedDocument
@@ -40,20 +41,19 @@ import { layerCounts } from './test-plan-layers.mjs'
  *   the folded sections when the whole body is past bodyLimit, none otherwise.
  */
 
-/** The description of the pull request, kept in the tracking folder. */
-export const PULL_REQUEST_FILE = 'pull-request.md'
+export { PULL_REQUEST_FILE }
 /** Its body alone, which the pull request is opened or updated with. */
 export const PULL_REQUEST_BODY_FILE = 'pull-request-body.md'
 
-/** What ends a section cut to keep the body within the forge's limit. */
-const CUT = `[cut: the description holds more than a pull request takes; read it whole in the tracking folder, ${PULL_REQUEST_FILE}]`
+/** The words of the description, in the story's language. @param {{ language: import('./language.mjs').Language }} facts */
+const wordsOf = ({ language }) => DESCRIPTION_WORDS[language]
 
 /**
  * The description whole, and the body the pull request takes: the same while it holds at most the
  * forge's bodyLimit characters. Past it, the body keeps what decides (the sections shown under a
- * heading, those open on a gate that failed or a finding for a human) and a fixed line that sends
+ * heading, those open on a gate that failed or a finding to fix or to decide) and a fixed line that sends
  * to the comments; the folded sections go to `details`, one comment per part. What decides is cut
- * with CUT only when it alone is past the limit.
+ * with the fixed mark only when it alone is past the limit.
  * @param {PullRequestFacts} facts @returns {PullRequest}
  */
 export const renderPullRequest = (facts) => {
@@ -70,13 +70,13 @@ const split = (facts, sections) => {
   const body = fitted(facts, sections.filter(({ detail }) => !detail), [pointerOf(facts.language)])
   const folded = sections.filter(({ detail }) => detail)
   const room = roomOf(facts, folded.length)
-  return { body, details: detailParts(facts, folded.map((section) => blockOf(section, room))) }
+  return { body, details: detailParts(facts, folded.map((section) => blockOf(section, room, wordsOf(facts).cut))) }
 }
 
-/** A section as one block of a comment, cut to the room a comment leaves it. @param {Section} section @param {number} room */
-const blockOf = (section, room) => {
+/** A section as one block of a comment, cut to the room a comment leaves it. @param {Section} section @param {number} room @param {string} mark */
+const blockOf = (section, room, mark) => {
   const block = linesOf(section).join('\n')
-  return block.length <= room ? block : linesOf(cut(section, block.length - room)).join('\n')
+  return block.length <= room ? block : linesOf(cut(section, block.length - room, mark)).join('\n')
 }
 
 /**
@@ -104,26 +104,27 @@ const fitted = (facts, sections, tail) => {
   const excess = body.length - facts.bodyLimit
   // Stryker disable next-line EqualityOperator: a body of exactly bodyLimit cut by nothing is the same body
   if (excess <= 0) return body
-  const first = sections.reduce((best, section, index) => (cutBefore(section, sections[best]) ? index : best), 0)
-  const shorter = sections.map((section, index) => (index === first ? cut(section, excess) : section))
-  return bodyOf(facts, shorter, tail).length < body.length ? fitted(facts, shorter, tail) : cutWhole(body, facts.bodyLimit)
+  const { cut: mark } = wordsOf(facts)
+  const first = sections.reduce((best, section, index) => (cutBefore(section, sections[best], mark) ? index : best), 0)
+  const shorter = sections.map((section, index) => (index === first ? cut(section, excess, mark) : section))
+  return bodyOf(facts, shorter, tail).length < body.length ? fitted(facts, shorter, tail) : cutWhole(body, facts.bodyLimit, mark)
 }
 
-/** The body's first characters, without a tag or block left open, then a blank line and CUT. @param {string} body @param {number} limit */
-const cutWhole = (body, limit) => `${closed(body.slice(0, limit - CUT.length - 2))}\n\n${CUT}`
+/** The body's first characters, without a tag or block left open, then a blank line and the mark. @param {string} body @param {number} limit @param {string} mark */
+const cutWhole = (body, limit, mark) => `${closed(body.slice(0, limit - mark.length - 2))}\n\n${mark}`
 
-/** A section that yields is cut before one that does not, else the longer first. @param {Section} section @param {Section} other */
-const cutBefore = (section, other) => {
+/** A section that yields is cut before one that does not, else the longer first. @param {Section} section @param {Section} other @param {string} mark */
+const cutBefore = (section, other, mark) => {
   // Stryker disable next-line EqualityOperator: of two sections of the same length, either is the longest
-  if (yields(section) === yields(other)) return section.text.length > other.text.length
-  return yields(section)
+  if (yields(section, mark) === yields(other, mark)) return section.text.length > other.text.length
+  return yields(section, mark)
 }
 
-/** A section with text left to give, not open on what blocks the work or waits on a human. @param {Section} section */
-const yields = ({ open, text }) => !open && text.length > CUT.length + 2
+/** A section with text left to give, not open on what blocks the work or waits on a human. @param {Section} section @param {string} mark */
+const yields = ({ open, text }, mark) => !open && text.length > mark.length + 2
 
-/** The section without as many of its last characters as the excess takes, then a blank line and CUT. @param {Section} section @param {number} excess */
-const cut = ({ head, text, foot, open, detail }, excess) => ({ head, foot, open, detail, text: `${closed(text.slice(0, Math.max(0, text.length - excess - CUT.length - 2)))}\n\n${CUT}` })
+/** The section without as many of its last characters as the excess takes, then a blank line and the mark. @param {Section} section @param {number} excess @param {string} mark */
+const cut = ({ head, text, foot, open, detail }, excess, mark) => ({ head, foot, open, detail, text: `${closed(text.slice(0, Math.max(0, text.length - excess - mark.length - 2)))}\n\n${mark}` })
 
 /** A text cut inside a tag, inside a block it folds (the dark screenshots) or inside a code block, without that tag or block, nor the blanks it ends on. @param {string} text */
 const closed = (text) => {
@@ -144,13 +145,16 @@ const titleOf = ({ prose, story, slug }) => {
 /** The line that links the pull request to its story, as its forge writes it; none without one. @param {PullRequestFacts} facts */
 const issueLine = ({ link }) => (link === null ? [] : [link, ''])
 
-/** @param {string} what */
-const notWritten = (what) => [`Not written: the run has no pr-writer step that wrote ${what}.`]
+/** @typedef {import('./pull-request-words.mjs').Words} Words */
+
+/** What a section of the pr-writer says when no pr-writer wrote it. @param {keyof Words['notWritten']} key @returns {Lines} */
+const notWritten = (key) => (facts) => [wordsOf(facts).notWritten[key]]
 
 /** @typedef {(facts: PullRequestFacts) => string[]} Lines */
+/** @typedef {keyof Words['headings']} Heading */
 
-/** A section under its heading. @param {string} heading @param {Lines} lines @returns {(facts: PullRequestFacts) => Section} */
-const shown = (heading, lines) => (facts) => ({ head: `## ${heading}`, text: lines(facts).join('\n'), foot: [], open: false, detail: false })
+/** A section under its heading. @param {Heading} heading @param {Lines} lines @returns {(facts: PullRequestFacts) => Section} */
+const shown = (heading, lines) => (facts) => ({ head: `## ${wordsOf(facts).headings[heading]}`, text: lines(facts).join('\n'), foot: [], open: false, detail: false })
 
 /**
  * @typedef {{ count: string | null, open: boolean }} Fold
@@ -163,132 +167,104 @@ const FOLDED = Object.freeze({ count: null, open: false })
 
 /**
  * A section in a block whose summary is its heading, then what it counts when it counts something.
- * @param {string} heading @param {Lines} lines @param {(facts: PullRequestFacts) => Fold} fold
+ * @param {Heading} key @param {Lines} lines @param {(facts: PullRequestFacts) => Fold} fold
  * @returns {(facts: PullRequestFacts) => Section}
  */
-const folded = (heading, lines, fold = () => FOLDED) => (facts) => {
+const folded = (key, lines, fold = () => FOLDED) => (facts) => {
   const { count, open } = fold(facts)
+  const heading = wordsOf(facts).headings[key]
   return { head: `<details${open ? ' open' : ''}><summary>${count === null ? heading : `${heading}: ${count}`}</summary>`, text: lines(facts).join('\n'), foot: ['', '</details>'], open, detail: !open }
 }
-
-/** The command a developer runs to find the tests that kill no mutant on their own. */
-const PRUNE_LINE = 'To find the tests that kill no mutant on their own, the developer runs `/skraft:prune-tests` on a component; it proposes, the developer decides each test.'
-const DOMAIN_HEAVY = 'More Domain tests than acceptance tests'
 
 /** @typedef {import('./test-plan-layers.mjs').LayerCounts} LayerCounts */
 
 /** The test plans plan more Domain tests than acceptance tests. @param {LayerCounts} counts */
 const domainHeavy = ({ domain, acceptance }) => domain > acceptance
 
-/** @param {LayerCounts} counts */
-const domainHeavyLine = ({ domain, acceptance }) => `The test plans count ${counted(domain, 'Domain row')} against ${counted(acceptance, 'acceptance row')} (Application and E2E). ${PRUNE_LINE}`
+/** @param {Words} words @param {LayerCounts} counts */
+const domainHeavyLine = (words, { domain, acceptance }) => `${words.domainHeavy(counted(words, domain, words.domainRow), counted(words, acceptance, words.acceptanceRow))} ${words.prune}`
 
 /** The suggestion in the clear, under its heading, when the test plans are Domain heavy. @param {PullRequestFacts} facts @param {LayerCounts} counts */
-const domainHeavySection = (facts, counts) => (domainHeavy(counts) ? shown(DOMAIN_HEAVY, () => [domainHeavyLine(counts)])(facts) : null)
+const domainHeavySection = (facts, counts) => (domainHeavy(counts) ? shown('domainHeavy', () => [domainHeavyLine(wordsOf(facts), counts)])(facts) : null)
 
 /** @type {ReadonlyArray<(facts: PullRequestFacts, counts: LayerCounts) => Section | null>} */
 const SECTIONS = Object.freeze([
-  shown('What changes', ({ prose }) => (prose === null ? notWritten('what changes') : [inert(prose.what)])),
-  shown('Why', ({ prose }) => (prose === null ? notWritten('why') : [inert(prose.why)])),
-  shown('Decisions applied', (facts) => decisionLines(facts)),
-  folded('Consistency matrix', ({ matrices }) => documentLines(matrices, NO_MATRIX)),
-  folded('Tests', ({ testPlans }) => documentLines(testPlans, NO_TEST_PLAN)),
-  folded('RED evidence', ({ reds }) => redLines(reds), ({ reds }) => ({ count: counted(reds.length, 'red commit'), open: false })),
-  folded('Quality gates', ({ gates }) => gateLines(gates), ({ gates }) => gateFold(gates)),
-  folded('Review', ({ review }) => reviewLines(review), ({ review }) => reviewFold(review)),
-  folded('Screenshots', ({ visuals, repository }) => screenshotLines(visuals, repository)),
+  shown('what', (facts) => (facts.prose === null ? notWritten('what')(facts) : [inert(facts.prose.what)])),
+  shown('why', (facts) => (facts.prose === null ? notWritten('why')(facts) : [inert(facts.prose.why)])),
+  shown('decisions', (facts) => decisionLines(facts)),
+  folded('matrix', (facts) => documentLines(facts.matrices, wordsOf(facts), 'noMatrix')),
+  folded('tests', (facts) => documentLines(facts.testPlans, wordsOf(facts), 'noTestPlan')),
+  folded('red', (facts) => redLines(facts.reds, wordsOf(facts)), (facts) => ({ count: counted(wordsOf(facts), facts.reds.length, wordsOf(facts).redCommit), open: false })),
+  folded('gates', (facts) => gateLines(facts.gates, wordsOf(facts)), (facts) => gateFold(facts.gates, wordsOf(facts))),
+  folded('review', (facts) => reviewLines(facts.review, wordsOf(facts)), (facts) => reviewFold(facts.review, wordsOf(facts))),
+  folded('screenshots', ({ visuals, repository, language }) => screenshotLines(visuals, repository, language)),
   domainHeavySection,
-  shown('Out of scope and limitations', ({ prose }) => (prose === null ? notWritten('what is out of scope') : [inert(prose.limitations)])),
-  (facts, counts) => folded('Run summary', ({ status, report }) => [status, '', ...reportTable(report), ...(domainHeavy(counts) ? [] : ['', PRUNE_LINE])])(facts),
-  folded('AI disclosure', ({ models }) => [disclosure(models)]),
+  shown('limitations', (facts) => (facts.prose === null ? notWritten('limitations')(facts) : [inert(facts.prose.limitations)])),
+  (facts, counts) => folded('summary', ({ status, report, language }) => [status, '', ...reportTable(report, language), ...(domainHeavy(counts) ? [] : ['', wordsOf(facts).prune])])(facts),
+  folded('disclosure', (facts) => [disclosure(facts.models, wordsOf(facts))]),
 ])
 
-/** What a section of a document says when the run has none, or it is empty. */
-const NO_MATRIX = 'None recorded: the tracking folder holds no consistency matrix of this run (DESIGN writes it).'
-const NO_TEST_PLAN = 'None recorded: the tracking folder holds no test plan of this run (DISTILL writes it).'
-
-/** Where each document of the tracking folder is, then what it says, made inert; the fixed text when there is none. @param {TrackedDocument[]} documents @param {string} none */
-const documentLines = (documents, none) => {
-  const shown = documents.map(shownDocument).filter((lines) => lines.length > 0)
-  return shown.length === 0 ? [none] : shown.flatMap((lines, n) => (n === 0 ? lines : ['', ...lines]))
+/** Where each document of the tracking folder is, then what it says, made inert; the fixed text when there is none. @param {TrackedDocument[]} documents @param {Words} words @param {'noMatrix' | 'noTestPlan'} none */
+const documentLines = (documents, words, none) => {
+  const shown = documents.map((document) => shownDocument(document, words)).filter((lines) => lines.length > 0)
+  return shown.length === 0 ? [words[none]] : shown.flatMap((lines, n) => (n === 0 ? lines : ['', ...lines]))
 }
 
-/** @param {TrackedDocument} document */
-const shownDocument = ({ path, text }) => {
+/** @param {TrackedDocument} document @param {Words} words */
+const shownDocument = ({ path, text }, words) => {
   const inertText = embedded(text).trim()
-  return inertText === '' ? [] : [`From ${code(path)} in the tracking folder:`, '', inertText]
+  return inertText === '' ? [] : [words.from(code(path)), '', inertText]
 }
 
-/** @param {number} count @param {string} noun */
-const counted = (count, noun) => `${count} ${noun}${count === 1 ? '' : 's'}`
-
-/** The gates that failed and those that passed, nothing when none ran; open while one failed. @param {GateFact[]} gates @returns {Fold} */
-const gateFold = (gates) => {
+/** The gates that failed and those that passed, nothing when none ran; open while one failed. @param {GateFact[]} gates @param {Words} words @returns {Fold} */
+const gateFold = (gates, words) => {
   if (gates.length === 0) return FOLDED
   const failed = gates.filter(({ status }) => status === 'fail').length
-  return { count: `${failed > 0 ? `${failed} failed, ` : ''}${gates.length - failed} passed`, open: failed > 0 }
+  return { count: `${failed > 0 ? `${failed} ${words.failed}, ` : ''}${counted(words, gates.length - failed, words.passed)}`, open: failed > 0 }
 }
 
-/** The findings the Review section shows and those left for a human; open while one is. @param {ReviewFacts} review @returns {Fold} */
-const reviewFold = ({ counted: counting, refuted, forHuman }) => {
-  const findings = counted(counting.length + refuted.length + forHuman.length, 'finding')
-  return { count: forHuman.length > 0 ? `${findings}, ${forHuman.length} for a human` : findings, open: forHuman.length > 0 }
-}
+/** The lines of the review by status, nothing when it holds none; open while one asks for an action. @param {ReviewFacts} review @param {Words} words @returns {Fold} */
+const reviewFold = (review, words) => ({ count: reviewCount(review, words), open: asksAction(review) })
 
 /** @param {PullRequestFacts} facts */
-const decisionLines = ({ adrs, unlocked }) => {
+const decisionLines = (facts) => {
+  const words = wordsOf(facts)
   const lines = [
-    ...adrs.map(({ path, number, title }) => `- ADR-${String(number).padStart(3, '0')}${title ? ` ${title}` : ''} (${code(path)}), ratified in this run`),
-    ...unlocked.map(({ node, reason }) => `- Locked gate ${code(node)} skipped, unlocked: ${oneLine(reason)}`),
+    ...facts.adrs.map(({ path, number, title }) => `- ADR-${String(number).padStart(3, '0')}${title ? ` ${title}` : ''} (${code(path)}), ${words.ratified}`),
+    ...facts.unlocked.map(({ node, reason }) => `- ${words.unlocked(code(node), oneLine(reason))}`),
   ]
-  return lines.length > 0 ? lines : ['None recorded: no ADR was ratified and no locked gate was unlocked in this run.']
+  return lines.length > 0 ? lines : [words.noDecision]
 }
 
-/** @param {RedCommit[]} reds */
-const redLines = (reds) => (reds.length === 0
-  ? ['None recorded: no red commit was accepted in this run.']
+/** @param {RedCommit[]} reds @param {Words} words */
+const redLines = (reds, words) => (reds.length === 0
+  ? [words.noRed]
   : [
-    '| Commit | Subject | Replay exit code |',
+    words.redHeader,
     '| --- | --- | ---: |',
-    ...reds.map(({ sha, subject, exitCode }) => `| ${code(sha)} | ${cell(subject)} | ${exitCode ?? 'not replayed'} |`),
+    ...reds.map(({ sha, subject, exitCode }) => `| ${code(sha)} | ${cell(subject)} | ${exitCode ?? words.notReplayed} |`),
     '',
-    'Output excerpts of the replays are not recorded yet.',
+    words.noExcerpt,
   ])
 
-/** @param {GateFact[]} gates */
-const gateLines = (gates) => (gates.length === 0
-  ? ['None recorded: no gate ran in this run.']
+/** @param {GateFact[]} gates @param {Words} words */
+const gateLines = (gates, words) => (gates.length === 0
+  ? [words.noGate]
   : [
-    '| Component | Gate | Command | Result | Time | Evidence |',
+    words.gateHeader,
     '| --- | --- | --- | --- | ---: | --- |',
     ...gates.map(({ component, gate, command, status, durationMs, evidence }) => `| ${component} | ${gate} | ${cell(code(command))} | ${status} | ${durationText(durationMs)} | ${cell(code(evidence))} |`),
   ])
 
-/** @param {ReviewFacts} review */
-const reviewLines = ({ counted, refuted, forHuman }) => {
-  if ([counted, refuted, forHuman].every((lines) => lines.length === 0)) return ['Every lens of the last pass of each review passed without a finding.']
-  return [
-    ...findingBlock('Findings that count', counted, () => ''),
-    ...findingBlock('Refuted by the finding refuter', refuted, (line) => ` — refuted: ${told(line.finding.reason)}`),
-    ...findingBlock('For the human: found by one lens alone, against the lenses that passed', forHuman, (line) => ` — ${line.finding.verdict}${line.finding.reason ? `: ${told(line.finding.reason)}` : ''}`),
-  ]
-}
+/** One table per review step under its name. @param {ReviewFacts} review @param {Words} words */
+const reviewLines = (review, words) => (review.length === 0
+  ? [words.allPassed]
+  : review.flatMap(({ step, lines }, index) => [...(index === 0 ? [] : ['']), `**${step}**`, '', ...stepTable(lines, words)]))
 
-/** @param {string} title @param {FindingLine[]} lines @param {(line: FindingLine) => string} after */
-const findingBlock = (title, lines, after) => (lines.length === 0 ? [] : [
-  `${title}:`,
-  '',
-  ...lines.map((line) => `- ${line.finding.step} · ${line.cited} (${line.finding.severity}) ${code(line.finding.location)}: ${told(line.finding.description)}${after(line)}`),
-  '',
-])
-
-/** @param {{ families: string[], models: string[] }} models */
-const disclosure = ({ families, models }) => [
-  'This pull request was prepared by skraft with AI agents',
-  families.length > 0 ? ` on the model families ${families.join(', ')}` : '',
-  models.length > 0 ? ` (models the host named: ${models.join(', ')})` : ' (the host named no model)',
-  '. What changes, Why and Out of scope were written by the pr-writer agent; every other section is rendered by the engine from the run\'s journal. A human reviews it before it merges.',
+/** @param {{ families: string[], models: string[] }} models @param {Words} words */
+const disclosure = ({ families, models }, words) => [
+  words.preparedBy,
+  families.length > 0 ? words.families(families.join(', ')) : '',
+  models.length > 0 ? words.models(models.join(', ')) : words.noModel,
+  words.writtenBy,
 ].join('')
-
-/** What a lens or the refuter wrote, inert and on one line. @param {string | null} text */
-const told = (text) => inert(oneLine(text ?? ''))

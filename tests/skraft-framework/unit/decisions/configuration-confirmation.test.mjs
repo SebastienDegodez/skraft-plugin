@@ -35,7 +35,7 @@ test('a working copy whose configuration nobody confirmed is asked once, before 
 
   assert.deepEqual(waiting, { status: 'waiting', slug: SLUG, phase: null, code: 'configuration', reason: `${QUESTION} Answer with skraft decide configuration-1 START|STOP.` })
   assert.deepEqual(host.human.questions.map(({ key, kind, text, options, refusals, header }) => [key, kind, text, options, refusals, header]), [
-    ['configuration-1', 'configuration', QUESTION, ['START', 'STOP'], [], 'Configuration'],
+    ['configuration-1', 'configuration', QUESTION, ['START', 'STOP'], [], 'Config'],
   ])
   assert.deepEqual(host.types(), ['run.started', 'question.asked'])
   assert.deepEqual(host.agentRunner.dispatches, [])

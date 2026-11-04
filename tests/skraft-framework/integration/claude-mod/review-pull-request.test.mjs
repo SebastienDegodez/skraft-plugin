@@ -37,6 +37,14 @@ test('/skraft review <number> [--publish] is a review request, never a slug', ()
   assert.deepEqual(parseSkraftCommand('review twelve'), { command: 'review', number: null, publish: false })
 })
 
+test('/skraft review --pr <number>, as the CLI types it, is the same review request', () => {
+  assert.deepEqual(parseSkraftCommand('review --pr 4 --publish'), { command: 'review', number: 4, publish: true })
+  assert.deepEqual(parseSkraftCommand('review --publish --pr 12'), { command: 'review', number: 12, publish: true })
+  assert.deepEqual(parseSkraftCommand('review --pr'), { command: 'review', number: null, publish: false })
+  assert.deepEqual(parseSkraftCommand('review --pr 12 13'), { command: 'review', number: null, publish: false })
+  assert.deepEqual(parseSkraftCommand('review 12 --pr'), { command: 'review', number: null, publish: false })
+})
+
 test('/skraft review 12 spawns the lenses together, then the refuter, and notifies NEEDS_REWORK on the weakened assertion', async (t) => {
   const repo = pullRequestRepository(t)
   const mod = await modOn(repo)
@@ -62,7 +70,7 @@ test('/skraft review 12 --publish asks the consent in the dialog, then keeps one
   const outcome = await mod.settled()
 
   assert.equal(outcome.comment, COMMENT_URL)
-  assert.deepEqual(mod.asked.map(({ options }) => options), [{ options: ['ACCEPTED', 'DECLINED'], header: 'Review comment' }])
+  assert.deepEqual(mod.asked.map(({ options }) => options), [{ options: ['ACCEPTED', 'DECLINED'], header: 'PR comment' }])
   assert.equal(repo.forge.state().comments.length, 1)
   assert.deepEqual(JSON.parse(readFileSync(join(`${repo.cwd}-home`, '.skraft', 'config.json'), 'utf8')).reviewComments, { 'github.example.com/acme/shop': { accepted: true, questionVersion: 1 } })
 })

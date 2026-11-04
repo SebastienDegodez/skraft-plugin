@@ -2,11 +2,11 @@ import { CONFIG_FILE } from '../../domain/config/skraft-config.mjs'
 import { deriveRun, redByGates } from '../../domain/journal/run-state.mjs'
 import { DEFAULT_ATTEMPTS, nextStep } from '../../domain/pipeline/next-step.mjs'
 import { composeBrief, dispatchLabel } from '../../domain/pipeline/dispatch-brief.mjs'
-import { dayOf, isFilled, outputPath } from '../../domain/pipeline/outputs.mjs'
+import { dayOf, isFilled, outputPath, templateName } from '../../domain/pipeline/outputs.mjs'
 import { isDocument, writtenDocuments } from '../../domain/pipeline/documents.mjs'
 import { SCAN_FILE } from '../../domain/pipeline/structural-scan.mjs'
 import { proposalPath, proposalTemplate } from '../../domain/pipeline/proposals.mjs'
-import { allowedPaths, makesCommits, roleOf } from '../../domain/pipeline/roles.mjs'
+import { allowedPaths, checklistsOf, makesCommits, roleOf } from '../../domain/pipeline/roles.mjs'
 import { writesComponentTests } from '../../domain/pipeline/component-skills.mjs'
 import { REPLAY_SHARE } from '../../domain/pipeline/commits.mjs'
 import { RUN_REPORT_FILE, renderRunReport, runReport } from '../../domain/reporting/run-report.mjs'
@@ -15,6 +15,7 @@ import { QA_REPORT_FILE, renderQaReport } from '../../domain/reporting/qa-report
 import { statusLine } from '../../domain/reporting/run-status.mjs'
 import { renderWorkflowView, WORKFLOW_FILE } from '../../domain/reporting/workflow-view.mjs'
 import { aliveCount, groupSurvivors, isStalled, ROUNDS_WITHOUT_PROGRESS } from '../../domain/gates/mutation-report.mjs'
+import { gatesOf } from '../../domain/gates/gate-plan.mjs'
 import { openActiveRun } from './active-run.mjs'
 import { holdRun, LockLost, writingWhileHeld } from './run-lock.mjs'
 import { baseOf, loadConfig } from '../config/bases.mjs'
@@ -29,7 +30,9 @@ import { answerOrWait, askStep, blockQuestion, escalate, settleEnvironment } fro
 import { confirmConfiguration } from './configuration-question.mjs'
 import { publishStep } from './publish-step.mjs'
 import { reportProgress } from '../publish/issue-progress.mjs'
+import { storyLanguage } from '../publish/story-language.mjs'
 import { checkStep, headsOf } from './step-checks.mjs'
+import { commitForAgent } from './agent-commits.mjs'
 import { writeStructuralScan } from './structural-scan.mjs'
 import { findComponentSkills } from './component-skills.mjs'
 import { proposedAdrs } from '../decisions/adr-ratification.mjs'
@@ -323,10 +326,13 @@ const refusalDetails = ({ deps, slug }, event) => [
  *   agent: string, role: ReturnType<typeof roleOf>, outputs: string[], result: string,
  *   precreated: (string | null)[], scan: string | null, skills: import('./component-skills.mjs').FoundSkills, drafts: string[],
  *   assignment: import('../../domain/config/model-assignment.mjs').ResolvedAssignment,
+ *   language: import('../../domain/reporting/language.mjs').Language, checklists: string[],
  * }} Job
  *   what an attempt of an agent node is asked to write, the templates it starts from, and the
  *   structural scan the engine wrote for it to read, and the skills of its components: the SKILL.md files it reads first, those found nowhere;
- *   assignment: what it runs on, the one its open attempt journaled on a resume; drafts: the Proposed ADRs an agent keeping the DESIGN records rewrites in place.
+ *   assignment: what it runs on, the one its open attempt journaled on a resume; drafts: the Proposed ADRs an agent keeping the DESIGN records rewrites in place;
+ *   language: the story's, which its templates are in and the prose of the pull request is written in;
+ *   checklists: the SKILL.md files whose gates the review of its phase judges its outputs by, those found.
  */
 
 /**
@@ -361,25 +367,26 @@ const prepareJob = async (context, run, next) => {
   const agent = /** @type {string} */ (node.agent)
   const role = roleOf(node)
   const date = dayOf(deps.clock.now())
-  const { outputs, precreated } = await outputsOf(context, run, next, role)
+  const language = await storyLanguage(deps, slug, run)
+  const { outputs, precreated } = await outputsOf(context, run, next, { role, language })
   const result = `results/${node.id}-${visit}${group === null ? '' : `-g${group}`}-${attempt}.json`
   const scan = role.scan ? await writeStructuralScan(deps, { slug, path: outputPath(SCAN_FILE, { date, slug }), components: config.components }) : null
-  return { agent, role, outputs, result, precreated, scan, skills: await skillsOf(deps, role, config.components), drafts: await draftsOf(deps, role), assignment: phaseAssignment(context, next) }
+  return { agent, role, outputs, result, precreated, scan, skills: await skillsOf(deps, role, config.components), drafts: await draftsOf(deps, role), assignment: phaseAssignment(context, next), language, checklists: await checklistsFound(deps, agent) }
 }
 
 /**
  * The outputs of an attempt and what the engine writes in each before it: a proposal's, created
  * for its visit and its file of survivors; any other's, kept from the node's first attempt, with
- * their templates.
- * @param {Context} context @param {RunState} run @param {WorkStep} next @param {Job['role']} role
+ * their templates in the story's language.
+ * @param {Context} context @param {RunState} run @param {WorkStep} next @param {Pick<Job, 'role' | 'language'>} job
  * @returns {Promise<Pick<Job, 'outputs' | 'precreated'>>}
  */
-const outputsOf = async ({ deps, slug }, run, next, role) => {
+const outputsOf = async ({ deps, slug }, run, next, { role, language }) => {
   if (role.proposal) return { outputs: [proposalPath({ node: next.node.id, visit: next.visit, group: next.group })], precreated: [proposalTemplate(next)] }
   const date = dayOf(deps.clock.now())
   return {
     outputs: run.nodes[next.node.id]?.outputs ?? role.outputs.map((output) => outputPath(output.path, { date, slug })),
-    precreated: await Promise.all(role.outputs.map((output) => (output.template ? deps.templates.read(output.template) : null))),
+    precreated: await Promise.all(role.outputs.map((output) => (output.template ? deps.templates.read(templateName(output.template, language)) : null))),
   }
 }
 
@@ -393,6 +400,13 @@ const draftsOf = async (deps, role) => {
   const adrs = role.records ? await proposedAdrs(deps) : []
   return typeof adrs === 'string' ? [] : adrs
 }
+
+/**
+ * The SKILL.md files whose gates the review of the agent's phase judges its outputs by, those the
+ * plugin or the working copy provides.
+ * @param {PipelineDeps} deps @param {string} agent
+ */
+const checklistsFound = async ({ agentCatalog }, agent) => (await Promise.all(checklistsOf(agent).map((name) => agentCatalog.skill(name)))).flatMap((file) => (file === null ? [] : [file.path]))
 
 /**
  * The skills of the components, for an agent that writes tests against their code; the agent
@@ -524,17 +538,21 @@ const briefOf = (context, run, next, job) => ({
   feedback: next.feedback,
   sentBy: next.sentBy,
   acceptance: acceptanceCommits(context),
-  ...briefMutants(next, job),
-  drafts: job.drafts,
+  ...briefRole(next, job),
 })
 
 /**
- * The group of surviving mutants the agent works on, and whether it only proposes how to treat them.
+ * The group of surviving mutants the agent works on, whether it only proposes how to treat them,
+ * the Proposed ADRs it rewrites, the language an agent writing the pull request's prose writes in, and
+ * the gates it checks its outputs against.
  * @param {WorkStep} next @param {Job} job
  */
-const briefMutants = ({ group, groups }, { role }) => ({
+const briefRole = ({ group, groups }, { role, drafts, language, checklists }) => ({
   mutants: group === null ? null : { ...groups[group - 1], group, of: groups.length },
   proposal: role.proposal,
+  drafts,
+  language: role.prose ? language : null,
+  checklists,
 })
 
 /**
@@ -575,10 +593,22 @@ const inputsOf = (run, id) => [...run.artifacts, ...Object.entries(run.nodes).fi
  * @param {Context} context @param {RunState} run @param {Job['role']} role
  */
 const briefStack = ({ config }, run, role) => ({
-  components: (role.components.length > 0 ? config.components : []).map(({ name, root, stack, mocking, contractTesting, commands }) => ({ name, root, stack, mocking: mocking.strategy, contractTesting, test: testLine(commands.test, baseOf(run.base, name)?.sha) })),
+  components: (role.components.length > 0 ? config.components : []).map((component) => briefComponent(component, baseOf(run.base, component.name)?.sha)),
   tdd: role.tdd,
   commits: makesCommits(role),
 })
+
+/**
+ * A component as the brief tells it: its test command, and its gate commands but mutation, in
+ * the order the gates step runs them, each with the run's base in place of `{baseSha}`.
+ * @param {import('../../domain/config/skraft-config.mjs').Component} component @param {string | undefined} sha
+ * @returns {import('../../domain/pipeline/dispatch-brief.mjs').BriefComponent}
+ */
+const briefComponent = (component, sha) => {
+  const { name, root, stack, mocking, contractTesting, commands } = component
+  const gates = gatesOf(component).filter((gate) => gate !== 'mutation').map((gate) => ({ gate, line: withBase(commands[gate], sha) }))
+  return { name, root, stack, mocking: mocking.strategy, contractTesting, test: testLine(commands.test, sha), gates }
+}
 
 /**
  * Checks what the attempt did and records it, unless the machine stopped it.
@@ -590,10 +620,24 @@ const judgeAttempt = async (context, run, next, attempt) => {
   const checked = await checkAttempt(context, run, next, attempt)
   if (checked.commits.length > 0) await context.journal.append('commits.checked', { step: next.node.id, visit: next.visit, attempt: next.attempt, commits: checked.commits, ...unsettled(checked) })
   if (checked.environment !== null) return escalate(context, next, checked.environment)
-  await recordAttempt(context, run, next, { ...attempt, checked })
+  const committed = await commitDone(context, run, next, checked)
+  if (typeof committed === 'string') return escalate(context, next, committed)
+  await recordAttempt(context, run, next, { ...attempt, checked, committed })
   await warnSlowReplay(context, next.phase)
   return null
 }
+
+/**
+ * The engine's commit of what a done attempt of an agent with no shell changed in its scope.
+ * @param {Context} context @param {RunState} run @param {WorkStep} next
+ * @param {Extract<Awaited<ReturnType<typeof checkStep>>, { environment: null }>} checked
+ */
+const commitDone = ({ deps, slug }, run, next, checked) => (failedCheck(checked)
+  ? null
+  : commitForAgent(deps, { slug, step: next.node.id, story: run.story }, /** @type {import('./step-checks.mjs').UncommittedFile[]} */ (checked.uncommitted)))
+
+/** @param {{ missing: string[], failures: string[] }} checked */
+const failedCheck = ({ missing, failures }) => missing.length > 0 || failures.length > 0
 
 /**
  * @param {Context} context @param {RunState} run @param {WorkStep} next
@@ -624,10 +668,11 @@ const knownCommits = (journal) => new Map(journal.events
 /**
  * Records the attempt: refused, or done with the node it leads to.
  * @param {Context} context @param {RunState} run @param {WorkStep} next
- * @param {{ job: Job, started: Date, cost?: number, model?: string | null, checked: Awaited<ReturnType<typeof checkStep>> }} attempt
+ * @param {{ job: Job, started: Date, cost?: number, model?: string | null, checked: Awaited<ReturnType<typeof checkStep>>, committed: import('./agent-commits.mjs').EngineCommit | null }} attempt
+ *   committed: the engine's commit of what an agent with no shell changed, journaled with the step
  */
-const recordAttempt = async (context, run, { node, visit, attempt, group, groups }, { job, started, cost, model, checked }) => {
-  const failed = checked.missing.length > 0 || checked.failures.length > 0
+const recordAttempt = async (context, run, { node, visit, attempt, group, groups }, { job, started, cost, model, checked, committed }) => {
+  const failed = failedCheck(checked)
   const routed = failed ? { next: null } : routeDone(context, run, { node, group, groups })
   await context.journal.append('step.recorded', {
     step: node.id, visit, attempt, ...(group === null ? {} : { group }), documents: await documentsWritten(context, job),
@@ -635,7 +680,7 @@ const recordAttempt = async (context, run, { node, visit, attempt, group, groups
     code: failed ? checked.code : routed.code ?? null,
     missing: checked.missing, failures: checked.failures,
     next: routed.next, ceiling: routed.ceiling, reason: routed.reason, model, // undefined on a resume that did not start the agent
-    ...spent(context, started, checked.replayMs, cost),
+    ...spent(context, started, checked.replayMs, cost), ...(committed ? { committed } : {}),
   })
 }
 
@@ -658,7 +703,10 @@ const spent = ({ deps }, started, replayMs, cost) => ({
  * A test command as the agent can run it: the base the run diffs against in place of `{baseSha}`.
  * @param {string | undefined} line @param {string | undefined} sha
  */
-const testLine = (line, sha) => (line === undefined ? null : sha ? line.replaceAll('{baseSha}', sha) : line)
+const testLine = (line, sha) => (line === undefined ? null : withBase(line, sha))
+
+/** A command line with the base the run diffs against in place of `{baseSha}`. @param {string} line @param {string | undefined} sha */
+const withBase = (line, sha) => (sha ? line.replaceAll('{baseSha}', sha) : line)
 
 /**
  * Tells the developer once per phase that replaying red commits takes more than its share of

@@ -349,6 +349,7 @@ test('a refuted blocker or medium does not count; an unverifiable one does; the 
     '- Finding: G1 blocker at src/Checkout.cs:12: the ADR is missing',
     '- Only consistency found a blocker, high or medium finding; architecture-compliance, fitness found none.',
     '- Judge it as the reviewer, with every input of the review: confirm it only when the defect stands with all of them and warrants sending the work back; refute it when the story, a contract or a document shows the work is right as it is, or when its fix would change what they fix, and say why in reason.',
+    '- Lens (read it with the skills: its gate table states the rule of each gate a finding cites): /plugin/agents/consistency-lens.md',
     '- Read these inputs and the files they name; search the repository for nothing else:',
     `  - Review context (story, project rules, who wrote which document): ${TRACKING}/reviews/design_review-1/context.md`,
     `  - Documents of this phase: ${TRACKING}/${MATRIX}`,
@@ -359,6 +360,7 @@ test('a refuted blocker or medium does not count; an unverifiable one does; the 
     `  - Changes since the base of the run (open a whole file only when the patch lacks the context a finding needs): ${TRACKING}/reviews/design_review-1/design.patch`,
     `  - Paths those changes touch (a path with no section in the patch is a new file: open it): ${TRACKING}/reviews/design_review-1/design-files.txt`,
     '- Confirm the finding only when these inputs show it; refute it when they show it is wrong, citing the path:line; say unverifiable when they cannot tell.',
+    '- Judge by the rule of the gate a finding cites, as the lens, the skills and the inputs above state it, with the references a skill names for that gate; a rule no input states is no reason to refute: say unverifiable.',
     '- Write no file, change nothing, start no agent.',
     '- End your answer with this YAML document in a ```yaml block:',
     '```yaml',
@@ -417,7 +419,7 @@ test('a refuted blocker or medium does not count; an unverifiable one does; the 
   assert.match(await kept.tracking.read(SLUG, 'reviews/design_review-2/verdict.yaml'), /^status: "APPROVED"\ncode: null\nsummary: "APPROVED: every lens passed"\nfindings: \[\]\nnotes: \[\]\nrefutations: \[\]\n/)
 })
 
-test('findings of different lenses at the same line with the same severity are checked in one call, each on its own verdict, and the next brief lists those that count once', async () => {
+test('findings of different lenses at the same line with the same severity are checked in one call, each on its own verdict, with the skills and the descriptor of each lens, and the next brief lists those that count once', async () => {
   const catalog = new InMemoryAgentCatalog({
     skills: { 'consistency-lens': ['architecture-review-criteria'], 'architecture-compliance-lens': ['architecture-review-criteria', 'clean-architecture'] },
     skillFiles: { 'architecture-review-criteria': '# Criteria\n', 'clean-architecture': '# Clean Architecture\n' },
@@ -467,6 +469,8 @@ test('findings of different lenses at the same line with the same severity are c
     '- Finding (architecture-compliance F2): A3 blocker at src/Checkout.cs:12: the domain imports the database driver',
     '- Skill (read it before any other input and judge with its criteria): /plugin/skills/architecture-review-criteria/SKILL.md',
     '- Skill (read it before any other input and judge with its criteria): /plugin/skills/clean-architecture/SKILL.md',
+    '- Lens (read it with the skills: its gate table states the rule of each gate a finding cites): /plugin/agents/consistency-lens.md',
+    '- Lens (read it with the skills: its gate table states the rule of each gate a finding cites): /plugin/agents/architecture-compliance-lens.md',
     '- Read these inputs and the files they name; search the repository for nothing else:',
     `  - Review context (story, project rules, who wrote which document): ${TRACKING}/reviews/design_review-1/context.md`,
     `  - Documents of this phase: ${TRACKING}/${MATRIX}`,
@@ -475,6 +479,7 @@ test('findings of different lenses at the same line with the same severity are c
     `  - Changes since the base of the run (open a whole file only when the patch lacks the context a finding needs): ${TRACKING}/reviews/design_review-1/changes.patch`,
     `  - Paths those changes touch (a path with no section in the patch is a new file: open it): ${TRACKING}/reviews/design_review-1/changed-files.txt`,
     '- Check each finding on its own, though they share a line: confirm it only when these inputs show it; refute it when they show it is wrong, citing the path:line; say unverifiable when they cannot tell.',
+    '- Judge by the rule of the gate a finding cites, as the lens, the skills and the inputs above state it, with the references a skill names for that gate; a rule no input states is no reason to refute: say unverifiable.',
     '- Write no file, change nothing, start no agent.',
     '- End your answer with this YAML document in a ```yaml block:',
     '```yaml',
@@ -648,7 +653,6 @@ test('the engine reads in the patch the skips added to tests, the test files del
         '-        Assert.Equal(90, total);', '-        Assert.Equal("EUR", currency);', '+        Assert.NotNull(total);', '+    [Fact(Skip = "slow")]',
       ])
       git.patched('tests/TotalTests.cs', ['--- a/tests/TotalTests.cs', '+++ b/tests/TotalTests.cs', '@@ -4,1 +4,1 @@', '-        Assert.Equal(1, count);', '+        Assert.Equal(2, count);'])
-      git.change('tests/TotalTests.cs')
       git.patched('tests/RefundTests.cs', ['deleted file mode 100644', '--- a/tests/RefundTests.cs', '+++ /dev/null', '@@ -1,2 +0,0 @@', '-public class RefundTests {', '-}'])
       git.patched('src/Checkout.cs', ['--- a/src/Checkout.cs', '+++ b/src/Checkout.cs', '@@ -3,0 +3,1 @@', '+    items.Skip(1); // [Ignore] in a comment of the code', '-    Assert(total > 0);'])
       git.patched('src/test_refunds.py', ['--- a/src/test_refunds.py', '+++ b/src/test_refunds.py', '@@ -1,0 +1,1 @@', '+@pytest.mark.skipif(sys.platform == "win32", reason="slow")'])
@@ -656,7 +660,7 @@ test('the engine reads in the patch the skips added to tests, the test files del
       git.patched('src/latest.ts', ['--- a/src/latest.ts', '+++ b/src/latest.ts', '@@ -2,1 +2,0 @@', '-  expect(version).toBe(2)'])
       git.patched('tests/fixtures/payment.json', ['deleted file mode 100644', '--- a/tests/fixtures/payment.json', '+++ /dev/null'])
       git.patched('src/specs/payment.yaml', ['deleted file mode 100644', '--- a/src/specs/payment.yaml', '+++ /dev/null'])
-      git.change('tests/RefundTests.cs', 'src/test_refunds.py', 'src/App.test.tsx', 'src/latest.ts', 'tests/fixtures/payment.json', 'src/specs/payment.yaml')
+      git.commit('refactor(checkout): trim the payment tests', ['tests/TotalTests.cs', 'tests/RefundTests.cs', 'src/test_refunds.py', 'src/App.test.tsx', 'src/latest.ts', 'tests/fixtures/payment.json', 'src/specs/payment.yaml'])
     } })(it),
   ])
   const unavailable = { ok: false, text: '', unavailable: true, error: 'finding-refuter is not installed' }

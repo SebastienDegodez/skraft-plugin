@@ -115,15 +115,15 @@ const section = (title, rows, table) => (rows.length === 0 ? [] : [title, '', ..
 
 /**
  * The table of a report: one row per step, then the totals, then what a cost means when one
- * was told.
- * @param {RunReport} report
+ * was told; in the language given, English unless a story's description asks another.
+ * @param {RunReport} report @param {import('./language.mjs').Language} [language]
  */
-export const reportTable = ({ steps, totals }) => [
-  '| Step | Phase | Visits | Attempts | Retries | Time | Cost | Outcome |',
+export const reportTable = ({ steps, totals }, language = 'en') => [
+  TABLE_WORDS[language].header,
   '| --- | --- | ---: | ---: | ---: | ---: | ---: | --- |',
-  ...steps.map((step) => `| ${step.step} | ${step.phase} | ${step.visits} | ${step.attempts} | ${step.retries} | ${durationText(step.durationMs)} | ${costText(step.costUsd)} | ${step.outcome ?? 'in progress'} |`),
+  ...steps.map((step) => `| ${step.step} | ${step.phase} | ${step.visits} | ${step.attempts} | ${step.retries} | ${durationText(step.durationMs)} | ${costText(step.costUsd)} | ${step.outcome ?? TABLE_WORDS[language].running} |`),
   `| Total | | | ${totals.attempts} | ${totals.retries} | ${durationText(totals.durationMs)} | ${costText(totals.costUsd)} | |`,
-  ...(totals.costUsd === null ? [] : ['', COST_NOTE]),
+  ...(totals.costUsd === null ? [] : ['', TABLE_WORDS[language].cost]),
 ]
 
 /**
@@ -155,6 +155,16 @@ export const answersTable = (answers) => [
  * it, which counts whatever else that session did meanwhile.
  */
 export const COST_NOTE = 'Costs are approximate (~): each is what the Claude Code session cost while the agent ran, so it includes anything else exchanged in that session meanwhile.'
+
+/** The header, a step still running and the note on costs of the report table, per language. */
+const TABLE_WORDS = Object.freeze({
+  en: Object.freeze({ header: '| Step | Phase | Visits | Attempts | Retries | Time | Cost | Outcome |', running: 'in progress', cost: COST_NOTE }),
+  fr: Object.freeze({
+    header: '| Étape | Phase | Visites | Tentatives | Reprises | Durée | Coût | Résultat |',
+    running: 'en cours',
+    cost: 'Les coûts sont approximatifs (~) : chacun est ce que la session Claude Code a coûté pendant que l\'agent tournait ; il inclut donc tout autre échange de cette session pendant ce temps.',
+  }),
+})
 
 /** `~$0.42`, approximate (COST_NOTE); `-` when no cost was told. @param {number | null} costUsd */
 export const costText = (costUsd) => (costUsd === null ? '-' : `~$${costUsd.toFixed(2)}`)
