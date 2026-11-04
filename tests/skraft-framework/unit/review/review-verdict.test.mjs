@@ -716,6 +716,9 @@ test('ACCEPT given with skraft decide at the ceiling of distill_review closes DI
     ['deliver_review', 1, 'approved', 'mutation'],
   ])
   assert.equal(host.agentRunner.dispatches.filter((dispatch) => dispatch.agent === 'acceptance-designer').length, 4)
+  const engineer = host.agentRunner.dispatches.find((dispatch) => dispatch.agent === 'software-engineer')
+  assert.ok(!engineer.prompt.includes('A human refused') && !engineer.prompt.includes('What pass'), engineer.prompt)
+  assert.deepEqual(host.events().filter((event) => event.type === 'step.started' && event.step === 'deliver').map(({ visit, feedback, sentBy, instruction }) => [visit, feedback, sentBy, instruction]), [[1, [], undefined, undefined]])
   const report = await host.tracking.read(SLUG, 'run-report.md')
   assert.ok(report.includes('| distill_review | medium | coverage F1 | tests/Acceptance/refund.feature:4 | the refund rule has no scenario |\n| distill_review | low | coverage F2 | tests/Acceptance/refund.feature:9 | a step is worded twice |\n'), report)
 })

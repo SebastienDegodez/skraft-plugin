@@ -110,7 +110,7 @@ const accept = (workflow, run, last) => {
   if (!target || to === last.step) return changed(to)
   const phase = /** @type {string} */ (workflow.nodes[last.step].phase)
   if (closes(run, phase, target)) return { kind: 'close-phase', phase }
-  return enter(target, { visit: (run.nodes[target.id]?.visit ?? 0) + 1, attempt: 1, missing: [], feedback: [], sentBy: null, resumed: null, group: null, groups: [] }, run)
+  return enter(target, { visit: (run.nodes[target.id]?.visit ?? 0) + 1, attempt: 1, missing: [], feedback: [], instruction: null, sentBy: null, resumed: null, group: null, groups: [] }, run)
 }
 
 /**
