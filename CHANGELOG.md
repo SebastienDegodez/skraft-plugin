@@ -3,6 +3,12 @@
 Toutes les modifications notables de ce projet sont documentées ici.
 Format basé sur [Conventional Commits](https://www.conventionalcommits.org/) — versionnage [SemVer](https://semver.org/).
 
+## [2.0.0-alpha.58](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.57...v2.0.0-alpha.58) (2026-11-04)
+
+### 🐛 Bug Fixes
+
+* **engine:** the research agent runs on the economy tier ([#514](https://github.com/SebastienDegodez/skraft-plugin/issues/514)) ([fb2aa8c](https://github.com/SebastienDegodez/skraft-plugin/commit/fb2aa8c9dd0f29f8cb7d84a269497f5953105ead)), closes [#512](https://github.com/SebastienDegodez/skraft-plugin/issues/512)
+
 ## [2.0.0-alpha.57](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.56...v2.0.0-alpha.57) (2026-11-04)
 
 ### 🐛 Bug Fixes
