@@ -110,18 +110,25 @@ its confidence gate in `index.md`.
 
 The repository has no tests: expect the **CONCERNS** verdict. The analyst then shows you its
 validation checklist, every Low-confidence claim and every core feature without coverage, and
-waits. Read it: the 18-year rule and the 30-day retention should be on it. Answer:
+waits. Read it: the 18-year rule and the 30-day retention should be on it, then answer. An example
+(illustrative: the analyst's wording changes from run to run; the verdict, the checklist's content
+and the wait for your answer come from its instructions):
 
-```console title="Copilot CLI"
+```text title="Copilot CLI"
+Characterization gate: CONCERNS. The repository has no tests: each feature is described from the code alone.
+Artifacts: .copilot-tracking/skraft-plans/permis/characterization/<YYYY-MM-DD>/
+
+Validation checklist. Confirm, correct, or ask for a deeper scan before I write the PRD:
+1. Eligibility decision (src/eligibility.js, decide): Core, coverage NONE.
+   INFERENCE (Low): a driver aged 18 or more on the day of the decision is eligible;
+   younger, refused with the reason "âge minimum 18 ans".
+2. Last decision (src/eligibility.js, lastDecision): Core, coverage NONE.
+   INFERENCE (Low): a driver's last decision is returned for 30 days, then null.
+3. Decision storage (src/eligibility.js, decisions): INFERENCE (Low): kept in memory only,
+   lost when the process restarts.
+
 > Confirmed.
 ```
-
-:::note[Screenshot pending a real run]
-
-A capture of the analyst's session, its validation checklist then your answer, needs a real
-Copilot CLI session. Until then, the block above shows what you type.
-
-:::
 
 The analyst composes the PRD, then gives you its path under `docs/prds/`, the characterization and
 schema gate verdicts, and the number of open questions. Open the PRD: its functional requirements

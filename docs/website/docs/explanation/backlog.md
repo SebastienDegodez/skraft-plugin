@@ -90,6 +90,11 @@ developer creates an automation from it, choosing the model and the permissions.
 make triage an appointment rather than a chore that gets postponed, without ever starting an
 agent nobody authorised.
 
+| Template, as VS Code lists it | Schedule | Agent |
+|---|---|---|
+| **Weekly backlog triage** | Monday 08:45, local time (`45 8 * * 1`) | `Skraft - Backlog Discoverer` |
+| **Refine the proposed sprint** | manual | `Skraft - Backlog Planner` |
+
 ## The planning lenses: why each one
 
 A story is not "ready" because its author says so. Four lenses, each read-only, judge it from a

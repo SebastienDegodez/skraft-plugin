@@ -109,19 +109,25 @@ porte de confiance dans `index.md`.
 
 Le dépôt n'a aucun test : attendez-vous au verdict **CONCERNS**. L'analyste vous montre alors sa
 liste de vérification, chaque affirmation de confiance Low et chaque fonctionnalité centrale sans
-couverture, et attend. Relisez-la : la règle des 18 ans et la conservation 30 jours doivent y
-figurer. Répondez :
+couverture, et attend. Relisez-la : la règle des 18 ans et la conservation 30 jours doivent y figurer, puis répondez. Un
+exemple (illustratif : la formulation de l'analyste change d'un run à l'autre ; le verdict, le
+contenu de la liste et l'attente de votre réponse viennent de ses instructions) :
 
-```console title="Copilot CLI"
+```text title="Copilot CLI"
+Porte de caractérisation : CONCERNS. Le dépôt n'a aucun test : chaque fonctionnalité est décrite depuis le seul code.
+Artefacts : .copilot-tracking/skraft-plans/permis/characterization/<AAAA-MM-JJ>/
+
+Liste de vérification. Confirmez, corrigez, ou demandez une analyse plus profonde avant que j'écrive le PRD :
+1. Décision d'éligibilité (src/eligibility.js, decide) : Core, couverture NONE.
+   INFERENCE (Low) : un conducteur de 18 ans ou plus le jour de la décision est éligible ;
+   plus jeune, refusé avec la raison « âge minimum 18 ans ».
+2. Dernière décision (src/eligibility.js, lastDecision) : Core, couverture NONE.
+   INFERENCE (Low) : la dernière décision d'un conducteur est rendue pendant 30 jours, puis null.
+3. Stockage des décisions (src/eligibility.js, decisions) : INFERENCE (Low) : en mémoire seulement,
+   perdu au redémarrage du processus.
+
 > Confirmé.
 ```
-
-:::note[Capture en attente d'un run réel]
-
-Une capture de la session de l'analyste, sa liste de vérification puis votre réponse, demande une
-vraie session Copilot CLI. D'ici là, le bloc ci-dessus montre ce que vous saisissez.
-
-:::
 
 L'analyste compose le PRD, puis vous donne son chemin sous `docs/prds/`, les verdicts de
 caractérisation et de schéma, et le nombre de questions ouvertes. Ouvrez le PRD : ses exigences

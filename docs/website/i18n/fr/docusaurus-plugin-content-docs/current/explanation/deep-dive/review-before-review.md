@@ -67,6 +67,11 @@ entrées de la revue — la *Dissent Rule* : une voix isolée n'est ni écartée
 sans vérification. Les reprises sont bornées avant de remonter à un humain, et le verdict garde
 ses findings : la revue humaine voit **pourquoi** le travail est passé.
 
+Une passe de reprise converge au lieu de rouvrir ce qui était tranché : un finding que le
+réfuteur a réfuté à la passe précédente reste réfuté quand il revient au même endroit, et un
+finding nouveau sur une ligne que l'agent a laissée telle quelle devient une note : la passe
+suivante juge ce que l'agent a changé.
+
 Le calcul exact du verdict : [Gates](../../reference/gates.md#review-run).
 
 ## Les lentilles de DELIVER en pratique

@@ -40,6 +40,12 @@ Then come the DELIVER review's lenses: test integrity, architecture boundaries, 
 and, when the change touches them, mock and contract fidelity. A rework the review asks for goes
 back through `deliver` and the gates, never through mutation.
 
+The engineer runs the same commands before it hands over. Its brief lists the gate commands of
+each component it may change, mutation left out, with the run's base in place of `{baseSha}`, and
+tells it to fix every failure before it writes its result, on a rework pass too. The gates step
+stays the check; the brief saves the pass that a format or build failure found only there would
+cost.
+
 ### Why mutation runs last
 
 Mutation testing injects small faults into the code and measures how many the tests catch

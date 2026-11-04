@@ -40,7 +40,7 @@ La ligne `answer:` donne la clé (`adr-1`) et les réponses permises :
 |---|---|---|
 | `adr-ratification` | `RATIFIED`, `REJECTED` | avec `REJECTED` |
 | `publish-consent`, `reporting-consent` | `ACCEPTED`, `DECLINED` | — |
-| `review-consent` (`skraft review --pr --publish`, en-tête `Review comment`) | `ACCEPTED`, `DECLINED` | — |
+| `review-consent` (`skraft review --pr --publish`, en-tête `PR comment`) | `ACCEPTED`, `DECLINED` | — |
 | `environment` | `RETRY` (après avoir réparé la machine), `ABORT` | — |
 | `mutation-plan` | `APPLY`, une consigne à vous, ou `STOP` | — |
 | `blocked` | une consigne pour l'agent, ou `STOP` | — |
@@ -68,10 +68,22 @@ conversation :
 Les mots après la réponse forment la raison ; pour une question `blocked`, tous les mots après la
 clé forment la consigne. `/skraft decide` enregistre la réponse, puis reprend le run.
 
-:::note[Capture en attente d'un run réel]
-Une capture de la boîte de dialogue du mod (en-tête `ADR`, les options et **Other**) viendra après
-un run réel sous Claude Code.
-:::
+Claude Code dessine la boîte de dialogue ainsi ; **Type something.** est le champ **Other** :
+
+```text title="Claude Code"
+☐ ADR
+
+Ratify the Proposed ADRs docs/adr/adr-001-card-provider.md? RATIFIED marks them Accepted;
+REJECTED sends DESIGN back with your reason.
+
+❯ 1. RATIFIED
+  2. REJECTED
+  3. Type something.
+─────────────────────────────────────────────────────────────
+  4. Chat about this
+
+Enter to select · ↑/↓ to navigate · Esc to cancel
+```
 
 </TabItem>
 <TabItem value="copilot-cli" label="GitHub Copilot CLI">
@@ -145,6 +157,8 @@ Une réponse refusée n'enregistre rien ; le run attend toujours.
 | `the answer must be one of RATIFIED, REJECTED` | Écrire une des options. |
 | `skraft decide records a person's answer: run it yourself in an interactive terminal; nothing was recorded` | Lancer la commande vous-même, dans un terminal interactif. |
 | `Refused: …; nothing was recorded.` (Copilot) | Répondre par `skraft decide` dans un terminal, puis reprendre le workflow. |
+| `not recorded — no active pipeline in this working copy` (Claude Code), alors que `skraft status` montre le run en attente | Répondre par `skraft decide <clé> …` dans un terminal, puis `/skraft <slug>` dans Claude Code. |
+| Vous avez écrit la réponse dans la conversation au lieu de la boîte de dialogue | Ce n'est pas une réponse : le run attend toujours. Utiliser `/skraft decide`. |
 
 ## Étapes suivantes {/* #next-steps */}
 

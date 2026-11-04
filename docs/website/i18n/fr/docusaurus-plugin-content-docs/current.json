@@ -412,7 +412,7 @@
     "description": "The generated-index page title for category 'Reference — look up' in sidebar 'reference'"
   },
   "sidebar.reference.category.reference.link.generated-index.description": {
-    "message": "Tout le factuel : hôtes, commandes, workflow DOT, phases, configuration, journal, catalogue agentique, gates, patterns, outillage d'évaluation, citations, glossaire, changelog.",
+    "message": "Tout le factuel : hôtes, commandes, workflow DOT, phases, configuration, journal, pull request et commentaires, canvas du backlog, catalogue agentique, gates, patterns, outillage d'évaluation, citations, glossaire, changelog.",
     "description": "The generated-index page description for category 'Reference — look up' in sidebar 'reference'"
   },
   "sidebar.reference.category.usage": {
@@ -424,7 +424,7 @@
     "description": "The generated-index page title for category 'Using SKRAFT' in sidebar 'reference'"
   },
   "sidebar.reference.category.usage.link.generated-index.description": {
-    "message": "Hôtes, commandes, workflow DOT, phases, configuration et journal d'un run.",
+    "message": "Hôtes, commandes, workflow DOT, phases, configuration, journal d'un run, pull request et commentaires, canvas du backlog.",
     "description": "The generated-index page description for category 'Using SKRAFT' in sidebar 'reference'"
   },
   "sidebar.reference.category.catalogue": {
@@ -514,6 +514,18 @@
   "sidebar.reference.doc.reference/run-journal": {
     "message": "Suivi et journal",
     "description": "The label for the doc item 'Tracking and journal' in sidebar 'reference', linking to the doc reference/run-journal"
+  },
+  "sidebar.reference.doc.reference/pull-request": {
+    "message": "Pull request et commentaire de revue",
+    "description": "The label for the doc item 'Pull request and review comment' in sidebar 'reference', linking to the doc reference/pull-request"
+  },
+  "sidebar.reference.doc.reference/issue-comments": {
+    "message": "Commentaires d'issue",
+    "description": "The label for the doc item 'Issue comments' in sidebar 'reference', linking to the doc reference/issue-comments"
+  },
+  "sidebar.reference.doc.reference/backlog-canvas": {
+    "message": "Canvas du backlog et carte des stories",
+    "description": "The label for the doc item 'Backlog canvas and story map' in sidebar 'reference', linking to the doc reference/backlog-canvas"
   },
   "sidebar.reference.doc.reference/catalogue": {
     "message": "Agents, skills et chaînes",

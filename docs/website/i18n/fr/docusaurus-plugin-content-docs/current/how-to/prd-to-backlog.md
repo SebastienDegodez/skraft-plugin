@@ -70,7 +70,7 @@ en pause depuis `/workflows`.
 
    Une question sans réponse prend l'option recommandée.
 2. **Carte des stories** (`story-map-approved`) : relisez `story-map.md`. Pour changer le
-   découpage, modifiez `story-map.json` : la reprise le revérifie tel qu'il est.
+   découpage, modifiez `story-map.json` : la reprise le revérifie tel qu'il est. Ses tableaux : [story-map.md](../reference/backlog-canvas.md#story-map).
 
 ## 4. Laisser écrire et relire les stories
 
@@ -78,7 +78,11 @@ Un `story-writer` par story, puis les quatre lentilles de planification, epic pa
 l'avancement dans le canvas, onglet **Suivi** (**Progress** pour un PRD en anglais : le canvas
 suit la langue du PRD) : chaque story y est approuvée, refusée, ou retenue parce qu'elle attend
 une story refusée. L'onglet **Revue** dit pourquoi une story ne passe pas et comment la
-corriger.
+corriger. Chaque compteur, statut et onglet : [Canvas du backlog](../reference/backlog-canvas.md#progress-tab).
+
+![Canvas skraft backlog, onglet Suivi, pendant ELABORATE : « 8 agents au travail », un story-writer par story avec sa tentative et depuis quand il tourne, puis 3 épics, 16 stories, 9/16 fiches écrites, aucune refusée pour l'instant](/img/screenshots/fr/backlog-canvas-elaborate.png)
+
+*Figure 1 — ELABORATE sur l'extrait d'un vrai PRD rédigé en français ([dépôt de démonstration](https://github.com/SebastienDegodez/skraft-demo-event-storming)) : huit agents `story-writer` au travail.*
 
 ## 5. Corriger une story retenue (si besoin)
 
@@ -89,10 +93,21 @@ dépendance, préciser un critère…) ou répondez à ses questions ouvertes, p
 Run the skraft-prd-backlog workflow with prd docs/prds/commande-en-ligne.md and corrections true
 ```
 
+![Canvas skraft backlog, onglet Revue : la story EP-001-S05 « Attribuer un rôle applicatif » retenue, les trois raisons de sa revue, un bouton « Répondre 2 » pour ses questions ouvertes, puis les lettres INVEST, chacune avec la valeur trouvée ; à gauche les stories d'EP-001, deux prêtes et trois retenues](/img/screenshots/fr/backlog-canvas-handoff-review.png)
+
+*Figure 2 — Une story retenue du même run : la revue dit pourquoi, et ses deux questions ouvertes
+attendent une réponse.*
+
 Seules les stories touchées sont réécrites et relues. Sans correction acceptée ni réponse en
 attente, le run est refusé et rien ne change.
 
 ## 6. Valider le handoff et publier
+
+Quand le run s'arrête sur la passation, le canvas résume le backlog :
+
+![Canvas skraft backlog, onglet Suivi, à la passation : 3 épics, 16 stories, 16/16 fiches écrites, 0 refusée, 4 retenues, 12 prêtes, 0/12 relue, 0 publiée, puis l'épic EP-001 rejetée à la tentative 3 et ses stories, prêtes ou retenues ; en bas les boutons « Aperçu à blanc » et « Créer les issues » vers SebastienDegodez/skraft-demo-event-storming](/img/screenshots/fr/backlog-canvas-handoff-progress.png)
+
+*Figure 3 — La passation du run de démonstration : 12 stories prêtes à créer, 4 retenues.*
 
 Le run s'arrête sur `.copilot-tracking/github-issues/prds/<slug>/handoff.md` (`handoff-reviewed`).
 Relisez les opérations prévues, puis cochez la case :

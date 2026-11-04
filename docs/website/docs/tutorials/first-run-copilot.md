@@ -145,6 +145,9 @@ The command starts the `skraft-pipeline` dynamic workflow with `{ slug: "checkou
 checkout pipeline for issue 42, titled "Pay by card".* It starts the same workflow.) The repository has no remote, so the issue cannot be read: the run is refused
 (`issue-unreadable`) and nothing is journaled. Without `issue` the run starts, and its agents get no issue.
 
+Copilot first asks you to approve the workflow run and its limits: answer **Yes**, or **Yes, and
+always approve this workflow at these limits in this repo**.
+
 Before any phase, on the first run of a working copy, Copilot asks once in the chat: *Start this run
 with the configuration of this working copy?* If your client shows canvases, the `skraft-pipeline`
 canvas opens on its **Configuration** tab: the forge, the components and their commands, the
@@ -163,12 +166,21 @@ request when the run ends? The question reads:
 May skraft push this branch and open or update its pull request when a run ends, and keep one comment on its story's issue up to date with the run's progress, time and cost? ACCEPTED or DECLINED; the answer is kept in skraft-config.json (publish.pullRequest) for every later run.
 ```
 
-:::note[Screenshot pending a real run]
+Copilot CLI shows it this way:
 
-A capture of Copilot's confirmation dialog for this question needs a real Copilot CLI session.
-Until then, the block above shows its text.
+```text title="Copilot CLI"
+Copilot needs information.
+May skraft push this branch and open or update its pull request when a run ends, and keep one
+comment on its story's issue up to date with the run's progress, time and cost? ACCEPTED or
+DECLINED; the answer is kept in skraft-config.json (publish.pullRequest) for every later run.
 
-:::
+selection:
+❯ ACCEPTED
+  DECLINED
+  Other (type your answer)
+
+↑/↓ select · enter accept · ctrl+d decline · esc cancel
+```
 
 If your Copilot client shows canvases, ask it to open the
 `skraft-pipeline` canvas: it shows the same question and the workflow.
@@ -190,12 +202,15 @@ Type `/workflows` to see the run's log. Each agent appears there with its model 
 checkout: solution-researcher, attempt 1 — researcher · standard · model chosen by the host
 ```
 
-:::note[Screenshot pending a real run]
+In the chat, the start of RESEARCH reads:
 
-A capture of the `/workflows` list in Copilot CLI needs a real session. Until then, the block above
-shows the log line.
-
-:::
+```text title="Copilot CLI"
+● phase RESEARCH
+● checkout: publish_consent DECLINED
+● checkout: visuals_consent DECLINED (no component of skraft-config.json is a front end (stack
+  react, or an e2e command), so no screenshot is taken)
+● checkout: solution-researcher, attempt 1 — researcher · standard · model chosen by the host
+```
 
 Once the architect has proposed an ADR and the three design review lenses have approved it, Copilot
 asks you the next question: ratify the ADR. The canvas shows it too:

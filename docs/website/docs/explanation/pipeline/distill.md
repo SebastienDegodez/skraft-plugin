@@ -62,7 +62,9 @@ Four lenses review the work: **coverage** (each criterion has its scenario, with
 cases), **business alignment** (no implementation detail in a step), **testability** (each step
 can be implemented, the red is the right one), and **boundaries** (the acceptance test drives
 only the use case, at least one walking skeleton per flow). The engine computes the verdict; a
-`NEEDS_REWORK` sends the acceptance-designer back with the findings that stand.
+`NEEDS_REWORK` sends the acceptance-designer back with the findings that stand. Its brief gives the
+path of `acceptance-review-criteria`, the gates these lenses judge by: it checks its outputs
+against every one before it writes its result.
 
 ## Sources
 

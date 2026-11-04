@@ -48,7 +48,9 @@ The tracking folder lives **in the working copy that starts the run**:
 `results/` and `reviews/` belong to the engine: they are not documents of the run, and a
 review never hands them to a lens as one.
 
-`verdict.yaml` is written at the end of each review pass, every text double-quoted:
+`verdict.yaml` is written at the end of each review pass, every text double-quoted; beside it,
+`snapshot.json` keeps what each file the pass reviewed held, which the next pass compares with
+([incremental re-review](./gates.md#incremental)):
 
 ```yaml
 status: "NEEDS_REWORK"          # APPROVED | NEEDS_REWORK | BLOCKED
@@ -62,13 +64,14 @@ findings:                       # the blocker, high and medium findings that cou
     location: "docs/adr/adr-001-card-payment.md:3"
     description: "two contexts own payments"
     suggestion: null
-notes: []                       # the low findings, same keys
+notes: []                       # the low findings, and those new on a line unchanged since the pass `since`, same keys
 refutations:                    # every check of this pass
   - lens: "consistency"
     finding: "F1"
     verdict: "refuted"          # confirmed | refuted | unverifiable
     reason: "docs/adr/adr-001-card-payment.md:3 names Acme Pay"
     dissent: true               # only when the lens stood alone (Dissent Rule)
+    # carried: 1                 # only when carried over from that pass's refutation
 reused:                         # the lenses taken over from the previous pass
   - lens: "fitness"
 ```
@@ -96,9 +99,9 @@ output, and pre-creates it when it has a template. Detail by phase:
 | DELIVER | change log | `changes/{date}/change-log.md` |
 | DELIVER | proposals for surviving mutants | `proposals/kill_proposal-{visit}-g{n}.md` |
 | DELIVER | evidence of each gate; output of the e2e commands | `gates/{component}/{gate}-{n}.log`; `visuals/{component}/e2e-{n}.log` |
-| PUBLISH | pull request prose and description | `details/{date}/pull-request-prose-{slug}.md`, `pull-request.md` |
+| PUBLISH | pull request prose and description | `details/{date}/pull-request-prose-{slug}.md`, `pull-request.md` ([sections](./pull-request.md#description)) |
 | DESIGN, DISTILL, DELIVER reviews | the lenses' inputs and the verdict the engine writes | `reviews/{node}-{visit}/` |
-| whole run | journal, reports recomputed after each step | `events.jsonl`, `run-report.md`, `qa-report.md`, `WORKFLOW.md`, `issue-progress.md` |
+| whole run | journal, reports recomputed after each step | `events.jsonl`, `run-report.md`, `qa-report.md`, `WORKFLOW.md`, `issue-progress.md` ([lines](./issue-comments.md#progress)) |
 
 Lenses write no file: they return findings, and the engine writes
 `reviews/{node}-{visit}/verdict.yaml`.
@@ -220,7 +223,8 @@ Under Copilot CLI, the **Journal** tab of the `skraft-pipeline` canvas reads thi
 | `run.finished` | the pipeline | `status` (`completed` when the last phase is closed, `blocked` when the run stops); `code` (with `blocked`); `reason` (`<PHASE> closed` with `completed`) |
 | `run.stopped` | the pipeline, when the agent does not start or stops, or a lens answers twice without a readable verdict | `code` (`agent-unavailable`, `agent-failed` or `lens-unreadable`); `reason`. Never written when the machine cannot run a step: the engine asks the `environment` question instead |
 | `review.lens` | a review node, once per lens, and once per pass for each of the engine's own checks that finds something | `step`; `visit`; `lens` (`consistency`; `test-integrity#patch` for the engine's G9 findings, `testability#layout` for its G11 findings, which carry no `fingerprint`); `agent` (`consistency-lens`); `model` (the model it ran on, `claude-haiku-5.5`; null for the session's); `fingerprint` (hash of the lens's inputs); `verdict` (`pass`, `fail` or `inconclusive`); `findings` (`{ id, gate, severity, location, description, suggestion }`, `gate` being the id of the lens's table: `G7`, `M2`…); `cost` (absent when unknown); `reused` (`true` when kept from the previous pass: same inputs, nothing found) |
-| `review.refuted` | a review node, once per blocker, high or medium finding checked by `finding-refuter`; findings of several lenses at one line, checked in one call, give one each with its own verdict, its `cost` on the first | `step`; `visit`; `lens`; `finding` (its id); `verdict` (`confirmed`, `refuted` or `unverifiable`); `reason`; `dissent` (`true` when the finding's lens alone found what sends the work back, and the refuter judged it with every input of the review); `model`; `cost` |
+| `review.refuted` | a review node, once per blocker, high or medium finding checked by `finding-refuter`; findings of several lenses at one line, checked in one call, give one each with its own verdict, its `cost` on the first | `step`; `visit`; `lens`; `finding` (its id); `verdict` (`confirmed`, `refuted` or `unverifiable`); `reason`; `dissent` (`true` when the finding's lens alone found what sends the work back, and the refuter judged it with every input of the review); `carried` (on a later pass, the pass whose refutation of a finding at the same place it carries over, the refuter not asked: its `reason`, `assignment` and `model` are that refutation's, no `cost`); `model`; `cost` |
+| `review.noted` | a review node, from its second pass, once per blocker, high or medium finding new on a line the last pass read with the same text ([incremental re-review](./gates.md#incremental)): a note, not checked by the refuter | `step`; `visit`; `lens`; `finding` (its id); `since` (the last pass) |
 | `review.cost` | a review node, once per batch the host costs as a whole (the Claude Code mod) | `step`; `visit`; `cost` |
 | `gate.ran` | `skraft gate`, once per gate | `component`; `gate` (`build`… or `none`); `scope` (`touched` or `all`); `command` (`null` for `none`); `status` (`pass` or `fail`); `failure` (`environment`, `deterministic` or `null`); `exitCode` (`null` when nothing ran); `durationMs`; `evidence` (path relative to the slug folder, `null` for `none`) |
 | `commits.checked` | the pipeline, after an attempt of an agent step that made commits | `step`; `visit`; `attempt`; `commits`, each `{ repository, sha, subject, kind, verdict, replay }`: `kind` (`red`, `green`, `refactor`, `other`, `invalid`), `verdict` (`ok`, `not-conventional`, `issue-reference-missing`, `issue-closed`, `issue-not-in-story`, `green-without-red`, `not-red`, `no-component`), `replay` (`{ component, command, exitCode, durationMs }` of the replay the commit reports, `null` when it was not replayed); `settled` (`false` when the machine stopped the check, an `environment` question asked: its verdicts are those before the replays it could not run, so neither a later attempt nor the reports take them as final, and the attempt after `RETRY` replays its red commits again). `settled` is absent from a check that ran to its end, and from journals written before the field existed: absent means settled |

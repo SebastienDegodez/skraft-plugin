@@ -112,6 +112,7 @@ Verdict: `review-verdict.mjs --phase discuss`, same rules and same budget as DIS
 | Declared output | `details/{date}/consistency-matrix-{slug}.md` |
 | Other outputs | in the tracking folder: `details/{date}/contracts-{story}.md`, `supersession-plan-{story}.md` (when an `Accepted` ADR is replaced); in the repository: `docs/architecture/context-map.md`, `docs/architecture/{bounded-context}.md` (tactical design), `docs/domain/event-model/{bounded-context}.md`, `docs/adr/adr-{NNN}-{subject}.md`, `docs/adr/decisions-index.md`, `docs/adr/supersessions.md` |
 | Allowed writes | the tracking folder, `docs/adr/`, `docs/architecture/` and `docs/domain/event-model/` |
+| Commits | none by the architect, which has no shell: once `design` is done, the engine commits what it changed under its allowed paths as `docs(<story>): design <story>`, ending with `Refs: #<issue>` when the story has one, and journals it as `committed` on the step's `step.recorded` |
 | Existing documentation | instruction to the agent: a file of `docs/` is completed, not rewritten. When `docs/` already covers the story, the consistency matrix says so and cites the files of `docs/`, and the phase moves on. Engine check: the matrix's `docs-relied-on:` line lists at least one file of `docs/adr`, `docs/architecture`, `docs/domain/event-model` or `docs/features`, and each listed file exists in the working copy |
 | Engine checks | DESIGN records after each attempt: a consistency matrix reading `consistency-gate: PASS` (G10), no ADR named `*-rejected.md`, `*-accepted.md`, `*-deprecated.md` or `*-superseded.md` (G14), each `**Supersedes:**` with its registry row (G2, G12), the `docs-relied-on:` line of the matrix (files of the durable `docs/` folders that exist); an index row for each ADR written (`design-records`); draft ADRs: `Proposed`, no version, a one-sentence `decision`, no draft history; ADRs on the base: only their status lines change, never deleted; a status of the closed set (`adr-lifecycle`) |
 | Persistent failure | `missing-outputs` when the consistency matrix is missing after the last attempt, `design-records` otherwise |
@@ -146,7 +147,7 @@ Verdict: `review-verdict.mjs --phase discuss`, same rules and same budget as DIS
 | Declared output | `details/{date}/test-plan-{slug}.md` |
 | Other outputs | `details/{date}/impl-plan-{story}.md`; `docs/features/{bounded-context}/{feature}.feature` (Gherkin scenarios, not executable); in the components: failing acceptance tests (`tests` paths) and the skeleton they call (`src` paths) |
 | Allowed writes | the tracking folder, `docs/features/`, each component's `src` and `tests` paths, and the files at those components' roots |
-| Commits | `red` mode: only failing `test(<story>): …` commits, each replayed by its component's `test` command ([`tdd.replay`](./skraft-config.md#tdd)) |
+| Commits | `red` mode: only failing `test(<story>): …` commits, each replayed by its component's `test` command ([`tdd.replay`](./skraft-config.md#tdd)); a change to scenarios alone in a `docs(<story>): …` commit; a change left uncommitted is refused (`uncommitted`) |
 | Engine check | where added test files sit (`testability#layout`, G11) |
 
 | Lens | Gates |
@@ -182,7 +183,7 @@ Verdict: `review-verdict.mjs --phase discuss`, same rules and same budget as DIS
 | Proposals | `proposals/kill_proposal-<visit>-g<n>.md`, one per file of survivors, created by the engine with a section per mutant; each `{{outcome}}` line becomes `test: …`, `delete: …` or `equivalent: …` |
 | Evidence | `gates/<component>/<gate>-<n>.log`; `visuals/<component>/e2e-<n>.log` |
 | Allowed writes | `deliver`, `kill_mutants`: the tracking folder, each component's `src` and `tests` paths, and the files at their roots; `kill_proposal`: the tracking folder only, no commit |
-| Commits | `deliver` in `cycle` mode: failing `test(<story>): …` (red, replayed), then `feat` or `fix` (green), `refactor`; `kill_mutants` in `kill` mode: tests that kill mutants and pass; each conventional message ends with `Refs: #<issue>` and closes no issue |
+| Commits | `deliver` in `cycle` mode: failing `test(<story>): …` (red, replayed), then `feat` or `fix` (green), `refactor`; `kill_mutants` in `kill` mode: tests that kill mutants and pass; each conventional message ends with `Refs: #<issue>` and closes no issue; a change left uncommitted is refused (`uncommitted`) |
 | Mutation bar | 100 % on the core, 80 % on the boundary; not configurable |
 
 | Answer to `mutation-plan` | Effect |
@@ -223,7 +224,7 @@ Verdict: `review-verdict.mjs --phase discuss`, same rules and same budget as DIS
 
 | | |
 | --- | --- |
-| Declared output | `details/{date}/pull-request-prose-{slug}.md`, pre-created from `pull-request-prose.template.md` |
+| Declared output | `details/{date}/pull-request-prose-{slug}.md`, pre-created from `pull-request-prose.<language>.template.md` (`en` or `fr`, the story's language) |
 | Allowed writes | the tracking folder only |
 | Engine check | a summary line of at most 72 characters, no empty section |
 | Publication | with `publish.pullRequest` accepted: a draft pull request (unless `publish.draft: false`), described from the journal; without consent, a remote or `gh`: `pull-request.md` stays, and `skraft publish` opens it later |
@@ -236,10 +237,10 @@ Verdict: `review-verdict.mjs --phase discuss`, same rules and same budget as DIS
 | `publish-consent` | node `publish_consent` | `ACCEPTED`, `DECLINED` | — | `Pull request` |
 | `reporting-consent` | node `visuals_consent` | `ACCEPTED`, `DECLINED` | — | `Reporting` |
 | `adr-ratification` | node `adr` | `RATIFIED`, `REJECTED` | `REJECTED` | `ADR` |
-| `mutation-plan` | node `mutation_plan` | `APPLY`, an instruction, or `STOP` | — | `Mutation plan` |
+| `mutation-plan` | node `mutation_plan` | `APPLY`, an instruction, or `STOP` | — | `Mutation` |
 | `environment` | the engine, when a step cannot run on the machine | `RETRY`, `ABORT` | — | `Environment` |
 | `blocked` | the engine, when an agent answers `blocked`, a loop reaches its `max_visits` or a lens answers `inconclusive` | an instruction, or `STOP` | — | `Blocked` |
-| `review-consent` | `skraft review --pr --publish` | `ACCEPTED`, `DECLINED` | — | `Review comment` |
+| `review-consent` | `skraft review --pr --publish` | `ACCEPTED`, `DECLINED` | — | `PR comment` |
 
 A consent already given in `skraft-config.json` (`publish.pullRequest`, `publish.visuals`) is not
 asked again, unless the text of its question changed since (`publish.questionVersions`).

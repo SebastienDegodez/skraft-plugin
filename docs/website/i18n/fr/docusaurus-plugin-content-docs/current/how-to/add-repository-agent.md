@@ -60,7 +60,9 @@ et retirez l'arête `deliver -> gates` qu'elle remplace.
 
 Le brief que le moteur donne à l'agent liste ces sorties, les chemins qu'il peut écrire et les
 sorties des autres étapes à lire. Après chaque tentative, le moteur vérifie que chaque sortie est
-remplie et que rien n'a été écrit hors de ces chemins.
+remplie et que rien n'a été écrit hors de ces chemins. Le brief ne demande aucun commit : une fois
+l'étape réussie, le moteur commite ce que l'agent a laissé modifié dans `writes` en
+`docs(<story>): <nœud> <story>`.
 
 ## 3. Vérifier
 

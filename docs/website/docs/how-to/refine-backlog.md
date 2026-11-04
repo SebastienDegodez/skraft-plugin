@@ -35,6 +35,13 @@ the proposed story — on demand, or automatically on every new issue.
    comment's link. The comment ends with a visible marker
    `skraft-refine v=<version> hash=<fingerprint>`.
 
+   On issue [#5 of the demo repository](https://github.com/SebastienDegodez/skraft-demo-meetup/issues/5),
+   the comment begins and ends this way:
+
+   ![skraft-refine comment on a GitHub issue: "Refinement proposal — needs refinement", size 3 points, type feature, priority P1, Definition of Ready 3/8, the justification of the size, then the first item that keeps it from being ready; at the bottom the footer and the marker skraft-refine v=2.0.0-alpha.54 hash=cab55c1246107882](/img/screenshots/en/github-refine-comment.png)
+
+   Each part of the comment and when to act: [Refinement proposal](../reference/issue-comments.md#refinement).
+
 An issue a proposal already covers, for its title, its body and the plugin version, is skipped
 with its reason. To refine it anyway, add `--force` after the number: `/skraft-refine 42 --force` in
 Claude Code, `/skraft-backlog:skraft-refine 42 --force` in Copilot CLI.

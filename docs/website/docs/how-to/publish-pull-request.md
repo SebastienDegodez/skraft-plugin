@@ -46,7 +46,6 @@ written in `skraft-config.json`:
 - `draft`: without it, the pull request is opened as a draft; `false` opens it ready for review.
 - A run started with `--from-artifacts` does not ask the question: write the two keys
   `pullRequest` and `questionVersions` by hand.
-- Commit `skraft-config.json` so the team shares the answer.
 
 ## 3. Let the run publish
 
@@ -58,21 +57,13 @@ the branch is updated.
 Result: the notification `skraft <slug>: done — PUBLISH closed`, and the pull request on the
 forge, starting with `Refs #<issue>` (`Closes #<issue>` when it targets the default branch).
 
-:::note[Screenshot pending a real run]
-A capture of the pull request the run opened on GitHub comes after a real run.
-:::
+![GitHub: draft pull request #4 "Refuse a driver whose licence is suspended", 11 commits from suspended-licence into main, 18 files changed; its description begins with Closes #2, then What changes (HTTP, Domain, Application, Specs) and Why](/img/screenshots/shared/github-pr-published.png)
+
+*Figure 1 — The pull request a run opened on the [demo repository](https://github.com/SebastienDegodez/skraft-demo-meetup/pull/4), as a draft.*
 
 ### What the description holds
 
-The description starts with `Refs #<issue>`. What changes, Why, Decisions applied and Out of scope
-show under their headings; the other sections (Tests, Quality gates, Review, Screenshots, Run
-summary, AI disclosure) are folded in a `<details>` block. Quality gates stays open when a gate
-failed, Review when a finding waits on a human.
-
-Past the forge's limit, the folded sections go to a comment of the pull request titled
-`skraft · run details` (`skraft · détails du run` for a French story). If that comment cannot be
-kept, the pull request is still published, `pull-request.md` holds the whole description, and
-`skraft publish` keeps the details once the cause is fixed.
+The description starts with `Refs #<issue>`; what decides shows under headings, the rest is folded and opens by itself on a failed gate or a finding to fix or to decide. It is written in the story's language; past the forge's limit, folded sections go to a `skraft · run details` comment. Each section, what it is for and when to act: [Pull request and review comment](../reference/pull-request.md#description).
 
 ## 4. Publish later with `skraft publish`
 
@@ -95,7 +86,8 @@ Typed by you, the command is the consent for that one publication, even with
 Start the run with the issue's number: `/skraft checkout #42 Pay by card`,
 `skraft init checkout --issue 42`, or the Copilot workflow's `issue` argument. With the consent of
 step 2, the run keeps one comment on the issue, rewritten at each closed phase, review sent back
-and end of run. Its last body stays in `.copilot-tracking/skraft-plans/<slug>/issue-progress.md`.
+and end of run, in the story's language, the pull request named once by its URL. Its last body
+stays in `.copilot-tracking/skraft-plans/<slug>/issue-progress.md`. Each line of that comment: [Issue comments](../reference/issue-comments.md#progress).
 
 ## On Azure DevOps <!-- #azure-devops -->
 
