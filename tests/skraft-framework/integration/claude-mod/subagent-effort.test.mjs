@@ -15,7 +15,7 @@ const stepping = (mod, seen) => async (spawn, host) => {
 }
 
 const withEffortConfigured = (mod) =>
-  nodeModFs.write(join(mod.home, '.skraft', 'config.json'), JSON.stringify({ models: { standard: { 'claude-code': { model: 'sonnet', effort: 'high' } } } }))
+  nodeModFs.write(join(mod.home, '.skraft', 'config.json'), JSON.stringify({ models: { economy: { 'claude-code': { model: 'haiku', effort: 'high' } } } }))
 
 test('the step of a skraft subagent goes on with the effort skraft-config.json gives its dispatch\'s family on Claude Code, and only while it runs', async () => {
   const seen = []

@@ -23,7 +23,7 @@ test('under Copilot with no Copilot model configured, the log says the host choo
   })
 
   assert.deepEqual(modelLines(host), [
-    `${SLUG}: solution-researcher, attempt 1 — researcher · standard · model chosen by the host`,
+    `${SLUG}: solution-researcher, attempt 1 — researcher · economy · model chosen by the host`,
     `${SLUG}: solution-architect, attempt 1 — planner · frontier · model chosen by the host`,
     `${SLUG}: design_review (consistency, architecture-compliance, fitness) — reviewer · economy · model chosen by the host`,
     `${SLUG}: design_review refutes consistency F1 — standard · model chosen by the host`,
@@ -48,7 +48,7 @@ test('under Claude Code, the log names the models of each agent in the order the
 
   const lines = modelLines(host)
   assert.deepEqual(lines.slice(0, 4), [
-    `${SLUG}: solution-researcher, attempt 1 — researcher · standard · sonnet · effort medium`,
+    `${SLUG}: solution-researcher, attempt 1 — researcher · economy · haiku`,
     `${SLUG}: solution-architect, attempt 1 — planner · frontier · opus → sonnet`,
     `${SLUG}: design_review (consistency, architecture-compliance, fitness) — consistency-lens, architecture-compliance-lens: reviewer · economy · haiku; fitness-lens: frontier · opus`,
     `${SLUG}: design_review refutes fitness F1 — frontier · opus`,
@@ -70,7 +70,7 @@ test('the view lists what each agent started runs on under the host that started
   host.agentRunner.host = 'copilot'
   assert.equal((await host.start()).status, 'done')
 
-  const researching = { step: 'research', agent: 'solution-researcher', family: 'researcher', tier: 'standard', host: 'copilot', models: ['gpt-5.5', 'gpt-6.0'], effort: 'high' }
+  const researching = { step: 'research', agent: 'solution-researcher', family: 'researcher', tier: 'economy', host: 'copilot', models: ['gpt-5.5', 'gpt-6.0'], effort: 'high' }
   assert.deepEqual(seen, [[researching]])
   const lens = (agentId) => ({ step: 'design_review', agent: agentId, family: 'reviewer', tier: 'economy', host: 'copilot', models: null, effort: null })
   assert.deepEqual((await host.view()).agents.slice(0, 5), [

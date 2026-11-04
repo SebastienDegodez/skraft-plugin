@@ -23,7 +23,7 @@ const layout = (host) => (host.events().find((event) => event.type === 'review.l
 
 test('a .NET acceptance test added outside a <Context>.UnitTest project is a G11 blocker the engine reads, given to testability and checked by the refuter one tier above testability, with the skills and the descriptor that state G11', async () => {
   const catalog = new InMemoryAgentCatalog({ skills: { 'testability-lens': ['acceptance-review-criteria'] }, skillFiles: { 'acceptance-review-criteria': '# G11\n' } })
-  const host = await reviewed({ catalog, config: { assign: { agents: { 'testability-lens': 'researcher' } } } }, ['tests/Acceptance/CheckoutAcceptanceTests.cs', 'src/Checkout.cs'])
+  const host = await reviewed({ catalog, config: { assign: { agents: { 'testability-lens': 'implementer' } } } }, ['tests/Acceptance/CheckoutAcceptanceTests.cs', 'src/Checkout.cs'])
 
   assert.deepEqual(layout(host), [
     'F1 G11 blocker tests/Acceptance/CheckoutAcceptanceTests.cs: a test added outside a <Context>.UnitTest, <Context>.UnitTests or <Context>.Tests project and the integration place of dotnet, where clean-architecture-testing puts it',
