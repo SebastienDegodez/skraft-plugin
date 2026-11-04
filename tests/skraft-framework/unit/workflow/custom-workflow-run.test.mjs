@@ -27,6 +27,7 @@ test('a repository agent between DESIGN and DISTILL is launched in its place, as
     'solution-researcher plugin', 'solution-architect plugin', 'acme-security-reviewer repository', 'acceptance-designer plugin', 'software-engineer plugin', 'pr-writer plugin',
   ])
   assert.equal(host.events()[0].workflow, '.skraft/pipeline.skraft.dot')
+  assert.deepEqual(host.git.engineCommits, [], 'a repository agent has no role folder: its writes= may name files')
   assert.deepEqual(host.events().filter((event) => event.type === 'phase.closed').map((event) => event.phase), ['RESEARCH', 'DESIGN', 'DISTILL', 'DELIVER', 'PUBLISH'])
   const security = host.agentRunner.dispatches[2]
   assert.equal(security.label, `skraft ${SLUG} · security · attempt 1`)

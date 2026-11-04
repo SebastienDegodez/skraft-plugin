@@ -486,12 +486,22 @@ const createRoleFolders = async (deps, run, node) => {
 const missingFolders = async ({ workspace }, folders) => {
   const created = []
   for (const folder of folders) {
-    if ((await workspace.list(folder).catch(() => [])) !== null) continue
+    if (!(await isMissing(workspace, folder))) continue
     await workspace.write(`${folder}/.gitkeep`, '')
     created.push(`${folder}/.gitkeep`)
   }
   return created
 }
+
+/**
+ * Whether the working copy lacks the folder; a folder the machine cannot list is not known to be missing.
+ * @param {PipelineDeps['workspace']} workspace @param {string} folder
+ */
+const isMissing = (workspace, folder) => workspace.list(folder).then(
+  (entries) => entries === null,
+  // Stryker disable next-line ArrowFunction: undefined skips the folder as false does
+  () => false,
+)
 
 /** Writes each output that has a template and does not exist yet. @param {Context} context @param {Job} job */
 const precreate = async ({ deps, slug }, { outputs, precreated }) => {
