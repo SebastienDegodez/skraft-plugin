@@ -1,7 +1,7 @@
 ---
 name: solution-researcher
 description: Use when investigating a codebase or external sources to produce a verified, cited research document BEFORE any design or implementation — the RESEARCH phase of the SKRAFT engineering pipeline (evidence before building, never author production code). Activate on 'research', 'investigate', 'find existing patterns', 'evidence before building', 'what does the codebase already do', 'spike', 'prior art', or when the pipeline enters RESEARCH. It investigates and cites — it does NOT design architecture, choose ADRs, or write production code.
-model: sonnet
+model: haiku
 user-invocable: false
 tools:
   - Read

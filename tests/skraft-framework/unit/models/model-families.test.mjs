@@ -95,7 +95,7 @@ test('the plugin defaults, a team exception and a developer file resolve each ag
   const economy = ['economy', 'haiku · low', 'gpt-5.5 · low']
   const standardRefuter = ['standard', 'sonnet · medium', 'gpt-5.5 · high']
   assert.deepEqual(rows(host), {
-    'solution-researcher': ['researcher', 'sonnet · medium', 'gpt-5.5 · high'],
+    'solution-researcher': ['researcher', 'haiku · low', 'gpt-5.5 · low'],
     'solution-architect': ['planner', 'opus · max', 'gpt-6.0 · xhigh'],
     'acceptance-designer': ['implementer', 'sonnet · medium', 'gpt-6.0 → gpt-5.5 · high'],
     'software-engineer': ['gpt-codex', 'sonnet · medium', 'gpt-5.5-codex · medium'],
@@ -120,7 +120,7 @@ test('without models or assign in any file, Claude Code gets the plugin aliases 
   const host = await runOn()
 
   assert.deepEqual(dispatches(host).map((dispatch) => [dispatch.agent, dispatch.model, dispatch.models, Object.hasOwn(dispatch, 'effort')]).filter((entry, index, all) => all.findIndex((other) => other[0] === entry[0]) === index), [
-    ['solution-researcher', 'researcher', { 'claude-code': ['sonnet'] }, false],
+    ['solution-researcher', 'researcher', { 'claude-code': ['haiku'] }, false],
     ['solution-architect', 'planner', { 'claude-code': ['opus'] }, false],
     ['acceptance-designer', 'implementer', { 'claude-code': ['sonnet'] }, false],
     ['software-engineer', 'implementer', { 'claude-code': ['sonnet'] }, false],
@@ -201,7 +201,7 @@ test('the refuter runs one tier above the strongest tier of the lenses it checks
     coverage: [says('coverage', 'fail', [finding('F1', 'high', 'a rule has no scenario')])],
     refuter: [refutedTogether('consistency F1', 'architecture-compliance F1'), refutes('refuted'), refutes('refuted')],
   })
-  const tiers = { assign: { agents: { 'consistency-lens': 'researcher', 'architecture-compliance-lens': 'economy', 'fitness-lens': 'gpt-review', 'coverage-lens': 'deep-review' } }, models: { 'gpt-review': { tier: 'economy' }, 'deep-review': { tier: 'premium' } } }
+  const tiers = { assign: { agents: { 'consistency-lens': 'implementer', 'architecture-compliance-lens': 'economy', 'fitness-lens': 'gpt-review', 'coverage-lens': 'deep-review' } }, models: { 'gpt-review': { tier: 'economy' }, 'deep-review': { tier: 'premium' } } }
 
   const escalated = rows(await runOn({ local: tiers, review: together() }))['finding-refuter']
   const fixed = rows(await runOn({ local: { ...tiers, assign: { ...tiers.assign, types: { refuter: { family: 'reviewer', 'claude-code': { effort: 'high' } } } } }, review: together() }))['finding-refuter']
@@ -220,7 +220,7 @@ test('an effort given alone for an agent keeps the family the other rules give i
   assert.deepEqual([engineer, designer, researcher], [
     ['implementer', 'sonnet · -', '- · xhigh'],
     ['implementer', 'sonnet · low', '- · medium'],
-    ['researcher', 'sonnet · -', '- · medium'],
+    ['researcher', 'haiku · -', '- · medium'],
   ])
   const effortOf = (id) => dispatches(host).find(({ agent: name }) => name === id).effort
   assert.deepEqual([effortOf('software-engineer'), effortOf('acceptance-designer')], [{ copilot: 'xhigh' }, { 'claude-code': 'low', copilot: 'medium' }])
@@ -270,10 +270,10 @@ test('a resumed run replays the family, the models, the effort and their sources
 
   const [first, resumed] = host.agentRunner.dispatches.filter(({ agent: id }) => id === 'solution-researcher')
   assert.deepEqual(modelFields(resumed), modelFields(first))
-  assert.deepEqual(modelFields(first), { model: 'researcher', models: { 'claude-code': ['sonnet'], copilot: ['gpt-5.5'] }, effort: { 'claude-code': 'medium', copilot: 'high' } })
+  assert.deepEqual(modelFields(first), { model: 'researcher', models: { 'claude-code': ['haiku'], copilot: ['gpt-5.5'] }, effort: { 'claude-code': 'low', copilot: 'low' } })
   assert.deepEqual(host.events().filter(({ type, step }) => type === 'step.started' && step === 'research').map(({ assignment }) => assignment), [{
-    family: 'researcher', tier: 'standard', source: 'agent',
-    hosts: { 'claude-code': { model: ['sonnet'], effort: 'medium', source: { model: 'tier', effort: 'tier' } }, copilot: { model: ['gpt-5.5'], effort: 'high', source: { model: 'tier', effort: 'tier' } } },
+    family: 'researcher', tier: 'economy', source: 'agent',
+    hosts: { 'claude-code': { model: ['haiku'], effort: 'low', source: { model: 'tier', effort: 'tier' } }, copilot: { model: ['gpt-5.5'], effort: 'low', source: { model: 'tier', effort: 'tier' } } },
   }])
   const frontier = { 'claude-code': { model: ['opus'], effort: null, source: { model: 'family', effort: 'host' } }, copilot: { model: ['gpt-frontier'], effort: 'high', source: { model: 'family', effort: 'family' } } }
   const fitness = host.agentRunner.reviewed().filter(({ agent: id }) => id === 'fitness-lens')
@@ -429,7 +429,7 @@ test('doctor shows, for each host, what every agent the workflow dispatches runs
   const table = (host) => {
     const [tier, claude] = host === 'claude-code' ? ['tier', (alias) => alias] : ['host', () => '-']
     return [
-      `research solution-researcher phase researcher standard ${claude('sonnet')} - agent/${tier}/host`,
+      `research solution-researcher phase researcher economy ${claude('haiku')} - agent/${tier}/host`,
       `design solution-architect phase planner frontier ${claude('opus')} - agent/${tier}/host`,
       ...lensLines('design_review', LENSES.slice(0, 3), host),
       `design_review finding-refuter refuter standard standard ${claude('sonnet')} - escalation/${host === 'claude-code' ? 'family' : 'host'}/host`,
@@ -481,7 +481,7 @@ test('doctor fails an agent rule for an agent nobody provides, naming the closes
   assert.deepEqual(report.checks.filter(({ subject }) => subject.startsWith('models')), [
     { subject: 'models', status: 'fail', detail: 'assign.agents.cold-reader: no agent cold-reader in the plugin, .claude/agents/ or .github/agents/; did you mean cold-reader-lens?' },
     { subject: 'models', status: 'fail', detail: 'assign.agents.sofware-engineer: no agent sofware-engineer in the plugin, .claude/agents/ or .github/agents/; did you mean software-engineer?' },
-    { subject: 'models/claude-code', status: 'warn', detail: "no model on claude-code for reviewer (9 dispatches), gpt-idle (1 dispatch), economy (1 dispatch); these run on the agent file's model" },
+    { subject: 'models/claude-code', status: 'warn', detail: "no model on claude-code for researcher (1 dispatch), reviewer (9 dispatches), gpt-idle (1 dispatch), economy (1 dispatch); these run on the agent file's model" },
     { subject: 'models/claude-code', status: 'warn', detail: 'CLAUDE_CODE_EFFORT_LEVEL is set to "high": Claude Code applies it to every agent, over the effort skraft assigns' },
     { subject: 'models/copilot', status: 'ok', detail: "every family the workflow's agents run on has a model on copilot" },
     { subject: 'models/copilot', status: 'warn', detail: 'max effort on architecture-boundaries-lens (gpt-mini), cold-reader-lens (gpt-6.0, gpt-5.5): Copilot takes max on Anthropic models only, and these names do not contain "claude"' },
@@ -495,7 +495,7 @@ test('doctor fails an agent rule for an agent nobody provides, naming the closes
     'deliver_review cold-reader-lens lens deep-review frontier claude-opus-5.5 → gpt-6.0 → gpt-5.5 max agent/family/family',
   ])
   assert.deepEqual([line('copilot', 'solution-researcher'), line('claude-code', 'business-alignment-lens'), line('copilot', 'business-alignment-lens')], [
-    'research solution-researcher phase researcher standard gpt-5.5 medium agent/tier/type',
+    'research solution-researcher phase researcher economy gpt-mini medium agent/tier/type',
     'distill_review business-alignment-lens lens - - - - host/host/host',
     'distill_review business-alignment-lens lens - - - - host/host/host',
   ])

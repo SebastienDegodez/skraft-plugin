@@ -29,7 +29,7 @@ const ESCALATION_CEILING = TIERS.indexOf('frontier')
 export const AGENT_TYPES = Object.freeze(/** @type {AgentType[]} */ (['phase', 'lens', 'refuter', 'worker']))
 export const EFFORTS = Object.freeze(/** @type {Effort[]} */ (['low', 'medium', 'high', 'xhigh', 'max']))
 /** The roles and the tier each one runs on unless `models.<role>.tier` says otherwise. */
-export const ROLES = Object.freeze(/** @type {Readonly<Record<string, Tier>>} */ ({ reviewer: 'economy', researcher: 'standard', implementer: 'standard', planner: 'frontier' }))
+export const ROLES = Object.freeze(/** @type {Readonly<Record<string, Tier>>} */ ({ reviewer: 'economy', researcher: 'economy', implementer: 'standard', planner: 'frontier' }))
 /** The host decides: no model and no effort. */
 export const INHERIT = 'inherit'
 /** A family: a kebab-case word whose every part starts with a letter, so never a versioned model (`gpt-5.5`). */

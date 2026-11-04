@@ -25,13 +25,13 @@ The doctor prints one table per host:
 ```text
 models on claude-code:
   step             agent                         type     family       tier      model   effort  source (family/model/effort)
-  research         solution-researcher           phase    researcher   standard  sonnet  -       agent/tier/host
+  research         solution-researcher           phase    researcher   economy   haiku   -       agent/tier/host
   design           solution-architect            phase    planner      frontier  opus    -       agent/tier/host
   design_review    consistency-lens              lens     reviewer     economy   haiku   -       type/tier/host
 ```
 
-With no setting, lenses run on `reviewer` (tier `economy`), `solution-researcher` on
-`researcher`, `solution-architect` on `planner` (`frontier`), `pr-writer` on `economy`, every
+With no setting, lenses run on `reviewer` and `solution-researcher` on `researcher` (both tier
+`economy`), `solution-architect` on `planner` (`frontier`), `pr-writer` on `economy`, every
 other agent on `implementer` (`standard`). On Claude Code, `economy`, `standard` and `frontier`
 give `haiku`, `sonnet` and `opus`; on Copilot, no model: the agent runs on the session's.
 

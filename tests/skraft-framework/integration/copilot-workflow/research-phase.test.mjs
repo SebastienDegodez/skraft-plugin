@@ -112,7 +112,7 @@ test('a filled output and a done result close RESEARCH; a blocked architect then
   assert.deepEqual(logs.filter((line) => line.startsWith('phase ')), ['phase RESEARCH', 'phase DESIGN'])
   assert.ok(logs.includes('checkout: RESEARCH closed'))
   assert.deepEqual(logs.filter((line) => line.includes(', attempt ')), [
-    'checkout: solution-researcher, attempt 1 — researcher · standard · model chosen by the host',
+    'checkout: solution-researcher, attempt 1 — researcher · economy · model chosen by the host',
     'checkout: solution-architect, attempt 1 — planner · frontier · model chosen by the host',
   ])
   assert.deepEqual(events.filter((event) => event.type === 'step.started' && event.agent !== undefined).map((event) => [event.agent, event.host]), [['solution-researcher', 'copilot'], ['solution-architect', 'copilot']])

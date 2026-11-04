@@ -39,7 +39,7 @@ test('the canvas draws the workflow as the run goes: a review in progress, then 
   const chosen = (agent, step, assigned) => ({ key: `agent-${step}-${agent}`, text: `${agent} (${step}): ${assigned} · model chosen by the host`, state: 'done' })
   assert.deepEqual(duringRefutation.map((content) => [content.status, content.details]), [['running', [
     { key: 'review-design_review', text: 'review design_review: in progress — consistency fail (1), architecture-compliance pass, fitness pass', state: 'open' },
-    chosen('solution-researcher', 'research', 'researcher · standard'),
+    chosen('solution-researcher', 'research', 'researcher · economy'),
     chosen('solution-architect', 'design', 'planner · frontier'),
     ...['consistency-lens', 'architecture-compliance-lens', 'fitness-lens'].map((lens) => chosen(lens, 'design_review', 'reviewer · economy')),
   ]]])
@@ -59,7 +59,7 @@ test('the canvas draws the workflow as the run goes: a review in progress, then 
     { key: 'review-design_review', text: 'review design_review: approved, pass 2 — consistency pass, architecture-compliance pass, fitness pass', state: 'done' },
     { key: 'edge-design_review-design', text: 'design_review → design (NEEDS_REWORK) ×1', state: 'done' },
     { key: 'edge-design_review-adr', text: 'design_review → adr (APPROVED) ×1', state: 'done' },
-    chosen('solution-researcher', 'research', 'researcher · standard'),
+    chosen('solution-researcher', 'research', 'researcher · economy'),
     chosen('solution-architect', 'design', 'planner · frontier'),
     ...['consistency-lens', 'architecture-compliance-lens', 'fitness-lens'].map((lens) => chosen(lens, 'design_review', 'reviewer · economy')),
     chosen('finding-refuter', 'design_review', 'standard'),

@@ -98,7 +98,7 @@ test('after each step the tracking folder holds run-report.md, with the time, co
     '',
     '| Step | Agent | Family | Tier | Host | Model | Effort |',
     '| --- | --- | --- | --- | --- | --- | --- |',
-    '| research | solution-researcher | researcher | standard | claude-code | sonnet | - |',
+    '| research | solution-researcher | researcher | economy | claude-code | sonnet | - |',
     '| design | solution-architect | planner | frontier | claude-code | model chosen by the host | - |',
     '| design_review | consistency-lens | reviewer | economy | claude-code | model chosen by the host | - |',
     '| design_review | fitness-lens | reviewer | economy | claude-code | model chosen by the host | - |',
@@ -119,7 +119,7 @@ test('after each step the tracking folder holds run-report.md, with the time, co
     totals: { attempts: 5, retries: 1, durationMs: 9000, costUsd: 2.1 },
     answers: [],
     agents: [
-      { step: 'research', agent: 'solution-researcher', family: 'researcher', tier: 'standard', host: 'claude-code', models: ['sonnet'], effort: null },
+      { step: 'research', agent: 'solution-researcher', family: 'researcher', tier: 'economy', host: 'claude-code', models: ['sonnet'], effort: null },
       { step: 'design', agent: 'solution-architect', family: 'planner', tier: 'frontier', host: 'claude-code', models: null, effort: null },
       { step: 'design_review', agent: 'consistency-lens', family: 'reviewer', tier: 'economy', host: 'claude-code', models: null, effort: null },
       { step: 'design_review', agent: 'fitness-lens', family: 'reviewer', tier: 'economy', host: 'claude-code', models: null, effort: null },

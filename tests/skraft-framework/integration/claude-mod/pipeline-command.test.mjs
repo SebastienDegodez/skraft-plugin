@@ -38,8 +38,8 @@ test('the run reads the developer\'s ~/.skraft/config.json from the home folder 
   const fromNode = await withoutHomeVariable({ behaviours: [stops()] }, nodeHome)
   const none = await withoutHomeVariable({ behaviours: [stops()] }, null)
   try {
-    await nodeModFs.write(join(home.home, '.skraft', 'config.json'), JSON.stringify({ models: { standard: { 'claude-code': { model: 'claude-home' } } } }))
-    await nodeModFs.write(join(nodeHome, '.skraft', 'config.json'), JSON.stringify({ models: { standard: { 'claude-code': { model: 'claude-node-home' } } } }))
+    await nodeModFs.write(join(home.home, '.skraft', 'config.json'), JSON.stringify({ models: { economy: { 'claude-code': { model: 'claude-home' } } } }))
+    await nodeModFs.write(join(nodeHome, '.skraft', 'config.json'), JSON.stringify({ models: { economy: { 'claude-code': { model: 'claude-node-home' } } } }))
     await home.command('checkout')
     await home.settled()
     await fromNode.command('checkout')
@@ -65,8 +65,8 @@ test('the mod takes the home folder node names over the one the environment name
   const nodeHome = `${mod.root}-node-home`
   const both = await scriptedModHost({ cwd: mod.root, behaviours: [stops()], nodeHome })
   try {
-    await nodeModFs.write(join(nodeHome, '.skraft', 'config.json'), JSON.stringify({ models: { standard: { 'claude-code': { model: 'claude-node-home' } } } }))
-    await nodeModFs.write(join(mod.home, '.skraft', 'config.json'), JSON.stringify({ models: { standard: { 'claude-code': { model: 'claude-env-home' } } } }))
+    await nodeModFs.write(join(nodeHome, '.skraft', 'config.json'), JSON.stringify({ models: { economy: { 'claude-code': { model: 'claude-node-home' } } } }))
+    await nodeModFs.write(join(mod.home, '.skraft', 'config.json'), JSON.stringify({ models: { economy: { 'claude-code': { model: 'claude-env-home' } } } }))
     await both.command('checkout')
     await both.settled()
 
@@ -121,7 +121,7 @@ test('a filled research document closes RESEARCH, a blocked architect stops the 
     { phase: 'RESEARCH', state: 'closed' }, { phase: 'DESIGN', state: 'open' }, { phase: 'DISTILL', state: 'pending' }, { phase: 'DELIVER', state: 'pending' }, { phase: 'PUBLISH', state: 'pending' },
   ])
   assert.deepEqual(last.log, [
-    'checkout: publish_consent DECLINED (skraft-config.json sets publish.pullRequest to false)', 'checkout: visuals_consent DECLINED (no component of skraft-config.json is a front end (stack react, or an e2e command), so no screenshot is taken)', 'checkout: solution-researcher, attempt 1 — researcher · standard · sonnet', 'checkout: RESEARCH closed', 'checkout: solution-architect, attempt 1 — planner · frontier · opus',
+    'checkout: publish_consent DECLINED (skraft-config.json sets publish.pullRequest to false)', 'checkout: visuals_consent DECLINED (no component of skraft-config.json is a front end (stack react, or an e2e command), so no screenshot is taken)', 'checkout: solution-researcher, attempt 1 — researcher · economy · haiku', 'checkout: RESEARCH closed', 'checkout: solution-architect, attempt 1 — planner · frontier · opus',
     `skraft checkout: blocked (agent-blocked) — ${ARCHITECT_BLOCKED}`,
   ])
   assert.equal(await mod.command(''), `skraft checkout — blocked\n✓ RESEARCH\n▶ DESIGN\n· DISTILL\n· DELIVER\n· PUBLISH\n${ARCHITECT_BLOCKED}`)
