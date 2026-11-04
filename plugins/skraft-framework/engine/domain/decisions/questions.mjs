@@ -277,11 +277,14 @@ const readOption = ({ options, refusals }, { answer, reason }) => {
 
 /** An instruction is kept on one line, at most this long. */
 const INSTRUCTION_LENGTH = 1000
+/** A word of an instruction: three letters in a row, in any script. A digit or a mark alone tells an agent nothing (#500). */
+const WORD = /\p{L}{3}/u
 
 /**
  * The answer a human gave to a question that takes an instruction: one of its options, in any
  * case, with the reason kept on one line; any other answer is the instruction, the reason's words
- * after the answer's, on one line. Never cut: an instruction too long is refused.
+ * after the answer's, on one line. Never cut: an instruction too long is refused, and so is one
+ * that holds no word.
  * @param {Pick<Question, 'options'>} question
  * @param {{ answer: unknown, reason?: unknown }} given
  * @returns {AnswerReading}
@@ -292,6 +295,7 @@ const readInstruction = ({ options }, { answer, reason }) => {
   const text = [answer, reason].filter((part) => typeof part === 'string').join(' ').replace(/\s+/g, ' ').trim()
   if (text === '') return { ok: false, reason: `the answer must be an instruction, or ${options.join(' or ')}` }
   if (text.length > INSTRUCTION_LENGTH) return { ok: false, reason: `an instruction is at most ${INSTRUCTION_LENGTH} characters` }
+  if (!WORD.test(text)) return { ok: false, reason: `an instruction tells the agent in words what to do; write a sentence, or ${options.join(' or ')}` }
   return { ok: true, answer: text, reason: null }
 }
 

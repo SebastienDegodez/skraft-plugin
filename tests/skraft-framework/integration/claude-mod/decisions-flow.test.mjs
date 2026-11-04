@@ -57,16 +57,23 @@ test('a dismissed dialog leaves the run waiting; /skraft decide records the answ
   ])
 })
 
-test('a blocked architect is asked in a dialog; the instruction typed under Other sends it back with it in the same run', async (t) => {
+test('a blocked architect is asked in a dialog; the instruction typed under Other, once confirmed, sends it back with it in the same run', async (t) => {
   const { cwd } = pipelineRepository(t)
   const llm = scriptedLlm({ cwd, acts: { 'solution-architect': [blocked('which payment provider?')] } })
-  const mod = await scriptedModHost({ cwd, otherwise: actsAs(llm), answers: ['Use the bank gateway', 'RATIFIED'] })
+  const mod = await scriptedModHost({ cwd, otherwise: actsAs(llm), answers: ['5', 'Use the bank gateway', 'CANCEL', 'Use the bank gateway', 'SEND', 'RATIFIED'] })
 
   await mod.command(SLUG)
   const outcome = await mod.settled()
 
   assert.equal(outcome.status, 'done')
   assert.deepEqual(mod.asked[0].options, { options: ['STOP'], header: 'Blocked' })
+  // #500: a text with no word is asked again; an instruction is shown back and recorded only once sent.
+  assert.deepEqual(mod.asked.slice(1, 5).map(({ question, options }) => [question.split('\n')[0].slice(0, 40), options.options]), [
+    [mod.asked[0].question.split('\n')[0].slice(0, 40), ['STOP']],
+    ['Send this instruction to design? Use the', ['SEND', 'CANCEL']],
+    [mod.asked[0].question.split('\n')[0].slice(0, 40), ['STOP']],
+    ['Send this instruction to design? Use the', ['SEND', 'CANCEL']],
+  ])
   assert.match(mod.asked[0].question, /^design is blocked: solution-architect says it cannot go on; its reason is in .*design-1-1\.json\.\nLeft by design \(1\):\n- .+\n An instruction runs design again on a new pass with what is left above and the instruction; STOP ends the run\.$/)
   assert.ok(spawnOf(mod, 'design · pass 2 · attempt 1').prompt.includes('\nA human refused the work of pass 1:\n- Use the bank gateway'))
   assert.deepEqual(journal(cwd, SLUG).filter((event) => event.type === 'question.answered').map(({ key, answer, by }) => [key, answer, by]), [['design-1', 'Use the bank gateway', 'host'], ['adr-1', 'RATIFIED', 'host']])

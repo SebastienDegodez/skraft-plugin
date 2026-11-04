@@ -10,6 +10,7 @@ const unavailable = () => ({ ok: false, unavailable: true, text: '' })
 const INSTRUCTION = 'Use the bank gateway of Acme'
 const NO_PROVIDER = 'The story names no payment provider.'
 const blockedAgent = (it) => agent({ result: { status: 'blocked', summary: NO_PROVIDER } })(it)
+const NO_WORD = 'an instruction tells the agent in words what to do; write a sentence, or STOP'
 const RESEARCH_BLOCKED = `research is blocked: solution-researcher says it cannot go on; its reason is in ${TRACKING}/results/research-1-1.json.\nLeft by research (1):\n- ${NO_PROVIDER}\n An instruction runs research again on a new pass with what is left above and the instruction; STOP ends the run.`
 
 test('an agent that says it is blocked asks a human what to do instead of ending the run', async () => {
@@ -148,13 +149,15 @@ test('the node run again that blocks again asks again; STOP then ends the run bl
   assert.equal((await host.view()).status, 'blocked')
 })
 
-test('an answer to a blocked question is refused, without echoing it, when it holds no text or more than 1000 characters', async () => {
+test('an answer to a blocked question is refused, without echoing it, when it holds no text, no word, or more than 1000 characters', async () => {
   const host = scripted({}, (it) => [blockedAgent(it)])
   await host.start()
   const refused = (reason) => ({ ok: false, slug: SLUG, key: 'research-1', code: 'invalid-answer', reason })
 
   assert.deepEqual(await host.decide({ answer: ' \n ' }), refused('the answer must be an instruction, or STOP'))
   assert.deepEqual(await host.decide({ answer: 7 }), refused('the answer must be an instruction, or STOP'))
+  // #500: a bare digit typed in the dialog was sent to the architect as its whole instruction.
+  for (const wordless of ['5', ' 3 ', '42?', '#1', 'ok']) assert.deepEqual(await host.decide({ answer: wordless }), refused(NO_WORD))
   assert.deepEqual(await host.decide({ answer: 'x'.repeat(990), reason: 'y'.repeat(10) }), refused('an instruction is at most 1000 characters'))
   assert.deepEqual(eventsOf(host, 'question.answered'), [])
   assert.equal((await host.decide({ answer: 'x'.repeat(989), reason: 'y'.repeat(10) })).ok, true)

@@ -1,10 +1,12 @@
-import { takesInstruction } from '../../domain/decisions/questions.mjs'
+import { readAnswer, takesInstruction } from '../../domain/decisions/questions.mjs'
 
 /**
  * A question of the run put to the person once, in Copilot's own dialog (host-confirmation.mjs):
  * a question with options as a choice among them, one that takes an instruction (a blocked step's,
- * the mutation plan) as a text field where the person writes an option or their instruction. What the dialog gives is the answer; nothing asks to
- * confirm it. A refusal chosen asks its reason next, in a text field: the agent gets it back.
+ * the mutation plan) as a text field where the person writes an option or their instruction. An
+ * instruction is shown back and confirmed before it is the answer (#500: a bare digit was sent to
+ * the agent as its instruction); an option typed, or a text the engine refuses anyway, asks no
+ * confirmation. A refusal chosen asks its reason next, in a text field: the agent gets it back.
  *
  * @typedef {import('../../domain/decisions/questions.mjs').Question} Question
  * @typedef {import('./host-confirmation.mjs').HostDialog} HostDialog
@@ -17,11 +19,35 @@ import { takesInstruction } from '../../domain/decisions/questions.mjs'
  * @returns {Promise<Put>}
  */
 export const askInHost = async (dialog, question) => {
-  if (takesInstruction(question.kind)) return given(await dialog.write(question.text), null)
+  if (takesInstruction(question.kind)) return instructionOf(dialog, question)
   const chosen = await dialog.choose(question.text, question.options)
   if (!chosen.ok || !question.refusals.includes(/** @type {string} */ (chosen.value))) return given(chosen, null)
   return withReason(dialog, question, /** @type {string} */ (chosen.value))
 }
+
+/**
+ * What the person writes in the text field: an option as it is, an instruction once they confirm
+ * it as written.
+ * @param {HostDialog} dialog @param {Question} question @returns {Promise<Put>}
+ */
+const instructionOf = async (dialog, question) => {
+  const written = await dialog.write(question.text)
+  if (!written.ok || !needsConfirmation(question, /** @type {string} */ (written.value))) return given(written, null)
+  const confirmed = await dialog.ask(`Send this instruction to ${stepOf(question.key)}? ${written.value.trim()}`)
+  return confirmed.ok ? given(written, null) : confirmed
+}
+
+/**
+ * Whether a written answer is an instruction the engine takes: neither an option nor a text it refuses.
+ * @param {Question} question @param {string} text
+ */
+const needsConfirmation = (question, text) => {
+  const reading = readAnswer(question, { answer: text })
+  return reading.ok && !question.options.includes(reading.answer)
+}
+
+/** The node a question's key names: the key without its rank. @param {string} key */
+const stepOf = (key) => key.replace(/-\d+$/, '')
 
 /**
  * The refusal with the reason the person writes for it; refused as its dialog is, and when the
