@@ -3,6 +3,16 @@
 Toutes les modifications notables de ce projet sont documentées ici.
 Format basé sur [Conventional Commits](https://www.conventionalcommits.org/) — versionnage [SemVer](https://semver.org/).
 
+## [2.0.0-alpha.62](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.61...v2.0.0-alpha.62) (2026-11-05)
+
+### 🐛 Bug Fixes
+
+* **engine:** make the pull request's Review section readable ([#511](https://github.com/SebastienDegodez/skraft-plugin/issues/511)) ([#522](https://github.com/SebastienDegodez/skraft-plugin/issues/522)) ([c25abe6](https://github.com/SebastienDegodez/skraft-plugin/commit/c25abe6fe2885842ffcfe8896f08e67f4a7d0213))
+
+### 📝 Documentation
+
+* fix the Mermaid diagrams that do not render ([#520](https://github.com/SebastienDegodez/skraft-plugin/issues/520)) ([2617b89](https://github.com/SebastienDegodez/skraft-plugin/commit/2617b89185f50c391038d06ae8a3121cc8b00891))
+
 ## [2.0.0-alpha.61](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.60...v2.0.0-alpha.61) (2026-11-05)
 
 ### 🐛 Bug Fixes
