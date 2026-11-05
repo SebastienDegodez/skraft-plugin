@@ -3,6 +3,12 @@
 Toutes les modifications notables de ce projet sont documentées ici.
 Format basé sur [Conventional Commits](https://www.conventionalcommits.org/) — versionnage [SemVer](https://semver.org/).
 
+## [2.0.0-alpha.63](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.62...v2.0.0-alpha.63) (2026-11-05)
+
+### ✨ Features
+
+* **engine:** the engine checks a research document's citations and line ranges ([#517](https://github.com/SebastienDegodez/skraft-plugin/issues/517)) ([#518](https://github.com/SebastienDegodez/skraft-plugin/issues/518)) ([c643627](https://github.com/SebastienDegodez/skraft-plugin/commit/c643627e3eafc828f0ba7aab4dbe1d021d0e0823)), closes [#500](https://github.com/SebastienDegodez/skraft-plugin/issues/500)
+
 ## [2.0.0-alpha.62](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.61...v2.0.0-alpha.62) (2026-11-05)
 
 ### 🐛 Bug Fixes
