@@ -49,6 +49,13 @@ branche de la story : la pull request les montre, et les runs suivants les relis
 lanceur de tests ne lit ces fichiers ; le test d'acceptation en reprend les valeurs mot pour mot,
 et la lentille `testability` le vérifie (T2).
 
+Un composant dit s'il décrit son comportement ainsi, avec `bdd` dans `skraft-config.json`
+([skraft-config.json](../../reference/skraft-config.md#component)). C'est une pratique qui se
+déclare, pas une barre : un composant qui le laisse actif est tenu à ses scénarios en entier, et
+celui qui refuse ne se voit demander aucun `.feature` — DISTILL prend alors ses scénarios dans la
+colonne `Scenario` du plan de test, et le TDD de DELIVER tourne exactement comme toujours. Une clé
+absente vaut oui.
+
 ## Ce qui n'est pas un scénario
 
 Un cas d'entrée purement technique — une valeur du mauvais type, `NaN`, `null`, un nombre écrit

@@ -105,7 +105,35 @@ JavaScript and React are in memory by default already):
 
 What you give up: [Adapting skraft: what each setting costs](../explanation/customisation-trade-offs.md).
 
-## 7. Check with `skraft doctor`
+## 7. Say whether a component writes Gherkin
+
+A component describes its behaviour in Gherkin unless it says otherwise. For one whose team writes
+plain tests — a batch job, a scheduler — write:
+
+```json
+{ "name": "batch", "root": "services/batch", "stack": "python", "bdd": false }
+```
+
+DISTILL then asks that component for no `.feature`, and takes its scenarios from the test plan's
+`Scenario` column; DELIVER's TDD runs as it always does. Leaving it on holds the component to its
+scenarios in full: it declares a practice, not a bar to lower. Write the key only to decline — an
+absent key already means yes, and the Configuration tab of the skraft canvas toggles it.
+
+## 8. Settle the publication consents
+
+A run that publishes starts only once they are settled, so `skraft init` leaves them to you:
+
+```json
+{ "publish": { "pullRequest": true, "visuals": false, "questionVersions": { "pullRequest": 2, "visuals": 1 } } }
+```
+
+`pullRequest` lets a run push its branch, open its pull request and keep a comment on the issue;
+`visuals` lets it commit a front end's screenshots. `questionVersions` records which version of
+each question the answer was given to: an answer kept for an earlier version is not settled.
+Without them a run is refused before its first agent, with
+`skraft is not initialised: run /skraft-init`.
+
+## 9. Check with `skraft doctor`
 
 ```console
 $ skraft doctor

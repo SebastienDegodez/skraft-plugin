@@ -107,7 +107,36 @@ JavaScript et React sont déjà en mémoire par défaut) :
 
 Ce que vous perdez : [Adapter skraft : ce que coûte chaque réglage](../explanation/customisation-trade-offs.md).
 
-## 7. Vérifier avec `skraft doctor`
+## 7. Dire si un composant écrit du Gherkin
+
+Un composant décrit son comportement en Gherkin sauf s'il dit le contraire. Pour celui dont
+l'équipe écrit des tests ordinaires — un batch, un ordonnanceur — écrivez :
+
+```json
+{ "name": "batch", "root": "services/batch", "stack": "python", "bdd": false }
+```
+
+DISTILL ne demande alors aucun `.feature` à ce composant et prend ses scénarios dans la colonne
+`Scenario` du plan de test ; le TDD de DELIVER tourne comme toujours. Le laisser actif tient le
+composant à ses scénarios en entier : c'est une pratique qui se déclare, pas une barre à baisser.
+N'écrivez la clé que pour refuser — une clé absente vaut déjà oui, et l'onglet Configuration du
+canvas skraft la bascule.
+
+## 8. Régler les consentements de publication
+
+Un run qui publie ne démarre qu'une fois qu'ils sont réglés, et `skraft init` vous les laisse :
+
+```json
+{ "publish": { "pullRequest": true, "visuals": false, "questionVersions": { "pullRequest": 2, "visuals": 1 } } }
+```
+
+`pullRequest` autorise un run à pousser sa branche, ouvrir sa pull request et tenir un commentaire
+sur l'issue ; `visuals` à commiter les captures d'un front end. `questionVersions` note à quelle
+version de chaque question la réponse a été donnée : une réponse gardée pour une version
+antérieure n'est pas réglée. Sans elles, un run est refusé avant son premier agent, avec
+`skraft is not initialised: run /skraft-init`.
+
+## 9. Vérifier avec `skraft doctor`
 
 ```console
 $ skraft doctor
