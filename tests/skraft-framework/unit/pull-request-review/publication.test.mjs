@@ -40,6 +40,7 @@ test('--publish twice keeps one comment on the pull request, rewritten with each
   assert.equal(host.pullRequests.comments[0].body, [
     '### skraft review · #12 — NEEDS_REWORK (pass 1)', '',
     'Review: 2 to fix, 1 refuted', '',
+    '**verdict** · 1 pass · lenses reviewer · refuter standard', '',
     HEADER, RULE,
     `| To fix | blocker | test-integrity F1 G9 | \`${TEST_FILE}:14\` | the assertion \`@alice\` wrote is gone | confirmed: confirmed by the patch |`,
     `| To fix | low | test-integrity F2 G9 | \`${TEST_FILE}:20\` | name the total | confirmed: the total has no name |`,
@@ -213,6 +214,7 @@ test('the comment is one table by status: what to fix, what one lens alone found
   assert.equal(host.pullRequests.comments[0].body, [
     '### skraft review · #12 — NEEDS_REWORK (pass 1)', '',
     'Review: 3 to fix, 2 refuted', '',
+    '**verdict** · 1 pass · lenses reviewer · refuter standard', '',
     HEADER, RULE,
     `| To fix | blocker | test-integrity F1 G9 | \`${TEST_FILE}:14\` | the assertion that checked the discount above 100 is gone, so a refactoring of Apply can drop the r… | confirmed: the patch drops the assertion |`,
     `| To fix | high | test-integrity F2 G7 | \`${TEST_FILE}:20\` | the discount rule has no test | not verified: no rule names the discount test |`,
@@ -222,12 +224,57 @@ test('the comment is one table by status: what to fix, what one lens alone found
     '',
     HEADER, RULE,
     '| Refuted | low | architecture-boundaries F1 G10 | `src/Discount.cs:5` | name the rate | Discount.cs:5 names the rate |',
-    '| Refuted | medium | cold-reader F1 C1 | `src/Discount.cs:3` | Apply hides the threshold | Discount.cs:3 names the threshold in a constant, MinimumOrder, which the test file quotes word for… |',
+    '| Refuted | medium | cold-reader F1 C1 | `src/Discount.cs:3` | Apply hides the threshold | Discount.cs:3 names the threshold in a constant, MinimumOrder, which the test file quotes word for word |',
     '',
     '</details>',
     '',
     '<sub>skraft-review pr=12</sub>', '',
   ].join('\n'))
+})
+
+test('the comment opens the review on a heading line, its passes and what its lenses and refuter ran on, each lens on its own model; a reason to fix is cut where the refuted one is whole; a finding that names no place shows -', async () => {
+  const host = reviewed({ config: { components: [API], publish: { reviewComment: true } } })
+  /** @param {string} text @param {string} model */
+  const by = (text, model) => ({ ok: true, text, model })
+  host.agentRunner.review = lenses({
+    'test-integrity': [by(says('test-integrity', 'fail', [finding('F1', 'high', 'the rule is gone', { gate: 'G9', location: '' })]), 'claude-sonnet-5')],
+    'cold-reader': [by(says('cold-reader', 'fail', [finding('F1', 'medium', 'Apply hides the threshold', { gate: 'C1', location: 'src/Discount.cs:3' })]), 'claude-haiku-5')],
+    'architecture-boundaries': [by(says('architecture-boundaries', 'pass'), 'claude-haiku-5')],
+    refuter: [by(refutes('confirmed', LONG_REASON), 'claude-opus-5'), by(refutes('refuted', LONG_REASON), 'claude-opus-5')],
+  })
+
+  await host.review({ publish: true })
+
+  assert.equal(host.pullRequests.comments[0].body, [
+    '### skraft review · #12 — NEEDS_REWORK (pass 1)', '',
+    'Review: 1 to fix, 1 refuted', '',
+    '**verdict** · 1 pass · lenses test-integrity: claude-sonnet-5; architecture-boundaries, cold-reader: claude-haiku-5 · refuter claude-opus-5', '',
+    HEADER, RULE,
+    '| To fix | high | test-integrity F1 G9 | - | the rule is gone | confirmed: Discount.cs:3 names the threshold in a constant, MinimumOrder, which the test file quotes word for… |',
+    '',
+    '<details><summary>1 refuted</summary>',
+    '',
+    HEADER, RULE,
+    `| Refuted | medium | cold-reader F1 C1 | \`src/Discount.cs:3\` | Apply hides the threshold | ${LONG_REASON} |`,
+    '',
+    '</details>',
+    '',
+    '<sub>skraft-review pr=12</sub>', '',
+  ].join('\n'))
+})
+
+test('a review whose only finding is a note on a line unchanged since an earlier pass names no refuter on its heading line: none answered', async () => {
+  const lines = Array.from({ length: 12 }, (_, n) => `        // line ${n + 1}`).join('\n')
+  const host = reviewed({ files: { [TEST_FILE]: `${lines}\n` }, config: { components: [API], publish: { reviewComment: true } } })
+  host.agentRunner.review = lenses({ 'test-integrity': [says('test-integrity', 'pass'), says('test-integrity', 'pass', [finding('F1', 'low', 'name the total', { gate: 'G7', location: `${TEST_FILE}:3` })])] })
+
+  await host.review({ publish: true })
+  host.git.commit('feat: round the discount', ['src/Discount.cs'])
+  host.git.adds('src/Discount.cs', '        return Math.Round(total, 2);')
+  pushed(host, 'root-2')
+  await host.review({ publish: true })
+
+  assert.equal(host.pullRequests.comments[0].body.split('\n')[4], '**verdict** · 2 passes · lenses reviewer · refuter -')
 })
 
 test('the comment on a French pull request is in French: what one lens alone found and the refuter refuted is to decide; on the next pass a refutation carried over is folded, a finding new on an unchanged line is a note, a claim of 100 characters is shown whole; each pass shows its own findings', async () => {
@@ -261,6 +308,7 @@ test('the comment on a French pull request is in French: what one lens alone fou
   assert.equal(host.pullRequests.comments[0].body, [
     '### skraft review · #12 — APPROVED (passe 1)', '',
     'Revue : 2 à trancher', '',
+    '**verdict** · 1 passe · lentilles reviewer · réfuteur standard', '',
     FR_HEADER, RULE,
     `| À trancher | high | test-integrity F1 G7 | \`${TEST_FILE}:3\` | the threshold is not tested | une seule lentille, contre celles qui sont passées ; réfuté : line 3 tests 100 and 101 |`,
     `| À trancher | medium | test-integrity F2 G7 | \`${TEST_FILE}:5\` | the rounding is not tested | une seule lentille, contre celles qui sont passées ; réfuté : line 5 rounds |`, '',
@@ -272,6 +320,7 @@ test('the comment on a French pull request is in French: what one lens alone fou
   assert.equal(host.pullRequests.comments[0].body, [
     '### skraft review · #12 — NEEDS_REWORK (passe 2)', '',
     'Revue : 3 à corriger, 1 note, 1 réfuté', '',
+    '**verdict** · 2 passes · lentilles reviewer · réfuteur standard', '',
     FR_HEADER, RULE,
     '| À corriger | low | test-integrity F4 G7 | `src/Checkout.cs:12` | name the total | confirmé : the total has no name |',
     '| À corriger | medium | test-integrity F5 G9 | `src/Discount.cs:2` | Apply hides the threshold | confirmé : Apply names no threshold |',
@@ -293,6 +342,7 @@ test('the comment on a French pull request is in French: what one lens alone fou
   assert.equal(host.pullRequests.comments[0].body, [
     '### skraft review · #12 — APPROVED (passe 3)', '',
     'Revue : 1 réfuté', '',
+    '**verdict** · 3 passes · lentilles reviewer · réfuteur standard', '',
     '<details><summary>1 réfuté</summary>',
     '',
     FR_HEADER, RULE,

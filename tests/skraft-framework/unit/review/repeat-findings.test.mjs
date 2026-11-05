@@ -86,7 +86,7 @@ test('from the second pass, a finding at the place of one the refuter refuted on
   const description = await host.tracking.read(SLUG, 'pull-request.md')
   assert.equal(opening(description, 'Review'), '<details><summary>Review: 2 notes, 3 refuted</summary>')
   assert.equal(section(description, 'Review'), [
-    '**design_review**',
+    '**design_review** · 2 passes · lenses reviewer · refuter standard',
     '',
     '| Status | Severity | Lens | Location | Finding | Why |',
     '| --- | --- | --- | --- | --- | --- |',

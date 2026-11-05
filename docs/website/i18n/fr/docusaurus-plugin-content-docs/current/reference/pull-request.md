@@ -96,7 +96,7 @@ La description est écrite dans la langue de la story. Ce qui décide s'affiche 
 
 ### Revue <!-- #review -->
 
-- **Contient** : par étape de revue, son nom en gras et son tableau ([Tableau de revue](#review-table)) ; `Chaque lentille de la dernière passe de chaque revue est passée sans constat.` quand aucune lentille n'a rien trouvé.
+- **Contient** : par étape de revue, sa ligne d'en-tête et son tableau ([Tableau de revue](#review-table)) ; `Chaque lentille de la dernière passe de chaque revue est passée sans constat.` quand aucune lentille n'a rien trouvé.
 - **Affichée** : repliée ; le résumé dit `Revue: <décomptes>` et le bloc s'ouvre seul tant qu'un constat est À corriger, À trancher ou Accepté.
 - **Rédigée par** : le moteur, à partir de la dernière passe de chaque revue.
 - **À lire pour** : voir ce que les lentilles ont trouvé et ce que le réfuteur a décidé.
@@ -148,7 +148,7 @@ Au-delà de la limite de corps de la forge, le corps garde les sections affiché
 
 ## Tableau de revue <!-- #review-table -->
 
-La ligne de décompte ressemble à `Revue : 2 à corriger, 1 note, 13 réfutés`. Chaque étape de revue a un tableau aux colonnes `Statut | Sévérité | Lentille | Emplacement | Constat | Pourquoi`. Les lignes sont groupées À corriger, À trancher, Accepté, puis Note ; les lignes Réfuté sont repliées sous leur nombre. La cellule Lentille dit `<lentille> <id> <porte>` pour chaque lentille qui a trouvé la même ligne avec la même sévérité et le même statut. Le constat et la raison sont coupés à 100 caractères avec `…` ; `verdict.yaml` les garde entiers.
+La ligne de décompte ressemble à `Revue : 2 à corriger, 1 note, 13 réfutés`. Chaque étape de revue s'ouvre sur une ligne d'en-tête, `**<revue>** · <n> passes · lentilles <modèle> · réfuteur <modèle>`, pour comparer deux runs : le modèle est celui que l'hôte a nommé à la dernière réponse de l'agent, sinon la famille qui lui était assignée ; des lentilles sur des modèles différents montrent chacune le sien (`test-integrity: sonnet; cold-reader: haiku`) ; `-` quand aucun agent n'a répondu. Puis un tableau aux colonnes `Statut | Sévérité | Lentille | Emplacement | Constat | Pourquoi`. Les lignes sont groupées À corriger, À trancher, Accepté, puis Note ; les lignes Réfuté sont repliées sous leur nombre. La cellule Lentille dit `<lentille> <id> <porte>` pour chaque lentille qui a trouvé la même ligne avec la même sévérité et le même statut. Un constat sans emplacement affiche `-`. Le constat, et la raison du réfuteur sur une ligne À corriger, sont coupés à 100 caractères avec `…` ; la raison est entière sur une ligne À trancher et dans les lignes Réfuté repliées, où on la lit pour juger le réfuteur ; `verdict.yaml` garde tout entier.
 
 ### Statuts <!-- #statuses -->
 
@@ -183,7 +183,7 @@ Comment le réfuteur travaille et comment une passe suivante le réutilise : [R�
 
 1. le titre `### skraft review · #<n> — <STATUT> (passe N)` ;
 2. la ligne de décompte, ou le résumé du verdict quand le statut est BLOCKED ou qu'il n'y a aucun constat ;
-3. les tableaux du [Tableau de revue](#review-table) ;
+3. la ligne d'en-tête et le tableau du [Tableau de revue](#review-table) ;
 4. le marqueur visible `skraft-review pr=<n>`, qui retrouve le commentaire.
 
 Le commentaire est réécrit à chaque passe ; sur Azure Repos, c'est un fil créé Closed. Étapes et consentement : [Revoir une pull request avec skraft](../how-to/review-a-pull-request.md).

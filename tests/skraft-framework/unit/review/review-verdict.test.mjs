@@ -717,12 +717,12 @@ test('a review with only medium and low findings left after three passes lets th
   const description = await host.tracking.read(SLUG, 'pull-request.md')
   assert.equal(opening(description, 'Review'), '<details open><summary>Review: 1 to decide, 2 accepted</summary>')
   assert.equal(section(description, 'Review'), [
-    '**design_review**', '',
+    '**design_review** · 4 passes · lenses reviewer · refuter standard', '',
     '| Status | Severity | Lens | Location | Finding | Why |',
     '| --- | --- | --- | --- | --- | --- |',
     '| To decide | medium | consistency F3 G1 | `docs/architecture/payments.md:9` | the map names no currency | one lens alone, against the lenses that passed; refuted: payments.md:9 names EUR (pass 4) |',
     '| Accepted | medium | consistency F1 G1 | `docs/architecture/payments.md:7` | a read model is classified twice | a human accepted it as it stands at the review\'s ceiling |',
-    '| Accepted | low | consistency F2 G1 | `` | a typo \\| in the title | a human accepted it as it stands at the review\'s ceiling |',
+    '| Accepted | low | consistency F2 G1 | - | a typo \\| in the title | a human accepted it as it stands at the review\'s ceiling |',
   ].join('\n'))
   assert.equal(description.includes('Accepted findings'), false, 'the review table holds the accepted findings: no second list')
 })

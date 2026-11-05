@@ -1,6 +1,7 @@
 import { groupFindings } from '../review/finding-groups.mjs'
 import { isMatrix } from '../pipeline/design-records.mjs'
 import { acceptedFindings } from './accepted-findings.mjs'
+import { reviewModels } from './agent-models.mjs'
 
 /**
  * The facts of a run a pull request description shows, read from its journal alone: the red
@@ -25,7 +26,8 @@ import { acceptedFindings } from './accepted-findings.mjs'
  *   counts; refuted: the refuter refuted it, on this pass or an earlier one.
  * @typedef {{ status: ReviewStatus, cited: string, finding: FindingFact }} FindingLine
  *   cited: `<lens> <id> <gate>` of each lens that found it at that line, with that severity and status.
- * @typedef {{ step: string, lines: FindingLine[] }} StepReview
+ * @typedef {{ step: string, passes: number, lenses: string, refuter: string, lines: FindingLine[] }} StepReview
+ *   passes: how many passes the step ran; lenses, refuter: what they ran on (`reviewModels`);
  *   lines: grouped by status, in the order of REVIEW_STATUSES.
  * @typedef {StepReview[]} ReviewFacts
  *   the review steps whose last pass found something, in the order they ran.
@@ -72,9 +74,12 @@ export const reviewFacts = (events) => {
   const last = lenses.filter((lens) => !lenses.some((other) => other.step === lens.step && other.visit > lens.visit))
   const steps = [...new Set(last.map(({ step }) => step))]
   const accepted = acceptedFindings(events).map(({ review, lens, id }) => `${review} ${lens} ${id}`)
-  return steps.map((step) => ({ step, lines: linesOf(last.filter((lens) => lens.step === step).flatMap((lens) => findingsOf(events, lens, accepted))) }))
+  return steps.map((step) => ({ step, passes: passesOf(lenses, step), ...reviewModels(events, step), lines: linesOf(last.filter((lens) => lens.step === step).flatMap((lens) => findingsOf(events, lens, accepted))) }))
     .filter(({ lines }) => lines.length > 0)
 }
+
+/** How many passes a review step ran: its visits a lens answered on. @param {RunEvent[]} lenses review.lens events @param {string} step */
+const passesOf = (lenses, step) => new Set(lenses.filter((lens) => lens.step === step).map(({ visit }) => visit)).size
 
 /** A finding that counts becomes accepted when a human accepted it. @param {FindingFact} finding @returns {ReviewStatus} */
 const statusOf = (finding) => {

@@ -345,7 +345,7 @@ test('the review the description shows: one table per review, a row per finding 
   assert.equal(opening(body, 'Review'), '<details open><summary>Review: 1 to decide, 3 refuted</summary>')
   assert.equal(opening(await host.tracking.read(SLUG, 'pull-request.md'), 'Review'), '<details open><summary>Review: 1 to decide, 3 refuted</summary>')
   assert.equal(section(body, 'Review'), [
-    '**design_review**',
+    '**design_review** · 1 pass · lenses reviewer · refuter standard',
     '',
     '<details><summary>2 refuted</summary>',
     '',
@@ -355,10 +355,10 @@ test('the review the description shows: one table per review, a row per finding 
     '',
     '</details>',
     '',
-    '**deliver_review**',
+    '**deliver_review** · 1 pass · lenses reviewer · refuter standard',
     '',
     HEADER, RULE,
-    '| To decide | medium | cold-reader F1 G1 | `src/Checkout.cs:3` | pay names no currency, so a refund cannot tell euros from dollars and the ledger rounds each one it… | one lens alone, against the lenses that passed; refuted: context-map.md:12 fixes pay(amount) in euros for the whole checkout context, and the ADR states it… |',
+    '| To decide | medium | cold-reader F1 G1 | `src/Checkout.cs:3` | pay names no currency, so a refund cannot tell euros from dollars and the ledger rounds each one it… | one lens alone, against the lenses that passed; refuted: context-map.md:12 fixes pay(amount) in euros for the whole checkout context, and the ADR states it in its decision |',
     '',
     '<details><summary>1 refuted</summary>',
     '',
@@ -381,7 +381,7 @@ test('the review the description shows: one table per review, a row per finding 
   const reworkedBody = await reworked.tracking.read(SLUG, 'pull-request-body.md')
   assert.equal(opening(reworkedBody, 'Review'), '<details><summary>Review: 2 refuted</summary>')
   assert.equal(section(reworkedBody, 'Review'), [
-    '**design_review**',
+    '**design_review** · 2 passes · lenses reviewer · refuter standard',
     '',
     '<details><summary>1 refuted</summary>',
     '',
@@ -390,7 +390,7 @@ test('the review the description shows: one table per review, a row per finding 
     '',
     '</details>',
     '',
-    '**deliver_review**',
+    '**deliver_review** · 1 pass · lenses reviewer · refuter standard',
     '',
     '<details><summary>1 refuted</summary>',
     '',
@@ -404,7 +404,7 @@ test('the review the description shows: one table per review, a row per finding 
   minor.agentRunner.review = lenses({ 'cold-reader': [says('cold-reader', 'pass', [finding('F1', 'low', 'long name')])], refuter: [refutes('refuted', 'the name is short')] })
   await minor.start()
   const minorBody = await minor.tracking.read(SLUG, 'pull-request-body.md')
-  assert.equal(section(minorBody, 'Review'), ['**deliver_review**', '', '<details><summary>1 refuted</summary>', '', HEADER, RULE, '| Refuted | low | cold-reader F1 G1 | `src/Checkout.cs:12` | long name | the name is short |', '', '</details>'].join('\n'))
+  assert.equal(section(minorBody, 'Review'), ['**deliver_review** · 1 pass · lenses reviewer · refuter standard', '', '<details><summary>1 refuted</summary>', '', HEADER, RULE, '| Refuted | low | cold-reader F1 G1 | `src/Checkout.cs:12` | long name | the name is short |', '', '</details>'].join('\n'))
   assert.equal(opening(minorBody, 'Review'), '<details><summary>Review: 1 refuted</summary>')
 })
 
@@ -423,9 +423,9 @@ test('a review whose rework the workflow sends onward shows what is to fix, open
 
   const body = await host.tracking.read(SLUG, 'pull-request-body.md')
   assert.equal(opening(body, 'Review'), '<details open><summary>Review: 2 to fix</summary>')
-  assert.ok(body.includes('<details open><summary>Review: 2 to fix</summary>\n\n**design_review**\n\n'), body)
+  assert.ok(body.includes('<details open><summary>Review: 2 to fix</summary>\n\n**design_review** · 1 pass · lenses reviewer · refuter standard\n\n'), body)
   assert.equal(section(body, 'Review'), [
-    '**design_review**',
+    '**design_review** · 1 pass · lenses reviewer · refuter standard',
     '',
     HEADER, RULE,
     '| To fix | medium | consistency F1 G1 | `details/x.md:3` | no owner for refunds | confirmed: nobody owns refunds |',
@@ -433,19 +433,22 @@ test('a review whose rework the workflow sends onward shows what is to fix, open
   ].join('\n'))
 })
 
-test('two reviews with the same lens each show what the refuter said of their own finding', async () => {
+test('two reviews with the same lens each show what the refuter said of their own finding, and what their own lenses and refuter ran on', async () => {
   const twice = 'digraph p {\n  start [shape=Mdiamond]\n  deliver [shape=box, agent="software-engineer", phase="DELIVER"]\n  first_review [shape=house, workflow="review"]\n  second_review [shape=house, workflow="review"]\n  publish [shape=parallelogram, publish="pull-request", phase="PUBLISH"]\n  exit [shape=Msquare]\n  start -> deliver -> first_review\n  first_review -> second_review [label="APPROVED"]\n  second_review -> publish [label="APPROVED"]\n  publish -> exit\n}'
   const host = scripted({ config: CONSENTED, workflow: twice }, (it) => [agent({ work: tddCycle() })(it)])
   host.agentRunner.review = lenses({
-    'test-integrity': [says('test-integrity', 'fail', [finding('F1', 'medium', 'the total is not asserted')]), says('test-integrity', 'fail', [finding('F1', 'medium', 'the total is still not asserted')])],
-    refuter: [refutes('refuted', 'line 12 asserts 90'), refutes('refuted', 'line 12 still asserts 90')],
+    'test-integrity': [
+      { ok: true, text: says('test-integrity', 'fail', [finding('F1', 'medium', 'the total is not asserted')]), model: 'claude-haiku-5' },
+      { ok: true, text: says('test-integrity', 'fail', [finding('F1', 'medium', 'the total is still not asserted')]), model: 'claude-sonnet-5' },
+    ],
+    refuter: [{ ok: true, text: refutes('refuted', 'line 12 asserts 90'), model: 'claude-sonnet-5' }, { ok: true, text: refutes('refuted', 'line 12 still asserts 90'), model: 'claude-opus-5' }],
   })
 
   assert.equal((await host.start()).status, 'done')
 
   const review = section(await host.tracking.read(SLUG, 'pull-request-body.md'), 'Review')
-  assert.ok(review.includes('**first_review**\n\n' + HEADER + '\n' + RULE + '\n| To decide | medium | test-integrity F1 G1 | `src/Checkout.cs:12` | the total is not asserted | one lens alone, against the lenses that passed; refuted: line 12 asserts 90 |'), review)
-  assert.ok(review.includes('**second_review**\n\n' + HEADER + '\n' + RULE + '\n| To decide | medium | test-integrity F1 G1 | `src/Checkout.cs:12` | the total is still not asserted | one lens alone, against the lenses that passed; refuted: line 12 still asserts 90 |'), review)
+  assert.ok(review.includes('**first_review** · 1 pass · lenses test-integrity: claude-haiku-5; architecture-boundaries, cold-reader: reviewer · refuter claude-sonnet-5\n\n' + HEADER + '\n' + RULE + '\n| To decide | medium | test-integrity F1 G1 | `src/Checkout.cs:12` | the total is not asserted | one lens alone, against the lenses that passed; refuted: line 12 asserts 90 |'), review)
+  assert.ok(review.includes('**second_review** · 1 pass · lenses test-integrity: claude-sonnet-5; architecture-boundaries, cold-reader: reviewer · refuter claude-opus-5\n\n' + HEADER + '\n' + RULE + '\n| To decide | medium | test-integrity F1 G1 | `src/Checkout.cs:12` | the total is still not asserted | one lens alone, against the lenses that passed; refuted: line 12 still asserts 90 |'), review)
 })
 
 test('a red commit the engine refused is not shown as evidence, only the one that replaced it', async () => {
@@ -629,7 +632,7 @@ test('a body whose decisive sections are past 60,000 characters keeps what waits
   assert.ok(body.length <= 60_000 && body.length > 59_900, String(body.length))
   assert.equal(opening(body, 'Review'), '<details open><summary>Review: 20 to decide</summary>')
   assert.equal(section(body, 'Review'), section(await host.tracking.read(SLUG, 'pull-request.md'), 'Review'))
-  assert.equal(section(body, 'Review').split('\n').at(-1), `| To decide | medium | cold-reader F20 G1 | \`src/Checkout.cs:20\` | ${'pay names no currency '.repeat(5).slice(0, 99)}… | one lens alone, against the lenses that passed; refuted: ${'the map fixes it '.repeat(6).slice(0, 99).trimEnd()}… |`)
+  assert.equal(section(body, 'Review').split('\n').at(-1), `| To decide | medium | cold-reader F20 G1 | \`src/Checkout.cs:20\` | ${'pay names no currency '.repeat(5).slice(0, 99)}… | one lens alone, against the lenses that passed; refuted: ${'the map fixes it '.repeat(35).trimEnd()} |`)
   assert.ok(section(body, 'Why').endsWith(`\n\n${CUT}`), section(body, 'Why').slice(-200))
   assert.ok(section(body, 'What changes').endsWith('Checkout records it.\nDone.'), section(body, 'What changes').slice(-200))
 })
