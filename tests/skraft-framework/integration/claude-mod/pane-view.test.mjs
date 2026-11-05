@@ -122,14 +122,14 @@ test('the pane names what each agent runs on under the host that started it, bef
     current: null,
     costUsd: null,
     agents: [
-      { step: 'research', agent: 'solution-researcher', family: 'researcher', tier: 'standard', host: 'claude-code', models: ['sonnet'], effort: 'high' },
+      { step: 'research', agent: 'solution-researcher', family: 'researcher', tier: 'economy', host: 'claude-code', models: ['haiku'], effort: 'high' },
       { step: 'design', agent: 'solution-architect', family: 'planner', tier: 'frontier', host: 'copilot', models: ['gpt-6.0', 'gpt-5.5'], effort: null },
       { step: 'design_review', agent: 'finding-refuter', family: 'standard', tier: 'standard', host: 'copilot', models: null, effort: null },
     ],
   }
 
   assert.deepEqual(paneRows({ view, log: ['checkout: RESEARCH closed'] }).slice(1), [
-    { key: 'agent-research-solution-researcher', text: 'solution-researcher (research): researcher · standard · sonnet · effort high', tone: 'detail' },
+    { key: 'agent-research-solution-researcher', text: 'solution-researcher (research): researcher · economy · haiku · effort high', tone: 'detail' },
     { key: 'agent-design-solution-architect', text: 'solution-architect (design): planner · frontier · gpt-6.0 → gpt-5.5', tone: 'detail' },
     { key: 'agent-design_review-finding-refuter', text: 'finding-refuter (design_review): standard · model chosen by the host', tone: 'detail' },
     { key: 'log-0', text: 'checkout: RESEARCH closed', tone: 'log' },

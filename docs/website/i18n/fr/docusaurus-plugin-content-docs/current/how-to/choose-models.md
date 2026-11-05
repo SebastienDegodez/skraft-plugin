@@ -25,13 +25,13 @@ Le doctor affiche une table par hôte :
 ```text
 models on claude-code:
   step             agent                         type     family       tier      model   effort  source (family/model/effort)
-  research         solution-researcher           phase    researcher   standard  sonnet  -       agent/tier/host
+  research         solution-researcher           phase    researcher   economy   haiku   -       agent/tier/host
   design           solution-architect            phase    planner      frontier  opus    -       agent/tier/host
   design_review    consistency-lens              lens     reviewer     economy   haiku   -       type/tier/host
 ```
 
-Sans réglage, les lentilles tournent sur `reviewer` (palier `economy`), `solution-researcher` sur
-`researcher`, `solution-architect` sur `planner` (`frontier`), `pr-writer` sur `economy`, les
+Sans réglage, les lentilles tournent sur `reviewer` et `solution-researcher` sur `researcher` (palier
+`economy` pour les deux), `solution-architect` sur `planner` (`frontier`), `pr-writer` sur `economy`, les
 autres agents sur `implementer` (`standard`). Sous Claude Code, `economy`, `standard` et
 `frontier` donnent `haiku`, `sonnet` et `opus` ; sous Copilot, aucun modèle : l'agent tourne sur
 celui de la session.

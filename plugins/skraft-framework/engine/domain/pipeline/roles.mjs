@@ -21,8 +21,8 @@ import { joinRelative } from '../config/relative-path.mjs'
  *   tdd: how its commits drive the tests; prose: the engine checks the pull request prose its
  *   output holds (a summary line of at most 72 characters, no section left empty); proposal: it
  *   writes a proposal for surviving mutants in the file the engine creates, and changes no code;
- *   shell: its descriptor grants a shell, so it commits its own changes; the engine commits those
- *   of an agent with none once its step is done; absent for a repository agent and a proposal: no shell.
+ *   shell: false when its descriptor grants no shell: the engine commits its changes once its step
+ *   is done; any other agent, a repository agent included, commits its own.
  * @typedef {import('../workflow/workflow.mjs').WorkflowNode} WorkflowNode
  * @typedef {import('../config/skraft-config.mjs').Component} Component
  */
@@ -103,11 +103,11 @@ const CHECKLISTS = /** @type {Readonly<Record<string, readonly string[]>>} */ (O
 export const checklistsOf = (agent) => CHECKLISTS[agent] ?? []
 
 /**
- * Whether the agent commits to the working copy itself: one with a shell. The engine commits
- * what an agent with none changes outside the tracking folder.
+ * Whether the agent commits to the working copy itself: any but one marked with no shell. The
+ * engine commits what an agent with none changes outside the tracking folder.
  * @param {Role} role
  */
-export const makesCommits = (role) => role.shell === true
+export const makesCommits = (role) => role.shell !== false
 
 /** The tracking folder of a pipeline, relative to the working copy. @param {string} slug */
 export const trackingFolder = (slug) => `.copilot-tracking/skraft-plans/${slug}`
@@ -116,12 +116,13 @@ export const trackingFolder = (slug) => `.copilot-tracking/skraft-plans/${slug}`
 const PROPOSAL = Object.freeze({ outputs: Object.freeze([]), writes: Object.freeze([]), components: Object.freeze([]), records: false, scan: false, tdd: null, prose: false, proposal: true })
 
 /**
- * The role an agent node plays: a proposal, else its agent's own, with the outputs and writes
- * its node declares taking over; a node that takes surviving mutants writes tests that kill them.
+ * The role an agent node plays: a proposal, committing as its agent does, else its agent's own,
+ * with the outputs and writes its node declares taking over; a node that takes surviving mutants
+ * writes tests that kill them.
  * @param {WorkflowNode} node an agent node
  * @returns {Role}
  */
-export const roleOf = (node) => (node.proposal ? PROPOSAL : ownRole(node))
+export const roleOf = (node) => (node.proposal ? { ...PROPOSAL, shell: ownRole(node).shell } : ownRole(node))
 
 /** @param {WorkflowNode} node an agent node @returns {Role} */
 const ownRole = (node) => {
@@ -133,6 +134,15 @@ const ownRole = (node) => {
     tdd: node.each === 'survivor-file' ? 'kill' : own.tdd,
   }
 }
+
+/**
+ * The folders the engine creates before an attempt of an agent node, so that an agent whose
+ * tools only create files in existing folders can write on a repository that has none yet: the
+ * folders its plugin role writes in. A node's own `writes=` may name files, so it adds none.
+ * @param {WorkflowNode} node an agent node
+ * @returns {readonly string[]}
+ */
+export const roleFolders = (node) => (node.proposal ? [] : (ROLES[/** @type {string} */ (node.agent)]?.writes ?? []))
 
 /** What an agent with no role of its own (a repository agent) starts from. @type {Role} */
 const NO_ROLE = Object.freeze({ outputs: Object.freeze([]), writes: Object.freeze([]), components: Object.freeze([]), records: false, scan: false, tdd: null, prose: false, proposal: false })

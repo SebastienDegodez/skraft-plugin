@@ -3,6 +3,34 @@
 Toutes les modifications notables de ce projet sont documentées ici.
 Format basé sur [Conventional Commits](https://www.conventionalcommits.org/) — versionnage [SemVer](https://semver.org/).
 
+## [2.0.0-alpha.59](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.58...v2.0.0-alpha.59) (2026-11-04)
+
+### 🐛 Bug Fixes
+
+* **engine:** an agent commits its own changes unless it has no shell ([#513](https://github.com/SebastienDegodez/skraft-plugin/issues/513)) ([9a95c10](https://github.com/SebastienDegodez/skraft-plugin/commit/9a95c105cc372ba586e04a6065fc9c65e08859be)), closes [#509](https://github.com/SebastienDegodez/skraft-plugin/issues/509)
+
+## [2.0.0-alpha.58](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.57...v2.0.0-alpha.58) (2026-11-04)
+
+### 🐛 Bug Fixes
+
+* **engine:** the research agent runs on the economy tier ([#514](https://github.com/SebastienDegodez/skraft-plugin/issues/514)) ([fb2aa8c](https://github.com/SebastienDegodez/skraft-plugin/commit/fb2aa8c9dd0f29f8cb7d84a269497f5953105ead)), closes [#512](https://github.com/SebastienDegodez/skraft-plugin/issues/512)
+
+## [2.0.0-alpha.57](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.56...v2.0.0-alpha.57) (2026-11-04)
+
+### 🐛 Bug Fixes
+
+* **engine:** keep a block's findings for the human and the agent ([#502](https://github.com/SebastienDegodez/skraft-plugin/issues/502)) ([bae04c1](https://github.com/SebastienDegodez/skraft-plugin/commit/bae04c1ee9a4194dc7aeae1b9a846e202459f58d)), closes [#500](https://github.com/SebastienDegodez/skraft-plugin/issues/500) [#500](https://github.com/SebastienDegodez/skraft-plugin/issues/500) [#500](https://github.com/SebastienDegodez/skraft-plugin/issues/500) [#500](https://github.com/SebastienDegodez/skraft-plugin/issues/500)
+
+## [2.0.0-alpha.56](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.55...v2.0.0-alpha.56) (2026-11-04)
+
+### 🐛 Bug Fixes
+
+* **engine:** create a role's docs folders before dispatching its agent ([#501](https://github.com/SebastienDegodez/skraft-plugin/issues/501)) ([ad67204](https://github.com/SebastienDegodez/skraft-plugin/commit/ad672044263f804ae6309e95a2b25e5a6e7da501)), closes [#498](https://github.com/SebastienDegodez/skraft-plugin/issues/498) [#498](https://github.com/SebastienDegodez/skraft-plugin/issues/498)
+
+### 📝 Documentation
+
+* capture the workflows in real sessions ([#506](https://github.com/SebastienDegodez/skraft-plugin/issues/506)) ([f488c80](https://github.com/SebastienDegodez/skraft-plugin/commit/f488c80fb3c6130d4ce8635bfd0b231be301eb9a)), closes [#478](https://github.com/SebastienDegodez/skraft-plugin/issues/478)
+
 ## [2.0.0-alpha.55](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.54...v2.0.0-alpha.55) (2026-11-04)
 
 ### 🐛 Bug Fixes

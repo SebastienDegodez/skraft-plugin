@@ -69,7 +69,7 @@ test('the nominal run goes through RESEARCH, DESIGN, DISTILL and DELIVER, the ga
   assert.deepEqual(host.progress.lines, [
     'phase RESEARCH', `${SLUG}: publish_consent DECLINED (skraft-config.json sets publish.pullRequest to false)`,
     `${SLUG}: visuals_consent DECLINED (no component of skraft-config.json is a front end (stack react, or an e2e command), so no screenshot is taken)`,
-    `${SLUG}: solution-researcher, attempt 1 — researcher · standard · sonnet`, `${SLUG}: RESEARCH closed`,
+    `${SLUG}: solution-researcher, attempt 1 — researcher · economy · haiku`, `${SLUG}: RESEARCH closed`,
     'phase DESIGN', `${SLUG}: solution-architect, attempt 1 — planner · frontier · opus`,
     `${SLUG}: design_review (consistency, architecture-compliance, fitness) — reviewer · economy · haiku`, `${SLUG}: design_review APPROVED: every lens passed`,
     `${SLUG}: adr RATIFIED (no Proposed ADR to ratify)`, `${SLUG}: DESIGN closed`,

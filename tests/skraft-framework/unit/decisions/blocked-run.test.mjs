@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { BUILT_IN_WORKFLOW, InMemoryAgentCatalog, InMemoryGit, ScriptedMachine } from '../support/in-memory-host.mjs'
 import { agent, API, finding, lenses, nominal, reviews, says, scripted, SLUG, tddCycle, TRACKING } from '../support/pipeline-host.mjs'
 import { dispatched, eventsOf } from '../support/decisions.mjs'
-import { WITH_SECURITY } from '../workflow/support.mjs'
+import { edit, WITH_SECURITY } from '../workflow/support.mjs'
 
 const withSecurity = { files: { '.skraft/pipeline.skraft.dot': WITH_SECURITY }, catalog: new InMemoryAgentCatalog({ repository: ['acme-security-reviewer'] }) }
 const unavailable = () => ({ ok: false, unavailable: true, text: '' })
@@ -75,6 +75,27 @@ test('a loop that reached its max_visits asks a human; an instruction runs the n
   ])
   const resumed = host.agentRunner.dispatches.find((dispatch) => dispatch.label === `skraft ${SLUG} · deliver · pass 5 · attempt 1`)
   assert.ok(resumed.prompt.endsWith(`\n\nWhat pass 4 left when it was blocked:\n- ${failures[0]}\n- ${failures[1]}\n\nA human refused the work of pass 4:\n- Mock the bank gateway in the tests`), resumed.prompt)
+})
+
+test('a loop stopped at its max_visits by an edge out of a step that refused nothing leaves nothing: the reopened pass is told the instruction alone (#500)', async () => {
+  // A gate whose PASS edge loops back to design: a pass that passed leaves no failures.
+  const looping = edit(WITH_SECURITY,
+    ['  exit     [shape=Msquare]', '  exit     [shape=Msquare]\n  lint_design [shape=parallelogram, gate="lint"]'],
+    ['  security -> design_review_lenses\n', '  security -> lint_design\n  lint_design -> design [label="PASS", max_visits=1]\n  lint_design -> design_review_lenses [label="FAIL"]\n'])
+  const host = scripted({ ...withSecurity, files: { '.skraft/pipeline.skraft.dot': looping } }, (it) => [agent()(it), agent()(it), agent()(it), agent()(it), agent()(it), agent()(it), unavailable])
+
+  const waiting = await host.start()
+  await host.decide({ answer: INSTRUCTION })
+  await host.run()
+
+  const text = 'design is blocked: lint_design -> design was taken as often as its max_visits allows. An instruction runs design again on a new pass with it; STOP ends the run.'
+  assert.deepEqual(waiting, { status: 'waiting', slug: SLUG, phase: 'DESIGN', code: 'blocked', reason: `${text} Answer with skraft decide design-1 "<instruction>"|STOP.` })
+  const reopened = host.agentRunner.dispatches.find((dispatch) => dispatch.label === `skraft ${SLUG} · design · pass 3 · attempt 1`)
+  assert.ok(reopened.prompt.endsWith(`\n\nA human refused the work of pass 2:\n- ${INSTRUCTION}`), reopened.prompt)
+  assert.ok(!reopened.prompt.includes('left when it was blocked'), reopened.prompt)
+  assert.deepEqual(eventsOf(host, 'step.started').filter((event) => event.step === 'design').map(({ visit, feedback, instruction, sentBy }) => [visit, feedback, instruction, sentBy]), [
+    [1, [], undefined, undefined], [2, [], undefined, undefined], [3, [], INSTRUCTION, 'ask'],
+  ])
 })
 
 /** The journal's lines chained and signed again, after an edit, as the machine that wrote them would. */
