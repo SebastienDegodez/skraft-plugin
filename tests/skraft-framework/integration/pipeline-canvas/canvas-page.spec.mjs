@@ -60,10 +60,10 @@ test('the Journal tab lists each step recorded with its pass, outcome and the ed
 
   await page.getByRole('tab', { name: 'Journal' }).click()
 
-  await expect(page.locator('.j-step .j-id')).toHaveText(['research', 'design', 'design_review', 'adr', 'distill'])
-  await expect(page.locator('.j-step .j-outcome')).toHaveText(['skipped', 'skipped', 'done', 'done', 'approved'])
-  await expect(page.locator('.j-step .j-edge')).toHaveText(['then design', 'then design_review', 'then adr', 'then distill', 'then distill_review'])
-  await expect(page.locator('.j-step .j-pass')).toHaveText(Array(5).fill('pass 1'))
+  await expect(page.locator('.j-step .j-id')).toHaveText(['research', 'design', 'design_review'])
+  await expect(page.locator('.j-step .j-outcome')).toHaveText(['done', 'done', 'approved'])
+  await expect(page.locator('.j-step .j-edge')).toHaveText(['then design', 'then design_review', 'then adr'])
+  await expect(page.locator('.j-step .j-pass')).toHaveText(Array(3).fill('pass 1'))
   const lines = readFileSync(journalFile(state.run.cwd), 'utf8').split('\n').filter(Boolean).length
   await expect(page.locator('.chain-word')).toHaveText('intact')
   await expect(page.locator('.chain-detail')).toHaveText(`${lines} lines, each chained to the one before and signed.`)
@@ -78,7 +78,7 @@ test('the Journal tab shows the last entries only, and says how many there are',
 
   await expect(page.locator('.j-row')).toHaveCount(2)
   await expect(page.locator('.j-id')).toHaveText(['design', 'design_review'])
-  await expect(page.locator('.journal-shown')).toHaveText('The last 2 of 5 entries.')
+  await expect(page.locator('.journal-shown')).toHaveText('The last 2 of 3 entries.')
 })
 
 test('a question waiting puts a We need you button in the header, which comes and goes with the question and leads to it', async ({ page }) => {
