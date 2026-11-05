@@ -5,21 +5,20 @@
  *              its examples, and is titled once in its file; and the story has at least one
  *              scenario per acceptance criterion it holds (#524)
  *
- * The plan declares what the story's scenarios are; a row that names none writes `—`, as the
- * coverage matrix of `test-design-mandates` does for a domain invariant or an adapter test. So a
- * story that declares no Gherkin is asked for none, and one that does is held to what it named.
+ * The plan declares which `.feature` files are the story's: a coverage matrix row that names none
+ * writes `—`, as `test-design-mandates` lays it out for a domain invariant or an adapter test. So
+ * the files of another story are never read, and a plan that names none is asked for no scenario.
+ * The criteria answer how many it takes: a story whose `ac-draft` declares none is asked for none.
  *
  * @typedef {{ path: string, text: string }} Document a file of the run, as the engine read it
  * @typedef {{ kind: string, title: string, steps: string[], examples: string[][] }} Scenario
  * @typedef {{ plans: Document[], features: Document[], criteria: Document[] }} Records
- *   plans: the test plans of the tracking folder; features: the `.feature` files of the working
- *   copy; criteria: the acceptance criteria of the story, `ac-draft-<story>.md`.
+ *   plans: the test plans of the tracking folder; features: the files of the features folder of
+ *   the working copy; criteria: the acceptance criteria of the story, `ac-draft-<story>.md`.
  */
 
-/** Where the scenarios of a story live: a `.feature` under the features folder of a repository. */
-const FEATURE = /(^|\/)docs\/features\/.+\.feature$/
 /** A test plan names its scenarios' file in a cell of its coverage matrix, as a path or in backticks. */
-const CITED = /(?<=^|[\s,`'"(|])([\w.-]+(?:\/[\w.-]+)*\.feature)/g
+const CITED = /[\w.-]+(?:\/[\w.-]+)*\.feature/g
 /** What opens a scenario: its keyword and its title. */
 const OPENS = /^\s*(Scenario Outline|Scenario Template|Scenario|Example):\s*(\S.*?)\s*$/
 /** A step of a scenario, whatever its keyword. */
@@ -30,27 +29,25 @@ const EXAMPLES = /^\s*(Examples|Scenarios):/
 const ROW = /^\s*\|(.*)\|\s*$/
 /** A placeholder an outline opens, filled from a column of its examples. */
 const PLACEHOLDER = /<([^<>]+)>/g
-/** A heading of one acceptance criterion, as DISCUSS writes it. */
-const CRITERION = /^##\s+AC-\d+\b/m
+/** How DISCUSS heads one acceptance criterion (`## AC-1 — A card is paid`). */
+const CRITERION = '## AC-'
+
 /** The keywords a scenario says, each needed once. */
 const KEYWORDS = Object.freeze(['Given', 'When', 'Then'])
 /** An outline fills its placeholders from its examples; another scenario opens none. */
 const OUTLINES = Object.freeze(['Scenario Outline', 'Scenario Template'])
 
-/** @param {string} path relative to the working copy */
-export const isFeature = (path) => FEATURE.test(path)
-
 /**
  * The `.feature` files a test plan names, each once, back slashes read as separators.
  * @param {string} text @returns {string[]}
  */
-export const namedFeatures = (text) => [...new Set([...text.replaceAll('\\', '/').matchAll(CITED)].map(([, path]) => path))]
+const namedFeatures = (text) => [...new Set([...text.replaceAll('\\', '/').matchAll(CITED)].map(([path]) => path))]
 
 /**
  * The scenarios a `.feature` holds, with the steps and the example rows of each.
  * @param {string} text @returns {Scenario[]}
  */
-export const scenariosOf = (text) => text.split(/\r?\n/).reduce(reading, []).map(({ rows, ...scenario }) => scenario)
+const scenariosOf = (text) => text.split(/\r?\n/).reduce(reading, []).map(({ rows, ...scenario }) => scenario)
 
 /** @param {Array<Scenario & { rows: boolean }>} scenarios @param {string} line */
 const reading = (scenarios, line) => {
@@ -87,9 +84,9 @@ const storyFeatures = ({ text }, features) => features
  * @param {Document} file @param {Document[]} features @returns {string[]}
  */
 const coverageFailures = ({ path, text }, features) => {
-  const criteria = text.split(/\r?\n/).filter((line) => CRITERION.test(line)).length
+  const criteria = text.split(/\r?\n/).filter((line) => line.startsWith(CRITERION)).length
   const scenarios = features.flatMap(({ text: feature }) => scenariosOf(feature)).length
-  if (criteria === 0 || scenarios >= criteria) return []
+  if (scenarios >= criteria) return []
   return [`${path} declares ${criteria} ${criteria === 1 ? 'acceptance criterion' : 'acceptance criteria'}, and ${scenarios === 1 ? '1 scenario is' : `${scenarios} scenarios are`} written for ${criteria === 1 ? 'it' : 'them'} (#524)`]
 }
 
@@ -111,11 +108,12 @@ const featureFailures = ({ path, text }) => {
 /** The keywords a scenario leaves unsaid, one line each. @param {string} path @param {Scenario} scenario */
 const stepFailures = (path, { kind, title, steps }) => KEYWORDS
   .filter((keyword) => !steps.some((step) => step.startsWith(keyword)))
-  .map((keyword) => `${path}: ${kind.toLowerCase().startsWith('scenario outline') ? 'outline' : 'scenario'} "${title}" says no ${keyword} (#524)`)
+  .map((keyword) => `${path}: ${OUTLINES.includes(kind) ? 'outline' : 'scenario'} "${title}" says no ${keyword} (#524)`)
 
 /** The placeholders an outline opens that its examples do not fill. @param {string} path @param {Scenario} outline */
 const exampleFailures = (path, { title, steps, examples }) => {
   const opened = [...new Set([title, ...steps].flatMap((line) => [...line.matchAll(PLACEHOLDER)].map(([, name]) => name)))]
+  // Stryker disable next-line ArrayDeclaration: an outline with no examples fills no placeholder, as any stand-in row that names no column
   const filled = examples[0] ?? []
   const left = opened.filter((name) => !filled.includes(name))
   if (left.length === 0) return []

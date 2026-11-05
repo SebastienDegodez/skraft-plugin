@@ -178,8 +178,10 @@ laissent sans colonne un placeholder ouvert par son titre ou ses étapes, deux s
 fichier qui partagent un titre, et une histoire qui compte moins de scénarios que son
 `ac-draft-{story}.md` ne déclare de critères d'acceptation (un outline compte une fois, quel que
 soit le nombre de lignes de ses exemples). Le plan déclare le périmètre : seuls les `.feature`
-qu'il cite sont lus, une ligne de la matrice de couverture qui ne nomme aucun Gherkin écrit `—`, et
-une histoire qui n'en déclare aucun ne s'en voit demander aucun. C'est un plancher sous G1, pas G1 :
+qu'il cite sont lus, si bien que les fichiers d'une autre histoire ne sont jamais imputés à ce run,
+et une ligne de la matrice de couverture qui ne nomme aucun Gherkin écrit `—`. Les critères disent
+combien de scénarios il en faut : une histoire dont l'`ac-draft` n'en déclare aucun ne se voit
+demander aucun scénario. C'est un plancher sous G1, pas G1 :
 la lentille `coverage` juge toujours à quel critère répond chaque scénario.
 
 ## DELIVER <!-- #deliver -->

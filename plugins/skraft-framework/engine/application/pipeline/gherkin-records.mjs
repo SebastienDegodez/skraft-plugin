@@ -28,33 +28,39 @@ export const checkGherkinRecords = async (deps, { slug }) => {
   return gherkinFailures({ plans, criteria, features: await featuresOf(deps.workspace) })
 }
 
-/** Each tracked file with its text, empty when the folder lost it between the listing and the read. @param {GherkinDeps} deps @param {string} slug @param {string[]} paths */
+/** Each tracked file with its text. @param {GherkinDeps} deps @param {string} slug @param {string[]} paths */
 const documentsOf = async (deps, slug, paths) => {
-  const texts = await Promise.all(paths.map((path) => readPlan(deps, slug, path)))
+  const texts = await Promise.all(paths.map((path) => trackedText(deps, slug, path)))
   return paths.map((path, index) => ({ path, text: texts[index] }))
 }
 
-/** A test plan, empty when the tracking folder lost it between the listing and the read. @param {GherkinDeps} deps @param {string} slug @param {string} path */
-// Stryker disable next-line StringLiteral: a plan that is gone names nothing, as any stand-in text that names no feature
-const readPlan = async (deps, slug, path) => (await deps.files.read(slug, path)) ?? ''
+/** The text of a tracked file, empty when the folder lost it between the listing and the read. @param {GherkinDeps} deps @param {string} slug @param {string} path */
+// Stryker disable next-line StringLiteral: a file that is gone names nothing, as any stand-in text that names no feature
+const trackedText = async (deps, slug, path) => (await deps.files.read(slug, path)) ?? ''
 
 /**
- * Every `.feature` of the features folder, one bounded context deep, as the designer writes them;
- * none when the working copy has no such folder.
- * @param {Workspace} workspace @returns {Promise<string[]>}
+ * Every file of the features folder, one bounded context deep, as the designer writes them; none
+ * when the working copy has no such folder.
+ * @param {Workspace} workspace @returns {Promise<Array<{ path: string, text: string }>>}
  */
 const featuresOf = async (workspace) => {
-  const contexts = await workspace.list(FEATURES)
-  if (contexts === null) return []
-  const inside = await Promise.all(contexts.map((entry) => pathsOf(workspace, entry)))
-  const paths = inside.flat()
-  const texts = await Promise.all(paths.map((path) => workspace.read(path)))
-  return paths.map((path, index) => ({ path, text: texts[index] ?? '' }))
+  const contexts = await entriesOf(workspace, FEATURES)
+  const paths = (await Promise.all(contexts.map((entry) => pathsOf(workspace, entry)))).flat()
+  const texts = await Promise.all(paths.map((path) => fileText(workspace, path)))
+  return paths.map((path, index) => ({ path, text: texts[index] }))
 }
 
-/** The `.feature` paths an entry of the features folder holds: itself, or those of its context. @param {Workspace} workspace @param {import('../ports/workspace.mjs').WorkspaceEntry} entry @returns {Promise<string[]>} */
+/** The paths an entry of the features folder holds: itself, or the files of its context. @param {Workspace} workspace @param {import('../ports/workspace.mjs').WorkspaceEntry} entry @returns {Promise<string[]>} */
 const pathsOf = async (workspace, entry) => {
-  if (entry.kind === 'file') return entry.name.endsWith('.feature') ? [`${FEATURES}/${entry.name}`] : []
-  const entries = (await workspace.list(`${FEATURES}/${entry.name}`)) ?? []
-  return entries.filter((inner) => inner.kind === 'file' && inner.name.endsWith('.feature')).map((inner) => `${FEATURES}/${entry.name}/${inner.name}`)
+  if (entry.kind === 'file') return [`${FEATURES}/${entry.name}`]
+  const entries = await entriesOf(workspace, `${FEATURES}/${entry.name}`)
+  return entries.map((inner) => `${FEATURES}/${entry.name}/${inner.name}`)
 }
+
+/** The entries of a folder of the working copy, none when it is no folder of it. @param {Workspace} workspace @param {string} path */
+// Stryker disable next-line ArrayDeclaration: a stand-in entry names no path a plan can cite, so the walk reads the same files
+const entriesOf = async (workspace, path) => (await workspace.list(path)) ?? []
+
+/** The text of a file of the working copy, empty when it is a folder or gone. @param {Workspace} workspace @param {string} path */
+// Stryker disable next-line StringLiteral: a file that is gone holds no scenario, as any stand-in text that opens none
+const fileText = async (workspace, path) => (await workspace.read(path)) ?? ''

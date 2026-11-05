@@ -175,8 +175,9 @@ not hold, a scenario that says no Given, When or Then, an outline whose examples
 placeholder its title or its steps open, two scenarios of one file sharing a title, and a story
 with fewer scenarios than its `ac-draft-{story}.md` declares acceptance criteria (an outline counts
 once, however many example rows it carries). The plan declares the perimeter: only the `.feature`
-files it cites are read, a coverage-matrix row that names no Gherkin writes `—`, and a story that
-declares none is asked for none. This is a floor under G1, not G1 itself: the `coverage` lens still
+files it cites are read, so the files of another story are never charged to this run, and a
+coverage-matrix row that names no Gherkin writes `—`. The criteria answer how many scenarios it
+takes: a story whose `ac-draft` declares none is asked for none. This is a floor under G1, not G1 itself: the `coverage` lens still
 judges which criterion each scenario answers.
 
 ## DELIVER <!-- #deliver -->
