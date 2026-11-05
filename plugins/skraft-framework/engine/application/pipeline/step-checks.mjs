@@ -11,13 +11,14 @@ import { allowedPaths, makesCommits, rootFiles, trackingFolder } from '../../dom
 import { adrFailures } from '../decisions/adr-checks.mjs'
 import { baseOf } from '../config/bases.mjs'
 import { checkDesignRecords } from './design-records.mjs'
+import { checkGherkinRecords } from './gherkin-records.mjs'
 import { EJECTED } from '../workflow/called-workflows.mjs'
 
 /**
  * @typedef {import('../../domain/journal/run-state.mjs').Head} Head
  * @typedef {import('../../domain/pipeline/commits.mjs').JudgedCommit} JudgedCommit
  * @typedef {import('../../domain/config/skraft-config.mjs').Component} Component
- * @typedef {'missing-outputs' | 'invalid-result' | 'design-records' | 'pull-request-prose' | 'agent-blocked' | 'write-scope' | 'uncommitted' | 'adr-lifecycle' | 'commit-convention' | 'tdd'} FailureCode
+ * @typedef {'missing-outputs' | 'invalid-result' | 'design-records' | 'gherkin-records' | 'pull-request-prose' | 'agent-blocked' | 'write-scope' | 'uncommitted' | 'adr-lifecycle' | 'commit-convention' | 'tdd'} FailureCode
  * @typedef {{
  *   repository: string, sha: string, subject: string, kind: string, verdict: string,
  *   replay: { component: string, command: ReplayedCommand, exitCode: number | null, durationMs: number } | null,
@@ -53,7 +54,7 @@ import { EJECTED } from '../workflow/called-workflows.mjs'
  */
 
 /** Failure codes, the first one found naming the step's refusal. */
-const PRIORITY = /** @type {const} */ (['missing-outputs', 'invalid-result', 'design-records', 'pull-request-prose', 'write-scope', 'uncommitted', 'adr-lifecycle', 'commit-convention', 'tdd'])
+const PRIORITY = /** @type {const} */ (['missing-outputs', 'invalid-result', 'design-records', 'gherkin-records', 'pull-request-prose', 'write-scope', 'uncommitted', 'adr-lifecycle', 'commit-convention', 'tdd'])
 
 /**
  * Where each repository of the run stands before an attempt: its HEAD and the files already
@@ -100,7 +101,7 @@ export const checkStep = async (context, step) => {
   if (commits.environment !== null) return { ...environmentOnly(commits.environment), commits: commits.checked }
   const adr = await adrFailures(context.deps, { base: context.base, touched: read.touched })
   if (typeof adr === 'string') return { ...environmentOnly(adr), commits: commits.checked }
-  const found = [...resultFailures(read.reading), ...recordFailures(read.records), ...read.prose, ...read.scope.failures, ...adrLines(adr), ...commits.found]
+  const found = [...resultFailures(read.reading), ...recordFailures(read.records), ...scenarioLines(read.scenarios), ...read.prose, ...read.scope.failures, ...adrLines(adr), ...commits.found]
   return { ...refusal(read.missing, found, commits), uncommitted: read.scope.uncommitted }
 }
 
@@ -109,19 +110,42 @@ export const checkStep = async (context, step) => {
  * or left uncommitted, and its DESIGN records; the check that stops the step when one does.
  * @param {CheckContext} context
  * @param {Parameters<typeof checkStep>[1]} step
- * @returns {Promise<{ stop: StepCheck } | { missing: string[], reading: import('../../domain/pipeline/agent-result.mjs').ResultReading, touched: string[], scope: { failures: Failure[], uncommitted: UncommittedFile[] }, records: string[], prose: Failure[] }>}
+ * @returns {Promise<{ stop: StepCheck } | { missing: string[], reading: import('../../domain/pipeline/agent-result.mjs').ResultReading, touched: string[], scope: { failures: Failure[], uncommitted: UncommittedFile[] }, records: string[], scenarios: string[], prose: Failure[] }>}
  */
-const readAttempt = async ({ deps, slug, config, base }, step) => {
+const readAttempt = async (context, step) => {
+  const { deps, slug, config } = context
   const missing = await missingOutputs(deps, slug, step)
   const reading = readResult(await deps.files.read(slug, step.result))
   if (reading.ok && reading.result.status === 'blocked') return { stop: blockedBy(reading.result.summary) }
   const touched = await touchedPaths(deps, step.visitHeads)
   if (typeof touched === 'string') return { stop: environmentOnly(touched) }
+  const read = await scopeAndRecords(context, step, touched)
+  if (typeof read === 'string') return { stop: environmentOnly(read) }
+  return { ...read, missing, reading, touched, prose: await proseFailures(deps, slug, step, missing) }
+}
+
+/**
+ * What the attempt left outside its scope, and the records its role asks the engine to check.
+ * @param {CheckContext} context @param {Parameters<typeof checkStep>[1]} step @param {string[]} touched
+ * @returns {Promise<{ scope: { failures: Failure[], uncommitted: UncommittedFile[] }, records: string[], scenarios: string[] } | string>} a string: the machine to fix
+ */
+const scopeAndRecords = async (context, step, touched) => {
+  const { deps, slug, config } = context
   const scope = await scopeFailures(deps, step, { slug, config, touched })
-  if (typeof scope === 'string') return { stop: environmentOnly(scope) }
+  if (typeof scope === 'string') return scope
+  const records = await recordsOf(context, step, touched)
+  return typeof records === 'string' ? records : { scope, ...records }
+}
+
+/**
+ * The records a role asks the engine to check, none for a role that asks for neither.
+ * @param {CheckContext} context @param {Parameters<typeof checkStep>[1]} step @param {string[]} touched
+ * @returns {Promise<{ records: string[], scenarios: string[] } | string>} a string: the machine to fix
+ */
+const recordsOf = async ({ deps, slug, config, base }, step, touched) => {
   const records = step.role.records ? await checkDesignRecords(deps, { slug, base }) : []
-  if (typeof records === 'string') return { stop: environmentOnly(records) }
-  return { missing, reading, touched, scope, records, prose: await proseFailures(deps, slug, step, missing) }
+  if (typeof records === 'string') return records
+  return { records, scenarios: step.role.scenarios ? await checkGherkinRecords(deps, { slug }) : [] }
 }
 
 /**
@@ -139,6 +163,9 @@ const proseFailures = async ({ files }, slug, { role, outputs }, missing) => {
 
 /** @param {string[]} lines @returns {Failure[]} */
 const recordFailures = (lines) => lines.map((line) => ({ code: /** @type {const} */ ('design-records'), line }))
+
+/** @param {string[]} lines @returns {Failure[]} */
+const scenarioLines = (lines) => lines.map((line) => ({ code: /** @type {const} */ ('gherkin-records'), line }))
 
 /** @param {string[]} lines @returns {Failure[]} */
 const adrLines = (lines) => lines.map((line) => ({ code: /** @type {const} */ ('adr-lifecycle'), line }))
