@@ -77,7 +77,7 @@ docs/website/      ← handbook (Docusaurus): book.yml (structure contract), doc
 - State lives in `.copilot-tracking/skraft-plans/<slug>/`; `events.jsonl` (hash-chained)
   replaces `state.json`; `.active-slug` is mandatory and never guessed.
 - Developer configuration is `skraft-config.json` with components (root, stack, paths,
-  commands, mocking, contractTesting). A command written by the developer always wins over a
+  commands, mocking, contractTesting, bdd). A command written by the developer always wins over a
   default. Quality thresholds are not configurable.
 - The workflow is a DOT graph shipped in the plugin and copied into a repo with
   `skraft workflow eject`. DELIVER gates are `locked`; removing one needs `unlock="<reason>"`.

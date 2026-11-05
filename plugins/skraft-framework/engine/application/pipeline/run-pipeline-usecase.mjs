@@ -648,9 +648,9 @@ const briefStack = ({ config }, run, role) => ({
  * @returns {import('../../domain/pipeline/dispatch-brief.mjs').BriefComponent}
  */
 const briefComponent = (component, sha) => {
-  const { name, root, stack, mocking, contractTesting, commands } = component
+  const { name, root, stack, mocking, contractTesting, bdd, commands } = component
   const gates = gatesOf(component).filter((gate) => gate !== 'mutation').map((gate) => ({ gate, line: withBase(commands[gate], sha) }))
-  return { name, root, stack, mocking: mocking.strategy, contractTesting, test: testLine(commands.test, sha), gates }
+  return { name, root, stack, mocking: mocking.strategy, contractTesting, bdd, test: testLine(commands.test, sha), gates }
 }
 
 /**

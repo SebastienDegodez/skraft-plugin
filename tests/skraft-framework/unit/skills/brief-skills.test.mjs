@@ -74,14 +74,14 @@ test('the agent of the TDD cycles reads the mocking skill of each component, and
   assert.deepEqual(skillLines(distill), [])
   assert.deepEqual(skillLines(research), [])
   assert.deepEqual(skillLines(design), [])
-  assert.ok(distill.includes('- api: . (dotnet), mocking: inprocess, contract testing: on, tests: dotnet test\n'), distill)
+  assert.ok(distill.includes('- api: . (dotnet), mocking: inprocess, contract testing: on, bdd: on, tests: dotnet test\n'), distill)
   assert.ok(deliver.includes([
     '- Components:',
-    '- api: . (dotnet), mocking: inprocess, contract testing: on, tests: dotnet test',
-    '- web: ../web (react), mocking: inprocess, contract testing: off, tests: npm test',
-    '- admin: ../admin (javascript), mocking: inprocess, contract testing: off, tests: npm test',
-    '- shop: ../shop (typescript), mocking: microcks, contract testing: off, tests: npm test',
-    '- pay: ../pay (dotnet), mocking: inprocess, contract testing: on, tests: dotnet test',
+    '- api: . (dotnet), mocking: inprocess, contract testing: on, bdd: on, tests: dotnet test',
+    '- web: ../web (react), mocking: inprocess, contract testing: off, bdd: on, tests: npm test',
+    '- admin: ../admin (javascript), mocking: inprocess, contract testing: off, bdd: on, tests: npm test',
+    '- shop: ../shop (typescript), mocking: microcks, contract testing: off, bdd: on, tests: npm test',
+    '- pay: ../pay (dotnet), mocking: inprocess, contract testing: on, bdd: on, tests: dotnet test',
   ].join('\n')), deliver)
 })
 
@@ -108,7 +108,7 @@ test('a skill found nowhere is named in the brief with its component, never read
     '- contract-testing-typescript (shop)',
   ])
   assert.deepEqual(sectionLines(distill, NOWHERE), [])
-  assert.ok(deliver.includes('- orders: orders (java), mocking: microcks, contract testing: on, tests: mvn test\n'), deliver)
+  assert.ok(deliver.includes('- orders: orders (java), mocking: microcks, contract testing: on, bdd: on, tests: mvn test\n'), deliver)
 })
 
 test('the acceptance designer is told the review criteria to check its outputs against, wherever they are found, and nothing when nobody provides them', async () => {

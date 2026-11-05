@@ -29,6 +29,7 @@ export { HOSTS } from './model-assignment.mjs'
  *   baseBranch: string | null,
  *   mocking: { strategy: 'microcks' | 'inprocess' },
  *   contractTesting: boolean,
+ *   bdd: boolean,
  *   mutationReport: string | null,
  * }} Component
  *   root is relative to the working copy, normalised (`.`, `services/api`, `../payment-web`).
@@ -75,7 +76,7 @@ const REPLAY_MODES = Object.freeze(['all', 'last-red'])
 export const MOCKING_STRATEGIES = Object.freeze(['microcks', 'inprocess'])
 const IN_PROCESS_STACKS = Object.freeze(['typescript', 'javascript', 'react'])
 const NAME = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
-const COMPONENT_KEYS = Object.freeze(['name', 'root', 'stack', 'paths', 'commands', 'baseBranch', 'mocking', 'contractTesting', 'mutationReport'])
+const COMPONENT_KEYS = Object.freeze(['name', 'root', 'stack', 'paths', 'commands', 'baseBranch', 'mocking', 'contractTesting', 'bdd', 'mutationReport'])
 /** The gates, and `e2e`, which doctor checks but no gate runs. */
 export const COMMAND_NAMES = Object.freeze([...GATE_ORDER, 'e2e'])
 /** What only the team's file holds. */
@@ -340,6 +341,9 @@ const FIELD_CHECKS = Object.freeze([
     if (entry.contractTesting !== undefined && typeof entry.contractTesting !== 'boolean') errors.push(`${label}: contractTesting must be true or false`)
   },
   ({ entry, label, errors }) => {
+    if (entry.bdd !== undefined && typeof entry.bdd !== 'boolean') errors.push(`${label}: bdd must be true or false`)
+  },
+  ({ entry, label, errors }) => {
     if (entry.mutationReport !== undefined && !isInnerFolder(entry.mutationReport)) errors.push(`${label}: mutationReport must be a file inside the component root`)
   },
 ])
@@ -375,6 +379,7 @@ const componentFrom = (entry, { paths, commands, baseBranch, strategy }) => ({
   baseBranch,
   mocking: { strategy },
   contractTesting: entry.contractTesting === true,
+  bdd: entry.bdd !== false,
   mutationReport: entry.mutationReport === undefined ? null : normalizeRelative(entry.mutationReport),
 })
 

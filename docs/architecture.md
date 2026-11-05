@@ -156,7 +156,7 @@ Chaque fichier, événement et code de refus : [Suivi et journal](website/i18n/f
 
 `skraft-config.json`, à la racine du dépôt, liste des **composants** : `name`, `root`, `stack`,
 `paths` (`src`, `tests`), `commands` (`build`, `format`, `lint`, `test`, `architecture`,
-`coverage`, `mutation`, `e2e`), `baseBranch`, `mocking`, `contractTesting`. Un composant peut être
+`coverage`, `mutation`, `e2e`), `baseBranch`, `mocking`, `contractTesting`, `bdd`. Un composant peut être
 un autre dépôt. `skraft init` les détecte, `skraft doctor` vérifie chaque commande. Une commande
 écrite par le développeur l'emporte toujours ; les seuils de qualité ne sont pas configurables.
 

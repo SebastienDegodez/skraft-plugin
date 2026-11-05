@@ -310,7 +310,7 @@ const documentInputs = (documents, folder, present) => {
  * @param {Review} review
  */
 const componentsOf = ({ inputs }) => {
-  const described = /** @type {NonNullable<ReviewInputs['components']>} */ (inputs.components).map(({ name, root, stack, mocking, contractTesting, gates }) => ({ name, root, stack, mocking, contractTesting, gates }))
+  const described = /** @type {NonNullable<ReviewInputs['components']>} */ (inputs.components).map(({ name, root, stack, mocking, contractTesting, bdd, gates }) => ({ name, root, stack, mocking, contractTesting, bdd, gates }))
   return `${JSON.stringify(described, null, 2)}\n`
 }
 

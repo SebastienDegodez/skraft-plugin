@@ -139,7 +139,7 @@ error separated by `; `:
 
 | Message | Fix |
 |---|---|
-| `component web: unknown key comands (allowed: name, root, stack, paths, commands, baseBranch, mocking, contractTesting, mutationReport)` | Fix the typo. |
+| `component web: unknown key comands (allowed: name, root, stack, paths, commands, baseBranch, mocking, contractTesting, bdd, mutationReport)` | Fix the typo. |
 | `component web: root must be a path relative to the working copy` | Write `web` or `../payment-web`, never `/srv/web` or `C:\…`. |
 | `components[1].name must be kebab-case, got "Api"` | Lower case and hyphens: `api`. |
 | `component api: mocking must be { "strategy": "microcks" or "inprocess" }` | An object, not a string. |

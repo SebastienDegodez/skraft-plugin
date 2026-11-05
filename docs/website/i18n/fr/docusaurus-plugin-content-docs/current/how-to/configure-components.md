@@ -141,7 +141,7 @@ ses erreurs séparées par `; ` :
 
 | Message | Correction |
 |---|---|
-| `component web: unknown key comands (allowed: name, root, stack, paths, commands, baseBranch, mocking, contractTesting, mutationReport)` | Corriger la faute de frappe. |
+| `component web: unknown key comands (allowed: name, root, stack, paths, commands, baseBranch, mocking, contractTesting, bdd, mutationReport)` | Corriger la faute de frappe. |
 | `component web: root must be a path relative to the working copy` | Écrire `web` ou `../payment-web`, jamais `/srv/web` ni `C:\…`. |
 | `components[1].name must be kebab-case, got "Api"` | Minuscules et tirets : `api`. |
 | `component api: mocking must be { "strategy": "microcks" or "inprocess" }` | Un objet, pas une chaîne. |

@@ -46,7 +46,7 @@ stimuli:
       - tests
       - ./* (the files right in the root of checkout-pricing)
       - Components:
-      - checkout-pricing: . (dotnet), mocking: microcks, contract testing: off, tests: dotnet test CheckoutPricing.slnx --no-restore
+      - checkout-pricing: . (dotnet), mocking: microcks, contract testing: off, bdd: on, tests: dotnet test CheckoutPricing.slnx --no-restore
       - Commit each TDD cycle: `test(<story>): …` with the failing test, then `feat(<story>): …` or `fix(<story>): …` with the code that makes it pass,
         then `refactor(<story>): …` if needed. Tests that pass from the start (coverage) go with the code they cover, or in a `refactor` commit;
         lint and format fixes in a `style` commit. The engine runs the tests at every test commit and refuses one whose tests pass,

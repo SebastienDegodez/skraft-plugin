@@ -44,7 +44,7 @@ test('a .skraft/review.skraft.dot bound to neither story nor documents reviews t
     '- Read these inputs and the files they name; search the repository for nothing else:',
     `  - Changes since the base of the run (open a whole file only when the patch lacks the context a finding needs): ${TRACKING}/reviews/deliver_review-1/changes.patch`,
     `  - Paths those changes touch (a path with no section in the patch is a new file: open it): ${TRACKING}/reviews/deliver_review-1/changed-files.txt`,
-    `  - Components (stack, mocking strategy, contract testing, gates that passed): ${TRACKING}/reviews/deliver_review-1/components.json`,
+    `  - Components (stack, mocking strategy, contract testing, BDD, gates that passed): ${TRACKING}/reviews/deliver_review-1/components.json`,
   ].join('\n'))
   const delivered = host.agentRunner.reviewed().filter(({ label }) => label.includes('deliver_review')).map(({ prompt: text }) => text)
   assert.deepEqual(delivered.filter((text) => text.includes('Documents of') || text.includes('Review context')), [])

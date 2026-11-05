@@ -142,7 +142,7 @@ test('each agent is told its story, inputs, outputs, result file and the paths i
     '- tests',
     '- ./* (the files right in the root of api)',
     '- Components:',
-    '- api: . (dotnet), mocking: inprocess, contract testing: off, tests: dotnet test',
+    '- api: . (dotnet), mocking: inprocess, contract testing: off, bdd: on, tests: dotnet test',
     '- Commit each TDD cycle: `test(<story>): …` with the failing test, then `feat(<story>): …` or `fix(<story>): …` with the code that makes it pass,',
     '  then `refactor(<story>): …` if needed. Tests that pass from the start (coverage) go with the code they cover, or in a `refactor` commit;',
     '  lint and format fixes in a `style` commit. The engine runs the tests at every test commit and refuses one whose tests pass,',
@@ -163,7 +163,7 @@ test('each agent is told its story, inputs, outputs, result file and the paths i
     '- tests',
     '- ./* (the files right in the root of api)',
     '- Components:',
-    '- api: . (dotnet), mocking: inprocess, contract testing: off, tests: dotnet test',
+    '- api: . (dotnet), mocking: inprocess, contract testing: off, bdd: on, tests: dotnet test',
     '- Commit the failing acceptance tests as `test(<story>): …`, with the skeleton they call: the signatures the contract names, each answering',
     '  the empty value of its type, no behaviour; a test failing on a missing module proves nothing. The engine runs the tests at every test commit and refuses one whose tests pass,',
     '  and any commit that is not `type(scope): subject`. A refused commit stays refused until you rewrite it.',
@@ -399,13 +399,13 @@ test('a configuration that became invalid stops the run before anything is dispa
 })
 
 test('the engineer works on every component, each with its test command when it has one and the gate commands it runs before its result, mutation and other commands left out, a path list left out being the whole root', async () => {
-  const WEB = { name: 'web', root: '../web', stack: 'react', mocking: { strategy: 'inprocess' }, paths: { src: ['src'], tests: ['src'] }, commands: { lint: 'npx eslint .' } }
+  const WEB = { name: 'web', root: '../web', stack: 'react', mocking: { strategy: 'inprocess' }, bdd: false, paths: { src: ['src'], tests: ['src'] }, commands: { lint: 'npx eslint .' } }
   const host = scripted({ components: [API, WEB] }, (it) => [agent()(it), agent()(it), agent()(it), () => ({ ok: false, unavailable: true, text: '' })])
 
   await host.start()
 
   const deliver = host.agentRunner.dispatches[3].prompt
-  assert.ok(deliver.includes(`- .copilot-tracking/skraft-plans/${SLUG}\n- src\n- tests\n- ../web/src\n- ./* (the files right in the root of api)\n- ../web/* (the files right in the root of web)\n- Components:\n- api: . (dotnet), mocking: inprocess, contract testing: off, tests: dotnet test\n- web: ../web (react), mocking: inprocess, contract testing: off\n`), deliver)
+  assert.ok(deliver.includes(`- .copilot-tracking/skraft-plans/${SLUG}\n- src\n- tests\n- ../web/src\n- ./* (the files right in the root of api)\n- ../web/* (the files right in the root of web)\n- Components:\n- api: . (dotnet), mocking: inprocess, contract testing: off, bdd: on, tests: dotnet test\n- web: ../web (react), mocking: inprocess, contract testing: off, bdd: off\n`), deliver)
   assert.ok(host.agentRunner.dispatches[2].prompt.includes(`- .copilot-tracking/skraft-plans/${SLUG}\n- docs/features\n- src\n- tests\n- ../web/src\n- ./* (the files right in the root of api)`))
   assert.ok(deliver.endsWith(`- Gate commands: before you write your result, run those of each component you changed, from its root, and fix every failure; the gates step runs them next and sends a failure back as a new pass:\n- api: build: dotnet build; test: dotnet test\n- web: lint: npx eslint .`), deliver)
 
@@ -422,6 +422,6 @@ test('the test and gate commands the engineer is given have the run\'s base in p
 
   await host.start()
 
-  assert.ok(host.agentRunner.dispatches[3].prompt.includes('- api: . (dotnet), mocking: inprocess, contract testing: off, tests: dotnet test --filter Since=root-0\n'))
+  assert.ok(host.agentRunner.dispatches[3].prompt.includes('- api: . (dotnet), mocking: inprocess, contract testing: off, bdd: on, tests: dotnet test --filter Since=root-0\n'))
   assert.ok(host.agentRunner.dispatches[3].prompt.endsWith('\n- api: test: dotnet test --filter Since=root-0'), host.agentRunner.dispatches[3].prompt)
 })

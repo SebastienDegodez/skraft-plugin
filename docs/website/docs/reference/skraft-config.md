@@ -89,6 +89,7 @@ Any key outside this list is refused.
 | `mocking` | object | `inprocess` for `typescript`, `javascript` and `react`, `microcks` otherwise | `strategy` is `microcks`, `inprocess` or `null`; absent or `null` means the stack's default. The engine passes it in the brief and picks the matching mocking skill |
 | `paths` | object | `["."]` for each key, the whole root | `{ "src": […], "tests": […] }`, folders relative to the component root, never absolute nor starting with `..`; `skraft init` writes them. In DELIVER, the software engineer may write only there (write scope) |
 | `contractTesting` | boolean | `false` | `true` makes the software engineer read the contract testing skills of its stack; the review lenses see the setting among the component settings |
+| `bdd` | boolean | `true` | whether the component describes its behaviour in Gherkin. `false` asks DISTILL for no `.feature`: the acceptance designer takes its scenarios from the test plan's `Scenario` column and TDD runs as it always does. It declares a practice, never a threshold: a component that leaves it on is held to its scenarios in full. The engine passes it in the brief, and the review lenses see it among the component settings |
 | `mutationReport` | string | absent: the report the stack's tool writes, relative to the root: `StrykerOutput/reports/mutation-report.json` (.NET), `reports/mutation/mutation.json` (TypeScript, JavaScript, React), `mutation-report.json` (Python), `target/pit-reports/mutations.xml` (Java; `build/reports/pitest/mutations.xml` when the mutation command names Gradle) | the file the `mutation` command writes its report to, relative to the component root, never absolute nor outside it. The mutation gate reads its surviving mutants there and judges the 100 % / 80 % bar |
 
 Quality thresholds (coverage, mutation…) are **not** configurable: no key carries them.
@@ -230,7 +231,7 @@ otherwise.
 | entry not an object | `components[<index>] must be an object` |
 | name | `components[<index>].name must be kebab-case, got <JSON value>` |
 | duplicate name | `component name <name> is used twice` |
-| unknown key | `<label>: unknown key <key> (allowed: name, root, stack, paths, commands, baseBranch, mocking, contractTesting, mutationReport)` |
+| unknown key | `<label>: unknown key <key> (allowed: name, root, stack, paths, commands, baseBranch, mocking, contractTesting, bdd, mutationReport)` |
 | root | `<label>: root must be a path relative to the working copy` |
 | stack | `<label>: stack must be one of dotnet, java, python, typescript, javascript, react` |
 | `commands` not an object | `<label>: commands must be an object of command lines` |
@@ -240,6 +241,7 @@ otherwise.
 | `mocking` | `<label>: mocking must be { "strategy": "microcks" or "inprocess" }` |
 | `paths` | `<label>: paths must be { "src": [...], "tests": [...] }`; `<label>: paths.<key> must list folders inside the component root` |
 | `contractTesting` | `<label>: contractTesting must be true or false` |
+| `bdd` | `<label>: bdd must be true or false` |
 | `mutationReport` | `<label>: mutationReport must be a file inside the component root` |
 
 ## Command lines <!-- #command-lines -->
