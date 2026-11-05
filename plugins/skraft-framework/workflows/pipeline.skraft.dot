@@ -2,7 +2,7 @@
 // agents, lenses, gates or questions; `skraft workflow check` validates it, `skraft workflow diff`
 // compares it with this one. A node marked locked=true can only be dropped with unlock="<reason>"; a node marked
 // mandatory=true can never be dropped, bypassed or weakened, whatever the copy says.
-// A review fans out (shape=component) to one lens node per branch (shape=note, lens="<name>", run as the agent `<name>-lens`) joins its branches in the refuter (shape=octagon, finding-refuter, which checks each blocker, high and medium finding) and closes in a fan-in (shape=tripleoctagon) that computes the verdict and carries the APPROVED and NEEDS_REWORK edges. A lens with when="mock" or when="contract" runs only when the changes touch mocks or contracts; one without when always runs. skraft-config.json's `assign` chooses each agent's model family, `models` what a family runs on per host; model= on an agent, a lens or a fan-in (for its lenses that name none) and refuter= on a fan-in name a family too, under `assign.agents`.
+// A review fans out (shape=component) to one lens node per branch (shape=note, lens="<name>", run as the agent `<name>-lens`) joins its branches in the refuter (shape=octagon, finding-refuter, which checks each finding, of any severity) and closes in a fan-in (shape=tripleoctagon) that computes the verdict and carries the APPROVED and NEEDS_REWORK edges. A lens with when="mock" or when="contract" runs only when the changes touch mocks or contracts; one without when always runs. skraft-config.json's `assign` chooses each agent's model family, `models` what a family runs on per host; model= on an agent, a lens or a fan-in (for its lenses that name none) and refuter= on a fan-in name a family too, under `assign.agents`.
 // The DESIGN and DISTILL reviews sit in subgraph clusters, which only group them in a drawing.
 // A house calls another workflow by its base name (workflow="<name>": .skraft/<name>.skraft.dot, else the plugin's) and leaves
 // by the verdict it returns: deliver_review runs review, the review a pull request gets too. The called workflow declares its inputs
@@ -66,7 +66,7 @@ digraph skraft {
   design_review_lenses -> design_review_architecture_compliance -> design_review_refuter
   design_review_lenses -> design_review_fitness -> design_review_refuter
   design_review_refuter -> design_review
-  design_review -> design  [label="NEEDS_REWORK", max_visits=1]
+  design_review -> design  [label="NEEDS_REWORK", max_visits=3]
   design_review -> adr     [label="APPROVED"]
   adr -> distill   [label="RATIFIED"]
   adr -> design    [label="REJECTED", max_visits=1]

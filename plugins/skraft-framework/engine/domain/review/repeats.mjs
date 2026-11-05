@@ -1,5 +1,4 @@
 import { normalizeRelative } from '../config/relative-path.mjs'
-import { BLOCKING } from './verdict.mjs'
 
 /**
  * What a later pass of a review step takes from the pass before it, so that it neither asks the
@@ -12,7 +11,7 @@ import { BLOCKING } from './verdict.mjs'
  *                   at those lines: a line that moved is the same, an edited or repeated one is
  *                   not. A lens rewords its claim on every pass, so the claim is not compared.
  *   without a line  the same location and the same claim, word for word (the engine's checks).
- * On a pass after the first, each blocker, high or medium finding:
+ * On a pass after the first, each finding, of any severity:
  *   at the place of one the last pass refuted (or carried over)   carried over as refuted, with that reason
  *   at the place of one the last pass did not refute              checked again as usual
  *   otherwise, from a lens (not the engine), on a line the last
@@ -28,7 +27,7 @@ import { BLOCKING } from './verdict.mjs'
  * @typedef {{ lens: string, finding: string, reason: string, pass: number, [field: string]: unknown }} Refuted
  *   a refutation of the last pass, refuted there or carried over to it from the pass `pass`
  * @typedef {{ findings: Member[], refuted: Refuted[], snapshot: Snapshot }} LastPass
- *   findings: every finding of the last pass; only its blocker, high and medium ones stand at a place.
+ *   findings: every finding of the last pass.
  * @typedef {{ carried: Array<Member & { prior: Refuted }>, unchanged: Member[] }} Settled
  */
 
@@ -43,9 +42,8 @@ const LINE = /(.+?):(\d+)/
 export const settleRepeats = ({ results, last, snapshot, engine }) => {
   /** @type {Settled} */
   const settled = { carried: [], unchanged: [] }
-  const blocking = last.findings.filter(({ finding }) => BLOCKING.includes(finding.severity))
-  for (const member of blockingMembers(results)) {
-    const earlier = blocking.filter((other) => samePlace(other, member, { before: last.snapshot, after: snapshot }))
+  for (const member of membersOf(results)) {
+    const earlier = last.findings.filter((other) => samePlace(other, member, { before: last.snapshot, after: snapshot }))
     const prior = last.refuted.find((refuted) => earlier.some(({ lens, finding }) => refuted.lens === lens && refuted.finding === finding.id))
     if (prior !== undefined) settled.carried.push({ ...member, prior })
     else if (earlier.length === 0 && !engine.includes(member.lens) && heldLine(member.finding, last.snapshot, snapshot) !== null) settled.unchanged.push(member)
@@ -54,13 +52,13 @@ export const settleRepeats = ({ results, last, snapshot, engine }) => {
 }
 
 /**
- * The paths the blocker, high and medium findings cite with a line, each once.
+ * The paths the findings cite with a line, each once.
  * @param {LensResult[]} results
  */
-export const citedPaths = (results) => [...new Set(blockingMembers(results).map(({ finding }) => placeOf(finding)?.path).filter((path) => path !== undefined))]
+export const citedPaths = (results) => [...new Set(membersOf(results).map(({ finding }) => placeOf(finding)?.path).filter((path) => path !== undefined))]
 
 /** @param {LensResult[]} results @returns {Member[]} */
-const blockingMembers = (results) => results.flatMap(({ lens, findings }) => findings.filter((finding) => BLOCKING.includes(finding.severity)).map((finding) => ({ lens, finding })))
+const membersOf = (results) => results.flatMap(({ lens, findings }) => findings.map((finding) => ({ lens, finding })))
 
 /**
  * @param {Member} earlier a finding of the last pass @param {Member} member one of this pass

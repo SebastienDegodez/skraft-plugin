@@ -1,3 +1,5 @@
+import { inert } from '../reporting/markdown-safety.mjs'
+
 /**
  * The questions a run asks a human, and how an answer to one is read. A question node of the
  * workflow (`shape=hexagon, question="<kind>"`) asks one of the node questions; the engine asks
@@ -7,7 +9,7 @@
  * developer's own, which goes on as APPLY does, or STOP.
  *
  * @typedef {'adr-ratification' | 'reporting-consent' | 'publish-consent' | 'mutation-plan'} NodeQuestion
- * @typedef {NodeQuestion | 'environment' | 'review-consent' | 'blocked' | 'configuration'} QuestionKind
+ * @typedef {NodeQuestion | 'environment' | 'review-consent' | 'blocked' | 'review-ceiling' | 'configuration'} QuestionKind
  * @typedef {{ options: readonly string[], refusals: readonly string[], header: string, instruction: boolean }} QuestionSpec
  *   options: the answers, the one that lets the run go on first; refusals: the answers that send
  *   the work back and need a reason; header: a short label a dialog shows beside the question, at
@@ -25,6 +27,14 @@ export const START = 'START'
 /** The question a block asks, and the one answer to it that is no instruction. */
 export const BLOCKED = 'blocked'
 export const STOP = 'STOP'
+/**
+ * The question a review asks once its loop to the producer reached its max_visits with only
+ * medium and low findings left (#499): ACCEPT takes them as they stand and goes on, an
+ * instruction runs the producer again, STOP ends the run. With a blocker or high finding left,
+ * the blocked question is asked instead, with the same text: those are never accepted.
+ */
+export const REVIEW_CEILING = 'review-ceiling'
+export const ACCEPT = 'ACCEPT'
 /** The answer to the mutation plan that applies the proposal as it stands. */
 export const APPLY = 'APPLY'
 
@@ -37,6 +47,7 @@ const QUESTIONS = Object.freeze({
   environment: Object.freeze({ options: Object.freeze(['RETRY', 'ABORT']), refusals: Object.freeze([]), header: 'Environment', instruction: false }),
   'review-consent': Object.freeze({ options: Object.freeze(['ACCEPTED', 'DECLINED']), refusals: Object.freeze([]), header: 'PR comment', instruction: false }),
   [BLOCKED]: Object.freeze({ options: Object.freeze([STOP]), refusals: Object.freeze([]), header: 'Blocked', instruction: true }),
+  [REVIEW_CEILING]: Object.freeze({ options: Object.freeze([ACCEPT, STOP]), refusals: Object.freeze([]), header: 'Review', instruction: true }),
   [CONFIGURATION]: Object.freeze({ options: Object.freeze([START, STOP]), refusals: Object.freeze([]), header: 'Config', instruction: false }),
 })
 
@@ -151,12 +162,98 @@ const BLOCKS = Object.freeze({
 })
 
 /**
- * The instruction a human answered a blocked question with; null for any other question, one
- * not answered yet, and STOP.
+ * @typedef {import('../review/verdict.mjs').LeftFinding} LeftFinding
+ * @typedef {{ review: string, step: string, passes: number, findings: readonly LeftFinding[], verdict: string }} Ceiling
+ *   review: the review node; step: the node it loops back to; passes: how many times the review
+ *   ran; findings: those its last pass left, blocking first; verdict: where its verdict file is.
+ */
+
+/** The severities a human can never accept: the review question asks for an instruction or STOP. */
+const UNACCEPTABLE = Object.freeze(['blocker', 'high'])
+
+/** Whether the findings a review left at its ceiling can be accepted. @param {readonly LeftFinding[]} findings */
+export const acceptable = (findings) => !findings.some((finding) => UNACCEPTABLE.includes(finding.severity))
+
+/**
+ * The text of the question a review asks at its ceiling: that the producer did not get it right,
+ * each blocker and high finding in full with its context, the medium and low ones in a table, and
+ * where every finding is in full.
+ * @param {Ceiling} ceiling
+ */
+export const reviewCeilingText = ({ review, step, passes, findings, verdict }) => {
+  const severe = findings.filter((finding) => UNACCEPTABLE.includes(finding.severity))
+  const minor = findings.filter((finding) => !UNACCEPTABLE.includes(finding.severity))
+  return [
+    `${review}: ${step} did not fix every finding after ${passes} passes, so the run does not send it back again.`,
+    ...(severe.length === 0 ? [] : ['', `Blocker and high (${severe.length}):`, ...severe.flatMap(severeLines)]),
+    ...(minor.length === 0 ? [] : ['', `Medium and low (${minor.length}):`, ...TABLE_HEAD, ...minor.map(minorRow)]),
+    '',
+    `Every finding with its context: ${verdict}`,
+    choicesOf(step, severe.length === 0),
+  ].join('\n')
+}
+
+const TABLE_HEAD = Object.freeze(['| Severity | Finding | Where | What |', '|---|---|---|---|'])
+
+/** What each answer does. @param {string} step @param {boolean} acceptable_ no blocker or high finding is left */
+const choicesOf = (step, acceptable_) => (acceptable_
+  ? `${ACCEPT} takes these findings as they stand and goes on (they are listed in the run report and the pull request); an instruction runs ${step} again with every finding and the instruction; ${STOP} ends the run.`
+  : `A blocker or high finding cannot be accepted: an instruction runs ${step} again with every finding and the instruction; ${STOP} ends the run.`)
+
+/**
+ * A blocker or high finding in full: what, why this severity, the kind of drift, every place, the
+ * fix; what its lens wrote made inert, as the run report and the pull request show it.
+ * @param {LeftFinding} finding
+ */
+const severeLines = (finding) => {
+  const { lens, id, gate, severity, location, description, suggestion, severityReason, drift } = finding
+  return [
+    `- ${severity} · ${lens} ${id} ${gate}${location === '' ? '' : ` at ${inert(location)}`}: ${inert(description)}`,
+    ...labelled(`why ${severity}`, severityReason),
+    ...labelled('drift', drift),
+    ...elsewhere(finding),
+    ...labelled('fix', suggestion),
+  ]
+}
+
+/** An indented `label: value` line, the value inert; none when there is no value. @param {string} label @param {string | null | undefined} value */
+const labelled = (label, value) => (value ? [`  ${label}: ${inert(value)}`] : [])
+
+/** The other places a finding holds at, when it names any. @param {LeftFinding} finding */
+const elsewhere = ({ location, occurrences = [] }) => {
+  const others = occurrences.filter((place) => place !== location)
+  return others.length === 0 ? [] : [`  also at: ${inert(others.join(', '))}`]
+}
+
+/** The longest cell of the table of medium and low findings. */
+const CELL = 120
+
+/** A medium or low finding as one row of the table. @param {LeftFinding} finding */
+const minorRow = ({ lens, id, severity, location, description }) => `| ${severity} | ${lens} ${id} | ${cell(inert(location || '-'))} | ${cell(inert(description))} |`
+
+/** A table cell on one line, its pipes escaped, cut to CELL characters. @param {string} text */
+const cell = (text) => {
+  const escaped = text.replaceAll('|', '\\|')
+  return escaped.length > CELL ? `${escaped.slice(0, CELL - 1)}…` : escaped
+}
+
+/**
+ * The instruction a human answered a blocked or review-ceiling question with; null for any other
+ * question, one not answered yet, STOP and ACCEPT.
  * @param {{ kind: QuestionKind, answer: string | null } | null} question
  * @returns {string | null}
  */
-export const instructionOf = (question) => (question?.kind === BLOCKED && question.answer !== STOP ? question.answer : null)
+export const instructionOf = (question) => {
+  if (question?.kind !== BLOCKED && question?.kind !== REVIEW_CEILING) return null
+  return QUESTIONS[question.kind].options.includes(/** @type {string} */ (question.answer)) ? null : question.answer
+}
+
+/**
+ * Whether a human accepted the findings a review left at its ceiling, so the run goes on as if it
+ * approved.
+ * @param {{ kind: QuestionKind, answer: string | null } | null} question
+ */
+export const acceptedOf = (question) => question?.kind === REVIEW_CEILING && question.answer === ACCEPT
 
 /**
  * What `skraft decide <key>` takes after the key: one of the options, or an instruction before STOP.

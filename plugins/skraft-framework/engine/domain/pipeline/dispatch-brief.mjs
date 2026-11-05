@@ -150,7 +150,10 @@ const feedbackLines = (brief) => {
 }
 
 /**
- * What a block left, when it left something, and the instruction a human lifted it with.
+ * What a block left, when it left something, and the instruction a human lifted it with. A
+ * block can leave nothing: a loop stopped at its max_visits by an edge out of a step that refused
+ * nothing (an agent's single edge, a gate's PASS, a consent's answer) carries no failures, and the
+ * pass it reopens is told the instruction alone (#500).
  * @param {Pick<Brief, 'feedback' | 'visit'>} brief @param {string} instruction
  */
 const reopenedLines = ({ feedback, visit }, instruction) => [

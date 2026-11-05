@@ -40,15 +40,16 @@ const EN = Object.freeze({
   failed: 'failed',
   passed: Object.freeze({ one: 'passed', many: 'passed' }),
   review: Object.freeze({
-    status: Object.freeze({ fix: 'To fix', decide: 'To decide', note: 'Note', refuted: 'Refuted' }),
+    status: Object.freeze({ fix: 'To fix', decide: 'To decide', accepted: 'Accepted', note: 'Note', refuted: 'Refuted' }),
     counted: Object.freeze({
-      fix: invariable('to fix'), decide: invariable('to decide'),
+      fix: invariable('to fix'), decide: invariable('to decide'), accepted: invariable('accepted'),
       note: Object.freeze({ one: 'note', many: 'notes' }), refuted: Object.freeze({ one: 'refuted', many: 'refuted' }),
     }),
     header: '| Status | Severity | Lens | Location | Finding | Why |',
     confirmed: 'confirmed: ',
     unverifiable: 'not verified: ',
     alone: 'one lens alone, against the lenses that passed; refuted: ',
+    accepted: 'a human accepted it as it stands at the review\'s ceiling',
     /** @param {number} pass */
     carried: (pass) => ` (refuted on pass ${pass})`,
     /** @param {number} pass */
@@ -103,15 +104,16 @@ const FR = Object.freeze({
   failed: 'en échec',
   passed: Object.freeze({ one: 'réussie', many: 'réussies' }),
   review: Object.freeze({
-    status: Object.freeze({ fix: 'À corriger', decide: 'À trancher', note: 'Note', refuted: 'Réfuté' }),
+    status: Object.freeze({ fix: 'À corriger', decide: 'À trancher', accepted: 'Accepté', note: 'Note', refuted: 'Réfuté' }),
     counted: Object.freeze({
-      fix: invariable('à corriger'), decide: invariable('à trancher'),
+      fix: invariable('à corriger'), decide: invariable('à trancher'), accepted: Object.freeze({ one: 'accepté', many: 'acceptés' }),
       note: Object.freeze({ one: 'note', many: 'notes' }), refuted: Object.freeze({ one: 'réfuté', many: 'réfutés' }),
     }),
     header: '| Statut | Sévérité | Lentille | Emplacement | Constat | Pourquoi |',
     confirmed: 'confirmé : ',
     unverifiable: 'non vérifié : ',
     alone: 'une seule lentille, contre celles qui sont passées ; réfuté : ',
+    accepted: 'un humain l\'a accepté tel quel au plafond de la revue',
     carried: (pass) => ` (réfuté à la passe ${pass})`,
     unchanged: (pass) => `nouveau sur une ligne inchangée depuis la passe ${pass}`,
     pass: (pass) => `passe ${pass}`,

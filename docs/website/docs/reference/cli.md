@@ -222,12 +222,40 @@ A block no longer ends the run by itself. When an agent answers `blocked`, a loo
 `max_visits`, or a lens of a review answers `inconclusive`, the engine asks the `blocked`
 question about the node to run again: the agent itself, the node the capped edge leads back to
 (the engineer after the gates, the architect after a review or a rejected ADR), or the review.
-Its text holds only what the engine checked, and the file that keeps the agent's own words:
+Its text holds what the engine checked, what the blocked step left (the agent's reason, the
+gates' failures), and the file that keeps the agent's own words:
 
 ```
-design is blocked: solution-architect says it cannot go on; its reason is in <tracking folder>/results/design-1-1.json. An instruction runs design again on a new pass with it; STOP ends the run.
-design is blocked: design_review -> design was taken as often as its max_visits allows. An instruction runs design again on a new pass with it; STOP ends the run.
+design is blocked: solution-architect says it cannot go on; its reason is in <tracking folder>/results/design-1-1.json.
+Left by design (1):
+- which payment provider?
+ An instruction runs design again on a new pass with what is left above and the instruction; STOP ends the run.
 design_review is blocked: a lens answered inconclusive; the verdict is in <tracking folder>/reviews/design_review-1/verdict.yaml. An instruction runs design_review again on a new pass with it; STOP ends the run.
+```
+
+The agent run again gets what the block left first, then the instruction.
+
+A review whose loop to its producer reaches `max_visits` (3 for each review of the shipped
+workflow) is not sent back again. Its question says that the producer did not fix every
+finding, shows each blocker and high finding with its context (why that severity, the kind of
+drift, every place it holds at, the fix), the medium and low ones in a table, and where the
+verdict file is. With only medium and low findings left, it is the `review-ceiling` question:
+`ACCEPT` takes them as they stand and goes on by the review's `APPROVED` edge; the run report lists
+them under *Accepted findings*, and the pull request shows them in its review table with the
+status *Accepted*. With a blocker or high finding left, it is
+the `blocked` question: those are never accepted. In both, an instruction runs the producer
+again with every finding, and `STOP` ends the run.
+
+```
+design_review: design did not fix every finding after 4 passes, so the run does not send it back again.
+
+Medium and low (1):
+| Severity | Finding | Where | What |
+|---|---|---|---|
+| medium | consistency F1 | docs/architecture/payments.md:7 | a read model is classified twice |
+
+Every finding with its context: <tracking folder>/reviews/design_review-4/verdict.yaml
+ACCEPT takes these findings as they stand and goes on (they are listed in the run report and the pull request); an instruction runs design again with every finding and the instruction; STOP ends the run.
 ```
 
 `skraft decide design-1 "Use the bank gateway of Acme"`: the next run of the pipeline, the same

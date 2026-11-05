@@ -6,7 +6,12 @@ import { parseAnswerYaml } from './answer-yaml.mjs'
  * is normalized, and every text is cut to one bounded line, since it goes into the next brief.
  *
  * @typedef {'blocker' | 'high' | 'medium' | 'low'} Severity
- * @typedef {{ id: string, gate: string, severity: Severity, location: string, description: string, suggestion: string | null }} Finding
+ * @typedef {'label' | 'classification' | 'structural'} Drift
+ * @typedef {{ id: string, gate: string, severity: Severity, location: string, description: string, suggestion: string | null, severityReason?: string | null, drift?: Drift | null, occurrences?: string[] }} Finding
+ *   severityReason: why the finding has its severity, for the human who decides on it;
+ *   drift: the kind of drift it is; occurrences: every `path:line` it holds at, the location
+ *   first. The three are context: a lens answer whose finding lacks one is refused (#499); the
+ *   engine's own findings have none.
  * @typedef {{ lens: string, verdict: 'pass' | 'fail' | 'inconclusive', findings: Finding[] }} LensResult
  * @typedef {{ verdict: 'confirmed' | 'refuted' | 'unverifiable', reason: string }} Refutation
  * @typedef {{ ok: true, value: Record<string, any> } | { ok: false, error: string }} Reading
@@ -17,26 +22,40 @@ const BLOCKING = Object.freeze(['blocker', 'high', 'medium'])
 const VERDICTS = Object.freeze(['pass', 'fail', 'inconclusive'])
 const REFUTATIONS = Object.freeze(['confirmed', 'refuted', 'unverifiable'])
 const LENS_KEYS = Object.freeze(['lens', 'verdict', 'findings'])
-const FINDING_KEYS = Object.freeze(['id', 'gate', 'severity', 'location', 'description', 'suggestion'])
+const FINDING_KEYS = Object.freeze(['id', 'gate', 'severity', 'location', 'description', 'suggestion', 'severityReason', 'drift', 'occurrences'])
+const DRIFTS = Object.freeze(/** @type {Drift[]} */ (['label', 'classification', 'structural']))
+/** The context every finding of a lens answer carries, for the human who decides on it at a review's ceiling. */
+export const CONTEXT_KEYS = Object.freeze(['severityReason', 'drift', 'occurrences'])
+/** The most places one finding may list. */
+const MAX_OCCURRENCES = 20
 const REFUTATION_KEYS = Object.freeze(['verdict', 'reason'])
 const CHECK_KEYS = Object.freeze(['finding', 'verdict', 'reason'])
 const GATE = /^[A-Za-z][\w.-]{0,23}$/
-/** The most findings a lens may give; each blocker, high or medium one costs a refuter. */
+/** The most findings a lens may give; each costs a refuter. */
 export const MAX_FINDINGS = 20
 /** How long each text may be once on one line. */
-const LIMITS = Object.freeze({ id: 24, location: 200, description: 500, suggestion: 300, reason: 600 })
+const LIMITS = Object.freeze({ id: 24, location: 200, description: 500, suggestion: 300, reason: 600, severityReason: 300 })
 
-/** The document a lens brief asks for. @param {string} lens */
-export const lensShape = (lens) => [
-  `lens: ${lens}`,
-  'verdict: fail            # pass | fail | inconclusive',
-  'findings:                # [] when you find none',
+/** One finding as a lens brief shows it, its context last. */
+const FINDING_SHAPE = Object.freeze([
   '  - id: F1',
   '    gate: G1             # the gate of your table',
   '    severity: blocker    # blocker | high | medium | low',
   '    location: "<path>:<line>"',
   '    description: "<what is wrong>"',
   '    suggestion: "<how to fix, one line; leave the key out when the fix is not evident>"',
+  '    severityReason: "<why this severity: what it breaks, for whom>"',
+  '    drift: label         # label (a name differs) | classification (a kind differs) | structural (anything else)',
+  '    occurrences:         # every place the same fact is wrong, the location first',
+  '      - "<path>:<line>"',
+])
+
+/** The document a lens brief asks for. @param {string} lens */
+export const lensShape = (lens) => [
+  `lens: ${lens}`,
+  'verdict: fail            # pass | fail | inconclusive',
+  'findings:                # [] when you find none',
+  ...FINDING_SHAPE,
 ].join('\n')
 
 /** The document a refuter brief asks for, on one finding. */
@@ -123,7 +142,19 @@ const findingError = (finding) => {
   if (unknown !== undefined) return `the key ${unknown} is not in the contract; the keys are ${FINDING_KEYS.join(', ')}`
   if (!SEVERITIES.includes(/** @type {Severity} */ (word(finding.severity)))) return `severity must be one of ${SEVERITIES.join(', ')}`
   if (typeof finding.gate !== 'string' || !GATE.test(finding.gate.trim())) return 'gate must name the gate of your table, such as G1'
-  return oneLine(finding.description, LIMITS.description) === '' ? 'description is empty' : null
+  if (oneLine(finding.description, LIMITS.description) === '') return 'description is empty'
+  return contextError(finding)
+}
+
+/**
+ * What keeps a finding from carrying its context, which a human decides on at a review's ceiling;
+ * null when it carries it.
+ * @param {any} finding
+ */
+const contextError = (finding) => {
+  if (oneLine(finding.severityReason, LIMITS.severityReason) === '') return 'severityReason is missing; say why this severity: what it breaks, for whom'
+  if (!DRIFTS.includes(/** @type {Drift} */ (word(finding.drift)))) return `drift must be one of ${DRIFTS.join(', ')}`
+  return occurrencesOf(finding.occurrences).length === 0 ? 'occurrences is missing; list every `path:line` the same fact is wrong at, the location first' : null
 }
 
 /** @param {any} raw @returns {Finding} */
@@ -134,7 +165,29 @@ const findingOf = (raw) => ({
   location: oneLine(raw.location, LIMITS.location),
   description: oneLine(raw.description, LIMITS.description),
   suggestion: oneLine(raw.suggestion, LIMITS.suggestion) || null,
+  ...contextOf(raw),
 })
+
+/**
+ * The context a lens gave a finding, which an answer must hold.
+ * @param {any} raw @returns {Required<Pick<Finding, 'severityReason' | 'drift' | 'occurrences'>>}
+ */
+const contextOf = (raw) => ({
+  severityReason: oneLine(raw.severityReason, LIMITS.severityReason),
+  drift: /** @type {Drift} */ (word(raw.drift)),
+  occurrences: occurrencesOf(raw.occurrences),
+})
+
+/**
+ * The places a finding lists, one `path:line` each, in its order, each once, at most
+ * MAX_OCCURRENCES: a list, one place per item, or one line whose places are separated by commas
+ * or semicolons.
+ * @param {unknown} value
+ */
+const occurrencesOf = (value) => [...new Set(placesOf(value).map((place) => oneLine(place, LIMITS.location)).filter((place) => place !== ''))].slice(0, MAX_OCCURRENCES)
+
+/** @param {unknown} value @returns {unknown[]} */
+const placesOf = (value) => (Array.isArray(value) ? value : oneLine(value, LIMITS.location * MAX_OCCURRENCES).split(/[,;]/))
 
 /**
  * The findings with an id each: the one they gave, else the first `F<n>` none of them uses.

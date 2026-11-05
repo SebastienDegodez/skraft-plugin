@@ -1,5 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
+import { withContext } from '../support/answer-yaml.mjs'
 import { agent, API, finding, lenses, nominal, REFS_42, refutes, reviews, says, scripted, SLUG, tddCycle, TRACKING } from '../support/pipeline-host.mjs'
 import { ejectedPipeline, edit, withLenses } from '../workflow/support.mjs'
 import { BUILT_IN_WORKFLOW, InMemoryAgentCatalog, PLUGIN_AGENTS } from '../support/in-memory-host.mjs'
@@ -222,10 +223,18 @@ test('each way an answer cannot be read is told to the lens on its second ask', 
     ['lens: consistency\nverdict: fail\nfindings:\n  - gate: G1\n    severity: high\n    description: "the port', notYaml(6, 'has a double-quoted value that does not close')],
     ['lens: consistency\nverdict: pass\nfindings: []\n  extra: 1', notYaml(4, 'is indented where a top-level key belongs')],
     ['lens: consistency\n\tverdict: pass', notYaml(2, 'is indented with a tab')],
+    ['lens: consistency\nverdict: fail\nfindings:\n  - gate: G1\n    occurrences: "a.md:1"\n      - "b.md:2"', notYaml(6, 'is not a `key: value` line')],
+    ['lens: consistency\nverdict: fail\nfindings:\n  - gate: G1\n    occurrences:\n      - "a.md:1"\n    - "b.md:2"', notYaml(7, 'is not a `key: value` line')],
     [says('consistency', 'fail', [finding('F1', 'high', 'one'), { gate: 'G2', severity: 'major', description: 'two' }]), 'finding 2: severity must be one of blocker, high, medium, low'],
     [says('consistency', 'fail', [{ gate: 'G1', severity: 'high', description: '  ' }]), 'finding 1: description is empty'],
     [says('consistency', 'fail', [{ severity: 'high', description: 'no gate named' }]), 'finding 1: gate must name the gate of your table, such as G1'],
-    [says('consistency', 'fail', [finding('F1', 'high', 'one', { rule: 'R1' })]), 'finding 1: the key rule is not in the contract; the keys are id, gate, severity, location, description, suggestion'],
+    [says('consistency', 'fail', [finding('F1', 'high', 'one', { rule: 'R1' })]), 'finding 1: the key rule is not in the contract; the keys are id, gate, severity, location, description, suggestion, severityReason, drift, occurrences'],
+    [says('consistency', 'fail', [finding('F1', 'high', 'one', { drift: 'naming' })]), 'finding 1: drift must be one of label, classification, structural'],
+    [says('consistency', 'fail', [finding('F1', 'low', 'one'), { gate: 'G1', severity: 'low', location: 'a.md:1', description: 'two', drift: 'label', occurrences: 'a.md:1' }]), 'finding 2: severityReason is missing; say why this severity: what it breaks, for whom'],
+    [says('consistency', 'fail', [{ gate: 'G1', severity: 'medium', location: 'a.md:1', description: 'one', severityReason: '  ', drift: 'label', occurrences: 'a.md:1' }]), 'finding 1: severityReason is missing; say why this severity: what it breaks, for whom'],
+    [says('consistency', 'fail', [{ gate: 'G1', severity: 'high', location: 'a.md:1', description: 'one', severityReason: 'billing breaks', occurrences: 'a.md:1' }]), 'finding 1: drift must be one of label, classification, structural'],
+    [says('consistency', 'fail', [{ gate: 'G1', severity: 'blocker', location: 'a.md:1', description: 'one', severityReason: 'billing breaks', drift: 'label' }]), 'finding 1: occurrences is missing; list every `path:line` the same fact is wrong at, the location first'],
+    [says('consistency', 'fail', [finding('F1', 'high', 'one', { occurrences: ' , ; ' })]), 'finding 1: occurrences is missing; list every `path:line` the same fact is wrong at, the location first'],
     [says('consistency', 'pass', [finding('F1', 'high', 'the ADR is missing')]), 'verdict is pass but finding F1 is high'],
     [says('consistency', 'fail', many), '21 findings; give at most 20, the most severe first'],
   ]
@@ -242,13 +251,14 @@ test('each way an answer cannot be read is told to the lens on its second ask', 
 
 test('the last fenced block of an answer is read whatever its tag, its words in any case; a finding without id takes the first free number, its text on one line', async () => {
   const host = scripted({}, (it) => [...nominal(it).slice(0, 2), agent()(it), ...nominal(it).slice(2)])
-  const answer = says('consistency-lens', 'FAIL', [finding('F1', 'low', 'a note'), { gate: 'G2', severity: 'Medium', location: '', description: 'no owner\n   for refunds' }, finding('F3', 'low', 'another note')])
-  host.agentRunner.review = lenses({ consistency: [`Notes first.\n\`\`\`text\n${answer}\n\`\`\``] })
+  const answer = says('consistency-lens', 'FAIL', [finding('F1', 'low', 'a note'), withContext({ gate: 'G2', severity: 'Medium', location: '', description: 'no owner\n   for refunds' }), finding('F3', 'low', 'another note')])
+  // The answer ends on a key left empty.
+  host.agentRunner.review = lenses({ consistency: [`Notes first.\n\`\`\`text\n${answer}\n    suggestion:\n\`\`\``] })
 
   await host.start()
 
   const recorded = host.events().find((event) => event.type === 'step.recorded' && event.step === 'design_review')
-  assert.deepEqual(recorded.failures, ['consistency F2 G2 medium: no owner for refunds'])
+  assert.deepEqual(recorded.failures, ['consistency F2 G2 medium: no owner for refunds', 'consistency F1 G1 low at src/Checkout.cs:12: a note', 'consistency F3 G1 low at src/Checkout.cs:12: another note'])
   assert.deepEqual(host.events().find((event) => event.type === 'review.lens' && event.lens === 'consistency').findings.map(({ id }) => id), ['F1', 'F2', 'F3'])
 })
 
@@ -574,7 +584,7 @@ test('a changed path that is no readable file, such as a nested repository, is r
   assert.ok((await host.tracking.read(SLUG, 'reviews/deliver_review-1/changed-files.txt')).includes('src/PaymentsSdk\n'))
 })
 
-test('an answer in the usual YAML forms is read: comments, single quotes, blocks, a bare dash, an id given as a number, an empty suggestion', async () => {
+test('an answer in the usual YAML forms is read: comments, single quotes, blocks, a bare dash, an id given as a number, an empty suggestion; a long reason is cut, at most 20 places are kept', async () => {
   const host = scripted({}, (it) => [...nominal(it).slice(0, 2), agent()(it), ...nominal(it).slice(2)])
   const answer = [
     '# my verdict',
@@ -585,11 +595,19 @@ test('an answer in the usual YAML forms is read: comments, single quotes, blocks
     '  - id: 7',
     '    gate: G2',
     '    severity: high',
-    "    location: 'docs/adr/adr-001.md:3'",
     '    description: |',
     "      The ADR's provider",
     '      is not named.',
     '    suggestion: ~',
+    '    severityReason: >',
+    '      billing reads',
+    '      the provider',
+    '    drift: Structural',
+    '    occurrences:',
+    "      - 'docs/adr/adr-001.md:3'",
+    '      - "docs/a, b.md:4"   # a path with a comma',
+    '      - docs/adr/adr-001.md:3',
+    '    location:',
     '  -',
     '    gate: C1',
     '    severity: low',
@@ -597,6 +615,17 @@ test('an answer in the usual YAML forms is read: comments, single quotes, blocks
     '      two names',
     '      for one context',
     '    suggestion: "name it \\"Payments\\"" # a note',
+    '    severityReason: "a reader hesitates"',
+    '    drift: label',
+    '    occurrences: "docs/a.md:1; docs/b.md:2,docs/a.md:1"',
+    '  - gate: C2',
+    '    severity: low',
+    '    description: "a long finding"',
+    '    suggestion:',
+    `    severityReason: "${'r'.repeat(301)}"`,
+    '    drift: label',
+    '    occurrences:',
+    ...Array.from({ length: 21 }, (_, index) => `    - "docs/c.md:${index + 1}"`),
   ].join('\n')
   host.agentRunner.review = lenses({ consistency: [answer] })
 
@@ -604,7 +633,9 @@ test('an answer in the usual YAML forms is read: comments, single quotes, blocks
 
   const lensed = host.events().find((event) => event.type === 'review.lens' && event.lens === 'consistency')
   assert.deepEqual(lensed.findings, [
-    { id: '7', gate: 'G2', severity: 'high', location: 'docs/adr/adr-001.md:3', description: "The ADR's provider is not named.", suggestion: null },
-    { id: 'F1', gate: 'C1', severity: 'low', location: '', description: 'two names for one context', suggestion: 'name it "Payments"' },
+    { id: '7', gate: 'G2', severity: 'high', location: '', description: "The ADR's provider is not named.", suggestion: null, severityReason: 'billing reads the provider', drift: 'structural', occurrences: ['docs/adr/adr-001.md:3', 'docs/a, b.md:4'] },
+    { id: 'F1', gate: 'C1', severity: 'low', location: '', description: 'two names for one context', suggestion: 'name it "Payments"', severityReason: 'a reader hesitates', drift: 'label', occurrences: ['docs/a.md:1', 'docs/b.md:2'] },
+    // At most 20 places, a reason cut at 300 characters.
+    { id: 'F2', gate: 'C2', severity: 'low', location: '', description: 'a long finding', suggestion: null, severityReason: `${'r'.repeat(299)}…`, drift: 'label', occurrences: Array.from({ length: 20 }, (_, index) => `docs/c.md:${index + 1}`) },
   ])
 })

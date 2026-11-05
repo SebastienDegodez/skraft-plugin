@@ -929,9 +929,13 @@ const blockedReview = ({ code, summary }) => ({ outcome: 'blocked', code, failur
  * @param {Context} context @param {RunState} run @param {string} from
  * @param {import('../../domain/review/verdict.mjs').ReviewVerdict} verdict
  */
-const recordedFieldsOf = (context, run, from, { status, reasons, summary }) => {
+const recordedFieldsOf = (context, run, from, { status, reasons, summary, findings }) => {
   const routed = leave(context, run, from, status, reasons)
-  return { outcome: status === 'APPROVED' ? 'approved' : 'needs-rework', code: routed.code ?? null, failures: reasons, next: routed.next, ceiling: routed.ceiling, reason: routed.reason ?? summary }
+  return {
+    outcome: status === 'APPROVED' ? 'approved' : 'needs-rework', code: routed.code ?? null, failures: reasons, next: routed.next, ceiling: routed.ceiling, reason: routed.reason ?? summary,
+    // What a human decides on when the review reaches its ceiling, and what the report lists once accepted: a review that sends work back always has some.
+    ...(findings.length > 0 ? { findings } : {}),
+  }
 }
 
 /**

@@ -117,6 +117,17 @@ test('an instruction instead of APPLY reaches kill_mutants as what the developer
   assert.deepEqual(recorded(host, ['mutation_plan']).map(({ answer, next }) => [answer, next]), [[instruction, 'kill_mutants']])
 })
 
+test('ACCEPT typed at the mutation plan is an instruction like any other: kill_mutants reads it, and no review finding is listed as accepted', async () => {
+  const host = scripted({ machine: new ScriptedMachine(), answers: [{ answer: 'ACCEPT' }] }, (it) => [...upToDeliver(it), proposer(it), proposer(it), killer(it)])
+  failsOnce(host)
+
+  assert.equal((await host.start()).status, 'done')
+
+  assert.ok(afterDeliver(host)[2].prompt.includes('A human chose how to go on:\n- ACCEPT\n'), afterDeliver(host)[2].prompt)
+  assert.deepEqual(recorded(host, ['mutation_plan']).map(({ answer }) => answer), ['ACCEPT'])
+  assert.deepEqual((await host.report()).accepted, [])
+})
+
 test('the kill the developer chose names no failing test: a fix it commits needs its failing test first', async () => {
   const fixing = (it) => agent({ work: ({ git }) => git.commit(`fix(${SLUG}): refund the right amount`, ['src/Refund.cs']) })(it)
   const host = scripted({ machine: new ScriptedMachine(), answers: [{ answer: 'APPLY' }] }, (it) => [...upToDeliver(it), proposer(it), proposer(it), fixing(it), agent({ work: ({ git }) => { git.reset('.', 'root-2'); git.commit(`test(${SLUG}): kill the checkout mutants`, ['tests/CheckoutTests.cs']) } })(it)])

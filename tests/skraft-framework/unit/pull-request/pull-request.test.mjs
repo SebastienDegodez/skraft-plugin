@@ -6,6 +6,7 @@ import { agent, API, finding, forgeLostAtFirstAgent, lenses, nominal, prWriter, 
 import { passing } from '../support/in-memory-host.mjs'
 import { eventsOf } from '../support/decisions.mjs'
 import { opening, section } from '../support/description.mjs'
+import { answerYaml } from '../support/answer-yaml.mjs'
 
 const CONSENTED = { publish: { pullRequest: true, questionVersions: { pullRequest: 2 } } }
 const STORY = { story: { issue: 42, title: 'Pay by card' } }
@@ -323,21 +324,26 @@ test('a draft is asked only when publish.draft is not false', async () => {
   assert.equal(eventsOf(ready, 'step.recorded').at(-1).reason, 'pull request #42 opened: https://github.example.com/acme/shop/pull/42')
 })
 
-test('the review the description shows: one table per review, a row per finding by status, what one lens alone found to decide, the notes, the refuted ones folded with the refuter\'s reason, long texts cut, duplicates together, open while a finding waits on a human', async () => {
+test('the review the description shows: one table per review, a row per finding by status, what one lens alone found to decide, the refuted ones folded, low ones too, with the refuter\'s reason, long texts cut, duplicates together, open while a finding waits on a human', async () => {
   const host = scripted({ config: CONSENTED }, (it) => nominal(it))
   host.agentRunner.review = lenses({
     consistency: [says('consistency', 'fail', [finding('F1', 'medium', 'the map names no currency', { location: 'details/x.md:3' })])],
     fitness: [says('fitness', 'fail', [finding('F1', 'high', 'speculative cache', { location: 'details/x.md:9' })])],
     'test-integrity': [says('test-integrity', 'pass', [finding('F1', 'low', 'long name')])],
-    'cold-reader': [says('cold-reader', 'fail', [finding('F1', 'medium', LONG_CLAIM, { location: 'src/Checkout.cs:3' }), finding('F2', 'low', 'long name too', { location: './src/Checkout.cs:12' })])],
-    refuter: [refutes('refuted', 'details/x.md:3 names EUR'), refutes('refuted', 'nothing is cached'), refutes('refuted', LONG_REASON)],
+    'architecture-boundaries': [says('architecture-boundaries', 'pass', [finding('F1', 'low', 'long name too', { location: './src/Checkout.cs:12' })])],
+    'cold-reader': [says('cold-reader', 'fail', [finding('F1', 'medium', LONG_CLAIM, { location: 'src/Checkout.cs:3' })])],
+    refuter: [
+      refutes('refuted', 'details/x.md:3 names EUR'), refutes('refuted', 'nothing is cached'),
+      answerYaml({ checks: [{ finding: 'test-integrity F1', verdict: 'refuted', reason: 'Checkout.cs:12 is short' }, { finding: 'architecture-boundaries F1', verdict: 'refuted', reason: 'Checkout.cs:12 is short' }] }),
+      refutes('refuted', LONG_REASON),
+    ],
   })
 
   assert.equal((await host.start()).status, 'done')
 
   const body = await host.tracking.read(SLUG, 'pull-request-body.md')
-  assert.equal(opening(body, 'Review'), '<details open><summary>Review: 1 to decide, 1 note, 2 refuted</summary>')
-  assert.equal(opening(await host.tracking.read(SLUG, 'pull-request.md'), 'Review'), '<details open><summary>Review: 1 to decide, 1 note, 2 refuted</summary>')
+  assert.equal(opening(body, 'Review'), '<details open><summary>Review: 1 to decide, 3 refuted</summary>')
+  assert.equal(opening(await host.tracking.read(SLUG, 'pull-request.md'), 'Review'), '<details open><summary>Review: 1 to decide, 3 refuted</summary>')
   assert.equal(section(body, 'Review'), [
     '**design_review**',
     '',
@@ -353,7 +359,13 @@ test('the review the description shows: one table per review, a row per finding 
     '',
     HEADER, RULE,
     '| To decide | medium | cold-reader F1 G1 | `src/Checkout.cs:3` | pay names no currency, so a refund cannot tell euros from dollars and the ledger rounds each one it… | one lens alone, against the lenses that passed; refuted: context-map.md:12 fixes pay(amount) in euros for the whole checkout context, and the ADR states it… |',
-    '| Note | low | test-integrity F1 G1, cold-reader F2 G1 | `src/Checkout.cs:12` | long name |  |',
+    '',
+    '<details><summary>1 refuted</summary>',
+    '',
+    HEADER, RULE,
+    '| Refuted | low | test-integrity F1 G1, architecture-boundaries F1 G1 | `src/Checkout.cs:12` | long name | Checkout.cs:12 is short |',
+    '',
+    '</details>',
   ].join('\n'))
 
   const reworked = scripted({ config: CONSENTED }, (it) => [...nominal(it).slice(0, 2), agent()(it), ...nominal(it).slice(2)])
@@ -363,35 +375,43 @@ test('the review the description shows: one table per review, a row per finding 
       says('consistency', 'pass', [finding('F1', 'low', 'a long heading', { location: 'details/x.md:3' })]),
     ],
     'cold-reader': [says('cold-reader', 'pass', [finding('F1', 'low', 'long name')])],
-    refuter: [refutes('refuted', 'details/x.md:3 names EUR'), refutes('confirmed', 'nobody owns refunds')],
+    refuter: [refutes('refuted', 'details/x.md:3 names EUR'), refutes('confirmed', 'nobody owns refunds'), refutes('refuted', 'the heading is short'), refutes('refuted', 'the name is short')],
   })
   await reworked.start()
   const reworkedBody = await reworked.tracking.read(SLUG, 'pull-request-body.md')
-  assert.equal(opening(reworkedBody, 'Review'), '<details><summary>Review: 2 notes</summary>')
+  assert.equal(opening(reworkedBody, 'Review'), '<details><summary>Review: 2 refuted</summary>')
   assert.equal(section(reworkedBody, 'Review'), [
     '**design_review**',
     '',
+    '<details><summary>1 refuted</summary>',
+    '',
     HEADER, RULE,
-    '| Note | low | consistency F1 G1 | `details/x.md:3` | a long heading |  |',
+    '| Refuted | low | consistency F1 G1 | `details/x.md:3` | a long heading | the heading is short |',
+    '',
+    '</details>',
     '',
     '**deliver_review**',
     '',
+    '<details><summary>1 refuted</summary>',
+    '',
     HEADER, RULE,
-    '| Note | low | cold-reader F1 G1 | `src/Checkout.cs:12` | long name |  |',
+    '| Refuted | low | cold-reader F1 G1 | `src/Checkout.cs:12` | long name | the name is short |',
+    '',
+    '</details>',
   ].join('\n'))
 
   const minor = scripted({ config: CONSENTED }, (it) => nominal(it))
-  minor.agentRunner.review = lenses({ 'cold-reader': [says('cold-reader', 'pass', [finding('F1', 'low', 'long name')])] })
+  minor.agentRunner.review = lenses({ 'cold-reader': [says('cold-reader', 'pass', [finding('F1', 'low', 'long name')])], refuter: [refutes('refuted', 'the name is short')] })
   await minor.start()
   const minorBody = await minor.tracking.read(SLUG, 'pull-request-body.md')
-  assert.equal(section(minorBody, 'Review'), ['**deliver_review**', '', HEADER, RULE, '| Note | low | cold-reader F1 G1 | `src/Checkout.cs:12` | long name |  |'].join('\n'))
-  assert.equal(opening(minorBody, 'Review'), '<details><summary>Review: 1 note</summary>')
+  assert.equal(section(minorBody, 'Review'), ['**deliver_review**', '', '<details><summary>1 refuted</summary>', '', HEADER, RULE, '| Refuted | low | cold-reader F1 G1 | `src/Checkout.cs:12` | long name | the name is short |', '', '</details>'].join('\n'))
+  assert.equal(opening(minorBody, 'Review'), '<details><summary>Review: 1 refuted</summary>')
 })
 
 test('a review whose rework the workflow sends onward shows what is to fix, open, with the refuter\'s word', async () => {
   const workflow = edit(BUILT_IN_WORKFLOW,
     ['design_review [shape=tripleoctagon, mandatory=true]', 'design_review [shape=tripleoctagon]'],
-    ['  design_review -> design  [label="NEEDS_REWORK", max_visits=1]\n', '  design_review -> adr  [label="NEEDS_REWORK"]\n'])
+    ['  design_review -> design  [label="NEEDS_REWORK", max_visits=3]\n', '  design_review -> adr  [label="NEEDS_REWORK"]\n'])
   const host = scripted({ config: CONSENTED, workflow }, (it) => nominal(it))
   host.agentRunner.review = lenses({
     consistency: [says('consistency', 'fail', [finding('F1', 'medium', 'no owner for refunds', { location: 'details/x.md:3' })])],

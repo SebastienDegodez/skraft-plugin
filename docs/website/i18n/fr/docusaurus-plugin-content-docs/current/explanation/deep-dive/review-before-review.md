@@ -47,9 +47,8 @@ et des requêtes de Meyer ([Meyer, 1997](../../reference/citations.mdx#cite-meye
 flowchart TB
     W["Travail produit<br/>(phase N)"] --> L1["lentille A"] & L2["lentille B"] & L3["lentille C"]
     L1 & L2 & L3 --> F["findings typés"]
-    F -->|blocker, high, medium| R["finding-refuter<br/>confirme ou réfute"]
+    F -->|toute sévérité| R["finding-refuter<br/>confirme ou réfute"]
     R --> V{"verdict calculé<br/>par le moteur"}
-    F -->|low : notes| V
     V -->|APPROVED| N["phase suivante,<br/>puis revue humaine"]
     V -->|NEEDS_REWORK| W
     V -->|BLOCKED| H["question à un humain"]
@@ -58,9 +57,12 @@ flowchart TB
 *Figure 1 — Une revue SKRAFT : les lentilles trouvent, le réfuteur vérifie, le moteur tranche ;
 un seul finding qui tient suffit à renvoyer le travail.*
 
-Chaque finding blocker, high ou medium passe par `finding-refuter`, qui relit l'endroit cité et
-le confirme ou le réfute, en disant pourquoi. Un seul finding qui tient suffit à renvoyer le
-travail (`NEEDS_REWORK`) ; les findings low restent des notes. Une lentille qui ne peut pas
+Chaque finding, de toute sévérité, passe par `finding-refuter`, qui relit l'endroit cité et le
+confirme ou le réfute, en disant pourquoi. Un seul finding qui tient suffit à renvoyer le travail
+(`NEEDS_REWORK`), un low aussi, que sa lentille ait échoué ou passé : le producteur corrige toutes
+les sévérités. Après
+la troisième passe, le run ne renvoie plus rien : un humain accepte ce qui reste quand il ne
+reste que des findings medium et low, ou dit au producteur quoi faire. Une lentille qui ne peut pas
 conclure bloque la revue au lieu de valoir approbation. Quand une seule lentille trouve ce qui
 renverrait le travail alors que les autres ont passé, le réfuteur la juge avec toutes les
 entrées de la revue — la *Dissent Rule* : une voix isolée n'est ni écartée sans raison, ni suivie

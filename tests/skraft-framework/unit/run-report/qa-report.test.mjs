@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { agent, API, finding, lenses, nominal, REFS_42, says, scripted, SLUG } from '../support/pipeline-host.mjs'
+import { agent, API, finding, lenses, nominal, REFS_42, refutes, says, scripted, SLUG } from '../support/pipeline-host.mjs'
 import { InMemoryGit, ScriptedMachine, ScriptedReplay } from '../support/in-memory-host.mjs'
 import { ALL_KILLED, strykerReport } from '../support/mutation-reports.mjs'
 
@@ -17,7 +17,7 @@ const shaOf = (host, subject) => host.events().filter((event) => event.type === 
 
 test('after each step the tracking folder holds qa-report.md: the test plan, each component\'s last gates with its mutation score, the TDD red commits, the acceptance test of DISTILL first, and each review\'s verdict with its findings', async () => {
   const host = scripted({ components: [API, WEB], git: twoRepositories() }, (it) => nominal(it, REFS_42))
-  host.agentRunner.review = lenses({ consistency: [says('consistency', 'pass', [finding('F1', 'low', 'the context map names no owner')])] })
+  host.agentRunner.review = lenses({ consistency: [says('consistency', 'pass', [finding('F1', 'low', 'the context map names no owner')])], refuter: [refutes('refuted', 'the map names the owner')] })
   const seen = []
   host.machine.meanwhile['. $ dotnet build'] = async () => { seen.push(await host.tracking.read(SLUG, QA)) }
 

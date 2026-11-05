@@ -68,4 +68,5 @@ Judge each rule by its definition in `craft-discipline` C10 and its reference `r
 - Answer `verdict: inconclusive` only when an input your brief lists cannot be read, with one `low` finding naming that input and what it lacks; an input that exists but is empty is read, not missing.
 - Put each finding's gate in its `gate` field.
 - Give a one-line `suggestion` only when the fix is evident; otherwise leave the key out.
+- Every finding, of any severity, gives `severityReason` (what it breaks, for whom), `drift` (`label` when a name differs, `classification` when a kind differs, `structural` otherwise) and `occurrences` (a list of every `path:line` of the same fact, the location first); the engine refuses an answer whose finding lacks one.
 - Write every free text value between double quotes.

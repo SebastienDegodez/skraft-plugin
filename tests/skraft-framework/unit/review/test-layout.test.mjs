@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { agent, API, nominal, scripted, SLUG } from '../support/pipeline-host.mjs'
+import { agent, API, nominal, scripted, SLUG, TRACKING } from '../support/pipeline-host.mjs'
 import { InMemoryAgentCatalog } from '../support/in-memory-host.mjs'
 
 /** A DISTILL that commits these files, each added (new) unless named in `changed`. @param {string[]} added @param {string[]} [changed] */
@@ -35,6 +35,24 @@ test('a .NET acceptance test added outside a <Context>.UnitTest project is a G11
   const check = host.agentRunner.reviewed().find((dispatch) => dispatch.agent === 'finding-refuter').prompt
   assert.ok(check.includes('\n- Skill (read it before any other input and judge with its criteria): /plugin/skills/acceptance-review-criteria/SKILL.md\n- Lens (read it with the skills: its gate table states the rule of each gate a finding cites): /plugin/agents/testability-lens.md\n'), check)
   assert.deepEqual(host.events().find((event) => event.type === 'step.recorded' && event.step === 'distill_review').outcome, 'needs-rework')
+})
+
+test('the engine\'s own G11 findings left at a review\'s ceiling are asked about with what they say, no context given and no table of others (#499)', async () => {
+  const added = ['tests/Acceptance/CheckoutAcceptanceTests.cs']
+  const host = scripted({ answers: [{ answer: 'STOP' }] }, (it) => [...nominal(it).slice(0, 2), ...[1, 2, 3, 4].map(() => distill(added)(it))])
+
+  assert.equal((await host.start()).code, 'loop-ceiling')
+
+  assert.equal(host.human.questions[0].text, [
+    'distill_review: distill did not fix every finding after 4 passes, so the run does not send it back again.',
+    '',
+    'Blocker and high (2):',
+    '- blocker · testability#layout F1 G11 at tests/Acceptance/CheckoutAcceptanceTests.cs: a test added outside a .UnitTest, .UnitTests or .Tests project and the integration place of dotnet, where clean-architecture-testing puts it',
+    '- blocker · testability#layout F2 G11 at tests: api gains tests and none in a .UnitTest, .UnitTests or .Tests project: the acceptance test of a new use case goes there',
+    '',
+    `Every finding with its context: ${TRACKING}/reviews/distill_review-4/verdict.yaml`,
+    'A blocker or high finding cannot be accepted: an instruction runs distill again with every finding and the instruction; STOP ends the run.',
+  ].join('\n'))
 })
 
 test('tests added in the unit or the integration place of their language pass, its project named in the singular or the plural; a test the patch only changes, or a source file, is not judged', async () => {

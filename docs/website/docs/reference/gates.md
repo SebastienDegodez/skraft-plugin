@@ -56,7 +56,7 @@ root; a component stops at its first failing gate.
 | `blocker` | `REJECTED` | `NEEDS_REWORK` once confirmed by `finding-refuter` |
 | `high` | `NEEDS_REWORK` | `NEEDS_REWORK` once confirmed |
 | `medium` | `NEEDS_REWORK` | `NEEDS_REWORK` once confirmed |
-| `low` | `APPROVED`, noted | `APPROVED`, noted |
+| `low` | `APPROVED`, noted | `NEEDS_REWORK` once confirmed, whether its lens answered `fail` or `pass` |
 
 ---
 
@@ -222,12 +222,16 @@ findings:                # [] when it finds none
     location: "tests/Orders.UnitTest/RefundTests.cs:42"
     description: "the expected amount 90 became Assert.NotNull"
     suggestion: "restore Assert.Equal(90, refund.Amount)"   # optional
+    severityReason: "the refund amount is no longer checked"
+    drift: structural    # label | classification | structural
+    occurrences:
+      - "tests/Orders.UnitTest/RefundTests.cs:42"
 ```
 
 | Rule | Detail |
 | --- | --- |
-| Keys | only `lens`, `verdict`, `findings`; per finding `id`, `gate`, `severity`, `location`, `description`, `suggestion`; any other key refuses the answer |
-| Required | `gate` and `description`; a missing `id` becomes the first free `F<n>` |
+| Keys | only `lens`, `verdict`, `findings`; per finding `id`, `gate`, `severity`, `location`, `description`, `suggestion`, `severityReason`, `drift`, `occurrences`; any other key refuses the answer |
+| Required | `gate`, `description`, `severityReason` (why this severity), `drift` (`label`, `classification` or `structural`) and `occurrences` (every `path:line` of the same fact, as a list or one line separated by `,` or `;`); a missing `id` becomes the first free `F<n>` |
 | Values | free texts in double quotes or a literal block scalar; no anchor, alias or tag; case of `verdict` and `severity` normalized |
 | Ceiling | at most 20 findings; a `pass` with a blocker, high or medium finding is refused |
 | Texts | brought onto one line and cut (description: 500 characters); `location` made relative to the working copy, `/`-separated, `./` dropped, its `:line` kept (a path outside the working copy stays absolute) |
@@ -249,7 +253,7 @@ like a lens's.
 
 Findings of different lenses at the same `path:line` (the path normalized as the
 patch's: `./src\Checkout.cs:12` is `src/Checkout.cs:12`) with the same severity form one group.
-Each group of blocker, high or medium findings goes once to `finding-refuter`, its label and brief naming
+Each group of findings, of any severity, goes once to `finding-refuter`, its label and brief naming
 every lens of the group, with the inputs, skills and descriptor of those lenses (for an engine
 check, the skills and descriptor of the lens it reports for). It judges by the rule of the gate the
 finding cites, as the lens descriptor's gate table, those skills and their references state it; a rule no input states is no reason to refute, and makes
@@ -262,12 +266,20 @@ How each answer shows in a pull request: [From finding to status](./pull-request
 
 ### Verdict <!-- #verdict -->
 
-A lens that answers `inconclusive`, or `fail` without a blocker, high or medium
-finding, blocks the review with `lens-inconclusive`, naming each such lens and what it noted:
-the work is not sent back, no finding is checked, and the run asks the `blocked` question on
-the review node. Otherwise `NEEDS_REWORK` when a blocker,
-high or medium finding counts, else `APPROVED` (low findings are notes). The findings that count
-go to the next brief of the phase agent, a group on one line citing each of its lenses.
+A lens that answers `inconclusive` blocks the review with `lens-inconclusive`, naming each such
+lens and what it noted: the work is not sent back, no finding is checked, and the run asks the
+`blocked` question on the review node. Otherwise `NEEDS_REWORK` when a finding counts, else
+`APPROVED`. Every finding the refuter did not refute counts, a low one too, whether its lens
+answered `fail` or `pass`, so that the producer fixes every severity while the review may send its
+work back. From the second pass, a finding at the place of one the refuter refuted is carried over
+as refuted, and a finding new on a line the producer left as it was is a note, the only kind of
+note a review sets aside: neither
+counts, goes back to the producer nor reaches the `review-ceiling` question. The
+findings that count go to the next brief of the phase agent, a group on one line citing each of
+its lenses. When the loop back to the producer reaches its `max_visits`, the run asks a human
+instead of sending the work back again: the `review-ceiling` question (`ACCEPT`, an instruction
+or `STOP`) when only medium and low findings are left, the `blocked` question (an instruction or
+`STOP`) while a blocker or high one is ([Tracking folder and journal](./run-journal.md)).
 The summary gives the status, then the refuted findings and the notes it set aside, each cited
 (`APPROVED: no finding counts; 2 refuted (consistency F1, fitness F1); 1 note (coverage F3)`,
 `APPROVED: every lens passed` when no lens found anything); the progress (the pane, the workflow log) lists
@@ -284,7 +296,7 @@ again with `reused: true`. The fingerprint covers its inputs, the content of eac
 reads (by skill name: moving the working copy or the plugin changes nothing), the project rule
 files and the content of each changed path it reads.
 
-From the second pass, the review compares each blocker, high or medium finding with those of the
+From the second pass, the review compares each finding, of any severity, with those of the
 last pass of the same step, before any refuter is asked. Two findings of one lens and one gate
 stand at the same place when they cite the same path and the text of their lines appears exactly
 once in that file at each pass (a line that moved is the same, an edited or repeated one is not);

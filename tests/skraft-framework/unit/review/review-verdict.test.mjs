@@ -1,6 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { agent, API, finding, lenses, nominal, REFS_42, refutes, reviews, says, scripted, SLUG, tddCycle, TRACKING } from '../support/pipeline-host.mjs'
+import { opening, section } from '../support/description.mjs'
 import { answerYaml } from '../support/answer-yaml.mjs'
 
 /** The refuter's answer on several findings at one line. @param {Array<[string, string, string?]>} each `<lens> <id>`, verdict, reason */
@@ -60,6 +61,8 @@ test('a lens reads only its own inputs; the cold reader gets neither the story n
   const prompt = (id, step) => host.agentRunner.reviewed().find((dispatch) => dispatch.agent === id && dispatch.label.includes(step)).prompt
   const answer = (lens) => [
     '- End your answer with this YAML document in a ```yaml block, at most 20 findings, every free text in double quotes:',
+    '- Every finding gives severityReason, drift, occurrences: an answer with a finding lacking one is refused.',
+    '- Every finding the refuter does not refute sends the work back to be fixed, a low one too, whether you answer pass or fail; pass names low findings only.',
     '```yaml',
     `lens: ${lens}`,
     'verdict: fail            # pass | fail | inconclusive',
@@ -70,6 +73,10 @@ test('a lens reads only its own inputs; the cold reader gets neither the story n
     '    location: "<path>:<line>"',
     '    description: "<what is wrong>"',
     '    suggestion: "<how to fix, one line; leave the key out when the fix is not evident>"',
+    '    severityReason: "<why this severity: what it breaks, for whom>"',
+    '    drift: label         # label (a name differs) | classification (a kind differs) | structural (anything else)',
+    '    occurrences:         # every place the same fact is wrong, the location first',
+    '      - "<path>:<line>"',
     '```',
   ]
   assert.equal(prompt('consistency-lens', 'design_review'), [
@@ -303,10 +310,14 @@ test('a confirmed blocker sends the work back to the phase agent with the findin
       'consistency F1 G1 blocker at src/Checkout.cs:12: the ADR contradicts the context map (suggestion: align the payment context)',
       `consistency F3 G1 high at .copilot-tracking/skraft-plans/${SLUG}/${CONTEXT_MAP}:44-45: the context map names two payment contexts`,
       'consistency F4 G1 high at docs/adr/adr-001-card-payment.md:3: the ADR has no status',
+      'consistency F2 G1 low: a typo in the title',
+      'consistency F5 G1 low at /plugin/skills/architecture-review-criteria/SKILL.md:55: the criterion is worded twice',
     ],
-    'NEEDS_REWORK: 3 reasons to address; 2 notes (consistency F2, consistency F5)',
+    'NEEDS_REWORK: 5 reasons to address',
   ])
-  assert.deepEqual(host.events().filter((event) => event.type === 'review.refuted').map(({ visit, lens, finding: id, verdict }) => [visit, lens, id, verdict]), [[1, 'consistency', 'F1', 'confirmed'], [1, 'consistency', 'F3', 'confirmed'], [1, 'consistency', 'F4', 'confirmed']])
+  assert.deepEqual(host.events().filter((event) => event.type === 'review.refuted').map(({ visit, lens, finding: id, verdict }) => [visit, lens, id, verdict]), [
+    [1, 'consistency', 'F1', 'confirmed'], [1, 'consistency', 'F2', 'confirmed'], [1, 'consistency', 'F3', 'confirmed'], [1, 'consistency', 'F4', 'confirmed'], [1, 'consistency', 'F5', 'confirmed'],
+  ])
   assert.deepEqual(host.events().find((event) => event.type === 'review.lens' && event.lens === 'consistency').findings.map(({ location }) => location), [
     'src/Checkout.cs:12', '', `.copilot-tracking/skraft-plans/${SLUG}/${CONTEXT_MAP}:44-45`, 'docs/adr/adr-001-card-payment.md:3', '/plugin/skills/architecture-review-criteria/SKILL.md:55',
   ])
@@ -319,10 +330,12 @@ test('a confirmed blocker sends the work back to the phase agent with the findin
     '- consistency F1 G1 blocker at src/Checkout.cs:12: the ADR contradicts the context map (suggestion: align the payment context)',
     `- consistency F3 G1 high at .copilot-tracking/skraft-plans/${SLUG}/${CONTEXT_MAP}:44-45: the context map names two payment contexts`,
     '- consistency F4 G1 high at docs/adr/adr-001-card-payment.md:3: the ADR has no status',
+    '- consistency F2 G1 low: a typo in the title',
+    '- consistency F5 G1 low at /plugin/skills/architecture-review-criteria/SKILL.md:55: the criterion is worded twice',
   ].join('\n')), second.prompt)
   const started = host.events().filter((event) => event.type === 'step.started' && event.step === 'design')
-  assert.deepEqual(started.map(({ visit, sentBy, feedback }) => [visit, sentBy, feedback.length]), [[1, undefined, 0], [2, 'review', 3]])
-  assert.ok(host.progress.lines.includes(`${SLUG}: design_review NEEDS_REWORK: 3 reasons to address; 2 notes (consistency F2, consistency F5)`), host.progress.lines.join('\n'))
+  assert.deepEqual(started.map(({ visit, sentBy, feedback }) => [visit, sentBy, feedback.length]), [[1, undefined, 0], [2, 'review', 5]])
+  assert.ok(host.progress.lines.includes(`${SLUG}: design_review NEEDS_REWORK: 5 reasons to address`), host.progress.lines.join('\n'))
 })
 
 test('a refuted blocker or medium does not count; an unverifiable one does; the pass writes its verdict beside its inputs', async () => {
@@ -379,38 +392,43 @@ test('a refuted blocker or medium does not count; an unverifiable one does; the 
       finding('F1', 'medium', 'no latency budget', { location: 'docs/adr/adr-001.md:4' }),
       finding('F2', 'medium', 'no error budget', { location: 'docs/adr/adr-001.md:9' }),
     ])],
-    refuter: [refutes('refuted'), refutes('unverifiable', 'the context map does not say'), refutes('confirmed'), refutes('refuted', 'docs/adr/adr-001.md:9 sets one')],
+    refuter: [refutes('refuted'), refutes('unverifiable', 'the context map does not say'), refutes('confirmed', 'the map spells it C:\\pay'), refutes('confirmed'), refutes('refuted', 'docs/adr/adr-001.md:9 sets one')],
   })
 
   await kept.start()
 
   const recorded = kept.events().find((event) => event.type === 'step.recorded' && event.step === 'design_review')
-  assert.ok(kept.progress.lines.includes('  note: consistency F3 G1 low at src/Checkout.cs:12: the "Payments" context is named C:\\pay (suggestion: one name)'), kept.progress.lines.join('\n'))
+  assert.ok(kept.progress.lines.includes(`${SLUG}: design_review NEEDS_REWORK: 3 reasons to address; 2 refuted (consistency F1, fitness F2)`), kept.progress.lines.join('\n'))
   assert.deepEqual([recorded.outcome, recorded.failures], ['needs-rework', [
     'consistency F2 G1 high at src/Checkout.cs:12: two contexts own payments (not verified)',
     'fitness F1 G1 medium at docs/adr/adr-001.md:4: no latency budget',
+    // A low finding the refuter confirmed counts like any other (#499): the producer fixes it on the pass that goes back.
+    'consistency F3 G1 low at src/Checkout.cs:12: the "Payments" context is named C:\\pay (suggestion: one name)',
   ]])
   assert.deepEqual(kept.events().filter((event) => event.type === 'review.refuted').map(({ lens, finding: id, verdict, reason }) => [lens, id, verdict, reason]), [
     ['consistency', 'F1', 'refuted', 'refuted by the patch'],
     ['consistency', 'F2', 'unverifiable', 'the context map does not say'],
+    ['consistency', 'F3', 'confirmed', 'the map spells it C:\\pay'],
     ['fitness', 'F1', 'confirmed', 'confirmed by the patch'],
     ['fitness', 'F2', 'refuted', 'docs/adr/adr-001.md:9 sets one'],
   ])
   const entryLines = (lens, id, severity, location, description, suggestion = 'null') => [
     `  - lens: "${lens}"`, `    id: "${id}"`, '    gate: "G1"', `    severity: "${severity}"`, `    location: "${location}"`, `    description: ${description}`, `    suggestion: ${suggestion}`,
+    `    severityReason: "${severity} by the criterion"`, '    drift: "structural"', `    occurrences: "${location}"`,
   ]
   assert.equal(await kept.tracking.read(SLUG, 'reviews/design_review-1/verdict.yaml'), [
     'status: "NEEDS_REWORK"',
     'code: null',
-    'summary: "NEEDS_REWORK: 2 reasons to address; 2 refuted (consistency F1, fitness F2); 1 note (consistency F3)"',
+    'summary: "NEEDS_REWORK: 3 reasons to address; 2 refuted (consistency F1, fitness F2)"',
     'findings:',
     ...entryLines('consistency', 'F2', 'high', 'src/Checkout.cs:12', '"two contexts own payments"'),
     ...entryLines('fitness', 'F1', 'medium', 'docs/adr/adr-001.md:4', '"no latency budget"'),
-    'notes:',
     ...entryLines('consistency', 'F3', 'low', 'src/Checkout.cs:12', '"the \\"Payments\\" context is named C:\\\\pay"', '"one name"'),
+    'notes: []',
     'refutations:',
     '  - lens: "consistency"', '    finding: "F1"', '    verdict: "refuted"', '    reason: "refuted by the patch"',
     '  - lens: "consistency"', '    finding: "F2"', '    verdict: "unverifiable"', '    reason: "the context map does not say"',
+    '  - lens: "consistency"', '    finding: "F3"', '    verdict: "confirmed"', '    reason: "the map spells it C:\\\\pay"',
     '  - lens: "fitness"', '    finding: "F1"', '    verdict: "confirmed"', '    reason: "confirmed by the patch"',
     '  - lens: "fitness"', '    finding: "F2"', '    verdict: "refuted"', '    reason: "docs/adr/adr-001.md:9 sets one"',
     'reused: []',
@@ -529,15 +547,34 @@ test('a check of several findings that does not give each its own verdict is ref
   ])
 })
 
-test('the verdict reads the severities, not the lens\'s word: a lens failing with low findings only passes, its findings noted', async () => {
-  const host = scripted({}, nominal)
-  host.agentRunner.review = lenses({ consistency: [says('consistency', 'fail', [finding('F1', 'low', 'the caller has two names'), finding('F2', 'low', 'a typo in the title')])] })
+test('a low finding sends the work back whatever its lens answered, once the refuter, one tier above the lens, did not refute it; a refuted low is set aside (#499)', async () => {
+  const host = scripted({}, (it) => [...nominal(it).slice(0, 2), agent()(it), ...nominal(it).slice(2)])
+  host.agentRunner.review = lenses({
+    consistency: [says('consistency', 'fail', [finding('F1', 'low', 'the caller has two names'), finding('F2', 'low', 'a typo in the title', { location: '' })])],
+    fitness: [says('fitness', 'pass', [finding('F1', 'low', 'name the latency budget', { location: 'docs/adr/adr-001.md:4' })])],
+    refuter: [refutes('confirmed'), refutes('refuted', 'the title has no typo'), refutes('unverifiable', 'the ADR does not say')],
+  })
 
   assert.equal((await host.start()).status, 'done')
 
   const recorded = host.events().find((event) => event.type === 'step.recorded' && event.step === 'design_review')
-  assert.deepEqual([recorded.outcome, recorded.code, recorded.next, recorded.reason], ['approved', null, 'adr', 'APPROVED: no finding counts; 2 notes (consistency F1, consistency F2)'])
-  assert.deepEqual(host.agentRunner.reviewed().filter((dispatch) => dispatch.agent === 'finding-refuter'), [])
+  assert.deepEqual([recorded.outcome, recorded.code, recorded.next, recorded.reason], ['needs-rework', null, 'design', 'NEEDS_REWORK: 2 reasons to address; 1 refuted (consistency F2)'])
+  assert.deepEqual(recorded.failures, ['consistency F1 G1 low at src/Checkout.cs:12: the caller has two names', 'fitness F1 G1 low at docs/adr/adr-001.md:4: name the latency budget (not verified)'])
+  assert.deepEqual(recorded.findings.map(({ lens, id, severity }) => `${lens} ${id} ${severity}`), ['consistency F1 low', 'fitness F1 low'])
+  const checks = host.agentRunner.reviewed().filter((dispatch) => dispatch.agent === 'finding-refuter')
+  assert.deepEqual(checks.map(({ label, model }) => `${label.split(' · ')[2]} ${model}`), ['refute consistency F1 standard', 'refute consistency F2 standard', 'refute fitness F1 standard'])
+  assert.deepEqual(host.events().filter((event) => event.type === 'review.refuted').map(({ lens, finding: id, verdict }) => `${lens} ${id} ${verdict}`), ['consistency F1 confirmed', 'consistency F2 refuted', 'fitness F1 unverifiable'])
+  const second = host.agentRunner.dispatches.find((dispatch) => dispatch.label === `skraft ${SLUG} · design · pass 2 · attempt 1`)
+  assert.ok(second.prompt.endsWith('The review sent the work back on pass 1, with these findings:\n- consistency F1 G1 low at src/Checkout.cs:12: the caller has two names\n- fitness F1 G1 low at docs/adr/adr-001.md:4: name the latency budget (not verified)'), second.prompt)
+  assert.deepEqual(reviews(host).slice(0, 2), [['design_review', 1, 'needs-rework', 'design'], ['design_review', 2, 'approved', 'adr']])
+  const approved = host.events().filter((event) => event.type === 'step.recorded' && event.step === 'design_review')[1]
+  assert.equal(approved.reason, 'APPROVED: every lens passed')
+
+  const refuted = scripted({}, nominal)
+  refuted.agentRunner.review = lenses({ fitness: [says('fitness', 'pass', [finding('F1', 'low', 'name the latency budget')])], refuter: [refutes('refuted', 'the ADR names it')] })
+  assert.equal((await refuted.start()).status, 'done')
+  const kept = refuted.events().find((event) => event.type === 'step.recorded' && event.step === 'design_review')
+  assert.deepEqual([kept.outcome, kept.next, kept.reason, kept.findings], ['approved', 'adr', 'APPROVED: no finding counts; 1 refuted (fitness F1)', undefined])
 })
 
 test('a lens that answers inconclusive blocks the review without sending the work back; one that fails with low findings only does not; the other lenses\' findings are journaled', async () => {
@@ -553,7 +590,8 @@ test('a lens that answers inconclusive blocks the review without sending the wor
   const reason = 'fitness: inconclusive: the research document is empty; no story to read'
   assert.deepEqual(outcome, { status: 'blocked', slug: SLUG, phase: 'DESIGN', code: 'lens-inconclusive', reason })
   const recorded = host.events().find((event) => event.type === 'step.recorded' && event.step === 'design_review')
-  assert.deepEqual([recorded.outcome, recorded.code, recorded.failures, recorded.next, recorded.reason], ['blocked', 'lens-inconclusive', [], null, reason])
+  assert.deepEqual([recorded.outcome, recorded.code, recorded.failures, recorded.next, recorded.reason, recorded.findings], ['blocked', 'lens-inconclusive', [], null, reason, undefined])
+  assert.deepEqual(host.progress.lines.filter((line) => line.startsWith('  ')), [])
   assert.deepEqual(host.events().filter((event) => event.type === 'review.lens').map(({ lens, verdict, findings }) => [lens, verdict, findings.map(({ id, severity }) => `${id} ${severity}`)]), [
     ['consistency', 'fail', ['F1 low']],
     ['architecture-compliance', 'fail', ['F1 blocker']],
@@ -568,37 +606,245 @@ test('a lens that answers inconclusive blocks the review without sending the wor
   assert.equal((await host.run()).code, 'lens-inconclusive')
 
   const silent = scripted({ answers: [{ answer: 'STOP' }] }, (it) => nominal(it).slice(0, 2))
-  silent.agentRunner.review = lenses({ 'architecture-compliance': [says('architecture-compliance', 'inconclusive')] })
-  assert.deepEqual(await silent.start(), { status: 'blocked', slug: SLUG, phase: 'DESIGN', code: 'lens-inconclusive', reason: 'architecture-compliance: inconclusive' })
+  silent.agentRunner.review = lenses({ 'architecture-compliance': [says('architecture-compliance', 'inconclusive')], fitness: [says('fitness', 'inconclusive')] })
+  assert.deepEqual(await silent.start(), { status: 'blocked', slug: SLUG, phase: 'DESIGN', code: 'lens-inconclusive', reason: 'architecture-compliance: inconclusive; fitness: inconclusive' })
 })
 
-test('a review sent back more often than its edge allows stops the run, naming the edge and the findings', async () => {
-  const host = scripted({ answers: [{ answer: 'STOP' }] }, (it) => [...nominal(it).slice(0, 2), agent()(it)])
-  const blocker = says('consistency', 'fail', [finding('F1', 'blocker', 'the ADR contradicts the context map')])
-  host.agentRunner.review = lenses({ consistency: [blocker, blocker] })
+/** The design agents of a DESIGN that loops to its ceiling: the first pass and the three the review sends back. */
+const designUntilCeiling = (it) => [...nominal(it).slice(0, 2), agent()(it), agent()(it), agent()(it)]
+const VERDICT_4 = `${TRACKING}/reviews/design_review-4/verdict.yaml`
+
+test('a review whose blocker or high finding is left after three passes asks the developer for an instruction or STOP, never ACCEPT, each such finding with its context (#499)', async () => {
+  const host = scripted({ answers: [{ answer: 'STOP' }] }, designUntilCeiling)
+  // 119 characters, then the 120th and on: the table keeps 119 and marks the cut.
+  const LONG = `${'the context map spells it "Payment" | '.repeat(3)}${'x'.repeat(5)}, and the glossary spells it otherwise`
+  // 120 characters once its pipe is escaped: kept whole.
+  const EXACT = `a glossary | ${'y'.repeat(106)}`
+  const high = says('consistency', 'fail', [
+    finding('F1', 'high', 'the published contract has no Refund type <b>now</b>', { severityReason: 'billing reads the contract, ask @billing', drift: 'structural', occurrences: ['src/Checkout.cs:12', 'docs/architecture/payments.md:40', 'docs/api/openapi.yaml:88'], suggestion: 'add Refund to the contract; fixes #12' }),
+    finding('F2', 'low', 'the context map spells it "Payment", see @alice'),
+    finding('F3', 'blocker', 'the ADR has no status', { location: '', occurrences: ['docs/adr/adr-001.md:1'], drift: 'label' }),
+    finding('F4', 'medium', LONG, { location: 'docs/glossary.md:3' }),
+    finding('F5', 'medium', EXACT, { location: 'docs/glossary.md:9' }),
+  ])
+  host.agentRunner.review = lenses({ consistency: [high, high, high, high] })
 
   const outcome = await host.start()
 
+  assert.deepEqual(reviews(host).map(([, visit, result, next]) => [visit, result, next]), [[1, 'needs-rework', 'design'], [2, 'needs-rework', 'design'], [3, 'needs-rework', 'design'], [4, 'needs-rework', null]])
+  const [asked] = host.human.questions
+  assert.deepEqual([asked.kind, asked.options], ['blocked', ['STOP']])
+  assert.equal(asked.text, [
+    'design_review: design did not fix every finding after 4 passes, so the run does not send it back again.',
+    '',
+    'Blocker and high (2):',
+    '- high · consistency F1 G1 at src/Checkout.cs:12: the published contract has no Refund type now',
+    '  why high: billing reads the contract, ask `@billing`',
+    '  drift: structural',
+    '  also at: docs/architecture/payments.md:40, docs/api/openapi.yaml:88',
+    '  fix: add Refund to the contract; `fixes #12`',
+    '- blocker · consistency F3 G1: the ADR has no status',
+    '  why blocker: blocker by the criterion',
+    '  drift: label',
+    '  also at: docs/adr/adr-001.md:1',
+    '',
+    'Medium and low (3):',
+    '| Severity | Finding | Where | What |',
+    '|---|---|---|---|',
+    `| medium | consistency F4 | docs/glossary.md:3 | ${LONG.replaceAll('|', '\\|').slice(0, 119)}… |`,
+    `| medium | consistency F5 | docs/glossary.md:9 | ${EXACT.replace('|', '\\|')} |`,
+    '| low | consistency F2 | src/Checkout.cs:12 | the context map spells it "Payment", see `@alice` |',
+    '',
+    `Every finding with its context: ${VERDICT_4}`,
+    'A blocker or high finding cannot be accepted: an instruction runs design again with every finding and the instruction; STOP ends the run.',
+  ].join('\n'))
   assert.deepEqual(outcome, {
     status: 'blocked', slug: SLUG, phase: 'DESIGN', code: 'loop-ceiling',
-    reason: 'design_review -> design was already taken 1 times, its max_visits; consistency F1 G1 blocker at src/Checkout.cs:12: the ADR contradicts the context map',
+    reason: `design_review -> design was already taken 3 times, its max_visits; consistency F1 G1 high at src/Checkout.cs:12: the published contract has no Refund type <b>now</b> (suggestion: add Refund to the contract; fixes #12); consistency F3 G1 blocker: the ADR has no status; consistency F4 G1 medium at docs/glossary.md:3: ${LONG}; consistency F5 G1 medium at docs/glossary.md:9: ${EXACT}; consistency F2 G1 low at src/Checkout.cs:12: the context map spells it "Payment", see @alice`,
   })
+  const written = await host.tracking.read(SLUG, 'reviews/design_review-4/verdict.yaml')
+  assert.ok(written.includes('    severityReason: "billing reads the contract, ask @billing"\n    drift: "structural"\n    occurrences: "src/Checkout.cs:12, docs/architecture/payments.md:40, docs/api/openapi.yaml:88"\n'), written)
 })
 
-test('a review at its loop ceiling shows its findings in the question, and an instruction sends them to the producer with the instruction after them (#500)', async () => {
-  const host = scripted({}, (it) => [...nominal(it).slice(0, 2), agent()(it), agent()(it), () => ({ ok: false, unavailable: true, text: '' })])
-  const blocker = says('consistency', 'fail', [finding('F1', 'blocker', 'the ADR contradicts the context map')])
-  host.agentRunner.review = lenses({ consistency: [blocker, blocker] })
-  const left = 'consistency F1 G1 blocker at src/Checkout.cs:12: the ADR contradicts the context map'
+test('ACCEPT typed at the question of a ceiling with a high finding left is an instruction like any other: the producer runs again with it, and nothing is listed as accepted (#499)', async () => {
+  const host = scripted({}, (it) => [...designUntilCeiling(it), agent()(it), ...nominal(it).slice(2)])
+  const high = says('consistency', 'fail', [finding('F1', 'high', 'the published contract has no Refund type')])
+  host.agentRunner.review = lenses({ consistency: [high, high, high, high] })
 
   await host.start()
-  await host.decide({ answer: 'Follow the context map' })
-  await host.run()
+  await host.decide({ answer: 'ACCEPT' })
+  assert.equal((await host.run()).status, 'done')
 
+  const pass = host.agentRunner.dispatches.find((dispatch) => dispatch.label === `skraft ${SLUG} · design · pass 5 · attempt 1`)
+  assert.ok(pass?.prompt.endsWith('\n\nA human refused the work of pass 4:\n- ACCEPT'), pass?.prompt)
+  assert.equal((await host.tracking.read(SLUG, 'run-report.md')).includes('## Accepted findings'), false)
+  assert.equal(section(await host.tracking.read(SLUG, 'pull-request.md'), 'Review'), 'Every lens of the last pass of each review passed without a finding.')
+})
+
+test('a review with only medium and low findings left after three passes lets the developer ACCEPT them: the run goes on past the review, and the report and the pull request list them (#499)', async () => {
+  // The developer answers the pull request's consent first, then the ceiling's question.
+  const host = scripted({ config: { publish: { visuals: false } }, answers: [{ answer: 'DECLINED' }, { answer: 'ACCEPT' }] }, (it) => [...designUntilCeiling(it), ...nominal(it).slice(2)])
+  const medium = says('consistency', 'fail', [
+    finding('F1', 'medium', 'a read model is classified twice', { location: 'docs/architecture/payments.md:7' }), finding('F2', 'low', 'a typo | in the title', { location: '' }),
+    finding('F3', 'medium', 'the map names no currency', { location: 'docs/architecture/payments.md:9' }),
+  ])
+  // The refuter confirms F1 and F2 and refutes F3 on each pass: F3, which one lens alone found, is never accepted.
+  const checks = (pass) => [refutes('confirmed'), refutes('confirmed'), refutes('refuted', `payments.md:9 names EUR (pass ${pass})`)]
+  host.agentRunner.review = lenses({ consistency: [medium, medium, medium, medium], refuter: [1, 2, 3, 4].flatMap(checks) })
+
+  const outcome = await host.start()
+
+  assert.equal(outcome.status, 'done')
+  const [consent, asked] = host.human.questions
+  assert.equal(consent.kind, 'publish-consent')
+  assert.deepEqual([asked.kind, asked.header, asked.options], ['review-ceiling', 'Review', ['ACCEPT', 'STOP']])
+  assert.equal(asked.text, [
+    'design_review: design did not fix every finding after 4 passes, so the run does not send it back again.',
+    '',
+    'Medium and low (2):',
+    '| Severity | Finding | Where | What |',
+    '|---|---|---|---|',
+    '| medium | consistency F1 | docs/architecture/payments.md:7 | a read model is classified twice |',
+    '| low | consistency F2 | - | a typo \\| in the title |',
+    '',
+    `Every finding with its context: ${VERDICT_4}`,
+    'ACCEPT takes these findings as they stand and goes on (they are listed in the run report and the pull request); an instruction runs design again with every finding and the instruction; STOP ends the run.',
+  ].join('\n'))
+  assert.deepEqual(reviews(host).slice(3, 5), [['design_review', 4, 'needs-rework', null], ['distill_review', 1, 'approved', 'deliver']])
+  assert.equal(host.agentRunner.dispatches.filter((dispatch) => dispatch.agent === 'solution-architect').length, 4)
+  const report = await host.tracking.read(SLUG, 'run-report.md')
+  assert.ok(report.includes('\n## Accepted findings\n\n| Review | Severity | Finding | Where | What |\n| --- | --- | --- | --- | --- |\n| design_review | medium | consistency F1 | docs/architecture/payments.md:7 | a read model is classified twice |\n| design_review | low | consistency F2 | - | a typo \\| in the title |\n'), report)
+  const description = await host.tracking.read(SLUG, 'pull-request.md')
+  assert.equal(opening(description, 'Review'), '<details open><summary>Review: 1 to decide, 2 accepted</summary>')
+  assert.equal(section(description, 'Review'), [
+    '**design_review**', '',
+    '| Status | Severity | Lens | Location | Finding | Why |',
+    '| --- | --- | --- | --- | --- | --- |',
+    '| To decide | medium | consistency F3 G1 | `docs/architecture/payments.md:9` | the map names no currency | one lens alone, against the lenses that passed; refuted: payments.md:9 names EUR (pass 4) |',
+    '| Accepted | medium | consistency F1 G1 | `docs/architecture/payments.md:7` | a read model is classified twice | a human accepted it as it stands at the review\'s ceiling |',
+    '| Accepted | low | consistency F2 G1 | `` | a typo \\| in the title | a human accepted it as it stands at the review\'s ceiling |',
+  ].join('\n'))
+  assert.equal(description.includes('Accepted findings'), false, 'the review table holds the accepted findings: no second list')
+})
+
+test('STOP to a review-ceiling question ends the run blocked at the ceiling, and a later run asks nothing more (#499)', async () => {
+  const host = scripted({ answers: [{ answer: 'STOP' }] }, designUntilCeiling)
+  const medium = says('consistency', 'fail', [finding('F1', 'medium', 'a read model is classified twice', { location: 'docs/architecture/payments.md:7' })])
+  host.agentRunner.review = lenses({ consistency: [medium, medium, medium, medium] })
+
+  const outcome = await host.start()
+
+  const reason = 'design_review -> design was already taken 3 times, its max_visits; consistency F1 G1 medium at docs/architecture/payments.md:7: a read model is classified twice'
+  assert.deepEqual(outcome, { status: 'blocked', slug: SLUG, phase: 'DESIGN', code: 'loop-ceiling', reason })
+  assert.deepEqual(host.human.questions.map(({ kind, options }) => [kind, options]), [['review-ceiling', ['ACCEPT', 'STOP']]])
+  assert.deepEqual(host.events().filter((event) => event.type === 'question.answered').map(({ key, answer }) => [key, answer]), [['design-1', 'STOP']])
+  assert.deepEqual(host.events().filter((event) => event.type === 'question.asked').map(({ key, step, visit, subjects }) => [key, step, visit, subjects]), [['design-1', 'design', 4, []]])
+  assert.deepEqual([host.events().at(-1).type, host.events().at(-1).status, host.events().at(-1).code], ['run.finished', 'blocked', 'loop-ceiling'])
+  assert.equal(host.agentRunner.dispatches.filter((dispatch) => dispatch.agent === 'solution-architect').length, 4)
+
+  assert.equal((await host.run()).code, 'loop-ceiling')
+  assert.equal(host.human.questions.length, 1)
+  assert.equal(host.events().filter((event) => event.type === 'question.asked').length, 1)
+  assert.deepEqual((await host.report()).accepted, [])
+})
+
+test('ACCEPT given with skraft decide at the ceiling of distill_review closes DISTILL and enters DELIVER; a run stopped after it resumes without asking again (#499)', async () => {
+  const unavailable = () => ({ ok: false, unavailable: true, text: '' })
+  const host = scripted({}, (it) => [...nominal(it).slice(0, 3), agent()(it), agent()(it), agent()(it), unavailable, nominal(it)[3]])
+  const medium = says('coverage', 'fail', [finding('F1', 'medium', 'the refund rule has no scenario', { location: 'tests/Acceptance/refund.feature:4' }), finding('F2', 'low', 'a step is worded twice', { location: 'tests/Acceptance/refund.feature:9' })])
+  host.agentRunner.review = lenses({ coverage: [medium, medium, medium, medium] })
+
+  const waiting = await host.start()
+  assert.deepEqual([waiting.status, waiting.phase, waiting.code], ['waiting', 'DISTILL', 'review-ceiling'])
+  assert.ok(waiting.reason.endsWith('Answer with skraft decide distill-1 ACCEPT|"<instruction>"|STOP.'), waiting.reason)
+  await host.decide({ answer: 'accept' })
+  const stopped = await host.run()
+  const done = await host.run()
+
+  assert.deepEqual([stopped.phase, stopped.code, done.status], ['DELIVER', 'agent-unavailable', 'done'])
+  assert.deepEqual(host.events().filter((event) => event.type.startsWith('question.')).map(({ type, key, kind, answer }) => [type, key, kind, answer]), [
+    ['question.asked', 'distill-1', 'review-ceiling', undefined],
+    ['question.answered', 'distill-1', undefined, 'ACCEPT'],
+  ])
+  const after = host.events().slice(host.events().findIndex((event) => event.type === 'question.answered'))
+  assert.deepEqual(after.filter((event) => event.type === 'phase.closed' || event.type === 'step.started').slice(0, 3).map(({ type, phase, step }) => `${type} ${phase} ${step ?? ''}`.trim()), [
+    // The resumed run picks up the open attempt of deliver: no new step.started for it, no question again.
+    'phase.closed DISTILL', 'step.started DELIVER deliver', 'step.started DELIVER gates',
+  ])
+  assert.deepEqual(reviews(host).filter(([step]) => step !== 'design_review'), [
+    ['distill_review', 1, 'needs-rework', 'distill'], ['distill_review', 2, 'needs-rework', 'distill'], ['distill_review', 3, 'needs-rework', 'distill'], ['distill_review', 4, 'needs-rework', null],
+    ['deliver_review', 1, 'approved', 'mutation'],
+  ])
+  assert.equal(host.agentRunner.dispatches.filter((dispatch) => dispatch.agent === 'acceptance-designer').length, 4)
+  const engineer = host.agentRunner.dispatches.find((dispatch) => dispatch.agent === 'software-engineer')
+  assert.ok(!engineer.prompt.includes('A human refused') && !engineer.prompt.includes('What pass'), engineer.prompt)
+  assert.deepEqual(host.events().filter((event) => event.type === 'step.started' && event.step === 'deliver').map(({ visit, attempt, missing, feedback, sentBy, instruction, group }) => [visit, attempt, missing, feedback, sentBy, instruction, group]), [[1, 1, [], [], undefined, undefined, undefined]])
+  const report = await host.tracking.read(SLUG, 'run-report.md')
+  // Only what the ceiling's question asked about: not design_review's findings, not the consents answered ACCEPTED before.
+  assert.equal(report.slice(report.indexOf('## Accepted findings'), report.indexOf('## Forge writes') < 0 ? report.indexOf('Started at') : report.indexOf('## Forge writes')), [
+    '## Accepted findings', '',
+    '| Review | Severity | Finding | Where | What |',
+    '| --- | --- | --- | --- | --- |',
+    '| distill_review | medium | coverage F1 | tests/Acceptance/refund.feature:4 | the refund rule has no scenario |',
+    '| distill_review | low | coverage F2 | tests/Acceptance/refund.feature:9 | a step is worded twice |',
+    '', '',
+  ].join('\n'))
+})
+
+test('ACCEPT at the ceiling of deliver_review, a call to .skraft/review.skraft.dot, goes on by its APPROVED edge to the mutation gate (#499)', async () => {
+  const host = scripted({ answers: [{ answer: 'ACCEPT' }] }, (it) => [
+    ...nominal(it),
+    agent({ work: tddCycle(SLUG, 'Refund') })(it), agent({ work: tddCycle(SLUG, 'Discount') })(it), agent({ work: tddCycle(SLUG, 'Receipt') })(it),
+  ])
+  const low = says('test-integrity', 'fail', [finding('F1', 'low', 'the refund test name says nothing', { gate: 'G7', location: 'tests/CheckoutTests.cs:9' })])
+  host.agentRunner.review = lenses({ 'test-integrity': [low, low, low, low] })
+
+  assert.equal((await host.start()).status, 'done')
+
+  assert.deepEqual(reviews(host).filter(([step]) => step === 'deliver_review'), [
+    ['deliver_review', 1, 'needs-rework', 'deliver'], ['deliver_review', 2, 'needs-rework', 'deliver'], ['deliver_review', 3, 'needs-rework', 'deliver'], ['deliver_review', 4, 'needs-rework', null],
+  ])
   const [asked] = host.human.questions
-  assert.equal(asked.text, `design is blocked: design_review -> design was taken as often as its max_visits allows.\nLeft by design_review (1):\n- ${left}\n An instruction runs design again on a new pass with what is left above and the instruction; STOP ends the run.`)
-  const pass = host.agentRunner.dispatches.find((dispatch) => dispatch.label === `skraft ${SLUG} · design · pass 3 · attempt 1`)
-  assert.ok(pass.prompt.endsWith(`\n\nWhat pass 2 left when it was blocked:\n- ${left}\n\nA human refused the work of pass 2:\n- Follow the context map`), pass.prompt)
+  assert.deepEqual([asked.kind, asked.options], ['review-ceiling', ['ACCEPT', 'STOP']])
+  assert.ok(asked.text.startsWith('deliver_review: deliver did not fix every finding after 4 passes'), asked.text)
+  const answered = host.events().findIndex((event) => event.type === 'question.answered')
+  assert.equal(host.events().slice(answered).find((event) => event.type === 'step.started').step, 'mutation')
+})
+
+test('ACCEPT for a review the workflow no longer has stops the run as changed, running nothing (#499)', async () => {
+  // A review of the repository's own, after design_review: no mandatory node, so a copy may drop it.
+  const withSecurity = edit(BUILT_IN_WORKFLOW,
+    ['  adr      [shape=hexagon, question="adr-ratification"]', '  security_review_lenses [shape=component]\n  security_review_fitness [shape=note, lens="fitness"]\n  security_review_refuter [shape=octagon]\n  security_review [shape=tripleoctagon]\n  adr      [shape=hexagon, question="adr-ratification"]'],
+    ['  design_review -> adr     [label="APPROVED"]', '  design_review -> security_review_lenses [label="APPROVED"]\n  security_review_lenses -> security_review_fitness -> security_review_refuter\n  security_review_refuter -> security_review\n  security_review -> design [label="NEEDS_REWORK", max_visits=3]\n  security_review -> adr [label="APPROVED"]'])
+  const host = scripted({ files: ejectedPipeline(withSecurity) }, designUntilCeiling)
+  const medium = says('fitness', 'fail', [finding('F1', 'medium', 'no latency budget')])
+  host.agentRunner.review = lenses({ fitness: [says('fitness', 'pass'), medium, medium, medium, medium] })
+  assert.equal((await host.start()).code, 'review-ceiling')
+  await host.decide({ answer: 'ACCEPT' })
+  await host.deps.workspace.write('.skraft/pipeline.skraft.dot', BUILT_IN_WORKFLOW)
+  const dispatched = host.agentRunner.dispatches.length
+
+  const outcome = await host.run()
+
+  assert.deepEqual(outcome, { status: 'blocked', slug: SLUG, phase: null, code: 'workflow-changed', reason: 'the workflow has no node security_review any more; restore the workflow the run started with' })
+  assert.equal(host.agentRunner.dispatches.length, dispatched)
+})
+
+test('an instruction at a review ceiling sends the producer every finding left, then the instruction, whether the question offered ACCEPT or not (#500)', async () => {
+  for (const severity of ['blocker', 'low']) {
+    const host = scripted({}, (it) => [...designUntilCeiling(it), () => ({ ok: false, unavailable: true, text: '' })])
+    const left = says('consistency', 'fail', [finding('F1', severity, 'the ADR contradicts the context map')])
+    host.agentRunner.review = lenses({ consistency: [left, left, left, left] })
+
+    await host.start()
+    await host.decide({ answer: 'Follow the context map' })
+    await host.run()
+
+    assert.equal(host.events().find((event) => event.type === 'question.asked').kind, severity === 'low' ? 'review-ceiling' : 'blocked')
+    assert.deepEqual((await host.report()).accepted, [])
+    const pass = host.agentRunner.dispatches.find((dispatch) => dispatch.label === `skraft ${SLUG} · design · pass 5 · attempt 1`)
+    assert.ok(pass?.prompt.endsWith(`\n\nWhat pass 4 left when it was blocked:\n- consistency F1 G1 ${severity} at src/Checkout.cs:12: the ADR contradicts the context map\n\nA human refused the work of pass 4:\n- Follow the context map`), `${severity}: ${pass?.prompt}`)
+  }
 })
 
 test('the changes of a component in a neighbour repository are read from that repository, each repository once, its paths rebased whole', async () => {
@@ -646,7 +892,7 @@ test('a review Git cannot diff stops the run as the environment, and the next ru
 test('a review asking for rework where the workflow has no NEEDS_REWORK edge stops the run, saying so', async () => {
   const workflow = edit(BUILT_IN_WORKFLOW,
     ['design_review [shape=tripleoctagon, mandatory=true]', 'design_review [shape=tripleoctagon]'],
-    ['  design_review -> design  [label="NEEDS_REWORK", max_visits=1]\n', ''])
+    ['  design_review -> design  [label="NEEDS_REWORK", max_visits=3]\n', ''])
   const host = scripted({ workflow }, (it) => nominal(it).slice(0, 2))
   host.agentRunner.review = lenses({ consistency: [says('consistency', 'fail', [finding('F1', 'medium', 'no owner for refunds')])] })
 

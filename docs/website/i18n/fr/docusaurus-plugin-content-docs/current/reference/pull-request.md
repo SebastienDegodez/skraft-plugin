@@ -97,10 +97,10 @@ La description est écrite dans la langue de la story. Ce qui décide s'affiche 
 ### Revue <!-- #review -->
 
 - **Contient** : par étape de revue, son nom en gras et son tableau ([Tableau de revue](#review-table)) ; `Chaque lentille de la dernière passe de chaque revue est passée sans constat.` quand aucune lentille n'a rien trouvé.
-- **Affichée** : repliée ; le résumé dit `Revue: <décomptes>` et le bloc s'ouvre seul tant qu'un constat est À corriger ou À trancher.
+- **Affichée** : repliée ; le résumé dit `Revue: <décomptes>` et le bloc s'ouvre seul tant qu'un constat est À corriger, À trancher ou Accepté.
 - **Rédigée par** : le moteur, à partir de la dernière passe de chaque revue.
 - **À lire pour** : voir ce que les lentilles ont trouvé et ce que le réfuteur a décidé.
-- **Agir quand** : une ligne est À corriger ou À trancher.
+- **Agir quand** : une ligne est À corriger ou À trancher ; lisez une ligne Accepté avant de fusionner.
 
 ### Captures d'écran <!-- #screenshots -->
 
@@ -148,7 +148,7 @@ Au-delà de la limite de corps de la forge, le corps garde les sections affiché
 
 ## Tableau de revue <!-- #review-table -->
 
-La ligne de décompte ressemble à `Revue : 2 à corriger, 1 note, 13 réfutés`. Chaque étape de revue a un tableau aux colonnes `Statut | Sévérité | Lentille | Emplacement | Constat | Pourquoi`. Les lignes sont groupées À corriger, À trancher, puis Note ; les lignes Réfuté sont repliées sous leur nombre. La cellule Lentille dit `<lentille> <id> <porte>` pour chaque lentille qui a trouvé la même ligne avec la même sévérité et le même statut. Le constat et la raison sont coupés à 100 caractères avec `…` ; `verdict.yaml` les garde entiers.
+La ligne de décompte ressemble à `Revue : 2 à corriger, 1 note, 13 réfutés`. Chaque étape de revue a un tableau aux colonnes `Statut | Sévérité | Lentille | Emplacement | Constat | Pourquoi`. Les lignes sont groupées À corriger, À trancher, Accepté, puis Note ; les lignes Réfuté sont repliées sous leur nombre. La cellule Lentille dit `<lentille> <id> <porte>` pour chaque lentille qui a trouvé la même ligne avec la même sévérité et le même statut. Le constat et la raison sont coupés à 100 caractères avec `…` ; `verdict.yaml` les garde entiers.
 
 ### Statuts <!-- #statuses -->
 
@@ -156,22 +156,24 @@ La ligne de décompte ressemble à `Revue : 2 à corriger, 1 note, 13 réfutés`
 |---|---|---|
 | À corriger | oui | le corriger, ou y répondre dans la pull request |
 | À trancher | non | décider : une seule lentille l'a trouvé et le réfuteur l'a réfuté |
+| Accepté | non | un humain l'a accepté tel quel quand la revue a atteint le plafond de sa boucle ; le lire avant de fusionner |
 | Note | non | le corriger si c'est peu coûteux ; ne bloque jamais |
 | Réfuté | non | lire la raison seulement si vous n'êtes pas d'accord |
 
 ### Du constat au statut <!-- #finding-to-status -->
 
-Le réfuteur vérifie chaque constat blocker, high ou medium ; sa réponse et deux faits donnent le statut.
+Le réfuteur vérifie chaque constat, de toute sévérité et quoi qu'ait répondu sa lentille ; sa réponse et deux faits donnent le statut. Un constat qui serait À corriger et qu'un humain a accepté au plafond de la revue (`review-ceiling`, `ACCEPT`) est Accepté, sa colonne Pourquoi `un humain l'a accepté tel quel au plafond de la revue`.
 
-| Sévérité | Ligne | Réponse du réfuteur | Une lentille seule, les autres passées | Statut | Colonne Pourquoi |
-|---|---|---|---|---|---|
-| low | toute | non sollicité | — | Note | vide |
-| blocker, high, medium | inchangée depuis la passe N | non sollicité | — | Note | `nouveau sur une ligne inchangée depuis la passe N` |
-| blocker, high, medium | modifiée | `confirmed` | — | À corriger | `confirmé : <raison>` |
-| blocker, high, medium | modifiée | `unverifiable`, ou sa vérification illisible deux fois | — | À corriger | `non vérifié : <raison>` |
-| blocker, high, medium | modifiée | `refuted` | oui | À trancher | `une seule lentille, contre celles qui sont passées ; réfuté : <raison>` |
-| blocker, high, medium | modifiée | `refuted` | non | Réfuté | `<raison>` |
-| blocker, high, medium | même endroit qu'un constat réfuté à la passe N | non sollicité de nouveau | — | Réfuté | `<raison> (réfuté à la passe N)` |
+| Ligne | Réponse du réfuteur | Une lentille seule, les autres passées | Statut | Colonne Pourquoi |
+|---|---|---|---|---|
+| inchangée depuis la passe N, le constat nouveau à cet endroit | non sollicité | — | Note | `nouveau sur une ligne inchangée depuis la passe N` |
+| modifiée | `confirmed` | — | À corriger | `confirmé : <raison>` |
+| modifiée | `unverifiable`, ou sa vérification illisible deux fois | — | À corriger | `non vérifié : <raison>` |
+| modifiée | `refuted` | oui | À trancher | `une seule lentille, contre celles qui sont passées ; réfuté : <raison>` |
+| modifiée | `refuted` | non | Réfuté | `<raison>` |
+| même endroit qu'un constat réfuté à la passe N | non sollicité de nouveau | — | Réfuté | `<raison> (réfuté à la passe N)` |
+
+Un constat low compte comme les autres : À corriger tant que le réfuteur ne le réfute pas, que sa lentille ait répondu `fail` ou `pass`.
 
 Comment le réfuteur travaille et comment une passe suivante le réutilise : [Réfutation](./gates.md#refutation), [Re-revue incrémentale](./gates.md#incremental).
 

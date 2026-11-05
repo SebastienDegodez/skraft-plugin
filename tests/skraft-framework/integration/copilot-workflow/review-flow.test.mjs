@@ -248,11 +248,12 @@ test('a run that dies with a lens still queued behind the session limit calls on
   assert.deepEqual(first.timeline.filter((line) => reviewNodeOf(line) === 'design_review'), [`call ${consistency}`, `answer ${consistency}`, `call ${compliance}`])
   await leaseLeftToExpire(cwd, SLUG)
 
-  const resumed = simulatedContext({ args: { slug: SLUG }, maxConcurrentSubagents: 1, journal: first.journal, otherwise: actsAs(scriptedLlm({ cwd })) })
+  // The low finding kept from before the workflow died goes to the refuter, which refutes it: the review approves.
+  const resumed = simulatedContext({ args: { slug: SLUG }, maxConcurrentSubagents: 1, journal: first.journal, otherwise: actsAs(scriptedLlm({ cwd, reviews: { refuter: [refutes('refuted', 'the answer is right')] } })) })
   const outcome = await resumedUntilDone(resumed.ctx, cwd)
 
   assert.equal(outcome.status, 'done', outcome.reason)
-  assert.deepEqual(resumed.calls.filter((call) => reviewNodeOf(call.label) === 'design_review').map((call) => call.label), [compliance, fitness])
+  assert.deepEqual(resumed.calls.filter((call) => reviewNodeOf(call.label) === 'design_review').map((call) => call.label), [compliance, fitness, `skraft ${SLUG} · design_review · refute consistency F1 · attempt 1`])
   assert.deepEqual(resumed.calls.slice(0, 2).map((call) => call.label), [compliance, fitness])
   assert.deepEqual(lensEvents(journal(cwd, SLUG), 'design_review').map(({ lens, visit, verdict, findings }) => [lens, visit, verdict, findings.map(({ id, description }) => `${id} ${description}`)]).sort(), [
     ['architecture-compliance', 1, 'pass', []], ['consistency', 1, 'pass', ['F1 answered before the workflow died']], ['fitness', 1, 'pass', []],

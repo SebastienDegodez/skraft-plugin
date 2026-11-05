@@ -2,7 +2,7 @@
 // LLM is a scripted behaviour per dispatch that writes what an agent would write.
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
-import { answerYaml } from './answer-yaml.mjs'
+import { answerYaml, withContext } from './answer-yaml.mjs'
 import { strykerWritesItsReports } from './mutation-reports.mjs'
 import { createInit } from '../../../../plugins/skraft-framework/engine/application/pipeline/init-usecase.mjs'
 import { createObserve } from '../../../../plugins/skraft-framework/engine/application/pipeline/observe-usecase.mjs'
@@ -230,8 +230,13 @@ export const scripted = (options, script) => {
  */
 export const says = (lens, verdict, findings = []) => answerYaml({ lens, verdict, findings })
 
-/** A finding of a lens's answer. @param {string} id @param {string} severity @param {string} description @param {object} [more] */
-export const finding = (id, severity, description, more = {}) => ({ id, gate: 'G1', severity, location: 'src/Checkout.cs:12', description, ...more })
+/**
+ * A finding of a lens's answer, with the context every finding carries: why its severity, its
+ * drift, where it holds (its location unless `more` names others).
+ * @param {string} id @param {string} severity @param {string} description @param {object} [more]
+ */
+export const finding = (id, severity, description, more = {}) => withContext({ id, gate: 'G1', severity, location: 'src/Checkout.cs:12', description, ...more })
+
 
 /** The refuter's answer. @param {'confirmed' | 'refuted' | 'unverifiable'} verdict @param {string} [reason] */
 export const refutes = (verdict, reason = `${verdict} by the patch`) => answerYaml({ verdict, reason })

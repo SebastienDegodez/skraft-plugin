@@ -97,10 +97,10 @@ The description is written in the story's language. What decides shows under a h
 ### Review <!-- #review -->
 
 - **Holds**: per review step, its name in bold and its table ([Review table](#review-table)); `Every lens of the last pass of each review passed without a finding.` when no lens found anything.
-- **Shown**: folded; the summary reads `Review: <counts>` and the block opens itself while a finding is To fix or To decide.
+- **Shown**: folded; the summary reads `Review: <counts>` and the block opens itself while a finding is To fix, To decide or Accepted.
 - **Written by**: the engine, from the last pass of each review.
 - **Read it to**: see what the reviewing lenses found and what the refuter decided.
-- **Act when**: a row is To fix or To decide.
+- **Act when**: a row is To fix or To decide; read an Accepted row before you merge.
 
 ### Screenshots <!-- #screenshots -->
 
@@ -148,7 +148,7 @@ Past the forge's body limit, the body keeps the sections shown under a heading a
 
 ## Review table <!-- #review-table -->
 
-The counts line reads like `Review: 2 to fix, 1 note, 13 refuted`. Each review step has a table with the columns `Status | Severity | Lens | Location | Finding | Why`. Rows are grouped To fix, To decide, then Note; the Refuted rows are folded under their count. The Lens cell reads `<lens> <id> <gate>` for every lens that found the same line with the same severity and status. Finding and reason are cut at 100 characters with `…`; `verdict.yaml` keeps them whole.
+The counts line reads like `Review: 2 to fix, 1 note, 13 refuted`. Each review step has a table with the columns `Status | Severity | Lens | Location | Finding | Why`. Rows are grouped To fix, To decide, Accepted, then Note; the Refuted rows are folded under their count. The Lens cell reads `<lens> <id> <gate>` for every lens that found the same line with the same severity and status. Finding and reason are cut at 100 characters with `…`; `verdict.yaml` keeps them whole.
 
 ### Statuses <!-- #statuses -->
 
@@ -156,22 +156,24 @@ The counts line reads like `Review: 2 to fix, 1 note, 13 refuted`. Each review s
 |---|---|---|
 | To fix | yes | fix it, or answer it in the pull request |
 | To decide | no | decide: one lens alone found it and the refuter refuted it |
+| Accepted | no | a human accepted it as it stands when the review reached its loop ceiling; read it before you merge |
 | Note | no | fix it if cheap; never blocks |
 | Refuted | no | read the reason only if you disagree |
 
 ### From finding to status <!-- #finding-to-status -->
 
-The refuter checks each blocker, high or medium finding; its answer and two facts give the status.
+The refuter checks each finding, of any severity and whatever its lens answered; its answer and two facts give the status. A finding that would be To fix and that a human accepted at the review's ceiling (`review-ceiling`, `ACCEPT`) is Accepted, its Why column `a human accepted it as it stands at the review's ceiling`.
 
-| Severity | Line | Refuter's answer | One lens alone, others passed | Status | Why column |
-|---|---|---|---|---|---|
-| low | any | not asked | — | Note | empty |
-| blocker, high, medium | unchanged since pass N | not asked | — | Note | `new on a line unchanged since pass N` |
-| blocker, high, medium | changed | `confirmed` | — | To fix | `confirmed: <reason>` |
-| blocker, high, medium | changed | `unverifiable`, or its check unreadable twice | — | To fix | `not verified: <reason>` |
-| blocker, high, medium | changed | `refuted` | yes | To decide | `one lens alone, against the lenses that passed; refuted: <reason>` |
-| blocker, high, medium | changed | `refuted` | no | Refuted | `<reason>` |
-| blocker, high, medium | same place as a finding refuted on pass N | not asked again | — | Refuted | `<reason> (refuted on pass N)` |
+| Line | Refuter's answer | One lens alone, others passed | Status | Why column |
+|---|---|---|---|---|
+| unchanged since pass N, the finding new there | not asked | — | Note | `new on a line unchanged since pass N` |
+| changed | `confirmed` | — | To fix | `confirmed: <reason>` |
+| changed | `unverifiable`, or its check unreadable twice | — | To fix | `not verified: <reason>` |
+| changed | `refuted` | yes | To decide | `one lens alone, against the lenses that passed; refuted: <reason>` |
+| changed | `refuted` | no | Refuted | `<reason>` |
+| same place as a finding refuted on pass N | not asked again | — | Refuted | `<reason> (refuted on pass N)` |
+
+A low finding counts like any other: To fix while the refuter does not refute it, whether its lens answered `fail` or `pass`.
 
 How the refuter works and how a later pass reuses it: [Refutation](./gates.md#refutation), [Incremental re-review](./gates.md#incremental).
 

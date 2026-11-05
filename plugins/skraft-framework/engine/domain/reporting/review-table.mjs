@@ -4,7 +4,7 @@ import { counted } from './pull-request-words.mjs'
 
 /**
  * A review as a pull request description and a review comment show it: one table per review
- * step, one row per finding, grouped by status (to fix, to decide, note); the refuted rows in a
+ * step, one row per finding, grouped by status (to fix, to decide, accepted, note); the refuted rows in a
  * block that opens on a click below it, so the open part shows only what needs action. A claim
  * and a reason are cut at CLAIM_LENGTH characters with `…`; verdict.yaml keeps them whole.
  *
@@ -34,8 +34,11 @@ const countOf = (lines, status, words) => {
   return count === 0 ? null : counted(words, count, words.review.counted[status])
 }
 
-/** Whether a line asks for an action: one to fix or to decide. @param {ReviewFacts} review */
-export const asksAction = (review) => review.some((step) => step.lines.some(({ status }) => status === 'fix' || status === 'decide'))
+/** The statuses a reviewer acts on or must see: to fix, to decide, accepted as it stands. */
+const OPEN_STATUSES = Object.freeze(['fix', 'decide', 'accepted'])
+
+/** Whether a line asks for an action or a human accepted it unfixed. @param {ReviewFacts} review */
+export const asksAction = (review) => review.some((step) => step.lines.some(({ status }) => OPEN_STATUSES.includes(status)))
 
 /**
  * The table of a step's lines, then its refuted lines folded under their count.
@@ -64,12 +67,21 @@ const rowOf = ({ status, cited, finding }, words) =>
   `| ${words.review.status[status]} | ${finding.severity} | ${cell(cited)} | ${cell(code(finding.location))} | ${cell(shortened(finding.description))} | ${cell(whyOf({ status, finding }, words))} |`
 
 /**
- * What the row says of its status: why a note is one, else the refuter's word and reason, which
- * every finding but a note has.
+ * What the row says of its status: why a note is one, that a human accepted it, else the
+ * refuter's word and reason, which every other finding has.
  * @param {Pick<FindingLine, 'status' | 'finding'>} line @param {Words} words
  */
 const whyOf = ({ status, finding }, words) => {
-  if (status === 'note') return finding.since === null ? '' : words.review.unchanged(finding.since)
+  if (status === 'note') return words.review.unchanged(/** @type {number} */ (finding.since))
+  if (status === 'accepted') return words.review.accepted
+  return refuterWord({ status, finding }, words)
+}
+
+/**
+ * The refuter's word and reason on a finding it judged.
+ * @param {Pick<FindingLine, 'status' | 'finding'>} line @param {Words} words
+ */
+const refuterWord = ({ status, finding }, words) => {
   const reason = shortened(/** @type {string} */ (finding.reason))
   if (status === 'decide') return `${words.review.alone}${reason}`
   if (status === 'refuted') return `${reason}${finding.carried === null ? '' : words.review.carried(finding.carried)}`
