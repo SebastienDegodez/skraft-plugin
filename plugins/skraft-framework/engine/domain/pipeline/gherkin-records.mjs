@@ -20,7 +20,7 @@
 /** A test plan names its scenarios' file in a cell of its coverage matrix, as a path or in backticks. */
 const CITED = /[\w.-]+(?:\/[\w.-]+)*\.feature/g
 /** What opens a scenario: its keyword and its title. */
-const OPENS = /^\s*(Scenario Outline|Scenario Template|Scenario|Example):\s*(\S.*?)\s*$/
+const OPENS = /^\s*(Scenario Outline|Scenario Template|Scenario|Example):(.*\S)/
 /** A step of a scenario, whatever its keyword. */
 const STEP = /^\s*(Given|When|Then|And|But|\*)\s+\S/
 /** What opens the examples of an outline. */
@@ -52,7 +52,8 @@ const scenariosOf = (text) => text.split(/\r?\n/).reduce(reading, []).map(({ row
 /** @param {Array<Scenario & { rows: boolean }>} scenarios @param {string} line */
 const reading = (scenarios, line) => {
   const opened = OPENS.exec(line)
-  if (opened !== null) return [...scenarios, { kind: opened[1], title: opened[2], steps: [], examples: [], rows: false }]
+  // Stryker disable next-line ArrayDeclaration: a stand-in step says no keyword and opens no placeholder, as the steps a scenario has yet to say
+  if (opened !== null) return [...scenarios, { kind: opened[1], title: opened[2].trim(), steps: [], examples: [], rows: false }]
   const open = scenarios.at(-1)
   if (open === undefined) return scenarios
   if (STEP.test(line)) open.steps.push(line.trim())

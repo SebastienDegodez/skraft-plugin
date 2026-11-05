@@ -124,7 +124,7 @@ test('a scenario that does not say Given, When and Then sends the designer back,
   assert.equal(outcome.status, 'done', outcome.reason)
 })
 
-test('an outline whose examples do not fill a placeholder it opens sends the designer back, whether its examples name another column, hold none at all, or the outline is written as a template', async () => {
+test('an outline whose examples do not fill a placeholder it opens sends the designer back, whether its examples name another column, hold none at all, leave a row unclosed, or the outline is written as a template', async () => {
   const outlines = [
     'Feature: Pay by card',
     '',
@@ -141,6 +141,15 @@ test('an outline whose examples do not fill a placeholder it opens sends the des
     '    Given a card the bank refuses',
     '    When a basket of <amount> cents is paid',
     '    Then the payment is refused',
+    '',
+    '  Scenario Outline: A basket of <amount> is paid with <card>',
+    '    Given a returning customer with a valid card',
+    '    When a basket of <amount> cents is paid with <card>',
+    '    Then the payment is accepted',
+    '',
+    '    Examples:',
+    '      | amount | card',
+    '      | 10000  | 4111',
     '',
     '  Scenario Template: A basket of <amount> is deferred by <method>',
     '    Given a returning customer with an open credit',
@@ -160,6 +169,7 @@ test('an outline whose examples do not fill a placeholder it opens sends the des
     [1, 'failed', 'gherkin-records', [
       `${CARD}: outline "A basket of <amount> is paid with <method>" leaves <method>, <total> out of its examples (#524)`,
       `${CARD}: outline "A basket of <amount> is refused" leaves <amount> out of its examples (#524)`,
+      `${CARD}: outline "A basket of <amount> is paid with <card>" leaves <amount>, <card> out of its examples (#524)`,
       `${CARD}: outline "A basket of <amount> is deferred by <method>" leaves <method> out of its examples (#524)`,
     ]],
     [2, 'done', null, []],
@@ -200,28 +210,33 @@ test('a story whose criteria outnumber its scenarios sends the designer back, an
   assert.equal(outcome.status, 'done', outcome.reason)
 })
 
-test("the story is read from what its plan names: the .feature of another context under the same file name, a comment, a step's data table, an angle-bracketed value outside an outline and a stale copy of the criteria are all left alone", async () => {
+test("the story is read from what its plan names: the .feature of another context under the same file name, a scenario, a step, an examples table and a row that are commented out, a step's own data table, an angle-bracketed value outside an outline and a stale copy of its plan and of its criteria are all left alone", async () => {
   const REFUNDS = 'docs/features/refunds/pay-by-card.feature'
   const other = 'Feature: Refund a card\n\n  Scenario: A card is refunded\n    Given a paid basket\n'
   const rich = [
     'Feature: Pay by card',
     '',
     '  Scenario: A returning customer pays a basket with a valid card',
-    '    Given a returning customer <ana@acme.test> with a valid card',
-    '    When a basket of 10000 cents is paid',
-    '    Then the payment is accepted for 10000 cents',
+    '    Given  a returning customer <ana@acme.test> with a valid card',
+    '    When   a basket of 10000 cents is paid',
+    '    Then   the payment is accepted for 10000 cents',
     '',
     '  Scenario Outline: A basket of <amount> is paid by <method>',
     '    # <fee> is decided by the pricing grid, not by this story',
-    '    Given a returning customer with the cards:',
+    '    # Examples: of the fee grid live in the pricing story',
+    '    Given  a returning customer with the cards:',
     '      | card | state |',
     '      | 4111 | valid |',
-    '    When a basket of <amount> cents is paid by <method>',
-    '    Then the payment is accepted for <amount>',
+    '    When   a basket of <amount> cents is paid by <method>',
+    '    Then   the payment is accepted for <amount>',
     '',
     '    Examples:',
-    '      | amount | method |',
+    '      # | fee |',
+    '      | amount | method |  ',
     '      | 10000  | card   |',
+    '',
+    '  # Scenario: A basket is paid in instalments',
+    '  #   Given  a basket of <instalments> is paid',
     '',
   ].join('\n')
   const two = '# Acceptance criteria — checkout\n\n## AC-9 — A card is paid\n\n## AC-10 — A basket is deferred\n'
@@ -230,7 +245,7 @@ test("the story is read from what its plan names: the .feature of another contex
     features: { 'docs/features/checkout/pay-by-card.feature': rich, [REFUNDS]: other, 'docs/features/checkout/pay-later.feature': PAY_LATER },
     cited: ['docs\\features\\checkout\\pay-by-card.feature', 'pay-later.feature'],
     criteria: two,
-    tracked: { 'plans/2026-10-11/ac-draft-checkout.md.orig': stale },
+    tracked: { 'plans/2026-10-11/ac-draft-checkout.md.orig': stale, 'details/2026-10-11/test-plan-checkout.md.orig': `${matrix(['pay-by-cheque.feature'])}\n` },
   })])
 
   const outcome = await host.start()
