@@ -2,7 +2,8 @@
  * The DISTILL records the engine checks when the acceptance designer finishes, instead of a lens:
  *   scenarios  every `.feature` its test plan names is a file of the features folder, each of
  *              whose scenarios says Given, When and Then, fills every placeholder it opens from
- *              its examples, and is titled once in its file (#524)
+ *              its examples, and is titled once in its file; and the story has at least one
+ *              scenario per acceptance criterion it holds (#524)
  *
  * The plan declares what the story's scenarios are; a row that names none writes `—`, as the
  * coverage matrix of `test-design-mandates` does for a domain invariant or an adapter test. So a
@@ -10,8 +11,9 @@
  *
  * @typedef {{ path: string, text: string }} Document a file of the run, as the engine read it
  * @typedef {{ kind: string, title: string, steps: string[], examples: string[][] }} Scenario
- * @typedef {{ plans: Document[], features: Document[] }} Records
- *   plans: the test plans of the tracking folder; features: the `.feature` files of the working copy.
+ * @typedef {{ plans: Document[], features: Document[], criteria: Document[] }} Records
+ *   plans: the test plans of the tracking folder; features: the `.feature` files of the working
+ *   copy; criteria: the acceptance criteria of the story, `ac-draft-<story>.md`.
  */
 
 /** Where the scenarios of a story live: a `.feature` under the features folder of a repository. */
@@ -28,6 +30,8 @@ const EXAMPLES = /^\s*(Examples|Scenarios):/
 const ROW = /^\s*\|(.*)\|\s*$/
 /** A placeholder an outline opens, filled from a column of its examples. */
 const PLACEHOLDER = /<([^<>]+)>/g
+/** A heading of one acceptance criterion, as DISCUSS writes it. */
+const CRITERION = /^##\s+AC-\d+\b/m
 /** The keywords a scenario says, each needed once. */
 const KEYWORDS = Object.freeze(['Given', 'When', 'Then'])
 /** An outline fills its placeholders from its examples; another scenario opens none. */
@@ -67,10 +71,27 @@ const cellsOf = (line) => /** @type {string[]} */ (ROW.exec(line))[1].split('|')
  * Why the Gherkin of the story sends the acceptance designer back; empty when it holds.
  * @param {Records} records @returns {string[]}
  */
-export const gherkinFailures = ({ plans, features }) => [
+export const gherkinFailures = ({ plans, features, criteria }) => [
   ...plans.flatMap((plan) => missingFeatures(plan, features)),
-  ...features.flatMap(featureFailures),
+  ...plans.flatMap((plan) => storyFeatures(plan, features).flatMap(featureFailures)),
+  ...criteria.flatMap((file) => coverageFailures(file, plans.flatMap((plan) => storyFeatures(plan, features)))),
 ]
+
+/** The `.feature` files of the story: those its plan names, as the working copy holds them. @param {Document} plan @param {Document[]} features */
+const storyFeatures = ({ text }, features) => features
+  .filter(({ path }) => namedFeatures(text).some((named) => path === named || path.endsWith(`/${named}`)))
+
+/**
+ * Whether the story has a scenario for each criterion it holds. An outline counts once, however
+ * many rows its examples carry: one criterion may be a grid.
+ * @param {Document} file @param {Document[]} features @returns {string[]}
+ */
+const coverageFailures = ({ path, text }, features) => {
+  const criteria = text.split(/\r?\n/).filter((line) => CRITERION.test(line)).length
+  const scenarios = features.flatMap(({ text: feature }) => scenariosOf(feature)).length
+  if (criteria === 0 || scenarios >= criteria) return []
+  return [`${path} declares ${criteria} ${criteria === 1 ? 'acceptance criterion' : 'acceptance criteria'}, and ${scenarios === 1 ? '1 scenario is' : `${scenarios} scenarios are`} written for ${criteria === 1 ? 'it' : 'them'} (#524)`]
+}
 
 /** Each `.feature` a plan names that the working copy does not hold. @param {Document} plan @param {Document[]} features */
 const missingFeatures = ({ path, text }, features) => namedFeatures(text)

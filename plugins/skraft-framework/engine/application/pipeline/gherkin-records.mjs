@@ -13,6 +13,8 @@ import { gherkinFailures } from '../../domain/pipeline/gherkin-records.mjs'
 const FEATURES = 'docs/features'
 /** A test plan of the tracking folder, as the acceptance designer's role names it. */
 const TEST_PLAN = /(^|\/)details\/[^/]+\/test-plan-[^/]+\.md$/
+/** The acceptance criteria of a story, as DISCUSS leaves them in the tracking folder. */
+const CRITERIA = /(^|\/)plans\/[^/]+\/ac-draft-[^/]+\.md$/
 
 /**
  * Why the Gherkin of the story sends the designer back; empty when it holds.
@@ -21,10 +23,15 @@ const TEST_PLAN = /(^|\/)details\/[^/]+\/test-plan-[^/]+\.md$/
  */
 export const checkGherkinRecords = async (deps, { slug }) => {
   const tracked = await deps.files.list(slug, '')
-  const paths = tracked.filter((path) => TEST_PLAN.test(path))
+  const plans = await documentsOf(deps, slug, tracked.filter((path) => TEST_PLAN.test(path)))
+  const criteria = await documentsOf(deps, slug, tracked.filter((path) => CRITERIA.test(path)))
+  return gherkinFailures({ plans, criteria, features: await featuresOf(deps.workspace) })
+}
+
+/** Each tracked file with its text, empty when the folder lost it between the listing and the read. @param {GherkinDeps} deps @param {string} slug @param {string[]} paths */
+const documentsOf = async (deps, slug, paths) => {
   const texts = await Promise.all(paths.map((path) => readPlan(deps, slug, path)))
-  const plans = paths.map((path, index) => ({ path, text: texts[index] }))
-  return gherkinFailures({ plans, features: await featuresOf(deps.workspace) })
+  return paths.map((path, index) => ({ path, text: texts[index] }))
 }
 
 /** A test plan, empty when the tracking folder lost it between the listing and the read. @param {GherkinDeps} deps @param {string} slug @param {string} path */
