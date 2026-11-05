@@ -17,7 +17,7 @@ Where each review sits in the pipeline: [Phases](./phases.md).
 | --- | --- | --- | --- |
 | Command gate | `build`, `format`, `lint`, `test`, `architecture`, `coverage`, `mutation` | the engine, by the exit code of the component's command | DELIVER's `gates`, `mutation` and `mutation_gates` nodes, `skraft gate` |
 | Review criterion | `G<n>`, and `C1`, `F1`, `B1`, `T<n>`, `E<n>`, `M<n>`, `K<n>` | a lens, then the engine (DESIGN, DISTILL, DELIVER) or `review-verdict.mjs` (DISCOVER, DISCUSS) | each phase's reviews |
-| Engine check tied to a criterion | G2, G10, G12, G14 (DESIGN); G9 (`test-integrity#patch`); G11 (`testability#layout`) | the engine, without a lens | after the architect's attempt; in a review's patch |
+| Engine check tied to a criterion | G2, G10, G12, G14 (DESIGN); G1 (`gherkin-records`), G11 (`testability#layout`) (DISTILL); G9 (`test-integrity#patch`) | the engine, without a lens | after the architect's attempt; after the acceptance designer's attempt; in a review's patch |
 
 A `G<n>` id is unique only within its phase: DESIGN's G1 is not DISTILL's G1. A lens's table, in
 its agent descriptor, is the source; a lens puts the id in the `gate` field of each finding.
@@ -167,6 +167,17 @@ place counts as it (`tests/unit`, `tests/Orders.UnitTests`). .NET names its plac
 `<Context>.UnitTest(s)`, `<Context>.Unit.Tests` or `<Context>.Tests` and
 `<Context>.IntegrationTest(s)` or `<Context>.Integration.Tests`; Java `<context>-unit-test(s)` and
 `<context>-integration-test(s)`; any other stack `unit/` and `integration/` under the test path.
+
+**Engine check.** G1: after each `acceptance-designer` attempt, without a lens
+([`gherkin-records`](./run-journal.md#statuses-and-codes)), the engine reads the scenarios the test
+plan names and reports one line per fault: a `.feature` the plan cites that `docs/features/` does
+not hold, a scenario that says no Given, When or Then, an outline whose examples leave unfilled a
+placeholder its title or its steps open, two scenarios of one file sharing a title, and a story
+with fewer scenarios than its `ac-draft-{story}.md` declares acceptance criteria (an outline counts
+once, however many example rows it carries). The plan declares the perimeter: only the `.feature`
+files it cites are read, a coverage-matrix row that names no Gherkin writes `—`, and a story that
+declares none is asked for none. This is a floor under G1, not G1 itself: the `coverage` lens still
+judges which criterion each scenario answers.
 
 ## DELIVER <!-- #deliver -->
 
