@@ -36,7 +36,7 @@ const PUBLICATION_CONSENTS = Object.freeze(/** @type {Record<string, ConsentKey>
  * @param {ReadonlyArray<string | null>} publications what each publication node of the run publishes
  * @returns {ConsentKey[]}
  */
-export const consentsAsked = (publications) => CONSENT_KEYS.filter((key) => publications.some((what) => what !== null && PUBLICATION_CONSENTS[what] === key))
+export const consentsAsked = (publications) => CONSENT_KEYS.filter((key) => publications.some((what) => PUBLICATION_CONSENTS[String(what)] === key))
 
 /** A consent a run may start on: refused, or accepted for the question as it reads now. */
 const SETTLED = Object.freeze(/** @type {ConsentState[]} */ (['declined', 'accepted']))

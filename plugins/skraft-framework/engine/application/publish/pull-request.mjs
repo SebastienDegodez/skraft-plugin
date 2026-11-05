@@ -73,7 +73,7 @@ const notOpened = (reason) => ({ published: false, reason: `pull request not ope
  * @returns {Promise<Target>}
  */
 const targetOf = async ({ codeHost }, { config, requested = false }, run) => {
-  if (!requested && config.publish.pullRequest !== true) return { ok: false, reason: consentReason(config.publish.pullRequest) }
+  if (!requested && config.publish.pullRequest !== true) return { ok: false, reason: `${CONFIG_FILE} sets publish.pullRequest to false` }
   const unavailable = await codeHost.unavailable()
   if (unavailable !== null) return { ok: false, reason: unavailable }
   const own = run.base[0]
@@ -81,11 +81,6 @@ const targetOf = async ({ codeHost }, { config, requested = false }, run) => {
   if (base === null) return { ok: false, reason: 'the run\'s base names no branch (a sha or a revision): set baseBranch in skraft-config.json, or start the run with --base <branch>' }
   return branchesOf(codeHost, base)
 }
-
-/** @param {boolean | null} given */
-const consentReason = (given) => (given === null
-  ? `nobody settled publish.pullRequest in ${CONFIG_FILE} yet; run /skraft-init`
-  : `${CONFIG_FILE} sets publish.pullRequest to false`)
 
 /**
  * The head: the branch HEAD is on, which is neither the base nor the default branch.

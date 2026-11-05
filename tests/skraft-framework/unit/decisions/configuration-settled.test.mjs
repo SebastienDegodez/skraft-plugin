@@ -36,11 +36,13 @@ test('a working copy whose publication consents nobody settled starts nothing, a
   assert.deepEqual(host.human.questions, [])
 })
 
-test('a front end makes the screenshots consent part of what a run needs; without one it is not asked for', async () => {
-  const front = starting({ components: [API, WEB], config: { publish: { pullRequest: true, questionVersions: { pullRequest: 2 } } } })
+test('a front end makes the screenshots consent part of what a run needs, named beside the others; without one it is not asked for', async () => {
+  const front = starting({ components: [API, WEB], config: { publish: {} } })
+  const one = starting({ components: [API, WEB], config: { publish: { pullRequest: true, questionVersions: { pullRequest: 2 } } } })
   const back = starting({ config: { publish: { pullRequest: true, questionVersions: { pullRequest: 2 } } } })
 
-  assert.equal((await front.start()).reason, 'skraft is not initialised: run /skraft-init (publish.visuals is unanswered)')
+  assert.equal((await front.start()).reason, 'skraft is not initialised: run /skraft-init (publish.visuals is unanswered, publish.pullRequest is unanswered)')
+  assert.equal((await one.start()).reason, 'skraft is not initialised: run /skraft-init (publish.visuals is unanswered)')
   assert.equal((await back.start()).status, 'done')
 })
 

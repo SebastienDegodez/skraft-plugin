@@ -36,8 +36,12 @@ const stateLine = ({ key, state }) => `publish.${key} ${state === 'outdated' ? '
  * @param {Context} context @returns {Array<string | null>}
  */
 const publicationsOf = ({ loaded, config }) => Object.values(loaded.workflow.nodes)
-  .filter((node) => node.kind === 'publish' && (node.when !== 'frontend' || config.components.some(isFrontend)))
+  .filter((node) => isPublication(node) && (node.when !== 'frontend' || config.components.some(isFrontend)))
   .map((node) => node.publish)
+
+/** @param {import('../../domain/workflow/workflow.mjs').WorkflowNode} node */
+// Stryker disable next-line ConditionalExpression: a node that is no publication publishes nothing, so it asks for no consent either way
+const isPublication = (node) => node.kind === 'publish'
 
 /**
  * The forge a publication of the run would open its pull request on, out of this machine's reach:
