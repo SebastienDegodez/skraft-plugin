@@ -1,0 +1,24 @@
+{
+  "components": [
+    {
+      "name": "api",
+      "root": "src/Api",
+      "stack": "dotnet",
+      "paths": { "src": ["Api"], "tests": ["Api.Tests"] },
+      "commands": {
+        "build": "dotnet build Api.slnx --nologo",
+        "test": "dotnet test Api.slnx --nologo --no-build"
+      }
+    },
+    {
+      "name": "batch",
+      "root": "src/Batch",
+      "stack": "python",
+      "paths": { "src": ["jobs"], "tests": ["tests"] },
+      "commands": {
+        "lint": "ruff check .",
+        "test": "pytest -q"
+      }
+    }
+  ]
+}

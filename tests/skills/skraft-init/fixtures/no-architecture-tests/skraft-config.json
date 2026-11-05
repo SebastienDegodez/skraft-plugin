@@ -1,0 +1,14 @@
+{
+  "components": [
+    {
+      "name": "pricing",
+      "root": ".",
+      "stack": "dotnet",
+      "paths": { "src": ["src"], "tests": ["tests"] },
+      "commands": {
+        "build": "dotnet build Pricing.slnx --nologo",
+        "test": "dotnet test Pricing.slnx --nologo --no-build"
+      }
+    }
+  ]
+}

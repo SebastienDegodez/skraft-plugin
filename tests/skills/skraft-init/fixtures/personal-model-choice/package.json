@@ -1,0 +1,14 @@
+{
+  "name": "storefront",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "vite build",
+    "lint": "eslint ."
+  },
+  "devDependencies": {
+    "vitest": "3.2.4",
+    "vite": "7.1.5",
+    "eslint": "9.37.0"
+  }
+}

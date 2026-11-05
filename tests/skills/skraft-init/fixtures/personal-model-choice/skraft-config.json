@@ -1,0 +1,17 @@
+{
+  "baseBranch": "develop",
+  "components": [
+    {
+      "name": "storefront",
+      "root": ".",
+      "stack": "react",
+      "paths": { "src": ["src"], "tests": ["tests"] },
+      "commands": {
+        "build": "npm run build",
+        "lint": "npm run lint",
+        "test": "npx vitest run"
+      }
+    }
+  ],
+  "publish": { "pullRequest": true, "visuals": false, "questionVersions": { "pullRequest": 2, "visuals": 1 } }
+}
