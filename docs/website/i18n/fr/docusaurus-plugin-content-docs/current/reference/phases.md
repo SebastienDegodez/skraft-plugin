@@ -95,7 +95,7 @@ Verdict : `review-verdict.mjs --phase discuss`, mêmes règles et même budget q
 | Sortie | `research/{date}/{slug}-research.md`, pré-créé depuis `research.template.md` |
 | Écriture permise | le dossier de suivi seulement |
 | `docs/` couvre déjà la story | le document de recherche le dit et cite les fichiers de `docs/` ; le moteur lit ces citations, donc un chemin qu'il nomme doit exister |
-| Contrôle | sortie remplie : non vide, différente du gabarit, sans `{{…}}`. Traces RESEARCH après chaque tentative : chaque chemin de la copie de travail que le document cite est un fichier lisible, et chaque plage `chemin:ligne` ou `chemin:ligne-ligne` tient dans la longueur de ce fichier (`research-records`) |
+| Contrôle | sortie remplie : non vide, différente du gabarit, sans `{{…}}`. Traces RESEARCH après chaque tentative : chaque chemin de la copie de travail que le document cite — barres obliques ou inverses, nommé une seule fois quel que soit le nombre de citations, un dossier et un chemin à segment `.` ou `..` laissés de côté — est un fichier lisible, et chaque plage `chemin:ligne` ou `chemin:ligne-ligne` tient dans la longueur de ce fichier (`research-records`) |
 | Tentatives | 3 (défaut de `max_attempts`) ; ensuite `missing-outputs`, ou `research-records` quand le document est là et que ses citations échouent encore |
 
 ## DESIGN <!-- #design -->
