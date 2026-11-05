@@ -208,7 +208,7 @@ ok    forge: github, deduced from the Git remote
 FAIL  web/test: command not found: npx (from ../payment-web); install it or change commands.test in skraft-config.json
 models on claude-code:
   step      agent                type   family      tier      model   effort  source (family/model/effort)
-  research  solution-researcher  phase  researcher  standard  sonnet  -       agent/tier/host
+  research  solution-researcher  phase  researcher  economy   haiku   -       agent/tier/host
   …
 models on copilot:
   …

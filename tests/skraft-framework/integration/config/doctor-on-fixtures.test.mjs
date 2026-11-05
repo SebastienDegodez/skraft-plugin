@@ -76,7 +76,7 @@ test('init lists skraft-config.local.json in .gitignore, and doctor reads it and
   const lines = doctor.stdout.split(/\r?\n/)
   const copilot = lines.slice(lines.indexOf('models on copilot:'))
   assert.match(copilot[1], /^ {2}step +agent +type +family +tier +model +effort +source \(family\/model\/effort\)$/)
-  assert.match(copilot[2], /^ {2}research +solution-researcher +phase +researcher +standard +- +- +agent\/host\/host$/)
+  assert.match(copilot[2], /^ {2}research +solution-researcher +phase +researcher +economy +- +- +agent\/host\/host$/)
   assert.ok(lines.indexOf('models on claude-code:') < lines.indexOf('models on copilot:'))
 })
 

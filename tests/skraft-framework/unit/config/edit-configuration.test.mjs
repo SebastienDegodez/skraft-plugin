@@ -37,7 +37,7 @@ test('the view shows the forge the files name and the one the Git remote names, 
   assert.deepEqual([view.confirmed, view.files], [false, { team: 'skraft-config.json', local: LOCAL }])
   assert.deepEqual({ assign: view.models.assign, models: view.models.models }, { assign: { agents: { 'solution-architect': 'frontier' } }, models: {} })
   assert.deepEqual(runsOn(view, 'claude-code', 'solution-architect'), { family: 'frontier', tier: 'frontier', model: ['opus'], effort: null, source: { family: 'agent', model: 'family', effort: 'host' } })
-  assert.deepEqual(runsOn(view, 'copilot', 'solution-researcher'), { family: 'researcher', tier: 'standard', model: null, effort: null, source: { family: 'agent', model: 'host', effort: 'host' } })
+  assert.deepEqual(runsOn(view, 'copilot', 'solution-researcher'), { family: 'researcher', tier: 'economy', model: null, effort: null, source: { family: 'agent', model: 'host', effort: 'host' } })
   assert.deepEqual(view.thresholds, [{ scope: 'core', bar: 100 }, { scope: 'boundary', bar: 80 }])
   assert.deepEqual(view.choices, {
     forges: ['github', 'azure-devops'],

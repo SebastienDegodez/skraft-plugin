@@ -201,7 +201,7 @@ Tapez `/workflows` pour voir le journal du run. Chaque agent y apparaît avec sa
 
 ```console title="Copilot CLI"
 > /workflows
-checkout: solution-researcher, attempt 1 — researcher · standard · model chosen by the host
+checkout: solution-researcher, attempt 1 — researcher · economy · model chosen by the host
 ```
 
 Dans le chat, le début de RESEARCH s'affiche ainsi :
@@ -211,7 +211,7 @@ Dans le chat, le début de RESEARCH s'affiche ainsi :
 ● checkout: publish_consent DECLINED
 ● checkout: visuals_consent DECLINED (no component of skraft-config.json is a front end (stack
   react, or an e2e command), so no screenshot is taken)
-● checkout: solution-researcher, attempt 1 — researcher · standard · model chosen by the host
+● checkout: solution-researcher, attempt 1 — researcher · economy · model chosen by the host
 ```
 
 Quand l'architecte propose un ADR et que les trois lentilles de la revue de conception l'ont

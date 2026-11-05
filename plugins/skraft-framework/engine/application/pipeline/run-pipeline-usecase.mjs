@@ -6,9 +6,9 @@ import { dayOf, isFilled, outputPath, templateName } from '../../domain/pipeline
 import { isDocument, writtenDocuments } from '../../domain/pipeline/documents.mjs'
 import { SCAN_FILE } from '../../domain/pipeline/structural-scan.mjs'
 import { proposalPath, proposalTemplate } from '../../domain/pipeline/proposals.mjs'
-import { allowedPaths, checklistsOf, makesCommits, roleOf } from '../../domain/pipeline/roles.mjs'
+import { allowedPaths, checklistsOf, makesCommits, roleFolders, roleOf } from '../../domain/pipeline/roles.mjs'
 import { writesComponentTests } from '../../domain/pipeline/component-skills.mjs'
-import { REPLAY_SHARE } from '../../domain/pipeline/commits.mjs'
+import { engineMessage, issueOf, REPLAY_SHARE } from '../../domain/pipeline/commits.mjs'
 import { RUN_REPORT_FILE, renderRunReport, runReport } from '../../domain/reporting/run-report.mjs'
 import { assignmentsText, modelText, onHost } from '../../domain/reporting/agent-models.mjs'
 import { QA_REPORT_FILE, renderQaReport } from '../../domain/reporting/qa-report.mjs'
@@ -436,6 +436,7 @@ const openStart = (journal) => /** @type {import('../../domain/journal/run-state
  */
 const openAttempt = async (context, run, next, job) => {
   if (next.resumed?.heads) return next.resumed.heads
+  await createRoleFolders(context.deps, run, next.node)
   await precreate(context, job)
   await context.deps.files.write(context.slug, snapshotOf(job.result), JSON.stringify(await documentHashes(context)))
   const heads = await headsOf(context.deps, run.base)
@@ -475,6 +476,46 @@ const documentsWritten = async (context, { result, scan }) => {
   const written = writtenDocuments(before === null ? {} : JSON.parse(before), await documentHashes(context))
   return [...new Set([...written, ...(scan === null ? [] : [scan])])].sort()
 }
+
+/**
+ * Creates each folder of the node's role that the working copy does not have yet, with an empty
+ * `.gitkeep` so that git keeps it, and commits them alone before the attempt takes its heads: the
+ * working copy stays clean whatever the agent's tools, and the folders reach the review and the
+ * pull request as the engine's commit, never as the agent's changes. DESIGN on a fresh repository
+ * writes its first ADR, event model and context map there. A folder the machine cannot list is
+ * left to the checks that ask a human. A commit Git refuses leaves the files uncommitted, dirty
+ * before the attempt, so never held against the agent.
+ * @param {PipelineDeps} deps @param {RunState} run @param {WorkStep['node']} node
+ */
+const createRoleFolders = async (deps, run, node) => {
+  const created = await missingFolders(deps, roleFolders(node))
+  if (created.length === 0) return
+  await deps.sourceControl.commitFiles('.', created, engineMessage(`chore: create the folders ${node.agent} writes in`, issueOf(run.story)))
+}
+
+/**
+ * Writes an empty `.gitkeep` in each folder the working copy does not have; returns those files.
+ * @param {PipelineDeps} deps @param {readonly string[]} folders @returns {Promise<string[]>}
+ */
+const missingFolders = async ({ workspace }, folders) => {
+  const created = []
+  for (const folder of folders) {
+    if (!(await isMissing(workspace, folder))) continue
+    await workspace.write(`${folder}/.gitkeep`, '')
+    created.push(`${folder}/.gitkeep`)
+  }
+  return created
+}
+
+/**
+ * Whether the working copy lacks the folder; a folder the machine cannot list is not known to be missing.
+ * @param {PipelineDeps['workspace']} workspace @param {string} folder
+ */
+const isMissing = (workspace, folder) => workspace.list(folder).then(
+  (entries) => entries === null,
+  // Stryker disable next-line ArrowFunction: undefined skips the folder as false does
+  () => false,
+)
 
 /** Writes each output that has a template and does not exist yet. @param {Context} context @param {Job} job */
 const precreate = async ({ deps, slug }, { outputs, precreated }) => {

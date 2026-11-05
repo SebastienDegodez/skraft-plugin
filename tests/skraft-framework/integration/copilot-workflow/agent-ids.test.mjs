@@ -151,7 +151,7 @@ test('the workflow reads the developer\'s ~/.skraft/config.json from the home fo
   const host = copilotHost(cwd)
   t.after(cleanup)
   await mkdir(join(host.home, '.skraft'), { recursive: true })
-  await writeFile(join(host.home, '.skraft', 'config.json'), JSON.stringify({ models: { standard: { copilot: { model: 'gpt-home', effort: 'low' } } } }), 'utf8')
+  await writeFile(join(host.home, '.skraft', 'config.json'), JSON.stringify({ models: { economy: { copilot: { model: 'gpt-home', effort: 'low' } } } }), 'utf8')
 
   const { ctx, calls } = simulatedContext({ args: { slug: 'payments' }, behaviours: [fillsOutputs(), stops()] })
   await settled(runSkraftPipelineWorkflow(ctx, host))
@@ -178,10 +178,10 @@ test('the workflow passes listed agentIds through, takes each Copilot model from
   assert.deepEqual(explicit.calls.map((call) => call.agent), ['skraft:solution-researcher', 'skraft:solution-architect'])
   assert.deepEqual(explicit.calls.map((call) => call.model), [undefined, undefined])
 
-  await writeFile(join(cwd, 'skraft-config.json'), JSON.stringify({ ...ANSWERED, models: { standard: { copilot: { model: 'copilot-medium' } }, frontier: { 'claude-code': { model: 'opus' }, copilot: { model: ['copilot-large-next', 'copilot-large'] } } } }), 'utf8')
+  await writeFile(join(cwd, 'skraft-config.json'), JSON.stringify({ ...ANSWERED, models: { economy: { copilot: { model: 'copilot-small' } }, frontier: { 'claude-code': { model: 'opus' }, copilot: { model: ['copilot-large-next', 'copilot-large'] } } } }), 'utf8')
   const mapped = simulatedContext({ args: { slug: 'payments' }, behaviours: [fillsOutputs(), stops()] })
   await settled(runSkraftPipelineWorkflow(mapped.ctx, copilotHost(cwd)))
-  assert.deepEqual(mapped.calls.map((call) => call.model), ['copilot-medium', 'copilot-large-next'])
+  assert.deepEqual(mapped.calls.map((call) => call.model), ['copilot-small', 'copilot-large-next'])
 
   const missing = simulatedContext({ args: { slug: 'billing' }, agents: [] })
   const outcome = await runSkraftPipelineWorkflow(missing.ctx, copilotHost(cwd))
