@@ -6,7 +6,8 @@ const RESEARCH = 'research/2026-10-11/checkout-research.md'
 /** A file of the working copy the harness holds, one line long. */
 const MAP = 'docs/architecture/context-map.md'
 /** Two lines, the last one without its newline, as a repository ends a file. */
-const MONEY = { 'src/Pricing/Money.cs': 'public record Money(decimal Amount);\npublic record Fee(decimal Amount);' }
+const MONEY_PATH = 'src/Pricing/Money.cs'
+const MONEY = { [MONEY_PATH]: 'public record Money(decimal Amount);\npublic record Fee(decimal Amount);' }
 
 /**
  * A solution researcher that leaves `text` as its research document, and `beside` as the other
@@ -60,7 +61,7 @@ test('a research document that cites a path the working copy has not sends the r
 test('a line range cited past the end of its file sends the researcher back, and a range that ends on the last line of a file holds', async () => {
   const host = scripted({ files: MONEY }, (it) => [
     researcher(`${MAP}:12 names the bounded contexts, ${MAP}:10-12 the events it publishes, and ${MAP}:4\u20136 the policies that rule them.\n`)(it),
-    researcher(citing(['src/Pricing/Money.cs:1-2']))(it),
+    researcher(citing([`${MONEY_PATH}:1-2`]))(it),
     ...nominal(it).slice(1),
   ])
 
@@ -127,6 +128,24 @@ test('a backup an editor left beside the research document is no research docume
   const host = scripted({}, (it) => [
     researcher(citing([MAP]), { [`${RESEARCH}.bak`]: citing(['src/Pricing/Discount.cs']) })(it),
     ...nominal(it).slice(1),
+  ])
+
+  const outcome = await host.start()
+
+  assert.deepEqual(recorded(host), [[1, 'done', null, []]])
+  assert.equal(outcome.status, 'done')
+})
+
+test('a research document is checked when the researcher finishes, so a file it cited may be gone by a later step', async () => {
+  const host = scripted({ files: MONEY }, (it) => [
+    researcher(citing([MAP, MONEY_PATH]))(it),
+    agent({
+      work: ({ git, workspace }) => {
+        git.change('docs/adr/adr-001-card-payment.md')
+        workspace.files.delete(MONEY_PATH)
+      },
+    })(it),
+    ...nominal(it).slice(2),
   ])
 
   const outcome = await host.start()

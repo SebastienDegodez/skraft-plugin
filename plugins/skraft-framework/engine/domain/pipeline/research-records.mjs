@@ -67,8 +67,11 @@ const rangeFailures = ({ path, text }, cited) => citedRanges(text)
   .map(({ cite, lines }) => `${path} cites ${cite}, past the end of a ${lines}-line file (#517)`)
 
 /** How many lines a file holds, a closing newline ending none; null when the engine read no file there, which missingCitations reports when a citation names it. @param {string | null} text */
+const lineCount = (text) => (text === null ? null : withoutClosingNewline(text).split('\n').length)
+
+/** @param {string} text */
 // Stryker disable next-line StringLiteral: what replaces the closing newline holds no newline either, so the file keeps its line count
-const lineCount = (text) => (text === null ? null : text.replace(/\n$/, '').split('\n').length)
+const withoutClosingNewline = (text) => text.replace(/\n$/, '')
 
 /** Each path a document cites that is no file of the working copy. @param {Document} document @param {Text[]} cited */
 const missingCitations = ({ path, text }, cited) => citedPaths(text)
