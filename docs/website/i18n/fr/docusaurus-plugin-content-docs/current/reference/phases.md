@@ -19,7 +19,7 @@ détail de chaque gate citée : [Gates](./gates.md).
 | --- | --- | --- | --- | --- | --- |
 | DISCOVER | `skraft-backlog` | l'agent, lancé par le développeur | `backlog-discoverer` | 3 lentilles, verdict de `review-verdict.mjs` | dépôt cible, capacité |
 | DISCUSS | `skraft-backlog` | l'agent, lancé par le développeur | `backlog-planner` | 4 lentilles, verdict de `review-verdict.mjs` | — |
-| RESEARCH | `skraft` | le moteur | `solution-researcher` | sortie remplie | consentements `publish-consent`, `reporting-consent` |
+| RESEARCH | `skraft` | le moteur | `solution-researcher` | sortie remplie | — |
 | DESIGN | `skraft` | le moteur | `solution-architect` | traces DESIGN, scan structurel, revue à 3 lentilles | `adr-ratification` |
 | DISTILL | `skraft` | le moteur | `acceptance-designer` | commits rouges rejoués, revue à 4 lentilles | — |
 | DELIVER | `skraft` | le moteur | `software-engineer` | commits TDD, gates, revue `review`, mutation | `mutation-plan` quand la mutation échoue |
@@ -85,8 +85,6 @@ Verdict : `review-verdict.mjs --phase discuss`, mêmes règles et même budget q
 
 | Nœud | Type | Rôle |
 | --- | --- | --- |
-| `publish_consent` | question `publish-consent` | consentement à pousser la branche, ouvrir la pull request, commenter l'issue |
-| `visuals_consent` | question `reporting-consent` | consentement à publier captures et vidéos d'un front end |
 | `research` | agent `solution-researcher` | le document de recherche |
 
 | | |
@@ -234,18 +232,19 @@ ligne `**Status:**`, ligne de `docs/adr/decisions-index.md`) et les commite seul
 
 | Question | Posée par | Options | Refus (raison obligatoire) | En-tête |
 | --- | --- | --- | --- | --- |
-| `publish-consent` | nœud `publish_consent` | `ACCEPTED`, `DECLINED` | — | `Pull request` |
-| `reporting-consent` | nœud `visuals_consent` | `ACCEPTED`, `DECLINED` | — | `Reporting` |
 | `adr-ratification` | nœud `adr` | `RATIFIED`, `REJECTED` | `REJECTED` | `ADR` |
 | `mutation-plan` | nœud `mutation_plan` | `APPLY`, une consigne, ou `STOP` | — | `Mutation` |
 | `environment` | le moteur, quand une étape ne peut pas tourner sur la machine | `RETRY`, `ABORT` | — | `Environment` |
 | `blocked` | le moteur, quand un agent répond `blocked`, qu'une boucle atteint son `max_visits` ou qu'une lentille répond `inconclusive` | une consigne, ou `STOP` | — | `Blocked` |
 | `review-consent` | `skraft review --pr --publish` | `ACCEPTED`, `DECLINED` | — | `PR comment` |
 
-Un consentement déjà donné dans `skraft-config.json` (`publish.pullRequest`,
-`publish.visuals`) n'est pas reposé, sauf si le texte de sa question a changé depuis
-(`publish.questionVersions`). `reporting-consent` est sauté quand aucun composant n'est un front
-end. Clés, réponses et journal : [Dossier de suivi et journal](./run-journal.md#human-questions).
+Aucun run ne demande de consentement de publication : `/skraft-init` les règle avant tout run,
+dans `skraft-config.json` (`publish.pullRequest`, `publish.visuals`, chacun avec la version de la
+question auquel il répond sous `publish.questionVersions`). Un run dont le workflow publie est
+refusé avant son premier agent tant qu'un consentement dont il a besoin est sans réponse, ou
+répond à une version antérieure de sa question ; `publish.visuals` n'est nécessaire que si un
+composant est un front end. Clés, réponses et journal :
+[Dossier de suivi et journal](./run-journal.md#human-questions).
 
 ## Voir aussi <!-- #see-also -->
 

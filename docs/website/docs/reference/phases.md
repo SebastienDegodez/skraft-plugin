@@ -19,7 +19,7 @@ The detail of each gate cited: [Gates](./gates.md).
 | --- | --- | --- | --- | --- | --- |
 | DISCOVER | `skraft-backlog` | the agent, started by the developer | `backlog-discoverer` | 3 lenses, verdict from `review-verdict.mjs` | target repository, capacity |
 | DISCUSS | `skraft-backlog` | the agent, started by the developer | `backlog-planner` | 4 lenses, verdict from `review-verdict.mjs` | — |
-| RESEARCH | `skraft` | the engine | `solution-researcher` | output filled | consents `publish-consent`, `reporting-consent` |
+| RESEARCH | `skraft` | the engine | `solution-researcher` | output filled | — |
 | DESIGN | `skraft` | the engine | `solution-architect` | DESIGN records, structural scan, 3-lens review | `adr-ratification` |
 | DISTILL | `skraft` | the engine | `acceptance-designer` | red commits replayed, 4-lens review | — |
 | DELIVER | `skraft` | the engine | `software-engineer` | TDD commits, gates, `review`, mutation | `mutation-plan` when mutation fails |
@@ -85,8 +85,6 @@ Verdict: `review-verdict.mjs --phase discuss`, same rules and same budget as DIS
 
 | Node | Kind | Role |
 | --- | --- | --- |
-| `publish_consent` | question `publish-consent` | consent to push the branch, open the pull request, comment on the issue |
-| `visuals_consent` | question `reporting-consent` | consent to publish a front end's screenshots and videos |
 | `research` | agent `solution-researcher` | the research document |
 
 | | |
@@ -234,18 +232,18 @@ Verdict: `review-verdict.mjs --phase discuss`, same rules and same budget as DIS
 
 | Question | Asked by | Options | Refusal (reason required) | Header |
 | --- | --- | --- | --- | --- |
-| `publish-consent` | node `publish_consent` | `ACCEPTED`, `DECLINED` | — | `Pull request` |
-| `reporting-consent` | node `visuals_consent` | `ACCEPTED`, `DECLINED` | — | `Reporting` |
 | `adr-ratification` | node `adr` | `RATIFIED`, `REJECTED` | `REJECTED` | `ADR` |
 | `mutation-plan` | node `mutation_plan` | `APPLY`, an instruction, or `STOP` | — | `Mutation` |
 | `environment` | the engine, when a step cannot run on the machine | `RETRY`, `ABORT` | — | `Environment` |
 | `blocked` | the engine, when an agent answers `blocked`, a loop reaches its `max_visits` or a lens answers `inconclusive` | an instruction, or `STOP` | — | `Blocked` |
 | `review-consent` | `skraft review --pr --publish` | `ACCEPTED`, `DECLINED` | — | `PR comment` |
 
-A consent already given in `skraft-config.json` (`publish.pullRequest`, `publish.visuals`) is not
-asked again, unless the text of its question changed since (`publish.questionVersions`).
-`reporting-consent` is skipped when no component is a front end. Keys, answers and journal:
-[Tracking folder and journal](./run-journal.md#human-questions).
+No run asks for a publication consent: `/skraft-init` settles them before any run, in
+`skraft-config.json` (`publish.pullRequest`, `publish.visuals`, each with the version of the
+question it answers under `publish.questionVersions`). A run whose workflow publishes is refused
+before its first agent while a consent it needs is unanswered, or answers an earlier version of
+its question; `publish.visuals` is needed only when a component is a front end. Keys, answers and
+journal: [Tracking folder and journal](./run-journal.md#human-questions).
 
 ## See also <!-- #see-also -->
 

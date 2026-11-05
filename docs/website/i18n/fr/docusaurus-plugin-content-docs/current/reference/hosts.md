@@ -150,7 +150,10 @@ skraft checkout — running
 ```
 
 Le bloc montre le texte du panneau pour un run `checkout` en DESIGN, tel que le vérifient les tests
-de vue du mod. Au démarrage d'un run, à côté de sa première boîte de dialogue :
+de vue du mod. À côté d'une boîte de dialogue, tant qu'une question attend (la capture a été faite
+quand le consentement de publication était encore demandé pendant un run ; `/skraft-init` le règle
+avant, et la question sur laquelle un run s'arrête est l'une de `adr-ratification`,
+`mutation-plan`, `environment` ou `blocked`) :
 
 ![Claude Code : à gauche la boîte de dialogue Pull request avec ACCEPTED, DECLINED et Type something ; à droite le panneau Skraft, « skraft checkout — waiting », RESEARCH ouverte sur publish_consent, les étapes des autres phases à venir, puis la question et la façon d'y répondre](/img/screenshots/shared/claude-skraft-pane.png)
 
@@ -283,6 +286,10 @@ Copilot chat, where Copilot puts it to you; or type skraft decide <key> <answers
 terminal.` ; il ne prend aucune réponse.
 
 Tant qu'une question attend, un bouton **On a besoin de vous** s'affiche dans l'en-tête. Il mène à la question sur l'onglet Run, comme la touche `n` hors d'un champ. Il ne répond à rien : la réponse passe par la boîte de dialogue de Copilot ou par `skraft decide`.
+
+La capture ci-dessous a été faite quand le consentement de publication était encore demandé
+pendant un run ; le bouton et l'encadré fonctionnent de même pour les questions sur lesquelles un
+run s'arrête aujourd'hui.
 
 ![Canvas skraft-pipeline : statut WAITING, bouton « On a besoin de vous » dans l'en-tête, encadré « Pull request » avec la question et la façon d'y répondre, RESEARCH ouverte sur publish_consent, les autres phases à venir](/img/screenshots/shared/pipeline-canvas-question.png)
 

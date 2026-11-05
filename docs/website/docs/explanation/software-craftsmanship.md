@@ -113,8 +113,10 @@ and the tests with no context at all and checks that they speak the business lan
 
 A craftsperson does not decide alone what commits their client. In the workflow, a hexagon is a
 question asked to a human: `adr-ratification` has the ADRs ratified before DISTILL,
-`publish-consent` asks for agreement before pushing a branch. Without an answer, the run waits;
-no agent can answer in the human's place. See
+`mutation-plan` has the developer decide what to do with the mutants the gate left alive. Without
+an answer, the run waits; no agent can answer in the human's place. The agreement to push a
+branch is given once, before any run, and a run that lacks it is refused rather than left
+waiting. See
 [Architecture](./architecture.md).
 
 ## Where craftsmanship plays out in DELIVER

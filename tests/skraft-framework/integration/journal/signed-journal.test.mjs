@@ -51,7 +51,7 @@ test('a journal whose key is gone from the home folder blocks the next run befor
 
   assert.deepEqual(outcome, {
     status: 'blocked', slug: SLUG, phase: null, code: 'journal-unverifiable',
-    reason: 'journal unverifiable: the key that signed events.jsonl is not in ~/.skraft/journal-keys on this machine (unverified: lines 1-11: 1 run.started, 4 step.started, 4 step.recorded, 1 phase.closed, 1 question.asked); restore it from the machine that started the run, or adopt the journal on this machine with skraft journal adopt, typed in your own terminal (its earlier lines stay unverified)',
+    reason: 'journal unverifiable: the key that signed events.jsonl is not in ~/.skraft/journal-keys on this machine (unverified: lines 1-7: 1 run.started, 2 step.started, 2 step.recorded, 1 phase.closed, 1 question.asked); restore it from the machine that started the run, or adopt the journal on this machine with skraft journal adopt, typed in your own terminal (its earlier lines stay unverified)',
   })
   assert.deepEqual(resumed.calls, [])
 })

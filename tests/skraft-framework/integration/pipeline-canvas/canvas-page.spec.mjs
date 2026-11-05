@@ -60,9 +60,9 @@ test('the Journal tab lists each step recorded with its pass, outcome and the ed
 
   await page.getByRole('tab', { name: 'Journal' }).click()
 
-  await expect(page.locator('.j-step .j-id')).toHaveText(['publish_consent', 'visuals_consent', 'research', 'design', 'design_review'])
+  await expect(page.locator('.j-step .j-id')).toHaveText(['research', 'design', 'design_review', 'adr', 'distill'])
   await expect(page.locator('.j-step .j-outcome')).toHaveText(['skipped', 'skipped', 'done', 'done', 'approved'])
-  await expect(page.locator('.j-step .j-edge')).toHaveText(['then visuals_consent', 'then research', 'then design', 'then design_review', 'then adr'])
+  await expect(page.locator('.j-step .j-edge')).toHaveText(['then design', 'then design_review', 'then adr', 'then distill', 'then distill_review'])
   await expect(page.locator('.j-step .j-pass')).toHaveText(Array(5).fill('pass 1'))
   const lines = readFileSync(journalFile(state.run.cwd), 'utf8').split('\n').filter(Boolean).length
   await expect(page.locator('.chain-word')).toHaveText('intact')
@@ -200,7 +200,7 @@ test.describe('in French (the driver\'s sentences)', () => {
 
     await expect(page.locator('.chain-word')).toHaveText('intacte')
     await expect(page.locator('.j-pass').first()).toHaveText('passe 1')
-    await expect(page.locator('.j-edge').first()).toHaveText('puis visuals_consent')
+    await expect(page.locator('.j-edge').first()).toHaveText('puis design')
   })
 
   test('where to answer the question is read in French, the engine\'s question as it wrote it', async ({ page }) => {

@@ -40,7 +40,7 @@ const dies = async (run, { calls }, cwd) => {
 }
 
 /** The journal of a run that closed RESEARCH and paused on the question of a blocked architect. */
-const PAUSED_IN_DESIGN = ['run.started', 'step.started', 'step.recorded', 'step.started', 'step.recorded', 'step.started', 'step.recorded', 'phase.closed', 'step.started', 'step.recorded', 'question.asked']
+const PAUSED_IN_DESIGN = ['run.started', 'step.started', 'step.recorded', 'phase.closed', 'step.started', 'step.recorded', 'question.asked']
 
 test('the workflow declares skraft-pipeline with the phases of the plugin\'s workflow and optional arguments', async (t) => {
   const { cwd, cleanup } = await workingCopy()

@@ -49,7 +49,7 @@ test('the canvas draws the workflow as the run goes: a review in progress, then 
   const content = await shown()
   assert.deepEqual([content.title, content.status, content.reason], [`skraft ${SLUG}`, 'waiting', RATIFY])
   assert.deepEqual(outline(content).slice(0, 3), [
-    ['✓ RESEARCH', 'closed', [['✓ publish_consent — publish-consent: answered by the configuration', 'done'], ['✓ visuals_consent — reporting-consent: answered by the configuration', 'done'], ['✓ research — solution-researcher: done', 'done']]],
+    ['✓ RESEARCH', 'closed', [['✓ research — solution-researcher: done', 'done']]],
     ['▶ DESIGN', 'open', [['✓ design — solution-architect: done, pass 2', 'done'], ['✓ design_review — consistency, architecture-compliance, fitness: approved, pass 2', 'done'], ['▶ adr — adr-ratification', 'open']]],
     ['· DISTILL', 'pending', [['· distill — acceptance-designer', 'pending'], ['· distill_review — coverage, business-alignment, testability, boundary-enforcement', 'pending']]],
   ])
@@ -75,7 +75,7 @@ test('the canvas draws the workflow as the run goes: a review in progress, then 
 
   writeFileSync(join(cwd, 'skraft-config.json'), 'not json')
   assert.deepEqual(outline(await shown()), [
-    ['✓ RESEARCH', 'closed', [['✓ publish_consent: skipped', 'done'], ['✓ visuals_consent: skipped', 'done'], ['✓ research: done', 'done']]],
+    ['✓ RESEARCH', 'closed', [['✓ research: done', 'done']]],
     ['▶ DESIGN', 'open', [['✓ design: done, pass 2', 'done'], ['✓ design_review: approved, pass 2', 'done'], ['▶ adr', 'open']]],
   ])
 })

@@ -217,10 +217,11 @@ export const scriptedModHost = async ({ cwd, behaviours = [], costs = [], otherw
 /** What node prints for its home folder; it fails when it can name none. @param {string | null} folder */
 const homeAnswer = async (folder) => (folder === null ? { exitCode: 1, stdout: '', stderr: '' } : { exitCode: 0, stdout: `${folder}\n`, stderr: '' })
 
-/** A fresh working copy whose skraft-config.json has answered the consent to open a pull request: no. */
+/** A fresh working copy whose skraft-config.json has settled both publication consents: no to each. */
 const answeredWorkingCopy = async () => {
   const root = await mkdtemp(join(tmpdir(), 'skraft-mod-'))
-  await writeFile(join(root, 'skraft-config.json'), JSON.stringify({ publish: { pullRequest: false } }), 'utf8')
+  const publish = { pullRequest: false, visuals: false, questionVersions: { pullRequest: 2, visuals: 1 } }
+  await writeFile(join(root, 'skraft-config.json'), JSON.stringify({ publish }), 'utf8')
   return root
 }
 

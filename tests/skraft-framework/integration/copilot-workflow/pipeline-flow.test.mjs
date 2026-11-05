@@ -34,7 +34,7 @@ const replaysOf = (events) => events
   .map(({ step, commits }) => [step, commits.map(({ replay }) => replay?.exitCode ?? null)])
 
 test('the four phases run on a real repository: each agent commits its part, the gates run the tests, DELIVER closes, then PUBLISH writes the pull request', async (t) => {
-  const { cwd } = pipelineRepository(t, { publish: null })
+  const { cwd } = pipelineRepository(t, { publish: { pullRequest: true, visuals: false, questionVersions: { pullRequest: 2, visuals: 1 } } })
   issueForge(t, cwd)
 
   const { outcome, calls, logs, phases, asked, events } = await runOn(cwd, { args: { issue: 42, title: 'Pay by card' } })
@@ -68,9 +68,9 @@ test('the four phases run on a real repository: each agent commits its part, the
   const finished = events.filter((event) => event.type === 'run.finished')
   assert.deepEqual(finished.map(({ status, reason }) => [status, reason]), [['completed', 'PUBLISH closed']])
   issueProgressKept(cwd, events)
-  assert.deepEqual(asked, ['publish_consent-1', 'adr-1'])
-  assert.deepEqual(events.filter((event) => event.type === 'question.answered').map(({ key, answer, by }) => [key, answer, by]), [['publish_consent-1', 'ACCEPTED', 'host-confirmed'], ['adr-1', 'RATIFIED', 'host-confirmed']])
-  assert.deepEqual(JSON.parse(readFileSync(join(cwd, 'skraft-config.json'), 'utf8')).publish, { pullRequest: true, questionVersions: { pullRequest: 2 } })
+  assert.deepEqual(asked, ['adr-1'])
+  assert.deepEqual(events.filter((event) => event.type === 'question.answered').map(({ key, answer, by }) => [key, answer, by]), [['adr-1', 'RATIFIED', 'host-confirmed']])
+  assert.deepEqual(JSON.parse(readFileSync(join(cwd, 'skraft-config.json'), 'utf8')).publish, { pullRequest: true, visuals: false, questionVersions: { pullRequest: 2, visuals: 1 } })
   assert.deepEqual(events.filter((event) => event.type === 'step.recorded' && event.step === 'publish').map(({ outcome: result, reason }) => [result, reason]), [['local', `pull request not opened: ${NO_PULL_REQUEST}; pull-request.md holds its description, and skraft publish opens it once that is fixed`]])
   assert.ok(readFileSync(join(cwd, '.copilot-tracking', 'skraft-plans', SLUG, 'pull-request.md'), 'utf8').startsWith('Pay by card at checkout\n\nRefs #42\n\n## What changes\n\npay(amount) answers what was paid.\n'))
   const distillRed = events.find((event) => event.type === 'commits.checked' && event.step === 'distill').commits[0].sha
@@ -83,14 +83,14 @@ test('the four phases run on a real repository: each agent commits its part, the
 })
 
 test('a front end\'s e2e run leaves its light and dark screenshots committed on the working branch, and the pull request shows them', async (t) => {
-  const { cwd } = pipelineRepository(t, { frontend: true, publish: { pullRequest: false } })
+  const { cwd } = pipelineRepository(t, { frontend: true, publish: { pullRequest: false, visuals: true, questionVersions: { pullRequest: 2, visuals: 1 } } })
   issueForge(t, cwd)
 
   const { outcome, events, asked } = await runOn(cwd, { args: { issue: 42, title: 'Pay by card' } })
 
   assert.equal(outcome.status, 'done', outcome.reason)
-  assert.deepEqual(asked, ['visuals_consent-1', 'adr-1'])
-  assert.deepEqual(events.filter((event) => event.type === 'question.answered').map(({ key, answer, by }) => [key, answer, by])[0], ['visuals_consent-1', 'ACCEPTED', 'host-confirmed'])
+  assert.deepEqual(asked, ['adr-1'])
+  assert.deepEqual(events.filter((event) => event.type === 'question.answered').map(({ key, answer, by }) => [key, answer, by])[0], ['adr-1', 'RATIFIED', 'host-confirmed'])
   visualsKept(cwd, events)
 })
 

@@ -12,6 +12,7 @@ const repository = (t) => {
   const cwd = join(tempFolder(t), 'payment-api')
   mkdirSync(cwd)
   writeFileSync(join(cwd, '.gitignore'), '.copilot-tracking/\n')
+  writeFileSync(join(cwd, 'skraft-config.json'), JSON.stringify({ publish: { pullRequest: false, visuals: false, questionVersions: { pullRequest: 2, visuals: 1 } } }))
   const main = commitAll(cwd)
   git(cwd, 'checkout', '-q', '-b', 'develop')
   writeFileSync(join(cwd, 'notes.md'), 'develop\n')

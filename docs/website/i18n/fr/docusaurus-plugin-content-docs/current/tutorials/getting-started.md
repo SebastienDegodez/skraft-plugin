@@ -160,7 +160,24 @@ Ouvrez `skraft-config.json` à la racine de `shop` :
 `test` vient du script de `web/package.json` ; `mutation` est le défaut StrykerJS. `paths` est aussi
 le **périmètre d'écriture** de DELIVER : le software engineer ne pourra écrire que dans `web/src` et
 `web/test`. `skraft init` a aussi ajouté `skraft-config.local.json`, votre couche personnelle, au
-`.gitignore`. Commitez les deux fichiers :
+`.gitignore`.
+
+Ajoutez les consentements de publication à côté de `components`. Un run qui publie ne démarre
+qu'une fois qu'ils sont réglés ; ce dépôt n'a pas de remote, donc refusez les deux :
+
+```json title="skraft-config.json"
+  "publish": {
+    "pullRequest": false,
+    "visuals": false,
+    "questionVersions": { "pullRequest": 2, "visuals": 1 }
+  }
+```
+
+`/skraft-init` vous les demande dès qu'il est installé sur votre hôte ; à la main, ces clés sont
+tout ce qu'un run exige. Sans elles, il est refusé avant son premier agent, avec
+`skraft is not initialised: run /skraft-init`.
+
+Commitez les deux fichiers :
 
 ```console
 $ git add skraft-config.json .gitignore
@@ -208,13 +225,8 @@ skraft checkout started — progress in the Skraft pane.
 Le panneau **Skraft** s'ouvre. Il dessine le workflow, une ligne par phase suivie de ses étapes, et
 coche chaque étape à mesure qu'elle tourne.
 
-![Claude Code : /skraft checkout Pay by card répond « skraft checkout started — progress in the Skraft pane » ; à gauche la boîte de dialogue Pull request avec ACCEPTED, DECLINED et Type something ; à droite le panneau Skraft, « skraft checkout — waiting », RESEARCH ouverte sur publish_consent, les étapes des autres phases à venir, puis la question et la façon d'y répondre](/img/screenshots/shared/claude-skraft-pane.png)
-
-*Figure 3 — Le run vient de démarrer : le panneau **Skraft** à droite, la boîte de dialogue
-**Pull request** à gauche.*
-
-Aussitôt, une boîte de dialogue intitulée **Pull request** demande si skraft peut pousser la
-branche et ouvrir la pull request à la fin du run. **Laissez-la ouverte** pour l'étape suivante.
+Les consentements que vous avez réglés dans `skraft-config.json` y répondent d'eux-mêmes : aucune
+boîte de dialogue ne s'ouvre, et le run va droit à `research`.
 
 :::tip[Moins de demandes de permission]
 Les agents lancent les commandes du dépôt (`npm`, `git`, `node`…). Claude Code demande votre
@@ -225,30 +237,20 @@ le laisser avancer, lancez Claude Code avec ces commandes autorisées, par exemp
 
 ## 6. Regarder le run depuis un terminal <!-- #6-watch-the-run-from-a-terminal -->
 
-Pendant que la boîte de dialogue attend, lancez dans un terminal, à la racine de `shop` :
+Pendant que le run avance, lancez dans un terminal, à la racine de `shop` :
 
 ```console
 $ skraft status
 ```
 
-![Terminal : skraft status montre « skraft checkout: waiting », RESEARCH open, les autres phases pending, et la question publish-consent](/img/screenshots/shared/terminal-status-waiting.svg)
-
-*Figure 4 — Le run attend votre réponse : RESEARCH est ouverte, la question `publish-consent` est
-celle de la boîte de dialogue.*
-
-`skraft status` relit le journal que le moteur écrit ; il ne change rien au run.
-
-Revenez à la boîte de dialogue : ce dépôt n'a pas de remote, choisissez **DECLINED**. La réponse est
-écrite dans `skraft-config.json` (`"publish": { "pullRequest": false, … }`) et ne sera plus
-redemandée. Aucune question sur les captures d'écran n'est posée : aucun composant n'est un front.
+`skraft status` relit le journal que le moteur écrit ; il ne change rien au run. Il montre RESEARCH
+ouverte sur `research`, les autres phases en attente.
 
 ## 7. RESEARCH et DESIGN <!-- #7-research-and-design -->
 
 Le journal du panneau montre chaque étape, par exemple :
 
 ```text
-checkout: publish_consent DECLINED
-checkout: visuals_consent DECLINED (no component of skraft-config.json is a front end (stack react, or an e2e command), so no screenshot is taken)
 checkout: solution-researcher, attempt 1
 ```
 
@@ -309,7 +311,7 @@ $ skraft status
 
 ![Terminal : skraft status montre « skraft checkout: done » et RESEARCH à PUBLISH closed](/img/screenshots/shared/terminal-status-done.svg)
 
-*Figure 5 — Un run terminé : chaque phase est `closed`. Capture faite sur le dépôt scripté des tests
+*Figure 3 — Un run terminé : chaque phase est `closed`. Capture faite sur le dépôt scripté des tests
 d'intégration ; sous Claude Code, une ligne `cost:` s'ajoute avec le coût que l'hôte a rapporté.*
 
 Relancez vous-même les gates sur le code livré :
@@ -320,7 +322,7 @@ $ skraft gate --all
 
 ![Terminal : skraft gate --all, pass web/test et pass web/mutation, « 2 gates passed on web »](/img/screenshots/shared/terminal-gates.svg)
 
-*Figure 6 — Les deux gates du composant `web` passent.*
+*Figure 4 — Les deux gates du composant `web` passent.*
 
 Le dossier de suivi `.copilot-tracking/skraft-plans/checkout/` contient maintenant :
 

@@ -113,11 +113,11 @@ commit of each story`. Toute autre valeur : `tdd must be { "replay": "all" or "l
 
 | Clé | Type | Défaut | Effet |
 | --- | --- | --- | --- |
-| `pullRequest` | boolean | absent : question `publish-consent` | le run peut pousser sa branche, ouvrir ou mettre à jour sa pull request et tenir un commentaire de progression sur l'issue de sa story |
-| `visuals` | boolean | absent : question `reporting-consent` (seulement avec un front end) | le run peut publier les captures et vidéos d'un front end dans la pull request |
+| `pullRequest` | boolean | absent : un run qui publie est refusé, `/skraft-init` le demande | le run peut pousser sa branche, ouvrir ou mettre à jour sa pull request et tenir un commentaire de progression sur l'issue de sa story |
+| `visuals` | boolean | absent : un run qui publie des captures est refusé, `/skraft-init` le demande (seulement avec un front end) | le run peut publier les captures et vidéos d'un front end dans la pull request |
 | `draft` | boolean | `true` | une pull request ouverte par skraft est un brouillon |
 | `reviewComment` | boolean | absent : demandé une fois par dépôt | `skraft review --pr --publish` peut garder un commentaire sur la pull request revue ; écrit à la main dans le fichier de l'équipe, il l'emporte sur la réponse de chaque développeur, que le moteur garde dans son `~/.skraft/config.json` (`reviewComments`) |
-| `questionVersions` | object | `1` par clé | la version du texte de la question à laquelle chaque réponse a été donnée (`visuals`, `pullRequest`, `reviewComment`, entiers à partir de 1) ; une acceptation d'une version antérieure est redemandée |
+| `questionVersions` | object | `1` par clé | la version du texte de la question à laquelle chaque réponse a été donnée (`visuals`, `pullRequest`, `reviewComment`, entiers à partir de 1) ; une acceptation d'une version antérieure n'est pas réglée : le run est refusé jusqu'à ce que `/skraft-init` la repose |
 
 Le moteur écrit `pullRequest` ou `visuals`, et leur `questionVersions`, quand un humain répond à
 la question, toutes les autres clés du fichier conservées. Toute autre clé ou valeur :
@@ -161,11 +161,10 @@ hôte sert les agents qui s'en servent (les skills du plugin backlog, par exempl
 
 Un run démarré depuis une issue que la ligne de commande de la forge ne peut pas lire (pas de
 remote, `gh` ou `az` absent, pas connecté) est refusé avant que rien ne soit journalisé
-(`issue-unreadable`). Un run dont le consentement de publication est donné, gardé dans
-`skraft-config.json` ou répondu à son démarrage, vérifie la forge juste après cette réponse, avant
-le premier agent : hors de portée, le run pose une question environment (`publish_consent cannot
-run on this machine: <raison>. Fix it, then RETRY; or ABORT the run.`). La raison est celle que
-`skraft doctor` donne sur sa ligne `forge`.
+(`issue-unreadable`). Un run dont le consentement de publication est accepté dans
+`skraft-config.json` vérifie la forge avant son premier agent : hors de portée, le run est refusé
+(`forge-unreachable`, `<raison>. Fix it, then start the run again.`) et ne demande rien. La raison
+est celle que `skraft doctor` donne sur sa ligne `forge`.
 
 ### GitHub par gh <!-- #github-through-gh -->
 

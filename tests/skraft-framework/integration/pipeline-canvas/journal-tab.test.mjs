@@ -27,7 +27,7 @@ test('the page gets the journal of the active pipeline beside the run: its chain
       { step: 'design', pass: 1, outcome: 'done', next: 'design_review' },
       { step: 'design_review', pass: 1, outcome: 'approved', next: 'adr' },
     ],
-    total: 5,
+    total: 3,
   })
 })
 

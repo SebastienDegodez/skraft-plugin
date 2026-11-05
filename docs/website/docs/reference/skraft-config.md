@@ -111,11 +111,11 @@ each story`. Any other value: `tdd must be { "replay": "all" or "last-red" }`.
 
 | Key | Type | Default | Effect |
 | --- | --- | --- | --- |
-| `pullRequest` | boolean | absent: `publish-consent` question | the run may push its branch, open or update its pull request and keep a progress comment on its story's issue |
-| `visuals` | boolean | absent: `reporting-consent` question (only with a front end) | the run may publish a front end's screenshots and videos in the pull request |
+| `pullRequest` | boolean | absent: a run that publishes is refused, `/skraft-init` asks for it | the run may push its branch, open or update its pull request and keep a progress comment on its story's issue |
+| `visuals` | boolean | absent: a run that publishes screenshots is refused, `/skraft-init` asks for it (only with a front end) | the run may publish a front end's screenshots and videos in the pull request |
 | `draft` | boolean | `true` | a pull request skraft opens is a draft |
 | `reviewComment` | boolean | absent: asked once per repository | `skraft review --pr --publish` may keep one comment on the pull request it reviews; written by hand in the team's file, it wins over each developer's answer, which the engine keeps in their `~/.skraft/config.json` (`reviewComments`) |
-| `questionVersions` | object | `1` per key | the version of the question's text each answer was given to (`visuals`, `pullRequest`, `reviewComment`, whole numbers from 1); an acceptance of an earlier version is asked again |
+| `questionVersions` | object | `1` per key | the version of the question's text each answer was given to (`visuals`, `pullRequest`, `reviewComment`, whole numbers from 1); an acceptance of an earlier version is not settled: the run is refused until `/skraft-init` asks again |
 
 The engine writes `pullRequest` or `visuals`, and their `questionVersions`, when a human answers
 the question, every other key of the file kept. Any other key or value:
@@ -158,10 +158,9 @@ serves the agents that use it (the backlog plugin's skills, for instance), never
 
 A run started from an issue that the forge's command line cannot read (no remote, `gh` or `az`
 missing, not signed in) is refused before anything is journaled (`issue-unreadable`). A run whose
-publish consent is given, kept in `skraft-config.json` or answered at its start, checks the
-forge right after that answer, before the first agent: out of reach, the run asks an
-environment question (`publish_consent cannot run on this machine: <reason>. Fix it, then RETRY;
-or ABORT the run.`). The reason is the one `skraft doctor` gives on its `forge` line.
+publish consent is accepted in `skraft-config.json` checks the forge before its first agent: out
+of reach, the run is refused (`forge-unreachable`, `<reason>. Fix it, then start the run again.`)
+and asks nothing. The reason is the one `skraft doctor` gives on its `forge` line.
 
 ### GitHub through gh <!-- #github-through-gh -->
 

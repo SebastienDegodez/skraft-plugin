@@ -291,7 +291,10 @@ const NOTHING_TO_MUTATE = [
  * `app` turns contract testing on. Each folder of `skills`, relative to the working copy, holds a
  * SKILL.md of the working copy.
  */
-export const pipelineRepository = (t, { security = false, lens = false, lensSkills = [], models, tdd, publish = { pullRequest: false }, frontend = false, contractTesting = false, skills = [] } = {}) => {
+/** The publication consents settled, as /skraft-init leaves them: a configuration a run may start on. */
+export const SETTLED_PUBLISH = Object.freeze({ pullRequest: false, visuals: false, questionVersions: Object.freeze({ pullRequest: 2, visuals: 1 }) })
+
+export const pipelineRepository = (t, { security = false, lens = false, lensSkills = [], models, tdd, publish = SETTLED_PUBLISH, frontend = false, contractTesting = false, skills = [] } = {}) => {
   const cwd = join(tempFolder(t, 'skraft-pipeline-'), 'payment')
   mkdirSync(cwd)
   const config = {

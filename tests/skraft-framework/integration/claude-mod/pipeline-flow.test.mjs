@@ -37,7 +37,7 @@ test('/skraft on a repository with a front end leaves its light and dark screens
 })
 
 test('/skraft runs the four phases on a real repository: each subagent commits its part, the gates run the tests, DELIVER closes, then PUBLISH writes the pull request', async (t) => {
-  const { cwd } = pipelineRepository(t, { publish: null })
+  const { cwd } = pipelineRepository(t, { publish: { pullRequest: true, visuals: false, questionVersions: { pullRequest: 2, visuals: 1 } } })
   issueForge(t, cwd)
 
   const { text, outcome, mod, spawns, events } = await runOn(cwd, { args: `${SLUG} #42 Pay by card` })
@@ -57,8 +57,8 @@ test('/skraft runs the four phases on a real repository: each subagent commits i
   assert.deepEqual(spawns.filter((spawn) => !spawn.prompt.includes('- Story: #42 — Pay by card')).map(({ subagentType }) => subagentType), ['skraft:cold-reader-lens'])
   assert.deepEqual(reviewsOf(events), [['design_review', 1, 'approved', 'adr'], ['distill_review', 1, 'approved', 'deliver'], ['deliver_review', 1, 'approved', 'mutation']])
   assert.deepEqual(events.filter((event) => event.type === 'phase.closed').map((event) => event.phase), ['RESEARCH', 'DESIGN', 'DISTILL', 'DELIVER', 'PUBLISH'])
-  assert.deepEqual(mod.asked.map(({ options }) => [options.header, options.options]).slice(0, 2), [['Pull request', ['ACCEPTED', 'DECLINED']], ['ADR', ['RATIFIED', 'REJECTED']]])
-  assert.deepEqual(JSON.parse(readFileSync(join(cwd, 'skraft-config.json'), 'utf8')).publish, { pullRequest: true, questionVersions: { pullRequest: 2 } })
+  assert.deepEqual(mod.asked.map(({ options }) => [options.header, options.options]).slice(0, 1), [['ADR', ['RATIFIED', 'REJECTED']]])
+  assert.deepEqual(JSON.parse(readFileSync(join(cwd, 'skraft-config.json'), 'utf8')).publish, { pullRequest: true, visuals: false, questionVersions: { pullRequest: 2, visuals: 1 } })
   assert.deepEqual(recorded(events, 'publish').map(({ outcome: result, reason }) => [result, reason]), [['local', `pull request not opened: ${NO_PULL_REQUEST}; pull-request.md holds its description, and skraft publish opens it once that is fixed`]])
   assert.ok(readFileSync(join(cwd, '.copilot-tracking', 'skraft-plans', SLUG, 'pull-request.md'), 'utf8').startsWith('Pay by card at checkout\n\nRefs #42\n'))
   assert.deepEqual(events.filter((event) => event.type === 'gate.ran').map(({ component, gate, status }) => `${component}/${gate} ${status}`), ['app/test pass', 'app/mutation pass'])
