@@ -682,8 +682,7 @@ test('ACCEPT typed at the question of a ceiling with a high finding left is an i
 })
 
 test('a review with only medium and low findings left after three passes lets the developer ACCEPT them: the run goes on past the review, and the report and the pull request list them (#499)', async () => {
-  // The developer answers the pull request's consent first, then the ceiling's question.
-  const host = scripted({ config: { publish: { visuals: false } }, answers: [{ answer: 'DECLINED' }, { answer: 'ACCEPT' }] }, (it) => [...designUntilCeiling(it), ...nominal(it).slice(2)])
+  const host = scripted({ answers: [{ answer: 'ACCEPT' }] }, (it) => [...designUntilCeiling(it), ...nominal(it).slice(2)])
   const medium = says('consistency', 'fail', [
     finding('F1', 'medium', 'a read model is classified twice', { location: 'docs/architecture/payments.md:7' }), finding('F2', 'low', 'a typo | in the title', { location: '' }),
     finding('F3', 'medium', 'the map names no currency', { location: 'docs/architecture/payments.md:9' }),
@@ -695,8 +694,7 @@ test('a review with only medium and low findings left after three passes lets th
   const outcome = await host.start()
 
   assert.equal(outcome.status, 'done')
-  const [consent, asked] = host.human.questions
-  assert.equal(consent.kind, 'publish-consent')
+  const [asked] = host.human.questions
   assert.deepEqual([asked.kind, asked.header, asked.options], ['review-ceiling', 'Review', ['ACCEPT', 'STOP']])
   assert.equal(asked.text, [
     'design_review: design did not fix every finding after 4 passes, so the run does not send it back again.',

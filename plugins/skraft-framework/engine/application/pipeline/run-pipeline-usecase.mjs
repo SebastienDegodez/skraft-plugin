@@ -28,6 +28,7 @@ import { boundInputs } from './review-inputs.mjs'
 import { leave } from './run-routes.mjs'
 import { answerOrWait, askStep, blockQuestion, escalate, settleEnvironment } from './run-questions.mjs'
 import { confirmConfiguration } from './configuration-question.mjs'
+import { cannotStart } from './initialised.mjs'
 import { publishStep } from './publish-step.mjs'
 import { reportProgress } from '../publish/issue-progress.mjs'
 import { storyLanguage } from '../publish/story-language.mjs'
@@ -178,10 +179,14 @@ const runGuarded = async (context) => {
 const blockedBeforeStart = (slug, code, reason) => ({ status: 'blocked', slug, phase: null, code, reason })
 
 /**
- * Nothing starts before a person the driver asks confirms the configuration.
+ * Nothing starts before a person the driver asks confirms the configuration, and nothing starts on
+ * one `/skraft-init` has not settled. The confirmation comes first: it is where the person fixes
+ * the configuration, so the run reads it as they leave it.
  * @param {Context} context @returns {Promise<RunOutcome>}
  */
-const confirmedThenRun = async (context) => (await confirmConfiguration(context, deriveRun(context.journal.events), context.confirm)) ?? runFrom(context)
+const confirmedThenRun = async (context) => (await confirmConfiguration(context, deriveRun(context.journal.events), context.confirm))
+  ?? (await cannotStart(context))
+  ?? runFrom(context)
 
 /** @param {Context} context @returns {Promise<RunOutcome>} */
 const runFrom = async (context) => {

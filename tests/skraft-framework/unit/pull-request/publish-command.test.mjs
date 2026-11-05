@@ -44,7 +44,7 @@ test('skraft publish typed by the developer is the consent for that run: the sto
 
   assert.deepEqual(await declined.publish(), { ok: true, slug: SLUG, code: null, reason: 'pull request #42 opened as a draft: https://github.example.com/acme/shop/pull/42' })
 
-  assert.deepEqual(declined.workspace.config().publish, { pullRequest: false, visuals: false })
+  assert.deepEqual(declined.workspace.config().publish, { pullRequest: false, visuals: false, questionVersions: { pullRequest: 2, visuals: 1 } })
   const [requested] = eventsOf(declined, 'publish.requested')
   assert.deepEqual({ by: requested.by, consent: requested.consent }, { by: 'skraft publish', consent: false })
   assert.deepEqual(declined.types().slice(-5), ['publish.requested', 'forge.write', 'pull-request.create-started', 'pull-request.opened', 'forge.write'])

@@ -8,7 +8,7 @@ import { inert } from '../reporting/markdown-safety.mjs'
  * it, STOP ends the run. The mutation-plan question takes APPLY, an instruction of the
  * developer's own, which goes on as APPLY does, or STOP.
  *
- * @typedef {'adr-ratification' | 'reporting-consent' | 'publish-consent' | 'mutation-plan'} NodeQuestion
+ * @typedef {'adr-ratification' | 'mutation-plan'} NodeQuestion
  * @typedef {NodeQuestion | 'environment' | 'review-consent' | 'blocked' | 'review-ceiling' | 'configuration'} QuestionKind
  * @typedef {{ options: readonly string[], refusals: readonly string[], header: string, instruction: boolean }} QuestionSpec
  *   options: the answers, the one that lets the run go on first; refusals: the answers that send
@@ -41,8 +41,6 @@ export const APPLY = 'APPLY'
 /** @type {Readonly<Record<QuestionKind, QuestionSpec>>} */
 const QUESTIONS = Object.freeze({
   'adr-ratification': Object.freeze({ options: Object.freeze(['RATIFIED', 'REJECTED']), refusals: Object.freeze(['REJECTED']), header: 'ADR', instruction: false }),
-  'reporting-consent': Object.freeze({ options: Object.freeze(['ACCEPTED', 'DECLINED']), refusals: Object.freeze([]), header: 'Reporting', instruction: false }),
-  'publish-consent': Object.freeze({ options: Object.freeze(['ACCEPTED', 'DECLINED']), refusals: Object.freeze([]), header: 'Pull request', instruction: false }),
   'mutation-plan': Object.freeze({ options: Object.freeze([APPLY, STOP]), refusals: Object.freeze([]), header: 'Mutation', instruction: true }),
   environment: Object.freeze({ options: Object.freeze(['RETRY', 'ABORT']), refusals: Object.freeze([]), header: 'Environment', instruction: false }),
   'review-consent': Object.freeze({ options: Object.freeze(['ACCEPTED', 'DECLINED']), refusals: Object.freeze([]), header: 'PR comment', instruction: false }),
@@ -51,11 +49,8 @@ const QUESTIONS = Object.freeze({
   [CONFIGURATION]: Object.freeze({ options: Object.freeze([START, STOP]), refusals: Object.freeze([]), header: 'Config', instruction: false }),
 })
 
-/** The node questions the configuration answers once kept: a run asks them only while it does not. */
-export const CONSENT_QUESTIONS = Object.freeze(/** @type {NodeQuestion[]} */ (['publish-consent', 'reporting-consent']))
-
 /** The questions a workflow node may ask. */
-export const NODE_QUESTIONS = Object.freeze(/** @type {NodeQuestion[]} */ (['adr-ratification', 'reporting-consent', 'publish-consent', 'mutation-plan']))
+export const NODE_QUESTIONS = Object.freeze(/** @type {NodeQuestion[]} */ (['adr-ratification', 'mutation-plan']))
 
 /** A reason is kept on one line, at most this long. */
 const REASON_LENGTH = 500
@@ -99,8 +94,14 @@ export const questionKey = (step, asked) => `${step}-${asked + 1}`
 export const ratificationText = (adrs) =>
   `Ratify the Proposed ADRs ${adrs.join(', ')}? RATIFIED marks them Accepted; REJECTED sends DESIGN back with your reason.`
 
+export const CONFIGURATION_TEXT =
+  'Start this run with the configuration of this working copy? The Configuration tab of the skraft canvas and skraft doctor show it. ' +
+  'START goes on, and is kept in skraft-config.local.json (configurationConfirmed) so that later runs start without asking; STOP starts nothing.'
+
 // Each consent text changes only with its version in consents.mjs: an acceptance of an earlier
-// text is asked again (tests/skraft-framework/unit/decisions/consent-versions.test.mjs pins them).
+// text is not settled, so /skraft-init asks it again
+// (tests/skraft-framework/unit/decisions/consent-versions.test.mjs pins them). The engine asks
+// none of them itself; it owns their wording so that a change to it carries a version with it.
 export const CONSENT_TEXT =
   'May skraft publish the screenshots and videos of its runs in the pull request of the branch? They can show private data. ' +
   'ACCEPTED or DECLINED; the answer is kept in skraft-config.json for every later run.'
@@ -108,10 +109,6 @@ export const CONSENT_TEXT =
 export const PUBLISH_CONSENT_TEXT =
   'May skraft push this branch and open or update its pull request when a run ends, and keep one comment on its story\'s issue up to date with the run\'s progress, time and cost? ' +
   'ACCEPTED or DECLINED; the answer is kept in skraft-config.json (publish.pullRequest) for every later run.'
-
-export const CONFIGURATION_TEXT =
-  'Start this run with the configuration of this working copy? The Configuration tab of the skraft canvas and skraft doctor show it. ' +
-  'START goes on, and is kept in skraft-config.local.json (configurationConfirmed) so that later runs start without asking; STOP starts nothing.'
 
 export const REVIEW_CONSENT_TEXT =
   'May skraft keep one comment on the pull request it reviews with skraft review --pr --publish, rewritten at each review, with the verdict and the findings? It is posted as you. ' +

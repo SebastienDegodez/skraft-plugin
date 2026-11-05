@@ -50,13 +50,19 @@ Ask each one with the host's question tool (`AskUserQuestion` on Claude Code, `a
 Copilot), never by writing a line and reading the answer from the transcript. Record an answer
 only once the tool returns it.
 
-| Consent | The question | Written to |
-| --- | --- | --- |
-| `pullRequest` | May a run push the branch and open its pull request, and keep a comment on the issue? | `publish.pullRequest` |
-| `visuals` | May a run commit the end-to-end screenshots of a front end? | `publish.visuals` |
+Ask each one in these words, which are the ones the answer is kept against:
 
-Ask `visuals` only when a component is a front end (a `react` stack, or an `e2e` command). Write
-each answer with the version of the question it answers, under `publish.questionVersions`.
+- `publish.pullRequest` — *May skraft push this branch and open or update its pull request when a
+  run ends, and keep one comment on its story's issue up to date with the run's progress, time and
+  cost?*
+- `publish.visuals` — *May skraft publish the screenshots and videos of its runs in the pull
+  request of the branch? They can show private data.*
+
+Ask `visuals` only when a component is a front end (a `react` stack, or an `e2e` command).
+
+Write each answer with the version of the question it answers, under `publish.questionVersions`:
+`pullRequest` is at version 2, `visuals` at version 1. An answer kept against an earlier version
+is not settled, and a run is refused until you ask again.
 
 A refusal is an answer: a run then publishes nothing and is not held up.
 

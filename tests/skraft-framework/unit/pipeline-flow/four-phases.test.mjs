@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { agent, API, CONSENTS, nominal, pipelineHost, REFS_42, RESEARCH_TEMPLATE, scripted, SLUG, TRACKING } from '../support/pipeline-host.mjs'
+import { agent, API, nominal, pipelineHost, REFS_42, RESEARCH_TEMPLATE, scripted, SLUG, TRACKING } from '../support/pipeline-host.mjs'
 
 const RESEARCH = 'research/2026-10-11/checkout-research.md'
 const MATRIX = 'details/2026-10-11/consistency-matrix-checkout.md'
@@ -25,8 +25,6 @@ test('the nominal run goes through RESEARCH, DESIGN, DISTILL and DELIVER, the ga
   ])
   assert.deepEqual(host.types(), [
     'run.started',
-    'step.started', 'step.recorded',
-    'step.started', 'step.recorded',
     'step.started', 'step.recorded', 'phase.closed', 'issue.comment-skipped',
     'step.started', 'step.recorded',
     'step.started', 'review.lens', 'review.lens', 'review.lens', 'step.recorded',
@@ -49,8 +47,6 @@ test('the nominal run goes through RESEARCH, DESIGN, DISTILL and DELIVER, the ga
   assert.deepEqual(events.filter((event) => event.type === 'step.recorded' && event.committed !== undefined).map((event) => event.step), ['design'])
   assert.deepEqual([...new Set(events.filter((event) => event.type === 'issue.comment-skipped').map((event) => event.reason))], ['skraft-config.json does not set publish.pullRequest to true'])
   assert.deepEqual(events.filter((event) => event.type === 'step.recorded').map(({ step, outcome: result, code, next }) => [step, result, code, next]), [
-    ['publish_consent', 'skipped', null, 'visuals_consent'],
-    ['visuals_consent', 'skipped', null, 'research'],
     ['research', 'done', null, 'design'],
     ['design', 'done', null, 'design_review'],
     ['design_review', 'approved', null, 'adr'],
@@ -67,8 +63,7 @@ test('the nominal run goes through RESEARCH, DESIGN, DISTILL and DELIVER, the ga
   ])
   assert.deepEqual(events.at(-2), { ...events.at(-2), type: 'run.finished', status: 'completed', reason: 'PUBLISH closed' })
   assert.deepEqual(host.progress.lines, [
-    'phase RESEARCH', `${SLUG}: publish_consent DECLINED (skraft-config.json sets publish.pullRequest to false)`,
-    `${SLUG}: visuals_consent DECLINED (no component of skraft-config.json is a front end (stack react, or an e2e command), so no screenshot is taken)`,
+    'phase RESEARCH',
     `${SLUG}: solution-researcher, attempt 1 — researcher · economy · haiku`, `${SLUG}: RESEARCH closed`,
     'phase DESIGN', `${SLUG}: solution-architect, attempt 1 — planner · frontier · opus`,
     `${SLUG}: design_review (consistency, architecture-compliance, fitness) — reviewer · economy · haiku`, `${SLUG}: design_review APPROVED: every lens passed`,
@@ -236,7 +231,7 @@ test('a document that quotes double braces of its subject, not of its template, 
 
   await host.start()
 
-  const recorded = host.events().filter((event) => event.type === 'step.recorded' && !CONSENTS.includes(event.step))
+  const recorded = host.events().filter((event) => event.type === 'step.recorded')
   assert.deepEqual(recorded.map(({ step, outcome, missing }) => [step, outcome, missing]), [['research', 'done', []]])
 })
 
@@ -262,9 +257,9 @@ test('a missing document is asked again with its path, and a retry that fills it
     'Missing outputs from attempt 1 of 3:',
     `- ${TRACKING}/${RESEARCH}`,
   ].join('\n'))
-  const recorded = host.events().filter((event) => event.type === 'step.recorded' && !CONSENTS.includes(event.step))
+  const recorded = host.events().filter((event) => event.type === 'step.recorded')
   assert.deepEqual(recorded.map(({ outcome, code, missing, next }) => [outcome, code, missing, next]), [['failed', 'missing-outputs', [RESEARCH], null], ['done', null, [], 'design']])
-  assert.deepEqual(host.events().filter((event) => event.type === 'step.started' && !CONSENTS.includes(event.step)).map((event) => [event.attempt, event.missing, event.outputs]), [
+  assert.deepEqual(host.events().filter((event) => event.type === 'step.started').map((event) => [event.attempt, event.missing, event.outputs]), [
     [1, [], [RESEARCH]], [2, [RESEARCH], [RESEARCH]], [1, [], [MATRIX]],
   ])
 })
@@ -274,7 +269,7 @@ test('a retry after midnight keeps the paths of the first attempt', async () => 
 
   await host.start()
 
-  assert.deepEqual(host.events().filter((event) => event.type === 'step.started').map((event) => event.outputs), [[], [], [RESEARCH], [RESEARCH], ['details/2026-10-12/consistency-matrix-checkout.md']])
+  assert.deepEqual(host.events().filter((event) => event.type === 'step.started').map((event) => event.outputs), [[RESEARCH], [RESEARCH], ['details/2026-10-12/consistency-matrix-checkout.md']])
 })
 
 test('an agent the host cannot start stops the run without spending the attempt; the next run dispatches it again', async () => {
@@ -283,8 +278,8 @@ test('an agent the host cannot start stops the run without spending the attempt;
   const outcome = await host.start()
 
   assert.deepEqual(outcome, { status: 'blocked', slug: SLUG, phase: 'RESEARCH', code: 'agent-unavailable', reason: 'agent "solution-researcher" is not installed' })
-  assert.deepEqual(host.types(), ['run.started', 'step.started', 'step.recorded', 'step.started', 'step.recorded', 'step.started', 'run.stopped'])
-  assert.deepEqual(host.events()[6], { ...host.events()[6], code: 'agent-unavailable', reason: outcome.reason })
+  assert.deepEqual(host.types(), ['run.started', 'step.started', 'run.stopped'])
+  assert.deepEqual(host.events()[2], { ...host.events()[2], code: 'agent-unavailable', reason: outcome.reason })
 
   host.agentRunner.behaviours.push(() => ({ ok: false, unavailable: true, text: '' }))
   assert.equal((await host.run()).reason, 'solution-researcher could not be started')
@@ -300,7 +295,7 @@ test('an agent that stops without finishing stops the run; one that answers noth
   const outcome = await host.start()
 
   assert.deepEqual(outcome, { status: 'blocked', slug: SLUG, phase: 'RESEARCH', code: 'agent-failed', reason: 'solution-researcher stopped without finishing: aborted by the user' })
-  assert.deepEqual(host.types(), ['run.started', 'step.started', 'step.recorded', 'step.started', 'step.recorded', 'step.started', 'run.stopped'])
+  assert.deepEqual(host.types(), ['run.started', 'step.started', 'run.stopped'])
   host.agentRunner.behaviours.push(() => ({ ok: false, text: '' }))
   assert.equal((await host.run()).reason, 'solution-researcher stopped without finishing: no answer')
 

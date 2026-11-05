@@ -21,7 +21,8 @@ export const SLUG = 'checkout'
  */
 export const DOCS_FOLDERS = Object.freeze({ 'docs/adr/.gitkeep': '', 'docs/domain/event-model/.gitkeep': '', 'docs/features/.gitkeep': '' })
 /** The consent questions the default workflow asks before its first agent. */
-export const CONSENTS = Object.freeze(['publish_consent', 'visuals_consent'])
+/** The publication consents settled, as /skraft-init leaves them: a configuration a run may start on. */
+export const SETTLED_PUBLISH = Object.freeze({ pullRequest: false, visuals: false, questionVersions: Object.freeze({ pullRequest: 2, visuals: 1 }) })
 export const RESEARCH_TEMPLATE = '<!-- markdownlint-disable-file -->\n# Research: {{topic}}\n'
 export const TRACKING = `/work/.copilot-tracking/skraft-plans/${SLUG}`
 /** The plugin's templates of the pull request prose the pr-writer fills, for an English story and a French one. */
@@ -55,7 +56,7 @@ export const pipelineHost = ({
   tracking = new InMemoryTracking(), owner = 'session-a', journalKeys = tracking.journalKeys, forge = 'github',
   slug = SLUG,
 } = {}) => {
-  const answered = answeredConsents(workflow ?? BUILT_IN_WORKFLOW)
+  const answered = answeredConsents()
   const deps = {
     journal: tracking,
     activePipeline: tracking,
@@ -122,14 +123,8 @@ export const pipelineHost = ({
   return host
 }
 
-/** publish set to false for each consent the workflow asks, none when it asks neither. @param {string} workflow */
-const answeredConsents = (workflow) => {
-  const publish = {
-    ...(workflow.includes('"publish-consent"') ? { pullRequest: false } : {}),
-    ...(workflow.includes('"reporting-consent"') ? { visuals: false } : {}),
-  }
-  return Object.keys(publish).length > 0 ? { publish } : {}
-}
+/** The publication consents settled, as /skraft-init leaves them, so that no run is refused for want of them. */
+const answeredConsents = () => ({ publish: SETTLED_PUBLISH })
 
 /** The last step.started of the journal: what the dispatched agent was asked for. */
 const asked = (host) => host.tracking.journal(host.slug).filter((event) => event.type === 'step.started').at(-1)

@@ -238,8 +238,8 @@ test('a v1 run in its first phase restarts at the first node of the workflow, wi
 
   const outcome = await createMigrate(deps).migrate({ dryRun: false })
 
-  assert.deepEqual(tracking.journal('checkout-flow').map(({ type, start }) => [type, start]), [['run.started', 'publish_consent']])
-  assert.equal(outcome.pipelines[0].reason, 'checkout-flow: RESEARCH restarts at publish_consent; resume it with skraft init checkout-flow')
+  assert.deepEqual(tracking.journal('checkout-flow').map(({ type, start }) => [type, start]), [['run.started', 'research']])
+  assert.equal(outcome.pipelines[0].reason, 'checkout-flow: RESEARCH restarts at research; resume it with skraft init checkout-flow')
 })
 
 test('one artefact path of a completed phase whose file is gone is reported as one, by its reason', async () => {

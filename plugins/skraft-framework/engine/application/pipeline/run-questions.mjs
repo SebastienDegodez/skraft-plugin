@@ -1,9 +1,8 @@
 import { CONFIG_FILE, withPublishSetting } from '../../domain/config/skraft-config.mjs'
-import { APPLY, BLOCKED, CONSENT_TEXT, REVIEW_CEILING, acceptable, reviewCeilingText, PUBLISH_CONSENT_TEXT, STOP, blockText, decideUsage, edgeAnswerOf, environmentText, mutationPlanText, questionKey, questionOf, ratificationText, readAnswer } from '../../domain/decisions/questions.mjs'
+import { APPLY, BLOCKED, REVIEW_CEILING, acceptable, reviewCeilingText, STOP, blockText, decideUsage, edgeAnswerOf, environmentText, mutationPlanText, questionKey, questionOf, ratificationText, readAnswer } from '../../domain/decisions/questions.mjs'
 import { trackingFolder } from '../../domain/pipeline/roles.mjs'
 import { causeFields } from '../../domain/pipeline/next-step.mjs'
 import { issueOf } from '../../domain/pipeline/commits.mjs'
-import { CONSENT_VERSIONS, consentOf } from '../../domain/decisions/consents.mjs'
 import { dayOf } from '../../domain/pipeline/outputs.mjs'
 import { isFrontend, NO_FRONT_END } from '../../domain/reporting/visuals.mjs'
 import { proposedAdrs, ratify } from '../decisions/adr-ratification.mjs'
@@ -33,7 +32,7 @@ import { verdictPath } from '../review/review-runs.mjs'
  * }} Context
  * @typedef {{ answer: string, reason: string | null }} Answer
  * @typedef {{ answered: Answer } | { text: string, subjects: string[] } | { environment: string }} Plan
- *   answered: the question needs no human (nothing to ratify, consent already given);
+ *   answered: the question needs no human (nothing to ratify);
  *   environment: the machine cannot tell what to ask.
  * @typedef {{ failures: string[] } | { environment: string } | { stop: string }} Act
  *   failures: what goes on to the node an answer leads to; stop: why the answer ends the run.
@@ -47,43 +46,6 @@ const RATIFICATION = {
     ? committed(await ratify(deps, { adrs: asked.subjects, day: dayOf(deps.clock.now()), issue: issueOf(run.story) }))
     : { failures: [`${asked.subjects.join(', ')}: ${asked.reason}`] }),
 }
-
-/**
- * A consent asked once per repository, and again when its question's text changed since an
- * acceptance, kept in skraft-config.json under publish; not asked, and nothing kept, while the
- * configuration has nothing it is about. Accepted, kept or given now, it asks to fix this machine
- * when it misses what the consent needs, before anything goes on.
- * @param {'visuals' | 'pullRequest'} key
- * @param {(config: import('../../domain/config/skraft-config.mjs').SkraftConfig) => string | null} [moot] why there is nothing to consent to
- * @param {(context: Context) => Promise<string | null>} [needs] what this machine misses to act on the consent, null for nothing
- * @returns {Questionnaire}
- */
-const consent = (key, moot = () => null, needs = async () => null) => ({
-  plan: async (context) => {
-    const why = moot(context.config)
-    if (why !== null) return { answered: { answer: 'DECLINED', reason: why } }
-    const plan = consentPlan(key, context.config.publish)
-    return unlessMissing(plan, 'answered' in plan && plan.answered.answer === 'ACCEPTED', () => needs(context))
-  },
-  act: async (context, asked) => unlessMissing(await keepConsent(context, key, asked.answer === 'ACCEPTED'), asked.answer === 'ACCEPTED', () => needs(context)),
-})
-
-/**
- * What a consent accepted turns into when the machine misses what it needs: the environment question.
- * @template {Plan | Act} T @param {T} done @param {boolean} accepted @param {() => Promise<string | null>} needs
- * @returns {Promise<T | { environment: string }>}
- */
-const unlessMissing = async (done, accepted, needs) => {
-  if (!accepted) return done
-  const missing = await needs()
-  return missing === null ? done : { environment: missing }
-}
-
-/** The forge the pull request is opened on, out of this machine's reach. @param {Context} context */
-const forgeOutOfReach = ({ deps, config }) => forgeMissing(deps, config.forge)
-
-/** @param {import('../../domain/config/skraft-config.mjs').SkraftConfig} config */
-const noFrontEnd = (config) => (config.components.some(isFrontend) ? null : `${NO_FRONT_END}, so no screenshot is taken`)
 
 /**
  * The mutation plan: the proposals the step before it wrote, asked once; APPLY or the developer's
@@ -120,7 +82,7 @@ const planChosen = ({ deps, slug }, { answer, subjects, step }) => {
 }
 
 /** @type {Readonly<Record<NodeQuestion, Questionnaire>>} */
-const QUESTIONNAIRES = Object.freeze({ 'adr-ratification': RATIFICATION, 'reporting-consent': consent('visuals', noFrontEnd), 'publish-consent': consent('pullRequest', undefined, forgeOutOfReach), 'mutation-plan': MUTATION_PLAN })
+const QUESTIONNAIRES = Object.freeze({ 'adr-ratification': RATIFICATION, 'mutation-plan': MUTATION_PLAN })
 
 /** @param {string[] | string} adrs a string: why they cannot be listed @returns {Plan} */
 const adrPlan = (adrs) => {
@@ -128,56 +90,8 @@ const adrPlan = (adrs) => {
   return adrs.length === 0 ? { answered: { answer: 'RATIFIED', reason: 'no Proposed ADR to ratify' } } : { text: ratificationText(adrs), subjects: adrs }
 }
 
-/** The question each consent asks. */
-const CONSENT_TEXTS = Object.freeze({ visuals: CONSENT_TEXT, pullRequest: PUBLISH_CONSENT_TEXT })
-
-/**
- * Asked while unanswered, or accepted for an earlier text of the question.
- * @param {'visuals' | 'pullRequest'} key @param {import('../../domain/config/skraft-config.mjs').Publish} publish @returns {Plan}
- */
-const consentPlan = (key, publish) => {
-  const state = consentOf(publish, key)
-  if (toAsk(state)) return { text: CONSENT_TEXTS[key], subjects: [] }
-  return { answered: { answer: state === 'declined' ? 'DECLINED' : 'ACCEPTED', reason: `${CONFIG_FILE} sets publish.${key} to ${publish[key]}` } }
-}
-
-/** A consent nobody gave, or gave to an earlier text of its question. @param {import('../../domain/decisions/consents.mjs').ConsentState} state */
-const toAsk = (state) => state === 'unanswered' || state === 'outdated'
-
 /** @param {{ ok: true } | { ok: false, error: string }} commit @returns {Act} */
 const committed = (commit) => (commit.ok ? { failures: [] } : { environment: commit.error })
-
-/**
- * The answer written into skraft-config.json, and into the configuration the run goes on with.
- * @param {Context} context @param {'visuals' | 'pullRequest'} key @param {boolean} value @returns {Promise<Act>}
- */
-const keepConsent = async (context, key, value) => {
-  const config = await loadConfig(context.deps)
-  if (!config.ok) return { environment: config.reason }
-  await context.deps.workspace.write(CONFIG_FILE, withPublishSetting(config.raw, key, value))
-  const { publish } = config.config
-  context.config = { ...config.config, publish: { ...publish, [key]: value, questionVersions: { ...publish.questionVersions, [key]: CONSENT_VERSIONS[key] } } }
-  return { failures: [] }
-}
-
-/**
- * The screenshots consent, asked by the visuals node itself when a front end is there and nobody
- * answered it yet: asked once, kept like the reporting-consent node keeps it.
- * @param {Context} context @param {RunState} run @param {WorkStep} next
- * @returns {Promise<{ stop: RunOutcome | null } | null>} null: the node goes on; stop: what the run stops with
- */
-export const visualsConsent = async (context, run, next) => {
-  if (!toAsk(consentOf(context.config.publish, 'visuals')) || !context.config.components.some(isFrontend)) return null
-  // The node's first question is its consent: once kept, the configuration answers it on every later visit.
-  const open = Object.values(run.questions).find(({ step }) => step === next.node.id)
-    ?? (await askQuestion(context, { kind: 'reporting-consent', step: next.node.id, visit: next.visit }, { text: CONSENT_TEXT, subjects: [] }))
-  const answer = open.answer ?? (await answerNow(context, open))?.answer
-  if (answer === undefined) return { stop: waiting(context, open, next.phase) }
-  return keptAtStep(context, next, await keepConsent(context, 'visuals', answer === 'ACCEPTED'))
-}
-
-/** @param {Context} context @param {WorkStep} next @param {Act} done @returns {Promise<{ stop: RunOutcome | null } | null>} */
-const keptAtStep = async (context, next, done) => ('environment' in done ? { stop: await escalate(context, next, done.environment) } : null)
 
 /**
  * An ask node: the question asked once, its answer acted on, the run routed by it.

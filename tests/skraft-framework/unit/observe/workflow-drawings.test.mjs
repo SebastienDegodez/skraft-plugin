@@ -13,7 +13,7 @@ test('the workflows a run of this working copy can follow are drawn before any r
   assert.deepEqual(more, [])
   assert.deepEqual([pipeline.name, pipeline.file, pipeline.goal, review.name, review.file, review.goal], ['pipeline', null, 'Deliver the story', 'review', null, 'Review the changes'])
   assert.deepEqual(pipeline.steps.map(({ id }) => id), [
-    'publish_consent', 'visuals_consent', 'research', 'design', 'design_review', 'adr', 'distill', 'distill_review', 'deliver', 'gates',
+    'research', 'design', 'design_review', 'adr', 'distill', 'distill_review', 'deliver', 'gates',
     'deliver_review', 'mutation', 'kill_proposal', 'mutation_plan', 'kill_mutants', 'mutation_review', 'mutation_gates', 'visuals', 'pr_writer', 'publish',
   ])
   const steps = Object.fromEntries(pipeline.steps.map((step) => [step.id, shape(step)]))
@@ -77,12 +77,12 @@ test('a rework a review sends to a step of its own is drawn right after the revi
   assert.deepEqual(pipeline.steps.find(({ id }) => id === 'check').refuter, { id: 'refuter', agent: 'finding-refuter', mandatory: false })
 })
 
-const WORKFLOW = `digraph consent {
+const WORKFLOW = `digraph asking {
   start    [shape=Mdiamond]
   research [shape=box, agent="solution-researcher", phase="RESEARCH"]
-  consent  [shape=hexagon, question="publish-consent"]
+  plan     [shape=hexagon, question="mutation-plan"]
   exit     [shape=Msquare]
-  start -> research -> consent -> exit
+  start -> research -> plan -> exit
 }`
 
 test('the pipeline a run follows is drawn with where the run stands: each step done, open or pending, and how often each edge was taken; a workflow the working copy ejected is named by its file', async () => {
@@ -92,10 +92,10 @@ test('the pipeline a run follows is drawn with where the run stands: each step d
   const [pipeline, ...called] = await createObserve(host.deps).workflows()
 
   assert.deepEqual([pipeline.name, pipeline.file, called], ['pipeline', '.skraft/pipeline.skraft.dot', []])
-  assert.deepEqual(pipeline.steps.map(where), [['research', 'done', 1], ['consent', 'open', 1]])
+  assert.deepEqual(pipeline.steps.map(where), [['research', 'done', 1], ['plan', 'open', 1]])
   assert.deepEqual(pipeline.edges, [
     { from: 'start', to: 'research', label: null, maxVisits: null, taken: 0 },
-    { from: 'research', to: 'consent', label: null, maxVisits: null, taken: 1 },
-    { from: 'consent', to: 'exit', label: null, maxVisits: null, taken: 0 },
+    { from: 'research', to: 'plan', label: null, maxVisits: null, taken: 1 },
+    { from: 'plan', to: 'exit', label: null, maxVisits: null, taken: 0 },
   ])
 })

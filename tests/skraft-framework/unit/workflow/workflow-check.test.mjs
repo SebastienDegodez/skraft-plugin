@@ -63,8 +63,6 @@ test('with no workflow designated, the plugin workflow runs and checks ok with i
       start: 'start',
       nodes: {
         start: node('start', 'start'),
-        publish_consent: node('publish_consent', 'ask', { phase: 'RESEARCH', question: 'publish-consent' }),
-        visuals_consent: node('visuals_consent', 'ask', { phase: 'RESEARCH', question: 'reporting-consent' }),
         research: node('research', 'agent', { phase: 'RESEARCH', agent: 'solution-researcher' }),
         design: node('design', 'agent', { phase: 'DESIGN', agent: 'solution-architect' }),
         design_review: review('design_review', 'DESIGN', { mandatory: ['review'] }),
@@ -85,11 +83,9 @@ test('with no workflow designated, the plugin workflow runs and checks ok with i
         publish: node('publish', 'publish', { phase: 'PUBLISH', publish: 'pull-request' }),
         exit: node('exit', 'exit', { phase: 'PUBLISH' }),
       },
-      order: ['start', 'publish_consent', 'visuals_consent', 'research', 'design', 'design_review', 'adr', 'distill', 'distill_review', 'deliver', 'gates', 'deliver_review', 'mutation', 'visuals', 'kill_proposal', 'pr_writer', 'mutation_plan', 'publish', 'kill_mutants', 'exit', 'mutation_review', 'mutation_gates'],
+      order: ['start', 'research', 'design', 'design_review', 'adr', 'distill', 'distill_review', 'deliver', 'gates', 'deliver_review', 'mutation', 'visuals', 'kill_proposal', 'pr_writer', 'mutation_plan', 'publish', 'kill_mutants', 'exit', 'mutation_review', 'mutation_gates'],
       edges: [
-        { from: 'start', to: 'publish_consent', label: null, maxVisits: null },
-        { from: 'publish_consent', to: 'visuals_consent', label: null, maxVisits: null },
-        { from: 'visuals_consent', to: 'research', label: null, maxVisits: null },
+        { from: 'start', to: 'research', label: null, maxVisits: null },
         { from: 'research', to: 'design', label: null, maxVisits: null },
         { from: 'design', to: 'design_review', label: null, maxVisits: null },
         { from: 'design_review', to: 'design', label: 'NEEDS_REWORK', maxVisits: 3 },
@@ -136,7 +132,7 @@ test('a repository agent added between design and distill checks ok and runs in 
     writes: ['docs/security/', 'src/'],
     maxAttempts: 2,
   }))
-  assert.deepEqual(loaded.workflow.order, ['start', 'publish_consent', 'visuals_consent', 'research', 'design', 'security', 'design_review', 'adr', 'distill', 'distill_review', 'deliver', 'gates', 'deliver_review', 'mutation', 'visuals', 'kill_proposal', 'pr_writer', 'mutation_plan', 'publish', 'kill_mutants', 'exit', 'mutation_review', 'mutation_gates'])
+  assert.deepEqual(loaded.workflow.order, ['start', 'research', 'design', 'security', 'design_review', 'adr', 'distill', 'distill_review', 'deliver', 'gates', 'deliver_review', 'mutation', 'visuals', 'kill_proposal', 'pr_writer', 'mutation_plan', 'publish', 'kill_mutants', 'exit', 'mutation_review', 'mutation_gates'])
   assert.deepEqual(loaded.sources, { ...PLUGIN_AGENTS, 'acme-security-reviewer': 'repository' })
 })
 
@@ -181,7 +177,7 @@ test('a node the start cannot reach, or one that never reaches an exit, is refus
 })
 
 test('a workflow without one start or without an exit is refused', async () => {
-  const noStart = host({ files: ejectedPipeline(edit(BUILT_IN_WORKFLOW, ['  start    [shape=Mdiamond]\n', ''], ['start -> publish_consent', 'publish_consent'])) })
+  const noStart = host({ files: ejectedPipeline(edit(BUILT_IN_WORKFLOW, ['  start    [shape=Mdiamond]\n', ''], ['start -> research', 'research'])) })
   assert.deepEqual(await noStart.commands.check(), refused('.skraft/pipeline.skraft.dot', ['the workflow needs exactly one start node (shape=Mdiamond), has 0']))
 
   const noExit = host({ files: ejectedPipeline(edit(BUILT_IN_WORKFLOW, ['  exit     [shape=Msquare]\n', ''], ['  visuals -> pr_writer -> publish -> exit\n', '  visuals -> pr_writer -> publish\n'])) })
@@ -432,7 +428,7 @@ test('a workflow that lets the run reach the exit around the locked gates, or ar
 
 test('an ask node names a question the engine knows, and leads each of its answers somewhere, a refusal by an edge of its own', async () => {
   const cases = [
-    { dot: edit(BUILT_IN_WORKFLOW, ['question="adr-ratification"', 'question="budget"']), errors: ['node adr: question="budget" must be one of adr-ratification, reporting-consent, publish-consent, mutation-plan'] },
+    { dot: edit(BUILT_IN_WORKFLOW, ['question="adr-ratification"', 'question="budget"']), errors: ['node adr: question="budget" must be one of adr-ratification, mutation-plan'] },
     { dot: edit(BUILT_IN_WORKFLOW, [', question="adr-ratification"', '']), errors: ['node adr: a hexagon node needs question="…"'] },
     { dot: edit(BUILT_IN_WORKFLOW, ['  adr -> design    [label="REJECTED", max_visits=1]\n', '']), errors: ['node adr: REJECTED needs an edge of its own, back to the node whose work it refuses'] },
     { dot: edit(BUILT_IN_WORKFLOW, ['adr -> distill   [label="RATIFIED"]', 'adr -> distill']), errors: [] },
@@ -485,16 +481,16 @@ test('a publish node publishes the pull request or the screenshots, runs when a 
   }
 })
 
-test('a consent question leads every answer by one unlabeled edge', async () => {
-  const consent = edit(BUILT_IN_WORKFLOW,
-    ['  exit     [shape=Msquare]', '  exit     [shape=Msquare]\n  consent  [shape=hexagon, question="reporting-consent"]'],
-    ['deliver_review -> mutation [label="APPROVED"]', 'deliver_review -> consent [label="APPROVED"]\n  consent -> mutation'])
-  const { commands, deps } = host({ files: ejectedPipeline(consent) })
+test('an ask node whose answers need no routing leads them all by one unlabeled edge', async () => {
+  const asking = edit(BUILT_IN_WORKFLOW,
+    ['  exit     [shape=Msquare]', '  exit     [shape=Msquare]\n  replan   [shape=hexagon, question="mutation-plan"]'],
+    ['deliver_review -> mutation [label="APPROVED"]', 'deliver_review -> replan [label="APPROVED"]\n  replan -> mutation'])
+  const { commands, deps } = host({ files: ejectedPipeline(asking) })
 
   assert.equal((await commands.check()).ok, true)
   const loaded = await loadWorkflow(deps, {})
-  assert.deepEqual(loaded.workflow.nodes.consent, node('consent', 'ask', { phase: 'DELIVER', question: 'reporting-consent' }))
-  assert.deepEqual(loaded.workflow.edges.find((edge) => edge.from === 'consent'), { from: 'consent', to: 'mutation', label: null, maxVisits: null })
+  assert.deepEqual(loaded.workflow.nodes.replan, node('replan', 'ask', { phase: 'DELIVER', question: 'mutation-plan' }))
+  assert.deepEqual(loaded.workflow.edges.find((edge) => edge.from === 'replan'), { from: 'replan', to: 'mutation', label: null, maxVisits: null })
 })
 
 test('in an ejected workflow, a model=, a lens\'s @family or a refuter= that an agent rule masks is a warning naming the rule, the plugin\'s defaults included', async () => {

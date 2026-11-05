@@ -15,8 +15,6 @@ const edge = (from, to, label = null) => ({ from, to, label, taken: 0 })
 /** The default workflow as the view draws it before a run: each step pending, no edge taken. */
 const PENDING_GRAPH = Object.freeze({
   nodes: [
-    node('publish_consent', 'ask', 'RESEARCH', 'publish-consent'),
-    node('visuals_consent', 'ask', 'RESEARCH', 'reporting-consent'),
     node('research', 'agent', 'RESEARCH', 'solution-researcher'),
     node('design', 'agent', 'DESIGN', 'solution-architect'),
     node('design_review', 'review', 'DESIGN', 'consistency, architecture-compliance, fitness'),
@@ -37,7 +35,7 @@ const PENDING_GRAPH = Object.freeze({
     node('publish', 'publish', 'PUBLISH', 'publish pull-request'),
   ],
   edges: [
-    edge('publish_consent', 'visuals_consent'), edge('visuals_consent', 'research'), edge('research', 'design'), edge('design', 'design_review'),
+    edge('research', 'design'), edge('design', 'design_review'),
     edge('design_review', 'design', 'NEEDS_REWORK'), edge('design_review', 'adr', 'APPROVED'), edge('adr', 'distill', 'RATIFIED'), edge('adr', 'design', 'REJECTED'),
     edge('distill', 'distill_review'), edge('distill_review', 'distill', 'NEEDS_REWORK'), edge('distill_review', 'deliver', 'APPROVED'),
     edge('deliver', 'gates'), edge('gates', 'deliver', 'FAIL'), edge('gates', 'deliver_review', 'PASS'),
@@ -105,10 +103,10 @@ test('the view follows a run, its open step, its attempts and its cost', async (
 
   assert.deepEqual(seen, [{
     slug: SLUG, status: 'running', reason: '', phases: phases('open', 'pending', 'pending', 'pending', 'pending'),
-    current: { step: 'research', phase: 'RESEARCH', agent: 'solution-researcher', gates: null, question: null, visit: 1, attempt: 1 }, question: null, attempts: 3, costUsd: null, reviews: [], gates: [],
+    current: { step: 'research', phase: 'RESEARCH', agent: 'solution-researcher', gates: null, question: null, visit: 1, attempt: 1 }, question: null, attempts: 1, costUsd: null, reviews: [], gates: [],
   }, {
     slug: SLUG, status: 'running', reason: '', phases: phases('closed', 'open', 'pending', 'pending', 'pending'),
-    current: { step: 'design', phase: 'DESIGN', agent: 'solution-architect', gates: null, question: null, visit: 1, attempt: 1 }, question: null, attempts: 5, costUsd: 0.75, reviews: [], gates: [],
+    current: { step: 'design', phase: 'DESIGN', agent: 'solution-architect', gates: null, question: null, visit: 1, attempt: 1 }, question: null, attempts: 3, costUsd: 0.75, reviews: [], gates: [],
   }])
   assert.deepEqual((await host.view()).status, 'blocked')
 })
@@ -122,7 +120,7 @@ test('the view of a run at its gates names them, and of a completed run says don
 
   assert.deepEqual(seen, [{ step: 'gates', phase: 'DELIVER', agent: null, gates: ['build', 'format', 'lint', 'test', 'architecture', 'coverage'], question: null, visit: 1, attempt: 1 }])
   assert.deepEqual(core(await host.view()), {
-    slug: SLUG, status: 'done', reason: 'PUBLISH closed', phases: phases('closed', 'closed', 'closed', 'closed', 'closed'), current: null, question: null, attempts: 15, costUsd: null,
+    slug: SLUG, status: 'done', reason: 'PUBLISH closed', phases: phases('closed', 'closed', 'closed', 'closed', 'closed'), current: null, question: null, attempts: 13, costUsd: null,
     reviews: [
       { step: 'design_review', visit: 1, verdict: 'approved', lenses: passing('consistency', 'architecture-compliance', 'fitness') },
       { step: 'distill_review', visit: 1, verdict: 'approved', lenses: passing('coverage', 'business-alignment', 'testability', 'boundary-enforcement') },
@@ -181,8 +179,6 @@ test('the view draws the phases of the repository\'s workflow, and of the journa
   assert.deepEqual(unreadable.phases, [{ phase: 'RESEARCH', state: 'closed' }, { phase: 'DESIGN', state: 'open' }])
   assert.deepEqual(unreadable.graph, {
     nodes: [
-      { id: 'publish_consent', kind: null, phase: 'RESEARCH', what: null, state: 'done', outcome: 'skipped', visits: 1, attempts: 1, retries: 0, durationMs: 0, costUsd: null },
-      { id: 'visuals_consent', kind: null, phase: 'RESEARCH', what: null, state: 'done', outcome: 'skipped', visits: 1, attempts: 1, retries: 0, durationMs: 0, costUsd: null },
       { id: 'research', kind: null, phase: 'RESEARCH', what: null, state: 'done', outcome: 'done', visits: 1, attempts: 1, retries: 0, durationMs: 0, costUsd: null },
       { id: 'design', kind: null, phase: 'DESIGN', what: null, state: 'open', outcome: null, visits: 1, attempts: 1, retries: 0, durationMs: 0, costUsd: null },
     ],
@@ -229,8 +225,6 @@ test('the view marks each step of the run done or in progress, with its outcome,
   assert.deepEqual(seen[0].slice(-3), [['distill_review', 'done'], ['deliver', 'done'], ['gates', 'open']])
   const { graph } = await host.view()
   assert.deepEqual(graph.nodes.map(({ id, state, outcome, visits, attempts, retries, costUsd }) => [id, state, outcome, visits, attempts, retries, costUsd]), [
-    ['publish_consent', 'done', 'skipped', 1, 1, 0, null],
-    ['visuals_consent', 'done', 'skipped', 1, 1, 0, null],
     ['research', 'done', 'done', 1, 1, 0, 0.25],
     ['design', 'done', 'done', 2, 2, 1, 1],
     ['design_review', 'done', 'approved', 2, 2, 1, 0.375],
@@ -252,7 +246,7 @@ test('the view marks each step of the run done or in progress, with its outcome,
   ])
   assert.equal(graph.nodes.find((step) => step.id === 'gates').durationMs, 2_000)
   assert.deepEqual(graph.edges.filter((taken) => taken.taken > 0).map(({ from, to, taken }) => [from, to, taken]), [
-    ['publish_consent', 'visuals_consent', 1], ['visuals_consent', 'research', 1], ['research', 'design', 1], ['design', 'design_review', 2],
+    ['research', 'design', 1], ['design', 'design_review', 2],
     ['design_review', 'design', 1], ['design_review', 'adr', 1], ['adr', 'distill', 1], ['distill', 'distill_review', 1], ['distill_review', 'deliver', 1],
     ['deliver', 'gates', 1], ['gates', 'deliver_review', 1], ['deliver_review', 'mutation', 1], ['mutation', 'visuals', 1], ['visuals', 'pr_writer', 1], ['pr_writer', 'publish', 1],
   ])

@@ -30,7 +30,7 @@ import { COMMENTED, ISSUE_PROGRESS_FILE, keptComment, markerOf, pendingTransitio
 
 /** Why a run from an issue keeps nothing on it, its transitions journaled skipped. */
 export const UNCONSENTED = `${CONFIG_FILE} does not set publish.pullRequest to true`
-export const OUTDATED = `publish.pullRequest in ${CONFIG_FILE} answers an earlier publish-consent question, which did not cover the issue`
+export const OUTDATED = `publish.pullRequest in ${CONFIG_FILE} answers an earlier question, which did not cover the issue; run /skraft-init`
 
 /** Why the run may keep nothing on the issue; null when the developer accepted the current question. @param {import('../../domain/config/skraft-config.mjs').Publish} publish */
 const refusalOf = (publish) => {

@@ -84,7 +84,7 @@ const targetOf = async ({ codeHost }, { config, requested = false }, run) => {
 
 /** @param {boolean | null} given */
 const consentReason = (given) => (given === null
-  ? `nobody answered the publish-consent question yet (publish.pullRequest in ${CONFIG_FILE})`
+  ? `nobody settled publish.pullRequest in ${CONFIG_FILE} yet; run /skraft-init`
   : `${CONFIG_FILE} sets publish.pullRequest to false`)
 
 /**

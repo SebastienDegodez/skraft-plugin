@@ -17,7 +17,7 @@ test('a run interrupted after the researcher did its work records it without dis
 
   assert.equal(resumed.code, 'agent-unavailable')
   assert.deepEqual(host.agentRunner.dispatches.map((dispatch) => dispatch.agent), ['solution-researcher', 'solution-architect'])
-  assert.deepEqual(host.types(), ['run.started', 'step.started', 'step.recorded', 'step.started', 'step.recorded', 'step.started', 'step.recorded', 'phase.closed', 'step.started', 'run.stopped'])
+  assert.deepEqual(host.types(), ['run.started', 'step.started', 'step.recorded', 'phase.closed', 'step.started', 'run.stopped'])
 })
 
 test('a run resumed on an ejected pipeline that dropped a node the run already passed reviews the next phase as usual', async () => {
@@ -25,8 +25,9 @@ test('a run resumed on an ejected pipeline that dropped a node the run already p
   await host.init()
   assert.equal((await host.run()).code, 'agent-unavailable')
   await host.workspace.write('.skraft/pipeline.skraft.dot', edit(BUILT_IN_WORKFLOW,
-    ['  visuals_consent [shape=hexagon, question="reporting-consent"]\n', ''],
-    ['publish_consent -> visuals_consent -> research', 'publish_consent -> research']))
+    ['  visuals  [shape=parallelogram, publish="playwright-visuals", when="frontend"]\n', ''],
+    ['mutation -> visuals [label="PASS"]', 'mutation -> pr_writer [label="PASS"]'],
+    ['visuals -> pr_writer -> publish -> exit', 'pr_writer -> publish -> exit']))
   host.agentRunner.behaviours.push(nominal(host)[1], unavailable)
 
   await host.run()

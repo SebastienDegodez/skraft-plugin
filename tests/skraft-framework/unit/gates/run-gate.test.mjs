@@ -353,6 +353,7 @@ test('an invalid skraft-config.json refuses the gates with every error, instead 
     baseBranch: '--orphan',
     forge: 'gitlab',
     workflow: 7,
+    publish: { draft: 'no' },
     components: [
       { name: 'web', root: '/srv/web', stack: 'react', comands: { test: 'npm test' } },
       { name: 'Api', root: 'api', stack: 'cobol', commands: { Test: 'dotnet test', tset: 'dotnet test', build: '  ', mutation: 7 }, baseBranch: 'release 2', mocking: { strategy: 'wiremock' }, contractTesting: 'yes', bdd: 'yes' },
@@ -368,6 +369,7 @@ test('an invalid skraft-config.json refuses the gates with every error, instead 
     'skraft-config.json is invalid: workflow is no key: skraft workflow eject copies the pipeline into .skraft/pipeline.skraft.dot, the only one a run follows',
     'baseBranch must be a git ref, got "--orphan"',
     'forge must be "github" or "azure-devops"',
+    'publish must be an object of visuals, pullRequest, reviewComment and draft, each true or false',
     'component web: unknown key comands (allowed: name, root, stack, paths, commands, baseBranch, mocking, contractTesting, bdd, mutationReport)',
     'component web: root must be a path relative to the working copy',
     'components[1].name must be kebab-case, got "Api"',
@@ -390,6 +392,14 @@ test('an invalid skraft-config.json refuses the gates with every error, instead 
     'component jobs: paths.tests must list folders inside the component root',
     'component tools: paths.src must list folders inside the component root',
   ].join('; '))
+  for (const questionVersions of [{ pullRequest: 0 }, { pullRequest: 1.5 }, { pullRequest: '2' }, { draft: 1 }, { pullRequest: 2, draft: 1 }, [2]]) {
+    assert.equal(await gateWith(JSON.stringify({ publish: { pullRequest: true, questionVersions }, components: [API] })),
+      'skraft-config.json is invalid: publish.questionVersions must be an object of visuals, pullRequest and reviewComment, each a whole number from 1')
+  }
+  for (const publish of [{ pullRequest: 1 }, { reviewers: true }, { visuals: 'yes' }, true]) {
+    assert.equal(await gateWith(JSON.stringify({ publish, components: [API] })),
+      'skraft-config.json is invalid: publish must be an object of visuals, pullRequest, reviewComment and draft, each true or false')
+  }
   assert.equal(await gateWith(JSON.stringify({ components: [{ name: 'payment-api', root: 'a', stack: 'dotnet' }, { name: 'payment-api', root: 'b', stack: 'dotnet' }] })), 'skraft-config.json is invalid: component name payment-api is used twice')
   assert.equal(await gateWith('{"components": {}}'), 'skraft-config.json is invalid: components must be an array')
   assert.equal(await gateWith('["api"]'), 'skraft-config.json is invalid: skraft-config.json must hold a JSON object')
