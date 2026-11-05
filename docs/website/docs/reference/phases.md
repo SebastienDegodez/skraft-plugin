@@ -19,7 +19,7 @@ The detail of each gate cited: [Gates](./gates.md).
 | --- | --- | --- | --- | --- | --- |
 | DISCOVER | `skraft-backlog` | the agent, started by the developer | `backlog-discoverer` | 3 lenses, verdict from `review-verdict.mjs` | target repository, capacity |
 | DISCUSS | `skraft-backlog` | the agent, started by the developer | `backlog-planner` | 4 lenses, verdict from `review-verdict.mjs` | — |
-| RESEARCH | `skraft` | the engine | `solution-researcher` | output filled | consents `publish-consent`, `reporting-consent` |
+| RESEARCH | `skraft` | the engine | `solution-researcher` | output filled, research records | consents `publish-consent`, `reporting-consent` |
 | DESIGN | `skraft` | the engine | `solution-architect` | DESIGN records, structural scan, 3-lens review | `adr-ratification` |
 | DISTILL | `skraft` | the engine | `acceptance-designer` | red commits replayed, 4-lens review | — |
 | DELIVER | `skraft` | the engine | `software-engineer` | TDD commits, gates, `review`, mutation | `mutation-plan` when mutation fails |
@@ -94,9 +94,9 @@ Verdict: `review-verdict.mjs --phase discuss`, same rules and same budget as DIS
 | Inputs | the story (`plans/{date}/issue-<number>.md` when the run started with `--issue`); the durable documentation under `docs/`, read first |
 | Output | `research/{date}/{slug}-research.md`, pre-created from `research.template.md` |
 | Allowed writes | the tracking folder only |
-| `docs/` already covers the story | the research document says so and cites the files of `docs/`; the engine checks only that the document exists |
-| Check | output filled: not empty, different from the template, no `{{…}}` left |
-| Attempts | 3 (the `max_attempts` default); then `missing-outputs` |
+| `docs/` already covers the story | the research document says so and cites the files of `docs/`; the engine reads those citations, so a path it names must exist |
+| Check | output filled: not empty, different from the template, no `{{…}}` left. Research records after each attempt: every workspace path the document cites — forward or back slashes, named once however often it cites it, a folder and a path with a `.` or `..` segment left alone — is a readable file of the working copy, and every `path:line` or `path:line-line` range sits within that file's length (`research-records`) |
+| Attempts | 3 (the `max_attempts` default); then `missing-outputs`, or `research-records` when the document is there and its citations still fail |
 
 ## DESIGN <!-- #design -->
 
