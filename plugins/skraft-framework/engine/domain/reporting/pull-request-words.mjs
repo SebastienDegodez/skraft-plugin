@@ -57,6 +57,9 @@ const EN = Object.freeze({
     /** @param {number} pass */
     pass: (pass) => `pass ${pass}`,
     lead: 'Review: ',
+    passes: Object.freeze({ one: 'pass', many: 'passes' }),
+    /** @param {string} passes @param {string} lenses @param {string} refuter */
+    heading: (passes, lenses, refuter) => `${passes} · lenses ${lenses} · refuter ${refuter}`,
   }),
   ratified: 'ratified in this run',
   /** @param {string} node @param {string} reason */
@@ -118,6 +121,8 @@ const FR = Object.freeze({
     unchanged: (pass) => `nouveau sur une ligne inchangée depuis la passe ${pass}`,
     pass: (pass) => `passe ${pass}`,
     lead: 'Revue : ',
+    passes: Object.freeze({ one: 'passe', many: 'passes' }),
+    heading: (passes, lenses, refuter) => `${passes} · lentilles ${lenses} · réfuteur ${refuter}`,
   }),
   ratified: 'ratifié dans ce run',
   unlocked: (node, reason) => `Porte verrouillée ${node} sautée, déverrouillée : ${reason}`,

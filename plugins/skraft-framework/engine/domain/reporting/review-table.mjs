@@ -6,7 +6,8 @@ import { counted } from './pull-request-words.mjs'
  * A review as a pull request description and a review comment show it: one table per review
  * step, one row per finding, grouped by status (to fix, to decide, accepted, note); the refuted rows in a
  * block that opens on a click below it, so the open part shows only what needs action. A claim
- * and a reason are cut at CLAIM_LENGTH characters with `…`; verdict.yaml keeps them whole.
+ * is cut at CLAIM_LENGTH characters with `…`, and so is the refuter's reason on a row to fix; a
+ * row to decide and a refuted row, read to judge the refuter, give its reason whole.
  *
  * @typedef {import('./run-facts.mjs').ReviewFacts} ReviewFacts
  * @typedef {import('./run-facts.mjs').FindingLine} FindingLine
@@ -41,6 +42,13 @@ const OPEN_STATUSES = Object.freeze(['fix', 'decide', 'accepted'])
 export const asksAction = (review) => review.some((step) => step.lines.some(({ status }) => OPEN_STATUSES.includes(status)))
 
 /**
+ * The line that opens a review step: its name, how many passes it ran, what its lenses and its
+ * refuter ran on, so that two runs compare.
+ * @param {import('./run-facts.mjs').StepReview} review @param {Words} words
+ */
+export const stepHeading = ({ step, passes, lenses, refuter }, words) => `**${step}** · ${words.review.heading(counted(words, passes, words.review.passes), lenses, refuter)}`
+
+/**
  * The table of a step's lines, then its refuted lines folded under their count.
  * @param {FindingLine[]} lines @param {Words} words @returns {string[]}
  */
@@ -64,7 +72,10 @@ const tableOf = (lines, words) => [words.review.header, '| --- | --- | --- | ---
 
 /** @param {FindingLine} line @param {Words} words */
 const rowOf = ({ status, cited, finding }, words) =>
-  `| ${words.review.status[status]} | ${finding.severity} | ${cell(cited)} | ${cell(code(finding.location))} | ${cell(shortened(finding.description))} | ${cell(whyOf({ status, finding }, words))} |`
+  `| ${words.review.status[status]} | ${finding.severity} | ${cell(cited)} | ${cell(locationOf(finding.location))} | ${cell(shortened(finding.description))} | ${cell(whyOf({ status, finding }, words))} |`
+
+/** Where the finding is, `-` for a finding that names no place. @param {string} location */
+const locationOf = (location) => (location === '' ? '-' : code(location))
 
 /**
  * What the row says of its status: why a note is one, that a human accepted it, else the
@@ -78,15 +89,19 @@ const whyOf = ({ status, finding }, words) => {
 }
 
 /**
- * The refuter's word and reason on a finding it judged.
+ * The refuter's word and reason on a finding it judged: its reason whole on what it refuted, cut
+ * on what is to fix.
  * @param {Pick<FindingLine, 'status' | 'finding'>} line @param {Words} words
  */
 const refuterWord = ({ status, finding }, words) => {
-  const reason = shortened(/** @type {string} */ (finding.reason))
+  const reason = (status === 'fix' ? shortened : whole)(/** @type {string} */ (finding.reason))
   if (status === 'decide') return `${words.review.alone}${reason}`
   if (status === 'refuted') return `${reason}${finding.carried === null ? '' : words.review.carried(finding.carried)}`
   return finding.verdict === 'unverifiable' ? `${words.review.unverifiable}${reason}` : `${words.review.confirmed}${reason}`
 }
+
+/** What the refuter wrote, on one line, whole, made inert. @param {string} text */
+const whole = (text) => inert(oneLine(text))
 
 /** What a lens or the refuter wrote, on one line, cut at CLAIM_LENGTH characters, made inert. @param {string} text */
 const shortened = (text) => {

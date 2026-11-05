@@ -76,7 +76,8 @@ import { takeFromLastPass } from './review-repeats.mjs'
  *   where the pass's verdict.yaml is, absolute.
  * @typedef {import('../ports/agent-catalog.mjs').SkillFile} SkillFile
  * @typedef {import('../../domain/config/model-assignment.mjs').ResolvedAssignment} ResolvedAssignment
- * @typedef {{ lens: Lens, inputs: TrackedInput[], skills: SkillFile[], descriptor: string, fingerprint: string, known: Finding[], unchanged: boolean }} PlannedLens
+ * @typedef {{ lens: Lens, inputs: TrackedInput[], skills: SkillFile[], descriptor: string, gates: Record<string, string>, fingerprint: string, known: Finding[], unchanged: boolean }} PlannedLens
+ *   gates: the name of each gate the lens's descriptor names, by id, journaled with its answer.
  *   skills: the skills the lens declares, with their SKILL.md; known: the engine's findings the
  *   lens is told not to report again.
  */
@@ -175,14 +176,15 @@ const scanOf = async (review, planned, prepared) => {
   const scanned = []
   for (const check of found) {
     const result = /** @type {LensResult} */ ({ lens: check.id, verdict: 'fail', findings: check.findings })
-    if (!journaled.some((event) => event.lens === check.id)) await recordScan(review, result)
-    scanned.push({ result, entry: scanEntry(prepared, check, planned) })
+    const entry = scanEntry(prepared, check, planned)
+    if (!journaled.some((event) => event.lens === check.id)) await recordScan(review, result, entry)
+    scanned.push({ result, entry })
   }
   return scanned
 }
 
-/** @param {Review} review @param {LensResult} result */
-const recordScan = ({ journal, step }, { lens, verdict, findings }) => journal.append('review.lens', { step: step.node.id, visit: step.visit, lens, agent: SCAN_AGENT, verdict, findings })
+/** @param {Review} review @param {LensResult} result @param {PlannedLens} entry the scan as the refuter sees it, with the gates of the lens it reports for */
+const recordScan = ({ journal, step }, { lens, verdict, findings }, { gates }) => journal.append('review.lens', { step: step.node.id, visit: step.visit, lens, agent: SCAN_AGENT, verdict, findings, gates })
 
 /** Who journals the scan's findings. */
 const SCAN_AGENT = 'skraft-engine'
@@ -203,8 +205,8 @@ const scanEntry = (prepared, { id, joins }, planned) => ({
   unchanged: false,
 })
 
-/** What states the rules of a lens: its skills and its descriptor. @param {PlannedLens} entry */
-const skillsAndDescriptor = ({ skills, descriptor }) => ({ skills, descriptor })
+/** What states the rules of a lens: its skills, its descriptor and the names of its gates. @param {PlannedLens} entry */
+const skillsAndDescriptor = ({ skills, descriptor, gates }) => ({ skills, descriptor, gates })
 
 /**
  * The verdict of the pass, written beside its inputs.
@@ -406,9 +408,10 @@ const planLensInputs = async (review, prepared) => Promise.all(planLenses(review
   const skills = (await review.deps.agentCatalog.skills(lens.agent)).found
   // A lens the review runs is one the catalog located when the workflow loaded, so its descriptor is there.
   const descriptor = /** @type {string} */ (await review.deps.agentCatalog.descriptor(lens.agent))
+  const gates = await review.deps.agentCatalog.gateNames(lens.agent)
   const known = engineChecks(prepared).filter(({ joins }) => joins === lens.name).flatMap(({ findings }) => findings)
   const unchanged = !hasChanges(prepared)
-  return { lens, inputs, skills, descriptor, fingerprint: await fingerprintOf(review, { inputs, skills, prepared, lens }), known, unchanged }
+  return { lens, inputs, skills, descriptor, gates, fingerprint: await fingerprintOf(review, { inputs, skills, prepared, lens }), known, unchanged }
 }))
 
 /**
@@ -575,11 +578,11 @@ const pathsOf = (skills) => skills.map(({ path }) => path)
 const located = (deps, slug, inputs) => inputs.map(({ kind, path }) => ({ kind, path: deps.files.location(slug, path) }))
 
 /** @param {Review} review @param {PlannedLens} entry @param {{ result: LensResult }} reading @param {AgentAnswer} answer */
-const recordLens = async ({ journal, step, assignments }, { lens, fingerprint }, { result }, answer) => {
+const recordLens = async ({ journal, step, assignments }, { lens, fingerprint, gates }, { result }, answer) => {
   const { verdict, findings } = result
   const cost = answer.costUsd
   const assignment = assignments.lenses[lens.agent]
-  await journal.append('review.lens', { step: step.node.id, visit: step.visit, lens: lens.id, agent: lens.agent, assignment, model: answer.model ?? null, fingerprint, verdict, findings, cost })
+  await journal.append('review.lens', { step: step.node.id, visit: step.visit, lens: lens.id, agent: lens.agent, assignment, model: answer.model ?? null, fingerprint, verdict, findings, gates, cost })
   return result
 }
 

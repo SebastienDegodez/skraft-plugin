@@ -19,13 +19,13 @@ Find every provider-side contract test that is missing where its component asks 
 - Read the components file your brief lists: the component whose `root` holds the API under test asks for contract tests when its `contractTesting` is `true`.
 - A component whose `contractTesting` is `false` or absent asks for none: never report a missing contract test for it (K1, K2).
 
-| Gate | Criterion | Severity |
-|---|---|---|
-| K1 | When the component asks for contract tests, the patch has an integration test that starts the app in-process and calls it over HTTP (`WebApplicationFactory` + `HttpClient` or the stack's equivalent). | blocker |
-| K2 | When the component asks for contract tests, the patch also has a Microcks provider verification: `TestEndpointAsync` with the `OPEN_API_SCHEMA` runner. | high |
-| K3 | A Microcks provider verification asserts its result. | blocker |
-| K4 | The integration test asserts the response contract. | high |
-| K5 | No real downstream call leaks. | blocker |
+| Gate | Name | Criterion | Severity |
+|---|---|---|---|
+| K1 | In-process HTTP test | When the component asks for contract tests, the patch has an integration test that starts the app in-process and calls it over HTTP (`WebApplicationFactory` + `HttpClient` or the stack's equivalent). | blocker |
+| K2 | Microcks provider verification | When the component asks for contract tests, the patch also has a Microcks provider verification: `TestEndpointAsync` with the `OPEN_API_SCHEMA` runner. | high |
+| K3 | Result asserted | A Microcks provider verification asserts its result. | blocker |
+| K4 | Response contract asserted | The integration test asserts the response contract. | high |
+| K5 | No real downstream call | No real downstream call leaks. | blocker |
 
 ## K3 — result asserted
 

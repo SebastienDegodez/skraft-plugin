@@ -594,6 +594,12 @@ export const SHIPPED_COMPONENT_SKILLS = Object.freeze([
 /** The skills holding the gates a producer's review judges its outputs by. */
 export const SHIPPED_CHECKLIST_SKILLS = Object.freeze(['acceptance-review-criteria'])
 
+/** The gate names some shipped lenses give in their descriptor, as `| Gate | Name | …` holds them. */
+export const SHIPPED_GATE_NAMES = Object.freeze({
+  'consistency-lens': { G1: 'Every structural commitment has an ADR', G2: 'No contradicting ADRs', C1: 'Same names everywhere' },
+  'test-integrity-lens': { G7: 'No test theater', G9: 'Iron Rule' },
+})
+
 /**
  * Agents by where they come from; the plugin ships the pipeline's own by default. Each agent
  * declares skill names; a skill is provided when `skillFiles` holds its SKILL.md text, found at
@@ -601,16 +607,19 @@ export const SHIPPED_CHECKLIST_SKILLS = Object.freeze(['acceptance-review-criter
  */
 export class InMemoryAgentCatalog {
   /**
-   * @param {{ plugin?: string[], repository?: string[], skills?: Record<string, string[]>, skillFiles?: Record<string, string>, skillRoot?: string }} [agents]
-   *   skills: the skill names each agent declares; skillFiles: SKILL.md text by skill name
+   * @param {{ plugin?: string[], repository?: string[], skills?: Record<string, string[]>, skillFiles?: Record<string, string>, skillRoot?: string, gates?: Record<string, Record<string, string>> }} [agents]
+   *   skills: the skill names each agent declares; skillFiles: SKILL.md text by skill name;
+   *   gates: the gate names each agent's descriptor gives
    */
-  constructor({ plugin = PLUGIN_AGENTS, repository = [], skills = {}, skillFiles = Object.fromEntries([...SHIPPED_COMPONENT_SKILLS, ...SHIPPED_CHECKLIST_SKILLS].map((name) => [name, '# skill\n'])), skillRoot = '/plugin/skills' } = {}) {
+  constructor({ plugin = PLUGIN_AGENTS, repository = [], skills = {}, gates = SHIPPED_GATE_NAMES, skillFiles = Object.fromEntries([...SHIPPED_COMPONENT_SKILLS, ...SHIPPED_CHECKLIST_SKILLS].map((name) => [name, '# skill\n'])), skillRoot = '/plugin/skills' } = {}) {
     this.plugin = new Set(plugin)
     this.repository = new Set(repository)
     this.skillsByAgent = skills
     this.skillFiles = skillFiles
     this.skillRoot = skillRoot
+    this.gates = gates
   }
+  async gateNames(agent) { return { ...this.gates[agent] } }
   async locate(agent) { return this.plugin.has(agent) ? 'plugin' : this.repository.has(agent) ? 'repository' : null }
   async descriptor(agent) { return this.plugin.has(agent) ? `/plugin/agents/${agent}.md` : this.repository.has(agent) ? `/work/.claude/agents/${agent}.md` : null }
   async skill(name) { return name in this.skillFiles ? { name, path: `${this.skillRoot}/${name}/SKILL.md`, text: this.skillFiles[name] } : null }

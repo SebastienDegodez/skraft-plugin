@@ -5,7 +5,7 @@ import { screenshotLines } from './visuals.mjs'
 import { detailParts, pointerOf, roomOf } from './run-details.mjs'
 import { layerCounts } from './test-plan-layers.mjs'
 import { counted, DESCRIPTION_WORDS, PULL_REQUEST_FILE } from './pull-request-words.mjs'
-import { asksAction, reviewCount, stepTable } from './review-table.mjs'
+import { asksAction, reviewCount, stepHeading, stepTable } from './review-table.mjs'
 
 /**
  * The description of the pull request a run opens, as "Writing good CL descriptions" lays it
@@ -256,10 +256,10 @@ const gateLines = (gates, words) => (gates.length === 0
     ...gates.map(({ component, gate, command, status, durationMs, evidence }) => `| ${component} | ${gate} | ${cell(code(command))} | ${status} | ${durationText(durationMs)} | ${cell(code(evidence))} |`),
   ])
 
-/** One table per review step under its name. @param {ReviewFacts} review @param {Words} words */
+/** One table per review step under its heading line. @param {ReviewFacts} review @param {Words} words */
 const reviewLines = (review, words) => (review.length === 0
   ? [words.allPassed]
-  : review.flatMap(({ step, lines }, index) => [...(index === 0 ? [] : ['']), `**${step}**`, '', ...stepTable(lines, words)]))
+  : review.flatMap((step, index) => [...(index === 0 ? [] : ['']), stepHeading(step, words), '', ...stepTable(step.lines, words)]))
 
 /** @param {{ families: string[], models: string[] }} models @param {Words} words */
 const disclosure = ({ families, models }, words) => [

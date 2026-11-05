@@ -32,6 +32,7 @@ export const createAgentCatalog = ({ files, pluginRoot, root, host }) => {
   return Object.freeze({
     locate: (agent) => locateAgent({ files, pluginRoot, root, places }, agent),
     descriptor: (agent) => descriptorPath({ files, pluginRoot, root, places }, agent),
+    gateNames: (agent) => gateNamesIn({ files, pluginRoot, root, places }, agent),
     skills: (agent) => skillsOf({ files, pluginRoot, root, places }, agent),
     skill: (name) => namedSkill({ files, pluginRoot, root, places }, name),
   })
@@ -86,6 +87,32 @@ const skillsOf = async (catalog, agent) => {
 
 /** Where the agent's descriptor is, the plugin's first; null when nobody provides it. @param {Catalog} catalog @param {string} agent */
 const descriptorPath = async (catalog, agent) => (await descriptorOf(catalog, agent))?.path ?? null
+
+/** The names the agent's descriptor gives its gates; none when nobody provides it. @param {Catalog} catalog @param {string} agent */
+const gateNamesIn = async (catalog, agent) => {
+  const found = await descriptorOf(catalog, agent)
+  return found === null ? {} : gateNamesOf(found.text)
+}
+
+/**
+ * The names a descriptor's gate table gives, by gate id: the rows under its header
+ * `| Gate | Name | …` and its rule line, up to the first line that is no row; none without that
+ * header, as in a lens a repository wrote before it. A line ending in `\r` (CRLF) reads the same.
+ * @param {string} text @returns {Record<string, string>}
+ */
+const gateNamesOf = (text) => {
+  const lines = text.split('\n')
+  const header = lines.findIndex((line) => line.startsWith('| Gate | Name |'))
+  /** @type {Record<string, string>} */
+  const names = {}
+  if (header < 0) return names
+  for (const line of lines.slice(header + 2)) {
+    if (!line.startsWith('|')) break
+    const [gate, name] = line.split('|').slice(1, 3).map((cell) => cell.trim())
+    names[gate] = name
+  }
+  return names
+}
 
 /** The agent's descriptor, the plugin's first; null for a name that is no agent id. @param {Catalog} catalog @param {string} agent */
 const descriptorOf = async ({ files, places, pluginRoot, root }, agent) => {

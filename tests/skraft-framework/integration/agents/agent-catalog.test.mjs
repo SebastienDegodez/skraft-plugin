@@ -29,6 +29,27 @@ test('an agent skraft ships comes from the plugin; one the working copy defines 
   assert.equal(await agentCatalog.descriptor('acme-unknown'), null)
 })
 
+test('a lens names its gates in the Name column of its gate table, read up to the table\'s end, CRLF lines too; a descriptor without that column, or nobody\'s, names none', async (t) => {
+  const cwd = tempFolder(t)
+  mkdirSync(join(cwd, '.claude', 'agents'), { recursive: true })
+  writeFileSync(join(cwd, '.claude', 'agents', 'acme-lens.md'), [
+    '---', 'name: acme-lens', '---', '', '| Gate | Name | Criterion | Severity |', '|---|---|---|---|',
+    '| A1 |  Prices in cents  | Every price is in cents. | high |', '| A2 | Rounding | Rounding is half-even. | low |', '',
+    '| Other | Table |', '|---|---|', '| X9 | not a gate |', '',
+  ].join('\n'))
+  writeFileSync(join(cwd, '.claude', 'agents', 'acme-old-lens.md'), ['| Gate | Criterion | Severity |', '|---|---|---|', '| A1 | Every price is in cents. | high |'].join('\n'))
+  writeFileSync(join(cwd, '.claude', 'agents', 'acme-windows-lens.md'), ['---', 'name: acme-windows-lens', '---', '', '| Gate | Name | Criterion | Severity |', '|---|---|---|---|', '| A1 | Cents | Every price is in cents. | high |', '| A2 | Rounding | Rounding is half-even. | low |', ''].join('\r\n'))
+  writeFileSync(join(cwd, '.claude', 'agents', 'acme-last-lens.md'), ['| Gate | Name | Criterion | Severity |', '|---|---|---|---|', '| A1 | Cents | Every price is in cents. | high |'].join('\n'))
+  const { agentCatalog } = createNodeAdapters({ cwd, pluginRoot: PLUGIN_ROOT })
+
+  assert.deepEqual(await agentCatalog.gateNames('acme-lens'), { A1: 'Prices in cents', A2: 'Rounding' })
+  assert.deepEqual(await agentCatalog.gateNames('acme-last-lens'), { A1: 'Cents' })
+  assert.deepEqual(await agentCatalog.gateNames('acme-old-lens'), {})
+  assert.deepEqual(await agentCatalog.gateNames('acme-windows-lens'), { A1: 'Cents', A2: 'Rounding' })
+  assert.deepEqual(await agentCatalog.gateNames('acme-unknown'), {})
+  assert.deepEqual(await agentCatalog.gateNames('mock-fidelity-lens'), { M1: 'Strategy followed', M2: 'Mock wired', M3: 'No real downstream call', M4: 'Double of the downstream' })
+})
+
 test('an agent shipped in only one of the plugin trees still comes from the plugin', async (t) => {
   const cwd = tempFolder(t)
   const pluginRoot = tempFolder(t)

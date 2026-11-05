@@ -44,10 +44,10 @@ test('every lens of each phase passing approves the phase, and the run goes on t
   ])
   const recorded = host.events().find((event) => event.type === 'step.recorded' && event.step === 'design_review')
   assert.deepEqual([recorded.code, recorded.failures, recorded.reason], [null, [], 'APPROVED: every lens passed'])
-  assert.deepEqual(host.events().filter((event) => event.type === 'review.lens' && event.step === 'design_review').map(({ visit, lens, agent: id, verdict, findings }) => [visit, lens, id, verdict, findings]), [
-    [1, 'consistency', 'consistency-lens', 'pass', []],
-    [1, 'architecture-compliance', 'architecture-compliance-lens', 'pass', []],
-    [1, 'fitness', 'fitness-lens', 'pass', []],
+  assert.deepEqual(host.events().filter((event) => event.type === 'review.lens' && event.step === 'design_review').map(({ visit, lens, agent: id, verdict, findings, gates }) => [visit, lens, id, verdict, findings, gates]), [
+    [1, 'consistency', 'consistency-lens', 'pass', [], { G1: 'Every structural commitment has an ADR', G2: 'No contradicting ADRs', C1: 'Same names everywhere' }],
+    [1, 'architecture-compliance', 'architecture-compliance-lens', 'pass', [], {}],
+    [1, 'fitness', 'fitness-lens', 'pass', [], {}],
   ])
   assert.ok(host.progress.lines.includes(`${SLUG}: design_review (consistency, architecture-compliance, fitness) — reviewer · economy · haiku`), host.progress.lines.join('\n'))
   assert.ok(host.progress.lines.includes(`${SLUG}: design_review APPROVED: every lens passed`), host.progress.lines.join('\n'))
@@ -717,12 +717,12 @@ test('a review with only medium and low findings left after three passes lets th
   const description = await host.tracking.read(SLUG, 'pull-request.md')
   assert.equal(opening(description, 'Review'), '<details open><summary>Review: 1 to decide, 2 accepted</summary>')
   assert.equal(section(description, 'Review'), [
-    '**design_review**', '',
+    '**design_review** · 4 passes · lenses reviewer · refuter standard', '',
     '| Status | Severity | Lens | Location | Finding | Why |',
     '| --- | --- | --- | --- | --- | --- |',
-    '| To decide | medium | consistency F3 G1 | `docs/architecture/payments.md:9` | the map names no currency | one lens alone, against the lenses that passed; refuted: payments.md:9 names EUR (pass 4) |',
-    '| Accepted | medium | consistency F1 G1 | `docs/architecture/payments.md:7` | a read model is classified twice | a human accepted it as it stands at the review\'s ceiling |',
-    '| Accepted | low | consistency F2 G1 | `` | a typo \\| in the title | a human accepted it as it stands at the review\'s ceiling |',
+    '| To decide | medium | consistency · G1 Every structural commitment has an ADR (F3) | `docs/architecture/payments.md:9` | the map names no currency | one lens alone, against the lenses that passed; refuted: payments.md:9 names EUR (pass 4) |',
+    '| Accepted | medium | consistency · G1 Every structural commitment has an ADR (F1) | `docs/architecture/payments.md:7` | a read model is classified twice | a human accepted it as it stands at the review\'s ceiling |',
+    '| Accepted | low | consistency · G1 Every structural commitment has an ADR (F2) | - | a typo \\| in the title | a human accepted it as it stands at the review\'s ceiling |',
   ].join('\n'))
   assert.equal(description.includes('Accepted findings'), false, 'the review table holds the accepted findings: no second list')
 })
@@ -933,6 +933,7 @@ test('the engine reads in the patch the skips added to tests, the test files del
   await host.run()
 
   const scanned = host.events().find((event) => event.type === 'review.lens' && event.lens === 'test-integrity#patch')
+  assert.deepEqual(scanned.gates, { G7: 'No test theater', G9: 'Iron Rule' }, 'the names of the gates of the lens the scan reports for')
   assert.deepEqual([scanned.agent, scanned.verdict, scanned.findings], ['skraft-engine', 'fail', [
     { id: 'F1', gate: 'G9', severity: 'blocker', location: 'tests/CheckoutTests.cs:10', description: 'a skip or a focus added to a test: [Fact(Skip = "flaky on CI")]', suggestion: null },
     { id: 'F2', gate: 'G9', severity: 'blocker', location: 'tests/CheckoutTests.cs:13', description: 'a skip or a focus added to a test: [Fact(Skip = "slow")]', suggestion: null },

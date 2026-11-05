@@ -86,20 +86,20 @@ test('from the second pass, a finding at the place of one the refuter refuted on
   const description = await host.tracking.read(SLUG, 'pull-request.md')
   assert.equal(opening(description, 'Review'), '<details><summary>Review: 2 notes, 3 refuted</summary>')
   assert.equal(section(description, 'Review'), [
-    '**design_review**',
+    '**design_review** · 2 passes · lenses reviewer · refuter standard',
     '',
     '| Status | Severity | Lens | Location | Finding | Why |',
     '| --- | --- | --- | --- | --- | --- |',
-    `| Note | high | consistency F2 G1 | \`${ADR}:15\` | two contexts own payments | new on a line unchanged since pass 1 |`,
-    `| Note | low | architecture-compliance F5 G1 | \`${ADR}:17\` | a name could be clearer | new on a line unchanged since pass 1 |`,
+    `| Note | high | consistency · G1 Every structural commitment has an ADR (F2) | \`${ADR}:15\` | two contexts own payments | new on a line unchanged since pass 1 |`,
+    `| Note | low | architecture-compliance · G1 (F5) | \`${ADR}:17\` | a name could be clearer | new on a line unchanged since pass 1 |`,
     '',
     '<details><summary>3 refuted</summary>',
     '',
     '| Status | Severity | Lens | Location | Finding | Why |',
     '| --- | --- | --- | --- | --- | --- |',
-    `| Refuted | blocker | consistency F1 G1 | \`${ADR}:12:5\` | the ADR still contradicts the map, worded anew | ADR line 12 shows the ADR agrees with the map (refuted on pass 1) |`,
-    `| Refuted | medium | consistency F3 G1 | \`${ADR}:3\` | the reworded line hides the owner | line 3 names the owner |`,
-    `| Refuted | high | fitness F1 G1 | \`${ADR}:3\` | the latency budget is still missing | line 3 states the budget |`,
+    `| Refuted | blocker | consistency · G1 Every structural commitment has an ADR (F1) | \`${ADR}:12:5\` | the ADR still contradicts the map, worded anew | ADR line 12 shows the ADR agrees with the map (refuted on pass 1) |`,
+    `| Refuted | medium | consistency · G1 Every structural commitment has an ADR (F3) | \`${ADR}:3\` | the reworded line hides the owner | line 3 names the owner |`,
+    `| Refuted | high | fitness · G1 (F1) | \`${ADR}:3\` | the latency budget is still missing | line 3 states the budget |`,
     '',
     '</details>',
   ].join('\n'))

@@ -27,11 +27,11 @@ Read the skill files your brief lists under Skill before any other input; judge 
 - No ADR overrides G5's dependency direction.
 - Skip G5 for a component whose `gates` in the components file lists `architecture`: that gate passed on it in this run.
 
-| Gate | Criterion | Severity |
-|---|---|---|
-| G4 | No test double on a Domain or Application type in a unit test. | blocker |
-| G5 | Dependencies point inward: Domain → nothing, Application → Domain only, API and Infrastructure → Application. | blocker |
-| G10 | Domain code follows the 9 Object Calisthenics rules. | medium |
+| Gate | Name | Criterion | Severity |
+|---|---|---|---|
+| G4 | No double on Domain or Application | No test double on a Domain or Application type in a unit test. | blocker |
+| G5 | Dependency direction | Dependencies point inward: Domain → nothing, Application → Domain only, API and Infrastructure → Application. | blocker |
+| G10 | Object Calisthenics on Domain | Domain code follows the 9 Object Calisthenics rules. | medium |
 
 ## G4 — no double on Domain or Application
 

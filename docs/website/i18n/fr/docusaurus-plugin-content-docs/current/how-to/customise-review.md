@@ -24,6 +24,11 @@ chaque hôte que l'équipe utilise :
 | Claude Code | `.claude/agents/threat-model-lens.md` |
 | Copilot CLI, VS Code | `.github/agents/threat-model-lens.agent.md` (ou `.md`) |
 
+Donnez-lui un tableau de portes aux colonnes `| Gate | Name | Criterion | Severity |`, comme les
+lentilles que livre skraft : le Name, quelques mots, est ce que la Revue de la pull request montre à
+côté de l'id de la porte ([Tableau de revue](../reference/pull-request.md#review-table)) ; un tableau
+sans lui montre l'id seul.
+
 La lentille rend sa réponse dans le format que lit le moteur :
 [Réponse d'une lentille](../reference/gates.md#lens-answer).
 

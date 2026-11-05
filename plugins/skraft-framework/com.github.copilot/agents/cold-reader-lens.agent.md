@@ -13,9 +13,9 @@ metadata:
 
 Read the changed code and tests as a developer who finds them in the repository for the first time, with no story, plan or history. Find every name that hides the business intent. Report; never repair.
 
-| Gate | Criterion | Severity |
-|---|---|---|
-| G11 | Tests and production code speak the business language and show their intent. | medium |
+| Gate | Name | Criterion | Severity |
+|---|---|---|---|
+| G11 | Business language | Tests and production code speak the business language and show their intent. | medium |
 
 ## G11 — business language
 

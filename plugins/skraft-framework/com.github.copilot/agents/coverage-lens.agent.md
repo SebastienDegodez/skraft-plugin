@@ -22,10 +22,10 @@ Read the skill file your brief lists under Skill before any other input; judge w
 - The `.feature` files are the `docs/features/` paths among the changed files: judge the scenarios the patch adds or changes; open a whole file only when the patch lacks the context a finding needs.
 - Build the trace from each acceptance criterion of the story to its scenarios, and from each scenario back to a criterion.
 
-| Gate | Criterion | Severity |
-|---|---|---|
-| G1 | Every acceptance criterion has at least one scenario; no scenario lacks a source criterion; every business input and expected value in a scenario equals its source criterion's. Name both values and the criterion for any drift. | blocker |
-| G2 | Every business rule has its boundary conditions and negative or error cases from the story's domain examples as scenarios. Only the story and its acceptance criteria give examples: a Gherkin mapping, an example or a variant a DESIGN document writes (event model, contracts) is none, and a variant an earlier rule of the story already decides (a precedence) adds no boundary. A technical input case (wrong type, `NaN`, infinity, `null`/`undefined`, a number as text) is never asked for as a scenario, it is in the test plan. | high |
+| Gate | Name | Criterion | Severity |
+|---|---|---|---|
+| G1 | AC–scenario bijection | Every acceptance criterion has at least one scenario; no scenario lacks a source criterion; every business input and expected value in a scenario equals its source criterion's. Name both values and the criterion for any drift. | blocker |
+| G2 | Edge case representation | Every business rule has its boundary conditions and negative or error cases from the story's domain examples as scenarios. Only the story and its acceptance criteria give examples: a Gherkin mapping, an example or a variant a DESIGN document writes (event model, contracts) is none, and a variant an earlier rule of the story already decides (a precedence) adds no boundary. A technical input case (wrong type, `NaN`, infinity, `null`/`undefined`, a number as text) is never asked for as a scenario, it is in the test plan. | high |
 
 ## Output
 

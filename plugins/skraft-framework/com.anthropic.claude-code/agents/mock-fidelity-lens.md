@@ -18,12 +18,12 @@ Find every integration test whose downstream mock is wired against the component
 - Read the patch; open a whole file only when the patch lacks the context a finding needs.
 - Read the components file your brief lists: the component whose `root` holds the test sets the strategy in `mocking.strategy`; a component without `mocking` uses `microcks`.
 
-| Gate | Criterion | Severity |
-|---|---|---|
-| M1 | The test follows its component's mocking strategy. | high |
-| M2 | The mock is wired into the test host. | blocker |
-| M3 | No real downstream call leaks. | blocker |
-| M4 | The double stands in for the downstream, never for the system under test. | high |
+| Gate | Name | Criterion | Severity |
+|---|---|---|---|
+| M1 | Strategy followed | The test follows its component's mocking strategy. | high |
+| M2 | Mock wired | The mock is wired into the test host. | blocker |
+| M3 | No real downstream call | No real downstream call leaks. | blocker |
+| M4 | Double of the downstream | The double stands in for the downstream, never for the system under test. | high |
 
 ## M1 — strategy followed
 

@@ -79,6 +79,37 @@ export const modelName = ({ host, models }) => {
   return host === null ? null : HOST_CHOOSES
 }
 
+/**
+ * What the lenses and the refuter of a review step ran on, as its heading names them: each
+ * agent's last answer on the step, the model its host named, else the family it was assigned;
+ * `-` when none answered; several on different ones each with its own:
+ * `consistency, fitness: haiku; cold-reader: opus`. A verdict kept from an earlier pass or read
+ * by the engine itself started no agent and names none.
+ * @param {RunEvent[]} events @param {string} step @returns {{ lenses: string, refuter: string }}
+ */
+export const reviewModels = (events, step) => {
+  const answers = events.filter((event) => event.step === step && event.assignment !== undefined)
+  return {
+    lenses: answeredText(answers.filter(({ type }) => type === 'review.lens').map((event) => [event.lens, event])),
+    refuter: answeredText(answers.filter(({ type }) => type === 'review.refuted').map((event) => [REFUTER, event])),
+  }
+}
+
+/**
+ * The model of each agent's last answer, agents on the same one together.
+ * @param {Array<[string, RunEvent]>} answers by agent, in journal order @returns {string}
+ */
+const answeredText = (answers) => {
+  /** @type {Map<string, string[]>} */
+  const groups = new Map()
+  for (const [agent, { model, assignment }] of new Map(answers)) {
+    const text = model ?? assignment.family
+    groups.set(text, [...(groups.get(text) ?? []), agent])
+  }
+  if (groups.size < 2) return [...groups.keys()][0] ?? '-'
+  return [...groups].map(([text, agents]) => `${agents.join(', ')}: ${text}`).join('; ')
+}
+
 /** @param {Seen} seen @param {RunEvent} event */
 const started = (seen, event) => {
   seen.started.set(event.step, event)
