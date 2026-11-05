@@ -23,13 +23,13 @@ Read the skill file your brief lists under Skill before any other input; judge w
 - The context map, the diagrams and the event model are the `docs/architecture/` and `docs/domain/event-model/` paths among the changed files: judge what the patch adds or changes in them.
 - An ADR the pass under review wrote is `Proposed`: it satisfies every criterion that asks for an `Accepted` ADR and falls under every criterion that forbids one. Never report an ADR for being `Proposed`.
 
-| Gate | Criterion | Severity |
-|---|---|---|
-| G3 | Domain and Application depend on nothing in Infrastructure or API: no type, namespace or import from those layers in a Domain or Application contract or file. | blocker |
-| G4 | Every application interface (repository, gateway, publisher) is defined in Domain or Application, in the layer the aggregate's ADR records, never in Infrastructure. A Domain repository interface the ADR chose is not a finding. | blocker |
-| G5 | Each aggregate enforces only its own invariants and refers to other aggregates by ID, never by holding another aggregate root. | high |
-| G6 | The context map labels every relationship between contexts with an explicit pattern (ACL, Conformist, Shared Kernel, Partnership, Open Host Service, Published Language); no dependency between contexts is undeclared. | high |
-| G16 | Comparable interfaces or hooks for similar responsibilities share the same state, return and error shape and exposed field names, unless an ADR justifies the divergence. Name the compared pair in the finding. | high |
+| Gate | Name | Criterion | Severity |
+|---|---|---|---|
+| G3 | Dependency rule | Domain and Application depend on nothing in Infrastructure or API: no type, namespace or import from those layers in a Domain or Application contract or file. | blocker |
+| G4 | Interfaces in an inner layer | Every application interface (repository, gateway, publisher) is defined in Domain or Application, in the layer the aggregate's ADR records, never in Infrastructure. A Domain repository interface the ADR chose is not a finding. | blocker |
+| G5 | Invariants stay inside one aggregate | Each aggregate enforces only its own invariants and refers to other aggregates by ID, never by holding another aggregate root. | high |
+| G6 | Context map complete and admissible | The context map labels every relationship between contexts with an explicit pattern (ACL, Conformist, Shared Kernel, Partnership, Open Host Service, Published Language); no dependency between contexts is undeclared. | high |
+| G16 | Comparable contracts share a convention | Comparable interfaces or hooks for similar responsibilities share the same state, return and error shape and exposed field names, unless an ADR justifies the divergence. Name the compared pair in the finding. | high |
 
 ## Output
 

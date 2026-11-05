@@ -24,6 +24,11 @@ team uses:
 | Claude Code | `.claude/agents/threat-model-lens.md` |
 | Copilot CLI, VS Code | `.github/agents/threat-model-lens.agent.md` (or `.md`) |
 
+Give it a gate table with the columns `| Gate | Name | Criterion | Severity |`, as the lenses
+skraft ships have: the Name, a few words, is what the pull request's Review shows next to the
+gate id ([Review table](../reference/pull-request.md#review-table)); a table without it shows the
+id alone.
+
 The lens answers in the format the engine reads:
 [A lens's answer](../reference/gates.md#lens-answer).
 

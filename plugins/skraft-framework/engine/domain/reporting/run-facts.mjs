@@ -13,8 +13,9 @@ import { reviewModels } from './agent-models.mjs'
  *   exitCode: that of the replay that proved the commit red (its test or e2e command), null when it was not replayed (a test that kills mutants).
  * @typedef {{ component: string, gate: string, command: string, status: string, durationMs: number, evidence: string, survivors?: number | null }} GateFact
  *   survivors: the mutants a mutation gate handed out, null when it passed or could not tell; absent for any other gate.
- * @typedef {{ step: string, lens: string, id: string, gate: string, severity: string, location: string, description: string, verdict: string | null, reason: string | null, dissent: boolean, carried: number | null, since: number | null, accepted: boolean }} FindingFact
- *   verdict: the refuter's, null for a finding it does not check (noted); carried: the pass
+ * @typedef {{ step: string, lens: string, id: string, gate: string, severity: string, location: string, description: string, verdict: string | null, reason: string | null, dissent: boolean, carried: number | null, since: number | null, accepted: boolean, rule: string | null }} FindingFact
+ *   rule: the name the lens's descriptor gives its gate, null when the journal does not hold it
+ *   (an older journal, a lens without a Name column); verdict: the refuter's, null for a finding it does not check (noted); carried: the pass
  *   whose refutation this one repeats, null when the refuter judged it on this pass; since: the
  *   pass since which its line is unchanged when the review noted it, null otherwise; accepted: a
  *   human accepted it as it stands at the review's ceiling.
@@ -25,7 +26,8 @@ import { reviewModels } from './agent-models.mjs'
  *   stands at the review's ceiling; note: new on a line unchanged since an earlier pass: it never
  *   counts; refuted: the refuter refuted it, on this pass or an earlier one.
  * @typedef {{ status: ReviewStatus, cited: string, finding: FindingFact }} FindingLine
- *   cited: `<lens> <id> <gate>` of each lens that found it at that line, with that severity and status.
+ *   cited: `<lens> · <gate> <rule> (<id>)` of each lens that found it at that line, with that
+ *   severity and status; `<lens> · <gate> (<id>)` when the rule has no name.
  * @typedef {{ step: string, passes: number, lenses: string, refuter: string, lines: FindingLine[] }} StepReview
  *   passes: how many passes the step ran; lenses, refuter: what they ran on (`reviewModels`);
  *   lines: grouped by status, in the order of REVIEW_STATUSES.
@@ -103,18 +105,18 @@ const countedStatus = (finding) => {
  * @param {string[]} accepted `<step> <lens> <id>` of each finding a human accepted at a review's ceiling
  * @returns {FindingFact[]}
  */
-const findingsOf = (events, { step, visit, lens, findings }, accepted) => {
+const findingsOf = (events, { step, visit, lens, findings, gates = {} }, accepted) => {
   const said = events.filter((event) => event.step === step && event.visit === visit && event.lens === lens)
-  return findings.map((/** @type {any} */ finding) => findingFact({ step, lens }, finding, said.findLast((event) => event.finding === finding.id), accepted))
+  return findings.map((/** @type {any} */ finding) => findingFact({ step, lens, gates }, finding, said.findLast((event) => event.finding === finding.id), accepted))
 }
 
 /**
- * @param {{ step: string, lens: string }} of @param {any} finding
+ * @param {{ step: string, lens: string, gates: Record<string, string> }} of @param {any} finding
  * @param {RunEvent | undefined} said what the pass journaled last of that finding @param {string[]} accepted
  * @returns {FindingFact}
  */
-const findingFact = ({ step, lens }, { id, gate, severity, location, description }, said, accepted) => ({
-  step, lens, id, gate, severity, location, description, ...saidOf(said ?? {}), accepted: accepted.includes(`${step} ${lens} ${id}`),
+const findingFact = ({ step, lens, gates }, { id, gate, severity, location, description }, said, accepted) => ({
+  step, lens, id, gate, severity, location, description, ...saidOf(said ?? {}), accepted: accepted.includes(`${step} ${lens} ${id}`), rule: Object.hasOwn(gates, gate) ? gates[gate] : null,
 })
 
 /** @param {Partial<RunEvent>} said */
@@ -122,7 +124,10 @@ const saidOf = ({ verdict = null, reason = null, dissent, carried = null, since 
 
 /** The findings as lines, grouped by status in the order of REVIEW_STATUSES. @param {FindingFact[]} findings @returns {FindingLine[]} */
 const linesOf = (findings) => REVIEW_STATUSES.flatMap((status) => groupFindings(findings.filter((finding) => statusOf(finding) === status).map((finding) => ({ lens: finding.lens, finding })))
-  .map((members) => ({ status, cited: members.map(({ lens, finding }) => `${lens} ${finding.id} ${finding.gate}`).join(', '), finding: members[0].finding })))
+  .map((members) => ({ status, cited: members.map(({ lens, finding }) => citedOf(lens, finding)).join(', '), finding: members[0].finding })))
+
+/** `consistency · G1 Every structural commitment has an ADR (F3)`. @param {string} lens @param {FindingFact} finding */
+const citedOf = (lens, { gate, rule, id }) => `${lens} · ${rule === null ? gate : `${gate} ${rule}`} (${id})`
 
 /**
  * The model families the agents were assigned and the models their hosts named, each once, sorted:

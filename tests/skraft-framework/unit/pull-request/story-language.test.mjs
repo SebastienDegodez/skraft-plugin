@@ -164,20 +164,20 @@ test('a French story\'s review, failed gate, decisions and costs are told in Fre
     '<details><summary>2 réfutés</summary>',
     '',
     FR_HEADER, FR_RULE,
-    '| Réfuté | medium | consistency F1 G1 | `details/x.md:3` | the map names no currency | details/x.md:3 names EUR |',
-    '| Réfuté | high | fitness F1 G1 | `details/x.md:9` | speculative cache | nothing is cached |',
+    '| Réfuté | medium | consistency · G1 Every structural commitment has an ADR (F1) | `details/x.md:3` | the map names no currency | details/x.md:3 names EUR |',
+    '| Réfuté | high | fitness · G1 (F1) | `details/x.md:9` | speculative cache | nothing is cached |',
     '',
     '</details>',
     '',
     '**deliver_review** · 1 passe · lentilles reviewer · réfuteur standard',
     '',
     FR_HEADER, FR_RULE,
-    '| À trancher | medium | cold-reader F1 G1 | `src/Checkout.cs:3` | pay names no currency | une seule lentille, contre celles qui sont passées ; réfuté : context-map.md:12 fixes pay(amount) |',
+    '| À trancher | medium | cold-reader · G1 (F1) | `src/Checkout.cs:3` | pay names no currency | une seule lentille, contre celles qui sont passées ; réfuté : context-map.md:12 fixes pay(amount) |',
     '',
     '<details><summary>1 réfuté</summary>',
     '',
     FR_HEADER, FR_RULE,
-    '| Réfuté | low | test-integrity F1 G1, architecture-boundaries F1 G1 | `src/Checkout.cs:12` | long name | Checkout.cs:12 is short |',
+    '| Réfuté | low | test-integrity · G1 (F1), architecture-boundaries · G1 (F1) | `src/Checkout.cs:12` | long name | Checkout.cs:12 is short |',
     '',
     '</details>',
   ].join('\n'))
@@ -221,8 +221,8 @@ test('a French story\'s review whose findings a human accepted at its ceiling sh
   assert.equal(section(body, 'Revue'), [
     '**design_review** · 4 passes · lentilles reviewer · réfuteur standard', '',
     FR_HEADER, FR_RULE,
-    "| Accepté | medium | consistency F1 G1 | `docs/architecture/payments.md:7` | a read model is classified twice | un humain l'a accepté tel quel au plafond de la revue |",
-    "| Accepté | low | consistency F2 G1 | `docs/architecture/payments.md:9` | a typo | un humain l'a accepté tel quel au plafond de la revue |",
+    "| Accepté | medium | consistency · G1 Every structural commitment has an ADR (F1) | `docs/architecture/payments.md:7` | a read model is classified twice | un humain l'a accepté tel quel au plafond de la revue |",
+    "| Accepté | low | consistency · G1 Every structural commitment has an ADR (F2) | `docs/architecture/payments.md:9` | a typo | un humain l'a accepté tel quel au plafond de la revue |",
   ].join('\n'))
 
   const one = scripted({ config: CONSENTED, codeHost: french(), answers: [{ answer: 'ACCEPT' }] }, (it) => [

@@ -31,10 +31,10 @@ Judge each test against both plans before flagging it (`craft-discipline` C12):
 - A test absent from both plans is legitimate only when a document your brief lists records a `PLAN_DEVIATION` for it; otherwise report it `medium` under G7.
 - Acceptance-test input and expected values must match the `.feature` verbatim; a changed value is a G9 finding.
 
-| Gate | Criterion | Severity |
-|---|---|---|
-| G7 | No test theater: every test can fail when the behaviour it names breaks. | blocker |
-| G9 | No test changed to pass (Iron Rule): no weakened assertion, no deleted test, no skip or focus added, no acceptance value that drifted from the `.feature`. | blocker |
+| Gate | Name | Criterion | Severity |
+|---|---|---|---|
+| G7 | No test theater | No test theater: every test can fail when the behaviour it names breaks. | blocker |
+| G9 | Iron Rule | No test changed to pass (Iron Rule): no weakened assertion, no deleted test, no skip or focus added, no acceptance value that drifted from the `.feature`. | blocker |
 
 ## G7 — test theater
 

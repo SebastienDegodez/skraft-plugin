@@ -350,20 +350,20 @@ test('the review the description shows: one table per review, a row per finding 
     '<details><summary>2 refuted</summary>',
     '',
     HEADER, RULE,
-    '| Refuted | medium | consistency F1 G1 | `details/x.md:3` | the map names no currency | details/x.md:3 names EUR |',
-    '| Refuted | high | fitness F1 G1 | `details/x.md:9` | speculative cache | nothing is cached |',
+    '| Refuted | medium | consistency · G1 Every structural commitment has an ADR (F1) | `details/x.md:3` | the map names no currency | details/x.md:3 names EUR |',
+    '| Refuted | high | fitness · G1 (F1) | `details/x.md:9` | speculative cache | nothing is cached |',
     '',
     '</details>',
     '',
     '**deliver_review** · 1 pass · lenses reviewer · refuter standard',
     '',
     HEADER, RULE,
-    '| To decide | medium | cold-reader F1 G1 | `src/Checkout.cs:3` | pay names no currency, so a refund cannot tell euros from dollars and the ledger rounds each one it… | one lens alone, against the lenses that passed; refuted: context-map.md:12 fixes pay(amount) in euros for the whole checkout context, and the ADR states it in its decision |',
+    '| To decide | medium | cold-reader · G1 (F1) | `src/Checkout.cs:3` | pay names no currency, so a refund cannot tell euros from dollars and the ledger rounds each one it… | one lens alone, against the lenses that passed; refuted: context-map.md:12 fixes pay(amount) in euros for the whole checkout context, and the ADR states it in its decision |',
     '',
     '<details><summary>1 refuted</summary>',
     '',
     HEADER, RULE,
-    '| Refuted | low | test-integrity F1 G1, architecture-boundaries F1 G1 | `src/Checkout.cs:12` | long name | Checkout.cs:12 is short |',
+    '| Refuted | low | test-integrity · G1 (F1), architecture-boundaries · G1 (F1) | `src/Checkout.cs:12` | long name | Checkout.cs:12 is short |',
     '',
     '</details>',
   ].join('\n'))
@@ -386,7 +386,7 @@ test('the review the description shows: one table per review, a row per finding 
     '<details><summary>1 refuted</summary>',
     '',
     HEADER, RULE,
-    '| Refuted | low | consistency F1 G1 | `details/x.md:3` | a long heading | the heading is short |',
+    '| Refuted | low | consistency · G1 Every structural commitment has an ADR (F1) | `details/x.md:3` | a long heading | the heading is short |',
     '',
     '</details>',
     '',
@@ -395,7 +395,7 @@ test('the review the description shows: one table per review, a row per finding 
     '<details><summary>1 refuted</summary>',
     '',
     HEADER, RULE,
-    '| Refuted | low | cold-reader F1 G1 | `src/Checkout.cs:12` | long name | the name is short |',
+    '| Refuted | low | cold-reader · G1 (F1) | `src/Checkout.cs:12` | long name | the name is short |',
     '',
     '</details>',
   ].join('\n'))
@@ -404,7 +404,7 @@ test('the review the description shows: one table per review, a row per finding 
   minor.agentRunner.review = lenses({ 'cold-reader': [says('cold-reader', 'pass', [finding('F1', 'low', 'long name')])], refuter: [refutes('refuted', 'the name is short')] })
   await minor.start()
   const minorBody = await minor.tracking.read(SLUG, 'pull-request-body.md')
-  assert.equal(section(minorBody, 'Review'), ['**deliver_review** · 1 pass · lenses reviewer · refuter standard', '', '<details><summary>1 refuted</summary>', '', HEADER, RULE, '| Refuted | low | cold-reader F1 G1 | `src/Checkout.cs:12` | long name | the name is short |', '', '</details>'].join('\n'))
+  assert.equal(section(minorBody, 'Review'), ['**deliver_review** · 1 pass · lenses reviewer · refuter standard', '', '<details><summary>1 refuted</summary>', '', HEADER, RULE, '| Refuted | low | cold-reader · G1 (F1) | `src/Checkout.cs:12` | long name | the name is short |', '', '</details>'].join('\n'))
   assert.equal(opening(minorBody, 'Review'), '<details><summary>Review: 1 refuted</summary>')
 })
 
@@ -428,8 +428,8 @@ test('a review whose rework the workflow sends onward shows what is to fix, open
     '**design_review** · 1 pass · lenses reviewer · refuter standard',
     '',
     HEADER, RULE,
-    '| To fix | medium | consistency F1 G1 | `details/x.md:3` | no owner for refunds | confirmed: nobody owns refunds |',
-    '| To fix | high | fitness F1 G1 | `details/x.md:9` | speculative cache | not verified: no rule names the cache |',
+    '| To fix | medium | consistency · G1 Every structural commitment has an ADR (F1) | `details/x.md:3` | no owner for refunds | confirmed: nobody owns refunds |',
+    '| To fix | high | fitness · G1 (F1) | `details/x.md:9` | speculative cache | not verified: no rule names the cache |',
   ].join('\n'))
 })
 
@@ -447,8 +447,8 @@ test('two reviews with the same lens each show what the refuter said of their ow
   assert.equal((await host.start()).status, 'done')
 
   const review = section(await host.tracking.read(SLUG, 'pull-request-body.md'), 'Review')
-  assert.ok(review.includes('**first_review** · 1 pass · lenses test-integrity: claude-haiku-5; architecture-boundaries, cold-reader: reviewer · refuter claude-sonnet-5\n\n' + HEADER + '\n' + RULE + '\n| To decide | medium | test-integrity F1 G1 | `src/Checkout.cs:12` | the total is not asserted | one lens alone, against the lenses that passed; refuted: line 12 asserts 90 |'), review)
-  assert.ok(review.includes('**second_review** · 1 pass · lenses test-integrity: claude-sonnet-5; architecture-boundaries, cold-reader: reviewer · refuter claude-opus-5\n\n' + HEADER + '\n' + RULE + '\n| To decide | medium | test-integrity F1 G1 | `src/Checkout.cs:12` | the total is still not asserted | one lens alone, against the lenses that passed; refuted: line 12 still asserts 90 |'), review)
+  assert.ok(review.includes('**first_review** · 1 pass · lenses test-integrity: claude-haiku-5; architecture-boundaries, cold-reader: reviewer · refuter claude-sonnet-5\n\n' + HEADER + '\n' + RULE + '\n| To decide | medium | test-integrity · G1 (F1) | `src/Checkout.cs:12` | the total is not asserted | one lens alone, against the lenses that passed; refuted: line 12 asserts 90 |'), review)
+  assert.ok(review.includes('**second_review** · 1 pass · lenses test-integrity: claude-sonnet-5; architecture-boundaries, cold-reader: reviewer · refuter claude-opus-5\n\n' + HEADER + '\n' + RULE + '\n| To decide | medium | test-integrity · G1 (F1) | `src/Checkout.cs:12` | the total is still not asserted | one lens alone, against the lenses that passed; refuted: line 12 still asserts 90 |'), review)
 })
 
 test('a red commit the engine refused is not shown as evidence, only the one that replaced it', async () => {
@@ -632,7 +632,7 @@ test('a body whose decisive sections are past 60,000 characters keeps what waits
   assert.ok(body.length <= 60_000 && body.length > 59_900, String(body.length))
   assert.equal(opening(body, 'Review'), '<details open><summary>Review: 20 to decide</summary>')
   assert.equal(section(body, 'Review'), section(await host.tracking.read(SLUG, 'pull-request.md'), 'Review'))
-  assert.equal(section(body, 'Review').split('\n').at(-1), `| To decide | medium | cold-reader F20 G1 | \`src/Checkout.cs:20\` | ${'pay names no currency '.repeat(5).slice(0, 99)}… | one lens alone, against the lenses that passed; refuted: ${'the map fixes it '.repeat(35).trimEnd()} |`)
+  assert.equal(section(body, 'Review').split('\n').at(-1), `| To decide | medium | cold-reader · G1 (F20) | \`src/Checkout.cs:20\` | ${'pay names no currency '.repeat(5).slice(0, 99)}… | one lens alone, against the lenses that passed; refuted: ${'the map fixes it '.repeat(35).trimEnd()} |`)
   assert.ok(section(body, 'Why').endsWith(`\n\n${CUT}`), section(body, 'Why').slice(-200))
   assert.ok(section(body, 'What changes').endsWith('Checkout records it.\nDone.'), section(body, 'What changes').slice(-200))
 })

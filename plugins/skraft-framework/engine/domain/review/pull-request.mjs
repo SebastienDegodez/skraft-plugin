@@ -65,7 +65,8 @@ export const commentStartOf = (number) => `### skraft review · #${number} — `
 
 /**
  * The comment: the verdict of the pass, how many findings of each status its last pass holds,
- * the heading line of the review and their table (`review-table.mjs`), and the marker; in the pull request's language. A pass a lens
+ * the heading line of the review, named Review in its language rather than by its node, and
+ * their table (`review-table.mjs`), and the marker; in the pull request's language. A pass a lens
  * blocked, or one without a finding, says its verdict's summary instead.
  * @param {{ number: number, pass: number, verdict: ReviewVerdict, review: ReviewFacts, language: Language }} review
  */
@@ -75,7 +76,7 @@ export const renderComment = ({ number, pass, verdict, review, language }) => {
   return [
     `${commentStartOf(number)}${verdict.status} (${words.review.pass(pass)})`, '',
     count === null ? inert(verdict.summary) : `${words.review.lead}${count}`, '',
-    ...(count === null ? [] : [...review.flatMap((step) => [stepHeading(step, words), '', ...stepTable(step.lines, words)]), '']),
+    ...(count === null ? [] : [...review.flatMap((step) => [stepHeading({ ...step, step: words.headings.review }, words), '', ...stepTable(step.lines, words)]), '']),
     markerOf(number), '',
   ].join('\n')
 }

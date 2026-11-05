@@ -96,7 +96,7 @@ The description is written in the story's language. What decides shows under a h
 
 ### Review <!-- #review -->
 
-- **Holds**: per review step, its heading line and its table ([Review table](#review-table)); `Every lens of the last pass of each review passed without a finding.` when no lens found anything.
+- **Holds**: per review step, its heading line (`**<review>** · …`) and its table ([Review table](#review-table)); `Every lens of the last pass of each review passed without a finding.` when no lens found anything.
 - **Shown**: folded; the summary reads `Review: <counts>` and the block opens itself while a finding is To fix, To decide or Accepted.
 - **Written by**: the engine, from the last pass of each review.
 - **Read it to**: see what the reviewing lenses found and what the refuter decided.
@@ -148,7 +148,7 @@ Past the forge's body limit, the body keeps the sections shown under a heading a
 
 ## Review table <!-- #review-table -->
 
-The counts line reads like `Review: 2 to fix, 1 note, 13 refuted`. Each review step opens on a heading line, `**<review>** · <n> passes · lenses <model> · refuter <model>`, so that two runs compare: the model is the one the host named on the agent's last answer, else the family it was assigned; lenses on different models each show theirs (`test-integrity: sonnet; cold-reader: haiku`); `-` when no agent answered. Then the table with the columns `Status | Severity | Lens | Location | Finding | Why`. Rows are grouped To fix, To decide, Accepted, then Note; the Refuted rows are folded under their count. The Lens cell reads `<lens> <id> <gate>` for every lens that found the same line with the same severity and status. A finding without a location shows `-`. The finding, and the refuter's reason on a To fix row, are cut at 100 characters with `…`; the reason is whole on a To decide row and in the folded Refuted rows, where it is read to judge the refuter; `verdict.yaml` keeps everything whole.
+The counts line reads like `Review: 2 to fix, 1 note, 13 refuted`. Each review step opens on a heading line, `**<review>** · <n> passes · lenses <model> · refuter <model>`, so that two runs compare: the model is the one the host named on the agent's last answer, else the family it was assigned; lenses on different models each show theirs (`test-integrity: sonnet; cold-reader: haiku`); `-` when no agent answered. Then the table with the columns `Status | Severity | Lens | Location | Finding | Why`. Rows are grouped To fix, To decide, Accepted, then Note; the Refuted rows are folded under their count. The Lens cell reads `<lens> · <gate> <name> (<id>)` for every lens that found the same line with the same severity and status, like `consistency · G1 Every structural commitment has an ADR (F3)`: the name is the one the Name column of the lens's gate table gives; without one (a journal written before the column, a lens of the repository without it) the cell reads `<lens> · <gate> (<id>)`. A finding without a location shows `-`. The finding, and the refuter's reason on a To fix row, are cut at 100 characters with `…`; the reason is whole on a To decide row and in the folded Refuted rows, where it is read to judge the refuter; `verdict.yaml` keeps everything whole.
 
 ### Statuses <!-- #statuses -->
 
@@ -183,7 +183,7 @@ How the refuter works and how a later pass reuses it: [Refutation](./gates.md#re
 
 1. the heading `### skraft review · #<n> — <STATUS> (pass N)`;
 2. the counts line, or the verdict's summary when the status is BLOCKED or no finding exists;
-3. the heading line and the table of the [Review table](#review-table);
+3. the heading line, which names the review `Review` rather than its node, and the table of the [Review table](#review-table);
 4. the visible marker `skraft-review pr=<n>`, which finds the comment again.
 
 The comment is rewritten at every pass; on Azure Repos it is a thread created Closed. Steps and consent: [Review a pull request with skraft](../how-to/review-a-pull-request.md).
