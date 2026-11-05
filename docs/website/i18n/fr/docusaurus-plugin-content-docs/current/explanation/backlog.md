@@ -29,7 +29,7 @@ flowchart LR
     PRD["PRD approuvé"] -->|workflow<br/>skraft-prd-backlog| BL["epics + stories<br/>sur GitHub"]
     IS["issues existantes"] -->|backlog-discoverer| TR["triage +<br/>proposition de sprint"]
     TR -->|backlog-planner| ST["stories prêtes<br/>dans le dossier de suivi"]
-    ONE["une issue"] -->|/skraft-refine (Claude Code)<br/>/skraft-backlog:skraft-refine (Copilot CLI)<br/>ou workflow gh-aw| CO["proposition de<br/>raffinement en commentaire"]
+    ONE["une issue"] -->|"/skraft-refine (Claude Code)<br/>/skraft-backlog:skraft-refine (Copilot CLI)<br/>ou workflow gh-aw"| CO["proposition de<br/>raffinement en commentaire"]
     ST -->|skraft init --from-artifacts| ENG["pipeline d'ingénierie<br/>en DESIGN"]
 ```
 
