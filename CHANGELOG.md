@@ -3,6 +3,12 @@
 Toutes les modifications notables de ce projet sont documentées ici.
 Format basé sur [Conventional Commits](https://www.conventionalcommits.org/) — versionnage [SemVer](https://semver.org/).
 
+## [2.0.0-alpha.60](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.59...v2.0.0-alpha.60) (2026-11-05)
+
+### ✨ Features
+
+* **engine:** decide on the findings a review leaves at its ceiling ([#503](https://github.com/SebastienDegodez/skraft-plugin/issues/503)) ([27c2e65](https://github.com/SebastienDegodez/skraft-plugin/commit/27c2e656b5f5639f4345f9a411e624058c10d5ec)), closes [#500](https://github.com/SebastienDegodez/skraft-plugin/issues/500) [#499](https://github.com/SebastienDegodez/skraft-plugin/issues/499) [#499](https://github.com/SebastienDegodez/skraft-plugin/issues/499) [#500](https://github.com/SebastienDegodez/skraft-plugin/issues/500) [#500](https://github.com/SebastienDegodez/skraft-plugin/issues/500) [#500](https://github.com/SebastienDegodez/skraft-plugin/issues/500) [#500](https://github.com/SebastienDegodez/skraft-plugin/issues/500) [#499](https://github.com/SebastienDegodez/skraft-plugin/issues/499) [#499](https://github.com/SebastienDegodez/skraft-plugin/issues/499) [#499](https://github.com/SebastienDegodez/skraft-plugin/issues/499) [#500](https://github.com/SebastienDegodez/skraft-plugin/issues/500) [#499](https://github.com/SebastienDegodez/skraft-plugin/issues/499) [#505](https://github.com/SebastienDegodez/skraft-plugin/issues/505) [#499](https://github.com/SebastienDegodez/skraft-plugin/issues/499) [#499](https://github.com/SebastienDegodez/skraft-plugin/issues/499)
+
 ## [2.0.0-alpha.59](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.58...v2.0.0-alpha.59) (2026-11-04)
 
 ### 🐛 Bug Fixes
