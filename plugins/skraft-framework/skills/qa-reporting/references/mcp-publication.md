@@ -24,7 +24,7 @@ sequenceDiagram
     participant O as Publishing agent
     participant L as Local reporting CLI
     participant M as Selected host transport
-    O->>L: setup consent; render checked producer data once
+    O->>L: setup consent, then render checked producer data once
     O->>L: prepare destination packet
     L-->>O: exact marked body, digest, target, pending or ready
     O->>M: read identity, target/head, all comments
@@ -32,7 +32,7 @@ sequenceDiagram
     O->>L: decide normalized snapshot
     L-->>O: create / update / unchanged / pending
     opt create or update authorized
-        O->>M: exact packet body; selected target and comment/thread IDs
+        O->>M: exact packet body, selected target and comment/thread IDs
         M-->>O: write result
     end
     opt non-pending decision
