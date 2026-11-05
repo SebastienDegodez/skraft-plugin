@@ -46,8 +46,8 @@ stimuli:
           dest: Directory.Packages.props
         - src: fixtures/designed-story/.copilot-tracking/skraft-plans/pricing/plans/2026-08-12/stories-m1.md
           dest: .copilot-tracking/skraft-plans/pricing/plans/2026-08-12/stories-m1.md
-        - src: fixtures/designed-story/.copilot-tracking/skraft-plans/pricing/plans/2026-08-12/ac.md
-          dest: .copilot-tracking/skraft-plans/pricing/plans/2026-08-12/ac.md
+        - src: fixtures/designed-story/.copilot-tracking/skraft-plans/pricing/plans/2026-08-12/ac-draft-discount.md
+          dest: .copilot-tracking/skraft-plans/pricing/plans/2026-08-12/ac-draft-discount.md
         - src: fixtures/designed-story/.copilot-tracking/skraft-plans/pricing/details/2026-08-12/contracts.md
           dest: .copilot-tracking/skraft-plans/pricing/details/2026-08-12/contracts.md
         - src: fixtures/designed-story/docs/adr/decisions-index.md
@@ -247,8 +247,8 @@ stimuli:
           dest: Directory.Packages.props
         - src: fixtures/designed-story/.copilot-tracking/skraft-plans/pricing/plans/2026-08-12/stories-m1.md
           dest: .copilot-tracking/skraft-plans/pricing/plans/2026-08-12/stories-m1.md
-        - src: fixtures/designed-story/.copilot-tracking/skraft-plans/pricing/plans/2026-08-12/ac.md
-          dest: .copilot-tracking/skraft-plans/pricing/plans/2026-08-12/ac.md
+        - src: fixtures/designed-story/.copilot-tracking/skraft-plans/pricing/plans/2026-08-12/ac-draft-discount.md
+          dest: .copilot-tracking/skraft-plans/pricing/plans/2026-08-12/ac-draft-discount.md
         - src: fixtures/designed-story/.copilot-tracking/skraft-plans/pricing/details/2026-08-12/contracts.md
           dest: .copilot-tracking/skraft-plans/pricing/details/2026-08-12/contracts.md
         - src: fixtures/designed-story/.copilot-tracking/skraft-plans/pricing/research/2026-08-12/pricing-research.md
