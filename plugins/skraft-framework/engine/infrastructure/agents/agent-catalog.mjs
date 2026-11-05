@@ -32,7 +32,7 @@ export const createAgentCatalog = ({ files, pluginRoot, root, host }) => {
   return Object.freeze({
     locate: (agent) => locateAgent({ files, pluginRoot, root, places }, agent),
     descriptor: (agent) => descriptorPath({ files, pluginRoot, root, places }, agent),
-    gateNames: async (agent) => gateNamesOf((await descriptorOf({ files, pluginRoot, root, places }, agent))?.text ?? ''),
+    gateNames: (agent) => gateNamesIn({ files, pluginRoot, root, places }, agent),
     skills: (agent) => skillsOf({ files, pluginRoot, root, places }, agent),
     skill: (name) => namedSkill({ files, pluginRoot, root, places }, name),
   })
@@ -88,10 +88,16 @@ const skillsOf = async (catalog, agent) => {
 /** Where the agent's descriptor is, the plugin's first; null when nobody provides it. @param {Catalog} catalog @param {string} agent */
 const descriptorPath = async (catalog, agent) => (await descriptorOf(catalog, agent))?.path ?? null
 
+/** The names the agent's descriptor gives its gates; none when nobody provides it. @param {Catalog} catalog @param {string} agent */
+const gateNamesIn = async (catalog, agent) => {
+  const found = await descriptorOf(catalog, agent)
+  return found === null ? {} : gateNamesOf(found.text)
+}
+
 /**
  * The names a descriptor's gate table gives, by gate id: the rows under its header
  * `| Gate | Name | …` and its rule line, up to the first line that is no row; none without that
- * header, as in a lens a repository wrote before it.
+ * header, as in a lens a repository wrote before it. A line ending in `\r` (CRLF) reads the same.
  * @param {string} text @returns {Record<string, string>}
  */
 const gateNamesOf = (text) => {
