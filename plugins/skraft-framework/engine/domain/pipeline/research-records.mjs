@@ -11,13 +11,16 @@
  */
 
 const RESEARCH = /(^|\/)research\/[^/]+\/[^/]+\.md$/
-/** A token that could be a workspace path: segments of word characters, dots and dashes joined by slashes, at a path boundary. */
-const TOKEN = /(?<=^|[\s,`'"(])[\w.-]+(?:\/[\w.-]+)+/g
+/** A token that could be a workspace path, including a trailing slash that marks a folder. */
+const TOKEN = /(?<=^|[\s,`'"(])[\w.-]+(?:\/[\w.-]+)+\/?/g
+/** A root-level filename, or a filename listed alone as a file-analysis citation. */
+const ROOT_FILE = /(?<=^|[\s,`'"(])[\w-]+\.[A-Za-z]\w{0,9}(?=$|[\s,`'"):])/g
+const FILE_ANALYSIS = /^### File analysis\s*([\s\S]*?)(?=^### |^## |(?![\s\S]))/gm
+const FILE_LIST_ITEM = /^\s*[-*]\s+([A-Za-z0-9_-]+)\s*$/gm
 /** A citation that closes a sentence keeps its full stop, which no file name ends with. */
 const FULL_STOP = /\.$/
 /** A path followed by `:line`, or by `:line-line` over a hyphen or a dash: what the document claims its file holds. */
-const RANGE = /(?<=^|[\s,`'"(])([\w.-]+(?:\/[\w.-]+)+):(\d+)(?:[-\u2013](\d+))?/g
-/** A file name ends with an extension; a token without one names a folder, not a file to read. */
+const RANGE = /(?<=^|[\s,`'"(])([\w.-]+(?:\/[\w.-]+)*):(\d+)(?:[-\u2013](\d+))?/g
 const EXTENSION = /\.[A-Za-z]\w{0,9}$/
 const TRACKING = '.copilot-tracking'
 
@@ -34,12 +37,21 @@ export const isResearch = (path) => RESEARCH.test(path)
 export const citedPaths = (text) => [...new Set(tokensOf(text).map((token) => token.replace(FULL_STOP, '')))]
   .filter(isWorkspaceFile)
 
-/** Every token of a document that could be a path, back slashes read as separators. @param {string} text */
+/** Every path token or standalone file citation, back slashes read as separators. @param {string} text */
 // Stryker disable next-line ArrayDeclaration: a document that cites nothing gives a placeholder that names no file, as no citation does
-const tokensOf = (text) => text.replaceAll('\\', '/').match(TOKEN) ?? []
+const tokensOf = (text) => {
+  const normalized = text.replaceAll('\\', '/')
+  const fileLists = [...normalized.matchAll(FILE_ANALYSIS)]
+    .flatMap(([, section]) => [...section.matchAll(FILE_LIST_ITEM)].map(([, path]) => path))
+  return [
+    ...(normalized.match(TOKEN) ?? []),
+    ...(normalized.match(ROOT_FILE) ?? []),
+    ...fileLists,
+  ]
+}
 
 /** @param {string} path */
-const isWorkspaceFile = (path) => EXTENSION.test(path) && !path.startsWith(TRACKING) && !path.split('/').some((part) => part === '.' || part === '..')
+const isWorkspaceFile = (path) => !path.endsWith('/') && (EXTENSION.test(path) || !path.includes('/')) && !path.startsWith(TRACKING) && !path.split('/').some((part) => part === '.' || part === '..')
 
 /**
  * The line ranges a research document cites: the citation as written, its path, and the last
@@ -48,7 +60,7 @@ const isWorkspaceFile = (path) => EXTENSION.test(path) && !path.startsWith(TRACK
  * @returns {Array<{ cite: string, path: string, last: number }>}
  */
 export const citedRanges = (text) => [...text.replaceAll('\\', '/').matchAll(RANGE)]
-  .map(([cite, path, first, last]) => ({ cite, path, last: Number(last ?? first) }))
+  .map(([cite, path, first, last]) => ({ cite, path, first: Number(first), last: Number(last ?? first) }))
 
 /**
  * Why the research records send the researcher back; empty when they hold.
@@ -63,8 +75,8 @@ export const researchFailures = ({ documents, cited }) => documents.flatMap((doc
 /** Each line range a document cites that its file does not hold. @param {Document} document @param {Text[]} cited */
 const rangeFailures = ({ path, text }, cited) => citedRanges(text)
   .map((range) => ({ ...range, lines: lineCount(textOf(cited, range.path)) }))
-  .filter(({ lines, last }) => lines !== null && last > lines)
-  .map(({ cite, lines }) => `${path} cites ${cite}, past the end of a ${lines}-line file (#517)`)
+  .filter(({ lines, first, last }) => lines !== null && (first < 1 || first > lines || last < 1 || last > lines))
+  .map(({ cite, lines }) => `${path} cites ${cite}, outside the 1-${lines} line range (#517)`)
 
 /** How many lines a file holds, a closing newline ending none; null when the engine read no file there, which missingCitations reports when a citation names it. @param {string | null} text */
 const lineCount = (text) => (text === null ? null : withoutClosingNewline(text).split('\n').length)
