@@ -104,8 +104,17 @@ question, ses options et un en-tête (`ADR`, `Reporting`, `Environment`) :
 | --- | --- |
 | une option qui n'est pas un refus | enregistrée comme réponse ; le run continue |
 | un refus (`REJECTED`) | une deuxième boîte : `Why REJECTED? Type the reason under Other; it goes back to the agent.` ; le texte tapé sous Other est la raison ; `Not now` ou `Answer later` ne donnent pas de réponse |
-| du texte tapé sous Other dans la première boîte | une option tapée, quelle que soit la casse, vaut cette option ; un autre texte est un refus avec ce texte pour raison quand la question en a un (`adr-ratification`), la consigne d'une question `blocked` (dont la seule option est `STOP`), et sinon une réponse refusée (le run attend) |
-| boîte fermée | pas de réponse : le run attend |
+| du texte tapé sous Other dans la première boîte | une option tapée, quelle que soit la casse, vaut cette option ; un autre texte est un refus avec ce texte pour raison quand la question en a un (`adr-ratification`), la consigne d'une question `blocked` ou `mutation-plan`, et sinon une réponse refusée (le run attend) |
+| une consigne tapée sous Other | montrée en retour dans une boîte `Send this instruction to <step>? <instruction>` avec `SEND` et `CANCEL` : `SEND` l'enregistre et le run continue ; `CANCEL` repose la question |
+| un texte sans mot tapé comme consigne (`5`, `42?`, `ok`) | refusé sans être montré en retour, et la question est reposée |
+| boîte fermée, celle de `SEND`/`CANCEL` comprise | pas de réponse : le run attend `/skraft decide` |
+
+Une question qui prend une consigne est posée au plus 3 fois : après trois textes refusés ou
+consignes annulées, le run attend `/skraft decide`, sans rien enregistrer. Une consigne contient
+un mot : trois lettres de suite, signes combinants comptés (`करो`, `été`), ou deux lettres d'une
+écriture sans espaces (chinois, kana japonais, coréen : `修复`) ; un chiffre, un signe ou deux
+lettres latines seuls sont refusés sur tous les hôtes, avec un message qui ne répète jamais le
+texte.
 
 Le panneau **Skraft** montre les phases, chacune suivie de ses étapes du graphe du workflow
 (`  ✓ design — solution-architect: done, pass 2, $1.00` : `✓` faite, `▶` en cours, `·` à
@@ -241,16 +250,24 @@ boîte de dialogue de Copilot, dans le chat : un choix parmi ses options (`sessi
 un champ texte pour une question qui prend une consigne, celle d'une étape `blocked` ou le
 `mutation-plan`, où la personne écrit une option ou sa consigne (`session.ui.input`). Un refus
 (`REJECTED`) demande ensuite sa raison, dans un champ texte. La valeur que rend la boîte de
-dialogue est la réponse, journalisée `by: "host-confirmed"` ; rien ne demande de la confirmer, et
-le run continue. Quand Copilot ne peut pas poser la question (pas de boîte de dialogue, mode
-`autopilot`, mode qu'il ne dit pas, trop de questions en peu de temps) ou que la personne la
-ferme, le workflow écrit pourquoi et comment répondre, puis se met en pause durable par
-`ctx.pause(<clé>)` :
+dialogue est la réponse, journalisée `by: "host-confirmed"`, et le run continue ; une consigne
+écrite dans le champ texte est d'abord montrée en retour (`Send this instruction to <step>?
+<instruction>`, `session.ui.confirm`) et n'est enregistrée qu'une fois que la personne la
+confirme. Le run pose autant de questions qu'il lui faut. Quand Copilot ne peut pas poser la
+question (pas de boîte de dialogue, mode `autopilot`, mode qu'il ne dit pas), que la personne la
+ferme, ou qu'elle n'envoie pas la consigne écrite (`<why>` vaut alors `you did not send the
+instruction you wrote`), le workflow écrit pourquoi et comment répondre, puis se met en pause
+durable par `ctx.pause(<clé>)` :
 
 ```
 Waiting for you — <question>
 adr-1 was not answered: <why>. Resume this run to be asked again, ask Copilot in the chat to put the question to you, or type skraft decide adr-1 RATIFIED|REJECTED in a terminal and resume this run.
 ```
+
+À la différence du mod Claude Code, un texte sans mot écrit comme consigne n'est pas redemandé :
+le run écrit `<slug>: <key> not answered: an instruction tells the agent in words what to do;
+write a sentence, or STOP` et se termine `waiting`, à répondre par `skraft decide` ou l'outil
+`skraft_decide`.
 
 ### Canvas `skraft-pipeline` <!-- #canvas -->
 
@@ -278,7 +295,8 @@ Avant la première phase d'une copie de travail, le workflow ouvre le canvas sur
 Sans argument ; toute clé est refusée. Il pose à la personne, une seule
 fois, la question qu'attend le pipeline actif, dans la boîte de dialogue de Copilot, comme le
 run, et enregistre ce qu'elle donne par le même cas d'usage que `skraft decide` (mêmes règles et
-refus : une consigne de plus de 1000 caractères est refusée), journalisé `by: "host-confirmed"`.
+refus : une consigne de plus de 1000 caractères, ou sans mot, est refusée ; une consigne écrite
+est montrée en retour et n'est enregistrée qu'une fois confirmée), journalisé `by: "host-confirmed"`.
 Ni la question ni la réponse ne viennent du modèle. Sans boîte de dialogue, en mode `autopilot`,
 ou quand la personne ne répond pas, rien n'est enregistré et la personne répond par `skraft
 decide` dans un terminal. Il répond `Recorded: <slug>: <key> answered <answer>; run the pipeline
