@@ -3,6 +3,12 @@
 Toutes les modifications notables de ce projet sont documentées ici.
 Format basé sur [Conventional Commits](https://www.conventionalcommits.org/) — versionnage [SemVer](https://semver.org/).
 
+## [2.0.0-alpha.61](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.60...v2.0.0-alpha.61) (2026-11-05)
+
+### 🐛 Bug Fixes
+
+* **engine:** confirm an instruction before it is recorded, refuse one with no word ([#504](https://github.com/SebastienDegodez/skraft-plugin/issues/504)) ([0538aa8](https://github.com/SebastienDegodez/skraft-plugin/commit/0538aa8b10292bc1f1fa2c9711c2bb0812d92970)), closes [#500](https://github.com/SebastienDegodez/skraft-plugin/issues/500) [#499](https://github.com/SebastienDegodez/skraft-plugin/issues/499) [#499](https://github.com/SebastienDegodez/skraft-plugin/issues/499) [#500](https://github.com/SebastienDegodez/skraft-plugin/issues/500) [#500](https://github.com/SebastienDegodez/skraft-plugin/issues/500) [#500](https://github.com/SebastienDegodez/skraft-plugin/issues/500) [#500](https://github.com/SebastienDegodez/skraft-plugin/issues/500) [#500](https://github.com/SebastienDegodez/skraft-plugin/issues/500) [#500](https://github.com/SebastienDegodez/skraft-plugin/issues/500) [#1](https://github.com/SebastienDegodez/skraft-plugin/issues/1) [#499](https://github.com/SebastienDegodez/skraft-plugin/issues/499) [#499](https://github.com/SebastienDegodez/skraft-plugin/issues/499) [#499](https://github.com/SebastienDegodez/skraft-plugin/issues/499) [#500](https://github.com/SebastienDegodez/skraft-plugin/issues/500) [#499](https://github.com/SebastienDegodez/skraft-plugin/issues/499) [#505](https://github.com/SebastienDegodez/skraft-plugin/issues/505) [#499](https://github.com/SebastienDegodez/skraft-plugin/issues/499) [#499](https://github.com/SebastienDegodez/skraft-plugin/issues/499) [#503](https://github.com/SebastienDegodez/skraft-plugin/issues/503)
+
 ## [2.0.0-alpha.60](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.59...v2.0.0-alpha.60) (2026-11-05)
 
 ### ✨ Features
