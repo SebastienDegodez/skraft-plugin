@@ -137,27 +137,26 @@ const componentChecks = async (deps, component, { run, baseSha }) => {
  */
 const bddChecks = async (deps, component) => {
   const subject = `${component.name}/bdd`
-  const states = await Promise.all(component.bddPaths.map((pair) => pairState(deps, component.root, pair)))
-  return states.map((state) => bddCheck(subject, state))
+  return Promise.all(component.bddPaths.map((pair) => bddCheck(deps, component.root, subject, pair)))
 }
 
-/** @param {string} subject @param {{ pair: BddPair, written: boolean, binds: boolean }} state @returns {DoctorCheck} */
-const bddCheck = (subject, { pair, written, binds }) => {
+/**
+ * One pair's line: where its runner reads, and the warning when the scenarios are written and the
+ * folder that would bind them is no folder. A pair bound to nothing is read from the pair alone.
+ * @param {DoctorDeps} deps @param {string} root @param {string} subject @param {BddPair} pair
+ * @returns {Promise<DoctorCheck>}
+ */
+const bddCheck = async (deps, root, subject, pair) => {
   const named = pair.runner === null ? '' : `${pair.runner}: `
   if (pair.steps === null) return { subject, status: 'ok', detail: `${named}${pair.features}, bound to nothing` }
+  const written = await isFolder(deps, root, pair.features)
+  const binds = await isFolder(deps, root, pair.steps)
   if (written && !binds) return { subject, status: 'warn', detail: `${named}${pair.features} holds scenarios and ${pair.steps} is no folder: nothing binds them` }
   return { subject, status: 'ok', detail: `${named}${pair.features} → ${pair.steps}` }
 }
 
-/**
- * Whether a pair's scenarios are written, and whether its bindings folder exists.
- * @param {DoctorDeps} deps @param {string} root @param {BddPair} pair
- */
-const pairState = async (deps, root, pair) => {
-  const features = await deps.workspace.list(joinRelative(root, pair.features))
-  const steps = pair.steps === null ? null : await deps.workspace.list(joinRelative(root, pair.steps))
-  return { pair, written: features !== null, binds: steps !== null }
-}
+/** Whether a folder of the component is a folder. @param {DoctorDeps} deps @param {string} root @param {string} inner */
+const isFolder = async (deps, root, inner) => (await deps.workspace.list(joinRelative(root, inner))) !== null
 
 /**
  * The skills the component asks of the agents writing its tests that exist nowhere: a warning,

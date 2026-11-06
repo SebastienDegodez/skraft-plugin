@@ -407,12 +407,15 @@ pris. Une racine déjà listée n'est pas reproposée.
 
 **Paires BDD** : un projet nomme son runner dans son propre manifeste, donc l'init l'y lit —
 Reqnroll ou SpecFlow dans un `.csproj`, Cucumber dans un `package.json` ou un `pom.xml`, behave ou
-pytest-bdd dans un manifeste Python. Le runner dit alors quels noms de dossiers portent ses
-liaisons (`Steps`, `StepDefinitions`, `Bindings`, `step_definitions`, `glue`…), et le dossier où se
-trouvent ses `.feature` est celui des scénarios. Un projet qui nomme un runner mais ne montre qu'un
-des deux est écrit sans `bdd`, donc avec le défaut de son stack : une paire à moitié devinée est
-pire qu'une question. Chaque projet de tests d'un composant donne sa propre paire, dans l'ordre des
-dossiers.
+pytest-bdd dans un manifeste Python. Un dossier du projet nommé comme des liaisons les porte —
+`Steps`, `StepDefinitions`, `step_definitions`, `step_defs`, `Bindings` ou `glue`, quel que soit le
+runner nommé par le projet, parce que savoir lequel de ces noms un runner donné lit est la règle du
+runner et que l'init n'en lit rien — et le dossier où se trouvent ses `.feature` est celui des
+scénarios. L'init propose le premier dossier rencontré de chacun, quatre dossiers sous la racine du
+composant et quatre sous un projet, sans passer par les dépendances installées ni par les dossiers
+cachés. Un projet qui nomme un runner mais ne montre qu'un des deux est écrit sans `bdd`, donc avec
+le défaut de son stack : une paire à moitié devinée est pire qu'une question. Chaque projet de tests
+d'un composant donne sa propre paire, dans l'ordre des dossiers.
 
 | Stack | `features` | `steps` | Runners lus |
 | --- | --- | --- | --- |

@@ -432,23 +432,25 @@ const BDD_SHAPE = 'bdd must be true, false, or a list of { runner, features, ste
  */
 const bddOf = ({ bdd, stack }, label, errors) => {
   if (bdd === false) return { bdd: false, bddPaths: [] }
-  if (bdd === undefined || bdd === true) return { bdd: true, bddPaths: stackPairs(stack) }
-  const pairs = Array.isArray(bdd) && bdd.length > 0 ? bdd.map(pairOf) : [null]
-  if (pairs.includes(null)) return refusedPairs(label, errors)
-  return { bdd: true, bddPaths: /** @type {BddPair[]} */ (pairs) }
+  const pairs = listedPairs(bdd)
+  if (pairs !== null) return { bdd: true, bddPaths: pairs }
+  if (bdd !== undefined && bdd !== true) errors.push(`${label}: ${BDD_SHAPE}`)
+  return { bdd: true, bddPaths: stackPairs(stack) }
 }
 
-/** @param {string} label @param {string[]} errors @returns {{ bdd: boolean, bddPaths: BddPair[] }} */
-const refusedPairs = (label, errors) => {
-  errors.push(`${label}: ${BDD_SHAPE}`)
-  return { bdd: true, bddPaths: [] }
+/**
+ * The pairs a list names; null when the component names no list, and null when it names one this
+ * engine refuses, whose error leaves it the pair a component that named nothing would take.
+ * @param {unknown} bdd @returns {BddPair[] | null}
+ */
+const listedPairs = (bdd) => {
+  if (!Array.isArray(bdd) || bdd.length === 0) return null
+  const pairs = bdd.map(pairOf)
+  return pairs.includes(null) ? null : /** @type {BddPair[]} */ (pairs)
 }
 
-/** The default pair of a stack; none for a stack with no usual runner. @param {unknown} stack @returns {BddPair[]} */
-const stackPairs = (stack) => {
-  const folders = BDD_FOLDERS[/** @type {Stack} */ (stack)]
-  return folders === undefined ? [] : [{ runner: null, ...folders }]
-}
+/** The default pair of a stack. @param {unknown} stack @returns {BddPair[]} */
+const stackPairs = (stack) => [{ runner: null, ...BDD_FOLDERS[/** @type {Stack} */ (stack)] }]
 
 /**
  * One pair, its folders normalised; null when it names something else, a folder outside the root,

@@ -398,11 +398,14 @@ taken. A root already listed is not proposed again. The engine writes neither `m
 
 **BDD pairs**: a project names its runner in its own manifest, so init reads it there — Reqnroll or
 SpecFlow in a `.csproj`, Cucumber in a `package.json` or a `pom.xml`, behave or pytest-bdd in a
-Python manifest. The runner then says which folder names hold its bindings (`Steps`,
-`StepDefinitions`, `Bindings`, `step_definitions`, `glue`…), and the folder its `.feature` files sit
-in is the scenarios'. A project that names a runner but shows only one of the two is written without
-`bdd`, so the stack's default applies: a half-guessed pair is worse than a question. Each test
-project of a component gives its own pair, in folder order.
+Python manifest. A folder of the project named like bindings holds them — `Steps`,
+`StepDefinitions`, `step_definitions`, `step_defs`, `Bindings` or `glue`, whichever runner the
+project names, because which of those names a given runner reads is the runner's own rule and init
+reads none of it — and the folder its `.feature` files sit in is the scenarios'. Init proposes the
+first folder it meets of each, four folders below the component root and four below a project, past
+neither installed dependencies nor hidden folders. A project that names a runner but shows only one
+of the two is written without `bdd`, so the stack's default applies: a half-guessed pair is worse
+than a question. Each test project of a component gives its own pair, in folder order.
 
 | Stack | `features` | `steps` | Runners read |
 | --- | --- | --- | --- |

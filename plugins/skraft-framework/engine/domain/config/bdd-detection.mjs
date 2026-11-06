@@ -1,9 +1,9 @@
 /**
  * What `skraft init` reads to know where a project's scenarios and their bindings sit: the runner
- * a manifest names, and the folder names that runner binds its steps in.
+ * a manifest names, and the folder names a project binds its steps in.
  *
- * A project names its runner in its manifest, never in skraft's configuration: the folders follow
- * from the runner, because it is the runner that decides where it looks.
+ * A project names its runner in its manifest, never in skraft's configuration: the manifest is the
+ * only file that says which runner reads the scenarios.
  */
 
 /** What names each runner in a manifest, most specific first: jest-cucumber names no Cucumber package. */
@@ -17,16 +17,12 @@ const RUNNERS = Object.freeze([
   { runner: 'behave', named: /(^|[^\w-])behave([^\w-]|$)/i },
 ])
 
-/** The folder names each runner binds its steps in, lowercase. */
-const BINDINGS = Object.freeze({
-  reqnroll: ['steps', 'stepdefinitions', 'bindings'],
-  specflow: ['steps', 'stepdefinitions', 'bindings'],
-  'cucumber-jvm': ['steps', 'stepdefinitions', 'glue'],
-  'cucumber-js': ['step_definitions', 'steps'],
-  'jest-cucumber': ['steps', 'step_definitions'],
-  'pytest-bdd': ['steps', 'step_defs'],
-  behave: ['steps'],
-})
+/**
+ * The folder names a project binds its scenarios in, lowercase. Which of them a given runner reads
+ * is the runner's own rule, and the walk decides nothing from it: it proposes the first folder it
+ * meets, and `/skraft-init` has the developer confirm it.
+ */
+const BINDINGS = Object.freeze(['steps', 'stepdefinitions', 'step_definitions', 'step_defs', 'bindings', 'glue'])
 
 /** The manifests a runner is named in. */
 const MANIFESTS = Object.freeze(['package.json', 'pom.xml', 'build.gradle', 'build.gradle.kts', 'pyproject.toml', 'requirements.txt', 'setup.py'])
@@ -38,5 +34,5 @@ export const manifestsAmong = (files) => files.filter((name) => MANIFESTS.includ
 /** The runner a manifest names, null when it names none. @param {string} text @returns {string | null} */
 export const runnerNamed = (text) => RUNNERS.find(({ named }) => named.test(text))?.runner ?? null
 
-/** Whether a folder of that name holds the bindings of that runner. @param {string} runner @param {string} name */
-export const bindsSteps = (runner, name) => (BINDINGS[/** @type {keyof BINDINGS} */ (runner)] ?? []).includes(name.toLowerCase())
+/** Whether a folder of that name holds the bindings of a project's scenarios. @param {string} name */
+export const bindsSteps = (name) => BINDINGS.includes(name.toLowerCase())
