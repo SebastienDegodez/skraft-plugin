@@ -54,6 +54,26 @@ Ce que le pilote suppose déjà sans mesure ; la prochaine passe de la sonde rem
 | Copilot CLI : un message qui parle de skraft sans `/` ne lance pas la commande (déclencheur `agent-invoked`) | #252 | en attente de mesure (aucun contrôle de sonde écrit ; la mesure payante viendra avec son lot) | `com.github.copilot/commands/skraft.md` (aucun `disable-model-invocation`) |
 | Claude Code : la skill `prune-tests` exposée sous `/skraft:prune-tests`, appelable par le développeur, jamais chargée par le modèle (`disable-model-invocation: true`) | #341 | not measured ; nom supposé par la règle `<plugin>:<skill>`, ni la doc how-to ni la référence des commandes ne sont écrites avant la mesure | `skills/prune-tests/SKILL.md`, `domain/reporting/pull-request.mjs` (ligne qui suggère la commande) |
 | Copilot CLI et VS Code : la skill `prune-tests` listée par `session.rpc.commands.list({ includeSkills: true })` sous `skraft:prune-tests`, et `disable-model-invocation` respecté | #341 | not measured ; même règle de nom que `/skraft-backlog:skraft-refine` (sonde #252), non vérifiée pour une skill | `skills/prune-tests/SKILL.md` |
+| Copilot CLI et VS Code : le client déclare `roots` à `initialize` et rend la copie de travail dans `roots/list` ; sinon, le processus démarre dans la copie de travail (et non dans le dossier du plugin, défaut de la spécification) | — | not measured | `drivers/cli/mcp-roots.mjs` : sans root fichier ni dossier hors plugin, chaque appel est refusé `no-workspace` |
+| Claude Code : les `mcpServers` de `.claude-plugin/plugin.json` démarrent avec `${CLAUDE_PLUGIN_ROOT}` remplacé ; nom des outils offerts (`mcp__plugin_skraft_skraft__skraft_status` supposé), sans collision avec `mcp__skraft__run_pipeline` du mod ; `roots` déclaré | — | not measured ; `claude plugin validate` 2.1.296 passe | `.claude-plugin/plugin.json`, `drivers/cli/mcp-server.mjs` |
+| VS Code : `clientInfo.name` envoyé à `initialize` vaut `Visual Studio Code` (ou `Visual Studio Code - Insiders`) ; Claude Code envoie un autre nom | — | not measured ; lu dans microsoft/vscode `src/vs/workbench/contrib/mcp/common/mcpServerRequestHandler.ts` (`productService.nameLong`), rien lu pour Claude Code ; Copilot CLI 1.0.105 mesuré (section suivante). Un nom inattendu cache la boucle d'agent (repli `node`), jamais l'inverse | `drivers/cli/mcp-server.mjs` (`LOOP_HOSTS`) |
+| tout hôte : nom sous lequel les prompts MCP `init`, `run`, `status`, `review` apparaissent dans le menu `/` | — | not measured | `drivers/cli/mcp-prompts.mjs` |
+| tout hôte : `notifications/progress` affichées pendant un appel long (`skraft_next`, `skraft_gate`) quand l'hôte envoie un `progressToken` | — | not measured | `drivers/cli/mcp-server.mjs` |
+
+### Sonde d'hôte Copilot — 2026-11-06 (branche feat/mcp-server, serveur MCP du plugin)
+
+Copilot CLI GitHub Copilot CLI 1.0.105. · SDK 1.0.104-4 · Node v26.12.1 · linux 6.12.8. Aucun appel de modèle (`node eng/host-probe/copilot-probe.mjs --sdk <SDK 1.0.104-4>`, sans `--agent-calls` ni `--report-issues`).
+
+Question : Copilot CLI démarre-t-il le serveur `skraft` que déclare `plugins/skraft-framework/mcp.json`, et lui offre-t-il la boucle d'agent réservée à VS Code ? La sonde lit `session.rpc.mcp.list()` puis `session.rpc.mcp.listTools({ serverName })` dans la session qui charge le vrai plugin.
+
+| Contrôle | Issue | Verdict | Observé |
+| --- | --- | --- | --- |
+| `skraft-mcp-server-loaded` | ouvre une issue en cas d'échec | pass | un seul serveur : `{ name: skraft, status: connected, sourcePlugin: skraft }` ; outils `skraft_doctor`, `skraft_gate`, `skraft_init`, `skraft_journal`, `skraft_migrate`, `skraft_report`, `skraft_status`, `skraft_workflow_check`, `skraft_workflow_diff`, `skraft_workflow_eject` |
+| `skraft-mcp-loop-hidden` | ouvre une issue en cas d'échec | pass | `offered: []` : ni `skraft_start`, ni `skraft_next`, ni `skraft_record`, ni `skraft_review` |
+
+Lecture : Copilot CLI 1.0.105 lit `mcp.json` (Agent Plugins 1.0.0), remplace `${PLUGIN_ROOT}` dans `args` et démarre le serveur une seule fois, bien que `.claude-plugin/plugin.json` déclare le même serveur dans `mcpServers`. Le nom que le CLI donne à la poignée de main n'est pas `Visual Studio Code` : la boucle d'agent reste aux workflows `skraft-pipeline` et `skraft-review`. Le nom exact n'est pas relevé (la sonde lit la liste d'outils, pas la poignée de main). Le nom sous lequel le modèle voit ces outils dans la session reste non mesuré.
+
+Mutations à la main : verdict de `skraft-mcp-loop-hidden` sans regarder les outils offerts → le test « hôte nommé Visual Studio Code » échoue ; aucun serveur reconnu → 10 tests échouent. Restauré, tout passe.
 
 ### Mod Claude Code : dossier de session, en-tête de dialogue, lancement d'agent — 2026-11-02 (session réelle, dépôt de démonstration)
 

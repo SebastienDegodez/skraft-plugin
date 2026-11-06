@@ -12,14 +12,19 @@ import { answersTable, costText, reportTable } from '../../domain/reporting/run-
 import { decideUsage } from '../../domain/decisions/questions.mjs'
 import { createAgentLoop } from './agent-loop.mjs'
 import { reviewThroughLoop } from './review-loop.mjs'
+import { serveMcp } from './mcp-server.mjs'
 
 /**
  * @typedef {{ out: (line: string) => void, err: (line: string) => void }} Console
  * @typedef {Parameters<typeof createInit>[0] & Parameters<typeof createRunGate>[0] & Parameters<typeof createDoctor>[0] & Parameters<typeof createConfigureComponents>[0] & Parameters<typeof createWorkflowCommands>[0] & import('./agent-loop.mjs').LoopAdapters & Parameters<typeof createPublish>[0] & Parameters<typeof createAdoptJournal>[0]} CliAdapters
- * @typedef {{ pluginVersion: () => string, workingCopyName: () => string, adapters: (agentHost?: 'copilot') => CliAdapters, command: () => string, confirm: (question: string) => Promise<boolean | null> }} CliServices
+ * @typedef {{
+ *   pluginVersion: () => string, workingCopyName: () => string, adapters: (agentHost?: 'copilot') => CliAdapters, command: () => string,
+ *   confirm: (question: string) => Promise<boolean | null>, then?: import('./agent-loop.mjs').LoopThen,
+ * } & Partial<import('./mcp-server.mjs').McpServices>} CliServices
  *   adapters: for the host whose agents the run starts, none to check for both; command: how an
  *   agent runs this command line, `node "<absolute path of skraft.mjs>"`; confirm: the person's
- *   yes to a question asked at the terminal, null when no one can type there.
+ *   yes to a question asked at the terminal, null when no one can type there; then: what a loop
+ *   step names to run next, the command lines of `command` when absent.
  * @typedef {(args: string[], services: CliServices, console: Console) => Promise<number> | number} Command
  * @typedef {ReturnType<typeof createWorkflowCommands>} WorkflowCommands
  * @typedef {(commands: WorkflowCommands, request: { json: boolean, services: CliServices }, console: Console) => Promise<number>} WorkflowAction
@@ -96,8 +101,44 @@ const version = (_args, services, console) => {
   return 0
 }
 
-/** `journal adopt [--pr <number>]`, which takes the person's yes at their terminal first. @type {Command} */
-const journalCommand = async (args, services, console) => {
+/**
+ * `journal show [--last <n>] [--json]` reads the active pipeline's journal; `journal adopt
+ * [--pr <number>]` takes the person's yes at their terminal first.
+ * @type {Command}
+ */
+const journalCommand = (args, services, console) =>
+  args[0] === 'show' ? journalShow(args.slice(1), services, console) : journalAdopt(args, services, console)
+
+/** How many entries `journal show` prints without `--last`. */
+const JOURNAL_ROWS = 20
+
+/** A chain whose state makes `journal show` exit 1. */
+const BROKEN_CHAINS = new Set(['tampered', 'unverifiable'])
+
+/** @param {string[]} args @param {CliServices} services @param {Console} console */
+const journalShow = async (args, services, console) => {
+  const options = optionsOf(args, { values: ['--last'], flags: ['--json'] })
+  if (options === undefined || !isOptionalCount(options['--last'])) return usage(console)
+  const shown = await createObserve(services.adapters()).journal({ last: Number(options['--last'] ?? JOURNAL_ROWS) })
+  print(options['--json'] === true, shown, journalLines, console)
+  return BROKEN_CHAINS.has(shown.chain.state) ? 1 : 0
+}
+
+/** @param {import('../../application/pipeline/observe-usecase.mjs').JournalView} shown */
+const journalLines = ({ slug, chain, entries, total }) => [
+  `${skraftOf(slug)}: journal ${chain.state}${chain.lines > 0 ? `, ${chain.lines} lines` : ''}${chain.unverified > 0 ? `, ${chain.unverified} unverified` : ''}`,
+  ...(chain.reason ? [chain.reason] : []),
+  ...(total > entries.length ? [`last ${entries.length} of ${total} entries`] : []),
+  ...entries.map(entryLine),
+]
+
+/** A step recorded, or a human decision with who confirmed it. @param {import('../../domain/reporting/journal-entries.mjs').JournalEntry} entry */
+const entryLine = (entry) => (entry.kind === 'step'
+  ? `${entry.line}  ${entry.at}  ${entry.step} (${entry.phase}, pass ${entry.pass}, attempt ${entry.attempt}): ${entry.outcome}${entry.next ? ` → ${entry.next}` : ''}`
+  : `${entry.line}  ${entry.at}  ${entry.key}: ${entry.answer} (by ${entry.by})`)
+
+/** @type {Command} */
+const journalAdopt = async (args, services, console) => {
   const target = adoptionTarget(args)
   if (target === undefined) return usage(console)
   const adoption = createAdoptJournal(services.adapters())
@@ -145,13 +186,13 @@ const configure = async (args, services, console) => {
 /** @param {string[]} args @param {CliServices} services @param {Console} console */
 const init = async ([slug, ...rest], services, console) => {
   const options = optionsOf(rest, { values: ['--issue', '--title', '--base'], flags: ['--from-artifacts'] })
-  if (options === undefined || !isIssueNumber(options['--issue'])) return usage(console)
+  if (options === undefined || !isOptionalCount(options['--issue'])) return usage(console)
   const request = { slug: slug ?? null, story: storyOf(options), base: options['--base'] ?? null, fromArtifacts: options['--from-artifacts'] === true }
   return answer(await createInit(services.adapters()).init(request), console)
 }
 
-/** `--issue`, when given, is a positive whole number with no leading zero. @param {string | string[] | true | undefined} issue */
-const isIssueNumber = (issue) => issue === undefined || /^[1-9]\d*$/.test(String(issue))
+/** `--issue` or `--last`, when given, is a positive whole number with no leading zero. @param {string | string[] | true | undefined} value */
+const isOptionalCount = (value) => value === undefined || /^[1-9]\d*$/.test(String(value))
 
 /** The story `--issue` and `--title` name; null with neither. @param {Record<string, string | string[] | true>} options */
 const storyOf = (options) => {
@@ -269,7 +310,7 @@ const confirmedOf = (confirmed) => {
 const loopStep = (step) => async (args, services, console) => {
   const options = optionsOf(args, { flags: ['--json'] })
   if (options === undefined) return usage(console)
-  const loop = createAgentLoop({ adapters: services.adapters('copilot'), command: services.command(), log: console.err })
+  const loop = createAgentLoop({ adapters: services.adapters('copilot'), then: thenOf(services), log: console.err })
   const done = await loop[step]()
   print(options['--json'] === true, done, loopLines, console)
   return done.status === 'blocked' || done.status === 'refused' ? 1 : 0
@@ -288,6 +329,20 @@ const dispatchLines = ({ agent, model, prompt, reply }, index) => [
   `  prompt: ${prompt}`,
   `  reply: ${reply}`,
 ]
+
+/**
+ * What a loop step names to run next: the tools of the MCP server that runs this command, else
+ * its command lines.
+ * @param {CliServices} services @returns {import('./agent-loop.mjs').LoopThen}
+ */
+const thenOf = (services) => services.then ?? commandThen(services.command())
+
+/** @param {string} command @returns {import('./agent-loop.mjs').LoopThen} */
+const commandThen = (command) => ({
+  next: `${command} next`,
+  record: `${command} record`,
+  review: ({ number, publish }) => `${command} review --pr ${number} --record${publish ? ' --publish' : ''}`,
+})
 
 /** @param {string[]} args @param {CliServices} services @param {Console} console */
 const gate = async (args, services, console) => {
@@ -389,7 +444,7 @@ const workflowReport = (outcome, json, console) => {
 const review = async (args, services, console) => {
   const options = optionsOf(args, { values: ['--pr'], flags: ['--publish', '--record', '--json'] })
   if (options === undefined || !/^[1-9]\d*$/.test(String(options['--pr']))) return usage(console)
-  const deps = { adapters: services.adapters('copilot'), command: services.command(), log: console.err, confirm: services.confirm }
+  const deps = { adapters: services.adapters('copilot'), then: thenOf(services), log: console.err, confirm: services.confirm }
   const step = await reviewThroughLoop(deps, { number: Number(options['--pr']), publish: options['--publish'] === true, record: options['--record'] === true, workingCopyName: services.workingCopyName() })
   print(options['--json'] === true, step, reviewLines, console)
   return step.status === 'APPROVED' || step.status === 'dispatch' ? 0 : 1
@@ -443,7 +498,10 @@ const TABLE = [
   ['report', report, [{ synopsis: '[--json]', summary: 'time, cost and retries of each step of the active pipeline' }]],
   ['decide', decide, [{ synopsis: '[<key>] <answer> [--reason <text>]', summary: 'answer the question the active pipeline waits on' }]],
   ['publish', publish, [{ summary: 'push the branch and open or update the pull request of the completed run' }]],
-  ['journal', journalCommand, [{ synopsis: 'adopt [--pr <number>]', summary: "sign a journal this machine cannot verify with a key of this machine (--pr: a pull request's review journal)" }]],
+  ['journal', journalCommand, [
+    { synopsis: 'show [--last <n>] [--json]', summary: "the active pipeline's journal: the state of its chain, then its last steps and decisions" },
+    { synopsis: 'adopt [--pr <number>]', summary: "sign a journal this machine cannot verify with a key of this machine (--pr: a pull request's review journal)" },
+  ]],
   ['migrate', migrate, [{ synopsis: '[--dry-run] [--json]', summary: 'turn the v1 runs in progress and skraft-config.json into V2 ones' }]],
   ['next', loopStep('next'), [{ synopsis: '[--json]', summary: 'run the active pipeline until it needs agents or a human' }]],
   ['record', loopStep('record'), [{ synopsis: '[--json]', summary: 'hand the saved agent replies to the run, then go on' }]],
@@ -456,6 +514,7 @@ const TABLE = [
     { synopsis: 'diff [--json]', summary: 'compare the repository workflow with the plugin one' },
   ]],
   ['commands', commands, [{ synopsis: '--json', summary: 'every command, its synopsis and summary, as JSON (help and completion of the skraft command)' }]],
+  ['mcp', mcp, [{ summary: 'serve these commands to an agent host as MCP tools, over stdin and stdout (the host starts it from mcp.json)' }]],
 ]
 
 const COMMANDS = new Map(TABLE.map(([name, handler]) => [name, handler]))
@@ -477,6 +536,15 @@ function commands(args, _services, console) {
   if (args.length !== 1 || args[0] !== '--json') return usage(console)
   console.out(JSON.stringify({ schema: 1, commands: usageLines() }, null, 2))
   return 0
+}
+
+/**
+ * `mcp`: serves the commands of this table to the host that started it, until stdin closes.
+ * @param {string[]} args @param {CliServices} services @param {Console} console
+ */
+function mcp(args, services, console) {
+  if (args.length > 0) return usage(console)
+  return serveMcp(/** @type {CliServices & import('./mcp-server.mjs').McpServices} */ (services), console, runCli)
 }
 
 /** `skraft` followed by the slug, when there is one. @param {string | null | undefined} slug */

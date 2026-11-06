@@ -21,8 +21,10 @@ import { HandedOver, OWNER_FILE, PENDING_FILE, REPLIES_FILE, createLoopAgentRunn
  *   reason: string, dispatches: LoopDispatch[], then: string | null,
  * }} LoopStep
  *   then: the command to run once the step is done, null when the loop ends.
- * @typedef {{ adapters: LoopAdapters, command: string, log: (line: string) => void }} LoopDeps
- *   command: how the conducting agent runs this command line (`node "<path>/skraft.mjs"`);
+ * @typedef {{ next: string, record: string, review: (request: { number: number, publish: boolean }) => string }} LoopThen
+ *   what the conducting agent runs once a step is done: a command line of this script
+ *   (`node "<path>/skraft.mjs" next`), or the tool of the MCP server that runs it.
+ * @typedef {{ adapters: LoopAdapters, then: LoopThen, log: (line: string) => void }} LoopDeps
  *   log: where the run's progress goes.
  */
 
@@ -169,7 +171,7 @@ const showPhase = (shown, phase, log) => {
  * @param {LoopDeps} deps @param {RunOutcome} outcome @returns {Promise<LoopStep>}
  */
 const afterRun = async (deps, outcome) => (outcome.status === 'waiting'
-  ? { ...outcome, reason: await askTheHuman(deps), dispatches: [], then: `${deps.command} next` }
+  ? { ...outcome, reason: await askTheHuman(deps), dispatches: [], then: deps.then.next }
   : ended(outcome))
 
 /**
@@ -195,11 +197,11 @@ const ended = (outcome) => ({ ...outcome, dispatches: [], then: null })
  * The agents handed over, as the conducting agent starts them, and the record that follows.
  * @param {LoopDeps} deps @param {string} slug @param {HandedDispatch[]} pending @returns {LoopStep}
  */
-const handedStep = ({ adapters, command }, slug, pending) => ({
+const handedStep = ({ adapters, then }, slug, pending) => ({
   status: 'dispatch', slug, phase: null, code: null,
   reason: `start ${pending.length === 1 ? 'this agent' : `these ${pending.length} agents, one after the other`}, save each final reply as it is to its reply file, then record`,
   dispatches: pending.map(({ agent, model, brief, reply }) => loopDispatch(adapters.files.location(slug, brief), { agent, model, reply: adapters.files.location(slug, reply) })),
-  then: `${command} record`,
+  then: then.record,
 })
 
 /**

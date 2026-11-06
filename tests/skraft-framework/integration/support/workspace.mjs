@@ -100,16 +100,23 @@ export const skraft = async (cwd, args, { env = process.env, home = `${cwd}-home
   const out = []
   /** @type {string[]} */
   const err = []
-  const status = await runCli(args, {
-    pluginVersion: () => 'in-process',
-    workingCopyName: () => basename(cwd),
-    adapters: (agentHost) => createNodeAdapters({ cwd, pluginRoot: PLUGIN_ROOT, env, home, agentHost }),
-    command: () => SKRAFT_COMMAND,
-    confirm,
-  }, { out: (line) => out.push(line), err: (line) => err.push(line) })
+  const status = await runCli(args, inProcessServices(cwd, { env, home, confirm }), { out: (line) => out.push(line), err: (line) => err.push(line) })
   const text = (/** @type {string[]} */ lines) => lines.map((line) => `${line}\n`).join('')
   return { status, stdout: text(out), stderr: text(err) }
 }
+
+/**
+ * The services the skraft executable builds for a command run from cwd, on the real Node
+ * adapters; home and confirm as for `skraft`.
+ * @param {string} cwd @param {{ env?: NodeJS.ProcessEnv, home?: string, confirm?: (question: string) => Promise<boolean | null> }} [options]
+ */
+export const inProcessServices = (cwd, { env = process.env, home = `${cwd}-home`, confirm = async () => true } = {}) => ({
+  pluginVersion: () => 'in-process',
+  workingCopyName: () => basename(cwd),
+  adapters: (agentHost) => createNodeAdapters({ cwd, pluginRoot: PLUGIN_ROOT, env, home, agentHost }),
+  command: () => SKRAFT_COMMAND,
+  confirm,
+})
 
 export const readJson = (/** @type {string} */ path) => JSON.parse(readFileSync(path, 'utf8'))
 export const journal = (/** @type {string} */ cwd, /** @type {string} */ slug) =>

@@ -12,7 +12,7 @@ Pourquoi le moteur décide et les pilotes exécutent : [Architecture](../explana
 
 Ce que les hôtes offrent à la place de ces commandes (`/skraft`, workflow `skraft-pipeline`, `skraft_decide`, pilote SDK) : [Hôtes](./hosts.md). La syntaxe des workflows que `skraft workflow` copie et valide : [Le workflow DOT](./workflow-dot.mdx).
 
-Autres commandes : [installation et maintenance](./cli-maintenance.md) (recherche du plugin par la commande `skraft`, `commands`, `journal adopt`, `migrate`, `workflow`, `doctor`).
+Autres commandes : [installation et maintenance](./cli-maintenance.md) (recherche du plugin par la commande `skraft`, `commands`, `journal show`, `journal adopt`, `migrate`, `workflow`, `doctor`). Les mêmes commandes comme outils d'un hôte d'agents : [Serveur MCP](./mcp-server.md).
 
 ## Appeler skraft
 
@@ -38,6 +38,7 @@ usage: skraft --version
        skraft report [--json]                                            time, cost and retries of each step of the active pipeline
        skraft decide [<key>] <answer> [--reason <text>]                answer the question the active pipeline waits on
        skraft publish                                                    push the branch and open or update the pull request of the completed run
+       skraft journal show [--last <n>] [--json]                         the active pipeline's journal: the state of its chain, then its last steps and decisions
        skraft journal adopt [--pr <number>]                              sign a journal this machine cannot verify with a key of this machine (--pr: a pull request's review journal)
        skraft migrate [--dry-run] [--json]                               turn the v1 runs in progress and skraft-config.json into V2 ones
        skraft next [--json]                                              run the active pipeline until it needs agents or a human
@@ -49,6 +50,7 @@ usage: skraft --version
        skraft workflow check [--json]                                    validate the workflow a run follows
        skraft workflow diff [--json]                                     compare the repository workflow with the plugin one
        skraft commands --json                                            every command, its synopsis and summary, as JSON (help and completion of the skraft command)
+       skraft mcp                                                        serve these commands to an agent host as MCP tools, over stdin and stdout (the host starts it from mcp.json)
 ```
 
 Règles communes des options :

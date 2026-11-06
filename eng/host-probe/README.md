@@ -68,6 +68,8 @@ The session asks for extension access once: the probe approves it for its own fi
 | `skraft-canvas-read-only` | — | the canvas takes no answer: a POST `/answer` with the page's token and Origin answers 404, nothing is asked of the host nor journaled |
 | `skraft-decide-one-question` | opens one on failure | `skraft_decide`, with no argument, puts the question the active pipeline waits on to the host once, as a choice among its options; the option chosen is journaled `host-confirmed`, with no confirmation after it |
 | `decide-after-cd` | #245 | `skraft_decide` still acts on the first repository after `/cd` |
+| `skraft-mcp-server-loaded` | opens one on failure | the `skraft` server of the plugin's `mcp.json` is started (`session.rpc.mcp.list()`) and `session.rpc.mcp.listTools` lists `skraft_status` |
+| `skraft-mcp-loop-hidden` | opens one on failure | that server offers none of `skraft_start`, `skraft_next`, `skraft_record`, `skraft_review`: the CLI does not name itself `Visual Studio Code` at the handshake; inconclusive when the server is not loaded |
 | `session-agents` | opens one on failure | every `com.github.copilot/agents/*` resolves in `session.rpc.agent.list` |
 | `copilot-models-available` | opens one on failure | every Copilot name under `models` in the `skraft-config.json` of the directory the probe runs from is in `client.listModels()`; inconclusive when it names none |
 | `skraft-tool-names-free` | opens one on failure | the tool names of a session with no plugin (the host's own tools, listed in the report) include no tool the `skraft-pipeline` extension registers |

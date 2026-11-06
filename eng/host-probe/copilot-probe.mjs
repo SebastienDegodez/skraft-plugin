@@ -665,12 +665,48 @@ const skraftChecks = async ({ sdk, client, dirs, models }) => {
       checks.push(await decideOneQuestion(session, dirs, answers))
       checks.push(await decideAfterCd(session, dirs, pluginRoot, answers))
     }
+    checks.push(...await skraftMcpChecks(session))
     checks.push(await sessionAgents(session, pluginRoot))
   } finally {
     await session.disconnect?.().catch(() => undefined)
   }
   checks.push(await copilotModels(client, models))
   return checks
+}
+
+/** The tools the skraft MCP server offers only to VS Code: the agent loop the orchestrator conducts there. */
+const MCP_LOOP_TOOLS = ['skraft_next', 'skraft_record', 'skraft_review', 'skraft_start']
+const MCP_SERVER_EXPECTED = "Le serveur MCP `skraft` que déclare `mcp.json` à la racine du plugin est démarré (`${PLUGIN_ROOT}` remplacé) : `rpc.mcp.listTools` y liste `skraft_status`."
+const MCP_LOOP_EXPECTED = "Le serveur MCP `skraft` ne propose pas la boucle d'agent (`skraft_start`, `skraft_next`, `skraft_record`, `skraft_review`) sous Copilot CLI : l'hôte ne se nomme pas `Visual Studio Code` à la poignée de main."
+
+/** The skraft MCP server's name and tools, as the host started it from the plugin's mcp.json. */
+const skraftMcpServer = async (session) => {
+  const listed = (await withTimeout(session.rpc.mcp.list(), T.rpc, 'mcp.list'))?.servers ?? []
+  const servers = listed.filter((server) => server.name === 'skraft' || server.sourcePlugin === 'skraft-framework').map(({ name, status, sourcePlugin }) => ({ name, status, sourcePlugin }))
+  if (servers.length === 0) return { servers, tools: [] }
+  const tools = (await withTimeout(session.rpc.mcp.listTools({ serverName: servers[0].name }), T.rpc, 'mcp.listTools'))?.tools ?? []
+  return { servers, tools: tools.map(({ name }) => name).sort() }
+}
+
+const skraftMcpChecks = async (session) => {
+  let seen
+  try { seen = await skraftMcpServer(session) } catch (error) {
+    return [check({ id: 'skraft-mcp-server-loaded', expected: MCP_SERVER_EXPECTED, observed: { error: messageOf(error) } }), check({ id: 'skraft-mcp-loop-hidden', expected: MCP_LOOP_EXPECTED, observed: { error: messageOf(error) } })]
+  }
+  const loaded = seen.tools.includes('skraft_status')
+  const offered = seen.tools.filter((name) => MCP_LOOP_TOOLS.includes(name))
+  return [
+    check({
+      id: 'skraft-mcp-server-loaded', expected: MCP_SERVER_EXPECTED, verdict: loaded ? 'pass' : 'fail', observed: seen,
+      title: "V2 — le serveur MCP skraft ne démarre pas sous Copilot", labels: ['bug', 'gain:reliability'],
+      body: "Dans un hôte SDK headless, avec `pluginDirectories` sur `plugins/skraft-framework`, `rpc.mcp.list` ne montre pas le serveur `skraft` de `mcp.json`, ou `rpc.mcp.listTools` n'y liste pas `skraft_status` : manifeste non lu, `${PLUGIN_ROOT}` non remplacé, ou serveur en échec au démarrage.",
+    }),
+    check({
+      id: 'skraft-mcp-loop-hidden', expected: MCP_LOOP_EXPECTED, verdict: loaded ? (offered.length === 0 ? 'pass' : 'fail') : 'inconclusive', observed: { offered },
+      title: "V2 — le serveur MCP skraft propose la boucle d'agent sous Copilot CLI", labels: ['bug', 'gain:reliability'],
+      body: "Sous Copilot CLI, le serveur MCP `skraft` liste `skraft_start` : l'hôte se nomme `Visual Studio Code` à la poignée de main, et un agent peut démarrer un pipeline hors du workflow `skraft-pipeline`.",
+    }),
+  ]
 }
 
 const skraftWorkflowChecks = async (session) => {

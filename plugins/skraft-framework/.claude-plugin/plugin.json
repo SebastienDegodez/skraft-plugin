@@ -9,6 +9,15 @@
   "repository": "https://github.com/SebastienDegodez/skraft-plugin",
   "license": "GPL-3.0-or-later",
   "types": "./types/index.d.ts",
+  "mcpServers": {
+    "skraft": {
+      "command": "node",
+      "args": [
+        "${CLAUDE_PLUGIN_ROOT}/engine/drivers/cli/skraft.mjs",
+        "mcp"
+      ]
+    }
+  },
   "agents": [
     "./com.anthropic.claude-code/agents/acceptance-designer.md",
     "./com.anthropic.claude-code/agents/architecture-boundaries-lens.md",
