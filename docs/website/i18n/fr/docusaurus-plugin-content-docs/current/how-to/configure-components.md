@@ -9,6 +9,11 @@ persona: software-engineer
 Obtenez un `skraft-config.json` dont chaque commande tourne sur votre machine, avant de lancer un
 run.
 
+`skraft init` propose ce qu'il voit ; le fichier est le vôtre, et le rendre juste vous revient. Le
+moteur le prend pour la vérité et n'a aucun moyen de savoir qu'un chemin que vous avez accepté
+n'est pas celui que vos outils utilisent — et un chemin faux coûte du silence, pas un échec. Relisez
+le résultat de chaque étape avant le run suivant.
+
 ## Prérequis
 
 - Le plugin skraft installé ([Installer skraft sur un hôte](./install-on-a-host.mdx)).

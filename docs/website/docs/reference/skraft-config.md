@@ -350,6 +350,18 @@ computed in each component's repository and in the working copy's.
 
 ## Detection (`skraft init` without a slug) <!-- #detection -->
 
+:::caution[The file is yours]
+**`skraft init` proposes; making the configuration right is the developer's job.** Detection reads
+a bounded part of the working copy — a few folders deep, the manifests it knows, the folder names
+each runner conventionally uses — so it can miss a project, propose a path that is not the one you
+meant, or find nothing at all. Nothing downstream second-guesses it: a run takes this file as the
+truth, and the engine has no way to know that a path you accepted is not the one your tools use.
+
+A wrong path costs silence rather than a failure. Scenarios written where no runner reads them run
+nowhere, and every gate still passes. So read what init wrote before the first run, let
+`skraft doctor` tell you what it sees, and correct the file rather than work around it.
+:::
+
 The engine looks for projects in the working copy and in each `--add` folder, down to
 **3 levels**, skipping hidden folders and `node_modules`. A project under a project of the
 **same family** is not a component (a `.csproj` under a solution); a project of **another
@@ -417,6 +429,9 @@ file keeps its default until the dialogue or a hand edit replaces it.
 
 ## Pitfalls & anti-patterns
 
+- **Accepting the detection without reading it**: `skraft init` proposes from what it can see, and
+  the file is yours from then on. A `bdd` pair naming a folder no runner reads leaves the scenarios
+  unrun with every gate green.
 - **A shell chain in `commands`** (`npm ci && npm test`): refused. Put the steps in a script
   and call it.
 - **Relying on an environment variable** (`$HOME`, `%PATH%`) in a line: it goes to the

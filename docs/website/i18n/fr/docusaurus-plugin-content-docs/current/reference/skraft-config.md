@@ -357,6 +357,21 @@ calculé dans le dépôt de chaque composant et dans celui de la copie de travai
 
 ## Détection (`skraft init` sans slug) <!-- #detection -->
 
+:::caution[Le fichier est le vôtre]
+**`skraft init` propose ; s'assurer que la configuration est juste revient au développeur.** La
+détection ne lit qu'une partie bornée de la copie de travail — quelques niveaux de profondeur, les
+manifestes qu'elle connaît, les noms de dossiers que chaque runner emploie par convention. Elle
+peut donc manquer un projet, proposer un chemin qui n'est pas celui que vous visiez, ou ne rien
+trouver du tout. Rien en aval ne la contredit : un run prend ce fichier pour la vérité, et le
+moteur n'a aucun moyen de savoir qu'un chemin que vous avez accepté n'est pas celui que vos outils
+utilisent.
+
+Un chemin faux coûte du silence, pas un échec. Des scénarios écrits là où aucun runner ne les lit
+ne tournent nulle part, et tous les gates passent quand même. Lisez donc ce que l'init a écrit
+avant le premier run, laissez `skraft doctor` vous dire ce qu'il voit, et corrigez le fichier
+plutôt que de le contourner.
+:::
+
 Le moteur cherche les projets dans la copie de travail et dans chaque dossier `--add`,
 jusqu'à **3 niveaux** de profondeur, en ignorant les dossiers cachés et `node_modules`. Un
 projet sous un projet de la **même famille** n'est pas un composant (un `.csproj` sous une
@@ -428,6 +443,9 @@ Le moteur n'écrit ni `mocking` ni
 
 ## Pièges & anti-patterns
 
+- **Accepter la détection sans la relire** : `skraft init` propose à partir de ce qu'il voit, et le
+  fichier est le vôtre ensuite. Une paire `bdd` qui nomme un dossier qu'aucun runner ne lit laisse
+  les scénarios sans exécution, tous les gates au vert.
 - **Une chaîne shell dans `commands`** (`npm ci && npm test`) : refusée. Mettez les étapes
   dans un script et appelez-le.
 - **Compter sur une variable d'environnement** (`$HOME`, `%PATH%`) dans une ligne : elle part
