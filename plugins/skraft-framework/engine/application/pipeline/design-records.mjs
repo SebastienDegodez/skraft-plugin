@@ -1,6 +1,6 @@
 import { joinRelative } from '../../domain/config/relative-path.mjs'
 import { inAdrFolder, indexOf, isAdr, isMatrix, recordFailures, registryOf, reliedOn } from '../../domain/pipeline/design-records.mjs'
-import { readOrName } from '../shared/workspace-reading.mjs'
+import { readOrName, regularFile, textsOf } from '../shared/workspace-reading.mjs'
 
 /**
  * @typedef {{
@@ -53,19 +53,3 @@ const recordsOf = async ({ files, workspace }, slug, { tracked, changed }) => {
   const indexes = await textsOf([...new Set(adrs.map(({ path }) => indexOf(path)))], fromWorkspace)
   return { matrices, relied, written: adrFolder.map(({ path }) => path), adrs, registries, indexes }
 }
-
-/**
- * A listed file's text, null when the working copy has none or the path is no readable file (a folder, a device).
- * @param {RecordDeps['workspace']} workspace @param {string} path
- * @returns {Promise<string | null>}
- */
-const regularFile = async (workspace, path) => {
-  try {
-    return await workspace.read(path)
-  } catch {
-    return null
-  }
-}
-
-/** @param {string[]} paths @param {(path: string) => Promise<string | null>} read @returns {Promise<Text[]>} */
-const textsOf = async (paths, read) => Promise.all(paths.map(async (path) => ({ path, text: await read(path) })))

@@ -13,12 +13,13 @@ import { joinRelative } from '../config/relative-path.mjs'
  *   cycle: each failing test commit, then the code that passes it; red: failing acceptance tests
  *   only, with the skeleton they call; kill: tests that kill surviving mutants, which pass on the
  *   code they test; null: no test commit.
- * @typedef {{ outputs: readonly OutputSpec[], writes: readonly string[], components: readonly ComponentPaths[], records: boolean, scan: boolean, tdd: TddMode, prose: boolean, proposal: boolean, shell?: boolean, scenarios?: boolean }} Role
+ * @typedef {{ outputs: readonly OutputSpec[], writes: readonly string[], components: readonly ComponentPaths[], records: boolean, scan: boolean, tdd: TddMode, prose: boolean, proposal: boolean, shell?: boolean, citations?: boolean, scenarios?: boolean }} Role
  *   writes: paths relative to the working copy; components: which paths of every component of
  *   skraft-config.json the agent may write; records: the engine checks the DESIGN records
  *   (consistency matrix, ADR names and supersessions) its attempts leave;
  *   scan: the engine scans the code for its structural commitments before each attempt;
- *   scenarios: the engine checks the Gherkin the attempt leaves, for a component that declares bdd;
+ *   citations: the engine checks the citations of the research document its attempts leave;
+ *   scenarios: the engine checks the Gherkin the test plan of its attempts names;
  *   tdd: how its commits drive the tests; prose: the engine checks the pull request prose its
  *   output holds (a summary line of at most 72 characters, no section left empty); proposal: it
  *   writes a proposal for surviving mutants in the file the engine creates, and changes no code;
@@ -35,6 +36,7 @@ const ROLES = Object.freeze({
     writes: Object.freeze([]),
     components: Object.freeze([]),
     records: false,
+    citations: true,
     scan: false,
     tdd: null,
     prose: false,
