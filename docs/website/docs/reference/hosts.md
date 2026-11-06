@@ -146,7 +146,9 @@ skraft checkout — running
 ```
 
 The block shows the pane's text for a `checkout` run in DESIGN, as the mod's view tests check it.
-At the start of a run, next to its first dialog:
+Next to a dialog, while a question waits (the figure was captured when the publication consent was
+still asked inside a run; `/skraft-init` settles it beforehand now, and the question a run stops on
+is one of `adr-ratification`, `mutation-plan`, `environment` or `blocked`):
 
 ![Claude Code: on the left the Pull request dialog with ACCEPTED, DECLINED and Type something; on the right the Skraft pane, "skraft checkout — waiting", RESEARCH open on publish_consent, the steps of the other phases to come, then the question and how to answer it](/img/screenshots/shared/claude-skraft-pane.png)
 
@@ -279,6 +281,9 @@ in the Copilot chat, where Copilot puts it to you; or type skraft decide <key> <
 terminal.`; it takes no answer.
 
 While a question waits, a **We need you** button shows in the header. It leads to the question on the Run tab, and so does the `n` key outside a field. It answers nothing: the answer goes through Copilot's dialog or `skraft decide`.
+
+The figure below was captured when the publication consent was still asked inside a run; the
+button and the box work the same for the questions a run stops on today.
 
 ![skraft-pipeline canvas: status WAITING, a "We need you" button in the header and a "Pull request" box with the question and how to answer it, RESEARCH open on publish_consent, the other phases to come](/img/screenshots/shared/pipeline-canvas-question.png)
 

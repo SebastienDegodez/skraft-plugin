@@ -30,7 +30,7 @@ const CHECKOUT_12 = 'src/Checkout.cs:12 Equality (!=) survived'
 /** Git lists no change while the mutation gate runs, and lists them again for every other step. */
 const whileMutating = (host) => {
   const listing = host.git.changedFiles.bind(host.git)
-  return async (...args) => (host.events().filter((event) => event.type === 'step.started').at(-1).step === 'mutation' ? null : listing(...args))
+  return async (...args) => (host.events().filter((event) => event.type === 'step.started').at(-1)?.step === 'mutation' ? null : listing(...args))
 }
 
 /** In the rounds of mutationRounds, a run that passes. */

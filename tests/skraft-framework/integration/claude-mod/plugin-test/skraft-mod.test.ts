@@ -41,7 +41,15 @@ const newKey = (files: Map<string, string>, home: string) => {
  * The machine beneath `$.process.run`: node runs the engine's lock-file command, its home
  * folder and its lock writes on the Map; any other program fails, as in a folder that is no repository.
  */
-const machine = (files: Map<string, string>, argv: readonly string[], github?: ReturnType<typeof githubCli>) => {
+/** `git ls-files -z` from one folder: the names of the Map's files right under it, as Git prints them. */
+const lsFiles = (files: Map<string, string>, cwd: string) => {
+  const names = [...files.keys()].filter((path) => path.startsWith(`${cwd}/`)).map((path) => path.slice(cwd.length + 1))
+  const own = names.filter((name) => !name.includes('/'))
+  return { exitCode: 0, stdout: own.map((name) => `${name}\0`).join(''), stderr: '' }
+}
+
+const machine = (files: Map<string, string>, argv: readonly string[], github?: ReturnType<typeof githubCli>, cwd = '') => {
+  if (argv[0] === 'git' && argv.includes('ls-files')) return lsFiles(files, cwd)
   if (github !== undefined && argv[0] === 'git' && argv.includes('remote')) {
     return { exitCode: 0, stdout: argv.includes('get-url') ? `${REMOTE}\n` : 'origin\n', stderr: '' }
   }
@@ -63,7 +71,7 @@ const machine = (files: Map<string, string>, argv: readonly string[], github?: R
 }
 
 // A repository that answered the consent to open its pull request: no question before the researcher.
-const ANSWERED = { publish: { pullRequest: false } }
+const ANSWERED = { publish: { pullRequest: false, visuals: false, questionVersions: { pullRequest: 2, visuals: 1 } } }
 
 const REMOTE = 'https://github.com/acme/shop.git'
 const ISSUE = { number: 42, title: 'Pay by card', body: 'As a buyer I pay by card.', html_url: 'https://github.com/acme/shop/issues/42' }
@@ -95,7 +103,7 @@ const world = ($: any, on: any, config: object = ANSWERED, { github = githubCli(
   on('session.cwd', () => ({ value: CWD }))
   on('env.get', () => ({ value: undefined }))
   on('session.usage', () => ({ value: { startedAt: 0, context: {}, rateLimits: [] } }))
-  on('process.run', ($$: any, e: any) => ({ value: machine(files, e.argv, github) }))
+  on('process.run', ($$: any, e: any) => ({ value: machine(files, e.argv, github, e.init?.cwd ?? '') }))
   on('fs.exists', ($$: any, e: any) => ({ value: files.has(e.path) || shipped(e.path) !== undefined }))
   on('fs.read', ($$: any, e: any) => {
     if (e.path.endsWith('/assets/templates/research.template.md')) return { value: TEMPLATE }
@@ -197,9 +205,15 @@ describe('skraft mod', () => {
     }
   })
 
-  test('a dismissed consent dialog leaves the question in the pane, whose pressed button records the answer by host and resumes the run', { timeoutMs: 20_000 } as any, async ($, on) => {
+  test('a dismissed question dialog leaves the question in the pane, whose pressed button records the answer by host', { timeoutMs: 20_000 } as any, async ($, on) => {
     const clock = mock.clock(on)
-    const { files } = world($, on, {})
+    const { files } = world($, on, ANSWERED)
+    // The plugin pipeline with an ask node right after the start, so a question reaches the pane
+    // before any agent runs; an ejected copy must keep every locked and mandatory node.
+    files.set(`${CWD}/.skraft/pipeline.skraft.dot`, PLUGIN_FILES['workflows/pipeline.skraft.dot']
+      .replace('  start    [shape=Mdiamond]', '  start    [shape=Mdiamond]\n  ratify   [shape=hexagon, question="adr-ratification", phase="RESEARCH"]')
+      .replace('start -> research -> design', 'start -> ratify\n  ratify -> research [label="RATIFIED"]\n  ratify -> research [label="REJECTED"]\n  research -> design'))
+    files.set(`${CWD}/docs/adr/adr-001-card-payment.md`, '# ADR-001 — Card payment\n\n**Status:** Proposed\n')
     on('tool.call', { tool: 'AskUserQuestion' }, () => ({ deny: 'dismissed' }))
     await $.session.start({ surface: 'terminal', isInteractive: true, cwd: CWD } as any)
     await $.command.run({ command: 'skraft', args: 'checkout' } as any)
@@ -211,18 +225,18 @@ describe('skraft mod', () => {
     for (const surface of ['terminal', 'desktop'] as const) {
       const ui = await $.ui.mount({ plugin: 'skraft', surface, component: 'Pane', requestId: PANE, props: { title: 'Skraft', isFocused: false, bodyColumns: 80, placement: 'dock' } } as any)
       expect(await ui.find({ type: 'Text', text: 'skraft checkout — waiting' })).toBeDefined()
-      expect((await ui.findAll({ type: 'Button' })).map((button: any) => button.key)).toEqual(['answer-publish_consent-1-ACCEPTED', 'answer-publish_consent-1-DECLINED'])
+      expect((await ui.findAll({ type: 'Button' })).map((button: any) => button.key)).toEqual(['answer-ratify-1-RATIFIED', 'answer-ratify-1-REJECTED'])
       await ui.unmount()
     }
     expect(answered()).toEqual([])
 
     const ui = await $.ui.mount({ plugin: 'skraft', surface: 'terminal', component: 'Pane', requestId: PANE, props: { title: 'Skraft', isFocused: false, bodyColumns: 80, placement: 'dock' } } as any)
-    await ui.press({ key: 'answer-publish_consent-1-DECLINED' })
+    await ui.press({ key: 'answer-ratify-1-RATIFIED' })
     await settle(clock)
     await ui.unmount()
 
-    expect(answered().map(({ key, answer, by }: any) => [key, answer, by])).toEqual([['publish_consent-1', 'DECLINED', 'host']])
-    expect(events('step.started').map(({ step }: any) => step)).toEqual(['publish_consent', 'visuals_consent', 'research'])
+    expect(answered().map(({ key, answer, by }: any) => [key, answer, by])).toEqual([['ratify-1', 'RATIFIED', 'host']])
+    expect(events('step.started').map(({ step }: any) => step)).toEqual(['ratify'])
   })
 
   test('the run_pipeline tool with no slug and no active pipeline is refused', { timeoutMs: 20_000 } as any, async ($, on) => {

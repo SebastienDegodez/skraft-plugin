@@ -2,7 +2,7 @@ import { createObserve } from '../../application/pipeline/observe-usecase.mjs'
 import { createConfiguration } from '../../application/config/configuration-usecase.mjs'
 import { lensesText } from '../../domain/reporting/review-passes.mjs'
 import { agentText } from '../../domain/reporting/agent-models.mjs'
-import { CONSENT_QUESTIONS, decideUsage } from '../../domain/decisions/questions.mjs'
+import { decideUsage } from '../../domain/decisions/questions.mjs'
 import { createNodeAdapters } from '../../infrastructure/node-adapters.mjs'
 import { editedDigest } from './edited-files.mjs'
 
@@ -231,7 +231,7 @@ const stepText = (node) => {
  * says so.
  * @param {GraphNode} node
  */
-const outcomeText = ({ kind, what, outcome }) => (kind === 'ask' && outcome === 'skipped' && CONSENT_QUESTIONS.includes(/** @type {any} */ (what)) ? 'answered by the configuration' : outcome)
+const outcomeText = ({ outcome }) => outcome
 
 /** The last pass of each review step. @param {RunView} view @returns {Line[]} */
 const reviewLines = ({ reviews }) => reviews.map(({ step, visit, verdict, lenses }) => ({

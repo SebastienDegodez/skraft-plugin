@@ -59,7 +59,7 @@ test('a run from an issue keeps one comment on it, posted when the first phase c
     '',
     'Pull request: none opened or updated by this run.',
     '',
-    'Total: 3 attempts, 0 retries, 0 s, cost ~$0.75 (approximate: what the Claude Code session cost while each agent ran, anything else exchanged meanwhile included).',
+    'Total: 1 attempts, 0 retries, 0 s, cost ~$0.75 (approximate: what the Claude Code session cost while each agent ran, anything else exchanged meanwhile included).',
     '',
     `Run report and evidence: in the working copy, under the run's tracking folder (slug \`${SLUG}\`).`,
     '',
@@ -67,8 +67,6 @@ test('a run from an issue keeps one comment on it, posted when the first phase c
     '',
     '| Phase | Step | Visits | Attempts | Retries | Time | Cost | Outcome |',
     '| --- | --- | ---: | ---: | ---: | ---: | ---: | --- |',
-    '| RESEARCH | publish_consent | 1 | 1 | 0 | 0 s | - | skipped |',
-    '| RESEARCH | visuals_consent | 1 | 1 | 0 | 0 s | - | skipped |',
     '| RESEARCH | research | 1 | 1 | 0 | 0 s | ~$0.75 | done |',
     '',
     '</details>',
@@ -91,7 +89,7 @@ test('a run from an issue keeps one comment on it, posted when the first phase c
     '',
     'Pull request: https://github.example.com/acme/shop/pull/42',
     '',
-    'Total: 15 attempts, 0 retries, 0 s, cost ~$0.75 (approximate: what the Claude Code session cost while each agent ran, anything else exchanged meanwhile included).',
+    'Total: 13 attempts, 0 retries, 0 s, cost ~$0.75 (approximate: what the Claude Code session cost while each agent ran, anything else exchanged meanwhile included).',
     '',
     `Run report and evidence: in the working copy, under the run's tracking folder (slug \`${SLUG}\`).`,
     '',
@@ -126,10 +124,13 @@ test('without an issue the run keeps nothing; without consent, or with an accept
   await outdated.tracking.write(SLUG, 'plans/2026-10-01/stories-v1.md', '# Stories\n')
   await outdated.tracking.write(SLUG, 'plans/2026-10-01/ac-draft-us-1.md', '# AC\n')
   assert.equal((await outdated.init({ fromArtifacts: true, ...STORY })).ok, true)
-  assert.equal((await outdated.run()).status, 'done')
+
+  const refused = await outdated.run()
+
+  assert.deepEqual([refused.status, refused.code], ['refused', 'configuration-incomplete'], 'an acceptance of an earlier question covers less than the question asks now')
+  assert.match(refused.reason, /publish\.pullRequest answers an earlier question/)
+  assert.deepEqual(outdated.codeHost.calls, [])
   assert.deepEqual(kept(outdated), [])
-  assert.equal(outdated.codeHost.calls.includes('push checkout'), true, 'the acceptance of the earlier question still covers the pull request')
-  assert.deepEqual([...new Set(journaled(outdated).map(([, , , reason]) => reason))], ['publish.pullRequest in skraft-config.json answers an earlier publish-consent question, which did not cover the issue'])
 })
 
 test('a run started from artifacts tells the phases it ran, not those it found closed', async () => {
@@ -277,7 +278,7 @@ test('a blocked run is summarised where it stopped by its status and code: neith
     '',
     'Pull request: none opened or updated by this run.',
     '',
-    'Total: 3 attempts, 0 retries, 0 s, cost -.',
+    'Total: 1 attempts, 0 retries, 0 s, cost -.',
     '',
     `Run report and evidence: in the working copy, under the run's tracking folder (slug \`${SLUG}\`).`,
     '',
@@ -336,7 +337,7 @@ test('a French story\'s comment is in French, the pull request shown once by its
     '',
     'Pull request : aucune ouverte ni mise à jour par ce run.',
     '',
-    'Total : 3 tentatives, 0 reprises, 0 s, coût ~$0.75 (approximatif : ce que la session Claude Code a coûté pendant que chaque agent tournait, tout autre échange de cette session inclus).',
+    'Total : 1 tentatives, 0 reprises, 0 s, coût ~$0.75 (approximatif : ce que la session Claude Code a coûté pendant que chaque agent tournait, tout autre échange de cette session inclus).',
     '',
     `Rapport du run et preuves : dans la copie de travail, sous le dossier de suivi du run (slug \`${SLUG}\`).`,
     '',
@@ -344,8 +345,6 @@ test('a French story\'s comment is in French, the pull request shown once by its
     '',
     '| Phase | Étape | Visites | Tentatives | Reprises | Durée | Coût | Résultat |',
     '| --- | --- | ---: | ---: | ---: | ---: | ---: | --- |',
-    '| RESEARCH | publish_consent | 1 | 1 | 0 | 0 s | - | skipped |',
-    '| RESEARCH | visuals_consent | 1 | 1 | 0 | 0 s | - | skipped |',
     '| RESEARCH | research | 1 | 1 | 0 | 0 s | ~$0.75 | done |',
     '',
     '</details>',
@@ -369,7 +368,7 @@ test('a French story\'s comment is in French, the pull request shown once by its
     '',
     'Pull request : https://github.example.com/acme/shop/pull/42',
     '',
-    'Total : 15 tentatives, 0 reprises, 0 s, coût ~$0.75 (approximatif : ce que la session Claude Code a coûté pendant que chaque agent tournait, tout autre échange de cette session inclus).',
+    'Total : 13 tentatives, 0 reprises, 0 s, coût ~$0.75 (approximatif : ce que la session Claude Code a coûté pendant que chaque agent tournait, tout autre échange de cette session inclus).',
     '',
     `Rapport du run et preuves : dans la copie de travail, sous le dossier de suivi du run (slug \`${SLUG}\`).`,
     '',

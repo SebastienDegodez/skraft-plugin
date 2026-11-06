@@ -89,6 +89,7 @@ Any key outside this list is refused.
 | `mocking` | object | `inprocess` for `typescript`, `javascript` and `react`, `microcks` otherwise | `strategy` is `microcks`, `inprocess` or `null`; absent or `null` means the stack's default. The engine passes it in the brief and picks the matching mocking skill |
 | `paths` | object | `["."]` for each key, the whole root | `{ "src": […], "tests": […] }`, folders relative to the component root, never absolute nor starting with `..`; `skraft init` writes them. In DELIVER, the software engineer may write only there (write scope) |
 | `contractTesting` | boolean | `false` | `true` makes the software engineer read the contract testing skills of its stack; the review lenses see the setting among the component settings |
+| `bdd` | boolean | `true` | whether the component describes its behaviour in Gherkin. `false` asks DISTILL for no `.feature`: the acceptance designer takes its scenarios from the test plan's `Scenario` column and TDD runs as it always does. It declares a practice, never a threshold: a component that leaves it on is held to its scenarios in full. The engine passes it in the brief, and the review lenses see it among the component settings |
 | `mutationReport` | string | absent: the report the stack's tool writes, relative to the root: `StrykerOutput/reports/mutation-report.json` (.NET), `reports/mutation/mutation.json` (TypeScript, JavaScript, React), `mutation-report.json` (Python), `target/pit-reports/mutations.xml` (Java; `build/reports/pitest/mutations.xml` when the mutation command names Gradle) | the file the `mutation` command writes its report to, relative to the component root, never absolute nor outside it. The mutation gate reads its surviving mutants there and judges the 100 % / 80 % bar |
 
 Quality thresholds (coverage, mutation…) are **not** configurable: no key carries them.
@@ -110,11 +111,11 @@ each story`. Any other value: `tdd must be { "replay": "all" or "last-red" }`.
 
 | Key | Type | Default | Effect |
 | --- | --- | --- | --- |
-| `pullRequest` | boolean | absent: `publish-consent` question | the run may push its branch, open or update its pull request and keep a progress comment on its story's issue |
-| `visuals` | boolean | absent: `reporting-consent` question (only with a front end) | the run may publish a front end's screenshots and videos in the pull request |
+| `pullRequest` | boolean | absent: a run that publishes is refused, `/skraft-init` asks for it | the run may push its branch, open or update its pull request and keep a progress comment on its story's issue |
+| `visuals` | boolean | absent: a run that publishes screenshots is refused, `/skraft-init` asks for it (only with a front end) | the run may publish a front end's screenshots and videos in the pull request |
 | `draft` | boolean | `true` | a pull request skraft opens is a draft |
 | `reviewComment` | boolean | absent: asked once per repository | `skraft review --pr --publish` may keep one comment on the pull request it reviews; written by hand in the team's file, it wins over each developer's answer, which the engine keeps in their `~/.skraft/config.json` (`reviewComments`) |
-| `questionVersions` | object | `1` per key | the version of the question's text each answer was given to (`visuals`, `pullRequest`, `reviewComment`, whole numbers from 1); an acceptance of an earlier version is asked again |
+| `questionVersions` | object | `1` per key | the version of the question's text each answer was given to (`visuals`, `pullRequest`, `reviewComment`, whole numbers from 1); an acceptance of an earlier version is not settled: the run is refused until `/skraft-init` asks again |
 
 The engine writes `pullRequest` or `visuals`, and their `questionVersions`, when a human answers
 the question, every other key of the file kept. Any other key or value:
@@ -157,10 +158,9 @@ serves the agents that use it (the backlog plugin's skills, for instance), never
 
 A run started from an issue that the forge's command line cannot read (no remote, `gh` or `az`
 missing, not signed in) is refused before anything is journaled (`issue-unreadable`). A run whose
-publish consent is given, kept in `skraft-config.json` or answered at its start, checks the
-forge right after that answer, before the first agent: out of reach, the run asks an
-environment question (`publish_consent cannot run on this machine: <reason>. Fix it, then RETRY;
-or ABORT the run.`). The reason is the one `skraft doctor` gives on its `forge` line.
+publish consent is accepted in `skraft-config.json` checks the forge before its first agent: out
+of reach, the run is refused (`forge-unreachable`, `<reason>. Fix it, then start the run again.`)
+and asks nothing. The reason is the one `skraft doctor` gives on its `forge` line.
 
 ### GitHub through gh <!-- #github-through-gh -->
 
@@ -230,7 +230,7 @@ otherwise.
 | entry not an object | `components[<index>] must be an object` |
 | name | `components[<index>].name must be kebab-case, got <JSON value>` |
 | duplicate name | `component name <name> is used twice` |
-| unknown key | `<label>: unknown key <key> (allowed: name, root, stack, paths, commands, baseBranch, mocking, contractTesting, mutationReport)` |
+| unknown key | `<label>: unknown key <key> (allowed: name, root, stack, paths, commands, baseBranch, mocking, contractTesting, bdd, mutationReport)` |
 | root | `<label>: root must be a path relative to the working copy` |
 | stack | `<label>: stack must be one of dotnet, java, python, typescript, javascript, react` |
 | `commands` not an object | `<label>: commands must be an object of command lines` |
@@ -240,6 +240,7 @@ otherwise.
 | `mocking` | `<label>: mocking must be { "strategy": "microcks" or "inprocess" }` |
 | `paths` | `<label>: paths must be { "src": [...], "tests": [...] }`; `<label>: paths.<key> must list folders inside the component root` |
 | `contractTesting` | `<label>: contractTesting must be true or false` |
+| `bdd` | `<label>: bdd must be true or false` |
 | `mutationReport` | `<label>: mutationReport must be a file inside the component root` |
 
 ## Command lines <!-- #command-lines -->

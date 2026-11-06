@@ -90,6 +90,7 @@ Toute clé hors de cette liste est refusée.
 | `mocking` | object | `inprocess` pour `typescript`, `javascript` et `react`, `microcks` sinon | `strategy` vaut `microcks`, `inprocess` ou `null` ; absent ou `null` vaut le défaut de la stack. Le moteur la passe dans le brief et choisit la skill de mocking correspondante |
 | `paths` | object | `["."]` pour chaque clé, toute la racine | `{ "src": […], "tests": […] }`, dossiers relatifs à la racine du composant, jamais absolus ni commençant par `..` ; `skraft init` les écrit. En DELIVER, le software engineer n'écrit que là (droits d'écriture) |
 | `contractTesting` | boolean | `false` | `true` fait lire au software engineer les skills de contract testing de sa stack ; les lentilles de revue voient le réglage parmi ceux du composant |
+| `bdd` | boolean | `true` | si le composant décrit son comportement en Gherkin. `false` ne demande aucun `.feature` à DISTILL : l'acceptance designer prend ses scénarios dans la colonne `Scenario` du plan de test, et TDD tourne comme toujours. C'est une pratique qui se déclare, jamais un seuil : un composant qui le laisse actif est tenu à ses scénarios en entier. Le moteur le passe dans le brief, et les lentilles de revue le voient parmi les réglages du composant |
 | `mutationReport` | string | absent : le rapport qu'écrit l'outil de la stack, relatif à la racine : `StrykerOutput/reports/mutation-report.json` (.NET), `reports/mutation/mutation.json` (TypeScript, JavaScript, React), `mutation-report.json` (Python), `target/pit-reports/mutations.xml` (Java ; `build/reports/pitest/mutations.xml` quand la commande de mutation nomme Gradle) | le fichier où la commande `mutation` écrit son rapport, relatif à la racine du composant, jamais absolu ni hors d'elle. La gate de mutation y lit les mutants survivants et juge la barre 100 % / 80 % |
 
 Les seuils qualité (couverture, mutation…) ne sont **pas** configurables : aucune clé ne les
@@ -112,11 +113,11 @@ commit of each story`. Toute autre valeur : `tdd must be { "replay": "all" or "l
 
 | Clé | Type | Défaut | Effet |
 | --- | --- | --- | --- |
-| `pullRequest` | boolean | absent : question `publish-consent` | le run peut pousser sa branche, ouvrir ou mettre à jour sa pull request et tenir un commentaire de progression sur l'issue de sa story |
-| `visuals` | boolean | absent : question `reporting-consent` (seulement avec un front end) | le run peut publier les captures et vidéos d'un front end dans la pull request |
+| `pullRequest` | boolean | absent : un run qui publie est refusé, `/skraft-init` le demande | le run peut pousser sa branche, ouvrir ou mettre à jour sa pull request et tenir un commentaire de progression sur l'issue de sa story |
+| `visuals` | boolean | absent : un run qui publie des captures est refusé, `/skraft-init` le demande (seulement avec un front end) | le run peut publier les captures et vidéos d'un front end dans la pull request |
 | `draft` | boolean | `true` | une pull request ouverte par skraft est un brouillon |
 | `reviewComment` | boolean | absent : demandé une fois par dépôt | `skraft review --pr --publish` peut garder un commentaire sur la pull request revue ; écrit à la main dans le fichier de l'équipe, il l'emporte sur la réponse de chaque développeur, que le moteur garde dans son `~/.skraft/config.json` (`reviewComments`) |
-| `questionVersions` | object | `1` par clé | la version du texte de la question à laquelle chaque réponse a été donnée (`visuals`, `pullRequest`, `reviewComment`, entiers à partir de 1) ; une acceptation d'une version antérieure est redemandée |
+| `questionVersions` | object | `1` par clé | la version du texte de la question à laquelle chaque réponse a été donnée (`visuals`, `pullRequest`, `reviewComment`, entiers à partir de 1) ; une acceptation d'une version antérieure n'est pas réglée : le run est refusé jusqu'à ce que `/skraft-init` la repose |
 
 Le moteur écrit `pullRequest` ou `visuals`, et leur `questionVersions`, quand un humain répond à
 la question, toutes les autres clés du fichier conservées. Toute autre clé ou valeur :
@@ -160,11 +161,10 @@ hôte sert les agents qui s'en servent (les skills du plugin backlog, par exempl
 
 Un run démarré depuis une issue que la ligne de commande de la forge ne peut pas lire (pas de
 remote, `gh` ou `az` absent, pas connecté) est refusé avant que rien ne soit journalisé
-(`issue-unreadable`). Un run dont le consentement de publication est donné, gardé dans
-`skraft-config.json` ou répondu à son démarrage, vérifie la forge juste après cette réponse, avant
-le premier agent : hors de portée, le run pose une question environment (`publish_consent cannot
-run on this machine: <raison>. Fix it, then RETRY; or ABORT the run.`). La raison est celle que
-`skraft doctor` donne sur sa ligne `forge`.
+(`issue-unreadable`). Un run dont le consentement de publication est accepté dans
+`skraft-config.json` vérifie la forge avant son premier agent : hors de portée, le run est refusé
+(`forge-unreachable`, `<raison>. Fix it, then start the run again.`) et ne demande rien. La raison
+est celle que `skraft doctor` donne sur sa ligne `forge`.
 
 ### GitHub par gh <!-- #github-through-gh -->
 
@@ -234,7 +234,7 @@ Dans les messages, `<label>` vaut `component <name>` si le nom est une chaîne, 
 | entrée pas un objet | `components[<index>] must be an object` |
 | nom | `components[<index>].name must be kebab-case, got <valeur JSON>` |
 | nom en double | `component name <name> is used twice` |
-| clé inconnue | `<label>: unknown key <clé> (allowed: name, root, stack, paths, commands, baseBranch, mocking, contractTesting, mutationReport)` |
+| clé inconnue | `<label>: unknown key <clé> (allowed: name, root, stack, paths, commands, baseBranch, mocking, contractTesting, bdd, mutationReport)` |
 | racine | `<label>: root must be a path relative to the working copy` |
 | stack | `<label>: stack must be one of dotnet, java, python, typescript, javascript, react` |
 | `commands` pas un objet | `<label>: commands must be an object of command lines` |
@@ -244,6 +244,7 @@ Dans les messages, `<label>` vaut `component <name>` si le nom est une chaîne, 
 | `mocking` | `<label>: mocking must be { "strategy": "microcks" or "inprocess" }` |
 | `paths` | `<label>: paths must be { "src": [...], "tests": [...] }` ; `<label>: paths.<key> must list folders inside the component root` |
 | `contractTesting` | `<label>: contractTesting must be true or false` |
+| `bdd` | `<label>: bdd must be true or false` |
 | `mutationReport` | `<label>: mutationReport must be a file inside the component root` |
 
 ## Lignes de commande <!-- #command-lines -->

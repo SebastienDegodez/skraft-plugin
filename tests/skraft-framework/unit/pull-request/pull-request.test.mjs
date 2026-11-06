@@ -106,8 +106,6 @@ test('the run ends by opening a draft pull request from its branch to its base, 
     '',
     '| Step | Phase | Visits | Attempts | Retries | Time | Cost | Outcome |',
     '| --- | --- | ---: | ---: | ---: | ---: | ---: | --- |',
-    '| publish_consent | RESEARCH | 1 | 1 | 0 | 0 s | - | skipped |',
-    '| visuals_consent | RESEARCH | 1 | 1 | 0 | 0 s | - | skipped |',
     '| research | RESEARCH | 1 | 1 | 0 | 0 s | - | done |',
     '| design | DESIGN | 1 | 1 | 0 | 0 s | - | done |',
     '| design_review | DESIGN | 1 | 1 | 0 | 0 s | - | approved |',
@@ -121,7 +119,7 @@ test('the run ends by opening a draft pull request from its branch to its base, 
     '| visuals | DELIVER | 1 | 1 | 0 | 0 s | - | skipped |',
     '| pr_writer | PUBLISH | 1 | 1 | 0 | 0 s | - | done |',
     '| publish | PUBLISH | 1 | 1 | 0 | 0 s | - | in progress |',
-    '| Total | | | 15 | 0 | 0 s | - | |',
+    '| Total | | | 13 | 0 | 0 s | - | |',
     '',
     'To find the tests that kill no mutant on their own, the developer runs `/skraft:prune-tests` on a component; it proposes, the developer decides each test.',
     '',
@@ -203,10 +201,8 @@ test('the pr-writer is told where to write its prose and what to read; a summary
   assert.deepEqual(eventsOf(headless, 'step.recorded').find(({ step }) => step === 'pr_writer').failures, ['pull request prose: Summary is empty', 'pull request prose: Why is empty'])
 })
 
-test('a repository workflow with no consent question and no pr-writer: nothing is pushed, the description says what nobody wrote, and its title is the story\'s, cut to 72 characters', async () => {
+test('a repository workflow with no pr-writer: nothing is pushed, the description says what nobody wrote, and its title is the story\'s, cut to 72 characters', async () => {
   const bare = edit(BUILT_IN_WORKFLOW,
-    ['  publish_consent [shape=hexagon, question="publish-consent", phase="RESEARCH"]\n  visuals_consent [shape=hexagon, question="reporting-consent"]\n', ''],
-    ['start -> publish_consent -> visuals_consent -> research', 'start -> research'],
     ['  pr_writer [shape=box, agent="pr-writer", phase="PUBLISH"]\n', ''],
     ['  publish  [shape=parallelogram, publish="pull-request"]', '  publish  [shape=parallelogram, publish="pull-request", phase="PUBLISH"]'],
     ['visuals -> pr_writer -> publish -> exit', 'visuals -> publish -> exit'])
@@ -216,7 +212,7 @@ test('a repository workflow with no consent question and no pr-writer: nothing i
   await host.start({ story: { issue: 42, title } })
 
   assert.deepEqual(host.codeHost.calls, [])
-  assert.equal(eventsOf(host, 'step.recorded').at(-1).reason, 'pull request not opened: nobody answered the publish-consent question yet (publish.pullRequest in skraft-config.json); pull-request.md holds its description, and skraft publish opens it once that is fixed')
+  assert.equal(eventsOf(host, 'step.recorded').at(-1).reason, 'pull request not opened: skraft-config.json sets publish.pullRequest to false; pull-request.md holds its description, and skraft publish opens it once that is fixed')
   const description = await host.tracking.read(SLUG, 'pull-request.md')
   assert.ok(description.startsWith(`${title.slice(0, 71)}…\n\nRefs #42\n\n## What changes\n\nNot written: the run has no pr-writer step that wrote what changes.\n\n## Why\n\nNot written: the run has no pr-writer step that wrote why.\n`), description)
   assert.equal(section(description, 'Out of scope and limitations'), 'Not written: the run has no pr-writer step that wrote what is out of scope.')
@@ -316,7 +312,7 @@ test('the AI disclosure names the models the host said each agent, lens and chec
 })
 
 test('a draft is asked only when publish.draft is not false', async () => {
-  const ready = scripted({ config: { publish: { draft: false } }, answers: [{ answer: 'ACCEPTED' }] }, (it) => nominal(it))
+  const ready = scripted({ config: { publish: { draft: false, pullRequest: true, questionVersions: { pullRequest: 2 } } } }, (it) => nominal(it))
   await ready.start()
   assert.deepEqual(ready.workspace.config().publish, { draft: false, pullRequest: true, questionVersions: { pullRequest: 2 } })
   assert.deepEqual(ready.codeHost.calls.find((call) => call.startsWith('create ')), 'create main <- checkout: Pay by card at checkout')

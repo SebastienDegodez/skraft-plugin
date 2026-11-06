@@ -27,3 +27,27 @@ export const consentOf = (publish, key) => {
   if (given === false) return 'declined'
   return publish.questionVersions[key] >= CONSENT_VERSIONS[key] ? 'accepted' : 'outdated'
 }
+
+/** The consent each publication asks for; a publication that asks none is absent. */
+const PUBLICATION_CONSENTS = Object.freeze(/** @type {Record<string, ConsentKey>} */ ({ 'pull-request': 'pullRequest', 'playwright-visuals': 'visuals' }))
+
+/**
+ * The consents the publications of a workflow ask for, in the order messages list them.
+ * @param {ReadonlyArray<string | null>} publications what each publication node of the run publishes
+ * @returns {ConsentKey[]}
+ */
+export const consentsAsked = (publications) => CONSENT_KEYS.filter((key) => publications.some((what) => PUBLICATION_CONSENTS[String(what)] === key))
+
+/** A consent a run may start on: refused, or accepted for the question as it reads now. */
+const SETTLED = Object.freeze(/** @type {ConsentState[]} */ (['declined', 'accepted']))
+
+/**
+ * Of the consents a run asks for, those nobody settled, each with where it stands: what
+ * `/skraft-init` has still to settle before the run can start.
+ * @param {Consents} publish @param {readonly ConsentKey[]} asked
+ * @returns {Array<{ key: ConsentKey, state: ConsentState }>}
+ */
+export const unsettledConsents = (publish, asked) => CONSENT_KEYS
+  .filter((key) => asked.includes(key))
+  .map((key) => ({ key, state: consentOf(publish, key) }))
+  .filter(({ state }) => !SETTLED.includes(state))

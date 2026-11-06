@@ -23,15 +23,14 @@ $ gh auth login --hostname github.com
 ```
 
 Replace `github.com` with your GitHub Enterprise host if needed. skraft runs `gh` with
-`--repo <host>/<owner>/<repo>` from the remote's URL. The engine reads the issue and opens the pull request through `gh` only, never through an MCP server ([GitHub through gh](../reference/skraft-config.md#github-through-gh)). With the consent given, a forge `gh` cannot reach stops the run at its start, before the first agent, with an environment question: fix it (`gh auth login`), then answer RETRY.
+`--repo <host>/<owner>/<repo>` from the remote's URL. The engine reads the issue and opens the pull request through `gh` only, never through an MCP server ([GitHub through gh](../reference/skraft-config.md#github-through-gh)). With the consent accepted, a forge `gh` cannot reach refuses the run at its start, before the first agent and without asking anything: fix it (`gh auth login`), then start the run again.
 
 ## 2. Give the consent
 
-At the repository's first run, the `publish-consent` question (header `Pull request`) asks whether
-skraft may push the branch, open or update its pull request, and keep one comment up to date on
-the story's issue. Answer `ACCEPTED`
-([Answer a run's question](./answer-a-question.mdx)). The answer is
-written in `skraft-config.json`:
+`/skraft-init` asks whether skraft may push the branch, open or update its pull request, and keep
+one comment up to date on the story's issue. Answer yes, and it writes the answer in
+`skraft-config.json`. Until it is settled there, a run that would publish is refused
+(`configuration-incomplete`) before its first agent:
 
 ```json
 {

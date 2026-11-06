@@ -212,8 +212,6 @@ The questions, their options and their refusals:
 | Kind | Key | Options | Refusal |
 | --- | --- | --- | --- |
 | `adr-ratification` | `<node>-<n>` (`adr-1`) | `RATIFIED`, `REJECTED` | `REJECTED` |
-| `publish-consent` | `<node>-<n>` | `ACCEPTED`, `DECLINED` | — |
-| `reporting-consent` | `<node>-<n>` | `ACCEPTED`, `DECLINED` | — |
 | `environment` | `<node>-<n>`, the node that cannot run (`gates-1`) | `RETRY`, `ABORT` | — |
 | `mutation-plan` | `<node>-<n>` (`mutation_plan-1`) | `APPLY`, an instruction, or `STOP` (ends the run `blocked`, code `stopped`) | — |
 | `blocked` | `<node>-<n>`, the node an instruction runs again (`design-1`) | an instruction, or `STOP` | — |

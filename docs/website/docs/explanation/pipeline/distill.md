@@ -49,6 +49,12 @@ story's branch: the pull request shows them, and the next runs read them. No tes
 these files; the acceptance test carries their values verbatim, and the `testability` lens checks
 it (T2).
 
+A component says whether it describes its behaviour that way, with `bdd` in `skraft-config.json`
+([skraft-config.json](../../reference/skraft-config.md#component)). It declares a practice, not a
+bar: a component that leaves it on is held to its scenarios in full, and one that declines is
+asked for no `.feature` — DISTILL takes its scenarios from the test plan's `Scenario` column
+instead, and DELIVER's TDD runs exactly as it always does. An absent key means yes.
+
 ## What is not a scenario
 
 A purely technical input case — a value of the wrong type, `NaN`, `null`, a number written as

@@ -114,6 +114,25 @@ Dans la suite, `skraft …` veut dire cette commande complète, ou la commande `
 *Figure 1 — Un composant, `web`, avec ses commandes `test` et `mutation`, est écrit dans
 `skraft-config.json`.*
 
+Un run qui publie ne démarre que sur une configuration dont les consentements de publication sont
+réglés : répondez-y maintenant, dans `skraft-config.json`. Ce dépôt n'a pas de remote, donc
+refusez les deux :
+
+```json title="skraft-config.json"
+{
+  "publish": {
+    "pullRequest": false,
+    "visuals": false,
+    "questionVersions": { "pullRequest": 2, "visuals": 1 }
+  },
+  "components": [ … ]
+}
+```
+
+`/skraft-init` vous les demande, ainsi que le reste de la configuration, dès qu'il est installé sur
+votre hôte ; à la main, les clés ci-dessus sont tout ce qu'un run exige. Sans elles, il est refusé
+avant son premier agent, avec `skraft is not initialised: run /skraft-init`.
+
 Commitez la configuration, puis vérifiez la machine :
 
 ```console
@@ -159,41 +178,14 @@ rien. Passez `configure: true` au workflow pour qu'on vous le redemande. Le canv
 **Run** (où en est le run) et un onglet **Workflow** (chaque workflow que le run peut suivre,
 l'étape en cours mise en évidence).
 
-## 5. Répondre à la première question <!-- #5-answer-the-first-question -->
+## 5. Voir le run démarrer sur RESEARCH <!-- #5-watch-the-run-start-on-research -->
 
-Copilot vous pose une question dans le chat, une seule fois : skraft peut-il pousser la branche et
-ouvrir la pull request à la fin du run ? La question s'affiche ainsi :
+Aucune question ne se tient entre le démarrage et le premier agent : les consentements que vous
+avez réglés dans `skraft-config.json` y répondent d'eux-mêmes, et le run va droit à `research`. Un
+consentement laissé sans réponse là refuserait le run au lieu de l'arrêter pour le demander.
 
-```console title="Copilot CLI"
-May skraft push this branch and open or update its pull request when a run ends, and keep one comment on its story's issue up to date with the run's progress, time and cost? ACCEPTED or DECLINED; the answer is kept in skraft-config.json (publish.pullRequest) for every later run.
-```
-
-Copilot CLI l'affiche ainsi :
-
-```text title="Copilot CLI"
-Copilot needs information.
-May skraft push this branch and open or update its pull request when a run ends, and keep one
-comment on its story's issue up to date with the run's progress, time and cost? ACCEPTED or
-DECLINED; the answer is kept in skraft-config.json (publish.pullRequest) for every later run.
-
-selection:
-❯ ACCEPTED
-  DECLINED
-  Other (type your answer)
-
-↑/↓ select · enter accept · ctrl+d decline · esc cancel
-```
-
-Si votre client Copilot affiche les canvas, demandez-lui
-d'ouvrir le canvas `skraft-pipeline` : il montre la même question et le workflow.
-
-![Canvas skraft-pipeline : statut WAITING, bouton « On a besoin de vous » dans l'en-tête, encadré « Pull request » avec la question et la façon d'y répondre, RESEARCH ouverte sur publish_consent, les autres phases à venir](/img/screenshots/shared/pipeline-canvas-question.png)
-
-*Figure 2 — Le canvas `skraft-pipeline` du dépôt `shop` : le run attend la réponse à
-`publish_consent-1`. Le canvas montre ; c'est dans le chat que vous répondez.*
-
-Choisissez **DECLINED** : ce dépôt n'a pas de remote. La réponse est écrite dans
-`skraft-config.json` et ne sera plus redemandée.
+Si votre client Copilot affiche des canvas, demandez-lui d'ouvrir le canvas `skraft-pipeline` : il
+montre le run étape par étape, RESEARCH ouvert sur `research`.
 
 ## 6. Suivre RESEARCH et DESIGN <!-- #6-follow-research-and-design -->
 
@@ -208,9 +200,6 @@ Dans le chat, le début de RESEARCH s'affiche ainsi :
 
 ```text title="Copilot CLI"
 ● phase RESEARCH
-● checkout: publish_consent DECLINED
-● checkout: visuals_consent DECLINED (no component of skraft-config.json is a front end (stack
-  react, or an e2e command), so no screenshot is taken)
 ● checkout: solution-researcher, attempt 1 — researcher · economy · model chosen by the host
 ```
 
@@ -219,7 +208,7 @@ approuvé, Copilot vous pose la question suivante : ratifier l'ADR. Le canvas la
 
 ![Canvas skraft-pipeline : statut WAITING avec un bouton « On a besoin de vous » sur la question ADR adr-1, RESEARCH cochée, DESIGN ouverte avec design et design_review faits, adr en cours ; sous le workflow, la revue design_review approuvée et le modèle de chaque agent](/img/screenshots/shared/pipeline-canvas-adr.png)
 
-*Figure 3 — Le run attend la ratification de l'ADR. Capture faite sur le dépôt scripté des tests
+*Figure 2 — Le run attend la ratification de l'ADR. Capture faite sur le dépôt scripté des tests
 d'intégration, dont l'ADR s'appelle `adr-001-card-payment.md` ; le vôtre porte le titre que
 l'architecte lui a donné.*
 
@@ -233,14 +222,14 @@ la description de la pull request. Le journal de `/workflows` se termine ainsi :
 
 ![Journal du workflow skraft-pipeline : phase PUBLISH, pr-writer, la pull request non ouverte car publish.pullRequest vaut false, PUBLISH closed, puis checkout: done: PUBLISH closed](/img/screenshots/shared/terminal-workflow-log.svg)
 
-*Figure 4 — La fin du journal : la description est écrite dans `pull-request.md`, rien n'est
+*Figure 3 — La fin du journal : la description est écrite dans `pull-request.md`, rien n'est
 poussé, le run est fini.*
 
 Le canvas coche alors chaque phase :
 
 ![Canvas skraft-pipeline : statut DONE, « PUBLISH closed », RESEARCH à PUBLISH cochées avec chaque étape et son résultat, puis les revues approuvées et les gates passées](/img/screenshots/shared/pipeline-canvas-done.png)
 
-*Figure 5 — Un run terminé dans le canvas (dépôt scripté des tests d'intégration). Les étapes
+*Figure 4 — Un run terminé dans le canvas (dépôt scripté des tests d'intégration). Les étapes
 `kill_proposal` à `mutation_gates` restent grises : aucun mutant n'a survécu.*
 
 Son onglet **Journal** relit `events.jsonl` : la chaîne de hachage est-elle intacte, puis chaque étape
@@ -248,7 +237,7 @@ enregistrée et chaque décision humaine, avec qui l'a confirmée.
 
 ![Canvas skraft-pipeline, onglet Journal : la chaîne de hachage intacte, 62 lignes chaînées chacune à la précédente et signées ; puis chaque étape avec sa phase, son passage et son résultat, et la décision humaine adr-1 RATIFIED par host-confirmed](/img/screenshots/shared/pipeline-canvas-journal.png)
 
-*Figure 6 — L'onglet Journal du run terminé : `adr-1` a été ratifiée par la boîte de confirmation
+*Figure 5 — L'onglet Journal du run terminé : `adr-1` a été ratifiée par la boîte de confirmation
 de Copilot elle-même (`host-confirmed`).*
 
 ## 8. Lire le rapport du run <!-- #8-read-the-runs-report -->
@@ -261,7 +250,7 @@ $ skraft report
 
 ![Terminal : skraft report, un tableau d'une ligne par étape avec ses visites, tentatives, relances, temps, coût et résultat, une ligne Total, puis la question adr-1 répondue RATIFIED par host-confirmed](/img/screenshots/shared/terminal-report-done.svg)
 
-*Figure 7 — Le rapport d'un run terminé. Sur le dépôt scripté, les agents répondent aussitôt, d'où
+*Figure 6 — Le rapport d'un run terminé. Sur le dépôt scripté, les agents répondent aussitôt, d'où
 des temps nuls ; sous Copilot, la colonne Coût reste vide : Copilot compte en crédits.*
 
 La dernière table dit qui a répondu : `host-confirmed`, c'est-à-dire vous, dans la boîte de

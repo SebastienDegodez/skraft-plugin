@@ -8,11 +8,10 @@ const QUESTION = 'Start this run with the configuration of this working copy? Th
   'START goes on, and is kept in skraft-config.local.json (configurationConfirmed) so that later runs start without asking; STOP starts nothing.'
 
 const WORKFLOW = `digraph confirm {
-  start           [shape=Mdiamond]
-  publish_consent [shape=hexagon, question="publish-consent", phase="RESEARCH"]
-  research        [shape=box, agent="solution-researcher"]
-  exit            [shape=Msquare]
-  start -> publish_consent -> research -> exit
+  start    [shape=Mdiamond]
+  research [shape=box, agent="solution-researcher", phase="RESEARCH"]
+  exit     [shape=Msquare]
+  start -> research -> exit
 }`
 
 const LOCAL = 'skraft-config.local.json'
@@ -51,7 +50,7 @@ test('a working copy whose configuration nobody confirmed is asked once, before 
   assert.equal(host.workspace.files.get('.gitignore'), 'node_modules/\nskraft-config.local.json\n')
   assert.deepEqual(eventsOf(host, 'question.asked').map(({ key, step }) => [key, step]), [['configuration-1', 'configuration']])
   assert.deepEqual(eventsOf(host, 'question.answered').map(({ key, answer, by }) => [key, answer, by]), [['configuration-1', 'START', 'decide']])
-  assert.deepEqual(eventsOf(host, 'step.recorded').map(({ step }) => step), ['publish_consent', 'research'])
+  assert.deepEqual(eventsOf(host, 'step.recorded').map(({ step }) => step), ['research'])
 })
 
 test('a working copy whose configuration a person confirmed starts without asking; a driver asking at each start asks again, and a run no driver asks to confirm asks nothing', async () => {
@@ -95,8 +94,7 @@ test('the run goes on with the configuration as the person left it when they ans
   assert.equal((await started(host)).status, 'done')
 
   assert.deepEqual(host.human.questions.map(({ key }) => key), ['configuration-1'])
-  const consent = eventsOf(host, 'step.recorded')[0]
-  assert.deepEqual([consent.step, consent.outcome, consent.answer], ['publish_consent', 'skipped', 'ACCEPTED'])
+  assert.deepEqual(eventsOf(host, 'step.recorded').map(({ step }) => step), ['research'])
 })
 
 test('configurationConfirmed is true or false, in skraft-config.local.json only', async () => {

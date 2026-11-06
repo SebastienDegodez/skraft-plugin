@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { agent, API, CONSENTS, nominal, pipelineHost, REFS_42, RESEARCH_TEMPLATE, scripted, SLUG, TRACKING } from '../support/pipeline-host.mjs'
+import { agent, API, nominal, pipelineHost, REFS_42, RESEARCH_TEMPLATE, scripted, SLUG, TRACKING } from '../support/pipeline-host.mjs'
 
 const RESEARCH = 'research/2026-10-11/checkout-research.md'
 const MATRIX = 'details/2026-10-11/consistency-matrix-checkout.md'
@@ -25,8 +25,6 @@ test('the nominal run goes through RESEARCH, DESIGN, DISTILL and DELIVER, the ga
   ])
   assert.deepEqual(host.types(), [
     'run.started',
-    'step.started', 'step.recorded',
-    'step.started', 'step.recorded',
     'step.started', 'step.recorded', 'phase.closed', 'issue.comment-skipped',
     'step.started', 'step.recorded',
     'step.started', 'review.lens', 'review.lens', 'review.lens', 'step.recorded',
@@ -49,8 +47,6 @@ test('the nominal run goes through RESEARCH, DESIGN, DISTILL and DELIVER, the ga
   assert.deepEqual(events.filter((event) => event.type === 'step.recorded' && event.committed !== undefined).map((event) => event.step), ['design'])
   assert.deepEqual([...new Set(events.filter((event) => event.type === 'issue.comment-skipped').map((event) => event.reason))], ['skraft-config.json does not set publish.pullRequest to true'])
   assert.deepEqual(events.filter((event) => event.type === 'step.recorded').map(({ step, outcome: result, code, next }) => [step, result, code, next]), [
-    ['publish_consent', 'skipped', null, 'visuals_consent'],
-    ['visuals_consent', 'skipped', null, 'research'],
     ['research', 'done', null, 'design'],
     ['design', 'done', null, 'design_review'],
     ['design_review', 'approved', null, 'adr'],
@@ -67,8 +63,7 @@ test('the nominal run goes through RESEARCH, DESIGN, DISTILL and DELIVER, the ga
   ])
   assert.deepEqual(events.at(-2), { ...events.at(-2), type: 'run.finished', status: 'completed', reason: 'PUBLISH closed' })
   assert.deepEqual(host.progress.lines, [
-    'phase RESEARCH', `${SLUG}: publish_consent DECLINED (skraft-config.json sets publish.pullRequest to false)`,
-    `${SLUG}: visuals_consent DECLINED (no component of skraft-config.json is a front end (stack react, or an e2e command), so no screenshot is taken)`,
+    'phase RESEARCH',
     `${SLUG}: solution-researcher, attempt 1 — researcher · economy · haiku`, `${SLUG}: RESEARCH closed`,
     'phase DESIGN', `${SLUG}: solution-architect, attempt 1 — planner · frontier · opus`,
     `${SLUG}: design_review (consistency, architecture-compliance, fitness) — reviewer · economy · haiku`, `${SLUG}: design_review APPROVED: every lens passed`,
@@ -142,7 +137,7 @@ test('each agent is told its story, inputs, outputs, result file and the paths i
     '- tests',
     '- ./* (the files right in the root of api)',
     '- Components:',
-    '- api: . (dotnet), mocking: inprocess, contract testing: off, tests: dotnet test',
+    '- api: . (dotnet), mocking: inprocess, contract testing: off, bdd: on, tests: dotnet test',
     '- Commit each TDD cycle: `test(<story>): …` with the failing test, then `feat(<story>): …` or `fix(<story>): …` with the code that makes it pass,',
     '  then `refactor(<story>): …` if needed. Tests that pass from the start (coverage) go with the code they cover, or in a `refactor` commit;',
     '  lint and format fixes in a `style` commit. The engine runs the tests at every test commit and refuses one whose tests pass,',
@@ -163,7 +158,7 @@ test('each agent is told its story, inputs, outputs, result file and the paths i
     '- tests',
     '- ./* (the files right in the root of api)',
     '- Components:',
-    '- api: . (dotnet), mocking: inprocess, contract testing: off, tests: dotnet test',
+    '- api: . (dotnet), mocking: inprocess, contract testing: off, bdd: on, tests: dotnet test',
     '- Commit the failing acceptance tests as `test(<story>): …`, with the skeleton they call: the signatures the contract names, each answering',
     '  the empty value of its type, no behaviour; a test failing on a missing module proves nothing. The engine runs the tests at every test commit and refuses one whose tests pass,',
     '  and any commit that is not `type(scope): subject`. A refused commit stays refused until you rewrite it.',
@@ -236,7 +231,7 @@ test('a document that quotes double braces of its subject, not of its template, 
 
   await host.start()
 
-  const recorded = host.events().filter((event) => event.type === 'step.recorded' && !CONSENTS.includes(event.step))
+  const recorded = host.events().filter((event) => event.type === 'step.recorded')
   assert.deepEqual(recorded.map(({ step, outcome, missing }) => [step, outcome, missing]), [['research', 'done', []]])
 })
 
@@ -262,9 +257,9 @@ test('a missing document is asked again with its path, and a retry that fills it
     'Missing outputs from attempt 1 of 3:',
     `- ${TRACKING}/${RESEARCH}`,
   ].join('\n'))
-  const recorded = host.events().filter((event) => event.type === 'step.recorded' && !CONSENTS.includes(event.step))
+  const recorded = host.events().filter((event) => event.type === 'step.recorded')
   assert.deepEqual(recorded.map(({ outcome, code, missing, next }) => [outcome, code, missing, next]), [['failed', 'missing-outputs', [RESEARCH], null], ['done', null, [], 'design']])
-  assert.deepEqual(host.events().filter((event) => event.type === 'step.started' && !CONSENTS.includes(event.step)).map((event) => [event.attempt, event.missing, event.outputs]), [
+  assert.deepEqual(host.events().filter((event) => event.type === 'step.started').map((event) => [event.attempt, event.missing, event.outputs]), [
     [1, [], [RESEARCH]], [2, [RESEARCH], [RESEARCH]], [1, [], [MATRIX]],
   ])
 })
@@ -274,7 +269,7 @@ test('a retry after midnight keeps the paths of the first attempt', async () => 
 
   await host.start()
 
-  assert.deepEqual(host.events().filter((event) => event.type === 'step.started').map((event) => event.outputs), [[], [], [RESEARCH], [RESEARCH], ['details/2026-10-12/consistency-matrix-checkout.md']])
+  assert.deepEqual(host.events().filter((event) => event.type === 'step.started').map((event) => event.outputs), [[RESEARCH], [RESEARCH], ['details/2026-10-12/consistency-matrix-checkout.md']])
 })
 
 test('an agent the host cannot start stops the run without spending the attempt; the next run dispatches it again', async () => {
@@ -283,8 +278,8 @@ test('an agent the host cannot start stops the run without spending the attempt;
   const outcome = await host.start()
 
   assert.deepEqual(outcome, { status: 'blocked', slug: SLUG, phase: 'RESEARCH', code: 'agent-unavailable', reason: 'agent "solution-researcher" is not installed' })
-  assert.deepEqual(host.types(), ['run.started', 'step.started', 'step.recorded', 'step.started', 'step.recorded', 'step.started', 'run.stopped'])
-  assert.deepEqual(host.events()[6], { ...host.events()[6], code: 'agent-unavailable', reason: outcome.reason })
+  assert.deepEqual(host.types(), ['run.started', 'step.started', 'run.stopped'])
+  assert.deepEqual(host.events()[2], { ...host.events()[2], code: 'agent-unavailable', reason: outcome.reason })
 
   host.agentRunner.behaviours.push(() => ({ ok: false, unavailable: true, text: '' }))
   assert.equal((await host.run()).reason, 'solution-researcher could not be started')
@@ -300,7 +295,7 @@ test('an agent that stops without finishing stops the run; one that answers noth
   const outcome = await host.start()
 
   assert.deepEqual(outcome, { status: 'blocked', slug: SLUG, phase: 'RESEARCH', code: 'agent-failed', reason: 'solution-researcher stopped without finishing: aborted by the user' })
-  assert.deepEqual(host.types(), ['run.started', 'step.started', 'step.recorded', 'step.started', 'step.recorded', 'step.started', 'run.stopped'])
+  assert.deepEqual(host.types(), ['run.started', 'step.started', 'run.stopped'])
   host.agentRunner.behaviours.push(() => ({ ok: false, text: '' }))
   assert.equal((await host.run()).reason, 'solution-researcher stopped without finishing: no answer')
 
@@ -399,13 +394,13 @@ test('a configuration that became invalid stops the run before anything is dispa
 })
 
 test('the engineer works on every component, each with its test command when it has one and the gate commands it runs before its result, mutation and other commands left out, a path list left out being the whole root', async () => {
-  const WEB = { name: 'web', root: '../web', stack: 'react', mocking: { strategy: 'inprocess' }, paths: { src: ['src'], tests: ['src'] }, commands: { lint: 'npx eslint .' } }
+  const WEB = { name: 'web', root: '../web', stack: 'react', mocking: { strategy: 'inprocess' }, bdd: false, paths: { src: ['src'], tests: ['src'] }, commands: { lint: 'npx eslint .' } }
   const host = scripted({ components: [API, WEB] }, (it) => [agent()(it), agent()(it), agent()(it), () => ({ ok: false, unavailable: true, text: '' })])
 
   await host.start()
 
   const deliver = host.agentRunner.dispatches[3].prompt
-  assert.ok(deliver.includes(`- .copilot-tracking/skraft-plans/${SLUG}\n- src\n- tests\n- ../web/src\n- ./* (the files right in the root of api)\n- ../web/* (the files right in the root of web)\n- Components:\n- api: . (dotnet), mocking: inprocess, contract testing: off, tests: dotnet test\n- web: ../web (react), mocking: inprocess, contract testing: off\n`), deliver)
+  assert.ok(deliver.includes(`- .copilot-tracking/skraft-plans/${SLUG}\n- src\n- tests\n- ../web/src\n- ./* (the files right in the root of api)\n- ../web/* (the files right in the root of web)\n- Components:\n- api: . (dotnet), mocking: inprocess, contract testing: off, bdd: on, tests: dotnet test\n- web: ../web (react), mocking: inprocess, contract testing: off, bdd: off\n`), deliver)
   assert.ok(host.agentRunner.dispatches[2].prompt.includes(`- .copilot-tracking/skraft-plans/${SLUG}\n- docs/features\n- src\n- tests\n- ../web/src\n- ./* (the files right in the root of api)`))
   assert.ok(deliver.endsWith(`- Gate commands: before you write your result, run those of each component you changed, from its root, and fix every failure; the gates step runs them next and sends a failure back as a new pass:\n- api: build: dotnet build; test: dotnet test\n- web: lint: npx eslint .`), deliver)
 
@@ -422,6 +417,6 @@ test('the test and gate commands the engineer is given have the run\'s base in p
 
   await host.start()
 
-  assert.ok(host.agentRunner.dispatches[3].prompt.includes('- api: . (dotnet), mocking: inprocess, contract testing: off, tests: dotnet test --filter Since=root-0\n'))
+  assert.ok(host.agentRunner.dispatches[3].prompt.includes('- api: . (dotnet), mocking: inprocess, contract testing: off, bdd: on, tests: dotnet test --filter Since=root-0\n'))
   assert.ok(host.agentRunner.dispatches[3].prompt.endsWith('\n- api: test: dotnet test --filter Since=root-0'), host.agentRunner.dispatches[3].prompt)
 })

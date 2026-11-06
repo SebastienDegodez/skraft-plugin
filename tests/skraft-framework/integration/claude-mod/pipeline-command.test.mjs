@@ -14,7 +14,7 @@ const NO_ACTIVE =
   'no active pipeline in this working copy (.copilot-tracking/skraft-plans/.active-slug); start one with an explicit slug'
 const PENDING_PHASES = '· RESEARCH\n· DESIGN\n· DISTILL\n· DELIVER\n· PUBLISH'
 /** The journal of a run that closed RESEARCH and stopped at a blocked architect, its person picking STOP in the dialog. */
-const STOPPED_IN_DESIGN = ['run.started', 'step.started', 'step.recorded', 'step.started', 'step.recorded', 'step.started', 'step.recorded', 'phase.closed', 'step.started', 'step.recorded', 'question.asked', 'question.answered', 'run.finished']
+const STOPPED_IN_DESIGN = ['run.started', 'step.started', 'step.recorded', 'phase.closed', 'step.started', 'step.recorded', 'question.asked', 'question.answered', 'run.finished']
 /** The same run from the issue #42, each transition told to it, skipped without consent to publish. */
 const STOPPED_IN_DESIGN_FROM_ISSUE = STOPPED_IN_DESIGN.flatMap((type) => (type === 'phase.closed' || type === 'run.finished' ? [type, 'issue.comment-skipped'] : [type]))
 const ARCHITECT_BLOCKED = 'solution-architect is blocked: needs a decision on the payment provider'
@@ -121,7 +121,7 @@ test('a filled research document closes RESEARCH, a blocked architect stops the 
     { phase: 'RESEARCH', state: 'closed' }, { phase: 'DESIGN', state: 'open' }, { phase: 'DISTILL', state: 'pending' }, { phase: 'DELIVER', state: 'pending' }, { phase: 'PUBLISH', state: 'pending' },
   ])
   assert.deepEqual(last.log, [
-    'checkout: publish_consent DECLINED (skraft-config.json sets publish.pullRequest to false)', 'checkout: visuals_consent DECLINED (no component of skraft-config.json is a front end (stack react, or an e2e command), so no screenshot is taken)', 'checkout: solution-researcher, attempt 1 — researcher · economy · haiku', 'checkout: RESEARCH closed', 'checkout: solution-architect, attempt 1 — planner · frontier · opus',
+    'checkout: solution-researcher, attempt 1 — researcher · economy · haiku', 'checkout: RESEARCH closed', 'checkout: solution-architect, attempt 1 — planner · frontier · opus',
     `skraft checkout: blocked (agent-blocked) — ${ARCHITECT_BLOCKED}`,
   ])
   assert.equal(await mod.command(''), `skraft checkout — blocked\n✓ RESEARCH\n▶ DESIGN\n· DISTILL\n· DELIVER\n· PUBLISH\n${ARCHITECT_BLOCKED}`)
@@ -227,7 +227,7 @@ test('a spawn the host rejects blocks the run as agent-unavailable', withHost({ 
 
   assert.equal(outcome.code, 'agent-unavailable')
   assert.equal(outcome.reason, 'skraft:solution-researcher could not be started')
-  assert.deepEqual((await mod.journal('checkout')).map((event) => event.type), ['run.started', 'step.started', 'step.recorded', 'step.started', 'step.recorded', 'step.started', 'run.stopped'])
+  assert.deepEqual((await mod.journal('checkout')).map((event) => event.type), ['run.started', 'step.started', 'run.stopped'])
 }))
 
 test('a run that throws is reported as an error with a fixed line, never the error text, and frees the driver for the next start', withHost({ behaviours: [fillsItsOutputs(), stops()] }, async (mod) => {

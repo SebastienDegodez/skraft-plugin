@@ -71,8 +71,9 @@ For such a component, the `visuals` node runs `commands.e2e` after the DELIVER r
    ```
 
 4. Add `skraft-visuals/` to the front end's `.gitignore`.
-5. Answer `ACCEPTED` to the `reporting-consent` question (header `Reporting`), or write
-   `"visuals": true` under `publish`.
+5. Write `"visuals": true` under `publish`, with `"questionVersions": { "visuals": 1 }`, or let
+   `/skraft-init` ask you for it. Until it is settled, a run that would publish screenshots is
+   refused.
 
 Result: the screenshots are committed alone on the branch
 (`docs(evidence): screenshots of <components>`) and the pull request's Screenshots section shows

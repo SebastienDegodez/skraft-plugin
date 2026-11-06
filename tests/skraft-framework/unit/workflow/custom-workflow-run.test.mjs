@@ -11,7 +11,7 @@ const repositoryWorkflow = (dot, models = RANKED) => ({ config: { models }, file
 const withSecurity = { ...repositoryWorkflow(WITH_SECURITY), catalog: new InMemoryAgentCatalog({ repository: ['acme-security-reviewer'] }) }
 
 test('a repository agent between DESIGN and DISTILL is launched in its place, as a repository agent, whatever the order of the edges', async () => {
-  const chain = '  start -> publish_consent -> visuals_consent -> research -> design -> security\n'
+  const chain = '  start -> research -> design -> security\n'
   const around = '  security -> design_review_lenses\n'
   const last = '  visuals -> pr_writer -> publish -> exit\n'
   const edgesLast = edit(WITH_SECURITY, [chain, ''], [around, ''], [last, `${last}${around}${chain}`])

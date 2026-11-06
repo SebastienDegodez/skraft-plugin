@@ -2,7 +2,7 @@ import { RESULT_SHAPE } from './agent-result.mjs'
 import { issueOf } from './commits.mjs'
 
 /**
- * @typedef {{ name: string, root: string, stack: string, mocking: string, contractTesting: boolean, test: string | null, gates: BriefGate[] }} BriefComponent
+ * @typedef {{ name: string, root: string, stack: string, mocking: string, contractTesting: boolean, bdd: boolean, test: string | null, gates: BriefGate[] }} BriefComponent
  *   gates: the gate commands of the component the agent runs before its result, in the order the
  *   gates step runs them, mutation left out.
  * @typedef {{ gate: string, line: string }} BriefGate
@@ -107,7 +107,7 @@ const writablePaths = (allowed, components) => [
 ]
 
 /** @param {BriefComponent} component */
-const componentLine = ({ name, root, stack, mocking, contractTesting, test }) => `${name}: ${root} (${stack}), mocking: ${mocking}, contract testing: ${contractTesting ? 'on' : 'off'}${test ? `, tests: ${test}` : ''}`
+const componentLine = ({ name, root, stack, mocking, contractTesting, bdd, test }) => `${name}: ${root} (${stack}), mocking: ${mocking}, contract testing: ${contractTesting ? 'on' : 'off'}, bdd: ${bdd ? 'on' : 'off'}${test ? `, tests: ${test}` : ''}`
 
 /** The commits whose code the gates step runs its commands on next: a TDD cycle's, a mutant killer's. */
 const GATED = Object.freeze(['cycle', 'kill'])

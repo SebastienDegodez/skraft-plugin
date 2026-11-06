@@ -51,7 +51,7 @@ stimuli:
       - tests
       - ./* (the files right in the root of orders)
       - Components:
-      - orders: . (dotnet), mocking: microcks, contract testing: off, tests: dotnet test --nologo
+      - orders: . (dotnet), mocking: microcks, contract testing: off, bdd: on, tests: dotnet test --nologo
       - Commit each TDD cycle: `test(<story>): …` with the failing test, then `feat(<story>): …` or `fix(<story>): …` with the code that makes it pass,
         then `refactor(<story>): …` if needed. Tests that pass from the start (coverage) go with the code they cover, or in a `refactor` commit;
         lint and format fixes in a `style` commit. The engine runs the tests at every test commit and refuses one whose tests pass,
@@ -166,7 +166,7 @@ stimuli:
       - tests
       - ./* (the files right in the root of storefront)
       - Components:
-      - storefront: . (dotnet), mocking: microcks, contract testing: off, tests: dotnet test --nologo
+      - storefront: . (dotnet), mocking: microcks, contract testing: off, bdd: on, tests: dotnet test --nologo
       - Commit each TDD cycle: `test(<story>): …` with the failing test, then `feat(<story>): …` or `fix(<story>): …` with the code that makes it pass,
         then `refactor(<story>): …` if needed. Tests that pass from the start (coverage) go with the code they cover, or in a `refactor` commit;
         lint and format fixes in a `style` commit. The engine runs the tests at every test commit and refuses one whose tests pass,
@@ -266,7 +266,7 @@ stimuli:
       - tests
       - ./* (the files right in the root of orders)
       - Components:
-      - orders: . (dotnet), mocking: microcks, contract testing: off, tests: dotnet test --nologo
+      - orders: . (dotnet), mocking: microcks, contract testing: off, bdd: on, tests: dotnet test --nologo
       - Commit each TDD cycle: `test(<story>): …` with the failing test, then `feat(<story>): …` or `fix(<story>): …` with the code that makes it pass,
         then `refactor(<story>): …` if needed. Tests that pass from the start (coverage) go with the code they cover, or in a `refactor` commit;
         lint and format fixes in a `style` commit. The engine runs the tests at every test commit and refuses one whose tests pass,
@@ -386,7 +386,7 @@ stimuli:
       - tests
       - ./* (the files right in the root of orders)
       - Components:
-      - orders: . (dotnet), mocking: microcks, contract testing: off, tests: dotnet test --nologo
+      - orders: . (dotnet), mocking: microcks, contract testing: off, bdd: on, tests: dotnet test --nologo
       - Commit each TDD cycle: `test(<story>): …` with the failing test, then `feat(<story>): …` or `fix(<story>): …` with the code that makes it pass,
         then `refactor(<story>): …` if needed. Tests that pass from the start (coverage) go with the code they cover, or in a `refactor` commit;
         lint and format fixes in a `style` commit. The engine runs the tests at every test commit and refuses one whose tests pass,

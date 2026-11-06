@@ -94,7 +94,7 @@ Attributes common to every shape: `label`, `shape`, `phase`. Any other attribute
 | `when` (publication) | `frontend` | skips the node when no component is a front end |
 | `lens` | kebab-case name | the lens `<name>` is the agent `<name>-lens`; at most once per review |
 | `when` (lens) | `mock` or `contract` | see [Conditional lenses](#conditional-lenses) |
-| `question` | `adr-ratification`, `reporting-consent`, `publish-consent` or `mutation-plan` | see [Phases](./phases.md#human-questions) |
+| `question` | `adr-ratification` or `mutation-plan` | see [Phases](./phases.md#human-questions) |
 | `workflow` | kebab-case base name (`review`) | the called workflow |
 | `with_<input>` | `base`, `head`, `story`, `documents` or `components` | binds the called workflow's input `<input>` to this value of the run |
 | `mandatory` | `true` | see [Mandatory nodes](#mandatory-nodes); `mandatory=false` is refused |
@@ -309,8 +309,6 @@ from the predecessor.
 | Node | Shape | Attributes | Phase |
 | --- | --- | --- | --- |
 | `start` | `Mdiamond` | — | — |
-| `publish_consent` | `hexagon` | `question="publish-consent"` | RESEARCH |
-| `visuals_consent` | `hexagon` | `question="reporting-consent"` | (RESEARCH) |
 | `research` | `box` | `agent="solution-researcher"` | RESEARCH |
 | `design` | `box` | `agent="solution-architect"` | DESIGN |
 | `design_review_lenses` → `design_review` | review | lenses `consistency`, `architecture-compliance`, `fitness`; fan-in `mandatory=true` | (DESIGN) |
@@ -351,8 +349,7 @@ from the predecessor.
 | `mutation_gates -> kill_mutants` | `FAIL` | 3 |
 | `mutation_gates -> mutation` | `PASS` | — |
 
-The other edges carry neither label nor ceiling: `start -> publish_consent -> visuals_consent
--> research -> design`, `distill -> distill_review_lenses`, `deliver -> gates`,
+The other edges carry neither label nor ceiling: `start -> research -> design`, `distill -> distill_review_lenses`, `deliver -> gates`,
 `kill_proposal -> mutation_plan`, `kill_mutants -> mutation_review_lenses`, `visuals -> pr_writer -> publish -> exit`, and those of
 each review.
 

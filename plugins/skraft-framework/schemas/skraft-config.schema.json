@@ -161,6 +161,10 @@
         "contractTesting": {
           "type": "boolean"
         },
+        "bdd": {
+          "description": "Whether this component describes its behaviour in Gherkin; absent: true.",
+          "type": "boolean"
+        },
         "mutationReport": {
           "description": "The file the mutation command writes its report to, relative to the component root; absent: the one the stack's tool writes.",
           "type": "string",

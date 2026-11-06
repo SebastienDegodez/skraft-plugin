@@ -7,7 +7,7 @@ const API = Object.freeze({
   name: 'payment-api', root: 'services/payment-api', stack: 'dotnet', paths: { src: ['src'], tests: ['tests'] },
   commands: { build: 'dotnet build --nologo', lint: 'dotnet format --verify-no-changes', test: 'dotnet test --nologo' },
 })
-const WEB = Object.freeze({ name: 'payment-web', root: '../payment-web', stack: 'react', commands: { test: 'npx vitest run' } })
+const WEB = Object.freeze({ name: 'payment-web', root: '../payment-web', stack: 'react', commands: { test: 'npx vitest run' }, bdd: false })
 const TEAM = Object.freeze({ baseBranch: 'develop', tdd: { replay: 'last-red' }, publish: { visuals: false, draft: false }, components: [API, WEB] })
 const LOCAL = 'skraft-config.local.json'
 
@@ -30,8 +30,8 @@ test('the view shows the forge the files name and the one the Git remote names, 
   assert.equal(view.ok, true)
   assert.deepEqual(view.forge, { named: null, namedIn: null, deduced: 'azure-devops' })
   assert.deepEqual(view.components, [
-    { name: 'payment-api', root: 'services/payment-api', stack: 'dotnet', commands: API.commands, mocking: 'microcks', contractTesting: false },
-    { name: 'payment-web', root: '../payment-web', stack: 'react', commands: { test: 'npx vitest run' }, mocking: 'inprocess', contractTesting: false },
+    { name: 'payment-api', root: 'services/payment-api', stack: 'dotnet', commands: API.commands, mocking: 'microcks', contractTesting: false, bdd: true },
+    { name: 'payment-web', root: '../payment-web', stack: 'react', commands: { test: 'npx vitest run' }, mocking: 'inprocess', contractTesting: false, bdd: false },
   ])
   assert.deepEqual(view.consents, [{ key: 'pullRequest', value: null, state: 'unanswered' }, { key: 'visuals', value: false, state: 'declined' }])
   assert.deepEqual([view.confirmed, view.files], [false, { team: 'skraft-config.json', local: LOCAL }])
@@ -53,11 +53,11 @@ test('the view shows the forge the files name and the one the Git remote names, 
 
 test('a saved edit changes only what the person changed in skraft-config.json: the forge, a command written, one removed, the mocking, a consent with the version of its question; every other key stays', async () => {
   const host = configuration()
-  const unchanged = { name: 'payment-web', root: '../payment-web', stack: 'react', commands: { test: 'npx vitest run' }, mocking: 'inprocess', contractTesting: false }
+  const unchanged = { name: 'payment-web', root: '../payment-web', stack: 'react', commands: { test: 'npx vitest run' }, mocking: 'inprocess', contractTesting: false, bdd: false }
   assert.deepEqual(await host.save({ forge: null, components: [unchanged], consents: { visuals: false } }), { ok: true, reason: 'nothing changed' })
 
   const saved = await host.save({
-    components: [{ name: 'payment-api', commands: { build: 'dotnet build --nologo', lint: '  ', test: 'dotnet test --nologo --no-build' }, mocking: 'inprocess', contractTesting: true }, unchanged],
+    components: [{ name: 'payment-api', commands: { build: 'dotnet build --nologo', lint: '  ', test: 'dotnet test --nologo --no-build' }, mocking: 'inprocess', contractTesting: true, bdd: false }, unchanged],
     consents: { pullRequest: true, visuals: false },
     forge: 'azure-devops',
   })
@@ -67,7 +67,7 @@ test('a saved edit changes only what the person changed in skraft-config.json: t
     ...TEAM,
     forge: 'azure-devops',
     publish: { visuals: false, draft: false, pullRequest: true, questionVersions: { pullRequest: 2 } },
-    components: [{ ...API, commands: { build: 'dotnet build --nologo', test: 'dotnet test --nologo --no-build' }, mocking: { strategy: 'inprocess' }, contractTesting: true }, WEB],
+    components: [{ ...API, commands: { build: 'dotnet build --nologo', test: 'dotnet test --nologo --no-build' }, mocking: { strategy: 'inprocess' }, contractTesting: true, bdd: false }, WEB],
   })
   assert.equal(host.workspace.files.has(LOCAL), false)
   assert.deepEqual((await host.view()).forge, { named: 'azure-devops', namedIn: 'skraft-config.json', deduced: 'github' })
@@ -125,7 +125,8 @@ test('an edit the configuration would refuse writes nothing, with why; so does a
     [{ components: [{ name: 'payment-api', stack: 'cobol' }], consents: { pullRequest: true } }, 'skraft-config.json is invalid: component payment-api: stack must be one of dotnet, java, python, typescript, javascript, react'],
     [{ assign: { agents: { 'solution-architect': 'gpt-5.5' } } }, 'skraft-config.local.json is invalid: assign.agents.solution-architect must be a model family, inherit, or { "family": ..., "<host>": { "effort": ... } }'],
     [{ components: [{ name: 'checkout' }] }, 'the edit names a component skraft-config.json does not list; skraft init adds components'],
-    [{ components: [{ name: 'payment-api', paths: { src: ['x'] } }] }, 'a component edit takes name, root, stack, commands, mocking and contractTesting only'],
+    [{ components: [{ name: 'payment-api', bdd: 'yes' }] }, 'skraft-config.json is invalid: component payment-api: bdd must be true or false'],
+    [{ components: [{ name: 'payment-api', paths: { src: ['x'] } }] }, 'a component edit takes name, root, stack, commands, mocking, contractTesting and bdd only'],
     [{ workflow: 'mine' }, 'a configuration edit takes forge, components, consents, assign and models only'],
     [{ forge: {} }, 'a configuration edit takes a forge as text, or null'],
     [{ forge: 'gitlab' }, 'skraft-config.json is invalid: forge must be "github" or "azure-devops"'],

@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { InMemoryGit, ScriptedMachine } from '../support/in-memory-host.mjs'
-import { agent, API, scripted, SLUG, tddCycle, TRACKING } from '../support/pipeline-host.mjs'
+import { API, SETTLED_PUBLISH, SLUG, TRACKING, agent, scripted, tddCycle } from '../support/pipeline-host.mjs'
 import { ADR_1, adrText, architect, eventsOf, waitingOnEnvironment } from '../support/decisions.mjs'
 
 const BUILD = `api/build: command not found: dotnet; install it or change the command in skraft-config.json (evidence: ${TRACKING}/gates/api/build-1.log)`
@@ -63,7 +63,7 @@ test('an agent step the machine cannot check asks the same question, and RETRY c
 
   assert.deepEqual({ status: outcome.status, code: outcome.code }, { status: 'waiting', code: 'environment' })
   assert.match((await host.view()).question.text, /^distill cannot run on this machine: component api has no test command/)
-  await host.workspace.write('skraft-config.json', JSON.stringify({ components: [API] }))
+  await host.workspace.write('skraft-config.json', JSON.stringify({ components: [API], publish: SETTLED_PUBLISH }))
   assert.equal((await host.decide({ answer: 'RETRY' })).ok, true)
   assert.equal((await host.run()).code, 'agent-unavailable')
   assert.deepEqual(host.agentRunner.dispatches.map((dispatch) => dispatch.agent), ['solution-researcher', 'solution-architect', 'acceptance-designer', 'software-engineer'])
@@ -89,7 +89,7 @@ test('a configuration the human leaves invalid in the dialog refuses to go on an
   assert.equal(machine.runs.length, ranBeforeRetry)
   assert.equal(host.types().at(-1), 'question.answered')
 
-  await host.workspace.write('skraft-config.json', JSON.stringify({ components: [API] }))
+  await host.workspace.write('skraft-config.json', JSON.stringify({ components: [API], publish: SETTLED_PUBLISH }))
   assert.equal((await host.run()).status, 'done')
   assert.deepEqual(eventsOf(host, 'step.recorded').filter((event) => event.step === 'gates').map((event) => event.outcome), ['pass'])
   assert.equal(host.agentRunner.dispatches.length, 5)

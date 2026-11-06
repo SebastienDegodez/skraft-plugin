@@ -21,16 +21,15 @@ const consentedOnGithub = async (t) => {
   return cwd
 }
 
-test('a run whose publish consent is kept, on a PATH without gh, asks in the session to fix the machine before any agent, with gh\'s fixed reason', async (t) => {
+test('a run whose publish consent is kept, on a PATH without gh, is refused before any agent and asks nothing, with gh\'s fixed reason', async (t) => {
   const cwd = await consentedOnGithub(t)
   await withoutAz(t)
   const session = answeringSession()
   const { ctx, calls } = simulatedContext({ args: { slug: 'refund' }, behaviours: [writesNothing] })
 
-  await settled(runSkraftPipelineWorkflow(ctx, copilotHost(cwd, PLUGIN_ROOT, session)))
+  const outcome = await settled(runSkraftPipelineWorkflow(ctx, copilotHost(cwd, PLUGIN_ROOT, session)))
 
   assert.deepEqual(calls, [])
-  assert.equal(session.asked.length, 1, JSON.stringify(session.asked))
-  assert.equal(session.asked[0].message, `publish_consent cannot run on this machine: ${NO_GH}. Fix it, then RETRY; or ABORT the run.`)
-  assert.deepEqual(session.asked[0].options, ['RETRY', 'ABORT'])
+  assert.deepEqual(session.asked, [], JSON.stringify(session.asked))
+  assert.match(JSON.stringify(outcome), new RegExp(`${NO_GH}\\. Fix it, then start the run again\\.`))
 })

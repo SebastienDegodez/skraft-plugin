@@ -183,6 +183,7 @@ const options = (values, chosen, labels = {}) => values.map((value) => `<option 
 const renderComponent = (component, index, choices, lang) => `<article class="card">
     <header class="card-head"><h3 class="card-title"><code>${esc(component.name)}</code></h3>
       <label class="toggle"><input type="checkbox" data-field="components.${index}.contractTesting"${component.contractTesting ? ' checked' : ''}><span>${esc(ui(lang, 'contractTesting'))}</span></label>
+      <label class="toggle"><input type="checkbox" data-field="components.${index}.bdd"${component.bdd ? ' checked' : ''}><span>${esc(ui(lang, 'bdd'))}</span></label>
     </header>
     <div class="fields">
       <label class="field"><span>${esc(ui(lang, 'root'))}</span><input type="text" spellcheck="false" data-field="components.${index}.root" value="${esc(component.root)}"></label>

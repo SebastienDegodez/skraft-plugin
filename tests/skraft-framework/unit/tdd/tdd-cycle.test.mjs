@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { FixedClock, InMemoryGit, ScriptedReplay } from '../support/in-memory-host.mjs'
-import { agent, API, scripted, SLUG, tddCycle } from '../support/pipeline-host.mjs'
+import { API, SETTLED_PUBLISH, SLUG, agent, scripted, tddCycle } from '../support/pipeline-host.mjs'
 import { waitingOnEnvironment } from '../support/decisions.mjs'
 
 const unavailable = () => ({ ok: false, unavailable: true, text: '' })
@@ -144,7 +144,7 @@ test('a component without a test command waits for a human until it gets one', a
   })
   assert.deepEqual(host.types().slice(-3), ['step.started', 'commits.checked', 'question.asked'])
 
-  await host.deps.workspace.write('skraft-config.json', JSON.stringify({ components: [API] }))
+  await host.deps.workspace.write('skraft-config.json', JSON.stringify({ components: [API], publish: SETTLED_PUBLISH }))
   await host.decide({ answer: 'RETRY' })
   assert.equal((await host.run()).code, 'agent-unavailable')
   assert.equal(host.agentRunner.dispatches.length, 4)
@@ -219,7 +219,7 @@ test('Git that cannot list a repository\'s commits waits for a human to fix the 
   const outcome = await host.start()
 
   assert.deepEqual(outcome, { status: 'waiting', slug: SLUG, phase: 'RESEARCH', code: 'environment', reason: waitingOnEnvironment('research', 'Git cannot list the commits of . since root-0') })
-  assert.deepEqual(host.types(), ['run.started', 'step.started', 'step.recorded', 'step.started', 'step.recorded', 'step.started', 'question.asked'])
+  assert.deepEqual(host.types(), ['run.started', 'step.started', 'question.asked'])
 })
 
 test('a component added after the run started has its test commits replayed without a base', async () => {
@@ -237,7 +237,7 @@ test('a component added after the run started has its test commits replayed with
   await placeholder.init()
   await placeholder.deps.workspace.write('skraft-config.json', JSON.stringify({ publish: { pullRequest: false, visuals: false }, components: [API, { ...FRONT, commands: { test: 'npx vitest run --since {baseSha}', mutation: 'npx stryker run' } }] }))
   await placeholder.run()
-  assert.ok(placeholder.agentRunner.dispatches[3].prompt.includes('- web: web (react), mocking: inprocess, contract testing: off, tests: npx vitest run --since {baseSha}\n'), placeholder.agentRunner.dispatches[3].prompt)
+  assert.ok(placeholder.agentRunner.dispatches[3].prompt.includes('- web: web (react), mocking: inprocess, contract testing: off, bdd: on, tests: npx vitest run --since {baseSha}\n'), placeholder.agentRunner.dispatches[3].prompt)
 })
 
 test('a red commit is replayed for each component it touches, is red when one of them fails, and reports the first replay that fails', async () => {

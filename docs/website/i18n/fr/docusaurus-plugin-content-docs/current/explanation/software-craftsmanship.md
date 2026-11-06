@@ -119,8 +119,10 @@ lentille `architecture-boundaries` applique les règles d'Object Calisthenics au
 
 Un artisan ne décide pas seul de ce qui engage son client. Dans le workflow, un hexagone est
 une question posée à un humain : `adr-ratification` fait ratifier les ADR avant DISTILL,
-`publish-consent` demande l'accord avant de pousser une branche. Sans réponse, le run attend ;
-aucun agent ne peut répondre à la place de l'humain. Voir
+`mutation-plan` fait décider au développeur quoi faire des mutants que la gate a laissés vivants.
+Sans réponse, le run attend ; aucun agent ne peut répondre à la place de l'humain. L'accord pour
+pousser une branche se donne une fois, avant tout run, et un run qui en manque est refusé plutôt
+que laissé en attente. Voir
 [Architecture](./architecture.md).
 
 ## Où le craft se joue dans DELIVER

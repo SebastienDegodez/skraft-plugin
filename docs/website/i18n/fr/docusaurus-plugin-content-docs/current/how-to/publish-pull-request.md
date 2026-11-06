@@ -23,15 +23,14 @@ $ gh auth login --hostname github.com
 ```
 
 Remplacez `github.com` par l'hôte de votre GitHub Enterprise le cas échéant. skraft lance `gh`
-avec `--repo <hôte>/<owner>/<dépôt>` d'après l'URL du remote. Le moteur lit l'issue et ouvre la pull request par `gh` seulement, jamais par un serveur MCP ([GitHub par gh](../reference/skraft-config.md#github-through-gh)). Consentement donné, une forge que `gh` ne peut pas joindre arrête le run dès son démarrage, avant le premier agent, par une question environment : réparez (`gh auth login`), puis répondez RETRY.
+avec `--repo <hôte>/<owner>/<dépôt>` d'après l'URL du remote. Le moteur lit l'issue et ouvre la pull request par `gh` seulement, jamais par un serveur MCP ([GitHub par gh](../reference/skraft-config.md#github-through-gh)). Consentement accepté, une forge que `gh` ne peut pas joindre refuse le run dès son démarrage, avant le premier agent et sans rien demander : réparez (`gh auth login`), puis relancez le run.
 
 ## 2. Donner le consentement
 
-Au premier run du dépôt, la question `publish-consent` (en-tête `Pull request`) demande si skraft
-peut pousser la branche, ouvrir ou mettre à jour sa pull request, et tenir à jour un commentaire
-sur l'issue de la story. Répondez `ACCEPTED`
-([Répondre à une question du run](./answer-a-question.mdx)). La
-réponse est écrite dans `skraft-config.json` :
+`/skraft-init` demande si skraft peut pousser la branche, ouvrir ou mettre à jour sa pull request,
+et tenir à jour un commentaire sur l'issue de la story. Répondez oui, et il écrit la réponse dans
+`skraft-config.json`. Tant que ce n'est pas réglé là, un run qui publierait est refusé
+(`configuration-incomplete`) avant son premier agent :
 
 ```json
 {

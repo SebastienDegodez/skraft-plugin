@@ -94,7 +94,7 @@ refusé (`attribute <clé> is not supported on a <forme> node (supported: …)`)
 | `when` (publication) | `frontend` | saute le nœud quand aucun composant n'est un front end |
 | `lens` | nom kebab-case | la lentille `<nom>` est l'agent `<nom>-lens` ; une fois au plus par revue |
 | `when` (lentille) | `mock` ou `contract` | voir [Lentilles conditionnelles](#conditional-lenses) |
-| `question` | `adr-ratification`, `reporting-consent`, `publish-consent` ou `mutation-plan` | voir [Phases](./phases.md#human-questions) |
+| `question` | `adr-ratification` ou `mutation-plan` | voir [Phases](./phases.md#human-questions) |
 | `workflow` | nom de base kebab-case (`review`) | le workflow appelé |
 | `with_<entrée>` | `base`, `head`, `story`, `documents` ou `components` | lie l'entrée `<entrée>` du workflow appelé à cette valeur du run |
 | `mandatory` | `true` | voir [Nœuds obligatoires](#mandatory-nodes) ; `mandatory=false` est refusé |
@@ -312,8 +312,6 @@ parenthèses est héritée du prédécesseur.
 | Nœud | Forme | Attributs | Phase |
 | --- | --- | --- | --- |
 | `start` | `Mdiamond` | — | — |
-| `publish_consent` | `hexagon` | `question="publish-consent"` | RESEARCH |
-| `visuals_consent` | `hexagon` | `question="reporting-consent"` | (RESEARCH) |
 | `research` | `box` | `agent="solution-researcher"` | RESEARCH |
 | `design` | `box` | `agent="solution-architect"` | DESIGN |
 | `design_review_lenses` → `design_review` | revue | lentilles `consistency`, `architecture-compliance`, `fitness` ; fan-in `mandatory=true` | (DESIGN) |
@@ -354,8 +352,7 @@ parenthèses est héritée du prédécesseur.
 | `mutation_gates -> kill_mutants` | `FAIL` | 3 |
 | `mutation_gates -> mutation` | `PASS` | — |
 
-Les autres arêtes n'ont ni étiquette ni plafond : `start -> publish_consent -> visuals_consent
--> research -> design`, `distill -> distill_review_lenses`, `deliver -> gates`,
+Les autres arêtes n'ont ni étiquette ni plafond : `start -> research -> design`, `distill -> distill_review_lenses`, `deliver -> gates`,
 `kill_proposal -> mutation_plan`, `kill_mutants -> mutation_review_lenses`, `visuals -> pr_writer -> publish -> exit`, et celles
 de chaque revue.
 

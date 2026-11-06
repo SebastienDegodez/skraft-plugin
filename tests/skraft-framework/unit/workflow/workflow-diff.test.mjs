@@ -69,7 +69,7 @@ test('diff names every fact of a node or an edge that changed, and the nodes rem
   const reshaped = edit(
     BUILT_IN_WORKFLOW,
     ['  research [shape=box, agent="solution-researcher", phase="RESEARCH"]\n', ''],
-    ['start -> publish_consent -> visuals_consent -> research -> design', 'start -> publish_consent -> visuals_consent -> design'],
+    ['start -> research -> design', 'start -> design'],
     ['phase="DESIGN"', 'phase="ARCHITECTURE"'],
     ['design_review [shape=tripleoctagon, mandatory=true]', 'design_review [shape=tripleoctagon, mandatory=true, refuter="opus"]'],
     ['distill  [shape=box, agent="acceptance-designer", phase="DISTILL"]', 'distill  [shape=parallelogram, gate="test", phase="DISTILL"]'],
@@ -103,8 +103,8 @@ test('diff names every fact of a node or an edge that changed, and the nodes rem
       '~ node gates: locked true → false',
       '~ node gates: unlock none → the CI runs the rest',
       '~ node kill_mutants: each survivor-file → none',
-      '+ edge visuals_consent -> design',
-      '- edge visuals_consent -> research',
+      '+ edge start -> design',
+      '- edge start -> research',
       '- edge research -> design',
       '~ edge distill -> distill_review: label none → PASS',
       '~ edge gates -> deliver: label FAIL → PASS',
@@ -115,7 +115,7 @@ test('diff names every fact of a node or an edge that changed, and the nodes rem
   })
 })
 
-test('diff names a publish node added, a node turned from publish to gate, a condition dropped, a question changed, and each lens node added, dropped or changed', async () => {
+test('diff names a publish node added, a node turned from publish to gate, a condition dropped, and each lens node added, dropped or changed', async () => {
   const reshaped = edit(
     withLenses(BUILT_IN_WORKFLOW, 'mutation_review', ['cold-reader', 'test-integrity']),
     ['    design_review_fitness [shape=note, lens="fitness"]\n', ''],
@@ -125,7 +125,6 @@ test('diff names a publish node added, a node turned from publish to gate, a con
     ['  mutation_review_lenses -> mutation_review_cold_reader', '  mutation_review_lenses -> distill_review_testability -> mutation_review_refuter\n  mutation_review_lenses -> mutation_review_cold_reader'],
     ['publish  [shape=parallelogram, publish="pull-request"]', 'publish  [shape=parallelogram, gate="build"]\n  notify   [shape=parallelogram, publish="pull-request"]'],
     ['pr_writer -> publish -> exit', 'pr_writer -> publish -> notify -> exit'],
-    ['question="publish-consent"', 'question="reporting-consent"'],
     ['publish="playwright-visuals", when="frontend"]', 'publish="playwright-visuals"]'],
     ['graph [version="2", goal="Deliver the story"]', 'graph [version="2", goal="Deliver the story", skraft_version="2.0.0"]'],
   )
@@ -135,7 +134,6 @@ test('diff names a publish node added, a node turned from publish to gate, a con
     '+ node mutation_review_cold_reader (lens cold-reader)',
     '+ node notify (publish pull-request)',
     '- node design_review_fitness',
-    '~ node publish_consent: question publish-consent → reporting-consent',
     '~ node distill_review_coverage: when none → mock',
     '~ node distill_review_coverage: model none → frontier',
     '~ node distill_review_testability: fan-in distill_review → mutation_review',
@@ -192,4 +190,18 @@ test('diff is refused without an ejected workflow, or when one is invalid', asyn
     reason: '.skraft/pipeline.skraft.dot is invalid: node a: a box node needs agent="…"; node a: agent node needs exactly one outgoing edge, has 0; '
       + 'the workflow needs exactly one start node (shape=Mdiamond), has 0; the workflow needs at least one exit node (shape=Msquare)',
   })
+})
+
+test('diff names the question an ask node changed to, with the edges that follow it', async () => {
+  const replanned = edit(BUILT_IN_WORKFLOW,
+    ['mutation_plan [shape=hexagon, question="mutation-plan"]', 'mutation_plan [shape=hexagon, question="adr-ratification"]'],
+    ['mutation_plan -> kill_mutants [label="APPLY"]', 'mutation_plan -> kill_mutants [label="RATIFIED"]\n  mutation_plan -> mutation [label="REJECTED", max_visits=1]'],
+    ['graph [version="2", goal="Deliver the story"]', 'graph [version="2", goal="Deliver the story", skraft_version="2.0.0"]'])
+  const { commands } = host({ files: ejectedPipeline(replanned) })
+
+  assert.deepEqual((await commands.diff({ pluginVersion: '2.0.0' })).changes, [
+    '~ node mutation_plan: question mutation-plan → adr-ratification',
+    '+ edge mutation_plan -> mutation',
+    '~ edge mutation_plan -> kill_mutants: label APPLY → RATIFIED',
+  ])
 })

@@ -71,8 +71,9 @@ Pour un tel composant, le nœud `visuals` lance `commands.e2e` après la revue D
    ```
 
 4. Ajoutez `skraft-visuals/` au `.gitignore` du frontend.
-5. Répondez `ACCEPTED` à la question `reporting-consent` (en-tête `Reporting`), ou écrivez
-   `"visuals": true` sous `publish`.
+5. Écrivez `"visuals": true` sous `publish`, avec `"questionVersions": { "visuals": 1 }`, ou
+   laissez `/skraft-init` vous le demander. Tant que ce n'est pas réglé, un run qui publierait des
+   captures est refusé.
 
 Résultat : les captures sont commitées seules sur la branche
 (`docs(evidence): screenshots of <composants>`) et la section Screenshots de la pull request les

@@ -114,45 +114,25 @@ test('without the developer\'s consent the e2e run still runs, but no screenshot
   }
 })
 
-test('screenshots nobody consented to yet are asked about at the visuals node, before the e2e run; the answer is kept and acted on', async () => {
-  const host = visualsRun({ config: { publish: { pullRequest: true, questionVersions: { pullRequest: 2 } } } })
+test('screenshots a repository declined are not committed, though the e2e run still happens and says why', async () => {
+  const declined = visualsRun({ config: { publish: { pullRequest: true, visuals: false, questionVersions: { pullRequest: 2, visuals: 1 } } } })
 
-  const waiting = await host.start(STORY)
-  const [asked] = eventsOf(host, 'question.asked')
-  assert.deepEqual([asked.step, asked.visit, asked.kind, asked.subjects], ['visuals', 1, 'reporting-consent', []])
-
-  assert.deepEqual({ status: waiting.status, code: waiting.code, phase: waiting.phase }, { status: 'waiting', code: 'reporting-consent', phase: 'RESEARCH' })
-  assert.deepEqual(host.human.questions.map(({ key, kind, options }) => [key, kind, options]), [['visuals-1', 'reporting-consent', ['ACCEPTED', 'DECLINED']]])
-  assert.ok(!host.machine.lines().includes(E2E))
-  assert.equal((await host.decide({ answer: 'ACCEPTED' })).ok, true)
-  assert.equal((await host.run()).status, 'done')
-  assert.deepEqual(host.workspace.config().publish, { pullRequest: true, visuals: true, questionVersions: { pullRequest: 2, visuals: 1 } })
-  assert.equal(host.machine.lines().filter((line) => line === E2E).length, 1)
-  assert.deepEqual(visualsStep(host), { outcome: 'recorded', next: 'publish', reason: '4 screenshots committed in root-1' })
-
-  const declined = visualsRun({ config: { publish: { pullRequest: true, questionVersions: { pullRequest: 2 } } }, answers: [{ answer: 'DECLINED' }] })
   assert.equal((await declined.start(STORY)).status, 'done')
-  assert.deepEqual(declined.workspace.config().publish, { pullRequest: true, visuals: false, questionVersions: { pullRequest: 2, visuals: 1 } })
+
   assert.ok(declined.machine.lines().includes(E2E))
   assert.deepEqual(declined.git.engineCommits, [])
   assert.equal(visualsStep(declined).reason, 'no screenshot committed: web: 4 screenshots not published (consent): skraft-config.json sets publish.visuals to false')
+  assert.deepEqual(declined.human.questions, [])
+})
 
-  const first = visualsRun({
-    config: { publish: {} },
-    answers: [{ answer: 'ACCEPTED' }, { answer: 'DECLINED' }],
-  })
-  first.deps.workflowSource.text = WORKFLOW.replace('start -> research', 'start -> consent -> research').replace('  exit     [shape=Msquare]', '  consent  [shape=hexagon, question="publish-consent", phase="RESEARCH"]\n  exit     [shape=Msquare]')
-  assert.equal((await first.start(STORY)).status, 'done')
-  assert.deepEqual(first.human.questions.map(({ key, kind }) => [key, kind]), [['consent-1', 'publish-consent'], ['visuals-1', 'reporting-consent']])
-  assert.deepEqual(first.workspace.config().publish, { pullRequest: true, visuals: false, questionVersions: { pullRequest: 2, visuals: 1 } })
+test('screenshots a repository accepted are committed once, after its e2e run', async () => {
+  const host = visualsRun({ config: { publish: { pullRequest: true, visuals: true, questionVersions: { pullRequest: 2, visuals: 1 } } } })
 
-  const broken = visualsRun({
-    config: { publish: { pullRequest: true, questionVersions: { pullRequest: 2 } } },
-    answers: [async () => { await broken.workspace.write('skraft-config.json', '{ broken'); return { answer: 'ACCEPTED' } }],
-  })
-  const stopped = await broken.start(STORY)
-  assert.deepEqual([stopped.status, stopped.code], ['waiting', 'environment'])
-  assert.match(stopped.reason, /^visuals cannot run on this machine: skraft-config\.json/)
+  assert.equal((await host.start(STORY)).status, 'done')
+
+  assert.equal(host.machine.lines().filter((line) => line === E2E).length, 1)
+  assert.deepEqual(visualsStep(host), { outcome: 'recorded', next: 'publish', reason: '4 screenshots committed in root-1' })
+  assert.deepEqual(host.human.questions, [])
 })
 
 test('a failing e2e run is told in the pull request with its log, and the run still opens it', async () => {

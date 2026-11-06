@@ -2,7 +2,6 @@ import { isFrontend, NO_FRONT_END } from '../../domain/reporting/visuals.mjs'
 import { publishPullRequest } from '../publish/pull-request.mjs'
 import { recordVisuals } from '../publish/visuals.mjs'
 import { leave } from './run-routes.mjs'
-import { visualsConsent } from './run-questions.mjs'
 
 /**
  * @typedef {import('./run-pipeline-usecase.mjs').Context} Context
@@ -45,14 +44,8 @@ const PUBLISHERS = Object.freeze({
     const publication = await publishPullRequest(deps, { slug, journal, config, workflow: loaded.workflow })
     return { outcome: publication.published ? 'published' : 'local', reason: publication.reason }
   },
-  'playwright-visuals': (context, run, next) => visualsOf(context, run, next),
+  'playwright-visuals': (context, run, next) => recordedVisuals(context, run, next),
 })
-
-/**
- * The consent settled, the visuals recorded, then journaled for the pull request to show.
- * @param {Context} context @param {RunState} run @param {WorkStep} next @returns {Promise<Published | Stopped>}
- */
-const visualsOf = async (context, run, next) => (await visualsConsent(context, run, next)) ?? recordedVisuals(context, run, next)
 
 /** @param {Context} context @param {RunState} run @param {WorkStep} next @returns {Promise<Published>} */
 const recordedVisuals = async ({ deps, slug, journal, config }, run, { node, visit }) => {

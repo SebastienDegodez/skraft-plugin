@@ -222,7 +222,7 @@ const discard = () => {
 /** The draft as the engine takes an edit: each component, the consents, the person's own models. */
 const editOf = (draft) => ({
   forge: draft.forge,
-  components: draft.components.map(({ name, root, stack, commands, mocking, contractTesting }) => ({ name, root, stack, commands, mocking, contractTesting })),
+  components: draft.components.map(({ name, root, stack, commands, mocking, contractTesting, bdd }) => ({ name, root, stack, commands, mocking, contractTesting, bdd })),
   consents: draft.consents,
   assign: draft.assign,
   models: draft.models,

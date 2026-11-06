@@ -1,0 +1,217 @@
+name: skraft-init
+description: >-
+  Evaluates whether a first setup leaves a configuration a run can trust: no gate claimed that
+  nothing can run, a practice recorded only where the team said it applies, and no value invented
+  for a choice the developer has not made.
+type: capability
+defaults:
+  model: standard
+  timeout: 5m
+  runs: 5
+scoring:
+  threshold: 1
+stimuli:
+  - name: Claim no gate the repository cannot run
+    prompt: |
+      Finish setting this repository up so a run never has to stop and ask me something.
+      Fill in every check command you can work out from the project itself, and tell me what
+      you ended up with.
+    tags:
+      intent: forced-concept
+    environment:
+      files:
+        - src: fixtures/no-architecture-tests/.gitignore
+          dest: .gitignore
+        - src: fixtures/no-architecture-tests/skraft-config.json
+          dest: skraft-config.json
+        - src: fixtures/no-architecture-tests/Pricing.slnx
+          dest: Pricing.slnx
+        - src: fixtures/no-architecture-tests/src/Pricing/Pricing.csproj
+          dest: src/Pricing/Pricing.csproj
+        - src: fixtures/no-architecture-tests/src/Pricing/Money.cs
+          dest: src/Pricing/Money.cs
+        - src: fixtures/no-architecture-tests/tests/Pricing.Tests/Pricing.Tests.csproj
+          dest: tests/Pricing.Tests/Pricing.Tests.csproj
+        - src: fixtures/no-architecture-tests/tests/Pricing.Tests/MoneyTests.cs
+          dest: tests/Pricing.Tests/MoneyTests.cs
+      commandTimeout: 1m
+    graders:
+      - type: run-command
+        name: No architecture check was claimed, since the repository holds none
+        config:
+          command: node
+          args:
+            - '-e'
+            - 'const c=require("node:fs").readFileSync("skraft-config.json","utf8");const j=JSON.parse(c);process.exit(j.components.some((x)=>"architecture" in (x.commands??{}))?1:0)'
+          expected_exit_code: 0
+          timeout: 30s
+      - type: run-command
+        name: Every command written is one of the names a gate runs
+        config:
+          command: node
+          args:
+            - '-e'
+            - 'const j=JSON.parse(require("node:fs").readFileSync("skraft-config.json","utf8"));const ok=["build","format","lint","test","architecture","coverage","mutation","e2e"];process.exit(j.components.every((x)=>Object.keys(x.commands??{}).every((k)=>ok.includes(k)))?0:1)'
+          expected_exit_code: 0
+          timeout: 30s
+      - type: run-command
+        name: The component and the commands it already had survived the setup
+        config:
+          command: node
+          args:
+            - '-e'
+            - 'const j=JSON.parse(require("node:fs").readFileSync("skraft-config.json","utf8"));const p=j.components.find((x)=>x.name==="pricing");process.exit(p&&p.commands.build&&p.commands.test?0:1)'
+          expected_exit_code: 0
+          timeout: 30s
+      - type: prompt
+        config:
+          scoring: scale_1_10
+      - type: skill-invocation
+        name: The skill under test is loaded
+        config:
+          required:
+            - skraft-init
+    rubric:
+      - The answer says the architecture boundaries are checked by nothing, and what that leaves unproven.
+      - No command was written for a check the project cannot run.
+      - The developer can tell, from the answer alone, which checks a run will perform.
+
+  - name: Record a practice only where it applies
+    prompt: |
+      Finish setting this repository up so a run never has to stop and ask me something.
+      One thing up front: the batch does not describe its behaviour in Gherkin and never will —
+      it is a settlement job and the team writes plain tests for it. The API is a different
+      matter, that is where our scenarios live.
+    tags:
+      intent: forced-concept
+    environment:
+      files:
+        - src: fixtures/gherkin-and-batch/.gitignore
+          dest: .gitignore
+        - src: fixtures/gherkin-and-batch/skraft-config.json
+          dest: skraft-config.json
+        - src: fixtures/gherkin-and-batch/docs/features/checkout/pay-by-card.feature
+          dest: docs/features/checkout/pay-by-card.feature
+        - src: fixtures/gherkin-and-batch/src/Api/Api/Api.csproj
+          dest: src/Api/Api/Api.csproj
+        - src: fixtures/gherkin-and-batch/src/Api/Api.Tests/Api.Tests.csproj
+          dest: src/Api/Api.Tests/Api.Tests.csproj
+        - src: fixtures/gherkin-and-batch/src/Api/Api.Tests/PayByCardSteps.cs
+          dest: src/Api/Api.Tests/PayByCardSteps.cs
+        - src: fixtures/gherkin-and-batch/src/Batch/pyproject.toml
+          dest: src/Batch/pyproject.toml
+        - src: fixtures/gherkin-and-batch/src/Batch/jobs/settle.py
+          dest: src/Batch/jobs/settle.py
+        - src: fixtures/gherkin-and-batch/src/Batch/tests/test_settle.py
+          dest: src/Batch/tests/test_settle.py
+      commandTimeout: 1m
+    graders:
+      - type: run-command
+        name: The component that declined is the one marked as declining
+        config:
+          command: node
+          args:
+            - '-e'
+            - 'const j=JSON.parse(require("node:fs").readFileSync("skraft-config.json","utf8"));const b=j.components.find((x)=>x.name==="batch");process.exit(b&&b.bdd===false?0:1)'
+          expected_exit_code: 0
+          timeout: 30s
+      - type: run-command
+        name: The component whose scenarios exist was left alone
+        config:
+          command: node
+          args:
+            - '-e'
+            - 'const j=JSON.parse(require("node:fs").readFileSync("skraft-config.json","utf8"));const a=j.components.find((x)=>x.name==="api");process.exit(a&&!("bdd" in a)?0:1)'
+          expected_exit_code: 0
+          timeout: 30s
+      - type: run-command
+        name: Both components kept the commands they came with
+        config:
+          command: node
+          args:
+            - '-e'
+            - 'const j=JSON.parse(require("node:fs").readFileSync("skraft-config.json","utf8"));process.exit(j.components.length===2&&j.components.every((x)=>x.commands&&x.commands.test)?0:1)'
+          expected_exit_code: 0
+          timeout: 30s
+      - type: run-command
+        name: The scenarios already in the repository survived the setup
+        config:
+          command: bash
+          args:
+            - '-lc'
+            - '[ -s docs/features/checkout/pay-by-card.feature ]'
+          expected_exit_code: 0
+          timeout: 30s
+      - type: prompt
+        config:
+          scoring: scale_1_10
+      - type: skill-invocation
+        name: The skill under test is loaded
+        config:
+          required:
+            - skraft-init
+    rubric:
+      - The answer records the refusal for the batch alone, and says what changes for it.
+      - The API keeps its scenarios and is not recorded as refusing them.
+      - Nothing in the answer treats the refusal as a quality bar being lowered.
+
+  - name: Invent no value for a choice not yet made
+    prompt: |
+      Finish setting this repository up so a run never has to stop and ask me something.
+      I work on Copilot and I would like the top tier pinned rather than left to the defaults.
+      That is my own preference, not the team's — nobody else should inherit it.
+    tags:
+      intent: forced-concept
+    environment:
+      files:
+        - src: fixtures/personal-model-choice/.gitignore
+          dest: .gitignore
+        - src: fixtures/personal-model-choice/skraft-config.json
+          dest: skraft-config.json
+        - src: fixtures/personal-model-choice/package.json
+          dest: package.json
+        - src: fixtures/personal-model-choice/src/storefront/basket.ts
+          dest: src/storefront/basket.ts
+        - src: fixtures/personal-model-choice/tests/basket.test.ts
+          dest: tests/basket.test.ts
+      commandTimeout: 1m
+    graders:
+      - type: run-command
+        name: The team file carries no personal choice
+        config:
+          command: node
+          args:
+            - '-e'
+            - 'const j=JSON.parse(require("node:fs").readFileSync("skraft-config.json","utf8"));process.exit("models" in j||"assign" in j?1:0)'
+          expected_exit_code: 0
+          timeout: 30s
+      - type: run-command
+        name: No model was named that the developer never chose
+        config:
+          command: bash
+          args:
+            - '-lc'
+            - '! grep -rqiE "(claude-[a-z]|gpt-[0-9]|sonnet-[0-9]|opus-[0-9]|haiku-[0-9])" skraft-config.json skraft-config.local.json 2>/dev/null'
+          expected_exit_code: 0
+          timeout: 30s
+      - type: run-command
+        name: The configuration the repository already had survived the setup
+        config:
+          command: node
+          args:
+            - '-e'
+            - 'const j=JSON.parse(require("node:fs").readFileSync("skraft-config.json","utf8"));process.exit(j.baseBranch==="develop"&&j.components.length===1&&j.publish&&j.publish.pullRequest===true?0:1)'
+          expected_exit_code: 0
+          timeout: 30s
+      - type: prompt
+        config:
+          scoring: scale_1_10
+      - type: skill-invocation
+        name: The skill under test is loaded
+        config:
+          required:
+            - skraft-init
+    rubric:
+      - The answer asks which model to pin instead of choosing one.
+      - It says the choice belongs in the developer's own file, which the team never inherits.
+      - Nothing was written that the developer would have to undo.

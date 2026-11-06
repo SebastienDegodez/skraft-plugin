@@ -213,8 +213,6 @@ Les questions, leurs options et leurs refus :
 | Type | Clé | Options | Refus |
 | --- | --- | --- | --- |
 | `adr-ratification` | `<nœud>-<n>` (`adr-1`) | `RATIFIED`, `REJECTED` | `REJECTED` |
-| `publish-consent` | `<nœud>-<n>` | `ACCEPTED`, `DECLINED` | — |
-| `reporting-consent` | `<nœud>-<n>` | `ACCEPTED`, `DECLINED` | — |
 | `environment` | `<nœud>-<n>`, le nœud qui ne peut pas tourner (`gates-1`) | `RETRY`, `ABORT` | — |
 | `mutation-plan` | `<nœud>-<n>` (`mutation_plan-1`) | `APPLY`, une consigne, ou `STOP` (termine le run `blocked`, code `stopped`) | — |
 | `blocked` | `<nœud>-<n>`, le nœud qu'une consigne relance (`design-1`) | une consigne, ou `STOP` | — |

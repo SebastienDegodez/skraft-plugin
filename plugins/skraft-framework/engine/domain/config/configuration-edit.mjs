@@ -10,12 +10,12 @@ import { CONSENT_VERSIONS } from '../decisions/consents.mjs'
  *
  * @typedef {import('./skraft-config.mjs').SkraftConfig} SkraftConfig
  * @typedef {import('./skraft-config.mjs').Component} Component
- * @typedef {{ name: string, root?: unknown, stack?: unknown, commands?: unknown, mocking?: unknown, contractTesting?: unknown }} ComponentEdit
+ * @typedef {{ name: string, root?: unknown, stack?: unknown, commands?: unknown, mocking?: unknown, contractTesting?: unknown, bdd?: unknown }} ComponentEdit
  * @typedef {{ forge?: unknown, components?: ComponentEdit[], consents?: Record<string, boolean | null>, assign?: unknown, models?: unknown }} ConfigurationEdit
  */
 
 const EDIT_KEYS = Object.freeze(['forge', 'components', 'consents', 'assign', 'models'])
-const COMPONENT_EDIT_KEYS = Object.freeze(['name', 'root', 'stack', 'commands', 'mocking', 'contractTesting'])
+const COMPONENT_EDIT_KEYS = Object.freeze(['name', 'root', 'stack', 'commands', 'mocking', 'contractTesting', 'bdd'])
 /** The consents a person gives in the page, in the order it shows them. */
 export const EDITED_CONSENTS = Object.freeze(/** @type {Array<'pullRequest' | 'visuals'>} */ (['pullRequest', 'visuals']))
 /** The keys of skraft-config.local.json an edit writes. */
@@ -24,7 +24,7 @@ const LOCAL_KEYS = Object.freeze(['assign', 'models'])
 const REFUSALS = Object.freeze({
   keys: 'a configuration edit takes forge, components, consents, assign and models only',
   forge: 'a configuration edit takes a forge as text, or null',
-  component: 'a component edit takes name, root, stack, commands, mocking and contractTesting only',
+  component: 'a component edit takes name, root, stack, commands, mocking, contractTesting and bdd only',
   unknown: 'the edit names a component skraft-config.json does not list; skraft init adds components',
   consents: 'consents takes pullRequest and visuals, each true, false or null',
 })
@@ -103,6 +103,7 @@ const FIELDS = Object.freeze([
   (current, edit) => changed('root', current.root, edit.root),
   (current, edit) => changed('stack', current.stack, edit.stack),
   (current, edit) => changed('contractTesting', current.contractTesting, edit.contractTesting),
+  (current, edit) => changed('bdd', current.bdd, edit.bdd),
   (current, edit) => (edit.mocking === undefined || edit.mocking === current.mocking.strategy ? {} : { mocking: { strategy: edit.mocking } }),
   (current, edit) => (edit.commands === undefined ? {} : changed('commands', current.commands, writtenCommands(edit.commands))),
 ])
