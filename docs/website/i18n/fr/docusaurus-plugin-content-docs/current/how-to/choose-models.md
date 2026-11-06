@@ -9,6 +9,13 @@ persona: tech-lead
 Décidez sur quel modèle, et avec quel niveau de réflexion, chaque agent de skraft tourne, sous
 Claude Code et sous Copilot.
 
+`/skraft-init` pose la question une fois, quand il règle la configuration : **standard**, où les
+paliers du plugin décident et où rien n'est écrit, ou **explicite**, où chaque famille nomme le
+modèle sur lequel elle tourne pour chaque hôte — et si le choix est celui de l'équipe
+(`skraft-config.json`) ou le vôtre seul (`skraft-config.local.json`, que Git ignore). Il n'écrit
+aucun modèle que vous n'avez pas choisi. Les étapes ci-dessous sont ce même choix à la main, et
+elles changent ce que `/skraft-init` a écrit.
+
 ## Prérequis
 
 - Un dépôt configuré ([Configurer les composants](./configure-components.md)).

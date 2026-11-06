@@ -359,6 +359,7 @@ RESEARCH to PUBLISH and its pull request description. On the way, you learned th
 - [First run under GitHub Copilot CLI](./first-run-copilot.md) — the same path, followed in the Copilot canvas.
 - [Publish a run's pull request](../how-to/publish-pull-request.md)
 - [Configure components](../how-to/configure-components.md)
+- [Choose the agents' models](../how-to/choose-models.md) — the models file `/skraft-init` offers to write, and the same choice by hand.
 
 Also useful: [Install skraft on a host](../how-to/install-on-a-host.mdx) (Windows, VS Code,
 optional plugins), [Hosts](../reference/hosts.md) (what each host shows and asks) and
