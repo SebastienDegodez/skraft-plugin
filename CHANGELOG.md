@@ -3,6 +3,12 @@
 Toutes les modifications notables de ce projet sont documentées ici.
 Format basé sur [Conventional Commits](https://www.conventionalcommits.org/) — versionnage [SemVer](https://semver.org/).
 
+## [2.0.0-alpha.65](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.64...v2.0.0-alpha.65) (2026-11-06)
+
+### ✨ Features
+
+* **engine:** the engine checks the scenarios a test plan names ([#524](https://github.com/SebastienDegodez/skraft-plugin/issues/524)) ([#527](https://github.com/SebastienDegodez/skraft-plugin/issues/527)) ([38b8f7b](https://github.com/SebastienDegodez/skraft-plugin/commit/38b8f7b001a437e655c487eea9e181f3e7621c09)), closes [#523](https://github.com/SebastienDegodez/skraft-plugin/issues/523) [#523](https://github.com/SebastienDegodez/skraft-plugin/issues/523) [#523](https://github.com/SebastienDegodez/skraft-plugin/issues/523) [#523](https://github.com/SebastienDegodez/skraft-plugin/issues/523) [#523](https://github.com/SebastienDegodez/skraft-plugin/issues/523) [#523](https://github.com/SebastienDegodez/skraft-plugin/issues/523) [#523](https://github.com/SebastienDegodez/skraft-plugin/issues/523) [#523](https://github.com/SebastienDegodez/skraft-plugin/issues/523) [#523](https://github.com/SebastienDegodez/skraft-plugin/issues/523) [#523](https://github.com/SebastienDegodez/skraft-plugin/issues/523) [#523](https://github.com/SebastienDegodez/skraft-plugin/issues/523)
+
 ## [2.0.0-alpha.64](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.63...v2.0.0-alpha.64) (2026-11-06)
 
 ### ✨ Features
