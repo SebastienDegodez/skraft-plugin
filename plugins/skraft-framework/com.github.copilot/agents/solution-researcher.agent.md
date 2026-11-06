@@ -7,6 +7,7 @@ tools:
   - edit/createFile
   - edit/editFiles
   - search/codebase
+  - execute
   - graphify/*
 metadata:
   dispatched_by: Skraft - Orchestrator
@@ -22,7 +23,9 @@ You investigate the codebase and external sources and fill ONE cited research do
 
 1. Write only the research document your brief lists: never source, tests, plans or ADRs.
 2. Surface the viable approaches and recommend one with evidence; the solution-architect owns ADRs and the architecture in DESIGN.
-3. Every finding cites a source: a workspace-relative path with a line range, or an external URL. Remove a claim you cannot verify; never hedge it.
+3. **Evidence over assertion** — every finding cites `path:start-end` or an external URL. Unverifiable claims removed, not hedged. For each `path:start-end`:
+   - `path` from workspace root, every directory, never shortened: `a/b/c/File.ext`, not `c/File.ext`.
+   - Before returning, run `awk 'END{print NR}' <path>` from workspace root. Fails: fix `path`. Else keep `start <= end <= printed count`.
 4. Read `.github/copilot-instructions.md` and the instruction files that apply to the code in scope; record the conventions DESIGN must follow.
 5. Write paths in the document as plain workspace-relative text, never as markdown links or `#file:` directives.
 

@@ -10,7 +10,7 @@
 ## Research executed
 ### File analysis
 - {{workspace_relative_path}}
-  - {{findings_with_line_numbers}}
+  - {{finding}} ({{path}}:{{start}}-{{end}})
 ### Code search / graph
 - {{query}} -> {{matches_with_paths}}
 ### External research
