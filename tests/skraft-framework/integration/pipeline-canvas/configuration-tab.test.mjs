@@ -38,7 +38,7 @@ test('the canvas opens on the tab asked, and its page gets the configuration and
   const content = await contentStream(t, url, await tokenOf(url)).next()
   assert.deepEqual([content.title, content.status], ['skraft pipeline', 'idle'])
   assert.deepEqual([content.configuration.status, content.configuration.components, content.configuration.confirmed], [
-    'ok', [{ name: 'mastermind-api', root: '.', stack: 'dotnet', commands: API.commands, mocking: 'microcks', contractTesting: false, bdd: true }], true,
+    'ok', [{ name: 'mastermind-api', root: '.', stack: 'dotnet', commands: API.commands, mocking: 'microcks', contractTesting: false, bdd: [{ runner: null, features: 'tests/Features', steps: 'tests/Steps' }] }], true,
   ])
   assert.deepEqual([content.configuration.forge, content.configuration.choices.forges], [{ named: null, namedIn: null, deduced: 'azure-devops' }, ['github', 'azure-devops']])
   assert.deepEqual(content.workflows.map(({ name, file }) => [name, file]), [['pipeline', null], ['review', null]])

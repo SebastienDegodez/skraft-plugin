@@ -3,13 +3,19 @@ import assert from 'node:assert/strict'
 import { createConfiguration } from '../../../../plugins/skraft-framework/engine/application/config/configuration-usecase.mjs'
 import { GITHUB_REMOTE, InMemoryAgentCatalog, InMemorySourceControl, InMemoryUserSettings, InMemoryWorkflowSource, InMemoryWorkspace } from '../support/in-memory-host.mjs'
 
+const PAIRS = Object.freeze([
+  { runner: 'reqnroll', features: 'tests/Payment.Tests/Features', steps: 'tests/Payment.Tests/Steps' },
+  { runner: 'reqnroll', features: 'tests/Billing.Tests/Features', steps: 'tests/Billing.Tests/Steps' },
+])
 const API = Object.freeze({
   name: 'payment-api', root: 'services/payment-api', stack: 'dotnet', paths: { src: ['src'], tests: ['tests'] },
   commands: { build: 'dotnet build --nologo', lint: 'dotnet format --verify-no-changes', test: 'dotnet test --nologo' },
+  bdd: PAIRS,
 })
 const WEB = Object.freeze({ name: 'payment-web', root: '../payment-web', stack: 'react', commands: { test: 'npx vitest run' }, bdd: false })
 const TEAM = Object.freeze({ baseBranch: 'develop', tdd: { replay: 'last-red' }, publish: { visuals: false, draft: false }, components: [API, WEB] })
 const LOCAL = 'skraft-config.local.json'
+const SHAPE = 'skraft-config.json is invalid: component payment-api: bdd must be true, false, or a list of { runner, features, steps } whose folders are inside the component root'
 
 /** The Configuration tab's use case on a working copy whose files say what is given. */
 const configuration = ({ team = TEAM, local, user, files = {}, remote = GITHUB_REMOTE } = {}) => {
@@ -30,8 +36,8 @@ test('the view shows the forge the files name and the one the Git remote names, 
   assert.equal(view.ok, true)
   assert.deepEqual(view.forge, { named: null, namedIn: null, deduced: 'azure-devops' })
   assert.deepEqual(view.components, [
-    { name: 'payment-api', root: 'services/payment-api', stack: 'dotnet', commands: API.commands, mocking: 'microcks', contractTesting: false, bdd: true },
-    { name: 'payment-web', root: '../payment-web', stack: 'react', commands: { test: 'npx vitest run' }, mocking: 'inprocess', contractTesting: false, bdd: false },
+    { name: 'payment-api', root: 'services/payment-api', stack: 'dotnet', commands: API.commands, mocking: 'microcks', contractTesting: false, bdd: PAIRS },
+    { name: 'payment-web', root: '../payment-web', stack: 'react', commands: { test: 'npx vitest run' }, mocking: 'inprocess', contractTesting: false, bdd: [] },
   ])
   assert.deepEqual(view.consents, [{ key: 'pullRequest', value: null, state: 'unanswered' }, { key: 'visuals', value: false, state: 'declined' }])
   assert.deepEqual([view.confirmed, view.files], [false, { team: 'skraft-config.json', local: LOCAL }])
@@ -53,7 +59,7 @@ test('the view shows the forge the files name and the one the Git remote names, 
 
 test('a saved edit changes only what the person changed in skraft-config.json: the forge, a command written, one removed, the mocking, a consent with the version of its question; every other key stays', async () => {
   const host = configuration()
-  const unchanged = { name: 'payment-web', root: '../payment-web', stack: 'react', commands: { test: 'npx vitest run' }, mocking: 'inprocess', contractTesting: false, bdd: false }
+  const unchanged = { name: 'payment-web', root: '../payment-web', stack: 'react', commands: { test: 'npx vitest run' }, mocking: 'inprocess', contractTesting: false, bdd: [] }
   assert.deepEqual(await host.save({ forge: null, components: [unchanged], consents: { visuals: false } }), { ok: true, reason: 'nothing changed' })
 
   const saved = await host.save({
@@ -120,12 +126,33 @@ test('a forge a personal layer names stays out of skraft-config.json when an unr
   assert.deepEqual(await personal.save({ forge: null }), { ok: true, reason: 'nothing changed; ~/.skraft/config.json still names the forge' })
 })
 
+test('a component that declares BDD without naming folders takes the ones its stack\'s runner looks in, and one that declines names none', async () => {
+  const of = (stack) => ({ name: `svc-${stack}`, root: stack, stack, commands: { test: 'x' } })
+  const team = { components: [...['dotnet', 'java', 'python', 'typescript', 'javascript', 'react'].map(of), { ...of('dotnet'), name: 'no-bdd', bdd: false }] }
+
+  const view = await configuration({ team }).view()
+
+  assert.deepEqual(view.components.map(({ name, bdd }) => [name, bdd]), [
+    ['svc-dotnet', [{ runner: null, features: 'tests/Features', steps: 'tests/Steps' }]],
+    ['svc-java', [{ runner: null, features: 'src/test/resources/features', steps: 'src/test/java' }]],
+    ['svc-python', [{ runner: null, features: 'features', steps: 'features/steps' }]],
+    ['svc-typescript', [{ runner: null, features: 'features', steps: 'features/step_definitions' }]],
+    ['svc-javascript', [{ runner: null, features: 'features', steps: 'features/step_definitions' }]],
+    ['svc-react', [{ runner: null, features: 'features', steps: 'features/step_definitions' }]],
+    ['no-bdd', []],
+  ])
+})
+
 test('an edit the configuration would refuse writes nothing, with why; so does an edit of a component no file lists, or a key no edit takes', async () => {
   const refusals = [
     [{ components: [{ name: 'payment-api', stack: 'cobol' }], consents: { pullRequest: true } }, 'skraft-config.json is invalid: component payment-api: stack must be one of dotnet, java, python, typescript, javascript, react'],
     [{ assign: { agents: { 'solution-architect': 'gpt-5.5' } } }, 'skraft-config.local.json is invalid: assign.agents.solution-architect must be a model family, inherit, or { "family": ..., "<host>": { "effort": ... } }'],
     [{ components: [{ name: 'checkout' }] }, 'the edit names a component skraft-config.json does not list; skraft init adds components'],
-    [{ components: [{ name: 'payment-api', bdd: 'yes' }] }, 'skraft-config.json is invalid: component payment-api: bdd must be true or false'],
+    [{ components: [{ name: 'payment-api', bdd: 'yes' }] }, SHAPE],
+    [{ components: [{ name: 'payment-api', bdd: [] }] }, SHAPE],
+    [{ components: [{ name: 'payment-api', bdd: [{ features: 'tests/Features' }] }] }, SHAPE],
+    [{ components: [{ name: 'payment-api', bdd: [{ features: '../shared/Features', steps: 'tests/Steps' }] }] }, SHAPE],
+    [{ components: [{ name: 'payment-api', bdd: [{ features: 'tests/Features', steps: 'tests/Steps', glue: 'tests/Hooks' }] }] }, SHAPE],
     [{ components: [{ name: 'payment-api', paths: { src: ['x'] } }] }, 'a component edit takes name, root, stack, commands, mocking, contractTesting and bdd only'],
     [{ workflow: 'mine' }, 'a configuration edit takes forge, components, consents, assign and models only'],
     [{ forge: {} }, 'a configuration edit takes a forge as text, or null'],
