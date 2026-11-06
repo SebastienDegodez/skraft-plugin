@@ -75,13 +75,15 @@ for them yourself.
 
 - **The component has pairs**: show them, one line per pair, and ask the developer to confirm. Write
   a pair they correct as they give it.
-- **No `bdd` key, and a test project names a BDD runner or holds a `.feature`**: init found one half
-  only. Ask where both folders are and write the pair. Never guess the missing one: a folder the
-  runner does not read holds scenarios nothing runs.
-- **Neither**: ask whether the component describes its behaviour in Gherkin. Declining writes
-  `"bdd": false`. Accepting means naming the two folders: ask for them and write the pair. Do not
-  accept the stack's default as an answer — it is a fallback for a file written by hand, and a
-  folder nobody chose is one the runner may never read.
+- **The component says `true`, or has no `bdd` key, and a test project names a BDD runner or holds a
+  `.feature`**: no pair was written — either init found one half only, or the component was already
+  listed and init never looks at a component it did not add. Ask where both folders are and write
+  the pair. Never guess the missing one: a folder the runner does not read holds scenarios nothing
+  runs.
+- **Neither, and the component says nothing or `true`**: ask whether it describes its behaviour in
+  Gherkin. Declining writes `"bdd": false`. Accepting means naming the two folders: ask for them
+  and write the pair. Do not accept the stack's default as an answer — it is a fallback for a file
+  written by hand, and a folder nobody chose is one the runner may never read.
 
 One pair per runner: a definition of one pair binds no step of another, so a component holding
 several test projects carries several pairs.
