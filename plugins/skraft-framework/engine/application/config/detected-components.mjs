@@ -1,4 +1,5 @@
 import { componentName, detectProject } from '../../domain/config/stack-detection.mjs'
+import { bddPairs } from './bdd-detection.mjs'
 import { joinRelative } from '../../domain/config/relative-path.mjs'
 
 /**
@@ -9,7 +10,10 @@ import { joinRelative } from '../../domain/config/relative-path.mjs'
  * @typedef {import('../ports/workspace.mjs').WorkspaceEntry} WorkspaceEntry
  * @typedef {import('../../domain/config/stack-detection.mjs').Detected} Detected
  * @typedef {{ root: string } & Detected} FoundProject
- * @typedef {{ name: string, root: string, stack: string, paths: { src: string[], tests: string[] }, commands: Record<string, string> }} ProposedComponent
+ * @typedef {import('../../domain/config/skraft-config.mjs').BddPair} BddPair
+ * @typedef {{ name: string, root: string, stack: string, paths: { src: string[], tests: string[] }, commands: Record<string, string>, bdd?: BddPair[] }} ProposedComponent
+ *   bdd: only when the walk found a runner and both its folders; absent leaves the default, which
+ *   asks for Gherkin as documentation and runs none of it.
  */
 
 const DEPTH = 3
@@ -31,10 +35,20 @@ export const newComponents = async (workspace, starts, components, workingCopyNa
   for (const found of await projectsUnder(workspace, starts)) {
     if (roots.has(found.root)) continue
     roots.add(found.root)
-    const name = claimName(componentName(folderName(found.root, workingCopyName)), names)
-    added.push({ name, root: found.root, stack: found.stack, paths: found.paths, commands: found.commands })
+    added.push(await proposedComponent(workspace, found, claimName(componentName(folderName(found.root, workingCopyName)), names)))
   }
   return added
+}
+
+/**
+ * One component as init writes it: its project, and the pairs its folders show. A project whose
+ * folders show no pair is written without `bdd`, which leaves the default.
+ * @param {Workspace} workspace @param {FoundProject} found @param {string} name
+ * @returns {Promise<ProposedComponent>}
+ */
+const proposedComponent = async (workspace, { root, stack, paths, commands }, name) => {
+  const bdd = await bddPairs(workspace, root)
+  return { name, root, stack, paths, commands, ...(bdd.length === 0 ? {} : { bdd }) }
 }
 
 /** @param {string} root @param {string} workingCopyName the name of the folder `.` */

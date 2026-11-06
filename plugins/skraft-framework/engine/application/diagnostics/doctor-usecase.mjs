@@ -6,9 +6,11 @@ import { readWorkflows } from '../workflow/load-workflow.mjs'
 import { findComponentSkills } from '../pipeline/component-skills.mjs'
 import { forgeCheck } from './forge-check.mjs'
 import { modelChecks } from './model-checks.mjs'
+import { joinRelative } from '../../domain/config/relative-path.mjs'
 
 /**
  * @typedef {import('../../domain/config/skraft-config.mjs').Component} Component
+ * @typedef {import('../../domain/config/skraft-config.mjs').BddPair} BddPair
  * @typedef {import('../../domain/config/skraft-config.mjs').SkraftConfig} SkraftConfig
  * @typedef {{ subject: string, status: 'ok' | 'warn' | 'fail', detail: string }} DoctorCheck
  *   subject: `node`, `config`, `forge`, `models`, `models/<host>`, `<component>`,
@@ -124,7 +126,34 @@ const componentChecks = async (deps, component, { run, baseSha }) => {
   /** @type {DoctorCheck[]} */
   const checks = gatesOf(component).length === 0 ? [{ subject: component.name, status: 'fail', detail: NO_GATE }] : []
   for (const name of commandNames(component)) checks.push(await commandCheck(deps, { component, name, run, baseSha }))
-  return [...checks, ...await skillChecks(deps, component)]
+  return [...checks, ...await bddChecks(deps, component), ...await skillChecks(deps, component)]
+}
+
+/**
+ * Where each runner of the component reads its scenarios. A pair whose scenarios are written and
+ * whose bindings folder is not a folder is a warning: nothing binds them, so the runner reports
+ * them undefined and the `test` gate still passes. A component that declares no pair says nothing.
+ * @param {DoctorDeps} deps @param {Component} component @returns {Promise<DoctorCheck[]>}
+ */
+const bddChecks = async (deps, component) => {
+  const states = await Promise.all(component.bdd.map((pair) => pairState(deps, component.root, pair)))
+  return states.map((state) => bddCheck(`${component.name}/bdd`, state))
+}
+
+/** @param {string} subject @param {{ pair: BddPair, written: boolean, binds: boolean }} state @returns {DoctorCheck} */
+const bddCheck = (subject, { pair, written, binds }) => {
+  const named = pair.runner === null ? '' : `${pair.runner}: `
+  if (written && !binds) return { subject, status: 'warn', detail: `${named}${pair.features} holds scenarios and ${pair.steps} is no folder: nothing binds them` }
+  return { subject, status: 'ok', detail: `${named}${pair.features} → ${pair.steps}` }
+}
+
+/**
+ * Whether a pair's scenarios are written, and whether its bindings folder exists.
+ * @param {DoctorDeps} deps @param {string} root @param {BddPair} pair
+ */
+const pairState = async (deps, root, pair) => {
+  const [features, steps] = await Promise.all([joinRelative(root, pair.features), joinRelative(root, pair.steps)].map((path) => deps.workspace.list(path)))
+  return { pair, written: features !== null, binds: steps !== null }
 }
 
 /**

@@ -32,6 +32,58 @@ test('a .NET repository alone gives one component with the .NET default commands
   assert.equal(result.reason, 'skraft-config.json: payment-authorization (dotnet, .)')
 })
 
+test('a .NET test project that holds Gherkin beside its bindings is proposed with the pair its runner reads, and the runner it found', async () => {
+  const components = await proposed({
+    'PaymentAuthorization.slnx': '<Solution />',
+    'src/Payment.Domain/Payment.Domain.csproj': '<Project />',
+    'tests/Payment.UnitTests/Payment.UnitTests.csproj': '<Project><ItemGroup><PackageReference Include="Reqnroll.xUnit" Version="3.3.4" /></ItemGroup></Project>',
+    'tests/Payment.UnitTests/Features/pay-by-card.feature': 'Feature: Pay by card\n',
+    'tests/Payment.UnitTests/Steps/PayByCardSteps.cs': '[Binding] public sealed class PayByCardSteps { }',
+  })
+
+  assert.deepEqual(components.map(({ name, bdd }) => ({ name, bdd })), [{
+    name: 'payment-authorization',
+    bdd: [{ runner: 'reqnroll', features: 'tests/Payment.UnitTests/Features', steps: 'tests/Payment.UnitTests/Steps' }],
+  }])
+})
+
+test('two test projects of one solution give one pair each, bound where each runner reads, and a project that shows its Gherkin without its bindings gives none', async () => {
+  const csproj = (runner) => `<Project><ItemGroup><PackageReference Include="${runner}" /></ItemGroup></Project>`
+  const components = await proposed({
+    'Shop.slnx': '<Solution />',
+    'src/Shop.Domain/Shop.Domain.csproj': '<Project />',
+    'tests/Cart.Tests/Cart.Tests.csproj': csproj('Reqnroll.xUnit'),
+    'tests/Cart.Tests/Features/cart.feature': 'Feature: Cart\n',
+    'tests/Cart.Tests/Steps/CartSteps.cs': '[Binding]',
+    'tests/Billing.Tests/Billing.Tests.csproj': csproj('SpecFlow.xUnit'),
+    'tests/Billing.Tests/Specs/billing.feature': 'Feature: Billing\n',
+    'tests/Billing.Tests/Bindings/BillingSteps.cs': '[Binding]',
+    'tests/Shipping.Tests/Shipping.Tests.csproj': csproj('Reqnroll.xUnit'),
+    'tests/Shipping.Tests/Features/shipping.feature': 'Feature: Shipping\n',
+  })
+
+  assert.deepEqual(components[0].bdd, [
+    { runner: 'specflow', features: 'tests/Billing.Tests/Specs', steps: 'tests/Billing.Tests/Bindings' },
+    { runner: 'reqnroll', features: 'tests/Cart.Tests/Features', steps: 'tests/Cart.Tests/Steps' },
+  ])
+})
+
+test('a project whose manifest names no BDD runner is proposed without a pair, and so is one whose runner has no Gherkin to read', async () => {
+  const withoutRunner = await proposed({
+    'Shop.slnx': '<Solution />',
+    'tests/Cart.Tests/Cart.Tests.csproj': '<Project><ItemGroup><PackageReference Include="xunit" /></ItemGroup></Project>',
+    'tests/Cart.Tests/Features/cart.feature': 'Feature: Cart\n',
+    'tests/Cart.Tests/Steps/CartSteps.cs': '[Binding]',
+  })
+  const withoutGherkin = await proposed({
+    'Shop.slnx': '<Solution />',
+    'tests/Cart.Tests/Cart.Tests.csproj': '<Project><ItemGroup><PackageReference Include="Reqnroll.xUnit" /></ItemGroup></Project>',
+    'tests/Cart.Tests/Steps/CartSteps.cs': '[Binding]',
+  })
+
+  assert.deepEqual([withoutRunner[0].bdd, withoutGherkin[0].bdd], [undefined, undefined])
+})
+
 test('a .NET API and a React front in one working copy give two components', async () => {
   const components = await proposed({
     'services/payment-api/Payment.sln': '',
