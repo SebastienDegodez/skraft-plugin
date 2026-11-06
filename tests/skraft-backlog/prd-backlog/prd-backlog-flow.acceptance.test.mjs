@@ -3,7 +3,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { mkdir, readFile, rm, writeFile } from 'node:fs/promises'
-import { mkdirSync, rmSync } from 'node:fs'
+import { existsSync, mkdirSync, rmSync } from 'node:fs'
 import { join } from 'node:path'
 
 import { runPrdBacklogWorkflow } from '../../../plugins/skraft-backlog/prd-backlog/workflow.mjs'
@@ -42,7 +42,7 @@ const runUntil = async ({ cwd, github, agents, args = ARGS, approveHandoff = tru
   }
 }
 
-test('from the PRD to a published backlog: map, pause, stories, review, handoff, pause, issues', async (t) => {
+test('from the PRD to a published backlog, in a working copy skraft was never initialised in: map, pause, stories, review, handoff, pause, issues', async (t) => {
   const { cwd, cleanup } = await workingCopy()
   t.after(cleanup)
   const github = fakeGitHub()
@@ -50,6 +50,8 @@ test('from the PRD to a published backlog: map, pause, stories, review, handoff,
 
   assert.deepEqual(runs.map((r) => r.result.paused ?? r.result.status), ['framing-answered', 'story-map-approved', 'handoff-reviewed', 'published'])
   assert.equal(result.failed, 0)
+  assert.ok(!existsSync(join(cwd, 'skraft-config.json')), 'the backlog publishes a repository skraft was never initialised in')
+  assert.ok(runs.every(({ logs }) => logs.every((line) => !/skraft-init|not initialised/.test(line))), 'the backlog needs no key of skraft-config.json, so it never sends the developer to /skraft-init')
   assert.deepEqual(runs[0].calls.map((c) => c.label), ['frame'], 'the slicer frames before it cuts')
   assert.match(runs[0].calls[0].prompt, /do not slice yet[\s\S]*These are already asked; do not repeat them:\n- Comment découper en jalons \?/)
   const sliced = runs[1].calls.find((c) => c.label === 'slice · attempt 1')

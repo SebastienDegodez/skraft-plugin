@@ -19,6 +19,7 @@ leurs milestones.
 - Le PRD dans le dépôt, écrit sur le gabarit canonique : chaque exigence en puce
   `` * `FR-001` : <énoncé> `` (de même `NFR-`, `AC-`, `CON-`, `GOAL-`), chaque epic en titre
   `### EP-001 : <titre>`.
+- Aucun `skraft-config.json` : `skraft-backlog` n'en lit aucune clé, donc il tourne dans un dépôt que `/skraft-init` n'a jamais touché. Le refus `skraft is not initialised` n'appartient qu'au pipeline d'ingénierie.
 
 ## 1. Vérifier le PRD
 

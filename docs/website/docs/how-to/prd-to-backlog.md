@@ -19,6 +19,7 @@ milestones.
 - The PRD in the repository, written on the canonical template: each requirement as a bullet
   `` * `FR-001` : <statement> `` (likewise `NFR-`, `AC-`, `CON-`, `GOAL-`), each epic as a
   heading `### EP-001 : <title>`.
+- No `skraft-config.json`: `skraft-backlog` reads no key of it, so it runs in a repository `/skraft-init` never touched. The refusal `skraft is not initialised` belongs to the engineering pipeline alone.
 
 ## 1. Check the PRD
 

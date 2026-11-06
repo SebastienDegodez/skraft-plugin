@@ -17,6 +17,7 @@ critères et la story proposée — à la demande, ou automatiquement à chaque 
 - Pour le workflow GitHub : l'extension `gh aw`
   (`gh extension install github/gh-aw`) et le droit d'écrire des secrets du dépôt ou de
   l'organisation.
+- Aucun `skraft-config.json` : `skraft-backlog` n'en lit aucune clé, donc il tourne dans un dépôt que `/skraft-init` n'a jamais touché. Le refus `skraft is not initialised` n'appartient qu'au pipeline d'ingénierie.
 
 ## Raffiner une issue depuis l'éditeur
 

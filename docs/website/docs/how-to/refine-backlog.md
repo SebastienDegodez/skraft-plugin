@@ -16,6 +16,7 @@ the proposed story — on demand, or automatically on every new issue.
 - Write access to the repository's issues: `gh` signed in, or the GitHub MCP server.
 - For the GitHub workflow: the `gh aw` extension (`gh extension install github/gh-aw`) and the
   right to write repository or organization secrets.
+- No `skraft-config.json`: `skraft-backlog` reads no key of it, so it runs in a repository `/skraft-init` never touched. The refusal `skraft is not initialised` belongs to the engineering pipeline alone.
 
 ## Refine one issue from your editor
 
