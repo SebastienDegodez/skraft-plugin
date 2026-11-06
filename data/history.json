@@ -4326,6 +4326,80 @@
           }
         }
       }
+    ],
+    "skraft-init": [
+      {
+        "id": "42298686294:skill:skraft-init:2026-11-06T21:51:22.103Z",
+        "timestamp": "2026-11-06T21:51:22.103Z",
+        "commit": "57fe4c79a38eac08f9398b837e8d7a9d6aa688d4",
+        "run": "42298686294",
+        "url": "https://github.com/SebastienDegodez/skraft-plugin/actions/runs/42298686294",
+        "runner": "vally",
+        "model": "claude-sonnet-5.5",
+        "judgeModel": "gpt-5.6-luna",
+        "state": "no-improvement",
+        "reason": "no credible improvement (10W/1T/4L, sign test p=0.180, Wilcoxon p=0.065)",
+        "descriptorSha": null,
+        "netWin": 0.4,
+        "trialCount": 15,
+        "meanScore": 0.03999999999999997,
+        "confidenceInterval": {
+          "low": -0.3302252364632721,
+          "high": 0.4102252364632721
+        },
+        "signTest": {
+          "wins": 10,
+          "ties": 1,
+          "losses": 4,
+          "pValue": 0.1795654296875
+        },
+        "metrics": {
+          "quality": {
+            "baseline": 0.833,
+            "skilled": 0.907,
+            "delta": 0.074
+          },
+          "activation": {
+            "expected": 15,
+            "actual": 15,
+            "unexpected": 0,
+            "rate": 1
+          },
+          "efficiency": {
+            "baseline": {
+              "durationMs": 62389,
+              "tokens": 209310,
+              "turns": 11,
+              "toolCalls": 10
+            },
+            "skilled": {
+              "durationMs": 46596,
+              "tokens": 167456,
+              "turns": 8,
+              "toolCalls": 7
+            },
+            "durationDeltaPercent": -25.3,
+            "tokenDeltaPercent": -20
+          },
+          "efficiencyPaired": {
+            "pairCount": 15,
+            "baseline": {
+              "durationMs": 62389,
+              "tokens": 209310,
+              "turns": 11,
+              "toolCalls": 10
+            },
+            "skilled": {
+              "durationMs": 46596,
+              "tokens": 167456,
+              "turns": 8,
+              "toolCalls": 7
+            },
+            "durationDeltaPercent": -25.3,
+            "tokenDeltaPercent": -20
+          }
+        }
+      }
     ]
   },
   "agents": {

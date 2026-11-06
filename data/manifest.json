@@ -1,5 +1,5 @@
 {
-  "generated": "2026-11-05T09:31:10.799Z",
+  "generated": "2026-11-06T21:52:06.840Z",
   "sessions": [
     {
       "id": "scheduled/2026-09-28/acceptance-designer/absent-acceptance-criteria-halt-the-distillation--main--run0",
@@ -4186,6 +4186,396 @@
         "pr-210"
       ],
       "mtime": 1791636973896.692
+    },
+    {
+      "id": "pr/534/skraft-init/claim-no-gate-the-repository-cannot-run--baseline--run0",
+      "name": "skraft-init / Claim no gate the repository cannot run (baseline, run 0)",
+      "url": "sessions/pr/534/skraft-init/claim-no-gate-the-repository-cannot-run--baseline--run0.jsonl",
+      "tags": [
+        "pr",
+        "skraft-init",
+        "baseline",
+        "claim-no-gate-the-repository-cannot-run",
+        "pr-534"
+      ],
+      "mtime": 1794001923942.54
+    },
+    {
+      "id": "pr/534/skraft-init/claim-no-gate-the-repository-cannot-run--baseline--run1",
+      "name": "skraft-init / Claim no gate the repository cannot run (baseline, run 1)",
+      "url": "sessions/pr/534/skraft-init/claim-no-gate-the-repository-cannot-run--baseline--run1.jsonl",
+      "tags": [
+        "pr",
+        "skraft-init",
+        "baseline",
+        "claim-no-gate-the-repository-cannot-run",
+        "pr-534"
+      ],
+      "mtime": 1794001924009.904
+    },
+    {
+      "id": "pr/534/skraft-init/claim-no-gate-the-repository-cannot-run--baseline--run2",
+      "name": "skraft-init / Claim no gate the repository cannot run (baseline, run 2)",
+      "url": "sessions/pr/534/skraft-init/claim-no-gate-the-repository-cannot-run--baseline--run2.jsonl",
+      "tags": [
+        "pr",
+        "skraft-init",
+        "baseline",
+        "claim-no-gate-the-repository-cannot-run",
+        "pr-534"
+      ],
+      "mtime": 1794001924011.904
+    },
+    {
+      "id": "pr/534/skraft-init/claim-no-gate-the-repository-cannot-run--baseline--run3",
+      "name": "skraft-init / Claim no gate the repository cannot run (baseline, run 3)",
+      "url": "sessions/pr/534/skraft-init/claim-no-gate-the-repository-cannot-run--baseline--run3.jsonl",
+      "tags": [
+        "pr",
+        "skraft-init",
+        "baseline",
+        "claim-no-gate-the-repository-cannot-run",
+        "pr-534"
+      ],
+      "mtime": 1794001924011.904
+    },
+    {
+      "id": "pr/534/skraft-init/claim-no-gate-the-repository-cannot-run--baseline--run4",
+      "name": "skraft-init / Claim no gate the repository cannot run (baseline, run 4)",
+      "url": "sessions/pr/534/skraft-init/claim-no-gate-the-repository-cannot-run--baseline--run4.jsonl",
+      "tags": [
+        "pr",
+        "skraft-init",
+        "baseline",
+        "claim-no-gate-the-repository-cannot-run",
+        "pr-534"
+      ],
+      "mtime": 1794001924012.904
+    },
+    {
+      "id": "pr/534/skraft-init/invent-no-value-for-a-choice-not-yet-made--baseline--run0",
+      "name": "skraft-init / Invent no value for a choice not yet made (baseline, run 0)",
+      "url": "sessions/pr/534/skraft-init/invent-no-value-for-a-choice-not-yet-made--baseline--run0.jsonl",
+      "tags": [
+        "pr",
+        "skraft-init",
+        "baseline",
+        "invent-no-value-for-a-choice-not-yet-made",
+        "pr-534"
+      ],
+      "mtime": 1794001924011.904
+    },
+    {
+      "id": "pr/534/skraft-init/invent-no-value-for-a-choice-not-yet-made--baseline--run1",
+      "name": "skraft-init / Invent no value for a choice not yet made (baseline, run 1)",
+      "url": "sessions/pr/534/skraft-init/invent-no-value-for-a-choice-not-yet-made--baseline--run1.jsonl",
+      "tags": [
+        "pr",
+        "skraft-init",
+        "baseline",
+        "invent-no-value-for-a-choice-not-yet-made",
+        "pr-534"
+      ],
+      "mtime": 1794001924012.904
+    },
+    {
+      "id": "pr/534/skraft-init/invent-no-value-for-a-choice-not-yet-made--baseline--run2",
+      "name": "skraft-init / Invent no value for a choice not yet made (baseline, run 2)",
+      "url": "sessions/pr/534/skraft-init/invent-no-value-for-a-choice-not-yet-made--baseline--run2.jsonl",
+      "tags": [
+        "pr",
+        "skraft-init",
+        "baseline",
+        "invent-no-value-for-a-choice-not-yet-made",
+        "pr-534"
+      ],
+      "mtime": 1794001924076.9043
+    },
+    {
+      "id": "pr/534/skraft-init/invent-no-value-for-a-choice-not-yet-made--baseline--run3",
+      "name": "skraft-init / Invent no value for a choice not yet made (baseline, run 3)",
+      "url": "sessions/pr/534/skraft-init/invent-no-value-for-a-choice-not-yet-made--baseline--run3.jsonl",
+      "tags": [
+        "pr",
+        "skraft-init",
+        "baseline",
+        "invent-no-value-for-a-choice-not-yet-made",
+        "pr-534"
+      ],
+      "mtime": 1794001924075.9043
+    },
+    {
+      "id": "pr/534/skraft-init/invent-no-value-for-a-choice-not-yet-made--baseline--run4",
+      "name": "skraft-init / Invent no value for a choice not yet made (baseline, run 4)",
+      "url": "sessions/pr/534/skraft-init/invent-no-value-for-a-choice-not-yet-made--baseline--run4.jsonl",
+      "tags": [
+        "pr",
+        "skraft-init",
+        "baseline",
+        "invent-no-value-for-a-choice-not-yet-made",
+        "pr-534"
+      ],
+      "mtime": 1794001924076.9043
+    },
+    {
+      "id": "pr/534/skraft-init/record-a-practice-only-where-it-applies--baseline--run0",
+      "name": "skraft-init / Record a practice only where it applies (baseline, run 0)",
+      "url": "sessions/pr/534/skraft-init/record-a-practice-only-where-it-applies--baseline--run0.jsonl",
+      "tags": [
+        "pr",
+        "skraft-init",
+        "baseline",
+        "record-a-practice-only-where-it-applies",
+        "pr-534"
+      ],
+      "mtime": 1794001924077.9043
+    },
+    {
+      "id": "pr/534/skraft-init/record-a-practice-only-where-it-applies--baseline--run1",
+      "name": "skraft-init / Record a practice only where it applies (baseline, run 1)",
+      "url": "sessions/pr/534/skraft-init/record-a-practice-only-where-it-applies--baseline--run1.jsonl",
+      "tags": [
+        "pr",
+        "skraft-init",
+        "baseline",
+        "record-a-practice-only-where-it-applies",
+        "pr-534"
+      ],
+      "mtime": 1794001924172.9043
+    },
+    {
+      "id": "pr/534/skraft-init/record-a-practice-only-where-it-applies--baseline--run2",
+      "name": "skraft-init / Record a practice only where it applies (baseline, run 2)",
+      "url": "sessions/pr/534/skraft-init/record-a-practice-only-where-it-applies--baseline--run2.jsonl",
+      "tags": [
+        "pr",
+        "skraft-init",
+        "baseline",
+        "record-a-practice-only-where-it-applies",
+        "pr-534"
+      ],
+      "mtime": 1794001924174.9043
+    },
+    {
+      "id": "pr/534/skraft-init/record-a-practice-only-where-it-applies--baseline--run3",
+      "name": "skraft-init / Record a practice only where it applies (baseline, run 3)",
+      "url": "sessions/pr/534/skraft-init/record-a-practice-only-where-it-applies--baseline--run3.jsonl",
+      "tags": [
+        "pr",
+        "skraft-init",
+        "baseline",
+        "record-a-practice-only-where-it-applies",
+        "pr-534"
+      ],
+      "mtime": 1794001924174.2434
+    },
+    {
+      "id": "pr/534/skraft-init/record-a-practice-only-where-it-applies--baseline--run4",
+      "name": "skraft-init / Record a practice only where it applies (baseline, run 4)",
+      "url": "sessions/pr/534/skraft-init/record-a-practice-only-where-it-applies--baseline--run4.jsonl",
+      "tags": [
+        "pr",
+        "skraft-init",
+        "baseline",
+        "record-a-practice-only-where-it-applies",
+        "pr-534"
+      ],
+      "mtime": 1794001924174.2434
+    },
+    {
+      "id": "pr/534/skraft-init/claim-no-gate-the-repository-cannot-run--skilled--run0",
+      "name": "skraft-init / Claim no gate the repository cannot run (skilled, run 0)",
+      "url": "sessions/pr/534/skraft-init/claim-no-gate-the-repository-cannot-run--skilled--run0.jsonl",
+      "tags": [
+        "pr",
+        "skraft-init",
+        "skilled",
+        "claim-no-gate-the-repository-cannot-run",
+        "pr-534"
+      ],
+      "mtime": 1794001924209.9043
+    },
+    {
+      "id": "pr/534/skraft-init/claim-no-gate-the-repository-cannot-run--skilled--run1",
+      "name": "skraft-init / Claim no gate the repository cannot run (skilled, run 1)",
+      "url": "sessions/pr/534/skraft-init/claim-no-gate-the-repository-cannot-run--skilled--run1.jsonl",
+      "tags": [
+        "pr",
+        "skraft-init",
+        "skilled",
+        "claim-no-gate-the-repository-cannot-run",
+        "pr-534"
+      ],
+      "mtime": 1794001924211.1743
+    },
+    {
+      "id": "pr/534/skraft-init/claim-no-gate-the-repository-cannot-run--skilled--run2",
+      "name": "skraft-init / Claim no gate the repository cannot run (skilled, run 2)",
+      "url": "sessions/pr/534/skraft-init/claim-no-gate-the-repository-cannot-run--skilled--run2.jsonl",
+      "tags": [
+        "pr",
+        "skraft-init",
+        "skilled",
+        "claim-no-gate-the-repository-cannot-run",
+        "pr-534"
+      ],
+      "mtime": 1794001924211.1743
+    },
+    {
+      "id": "pr/534/skraft-init/claim-no-gate-the-repository-cannot-run--skilled--run3",
+      "name": "skraft-init / Claim no gate the repository cannot run (skilled, run 3)",
+      "url": "sessions/pr/534/skraft-init/claim-no-gate-the-repository-cannot-run--skilled--run3.jsonl",
+      "tags": [
+        "pr",
+        "skraft-init",
+        "skilled",
+        "claim-no-gate-the-repository-cannot-run",
+        "pr-534"
+      ],
+      "mtime": 1794001924211.1743
+    },
+    {
+      "id": "pr/534/skraft-init/claim-no-gate-the-repository-cannot-run--skilled--run4",
+      "name": "skraft-init / Claim no gate the repository cannot run (skilled, run 4)",
+      "url": "sessions/pr/534/skraft-init/claim-no-gate-the-repository-cannot-run--skilled--run4.jsonl",
+      "tags": [
+        "pr",
+        "skraft-init",
+        "skilled",
+        "claim-no-gate-the-repository-cannot-run",
+        "pr-534"
+      ],
+      "mtime": 1794001924211.1743
+    },
+    {
+      "id": "pr/534/skraft-init/invent-no-value-for-a-choice-not-yet-made--skilled--run0",
+      "name": "skraft-init / Invent no value for a choice not yet made (skilled, run 0)",
+      "url": "sessions/pr/534/skraft-init/invent-no-value-for-a-choice-not-yet-made--skilled--run0.jsonl",
+      "tags": [
+        "pr",
+        "skraft-init",
+        "skilled",
+        "invent-no-value-for-a-choice-not-yet-made",
+        "pr-534"
+      ],
+      "mtime": 1794001924211.1743
+    },
+    {
+      "id": "pr/534/skraft-init/invent-no-value-for-a-choice-not-yet-made--skilled--run1",
+      "name": "skraft-init / Invent no value for a choice not yet made (skilled, run 1)",
+      "url": "sessions/pr/534/skraft-init/invent-no-value-for-a-choice-not-yet-made--skilled--run1.jsonl",
+      "tags": [
+        "pr",
+        "skraft-init",
+        "skilled",
+        "invent-no-value-for-a-choice-not-yet-made",
+        "pr-534"
+      ],
+      "mtime": 1794001924240.109
+    },
+    {
+      "id": "pr/534/skraft-init/invent-no-value-for-a-choice-not-yet-made--skilled--run2",
+      "name": "skraft-init / Invent no value for a choice not yet made (skilled, run 2)",
+      "url": "sessions/pr/534/skraft-init/invent-no-value-for-a-choice-not-yet-made--skilled--run2.jsonl",
+      "tags": [
+        "pr",
+        "skraft-init",
+        "skilled",
+        "invent-no-value-for-a-choice-not-yet-made",
+        "pr-534"
+      ],
+      "mtime": 1794001924240.109
+    },
+    {
+      "id": "pr/534/skraft-init/invent-no-value-for-a-choice-not-yet-made--skilled--run3",
+      "name": "skraft-init / Invent no value for a choice not yet made (skilled, run 3)",
+      "url": "sessions/pr/534/skraft-init/invent-no-value-for-a-choice-not-yet-made--skilled--run3.jsonl",
+      "tags": [
+        "pr",
+        "skraft-init",
+        "skilled",
+        "invent-no-value-for-a-choice-not-yet-made",
+        "pr-534"
+      ],
+      "mtime": 1794001924240.109
+    },
+    {
+      "id": "pr/534/skraft-init/invent-no-value-for-a-choice-not-yet-made--skilled--run4",
+      "name": "skraft-init / Invent no value for a choice not yet made (skilled, run 4)",
+      "url": "sessions/pr/534/skraft-init/invent-no-value-for-a-choice-not-yet-made--skilled--run4.jsonl",
+      "tags": [
+        "pr",
+        "skraft-init",
+        "skilled",
+        "invent-no-value-for-a-choice-not-yet-made",
+        "pr-534"
+      ],
+      "mtime": 1794001924279.9043
+    },
+    {
+      "id": "pr/534/skraft-init/record-a-practice-only-where-it-applies--skilled--run0",
+      "name": "skraft-init / Record a practice only where it applies (skilled, run 0)",
+      "url": "sessions/pr/534/skraft-init/record-a-practice-only-where-it-applies--skilled--run0.jsonl",
+      "tags": [
+        "pr",
+        "skraft-init",
+        "skilled",
+        "record-a-practice-only-where-it-applies",
+        "pr-534"
+      ],
+      "mtime": 1794001924282.7632
+    },
+    {
+      "id": "pr/534/skraft-init/record-a-practice-only-where-it-applies--skilled--run1",
+      "name": "skraft-init / Record a practice only where it applies (skilled, run 1)",
+      "url": "sessions/pr/534/skraft-init/record-a-practice-only-where-it-applies--skilled--run1.jsonl",
+      "tags": [
+        "pr",
+        "skraft-init",
+        "skilled",
+        "record-a-practice-only-where-it-applies",
+        "pr-534"
+      ],
+      "mtime": 1794001924282.9043
+    },
+    {
+      "id": "pr/534/skraft-init/record-a-practice-only-where-it-applies--skilled--run2",
+      "name": "skraft-init / Record a practice only where it applies (skilled, run 2)",
+      "url": "sessions/pr/534/skraft-init/record-a-practice-only-where-it-applies--skilled--run2.jsonl",
+      "tags": [
+        "pr",
+        "skraft-init",
+        "skilled",
+        "record-a-practice-only-where-it-applies",
+        "pr-534"
+      ],
+      "mtime": 1794001924282.7632
+    },
+    {
+      "id": "pr/534/skraft-init/record-a-practice-only-where-it-applies--skilled--run3",
+      "name": "skraft-init / Record a practice only where it applies (skilled, run 3)",
+      "url": "sessions/pr/534/skraft-init/record-a-practice-only-where-it-applies--skilled--run3.jsonl",
+      "tags": [
+        "pr",
+        "skraft-init",
+        "skilled",
+        "record-a-practice-only-where-it-applies",
+        "pr-534"
+      ],
+      "mtime": 1794001924282.9043
+    },
+    {
+      "id": "pr/534/skraft-init/record-a-practice-only-where-it-applies--skilled--run4",
+      "name": "skraft-init / Record a practice only where it applies (skilled, run 4)",
+      "url": "sessions/pr/534/skraft-init/record-a-practice-only-where-it-applies--skilled--run4.jsonl",
+      "tags": [
+        "pr",
+        "skraft-init",
+        "skilled",
+        "record-a-practice-only-where-it-applies",
+        "pr-534"
+      ],
+      "mtime": 1794001924282.9043
     }
   ]
 }
