@@ -3,6 +3,12 @@
 Toutes les modifications notables de ce projet sont documentées ici.
 Format basé sur [Conventional Commits](https://www.conventionalcommits.org/) — versionnage [SemVer](https://semver.org/).
 
+## [2.0.0-alpha.64](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.63...v2.0.0-alpha.64) (2026-11-06)
+
+### ✨ Features
+
+* **engine:** a component declares BDD, and a run starts on a settled configuration ([#526](https://github.com/SebastienDegodez/skraft-plugin/issues/526)) ([5895b99](https://github.com/SebastienDegodez/skraft-plugin/commit/5895b997c5270e36b2c5bce904490cf94341a892)), closes [#523](https://github.com/SebastienDegodez/skraft-plugin/issues/523) [#523](https://github.com/SebastienDegodez/skraft-plugin/issues/523) [#523](https://github.com/SebastienDegodez/skraft-plugin/issues/523) [#523](https://github.com/SebastienDegodez/skraft-plugin/issues/523) [#523](https://github.com/SebastienDegodez/skraft-plugin/issues/523) [#523](https://github.com/SebastienDegodez/skraft-plugin/issues/523) [#523](https://github.com/SebastienDegodez/skraft-plugin/issues/523) [#523](https://github.com/SebastienDegodez/skraft-plugin/issues/523) [#523](https://github.com/SebastienDegodez/skraft-plugin/issues/523) [#523](https://github.com/SebastienDegodez/skraft-plugin/issues/523) [#523](https://github.com/SebastienDegodez/skraft-plugin/issues/523)
+
 ## [2.0.0-alpha.63](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.62...v2.0.0-alpha.63) (2026-11-05)
 
 ### ✨ Features
