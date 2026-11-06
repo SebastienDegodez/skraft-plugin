@@ -117,4 +117,6 @@ again. Then tell the developer, in one line each:
 
 - which components were detected, with the gates each one can run;
 - what you wrote, and which file;
-- anything you left out, and what it costs them.
+- anything you left out, and what it costs them;
+- that `npm i -g @skraft/cli` gives them `skraft` for their own terminal, when it answers nothing
+  today. Never install it yourself, and keep using `<cli>`: the long line needs no install.
