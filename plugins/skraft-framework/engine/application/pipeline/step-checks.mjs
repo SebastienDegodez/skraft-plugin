@@ -11,6 +11,7 @@ import { allowedPaths, makesCommits, rootFiles, trackingFolder } from '../../dom
 import { adrFailures } from '../decisions/adr-checks.mjs'
 import { baseOf } from '../config/bases.mjs'
 import { checkDesignRecords } from './design-records.mjs'
+import { checkGherkinRecords } from './gherkin-records.mjs'
 import { checkResearchRecords } from './research-records.mjs'
 import { EJECTED } from '../workflow/called-workflows.mjs'
 
@@ -18,7 +19,7 @@ import { EJECTED } from '../workflow/called-workflows.mjs'
  * @typedef {import('../../domain/journal/run-state.mjs').Head} Head
  * @typedef {import('../../domain/pipeline/commits.mjs').JudgedCommit} JudgedCommit
  * @typedef {import('../../domain/config/skraft-config.mjs').Component} Component
- * @typedef {'missing-outputs' | 'invalid-result' | 'design-records' | 'research-records' | 'pull-request-prose' | 'agent-blocked' | 'write-scope' | 'uncommitted' | 'adr-lifecycle' | 'commit-convention' | 'tdd'} FailureCode
+ * @typedef {'missing-outputs' | 'invalid-result' | 'design-records' | 'research-records' | 'gherkin-records' | 'pull-request-prose' | 'agent-blocked' | 'write-scope' | 'uncommitted' | 'adr-lifecycle' | 'commit-convention' | 'tdd'} FailureCode
  * @typedef {{
  *   repository: string, sha: string, subject: string, kind: string, verdict: string,
  *   replay: { component: string, command: ReplayedCommand, exitCode: number | null, durationMs: number } | null,
@@ -54,7 +55,7 @@ import { EJECTED } from '../workflow/called-workflows.mjs'
  */
 
 /** Failure codes, the first one found naming the step's refusal. */
-const PRIORITY = /** @type {const} */ (['missing-outputs', 'invalid-result', 'design-records', 'research-records', 'pull-request-prose', 'write-scope', 'uncommitted', 'adr-lifecycle', 'commit-convention', 'tdd'])
+const PRIORITY = /** @type {const} */ (['missing-outputs', 'invalid-result', 'design-records', 'research-records', 'gherkin-records', 'pull-request-prose', 'write-scope', 'uncommitted', 'adr-lifecycle', 'commit-convention', 'tdd'])
 
 /**
  * Where each repository of the run stands before an attempt: its HEAD and the files already
@@ -140,7 +141,8 @@ const proseFailures = async ({ files }, slug, { role, outputs }, missing) => {
 
 /**
  * The records a role keeps, each failure under its own code: the DESIGN records of a role that
- * keeps them, the citations of a role whose research document the engine checks.
+ * keeps them, the citations of a role whose research document the engine checks, the scenarios of
+ * a role whose test plan names them.
  * @param {CheckDeps} deps @param {Parameters<typeof checkStep>[1]} step
  * @param {{ slug: string, base: import('../config/bases.mjs').Base[] }} run
  * @returns {Promise<Failure[] | string>} a string: why the machine could not read them
@@ -148,6 +150,7 @@ const proseFailures = async ({ files }, slug, { role, outputs }, missing) => {
 const keptRecords = async (deps, { role }, { slug, base }) => {
   if (role.records) return coded('design-records', await checkDesignRecords(deps, { slug, base }))
   if (role.citations) return coded('research-records', await checkResearchRecords(deps, { slug }))
+  if (role.scenarios) return coded('gherkin-records', await checkGherkinRecords(deps, { slug }))
   return []
 }
 
