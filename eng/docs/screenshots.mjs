@@ -230,6 +230,19 @@ const shop = () => {
   return { cwd, home, git, paths: { [cwd]: '~/shop', [home]: '~' } }
 }
 
+/**
+ * The publication consents of the tutorial repository, settled as its page settles them: it has no
+ * remote, so it declines both. A run that publishes starts only once they are settled, so without
+ * this the first `skraft` of a run is refused (`configuration-incomplete`).
+ * @param {string} cwd
+ */
+const declinePublishing = (cwd) => {
+  const path = join(cwd, 'skraft-config.json')
+  const config = JSON.parse(readFileSync(path, 'utf8'))
+  config.publish = { pullRequest: false, visuals: false, questionVersions: { pullRequest: 2, visuals: 1 } }
+  writeFileSync(path, `${JSON.stringify(config, null, 2)}\n`)
+}
+
 /** `skraft doctor`, its model tables cut to their first rows: the checks are what a reader reads. */
 const doctorShown = (lines) => {
   const shown = []
@@ -287,6 +300,7 @@ const shopCaptures = async () => {
   const init = await say(['init'])
   if (init.code !== 0) throw new Error(`skraft init: ${init.lines.join('\n')}`)
   writeSvg('terminal-init.svg', ['$ skraft init', ...init.lines], '~/shop', 'skraft init: skraft-config.json: web (javascript, web)')
+  declinePublishing(cwd)
   git('add', 'skraft-config.json', '.gitignore')
   git('commit', '-q', '-m', 'chore: describe the shop for skraft')
 
@@ -295,12 +309,7 @@ const shopCaptures = async () => {
   writeSvg('terminal-doctor.svg', ['$ skraft doctor', ...doctorShown(doctor.lines)], '~/shop', `skraft doctor: ${doctor.lines.at(-1)}`, 132)
 
   const start = await say(['init', 'checkout', '--title', 'Pay by card'])
-  const next = await say(['next'])
-  const status = await say(['status'])
   if (start.code !== 0) throw new Error(`skraft init checkout: ${start.lines.join('\n')}`)
-  writeSvg('terminal-status-waiting.svg', ['$ skraft status', ...status.lines], '~/shop', 'skraft status: checkout waiting in RESEARCH on publish-consent')
-  if (!next.lines.some((line) => line.includes('waiting (publish-consent)'))) throw new Error(`skraft next did not stop on publish-consent: ${next.lines.join('\n')}`)
-  if (ONLY.has('pipeline')) await canvasShot(cwd, home, 'pipeline-canvas-question.png')
 
   const gates = await say(['gate', '--all'])
   if (gates.code !== 0) throw new Error(`skraft gate --all: ${gates.lines.join('\n')}`)
@@ -470,7 +479,7 @@ const checkWritten = () => {
 }
 
 try {
-  if (ONLY.has('terminal') || ONLY.has('pipeline')) await shopCaptures()
+  if (ONLY.has('terminal')) await shopCaptures()
   if (ONLY.has('pipeline')) await pipelineCaptures()
   if (ONLY.has('backlog')) await backlogCaptures()
   if (ONLY.has('dashboard') || ONLY.has('replay')) await dashboardAndReplayCaptures()
