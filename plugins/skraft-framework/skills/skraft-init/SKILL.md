@@ -81,9 +81,12 @@ for them yourself.
   the pair. Never guess the missing one: a folder the runner does not read holds scenarios nothing
   runs.
 - **Neither, and the component says nothing or `true`**: ask whether it describes its behaviour in
-  Gherkin. Declining writes `"bdd": false`. Accepting means naming the two folders: ask for them
-  and write the pair. Do not accept the stack's default as an answer — it is a fallback for a file
-  written by hand, and a folder nobody chose is one the runner may never read.
+  Gherkin. Declining writes `"bdd": false`. Accepting means naming the folders: ask for them and
+  write the pair. Do not accept the stack's default as an answer — a folder nobody chose is one the
+  runner may never read, and a component holding several test projects gets a default that belongs
+  to none of them.
+- **The component writes Gherkin and runs none of it**: write the pair with `features` only. The
+  scenarios live there as the story's specification, and nothing is asked of them.
 
 One pair per runner: a definition of one pair binds no step of another, so a component holding
 several test projects carries several pairs.

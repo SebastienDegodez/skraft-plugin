@@ -29,18 +29,22 @@ export { HOSTS } from './model-assignment.mjs'
  *   baseBranch: string | null,
  *   mocking: { strategy: 'microcks' | 'inprocess' },
  *   contractTesting: boolean,
- *   bdd: BddPair[],
+ *   bdd: boolean,
+ *   bddPaths: BddPair[],
  *   mutationReport: string | null,
  * }} Component
  *   root is relative to the working copy, normalised (`.`, `services/api`, `../payment-web`).
  *   paths are relative to root, normalised; `['.']` (the whole root) when the file names none,
  *   or an empty list (`skraft init` on a project with no tests folder yet). mutationReport: where
  *   the mutation command writes its report, relative to root; null for the one its stack's tool writes.
- * @typedef {{ runner: string | null, features: string, steps: string }} BddPair
- *   Where one runner finds a story's scenarios and the definitions that bind them, both relative to
- *   the component root. A component declares one pair per runner: the binding scope is the runner's,
- *   so a definition of another pair binds no step of this one. Empty list: the component writes its
- *   scenarios as documentation and no runner reads them.
+ * @typedef {{ runner: string | null, features: string, steps: string | null }} BddPair
+ *   Where a story's scenarios are written, and where the definitions that bind them live, both
+ *   relative to the component root. A component declares one pair per runner: the binding scope is
+ *   the runner's, so a definition of another pair binds no step of this one.
+ *   steps null: the scenarios are written and nothing is asked of them, so no runner reads them.
+ *   A component that says `true`, or says nothing, takes the pair its stack's usual runner looks
+ *   in. That default fits a component holding one test project; `skraft init` detects the real
+ *   folders, and `/skraft-init` asks for them, so a component holding several names its own.
  * @typedef {'all' | 'last-red'} ReplayMode
  *   all: every red commit is replayed; last-red: only the last red commit of each story.
  * @typedef {import('./model-assignment.mjs').Host} Host
@@ -82,9 +86,9 @@ export const MOCKING_STRATEGIES = Object.freeze(['microcks', 'inprocess'])
 const IN_PROCESS_STACKS = Object.freeze(['typescript', 'javascript', 'react'])
 
 /**
- * Where each stack's usual runner looks, for a component that declares BDD without naming folders.
- * `skraft init` normally detects the real ones; dotnet has no guessable project name, so its pair
- * names the tests folder itself.
+ * Where each stack's usual runner looks, for a component that declares BDD without naming folders,
+ * relative to the component root. A component that holds several test projects gets one default
+ * pair that fits none of them: `skraft init` detects the real ones, `/skraft-init` asks for them.
  */
 const BDD_FOLDERS = Object.freeze({
   dotnet: { features: 'tests/Features', steps: 'tests/Steps' },
@@ -375,22 +379,22 @@ const checkedComponent = (component) => {
   const { entry, label, errors } = component
   const before = errors.length
   for (const check of FIELD_CHECKS) check(component)
-  const bdd = bddOf(entry, label, errors)
+  const gherkin = bddOf(entry, label, errors)
   const paths = pathsOf(entry.paths ?? {}, label, errors)
   const commands = commandsOf(entry.commands ?? {}, label, errors)
   const baseBranch = optionalRef(entry.baseBranch, `${label}: baseBranch`, errors)
   const strategy = mockingOf(entry, label, errors)
   if (errors.length > before) return null
-  return componentFrom(entry, { paths, commands, baseBranch, strategy, bdd })
+  return componentFrom(entry, { paths, commands, baseBranch, strategy, gherkin })
 }
 
 /**
  * A component whose fields passed their checks, its root normalised.
  * @param {Record<string, any>} entry
- * @param {{ paths: Component['paths'], commands: Record<string, string>, baseBranch: string | null, strategy: any, bdd: BddPair[] }} values
+ * @param {{ paths: Component['paths'], commands: Record<string, string>, baseBranch: string | null, strategy: any, gherkin: { bdd: boolean, bddPaths: BddPair[] } }} values
  * @returns {Component}
  */
-const componentFrom = (entry, { paths, commands, baseBranch, strategy, bdd }) => ({
+const componentFrom = (entry, { paths, commands, baseBranch, strategy, gherkin }) => ({
   name: entry.name,
   root: normalizeRelative(entry.root),
   stack: entry.stack,
@@ -399,7 +403,7 @@ const componentFrom = (entry, { paths, commands, baseBranch, strategy, bdd }) =>
   baseBranch,
   mocking: { strategy },
   contractTesting: entry.contractTesting === true,
-  bdd,
+  ...gherkin,
   mutationReport: entry.mutationReport === undefined ? null : normalizeRelative(entry.mutationReport),
 })
 
@@ -418,29 +422,29 @@ const mockingOf = ({ mocking, stack }, label, errors) => {
 }
 
 /** What `bdd` may be, said as the person has to write it. */
-const BDD_SHAPE = 'bdd must be true, false, or a list of { runner, features, steps } whose folders are inside the component root'
+const BDD_SHAPE = 'bdd must be true, false, or a list of { runner, features, steps } whose folders are inside the component root; steps may be left out when nothing binds the scenarios'
 
 /**
- * The pairs a component declares: the stack's own when it says `true` or says nothing, none when it
- * says `false`, the ones it names otherwise.
+ * Whether a component describes its behaviour in Gherkin, and where. A boolean, or no key at all,
+ * says the first without the second; a list says both, since naming a folder is declaring BDD.
  * @param {Record<string, any>} entry @param {string} label @param {string[]} errors
- * @returns {BddPair[]}
+ * @returns {{ bdd: boolean, bddPaths: BddPair[] }}
  */
 const bddOf = ({ bdd, stack }, label, errors) => {
-  if (bdd === undefined || bdd === true) return stackPairs(stack)
-  if (bdd === false) return []
+  if (bdd === false) return { bdd: false, bddPaths: [] }
+  if (bdd === undefined || bdd === true) return { bdd: true, bddPaths: stackPairs(stack) }
   const pairs = Array.isArray(bdd) && bdd.length > 0 ? bdd.map(pairOf) : [null]
   if (pairs.includes(null)) return refusedPairs(label, errors)
-  return /** @type {BddPair[]} */ (pairs)
+  return { bdd: true, bddPaths: /** @type {BddPair[]} */ (pairs) }
 }
 
-/** @param {string} label @param {string[]} errors @returns {BddPair[]} */
+/** @param {string} label @param {string[]} errors @returns {{ bdd: boolean, bddPaths: BddPair[] }} */
 const refusedPairs = (label, errors) => {
   errors.push(`${label}: ${BDD_SHAPE}`)
-  return []
+  return { bdd: true, bddPaths: [] }
 }
 
-/** The pair of a stack that names none; none for a stack with no usual runner. @param {unknown} stack @returns {BddPair[]} */
+/** The default pair of a stack; none for a stack with no usual runner. @param {unknown} stack @returns {BddPair[]} */
 const stackPairs = (stack) => {
   const folders = BDD_FOLDERS[/** @type {Stack} */ (stack)]
   return folders === undefined ? [] : [{ runner: null, ...folders }]
@@ -448,15 +452,23 @@ const stackPairs = (stack) => {
 
 /**
  * One pair, its folders normalised; null when it names something else, a folder outside the root,
- * or a runner that is no name.
+ * or a runner that is no name. `steps` left out: nothing is asked of the scenarios.
  * @param {unknown} entry @returns {BddPair | null}
  */
 const pairOf = (entry) => {
   if (!isRecord(entry) || !Object.keys(entry).every((key) => BDD_KEYS.includes(key))) return null
-  if (!isInnerFolder(entry.features) || !isInnerFolder(entry.steps)) return null
-  if (entry.runner !== undefined && typeof entry.runner !== 'string') return null
-  return { runner: entry.runner ?? null, features: normalizeRelative(entry.features), steps: normalizeRelative(entry.steps) }
+  if (!namesFolders(entry) || !namesRunner(entry)) return null
+  return { runner: entry.runner ?? null, features: normalizeRelative(entry.features), steps: innerOrNull(entry.steps) }
 }
+
+/** The scenarios' folder is inside the root, and the bindings' too when the pair names one. @param {Record<string, any>} entry */
+const namesFolders = ({ features, steps }) => isInnerFolder(features) && (steps === undefined || isInnerFolder(steps))
+
+/** @param {Record<string, any>} entry */
+const namesRunner = ({ runner }) => runner === undefined || typeof runner === 'string'
+
+/** @param {unknown} folder @returns {string | null} */
+const innerOrNull = (folder) => (folder === undefined ? null : normalizeRelative(/** @type {string} */ (folder)))
 
 /** @param {unknown} value @param {string} label @param {string[]} errors @returns {Record<string, string>} */
 const commandsOf = (value, label, errors) => {

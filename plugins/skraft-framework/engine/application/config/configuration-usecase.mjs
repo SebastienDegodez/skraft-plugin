@@ -70,7 +70,7 @@ const forgeNote = (loaded, edit) => {
 const shown = ({ config }) => ({
   confirmed: config.configurationConfirmed,
   files: { team: CONFIG_FILE, local: LOCAL_CONFIG_FILE },
-  components: config.components.map(({ name, root, stack, commands, mocking, contractTesting, bdd }) => ({ name, root, stack, commands, mocking: mocking.strategy, contractTesting, bdd })),
+  components: config.components.map(({ name, root, stack, commands, mocking, contractTesting, bdd, bddPaths }) => ({ name, root, stack, commands, mocking: mocking.strategy, contractTesting, bdd, bddPaths })),
   consents: EDITED_CONSENTS.map((key) => ({ key, value: config.publish[key], state: consentOf(config.publish, key) })),
   thresholds: Object.entries(MUTATION_BARS).map(([scope, bar]) => ({ scope, bar })),
   choices: choicesOf(config),

@@ -375,7 +375,7 @@ test('an invalid skraft-config.json refuses the gates with every error, instead 
     'components[1].name must be kebab-case, got "Api"',
     'component Api: stack must be one of dotnet, java, python, typescript, javascript, react',
     'component Api: contractTesting must be true or false',
-    'component Api: bdd must be true, false, or a list of { runner, features, steps } whose folders are inside the component root',
+    'component Api: bdd must be true, false, or a list of { runner, features, steps } whose folders are inside the component root; steps may be left out when nothing binds the scenarios',
     'component Api: unknown command Test (allowed: build, format, lint, test, architecture, coverage, mutation, e2e)',
     'component Api: unknown command tset (allowed: build, format, lint, test, architecture, coverage, mutation, e2e)',
     'component Api: command build must be a non-empty command line',

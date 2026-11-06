@@ -130,19 +130,21 @@ const componentChecks = async (deps, component, { run, baseSha }) => {
 }
 
 /**
- * Where each runner of the component reads its scenarios. A pair whose scenarios are written and
- * whose bindings folder is not a folder is a warning: nothing binds them, so the runner reports
- * them undefined and the `test` gate still passes. A component that declares no pair says nothing.
+ * Where each runner of the component reads its scenarios; a component that declines Gherkin says
+ * nothing. A pair whose scenarios are written and whose bindings folder is not a folder is a
+ * warning: nothing binds them, the runner reports them undefined, and `test` still passes.
  * @param {DoctorDeps} deps @param {Component} component @returns {Promise<DoctorCheck[]>}
  */
 const bddChecks = async (deps, component) => {
-  const states = await Promise.all(component.bdd.map((pair) => pairState(deps, component.root, pair)))
-  return states.map((state) => bddCheck(`${component.name}/bdd`, state))
+  const subject = `${component.name}/bdd`
+  const states = await Promise.all(component.bddPaths.map((pair) => pairState(deps, component.root, pair)))
+  return states.map((state) => bddCheck(subject, state))
 }
 
 /** @param {string} subject @param {{ pair: BddPair, written: boolean, binds: boolean }} state @returns {DoctorCheck} */
 const bddCheck = (subject, { pair, written, binds }) => {
   const named = pair.runner === null ? '' : `${pair.runner}: `
+  if (pair.steps === null) return { subject, status: 'ok', detail: `${named}${pair.features}, bound to nothing` }
   if (written && !binds) return { subject, status: 'warn', detail: `${named}${pair.features} holds scenarios and ${pair.steps} is no folder: nothing binds them` }
   return { subject, status: 'ok', detail: `${named}${pair.features} → ${pair.steps}` }
 }
@@ -152,7 +154,8 @@ const bddCheck = (subject, { pair, written, binds }) => {
  * @param {DoctorDeps} deps @param {string} root @param {BddPair} pair
  */
 const pairState = async (deps, root, pair) => {
-  const [features, steps] = await Promise.all([joinRelative(root, pair.features), joinRelative(root, pair.steps)].map((path) => deps.workspace.list(path)))
+  const features = await deps.workspace.list(joinRelative(root, pair.features))
+  const steps = pair.steps === null ? null : await deps.workspace.list(joinRelative(root, pair.steps))
   return { pair, written: features !== null, binds: steps !== null }
 }
 
