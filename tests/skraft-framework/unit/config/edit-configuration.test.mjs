@@ -36,8 +36,8 @@ test('the view shows the forge the files name and the one the Git remote names, 
   assert.equal(view.ok, true)
   assert.deepEqual(view.forge, { named: null, namedIn: null, deduced: 'azure-devops' })
   assert.deepEqual(view.components, [
-    { name: 'payment-api', root: 'services/payment-api', stack: 'dotnet', commands: API.commands, mocking: 'microcks', contractTesting: false, bdd: true, bddPaths: PAIRS },
-    { name: 'payment-web', root: '../payment-web', stack: 'react', commands: { test: 'npx vitest run' }, mocking: 'inprocess', contractTesting: false, bdd: false, bddPaths: [] },
+    { name: 'payment-api', root: 'services/payment-api', stack: 'dotnet', commands: API.commands, mocking: 'microcks', contractTesting: false, bdd: true, bddPaths: PAIRS, bddFound: [] },
+    { name: 'payment-web', root: '../payment-web', stack: 'react', commands: { test: 'npx vitest run' }, mocking: 'inprocess', contractTesting: false, bdd: false, bddPaths: [], bddFound: [] },
   ])
   assert.deepEqual(view.consents, [{ key: 'pullRequest', value: null, state: 'unanswered' }, { key: 'visuals', value: false, state: 'declined' }])
   assert.deepEqual([view.confirmed, view.files], [false, { team: 'skraft-config.json', local: LOCAL }])
@@ -144,6 +144,23 @@ test('a component that declares BDD without naming folders takes the pair its st
     ['bound', true, [{ runner: null, features: 'tests/Features', steps: 'tests/Steps' }]],
     ['unbound', true, [{ runner: null, features: 'tests/Features', steps: null }]],
   ])
+})
+
+test('the view shows the pairs the working copy holds beside the ones the file names, so a component listed before the key existed has something to confirm', async () => {
+  const team = { components: [{ name: 'shop', root: '.', stack: 'dotnet', commands: { test: 'dotnet test' } }] }
+  const files = {
+    'tests/Cart.Tests/Cart.Tests.csproj': '<Project><ItemGroup><PackageReference Include="Reqnroll.xUnit" /></ItemGroup></Project>',
+    'tests/Cart.Tests/Specs/cart.feature': 'Feature: Cart\n',
+    'tests/Cart.Tests/Bindings/CartSteps.cs': '[Binding]',
+  }
+
+  const view = await configuration({ team, files }).view()
+
+  assert.deepEqual(view.components.map(({ name, bddPaths, bddFound }) => ({ name, bddPaths, bddFound })), [{
+    name: 'shop',
+    bddPaths: [{ runner: null, features: 'tests/Features', steps: 'tests/Steps' }],
+    bddFound: [{ runner: 'reqnroll', features: 'tests/Cart.Tests/Specs', steps: 'tests/Cart.Tests/Bindings' }],
+  }])
 })
 
 test('an edit the configuration would refuse writes nothing, with why; so does an edit of a component no file lists, or a key no edit takes', async () => {

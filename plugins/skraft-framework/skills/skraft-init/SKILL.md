@@ -68,18 +68,18 @@ A refusal is an answer: a run then publishes nothing and is not held up.
 
 ## 5. BDD, per component
 
-`skraft init` already wrote what it found: for each test project whose manifest names a BDD runner
-and whose folders hold both the `.feature` files and the bindings, a `bdd` pair
-`{ runner, features, steps }`, folders relative to the component root. Read the file. Never search
-for them yourself.
+The engine has already looked. Each component of the Configuration view carries two lists, and you
+read them instead of searching the disk yourself: `bddPaths`, the pairs its file names — the
+stack's default when the file names none — and `bddFound`, the pairs the working copy actually
+holds, one per test project whose manifest names a BDD runner and whose folders hold both the
+`.feature` files and the bindings.
 
-- **The component has pairs**: show them, one line per pair, and ask the developer to confirm. Write
-  a pair they correct as they give it.
-- **The component says `true`, or has no `bdd` key, and a test project names a BDD runner or holds a
-  `.feature`**: no pair was written — either init found one half only, or the component was already
-  listed and init never looks at a component it did not add. Ask where both folders are and write
-  the pair. Never guess the missing one: a folder the runner does not read holds scenarios nothing
-  runs.
+- **`bddFound` is not empty**: show those pairs, one line per pair, and ask the developer to confirm
+  them. Write them as `bdd` on a yes, and write a pair they correct as they give it. Say when they
+  differ from `bddPaths`, because that is the case where the file is wrong and nobody noticed.
+- **`bddFound` is empty and a test project names a BDD runner or holds a `.feature`**: the engine
+  found one half only. Ask where both folders are and write the pair. Never guess the missing one:
+  a folder the runner does not read holds scenarios nothing runs.
 - **Neither, and the component says nothing or `true`**: ask whether it describes its behaviour in
   Gherkin. Declining writes `"bdd": false`. Accepting means naming the folders: ask for them and
   write the pair. Do not accept the stack's default as an answer — a folder nobody chose is one the
