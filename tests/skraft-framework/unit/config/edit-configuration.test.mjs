@@ -126,23 +126,36 @@ test('a forge a personal layer names stays out of skraft-config.json when an unr
   assert.deepEqual(await personal.save({ forge: null }), { ok: true, reason: 'nothing changed; ~/.skraft/config.json still names the forge' })
 })
 
-test('a component that declares BDD without naming folders takes the pair its stack reads, a list says where, and a pair may leave its bindings out', async () => {
+test('a component that declares BDD without naming folders takes the pair its stack reads, each stack its own, a list says where, and a pair may leave its bindings out', async () => {
+  const says = (name, stack, bdd) => ({ name, root: name, stack, commands: { test: 'x' }, ...(bdd === undefined ? {} : { bdd }) })
   const team = { components: [
-    { name: 'says-yes', root: 'a', stack: 'dotnet', commands: { test: 'x' }, bdd: true },
-    { name: 'says-nothing', root: 'b', stack: 'dotnet', commands: { test: 'x' } },
-    { name: 'says-no', root: 'c', stack: 'dotnet', commands: { test: 'x' }, bdd: false },
-    { name: 'bound', root: 'd', stack: 'dotnet', commands: { test: 'x' }, bdd: [{ features: 'tests/Features', steps: 'tests/Steps' }] },
-    { name: 'unbound', root: 'e', stack: 'dotnet', commands: { test: 'x' }, bdd: [{ features: 'tests/Features' }] },
+    says('says-yes', 'dotnet', true),
+    says('says-nothing', 'dotnet'),
+    says('says-no', 'dotnet', false),
+    says('bound', 'dotnet', [{ features: 'tests/Features', steps: 'tests/Steps' }]),
+    says('unbound', 'dotnet', [{ features: 'tests/Features' }]),
+    says('in-java', 'java'),
+    says('in-python', 'python'),
+    says('in-typescript', 'typescript'),
+    says('in-javascript', 'javascript'),
+    says('in-react', 'react'),
   ] }
+  const dotnet = { runner: null, features: 'tests/Features', steps: 'tests/Steps' }
+  const node = { runner: null, features: 'features', steps: 'features/step_definitions' }
 
   const view = await configuration({ team }).view()
 
   assert.deepEqual(view.components.map(({ name, bdd, bddPaths }) => [name, bdd, bddPaths]), [
-    ['says-yes', true, [{ runner: null, features: 'tests/Features', steps: 'tests/Steps' }]],
-    ['says-nothing', true, [{ runner: null, features: 'tests/Features', steps: 'tests/Steps' }]],
+    ['says-yes', true, [dotnet]],
+    ['says-nothing', true, [dotnet]],
     ['says-no', false, []],
-    ['bound', true, [{ runner: null, features: 'tests/Features', steps: 'tests/Steps' }]],
+    ['bound', true, [dotnet]],
     ['unbound', true, [{ runner: null, features: 'tests/Features', steps: null }]],
+    ['in-java', true, [{ runner: null, features: 'src/test/resources/features', steps: 'src/test/java' }]],
+    ['in-python', true, [{ runner: null, features: 'features', steps: 'features/steps' }]],
+    ['in-typescript', true, [node]],
+    ['in-javascript', true, [node]],
+    ['in-react', true, [node]],
   ])
 })
 
@@ -171,6 +184,8 @@ test('an edit the configuration would refuse writes nothing, with why; so does a
     [{ components: [{ name: 'payment-api', bdd: 'yes' }] }, SHAPE],
     [{ components: [{ name: 'payment-api', bdd: [] }] }, SHAPE],
     [{ components: [{ name: 'payment-api', bdd: [{ features: '../shared/Features', steps: 'tests/Steps' }] }] }, SHAPE],
+    [{ components: [{ name: 'payment-api', bdd: [{ features: 'tests/Features', steps: '../shared/Steps' }] }] }, SHAPE],
+    [{ components: [{ name: 'payment-api', bdd: [{ runner: 42, features: 'tests/Features', steps: 'tests/Steps' }] }] }, SHAPE],
     [{ components: [{ name: 'payment-api', bdd: [{ features: 'tests/Features', steps: 'tests/Steps', glue: 'tests/Hooks' }] }] }, SHAPE],
     [{ components: [{ name: 'payment-api', paths: { src: ['x'] } }] }, 'a component edit takes name, root, stack, commands, mocking, contractTesting and bdd only'],
     [{ workflow: 'mine' }, 'a configuration edit takes forge, components, consents, assign and models only'],
