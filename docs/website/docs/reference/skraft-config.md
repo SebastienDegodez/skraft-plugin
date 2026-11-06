@@ -89,7 +89,7 @@ Any key outside this list is refused.
 | `mocking` | object | `inprocess` for `typescript`, `javascript` and `react`, `microcks` otherwise | `strategy` is `microcks`, `inprocess` or `null`; absent or `null` means the stack's default. The engine passes it in the brief and picks the matching mocking skill |
 | `paths` | object | `["."]` for each key, the whole root | `{ "src": […], "tests": […] }`, folders relative to the component root, never absolute nor starting with `..`; `skraft init` writes them. In DELIVER, the software engineer may write only there (write scope) |
 | `contractTesting` | boolean | `false` | `true` makes the software engineer read the contract testing skills of its stack; the review lenses see the setting among the component settings |
-| `bdd` | boolean | `true` | whether the component describes its behaviour in Gherkin. `false` asks DISTILL for no `.feature`: the acceptance designer takes its scenarios from the test plan's `Scenario` column and TDD runs as it always does. It declares a practice, never a threshold: a component that leaves it on is held to its scenarios in full. The engine passes it in the brief, and the review lenses see it among the component settings |
+| `bdd` | boolean or list | `true` | where each runner of the component reads its scenarios and the definitions that bind them: a list of `{ runner, features, steps }`, both folders relative to the component root, `runner` optional. **One pair per runner**, because the binding scope is the runner's own: a definition of another pair binds no step of this one, so a component holding several test projects declares one pair each. `true` takes the pair its stack's usual runner looks in; `false` names none, and asks DISTILL for no `.feature`: the acceptance designer takes its scenarios from the test plan's `Scenario` column and TDD runs as it always does. It declares a practice, never a threshold: a component that leaves it on is held to its scenarios in full. `skraft init` detects the pairs, `skraft doctor` names them, the engine passes the setting in the brief, and the review lenses see it among the component settings |
 | `mutationReport` | string | absent: the report the stack's tool writes, relative to the root: `StrykerOutput/reports/mutation-report.json` (.NET), `reports/mutation/mutation.json` (TypeScript, JavaScript, React), `mutation-report.json` (Python), `target/pit-reports/mutations.xml` (Java; `build/reports/pitest/mutations.xml` when the mutation command names Gradle) | the file the `mutation` command writes its report to, relative to the component root, never absolute nor outside it. The mutation gate reads its surviving mutants there and judges the 100 % / 80 % bar |
 
 Quality thresholds (coverage, mutation…) are **not** configurable: no key carries them.
@@ -240,7 +240,7 @@ otherwise.
 | `mocking` | `<label>: mocking must be { "strategy": "microcks" or "inprocess" }` |
 | `paths` | `<label>: paths must be { "src": [...], "tests": [...] }`; `<label>: paths.<key> must list folders inside the component root` |
 | `contractTesting` | `<label>: contractTesting must be true or false` |
-| `bdd` | `<label>: bdd must be true or false` |
+| `bdd` | `<label>: bdd must be true, false, or a list of { runner, features, steps } whose folders are inside the component root` |
 | `mutationReport` | `<label>: mutationReport must be a file inside the component root` |
 
 ## Command lines <!-- #command-lines -->
@@ -383,6 +383,26 @@ Proposed `paths`:
 copy's folder name for the root, `app` when nothing is left; `-2`, `-3`… when the name is
 taken. A root already listed is not proposed again. The engine writes neither `mocking` nor
 `baseBranch`: the defaults apply.
+
+**BDD pairs**: a project names its runner in its own manifest, so init reads it there — Reqnroll or
+SpecFlow in a `.csproj`, Cucumber in a `package.json` or a `pom.xml`, behave or pytest-bdd in a
+Python manifest. The runner then says which folder names hold its bindings (`Steps`,
+`StepDefinitions`, `Bindings`, `step_definitions`, `glue`…), and the folder its `.feature` files sit
+in is the scenarios'. A project that names a runner but shows only one of the two is written without
+`bdd`, so the stack's default applies: a half-guessed pair is worse than a question. Each test
+project of a component gives its own pair, in folder order.
+
+| Stack | `features` | `steps` | Runners read |
+| --- | --- | --- | --- |
+| `dotnet` | `tests/Features` | `tests/Steps` | Reqnroll, SpecFlow |
+| `java` | `src/test/resources/features` | `src/test/java` | Cucumber-JVM |
+| `python` | `features` | `features/steps` | behave, pytest-bdd |
+| JS / TS / React | `features` | `features/step_definitions` | Cucumber-JS, jest-cucumber |
+
+A default is a fallback for a file written by hand, not a guess to rely on: the stack does not
+determine the runner — behave and pytest-bdd read different folders, and so do Cucumber-JS and
+jest-cucumber. `/skraft-init` therefore asks for the two folders of any component that accepts
+Gherkin without them, and does not take the default as an answer.
 
 ## Pitfalls & anti-patterns
 

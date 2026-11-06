@@ -90,7 +90,7 @@ Toute clé hors de cette liste est refusée.
 | `mocking` | object | `inprocess` pour `typescript`, `javascript` et `react`, `microcks` sinon | `strategy` vaut `microcks`, `inprocess` ou `null` ; absent ou `null` vaut le défaut de la stack. Le moteur la passe dans le brief et choisit la skill de mocking correspondante |
 | `paths` | object | `["."]` pour chaque clé, toute la racine | `{ "src": […], "tests": […] }`, dossiers relatifs à la racine du composant, jamais absolus ni commençant par `..` ; `skraft init` les écrit. En DELIVER, le software engineer n'écrit que là (droits d'écriture) |
 | `contractTesting` | boolean | `false` | `true` fait lire au software engineer les skills de contract testing de sa stack ; les lentilles de revue voient le réglage parmi ceux du composant |
-| `bdd` | boolean | `true` | si le composant décrit son comportement en Gherkin. `false` ne demande aucun `.feature` à DISTILL : l'acceptance designer prend ses scénarios dans la colonne `Scenario` du plan de test, et TDD tourne comme toujours. C'est une pratique qui se déclare, jamais un seuil : un composant qui le laisse actif est tenu à ses scénarios en entier. Le moteur le passe dans le brief, et les lentilles de revue le voient parmi les réglages du composant |
+| `bdd` | boolean ou liste | `true` | où chaque runner du composant lit ses scénarios et les définitions qui les lient : une liste de `{ runner, features, steps }`, les deux dossiers relatifs à la racine du composant, `runner` facultatif. **Une paire par runner**, parce que la portée de liaison est celle du runner : une définition d'une autre paire ne lie aucun pas de celle-ci, donc un composant qui porte plusieurs projets de tests en déclare une chacun. `true` prend la paire où regarde le runner habituel de son stack ; `false` n'en nomme aucune, et ne demande aucun `.feature` à DISTILL : l'acceptance designer prend ses scénarios dans la colonne `Scenario` du plan de test, et TDD tourne comme toujours. C'est une pratique qui se déclare, jamais un seuil : un composant qui le laisse actif est tenu à ses scénarios en entier. `skraft init` détecte les paires, `skraft doctor` les nomme, le moteur passe le réglage dans le brief, et les lentilles de revue le voient parmi les réglages du composant |
 | `mutationReport` | string | absent : le rapport qu'écrit l'outil de la stack, relatif à la racine : `StrykerOutput/reports/mutation-report.json` (.NET), `reports/mutation/mutation.json` (TypeScript, JavaScript, React), `mutation-report.json` (Python), `target/pit-reports/mutations.xml` (Java ; `build/reports/pitest/mutations.xml` quand la commande de mutation nomme Gradle) | le fichier où la commande `mutation` écrit son rapport, relatif à la racine du composant, jamais absolu ni hors d'elle. La gate de mutation y lit les mutants survivants et juge la barre 100 % / 80 % |
 
 Les seuils qualité (couverture, mutation…) ne sont **pas** configurables : aucune clé ne les
@@ -244,7 +244,7 @@ Dans les messages, `<label>` vaut `component <name>` si le nom est une chaîne, 
 | `mocking` | `<label>: mocking must be { "strategy": "microcks" or "inprocess" }` |
 | `paths` | `<label>: paths must be { "src": [...], "tests": [...] }` ; `<label>: paths.<key> must list folders inside the component root` |
 | `contractTesting` | `<label>: contractTesting must be true or false` |
-| `bdd` | `<label>: bdd must be true or false` |
+| `bdd` | `<label>: bdd must be true, false, or a list of { runner, features, steps } whose folders are inside the component root` |
 | `mutationReport` | `<label>: mutationReport must be a file inside the component root` |
 
 ## Lignes de commande <!-- #command-lines -->
@@ -388,7 +388,30 @@ existe ou dépendance `typescript`, sinon `javascript`. Les dépendances lues so
 
 **Nom** : nom du dossier en kebab-case (`PaymentApi` devient `payment-api`), le nom du dossier
 de la copie de travail pour la racine, `app` s'il ne reste rien ; `-2`, `-3`… si le nom est
-pris. Une racine déjà listée n'est pas reproposée. Le moteur n'écrit ni `mocking` ni
+pris. Une racine déjà listée n'est pas reproposée.
+
+**Paires BDD** : un projet nomme son runner dans son propre manifeste, donc l'init l'y lit —
+Reqnroll ou SpecFlow dans un `.csproj`, Cucumber dans un `package.json` ou un `pom.xml`, behave ou
+pytest-bdd dans un manifeste Python. Le runner dit alors quels noms de dossiers portent ses
+liaisons (`Steps`, `StepDefinitions`, `Bindings`, `step_definitions`, `glue`…), et le dossier où se
+trouvent ses `.feature` est celui des scénarios. Un projet qui nomme un runner mais ne montre qu'un
+des deux est écrit sans `bdd`, donc avec le défaut de son stack : une paire à moitié devinée est
+pire qu'une question. Chaque projet de tests d'un composant donne sa propre paire, dans l'ordre des
+dossiers.
+
+| Stack | `features` | `steps` | Runners lus |
+| --- | --- | --- | --- |
+| `dotnet` | `tests/Features` | `tests/Steps` | Reqnroll, SpecFlow |
+| `java` | `src/test/resources/features` | `src/test/java` | Cucumber-JVM |
+| `python` | `features` | `features/steps` | behave, pytest-bdd |
+| JS / TS / React | `features` | `features/step_definitions` | Cucumber-JS, jest-cucumber |
+
+Un défaut est un filet pour un fichier écrit à la main, pas une devinette sur laquelle s'appuyer :
+le stack ne détermine pas le runner — behave et pytest-bdd lisent des dossiers différents,
+Cucumber-JS et jest-cucumber aussi. `/skraft-init` demande donc les deux dossiers de tout composant
+qui accepte le Gherkin sans les nommer, et ne prend pas le défaut pour une réponse.
+
+Le moteur n'écrit ni `mocking` ni
 `baseBranch` : les défauts s'appliquent.
 
 ## Pièges & anti-patterns

@@ -68,17 +68,26 @@ A refusal is an answer: a run then publishes nothing and is not held up.
 
 ## 5. BDD, per component
 
-Ask each component whether it describes its behaviour in Gherkin. Propose the answer from what you
-find, and say what you found:
+`skraft init` already wrote what it found: for each test project whose manifest names a BDD runner
+and whose folders hold both the `.feature` files and the bindings, a `bdd` pair
+`{ runner, features, steps }`, folders relative to the component root. Read the file. Never search
+for them yourself.
 
-- `.feature` files under `docs/features/` or under the component's test paths;
-- a BDD runner in its `test` command or its manifest (Reqnroll, SpecFlow, Cucumber, behave,
-  pytest-bdd, jest-cucumber).
+- **The component has pairs**: show them, one line per pair, and ask the developer to confirm. Write
+  a pair they correct as they give it.
+- **No `bdd` key, and a test project names a BDD runner or holds a `.feature`**: init found one half
+  only. Ask where both folders are and write the pair. Never guess the missing one: a folder the
+  runner does not read holds scenarios nothing runs.
+- **Neither**: ask whether the component describes its behaviour in Gherkin. Declining writes
+  `"bdd": false`. Accepting means naming the two folders: ask for them and write the pair. Do not
+  accept the stack's default as an answer — it is a fallback for a file written by hand, and a
+  folder nobody chose is one the runner may never read.
 
-Found either: propose yes. Found neither: propose no.
+One pair per runner: a definition of one pair binds no step of another, so a component holding
+several test projects carries several pairs.
 
-Write `"bdd": false` only when the developer declines. An absent key already means yes, and the
-file stays as short as it can be.
+A component that accepts Gherkin leaves this step with a `bdd` list, never with an absent key: the
+key is absent only for a file no guided init has been through.
 
 Declining asks DISTILL for no `.feature`: the acceptance designer takes its scenarios from the test
 plan's `Scenario` column, and TDD runs as it always does. Accepting holds the component to its
