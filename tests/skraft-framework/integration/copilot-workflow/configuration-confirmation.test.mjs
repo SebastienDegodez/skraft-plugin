@@ -22,6 +22,7 @@ const unconfirmed = async (t) => {
 /** A joined session whose person answers in turn, and whose canvas opens keep each request. */
 const session = (answers) => {
   const joined = answeringSession({ answers })
+  joined.capabilities.ui.canvases = true
   const opens = []
   joined.rpc.canvas = { open: async (request) => { opens.push(request) } }
   return { joined, opens }
@@ -41,6 +42,17 @@ test('a run in a working copy whose configuration nobody confirmed opens the can
   assert.deepEqual((await answered(cwd))[0], ['configuration-1', 'START', 'host-confirmed'])
   assert.deepEqual(JSON.parse(readFileSync(join(cwd, LOCAL), 'utf8')), { configurationConfirmed: true })
   assert.deepEqual(calls.map(({ agent }) => agent), ['skraft:solution-researcher'])
+})
+
+test('a host that does not report canvas rendering (the terminal CLI) is never asked to open the canvas; the question stays in the chat', async (t) => {
+  const cwd = await unconfirmed(t)
+  const { joined, opens } = session(['START'])
+  joined.capabilities.ui.canvases = undefined
+  const { ctx } = simulatedContext({ args: { slug: SLUG }, behaviours: [stops()] })
+
+  await settled(runSkraftPipelineWorkflow(ctx, copilotHost(cwd, PLUGIN_ROOT, joined)))
+
+  assert.deepEqual([opens, joined.asked[0].message], [[], QUESTION])
 })
 
 test('a canvas the host cannot open leaves the question in the chat, which names the tab', async (t) => {

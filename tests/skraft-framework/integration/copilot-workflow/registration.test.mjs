@@ -305,6 +305,7 @@ test('the registered run opens the canvas of the joined session on its Configura
   const sdk = dismissingSession(repositories, asked)
   const opens = []
   sdk.session.rpc.canvas = { open: async (opened) => { opens.push(opened) } }
+  sdk.session.capabilities.ui.canvases = true
   await registerWith(sdk, `${repositories.first}-home`)
   const [workflow] = sdk.joins[0].workflows
 

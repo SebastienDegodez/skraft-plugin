@@ -5,9 +5,12 @@ import { PIPELINE_CANVAS } from './pipeline-canvas.mjs'
  * `rpc.canvas.open`, which the host answers by calling the canvas's `open` (probe check
  * `canvas-open-from-extension`, Copilot CLI 1.0.102-1). One instance, so that each run opens the
  * same panel again rather than a new one. Best effort: a session that cannot open it, that throws
- * or that does not answer in time leaves the question in the chat, which names the tab.
+ * or that does not answer in time leaves the question in the chat, which names the tab. A session
+ * whose host does not report `capabilities.ui.canvases` (the terminal CLI) is never asked to open
+ * it: the host would open a window of its own (capability read in the CLI 1.0.106 SDK typings, not
+ * yet measured in the Copilot app: docs/v2/host-verification.md, "Non vérifié").
  *
- * @typedef {{ rpc?: { canvas?: { open?: (request: { canvasId: string, instanceId: string, input: object }) => Promise<unknown> } } }} OpeningSession
+ * @typedef {{ capabilities?: { ui?: { canvases?: boolean } }, rpc?: { canvas?: { open?: (request: { canvasId: string, instanceId: string, input: object }) => Promise<unknown> } } }} OpeningSession
  * @typedef {{ show: (tab: 'configuration') => Promise<void> }} CanvasOpener
  */
 
@@ -19,10 +22,15 @@ const OPEN_MS = 5000
 /** @param {{ session: () => OpeningSession | null, waitMs?: number }} host @returns {CanvasOpener} */
 // Stryker disable next-line ObjectLiteral: the tests that keep this wait answer at once; the time itself is not observable there
 export const createCanvasOpener = ({ session, waitMs = OPEN_MS }) => Object.freeze({
-  show: (tab) => opened(session(), tab, waitMs),
+  show: (tab) => showIfRendered(session(), tab, waitMs),
 })
 
 /** @param {OpeningSession | null} joined @param {string} tab @param {number} waitMs */
+const showIfRendered = async (joined, tab, waitMs) => {
+  if (joined?.capabilities?.ui?.canvases === true) await opened(joined, tab, waitMs)
+}
+
+/** @param {OpeningSession} joined @param {string} tab @param {number} waitMs */
 const opened = async (joined, tab, waitMs) => {
   /** @type {NodeJS.Timeout | undefined} */
   let timer
