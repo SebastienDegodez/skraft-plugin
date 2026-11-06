@@ -3,6 +3,12 @@
 Toutes les modifications notables de ce projet sont documentées ici.
 Format basé sur [Conventional Commits](https://www.conventionalcommits.org/) — versionnage [SemVer](https://semver.org/).
 
+## [2.0.0-alpha.66](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.65...v2.0.0-alpha.66) (2026-11-06)
+
+### 🐛 Bug Fixes
+
+* **engine:** open the skraft canvas only when the Copilot host renders canvases ([9ba05b5](https://github.com/SebastienDegodez/skraft-plugin/commit/9ba05b52cd8f9e04dfe38698dc8a78a2551f74b5))
+
 ## [2.0.0-alpha.65](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.64...v2.0.0-alpha.65) (2026-11-06)
 
 ### ✨ Features
