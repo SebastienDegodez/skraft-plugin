@@ -92,8 +92,8 @@ Verdict: `review-verdict.mjs --phase discuss`, same rules and same budget as DIS
 | Inputs | the story (`plans/{date}/issue-<number>.md` when the run started with `--issue`); the durable documentation under `docs/`, read first |
 | Output | `research/{date}/{slug}-research.md`, pre-created from `research.template.md` |
 | Allowed writes | the tracking folder only |
-| `docs/` already covers the story | the research document says so and cites the files of `docs/`; the engine reads those citations, so a path it names must exist |
-| Check | output filled: not empty, different from the template, no `{{…}}` left. Research records after each attempt: every workspace path with a folder the document cites (a bare name is no citation) — forward or back slashes, named once however often it cites it, a folder and a path with a `.` or `..` segment left alone — is a readable file of the working copy, and every `path:line` or `path:line-line` range sits within that file's length (`research-records`) |
+| `docs/` already covers the story | the research document says so and cites the files of `docs/` with `#file:`; the engine reads those citations, so a file they name must exist |
+| Check | output filled: not empty, different from the template, no `{{…}}` left. Research records after each attempt: the document cites a file of the working copy as `#file:<path from the repository root>[:start[-end]]` (an external source by its URL). Each `#file:` citation — forward or back slashes, a path named once however often it is cited — names a readable file of the working copy, and its `start` and `end` lines sit within that file's length. Text without `#file:` is no citation and is never checked (`research-records`) |
 | Attempts | 3 (the `max_attempts` default); then `missing-outputs`, or `research-records` when the document is there and its citations still fail |
 
 ## DESIGN <!-- #design -->
