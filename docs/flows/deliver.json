@@ -252,7 +252,7 @@
       "from": "deliver_review",
       "to": "deliver",
       "label": "NEEDS_REWORK",
-      "maxVisits": 3
+      "maxVisits": 2
     },
     {
       "id": "deliver_review->mutation",
@@ -635,7 +635,7 @@
           "from": "mutation_review",
           "to": "kill_mutants",
           "label": "NEEDS_REWORK",
-          "maxVisits": 3,
+          "maxVisits": 2,
           "multi": true
         },
         {

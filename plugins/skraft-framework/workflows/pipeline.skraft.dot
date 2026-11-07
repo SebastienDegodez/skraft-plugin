@@ -64,7 +64,7 @@ digraph skraft {
   design_review_lenses -> design_review_architecture_compliance -> design_review_refuter
   design_review_lenses -> design_review_fitness -> design_review_refuter
   design_review_refuter -> design_review
-  design_review -> design  [label="NEEDS_REWORK", max_visits=3]
+  design_review -> design  [label="NEEDS_REWORK", max_visits=2]
   design_review -> adr     [label="APPROVED"]
   adr -> distill   [label="RATIFIED"]
   adr -> design    [label="REJECTED", max_visits=1]
@@ -74,12 +74,12 @@ digraph skraft {
   distill_review_lenses -> distill_review_testability -> distill_review_refuter
   distill_review_lenses -> distill_review_boundary_enforcement -> distill_review_refuter
   distill_review_refuter -> distill_review
-  distill_review -> distill [label="NEEDS_REWORK", max_visits=3]
+  distill_review -> distill [label="NEEDS_REWORK", max_visits=2]
   distill_review -> deliver [label="APPROVED"]
   deliver -> gates
   gates -> deliver [label="FAIL", max_visits=3]
   gates -> deliver_review [label="PASS"]
-  deliver_review -> deliver [label="NEEDS_REWORK", max_visits=3]
+  deliver_review -> deliver [label="NEEDS_REWORK", max_visits=2]
   deliver_review -> mutation [label="APPROVED"]
   mutation -> visuals [label="PASS"]
   mutation -> kill_proposal [label="FAIL", max_visits=5]
@@ -88,7 +88,7 @@ digraph skraft {
   kill_mutants -> mutation_review_lenses
   mutation_review_lenses -> mutation_review_test_integrity -> mutation_review_refuter
   mutation_review_refuter -> mutation_review
-  mutation_review -> kill_mutants [label="NEEDS_REWORK", max_visits=3]
+  mutation_review -> kill_mutants [label="NEEDS_REWORK", max_visits=2]
   mutation_review -> mutation_gates [label="APPROVED"]
   mutation_gates -> kill_mutants [label="FAIL", max_visits=3]
   mutation_gates -> mutation [label="PASS"]

@@ -114,12 +114,12 @@ critère qui en interdit un.
 | **G6** | `architecture-compliance` | Le context map étiquette chaque relation entre contextes d'un pattern explicite (ACL, Conformist, Shared Kernel, Partnership, Open Host Service, Published Language). | high |
 | **G16** | `architecture-compliance` | Les interfaces comparables partagent la même forme d'état, de retour et d'erreur et les mêmes noms de champs, sauf divergence justifiée par un ADR. | high |
 | **G7** | `fitness` | Chaque story correspond à au moins une Command ou Query du modèle d'événements. | high |
-| **G8** | `fitness` | Chaque Command a au moins un événement de domaine pour son succès ; les Queries en sont exemptées. | high |
+| **G8** | `fitness` | Chaque Command d'un bounded context métier a au moins un événement de domaine pour son succès ; les Queries et les composants front (qui ne font que déclencher la Command d'un contexte métier) en sont exemptés. | high |
 | **G9** | `fitness` | Chaque agrégat, contexte, adoption d'Event Sourcing ou Saga remonte à une story qui l'exige. | medium |
 | **G11** | `fitness` | Tout ADR adoptant CQRS, Event Sourcing, Saga, cohérence éventuelle, découpage de service ou ACL cite une force admissible et évalue l'option « faire sans ». | high |
-| **G15** | `fitness` | Aucun ADR ne ratifie un socle déjà imposé par un skill `clean-architecture-*` ou un test d'architecture. | high |
+| **G15** | `fitness` | Aucun ADR ne ratifie un socle déjà imposé par un skill `clean-architecture-*` ou un test d'architecture, l'emplacement d'une interface de repository compris. | high |
 | **G17** | `fitness` | Chaque ADR de la passe décide d'une frontière de couche, d'une frontière d'agrégat, d'un contexte borné, d'un pattern ajoutant de la complexité ou d'une préoccupation transverse, et pèse un vrai compromis ; un autre sujet est `ADR-INFLATION`, aucune alternative pesée est `NON-DECISION`. | high |
-| **G18** | `fitness` | Chaque ADR de la passe tient une décision au niveau décision : ni signature complète, ni chemin de fichier, ni valeurs d'enum, ni inventaire de Value Objects, ni arbre de routes, ni référence de traçabilité (id de ticket, d'AC, de PRD ou d'exigence cité comme source) au-delà de la story déclencheuse. Un attribut de qualité cité avec sa mesure comme force de la décision est admis. | medium |
+| **G18** | `fitness` | Chaque ADR de la passe tient une décision au niveau décision : ni signature complète, ni valeurs d'enum, ni inventaire de Value Objects, ni arbre de routes, ni référence de traçabilité (user story, PRD ou id d'exigence), story déclencheuse comprise. Un attribut de qualité cité avec sa mesure comme force de la décision est admis. Un fichier de code, un critère d'acceptation, un ticket ou un autre ADR cité hors de la ligne `Supersedes:` ou `Amends:` est refusé par le moteur, pas par la lentille. | medium |
 | **F1** | `fitness` | Chaque attribut qualité que la story ou la recherche énonce a un élément de conception qui y répond. | high |
 
 **Contrôles du moteur.** Après chaque tentative de `solution-architect`, sans lentille

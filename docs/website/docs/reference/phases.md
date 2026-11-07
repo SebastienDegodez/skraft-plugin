@@ -92,8 +92,8 @@ Verdict: `review-verdict.mjs --phase discuss`, same rules and same budget as DIS
 | Inputs | the story (`plans/{date}/issue-<number>.md` when the run started with `--issue`); the durable documentation under `docs/`, read first |
 | Output | `research/{date}/{slug}-research.md`, pre-created from `research.template.md` |
 | Allowed writes | the tracking folder only |
-| `docs/` already covers the story | the research document says so and cites the files of `docs/`; the engine reads those citations, so a path it names must exist |
-| Check | output filled: not empty, different from the template, no `{{…}}` left. Research records after each attempt: every workspace path with a folder the document cites (a bare name is no citation) — forward or back slashes, named once however often it cites it, a folder and a path with a `.` or `..` segment left alone — is a readable file of the working copy, and every `path:line` or `path:line-line` range sits within that file's length (`research-records`) |
+| `docs/` already covers the story | the research document says so and cites the files of `docs/` with `#file:`; the engine reads those citations, so a file they name must exist |
+| Check | output filled: not empty, different from the template, no `{{…}}` left. Research records after each attempt: the document cites a file of the working copy as `#file:<path from the repository root>[:start[-end]]` (an external source by its URL). Each `#file:` citation — forward or back slashes, a path named once however often it is cited — names a readable file of the working copy (an absolute path, a path with a `..` segment or one in `.copilot-tracking/` is read nowhere and fails the same way), and its `start` and `end` lines sit within that file's length. A path written from a component root (`#file:src/…` for the `web` component) fails with its path from the repository root (`#file:web/src/…`), every component inside the repository that holds it named. Text without `#file:` is no citation and is never checked (`research-records`) |
 | Attempts | 3 (the `max_attempts` default); then `missing-outputs`, or `research-records` when the document is there and its citations still fail |
 
 ## DESIGN <!-- #design -->
@@ -112,7 +112,7 @@ Verdict: `review-verdict.mjs --phase discuss`, same rules and same budget as DIS
 | Allowed writes | the tracking folder, `docs/adr/`, `docs/architecture/` and `docs/domain/event-model/` |
 | Commits | none by the architect, which has no shell: once `design` is done, the engine commits what it changed under its allowed paths as `docs(<story>): design <story>`, ending with `Refs: #<issue>` when the story has one, and journals it as `committed` on the step's `step.recorded` |
 | Existing documentation | instruction to the agent: a file of `docs/` is completed, not rewritten. When `docs/` already covers the story, the consistency matrix says so and cites the files of `docs/`, and the phase moves on. Engine check: the matrix's `docs-relied-on:` line lists at least one file of `docs/adr`, `docs/architecture`, `docs/domain/event-model` or `docs/features`, and each listed file exists in the working copy |
-| Engine checks | DESIGN records after each attempt: a consistency matrix reading `consistency-gate: PASS` (G10), no ADR named `*-rejected.md`, `*-accepted.md`, `*-deprecated.md` or `*-superseded.md` (G14), each `**Supersedes:**` with its registry row (G2, G12), the `docs-relied-on:` line of the matrix (files of the durable `docs/` folders that exist); an index row for each ADR written (`design-records`); draft ADRs: `Proposed`, no version, a one-sentence `decision`, no draft history; ADRs on the base: only their status lines change, never deleted; a status of the closed set (`adr-lifecycle`) |
+| Engine checks | DESIGN records after each attempt: a consistency matrix reading `consistency-gate: PASS` (G10), no ADR named `*-rejected.md`, `*-accepted.md`, `*-deprecated.md` or `*-superseded.md` (G14), each `**Supersedes:**` with its registry row (G2, G12), the `docs-relied-on:` line of the matrix (files of the durable `docs/` folders that exist); an index row for each ADR written (`design-records`); draft ADRs: `Proposed`, no version, no code file, acceptance criterion identifier, ticket or other ADR cited (only the ADR it replaces, on its `Supersedes:`/`Amends:` line), a one-sentence `decision`, no draft history; ADRs on the base: only their status lines change, `Accepted` only to `Superseded by ADR-NNN` or `Deprecated`, never deleted; a status of the closed set (`adr-lifecycle`) |
 | Persistent failure | `missing-outputs` when the consistency matrix is missing after the last attempt, `design-records` otherwise |
 
 | Lens | Gates |
@@ -123,7 +123,7 @@ Verdict: `review-verdict.mjs --phase discuss`, same rules and same budget as DIS
 
 | Edge | Label | `max_visits` |
 | --- | --- | --- |
-| `design_review -> design` | `NEEDS_REWORK` | 1 |
+| `design_review -> design` | `NEEDS_REWORK` | 2 |
 | `design_review -> adr` | `APPROVED` | — |
 | `adr -> distill` | `RATIFIED` | — |
 | `adr -> design` | `REJECTED` (reason required, sent back to the architect) | 1 |
@@ -157,7 +157,7 @@ Verdict: `review-verdict.mjs --phase discuss`, same rules and same budget as DIS
 
 | Edge | Label | `max_visits` |
 | --- | --- | --- |
-| `distill_review -> distill` | `NEEDS_REWORK` | 3 |
+| `distill_review -> distill` | `NEEDS_REWORK` | 2 |
 | `distill_review -> deliver` | `APPROVED` | — |
 
 ## DELIVER <!-- #deliver -->
@@ -202,13 +202,13 @@ Verdict: `review-verdict.mjs --phase discuss`, same rules and same budget as DIS
 | --- | --- | --- |
 | `gates -> deliver` | `FAIL` | 3 |
 | `gates -> deliver_review` | `PASS` | — |
-| `deliver_review -> deliver` | `NEEDS_REWORK` | 3 |
+| `deliver_review -> deliver` | `NEEDS_REWORK` | 2 |
 | `deliver_review -> mutation` | `APPROVED` | — |
 | `mutation -> visuals` | `PASS` | — |
 | `mutation -> kill_proposal` | `FAIL` | 5 |
 | `kill_proposal -> mutation_plan` | — | — |
 | `mutation_plan -> kill_mutants` | `APPLY` (an instruction takes this edge too) | — |
-| `mutation_review -> kill_mutants` | `NEEDS_REWORK` | 3 |
+| `mutation_review -> kill_mutants` | `NEEDS_REWORK` | 2 |
 | `mutation_review -> mutation_gates` | `APPROVED` | — |
 | `mutation_gates -> kill_mutants` | `FAIL` | 3 |
 | `mutation_gates -> mutation` | `PASS` | — |

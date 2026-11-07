@@ -3,6 +3,22 @@
 Toutes les modifications notables de ce projet sont documentées ici.
 Format basé sur [Conventional Commits](https://www.conventionalcommits.org/) — versionnage [SemVer](https://semver.org/).
 
+## [2.0.0-alpha.72](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.71...v2.0.0-alpha.72) (2026-11-07)
+
+### 🐛 Bug Fixes
+
+* **engine:** an ADR cites no code file, acceptance criterion or ticket; a file's line is no version ([#547](https://github.com/SebastienDegodez/skraft-plugin/issues/547)) ([c0b26e7](https://github.com/SebastienDegodez/skraft-plugin/commit/c0b26e7c6327f8b665101353fb3226d342a88f11)), closes [#N](https://github.com/SebastienDegodez/skraft-plugin/issues/N) [AB#N](https://github.com/SebastienDegodez/AB/issues/N) [#500](https://github.com/SebastienDegodez/skraft-plugin/issues/500) [#500](https://github.com/SebastienDegodez/skraft-plugin/issues/500) [#500](https://github.com/SebastienDegodez/skraft-plugin/issues/500)
+
+## [2.0.0-alpha.71](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.70...v2.0.0-alpha.71) (2026-11-07)
+
+### 🐛 Bug Fixes
+
+* **engine:** a research citation is a [#file](https://github.com/SebastienDegodez/skraft-plugin/issues/file): citation, and only those are checked ([#548](https://github.com/SebastienDegodez/skraft-plugin/issues/548)) ([85d417a](https://github.com/SebastienDegodez/skraft-plugin/commit/85d417a7eeea6f7d2e792862eccc9a2c529c4c65)), closes [#517](https://github.com/SebastienDegodez/skraft-plugin/issues/517) [#8](https://github.com/SebastienDegodez/skraft-plugin/issues/8)
+
+### 📝 Documentation
+
+* **agents:** a check the engine performs has no twin in a review lens ([#544](https://github.com/SebastienDegodez/skraft-plugin/issues/544)) ([d7431bc](https://github.com/SebastienDegodez/skraft-plugin/commit/d7431bc26e6004f1db6cd8d35d9c42ebede12aa6))
+
 ## [2.0.0-alpha.70](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.69...v2.0.0-alpha.70) (2026-11-07)
 
 ### ✨ Features

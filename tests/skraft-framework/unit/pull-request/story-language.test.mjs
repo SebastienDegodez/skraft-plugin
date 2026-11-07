@@ -207,27 +207,27 @@ test('a French story\'s review, failed gate, decisions and costs are told in Fre
 
 test('a French story\'s review whose findings a human accepted at its ceiling shows them in French (#499)', async () => {
   const host = scripted({ config: CONSENTED, codeHost: french(), answers: [{ answer: 'ACCEPT' }] }, (it) => [
-    ...nominal(it, REFS_42).slice(0, 2), agent()(it), agent()(it), agent()(it), ...nominal(it, REFS_42).slice(2),
+    ...nominal(it, REFS_42).slice(0, 2), agent()(it), agent()(it), ...nominal(it, REFS_42).slice(2),
   ])
   const medium = says('consistency', 'fail', [finding('F1', 'medium', 'a read model is classified twice', { location: 'docs/architecture/payments.md:7' }), finding('F2', 'low', 'a typo', { location: 'docs/architecture/payments.md:9' })])
-  host.agentRunner.review = lenses({ consistency: [medium, medium, medium, medium] })
+  host.agentRunner.review = lenses({ consistency: [medium, medium, medium] })
 
   await host.start(FRENCH)
 
   const body = await bodyOf(host)
   assert.equal(opening(body, 'Revue'), '<details open><summary>Revue: 2 acceptés</summary>')
   assert.equal(section(body, 'Revue'), [
-    '**design_review** · 4 passes · lentilles reviewer · réfuteur standard', '',
+    '**design_review** · 3 passes · lentilles reviewer · réfuteur standard', '',
     FR_HEADER, FR_RULE,
     "| Accepté | medium | consistency · G1 Every structural commitment has an ADR (F1) | `docs/architecture/payments.md:7` | a read model is classified twice | un humain l'a accepté tel quel au plafond de la revue |",
     "| Accepté | low | consistency · G1 Every structural commitment has an ADR (F2) | `docs/architecture/payments.md:9` | a typo | un humain l'a accepté tel quel au plafond de la revue |",
   ].join('\n'))
 
   const one = scripted({ config: CONSENTED, codeHost: french(), answers: [{ answer: 'ACCEPT' }] }, (it) => [
-    ...nominal(it, REFS_42).slice(0, 2), agent()(it), agent()(it), agent()(it), ...nominal(it, REFS_42).slice(2),
+    ...nominal(it, REFS_42).slice(0, 2), agent()(it), agent()(it), ...nominal(it, REFS_42).slice(2),
   ])
   const low = says('consistency', 'fail', [finding('F2', 'low', 'a typo', { location: 'docs/architecture/payments.md:9' })])
-  one.agentRunner.review = lenses({ consistency: [low, low, low, low] })
+  one.agentRunner.review = lenses({ consistency: [low, low, low] })
   await one.start(FRENCH)
   assert.equal(opening(await bodyOf(one), 'Revue'), '<details open><summary>Revue: 1 accepté</summary>')
 })

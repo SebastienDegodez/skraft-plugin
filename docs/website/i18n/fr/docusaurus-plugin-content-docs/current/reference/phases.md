@@ -92,8 +92,8 @@ Verdict : `review-verdict.mjs --phase discuss`, mêmes règles et même budget q
 | Entrées | la story (`plans/{date}/issue-<numéro>.md` quand le run a démarré avec `--issue`) ; la documentation durable sous `docs/`, lue d'abord |
 | Sortie | `research/{date}/{slug}-research.md`, pré-créé depuis `research.template.md` |
 | Écriture permise | le dossier de suivi seulement |
-| `docs/` couvre déjà la story | le document de recherche le dit et cite les fichiers de `docs/` ; le moteur lit ces citations, donc un chemin qu'il nomme doit exister |
-| Contrôle | sortie remplie : non vide, différente du gabarit, sans `{{…}}`. Traces RESEARCH après chaque tentative : chaque chemin de la copie de travail avec un dossier que le document cite (un nom seul n'est pas une citation) — barres obliques ou inverses, nommé une seule fois quel que soit le nombre de citations, un dossier et un chemin à segment `.` ou `..` laissés de côté — est un fichier lisible, et chaque plage `chemin:ligne` ou `chemin:ligne-ligne` tient dans la longueur de ce fichier (`research-records`) |
+| `docs/` couvre déjà la story | le document de recherche le dit et cite les fichiers de `docs/` avec `#file:` ; le moteur lit ces citations, donc un fichier qu'elles nomment doit exister |
+| Contrôle | sortie remplie : non vide, différente du gabarit, sans `{{…}}`. Traces RESEARCH après chaque tentative : le document cite un fichier de la copie de travail sous la forme `#file:<chemin depuis la racine du dépôt>[:début[-fin]]` (une source externe par son URL). Chaque citation `#file:` — barres obliques ou inverses, un chemin nommé une seule fois quel que soit le nombre de citations — nomme un fichier lisible de la copie de travail (un chemin absolu, un chemin à segment `..` ou situé dans `.copilot-tracking/` n’est jamais lu et échoue de la même façon), et ses lignes `début` et `fin` tiennent dans la longueur de ce fichier. Un chemin écrit depuis la racine d'un composant (`#file:src/…` pour le composant `web`) échoue avec son chemin depuis la racine du dépôt (`#file:web/src/…`), chaque composant du dépôt qui le contient nommé. Un texte sans `#file:` n'est pas une citation et n'est jamais contrôlé (`research-records`) |
 | Tentatives | 3 (défaut de `max_attempts`) ; ensuite `missing-outputs`, ou `research-records` quand le document est là et que ses citations échouent encore |
 
 ## DESIGN <!-- #design -->
@@ -112,7 +112,7 @@ Verdict : `review-verdict.mjs --phase discuss`, mêmes règles et même budget q
 | Écriture permise | le dossier de suivi, `docs/adr/`, `docs/architecture/` et `docs/domain/event-model/` |
 | Commits | aucun par l'architecte, qui n'a pas de shell : une fois `design` réussi, le moteur commite ce qu'il a changé dans ses chemins permis en `docs(<story>): design <story>`, terminé par `Refs: #<issue>` quand la story en a une, et le journalise en `committed` sur le `step.recorded` de l'étape |
 | Documentation existante | consigne à l'agent : un fichier de `docs/` est complété, pas réécrit. Quand `docs/` couvre déjà la story, la matrice de cohérence le dit et cite les fichiers de `docs/`, et la phase passe à la suite. Contrôle du moteur : la ligne `docs-relied-on:` de la matrice liste au moins un fichier de `docs/adr`, `docs/architecture`, `docs/domain/event-model` ou `docs/features`, et chaque fichier listé existe dans la copie de travail |
-| Contrôles du moteur | traces DESIGN après chaque tentative : matrice de cohérence `consistency-gate: PASS` (G10), aucun ADR nommé `*-rejected.md`, `*-accepted.md`, `*-deprecated.md` ou `*-superseded.md` (G14), chaque `**Supersedes:**` avec sa ligne de registre (G2, G12), la ligne `docs-relied-on:` de la matrice (fichiers des dossiers durables de `docs/` qui existent) ; une ligne d'index pour chaque ADR écrit (`design-records`) ; ADR brouillons : `Proposed`, aucune version, un `decision` d'une phrase, aucun historique de brouillon ; ADR de la base : seules leurs lignes de statut changent, jamais supprimés ; un statut du jeu fermé (`adr-lifecycle`) |
+| Contrôles du moteur | traces DESIGN après chaque tentative : matrice de cohérence `consistency-gate: PASS` (G10), aucun ADR nommé `*-rejected.md`, `*-accepted.md`, `*-deprecated.md` ou `*-superseded.md` (G14), chaque `**Supersedes:**` avec sa ligne de registre (G2, G12), la ligne `docs-relied-on:` de la matrice (fichiers des dossiers durables de `docs/` qui existent) ; une ligne d'index pour chaque ADR écrit (`design-records`) ; ADR brouillons : `Proposed`, aucune version, aucun fichier de code, identifiant de critère d'acceptation, ticket ni autre ADR cité (seulement l'ADR qu'il remplace, sur sa ligne `Supersedes:`/`Amends:`), un `decision` d'une phrase, aucun historique de brouillon ; ADR de la base : seules leurs lignes de statut changent, `Accepted` seulement vers `Superseded by ADR-NNN` ou `Deprecated`, jamais supprimés ; un statut du jeu fermé (`adr-lifecycle`) |
 | Échec persistant | `missing-outputs` quand la matrice de cohérence manque après la dernière tentative, `design-records` sinon |
 
 | Lentille | Gates |
@@ -123,7 +123,7 @@ Verdict : `review-verdict.mjs --phase discuss`, mêmes règles et même budget q
 
 | Arête | Étiquette | `max_visits` |
 | --- | --- | --- |
-| `design_review -> design` | `NEEDS_REWORK` | 1 |
+| `design_review -> design` | `NEEDS_REWORK` | 2 |
 | `design_review -> adr` | `APPROVED` | — |
 | `adr -> distill` | `RATIFIED` | — |
 | `adr -> design` | `REJECTED` (raison obligatoire, renvoyée à l'architecte) | 1 |
@@ -157,7 +157,7 @@ ligne `**Status:**`, ligne de `docs/adr/decisions-index.md`) et les commite seul
 
 | Arête | Étiquette | `max_visits` |
 | --- | --- | --- |
-| `distill_review -> distill` | `NEEDS_REWORK` | 3 |
+| `distill_review -> distill` | `NEEDS_REWORK` | 2 |
 | `distill_review -> deliver` | `APPROVED` | — |
 
 ## DELIVER <!-- #deliver -->
@@ -202,13 +202,13 @@ ligne `**Status:**`, ligne de `docs/adr/decisions-index.md`) et les commite seul
 | --- | --- | --- |
 | `gates -> deliver` | `FAIL` | 3 |
 | `gates -> deliver_review` | `PASS` | — |
-| `deliver_review -> deliver` | `NEEDS_REWORK` | 3 |
+| `deliver_review -> deliver` | `NEEDS_REWORK` | 2 |
 | `deliver_review -> mutation` | `APPROVED` | — |
 | `mutation -> visuals` | `PASS` | — |
 | `mutation -> kill_proposal` | `FAIL` | 5 |
 | `kill_proposal -> mutation_plan` | — | — |
 | `mutation_plan -> kill_mutants` | `APPLY` (une consigne suit aussi cette arête) | — |
-| `mutation_review -> kill_mutants` | `NEEDS_REWORK` | 3 |
+| `mutation_review -> kill_mutants` | `NEEDS_REWORK` | 2 |
 | `mutation_review -> mutation_gates` | `APPROVED` | — |
 | `mutation_gates -> kill_mutants` | `FAIL` | 3 |
 | `mutation_gates -> mutation` | `PASS` | — |

@@ -195,7 +195,7 @@ distill -> distill_review_lenses
 distill_review_lenses -> distill_review_coverage -> distill_review_refuter
 distill_review_lenses -> distill_review_testability -> distill_review_refuter
 distill_review_refuter -> distill_review
-distill_review -> distill [label="NEEDS_REWORK", max_visits=3]
+distill_review -> distill [label="NEEDS_REWORK", max_visits=2]
 distill_review -> deliver [label="APPROVED"]
 ```
 
@@ -218,7 +218,7 @@ distill_review -> deliver [label="APPROVED"]
 ```dot
 deliver_review [shape=house, workflow="review", mandatory=true]
 gates -> deliver_review [label="PASS"]
-deliver_review -> deliver [label="NEEDS_REWORK", max_visits=3]
+deliver_review -> deliver [label="NEEDS_REWORK", max_visits=2]
 deliver_review -> mutation [label="APPROVED"]
 ```
 
@@ -331,20 +331,20 @@ from the predecessor.
 
 | Edge | Label | `max_visits` |
 | --- | --- | --- |
-| `design_review -> design` | `NEEDS_REWORK` | 1 |
+| `design_review -> design` | `NEEDS_REWORK` | 2 |
 | `design_review -> adr` | `APPROVED` | — |
 | `adr -> distill` | `RATIFIED` | — |
 | `adr -> design` | `REJECTED` | 1 |
-| `distill_review -> distill` | `NEEDS_REWORK` | 3 |
+| `distill_review -> distill` | `NEEDS_REWORK` | 2 |
 | `distill_review -> deliver` | `APPROVED` | — |
 | `gates -> deliver` | `FAIL` | 3 |
 | `gates -> deliver_review` | `PASS` | — |
-| `deliver_review -> deliver` | `NEEDS_REWORK` | 3 |
+| `deliver_review -> deliver` | `NEEDS_REWORK` | 2 |
 | `deliver_review -> mutation` | `APPROVED` | — |
 | `mutation -> visuals` | `PASS` | — |
 | `mutation -> kill_proposal` | `FAIL` | 5 |
 | `mutation_plan -> kill_mutants` | `APPLY` | — |
-| `mutation_review -> kill_mutants` | `NEEDS_REWORK` | 3 |
+| `mutation_review -> kill_mutants` | `NEEDS_REWORK` | 2 |
 | `mutation_review -> mutation_gates` | `APPROVED` | — |
 | `mutation_gates -> kill_mutants` | `FAIL` | 3 |
 | `mutation_gates -> mutation` | `PASS` | — |

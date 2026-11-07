@@ -9,19 +9,19 @@
 
 ## Research executed
 ### File analysis
-- {{workspace_relative_path}}
-  - {{finding}} ({{path}}:{{start}}-{{end}})
+- {{#file:path_from_repository_root}}
+  - {{finding}} ({{#file:path_from_repository_root:start-end}})
 ### Code search / graph
-- {{query}} -> {{matches_with_paths}}
+- {{query}} -> {{#file:path_of_each_match}}
 ### External research
 - {{tool}}: {{query_or_url}} -> {{finding}} (Source: {{url}})
 ### Project conventions
 - {{conventions_and_instructions_followed}}
-- Stack, test framework, project layout, and the files that declare build/test commands: {{paths}}
+- Stack, test framework, project layout, and the files that declare build/test commands: {{#file:path_of_each_file}}
 ### Existing tests
 | Test file | Test name | Behaviour covered |
 |---|---|---|
-| {{workspace_relative_path}} | {{test_name}} | {{behaviour}} |
+| {{#file:path_from_repository_root}} | {{test_name}} | {{behaviour}} |
 
 ## Key discoveries
 {{patterns_examples_pitfalls}}
@@ -34,5 +34,5 @@
 
 ## Handoff to DESIGN
 - Recommended approach + the decisions DESIGN must ratify.
-- Existing aggregates, use cases, interfaces and structural patterns DESIGN reuses: {{name}} -> {{path}}
+- Existing aggregates, use cases, interfaces and structural patterns DESIGN reuses: {{name}} -> {{#file:path_from_repository_root}}
 - Open questions that remain for the architect.

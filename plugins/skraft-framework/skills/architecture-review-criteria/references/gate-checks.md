@@ -71,9 +71,10 @@ contract; a pure-read story uses a Query.
 
 ## G8 — No dangling command
 
-Every Command has at least one domain event for its successful outcome. Queries are exempt.
+Every Command of a business bounded context has at least one domain event for its successful outcome. Queries are exempt. A front-end or UI component is exempt: it declares no Command of its own and only triggers a Command of a business context.
 
 - ✓ `CheckEligibility` → `EligibilityChecked` + `EligibilityDenied`.
+- ✓ The front component `eligibility-web` triggers `CheckEligibility` of the Eligibility context and declares no event: exempt.
 
 ## G9 — Nothing unjustified
 
@@ -125,10 +126,11 @@ An ADR decides a layer boundary, an aggregate boundary, a bounded context, a pat
 
 ## G18 — Decision level
 
-One decision per ADR, at decision level. Independent decisions in one body, a full signature (a contract sketch of up to 5 lines is fine), a file path, enum values, a Value Object inventory, a route tree, or a traceability reference (a ticket, AC, PRD or requirement id cited as a source) other than the story that triggered it is each a finding at its line. A quality attribute stated with its measure as a force of the decision (`p95 ≤ 300 ms`, NFR id beside it or not) is no finding.
+One decision per ADR, at decision level. Independent decisions in one body, a full signature (a contract sketch of up to 5 lines is fine), enum values, a Value Object inventory, a route tree, or a traceability reference (a user story, PRD or requirement id), the story that triggered the ADR included, is each a finding at its line. A quality attribute stated with its measure as a force of the decision (`p95 ≤ 300 ms`, NFR id beside it or not) is no finding.
 
 - ✗ "ADR-004's Decision lists `OrderStatus { Draft, Placed, Paid }` and `src/Domain/Order.cs`."
-- ✓ "ADR-004: model order status as a state machine inside the Order aggregate; the values live in the code."
+- ✗ "ADR-005's Context opens with `Raised by US-07, AC-2; see src/Domain/Order.cs:42`."
+- ✓ "ADR-004: We will model order status as a state machine inside the Order aggregate." The values, the files and the story stay out of the ADR.
 
 ## G16 — Comparable contracts share a convention
 

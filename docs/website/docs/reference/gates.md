@@ -113,12 +113,12 @@ every criterion that forbids one.
 | **G6** | `architecture-compliance` | The context map labels every relationship between contexts with an explicit pattern (ACL, Conformist, Shared Kernel, Partnership, Open Host Service, Published Language). | high |
 | **G16** | `architecture-compliance` | Comparable interfaces share the same state, return and error shape and exposed field names, unless an ADR justifies the divergence. | high |
 | **G7** | `fitness` | Every story maps to at least one Command or Query in the event model. | high |
-| **G8** | `fitness` | Every Command has at least one domain event for its successful outcome; Queries are exempt. | high |
+| **G8** | `fitness` | Every Command of a business bounded context has at least one domain event for its successful outcome; Queries and front-end components (which only trigger a business context's Command) are exempt. | high |
 | **G9** | `fitness` | Every aggregate, bounded context, Event Sourcing adoption or Saga traces to a story that requires it. | medium |
 | **G11** | `fitness` | Every ADR adopting CQRS, Event Sourcing, Saga, eventual consistency, a service split or an ACL cites an admissible force and evaluates the "do without" option. | high |
-| **G15** | `fitness` | No ADR ratifies a baseline already enforced by a `clean-architecture-*` skill or an architecture test. | high |
+| **G15** | `fitness` | No ADR ratifies a baseline already enforced by a `clean-architecture-*` skill or an architecture test, where a repository interface lives included. | high |
 | **G17** | `fitness` | Every ADR the pass wrote decides a layer boundary, an aggregate boundary, a bounded context, a pattern adding complexity or a cross-cutting concern, and weighs a real trade-off; another subject is `ADR-INFLATION`, no alternative weighed is `NON-DECISION`. | high |
-| **G18** | `fitness` | Every ADR the pass wrote holds one decision at decision level: no full signature, file path, enum values, Value Object inventory, route tree, or traceability reference (ticket, AC, PRD or requirement id cited as a source) beyond the triggering story. A quality attribute stated with its measure as a force of the decision is allowed. | medium |
+| **G18** | `fitness` | Every ADR the pass wrote holds one decision at decision level: no full signature, enum values, Value Object inventory, route tree, or traceability reference (user story, PRD or requirement id), the triggering story included. A quality attribute stated with its measure as a force of the decision is allowed. A code file, an acceptance criterion, a ticket or another ADR cited outside the `Supersedes:` or `Amends:` line is refused by the engine, not by the lens. | medium |
 | **F1** | `fitness` | Every quality attribute the story or research states has a design element that answers it. | high |
 
 **Engine checks.** After each `solution-architect` attempt, without a lens

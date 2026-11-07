@@ -235,8 +235,8 @@ design_review is blocked: a lens answered inconclusive; the verdict is in <track
 
 The agent run again gets what the block left first, then the instruction.
 
-A review whose loop to its producer reaches `max_visits` (3 for each review of the shipped
-workflow) is not sent back again. Its question says that the producer did not fix every
+A review whose loop to its producer reaches `max_visits` (2 for each review of the shipped
+workflow: 3 passes) is not sent back again. Its question says that the producer did not fix every
 finding, shows each blocker and high finding with its context (why that severity, the kind of
 drift, every place it holds at, the fix), the medium and low ones in a table, and where the
 verdict file is. With only medium and low findings left, it is the `review-ceiling` question:
@@ -247,14 +247,14 @@ the `blocked` question: those are never accepted. In both, an instruction runs t
 again with every finding, and `STOP` ends the run.
 
 ```
-design_review: design did not fix every finding after 4 passes, so the run does not send it back again.
+design_review: design did not fix every finding after 3 passes, so the run does not send it back again.
 
 Medium and low (1):
 | Severity | Finding | Where | What |
 |---|---|---|---|
 | medium | consistency F1 | docs/architecture/payments.md:7 | a read model is classified twice |
 
-Every finding with its context: <tracking folder>/reviews/design_review-4/verdict.yaml
+Every finding with its context: <tracking folder>/reviews/design_review-3/verdict.yaml
 ACCEPT takes these findings as they stand and goes on (they are listed in the run report and the pull request); an instruction runs design again with every finding and the instruction; STOP ends the run.
 ```
 
