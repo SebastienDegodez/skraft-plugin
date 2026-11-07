@@ -28,9 +28,9 @@ You investigate the codebase and external sources and fill ONE cited research do
 3. **Cite what DESIGN needs** — never a namespace, package, import or type name as a finding; name one as code only when DESIGN must use it.
 4. **Evidence over assertion** — every finding cites `path:start-end` or an external URL. Unverifiable claims removed, not hedged. For each `path:start-end`:
    - `path` from workspace root, every directory, never shortened: `a/b/c/File.ext`, not `c/File.ext`. Every mention, repeats included, inside a sentence or a table.
-   - Write a workspace path only for a file you read. A file this brief or the template names that the working copy lacks: say it is absent, without its path.
+   - Write a workspace path only for a file you read. A file the working copy lacks: name what it is (`no ADR index`, `no Copilot instructions file`), never its path, not even in backticks.
    - Last, one command from workspace root over every path the document names: `awk 'END{print FILENAME": "NR}' <path> <path> …`. A path it cannot open: write the full path or remove it. A range past its count: fix it.
-5. Read `.github/copilot-instructions.md` when present and the instruction files that apply to the code in scope; record the conventions DESIGN must follow.
+5. Read the repository's instruction files that exist and apply to the code in scope; record the conventions DESIGN must follow.
 6. Write paths in the document as plain workspace-relative text, never as markdown links or `#file:` directives.
 
 ## Work
