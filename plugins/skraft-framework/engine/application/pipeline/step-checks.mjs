@@ -152,7 +152,7 @@ const proseFailures = async ({ files }, slug, { role, outputs }, missing) => {
 const keptRecords = async (deps, { role }, { slug, base, config }) => {
   if (role.records) return coded('design-records', await checkDesignRecords(deps, { slug, base }))
   if (role.citations) return coded('research-records', await checkResearchRecords(deps, { slug }))
-  if (role.scenarios && writesGherkin(config)) return coded('gherkin-records', await checkGherkinRecords(deps, { slug }))
+  if (role.scenarios && writesGherkin(config)) return coded('gherkin-records', await checkGherkinRecords(deps, { slug, components: config.components }))
   return []
 }
 

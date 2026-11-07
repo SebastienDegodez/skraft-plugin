@@ -2,9 +2,10 @@
  * The DESIGN records the engine checks when the solution architect finishes, instead of a lens:
  *   G10       a consistency-matrix-<story>.md in the tracking folder, its consistency-gate PASS,
  *             a comment in brackets or after a dash allowed after it
- *   docs      its docs-relied-on line lists every file of docs/adr, docs/architecture, docs/domain/event-model
- *             or docs/features the story relies on, created or cited, and each listed file is a readable
- *             file of the working copy (#410)
+ *   docs      its docs-relied-on line lists every file of docs/adr, docs/architecture,
+ *             docs/domain/event-model, and every `.feature` wherever its component keeps it, the
+ *             story relies on, created or cited; each listed file is a readable file of the
+ *             working copy (#410)
  *   G14      no ADR the run wrote is named *-rejected.md, *-accepted.md, *-deprecated.md or
  *             *-superseded.md
  *   G2, G12   every `**Supersedes:** ADR-MMM` of an ADR the run wrote has its registry row, ADR
@@ -28,6 +29,8 @@ const GATE_PASS = /^\s*(?:[-*]\s+)?(?:\*\*)?consistency-gate:(?:\*\*)?\s*(?:\*\*
 const RELIED_LINE = /^\s*(?:[-*]\s+)?(?:\*\*)?docs-relied-on:(?:\*\*)?(.*)$/gim
 /** A path of a durable docs/ folder, starting at a path boundary: the value's start, a space, a comma, a backtick, a quote or a parenthesis. */
 const DOC_PATH = /(?<=^|[\s,`'"(])docs\/(?:adr|architecture|domain\/event-model|features)\/[^\s,;`'"()[\]]+/g
+/** A scenario the stories rely on, wherever its component keeps them: the extension names it, never a folder the engine picked. */
+const SCENARIO_PATH = /(?<=^|[\s,`'"(])[\w-][\w.\/-]*\.feature\b/g
 /** What a citation adds after the path: `#anchor`, `:line`, `:line:column`, trailing periods. */
 const CITED_SUFFIX = /(?:#.*|(?::\d+)+)?\.*$/
 const FILE_NAME = /[^/]$/
@@ -42,9 +45,12 @@ const ADR_ID = /ADR-(\d+)/gi
  */
 export const reliedOn = (text) => {
   const lines = [...(text ?? '').replaceAll('\\', '/').matchAll(RELIED_LINE)]
-  const cited = lines.flatMap((line) => line[1].match(DOC_PATH) ?? []).map((path) => path.replace(CITED_SUFFIX, ''))
+  const cited = lines.flatMap((line) => citedIn(line[1])).map((path) => path.replace(CITED_SUFFIX, ''))
   return [...new Set(cited.filter(isDurableFile))]
 }
+
+/** The paths one `docs-relied-on:` value names: the durable docs/ files, and the scenarios wherever they sit. @param {string} value */
+const citedIn = (value) => [...(value.match(DOC_PATH) ?? []), ...(value.match(SCENARIO_PATH) ?? [])]
 
 /** @param {string} path */
 const isDurableFile = (path) => FILE_NAME.test(path) && !path.split('/').some((part) => part === '.' || part === '..')
@@ -93,11 +99,11 @@ const matrixFailures = (matrices) => {
 }
 
 /**
- * Each matrix that lists no docs/ file, and each listed file the working copy lacks.
+ * Each matrix that lists no file at all, and each listed file the working copy lacks.
  * @param {Text[]} matrices @param {Text[]} relied
  */
 const reliedFailures = (matrices, relied) => [
-  ...matrices.filter(({ text }) => reliedOn(text).length === 0).map(({ path }) => `${path}: its docs-relied-on line lists no docs/ file the story relies on, created or cited (#410)`),
+  ...matrices.filter(({ text }) => reliedOn(text).length === 0).map(({ path }) => `${path}: its docs-relied-on line lists no file the story relies on, created or cited (#410)`),
   ...relied.filter(({ text, path }) => text === null).map(({ path }) => `docs-relied-on lists ${path}, which is no file of the working copy (#410)`),
 ]
 

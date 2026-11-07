@@ -270,3 +270,77 @@ test('a component that writes its tests without Gherkin is asked for no scenario
   assert.equal((await gherkin.start()).status, 'blocked', 'the same attempt, in a component that declares Gherkin, is sent back')
   assert.equal((await both.start()).status, 'blocked', 'one component writing Gherkin holds the story to its scenarios, whatever the others write')
 })
+
+test('the scenarios live where the component says: the folder of its pair, not a folder the engine picked', async () => {
+  const inTests = { ...API, bdd: [{ features: 'tests/Features', steps: 'tests/Steps' }] }
+  const named = runOf([designer({ features: { 'tests/Features/checkout/pay-by-card.feature': SCENARIO } })], [inTests])
+  const elsewhere = runOf([designer({ features: { [CARD]: SCENARIO } })], [inTests])
+
+  const outcome = await named.start()
+
+  assert.deepEqual(distill(named), [[1, 'done', null, []]], 'the plan names it, the component declares the folder, and the designer wrote it there')
+  assert.equal(outcome.status, 'done', outcome.reason)
+  assert.equal((await elsewhere.start()).status, 'blocked', 'a .feature under docs/features is nowhere this component reads')
+})
+
+test('the folder a component declares is the one the engine creates and the one the designer may write in, wherever it sits', async () => {
+  const apart = { ...API, bdd: [{ features: 'specs/features', steps: 'tests/Steps' }] }
+  const host = runOf([designer({ features: { 'specs/features/checkout/pay-by-card.feature': SCENARIO } })], [apart])
+
+  const outcome = await host.start()
+
+  assert.deepEqual(distill(host), [[1, 'done', null, []]], 'a folder outside src and tests is still the one the component reads, so the commit is in scope')
+  assert.equal(outcome.status, 'done', outcome.reason)
+  assert.equal(host.workspace.files.get('specs/features/.gitkeep'), '', 'the engine creates it before the attempt, so an agent whose tools only write into existing folders can')
+  assert.deepEqual(host.git.engineCommits.filter(({ message }) => message.startsWith('chore: create')).map(({ paths }) => paths), [['specs/features/.gitkeep']],
+    'the engine commits the folders it creates, and creates only those the configuration names')
+})
+
+const FRENCH = [
+  '# language: fr',
+  'Fonctionnalité: Payer par carte',
+  '',
+  '  Scénario: Un client fidèle paie un panier avec une carte valide',
+  '    Soit un client fidèle avec une carte valide',
+  '    Quand un panier de 10000 centimes est payé',
+  '    Alors le paiement est accepté pour 10000 centimes',
+  '',
+].join('\n')
+
+test('skraft reads Gherkin in English, and says so instead of reporting a file it cannot read as empty', async () => {
+  const foreign = runOf([designer({ features: { [CARD]: FRENCH } })])
+  const keywords = runOf([designer({ features: { [CARD]: FRENCH.replace('# language: fr\n', '') } })])
+
+  const outcome = await foreign.start()
+
+  const language = `${CARD} declares # language: fr; skraft reads Gherkin in English (Scenario:, Given/When/Then) (#541)`
+  assert.ok(distill(foreign).length > 0)
+  for (const [attempt, result, code, failures] of distill(foreign)) {
+    assert.deepEqual([result, code, failures], ['failed', 'gherkin-records', [language]],
+      `attempt ${attempt}: the language is the only reason given, since a file skraft cannot read says nothing about the story's coverage`)
+  }
+  assert.equal(outcome.status, 'blocked', outcome.reason)
+  await keywords.start()
+  assert.deepEqual(distill(keywords)[0][3], [`${CARD} opens no scenario; skraft reads Gherkin in English (Scenario:, Given/When/Then) (#541)`],
+    'without the header, the keywords are what skraft cannot read')
+
+  const declared = runOf([designer({ features: { [CARD]: `# language: en\n${SCENARIO}` } })])
+  await declared.start()
+  assert.deepEqual(distill(declared), [[1, 'done', null, []]], 'a file that declares the language skraft reads is read')
+})
+
+test('a story spanning two components is checked against the folders of both, each where its own component reads', async () => {
+  const web = { ...API, name: 'web', root: 'web', bdd: [{ features: 'features', steps: 'tests/Steps' }] }
+  const SHIP = 'web/features/checkout/ship.feature'
+  const shipping = SCENARIO.replace('Pay by card', 'Ship the basket').replace('pays a basket with a valid card', 'ships a paid basket')
+  const both = runOf([designer({ cited: ['pay-by-card.feature', 'ship.feature'], features: { [CARD]: SCENARIO, [SHIP]: shipping } })], [GHERKIN, web])
+  const half = runOf([designer({ cited: ['pay-by-card.feature', 'ship.feature'], features: { [CARD]: SCENARIO } })], [GHERKIN, web])
+
+  const outcome = await both.start()
+
+  assert.deepEqual(distill(both), [[1, 'done', null, []]], 'each .feature sits under the folder its own component names')
+  assert.equal(outcome.status, 'done', outcome.reason)
+  await half.start()
+  assert.deepEqual(distill(half)[0][3], [`${PLAN} names ship.feature, which is no .feature of the working copy (#524)`],
+    'the folder of the second component is read too, so what it does not hold is missing')
+})

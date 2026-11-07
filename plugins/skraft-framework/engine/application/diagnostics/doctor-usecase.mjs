@@ -146,19 +146,30 @@ const bddChecks = async (deps, component) => {
 const UNDECIDED = 'the component does not say whether it describes its behaviour in Gherkin; run /skraft-init, or write "bdd" in skraft-config.json'
 
 /**
- * One pair's line: where its runner reads, and the warning when the scenarios are written and the
- * folder that would bind them is no folder. A pair bound to nothing is read from the pair alone.
+ * One pair's line: where its runner reads, and a failure naming each folder of the pair that is no
+ * folder of the working copy — a path that names nothing holds no scenario and binds no step,
+ * whatever the gates say. A pair bound to nothing is read from the pair alone.
  * @param {DoctorDeps} deps @param {string} root @param {string} subject @param {BddPair} pair
  * @returns {Promise<DoctorCheck>}
  */
 const bddCheck = async (deps, root, subject, pair) => {
   const named = pair.runner === null ? '' : `${pair.runner}: `
+  const missing = await missingFolders(deps, root, pair)
+  if (missing.length > 0) return { subject, status: 'fail', detail: `${named}${listed(missing)} ${missing.length === 1 ? 'is no folder' : 'are no folders'} of the working copy` }
   if (pair.steps === null) return { subject, status: 'ok', detail: `${named}${pair.features}, bound to nothing` }
-  const written = await isFolder(deps, root, pair.features)
-  const binds = await isFolder(deps, root, pair.steps)
-  if (written && !binds) return { subject, status: 'warn', detail: `${named}${pair.features} holds scenarios and ${pair.steps} is no folder: nothing binds them` }
   return { subject, status: 'ok', detail: `${named}${pair.features} → ${pair.steps}` }
 }
+
+/** The folders of the pair the working copy has not got. @param {DoctorDeps} deps @param {string} root @param {BddPair} pair */
+const missingFolders = async (deps, root, { features, steps }) => {
+  // Stryker disable next-line ConditionalExpression: a pair that binds nothing names no second folder, and asking the port about the absent one asks about the component root, whose own check answers for it; both readings report the same missing folders
+  const named = steps === null ? [features] : [features, steps]
+  const found = await Promise.all(named.map((inner) => isFolder(deps, root, inner)))
+  return named.filter((_, index) => !found[index])
+}
+
+/** `a`, `a and b`: what a reader says out loud. @param {string[]} folders */
+const listed = (folders) => folders.join(' and ')
 
 /** Whether a folder of the component is a folder. @param {DoctorDeps} deps @param {string} root @param {string} inner */
 const isFolder = async (deps, root, inner) => (await deps.workspace.list(joinRelative(root, inner))) !== null

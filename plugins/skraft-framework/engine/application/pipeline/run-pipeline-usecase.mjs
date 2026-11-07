@@ -441,7 +441,7 @@ const openStart = (journal) => /** @type {import('../../domain/journal/run-state
  */
 const openAttempt = async (context, run, next, job) => {
   if (next.resumed?.heads) return next.resumed.heads
-  await createRoleFolders(context.deps, run, next.node)
+  await createRoleFolders(context, run, next.node)
   await precreate(context, job)
   await context.deps.files.write(context.slug, snapshotOf(job.result), JSON.stringify(await documentHashes(context)))
   const heads = await headsOf(context.deps, run.base)
@@ -490,10 +490,10 @@ const documentsWritten = async (context, { result, scan }) => {
  * writes its first ADR, event model and context map there. A folder the machine cannot list is
  * left to the checks that ask a human. A commit Git refuses leaves the files uncommitted, dirty
  * before the attempt, so never held against the agent.
- * @param {PipelineDeps} deps @param {RunState} run @param {WorkStep['node']} node
+ * @param {Context} context @param {RunState} run @param {WorkStep['node']} node
  */
-const createRoleFolders = async (deps, run, node) => {
-  const created = await missingFolders(deps, roleFolders(node))
+const createRoleFolders = async ({ deps, config }, run, node) => {
+  const created = await missingFolders(deps, roleFolders(node, config.components))
   if (created.length === 0) return
   await deps.sourceControl.commitFiles('.', created, engineMessage(`chore: create the folders ${node.agent} writes in`, issueOf(run.story)))
 }
@@ -653,9 +653,9 @@ const briefStack = ({ config }, run, role) => ({
  * @returns {import('../../domain/pipeline/dispatch-brief.mjs').BriefComponent}
  */
 const briefComponent = (component, sha) => {
-  const { name, root, stack, mocking, contractTesting, bdd, commands } = component
+  const { name, root, stack, mocking, contractTesting, bddPaths, commands } = component
   const gates = gatesOf(component).filter((gate) => gate !== 'mutation').map((gate) => ({ gate, line: withBase(commands[gate], sha) }))
-  return { name, root, stack, mocking: mocking.strategy, contractTesting, bdd, test: testLine(commands.test, sha), gates }
+  return { name, root, stack, mocking: mocking.strategy, contractTesting, bdd: bddPaths, test: testLine(commands.test, sha), gates }
 }
 
 /**
