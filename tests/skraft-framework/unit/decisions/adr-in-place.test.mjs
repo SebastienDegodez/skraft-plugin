@@ -214,7 +214,7 @@ test('an amendment of an ADR on the default branch is allowed; one of an unpubli
   assert.deepEqual(designRecords(refused)[0][4], [`${ADR_2} amends ADR-001, which is not on the default branch yet: edit ${ADR_1} in place instead`])
 })
 
-test('a supersession written as a **Supersedes:** line is judged as the header one: refused for an unpublished ADR, once, and allowed for a published one', async () => {
+test('a supersession written as a **Supersedes:** line is judged as the header one: refused for an unpublished ADR, once, and allowed for a published one, the line never read as a citation', async () => {
   const line = '**Supersedes:** [ADR-001](./adr-001-card-payment.md)'
   const registry = { 'docs/adr/supersessions.md': '| date | superseded ADR | new ADR | reason |\n| --- | --- | --- | --- |\n| 2026-10-11 | ADR-001 | ADR-002 | token choice |\n' }
   const tokens = adrText({ number: 2, title: 'Card tokens', body: line })
@@ -240,7 +240,7 @@ test('a supersession written as a **Supersedes:** line is judged as the header o
     ...refusal,
   ])
 
-  const allowed = scripted({ git: new InMemoryGit({ published: [ADR_1] }), files: { [ADR_1]: adrText({ status: 'Accepted' }) } }, (it) => [agent()(it), architect({ [ADR_2]: tokens, ...registry })(it)])
+  const allowed = scripted({ git: new InMemoryGit({ published: [ADR_1] }), files: { [ADR_1]: adrText({ status: 'Accepted' }) } }, (it) => [agent()(it), architect({ [ADR_2]: tokens.replace(line, '**Supersedes:** ADR-001 (docs/adr/adr-001-card-payment.md, #12)'), ...registry })(it)])
   await allowed.start()
   assert.deepEqual(designRecords(allowed), [[1, 1, 'done', null, []]])
 })

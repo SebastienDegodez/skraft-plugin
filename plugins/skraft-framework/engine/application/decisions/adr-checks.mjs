@@ -14,7 +14,8 @@ import { adrFiles } from './adr-ratification.mjs'
 
 /**
  * What the ADRs an attempt changed break. An ADR not on the run's base yet is edited in place,
- * stays Proposed until a human ratifies it, names no version, holds one decision and neither
+ * stays Proposed until a human ratifies it, names no version, cites no code file, acceptance
+ * criterion or ticket, holds one decision and neither
  * supersedes nor amends another unpublished one (#209). An ADR the base holds changes only its
  * status lines and is never deleted. Every ADR changed has a status of the closed set.
  * @param {AdrDeps} deps

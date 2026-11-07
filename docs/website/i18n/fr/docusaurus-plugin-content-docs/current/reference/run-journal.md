@@ -308,14 +308,17 @@ d'agent, chaque ADR modifié par la tentative et non publié doit :
   run, c'est le remettre en `Proposed`, et sa ratification est redemandée) ;
 - ne porter aucun champ d'en-tête `amended_by`, `amended_in_place` ou `superseded_by` ;
 - n'avoir aucune section d'historique (`## Historique`, `## History`, `## Erratum`, `## Amendments`, `## Changelog`, `## Revisions`, à toute profondeur de titre) ;
-- ne nommer aucune version, tag d'image, digest ni version de paquet dans le corps (`3.1.4`, `v3`, `node:20-alpine`, `react-router@6`) : nommer la technologie ou la capacité qu'elle apporte ;
+- ne nommer aucune version, tag d'image, digest ni version de paquet dans le corps (`3.1.4`, `node:20-alpine`, `react-router@6` ; une majeure écrite `v1`, une adresse ou une date n'en est pas) : nommer la technologie ou la capacité qu'elle apporte ;
+- ne citer aucun fichier de code dans le corps ni le `decision` (une citation `#file:`, un chemin terminé par une extension de fichier comme `src/Domain/Order.cs`, une citation de ligne comme `Order.cs:9`) : nommer le composant, le code bouge ; une citation de ligne n'est jamais lue comme une version, un nom pointé seul (`System.IO`, `Node.js`) et une URL ne sont pas des fichiers ;
+- ne citer aucun critère d'acceptation par son identifiant (`AC-3`, `AC 3`, `AC3`) ni aucun ticket (`#123`, `AB#123`, une URL d'issue, de pull request ou de work item) dans le corps ni le `decision` : l'ADR se lit seul, la story reste dans `decisions-index.md` ; les mots « critères d'acceptation » sans numéro, `C#`, la ligne de titre et les lignes `**Supersedes:**` et `**Amends:**` ne sont pas lus comme des citations ;
+- ne citer aucun autre ADR dans le corps ni le `decision`, ni `ADR-NNN` (seul ou en lien markdown) ni un chemin de `docs/adr/` : tout ADR peut être remplacé, une référence devient donc périmée. Le seul `ADR-NNN` qu'un ADR nomme est son propre numéro (titre, en-tête) et l'ADR qu'il remplace, sur sa ligne `**Supersedes:**` ou `**Amends:**` et son champ d'en-tête `supersedes:` ou `amends:`. Un manquement se lit `<path> cites ADR-012 outside its Supersedes/Amends line: an ADR names only the ADR it replaces; any other ADR may be superseded` ;
 - porter un en-tête `decision` d'une seule phrase ;
 - ne pas `supersedes` ni `amends` un autre ADR non publié, que le lien soit dans l'en-tête ou
   sur une ligne `**Supersedes:** ADR-MMM` : modifier celui-ci sur place.
 
 Tout ADR modifié par la tentative, publié ou non, porte un statut du jeu fermé : `Proposed`, `Accepted`, `Rejected`, `Deprecated`, `Superseded` ou `Superseded by ADR-NNN`, entier et en anglais, dans son en-tête et sa ligne `**Status:**` (`Superseded (partial)` est refusé : un remplacement partiel est un nouvel ADR qui amende l'ancien).
 
-**ADR publiés.** Un ADR de la base ne change que ses lignes `status`, `superseded_by` et `**Status:**`, comparées au texte de la base ; tout autre changement, ou sa suppression, est refusé. Un ADR publié se remplace ou s'amende toujours de la manière habituelle. Un manquement
+**ADR publiés.** Un ADR de la base ne change que ses lignes `status`, `superseded_by` et `**Status:**`, comparées au texte de la base ; tout autre changement, ou sa suppression, est refusé. Son statut suit son cycle de vie : un ADR `Accepted` ne devient que `Superseded by ADR-NNN` (l'en-tête peut dire `Superseded`) ou `Deprecated` ; un ADR `Rejected`, `Deprecated` ou `Superseded` garde son statut ; tout autre passage (`Accepted` → `Proposed`, `Accepted` → `Rejected`) est refusé. Son corps n'est jamais contrôlé pour ses citations : un ADR publié ne peut pas changer. Un ADR publié se remplace ou s'amende toujours de la manière habituelle. Un manquement
 refuse la tentative avec le code d'échec `adr-lifecycle` et une ligne par manquement, par
 exemple `docs/adr/adr-002-x.md supersedes ADR-001, which is not on the default branch yet:
 edit docs/adr/adr-001-y.md in place instead`. L'agent recommence avec ces lignes.
