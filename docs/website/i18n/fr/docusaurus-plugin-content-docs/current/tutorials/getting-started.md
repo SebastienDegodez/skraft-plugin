@@ -287,7 +287,8 @@ seul : `git log --oneline -1 -- docs/adr` montre `docs(adr): ratify ADR-001`.
 
 ## 8. DISTILL et DELIVER <!-- #8-distill-and-deliver -->
 
-`acceptance-designer` écrit les scénarios (sous `docs/features/`) et le plan de test
+`acceptance-designer` écrit les scénarios (dans le dossier que nomme le `bdd` du composant) et le
+plan de test
 (`details/<AAAA-MM-JJ>/test-plan-checkout.md`) et commite les tests d'acceptation en échec. Quatre
 lentilles le revoient (coverage, business-alignment, testability, boundary-enforcement).
 
