@@ -231,15 +231,16 @@ const shop = () => {
 }
 
 /**
- * The publication consents of the tutorial repository, settled as its page settles them: it has no
- * remote, so it declines both. A run that publishes starts only once they are settled, so without
- * this the first `skraft` of a run is refused (`configuration-incomplete`).
+ * What the tutorial answers by hand, as its page answers it: the shop has no remote, so it declines
+ * both consents, and its tests are written without Gherkin, so it says so. Without either answer
+ * the first `skraft` of a run is refused (`configuration-incomplete`) and `skraft doctor` fails.
  * @param {string} cwd
  */
-const declinePublishing = (cwd) => {
+const answerAsThePageDoes = (cwd) => {
   const path = join(cwd, 'skraft-config.json')
   const config = JSON.parse(readFileSync(path, 'utf8'))
   config.publish = { pullRequest: false, visuals: false, questionVersions: { pullRequest: 2, visuals: 1 } }
+  for (const component of config.components) component.bdd = false
   writeFileSync(path, `${JSON.stringify(config, null, 2)}\n`)
 }
 
@@ -300,7 +301,7 @@ const shopCaptures = async () => {
   const init = await say(['init'])
   if (init.code !== 0) throw new Error(`skraft init: ${init.lines.join('\n')}`)
   writeSvg('terminal-init.svg', ['$ skraft init', ...init.lines], '~/shop', 'skraft init: skraft-config.json: web (javascript, web)')
-  declinePublishing(cwd)
+  answerAsThePageDoes(cwd)
   git('add', 'skraft-config.json', '.gitignore')
   git('commit', '-q', '-m', 'chore: describe the shop for skraft')
 
