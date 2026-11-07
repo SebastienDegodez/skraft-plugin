@@ -13,10 +13,6 @@
 const RESEARCH = /(^|\/)research\/[^/]+\/[^/]+\.md$/
 /** A token that could be a workspace path, including a trailing slash that marks a folder. */
 const TOKEN = /(?<=^|[\s,`'"(])[\w.-]+(?:\/[\w.-]+)+\/?/g
-/** A root-level filename, or a filename listed alone as a file-analysis citation. */
-const ROOT_FILE = /(?<=^|[\s,`'"(])[\w-]+\.[A-Za-z]\w{0,9}(?=$|[\s,`'"):])/g
-const FILE_ANALYSIS = /^### File analysis\s*([\s\S]*?)(?=^### |^## |(?![\s\S]))/gm
-const FILE_LIST_ITEM = /^\s*[-*]\s+([A-Za-z0-9_-]+)\s*$/gm
 /** A citation that closes a sentence keeps its full stop, which no file name ends with. */
 const FULL_STOP = /\.$/
 /** A path followed by `:line`, or by `:line-line` over a hyphen or a dash: what the document claims its file holds. */
@@ -37,21 +33,16 @@ export const isResearch = (path) => RESEARCH.test(path)
 export const citedPaths = (text) => [...new Set(tokensOf(text).map((token) => token.replace(FULL_STOP, '')))]
   .filter(isWorkspaceFile)
 
-/** Every path token or standalone file citation, back slashes read as separators. @param {string} text */
-// Stryker disable next-line ArrayDeclaration: a document that cites nothing gives a placeholder that names no file, as no citation does
-const tokensOf = (text) => {
-  const normalized = text.replaceAll('\\', '/')
-  const fileLists = [...normalized.matchAll(FILE_ANALYSIS)]
-    .flatMap(([, section]) => [...section.matchAll(FILE_LIST_ITEM)].map(([, path]) => path))
-  return [
-    ...(normalized.match(TOKEN) ?? []),
-    ...(normalized.match(ROOT_FILE) ?? []),
-    ...fileLists,
-  ]
-}
+/**
+ * Every token that names a folder and what it holds, back slashes read as separators. A name with
+ * no folder is no citation: the researcher writes each path from the workspace root, and a bare
+ * name (`System.IO`, `Program.cs`) cannot tell code from a file.
+ * @param {string} text
+ */
+const tokensOf = (text) => text.replaceAll('\\', '/').match(TOKEN) ?? []
 
 /** @param {string} path */
-const isWorkspaceFile = (path) => !path.endsWith('/') && (EXTENSION.test(path) || !path.includes('/')) && !path.startsWith(TRACKING) && !path.split('/').some((part) => part === '.' || part === '..')
+const isWorkspaceFile = (path) => !path.endsWith('/') && EXTENSION.test(path) && !path.startsWith(TRACKING) && !path.split('/').some((part) => part === '.' || part === '..')
 
 /**
  * The line ranges a research document cites: the citation as written, its path, and the last

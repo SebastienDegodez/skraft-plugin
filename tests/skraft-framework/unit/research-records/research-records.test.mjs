@@ -166,11 +166,9 @@ test('a citation of an existing folder ending in a slash does not send the resea
   assert.deepEqual(recorded(host)[0], [1, 'done', null, []])
 })
 
-test('citations of root and extensionless files are checked, and only absent paths send the researcher back', async () => {
-  const host = scripted({
-    files: { 'package.json': '{}', Dockerfile: 'FROM node:22' },
-  }, (it) => [
-    researcher(citing(['package.json:1', 'Dockerfile', 'missing.json:1', 'MissingFile']))(it),
+test('only a path with a folder is a citation: a bare name, a file or code alike, is never checked, and an absent path with a folder sends the researcher back', async () => {
+  const host = scripted({ files: { 'package.json': '{}' } }, (it) => [
+    researcher(`${citing(['package.json:9', 'missing.json:1', 'MissingFile', 'src/Pricing/Missing.cs'])}The domain uses no \`System.IO\`, \`java.util\` or \`process.env\`; Node.js and ASP.NET run it, and Program.cs boots it.\n`)(it),
     researcher(citing([MAP]))(it),
     ...nominal(it).slice(1),
   ])
@@ -178,7 +176,7 @@ test('citations of root and extensionless files are checked, and only absent pat
   const outcome = await host.start()
 
   assert.deepEqual(recorded(host), [
-    [1, 'failed', 'research-records', [noFile('missing.json'), noFile('MissingFile')]],
+    [1, 'failed', 'research-records', [noFile('src/Pricing/Missing.cs')]],
     [2, 'done', null, []],
   ])
   assert.equal(outcome.status, 'done')
