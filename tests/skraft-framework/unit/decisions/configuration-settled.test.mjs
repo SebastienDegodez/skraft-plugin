@@ -75,6 +75,7 @@ test('a runner with nowhere to bind its steps starts nothing: the folder the pai
   const unbound = starting({ components: [{ ...API, bdd: [bound] }], config: { publish: SETTLED } })
   const written = starting({ components: [{ ...API, bdd: [bound] }], config: { publish: SETTLED }, files: { 'tests/Steps/PaySteps.cs': '[Binding]' } })
   const noRunner = starting({ components: [{ ...API, bdd: [{ features: 'docs/features', steps: 'tests/Steps' }] }], config: { publish: SETTLED } })
+  const bindsNothing = starting({ components: [{ ...API, bdd: [{ runner: 'reqnroll', features: 'docs/features' }] }], config: { publish: SETTLED } })
 
   const refused = await unbound.start()
 
@@ -88,6 +89,7 @@ test('a runner with nowhere to bind its steps starts nothing: the folder the pai
   assert.deepEqual(unbound.agentRunner.dispatches, [], 'a runner that executes nothing spends no agent')
   assert.equal((await written.start()).status, 'done', 'the folder holds the bindings, so the run starts')
   assert.equal((await noRunner.start()).status, 'done', 'a pair that names no runner executes nothing anyway: the folder is the developer\'s business, not the run\'s')
+  assert.equal((await bindsNothing.start()).status, 'done', 'a runner whose pair leaves its bindings out is asked for no folder: nothing is asked of those scenarios')
 })
 
 test('a front end makes the screenshots consent part of what a run needs, named beside the others; without one it is not asked for', async () => {

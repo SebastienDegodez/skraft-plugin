@@ -162,6 +162,7 @@ const bddCheck = async (deps, root, subject, pair) => {
 
 /** The folders of the pair the working copy has not got. @param {DoctorDeps} deps @param {string} root @param {BddPair} pair */
 const missingFolders = async (deps, root, { features, steps }) => {
+  // Stryker disable next-line ConditionalExpression: a pair that binds nothing names no second folder, and asking the port about the absent one asks about the component root, whose own check answers for it; both readings report the same missing folders
   const named = steps === null ? [features] : [features, steps]
   const found = await Promise.all(named.map((inner) => isFolder(deps, root, inner)))
   return named.filter((_, index) => !found[index])

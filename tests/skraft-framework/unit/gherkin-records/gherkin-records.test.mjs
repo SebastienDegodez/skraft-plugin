@@ -323,6 +323,10 @@ test('skraft reads Gherkin in English, and says so instead of reporting a file i
   await keywords.start()
   assert.deepEqual(distill(keywords)[0][3], [`${CARD} opens no scenario; skraft reads Gherkin in English (Scenario:, Given/When/Then) (#541)`],
     'without the header, the keywords are what skraft cannot read')
+
+  const declared = runOf([designer({ features: { [CARD]: `# language: en\n${SCENARIO}` } })])
+  await declared.start()
+  assert.deepEqual(distill(declared), [[1, 'done', null, []]], 'a file that declares the language skraft reads is read')
 })
 
 test('a story spanning two components is checked against the folders of both, each where its own component reads', async () => {
