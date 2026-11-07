@@ -3,6 +3,12 @@
 Toutes les modifications notables de ce projet sont documentées ici.
 Format basé sur [Conventional Commits](https://www.conventionalcommits.org/) — versionnage [SemVer](https://semver.org/).
 
+## [2.0.0-alpha.74](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.73...v2.0.0-alpha.74) (2026-11-07)
+
+### 🐛 Bug Fixes
+
+* **design:** remove the contracts document ([#521](https://github.com/SebastienDegodez/skraft-plugin/issues/521)) ([#549](https://github.com/SebastienDegodez/skraft-plugin/issues/549)) ([d1df757](https://github.com/SebastienDegodez/skraft-plugin/commit/d1df7578cdf3f14f87a7b319885a662662834750)), closes [#500](https://github.com/SebastienDegodez/skraft-plugin/issues/500)
+
 ## [2.0.0-alpha.73](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.72...v2.0.0-alpha.73) (2026-11-07)
 
 ### 🐛 Bug Fixes
