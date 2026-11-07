@@ -79,7 +79,7 @@ Write each file named below in the date folder of the consistency matrix your br
 
    A Domain class a contract gives fields or a constructor holds at most two instance attributes and no bare primitive (Object Calisthenics rules 3 and 8, which DELIVER's review applies): wrap them in value objects, e.g. `Driver(birth: DateOfBirth, licence: DrivingLicense)`, never `Driver(dateOfBirth: DateOnly, licenseYears: int, isSuspended: bool)`. A Command, Query or Domain Event payload is exempt.
 
-8. **Consistency matrix** in the file your brief lists, one for all the stories (below). It lists every `docs/` file the stories rely on, created, changed or cited, on a `- docs-relied-on:` line (below). When the `docs/` files already cover a story, say so in it and cite them.
+8. **Consistency matrix** in the file your brief lists, one for all the stories (below). It lists every document the stories rely on, created, changed or cited, on a `- docs-relied-on:` line (below). When the documents already cover a story, say so in it and cite them.
 
 ## ADRs
 
@@ -109,7 +109,7 @@ The ADRs are the source of truth; the event model, the diagrams and the contract
 2. Treat as equal: `Value Object`, `ValueObject`, `VO`; `Aggregate Root`, `AggregateRoot`, `Aggregate`; `Domain Service`, `DomainService`; `Domain Event`, `DomainEvent`; `Read Model`, `ReadModel`. Never equal: `Command` and `Query`; `Entity` and `Value Object`; `Aggregate` and `Domain Service`.
 3. Classify each mismatch: `LABEL_DRIFT` (other wording), `CLASSIFICATION_DRIFT` (incompatible category), `STRUCTURAL_DRIFT` (the concept is missing from one artefact).
 4. On a label or classification drift, rewrite the descriptive artefact to the ADR's label, at most once per artefact, and log it in a `## Back-propagation journal` table (`Round | Concept | Artefact rewritten | Before → After | Trigger`). A change answering a review finding is not logged.
-5. Before the final verdict, write the line `- docs-relied-on: docs/architecture/context-map.md, docs/domain/event-model/payment.md`: every file the stories rely on, as repository-relative paths under docs/adr, docs/architecture, docs/domain/event-model or docs/features, forward slashes, comma separated, each an existing file of the working copy, at least one; several such lines add up.
+5. Before the final verdict, write the line `- docs-relied-on: docs/architecture/context-map.md, docs/domain/event-model/payment.md`: every file the stories rely on, as repository-relative paths under docs/adr, docs/architecture or docs/domain/event-model, plus any `.feature` wherever its component keeps it, forward slashes, comma separated, each an existing file of the working copy, at least one; several such lines add up.
 6. Fill the cells again. A row's Verdict is `PASS` when every cell agrees, `FAIL` otherwise. End with `## Final verdict` and the line `- consistency-gate: PASS` only when every row passes, `- consistency-gate: FAIL` otherwise.
 7. On a structural drift, or a classification drift that survives its rewrite:
    - the ADR is `Proposed`: rewrite the ADR or the artefact, whichever the stories and the feedback contradict, and fill the row again;
