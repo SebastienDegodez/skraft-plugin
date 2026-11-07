@@ -88,7 +88,7 @@ test('with no workflow designated, the plugin workflow runs and checks ok with i
         { from: 'start', to: 'research', label: null, maxVisits: null },
         { from: 'research', to: 'design', label: null, maxVisits: null },
         { from: 'design', to: 'design_review', label: null, maxVisits: null },
-        { from: 'design_review', to: 'design', label: 'NEEDS_REWORK', maxVisits: 3 },
+        { from: 'design_review', to: 'design', label: 'NEEDS_REWORK', maxVisits: 2 },
         { from: 'design_review', to: 'adr', label: 'APPROVED', maxVisits: null },
         { from: 'adr', to: 'distill', label: 'RATIFIED', maxVisits: null },
         { from: 'adr', to: 'design', label: 'REJECTED', maxVisits: 1 },
@@ -598,7 +598,7 @@ test('a review is a fan-out whose every branch runs one lens node into the same 
     },
     {
       what: 'a verdict edge on the fan-out',
-      dot: edit(BUILT_IN_WORKFLOW, ['design_review -> design  [label="NEEDS_REWORK", max_visits=3]', 'design_review_lenses -> design  [label="NEEDS_REWORK", max_visits=1]']),
+      dot: edit(BUILT_IN_WORKFLOW, ['design_review -> design  [label="NEEDS_REWORK", max_visits=2]', 'design_review_lenses -> design  [label="NEEDS_REWORK", max_visits=1]']),
       errors: [
         "edge design_review_lenses -> design: only an edge leaving a gate, a review's fan-in (shape=tripleoctagon), a call (shape=house) or an ask node takes a label",
         'edge design_review_lenses -> design: each branch of a fan-out holds exactly one lens node (shape=note), then the refuter',

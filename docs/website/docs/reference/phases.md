@@ -123,7 +123,7 @@ Verdict: `review-verdict.mjs --phase discuss`, same rules and same budget as DIS
 
 | Edge | Label | `max_visits` |
 | --- | --- | --- |
-| `design_review -> design` | `NEEDS_REWORK` | 1 |
+| `design_review -> design` | `NEEDS_REWORK` | 2 |
 | `design_review -> adr` | `APPROVED` | — |
 | `adr -> distill` | `RATIFIED` | — |
 | `adr -> design` | `REJECTED` (reason required, sent back to the architect) | 1 |

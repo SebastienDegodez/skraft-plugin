@@ -123,7 +123,7 @@ Verdict : `review-verdict.mjs --phase discuss`, mêmes règles et même budget q
 
 | Arête | Étiquette | `max_visits` |
 | --- | --- | --- |
-| `design_review -> design` | `NEEDS_REWORK` | 1 |
+| `design_review -> design` | `NEEDS_REWORK` | 2 |
 | `design_review -> adr` | `APPROVED` | — |
 | `adr -> distill` | `RATIFIED` | — |
 | `adr -> design` | `REJECTED` (raison obligatoire, renvoyée à l'architecte) | 1 |
