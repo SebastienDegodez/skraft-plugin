@@ -307,26 +307,52 @@ const FRENCH = [
   '',
 ].join('\n')
 
-test('skraft reads Gherkin in English, and says so instead of reporting a file it cannot read as empty', async () => {
-  const foreign = runOf([designer({ features: { [CARD]: FRENCH } })])
+const ENGLISH_ONLY = 'skraft reads Gherkin in English (Scenario:, Given/When/Then) (#541)'
+
+/** The same French file, its header spaced as the Gherkin specification allows. @param {string} header */
+const headed = (header) => FRENCH.replace('# language: fr', header)
+
+/** A scenario whose step quotes a language header mid-line, where Gherkin opens no comment. */
+const QUOTING = [
+  'Feature: Pay later',
+  '',
+  '  Scenario: A returning customer reads the note printed on the slip',
+  '    Given a slip whose note reads # language: fr',
+  '    When a basket of 10000 cents is paid',
+  '    Then the payment is accepted for 10000 cents',
+  '',
+].join('\n')
+
+test('skraft reads Gherkin in English, however a file spaces its language header, and says so instead of reporting a file it cannot read as empty', async () => {
+  const transfer = 'docs/features/pay-by-transfer.feature'
+  const store = 'docs/features/pay-in-store.feature'
+  const spelt = ['pay-by-card.feature', 'pay-later.feature', 'pay-by-transfer.feature', 'pay-in-store.feature']
+  const foreign = runOf([designer({
+    cited: spelt,
+    features: { [CARD]: FRENCH, [LATER]: headed('  # language: fr'), [transfer]: headed('#language:fr'), [store]: headed('# language : fr') },
+  })])
   const keywords = runOf([designer({ features: { [CARD]: FRENCH.replace('# language: fr\n', '') } })])
 
   const outcome = await foreign.start()
 
-  const language = `${CARD} declares # language: fr; skraft reads Gherkin in English (Scenario:, Given/When/Then) (#541)`
+  const declares = [CARD, LATER, transfer, store].map((path) => `${path} declares # language: fr; ${ENGLISH_ONLY}`)
   assert.ok(distill(foreign).length > 0)
   for (const [attempt, result, code, failures] of distill(foreign)) {
-    assert.deepEqual([result, code, failures], ['failed', 'gherkin-records', [language]],
-      `attempt ${attempt}: the language is the only reason given, since a file skraft cannot read says nothing about the story's coverage`)
+    assert.deepEqual([result, code, failures], ['failed', 'gherkin-records', declares],
+      `attempt ${attempt}: indented, tight against the colon or spaced before it, the header is read, and the language is the only reason given, since a file skraft cannot read says nothing about the story's coverage`)
   }
   assert.equal(outcome.status, 'blocked', outcome.reason)
   await keywords.start()
-  assert.deepEqual(distill(keywords)[0][3], [`${CARD} opens no scenario; skraft reads Gherkin in English (Scenario:, Given/When/Then) (#541)`],
+  assert.deepEqual(distill(keywords)[0][3], [`${CARD} opens no scenario; ${ENGLISH_ONLY}`],
     'without the header, the keywords are what skraft cannot read')
 
-  const declared = runOf([designer({ features: { [CARD]: `# language: en\n${SCENARIO}` } })])
+  const declared = runOf([designer({
+    cited: ['pay-by-card.feature', 'pay-later.feature'],
+    features: { [CARD]: `# language: en\n${SCENARIO}`, [LATER]: QUOTING },
+  })])
   await declared.start()
-  assert.deepEqual(distill(declared), [[1, 'done', null, []]], 'a file that declares the language skraft reads is read')
+  assert.deepEqual(distill(declared), [[1, 'done', null, []]],
+    'a file that declares the language skraft reads is read, and a step quoting a header where no comment opens declares nothing')
 })
 
 test('a story spanning two components is checked against the folders of both, each where its own component reads', async () => {

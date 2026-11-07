@@ -123,7 +123,7 @@ test('an architect that finds the story covered by the design documents already 
 test('an architect that relies on the scenarios of a component cites them where that component keeps them, not where the engine once looked', async () => {
   const inTests = { ...API, bdd: [{ features: 'tests/Features', steps: 'tests/Steps' }] }
   const written = { 'tests/Features/payment/pay-by-card.feature': 'Feature: Pay\n' }
-  const cited = citing('- docs-relied-on: tests/Features/payment/pay-by-card.feature')
+  const cited = citing('- docs-relied-on:tests/Features/payment/pay-by-card.feature')
   const missing = citing('- docs-relied-on: tests/Features/payment/pay-later.feature')
   const host = scripted({ components: [inTests], files: written }, (it) => [agent()(it), cited(it), ...nominal(it).slice(2)])
   const sentBack = scripted({ components: [inTests], files: written }, (it) => [agent()(it), missing(it), cited(it), ...nominal(it).slice(2)])
