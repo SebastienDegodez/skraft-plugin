@@ -18,6 +18,8 @@ Never imports another driver.
 | `skraft doctor [--run] [--base <ref>] [--json]` | Doctor | 0 every check ok, 1 otherwise |
 | `skraft commands --json` | Not a use case: every usage line as data, from the same table as the dispatch and the usage (read by the `skraft` command of `@skraft/cli`) | 0, 2 malformed |
 | `skraft review --pr <n> [--publish] [--record] [--json]` | ReviewPullRequest through the agent loop: hands the lenses, then the refuter, over; `--record` hands their replies back; `--publish` keeps the verdict in one comment of the pull request once the consent is given at the terminal | 0 approved or dispatch, 1 otherwise |
+| `skraft journal show [--last <n>] [--json]` | Not a use case: the state of the active pipeline's hash chain, then its last entries (20 without `--last`) | 0, 1 chain broken or unverifiable |
+| `skraft mcp` | Not a use case: serves the commands below as MCP tools over stdin and stdout (see below) | 0 when the host closes stdin |
 
 A malformed command line prints the usage and exits 2.
 
@@ -35,3 +37,47 @@ did not write refuses with `loop-file-unreadable`): a dispatch asked again since
 question makes the run wait; the human answers with `skraft decide`, then the agent runs `next`.
 Lenses run one after the other. The journal is the one the Copilot workflow writes, without the
 models and costs the loop cannot know.
+
+## MCP server (`skraft mcp`)
+
+`mcp-server.mjs`, `mcp-tools.mjs`, `mcp-prompts.mjs`, `mcp-roots.mjs`: a transport of this driver,
+not another driver. JSON-RPC 2.0 over stdio, one message per line, no dependency; stdout carries
+only the protocol, the log goes to stderr. The host starts it from the plugin's `mcp.json`
+(Agent Plugins) or the `mcpServers` of `.claude-plugin/plugin.json` (Claude Code).
+
+Each tool builds an argv and calls `runCli` with a console that captures its lines: a tool runs
+the same code as the command. Calls run one after the other; stderr lines become
+`notifications/progress` when the call carries a `progressToken`.
+
+| Tool | Command | Annotations |
+| --- | --- | --- |
+| `skraft_doctor {run?, base?}` | `doctor [--run] [--base <ref>] --json` | idempotent |
+| `skraft_init {add?}` | `init [--add <folder>]...` | |
+| `skraft_start {slug, issue?, title?, base?, fromArtifacts?}` | `init <slug> ...` | |
+| `skraft_next` / `skraft_record` | `next --json` / `record --json` | |
+| `skraft_status` / `skraft_report` | `status --json` / `report --json` | read-only |
+| `skraft_journal {last?}` | `journal show [--last <n>] --json` | read-only |
+| `skraft_gate {all?}` | `gate [--all] --json` | |
+| `skraft_review {pr, record?}` | `review --pr <n> [--record] --json` | open world |
+| `skraft_workflow_check` / `skraft_workflow_diff` | `workflow check --json` / `workflow diff --json` | read-only |
+| `skraft_workflow_eject {review?}` | `workflow eject [review]` | |
+| `skraft_migrate` | `migrate --dry-run --json` | read-only |
+
+The agent loop (`skraft_start`, `skraft_next`, `skraft_record`, `skraft_review` and the `run` and
+`review` prompts) is offered only to a host that names itself `Visual Studio Code` or
+`Visual Studio Code - Insiders` at `initialize`: Copilot CLI and Claude Code run the pipeline and
+the review themselves, and an unknown host or one that gives no name falls back to the `node`
+loop. Hidden, such a tool or prompt is refused as unknown (-32602). Its description keeps it for
+the Skraft - Orchestrator agent.
+
+Every tool also takes `workspace`. The folder a tool runs in is a `file:` root the host lists
+(`roots/list`), else the directory the server started in when it lies outside the plugin; with
+several roots, `workspace` names one by path or folder name. No folder, several without
+`workspace`, or an unknown one: the call is refused and nothing runs. Unknown arguments are
+refused without echoing the value. A step's `then` names the next tool, not a command.
+
+What takes a person stays a command typed in a terminal: `decide`, `publish`,
+`review --publish`, `journal adopt`, `migrate` without `--dry-run`. The server answers
+`confirm` with `null`, so no tool records a human decision.
+
+Prompts: `init`, `run {slug, issue?}`, `status`, `review {pr}`; how a host names them is not measured yet.

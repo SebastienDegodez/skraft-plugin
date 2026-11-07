@@ -15,7 +15,7 @@ import { loopOwner } from './agent-loop.mjs'
  * @typedef {(ReviewOutcome | (Omit<ReviewOutcome, 'status'> & { status: 'dispatch' | 'refused' })) & { dispatches: LoopDispatch[], then: string | null }} ReviewStep
  *   dispatch: agents handed over, `then` records them; refused: the loop's own files stop it.
  * @typedef {{
- *   adapters: Omit<ReviewDeps, 'agentRunner' | 'human' | 'progress'>, command: string, log: (line: string) => void,
+ *   adapters: Omit<ReviewDeps, 'agentRunner' | 'human' | 'progress'>, then: import('./agent-loop.mjs').LoopThen, log: (line: string) => void,
  *   confirm: (question: string) => Promise<boolean | null>,
  * }} ReviewLoopDeps
  * @typedef {{ number: number, publish: boolean, record: boolean, workingCopyName: string }} ReviewCommand
@@ -107,14 +107,14 @@ const terminalHuman = (confirm) => Object.freeze({
 })
 
 /** The agents handed over, as the conducting agent starts them. @param {ReviewLoopDeps} deps @param {ReviewCommand} command @returns {Promise<ReviewStep>} */
-const handed = async ({ adapters, command: skraft }, command) => {
+const handed = async ({ adapters, then }, command) => {
   const slug = reviewSlug(command.number)
   const pending = /** @type {import('./loop-agent-runner.mjs').HandedDispatch[]} */ (await pendingDispatches(adapters.reviewFiles, slug))
   const at = (/** @type {string} */ path) => adapters.reviewFiles.location(slug, path)
   return {
     ...empty(command, 'dispatch', `start ${pending.length === 1 ? 'this agent' : `these ${pending.length} agents, one after the other`}, save each final reply as it is to its reply file, then record`),
     dispatches: pending.map(({ agent, model, brief, reply }) => ({ agent, model, brief: at(brief), reply: at(reply), prompt: `Your brief is the file ${at(brief)}. Read it whole and do what it asks. Your last message is the reply it asks for.` })),
-    then: `${skraft} review --pr ${command.number} --record${command.publish ? ' --publish' : ''}`,
+    then: then.review(command),
   }
 }
 

@@ -7,6 +7,7 @@ import { parseArgs, reportMarkdown, requiredFailures, runProbe, toolText } from 
 import { planIssueActions } from '../../../eng/host-probe/issues.mjs'
 import { CONFIGURED_MODELS, NATIVE_TOOLS, REFUSALS, WORKFLOWS_UNAVAILABLE, notRegistered, simulatedSdk } from './simulated-copilot-host.mjs'
 
+const SHARED_MCP_TOOLS = ['skraft_doctor', 'skraft_gate', 'skraft_init', 'skraft_journal', 'skraft_migrate', 'skraft_report', 'skraft_status', 'skraft_workflow_check', 'skraft_workflow_diff', 'skraft_workflow_eject']
 const FAST = { tools: 50, isolationTools: 50, poll: 10, settle: 0 }
 const ENVIRONMENT = { copilot: '1.0.100', sdk: 'test', node: 'v22', os: 'linux' }
 
@@ -56,6 +57,8 @@ test('on a host that behaves as the issues say, every host premise is measured, 
     'skraft-canvas-read-only': 'pass',
     'skraft-decide-one-question': 'pass',
     'decide-after-cd': 'fail',
+    'skraft-mcp-server-loaded': 'pass',
+    'skraft-mcp-loop-hidden': 'pass',
     'session-agents': 'pass',
     'copilot-models-available': 'pass',
     'skraft-tool-names-free': 'pass',
@@ -63,6 +66,8 @@ test('on a host that behaves as the issues say, every host premise is measured, 
     'plugin-command-input': 'pass',
     'skraft-command-listed': 'pass',
   })
+  assert.deepEqual(report.checks.find((item) => item.id === 'skraft-mcp-server-loaded').observed, { servers: [{ name: 'skraft', status: 'connected', sourcePlugin: 'skraft-framework' }], tools: SHARED_MCP_TOOLS })
+  assert.deepEqual(report.checks.find((item) => item.id === 'skraft-mcp-loop-hidden').observed, { offered: [] })
   assert.deepEqual(report.checks.find((item) => item.id === 'skraft-tool-names-free').observed, { native: ['bash', 'edit', 'view'], skraft: ['skraft_decide'], collisions: [] })
   assert.deepEqual(report.checks.find((item) => item.id === 'bad-tool-name-isolation').observed, { status: 'rpc-error', error: notRegistered('skraft-probe-iso') })
   const decided = report.checks.find((item) => item.id === 'decide-without-confirm')
@@ -230,6 +235,24 @@ test('a failed requirement opens one issue, unless an open issue already has its
 
   const known = new Set([opened[0].title])
   assert.deepEqual(planIssueActions(report, { openTitles: known }).filter((action) => action.kind === 'open').map((action) => action.check), ['skraft-workflow-registered', 'copilot-models-available'])
+})
+
+test('a host that names itself Visual Studio Code to the skraft MCP server is offered the agent loop: the loop check fails and opens an issue', async (t) => {
+  const { report, verdicts } = await probe(t, { mcpClient: 'Visual Studio Code' })
+
+  assert.deepEqual([verdicts['skraft-mcp-server-loaded'], verdicts['skraft-mcp-loop-hidden']], ['pass', 'fail'])
+  assert.deepEqual(report.checks.find((item) => item.id === 'skraft-mcp-loop-hidden').observed, { offered: ['skraft_next', 'skraft_record', 'skraft_review', 'skraft_start'] })
+  const opened = planIssueActions(report, { openTitles: new Set() }).filter((action) => action.kind === 'open')
+  assert.deepEqual(opened.map((action) => action.check), ['skraft-mcp-loop-hidden'])
+})
+
+test('a host that starts no MCP server from the plugin\'s mcp.json fails the server check, opens an issue, and leaves the loop check inconclusive', async (t) => {
+  const { report, verdicts } = await probe(t, { mcpClient: null })
+
+  assert.deepEqual([verdicts['skraft-mcp-server-loaded'], verdicts['skraft-mcp-loop-hidden']], ['fail', 'inconclusive'])
+  assert.deepEqual(report.checks.find((item) => item.id === 'skraft-mcp-server-loaded').observed, { servers: [], tools: [] })
+  const opened = planIssueActions(report, { openTitles: new Set() }).filter((action) => action.kind === 'open')
+  assert.deepEqual(opened.map((action) => action.check), ['skraft-mcp-server-loaded'])
 })
 
 test('a session snapshot that keeps the first directory after a change fails its requirement and opens an issue', async (t) => {

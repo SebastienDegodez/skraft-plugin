@@ -48,6 +48,38 @@ engine. The `skraft` command reads it for its session help (`help`, `help <comma
 completion (commands, sub-commands, options) and its "did you mean" on an unknown command.
 Code 0; any other argument: usage, code 2.
 
+## `skraft journal show [--last <n>] [--json]` <!-- #journal-show -->
+
+**Effect.** Reads the active pipeline's journal, `events.jsonl`, checks its hash chain and its
+signatures, and prints the state of the chain, then its last entries: each step recorded and each
+human decision. Writes nothing. `--last <n>` (a positive integer) sets how many entries; 20
+without it.
+
+**Output** (stdout):
+
+```
+<slug>: journal verified, 51 lines
+last 20 of 34 entries
+12  2026-11-02T10:04:11.000Z  research (RESEARCH, pass 1, attempt 1): done → design
+13  2026-11-02T10:09:30.000Z  adr-1: RATIFIED (by cli-tty)
+```
+
+The first line names the chain state, `verified`, `tampered`, `unverifiable` or `none`, then the
+line count and, when some are, how many lines this machine cannot verify. A `tampered`,
+`unverifiable` or `none` chain prints its reason on the second line. A step line reads
+`<line> <at> <step> (<phase>, pass <n>, attempt <n>): <outcome> → <next>`; a decision line
+`<line> <at> <key>: <answer> (by <who>)`.
+
+**`--json` output**: `{ "slug": string|null, "chain": { "state", "lines", "unverified", "reason" }, "entries": [...], "total": number }`.
+
+**Exit codes**: 0 for `verified` or `none` (no active pipeline), 1 for `tampered` or
+`unverifiable`, 2 for a malformed line.
+
+## `skraft mcp` <!-- #mcp -->
+
+Serves the commands of this page to an agent host as MCP tools, over stdin and stdout. The host
+starts it; a person never types it. Its tools, prompts and refusals: [MCP server](./mcp-server.md).
+
 ## `skraft journal adopt [--pr <number>]`
 
 **Effect.** Signs the active pipeline's journal on from here with a new key of this machine,
@@ -214,6 +246,7 @@ The last line is `skraft doctor: every check passed`, `skraft doctor: no check f
 ## See also <!-- #see-also -->
 
 - [The skraft command line](./cli.md)
+- [MCP server](./mcp-server.md)
 - [The DOT workflow](./workflow-dot.mdx)
 - [Install skraft on a host](../how-to/install-on-a-host.mdx)
 - [Migrate from v1](../how-to/migrate-from-v1.md)

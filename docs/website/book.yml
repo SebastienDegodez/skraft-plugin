@@ -690,8 +690,8 @@ parts:
       - id: usage
         title_fr: "Utiliser SKRAFT"
         title_en: "Using SKRAFT"
-        intro_fr: "Hôtes, commandes, workflow DOT, phases, configuration, journal d'un run, pull request et commentaires, canvas du backlog."
-        intro_en: "Hosts, commands, DOT workflow, phases, configuration, a run's journal, pull request and comments, backlog canvas."
+        intro_fr: "Hôtes, commandes, serveur MCP, workflow DOT, phases, configuration, journal d'un run, pull request et commentaires, canvas du backlog."
+        intro_en: "Hosts, commands, MCP server, DOT workflow, phases, configuration, a run's journal, pull request and comments, backlog canvas."
         sidebar_position: 1
         pages:
           - id: hosts
@@ -718,11 +718,19 @@ parts:
             doc: reference/cli-maintenance
             purpose_fr: "Ou skraft trouve le plugin, puis doctor, migrate, journal adopt, workflow et la liste des commandes."
             purpose_en: "Where skraft finds the plugin, then doctor, migrate, journal adopt, workflow and the commands listing."
+          - id: mcp-server
+            type: editorial
+            label_fr: "Serveur MCP"
+            label_en: "MCP server"
+            sidebar_position: 4
+            doc: reference/mcp-server
+            purpose_fr: "Le serveur MCP du plugin : comment l'hote le demarre, ses outils et prompts, ceux offerts par hote, le dossier de travail et les refus."
+            purpose_en: "The plugin's MCP server: how a host starts it, its tools and prompts, which a host is offered, the working folder and the refusals."
           - id: workflow-dot
             type: editorial
             label_fr: "Workflow DOT"
             label_en: "DOT workflow"
-            sidebar_position: 4
+            sidebar_position: 5
             doc: reference/workflow-dot
             purpose_fr: "La syntaxe des workflows .skraft.dot : formes de noeud, attributs, aretes, regles de validite, noeuds verrouilles et obligatoires, revues, noeud d'appel."
             purpose_en: "The syntax of .skraft.dot workflows: node shapes, attributes, edges, validity rules, locked and mandatory nodes, reviews, call node."
@@ -730,7 +738,7 @@ parts:
             type: editorial
             label_fr: "Phases"
             label_en: "Phases"
-            sidebar_position: 5
+            sidebar_position: 6
             doc: reference/phases
             purpose_fr: "Chaque phase de DISCOVER a PUBLISH : entrees, sorties et leurs chemins, agents, lentilles et gates, aretes de retour, decisions humaines."
             purpose_en: "Each phase from DISCOVER to PUBLISH: inputs, outputs and their paths, agents, lenses and gates, loop-back edges, human decisions."
@@ -738,7 +746,7 @@ parts:
             type: editorial
             label_fr: "skraft-config.json"
             label_en: "skraft-config.json"
-            sidebar_position: 6
+            sidebar_position: 7
             doc: reference/skraft-config
             purpose_fr: "Le schema complet de la configuration et de ses couches, ses regles de validation, les lignes de commande et les defauts de detection."
             purpose_en: "The full schema of the configuration and its layers, its validation rules, command lines and detection defaults."
@@ -746,7 +754,7 @@ parts:
             type: editorial
             label_fr: "Suivi et journal"
             label_en: "Tracking and journal"
-            sidebar_position: 7
+            sidebar_position: 8
             doc: reference/run-journal
             purpose_fr: "Le dossier de suivi, les artefacts par phase, la documentation durable écrite sous docs/, les événements de events.jsonl et tous les codes de refus et de blocage."
             purpose_en: "The tracking folder, the artifacts by phase, the durable documentation written under docs/, the events.jsonl events and every refusal and block code."
@@ -754,7 +762,7 @@ parts:
             type: editorial
             label_fr: "Pull request et commentaire de revue"
             label_en: "Pull request and review comment"
-            sidebar_position: 8
+            sidebar_position: 9
             doc: reference/pull-request
             purpose_fr: "Chaque section de la pull request ouverte par un run, le commentaire de details, le tableau de revue et ses statuts, et le commentaire de skraft review --publish."
             purpose_en: "Each section of the pull request a run opens, its run details comment, the review table and its statuses, and the comment of skraft review --publish."
@@ -762,7 +770,7 @@ parts:
             type: editorial
             label_fr: "Commentaires d'issue"
             label_en: "Issue comments"
-            sidebar_position: 9
+            sidebar_position: 10
             doc: reference/issue-comments
             purpose_fr: "Les deux commentaires que skraft garde sur l'issue d'une story : le suivi du run et la proposition de raffinement, chaque partie et quand agir."
             purpose_en: "The two comments skraft keeps on a story's issue: the run's progress comment and the refinement proposal, each part and when to act."
@@ -770,7 +778,7 @@ parts:
             type: editorial
             label_fr: "Canvas du backlog et carte des stories"
             label_en: "Backlog canvas and story map"
-            sidebar_position: 10
+            sidebar_position: 11
             doc: reference/backlog-canvas
             purpose_fr: "Chaque partie du canvas du backlog et de story-map.md : ce qu'elle contient, comment la lire, quand agir."
             purpose_en: "Each part of the backlog canvas and of story-map.md: what it holds, how to read it, when to act."

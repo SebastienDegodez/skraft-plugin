@@ -51,6 +51,39 @@ La commande `skraft` la lit pour l'aide de sa session (`help`, `help <commande>`
 par Tab (commandes, sous-commandes, options) et son « did you mean » sur une commande inconnue.
 Code 0 ; tout autre argument : l'usage, code 2.
 
+## `skraft journal show [--last <n>] [--json]` <!-- #journal-show -->
+
+**Effet.** Lit le journal du pipeline actif, `events.jsonl`, vérifie sa chaîne de hachage et ses
+signatures, puis affiche l'état de la chaîne et ses dernières entrées : chaque étape enregistrée et
+chaque décision humaine. N'écrit rien. `--last <n>` (un entier positif) fixe le nombre d'entrées ;
+20 sans lui.
+
+**Sortie** (stdout) :
+
+```
+<slug>: journal verified, 51 lines
+last 20 of 34 entries
+12  2026-11-02T10:04:11.000Z  research (RESEARCH, pass 1, attempt 1): done → design
+13  2026-11-02T10:09:30.000Z  adr-1: RATIFIED (by cli-tty)
+```
+
+La première ligne nomme l'état de la chaîne, `verified`, `tampered`, `unverifiable` ou `none`,
+puis le nombre de lignes et, s'il y en a, combien de lignes cette machine ne peut pas vérifier. Une
+chaîne `tampered`, `unverifiable` ou `none` affiche sa raison en deuxième ligne. Une ligne d'étape
+se lit `<ligne> <date> <étape> (<phase>, pass <n>, attempt <n>): <issue> → <suivante>` ; une ligne
+de décision `<ligne> <date> <clé>: <réponse> (by <qui>)`.
+
+**Sortie `--json`** : `{ "slug": string|null, "chain": { "state", "lines", "unverified", "reason" }, "entries": [...], "total": number }`.
+
+**Codes de sortie** : 0 pour `verified` ou `none` (aucun pipeline actif), 1 pour `tampered` ou
+`unverifiable`, 2 pour une ligne malformée.
+
+## `skraft mcp` <!-- #mcp -->
+
+Sert les commandes de cette page à un hôte d'agents comme outils MCP, sur stdin et stdout. L'hôte
+le démarre ; une personne ne la tape jamais. Ses outils, prompts et refus :
+[Serveur MCP](./mcp-server.md).
+
 ## `skraft journal adopt [--pr <number>]`
 
 **Effet.** Signe le journal du pipeline actif à partir d'ici avec une nouvelle clé de cette
@@ -224,6 +257,7 @@ La dernière ligne est `skraft doctor: every check passed`, `skraft doctor: no c
 ## Voir aussi <!-- #see-also -->
 
 - [La ligne de commande skraft](./cli.md)
+- [Serveur MCP](./mcp-server.md)
 - [Le workflow DOT](./workflow-dot.mdx)
 - [Installer skraft sur un hôte](../how-to/install-on-a-host.mdx)
 - [Migrer depuis la v1](../how-to/migrate-from-v1.md)

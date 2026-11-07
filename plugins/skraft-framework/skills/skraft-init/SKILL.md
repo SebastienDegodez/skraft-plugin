@@ -8,9 +8,15 @@ description: Use when the developer asks to initialise skraft in a working copy,
 You settle `skraft-config.json` with the developer, once, so that a run starts on `research` and
 asks nothing. Ask every question in this file; never guess an answer you could ask for.
 
-`<cli>` below is `node "<plugin folder>/engine/drivers/cli/skraft.mjs"`, the plugin folder being
-the one this skill sits in. Run it from the root of the working copy. Never type `skraft`: the
-developer may, you do not, and never search the disk for the plugin folder.
+When the host lists the skraft MCP tools, use them instead of `<cli>`: `skraft_init` for
+`<cli> init` (`{ add: [<folder>, …] }` for `--add`), `skraft_doctor` for `<cli> doctor`
+(`{ run: true }` for `--run`). Pass `workspace`, the absolute path of the root of the working
+copy, to every skraft tool call. When a skraft tool refuses, tell the developer its refusal and
+stop: never run `<cli>` or any `node` command in its place. Only when the host lists no skraft
+tool, `<cli>` below is
+`node "<plugin folder>/engine/drivers/cli/skraft.mjs"`, the plugin folder being the one this skill
+sits in. Run it from the root of the working copy. Never type `skraft`: the developer may, you do
+not, and never search the disk for the plugin folder.
 
 ## 1. The components
 

@@ -1,6 +1,7 @@
 // A simulated Copilot SDK for the host probe: sessions, tools, workflows and elicitation behave
 // as the issues the probe measures describe. The skraft extension is registered through the
 // real register, so the skraft checks measure the driver as it is.
+import { spawn } from 'node:child_process'
 import { existsSync, readdirSync, readFileSync } from 'node:fs'
 import { createServer } from 'node:http'
 import { basename, isAbsolute, join } from 'node:path'
@@ -27,7 +28,7 @@ export const notRegistered = (name) => `No workflow registered with name "${name
 export const NATIVE_TOOLS = Object.freeze(['bash', 'view', 'edit'])
 
 /**
- * @param {{ commands?: 'listed' | 'none' | 'duplicate', commandInput?: 'appended' | 'absent', preload?: 'preloads' | 'ignores' | 'everyone-knows', skraftLoads?: boolean, models?: string[], agents?: Array<{ id: string, name: string }>, refusals?: { model: string | null, effort: string | null }, staleSnapshot?: boolean, nativeTools?: string[], workflowRunError?: string | null, refuseCanvases?: boolean, canvasConfirmUnheard?: boolean, refuseCanvasOpen?: boolean, joinedElicitation?: boolean, dropCanvasQuery?: boolean, reopenFocusesOnly?: boolean, askedUnanswered?: boolean, undeclaredPhase?: 'listed' | 'throws' | 'ignored' | 'shifts' | 'forgets' }} [host]
+ * @param {{ commands?: 'listed' | 'none' | 'duplicate', commandInput?: 'appended' | 'absent', preload?: 'preloads' | 'ignores' | 'everyone-knows', skraftLoads?: boolean, models?: string[], agents?: Array<{ id: string, name: string }>, refusals?: { model: string | null, effort: string | null }, staleSnapshot?: boolean, nativeTools?: string[], workflowRunError?: string | null, refuseCanvases?: boolean, canvasConfirmUnheard?: boolean, refuseCanvasOpen?: boolean, joinedElicitation?: boolean, dropCanvasQuery?: boolean, reopenFocusesOnly?: boolean, askedUnanswered?: boolean, undeclaredPhase?: 'listed' | 'throws' | 'ignored' | 'shifts' | 'forgets', mcpClient?: string | null }} [host]
  *   commands: whether the plugins' com.github.copilot/commands/*.md files are listed (named by the plugin name rule),
  *   not listed, or listed twice; commandInput: whether a command's typed input reaches its prompt;
  *   refusals: what ctx.agent throws, null when it accepts the call; staleSnapshot: metadata.snapshot
@@ -40,21 +41,22 @@ export const NATIVE_TOOLS = Object.freeze(['bash', 'view', 'edit'])
  *   rpc.canvas.open gives back loses its query string; reopenFocusesOnly: rpc.canvas.open on an
  *   instance already open gives its snapshot back without calling the canvas's open; askedUnanswered: select and input reach the
  *   host's handler, but its answer never comes back (null); undeclaredPhase: what ctx.phase does with a
- *   title meta.phases does not declare (listed with no ordinal, throws, dropped, shifts: the declared phase opened after it loses its ordinal, or forgets: it is left out of the run detail)
+ *   title meta.phases does not declare (listed with no ordinal, throws, dropped, shifts: the declared phase opened after it loses its ordinal, or forgets: it is left out of the run detail);
+ *   mcpClient: the clientInfo.name the host gives the servers it starts from a plugin's mcp.json, null when it starts none
  */
-export const simulatedSdk = ({ preload = 'ignores', skraftLoads = true, models = CATALOGUE, agents, refusals = REFUSALS, staleSnapshot = false, home, nativeTools = NATIVE_TOOLS, workflowRunError = null, refuseCanvases = false, canvasConfirmUnheard = false, refuseCanvasOpen = false, joinedElicitation = true, dropCanvasQuery = false, reopenFocusesOnly = false, askedUnanswered = false, undeclaredPhase = 'listed', commands = 'listed', commandInput = 'appended' } = {}) => {
+export const simulatedSdk = ({ preload = 'ignores', skraftLoads = true, models = CATALOGUE, agents, refusals = REFUSALS, staleSnapshot = false, home, nativeTools = NATIVE_TOOLS, workflowRunError = null, refuseCanvases = false, canvasConfirmUnheard = false, refuseCanvasOpen = false, joinedElicitation = true, dropCanvasQuery = false, reopenFocusesOnly = false, askedUnanswered = false, undeclaredPhase = 'listed', commands = 'listed', commandInput = 'appended', mcpClient = 'GitHub Copilot CLI' } = {}) => {
   class CopilotClient {
     async start() {}
     async stop() { return [] }
     async listModels() { return models.map((id) => ({ id, name: id, capabilities: {} })) }
     async createSession(config) {
-      return simulatedSession(config, { preload, skraftLoads, agents, refusals, models, staleSnapshot, home, nativeTools, workflowRunError, refuseCanvases, canvasConfirmUnheard, refuseCanvasOpen, joinedElicitation, dropCanvasQuery, reopenFocusesOnly, askedUnanswered, undeclaredPhase, commands, commandInput }).ready
+      return simulatedSession(config, { preload, skraftLoads, agents, refusals, models, staleSnapshot, home, nativeTools, workflowRunError, refuseCanvases, canvasConfirmUnheard, refuseCanvasOpen, joinedElicitation, dropCanvasQuery, reopenFocusesOnly, askedUnanswered, undeclaredPhase, commands, commandInput, mcpClient }).ready
     }
   }
   return { CopilotClient, approveAll: () => ({ kind: 'approve-once' }) }
 }
 
-const simulatedSession = (config, { preload, skraftLoads, agents, refusals, models, staleSnapshot, home, nativeTools, workflowRunError, refuseCanvases, canvasConfirmUnheard, refuseCanvasOpen, joinedElicitation, dropCanvasQuery, reopenFocusesOnly, askedUnanswered, undeclaredPhase, commands: commandsHost, commandInput }) => {
+const simulatedSession = (config, { preload, skraftLoads, agents, refusals, models, staleSnapshot, home, nativeTools, workflowRunError, refuseCanvases, canvasConfirmUnheard, refuseCanvasOpen, joinedElicitation, dropCanvasQuery, reopenFocusesOnly, askedUnanswered, undeclaredPhase, commands: commandsHost, commandInput, mcpClient }) => {
   const atLoad = config.workingDirectory
   let mode = 'interactive'
   let tracked = null
@@ -204,6 +206,7 @@ const simulatedSession = (config, { preload, skraftLoads, agents, refusals, mode
     extensions: { list: async () => ({ extensions: [] }) },
     agent: { list: async () => ({ agents: agents ?? [...defaultAgents(), ...probeAgents()] }) },
     ...simulatedCommands(config.pluginDirectories, { commands: commandsHost, commandInput }),
+    mcp: simulatedMcp(config, mcpClient),
   }
   rpc.canvas = canvases.rpc
   const session = { rpc, disconnect: async () => { await canvases.closeAll() } }
@@ -348,3 +351,38 @@ const simulatedCommands = (pluginDirectories, { commands, commandInput }) => {
     skills: { list: async () => ({ skills: found.map((item) => ({ name: item.file, description: item.file, source: 'plugin', userInvocable: true, enabled: true, pluginName: item.plugin, argumentHint: item.hint })) }) },
   }
 }
+
+/** The MCP servers the plugins declare in mcp.json, `${PLUGIN_ROOT}` replaced, as one host plugin would start them. */
+const declaredServers = (pluginDirectories) => pluginDirectories
+  .filter((dir) => existsSync(join(dir, 'mcp.json')))
+  .flatMap((dir) => Object.entries(JSON.parse(readFileSync(join(dir, 'mcp.json'), 'utf8')).mcpServers ?? {})
+    .map(([name, server]) => ({ name, plugin: basename(dir), command: server.command, args: server.args.map((arg) => arg.replaceAll('${PLUGIN_ROOT}', dir)) })))
+
+/** `rpc.mcp.list` and `rpc.mcp.listTools`, as SDK 1.0.104 types them; listTools starts the real server and asks it. */
+const simulatedMcp = (config, clientName) => {
+  const servers = clientName === null ? [] : declaredServers(config.pluginDirectories)
+  return {
+    list: async () => ({ servers: servers.map(({ name, plugin }) => ({ name, status: 'connected', sourcePlugin: plugin })) }),
+    listTools: async ({ serverName }) => {
+      const server = servers.find(({ name }) => name === serverName)
+      if (!server) throw new Error(`MCP server ${serverName} is not connected`)
+      return { tools: (await askServer(server, config.workingDirectory, clientName)).map(({ name }) => ({ name, installationId: server.plugin })) }
+    },
+  }
+}
+
+/** Starts a stdio MCP server, initializes it under `clientName`, lists its tools and closes it. */
+const askServer = ({ command, args }, cwd, clientName) => new Promise((done, failed) => {
+  const child = spawn(command === 'node' ? process.execPath : command, args, { cwd, stdio: ['pipe', 'pipe', 'ignore'] })
+  let buffer = ''
+  child.on('error', failed)
+  child.stdout.on('data', (chunk) => {
+    buffer += chunk
+    const answer = buffer.split('\n').filter(Boolean).map((line) => JSON.parse(line)).find((message) => message.id === 2)
+    if (answer) { child.stdin.end(); done(answer.result?.tools ?? []) }
+  })
+  const send = (message) => child.stdin.write(`${JSON.stringify(message)}\n`)
+  send({ jsonrpc: '2.0', id: 1, method: 'initialize', params: { protocolVersion: '2025-06-18', capabilities: {}, clientInfo: { name: clientName, version: '0' } } })
+  send({ jsonrpc: '2.0', method: 'notifications/initialized' })
+  send({ jsonrpc: '2.0', id: 2, method: 'tools/list' })
+})

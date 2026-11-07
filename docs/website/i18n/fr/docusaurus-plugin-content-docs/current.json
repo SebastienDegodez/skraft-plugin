@@ -424,7 +424,7 @@
     "description": "The generated-index page title for category 'Using SKRAFT' in sidebar 'reference'"
   },
   "sidebar.reference.category.usage.link.generated-index.description": {
-    "message": "Hôtes, commandes, workflow DOT, phases, configuration, journal d'un run, pull request et commentaires, canvas du backlog.",
+    "message": "Hôtes, commandes, serveur MCP, workflow DOT, phases, configuration, journal d'un run, pull request et commentaires, canvas du backlog.",
     "description": "The generated-index page description for category 'Using SKRAFT' in sidebar 'reference'"
   },
   "sidebar.reference.category.catalogue": {
@@ -498,6 +498,10 @@
   "sidebar.reference.doc.reference/cli-maintenance": {
     "message": "Installation et maintenance",
     "description": "The label for the doc item 'Setup and maintenance' in sidebar 'reference', linking to the doc reference/cli-maintenance"
+  },
+  "sidebar.reference.doc.reference/mcp-server": {
+    "message": "Serveur MCP",
+    "description": "The label for the doc item 'MCP server' in sidebar 'reference', linking to the doc reference/mcp-server"
   },
   "sidebar.reference.doc.reference/workflow-dot": {
     "message": "Workflow DOT",
