@@ -3,6 +3,12 @@
 Toutes les modifications notables de ce projet sont documentées ici.
 Format basé sur [Conventional Commits](https://www.conventionalcommits.org/) — versionnage [SemVer](https://semver.org/).
 
+## [2.0.0-alpha.69](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.68...v2.0.0-alpha.69) (2026-11-07)
+
+### 🐛 Bug Fixes
+
+* **agents:** solution-researcher cites full paths with in-bounds line ranges ([#536](https://github.com/SebastienDegodez/skraft-plugin/issues/536)) ([2ca485c](https://github.com/SebastienDegodez/skraft-plugin/commit/2ca485c8599e34bd1763ee510fd4f9543fbad961))
+
 ## [2.0.0-alpha.68](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.67...v2.0.0-alpha.68) (2026-11-07)
 
 ### ✨ Features
