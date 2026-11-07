@@ -68,17 +68,31 @@ A refusal is an answer: a run then publishes nothing and is not held up.
 
 ## 5. BDD, per component
 
-Ask each component whether it describes its behaviour in Gherkin. Propose the answer from what you
-find, and say what you found:
+The engine has already looked. Each component of the Configuration view carries two lists, and you
+read them instead of searching the disk yourself: `bddPaths`, the pairs its file names — the
+stack's default when the file names none — and `bddFound`, the pairs the working copy actually
+holds, one per test project whose manifest names a BDD runner and whose folders hold both the
+`.feature` files and the bindings.
 
-- `.feature` files under `docs/features/` or under the component's test paths;
-- a BDD runner in its `test` command or its manifest (Reqnroll, SpecFlow, Cucumber, behave,
-  pytest-bdd, jest-cucumber).
+- **`bddFound` is not empty**: show those pairs, one line per pair, and ask the developer to confirm
+  them. Write them as `bdd` on a yes, and write a pair they correct as they give it. Say when they
+  differ from `bddPaths`, because that is the case where the file is wrong and nobody noticed.
+- **`bddFound` is empty and a test project names a BDD runner or holds a `.feature`**: the engine
+  found one half only. Ask where both folders are and write the pair. Never guess the missing one:
+  a folder the runner does not read holds scenarios nothing runs.
+- **Neither, and the component says nothing or `true`**: ask whether it describes its behaviour in
+  Gherkin. Declining writes `"bdd": false`. Accepting means naming the folders: ask for them and
+  write the pair. Do not accept the stack's default as an answer — a folder nobody chose is one the
+  runner may never read, and a component holding several test projects gets a default that belongs
+  to none of them.
+- **The component writes Gherkin and runs none of it**: write the pair with `features` only. The
+  scenarios live there as the story's specification, and nothing is asked of them.
 
-Found either: propose yes. Found neither: propose no.
+One pair per runner: a definition of one pair binds no step of another, so a component holding
+several test projects carries several pairs.
 
-Write `"bdd": false` only when the developer declines. An absent key already means yes, and the
-file stays as short as it can be.
+A component that accepts Gherkin leaves this step with a `bdd` list, never with an absent key: the
+key is absent only for a file no guided init has been through.
 
 Declining asks DISTILL for no `.feature`: the acceptance designer takes its scenarios from the test
 plan's `Scenario` column, and TDD runs as it always does. Accepting holds the component to its
@@ -103,4 +117,6 @@ again. Then tell the developer, in one line each:
 
 - which components were detected, with the gates each one can run;
 - what you wrote, and which file;
-- anything you left out, and what it costs them.
+- anything you left out, and what it costs them;
+- that `npm i -g @skraft/cli` gives them `skraft` for their own terminal, when it answers nothing
+  today. Never install it yourself, and keep using `<cli>`: the long line needs no install.

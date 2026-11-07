@@ -3,7 +3,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { execFileSync, spawnSync } from 'node:child_process'
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -15,7 +15,7 @@ import { frenchIssue, proposal } from './proposal-fixture.mjs'
 const skill = fileURLToPath(new URL('../../../plugins/skraft-backlog/skills/refinement-proposal/', import.meta.url))
 const node = (args, cwd) => spawnSync(process.execPath, args, { cwd, encoding: 'utf8' })
 
-test('resolve the documents, check the proposal, render the comment, then the issue counts as refined', () => {
+test('in a repository skraft was never initialised in: resolve the documents, check the proposal, render the comment, then the issue counts as refined', () => {
   const repo = mkdtempSync(join(tmpdir(), 'skraft-refine-'))
   try {
     mkdirSync(join(repo, 'docs/prd'), { recursive: true })
@@ -59,6 +59,10 @@ test('resolve the documents, check the proposal, render the comment, then the is
     writeFileSync(join(work, 'body.txt'), frenchIssue.body)
     const hash = execFileSync(process.execPath, [join(skill, 'scripts/refine-marker.mjs'), 'hash', '--title', frenchIssue.title, '--body-file', join(work, 'body.txt')], { encoding: 'utf8' }).trim()
     assert.ok(comment.endsWith(`<sub>skraft-refine v=${VERSION} hash=${hash}</sub>\n`))
+
+    // 6. Nothing above read a skraft-config.json, and nothing asked for one: refinement needs no key of it.
+    assert.ok(!existsSync(join(repo, 'skraft-config.json')), 'the flow ran through on a repository that holds no skraft-config.json')
+    for (const output of [docs.stdout, refused.stdout, rendered.stdout, comment]) assert.doesNotMatch(output, /skraft-init|not initialised/)
   } finally {
     rmSync(repo, { recursive: true, force: true })
   }

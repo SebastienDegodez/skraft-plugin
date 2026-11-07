@@ -32,6 +32,190 @@ test('a .NET repository alone gives one component with the .NET default commands
   assert.equal(result.reason, 'skraft-config.json: payment-authorization (dotnet, .)')
 })
 
+test('a .NET test project that holds Gherkin beside its bindings is proposed with the pair its runner reads, and the runner it found', async () => {
+  const components = await proposed({
+    'PaymentAuthorization.slnx': '<Solution />',
+    'src/Payment.Domain/Payment.Domain.csproj': '<Project />',
+    'tests/Payment.UnitTests/Payment.UnitTests.csproj': '<Project><ItemGroup><PackageReference Include="Reqnroll.xUnit" Version="3.3.4" /></ItemGroup></Project>',
+    'tests/Payment.UnitTests/Features/pay-by-card.feature': 'Feature: Pay by card\n',
+    'tests/Payment.UnitTests/Steps/PayByCardSteps.cs': '[Binding] public sealed class PayByCardSteps { }',
+  })
+
+  assert.deepEqual(components.map(({ name, bdd }) => ({ name, bdd })), [{
+    name: 'payment-authorization',
+    bdd: [{ runner: 'reqnroll', features: 'tests/Payment.UnitTests/Features', steps: 'tests/Payment.UnitTests/Steps' }],
+  }])
+})
+
+test('two test projects of one solution give one pair each, bound where each runner reads, and a project that shows its Gherkin without its bindings gives none', async () => {
+  const csproj = (runner) => `<Project><ItemGroup><PackageReference Include="${runner}" /></ItemGroup></Project>`
+  const components = await proposed({
+    'Shop.slnx': '<Solution />',
+    'src/Shop.Domain/Shop.Domain.csproj': '<Project />',
+    'tests/Cart.Tests/Cart.Tests.csproj': csproj('Reqnroll.xUnit'),
+    'tests/Cart.Tests/Features/cart.feature': 'Feature: Cart\n',
+    'tests/Cart.Tests/Steps/CartSteps.cs': '[Binding]',
+    'tests/Billing.Tests/Billing.Tests.csproj': csproj('SpecFlow.xUnit'),
+    'tests/Billing.Tests/Specs/billing.feature': 'Feature: Billing\n',
+    'tests/Billing.Tests/Bindings/BillingSteps.cs': '[Binding]',
+    'tests/Shipping.Tests/Shipping.Tests.csproj': csproj('Reqnroll.xUnit'),
+    'tests/Shipping.Tests/Features/shipping.feature': 'Feature: Shipping\n',
+  })
+
+  assert.deepEqual(components[0].bdd, [
+    { runner: 'specflow', features: 'tests/Billing.Tests/Specs', steps: 'tests/Billing.Tests/Bindings' },
+    { runner: 'reqnroll', features: 'tests/Cart.Tests/Features', steps: 'tests/Cart.Tests/Steps' },
+  ])
+})
+
+test('a project whose manifest names no BDD runner is proposed without a pair, and so is one whose runner has no Gherkin to read', async () => {
+  const withoutRunner = await proposed({
+    'Shop.slnx': '<Solution />',
+    'tests/Cart.Tests/Cart.Tests.csproj': '<Project><ItemGroup><PackageReference Include="xunit" /></ItemGroup></Project>',
+    'tests/Cart.Tests/Features/cart.feature': 'Feature: Cart\n',
+    'tests/Cart.Tests/Steps/CartSteps.cs': '[Binding]',
+  })
+  const withoutGherkin = await proposed({
+    'Shop.slnx': '<Solution />',
+    'tests/Cart.Tests/Cart.Tests.csproj': '<Project><ItemGroup><PackageReference Include="Reqnroll.xUnit" /></ItemGroup></Project>',
+    'tests/Cart.Tests/Steps/CartSteps.cs': '[Binding]',
+  })
+
+  assert.deepEqual([withoutRunner[0].bdd, withoutGherkin[0].bdd], [undefined, undefined])
+})
+
+const CSPROJ = (runner) => `<Project><ItemGroup><PackageReference Include="${runner}" /></ItemGroup></Project>`
+const GHERKIN = 'Feature: Shop\n'
+
+test('a project is proposed with the runner its manifest names, bound where the walk meets the bindings, whatever manifest names it', async () => {
+  const cases = [
+    { runner: 'cucumber-jvm', manifest: 'pom.xml', text: '<project><dependency><groupId>io.cucumber</groupId></dependency></project>', features: 'src/test/resources/features', steps: 'src/test/java/stepdefinitions', bound: 'ShopSteps.java' },
+    { runner: 'cucumber-jvm', manifest: 'build.gradle', text: "testImplementation 'io.cucumber:cucumber-java:7.18.0'", features: 'src/test/resources/features', steps: 'src/test/java/glue', bound: 'ShopGlue.java' },
+    { runner: 'cucumber-jvm', manifest: 'build.gradle.kts', text: 'testImplementation("io.cucumber:cucumber-java:7.18.0")', features: 'src/test/resources/features', steps: 'src/test/java/steps', bound: 'ShopSteps.java' },
+    { runner: 'pytest-bdd', manifest: 'pyproject.toml', text: '[project]\ndependencies = ["pytest-bdd==8.1.0"]\n', features: 'tests/features', steps: 'tests/step_defs', bound: 'test_shop.py' },
+    { runner: 'behave', manifest: 'requirements.txt', text: 'behave==1.2.6\n', features: 'features', steps: 'features/steps', bound: 'shop_steps.py' },
+    { runner: 'pytest-bdd', manifest: 'setup.py', text: 'setup(tests_require=["pytest-bdd"])\n', features: 'tests/features', steps: 'tests/steps', bound: 'test_shop.py' },
+    { runner: 'cucumber-js', manifest: 'package.json', text: JSON.stringify({ devDependencies: { '@cucumber/cucumber': '^11.0.0' } }), features: 'features', steps: 'features/step_definitions', bound: 'shop.steps.ts' },
+    { runner: 'jest-cucumber', manifest: 'package.json', text: JSON.stringify({ devDependencies: { 'jest-cucumber': '^4.5.0' } }), features: 'features', steps: 'features/steps', bound: 'shop.steps.js' },
+  ]
+
+  const found = []
+  for (const { manifest, text, features, steps, bound } of cases) {
+    const components = await proposed({ [manifest]: text, [`${features}/shop.feature`]: GHERKIN, [`${steps}/${bound}`]: 'bound' })
+    found.push(components[0].bdd)
+  }
+
+  assert.deepEqual(found, cases.map(({ runner, features, steps }) => [{ runner, features, steps }]))
+})
+
+test('a Python project is bound to behave when its requirements name the package itself, and not when a longer word merely holds the word', async () => {
+  const bddOf = async (requirements) => (await proposed({
+    'requirements.txt': requirements,
+    'features/login.feature': 'Feature: Login\n',
+    'features/steps/login_steps.py': 'from behave import given',
+  }))[0].bdd
+  const pair = [{ runner: 'behave', features: 'features', steps: 'features/steps' }]
+
+  assert.deepEqual(await bddOf('behave==1.2.6\n'), pair, 'the first line names it')
+  assert.deepEqual(await bddOf('pytest\nbehave\n'), pair, 'a later line names it')
+  assert.deepEqual(await bddOf('behave'), pair, 'the whole file is the name')
+  assert.equal(await bddOf('misbehave==0.1\n'), undefined, 'another package holds the word')
+})
+
+test('the walk stops before a project buried deeper than it goes, and before Gherkin buried deeper inside one', async () => {
+  const deepProject = await proposed({
+    'Shop.slnx': '<Solution />',
+    'a/b/c/d/e/Deep.Tests.csproj': CSPROJ('Reqnroll.xUnit'),
+    'a/b/c/d/e/Features/shop.feature': GHERKIN,
+    'a/b/c/d/e/Steps/ShopSteps.cs': '[Binding]',
+  })
+  const deepGherkin = await proposed({
+    'Shop.slnx': '<Solution />',
+    'tests/Shop.Tests/Shop.Tests.csproj': CSPROJ('Reqnroll.xUnit'),
+    'tests/Shop.Tests/a/b/c/d/e/shop.feature': GHERKIN,
+    'tests/Shop.Tests/Steps/ShopSteps.cs': '[Binding]',
+  })
+
+  assert.deepEqual([deepProject[0].bdd, deepGherkin[0].bdd], [undefined, undefined])
+})
+
+test('a project whose Gherkin and whose bindings each sit in two folders is proposed with the first of each the walk meets', async () => {
+  const components = await proposed({
+    'Shop.slnx': '<Solution />',
+    'tests/Shop.Tests/Steps/NewSteps.cs': '[Binding]',
+    'tests/Shop.Tests/Legacy/old.feature': GHERKIN,
+    'tests/Shop.Tests/Shop.Tests.csproj': CSPROJ('Reqnroll.xUnit'),
+    'tests/Shop.Tests/Features/new.feature': GHERKIN,
+    'tests/Shop.Tests/Bindings/OldSteps.cs': '[Binding]',
+  })
+
+  assert.deepEqual(components[0].bdd, [{ runner: 'reqnroll', features: 'tests/Shop.Tests/Features', steps: 'tests/Shop.Tests/Bindings' }])
+})
+
+test('the code a runner generates from the scenarios is no scenario: it sits beside them, and alone it shows none', async () => {
+  const beside = await proposed({
+    'Shop.slnx': '<Solution />',
+    'tests/Shop.Tests/Shop.Tests.csproj': CSPROJ('Reqnroll.xUnit'),
+    'tests/Shop.Tests/Features/shop.feature': GHERKIN,
+    'tests/Shop.Tests/Features/shop.feature.cs': '// generated by Reqnroll',
+    'tests/Shop.Tests/Steps/ShopSteps.cs': '[Binding]',
+  })
+  const alone = await proposed({
+    'Shop.slnx': '<Solution />',
+    'tests/Shop.Tests/Shop.Tests.csproj': CSPROJ('Reqnroll.xUnit'),
+    'tests/Shop.Tests/obj/Debug/shop.feature.cs': '// generated by Reqnroll',
+    'tests/Shop.Tests/Steps/ShopSteps.cs': '[Binding]',
+  })
+
+  assert.deepEqual(beside[0].bdd, [{ runner: 'reqnroll', features: 'tests/Shop.Tests/Features', steps: 'tests/Shop.Tests/Steps' }])
+  assert.equal(alone[0].bdd, undefined)
+})
+
+test('a runner named anywhere but in the project own manifest is not the runner the project runs', async () => {
+  const inProse = await proposed({
+    'Shop.slnx': '<Solution />',
+    'tests/Shop.Tests/Shop.Tests.csproj': CSPROJ('xunit'),
+    'tests/Shop.Tests/README.md': 'We write our scenarios with Reqnroll.',
+    'tests/Shop.Tests/Features/shop.feature': GHERKIN,
+    'tests/Shop.Tests/Steps/ShopSteps.cs': '[Binding]',
+  })
+  const inSettings = await proposed({
+    'Shop.slnx': '<Solution />',
+    'tests/Shop.Tests/Shop.Tests.csproj': CSPROJ('xunit'),
+    'tests/Shop.Tests/Shop.Tests.csproj.user': '<Project><Reqnroll /></Project>',
+    'tests/Shop.Tests/Features/shop.feature': GHERKIN,
+    'tests/Shop.Tests/Steps/ShopSteps.cs': '[Binding]',
+  })
+
+  assert.deepEqual([inProse[0].bdd, inSettings[0].bdd], [undefined, undefined])
+})
+
+test('neither the dependencies a project installs nor a folder it hides holds the scenarios the walk proposes', async () => {
+  const installed = await proposed({
+    'package.json': JSON.stringify({ devDependencies: { '@cucumber/cucumber': '^11.0.0' } }),
+    'features/step_definitions/shop.steps.js': 'bound',
+    'node_modules/@cucumber/cucumber/features/self-test.feature': GHERKIN,
+  })
+  const hidden = await proposed({
+    'requirements.txt': 'behave==1.2.6\n',
+    'features/steps/shop_steps.py': 'bound',
+    '.tox/py312/features/copied.feature': GHERKIN,
+  })
+
+  assert.deepEqual([installed[0].bdd, hidden[0].bdd], [undefined, undefined])
+})
+
+test('a project whose first manifest names no runner is read on to the one that does', async () => {
+  const components = await proposed({
+    'pyproject.toml': '[project]\nname = "shop"\n',
+    'requirements.txt': 'behave==1.2.6\n',
+    'features/login.feature': 'Feature: Login\n',
+    'features/steps/login_steps.py': 'bound',
+  })
+
+  assert.deepEqual(components[0].bdd, [{ runner: 'behave', features: 'features', steps: 'features/steps' }])
+})
+
 test('a .NET API and a React front in one working copy give two components', async () => {
   const components = await proposed({
     'services/payment-api/Payment.sln': '',

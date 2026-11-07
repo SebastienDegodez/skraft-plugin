@@ -41,7 +41,7 @@ for (const [fixture, stack, commands, paths, skills = []] of [
     assert.equal(doctor.status, 0, doctor.stdout)
     const lines = doctor.stdout.trim().split(/\r?\n/)
     assert.deepEqual(checksOf(lines).map((line) => line.split(': ')[0]), [
-      'ok    plugin', 'ok    node', 'ok    config', 'WARN  forge', ...commands.map((name) => `ok    ${fixture}/${name}`), ...skills, 'ok    models/claude-code', 'WARN  models/copilot', 'ok    vscode',
+      'ok    plugin', 'ok    node', 'ok    config', 'WARN  forge', ...commands.map((name) => `ok    ${fixture}/${name}`), `ok    ${fixture}/bdd`, ...skills, 'ok    models/claude-code', 'WARN  models/copilot', 'ok    vscode',
     ])
     assert.equal(lines.at(-1), `skraft doctor: no check failed, ${2 + skills.length} with a warning`)
     assert.match(lines[0], /^ok {4}plugin: skraft \S+$/)

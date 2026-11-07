@@ -6,9 +6,11 @@ import { readWorkflows } from '../workflow/load-workflow.mjs'
 import { findComponentSkills } from '../pipeline/component-skills.mjs'
 import { forgeCheck } from './forge-check.mjs'
 import { modelChecks } from './model-checks.mjs'
+import { joinRelative } from '../../domain/config/relative-path.mjs'
 
 /**
  * @typedef {import('../../domain/config/skraft-config.mjs').Component} Component
+ * @typedef {import('../../domain/config/skraft-config.mjs').BddPair} BddPair
  * @typedef {import('../../domain/config/skraft-config.mjs').SkraftConfig} SkraftConfig
  * @typedef {{ subject: string, status: 'ok' | 'warn' | 'fail', detail: string }} DoctorCheck
  *   subject: `node`, `config`, `forge`, `models`, `models/<host>`, `<component>`,
@@ -124,8 +126,37 @@ const componentChecks = async (deps, component, { run, baseSha }) => {
   /** @type {DoctorCheck[]} */
   const checks = gatesOf(component).length === 0 ? [{ subject: component.name, status: 'fail', detail: NO_GATE }] : []
   for (const name of commandNames(component)) checks.push(await commandCheck(deps, { component, name, run, baseSha }))
-  return [...checks, ...await skillChecks(deps, component)]
+  return [...checks, ...await bddChecks(deps, component), ...await skillChecks(deps, component)]
 }
+
+/**
+ * Where each runner of the component reads its scenarios; a component that declines Gherkin says
+ * nothing. A pair whose scenarios are written and whose bindings folder is not a folder is a
+ * warning: nothing binds them, the runner reports them undefined, and `test` still passes.
+ * @param {DoctorDeps} deps @param {Component} component @returns {Promise<DoctorCheck[]>}
+ */
+const bddChecks = async (deps, component) => {
+  const subject = `${component.name}/bdd`
+  return Promise.all(component.bddPaths.map((pair) => bddCheck(deps, component.root, subject, pair)))
+}
+
+/**
+ * One pair's line: where its runner reads, and the warning when the scenarios are written and the
+ * folder that would bind them is no folder. A pair bound to nothing is read from the pair alone.
+ * @param {DoctorDeps} deps @param {string} root @param {string} subject @param {BddPair} pair
+ * @returns {Promise<DoctorCheck>}
+ */
+const bddCheck = async (deps, root, subject, pair) => {
+  const named = pair.runner === null ? '' : `${pair.runner}: `
+  if (pair.steps === null) return { subject, status: 'ok', detail: `${named}${pair.features}, bound to nothing` }
+  const written = await isFolder(deps, root, pair.features)
+  const binds = await isFolder(deps, root, pair.steps)
+  if (written && !binds) return { subject, status: 'warn', detail: `${named}${pair.features} holds scenarios and ${pair.steps} is no folder: nothing binds them` }
+  return { subject, status: 'ok', detail: `${named}${pair.features} → ${pair.steps}` }
+}
+
+/** Whether a folder of the component is a folder. @param {DoctorDeps} deps @param {string} root @param {string} inner */
+const isFolder = async (deps, root, inner) => (await deps.workspace.list(joinRelative(root, inner))) !== null
 
 /**
  * The skills the component asks of the agents writing its tests that exist nowhere: a warning,

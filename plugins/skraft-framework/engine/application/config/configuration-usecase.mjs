@@ -9,6 +9,7 @@ import { loadWorkflow } from '../workflow/load-workflow.mjs'
 import { loadConfig } from './bases.mjs'
 import { remoteForge } from './forge.mjs'
 import { ignoreLocalConfig } from './local-config.mjs'
+import { bddPairs } from './bdd-detection.mjs'
 
 /**
  * Configuration — what a page shows of the configuration a run starts with, and the edit a
@@ -42,7 +43,20 @@ export const createConfiguration = (deps) => Object.freeze({
 const view = async (deps) => {
   const loaded = await loadConfig(deps)
   if (!loaded.ok) return loaded
-  return { ok: /** @type {const} */ (true), ...shown(/** @type {Loaded} */ (loaded)), forge: await forgeOf(deps, /** @type {Loaded} */ (loaded)), models: await modelsOf(deps, /** @type {Loaded} */ (loaded)) }
+  const seen = /** @type {Loaded} */ (loaded)
+  const page = shown(seen)
+  return { ok: /** @type {const} */ (true), ...page, components: await withFound(deps, page.components), forge: await forgeOf(deps, seen), models: await modelsOf(deps, seen) }
+}
+
+/**
+ * Each component with the pairs the working copy shows, beside those its file names. `skraft init`
+ * never looks at a component already listed, so without this a dialogue has nothing to confirm for
+ * one written before the key existed, and asks blind.
+ * @param {ConfigurationDeps} deps @param {Array<{ root: string }>} components
+ */
+const withFound = async (deps, components) => {
+  const found = await Promise.all(components.map(({ root }) => bddPairs(deps.workspace, root)))
+  return components.map((component, index) => ({ ...component, bddFound: found[index] }))
 }
 
 /**
@@ -70,7 +84,7 @@ const forgeNote = (loaded, edit) => {
 const shown = ({ config }) => ({
   confirmed: config.configurationConfirmed,
   files: { team: CONFIG_FILE, local: LOCAL_CONFIG_FILE },
-  components: config.components.map(({ name, root, stack, commands, mocking, contractTesting, bdd }) => ({ name, root, stack, commands, mocking: mocking.strategy, contractTesting, bdd })),
+  components: config.components.map(({ name, root, stack, commands, mocking, contractTesting, bdd, bddPaths }) => ({ name, root, stack, commands, mocking: mocking.strategy, contractTesting, bdd, bddPaths })),
   consents: EDITED_CONSENTS.map((key) => ({ key, value: config.publish[key], state: consentOf(config.publish, key) })),
   thresholds: Object.entries(MUTATION_BARS).map(([scope, bar]) => ({ scope, bar })),
   choices: choicesOf(config),

@@ -9,6 +9,12 @@ persona: tech-lead
 Decide which model, and which reasoning effort, each skraft agent runs on, on Claude Code and on
 Copilot.
 
+`/skraft-init` asks this once, when it settles the configuration: **standard**, where the plugin's
+tiers decide and nothing is written, or **explicit**, where each family names the model it runs on
+for each host — and whether the choice is the team's (`skraft-config.json`) or yours alone
+(`skraft-config.local.json`, which Git ignores). It writes no model you did not choose. The steps
+below are that same choice by hand, and they change what `/skraft-init` wrote.
+
 ## Prerequisites
 
 - A configured repository ([Configure the components](./configure-components.md)).
