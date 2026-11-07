@@ -133,6 +133,11 @@ Pour celui qui écrit du Gherkin, nommez les dossiers que son runner lit :
 `Scenario` du plan de test ; le TDD de DELIVER tourne comme toujours. Une liste tient le composant à
 ses scénarios en entier : c'est une pratique qui se déclare, pas une barre à baisser.
 
+Les dossiers sont là où DISTILL écrit et là où le moteur lit : l'acceptance designer les reçoit dans
+son brief, ne peut écrire que là, et le Gherkin qu'il écrit utilise des mots-clés anglais quelle que
+soit la langue des phrases. Un dossier qui n'existe pas fait échouer `skraft doctor`, et un runner
+dont le dossier `steps` manque refuse le run — il n'exécuterait rien.
+
 Une clé absente, et un `true` nu, ne répondent rien : aucun dossier n'est inventé depuis le stack,
 parce qu'un dossier que personne n'a choisi est un dossier que le runner peut ne jamais lire. Un run
 s'arrête alors avant son premier agent avec

@@ -130,6 +130,11 @@ For one that writes Gherkin, name the folders its runner reads:
 `Scenario` column; DELIVER's TDD runs as it always does. A list holds the component to its
 scenarios in full: it declares a practice, not a bar to lower.
 
+The folders are where DISTILL writes and where the engine reads: the acceptance designer is told
+them in its brief, may write only there, and the Gherkin it writes uses English keywords whatever
+language the sentences are in. A folder that does not exist fails `skraft doctor`, and a runner
+whose `steps` folder is missing refuses the run — it would execute nothing.
+
 An absent key, and a bare `true`, answer nothing: no folder is invented from the stack, because one
 nobody chose is one the runner may never read. A run then stops before its first agent with
 `skraft is not initialised: run /skraft-init (api: bdd is unanswered)`, and `skraft doctor` fails on
