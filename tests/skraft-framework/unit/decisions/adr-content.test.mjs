@@ -9,7 +9,7 @@ const pinned = (token) => `${ADR_1} names a version (${token}): name the technol
 const path = (token) => `${ADR_1} names a file of the code (${token}): name the component, the use case or the concept; files live in the research and the design`
 const tooMany = (count) => `${ADR_1} states its decision in ${count} sentences: keep one sentence and give each independent decision its own ADR`
 
-test('a draft ADR that pins a version, an image tag or a package is refused, one line per pin; rewritten with families it passes', async () => {
+test('a draft ADR that pins a version, an image tag or a package is refused, one line per pin, a major written vN is none; rewritten with families it passes', async () => {
   const host = scripted({ answers: [{ answer: 'RATIFIED' }] }, (it) => [
     agent()(it),
     architect({ [ADR_1]: adrText({ header: 'generator: skraft@1.15.3', body: 'We build on ubi8/ubi:8.9 and node:20-alpine, runtime:8.0-ubi8, digest sha256:ab12cd34, golang:1, node:18.4, ci:202610, react-router@6, release 2.1.0, SDK v3, API v2.1, and again 2.1.0.' }) })(it),
@@ -20,7 +20,7 @@ test('a draft ADR that pins a version, an image tag or a package is refused, one
   const outcome = await host.start()
 
   assert.deepEqual(designRecords(host), [
-    [1, 1, 'failed', 'adr-lifecycle', [pinned('ubi8/ubi:8.9'), pinned('node:20-alpine'), pinned('runtime:8.0-ubi8'), pinned('sha256:ab12cd34'), pinned('golang:1'), pinned('node:18.4'), pinned('ci:202610'), pinned('react-router@6'), pinned('2.1.0'), pinned('v3'), pinned('v2.1')]],
+    [1, 1, 'failed', 'adr-lifecycle', [pinned('ubi8/ubi:8.9'), pinned('node:20-alpine'), pinned('runtime:8.0-ubi8'), pinned('sha256:ab12cd34'), pinned('golang:1'), pinned('node:18.4'), pinned('ci:202610'), pinned('react-router@6'), pinned('2.1.0')]],
     [1, 2, 'done', null, []],
   ])
   assert.equal(outcome.status, 'done')

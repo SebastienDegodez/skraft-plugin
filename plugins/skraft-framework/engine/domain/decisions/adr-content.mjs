@@ -11,12 +11,11 @@ const PACKAGE_PIN = String.raw`[\w./-]+@[\^~]?\d[\w.]*`
 // version) and anything in a URL's authority (`//host:port`).
 const IMAGE_TAG = String.raw`(?<!\/\/[^\s/]*)\b[A-Za-z][\w.-]*(?:\/[\w.-]+)*:(?!\d{2,5}(?![\w-]|\.\d))[\w-]*\d[\w-]*(?:\.[\w-]+)*`
 const SEMVER = String.raw`\b\d+\.\d+\.\d+\b`
-const MAJOR = String.raw`(?<!\/)\b[vV]\d+(?:\.\d+)*\b`
 const BLOCK_INDICATOR = /^[>|][+-]?$/
 const BLOCK_LINES = /^[^\n]*(?:\r?\n[ \t]+\S[^\n]*)*/
 const SENTENCE_END = /(?<!\b(?:e\.g|i\.e|vs|etc|cf)\.)(?<=[.!?])\s+(?=[A-Z])/
 const CODE_SPAN = /`[^`]*`/g
-const PINS = new RegExp([PACKAGE_PIN, IMAGE_TAG, SEMVER, MAJOR].join('|'), 'g')
+const PINS = new RegExp([PACKAGE_PIN, IMAGE_TAG, SEMVER].join('|'), 'g')
 /** A path with a folder, or a file name with a line: what may name a file, its line or range kept, the full stop of its sentence left out. */
 const FILE_CITE = /(?<=^|[\s,`'"(])(?:[\w.-]+(?:[\\/][\w.-]*[\w-])+|[\w.-]*[\w-](?=:\d))(?::\d+(?:[-\u2013]\d+)?)?/g
 const FILE_NAME = /\.[A-Za-z]\w{0,9}$/
