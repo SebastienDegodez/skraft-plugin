@@ -324,3 +324,19 @@ test('skraft reads Gherkin in English, and says so instead of reporting a file i
   assert.deepEqual(distill(keywords)[0][3], [`${CARD} opens no scenario; skraft reads Gherkin in English (Scenario:, Given/When/Then) (#541)`],
     'without the header, the keywords are what skraft cannot read')
 })
+
+test('a story spanning two components is checked against the folders of both, each where its own component reads', async () => {
+  const web = { ...API, name: 'web', root: 'web', bdd: [{ features: 'features', steps: 'tests/Steps' }] }
+  const SHIP = 'web/features/checkout/ship.feature'
+  const shipping = SCENARIO.replace('Pay by card', 'Ship the basket').replace('pays a basket with a valid card', 'ships a paid basket')
+  const both = runOf([designer({ cited: ['pay-by-card.feature', 'ship.feature'], features: { [CARD]: SCENARIO, [SHIP]: shipping } })], [GHERKIN, web])
+  const half = runOf([designer({ cited: ['pay-by-card.feature', 'ship.feature'], features: { [CARD]: SCENARIO } })], [GHERKIN, web])
+
+  const outcome = await both.start()
+
+  assert.deepEqual(distill(both), [[1, 'done', null, []]], 'each .feature sits under the folder its own component names')
+  assert.equal(outcome.status, 'done', outcome.reason)
+  await half.start()
+  assert.deepEqual(distill(half)[0][3], [`${PLAN} names ship.feature, which is no .feature of the working copy (#524)`],
+    'the folder of the second component is read too, so what it does not hold is missing')
+})
