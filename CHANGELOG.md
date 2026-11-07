@@ -3,6 +3,16 @@
 Toutes les modifications notables de ce projet sont documentées ici.
 Format basé sur [Conventional Commits](https://www.conventionalcommits.org/) — versionnage [SemVer](https://semver.org/).
 
+## [2.0.0-alpha.78](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.77...v2.0.0-alpha.78) (2026-11-07)
+
+### 🐛 Bug Fixes
+
+* **agents:** agents that load a skill by name hold the skill tool ([#551](https://github.com/SebastienDegodez/skraft-plugin/issues/551)) ([8fbb8af](https://github.com/SebastienDegodez/skraft-plugin/commit/8fbb8af6783809d6ce90968cb68423a7093a5996)), closes [#8](https://github.com/SebastienDegodez/skraft-plugin/issues/8) [#8](https://github.com/SebastienDegodez/skraft-plugin/issues/8)
+
+### ♻️ Refactoring
+
+* **engine:** ADR lifecycle and link patterns keep only what a scenario asks for ([#553](https://github.com/SebastienDegodez/skraft-plugin/issues/553)) ([55d46c4](https://github.com/SebastienDegodez/skraft-plugin/commit/55d46c489472182f11e70ac4a7704f9763117c29)), closes [#500](https://github.com/SebastienDegodez/skraft-plugin/issues/500)
+
 ## [2.0.0-alpha.77](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.76...v2.0.0-alpha.77) (2026-11-07)
 
 ### 🐛 Bug Fixes
