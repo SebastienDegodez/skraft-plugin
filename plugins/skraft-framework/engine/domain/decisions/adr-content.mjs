@@ -117,7 +117,7 @@ const declaredStatuses = (text) => [field(text, 'status'), STATUS_LINE.exec(text
  * Deprecated, any other unchanged. A status outside the closed set is refused on its own.
  * @param {RegExp} moves @param {string | null | undefined} before @param {string | null | undefined} after
  */
-const allowedMove = (moves, before, after) => after === before || !STATUS.test(after ?? '') || (before === 'Accepted' && moves.test(after ?? ''))
+const allowedMove = (moves, before, after) => after === before || !STATUS.test(String(after)) || (before === 'Accepted' && moves.test(String(after)))
 
 /**
  * Each status change of an ADR on the default branch that its lifecycle forbids, once.
