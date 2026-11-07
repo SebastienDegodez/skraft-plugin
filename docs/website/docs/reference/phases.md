@@ -93,7 +93,7 @@ Verdict: `review-verdict.mjs --phase discuss`, same rules and same budget as DIS
 | Output | `research/{date}/{slug}-research.md`, pre-created from `research.template.md` |
 | Allowed writes | the tracking folder only |
 | `docs/` already covers the story | the research document says so and cites the files of `docs/`; the engine reads those citations, so a path it names must exist |
-| Check | output filled: not empty, different from the template, no `{{…}}` left. Research records after each attempt: every workspace path the document cites — forward or back slashes, named once however often it cites it, a folder and a path with a `.` or `..` segment left alone — is a readable file of the working copy, and every `path:line` or `path:line-line` range sits within that file's length (`research-records`) |
+| Check | output filled: not empty, different from the template, no `{{…}}` left. Research records after each attempt: every workspace path with a folder the document cites (a bare name is no citation) — forward or back slashes, named once however often it cites it, a folder and a path with a `.` or `..` segment left alone — is a readable file of the working copy, and every `path:line` or `path:line-line` range sits within that file's length (`research-records`) |
 | Attempts | 3 (the `max_attempts` default); then `missing-outputs`, or `research-records` when the document is there and its citations still fail |
 
 ## DESIGN <!-- #design -->
