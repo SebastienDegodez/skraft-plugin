@@ -3,6 +3,12 @@
 Toutes les modifications notables de ce projet sont documentées ici.
 Format basé sur [Conventional Commits](https://www.conventionalcommits.org/) — versionnage [SemVer](https://semver.org/).
 
+## [2.0.0-alpha.67](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.66...v2.0.0-alpha.67) (2026-11-07)
+
+### ✨ Features
+
+* **engine:** a component names its BDD pairs, and init proposes the ones it finds ([#523](https://github.com/SebastienDegodez/skraft-plugin/issues/523)) ([#535](https://github.com/SebastienDegodez/skraft-plugin/issues/535)) ([5cf7cb5](https://github.com/SebastienDegodez/skraft-plugin/commit/5cf7cb56a792b0af3889567948906ffdebc7a229)), closes [#526](https://github.com/SebastienDegodez/skraft-plugin/issues/526)
+
 ## [2.0.0-alpha.66](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.65...v2.0.0-alpha.66) (2026-11-06)
 
 ### 🐛 Bug Fixes
