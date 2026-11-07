@@ -3,6 +3,12 @@
 Toutes les modifications notables de ce projet sont documentées ici.
 Format basé sur [Conventional Commits](https://www.conventionalcommits.org/) — versionnage [SemVer](https://semver.org/).
 
+## [2.0.0-alpha.70](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.69...v2.0.0-alpha.70) (2026-11-07)
+
+### ✨ Features
+
+* **engine:** serve the engine commands as an MCP server ([#534](https://github.com/SebastienDegodez/skraft-plugin/issues/534)) ([a25a3fe](https://github.com/SebastienDegodez/skraft-plugin/commit/a25a3feafb761ddb2b8132b2f119f32913a22bd3)), closes [#211](https://github.com/SebastienDegodez/skraft-plugin/issues/211)
+
 ## [2.0.0-alpha.69](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.68...v2.0.0-alpha.69) (2026-11-07)
 
 ### 🐛 Bug Fixes
