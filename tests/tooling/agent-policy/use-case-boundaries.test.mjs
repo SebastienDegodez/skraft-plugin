@@ -41,5 +41,6 @@ test('the event model gives every Command, Query, Domain Event and Read Model it
   for (const path of ['com.anthropic.claude-code/agents/solution-architect.md', 'com.github.copilot/agents/solution-architect.agent.md']) {
     const step = read(path).split('\n').find((line) => line.includes('**Event model**'))
     assert.ok(step && /\| Fields \|/.test(step), `${path}: the event model step names no Fields column`)
+    assert.ok(/Observed:/.test(step), `${path}: the event model step names no Observed line`)
   }
 })
