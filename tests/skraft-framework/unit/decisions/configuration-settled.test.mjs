@@ -70,6 +70,26 @@ test('a component that declines Gherkin starts at once, and so does one that nam
   assert.equal((await one.start()).reason, 'skraft is not initialised: run /skraft-init (web: bdd is unanswered)', 'one component deciding nothing is enough to stop the run, and it is the one named')
 })
 
+test('a runner with nowhere to bind its steps starts nothing: the folder the pair names is no folder, and only the developer can write it', async () => {
+  const bound = { runner: 'reqnroll', features: 'docs/features', steps: 'tests/Steps' }
+  const unbound = starting({ components: [{ ...API, bdd: [bound] }], config: { publish: SETTLED } })
+  const written = starting({ components: [{ ...API, bdd: [bound] }], config: { publish: SETTLED }, files: { 'tests/Steps/PaySteps.cs': '[Binding]' } })
+  const noRunner = starting({ components: [{ ...API, bdd: [{ features: 'docs/features', steps: 'tests/Steps' }] }], config: { publish: SETTLED } })
+
+  const refused = await unbound.start()
+
+  assert.deepEqual(refused, {
+    status: 'refused',
+    slug: SLUG,
+    phase: null,
+    code: 'bdd-unbound',
+    reason: 'api: reqnroll reads its step definitions in tests/Steps, which is no folder of the working copy. Fix it, then start the run again.',
+  })
+  assert.deepEqual(unbound.agentRunner.dispatches, [], 'a runner that executes nothing spends no agent')
+  assert.equal((await written.start()).status, 'done', 'the folder holds the bindings, so the run starts')
+  assert.equal((await noRunner.start()).status, 'done', 'a pair that names no runner executes nothing anyway: the folder is the developer\'s business, not the run\'s')
+})
+
 test('a front end makes the screenshots consent part of what a run needs, named beside the others; without one it is not asked for', async () => {
   const front = starting({ components: [API, WEB], config: { publish: {} } })
   const one = starting({ components: [API, WEB], config: { publish: { pullRequest: true, questionVersions: { pullRequest: 2 } } } })
