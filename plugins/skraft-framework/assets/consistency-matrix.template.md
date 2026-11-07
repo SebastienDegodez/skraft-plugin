@@ -102,7 +102,7 @@ Reviewer use: G10 reads the registry to know which artefacts are in scope for th
 |---|---|---|---|
 | `LABEL_DRIFT` | Same concept, different vocabulary (e.g. `VO` vs `Value Object` vs `ValueObject`). | Back-propagate: rewrite the upstream artefact to use the ADR's spelling. | 1 per artefact |
 | `CLASSIFICATION_DRIFT` | Same concept, incompatible category (`Command` vs `Query`, `Entity` vs `Value Object`, `Aggregate` vs `Domain Service`). | Back-propagate: rewrite the upstream artefact to align on the ADR. | 1 per artefact, then blocked |
-| `STRUCTURAL_DRIFT` | The concept exists in one artefact and not the other (e.g. ADR mentions an aggregate the diagram never drew, or the tactical design defines a `Repository` that no ADR ratified). | **No back-propagation.** A real decision gap: rewrite a `Proposed` ADR or the artefact in place, supersede an `Accepted` ADR, else blocked (below). | 0 |
+| `STRUCTURAL_DRIFT` | The concept exists in one artefact and not the other (e.g. ADR mentions an aggregate the diagram never drew, or the event model names a Command the tactical design never drew; an interface's layer needs no ADR). | **No back-propagation.** A real decision gap: rewrite a `Proposed` ADR or the artefact in place, supersede an `Accepted` ADR, else blocked (below). | 0 |
 
 ---
 
