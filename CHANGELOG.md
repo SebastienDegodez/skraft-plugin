@@ -3,6 +3,12 @@
 Toutes les modifications notables de ce projet sont documentées ici.
 Format basé sur [Conventional Commits](https://www.conventionalcommits.org/) — versionnage [SemVer](https://semver.org/).
 
+## [2.0.0-alpha.68](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.67...v2.0.0-alpha.68) (2026-11-07)
+
+### ✨ Features
+
+* **engine:** a component says whether it writes Gherkin, and no stack decides for it ([#540](https://github.com/SebastienDegodez/skraft-plugin/issues/540)) ([#542](https://github.com/SebastienDegodez/skraft-plugin/issues/542)) ([a91fdc6](https://github.com/SebastienDegodez/skraft-plugin/commit/a91fdc6eb083d12386242726d0c68d0affe3d268)), closes [#523](https://github.com/SebastienDegodez/skraft-plugin/issues/523)
+
 ## [2.0.0-alpha.67](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.66...v2.0.0-alpha.67) (2026-11-07)
 
 ### ✨ Features
