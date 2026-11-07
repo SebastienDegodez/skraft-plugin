@@ -58,7 +58,7 @@ const ROLES = Object.freeze({
     shell: false,
   }),
   // The acceptance designer commits failing tests only; the skeleton they call goes in the source
-  // paths, its Gherkin scenarios under docs/features.
+  // paths, its Gherkin scenarios in the folders the components' bdd names.
   'acceptance-designer': Object.freeze({
     outputs: Object.freeze([Object.freeze({ path: 'details/{date}/test-plan-{slug}.md', template: null })]),
     writes: Object.freeze([]),

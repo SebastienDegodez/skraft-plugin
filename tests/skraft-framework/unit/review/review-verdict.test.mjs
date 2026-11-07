@@ -231,11 +231,12 @@ test('a lens runs on the trigger its node names, whichever lens it is: none runs
 test('a blind lens reads the changes without the decision records and design documents of the run: no ADR, no supersession registry, no context map, event model or scenario', async () => {
   const records = ['docs/adr/adr-001-card-payment.md', 'docs/adr/supersessions.md']
   const designs = ['docs/architecture/context-map.md', 'docs/architecture/payment.md', 'docs/domain/event-model/payment.md']
-  const scenarios = ['docs/features/payment/pay-by-card.feature', 'tests/docs/features/payment/nested.feature']
-  const host = scripted({ components: [{ ...API, bdd: [{ features: 'docs/features', steps: 'tests/Steps' }] }] }, (it) => [
+  const scenarios = ['tests/Features/payment/pay-by-card.feature', 'specs/pay-later.feature']
+  const CODE_BEHIND = 'tests/Acceptance/PayByCard.feature.cs'
+  const host = scripted({ components: [{ ...API, bdd: [{ features: 'tests/Features', steps: 'tests/Steps' }, { features: 'specs' }] }] }, (it) => [
     agent()(it),
     agent({ work: ({ git }) => git.commit('docs(checkout): ADR and design of the card payment', [...records, ...designs]) })(it),
-    agent({ work: ({ git }) => git.commit('test(checkout): acceptance of the card payment', ['tests/Acceptance/CheckoutAcceptanceTests.cs', ...scenarios]) })(it),
+    agent({ work: ({ git }) => git.commit('test(checkout): acceptance of the card payment', ['tests/Acceptance/CheckoutAcceptanceTests.cs', CODE_BEHIND, ...scenarios]) })(it),
     agent({ work: tddCycle() })(it),
   ])
 
@@ -248,6 +249,7 @@ test('a blind lens reads the changes without the decision records and design doc
   assert.ok(documents.every((path) => all.includes(`${path}\n`)), all)
   assert.equal(code, all.split('\n').filter((line) => line !== '' && !documents.includes(line)).map((line) => `${line}\n`).join(''))
   assert.ok(code.includes('tests/Acceptance/CheckoutAcceptanceTests.cs\n'), code)
+  assert.ok(code.includes(`${CODE_BEHIND}\n`), 'the extension names a scenario, so a runner\'s generated code-behind is code a blind lens reads')
   const patch = await host.tracking.read(SLUG, `${folder}/code.patch`)
   const changes = await host.tracking.read(SLUG, `${folder}/changes.patch`)
   assert.ok(documents.every((path) => !patch.includes(path) && changes.includes(`diff --git a/${path}`)), patch)

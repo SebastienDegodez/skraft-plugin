@@ -6,7 +6,8 @@ import { joinRelative } from '../config/relative-path.mjs'
  * The tracking folder is the one at the top of a repository: a `.copilot-tracking` folder
  * deeper in the code is code like any other. A blind lens reads the code changes only: the
  * decision records of the run (the files of a `docs/adr` folder) and its design documents (those
- * of `docs/architecture`, `docs/domain/event-model` and `docs/features`) are left out of its copy too.
+ * of `docs/architecture`, `docs/domain/event-model`, `docs/features`, and every `.feature`
+ * wherever its component keeps it) are left out of its copy too.
  * A lens with another scope reads the design documents or the scenarios only.
  */
 
@@ -53,7 +54,8 @@ const pathOf = (section) => HEADER.exec(section)?.[1] ?? ''
 const DOCUMENTS = /(^|\/)docs\/(adr|architecture|domain\/event-model|features)\//
 
 const DESIGN = /(^|\/)docs\/(adr|architecture|domain\/event-model)\//
-const FEATURES = /(^|\/)docs\/features\//
+/** A scenario is named by its extension, never by a folder the engine picked: its component says where it sits. @param {string} path */
+const isScenario = (path) => path.endsWith('.feature')
 
 /**
  * The part of the changes a lens reads when its scope narrows them: `code` (a blind lens: no
@@ -62,9 +64,9 @@ const FEATURES = /(^|\/)docs\/features\//
  * @typedef {'code' | 'design' | 'features'} Scope
  */
 const KEPT = /** @type {Readonly<Record<Scope, (path: string) => boolean>>} */ (Object.freeze({
-  code: (path) => !DOCUMENTS.test(path),
+  code: (path) => !DOCUMENTS.test(path) && !isScenario(path),
   design: (path) => DESIGN.test(path),
-  features: (path) => FEATURES.test(path),
+  features: (path) => isScenario(path),
 }))
 
 export const SCOPES = /** @type {readonly Scope[]} */ (Object.freeze(Object.keys(KEPT)))
