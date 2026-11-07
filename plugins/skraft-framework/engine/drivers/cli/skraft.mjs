@@ -1,9 +1,11 @@
 #!/usr/bin/env node
-import { basename, isAbsolute, relative } from 'node:path'
+import { statSync } from 'node:fs'
+import { basename } from 'node:path'
 import { createInterface } from 'node:readline'
 import { fileURLToPath } from 'node:url'
 import { readPluginVersion } from '../../infrastructure/plugin-manifest.mjs'
 import { createNodeAdapters } from '../../infrastructure/node-adapters.mjs'
+import { insideFolder } from './mcp-roots.mjs'
 import { runCli } from './run-cli.mjs'
 import { terminalConfirm } from './terminal-confirm.mjs'
 
@@ -20,9 +22,12 @@ const servicesAt = (directory) => ({
 })
 
 /** Whether `directory` is the plugin folder or inside it, where a host may start the MCP server. @param {string} directory */
-const insidePlugin = (directory) => {
-  const path = relative(pluginFolder, directory)
-  return !path.startsWith('..') && !isAbsolute(path)
+const insidePlugin = (directory) => insideFolder(directory, pluginFolder)
+
+/** Whether `directory` exists and is the root of a git working copy. @param {string} directory */
+const isWorkingCopy = async (directory) => {
+  if (!statSync(directory, { throwIfNoEntry: false })?.isDirectory()) return false
+  return (await servicesAt(directory).adapters().sourceControl.repository('.')) === '.'
 }
 
 process.exitCode = await runCli(
@@ -36,6 +41,8 @@ process.exitCode = await runCli(
     },
     at: servicesAt,
     workingDirectory: () => (insidePlugin(process.cwd()) ? null : process.cwd()),
+    pluginFolder: () => pluginFolder,
+    isWorkingCopy,
   },
   { out: (line) => process.stdout.write(`${line}\n`), err: (line) => process.stderr.write(`${line}\n`) },
 )

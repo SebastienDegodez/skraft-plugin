@@ -2,9 +2,10 @@
 // server writes back, as Copilot CLI, VS Code or Claude Code would through the server's stdin and
 // stdout. It lists its roots when asked, unless told not to answer. No doubles: the server runs the
 // real commands on the real Node adapters.
+import { statSync } from 'node:fs'
 import { pathToFileURL } from 'node:url'
 import { runCli } from '../../../../plugins/skraft-framework/engine/drivers/cli/run-cli.mjs'
-import { inProcessServices } from '../support/workspace.mjs'
+import { inProcessServices, PLUGIN_ROOT } from '../support/workspace.mjs'
 
 /** Lines handed to the server as it reads them, until the host closes its end. */
 const inbox = () => {
@@ -31,13 +32,13 @@ const inbox = () => {
  * Starts `skraft mcp` in this process.
  * @param {{
  *   roots?: string[] | null, answersRoots?: boolean, workingDirectory?: string | null, patienceMs?: number,
- *   client?: string | null,
+ *   client?: string | null, pluginFolder?: string,
  * }} options roots: the folders the host shares, null for a host without roots; client: the name
  *   the host gives at the handshake, VS Code's unless told, null for none; answersRoots:
  *   false for a host that never answers `roots/list`; workingDirectory: the folder the host
- *   started the server in, null for the plugin's own
+ *   started the server in, null for the plugin's own; pluginFolder: the plugin's folder, the real one unless told
  */
-export const mcpHost = ({ roots = null, answersRoots = true, workingDirectory = null, patienceMs, client = 'Visual Studio Code' } = {}) => {
+export const mcpHost = ({ roots = null, answersRoots = true, workingDirectory = null, patienceMs, client = 'Visual Studio Code', pluginFolder = PLUGIN_ROOT } = {}) => {
   const lines = inbox()
   /** @type {any[]} */ const received = []
   /** @type {string[]} */ const log = []
@@ -53,6 +54,9 @@ export const mcpHost = ({ roots = null, answersRoots = true, workingDirectory = 
     lines: () => lines.iterator,
     at: (/** @type {string} */ directory) => inProcessServices(directory, { confirm: async () => { throw new Error('a tool asked for a confirmation') } }),
     workingDirectory: () => workingDirectory,
+    pluginFolder: () => pluginFolder,
+    isWorkingCopy: async (/** @type {string} */ directory) =>
+      Boolean(statSync(directory, { throwIfNoEntry: false })?.isDirectory()) && (await inProcessServices(directory).adapters().sourceControl.repository('.')) === '.',
     ...(patienceMs === undefined ? {} : { patienceMs }),
   }
   const served = runCli(['mcp'], services, { out: (line) => deliver(JSON.parse(line)), err: (line) => log.push(line) })

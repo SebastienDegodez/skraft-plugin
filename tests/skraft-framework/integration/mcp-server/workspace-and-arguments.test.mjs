@@ -2,7 +2,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { mkdirSync } from 'node:fs'
 import { join } from 'node:path'
-import { skraft, tempFolder } from '../support/workspace.mjs'
+import { git, skraft, tempFolder } from '../support/workspace.mjs'
 import { mcpHost } from './mcp-host.mjs'
 
 /** A folder whose active pipeline is `slug`, so that a status says which folder a tool ran in. */
@@ -55,10 +55,34 @@ test('a host without roots, or one that lists none, has the tool work in the fol
   }
   const lost = mcpHost({ roots: null, workingDirectory: null })
   await lost.initialize()
-  assert.equal(refusal(await lost.call('skraft_status')), 'no-workspace: the host shares no root folder and started skraft outside a repository; open the repository in the host')
-  assert.equal(refusal(await lost.call('skraft_status', { workspace: 'shop' })), 'unknown-workspace: the workspace argument names none of the root folders the host shares: none')
+  assert.equal(refusal(await lost.call('skraft_status')), 'no-workspace: the host shares no root folder and started skraft outside a repository; call the tool again with the workspace argument set to the absolute path of the working copy')
   assert.equal(lost.received.some(({ method }) => method === 'roots/list'), false)
   await lost.close()
+})
+
+test('a host that shares no folder and starts the server in the plugin has a tool work in the git working copy the workspace argument names by its absolute path', async (t) => {
+  const shop = await pipelineFolder(t, 'shop')
+  git(shop, 'init', '-q')
+  mkdirSync(join(shop, 'src'))
+  const plain = await pipelineFolder(t, 'plain')
+  const plugin = join(tempFolder(t, 'skraft-plugin-'), 'skraft-framework')
+  mkdirSync(join(plugin, 'engine'), { recursive: true })
+  git(plugin, 'init', '-q')
+  const refusals = {
+    relative: 'relative-workspace: the host shares no root folder, so the workspace argument must be the absolute path of the working copy',
+    plugin: 'plugin-workspace: the workspace argument names a folder inside the skraft plugin; give the absolute path of the working copy instead',
+    copy: 'no-working-copy: the workspace argument names no root folder of a git working copy; give the absolute path of the folder that holds the working copy',
+  }
+  for (const roots of [null, []]) {
+    const host = mcpHost({ roots, workingDirectory: null, pluginFolder: plugin })
+    await host.initialize()
+    assert.equal(slugOf(await host.call('skraft_status', { workspace: shop })), 'shop')
+    assert.equal(slugOf(await host.call('skraft_status', { workspace: join(shop, 'src', '..') })), 'shop')
+    for (const named of ['shop', join('..', 'shop')]) assert.equal(refusal(await host.call('skraft_status', { workspace: named })), refusals.relative)
+    for (const named of [plugin, join(plugin, 'engine')]) assert.equal(refusal(await host.call('skraft_status', { workspace: named })), refusals.plugin)
+    for (const named of [join(shop, 'src'), plain, join(shop, 'missing')]) assert.equal(refusal(await host.call('skraft_status', { workspace: named })), refusals.copy)
+    await host.close()
+  }
 })
 
 test('a host that never lists its roots has the tool work in the folder it started the server in, once the server stops waiting', async (t) => {

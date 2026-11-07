@@ -115,7 +115,7 @@ test('tools/list offers every command an agent may run, each with a closed input
       title: { type: 'string', minLength: 1, description: 'the title of the story' },
       base: { type: 'string', minLength: 1, description: 'the ref the story starts from' },
       fromArtifacts: { type: 'boolean', description: 'start from the artifacts already in the working copy' },
-      workspace: { type: 'string', minLength: 1, description: 'the root folder of the host to work in, by its path or its folder name; only needed when the host shares several' },
+      workspace: { type: 'string', minLength: 1, description: 'the working copy to work in: the absolute path of its root folder when the host shares no root folder; else a root folder of the host, by its path or its folder name, only needed when the host shares several' },
     },
   })
   assert.deepEqual(byName.skraft_init.inputSchema.properties.add, { type: 'array', items: { type: 'string', minLength: 1 }, description: 'folders to detect beyond the ones found' })

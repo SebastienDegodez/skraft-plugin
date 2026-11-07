@@ -5,7 +5,7 @@ import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { createInterface } from 'node:readline'
 import { pathToFileURL } from 'node:url'
-import { PLUGIN_ROOT, SKRAFT_MJS, skraft, tempFolder } from '../support/workspace.mjs'
+import { PLUGIN_ROOT, SKRAFT_MJS, git, skraft, tempFolder } from '../support/workspace.mjs'
 
 /**
  * `node skraft.mjs mcp` started by a host in `cwd`: requests written to its stdin, every line of
@@ -36,7 +36,7 @@ const serverProcess = (t, cwd, roots) => {
   return {
     lines,
     start: () => request('initialize', { protocolVersion: '2025-06-18', capabilities, clientInfo: { name: 'test-host', version: '1' } }),
-    status: async () => (await request('tools/call', { name: 'skraft_status', arguments: {} })).result,
+    status: async (args = {}) => (await request('tools/call', { name: 'skraft_status', arguments: args })).result,
     end: () => {
       child.stdin.end()
       return exited
@@ -58,9 +58,10 @@ test('the executable serves the host on stdin and stdout, writes only protocol l
   for (const line of server.lines) assert.equal(JSON.parse(line).jsonrpc, '2.0')
 })
 
-test('started in the plugin\'s own folder, as a host does from mcp.json, the executable works in the root the host shares, and in none without one', async (t) => {
+test('started in the plugin\'s own folder, as a host does from mcp.json, the executable works in the root the host shares, else in the working copy the workspace argument names', async (t) => {
   const cwd = tempFolder(t, 'skraft-mcp-')
   await skraft(cwd, ['init', 'checkout'])
+  git(cwd, 'init', '-q')
   const shared = serverProcess(t, PLUGIN_ROOT, [cwd])
   const alone = serverProcess(t, PLUGIN_ROOT, null)
   await shared.start()
@@ -68,7 +69,9 @@ test('started in the plugin\'s own folder, as a host does from mcp.json, the exe
 
   assert.equal(JSON.parse((await shared.status()).content[0].text).slug, 'checkout')
   assert.deepEqual(await alone.status(), {
-    content: [{ type: 'text', text: 'no-workspace: the host shares no root folder and started skraft outside a repository; open the repository in the host' }], isError: true,
+    content: [{ type: 'text', text: 'no-workspace: the host shares no root folder and started skraft outside a repository; call the tool again with the workspace argument set to the absolute path of the working copy' }], isError: true,
   })
+  assert.equal(JSON.parse((await alone.status({ workspace: cwd })).content[0].text).slug, 'checkout')
+  assert.equal((await alone.status({ workspace: PLUGIN_ROOT })).isError, true)
   assert.deepEqual([await shared.end(), await alone.end()], [0, 0])
 })

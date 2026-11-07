@@ -87,10 +87,15 @@ instructions que le serveur donne à l'hôte à la poignée de main disent la m�
    Le serveur attend la liste 10 secondes.
 2. Sinon, le dossier où l'hôte a démarré le serveur, sauf s'il est dans le plugin.
 3. Avec plusieurs dossiers, `workspace` en nomme un, par son chemin ou son nom de dossier.
+4. Sans aucun (pas de racine, et le serveur a démarré dans le plugin, comme le fait le runtime
+   Copilot), `workspace` est le chemin absolu de la racine d'une copie de travail git hors du plugin.
 
 | Refus | Cas |
 | --- | --- |
-| `no-workspace` | aucune racine, et le serveur a démarré dans le plugin |
+| `no-workspace` | aucune racine, le serveur a démarré dans le plugin, et pas de `workspace` |
+| `relative-workspace` | aucun dossier offert, et `workspace` n'est pas un chemin absolu |
+| `plugin-workspace` | aucun dossier offert, et `workspace` est dans le plugin |
+| `no-working-copy` | aucun dossier offert, et `workspace` n'est pas la racine d'une copie de travail git |
 | `several-workspaces` | plusieurs racines et pas de `workspace` |
 | `unknown-workspace` | `workspace` ne nomme aucun dossier partagé par l'hôte |
 | `closed` | l'hôte a fermé la connexion avant que l'appel ne s'exécute |

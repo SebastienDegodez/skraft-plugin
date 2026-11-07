@@ -43,8 +43,11 @@ what it reports.
 When the host lists the skraft MCP tools, conduct the loop with them and never with `node`:
 `skraft_start` takes `{ slug, issue?, title?, base?, fromArtifacts? }`, then `skraft_next`;
 resume with `skraft_next`. Each answer is the JSON of a step; `then` names the tool to call next.
+Pass `workspace`, the absolute path of the root of the working copy, to every skraft tool call.
+When a skraft tool refuses, tell the human its refusal and stop: never run a `node` command in its
+place.
 
-Without those tools, `skraft` stands for `node "<plugin folder>/engine/drivers/cli/skraft.mjs"`,
+Only when the host lists no skraft tool, `skraft` stands for `node "<plugin folder>/engine/drivers/cli/skraft.mjs"`,
 run from the root of the working copy. Take the plugin folder from the human or from a `then:`
 line skraft printed in this conversation; never search the disk for it.
 

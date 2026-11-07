@@ -1,6 +1,6 @@
 import { offeredTools, refusalOf, toolListing } from './mcp-tools.mjs'
 import { offeredPrompts, promptListing, promptMessages, promptRefusalOf } from './mcp-prompts.mjs'
-import { chosenWorkspace, rootFolders } from './mcp-roots.mjs'
+import { chosenWorkspace, givenWorkingCopy, rootFolders } from './mcp-roots.mjs'
 
 /**
  * `skraft mcp`: the commands of this driver served to an agent host as MCP tools, JSON-RPC over
@@ -14,10 +14,12 @@ import { chosenWorkspace, rootFolders } from './mcp-roots.mjs'
  * @typedef {{
  *   lines: () => AsyncIterable<string>, at: (directory: string) => CliServices,
  *   workingDirectory: () => string | null, patienceMs?: number,
+ *   pluginFolder: () => string, isWorkingCopy: (directory: string) => Promise<boolean>,
  * }} McpServices
  *   lines: the messages the host writes; at: the services of a command run in that folder;
  *   workingDirectory: the folder the host started the server in, null when it is no repository;
- *   patienceMs: how long the host may take to list its roots.
+ *   patienceMs: how long the host may take to list its roots;
+ *   pluginFolder: the folder of the plugin; isWorkingCopy: whether a folder is the root of a git working copy.
  * @typedef {{
  *   services: CliServices & McpServices, run: Run, send: (message: object) => void, log: (line: string) => void,
  *   roots: boolean, loop: boolean, closed: boolean, sent: number, patienceMs: number,
@@ -206,13 +208,23 @@ const serially = (session, work) => {
 
 /** @param {Session} session @param {SkraftTool} tool @param {Record<string, any>} args @param {unknown} token */
 const runTool = async (session, tool, args, token) => {
-  const place = chosenWorkspace(await offeredFolders(session), args.workspace)
+  const place = await workspaceOf(session, args.workspace)
   if (place.directory === null) return refusedResult(place.reason)
   if (session.closed) return refusedResult('closed: the host closed the connection; nothing ran')
   const captured = capturing(progress(session, token))
   const services = { ...session.services.at(place.directory), confirm: async () => null, then: mcpThen(args.workspace) }
   const code = await guarded(session, tool, () => session.run(tool.argv(args), services, captured.console))
   return toolResult(code, captured)
+}
+
+/**
+ * The folder a call works in: one the host offers, else the working copy `workspace` names.
+ * @param {Session} session @param {string | undefined} named
+ */
+const workspaceOf = async (session, named) => {
+  const folders = await offeredFolders(session)
+  if (folders.length > 0 || named === undefined) return chosenWorkspace(folders, named)
+  return givenWorkingCopy(named, session.services)
 }
 
 /** The host's roots, else the folder it started the server in. @param {Session} session @returns {Promise<string[]>} */

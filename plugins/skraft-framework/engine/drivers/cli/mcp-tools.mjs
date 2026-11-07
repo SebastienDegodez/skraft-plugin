@@ -18,7 +18,7 @@
  */
 
 /** Every tool takes it: the root folder to work in when the host shares several. */
-const WORKSPACE = Object.freeze({ kind: 'string', description: 'the root folder of the host to work in, by its path or its folder name; only needed when the host shares several' })
+const WORKSPACE = Object.freeze({ kind: 'string', description: 'the working copy to work in: the absolute path of its root folder when the host shares no root folder; else a root folder of the host, by its path or its folder name, only needed when the host shares several' })
 
 const READ_ONLY = Object.freeze({ readOnlyHint: true, openWorldHint: false })
 const LOCAL = Object.freeze({ readOnlyHint: false, destructiveHint: false, openWorldHint: false })

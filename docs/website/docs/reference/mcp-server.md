@@ -86,10 +86,15 @@ instructions the server gives the host at the handshake say the same.
    server waits 10 seconds for the list.
 2. Otherwise, the folder the host started the server in, unless it lies inside the plugin.
 3. With several folders, `workspace` names one, by its path or its folder name.
+4. With none (no root, and the server started inside the plugin, as the Copilot runtime does),
+   `workspace` is the absolute path of the root of a git working copy outside the plugin.
 
 | Refusal | Case |
 | --- | --- |
-| `no-workspace` | no root, and the server started inside the plugin |
+| `no-workspace` | no root, the server started inside the plugin, and no `workspace` |
+| `relative-workspace` | no folder offered, and `workspace` is no absolute path |
+| `plugin-workspace` | no folder offered, and `workspace` lies inside the plugin |
+| `no-working-copy` | no folder offered, and `workspace` is no root of a git working copy |
 | `several-workspaces` | several roots and no `workspace` |
 | `unknown-workspace` | `workspace` names no folder the host shares |
 | `closed` | the host closed the connection before the call ran |
