@@ -128,7 +128,11 @@ flowchart TB
 comportement sur une ligne de temps : une commande (une intention, qui peut être refusée), un
 événement (un fait passé), un modèle de lecture (ce que l'utilisateur voit)
 ([Dymitruk, 2019](../reference/citations.mdx#cite-dymitruk-eventmodeling-2019)). skraft appelle **tranche** une
-commande, ses événements et son modèle de lecture : la plus petite unité de valeur livrable. La
+commande, ses événements et son modèle de lecture : la plus petite unité de valeur livrable.
+Chaque tranche donne à chaque commande, requête et événement ses champs, nommés en termes métier
+(`DriverId`, des centimes entiers, une date), et nomme les champs que les critères d'acceptation
+observent : DISTILL écrit son squelette avec ces noms, et les
+tests de DELIVER fixent les signatures. La
 lentille `fitness` exige que chaque story ait au moins une commande ou une requête (G7) et que
 chaque commande d'un contexte métier ait un événement pour son succès (G8).
 
@@ -149,8 +153,11 @@ chaque commande d'un contexte métier ait un événement pour son succès (G8).
 - le **repository**, un par agrégat, donne l'illusion d'une collection en mémoire
   ([Evans, 2003](../reference/citations.mdx#cite-evans-ddd-2003) ;
   [Fowler, 2002](../reference/citations.mdx#cite-fowler-peaa-2002)). Son interface vit dans Domain ou dans
-  Application, jamais dans Infrastructure, et l'ADR de l'agrégat note ce choix (lentille
-  `architecture-compliance`, G4).
+  Application, jamais dans Infrastructure ; la skill `clean-architecture-<stack>` en décide, et
+  la conception tactique le note, jamais une ADR (lentille `architecture-compliance`, G4) ;
+- la **gateway**, une par dépendance extérieure que l'application appelle (un autre contexte,
+  une API externe, une horloge), est une interface nommée d'après ce qu'elle demande, en termes
+  métier. La conception tactique donne sa couche ; les tests de DELIVER donnent ses méthodes.
 
 **CQRS et Event Sourcing restent des options.** Séparer commandes et requêtes
 ([Fowler, 2011](../reference/citations.mdx#cite-fowler-cqrs-2011)) ou dériver l'état de l'historique des

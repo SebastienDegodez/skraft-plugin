@@ -126,7 +126,11 @@ flowchart TB
 **Event Modeling first.** Before drawing aggregates, the `solution-architect` models behaviour on
 a timeline: a command (an intent, which may be rejected), an event (a past fact), a read model
 (what the user sees) ([Dymitruk, 2019](../reference/citations.mdx#cite-dymitruk-eventmodeling-2019)). skraft calls
-a command, its events and its read model a **slice**: the smallest unit of deliverable value. The
+a command, its events and its read model a **slice**: the smallest unit of deliverable value. Each
+slice gives every command, query and event its fields, named in business terms (`DriverId`,
+whole cents, a date), and names the fields the acceptance criteria watch: DISTILL writes its
+skeleton with these names, and DELIVER's tests settle
+the signatures. The
 `fitness` lens requires every story to have at least one command or query (G7) and every command
 of a business context to have an event for its success (G8).
 
@@ -145,8 +149,11 @@ of a business context to have an event for its success (G8).
 - the **repository**, one per aggregate, gives the illusion of an in-memory collection
   ([Evans, 2003](../reference/citations.mdx#cite-evans-ddd-2003);
   [Fowler, 2002](../reference/citations.mdx#cite-fowler-peaa-2002)). Its interface lives in Domain or in
-  Application, never in Infrastructure, and the aggregate's ADR records that choice
-  (`architecture-compliance` lens, G4).
+  Application, never in Infrastructure; the `clean-architecture-<stack>` skill decides which, and
+  the tactical design records it, never an ADR (`architecture-compliance` lens, G4);
+- the **gateway**, one per outside dependency the application calls (another context, an
+  external API, a clock), is an interface named for what it asks in business terms. The tactical
+  design gives its layer; DELIVER's tests give its methods.
 
 **CQRS and Event Sourcing remain options.** Separating commands from queries
 ([Fowler, 2011](../reference/citations.mdx#cite-fowler-cqrs-2011)) or deriving state from the history of events
