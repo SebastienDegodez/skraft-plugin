@@ -162,8 +162,21 @@ le **périmètre d'écriture** de DELIVER : le software engineer ne pourra écri
 `web/test`. `skraft init` a aussi ajouté `skraft-config.local.json`, votre couche personnelle, au
 `.gitignore`.
 
-Ajoutez les consentements de publication à côté de `components`. Un run qui publie ne démarre
-qu'une fois qu'ils sont réglés ; ce dépôt n'a pas de remote, donc refusez les deux :
+Deux réponses vous appartiennent, et `skraft init` n'en écrit aucune. La première est le Gherkin :
+il détecte les dossiers qu'un runner lit quand un projet en a, et celui-ci n'en a pas, donc dites
+que ses tests s'écrivent sans :
+
+```json title="skraft-config.json"
+      "stack": "javascript",
+      "bdd": false,
+```
+
+DISTILL ne demandera alors aucun `.feature` à `web`. Un composant qui en écrit nomme les dossiers à
+la place — `"bdd": [{ "features": "features", "steps": "features/step_definitions" }]` — et aucune
+clé ne répond rien, donc le run est refusé jusqu'à ce que l'une des deux soit écrite.
+
+La seconde est les consentements de publication, à côté de `components`. Un run qui publie ne
+démarre qu'une fois qu'ils sont réglés ; ce dépôt n'a pas de remote, donc refusez les deux :
 
 ```json title="skraft-config.json"
   "publish": {
@@ -173,9 +186,9 @@ qu'une fois qu'ils sont réglés ; ce dépôt n'a pas de remote, donc refusez le
   }
 ```
 
-`/skraft-init` vous les demande dès qu'il est installé sur votre hôte ; à la main, ces clés sont
-tout ce qu'un run exige. Sans elles, il est refusé avant son premier agent, avec
-`skraft is not initialised: run /skraft-init`.
+`/skraft-init` vous demande les deux dès qu'il est installé sur votre hôte ; à la main, ces clés
+sont tout ce qu'un run exige. Sans elles, il est refusé avant son premier agent, avec
+`skraft is not initialised: run /skraft-init`, qui nomme ce qui manque.
 
 Commitez les deux fichiers :
 

@@ -162,8 +162,21 @@ also the **write scope** of DELIVER: the software engineer may write only in `we
 `web/test`. `skraft init` also added `skraft-config.local.json`, your personal layer, to
 `.gitignore`.
 
-Add the publication consents beside `components`. A run that publishes starts only once they are
-settled; this repository has no remote, so decline both:
+Two answers are yours to give, and `skraft init` writes neither. The first is Gherkin: it detects
+the folders a runner reads when a project has them, and this one has none, so say that the tests
+are written without it:
+
+```json title="skraft-config.json"
+      "stack": "javascript",
+      "bdd": false,
+```
+
+DISTILL then asks `web` for no `.feature`. A component that does write Gherkin names the folders
+instead — `"bdd": [{ "features": "features", "steps": "features/step_definitions" }]` — and no key
+at all answers nothing, so the run is refused until one of the two is written.
+
+The second is the publication consents, beside `components`. A run that publishes starts only once
+they are settled; this repository has no remote, so decline both:
 
 ```json title="skraft-config.json"
   "publish": {
@@ -173,9 +186,9 @@ settled; this repository has no remote, so decline both:
   }
 ```
 
-`/skraft-init` asks you for them once it is set up on your host; by hand, those keys are all a run
+`/skraft-init` asks you for both once it is set up on your host; by hand, those keys are all a run
 needs. Without them it is refused before its first agent, with
-`skraft is not initialised: run /skraft-init`.
+`skraft is not initialised: run /skraft-init`, which names what is missing.
 
 Commit both files:
 
