@@ -3,6 +3,12 @@
 Toutes les modifications notables de ce projet sont documentées ici.
 Format basé sur [Conventional Commits](https://www.conventionalcommits.org/) — versionnage [SemVer](https://semver.org/).
 
+## [2.0.0-alpha.73](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.72...v2.0.0-alpha.73) (2026-11-07)
+
+### 🐛 Bug Fixes
+
+* **agents:** design review loops twice at most, ADRs stay autonomous, G8 for business contexts, no baseline ADR ([#546](https://github.com/SebastienDegodez/skraft-plugin/issues/546)) ([a9355b4](https://github.com/SebastienDegodez/skraft-plugin/commit/a9355b4aaccde6df5806fc160c2bdb39f239d584)), closes [#500](https://github.com/SebastienDegodez/skraft-plugin/issues/500) [#500](https://github.com/SebastienDegodez/skraft-plugin/issues/500)
+
 ## [2.0.0-alpha.72](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.71...v2.0.0-alpha.72) (2026-11-07)
 
 ### 🐛 Bug Fixes
