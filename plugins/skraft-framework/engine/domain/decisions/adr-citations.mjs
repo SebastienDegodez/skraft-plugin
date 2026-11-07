@@ -15,7 +15,7 @@ const URL_OR_CODE_FILE = new RegExp([URL, String.raw`#file:\S*\w`, PATH, NAME_AT
 const IS_URL = new RegExp(`^${URL}`)
 const CRITERION = /\bAC[- ]?\d+\b/gi
 const TICKET = /\bAB#\d+\b|(?<![\w&])#\d+\b|(?:https?:\/\/[^\s)]*)?\/(?:issues|pulls?|_workitems\/edit)\/\d+/g
-const UNREAD_LINES = /^(?:# |\*\*(?:Supersedes|Amends):\*\*).*$/gm
+const UNREAD_LINES = /^(?:# |\*\*(?:Supersedes|Amends):\*\*).*/gm
 const ADR_LINK = /\[(ADR-\d+)\]\([^)]*\)/g
 const ADR_ID = /ADR-(\d+)/g
 // A file of the ADR folder, or an ADR file by its name wherever it sits.
@@ -41,6 +41,7 @@ const otherAdrs = (text, files, own) => [
 export const withoutCodeFiles = (text) => text.replace(URL_OR_CODE_FILE, (token) => (IS_URL.test(token) ? token : ' '))
 
 /** The text a citation is looked for in: no title line, no Supersedes or Amends line, ADR links as their name. @param {string} text */
+// Stryker disable next-line StringLiteral: what stands for a skipped line or an ADR link cites nothing, as an ADR-NNN name is never a citation
 const readable = (text) => text.replace(UNREAD_LINES, '').replace(ADR_LINK, '$1')
 
 /**

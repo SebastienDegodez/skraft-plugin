@@ -21,7 +21,7 @@ const OCTET = String.raw`(?:25[0-5]|2[0-4]\d|1?\d?\d)`
 /** An IPv4 address, which a semantic version would otherwise read. */
 const ADDRESS = new RegExp(String.raw`\b${OCTET}(?:\.${OCTET}){3}\b`, 'g')
 /** A calendar day written with dots, slashes or hyphens. */
-const DAY = /\b(?:19|20)\d\d([./-])(?:0[1-9]|1[0-2])\1(?:0[1-9]|[12]\d|3[01])\b/g
+const DAY = /\b(?:19|20)\d\d([./-])\d\d\1\d\d\b/g
 
 /** The text after the YAML header; the whole text without one. @param {string} text */
 const bodyOf = (text) => {
@@ -34,6 +34,7 @@ const bodyOf = (text) => {
  * no version.
  * @param {string} body
  */
+// Stryker disable next-line StringLiteral: no pin straddles a blanked address or day, which a word boundary opens and closes
 const versionPins = (body) => [...new Set(withoutCodeFiles(body).replace(ADDRESS, ' ').replace(DAY, ' ').match(PINS) ?? [])]
 
 /**

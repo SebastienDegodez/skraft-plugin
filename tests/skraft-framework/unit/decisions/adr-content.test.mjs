@@ -50,7 +50,7 @@ test('a draft ADR that cites a code file is refused once per file and never read
 test('a draft ADR that cites an acceptance criterion by its identifier or a ticket is refused, in the body or the decision; its title line and the words acceptance criteria are not read', async () => {
   const host = scripted({ answers: [{ answer: 'RATIFIED' }] }, (it) => [
     agent()(it),
-    architect({ [ADR_1]: adrText({ body: 'This meets AC-2, AC 3 and ac4, for #81 and AB#1234, see https://github.com/o/r/issues/12, https://github.com/o/r/pull/34 and https://dev.azure.com/o/p/_workitems/edit/56, again #81.' }) })(it),
+    architect({ [ADR_1]: adrText({ body: 'This meets AC-2, AC 3, AC-12 and ac4, written in C# for AC-9, for #81 and AB#1234, see https://github.com/o/r/issues/12, https://github.com/o/r/pull/34, /issues/77 and https://dev.azure.com/o/p/_workitems/edit/56, again #81.' }) })(it),
     architect({ [ADR_1]: adrText({ decision: 'We will pay by card to meet AC-2 of https://github.com/o/r/issues/8.' }) })(it),
     architect({ [ADR_1]: adrText({ title: 'Card payment for #8 in src/pay/card.ts', body: 'The acceptance criteria are checked by Gherkin scenarios; each acceptance criterion and critère d\'acceptation stays in the story.' }) })(it),
     ...afterDesign(it),
@@ -59,7 +59,7 @@ test('a draft ADR that cites an acceptance criterion by its identifier or a tick
   const outcome = await host.start()
 
   assert.deepEqual(designRecords(host), [
-    [1, 1, 'failed', 'adr-lifecycle', [criterion('AC-2'), criterion('AC 3'), criterion('ac4'), ticket('#81'), ticket('AB#1234'), ticket('https://github.com/o/r/issues/12'), ticket('https://github.com/o/r/pull/34'), ticket('https://dev.azure.com/o/p/_workitems/edit/56')]],
+    [1, 1, 'failed', 'adr-lifecycle', [criterion('AC-2'), criterion('AC 3'), criterion('AC-12'), criterion('ac4'), criterion('AC-9'), ticket('#81'), ticket('AB#1234'), ticket('https://github.com/o/r/issues/12'), ticket('https://github.com/o/r/pull/34'), ticket('/issues/77'), ticket('https://dev.azure.com/o/p/_workitems/edit/56')]],
     [1, 2, 'failed', 'adr-lifecycle', [criterion('AC-2'), ticket('https://github.com/o/r/issues/8')]],
     [1, 3, 'done', null, []],
   ])
