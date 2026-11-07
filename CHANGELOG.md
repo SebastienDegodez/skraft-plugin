@@ -3,6 +3,12 @@
 Toutes les modifications notables de ce projet sont documentées ici.
 Format basé sur [Conventional Commits](https://www.conventionalcommits.org/) — versionnage [SemVer](https://semver.org/).
 
+## [2.0.0-alpha.75](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.74...v2.0.0-alpha.75) (2026-11-07)
+
+### 🐛 Bug Fixes
+
+* **agents:** G4 reads an interface's layer from the tactical design, never from an ADR ([#557](https://github.com/SebastienDegodez/skraft-plugin/issues/557)) ([5377ba1](https://github.com/SebastienDegodez/skraft-plugin/commit/5377ba18de510d67be0c2fc5447c1bfa8c3007f8)), closes [#546](https://github.com/SebastienDegodez/skraft-plugin/issues/546)
+
 ## [2.0.0-alpha.74](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.73...v2.0.0-alpha.74) (2026-11-07)
 
 ### 🐛 Bug Fixes
