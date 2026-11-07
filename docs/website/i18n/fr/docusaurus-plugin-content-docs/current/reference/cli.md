@@ -236,8 +236,8 @@ design_review is blocked: a lens answered inconclusive; the verdict is in <dossi
 
 L'agent relancé reçoit d'abord ce que le blocage a laissé, puis la consigne.
 
-Une revue dont la boucle vers son producteur atteint `max_visits` (3 pour chaque revue du
-workflow livré) ne renvoie plus le travail. Sa question dit que le producteur n'a pas corrigé
+Une revue dont la boucle vers son producteur atteint `max_visits` (2 pour chaque revue du workflow
+livré : 3 passages) ne renvoie plus le travail. Sa question dit que le producteur n'a pas corrigé
 tous les findings, montre chaque finding blocker et high avec son contexte (la raison de sa
 sévérité, le type de dérive, tous les endroits où il se trouve, la correction), les medium et low
 dans un tableau, et où se trouve le fichier de verdict. Quand il ne reste que des medium et des
@@ -248,14 +248,14 @@ jamais acceptés. Dans les deux cas, une consigne relance le producteur avec tou
 `STOP` termine le run.
 
 ```
-design_review: design did not fix every finding after 4 passes, so the run does not send it back again.
+design_review: design did not fix every finding after 3 passes, so the run does not send it back again.
 
 Medium and low (1):
 | Severity | Finding | Where | What |
 |---|---|---|---|
 | medium | consistency F1 | docs/architecture/payments.md:7 | a read model is classified twice |
 
-Every finding with its context: <dossier de suivi>/reviews/design_review-4/verdict.yaml
+Every finding with its context: <dossier de suivi>/reviews/design_review-3/verdict.yaml
 ACCEPT takes these findings as they stand and goes on (they are listed in the run report and the pull request); an instruction runs design again with every finding and the instruction; STOP ends the run.
 ```
 

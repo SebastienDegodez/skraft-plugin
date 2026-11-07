@@ -151,7 +151,8 @@ Proposed → Accepted → Deprecated
 
 **Linking rule:** When ADR-002 supersedes ADR-001:
 - ADR-001 status: `Superseded by ADR-002`
-- ADR-002 context: reference ADR-001 — "This supersedes ADR-001, which prescribed X."
+- ADR-002 names ADR-001 on its `**Supersedes:**` line (or `**Amends:**` for a partial replacement) and its `supersedes:` (or `amends:`) header field, nowhere else. Its Context and Decision state its own decision without restating or citing ADR-001.
+- No ADR cites any other ADR, by `ADR-NNN`, link or `docs/adr/` path: any ADR may be superseded, so the reference goes stale.
 
 **No ADR is ever deleted.** The historical record of why a decision was made is as valuable as the decision itself.
 
@@ -161,8 +162,8 @@ Proposed → Accepted → Deprecated
 |---|---|
 | `Proposed` (`ratified_by: null`), not yet on the default branch | Rewriting it in place: content, header and index row. It stays `Proposed`; the human ratifies the new text. Never supersede or amend it, and never give it `amended_by`, `amended_in_place`, `superseded_by` or a history section; git keeps the drafts. |
 | `Proposed`, already on the default branch | A new ADR that supersedes or amends it. Only its status lines change; the engine refuses any other change. |
-| `Accepted` | A new ADR that supersedes it (linking rule above). Its body and decision never change. |
-| `Rejected`, `Deprecated`, `Superseded` | Nothing: terminal. A new question gets a new ADR. |
+| `Accepted` | A new ADR that supersedes it (linking rule above). Its body and decision never change; its status moves only to `Superseded by ADR-NNN` or `Deprecated`, never back to `Proposed` nor to `Rejected`. |
+| `Rejected`, `Deprecated`, `Superseded` | Nothing: terminal, the status stays. A new question gets a new ADR. |
 
 One exception: when the run's feedback says an ADR is not on the default branch yet, it is still a draft of the pull request whatever its status — edit it in place and set it back to `Proposed`.
 
@@ -240,9 +241,9 @@ ADRs record **additions** and **deviations** from the project baseline. The base
 
 ### Q1 — Is the choice already enforced by a project skill or an automated architecture test?
 
-Baseline examples: pure domain service with no IO (Clean Architecture layering, `clean-architecture-*` skill and architecture tests); CQS at method level, one handler per command or query; validation at the boundary with a pure core; convention-based DI registration; Value Object with a pure validator (tactical DDD).
+Baseline examples: pure domain service with no IO (Clean Architecture layering, `clean-architecture-*` skill and architecture tests); CQS at method level, one handler per command or query; validation at the boundary with a pure core; convention-based DI registration; Value Object with a pure validator (tactical DDD); the repository pattern and where a repository interface lives, Domain or Application (`clean-architecture-*` skill).
 
-YES → `NOT ELIGIBLE — <skill, test or ADR that already enforces it>`.
+YES → `NOT ELIGIBLE — <skill, test or ADR that already enforces it>`. An ADR that mixes an eligible decision with a baseline one (an aggregate boundary plus where its repository interface lives) keeps the eligible decision only: delete the baseline part, never move it to a new ADR.
 
 ### Q2 — Is the choice framed as a good practice or as avoiding an antipattern?
 
@@ -337,8 +338,9 @@ Before writing the final ADR, verify:
 - [ ] **Alternatives are genuine** — rejected alternatives are real options that were seriously considered, not strawmen
 - [ ] **Alternatives explain the rejection** — not "too complex" but "too complex because X and Y are not needed given the current story set"
 - [ ] **Status is set** — `Proposed` when drafting, `Accepted` when ratified
-- [ ] **Supersession is linked** — if this supersedes another ADR, both are updated
-- [ ] **Decision level** — Context, a one-sentence decision, Consequences, Alternatives on about one page; signatures, route trees, enum values, Value Object inventories and file paths go in the DESIGN details.
+- [ ] **Supersession is linked** — if this supersedes another ADR, both are updated: the old one's status, the new one's `Supersedes:` line
+- [ ] **Decision level** — Context, a one-sentence decision, Consequences, Alternatives on about one page; signatures, route trees, enum values and Value Object inventories go in the DESIGN details.
+- [ ] **Autonomous** — the ADR records one technical decision and reads on its own. No code reference: no `#file:<path>[:start[-end]]` citation, no file path, no `path:line`. No user story, acceptance criterion identifier, ticket or issue number, not even the story that raised it: that link lives in `docs/adr/decisions-index.md`. No other ADR: the only `ADR-NNN` it names is its own and the one it replaces, on its `Supersedes:` or `Amends:` line.
 - [ ] **No version** — name technologies or families ("Red Hat UBI base images", "a client-side router"), never a version, image tag, digest or package version; when a version matters, state the capability it brings. Versions live in manifests (`.csproj`, `package.json`, Dockerfile `ARG`, CI).
 
 ---

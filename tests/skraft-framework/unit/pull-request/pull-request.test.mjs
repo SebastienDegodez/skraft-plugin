@@ -407,7 +407,7 @@ test('the review the description shows: one table per review, a row per finding 
 test('a review whose rework the workflow sends onward shows what is to fix, open, with the refuter\'s word', async () => {
   const workflow = edit(BUILT_IN_WORKFLOW,
     ['design_review [shape=tripleoctagon, mandatory=true]', 'design_review [shape=tripleoctagon]'],
-    ['  design_review -> design  [label="NEEDS_REWORK", max_visits=3]\n', '  design_review -> adr  [label="NEEDS_REWORK"]\n'])
+    ['  design_review -> design  [label="NEEDS_REWORK", max_visits=2]\n', '  design_review -> adr  [label="NEEDS_REWORK"]\n'])
   const host = scripted({ config: CONSENTED, workflow }, (it) => nominal(it))
   host.agentRunner.review = lenses({
     consistency: [says('consistency', 'fail', [finding('F1', 'medium', 'no owner for refunds', { location: 'details/x.md:3' })])],

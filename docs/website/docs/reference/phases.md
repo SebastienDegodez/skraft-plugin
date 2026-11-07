@@ -123,7 +123,7 @@ Verdict: `review-verdict.mjs --phase discuss`, same rules and same budget as DIS
 
 | Edge | Label | `max_visits` |
 | --- | --- | --- |
-| `design_review -> design` | `NEEDS_REWORK` | 1 |
+| `design_review -> design` | `NEEDS_REWORK` | 2 |
 | `design_review -> adr` | `APPROVED` | — |
 | `adr -> distill` | `RATIFIED` | — |
 | `adr -> design` | `REJECTED` (reason required, sent back to the architect) | 1 |
@@ -157,7 +157,7 @@ Verdict: `review-verdict.mjs --phase discuss`, same rules and same budget as DIS
 
 | Edge | Label | `max_visits` |
 | --- | --- | --- |
-| `distill_review -> distill` | `NEEDS_REWORK` | 3 |
+| `distill_review -> distill` | `NEEDS_REWORK` | 2 |
 | `distill_review -> deliver` | `APPROVED` | — |
 
 ## DELIVER <!-- #deliver -->
@@ -202,13 +202,13 @@ Verdict: `review-verdict.mjs --phase discuss`, same rules and same budget as DIS
 | --- | --- | --- |
 | `gates -> deliver` | `FAIL` | 3 |
 | `gates -> deliver_review` | `PASS` | — |
-| `deliver_review -> deliver` | `NEEDS_REWORK` | 3 |
+| `deliver_review -> deliver` | `NEEDS_REWORK` | 2 |
 | `deliver_review -> mutation` | `APPROVED` | — |
 | `mutation -> visuals` | `PASS` | — |
 | `mutation -> kill_proposal` | `FAIL` | 5 |
 | `kill_proposal -> mutation_plan` | — | — |
 | `mutation_plan -> kill_mutants` | `APPLY` (an instruction takes this edge too) | — |
-| `mutation_review -> kill_mutants` | `NEEDS_REWORK` | 3 |
+| `mutation_review -> kill_mutants` | `NEEDS_REWORK` | 2 |
 | `mutation_review -> mutation_gates` | `APPROVED` | — |
 | `mutation_gates -> kill_mutants` | `FAIL` | 3 |
 | `mutation_gates -> mutation` | `PASS` | — |

@@ -109,7 +109,7 @@ test('from the second pass, a finding at the place of one the refuter refuted on
 
 test('a finding on a line the agent changed, at a place the refuter confirmed, or in a file that came or went since the last pass, is checked again, and counts when it stands', async () => {
   // One rework only: the run stops at the review's ceiling after the second pass.
-  const once = edit(BUILT_IN_WORKFLOW, ['design_review -> design  [label="NEEDS_REWORK", max_visits=3]', 'design_review -> design  [label="NEEDS_REWORK", max_visits=1]'])
+  const once = edit(BUILT_IN_WORKFLOW, ['design_review -> design  [label="NEEDS_REWORK", max_visits=2]', 'design_review -> design  [label="NEEDS_REWORK", max_visits=1]'])
   const host = scripted({ workflow: once, files: { [ADR]: adr(), 'docs/architecture/old.md': 'old\nrule\n' } }, designReworking({ third: 'line 3, reworked', seventh: 'line 7, reworked' }, (files) => {
     files.delete('docs/architecture/old.md')
     files.set('docs/architecture/payments.md', 'payments\nowner\n')

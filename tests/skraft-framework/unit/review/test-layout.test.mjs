@@ -39,18 +39,18 @@ test('a .NET acceptance test added outside a <Context>.UnitTest project is a G11
 
 test('the engine\'s own G11 findings left at a review\'s ceiling are asked about with what they say, no context given and no table of others (#499)', async () => {
   const added = ['tests/Acceptance/CheckoutAcceptanceTests.cs']
-  const host = scripted({ answers: [{ answer: 'STOP' }] }, (it) => [...nominal(it).slice(0, 2), ...[1, 2, 3, 4].map(() => distill(added)(it))])
+  const host = scripted({ answers: [{ answer: 'STOP' }] }, (it) => [...nominal(it).slice(0, 2), ...[1, 2, 3].map(() => distill(added)(it))])
 
   assert.equal((await host.start()).code, 'loop-ceiling')
 
   assert.equal(host.human.questions[0].text, [
-    'distill_review: distill did not fix every finding after 4 passes, so the run does not send it back again.',
+    'distill_review: distill did not fix every finding after 3 passes, so the run does not send it back again.',
     '',
     'Blocker and high (2):',
     '- blocker · testability#layout F1 G11 at tests/Acceptance/CheckoutAcceptanceTests.cs: a test added outside a .UnitTest, .UnitTests or .Tests project and the integration place of dotnet, where clean-architecture-testing puts it',
     '- blocker · testability#layout F2 G11 at tests: api gains tests and none in a .UnitTest, .UnitTests or .Tests project: the acceptance test of a new use case goes there',
     '',
-    `Every finding with its context: ${TRACKING}/reviews/distill_review-4/verdict.yaml`,
+    `Every finding with its context: ${TRACKING}/reviews/distill_review-3/verdict.yaml`,
     'A blocker or high finding cannot be accepted: an instruction runs distill again with every finding and the instruction; STOP ends the run.',
   ].join('\n'))
 })
