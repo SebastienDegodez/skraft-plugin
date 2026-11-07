@@ -58,11 +58,12 @@ technical merit, not a one-line dismissal.
 
 **G15 — enforced baselines** never get their own ADR: CQS at method level (one handler interface
 per command or query), Clean Architecture layer boundaries, convention-based handler
-registration, the repository pattern as such. Suspect titles: `Apply CQS`, `Use layered
-architecture`, `Use repositories`, `Register handlers via DI`. An ADR on a deviation from a
+registration, the repository pattern as such, where a repository interface lives (Domain or
+Application). Suspect titles: `Apply CQS`, `Use layered
+architecture`, `Use repositories`, `Place the repository interface in Domain`, `Register handlers via DI`. An ADR on a deviation from a
 baseline, or an addition on top of it (CQRS with a bus, Event Sourcing, a custom DI strategy), is
 valid.
 
 **G17 — eligibility.** A library ADR is eligible only through the constraint it imposes (layer boundary, data-loading model); a body about the library's usage is G17.
 
-**G18 — decision level.** A line that would change when the code is refactored without changing the decision belongs in the contracts or diagrams. A traceability reference (a ticket, AC, PRD or requirement id cited as a source) other than the story that triggered the ADR is a finding at its line; a quality attribute stated with its measure as a force of the decision (`p95 ≤ 300 ms`, NFR id beside it or not) is none. The full list is in [references/gate-checks.md](references/gate-checks.md) G18.
+**G18 — decision level.** A line that would change when the code is refactored without changing the decision belongs in the contracts or diagrams. A code reference (a file path, a `#file:` citation, a `path:line`) is a finding at its line, and so is a traceability reference (a ticket, issue number, user story, AC, PRD or requirement id), the story that triggered the ADR included; a quality attribute stated with its measure as a force of the decision (`p95 ≤ 300 ms`, NFR id beside it or not) is none. The full list is in [references/gate-checks.md](references/gate-checks.md) G18.

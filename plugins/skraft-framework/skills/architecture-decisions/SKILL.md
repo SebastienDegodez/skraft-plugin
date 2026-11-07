@@ -240,9 +240,9 @@ ADRs record **additions** and **deviations** from the project baseline. The base
 
 ### Q1 — Is the choice already enforced by a project skill or an automated architecture test?
 
-Baseline examples: pure domain service with no IO (Clean Architecture layering, `clean-architecture-*` skill and architecture tests); CQS at method level, one handler per command or query; validation at the boundary with a pure core; convention-based DI registration; Value Object with a pure validator (tactical DDD).
+Baseline examples: pure domain service with no IO (Clean Architecture layering, `clean-architecture-*` skill and architecture tests); CQS at method level, one handler per command or query; validation at the boundary with a pure core; convention-based DI registration; Value Object with a pure validator (tactical DDD); the repository pattern and where a repository interface lives, Domain or Application (`clean-architecture-*` skill).
 
-YES → `NOT ELIGIBLE — <skill, test or ADR that already enforces it>`.
+YES → `NOT ELIGIBLE — <skill, test or ADR that already enforces it>`. An ADR that mixes an eligible decision with a baseline one (an aggregate boundary plus where its repository interface lives) keeps the eligible decision only: delete the baseline part, never move it to a new ADR.
 
 ### Q2 — Is the choice framed as a good practice or as avoiding an antipattern?
 
@@ -338,7 +338,8 @@ Before writing the final ADR, verify:
 - [ ] **Alternatives explain the rejection** — not "too complex" but "too complex because X and Y are not needed given the current story set"
 - [ ] **Status is set** — `Proposed` when drafting, `Accepted` when ratified
 - [ ] **Supersession is linked** — if this supersedes another ADR, both are updated
-- [ ] **Decision level** — Context, a one-sentence decision, Consequences, Alternatives on about one page; signatures, route trees, enum values, Value Object inventories and file paths go in the DESIGN details.
+- [ ] **Decision level** — Context, a one-sentence decision, Consequences, Alternatives on about one page; signatures, route trees, enum values and Value Object inventories go in the DESIGN details.
+- [ ] **Autonomous** — the ADR records one technical decision and reads on its own. No code reference: no file path, no `#file:` citation, no `path:line`. No user story, acceptance criterion, ticket or issue number, not even the story that raised it: that link lives in `docs/adr/decisions-index.md`.
 - [ ] **No version** — name technologies or families ("Red Hat UBI base images", "a client-side router"), never a version, image tag, digest or package version; when a version matters, state the capability it brings. Versions live in manifests (`.csproj`, `package.json`, Dockerfile `ARG`, CI).
 
 ---
