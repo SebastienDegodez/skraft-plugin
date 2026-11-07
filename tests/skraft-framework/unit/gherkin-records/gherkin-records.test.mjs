@@ -258,12 +258,15 @@ test("the story is read from what its plan names: the .feature of another contex
 })
 
 test('a component that writes its tests without Gherkin is asked for no scenario: the plan may name a .feature nobody wrote and DISTILL closes', async () => {
-  const unit = runOf([designer({ cited: ['pay-by-card.feature'], drop: ['docs/features/.gitkeep'] })], [{ ...API, bdd: false }])
-  const gherkin = runOf([designer({ cited: ['pay-by-card.feature'], drop: ['docs/features/.gitkeep'] })])
+  const attempt = () => designer({ cited: ['pay-by-card.feature'], drop: ['docs/features/.gitkeep'] })
+  const unit = runOf([attempt()], [{ ...API, bdd: false }])
+  const gherkin = runOf([attempt()])
+  const both = runOf([attempt()], [{ ...API, bdd: false }, { ...GHERKIN, name: 'web', root: 'web' }])
 
   const outcome = await unit.start()
 
   assert.deepEqual(distill(unit), [[1, 'done', null, []]], 'nothing reads a .feature of a component that declines Gherkin')
   assert.equal(outcome.status, 'done', outcome.reason)
   assert.equal((await gherkin.start()).status, 'blocked', 'the same attempt, in a component that declares Gherkin, is sent back')
+  assert.equal((await both.start()).status, 'blocked', 'one component writing Gherkin holds the story to its scenarios, whatever the others write')
 })
