@@ -166,11 +166,11 @@ test('a citation of an existing folder ending in a slash does not send the resea
   assert.deepEqual(recorded(host)[0], [1, 'done', null, []])
 })
 
-test('citations of root and extensionless files are checked, and only absent paths send the researcher back', async () => {
+test('citations of root and extensionless files are checked, code names that hold a dot are no file, and only absent paths send the researcher back', async () => {
   const host = scripted({
     files: { 'package.json': '{}', Dockerfile: 'FROM node:22' },
   }, (it) => [
-    researcher(citing(['package.json:1', 'Dockerfile', 'missing.json:1', 'MissingFile']))(it),
+    researcher(`${citing(['package.json:1', 'Dockerfile', 'missing.json:1', 'MissingFile'])}The domain uses no \`System.IO\` or \`System.Net\`, the endpoint answers \`TypedResults.Problem\` on ASP.NET, \`Mastermind.Domain\` references nothing and \`p.Value\` holds the colour.\n`)(it),
     researcher(citing([MAP]))(it),
     ...nominal(it).slice(1),
   ])

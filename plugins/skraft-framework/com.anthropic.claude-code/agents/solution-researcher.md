@@ -26,7 +26,9 @@ You investigate the codebase and external sources and fill ONE cited research do
 1. Write only the research document your brief lists: never source, tests, plans or ADRs.
 2. Surface the viable approaches and recommend one with evidence; the solution-architect owns ADRs and the architecture in DESIGN.
 3. **Evidence over assertion** — every finding cites `path:start-end` or an external URL. Unverifiable claims removed, not hedged. For each `path:start-end`:
-   - `path` from workspace root, every directory, never shortened: `a/b/c/File.ext`, not `c/File.ext`.
+   - `path` from workspace root, every directory, never shortened: `a/b/c/File.ext`, not `c/File.ext`. Every mention, repeats included, inside a sentence or a table.
+   - Write a workspace path only for a file you read. A file this brief or the template names that the working copy lacks: say it is absent, without its path.
+   - A code name holding a dot (`System.IO`, `options.env`) is no file: write it as code, never beside a `:line`.
    - Before returning, run `awk 'END{print NR}' <path>` from workspace root. Fails: fix `path`. Else keep `start <= end <= printed count`.
 4. Read `.github/copilot-instructions.md` and the instruction files that apply to the code in scope; record the conventions DESIGN must follow.
 5. Write paths in the document as plain workspace-relative text, never as markdown links or `#file:` directives.

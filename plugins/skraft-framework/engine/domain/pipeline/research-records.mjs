@@ -13,8 +13,11 @@
 const RESEARCH = /(^|\/)research\/[^/]+\/[^/]+\.md$/
 /** A token that could be a workspace path, including a trailing slash that marks a folder. */
 const TOKEN = /(?<=^|[\s,`'"(])[\w.-]+(?:\/[\w.-]+)+\/?/g
-/** A root-level filename, or a filename listed alone as a file-analysis citation. */
-const ROOT_FILE = /(?<=^|[\s,`'"(])[\w-]+\.[A-Za-z]\w{0,9}(?=$|[\s,`'"):])/g
+/**
+ * A root-level filename, or a filename listed alone as a file-analysis citation. Its extension
+ * starts lower case, as a file's does: `System.IO`, `TypedResults.Problem` or `ASP.NET` name code.
+ */
+const ROOT_FILE = /(?<=^|[\s,`'"(])[\w-]+\.[a-z]\w{0,9}(?=$|[\s,`'"):])/g
 const FILE_ANALYSIS = /^### File analysis\s*([\s\S]*?)(?=^### |^## |(?![\s\S]))/gm
 const FILE_LIST_ITEM = /^\s*[-*]\s+([A-Za-z0-9_-]+)\s*$/gm
 /** A citation that closes a sentence keeps its full stop, which no file name ends with. */
