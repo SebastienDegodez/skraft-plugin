@@ -128,7 +128,7 @@ a timeline: a command (an intent, which may be rejected), an event (a past fact)
 (what the user sees) ([Dymitruk, 2019](../reference/citations.mdx#cite-dymitruk-eventmodeling-2019)). skraft calls
 a command, its events and its read model a **slice**: the smallest unit of deliverable value. The
 `fitness` lens requires every story to have at least one command or query (G7) and every command
-to have an event for its success (G8).
+of a business context to have an event for its success (G8).
 
 **Then Evans's tactical building blocks**, in the tactical design of each context,
 `docs/architecture/{bounded-context}.md`:
