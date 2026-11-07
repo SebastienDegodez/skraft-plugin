@@ -1,5 +1,5 @@
 {
-  "generated": "2026-11-07T20:08:35.571Z",
+  "generated": "2026-11-07T20:31:31.476Z",
   "sessions": [
     {
       "id": "scheduled/2026-09-28/acceptance-designer/absent-acceptance-criteria-halt-the-distillation--main--run0",
@@ -4836,6 +4836,266 @@
         "pr-554"
       ],
       "mtime": 1794082113318.1904
+    },
+    {
+      "id": "pr/556/acceptance-designer/a-criterion-an-existing-test-already-covers-is-relied-on-only-once-that-test-is-run-else-tested-anew--main--run0",
+      "name": "acceptance-designer / A criterion an existing test already covers is relied on only once that test is run, else tested anew (main, run 0)",
+      "url": "sessions/pr/556/acceptance-designer/a-criterion-an-existing-test-already-covers-is-relied-on-only-once-that-test-is-run-else-tested-anew--main--run0.jsonl",
+      "tags": [
+        "pr",
+        "acceptance-designer",
+        "main",
+        "a-criterion-an-existing-test-already-covers-is-relied-on-only-once-that-test-is-run-else-tested-anew",
+        "pr-556"
+      ],
+      "mtime": 1794083489537.1145
+    },
+    {
+      "id": "pr/556/acceptance-designer/a-criterion-an-existing-test-already-covers-is-relied-on-only-once-that-test-is-run-else-tested-anew--main--run1",
+      "name": "acceptance-designer / A criterion an existing test already covers is relied on only once that test is run, else tested anew (main, run 1)",
+      "url": "sessions/pr/556/acceptance-designer/a-criterion-an-existing-test-already-covers-is-relied-on-only-once-that-test-is-run-else-tested-anew--main--run1.jsonl",
+      "tags": [
+        "pr",
+        "acceptance-designer",
+        "main",
+        "a-criterion-an-existing-test-already-covers-is-relied-on-only-once-that-test-is-run-else-tested-anew",
+        "pr-556"
+      ],
+      "mtime": 1794083489558.1145
+    },
+    {
+      "id": "pr/556/acceptance-designer/a-criterion-an-existing-test-already-covers-is-relied-on-only-once-that-test-is-run-else-tested-anew--main--run2",
+      "name": "acceptance-designer / A criterion an existing test already covers is relied on only once that test is run, else tested anew (main, run 2)",
+      "url": "sessions/pr/556/acceptance-designer/a-criterion-an-existing-test-already-covers-is-relied-on-only-once-that-test-is-run-else-tested-anew--main--run2.jsonl",
+      "tags": [
+        "pr",
+        "acceptance-designer",
+        "main",
+        "a-criterion-an-existing-test-already-covers-is-relied-on-only-once-that-test-is-run-else-tested-anew",
+        "pr-556"
+      ],
+      "mtime": 1794083489559.1145
+    },
+    {
+      "id": "pr/556/acceptance-designer/a-criterion-an-existing-test-already-covers-is-relied-on-only-once-that-test-is-run-else-tested-anew--main--run3",
+      "name": "acceptance-designer / A criterion an existing test already covers is relied on only once that test is run, else tested anew (main, run 3)",
+      "url": "sessions/pr/556/acceptance-designer/a-criterion-an-existing-test-already-covers-is-relied-on-only-once-that-test-is-run-else-tested-anew--main--run3.jsonl",
+      "tags": [
+        "pr",
+        "acceptance-designer",
+        "main",
+        "a-criterion-an-existing-test-already-covers-is-relied-on-only-once-that-test-is-run-else-tested-anew",
+        "pr-556"
+      ],
+      "mtime": 1794083489582.1145
+    },
+    {
+      "id": "pr/556/acceptance-designer/a-criterion-an-existing-test-already-covers-is-relied-on-only-once-that-test-is-run-else-tested-anew--main--run4",
+      "name": "acceptance-designer / A criterion an existing test already covers is relied on only once that test is run, else tested anew (main, run 4)",
+      "url": "sessions/pr/556/acceptance-designer/a-criterion-an-existing-test-already-covers-is-relied-on-only-once-that-test-is-run-else-tested-anew--main--run4.jsonl",
+      "tags": [
+        "pr",
+        "acceptance-designer",
+        "main",
+        "a-criterion-an-existing-test-already-covers-is-relied-on-only-once-that-test-is-run-else-tested-anew",
+        "pr-556"
+      ],
+      "mtime": 1794083489583.1145
+    },
+    {
+      "id": "pr/556/acceptance-designer/absent-acceptance-criteria-halt-the-distillation--main--run0",
+      "name": "acceptance-designer / Absent acceptance criteria halt the distillation (main, run 0)",
+      "url": "sessions/pr/556/acceptance-designer/absent-acceptance-criteria-halt-the-distillation--main--run0.jsonl",
+      "tags": [
+        "pr",
+        "acceptance-designer",
+        "main",
+        "absent-acceptance-criteria-halt-the-distillation",
+        "pr-556"
+      ],
+      "mtime": 1794083489582.1145
+    },
+    {
+      "id": "pr/556/acceptance-designer/absent-acceptance-criteria-halt-the-distillation--main--run1",
+      "name": "acceptance-designer / Absent acceptance criteria halt the distillation (main, run 1)",
+      "url": "sessions/pr/556/acceptance-designer/absent-acceptance-criteria-halt-the-distillation--main--run1.jsonl",
+      "tags": [
+        "pr",
+        "acceptance-designer",
+        "main",
+        "absent-acceptance-criteria-halt-the-distillation",
+        "pr-556"
+      ],
+      "mtime": 1794083489602.8225
+    },
+    {
+      "id": "pr/556/acceptance-designer/absent-acceptance-criteria-halt-the-distillation--main--run2",
+      "name": "acceptance-designer / Absent acceptance criteria halt the distillation (main, run 2)",
+      "url": "sessions/pr/556/acceptance-designer/absent-acceptance-criteria-halt-the-distillation--main--run2.jsonl",
+      "tags": [
+        "pr",
+        "acceptance-designer",
+        "main",
+        "absent-acceptance-criteria-halt-the-distillation",
+        "pr-556"
+      ],
+      "mtime": 1794083489603.1145
+    },
+    {
+      "id": "pr/556/acceptance-designer/absent-acceptance-criteria-halt-the-distillation--main--run3",
+      "name": "acceptance-designer / Absent acceptance criteria halt the distillation (main, run 3)",
+      "url": "sessions/pr/556/acceptance-designer/absent-acceptance-criteria-halt-the-distillation--main--run3.jsonl",
+      "tags": [
+        "pr",
+        "acceptance-designer",
+        "main",
+        "absent-acceptance-criteria-halt-the-distillation",
+        "pr-556"
+      ],
+      "mtime": 1794083489604.1145
+    },
+    {
+      "id": "pr/556/acceptance-designer/absent-acceptance-criteria-halt-the-distillation--main--run4",
+      "name": "acceptance-designer / Absent acceptance criteria halt the distillation (main, run 4)",
+      "url": "sessions/pr/556/acceptance-designer/absent-acceptance-criteria-halt-the-distillation--main--run4.jsonl",
+      "tags": [
+        "pr",
+        "acceptance-designer",
+        "main",
+        "absent-acceptance-criteria-halt-the-distillation",
+        "pr-556"
+      ],
+      "mtime": 1794083489604.1145
+    },
+    {
+      "id": "pr/556/acceptance-designer/agreed-criteria-become-an-executable-specification-that-fails-on-business-meaning--main--run0",
+      "name": "acceptance-designer / Agreed criteria become an executable specification that fails on business meaning (main, run 0)",
+      "url": "sessions/pr/556/acceptance-designer/agreed-criteria-become-an-executable-specification-that-fails-on-business-meaning--main--run0.jsonl",
+      "tags": [
+        "pr",
+        "acceptance-designer",
+        "main",
+        "agreed-criteria-become-an-executable-specification-that-fails-on-business-meaning",
+        "pr-556"
+      ],
+      "mtime": 1794083489604.1145
+    },
+    {
+      "id": "pr/556/acceptance-designer/agreed-criteria-become-an-executable-specification-that-fails-on-business-meaning--main--run1",
+      "name": "acceptance-designer / Agreed criteria become an executable specification that fails on business meaning (main, run 1)",
+      "url": "sessions/pr/556/acceptance-designer/agreed-criteria-become-an-executable-specification-that-fails-on-business-meaning--main--run1.jsonl",
+      "tags": [
+        "pr",
+        "acceptance-designer",
+        "main",
+        "agreed-criteria-become-an-executable-specification-that-fails-on-business-meaning",
+        "pr-556"
+      ],
+      "mtime": 1794083489624.385
+    },
+    {
+      "id": "pr/556/acceptance-designer/agreed-criteria-become-an-executable-specification-that-fails-on-business-meaning--main--run2",
+      "name": "acceptance-designer / Agreed criteria become an executable specification that fails on business meaning (main, run 2)",
+      "url": "sessions/pr/556/acceptance-designer/agreed-criteria-become-an-executable-specification-that-fails-on-business-meaning--main--run2.jsonl",
+      "tags": [
+        "pr",
+        "acceptance-designer",
+        "main",
+        "agreed-criteria-become-an-executable-specification-that-fails-on-business-meaning",
+        "pr-556"
+      ],
+      "mtime": 1794083489625.1145
+    },
+    {
+      "id": "pr/556/acceptance-designer/agreed-criteria-become-an-executable-specification-that-fails-on-business-meaning--main--run3",
+      "name": "acceptance-designer / Agreed criteria become an executable specification that fails on business meaning (main, run 3)",
+      "url": "sessions/pr/556/acceptance-designer/agreed-criteria-become-an-executable-specification-that-fails-on-business-meaning--main--run3.jsonl",
+      "tags": [
+        "pr",
+        "acceptance-designer",
+        "main",
+        "agreed-criteria-become-an-executable-specification-that-fails-on-business-meaning",
+        "pr-556"
+      ],
+      "mtime": 1794083489625.1145
+    },
+    {
+      "id": "pr/556/acceptance-designer/agreed-criteria-become-an-executable-specification-that-fails-on-business-meaning--main--run4",
+      "name": "acceptance-designer / Agreed criteria become an executable specification that fails on business meaning (main, run 4)",
+      "url": "sessions/pr/556/acceptance-designer/agreed-criteria-become-an-executable-specification-that-fails-on-business-meaning--main--run4.jsonl",
+      "tags": [
+        "pr",
+        "acceptance-designer",
+        "main",
+        "agreed-criteria-become-an-executable-specification-that-fails-on-business-meaning",
+        "pr-556"
+      ],
+      "mtime": 1794083489625.1145
+    },
+    {
+      "id": "pr/556/acceptance-designer/an-undecided-tier-is-escalated-rather-than-given-an-invented-price--main--run0",
+      "name": "acceptance-designer / An undecided tier is escalated rather than given an invented price (main, run 0)",
+      "url": "sessions/pr/556/acceptance-designer/an-undecided-tier-is-escalated-rather-than-given-an-invented-price--main--run0.jsonl",
+      "tags": [
+        "pr",
+        "acceptance-designer",
+        "main",
+        "an-undecided-tier-is-escalated-rather-than-given-an-invented-price",
+        "pr-556"
+      ],
+      "mtime": 1794083489625.1145
+    },
+    {
+      "id": "pr/556/acceptance-designer/an-undecided-tier-is-escalated-rather-than-given-an-invented-price--main--run1",
+      "name": "acceptance-designer / An undecided tier is escalated rather than given an invented price (main, run 1)",
+      "url": "sessions/pr/556/acceptance-designer/an-undecided-tier-is-escalated-rather-than-given-an-invented-price--main--run1.jsonl",
+      "tags": [
+        "pr",
+        "acceptance-designer",
+        "main",
+        "an-undecided-tier-is-escalated-rather-than-given-an-invented-price",
+        "pr-556"
+      ],
+      "mtime": 1794083489625.1145
+    },
+    {
+      "id": "pr/556/acceptance-designer/an-undecided-tier-is-escalated-rather-than-given-an-invented-price--main--run2",
+      "name": "acceptance-designer / An undecided tier is escalated rather than given an invented price (main, run 2)",
+      "url": "sessions/pr/556/acceptance-designer/an-undecided-tier-is-escalated-rather-than-given-an-invented-price--main--run2.jsonl",
+      "tags": [
+        "pr",
+        "acceptance-designer",
+        "main",
+        "an-undecided-tier-is-escalated-rather-than-given-an-invented-price",
+        "pr-556"
+      ],
+      "mtime": 1794083489640.1145
+    },
+    {
+      "id": "pr/556/acceptance-designer/an-undecided-tier-is-escalated-rather-than-given-an-invented-price--main--run3",
+      "name": "acceptance-designer / An undecided tier is escalated rather than given an invented price (main, run 3)",
+      "url": "sessions/pr/556/acceptance-designer/an-undecided-tier-is-escalated-rather-than-given-an-invented-price--main--run3.jsonl",
+      "tags": [
+        "pr",
+        "acceptance-designer",
+        "main",
+        "an-undecided-tier-is-escalated-rather-than-given-an-invented-price",
+        "pr-556"
+      ],
+      "mtime": 1794083489639.1145
+    },
+    {
+      "id": "pr/556/acceptance-designer/an-undecided-tier-is-escalated-rather-than-given-an-invented-price--main--run4",
+      "name": "acceptance-designer / An undecided tier is escalated rather than given an invented price (main, run 4)",
+      "url": "sessions/pr/556/acceptance-designer/an-undecided-tier-is-escalated-rather-than-given-an-invented-price--main--run4.jsonl",
+      "tags": [
+        "pr",
+        "acceptance-designer",
+        "main",
+        "an-undecided-tier-is-escalated-rather-than-given-an-invented-price",
+        "pr-556"
+      ],
+      "mtime": 1794083489640.1145
     }
   ]
 }
