@@ -65,10 +65,10 @@ import { takeFromLastPass } from './review-repeats.mjs'
  * @typedef {{ path: string, text: string, location: string }} RuleFile path: relative to the working
  *   copy; location: what a lens reads, the copy beside the review when the rules come from a commit
  * @typedef {import('../../domain/review/changes.mjs').Scope} Scope
- * @typedef {{ paths: string[], patch: string, rules: RuleFile[], inputs: Record<InputKind, string[]>, scoped: Partial<Record<Scope, { paths: string[], inputs: Partial<Record<InputKind, string[]>> }>>, scan: Finding[], layout: Finding[] }} Prepared
+ * @typedef {{ paths: string[], patch: string, rules: RuleFile[], inputs: Record<InputKind, string[]>, scoped: Partial<Record<Scope, { paths: string[], changed: boolean, inputs: Partial<Record<InputKind, string[]>> }>>, scan: Finding[], layout: Finding[] }} Prepared
  *   paths: the changed paths, relative to the working copy; rules: the project's rule files that
  *   exist; inputs: the tracking files of each kind; scoped: for each scope a lens of the node
- *   reads (the code always), its changed paths and change files, without or with only the run's documents; scan: the G9 findings the engine reads in the patch;
+ *   reads (the code always), its changed paths, whether it changed anything and its change files, without or with only the run's documents; scan: the G9 findings the engine reads in the patch;
  *   layout: the G11 findings it reads in where the patch adds test files.
  * @typedef {{ stop: { code: string, reason: string } }} Stopped
  * @typedef {{ verdict: ReviewVerdict, costUsd: number | undefined, file: string }} Reviewed
@@ -107,14 +107,14 @@ export const runReview = async (given) => {
  */
 const reviewPrepared = async (review, prepared) => {
   const planned = await planLensInputs(review, prepared)
-  const lensed = await lensResults(review, planned)
+  const lensed = await lensResults(review, planned, prepared)
   if ('stop' in lensed) return lensed
   const scanned = await scanOf(review, planned, prepared)
   const results = [...lensed.results, ...scanned.map(({ result }) => result)]
   const taken = await takeFromLastPass(review, { prepared, results, engine: ENGINE, journaled: (type) => eventsOfThisPass(review, type), last: (type) => eventsOf(review, type).filter(({ visit }) => visit === review.step.visit - 1) })
   const refuted = blocksReview(results) ? { refutations: [] } : await refutations(review, [...planned, ...scanned.map(({ entry }) => entry)], openResults(results, taken))
   if ('stop' in refuted) return refuted
-  return reviewed(review, await decide(review, { results, reused: lensed.reused, refutations: withCarried(taken.carried, refuted.refutations), unchanged: taken.unchanged }))
+  return reviewed(review, await decide(review, { results, reused: lensed.reused, skipped: lensed.skipped, refutations: withCarried(taken.carried, refuted.refutations), unchanged: taken.unchanged }))
 }
 
 /**
@@ -211,11 +211,11 @@ const skillsAndDescriptor = ({ skills, descriptor, gates }) => ({ skills, descri
 /**
  * The verdict of the pass, written beside its inputs.
  * @param {Review} review
- * @param {{ results: LensResult[], refutations: RecordedRefutation[], reused: string[], unchanged: import('../../domain/review/verdict.mjs').UnchangedFinding[] }} pass
+ * @param {{ results: LensResult[], refutations: RecordedRefutation[], reused: string[], skipped: string[], unchanged: import('../../domain/review/verdict.mjs').UnchangedFinding[] }} pass
  */
-const decide = async (review, { results, refutations: checked, reused, unchanged }) => {
+const decide = async (review, { results, refutations: checked, reused, skipped, unchanged }) => {
   const verdict = decideReview(results, checked, unchanged)
-  await review.deps.files.write(review.slug, verdictPath(review.step.node.id, review.step.visit), composeVerdictFile({ verdict, results, refutations: checked, reused, unchanged }))
+  await review.deps.files.write(review.slug, verdictPath(review.step.node.id, review.step.visit), composeVerdictFile({ verdict, results, refutations: checked, reused, skipped, unchanged }))
   return verdict
 }
 
@@ -243,7 +243,7 @@ const prepareChanges = async (review) => {
   const present = new Set(await review.deps.files.list(review.slug, ''))
   await writeAll(review, folder, filesOf(review, { changes, scopes }, { rules, present }))
   const changed = hasChanges(changes)
-  const scoped = Object.fromEntries(Object.entries(scopes).map(([scope, part]) => [scope, { paths: part.paths, inputs: changed ? scopeInputs(folder, scope) : {} }]))
+  const scoped = Object.fromEntries(Object.entries(scopes).map(([scope, part]) => [scope, { paths: part.paths, changed: hasChanges(part), inputs: changed ? scopeInputs(folder, scope) : {} }]))
   return { ...changes, rules, inputs: inputsOf(review, folder, { changed, present }), scoped, scan: scanPatch(changes.patch), layout: layoutFindings(changes.patch, review.inputs.components ?? []) }
 }
 
@@ -457,20 +457,56 @@ const eventsOfThisPass = ({ journal, step }, type) => {
 }
 
 /**
- * Each lens's result: kept from this pass when a resumed review already has it, kept from the
- * last pass when its inputs did not change and it found nothing, else asked; in the node's
- * order. reused: the lenses this pass took over from the last one.
- * @param {Review} review @param {PlannedLens[]} planned
- * @returns {Promise<{ results: LensResult[], reused: string[] } | Stopped>}
+ * Each lens's result: a pass for a lens that judges the changes alone when its scope holds none,
+ * kept from this pass when a resumed review already has it, kept from the last pass when its
+ * inputs did not change and it found nothing, else asked; in the node's order. reused: the
+ * lenses this pass took over from the last one; skipped: those it did not ask for want of change.
+ * @param {Review} review @param {PlannedLens[]} planned @param {Prepared} prepared
+ * @returns {Promise<{ results: LensResult[], reused: string[], skipped: string[] } | Stopped>}
  */
-const lensResults = async (review, planned) => {
-  const kept = await keepLenses(review, planned)
-  const answered = await askLenses(review, planned.filter((entry) => !kept.has(entry.lens.id)))
+const lensResults = async (review, planned, prepared) => {
+  const skipped = await skipLenses(review, planned.filter(({ lens }) => nothingToJudge(lens, prepared)))
+  const kept = await keepLenses(review, planned.filter((entry) => !skipped.has(entry.lens.id)))
+  const answered = await askLenses(review, planned.filter((entry) => !skipped.has(entry.lens.id) && !kept.has(entry.lens.id)))
   if ('stop' in answered) return answered
   const asked = answered.results
-  const results = planned.map(({ lens }) => kept.get(lens.id)?.result ?? /** @type {LensResult} */ (asked.find((result) => result.lens === lens.id)))
+  const results = planned.map(({ lens }) => skipped.get(lens.id) ?? kept.get(lens.id)?.result ?? /** @type {LensResult} */ (asked.find((result) => result.lens === lens.id)))
   const reused = planned.filter(({ lens }) => kept.get(lens.id)?.reused).map(({ lens }) => lens.id)
-  return { results, reused }
+  return { results, reused, skipped: planned.filter(({ lens }) => skipped.has(lens.id)).map(({ lens }) => lens.id) }
+}
+
+/** Why a lens is not asked: its scope holds no change and it judges the changes alone. */
+const NO_CHANGES = 'no-changes'
+
+/**
+ * Whether a lens that judges the changes alone has none to judge in its scope; a lens that reads
+ * anything else always has something.
+ * @param {Lens} lens @param {Prepared} prepared
+ */
+const nothingToJudge = (lens, prepared) => lens.patchOnly && !(lens.scope === null ? hasChanges(prepared) : /** @type {NonNullable<Prepared['scoped'][Scope]>} */ (prepared.scoped[lens.scope]).changed)
+
+/**
+ * A pass with no finding for each lens with nothing to judge, journaled once a pass with
+ * `skipped: no-changes`, so the verdict, a resume and the reports read it like any answer.
+ * @param {Review} review @param {PlannedLens[]} idle
+ * @returns {Promise<Map<string, LensResult>>}
+ */
+const skipLenses = async (review, idle) => {
+  const journaled = eventsOfThisPass(review, 'review.lens')
+  /** @type {Map<string, LensResult>} */
+  const skipped = new Map()
+  for (const { lens, fingerprint } of idle) {
+    const result = /** @type {LensResult} */ ({ lens: lens.id, verdict: 'pass', findings: [] })
+    if (!journaled.some((event) => event.lens === lens.id && event.skipped === NO_CHANGES)) await recordSkip(review, lens, fingerprint)
+    skipped.set(lens.id, result)
+  }
+  return skipped
+}
+
+/** @param {Review} review @param {Lens} lens @param {string} fingerprint */
+const recordSkip = async ({ journal, step, deps, slug }, lens, fingerprint) => {
+  await journal.append('review.lens', { step: step.node.id, visit: step.visit, lens: lens.id, agent: lens.agent, fingerprint, verdict: 'pass', findings: [], skipped: NO_CHANGES })
+  deps.progress.log(`${slug}: ${step.node.id} skips ${lens.id}: no change to judge`)
 }
 
 /** @typedef {{ result: LensResult, reused: boolean | undefined }} Kept reused: taken over from the last pass */

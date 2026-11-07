@@ -205,11 +205,13 @@ const counted = (count, noun) => `${count} ${noun}${count > 1 ? 's' : ''}`
 /**
  * The verdict file of a review pass: its status, the findings that count, the notes (`since`:
  * the pass since which the line of a finding new on it is unchanged), every refutation
- * (`carried`: the pass whose refutation it repeats), and the lenses taken over from the previous pass.
- * @param {{ verdict: ReviewVerdict, results: LensResult[], refutations: RecordedRefutation[], reused: string[], unchanged: UnchangedFinding[] }} pass
- *   reused: the lenses whose result was kept from the previous pass, in the node's order
+ * (`carried`: the pass whose refutation it repeats), the lenses taken over from the previous pass
+ * and, when there are some, those not asked because their scope holds no change.
+ * @param {{ verdict: ReviewVerdict, results: LensResult[], refutations: RecordedRefutation[], reused: string[], skipped?: string[], unchanged: UnchangedFinding[] }} pass
+ *   reused: the lenses whose result was kept from the previous pass, in the node's order;
+ *   skipped: the lenses that judge the changes alone and had none, each a pass with no finding
  */
-export const composeVerdictFile = ({ verdict, results, refutations, reused, unchanged }) => emitYaml({
+export const composeVerdictFile = ({ verdict, results, refutations, reused, skipped = [], unchanged }) => emitYaml({
   status: verdict.status,
   code: verdict.code,
   summary: verdict.summary,
@@ -217,6 +219,7 @@ export const composeVerdictFile = ({ verdict, results, refutations, reused, unch
   notes: noteFindings(results, unchanged).map(({ lens, finding, since }) => ({ ...fileEntry(findingEntry(lens, finding)), since })),
   refutations: refutations.map(({ lens, finding, verdict: said, reason, dissent, carried }) => ({ lens, finding, verdict: said, reason, ...(dissent ? { dissent } : {}), ...(carried === undefined ? {} : { carried }) })),
   reused: reused.map((lens) => ({ lens })),
+  ...(skipped.length === 0 ? {} : { skipped: skipped.map((lens) => ({ lens, reason: 'no-changes' })) }),
 })
 
 /**

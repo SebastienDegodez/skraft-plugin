@@ -308,6 +308,17 @@ again with `reused: true`. The fingerprint covers its inputs, the content of eac
 reads (by skill name: moving the working copy or the plugin changes nothing), the project rule
 files and the content of each changed path it reads.
 
+A lens whose definition judges only the changes is not started when the changes in its scope are
+empty: its result is journaled as `pass` with no finding and `skipped: no-changes`, so the
+verdict, a resumed run and the reports read it like any other answer. The list is data beside the
+lenses (`PATCH_ONLY` in `domain/review/lenses.mjs`) and holds `cold-reader`, whose scope is the
+code: on `design_review` and `distill_review`, where no code changed, a workflow that adds it does
+not start it. A lens is in the list only when its brief says it reads only the patch; a test fails
+when that prose changes on either host. Every other lens is always asked, a repository's too:
+`architecture-compliance` also judges what DESIGN wrote in the tracking folder, `testability` and
+`boundary-enforcement` the test plan and the implementation plan, `consistency` and `fitness`
+the decisions index, the matrix and the `docs/` files it cites.
+
 From the second pass, the review compares each finding, of any severity, with those of the
 last pass of the same step, before any refuter is asked. Two findings of one lens and one gate
 stand at the same place when they cite the same path and the text of their lines appears exactly

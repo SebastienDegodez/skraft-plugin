@@ -21,11 +21,12 @@ import { FAMILY } from '../config/model-assignment.mjs'
  * @typedef {import('./changes.mjs').Scope} Scope
  * @typedef {{ name: string, model: Family | null }} LensSpec
  * @typedef {{
- *   id: string, name: string, agent: string, inputs: readonly InputKind[], blind: boolean, scope: Scope | null,
+ *   id: string, name: string, agent: string, inputs: readonly InputKind[], blind: boolean, scope: Scope | null, patchOnly: boolean,
  * }} Lens
  *   id: the lens in the journal and the briefs, its name for a lens an agent answers;
  *   blind: the lens gets neither the story nor the feature scope; scope: the lens reads only
- *   that part of the patch and of the changed paths (`changes.mjs`).
+ *   that part of the patch and of the changed paths (`changes.mjs`); patchOnly: the lens judges
+ *   the changes alone (PATCH_ONLY), so a review whose changes in its scope are empty does not ask it.
  */
 
 export { FAMILY }
@@ -84,13 +85,24 @@ const KNOWN = /** @type {Readonly<Record<string, { inputs: readonly InputKind[],
 })))
 
 /**
+ * The lenses whose definition judges the changes alone: the brief tells them to read the patch and
+ * no criterion of theirs reads a document outside it. A review whose changes in a lens's scope
+ * are empty does not ask it and journals it as passed (`skipped: no-changes`). A lens is added
+ * here only when its prose makes that clear; any other lens, a repository's too, is always asked.
+ * Not here: architecture-compliance judges the documents DESIGN wrote as well as the changes,
+ * testability and boundary-enforcement the test plan and the implementation plan, consistency
+ * and fitness the decisions index, the matrix and the `docs/` files it cites.
+ */
+export const PATCH_ONLY = Object.freeze(['cold-reader'])
+
+/**
  * A node's lens.
  * @param {string} spec a valid lens spec @returns {Lens}
  */
 const lensOf = (spec) => {
   const { name } = /** @type {LensSpec} */ (readLensSpec(spec))
   const known = KNOWN[name]
-  return { id: name, name, agent: lensAgent(name), inputs: known?.inputs ?? ALL, blind: known?.blind === true, scope: known?.scope ?? null }
+  return { id: name, name, agent: lensAgent(name), inputs: known?.inputs ?? ALL, blind: known?.blind === true, scope: known?.scope ?? null, patchOnly: PATCH_ONLY.includes(name) }
 }
 
 /**

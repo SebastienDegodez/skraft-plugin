@@ -19,10 +19,13 @@ import { acceptedFindings, acceptedTable } from './accepted-findings.mjs'
  *   step: the node the question was about; by: how the journal knows a person gave it.
  * @typedef {import('./agent-models.mjs').AgentModel} AgentModel
  * @typedef {import('./forge-writes.mjs').ForgeWrite} ForgeWrite
- * @typedef {{ steps: StepReport[], totals: ReportTotals, answers: HumanAnswer[], accepted: import('./accepted-findings.mjs').AcceptedFinding[], agents: AgentModel[], writes: ForgeWrite[], startedAt: string | null, elapsedMs: number }} RunReport
+ * @typedef {{ step: string, visit: number, lens: string, reason: string }} SkippedLens
+ *   a lens a review pass did not ask, journaled as passed: `no-changes` when its scope held no change.
+ * @typedef {{ steps: StepReport[], totals: ReportTotals, answers: HumanAnswer[], accepted: import('./accepted-findings.mjs').AcceptedFinding[], agents: AgentModel[], writes: ForgeWrite[], skipped?: SkippedLens[], startedAt: string | null, elapsedMs: number }} RunReport
  *   steps: in the order they first started; answers: in the order they were given; accepted: the
  *   findings a human accepted at a review's ceiling, in journal order; writes: each
- *   write on the forge with its outcome, in journal order; agents: what
+ *   write on the forge with its outcome, in journal order; skipped: each lens a review pass did
+ *   not ask, in journal order; agents: what
  *   each agent ran on, in the order it first started; startedAt: the first event's; elapsedMs:
  *   from the first event to the last.
  * @typedef {{ step: string, phase: string, visits: number, attempts: number, durationMs: number, costUsd: number | null, outcome: string | null, open: boolean }} Row
@@ -36,7 +39,15 @@ export const runReport = (events) => {
   const rows = new Map()
   for (const event of events) ON_EVENT[event.type]?.(rows, event)
   const steps = [...rows.values()].map(stepOf)
-  return { steps, totals: totalsOf(steps), answers: answersOf(events), accepted: acceptedFindings(events), agents: agentModels(events), writes: forgeWrites(events), startedAt: events[0]?.at ?? null, elapsedMs: elapsedOf(events) }
+  return { steps, totals: totalsOf(steps), answers: answersOf(events), accepted: acceptedFindings(events), agents: agentModels(events), writes: forgeWrites(events), skipped: skippedLenses(events), startedAt: events[0]?.at ?? null, elapsedMs: elapsedOf(events) }
+}
+
+/** Each lens a review pass did not ask, once a pass. @param {RunEvent[]} events @returns {SkippedLens[]} */
+const skippedLenses = (events) => {
+  const skips = events.filter((event) => event.type === 'review.lens' && typeof event.skipped === 'string')
+  return skips
+    .filter((event, index) => skips.findIndex((other) => other.step === event.step && other.visit === event.visit && other.lens === event.lens) === index)
+    .map(({ step, visit, lens, skipped }) => ({ step, visit, lens, reason: skipped }))
 }
 
 /** Each answer a human gave, with the question it answers. @param {RunEvent[]} events @returns {HumanAnswer[]} */
@@ -93,7 +104,8 @@ const elapsedOf = (events) => (events.length === 0 ? 0 : Date.parse(events[event
 
 /**
  * run-report.md: the status line, one row per step, the totals, what each agent ran on, the
- * answers humans gave, the findings they accepted, each write on the forge with its outcome, when the run started.
+ * answers humans gave, the findings they accepted, each write on the forge with its outcome, the
+ * lenses a review did not ask, when the run started.
  * @param {{ slug: string, status: string, report: RunReport }} report
  */
 export const renderRunReport = ({ slug, status, report }) => [
@@ -113,6 +125,14 @@ const sectionsOf = (report) => [
   ...section('## Human answers', report.answers, answersTable),
   ...section('## Accepted findings', report.accepted, acceptedTable),
   ...section('## Forge writes', report.writes, forgeWritesTable),
+  ...section('## Lenses not asked', report.skipped ?? [], skippedTable),
+]
+
+/** The lenses a review did not ask: `no change` when their scope held none. @param {SkippedLens[]} skipped */
+const skippedTable = (skipped) => [
+  '| Review | Pass | Lens | Why |',
+  '| --- | ---: | --- | --- |',
+  ...skipped.map(({ step, visit, lens, reason }) => `| ${step} | ${visit} | ${lens} | ${reason === 'no-changes' ? 'no change in its scope' : cell(reason)} |`),
 ]
 
 /**

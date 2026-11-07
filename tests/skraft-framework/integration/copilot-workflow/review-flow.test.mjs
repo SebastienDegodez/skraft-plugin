@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { readFileSync } from 'node:fs'
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { runSkraftPipelineWorkflow } from '../../../../plugins/skraft-framework/engine/drivers/copilot-workflow/skraft-pipeline-workflow.mjs'
 import { PLUGIN_ROOT, copilotHost, actsAs, firstOptionPerson, simulatedContext, trackingDir } from './simulated-host.mjs'
@@ -8,7 +8,7 @@ import {
   FAMILY_MODELS, LENSES, NOMINAL, SECURITY_LENS, SLUG, checksOf, dropMandatoryLens, refutes, batchesSorted, commit, fillOutputs, finding, lensLabels, pipelineRepository, reviewBriefOf, reviewsOf, says,
   scriptedLlm, writeResult,
 } from '../support/pipeline-repository.mjs'
-import { git, journal } from '../support/workspace.mjs'
+import { commitAll, git, journal } from '../support/workspace.mjs'
 import { leaseLeftToExpire } from '../support/lease.mjs'
 
 /** The review node a label belongs to, null for a phase agent's. @param {string} label */
@@ -364,4 +364,29 @@ test('on pass 2 the lens that had findings and the clean ones whose inputs moved
   assert.deepEqual(lensEvents(events, 'design_review').filter((event) => event.visit === 2).map(({ lens, reused }) => [lens, reused ?? false]).sort(), [
     ['architecture-compliance', false], ['consistency', false], ['fitness', false],
   ])
+})
+
+test('a lens that judges the code changes alone is not called on design_review, whose changes hold none: it is journaled as passed for no change, consistency, architecture-compliance and fitness are called', async (t) => {
+  const { cwd } = pipelineRepository(t)
+  const shipped = readFileSync(join(PLUGIN_ROOT, 'workflows', 'pipeline.skraft.dot'), 'utf8')
+  const withColdReader = shipped
+    .replace('    design_review_fitness [shape=note, lens="fitness"]\n', '    design_review_fitness [shape=note, lens="fitness"]\n    design_review_cold_reader [shape=note, lens="cold-reader"]\n')
+    .replace('  design_review_lenses -> design_review_fitness -> design_review_refuter\n', '  design_review_lenses -> design_review_fitness -> design_review_refuter\n  design_review_lenses -> design_review_cold_reader -> design_review_refuter\n')
+  assert.notEqual(withColdReader, shipped)
+  mkdirSync(join(cwd, '.skraft'), { recursive: true })
+  writeFileSync(join(cwd, '.skraft', 'pipeline.skraft.dot'), withColdReader)
+  commitAll(cwd)
+
+  const { outcome, calls, events } = await runOn(cwd)
+
+  assert.equal(outcome.status, 'done')
+  assert.deepEqual(calls.filter((call) => reviewNodeOf(call.label) === 'design_review').map((call) => call.label).sort(), lensLabels('design_review').sort())
+  assert.deepEqual(lensEvents(events, 'design_review').map(({ lens, verdict, findings, skipped }) => [lens, verdict, findings, skipped ?? null]).sort(), [
+    ['architecture-compliance', 'pass', [], null], ['cold-reader', 'pass', [], 'no-changes'], ['consistency', 'pass', [], null], ['fitness', 'pass', [], null],
+  ])
+  assert.ok(calls.some((call) => call.label === `skraft ${SLUG} · deliver_review · cold-reader · attempt 1`))
+  assert.deepEqual(reviewsOf(events)[0], ['design_review', 1, 'approved', 'adr'])
+  const tracking = trackingDir(cwd, SLUG)
+  assert.ok(readFileSync(join(tracking, 'reviews', 'design_review-1', 'verdict.yaml'), 'utf8').endsWith('\nskipped:\n  - lens: "cold-reader"\n    reason: "no-changes"\n'))
+  assert.ok(readFileSync(join(tracking, 'run-report.md'), 'utf8').includes('| design_review | 1 | cold-reader | no change in its scope |'))
 })

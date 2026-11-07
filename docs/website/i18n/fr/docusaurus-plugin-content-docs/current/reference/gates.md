@@ -315,6 +315,19 @@ journalisé de nouveau avec `reused: true`. L'empreinte couvre ses entrées, le 
 `SKILL.md` qu'elle lit (par nom de skill : déplacer la copie de travail ou le plugin n'y change
 rien), les fichiers de règles du projet et le contenu de chaque chemin changé qu'elle lit.
 
+Une lentille dont la définition ne juge que les changements n'est pas lancée quand les changements
+de son périmètre sont vides : son résultat est journalisé `pass` sans finding avec
+`skipped: no-changes`, pour que le verdict, un run repris et les rapports le lisent comme toute
+autre réponse. La liste est une donnée à côté des lentilles (`PATCH_ONLY` dans
+`domain/review/lenses.mjs`) et contient `cold-reader`, dont le périmètre est le code : sur
+`design_review` et `distill_review`, où aucun code n'a changé, un workflow qui l'ajoute ne la lance
+pas. Une lentille n'entre dans la liste que si son brief dit qu'elle ne lit que le patch ; un test
+échoue quand cette prose change sur l'un des deux hôtes. Toute autre lentille est toujours
+interrogée, celle d'un dépôt aussi : `architecture-compliance` juge aussi ce que DESIGN a écrit dans
+le dossier de suivi, `testability` et `boundary-enforcement` le plan de test et le plan
+d'implémentation, `consistency` et `fitness` l'index des décisions, la matrice et les fichiers
+`docs/` qu'elle cite.
+
 À partir de la deuxième passe, la revue compare chaque finding, de toute sévérité, à ceux de
 la passe précédente de la même étape, avant d'interroger le réfuteur. Deux findings d'une même
 lentille et d'un même gate sont au même endroit quand ils citent le même chemin et que le texte de
