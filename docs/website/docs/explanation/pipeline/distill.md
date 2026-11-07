@@ -37,7 +37,7 @@ outside ([Freeman & Pryce, 2009](../../reference/citations.mdx#cite-freeman-goos
 
 The failure still has to mean something. A test that fails because a module does not exist
 proves nothing: it would fail for a wrong story too. DISTILL therefore also writes the
-**skeleton** the test calls — the signatures the contracts name, each returning the empty value
+**skeleton** the test calls — the use cases the event model names, each returning the empty value
 of its type, with no behaviour — so the test fails on a **business assertion**. Replacing the
 missing module with a test double is refused: the skeleton is the real module, which DELIVER
 will fill in.

@@ -22,8 +22,8 @@ Find every Clean Architecture breach in the production code and unit tests the D
 Read the skill files your brief lists under Skill before any other input; judge with their criteria and your table.
 
 - Read the patch; open a whole file only when the patch lacks the context a finding needs.
-- Open `docs/adr/decisions-index.md` and every `contracts-*.md` the documents your brief lists hold.
-- A placement an `Accepted` or `Proposed` ADR or the contracts decide — for example a repository interface in Domain — is not a finding; report a departure from that ADR or contract instead, citing it.
+- Open `docs/adr/decisions-index.md` and the tactical design `docs/architecture/{bounded-context}.md` of each context the patch touches.
+- A placement an `Accepted` or `Proposed` ADR or the tactical design decides — for example a repository interface in Domain — is not a finding; report a departure from that ADR or tactical design instead, citing it.
 - No ADR overrides G5's dependency direction.
 - Skip G5 for a component whose `gates` in the components file lists `architecture`: that gate passed on it in this run.
 

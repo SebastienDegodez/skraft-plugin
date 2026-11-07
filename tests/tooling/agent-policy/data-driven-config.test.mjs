@@ -241,11 +241,11 @@ test('context inputs are projected per agent, apart from the required inputs', (
     orchestrator(PHASES),
     {
       ...agent({ name: 'software-engineer', phase: 'DELIVER', inputs: ['test-plan-{story}.md'] }),
-      context: ['contracts-{story}.md', 'docs/adr/decisions-index.md'],
+      context: ['docs/domain/event-model/{bounded-context}.md', 'docs/adr/decisions-index.md'],
     },
     agent({ name: 'software-engineer-reviewer', phase: 'DELIVER' }),
   ])
-  assert.deepEqual(config.agentContext['software-engineer'], ['contracts-{story}.md', 'docs/adr/decisions-index.md'])
+  assert.deepEqual(config.agentContext['software-engineer'], ['docs/domain/event-model/{bounded-context}.md', 'docs/adr/decisions-index.md'])
   assert.deepEqual(config.agentContext['software-engineer-reviewer'], [])
   assert.deepEqual(config.agentArtifacts['software-engineer'].inputs, ['test-plan-{story}.md'])
 })

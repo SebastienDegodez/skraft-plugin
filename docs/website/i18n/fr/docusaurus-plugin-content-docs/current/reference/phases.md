@@ -100,7 +100,7 @@ Verdict : `review-verdict.mjs --phase discuss`, mêmes règles et même budget q
 
 | Nœud | Type | Rôle |
 | --- | --- | --- |
-| `design` | agent `solution-architect` | modèle d'événements, conception stratégique et tactique, ADR, contrats, matrice de cohérence |
+| `design` | agent `solution-architect` | modèle d'événements, conception stratégique et tactique, ADR, matrice de cohérence |
 | `design_review` | revue | lentilles `consistency`, `architecture-compliance`, `fitness` |
 | `adr` | question `adr-ratification` | ratification des ADR `Proposed` |
 
@@ -108,7 +108,7 @@ Verdict : `review-verdict.mjs --phase discuss`, mêmes règles et même budget q
 | --- | --- |
 | Entrées | la documentation durable sous `docs/`, lue d'abord ; document de recherche ; `details/{date}/structural-scan.json`, écrit par le moteur avant chaque tentative ; story |
 | Sortie déclarée | `details/{date}/consistency-matrix-{slug}.md` |
-| Autres sorties | dans le dossier de suivi : `details/{date}/contracts-{story}.md`, `supersession-plan-{story}.md` (quand un ADR `Accepted` est remplacé) ; dans le dépôt : `docs/architecture/context-map.md`, `docs/architecture/{bounded-context}.md` (conception tactique), `docs/domain/event-model/{bounded-context}.md`, `docs/adr/adr-{NNN}-{sujet}.md`, `docs/adr/decisions-index.md`, `docs/adr/supersessions.md` |
+| Autres sorties | dans le dossier de suivi : `details/{date}/supersession-plan-{story}.md` (quand un ADR `Accepted` est remplacé) ; dans le dépôt : `docs/architecture/context-map.md`, `docs/architecture/{bounded-context}.md` (conception tactique), `docs/domain/event-model/{bounded-context}.md`, `docs/adr/adr-{NNN}-{sujet}.md`, `docs/adr/decisions-index.md`, `docs/adr/supersessions.md` |
 | Écriture permise | le dossier de suivi, `docs/adr/`, `docs/architecture/` et `docs/domain/event-model/` |
 | Commits | aucun par l'architecte, qui n'a pas de shell : une fois `design` réussi, le moteur commite ce qu'il a changé dans ses chemins permis en `docs(<story>): design <story>`, terminé par `Refs: #<issue>` quand la story en a une, et le journalise en `committed` sur le `step.recorded` de l'étape |
 | Documentation existante | consigne à l'agent : un fichier de `docs/` est complété, pas réécrit. Quand `docs/` couvre déjà la story, la matrice de cohérence le dit et cite les fichiers de `docs/`, et la phase passe à la suite. Contrôle du moteur : la ligne `docs-relied-on:` de la matrice liste au moins un fichier de `docs/adr`, `docs/architecture`, `docs/domain/event-model` ou `docs/features`, et chaque fichier listé existe dans la copie de travail |

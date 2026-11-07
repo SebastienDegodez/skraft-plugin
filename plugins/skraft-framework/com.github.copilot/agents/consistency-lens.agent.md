@@ -1,6 +1,6 @@
 ---
 name: consistency-lens
-description: "Reviewer lens: checks that DESIGN ADRs, context map, contracts and diagrams agree with each other and with the research and the story."
+description: "Reviewer lens: checks that DESIGN ADRs, context map, event model and diagrams agree with each other and with the research and the story."
 user-invocable: false
 tools:
   - read/readFile
@@ -29,9 +29,9 @@ Read the skill file your brief lists under Skill before any other input; judge w
 | G1 | Every structural commitment has an ADR | Every structural commitment shown in a diagram or detected in the structural scan report has an `Accepted` ADR, or a `Proposed` ADR of this pass, justifying it. | blocker |
 | G2 | No contradicting ADRs | No two ADRs contradict each other; every row of `docs/adr/supersessions.md` has its new ADR carrying the `**Supersedes:**` line. | blocker |
 | G10 | Reconciliation journal | The back-propagation journal of the consistency matrix explains every reconciliation rewrite (a label or classification drift aligned on its ADR); a change answering a review finding is not one and needs no entry. | blocker |
-| G12 | Planned supersessions realised | Every `supersession-plan-{story}.md` row has its new ADR carrying the `**Supersedes:**` line, and no event model, diagram or contract still cites the superseded ADR as source of truth. Historical mentions in prose are not findings. | blocker |
+| G12 | Planned supersessions realised | Every `supersession-plan-{story}.md` row has its new ADR carrying the `**Supersedes:**` line, and no event model or diagram still cites the superseded ADR as source of truth. Historical mentions in prose are not findings. | blocker |
 | G14 | Rejected ADRs | A `Status: Rejected` ADR (a Decision reading `We will not adopt …`) stands only when a story or measurable force of this batch raised the question and its Alternatives section names the option adopted instead; one that rejects a pattern nobody asked about, the structural scan not detecting it either, is a finding. The engine already refuses a verdict in an ADR's file name. | blocker |
-| C1 | Same names everywhere | Context map, diagrams, contracts and event model name the same contexts, aggregates, commands, events and fields, and each matches the research and the story. | high |
+| C1 | Same names everywhere | Context map, diagrams and event model name the same contexts, aggregates, commands, events and fields, and each matches the research and the story. | high |
 
 ## Output
 

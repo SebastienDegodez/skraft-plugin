@@ -26,7 +26,7 @@ Read the skill file your brief lists under Skill before any other input; judge w
 
 | Gate | Name | Criterion | Severity |
 |---|---|---|---|
-| G7 | Every story has a trigger | Every story maps to at least one Command or Query in the event model or contracts; a pure-read story uses a Query. | high |
+| G7 | Every story has a trigger | Every story maps to at least one Command or Query in the event model; a pure-read story uses a Query. | high |
 | G8 | No dangling command | Every Command of a business bounded context has at least one domain event for its successful outcome. Queries are exempt. A front-end or UI component is exempt: it declares no Command of its own and only triggers a Command of a business context. | high |
 | G9 | Nothing unjustified | Every aggregate, bounded context, Event Sourcing adoption or Saga traces to a story that requires it; nothing exists for future needs. | medium |
 | G11 | Complexity-adding pattern justified | Every ADR adopting CQRS, Event Sourcing, Saga, eventual consistency, a service split or an ACL cites in its Context an admissible force (read/write asymmetry, audit trail, cross-service transaction boundary, contention hotspot, regulatory separation) and has a `do without the pattern` row in `Alternatives Rejected`. `Consistency with existing code` alone is not admissible. | high |

@@ -38,7 +38,7 @@ The use case boundary is the **public interface of the Application layer** — t
 - A query handler: `Handle(GetEligibilityResultQuery query)`
 - A use case class: `eligibilityUseCase.Execute(request)`
 
-The boundary is named in the `contracts-{story}.md` artefact from DESIGN.
+The boundary is named in the event model from DESIGN (`docs/domain/event-model/{bounded-context}.md`): each Command or Query it lists is one use case.
 
 ---
 

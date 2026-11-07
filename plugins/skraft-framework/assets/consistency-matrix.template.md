@@ -29,7 +29,7 @@ Schema (one entry per descriptive or normative artefact for this story):
 
 ```yaml
 shared_artifact_registry:
-  {artifact_name}:           # e.g. "event-model", "diagrams", "contracts", "ADR-007"
+  {artifact_name}:           # e.g. "event-model", "diagrams", "ADR-007"
     source_of_truth: {path}  # the file that ratifies this artefact's classifications
     consumers: [{phase}, ...] # downstream phases that read it: DISTILL | DELIVER
     owner: {agent-id}        # the agent allowed to write to source_of_truth (e.g. solution-architect)
@@ -49,18 +49,12 @@ shared_artifact_registry:
     validation: G2
   event-model:
     source_of_truth: docs/domain/event-model/{bounded-context}.md
-    consumers: [DISTILL]
+    consumers: [DISTILL, DELIVER]
     owner: solution-architect
-    integration_risk: medium
+    integration_risk: high
     validation: G10
   diagrams:
     source_of_truth: docs/architecture/{bounded-context}.md
-    consumers: [DELIVER]
-    owner: solution-architect
-    integration_risk: medium
-    validation: G10
-  contracts:
-    source_of_truth: .copilot-tracking/skraft-plans/{project-slug}/details/{date}/contracts-{story-id}.md
     consumers: [DISTILL, DELIVER]
     owner: solution-architect
     integration_risk: high
@@ -83,9 +77,9 @@ Reviewer use: G10 reads the registry to know which artefacts are in scope for th
 
 ## Matrix
 
-| Concept | ADR (source of truth) | event-model | diagrams | contracts | Cause | Verdict |
-|---|---|---|---|---|---|---|
-| `{concept-name}` | `{adr-truth}` (ADR-{NNN}) | `{cell-value}` | `{cell-value}` | `{cell-value}` | n/a \| LABEL_DRIFT \| CLASSIFICATION_DRIFT \| STRUCTURAL_DRIFT | PASS \| FAIL |
+| Concept | ADR (source of truth) | event-model | diagrams | Cause | Verdict |
+|---|---|---|---|---|---|
+| `{concept-name}` | `{adr-truth}` (ADR-{NNN}) | `{cell-value}` | `{cell-value}` | n/a \| LABEL_DRIFT \| CLASSIFICATION_DRIFT \| STRUCTURAL_DRIFT | PASS \| FAIL |
 
 ## Back-propagation journal
 
@@ -108,7 +102,7 @@ Reviewer use: G10 reads the registry to know which artefacts are in scope for th
 |---|---|---|---|
 | `LABEL_DRIFT` | Same concept, different vocabulary (e.g. `VO` vs `Value Object` vs `ValueObject`). | Back-propagate: rewrite the upstream artefact to use the ADR's spelling. | 1 per artefact |
 | `CLASSIFICATION_DRIFT` | Same concept, incompatible category (`Command` vs `Query`, `Entity` vs `Value Object`, `Aggregate` vs `Domain Service`). | Back-propagate: rewrite the upstream artefact to align on the ADR. | 1 per artefact, then blocked |
-| `STRUCTURAL_DRIFT` | The concept exists in one artefact and not the other (e.g. ADR mentions an aggregate the diagram never drew, or contracts define a `Repository` that no ADR ratified). | **No back-propagation.** A real decision gap: rewrite a `Proposed` ADR or the artefact in place, supersede an `Accepted` ADR, else blocked (below). | 0 |
+| `STRUCTURAL_DRIFT` | The concept exists in one artefact and not the other (e.g. ADR mentions an aggregate the diagram never drew, or the tactical design defines a `Repository` that no ADR ratified). | **No back-propagation.** A real decision gap: rewrite a `Proposed` ADR or the artefact in place, supersede an `Accepted` ADR, else blocked (below). | 0 |
 
 ---
 

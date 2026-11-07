@@ -111,7 +111,7 @@ flowchart TB
 repository selon la règle du skill `clean-architecture-*` de la stack : dans Domain quand elle
 rend l'agrégat et garde ses invariants, dans Application pour une entité sans invariant ou un
 contrat de lecture, jamais dans Infrastructure. Ce placement relève du socle : la conception
-tactique et les contrats le notent, jamais un ADR (G15). La lentille `architecture-compliance` refuse un contrat de
+tactique le note, jamais un ADR (G15). La lentille `architecture-compliance` refuse un contrat de
 Domain ou d'Application qui nomme un type d'Infrastructure ou d'API (G3) et une interface rangée
 dans Infrastructure (G4). C'est la même lentille qui vérifie le modèle de
 [Domain-Driven Design](./domain-driven-design.md).

@@ -33,7 +33,7 @@ and then checked at every phase.
   Ready requires at least three domain examples with real values (`planning-dor-lens`, G7), and no
   acceptance criterion may admit two readings by a business expert (`planning-ac-quality-lens`,
   G4).
-- **DESIGN** fixes it. The event model, the context map, the diagrams and the contracts must name
+- **DESIGN** fixes it. The event model, the context map and the diagrams must name
   the same contexts, aggregates, commands, events and fields as the story (`consistency` lens,
   C1).
 - **DISTILL** makes it executable. Every term of a Given/When/Then comes from the story's
@@ -115,7 +115,7 @@ flowchart TB
     D["docs/ of the repository<br/>read first"] --> SA
     subgraph SA["DESIGN — solution-architect"]
         direction LR
-        EM["docs/domain/event-model/{context}.md<br/>Event Modeling"] --> CM["docs/architecture/context-map.md<br/>strategic DDD"] --> TD["docs/architecture/{context}.md<br/>tactical DDD"] --> CT["contracts-{story}.md"] --> MX["ADRs +<br/>consistency matrix"]
+        EM["docs/domain/event-model/{context}.md<br/>Event Modeling"] --> CM["docs/architecture/context-map.md<br/>strategic DDD"] --> TD["docs/architecture/{context}.md<br/>tactical DDD"] --> MX["ADRs +<br/>consistency matrix"]
     end
     SA --> RV["DESIGN review<br/>consistency · architecture-compliance · fitness"]
     RV --> H["Human ADR ratification"] --> DI["DISTILL"]
@@ -163,7 +163,7 @@ architect writes them under `docs/` of the repository, on the story's branch, an
 shows them next to the code. The next run reads them before anything else and completes them
 rather than starting again; when they already cover its story, the architect says so, cites them
 and moves on. The scenarios DISTILL writes follow the same path, under `docs/features/`. The
-contracts and the consistency matrix belong to one story and stay in the run's tracking folder.
+consistency matrix belongs to one story and stays in the run's tracking folder.
 The full list: [Durable documentation](../reference/run-journal.md#durable-docs).
 
 ## Consistency between artefacts

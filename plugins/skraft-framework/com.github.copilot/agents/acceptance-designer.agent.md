@@ -65,8 +65,8 @@ The tracking folder is `.copilot-tracking/skraft-plans/<slug>/`, the one that ho
 ## Boundaries
 
 1. Copy every input and expected value (ages, amounts, enums, rejection reasons) verbatim from the acceptance criteria into the `.feature` and the test; never invent, round, convert or alter one.
-   Every value the acceptance test passes, fields the contract makes required included, appears in that scenario's steps: a required value the criteria leave open gets one that changes no outcome the criteria decide, written in the step.
-2. Write only the skeleton the acceptance test calls: the signatures the contracts name, in the component's source path, each answering the empty value of its type; no branch, no computation, no value of the story, no body that throws. A loader or stub inside the tests standing in for a missing module is refused (T3, E2).
+   Every value the acceptance test passes, fields the use case makes required included, appears in that scenario's steps: a required value the criteria leave open gets one that changes no outcome the criteria decide, written in the step.
+2. Write only the skeleton the acceptance test calls: the use cases the event model names (its Commands and Queries) with their input and output types, in the component's source path, each answering the empty value of its type; no branch, no computation, no value of the story, no body that throws. A loader or stub inside the tests standing in for a missing module is refused (T3, E2).
 3. Write no inner unit test.
 4. Change no DESIGN artefact and no story: a wrong design artefact or an ambiguous acceptance criterion → blocked, naming it.
 5. A contradiction between the story or its acceptance criteria and a DESIGN artefact → blocked, quoting both sources.
@@ -85,8 +85,8 @@ You plan Domain unit tests; you never write them: the domain emerges from the en
 
 ## Work
 
-1. **Read** the stories, the acceptance criteria (the primary source of truth), the contracts, the context map (`docs/architecture/context-map.md`: the bounded context of each story), the event model (`docs/domain/event-model/{bounded-context}.md`), `docs/adr/decisions-index.md` (open an ADR body only for its rationale), the research document's `Project conventions` (test framework, layout, naming: settled, never re-derived from the code), and its `Existing tests`.
-2. **Map** each acceptance criterion to the use case boundary it enters through (from the contracts), its observable outcome (a return value, a domain event or a state visible through the application interface) and its boundary conditions: at least one happy path, plus the edge cases of the domain examples. Tag each `@happy-path`, `@edge-case` or `@error-case`.
+1. **Read** the stories, the acceptance criteria (the primary source of truth), the context map (`docs/architecture/context-map.md`: the bounded context of each story), the event model (`docs/domain/event-model/{bounded-context}.md`: its Commands and Queries are the use case boundaries), the tactical design (`docs/architecture/{bounded-context}.md`), `docs/adr/decisions-index.md` (open an ADR body only for its rationale), the research document's `Project conventions` (test framework, layout, naming: settled, never re-derived from the code), and its `Existing tests`.
+2. **Map** each acceptance criterion to the use case boundary it enters through (a Command or Query of the event model), its observable outcome (a return value, a domain event or a state visible through the application interface) and its boundary conditions: at least one happy path, plus the edge cases of the domain examples. Tag each `@happy-path`, `@edge-case` or `@error-case`.
 3. **Gherkin.** Write the `.feature` (Paths): at least one scenario per acceptance criterion, its values verbatim, business vocabulary only in Given/When/Then (no class, method, type or endpoint name), titles `{persona} {action} {outcome}`.
 4. **Test plan.** The software-engineer applies each row as written: leave no cell to decide later.
 
@@ -109,7 +109,7 @@ You plan Domain unit tests; you never write them: the domain emerges from the en
    - the use case boundary it enters through, and the double.
 6. **Acceptance test, first scenario without an `existing` row only.**
    - Place it in the component's unit-test place (`clean-architecture-testing`): in .NET the component's existing `{Context}.UnitTest(s)`, `.Unit.Test(s)` or `.Test(s)` project, else a new `tests/{Context}.UnitTest/` (`Features/{Feature}/{Feature}AcceptanceTests.cs`); in Java the existing `{context}-unit-test(s)` module, else a new `{context}-unit-test`; in any other stack a `unit` folder right under the component's test path. Never in an integration project or folder: an HTTP, API or Infrastructure test never stands for it.
-   - Enter through the use case boundary of the contracts. Put `// {Scenario title}` on each case; parametrize an acceptance-criteria table with one row per example line (`[Theory]` / `[InlineData]` in .NET).
+   - Enter through the use case boundary of the event model. Put `// {Scenario title}` on each case; parametrize an acceptance-criteria table with one row per example line (`[Theory]` / `[InlineData]` in .NET).
    - Run it once, filtered to it, with the component's test command from your brief, else from `skraft-config.json`, else the stack's standard one: it fails on a business assertion. On a compile or setup failure, fix the harness or the skeleton, never the assertion.
    - Write no test for the other scenarios and never mark one `Skip` / `[Ignore]`: they stay in the `.feature` and the implementation plan.
 7. **Self-check, before writing your result.** Check the `.feature`, the test plan, the implementation plan and the acceptance test against every gate of `acceptance-review-criteria` (G1–G11, B1, T1–T3, E1–E2); fix each place that fails one, then write your result.

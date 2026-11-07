@@ -260,12 +260,12 @@ test('a blind lens reads the changes without the decision records and design doc
 })
 
 test('a document a later pass deleted or renamed is no input of the review any more', async () => {
-  const OLD = 'details/2026-10-11/contracts-checkout.md'
-  const NEW = 'details/2026-10-11/contracts-pay-by-card.md'
+  const OLD = 'details/2026-10-11/supersession-plan-checkout.md'
+  const NEW = 'details/2026-10-11/supersession-plan-pay-by-card.md'
   const host = scripted({}, (it) => [
     agent()(it),
-    agent({ work: ({ tracking }) => tracking.write(SLUG, OLD, '# Contracts\n') })(it),
-    agent({ work: ({ tracking }) => { tracking.files.delete(`${SLUG}/${OLD}`); tracking.write(SLUG, NEW, '# Contracts\n') } })(it),
+    agent({ work: ({ tracking }) => tracking.write(SLUG, OLD, '# Supersession plan\n') })(it),
+    agent({ work: ({ tracking }) => { tracking.files.delete(`${SLUG}/${OLD}`); tracking.write(SLUG, NEW, '# Supersession plan\n') } })(it),
     ...nominal(it).slice(2),
   ])
   host.agentRunner.review = lenses({ consistency: [says('consistency', 'fail', [finding('F1', 'high', 'two contexts own payments')])] })

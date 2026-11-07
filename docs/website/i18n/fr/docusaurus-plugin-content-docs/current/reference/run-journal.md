@@ -94,7 +94,7 @@ phase : [Phases](./phases.md).
 | DISCOVER (skraft-backlog) | rapport de triage, proposition de sprint | `research/{date}/triage-{date}.md`, `research/{date}/sprint-proposal.md` |
 | DISCUSS (skraft-backlog) | stories, brouillons de critères d'acceptation | `plans/{date}/stories-{milestone}.md`, `plans/{date}/ac-draft-{story}.md` |
 | RESEARCH | document de recherche | `research/{date}/{slug}-research.md` |
-| DESIGN | matrice de cohérence, contrats, plan de supersession | `details/{date}/consistency-matrix-{slug}.md`, `contracts-{story}.md`, `supersession-plan-{story}.md` ; `details/{date}/structural-scan.json` (écrit par le moteur) |
+| DESIGN | matrice de cohérence, plan de supersession | `details/{date}/consistency-matrix-{slug}.md`, `supersession-plan-{story}.md` ; `details/{date}/structural-scan.json` (écrit par le moteur) |
 | DESIGN | context map, conception tactique, modèle d'événements (dans le dépôt, hors du dossier de suivi) | `docs/architecture/context-map.md`, `docs/architecture/{bounded-context}.md`, `docs/domain/event-model/{bounded-context}.md` |
 | DESIGN | ADR (dans le dépôt, hors du dossier de suivi) | `docs/adr/adr-{nnn}-{sujet}.md`, `docs/adr/decisions-index.md`, `docs/adr/supersessions.md` |
 | DISTILL | plan de test, plan d'implémentation | `details/{date}/test-plan-{slug}.md`, `details/{date}/impl-plan-{story}.md` |
@@ -123,7 +123,7 @@ request les montre, et les runs suivants les relisent.
 | ADR, index des décisions, registre des supersessions | DESIGN | `docs/adr/` |
 | scénarios Gherkin, non exécutables | DISTILL | `docs/features/{bounded-context}/{feature}.feature` |
 
-Restent dans le dossier de suivi : le document de recherche, `contracts-{story}.md`,
+Restent dans le dossier de suivi : le document de recherche,
 `supersession-plan-{story}.md`, `consistency-matrix-{slug}.md`, `test-plan-{slug}.md`,
 `impl-plan-{story}.md`, le journal des changements, les propositions sur les mutants, la prose de
 la pull request, le journal et ses rapports.

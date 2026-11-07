@@ -105,7 +105,7 @@ Three lenses review the design, then the run waits: a human must **ratify** the 
 DISTILL starts. A rejection sends the architect back to work, with the reason.
 
 - **What enters:** the story, its criteria, and the research document.
-- **What exits:** the ratified ADR + the event model + the contracts.
+- **What exits:** the ratified ADR + the event model + the tactical design.
 
 ➡️ Phase detail: [DESIGN](./design.md).
 

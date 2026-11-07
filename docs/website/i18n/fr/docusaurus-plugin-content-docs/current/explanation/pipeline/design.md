@@ -22,7 +22,7 @@ Le modèle n'est pas un livrable de plus : c'est le langage que l'équipe, le m�
 partagent ([Evans, 2003](../../reference/citations.mdx#cite-evans-ddd-2003)). Le pourquoi de cette démarche, du
 langage omniprésent aux agrégats, est développé dans
 [Domain-Driven Design](../domain-driven-design.md) ; la règle de
-dépendance que les contrats respectent, dans
+dépendance que la conception tactique respecte, dans
 [Clean Architecture](../clean-architecture.md).
 
 :::info[☕ Fil rouge — Starbucks *(exemple illustratif)*]
@@ -53,7 +53,7 @@ c'est la même source, le scan, que les lentilles relisent ensuite.
 ## Relire, puis faire ratifier
 
 Trois lentilles relisent la conception, chacune dans un contexte neuf : la **cohérence** entre
-ADR, diagrammes, contrats et modèle d'événements ; la **conformité** à l'architecture (la règle
+ADR, diagrammes et modèle d'événements ; la **conformité** à l'architecture (la règle
 de dépendance, la place des interfaces, les relations entre contextes) ; l'**adéquation** des
 patterns, qui refuse tout agrégat ou pattern qu'aucune story ne justifie. Le moteur vérifie en
 plus, sans lentille, les traces qu'un humain ne devrait pas avoir à relire : matrice de

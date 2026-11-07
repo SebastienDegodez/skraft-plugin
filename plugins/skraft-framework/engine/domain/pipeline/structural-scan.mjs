@@ -1,6 +1,6 @@
 /**
  * The structural commitments the code already carries, read before each attempt of the
- * solution architect (its Step 7.0): it back-fills an ADR for each one no ADR covers, and the
+ * solution architect (its ADRs section): it back-fills an ADR for each one no ADR covers, and the
  * consistency lens judges G1 and G14 on the same report, so neither greps by hand.
  *   cqrs-bus        ICommandBus|IQueryBus|CommandBus|QueryBus
  *   event-sourcing  IEventStore|EventStream|Apply(…Event

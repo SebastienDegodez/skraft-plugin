@@ -110,7 +110,7 @@ flowchart TB
 repository interface by the rule of the `clean-architecture-*` skill of the stack: in Domain when
 it returns the aggregate and guards its invariants, in Application for an entity without
 invariants or a read-oriented contract, never in Infrastructure. That placement is baseline: the
-tactical design and the contracts record it, never an ADR (G15). The
+tactical design records it, never an ADR (G15). The
 `architecture-compliance` lens refuses a Domain or Application contract that names an
 Infrastructure or API type (G3) and an interface filed in Infrastructure (G4). The same lens checks
 the [Domain-Driven Design](./domain-driven-design.md) model.
