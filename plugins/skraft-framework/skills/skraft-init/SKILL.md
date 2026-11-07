@@ -69,10 +69,13 @@ A refusal is an answer: a run then publishes nothing and is not held up.
 ## 5. BDD, per component
 
 The engine has already looked. Each component of the Configuration view carries two lists, and you
-read them instead of searching the disk yourself: `bddPaths`, the pairs its file names — the
-stack's default when the file names none — and `bddFound`, the pairs the working copy actually
-holds, one per test project whose manifest names a BDD runner and whose folders hold both the
-`.feature` files and the bindings.
+read them instead of searching the disk yourself: `bddPaths`, the pairs its file names — empty when
+the file names none, since no stack decides them — and `bddFound`, the pairs the working copy
+actually holds, one per test project whose manifest names a BDD runner and whose folders hold both
+the `.feature` files and the bindings.
+
+Leave no component undecided: a component whose `bdd` says nothing, or says a bare `true`, refuses
+every run with `skraft is not initialised`, and `skraft doctor` fails on it.
 
 - **`bddFound` is not empty**: show those pairs, one line per pair, and ask the developer to confirm
   them. Write them as `bdd` on a yes, and write a pair they correct as they give it. Say when they
@@ -82,17 +85,17 @@ holds, one per test project whose manifest names a BDD runner and whose folders 
   a folder the runner does not read holds scenarios nothing runs.
 - **Neither, and the component says nothing or `true`**: ask whether it describes its behaviour in
   Gherkin. Declining writes `"bdd": false`. Accepting means naming the folders: ask for them and
-  write the pair. Do not accept the stack's default as an answer — a folder nobody chose is one the
-  runner may never read, and a component holding several test projects gets a default that belongs
-  to none of them.
+  write the pair. Never invent a folder from the stack — one nobody chose is one the runner may
+  never read, and a component holding several test projects would get a pair belonging to none of
+  them. This is the question a run is refused for until it is answered.
 - **The component writes Gherkin and runs none of it**: write the pair with `features` only. The
   scenarios live there as the story's specification, and nothing is asked of them.
 
 One pair per runner: a definition of one pair binds no step of another, so a component holding
 several test projects carries several pairs.
 
-A component that accepts Gherkin leaves this step with a `bdd` list, never with an absent key: the
-key is absent only for a file no guided init has been through.
+Every component leaves this step with a `bdd` list or `"bdd": false`, never with an absent key and
+never with a bare `true`: either of those is the state a run is refused for.
 
 Declining asks DISTILL for no `.feature`: the acceptance designer takes its scenarios from the test
 plan's `Scenario` column, and TDD runs as it always does. Accepting holds the component to its

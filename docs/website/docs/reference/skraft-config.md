@@ -89,7 +89,7 @@ Any key outside this list is refused.
 | `mocking` | object | `inprocess` for `typescript`, `javascript` and `react`, `microcks` otherwise | `strategy` is `microcks`, `inprocess` or `null`; absent or `null` means the stack's default. The engine passes it in the brief and picks the matching mocking skill |
 | `paths` | object | `["."]` for each key, the whole root | `{ "src": […], "tests": […] }`, folders relative to the component root, never absolute nor starting with `..`; `skraft init` writes them. In DELIVER, the software engineer may write only there (write scope) |
 | `contractTesting` | boolean | `false` | `true` makes the software engineer read the contract testing skills of its stack; the review lenses see the setting among the component settings |
-| `bdd` | boolean or list | `true` | where each runner of the component reads its scenarios and the definitions that bind them: a list of `{ runner, features, steps }`, folders relative to the component root, `runner` optional, and `steps` optional too — left out, the scenarios are written and nothing is asked of them, so no runner reads them. **One pair per runner**, because the binding scope is the runner's own: a definition of another pair binds no step of this one, so a component holding several test projects declares one pair each. `true` takes the pair its stack's usual runner looks in; `false` names none, and asks DISTILL for no `.feature`: the acceptance designer takes its scenarios from the test plan's `Scenario` column and TDD runs as it always does. It declares a practice, never a threshold: a component that leaves it on is held to its scenarios in full. `skraft init` detects the pairs, `skraft doctor` names them, the engine passes the setting in the brief, and the review lenses see it among the component settings |
+| `bdd` | list or `false` | required | where each runner of the component reads its scenarios and the definitions that bind them: a list of `{ runner, features, steps }`, folders relative to the component root, `runner` optional, and `steps` optional too — left out, the scenarios are written and nothing is asked of them, so no runner reads them. **One pair per runner**, because the binding scope is the runner's own: a definition of another pair binds no step of this one, so a component holding several test projects declares one pair each. `false` names none, and asks DISTILL for no `.feature`: the acceptance designer takes its scenarios from the test plan's `Scenario` column and TDD runs as it always does. **No key at all, and a bare `true`, decide nothing**: the engine invents no folder — one nobody chose is one the runner may never read — so a run is refused with `skraft is not initialised: run /skraft-init (<component>: bdd is unanswered)` and `skraft doctor` fails on that component. It declares a practice, never a threshold: a component that names its folders is held to its scenarios in full. `skraft init` detects the pairs, `/skraft-init` asks for the ones it did not find, `skraft doctor` names them, the engine passes the setting in the brief, and the review lenses see it among the component settings |
 | `mutationReport` | string | absent: the report the stack's tool writes, relative to the root: `StrykerOutput/reports/mutation-report.json` (.NET), `reports/mutation/mutation.json` (TypeScript, JavaScript, React), `mutation-report.json` (Python), `target/pit-reports/mutations.xml` (Java; `build/reports/pitest/mutations.xml` when the mutation command names Gradle) | the file the `mutation` command writes its report to, relative to the component root, never absolute nor outside it. The mutation gate reads its surviving mutants there and judges the 100 % / 80 % bar |
 
 Quality thresholds (coverage, mutation…) are **not** configurable: no key carries them.
@@ -404,31 +404,22 @@ project names, because which of those names a given runner reads is the runner's
 reads none of it — and the folder its `.feature` files sit in is the scenarios'. Init proposes the
 first folder it meets of each, four folders below the component root and four below a project, past
 neither installed dependencies nor hidden folders. A project that names a runner but shows only one
-of the two is written without `bdd`, so the stack's default applies: a half-guessed pair is worse
-than a question. Each test project of a component gives its own pair, in folder order.
+of the two is written without `bdd`: a half-guessed pair is worse than a question, and the question
+is asked rather than answered by a default. Each test project of a component gives its own pair, in
+folder order.
 
-| Stack | `features` | `steps` | Runners read |
-| --- | --- | --- | --- |
-| `dotnet` | `tests/Features` | `tests/Steps` | Reqnroll, SpecFlow |
-| `java` | `src/test/resources/features` | `src/test/java` | Cucumber-JVM |
-| `python` | `features` | `features/steps` | behave, pytest-bdd |
-| JS / TS / React | `features` | `features/step_definitions` | Cucumber-JS, jest-cucumber |
+**No stack decides the folders.** The stack does not determine the runner — behave and pytest-bdd
+read different folders, and so do Cucumber-JS and jest-cucumber — and a component holding several
+test projects (a solution with `Cart.Tests` and `Billing.Tests` under one `dotnet test`) would get
+one pair belonging to neither. So the folders come from the detection, from `/skraft-init`, or from
+the list written by hand, and never from the component's stack. A component whose `bdd` says
+nothing, or says a bare `true`, stops the run until one of the three answers it; `skraft doctor`
+names it meanwhile. The dividing line between pairs is the unit of commands: test projects sharing
+one `test` command are one component with several pairs; projects with their own stacks and commands
+are separate components.
 
-The default is relative to the component's own root, so a monorepo written as several components
-gets one default per component, right for each stack: `services/payment-api/tests/Features` for a
-`dotnet` one, `web/features` for a React one.
-
-It serves a component holding **one** test project. A component holding several — a solution with
-`Cart.Tests` and `Billing.Tests` under one `dotnet test` — gets a single default pair that belongs
-to neither, so its folders come from the detection, from `/skraft-init`, or from the list written by
-hand. The dividing line is the unit of commands: test projects sharing one `test` command are one
-component with several pairs; projects with their own stacks and commands are separate components.
-
-A default is a fallback, not a guess to rely on: the stack does not determine the runner — behave
-and pytest-bdd read different folders, and so do Cucumber-JS and jest-cucumber. `/skraft-init`
-therefore asks for the folders of a component whose detection found none, and does not take the
-default as an answer. `skraft init` does not look at a component already listed, so an existing
-file keeps its default until the dialogue or a hand edit replaces it.
+`skraft init` does not look at a component already listed, so an existing file keeps what it says
+until `/skraft-init` or a hand edit answers for it.
 
 ## Pitfalls & anti-patterns
 

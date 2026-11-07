@@ -8,7 +8,7 @@ import { edit, WITH_SECURITY } from '../workflow/support.mjs'
 const withSecurity = { files: { '.skraft/pipeline.skraft.dot': WITH_SECURITY }, catalog: new InMemoryAgentCatalog({ repository: ['acme-security-reviewer'] }) }
 const unavailable = () => ({ ok: false, unavailable: true, text: '' })
 /** A front end in a repository of its own. */
-const WEB = Object.freeze({ name: 'web', root: '../web', stack: 'react', mocking: { strategy: 'inprocess' }, paths: { src: ['src'], tests: ['src'] }, commands: { lint: 'npx eslint .', mutation: 'npx stryker run' } })
+const WEB = Object.freeze({ name: 'web', root: '../web', stack: 'react', bdd: false, mocking: { strategy: 'inprocess' }, paths: { src: ['src'], tests: ['src'] }, commands: { lint: 'npx eslint .', mutation: 'npx stryker run' } })
 const INSTRUCTION = 'Use the bank gateway of Acme'
 const NO_PROVIDER = 'The story names no payment provider.'
 const blockedAgent = (it) => agent({ result: { status: 'blocked', summary: NO_PROVIDER } })(it)

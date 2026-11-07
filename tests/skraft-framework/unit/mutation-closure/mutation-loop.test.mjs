@@ -366,7 +366,7 @@ test('a mutation run without a readable report waits for a human, naming where t
 })
 
 test('a component reads its mutants where mutationReport says, PIT\'s mutations.xml by the class\'s source file in its source folders', async () => {
-  const service = { name: 'orders', root: 'orders', stack: 'java', mocking: { strategy: 'inprocess' }, paths: { src: ['src/main'], tests: ['src/test'] }, commands: { test: 'mvn test', mutation: 'mvn pitest' }, mutationReport: 'target/pit/mutations.xml' }
+  const service = { name: 'orders', root: 'orders', stack: 'java', bdd: false, mocking: { strategy: 'inprocess' }, paths: { src: ['src/main'], tests: ['src/test'] }, commands: { test: 'mvn test', mutation: 'mvn pitest' }, mutationReport: 'target/pit/mutations.xml' }
   const sources = {
     'orders/src/main/java/com/acme/Order.java': 'class Order {}\n', 'orders/src/main/kotlin/com/acme/Fee.kt': 'class Fee\n', 'orders/src/main/com/acme/Tax.java': 'class Tax {}\n',
     'orders/src/main/java/com/acme/domain/Price.java': 'class Price {}\n',

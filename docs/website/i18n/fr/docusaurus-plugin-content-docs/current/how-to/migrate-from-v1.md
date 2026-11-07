@@ -109,6 +109,7 @@ Reprenez ensuite le run depuis votre hôte, comme tout run V2
 | `base-unresolved` | Écrire `baseBranch` dans `skraft-config.json`, puis relancer. |
 | `workflow-invalid` | Le workflow éjecté sous `.skraft/` est invalide : `skraft workflow check` liste les erreurs ([Copier et adapter le workflow](./eject-workflow.mdx)). |
 | `config-invalid` | Corriger chaque erreur listée, puis relancer. |
+| `skraft is not initialised: run /skraft-init (<composant>: bdd is unanswered)` | Un fichier migré ne dit rien du Gherkin, puisque v1 n'avait pas cette clé. Lancez `/skraft-init`, ou écrivez `"bdd": false` sur les composants dont les tests s'écrivent sans ([Configurer les composants](./configure-components.md)). |
 | la commande affiche l'aide et sort avec 2 | `migrate` ne prend que `--dry-run` et `--json`. |
 
 ## Étapes suivantes <!-- #next-steps -->

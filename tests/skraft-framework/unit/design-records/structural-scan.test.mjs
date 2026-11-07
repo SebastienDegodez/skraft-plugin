@@ -44,7 +44,7 @@ test('before each attempt of the architect, the engine scans the code the reposi
 })
 
 test('a component in a neighbour repository is scanned in its own repository, its paths from the working copy, twenty hits kept per commitment', async () => {
-  const WEB = { name: 'web', root: '../web', stack: 'react', mocking: { strategy: 'inprocess' }, paths: { src: ['src'], tests: ['tests'] }, commands: {} }
+  const WEB = { name: 'web', root: '../web', stack: 'react', bdd: false, mocking: { strategy: 'inprocess' }, paths: { src: ['src'], tests: ['tests'] }, commands: {} }
   const files = { '../web/src/bus.ts': `${Array.from({ length: 22 }, () => 'bus.send(new QueryBus())').join('\n')}\n` }
   const git = new InMemoryGit({ repositories: { '.': { mergeBases: { main: 'root-0' }, tracked: [] }, '../web': { mergeBases: { main: 'up-web-0' }, tracked: ['src/bus.ts'] } } })
   const host = scripted({ components: [API, WEB], files, git }, nominal)

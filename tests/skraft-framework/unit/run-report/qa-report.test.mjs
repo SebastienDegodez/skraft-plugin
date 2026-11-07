@@ -5,7 +5,7 @@ import { InMemoryGit, ScriptedMachine, ScriptedReplay } from '../support/in-memo
 import { ALL_KILLED, strykerReport } from '../support/mutation-reports.mjs'
 
 /** A front end in a repository of its own, which the story does not change. */
-const WEB = Object.freeze({ name: 'web', root: '../web', stack: 'react', mocking: { strategy: 'inprocess' }, paths: { src: ['src'], tests: ['src'] }, commands: { lint: 'npx eslint .', mutation: 'npx stryker run' } })
+const WEB = Object.freeze({ name: 'web', root: '../web', stack: 'react', bdd: false, mocking: { strategy: 'inprocess' }, paths: { src: ['src'], tests: ['src'] }, commands: { lint: 'npx eslint .', mutation: 'npx stryker run' } })
 const twoRepositories = () => new InMemoryGit({ repositories: { '.': { mergeBases: { main: 'root-0' } }, '../web': { mergeBases: { main: 'up-web-0' } } } })
 
 const QA = 'qa-report.md'

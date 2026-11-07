@@ -22,10 +22,20 @@ export const cannotStart = async (context) => configurationIncomplete(context) ?
 
 /** @param {Context} context @returns {RunOutcome | null} null: the configuration is settled */
 const configurationIncomplete = (context) => {
-  const unsettled = unsettledConsents(context.config.publish, consentsAsked(publicationsOf(context)))
+  const unsettled = [
+    ...unsettledConsents(context.config.publish, consentsAsked(publicationsOf(context))).map(stateLine),
+    ...undecidedGherkin(context.config.components),
+  ]
   if (unsettled.length === 0) return null
-  return { status: 'refused', slug: context.slug, phase: null, code: 'configuration-incomplete', reason: `skraft is not initialised: ${SETTLE} (${unsettled.map(stateLine).join(', ')})` }
+  return { status: 'refused', slug: context.slug, phase: null, code: 'configuration-incomplete', reason: `skraft is not initialised: ${SETTLE} (${unsettled.join(', ')})` }
 }
+
+/**
+ * The components that say neither that they decline Gherkin nor where their scenarios live: a
+ * component held to a folder nobody chose would be held to one its runner may never read.
+ * @param {readonly import('../../domain/config/skraft-config.mjs').Component[]} components
+ */
+const undecidedGherkin = (components) => components.filter(({ bdd }) => bdd === null).map(({ name }) => `${name}: bdd is unanswered`)
 
 /** Why one consent is not settled. @param {{ key: ConsentKey, state: ConsentState }} unsettled */
 const stateLine = ({ key, state }) => `publish.${key} ${state === 'outdated' ? 'answers an earlier question' : 'is unanswered'}`

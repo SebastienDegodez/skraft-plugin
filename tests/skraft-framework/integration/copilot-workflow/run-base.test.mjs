@@ -11,7 +11,7 @@ const repositories = (t) => {
   const root = tempFolder(t)
   const cwd = join(root, 'payment-api')
   mkdirSync(cwd)
-  writeFileSync(join(cwd, 'skraft-config.json'), JSON.stringify({ publish: { pullRequest: false, visuals: false }, components: [{ name: 'web', root: '../payment-web', stack: 'react', baseBranch: 'develop' }] }))
+  writeFileSync(join(cwd, 'skraft-config.json'), JSON.stringify({ publish: { pullRequest: false, visuals: false }, components: [{ name: 'web', root: '../payment-web', stack: 'react', bdd: false, baseBranch: 'develop' }] }))
   writeFileSync(join(cwd, 'skraft-config.local.json'), JSON.stringify({ configurationConfirmed: true }))
   writeFileSync(join(cwd, '.gitignore'), '.copilot-tracking/\nskraft-config.local.json\n')
   const main = commitAll(cwd)

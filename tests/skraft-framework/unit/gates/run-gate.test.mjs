@@ -5,8 +5,8 @@ import { createRunGate } from '../../../../plugins/skraft-framework/engine/appli
 import { FixedClock, InMemorySourceControl, InMemoryTracking, ScriptedMachine, inMemoryDeps } from '../support/in-memory-host.mjs'
 import { mutants, strykerReport, strykerWritesItsReports } from '../support/mutation-reports.mjs'
 
-const API = { name: 'api', root: 'services/payment-api', stack: 'dotnet', mocking: { strategy: 'inprocess' }, commands: { build: 'dotnet build --nologo', test: 'dotnet test --nologo', mutation: 'dotnet stryker --since:{baseSha}' } }
-const WEB = { name: 'web', root: '../payment-web', stack: 'react', mocking: { strategy: 'inprocess' }, commands: { lint: 'npx eslint .', test: 'npx vitest run' } }
+const API = { name: 'api', root: 'services/payment-api', stack: 'dotnet', bdd: false, mocking: { strategy: 'inprocess' }, commands: { build: 'dotnet build --nologo', test: 'dotnet test --nologo', mutation: 'dotnet stryker --since:{baseSha}' } }
+const WEB = { name: 'web', root: '../payment-web', stack: 'react', bdd: false, mocking: { strategy: 'inprocess' }, commands: { lint: 'npx eslint .', test: 'npx vitest run' } }
 
 /** The run checkout started over `components`; `given` replaces any in-memory dependency. */
 const started = async ({ components, ...given }) => {
@@ -136,7 +136,7 @@ test('a command the developer wrote is the one that runs, with the base of its o
   assert.deepEqual(gatesRan(tracking).map(({ command }) => command), [api.commands.test, api.commands.mutation, 'npx stryker run --since {baseSha}'])
 })
 
-const PY = { name: 'py', root: 'services/py', stack: 'python', mocking: { strategy: 'inprocess' }, commands: { build: 'python -m compileall -q src', test: 'python -m pytest -q' } }
+const PY = { name: 'py', root: 'services/py', stack: 'python', bdd: false, mocking: { strategy: 'inprocess' }, commands: { build: 'python -m compileall -q src', test: 'python -m pytest -q' } }
 
 test('python runs from the component\'s virtual environment, whichever OS made it', async () => {
   const posix = await hostWith({ components: [PY], machine: new ScriptedMachine({ installed: ['git', 'python', 'services/py/.venv/bin/python'] }) })
@@ -270,7 +270,7 @@ test('gates need an active, initialised pipeline and components to run', async (
 })
 
 test('a component outside Git always counts as touched, a {baseSha} command there cannot run, and its mutation report is judged whole', async () => {
-  const front = { name: 'front', root: '../../legacy/web', stack: 'react', mocking: { strategy: 'inprocess' }, commands: { mutation: 'npx stryker run' } }
+  const front = { name: 'front', root: '../../legacy/web', stack: 'react', bdd: false, mocking: { strategy: 'inprocess' }, commands: { mutation: 'npx stryker run' } }
   const { machine, gate, workspace } = await started({ components: [{ ...API, root: '../../legacy/./api/' }, front] })
   const report = strykerReport({ 'src/Old.tsx': [[3, 'Arithmetic', '+', 'Survived']], '/elsewhere/Checkout.Domain/Old.cs': [[4, 'Equality', null, 'NoCoverage']] })
   machine.meanwhile['../../legacy/web $ npx stryker run'] = () => workspace.write('../../legacy/web/reports/mutation/mutation.json', report)
@@ -287,8 +287,8 @@ test('a component outside Git always counts as touched, a {baseSha} command ther
 })
 
 test('Stryker.NET\'s absolute paths are read under each component\'s root, a neighbour repository\'s too, whatever the case of the drive letter', async () => {
-  const api = { name: 'api', root: 'services/payment-application', stack: 'dotnet', mocking: { strategy: 'inprocess' }, commands: { mutation: 'dotnet stryker' } }
-  const back = { name: 'back', root: '../payment-back', stack: 'dotnet', mocking: { strategy: 'inprocess' }, commands: { mutation: 'dotnet stryker' } }
+  const api = { name: 'api', root: 'services/payment-application', stack: 'dotnet', bdd: false, mocking: { strategy: 'inprocess' }, commands: { mutation: 'dotnet stryker' } }
+  const back = { name: 'back', root: '../payment-back', stack: 'dotnet', bdd: false, mocking: { strategy: 'inprocess' }, commands: { mutation: 'dotnet stryker' } }
   const { machine, gate, workspace } = await started({
     components: [api, back],
     tracking: new InMemoryTracking({ root: 'C:\\my-application\\.copilot-tracking\\skraft-plans' }),
@@ -355,15 +355,15 @@ test('an invalid skraft-config.json refuses the gates with every error, instead 
     workflow: 7,
     publish: { draft: 'no' },
     components: [
-      { name: 'web', root: '/srv/web', stack: 'react', comands: { test: 'npm test' } },
+      { name: 'web', root: '/srv/web', stack: 'react', bdd: false, comands: { test: 'npm test' } },
       { name: 'Api', root: 'api', stack: 'cobol', commands: { Test: 'dotnet test', tset: 'dotnet test', build: '  ', mutation: 7 }, baseBranch: 'release 2', mocking: { strategy: 'wiremock' }, contractTesting: 'yes', bdd: 'yes' },
-      { name: 'api', root: 'api', stack: 'dotnet', commands: 'dotnet test', mocking: 'inprocess' },
+      { name: 'api', root: 'api', stack: 'dotnet', bdd: false, commands: 'dotnet test', mocking: 'inprocess' },
       { name: 'api', root: 'api2', stack: 'dotnet' },
       null,
-      { name: 'front', root: 'front', stack: 'react', paths: ['src'] },
-      { name: 'back', root: 'back', stack: 'dotnet', paths: { src: ['src', '../shared'], tests: [] } },
-      { name: 'jobs', root: 'jobs', stack: 'python', paths: { src: ['/srv/jobs'], tests: [' '] } },
-      { name: 'tools', root: 'tools', stack: 'python', paths: { src: [3], tests: ['tests'] } },
+      { name: 'front', root: 'front', stack: 'react', bdd: false, paths: ['src'] },
+      { name: 'back', root: 'back', stack: 'dotnet', bdd: false, paths: { src: ['src', '../shared'], tests: [] } },
+      { name: 'jobs', root: 'jobs', stack: 'python', bdd: false, paths: { src: ['/srv/jobs'], tests: [' '] } },
+      { name: 'tools', root: 'tools', stack: 'python', bdd: false, paths: { src: [3], tests: ['tests'] } },
     ],
   })), [
     'skraft-config.json is invalid: workflow is no key: skraft workflow eject copies the pipeline into .skraft/pipeline.skraft.dot, the only one a run follows',

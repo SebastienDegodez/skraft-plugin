@@ -8,7 +8,7 @@ const upToDeliver = (it) => [agent()(it), agent()(it), agent()(it)]
 const deliver = (it) => agent({ work: tddCycle() })(it)
 const recorded = (host, step) => host.events().filter((event) => event.type === 'step.recorded' && event.step === step)
 const unavailable = () => ({ ok: false, unavailable: true, text: '' })
-const WEB = { name: 'web', root: '../web', stack: 'react', mocking: { strategy: 'inprocess' }, paths: { src: ['src'], tests: ['src'] }, commands: { lint: 'npx eslint .' } }
+const WEB = { name: 'web', root: '../web', stack: 'react', bdd: false, mocking: { strategy: 'inprocess' }, paths: { src: ['src'], tests: ['src'] }, commands: { lint: 'npx eslint .' } }
 const twoRepositories = () => new InMemoryGit({ repositories: { '.': { mergeBases: { main: 'root-0' } }, '../web': { mergeBases: { main: 'up-web-0' } } } })
 
 test('DELIVER does not close while a gate fails: the engineer gets a new pass with the failures', async () => {
@@ -134,7 +134,7 @@ test('a gate node that is not a goal gate runs its own gates on the touched comp
   const workflow = BUILT_IN_WORKFLOW
     .replace('gates    [shape=parallelogram', 'quick [shape=parallelogram, gate="build"]\n  gates    [shape=parallelogram')
     .replace('deliver -> gates', 'deliver -> quick -> gates')
-  const WEB = { name: 'web', root: '../web', stack: 'react', mocking: { strategy: 'inprocess' }, paths: { src: ['src'], tests: ['src'] }, commands: { lint: 'npx eslint .', mutation: 'npx stryker run' } }
+  const WEB = { name: 'web', root: '../web', stack: 'react', bdd: false, mocking: { strategy: 'inprocess' }, paths: { src: ['src'], tests: ['src'] }, commands: { lint: 'npx eslint .', mutation: 'npx stryker run' } }
   const git = new InMemoryGit({ repositories: { '.': { mergeBases: { main: 'root-0' } }, '../web': { mergeBases: { main: 'up-web-0' } } } })
   const host = scripted({ components: [API, WEB], git, files: { '.skraft/pipeline.skraft.dot': workflow } }, (it) => [...upToDeliver(it), deliver(it)])
 

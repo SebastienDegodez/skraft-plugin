@@ -180,9 +180,22 @@ const pruned = (value) => {
   return Object.fromEntries(kept)
 }
 
+/**
+ * The BDD choice writes a decision, never a bare `true`, which decides nothing: it writes the pairs
+ * the engine knows — those the working copy holds, else those the file names — or `false`. Left
+ * unanswered it writes nothing, and the file keeps saying nothing until `/skraft-init` answers.
+ */
+const bddValue = (el, path) => {
+  if (el.value === 'false') return false
+  if (el.value !== 'pairs') return undefined
+  const component = view.draft.components[Number(path.split('.')[1])]
+  return component.bddFound.length > 0 ? component.bddFound : component.bddPaths
+}
+
 /** What a field gives the draft. */
 const valueOf = (el, path) => {
   if (path === 'forge') return el.value === '' ? null : el.value
+  if (path.endsWith('.bdd')) return bddValue(el, path)
   if (el.type === 'checkbox') return el.checked
   if (path.startsWith('components.')) return el.value
   if (path.endsWith('.model')) {

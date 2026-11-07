@@ -20,7 +20,7 @@ test('a pull request from a fork without skraft-config.json: the stack is detect
   assert.equal(outcome.status, 'APPROVED')
   assert.deepEqual(host.agentRunner.batches[0].map(({ agent }) => agent), ['test-integrity-lens', 'architecture-boundaries-lens', 'cold-reader-lens', 'mock-fidelity-lens'])
   assert.deepEqual(JSON.parse(await host.reviews.read(SLUG, 'reviews/verdict-1/components.json')), [
-    { name: 'shop', root: '.', stack: 'dotnet', mocking: { strategy: 'microcks' }, contractTesting: false, bdd: true, gates: [] },
+    { name: 'shop', root: '.', stack: 'dotnet', mocking: { strategy: 'microcks' }, contractTesting: false, bdd: null, gates: [] },
   ])
   assert.ok(host.prompt('mock-fidelity-lens').includes(`\n  - Components (stack, mocking strategy, contract testing, BDD, gates that passed): ${REVIEWS}/reviews/verdict-1/components.json\n`))
   assert.deepEqual([...host.workspace.files.keys()].sort(), before)

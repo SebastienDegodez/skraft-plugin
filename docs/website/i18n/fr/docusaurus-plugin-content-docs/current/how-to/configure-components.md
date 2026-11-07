@@ -114,18 +114,32 @@ Ce que vous perdez : [Adapter skraft : ce que coûte chaque réglage](../explana
 
 ## 7. Dire si un composant écrit du Gherkin
 
-Un composant décrit son comportement en Gherkin sauf s'il dit le contraire. Pour celui dont
-l'équipe écrit des tests ordinaires — un batch, un ordonnanceur — écrivez :
+Chaque composant le dit, d'une façon ou de l'autre : ses tests s'écrivent en Gherkin ou non, et le
+moteur ne suppose ni l'un ni l'autre. Pour celui dont l'équipe écrit des tests ordinaires — un
+batch, un ordonnanceur — écrivez :
 
 ```json
 { "name": "batch", "root": "services/batch", "stack": "python", "bdd": false }
 ```
 
-DISTILL ne demande alors aucun `.feature` à ce composant et prend ses scénarios dans la colonne
-`Scenario` du plan de test ; le TDD de DELIVER tourne comme toujours. Le laisser actif tient le
-composant à ses scénarios en entier : c'est une pratique qui se déclare, pas une barre à baisser.
-N'écrivez la clé que pour refuser — une clé absente vaut déjà oui, et l'onglet Configuration du
-canvas skraft la bascule.
+Pour celui qui écrit du Gherkin, nommez les dossiers que son runner lit :
+
+```json
+{ "name": "api", "root": "services/payment-api", "stack": "dotnet",
+  "bdd": [{ "runner": "reqnroll", "features": "tests/Features", "steps": "tests/Steps" }] }
+```
+
+`false` ne demande aucun `.feature` à ce composant, et DISTILL prend ses scénarios dans la colonne
+`Scenario` du plan de test ; le TDD de DELIVER tourne comme toujours. Une liste tient le composant à
+ses scénarios en entier : c'est une pratique qui se déclare, pas une barre à baisser.
+
+Une clé absente, et un `true` nu, ne répondent rien : aucun dossier n'est inventé depuis le stack,
+parce qu'un dossier que personne n'a choisi est un dossier que le runner peut ne jamais lire. Un run
+s'arrête alors avant son premier agent avec
+`skraft is not initialised: run /skraft-init (api: bdd is unanswered)`, et `skraft doctor` échoue sur
+ce composant. `skraft init` écrit les paires qu'il détecte ; `/skraft-init` demande les autres, et
+l'onglet Configuration du canvas skraft montre à la fois ce que dit le fichier et ce que porte la
+copie de travail.
 
 ## 8. Régler les consentements de publication
 

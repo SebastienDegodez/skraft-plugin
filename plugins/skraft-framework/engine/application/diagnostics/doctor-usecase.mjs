@@ -131,14 +131,19 @@ const componentChecks = async (deps, component, { run, baseSha }) => {
 
 /**
  * Where each runner of the component reads its scenarios; a component that declines Gherkin says
- * nothing. A pair whose scenarios are written and whose bindings folder is not a folder is a
- * warning: nothing binds them, the runner reports them undefined, and `test` still passes.
+ * nothing, and one that decided neither way fails, since no run of it would start. A pair whose
+ * scenarios are written and whose bindings folder is not a folder is a warning: nothing binds
+ * them, the runner reports them undefined, and `test` still passes.
  * @param {DoctorDeps} deps @param {Component} component @returns {Promise<DoctorCheck[]>}
  */
 const bddChecks = async (deps, component) => {
   const subject = `${component.name}/bdd`
+  if (component.bdd === null) return [{ subject, status: 'fail', detail: UNDECIDED }]
   return Promise.all(component.bddPaths.map((pair) => bddCheck(deps, component.root, subject, pair)))
 }
+
+/** What a component whose Gherkin nobody decided leaves the developer to do. */
+const UNDECIDED = 'the component does not say whether it describes its behaviour in Gherkin; run /skraft-init, or write "bdd" in skraft-config.json'
 
 /**
  * One pair's line: where its runner reads, and the warning when the scenarios are written and the

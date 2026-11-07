@@ -126,37 +126,33 @@ test('a forge a personal layer names stays out of skraft-config.json when an unr
   assert.deepEqual(await personal.save({ forge: null }), { ok: true, reason: 'nothing changed; ~/.skraft/config.json still names the forge' })
 })
 
-test('a component that declares BDD without naming folders takes the pair its stack reads, each stack its own, a list says where, and a pair may leave its bindings out', async () => {
-  const says = (name, stack, bdd) => ({ name, root: name, stack, commands: { test: 'x' }, ...(bdd === undefined ? {} : { bdd }) })
+test('a component names where its scenarios live, says it writes none, or decides nothing: declaring BDD without naming a folder decides nothing either', async () => {
+  const says = (name, bdd) => ({ name, root: name, stack: 'dotnet', commands: { test: 'x' }, ...(bdd === undefined ? {} : { bdd }) })
   const team = { components: [
-    says('says-yes', 'dotnet', true),
-    says('says-nothing', 'dotnet'),
-    says('says-no', 'dotnet', false),
-    says('bound', 'dotnet', [{ features: 'tests/Features', steps: 'tests/Steps' }]),
-    says('unbound', 'dotnet', [{ features: 'tests/Features' }]),
-    says('in-java', 'java'),
-    says('in-python', 'python'),
-    says('in-typescript', 'typescript'),
-    says('in-javascript', 'javascript'),
-    says('in-react', 'react'),
+    says('says-nothing'),
+    says('says-yes', true),
+    says('says-no', false),
+    says('bound', [{ features: 'tests/Features', steps: 'tests/Steps' }]),
+    says('unbound', [{ features: 'tests/Features' }]),
+    says('two-runners', [
+      { runner: 'reqnroll', features: 'tests/Features', steps: 'tests/Steps' },
+      { runner: 'cucumber-js', features: 'web/features', steps: 'web/features/step_definitions' },
+    ]),
   ] }
-  const dotnet = { runner: null, features: 'tests/Features', steps: 'tests/Steps' }
-  const node = { runner: null, features: 'features', steps: 'features/step_definitions' }
 
   const view = await configuration({ team }).view()
 
   assert.deepEqual(view.components.map(({ name, bdd, bddPaths }) => [name, bdd, bddPaths]), [
-    ['says-yes', true, [dotnet]],
-    ['says-nothing', true, [dotnet]],
+    ['says-nothing', null, []],
+    ['says-yes', null, []],
     ['says-no', false, []],
-    ['bound', true, [dotnet]],
+    ['bound', true, [{ runner: null, features: 'tests/Features', steps: 'tests/Steps' }]],
     ['unbound', true, [{ runner: null, features: 'tests/Features', steps: null }]],
-    ['in-java', true, [{ runner: null, features: 'src/test/resources/features', steps: 'src/test/java' }]],
-    ['in-python', true, [{ runner: null, features: 'features', steps: 'features/steps' }]],
-    ['in-typescript', true, [node]],
-    ['in-javascript', true, [node]],
-    ['in-react', true, [node]],
-  ])
+    ['two-runners', true, [
+      { runner: 'reqnroll', features: 'tests/Features', steps: 'tests/Steps' },
+      { runner: 'cucumber-js', features: 'web/features', steps: 'web/features/step_definitions' },
+    ]],
+  ], 'a folder nobody chose is one the runner may never read, so no stack decides it')
 })
 
 test('the view shows the pairs the working copy holds beside the ones the file names, so a component listed before the key existed has something to confirm', async () => {
@@ -171,7 +167,7 @@ test('the view shows the pairs the working copy holds beside the ones the file n
 
   assert.deepEqual(view.components.map(({ name, bddPaths, bddFound }) => ({ name, bddPaths, bddFound })), [{
     name: 'shop',
-    bddPaths: [{ runner: null, features: 'tests/Features', steps: 'tests/Steps' }],
+    bddPaths: [],
     bddFound: [{ runner: 'reqnroll', features: 'tests/Cart.Tests/Specs', steps: 'tests/Cart.Tests/Bindings' }],
   }])
 })

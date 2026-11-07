@@ -111,17 +111,31 @@ What you give up: [Adapting skraft: what each setting costs](../explanation/cust
 
 ## 7. Say whether a component writes Gherkin
 
-A component describes its behaviour in Gherkin unless it says otherwise. For one whose team writes
-plain tests — a batch job, a scheduler — write:
+Every component says it, one way or the other: tests are written in Gherkin or they are not, and
+the engine assumes neither. For one whose team writes plain tests — a batch job, a scheduler —
+write:
 
 ```json
 { "name": "batch", "root": "services/batch", "stack": "python", "bdd": false }
 ```
 
-DISTILL then asks that component for no `.feature`, and takes its scenarios from the test plan's
-`Scenario` column; DELIVER's TDD runs as it always does. Leaving it on holds the component to its
-scenarios in full: it declares a practice, not a bar to lower. Write the key only to decline — an
-absent key already means yes, and the Configuration tab of the skraft canvas toggles it.
+For one that writes Gherkin, name the folders its runner reads:
+
+```json
+{ "name": "api", "root": "services/payment-api", "stack": "dotnet",
+  "bdd": [{ "runner": "reqnroll", "features": "tests/Features", "steps": "tests/Steps" }] }
+```
+
+`false` asks that component for no `.feature`, and DISTILL takes its scenarios from the test plan's
+`Scenario` column; DELIVER's TDD runs as it always does. A list holds the component to its
+scenarios in full: it declares a practice, not a bar to lower.
+
+An absent key, and a bare `true`, answer nothing: no folder is invented from the stack, because one
+nobody chose is one the runner may never read. A run then stops before its first agent with
+`skraft is not initialised: run /skraft-init (api: bdd is unanswered)`, and `skraft doctor` fails on
+that component. `skraft init` writes the pairs it detects; `/skraft-init` asks for the rest, and the
+Configuration tab of the skraft canvas shows both what the file says and what the working copy
+holds.
 
 ## 8. Settle the publication consents
 

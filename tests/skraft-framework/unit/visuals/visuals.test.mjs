@@ -7,7 +7,7 @@ import { opening, section } from '../support/description.mjs'
 
 /** A React front end in web/, whose e2e command runs Playwright. */
 const WEB = Object.freeze({
-  name: 'web', root: 'web', stack: 'react', mocking: { strategy: 'inprocess' },
+  name: 'web', root: 'web', stack: 'react', bdd: false, mocking: { strategy: 'inprocess' },
   paths: { src: ['src'], tests: ['tests'] },
   commands: { build: 'npm run build', e2e: 'npx playwright test' },
 })
@@ -218,7 +218,7 @@ test('screenshots a manifest does not list as the engine reads it are not record
 })
 
 test('a React component with no e2e command is told to declare one; a component with an e2e command is a front end whatever its stack', async () => {
-  const admin = { ...API, name: 'admin-ui', root: 'admin', stack: 'typescript', commands: { build: 'npm run build', e2e: 'npm run e2e' } }
+  const admin = { ...API, name: 'admin-ui', root: 'admin', stack: 'typescript', bdd: false, commands: { build: 'npm run build', e2e: 'npm run e2e' } }
   let host
   const writes = () => {
     host.workspace.files.set('admin/skraft-visuals/home.png', 'PNG')

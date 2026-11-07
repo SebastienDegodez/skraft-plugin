@@ -1,6 +1,9 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { agent, nominal, scripted, SLUG } from '../support/pipeline-host.mjs'
+import { agent, API, nominal, scripted, SLUG } from '../support/pipeline-host.mjs'
+
+/** A component that describes its behaviour in Gherkin, which is what the scenarios of this folder are about. */
+const GHERKIN = Object.freeze({ ...API, bdd: [{ features: 'docs/features', steps: 'tests/Steps' }] })
 
 const CARD = 'docs/features/checkout/pay-by-card.feature'
 const LATER = 'docs/features/pay-later.feature'
@@ -55,7 +58,7 @@ const distill = (host) => host.events()
   .map(({ attempt, outcome, code, failures }) => [attempt, outcome, code, failures])
 
 /** A run whose DISTILL step is the designers given, one per attempt. @param {Array<(host: any) => () => Promise<any>>} attempts */
-const runOf = (attempts) => scripted({}, (it) => [...nominal(it).slice(0, 2), ...attempts.map((made) => made(it)), ...nominal(it).slice(3)])
+const runOf = (attempts, components = [GHERKIN]) => scripted({ components }, (it) => [...nominal(it).slice(0, 2), ...attempts.map((made) => made(it)), ...nominal(it).slice(3)])
 
 test('a test plan that names a .feature the working copy does not hold sends the designer back, for a features folder it has not got and for a file no context holds, and goes on once each is written where the plan says', async () => {
   const host = runOf([
@@ -252,4 +255,18 @@ test("the story is read from what its plan names: the .feature of another contex
 
   assert.deepEqual(distill(host), [[1, 'done', null, []]])
   assert.equal(outcome.status, 'done', outcome.reason)
+})
+
+test('a component that writes its tests without Gherkin is asked for no scenario: the plan may name a .feature nobody wrote and DISTILL closes', async () => {
+  const attempt = () => designer({ cited: ['pay-by-card.feature'], drop: ['docs/features/.gitkeep'] })
+  const unit = runOf([attempt()], [{ ...API, bdd: false }])
+  const gherkin = runOf([attempt()])
+  const both = runOf([attempt()], [{ ...API, bdd: false }, { ...GHERKIN, name: 'web', root: 'web' }])
+
+  const outcome = await unit.start()
+
+  assert.deepEqual(distill(unit), [[1, 'done', null, []]], 'nothing reads a .feature of a component that declines Gherkin')
+  assert.equal(outcome.status, 'done', outcome.reason)
+  assert.equal((await gherkin.start()).status, 'blocked', 'the same attempt, in a component that declares Gherkin, is sent back')
+  assert.equal((await both.start()).status, 'blocked', 'one component writing Gherkin holds the story to its scenarios, whatever the others write')
 })

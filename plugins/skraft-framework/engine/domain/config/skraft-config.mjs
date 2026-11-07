@@ -29,7 +29,7 @@ export { HOSTS } from './model-assignment.mjs'
  *   baseBranch: string | null,
  *   mocking: { strategy: 'microcks' | 'inprocess' },
  *   contractTesting: boolean,
- *   bdd: boolean,
+ *   bdd: boolean | null,
  *   bddPaths: BddPair[],
  *   mutationReport: string | null,
  * }} Component
@@ -42,9 +42,9 @@ export { HOSTS } from './model-assignment.mjs'
  *   relative to the component root. A component declares one pair per runner: the binding scope is
  *   the runner's, so a definition of another pair binds no step of this one.
  *   steps null: the scenarios are written and nothing is asked of them, so no runner reads them.
- *   A component that says `true`, or says nothing, takes the pair its stack's usual runner looks
- *   in. That default fits a component holding one test project; `skraft init` detects the real
- *   folders, and `/skraft-init` asks for them, so a component holding several names its own.
+ *   bdd null: nobody has decided. The engine invents no folder — one nobody chose is one the
+ *   runner may never read — so a run is refused until `skraft init` detects the pairs or
+ *   `/skraft-init` asks for them.
  * @typedef {'all' | 'last-red'} ReplayMode
  *   all: every red commit is replayed; last-red: only the last red commit of each story.
  * @typedef {import('./model-assignment.mjs').Host} Host
@@ -84,20 +84,6 @@ export const STACKS = Object.freeze(['dotnet', 'java', 'python', 'typescript', '
 const REPLAY_MODES = Object.freeze(['all', 'last-red'])
 export const MOCKING_STRATEGIES = Object.freeze(['microcks', 'inprocess'])
 const IN_PROCESS_STACKS = Object.freeze(['typescript', 'javascript', 'react'])
-
-/**
- * Where each stack's usual runner looks, for a component that declares BDD without naming folders,
- * relative to the component root. A component that holds several test projects gets one default
- * pair that fits none of them: `skraft init` detects the real ones, `/skraft-init` asks for them.
- */
-const BDD_FOLDERS = Object.freeze({
-  dotnet: { features: 'tests/Features', steps: 'tests/Steps' },
-  java: { features: 'src/test/resources/features', steps: 'src/test/java' },
-  python: { features: 'features', steps: 'features/steps' },
-  typescript: { features: 'features', steps: 'features/step_definitions' },
-  javascript: { features: 'features', steps: 'features/step_definitions' },
-  react: { features: 'features', steps: 'features/step_definitions' },
-})
 
 /** What a pair may name, and nothing else. */
 const BDD_KEYS = Object.freeze(['runner', 'features', 'steps'])
@@ -425,22 +411,23 @@ const mockingOf = ({ mocking, stack }, label, errors) => {
 const BDD_SHAPE = 'bdd must be true, false, or a list of { runner, features, steps } whose folders are inside the component root; steps may be left out when nothing binds the scenarios'
 
 /**
- * Whether a component describes its behaviour in Gherkin, and where. A boolean, or no key at all,
- * says the first without the second; a list says both, since naming a folder is declaring BDD.
+ * Whether a component describes its behaviour in Gherkin, and where. A list says both at once,
+ * since naming a folder is declaring BDD; `false` declines Gherkin; `true` alone, and no key at
+ * all, leave the question open, and a run is refused rather than held to a folder nobody chose.
  * @param {Record<string, any>} entry @param {string} label @param {string[]} errors
- * @returns {{ bdd: boolean, bddPaths: BddPair[] }}
+ * @returns {{ bdd: boolean | null, bddPaths: BddPair[] }}
  */
-const bddOf = ({ bdd, stack }, label, errors) => {
+const bddOf = ({ bdd }, label, errors) => {
   if (bdd === false) return { bdd: false, bddPaths: [] }
   const pairs = listedPairs(bdd)
   if (pairs !== null) return { bdd: true, bddPaths: pairs }
   if (bdd !== undefined && bdd !== true) errors.push(`${label}: ${BDD_SHAPE}`)
-  return { bdd: true, bddPaths: stackPairs(stack) }
+  return { bdd: null, bddPaths: [] }
 }
 
 /**
  * The pairs a list names; null when the component names no list, and null when it names one this
- * engine refuses, whose error leaves it the pair a component that named nothing would take.
+ * engine refuses, whose error leaves the question open, as a component that named nothing.
  * @param {unknown} bdd @returns {BddPair[] | null}
  */
 const listedPairs = (bdd) => {
@@ -448,9 +435,6 @@ const listedPairs = (bdd) => {
   const pairs = bdd.map(pairOf)
   return pairs.includes(null) ? null : /** @type {BddPair[]} */ (pairs)
 }
-
-/** The default pair of a stack. @param {unknown} stack @returns {BddPair[]} */
-const stackPairs = (stack) => [{ runner: null, ...BDD_FOLDERS[/** @type {Stack} */ (stack)] }]
 
 /**
  * One pair, its folders normalised; null when it names something else, a folder outside the root,
