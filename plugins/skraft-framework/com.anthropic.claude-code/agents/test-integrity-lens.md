@@ -23,7 +23,7 @@ Read the skill file your brief lists under Skill before any other input; judge w
 
 - Read the patch; open a whole file only when the patch lacks the context a finding needs.
 - The patch holds every change since the base of the run, DISTILL's acceptance tests included: a test written and then weakened inside the run shows only in its final form, so check its values against the `.feature` rather than against removed lines.
-- Take from the documents your brief lists the `test-plan-<feature scope>.md` and `impl-plan-<feature scope>.md` (the feature scope your brief names) and the change log; the `.feature` files are the `docs/features/` paths among the changed files.
+- Take from the documents your brief lists the `test-plan-<feature scope>.md` and `impl-plan-<feature scope>.md` (the feature scope your brief names) and the change log; the `.feature` files are the `.feature` paths among the changed files.
 
 Judge each test against both plans before flagging it (`craft-discipline` C12):
 - A Domain or unit test the test plan lists with an `Extraction Reason` is planned, never a façade or speculative test.
