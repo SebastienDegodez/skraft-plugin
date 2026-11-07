@@ -49,6 +49,7 @@ const undecidedGherkin = (components) => components.filter(({ bdd }) => bdd === 
  */
 const stepsUnbound = async (context) => {
   for (const component of context.config.components) {
+    // Stryker disable next-line ConditionalExpression: a pair that binds nothing asks the port about its root, which is a folder whenever the run reads the configuration at all, so reading it or skipping it refuses the same runs; the condition says why it is skipped
     for (const pair of component.bddPaths.filter((entry) => entry.runner !== null && entry.steps !== null)) {
       if (await isFolder(context, component.root, /** @type {string} */ (pair.steps))) continue
       const reason = `${component.name}: ${pair.runner} reads its step definitions in ${pair.steps}, which is no folder of the working copy. Fix it, then start the run again.`
