@@ -6,7 +6,8 @@ import { ADR_1, adrText, afterDesign, architect, eventsOf } from '../support/dec
 
 const designRecords = (host) => eventsOf(host, 'step.recorded').filter((event) => event.step === 'design').map(({ visit, attempt, outcome, code, failures }) => [visit, attempt, outcome, code, failures])
 const pinned = (token) => `${ADR_1} names a version (${token}): name the technology or the capability it brings; versions live in the manifests`
-const path = (token) => `${ADR_1} names a file of the code (${token}): name the component, the use case or the concept; files live in the research and the design`
+const path = (token) => `${ADR_1} names a path (${token}): name the component or the concept, and a configuration file by its name alone`
+const codeFile = (token) => `${ADR_1} names a file of the code (${token}): name the component, the use case or the concept`
 const tooMany = (count) => `${ADR_1} states its decision in ${count} sentences: keep one sentence and give each independent decision its own ADR`
 
 test('a draft ADR that pins a version, an image tag or a package is refused, one line per pin, a major written vN is none; rewritten with families it passes', async () => {
@@ -26,11 +27,11 @@ test('a draft ADR that pins a version, an image tag or a package is refused, one
   assert.equal(outcome.status, 'done')
 })
 
-test('a draft ADR that names a file of the code is refused for the path, never as a version; an address or a date is no version', async () => {
+test('a draft ADR that names a path or a file of the code is refused for it, never as a version; a configuration file by its name, an address or a date is neither', async () => {
   const host = scripted({ answers: [{ answer: 'RATIFIED' }] }, (it) => [
     agent()(it),
-    architect({ [ADR_1]: adrText({ body: 'The use case is registered in api/src/Mastermind.Infrastructure/DependencyInjection.cs:9, its test in `api/tests/Mastermind.UnitTest/Couleurs/ListerCouleursUseCaseTests.cs:12-20`, the rule in DependencyInjection.cs:9 and web\\src\\app\\App.tsx.' }) })(it),
-    architect({ [ADR_1]: adrText({ body: 'The API answers on 127.0.0.1:3917 and 10.0.0.12 since 2026.11.07, the board since 2026/11/08, the context map in docs/architecture/context-map.md; the server runs on 10.0.300.' }) })(it),
+    architect({ [ADR_1]: adrText({ body: 'The use case is registered in api/src/Mastermind.Infrastructure/DependencyInjection.cs:9, its test in `api/tests/Mastermind.UnitTest/Couleurs/ListerCouleursUseCaseTests.cs:12-20`, the rule in DependencyInjection.cs:9 and Program.cs, the settings in config/appsettings.json, the page in web\\src\\app\\App.tsx.' }) })(it),
+    architect({ [ADR_1]: adrText({ body: 'The API answers on 127.0.0.1:3917 and 10.0.0.12 since 2026.11.07, the board since 2026/11/08, the context map in docs/architecture/context-map.md, the settings in appsettings.json and docker-compose.yml, the front on Node.js; the server runs on 10.0.300.' }) })(it),
     architect({ [ADR_1]: adrText({ body: 'The API answers on the loopback address since the day the board shipped.' }) })(it),
     ...afterDesign(it),
   ])
@@ -41,7 +42,9 @@ test('a draft ADR that names a file of the code is refused for the path, never a
     [1, 1, 'failed', 'adr-lifecycle', [
       path('api/src/Mastermind.Infrastructure/DependencyInjection.cs:9'),
       path('api/tests/Mastermind.UnitTest/Couleurs/ListerCouleursUseCaseTests.cs:12-20'),
-      path('DependencyInjection.cs:9'),
+      codeFile('DependencyInjection.cs:9'),
+      codeFile('Program.cs'),
+      path('config/appsettings.json'),
       path('web/src/app/App.tsx'),
     ]],
     [1, 2, 'failed', 'adr-lifecycle', [pinned('10.0.300')]],

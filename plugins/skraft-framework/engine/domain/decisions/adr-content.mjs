@@ -16,9 +16,13 @@ const BLOCK_LINES = /^[^\n]*(?:\r?\n[ \t]+\S[^\n]*)*/
 const SENTENCE_END = /(?<!\b(?:e\.g|i\.e|vs|etc|cf)\.)(?<=[.!?])\s+(?=[A-Z])/
 const CODE_SPAN = /`[^`]*`/g
 const PINS = new RegExp([PACKAGE_PIN, IMAGE_TAG, SEMVER].join('|'), 'g')
-/** A path with a folder, or a file name with a line: what may name a file, its line or range kept, the full stop of its sentence left out. */
-const FILE_CITE = /(?<=^|[\s,`'"(])(?:[\w.-]+(?:[\\/][\w.-]*[\w-])+|[\w.-]*[\w-](?=:\d))(?::\d+(?:[-\u2013]\d+)?)?/g
+/** A word or a path, its line or range kept, the full stop of its sentence left out. */
+const FILE_CITE = /(?<=^|[\s,`'"(])[\w.-]*[\w-](?:[\\/][\w.-]*[\w-])*(?::\d+(?:[-–]\d+)?)?/g
+const LINE = /:[\d–-]+$/
 const FILE_NAME = /\.[A-Za-z]\w{0,9}$/
+const CODE = /\.(?:cs|fs|vb|java|kts?|scala|groovy|py|rb|go|rs|tsx?|jsx|[cm]?js|php|swift|c|h|cpp|hpp|sh|ps1)$/i
+/** A technology named like a file (`Node.js`, `Next.js`): a file of the code only with a folder or a line. */
+const TECHNOLOGY = /\.js$/i
 /** The documents DESIGN keeps, and any Markdown page such as a linked ADR: an ADR may point at them. */
 const DOCUMENT = /^docs\/|\.md$/i
 const OCTET = String.raw`(?:25[0-5]|2[0-4]\d|1?\d?\d)`
@@ -39,19 +43,37 @@ const bodyOf = (text) => {
 const versionPins = (body) => [...new Set(withoutNonVersions(body).match(PINS) ?? [])]
 
 /** @param {string} body */
-const withoutNonVersions = (body) => body.replace(FILE_CITE, (cite) => (isCodeFile(cite) ? ' ' : cite)).replace(ADDRESS, ' ').replace(DAY, ' ')
+const withoutNonVersions = (body) => body.replace(FILE_CITE, (cite) => (kindOf(cite) === null ? cite : ' ')).replace(ADDRESS, ' ').replace(DAY, ' ')
 
 /**
- * Each file of the code the body names, once, in reading order, with forward slashes.
+ * Each path and each file of the code the body names, once, in reading order, with forward slashes.
  * @param {string} body
+ * @returns {Array<{ cite: string, kind: 'path' | 'code' }>}
  */
-const codeFiles = (body) => [...new Set((body.match(FILE_CITE) ?? []).filter(isCodeFile).map((cite) => cite.replaceAll('\\', '/')))]
+const filesNamed = (body) => [...new Set((body.match(FILE_CITE) ?? []).map((cite) => cite.replaceAll('\\', '/')))]
+  .map((cite) => ({ cite, kind: kindOf(cite) }))
+  .filter((named) => named.kind !== null)
 
-/** A cited path whose last part is a file name, and no document. @param {string} cite */
-const isCodeFile = (cite) => {
-  const path = cite.replace(/:[\d\u2013-]+$/, '').replaceAll('\\', '/')
-  return FILE_NAME.test(path) && !DOCUMENT.test(path)
+/**
+ * A path with a folder to a file, or the name of a file of the code; null for a document, a
+ * configuration file named alone, a word.
+ * @param {string} cite
+ * @returns {'path' | 'code' | null}
+ */
+const kindOf = (cite) => {
+  const file = cite.replace(LINE, '').replaceAll('\\', '/')
+  if (!FILE_NAME.test(file) || DOCUMENT.test(file)) return null
+  if (file.includes('/')) return 'path'
+  return CODE.test(file) && (LINE.test(cite) || !TECHNOLOGY.test(file)) ? 'code' : null
 }
+
+const FILE_REASON = Object.freeze({
+  path: 'name the component or the concept, and a configuration file by its name alone',
+  code: 'name the component, the use case or the concept',
+})
+
+/** @param {{ cite: string, kind: 'path' | 'code' }} named */
+const fileLabel = ({ cite, kind }) => `${kind === 'path' ? 'a path' : 'a file of the code'} (${cite}): ${FILE_REASON[kind]}`
 
 /**
  * The header's `decision`: its value, or the indented lines of a folded or literal block; null or
@@ -102,7 +124,7 @@ export const statusProblems = (path, text) => {
 export const contentProblems = (path, text) => {
   const content = `${bodyOf(text)}\n${decisionOf(text) ?? ''}`
   return [
-    ...codeFiles(content).map((file) => `${path} names a file of the code (${file}): name the component, the use case or the concept; files live in the research and the design`),
+    ...filesNamed(content).map((named) => `${path} names ${fileLabel(named)}`),
     ...versionPins(content).map((token) => `${path} names a version (${token}): name the technology or the capability it brings; versions live in the manifests`),
     ...decisionProblems(path, text),
   ]
