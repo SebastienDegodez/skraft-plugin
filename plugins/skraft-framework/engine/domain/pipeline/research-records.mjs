@@ -1,14 +1,18 @@
 /**
  * The RESEARCH records the engine checks when the solution researcher finishes, instead of a lens:
  *   citations  every workspace path its research document cites is a readable file of the working
- *              copy, and a line range it cites is one that file holds (#517)
+ *              copy, and a line range it cites is one that file holds (#517); a path written from
+ *              a component's root is named back from the workspace root
  *
  * @typedef {{ path: string, text: string | null }} Text
  * @typedef {{ path: string, text: string }} Document a research document of the tracking folder, as the engine read it
- * @typedef {{ documents: Document[], cited: Text[] }} Records
+ * @typedef {{ documents: Document[], cited: Text[], roots: string[] }} Records
  *   documents: the research documents of the tracking folder; cited: the workspace paths they
- *   cite, text null when the working copy has none or the path is no readable file.
+ *   cite and, for each, the same path under every component root, text null when the working copy
+ *   has none or the path is no readable file; roots: the component roots of the configuration.
  */
+
+import { joinRelative } from '../config/relative-path.mjs'
 
 const RESEARCH = /(^|\/)research\/[^/]+\/[^/]+\.md$/
 /** A token that could be a workspace path, including a trailing slash that marks a folder. */
@@ -32,6 +36,13 @@ export const isResearch = (path) => RESEARCH.test(path)
  */
 export const citedPaths = (text) => [...new Set(tokensOf(text).map((token) => token.replace(FULL_STOP, '')))]
   .filter(isWorkspaceFile)
+
+/**
+ * The same path under each component root other than the working copy's own.
+ * @param {string} path @param {string[]} roots
+ * @returns {string[]}
+ */
+export const underRoots = (path, roots) => roots.filter((root) => root !== '.').map((root) => joinRelative(root, path))
 
 /**
  * Every token that names a folder and what it holds, back slashes read as separators. A name with
@@ -58,8 +69,8 @@ export const citedRanges = (text) => [...text.replaceAll('\\', '/').matchAll(RAN
  * @param {Records} records
  * @returns {string[]}
  */
-export const researchFailures = ({ documents, cited }) => documents.flatMap((document) => [
-  ...missingCitations(document, cited),
+export const researchFailures = ({ documents, cited, roots }) => documents.flatMap((document) => [
+  ...missingCitations(document, cited, roots),
   ...rangeFailures(document, cited),
 ])
 
@@ -76,10 +87,16 @@ const lineCount = (text) => (text === null ? null : withoutClosingNewline(text).
 // Stryker disable next-line StringLiteral: what replaces the closing newline holds no newline either, so the file keeps its line count
 const withoutClosingNewline = (text) => text.replace(/\n$/, '')
 
-/** Each path a document cites that is no file of the working copy. @param {Document} document @param {Text[]} cited */
-const missingCitations = ({ path, text }, cited) => citedPaths(text)
+/** Each path a document cites that is no file of the working copy. @param {Document} document @param {Text[]} cited @param {string[]} roots */
+const missingCitations = ({ path, text }, cited, roots) => citedPaths(text)
   .filter((cite) => textOf(cited, cite) === null)
-  .map((cite) => `${path} cites ${cite}, which is no file of the working copy (#517)`)
+  .map((cite) => `${path} cites ${cite}, which is no file of the working copy${fromWorkspaceRoot(cited, underRoots(cite, roots))} (#517)`)
+
+/** Where the components hold a path written from their root, or nothing when none does. @param {Text[]} cited @param {string[]} candidates */
+const fromWorkspaceRoot = (cited, candidates) => {
+  const held = candidates.filter((candidate) => textOf(cited, candidate) !== null)
+  return held.length === 0 ? '' : `: write it from the workspace root, ${held.join(' or ')}`
+}
 
 /** @param {Text[]} cited @param {string} path */
 const textOf = (cited, path) => cited.find((entry) => entry.path === path)?.text ?? null

@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { agent, nominal, scripted, SLUG } from '../support/pipeline-host.mjs'
+import { agent, API, nominal, scripted, SLUG } from '../support/pipeline-host.mjs'
 
 const RESEARCH = 'research/2026-10-11/checkout-research.md'
 /** A file of the working copy the harness holds, one line long. */
@@ -38,6 +38,8 @@ const recorded = (host) => host.events()
   .map(({ attempt, outcome, code, failures }) => [attempt, outcome, code, failures])
 
 const noFile = (cite) => `${RESEARCH} cites ${cite}, which is no file of the working copy (#517)`
+/** A component-relative citation: its workspace paths, or a plain missing file when no component holds it. @param {string} cite @param {string | null} full */
+const fromRoot = (cite, full) => (full === null ? noFile(cite) : `${noFile(cite).replace(' (#517)', '')}: write it from the workspace root, ${full} (#517)`)
 const outOfRange = (cite, lines) => `${RESEARCH} cites ${cite}, outside the 1-${lines} line range (#517)`
 
 test('a research document that cites a path the working copy has not sends the researcher back, wherever the citation sits and however often it cites it, and the run goes on once every path exists', async () => {
@@ -212,5 +214,33 @@ test('a range starting at line zero sends the researcher back as an invalid line
     'failed',
     'research-records',
     [outOfRange(`${MONEY_PATH}:0-1`, 2)],
+  ])
+})
+
+test('a path written from its component root sends the researcher back with the path from the workspace root, every component that holds it named', async () => {
+  const web = { ...API, name: 'web', root: 'web', stack: 'react', commands: { test: 'npm test' } }
+  const admin = { ...web, name: 'admin', root: '../admin' }
+  const host = scripted({
+    components: [API, web, admin],
+    files: {
+      'web/src/palette/Palette.tsx': 'export const Palette = () => null\n',
+      'web/docs/notes.md': '# Web\n',
+      '../admin/docs/notes.md': '# Admin\n',
+    },
+  }, (it) => [
+    researcher(citing(['palette/Palette.tsx:1', 'docs/notes.md', 'src/Pricing/Absent.cs']))(it),
+    researcher(citing(['web/src/palette/Palette.tsx:1', 'web/docs/notes.md']))(it),
+    ...nominal(it).slice(1),
+  ])
+
+  await host.start()
+
+  assert.deepEqual(recorded(host), [
+    [1, 'failed', 'research-records', [
+      fromRoot('palette/Palette.tsx', null),
+      fromRoot('docs/notes.md', 'web/docs/notes.md or ../admin/docs/notes.md'),
+      noFile('src/Pricing/Absent.cs'),
+    ]],
+    [2, 'done', null, []],
   ])
 })

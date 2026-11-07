@@ -1,4 +1,4 @@
-import { citedPaths, isResearch, researchFailures } from '../../domain/pipeline/research-records.mjs'
+import { citedPaths, isResearch, researchFailures, underRoots } from '../../domain/pipeline/research-records.mjs'
 import { regularFile, textsOf } from '../shared/workspace-reading.mjs'
 
 /**
@@ -11,14 +11,14 @@ import { regularFile, textsOf } from '../shared/workspace-reading.mjs'
 /**
  * Why the citations of a solution researcher's attempt send it back.
  * @param {CitationDeps} deps
- * @param {{ slug: string }} run
+ * @param {{ slug: string, roots: string[] }} run roots: the component roots of the configuration
  * @returns {Promise<string[]>}
  */
-export const checkResearchRecords = async (deps, { slug }) => {
+export const checkResearchRecords = async (deps, { slug, roots }) => {
   const tracked = await deps.files.list(slug, '')
   const documents = await textsOf(tracked.filter(isResearch), (path) => readDocument(deps, slug, path))
-  const cited = [...new Set(documents.flatMap(({ text }) => citedPaths(text)))]
-  return researchFailures({ documents, cited: await textsOf(cited, (path) => regularFile(deps.workspace, path)) })
+  const cited = [...new Set(documents.flatMap(({ text }) => citedPaths(text)).flatMap((path) => [path, ...underRoots(path, roots)]))]
+  return researchFailures({ documents, cited: await textsOf(cited, (path) => regularFile(deps.workspace, path)), roots })
 }
 
 /** A research document, empty when the tracking folder lost it between the listing and the read. @param {CitationDeps} deps @param {string} slug @param {string} path */
