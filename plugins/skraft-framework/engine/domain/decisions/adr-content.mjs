@@ -1,14 +1,16 @@
 /**
  * What the body of an ADR written in this run must not hold: a version, an image tag or a package
  * pin. Versions live in the manifests; an ADR names the technology or the capability it brings.
+ * Nor a code file, an acceptance criterion or a ticket: an ADR reads on its own.
  */
 
 import { field, headerOf } from './adr.mjs'
+import { citationProblems, withoutCodeFiles } from './adr-citations.mjs'
 
 const PACKAGE_PIN = String.raw`[\w./-]+@[\^~]?\d[\w.]*`
-// A name, then `:` and a tag with a digit. Not a tag: a port (2 to 5 digits alone, then no more of a
+// A name, then `:` and a tag with a digit. Not a tag: a port (3 to 5 digits alone, then no more of a
 // version) and anything in a URL's authority (`//host:port`).
-const IMAGE_TAG = String.raw`(?<!\/\/[^\s/]*)\b[A-Za-z][\w.-]*(?:\/[\w.-]+)*:(?!\d{2,5}(?![\w-]|\.\d))[\w-]*\d[\w-]*(?:\.[\w-]+)*`
+const IMAGE_TAG = String.raw`(?<!\/\/[^\s/]*)\b[A-Za-z][\w.-]*(?:\/[\w.-]+)*:(?!\d{3,5}(?![\w-]|\.\d))[\w-]*\d[\w-]*(?:\.[\w-]+)*`
 const SEMVER = String.raw`\b\d+\.\d+\.\d+\b`
 const MAJOR = String.raw`(?<!\/)\b[vV]\d+(?:\.\d+)*\b`
 const BLOCK_INDICATOR = /^[>|][+-]?$/
@@ -24,10 +26,10 @@ const bodyOf = (text) => {
 }
 
 /**
- * Each version pin of the body, once, in reading order.
+ * Each version pin of the body, once, in reading order; a code file's line is no version.
  * @param {string} body
  */
-const versionPins = (body) => [...new Set(body.match(PINS) ?? [])]
+const versionPins = (body) => [...new Set(withoutCodeFiles(body).match(PINS) ?? [])]
 
 /**
  * The header's `decision`: its value, or the indented lines of a folded or literal block; null or
@@ -75,10 +77,14 @@ export const statusProblems = (path, text) => {
  * @param {string} path @param {string} text
  * @returns {string[]}
  */
-export const contentProblems = (path, text) => [
-  ...versionPins(`${bodyOf(text)}\n${decisionOf(text) ?? ''}`).map((token) => `${path} names a version (${token}): name the technology or the capability it brings; versions live in the manifests`),
-  ...decisionProblems(path, text),
-]
+export const contentProblems = (path, text) => {
+  const prose = `${bodyOf(text)}\n${decisionOf(text)}`
+  return [
+    ...versionPins(prose).map((token) => `${path} names a version (${token}): name the technology or the capability it brings; versions live in the manifests`),
+    ...citationProblems(path, prose),
+    ...decisionProblems(path, text),
+  ]
+}
 
 /** The lines an ADR on the default branch may change: its status and its replacement. */
 const STATUS_LINES = /^(?:(?:status|superseded_by):|\*\*Status:\*\*).*\n?/gm
