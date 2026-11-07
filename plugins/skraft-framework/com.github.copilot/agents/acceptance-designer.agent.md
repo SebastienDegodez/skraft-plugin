@@ -13,6 +13,7 @@ tools:
   - execute/getTerminalOutput
   - execute/testFailure
   - graphify/*
+  - skill
 skills:
   - bdd-methodology
   - test-design-mandates

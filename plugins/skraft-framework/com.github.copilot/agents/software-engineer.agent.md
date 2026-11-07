@@ -16,6 +16,7 @@ tools:
   - search/fileSearch
   - search/textSearch
   - search/usages
+  - skill
 skills:
   - outside-in-tdd
   - craft-discipline

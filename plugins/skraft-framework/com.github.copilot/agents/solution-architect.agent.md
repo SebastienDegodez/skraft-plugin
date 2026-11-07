@@ -9,6 +9,7 @@ tools:
   - edit/editFiles
   - search/codebase
   - graphify/*
+  - skill
 skills:
   - architecture-patterns
   - architecture-decisions

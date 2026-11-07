@@ -12,6 +12,7 @@ tools:
   - Bash
   - TaskOutput
   - mcp__graphify__*
+  - Skill
 skills:
   - bdd-methodology
   - test-design-mandates
