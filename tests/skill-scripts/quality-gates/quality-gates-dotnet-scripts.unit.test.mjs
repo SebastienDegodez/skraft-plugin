@@ -383,22 +383,25 @@ const reportOfFiles = async (root, files) => {
   return path
 }
 
-test('with --since, each changed source of the scope passes only once Stryker tested one of its mutants, or it has none', async () => {
+// Stryker.NET 4.14.1 reads --since through its own git library, which in a linked `git worktree`
+// diffs the main working copy: the gate hands Stryker the changed sources it listed with git instead.
+test('with --since, Stryker mutates only the changed sources of the scope, and each passes only once Stryker tested one of its mutants, or it has none', async () => {
   const QUOTE = 'src/Checkout.Domain/Quote.cs'
   const ROUNDING = 'src/Checkout.Domain/Rounding.cs'
   const CLOCK = 'src/Checkout.Application/IClock.cs'
-  for (const [name, gate, changes, files, exitCode, evidenceLine] of [
-    ['an unchanged scope tests nothing', CORE, [['src/Checkout.Infrastructure/Store.cs', true]], { [QUOTE]: [SINCE, SINCE] }, 0, /^No Domain,Application mutant changed since [0-9a-f]+: nothing to test$/m],
-    ['a changed test file is no source', CORE, [['tests/Checkout.UnitTest/Domain/QuoteTests.cs', true]], { [QUOTE]: [SINCE] }, 0, /^No Domain,Application mutant changed since/m],
-    ['a changed file with no mutable code has nothing to test', CORE, [[CLOCK, true]], { [CLOCK]: [], [QUOTE]: [SINCE] }, 0, /^No Domain,Application mutant changed since/m],
-    ['a changed file Stryker does not list has nothing to test', CORE, [[CLOCK, true]], { [QUOTE]: [SINCE] }, 0, /^No Domain,Application mutant changed since/m],
-    ['a changed file whose mutants were all filtered out fails', CORE, [[QUOTE, true]], { [QUOTE]: [SINCE, SINCE] }, 1, /^Stryker tested none of the mutants of these Domain,Application sources changed since [0-9a-f]+: src\/Checkout\.Domain\/Quote\.cs$/m],
-    ['an untracked file counts as changed', CORE, [['src/Checkout.Application/Pay.cs', false]], { 'src/Checkout.Application/Pay.cs': [SINCE] }, 1, /^Stryker tested none of the mutants of these Domain,Application sources changed since [0-9a-f]+: src\/Checkout\.Application\/Pay\.cs$/m],
-    ['one untested changed file fails the run beside a tested one', CORE, [[QUOTE, true], [ROUNDING, true]], { [QUOTE]: [['Killed']], [ROUNDING]: [SINCE, SINCE] }, 1, /^Stryker tested none of the mutants of these Domain,Application sources changed since [0-9a-f]+: src\/Checkout\.Domain\/Rounding\.cs$/m],
-    ['a changed file whose mutants a comment suppresses has nothing to test', CORE, [[QUOTE, true]], { [QUOTE]: [['Ignored', 'Ignored via code comment']] }, 0, /^No Domain,Application mutant changed since/m],
-    ['a changed core file is out of the boundary scope', BOUNDARY, [[QUOTE, true]], { [QUOTE]: [SINCE] }, 0, /^No API,Infrastructure mutant changed since/m],
+  const NOTHING = '--since'
+  for (const [name, gate, changes, files, exitCode, evidenceLine, scope] of [
+    ['an unchanged scope tests nothing', CORE, [['src/Checkout.Infrastructure/Store.cs', true]], { [QUOTE]: [SINCE, SINCE] }, 0, /^No Domain,Application mutant changed since [0-9a-f]+: nothing to test$/m, NOTHING],
+    ['a changed test file is no source', CORE, [['tests/Checkout.UnitTest/Domain/QuoteTests.cs', true]], { [QUOTE]: [SINCE] }, 0, /^No Domain,Application mutant changed since/m, NOTHING],
+    ['a changed file with no mutable code has nothing to test', CORE, [[CLOCK, true]], { [CLOCK]: [], [QUOTE]: [SINCE] }, 0, /^No Domain,Application mutant changed since/m, `--mutate **/${CLOCK}`],
+    ['a changed file Stryker does not list has nothing to test', CORE, [[CLOCK, true]], { [QUOTE]: [SINCE] }, 0, /^No Domain,Application mutant changed since/m, `--mutate **/${CLOCK}`],
+    ['a changed file whose mutants were all filtered out fails', CORE, [[QUOTE, true]], { [QUOTE]: [SINCE, SINCE] }, 1, /^Stryker tested none of the mutants of these Domain,Application sources changed since [0-9a-f]+: src\/Checkout\.Domain\/Quote\.cs$/m, `--mutate **/${QUOTE}`],
+    ['an untracked file counts as changed', CORE, [['src/Checkout.Application/Pay.cs', false]], { 'src/Checkout.Application/Pay.cs': [SINCE] }, 1, /^Stryker tested none of the mutants of these Domain,Application sources changed since [0-9a-f]+: src\/Checkout\.Application\/Pay\.cs$/m, '--mutate **/src/Checkout.Application/Pay.cs'],
+    ['one untested changed file fails the run beside a tested one', CORE, [[QUOTE, true], [ROUNDING, true]], { [QUOTE]: [['Killed']], [ROUNDING]: [SINCE, SINCE] }, 1, /^Stryker tested none of the mutants of these Domain,Application sources changed since [0-9a-f]+: src\/Checkout\.Domain\/Rounding\.cs$/m, `--mutate **/${QUOTE} --mutate **/${ROUNDING}`],
+    ['a changed file whose mutants a comment suppresses has nothing to test', CORE, [[QUOTE, true]], { [QUOTE]: [['Ignored', 'Ignored via code comment']] }, 0, /^No Domain,Application mutant changed since/m, `--mutate **/${QUOTE}`],
+    ['a changed core file is out of the boundary scope', BOUNDARY, [[QUOTE, true]], { [QUOTE]: [SINCE] }, 0, /^No API,Infrastructure mutant changed since/m, NOTHING],
   ]) {
-    const { root, env } = await setup()
+    const { root, log, env } = await setup()
     try {
       const base = await committedSolution(root, env)
       for (const [change, committed] of changes) {
@@ -417,6 +420,8 @@ test('with --since, each changed source of the scope passes only once Stryker te
       assert.match(await readFile(join(evidence, `${prefix}.stdout`), 'utf8'), evidenceLine, change)
       const engineReport = await readFile(join(root, ENGINE_REPORT), 'utf8').catch(() => null)
       assert.equal(engineReport === null, exitCode !== 0, `${change}: the engine reads a report only from a passed run`)
+      const [, , , strykerScope] = (await readFile(log, 'utf8')).trim().split('\n').at(-1).split('\t')
+      assert.equal(strykerScope, scope === NOTHING ? `--since:${base}` : scope, `${change}: how Stryker is scoped`)
     } finally {
       await rm(root, { recursive: true, force: true })
     }
