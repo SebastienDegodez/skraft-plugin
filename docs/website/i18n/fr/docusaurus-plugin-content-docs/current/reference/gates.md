@@ -107,7 +107,7 @@ critère qui en interdit un.
 | **G10** | `consistency` | Le journal de rétro-propagation de la matrice de cohérence explique chaque réécriture de réconciliation. | blocker |
 | **G12** | `consistency` | Chaque ligne d'un `supersession-plan-{story}.md` a son nouvel ADR portant `**Supersedes:**`, et aucun modèle d'événements ni diagramme ne cite encore l'ADR remplacé comme source de vérité. | blocker |
 | **G14** | `consistency` | Un ADR `Status: Rejected` ne tient que si une story ou une force mesurable du lot a posé la question et que sa section Alternatives nomme l'option retenue. | blocker |
-| **C1** | `consistency` | Context map, diagrammes et modèle d'événements nomment les mêmes contextes, agrégats, commandes, événements et champs, en accord avec la recherche et la story. | high |
+| **C1** | `consistency` | Context map, diagrammes et modèle d'événements nomment les mêmes contextes, agrégats, commandes, événements et champs (ceux que le modèle d'événements donne à chacun), en accord avec la recherche et la story. | high |
 | **G3** | `architecture-compliance` | Domain et Application ne dépendent de rien dans Infrastructure ni API. | blocker |
 | **G4** | `architecture-compliance` | Chaque interface applicative (repository, gateway, publisher) est définie dans Domain ou Application, dans la couche que la conception tactique enregistre, jamais dans Infrastructure. Cette couche ne relève jamais d'une ADR. | blocker |
 | **G5** | `architecture-compliance` | Chaque agrégat ne fait respecter que ses propres invariants et désigne les autres agrégats par leur ID. | high |

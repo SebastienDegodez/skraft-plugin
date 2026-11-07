@@ -34,12 +34,17 @@ One scenario per success path per slice; further scenarios for rejection paths a
 
 ## Example
 
-| Element | Name | Fields |
-|---|---|---|
-| Command | `CheckEligibility` | driverId, requestedAt |
-| Event (success) | `EligibilityChecked` | driverId, validUntil |
-| Event (rejection) | `EligibilityDenied` | driverId, rejectionReason |
-| Read model | `EligibilityResult` | eligible, validUntil?, rejectionReason? |
+| Step | Kind | Name | Fields |
+|---|---|---|---|
+| Trigger | Command | `CheckEligibility` | `DriverId: DriverId`, `RequestedOn: date` |
+| State change | Domain Event | `EligibilityChecked` | `DriverId: DriverId`, `ValidUntil: date` |
+| State change | Domain Event | `EligibilityDenied` | `DriverId: DriverId`, `RejectionReason: text` |
+| Outcome | Read Model | `EligibilityResult` | `Eligible: yes/no`, `ValidUntil: date?`, `RejectionReason: text?` |
+
+Observed: `EligibilityResult.Eligible`, `EligibilityResult.ValidUntil`, `EligibilityResult.RejectionReason`.
+
+A field's type is in business terms: a value object of the tactical design, or a plain kind. No
+signature, no type of the language, no validation rule: the scenarios hold the rules.
 
 Several contexts in one timeline: draw one swimlane (`subgraph`) per context, with the upstream
 event pointing to the downstream command.

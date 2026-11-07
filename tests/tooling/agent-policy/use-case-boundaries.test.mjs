@@ -22,7 +22,7 @@ test('DISTILL G7 takes its use case boundaries from the event model, in the lens
     'skills/acceptance-review-criteria/references/gate-definitions.md G7 section': g7Section(read('skills/acceptance-review-criteria/references/gate-definitions.md')),
   }
   const wrong = Object.entries(criteria)
-    .filter(([, text]) => !text || !text.includes(EVENT_MODEL) || /contract/i.test(text))
+    .filter(([, text]) => !text || !text.includes(EVENT_MODEL) || /contracts?[-\s](?:document|file|\{)|contracts-/i.test(text))
     .map(([where]) => where)
   assert.deepEqual(wrong, [])
 })
@@ -35,4 +35,12 @@ test('no agent, skill or template of the framework writes or reads a contracts d
     .map((line, index) => /contracts[-][{\w]/i.test(line) ? `${relative(PLUGIN, path)}:${index + 1}` : null)
     .filter(Boolean))
   assert.deepEqual(offences, [])
+})
+
+test('the event model gives every Command, Query, Domain Event and Read Model its fields, on both hosts', () => {
+  for (const path of ['com.anthropic.claude-code/agents/solution-architect.md', 'com.github.copilot/agents/solution-architect.agent.md']) {
+    const step = read(path).split('\n').find((line) => line.includes('**Event model**'))
+    assert.ok(step && /\| Fields \|/.test(step), `${path}: the event model step names no Fields column`)
+    assert.ok(/Observed:/.test(step), `${path}: the event model step names no Observed line`)
+  }
 })

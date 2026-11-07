@@ -65,8 +65,8 @@ ADR text:
 
 ## G7 — Every story has a trigger
 
-Every story ID in the stories file maps to at least one Command or Query in an event model or
-contract; a pure-read story uses a Query.
+Every story ID in the stories file maps to at least one Command or Query in an event model; a
+pure-read story uses a Query.
 
 - ✗ US-03 (renew eligibility) has no `RenewEligibility` command anywhere.
 
@@ -102,7 +102,7 @@ ACL: an admissible force in its Context (SKILL.md) and a "do without the pattern
 ## G12 — Planned supersessions realised
 
 For each row of each `supersession-plan-{story}.md`: the new ADR exists and carries the
-`**Supersedes:**` line, and no event model, diagram or contract still cites the superseded ADR as
+`**Supersedes:**` line, and no event model or diagram still cites the superseded ADR as
 its current source of truth. A historical mention in prose is not a finding.
 
 - ✗ `diagrams-US-03.md` still says "per ADR-003" for a relationship ADR-007 now governs.
@@ -148,9 +148,14 @@ finding naming both members.
 ## C1 — Same names everywhere
 
 Every context, aggregate, command, event and field is spelled the same in the context map,
-diagrams and event model, and matches the research or story it comes from.
+diagrams and event model, and matches the research or story it comes from. The fields are the
+ones the event model's tables give each Command, Query, Domain Event and Read Model; a value
+object they name is the one the tactical design defines.
+
+- ✗ The event model gives `CheckEligibility` the field `DriverId: DriverId`; the tactical design
+  names the value object `DriverIdentifier`.
 
 ## F1 — Quality attributes answered
 
 Every quality attribute the story or research states (performance, availability, security,
-audit) is named by an ADR, a contract or a diagram element.
+audit) is named by an ADR, the event model or a diagram element.

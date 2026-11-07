@@ -106,7 +106,7 @@ every criterion that forbids one.
 | **G10** | `consistency` | The back-propagation journal of the consistency matrix explains every reconciliation rewrite. | blocker |
 | **G12** | `consistency` | Every `supersession-plan-{story}.md` row has its new ADR carrying `**Supersedes:**`, and no event model or diagram still cites the superseded ADR as source of truth. | blocker |
 | **G14** | `consistency` | A `Status: Rejected` ADR stands only when a story or measurable force of this batch raised the question and its Alternatives section names the option adopted instead. | blocker |
-| **C1** | `consistency` | Context map, diagrams and event model name the same contexts, aggregates, commands, events and fields, and each matches the research and the story. | high |
+| **C1** | `consistency` | Context map, diagrams and event model name the same contexts, aggregates, commands, events and fields (the fields the event model gives each one), and each matches the research and the story. | high |
 | **G3** | `architecture-compliance` | Domain and Application depend on nothing in Infrastructure or API. | blocker |
 | **G4** | `architecture-compliance` | Every application interface (repository, gateway, publisher) is defined in Domain or Application, in the layer the tactical design records, never in Infrastructure. The layer is never an ADR's to record. | blocker |
 | **G5** | `architecture-compliance` | Each aggregate enforces only its own invariants and refers to other aggregates by ID. | high |

@@ -31,7 +31,7 @@ Read the skill file your brief lists under Skill before any other input; judge w
 | G10 | Reconciliation journal | The back-propagation journal of the consistency matrix explains every reconciliation rewrite (a label or classification drift aligned on its ADR); a change answering a review finding is not one and needs no entry. | blocker |
 | G12 | Planned supersessions realised | Every `supersession-plan-{story}.md` row has its new ADR carrying the `**Supersedes:**` line, and no event model or diagram still cites the superseded ADR as source of truth. Historical mentions in prose are not findings. | blocker |
 | G14 | Rejected ADRs | A `Status: Rejected` ADR (a Decision reading `We will not adopt …`) stands only when a story or measurable force of this batch raised the question and its Alternatives section names the option adopted instead; one that rejects a pattern nobody asked about, the structural scan not detecting it either, is a finding. The engine already refuses a verdict in an ADR's file name. | blocker |
-| C1 | Same names everywhere | Context map, diagrams and event model name the same contexts, aggregates, commands, events and fields, and each matches the research and the story. | high |
+| C1 | Same names everywhere | Context map, diagrams and event model name the same contexts, aggregates, commands, events and fields (the event model's tables), and each matches the research and the story. | high |
 
 ## Output
 
