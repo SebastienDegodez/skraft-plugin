@@ -109,7 +109,7 @@ critère qui en interdit un.
 | **G14** | `consistency` | Un ADR `Status: Rejected` ne tient que si une story ou une force mesurable du lot a posé la question et que sa section Alternatives nomme l'option retenue. | blocker |
 | **C1** | `consistency` | Context map, diagrammes et modèle d'événements nomment les mêmes contextes, agrégats, commandes, événements et champs, en accord avec la recherche et la story. | high |
 | **G3** | `architecture-compliance` | Domain et Application ne dépendent de rien dans Infrastructure ni API. | blocker |
-| **G4** | `architecture-compliance` | Chaque interface applicative (repository, gateway, publisher) est définie dans Domain ou Application, dans la couche que l'ADR de l'agrégat enregistre, jamais dans Infrastructure. | blocker |
+| **G4** | `architecture-compliance` | Chaque interface applicative (repository, gateway, publisher) est définie dans Domain ou Application, dans la couche que la conception tactique enregistre, jamais dans Infrastructure. Cette couche ne relève jamais d'une ADR. | blocker |
 | **G5** | `architecture-compliance` | Chaque agrégat ne fait respecter que ses propres invariants et désigne les autres agrégats par leur ID. | high |
 | **G6** | `architecture-compliance` | Le context map étiquette chaque relation entre contextes d'un pattern explicite (ACL, Conformist, Shared Kernel, Partnership, Open Host Service, Published Language). | high |
 | **G16** | `architecture-compliance` | Les interfaces comparables partagent la même forme d'état, de retour et d'erreur et les mêmes noms de champs, sauf divergence justifiée par un ADR. | high |
