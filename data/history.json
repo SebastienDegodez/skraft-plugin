@@ -4399,6 +4399,78 @@
             "tokenDeltaPercent": -20
           }
         }
+      },
+      {
+        "id": "42367476369:skill:skraft-init:2026-11-07T11:25:20.830Z",
+        "timestamp": "2026-11-07T11:25:20.830Z",
+        "commit": "c0867d7e0c1191b8bd6613e5062be1184a67c0f9",
+        "run": "42367476369",
+        "url": "https://github.com/SebastienDegodez/skraft-plugin/actions/runs/42367476369",
+        "runner": "vally",
+        "model": "claude-sonnet-5.5",
+        "judgeModel": "gpt-5.6-luna",
+        "state": "no-improvement",
+        "reason": "no credible improvement (9W/1T/5L, sign test p=0.424, Wilcoxon p=0.037)",
+        "descriptorSha": null,
+        "netWin": 0.26666666666666666,
+        "trialCount": 15,
+        "meanScore": -0.03999999999999997,
+        "confidenceInterval": {
+          "low": -0.49900231558706293,
+          "high": 0.41900231558706297
+        },
+        "signTest": {
+          "wins": 9,
+          "ties": 1,
+          "losses": 5,
+          "pValue": 0.4239501953125
+        },
+        "metrics": {
+          "quality": {
+            "baseline": 0.814,
+            "skilled": 0.897,
+            "delta": 0.083
+          },
+          "activation": {
+            "expected": 15,
+            "actual": 15,
+            "unexpected": 0,
+            "rate": 1
+          },
+          "efficiency": {
+            "baseline": {
+              "durationMs": 54834,
+              "tokens": 167950,
+              "turns": 9,
+              "toolCalls": 8
+            },
+            "skilled": {
+              "durationMs": 24879,
+              "tokens": 143285,
+              "turns": 7,
+              "toolCalls": 7
+            },
+            "durationDeltaPercent": -54.6,
+            "tokenDeltaPercent": -14.7
+          },
+          "efficiencyPaired": {
+            "pairCount": 15,
+            "baseline": {
+              "durationMs": 54834,
+              "tokens": 167950,
+              "turns": 9,
+              "toolCalls": 8
+            },
+            "skilled": {
+              "durationMs": 24879,
+              "tokens": 143285,
+              "turns": 7,
+              "toolCalls": 7
+            },
+            "durationDeltaPercent": -54.6,
+            "tokenDeltaPercent": -14.7
+          }
+        }
       }
     ]
   },
