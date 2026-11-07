@@ -1,0 +1,13 @@
+{
+  "components": [
+    {
+      "name": "api",
+      "root": "services/api",
+      "stack": "dotnet",
+      "commands": { "test": "dotnet test" },
+      "bdd": [
+        { "features": "../shared/Features", "steps": "tests/Steps" }
+      ]
+    }
+  ]
+}

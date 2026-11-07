@@ -4,8 +4,8 @@ import { createDoctor } from '../../../../plugins/skraft-framework/engine/applic
 import { BUILT_IN_WORKFLOW, GITHUB_REMOTE, InMemoryAgentCatalog, InMemoryCodeHost, InMemoryCopilotSdk, InMemoryHostSettings, InMemoryPullRequests, InMemorySourceControl, InMemoryUserSettings, InMemoryWorkflowSource, InMemoryWorkspace, ScriptedMachine } from '../support/in-memory-host.mjs'
 import { edit, withLenses } from '../workflow/support.mjs'
 
-const API = { name: 'api', root: 'services/payment-api', stack: 'dotnet', commands: { build: 'dotnet build --nologo', test: 'dotnet test --nologo', mutation: 'dotnet stryker --since:{baseSha}' } }
-const WEB = { name: 'web', root: '../payment-web', stack: 'react', mocking: { strategy: 'inprocess' }, commands: { test: 'npx vitest run', e2e: 'npx playwright test' } }
+const API = { name: 'api', root: 'services/payment-api', stack: 'dotnet', bdd: false, commands: { build: 'dotnet build --nologo', test: 'dotnet test --nologo', mutation: 'dotnet stryker --since:{baseSha}' } }
+const WEB = { name: 'web', root: '../payment-web', stack: 'react', bdd: false, mocking: { strategy: 'inprocess' }, commands: { test: 'npx vitest run', e2e: 'npx playwright test' } }
 const MICROCKS_WEB = { ...WEB, mocking: { strategy: 'microcks' } }
 const FOLDERS = { 'services/payment-api/Payment.sln': '', '../payment-web/package.json': '{}' }
 
@@ -36,7 +36,7 @@ const NO_SDK = {
   detail: 'no Copilot SDK under /home/dev/.copilot/pkg: under VS Code, the Skraft - Orchestrator agent conducts skraft next and skraft record; install the Copilot CLI to run the pipeline through its SDK',
 }
 
-test('doctor names where each runner reads a component\'s scenarios, warns about scenarios nothing binds, and says so when nothing is meant to', async () => {
+test('doctor names where each runner reads a component\'s scenarios, warns about scenarios nothing binds, says so when nothing is meant to, and fails when nobody decided', async () => {
   const pair = { runner: 'reqnroll', features: 'Features', steps: 'Steps' }
   const bddOf = async (files) => {
     const { doctor: check } = doctor({ components: [{ ...API, bdd: [pair] }], files: { ...FOLDERS, ...files } })
@@ -56,6 +56,17 @@ test('doctor names where each runner reads a component\'s scenarios, warns about
   ])
   const declined = doctor({ components: [{ ...API, bdd: false }] })
   assert.deepEqual((await declined.doctor.check()).checks.filter(({ subject }) => subject === 'api/bdd'), [])
+
+  const { bdd, ...undecided } = API
+  for (const component of [undecided, { ...API, bdd: true }]) {
+    const report = await doctor({ components: [component] }).doctor.check()
+    assert.deepEqual(report.checks.filter(({ subject }) => subject === 'api/bdd'), [{
+      subject: 'api/bdd',
+      status: 'fail',
+      detail: 'the component does not say whether it describes its behaviour in Gherkin; run /skraft-init, or write "bdd" in skraft-config.json',
+    }])
+    assert.equal(report.ok, false, 'a component nobody decided for is a failure: no run would start')
+  }
 })
 
 const failures = (report) => report.checks.filter((check) => check.status === 'fail').map(({ subject, detail }) => `${subject}: ${detail}`)
@@ -74,10 +85,8 @@ test('every program found and the forge reachable: doctor passes without running
       { subject: 'api/build', status: 'ok', detail: 'dotnet → /usr/local/bin/dotnet' },
       { subject: 'api/test', status: 'ok', detail: 'dotnet → /usr/local/bin/dotnet' },
       { subject: 'api/mutation', status: 'ok', detail: 'dotnet → /usr/local/bin/dotnet' },
-      { subject: 'api/bdd', status: 'ok', detail: 'tests/Features → tests/Steps' },
       { subject: 'web/test', status: 'ok', detail: 'npx → /usr/local/bin/npx' },
       { subject: 'web/e2e', status: 'ok', detail: 'npx → /usr/local/bin/npx' },
-      { subject: 'web/bdd', status: 'ok', detail: 'features → features/step_definitions' },
       ...BY_DEFAULT,
       NO_SDK,
     ],
@@ -153,10 +162,8 @@ test('--run starts every command once from its component root, with the base, an
     { subject: 'api/build', status: 'ok', detail: 'dotnet build --nologo passed' },
     { subject: 'api/test', status: 'ok', detail: 'dotnet test --nologo passed' },
     { subject: 'api/mutation', status: 'ok', detail: 'dotnet stryker --since:a1 passed' },
-    { subject: 'api/bdd', status: 'ok', detail: 'tests/Features → tests/Steps' },
     { subject: 'web/test', status: 'ok', detail: 'npx vitest run passed' },
     { subject: 'web/e2e', status: 'fail', detail: 'npx playwright test exited 1; its output is in .copilot-tracking/skraft-doctor/web/e2e.log' },
-    { subject: 'web/bdd', status: 'ok', detail: 'features → features/step_definitions' },
     ...BY_DEFAULT,
     NO_SDK,
   ])
@@ -191,7 +198,7 @@ test('the families an ejected workflow names count, and those with no model for 
 })
 
 test('python is found in the component\'s virtual environment, else as python3, and doctor says where it looked when it is nowhere', async () => {
-  const PY = { name: 'py', root: 'services/py', stack: 'python', mocking: { strategy: 'inprocess' }, commands: { test: 'python -m pytest -q' } }
+  const PY = { name: 'py', root: 'services/py', stack: 'python', bdd: false, mocking: { strategy: 'inprocess' }, commands: { test: 'python -m pytest -q' } }
   const files = { 'services/py/pyproject.toml': '' }
   const sourceControl = new InMemorySourceControl({ '.': { top: '.', mergeBases: { main: 'a1' } }, 'services/py': { top: '.', mergeBases: { main: 'a1' } } })
   const venv = doctor({ components: [PY], files, sourceControl, machine: new ScriptedMachine({ installed: ['python', 'services/py/.venv/Scripts/python.exe'] }) })
@@ -229,9 +236,9 @@ test('--run without a base cannot start a {baseSha} command and says why', async
 })
 
 test('a component asking for skills found nowhere is a warning naming them after its commands, never a failure: Java has no mocking or contract testing skill, JavaScript no mocking skill, TypeScript no contract testing skill', async () => {
-  const orders = { name: 'orders', root: 'orders', stack: 'java', contractTesting: true, commands: { test: 'mvn test' } }
-  const admin = { name: 'admin', root: 'admin', stack: 'javascript', commands: { test: 'npm test' } }
-  const shop = { name: 'shop', root: 'shop', stack: 'typescript', contractTesting: true, commands: { test: 'npx vitest run' } }
+  const orders = { name: 'orders', root: 'orders', stack: 'java', bdd: false, contractTesting: true, commands: { test: 'mvn test' } }
+  const admin = { name: 'admin', root: 'admin', stack: 'javascript', bdd: false, commands: { test: 'npm test' } }
+  const shop = { name: 'shop', root: 'shop', stack: 'typescript', bdd: false, contractTesting: true, commands: { test: 'npx vitest run' } }
   const files = { ...FOLDERS, 'orders/pom.xml': '', 'admin/package.json': '{}', 'shop/package.json': '{}' }
   const { doctor: check } = doctor({ components: [API, orders, admin, shop], files })
 
@@ -239,10 +246,10 @@ test('a component asking for skills found nowhere is a warning naming them after
 
   assert.equal(report.ok, true)
   assert.deepEqual(report.checks.filter(({ subject }) => !subject.startsWith('models') && subject !== 'vscode').slice(3).map(({ subject, status }) => `${subject} ${status}`), [
-    'api/build ok', 'api/test ok', 'api/mutation ok', 'api/bdd ok',
-    'orders/test ok', 'orders/bdd ok', 'orders warn',
-    'admin/test ok', 'admin/bdd ok', 'admin warn',
-    'shop/test ok', 'shop/bdd ok', 'shop warn',
+    'api/build ok', 'api/test ok', 'api/mutation ok',
+    'orders/test ok', 'orders warn',
+    'admin/test ok', 'admin warn',
+    'shop/test ok', 'shop warn',
   ])
   assert.deepEqual(report.checks.filter(({ status, subject }) => status === 'warn' && !subject.startsWith('models')), [
     { subject: 'orders', status: 'warn', detail: 'skills found nowhere, in the plugin or the working copy: mocking-microcks-java, contract-testing-java; mocking-strategy-roster and contract-testing say which recipe its tests use instead, or that they stop' },

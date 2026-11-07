@@ -26,7 +26,7 @@ const skillLines = (prompt) => sectionLines(prompt, '- Skills (read each before 
 const NOWHERE = '- Skills your components ask for that exist nowhere, in the plugin or the working copy; mocking-strategy-roster and contract-testing say which recipe to use instead, or to stop:'
 
 const WEB = Object.freeze({
-  name: 'web', root: '../web', stack: 'react',
+  name: 'web', root: '../web', stack: 'react', bdd: false,
   paths: { src: ['src'], tests: ['tests'] },
   commands: { test: 'npm test' },
 })
@@ -56,7 +56,7 @@ test('the agent of the TDD cycles reads the mocking skill of each component, and
     ['outside-in-tdd', 'mocking-inprocess-dotnet', 'mocking-microcks-dotnet', 'mocking-microcks-typescript', 'mocking-inprocess-typescript', 'contract-testing', 'contract-testing-dotnet'],
   )
   const ADMIN = { ...WEB, name: 'admin', root: '../admin', stack: 'javascript' }
-  const SHOP = { ...WEB, name: 'shop', root: '../shop', stack: 'typescript', mocking: { strategy: 'microcks' } }
+  const SHOP = { ...WEB, name: 'shop', root: '../shop', stack: 'typescript', bdd: [{ features: 'features', steps: 'features/step_definitions' }], mocking: { strategy: 'microcks' } }
   const PAY = { ...API, name: 'pay', root: '../pay', contractTesting: true }
   const host = scripted({ catalog, components: [{ ...API, contractTesting: true }, WEB, ADMIN, SHOP, PAY] }, nominal)
 
@@ -74,22 +74,22 @@ test('the agent of the TDD cycles reads the mocking skill of each component, and
   assert.deepEqual(skillLines(distill), [])
   assert.deepEqual(skillLines(research), [])
   assert.deepEqual(skillLines(design), [])
-  assert.ok(distill.includes('- api: . (dotnet), mocking: inprocess, contract testing: on, bdd: on, tests: dotnet test\n'), distill)
+  assert.ok(distill.includes('- api: . (dotnet), mocking: inprocess, contract testing: on, bdd: off, tests: dotnet test\n'), distill)
   assert.ok(deliver.includes([
     '- Components:',
-    '- api: . (dotnet), mocking: inprocess, contract testing: on, bdd: on, tests: dotnet test',
-    '- web: ../web (react), mocking: inprocess, contract testing: off, bdd: on, tests: npm test',
-    '- admin: ../admin (javascript), mocking: inprocess, contract testing: off, bdd: on, tests: npm test',
+    '- api: . (dotnet), mocking: inprocess, contract testing: on, bdd: off, tests: dotnet test',
+    '- web: ../web (react), mocking: inprocess, contract testing: off, bdd: off, tests: npm test',
+    '- admin: ../admin (javascript), mocking: inprocess, contract testing: off, bdd: off, tests: npm test',
     '- shop: ../shop (typescript), mocking: microcks, contract testing: off, bdd: on, tests: npm test',
-    '- pay: ../pay (dotnet), mocking: inprocess, contract testing: on, bdd: on, tests: dotnet test',
+    '- pay: ../pay (dotnet), mocking: inprocess, contract testing: on, bdd: off, tests: dotnet test',
   ].join('\n')), deliver)
 })
 
 test('a skill found nowhere is named in the brief with its component, never read: Java has no mocking or contract testing skill, a JavaScript component no mocking skill and reads no TypeScript one, a TypeScript component no contract testing skill', async () => {
   const catalog = catalogOf({}, ['mocking-microcks-dotnet', 'contract-testing', 'mocking-inprocess-typescript', 'mocking-microcks-typescript'])
-  const java = { name: 'orders', root: 'orders', stack: 'java', paths: { src: ['src/main'], tests: ['src/test'] }, commands: { test: 'mvn test' }, contractTesting: true }
+  const java = { name: 'orders', root: 'orders', stack: 'java', bdd: false, paths: { src: ['src/main'], tests: ['src/test'] }, commands: { test: 'mvn test' }, contractTesting: true }
   const admin = { ...WEB, name: 'admin', root: 'admin', stack: 'javascript' }
-  const shop = { ...WEB, name: 'shop', root: 'shop', stack: 'typescript', mocking: { strategy: 'microcks' }, contractTesting: true }
+  const shop = { ...WEB, name: 'shop', root: 'shop', stack: 'typescript', bdd: false, mocking: { strategy: 'microcks' }, contractTesting: true }
   const host = scripted({ catalog, components: [java, admin, shop] }, (it) => [
     agent()(it),
     agent({ work: ({ git }) => git.commit('docs(checkout): ADR for the order', ['docs/adr/adr-001-order.md']) })(it),
@@ -108,7 +108,7 @@ test('a skill found nowhere is named in the brief with its component, never read
     '- contract-testing-typescript (shop)',
   ])
   assert.deepEqual(sectionLines(distill, NOWHERE), [])
-  assert.ok(deliver.includes('- orders: orders (java), mocking: microcks, contract testing: on, bdd: on, tests: mvn test\n'), deliver)
+  assert.ok(deliver.includes('- orders: orders (java), mocking: microcks, contract testing: on, bdd: off, tests: mvn test\n'), deliver)
 })
 
 test('the acceptance designer is told the review criteria to check its outputs against, wherever they are found, and nothing when nobody provides them', async () => {

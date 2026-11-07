@@ -19,6 +19,7 @@ import { EJECTED } from '../workflow/called-workflows.mjs'
  * @typedef {import('../../domain/journal/run-state.mjs').Head} Head
  * @typedef {import('../../domain/pipeline/commits.mjs').JudgedCommit} JudgedCommit
  * @typedef {import('../../domain/config/skraft-config.mjs').Component} Component
+ * @typedef {import('../../domain/config/skraft-config.mjs').SkraftConfig} SkraftConfig
  * @typedef {'missing-outputs' | 'invalid-result' | 'design-records' | 'research-records' | 'gherkin-records' | 'pull-request-prose' | 'agent-blocked' | 'write-scope' | 'uncommitted' | 'adr-lifecycle' | 'commit-convention' | 'tdd'} FailureCode
  * @typedef {{
  *   repository: string, sha: string, subject: string, kind: string, verdict: string,
@@ -121,7 +122,7 @@ const readAttempt = async ({ deps, slug, config, base }, step) => {
   if (typeof touched === 'string') return { stop: environmentOnly(touched) }
   const scope = await scopeFailures(deps, step, { slug, config, touched })
   if (typeof scope === 'string') return { stop: environmentOnly(scope) }
-  const records = await keptRecords(deps, step, { slug, base })
+  const records = await keptRecords(deps, step, { slug, base, config })
   if (typeof records === 'string') return { stop: environmentOnly(records) }
   return { missing, reading, touched, scope, records, prose: await proseFailures(deps, slug, step, missing) }
 }
@@ -142,17 +143,21 @@ const proseFailures = async ({ files }, slug, { role, outputs }, missing) => {
 /**
  * The records a role keeps, each failure under its own code: the DESIGN records of a role that
  * keeps them, the citations of a role whose research document the engine checks, the scenarios of
- * a role whose test plan names them.
+ * a role whose test plan names them — and only where a component describes its behaviour in
+ * Gherkin: a repository whose tests are written without it is asked for no `.feature`.
  * @param {CheckDeps} deps @param {Parameters<typeof checkStep>[1]} step
- * @param {{ slug: string, base: import('../config/bases.mjs').Base[] }} run
+ * @param {{ slug: string, base: import('../config/bases.mjs').Base[], config: SkraftConfig }} run
  * @returns {Promise<Failure[] | string>} a string: why the machine could not read them
  */
-const keptRecords = async (deps, { role }, { slug, base }) => {
+const keptRecords = async (deps, { role }, { slug, base, config }) => {
   if (role.records) return coded('design-records', await checkDesignRecords(deps, { slug, base }))
   if (role.citations) return coded('research-records', await checkResearchRecords(deps, { slug }))
-  if (role.scenarios) return coded('gherkin-records', await checkGherkinRecords(deps, { slug }))
+  if (role.scenarios && writesGherkin(config)) return coded('gherkin-records', await checkGherkinRecords(deps, { slug }))
   return []
 }
+
+/** Whether any component of the run describes its behaviour in Gherkin. @param {SkraftConfig} config */
+const writesGherkin = ({ components }) => components.some(({ bdd }) => bdd === true)
 
 /** @param {FailureCode} code @param {string[] | string} lines @returns {Failure[] | string} */
 const coded = (code, lines) => (typeof lines === 'string' ? lines : lines.map((line) => ({ code, line })))

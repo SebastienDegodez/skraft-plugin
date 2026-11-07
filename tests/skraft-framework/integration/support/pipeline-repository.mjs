@@ -272,7 +272,7 @@ export const PLAYWRIGHT = [
 
 /** The `web` front end: a build that passes, a mutation run with nothing to mutate, and an e2e command that runs PLAYWRIGHT, by node's absolute path. */
 export const WEB = Object.freeze({
-  name: 'web', root: 'web', stack: 'react', mocking: { strategy: 'inprocess' },
+  name: 'web', root: 'web', stack: 'react', bdd: false, mocking: { strategy: 'inprocess' },
   paths: { src: ['src'], tests: ['tests'] },
   commands: { build: `"${process.execPath}" tools/build.mjs`, mutation: `"${process.execPath}" tools/mutate.mjs`, e2e: `"${process.execPath}" tools/playwright.mjs` },
 })
@@ -302,7 +302,7 @@ export const pipelineRepository = (t, { security = false, lens = false, lensSkil
     ...(publish === null ? {} : { publish }),
     ...(tdd === undefined ? {} : { tdd }),
     components: [{
-      name: 'app', root: '.', stack: 'javascript', mocking: { strategy: 'inprocess' },
+      name: 'app', root: '.', stack: 'javascript', bdd: false, mocking: { strategy: 'inprocess' },
       paths: { src: ['src'], tests: ['tests'] },
       commands: { test: TEST_COMMAND, mutation: MUTATION_COMMAND },
       ...(contractTesting ? { contractTesting: true } : {}),

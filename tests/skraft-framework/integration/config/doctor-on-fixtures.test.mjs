@@ -13,10 +13,24 @@ const machine = (t, programs = TOOLCHAINS) => envWithPath([stubPrograms(join(tem
 /** The lines of doctor's checks, without its tables. @param {string[]} lines */
 const checksOf = (lines) => lines.filter((line) => /^(ok  |WARN|FAIL)  /.test(line))
 
-const initThenDoctor = async (cwd, env, add = []) => {
+const initThenDoctor = async (cwd, env, add = [], { gherkin = 'declined' } = {}) => {
   const init = await skraft(cwd, ['init', ...add.flatMap((folder) => ['--add', folder])], { env })
   assert.equal(init.status, 0, init.stderr)
+  if (gherkin === 'declined') declineGherkin(cwd)
   return { init, doctor: await skraft(cwd, ['doctor'], { env }) }
+}
+
+/**
+ * The answer `/skraft-init` would write for a fixture that holds no Gherkin: init detects the pairs
+ * and answers nothing when it finds none, and every scenario but the one about that question has it
+ * answered.
+ * @param {string} cwd
+ */
+const declineGherkin = (cwd) => {
+  const file = join(cwd, 'skraft-config.json')
+  const config = readJson(file)
+  for (const component of config.components) component.bdd = false
+  writeFileSync(file, `${JSON.stringify(config, null, 2)}\n`)
 }
 
 // Doctor asks no container runtime of any component. The plugin ships no mocking skill for Java:
@@ -30,21 +44,31 @@ for (const [fixture, stack, commands, paths, skills = []] of [
   ['payment-fastapi', 'python', ['build', 'test', 'mutation'], { src: ['src/'], tests: ['tests/'] }],
   ['react', 'react', ['build', 'lint', 'test', 'mutation'], { src: ['src/'], tests: ['tests/'] }],
 ]) {
-  test(`skraft init then doctor pass on the ${fixture} fixture`, async (t) => {
+  test(`skraft init then doctor on the ${fixture} fixture: the Gherkin nobody answered is what is left to do, and doctor passes once it is`, async (t) => {
     const cwd = copyFixture(FIXTURES[fixture], join(tempFolder(t), fixture))
 
-    const { init, doctor } = await initThenDoctor(cwd, machine(t))
+    const { init, doctor } = await initThenDoctor(cwd, machine(t), [], { gherkin: 'unanswered' })
 
     const [component] = readJson(join(cwd, 'skraft-config.json')).components
     assert.deepEqual([component.name, component.root, component.stack, component.paths], [fixture, '.', stack, paths])
     assert.equal(init.stdout, `skraft-config.json: ${fixture} (${stack}, .)\n`)
-    assert.equal(doctor.status, 0, doctor.stdout)
+    assert.equal(component.bdd, undefined, 'the fixture holds no Gherkin, so init writes no pair and answers nothing')
+    assert.equal(doctor.status, 1, doctor.stdout)
     const lines = doctor.stdout.trim().split(/\r?\n/)
     assert.deepEqual(checksOf(lines).map((line) => line.split(': ')[0]), [
-      'ok    plugin', 'ok    node', 'ok    config', 'WARN  forge', ...commands.map((name) => `ok    ${fixture}/${name}`), `ok    ${fixture}/bdd`, ...skills, 'ok    models/claude-code', 'WARN  models/copilot', 'ok    vscode',
+      'ok    plugin', 'ok    node', 'ok    config', 'WARN  forge', ...commands.map((name) => `ok    ${fixture}/${name}`), `FAIL  ${fixture}/bdd`, ...skills, 'ok    models/claude-code', 'WARN  models/copilot', 'ok    vscode',
     ])
-    assert.equal(lines.at(-1), `skraft doctor: no check failed, ${2 + skills.length} with a warning`)
+    assert.match(checksOf(lines).find((line) => line.startsWith('FAIL')), /bdd: the component does not say whether it describes its behaviour in Gherkin; run \/skraft-init, or write "bdd" in skraft-config\.json$/)
+    assert.equal(lines.at(-1), 'skraft doctor: 1 checks failed')
     assert.match(lines[0], /^ok {4}plugin: skraft \S+$/)
+
+    const file = join(cwd, 'skraft-config.json')
+    const answered = readJson(file)
+    answered.components[0].bdd = false
+    writeFileSync(file, `${JSON.stringify(answered, null, 2)}\n`)
+    const again = await skraft(cwd, ['doctor'], { env: machine(t) })
+    assert.equal(again.status, 0, again.stdout)
+    assert.equal(again.stdout.trim().split(/\r?\n/).at(-1), `skraft doctor: no check failed, ${2 + skills.length} with a warning`)
   })
 }
 
@@ -54,6 +78,7 @@ test('init lists skraft-config.local.json in .gitignore, and doctor reads it and
   const home = join(root, 'home')
   const env = machine(t)
   assert.equal((await skraft(cwd, ['init'], { env, home })).status, 0)
+  declineGherkin(cwd)
   assert.match(readFileSync(join(cwd, '.gitignore'), 'utf8'), /^skraft-config\.local\.json$/m)
   const configLine = async () => (await skraft(cwd, ['doctor'], { env, home })).stdout.split(/\r?\n/).find((line) => line.includes(' config: '))
 
@@ -85,6 +110,7 @@ test('doctor\'s tables align each column under its heading, a model list in its 
   const cwd = copyFixture(FIXTURES.payment, join(root, 'payment'))
   const env = machine(t)
   assert.equal((await skraft(cwd, ['init'], { env })).status, 0)
+  declineGherkin(cwd)
   writeFileSync(join(cwd, 'skraft-config.local.json'), JSON.stringify({ models: { implementer: { copilot: { model: ['gpt-6.0', 'gpt-5.5'] } } }, assign: { agents: { 'business-alignment-lens': 'inherit' } } }))
 
   const lines = (await skraft(cwd, ['doctor'], { env })).stdout.split(/\r?\n/)
@@ -104,6 +130,7 @@ test('doctor warns of CLAUDE_CODE_EFFORT_LEVEL and of a ~/.copilot/settings.json
   const home = join(root, 'home')
   const env = machine(t)
   assert.equal((await skraft(cwd, ['init'], { env, home })).status, 0)
+  declineGherkin(cwd)
   writeFileSync(join(cwd, 'skraft-config.local.json'), JSON.stringify({ models: { standard: { copilot: { model: 'gpt-5.5' } } } }))
   mkdirSync(join(home, '.copilot'), { recursive: true })
   const warnings = async (settings, more = {}) => {
@@ -135,6 +162,7 @@ test('doctor names the missing command and exits 1; the developer\'s command the
   const cwd = copyFixture(FIXTURES.payment, join(tempFolder(t), 'payment'))
   const env = machine(t, ['dotnet'])
   assert.equal((await skraft(cwd, ['init'], { env })).status, 0)
+  declineGherkin(cwd)
   const config = readJson(join(cwd, 'skraft-config.json'))
   config.components[0].commands.architecture = 'archunit-cli check'
   writeFileSync(join(cwd, 'skraft-config.json'), JSON.stringify(config, null, 2))
@@ -154,6 +182,7 @@ test('doctor passes on Microcks components without any container runtime on the 
   const cwd = copyFixture(FIXTURES['payment-fastapi'], join(tempFolder(t), 'payment-fastapi'))
   const env = machine(t, ['python'])
   assert.equal((await skraft(cwd, ['init'], { env })).status, 0)
+  declineGherkin(cwd)
 
   const report = await skraft(cwd, ['doctor', '--json'], { env })
 
@@ -169,6 +198,7 @@ test('python runs from the virtual environment of the component, laid out the wa
   try { linkSync(process.execPath, venv) } catch { copyFileSync(process.execPath, venv) }
   const env = envWithPath(toolFolders())
   assert.equal((await skraft(cwd, ['init'], { env })).status, 0)
+  declineGherkin(cwd)
   const path = join(cwd, 'skraft-config.json')
   const config = readJson(path)
   config.components[0].commands = { test: 'python --version' }
@@ -191,7 +221,7 @@ test('doctor --run starts each command once against the base it is given, main b
   const cwd = join(tempFolder(t), 'payment')
   mkdirSync(cwd)
   writeFileSync(join(cwd, 'skraft-config.json'), JSON.stringify({ components: [
-    { name: 'payment', root: '.', stack: 'javascript', mocking: { strategy: 'inprocess' }, commands: { test: 'node --version {baseSha}' } },
+    { name: 'payment', root: '.', stack: 'javascript', bdd: false, mocking: { strategy: 'inprocess' }, commands: { test: 'node --version {baseSha}' } },
   ] }))
   const mainSha = commitAll(cwd)
   git(cwd, 'checkout', '-q', '-b', 'develop')

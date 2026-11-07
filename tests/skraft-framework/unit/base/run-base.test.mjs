@@ -5,8 +5,8 @@ import { InMemorySourceControl, inMemoryDeps } from '../support/in-memory-host.m
 
 const CONFIG = (extra = {}) => JSON.stringify({
   components: [
-    { name: 'api', root: '.', stack: 'dotnet', commands: { test: 'dotnet test' } },
-    { name: 'web', root: '../payment-web', stack: 'react', commands: { test: 'npm test' }, ...extra },
+    { name: 'api', root: '.', stack: 'dotnet', bdd: false, commands: { test: 'dotnet test' } },
+    { name: 'web', root: '../payment-web', stack: 'react', bdd: false, commands: { test: 'npm test' }, ...extra },
   ],
 })
 
@@ -107,7 +107,7 @@ test('an invalid skraft-config.json refuses the start with its errors and journa
   const { outcome, tracking } = await start({
     config: JSON.stringify({
       components: [
-        { name: 'payment-Web', root: '  ', stack: 'react', commands: { 'smoke-Test': 'npm run smoke' } },
+        { name: 'payment-Web', root: '  ', stack: 'react', bdd: false, commands: { 'smoke-Test': 'npm run smoke' } },
         { root: 'api', stack: 'cobol' },
       ],
     }),

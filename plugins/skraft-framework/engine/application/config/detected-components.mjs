@@ -12,8 +12,8 @@ import { joinRelative } from '../../domain/config/relative-path.mjs'
  * @typedef {{ root: string } & Detected} FoundProject
  * @typedef {import('../../domain/config/skraft-config.mjs').BddPair} BddPair
  * @typedef {{ name: string, root: string, stack: string, paths: { src: string[], tests: string[] }, commands: Record<string, string>, bdd?: BddPair[] }} ProposedComponent
- *   bdd: only when the walk found a runner and both its folders; absent leaves the default, which
- *   asks for Gherkin as documentation and runs none of it.
+ *   bdd: only when the walk found a runner and both its folders; absent leaves the question open,
+ *   which `/skraft-init` asks and a run is refused until it is answered.
  */
 
 const DEPTH = 3
@@ -42,7 +42,8 @@ export const newComponents = async (workspace, starts, components, workingCopyNa
 
 /**
  * One component as init writes it: its project, and the pairs its folders show. A project whose
- * folders show no pair is written without `bdd`, which leaves the default.
+ * folders show no pair is written without `bdd`, which leaves the question open: `/skraft-init`
+ * asks it, and a run is refused until it is answered.
  * @param {Workspace} workspace @param {FoundProject} found @param {string} name
  * @returns {Promise<ProposedComponent>}
  */

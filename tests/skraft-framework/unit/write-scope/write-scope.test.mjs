@@ -101,7 +101,7 @@ test('no agent may change skraft-config.json or the workflow file, even inside i
 })
 
 test('a component in a neighbour repository is checked in that repository, against its own paths', async () => {
-  const WEB = { name: 'web', root: '../web', stack: 'react', mocking: { strategy: 'inprocess' }, paths: { src: ['src'], tests: ['src'] }, commands: { test: 'npx vitest run' } }
+  const WEB = { name: 'web', root: '../web', stack: 'react', bdd: false, mocking: { strategy: 'inprocess' }, paths: { src: ['src'], tests: ['src'] }, commands: { test: 'npx vitest run' } }
   const git = new InMemoryGit({ repositories: { '.': { mergeBases: { main: 'root-0' } }, '../web': { mergeBases: { main: 'up-web-0' } } } })
   const host = scripted({ components: [API, WEB], git }, (it) => [
     agent()(it), agent()(it), agent()(it),
@@ -234,7 +234,7 @@ test('an architect, with no shell, is told to commit nothing; once DESIGN is don
 })
 
 test('the engine commits what an agent with no shell left in a neighbour repository in that repository, and nothing for a refused attempt', async () => {
-  const WEB = { name: 'web', root: '../web', stack: 'react', mocking: { strategy: 'inprocess' }, paths: { src: ['src'], tests: ['src'] }, commands: { test: 'npx vitest run' } }
+  const WEB = { name: 'web', root: '../web', stack: 'react', bdd: false, mocking: { strategy: 'inprocess' }, paths: { src: ['src'], tests: ['src'] }, commands: { test: 'npx vitest run' } }
   const git = new InMemoryGit({ repositories: { '.': { mergeBases: { main: 'root-0' } }, '../web': { mergeBases: { main: 'up-web-0' } } } })
   const host = scripted({ components: [API, WEB], git, files: { '.skraft/pipeline.skraft.dot': BUILT_IN_WORKFLOW.replace('agent="solution-architect"', 'agent="solution-architect", writes="../web/docs"') } }, (it) => [
     agent()(it),

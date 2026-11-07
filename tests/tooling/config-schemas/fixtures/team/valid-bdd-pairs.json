@@ -1,0 +1,21 @@
+{
+  "components": [
+    {
+      "name": "api",
+      "root": "services/api",
+      "stack": "dotnet",
+      "commands": { "test": "dotnet test" },
+      "bdd": [
+        { "runner": "reqnroll", "features": "tests/Features", "steps": "tests/Steps" },
+        { "features": "tests/Legacy/Features" }
+      ]
+    },
+    {
+      "name": "batch",
+      "root": "services/batch",
+      "stack": "python",
+      "commands": { "test": "pytest -q" },
+      "bdd": false
+    }
+  ]
+}

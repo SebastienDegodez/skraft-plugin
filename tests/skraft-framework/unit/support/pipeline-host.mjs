@@ -34,6 +34,7 @@ export const API = Object.freeze({
   name: 'api', root: '.', stack: 'dotnet', mocking: { strategy: 'inprocess' },
   paths: { src: ['src'], tests: ['tests'] },
   commands: { build: 'dotnet build', test: 'dotnet test', mutation: 'dotnet stryker' },
+  bdd: false,
 })
 
 /**

@@ -35,6 +35,25 @@
     }
   },
   "$defs": {
+    "innerFolder": {
+      "description": "A folder inside the component root: relative, never absolute, never leaving the root.",
+      "type": "string",
+      "allOf": [
+        {
+          "pattern": "\\S"
+        },
+        {
+          "not": {
+            "pattern": "^([\\\\/]|[A-Za-z]:)"
+          }
+        },
+        {
+          "not": {
+            "pattern": "^\\.\\."
+          }
+        }
+      ]
+    },
     "component": {
       "type": "object",
       "required": [
@@ -162,8 +181,34 @@
           "type": "boolean"
         },
         "bdd": {
-          "description": "Whether this component describes its behaviour in Gherkin; absent: true.",
-          "type": "boolean"
+          "description": "Where each runner of this component reads its scenarios and the definitions that bind them, one pair per runner; or false when its tests are written without Gherkin. An absent key, and a bare true, decide nothing: no folder is invented from the stack, so a run is refused until one of the two is written.",
+          "oneOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "object",
+                "properties": {
+                  "runner": {
+                    "type": "string"
+                  },
+                  "features": {
+                    "$ref": "#/$defs/innerFolder"
+                  },
+                  "steps": {
+                    "$ref": "#/$defs/innerFolder"
+                  }
+                },
+                "required": [
+                  "features"
+                ],
+                "additionalProperties": false
+              }
+            }
+          ]
         },
         "mutationReport": {
           "description": "The file the mutation command writes its report to, relative to the component root; absent: the one the stack's tool writes.",

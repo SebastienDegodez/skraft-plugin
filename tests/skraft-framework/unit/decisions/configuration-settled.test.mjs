@@ -15,6 +15,9 @@ const WORKFLOW = `digraph settled {
 
 const WEB = Object.freeze({ ...API, name: 'web', root: 'web', stack: 'react' })
 
+/** The component as a file no guided init has been through names it: no `bdd` key at all. */
+const silently = ({ bdd, ...component }) => component
+
 /** A run of a workflow that publishes, on the configuration the files give, with no consent pre-answered. */
 const starting = (options = {}) => scripted({ workflow: WORKFLOW, ...options }, (it) => [agent()(it)])
 
@@ -34,6 +37,37 @@ test('a working copy whose publication consents nobody settled starts nothing, a
   })
   assert.deepEqual(host.agentRunner.dispatches, [])
   assert.deepEqual(host.human.questions, [])
+
+  const nor = starting({ components: [silently(API)], config: { publish: {} } })
+  assert.equal((await nor.start()).reason, 'skraft is not initialised: run /skraft-init (publish.pullRequest is unanswered, api: bdd is unanswered)')
+})
+
+test('a component that says nothing about Gherkin starts nothing, however settled the consents are: a bare true is no answer either', async () => {
+  const nothing = starting({ components: [silently(API)], config: { publish: SETTLED } })
+  const bare = starting({ components: [{ ...API, bdd: true }], config: { publish: SETTLED } })
+
+  const refused = await nothing.start()
+
+  assert.deepEqual(refused, {
+    status: 'refused',
+    slug: SLUG,
+    phase: null,
+    code: 'configuration-incomplete',
+    reason: 'skraft is not initialised: run /skraft-init (api: bdd is unanswered)',
+  })
+  assert.deepEqual(nothing.agentRunner.dispatches, [], 'a configuration nobody settled spends no agent')
+  assert.deepEqual(nothing.human.questions, [], 'the run says what to run instead of asking')
+  assert.equal((await bare.start()).reason, 'skraft is not initialised: run /skraft-init (api: bdd is unanswered)', 'true names no folder, so it decides nothing')
+})
+
+test('a component that declines Gherkin starts at once, and so does one that names where its scenarios live', async () => {
+  const declined = starting({ components: [{ ...API, bdd: false }], config: { publish: SETTLED } })
+  const named = starting({ components: [{ ...API, bdd: [{ features: 'docs/features', steps: 'tests/Steps' }] }], config: { publish: SETTLED } })
+  const one = starting({ components: [{ ...API, bdd: false }, silently(WEB)], config: { publish: SETTLED } })
+
+  assert.equal((await declined.start()).status, 'done')
+  assert.equal((await named.start()).status, 'done')
+  assert.equal((await one.start()).reason, 'skraft is not initialised: run /skraft-init (web: bdd is unanswered)', 'one component deciding nothing is enough to stop the run, and it is the one named')
 })
 
 test('a front end makes the screenshots consent part of what a run needs, named beside the others; without one it is not asked for', async () => {

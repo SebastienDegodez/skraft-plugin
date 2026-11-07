@@ -407,7 +407,7 @@ test('a free family needs a tier once the layers are merged: one layer may give 
 const doctorOn = ({ config = {}, local, hostSettings = new InMemoryHostSettings() } = {}) => {
   const workspace = new InMemoryWorkspace({
     'services/api/Api.sln': '',
-    'skraft-config.json': JSON.stringify({ components: [{ name: 'api', root: 'services/api', stack: 'dotnet', mocking: { strategy: 'inprocess' }, commands: { build: 'dotnet build' } }], ...config }),
+    'skraft-config.json': JSON.stringify({ components: [{ name: 'api', root: 'services/api', stack: 'dotnet', bdd: false, mocking: { strategy: 'inprocess' }, commands: { build: 'dotnet build' } }], ...config }),
     ...(local === undefined ? {} : { [LOCAL]: JSON.stringify(local) }),
   })
   const machine = new ScriptedMachine()
