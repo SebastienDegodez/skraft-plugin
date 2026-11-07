@@ -1,3 +1,4 @@
+import { featuresFolders } from '../config/bdd-folders.mjs'
 import { joinRelative } from '../config/relative-path.mjs'
 
 /**
@@ -57,10 +58,10 @@ const ROLES = Object.freeze({
     shell: false,
   }),
   // The acceptance designer commits failing tests only; the skeleton they call goes in the source
-  // paths, its Gherkin scenarios under docs/features.
+  // paths, its Gherkin scenarios in the folders the components' bdd names.
   'acceptance-designer': Object.freeze({
     outputs: Object.freeze([Object.freeze({ path: 'details/{date}/test-plan-{slug}.md', template: null })]),
-    writes: Object.freeze(['docs/features']),
+    writes: Object.freeze([]),
     components: Object.freeze(/** @type {ComponentPaths[]} */ (['src', 'tests'])),
     records: false,
     scan: false,
@@ -142,11 +143,16 @@ const ownRole = (node) => {
 /**
  * The folders the engine creates before an attempt of an agent node, so that an agent whose
  * tools only create files in existing folders can write on a repository that has none yet: the
- * folders its plugin role writes in. A node's own `writes=` may name files, so it adds none.
- * @param {WorkflowNode} node an agent node
+ * folders its plugin role writes in, and the folders the components keep their scenarios in when
+ * the role writes them. A node's own `writes=` may name files, so it adds none.
+ * @param {WorkflowNode} node an agent node @param {readonly Component[]} components
  * @returns {readonly string[]}
  */
-export const roleFolders = (node) => (node.proposal ? [] : (ROLES[/** @type {string} */ (node.agent)]?.writes ?? []))
+export const roleFolders = (node, components) => {
+  if (node.proposal) return []
+  const role = ROLES[/** @type {string} */ (node.agent)] ?? NO_ROLE
+  return [...role.writes, ...(role.scenarios ? featuresFolders(components) : [])]
+}
 
 /** What an agent with no role of its own (a repository agent) starts from. @type {Role} */
 const NO_ROLE = Object.freeze({ outputs: Object.freeze([]), writes: Object.freeze([]), components: Object.freeze([]), records: false, scan: false, tdd: null, prose: false, proposal: false })
@@ -160,6 +166,7 @@ const NO_ROLE = Object.freeze({ outputs: Object.freeze([]), writes: Object.freez
 export const allowedPaths = (role, { slug, components }) => [...new Set([
   trackingFolder(slug),
   ...role.writes.map((path) => joinRelative(path)),
+  ...(role.scenarios ? featuresFolders(components) : []),
   ...components.flatMap((component) => role.components.flatMap((kind) => component.paths[kind].map((path) => joinRelative(component.root, path)))),
 ])]
 

@@ -31,6 +31,10 @@ const ROW = /^\s*\|(.*)\|\s*$/
 const PLACEHOLDER = /<([^<>]+)>/g
 /** How DISCUSS heads one acceptance criterion (`## AC-1 — A card is paid`). */
 const CRITERION = '## AC-'
+/** The language a `.feature` declares, as the Gherkin specification writes it. */
+const LANGUAGE = /^[^\S\n]*#[^\S\n]*language[^\S\n]*:[^\S\n]*([\w-]+)/m
+/** What skraft reads, and the only keywords it knows. */
+const ENGLISH = 'skraft reads Gherkin in English (Scenario:, Given/When/Then) (#541)'
 
 /** The keywords a scenario says, each needed once. */
 const KEYWORDS = Object.freeze(['Given', 'When', 'Then'])
@@ -69,11 +73,30 @@ const cellsOf = (line) => /** @type {string[]} */ (ROW.exec(line))[1].split('|')
  * Why the Gherkin of the story sends the acceptance designer back; empty when it holds.
  * @param {Records} records @returns {string[]}
  */
-export const gherkinFailures = ({ plans, features, criteria }) => [
-  ...plans.flatMap((plan) => missingFeatures(plan, features)),
-  ...plans.flatMap((plan) => storyFeatures(plan, features).flatMap(featureFailures)),
-  ...criteria.flatMap((file) => coverageFailures(file, plans.flatMap((plan) => storyFeatures(plan, features)))),
-]
+export const gherkinFailures = ({ plans, features, criteria }) => {
+  const story = plans.flatMap((plan) => storyFeatures(plan, features))
+  const unread = story.flatMap(unreadable)
+  if (unread.length > 0) return unread
+  return [
+    ...plans.flatMap((plan) => missingFeatures(plan, features)),
+    ...story.flatMap(featureFailures),
+    ...criteria.flatMap((file) => coverageFailures(file, story)),
+  ]
+}
+
+/**
+ * Why skraft cannot read a `.feature` at all: it declares another language, or opens no scenario
+ * its keywords name. Either way the file says nothing about what the story covers, so it is the
+ * only reason given — counting scenarios in a file one cannot read would name a second cause for
+ * the same fault. Every runner skraft detects accepts localised Gherkin; skraft does not, so that
+ * one keyword set is checked and the scenarios stay readable to whoever reviews them.
+ * @param {Document} feature @returns {string[]}
+ */
+const unreadable = ({ path, text }) => {
+  const declared = LANGUAGE.exec(text)?.[1]
+  if (declared !== undefined && declared !== 'en') return [`${path} declares # language: ${declared}; ${ENGLISH}`]
+  return scenariosOf(text).length === 0 ? [`${path} opens no scenario; ${ENGLISH}`] : []
+}
 
 /** The `.feature` files of the story: those its plan names, as the working copy holds them. @param {Document} plan @param {Document[]} features */
 const storyFeatures = ({ text }, features) => features

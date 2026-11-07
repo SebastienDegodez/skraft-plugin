@@ -44,8 +44,8 @@ will fill in.
 
 ## Scenarios kept in the repository
 
-DISTILL writes its scenarios in `docs/features/<bounded-context>/<feature>.feature`, on the
-story's branch: the pull request shows them, and the next runs read them. No test runner reads
+DISTILL writes its scenarios where the component's `bdd` says, as
+`<features folder>/<bounded-context>/<feature>.feature`, on the story's branch: the pull request shows them, and the next runs read them. No test runner reads
 these files; the acceptance test carries their values verbatim, and the `testability` lens checks
 it (T2).
 

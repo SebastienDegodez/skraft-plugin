@@ -358,3 +358,68 @@ stimuli:
       - The product owner could confirm the rule from the text alone.
       - No condition, exception, or amount was added beyond the one agreed.
       - The rule is stated once, not spread across variants.
+
+  - name: Write a specification for a team that does not work in English
+    prompt: |
+      L'équipe caisse a arrêté une règle pour la story « remise par palier » : une ligne de
+      panier d'une même référence qui atteint dix articles ouvre droit à une remise de 5 %.
+      Mets-la dans le dossier de spécification de l'équipe pour cette feature, pour que la
+      responsable produit confirme que c'est bien ce qu'elle a demandé. Elle ne lit pas
+      l'anglais.
+    environment:
+      files:
+        - src: fixtures/team-language/.gitignore
+          dest: .gitignore
+        - src: fixtures/team-language/.copilot-tracking/skraft-plans/caisse/plans/2026-08-12/ac-draft-remise-palier.md
+          dest: .copilot-tracking/skraft-plans/caisse/plans/2026-08-12/ac-draft-remise-palier.md
+      commandTimeout: 1m
+    graders:
+      - type: run-command
+        name: The rule is recorded where the team keeps it
+        config:
+          command: bash
+          args:
+            - '-lc'
+            - '[ -n "$(find .copilot-tracking/skraft-plans/caisse -type f -size +0c ! -name "ac-draft-remise-palier.md" 2>/dev/null)" ]'
+          expected_exit_code: 0
+          timeout: 30s
+      - type: run-command
+        name: The scenario opens with the keywords one parser reads
+        config:
+          command: bash
+          args:
+            - '-lc'
+            - 'out=$(find .copilot-tracking/skraft-plans/caisse -type f ! -name "ac-draft-remise-palier.md" -exec cat {} + 2>/dev/null); printf "%s\n" "$out" | grep -qE "^[[:space:]]*Scenario( Outline)?:" && printf "%s\n" "$out" | grep -qE "^[[:space:]]*Given " && printf "%s\n" "$out" | grep -qE "^[[:space:]]*When " && printf "%s\n" "$out" | grep -qE "^[[:space:]]*Then "'
+          expected_exit_code: 0
+          timeout: 30s
+      - type: run-command
+        name: No scenario declares another language, nor opens with its words
+        config:
+          command: bash
+          args:
+            - '-lc'
+            - 'out=$(find .copilot-tracking/skraft-plans/caisse -type f ! -name "ac-draft-remise-palier.md" -exec cat {} + 2>/dev/null); ! printf "%s\n" "$out" | grep -qiE "^[[:space:]]*#[[:space:]]*language[[:space:]]*:" && ! printf "%s\n" "$out" | grep -qE "^[[:space:]]*(Fonctionnalité|Scénario|Soit|Quand|Alors|Étant donné|Etant donné)"'
+          expected_exit_code: 0
+          timeout: 30s
+      - type: run-command
+        name: The product owner can still read her own rule
+        config:
+          command: bash
+          args:
+            - '-lc'
+            - 'out=$(find .copilot-tracking/skraft-plans/caisse -type f ! -name "ac-draft-remise-palier.md" -exec cat {} + 2>/dev/null); printf "%s\n" "$out" | grep -qiE "remise|articles|ligne"'
+          expected_exit_code: 0
+          timeout: 30s
+      - type: prompt
+        config:
+          scoring: scale_1_10
+      - type: skill-invocation
+        name: The skill under test is loaded
+        config:
+          required:
+            - bdd-methodology
+    rubric:
+      - The product owner, who does not read English, could confirm the rule from the text alone.
+      - The specification is written in the team's own language, business words included.
+      - A single parser could read the file — it opens its scenario and its steps the one way every runner understands.
+      - No condition, exception, or amount was added beyond the one agreed.

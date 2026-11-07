@@ -2,9 +2,11 @@ import { RESULT_SHAPE } from './agent-result.mjs'
 import { issueOf } from './commits.mjs'
 
 /**
- * @typedef {{ name: string, root: string, stack: string, mocking: string, contractTesting: boolean, bdd: boolean, test: string | null, gates: BriefGate[] }} BriefComponent
+ * @typedef {{ name: string, root: string, stack: string, mocking: string, contractTesting: boolean, bdd: BddPair[], test: string | null, gates: BriefGate[] }} BriefComponent
  *   gates: the gate commands of the component the agent runs before its result, in the order the
- *   gates step runs them, mutation left out.
+ *   gates step runs them, mutation left out. bdd: where its scenarios and their bindings live,
+ *   relative to its root; empty when its tests are written without Gherkin.
+ * @typedef {import('../config/skraft-config.mjs').BddPair} BddPair
  * @typedef {{ gate: string, line: string }} BriefGate
  * @typedef {{
  *   agent: string, phase: string, slug: string,
@@ -107,7 +109,14 @@ const writablePaths = (allowed, components) => [
 ]
 
 /** @param {BriefComponent} component */
-const componentLine = ({ name, root, stack, mocking, contractTesting, bdd, test }) => `${name}: ${root} (${stack}), mocking: ${mocking}, contract testing: ${contractTesting ? 'on' : 'off'}, bdd: ${bdd ? 'on' : 'off'}${test ? `, tests: ${test}` : ''}`
+const componentLine = ({ name, root, stack, mocking, contractTesting, bdd, test }) => `${name}: ${root} (${stack}), mocking: ${mocking}, contract testing: ${contractTesting ? 'on' : 'off'}, bdd: ${bddLine(bdd)}${test ? `, tests: ${test}` : ''}`
+
+/**
+ * Where the component's scenarios go, as the agent that writes them reads it: the folder of each
+ * pair and what binds it, so no agent has to guess a folder the engine already knows.
+ * @param {BddPair[]} pairs
+ */
+const bddLine = (pairs) => (pairs.length === 0 ? 'off' : pairs.map(({ features, steps }) => (steps === null ? features : `${features} → ${steps}`)).join(', '))
 
 /** The commits whose code the gates step runs its commands on next: a TDD cycle's, a mutant killer's. */
 const GATED = Object.freeze(['cycle', 'kill'])

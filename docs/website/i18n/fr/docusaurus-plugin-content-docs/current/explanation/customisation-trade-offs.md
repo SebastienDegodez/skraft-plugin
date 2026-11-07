@@ -52,7 +52,7 @@ peut pas voir, c'est une commande qui tourne et ne prouve rien.
 | Laisser un composant sans gate | Toute preuve sur ce composant ; le moteur le signale en échec `environment` | `no gate command; …` dans `skraft gate` |
 | Fixer `--base` ou `baseBranch` sur une ref trop récente | Des fichiers modifiés hors du périmètre comparé | `no component changed since its base; no gate to run` alors que du code a changé |
 | Retirer le nœud question `adr` | La ratification humaine des ADR, qui restent `Proposed` | `skraft workflow diff` montre le nœud disparu |
-| Mettre un composant à `bdd: false` | La spécification lisible par le métier de ce composant : aucun `.feature` n'est demandé à DISTILL, donc ses tests d'acceptation ne reprennent plus mot pour mot les valeurs d'un scénario qu'un expert du domaine peut lire | Aucun `.feature` sous `docs/features/` pour ses features, et la colonne `Feature File` du plan de test entièrement à tirets |
+| Mettre un composant à `bdd: false` | La spécification lisible par le métier de ce composant : aucun `.feature` n'est demandé à DISTILL, donc ses tests d'acceptation ne reprennent plus mot pour mot les valeurs d'un scénario qu'un expert du domaine peut lire | Aucun `.feature` écrit pour ses features, et la colonne `Feature File` du plan de test entièrement à tirets |
 | Modifier `events.jsonl` à la main pour débloquer un run | Le journal comme preuve : le run est bloqué en `journal-tampered` | [Reprendre ou débloquer un run](../how-to/resume-a-run.mdx) |
 
 Avant de réduire un contrôle, écrivez la raison là où l'équipe la lira : la description de la

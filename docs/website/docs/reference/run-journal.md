@@ -37,7 +37,7 @@ The tracking folder lives **in the working copy that starts the run**:
     │   ├── changed-files.txt                      paths those changes touch
     │   ├── code.patch, code-files.txt             the same for a blind lens, without docs/adr nor the durable documentation
     │   ├── design.patch, design-files.txt         the same for `fitness`: the design documents only (written when the review has that lens)
-    │   ├── features.patch, features-files.txt     the same for `business-alignment`: any `docs/features/` folder only (written when the review has that lens)
+    │   ├── features.patch, features-files.txt     the same for `business-alignment`: the `.feature` files only, wherever their component keeps them (written when the review has that lens)
     │   ├── context.md                             story, project rules, who wrote which document
     │   ├── components.json                        stack, mocking strategy, contract testing
     │   └── verdict.yaml                           the verdict of the pass, written by the engine
@@ -98,7 +98,7 @@ output, and pre-creates it when it has a template. Detail by phase:
 | DESIGN | context map, tactical design, event model (in the repository, outside the tracking folder) | `docs/architecture/context-map.md`, `docs/architecture/{bounded-context}.md`, `docs/domain/event-model/{bounded-context}.md` |
 | DESIGN | ADRs (in the repository, outside the tracking folder) | `docs/adr/adr-{nnn}-{subject}.md`, `docs/adr/decisions-index.md`, `docs/adr/supersessions.md` |
 | DISTILL | test plan, implementation plan | `details/{date}/test-plan-{slug}.md`, `details/{date}/impl-plan-{story}.md` |
-| DISTILL | Gherkin scenarios, not executable (in the repository, outside the tracking folder) | `docs/features/{bounded-context}/{feature}.feature` |
+| DISTILL | Gherkin scenarios, not executable (in the repository, outside the tracking folder) | `{features folder}/{bounded-context}/{feature}.feature` |
 | DELIVER | change log | `changes/{date}/change-log.md` |
 | DELIVER | proposals for surviving mutants | `proposals/kill_proposal-{visit}-g{n}.md` |
 | DELIVER | evidence of each gate; output of the e2e commands | `gates/{component}/{gate}-{n}.log`; `visuals/{component}/e2e-{n}.log` |
@@ -121,7 +121,7 @@ request shows them, and the next runs read them again.
 | tactical design: aggregates, entities, value objects, domain events, repositories | DESIGN | `docs/architecture/{bounded-context}.md` |
 | event model: commands, queries, domain events, read models, slices | DESIGN | `docs/domain/event-model/{bounded-context}.md` |
 | ADRs, decision index, supersession registry | DESIGN | `docs/adr/` |
-| Gherkin scenarios, not executable | DISTILL | `docs/features/{bounded-context}/{feature}.feature` |
+| Gherkin scenarios, not executable | DISTILL | `{features folder}/{bounded-context}/{feature}.feature` |
 
 These stay in the tracking folder: the research document,
 `supersession-plan-{story}.md`, `consistency-matrix-{slug}.md`, `test-plan-{slug}.md`,
@@ -131,10 +131,10 @@ and its reports.
 | Rule | Detail |
 | --- | --- |
 | Reading | instruction to the agents: RESEARCH and DESIGN read `docs/` before anything else; the engine does not check it |
-| Already covered | when `docs/` already covers the story, the phase says so in its declared output (the research document, the consistency matrix), cites the files of `docs/` and moves on. The engine checks only the matrix: its `docs-relied-on:` line must list at least one file of `docs/adr`, `docs/architecture`, `docs/domain/event-model` or `docs/features`, and each listed file must exist in the working copy. The research document's own citations are checked too, by the research records (`research-records`) |
+| Already covered | when `docs/` already covers the story, the phase says so in its declared output (the research document, the consistency matrix), cites the files of `docs/` and moves on. The engine checks only the matrix: its `docs-relied-on:` line must list at least one file of `docs/adr`, `docs/architecture`, `docs/domain/event-model` or `docs/features`, or a `.feature` wherever its component keeps it, and each listed file must exist in the working copy. The research document's own citations are checked too, by the research records (`research-records`) |
 | Updating | instruction to the agents: a phase completes an existing file of `docs/` and does not rewrite it; the engine does not check it |
 | ADRs | a published ADR is never edited; a new ADR may supersede it ([What is never rewritten](#append-only)) |
-| Write scope | DESIGN: `docs/adr/`, `docs/architecture/`, `docs/domain/event-model/`; DISTILL: `docs/features/` ([Phases](./phases.md)) |
+| Write scope | DESIGN: `docs/adr/`, `docs/architecture/`, `docs/domain/event-model/`; DISTILL: the features folders the components' `bdd` names ([Phases](./phases.md)) |
 | Blind lens | `cold-reader` reads neither these files nor the ADRs: they are left out of `code.patch` and `code-files.txt` |
 
 ## What is never rewritten <!-- #append-only -->
@@ -370,6 +370,7 @@ for a human's answer), `done`.
 | `refused` | `config-invalid` | invalid `skraft-config.json` | `skraft-config.json is invalid: <every error>` | fix each listed error |
 | `refused` | `configuration-incomplete` | a consent the run's publications ask for is unanswered, or answers an earlier version of its question | `skraft is not initialised: run /skraft-init (<publish.key is unanswered\|publish.key answers an earlier question>, …)` | run `/skraft-init` |
 | `refused` | `forge-unreachable` | the run would open a pull request on a forge this machine cannot reach | `<why the forge cannot be reached>. Fix it, then start the run again.` | install or sign in to the forge's command line |
+| `refused` | `bdd-unbound` | a component's `bdd` names a runner whose step definitions sit in no folder of the working copy | `<component>: <runner> reads its step definitions in <folder>, which is no folder of the working copy. Fix it, then start the run again.` | create the folder, or fix the path with `/skraft-init` |
 | `refused` | `base-unresolved` | no merge base with the ref in a repository | `… has no merge base with <ref>; set baseBranch in skraft-config.json or pass --base <ref>` | set `baseBranch` or pass `--base` |
 | `refused` | `source-control-unavailable` | Git does not start while the config lists components | `<error>; the components of skraft-config.json need Git for their base` | install Git, put it on the PATH |
 | `refused` | `no-active-pipeline` | no valid `.active-slug` | `no active pipeline in this working copy (.copilot-tracking/skraft-plans/.active-slug); start one with an explicit slug` | `skraft init <slug>` or `/skraft <slug>` |
@@ -385,7 +386,7 @@ for a human's answer), `done`.
 | `blocked` | `missing-outputs` | outputs missing after the last attempt | `solution-researcher left required outputs missing after 3 attempts: <paths>` | a resume returns the same block; fix the cause and start a new slug |
 | `blocked` | `design-records` | the solution architect's DESIGN records still fail after its last attempt: a consistency matrix whose `consistency-gate` does not read `PASS` (G10; a missing one stops with `missing-outputs`), an ADR named `*-rejected.md`, `*-accepted.md`, `*-deprecated.md` or `*-superseded.md` (G14), a `**Supersedes:**` line without its row in `docs/adr/supersessions.md` (G2, G12), an ADR without its row in `docs/adr/decisions-index.md` | `solution-architect still failed after 3 attempts: <each record at fault>` | write the record, then start a new slug |
 | `blocked` | `research-records` | the solution researcher's citations still fail after its last attempt: a workspace path the research document cites that is no readable file of the working copy, or a `path:line` or `path:line-line` range past the end of the file it names (a range on a path the working copy has not is reported once, as a path it has not; a path the document cites several times is reported once) | `solution-researcher still failed after 3 attempts: <each citation at fault>` | fix the citation, then start a new slug |
-| `blocked` | `gherkin-records` | the acceptance designer's scenarios still fail after its last attempt: a `.feature` the test plan names that `docs/features/` does not hold, a scenario that says no Given, When or Then, an outline whose examples leave a placeholder it opens unfilled, two scenarios of one file sharing a title, or fewer scenarios than the story's `ac-draft-{story}.md` declares acceptance criteria. Only where a component declares `bdd` | `acceptance-designer still failed after 3 attempts: <each scenario at fault>` | write the scenario, then start a new slug |
+| `blocked` | `gherkin-records` | the acceptance designer's scenarios still fail after its last attempt: a `.feature` the test plan names that no features folder of its component holds, a scenario that says no Given, When or Then, an outline whose examples leave a placeholder it opens unfilled, two scenarios of one file sharing a title, or fewer scenarios than the story's `ac-draft-{story}.md` declares acceptance criteria. A `.feature` declaring a language other than `en`, or opening no scenario English names, is reported on that line alone. Only where a component declares `bdd`, and only under the folders it names | `acceptance-designer still failed after 3 attempts: <each scenario at fault>` | write the scenario, then start a new slug |
 | `blocked` | `agent-blocked` | the agent answered `blocked`, and a human answered `STOP` to the `blocked` question | `<agent> is blocked: <summary>` | final: a new run of the slug stays blocked |
 | `blocked` | `agent-unavailable` | the host cannot start the agent | Claude Code: `skraft:solution-researcher could not be started: …`; Copilot: `agent "solution-researcher" is not available in this Copilot session (agents: …); install or enable the skraft plugin, or pass agentIds` | install or enable the plugin, then resume; the attempt is not consumed |
 | `blocked` | `agent-failed` | the agent stops without finishing and its outputs are missing | `<agent> stopped without finishing: <error>` | resume: the step stays open and the same attempt restarts |

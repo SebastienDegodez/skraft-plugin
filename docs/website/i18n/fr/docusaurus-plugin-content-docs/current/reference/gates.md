@@ -128,7 +128,7 @@ critère qui en interdit un.
 | Critère | Contrôle |
 | --- | --- |
 | G10 | un `consistency-matrix-<story>.md` dans le dossier de suivi, sa ligne `consistency-gate` à `PASS` |
-| docs-relied-on | la matrice a une ligne `docs-relied-on:` (chemins relatifs au dépôt séparés par des virgules, accents graves permis, séparateurs `/` ou `\`) qui liste au moins un fichier sous `docs/adr/`, `docs/architecture/`, `docs/domain/event-model/` ou `docs/features/`, et chaque chemin listé est un fichier régulier lisible de la copie de travail. Un chemin ne compte que depuis son début (pas ré-ancré depuis `mydocs/`, un chemin absolu ou `../docs/`), un chemin avec un segment `.` ou `..` n'est pas listé, un `:ligne`, `#ancre` ou point final est ôté, et un dossier ou tout autre fichier de `docs/` ne compte pas |
+| docs-relied-on | la matrice a une ligne `docs-relied-on:` (chemins relatifs au dépôt séparés par des virgules, accents graves permis, séparateurs `/` ou `\`) qui liste au moins un fichier sous `docs/adr/`, `docs/architecture/`, `docs/domain/event-model/` ou `docs/features/`, ou un `.feature` là où son composant le garde, et chaque chemin listé est un fichier régulier lisible de la copie de travail. Un chemin ne compte que depuis son début (pas ré-ancré depuis `mydocs/`, un chemin absolu ou `../docs/`), un chemin avec un segment `.` ou `..` n'est pas listé, un `:ligne`, `#ancre` ou point final est ôté, et un dossier ou tout autre fichier de `docs/` ne compte pas |
 | G14 | aucun ADR écrit par le run nommé `*-rejected.md`, `*-accepted.md`, `*-deprecated.md` ou `*-superseded.md` |
 | G2, G12 | chaque `**Supersedes:** ADR-MMM` d'un ADR écrit par le run a sa ligne dans le registre `docs/adr/supersessions.md` |
 | G2 | chaque ADR écrit par le run a sa ligne dans `docs/adr/decisions-index.md` |
@@ -172,8 +172,8 @@ emplacement unitaire. Un test ne compte que sous un chemin de tests que le compo
 
 **Contrôle du moteur.** G1 : après chaque tentative d'`acceptance-designer`, sans lentille
 ([`gherkin-records`](./run-journal.md#statuses-and-codes)), le moteur lit les scénarios que nomme le
-plan de test et rapporte une ligne par faute : un `.feature` que le plan cite et que `docs/features/`
-ne tient pas, un scénario qui ne dit ni Given, ni When, ni Then, un outline dont les exemples
+plan de test et rapporte une ligne par faute : un `.feature` que le plan cite et qu'aucun dossier features de son
+composant ne tient, un scénario qui ne dit ni Given, ni When, ni Then, un outline dont les exemples
 laissent sans colonne un placeholder ouvert par son titre ou ses étapes, deux scénarios d'un même
 fichier qui partagent un titre, et une histoire qui compte moins de scénarios que son
 `ac-draft-{story}.md` ne déclare de critères d'acceptation (un outline compte une fois, quel que

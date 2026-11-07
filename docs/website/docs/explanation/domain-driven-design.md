@@ -162,8 +162,9 @@ The event model, the context map and the tactical design describe the domain, no
 architect writes them under `docs/` of the repository, on the story's branch, and the pull request
 shows them next to the code. The next run reads them before anything else and completes them
 rather than starting again; when they already cover its story, the architect says so, cites them
-and moves on. The scenarios DISTILL writes follow the same path, under `docs/features/`. The
-consistency matrix belongs to one story and stays in the run's tracking folder.
+and moves on. The scenarios DISTILL writes are durable in the same way, in the folder each
+component's `bdd` names. The consistency matrix belongs to one story and stays in the run's
+tracking folder.
 The full list: [Durable documentation](../reference/run-journal.md#durable-docs).
 
 ## Consistency between artefacts

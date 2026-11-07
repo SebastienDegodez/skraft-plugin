@@ -120,6 +120,24 @@ test('an architect that finds the story covered by the design documents already 
   for (const [path, text] of Object.entries(documented)) assert.equal(await host.workspace.read(path), text)
 })
 
+test('an architect that relies on the scenarios of a component cites them where that component keeps them, not where the engine once looked', async () => {
+  const inTests = { ...API, bdd: [{ features: 'tests/Features', steps: 'tests/Steps' }] }
+  const written = { 'tests/Features/payment/pay-by-card.feature': 'Feature: Pay\n' }
+  const cited = citing('- docs-relied-on:tests/Features/payment/pay-by-card.feature')
+  const missing = citing('- docs-relied-on: tests/Features/payment/pay-later.feature')
+  const host = scripted({ components: [inTests], files: written }, (it) => [agent()(it), cited(it), ...nominal(it).slice(2)])
+  const sentBack = scripted({ components: [inTests], files: written }, (it) => [agent()(it), missing(it), cited(it), ...nominal(it).slice(2)])
+
+  assert.equal((await host.start()).status, 'done')
+
+  assert.deepEqual(design(host).map(({ attempt, outcome, failures }) => [attempt, outcome, failures]), [[1, 'done', []]])
+  await sentBack.start()
+  assert.deepEqual(design(sentBack).map(({ attempt, outcome, code, failures }) => [attempt, outcome, code, failures]), [
+    [1, 'failed', 'design-records', ['docs-relied-on lists tests/Features/payment/pay-later.feature, which is no file of the working copy (#410)']],
+    [2, 'done', null, []],
+  ], 'a scenario it relies on is checked like any document it cites')
+})
+
 test('an architect whose consistency matrix lists no file of a durable docs/ folder, or a file the working copy lacks, is sent back, and one citing its files with back slashes, lines and anchors goes on', async () => {
   const documented = { 'docs/README.md': '# Docs\n', 'docs/domain/event-model/payment.md': '# Payment\n', 'docs/architecture/legacy/old.md': '# Old\n' }
   const host = scripted({ files: documented }, (it) => [
@@ -139,7 +157,7 @@ test('an architect whose consistency matrix lists no file of a durable docs/ fol
 
   const lacks = (/** @type {string} */ path) => `docs-relied-on lists ${path}, which is no file of the working copy (#410)`
   assert.deepEqual(design(host).map(({ attempt, outcome, code, failures }) => [attempt, outcome, code, failures]), [
-    [1, 'failed', 'design-records', [`${MATRIX}: its docs-relied-on line lists no docs/ file the story relies on, created or cited (#410)`]],
+    [1, 'failed', 'design-records', [`${MATRIX}: its docs-relied-on line lists no file the story relies on, created or cited (#410)`]],
     [2, 'failed', 'design-records', [lacks('docs/architecture/payment.md'), lacks('docs/architecture/legacy')]],
     [3, 'done', null, []],
   ])
