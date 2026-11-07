@@ -3,13 +3,13 @@
 
 ## Slice: refund-request
 
-| Step | Kind | Name | Holds |
+| Step | Kind | Name | Fields |
 |---|---|---|---|
-| Trigger | Command | `RequestRefund` | `PurchaseId`, `RequestedOn` |
-| State change | Domain Event | `RefundDecided` | `PurchaseId`, `Outcome`, `AmountRefunded`, `Reason` |
-| Outcome | Read Model | `RefundDecision` | `PurchaseId`, `Outcome`, `AmountRefunded`, `Reason` |
-| Trigger | Query | `GetPurchaseHistory` | `PurchaseId` |
-| Outcome | Read Model | `PurchaseHistory` | `PurchaseId`, `PricePaid`, `BoughtOn`, `AlreadyRefunded` |
+| Trigger | Command | `RequestRefund` | `PurchaseId: identifier`, `RequestedOn: date` |
+| State change | Domain Event | `RefundDecided` | `PurchaseId: identifier`, `Outcome: Refunded \| Declined`, `AmountRefunded: decimal amount`, `Reason: text` |
+| Outcome | Read Model | `RefundDecision` | `PurchaseId: identifier`, `Outcome: Refunded \| Declined`, `AmountRefunded: decimal amount`, `Reason: text` |
+| Trigger | Query | `GetPurchaseHistory` | `PurchaseId: identifier` |
+| Outcome | Read Model | `PurchaseHistory` | `PurchaseId: identifier`, `PricePaid: decimal amount`, `BoughtOn: date`, `AlreadyRefunded: yes/no` |
 
 `RequestRefund` and `GetPurchaseHistory` are the two use cases of the Returns application layer;
 they are the only boundaries the team drives the refund behaviour from.

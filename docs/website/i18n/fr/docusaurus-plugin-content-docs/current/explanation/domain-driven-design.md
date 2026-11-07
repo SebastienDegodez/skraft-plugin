@@ -128,7 +128,10 @@ flowchart TB
 comportement sur une ligne de temps : une commande (une intention, qui peut être refusée), un
 événement (un fait passé), un modèle de lecture (ce que l'utilisateur voit)
 ([Dymitruk, 2019](../reference/citations.mdx#cite-dymitruk-eventmodeling-2019)). skraft appelle **tranche** une
-commande, ses événements et son modèle de lecture : la plus petite unité de valeur livrable. La
+commande, ses événements et son modèle de lecture : la plus petite unité de valeur livrable.
+Chaque tranche donne à chaque commande, requête et événement ses champs, nommés en termes métier
+(`DriverId`, des centimes entiers, une date) : DISTILL écrit son squelette avec ces noms, et les
+tests de DELIVER fixent les signatures. La
 lentille `fitness` exige que chaque story ait au moins une commande ou une requête (G7) et que
 chaque commande d'un contexte métier ait un événement pour son succès (G8).
 

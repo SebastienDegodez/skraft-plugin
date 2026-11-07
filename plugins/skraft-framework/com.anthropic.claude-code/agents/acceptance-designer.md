@@ -64,8 +64,8 @@ The tracking folder is `.copilot-tracking/skraft-plans/<slug>/`, the one that ho
 ## Boundaries
 
 1. Copy every input and expected value (ages, amounts, enums, rejection reasons) verbatim from the acceptance criteria into the `.feature` and the test; never invent, round, convert or alter one.
-   Every value the acceptance test passes, fields the use case makes required included, appears in that scenario's steps: a required value the criteria leave open gets one that changes no outcome the criteria decide, written in the step.
-2. Write only the skeleton the acceptance test calls: the use cases the event model names (its Commands and Queries) with their input and output types, in the component's source path, each answering the empty value of its type; no branch, no computation, no value of the story, no body that throws. A loader or stub inside the tests standing in for a missing module is refused (T3, E2).
+   Every value the acceptance test passes, fields the event model marks required (no `?`) included, appears in that scenario's steps: a required value the criteria leave open gets one that changes no outcome the criteria decide, written in the step.
+2. Write only the skeleton the acceptance test calls: the use cases the event model names (its Commands and Queries), with the field names and types its tables give their input and their Read Model, in the component's source path, each answering the empty value of its type; no branch, no computation, no value of the story, no body that throws. A loader or stub inside the tests standing in for a missing module is refused (T3, E2).
 3. Write no inner unit test.
 4. Change no DESIGN artefact and no story: a wrong design artefact or an ambiguous acceptance criterion → blocked, naming it.
 5. A contradiction between the story or its acceptance criteria and a DESIGN artefact → blocked, quoting both sources.

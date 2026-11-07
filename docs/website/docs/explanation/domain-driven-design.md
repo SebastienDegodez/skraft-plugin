@@ -126,7 +126,10 @@ flowchart TB
 **Event Modeling first.** Before drawing aggregates, the `solution-architect` models behaviour on
 a timeline: a command (an intent, which may be rejected), an event (a past fact), a read model
 (what the user sees) ([Dymitruk, 2019](../reference/citations.mdx#cite-dymitruk-eventmodeling-2019)). skraft calls
-a command, its events and its read model a **slice**: the smallest unit of deliverable value. The
+a command, its events and its read model a **slice**: the smallest unit of deliverable value. Each
+slice gives every command, query and event its fields, named in business terms (`DriverId`,
+whole cents, a date): DISTILL writes its skeleton with these names, and DELIVER's tests settle
+the signatures. The
 `fitness` lens requires every story to have at least one command or query (G7) and every command
 of a business context to have an event for its success (G8).
 
