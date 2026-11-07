@@ -309,6 +309,8 @@ d'agent, chaque ADR modifié par la tentative et non publié doit :
 - ne porter aucun champ d'en-tête `amended_by`, `amended_in_place` ou `superseded_by` ;
 - n'avoir aucune section d'historique (`## Historique`, `## History`, `## Erratum`, `## Amendments`, `## Changelog`, `## Revisions`, à toute profondeur de titre) ;
 - ne nommer aucune version, tag d'image, digest ni version de paquet dans le corps (`3.1.4`, `v3`, `node:20-alpine`, `react-router@6`) : nommer la technologie ou la capacité qu'elle apporte ;
+- ne citer aucun fichier de code dans le corps ni le `decision` (une citation `#file:`, un chemin terminé par une extension de fichier comme `src/Domain/Order.cs`, une citation de ligne comme `Order.cs:9`) : nommer le composant, le code bouge ; une citation de ligne n'est jamais lue comme une version, un nom pointé seul (`System.IO`, `Node.js`) et une URL ne sont pas des fichiers ;
+- ne citer aucun critère d'acceptation (`AC-3`, `AC 3`, `acceptance criterion`, `critère d'acceptation`) ni aucun ticket (`#123`, `AB#123`, une URL d'issue, de pull request ou de work item) dans le corps ni le `decision` : l'ADR se lit seul, la story reste dans `decisions-index.md` ; `ADR-NNN`, `C#`, la ligne de titre et la ligne `**Supersedes:**` ne sont pas lus comme des citations ;
 - porter un en-tête `decision` d'une seule phrase ;
 - ne pas `supersedes` ni `amends` un autre ADR non publié, que le lien soit dans l'en-tête ou
   sur une ligne `**Supersedes:** ADR-MMM` : modifier celui-ci sur place.

@@ -309,6 +309,8 @@ ADR the attempt changed that is not published must:
 - carry no `amended_by`, `amended_in_place` or `superseded_by` header field;
 - have no history section (`## History`, `## Historique`, `## Erratum`, `## Amendments`, `## Changelog`, `## Revisions`, at any heading depth);
 - name no version, image tag, digest or package pin in the body (`3.1.4`, `v3`, `node:20-alpine`, `react-router@6`): name the technology or the capability it brings;
+- cite no code file in the body or the `decision` (a `#file:` citation, a path ending in a file extension such as `src/Domain/Order.cs`, a line citation such as `Order.cs:9`): name the component, code moves; a line citation is never read as a version, a bare dotted name (`System.IO`, `Node.js`) and a URL are no file;
+- cite no acceptance criterion (`AC-3`, `AC 3`, `acceptance criterion`, `critère d'acceptation`) and no ticket (`#123`, `AB#123`, an issue, pull request or work item URL) in the body or the `decision`: the ADR reads on its own, the story stays in `decisions-index.md`; `ADR-NNN`, `C#`, the title line and the `**Supersedes:**` line are not read as citations;
 - hold a `decision` header of exactly one sentence;
 - not `supersedes` or `amends` another unpublished ADR, whether the link sits in the header or
   on a `**Supersedes:** ADR-MMM` line: edit that one in place instead.
