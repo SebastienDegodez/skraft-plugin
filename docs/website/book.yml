@@ -470,8 +470,8 @@ parts:
             sidebar_position: 6
             doc: explanation/pipeline/design
             source: "plugins/skraft-framework/com.github.copilot/agents/solution-architect.agent.md"
-            purpose_fr: "Phase DESIGN : Event Modeling, DDD, ADR et contrats d'interface."
-            purpose_en: "DESIGN phase: Event Modeling, DDD, ADRs, and interface contracts."
+            purpose_fr: "Phase DESIGN : Event Modeling, DDD stratégique et tactique, ADR."
+            purpose_en: "DESIGN phase: Event Modeling, strategic and tactical DDD, ADRs."
           - id: distill
             type: derived
             label_fr: "DISTILL"

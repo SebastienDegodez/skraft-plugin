@@ -23,7 +23,7 @@ finding. For every row of `docs/adr/supersessions.md`, the named new ADR carries
 
 ## G3 — Dependency rule
 
-Assign each interface and type in the contracts to its layer. Domain and Application name no
+Assign each interface and type of the tactical design to its layer. Domain and Application name no
 Infrastructure or API type (`SqlConnection`, `DbContext`, a concrete repository, `HttpContext`);
 no diagram arrow points outward. `CancellationToken` in a handler signature is not a finding.
 
@@ -31,7 +31,7 @@ no diagram arrow points outward. `CancellationToken` in a handler signature is n
 
 ## G4 — Interfaces in an inner layer
 
-Every `I*` interface in the contracts sits under Domain or Application; a repository sits in the
+Every `I*` interface of the tactical design sits under Domain or Application; a repository sits in the
 layer its aggregate's ADR records (Domain for an aggregate, Application for a CRUD entity or a
 read model); every other interface sits in Application. An interface under Infrastructure, a
 repository whose layer differs from its ADR, or an aggregate ADR recording no layer is a finding.
@@ -128,11 +128,11 @@ An ADR decides a layer boundary, an aggregate boundary, a bounded context, a pat
 One decision per ADR, at decision level. Independent decisions in one body, a full signature (a contract sketch of up to 5 lines is fine), a file path, enum values, a Value Object inventory, a route tree, or a traceability reference (a ticket, AC, PRD or requirement id cited as a source) other than the story that triggered it is each a finding at its line. A quality attribute stated with its measure as a force of the decision (`p95 ≤ 300 ms`, NFR id beside it or not) is no finding.
 
 - ✗ "ADR-004's Decision lists `OrderStatus { Draft, Placed, Paid }` and `src/Domain/Order.cs`."
-- ✓ "ADR-004: model order status as a state machine inside the Order aggregate; the values live in `contracts-US-04.md`."
+- ✓ "ADR-004: model order status as a state machine inside the Order aggregate; the values live in the code."
 
 ## G16 — Comparable contracts share a convention
 
-Group the interfaces and hooks of the contracts under review and of earlier accepted contracts by
+Group the interfaces and hooks of the tactical design under review and of the accepted ones by
 consumer category (hooks wrapping a query, repositories of sibling aggregates, controllers with the
 same CRUD shape). Within a group, compare the state/return shape, the error convention (throw vs
 `Result` vs status flag) and the exposed field names. A difference with no ADR justifying it is a
@@ -145,7 +145,7 @@ finding naming both members.
 ## C1 — Same names everywhere
 
 Every context, aggregate, command, event and field is spelled the same in the context map,
-diagrams, contracts and event model, and matches the research or story it comes from.
+diagrams and event model, and matches the research or story it comes from.
 
 ## F1 — Quality attributes answered
 

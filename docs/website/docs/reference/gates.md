@@ -104,15 +104,15 @@ every criterion that forbids one.
 | **G1** | `consistency` | Every structural commitment shown in a diagram or detected in the structural scan has an `Accepted` ADR, or a `Proposed` ADR of this pass, justifying it. | blocker |
 | **G2** | `consistency` | No two ADRs contradict each other; every row of `docs/adr/supersessions.md` has its new ADR carrying the `**Supersedes:**` line. | blocker |
 | **G10** | `consistency` | The back-propagation journal of the consistency matrix explains every reconciliation rewrite. | blocker |
-| **G12** | `consistency` | Every `supersession-plan-{story}.md` row has its new ADR carrying `**Supersedes:**`, and no event model, diagram or contract still cites the superseded ADR as source of truth. | blocker |
+| **G12** | `consistency` | Every `supersession-plan-{story}.md` row has its new ADR carrying `**Supersedes:**`, and no event model or diagram still cites the superseded ADR as source of truth. | blocker |
 | **G14** | `consistency` | A `Status: Rejected` ADR stands only when a story or measurable force of this batch raised the question and its Alternatives section names the option adopted instead. | blocker |
-| **C1** | `consistency` | Context map, diagrams, contracts and event model name the same contexts, aggregates, commands, events and fields, and each matches the research and the story. | high |
+| **C1** | `consistency` | Context map, diagrams and event model name the same contexts, aggregates, commands, events and fields, and each matches the research and the story. | high |
 | **G3** | `architecture-compliance` | Domain and Application depend on nothing in Infrastructure or API. | blocker |
 | **G4** | `architecture-compliance` | Every application interface (repository, gateway, publisher) is defined in Domain or Application, in the layer the aggregate's ADR records, never in Infrastructure. | blocker |
 | **G5** | `architecture-compliance` | Each aggregate enforces only its own invariants and refers to other aggregates by ID. | high |
 | **G6** | `architecture-compliance` | The context map labels every relationship between contexts with an explicit pattern (ACL, Conformist, Shared Kernel, Partnership, Open Host Service, Published Language). | high |
 | **G16** | `architecture-compliance` | Comparable interfaces share the same state, return and error shape and exposed field names, unless an ADR justifies the divergence. | high |
-| **G7** | `fitness` | Every story maps to at least one Command or Query in the event model or contracts. | high |
+| **G7** | `fitness` | Every story maps to at least one Command or Query in the event model. | high |
 | **G8** | `fitness` | Every Command has at least one domain event for its successful outcome; Queries are exempt. | high |
 | **G9** | `fitness` | Every aggregate, bounded context, Event Sourcing adoption or Saga traces to a story that requires it. | medium |
 | **G11** | `fitness` | Every ADR adopting CQRS, Event Sourcing, Saga, eventual consistency, a service split or an ACL cites an admissible force and evaluates the "do without" option. | high |
@@ -154,7 +154,7 @@ The `distill_review` review: 4 lenses, verdict computed by the engine.
 | **T1** | `testability` | Each scenario and test checks one behaviour through an observable outcome and depends on no time, order or randomness it does not fix. | high |
 | **T2** | `testability` | Every input and expected value the outer acceptance test holds equals the `.feature` verbatim; the test holds the first scenario only. | blocker |
 | **T3** | `testability` | The outer acceptance test exists and its first scenario fails on a business assertion; the patch's production code is a skeleton whose signatures answer the empty value of their type. | blocker |
-| **G7** | `boundary-enforcement` | Every scenario in the test plan targets the Application use case the contracts name; an implementation-plan step that writes no scenario's acceptance test (an API or HTTP test of a later circle) is out of its scope. | blocker |
+| **G7** | `boundary-enforcement` | Every scenario in the test plan targets an Application use case the event model names (one of its Commands or Queries); an implementation-plan step that writes no scenario's acceptance test (an API or HTTP test of a later circle) is out of its scope. | blocker |
 | **G8** | `boundary-enforcement` | The test plan identifies at least one walking-skeleton scenario per flow. | high |
 | **E1** | `boundary-enforcement` | The acceptance test drives only that use case: it never calls or asserts on a domain internal, a repository or an infrastructure class. Constructing the use case's real collaborators to hand them to its constructor is wiring, not a finding. | blocker |
 | **E2** | `boundary-enforcement` | Test doubles replace only outer-edge dependencies, never a domain object or the use case; DISTILL's skeleton is the real module. | high |

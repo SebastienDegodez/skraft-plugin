@@ -131,7 +131,7 @@ If YES → ambiguous → flag.
 **Why this gate exists:** `outside-in-tdd`'s Concentric Circle Expansion mandates Phase 1 (Application-layer acceptance test + domain unit tests) GREEN before Phase 2 (API/HTTP integration test) or Phase 3 (Infrastructure) begins. A DISTILL pass that ships only HTTP/Integration tests for a brand-new use case has silently skipped Phase 1 — G1–G10 do not detect this because they check Gherkin/plan artefacts, never the actual test files on disk.
 
 **How to check:**
-1. From the boundary-enforcement coverage matrix (see G7), list every use case boundary named in `test-plan-{story}.md` / `contracts-{story}.md`.
+1. From the boundary-enforcement coverage matrix (see G7), list every use case boundary named in `test-plan-{story}.md` and in the event model.
 2. Mark which use cases are NEW to this story (introduced here) vs REUSED (already existed before this story, only extended).
 3. For each NEW use case, use `search/codebase` to look for its acceptance test file in the component's unit-test place (table above).
 4. If no such file exists, or the only test coverage for that use case lives in the integration project or folder (`*.IntegrationTest(s)`, `*.Integration.Test(s)`, `*-integration-test(s)`, `<test path>/integration/`) or elsewhere under the test path, flag it.
@@ -157,12 +157,12 @@ Repo search: tests/pay.test.mjs (found, at the test path root)
 
 ### G7 — Layer Boundary Compliance
 
-**Definition:** Each row in the coverage matrix (`test-plan-{story}.md`) targets an Application layer use case named in `contracts-{story}.md`. No scenario targets an Infrastructure adapter as its primary entry point. An implementation-plan step that writes no scenario's acceptance test (an API, HTTP or Infrastructure test of a later circle) is no row of the matrix: never a G7 finding.
+**Definition:** Each row in the coverage matrix (`test-plan-{story}.md`) targets an Application layer use case the event model `docs/domain/event-model/{bounded-context}.md` names (one of its Commands or Queries). No scenario targets an Infrastructure adapter as its primary entry point. An implementation-plan step that writes no scenario's acceptance test (an API, HTTP or Infrastructure test of a later circle) is no row of the matrix: never a G7 finding.
 
 **How to check:**
-1. Read `contracts-{story}.md` — extract the list of valid use case boundaries
+1. Read the event model `docs/domain/event-model/{bounded-context}.md` of the story's bounded context — its Commands and Queries are the list of valid use case boundaries
 2. Read `test-plan-{story}.md` — check the "Use Case Boundary" column for each row
-3. Verify each boundary name appears in the contracts
+3. Verify each boundary name appears in the event model as a Command or a Query
 4. Flag any row that names an Infrastructure class (repository, adapter) as the entry point instead of a use case
 
 **Severity:** BLOCKER — a test entering through Infrastructure instead of Application skips the business logic.

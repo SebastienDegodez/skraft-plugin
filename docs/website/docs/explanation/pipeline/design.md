@@ -22,7 +22,7 @@ The model is not one more deliverable: it is the language the team, the business
 share ([Evans, 2003](../../reference/citations.mdx#cite-evans-ddd-2003)). The why of this approach, from the
 ubiquitous language to aggregates, is developed in
 [Domain-Driven Design](../domain-driven-design.md); the
-dependency rule the contracts follow, in
+dependency rule the tactical design follows, in
 [Clean Architecture](../clean-architecture.md).
 
 :::info[☕ Running example — Starbucks *(illustrative)*]
@@ -52,8 +52,8 @@ is the same source the lenses read afterwards.
 
 ## Review, then ratify
 
-Three lenses review the design, each in a fresh context: **consistency** across ADRs, diagrams,
-contracts and event model; **compliance** with the architecture (the dependency rule, where
+Three lenses review the design, each in a fresh context: **consistency** across ADRs, diagrams
+and event model; **compliance** with the architecture (the dependency rule, where
 interfaces live, relations between contexts); **fitness** of the patterns, which refuses any
 aggregate or pattern no story justifies. The engine also checks, with no lens, the traces a
 human should not have to reread: consistency matrix, naming and register of superseded ADRs, the decisions index, and the ADR rules (no version, a one-sentence decision, a closed status vocabulary, a published ADR changed only in its status lines).

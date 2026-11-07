@@ -100,7 +100,7 @@ Verdict: `review-verdict.mjs --phase discuss`, same rules and same budget as DIS
 
 | Node | Kind | Role |
 | --- | --- | --- |
-| `design` | agent `solution-architect` | event model, strategic and tactical design, ADRs, contracts, consistency matrix |
+| `design` | agent `solution-architect` | event model, strategic and tactical design, ADRs, consistency matrix |
 | `design_review` | review | lenses `consistency`, `architecture-compliance`, `fitness` |
 | `adr` | question `adr-ratification` | ratification of the `Proposed` ADRs |
 
@@ -108,7 +108,7 @@ Verdict: `review-verdict.mjs --phase discuss`, same rules and same budget as DIS
 | --- | --- |
 | Inputs | the durable documentation under `docs/`, read first; research document; `details/{date}/structural-scan.json`, written by the engine before each attempt; story |
 | Declared output | `details/{date}/consistency-matrix-{slug}.md` |
-| Other outputs | in the tracking folder: `details/{date}/contracts-{story}.md`, `supersession-plan-{story}.md` (when an `Accepted` ADR is replaced); in the repository: `docs/architecture/context-map.md`, `docs/architecture/{bounded-context}.md` (tactical design), `docs/domain/event-model/{bounded-context}.md`, `docs/adr/adr-{NNN}-{subject}.md`, `docs/adr/decisions-index.md`, `docs/adr/supersessions.md` |
+| Other outputs | in the tracking folder: `details/{date}/supersession-plan-{story}.md` (when an `Accepted` ADR is replaced); in the repository: `docs/architecture/context-map.md`, `docs/architecture/{bounded-context}.md` (tactical design), `docs/domain/event-model/{bounded-context}.md`, `docs/adr/adr-{NNN}-{subject}.md`, `docs/adr/decisions-index.md`, `docs/adr/supersessions.md` |
 | Allowed writes | the tracking folder, `docs/adr/`, `docs/architecture/` and `docs/domain/event-model/` |
 | Commits | none by the architect, which has no shell: once `design` is done, the engine commits what it changed under its allowed paths as `docs(<story>): design <story>`, ending with `Refs: #<issue>` when the story has one, and journals it as `committed` on the step's `step.recorded` |
 | Existing documentation | instruction to the agent: a file of `docs/` is completed, not rewritten. When `docs/` already covers the story, the consistency matrix says so and cites the files of `docs/`, and the phase moves on. Engine check: the matrix's `docs-relied-on:` line lists at least one file of `docs/adr`, `docs/architecture`, `docs/domain/event-model` or `docs/features`, and each listed file exists in the working copy |

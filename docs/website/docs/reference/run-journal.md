@@ -94,7 +94,7 @@ output, and pre-creates it when it has a template. Detail by phase:
 | DISCOVER (skraft-backlog) | triage report, sprint proposal | `research/{date}/triage-{date}.md`, `research/{date}/sprint-proposal.md` |
 | DISCUSS (skraft-backlog) | stories, acceptance-criteria drafts | `plans/{date}/stories-{milestone}.md`, `plans/{date}/ac-draft-{story}.md` |
 | RESEARCH | research document | `research/{date}/{slug}-research.md` |
-| DESIGN | consistency matrix, contracts, supersession plan | `details/{date}/consistency-matrix-{slug}.md`, `contracts-{story}.md`, `supersession-plan-{story}.md`; `details/{date}/structural-scan.json` (written by the engine) |
+| DESIGN | consistency matrix, supersession plan | `details/{date}/consistency-matrix-{slug}.md`, `supersession-plan-{story}.md`; `details/{date}/structural-scan.json` (written by the engine) |
 | DESIGN | context map, tactical design, event model (in the repository, outside the tracking folder) | `docs/architecture/context-map.md`, `docs/architecture/{bounded-context}.md`, `docs/domain/event-model/{bounded-context}.md` |
 | DESIGN | ADRs (in the repository, outside the tracking folder) | `docs/adr/adr-{nnn}-{subject}.md`, `docs/adr/decisions-index.md`, `docs/adr/supersessions.md` |
 | DISTILL | test plan, implementation plan | `details/{date}/test-plan-{slug}.md`, `details/{date}/impl-plan-{story}.md` |
@@ -123,7 +123,7 @@ request shows them, and the next runs read them again.
 | ADRs, decision index, supersession registry | DESIGN | `docs/adr/` |
 | Gherkin scenarios, not executable | DISTILL | `docs/features/{bounded-context}/{feature}.feature` |
 
-These stay in the tracking folder: the research document, `contracts-{story}.md`,
+These stay in the tracking folder: the research document,
 `supersession-plan-{story}.md`, `consistency-matrix-{slug}.md`, `test-plan-{slug}.md`,
 `impl-plan-{story}.md`, the change log, the mutant proposals, the pull request prose, the journal
 and its reports.

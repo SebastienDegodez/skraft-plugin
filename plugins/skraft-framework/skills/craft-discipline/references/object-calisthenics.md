@@ -28,11 +28,13 @@ A business collection deserves its own class. No exposed `List<T>`.
 Max ~50 effective lines per Domain class. Beyond that, extract.
 
 ### 8. No class with more than two instance attributes
-Forces decomposition into Value Objects.
+Forces decomposition into Value Objects: `Driver(birth: DateOfBirth, licence: DrivingLicense)`,
+never `Driver(dateOfBirth: DateOnly, licenseYears: int, isSuspended: bool)` (rules 3 and 8 together).
 
 ### 9. No public getters/setters on entities
 Expose behaviors, not data. `entity.Apply(command)` > `entity.Status = x`.
 
 ## Out of Scope
 These rules apply to the **Domain layer only**. DTOs, ViewModels,
-and Infrastructure adapters are not subject to calisthenics.
+and Infrastructure adapters are not subject to calisthenics. A Command, Query or Domain Event
+payload is exempt from rules 3 and 8.

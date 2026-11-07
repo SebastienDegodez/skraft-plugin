@@ -305,7 +305,7 @@ test('each agent\'s documents in the tracking folder reach the lenses, by phase,
   const host = scripted({ files: Object.fromEntries(rules.map((path) => [path, '# Rules\n'])) }, (it) => [
     agent()(it),
     agent({ work: ({ git, tracking }) => {
-      tracking.write(SLUG, 'details/2026-10-11/contracts-checkout.md', '# Contracts\n')
+      tracking.write(SLUG, 'details/2026-10-11/supersession-plan-checkout.md', '# Supersession plan\n')
       tracking.write(SLUG, 'results/notes.json', '{}')
       git.commit('docs(checkout): ADR for the card payment', ['docs/adr/adr-001-card-payment.md', 'docs/architecture/context-map.md'], REFS_42)
     } })(it),
@@ -315,13 +315,13 @@ test('each agent\'s documents in the tracking folder reach the lenses, by phase,
   await host.start({ story: { issue: 42, title: 'Pay by card' } })
 
   const design = host.events().find((event) => event.type === 'step.recorded' && event.step === 'design')
-  assert.deepEqual(design.documents, ['details/2026-10-11/consistency-matrix-checkout.md', 'details/2026-10-11/contracts-checkout.md', 'details/2026-10-11/structural-scan.json'])
+  assert.deepEqual(design.documents, ['details/2026-10-11/consistency-matrix-checkout.md', 'details/2026-10-11/structural-scan.json', 'details/2026-10-11/supersession-plan-checkout.md'])
   const fitness = host.agentRunner.reviewed().find((dispatch) => dispatch.agent === 'fitness-lens').prompt
   assert.deepEqual(fitness.split('\n').filter((line) => /^  - .+: \//.test(line)), [
     `  - Review context (story, project rules, who wrote which document): ${TRACKING}/reviews/design_review-1/context.md`,
     `  - Documents of this phase: ${TRACKING}/details/2026-10-11/consistency-matrix-checkout.md`,
-    `  - Documents of this phase: ${TRACKING}/details/2026-10-11/contracts-checkout.md`,
     `  - Documents of this phase: ${TRACKING}/details/2026-10-11/structural-scan.json`,
+    `  - Documents of this phase: ${TRACKING}/details/2026-10-11/supersession-plan-checkout.md`,
     `  - Documents of the story and of the other phases: ${TRACKING}/plans/2026-10-11/issue-42.md`,
     `  - Documents of the story and of the other phases: ${TRACKING}/research/2026-10-11/checkout-research.md`,
     `  - Changes since the base of the run (open a whole file only when the patch lacks the context a finding needs): ${TRACKING}/reviews/design_review-1/design.patch`,
@@ -335,11 +335,11 @@ test('each agent\'s documents in the tracking folder reach the lenses, by phase,
     '', '## Documents by phase',
     '', '### RESEARCH', '', '- research (solution-researcher):', `  - ${TRACKING}/research/2026-10-11/checkout-research.md`,
     '', '### DESIGN (under review)', '', '- design (solution-architect):', `  - ${TRACKING}/details/2026-10-11/consistency-matrix-checkout.md`,
-    `  - ${TRACKING}/details/2026-10-11/contracts-checkout.md`, `  - ${TRACKING}/details/2026-10-11/structural-scan.json`,
+    `  - ${TRACKING}/details/2026-10-11/structural-scan.json`, `  - ${TRACKING}/details/2026-10-11/supersession-plan-checkout.md`,
     '',
   ].join('\n'))
   const coverage = host.agentRunner.reviewed().find((dispatch) => dispatch.agent === 'coverage-lens').prompt
-  assert.ok(coverage.includes(`  - Documents of the story and of the other phases: ${TRACKING}/details/2026-10-11/contracts-checkout.md`), coverage)
+  assert.ok(coverage.includes(`  - Documents of the story and of the other phases: ${TRACKING}/details/2026-10-11/supersession-plan-checkout.md`), coverage)
   const story = await host.tracking.read(SLUG, 'reviews/distill_review-1/context.md')
   assert.ok(story.includes('- distill (acceptance-designer):'), story)
 

@@ -92,7 +92,7 @@ flowchart LR
 | Phase | Specialist | Review lenses (verdict computed by the engine) | Result |
 |---|---|---|---|
 | `RESEARCH` | `solution-researcher` | — | Research document and constraints |
-| `DESIGN` | `solution-architect` | consistency, architecture-compliance, fitness; then you ratify the ADRs | ADRs, contracts, implementation shape |
+| `DESIGN` | `solution-architect` | consistency, architecture-compliance, fitness; then you ratify the ADRs | ADRs, event model, tactical design |
 | `DISTILL` | `acceptance-designer` | coverage, business-alignment, testability, boundary-enforcement | Gherkin scenarios, test plan, failing acceptance tests |
 | `DELIVER` | `software-engineer` | after the gates, before mutation: test-integrity, architecture-boundaries, cold-reader, mock-fidelity, contract-fidelity; test-integrity again on mutant kills | Tested code, gate evidence, red/green commits |
 | `PUBLISH` | `pr-writer` | — | The branch's pull request, with screenshots of a front end |

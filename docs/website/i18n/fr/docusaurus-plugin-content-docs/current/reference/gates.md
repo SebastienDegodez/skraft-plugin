@@ -105,15 +105,15 @@ critère qui en interdit un.
 | **G1** | `consistency` | Tout engagement structurel d'un diagramme ou du scan structurel a un ADR `Accepted`, ou `Proposed` de ce passage, qui le justifie. | blocker |
 | **G2** | `consistency` | Deux ADR ne se contredisent pas ; chaque ligne de `docs/adr/supersessions.md` a son nouvel ADR portant la ligne `**Supersedes:**`. | blocker |
 | **G10** | `consistency` | Le journal de rétro-propagation de la matrice de cohérence explique chaque réécriture de réconciliation. | blocker |
-| **G12** | `consistency` | Chaque ligne d'un `supersession-plan-{story}.md` a son nouvel ADR portant `**Supersedes:**`, et aucun modèle d'événements, diagramme ou contrat ne cite encore l'ADR remplacé comme source de vérité. | blocker |
+| **G12** | `consistency` | Chaque ligne d'un `supersession-plan-{story}.md` a son nouvel ADR portant `**Supersedes:**`, et aucun modèle d'événements ni diagramme ne cite encore l'ADR remplacé comme source de vérité. | blocker |
 | **G14** | `consistency` | Un ADR `Status: Rejected` ne tient que si une story ou une force mesurable du lot a posé la question et que sa section Alternatives nomme l'option retenue. | blocker |
-| **C1** | `consistency` | Context map, diagrammes, contrats et modèle d'événements nomment les mêmes contextes, agrégats, commandes, événements et champs, en accord avec la recherche et la story. | high |
+| **C1** | `consistency` | Context map, diagrammes et modèle d'événements nomment les mêmes contextes, agrégats, commandes, événements et champs, en accord avec la recherche et la story. | high |
 | **G3** | `architecture-compliance` | Domain et Application ne dépendent de rien dans Infrastructure ni API. | blocker |
 | **G4** | `architecture-compliance` | Chaque interface applicative (repository, gateway, publisher) est définie dans Domain ou Application, dans la couche que l'ADR de l'agrégat enregistre, jamais dans Infrastructure. | blocker |
 | **G5** | `architecture-compliance` | Chaque agrégat ne fait respecter que ses propres invariants et désigne les autres agrégats par leur ID. | high |
 | **G6** | `architecture-compliance` | Le context map étiquette chaque relation entre contextes d'un pattern explicite (ACL, Conformist, Shared Kernel, Partnership, Open Host Service, Published Language). | high |
 | **G16** | `architecture-compliance` | Les interfaces comparables partagent la même forme d'état, de retour et d'erreur et les mêmes noms de champs, sauf divergence justifiée par un ADR. | high |
-| **G7** | `fitness` | Chaque story correspond à au moins une Command ou Query du modèle d'événements ou des contrats. | high |
+| **G7** | `fitness` | Chaque story correspond à au moins une Command ou Query du modèle d'événements. | high |
 | **G8** | `fitness` | Chaque Command a au moins un événement de domaine pour son succès ; les Queries en sont exemptées. | high |
 | **G9** | `fitness` | Chaque agrégat, contexte, adoption d'Event Sourcing ou Saga remonte à une story qui l'exige. | medium |
 | **G11** | `fitness` | Tout ADR adoptant CQRS, Event Sourcing, Saga, cohérence éventuelle, découpage de service ou ACL cite une force admissible et évalue l'option « faire sans ». | high |
@@ -155,7 +155,7 @@ Revue `distill_review` : 4 lentilles, verdict calculé par le moteur.
 | **T1** | `testability` | Chaque scénario et chaque test vérifient un comportement par un résultat observable et ne dépendent d'aucun temps, ordre ou aléa qu'ils ne fixent pas. | high |
 | **T2** | `testability` | Chaque valeur d'entrée et attendue du test d'acceptation externe égale le `.feature` mot pour mot ; le test ne porte que le premier scénario. | blocker |
 | **T3** | `testability` | Le test d'acceptation externe existe et son premier scénario échoue sur une assertion métier ; le code de production du patch est un squelette dont les signatures rendent la valeur vide de leur type. | blocker |
-| **G7** | `boundary-enforcement` | Chaque scénario du plan de test vise le cas d'usage Application que nomment les contrats ; une étape du plan d'implémentation qui n'écrit le test d'acceptation d'aucun scénario (un test API ou HTTP d'un cercle suivant) est hors de sa portée. | blocker |
+| **G7** | `boundary-enforcement` | Chaque scénario du plan de test vise un cas d'usage Application que nomme le modèle d'événements (une de ses Commands ou Queries) ; une étape du plan d'implémentation qui n'écrit le test d'acceptation d'aucun scénario (un test API ou HTTP d'un cercle suivant) est hors de sa portée. | blocker |
 | **G8** | `boundary-enforcement` | Le plan de test identifie au moins un scénario walking skeleton par flux. | high |
 | **E1** | `boundary-enforcement` | Le test d'acceptation ne pilote que ce cas d'usage : jamais d'appel ni d'assertion sur un élément interne du domaine, un repository ou une classe d'infrastructure. Construire les vrais collaborateurs du cas d'usage pour les passer à son constructeur est du câblage, pas un finding. | blocker |
 | **E2** | `boundary-enforcement` | Les doublures ne remplacent que des dépendances du bord extérieur, jamais un objet du domaine ni le cas d'usage ; le squelette de DISTILL est le vrai module. | high |

@@ -272,7 +272,7 @@ checkout: solution-researcher, attempt 1
 
 `solution-architect` then designs the story: the context map, the tactical design and the event
 model go under `docs/architecture/` and `docs/domain/event-model/`, its ADRs under `docs/adr/`; the
-contracts and the consistency matrix go under
+consistency matrix goes under
 `.copilot-tracking/skraft-plans/checkout/details/<YYYY-MM-DD>/`. Three lenses review the design
 (consistency, architecture-compliance, fitness).
 

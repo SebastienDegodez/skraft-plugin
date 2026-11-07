@@ -34,7 +34,7 @@ phase.
   Definition of Ready exige au moins trois exemples du domaine avec des valeurs réelles
   (`planning-dor-lens`, G7), et aucun critère d'acceptation ne doit admettre deux lectures par
   un expert du métier (`planning-ac-quality-lens`, G4).
-- **DESIGN** le fige. Le modèle d'événements, la context map, les diagrammes et les contrats
+- **DESIGN** le fige. Le modèle d'événements, la context map et les diagrammes
   doivent nommer les mêmes contextes, agrégats, commandes, événements et champs que la story
   (lentille `consistency`, C1).
 - **DISTILL** le rend exécutable. Chaque terme d'un Given/When/Then vient du vocabulaire de la
@@ -116,7 +116,7 @@ flowchart TB
     D["docs/ du dépôt<br/>lu d'abord"] --> SA
     subgraph SA["DESIGN — solution-architect"]
         direction LR
-        EM["docs/domain/event-model/{contexte}.md<br/>Event Modeling"] --> CM["docs/architecture/context-map.md<br/>DDD stratégique"] --> TD["docs/architecture/{contexte}.md<br/>DDD tactique"] --> CT["contracts-{story}.md"] --> MX["ADR +<br/>consistency matrix"]
+        EM["docs/domain/event-model/{contexte}.md<br/>Event Modeling"] --> CM["docs/architecture/context-map.md<br/>DDD stratégique"] --> TD["docs/architecture/{contexte}.md<br/>DDD tactique"] --> MX["ADR +<br/>consistency matrix"]
     end
     SA --> RV["Revue DESIGN<br/>consistency · architecture-compliance · fitness"]
     RV --> H["Ratification humaine des ADR"] --> DI["DISTILL"]
@@ -168,7 +168,7 @@ story. L'architecte les écrit sous `docs/` du dépôt, sur la branche de la sto
 request les montre à côté du code. Le run suivant les lit avant toute autre chose et les complète
 plutôt que de repartir de zéro ; quand ils couvrent déjà sa story, l'architecte le dit, les cite
 et passe à la suite. Les scénarios qu'écrit DISTILL suivent le même chemin, sous
-`docs/features/`. Les contrats et la matrice de cohérence appartiennent à une story et restent
+`docs/features/`. La matrice de cohérence appartient à une story et reste
 dans le dossier de suivi du run. La liste complète :
 [Documentation durable](../reference/run-journal.md#durable-docs).
 

@@ -48,8 +48,8 @@ stimuli:
           dest: .copilot-tracking/skraft-plans/pricing/plans/2026-08-12/stories-m1.md
         - src: fixtures/designed-story/.copilot-tracking/skraft-plans/pricing/plans/2026-08-12/ac-draft-discount.md
           dest: .copilot-tracking/skraft-plans/pricing/plans/2026-08-12/ac-draft-discount.md
-        - src: fixtures/designed-story/.copilot-tracking/skraft-plans/pricing/details/2026-08-12/contracts.md
-          dest: .copilot-tracking/skraft-plans/pricing/details/2026-08-12/contracts.md
+        - src: fixtures/designed-story/docs/domain/event-model/checkout-pricing.md
+          dest: docs/domain/event-model/checkout-pricing.md
         - src: fixtures/designed-story/docs/adr/decisions-index.md
           dest: docs/adr/decisions-index.md
         - src: fixtures/designed-story/src/CheckoutPricing.Domain/CheckoutPricing.Domain.csproj
@@ -249,8 +249,8 @@ stimuli:
           dest: .copilot-tracking/skraft-plans/pricing/plans/2026-08-12/stories-m1.md
         - src: fixtures/designed-story/.copilot-tracking/skraft-plans/pricing/plans/2026-08-12/ac-draft-discount.md
           dest: .copilot-tracking/skraft-plans/pricing/plans/2026-08-12/ac-draft-discount.md
-        - src: fixtures/designed-story/.copilot-tracking/skraft-plans/pricing/details/2026-08-12/contracts.md
-          dest: .copilot-tracking/skraft-plans/pricing/details/2026-08-12/contracts.md
+        - src: fixtures/designed-story/docs/domain/event-model/checkout-pricing.md
+          dest: docs/domain/event-model/checkout-pricing.md
         - src: fixtures/designed-story/.copilot-tracking/skraft-plans/pricing/research/2026-08-12/pricing-research.md
           dest: .copilot-tracking/skraft-plans/pricing/research/2026-08-12/pricing-research.md
         - src: fixtures/designed-story/docs/adr/decisions-index.md

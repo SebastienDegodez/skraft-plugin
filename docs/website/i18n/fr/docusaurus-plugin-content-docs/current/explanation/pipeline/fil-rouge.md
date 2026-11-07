@@ -105,7 +105,7 @@ Trois lentilles relisent la conception, puis le run attend : un humain doit **ra
 avant que DISTILL commence. Un refus renvoie l'architecte au travail, avec la raison.
 
 - **Ce qui entre :** la story, ses critères et le document de recherche.
-- **Ce qui sort :** l'ADR ratifié + le modèle d'événements + les contrats.
+- **Ce qui sort :** l'ADR ratifié + le modèle d'événements + la conception tactique.
 
 ➡️ Détail de la phase : [DESIGN](./design.md).
 

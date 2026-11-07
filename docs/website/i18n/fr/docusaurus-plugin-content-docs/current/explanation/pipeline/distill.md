@@ -37,7 +37,7 @@ de l'extérieur ([Freeman & Pryce, 2009](../../reference/citations.mdx#cite-free
 
 Encore faut-il que l'échec ait du sens. Un test qui échoue parce qu'un module n'existe pas ne
 prouve rien : il échouerait aussi pour une story fausse. DISTILL écrit donc aussi le
-**squelette** que le test appelle — les signatures que nomment les contrats, chacune rendant la
+**squelette** que le test appelle — les cas d'usage que nomme le modèle d'événements, chacun rendant la
 valeur vide de son type, sans comportement — pour que le test échoue sur une **assertion
 métier**. Remplacer le module manquant par une doublure dans les tests est refusé : le squelette
 est le vrai module, que DELIVER remplira.

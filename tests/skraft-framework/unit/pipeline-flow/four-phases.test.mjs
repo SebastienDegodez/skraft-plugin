@@ -159,7 +159,7 @@ test('each agent is told its story, inputs, outputs, result file and the paths i
     '- ./* (the files right in the root of api)',
     '- Components:',
     '- api: . (dotnet), mocking: inprocess, contract testing: off, bdd: off, tests: dotnet test',
-    '- Commit the failing acceptance tests as `test(<story>): …`, with the skeleton they call: the signatures the contract names, each answering',
+    '- Commit the failing acceptance tests as `test(<story>): …`, with the skeleton they call: the use cases the event model names, each answering',
     '  the empty value of its type, no behaviour; a test failing on a missing module proves nothing. The engine runs the tests at every test commit and refuses one whose tests pass,',
     '  and any commit that is not `type(scope): subject`. A refused commit stays refused until you rewrite it.',
     '  A test commit whose only failing tests are e2e tests holds all of them, or a failing unit test too; otherwise they go in the feat or fix that makes them pass.',

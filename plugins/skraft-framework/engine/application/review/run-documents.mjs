@@ -5,7 +5,7 @@ import { boundInputs } from '../pipeline/review-inputs.mjs'
  * The documents a skraft run of this working copy wrote for the pull request it opened, so that
  * `skraft review --pr` judges it with the inputs the run's own review of that phase had: the
  * story, each agent's documents by phase (the change-log and its PLAN_DEVIATION lines, the test
- * plan, the implementation plan, the contracts), copied beside the pull request's review under
+ * plan, the implementation plan, the consistency matrix), copied beside the pull request's review under
  * `run/`. The run is the one whose journal (`.copilot-tracking/skraft-plans/<slug>/events.jsonl`)
  * records opening or updating this pull request; there is none when no run or more than one
  * does, when the journal cannot be read, or when the pull request's head holds any file under
