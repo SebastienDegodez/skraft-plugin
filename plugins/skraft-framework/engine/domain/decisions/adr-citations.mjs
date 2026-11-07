@@ -5,7 +5,7 @@
 
 const URL = String.raw`\b[A-Za-z][\w+.-]*:\/\/\S+`
 const LINE = String.raw`:\d+(?:-\d+)?(?![\w/])`
-const PATH = String.raw`(?<![\w/:.-])\/?(?:[\w.-]+\/)+[\w-]+(?:\.[\w-]+)*\.[a-z][a-z\d]*(?:${LINE})?`
+const PATH = String.raw`(?<![\w/\\:.-])[\\/]?(?:[\w.-]+[\\/])+[\w-]+(?:\.[\w-]+)*\.[a-z][a-z\d]*(?:${LINE})?`
 const NAME_AT_LINE = String.raw`(?<![\w/:.-])[\w-]+(?:\.[\w-]+)*\.[a-z][a-z\d]*${LINE}`
 // A URL is matched first and kept whole, so that its path is never read as a file.
 const URL_OR_CODE_FILE = new RegExp([URL, String.raw`#file:\S*\w`, PATH, NAME_AT_LINE].join('|'), 'g')

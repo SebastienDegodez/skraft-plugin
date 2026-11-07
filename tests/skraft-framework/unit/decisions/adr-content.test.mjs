@@ -11,18 +11,18 @@ const criterion = (token) => `${ADR_1} cites an acceptance criterion (${token}):
 const ticket = (token) => `${ADR_1} cites a ticket (${token}): an ADR reads on its own, the story and its tickets stay in decisions-index.md`
 const tooMany = (count) => `${ADR_1} states its decision in ${count} sentences: keep one sentence and give each independent decision its own ADR`
 
-test('a draft ADR that pins a version, an image tag or a package is refused, one line per pin; rewritten with families it passes', async () => {
+test('a draft ADR that pins a version, an image tag or a package is refused, one line per pin, a major written vN is none; rewritten with families, an address or a day, it passes', async () => {
   const host = scripted({ answers: [{ answer: 'RATIFIED' }] }, (it) => [
     agent()(it),
     architect({ [ADR_1]: adrText({ header: 'generator: skraft@1.15.3', body: 'We build on ubi8/ubi:8.9 and node:20-alpine, runtime:8.0-ubi8, digest sha256:ab12cd34, golang:1, node:18.4, ci:202610, react-router@6, release 2.1.0, SDK v3, API v2.1, postgres:16, and again 2.1.0.' }) })(it),
-    architect({ [ADR_1]: adrText({ body: '## Context\n\nWe build on Red Hat UBI base images and a client-side router that loads data, in C# on System.IO and in TypeScript on Node.js with DependencyInjection.cs, after [ADR-002](./adr-002-card-tokens.md) and ADR-003 &#35;. Events go through kafka:9092 and postgres:5432, the health check is http://localhost:8080/health, the probe http://dev:8/ping, the docs are at localhost:3000/docs (see /v1/orders) and https://example.com/guide/setup.html.' }) })(it),
+    architect({ [ADR_1]: adrText({ body: '## Context\n\nWe build on Red Hat UBI base images and a client-side router that loads data, in C# on System.IO and in TypeScript on Node.js with DependencyInjection.cs, after [ADR-002](./adr-002-card-tokens.md) and ADR-003 &#35;. Events go through kafka:9092 and postgres:5432, the health check is http://localhost:8080/health, the probe http://dev:8/ping, the docs are at localhost:3000/docs (see /v1/orders) and https://example.com/guide/setup.html. The API listens on 127.0.0.1:3917 and 10.0.0.12 since 2026.11.07 and 2026/11/08, and keeps API v1 stable.' }) })(it),
     ...afterDesign(it),
   ])
 
   const outcome = await host.start()
 
   assert.deepEqual(designRecords(host), [
-    [1, 1, 'failed', 'adr-lifecycle', [pinned('ubi8/ubi:8.9'), pinned('node:20-alpine'), pinned('runtime:8.0-ubi8'), pinned('sha256:ab12cd34'), pinned('golang:1'), pinned('node:18.4'), pinned('ci:202610'), pinned('react-router@6'), pinned('2.1.0'), pinned('v3'), pinned('v2.1'), pinned('postgres:16')]],
+    [1, 1, 'failed', 'adr-lifecycle', [pinned('ubi8/ubi:8.9'), pinned('node:20-alpine'), pinned('runtime:8.0-ubi8'), pinned('sha256:ab12cd34'), pinned('golang:1'), pinned('node:18.4'), pinned('ci:202610'), pinned('react-router@6'), pinned('2.1.0'), pinned('postgres:16')]],
     [1, 2, 'done', null, []],
   ])
   assert.equal(outcome.status, 'done')
@@ -31,7 +31,7 @@ test('a draft ADR that pins a version, an image tag or a package is refused, one
 test('a draft ADR that cites a code file is refused once per file and never read as a version; naming the component passes', async () => {
   const host = scripted({ answers: [{ answer: 'RATIFIED' }] }, (it) => [
     agent()(it),
-    architect({ [ADR_1]: adrText({ body: 'The store is registered in api/src/Mastermind.Infrastructure/DependencyInjection.cs:9 and called from web/src/palette/infrastructure/HttpPaletteGateway.ts:8-12, see Order.cs:120, #file:src/Domain/Order.cs and src/Domain/Order.cs, again Order.cs:120.' }) })(it),
+    architect({ [ADR_1]: adrText({ body: 'The store is registered in api/src/Mastermind.Infrastructure/DependencyInjection.cs:9 and called from web/src/palette/infrastructure/HttpPaletteGateway.ts:8-12, see Order.cs:120, #file:src/Domain/Order.cs and src/Domain/Order.cs, web\\src\\app\\App.tsx, again Order.cs:120.' }) })(it),
     architect({ [ADR_1]: adrText({ decision: 'We keep the game state in web/src/state.ts.' }) })(it),
     architect({ [ADR_1]: adrText({ body: 'The store is registered by the infrastructure layer of the API and called from the palette gateway of the web client.' }) })(it),
     ...afterDesign(it),
@@ -40,7 +40,7 @@ test('a draft ADR that cites a code file is refused once per file and never read
   const outcome = await host.start()
 
   assert.deepEqual(designRecords(host), [
-    [1, 1, 'failed', 'adr-lifecycle', [codeFile('api/src/Mastermind.Infrastructure/DependencyInjection.cs:9'), codeFile('web/src/palette/infrastructure/HttpPaletteGateway.ts:8-12'), codeFile('Order.cs:120'), codeFile('#file:src/Domain/Order.cs'), codeFile('src/Domain/Order.cs')]],
+    [1, 1, 'failed', 'adr-lifecycle', [codeFile('api/src/Mastermind.Infrastructure/DependencyInjection.cs:9'), codeFile('web/src/palette/infrastructure/HttpPaletteGateway.ts:8-12'), codeFile('Order.cs:120'), codeFile('#file:src/Domain/Order.cs'), codeFile('src/Domain/Order.cs'), codeFile('web\\src\\app\\App.tsx')]],
     [1, 2, 'failed', 'adr-lifecycle', [codeFile('web/src/state.ts')]],
     [1, 3, 'done', null, []],
   ])

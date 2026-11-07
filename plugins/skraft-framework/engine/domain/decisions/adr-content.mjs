@@ -12,12 +12,16 @@ const PACKAGE_PIN = String.raw`[\w./-]+@[\^~]?\d[\w.]*`
 // version) and anything in a URL's authority (`//host:port`).
 const IMAGE_TAG = String.raw`(?<!\/\/[^\s/]*)\b[A-Za-z][\w.-]*(?:\/[\w.-]+)*:(?!\d{3,5}(?![\w-]|\.\d))[\w-]*\d[\w-]*(?:\.[\w-]+)*`
 const SEMVER = String.raw`\b\d+\.\d+\.\d+\b`
-const MAJOR = String.raw`(?<!\/)\b[vV]\d+(?:\.\d+)*\b`
 const BLOCK_INDICATOR = /^[>|][+-]?$/
 const BLOCK_LINES = /^[^\n]*(?:\r?\n[ \t]+\S[^\n]*)*/
 const SENTENCE_END = /(?<!\b(?:e\.g|i\.e|vs|etc|cf)\.)(?<=[.!?])\s+(?=[A-Z])/
 const CODE_SPAN = /`[^`]*`/g
-const PINS = new RegExp([PACKAGE_PIN, IMAGE_TAG, SEMVER, MAJOR].join('|'), 'g')
+const PINS = new RegExp([PACKAGE_PIN, IMAGE_TAG, SEMVER].join('|'), 'g')
+const OCTET = String.raw`(?:25[0-5]|2[0-4]\d|1?\d?\d)`
+/** An IPv4 address, which a semantic version would otherwise read. */
+const ADDRESS = new RegExp(String.raw`\b${OCTET}(?:\.${OCTET}){3}\b`, 'g')
+/** A calendar day written with dots, slashes or hyphens. */
+const DAY = /\b(?:19|20)\d\d([./-])(?:0[1-9]|1[0-2])\1(?:0[1-9]|[12]\d|3[01])\b/g
 
 /** The text after the YAML header; the whole text without one. @param {string} text */
 const bodyOf = (text) => {
@@ -26,10 +30,11 @@ const bodyOf = (text) => {
 }
 
 /**
- * Each version pin of the body, once, in reading order; a code file's line is no version.
+ * Each version pin of the body, once, in reading order; a code file's line, an address or a day is
+ * no version.
  * @param {string} body
  */
-const versionPins = (body) => [...new Set(withoutCodeFiles(body).match(PINS) ?? [])]
+const versionPins = (body) => [...new Set(withoutCodeFiles(body).replace(ADDRESS, ' ').replace(DAY, ' ').match(PINS) ?? [])]
 
 /**
  * The header's `decision`: its value, or the indented lines of a folded or literal block; null or
