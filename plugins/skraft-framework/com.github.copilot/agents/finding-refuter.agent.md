@@ -6,10 +6,8 @@ tools:
   - read
   - search
   - read/readFile
-  - search/codebase
   - search/textSearch
   - search/fileSearch
-  - graphify/*
 ---
 
 # Finding Refuter

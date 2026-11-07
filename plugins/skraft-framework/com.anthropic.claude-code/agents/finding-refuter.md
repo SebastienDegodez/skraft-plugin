@@ -7,7 +7,6 @@ tools:
   - Read
   - Grep
   - Glob
-  - mcp__graphify__*
 ---
 
 # Finding Refuter

@@ -55,8 +55,7 @@ test('actual native tree keeps native IDs, bounded tools, family models and one 
     if (data['user-invocable']) publicIds.push(data.name)
     assert.equal(data.tools.includes('*'), false)
     assert.equal(data.tools.includes('mcp__*'), false)
-    // Lenses and the refuter stay read-only; the graphify server is the one read-only addition allowed.
-    if (file.endsWith('-lens.md') || file === 'finding-refuter.md') assert.deepEqual(data.tools.filter((tool) => tool !== 'mcp__graphify__*'), ['Read', 'Grep', 'Glob'])
+    if (file.endsWith('-lens.md') || file === 'finding-refuter.md') assert.deepEqual(data.tools, ['Read', 'Grep', 'Glob'])
   }
   assert.deepEqual(publicIds, ['skraft-orchestrator'])
 })
