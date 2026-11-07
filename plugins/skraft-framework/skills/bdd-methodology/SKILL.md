@@ -11,6 +11,11 @@ Behaviour-Driven Development translates acceptance criteria into executable spec
 
 **Core rule:** Every word in a Gherkin scenario must be understood by a domain expert who has never seen code.
 
+**Keywords in English**, whatever language the domain speaks: `Feature:`, `Scenario:`,
+`Scenario Outline:`, `Examples:`, `Given`, `When`, `Then`, `And`. Never a `# language:` header —
+the engine reads one keyword set, and a file declaring another language is sent back naming it. The
+sentences stay in the domain's own language; only the keywords are fixed.
+
 ## Mapping AC → Gherkin
 
 Each acceptance criterion produces one or more scenarios. The mapping is explicit and traceable.
