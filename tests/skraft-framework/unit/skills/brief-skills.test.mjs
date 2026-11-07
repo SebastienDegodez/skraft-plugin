@@ -80,7 +80,7 @@ test('the agent of the TDD cycles reads the mocking skill of each component, and
     '- api: . (dotnet), mocking: inprocess, contract testing: on, bdd: off, tests: dotnet test',
     '- web: ../web (react), mocking: inprocess, contract testing: off, bdd: off, tests: npm test',
     '- admin: ../admin (javascript), mocking: inprocess, contract testing: off, bdd: off, tests: npm test',
-    '- shop: ../shop (typescript), mocking: microcks, contract testing: off, bdd: on, tests: npm test',
+    '- shop: ../shop (typescript), mocking: microcks, contract testing: off, bdd: features → features/step_definitions, tests: npm test',
     '- pay: ../pay (dotnet), mocking: inprocess, contract testing: on, bdd: off, tests: dotnet test',
   ].join('\n')), deliver)
 })

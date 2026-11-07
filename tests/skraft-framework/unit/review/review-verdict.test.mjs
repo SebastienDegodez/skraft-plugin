@@ -232,7 +232,7 @@ test('a blind lens reads the changes without the decision records and design doc
   const records = ['docs/adr/adr-001-card-payment.md', 'docs/adr/supersessions.md']
   const designs = ['docs/architecture/context-map.md', 'docs/architecture/payment.md', 'docs/domain/event-model/payment.md']
   const scenarios = ['docs/features/payment/pay-by-card.feature', 'tests/docs/features/payment/nested.feature']
-  const host = scripted({}, (it) => [
+  const host = scripted({ components: [{ ...API, bdd: [{ features: 'docs/features', steps: 'tests/Steps' }] }] }, (it) => [
     agent()(it),
     agent({ work: ({ git }) => git.commit('docs(checkout): ADR and design of the card payment', [...records, ...designs]) })(it),
     agent({ work: ({ git }) => git.commit('test(checkout): acceptance of the card payment', ['tests/Acceptance/CheckoutAcceptanceTests.cs', ...scenarios]) })(it),

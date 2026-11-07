@@ -36,7 +36,7 @@ const NO_SDK = {
   detail: 'no Copilot SDK under /home/dev/.copilot/pkg: under VS Code, the Skraft - Orchestrator agent conducts skraft next and skraft record; install the Copilot CLI to run the pipeline through its SDK',
 }
 
-test('doctor names where each runner reads a component\'s scenarios, warns about scenarios nothing binds, says so when nothing is meant to, and fails when nobody decided', async () => {
+test('doctor names where each runner reads a component\'s scenarios, fails on a folder that is no folder, says so when nothing is meant to, and fails when nobody decided', async () => {
   const pair = { runner: 'reqnroll', features: 'Features', steps: 'Steps' }
   const bddOf = async (files) => {
     const { doctor: check } = doctor({ components: [{ ...API, bdd: [pair] }], files: { ...FOLDERS, ...files } })
@@ -48,7 +48,10 @@ test('doctor names where each runner reads a component\'s scenarios, warns about
     { subject: 'api/bdd', status: 'ok', detail: 'reqnroll: Features → Steps' },
   ])
   assert.deepEqual(await bddOf({ 'services/payment-api/Features/pay.feature': '' }), [
-    { subject: 'api/bdd', status: 'warn', detail: 'reqnroll: Features holds scenarios and Steps is no folder: nothing binds them' },
+    { subject: 'api/bdd', status: 'fail', detail: 'reqnroll: Steps is no folder of the working copy' },
+  ])
+  assert.deepEqual(await bddOf({}), [
+    { subject: 'api/bdd', status: 'fail', detail: 'reqnroll: Features and Steps are no folders of the working copy' },
   ])
   const unbound = doctor({ components: [{ ...API, bdd: [{ features: 'Features' }] }], files: { ...FOLDERS, 'services/payment-api/Features/pay.feature': '' } })
   assert.deepEqual((await unbound.doctor.check()).checks.filter(({ subject }) => subject === 'api/bdd'), [

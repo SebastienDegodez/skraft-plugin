@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { BUILT_IN_WORKFLOW, ScriptedMachine } from '../support/in-memory-host.mjs'
-import { agent, DOCS_FOLDERS, nominal, REFS_42, scripted, SLUG } from '../support/pipeline-host.mjs'
+import { agent, API, DOCS_FOLDERS, nominal, REFS_42, scripted, SLUG } from '../support/pipeline-host.mjs'
 import { ALL_KILLED, strykerReport } from '../support/mutation-reports.mjs'
 import { UNLISTABLE_ADRS, waitingOnEnvironment } from '../support/decisions.mjs'
 
@@ -18,8 +18,11 @@ const withoutDocsFolders = (options, script) => {
   return host
 }
 
+/** A component that keeps its scenarios in docs/features, as a repository that writes Gherkin names it. */
+const GHERKIN = Object.freeze({ ...API, bdd: [{ features: 'docs/features', steps: 'tests/Steps' }] })
+
 test('the engine creates the docs folders of a role that the repository does not have yet, each with an empty .gitkeep it commits alone before the agent starts, and leaves existing ones alone', async () => {
-  const host = withoutDocsFolders({}, (it) => nominal(it, REFS_42))
+  const host = withoutDocsFolders({ components: [GHERKIN] }, (it) => nominal(it, REFS_42))
 
   const outcome = await host.start({ story: { issue: 42, title: 'Pay by card' } })
 
@@ -60,7 +63,7 @@ const STRYKER = '. $ dotnet stryker'
 const DESIGNER_PROPOSES = BUILT_IN_WORKFLOW.replace('kill_proposal [shape=box, agent="software-engineer"', 'kill_proposal [shape=box, agent="acceptance-designer"')
 
 test('a node that proposes for surviving mutants gets no folder of its agent\'s role: it changes nothing in the working copy', async () => {
-  const host = withoutDocsFolders({ machine: new ScriptedMachine(), answers: [{ answer: 'APPLY' }], files: { '.skraft/pipeline.skraft.dot': DESIGNER_PROPOSES } }, (it) => {
+  const host = withoutDocsFolders({ components: [GHERKIN], machine: new ScriptedMachine(), answers: [{ answer: 'APPLY' }], files: { '.skraft/pipeline.skraft.dot': DESIGNER_PROPOSES } }, (it) => {
     const [research, design, distill, deliver] = nominal(it)
     const removingScenarios = async () => {
       await deliver()
@@ -82,4 +85,14 @@ test('a node that proposes for surviving mutants gets no folder of its agent\'s 
   assert.ok(host.agentRunner.dispatches.some(({ label }) => label === `skraft ${SLUG} · kill_proposal · group 1 of 1 · attempt 1`), host.agentRunner.dispatches.map(({ label }) => label).join('\n'))
   assert.equal(host.workspace.files.has('docs/features/.gitkeep'), false)
   assert.deepEqual(folderCommits(host), [['docs/adr/.gitkeep', 'docs/domain/event-model/.gitkeep'], ['docs/features/.gitkeep']])
+})
+
+test('a component that writes no Gherkin has no features folder created for it: the engine creates what its configuration names, and nothing else', async () => {
+  const host = withoutDocsFolders({ components: [{ ...API, bdd: false }] }, nominal)
+
+  const outcome = await host.start()
+
+  assert.equal(outcome.status, 'done', outcome.reason)
+  assert.deepEqual(folderCommits(host), [['docs/adr/.gitkeep', 'docs/domain/event-model/.gitkeep']], 'the architect still gets its folders; the designer asks for none')
+  assert.equal(host.workspace.files.has('docs/features/.gitkeep'), false)
 })

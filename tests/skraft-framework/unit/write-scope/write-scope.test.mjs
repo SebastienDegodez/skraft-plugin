@@ -4,6 +4,9 @@ import { BUILT_IN_WORKFLOW, InMemoryGit } from '../support/in-memory-host.mjs'
 import { agent, API, scripted, SLUG, tddCycle } from '../support/pipeline-host.mjs'
 import { waitingOnEnvironment } from '../support/decisions.mjs'
 
+/** A component that keeps its scenarios in docs/features, so its designer may write them there. */
+const GHERKIN = Object.freeze({ ...API, bdd: [{ features: 'docs/features', steps: 'tests/Steps' }] })
+
 const unavailable = () => ({ ok: false, unavailable: true, text: '' })
 const recorded = (host, step) => host.events().filter((event) => event.type === 'step.recorded' && event.step === step)
 
@@ -165,8 +168,8 @@ test('the agents writing a component\'s paths may change the files right in its 
   assert.deepEqual(recorded(architect, 'design')[0].failures, ['out of write scope: Checkout.sln'])
 })
 
-test('the acceptance designer writes the skeleton its failing test calls in the source paths, beside the test, and its scenarios under docs/features', async () => {
-  const host = scripted({}, (it) => [
+test('the acceptance designer writes the skeleton its failing test calls in the source paths, beside the test, and its scenarios in the folder its component declares', async () => {
+  const host = scripted({ components: [GHERKIN] }, (it) => [
     agent()(it), agent()(it),
     agent({ work: ({ git }) => git.commit('test(checkout): pay by card', ['src/Checkout/Pay.cs', 'tests/Checkout.UnitTest/PayTests.cs', 'docs/features/payment/pay-by-card.feature']) })(it),
     unavailable,
@@ -193,7 +196,7 @@ test('a component whose paths list no folder (no tests folder yet) is written an
 
 test('a change an agent leaves uncommitted in its paths is refused, and told so, until its commit holds it; the tracking folder needs none', async () => {
   const FEATURE = 'docs/features/payment/pay-by-card.feature'
-  const host = scripted({}, (it) => [
+  const host = scripted({ components: [GHERKIN] }, (it) => [
     agent()(it), agent()(it),
     agent({ work: ({ git }) => { git.commit('test(checkout): acceptance of the card payment', ['tests/Acceptance/Pay.cs']); git.change(FEATURE, `.copilot-tracking/skraft-plans/${SLUG}/notes.md`) } })(it),
     agent({ work: ({ git }) => git.commit('docs(checkout): state the card holder\'s age', [FEATURE]) })(it),
