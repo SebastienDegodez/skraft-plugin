@@ -155,7 +155,7 @@ chaque commande d'un contexte métier ait un événement pour son succès (G8).
   [Fowler, 2002](../reference/citations.mdx#cite-fowler-peaa-2002)). Son interface vit dans Domain ou dans
   Application, jamais dans Infrastructure ; la skill `clean-architecture-<stack>` en décide, et
   la conception tactique le note, jamais une ADR (lentille `architecture-compliance`, G4) ;
-- la **gateway**, une par appel que l'application fait hors de son contexte (un autre contexte,
+- la **gateway**, une par dépendance extérieure que l'application appelle (un autre contexte,
   une API externe, une horloge), est une interface nommée d'après ce qu'elle demande, en termes
   métier. La conception tactique donne sa couche ; les tests de DELIVER donnent ses méthodes.
 

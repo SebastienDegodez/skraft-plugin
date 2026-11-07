@@ -151,7 +151,7 @@ of a business context to have an event for its success (G8).
   [Fowler, 2002](../reference/citations.mdx#cite-fowler-peaa-2002)). Its interface lives in Domain or in
   Application, never in Infrastructure; the `clean-architecture-<stack>` skill decides which, and
   the tactical design records it, never an ADR (`architecture-compliance` lens, G4);
-- the **gateway**, one per call the application makes outside its context (another context, an
+- the **gateway**, one per outside dependency the application calls (another context, an
   external API, a clock), is an interface named for what it asks in business terms. The tactical
   design gives its layer; DELIVER's tests give its methods.
 
