@@ -1,14 +1,18 @@
 /**
  * The RESEARCH records the engine checks when the solution researcher finishes, instead of a lens:
  *   citations  every `#file:` citation of its research document names a readable file of the working
- *              copy, and the line range it cites is one that file holds (#517)
+ *              copy, and the line range it cites is one that file holds (#517); a path written
+ *              from a component's root is named back from the workspace root
  *
  * @typedef {{ path: string, text: string | null }} Text
  * @typedef {{ path: string, text: string }} Document a research document of the tracking folder, as the engine read it
- * @typedef {{ documents: Document[], cited: Text[] }} Records
+ * @typedef {{ documents: Document[], cited: Text[], roots: string[] }} Records
  *   documents: the research documents of the tracking folder; cited: the paths their `#file:`
- *   citations name, text null when the working copy has none or the path is no readable file.
+ *   citations name and, for each, the same path under every component root, text null when the
+ *   working copy has none or the path is no readable file; roots: the component roots.
  */
+
+import { joinRelative } from '../config/relative-path.mjs'
 
 const RESEARCH = /(^|\/)research\/[^/]+\/[^/]+\.md$/
 /** `#file:<path>`, then `:line` or `:line-line` over a hyphen or a dash: the only citation of a working-copy file. */
@@ -47,12 +51,20 @@ const allCitedPaths = (text) => [...new Set(citationsOf(text).map(({ path }) => 
 export const citedPaths = (text) => allCitedPaths(text).filter((path) => !OUTSIDE.test(path))
 
 /**
+ * The same path under each component root inside the working copy, other than the working copy
+ * itself: a root outside it gives a `#file:` the engine never reads.
+ * @param {string} path @param {string[]} roots
+ * @returns {string[]}
+ */
+export const underRoots = (path, roots) => roots.filter((root) => root !== '.' && !OUTSIDE.test(root)).map((root) => joinRelative(root, path))
+
+/**
  * Why the research records send the researcher back; empty when they hold.
  * @param {Records} records
  * @returns {string[]}
  */
-export const researchFailures = ({ documents, cited }) => documents.flatMap((document) => [
-  ...missingCitations(document, cited),
+export const researchFailures = ({ documents, cited, roots }) => documents.flatMap((document) => [
+  ...missingCitations(document, cited, roots),
   ...rangeFailures(document, cited),
 ])
 
@@ -69,10 +81,16 @@ const lineCount = (text) => (text === null ? null : withoutClosingNewline(text).
 // Stryker disable next-line StringLiteral: what replaces the closing newline holds no newline either, so the file keeps its line count
 const withoutClosingNewline = (text) => text.replace(/\n$/, '')
 
-/** Each path a document cites that is no file of the working copy. @param {Document} document @param {Text[]} cited */
-const missingCitations = ({ path, text }, cited) => allCitedPaths(text)
+/** Each path a document cites that is no file of the working copy. @param {Document} document @param {Text[]} cited @param {string[]} roots */
+const missingCitations = ({ path, text }, cited, roots) => allCitedPaths(text)
   .filter((cite) => textOf(cited, cite) === null)
-  .map((cite) => `${path} cites #file:${cite}, which is no file of the working copy (#517)`)
+  .map((cite) => `${path} cites #file:${cite}, which is no file of the working copy${fromWorkspaceRoot(cited, underRoots(cite, roots))} (#517)`)
+
+/** Where the components hold a path written from their root, or nothing when none does. @param {Text[]} cited @param {string[]} candidates */
+const fromWorkspaceRoot = (cited, candidates) => {
+  const held = candidates.filter((candidate) => textOf(cited, candidate) !== null)
+  return held.length === 0 ? '' : `: write it from the workspace root, ${held.map((file) => `#file:${file}`).join(' or ')}`
+}
 
 /** @param {Text[]} cited @param {string} path */
 const textOf = (cited, path) => cited.find((entry) => entry.path === path)?.text ?? null

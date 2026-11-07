@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { agent, nominal, scripted, SLUG } from '../support/pipeline-host.mjs'
+import { agent, API, nominal, scripted, SLUG } from '../support/pipeline-host.mjs'
 
 const RESEARCH = 'research/2026-10-11/checkout-research.md'
 /** A file of the working copy the harness holds, one line long. */
@@ -38,6 +38,8 @@ const recorded = (host) => host.events()
   .map(({ attempt, outcome, code, failures }) => [attempt, outcome, code, failures])
 
 const noFile = (path) => `${RESEARCH} cites #file:${path}, which is no file of the working copy (#517)`
+/** A citation written from a component root: the paths that component holds it at, from the workspace root. @param {string} cite @param {string} full */
+const fromRoot = (cite, full) => `${noFile(cite).replace(' (#517)', '')}: write it from the workspace root, ${full} (#517)`
 const outOfRange = (cite, lines) => `${RESEARCH} cites #file:${cite}, outside the 1-${lines} line range (#517)`
 
 test('a #file: citation of a path the working copy has not sends the researcher back, wherever the citation sits and however often it cites it, and the run goes on once every cited file exists', async () => {
@@ -212,5 +214,37 @@ test('a range starting at line zero sends the researcher back as an invalid line
     'failed',
     'research-records',
     [outOfRange(`${MONEY_PATH}:0-1`, 2)],
+  ])
+})
+
+test('a #file: citation written from a component root sends the researcher back with its path from the workspace root, every component inside the working copy that holds it named', async () => {
+  const web = { ...API, name: 'web', root: 'web', stack: 'react', commands: { test: 'npm test' } }
+  const admin = { ...web, name: 'admin', root: 'admin' }
+  const shop = { ...web, name: 'shop', root: '../shop' }
+  const host = scripted({
+    components: [API, web, admin, shop],
+    files: {
+      'web/src/palette/Palette.tsx': 'export const Palette = () => null\n',
+      'web/docs/notes.md': '# Web\n',
+      'admin/docs/notes.md': '# Admin\n',
+      '../shop/docs/shop.md': '# Shop\n',
+    },
+  }, (it) => [
+    researcher('#file:src/palette/Palette.tsx:1 draws it, #file:docs/notes.md and #file:docs/shop.md say why, #file:palette/Palette.tsx and #file:src/Pricing/Absent.cs do not exist.\n')(it),
+    researcher('#file:web/src/palette/Palette.tsx:1 draws it, #file:web/docs/notes.md says why.\n')(it),
+    ...nominal(it).slice(1),
+  ])
+
+  await host.start()
+
+  assert.deepEqual(recorded(host), [
+    [1, 'failed', 'research-records', [
+      fromRoot('src/palette/Palette.tsx', '#file:web/src/palette/Palette.tsx'),
+      fromRoot('docs/notes.md', '#file:web/docs/notes.md or #file:admin/docs/notes.md'),
+      noFile('docs/shop.md'),
+      noFile('palette/Palette.tsx'),
+      noFile('src/Pricing/Absent.cs'),
+    ]],
+    [2, 'done', null, []],
   ])
 })
