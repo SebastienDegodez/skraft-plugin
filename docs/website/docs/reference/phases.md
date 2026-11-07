@@ -93,7 +93,7 @@ Verdict: `review-verdict.mjs --phase discuss`, same rules and same budget as DIS
 | Output | `research/{date}/{slug}-research.md`, pre-created from `research.template.md` |
 | Allowed writes | the tracking folder only |
 | `docs/` already covers the story | the research document says so and cites the files of `docs/` with `#file:`; the engine reads those citations, so a file they name must exist |
-| Check | output filled: not empty, different from the template, no `{{…}}` left. Research records after each attempt: the document cites a file of the working copy as `#file:<path from the repository root>[:start[-end]]` (an external source by its URL). Each `#file:` citation — forward or back slashes, a path named once however often it is cited — names a readable file of the working copy, and its `start` and `end` lines sit within that file's length. Text without `#file:` is no citation and is never checked (`research-records`) |
+| Check | output filled: not empty, different from the template, no `{{…}}` left. Research records after each attempt: the document cites a file of the working copy as `#file:<path from the repository root>[:start[-end]]` (an external source by its URL). Each `#file:` citation — forward or back slashes, a path named once however often it is cited — names a readable file of the working copy (an absolute path, a path with a `..` segment or one in `.copilot-tracking/` is read nowhere and fails the same way), and its `start` and `end` lines sit within that file's length. Text without `#file:` is no citation and is never checked (`research-records`) |
 | Attempts | 3 (the `max_attempts` default); then `missing-outputs`, or `research-records` when the document is there and its citations still fail |
 
 ## DESIGN <!-- #design -->

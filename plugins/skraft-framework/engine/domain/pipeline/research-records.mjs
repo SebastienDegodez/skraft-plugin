@@ -12,9 +12,11 @@
 
 const RESEARCH = /(^|\/)research\/[^/]+\/[^/]+\.md$/
 /** `#file:<path>`, then `:line` or `:line-line` over a hyphen or a dash: the only citation of a working-copy file. */
-const CITATION = /#file:([^\s`'"()<>[\],;:]+)(?::(\d+)(?:[-\u2013](\d+))?)?/g
+const CITATION = /#file:((?:[A-Za-z]:)?[^\s`'"()<>[\],;:]+)(?::(\d+)(?:[-\u2013](\d+))?)?/g
 /** A citation that closes a sentence keeps its full stop, which no file name ends with. */
 const FULL_STOP = /\.$/
+/** A path the engine never reads: absolute, climbing out with `..`, or in its own tracking folder. */
+const OUTSIDE = /^(?:\/|[A-Za-z]:|\.copilot-tracking\/)|(?:^|\/)\.\.(?:\/|$)/
 
 /** @param {string} path relative to the tracking folder */
 export const isResearch = (path) => RESEARCH.test(path)
@@ -30,11 +32,19 @@ const citationsOf = (text) => [...text.replaceAll('\\', '/').matchAll(CITATION)]
   .map(([cite, path, first, last]) => ({ cite, path: path.replace(FULL_STOP, ''), first: Number(first), last: Number(last ?? first) }))
 
 /**
- * The working-copy paths a research document cites, each named once however often it cites it.
+ * The paths a research document cites, each named once however often it cites it.
  * @param {string} text
  * @returns {string[]}
  */
-export const citedPaths = (text) => [...new Set(citationsOf(text).map(({ path }) => path))]
+const allCitedPaths = (text) => [...new Set(citationsOf(text).map(({ path }) => path))]
+
+/**
+ * The cited paths the engine reads: those inside the working copy. Any other is never read, so
+ * it is reported as no file of the working copy.
+ * @param {string} text
+ * @returns {string[]}
+ */
+export const citedPaths = (text) => allCitedPaths(text).filter((path) => !OUTSIDE.test(path))
 
 /**
  * Why the research records send the researcher back; empty when they hold.
@@ -60,7 +70,7 @@ const lineCount = (text) => (text === null ? null : withoutClosingNewline(text).
 const withoutClosingNewline = (text) => text.replace(/\n$/, '')
 
 /** Each path a document cites that is no file of the working copy. @param {Document} document @param {Text[]} cited */
-const missingCitations = ({ path, text }, cited) => citedPaths(text)
+const missingCitations = ({ path, text }, cited) => allCitedPaths(text)
   .filter((cite) => textOf(cited, cite) === null)
   .map((cite) => `${path} cites #file:${cite}, which is no file of the working copy (#517)`)
 

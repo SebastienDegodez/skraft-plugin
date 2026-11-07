@@ -132,6 +132,37 @@ test('a research document is checked when the researcher finishes, so a file it 
   assert.equal(outcome.status, 'done')
 })
 
+test('a #file: citation outside the working copy is read nowhere and reported as no file of it: an absolute path, a .. segment, the tracking folder', async () => {
+  const outside = {
+    '/etc/hosts': 'localhost\n',
+    'C:/Windows/win.ini': '[fonts]\n',
+    '../secrets/token.txt': 'secret\n',
+    'src/Pricing/Fee.cs': 'public record Fee;\n',
+    'src/Pricing': 'a folder read as a file\n',
+    '.copilot-tracking/skraft-plans/checkout/notes.md': 'notes\n',
+  }
+  const host = scripted({ files: outside }, (it) => [
+    researcher(citing(['/etc/hosts:1', 'C:\\Windows\\win.ini', '../secrets/token.txt', 'docs/../src/Pricing/Fee.cs:1', 'src/Pricing/Fee/...', '.copilot-tracking/skraft-plans/checkout/notes.md', 'src/Pricing/Fee.cs:1']))(it),
+    researcher(citing([MAP]))(it),
+    ...nominal(it).slice(1),
+  ])
+
+  const outcome = await host.start()
+
+  assert.deepEqual(recorded(host), [
+    [1, 'failed', 'research-records', [
+      noFile('/etc/hosts'),
+      noFile('C:/Windows/win.ini'),
+      noFile('../secrets/token.txt'),
+      noFile('docs/../src/Pricing/Fee.cs'),
+      noFile('src/Pricing/Fee/..'),
+      noFile('.copilot-tracking/skraft-plans/checkout/notes.md'),
+    ]],
+    [2, 'done', null, []],
+  ])
+  assert.equal(outcome.status, 'done')
+})
+
 test('text without #file: is never a citation: a code name, a shortened path, an absent instruction file or a range in prose leaves the researcher alone', async () => {
   const host = scripted({ files: { 'package.json': '{}', 'web/tests/setup.ts': 'export {}\n' } }, (it) => [
     researcher([
