@@ -1,6 +1,7 @@
 /**
  * What the body of an ADR written in this run must not hold: a version, an image tag or a package
- * pin. Versions live in the manifests; an ADR names the technology or the capability it brings.
+ * pin, and a file of the code. Versions live in the manifests, files in the research; an ADR names
+ * the technology, the capability it brings, the component or the concept.
  */
 
 import { field, headerOf } from './adr.mjs'
@@ -16,6 +17,14 @@ const BLOCK_LINES = /^[^\n]*(?:\r?\n[ \t]+\S[^\n]*)*/
 const SENTENCE_END = /(?<!\b(?:e\.g|i\.e|vs|etc|cf)\.)(?<=[.!?])\s+(?=[A-Z])/
 const CODE_SPAN = /`[^`]*`/g
 const PINS = new RegExp([PACKAGE_PIN, IMAGE_TAG, SEMVER, MAJOR].join('|'), 'g')
+/** A path with a folder, or a file name with a line: what may name a file, its line or range kept, the full stop of its sentence left out. */
+const FILE_CITE = /(?<=^|[\s,`'"(])(?:[\w.-]+(?:[\\/][\w.-]*[\w-])+|[\w.-]*[\w-](?=:\d))(?::\d+(?:[-\u2013]\d+)?)?/g
+const FILE_NAME = /\.[A-Za-z]\w{0,9}$/
+/** The documents DESIGN keeps, and any Markdown page such as a linked ADR: an ADR may point at them. */
+const DOCUMENT = /^docs\/|\.md$/i
+const OCTET = String.raw`(?:25[0-5]|2[0-4]\d|1?\d?\d)`
+const ADDRESS = new RegExp(String.raw`\b${OCTET}(?:\.${OCTET}){3}\b`, 'g')
+const DAY = /\b(?:19|20)\d\d([./-])(?:0[1-9]|1[0-2])\1(?:0[1-9]|[12]\d|3[01])\b/g
 
 /** The text after the YAML header; the whole text without one. @param {string} text */
 const bodyOf = (text) => {
@@ -24,10 +33,26 @@ const bodyOf = (text) => {
 }
 
 /**
- * Each version pin of the body, once, in reading order.
+ * Each version pin of the body, once, in reading order; a file it names, an address or a day is
+ * none.
  * @param {string} body
  */
-const versionPins = (body) => [...new Set(body.match(PINS) ?? [])]
+const versionPins = (body) => [...new Set(withoutNonVersions(body).match(PINS) ?? [])]
+
+/** @param {string} body */
+const withoutNonVersions = (body) => body.replace(FILE_CITE, (cite) => (isCodeFile(cite) ? ' ' : cite)).replace(ADDRESS, ' ').replace(DAY, ' ')
+
+/**
+ * Each file of the code the body names, once, in reading order, with forward slashes.
+ * @param {string} body
+ */
+const codeFiles = (body) => [...new Set((body.match(FILE_CITE) ?? []).filter(isCodeFile).map((cite) => cite.replaceAll('\\', '/')))]
+
+/** A cited path whose last part is a file name, and no document. @param {string} cite */
+const isCodeFile = (cite) => {
+  const path = cite.replace(/:[\d\u2013-]+$/, '').replaceAll('\\', '/')
+  return FILE_NAME.test(path) && !DOCUMENT.test(path)
+}
 
 /**
  * The header's `decision`: its value, or the indented lines of a folded or literal block; null or
@@ -75,10 +100,14 @@ export const statusProblems = (path, text) => {
  * @param {string} path @param {string} text
  * @returns {string[]}
  */
-export const contentProblems = (path, text) => [
-  ...versionPins(`${bodyOf(text)}\n${decisionOf(text) ?? ''}`).map((token) => `${path} names a version (${token}): name the technology or the capability it brings; versions live in the manifests`),
-  ...decisionProblems(path, text),
-]
+export const contentProblems = (path, text) => {
+  const content = `${bodyOf(text)}\n${decisionOf(text) ?? ''}`
+  return [
+    ...codeFiles(content).map((file) => `${path} names a file of the code (${file}): name the component, the use case or the concept; files live in the research and the design`),
+    ...versionPins(content).map((token) => `${path} names a version (${token}): name the technology or the capability it brings; versions live in the manifests`),
+    ...decisionProblems(path, text),
+  ]
+}
 
 /** The lines an ADR on the default branch may change: its status and its replacement. */
 const STATUS_LINES = /^(?:(?:status|superseded_by):|\*\*Status:\*\*).*\n?/gm
