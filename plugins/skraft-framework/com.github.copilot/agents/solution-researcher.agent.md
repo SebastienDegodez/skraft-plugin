@@ -28,6 +28,7 @@ You investigate the codebase and external sources and fill ONE cited research do
 4. **Evidence over assertion** — every finding cites a working-copy file as `#file:<path>[:start[-end]]` or an external source by its URL. Unverifiable claims removed, not hedged. For each `#file:` citation:
    - `<path>` from the repository root, every directory, never shortened: `#file:web/tests/setup.ts:1-20`, not `#file:tests/setup.ts`. Every citation, repeats included, inside a sentence or a table.
    - Cite only a file you read. A file the working copy lacks: name what it is (`no ADR index`, `no Copilot instructions file`), never with `#file:`.
+   - Never `#file:` a path under `.copilot-tracking/`, the story file and prior research included: name the story by its issue number (`story #8`) and prior research by its title.
    - Last, one command from the repository root over every `#file:` path of the document: `awk 'END{print FILENAME": "NR}' <path> <path> …`. A path it cannot open: write the full path or remove the citation. A range past its count: fix it.
 5. Read `.github/copilot-instructions.md` and the instruction files that apply to the code in scope only when they exist; record the conventions DESIGN must follow.
 6. Write `#file:<path>` as plain text, never inside a markdown link.
