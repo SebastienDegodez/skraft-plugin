@@ -10,6 +10,7 @@ tools:
   - Edit
   - Grep
   - Glob
+  - Skill
 skills:
   - outside-in-tdd
   - craft-discipline

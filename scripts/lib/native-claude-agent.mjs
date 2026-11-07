@@ -11,7 +11,7 @@ const toolMap = new Map(Object.entries({
   'edit/createFile': ['Write'], 'edit/editFiles': ['Edit'], 'edit/createDirectory': [], edit: ['Write', 'Edit'],
   'execute/runInTerminal': ['Bash'], 'execute/getTerminalOutput': ['TaskOutput'], 'execute/killTerminal': ['TaskStop'],
   'execute/sendToTerminal': [], 'execute/testFailure': [], execute: ['Bash', 'TaskOutput', 'TaskStop'],
-  'graphify/*': ['mcp__graphify__*'],
+  'graphify/*': ['mcp__graphify__*'], skill: ['Skill'],
 }))
 
 function string(value, field) {
