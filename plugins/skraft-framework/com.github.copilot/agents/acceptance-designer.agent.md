@@ -59,7 +59,7 @@ When you cannot go on, write your result with `"status": "blocked"` and a summar
 
 The tracking folder is `.copilot-tracking/skraft-plans/<slug>/`, the one that holds the story; `{date}` is the date folder of its `plans/{date}/stories-*.md`. With a brief, fill the outputs it lists and write the `.feature` below; without one, write exactly:
 
-- `docs/features/{bounded-context}/{feature}.feature`, both names in kebab-case, never under the tracking folder; when it exists, add the story's scenarios and keep the others;
+- the `.feature` in the folder the brief names after `bdd:` for the component the story touches, as `{bounded-context}/{feature}.feature`, both names in kebab-case, never under the tracking folder; when the file exists, add the story's scenarios and keep the others. The brief names one folder per component: a component whose `bdd:` says `off` gets no `.feature`, and its scenarios stay in the test plan's `Scenario` column;
 - `<tracking>/details/{date}/test-plan-{story}.md` and `impl-plan-{story}.md` beside it.
 
 ## Boundaries
@@ -87,7 +87,7 @@ You plan Domain unit tests; you never write them: the domain emerges from the en
 
 1. **Read** the stories, the acceptance criteria (the primary source of truth), the contracts, the context map (`docs/architecture/context-map.md`: the bounded context of each story), the event model (`docs/domain/event-model/{bounded-context}.md`), `docs/adr/decisions-index.md` (open an ADR body only for its rationale), the research document's `Project conventions` (test framework, layout, naming: settled, never re-derived from the code), and its `Existing tests`.
 2. **Map** each acceptance criterion to the use case boundary it enters through (from the contracts), its observable outcome (a return value, a domain event or a state visible through the application interface) and its boundary conditions: at least one happy path, plus the edge cases of the domain examples. Tag each `@happy-path`, `@edge-case` or `@error-case`.
-3. **Gherkin.** Write the `.feature` (Paths): at least one scenario per acceptance criterion, its values verbatim, business vocabulary only in Given/When/Then (no class, method, type or endpoint name), titles `{persona} {action} {outcome}`.
+3. **Gherkin.** Write the `.feature` (Paths) when the component's `bdd:` names a folder: at least one scenario per acceptance criterion, its values verbatim, business vocabulary only in Given/When/Then (no class, method, type or endpoint name), titles `{persona} {action} {outcome}`. Keywords in English — `Feature:`, `Scenario:`, `Scenario Outline:`, `Examples:`, `Given`, `When`, `Then`, `And` — whatever language the story and the steps are written in; never a `# language:` header.
 4. **Test plan.** The software-engineer applies each row as written: leave no cell to decide later.
 
    | Scenario | Use Case Boundary | Layer | Double Type | Walking Skeleton | Extraction Reason | Priority |
