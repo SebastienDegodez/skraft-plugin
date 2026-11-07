@@ -55,7 +55,7 @@ test('the agent of the TDD cycles reads the mocking skill of each component, and
     { 'software-engineer': ['outside-in-tdd'] },
     ['outside-in-tdd', 'mocking-inprocess-dotnet', 'mocking-microcks-dotnet', 'mocking-microcks-typescript', 'mocking-inprocess-typescript', 'contract-testing', 'contract-testing-dotnet'],
   )
-  const ADMIN = { ...WEB, name: 'admin', root: '../admin', stack: 'javascript' }
+  const ADMIN = { ...WEB, name: 'admin', root: '../admin', stack: 'javascript', bdd: [{ features: 'features' }] }
   const SHOP = { ...WEB, name: 'shop', root: '../shop', stack: 'typescript', bdd: [{ features: 'features', steps: 'features/step_definitions' }], mocking: { strategy: 'microcks' } }
   const PAY = { ...API, name: 'pay', root: '../pay', contractTesting: true }
   const host = scripted({ catalog, components: [{ ...API, contractTesting: true }, WEB, ADMIN, SHOP, PAY] }, nominal)
@@ -79,7 +79,7 @@ test('the agent of the TDD cycles reads the mocking skill of each component, and
     '- Components:',
     '- api: . (dotnet), mocking: inprocess, contract testing: on, bdd: off, tests: dotnet test',
     '- web: ../web (react), mocking: inprocess, contract testing: off, bdd: off, tests: npm test',
-    '- admin: ../admin (javascript), mocking: inprocess, contract testing: off, bdd: off, tests: npm test',
+    '- admin: ../admin (javascript), mocking: inprocess, contract testing: off, bdd: features, tests: npm test',
     '- shop: ../shop (typescript), mocking: microcks, contract testing: off, bdd: features → features/step_definitions, tests: npm test',
     '- pay: ../pay (dotnet), mocking: inprocess, contract testing: on, bdd: off, tests: dotnet test',
   ].join('\n')), deliver)

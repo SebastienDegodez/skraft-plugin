@@ -57,6 +57,10 @@ test('doctor names where each runner reads a component\'s scenarios, fails on a 
   assert.deepEqual((await unbound.doctor.check()).checks.filter(({ subject }) => subject === 'api/bdd'), [
     { subject: 'api/bdd', status: 'ok', detail: 'Features, bound to nothing' },
   ])
+  const nowhere = doctor({ components: [{ ...API, bdd: [{ features: 'Features' }] }] })
+  assert.deepEqual((await nowhere.doctor.check()).checks.filter(({ subject }) => subject === 'api/bdd'), [
+    { subject: 'api/bdd', status: 'fail', detail: 'Features is no folder of the working copy' },
+  ], 'a pair that binds nothing still names a folder, and a folder that names nothing holds no scenario')
   const declined = doctor({ components: [{ ...API, bdd: false }] })
   assert.deepEqual((await declined.doctor.check()).checks.filter(({ subject }) => subject === 'api/bdd'), [])
 
