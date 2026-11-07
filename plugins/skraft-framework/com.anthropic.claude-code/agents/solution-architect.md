@@ -10,6 +10,7 @@ tools:
   - Grep
   - Glob
   - mcp__graphify__*
+  - Skill
 skills:
   - architecture-patterns
   - architecture-decisions
