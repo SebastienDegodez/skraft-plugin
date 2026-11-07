@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { agent, nominal, scripted, SLUG } from '../support/pipeline-host.mjs'
+import { agent, API, nominal, scripted, SLUG } from '../support/pipeline-host.mjs'
 
 const RESEARCH = 'research/2026-10-11/checkout-research.md'
 /** A file of the working copy the harness holds, one line long. */
@@ -22,13 +22,13 @@ const researcher = (text, beside = {}) => agent({
   },
 })
 
-/** A research document that cites `paths`, one per line under File analysis. @param {string[]} paths */
+/** A research document that cites `paths` as `#file:` citations, one per line under File analysis. @param {string[]} paths */
 const citing = (paths) => [
   '# Research: the card payment',
   '',
   '## Research executed',
   '### File analysis',
-  ...paths.map((path) => `- ${path}`),
+  ...paths.map((path) => `- #file:${path}`),
   '',
 ].join('\n')
 
@@ -37,12 +37,14 @@ const recorded = (host) => host.events()
   .filter((event) => event.type === 'step.recorded' && event.step === 'research')
   .map(({ attempt, outcome, code, failures }) => [attempt, outcome, code, failures])
 
-const noFile = (cite) => `${RESEARCH} cites ${cite}, which is no file of the working copy (#517)`
-const outOfRange = (cite, lines) => `${RESEARCH} cites ${cite}, outside the 1-${lines} line range (#517)`
+const noFile = (path) => `${RESEARCH} cites #file:${path}, which is no file of the working copy (#517)`
+/** A citation written from a component root: the paths that component holds it at, from the workspace root. @param {string} cite @param {string} full */
+const fromRoot = (cite, full) => `${noFile(cite).replace(' (#517)', '')}: write it from the workspace root, ${full} (#517)`
+const outOfRange = (cite, lines) => `${RESEARCH} cites #file:${cite}, outside the 1-${lines} line range (#517)`
 
-test('a research document that cites a path the working copy has not sends the researcher back, wherever the citation sits and however often it cites it, and the run goes on once every path exists', async () => {
+test('a #file: citation of a path the working copy has not sends the researcher back, wherever the citation sits and however often it cites it, and the run goes on once every cited file exists', async () => {
   const host = scripted({}, (it) => [
-    researcher('src/Pricing/Discount.cs holds the fee, read in src/Pricing/Fee.cs and again in src/Pricing/Fee.cs, each with the tax of src/Pricing/Tax.cs.\n')(it),
+    researcher('#file:src/Pricing/Discount.cs holds the fee, read in `#file:src/Pricing/Fee.cs` and again in #file:src/Pricing/Fee.cs, each with the tax (#file:src/Pricing/Tax.cs) of #file:src/Pricing/Vat.cs.\n')(it),
     researcher(citing(['src/Pricing/Receipt.cs']))(it),
     researcher(citing([MAP]))(it),
     ...nominal(it).slice(1),
@@ -51,17 +53,17 @@ test('a research document that cites a path the working copy has not sends the r
   const outcome = await host.start()
 
   assert.deepEqual(recorded(host), [
-    [1, 'failed', 'research-records', [noFile('src/Pricing/Discount.cs'), noFile('src/Pricing/Fee.cs'), noFile('src/Pricing/Tax.cs')]],
+    [1, 'failed', 'research-records', [noFile('src/Pricing/Discount.cs'), noFile('src/Pricing/Fee.cs'), noFile('src/Pricing/Tax.cs'), noFile('src/Pricing/Vat.cs')]],
     [2, 'failed', 'research-records', [noFile('src/Pricing/Receipt.cs')]],
     [3, 'done', null, []],
   ])
   assert.equal(outcome.status, 'done')
 })
 
-test('a line range cited past the end of its file sends the researcher back, and a range that ends on the last line of a file holds', async () => {
+test('a #file: line range cited past the end of its file sends the researcher back, and a range that ends on the last line of a file holds', async () => {
   const host = scripted({ files: MONEY }, (it) => [
-    researcher(`${MAP}:12 names the bounded contexts, ${MAP}:10-12 the events it publishes, and ${MAP}:4\u20136 the policies that rule them.\n`)(it),
-    researcher(citing([`${MONEY_PATH}:1-2`]))(it),
+    researcher(`#file:${MAP}:12 names the bounded contexts, #file:${MAP}:10-12 the events it publishes, and #file:${MAP}:4\u20136 the policies that rule them.\n`)(it),
+    researcher(`${citing([`${MONEY_PATH}:1-2`])}The fee is read at #file:${MONEY_PATH}:2.\n`)(it),
     ...nominal(it).slice(1),
   ])
 
@@ -86,29 +88,7 @@ test('a range on a path the working copy has not is reported once, as a path it 
   assert.deepEqual(recorded(host)[0][3], [noFile('src/Pricing/Discount.cs')])
 })
 
-test('the engine reads the citations a working copy can hold, and leaves a folder, a relative path and its own tracking folder alone', async () => {
-  const host = scripted({}, (it) => [
-    researcher(citing([
-      '.copilot-tracking/skraft-plans/checkout/research/2026-10-11/notes.md',
-      './src/Pricing/Discount.cs:1-9',
-      'docs/../src/Pricing/Discount.cs',
-      '.github/workflows',
-      'src/Pricing/Receipt.mjs',
-    ]))(it),
-    researcher(citing([MAP]))(it),
-    ...nominal(it).slice(1),
-  ])
-
-  const outcome = await host.start()
-
-  assert.deepEqual(recorded(host), [
-    [1, 'failed', 'research-records', [noFile('src/Pricing/Receipt.mjs')]],
-    [2, 'done', null, []],
-  ])
-  assert.equal(outcome.status, 'done')
-})
-
-test('a citation written with back slashes names the same file, and each cited file is read by its own path', async () => {
+test('a #file: citation written with back slashes names the same file, and each cited file is read by its own path', async () => {
   const host = scripted({}, (it) => [
     researcher(citing(['src\\Pricing\\Discount.cs', 'docs\\architecture\\context-map.md:1-9']))(it),
     researcher(citing([MAP]))(it),
@@ -154,21 +134,17 @@ test('a research document is checked when the researcher finishes, so a file it 
   assert.equal(outcome.status, 'done')
 })
 
-test('a citation of an existing folder ending in a slash does not send the researcher back as a missing file', async () => {
-  const host = scripted({ files: { 'tests/Checkout.Tests/Checkout.Tests.csproj': '<Project />' } }, (it) => [
-    researcher(citing(['tests/Checkout.Tests/']))(it),
-    researcher(citing([MAP]))(it),
-    ...nominal(it).slice(1),
-  ])
-
-  await host.start()
-
-  assert.deepEqual(recorded(host)[0], [1, 'done', null, []])
-})
-
-test('only a path with a folder is a citation: a bare name, a file or code alike, is never checked, and an absent path with a folder sends the researcher back', async () => {
-  const host = scripted({ files: { 'package.json': '{}' } }, (it) => [
-    researcher(`${citing(['package.json:9', 'missing.json:1', 'MissingFile', 'src/Pricing/Missing.cs'])}The domain uses no \`System.IO\`, \`java.util\` or \`process.env\`; Node.js and ASP.NET run it, and Program.cs boots it.\n`)(it),
+test('a #file: citation outside the working copy is read nowhere and reported as no file of it: an absolute path, a .. segment, the tracking folder', async () => {
+  const outside = {
+    '/etc/hosts': 'localhost\n',
+    'C:/Windows/win.ini': '[fonts]\n',
+    '../secrets/token.txt': 'secret\n',
+    'src/Pricing/Fee.cs': 'public record Fee;\n',
+    'src/Pricing': 'a folder read as a file\n',
+    '.copilot-tracking/skraft-plans/checkout/notes.md': 'notes\n',
+  }
+  const host = scripted({ files: outside }, (it) => [
+    researcher(citing(['/etc/hosts:1', 'C:\\Windows\\win.ini', '../secrets/token.txt', 'docs/../src/Pricing/Fee.cs:1', 'src/Pricing/Fee/...', '.copilot-tracking/skraft-plans/checkout/notes.md', 'src/Pricing/Fee.cs:1']))(it),
     researcher(citing([MAP]))(it),
     ...nominal(it).slice(1),
   ])
@@ -176,9 +152,35 @@ test('only a path with a folder is a citation: a bare name, a file or code alike
   const outcome = await host.start()
 
   assert.deepEqual(recorded(host), [
-    [1, 'failed', 'research-records', [noFile('src/Pricing/Missing.cs')]],
+    [1, 'failed', 'research-records', [
+      noFile('/etc/hosts'),
+      noFile('C:/Windows/win.ini'),
+      noFile('../secrets/token.txt'),
+      noFile('docs/../src/Pricing/Fee.cs'),
+      noFile('src/Pricing/Fee/..'),
+      noFile('.copilot-tracking/skraft-plans/checkout/notes.md'),
+    ]],
     [2, 'done', null, []],
   ])
+  assert.equal(outcome.status, 'done')
+})
+
+test('text without #file: is never a citation: a code name, a shortened path, an absent instruction file or a range in prose leaves the researcher alone', async () => {
+  const host = scripted({ files: { 'package.json': '{}', 'web/tests/setup.ts': 'export {}\n' } }, (it) => [
+    researcher([
+      '# Research: the card payment',
+      '',
+      'The domain uses no `System.IO`, `java.util` or `process.env`; `using System.Text.Json;` and `import fs from \'node:fs\'` stay out of it.',
+      'The test setup sits in tests/setup.ts, the build in package.json:9, the fee in src/Pricing/Missing.cs:12-40.',
+      'The repository holds no .github/copilot-instructions.md, and docs/architecture/context-map.md:7 names no context.',
+      '',
+    ].join('\n'))(it),
+    ...nominal(it).slice(1),
+  ])
+
+  const outcome = await host.start()
+
+  assert.deepEqual(recorded(host), [[1, 'done', null, []]])
   assert.equal(outcome.status, 'done')
 })
 
@@ -212,5 +214,37 @@ test('a range starting at line zero sends the researcher back as an invalid line
     'failed',
     'research-records',
     [outOfRange(`${MONEY_PATH}:0-1`, 2)],
+  ])
+})
+
+test('a #file: citation written from a component root sends the researcher back with its path from the workspace root, every component inside the working copy that holds it named', async () => {
+  const web = { ...API, name: 'web', root: 'web', stack: 'react', commands: { test: 'npm test' } }
+  const admin = { ...web, name: 'admin', root: 'admin' }
+  const shop = { ...web, name: 'shop', root: '../shop' }
+  const host = scripted({
+    components: [API, web, admin, shop],
+    files: {
+      'web/src/palette/Palette.tsx': 'export const Palette = () => null\n',
+      'web/docs/notes.md': '# Web\n',
+      'admin/docs/notes.md': '# Admin\n',
+      '../shop/docs/shop.md': '# Shop\n',
+    },
+  }, (it) => [
+    researcher('#file:src/palette/Palette.tsx:1 draws it, #file:docs/notes.md and #file:docs/shop.md say why, #file:palette/Palette.tsx and #file:src/Pricing/Absent.cs do not exist.\n')(it),
+    researcher('#file:web/src/palette/Palette.tsx:1 draws it, #file:web/docs/notes.md says why.\n')(it),
+    ...nominal(it).slice(1),
+  ])
+
+  await host.start()
+
+  assert.deepEqual(recorded(host), [
+    [1, 'failed', 'research-records', [
+      fromRoot('src/palette/Palette.tsx', '#file:web/src/palette/Palette.tsx'),
+      fromRoot('docs/notes.md', '#file:web/docs/notes.md or #file:admin/docs/notes.md'),
+      noFile('docs/shop.md'),
+      noFile('palette/Palette.tsx'),
+      noFile('src/Pricing/Absent.cs'),
+    ]],
+    [2, 'done', null, []],
   ])
 })
