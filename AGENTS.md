@@ -289,9 +289,9 @@ Descriptors are prompts an agent pays for on every run, not documentation.
   check (`--agent-calls`) has measured it.
 - **Write for the agent, never for a human reader.** Every sentence carries a decision the agent
   has to make. No prose explaining why a rule exists; the reasoning belongs in the commit message.
-- **Do not repeat a check the engine performs** (order, inputs, outputs, commit convention,
-  gates, verdict). A check stays in prose only if nothing else performs it and only that agent
-  can avoid the error.
+- **A check the engine performs has no twin in a review lens** (order, inputs, outputs, commit
+  convention, gates, verdict, ADR content). A lens never reports what the engine refuses; the
+  producer's prompt may keep the rule so the agent avoids the error.
 - **Put a rule's scope inside the rule**, not in a paragraph after it. A prohibition scoped too
   narrowly is an escape hatch.
 - **Never argue from the evaluation sandbox.** Argue from what holds on a developer machine too.
