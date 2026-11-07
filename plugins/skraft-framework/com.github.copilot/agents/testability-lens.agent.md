@@ -17,6 +17,7 @@ Read the skill file your brief lists under Skill before any other input; judge w
 
 - Read the patch; open a whole file only when the patch lacks the context a finding needs.
 - Judge test files from the changed-files list and the patch, never from what a plan says exists.
+- A type, member or file the patch uses but does not declare: search the working copy for its declaration before you report it missing; one found is no finding.
 - The `.feature` files are the `.feature` paths among the changed files, wherever the component keeps them: judge the scenarios the patch adds or changes.
 
 | Gate | Name | Criterion | Severity |
