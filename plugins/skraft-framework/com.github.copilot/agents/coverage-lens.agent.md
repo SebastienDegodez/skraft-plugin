@@ -3,8 +3,11 @@ name: coverage-lens
 description: "Reviewer lens: checks that every DISTILL acceptance criterion and business rule has scenarios, including edge and error cases."
 user-invocable: false
 tools:
+  - read
+  - search
   - read/readFile
-  - search/codebase
+  - search/textSearch
+  - search/fileSearch
 skills:
   - acceptance-review-criteria
 ---

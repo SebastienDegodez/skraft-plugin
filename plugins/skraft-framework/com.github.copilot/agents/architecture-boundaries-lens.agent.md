@@ -2,9 +2,12 @@
 name: architecture-boundaries-lens
 description: "Reviewer lens: verifies Clean Architecture dependency direction, no mocks in Domain/Application, Object Calisthenics on Domain."
 user-invocable: false
-tools: 
+tools:
+  - read
+  - search
   - read/readFile
-  - search/codebase
+  - search/textSearch
+  - search/fileSearch
 skills:
   - clean-architecture-testing
   - craft-discipline

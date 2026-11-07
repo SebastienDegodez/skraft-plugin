@@ -3,8 +3,11 @@ name: consistency-lens
 description: "Reviewer lens: checks that DESIGN ADRs, context map, event model and diagrams agree with each other and with the research and the story."
 user-invocable: false
 tools:
+  - read
+  - search
   - read/readFile
-  - search/codebase
+  - search/textSearch
+  - search/fileSearch
 skills:
   - architecture-review-criteria
 ---

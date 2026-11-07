@@ -2,9 +2,12 @@
 name: mock-fidelity-lens
 description: "Reviewer lens: audits consumer-side mock wiring in integration tests — strategy/override honored, mock URL actually wired, no real downstream call."
 user-invocable: false
-tools: 
+tools:
+  - read
+  - search
   - read/readFile
-  - search/codebase
+  - search/textSearch
+  - search/fileSearch
 ---
 
 # Mock Fidelity Lens
