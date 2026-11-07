@@ -3,6 +3,12 @@
 Toutes les modifications notables de ce projet sont documentées ici.
 Format basé sur [Conventional Commits](https://www.conventionalcommits.org/) — versionnage [SemVer](https://semver.org/).
 
+## [2.0.0-alpha.77](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.76...v2.0.0-alpha.77) (2026-11-07)
+
+### 🐛 Bug Fixes
+
+* **design:** what [#549](https://github.com/SebastienDegodez/skraft-plugin/issues/549) left out — fields and observed outcome in the event model, gateways in the tactical design ([#556](https://github.com/SebastienDegodez/skraft-plugin/issues/556)) ([c583bff](https://github.com/SebastienDegodez/skraft-plugin/commit/c583bff532703a3a930d7cae40350181608f9d93)), closes [#521](https://github.com/SebastienDegodez/skraft-plugin/issues/521) [#546](https://github.com/SebastienDegodez/skraft-plugin/issues/546)
+
 ## [2.0.0-alpha.76](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.75...v2.0.0-alpha.76) (2026-11-07)
 
 ### ✨ Features
