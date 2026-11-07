@@ -19,8 +19,8 @@ const UNREAD_LINES = /^(?:# |\*\*(?:Supersedes|Amends):\*\*).*/gm
 const ADR_LINK = /\[(ADR-\d+)\]\([^)]*\)/g
 const ADR_ID = /ADR-(\d+)/g
 // A file of the ADR folder, or an ADR file by its name wherever it sits.
-const ADR_PATH = /docs\/adr\/|adr-\d+[^/]*\.md/i
-const ADR_FILE_LINK = /\]\((adr-\d+[^)\s/]*\.md)\)/gi
+const ADR_PATH = /docs\/adr\/|adr-\d[^/]*\.md/i
+const ADR_FILE_LINK = /\]\((adr-\d[^)\s/]*\.md)\)/gi
 
 /** The files a text cites, as written. @param {string} text */
 const citedFiles = (text) => (text.match(URL_OR_CODE_FILE) ?? []).filter((token) => !IS_URL.test(token))
