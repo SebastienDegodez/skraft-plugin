@@ -108,7 +108,7 @@ every criterion that forbids one.
 | **G14** | `consistency` | A `Status: Rejected` ADR stands only when a story or measurable force of this batch raised the question and its Alternatives section names the option adopted instead. | blocker |
 | **C1** | `consistency` | Context map, diagrams and event model name the same contexts, aggregates, commands, events and fields, and each matches the research and the story. | high |
 | **G3** | `architecture-compliance` | Domain and Application depend on nothing in Infrastructure or API. | blocker |
-| **G4** | `architecture-compliance` | Every application interface (repository, gateway, publisher) is defined in Domain or Application, in the layer the aggregate's ADR records, never in Infrastructure. | blocker |
+| **G4** | `architecture-compliance` | Every application interface (repository, gateway, publisher) is defined in Domain or Application, in the layer the tactical design records, never in Infrastructure. The layer is never an ADR's to record. | blocker |
 | **G5** | `architecture-compliance` | Each aggregate enforces only its own invariants and refers to other aggregates by ID. | high |
 | **G6** | `architecture-compliance` | The context map labels every relationship between contexts with an explicit pattern (ACL, Conformist, Shared Kernel, Partnership, Open Host Service, Published Language). | high |
 | **G16** | `architecture-compliance` | Comparable interfaces share the same state, return and error shape and exposed field names, unless an ADR justifies the divergence. | high |
