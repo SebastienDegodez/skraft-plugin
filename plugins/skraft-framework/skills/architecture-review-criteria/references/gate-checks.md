@@ -125,7 +125,7 @@ An ADR decides a layer boundary, an aggregate boundary, a bounded context, a pat
 
 ## G18 — Decision level
 
-One decision per ADR, at decision level. Independent decisions in one body, a full signature (a contract sketch of up to 5 lines is fine), a file path, enum values, a Value Object inventory, a route tree, or a traceability reference (a ticket, AC, PRD or requirement id cited as a source) other than the story that triggered it is each a finding at its line. A quality attribute stated with its measure as a force of the decision (`p95 ≤ 300 ms`, NFR id beside it or not) is no finding.
+One decision per ADR, at decision level. Independent decisions in one body, a full signature (a contract sketch of up to 5 lines is fine), enum values, a Value Object inventory, a route tree, or a traceability reference (a ticket, AC, PRD or requirement id cited as a source) other than the story that triggered it is each a finding at its line. A quality attribute stated with its measure as a force of the decision (`p95 ≤ 300 ms`, NFR id beside it or not) is no finding.
 
 - ✗ "ADR-004's Decision lists `OrderStatus { Draft, Placed, Paid }` and `src/Domain/Order.cs`."
 - ✓ "ADR-004: model order status as a state machine inside the Order aggregate; the values live in `contracts-US-04.md`."

@@ -25,7 +25,7 @@ each one.
 - **Not yours to report** — the engine already checks: a consistency matrix exists per story and
   reads `consistency-gate: PASS` (G10); no ADR file name carries a verdict (G14); every `**Supersedes:**` line of a new ADR has its row
   in `docs/adr/supersessions.md` (G2, G12).
-  The engine also refuses version pins, a `decision` longer than one sentence, a status outside the closed set, a missing index row and an in-place edit of a published ADR: do not report them.
+  The engine also refuses version pins, a path or a file of the code, a `decision` longer than one sentence, a status outside the closed set, a missing index row and an in-place edit of a published ADR: do not report them.
 
 ## Gate checks
 
