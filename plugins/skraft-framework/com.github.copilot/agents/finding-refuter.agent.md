@@ -3,8 +3,13 @@ name: finding-refuter
 description: "Review checker: confirms or refutes one lens finding against the inputs it is given."
 user-invocable: false
 tools:
+  - read
+  - search
   - read/readFile
   - search/codebase
+  - search/textSearch
+  - search/fileSearch
+  - graphify/*
 ---
 
 # Finding Refuter

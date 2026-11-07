@@ -3,8 +3,13 @@ name: testability-lens
 description: "Reviewer lens: checks that DISTILL scenarios and committed failing tests are deterministic, observable and test one behaviour each."
 user-invocable: false
 tools:
+  - read
+  - search
   - read/readFile
   - search/codebase
+  - search/textSearch
+  - search/fileSearch
+  - graphify/*
 skills:
   - acceptance-review-criteria
 ---

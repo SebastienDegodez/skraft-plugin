@@ -7,6 +7,7 @@ tools:
   - Read
   - Grep
   - Glob
+  - mcp__graphify__*
 skills:
   - acceptance-review-criteria
 ---
