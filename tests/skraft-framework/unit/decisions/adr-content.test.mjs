@@ -2,7 +2,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { InMemoryGit } from '../support/in-memory-host.mjs'
 import { agent, scripted } from '../support/pipeline-host.mjs'
-import { ADR_1, adrText, afterDesign, architect, eventsOf } from '../support/decisions.mjs'
+import { ADR_1, ADR_2, adrText, afterDesign, architect, eventsOf } from '../support/decisions.mjs'
 
 const designRecords = (host) => eventsOf(host, 'step.recorded').filter((event) => event.step === 'design').map(({ visit, attempt, outcome, code, failures }) => [visit, attempt, outcome, code, failures])
 const pinned = (token) => `${ADR_1} names a version (${token}): name the technology or the capability it brings; versions live in the manifests`
@@ -15,7 +15,7 @@ test('a draft ADR that pins a version, an image tag or a package is refused, one
   const host = scripted({ answers: [{ answer: 'RATIFIED' }] }, (it) => [
     agent()(it),
     architect({ [ADR_1]: adrText({ header: 'generator: skraft@1.15.3', body: 'We build on ubi8/ubi:8.9 and node:20-alpine, runtime:8.0-ubi8, digest sha256:ab12cd34, golang:1, node:18.4, ci:202610, react-router@6, release 2.1.0, SDK v3, API v2.1, postgres:16, and again 2.1.0.' }) })(it),
-    architect({ [ADR_1]: adrText({ body: '## Context\n\nWe build on Red Hat UBI base images and a client-side router that loads data, in C# on System.IO and in TypeScript on Node.js with DependencyInjection.cs, after [ADR-002](./adr-002-card-tokens.md) and ADR-003 &#35;. Events go through kafka:9092 and postgres:5432, the health check is http://localhost:8080/health, the probe http://dev:8/ping, the docs are at localhost:3000/docs (see /v1/orders) and https://example.com/guide/setup.html. The API listens on 127.0.0.1:3917 and 10.0.0.12 since 2026.11.07 and 2026/11/08, and keeps API v1 stable.' }) })(it),
+    architect({ [ADR_1]: adrText({ body: '## Context\n\nWe build on Red Hat UBI base images and a client-side router that loads data, in C# on System.IO and in TypeScript on Node.js with DependencyInjection.cs &#35;. Events go through kafka:9092 and postgres:5432, the health check is http://localhost:8080/health, the probe http://dev:8/ping, the docs are at localhost:3000/docs (see /v1/orders) and https://example.com/guide/setup.html. The API listens on 127.0.0.1:3917 and 10.0.0.12 since 2026.11.07 and 2026/11/08, and keeps API v1 stable.' }) })(it),
     ...afterDesign(it),
   ])
 
@@ -47,20 +47,45 @@ test('a draft ADR that cites a code file is refused once per file and never read
   assert.equal(outcome.status, 'done')
 })
 
-test('a draft ADR that cites an acceptance criterion or a ticket is refused, in the body or the decision; its title line is not read', async () => {
+test('a draft ADR that cites an acceptance criterion by its identifier or a ticket is refused, in the body or the decision; its title line and the words acceptance criteria are not read', async () => {
   const host = scripted({ answers: [{ answer: 'RATIFIED' }] }, (it) => [
     agent()(it),
-    architect({ [ADR_1]: adrText({ body: 'This meets AC-2, AC 3 and ac4 of the Acceptance Criteria, the acceptance criterion on refunds and the critère d\'acceptation 5, for #81 and AB#1234, see https://github.com/o/r/issues/12, https://github.com/o/r/pull/34 and https://dev.azure.com/o/p/_workitems/edit/56, again #81.' }) })(it),
+    architect({ [ADR_1]: adrText({ body: 'This meets AC-2, AC 3 and ac4, for #81 and AB#1234, see https://github.com/o/r/issues/12, https://github.com/o/r/pull/34 and https://dev.azure.com/o/p/_workitems/edit/56, again #81.' }) })(it),
     architect({ [ADR_1]: adrText({ decision: 'We will pay by card to meet AC-2 of https://github.com/o/r/issues/8.' }) })(it),
-    architect({ [ADR_1]: adrText({ title: 'Card payment for #8 in src/pay/card.ts' }) })(it),
+    architect({ [ADR_1]: adrText({ title: 'Card payment for #8 in src/pay/card.ts', body: 'The acceptance criteria are checked by Gherkin scenarios; each acceptance criterion and critère d\'acceptation stays in the story.' }) })(it),
     ...afterDesign(it),
   ])
 
   const outcome = await host.start()
 
   assert.deepEqual(designRecords(host), [
-    [1, 1, 'failed', 'adr-lifecycle', [criterion('AC-2'), criterion('AC 3'), criterion('ac4'), criterion('Acceptance Criteria'), criterion('acceptance criterion'), criterion('critère d\'acceptation'), ticket('#81'), ticket('AB#1234'), ticket('https://github.com/o/r/issues/12'), ticket('https://github.com/o/r/pull/34'), ticket('https://dev.azure.com/o/p/_workitems/edit/56')]],
+    [1, 1, 'failed', 'adr-lifecycle', [criterion('AC-2'), criterion('AC 3'), criterion('ac4'), ticket('#81'), ticket('AB#1234'), ticket('https://github.com/o/r/issues/12'), ticket('https://github.com/o/r/pull/34'), ticket('https://dev.azure.com/o/p/_workitems/edit/56')]],
     [1, 2, 'failed', 'adr-lifecycle', [criterion('AC-2'), ticket('https://github.com/o/r/issues/8')]],
+    [1, 3, 'done', null, []],
+  ])
+  assert.equal(outcome.status, 'done')
+})
+
+const citesAdr = (path, token) => `${path} cites ${token} outside its Supersedes/Amends line: an ADR names only the ADR it replaces; any other ADR may be superseded`
+
+test('a draft ADR names no other ADR, by id, link or path, in its body or decision; its own number, its Supersedes and Amends lines and its header links pass', async () => {
+  const third = 'docs/adr/adr-003-refunds.md'
+  const tokens = adrText({ number: 2, title: 'Card tokens', header: 'amends: ADR-003', body: '**Supersedes:** [ADR-001](./adr-001-card-payment.md)\n**Amends:** ADR-003\n\n## Context\n\nADR-002 keeps card tokens with the provider, as [ADR-004](./adr-004-wallets.md) and ADR-005 did; see docs/adr/adr-006-cash.md, ../adr/adr-009-queue.md, [cash](adr-007-cash.md) and #file:docs/adr/decisions-index.md, again ADR-005.' }).replace('supersedes: null', 'supersedes: ADR-001')
+  const git = new InMemoryGit({ published: [ADR_1, third] })
+  const host = scripted({ git, files: { [ADR_1]: adrText({ status: 'Accepted' }), [third]: adrText({ number: 3, title: 'Refunds', status: 'Accepted' }) }, answers: [{ answer: 'RATIFIED' }] }, (it) => [
+    agent()(it),
+    architect({ [ADR_2]: tokens, 'docs/adr/supersessions.md': '| date | superseded ADR | new ADR | reason |\n| --- | --- | --- | --- |\n| 2026-10-11 | ADR-001 | ADR-002 | token choice |\n' })(it),
+    architect({ [ADR_2]: tokens.replace('decision: We will pay by card.', 'decision: We keep tokens with the provider, unlike ADR-008.') })(it),
+    architect({ [ADR_2]: tokens.replace(/## Context[\s\S]*$/, '## Context\n\nADR-002 keeps card tokens with the provider.\n') })(it),
+    ...afterDesign(it),
+  ])
+
+  const outcome = await host.start()
+
+  const first = [citesAdr(ADR_2, 'ADR-004'), citesAdr(ADR_2, 'ADR-005'), citesAdr(ADR_2, 'docs/adr/adr-006-cash.md'), citesAdr(ADR_2, '../adr/adr-009-queue.md'), citesAdr(ADR_2, '#file:docs/adr/decisions-index.md'), citesAdr(ADR_2, 'adr-007-cash.md')]
+  assert.deepEqual(designRecords(host), [
+    [1, 1, 'failed', 'adr-lifecycle', first],
+    [1, 2, 'failed', 'adr-lifecycle', [citesAdr(ADR_2, 'ADR-004'), citesAdr(ADR_2, 'ADR-005'), citesAdr(ADR_2, 'ADR-008'), ...first.slice(2)]],
     [1, 3, 'done', null, []],
   ])
   assert.equal(outcome.status, 'done')
@@ -177,8 +202,8 @@ test('a draft ADR with a status that is Proposed plus a remark is refused once, 
   }
 })
 
-test('an ADR on the default branch may take any status of the closed set, a supersession linked or not', async () => {
-  for (const status of ['Deprecated', 'Rejected', 'Superseded', 'Superseded by ADR-002', 'Superseded by [ADR-002](./adr-002-card-tokens.md)']) {
+test('an Accepted ADR on the default branch may become Deprecated or Superseded by its successor, linked or not', async () => {
+  for (const status of ['Deprecated', 'Superseded by ADR-002', 'Superseded by [ADR-002](./adr-002-card-tokens.md)']) {
     const git = new InMemoryGit({ published: [ADR_1] })
     git.holds('root-0', { [ADR_1]: adrText({ status: 'Accepted' }) })
     const host = scripted({ git, files: { [ADR_1]: adrText({ status: 'Accepted' }) } }, (it) => [agent()(it), architect({ [ADR_1]: adrText({ status }) })(it), unavailable])
@@ -186,6 +211,31 @@ test('an ADR on the default branch may take any status of the closed set, a supe
     await host.start()
 
     assert.deepEqual(designRecords(host), [[1, 1, 'done', null, []]])
+  }
+})
+
+const moved = (from, to) => `${ADR_1} is on the default branch with the status "${from}" and was given "${to}": an Accepted ADR becomes only Superseded by ADR-NNN or Deprecated; any other status stays`
+
+test('an ADR on the default branch keeps its lifecycle: Accepted goes nowhere else, Rejected, Deprecated and Superseded stay; the header may say Superseded alone', async () => {
+  const cases = [
+    ['Accepted', adrText({ status: 'Proposed' }), [moved('Accepted', 'Proposed')]],
+    ['Accepted', adrText({ status: 'Rejected' }), [moved('Accepted', 'Rejected')]],
+    ['Accepted', adrText({ status: 'Superseded' }), [moved('Accepted', 'Superseded')]],
+    ['Accepted', adrText({ status: 'Superseded by ADR-002' }).replace('status: Superseded by ADR-002', 'status: Superseded'), []],
+    ['Accepted', adrText({ status: 'Accepted' }).replace('**Status:** Accepted', '**Status:** Deprecated'), []],
+    ['Rejected', adrText({ status: 'Accepted' }), [moved('Rejected', 'Accepted')]],
+    ['Deprecated', adrText({ status: 'Superseded by ADR-002' }), [moved('Deprecated', 'Superseded by ADR-002')]],
+    ['Superseded by ADR-002', adrText({ status: 'Deprecated' }), [moved('Superseded by ADR-002', 'Deprecated')]],
+    ['Rejected', adrText({ status: 'Rejected' }), []],
+  ]
+  for (const [from, text, problems] of cases) {
+    const git = new InMemoryGit({ published: [ADR_1] })
+    git.holds('root-0', { [ADR_1]: adrText({ status: from }) })
+    const host = scripted({ git, files: { [ADR_1]: adrText({ status: from }) } }, (it) => [agent()(it), architect({ [ADR_1]: text })(it), unavailable])
+
+    await host.start()
+
+    assert.deepEqual(designRecords(host)[0].slice(2), problems.length === 0 ? ['done', null, []] : ['failed', 'adr-lifecycle', problems], `${from} -> ${text.match(/\*\*Status:\*\* .*/)[0]}`)
   }
 })
 
