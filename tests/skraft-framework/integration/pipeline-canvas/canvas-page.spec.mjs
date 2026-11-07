@@ -284,6 +284,16 @@ const highlight = (page) => page.evaluate(() => {
   return backgroundColor
 })
 
+test('the Gherkin of a component is a choice between its folders and none, and it names /skraft-init where no folder is known', async ({ page }) => {
+  await open(page, { tab: 'configuration' })
+  const choice = page.getByLabel('BDD')
+
+  await expect(choice).toHaveValue('false')
+  await expect(choice.locator('option')).toHaveText(['Gherkin — run /skraft-init to name the folders', 'No Gherkin'])
+  await expect(choice.locator('option[disabled]')).toHaveText('Gherkin — run /skraft-init to name the folders')
+  await expect(page.locator('.bar-state')).not.toHaveText('Unsaved changes')
+})
+
 test('in forced colours the chosen consent keeps its fill, the selected tab and the step under way an outline or border', async ({ page }) => {
   await page.emulateMedia({ forcedColors: 'active' })
   await open(page, { tab: 'configuration' })

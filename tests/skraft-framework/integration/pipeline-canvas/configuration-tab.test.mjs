@@ -38,7 +38,7 @@ test('the canvas opens on the tab asked, and its page gets the configuration and
   const content = await contentStream(t, url, await tokenOf(url)).next()
   assert.deepEqual([content.title, content.status], ['skraft pipeline', 'idle'])
   assert.deepEqual([content.configuration.status, content.configuration.components, content.configuration.confirmed], [
-    'ok', [{ name: 'mastermind-api', root: '.', stack: 'dotnet', commands: API.commands, mocking: 'microcks', contractTesting: false, bdd: true, bddPaths: [{ runner: null, features: 'tests/Features', steps: 'tests/Steps' }], bddFound: [] }], true,
+    'ok', [{ name: 'mastermind-api', root: '.', stack: 'dotnet', commands: API.commands, mocking: 'microcks', contractTesting: false, bdd: null, bddPaths: [], bddFound: [] }], true,
   ])
   assert.deepEqual([content.configuration.forge, content.configuration.choices.forges], [{ named: null, namedIn: null, deduced: 'azure-devops' }, ['github', 'azure-devops']])
   assert.deepEqual(content.workflows.map(({ name, file }) => [name, file]), [['pipeline', null], ['review', null]])
@@ -66,6 +66,28 @@ test('a save from the page writes the configuration and sends the page what it n
     ok: false, reason: 'skraft-config.json is invalid: component mastermind-api: stack must be one of dotnet, java, python, typescript, javascript, react',
   }])
   assert.equal(team(cwd).components[0].stack, 'dotnet')
+})
+
+test('the page answers the Gherkin of a component nobody answered for: the folders it names, or none, and never a bare true', BOUNDED, async (t) => {
+  const { cwd, open } = await configured(t)
+  const { url } = await open()
+  const token = await tokenOf(url)
+  const stream = contentStream(t, url, token)
+  const shown = (await stream.next()).configuration.components[0]
+  assert.deepEqual([shown.bdd, shown.bddPaths], [null, []], 'the file says nothing, and no stack decides for it')
+
+  const declined = await saving(url, token, { components: [{ name: 'mastermind-api', bdd: false }] })
+
+  assert.deepEqual([declined.status, JSON.parse(declined.text).ok], [200, true])
+  assert.equal(team(cwd).components[0].bdd, false)
+  assert.deepEqual((await stream.next()).configuration.components[0].bdd, false)
+
+  const named = await saving(url, token, { components: [{ name: 'mastermind-api', bdd: [{ runner: 'reqnroll', features: 'tests/Features', steps: 'tests/Steps' }] }] })
+
+  assert.deepEqual([named.status, JSON.parse(named.text).ok], [200, true])
+  assert.deepEqual(team(cwd).components[0].bdd, [{ runner: 'reqnroll', features: 'tests/Features', steps: 'tests/Steps' }])
+  const answered = (await stream.next()).configuration.components[0]
+  assert.deepEqual([answered.bdd, answered.bddPaths], [true, [{ runner: 'reqnroll', features: 'tests/Features', steps: 'tests/Steps' }]])
 })
 
 test('a save that does not come from the panel\'s page is refused and writes nothing: no token or another, another origin or site, no JSON, too large a body', BOUNDED, async (t) => {

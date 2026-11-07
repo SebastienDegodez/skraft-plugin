@@ -179,16 +179,36 @@ const FORGE_NAMES = Object.freeze({ github: 'GitHub', 'azure-devops': 'Azure Dev
 
 const options = (values, chosen, labels = {}) => values.map((value) => `<option value="${esc(value)}"${value === chosen ? ' selected' : ''}>${esc(labels[value] ?? value)}</option>`).join('')
 
+/** The folders the engine knows for a component: those the working copy holds, else those its file names. */
+const bddKnown = (component) => (component.bddFound.length > 0 ? component.bddFound : component.bddPaths)
+
+/** Where a pair reads, as the choice names it. */
+const bddLabel = (pairs) => pairs.map(({ features, steps }) => (steps === null ? features : `${features} → ${steps}`)).join(', ')
+
+/**
+ * What a component may say about Gherkin here: its folders, or none. The canvas invents no folder,
+ * so a component nobody answered for keeps its unanswered state until `/skraft-init` names them.
+ */
+const bddChoice = (component, index, lang) => {
+  const known = bddKnown(component)
+  const unanswered = component.bdd === null ? `<option value="" selected>${esc(ui(lang, 'bddUnanswered'))}</option>` : ''
+  const pairs = known.length === 0
+    ? `<option value="" disabled>${esc(ui(lang, 'bddAskInit'))}</option>`
+    : `<option value="pairs"${component.bdd === true ? ' selected' : ''}>${esc(bddLabel(known))}</option>`
+  const none = `<option value="false"${component.bdd === false ? ' selected' : ''}>${esc(ui(lang, 'bddNone'))}</option>`
+  return `<label class="field"><span>${esc(ui(lang, 'bdd'))}</span><select data-field="components.${index}.bdd">${unanswered}${pairs}${none}</select></label>`
+}
+
 /** A component: its fields, then each command it may run. */
 const renderComponent = (component, index, choices, lang) => `<article class="card">
     <header class="card-head"><h3 class="card-title"><code>${esc(component.name)}</code></h3>
       <label class="toggle"><input type="checkbox" data-field="components.${index}.contractTesting"${component.contractTesting ? ' checked' : ''}><span>${esc(ui(lang, 'contractTesting'))}</span></label>
-      <label class="toggle"><input type="checkbox" data-field="components.${index}.bdd"${component.bdd ? ' checked' : ''}><span>${esc(ui(lang, 'bdd'))}</span></label>
     </header>
     <div class="fields">
       <label class="field"><span>${esc(ui(lang, 'root'))}</span><input type="text" spellcheck="false" data-field="components.${index}.root" value="${esc(component.root)}"></label>
       <label class="field"><span>${esc(ui(lang, 'stack'))}</span><select data-field="components.${index}.stack">${options(choices.stacks, component.stack)}</select></label>
       <label class="field"><span>${esc(ui(lang, 'mocking'))}</span><select data-field="components.${index}.mocking">${options(choices.mocking, component.mocking)}</select></label>
+      ${bddChoice(component, index, lang)}
     </div>
     <h4 class="sub-head">${esc(ui(lang, 'commands'))}</h4>
     <dl class="commands">${choices.commands.map((name) => `<div class="command${component.commands[name] ? '' : ' unset'}"><dt><label for="cmd-${index}-${esc(name)}">${esc(name)}</label></dt>
