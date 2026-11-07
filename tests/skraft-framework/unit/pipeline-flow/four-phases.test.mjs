@@ -153,7 +153,6 @@ test('each agent is told its story, inputs, outputs, result file and the paths i
   ].join('\n'))
   assert.ok(host.agentRunner.dispatches[2].prompt.endsWith([
     `- .copilot-tracking/skraft-plans/${SLUG}`,
-    '- docs/features',
     '- src',
     '- tests',
     '- ./* (the files right in the root of api)',
@@ -401,13 +400,13 @@ test('the engineer works on every component, each with its test command when it 
 
   const deliver = host.agentRunner.dispatches[3].prompt
   assert.ok(deliver.includes(`- .copilot-tracking/skraft-plans/${SLUG}\n- src\n- tests\n- ../web/src\n- ./* (the files right in the root of api)\n- ../web/* (the files right in the root of web)\n- Components:\n- api: . (dotnet), mocking: inprocess, contract testing: off, bdd: off, tests: dotnet test\n- web: ../web (react), mocking: inprocess, contract testing: off, bdd: off\n`), deliver)
-  assert.ok(host.agentRunner.dispatches[2].prompt.includes(`- .copilot-tracking/skraft-plans/${SLUG}\n- docs/features\n- src\n- tests\n- ../web/src\n- ./* (the files right in the root of api)`))
+  assert.ok(host.agentRunner.dispatches[2].prompt.includes(`- .copilot-tracking/skraft-plans/${SLUG}\n- src\n- tests\n- ../web/src\n- ./* (the files right in the root of api)`))
   assert.ok(deliver.endsWith(`- Gate commands: before you write your result, run those of each component you changed, from its root, and fix every failure; the gates step runs them next and sends a failure back as a new pass:\n- api: build: dotnet build; test: dotnet test\n- web: lint: npx eslint .`), deliver)
 
   const partial = scripted({ components: [{ ...API, paths: { src: ['src'] } }, { ...WEB, paths: { tests: ['src'] }, commands: { e2e: 'npx playwright test' } }] }, (it) => [agent()(it), agent()(it), agent()(it), () => ({ ok: false, unavailable: true, text: '' })])
   await partial.start()
   const [distill, engineer] = partial.agentRunner.dispatches.slice(2).map((dispatch) => dispatch.prompt)
-  assert.ok(distill.includes(`- .copilot-tracking/skraft-plans/${SLUG}\n- docs/features\n- src\n- .\n- ../web\n- ../web/src\n- ./* (the files right in the root of api)`), distill)
+  assert.ok(distill.includes(`- .copilot-tracking/skraft-plans/${SLUG}\n- src\n- .\n- ../web\n- ../web/src\n- ./* (the files right in the root of api)`), distill)
   assert.ok(engineer.includes(`- .copilot-tracking/skraft-plans/${SLUG}\n- src\n- .\n- ../web\n- ../web/src\n- ./* (the files right in the root of api)`), engineer)
   assert.ok(engineer.endsWith(`- Gate commands: before you write your result, run those of each component you changed, from its root, and fix every failure; the gates step runs them next and sends a failure back as a new pass:\n- api: build: dotnet build; test: dotnet test`), engineer)
 })

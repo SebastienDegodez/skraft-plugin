@@ -37,7 +37,7 @@ Le dossier de suivi vit **dans la copie de travail qui lance le run** :
     │   ├── changed-files.txt                      chemins que ces changements touchent
     │   ├── code.patch, code-files.txt             les mêmes pour une lentille aveugle, sans docs/adr ni la documentation durable
     │   ├── design.patch, design-files.txt         les mêmes pour `fitness` : les documents de conception seulement (écrits quand la revue a cette lentille)
-    │   ├── features.patch, features-files.txt     les mêmes pour `business-alignment` : tout dossier `docs/features/` seulement (écrits quand la revue a cette lentille)
+    │   ├── features.patch, features-files.txt     les mêmes pour `business-alignment` : les `.feature` seulement, là où leur composant les garde (écrits quand la revue a cette lentille)
     │   ├── context.md                             story, règles du projet, qui a écrit quel document
     │   ├── components.json                        stack, stratégie de mocking, contract testing
     │   └── verdict.yaml                           le verdict de la passe, écrit par le moteur
@@ -98,7 +98,7 @@ phase : [Phases](./phases.md).
 | DESIGN | context map, conception tactique, modèle d'événements (dans le dépôt, hors du dossier de suivi) | `docs/architecture/context-map.md`, `docs/architecture/{bounded-context}.md`, `docs/domain/event-model/{bounded-context}.md` |
 | DESIGN | ADR (dans le dépôt, hors du dossier de suivi) | `docs/adr/adr-{nnn}-{sujet}.md`, `docs/adr/decisions-index.md`, `docs/adr/supersessions.md` |
 | DISTILL | plan de test, plan d'implémentation | `details/{date}/test-plan-{slug}.md`, `details/{date}/impl-plan-{story}.md` |
-| DISTILL | scénarios Gherkin, non exécutables (dans le dépôt, hors du dossier de suivi) | `docs/features/{bounded-context}/{feature}.feature` |
+| DISTILL | scénarios Gherkin, non exécutables (dans le dépôt, hors du dossier de suivi) | `{dossier features}/{bounded-context}/{feature}.feature` |
 | DELIVER | journal des changements | `changes/{date}/change-log.md` |
 | DELIVER | propositions pour les mutants survivants | `proposals/kill_proposal-{visite}-g{n}.md` |
 | DELIVER | preuve de chaque gate ; sortie des commandes e2e | `gates/{composant}/{gate}-{n}.log` ; `visuals/{composant}/e2e-{n}.log` |
@@ -121,7 +121,7 @@ request les montre, et les runs suivants les relisent.
 | conception tactique : agrégats, entités, objets valeur, événements de domaine, repositories | DESIGN | `docs/architecture/{bounded-context}.md` |
 | modèle d'événements : commandes, requêtes, événements de domaine, modèles de lecture, tranches | DESIGN | `docs/domain/event-model/{bounded-context}.md` |
 | ADR, index des décisions, registre des supersessions | DESIGN | `docs/adr/` |
-| scénarios Gherkin, non exécutables | DISTILL | `docs/features/{bounded-context}/{feature}.feature` |
+| scénarios Gherkin, non exécutables | DISTILL | `{dossier features}/{bounded-context}/{feature}.feature` |
 
 Restent dans le dossier de suivi : le document de recherche,
 `supersession-plan-{story}.md`, `consistency-matrix-{slug}.md`, `test-plan-{slug}.md`,
@@ -131,10 +131,10 @@ la pull request, le journal et ses rapports.
 | Règle | Détail |
 | --- | --- |
 | Lecture | consigne aux agents : RESEARCH et DESIGN lisent `docs/` avant toute autre chose ; le moteur ne le contrôle pas |
-| Déjà couvert | quand `docs/` couvre déjà la story, la phase le dit dans sa sortie déclarée (le document de recherche, la matrice de cohérence), cite les fichiers de `docs/` et passe à la suite. Le moteur ne contrôle que la matrice : sa ligne `docs-relied-on:` doit lister au moins un fichier de `docs/adr`, `docs/architecture`, `docs/domain/event-model` ou `docs/features`, et chaque fichier listé doit exister dans la copie de travail. Les citations du document de recherche sont contrôlées aussi, par les traces RESEARCH (`research-records`) |
+| Déjà couvert | quand `docs/` couvre déjà la story, la phase le dit dans sa sortie déclarée (le document de recherche, la matrice de cohérence), cite les fichiers de `docs/` et passe à la suite. Le moteur ne contrôle que la matrice : sa ligne `docs-relied-on:` doit lister au moins un fichier de `docs/adr`, `docs/architecture`, `docs/domain/event-model` ou `docs/features`, ou un `.feature` là où son composant le garde, et chaque fichier listé doit exister dans la copie de travail. Les citations du document de recherche sont contrôlées aussi, par les traces RESEARCH (`research-records`) |
 | Mise à jour | consigne aux agents : une phase complète un fichier existant de `docs/` et ne le réécrit pas ; le moteur ne le contrôle pas |
 | ADR | un ADR publié n'est jamais édité ; un nouvel ADR peut le remplacer ([Ce qui n'est jamais réécrit](#append-only)) |
-| Écriture permise | DESIGN : `docs/adr/`, `docs/architecture/`, `docs/domain/event-model/` ; DISTILL : `docs/features/` ([Phases](./phases.md)) |
+| Écriture permise | DESIGN : `docs/adr/`, `docs/architecture/`, `docs/domain/event-model/` ; DISTILL : les dossiers features que nomme le `bdd` des composants ([Phases](./phases.md)) |
 | Lentille aveugle | `cold-reader` ne lit ni ces fichiers ni les ADR : ils sont retirés de `code.patch` et de `code-files.txt` |
 
 ## Ce qui n'est jamais réécrit <!-- #append-only -->
@@ -370,6 +370,7 @@ attend la réponse d'un humain), `done`.
 | `refused` | `config-invalid` | `skraft-config.json` invalide | `skraft-config.json is invalid: <toutes les erreurs>` | corriger chaque erreur listée |
 | `refused` | `configuration-incomplete` | un consentement que les publications du run demandent est sans réponse, ou répond à une version antérieure de sa question | `skraft is not initialised: run /skraft-init (<publish.clé is unanswered\|publish.clé answers an earlier question>, …)` | lancer `/skraft-init` |
 | `refused` | `forge-unreachable` | le run ouvrirait une pull request sur une forge que cette machine ne joint pas | `<pourquoi la forge est injoignable>. Fix it, then start the run again.` | installer la ligne de commande de la forge, ou s'y connecter |
+| `refused` | `bdd-unbound` | le `bdd` d'un composant nomme un runner dont les définitions de pas sont dans un dossier que la copie de travail n'a pas | `<composant>: <runner> reads its step definitions in <dossier>, which is no folder of the working copy. Fix it, then start the run again.` | créer le dossier, ou corriger le chemin avec `/skraft-init` |
 | `refused` | `base-unresolved` | pas de merge-base avec la ref dans un dépôt | `… has no merge base with <ref>; set baseBranch in skraft-config.json or pass --base <ref>` | régler `baseBranch` ou passer `--base` |
 | `refused` | `source-control-unavailable` | Git ne se lance pas alors que la config liste des composants | `<erreur>; the components of skraft-config.json need Git for their base` | installer Git, le mettre dans le PATH |
 | `refused` | `no-active-pipeline` | pas de `.active-slug` valide | `no active pipeline in this working copy (.copilot-tracking/skraft-plans/.active-slug); start one with an explicit slug` | `skraft init <slug>` ou `/skraft <slug>` |
@@ -385,7 +386,7 @@ attend la réponse d'un humain), `done`.
 | `blocked` | `missing-outputs` | sorties absentes après la dernière tentative | `solution-researcher left required outputs missing after 3 attempts: <chemins>` | une reprise rend le même blocage ; corriger la cause et démarrer un nouveau slug |
 | `blocked` | `design-records` | les traces DESIGN de l'architecte échouent encore après sa dernière tentative : une matrice de cohérence dont `consistency-gate` ne vaut pas `PASS` (G10 ; une matrice absente arrête sur `missing-outputs`), un ADR nommé `*-rejected.md`, `*-accepted.md`, `*-deprecated.md` ou `*-superseded.md` (G14), une ligne `**Supersedes:**` sans sa ligne dans `docs/adr/supersessions.md` (G2, G12), un ADR sans sa ligne dans `docs/adr/decisions-index.md` | `solution-architect still failed after 3 attempts: <chaque trace en faute>` | écrire la trace, puis démarrer un nouveau slug |
 | `blocked` | `research-records` | les citations du chercheur échouent encore après sa dernière tentative : un chemin de la copie de travail que le document de recherche cite et qui n'est pas un fichier lisible, ou une plage `chemin:ligne` ou `chemin:ligne-ligne` au-delà de la fin du fichier qu'elle nomme (une plage sur un chemin absent est signalée une seule fois, comme chemin absent ; un chemin cité plusieurs fois est signalé une seule fois) | `solution-researcher still failed after 3 attempts: <chaque citation en faute>` | corriger la citation, puis démarrer un nouveau slug |
-| `blocked` | `gherkin-records` | les scénarios du concepteur d'acceptation échouent encore après sa dernière tentative : un `.feature` que nomme le plan de test et que `docs/features/` ne tient pas, un scénario qui ne dit ni Given, ni When, ni Then, un outline dont les exemples laissent un placeholder ouvert sans colonne, deux scénarios d'un même fichier qui partagent un titre, ou moins de scénarios que son `ac-draft-{story}.md` ne déclare de critères d'acceptation. Seulement là où un composant déclare `bdd` | `acceptance-designer still failed after 3 attempts: <chaque scénario en faute>` | écrire le scénario, puis démarrer un nouveau slug |
+| `blocked` | `gherkin-records` | les scénarios du concepteur d'acceptation échouent encore après sa dernière tentative : un `.feature` que nomme le plan de test et qu'aucun dossier features de son composant ne tient, un scénario qui ne dit ni Given, ni When, ni Then, un outline dont les exemples laissent un placeholder ouvert sans colonne, deux scénarios d'un même fichier qui partagent un titre, ou moins de scénarios que son `ac-draft-{story}.md` ne déclare de critères d'acceptation. Un `.feature` qui déclare une langue autre que `en`, ou qui n'ouvre aucun scénario nommé en anglais, est rapporté sur cette seule ligne. Seulement là où un composant déclare `bdd`, et seulement sous les dossiers qu'il nomme | `acceptance-designer still failed after 3 attempts: <chaque scénario en faute>` | écrire le scénario, puis démarrer un nouveau slug |
 | `blocked` | `agent-blocked` | l'agent a répondu `blocked`, et un humain a répondu `STOP` à la question `blocked` | `<agent> is blocked: <résumé>` | définitif : une nouvelle exécution du slug reste bloquée |
 | `blocked` | `agent-unavailable` | l'hôte ne peut pas lancer l'agent | Claude Code : `skraft:solution-researcher could not be started: …` ; Copilot : `agent "solution-researcher" is not available in this Copilot session (agents: …); install or enable the skraft plugin, or pass agentIds` | installer ou activer le plugin, puis reprendre ; la tentative n'est pas consommée |
 | `blocked` | `agent-failed` | l'agent s'arrête sans finir et ses sorties manquent | `<agent> stopped without finishing: <erreur>` | reprendre : l'étape reste ouverte et la même tentative est relancée |

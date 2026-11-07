@@ -44,8 +44,8 @@ est le vrai module, que DELIVER remplira.
 
 ## Des scénarios gardés dans le dépôt
 
-DISTILL écrit ses scénarios dans `docs/features/<bounded-context>/<feature>.feature`, sur la
-branche de la story : la pull request les montre, et les runs suivants les relisent. Aucun
+DISTILL écrit ses scénarios là où le dit le `bdd` du composant, sous la forme
+`<dossier features>/<bounded-context>/<feature>.feature`, sur la branche de la story : la pull request les montre, et les runs suivants les relisent. Aucun
 lanceur de tests ne lit ces fichiers ; le test d'acceptation en reprend les valeurs mot pour mot,
 et la lentille `testability` le vérifie (T2).
 

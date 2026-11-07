@@ -68,7 +68,7 @@ All seven context-map patterns with their risks: [references/ddd-strategic.md](r
   immutable payload, raised by the aggregate root after the state change.
 - **Repository:** one per aggregate, domain-named methods, returns aggregates, no ORM type in the
   interface. Interface in **Domain** when it persists an aggregate, in **Application** for a CRUD
-  entity or a read model, never in Infrastructure; the aggregate's ADR records the choice.
+  entity or a read model, never in Infrastructure; the tactical design records the choice, never an ADR.
 - **Domain service:** stateless logic spanning several aggregates; logic of one aggregate stays in
   it; infrastructural logic goes behind an Application interface.
 - **Policy / Specification:** a named rule; a Specification is a composable predicate

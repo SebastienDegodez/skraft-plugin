@@ -26,7 +26,7 @@ Read the skill file your brief lists under Skill before any other input; judge w
 | Gate | Name | Criterion | Severity |
 |---|---|---|---|
 | G3 | Dependency rule | Domain and Application depend on nothing in Infrastructure or API: no type, namespace or import from those layers in a Domain or Application contract or file. | blocker |
-| G4 | Interfaces in an inner layer | Every application interface (repository, gateway, publisher) is defined in Domain or Application, in the layer the aggregate's ADR records, never in Infrastructure. A Domain repository interface the ADR chose is not a finding. | blocker |
+| G4 | Interfaces in an inner layer | Every application interface (repository, gateway, publisher) is defined in Domain or Application, in the layer the tactical design records by the `clean-architecture-<stack>` rule, never in Infrastructure. That layer is never an ADR's to record: an ADR that records none is not a finding. | blocker |
 | G5 | Invariants stay inside one aggregate | Each aggregate enforces only its own invariants and refers to other aggregates by ID, never by holding another aggregate root. | high |
 | G6 | Context map complete and admissible | The context map labels every relationship between contexts with an explicit pattern (ACL, Conformist, Shared Kernel, Partnership, Open Host Service, Published Language); no dependency between contexts is undeclared. | high |
 | G16 | Comparable contracts share a convention | Comparable interfaces or hooks for similar responsibilities share the same state, return and error shape and exposed field names, unless an ADR justifies the divergence. Name the compared pair in the finding. | high |

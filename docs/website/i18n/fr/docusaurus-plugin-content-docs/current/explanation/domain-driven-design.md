@@ -174,9 +174,9 @@ Le modèle d'événements, la context map et la conception tactique décrivent l
 story. L'architecte les écrit sous `docs/` du dépôt, sur la branche de la story, et la pull
 request les montre à côté du code. Le run suivant les lit avant toute autre chose et les complète
 plutôt que de repartir de zéro ; quand ils couvrent déjà sa story, l'architecte le dit, les cite
-et passe à la suite. Les scénarios qu'écrit DISTILL suivent le même chemin, sous
-`docs/features/`. La matrice de cohérence appartient à une story et reste
-dans le dossier de suivi du run. La liste complète :
+et passe à la suite. Les scénarios qu'écrit DISTILL sont durables de la même façon, dans le
+dossier que nomme le `bdd` de chaque composant. La matrice de cohérence appartient à une story
+et reste dans le dossier de suivi du run. La liste complète :
 [Documentation durable](../reference/run-journal.md#durable-docs).
 
 ## La cohérence entre artefacts

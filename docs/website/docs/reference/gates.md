@@ -108,7 +108,7 @@ every criterion that forbids one.
 | **G14** | `consistency` | A `Status: Rejected` ADR stands only when a story or measurable force of this batch raised the question and its Alternatives section names the option adopted instead. | blocker |
 | **C1** | `consistency` | Context map, diagrams and event model name the same contexts, aggregates, commands, events and fields (the fields the event model gives each one), and each matches the research and the story. | high |
 | **G3** | `architecture-compliance` | Domain and Application depend on nothing in Infrastructure or API. | blocker |
-| **G4** | `architecture-compliance` | Every application interface (repository, gateway, publisher) is defined in Domain or Application, in the layer the aggregate's ADR records, never in Infrastructure. | blocker |
+| **G4** | `architecture-compliance` | Every application interface (repository, gateway, publisher) is defined in Domain or Application, in the layer the tactical design records, never in Infrastructure. The layer is never an ADR's to record. | blocker |
 | **G5** | `architecture-compliance` | Each aggregate enforces only its own invariants and refers to other aggregates by ID. | high |
 | **G6** | `architecture-compliance` | The context map labels every relationship between contexts with an explicit pattern (ACL, Conformist, Shared Kernel, Partnership, Open Host Service, Published Language). | high |
 | **G16** | `architecture-compliance` | Comparable interfaces share the same state, return and error shape and exposed field names, unless an ADR justifies the divergence. | high |
@@ -127,7 +127,7 @@ every criterion that forbids one.
 | Criterion | Check |
 | --- | --- |
 | G10 | a `consistency-matrix-<story>.md` in the tracking folder, its `consistency-gate` line reading `PASS` |
-| docs-relied-on | the matrix has a `docs-relied-on:` line (comma-separated repository-relative paths, backticks allowed, `/` or `\` separators) listing at least one file under `docs/adr/`, `docs/architecture/`, `docs/domain/event-model/` or `docs/features/`, and every listed path is a readable regular file of the working copy. A path counts only from its start (not re-rooted from `mydocs/`, an absolute path or `../docs/`), a path with a `.` or `..` segment is not listed, a trailing `:line`, `#anchor` or period is dropped, and a folder or any other file of `docs/` does not count |
+| docs-relied-on | the matrix has a `docs-relied-on:` line (comma-separated repository-relative paths, backticks allowed, `/` or `\` separators) listing at least one file under `docs/adr/`, `docs/architecture/`, `docs/domain/event-model/` or `docs/features/`, or a `.feature` wherever its component keeps it, and every listed path is a readable regular file of the working copy. A path counts only from its start (not re-rooted from `mydocs/`, an absolute path or `../docs/`), a path with a `.` or `..` segment is not listed, a trailing `:line`, `#anchor` or period is dropped, and a folder or any other file of `docs/` does not count |
 | G14 | no ADR the run wrote named `*-rejected.md`, `*-accepted.md`, `*-deprecated.md` or `*-superseded.md` |
 | G2, G12 | every `**Supersedes:** ADR-MMM` of an ADR the run wrote has its row in the `docs/adr/supersessions.md` registry |
 | G2 | every ADR the run wrote has its row in `docs/adr/decisions-index.md` |
@@ -170,8 +170,8 @@ place counts as it (`tests/unit`, `tests/Orders.UnitTests`). .NET names its plac
 
 **Engine check.** G1: after each `acceptance-designer` attempt, without a lens
 ([`gherkin-records`](./run-journal.md#statuses-and-codes)), the engine reads the scenarios the test
-plan names and reports one line per fault: a `.feature` the plan cites that `docs/features/` does
-not hold, a scenario that says no Given, When or Then, an outline whose examples leave unfilled a
+plan names and reports one line per fault: a `.feature` the plan cites that no features folder of its
+component holds, a scenario that says no Given, When or Then, an outline whose examples leave unfilled a
 placeholder its title or its steps open, two scenarios of one file sharing a title, and a story
 with fewer scenarios than its `ac-draft-{story}.md` declares acceptance criteria (an outline counts
 once, however many example rows it carries). The plan declares the perimeter: only the `.feature`

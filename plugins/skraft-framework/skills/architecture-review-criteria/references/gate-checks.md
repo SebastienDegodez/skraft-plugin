@@ -31,13 +31,14 @@ no diagram arrow points outward. `CancellationToken` in a handler signature is n
 
 ## G4 — Interfaces in an inner layer
 
-Every `I*` interface of the tactical design sits under Domain or Application; a repository sits in the
-layer its aggregate's ADR records (Domain for an aggregate, Application for a CRUD entity or a
-read model); every other interface sits in Application. An interface under Infrastructure, a
-repository whose layer differs from its ADR, or an aggregate ADR recording no layer is a finding.
+Every `I*` interface of the tactical design sits under Domain or Application, in the layer the
+tactical design records by the `clean-architecture-<stack>` rule (with no such skill: Domain for an
+aggregate's repository, Application for a CRUD entity, a read model or a gateway). An interface
+under Infrastructure, or code that puts an interface in another layer than the tactical design,
+is a finding. The layer is baseline (G15): an ADR that records none is no finding.
 
 - ✗ `IEventPublisher` is "defined in the messaging Infrastructure project".
-- ✓ `IEligibilityRepository` under Domain as its ADR records; `IEventPublisher` under Application.
+- ✓ `IEligibilityRepository` under Domain as the tactical design records; `IEventPublisher` under Application.
 
 ## G5 — Invariants stay inside one aggregate
 
