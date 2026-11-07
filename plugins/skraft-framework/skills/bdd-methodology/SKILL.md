@@ -92,7 +92,7 @@ Feature: Eligibility Check
 
 | Element | Convention | Example |
 |---|---|---|
-| Feature file | `docs/features/{bounded-context}/{feature}.feature` | `docs/features/eligibility/check.feature` |
+| Feature file | `{the component's scenarios folder}/{bounded-context}/{feature}.feature` | `docs/features/eligibility/check.feature` |
 | Feature title | Business name of the feature | `Eligibility Check` |
 | Scenario title | `{Persona} {business action} {outcome}` | `Driver with clean record obtains eligibility` |
 | Steps | Business verb + domain noun | `the driver requests an eligibility check` |
