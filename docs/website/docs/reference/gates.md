@@ -118,7 +118,7 @@ every criterion that forbids one.
 | **G11** | `fitness` | Every ADR adopting CQRS, Event Sourcing, Saga, eventual consistency, a service split or an ACL cites an admissible force and evaluates the "do without" option. | high |
 | **G15** | `fitness` | No ADR ratifies a baseline already enforced by a `clean-architecture-*` skill or an architecture test, where a repository interface lives included. | high |
 | **G17** | `fitness` | Every ADR the pass wrote decides a layer boundary, an aggregate boundary, a bounded context, a pattern adding complexity or a cross-cutting concern, and weighs a real trade-off; another subject is `ADR-INFLATION`, no alternative weighed is `NON-DECISION`. | high |
-| **G18** | `fitness` | Every ADR the pass wrote holds one decision at decision level: no full signature, code reference (file path, `#file:` citation, `path:line`), enum values, Value Object inventory, route tree, or traceability reference (ticket, issue number, user story, AC, PRD or requirement id), the triggering story included. A quality attribute stated with its measure as a force of the decision is allowed. | medium |
+| **G18** | `fitness` | Every ADR the pass wrote holds one decision at decision level: no full signature, enum values, Value Object inventory, route tree, or traceability reference (user story, PRD or requirement id), the triggering story included. A quality attribute stated with its measure as a force of the decision is allowed. A code file, an acceptance criterion or a ticket is refused by the engine, not by the lens. | medium |
 | **F1** | `fitness` | Every quality attribute the story or research states has a design element that answers it. | high |
 
 **Engine checks.** After each `solution-architect` attempt, without a lens

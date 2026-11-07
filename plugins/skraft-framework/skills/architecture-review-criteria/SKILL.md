@@ -25,7 +25,7 @@ each one.
 - **Not yours to report** — the engine already checks: a consistency matrix exists per story and
   reads `consistency-gate: PASS` (G10); no ADR file name carries a verdict (G14); every `**Supersedes:**` line of a new ADR has its row
   in `docs/adr/supersessions.md` (G2, G12).
-  The engine also refuses version pins, a `decision` longer than one sentence, a status outside the closed set, a missing index row and an in-place edit of a published ADR: do not report them.
+  The engine also refuses version pins, a code file, an acceptance criterion or a ticket cited in an ADR, a `decision` longer than one sentence, a status outside the closed set, a missing index row and an in-place edit of a published ADR: do not report them.
 
 ## Gate checks
 
@@ -66,4 +66,4 @@ valid.
 
 **G17 — eligibility.** A library ADR is eligible only through the constraint it imposes (layer boundary, data-loading model); a body about the library's usage is G17.
 
-**G18 — decision level.** A line that would change when the code is refactored without changing the decision belongs in the contracts or diagrams. A code reference (a file path, a `#file:` citation, a `path:line`) is a finding at its line, and so is a traceability reference (a ticket, issue number, user story, AC, PRD or requirement id), the story that triggered the ADR included; a quality attribute stated with its measure as a force of the decision (`p95 ≤ 300 ms`, NFR id beside it or not) is none. The full list is in [references/gate-checks.md](references/gate-checks.md) G18.
+**G18 — decision level.** A line that would change when the code is refactored without changing the decision belongs in the contracts or diagrams. A traceability reference (a user story, PRD or requirement id) is a finding at its line, the story that triggered the ADR included; a quality attribute stated with its measure as a force of the decision (`p95 ≤ 300 ms`, NFR id beside it or not) is none. The full list is in [references/gate-checks.md](references/gate-checks.md) G18.
