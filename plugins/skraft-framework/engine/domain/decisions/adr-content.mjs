@@ -98,11 +98,45 @@ const STATUS_LINES = /^(?:(?:status|superseded_by):|\*\*Status:\*\*).*\n?/gm
 const withoutStatus = (text) => text.replace(/\r\n/g, '\n').replace(STATUS_LINES, '')
 
 /**
- * What an ADR on the default branch must not suffer: a change beyond its status lines, a deletion.
+ * The statuses an `Accepted` ADR on the default branch may move to, in its header and in its
+ * `**Status:**` line; any other status stays as it is. The header may say `Superseded` alone, its
+ * `superseded_by` naming the successor.
+ */
+const SUCCESSOR = String.raw`by \[?ADR-\d+\]?(?:\([^)]*\))?`
+const ACCEPTED_MOVES = [new RegExp(`^(?:Deprecated|Superseded(?: ${SUCCESSOR})?)$`), new RegExp(`^(?:Deprecated|Superseded ${SUCCESSOR})$`)]
+
+/**
+ * The status the header and the `**Status:**` line declare, each in turn.
+ * @param {string} text
+ */
+const declaredStatuses = (text) => [field(text, 'status'), STATUS_LINE.exec(text)?.[1]]
+
+/**
+ * Whether a status may go from `before` to `after`: an Accepted one to Superseded by ADR-NNN or
+ * Deprecated, any other unchanged. A status outside the closed set is refused on its own.
+ * @param {RegExp} moves @param {string | null | undefined} before @param {string | null | undefined} after
+ */
+const allowedMove = (moves, before, after) => after === before || !STATUS.test(after ?? '') || (before === 'Accepted' && moves.test(after ?? ''))
+
+/**
+ * Each status change of an ADR on the default branch that its lifecycle forbids, once.
+ * @param {string} path @param {string} before @param {string} after
+ */
+const transitionProblems = (path, before, after) => {
+  const was = declaredStatuses(before)
+  const moves = declaredStatuses(after).map((status, at) => [was[at], status, ACCEPTED_MOVES[at]])
+    .filter(([from, to, moves]) => !allowedMove(/** @type {RegExp} */ (moves), from, to))
+  return [...new Set(moves.map(([from, to]) => `${path} is on the default branch with the status "${from}" and was given "${to}": an Accepted ADR becomes only Superseded by ADR-NNN or Deprecated; any other status stays`))]
+}
+
+/**
+ * What an ADR on the default branch must not suffer: a change beyond its status lines, a status
+ * move its lifecycle forbids, a deletion.
  * @param {string} path @param {string} before the text on the base @param {string | null} after null: deleted
  * @returns {string[]}
  */
 export const publishedProblems = (path, before, after) => {
   if (after === null) return [`${path} is on the default branch and was deleted: restore it; an ADR is never deleted`]
-  return withoutStatus(before) === withoutStatus(after) ? [] : [`${path} is on the default branch: change only its status lines; write a new ADR that supersedes or amends it`]
+  const kept = withoutStatus(before) === withoutStatus(after) ? [] : [`${path} is on the default branch: change only its status lines; write a new ADR that supersedes or amends it`]
+  return [...kept, ...transitionProblems(path, before, after)]
 }
