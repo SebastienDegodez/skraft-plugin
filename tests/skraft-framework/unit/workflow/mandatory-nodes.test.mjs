@@ -115,7 +115,7 @@ test('a mandatory lens dropped from review.skraft.dot stays missing when the pip
   const noCall = edit(decoy,
     ['  deliver_review [shape=house, workflow="review", mandatory=true]\n', ''],
     ['  gates -> deliver_review [label="PASS"]', '  gates -> mutation [label="PASS"]'],
-    ['  deliver_review -> deliver [label="NEEDS_REWORK", max_visits=3]\n  deliver_review -> mutation [label="APPROVED"]\n', ''])
+    ['  deliver_review -> deliver [label="NEEDS_REWORK", max_visits=2]\n  deliver_review -> mutation [label="APPROVED"]\n', ''])
   assert.deepEqual(await checked(noCall), [
     `mandatory node deliver_review is missing as a call (shape=house); ${MANDATORY}`,
     lensMissing('test_integrity', 'test-integrity'), lensMissing('architecture_boundaries', 'architecture-boundaries'),
@@ -145,7 +145,7 @@ test('a mandatory review dropped, bypassed, or sending NEEDS_REWORK nowhere or t
     ['research -> design -> design_review_lenses', 'research -> design -> quick\n  quick [shape=parallelogram, gate="build"]\n  quick -> design_review_lenses [label="PASS"]\n  quick -> adr [label="FAIL"]'])
   assert.deepEqual(await checked(bypassed), ['start', 'design'].map((from) => `${from} reaches the exit without passing mandatory node design_review; ${MANDATORY}`))
 
-  const noRework = edit(BUILT_IN_WORKFLOW, ['  distill_review -> distill [label="NEEDS_REWORK", max_visits=3]\n', ''])
+  const noRework = edit(BUILT_IN_WORKFLOW, ['  distill_review -> distill [label="NEEDS_REWORK", max_visits=2]\n', ''])
   assert.deepEqual(await checked(noRework), [`mandatory node distill_review has no NEEDS_REWORK edge back to an agent of DISTILL; ${MANDATORY}`])
 
   const elsewhere = edit(BUILT_IN_WORKFLOW, ['design_review -> design  [label="NEEDS_REWORK", max_visits=2]', 'design_review -> distill  [label="NEEDS_REWORK", max_visits=1]'])

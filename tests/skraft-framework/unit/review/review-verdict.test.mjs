@@ -748,9 +748,9 @@ test('STOP to a review-ceiling question ends the run blocked at the ceiling, and
 
 test('ACCEPT given with skraft decide at the ceiling of distill_review closes DISTILL and enters DELIVER; a run stopped after it resumes without asking again (#499)', async () => {
   const unavailable = () => ({ ok: false, unavailable: true, text: '' })
-  const host = scripted({}, (it) => [...nominal(it).slice(0, 3), agent()(it), agent()(it), agent()(it), unavailable, nominal(it)[3]])
+  const host = scripted({}, (it) => [...nominal(it).slice(0, 3), agent()(it), agent()(it), unavailable, nominal(it)[3]])
   const medium = says('coverage', 'fail', [finding('F1', 'medium', 'the refund rule has no scenario', { location: 'tests/Acceptance/refund.feature:4' }), finding('F2', 'low', 'a step is worded twice', { location: 'tests/Acceptance/refund.feature:9' })])
-  host.agentRunner.review = lenses({ coverage: [medium, medium, medium, medium] })
+  host.agentRunner.review = lenses({ coverage: [medium, medium, medium] })
 
   const waiting = await host.start()
   assert.deepEqual([waiting.status, waiting.phase, waiting.code], ['waiting', 'DISTILL', 'review-ceiling'])
@@ -770,10 +770,10 @@ test('ACCEPT given with skraft decide at the ceiling of distill_review closes DI
     'phase.closed DISTILL', 'step.started DELIVER deliver', 'step.started DELIVER gates',
   ])
   assert.deepEqual(reviews(host).filter(([step]) => step !== 'design_review'), [
-    ['distill_review', 1, 'needs-rework', 'distill'], ['distill_review', 2, 'needs-rework', 'distill'], ['distill_review', 3, 'needs-rework', 'distill'], ['distill_review', 4, 'needs-rework', null],
+    ['distill_review', 1, 'needs-rework', 'distill'], ['distill_review', 2, 'needs-rework', 'distill'], ['distill_review', 3, 'needs-rework', null],
     ['deliver_review', 1, 'approved', 'mutation'],
   ])
-  assert.equal(host.agentRunner.dispatches.filter((dispatch) => dispatch.agent === 'acceptance-designer').length, 4)
+  assert.equal(host.agentRunner.dispatches.filter((dispatch) => dispatch.agent === 'acceptance-designer').length, 3)
   const engineer = host.agentRunner.dispatches.find((dispatch) => dispatch.agent === 'software-engineer')
   assert.ok(!engineer.prompt.includes('A human refused') && !engineer.prompt.includes('What pass'), engineer.prompt)
   assert.deepEqual(host.events().filter((event) => event.type === 'step.started' && event.step === 'deliver').map(({ visit, attempt, missing, feedback, sentBy, instruction, group }) => [visit, attempt, missing, feedback, sentBy, instruction, group]), [[1, 1, [], [], undefined, undefined, undefined]])
@@ -792,19 +792,19 @@ test('ACCEPT given with skraft decide at the ceiling of distill_review closes DI
 test('ACCEPT at the ceiling of deliver_review, a call to .skraft/review.skraft.dot, goes on by its APPROVED edge to the mutation gate (#499)', async () => {
   const host = scripted({ answers: [{ answer: 'ACCEPT' }] }, (it) => [
     ...nominal(it),
-    agent({ work: tddCycle(SLUG, 'Refund') })(it), agent({ work: tddCycle(SLUG, 'Discount') })(it), agent({ work: tddCycle(SLUG, 'Receipt') })(it),
+    agent({ work: tddCycle(SLUG, 'Refund') })(it), agent({ work: tddCycle(SLUG, 'Discount') })(it),
   ])
   const low = says('test-integrity', 'fail', [finding('F1', 'low', 'the refund test name says nothing', { gate: 'G7', location: 'tests/CheckoutTests.cs:9' })])
-  host.agentRunner.review = lenses({ 'test-integrity': [low, low, low, low] })
+  host.agentRunner.review = lenses({ 'test-integrity': [low, low, low] })
 
   assert.equal((await host.start()).status, 'done')
 
   assert.deepEqual(reviews(host).filter(([step]) => step === 'deliver_review'), [
-    ['deliver_review', 1, 'needs-rework', 'deliver'], ['deliver_review', 2, 'needs-rework', 'deliver'], ['deliver_review', 3, 'needs-rework', 'deliver'], ['deliver_review', 4, 'needs-rework', null],
+    ['deliver_review', 1, 'needs-rework', 'deliver'], ['deliver_review', 2, 'needs-rework', 'deliver'], ['deliver_review', 3, 'needs-rework', null],
   ])
   const [asked] = host.human.questions
   assert.deepEqual([asked.kind, asked.options], ['review-ceiling', ['ACCEPT', 'STOP']])
-  assert.ok(asked.text.startsWith('deliver_review: deliver did not fix every finding after 4 passes'), asked.text)
+  assert.ok(asked.text.startsWith('deliver_review: deliver did not fix every finding after 3 passes'), asked.text)
   const answered = host.events().findIndex((event) => event.type === 'question.answered')
   assert.equal(host.events().slice(answered).find((event) => event.type === 'step.started').step, 'mutation')
 })

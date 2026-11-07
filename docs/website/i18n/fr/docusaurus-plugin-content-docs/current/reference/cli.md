@@ -236,8 +236,8 @@ design_review is blocked: a lens answered inconclusive; the verdict is in <dossi
 
 L'agent relancé reçoit d'abord ce que le blocage a laissé, puis la consigne.
 
-Une revue dont la boucle vers son producteur atteint `max_visits` (2 pour `design_review`, 3 pour chaque autre
-revue du workflow livré) ne renvoie plus le travail. Sa question dit que le producteur n'a pas corrigé
+Une revue dont la boucle vers son producteur atteint `max_visits` (2 pour chaque revue du workflow
+livré : 3 passages) ne renvoie plus le travail. Sa question dit que le producteur n'a pas corrigé
 tous les findings, montre chaque finding blocker et high avec son contexte (la raison de sa
 sévérité, le type de dérive, tous les endroits où il se trouve, la correction), les medium et low
 dans un tableau, et où se trouve le fichier de verdict. Quand il ne reste que des medium et des

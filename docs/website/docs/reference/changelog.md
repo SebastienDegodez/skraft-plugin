@@ -37,7 +37,7 @@ The changes a user sees, grouped by version; the commit-by-commit detail is in `
 | alpha.16 | `skraft doctor` and the run show each agent's model under the host that starts it. |
 | alpha.16 | The engine no longer looks for Docker: a test that needs a container fails like any other. |
 | alpha.19 | Mutation runs last, once, on the code the DELIVER review approved. On failure, `kill_proposal` writes one proposal per file of survivors without touching the code; the `mutation-plan` question lets the developer choose (`APPLY`, their instruction, `STOP`); `kill_mutants` applies the choice, then `mutation_gates` runs the gates again before a new mutation run. |
-| next | ADR rules in the engine: no version, one-sentence `decision`, closed status vocabulary, published ADRs changed only in their status lines, a row in `decisions-index.md` for each ADR written; DESIGN review returns twice at most (`max_visits` 2), ratification once (`max_visits` 1); lens gates G17 and G18. |
+| next | ADR rules in the engine: no version, one-sentence `decision`, closed status vocabulary, published ADRs changed only in their status lines, a row in `decisions-index.md` for each ADR written; each review (DESIGN, DISTILL, DELIVER, mutation) returns twice at most (`max_visits` 2, 3 passes), ratification once (`max_visits` 1); lens gates G17 and G18. |
 
 ### End of run and pull requests <!-- #v2-publish -->
 

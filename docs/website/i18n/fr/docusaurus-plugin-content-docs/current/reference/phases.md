@@ -157,7 +157,7 @@ ligne `**Status:**`, ligne de `docs/adr/decisions-index.md`) et les commite seul
 
 | Arête | Étiquette | `max_visits` |
 | --- | --- | --- |
-| `distill_review -> distill` | `NEEDS_REWORK` | 3 |
+| `distill_review -> distill` | `NEEDS_REWORK` | 2 |
 | `distill_review -> deliver` | `APPROVED` | — |
 
 ## DELIVER <!-- #deliver -->
@@ -202,13 +202,13 @@ ligne `**Status:**`, ligne de `docs/adr/decisions-index.md`) et les commite seul
 | --- | --- | --- |
 | `gates -> deliver` | `FAIL` | 3 |
 | `gates -> deliver_review` | `PASS` | — |
-| `deliver_review -> deliver` | `NEEDS_REWORK` | 3 |
+| `deliver_review -> deliver` | `NEEDS_REWORK` | 2 |
 | `deliver_review -> mutation` | `APPROVED` | — |
 | `mutation -> visuals` | `PASS` | — |
 | `mutation -> kill_proposal` | `FAIL` | 5 |
 | `kill_proposal -> mutation_plan` | — | — |
 | `mutation_plan -> kill_mutants` | `APPLY` (une consigne suit aussi cette arête) | — |
-| `mutation_review -> kill_mutants` | `NEEDS_REWORK` | 3 |
+| `mutation_review -> kill_mutants` | `NEEDS_REWORK` | 2 |
 | `mutation_review -> mutation_gates` | `APPROVED` | — |
 | `mutation_gates -> kill_mutants` | `FAIL` | 3 |
 | `mutation_gates -> mutation` | `PASS` | — |

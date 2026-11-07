@@ -235,8 +235,8 @@ design_review is blocked: a lens answered inconclusive; the verdict is in <track
 
 The agent run again gets what the block left first, then the instruction.
 
-A review whose loop to its producer reaches `max_visits` (2 for `design_review`, 3 for each other
-review of the shipped workflow) is not sent back again. Its question says that the producer did not fix every
+A review whose loop to its producer reaches `max_visits` (2 for each review of the shipped
+workflow: 3 passes) is not sent back again. Its question says that the producer did not fix every
 finding, shows each blocker and high finding with its context (why that severity, the kind of
 drift, every place it holds at, the fix), the medium and low ones in a table, and where the
 verdict file is. With only medium and low findings left, it is the `review-ceiling` question:
