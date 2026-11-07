@@ -3,6 +3,12 @@
 Toutes les modifications notables de ce projet sont documentées ici.
 Format basé sur [Conventional Commits](https://www.conventionalcommits.org/) — versionnage [SemVer](https://semver.org/).
 
+## [2.0.0-alpha.76](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.75...v2.0.0-alpha.76) (2026-11-07)
+
+### ✨ Features
+
+* **engine:** the scenarios live where the component says, and a wrong path says so ([#541](https://github.com/SebastienDegodez/skraft-plugin/issues/541)) ([#543](https://github.com/SebastienDegodez/skraft-plugin/issues/543)) ([566f968](https://github.com/SebastienDegodez/skraft-plugin/commit/566f968d092d5727cf46e50b1ca27ea44c74fb4b)), closes [#523](https://github.com/SebastienDegodez/skraft-plugin/issues/523)
+
 ## [2.0.0-alpha.75](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.74...v2.0.0-alpha.75) (2026-11-07)
 
 ### 🐛 Bug Fixes
