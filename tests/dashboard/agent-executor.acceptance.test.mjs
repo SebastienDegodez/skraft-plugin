@@ -1,4 +1,3 @@
-import { createHash } from 'node:crypto'
 import { deepStrictEqual, match, strictEqual } from 'node:assert/strict'
 import { mkdirSync, mkdtempSync, existsSync, readFileSync, readdirSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
@@ -10,6 +9,7 @@ import { computeMetrics } from '@microsoft/vally'
 import { CopilotAdapter } from '@microsoft/vally/trajectory'
 
 import { createAgentExecutor as createExecutor } from '../../eng/vally-agent-executor/executor.mjs'
+import { behaviourHash } from '../../eng/lib/descriptor-hash.mjs'
 
 // Each executor copies a plugin root into the temp folder on its first run; every one is shut
 // down once the file has run, whatever its test came to, and the artifact folders go with TEMP.
@@ -29,7 +29,7 @@ const repoRoot = resolve(join(dirname(fileURLToPath(import.meta.url)), '../..'))
 const pluginSkills = join(repoRoot, 'plugins/skraft-framework/skills')
 const agentPath = join(repoRoot, 'plugins/skraft-framework/com.github.copilot/agents/software-engineer.agent.md')
 const relativeAgentPath = relative(repoRoot, agentPath).split('\\').join('/')
-const expectedHash = createHash('sha256').update(readFileSync(agentPath)).digest('hex')
+const expectedHash = behaviourHash(readFileSync(agentPath, 'utf8'))
 const activatedSkills = ['outside-in-tdd', 'test-design-mandates', 'craft-discipline']
 const blockedOutput = '{"status":"blocked","type":"clarification_needed"}'
 

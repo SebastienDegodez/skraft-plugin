@@ -17,7 +17,6 @@ skills:
   - clean-architecture-testing
 metadata:
   dispatched_by: Skraft - Orchestrator
-  model_requirement: "Sonnet-class or above. This agent requires multi-constraint reasoning (Clean Architecture + Object Calisthenics + the Iron Rule of tests). Low-tier models (Haiku, Flash, mini) are NOT supported."
 ---
 
 # Software-engineer agent, batched cycle

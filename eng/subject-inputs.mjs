@@ -11,7 +11,7 @@ import { spawnSync } from 'node:child_process'
 
 import { exercisedAgents } from './lib/changed-skills.mjs'
 import { parseCompanions, stagedSources } from './lib/eval-reuse.mjs'
-import { agentPathOf, metadataSequence } from './vally-agent-executor/agent-descriptor.mjs'
+import { agentPathOf, agentSkills } from './vally-agent-executor/agent-descriptor.mjs'
 
 const show = (rev, path, cwd) => {
   const result = spawnSync('git', ['show', `${rev}:${path}`], { cwd, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 })
@@ -24,7 +24,7 @@ const loadedSkills = (rev, agents, cwd) => {
   const skills = agents.flatMap((id) => {
     const path = agentPathOf(id)
     const content = path ? show(rev, path, cwd) : null
-    return content === null ? [] : [...metadataSequence(content, 'skills'), ...metadataSequence(content, 'on_demand_skills')]
+    return content === null ? [] : agentSkills(content)
   })
   return [...new Set(skills)].sort()
 }

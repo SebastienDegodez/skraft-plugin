@@ -20,7 +20,7 @@ import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
 import { parseArgs } from 'node:util'
 
-import { parseTree, planReuse, recordLedger, stampReused, subjectFingerprint, subjectKey } from './lib/eval-reuse.mjs'
+import { parseTree, withBehaviourBlobs, planReuse, recordLedger, stampReused, subjectFingerprint, subjectKey } from './lib/eval-reuse.mjs'
 import { subjectInputsAt } from './subject-inputs.mjs'
 
 const USAGE = [
@@ -96,7 +96,11 @@ async function plan() {
   const { include } = JSON.parse(readFileSync(values.matrix, 'utf8'))
   const listing = git(['ls-tree', '-r', values.rev])
   if (listing.status !== 0) fail(`git ls-tree -r ${values.rev} failed: ${listing.stderr.trim()}`)
-  const tree = parseTree(listing.stdout)
+  const tree = withBehaviourBlobs(parseTree(listing.stdout), (blob) => {
+    const shown = git(['cat-file', 'blob', blob])
+    if (shown.status !== 0) fail(`git cat-file blob ${blob} failed: ${shown.stderr.trim()}`)
+    return shown.stdout
+  })
   const planned = await Promise.all(
     include.map(async (entry) => ({
       ...entry,

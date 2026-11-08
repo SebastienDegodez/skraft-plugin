@@ -35,11 +35,11 @@ describe('subjects a pull request selects, read from a commit', () => {
     git('init', '-q')
     write(
       'plugins/skraft-framework/com.github.copilot/agents/software-engineer.agent.md',
-      ['---', 'name: software-engineer', 'metadata:', '  skills:', '    - outside-in-tdd', '  on_demand_skills:', '    - craft-discipline', '---', 'body', ''].join('\n')
+      ['---', 'name: software-engineer', 'skills:', '  - outside-in-tdd', 'metadata:', '  on_demand_skills:', '    - craft-discipline', '---', 'body', ''].join('\n')
     )
     write(
       'plugins/skraft-framework/com.github.copilot/agents/solution-architect.agent.md',
-      ['---', 'name: solution-architect', 'metadata:', '  skills:', '    - architecture-patterns', '---', 'body', ''].join('\n')
+      ['---', 'name: solution-architect', 'skills:', '  - architecture-patterns', '---', 'body', ''].join('\n')
     )
     write('tests/agents/commit-convention/eval.yaml', ['name: commits', 'stimuli:', '  - name: one', '    tags:', '      agent: software-engineer', ''].join('\n'))
     write('tests/agents/architect/eval.yaml', ['name: design', 'stimuli:', '  - name: one', '    tags:', '      agent: solution-architect', ''].join('\n'))
