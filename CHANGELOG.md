@@ -3,6 +3,12 @@
 Toutes les modifications notables de ce projet sont documentées ici.
 Format basé sur [Conventional Commits](https://www.conventionalcommits.org/) — versionnage [SemVer](https://semver.org/).
 
+## [2.0.0-alpha.80](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.79...v2.0.0-alpha.80) (2026-11-08)
+
+### ♻️ Refactoring
+
+* **agents:** phases and dispatch come from the workflow; metadata holds on_demand_skills only ([#562](https://github.com/SebastienDegodez/skraft-plugin/issues/562)) ([3c301a6](https://github.com/SebastienDegodez/skraft-plugin/commit/3c301a69723fbcb30595bf85387012e4674050d3))
+
 ## [2.0.0-alpha.79](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.78...v2.0.0-alpha.79) (2026-11-08)
 
 ### ✨ Features
