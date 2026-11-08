@@ -109,6 +109,40 @@ each phase: [Phases](https://sebastiendegodez.github.io/skraft-plugin/reference/
 [DOT workflow](https://sebastiendegodez.github.io/skraft-plugin/reference/workflow-dot); adapting it:
 [Copy and adapt the workflow](https://sebastiendegodez.github.io/skraft-plugin/how-to/eject-workflow).
 
+### Experimental: batched TDD in DELIVER
+
+`software-engineer-batch` delivers a story like `software-engineer`, with one difference: the
+independent tests one production slice makes pass go into **one red commit** instead of one
+cycle each. The technical input cases of an entry point (wrong type, NaN, null, number as text)
+always become one batch, usually one parameterized test; a test whose behaviour builds on
+another's code still gets its own cycle. The engine treats it exactly as the original: same
+write scope, every red commit replayed, a green without a red refused. Each `test` commit's
+change-log line ends with `BATCH: <n> tests`.
+
+The shipped workflow keeps `software-engineer`. To switch a repository to the batch agent:
+
+```text
+skraft workflow eject      copies the pipeline into .skraft/pipeline.skraft.dot
+```
+
+In `.skraft/pipeline.skraft.dot`, change the agent of the `deliver` node only (the mutation
+nodes `kill_proposal` and `kill_mutants` stay on `software-engineer`):
+
+```dot
+deliver  [shape=box, agent="software-engineer-batch", phase="DELIVER"]
+```
+
+```text
+skraft workflow check      validates the copy
+skraft workflow diff       shows the one changed line against the plugin's workflow
+```
+
+The next run uses it. To switch back, restore `agent="software-engineer"` or delete
+`.skraft/pipeline.skraft.dot`. To compare both, run the same story on two working copies, one
+on each workflow, and read `run-report.md` (time and cost of DELIVER), the mutation gate and the
+DELIVER verdict side by side. Leave `"tdd": { "replay": "last-red" }` out of the comparison: it
+changes a second thing at once.
+
 ## What the engine guarantees
 
 | Check | What you get |

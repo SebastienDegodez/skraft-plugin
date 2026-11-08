@@ -13,11 +13,7 @@ skills:
   - story-elaboration
   - issue-refinement
 metadata:
-  cost_role_class: implementer
   dispatched_by: skraft-prd-backlog
-  skills:
-    - story-elaboration
-    - issue-refinement
 ---
 
 # Story Writer

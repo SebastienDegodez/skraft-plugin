@@ -23,13 +23,6 @@ skills:
 metadata:
   dispatched_by: Skraft - Orchestrator
   phase: DISTILL
-  skills:
-    - bdd-methodology
-    - test-design-mandates
-    - outside-in-tdd
-    - craft-discipline
-    - clean-architecture-testing
-    - acceptance-review-criteria
 ---
 
 # Acceptance-designer agent

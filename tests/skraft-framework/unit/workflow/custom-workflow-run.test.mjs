@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { InMemoryAgentCatalog } from '../support/in-memory-host.mjs'
 import { agent, finding, lenses, nominal, pipelineHost, refutes, says, scripted, SLUG, TRACKING } from '../support/pipeline-host.mjs'
 import { edit, WITH_SECURITY } from './support.mjs'
-import { BUILT_IN_WORKFLOW } from '../support/in-memory-host.mjs'
+import { BUILT_IN_WORKFLOW, PLUGIN_AGENTS } from '../support/in-memory-host.mjs'
 
 /** A free family that runs on the frontier tier, beside the tiers and roles of the plugin's defaults. */
 const RANKED = { 'gpt-luna': { tier: 'frontier' } }
@@ -272,4 +272,28 @@ test('a skipped gate interrupted before it was recorded is not started twice', a
 
   assert.equal((await host.run()).status, 'done')
   assert.equal(host.events().filter((event) => event.type === 'step.started' && event.step === 'gates').length, 1)
+})
+
+test('an ejected workflow that delivers with software-engineer-batch runs it as the plugin\'s, with the software-engineer\'s write scope, and replays its batched red commit', async () => {
+  const batched = edit(BUILT_IN_WORKFLOW, ['deliver  [shape=box, agent="software-engineer", phase="DELIVER"]', 'deliver  [shape=box, agent="software-engineer-batch", phase="DELIVER"]'])
+  const catalog = new InMemoryAgentCatalog({ plugin: [...PLUGIN_AGENTS, 'software-engineer-batch'] })
+  const host = scripted({ ...repositoryWorkflow(batched), catalog }, (it) => {
+    const [research, design, distill] = nominal(it)
+    return [research, design, distill, agent({
+      work: ({ git }) => {
+        git.commit(`test(${SLUG}): Checkout refuses card amounts that are not numbers`, ['tests/CheckoutTests.cs'])
+        git.commit(`feat(${SLUG}): Checkout refuses card amounts that are not numbers`, ['src/Checkout.cs'])
+      },
+    })(it)]
+  })
+
+  assert.equal((await host.start()).status, 'done')
+
+  assert.deepEqual(host.agentRunner.dispatches.map(({ agent: id, source }) => `${id} ${source}`), [
+    'solution-researcher plugin', 'solution-architect plugin', 'acceptance-designer plugin', 'software-engineer-batch plugin', 'pr-writer plugin',
+  ])
+  const deliver = host.agentRunner.dispatches[3].prompt.split('\n')
+  assert.ok(deliver.includes('- src') && deliver.includes('- tests'), 'the batch agent writes the source and test paths')
+  assert.ok(deliver.some((line) => line.includes('/changes/') && line.endsWith('change-log.md')), 'the batch agent fills the change log')
+  assert.deepEqual(host.replay.lines(), ['root-2 ./. $ dotnet test', 'root-3 ./. $ dotnet test'], 'the acceptance test of DISTILL, then the batched red')
 })

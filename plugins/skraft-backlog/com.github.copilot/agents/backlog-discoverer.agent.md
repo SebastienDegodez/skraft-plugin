@@ -21,15 +21,6 @@ skills:
   - github-issue-search
   - issue-triage
 metadata:
-  genesis_patterns:
-    - A3 ORCHESTRATOR-SAGA
-    - A7 ADVERSARIAL REVIEW
-    - S4 VALIDATION DECORATOR
-    - C2 PERSONA PRELOAD
-    - B4 PLAN MEMENTO
-  skills:
-    - github-issue-search
-    - issue-triage
   on_demand_skills:
     - azure-boards-work-items
     - discovery-review-criteria

@@ -9,11 +9,11 @@
 //
 //   node eng/catalog/scan.mjs [--root dir] [--out artifacts/catalog/report.json]
 import { existsSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs'
-import { createHash } from 'node:crypto'
 import { dirname, join, relative, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { parseArgs } from 'node:util'
 
+import { behaviourHash } from '../lib/descriptor-hash.mjs'
 import { readFrontMatter } from '../lib/front-matter.mjs'
 import { profileSkill, summariseEvalSpec } from '../lib/skill-profile.mjs'
 import { buildCatalogueTopology } from '../lib/catalogue-topology.mjs'
@@ -126,16 +126,16 @@ const agents = pluginRoots.flatMap((root) => {
     // The descriptor as it stands right now. A published verdict carries the
     // hash of the descriptor it actually measured, so the two together say
     // whether the evidence still describes the shipped agent — without paying
-    // for a run. Same input as the executor's own hash (the whole file, utf8),
-    // or the two never compare equal.
-    sha256: createHash('sha256').update(content).digest('hex'),
+    // for a run. Same hash as the executor's (eng/lib/descriptor-hash.mjs: the
+    // file without its metadata block), or the two never compare equal.
+    sha256: behaviourHash(content),
     plugin: pluginName(root),
     kind: agentKind(agentsRoot, path),
     model: data.model ? String(data.model) : null,
     userInvocable: structured['user-invocable'] === true || structured.userInvocable === true,
     phase: metadata.phase ? String(metadata.phase) : null,
     phases: asArray(metadata.phases).map(String),
-    skills: [...asArray(metadata.skills), ...asArray(metadata.on_demand_skills)].map(String),
+    skills: [...asArray(structured.skills), ...asArray(metadata.on_demand_skills)].map(String),
     inputs: asArray(metadata.inputs?.required).map(String),
     outputs: asArray(metadata.outputs).map(String),
     childRefs: asArray(structured.agents).map(String),

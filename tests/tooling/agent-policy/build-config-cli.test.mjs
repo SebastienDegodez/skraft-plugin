@@ -17,10 +17,10 @@ const specialist = ({ name, phase, skills = [], inputs = [], outputs = [] }) =>
     '---',
     `name: ${name}`,
     'description: "x"',
+    ...(skills.length ? ['skills:', ...skills.map((s) => `  - ${s}`)] : []),
     'metadata:',
     `  dispatched_by: skraft-orchestrator`,
     `  phase: ${phase}`,
-    ...(skills.length ? ['  skills:', ...skills.map((s) => `    - ${s}`)] : []),
     '  inputs:',
     '    required:',
     ...inputs.map((i) => `      - ${i}`),
@@ -76,11 +76,11 @@ test('parseAgentDescriptor reads on-demand skills and merges context with recomm
     '---',
     'name: software-engineer',
     'description: "x"',
+    'skills:',
+    '  - outside-in-tdd',
     'metadata:',
     '  dispatched_by: skraft-orchestrator',
     '  phase: DELIVER',
-    '  skills:',
-    '    - outside-in-tdd',
     '  on_demand_skills:',
     '    - mutation-testing',
     '  inputs:',
@@ -178,9 +178,9 @@ test('main fails (exit 1) and names the skill an agent lists as both mandatory a
   await writeFile(
     join(agents, 'eng.md'),
     [
-      '---', 'name: software-engineer', 'description: "x"', 'metadata:',
+      '---', 'name: software-engineer', 'description: "x"',
+      'skills:', '  - outside-in-tdd', '  - mutation-testing', 'metadata:',
       '  dispatched_by: skraft-orchestrator', '  phase: DELIVER',
-      '  skills:', '    - outside-in-tdd', '    - mutation-testing',
       '  on_demand_skills:', '    - mutation-testing',
       '---', '', '# body',
     ].join('\n'),
@@ -192,23 +192,26 @@ test('main fails (exit 1) and names the skill an agent lists as both mandatory a
   await rm(dir, { recursive: true, force: true })
 })
 
-test('parseAgentDescriptor reads the host preload list from the top-level skills field', () => {
-  const withList = parseAgentDescriptor([
+test('parseAgentDescriptor reads the skills from the top-level list and flags a metadata.skills copy', () => {
+  const copied = parseAgentDescriptor([
     '---', 'name: software-engineer', 'description: "x"',
     'skills:', '  - outside-in-tdd',
     'metadata:', '  skills:', '    - outside-in-tdd', '---', '',
   ].join('\n'))
-  assert.deepEqual(withList.preloadedSkills, ['outside-in-tdd'])
-  assert.equal(parseAgentDescriptor(specialist({ name: 'x', phase: 'DESIGN' })).preloadedSkills, undefined)
+  assert.deepEqual(copied.skills, ['outside-in-tdd'])
+  assert.equal(copied.metadataSkills, true)
+  assert.equal(parseAgentDescriptor(specialist({ name: 'x', phase: 'DESIGN', skills: ['a'] })).metadataSkills, false)
 })
 
-test('main --preload fails (exit 1) and names an agent whose mandatory skills the host does not preload', async () => {
+test('main fails (exit 1) and names an agent that still lists its skills under metadata.skills', async () => {
   const { dir, agents } = await fixtureDir()
+  await writeFile(join(agents, 'eng.md'), [
+    '---', 'name: software-engineer', 'description: "x"', 'skills:', '  - outside-in-tdd', 'metadata:',
+    '  dispatched_by: skraft-orchestrator', '  phase: DELIVER', '  skills:', '    - outside-in-tdd', '---', '', '# body',
+  ].join('\n'))
   const { io, errs } = capture()
-  const code = main(['--preload', '--dir', agents], io)
-  assert.equal(code, 1)
-  assert.ok(errs.some((l) => /solution-architect/.test(l) && /architecture-patterns/.test(l) && /SKILL_PRELOAD_MISMATCH/.test(l)))
-  assert.equal(main(['--dir', agents], capture().io), 0)
+  assert.equal(main(['--dir', agents], io), 1)
+  assert.ok(errs.some((l) => /software-engineer/.test(l) && /SKILL_IN_METADATA/.test(l)))
   await rm(dir, { recursive: true, force: true })
 })
 

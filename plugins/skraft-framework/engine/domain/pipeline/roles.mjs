@@ -30,6 +30,19 @@ import { joinRelative } from '../config/relative-path.mjs'
  * @typedef {import('../config/skraft-config.mjs').Component} Component
  */
 
+/** What the agent that delivers a story's code in DELIVER plays. @type {Role} */
+const DELIVERING = Object.freeze({
+  outputs: Object.freeze([Object.freeze({ path: 'changes/{date}/change-log.md', template: null })]),
+  writes: Object.freeze([]),
+  components: Object.freeze(/** @type {ComponentPaths[]} */ (['src', 'tests'])),
+  records: false,
+  scan: false,
+  tdd: 'cycle',
+  prose: false,
+  proposal: false,
+  shell: true,
+})
+
 /** @type {Readonly<Record<string, Role>>} */
 const ROLES = Object.freeze({
   'solution-researcher': Object.freeze({
@@ -71,17 +84,10 @@ const ROLES = Object.freeze({
     proposal: false,
     shell: true,
   }),
-  'software-engineer': Object.freeze({
-    outputs: Object.freeze([Object.freeze({ path: 'changes/{date}/change-log.md', template: null })]),
-    writes: Object.freeze([]),
-    components: Object.freeze(/** @type {ComponentPaths[]} */ (['src', 'tests'])),
-    records: false,
-    scan: false,
-    tdd: 'cycle',
-    prose: false,
-    proposal: false,
-    shell: true,
-  }),
+  'software-engineer': DELIVERING,
+  // Experimental: the same role, for the descriptor that batches independent tests of one slice in
+  // one red commit; only an ejected workflow names it.
+  'software-engineer-batch': DELIVERING,
   // The pr-writer writes the prose of the pull request the publish node opens, nothing else.
   'pr-writer': Object.freeze({
     outputs: Object.freeze([Object.freeze({ path: 'details/{date}/pull-request-prose-{slug}.md', template: 'pull-request-prose.{language}.template.md' })]),

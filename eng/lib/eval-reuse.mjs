@@ -5,16 +5,18 @@
 // touched. The fingerprint below hashes a subject's AI content only — the same
 // files that select it (eng/lib/changed-skills.mjs): its skill directory and
 // companion skills, the descriptors of the agents a suite exercises, its eval
-// spec folder and the files its spec stages — from git blobs. Tooling, the
+// spec folder and the files its spec stages — from git blobs, an agent
+// descriptor by its behaviour hash (its content without the metadata block). Tooling, the
 // pinned toolchain and the models never invalidate a carried cell on a PR;
 // scheduled and dispatched runs measure every subject afresh.
 import { createHash } from 'node:crypto'
 import { posix } from 'node:path'
 
+import { behaviourHash, isAgentDescriptor } from './descriptor-hash.mjs'
 import { subjectContent } from './changed-skills.mjs'
 import { verdictState } from './verdict.mjs'
 
-const FINGERPRINT_VERSION = 'skraft-eval-fingerprint/2'
+const FINGERPRINT_VERSION = 'skraft-eval-fingerprint/3'
 
 /**
  * `git ls-tree -r <rev>` output as entries. The blob id stands for the content,
@@ -78,6 +80,20 @@ export function stagedSources(spec, specDir) {
     .map((src) => posix.normalize(posix.join(specDir, src)).replace(/\/+$/, ''))
     .filter((path) => path !== '..' && !path.startsWith('../') && !posix.isAbsolute(path))
   return [...new Set(paths)].sort()
+}
+
+/**
+ * The tree with each agent descriptor's blob id replaced by its behaviour hash
+ * (eng/lib/descriptor-hash.mjs), so a change to a descriptor's `metadata` alone
+ * leaves every fingerprint that reads it unchanged. Other entries pass through.
+ *
+ * @param {Array<{ mode: string, blob: string, path: string }>} tree
+ * @param {(blob: string) => string} read the content of a blob
+ */
+export function withBehaviourBlobs(tree, read) {
+  return tree.map((entry) => (isAgentDescriptor(entry.path)
+    ? { ...entry, blob: `behaviour:${behaviourHash(read(entry.blob))}` }
+    : entry))
 }
 
 /** The key a subject is recorded under: a skill and a suite may share a name. */

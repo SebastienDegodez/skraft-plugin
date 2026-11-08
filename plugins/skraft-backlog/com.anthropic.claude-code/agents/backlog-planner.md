@@ -21,15 +21,6 @@ skills:
   - issue-refinement
   - sprint-planning
 metadata:
-  genesis_patterns:
-    - A3 ORCHESTRATOR-SAGA
-    - A7 ADVERSARIAL REVIEW
-    - S4 VALIDATION DECORATOR
-    - C2 PERSONA PRELOAD
-    - B4 PLAN MEMENTO
-  skills:
-    - issue-refinement
-    - sprint-planning
   on_demand_skills:
     - github-issue-search
     - azure-boards-work-items

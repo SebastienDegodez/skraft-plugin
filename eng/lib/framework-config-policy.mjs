@@ -84,21 +84,16 @@ const declaredTwice = (d) => {
     }))
 }
 
-// The host preloads the top-level `skills` list; the evaluation tooling reads
-// `metadata.skills`. Both must name the same skills in the same order.
-const preloadMismatch = (d, requirePreload) => {
-  const mandatory = d.skills ?? []
-  const preloaded = d.preloadedSkills ?? (requirePreload && mandatory.length > 0 ? [] : undefined)
-  if (preloaded === undefined || preloaded.join('\n') === mandatory.join('\n')) return []
-  return [{
-    agent: d.name,
-    code: 'SKILL_PRELOAD_MISMATCH',
-    message: `skills [${preloaded.join(', ')}] must equal metadata.skills [${mandatory.join(', ')}]`,
-  }]
-}
+// An agent lists its mandatory skills once, under the top-level `skills` the host preloads and
+// the engine and the evaluation tooling read; a `metadata.skills` copy is refused.
+const skillsInMetadata = (d) => (d.metadataSkills ? [{
+  agent: d.name,
+  code: 'SKILL_IN_METADATA',
+  message: 'lists skills under metadata.skills; list them under the top-level skills only',
+}] : [])
 
-export const validateSkillDeclarations = (descriptors, { requirePreload = false } = {}) => Object.freeze(
-  descriptors.flatMap((d) => [...declaredTwice(d), ...preloadMismatch(d, requirePreload)]),
+export const validateSkillDeclarations = (descriptors) => Object.freeze(
+  descriptors.flatMap((d) => [...declaredTwice(d), ...skillsInMetadata(d)]),
 )
 
 // Every agent's expected artifacts: its required inputs and its produced outputs.

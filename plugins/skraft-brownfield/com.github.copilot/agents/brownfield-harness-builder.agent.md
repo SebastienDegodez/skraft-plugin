@@ -13,8 +13,6 @@ tools:
 skills:
   - characterize-with-contracts
 metadata:
-  skills:
-    - characterize-with-contracts
   inputs:
     required:
       - target service path or component name

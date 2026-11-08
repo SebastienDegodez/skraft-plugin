@@ -1,7 +1,7 @@
-import { createHash } from 'node:crypto'
 import { isAbsolute, relative, resolve } from 'node:path'
 import { readFileSync } from 'node:fs'
 
+import { behaviourHash } from '../lib/descriptor-hash.mjs'
 import { readFrontMatter } from '../lib/front-matter.mjs'
 
 const pluginAgent = (relativePath) => `plugins/skraft-framework/com.github.copilot/agents/${relativePath.split('/').at(-1)}.agent.md`
@@ -40,6 +40,30 @@ const posix = (value) => value.split('\\').join('/')
 
 /** The allowlisted descriptor path of an agent id, or undefined. */
 export const agentPathOf = (id) => AGENT_PATHS.get(id)
+
+/**
+ * The skills an agent loads: the top-level `skills` the host preloads, then its
+ * `metadata.on_demand_skills`.
+ *
+ * @param {string} content the descriptor
+ * @returns {string[]}
+ */
+export const agentSkills = (content) => [...topLevelSequence(content, 'skills'), ...metadataSequence(content, 'on_demand_skills')]
+
+const topLevelSequence = (content, key) => {
+  const match = /^---\r?\n([\s\S]*?)\r?\n---/.exec(content)
+  if (!match) return []
+  const lines = match[1].split(/\r?\n/)
+  const start = lines.findIndex((line) => new RegExp(`^${key}:\\s*$`).test(line))
+  if (start < 0) return []
+  const values = []
+  for (let index = start + 1; index < lines.length; index += 1) {
+    const item = /^\s*-\s+(.+?)\s*$/.exec(lines[index])
+    if (!item || /^\S/.test(lines[index])) break
+    values.push(item[1])
+  }
+  return values
+}
 
 export const metadataSequence = (content, key) => {
   const match = /^---\r?\n([\s\S]*?)\r?\n---/.exec(content)
@@ -93,7 +117,7 @@ export const loadAgentDescriptor = (repoRoot, id) => {
   const name = String(data.name ?? '')
   if (!name) throw new Error(`Agent has no name: ${relativePath}`)
 
-  const skills = [...metadataSequence(content, 'skills'), ...metadataSequence(content, 'on_demand_skills')]
+  const skills = agentSkills(content)
   const pluginDirectory = relativePath.startsWith('plugins/') ? pluginDirectoryOf(relativePath) : null
 
   return {
@@ -101,7 +125,7 @@ export const loadAgentDescriptor = (repoRoot, id) => {
     name,
     path: posix(relative(normalizedRoot, path)),
     pluginDirectory,
-    sha256: createHash('sha256').update(content).digest('hex'),
+    sha256: behaviourHash(content),
     description: String(data.description ?? ''),
     declaredModel: String(data.model ?? ''),
     tools: Array.isArray(data.tools) ? data.tools : [],
