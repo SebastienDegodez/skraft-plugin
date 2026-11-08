@@ -4477,33 +4477,6 @@
   "agents": {
     "software-engineer": [
       {
-        "id": "41026201602:agent:software-engineer:2026-10-30T08:30:55.876Z",
-        "timestamp": "2026-10-30T08:30:55.876Z",
-        "commit": "9911a9619da2863c84bfddeed2f7a19596800892",
-        "run": "41026201602",
-        "url": "https://github.com/SebastienDegodez/skraft-plugin/actions/runs/41026201602",
-        "runner": "vally-agent",
-        "model": "gpt-5.6-luna",
-        "judgeModel": "none",
-        "state": "pass",
-        "reason": "conforms on every trial (15/15 at or above 1)",
-        "descriptorSha": "96f538605f0895e26abec01a4ce3d62f89900cbd29cd50c7ef5f947fd1ba52fe",
-        "netWin": 1,
-        "trialCount": 15,
-        "meanScore": 1,
-        "confidenceInterval": {
-          "low": null,
-          "high": null
-        },
-        "signTest": {
-          "wins": 0,
-          "ties": 0,
-          "losses": 0,
-          "pValue": null
-        },
-        "metrics": null
-      },
-      {
         "id": "41053245357:agent:software-engineer:2026-10-30T12:16:34.967Z",
         "timestamp": "2026-10-30T12:16:34.967Z",
         "commit": "a6165fd6163930109b21fff4bb24e83ae8f1088b",
@@ -4734,6 +4707,33 @@
         "netWin": 1,
         "trialCount": 15,
         "meanScore": 1,
+        "confidenceInterval": {
+          "low": null,
+          "high": null
+        },
+        "signTest": {
+          "wins": 0,
+          "ties": 0,
+          "losses": 0,
+          "pValue": null
+        },
+        "metrics": null
+      },
+      {
+        "id": "42511415662:agent:software-engineer:2026-11-08T18:49:25.374Z",
+        "timestamp": "2026-11-08T18:49:25.374Z",
+        "commit": "6ec1db53ae0530ab4f44924a5a2dd3c71f46e4b4",
+        "run": "42511415662",
+        "url": "https://github.com/SebastienDegodez/skraft-plugin/actions/runs/42511415662",
+        "runner": "vally-agent",
+        "model": "gpt-5.6-luna",
+        "judgeModel": "none",
+        "state": "flaky",
+        "reason": "conforms on 14 of 15 trial(s); every scenario at or above 2/3 (threshold 1)",
+        "descriptorSha": "c26897d14b769cdfc4113eb59c5d2446c070254c5fa720c6d2b07af4f7f392e9",
+        "netWin": 0.8666666666666667,
+        "trialCount": 15,
+        "meanScore": 0.983,
         "confidenceInterval": {
           "low": null,
           "high": null
@@ -5021,33 +5021,6 @@
     ],
     "acceptance-designer": [
       {
-        "id": "41064131470:agent:acceptance-designer:2026-10-30T13:40:03.141Z",
-        "timestamp": "2026-10-30T13:40:03.141Z",
-        "commit": "6b83be7b81397816868c061dc6a10fca79d47147",
-        "run": "41064131470",
-        "url": "https://github.com/SebastienDegodez/skraft-plugin/actions/runs/41064131470",
-        "runner": "vally-agent",
-        "model": "claude-sonnet-5.5",
-        "judgeModel": "none",
-        "state": "flaky",
-        "reason": "conforms on 8 of 9 trial(s); every scenario at or above 2/3 (threshold 0.9)",
-        "descriptorSha": "be0b52e1567af3a45f0548c6118a9f8e6c8aeb204069e14b8c3975e589e36636",
-        "netWin": 0.7777777777777778,
-        "trialCount": 9,
-        "meanScore": 0.972,
-        "confidenceInterval": {
-          "low": null,
-          "high": null
-        },
-        "signTest": {
-          "wins": 0,
-          "ties": 0,
-          "losses": 0,
-          "pValue": null
-        },
-        "metrics": null
-      },
-      {
         "id": "41200443589:agent:acceptance-designer:2026-10-31T12:24:17.161Z",
         "timestamp": "2026-10-31T12:24:17.161Z",
         "commit": "5c8f94bb65064eb091e7d366942f4121a931fad9",
@@ -5278,6 +5251,33 @@
         "netWin": 0.8,
         "trialCount": 20,
         "meanScore": 0.974,
+        "confidenceInterval": {
+          "low": null,
+          "high": null
+        },
+        "signTest": {
+          "wins": 0,
+          "ties": 0,
+          "losses": 0,
+          "pValue": null
+        },
+        "metrics": null
+      },
+      {
+        "id": "42511415662:agent:acceptance-designer:2026-11-08T18:57:43.314Z",
+        "timestamp": "2026-11-08T18:57:43.314Z",
+        "commit": "6ec1db53ae0530ab4f44924a5a2dd3c71f46e4b4",
+        "run": "42511415662",
+        "url": "https://github.com/SebastienDegodez/skraft-plugin/actions/runs/42511415662",
+        "runner": "vally-agent",
+        "model": "claude-sonnet-5.5",
+        "judgeModel": "none",
+        "state": "flaky",
+        "reason": "conforms on 19 of 20 trial(s); every scenario at or above 2/3 (threshold 0.9)",
+        "descriptorSha": "59ad0f395386624eee18b12ed13f02564f9b0088605c7e3ebd8b4d039182cfa7",
+        "netWin": 0.9,
+        "trialCount": 20,
+        "meanScore": 0.978,
         "confidenceInterval": {
           "low": null,
           "high": null
