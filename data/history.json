@@ -4477,33 +4477,6 @@
   "agents": {
     "software-engineer": [
       {
-        "id": "40124990714:agent:software-engineer:2026-10-24T19:28:10.894Z",
-        "timestamp": "2026-10-24T19:28:10.894Z",
-        "commit": "ea21a1d409740520acbf72ce5cc7128133e29316",
-        "run": "40124990714",
-        "url": "https://github.com/SebastienDegodez/skraft-plugin/actions/runs/40124990714",
-        "runner": "vally-agent",
-        "model": "gpt-5.6-luna",
-        "judgeModel": "none",
-        "state": "pass",
-        "reason": "conforms on every trial (15/15 at or above 1)",
-        "descriptorSha": "9566d8847696d8f3d0b60fb08e57cdee93687abda0ad7ee6a312c086d695267f",
-        "netWin": 1,
-        "trialCount": 15,
-        "meanScore": 1,
-        "confidenceInterval": {
-          "low": null,
-          "high": null
-        },
-        "signTest": {
-          "wins": 0,
-          "ties": 0,
-          "losses": 0,
-          "pValue": null
-        },
-        "metrics": null
-      },
-      {
         "id": "40126448260:agent:software-engineer:2026-10-24T19:46:57.756Z",
         "timestamp": "2026-10-24T19:46:57.756Z",
         "commit": "2c5ac9e2f71aeb0fad192915fe3535844c043334",
@@ -4731,6 +4704,33 @@
         "state": "pass",
         "reason": "conforms on every trial (15/15 at or above 1)",
         "descriptorSha": "d359d22bcb62d85cf79969713e1461b8d6ded9a6e93208875619371a38de4063",
+        "netWin": 1,
+        "trialCount": 15,
+        "meanScore": 1,
+        "confidenceInterval": {
+          "low": null,
+          "high": null
+        },
+        "signTest": {
+          "wins": 0,
+          "ties": 0,
+          "losses": 0,
+          "pValue": null
+        },
+        "metrics": null
+      },
+      {
+        "id": "42465689152:agent:software-engineer:2026-11-08T09:12:33.944Z",
+        "timestamp": "2026-11-08T09:12:33.944Z",
+        "commit": "b0cc8a21809950c22629336f15df2698af008cac",
+        "run": "42465689152",
+        "url": "https://github.com/SebastienDegodez/skraft-plugin/actions/runs/42465689152",
+        "runner": "vally-agent",
+        "model": "gpt-5.6-luna",
+        "judgeModel": "none",
+        "state": "pass",
+        "reason": "conforms on every trial (15/15 at or above 1)",
+        "descriptorSha": "3483b3c23c067261d50925ca771dc5ad1bd3f93841f319d25a159061b898e682",
         "netWin": 1,
         "trialCount": 15,
         "meanScore": 1,

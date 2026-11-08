@@ -1,5 +1,5 @@
 {
-  "generated": "2026-11-07T21:21:26.415Z",
+  "generated": "2026-11-08T09:13:08.616Z",
   "sessions": [
     {
       "id": "scheduled/2026-09-28/acceptance-designer/absent-acceptance-criteria-halt-the-distillation--main--run0",
@@ -4381,6 +4381,201 @@
         "pr-554"
       ],
       "mtime": 1794082113318.1904
+    },
+    {
+      "id": "pr/561/commit-convention/finish-the-approved-customer-guide-issue--main--run0",
+      "name": "commit-convention / Finish the approved customer guide issue (main, run 0)",
+      "url": "sessions/pr/561/commit-convention/finish-the-approved-customer-guide-issue--main--run0.jsonl",
+      "tags": [
+        "pr",
+        "commit-convention",
+        "main",
+        "finish-the-approved-customer-guide-issue",
+        "pr-561"
+      ],
+      "mtime": 1794129186994.2188
+    },
+    {
+      "id": "pr/561/commit-convention/finish-the-approved-customer-guide-issue--main--run1",
+      "name": "commit-convention / Finish the approved customer guide issue (main, run 1)",
+      "url": "sessions/pr/561/commit-convention/finish-the-approved-customer-guide-issue--main--run1.jsonl",
+      "tags": [
+        "pr",
+        "commit-convention",
+        "main",
+        "finish-the-approved-customer-guide-issue",
+        "pr-561"
+      ],
+      "mtime": 1794129187002.2188
+    },
+    {
+      "id": "pr/561/commit-convention/finish-the-approved-customer-guide-issue--main--run2",
+      "name": "commit-convention / Finish the approved customer guide issue (main, run 2)",
+      "url": "sessions/pr/561/commit-convention/finish-the-approved-customer-guide-issue--main--run2.jsonl",
+      "tags": [
+        "pr",
+        "commit-convention",
+        "main",
+        "finish-the-approved-customer-guide-issue",
+        "pr-561"
+      ],
+      "mtime": 1794129187006.219
+    },
+    {
+      "id": "pr/561/commit-convention/finish-the-approved-customer-guide-issue--main--run3",
+      "name": "commit-convention / Finish the approved customer guide issue (main, run 3)",
+      "url": "sessions/pr/561/commit-convention/finish-the-approved-customer-guide-issue--main--run3.jsonl",
+      "tags": [
+        "pr",
+        "commit-convention",
+        "main",
+        "finish-the-approved-customer-guide-issue",
+        "pr-561"
+      ],
+      "mtime": 1794129187005.219
+    },
+    {
+      "id": "pr/561/commit-convention/finish-the-approved-customer-guide-issue--main--run4",
+      "name": "commit-convention / Finish the approved customer guide issue (main, run 4)",
+      "url": "sessions/pr/561/commit-convention/finish-the-approved-customer-guide-issue--main--run4.jsonl",
+      "tags": [
+        "pr",
+        "commit-convention",
+        "main",
+        "finish-the-approved-customer-guide-issue",
+        "pr-561"
+      ],
+      "mtime": 1794129187005.219
+    },
+    {
+      "id": "pr/561/commit-convention/record-a-customer-guide-increment-while-the-issue-remains-open--main--run0",
+      "name": "commit-convention / Record a customer guide increment while the issue remains open (main, run 0)",
+      "url": "sessions/pr/561/commit-convention/record-a-customer-guide-increment-while-the-issue-remains-open--main--run0.jsonl",
+      "tags": [
+        "pr",
+        "commit-convention",
+        "main",
+        "record-a-customer-guide-increment-while-the-issue-remains-open",
+        "pr-561"
+      ],
+      "mtime": 1794129187005.219
+    },
+    {
+      "id": "pr/561/commit-convention/record-a-customer-guide-increment-while-the-issue-remains-open--main--run1",
+      "name": "commit-convention / Record a customer guide increment while the issue remains open (main, run 1)",
+      "url": "sessions/pr/561/commit-convention/record-a-customer-guide-increment-while-the-issue-remains-open--main--run1.jsonl",
+      "tags": [
+        "pr",
+        "commit-convention",
+        "main",
+        "record-a-customer-guide-increment-while-the-issue-remains-open",
+        "pr-561"
+      ],
+      "mtime": 1794129187004.219
+    },
+    {
+      "id": "pr/561/commit-convention/record-a-customer-guide-increment-while-the-issue-remains-open--main--run2",
+      "name": "commit-convention / Record a customer guide increment while the issue remains open (main, run 2)",
+      "url": "sessions/pr/561/commit-convention/record-a-customer-guide-increment-while-the-issue-remains-open--main--run2.jsonl",
+      "tags": [
+        "pr",
+        "commit-convention",
+        "main",
+        "record-a-customer-guide-increment-while-the-issue-remains-open",
+        "pr-561"
+      ],
+      "mtime": 1794129187005.219
+    },
+    {
+      "id": "pr/561/commit-convention/record-a-customer-guide-increment-while-the-issue-remains-open--main--run3",
+      "name": "commit-convention / Record a customer guide increment while the issue remains open (main, run 3)",
+      "url": "sessions/pr/561/commit-convention/record-a-customer-guide-increment-while-the-issue-remains-open--main--run3.jsonl",
+      "tags": [
+        "pr",
+        "commit-convention",
+        "main",
+        "record-a-customer-guide-increment-while-the-issue-remains-open",
+        "pr-561"
+      ],
+      "mtime": 1794129187004.219
+    },
+    {
+      "id": "pr/561/commit-convention/record-a-customer-guide-increment-while-the-issue-remains-open--main--run4",
+      "name": "commit-convention / Record a customer guide increment while the issue remains open (main, run 4)",
+      "url": "sessions/pr/561/commit-convention/record-a-customer-guide-increment-while-the-issue-remains-open--main--run4.jsonl",
+      "tags": [
+        "pr",
+        "commit-convention",
+        "main",
+        "record-a-customer-guide-increment-while-the-issue-remains-open",
+        "pr-561"
+      ],
+      "mtime": 1794129187005.219
+    },
+    {
+      "id": "pr/561/commit-convention/record-the-approved-guide-edit-without-a-known-issue--main--run0",
+      "name": "commit-convention / Record the approved guide edit without a known issue (main, run 0)",
+      "url": "sessions/pr/561/commit-convention/record-the-approved-guide-edit-without-a-known-issue--main--run0.jsonl",
+      "tags": [
+        "pr",
+        "commit-convention",
+        "main",
+        "record-the-approved-guide-edit-without-a-known-issue",
+        "pr-561"
+      ],
+      "mtime": 1794129187005.219
+    },
+    {
+      "id": "pr/561/commit-convention/record-the-approved-guide-edit-without-a-known-issue--main--run1",
+      "name": "commit-convention / Record the approved guide edit without a known issue (main, run 1)",
+      "url": "sessions/pr/561/commit-convention/record-the-approved-guide-edit-without-a-known-issue--main--run1.jsonl",
+      "tags": [
+        "pr",
+        "commit-convention",
+        "main",
+        "record-the-approved-guide-edit-without-a-known-issue",
+        "pr-561"
+      ],
+      "mtime": 1794129187003.2188
+    },
+    {
+      "id": "pr/561/commit-convention/record-the-approved-guide-edit-without-a-known-issue--main--run2",
+      "name": "commit-convention / Record the approved guide edit without a known issue (main, run 2)",
+      "url": "sessions/pr/561/commit-convention/record-the-approved-guide-edit-without-a-known-issue--main--run2.jsonl",
+      "tags": [
+        "pr",
+        "commit-convention",
+        "main",
+        "record-the-approved-guide-edit-without-a-known-issue",
+        "pr-561"
+      ],
+      "mtime": 1794129187005.219
+    },
+    {
+      "id": "pr/561/commit-convention/record-the-approved-guide-edit-without-a-known-issue--main--run3",
+      "name": "commit-convention / Record the approved guide edit without a known issue (main, run 3)",
+      "url": "sessions/pr/561/commit-convention/record-the-approved-guide-edit-without-a-known-issue--main--run3.jsonl",
+      "tags": [
+        "pr",
+        "commit-convention",
+        "main",
+        "record-the-approved-guide-edit-without-a-known-issue",
+        "pr-561"
+      ],
+      "mtime": 1794129187004.219
+    },
+    {
+      "id": "pr/561/commit-convention/record-the-approved-guide-edit-without-a-known-issue--main--run4",
+      "name": "commit-convention / Record the approved guide edit without a known issue (main, run 4)",
+      "url": "sessions/pr/561/commit-convention/record-the-approved-guide-edit-without-a-known-issue--main--run4.jsonl",
+      "tags": [
+        "pr",
+        "commit-convention",
+        "main",
+        "record-the-approved-guide-edit-without-a-known-issue",
+        "pr-561"
+      ],
+      "mtime": 1794129187006.219
     }
   ]
 }
