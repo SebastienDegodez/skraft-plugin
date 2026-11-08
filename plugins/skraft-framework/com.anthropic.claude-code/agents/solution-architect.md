@@ -17,9 +17,6 @@ skills:
 metadata:
   dispatched_by: Skraft - Orchestrator
   phase: DESIGN
-  skills:
-    - architecture-patterns
-    - architecture-decisions
 ---
 
 # Solution-architect agent

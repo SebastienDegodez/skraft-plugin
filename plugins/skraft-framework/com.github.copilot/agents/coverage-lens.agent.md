@@ -9,8 +9,6 @@ skills:
   - acceptance-review-criteria
 metadata:
   dispatched_by: skraft-engine
-  skills:
-    - acceptance-review-criteria
 ---
 
 # Coverage Lens

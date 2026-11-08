@@ -12,7 +12,6 @@ tools:
 metadata:
   dispatched_by: Skraft - Orchestrator
   phase: RESEARCH
-  skills: []
 ---
 
 # Solution-researcher agent

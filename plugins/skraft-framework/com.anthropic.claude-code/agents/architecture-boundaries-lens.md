@@ -12,9 +12,6 @@ skills:
   - craft-discipline
 metadata:
   dispatched_by: skraft-engine
-  skills:
-    - clean-architecture-testing
-    - craft-discipline
 ---
 
 # Architecture Boundaries Lens

@@ -13,8 +13,6 @@ tools:
 skills:
   - characterize-brownfield
 metadata:
-  skills:
-    - characterize-brownfield
   inputs:
     required:
       - repository path

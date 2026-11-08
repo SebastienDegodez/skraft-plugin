@@ -44,7 +44,7 @@ const agentSources = (agents) => (Array.isArray(agents) ? agents.flatMap(descrip
  * @param {{ companions?: string[], staged?: string[], agents?: string[] | null, skills?: string[] }} inputs
  *   `agents` is the list of agent ids a suite exercises; null or absent when the
  *   spec names none, in which case every descriptor counts. `skills` are the
- *   skills those agents' descriptors load (`metadata.skills`, `on_demand_skills`).
+ *   skills those agents' descriptors load (top-level `skills`, `metadata.on_demand_skills`).
  * @returns {RegExp[]}
  */
 export function subjectContent(subject, { companions = [], staged = [], agents, skills = [] } = {}) {

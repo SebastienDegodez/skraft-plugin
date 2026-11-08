@@ -135,7 +135,7 @@ const agents = pluginRoots.flatMap((root) => {
     userInvocable: structured['user-invocable'] === true || structured.userInvocable === true,
     phase: metadata.phase ? String(metadata.phase) : null,
     phases: asArray(metadata.phases).map(String),
-    skills: [...asArray(metadata.skills), ...asArray(metadata.on_demand_skills)].map(String),
+    skills: [...asArray(structured.skills), ...asArray(metadata.on_demand_skills)].map(String),
     inputs: asArray(metadata.inputs?.required).map(String),
     outputs: asArray(metadata.outputs).map(String),
     childRefs: asArray(structured.agents).map(String),

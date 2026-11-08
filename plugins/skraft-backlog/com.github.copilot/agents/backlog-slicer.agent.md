@@ -15,9 +15,6 @@ skills:
 metadata:
   cost_role_class: implementer
   dispatched_by: skraft-prd-backlog
-  skills:
-    - backlog-slicing
-    - sprint-planning
 ---
 
 # Backlog Slicer

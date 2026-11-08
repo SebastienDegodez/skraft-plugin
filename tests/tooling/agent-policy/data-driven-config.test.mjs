@@ -208,32 +208,16 @@ test('a skill listed as both mandatory and on-demand is a violation naming the a
   assert.ok(Object.isFrozen(violations))
 })
 
-test('a host preload list that differs from metadata.skills is a violation naming both lists', () => {
+test('an agent that lists its skills under metadata.skills is a violation; the top-level list alone is not', () => {
   const violations = validateSkillDeclarations([
-    { name: 'software-engineer', skills: ['outside-in-tdd', 'craft-discipline'], preloadedSkills: ['outside-in-tdd'] },
-    { name: 'coverage-lens', skills: ['acceptance-review-criteria'], preloadedSkills: ['acceptance-review-criteria'] },
+    { name: 'software-engineer', skills: ['outside-in-tdd'], metadataSkills: true },
+    { name: 'coverage-lens', skills: ['acceptance-review-criteria'], metadataSkills: false },
   ])
   assert.deepEqual(violations, [{
     agent: 'software-engineer',
-    code: 'SKILL_PRELOAD_MISMATCH',
-    message: "skills [outside-in-tdd] must equal metadata.skills [outside-in-tdd, craft-discipline]",
+    code: 'SKILL_IN_METADATA',
+    message: 'lists skills under metadata.skills; list them under the top-level skills only',
   }])
-})
-
-test('with preload required, an agent with mandatory skills and no host preload list is a violation', () => {
-  const violations = validateSkillDeclarations([
-    { name: 'software-engineer', skills: ['outside-in-tdd'] },
-    { name: 'bare', skills: [] },
-  ], { requirePreload: true })
-  assert.deepEqual(violations, [{
-    agent: 'software-engineer',
-    code: 'SKILL_PRELOAD_MISMATCH',
-    message: "skills [] must equal metadata.skills [outside-in-tdd]",
-  }])
-})
-
-test('without preload required, an agent that declares no host preload list is not a violation', () => {
-  assert.deepEqual(validateSkillDeclarations([{ name: 'software-engineer', skills: ['outside-in-tdd'] }]), [])
 })
 
 test('context inputs are projected per agent, apart from the required inputs', () => {

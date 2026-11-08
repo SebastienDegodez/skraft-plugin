@@ -17,9 +17,6 @@ skills:
   - mikado-method
   - strangler-fig-method
 metadata:
-  skills:
-    - mikado-method
-    - strangler-fig-method
   inputs:
     required:
       - the goal (what to modify, or what to replace)
