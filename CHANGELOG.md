@@ -3,6 +3,12 @@
 Toutes les modifications notables de ce projet sont documentées ici.
 Format basé sur [Conventional Commits](https://www.conventionalcommits.org/) — versionnage [SemVer](https://semver.org/).
 
+## [2.0.0-alpha.79](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.78...v2.0.0-alpha.79) (2026-11-08)
+
+### ✨ Features
+
+* **agents:** experimental software-engineer-batch; skills listed once; behaviour hash for evals ([#560](https://github.com/SebastienDegodez/skraft-plugin/issues/560)) ([d80f6b3](https://github.com/SebastienDegodez/skraft-plugin/commit/d80f6b3dbe06a2e27a4f4862cf82cf42fcfff76a))
+
 ## [2.0.0-alpha.78](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.77...v2.0.0-alpha.78) (2026-11-07)
 
 ### 🐛 Bug Fixes
