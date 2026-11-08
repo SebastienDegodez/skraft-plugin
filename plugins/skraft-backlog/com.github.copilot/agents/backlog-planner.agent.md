@@ -27,18 +27,6 @@ metadata:
     - azure-boards-work-items
     - planning-review-criteria
     - backlog-review-lenses
-  inputs:
-    required:
-      - .copilot-tracking/skraft-plans/{projectSlug}/research/{date}/triage-{date}.md
-      - Issues or work items with triage labels or tags
-    context:
-      - .copilot-tracking/skraft-plans/{projectSlug}/research/{date}/sprint-proposal.md
-      - .copilot-tracking/skraft-plans/{projectSlug}/research/{date}/triage-ingest-{date}.md (when DISCOVER was skipped via an upstream handoff)
-  outputs:
-    - .copilot-tracking/skraft-plans/{projectSlug}/plans/{date}/stories-{milestone}.md
-    - .copilot-tracking/skraft-plans/{projectSlug}/plans/{date}/ac-draft-{story}.md
-    - .copilot-tracking/skraft-plans/{projectSlug}/reviews/{date}/discuss-review-{N}.md
-    - .copilot-tracking/skraft-plans/{projectSlug}/reviews/{date}/discuss-lens-{lens}-{N}.yaml (one per lens answer)
 ---
 
 # Backlog-Planner Agent
@@ -185,7 +173,7 @@ Action: Fix flagged items before marking ready-for-design.
 
 ### Phase 6: PERSIST
 
-Write only the declared output artefacts under `.copilot-tracking/skraft-plans/{projectSlug}/plans/{date}/`. Every markdown file must start with `<!-- markdownlint-disable-file -->`.
+Write only the output artefacts below under `.copilot-tracking/skraft-plans/{projectSlug}/plans/{date}/`. Every markdown file must start with `<!-- markdownlint-disable-file -->`.
 
 **`stories-{milestone}.md`** — one file per milestone, containing:
 - Milestone summary (theme, scope, due date)

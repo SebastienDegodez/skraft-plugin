@@ -10,8 +10,7 @@ on:
       # The checks job runs these two scripts and the eng/lib modules they import.
       - 'scripts/agent-policy/**'
       - 'eng/lib/yaml-parser.mjs'
-      - 'eng/lib/framework-config-policy.mjs'
-      - 'eng/lib/dispatch-policy.mjs'
+      - 'eng/lib/skill-declaration-policy.mjs'
       - 'eng/lib/model-family-policy.mjs'
       - '.claude-plugin/marketplace.json'
       - '.cursor-plugin/marketplace.json'
@@ -27,8 +26,7 @@ on:
       # The checks job runs these two scripts and the eng/lib modules they import.
       - 'scripts/agent-policy/**'
       - 'eng/lib/yaml-parser.mjs'
-      - 'eng/lib/framework-config-policy.mjs'
-      - 'eng/lib/dispatch-policy.mjs'
+      - 'eng/lib/skill-declaration-policy.mjs'
       - 'eng/lib/model-family-policy.mjs'
       - '.claude-plugin/marketplace.json'
       - '.cursor-plugin/marketplace.json'
@@ -57,9 +55,9 @@ jobs:
           node-version: '22'
       - name: Both agent trees in sync with their baseline
         run: node scripts/project-plugin-adapters.mjs --check --plugin-root plugins/skraft-brownfield
-      - name: Dispatch tree and declared skills are valid
+      - name: Copilot agents declare their skills once, metadata holds nothing unread
         run: node scripts/agent-policy/build-config-bin.mjs --dir plugins/skraft-brownfield/com.github.copilot/agents
-      - name: Claude Code agents declare their skills once
+      - name: Claude Code agents declare their skills once, metadata holds nothing unread
         run: node scripts/agent-policy/build-config-bin.mjs --dir plugins/skraft-brownfield/com.anthropic.claude-code/agents
       - name: Claude Code agents declare a model family; Copilot agents name no model
         run: node scripts/agent-policy/resolve-model-bin.mjs --check --forbid-model --dir plugins/skraft-brownfield/com.github.copilot/agents

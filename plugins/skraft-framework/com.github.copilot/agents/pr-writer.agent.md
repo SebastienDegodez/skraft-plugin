@@ -7,8 +7,6 @@ tools:
   - search/codebase
   - edit/editFiles
   - edit/createFile
-metadata:
-  dispatched_by: skraft-engine
 ---
 
 # PR Writer

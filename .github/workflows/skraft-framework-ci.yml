@@ -261,9 +261,9 @@ jobs:
       - name: Check the copies that keep every skill self-contained
         run: node scripts/sync-skill-copies.mjs --check
 
-      - name: Dispatch tree and declared skills are valid
+      - name: Copilot agents declare their skills once, metadata holds nothing unread
         run: node scripts/agent-policy/build-config-bin.mjs
-      - name: Claude Code agents declare their skills once
+      - name: Claude Code agents declare their skills once, metadata holds nothing unread
         run: node scripts/agent-policy/build-config-bin.mjs --dir plugins/skraft-framework/com.anthropic.claude-code/agents
 
       - name: Claude Code agents declare a model family; Copilot agents name no model

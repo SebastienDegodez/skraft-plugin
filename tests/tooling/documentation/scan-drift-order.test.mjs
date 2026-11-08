@@ -15,7 +15,7 @@ const EN_DOCS = 'docs/website/docs'
 const bookYml = ({ retire = false, guides = false } = {}) => `meta:
   title_en: Book
 sources:
-  agents: "plugins/skraft-framework/com.github.copilot/agents/*.agent.md"
+  agents: "plugins/*/com.github.copilot/agents/*.agent.md"
   workers: "plugins/skraft-framework/com.github.copilot/agents/*-worker.agent.md"
   lenses: "plugins/skraft-framework/com.github.copilot/agents/*.agent.md"
   skills: "plugins/skraft-framework/skills/*/SKILL.md"
@@ -49,30 +49,32 @@ name: Engineering entry
 user-invocable: true
 agents:
   - ${RESEARCHER_LABEL}
-metadata:
-  phases:
-    - RESEARCH
-  skills:
-    - routing
+skills:
+  - routing
 ---
 `
 
 const researcherAgent = `---
 name: ${RESEARCHER_LABEL}
-metadata:
-  phase: RESEARCH
-  dispatched_by: Engineering entry
-  skills:
-    - routing
+skills:
+  - routing
 ---
+`
+
+// The shipped entry workflow: it, not a descriptor, says which agent each phase dispatches.
+const pipelineDot = (researcher) => `digraph skraft {
+  start [shape=Mdiamond]
+  research [shape=box, agent="${researcher}", phase="RESEARCH"]
+  exit [shape=Msquare]
+  start -> research -> exit
+}
 `
 
 const productAgent = (name) => `---
 name: ${name}
 userInvocable: true
-metadata:
-  skills:
-    - routing
+skills:
+  - routing
 ---
 `
 
@@ -84,6 +86,8 @@ async function withFixture({ brokenParent = false, retire = false, enDashboardBo
     `${EN_DOCS}/reference`,
     'plugins/skraft-framework/com.github.copilot/agents',
     'plugins/skraft-framework/skills/routing',
+    'plugins/skraft-framework/workflows',
+    'plugins/skraft-backlog/com.github.copilot/agents',
   ]
   await Promise.all(directories.map((path) => mkdir(join(root, path), { recursive: true })))
 
@@ -96,16 +100,18 @@ async function withFixture({ brokenParent = false, retire = false, enDashboardBo
   }
   await writeFile(join(root, 'plugins/skraft-framework/skills/routing/SKILL.md'), '---\nname: routing\n---\n')
   await writeFile(join(root, 'plugins/skraft-framework/com.github.copilot/agents/skraft-orchestrator.agent.md'), orchestratorAgent)
-  await writeFile(join(root, 'plugins/skraft-framework/com.github.copilot/agents/solution-researcher.agent.md'), brokenParent ? researcherAgent.replace('Engineering entry', 'Missing dispatcher') : researcherAgent)
-  await writeFile(join(root, 'plugins/skraft-framework/com.github.copilot/agents/backlog-discoverer.agent.md'), productAgent('Product discovery'))
-  await writeFile(join(root, 'plugins/skraft-framework/com.github.copilot/agents/backlog-planner.agent.md'), productAgent('Product planning'))
+  await writeFile(join(root, 'plugins/skraft-framework/com.github.copilot/agents/solution-researcher.agent.md'), researcherAgent)
+  await writeFile(join(root, 'plugins/skraft-framework/workflows/pipeline.skraft.dot'), pipelineDot(brokenParent ? 'missing-researcher' : 'solution-researcher'))
+  await writeFile(join(root, 'plugins/skraft-backlog/com.github.copilot/agents/backlog-discoverer.agent.md'), productAgent('Product discovery'))
+  await writeFile(join(root, 'plugins/skraft-backlog/com.github.copilot/agents/backlog-planner.agent.md'), productAgent('Product planning'))
 
   if (workflow) {
-    // an agent a dynamic workflow dispatches; the workflow is declared by another plugin's Copilot extension
-    await writeFile(join(root, 'plugins/skraft-framework/com.github.copilot/agents/story-slicer.agent.md'), `---\nname: story-slicer\nmetadata:\n  dispatched_by: prd-workflow\n---\n`)
-    const extension = join(root, 'plugins/skraft-backlog/com.github.copilot/extensions/prd-workflow')
+    // an internal agent no parent lists and no shipped workflow names: its plugin's one dynamic workflow
+    // (a Copilot extension) dispatches it; an extension of another plugin does not
+    await writeFile(join(root, 'plugins/skraft-framework/com.github.copilot/agents/story-slicer.agent.md'), `---\nname: story-slicer\n---\n`)
+    const extension = join(root, workflow.plugin, 'com.github.copilot/extensions/prd-workflow')
     await mkdir(extension, { recursive: true })
-    await writeFile(join(extension, 'copilot-extension.json'), JSON.stringify({ name: workflow, version: 1 }))
+    await writeFile(join(extension, 'copilot-extension.json'), JSON.stringify({ name: 'prd-workflow', version: 1 }))
   }
 
   if (retire) {
@@ -186,7 +192,7 @@ test('scan-drift promotes broken topology to a blocker', async () => {
   const fixture = await withFixture({ brokenParent: true })
   try {
     const ledger = fixture.ledger()
-    const blocker = ledger.items.find(({ type, detail }) => type === 'catalogue-topology' && detail.includes('DISPATCH_PARENT_MISSING'))
+    const blocker = ledger.items.find(({ type, detail }) => type === 'catalogue-topology' && detail.includes('PHASE_SPECIALIST_MISSING'))
     assert.ok(blocker)
     assert.equal(blocker.severity, 'blocker')
   } finally {
@@ -194,12 +200,12 @@ test('scan-drift promotes broken topology to a blocker', async () => {
   }
 })
 
-test('scan-drift reports no topology drift for an agent a declared dynamic workflow dispatches, and a blocker when none declares it', async () => {
-  const declared = await withFixture({ workflow: 'prd-workflow' })
-  const undeclared = await withFixture({ workflow: 'another-workflow' })
+test('scan-drift reports no topology drift for an agent its plugin\'s dynamic workflow dispatches, and a blocker when only another plugin declares one', async () => {
+  const declared = await withFixture({ workflow: { plugin: 'plugins/skraft-framework' } })
+  const undeclared = await withFixture({ workflow: { plugin: 'plugins/skraft-backlog' } })
   try {
     assert.deepEqual(declared.ledger().items.filter(({ type }) => type === 'catalogue-topology').map(({ detail }) => detail), [])
-    const blocker = undeclared.ledger().items.find(({ type, detail }) => type === 'catalogue-topology' && detail.includes('DISPATCH_PARENT_MISSING'))
+    const blocker = undeclared.ledger().items.find(({ type, detail }) => type === 'catalogue-topology' && detail.includes('AGENT_DISPATCHER_UNKNOWN'))
     assert.equal(blocker?.severity, 'blocker', 'a dispatcher nothing declares stays a blocker')
   } finally {
     await declared.cleanup()

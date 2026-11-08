@@ -2,46 +2,32 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
-import { frameworkConfigFrom } from '../../../scripts/agent-policy/build-config.mjs'
+
+import { findShippedWorkflows } from '../../../eng/lib/shipped-workflows.mjs'
 
 // Regression guard for the product/engineering layer separation. Pins the SHAPE of the
-// framework config the agent descriptors define so a future frontmatter edit cannot silently re-merge the
-// product layer (backlog discovery / refinement) back into the engineering orchestrator.
-const here = dirname(fileURLToPath(import.meta.url))
-const config = frameworkConfigFrom(join(here, '../../..', 'plugins/skraft-framework/com.github.copilot/agents'))
+// shipped pipeline so a future workflow edit cannot silently re-merge the product layer
+// (backlog discovery / refinement) back into the engineering pipeline.
+const root = join(dirname(fileURLToPath(import.meta.url)), '../../..')
+const pipeline = findShippedWorkflows(root).find((workflow) => workflow.entry)
 
-test('layer separation: orchestrator pipeline is RESEARCH -> DESIGN -> DISTILL -> DELIVER', () => {
-  assert.deepEqual(config.phaseOrder, ['RESEARCH', 'DESIGN', 'DISTILL', 'DELIVER'])
+test('layer separation: the pipeline is RESEARCH -> DESIGN -> DISTILL -> DELIVER -> PUBLISH', () => {
+  assert.equal(pipeline.pluginDir, 'skraft-framework')
+  assert.deepEqual(pipeline.phases.map(({ phase }) => phase), ['RESEARCH', 'DESIGN', 'DISTILL', 'DELIVER', 'PUBLISH'])
 })
 
 test('layer separation: DISCOVER / DISCUSS are NOT engineering phases', () => {
-  assert.ok(!config.phaseOrder.includes('DISCOVER'))
-  assert.ok(!config.phaseOrder.includes('DISCUSS'))
+  const phases = pipeline.phases.map(({ phase }) => phase)
+  assert.ok(!phases.includes('DISCOVER'))
+  assert.ok(!phases.includes('DISCUSS'))
 })
 
-test('layer separation: RESEARCH has a specialist and NO reviewer (evidence is citation-verifiable, not adversarially reviewed)', () => {
-  assert.deepEqual(config.phaseAgents.RESEARCH, {
-    specialist: 'Skraft - Solution Researcher',
-    reviewer: null,
-  })
+test('layer separation: RESEARCH dispatches the researcher first', () => {
+  assert.deepEqual(pipeline.phases[0], { phase: 'RESEARCH', specialist: 'solution-researcher' })
 })
 
-test('layer separation: no phase agent is a backlog (product-layer) agent', () => {
-  const wired = JSON.stringify(config.phaseAgents).toLowerCase()
-  assert.ok(!wired.includes('backlog'), 'backlog agents must not appear in phaseAgents')
-})
-
-test('layer separation: backlog agents live in the skraft-backlog plugin, outside the engineering catalogue', () => {
-  for (const a of [
-    'Skraft - Backlog Discoverer',
-    'Skraft - Backlog Discoverer Reviewer',
-    'Skraft - Backlog Planner',
-    'Skraft - Backlog Planner Reviewer',
-  ]) {
-    assert.ok(!(a in config.agentSkills), `${a} must not be part of the engineering plugin`)
+test('layer separation: no shipped workflow names a backlog (product-layer) agent', () => {
+  for (const workflow of findShippedWorkflows(root)) {
+    assert.ok(!workflow.agents.some((id) => id.startsWith('backlog-')), `${workflow.path} must not name a backlog agent`)
   }
-})
-
-test('layer separation: no reviewer agent exists in the catalogue for RESEARCH', () => {
-  assert.ok(!('Skraft - Solution Researcher Reviewer' in config.agentSkills), 'no reviewer agent for RESEARCH')
 })

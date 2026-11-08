@@ -11,9 +11,6 @@ tools:
   - Glob
   - Bash
   - mcp__graphify__*
-metadata:
-  dispatched_by: Skraft - Orchestrator
-  phase: RESEARCH
 ---
 
 # Solution-researcher agent

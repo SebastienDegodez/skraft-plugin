@@ -9,9 +9,6 @@ tools:
   - search/codebase
   - execute
   - graphify/*
-metadata:
-  dispatched_by: Skraft - Orchestrator
-  phase: RESEARCH
 ---
 
 # Solution-researcher agent

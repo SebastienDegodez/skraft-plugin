@@ -20,9 +20,6 @@ skills:
   - craft-discipline
   - clean-architecture-testing
   - acceptance-review-criteria
-metadata:
-  dispatched_by: Skraft - Orchestrator
-  phase: DISTILL
 ---
 
 # Acceptance-designer agent

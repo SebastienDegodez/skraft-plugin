@@ -6,8 +6,6 @@ user-invocable: false
 tools: 
   - read/readFile
   - search/codebase
-metadata:
-  dispatched_by: backlog-planner
 ---
 
 # Planning Coherence Lens

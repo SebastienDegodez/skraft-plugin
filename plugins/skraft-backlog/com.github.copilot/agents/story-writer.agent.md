@@ -12,8 +12,6 @@ tools:
 skills:
   - story-elaboration
   - issue-refinement
-metadata:
-  dispatched_by: skraft-prd-backlog
 ---
 
 # Story Writer

@@ -22,6 +22,7 @@ before(() => {
   workspace = mkdtempSync(join(tmpdir(), 'skraft-dashboard-'))
 
   write(join(workspace, 'plugins/skraft-framework/.claude-plugin/plugin.json'), JSON.stringify({ name: 'demo', version: '2.0.0', description: 'Demo plugin.' }))
+  write(join(workspace, 'plugins/skraft-backlog/.claude-plugin/plugin.json'), JSON.stringify({ name: 'demo-backlog', version: '2.0.0', description: 'Demo backlog plugin.' }))
   write(
     join(workspace, 'plugins/skraft-framework/skills/demo-skill/SKILL.md'),
     ['---', 'name: demo-skill', 'description: Use when demonstrating the dashboard pipeline.', '---', '', '# Demo', '', '## When to use', '', '1. Always', ''].join('\n'),
@@ -36,35 +37,36 @@ before(() => {
   )
   write(
     join(workspace, 'plugins/skraft-framework/com.github.copilot/agents/skraft-orchestrator.agent.md'),
-    ['---', 'name: Skraft - Orchestrator', 'description: Runs engineering.', 'user-invocable: true', 'agents:', '  - Research Specialist', '  - Delivery Specialist', '  - Delivery Reviewer', 'metadata:', '  phases:', '    - RESEARCH', '    - DELIVER', '  skills:', '    - demo-skill', '  inputs:', '    required:', '      - refined-story', '  outputs:', '    - evidence', '---', ''].join('\n'),
+    ['---', 'name: Skraft - Orchestrator', 'description: Runs engineering.', 'user-invocable: true', 'skills:', '  - demo-skill', '---', ''].join('\n'),
+  )
+  // The shipped entry workflow: it, not a descriptor, orders the phases and names their agents and lenses.
+  write(
+    join(workspace, 'plugins/skraft-framework/workflows/pipeline.skraft.dot'),
+    ['digraph skraft {', '  start [shape=Mdiamond]', '  research [shape=box, agent="research-specialist", phase="RESEARCH"]', '  deliver [shape=box, agent="delivery-specialist", phase="DELIVER"]', '  deliver_review_lenses [shape=component]', '  deliver_review_demo [shape=note, lens="demo"]', '  deliver_review_refuter [shape=octagon]', '  deliver_review [shape=tripleoctagon]', '  exit [shape=Msquare]', '  start -> research -> deliver -> deliver_review_lenses -> deliver_review_demo -> deliver_review_refuter -> deliver_review', '  deliver_review -> exit [label="APPROVED"]', '  deliver_review -> deliver [label="NEEDS_REWORK", max_visits=2]', '}', ''].join('\n'),
   )
   write(
     join(workspace, 'plugins/skraft-framework/com.github.copilot/agents/research-specialist.agent.md'),
-    ['---', 'name: Research Specialist', 'description: Researches.', 'userInvocable: false', 'metadata:', '  phase: RESEARCH', '  dispatched_by: Skraft - Orchestrator', '  skills:', '    - demo-skill', '---', ''].join('\n'),
+    ['---', 'name: Research Specialist', 'description: Researches.', 'userInvocable: false', 'skills:', '  - demo-skill', '---', ''].join('\n'),
   )
   write(
     join(workspace, 'plugins/skraft-framework/com.github.copilot/agents/delivery-specialist.agent.md'),
-    ['---', 'name: Delivery Specialist', 'description: Delivers.', 'metadata:', '  phase: DELIVER', '  dispatched_by: Skraft - Orchestrator', '  skills:', '    - demo-skill', '---', ''].join('\n'),
+    ['---', 'name: Delivery Specialist', 'description: Delivers.', 'agents:', '  - Demo Worker', 'skills:', '  - demo-skill', '---', ''].join('\n'),
   )
   write(
-    join(workspace, 'plugins/skraft-framework/com.github.copilot/agents/delivery-reviewer.agent.md'),
-    ['---', 'name: Delivery Reviewer', 'description: Reviews delivery.', 'agents:', '  - Demo Lens', 'metadata:', '  phase: DELIVER-REVIEW', '  dispatched_by: Skraft - Orchestrator', '---', ''].join('\n'),
+    join(workspace, 'plugins/skraft-backlog/com.github.copilot/agents/backlog-discoverer.agent.md'),
+    ['---', 'name: Backlog Discovery', 'description: Finds work.', 'userInvocable: true', 'skills:', '  - demo-skill', '---', ''].join('\n'),
   )
   write(
-    join(workspace, 'plugins/skraft-framework/com.github.copilot/agents/backlog-discoverer.agent.md'),
-    ['---', 'name: Backlog Discovery', 'description: Finds work.', 'userInvocable: true', 'metadata:', '  skills:', '    - demo-skill', '---', ''].join('\n'),
-  )
-  write(
-    join(workspace, 'plugins/skraft-framework/com.github.copilot/agents/backlog-planner.agent.md'),
-    ['---', 'name: Backlog Planning', 'description: Refines work.', 'user-invocable: true', 'metadata:', '  skills:', '    - demo-skill', '---', ''].join('\n'),
+    join(workspace, 'plugins/skraft-backlog/com.github.copilot/agents/backlog-planner.agent.md'),
+    ['---', 'name: Backlog Planning', 'description: Refines work.', 'user-invocable: true', 'skills:', '  - demo-skill', '---', ''].join('\n'),
   )
   write(
     join(workspace, 'plugins/skraft-framework/com.github.copilot/agents/demo-worker.agent.md'),
-    ['---', 'name: Demo Worker', 'description: Supports delivery.', 'metadata:', '  dispatched_by: Delivery Specialist', '  skills:', '    - demo-skill', '---', ''].join('\n'),
+    ['---', 'name: Demo Worker', 'description: Supports delivery.', 'skills:', '  - demo-skill', '---', ''].join('\n'),
   )
   write(
     join(workspace, 'plugins/skraft-framework/com.github.copilot/agents/demo-lens.agent.md'),
-    ['---', 'name: Demo Lens', 'description: Reviews the demo.', 'metadata:', '  dispatched_by: Delivery Reviewer', '---', '', '# Demo lens', ''].join('\n'),
+    ['---', 'name: Demo Lens', 'description: Reviews the demo.', '---', '', '# Demo lens', ''].join('\n'),
   )
   write(
     join(workspace, 'tests/skills/demo-skill/eval.yaml'),
@@ -84,7 +86,7 @@ describe('catalogue scan', () => {
     strictEqual(report.plugin.version, '2.0.0')
     strictEqual(report.summary.skills, 2)
     strictEqual(report.schemaVersion, 2)
-    strictEqual(report.summary.agents, 7)
+    strictEqual(report.summary.agents, 6)
     strictEqual(report.summary.workers, 1)
     strictEqual(report.summary.lenses, 1)
     strictEqual(report.summary.evaluatedSkills, 1)
@@ -104,7 +106,7 @@ describe('catalogue scan', () => {
       entrypoint: 'skraft-orchestrator',
       phases: [
         { phase: 'RESEARCH', specialist: 'research-specialist', reviewer: null },
-        { phase: 'DELIVER', specialist: 'delivery-specialist', reviewer: 'delivery-reviewer' },
+        { phase: 'DELIVER', specialist: 'delivery-specialist', reviewer: null },
       ],
     })
     deepStrictEqual(report.topology.journeys.productToEngineering.variants, [
@@ -113,11 +115,10 @@ describe('catalogue scan', () => {
       ['backlog-discoverer', 'backlog-planner', 'skraft-orchestrator'],
     ])
     ok(report.topology.edges.some((edge) => edge.type === 'dispatch' && edge.from === 'delivery-specialist' && edge.to === 'demo-worker'))
-    ok(report.topology.edges.some((edge) => edge.type === 'dispatch' && edge.from === 'delivery-reviewer' && edge.to === 'demo-lens'))
-    deepStrictEqual(report.topology.edges.filter((edge) => edge.type === 'dispatch' && edge.from === 'skraft-orchestrator').map((edge) => edge.order), [0, 1, 2])
+    strictEqual(report.agents.find((agent) => agent.id === 'demo-lens').dispatchedBy, 'skraft-engine')
+    deepStrictEqual(report.topology.edges.filter((edge) => edge.type === 'dispatch' && edge.from === 'skraft-orchestrator').map((edge) => [edge.to, edge.sources]), [['delivery-specialist', ['workflow']], ['research-specialist', ['workflow']]])
     strictEqual(report.agents.find((agent) => agent.id === 'backlog-discoverer').userInvocable, true)
     strictEqual(report.agents.find((agent) => agent.id === 'backlog-planner').userInvocable, true)
-    deepStrictEqual(report.agents.find((agent) => agent.id === 'skraft-orchestrator').artifacts, { inputs: ['refined-story'], outputs: ['evidence'] })
   })
 
   it('warns about a skill with no description instead of failing silently', () => {
@@ -233,7 +234,7 @@ describe('dashboard data', () => {
     strictEqual(dashboard.summary.skills, 2)
     deepStrictEqual(dashboard.topology.journeys.engineering.phases, [
       { phase: 'RESEARCH', specialist: 'research-specialist', reviewer: null },
-      { phase: 'DELIVER', specialist: 'delivery-specialist', reviewer: 'delivery-reviewer' },
+      { phase: 'DELIVER', specialist: 'delivery-specialist', reviewer: null },
     ])
     strictEqual(dashboard.history['demo-skill'][0].state, 'pass')
     strictEqual(dashboard.sources.history, 'https://raw.githubusercontent.com/acme/demo/evidence/data/history.json')
