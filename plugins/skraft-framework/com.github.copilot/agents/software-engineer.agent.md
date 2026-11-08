@@ -70,6 +70,13 @@ Work one scenario at a time, in the order of the implementation plan. DISTILL wr
 7. Append one line per commit to the change log your brief lists: `<short sha> <subject>`, plus its `PLAN_DEVIATION` if any.
 8. **Before writing your result**, on every pass: run the component's `build`, `format`, `lint` and `test` commands (`craft-discipline` C3, C4: your brief, else `commands` of the component in `skraft-config.json`) and fix every failure; commit format and lint fixes as `style`.
 
+## Turns
+
+- Put every independent call of a step in one turn: the files a cycle reads; the test file and the skeleton it compiles against; the production files of one green.
+- Once the wiring check holds, chain a green's run and its commit in one command: `<component test command> && git add <files> && git commit …`. A red's commit waits until you have read why the test fails.
+- Write a command's output only to a file under the tracking folder's `logs/` (the `.copilot-tracking/skraft-plans/<slug>` path your brief allows), then read it: never to `/tmp` or any other folder outside the working copy.
+- Read a file once per pass; after you edit it, trust your edit instead of reading it again.
+
 ## Commits
 
 - Commit under the configured identity with one `-m` per paragraph; inside a `-m`, no `\n`, backtick, `$` or double quote:
