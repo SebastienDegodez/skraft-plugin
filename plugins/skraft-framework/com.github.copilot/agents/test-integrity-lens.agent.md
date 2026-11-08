@@ -7,8 +7,6 @@ tools:
   - search/codebase
 skills:
   - craft-discipline
-metadata:
-  dispatched_by: skraft-engine
 ---
 
 # Test Integrity Lens

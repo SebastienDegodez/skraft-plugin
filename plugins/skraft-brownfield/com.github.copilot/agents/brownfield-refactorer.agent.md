@@ -16,15 +16,6 @@ agents:
 skills:
   - mikado-method
   - strangler-fig-method
-metadata:
-  inputs:
-    required:
-      - the goal (what to modify, or what to replace)
-      - a safety net for the target (harness report, or the human's confirmation)
-  outputs:
-    - .copilot-tracking/skraft-plans/{projectSlug}/refactoring/{YYYY-MM-DD}/mikado-<slug>.md
-    - .copilot-tracking/skraft-plans/{projectSlug}/refactoring/{YYYY-MM-DD}/strangler-<slug>.md
-    - one green commit per completed leaf or slice (made by the worker)
 ---
 
 # Brownfield refactorer

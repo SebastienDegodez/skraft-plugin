@@ -5,9 +5,9 @@
 // without IO or timestamps, so scanners, dashboard builders and tests share
 // one deterministic contract.
 
-const asArray = (value) => (Array.isArray(value) ? value : value == null || value === '' ? [] : [value])
-const basePhase = (phase) => String(phase ?? '').replace(/-REVIEW$/, '')
-const isReviewer = (agent) => String(agent.phase ?? '').endsWith('-REVIEW') || /(?:^|[\s-])reviewer$/i.test(String(agent.name ?? '').trim())
+/** The plugin folder a repository path sits in, `plugins/<dir>/…`, else null. @param {string} path */
+const pluginDirOf = (path) => /^plugins\/([^/]+)\//.exec(String(path).split('\\').join('/'))?.[1] ?? null
+
 const byId = (left, right) => left.id.localeCompare(right.id)
 
 const unique = (values) => [...new Set(values)]
@@ -16,15 +16,16 @@ const legacyFamily = (kind) => ({ agent: 'agents', worker: 'workers', lens: 'len
 
 const finding = (severity, code, path, message) => ({ severity, code, path, message })
 
-// The V2 engine starts the review lenses and the finding refuter itself: no agent dispatches them.
+// The V2 engine starts what a shipped workflow names apart from its phase agents: the review
+// lenses, the finding refuter.
 export const ENGINE_DISPATCHER = 'skraft-engine'
 
-// A plugin's Copilot extension may declare a dynamic workflow (copilot-extension.json `name`) that
-// dispatches agents itself: an agent naming it in `dispatched_by` has a known dispatcher.
-export const buildCatalogueTopology = ({ skills = [], agents = [], workflows = [], frameworkConfig = null } = {}) => {
+// Who dispatches an agent is no descriptor field: a parent lists it under `agents:`; a plugin's
+// entry workflow (eng/lib/shipped-workflows.mjs) dispatches its phase agents from the plugin's one
+// user-invocable agent, and the engine starts the lenses and the refuter that workflow names; any
+// other internal agent belongs to its plugin's one dynamic workflow (copilot-extension.json `name`).
+export const buildCatalogueTopology = ({ skills = [], agents = [], workflows = [], pipelines = [] } = {}) => {
   const findings = []
-  const workflowIds = new Set(workflows.map((workflow) => workflow.id))
-  const isOutsideDispatcher = (reference) => reference === ENGINE_DISPATCHER || workflowIds.has(reference)
   const skillIds = new Set(skills.map((skill) => skill.directory))
   const idGroups = new Map()
   const nameGroups = new Map()
@@ -49,19 +50,22 @@ export const buildCatalogueTopology = ({ skills = [], agents = [], workflows = [
   const agentByName = new Map([...nameGroups].filter(([, matches]) => matches.length === 1).map(([name, matches]) => [name, matches[0]]))
   const resolveAgent = (reference) => agentByName.get(String(reference)) ?? agentById.get(String(reference)) ?? null
 
-  const orchestrators = agents.filter((agent) => agent.phases.length > 0)
-  if (orchestrators.length > 1) {
-    findings.push(finding('error', 'ENGINEERING_ORCHESTRATOR_AMBIGUOUS', orchestrators.map((agent) => agent.path).join(', '), 'More than one agent declares an ordered phase list'))
+  const entries = pipelines.filter((pipeline) => pipeline.entry)
+  if (entries.length > 1) {
+    findings.push(finding('error', 'ENGINEERING_WORKFLOW_AMBIGUOUS', entries.map((pipeline) => pipeline.path).join(', '), 'More than one plugin ships an entry workflow'))
   }
-  const orchestrator = orchestrators.length === 1 ? orchestrators[0] : null
-  const phaseOrder = orchestrator?.phases ?? []
-
-  if (orchestrator && frameworkConfig) {
-    const configured = frameworkConfig.phaseOrder ?? []
-    if (JSON.stringify(configured) !== JSON.stringify(phaseOrder)) {
-      findings.push(finding('error', 'ENGINEERING_PHASE_ORDER_MISMATCH', orchestrator.path, `Descriptor phases ${phaseOrder.join(' -> ')} do not match generated config ${configured.join(' -> ')}`))
-    }
+  const pipeline = entries.length === 1 ? entries[0] : null
+  const entrypoints = pipeline ? agents.filter((agent) => agent.kind === 'agent' && agent.userInvocable && pluginDirOf(agent.path) === pipeline.pluginDir) : []
+  if (entrypoints.length > 1) {
+    findings.push(finding('error', 'ENGINEERING_ORCHESTRATOR_AMBIGUOUS', entrypoints.map((agent) => agent.path).join(', '), 'The plugin that ships the entry workflow has more than one user-invocable agent'))
   }
+  const orchestrator = entrypoints.length === 1 ? entrypoints[0] : null
+  const phaseOrder = pipeline ? pipeline.phases.map(({ phase }) => phase) : []
+  const specialists = new Map(pipeline ? pipeline.phases.flatMap(({ phase, specialist }) => {
+    const agent = resolveAgent(specialist)
+    return agent ? [[agent.id, phase]] : []
+  }) : [])
+  const engineStarted = new Set(pipelines.flatMap((shipped) => shipped.agents))
 
   const dispatchEdges = new Map()
   const addDispatchEdge = (from, to, source) => {
@@ -84,43 +88,37 @@ export const buildCatalogueTopology = ({ skills = [], agents = [], workflows = [
         continue
       }
       addDispatchEdge(parent.id, child.id, 'agents')
-      const declaredParent = child.dispatchedByRef ? resolveAgent(child.dispatchedByRef) : null
-      if (declaredParent && declaredParent.id !== parent.id) {
-        findings.push(finding('error', 'DISPATCH_PARENT_CONFLICT', child.path, `${child.name} declares '${child.dispatchedByRef}' but is listed by '${parent.name}'`))
-      }
       const edge = dispatchEdges.get(`${parent.id}:${child.id}`)
       dispatchEdges.set(`${parent.id}:${child.id}`, { ...edge, order })
     }
   }
 
+  const listed = new Set([...dispatchEdges.values()].map((edge) => edge.to))
+  const dispatcherOf = new Map()
   for (const child of agents) {
-    if (!child.dispatchedByRef || isOutsideDispatcher(child.dispatchedByRef)) continue
-    const parent = resolveAgent(child.dispatchedByRef)
-    if (!parent) {
-      findings.push(finding('error', 'DISPATCH_PARENT_MISSING', child.path, `${child.name} declares unknown dispatcher '${child.dispatchedByRef}'`))
+    if (listed.has(child.id)) continue
+    if (orchestrator && specialists.has(child.id)) {
+      addDispatchEdge(orchestrator.id, child.id, 'workflow')
       continue
     }
-    addDispatchEdge(parent.id, child.id, 'dispatched_by')
+    if (engineStarted.has(child.id)) {
+      dispatcherOf.set(child.id, ENGINE_DISPATCHER)
+      continue
+    }
+    if (child.userInvocable) continue
+    const own = workflows.filter((workflow) => pluginDirOf(workflow.path) === pluginDirOf(child.path))
+    if (own.length === 1) dispatcherOf.set(child.id, own[0].id)
+    else findings.push(finding('error', 'AGENT_DISPATCHER_UNKNOWN', child.path, `${child.name} is internal, yet no agent lists it, no shipped workflow names it and its plugin has ${own.length ? 'several dynamic workflows' : 'no dynamic workflow'}`))
   }
 
   const incoming = new Map()
   for (const edge of dispatchEdges.values()) incoming.set(edge.to, [...(incoming.get(edge.to) ?? []), edge.from])
 
   const phaseAgents = {}
-  if (orchestrator) {
-    for (const phase of phaseOrder) {
-      const candidates = agents.filter((agent) =>
-        agent.id !== orchestrator.id &&
-        basePhase(agent.phase) === phase &&
-        dispatchEdges.has(`${orchestrator.id}:${agent.id}`),
-      )
-      const specialist = candidates.find((agent) => !isReviewer(agent)) ?? null
-      const reviewer = candidates.find((agent) => isReviewer(agent)) ?? null
-      if (!specialist) {
-        findings.push(finding('error', 'PHASE_SPECIALIST_MISSING', orchestrator.path, `Engineering phase '${phase}' has no dispatched specialist`))
-      }
-      phaseAgents[phase] = { specialist: specialist?.id ?? null, reviewer: reviewer?.id ?? null }
-    }
+  for (const { phase, specialist } of pipeline?.phases ?? []) {
+    const agent = resolveAgent(specialist)
+    if (!agent) findings.push(finding('error', 'PHASE_SPECIALIST_MISSING', pipeline.path, `Engineering phase '${phase}' dispatches unknown agent '${specialist}'`))
+    phaseAgents[phase] = { specialist: agent?.id ?? null, reviewer: null }
   }
 
   const enrichedSkills = skills.map((skill) => ({
@@ -134,7 +132,7 @@ export const buildCatalogueTopology = ({ skills = [], agents = [], workflows = [
     const children = [...dispatchEdges.values()].filter((edge) => edge.from === agent.id).sort((left, right) => (left.order ?? Number.MAX_SAFE_INTEGER) - (right.order ?? Number.MAX_SAFE_INTEGER) || left.to.localeCompare(right.to)).map((edge) => edge.to)
     const parents = incoming.get(agent.id) ?? []
     const isProduct = agent.id === 'backlog-discoverer' || agent.id === 'backlog-planner'
-    const isEngineering = agent.id === orchestrator?.id || phaseOrder.includes(basePhase(agent.phase))
+    const isEngineering = agent.id === orchestrator?.id || specialists.has(agent.id)
     const layer = isProduct ? 'product-preflight' : isEngineering ? 'engineering-pipeline' : agent.kind === 'agent' ? 'standalone' : 'internal'
     const family = legacyFamily(agent.kind)
 
@@ -150,8 +148,8 @@ export const buildCatalogueTopology = ({ skills = [], agents = [], workflows = [
       root: agent.userInvocable && parents.length === 0,
       parents: unique(parents),
       children,
-      dispatchedBy: isOutsideDispatcher(agent.dispatchedByRef) ? agent.dispatchedByRef : agent.dispatchedByRef ? resolveAgent(agent.dispatchedByRef)?.id ?? null : null,
-      artifacts: { inputs: agent.inputs, outputs: agent.outputs },
+      phase: specialists.get(agent.id) ?? null,
+      dispatchedBy: dispatcherOf.get(agent.id) ?? (parents.length === 1 ? parents[0] : null),
       legacyRoutes: family ? ['fr', 'en'].map((lang) => `/${lang}/reference/${family}/${agent.id}/`) : [],
     }
   }).sort(byId)
@@ -161,38 +159,13 @@ export const buildCatalogueTopology = ({ skills = [], agents = [], workflows = [
   const backlogPlanner = enrichedById.get('backlog-planner')
   if (!backlogDiscoverer) findings.push(finding('error', 'PRODUCT_PREFLIGHT_AGENT_MISSING', 'plugins/skraft-backlog/com.github.copilot/agents', "Required product preflight agent 'backlog-discoverer' is missing"))
   if (!backlogPlanner) findings.push(finding('error', 'PRODUCT_PREFLIGHT_AGENT_MISSING', 'plugins/skraft-backlog/com.github.copilot/agents', "Required product preflight agent 'backlog-planner' is missing"))
-  if (!orchestrator) findings.push(finding('error', 'ENGINEERING_ORCHESTRATOR_MISSING', 'plugins/skraft-framework/com.github.copilot/agents', 'No agent declares the engineering phase order'))
+  if (!orchestrator) findings.push(finding('error', 'ENGINEERING_ORCHESTRATOR_MISSING', pipeline?.path ?? 'plugins', pipeline ? 'The plugin that ships the entry workflow has no user-invocable agent to start it' : 'No plugin ships an entry workflow'))
   for (const agent of [backlogDiscoverer, backlogPlanner].filter(Boolean)) {
     if (!agent.userInvocable || !agent.root) {
       findings.push(finding('error', 'PRODUCT_PREFLIGHT_NOT_STANDALONE', agent.path, `${agent.name} must be a directly invocable root`))
     }
     if (orchestrator && agent.parents.includes(orchestrator.id)) {
       findings.push(finding('error', 'PRODUCT_PREFLIGHT_ORCHESTRATED', agent.path, `${agent.name} must run before, not inside, the engineering orchestrator`))
-    }
-  }
-
-  if (frameworkConfig) {
-    for (const [phase, configured] of Object.entries(frameworkConfig.phaseAgents ?? {})) {
-      const expected = phaseAgents[phase]
-      const configuredSpecialist = configured?.specialist ? resolveAgent(configured.specialist)?.id ?? configured.specialist : null
-      const configuredReviewer = configured?.reviewer ? resolveAgent(configured.reviewer)?.id ?? configured.reviewer : null
-      if (!expected || expected.specialist !== configuredSpecialist || expected.reviewer !== configuredReviewer) {
-        findings.push(finding('error', 'ENGINEERING_PHASE_AGENT_MISMATCH', orchestrator?.path ?? 'plugins/skraft-framework/com.github.copilot/agents', `Generated config for '${phase}' does not match descriptor dispatch topology`))
-      }
-    }
-
-    for (const agent of enrichedAgents) {
-      const configuredSkills = frameworkConfig.agentSkills?.[agent.name] ?? frameworkConfig.agentSkills?.[agent.id]
-      if (configuredSkills) {
-        const names = configuredSkills.map((skill) => typeof skill === 'string' ? skill : skill.name)
-        if (JSON.stringify(names) !== JSON.stringify(agent.skills)) {
-          findings.push(finding('error', 'AGENT_SKILLS_CONFIG_MISMATCH', agent.path, `Generated skill order for '${agent.name}' does not match its descriptor`))
-        }
-      }
-      const configuredArtifacts = frameworkConfig.agentArtifacts?.[agent.name] ?? frameworkConfig.agentArtifacts?.[agent.id]
-      if (configuredArtifacts && JSON.stringify(configuredArtifacts) !== JSON.stringify(agent.artifacts)) {
-        findings.push(finding('error', 'AGENT_ARTIFACTS_CONFIG_MISMATCH', agent.path, `Generated artifacts for '${agent.name}' do not match its descriptor`))
-      }
     }
   }
 

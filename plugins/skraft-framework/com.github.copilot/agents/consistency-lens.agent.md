@@ -7,8 +7,6 @@ tools:
   - search/codebase
 skills:
   - architecture-review-criteria
-metadata:
-  dispatched_by: skraft-engine
 ---
 
 # Consistency Lens

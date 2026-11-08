@@ -9,8 +9,6 @@ tools:
   - Glob
   - Edit
   - Write
-metadata:
-  dispatched_by: skraft-engine
 ---
 
 # PR Writer

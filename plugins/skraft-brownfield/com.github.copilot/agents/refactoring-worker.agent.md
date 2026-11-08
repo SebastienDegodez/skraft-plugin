@@ -11,18 +11,9 @@ tools:
   - execute/runInTerminal
   - execute/getTerminalOutput
 metadata:
-  dispatched_by: brownfield-refactorer
   on_demand_skills:
     - mikado-method
     - strangler-fig-method
-  inputs:
-    required:
-      - the graph or slice plan path and its full current content
-      - the leaf or slice, verbatim
-      - the acceptance criteria of the method, verbatim
-      - the build and test commands
-  outputs:
-    - exactly one terminal signal (ADVANCE, EXPAND, DONE or BLOCKED); a commit only on ADVANCE or DONE
 ---
 
 # Refactoring worker

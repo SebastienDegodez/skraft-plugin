@@ -18,6 +18,7 @@ import { readFrontMatter } from '../lib/front-matter.mjs'
 import { profileSkill, summariseEvalSpec } from '../lib/skill-profile.mjs'
 import { buildCatalogueTopology } from '../lib/catalogue-topology.mjs'
 import { findDynamicWorkflows } from '../lib/dynamic-workflows.mjs'
+import { findShippedWorkflows } from '../lib/shipped-workflows.mjs'
 import { parseYaml } from '../lib/yaml-parser.mjs'
 
 const { values } = parseArgs({
@@ -133,13 +134,8 @@ const agents = pluginRoots.flatMap((root) => {
     kind: agentKind(agentsRoot, path),
     model: data.model ? String(data.model) : null,
     userInvocable: structured['user-invocable'] === true || structured.userInvocable === true,
-    phase: metadata.phase ? String(metadata.phase) : null,
-    phases: asArray(metadata.phases).map(String),
     skills: [...asArray(structured.skills), ...asArray(metadata.on_demand_skills)].map(String),
-    inputs: asArray(metadata.inputs?.required).map(String),
-    outputs: asArray(metadata.outputs).map(String),
     childRefs: asArray(structured.agents).map(String),
-    dispatchedByRef: metadata.dispatched_by ? String(metadata.dispatched_by) : null,
   }
 })
 
@@ -158,7 +154,7 @@ if (existsSync(evalsRoot)) {
 const workflows = findDynamicWorkflows(repoRoot)
 
 const manifest = JSON.parse(readFileSync(join(pluginRoot, '.claude-plugin/plugin.json'), 'utf8'))
-const topology = buildCatalogueTopology({ skills, agents, workflows })
+const topology = buildCatalogueTopology({ skills, agents, workflows, pipelines: findShippedWorkflows(repoRoot) })
 findings.push(...topology.findings)
 const report = {
   schemaVersion: 2,

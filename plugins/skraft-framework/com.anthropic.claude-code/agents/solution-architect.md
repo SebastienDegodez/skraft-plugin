@@ -14,9 +14,6 @@ tools:
 skills:
   - architecture-patterns
   - architecture-decisions
-metadata:
-  dispatched_by: Skraft - Orchestrator
-  phase: DESIGN
 ---
 
 # Solution-architect agent

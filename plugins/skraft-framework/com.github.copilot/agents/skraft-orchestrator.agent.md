@@ -7,12 +7,6 @@ description: >-
   backlog discovery or story refinement (the skraft-backlog plugin).
 model: inherit
 user-invocable: true
-metadata:
-  phases:
-    - RESEARCH
-    - DESIGN
-    - DISTILL
-    - DELIVER
 ---
 
 # SKRAFT pipeline launcher

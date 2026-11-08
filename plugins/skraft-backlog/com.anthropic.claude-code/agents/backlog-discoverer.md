@@ -24,17 +24,6 @@ metadata:
     - azure-boards-work-items
     - discovery-review-criteria
     - backlog-review-lenses
-  inputs:
-    required:
-      - Issues of the forge: GitHub issues or Azure Boards work items
-    context:
-      - GitHub milestones or Azure Boards iterations
-      - git log (for artifact-driven mode)
-  outputs:
-    - .copilot-tracking/skraft-plans/{projectSlug}/research/{YYYY-MM-DD}/triage-{YYYY-MM-DD}.md
-    - .copilot-tracking/skraft-plans/{projectSlug}/research/{YYYY-MM-DD}/sprint-proposal.md
-    - .copilot-tracking/skraft-plans/{projectSlug}/reviews/{date}/discover-review-{N}.md
-    - .copilot-tracking/skraft-plans/{projectSlug}/reviews/{date}/discover-lens-{lens}-{N}.yaml (one per lens answer)
 ---
 
 # Backlog-Discoverer Agent

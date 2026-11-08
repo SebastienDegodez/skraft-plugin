@@ -26,6 +26,7 @@ import { parseArgs } from 'node:util';
 import { loadBook, iterPages, findFiles, sectionsOf, pagesOfSection, pageFiles, parseYaml } from './lib/book.mjs';
 import { buildCatalogueTopology } from '../eng/lib/catalogue-topology.mjs';
 import { findDynamicWorkflows } from '../eng/lib/dynamic-workflows.mjs';
+import { findShippedWorkflows } from '../eng/lib/shipped-workflows.mjs';
 
 const SEVERITY = { blocker: 0, high: 1, medium: 2, low: 3 };
 
@@ -112,18 +113,13 @@ function catalogueTopology(root, book) {
         path,
         kind: /(?:-worker|^(?:contract|mock)-fidelity-lens)$/.test(id) ? 'worker' : id.endsWith('-lens') ? 'lens' : 'agent',
         userInvocable: fm['user-invocable'] === true || fm.userInvocable === true,
-        phase: metadata.phase ? String(metadata.phase) : null,
-        phases: asArray(metadata.phases).map(String),
         skills: [...asArray(fm.skills), ...asArray(metadata.on_demand_skills)].map(String),
-        inputs: asArray(metadata.inputs?.required).map(String),
-        outputs: asArray(metadata.outputs).map(String),
         childRefs: asArray(fm.agents).map(String),
-        dispatchedByRef: metadata.dispatched_by ? String(metadata.dispatched_by) : null,
       });
     }
   }
 
-  return { ownedKeys, topology: buildCatalogueTopology({ skills, agents, workflows: findDynamicWorkflows(root) }) };
+  return { ownedKeys, topology: buildCatalogueTopology({ skills, agents, workflows: findDynamicWorkflows(root), pipelines: findShippedWorkflows(root) }) };
 }
 
 const LEGACY_CATALOGUE_LINK = /\/(?:fr|en)\/reference\/(?:agents|skills|workers|lens(?:es)?)(?:\/[a-z0-9-]+(?:\.html)?)?\/?/gi;

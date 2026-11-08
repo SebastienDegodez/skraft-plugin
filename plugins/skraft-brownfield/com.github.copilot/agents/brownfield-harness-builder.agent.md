@@ -12,16 +12,6 @@ tools:
   - execute/getTerminalOutput
 skills:
   - characterize-with-contracts
-metadata:
-  inputs:
-    required:
-      - target service path or component name
-    context:
-      - existing contract file
-  outputs:
-    - discovered, generated or reconstructed contract file(s)
-    - characterization test files
-    - harness verdict report
 ---
 
 # Brownfield harness builder

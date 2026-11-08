@@ -7,8 +7,6 @@ tools:
   - Read
   - Grep
   - Glob
-metadata:
-  dispatched_by: backlog-planner
 ---
 
 # Planning Coherence Lens

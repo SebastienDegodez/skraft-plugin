@@ -287,6 +287,10 @@ Descriptors are prompts an agent pays for on every run, not documentation.
   under `metadata.skills`: `node scripts/agent-policy/build-config-bin.mjs --dir <agents dir>`
   refuses it. Never rely on the Copilot load until the host probe's `agent-skills-preload`
   check (`--agent-calls`) has measured it.
+- `metadata` holds `on_demand_skills` only, the one field the tooling reads; the same command
+  refuses any other. An agent's phase and dispatcher come from the workflow (`.skraft.dot`) and
+  from its parent's `agents:` list, its outputs from the engine and its prompt. A `metadata`
+  change reaches no model, so it marks no evaluation stale (`eng/lib/descriptor-hash.mjs`).
 - **Write for the agent, never for a human reader.** Every sentence carries a decision the agent
   has to make. No prose explaining why a rule exists; the reasoning belongs in the commit message.
 - **A check the engine performs has no twin in a review lens** (order, inputs, outputs, commit

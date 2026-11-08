@@ -15,8 +15,6 @@ skills:
   - outside-in-tdd
   - craft-discipline
   - clean-architecture-testing
-metadata:
-  dispatched_by: Skraft - Orchestrator
 ---
 
 # Software-engineer agent, batched cycle

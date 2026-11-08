@@ -9,12 +9,6 @@ model: inherit
 tools:
   - mcp__skraft__run_pipeline
 user-invocable: true
-metadata:
-  phases:
-    - RESEARCH
-    - DESIGN
-    - DISTILL
-    - DELIVER
 ---
 
 # SKRAFT pipeline launcher

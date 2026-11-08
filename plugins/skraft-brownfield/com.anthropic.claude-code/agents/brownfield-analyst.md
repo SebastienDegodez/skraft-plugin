@@ -12,18 +12,6 @@ tools:
   - Bash
 skills:
   - characterize-brownfield
-metadata:
-  inputs:
-    required:
-      - repository path
-    context:
-      - depth (quick, deep or exhaustive; default deep)
-      - focus directories
-      - product name
-  outputs:
-    - .copilot-tracking/skraft-plans/{projectSlug}/characterization/{YYYY-MM-DD}/*.md
-    - docs/prds/<kebab-case-name>.md
-    - .copilot-tracking/prd-sessions/<kebab-case-name>.state.json
 ---
 
 # Brownfield analyst

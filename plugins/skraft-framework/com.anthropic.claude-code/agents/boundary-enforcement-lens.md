@@ -9,8 +9,6 @@ tools:
   - Glob
 skills:
   - acceptance-review-criteria
-metadata:
-  dispatched_by: skraft-engine
 ---
 
 # Boundary Enforcement Lens

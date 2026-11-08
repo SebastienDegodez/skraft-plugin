@@ -12,8 +12,6 @@ tools:
 skills:
   - backlog-slicing
   - sprint-planning
-metadata:
-  dispatched_by: skraft-prd-backlog
 ---
 
 # Backlog Slicer

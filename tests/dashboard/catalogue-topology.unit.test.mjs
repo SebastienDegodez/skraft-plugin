@@ -1,99 +1,107 @@
 import { deepStrictEqual, equal, ok } from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
-import { buildCatalogueTopology } from '../../eng/lib/catalogue-topology.mjs'
+import { buildCatalogueTopology, ENGINE_DISPATCHER } from '../../eng/lib/catalogue-topology.mjs'
 
 const skill = (id) => ({ id, directory: id, name: id })
 const agent = (id, overrides = {}) => ({
   id,
   name: id,
-  path: `agents/${id}.md`,
+  path: `plugins/${overrides.plugin ?? 'framework'}/com.github.copilot/agents/${id}.agent.md`,
   kind: 'agent',
   userInvocable: false,
-  phase: null,
-  phases: [],
   skills: [],
-  inputs: [],
-  outputs: [],
   childRefs: [],
-  dispatchedByRef: null,
   ...overrides,
 })
 
 const validAgents = () => [
-  agent('backlog-discoverer', { name: 'Discovery entry', userInvocable: true }),
-  agent('backlog-planner', { name: 'Planning entry', userInvocable: true }),
-  agent('skraft-orchestrator', { name: 'Engineering entry', userInvocable: true, phases: ['RESEARCH'], childRefs: ['Display label impossible to derive'] }),
-  agent('researcher', { name: 'Display label impossible to derive', phase: 'RESEARCH', dispatchedByRef: 'Engineering entry', skills: ['research-skill'] }),
+  agent('backlog-discoverer', { name: 'Discovery entry', userInvocable: true, plugin: 'backlog' }),
+  agent('backlog-planner', { name: 'Planning entry', userInvocable: true, plugin: 'backlog' }),
+  agent('skraft-orchestrator', { name: 'Engineering entry', userInvocable: true }),
+  agent('researcher', { name: 'Display label impossible to derive', skills: ['research-skill'] }),
+  agent('consistency-lens', { kind: 'lens' }),
+  agent('finding-refuter'),
 ]
 
-describe('catalogue topology', () => {
-  it('resolves dispatch labels through descriptors and keeps stable IDs and skill order', () => {
-    const topology = buildCatalogueTopology({ skills: [skill('research-skill')], agents: validAgents(), frameworkConfig: { phaseOrder: ['RESEARCH'] } })
+// The shipped entry workflow of the framework plugin: phases and what the engine starts.
+const pipeline = (overrides = {}) => ({
+  path: 'plugins/framework/workflows/pipeline.skraft.dot',
+  pluginDir: 'framework',
+  entry: true,
+  phases: [{ phase: 'RESEARCH', specialist: 'researcher' }],
+  agents: ['researcher', 'consistency-lens', 'finding-refuter'],
+  ...overrides,
+})
 
+const build = (agents = validAgents(), extra = {}) => buildCatalogueTopology({ skills: [skill('research-skill')], agents, pipelines: [pipeline()], ...extra })
+
+describe('catalogue topology', () => {
+  it('reads phases from the entry workflow and its entrypoint from the plugin that ships it', () => {
+    const topology = build()
+
+    deepStrictEqual(topology.findings, [])
     deepStrictEqual(topology.roots, ['backlog-discoverer', 'backlog-planner', 'skraft-orchestrator'])
-    deepStrictEqual(topology.journeys.engineering.phases, [{ phase: 'RESEARCH', specialist: 'researcher', reviewer: null }])
-    deepStrictEqual(topology.agents.find(({ id }) => id === 'researcher').skills, ['research-skill'])
-    equal(topology.findings.some(({ code }) => code === 'DISPATCH_TARGET_MISSING'), false)
+    deepStrictEqual(topology.journeys.engineering, { entrypoint: 'skraft-orchestrator', phases: [{ phase: 'RESEARCH', specialist: 'researcher', reviewer: null }] })
+    const researcher = topology.agents.find(({ id }) => id === 'researcher')
+    deepStrictEqual([researcher.phase, researcher.dispatchedBy, researcher.layer, researcher.skills], ['RESEARCH', 'skraft-orchestrator', 'engineering-pipeline', ['research-skill']])
+    deepStrictEqual(topology.edges.find((edge) => edge.to === 'researcher'), { type: 'dispatch', from: 'skraft-orchestrator', to: 'researcher', sources: ['workflow'] })
   })
 
-  it('reports duplicate identities and unresolved dispatch endpoints', () => {
+  it('names the engine as the dispatcher of the lenses and the refuter a workflow names', () => {
+    const topology = build()
+    deepStrictEqual(['consistency-lens', 'finding-refuter'].map((id) => topology.agents.find((a) => a.id === id).dispatchedBy), [ENGINE_DISPATCHER, ENGINE_DISPATCHER])
+  })
+
+  it('resolves a child a parent lists by its display label and keeps that edge', () => {
+    const agents = validAgents()
+    agents[2].childRefs.push('Display label impossible to derive')
+    const topology = build(agents)
+    deepStrictEqual(topology.edges.find((edge) => edge.to === 'researcher').sources, ['agents'])
+    equal(topology.findings.length, 0)
+  })
+
+  it('reports duplicate identities, unknown children and a phase agent no descriptor declares', () => {
     const agents = validAgents()
     agents.push(agent('researcher', { name: 'Duplicate ID' }))
     agents[2].childRefs.push('Missing child')
-    agents[3].dispatchedByRef = 'Missing parent'
-
-    const codes = buildCatalogueTopology({ skills: [skill('research-skill')], agents }).findings.map(({ code }) => code)
+    const codes = build(agents, { pipelines: [pipeline({ phases: [{ phase: 'RESEARCH', specialist: 'missing-researcher' }] })] }).findings.map(({ code }) => code)
 
     ok(codes.includes('AGENT_ID_DUPLICATE'))
     ok(codes.includes('DISPATCH_TARGET_MISSING'))
-    ok(codes.includes('DISPATCH_PARENT_MISSING'))
+    ok(codes.includes('PHASE_SPECIALIST_MISSING'))
   })
 
-  it('blocks generated phase, specialist, skill and artifact divergence', () => {
-    const agents = validAgents()
-    agents[3].inputs = ['source']
-    const topology = buildCatalogueTopology({
-      skills: [skill('research-skill')],
-      agents,
-      frameworkConfig: {
-        phaseOrder: ['DELIVER'],
-        phaseAgents: { RESEARCH: { specialist: 'wrong', reviewer: null } },
-        agentSkills: { 'Display label impossible to derive': [{ name: 'wrong' }] },
-        agentArtifacts: { 'Display label impossible to derive': { inputs: ['wrong'], outputs: [] } },
-      },
-    })
-    const codes = topology.findings.map(({ code }) => code)
-
-    ok(codes.includes('ENGINEERING_PHASE_ORDER_MISMATCH'))
-    ok(codes.includes('ENGINEERING_PHASE_AGENT_MISMATCH'))
-    ok(codes.includes('AGENT_SKILLS_CONFIG_MISMATCH'))
-    ok(codes.includes('AGENT_ARTIFACTS_CONFIG_MISMATCH'))
+  it('reports an entry workflow without one user-invocable agent in its plugin, and two entry workflows', () => {
+    const two = validAgents()
+    two.push(agent('other-entry', { userInvocable: true }))
+    ok(build(two).findings.some(({ code }) => code === 'ENGINEERING_ORCHESTRATOR_AMBIGUOUS'))
+    ok(build(validAgents().filter(({ id }) => id !== 'skraft-orchestrator')).findings.some(({ code }) => code === 'ENGINEERING_ORCHESTRATOR_MISSING'))
+    ok(build(validAgents(), { pipelines: [pipeline(), pipeline({ path: 'plugins/other/workflows/pipeline.skraft.dot', pluginDir: 'other' })] }).findings.some(({ code }) => code === 'ENGINEERING_WORKFLOW_AMBIGUOUS'))
   })
 
   it('blocks product preflight agents dispatched inside engineering', () => {
     const agents = validAgents()
     agents[2].childRefs.unshift('Discovery entry')
-    agents[0].dispatchedByRef = 'Engineering entry'
 
-    const topology = buildCatalogueTopology({ skills: [skill('research-skill')], agents })
+    const topology = build(agents)
 
     ok(topology.findings.some(({ code }) => code === 'PRODUCT_PREFLIGHT_NOT_STANDALONE'))
     ok(topology.findings.some(({ code }) => code === 'PRODUCT_PREFLIGHT_ORCHESTRATED'))
   })
 
-  it('accepts a dispatcher that is a workflow a plugin declares, and still reports one nobody declares', () => {
+  it('gives an internal agent nothing else dispatches to its plugin\'s one dynamic workflow, and reports one whose plugin has none', () => {
     const agents = [
       ...validAgents(),
-      agent('slicer', { dispatchedByRef: 'prd-workflow' }),
-      agent('writer', { dispatchedByRef: 'prd-workflow' }),
-      agent('stray', { dispatchedByRef: 'undeclared-workflow' }),
+      agent('slicer', { plugin: 'backlog' }),
+      agent('writer', { plugin: 'backlog' }),
+      agent('stray', { plugin: 'brownfield' }),
     ]
-    const workflows = [{ id: 'prd-workflow', plugin: 'backlog', path: 'extensions/prd-workflow/copilot-extension.json' }]
+    const workflows = [{ id: 'prd-workflow', plugin: 'backlog', path: 'plugins/backlog/com.github.copilot/extensions/prd-workflow/copilot-extension.json' }]
 
-    const topology = buildCatalogueTopology({ skills: [skill('research-skill')], agents, workflows })
+    const topology = build(agents, { workflows })
 
-    deepStrictEqual(topology.findings.filter(({ code }) => code === 'DISPATCH_PARENT_MISSING').map(({ path }) => path), ['agents/stray.md'])
+    deepStrictEqual(topology.findings.filter(({ code }) => code === 'AGENT_DISPATCHER_UNKNOWN').map(({ path }) => path), ['plugins/brownfield/com.github.copilot/agents/stray.agent.md'])
     deepStrictEqual(['slicer', 'writer'].map((id) => topology.agents.find((a) => a.id === id).dispatchedBy), ['prd-workflow', 'prd-workflow'])
     equal(topology.agents.find((a) => a.id === 'stray').dispatchedBy, null)
   })

@@ -10,8 +10,6 @@ tools:
 skills:
   - clean-architecture-testing
   - craft-discipline
-metadata:
-  dispatched_by: skraft-engine
 ---
 
 # Architecture Boundaries Lens

@@ -7,8 +7,6 @@ tools:
   - search/codebase
 skills:
   - acceptance-review-criteria
-metadata:
-  dispatched_by: skraft-engine
 ---
 
 # Coverage Lens
