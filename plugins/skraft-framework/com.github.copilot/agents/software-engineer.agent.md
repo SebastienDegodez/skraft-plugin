@@ -73,7 +73,7 @@ Work one scenario at a time, in the order of the implementation plan. DISTILL wr
 ## Turns
 
 - Put every independent call of a step in one turn: the files a cycle reads; the test file and the skeleton it compiles against; the production files of one green.
-- Once the wiring check holds, chain a green's run and its commit in one command: `<component test command> && git add <files> && git commit …`. A red's commit waits until you have read why the test fails.
+- Once the wiring check holds, chain a green's run and its commit in one command that commits only when the run passes: `<component test command> && git add <files> && git commit …` in sh and PowerShell 7; in Windows PowerShell 5.1, `<component test command>; if ($?) { git add <files>; if ($?) { git commit … } }`. A red's commit waits until you have read why the test fails.
 - Write a command's output only to a file under the tracking folder's `logs/` (the `.copilot-tracking/skraft-plans/<slug>` path your brief allows), then read it: never to `/tmp` or any other folder outside the working copy.
 - Read a file once per pass; after you edit it, trust your edit instead of reading it again.
 
