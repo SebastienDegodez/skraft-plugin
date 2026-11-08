@@ -73,7 +73,16 @@ describe('migration of published verdicts', () => {
     }
     const { history: migrated, moved, kept } = migrateHistory(history, (commit, agent) => (agent === 'gone' ? null : measured))
     strictEqual(moved, 1)
-    deepStrictEqual(migrated.agents['software-engineer'].map(({ descriptorSha }) => descriptorSha), [behaviourHash(measured), 'not-this-content', null])
+    deepStrictEqual(migrated.agents['software-engineer'].map(({ descriptorSha, descriptorShaKind }) => [descriptorSha, descriptorShaKind]), [
+      [behaviourHash(measured), 'behaviour'], ['not-this-content', 'file'], [null, undefined],
+    ])
     deepStrictEqual(kept.map(({ agent, commit }) => `${agent}@${commit}`), ['software-engineer@c2', 'gone@c1'])
+  })
+
+  it('skips the entries it already stamped, so running it on every publication reads nothing twice', () => {
+    let reads = 0
+    const history = { agents: { a: [{ commit: 'c1', descriptorSha: 'x', descriptorShaKind: 'file' }, { commit: 'c2', descriptorSha: 'y', descriptorShaKind: 'behaviour' }] } }
+    const { moved, kept } = migrateHistory(history, () => { reads += 1; return null })
+    deepStrictEqual([moved, kept.length, reads], [0, 0, 0])
   })
 })

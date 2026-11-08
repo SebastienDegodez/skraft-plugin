@@ -80,6 +80,10 @@ for (const resultInput of values.results) {
       // differ, so a verdict can never keep vouching for a descriptor that has
       // since been rewritten. Skills have no equivalent hash yet, hence null.
       descriptorSha: verdict.descriptorSha ?? null,
+      // What descriptorSha hashes: the descriptor without its metadata block
+      // (eng/lib/descriptor-hash.mjs). Entries published before carry the whole
+      // file's hash until eng/lib/descriptor-hash-migration.mjs re-keys them.
+      ...(verdict.descriptorSha ? { descriptorShaKind: 'behaviour' } : {}),
       netWin: verdict.netWin ?? 0,
       trialCount: verdict.trialCount ?? 0,
       // The judged score of the treatment, with the interval the judge reported

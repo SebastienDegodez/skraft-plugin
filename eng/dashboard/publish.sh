@@ -86,6 +86,8 @@ if (( ${#RESULTS[@]} > 0 )); then
   [[ -n "$RUN_URL" ]] && HISTORY_ARGS+=(--url "$RUN_URL")
   for result in "${RESULTS[@]}"; do HISTORY_ARGS+=(--results "$result"); done
 
+  # Verdicts published before the behaviour hash are re-keyed once; stamped entries are skipped.
+  node eng/dashboard/migrate-descriptor-hash.mjs --history "$CHECKOUT/data/history.json"
   node eng/dashboard/update-history.mjs "${HISTORY_ARGS[@]}"
 fi
 

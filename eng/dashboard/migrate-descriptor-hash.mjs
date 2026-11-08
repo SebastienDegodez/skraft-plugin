@@ -1,11 +1,10 @@
 #!/usr/bin/env node
 // Re-keys the published agent verdicts of a dashboard history to the behaviour
-// hash (eng/lib/descriptor-hash-migration.mjs). Run once, from the repository
-// root, on a checkout of the `dashboard-data` branch's history.json:
+// hash (eng/lib/descriptor-hash-migration.mjs). eng/dashboard/publish.sh runs it,
+// from the repository root, on the data branch's history.json before each
+// publication; an entry it already stamped is skipped:
 //
-//   git fetch origin dashboard-data
-//   git show origin/dashboard-data:data/history.json > history.json
-//   node eng/dashboard/migrate-descriptor-hash.mjs --history history.json
+//   node eng/dashboard/migrate-descriptor-hash.mjs --history <history.json>
 //
 // It reads each verdict's descriptor with `git show <commit>:<path>`, fetching
 // the commit when the clone lacks it, rewrites the file in place, and prints
@@ -36,7 +35,13 @@ const readAt = (commit, agent) => {
   return shown.status === 0 ? shown.stdout : null
 }
 
-const history = JSON.parse(readFileSync(values.history, 'utf8'))
+let history
+try {
+  history = JSON.parse(readFileSync(values.history, 'utf8'))
+} catch {
+  console.log(`no readable history at ${values.history}; nothing to migrate`)
+  process.exit(0)
+}
 const { history: migrated, moved, kept } = migrateHistory(history, readAt)
 writeFileSync(values.history, `${JSON.stringify(migrated, null, 2)}\n`)
 console.log(`moved ${moved} verdict(s) to the behaviour hash`)
