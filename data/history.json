@@ -3147,6 +3147,78 @@
             "tokenDeltaPercent": -30.4
           }
         }
+      },
+      {
+        "id": "42656853662:skill:quality-gates-typescript:2026-11-09T16:53:49.268Z",
+        "timestamp": "2026-11-09T16:53:49.268Z",
+        "commit": "c4767445287d9d1389006531c72ea09abca19fc9",
+        "run": "42656853662",
+        "url": "https://github.com/SebastienDegodez/skraft-plugin/actions/runs/42656853662",
+        "runner": "vally",
+        "model": "claude-sonnet-5.5",
+        "judgeModel": "gpt-5.6-luna",
+        "state": "inconclusive",
+        "reason": "underpowered (1W/2T/3L: 4 discordant pair(s); no tally below 6 can reach p<=0.05, so budget more runs) [9 pair(s) excluded: the skill never activated on the skilled run]",
+        "descriptorSha": null,
+        "netWin": -0.3333333333333333,
+        "trialCount": 6,
+        "meanScore": 0.026666666666666675,
+        "confidenceInterval": {
+          "low": -0.12923425425061702,
+          "high": 0.18256758758395036
+        },
+        "signTest": {
+          "wins": 1,
+          "ties": 2,
+          "losses": 3,
+          "pValue": 0.625
+        },
+        "metrics": {
+          "quality": {
+            "baseline": 0.904,
+            "skilled": 0.846,
+            "delta": -0.058
+          },
+          "activation": {
+            "expected": 15,
+            "actual": 6,
+            "unexpected": 0,
+            "rate": 0.4
+          },
+          "efficiency": {
+            "baseline": {
+              "durationMs": 88806,
+              "tokens": 179619,
+              "turns": 9,
+              "toolCalls": 8
+            },
+            "skilled": {
+              "durationMs": 78559,
+              "tokens": 130311,
+              "turns": 6,
+              "toolCalls": 6
+            },
+            "durationDeltaPercent": -11.5,
+            "tokenDeltaPercent": -27.5
+          },
+          "efficiencyPaired": {
+            "pairCount": 6,
+            "baseline": {
+              "durationMs": 137850,
+              "tokens": 166383,
+              "turns": 8.5,
+              "toolCalls": 7.5
+            },
+            "skilled": {
+              "durationMs": 126749,
+              "tokens": 96022,
+              "turns": 4.5,
+              "toolCalls": 4.5
+            },
+            "durationDeltaPercent": -8.1,
+            "tokenDeltaPercent": -42.3
+          }
+        }
       }
     ],
     "characterize-brownfield": [
@@ -3725,6 +3797,78 @@
             },
             "durationDeltaPercent": 60.2,
             "tokenDeltaPercent": 90.8
+          }
+        }
+      },
+      {
+        "id": "42656853662:skill:characterize-with-contracts:2026-11-09T16:46:23.345Z",
+        "timestamp": "2026-11-09T16:46:23.345Z",
+        "commit": "c4767445287d9d1389006531c72ea09abca19fc9",
+        "run": "42656853662",
+        "url": "https://github.com/SebastienDegodez/skraft-plugin/actions/runs/42656853662",
+        "runner": "vally",
+        "model": "claude-sonnet-5.5",
+        "judgeModel": "gpt-5.6-luna",
+        "state": "inconclusive",
+        "reason": "underpowered (0W/13T/1L: 1 discordant pair(s); no tally below 6 can reach p<=0.05, so budget more runs) [1 pair(s) excluded: the skill never activated on the skilled run]",
+        "descriptorSha": null,
+        "netWin": -0.07142857142857142,
+        "trialCount": 14,
+        "meanScore": 0.18666666666666665,
+        "confidenceInterval": {
+          "low": 0.07226666666666665,
+          "high": 0.30106666666666665
+        },
+        "signTest": {
+          "wins": 0,
+          "ties": 13,
+          "losses": 1,
+          "pValue": 1
+        },
+        "metrics": {
+          "quality": {
+            "baseline": 1,
+            "skilled": 0.993,
+            "delta": -0.007
+          },
+          "activation": {
+            "expected": 10,
+            "actual": 9,
+            "unexpected": 0,
+            "rate": 0.9
+          },
+          "efficiency": {
+            "baseline": {
+              "durationMs": 24367,
+              "tokens": 73057,
+              "turns": 4,
+              "toolCalls": 3
+            },
+            "skilled": {
+              "durationMs": 37872,
+              "tokens": 130020,
+              "turns": 5,
+              "toolCalls": 7
+            },
+            "durationDeltaPercent": 55.4,
+            "tokenDeltaPercent": 78
+          },
+          "efficiencyPaired": {
+            "pairCount": 9,
+            "baseline": {
+              "durationMs": 27760,
+              "tokens": 73967,
+              "turns": 4,
+              "toolCalls": 3
+            },
+            "skilled": {
+              "durationMs": 40003,
+              "tokens": 131187,
+              "turns": 5,
+              "toolCalls": 7
+            },
+            "durationDeltaPercent": 44.1,
+            "tokenDeltaPercent": 77.4
           }
         }
       }

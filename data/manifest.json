@@ -1,5 +1,5 @@
 {
-  "generated": "2026-11-09T13:06:12.947Z",
+  "generated": "2026-11-09T16:54:27.169Z",
   "sessions": [
     {
       "id": "scheduled/2026-09-28/acceptance-designer/absent-acceptance-criteria-halt-the-distillation--main--run0",
@@ -4578,266 +4578,6 @@
       "mtime": 1794129653876.4917
     },
     {
-      "id": "pr/567/acceptance-designer/a-criterion-an-existing-test-already-covers-is-relied-on-only-once-that-test-is-run-else-tested-anew--main--run0",
-      "name": "acceptance-designer / A criterion an existing test already covers is relied on only once that test is run, else tested anew (main, run 0)",
-      "url": "sessions/pr/567/acceptance-designer/a-criterion-an-existing-test-already-covers-is-relied-on-only-once-that-test-is-run-else-tested-anew--main--run0.jsonl",
-      "tags": [
-        "pr",
-        "acceptance-designer",
-        "main",
-        "a-criterion-an-existing-test-already-covers-is-relied-on-only-once-that-test-is-run-else-tested-anew",
-        "pr-567"
-      ],
-      "mtime": 1794229570307.918
-    },
-    {
-      "id": "pr/567/acceptance-designer/a-criterion-an-existing-test-already-covers-is-relied-on-only-once-that-test-is-run-else-tested-anew--main--run1",
-      "name": "acceptance-designer / A criterion an existing test already covers is relied on only once that test is run, else tested anew (main, run 1)",
-      "url": "sessions/pr/567/acceptance-designer/a-criterion-an-existing-test-already-covers-is-relied-on-only-once-that-test-is-run-else-tested-anew--main--run1.jsonl",
-      "tags": [
-        "pr",
-        "acceptance-designer",
-        "main",
-        "a-criterion-an-existing-test-already-covers-is-relied-on-only-once-that-test-is-run-else-tested-anew",
-        "pr-567"
-      ],
-      "mtime": 1794229570303.918
-    },
-    {
-      "id": "pr/567/acceptance-designer/a-criterion-an-existing-test-already-covers-is-relied-on-only-once-that-test-is-run-else-tested-anew--main--run2",
-      "name": "acceptance-designer / A criterion an existing test already covers is relied on only once that test is run, else tested anew (main, run 2)",
-      "url": "sessions/pr/567/acceptance-designer/a-criterion-an-existing-test-already-covers-is-relied-on-only-once-that-test-is-run-else-tested-anew--main--run2.jsonl",
-      "tags": [
-        "pr",
-        "acceptance-designer",
-        "main",
-        "a-criterion-an-existing-test-already-covers-is-relied-on-only-once-that-test-is-run-else-tested-anew",
-        "pr-567"
-      ],
-      "mtime": 1794229570304.918
-    },
-    {
-      "id": "pr/567/acceptance-designer/a-criterion-an-existing-test-already-covers-is-relied-on-only-once-that-test-is-run-else-tested-anew--main--run3",
-      "name": "acceptance-designer / A criterion an existing test already covers is relied on only once that test is run, else tested anew (main, run 3)",
-      "url": "sessions/pr/567/acceptance-designer/a-criterion-an-existing-test-already-covers-is-relied-on-only-once-that-test-is-run-else-tested-anew--main--run3.jsonl",
-      "tags": [
-        "pr",
-        "acceptance-designer",
-        "main",
-        "a-criterion-an-existing-test-already-covers-is-relied-on-only-once-that-test-is-run-else-tested-anew",
-        "pr-567"
-      ],
-      "mtime": 1794229570303.918
-    },
-    {
-      "id": "pr/567/acceptance-designer/a-criterion-an-existing-test-already-covers-is-relied-on-only-once-that-test-is-run-else-tested-anew--main--run4",
-      "name": "acceptance-designer / A criterion an existing test already covers is relied on only once that test is run, else tested anew (main, run 4)",
-      "url": "sessions/pr/567/acceptance-designer/a-criterion-an-existing-test-already-covers-is-relied-on-only-once-that-test-is-run-else-tested-anew--main--run4.jsonl",
-      "tags": [
-        "pr",
-        "acceptance-designer",
-        "main",
-        "a-criterion-an-existing-test-already-covers-is-relied-on-only-once-that-test-is-run-else-tested-anew",
-        "pr-567"
-      ],
-      "mtime": 1794229570304.918
-    },
-    {
-      "id": "pr/567/acceptance-designer/absent-acceptance-criteria-halt-the-distillation--main--run0",
-      "name": "acceptance-designer / Absent acceptance criteria halt the distillation (main, run 0)",
-      "url": "sessions/pr/567/acceptance-designer/absent-acceptance-criteria-halt-the-distillation--main--run0.jsonl",
-      "tags": [
-        "pr",
-        "acceptance-designer",
-        "main",
-        "absent-acceptance-criteria-halt-the-distillation",
-        "pr-567"
-      ],
-      "mtime": 1794229570300.918
-    },
-    {
-      "id": "pr/567/acceptance-designer/absent-acceptance-criteria-halt-the-distillation--main--run1",
-      "name": "acceptance-designer / Absent acceptance criteria halt the distillation (main, run 1)",
-      "url": "sessions/pr/567/acceptance-designer/absent-acceptance-criteria-halt-the-distillation--main--run1.jsonl",
-      "tags": [
-        "pr",
-        "acceptance-designer",
-        "main",
-        "absent-acceptance-criteria-halt-the-distillation",
-        "pr-567"
-      ],
-      "mtime": 1794229570301.918
-    },
-    {
-      "id": "pr/567/acceptance-designer/absent-acceptance-criteria-halt-the-distillation--main--run2",
-      "name": "acceptance-designer / Absent acceptance criteria halt the distillation (main, run 2)",
-      "url": "sessions/pr/567/acceptance-designer/absent-acceptance-criteria-halt-the-distillation--main--run2.jsonl",
-      "tags": [
-        "pr",
-        "acceptance-designer",
-        "main",
-        "absent-acceptance-criteria-halt-the-distillation",
-        "pr-567"
-      ],
-      "mtime": 1794229570301.918
-    },
-    {
-      "id": "pr/567/acceptance-designer/absent-acceptance-criteria-halt-the-distillation--main--run3",
-      "name": "acceptance-designer / Absent acceptance criteria halt the distillation (main, run 3)",
-      "url": "sessions/pr/567/acceptance-designer/absent-acceptance-criteria-halt-the-distillation--main--run3.jsonl",
-      "tags": [
-        "pr",
-        "acceptance-designer",
-        "main",
-        "absent-acceptance-criteria-halt-the-distillation",
-        "pr-567"
-      ],
-      "mtime": 1794229570301.918
-    },
-    {
-      "id": "pr/567/acceptance-designer/absent-acceptance-criteria-halt-the-distillation--main--run4",
-      "name": "acceptance-designer / Absent acceptance criteria halt the distillation (main, run 4)",
-      "url": "sessions/pr/567/acceptance-designer/absent-acceptance-criteria-halt-the-distillation--main--run4.jsonl",
-      "tags": [
-        "pr",
-        "acceptance-designer",
-        "main",
-        "absent-acceptance-criteria-halt-the-distillation",
-        "pr-567"
-      ],
-      "mtime": 1794229570301.918
-    },
-    {
-      "id": "pr/567/acceptance-designer/agreed-criteria-become-an-executable-specification-that-fails-on-business-meaning--main--run0",
-      "name": "acceptance-designer / Agreed criteria become an executable specification that fails on business meaning (main, run 0)",
-      "url": "sessions/pr/567/acceptance-designer/agreed-criteria-become-an-executable-specification-that-fails-on-business-meaning--main--run0.jsonl",
-      "tags": [
-        "pr",
-        "acceptance-designer",
-        "main",
-        "agreed-criteria-become-an-executable-specification-that-fails-on-business-meaning",
-        "pr-567"
-      ],
-      "mtime": 1794229570305.918
-    },
-    {
-      "id": "pr/567/acceptance-designer/agreed-criteria-become-an-executable-specification-that-fails-on-business-meaning--main--run1",
-      "name": "acceptance-designer / Agreed criteria become an executable specification that fails on business meaning (main, run 1)",
-      "url": "sessions/pr/567/acceptance-designer/agreed-criteria-become-an-executable-specification-that-fails-on-business-meaning--main--run1.jsonl",
-      "tags": [
-        "pr",
-        "acceptance-designer",
-        "main",
-        "agreed-criteria-become-an-executable-specification-that-fails-on-business-meaning",
-        "pr-567"
-      ],
-      "mtime": 1794229570305.918
-    },
-    {
-      "id": "pr/567/acceptance-designer/agreed-criteria-become-an-executable-specification-that-fails-on-business-meaning--main--run2",
-      "name": "acceptance-designer / Agreed criteria become an executable specification that fails on business meaning (main, run 2)",
-      "url": "sessions/pr/567/acceptance-designer/agreed-criteria-become-an-executable-specification-that-fails-on-business-meaning--main--run2.jsonl",
-      "tags": [
-        "pr",
-        "acceptance-designer",
-        "main",
-        "agreed-criteria-become-an-executable-specification-that-fails-on-business-meaning",
-        "pr-567"
-      ],
-      "mtime": 1794229570307.918
-    },
-    {
-      "id": "pr/567/acceptance-designer/agreed-criteria-become-an-executable-specification-that-fails-on-business-meaning--main--run3",
-      "name": "acceptance-designer / Agreed criteria become an executable specification that fails on business meaning (main, run 3)",
-      "url": "sessions/pr/567/acceptance-designer/agreed-criteria-become-an-executable-specification-that-fails-on-business-meaning--main--run3.jsonl",
-      "tags": [
-        "pr",
-        "acceptance-designer",
-        "main",
-        "agreed-criteria-become-an-executable-specification-that-fails-on-business-meaning",
-        "pr-567"
-      ],
-      "mtime": 1794229570307.918
-    },
-    {
-      "id": "pr/567/acceptance-designer/agreed-criteria-become-an-executable-specification-that-fails-on-business-meaning--main--run4",
-      "name": "acceptance-designer / Agreed criteria become an executable specification that fails on business meaning (main, run 4)",
-      "url": "sessions/pr/567/acceptance-designer/agreed-criteria-become-an-executable-specification-that-fails-on-business-meaning--main--run4.jsonl",
-      "tags": [
-        "pr",
-        "acceptance-designer",
-        "main",
-        "agreed-criteria-become-an-executable-specification-that-fails-on-business-meaning",
-        "pr-567"
-      ],
-      "mtime": 1794229570306.918
-    },
-    {
-      "id": "pr/567/acceptance-designer/an-undecided-tier-is-escalated-rather-than-given-an-invented-price--main--run0",
-      "name": "acceptance-designer / An undecided tier is escalated rather than given an invented price (main, run 0)",
-      "url": "sessions/pr/567/acceptance-designer/an-undecided-tier-is-escalated-rather-than-given-an-invented-price--main--run0.jsonl",
-      "tags": [
-        "pr",
-        "acceptance-designer",
-        "main",
-        "an-undecided-tier-is-escalated-rather-than-given-an-invented-price",
-        "pr-567"
-      ],
-      "mtime": 1794229570307.918
-    },
-    {
-      "id": "pr/567/acceptance-designer/an-undecided-tier-is-escalated-rather-than-given-an-invented-price--main--run1",
-      "name": "acceptance-designer / An undecided tier is escalated rather than given an invented price (main, run 1)",
-      "url": "sessions/pr/567/acceptance-designer/an-undecided-tier-is-escalated-rather-than-given-an-invented-price--main--run1.jsonl",
-      "tags": [
-        "pr",
-        "acceptance-designer",
-        "main",
-        "an-undecided-tier-is-escalated-rather-than-given-an-invented-price",
-        "pr-567"
-      ],
-      "mtime": 1794229570307.918
-    },
-    {
-      "id": "pr/567/acceptance-designer/an-undecided-tier-is-escalated-rather-than-given-an-invented-price--main--run2",
-      "name": "acceptance-designer / An undecided tier is escalated rather than given an invented price (main, run 2)",
-      "url": "sessions/pr/567/acceptance-designer/an-undecided-tier-is-escalated-rather-than-given-an-invented-price--main--run2.jsonl",
-      "tags": [
-        "pr",
-        "acceptance-designer",
-        "main",
-        "an-undecided-tier-is-escalated-rather-than-given-an-invented-price",
-        "pr-567"
-      ],
-      "mtime": 1794229570306.918
-    },
-    {
-      "id": "pr/567/acceptance-designer/an-undecided-tier-is-escalated-rather-than-given-an-invented-price--main--run3",
-      "name": "acceptance-designer / An undecided tier is escalated rather than given an invented price (main, run 3)",
-      "url": "sessions/pr/567/acceptance-designer/an-undecided-tier-is-escalated-rather-than-given-an-invented-price--main--run3.jsonl",
-      "tags": [
-        "pr",
-        "acceptance-designer",
-        "main",
-        "an-undecided-tier-is-escalated-rather-than-given-an-invented-price",
-        "pr-567"
-      ],
-      "mtime": 1794229570301.918
-    },
-    {
-      "id": "pr/567/acceptance-designer/an-undecided-tier-is-escalated-rather-than-given-an-invented-price--main--run4",
-      "name": "acceptance-designer / An undecided tier is escalated rather than given an invented price (main, run 4)",
-      "url": "sessions/pr/567/acceptance-designer/an-undecided-tier-is-escalated-rather-than-given-an-invented-price--main--run4.jsonl",
-      "tags": [
-        "pr",
-        "acceptance-designer",
-        "main",
-        "an-undecided-tier-is-escalated-rather-than-given-an-invented-price",
-        "pr-567"
-      ],
-      "mtime": 1794229570305.918
-    },
-    {
       "id": "pr/567/characterize-with-contracts/a-new-feature-is-driven-by-its-tests-not-characterized--baseline--run0",
       "name": "characterize-with-contracts / A new feature is driven by its tests, not characterized (baseline, run 0)",
       "url": "sessions/pr/567/characterize-with-contracts/a-new-feature-is-driven-by-its-tests-not-characterized--baseline--run0.jsonl",
@@ -4848,7 +4588,7 @@
         "a-new-feature-is-driven-by-its-tests-not-characterized",
         "pr-567"
       ],
-      "mtime": 1794229570364.918
+      "mtime": 1794243263347.9941
     },
     {
       "id": "pr/567/characterize-with-contracts/a-new-feature-is-driven-by-its-tests-not-characterized--baseline--run1",
@@ -4861,7 +4601,7 @@
         "a-new-feature-is-driven-by-its-tests-not-characterized",
         "pr-567"
       ],
-      "mtime": 1794229570363.918
+      "mtime": 1794243263345.9941
     },
     {
       "id": "pr/567/characterize-with-contracts/a-new-feature-is-driven-by-its-tests-not-characterized--baseline--run2",
@@ -4874,7 +4614,7 @@
         "a-new-feature-is-driven-by-its-tests-not-characterized",
         "pr-567"
       ],
-      "mtime": 1794229570364.918
+      "mtime": 1794243263347.9941
     },
     {
       "id": "pr/567/characterize-with-contracts/a-new-feature-is-driven-by-its-tests-not-characterized--baseline--run3",
@@ -4887,7 +4627,7 @@
         "a-new-feature-is-driven-by-its-tests-not-characterized",
         "pr-567"
       ],
-      "mtime": 1794229570363.918
+      "mtime": 1794243263347.9941
     },
     {
       "id": "pr/567/characterize-with-contracts/a-new-feature-is-driven-by-its-tests-not-characterized--baseline--run4",
@@ -4900,7 +4640,7 @@
         "a-new-feature-is-driven-by-its-tests-not-characterized",
         "pr-567"
       ],
-      "mtime": 1794229570363.918
+      "mtime": 1794243263344.9941
     },
     {
       "id": "pr/567/characterize-with-contracts/a-suspected-bug-is-pinned-not-fixed--baseline--run0",
@@ -4913,7 +4653,7 @@
         "a-suspected-bug-is-pinned-not-fixed",
         "pr-567"
       ],
-      "mtime": 1794229570365.918
+      "mtime": 1794243263341.9941
     },
     {
       "id": "pr/567/characterize-with-contracts/a-suspected-bug-is-pinned-not-fixed--baseline--run1",
@@ -4926,7 +4666,7 @@
         "a-suspected-bug-is-pinned-not-fixed",
         "pr-567"
       ],
-      "mtime": 1794229570364.918
+      "mtime": 1794243263346.9941
     },
     {
       "id": "pr/567/characterize-with-contracts/a-suspected-bug-is-pinned-not-fixed--baseline--run2",
@@ -4939,7 +4679,7 @@
         "a-suspected-bug-is-pinned-not-fixed",
         "pr-567"
       ],
-      "mtime": 1794229570363.918
+      "mtime": 1794243263339.9941
     },
     {
       "id": "pr/567/characterize-with-contracts/a-suspected-bug-is-pinned-not-fixed--baseline--run3",
@@ -4952,7 +4692,7 @@
         "a-suspected-bug-is-pinned-not-fixed",
         "pr-567"
       ],
-      "mtime": 1794229570364.918
+      "mtime": 1794243263342.9941
     },
     {
       "id": "pr/567/characterize-with-contracts/a-suspected-bug-is-pinned-not-fixed--baseline--run4",
@@ -4965,7 +4705,7 @@
         "a-suspected-bug-is-pinned-not-fixed",
         "pr-567"
       ],
-      "mtime": 1794229570363.918
+      "mtime": 1794243263328.9941
     },
     {
       "id": "pr/567/characterize-with-contracts/tests-before-a-refactor-pin-today-s-behaviour-quirks-included--baseline--run0",
@@ -4978,7 +4718,7 @@
         "tests-before-a-refactor-pin-today-s-behaviour-quirks-included",
         "pr-567"
       ],
-      "mtime": 1794229570362.918
+      "mtime": 1794243263333.9941
     },
     {
       "id": "pr/567/characterize-with-contracts/tests-before-a-refactor-pin-today-s-behaviour-quirks-included--baseline--run1",
@@ -4991,7 +4731,7 @@
         "tests-before-a-refactor-pin-today-s-behaviour-quirks-included",
         "pr-567"
       ],
-      "mtime": 1794229570365.918
+      "mtime": 1794243263335.9941
     },
     {
       "id": "pr/567/characterize-with-contracts/tests-before-a-refactor-pin-today-s-behaviour-quirks-included--baseline--run2",
@@ -5004,7 +4744,7 @@
         "tests-before-a-refactor-pin-today-s-behaviour-quirks-included",
         "pr-567"
       ],
-      "mtime": 1794229570365.918
+      "mtime": 1794243263335.9941
     },
     {
       "id": "pr/567/characterize-with-contracts/tests-before-a-refactor-pin-today-s-behaviour-quirks-included--baseline--run3",
@@ -5017,7 +4757,7 @@
         "tests-before-a-refactor-pin-today-s-behaviour-quirks-included",
         "pr-567"
       ],
-      "mtime": 1794229570365.918
+      "mtime": 1794243263336.9941
     },
     {
       "id": "pr/567/characterize-with-contracts/tests-before-a-refactor-pin-today-s-behaviour-quirks-included--baseline--run4",
@@ -5030,7 +4770,7 @@
         "tests-before-a-refactor-pin-today-s-behaviour-quirks-included",
         "pr-567"
       ],
-      "mtime": 1794229570365.918
+      "mtime": 1794243263336.9941
     },
     {
       "id": "pr/567/characterize-with-contracts/a-new-feature-is-driven-by-its-tests-not-characterized--skilled--run0",
@@ -5043,7 +4783,7 @@
         "a-new-feature-is-driven-by-its-tests-not-characterized",
         "pr-567"
       ],
-      "mtime": 1794229570359.918
+      "mtime": 1794243263334.9941
     },
     {
       "id": "pr/567/characterize-with-contracts/a-new-feature-is-driven-by-its-tests-not-characterized--skilled--run1",
@@ -5056,7 +4796,7 @@
         "a-new-feature-is-driven-by-its-tests-not-characterized",
         "pr-567"
       ],
-      "mtime": 1794229570361.918
+      "mtime": 1794243263339.9941
     },
     {
       "id": "pr/567/characterize-with-contracts/a-new-feature-is-driven-by-its-tests-not-characterized--skilled--run2",
@@ -5069,7 +4809,7 @@
         "a-new-feature-is-driven-by-its-tests-not-characterized",
         "pr-567"
       ],
-      "mtime": 1794229570362.918
+      "mtime": 1794243263339.9941
     },
     {
       "id": "pr/567/characterize-with-contracts/a-new-feature-is-driven-by-its-tests-not-characterized--skilled--run3",
@@ -5082,7 +4822,7 @@
         "a-new-feature-is-driven-by-its-tests-not-characterized",
         "pr-567"
       ],
-      "mtime": 1794229570361.918
+      "mtime": 1794243263342.9941
     },
     {
       "id": "pr/567/characterize-with-contracts/a-new-feature-is-driven-by-its-tests-not-characterized--skilled--run4",
@@ -5095,7 +4835,7 @@
         "a-new-feature-is-driven-by-its-tests-not-characterized",
         "pr-567"
       ],
-      "mtime": 1794229570361.918
+      "mtime": 1794243263342.9941
     },
     {
       "id": "pr/567/characterize-with-contracts/a-suspected-bug-is-pinned-not-fixed--skilled--run0",
@@ -5108,7 +4848,7 @@
         "a-suspected-bug-is-pinned-not-fixed",
         "pr-567"
       ],
-      "mtime": 1794229570365.918
+      "mtime": 1794243263348.9941
     },
     {
       "id": "pr/567/characterize-with-contracts/a-suspected-bug-is-pinned-not-fixed--skilled--run1",
@@ -5121,7 +4861,7 @@
         "a-suspected-bug-is-pinned-not-fixed",
         "pr-567"
       ],
-      "mtime": 1794229570365.918
+      "mtime": 1794243263347.9941
     },
     {
       "id": "pr/567/characterize-with-contracts/a-suspected-bug-is-pinned-not-fixed--skilled--run2",
@@ -5134,7 +4874,7 @@
         "a-suspected-bug-is-pinned-not-fixed",
         "pr-567"
       ],
-      "mtime": 1794229570363.918
+      "mtime": 1794243263342.9941
     },
     {
       "id": "pr/567/characterize-with-contracts/a-suspected-bug-is-pinned-not-fixed--skilled--run3",
@@ -5147,7 +4887,7 @@
         "a-suspected-bug-is-pinned-not-fixed",
         "pr-567"
       ],
-      "mtime": 1794229570366.918
+      "mtime": 1794243263347.9941
     },
     {
       "id": "pr/567/characterize-with-contracts/a-suspected-bug-is-pinned-not-fixed--skilled--run4",
@@ -5160,7 +4900,7 @@
         "a-suspected-bug-is-pinned-not-fixed",
         "pr-567"
       ],
-      "mtime": 1794229570363.918
+      "mtime": 1794243263347.9941
     },
     {
       "id": "pr/567/characterize-with-contracts/tests-before-a-refactor-pin-today-s-behaviour-quirks-included--skilled--run0",
@@ -5173,7 +4913,7 @@
         "tests-before-a-refactor-pin-today-s-behaviour-quirks-included",
         "pr-567"
       ],
-      "mtime": 1794229570365.918
+      "mtime": 1794243263347.9941
     },
     {
       "id": "pr/567/characterize-with-contracts/tests-before-a-refactor-pin-today-s-behaviour-quirks-included--skilled--run1",
@@ -5186,7 +4926,7 @@
         "tests-before-a-refactor-pin-today-s-behaviour-quirks-included",
         "pr-567"
       ],
-      "mtime": 1794229570365.918
+      "mtime": 1794243263347.9941
     },
     {
       "id": "pr/567/characterize-with-contracts/tests-before-a-refactor-pin-today-s-behaviour-quirks-included--skilled--run2",
@@ -5199,7 +4939,7 @@
         "tests-before-a-refactor-pin-today-s-behaviour-quirks-included",
         "pr-567"
       ],
-      "mtime": 1794229570365.918
+      "mtime": 1794243263348.9941
     },
     {
       "id": "pr/567/characterize-with-contracts/tests-before-a-refactor-pin-today-s-behaviour-quirks-included--skilled--run3",
@@ -5212,7 +4952,7 @@
         "tests-before-a-refactor-pin-today-s-behaviour-quirks-included",
         "pr-567"
       ],
-      "mtime": 1794229570366.918
+      "mtime": 1794243263347.9941
     },
     {
       "id": "pr/567/characterize-with-contracts/tests-before-a-refactor-pin-today-s-behaviour-quirks-included--skilled--run4",
@@ -5225,1918 +4965,7 @@
         "tests-before-a-refactor-pin-today-s-behaviour-quirks-included",
         "pr-567"
       ],
-      "mtime": 1794229570365.918
-    },
-    {
-      "id": "pr/567/commit-convention/finish-the-approved-customer-guide-issue--main--run0",
-      "name": "commit-convention / Finish the approved customer guide issue (main, run 0)",
-      "url": "sessions/pr/567/commit-convention/finish-the-approved-customer-guide-issue--main--run0.jsonl",
-      "tags": [
-        "pr",
-        "commit-convention",
-        "main",
-        "finish-the-approved-customer-guide-issue",
-        "pr-567"
-      ],
-      "mtime": 1794229570393.918
-    },
-    {
-      "id": "pr/567/commit-convention/finish-the-approved-customer-guide-issue--main--run1",
-      "name": "commit-convention / Finish the approved customer guide issue (main, run 1)",
-      "url": "sessions/pr/567/commit-convention/finish-the-approved-customer-guide-issue--main--run1.jsonl",
-      "tags": [
-        "pr",
-        "commit-convention",
-        "main",
-        "finish-the-approved-customer-guide-issue",
-        "pr-567"
-      ],
-      "mtime": 1794229570394.918
-    },
-    {
-      "id": "pr/567/commit-convention/finish-the-approved-customer-guide-issue--main--run2",
-      "name": "commit-convention / Finish the approved customer guide issue (main, run 2)",
-      "url": "sessions/pr/567/commit-convention/finish-the-approved-customer-guide-issue--main--run2.jsonl",
-      "tags": [
-        "pr",
-        "commit-convention",
-        "main",
-        "finish-the-approved-customer-guide-issue",
-        "pr-567"
-      ],
-      "mtime": 1794229570393.918
-    },
-    {
-      "id": "pr/567/commit-convention/finish-the-approved-customer-guide-issue--main--run3",
-      "name": "commit-convention / Finish the approved customer guide issue (main, run 3)",
-      "url": "sessions/pr/567/commit-convention/finish-the-approved-customer-guide-issue--main--run3.jsonl",
-      "tags": [
-        "pr",
-        "commit-convention",
-        "main",
-        "finish-the-approved-customer-guide-issue",
-        "pr-567"
-      ],
-      "mtime": 1794229570393.918
-    },
-    {
-      "id": "pr/567/commit-convention/finish-the-approved-customer-guide-issue--main--run4",
-      "name": "commit-convention / Finish the approved customer guide issue (main, run 4)",
-      "url": "sessions/pr/567/commit-convention/finish-the-approved-customer-guide-issue--main--run4.jsonl",
-      "tags": [
-        "pr",
-        "commit-convention",
-        "main",
-        "finish-the-approved-customer-guide-issue",
-        "pr-567"
-      ],
-      "mtime": 1794229570393.918
-    },
-    {
-      "id": "pr/567/commit-convention/record-a-customer-guide-increment-while-the-issue-remains-open--main--run0",
-      "name": "commit-convention / Record a customer guide increment while the issue remains open (main, run 0)",
-      "url": "sessions/pr/567/commit-convention/record-a-customer-guide-increment-while-the-issue-remains-open--main--run0.jsonl",
-      "tags": [
-        "pr",
-        "commit-convention",
-        "main",
-        "record-a-customer-guide-increment-while-the-issue-remains-open",
-        "pr-567"
-      ],
-      "mtime": 1794229570393.918
-    },
-    {
-      "id": "pr/567/commit-convention/record-a-customer-guide-increment-while-the-issue-remains-open--main--run1",
-      "name": "commit-convention / Record a customer guide increment while the issue remains open (main, run 1)",
-      "url": "sessions/pr/567/commit-convention/record-a-customer-guide-increment-while-the-issue-remains-open--main--run1.jsonl",
-      "tags": [
-        "pr",
-        "commit-convention",
-        "main",
-        "record-a-customer-guide-increment-while-the-issue-remains-open",
-        "pr-567"
-      ],
-      "mtime": 1794229570393.918
-    },
-    {
-      "id": "pr/567/commit-convention/record-a-customer-guide-increment-while-the-issue-remains-open--main--run2",
-      "name": "commit-convention / Record a customer guide increment while the issue remains open (main, run 2)",
-      "url": "sessions/pr/567/commit-convention/record-a-customer-guide-increment-while-the-issue-remains-open--main--run2.jsonl",
-      "tags": [
-        "pr",
-        "commit-convention",
-        "main",
-        "record-a-customer-guide-increment-while-the-issue-remains-open",
-        "pr-567"
-      ],
-      "mtime": 1794229570394.918
-    },
-    {
-      "id": "pr/567/commit-convention/record-a-customer-guide-increment-while-the-issue-remains-open--main--run3",
-      "name": "commit-convention / Record a customer guide increment while the issue remains open (main, run 3)",
-      "url": "sessions/pr/567/commit-convention/record-a-customer-guide-increment-while-the-issue-remains-open--main--run3.jsonl",
-      "tags": [
-        "pr",
-        "commit-convention",
-        "main",
-        "record-a-customer-guide-increment-while-the-issue-remains-open",
-        "pr-567"
-      ],
-      "mtime": 1794229570394.918
-    },
-    {
-      "id": "pr/567/commit-convention/record-a-customer-guide-increment-while-the-issue-remains-open--main--run4",
-      "name": "commit-convention / Record a customer guide increment while the issue remains open (main, run 4)",
-      "url": "sessions/pr/567/commit-convention/record-a-customer-guide-increment-while-the-issue-remains-open--main--run4.jsonl",
-      "tags": [
-        "pr",
-        "commit-convention",
-        "main",
-        "record-a-customer-guide-increment-while-the-issue-remains-open",
-        "pr-567"
-      ],
-      "mtime": 1794229570393.918
-    },
-    {
-      "id": "pr/567/commit-convention/record-the-approved-guide-edit-without-a-known-issue--main--run0",
-      "name": "commit-convention / Record the approved guide edit without a known issue (main, run 0)",
-      "url": "sessions/pr/567/commit-convention/record-the-approved-guide-edit-without-a-known-issue--main--run0.jsonl",
-      "tags": [
-        "pr",
-        "commit-convention",
-        "main",
-        "record-the-approved-guide-edit-without-a-known-issue",
-        "pr-567"
-      ],
-      "mtime": 1794229570394.918
-    },
-    {
-      "id": "pr/567/commit-convention/record-the-approved-guide-edit-without-a-known-issue--main--run1",
-      "name": "commit-convention / Record the approved guide edit without a known issue (main, run 1)",
-      "url": "sessions/pr/567/commit-convention/record-the-approved-guide-edit-without-a-known-issue--main--run1.jsonl",
-      "tags": [
-        "pr",
-        "commit-convention",
-        "main",
-        "record-the-approved-guide-edit-without-a-known-issue",
-        "pr-567"
-      ],
-      "mtime": 1794229570394.918
-    },
-    {
-      "id": "pr/567/commit-convention/record-the-approved-guide-edit-without-a-known-issue--main--run2",
-      "name": "commit-convention / Record the approved guide edit without a known issue (main, run 2)",
-      "url": "sessions/pr/567/commit-convention/record-the-approved-guide-edit-without-a-known-issue--main--run2.jsonl",
-      "tags": [
-        "pr",
-        "commit-convention",
-        "main",
-        "record-the-approved-guide-edit-without-a-known-issue",
-        "pr-567"
-      ],
-      "mtime": 1794229570393.918
-    },
-    {
-      "id": "pr/567/commit-convention/record-the-approved-guide-edit-without-a-known-issue--main--run3",
-      "name": "commit-convention / Record the approved guide edit without a known issue (main, run 3)",
-      "url": "sessions/pr/567/commit-convention/record-the-approved-guide-edit-without-a-known-issue--main--run3.jsonl",
-      "tags": [
-        "pr",
-        "commit-convention",
-        "main",
-        "record-the-approved-guide-edit-without-a-known-issue",
-        "pr-567"
-      ],
-      "mtime": 1794229570392.918
-    },
-    {
-      "id": "pr/567/commit-convention/record-the-approved-guide-edit-without-a-known-issue--main--run4",
-      "name": "commit-convention / Record the approved guide edit without a known issue (main, run 4)",
-      "url": "sessions/pr/567/commit-convention/record-the-approved-guide-edit-without-a-known-issue--main--run4.jsonl",
-      "tags": [
-        "pr",
-        "commit-convention",
-        "main",
-        "record-the-approved-guide-edit-without-a-known-issue",
-        "pr-567"
-      ],
-      "mtime": 1794229570394.918
-    },
-    {
-      "id": "pr/567/outside-in-tdd/do-not-invent-an-unresolved-business-outcome--baseline--run0",
-      "name": "outside-in-tdd / Do not invent an unresolved business outcome (baseline, run 0)",
-      "url": "sessions/pr/567/outside-in-tdd/do-not-invent-an-unresolved-business-outcome--baseline--run0.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "baseline",
-        "do-not-invent-an-unresolved-business-outcome",
-        "pr-567"
-      ],
-      "mtime": 1794229570457.9182
-    },
-    {
-      "id": "pr/567/outside-in-tdd/do-not-invent-an-unresolved-business-outcome--baseline--run1",
-      "name": "outside-in-tdd / Do not invent an unresolved business outcome (baseline, run 1)",
-      "url": "sessions/pr/567/outside-in-tdd/do-not-invent-an-unresolved-business-outcome--baseline--run1.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "baseline",
-        "do-not-invent-an-unresolved-business-outcome",
-        "pr-567"
-      ],
-      "mtime": 1794229570454.9182
-    },
-    {
-      "id": "pr/567/outside-in-tdd/do-not-invent-an-unresolved-business-outcome--baseline--run2",
-      "name": "outside-in-tdd / Do not invent an unresolved business outcome (baseline, run 2)",
-      "url": "sessions/pr/567/outside-in-tdd/do-not-invent-an-unresolved-business-outcome--baseline--run2.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "baseline",
-        "do-not-invent-an-unresolved-business-outcome",
-        "pr-567"
-      ],
-      "mtime": 1794229570457.9182
-    },
-    {
-      "id": "pr/567/outside-in-tdd/do-not-invent-an-unresolved-business-outcome--baseline--run3",
-      "name": "outside-in-tdd / Do not invent an unresolved business outcome (baseline, run 3)",
-      "url": "sessions/pr/567/outside-in-tdd/do-not-invent-an-unresolved-business-outcome--baseline--run3.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "baseline",
-        "do-not-invent-an-unresolved-business-outcome",
-        "pr-567"
-      ],
-      "mtime": 1794229570454.9182
-    },
-    {
-      "id": "pr/567/outside-in-tdd/hand-off-a-tdd-slice-to-an-unattended-worker--baseline--run0",
-      "name": "outside-in-tdd / Hand off a TDD slice to an unattended worker (baseline, run 0)",
-      "url": "sessions/pr/567/outside-in-tdd/hand-off-a-tdd-slice-to-an-unattended-worker--baseline--run0.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "baseline",
-        "hand-off-a-tdd-slice-to-an-unattended-worker",
-        "pr-567"
-      ],
-      "mtime": 1794229570450.9182
-    },
-    {
-      "id": "pr/567/outside-in-tdd/hand-off-a-tdd-slice-to-an-unattended-worker--baseline--run1",
-      "name": "outside-in-tdd / Hand off a TDD slice to an unattended worker (baseline, run 1)",
-      "url": "sessions/pr/567/outside-in-tdd/hand-off-a-tdd-slice-to-an-unattended-worker--baseline--run1.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "baseline",
-        "hand-off-a-tdd-slice-to-an-unattended-worker",
-        "pr-567"
-      ],
-      "mtime": 1794229570454.9182
-    },
-    {
-      "id": "pr/567/outside-in-tdd/hand-off-a-tdd-slice-to-an-unattended-worker--baseline--run2",
-      "name": "outside-in-tdd / Hand off a TDD slice to an unattended worker (baseline, run 2)",
-      "url": "sessions/pr/567/outside-in-tdd/hand-off-a-tdd-slice-to-an-unattended-worker--baseline--run2.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "baseline",
-        "hand-off-a-tdd-slice-to-an-unattended-worker",
-        "pr-567"
-      ],
-      "mtime": 1794229570455.9182
-    },
-    {
-      "id": "pr/567/outside-in-tdd/hand-off-a-tdd-slice-to-an-unattended-worker--baseline--run3",
-      "name": "outside-in-tdd / Hand off a TDD slice to an unattended worker (baseline, run 3)",
-      "url": "sessions/pr/567/outside-in-tdd/hand-off-a-tdd-slice-to-an-unattended-worker--baseline--run3.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "baseline",
-        "hand-off-a-tdd-slice-to-an-unattended-worker",
-        "pr-567"
-      ],
-      "mtime": 1794229570455.9182
-    },
-    {
-      "id": "pr/567/outside-in-tdd/keep-wider-integration-work-behind-the-failing-behavior--baseline--run0",
-      "name": "outside-in-tdd / Keep wider integration work behind the failing behavior (baseline, run 0)",
-      "url": "sessions/pr/567/outside-in-tdd/keep-wider-integration-work-behind-the-failing-behavior--baseline--run0.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "baseline",
-        "keep-wider-integration-work-behind-the-failing-behavior",
-        "pr-567"
-      ],
-      "mtime": 1794229570450.9182
-    },
-    {
-      "id": "pr/567/outside-in-tdd/keep-wider-integration-work-behind-the-failing-behavior--baseline--run1",
-      "name": "outside-in-tdd / Keep wider integration work behind the failing behavior (baseline, run 1)",
-      "url": "sessions/pr/567/outside-in-tdd/keep-wider-integration-work-behind-the-failing-behavior--baseline--run1.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "baseline",
-        "keep-wider-integration-work-behind-the-failing-behavior",
-        "pr-567"
-      ],
-      "mtime": 1794229570455.9182
-    },
-    {
-      "id": "pr/567/outside-in-tdd/keep-wider-integration-work-behind-the-failing-behavior--baseline--run2",
-      "name": "outside-in-tdd / Keep wider integration work behind the failing behavior (baseline, run 2)",
-      "url": "sessions/pr/567/outside-in-tdd/keep-wider-integration-work-behind-the-failing-behavior--baseline--run2.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "baseline",
-        "keep-wider-integration-work-behind-the-failing-behavior",
-        "pr-567"
-      ],
-      "mtime": 1794229570455.9182
-    },
-    {
-      "id": "pr/567/outside-in-tdd/keep-wider-integration-work-behind-the-failing-behavior--baseline--run3",
-      "name": "outside-in-tdd / Keep wider integration work behind the failing behavior (baseline, run 3)",
-      "url": "sessions/pr/567/outside-in-tdd/keep-wider-integration-work-behind-the-failing-behavior--baseline--run3.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "baseline",
-        "keep-wider-integration-work-behind-the-failing-behavior",
-        "pr-567"
-      ],
-      "mtime": 1794229570455.9182
-    },
-    {
-      "id": "pr/567/outside-in-tdd/make-the-domain-emerge-from-an-approved-scenario--baseline--run0",
-      "name": "outside-in-tdd / Make the domain emerge from an approved scenario (baseline, run 0)",
-      "url": "sessions/pr/567/outside-in-tdd/make-the-domain-emerge-from-an-approved-scenario--baseline--run0.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "baseline",
-        "make-the-domain-emerge-from-an-approved-scenario",
-        "pr-567"
-      ],
-      "mtime": 1794229570458.9182
-    },
-    {
-      "id": "pr/567/outside-in-tdd/make-the-domain-emerge-from-an-approved-scenario--baseline--run1",
-      "name": "outside-in-tdd / Make the domain emerge from an approved scenario (baseline, run 1)",
-      "url": "sessions/pr/567/outside-in-tdd/make-the-domain-emerge-from-an-approved-scenario--baseline--run1.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "baseline",
-        "make-the-domain-emerge-from-an-approved-scenario",
-        "pr-567"
-      ],
-      "mtime": 1794229570458.9182
-    },
-    {
-      "id": "pr/567/outside-in-tdd/make-the-domain-emerge-from-an-approved-scenario--baseline--run2",
-      "name": "outside-in-tdd / Make the domain emerge from an approved scenario (baseline, run 2)",
-      "url": "sessions/pr/567/outside-in-tdd/make-the-domain-emerge-from-an-approved-scenario--baseline--run2.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "baseline",
-        "make-the-domain-emerge-from-an-approved-scenario",
-        "pr-567"
-      ],
-      "mtime": 1794229570459.9182
-    },
-    {
-      "id": "pr/567/outside-in-tdd/make-the-domain-emerge-from-an-approved-scenario--baseline--run3",
-      "name": "outside-in-tdd / Make the domain emerge from an approved scenario (baseline, run 3)",
-      "url": "sessions/pr/567/outside-in-tdd/make-the-domain-emerge-from-an-approved-scenario--baseline--run3.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "baseline",
-        "make-the-domain-emerge-from-an-approved-scenario",
-        "pr-567"
-      ],
-      "mtime": 1794229570455.9182
-    },
-    {
-      "id": "pr/567/outside-in-tdd/prove-the-first-route-through-a-new-feature--baseline--run0",
-      "name": "outside-in-tdd / Prove the first route through a new feature (baseline, run 0)",
-      "url": "sessions/pr/567/outside-in-tdd/prove-the-first-route-through-a-new-feature--baseline--run0.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "baseline",
-        "prove-the-first-route-through-a-new-feature",
-        "pr-567"
-      ],
-      "mtime": 1794229570445.9182
-    },
-    {
-      "id": "pr/567/outside-in-tdd/prove-the-first-route-through-a-new-feature--baseline--run1",
-      "name": "outside-in-tdd / Prove the first route through a new feature (baseline, run 1)",
-      "url": "sessions/pr/567/outside-in-tdd/prove-the-first-route-through-a-new-feature--baseline--run1.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "baseline",
-        "prove-the-first-route-through-a-new-feature",
-        "pr-567"
-      ],
-      "mtime": 1794229570450.9182
-    },
-    {
-      "id": "pr/567/outside-in-tdd/prove-the-first-route-through-a-new-feature--baseline--run2",
-      "name": "outside-in-tdd / Prove the first route through a new feature (baseline, run 2)",
-      "url": "sessions/pr/567/outside-in-tdd/prove-the-first-route-through-a-new-feature--baseline--run2.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "baseline",
-        "prove-the-first-route-through-a-new-feature",
-        "pr-567"
-      ],
-      "mtime": 1794229570453.9182
-    },
-    {
-      "id": "pr/567/outside-in-tdd/prove-the-first-route-through-a-new-feature--baseline--run3",
-      "name": "outside-in-tdd / Prove the first route through a new feature (baseline, run 3)",
-      "url": "sessions/pr/567/outside-in-tdd/prove-the-first-route-through-a-new-feature--baseline--run3.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "baseline",
-        "prove-the-first-route-through-a-new-feature",
-        "pr-567"
-      ],
-      "mtime": 1794229570450.9182
-    },
-    {
-      "id": "pr/567/outside-in-tdd/reach-a-failure-that-witnesses-the-missing-behaviour--baseline--run0",
-      "name": "outside-in-tdd / Reach a failure that witnesses the missing behaviour (baseline, run 0)",
-      "url": "sessions/pr/567/outside-in-tdd/reach-a-failure-that-witnesses-the-missing-behaviour--baseline--run0.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "baseline",
-        "reach-a-failure-that-witnesses-the-missing-behaviour",
-        "pr-567"
-      ],
-      "mtime": 1794229570445.9182
-    },
-    {
-      "id": "pr/567/outside-in-tdd/reach-a-failure-that-witnesses-the-missing-behaviour--baseline--run1",
-      "name": "outside-in-tdd / Reach a failure that witnesses the missing behaviour (baseline, run 1)",
-      "url": "sessions/pr/567/outside-in-tdd/reach-a-failure-that-witnesses-the-missing-behaviour--baseline--run1.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "baseline",
-        "reach-a-failure-that-witnesses-the-missing-behaviour",
-        "pr-567"
-      ],
-      "mtime": 1794229570453.9182
-    },
-    {
-      "id": "pr/567/outside-in-tdd/reach-a-failure-that-witnesses-the-missing-behaviour--baseline--run2",
-      "name": "outside-in-tdd / Reach a failure that witnesses the missing behaviour (baseline, run 2)",
-      "url": "sessions/pr/567/outside-in-tdd/reach-a-failure-that-witnesses-the-missing-behaviour--baseline--run2.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "baseline",
-        "reach-a-failure-that-witnesses-the-missing-behaviour",
-        "pr-567"
-      ],
-      "mtime": 1794229570451.9182
-    },
-    {
-      "id": "pr/567/outside-in-tdd/reach-a-failure-that-witnesses-the-missing-behaviour--baseline--run3",
-      "name": "outside-in-tdd / Reach a failure that witnesses the missing behaviour (baseline, run 3)",
-      "url": "sessions/pr/567/outside-in-tdd/reach-a-failure-that-witnesses-the-missing-behaviour--baseline--run3.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "baseline",
-        "reach-a-failure-that-witnesses-the-missing-behaviour",
-        "pr-567"
-      ],
-      "mtime": 1794229570451.9182
-    },
-    {
-      "id": "pr/567/outside-in-tdd/replace-a-fixture-provided-discount-with-production-behavior--baseline--run0",
-      "name": "outside-in-tdd / Replace a fixture-provided discount with production behavior (baseline, run 0)",
-      "url": "sessions/pr/567/outside-in-tdd/replace-a-fixture-provided-discount-with-production-behavior--baseline--run0.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "baseline",
-        "replace-a-fixture-provided-discount-with-production-behavior",
-        "pr-567"
-      ],
-      "mtime": 1794229570448.9182
-    },
-    {
-      "id": "pr/567/outside-in-tdd/replace-a-fixture-provided-discount-with-production-behavior--baseline--run1",
-      "name": "outside-in-tdd / Replace a fixture-provided discount with production behavior (baseline, run 1)",
-      "url": "sessions/pr/567/outside-in-tdd/replace-a-fixture-provided-discount-with-production-behavior--baseline--run1.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "baseline",
-        "replace-a-fixture-provided-discount-with-production-behavior",
-        "pr-567"
-      ],
-      "mtime": 1794229570451.9182
-    },
-    {
-      "id": "pr/567/outside-in-tdd/replace-a-fixture-provided-discount-with-production-behavior--baseline--run2",
-      "name": "outside-in-tdd / Replace a fixture-provided discount with production behavior (baseline, run 2)",
-      "url": "sessions/pr/567/outside-in-tdd/replace-a-fixture-provided-discount-with-production-behavior--baseline--run2.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "baseline",
-        "replace-a-fixture-provided-discount-with-production-behavior",
-        "pr-567"
-      ],
-      "mtime": 1794229570451.9182
-    },
-    {
-      "id": "pr/567/outside-in-tdd/replace-a-fixture-provided-discount-with-production-behavior--baseline--run3",
-      "name": "outside-in-tdd / Replace a fixture-provided discount with production behavior (baseline, run 3)",
-      "url": "sessions/pr/567/outside-in-tdd/replace-a-fixture-provided-discount-with-production-behavior--baseline--run3.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "baseline",
-        "replace-a-fixture-provided-discount-with-production-behavior",
-        "pr-567"
-      ],
-      "mtime": 1794229570453.9182
-    },
-    {
-      "id": "pr/567/outside-in-tdd/tidy-a-green-test-class-without-inventing-new-work--baseline--run0",
-      "name": "outside-in-tdd / Tidy a green test class without inventing new work (baseline, run 0)",
-      "url": "sessions/pr/567/outside-in-tdd/tidy-a-green-test-class-without-inventing-new-work--baseline--run0.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "baseline",
-        "tidy-a-green-test-class-without-inventing-new-work",
-        "pr-567"
-      ],
-      "mtime": 1794229570445.9182
-    },
-    {
-      "id": "pr/567/outside-in-tdd/tidy-a-green-test-class-without-inventing-new-work--baseline--run1",
-      "name": "outside-in-tdd / Tidy a green test class without inventing new work (baseline, run 1)",
-      "url": "sessions/pr/567/outside-in-tdd/tidy-a-green-test-class-without-inventing-new-work--baseline--run1.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "baseline",
-        "tidy-a-green-test-class-without-inventing-new-work",
-        "pr-567"
-      ],
-      "mtime": 1794229570451.9182
-    },
-    {
-      "id": "pr/567/outside-in-tdd/tidy-a-green-test-class-without-inventing-new-work--baseline--run2",
-      "name": "outside-in-tdd / Tidy a green test class without inventing new work (baseline, run 2)",
-      "url": "sessions/pr/567/outside-in-tdd/tidy-a-green-test-class-without-inventing-new-work--baseline--run2.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "baseline",
-        "tidy-a-green-test-class-without-inventing-new-work",
-        "pr-567"
-      ],
-      "mtime": 1794229570451.9182
-    },
-    {
-      "id": "pr/567/outside-in-tdd/tidy-a-green-test-class-without-inventing-new-work--baseline--run3",
-      "name": "outside-in-tdd / Tidy a green test class without inventing new work (baseline, run 3)",
-      "url": "sessions/pr/567/outside-in-tdd/tidy-a-green-test-class-without-inventing-new-work--baseline--run3.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "baseline",
-        "tidy-a-green-test-class-without-inventing-new-work",
-        "pr-567"
-      ],
-      "mtime": 1794229570451.9182
-    },
-    {
-      "id": "pr/567/outside-in-tdd/turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome--baseline--run0",
-      "name": "outside-in-tdd / Turn an untrustworthy failure into evidence of the approved outcome (baseline, run 0)",
-      "url": "sessions/pr/567/outside-in-tdd/turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome--baseline--run0.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "baseline",
-        "turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome",
-        "pr-567"
-      ],
-      "mtime": 1794229570453.9182
-    },
-    {
-      "id": "pr/567/outside-in-tdd/turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome--baseline--run1",
-      "name": "outside-in-tdd / Turn an untrustworthy failure into evidence of the approved outcome (baseline, run 1)",
-      "url": "sessions/pr/567/outside-in-tdd/turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome--baseline--run1.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "baseline",
-        "turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome",
-        "pr-567"
-      ],
-      "mtime": 1794229570455.9182
-    },
-    {
-      "id": "pr/567/outside-in-tdd/turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome--baseline--run2",
-      "name": "outside-in-tdd / Turn an untrustworthy failure into evidence of the approved outcome (baseline, run 2)",
-      "url": "sessions/pr/567/outside-in-tdd/turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome--baseline--run2.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "baseline",
-        "turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome",
-        "pr-567"
-      ],
-      "mtime": 1794229570455.9182
-    },
-    {
-      "id": "pr/567/outside-in-tdd/turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome--baseline--run3",
-      "name": "outside-in-tdd / Turn an untrustworthy failure into evidence of the approved outcome (baseline, run 3)",
-      "url": "sessions/pr/567/outside-in-tdd/turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome--baseline--run3.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "baseline",
-        "turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome",
-        "pr-567"
-      ],
-      "mtime": 1794229570455.9182
-    },
-    {
-      "id": "pr/567/outside-in-tdd/do-not-invent-an-unresolved-business-outcome--skilled--run0",
-      "name": "outside-in-tdd / Do not invent an unresolved business outcome (skilled, run 0)",
-      "url": "sessions/pr/567/outside-in-tdd/do-not-invent-an-unresolved-business-outcome--skilled--run0.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "skilled",
-        "do-not-invent-an-unresolved-business-outcome",
-        "pr-567"
-      ],
-      "mtime": 1794229570451.9182
-    },
-    {
-      "id": "pr/567/outside-in-tdd/do-not-invent-an-unresolved-business-outcome--skilled--run1",
-      "name": "outside-in-tdd / Do not invent an unresolved business outcome (skilled, run 1)",
-      "url": "sessions/pr/567/outside-in-tdd/do-not-invent-an-unresolved-business-outcome--skilled--run1.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "skilled",
-        "do-not-invent-an-unresolved-business-outcome",
-        "pr-567"
-      ],
-      "mtime": 1794229570457.9182
-    },
-    {
-      "id": "pr/567/outside-in-tdd/do-not-invent-an-unresolved-business-outcome--skilled--run2",
-      "name": "outside-in-tdd / Do not invent an unresolved business outcome (skilled, run 2)",
-      "url": "sessions/pr/567/outside-in-tdd/do-not-invent-an-unresolved-business-outcome--skilled--run2.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "skilled",
-        "do-not-invent-an-unresolved-business-outcome",
-        "pr-567"
-      ],
-      "mtime": 1794229570457.9182
-    },
-    {
-      "id": "pr/567/outside-in-tdd/do-not-invent-an-unresolved-business-outcome--skilled--run3",
-      "name": "outside-in-tdd / Do not invent an unresolved business outcome (skilled, run 3)",
-      "url": "sessions/pr/567/outside-in-tdd/do-not-invent-an-unresolved-business-outcome--skilled--run3.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "skilled",
-        "do-not-invent-an-unresolved-business-outcome",
-        "pr-567"
-      ],
-      "mtime": 1794229570459.9182
-    },
-    {
-      "id": "pr/567/outside-in-tdd/hand-off-a-tdd-slice-to-an-unattended-worker--skilled--run0",
-      "name": "outside-in-tdd / Hand off a TDD slice to an unattended worker (skilled, run 0)",
-      "url": "sessions/pr/567/outside-in-tdd/hand-off-a-tdd-slice-to-an-unattended-worker--skilled--run0.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "skilled",
-        "hand-off-a-tdd-slice-to-an-unattended-worker",
-        "pr-567"
-      ],
-      "mtime": 1794229570460.9182
-    },
-    {
-      "id": "pr/567/outside-in-tdd/hand-off-a-tdd-slice-to-an-unattended-worker--skilled--run1",
-      "name": "outside-in-tdd / Hand off a TDD slice to an unattended worker (skilled, run 1)",
-      "url": "sessions/pr/567/outside-in-tdd/hand-off-a-tdd-slice-to-an-unattended-worker--skilled--run1.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "skilled",
-        "hand-off-a-tdd-slice-to-an-unattended-worker",
-        "pr-567"
-      ],
-      "mtime": 1794229570459.9182
-    },
-    {
-      "id": "pr/567/outside-in-tdd/hand-off-a-tdd-slice-to-an-unattended-worker--skilled--run2",
-      "name": "outside-in-tdd / Hand off a TDD slice to an unattended worker (skilled, run 2)",
-      "url": "sessions/pr/567/outside-in-tdd/hand-off-a-tdd-slice-to-an-unattended-worker--skilled--run2.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "skilled",
-        "hand-off-a-tdd-slice-to-an-unattended-worker",
-        "pr-567"
-      ],
-      "mtime": 1794229570459.9182
-    },
-    {
-      "id": "pr/567/outside-in-tdd/hand-off-a-tdd-slice-to-an-unattended-worker--skilled--run3",
-      "name": "outside-in-tdd / Hand off a TDD slice to an unattended worker (skilled, run 3)",
-      "url": "sessions/pr/567/outside-in-tdd/hand-off-a-tdd-slice-to-an-unattended-worker--skilled--run3.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "skilled",
-        "hand-off-a-tdd-slice-to-an-unattended-worker",
-        "pr-567"
-      ],
-      "mtime": 1794229570459.9182
-    },
-    {
-      "id": "pr/567/outside-in-tdd/keep-wider-integration-work-behind-the-failing-behavior--skilled--run0",
-      "name": "outside-in-tdd / Keep wider integration work behind the failing behavior (skilled, run 0)",
-      "url": "sessions/pr/567/outside-in-tdd/keep-wider-integration-work-behind-the-failing-behavior--skilled--run0.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "skilled",
-        "keep-wider-integration-work-behind-the-failing-behavior",
-        "pr-567"
-      ],
-      "mtime": 1794229570456.9182
-    },
-    {
-      "id": "pr/567/outside-in-tdd/keep-wider-integration-work-behind-the-failing-behavior--skilled--run1",
-      "name": "outside-in-tdd / Keep wider integration work behind the failing behavior (skilled, run 1)",
-      "url": "sessions/pr/567/outside-in-tdd/keep-wider-integration-work-behind-the-failing-behavior--skilled--run1.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "skilled",
-        "keep-wider-integration-work-behind-the-failing-behavior",
-        "pr-567"
-      ],
-      "mtime": 1794229570459.9182
-    },
-    {
-      "id": "pr/567/outside-in-tdd/keep-wider-integration-work-behind-the-failing-behavior--skilled--run2",
-      "name": "outside-in-tdd / Keep wider integration work behind the failing behavior (skilled, run 2)",
-      "url": "sessions/pr/567/outside-in-tdd/keep-wider-integration-work-behind-the-failing-behavior--skilled--run2.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "skilled",
-        "keep-wider-integration-work-behind-the-failing-behavior",
-        "pr-567"
-      ],
-      "mtime": 1794229570459.9182
-    },
-    {
-      "id": "pr/567/outside-in-tdd/keep-wider-integration-work-behind-the-failing-behavior--skilled--run3",
-      "name": "outside-in-tdd / Keep wider integration work behind the failing behavior (skilled, run 3)",
-      "url": "sessions/pr/567/outside-in-tdd/keep-wider-integration-work-behind-the-failing-behavior--skilled--run3.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "skilled",
-        "keep-wider-integration-work-behind-the-failing-behavior",
-        "pr-567"
-      ],
-      "mtime": 1794229570459.9182
-    },
-    {
-      "id": "pr/567/outside-in-tdd/make-the-domain-emerge-from-an-approved-scenario--skilled--run0",
-      "name": "outside-in-tdd / Make the domain emerge from an approved scenario (skilled, run 0)",
-      "url": "sessions/pr/567/outside-in-tdd/make-the-domain-emerge-from-an-approved-scenario--skilled--run0.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "skilled",
-        "make-the-domain-emerge-from-an-approved-scenario",
-        "pr-567"
-      ],
-      "mtime": 1794229570460.9182
-    },
-    {
-      "id": "pr/567/outside-in-tdd/make-the-domain-emerge-from-an-approved-scenario--skilled--run1",
-      "name": "outside-in-tdd / Make the domain emerge from an approved scenario (skilled, run 1)",
-      "url": "sessions/pr/567/outside-in-tdd/make-the-domain-emerge-from-an-approved-scenario--skilled--run1.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "skilled",
-        "make-the-domain-emerge-from-an-approved-scenario",
-        "pr-567"
-      ],
-      "mtime": 1794229570461.9182
-    },
-    {
-      "id": "pr/567/outside-in-tdd/make-the-domain-emerge-from-an-approved-scenario--skilled--run2",
-      "name": "outside-in-tdd / Make the domain emerge from an approved scenario (skilled, run 2)",
-      "url": "sessions/pr/567/outside-in-tdd/make-the-domain-emerge-from-an-approved-scenario--skilled--run2.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "skilled",
-        "make-the-domain-emerge-from-an-approved-scenario",
-        "pr-567"
-      ],
-      "mtime": 1794229570461.9182
-    },
-    {
-      "id": "pr/567/outside-in-tdd/make-the-domain-emerge-from-an-approved-scenario--skilled--run3",
-      "name": "outside-in-tdd / Make the domain emerge from an approved scenario (skilled, run 3)",
-      "url": "sessions/pr/567/outside-in-tdd/make-the-domain-emerge-from-an-approved-scenario--skilled--run3.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "skilled",
-        "make-the-domain-emerge-from-an-approved-scenario",
-        "pr-567"
-      ],
-      "mtime": 1794229570461.9182
-    },
-    {
-      "id": "pr/567/outside-in-tdd/prove-the-first-route-through-a-new-feature--skilled--run0",
-      "name": "outside-in-tdd / Prove the first route through a new feature (skilled, run 0)",
-      "url": "sessions/pr/567/outside-in-tdd/prove-the-first-route-through-a-new-feature--skilled--run0.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "skilled",
-        "prove-the-first-route-through-a-new-feature",
-        "pr-567"
-      ],
-      "mtime": 1794229570456.9182
-    },
-    {
-      "id": "pr/567/outside-in-tdd/prove-the-first-route-through-a-new-feature--skilled--run1",
-      "name": "outside-in-tdd / Prove the first route through a new feature (skilled, run 1)",
-      "url": "sessions/pr/567/outside-in-tdd/prove-the-first-route-through-a-new-feature--skilled--run1.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "skilled",
-        "prove-the-first-route-through-a-new-feature",
-        "pr-567"
-      ],
-      "mtime": 1794229570460.9182
-    },
-    {
-      "id": "pr/567/outside-in-tdd/prove-the-first-route-through-a-new-feature--skilled--run2",
-      "name": "outside-in-tdd / Prove the first route through a new feature (skilled, run 2)",
-      "url": "sessions/pr/567/outside-in-tdd/prove-the-first-route-through-a-new-feature--skilled--run2.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "skilled",
-        "prove-the-first-route-through-a-new-feature",
-        "pr-567"
-      ],
-      "mtime": 1794229570459.9182
-    },
-    {
-      "id": "pr/567/outside-in-tdd/prove-the-first-route-through-a-new-feature--skilled--run3",
-      "name": "outside-in-tdd / Prove the first route through a new feature (skilled, run 3)",
-      "url": "sessions/pr/567/outside-in-tdd/prove-the-first-route-through-a-new-feature--skilled--run3.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "skilled",
-        "prove-the-first-route-through-a-new-feature",
-        "pr-567"
-      ],
-      "mtime": 1794229570460.9182
-    },
-    {
-      "id": "pr/567/outside-in-tdd/reach-a-failure-that-witnesses-the-missing-behaviour--skilled--run0",
-      "name": "outside-in-tdd / Reach a failure that witnesses the missing behaviour (skilled, run 0)",
-      "url": "sessions/pr/567/outside-in-tdd/reach-a-failure-that-witnesses-the-missing-behaviour--skilled--run0.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "skilled",
-        "reach-a-failure-that-witnesses-the-missing-behaviour",
-        "pr-567"
-      ],
-      "mtime": 1794229570458.9182
-    },
-    {
-      "id": "pr/567/outside-in-tdd/reach-a-failure-that-witnesses-the-missing-behaviour--skilled--run1",
-      "name": "outside-in-tdd / Reach a failure that witnesses the missing behaviour (skilled, run 1)",
-      "url": "sessions/pr/567/outside-in-tdd/reach-a-failure-that-witnesses-the-missing-behaviour--skilled--run1.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "skilled",
-        "reach-a-failure-that-witnesses-the-missing-behaviour",
-        "pr-567"
-      ],
-      "mtime": 1794229570460.9182
-    },
-    {
-      "id": "pr/567/outside-in-tdd/reach-a-failure-that-witnesses-the-missing-behaviour--skilled--run2",
-      "name": "outside-in-tdd / Reach a failure that witnesses the missing behaviour (skilled, run 2)",
-      "url": "sessions/pr/567/outside-in-tdd/reach-a-failure-that-witnesses-the-missing-behaviour--skilled--run2.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "skilled",
-        "reach-a-failure-that-witnesses-the-missing-behaviour",
-        "pr-567"
-      ],
-      "mtime": 1794229570460.9182
-    },
-    {
-      "id": "pr/567/outside-in-tdd/reach-a-failure-that-witnesses-the-missing-behaviour--skilled--run3",
-      "name": "outside-in-tdd / Reach a failure that witnesses the missing behaviour (skilled, run 3)",
-      "url": "sessions/pr/567/outside-in-tdd/reach-a-failure-that-witnesses-the-missing-behaviour--skilled--run3.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "skilled",
-        "reach-a-failure-that-witnesses-the-missing-behaviour",
-        "pr-567"
-      ],
-      "mtime": 1794229570460.9182
-    },
-    {
-      "id": "pr/567/outside-in-tdd/replace-a-fixture-provided-discount-with-production-behavior--skilled--run0",
-      "name": "outside-in-tdd / Replace a fixture-provided discount with production behavior (skilled, run 0)",
-      "url": "sessions/pr/567/outside-in-tdd/replace-a-fixture-provided-discount-with-production-behavior--skilled--run0.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "skilled",
-        "replace-a-fixture-provided-discount-with-production-behavior",
-        "pr-567"
-      ],
-      "mtime": 1794229570456.9182
-    },
-    {
-      "id": "pr/567/outside-in-tdd/replace-a-fixture-provided-discount-with-production-behavior--skilled--run1",
-      "name": "outside-in-tdd / Replace a fixture-provided discount with production behavior (skilled, run 1)",
-      "url": "sessions/pr/567/outside-in-tdd/replace-a-fixture-provided-discount-with-production-behavior--skilled--run1.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "skilled",
-        "replace-a-fixture-provided-discount-with-production-behavior",
-        "pr-567"
-      ],
-      "mtime": 1794229570460.9182
-    },
-    {
-      "id": "pr/567/outside-in-tdd/replace-a-fixture-provided-discount-with-production-behavior--skilled--run2",
-      "name": "outside-in-tdd / Replace a fixture-provided discount with production behavior (skilled, run 2)",
-      "url": "sessions/pr/567/outside-in-tdd/replace-a-fixture-provided-discount-with-production-behavior--skilled--run2.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "skilled",
-        "replace-a-fixture-provided-discount-with-production-behavior",
-        "pr-567"
-      ],
-      "mtime": 1794229570460.9182
-    },
-    {
-      "id": "pr/567/outside-in-tdd/replace-a-fixture-provided-discount-with-production-behavior--skilled--run3",
-      "name": "outside-in-tdd / Replace a fixture-provided discount with production behavior (skilled, run 3)",
-      "url": "sessions/pr/567/outside-in-tdd/replace-a-fixture-provided-discount-with-production-behavior--skilled--run3.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "skilled",
-        "replace-a-fixture-provided-discount-with-production-behavior",
-        "pr-567"
-      ],
-      "mtime": 1794229570460.9182
-    },
-    {
-      "id": "pr/567/outside-in-tdd/tidy-a-green-test-class-without-inventing-new-work--skilled--run0",
-      "name": "outside-in-tdd / Tidy a green test class without inventing new work (skilled, run 0)",
-      "url": "sessions/pr/567/outside-in-tdd/tidy-a-green-test-class-without-inventing-new-work--skilled--run0.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "skilled",
-        "tidy-a-green-test-class-without-inventing-new-work",
-        "pr-567"
-      ],
-      "mtime": 1794229570460.9182
-    },
-    {
-      "id": "pr/567/outside-in-tdd/tidy-a-green-test-class-without-inventing-new-work--skilled--run1",
-      "name": "outside-in-tdd / Tidy a green test class without inventing new work (skilled, run 1)",
-      "url": "sessions/pr/567/outside-in-tdd/tidy-a-green-test-class-without-inventing-new-work--skilled--run1.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "skilled",
-        "tidy-a-green-test-class-without-inventing-new-work",
-        "pr-567"
-      ],
-      "mtime": 1794229570459.9182
-    },
-    {
-      "id": "pr/567/outside-in-tdd/tidy-a-green-test-class-without-inventing-new-work--skilled--run2",
-      "name": "outside-in-tdd / Tidy a green test class without inventing new work (skilled, run 2)",
-      "url": "sessions/pr/567/outside-in-tdd/tidy-a-green-test-class-without-inventing-new-work--skilled--run2.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "skilled",
-        "tidy-a-green-test-class-without-inventing-new-work",
-        "pr-567"
-      ],
-      "mtime": 1794229570460.9182
-    },
-    {
-      "id": "pr/567/outside-in-tdd/tidy-a-green-test-class-without-inventing-new-work--skilled--run3",
-      "name": "outside-in-tdd / Tidy a green test class without inventing new work (skilled, run 3)",
-      "url": "sessions/pr/567/outside-in-tdd/tidy-a-green-test-class-without-inventing-new-work--skilled--run3.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "skilled",
-        "tidy-a-green-test-class-without-inventing-new-work",
-        "pr-567"
-      ],
-      "mtime": 1794229570460.9182
-    },
-    {
-      "id": "pr/567/outside-in-tdd/turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome--skilled--run0",
-      "name": "outside-in-tdd / Turn an untrustworthy failure into evidence of the approved outcome (skilled, run 0)",
-      "url": "sessions/pr/567/outside-in-tdd/turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome--skilled--run0.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "skilled",
-        "turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome",
-        "pr-567"
-      ],
-      "mtime": 1794229570458.9182
-    },
-    {
-      "id": "pr/567/outside-in-tdd/turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome--skilled--run1",
-      "name": "outside-in-tdd / Turn an untrustworthy failure into evidence of the approved outcome (skilled, run 1)",
-      "url": "sessions/pr/567/outside-in-tdd/turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome--skilled--run1.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "skilled",
-        "turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome",
-        "pr-567"
-      ],
-      "mtime": 1794229570460.9182
-    },
-    {
-      "id": "pr/567/outside-in-tdd/turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome--skilled--run2",
-      "name": "outside-in-tdd / Turn an untrustworthy failure into evidence of the approved outcome (skilled, run 2)",
-      "url": "sessions/pr/567/outside-in-tdd/turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome--skilled--run2.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "skilled",
-        "turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome",
-        "pr-567"
-      ],
-      "mtime": 1794229570460.9182
-    },
-    {
-      "id": "pr/567/outside-in-tdd/turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome--skilled--run3",
-      "name": "outside-in-tdd / Turn an untrustworthy failure into evidence of the approved outcome (skilled, run 3)",
-      "url": "sessions/pr/567/outside-in-tdd/turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome--skilled--run3.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "skilled",
-        "turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome",
-        "pr-567"
-      ],
-      "mtime": 1794229570458.9182
-    },
-    {
-      "id": "pr/567/quality-gates-javascript/decide-whether-the-recorded-result-is-enough-for-delivery--baseline--run0",
-      "name": "quality-gates-javascript / Decide whether the recorded result is enough for delivery (baseline, run 0)",
-      "url": "sessions/pr/567/quality-gates-javascript/decide-whether-the-recorded-result-is-enough-for-delivery--baseline--run0.jsonl",
-      "tags": [
-        "pr",
-        "quality-gates-javascript",
-        "baseline",
-        "decide-whether-the-recorded-result-is-enough-for-delivery",
-        "pr-567"
-      ],
-      "mtime": 1794229570508.9182
-    },
-    {
-      "id": "pr/567/quality-gates-javascript/decide-whether-the-recorded-result-is-enough-for-delivery--baseline--run1",
-      "name": "quality-gates-javascript / Decide whether the recorded result is enough for delivery (baseline, run 1)",
-      "url": "sessions/pr/567/quality-gates-javascript/decide-whether-the-recorded-result-is-enough-for-delivery--baseline--run1.jsonl",
-      "tags": [
-        "pr",
-        "quality-gates-javascript",
-        "baseline",
-        "decide-whether-the-recorded-result-is-enough-for-delivery",
-        "pr-567"
-      ],
-      "mtime": 1794229570510.9182
-    },
-    {
-      "id": "pr/567/quality-gates-javascript/decide-whether-the-recorded-result-is-enough-for-delivery--baseline--run2",
-      "name": "quality-gates-javascript / Decide whether the recorded result is enough for delivery (baseline, run 2)",
-      "url": "sessions/pr/567/quality-gates-javascript/decide-whether-the-recorded-result-is-enough-for-delivery--baseline--run2.jsonl",
-      "tags": [
-        "pr",
-        "quality-gates-javascript",
-        "baseline",
-        "decide-whether-the-recorded-result-is-enough-for-delivery",
-        "pr-567"
-      ],
-      "mtime": 1794229570510.9182
-    },
-    {
-      "id": "pr/567/quality-gates-javascript/decide-whether-the-recorded-result-is-enough-for-delivery--baseline--run3",
-      "name": "quality-gates-javascript / Decide whether the recorded result is enough for delivery (baseline, run 3)",
-      "url": "sessions/pr/567/quality-gates-javascript/decide-whether-the-recorded-result-is-enough-for-delivery--baseline--run3.jsonl",
-      "tags": [
-        "pr",
-        "quality-gates-javascript",
-        "baseline",
-        "decide-whether-the-recorded-result-is-enough-for-delivery",
-        "pr-567"
-      ],
-      "mtime": 1794229570510.9182
-    },
-    {
-      "id": "pr/567/quality-gates-javascript/decide-whether-the-recorded-result-is-enough-for-delivery--baseline--run4",
-      "name": "quality-gates-javascript / Decide whether the recorded result is enough for delivery (baseline, run 4)",
-      "url": "sessions/pr/567/quality-gates-javascript/decide-whether-the-recorded-result-is-enough-for-delivery--baseline--run4.jsonl",
-      "tags": [
-        "pr",
-        "quality-gates-javascript",
-        "baseline",
-        "decide-whether-the-recorded-result-is-enough-for-delivery",
-        "pr-567"
-      ],
-      "mtime": 1794229570510.9182
-    },
-    {
-      "id": "pr/567/quality-gates-javascript/explain-the-member-pricing-assertion-without-starting-verification--baseline--run0",
-      "name": "quality-gates-javascript / Explain the member-pricing assertion without starting verification (baseline, run 0)",
-      "url": "sessions/pr/567/quality-gates-javascript/explain-the-member-pricing-assertion-without-starting-verification--baseline--run0.jsonl",
-      "tags": [
-        "pr",
-        "quality-gates-javascript",
-        "baseline",
-        "explain-the-member-pricing-assertion-without-starting-verification",
-        "pr-567"
-      ],
-      "mtime": 1794229570512.9182
-    },
-    {
-      "id": "pr/567/quality-gates-javascript/explain-the-member-pricing-assertion-without-starting-verification--baseline--run1",
-      "name": "quality-gates-javascript / Explain the member-pricing assertion without starting verification (baseline, run 1)",
-      "url": "sessions/pr/567/quality-gates-javascript/explain-the-member-pricing-assertion-without-starting-verification--baseline--run1.jsonl",
-      "tags": [
-        "pr",
-        "quality-gates-javascript",
-        "baseline",
-        "explain-the-member-pricing-assertion-without-starting-verification",
-        "pr-567"
-      ],
-      "mtime": 1794229570511.9182
-    },
-    {
-      "id": "pr/567/quality-gates-javascript/explain-the-member-pricing-assertion-without-starting-verification--baseline--run2",
-      "name": "quality-gates-javascript / Explain the member-pricing assertion without starting verification (baseline, run 2)",
-      "url": "sessions/pr/567/quality-gates-javascript/explain-the-member-pricing-assertion-without-starting-verification--baseline--run2.jsonl",
-      "tags": [
-        "pr",
-        "quality-gates-javascript",
-        "baseline",
-        "explain-the-member-pricing-assertion-without-starting-verification",
-        "pr-567"
-      ],
-      "mtime": 1794229570511.9182
-    },
-    {
-      "id": "pr/567/quality-gates-javascript/explain-the-member-pricing-assertion-without-starting-verification--baseline--run3",
-      "name": "quality-gates-javascript / Explain the member-pricing assertion without starting verification (baseline, run 3)",
-      "url": "sessions/pr/567/quality-gates-javascript/explain-the-member-pricing-assertion-without-starting-verification--baseline--run3.jsonl",
-      "tags": [
-        "pr",
-        "quality-gates-javascript",
-        "baseline",
-        "explain-the-member-pricing-assertion-without-starting-verification",
-        "pr-567"
-      ],
-      "mtime": 1794229570510.9182
-    },
-    {
-      "id": "pr/567/quality-gates-javascript/explain-the-member-pricing-assertion-without-starting-verification--baseline--run4",
-      "name": "quality-gates-javascript / Explain the member-pricing assertion without starting verification (baseline, run 4)",
-      "url": "sessions/pr/567/quality-gates-javascript/explain-the-member-pricing-assertion-without-starting-verification--baseline--run4.jsonl",
-      "tags": [
-        "pr",
-        "quality-gates-javascript",
-        "baseline",
-        "explain-the-member-pricing-assertion-without-starting-verification",
-        "pr-567"
-      ],
-      "mtime": 1794229570510.9182
-    },
-    {
-      "id": "pr/567/quality-gates-javascript/run-the-existing-package-tests-without-expanding-the-work--baseline--run0",
-      "name": "quality-gates-javascript / Run the existing package tests without expanding the work (baseline, run 0)",
-      "url": "sessions/pr/567/quality-gates-javascript/run-the-existing-package-tests-without-expanding-the-work--baseline--run0.jsonl",
-      "tags": [
-        "pr",
-        "quality-gates-javascript",
-        "baseline",
-        "run-the-existing-package-tests-without-expanding-the-work",
-        "pr-567"
-      ],
-      "mtime": 1794229570508.9182
-    },
-    {
-      "id": "pr/567/quality-gates-javascript/run-the-existing-package-tests-without-expanding-the-work--baseline--run1",
-      "name": "quality-gates-javascript / Run the existing package tests without expanding the work (baseline, run 1)",
-      "url": "sessions/pr/567/quality-gates-javascript/run-the-existing-package-tests-without-expanding-the-work--baseline--run1.jsonl",
-      "tags": [
-        "pr",
-        "quality-gates-javascript",
-        "baseline",
-        "run-the-existing-package-tests-without-expanding-the-work",
-        "pr-567"
-      ],
-      "mtime": 1794229570510.9182
-    },
-    {
-      "id": "pr/567/quality-gates-javascript/run-the-existing-package-tests-without-expanding-the-work--baseline--run2",
-      "name": "quality-gates-javascript / Run the existing package tests without expanding the work (baseline, run 2)",
-      "url": "sessions/pr/567/quality-gates-javascript/run-the-existing-package-tests-without-expanding-the-work--baseline--run2.jsonl",
-      "tags": [
-        "pr",
-        "quality-gates-javascript",
-        "baseline",
-        "run-the-existing-package-tests-without-expanding-the-work",
-        "pr-567"
-      ],
-      "mtime": 1794229570510.9182
-    },
-    {
-      "id": "pr/567/quality-gates-javascript/run-the-existing-package-tests-without-expanding-the-work--baseline--run3",
-      "name": "quality-gates-javascript / Run the existing package tests without expanding the work (baseline, run 3)",
-      "url": "sessions/pr/567/quality-gates-javascript/run-the-existing-package-tests-without-expanding-the-work--baseline--run3.jsonl",
-      "tags": [
-        "pr",
-        "quality-gates-javascript",
-        "baseline",
-        "run-the-existing-package-tests-without-expanding-the-work",
-        "pr-567"
-      ],
-      "mtime": 1794229570510.9182
-    },
-    {
-      "id": "pr/567/quality-gates-javascript/run-the-existing-package-tests-without-expanding-the-work--baseline--run4",
-      "name": "quality-gates-javascript / Run the existing package tests without expanding the work (baseline, run 4)",
-      "url": "sessions/pr/567/quality-gates-javascript/run-the-existing-package-tests-without-expanding-the-work--baseline--run4.jsonl",
-      "tags": [
-        "pr",
-        "quality-gates-javascript",
-        "baseline",
-        "run-the-existing-package-tests-without-expanding-the-work",
-        "pr-567"
-      ],
-      "mtime": 1794229570510.9182
-    },
-    {
-      "id": "pr/567/quality-gates-javascript/decide-whether-the-recorded-result-is-enough-for-delivery--skilled--run0",
-      "name": "quality-gates-javascript / Decide whether the recorded result is enough for delivery (skilled, run 0)",
-      "url": "sessions/pr/567/quality-gates-javascript/decide-whether-the-recorded-result-is-enough-for-delivery--skilled--run0.jsonl",
-      "tags": [
-        "pr",
-        "quality-gates-javascript",
-        "skilled",
-        "decide-whether-the-recorded-result-is-enough-for-delivery",
-        "pr-567"
-      ],
-      "mtime": 1794229570505.0625
-    },
-    {
-      "id": "pr/567/quality-gates-javascript/decide-whether-the-recorded-result-is-enough-for-delivery--skilled--run1",
-      "name": "quality-gates-javascript / Decide whether the recorded result is enough for delivery (skilled, run 1)",
-      "url": "sessions/pr/567/quality-gates-javascript/decide-whether-the-recorded-result-is-enough-for-delivery--skilled--run1.jsonl",
-      "tags": [
-        "pr",
-        "quality-gates-javascript",
-        "skilled",
-        "decide-whether-the-recorded-result-is-enough-for-delivery",
-        "pr-567"
-      ],
-      "mtime": 1794229570509.9182
-    },
-    {
-      "id": "pr/567/quality-gates-javascript/decide-whether-the-recorded-result-is-enough-for-delivery--skilled--run2",
-      "name": "quality-gates-javascript / Decide whether the recorded result is enough for delivery (skilled, run 2)",
-      "url": "sessions/pr/567/quality-gates-javascript/decide-whether-the-recorded-result-is-enough-for-delivery--skilled--run2.jsonl",
-      "tags": [
-        "pr",
-        "quality-gates-javascript",
-        "skilled",
-        "decide-whether-the-recorded-result-is-enough-for-delivery",
-        "pr-567"
-      ],
-      "mtime": 1794229570508.9182
-    },
-    {
-      "id": "pr/567/quality-gates-javascript/decide-whether-the-recorded-result-is-enough-for-delivery--skilled--run3",
-      "name": "quality-gates-javascript / Decide whether the recorded result is enough for delivery (skilled, run 3)",
-      "url": "sessions/pr/567/quality-gates-javascript/decide-whether-the-recorded-result-is-enough-for-delivery--skilled--run3.jsonl",
-      "tags": [
-        "pr",
-        "quality-gates-javascript",
-        "skilled",
-        "decide-whether-the-recorded-result-is-enough-for-delivery",
-        "pr-567"
-      ],
-      "mtime": 1794229570508.9182
-    },
-    {
-      "id": "pr/567/quality-gates-javascript/decide-whether-the-recorded-result-is-enough-for-delivery--skilled--run4",
-      "name": "quality-gates-javascript / Decide whether the recorded result is enough for delivery (skilled, run 4)",
-      "url": "sessions/pr/567/quality-gates-javascript/decide-whether-the-recorded-result-is-enough-for-delivery--skilled--run4.jsonl",
-      "tags": [
-        "pr",
-        "quality-gates-javascript",
-        "skilled",
-        "decide-whether-the-recorded-result-is-enough-for-delivery",
-        "pr-567"
-      ],
-      "mtime": 1794229570508.9182
-    },
-    {
-      "id": "pr/567/quality-gates-javascript/explain-the-member-pricing-assertion-without-starting-verification--skilled--run0",
-      "name": "quality-gates-javascript / Explain the member-pricing assertion without starting verification (skilled, run 0)",
-      "url": "sessions/pr/567/quality-gates-javascript/explain-the-member-pricing-assertion-without-starting-verification--skilled--run0.jsonl",
-      "tags": [
-        "pr",
-        "quality-gates-javascript",
-        "skilled",
-        "explain-the-member-pricing-assertion-without-starting-verification",
-        "pr-567"
-      ],
-      "mtime": 1794229570508.9182
-    },
-    {
-      "id": "pr/567/quality-gates-javascript/explain-the-member-pricing-assertion-without-starting-verification--skilled--run1",
-      "name": "quality-gates-javascript / Explain the member-pricing assertion without starting verification (skilled, run 1)",
-      "url": "sessions/pr/567/quality-gates-javascript/explain-the-member-pricing-assertion-without-starting-verification--skilled--run1.jsonl",
-      "tags": [
-        "pr",
-        "quality-gates-javascript",
-        "skilled",
-        "explain-the-member-pricing-assertion-without-starting-verification",
-        "pr-567"
-      ],
-      "mtime": 1794229570510.9182
-    },
-    {
-      "id": "pr/567/quality-gates-javascript/explain-the-member-pricing-assertion-without-starting-verification--skilled--run2",
-      "name": "quality-gates-javascript / Explain the member-pricing assertion without starting verification (skilled, run 2)",
-      "url": "sessions/pr/567/quality-gates-javascript/explain-the-member-pricing-assertion-without-starting-verification--skilled--run2.jsonl",
-      "tags": [
-        "pr",
-        "quality-gates-javascript",
-        "skilled",
-        "explain-the-member-pricing-assertion-without-starting-verification",
-        "pr-567"
-      ],
-      "mtime": 1794229570510.9182
-    },
-    {
-      "id": "pr/567/quality-gates-javascript/explain-the-member-pricing-assertion-without-starting-verification--skilled--run3",
-      "name": "quality-gates-javascript / Explain the member-pricing assertion without starting verification (skilled, run 3)",
-      "url": "sessions/pr/567/quality-gates-javascript/explain-the-member-pricing-assertion-without-starting-verification--skilled--run3.jsonl",
-      "tags": [
-        "pr",
-        "quality-gates-javascript",
-        "skilled",
-        "explain-the-member-pricing-assertion-without-starting-verification",
-        "pr-567"
-      ],
-      "mtime": 1794229570510.9182
-    },
-    {
-      "id": "pr/567/quality-gates-javascript/explain-the-member-pricing-assertion-without-starting-verification--skilled--run4",
-      "name": "quality-gates-javascript / Explain the member-pricing assertion without starting verification (skilled, run 4)",
-      "url": "sessions/pr/567/quality-gates-javascript/explain-the-member-pricing-assertion-without-starting-verification--skilled--run4.jsonl",
-      "tags": [
-        "pr",
-        "quality-gates-javascript",
-        "skilled",
-        "explain-the-member-pricing-assertion-without-starting-verification",
-        "pr-567"
-      ],
-      "mtime": 1794229570510.9182
-    },
-    {
-      "id": "pr/567/quality-gates-javascript/run-the-existing-package-tests-without-expanding-the-work--skilled--run0",
-      "name": "quality-gates-javascript / Run the existing package tests without expanding the work (skilled, run 0)",
-      "url": "sessions/pr/567/quality-gates-javascript/run-the-existing-package-tests-without-expanding-the-work--skilled--run0.jsonl",
-      "tags": [
-        "pr",
-        "quality-gates-javascript",
-        "skilled",
-        "run-the-existing-package-tests-without-expanding-the-work",
-        "pr-567"
-      ],
-      "mtime": 1794229570509.9182
-    },
-    {
-      "id": "pr/567/quality-gates-javascript/run-the-existing-package-tests-without-expanding-the-work--skilled--run1",
-      "name": "quality-gates-javascript / Run the existing package tests without expanding the work (skilled, run 1)",
-      "url": "sessions/pr/567/quality-gates-javascript/run-the-existing-package-tests-without-expanding-the-work--skilled--run1.jsonl",
-      "tags": [
-        "pr",
-        "quality-gates-javascript",
-        "skilled",
-        "run-the-existing-package-tests-without-expanding-the-work",
-        "pr-567"
-      ],
-      "mtime": 1794229570510.9182
-    },
-    {
-      "id": "pr/567/quality-gates-javascript/run-the-existing-package-tests-without-expanding-the-work--skilled--run2",
-      "name": "quality-gates-javascript / Run the existing package tests without expanding the work (skilled, run 2)",
-      "url": "sessions/pr/567/quality-gates-javascript/run-the-existing-package-tests-without-expanding-the-work--skilled--run2.jsonl",
-      "tags": [
-        "pr",
-        "quality-gates-javascript",
-        "skilled",
-        "run-the-existing-package-tests-without-expanding-the-work",
-        "pr-567"
-      ],
-      "mtime": 1794229570510.9182
-    },
-    {
-      "id": "pr/567/quality-gates-javascript/run-the-existing-package-tests-without-expanding-the-work--skilled--run3",
-      "name": "quality-gates-javascript / Run the existing package tests without expanding the work (skilled, run 3)",
-      "url": "sessions/pr/567/quality-gates-javascript/run-the-existing-package-tests-without-expanding-the-work--skilled--run3.jsonl",
-      "tags": [
-        "pr",
-        "quality-gates-javascript",
-        "skilled",
-        "run-the-existing-package-tests-without-expanding-the-work",
-        "pr-567"
-      ],
-      "mtime": 1794229570510.9182
-    },
-    {
-      "id": "pr/567/quality-gates-javascript/run-the-existing-package-tests-without-expanding-the-work--skilled--run4",
-      "name": "quality-gates-javascript / Run the existing package tests without expanding the work (skilled, run 4)",
-      "url": "sessions/pr/567/quality-gates-javascript/run-the-existing-package-tests-without-expanding-the-work--skilled--run4.jsonl",
-      "tags": [
-        "pr",
-        "quality-gates-javascript",
-        "skilled",
-        "run-the-existing-package-tests-without-expanding-the-work",
-        "pr-567"
-      ],
-      "mtime": 1794229570510.9182
-    },
-    {
-      "id": "pr/567/quality-gates-python/python-project-bring-the-business-code-to-the-mutation-bar--baseline--run0",
-      "name": "quality-gates-python / Python project: bring the business code to the mutation bar (baseline, run 0)",
-      "url": "sessions/pr/567/quality-gates-python/python-project-bring-the-business-code-to-the-mutation-bar--baseline--run0.jsonl",
-      "tags": [
-        "pr",
-        "quality-gates-python",
-        "baseline",
-        "python-project-bring-the-business-code-to-the-mutation-bar",
-        "pr-567"
-      ],
-      "mtime": 1794229570513.9182
-    },
-    {
-      "id": "pr/567/quality-gates-python/python-project-bring-the-business-code-to-the-mutation-bar--baseline--run1",
-      "name": "quality-gates-python / Python project: bring the business code to the mutation bar (baseline, run 1)",
-      "url": "sessions/pr/567/quality-gates-python/python-project-bring-the-business-code-to-the-mutation-bar--baseline--run1.jsonl",
-      "tags": [
-        "pr",
-        "quality-gates-python",
-        "baseline",
-        "python-project-bring-the-business-code-to-the-mutation-bar",
-        "pr-567"
-      ],
-      "mtime": 1794229570512.9182
-    },
-    {
-      "id": "pr/567/quality-gates-python/python-project-bring-the-business-code-to-the-mutation-bar--baseline--run2",
-      "name": "quality-gates-python / Python project: bring the business code to the mutation bar (baseline, run 2)",
-      "url": "sessions/pr/567/quality-gates-python/python-project-bring-the-business-code-to-the-mutation-bar--baseline--run2.jsonl",
-      "tags": [
-        "pr",
-        "quality-gates-python",
-        "baseline",
-        "python-project-bring-the-business-code-to-the-mutation-bar",
-        "pr-567"
-      ],
-      "mtime": 1794229570511.9182
-    },
-    {
-      "id": "pr/567/quality-gates-python/python-project-bring-the-business-code-to-the-mutation-bar--baseline--run3",
-      "name": "quality-gates-python / Python project: bring the business code to the mutation bar (baseline, run 3)",
-      "url": "sessions/pr/567/quality-gates-python/python-project-bring-the-business-code-to-the-mutation-bar--baseline--run3.jsonl",
-      "tags": [
-        "pr",
-        "quality-gates-python",
-        "baseline",
-        "python-project-bring-the-business-code-to-the-mutation-bar",
-        "pr-567"
-      ],
-      "mtime": 1794229570509.9182
-    },
-    {
-      "id": "pr/567/quality-gates-python/python-project-bring-the-business-code-to-the-mutation-bar--baseline--run4",
-      "name": "quality-gates-python / Python project: bring the business code to the mutation bar (baseline, run 4)",
-      "url": "sessions/pr/567/quality-gates-python/python-project-bring-the-business-code-to-the-mutation-bar--baseline--run4.jsonl",
-      "tags": [
-        "pr",
-        "quality-gates-python",
-        "baseline",
-        "python-project-bring-the-business-code-to-the-mutation-bar",
-        "pr-567"
-      ],
-      "mtime": 1794229570511.9182
-    },
-    {
-      "id": "pr/567/quality-gates-python/python-project-does-the-business-code-meet-the-mutation-bar--baseline--run0",
-      "name": "quality-gates-python / Python project: does the business code meet the mutation bar (baseline, run 0)",
-      "url": "sessions/pr/567/quality-gates-python/python-project-does-the-business-code-meet-the-mutation-bar--baseline--run0.jsonl",
-      "tags": [
-        "pr",
-        "quality-gates-python",
-        "baseline",
-        "python-project-does-the-business-code-meet-the-mutation-bar",
-        "pr-567"
-      ],
-      "mtime": 1794229570503.9927
-    },
-    {
-      "id": "pr/567/quality-gates-python/python-project-does-the-business-code-meet-the-mutation-bar--baseline--run1",
-      "name": "quality-gates-python / Python project: does the business code meet the mutation bar (baseline, run 1)",
-      "url": "sessions/pr/567/quality-gates-python/python-project-does-the-business-code-meet-the-mutation-bar--baseline--run1.jsonl",
-      "tags": [
-        "pr",
-        "quality-gates-python",
-        "baseline",
-        "python-project-does-the-business-code-meet-the-mutation-bar",
-        "pr-567"
-      ],
-      "mtime": 1794229570505.9182
-    },
-    {
-      "id": "pr/567/quality-gates-python/python-project-does-the-business-code-meet-the-mutation-bar--baseline--run2",
-      "name": "quality-gates-python / Python project: does the business code meet the mutation bar (baseline, run 2)",
-      "url": "sessions/pr/567/quality-gates-python/python-project-does-the-business-code-meet-the-mutation-bar--baseline--run2.jsonl",
-      "tags": [
-        "pr",
-        "quality-gates-python",
-        "baseline",
-        "python-project-does-the-business-code-meet-the-mutation-bar",
-        "pr-567"
-      ],
-      "mtime": 1794229570509.9182
-    },
-    {
-      "id": "pr/567/quality-gates-python/python-project-does-the-business-code-meet-the-mutation-bar--baseline--run3",
-      "name": "quality-gates-python / Python project: does the business code meet the mutation bar (baseline, run 3)",
-      "url": "sessions/pr/567/quality-gates-python/python-project-does-the-business-code-meet-the-mutation-bar--baseline--run3.jsonl",
-      "tags": [
-        "pr",
-        "quality-gates-python",
-        "baseline",
-        "python-project-does-the-business-code-meet-the-mutation-bar",
-        "pr-567"
-      ],
-      "mtime": 1794229570507.9182
-    },
-    {
-      "id": "pr/567/quality-gates-python/python-project-does-the-business-code-meet-the-mutation-bar--baseline--run4",
-      "name": "quality-gates-python / Python project: does the business code meet the mutation bar (baseline, run 4)",
-      "url": "sessions/pr/567/quality-gates-python/python-project-does-the-business-code-meet-the-mutation-bar--baseline--run4.jsonl",
-      "tags": [
-        "pr",
-        "quality-gates-python",
-        "baseline",
-        "python-project-does-the-business-code-meet-the-mutation-bar",
-        "pr-567"
-      ],
-      "mtime": 1794229570507.9182
-    },
-    {
-      "id": "pr/567/quality-gates-python/python-project-mutation-testing-on-a-red-suite--baseline--run0",
-      "name": "quality-gates-python / Python project: mutation testing on a red suite (baseline, run 0)",
-      "url": "sessions/pr/567/quality-gates-python/python-project-mutation-testing-on-a-red-suite--baseline--run0.jsonl",
-      "tags": [
-        "pr",
-        "quality-gates-python",
-        "baseline",
-        "python-project-mutation-testing-on-a-red-suite",
-        "pr-567"
-      ],
-      "mtime": 1794229570509.9182
-    },
-    {
-      "id": "pr/567/quality-gates-python/python-project-mutation-testing-on-a-red-suite--baseline--run1",
-      "name": "quality-gates-python / Python project: mutation testing on a red suite (baseline, run 1)",
-      "url": "sessions/pr/567/quality-gates-python/python-project-mutation-testing-on-a-red-suite--baseline--run1.jsonl",
-      "tags": [
-        "pr",
-        "quality-gates-python",
-        "baseline",
-        "python-project-mutation-testing-on-a-red-suite",
-        "pr-567"
-      ],
-      "mtime": 1794229570509.9182
-    },
-    {
-      "id": "pr/567/quality-gates-python/python-project-mutation-testing-on-a-red-suite--baseline--run2",
-      "name": "quality-gates-python / Python project: mutation testing on a red suite (baseline, run 2)",
-      "url": "sessions/pr/567/quality-gates-python/python-project-mutation-testing-on-a-red-suite--baseline--run2.jsonl",
-      "tags": [
-        "pr",
-        "quality-gates-python",
-        "baseline",
-        "python-project-mutation-testing-on-a-red-suite",
-        "pr-567"
-      ],
-      "mtime": 1794229570509.9182
-    },
-    {
-      "id": "pr/567/quality-gates-python/python-project-mutation-testing-on-a-red-suite--baseline--run3",
-      "name": "quality-gates-python / Python project: mutation testing on a red suite (baseline, run 3)",
-      "url": "sessions/pr/567/quality-gates-python/python-project-mutation-testing-on-a-red-suite--baseline--run3.jsonl",
-      "tags": [
-        "pr",
-        "quality-gates-python",
-        "baseline",
-        "python-project-mutation-testing-on-a-red-suite",
-        "pr-567"
-      ],
-      "mtime": 1794229570505.9182
-    },
-    {
-      "id": "pr/567/quality-gates-python/python-project-mutation-testing-on-a-red-suite--baseline--run4",
-      "name": "quality-gates-python / Python project: mutation testing on a red suite (baseline, run 4)",
-      "url": "sessions/pr/567/quality-gates-python/python-project-mutation-testing-on-a-red-suite--baseline--run4.jsonl",
-      "tags": [
-        "pr",
-        "quality-gates-python",
-        "baseline",
-        "python-project-mutation-testing-on-a-red-suite",
-        "pr-567"
-      ],
-      "mtime": 1794229570509.9182
-    },
-    {
-      "id": "pr/567/quality-gates-python/python-project-bring-the-business-code-to-the-mutation-bar--skilled--run0",
-      "name": "quality-gates-python / Python project: bring the business code to the mutation bar (skilled, run 0)",
-      "url": "sessions/pr/567/quality-gates-python/python-project-bring-the-business-code-to-the-mutation-bar--skilled--run0.jsonl",
-      "tags": [
-        "pr",
-        "quality-gates-python",
-        "skilled",
-        "python-project-bring-the-business-code-to-the-mutation-bar",
-        "pr-567"
-      ],
-      "mtime": 1794229570510.9182
-    },
-    {
-      "id": "pr/567/quality-gates-python/python-project-bring-the-business-code-to-the-mutation-bar--skilled--run1",
-      "name": "quality-gates-python / Python project: bring the business code to the mutation bar (skilled, run 1)",
-      "url": "sessions/pr/567/quality-gates-python/python-project-bring-the-business-code-to-the-mutation-bar--skilled--run1.jsonl",
-      "tags": [
-        "pr",
-        "quality-gates-python",
-        "skilled",
-        "python-project-bring-the-business-code-to-the-mutation-bar",
-        "pr-567"
-      ],
-      "mtime": 1794229570511.9182
-    },
-    {
-      "id": "pr/567/quality-gates-python/python-project-bring-the-business-code-to-the-mutation-bar--skilled--run2",
-      "name": "quality-gates-python / Python project: bring the business code to the mutation bar (skilled, run 2)",
-      "url": "sessions/pr/567/quality-gates-python/python-project-bring-the-business-code-to-the-mutation-bar--skilled--run2.jsonl",
-      "tags": [
-        "pr",
-        "quality-gates-python",
-        "skilled",
-        "python-project-bring-the-business-code-to-the-mutation-bar",
-        "pr-567"
-      ],
-      "mtime": 1794229570511.9182
-    },
-    {
-      "id": "pr/567/quality-gates-python/python-project-bring-the-business-code-to-the-mutation-bar--skilled--run3",
-      "name": "quality-gates-python / Python project: bring the business code to the mutation bar (skilled, run 3)",
-      "url": "sessions/pr/567/quality-gates-python/python-project-bring-the-business-code-to-the-mutation-bar--skilled--run3.jsonl",
-      "tags": [
-        "pr",
-        "quality-gates-python",
-        "skilled",
-        "python-project-bring-the-business-code-to-the-mutation-bar",
-        "pr-567"
-      ],
-      "mtime": 1794229570511.9182
-    },
-    {
-      "id": "pr/567/quality-gates-python/python-project-bring-the-business-code-to-the-mutation-bar--skilled--run4",
-      "name": "quality-gates-python / Python project: bring the business code to the mutation bar (skilled, run 4)",
-      "url": "sessions/pr/567/quality-gates-python/python-project-bring-the-business-code-to-the-mutation-bar--skilled--run4.jsonl",
-      "tags": [
-        "pr",
-        "quality-gates-python",
-        "skilled",
-        "python-project-bring-the-business-code-to-the-mutation-bar",
-        "pr-567"
-      ],
-      "mtime": 1794229570511.9182
-    },
-    {
-      "id": "pr/567/quality-gates-python/python-project-does-the-business-code-meet-the-mutation-bar--skilled--run0",
-      "name": "quality-gates-python / Python project: does the business code meet the mutation bar (skilled, run 0)",
-      "url": "sessions/pr/567/quality-gates-python/python-project-does-the-business-code-meet-the-mutation-bar--skilled--run0.jsonl",
-      "tags": [
-        "pr",
-        "quality-gates-python",
-        "skilled",
-        "python-project-does-the-business-code-meet-the-mutation-bar",
-        "pr-567"
-      ],
-      "mtime": 1794229570510.9182
-    },
-    {
-      "id": "pr/567/quality-gates-python/python-project-does-the-business-code-meet-the-mutation-bar--skilled--run1",
-      "name": "quality-gates-python / Python project: does the business code meet the mutation bar (skilled, run 1)",
-      "url": "sessions/pr/567/quality-gates-python/python-project-does-the-business-code-meet-the-mutation-bar--skilled--run1.jsonl",
-      "tags": [
-        "pr",
-        "quality-gates-python",
-        "skilled",
-        "python-project-does-the-business-code-meet-the-mutation-bar",
-        "pr-567"
-      ],
-      "mtime": 1794229570510.9182
-    },
-    {
-      "id": "pr/567/quality-gates-python/python-project-does-the-business-code-meet-the-mutation-bar--skilled--run2",
-      "name": "quality-gates-python / Python project: does the business code meet the mutation bar (skilled, run 2)",
-      "url": "sessions/pr/567/quality-gates-python/python-project-does-the-business-code-meet-the-mutation-bar--skilled--run2.jsonl",
-      "tags": [
-        "pr",
-        "quality-gates-python",
-        "skilled",
-        "python-project-does-the-business-code-meet-the-mutation-bar",
-        "pr-567"
-      ],
-      "mtime": 1794229570510.9182
-    },
-    {
-      "id": "pr/567/quality-gates-python/python-project-does-the-business-code-meet-the-mutation-bar--skilled--run3",
-      "name": "quality-gates-python / Python project: does the business code meet the mutation bar (skilled, run 3)",
-      "url": "sessions/pr/567/quality-gates-python/python-project-does-the-business-code-meet-the-mutation-bar--skilled--run3.jsonl",
-      "tags": [
-        "pr",
-        "quality-gates-python",
-        "skilled",
-        "python-project-does-the-business-code-meet-the-mutation-bar",
-        "pr-567"
-      ],
-      "mtime": 1794229570510.9182
-    },
-    {
-      "id": "pr/567/quality-gates-python/python-project-does-the-business-code-meet-the-mutation-bar--skilled--run4",
-      "name": "quality-gates-python / Python project: does the business code meet the mutation bar (skilled, run 4)",
-      "url": "sessions/pr/567/quality-gates-python/python-project-does-the-business-code-meet-the-mutation-bar--skilled--run4.jsonl",
-      "tags": [
-        "pr",
-        "quality-gates-python",
-        "skilled",
-        "python-project-does-the-business-code-meet-the-mutation-bar",
-        "pr-567"
-      ],
-      "mtime": 1794229570510.9182
-    },
-    {
-      "id": "pr/567/quality-gates-python/python-project-mutation-testing-on-a-red-suite--skilled--run0",
-      "name": "quality-gates-python / Python project: mutation testing on a red suite (skilled, run 0)",
-      "url": "sessions/pr/567/quality-gates-python/python-project-mutation-testing-on-a-red-suite--skilled--run0.jsonl",
-      "tags": [
-        "pr",
-        "quality-gates-python",
-        "skilled",
-        "python-project-mutation-testing-on-a-red-suite",
-        "pr-567"
-      ],
-      "mtime": 1794229570510.9182
-    },
-    {
-      "id": "pr/567/quality-gates-python/python-project-mutation-testing-on-a-red-suite--skilled--run1",
-      "name": "quality-gates-python / Python project: mutation testing on a red suite (skilled, run 1)",
-      "url": "sessions/pr/567/quality-gates-python/python-project-mutation-testing-on-a-red-suite--skilled--run1.jsonl",
-      "tags": [
-        "pr",
-        "quality-gates-python",
-        "skilled",
-        "python-project-mutation-testing-on-a-red-suite",
-        "pr-567"
-      ],
-      "mtime": 1794229570510.9182
-    },
-    {
-      "id": "pr/567/quality-gates-python/python-project-mutation-testing-on-a-red-suite--skilled--run2",
-      "name": "quality-gates-python / Python project: mutation testing on a red suite (skilled, run 2)",
-      "url": "sessions/pr/567/quality-gates-python/python-project-mutation-testing-on-a-red-suite--skilled--run2.jsonl",
-      "tags": [
-        "pr",
-        "quality-gates-python",
-        "skilled",
-        "python-project-mutation-testing-on-a-red-suite",
-        "pr-567"
-      ],
-      "mtime": 1794229570510.9182
-    },
-    {
-      "id": "pr/567/quality-gates-python/python-project-mutation-testing-on-a-red-suite--skilled--run3",
-      "name": "quality-gates-python / Python project: mutation testing on a red suite (skilled, run 3)",
-      "url": "sessions/pr/567/quality-gates-python/python-project-mutation-testing-on-a-red-suite--skilled--run3.jsonl",
-      "tags": [
-        "pr",
-        "quality-gates-python",
-        "skilled",
-        "python-project-mutation-testing-on-a-red-suite",
-        "pr-567"
-      ],
-      "mtime": 1794229570510.9182
-    },
-    {
-      "id": "pr/567/quality-gates-python/python-project-mutation-testing-on-a-red-suite--skilled--run4",
-      "name": "quality-gates-python / Python project: mutation testing on a red suite (skilled, run 4)",
-      "url": "sessions/pr/567/quality-gates-python/python-project-mutation-testing-on-a-red-suite--skilled--run4.jsonl",
-      "tags": [
-        "pr",
-        "quality-gates-python",
-        "skilled",
-        "python-project-mutation-testing-on-a-red-suite",
-        "pr-567"
-      ],
-      "mtime": 1794229570511.9182
+      "mtime": 1794243263347.9941
     },
     {
       "id": "pr/567/quality-gates-typescript/typescript-front-end-bring-the-application-code-to-the-mutation-bar--baseline--run0",
@@ -7149,7 +4978,7 @@
         "typescript-front-end-bring-the-application-code-to-the-mutation-bar",
         "pr-567"
       ],
-      "mtime": 1794229570545.9182
+      "mtime": 1794243263412.9944
     },
     {
       "id": "pr/567/quality-gates-typescript/typescript-front-end-bring-the-application-code-to-the-mutation-bar--baseline--run1",
@@ -7162,7 +4991,7 @@
         "typescript-front-end-bring-the-application-code-to-the-mutation-bar",
         "pr-567"
       ],
-      "mtime": 1794229570548.0408
+      "mtime": 1794243263424.9944
     },
     {
       "id": "pr/567/quality-gates-typescript/typescript-front-end-bring-the-application-code-to-the-mutation-bar--baseline--run2",
@@ -7175,7 +5004,7 @@
         "typescript-front-end-bring-the-application-code-to-the-mutation-bar",
         "pr-567"
       ],
-      "mtime": 1794229570557.9182
+      "mtime": 1794243263424.9944
     },
     {
       "id": "pr/567/quality-gates-typescript/typescript-front-end-bring-the-application-code-to-the-mutation-bar--baseline--run3",
@@ -7188,7 +5017,7 @@
         "typescript-front-end-bring-the-application-code-to-the-mutation-bar",
         "pr-567"
       ],
-      "mtime": 1794229570557.9182
+      "mtime": 1794243263424.9944
     },
     {
       "id": "pr/567/quality-gates-typescript/typescript-front-end-bring-the-application-code-to-the-mutation-bar--baseline--run4",
@@ -7201,7 +5030,7 @@
         "typescript-front-end-bring-the-application-code-to-the-mutation-bar",
         "pr-567"
       ],
-      "mtime": 1794229570558.9182
+      "mtime": 1794243263424.9944
     },
     {
       "id": "pr/567/quality-gates-typescript/typescript-front-end-does-the-application-code-meet-the-mutation-bar--baseline--run0",
@@ -7214,7 +5043,7 @@
         "typescript-front-end-does-the-application-code-meet-the-mutation-bar",
         "pr-567"
       ],
-      "mtime": 1794229570544.9182
+      "mtime": 1794243263402.9944
     },
     {
       "id": "pr/567/quality-gates-typescript/typescript-front-end-does-the-application-code-meet-the-mutation-bar--baseline--run1",
@@ -7227,7 +5056,7 @@
         "typescript-front-end-does-the-application-code-meet-the-mutation-bar",
         "pr-567"
       ],
-      "mtime": 1794229570546.9182
+      "mtime": 1794243263413.9944
     },
     {
       "id": "pr/567/quality-gates-typescript/typescript-front-end-does-the-application-code-meet-the-mutation-bar--baseline--run2",
@@ -7240,7 +5069,7 @@
         "typescript-front-end-does-the-application-code-meet-the-mutation-bar",
         "pr-567"
       ],
-      "mtime": 1794229570557.9182
+      "mtime": 1794243263424.9944
     },
     {
       "id": "pr/567/quality-gates-typescript/typescript-front-end-does-the-application-code-meet-the-mutation-bar--baseline--run3",
@@ -7253,7 +5082,7 @@
         "typescript-front-end-does-the-application-code-meet-the-mutation-bar",
         "pr-567"
       ],
-      "mtime": 1794229570548.0408
+      "mtime": 1794243263419.9944
     },
     {
       "id": "pr/567/quality-gates-typescript/typescript-front-end-does-the-application-code-meet-the-mutation-bar--baseline--run4",
@@ -7266,7 +5095,7 @@
         "typescript-front-end-does-the-application-code-meet-the-mutation-bar",
         "pr-567"
       ],
-      "mtime": 1794229570548.0408
+      "mtime": 1794243263420.9944
     },
     {
       "id": "pr/567/quality-gates-typescript/typescript-front-end-mutation-testing-on-a-red-suite--baseline--run0",
@@ -7279,7 +5108,7 @@
         "typescript-front-end-mutation-testing-on-a-red-suite",
         "pr-567"
       ],
-      "mtime": 1794229570548.0408
+      "mtime": 1794243263425.9944
     },
     {
       "id": "pr/567/quality-gates-typescript/typescript-front-end-mutation-testing-on-a-red-suite--baseline--run1",
@@ -7292,7 +5121,7 @@
         "typescript-front-end-mutation-testing-on-a-red-suite",
         "pr-567"
       ],
-      "mtime": 1794229570559.9182
+      "mtime": 1794243263420.9944
     },
     {
       "id": "pr/567/quality-gates-typescript/typescript-front-end-mutation-testing-on-a-red-suite--baseline--run2",
@@ -7305,7 +5134,7 @@
         "typescript-front-end-mutation-testing-on-a-red-suite",
         "pr-567"
       ],
-      "mtime": 1794229570558.9182
+      "mtime": 1794243263413.9944
     },
     {
       "id": "pr/567/quality-gates-typescript/typescript-front-end-mutation-testing-on-a-red-suite--baseline--run3",
@@ -7318,7 +5147,7 @@
         "typescript-front-end-mutation-testing-on-a-red-suite",
         "pr-567"
       ],
-      "mtime": 1794229570545.9182
+      "mtime": 1794243263424.9944
     },
     {
       "id": "pr/567/quality-gates-typescript/typescript-front-end-mutation-testing-on-a-red-suite--baseline--run4",
@@ -7331,7 +5160,7 @@
         "typescript-front-end-mutation-testing-on-a-red-suite",
         "pr-567"
       ],
-      "mtime": 1794229570546.9182
+      "mtime": 1794243263424.9944
     },
     {
       "id": "pr/567/quality-gates-typescript/typescript-front-end-bring-the-application-code-to-the-mutation-bar--skilled--run0",
@@ -7344,7 +5173,7 @@
         "typescript-front-end-bring-the-application-code-to-the-mutation-bar",
         "pr-567"
       ],
-      "mtime": 1794229570558.9182
+      "mtime": 1794243263416.9944
     },
     {
       "id": "pr/567/quality-gates-typescript/typescript-front-end-bring-the-application-code-to-the-mutation-bar--skilled--run1",
@@ -7357,7 +5186,7 @@
         "typescript-front-end-bring-the-application-code-to-the-mutation-bar",
         "pr-567"
       ],
-      "mtime": 1794229570558.9182
+      "mtime": 1794243263425.9944
     },
     {
       "id": "pr/567/quality-gates-typescript/typescript-front-end-bring-the-application-code-to-the-mutation-bar--skilled--run2",
@@ -7370,7 +5199,7 @@
         "typescript-front-end-bring-the-application-code-to-the-mutation-bar",
         "pr-567"
       ],
-      "mtime": 1794229570559.9182
+      "mtime": 1794243263425.9944
     },
     {
       "id": "pr/567/quality-gates-typescript/typescript-front-end-bring-the-application-code-to-the-mutation-bar--skilled--run3",
@@ -7383,7 +5212,7 @@
         "typescript-front-end-bring-the-application-code-to-the-mutation-bar",
         "pr-567"
       ],
-      "mtime": 1794229570558.9182
+      "mtime": 1794243263425.9944
     },
     {
       "id": "pr/567/quality-gates-typescript/typescript-front-end-bring-the-application-code-to-the-mutation-bar--skilled--run4",
@@ -7396,7 +5225,7 @@
         "typescript-front-end-bring-the-application-code-to-the-mutation-bar",
         "pr-567"
       ],
-      "mtime": 1794229570558.9182
+      "mtime": 1794243263425.9944
     },
     {
       "id": "pr/567/quality-gates-typescript/typescript-front-end-does-the-application-code-meet-the-mutation-bar--skilled--run0",
@@ -7409,7 +5238,7 @@
         "typescript-front-end-does-the-application-code-meet-the-mutation-bar",
         "pr-567"
       ],
-      "mtime": 1794229570558.9182
+      "mtime": 1794243263417.9944
     },
     {
       "id": "pr/567/quality-gates-typescript/typescript-front-end-does-the-application-code-meet-the-mutation-bar--skilled--run1",
@@ -7422,7 +5251,7 @@
         "typescript-front-end-does-the-application-code-meet-the-mutation-bar",
         "pr-567"
       ],
-      "mtime": 1794229570557.9182
+      "mtime": 1794243263425.9944
     },
     {
       "id": "pr/567/quality-gates-typescript/typescript-front-end-does-the-application-code-meet-the-mutation-bar--skilled--run2",
@@ -7435,7 +5264,7 @@
         "typescript-front-end-does-the-application-code-meet-the-mutation-bar",
         "pr-567"
       ],
-      "mtime": 1794229570558.9182
+      "mtime": 1794243263425.9944
     },
     {
       "id": "pr/567/quality-gates-typescript/typescript-front-end-does-the-application-code-meet-the-mutation-bar--skilled--run3",
@@ -7448,7 +5277,7 @@
         "typescript-front-end-does-the-application-code-meet-the-mutation-bar",
         "pr-567"
       ],
-      "mtime": 1794229570558.9182
+      "mtime": 1794243263426.9944
     },
     {
       "id": "pr/567/quality-gates-typescript/typescript-front-end-does-the-application-code-meet-the-mutation-bar--skilled--run4",
@@ -7461,7 +5290,7 @@
         "typescript-front-end-does-the-application-code-meet-the-mutation-bar",
         "pr-567"
       ],
-      "mtime": 1794229570558.9182
+      "mtime": 1794243263425.9944
     },
     {
       "id": "pr/567/quality-gates-typescript/typescript-front-end-mutation-testing-on-a-red-suite--skilled--run0",
@@ -7474,7 +5303,7 @@
         "typescript-front-end-mutation-testing-on-a-red-suite",
         "pr-567"
       ],
-      "mtime": 1794229570546.9182
+      "mtime": 1794243263424.9944
     },
     {
       "id": "pr/567/quality-gates-typescript/typescript-front-end-mutation-testing-on-a-red-suite--skilled--run1",
@@ -7487,7 +5316,7 @@
         "typescript-front-end-mutation-testing-on-a-red-suite",
         "pr-567"
       ],
-      "mtime": 1794229570558.9182
+      "mtime": 1794243263426.9944
     },
     {
       "id": "pr/567/quality-gates-typescript/typescript-front-end-mutation-testing-on-a-red-suite--skilled--run2",
@@ -7500,7 +5329,7 @@
         "typescript-front-end-mutation-testing-on-a-red-suite",
         "pr-567"
       ],
-      "mtime": 1794229570558.9182
+      "mtime": 1794243263425.9944
     },
     {
       "id": "pr/567/quality-gates-typescript/typescript-front-end-mutation-testing-on-a-red-suite--skilled--run3",
@@ -7513,7 +5342,7 @@
         "typescript-front-end-mutation-testing-on-a-red-suite",
         "pr-567"
       ],
-      "mtime": 1794229570558.9182
+      "mtime": 1794243263426.9944
     },
     {
       "id": "pr/567/quality-gates-typescript/typescript-front-end-mutation-testing-on-a-red-suite--skilled--run4",
@@ -7526,397 +5355,7 @@
         "typescript-front-end-mutation-testing-on-a-red-suite",
         "pr-567"
       ],
-      "mtime": 1794229570558.9182
-    },
-    {
-      "id": "pr/567/skraft-init/claim-no-gate-the-repository-cannot-run--baseline--run0",
-      "name": "skraft-init / Claim no gate the repository cannot run (baseline, run 0)",
-      "url": "sessions/pr/567/skraft-init/claim-no-gate-the-repository-cannot-run--baseline--run0.jsonl",
-      "tags": [
-        "pr",
-        "skraft-init",
-        "baseline",
-        "claim-no-gate-the-repository-cannot-run",
-        "pr-567"
-      ],
-      "mtime": 1794229570548.0408
-    },
-    {
-      "id": "pr/567/skraft-init/claim-no-gate-the-repository-cannot-run--baseline--run1",
-      "name": "skraft-init / Claim no gate the repository cannot run (baseline, run 1)",
-      "url": "sessions/pr/567/skraft-init/claim-no-gate-the-repository-cannot-run--baseline--run1.jsonl",
-      "tags": [
-        "pr",
-        "skraft-init",
-        "baseline",
-        "claim-no-gate-the-repository-cannot-run",
-        "pr-567"
-      ],
-      "mtime": 1794229570558.9182
-    },
-    {
-      "id": "pr/567/skraft-init/claim-no-gate-the-repository-cannot-run--baseline--run2",
-      "name": "skraft-init / Claim no gate the repository cannot run (baseline, run 2)",
-      "url": "sessions/pr/567/skraft-init/claim-no-gate-the-repository-cannot-run--baseline--run2.jsonl",
-      "tags": [
-        "pr",
-        "skraft-init",
-        "baseline",
-        "claim-no-gate-the-repository-cannot-run",
-        "pr-567"
-      ],
-      "mtime": 1794229570558.9182
-    },
-    {
-      "id": "pr/567/skraft-init/claim-no-gate-the-repository-cannot-run--baseline--run3",
-      "name": "skraft-init / Claim no gate the repository cannot run (baseline, run 3)",
-      "url": "sessions/pr/567/skraft-init/claim-no-gate-the-repository-cannot-run--baseline--run3.jsonl",
-      "tags": [
-        "pr",
-        "skraft-init",
-        "baseline",
-        "claim-no-gate-the-repository-cannot-run",
-        "pr-567"
-      ],
-      "mtime": 1794229570558.9182
-    },
-    {
-      "id": "pr/567/skraft-init/claim-no-gate-the-repository-cannot-run--baseline--run4",
-      "name": "skraft-init / Claim no gate the repository cannot run (baseline, run 4)",
-      "url": "sessions/pr/567/skraft-init/claim-no-gate-the-repository-cannot-run--baseline--run4.jsonl",
-      "tags": [
-        "pr",
-        "skraft-init",
-        "baseline",
-        "claim-no-gate-the-repository-cannot-run",
-        "pr-567"
-      ],
-      "mtime": 1794229570557.9182
-    },
-    {
-      "id": "pr/567/skraft-init/invent-no-value-for-a-choice-not-yet-made--baseline--run0",
-      "name": "skraft-init / Invent no value for a choice not yet made (baseline, run 0)",
-      "url": "sessions/pr/567/skraft-init/invent-no-value-for-a-choice-not-yet-made--baseline--run0.jsonl",
-      "tags": [
-        "pr",
-        "skraft-init",
-        "baseline",
-        "invent-no-value-for-a-choice-not-yet-made",
-        "pr-567"
-      ],
-      "mtime": 1794229570546.9182
-    },
-    {
-      "id": "pr/567/skraft-init/invent-no-value-for-a-choice-not-yet-made--baseline--run1",
-      "name": "skraft-init / Invent no value for a choice not yet made (baseline, run 1)",
-      "url": "sessions/pr/567/skraft-init/invent-no-value-for-a-choice-not-yet-made--baseline--run1.jsonl",
-      "tags": [
-        "pr",
-        "skraft-init",
-        "baseline",
-        "invent-no-value-for-a-choice-not-yet-made",
-        "pr-567"
-      ],
-      "mtime": 1794229570557.9182
-    },
-    {
-      "id": "pr/567/skraft-init/invent-no-value-for-a-choice-not-yet-made--baseline--run2",
-      "name": "skraft-init / Invent no value for a choice not yet made (baseline, run 2)",
-      "url": "sessions/pr/567/skraft-init/invent-no-value-for-a-choice-not-yet-made--baseline--run2.jsonl",
-      "tags": [
-        "pr",
-        "skraft-init",
-        "baseline",
-        "invent-no-value-for-a-choice-not-yet-made",
-        "pr-567"
-      ],
-      "mtime": 1794229570557.9182
-    },
-    {
-      "id": "pr/567/skraft-init/invent-no-value-for-a-choice-not-yet-made--baseline--run3",
-      "name": "skraft-init / Invent no value for a choice not yet made (baseline, run 3)",
-      "url": "sessions/pr/567/skraft-init/invent-no-value-for-a-choice-not-yet-made--baseline--run3.jsonl",
-      "tags": [
-        "pr",
-        "skraft-init",
-        "baseline",
-        "invent-no-value-for-a-choice-not-yet-made",
-        "pr-567"
-      ],
-      "mtime": 1794229570557.9182
-    },
-    {
-      "id": "pr/567/skraft-init/invent-no-value-for-a-choice-not-yet-made--baseline--run4",
-      "name": "skraft-init / Invent no value for a choice not yet made (baseline, run 4)",
-      "url": "sessions/pr/567/skraft-init/invent-no-value-for-a-choice-not-yet-made--baseline--run4.jsonl",
-      "tags": [
-        "pr",
-        "skraft-init",
-        "baseline",
-        "invent-no-value-for-a-choice-not-yet-made",
-        "pr-567"
-      ],
-      "mtime": 1794229570558.9182
-    },
-    {
-      "id": "pr/567/skraft-init/record-a-practice-only-where-it-applies--baseline--run0",
-      "name": "skraft-init / Record a practice only where it applies (baseline, run 0)",
-      "url": "sessions/pr/567/skraft-init/record-a-practice-only-where-it-applies--baseline--run0.jsonl",
-      "tags": [
-        "pr",
-        "skraft-init",
-        "baseline",
-        "record-a-practice-only-where-it-applies",
-        "pr-567"
-      ],
-      "mtime": 1794229570560.9182
-    },
-    {
-      "id": "pr/567/skraft-init/record-a-practice-only-where-it-applies--baseline--run1",
-      "name": "skraft-init / Record a practice only where it applies (baseline, run 1)",
-      "url": "sessions/pr/567/skraft-init/record-a-practice-only-where-it-applies--baseline--run1.jsonl",
-      "tags": [
-        "pr",
-        "skraft-init",
-        "baseline",
-        "record-a-practice-only-where-it-applies",
-        "pr-567"
-      ],
-      "mtime": 1794229570558.9182
-    },
-    {
-      "id": "pr/567/skraft-init/record-a-practice-only-where-it-applies--baseline--run2",
-      "name": "skraft-init / Record a practice only where it applies (baseline, run 2)",
-      "url": "sessions/pr/567/skraft-init/record-a-practice-only-where-it-applies--baseline--run2.jsonl",
-      "tags": [
-        "pr",
-        "skraft-init",
-        "baseline",
-        "record-a-practice-only-where-it-applies",
-        "pr-567"
-      ],
-      "mtime": 1794229570559.9182
-    },
-    {
-      "id": "pr/567/skraft-init/record-a-practice-only-where-it-applies--baseline--run3",
-      "name": "skraft-init / Record a practice only where it applies (baseline, run 3)",
-      "url": "sessions/pr/567/skraft-init/record-a-practice-only-where-it-applies--baseline--run3.jsonl",
-      "tags": [
-        "pr",
-        "skraft-init",
-        "baseline",
-        "record-a-practice-only-where-it-applies",
-        "pr-567"
-      ],
-      "mtime": 1794229570559.9182
-    },
-    {
-      "id": "pr/567/skraft-init/record-a-practice-only-where-it-applies--baseline--run4",
-      "name": "skraft-init / Record a practice only where it applies (baseline, run 4)",
-      "url": "sessions/pr/567/skraft-init/record-a-practice-only-where-it-applies--baseline--run4.jsonl",
-      "tags": [
-        "pr",
-        "skraft-init",
-        "baseline",
-        "record-a-practice-only-where-it-applies",
-        "pr-567"
-      ],
-      "mtime": 1794229570559.9182
-    },
-    {
-      "id": "pr/567/skraft-init/claim-no-gate-the-repository-cannot-run--skilled--run0",
-      "name": "skraft-init / Claim no gate the repository cannot run (skilled, run 0)",
-      "url": "sessions/pr/567/skraft-init/claim-no-gate-the-repository-cannot-run--skilled--run0.jsonl",
-      "tags": [
-        "pr",
-        "skraft-init",
-        "skilled",
-        "claim-no-gate-the-repository-cannot-run",
-        "pr-567"
-      ],
-      "mtime": 1794229570580.911
-    },
-    {
-      "id": "pr/567/skraft-init/claim-no-gate-the-repository-cannot-run--skilled--run1",
-      "name": "skraft-init / Claim no gate the repository cannot run (skilled, run 1)",
-      "url": "sessions/pr/567/skraft-init/claim-no-gate-the-repository-cannot-run--skilled--run1.jsonl",
-      "tags": [
-        "pr",
-        "skraft-init",
-        "skilled",
-        "claim-no-gate-the-repository-cannot-run",
-        "pr-567"
-      ],
-      "mtime": 1794229570581.9182
-    },
-    {
-      "id": "pr/567/skraft-init/claim-no-gate-the-repository-cannot-run--skilled--run2",
-      "name": "skraft-init / Claim no gate the repository cannot run (skilled, run 2)",
-      "url": "sessions/pr/567/skraft-init/claim-no-gate-the-repository-cannot-run--skilled--run2.jsonl",
-      "tags": [
-        "pr",
-        "skraft-init",
-        "skilled",
-        "claim-no-gate-the-repository-cannot-run",
-        "pr-567"
-      ],
-      "mtime": 1794229570581.9182
-    },
-    {
-      "id": "pr/567/skraft-init/claim-no-gate-the-repository-cannot-run--skilled--run3",
-      "name": "skraft-init / Claim no gate the repository cannot run (skilled, run 3)",
-      "url": "sessions/pr/567/skraft-init/claim-no-gate-the-repository-cannot-run--skilled--run3.jsonl",
-      "tags": [
-        "pr",
-        "skraft-init",
-        "skilled",
-        "claim-no-gate-the-repository-cannot-run",
-        "pr-567"
-      ],
-      "mtime": 1794229570581.9182
-    },
-    {
-      "id": "pr/567/skraft-init/claim-no-gate-the-repository-cannot-run--skilled--run4",
-      "name": "skraft-init / Claim no gate the repository cannot run (skilled, run 4)",
-      "url": "sessions/pr/567/skraft-init/claim-no-gate-the-repository-cannot-run--skilled--run4.jsonl",
-      "tags": [
-        "pr",
-        "skraft-init",
-        "skilled",
-        "claim-no-gate-the-repository-cannot-run",
-        "pr-567"
-      ],
-      "mtime": 1794229570581.9182
-    },
-    {
-      "id": "pr/567/skraft-init/invent-no-value-for-a-choice-not-yet-made--skilled--run0",
-      "name": "skraft-init / Invent no value for a choice not yet made (skilled, run 0)",
-      "url": "sessions/pr/567/skraft-init/invent-no-value-for-a-choice-not-yet-made--skilled--run0.jsonl",
-      "tags": [
-        "pr",
-        "skraft-init",
-        "skilled",
-        "invent-no-value-for-a-choice-not-yet-made",
-        "pr-567"
-      ],
-      "mtime": 1794229570581.9182
-    },
-    {
-      "id": "pr/567/skraft-init/invent-no-value-for-a-choice-not-yet-made--skilled--run1",
-      "name": "skraft-init / Invent no value for a choice not yet made (skilled, run 1)",
-      "url": "sessions/pr/567/skraft-init/invent-no-value-for-a-choice-not-yet-made--skilled--run1.jsonl",
-      "tags": [
-        "pr",
-        "skraft-init",
-        "skilled",
-        "invent-no-value-for-a-choice-not-yet-made",
-        "pr-567"
-      ],
-      "mtime": 1794229570581.9182
-    },
-    {
-      "id": "pr/567/skraft-init/invent-no-value-for-a-choice-not-yet-made--skilled--run2",
-      "name": "skraft-init / Invent no value for a choice not yet made (skilled, run 2)",
-      "url": "sessions/pr/567/skraft-init/invent-no-value-for-a-choice-not-yet-made--skilled--run2.jsonl",
-      "tags": [
-        "pr",
-        "skraft-init",
-        "skilled",
-        "invent-no-value-for-a-choice-not-yet-made",
-        "pr-567"
-      ],
-      "mtime": 1794229570581.9182
-    },
-    {
-      "id": "pr/567/skraft-init/invent-no-value-for-a-choice-not-yet-made--skilled--run3",
-      "name": "skraft-init / Invent no value for a choice not yet made (skilled, run 3)",
-      "url": "sessions/pr/567/skraft-init/invent-no-value-for-a-choice-not-yet-made--skilled--run3.jsonl",
-      "tags": [
-        "pr",
-        "skraft-init",
-        "skilled",
-        "invent-no-value-for-a-choice-not-yet-made",
-        "pr-567"
-      ],
-      "mtime": 1794229570581.9182
-    },
-    {
-      "id": "pr/567/skraft-init/invent-no-value-for-a-choice-not-yet-made--skilled--run4",
-      "name": "skraft-init / Invent no value for a choice not yet made (skilled, run 4)",
-      "url": "sessions/pr/567/skraft-init/invent-no-value-for-a-choice-not-yet-made--skilled--run4.jsonl",
-      "tags": [
-        "pr",
-        "skraft-init",
-        "skilled",
-        "invent-no-value-for-a-choice-not-yet-made",
-        "pr-567"
-      ],
-      "mtime": 1794229570581.9182
-    },
-    {
-      "id": "pr/567/skraft-init/record-a-practice-only-where-it-applies--skilled--run0",
-      "name": "skraft-init / Record a practice only where it applies (skilled, run 0)",
-      "url": "sessions/pr/567/skraft-init/record-a-practice-only-where-it-applies--skilled--run0.jsonl",
-      "tags": [
-        "pr",
-        "skraft-init",
-        "skilled",
-        "record-a-practice-only-where-it-applies",
-        "pr-567"
-      ],
-      "mtime": 1794229570581.9182
-    },
-    {
-      "id": "pr/567/skraft-init/record-a-practice-only-where-it-applies--skilled--run1",
-      "name": "skraft-init / Record a practice only where it applies (skilled, run 1)",
-      "url": "sessions/pr/567/skraft-init/record-a-practice-only-where-it-applies--skilled--run1.jsonl",
-      "tags": [
-        "pr",
-        "skraft-init",
-        "skilled",
-        "record-a-practice-only-where-it-applies",
-        "pr-567"
-      ],
-      "mtime": 1794229570581.9182
-    },
-    {
-      "id": "pr/567/skraft-init/record-a-practice-only-where-it-applies--skilled--run2",
-      "name": "skraft-init / Record a practice only where it applies (skilled, run 2)",
-      "url": "sessions/pr/567/skraft-init/record-a-practice-only-where-it-applies--skilled--run2.jsonl",
-      "tags": [
-        "pr",
-        "skraft-init",
-        "skilled",
-        "record-a-practice-only-where-it-applies",
-        "pr-567"
-      ],
-      "mtime": 1794229570581.9182
-    },
-    {
-      "id": "pr/567/skraft-init/record-a-practice-only-where-it-applies--skilled--run3",
-      "name": "skraft-init / Record a practice only where it applies (skilled, run 3)",
-      "url": "sessions/pr/567/skraft-init/record-a-practice-only-where-it-applies--skilled--run3.jsonl",
-      "tags": [
-        "pr",
-        "skraft-init",
-        "skilled",
-        "record-a-practice-only-where-it-applies",
-        "pr-567"
-      ],
-      "mtime": 1794229570581.9182
-    },
-    {
-      "id": "pr/567/skraft-init/record-a-practice-only-where-it-applies--skilled--run4",
-      "name": "skraft-init / Record a practice only where it applies (skilled, run 4)",
-      "url": "sessions/pr/567/skraft-init/record-a-practice-only-where-it-applies--skilled--run4.jsonl",
-      "tags": [
-        "pr",
-        "skraft-init",
-        "skilled",
-        "record-a-practice-only-where-it-applies",
-        "pr-567"
-      ],
-      "mtime": 1794229570581.9182
+      "mtime": 1794243263425.9944
     }
   ]
 }
