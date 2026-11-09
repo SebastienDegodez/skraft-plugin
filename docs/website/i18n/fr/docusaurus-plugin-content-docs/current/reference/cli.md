@@ -221,18 +221,27 @@ Les questions, leurs options et leurs refus :
 | `blocked` | `<nœud>-<n>`, le nœud qu'une consigne relance (`design-1`) | une consigne, ou `STOP` | — |
 
 Un blocage ne termine plus le run à lui seul. Quand un agent répond `blocked`, qu'une boucle
-atteint son `max_visits` ou qu'une lentille d'une revue répond `inconclusive`, le moteur pose la
-question `blocked` sur le nœud à relancer : l'agent lui-même, le nœud vers lequel revient l'arête
-plafonnée (l'ingénieur après les gates, l'architecte après une revue ou un ADR rejeté), ou la
-revue. Son texte porte ce que le moteur a vérifié, ce que l'étape bloquée a laissé (la raison
-de l'agent, les échecs des gates) et le fichier qui garde les mots de l'agent :
+atteint son `max_visits`, qu'une étape de gates échoue de la même façon 3 fois depuis son dernier
+passage réussi ou qu'une lentille d'une revue répond `inconclusive`, le moteur pose la question
+`blocked` sur le nœud à relancer : l'agent lui-même, le nœud vers lequel revient l'arête plafonnée
+ou l'arête `FAIL` des gates (l'ingénieur après les gates, l'architecte après une revue ou un ADR
+rejeté), ou la revue. Son texte porte ce que le moteur a vérifié, ce que l'étape bloquée a laissé
+(la raison de l'agent, les échecs des gates), le fichier qui garde les mots de l'agent et
+l'emplacement du rapport du run :
 
 ```
 design is blocked: solution-architect says it cannot go on; its reason is in <dossier de suivi>/results/design-1-1.json.
 Left by design (1):
 - which payment provider?
  An instruction runs design again on a new pass with what is left above and the instruction; STOP ends the run.
+The run so far (commits, refusals, incidents): <dossier de suivi>/run-report.md
 design_review is blocked: a lens answered inconclusive; the verdict is in <dossier de suivi>/reviews/design_review-1/verdict.yaml. An instruction runs design_review again on a new pass with it; STOP ends the run.
+The run so far (commits, refusals, incidents): <dossier de suivi>/run-report.md
+deliver is blocked: gates failed the same way 3 times since it last passed, so it does not send the work back again.
+Left by gates (1):
+- api/test: exited 1 (evidence: <dossier de suivi>/gates/api/test-3.log)
+ An instruction runs deliver again on a new pass with what is left above and the instruction; STOP ends the run.
+The run so far (commits, refusals, incidents): <dossier de suivi>/run-report.md
 ```
 
 L'agent relancé reçoit d'abord ce que le blocage a laissé, puis la consigne.
@@ -258,6 +267,7 @@ Medium and low (1):
 
 Every finding with its context: <dossier de suivi>/reviews/design_review-3/verdict.yaml
 ACCEPT takes these findings as they stand and goes on (they are listed in the run report and the pull request); an instruction runs design again with every finding and the instruction; STOP ends the run.
+The run so far (commits, refusals, incidents): <dossier de suivi>/run-report.md
 ```
 
 `skraft decide design-1 "Utiliser la passerelle bancaire d'Acme"` : le run suivant du pipeline,
@@ -265,9 +275,10 @@ le même run sur le même slug, relance ce nœud sur un nouveau passage, la cons
 agent comme retour d'un humain (à chaque lentille que la revue interroge, pour une revue) ;
 aucune arête vers ce nœud ne compte plus comme empruntée, sa boucle retrouve donc tout son
 budget. Bloqué de nouveau, il redemande (`design-2`). `STOP` (quelle que soit la casse) termine
-le run `blocked`, avec le code et la raison du blocage, et rien d'autre. Un disjoncteur, un
-plafond de tentatives, une arête manquante ou une boucle de mutation sans progrès terminent
-toujours le run sans question.
+le run `blocked`, avec le code et la raison du blocage, et rien d'autre. Un disjoncteur (un agent
+qui échoue de la même façon à ses deux dernières tentatives, ou 3 fois depuis son dernier passage
+réussi), un plafond de tentatives, une arête manquante ou une boucle de mutation sans progrès
+terminent toujours le run sans question.
 
 Une clé nomme le nœud qui pose la question, puis le rang de la question parmi celles que ce
 nœud a posées dans le run, tous types confondus : `adr-1`, puis `adr-2` après un rejet ou
@@ -318,13 +329,13 @@ Pour un refus ou un blocage, la synthèse porte le code : `skraft <slug>: gates 
 | `scope` | string | `touched` ou `all` |
 | `components` | string[] | composants retenus |
 | `gates` | `GateResult[]` | voir ci-dessous |
-| `failure` | string ou null | `environment` si au moins un échec d'environnement, sinon `deterministic` en cas d'échec, `null` sans échec |
+| `failure` | string ou null | `environment` si au moins un échec d'environnement, sinon `unknown` si une gate a été arrêtée par un signal ou a planté, sinon `deterministic` en cas d'échec, `null` sans échec |
 | `code` | string ou null | code de refus ou de blocage |
 | `reason` | string | synthèse |
 | `phase` | null | présent seulement sur un refus ou blocage venu du pipeline actif |
 
 Chaque `GateResult` : `component`, `gate` (`none` pour un composant sans commande de gate),
-`status` (`pass`, `fail`), `failure` (`environment`, `deterministic`, `null`), `reason`,
+`status` (`pass`, `fail`), `failure` (`environment`, `unknown`, `deterministic`, `null`), `reason`,
 `evidence` (chemin absolu du fichier de preuve ; pour la gate `none`, le dossier
 `gates/<composant>`, où aucun fichier n'est écrit).
 
@@ -344,7 +355,8 @@ d'échec et format des preuves :
 
 **Effet.** Lit le journal du pipeline actif et affiche le temps, le coût et les relances de
 chaque étape ; n'écrit rien. Le moteur écrit le même tableau dans `run-report.md` après chaque
-étape.
+étape, suivi de la question qu'attend le run, des commits qu'il a vérifiés, des échecs renvoyés à
+un agent et des incidents posés à un humain ([Rapport du run](./run-journal.md#run-report)).
 
 **Sortie texte** :
 
@@ -378,8 +390,11 @@ et la raison s'affichent (`idle`, `not-initialised`, `tampered`).
 
 **Sortie `--json`** : `{ slug, status, reason, steps: [{ step, phase, visits, attempts, retries,
 durationMs, costUsd, outcome }], totals: { attempts, retries, durationMs, costUsd }, answers:
-[{ key, kind, step, answer, reason, by }], startedAt, elapsedMs }`. Code 1 seulement pour
-`tampered`.
+[{ key, kind, step, answer, reason, by }], waiting: { key, kind, step, text, options } ou null,
+commits: [{ step, sha, subject, kind, verdict }], refusals: [{ step, signature, times, failure }],
+incidents: [{ key, step, owner, log, answer }], startedAt, elapsedMs }` : `sha` court, `failure` le
+premier échec de cette signature, `answer` `null` tant que la question attend. Code 1 seulement
+pour `tampered`.
 
 ## `skraft publish`
 

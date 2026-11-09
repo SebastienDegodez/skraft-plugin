@@ -41,11 +41,28 @@ La ligne `answer:` donne la clé (`adr-1`) et les réponses permises :
 | `adr-ratification` | `RATIFIED`, `REJECTED` | avec `REJECTED` |
 | `scenario-review` (en-tête `Scenarios`) | `APPROVED`, `REVISE` | avec `REVISE` : vos corrections, envoyées à DISTILL |
 | `review-consent` (`skraft review --pr --publish`, en-tête `PR comment`) | `ACCEPTED`, `DECLINED` | — |
-| `environment` | `RETRY` (après avoir réparé la machine), `ABORT` | — |
+| `environment` | `RETRY` (après avoir réparé la machine ou `skraft-config.json`), `ABORT` | — |
 | `mutation-plan` | `APPLY`, une consigne à vous, ou `STOP` | — |
 | `blocked` | une consigne pour l'agent, ou `STOP` | — |
 
 Ce que chaque réponse déclenche : [Questions à un humain](../reference/run-journal.md#human-questions).
+
+Une question `environment`, `blocked` ou `review-ceiling` finit par
+`The run so far (commits, refusals, incidents): <dossier de suivi>/run-report.md`. Ouvrez ce
+fichier : `## Waiting on` cite la question et la ligne `skraft decide` exacte ; `## Commits`,
+`## Refusals` et `## Incidents` montrent ce que le run a fait avant de s'arrêter
+([Rapport du run](../reference/run-journal.md#run-report)).
+
+Une question `environment` dit qui corrige sur sa ligne `Cause:`, et où la commande en échec a
+écrit sur sa ligne `Output:` :
+
+| `Cause:` commence par | À corriger avant `RETRY` |
+|---|---|
+| `the machine` | installer ou démarrer le programme ou le service, accorder la permission ou corriger le hook Git ; le log `Output:` dit lequel |
+| `skraft-config.json` | changer la commande ou le chemin que nomme la première ligne ; elle dit quoi ajouter ([Configurer les composants](./configure-components.md)) |
+| `none the engine knows` | lire le log `Output:` : la commande a été arrêtée par un signal ou a planté (mémoire, processus tué) |
+
+`RETRY` relance l'étape là où elle s'est arrêtée et ne consomme aucune tentative de l'agent.
 
 ## 2. Répondre depuis votre hôte
 

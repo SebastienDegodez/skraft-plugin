@@ -127,9 +127,11 @@ La rangée de la gateway externe suit `mocking.strategy` ; `infrastructure` la r
 ## 7. Indiquer au moteur les rapports JUnit
 
 Le moteur rejoue chaque test d'acceptation en échec que DISTILL commite et le vert de chaque
-scénario, et lit le JUnit XML qu'écrivent ses commandes `test` et `e2e` : sans rapport, chaque rouge est refusé
-(`its test command wrote no test report`). Faites écrire la commande là où l'attend le défaut de
-la stack, relatif à la racine du composant :
+scénario, et lit le JUnit XML qu'écrivent ses commandes `test` et `e2e`. Sans rapport, un rouge
+ou un vert est refusé (`its test command wrote no test report`) ; quand la commande lance un
+runner ci-dessous sans l'option qui en écrit un, le run vous pose plutôt la question
+(`environment`, cause `config`), en nommant quoi ajouter. Faites écrire la commande là où
+l'attend le défaut de la stack, relatif à la racine du composant :
 
 | Stack | `testReports` par défaut | Par exemple |
 |---|---|---|

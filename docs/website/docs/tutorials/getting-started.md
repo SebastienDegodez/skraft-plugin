@@ -363,10 +363,11 @@ The tracking folder `.copilot-tracking/skraft-plans/checkout/` now holds:
 |---|---|
 | `events.jsonl` | the journal: one signed, chained event per fact |
 | `WORKFLOW.md` | the workflow graph with each step done |
-| `run-report.md` | the table `skraft report` prints: time, cost and retries of each step |
+| `run-report.md` | the table `skraft report` prints (time, cost and retries of each step), then each commit the engine checked with its verdict |
 | `qa-report.md` | the test plan, the last gates with the mutation score, the red commits, each review's verdict |
 | `pull-request.md` | the pull request description, ready to publish |
 | `gates/web/` | the output of each gate |
+| `logs/` | what each replay of a red or a green commit printed |
 | `reviews/` | what each review pass read, and its `verdict.yaml` |
 
 Open `pull-request.md`: it is the result of your first run. `git log --oneline` shows, on

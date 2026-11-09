@@ -346,10 +346,11 @@ any failing test; `skraft doctor` warns when neither answers.
 | --- | --- | --- | --- |
 | `environment` | program or folder not found, program cannot start | `<error>; install it or change the command in skraft-config.json` | a human, on the machine or the config |
 | `environment` | exit code 127 (sh) or 9009 (cmd) | `exited <code>` | same |
-| `environment` | program stopped by a signal | `<program> was stopped by <signal>; run it again` | same |
+| `environment` | program stopped by a signal, with no exit code | `<program> was stopped by <signal>; run it again` | same |
 | `environment` | line refused (shell syntax, quote, `{baseSha}`) | `command "<line>" <reason>` | same |
 | `environment` | component with no gate command | `no gate command` message above | same |
-| `deterministic` | any other non-zero exit code | `exited <code>` | the code must change |
+| `unknown` | exit code above 128: a signal on POSIX (128 + its number), a crash code from `0xC0000000` on Windows | `was stopped by a signal or crashed (exit <code>), not by a failing check` | a human, reading the evidence; never an agent |
+| `deterministic` | any other non-zero exit code, 128 included (Git's fatal error) | `exited <code>` | the code must change |
 
 Under the CLI and Copilot, a command's output is kept up to 64 MiB per stream. Past that, the evidence keeps its head and
 its tail around `… output cut …`, the command still runs to its end, and its exit code still

@@ -123,9 +123,11 @@ The external gateway row follows `mocking.strategy`; `infrastructure` refuses it
 ## 7. Point the engine at the JUnit reports
 
 The engine replays each failing acceptance test DISTILL commits and each scenario's green, and
-reads the JUnit XML its `test` and `e2e` commands write: without a report, every red is refused
-(`its test command wrote no test report`). Make the command write one where the stack's default
-expects it, relative to the component root:
+reads the JUnit XML its `test` and `e2e` commands write. Without a report, a red or a green is
+refused (`its test command wrote no test report`); when the command runs a runner below without
+the option that writes one, the run asks you instead (`environment` question, cause `config`),
+naming what to add. Make the command write one where the stack's default expects it, relative to
+the component root:
 
 | Stack | Default `testReports` | For example |
 |---|---|---|

@@ -35,6 +35,11 @@ Tous les chemins relatifs sont sous le dossier de suivi
 commence par `docs/` est dans le dépôt, hors du dossier de suivi : c'est la documentation durable
 du dépôt ([Documentation durable](./run-journal.md#durable-docs)).
 
+Le brief de chaque agent lui dit d'envoyer ce qu'affichent les commandes qu'il lance dans des
+fichiers sous `logs/` et de garder ses fichiers temporaires sous `.tmp/`, sans rien écrire sous
+`/tmp` ni hors de la copie de travail. Aucun de ces dossiers n'est un document d'une phase : ni
+lentille ni revue ne les reçoit ([Logs](./run-journal.md#logs)).
+
 ## DISCOVER <!-- #discover -->
 
 | | |
@@ -276,8 +281,8 @@ s'arrête avec `scenarios`. Pourquoi S1 est un walking skeleton :
 | `adr-ratification` | nœud `adr` | `RATIFIED`, `REJECTED` | `REJECTED` | `ADR` |
 | `scenario-review` | nœud `scenario_review` | `APPROVED`, `REVISE` | `REVISE` | `Scenarios` |
 | `mutation-plan` | nœud `mutation_plan` | `APPLY`, une consigne, ou `STOP` | — | `Mutation` |
-| `environment` | le moteur, quand une étape ne peut pas tourner sur la machine, rejeu compris (ni Docker ni Podman ne répond) | `RETRY`, `ABORT` | — | `Environment` |
-| `blocked` | le moteur, quand un agent répond `blocked`, qu'une boucle atteint son `max_visits` ou qu'une lentille répond `inconclusive` | une consigne, ou `STOP` | — | `Blocked` |
+| `environment` | le moteur, quand une étape ne peut pas tourner sur la machine ou avec ce que lui donne `skraft-config.json`, rejeu compris (ni Docker ni Podman ne répond, un runner qui n'écrit pas de rapport) ; son texte nomme la cause et le log ([causes](./run-journal.md#environment-question)) | `RETRY`, `ABORT` | — | `Environment` |
+| `blocked` | le moteur, quand un agent répond `blocked`, qu'une boucle atteint son `max_visits`, qu'une étape de gates échoue de la même façon 3 fois depuis son dernier passage réussi ou qu'une lentille répond `inconclusive` | une consigne, ou `STOP` | — | `Blocked` |
 | `review-consent` | `skraft review --pr --publish` | `ACCEPTED`, `DECLINED` | — | `PR comment` |
 
 Aucun run ne demande de consentement de publication : `/skraft-init` les règle avant tout run,

@@ -363,10 +363,11 @@ Le dossier de suivi `.copilot-tracking/skraft-plans/checkout/` contient maintena
 |---|---|
 | `events.jsonl` | le journal : un événement signé et chaîné par fait |
 | `WORKFLOW.md` | le graphe du workflow avec chaque étape faite |
-| `run-report.md` | le tableau qu'affiche `skraft report` : temps, coût et relances de chaque étape |
+| `run-report.md` | le tableau qu'affiche `skraft report` (temps, coût et relances de chaque étape), puis chaque commit que le moteur a vérifié avec son verdict |
 | `qa-report.md` | le plan de test, les dernières gates avec le score de mutation, les commits rouges, le verdict de chaque revue |
 | `pull-request.md` | la description de la pull request, prête à publier |
 | `gates/web/` | la sortie de chaque gate |
+| `logs/` | ce qu'a affiché chaque rejeu d'un commit rouge ou vert |
 | `reviews/` | ce que chaque passage de revue a lu, et son `verdict.yaml` |
 
 Ouvrez `pull-request.md` : c'est le résultat de votre premier run. `git log --oneline` montre, sur

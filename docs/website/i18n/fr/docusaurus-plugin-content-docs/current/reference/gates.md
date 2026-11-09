@@ -41,10 +41,12 @@ racine du composant ; un composant s'arrête à sa première gate en échec.
 
 | Règle | Détail |
 | --- | --- |
-| Résultat | `pass` (sortie 0) ou `fail`, classe `environment` ou `deterministic` ([classes d'échec](./skraft-config.md#failure-classes)) |
-| Composant sans commande de gate | gate `none`, `fail`, classe `environment` |
+| Résultat | `pass` (sortie 0) ou `fail`, classe `environment`, `unknown` ou `deterministic` ([classes d'échec](./skraft-config.md#failure-classes)) |
+| Composant sans commande de gate | gate `none`, `fail`, classe `environment` ; dans un run, la question `environment` nomme la cause `config` |
 | Portée | les composants modifiés depuis leur base ; `goal_gate=true` lance ensuite tous les autres ; `skraft gate --all` les lance tous |
 | Arêtes | toutes les gates du nœud passent : arête `PASS` ; une échoue : arête `FAIL` (`gates` : `PASS` vers `deliver_review`, `FAIL` vers `deliver` ; `mutation` : `PASS` vers `visuals`, `FAIL` vers `kill_proposal` ; `mutation_gates` : `PASS` vers `mutation`, `FAIL` vers `kill_mutants`) |
+| Machine | une étape de gates qui échoue en `environment` ou `unknown` ne prend aucune arête : le run pose la question `environment` ([causes](./run-journal.md#environment-question)), ne renvoie rien à un agent et ne consomme aucune de ses tentatives |
+| Échec répété | une étape de gates en échec a une `signature`, qui couvre le log de preuve de chaque gate en échec ; quand elle échoue de la même façon 3 fois depuis son dernier passage réussi, elle ne prend pas l'arête `FAIL` : le run pose la question `blocked` (code `repeated-failure`) sur le nœud vers lequel mène cette arête ; une consigne y renvoie le travail, `STOP` termine le run. Des échecs qui diffèrent à chaque fois bouclent jusqu'au `max_visits` de l'arête |
 | Mutation | le moteur lit le rapport de la commande `mutation` (`mutationReport`) et juge deux barres : **100 %** sur le cœur (Domain, Application), **80 %** sur la frontière (le reste) ; elle tourne une fois, après l'approbation de `deliver_review` ; en échec, `kill_proposal` écrit une proposition par fichier de survivants, la question `mutation-plan` laisse le développeur choisir (`APPLY`, sa consigne, `STOP`), puis `kill_mutants` applique le choix ([Phases](./phases.md#deliver)) |
 | Seuils | aucun n'est configurable |
 | Verrou | `gates` et `mutation` sont `locked=true` : une copie du workflow ne les retire qu'avec `unlock="<raison>"` ([Le workflow DOT](./workflow-dot.mdx#locked-nodes)) |
@@ -260,7 +262,9 @@ porte le nom de son fichier), sur tous les cas de test sinon ; un échec dont le
 exception levée par le code (`NotImplementedException`, `NullReferenceException`, `TypeError`,
 `AttributeError`…) est une erreur, jamais une assertion. Les rapports que les tests d'un composant
 écrivent dans la copie de travail sont la sortie du run : jamais hors du périmètre d'écriture,
-jamais laissés non commités.
+jamais laissés non commités. Ce qu'affiche chaque rejeu va dans
+`logs/replay-<sha court>-<composant>-<commande>.log` ([Logs](./run-journal.md#logs)) ; la raison
+d'un rouge ou d'un vert refusé le nomme : `the replay's output is in <log>`.
 
 | Rejoué | Lecture | Effet |
 | --- | --- | --- |
@@ -269,6 +273,9 @@ jamais laissés non commités.
 | | `indeterminate` : aucun runtime de conteneurs ne répond (Docker ou Podman) | l'étape reste ouverte : question `environment`, `…no container runtime answers (Docker or Podman), so the tests that need one could not run; start Docker or Podman, then retry` ; jamais sauté, jamais remplacé par une doublure |
 | le vert du scénario k | la commande `test`, et `e2e` quand des tests e2e ont prouvé le rouge : les tests du scénario passent, aucun test n'échoue ni ne finit en erreur, chaque commande sort avec 0 | accepté |
 | | un test échoue ou finit en erreur ; un test du scénario absent des rapports ou sauté ; une commande sort avec un code non nul ; aucun rapport | refusé, `not-green` : `these tests fail at it: …`, `the scenario's tests do not pass at it: …`, `<command> exits <code>`, `its test command wrote no test report: …` |
+| un rouge ou un vert | `no-report`, venant d'une commande qui lance un runner dont `skraft doctor` sait qu'il n'en écrit pas là où regarde `testReports` | l'étape reste ouverte : question `environment`, cause `config` : `replaying <sha> for <component>: its test command "<line>" writes no JUnit report where testReports looks; add <ce qui manque> to it in skraft-config.json, then retry` |
+| | la commande a été arrêtée par un signal ou a planté (sortie au-dessus de 128) | l'étape reste ouverte : question `environment`, cause `unknown` : `replaying <sha> for <component>: <line> was stopped by a signal or crashed (exit <code>)` |
+| | pas de commande `test`, une commande à syntaxe shell ou qui installe des dépendances | l'étape reste ouverte : question `environment`, cause `config`, rien n'est rejoué |
 
 [`tdd.replay`](./skraft-config.md#tdd) choisit quels rouges d'une tentative sont rejoués. Le rouge
 d'un test e2e n'est prouvé que si les tests `e2e` passent à son parent.

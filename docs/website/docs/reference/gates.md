@@ -40,10 +40,12 @@ root; a component stops at its first failing gate.
 
 | Rule | Detail |
 | --- | --- |
-| Result | `pass` (exit 0) or `fail`, class `environment` or `deterministic` ([failure classes](./skraft-config.md#failure-classes)) |
-| Component with no gate command | gate `none`, `fail`, class `environment` |
+| Result | `pass` (exit 0) or `fail`, class `environment`, `unknown` or `deterministic` ([failure classes](./skraft-config.md#failure-classes)) |
+| Component with no gate command | gate `none`, `fail`, class `environment`; in a run, the `environment` question names the cause `config` |
 | Scope | the components changed since their base; `goal_gate=true` then runs all the others; `skraft gate --all` runs them all |
 | Edges | every gate of the node passes: the `PASS` edge; one fails: the `FAIL` edge (`gates`: `PASS` to `deliver_review`, `FAIL` to `deliver`; `mutation`: `PASS` to `visuals`, `FAIL` to `kill_proposal`; `mutation_gates`: `PASS` to `mutation`, `FAIL` to `kill_mutants`) |
+| Machine | a gate step that fails as `environment` or `unknown` takes no edge: the run asks the `environment` question ([causes](./run-journal.md#environment-question)), sends nothing back to an agent and uses none of its attempts |
+| Repeated failure | a failed gate step has a `signature`, which covers the evidence log of each gate that failed; failing the same way 3 times since it last passed, it takes no `FAIL` edge: the run asks the `blocked` question (code `repeated-failure`) about the node that edge leads to; an instruction sends the work back there, `STOP` ends the run. Failures that differ each time loop until the edge's `max_visits` |
 | Mutation | the engine reads the report of the `mutation` command (`mutationReport`) and judges two bars: **100 %** on the core (Domain, Application), **80 %** on the boundary (the rest); it runs once, after `deliver_review` approved; on failure, `kill_proposal` writes one proposal per file of survivors, the `mutation-plan` question lets the developer choose (`APPLY`, their instruction, `STOP`), then `kill_mutants` applies the choice ([Phases](./phases.md#deliver)) |
 | Thresholds | none is configurable |
 | Lock | `gates` and `mutation` are `locked=true`: a copy of the workflow drops them only with `unlock="<reason>"` ([The DOT workflow](./workflow-dot.mdx#locked-nodes)) |
@@ -254,7 +256,9 @@ files it commits, when the reports name them (a test case's id holds its file's 
 test case otherwise; a failure whose message names an exception the code threw
 (`NotImplementedException`, `NullReferenceException`, `TypeError`, `AttributeError`, …) is an
 error, never an assertion. The reports a component's tests write in the working copy are the run's
-output: never out of the write scope, never left uncommitted.
+output: never out of the write scope, never left uncommitted. What each replay printed goes to
+`logs/replay-<short sha>-<component>-<command>.log` ([Logs](./run-journal.md#logs)); the reason of
+a refused red or green names it: `the replay's output is in <log>`.
 
 | Replayed | Reading | Effect |
 | --- | --- | --- |
@@ -263,6 +267,9 @@ output: never out of the write scope, never left uncommitted.
 | | `indeterminate`: no container runtime answers (Docker or Podman) | the step stays open: `environment` question, `…no container runtime answers (Docker or Podman), so the tests that need one could not run; start Docker or Podman, then retry`; never skipped, never replaced by a double |
 | the green of scenario k | the `test` command, and `e2e` when e2e tests proved the red: the scenario's tests pass, no test fails or errs, every command exits 0 | accepted |
 | | a test fails or errs; a test of the scenario missing from the reports or skipped; a command exits non-zero; no report | refused, `not-green`: `these tests fail at it: …`, `the scenario's tests do not pass at it: …`, `<command> exits <code>`, `its test command wrote no test report: …` |
+| a red or a green | `no-report`, from a command that runs a runner `skraft doctor` knows writes none where `testReports` looks | the step stays open: `environment` question, cause `config`: `replaying <sha> for <component>: its test command "<line>" writes no JUnit report where testReports looks; add <what it lacks> to it in skraft-config.json, then retry` |
+| | the command was stopped by a signal or crashed (exit above 128) | the step stays open: `environment` question, cause `unknown`: `replaying <sha> for <component>: <line> was stopped by a signal or crashed (exit <code>)` |
+| | no `test` command, a command that uses shell syntax or installs dependencies | the step stays open: `environment` question, cause `config`, nothing replayed |
 
 [`tdd.replay`](./skraft-config.md#tdd) chooses which reds of an attempt are replayed. A red of an
 e2e test is proven only when the `e2e` tests pass at its parent.

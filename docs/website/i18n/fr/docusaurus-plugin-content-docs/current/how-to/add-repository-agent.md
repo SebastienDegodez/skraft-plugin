@@ -59,7 +59,9 @@ et retirez l'arête `deliver -> gates` qu'elle remplace.
 | `model` | sa famille de modèle ([Choisir les modèles des agents](./choose-models.md)) |
 
 Le brief que le moteur donne à l'agent liste ces sorties, les chemins qu'il peut écrire et les
-sorties des autres étapes à lire. Après chaque tentative, le moteur vérifie que chaque sortie est
+sorties des autres étapes à lire ; il lui dit aussi d'envoyer ce qu'affichent ses commandes sous
+le `logs/` du run et de garder ses fichiers temporaires sous le `.tmp/` du run, jamais sous `/tmp`
+ni hors de la copie de travail. Après chaque tentative, le moteur vérifie que chaque sortie est
 remplie et que rien n'a été écrit hors de ces chemins. L'agent commite ses propres changements :
 le brief lui demande de commiter chaque fichier qu'il change hors du dossier de suivi, et un
 changement laissé non commité est refusé (`uncommitted`). Le moteur ne commite que pour les agents

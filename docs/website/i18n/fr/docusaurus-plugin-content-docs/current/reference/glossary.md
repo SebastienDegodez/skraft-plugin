@@ -39,7 +39,7 @@ Liste priorisée de fonctionnalités ou User Stories à développer. Le backlog 
 ## C
 
 **Classe d'échec**
-Nature d'une gate en échec : `environment` (la machine ou la config doit changer : programme absent, programme arrêté) ou `deterministic` (la commande a échoué : le code doit changer).
+Nature d'une gate en échec : `environment` (la machine ou la config doit changer : programme absent, programme arrêté), `unknown` (la commande a été arrêtée par un signal ou a planté : un humain lit son log) ou `deterministic` (la commande a échoué : le code doit changer).
 → Voir [Classe d'échec](../how-to/run-gates.md)
 
 **Composant**
@@ -187,10 +187,14 @@ Sur quoi les tests d'un composant font tourner chaque sorte de dépendance, dans
 ## Q
 
 **Question d'environnement**
-La question que le moteur pose quand la machine ne peut pas exécuter une étape (programme introuvable, Git en échec, ni Docker ni Podman ne répondant à un rejeu) : `Fix it, then RETRY; or ABORT the run.` `RETRY` revérifie ou relance la même étape ; `ABORT` bloque le run.
-→ Voir [Reprendre ou débloquer un run](../how-to/resume-a-run.mdx)
+La question que le moteur pose quand une étape ne peut pas tourner sur la machine ou avec ce que lui donne `skraft-config.json` (programme introuvable, Git en échec, ni Docker ni Podman ne répondant à un rejeu, une commande arrêtée par un signal ou qui a planté). Elle nomme la cause (la machine, `skraft-config.json`, ou aucune que le moteur connaisse) et le log de la commande en échec. `RETRY` relance la même étape là où elle s'est arrêtée, sans consommer de tentative ; `ABORT` bloque le run.
+→ Voir [La question environment](./run-journal.md#environment-question)
 
 ## R
+
+**Rapport du run**
+`run-report.md`, réécrit depuis le journal après chaque étape : temps, coût et relances de chaque étape, la question qu'attend le run, chaque commit vérifié et son verdict, les échecs renvoyés à un agent, les incidents posés à un humain.
+→ Voir [Rapport du run](./run-journal.md#run-report)
 
 **Ratification (d'ADR)**
 L'acceptation par un humain des ADR proposés par DESIGN. Seul le moteur passe un ADR en `Accepted`, après une réponse humaine `RATIFIED` ; `REJECTED` renvoie DESIGN avec la raison.
@@ -215,6 +219,10 @@ Le statut d'un run dont la question n'a pas encore de réponse. Le run ne fait p
 → Voir [Reprendre ou débloquer un run](../how-to/resume-a-run.mdx)
 
 ## S
+
+**Signature d'échec**
+Huit chiffres hexadécimaux qui nomment un échec une fois retiré ce qui varie d'un essai à l'autre (heures, durées, processus, ports, sha, dossiers temporaires, numéros de tentative, la copie de travail). Un agent qui échoue de la même façon à ses deux dernières tentatives, ou un nœud qui échoue de la même façon 3 fois depuis son dernier passage réussi, ne reçoit plus le travail en retour.
+→ Voir [Dossier de suivi et journal](./run-journal.md#events)
 
 **Skill**
 Dans SKRAFT, une pratique outillée encapsulée dans un fichier `SKILL.md`. Une skill définit quoi faire, comment le faire et quelles références la justifient.

@@ -220,18 +220,26 @@ The questions, their options and their refusals:
 | `blocked` | `<node>-<n>`, the node an instruction runs again (`design-1`) | an instruction, or `STOP` | — |
 
 A block no longer ends the run by itself. When an agent answers `blocked`, a loop reaches its
-`max_visits`, or a lens of a review answers `inconclusive`, the engine asks the `blocked`
-question about the node to run again: the agent itself, the node the capped edge leads back to
-(the engineer after the gates, the architect after a review or a rejected ADR), or the review.
-Its text holds what the engine checked, what the blocked step left (the agent's reason, the
-gates' failures), and the file that keeps the agent's own words:
+`max_visits`, a gate step fails the same way 3 times since it last passed, or a lens of a review
+answers `inconclusive`, the engine asks the `blocked` question about the node to run again: the
+agent itself, the node the capped edge or the gates' `FAIL` edge leads back to (the engineer after
+the gates, the architect after a review or a rejected ADR), or the review. Its text holds what the
+engine checked, what the blocked step left (the agent's reason, the gates' failures), the file
+that keeps the agent's own words, and where the run report is:
 
 ```
 design is blocked: solution-architect says it cannot go on; its reason is in <tracking folder>/results/design-1-1.json.
 Left by design (1):
 - which payment provider?
  An instruction runs design again on a new pass with what is left above and the instruction; STOP ends the run.
+The run so far (commits, refusals, incidents): <tracking folder>/run-report.md
 design_review is blocked: a lens answered inconclusive; the verdict is in <tracking folder>/reviews/design_review-1/verdict.yaml. An instruction runs design_review again on a new pass with it; STOP ends the run.
+The run so far (commits, refusals, incidents): <tracking folder>/run-report.md
+deliver is blocked: gates failed the same way 3 times since it last passed, so it does not send the work back again.
+Left by gates (1):
+- api/test: exited 1 (evidence: <tracking folder>/gates/api/test-3.log)
+ An instruction runs deliver again on a new pass with what is left above and the instruction; STOP ends the run.
+The run so far (commits, refusals, incidents): <tracking folder>/run-report.md
 ```
 
 The agent run again gets what the block left first, then the instruction.
@@ -257,6 +265,7 @@ Medium and low (1):
 
 Every finding with its context: <tracking folder>/reviews/design_review-3/verdict.yaml
 ACCEPT takes these findings as they stand and goes on (they are listed in the run report and the pull request); an instruction runs design again with every finding and the instruction; STOP ends the run.
+The run so far (commits, refusals, incidents): <tracking folder>/run-report.md
 ```
 
 `skraft decide design-1 "Use the bank gateway of Acme"`: the next run of the pipeline, the same
@@ -264,8 +273,9 @@ run on the same slug, runs that node again on a new pass, the instruction given 
 a human's feedback (to each lens the review asks, for a review); no edge into the node counts
 as taken any more, so its loop has its whole budget again. Blocked again, it asks again
 (`design-2`). `STOP` (in any case) ends the run `blocked`, with the code and reason of the
-block, and nothing else. A breaker, an attempt ceiling, a missing edge or a stalled mutation
-loop still end the run without a question.
+block, and nothing else. A breaker (an agent failing the same way on its last two attempts, or
+3 times since it last passed), an attempt ceiling, a missing edge or a stalled mutation loop
+still end the run without a question.
 
 A key names the node that asks the question, then the question's rank among those that node
 asked in the run, whatever their kind: `adr-1`, then `adr-2` after a rejection or when Git
@@ -316,13 +326,13 @@ On a refusal or a block, the summary carries the code: `skraft <slug>: gates ref
 | `scope` | string | `touched` or `all` |
 | `components` | string[] | components selected |
 | `gates` | `GateResult[]` | see below |
-| `failure` | string or null | `environment` when at least one environment failure, otherwise `deterministic` on failure, `null` with no failure |
+| `failure` | string or null | `environment` when at least one environment failure, otherwise `unknown` when a gate was stopped by a signal or crashed, otherwise `deterministic` on failure, `null` with no failure |
 | `code` | string or null | refusal or block code |
 | `reason` | string | summary |
 | `phase` | null | present only on a refusal or block coming from the active pipeline |
 
 Each `GateResult`: `component`, `gate` (`none` for a component with no gate command),
-`status` (`pass`, `fail`), `failure` (`environment`, `deterministic`, `null`), `reason`,
+`status` (`pass`, `fail`), `failure` (`environment`, `unknown`, `deterministic`, `null`), `reason`,
 `evidence` (absolute path of the evidence file; for the `none` gate, the `gates/<component>`
 folder, where no file is written).
 
@@ -341,7 +351,9 @@ and evidence format:
 ## `skraft report [--json]`
 
 **Effect.** Reads the active pipeline's journal and prints the time, cost and retries of each
-step; writes nothing. The engine writes the same table to `run-report.md` after each step.
+step; writes nothing. The engine writes the same table to `run-report.md` after each step,
+followed by the question the run waits on, the commits it checked, the failures sent back to an
+agent and the incidents asked of a human ([Run report](./run-journal.md#run-report)).
 
 **Text output**:
 
@@ -374,7 +386,11 @@ journal or a tampered one, only the first line and the reason are printed (`idle
 
 **`--json` output**: `{ slug, status, reason, steps: [{ step, phase, visits, attempts, retries,
 durationMs, costUsd, outcome }], totals: { attempts, retries, durationMs, costUsd }, answers:
-[{ key, kind, step, answer, reason, by }], startedAt, elapsedMs }`. Code 1 only for `tampered`.
+[{ key, kind, step, answer, reason, by }], waiting: { key, kind, step, text, options } or null,
+commits: [{ step, sha, subject, kind, verdict }], refusals: [{ step, signature, times, failure }],
+incidents: [{ key, step, owner, log, answer }], startedAt, elapsedMs }`: `sha` short, `failure` the
+first failure of that signature, `answer` `null` while the question waits. Code 1 only for
+`tampered`.
 
 ## `skraft publish`
 

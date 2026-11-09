@@ -84,8 +84,8 @@ The SKRAFT code that decides every pipeline step (order, expected outputs, retri
 → See [Engine](../explanation/architecture.md)
 
 **Environment question**
-The question the engine asks when the machine cannot run a step (program not found, Git failing, no Docker or Podman answering a replay): `Fix it, then RETRY; or ABORT the run.` `RETRY` checks or runs the same step again; `ABORT` blocks the run.
-→ See [Resume or unblock a run](../how-to/resume-a-run.mdx)
+The question the engine asks when a step cannot run on the machine or with what `skraft-config.json` gives it (program not found, Git failing, no Docker or Podman answering a replay, a command stopped by a signal or crashed). It names the cause (the machine, `skraft-config.json`, or none the engine knows) and the log of the failing command. `RETRY` runs the same step again where it stopped, using no new attempt; `ABORT` blocks the run.
+→ See [The environment question](./run-journal.md#environment-question)
 
 **Event Modeling**
 A specification technique that describes a system as a sequence of events over time. Facilitates communication between technical and business teams.
@@ -96,8 +96,12 @@ An architectural pattern where the state of a system is reconstructed from a seq
 ## F
 
 **Failure class**
-What a failed gate is: `environment` (the machine or the config must change: missing program, program stopped) or `deterministic` (the command failed: the code must change).
+What a failed gate is: `environment` (the machine or the config must change: missing program, program stopped), `unknown` (the command was stopped by a signal or crashed: a human reads its log) or `deterministic` (the command failed: the code must change).
 → See [Failure class](../how-to/run-gates.md)
+
+**Failure signature**
+Eight hexadecimal digits that name a failure once what varies between tries is taken out (times, durations, processes, ports, shas, temporary folders, attempt numbers, the working copy). An agent failing the same way on its last two attempts, or a node failing the same way 3 times since it last passed, is not sent the work back again.
+→ See [Tracking folder and journal](./run-journal.md#events)
 
 **Finding**
 A defect a lens reports: the gate concerned, a severity (`blocker`, `high`, `medium`, `low`), a location and a description. Only `blocker`, `high` and `medium` findings that stand send the work back.
@@ -196,6 +200,10 @@ The agent that checks a `blocker`, `high` or `medium` finding by reading the cit
 
 **Reviewer**
 A read-only AI agent that judges the artifacts of an executor agent and never modifies them (CQS principle). In V2, phase reviewers give way to isolated lenses whose findings the engine combines into a verdict.
+
+**Run report**
+`run-report.md`, rewritten from the journal after each step: time, cost and retries of each step, the question the run waits on, each commit checked and its verdict, the failures sent back to an agent, the incidents asked of a human.
+→ See [Run report](./run-journal.md#run-report)
 
 ## S
 

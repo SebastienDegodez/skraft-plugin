@@ -95,7 +95,7 @@ The code shows in the Claude Code mod's final notification
 | `no-active-pipeline`, `not-initialised` | `skraft init <slug>` or `/skraft <slug>`. |
 | `config-invalid` | Fix every listed error ([Configure the components](./configure-components.md)), then resume. |
 | `base-unresolved` | Write `baseBranch` in `skraft-config.json` or pass `--base <ref>` at the first init. |
-| `missing-outputs`, `loop-ceiling`, `environment`, `stopped` | Final for this slug: read the reason in the journal, fix the cause, start a new slug. |
+| `missing-outputs`, `loop-ceiling`, `repeated-failure`, `environment`, `stopped` | Final for this slug: read the reason, then `run-report.md` (its commits, refusals and incidents, [Run report](../reference/run-journal.md#run-report)), fix the cause, start a new slug. |
 
 Every code, its message and its action:
 [Statuses and codes](../reference/run-journal.md#statuses-and-codes).

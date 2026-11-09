@@ -42,11 +42,17 @@ The tracking folder lives **in the working copy that starts the run**:
     │   ├── components.json                        stack, mocking strategy, contract testing
     │   └── verdict.yaml                           the verdict of the pass, written by the engine
     ├── gates/<component>/<gate>-<n>.log           evidence of each gate run
+    ├── logs/                                      what commands printed
+    │   ├── replay-<short sha>-<component>-<command>.log   output of one replay of a commit
+    │   ├── commit-<node>.log                      what Git printed when it refused a commit of the engine
+    │   └── …                                      what the commands an agent runs print
+    ├── .tmp/                                      the agents' temporary files
     └── visuals/<component>/e2e-<n>.log            output of each e2e command of the screenshots publication
 ```
 
 `results/` and `reviews/` belong to the engine: they are not documents of the run, and a
-review never hands them to a lens as one.
+review never hands them to a lens as one. `logs/` and `.tmp/` hold what commands printed or left
+behind: they are never documents of a phase, and neither a lens nor a review gets them.
 
 `verdict.yaml` is written at the end of each review pass, every text double-quoted; beside it,
 `snapshot.json` keeps what each file the pass reviewed held, which the next pass compares with
@@ -104,7 +110,8 @@ output, and pre-creates it when it has a template. Detail by phase:
 | DELIVER | evidence of each gate; output of the e2e commands | `gates/{component}/{gate}-{n}.log`; `visuals/{component}/e2e-{n}.log` |
 | PUBLISH | pull request prose and description | `details/{date}/pull-request-prose-{slug}.md`, `pull-request.md` ([sections](./pull-request.md#description)) |
 | DESIGN, DISTILL, DELIVER reviews | the lenses' inputs and the verdict the engine writes | `reviews/{node}-{visit}/` |
-| whole run | journal, reports recomputed after each step | `events.jsonl`, `run-report.md`, `qa-report.md`, `WORKFLOW.md`, `issue-progress.md` ([lines](./issue-comments.md#progress)) |
+| whole run | journal, reports recomputed after each step | `events.jsonl`, `run-report.md` ([sections](#run-report)), `qa-report.md`, `WORKFLOW.md`, `issue-progress.md` ([lines](./issue-comments.md#progress)) |
+| whole run | what replays, refused commits and agents' commands printed; agents' temporary files | `logs/` ([Logs](#logs)), `.tmp/` |
 
 Lenses write no file: they return findings, and the engine writes
 `reviews/{node}-{visit}/verdict.yaml`.
@@ -220,7 +227,7 @@ Under Copilot CLI, the **Journal** tab of the `skraft-pipeline` canvas reads thi
 | `run.started` | Init, at the first init of the slug | `slug`; `story` (`{ issue, title }` or `null`); `workflow` (`skraft`); `base` (list, see below) |
 | `step.started` | the pipeline, before starting an agent | `step` (`research`); `phase` (`RESEARCH`); `agent` (`solution-researcher`); `attempt` (1, 2…); `outputs` (expected paths, relative to the slug folder); `missing` (paths missing at the previous attempt, empty on the first); `assignment`: what the agent runs on — `family`, `tier`, `source` (`agent`, `workflow`, `type`, `default`, `escalation`, `host`) and, per host, `model` (list or null), `effort` (or null) and the `source` of each; a resumed attempt runs on it again, whatever the configuration says since; `host` (`claude-code`, `copilot`): the host that starts the agent, whose `model` and `effort` it runs on (no model: the host chooses). The `/workflows` log, the Observe view (`agents`) and `run-report.md` (`## Agents`) show each agent's family, tier, model on that host (or `model chosen by the host`) and effort, then the model the host says it ran on once it answers. On an ask node, `question` (the question kind) instead of `agent`. On a node with `each`, `group`: the file of survivors, or the scenario (S`<group>`), the attempt works on, from 1; and on the attempt that opens a visit (the first file of survivors, each scenario, the group a human's instruction reopens), `groups`: the files of survivors or the story's scenarios. A resumed run, or a human's instruction after a block, reopens the group in progress |
 | `step.recorded` | the pipeline, after the agent | `step`; `attempt`; `outcome` (`outputs-complete` or `missing-outputs`; on an ask node `answered`, or `skipped` when no human was needed, with `answer`; `aborted`, code `environment`, after an `ABORT`); `missing`; `durationMs`; `cost` (absent when the host reports none); `model` (the model the agent ran on, null for the session's; absent on a resume that did not start it); `ceiling` on a step no edge leads on from: the node the edge at its `max_visits` leads to (`loop-ceiling`), or the one a gate's `FAIL` edge leads to (`repeated-failure`), the one a human's instruction runs again, `null` when no edge leads on. On a refused attempt or a failed gate step: `signature`, eight hexadecimal digits, the same for the same failure whatever time, duration, process, temporary folder, sha, GUID, port, attempt, working copy or slug it prints; a gate's covers the evidence log of each gate that failed. The engine counts signatures by node since the node last passed: an agent failing the same way on its last two attempts, or 3 times, stops the run; a gate step failing the same way 3 times asks the `blocked` question. On a node with `each="scenario"`, once done: `scenarios` (each `{ index, title, component, tags }`) and `exemption` on the first pass; `oracle` (`{ scenario, sha, subject, component, files, tests }`: the red of the scenario's acceptance test and the test cases its replay saw fail); `green` (`{ scenario, sha }`) |
-| `question.asked` | the pipeline, when it puts a question to a human | `key` (`adr-1`, `gates-1`), the node that asks the question then its rank among that node's questions in the run; `kind` (`adr-ratification`, `scenario-review`, `mutation-plan`, `environment`, `blocked`, `review-ceiling`); `text`; `options`; `refusals`; `header`; `step`; `visit`; `subjects` (the ADRs to ratify, the files of S1's acceptance-test commit, otherwise empty) |
+| `question.asked` | the pipeline, when it puts a question to a human | `key` (`adr-1`, `gates-1`), the node that asks the question then its rank among that node's questions in the run; `kind` (`adr-ratification`, `scenario-review`, `mutation-plan`, `environment`, `blocked`, `review-ceiling`); `text`; `options`; `refusals`; `header`; `step`; `visit`; `subjects` (the ADRs to ratify, the files of S1's acceptance-test commit, otherwise empty); on an `environment` question, `incident`: `{ owner, log }`, `owner` the cause (`environment`, `config` or `unknown`), `log` the absolute path of the file that holds what the failing command printed, `null` when none printed to a log |
 | `question.answered` | the host's dialog, or `skraft decide` | `key`; `answer` (for a `blocked` or `review-ceiling` question, the human's instruction as they wrote it, on one line, or `STOP`, or `ACCEPT` for a `review-ceiling` one); `reason` (`null` without one); `by` (`host`, `decide`, `host-confirmed` or `cli-tty`) |
 | `phase.closed` | the pipeline | `phase` |
 | `run.finished` | the pipeline | `status` (`completed` when the last phase is closed, `blocked` when the run stops); `code` (with `blocked`); `reason` (`<PHASE> closed` with `completed`) |
@@ -229,8 +236,8 @@ Under Copilot CLI, the **Journal** tab of the `skraft-pipeline` canvas reads thi
 | `review.refuted` | a review node, once per finding, of any severity, checked by `finding-refuter`; findings of several lenses at one line, checked in one call, give one each with its own verdict, its `cost` on the first | `step`; `visit`; `lens`; `finding` (its id); `verdict` (`confirmed`, `refuted` or `unverifiable`); `reason`; `dissent` (`true` when the finding's lens alone found what sends the work back, and the refuter judged it with every input of the review); `carried` (on a later pass, the pass whose refutation of a finding at the same place it carries over, the refuter not asked: its `reason`, `assignment` and `model` are that refutation's, no `cost`); `model`; `cost` |
 | `review.noted` | a review node, from its second pass, once per finding, of any severity, new on a line the last pass read with the same text ([incremental re-review](./gates.md#incremental)): a note, not checked by the refuter | `step`; `visit`; `lens`; `finding` (its id); `since` (the last pass) |
 | `review.cost` | a review node, once per batch the host costs as a whole (the Claude Code mod) | `step`; `visit`; `cost` |
-| `gate.ran` | `skraft gate`, once per gate | `component`; `gate` (`build`… or `none`); `scope` (`touched` or `all`); `command` (`null` for `none`); `status` (`pass` or `fail`); `failure` (`environment`, `deterministic` or `null`); `exitCode` (`null` when nothing ran); `durationMs`; `evidence` (path relative to the slug folder, `null` for `none`) |
-| `commits.checked` | the pipeline, after an attempt of an agent step that made commits | `step`; `visit`; `attempt`; `commits`, each `{ repository, sha, subject, kind, verdict, replay }`: `kind` (`red`, `green`, `refactor`, `other`, `invalid`), `verdict` (`ok`, `not-conventional`, `issue-reference-missing`, `issue-closed`, `issue-not-in-story`, `outside-tdd`, `green-without-red`, `not-red`, `no-component`, `oracle-split`, `oracle-component`, `code-in-oracle`, `test-in-scenario`, `refactor-in-scenario`, `second-green`, `oracle-touched`, `other-component`, `not-green`; [Commits and replays](./gates.md#commits)), `replay` (`{ component, command, exitCode, durationMs, reading, tests }` of the replay the commit reports, `null` when it was not replayed: `reading` what its JUnit reports prove, `assertion`, `no-report`, `error`, `skipped`, `green`, `timeout` or `indeterminate`; `tests` the test cases a proven red failed); `settled` (`false` when the machine stopped the check, an `environment` question asked: its verdicts are those before the replays it could not run, so neither a later attempt nor the reports take them as final, and the attempt after `RETRY` replays its red commits again). `settled` is absent from a check that ran to its end, and from journals written before the field existed: absent means settled |
+| `gate.ran` | `skraft gate`, once per gate | `component`; `gate` (`build`… or `none`); `scope` (`touched` or `all`); `command` (`null` for `none`); `status` (`pass` or `fail`); `failure` (`environment`, `unknown`, `deterministic` or `null`); `exitCode` (`null` when nothing ran); `durationMs`; `evidence` (path relative to the slug folder, `null` for `none`) |
+| `commits.checked` | the pipeline, after an attempt of an agent step that made commits | `step`; `visit`; `attempt`; `commits`, each `{ repository, sha, subject, kind, verdict, replay }`: `kind` (`red`, `green`, `refactor`, `other`, `invalid`), `verdict` (`ok`, `not-conventional`, `issue-reference-missing`, `issue-closed`, `issue-not-in-story`, `outside-tdd`, `green-without-red`, `not-red`, `no-component`, `oracle-split`, `oracle-component`, `code-in-oracle`, `test-in-scenario`, `refactor-in-scenario`, `second-green`, `oracle-touched`, `other-component`, `not-green`; [Commits and replays](./gates.md#commits)), `replay` (`{ component, command, exitCode, durationMs, log, reading, tests }` of the replay the commit reports, `null` when it was not replayed: `log` the absolute path of what it printed ([Logs](#logs)); `reading` what its JUnit reports prove, `assertion`, `no-report`, `error`, `skipped`, `green`, `timeout` or `indeterminate`; `tests` the test cases a proven red failed); `settled` (`false` when the machine stopped the check, an `environment` question asked: its verdicts are those before the replays it could not run, so neither a later attempt nor the reports take them as final, and the attempt after `RETRY` replays its red commits again). `settled` is absent from a check that ran to its end, and from journals written before the field existed: absent means settled |
 | `tdd.replay-slow` | the pipeline, once per phase, with `tdd.replay` at `all` | `phase`; `replayMs`; `phaseMs` |
 | `visuals.recorded` | the `playwright-visuals` node | `step`; `visit`; each front end's screenshots |
 | `publish.requested` | `skraft publish` | `by` (`skraft publish`); `consent` (`publish.pullRequest` when the command ran) |
@@ -285,20 +292,42 @@ way.
 | `adr-ratification` | `<node>-<n>` (`adr-1`) | an ADR `docs/adr/adr-NNN-*.md` is `Proposed`; none: `step.recorded` `skipped`, reason `no Proposed ADR to ratify` | `RATIFIED`: each ADR set to `Accepted` (`status: Accepted`, `ratified_by: "human YYYY-MM-DD"`, the `**Status:**` line, its row in `docs/adr/decisions-index.md` when present), committed alone as `docs(adr): ratify ADR-001, ADR-002`. `REJECTED`: DESIGN runs again with the reason |
 | `scenario-review` | `<node>-<n>` (`scenario_review-1`) | the DISTILL review approved; the text names each scenario in order (S1 marked walking skeleton) and S1's acceptance-test commit and files | `APPROVED`: `deliver` makes S1 pass, then the scenarios go on one at a time. `REVISE`: DISTILL runs again with the human's corrections as its feedback |
 | `mutation-plan` | `<node>-<n>` (`mutation_plan-1`) | the mutation gate failed and `kill_proposal` wrote its proposals | `APPLY`: `kill_mutants` applies the proposals; an instruction: `kill_mutants` gets it with the proposals it departs from; `STOP`: `run.finished` `blocked`, code `stopped` |
-| `environment` | `<node>-<n>`, the node that cannot run (`gates-1`) | a step cannot run on this machine | `RETRY`: the same step is checked or run again, its agent only if its outputs were still missing; `ABORT`: run blocked |
-| `blocked` | `<node>-<n>`, the node an instruction runs again (`design-1`) | an agent answered `blocked` (the agent's node), a loop reached its `max_visits` (the node its capped edge leads back to; for a review, only while a blocker or high finding is left), a lens answered `inconclusive` (the review node) | an instruction: the same run enters that node on a new pass, the instruction in `instruction` and what the block left as its `feedback` (`sentBy` `ask`), and no edge into the node counts as taken any more; `STOP`: `run.finished` `blocked` with the block's code and reason, nothing else |
+| `environment` | `<node>-<n>`, the node that cannot run (`gates-1`) | a step cannot run on this machine, or with what `skraft-config.json` gives it ([causes](#environment-question)) | `RETRY`: the same step is checked or run again where it stopped, using no new attempt, its agent only if its outputs were still missing; `ABORT`: run blocked |
+| `blocked` | `<node>-<n>`, the node an instruction runs again (`design-1`) | an agent answered `blocked` (the agent's node), a loop reached its `max_visits` (the node its capped edge leads back to; for a review, only while a blocker or high finding is left), a gate step failed the same way 3 times since it last passed (the node its `FAIL` edge leads to, code `repeated-failure`), a lens answered `inconclusive` (the review node) | an instruction: the same run enters that node on a new pass, the instruction in `instruction` and what the block left as its `feedback` (`sentBy` `ask`), and no edge into the node counts as taken any more; `STOP`: `run.finished` `blocked` with the block's code and reason, nothing else |
 | `review-ceiling` | `<node>-<n>`, the producer the review loops back to (`design-1`) | a review's loop to its producer reached its `max_visits` with only medium and low findings left | `ACCEPT`: the run goes on by the review's `APPROVED` edge (closing its phase when that edge leaves it), and the run report and the pull request list the accepted findings; an instruction: as for `blocked`; `STOP`: `run.finished` `blocked`, code `loop-ceiling` |
 
-The `environment` question reads `<node> cannot run on this machine: <reason>. Fix it, then
-RETRY; or ABORT the run.` It is asked when a gate program is not found, a red commit cannot be
-replayed, no container runtime answers a replay (Docker or Podman), a component has no test command, Git fails, `docs/adr` exists but cannot be listed
-(`docs/adr cannot be listed: Git or the file system refused to read it`, a fixed text that never
-carries the error's own; the ratification is then never skipped), or Git refuses
-the ratification commit. The step stays open. The same failure after a `RETRY` asks a new
-question (`gates-2`). After a `RETRY` given in a host dialog, the engine reads
-`skraft-config.json` again; when it is invalid, the run stops with `config-invalid` before it
-runs anything, journaling nothing: once the file is fixed, starting the run again resumes the
-open step.
+The `blocked`, `review-ceiling` and `environment` questions end with the line
+`The run so far (commits, refusals, incidents): <absolute path of run-report.md>`
+([Run report](#run-report)).
+
+### The `environment` question <!-- #environment-question -->
+
+It reads:
+
+```text
+<node> cannot run on this machine: <reason>.
+Cause: <cause>.
+Output: <absolute path of the log>
+Fix it, then RETRY: <node> runs again where it stopped, using no new attempt; or ABORT: the run ends.
+The run so far (commits, refusals, incidents): <absolute path of run-report.md>
+```
+
+The `Output:` line is there only when a command printed to a log: a gate's evidence, a replay's
+log, `logs/commit-<node>.log` ([Logs](#logs)). `Cause:` names who fixes it; `question.asked`
+carries it in `incident.owner`.
+
+| `owner` | `Cause:` | Asked when |
+| --- | --- | --- |
+| `environment` | `the machine: a program, a service, a permission or a Git hook it lacks or refuses` | a gate fails as `environment` ([failure classes](./skraft-config.md#failure-classes)), a component with no gate command aside; a replay's program cannot start; no container runtime answers a replay (Docker or Podman); an e2e red's tests cannot run, or fail, at its parent too; Git fails; `docs/adr` exists but cannot be listed (`docs/adr cannot be listed: Git or the file system refused to read it`, a fixed text that never carries the error's own; the ratification is then never skipped); Git refuses a commit the engine makes (a hook, a missing identity, a lock): the commit of an agent with no shell, the ratification commit |
+| `config` | `skraft-config.json: a command or a path it gives the engine` | a component has no gate command for a gate node; a replay's command is missing (`commands.test`), uses shell syntax or installs dependencies; a red or green replay writes no JUnit report and its command runs a runner that `skraft doctor` knows writes none where `testReports` looks: `dotnet test` without `--logger trx` or `--report-trx`, pytest without `--junitxml`, `python -m unittest`, Vitest, Jest or Playwright without a junit reporter. The reason says what to add to the command in `skraft-config.json` |
+| `unknown` | `none the engine knows: the command was stopped by a signal or crashed, which no failing check explains` | a gate or a replay ends with an exit code above 128: a signal on POSIX, a crash code from `0xC0000000` on Windows. Exit 128, which Git gives on a fatal error, stays a failed check |
+
+An `environment` question sends nothing back to an agent and uses none of its attempts. A red or
+a green with no report from any other command stays the agent's to fix (`not-red`, `not-green`).
+The step stays open. The same failure after a `RETRY` asks a new question (`gates-2`). After a
+`RETRY` given in a host dialog, the engine reads `skraft-config.json` again; when it is invalid,
+the run stops with `config-invalid` before it runs anything, journaling nothing: once the file is
+fixed, starting the run again resumes the open step.
 
 ## Unpublished ADRs <!-- #unpublished-adrs -->
 
@@ -358,6 +387,76 @@ On failure, the `result` line reads `fail (<class>): <reason>`. The `stdout` and
 sections are missing when nothing ran (line refused). A component with no
 gate command writes no evidence.
 
+## Logs <!-- #logs -->
+
+What a command printed goes to a file of `logs/`; the journal, an outcome and a question name that
+file, never copy what it holds.
+
+| File | Written when | Content |
+| --- | --- | --- |
+| `logs/replay-<short sha>-<component>-<command>.log` | each replay of a red or a green commit; `<command>` is `test`, `e2e`, or `e2e-parent` for the e2e replay at the red's parent | the replayed command, its folder, the commit and its exit, then what it printed |
+| `logs/commit-<node>.log` | Git refuses a commit the engine makes (a hook, a missing identity, a lock): the commit for an agent with no shell, the ADR ratification commit | `$ git commit (<node>)`, `result: git commit failed: exit N`, then `--- output` and what Git printed |
+| any other file of `logs/` | an agent runs a command | what the command printed |
+
+```
+$ <command run>
+cwd: <component root>
+commit: <sha>
+exit: <exit code, or why it did not start>
+--- stdout
+<standard output>
+--- stderr
+<error output>
+```
+
+A refused red (`is not red: …`) or green (`does not make the scenario pass: …`) names the log of
+its replay in its reason: `the replay's output is in <log>`; the replay journaled in
+`commits.checked` carries it in `log`. A refused commit keeps only its fixed reason in the journal
+and in the `environment` question (`git commit failed: exit N` for the ratification commit),
+never what Git printed; the question's `Output:` line names `logs/commit-<node>.log`.
+
+Every agent's brief says: send what the commands you run print to files under `<run>/logs/`,
+keep your temporary files under `<run>/.tmp/`, write nothing under `/tmp` nor outside the
+working copy.
+
+## Run report <!-- #run-report -->
+
+The engine rewrites `run-report.md` from the journal after each step: the status line, the table
+of steps (`Step`, `Phase`, `Visits`, `Attempts`, `Retries`, `Time`, `Cost`, `Outcome`) and the
+totals, which [`skraft report`](./cli.md) prints too, then
+these sections, each only when it has rows, then when the run started.
+
+| Section | Columns or lines | Content |
+| --- | --- | --- |
+| `## Waiting on` | `Question <key>, on <node>:`, the question's text quoted, then ``Answer with `skraft decide <key> <answers>`.`` | the question the run waits on: the last one asked with no answer |
+| `## Commits` | `Step`, `Commit`, `Subject`, `Kind`, `Verdict` | each commit the run checked (`commits.checked`), by its short sha, with the verdict of its last check |
+| `## Refusals` | `Step`, `Signature`, `Times`, `First failure` | the failures sent back to an agent, a gate step's included: one row per node and `signature`, how often it came back, what it said first |
+| `## Incidents` | `Question`, `Step`, `Cause`, `Output`, `Answer` | each `environment` question: its key, its node, its `incident.owner`, its log (`-` without one), its answer (`waiting` while it has none) |
+| `## Agents` | `Step`, `Agent`, `Family`, `Tier`, `Host`, `Model`, `Effort` | what each agent ran on |
+| `## Human answers` | `Question`, `Step`, `Answer`, `By` | every answer a human gave |
+| `## Accepted findings` | | the findings a human accepted at a review's ceiling |
+| `## Forge writes` | | each write on the forge, with its outcome |
+
+```markdown
+## Waiting on
+
+Question gates-1, on gates:
+
+> gates cannot run on this machine: api/test: was stopped by a signal or crashed (exit 137), not by a failing check (evidence: <tracking folder>/gates/api/test-1.log).
+> Cause: none the engine knows: the command was stopped by a signal or crashed, which no failing check explains.
+> Output: <tracking folder>/gates/api/test-1.log
+> Fix it, then RETRY: gates runs again where it stopped, using no new attempt; or ABORT: the run ends.
+> The run so far (commits, refusals, incidents): <tracking folder>/run-report.md
+
+Answer with `skraft decide gates-1 RETRY|ABORT`.
+
+## Incidents
+
+| Question | Step | Cause | Output | Answer |
+| --- | --- | --- | --- | --- |
+| gates-1 | gates | unknown | <tracking folder>/gates/api/test-1.log | waiting |
+```
+
 ## Statuses and codes <!-- #statuses-and-codes -->
 
 The commands, the mod and the workflow return a **status** and, when they stop, a **code**:
@@ -384,7 +483,7 @@ for a human's answer), `done`.
 | `refused` | `no-components` | `skraft gate` with no component | `skraft-config.json lists no component; run skraft init to detect them` | `skraft init` |
 | `blocked` | `journal-tampered` | broken chain | `journal tampered: events.jsonl line N …; restore the file or start a new slug` | restore the file or start a new slug |
 | `blocked` | `journal-changed` | another run writes during this one | `<slug>: another run wrote events.jsonl meanwhile; run again once it stops` | wait for the other run to end, run again |
-| `blocked` | `missing-outputs` | outputs missing after the last attempt | `solution-researcher left required outputs missing after 3 attempts: <paths>` | a resume returns the same block; fix the cause and start a new slug |
+| `blocked` | `missing-outputs` | outputs missing after the last attempt | `solution-researcher still failed after 3 attempts: missing outputs: <paths>` | a resume returns the same block; fix the cause and start a new slug |
 | `blocked` | `design-records` | the solution architect's DESIGN records still fail after its last attempt: a consistency matrix whose `consistency-gate` does not read `PASS` (G10; a missing one stops with `missing-outputs`), an ADR named `*-rejected.md`, `*-accepted.md`, `*-deprecated.md` or `*-superseded.md` (G14), a `**Supersedes:**` line without its row in `docs/adr/supersessions.md` (G2, G12), an ADR without its row in `docs/adr/decisions-index.md` | `solution-architect still failed after 3 attempts: <each record at fault>` | write the record, then start a new slug |
 | `blocked` | `research-records` | the solution researcher's citations still fail after its last attempt: a workspace path the research document cites that is no readable file of the working copy, or a `path:line` or `path:line-line` range past the end of the file it names (a range on a path the working copy has not is reported once, as a path it has not; a path the document cites several times is reported once) | `solution-researcher still failed after 3 attempts: <each citation at fault>` | fix the citation, then start a new slug |
 | `blocked` | `gherkin-records` | the acceptance designer's scenarios still fail after its last attempt: a `.feature` the test plan names that no features folder of its component holds, a scenario that says no Given, When or Then, an outline whose examples leave a placeholder it opens unfilled, two scenarios of one file sharing a title, or fewer scenarios than the story's `ac-draft-{story}.md` declares acceptance criteria. A `.feature` declaring a language other than `en`, or opening no scenario English names, is reported on that line alone. Only where a component declares `bdd`, and only under the folders it names | `acceptance-designer still failed after 3 attempts: <each scenario at fault>` | write the scenario, then start a new slug |
@@ -402,6 +501,13 @@ for a human's answer), `done`.
 | `waiting` | `adr-ratification`, `scenario-review`, `mutation-plan`, `environment` | a question has no answer | `<question> Answer with skraft decide <key> <A>\|<B>`, plus ` (a refusal with its reason)` when the question has a refusal | answer with `skraft decide`, `/skraft decide` or `skraft_decide` |
 | `waiting` | `blocked` | an agent answered `blocked`, a loop reached its `max_visits`, a gate step failed the same way 3 times since it last passed or a lens answered `inconclusive`, and nobody answered the `blocked` question yet | `<question> Answer with skraft decide <key> "<instruction>"\|STOP.` | answer with an instruction, which runs the node again in the same run, or `STOP` |
 | `done` | — | the workflow's last phase is closed | `<PHASE> closed` (`PUBLISH closed` with the plugin's workflow) | — |
+
+An agent step that stops on its refused attempts keeps the code of the last one
+(`missing-outputs`, `design-records`…). Its reason starts with `<agent> still failed after N attempts`,
+`<agent> failed the same way on attempts N and M` (the same `signature` on its last two attempts)
+or `<agent> failed the same way 3 times since it last passed`, then lists the failures. A gate step
+failing the same way 3 times asks the `blocked` question instead (`repeated-failure`); gate
+failures that differ each time loop until the `max_visits` of the `FAIL` edge.
 
 Gates also have their own `passed` and `failed` statuses:
 [The skraft command line](./cli.md).

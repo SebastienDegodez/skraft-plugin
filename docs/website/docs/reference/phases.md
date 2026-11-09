@@ -35,6 +35,11 @@ Every relative path sits under the tracking folder `.copilot-tracking/skraft-pla
 the tracking folder: it is the repository's durable documentation
 ([Durable documentation](./run-journal.md#durable-docs)).
 
+Every agent's brief says to send what the commands it runs print to files under `logs/` and to
+keep its temporary files under `.tmp/`, writing nothing under `/tmp` nor outside the working copy.
+Neither folder is a document of a phase: no lens nor review gets them
+([Logs](./run-journal.md#logs)).
+
 ## DISCOVER <!-- #discover -->
 
 | | |
@@ -275,8 +280,8 @@ with `scenarios`. Why S1 is a walking skeleton: [Walking Skeleton](../explanatio
 | `adr-ratification` | node `adr` | `RATIFIED`, `REJECTED` | `REJECTED` | `ADR` |
 | `scenario-review` | node `scenario_review` | `APPROVED`, `REVISE` | `REVISE` | `Scenarios` |
 | `mutation-plan` | node `mutation_plan` | `APPLY`, an instruction, or `STOP` | — | `Mutation` |
-| `environment` | the engine, when a step cannot run on the machine, a replay included (no Docker or Podman answers) | `RETRY`, `ABORT` | — | `Environment` |
-| `blocked` | the engine, when an agent answers `blocked`, a loop reaches its `max_visits` or a lens answers `inconclusive` | an instruction, or `STOP` | — | `Blocked` |
+| `environment` | the engine, when a step cannot run on the machine or with what `skraft-config.json` gives it, a replay included (no Docker or Podman answers, a runner that writes no report); its text names the cause and the log ([causes](./run-journal.md#environment-question)) | `RETRY`, `ABORT` | — | `Environment` |
+| `blocked` | the engine, when an agent answers `blocked`, a loop reaches its `max_visits`, a gate step fails the same way 3 times since it last passed or a lens answers `inconclusive` | an instruction, or `STOP` | — | `Blocked` |
 | `review-consent` | `skraft review --pr --publish` | `ACCEPTED`, `DECLINED` | — | `PR comment` |
 
 No run asks for a publication consent: `/skraft-init` settles them before any run, in

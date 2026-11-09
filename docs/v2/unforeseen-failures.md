@@ -154,8 +154,9 @@ Livré ainsi (D6, D7, D8, D10) :
   | test rouge au green, format de commit, fichier hors périmètre | agent | retry existant |
   | rouge sans rapport alors que la commande n'en écrit pas non plus au commit parent | config | `escalate` + renvoi vers `skraft doctor` |
   | hook git en échec | environnement | `escalate` (RETRY/ABORT), avec le hook et la fin de sa sortie |
-  | Docker / Podman absent ou injoignable | environnement | `escalate` |
-  | commande de test introuvable | config | `escalate` + renvoi vers `skraft doctor` |
+  | Docker / Podman absent ou injoignable | environnement | `escalate` (« start Docker or Podman, then retry ») |
+  | programme de la commande de test introuvable | environnement | `escalate` (« could not start … » ; installer le programme ou changer la commande) |
+  | commande de test absente, à syntaxe shell, qui installe des dépendances ; runner connu sans rapport JUnit (D8) | config | `escalate`, la raison dit quoi changer dans `skraft-config.json` |
   | permission refusée sur un chemin | environnement | `escalate` |
   | non classée | inconnu | STOP (lot 3) |
 
@@ -188,20 +189,30 @@ Livré ainsi (D6, D7, D8, D10) :
 
 ### Lot 4 — Rapport d'arrêt et de fin
 
-- [ ] `blockText`, `reviewCeilingText` et `environmentText` complétés, avec ces points imposés :
-  1. étape et scénario en cours ;
-  2. SHAs des commits du run ;
-  3. verdicts par étape ;
-  4. refus et leur propriétaire ;
-  5. findings ouverts avec leur nombre de rounds ;
-  6. incidents (signature, nombre d'occurrences, log) ;
-  7. décisions attendues de l'humain, avec la conséquence de chaque option.
+Livré ainsi : les questions `blocked`, `review-ceiling` et `environment` se terminent par le chemin
+de `run-report.md` (réécrit après chaque étape) ; le rapport porte le reste, une question restant
+lisible dans un dialogue d'hôte.
+
+- [x] 1. étape en cours : la question la nomme ; `## Waiting on` nomme la question et son nœud
+  (le numéro du scénario reste dans le tableau des étapes et le libellé de l'agent) ;
+- [x] 2. SHAs des commits du run : `## Commits` (étape, sha court, sujet, sorte) ;
+- [x] 3. verdicts : celui du dernier contrôle de chaque commit dans `## Commits`, l'issue de
+  chaque étape dans le tableau des étapes ;
+- [x] 4. refus et leur propriétaire : `## Refusals` (renvoyés à l'agent, D10), `## Incidents`
+  (cause `environment`, `config` ou `unknown`) ;
+- [x] 5. findings ouverts et leurs rounds : la question `review-ceiling` (inchangée) ;
+- [x] 6. incidents : signature et nombre d'occurrences dans `## Refusals`, log dans
+  `## Incidents` ;
+- [x] 7. décision attendue : `## Waiting on` cite la question et la commande `skraft decide` ;
+  chaque question dit ce que fait chaque réponse.
+- `skraft report --json` porte `waiting`, `commits`, `refusals`, `incidents`.
 
 ### Lot 5 — Mesure
 
-Les pannes sont injectées dans `tests/skraft-framework/integration/unforeseen/` : vrais
-processus, vrais hooks git et un `PATH` sans `docker` ni `podman`. Ces tests tournent sur Linux,
-Windows et macOS par la CI existante.
+Les pannes sont injectées dans `tests/skraft-framework/integration/unforeseen-failures/` : vrais
+processus, vrai dépôt Git, vrai hook `pre-commit`, une sortie Testcontainers qui ne trouve aucun
+runtime. Ces tests tournent sur Linux, Windows et macOS par la CI existante
+(`npm run test:engine`).
 
 | Panne | Attendu |
 |---|---|
@@ -213,17 +224,31 @@ Windows et macOS par la CI existante.
 | même échec avec horodatage différent | arrêt au seuil (signature identique) |
 | **imprévu non classé** (sortie inconnue d'un outil) | STOP avec diagnostic, 0 tentative d'agent consommée |
 
-Pour chaque panne, on relève dans le journal : le nombre de tours perdus, la durée jusqu'à
-l'arrêt et la lisibilité du diagnostic.
+Mesuré (agents scriptés, donc durées du moteur seul, relevées dans les `at` du journal) :
+
+| Panne | Résultat | Tours d'agent perdus | Panne → arrêt |
+|---|---|---|---|
+| hook `pre-commit` refusant le commit de ratification | question `environment`, cause machine, `Output` = `logs/commit-adr.log` (le message du hook y est, pas dans le journal) ; RETRY repart | 0 | 150–364 ms (le hook) |
+| aucun runtime de conteneurs au rejeu du rouge | question `environment`, `Output` = log du rejeu ; RETRY repart | 0, aucune tentative journalisée | ≤ 1 ms |
+| programme de la commande de test introuvable | question `environment` (« could not start ») ; RETRY repart | 0 | ≤ 1 ms |
+| agent qui ne produit pas sa sortie | disjoncteur après la tentative 2 (`missing-outputs`) | 1 (la tentative 2) | ≈ 50 ms |
+| test instable | pas d'arrêt, run terminé | 1 (passe 2 de l'engineer) | ≈ 80 ms pour repartir |
+| même échec, sortie qui varie (heure, durée, dossier temporaire) | question `blocked`, code `repeated-failure`, trois signatures égales | 2 (passes 2 et 3), aucune après | ≈ 150–165 ms |
+| commande arrêtée par un plantage (exit 139) | question `environment`, cause `unknown` ; RETRY repart | 0, aucune passe des gates journalisée | ≈ 1 ms |
+
+Lisibilité : chaque arrêt nomme la cause, le log complet et ce que fait chaque réponse ; le
+rapport du run (`run-report.md`) liste commits, refus par signature et incidents.
 
 ### Fini quand (V2)
 
-- [ ] Les scénarios sont écrits d'abord en tests d'acceptation au niveau du cas d'usage, puis
+- [x] Les scénarios sont écrits d'abord en tests d'acceptation au niveau du cas d'usage, puis
   couverts par les pilotes sur l'hôte simulé.
-- [ ] La mutation incrémentale est verte (100 % domaine et application) sur les fichiers modifiés.
-- [ ] Les 7 pannes du lot 5 donnent le résultat attendu sur les 3 OS.
-- [ ] Aucune demande d'autorisation pour un chemin hors du dépôt pendant un run réel.
-- [ ] Aucune régression : unitaires, intégration, outillage, CI locale.
+- [x] La mutation incrémentale est verte (100 % domaine et application) sur les fichiers modifiés.
+- [x] Les 7 pannes du lot 5 donnent le résultat attendu (macOS en local ; Linux et Windows par la
+  CI de la PR).
+- [ ] Aucune demande d'autorisation pour un chemin hors du dépôt pendant un run réel : à
+  vérifier sur un run réel (consigne `logs/`/`.tmp/` dans chaque brief ; D6).
+- [x] Aucune régression : unitaires, intégration, outillage, CLI, scripts de skills, manuel.
 
 ## 6. Lots 2.1 (après mesure)
 
@@ -286,5 +311,5 @@ n'apportera rien de plus qu'un bon diagnostic, et on s'arrête au lot 7.
 | 1 | `feat/unforeseen-failures` (#568) | fait | mutation 100 % (domaine, application) ; un journal V2 écrit avant le lot 1 n'a pas de signature : deux échecs consécutifs y déclenchent le disjoncteur (V2 non publiée) |
 | 2 | `feat/unforeseen-failures` (#568) | fait | mutation 100 % (domaine, application) |
 | 3 | #568 | fait | livré avec le lot 2, même commit |
-| 4 | #568 | à faire | |
-| 5 | #568 | à faire | |
+| 4 | #568 | fait | mutation 100 % |
+| 5 | #568 | fait | 7 pannes, `tests/skraft-framework/integration/unforeseen-failures/` ; 3 OS par la CI |
