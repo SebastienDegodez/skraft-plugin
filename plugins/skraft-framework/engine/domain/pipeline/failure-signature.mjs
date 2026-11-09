@@ -14,12 +14,18 @@
 export const REPEATS = 3
 
 /**
- * What changes from one try to the next and says nothing of the failure, each with what replaces
- * it; GUIDs before hashes and times before durations, which would cut them.
+ * What changes from one try to the next, or from one machine to another, and says nothing of the
+ * failure, each with what replaces it: colours first, which split the words; a results file named
+ * by machine and second, the plugin wherever it is installed; GUIDs before hashes, times before
+ * durations, which would cut them; a duration a test runner prints or not last.
  * @type {ReadonlyArray<readonly [RegExp, string]>}
  */
 const VARYING = Object.freeze([
+  [/\u001b\[[0-9;?]*[ -/]*[@-~]/g, ''],
   [/(?<=^|[\s'"(=:/])(?:(?:\/private)?\/var\/folders\/[^\s'"]+?\/T\/|\/tmp\/|[A-Za-z]:\\Users\\[^\\\s]+\\AppData\\Local\\Temp\\)[^\s'")]*/g, '<tmp>'],
+  [/[^\s\\/'"]+\.trx\b/g, '<results>.trx'],
+  [/(?:[A-Za-z]:)?(?:[\\/][^\s\\/'"]+)+?[\\/]skills[\\/]([\w.-]+)[\\/]scripts[\\/]/g, '<plugin>/skills/$1/scripts/'],
+  [/^(\s*Duration)\s.*$/g, '$1 <duration>'],
   [/\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b/gi, '<guid>'],
   [/(?<!\d)\d{4}-\d{2}-\d{2}[T _]\d{2}[:_]\d{2}(?:[:_]\d{2}(?:[.,]\d+)?)?(?:Z|[+-]\d{2}:?\d{2})?/g, '<time>'],
   [/(?<!\d)(?:\d{4}-\d{2}-\d{2}|\d{1,2}\/\d{1,2}\/\d{2,4})(?!\d)/g, '<date>'],
@@ -27,17 +33,23 @@ const VARYING = Object.freeze([
   [/\b\d+(?:[.,]\d+)?\s?(?:ms|s|sec|seconds?|min|minutes?|m|h)\b/g, '<duration>'],
   [/\b(pid|process)([\s:=#]*)\d+/gi, '$1$2<pid>'],
   [/\b(localhost|127\.0\.0\.1|0\.0\.0\.0|\[::1\]|host\.docker\.internal):\d+/g, '$1:<port>'],
-  [/\b(?=[0-9a-f]*[a-f])(?=[0-9a-f]*\d)[0-9a-f]{7,40}\b/g, '<sha>'],
+  [/(?<![0-9A-Za-z])(?=[0-9a-f]*[a-f])(?=[0-9a-f]*\d)[0-9a-f]{7,40}(?![0-9A-Za-z])/g, '<sha>'],
   [/\b(attempt|pass|visit|round)( )\d+/gi, '$1$2<n>'],
   [/-\d+(?:-g\d+)?(?:-\d+)?\.(json|log|md)\b/g, '-<n>.$1'],
+  [/([=_*~#-])\1{2,}/g, '$1$1$1'],
+  [/ \(<duration>\)|, estimated <duration>/g, ''],
 ])
+
+/** A line a run prints or not, which says nothing of the failure: a build's SDK warning, a JVM echoing the options of the machine. */
+const NOISE = /: warning [A-Z]{2,}\d{3,}:|Picked up (?:JAVA_TOOL_OPTIONS|_JAVA_OPTIONS|JDK_JAVA_OPTIONS):/
 
 /**
  * The text of a failure as every try writes it: the working copy and the slug named, what varies
- * replaced, spaces at the end of a line and empty lines gone, the order of the lines kept.
+ * replaced, noise, spaces at the end of a line and empty lines gone, the order of the lines kept.
  * @param {readonly string[]} lines @param {SignatureContext} context
  */
 const steady = (lines, { slug, root }) => lines.join('\n').split(/\r?\n/)
+  .filter((line) => !NOISE.test(line))
   .map((line) => VARYING.reduce((text, [varying, by]) => text.replace(varying, by), line.replaceAll(root, '<repo>').replaceAll(slug, '<slug>')).trimEnd())
   .filter((line) => line !== '')
   .join('\n')

@@ -14,6 +14,13 @@ import { failureSignature, REPEATS } from '../../domain/pipeline/failure-signatu
 export const attemptSignature = (context, { step, code, missing, failures }) => failureSignature({ step, code, lines: [...missing, ...failures] }, placesOf(context))
 
 /**
+ * The signature of an incident asked of a human: its step, its cause and its reason, so that the
+ * same incident on another run, or another machine, is known as the same.
+ * @param {SignatureContext} context @param {{ step: string, owner: string, reason: string }} incident
+ */
+export const incidentSignature = (context, { step, owner, reason }) => failureSignature({ step, code: owner, lines: [reason] }, placesOf(context))
+
+/**
  * The signature of a failed gate step: its failures, then the evidence log of each gate that
  * failed on this pass, which holds what the command printed.
  * @param {SignatureContext} context @param {{ step: string, failures: string[] }} failed

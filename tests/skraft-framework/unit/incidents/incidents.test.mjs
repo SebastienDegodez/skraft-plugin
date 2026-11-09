@@ -13,6 +13,7 @@ const replayLog = (sha, command = 'test') => `${TRACKING}/logs/replay-${sha}-api
 const LINTED = { name: 'web', root: '.', stack: 'react', bdd: false, mocking: { strategy: 'inprocess' }, paths: { src: ['web/src'], tests: ['web/src'] }, commands: { lint: 'npx eslint .' } }
 
 test('a gate stopped by a signal or a crash, on POSIX or on Windows, asks a human, its cause unknown: no pass goes back to the engineer', async () => {
+  const signatures = []
   for (const exit of [137, 139, 3221225477]) {
     const host = scripted({ machine: new ScriptedMachine({ exits: { '. $ dotnet test': exit } }) }, (it) => [...upToDeliver(it), agent({ work: green() })(it)])
 
@@ -20,10 +21,14 @@ test('a gate stopped by a signal or a crash, on POSIX or on Windows, asks a huma
 
     const evidence = `${TRACKING}/gates/api/test-1.log`
     assert.deepEqual([outcome.status, outcome.code, outcome.reason], ['waiting', 'environment', waitingOnEnvironment('gates', `api/test: was stopped by a signal or crashed (exit ${exit}), not by a failing check (evidence: ${evidence})`, 1, { owner: 'unknown', log: evidence })], String(exit))
-    assert.deepEqual(asked(host).incident, { owner: 'unknown', log: evidence })
+    const { signature, ...incident } = asked(host).incident
+    assert.deepEqual(incident, { owner: 'unknown', log: evidence })
+    assert.match(signature, /^[0-9a-f]{8}$/)
+    signatures.push(signature)
     assert.deepEqual(asked(host).subjects, [])
     assert.equal(dispatched(host, 'deliver'), 1)
   }
+  assert.equal(new Set(signatures).size, 3)
 })
 
 test('a gate exiting 128, as Git does on a fatal error, failed a check: the engineer gets the work back', async () => {
@@ -46,7 +51,7 @@ test('a gate a signal stopped, beside one the machine cannot start, is the machi
 
   await host.start()
 
-  assert.deepEqual(asked(host).incident, { owner: 'environment', log: `${TRACKING}/gates/web/lint-1.log` })
+  assert.deepEqual({ ...asked(host).incident, signature: undefined }, { owner: 'environment', log: `${TRACKING}/gates/web/lint-1.log`, signature: undefined })
 })
 
 test('a mutation run stopped by a signal is not judged by its report: a human is asked, its cause unknown', async () => {
@@ -57,7 +62,7 @@ test('a mutation run stopped by a signal is not judged by its report: a human is
 
   assert.equal(outcome.code, 'environment')
   assert.ok(outcome.reason.startsWith('mutation cannot run on this machine: api/mutation: was stopped by a signal or crashed (exit 137), not by a failing check'), outcome.reason)
-  assert.deepEqual(asked(host).incident, { owner: 'unknown', log: `${TRACKING}/gates/api/mutation-1.log` })
+  assert.deepEqual({ ...asked(host).incident, signature: undefined }, { owner: 'unknown', log: `${TRACKING}/gates/api/mutation-1.log`, signature: undefined })
 })
 
 test('a replay stopped by a signal or a crash asks a human, its cause unknown, with what it printed: the designer keeps its attempts', async () => {

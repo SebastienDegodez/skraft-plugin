@@ -133,3 +133,56 @@ test('a signature stays the same from one version of the engine to the next: eig
   assert.equal(of('api/test: exited 1'), '59ee657d')
   assert.equal(of('api/test: exited 124'), '0fad464b')
 })
+
+/** Two runs of the same failure as real tools print them, what differs between them noise only. */
+const NOISY = {
+  'vitest 5, its duration split into parts that change order': [
+    ' FAIL  src/checkout.test.ts > checkout > pays by card\nAssertionError: expected 0 to be 10\n Duration  81ms (transform 52%, import 24%, tests 16%, worker 8%)',
+    ' FAIL  src/checkout.test.ts > checkout > pays by card\nAssertionError: expected 0 to be 10\n Duration  74ms (import 41%, transform 33%, worker 15%, tests 11%)',
+  ],
+  'jest, a test duration printed or not, an estimate on the second run': [
+    'FAIL src/checkout.test.js\n  ✓ refunds the card (1 ms)\n  ● checkout › pays by card\nTime:        0.128 s',
+    'FAIL src/checkout.test.js\n  ✓ refunds the card\n  ● checkout › pays by card\nTime:        0.085 s, estimated 1 s',
+  ],
+  'colours a terminal shows on one host and not the other': [
+    '\u001b[31m\u001b[1mFAIL\u001b[22m\u001b[39m src/checkout.test.ts \u001b[2m> pays by card\u001b[22m',
+    'FAIL src/checkout.test.ts > pays by card',
+  ],
+  'dotnet test, its results file named by machine and given a suffix in the same second': [
+    'Results File: /work/tests/TestResults/_MacBook-Pro-de-Sebastien_2026-11-09_09_01_00.trx\nFailed CheckoutTests.PaysByCard',
+    'Results File: /work/tests/TestResults/_9c084ff64859_2026-11-09_09_01_00[1].trx\nFailed CheckoutTests.PaysByCard',
+  ],
+  'a first build that warns, the next one that does not': [
+    '/usr/share/dotnet/sdk/8.0.404/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.targets(1239,5): warning NETSDK1188: The project does not reference a runtime pack.\nFailed CheckoutTests.PaysByCard',
+    'Failed CheckoutTests.PaysByCard',
+  ],
+  'the plugin installed in another folder, of another version': [
+    '$ node /Users/dev/.claude/plugins/cache/skraft/skraft-framework/2.0.1/skills/quality-gates-dotnet/scripts/mutation-core.mjs --root .\nboundary 50% < 80%',
+    '$ node C:\\Users\\ci\\.copilot\\installed-plugins\\skraft-framework\\skills\\quality-gates-dotnet\\scripts\\mutation-core.mjs --root .\nboundary 50% < 80%',
+  ],
+  'a JVM echoing the options of the machine': [
+    'Picked up JAVA_TOOL_OPTIONS: -Dfile.encoding=UTF-8\n[ERROR] CheckoutTest.paysByCard <<< FAILURE!',
+    '[ERROR] CheckoutTest.paysByCard <<< FAILURE!',
+  ],
+  'a separator as wide as the terminal': [
+    `${'='.repeat(30)} FAILURES ${'='.repeat(30)}\nFAILED tests/test_checkout.py::test_pays_by_card`,
+    `${'='.repeat(55)} FAILURES ${'='.repeat(55)}\nFAILED tests/test_checkout.py::test_pays_by_card`,
+  ],
+  'a container id in a results path': [
+    'see /work/TestResults/_9c084ff64859_run.log\nFailed CheckoutTests.PaysByCard',
+    'see /work/TestResults/_0d1e77a1b2c3_run.log\nFailed CheckoutTests.PaysByCard',
+  ],
+}
+
+test('noise real tools print from one run to the next, or from one machine to another, leaves the signature as it is', () => {
+  for (const [noise, [first, again]] of Object.entries(NOISY)) assert.equal(signature(first), signature(again), noise)
+})
+
+test('what tells two failures apart survives the noise taken out: the failing test, a coverage figure, a warning of the code', () => {
+  assert.notEqual(signature(' Duration  81ms (transform 52%)\nAssertionError: expected 0 to be 10'), signature(' Duration  81ms (transform 52%)\nAssertionError: expected 1 to be 10'))
+  assert.notEqual(signature('boundary 50% < 80%'), signature('boundary 60% < 80%'))
+  assert.notEqual(signature('src/Pay.cs(12,5): error CS0103: The name x does not exist'), signature('src/Pay.cs(12,5): error CS0103: The name y does not exist'))
+  assert.notEqual(signature('Results File: a.trx\nFailed CheckoutTests.PaysByCard'), signature('Results File: a.trx\nFailed CheckoutTests.Refunds'))
+  assert.notEqual(signature('expected a === b'), signature('expected a  b'))
+  assert.notEqual(signature('refused by abc1234'), signature('refused by'))
+})

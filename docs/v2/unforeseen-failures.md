@@ -313,3 +313,5 @@ n'apportera rien de plus qu'un bon diagnostic, et on s'arrête au lot 7.
 | 3 | #568 | fait | livré avec le lot 2, même commit |
 | 4 | #568 | fait | mutation 100 % |
 | 5 | #568 | fait | 7 pannes, `tests/skraft-framework/integration/unforeseen-failures/` ; 3 OS par la CI |
+| 1 bis | #567 | fait | Le spike du lot 7 a mesuré une signature instable sur sorties réelles (Vitest 5 : jamais égale ; Jest : un essai trop tard ; .NET : `[1].trx`, avertissements du premier build). La normalisation retire désormais couleurs ANSI, parts de durée Vitest, durées et estimation Jest, nom du `.trx`, avertissements SDK, écho `JAVA_TOOL_OPTIONS`, largeur des séparateurs, dossier du plugin ; le motif `<sha>` coupe aussi sur `_`. Une escalade journalise sa `signature` (données du lot 7). Mutation 100 %. Non traité : langue de la sortie .NET, numéros de ligne du runtime JDK/Python (entre machines seulement) |
+| 6, 7 | spikes | mesure | Lot 7 : table non justifiée (1 entrée possible, 0 arrêt évité sur 13), critères de la section 7 non atteints ; rapport sur la branche `spike/lot7-known-signatures`. Lot 6 : spike en cours |

@@ -106,7 +106,9 @@ test('a red with no report from a test command that writes none where the engine
 
   assert.deepEqual([outcome.status, outcome.reason], ['waiting', waitingOnEnvironment('distill', 'replaying root-1 for api: its test command "dotnet test" writes no JUnit report where testReports looks; add --logger trx (VSTest) or --report-trx (Microsoft.Testing.Platform) to it in skraft-config.json, then retry', 1, { owner: 'config', log: logOf('root-1') })])
   assert.deepEqual(recorded(host, 'distill'), [])
-  assert.deepEqual(host.events().filter(({ type }) => type === 'question.asked').at(-1).incident, { owner: 'config', log: logOf('root-1') })
+  const { signature, ...incident } = host.events().filter(({ type }) => type === 'question.asked').at(-1).incident
+  assert.deepEqual(incident, { owner: 'config', log: logOf('root-1') })
+  assert.match(signature, /^[0-9a-f]{8}$/)
   assert.match(host.tracking.files.get(`${SLUG}/logs/replay-root-1-api-test.log`), /^\$ dotnet test\ncwd: \.\ncommit: root-1\nexit: 1\n--- stdout\n/)
 })
 

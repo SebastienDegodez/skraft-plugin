@@ -16,6 +16,7 @@ import { verdictPath } from '../review/review-runs.mjs'
 import { MACHINE } from '../../domain/pipeline/incidents.mjs'
 import { refusedCommit } from './refused-commits.mjs'
 import { RUN_REPORT_FILE } from '../../domain/reporting/run-report.mjs'
+import { incidentSignature } from './failure-signatures.mjs'
 
 /**
  * The questions a run puts to a human: an ask node's, and the one the engine asks when the
@@ -276,7 +277,8 @@ const retried = async (context, phase) => {
 
 /**
  * The machine cannot run the step: the engine asks a human to fix it and RETRY, or ABORT, with
- * the incident it knows of. The step stays open; the run settles the question before anything else.
+ * the incident it knows of, signed as a failure is. The step stays open; the run settles the
+ * question before anything else.
  * @param {Context} context @param {Pick<WorkStep, 'node' | 'visit'>} next @param {string} reason
  * @param {import('../../domain/pipeline/incidents.mjs').Incident} [incident]
  * @returns {Promise<null>}
@@ -284,7 +286,8 @@ const retried = async (context, phase) => {
 export const escalate = async (context, { node, visit }, reason, incident = MACHINE) => {
   const { journal } = context
   const question = questionOf('environment', nextKey(journal, node.id), withReport(context, environmentText(node.id, reason, incident)))
-  await journal.append('question.asked', { ...question, step: node.id, visit, subjects: [], incident })
+  const signature = incidentSignature(context, { step: node.id, owner: incident.owner, reason })
+  await journal.append('question.asked', { ...question, step: node.id, visit, subjects: [], incident: { ...incident, signature } })
   return null
 }
 
