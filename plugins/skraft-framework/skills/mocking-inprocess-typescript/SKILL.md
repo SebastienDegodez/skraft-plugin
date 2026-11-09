@@ -1,15 +1,17 @@
 ---
 name: mocking-inprocess-typescript
-description: 'Use when a TypeScript, JavaScript or React component''s brief line says `mocking: inprocess` (the default for these stacks) and a Vitest integration test must replace a downstream HTTP API with an in-process double (MSW at the network layer, or a hand-written gateway handed to the feature).'
+description: 'Use when a TypeScript, JavaScript or React component''s brief line says `mocking: inprocess` (the default for a React front end) and a Vitest integration test must replace a downstream HTTP API with an in-process double: MSW at the network layer for a React front end''s targeted tests of its calls to the back end, or a hand-written gateway handed to the feature.'
 ---
 
-# Mocking — In-process x TypeScript (default)
+# Mocking — In-process x TypeScript (default for React)
 
 Replaces a downstream HTTP API the code under test calls with an in-process double in a Vitest
 integration test. Applies only to a TypeScript, JavaScript or React component whose brief line
-says `mocking: inprocess`. Pick the library from the table below: the first row that fits and
-is already a devDependency; otherwise the first row that fits. Write mock wiring and the
-integration-test scaffold only.
+says `mocking: inprocess`: a React front end by default, whose targeted tests answer its calls to
+the back end with MSW; its Playwright e2e run reaches the back end through Microcks
+(`mocking-microcks-typescript`). Pick the library from the table below: for a React front end's
+calls to the back end, MSW; otherwise the first row that fits and is already a devDependency,
+else the first row that fits. Write mock wiring and the integration-test scaffold only.
 
 ## Libraries (table order = priority, top = highest)
 
@@ -57,7 +59,8 @@ Files: `tests/integration/{feature}/infrastructure/Http{Feature}Gateway.test.ts`
 ## Rules
 
 - Double the DOWNSTREAM API, never the feature's own use cases or components.
-- MSW lives in `tests/integration`; `tests/unit` uses hand-written in-memory gateways and no
-  `vi.mock` / `vi.fn` (G7).
+- MSW answers the back end in `tests/integration`, and in the acceptance tests of a React front
+  end's scenarios wherever they live (the front → back policy of targeted scenarios); any other
+  test of `tests/unit` uses hand-written in-memory gateways. Never `vi.mock` / `vi.fn` (G7).
 - A call the test did not expect fails it: `onUnhandledFrame: 'error'` from msw 3,
   `onUnhandledRequest: 'error'` below 3. Read the `msw` major in `package.json` after installing it.

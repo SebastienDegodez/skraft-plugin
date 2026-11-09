@@ -1,0 +1,14 @@
+{
+  "components": [
+    {
+      "name": "api",
+      "root": "services/api",
+      "stack": "dotnet",
+      "infrastructure": {
+        "internalGateway": {
+          "walkingSkeleton": "in-memory"
+        }
+      }
+    }
+  ]
+}

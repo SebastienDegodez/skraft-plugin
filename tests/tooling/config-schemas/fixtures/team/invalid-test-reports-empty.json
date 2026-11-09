@@ -1,0 +1,10 @@
+{
+  "components": [
+    {
+      "name": "api",
+      "root": "services/api",
+      "stack": "dotnet",
+      "testReports": []
+    }
+  ]
+}

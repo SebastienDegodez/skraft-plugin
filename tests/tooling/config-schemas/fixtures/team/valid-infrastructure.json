@@ -1,0 +1,48 @@
+{
+  "components": [
+    {
+      "name": "api",
+      "root": "services/api",
+      "stack": "dotnet",
+      "infrastructure": {
+        "entryPoint": {
+          "walkingSkeleton": "in-process"
+        },
+        "internalGateway": {
+          "targeted": "in-memory",
+          "walkingSkeleton": "in-memory"
+        },
+        "clock": {
+          "targeted": "real"
+        }
+      },
+      "testReports": [
+        "./reports/unit.xml",
+        "tests/**/TestResults/*.xml"
+      ]
+    },
+    {
+      "name": "web",
+      "root": "../web",
+      "stack": "react",
+      "mocking": {
+        "strategy": "microcks"
+      },
+      "infrastructure": {
+        "entryPoint": {
+          "targeted": "real"
+        },
+        "frontToBack": {
+          "targeted": "msw",
+          "e2e": "msw"
+        },
+        "clock": {
+          "targeted": "fake"
+        }
+      },
+      "testReports": [
+        "reports/junit.xml"
+      ]
+    }
+  ]
+}

@@ -78,6 +78,8 @@ test('the agent loop waits on the mutation plan, naming its options and an instr
   }
   await untilAsked()
   await skraft(cwd, ['decide', 'adr-1', 'RATIFIED'], { confirm: async () => true })
+  await untilAsked()
+  await skraft(cwd, ['decide', 'scenario_review-1', 'APPROVED'], { confirm: async () => true })
 
   const step = await untilAsked()
   const decided = await skraft(cwd, ['decide', 'mutation_plan-1', 'Test pay(0) only'], { confirm: async () => true })

@@ -4,10 +4,12 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { actsAs, scriptedModHost } from './support/scripted-mod-host.mjs'
 import { answerChoices } from '../../../../plugins/skraft-framework/engine/drivers/claude-mod/run-view.mjs'
-import { ADR, ADR_PATH, decisionsIndex, INDEX_PATH, NOMINAL, PAY_OR_NOTHING, SLUG, blocked, commit, deliverWith, fillOutputs, killsZero, pipelineRepository, proposesZero, scriptedLlm, writeResult } from '../support/pipeline-repository.mjs'
+import { ADR, ADR_PATH, decisionsIndex, INDEX_PATH, NOMINAL, PAY_OR_NOTHING, SLUG, blocked, commit, deliverWith, fillOutputs, killsZero, pipelineRepository, proposesZero, scenarioReviewText, scriptedLlm, writeResult } from '../support/pipeline-repository.mjs'
 import { git, journal } from '../support/workspace.mjs'
 
 const RATIFY = `Ratify the Proposed ADRs ${ADR_PATH}? RATIFIED marks them Accepted; REJECTED sends DESIGN back with your reason.`
+/** The dialog of the scenario review of a run on the repository at cwd. @param {string} cwd */
+const reviewDialog = (cwd) => ({ question: scenarioReviewText(cwd), options: { options: ['APPROVED', 'REVISE'], header: 'Scenarios' } })
 const REASON = 'use the bank gateway, not Stripe'
 
 /** `/skraft <slug>` on the repository with these dialog answers, until the run stops. */
@@ -30,7 +32,7 @@ test('the ratification is asked in a dialog with its options; RATIFIED goes on i
   const { mod, outcome } = await runOn(cwd, ['RATIFIED'])
 
   assert.equal(outcome.status, 'done')
-  assert.deepEqual(mod.asked, [{ question: RATIFY, options: { options: ['RATIFIED', 'REJECTED'], header: 'ADR' } }])
+  assert.deepEqual(mod.asked, [{ question: RATIFY, options: { options: ['RATIFIED', 'REJECTED'], header: 'ADR' } }, reviewDialog(cwd)])
   assert.match(readFileSync(join(cwd, ...ADR_PATH.split('/')), 'utf8'), /^status: Accepted$/m)
   assert.equal(git(cwd, 'log', '-1', '--format=%s', '--', ADR_PATH), 'docs(adr): ratify ADR-001')
 })
@@ -53,7 +55,7 @@ test('a dismissed dialog leaves the run waiting; /skraft decide records the answ
   assert.equal(text, `${SLUG}: adr-1 answered RATIFIED; run the pipeline again to go on\nskraft ${SLUG} started — progress in the Skraft pane.`)
   assert.equal((await mod.settled()).status, 'done')
   assert.deepEqual(descriptions(mod), [
-    `skraft ${SLUG} · research · attempt 1`, `skraft ${SLUG} · design · attempt 1`, `skraft ${SLUG} · distill · attempt 1`, `skraft ${SLUG} · deliver · attempt 1`, `skraft ${SLUG} · pr_writer · attempt 1`,
+    `skraft ${SLUG} · research · attempt 1`, `skraft ${SLUG} · design · attempt 1`, `skraft ${SLUG} · distill · attempt 1`, `skraft ${SLUG} · deliver · scenario 1 of 1 · attempt 1`, `skraft ${SLUG} · pr_writer · attempt 1`,
   ])
 })
 
@@ -70,7 +72,7 @@ test('after the conversation moved into a subfolder of the working copy, /skraft
   assert.equal(text, `${SLUG}: adr-1 answered RATIFIED; run the pipeline again to go on\nskraft ${SLUG} started — progress in the Skraft pane.`)
   assert.equal((await mod.settled()).status, 'done')
   assert.deepEqual(descriptions(mod), [
-    `skraft ${SLUG} · research · attempt 1`, `skraft ${SLUG} · design · attempt 1`, `skraft ${SLUG} · distill · attempt 1`, `skraft ${SLUG} · deliver · attempt 1`, `skraft ${SLUG} · pr_writer · attempt 1`,
+    `skraft ${SLUG} · research · attempt 1`, `skraft ${SLUG} · design · attempt 1`, `skraft ${SLUG} · distill · attempt 1`, `skraft ${SLUG} · deliver · scenario 1 of 1 · attempt 1`, `skraft ${SLUG} · pr_writer · attempt 1`,
   ])
   assert.ok(!existsSync(join(cwd, subfolder, '.copilot-tracking')))
 })
@@ -122,7 +124,7 @@ test('a blocked architect is asked in a dialog; the instruction typed under Othe
   ])
   assert.match(mod.asked[0].question, /^design is blocked: solution-architect says it cannot go on; its reason is in .*design-1-1\.json\.\nLeft by design \(1\):\n- .+\n An instruction runs design again on a new pass with what is left above and the instruction; STOP ends the run\.$/)
   assert.ok(spawnOf(mod, 'design · pass 2 · attempt 1').prompt.includes('\nA human refused the work of pass 1:\n- Use the bank gateway'))
-  assert.deepEqual(journal(cwd, SLUG).filter((event) => event.type === 'question.answered').map(({ key, answer, by }) => [key, answer, by]), [['design-1', 'Use the bank gateway', 'host'], ['adr-1', 'RATIFIED', 'host']])
+  assert.deepEqual(journal(cwd, SLUG).filter((event) => event.type === 'question.answered').map(({ key, answer, by }) => [key, answer, by]), [['design-1', 'Use the bank gateway', 'host'], ['adr-1', 'RATIFIED', 'host'], ['scenario_review-1', 'APPROVED', 'host']])
 })
 
 test('a blocked architect whose dialog is dismissed waits; /skraft decide records the words after the key as the instruction and resumes', async (t) => {
@@ -170,13 +172,13 @@ test('a button pressed in the pane records its answer by host and resumes the ru
   const text = await mod.press(ratified)
 
   assert.equal(text, `${SLUG}: adr-1 answered RATIFIED; run the pipeline again to go on\nskraft ${SLUG} started — progress in the Skraft pane.`)
-  assert.equal(mod.asked.length, dialogs)
   assert.equal((await mod.settled()).status, 'done')
+  assert.deepEqual(mod.asked.slice(dialogs).map(({ options }) => options.header), ['Scenarios'], 'the press asks nothing; the run it resumes asks its next question')
   assert.deepEqual(mod.notes.slice(-3, -1), [refused, text])
-  assert.deepEqual(journal(cwd, SLUG).filter((event) => event.type === 'question.answered').map(({ key, answer, reason, by }) => [key, answer, reason, by]), [['adr-1', 'RATIFIED', null, 'host']])
+  assert.deepEqual(journal(cwd, SLUG).filter((event) => event.type === 'question.answered').map(({ key, answer, reason, by }) => [key, answer, reason, by]), [['adr-1', 'RATIFIED', null, 'host'], ['scenario_review-1', 'APPROVED', null, 'host']])
 
   assert.equal(await mod.press(rejected), 'skraft: not recorded — adr-1 was already answered RATIFIED')
-  assert.equal(mod.asked.length, dialogs)
+  assert.equal(mod.asked.length, dialogs + 1)
 })
 
 test('while the run drives, the pane offers no answer button and a press is refused: the run\'s own dialog answers', async (t) => {
@@ -185,6 +187,7 @@ test('while the run drives, the pane offers no answer button and a press is refu
   const dialog = mod.host.ask
   const pressed = []
   mod.host.ask = async (question, options) => {
+    if (options.header !== 'ADR') return dialog(question, options)
     await mod.driver.refresh(mod.host)
     const view = mod.published.at(-1)
     assert.deepEqual([view.view.question?.key, view.live], ['adr-1', true])
@@ -197,8 +200,8 @@ test('while the run drives, the pane offers no answer button and a press is refu
   assert.equal((await mod.settled()).status, 'done')
   assert.deepEqual(pressed, [[[], 'skraft is running; answer in its dialog']])
   assert.equal(mod.notes.includes('skraft is running; answer in its dialog'), true)
-  assert.deepEqual(journal(cwd, SLUG).filter((event) => event.type === 'question.answered').map(({ answer, by }) => [answer, by]), [['RATIFIED', 'host']])
-  assert.equal(mod.asked.length, 1)
+  assert.deepEqual(journal(cwd, SLUG).filter((event) => event.type === 'question.answered').map(({ answer, by }) => [answer, by]), [['RATIFIED', 'host'], ['APPROVED', 'host']])
+  assert.deepEqual(mod.asked.map(({ options }) => options.header), ['ADR', 'Scenarios'])
 })
 
 test('a press that fails tells it in a fixed line, never the error', async (t) => {
@@ -220,7 +223,7 @@ test('a refusal pressed in the pane with its reason typed in the dialog sends th
   await mod.press(answerChoices(mod.published.at(-1))[1])
 
   assert.equal((await mod.settled()).status, 'done')
-  assert.deepEqual(journal(cwd, SLUG).filter((event) => event.type === 'question.answered').map(({ answer, reason, by }) => [answer, reason, by]), [['REJECTED', REASON, 'host'], ['RATIFIED', null, 'host']])
+  assert.deepEqual(journal(cwd, SLUG).filter((event) => event.type === 'question.answered').map(({ answer, reason, by }) => [answer, reason, by]), [['REJECTED', REASON, 'host'], ['RATIFIED', null, 'host'], ['APPROVED', null, 'host']])
   assert.ok(spawnOf(mod, 'design · pass 2 · attempt 1').prompt.endsWith(`A human refused the work of pass 1:\n- ${ADR_PATH}: ${REASON}`))
 })
 
@@ -230,7 +233,7 @@ test('REJECTED asks its reason in a second dialog, and the architect gets it on 
   const { mod, outcome } = await runOn(cwd, ['REJECTED', REASON, 'RATIFIED'])
 
   assert.equal(outcome.status, 'done')
-  assert.deepEqual(mod.asked.map(({ question }) => question), [RATIFY, 'Why REJECTED? Type the reason under Other; it goes back to the agent.', RATIFY])
+  assert.deepEqual(mod.asked.map(({ question }) => question), [RATIFY, 'Why REJECTED? Type the reason under Other; it goes back to the agent.', RATIFY, scenarioReviewText(cwd)])
   assert.deepEqual(descriptions(mod).slice(1, 3), [`skraft ${SLUG} · design · attempt 1`, `skraft ${SLUG} · design · pass 2 · attempt 1`])
   const revised = spawnOf(mod, 'design · pass 2 · attempt 1').prompt
   assert.ok(revised.endsWith(`A human refused the work of pass 1:\n- ${ADR_PATH}: ${REASON}`), revised)
@@ -239,7 +242,7 @@ test('REJECTED asks its reason in a second dialog, and the architect gets it on 
 test('text typed under Other is a rejection with that reason; a reason dialog left with "Not now" leaves the run waiting', async (t) => {
   const typed = pipelineRepository(t)
   const { mod } = await runOn(typed.cwd, [REASON, 'RATIFIED'])
-  assert.deepEqual(journal(typed.cwd, SLUG).filter((event) => event.type === 'question.answered').map(({ answer, reason }) => [answer, reason]), [['REJECTED', REASON], ['RATIFIED', null]])
+  assert.deepEqual(journal(typed.cwd, SLUG).filter((event) => event.type === 'question.answered').map(({ answer, reason }) => [answer, reason]), [['REJECTED', REASON], ['RATIFIED', null], ['APPROVED', null]])
   assert.equal(phaseSpawns(mod).length, 6)
 
   const later = pipelineRepository(t)
@@ -254,7 +257,7 @@ test('an answer typed under Other in any case is that answer, not a rejection', 
   const { outcome } = await runOn(cwd, [' ratified '])
 
   assert.equal(outcome.status, 'done')
-  assert.deepEqual(journal(cwd, SLUG).filter((event) => event.type === 'question.answered').map(({ answer, reason }) => [answer, reason]), [['RATIFIED', null]])
+  assert.deepEqual(journal(cwd, SLUG).filter((event) => event.type === 'question.answered').map(({ answer, reason }) => [answer, reason]), [['RATIFIED', null], ['APPROVED', null]])
 })
 
 test('Git unable to list docs/adr asks the human to fix the machine and never skips the ratification; RETRY goes on to it', async (t) => {
@@ -276,7 +279,7 @@ test('Git unable to list docs/adr asks the human to fix the machine and never sk
   listing = 'works'
   await mod.command('decide RETRY')
   assert.equal((await mod.settled()).status, 'done')
-  assert.deepEqual(mod.asked.map(({ options }) => options.header), ['Environment', 'ADR'])
+  assert.deepEqual(mod.asked.map(({ options }) => options.header), ['Environment', 'ADR', 'Scenarios'])
   assert.match(readFileSync(join(cwd, ...ADR_PATH.split('/')), 'utf8'), /^status: Accepted$/m)
 })
 

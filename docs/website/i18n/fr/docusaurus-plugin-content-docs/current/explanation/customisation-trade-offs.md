@@ -18,7 +18,7 @@ nombre de tentatives, les verdicts, les gates et leurs seuils.
 
 | Ce que vous adaptez | Où | Guide |
 | --- | --- | --- |
-| Composants, commandes, gates, base, mocking | `skraft-config.json` | [Configurer les composants](../how-to/configure-components.md) |
+| Composants, commandes, gates, base, mocking, infrastructure de test, rapports JUnit | `skraft-config.json` | [Configurer les composants](../how-to/configure-components.md) |
 | Modèle et niveau de réflexion de chaque agent | `models`, `assign` (quatre couches) | [Choisir les modèles des agents](../how-to/choose-models.md) |
 | Lentilles d'une revue | `.skraft/pipeline.skraft.dot`, `.skraft/review.skraft.dot` | [Ajouter une lentille à une revue](../how-to/customise-review.md) |
 | Agents et questions de votre dépôt | `.skraft/pipeline.skraft.dot` | [Le workflow DOT](../reference/workflow-dot.mdx) |
@@ -52,6 +52,9 @@ peut pas voir, c'est une commande qui tourne et ne prouve rien.
 | Laisser un composant sans gate | Toute preuve sur ce composant ; le moteur le signale en échec `environment` | `no gate command; …` dans `skraft gate` |
 | Fixer `--base` ou `baseBranch` sur une ref trop récente | Des fichiers modifiés hors du périmètre comparé | `no component changed since its base; no gate to run` alors que du code a changé |
 | Retirer le nœud question `adr` | La ratification humaine des ADR, qui restent `Proposed` | `skraft workflow diff` montre le nœud disparu |
+| Retirer le nœud question `scenario_review` | La lecture par un humain des scénarios et du walking skeleton avant que DELIVER ne les construise | `skraft workflow diff` montre le nœud disparu |
+| Retirer `each="scenario"` de `distill` et `deliver` | L'ordre un scénario à la fois et le rejeu de chaque vert : DISTILL commite ses tests d'acceptation en un passage, les commits de DELIVER ne sont jugés que sur leur ordre | `skraft workflow diff` montre l'attribut disparu |
+| Faire tourner en mémoire le point d'entrée ou les gateways internes du walking skeleton (`infrastructure`) | La preuve d'intégration de S1 : il n'atteint plus un vrai point d'entrée ni une vraie base | `skraft doctor` affiche la rangée avec `source skraft-config.json` |
 | Mettre un composant à `bdd: false` | La spécification lisible par le métier de ce composant : aucun `.feature` n'est demandé à DISTILL, donc ses tests d'acceptation ne reprennent plus mot pour mot les valeurs d'un scénario qu'un expert du domaine peut lire | Aucun `.feature` écrit pour ses features, et la colonne `Feature File` du plan de test entièrement à tirets |
 | Modifier `events.jsonl` à la main pour débloquer un run | Le journal comme preuve : le run est bloqué en `journal-tampered` | [Reprendre ou débloquer un run](../how-to/resume-a-run.mdx) |
 

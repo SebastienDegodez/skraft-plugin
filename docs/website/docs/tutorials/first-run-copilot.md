@@ -40,10 +40,14 @@ $ git init -b main
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "node --test"
+    "pretest": "node -e \"require('node:fs').mkdirSync('reports', { recursive: true })\"",
+    "test": "node --test --test-reporter=spec --test-reporter-destination=stdout --test-reporter=junit --test-reporter-destination=reports/junit.xml"
   }
 }
 ```
+
+The `test` script also writes a JUnit report to `web/reports/junit.xml`, which the engine reads
+when it replays a commit.
 
 `web/src/cart.js`:
 
@@ -140,7 +144,9 @@ $ git commit -m "chore: describe the shop for skraft"
 $ skraft doctor
 ```
 
-The last line of `skraft doctor` says `no check failed, 3 with a warning`. No warning blocks:
+The last line of `skraft doctor` says `no check failed, 3 with a warning` (4 without Docker or
+Podman: `container-runtime` then says Microcks and Testcontainers scenarios would be reported
+INDETERMINATE, and this repository has no database). No warning blocks:
 `forge` says the repository has no remote yet, `web` has no JavaScript mocking recipe, and the small repository calls no service; `models/copilot`
 says that, with no model configured, each agent runs on your session's model.
 
@@ -214,8 +220,15 @@ Open the ADR under `docs/adr/`, read it, then choose **RATIFIED** in the chat. T
 
 ## 7. Let DISTILL, DELIVER and PUBLISH finish <!-- #7-let-distill-deliver-and-publish-finish -->
 
-The run goes on without you: acceptance tests, TDD cycles, gates, the DELIVER review, mutation,
-then the pull request description. The `/workflows` log ends like this:
+Once the four DISTILL lenses have approved the scenarios and the failing acceptance test of S1,
+Copilot asks one more question, headed **Scenarios**: it names each scenario of the story in the
+order DELIVER builds them, S1 marked walking skeleton, and the commit of S1's test. Open the test
+plan under `.copilot-tracking/skraft-plans/checkout/details/` and that commit, read them, then
+choose **APPROVED** in the chat.
+
+The run then goes on without you: one scenario at a time, a green commit that the engine replays,
+then the next scenario's failing test; then the gates, the DELIVER review, mutation, and the pull
+request description. The `/workflows` log ends like this:
 
 ![skraft-pipeline workflow log: phase PUBLISH, pr-writer, the pull request not opened as publish.pullRequest is false, PUBLISH closed, then checkout: done: PUBLISH closed](/img/screenshots/shared/terminal-workflow-log.svg)
 

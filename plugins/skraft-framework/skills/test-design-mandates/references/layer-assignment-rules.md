@@ -30,7 +30,8 @@ Every test targets exactly one Clean Architecture layer. The layer determines th
 | Domain policy / specification (complex invariant) | `UnitTest` | Domain | None — pure function, call directly | Fast (<1s) |
 | Domain entity invariant (rare, complex only) | `UnitTest` | Domain | None — construct and assert | Fast (<1s) |
 | Repository adapter (real persistence) | `IntegrationTest` | Infrastructure | Real DB (Testcontainers) | Slow (5–30s) |
-| External service adapter | `IntegrationTest` | Infrastructure | Real or WireMock (Testcontainers) | Slow |
+| External service adapter | `IntegrationTest` | Infrastructure | Microcks (Testcontainers) | Slow |
+| Walking skeleton (S1) | `IntegrationTest` | Entry point | Real entry point, internal gateways on Testcontainers, Microcks | Slow |
 | API endpoint + DI wiring | `IntegrationTest` | API | `WebApplicationFactory` or in-process host | Slow |
 | Architecture boundaries (layer rules) | `IntegrationTest` | Architecture | Static analysis (NetArchTest, ArchUnit) | Medium |
 
@@ -39,14 +40,14 @@ Every test targets exactly one Clean Architecture layer. The layer determines th
 ## Application Layer — Rules
 
 **Entry point:** Use case / command handler / query handler
-**Double type:** InMemory implementation of each application interface (repository, gateway, event publisher)
+**Double type:** what the infrastructure policy names for a targeted scenario (test-design-mandates): InMemory for each internal gateway (repository, cache); Microcks, from the test session's container, for an external gateway (an in-process double when the component's `mocking.strategy` is `inprocess`); a fake clock
 **Project:** `tests/{Context}.UnitTest/`
-**Speed:** Must run in < 1s total for the full suite. No I/O, no containers, no network.
+**Speed:** Must run in < 1s total for the full suite. No I/O but the test session's Microcks container.
 
 **What to double:**
-- `IEligibilityRepository` → `InMemoryEligibilityRepository`
-- `IEmailGateway` → `InMemoryEmailGateway` (captures sent emails for assertion)
-- `IEventPublisher` → `InMemoryEventPublisher` (captures published events for assertion)
+- `IEligibilityRepository` (internal gateway) → `InMemoryEligibilityRepository`
+- `IClock` → `FixedClock`
+- `IRiskScoringGateway` (external gateway) → the real HTTP gateway pointed at Microcks, never a hand-written fake
 
 **What NOT to double:**
 - Domain objects — use the real ones
@@ -112,7 +113,7 @@ Every test targets exactly one Clean Architecture layer. The layer determines th
 | Mistake | Correct approach |
 |---|---|
 | Using a real database in `UnitTest` | Use `InMemory{Interface}` — keep unit tests I/O-free |
-| Using a mock where an InMemory exists | InMemory > mock for application interfaces. Mocks for external services only. |
+| Using a mock where an InMemory exists | InMemory > mock for internal gateways; Microcks for external gateways. |
 | Writing a Domain test for a simple value object | Covered indirectly by Application acceptance test |
 | Testing infrastructure logic in Application tests | Write a separate Infrastructure integration test |
 | Skipping Architecture tests | Run in CI — they are the only thing that enforces the dependency rule |

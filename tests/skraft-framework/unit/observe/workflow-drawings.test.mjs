@@ -13,7 +13,7 @@ test('the workflows a run of this working copy can follow are drawn before any r
   assert.deepEqual(more, [])
   assert.deepEqual([pipeline.name, pipeline.file, pipeline.goal, review.name, review.file, review.goal], ['pipeline', null, 'Deliver the story', 'review', null, 'Review the changes'])
   assert.deepEqual(pipeline.steps.map(({ id }) => id), [
-    'research', 'design', 'design_review', 'adr', 'distill', 'distill_review', 'deliver', 'gates',
+    'research', 'design', 'design_review', 'adr', 'distill', 'distill_review', 'scenario_review', 'deliver', 'gates',
     'deliver_review', 'mutation', 'kill_proposal', 'mutation_plan', 'kill_mutants', 'mutation_review', 'mutation_gates', 'visuals', 'pr_writer', 'publish',
   ])
   const steps = Object.fromEntries(pipeline.steps.map((step) => [step.id, shape(step)]))

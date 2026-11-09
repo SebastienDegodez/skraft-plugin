@@ -61,6 +61,8 @@ test('skraft-run runs the pipeline through the Copilot SDK: a session in the wor
   assert.deepEqual(journal(cwd, SLUG)[0].story, { issue: 42, title: 'Pay by card' })
 
   assert.equal((await skraft(cwd, ['decide', 'adr-1', 'RATIFIED'])).status, 0)
+  assert.deepEqual(await run(cwd, [], simulated), paused, 'the scenario review waits on its own question')
+  assert.equal((await skraft(cwd, ['decide', 'scenario_review-1', 'APPROVED'])).status, 0)
   const done = await run(cwd, [], simulated)
 
   assert.deepEqual(done, { code: 0, asked: [], out: [`skraft ${SLUG}: done in PUBLISH — PUBLISH closed`], err: STATUS_LINES })

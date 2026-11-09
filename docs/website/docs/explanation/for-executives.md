@@ -60,7 +60,7 @@ highest-performing teams do not trade speed against stability; they get both.
 The engine checks what an instruction can only hope for. It pre-creates the document an
 agent must fill, checks it is filled, retries the agent with the list of what is missing (at
 most three attempts), then stops and names the cause. It also checks after each step that the
-agent wrote only where it may, and that each red TDD commit really fails. No agent spawns another agent: only the **host
+agent wrote only where it may, that each scenario's red acceptance test really fails, and that its green commit makes it pass. No agent spawns another agent: only the **host
 driver** (the part of SKRAFT specific to each tool) spawns agents, on the engine's order.
 
 ### The same pipeline on every tool and every system
@@ -126,7 +126,7 @@ organisation's performance.
 
 1. **A pilot on one repository.** Pick a real repository and a willing team. Install the
    `skraft` plugin in Claude Code, GitHub Copilot CLI or VS Code. Prerequisites: Node 22 or later and
-   Git; Docker if a component mocks its dependencies with Microcks (the default outside TypeScript, JavaScript and React).
+   Git; Docker if a component mocks its dependencies with Microcks (the default outside React).
 2. **Describe and check the components.** `skraft init` detects the projects and writes
    `skraft-config.json`; `skraft doctor` checks that each command can run. The team fixes
    the commands that do not work on their machines.

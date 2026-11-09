@@ -1,0 +1,14 @@
+{
+  "components": [
+    {
+      "name": "web",
+      "root": "../web",
+      "stack": "react",
+      "infrastructure": {
+        "entryPoint": {
+          "walkingSkeleton": "real"
+        }
+      }
+    }
+  ]
+}

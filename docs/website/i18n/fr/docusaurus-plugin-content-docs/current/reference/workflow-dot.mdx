@@ -84,7 +84,7 @@ refusé (`attribute <clé> is not supported on a <forme> node (supported: …)`)
 | `outputs` | chemins séparés par `,`, relatifs au dossier de suivi, sans `..` | remplace les sorties du rôle de l'agent ; `{date}` et `{slug}` remplis au lancement |
 | `writes` | chemins séparés par `,`, relatifs à la copie de travail | s'ajoutent aux chemins que le rôle de l'agent peut écrire |
 | `max_attempts` | entier positif | tentatives par passage ; défaut **3** |
-| `each` | `survivor-file` | atteint par l'arête `FAIL` de la gate de mutation : un lancement par fichier portant des mutants survivants ; atteint par une autre arête : un seul lancement, avec ce que l'arête apporte |
+| `each` | `survivor-file` ou `scenario` | `survivor-file` : atteint par l'arête `FAIL` de la gate de mutation, un lancement par fichier portant des mutants survivants ; atteint par une autre arête, un seul lancement, avec ce que l'arête apporte. `scenario` : sur deux nœuds agents ou sur aucun ; le premier dans l'ordre du run écrit les scénarios de l'histoire et le test d'acceptation en échec de S1, puis celui de chaque scénario suivant ; le second fait passer chacun avec un commit vert. Le moteur les alterne sur les scénarios du tableau `## Scenarios` du plan de test sans arête, chaque passage étant une visite à part ; après le dernier scénario, le second sort par son arête ([Phases](./phases.md#distill)) |
 | `proposal` | `true` ou `false` | avec `each="survivor-file"` (obligatoire) : l'agent écrit une proposition par fichier dans le fichier que crée le moteur (`proposals/<nœud>-<visite>-g<n>.md`) et ne change aucun code |
 | `gate` | liste parmi `build`, `format`, `lint`, `test`, `architecture`, `coverage`, `mutation` | lancées dans cet ordre, quel que soit l'ordre écrit |
 | `goal_gate` | `true` ou `false` | une fois les composants modifiés passés, lance aussi les autres composants |
@@ -94,7 +94,7 @@ refusé (`attribute <clé> is not supported on a <forme> node (supported: …)`)
 | `when` (publication) | `frontend` | saute le nœud quand aucun composant n'est un front end |
 | `lens` | nom kebab-case | la lentille `<nom>` est l'agent `<nom>-lens` ; une fois au plus par revue |
 | `when` (lentille) | `mock` ou `contract` | voir [Lentilles conditionnelles](#conditional-lenses) |
-| `question` | `adr-ratification` ou `mutation-plan` | voir [Phases](./phases.md#human-questions) |
+| `question` | `adr-ratification`, `scenario-review` ou `mutation-plan` | voir [Phases](./phases.md#human-questions) |
 | `workflow` | nom de base kebab-case (`review`) | le workflow appelé |
 | `with_<entrée>` | `base`, `head`, `story`, `documents` ou `components` | lie l'entrée `<entrée>` du workflow appelé à cette valeur du run |
 | `mandatory` | `true` | voir [Nœuds obligatoires](#mandatory-nodes) ; `mandatory=false` est refusé |
@@ -126,7 +126,9 @@ rendent toutes les erreurs. Un workflow est refusé quand :
 | nombre d'arêtes sortantes faux | `node <id>: gate node needs exactly one PASS edge, has N`, etc. |
 | étiquette sur une arête qui n'en prend pas | `edge <a> -> <b>: only an edge leaving a gate, a review's fan-in (shape=tripleoctagon), a call (shape=house) or an ask node takes a label` |
 | agent, lentille, `finding-refuter` ou skill qu'une lentille liste introuvable | le nœud, l'agent et la skill nommés |
-| `proposal=true` sans `each` | `node <id>: proposal=true needs each="survivor-file", the mutants it proposes for` |
+| `proposal=true` sans `each="survivor-file"` | `node <id>: proposal=true needs each="survivor-file", the mutants it proposes for` |
+| `each="scenario"` sur un seul nœud, ou sur plus de deux | `each="scenario" goes on two agent nodes, the one that writes each scenario's failing acceptance test, then the one that makes it pass; it is on <n>: <nœuds>` |
+| `question="scenario-review"` sans nœud marqué `each="scenario"` | `node <id>: question="scenario-review" needs the two nodes marked each="scenario", whose scenarios it shows` |
 | forme `lenses="…"` (ancienne) | refusée ; le message écrit, en DOT, les nœuds et arêtes qui la remplacent |
 
 Valide, `skraft workflow check` affiche `<fichier> is valid: phases RESEARCH, DESIGN, …` et, pour
@@ -316,9 +318,10 @@ parenthèses est héritée du prédécesseur.
 | `design` | `box` | `agent="solution-architect"` | DESIGN |
 | `design_review_lenses` → `design_review` | revue | lentilles `consistency`, `architecture-compliance`, `fitness` ; fan-in `mandatory=true` | (DESIGN) |
 | `adr` | `hexagon` | `question="adr-ratification"` | (DESIGN) |
-| `distill` | `box` | `agent="acceptance-designer"` | DISTILL |
+| `distill` | `box` | `agent="acceptance-designer"`, `each="scenario"` | DISTILL |
 | `distill_review_lenses` → `distill_review` | revue | lentilles `coverage`, `business-alignment`, `testability`, `boundary-enforcement` ; fan-in `mandatory=true` | (DISTILL) |
-| `deliver` | `box` | `agent="software-engineer"` | DELIVER |
+| `scenario_review` | `hexagon` | `question="scenario-review"` | (DISTILL) |
+| `deliver` | `box` | `agent="software-engineer"`, `each="scenario"` | DELIVER |
 | `gates` | `parallelogram` | `gate="build,format,lint,test,architecture,coverage"`, `goal_gate=true`, `locked=true` | DELIVER |
 | `deliver_review` | `house` | `workflow="review"`, `mandatory=true` | (DELIVER) |
 | `mutation` | `parallelogram` | `gate="mutation"`, `goal_gate=true`, `locked=true` | (DELIVER) |
@@ -339,7 +342,9 @@ parenthèses est héritée du prédécesseur.
 | `adr -> distill` | `RATIFIED` | — |
 | `adr -> design` | `REJECTED` | 1 |
 | `distill_review -> distill` | `NEEDS_REWORK` | 2 |
-| `distill_review -> deliver` | `APPROVED` | — |
+| `distill_review -> scenario_review` | `APPROVED` | — |
+| `scenario_review -> deliver` | `APPROVED` | — |
+| `scenario_review -> distill` | `REVISE` | 2 |
 | `gates -> deliver` | `FAIL` | 3 |
 | `gates -> deliver_review` | `PASS` | — |
 | `deliver_review -> deliver` | `NEEDS_REWORK` | 2 |
@@ -354,7 +359,8 @@ parenthèses est héritée du prédécesseur.
 
 Les autres arêtes n'ont ni étiquette ni plafond : `start -> research -> design`, `distill -> distill_review_lenses`, `deliver -> gates`,
 `kill_proposal -> mutation_plan`, `kill_mutants -> mutation_review_lenses`, `visuals -> pr_writer -> publish -> exit`, et celles
-de chaque revue.
+de chaque revue. Aucune arête ne ramène `deliver` à `distill` : le moteur les alterne sur les
+scénarios (`each="scenario"`).
 
 ## Voir aussi {/* #see-also */}
 

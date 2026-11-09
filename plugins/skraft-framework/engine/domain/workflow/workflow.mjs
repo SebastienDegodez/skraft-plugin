@@ -22,7 +22,7 @@ import { branchReasons, foldReviews, formerFanInReasons, formerReviewReasons } f
  *   id: string, kind: NodeKind, phase: string | null, agent: string | null, gates: string[],
  *   lenses: string[], question: import('../decisions/questions.mjs').NodeQuestion | null,
  *   goal: boolean, locked: boolean, unlock: string | null, outputs: string[], writes: string[],
- *   maxAttempts: number | null, model: string | null, refuter: string | null, each: 'survivor-file' | null, proposal: boolean,
+ *   maxAttempts: number | null, model: string | null, refuter: string | null, each: Each | null, proposal: boolean,
  *   publish: Publication | null, when: When | null, fanOut: string | null, branches: Branch[],
  *   mandatory: boolean | null, call: Call | null, refutedBy: Refuter | null,
  * }} WorkflowNode
@@ -34,7 +34,9 @@ import { branchReasons, foldReviews, formerFanInReasons, formerReviewReasons } f
  *   `{slug}` filled at dispatch); writes: relative to the working copy. model: the family an
  *   agent node's agent runs on, or a review node's lenses that name none; refuter: the family a
  *   review node's refuter runs on. each: an agent node the mutation gate sends its surviving
- *   mutants to runs its agent once per file that holds some. publish: what a publish node (a
+ *   mutants to runs its agent once per file that holds some (`survivor-file`); the two agent
+ *   nodes marked `scenario` run once per scenario of the story, the first writing its failing
+ *   acceptance test, the second making it pass. publish: what a publish node (a
  *   parallelogram with `publish=`) publishes: the run's pull request, or the screenshots of the
  *   e2e runs of its front ends. when: a publish node runs only when skraft-config.json has a
  *   component of that kind, and is skipped otherwise. refutedBy: the refuter node a review (or the
@@ -46,6 +48,7 @@ import { branchReasons, foldReviews, formerFanInReasons, formerReviewReasons } f
  *   workflow is read, the run value each input is bound to, and the id and mandatory= of its
  *   review's fan-in (folded into the call node with its fan-out, branches, lenses and families).
  * @typedef {'pull-request' | 'playwright-visuals'} Publication
+ * @typedef {'survivor-file' | 'scenario'} Each
  * @typedef {'PASS' | 'FAIL' | 'APPROVED' | 'NEEDS_REWORK'} EdgeLabel
  * @typedef {{ from: string, to: string, label: string | null, maxVisits: number | null }} WorkflowEdge
  *   label: PASS or FAIL on an edge leaving a gate (unlabeled means PASS), APPROVED or
@@ -87,6 +90,8 @@ const ATTRIBUTES = Object.freeze({
 })
 /** What `when=` names, by the kind of node it is on. @type {Readonly<Partial<Record<NodeKind, readonly string[]>>>} */
 const WHENS = Object.freeze({ publish: Object.freeze(['frontend']), lens: TRIGGER_NAMES })
+/** What an agent node runs once per. @type {readonly Each[]} */
+const EACHES = Object.freeze(/** @type {Each[]} */ (['survivor-file', 'scenario']))
 /** What a publish node publishes. @type {readonly Publication[]} */
 const PUBLICATIONS = Object.freeze(/** @type {Publication[]} */ (['pull-request', 'playwright-visuals']))
 
@@ -136,7 +141,7 @@ const NODE_CHECKS = {
   outputs: (value) => (listOf(value).every((path) => !isAbsolutePath(path) && !path.split(/[\\/]/).includes('..')) ? null : 'must list paths relative to the tracking folder, without ..'),
   writes: (value) => (listOf(value).every((path) => !isAbsolutePath(path)) ? null : 'must list paths relative to the working copy'),
   max_attempts: positive,
-  each: (value) => (value === 'survivor-file' ? null : 'must be survivor-file'),
+  each: (value) => (EACHES.some((known) => known === value) ? null : `must be ${EACHES.join(' or ')}`),
   publish: (value) => (PUBLICATIONS.some((known) => known === value) ? null : `must be ${PUBLICATIONS.join(' or ')}`),
   when: (value, kind) => {
     const known = /** @type {readonly string[]} */ (WHENS[kind])
@@ -283,7 +288,7 @@ const stepSettingsOf = (attributes) => ({
   outputs: listOf(attributes.outputs ?? ''),
   writes: listOf(attributes.writes ?? ''),
   maxAttempts: attributes.max_attempts === undefined ? null : Number(attributes.max_attempts),
-  each: attributes.each === 'survivor-file' ? /** @type {const} */ ('survivor-file') : null,
+  each: EACHES.find((known) => known === attributes.each) ?? null,
   proposal: attributes.proposal === 'true',
   publish: PUBLICATIONS.find((known) => known === attributes.publish) ?? null,
   when: /** @type {When | undefined} */ (attributes.when) ?? null,
@@ -450,8 +455,31 @@ const OUTGOING = Object.freeze({
 
 /** An agent proposes for the surviving mutants it takes by file. @param {Draft} draft */
 const proposalReasons = ({ nodes }) => Object.values(nodes)
-  .filter((node) => node.proposal && node.each === null)
+  .filter((node) => node.proposal && node.each !== 'survivor-file')
   .map((node) => `node ${node.id}: proposal=true needs each="survivor-file", the mutants it proposes for`)
+
+const SCENARIO_PAIR = 'each="scenario" goes on two agent nodes, the one that writes each scenario\'s failing acceptance test, then the one that makes it pass'
+
+/**
+ * The nodes marked each="scenario", in the order the run reaches them: the one that writes each
+ * scenario's failing acceptance test, then the one that makes it pass.
+ * @param {Pick<Workflow, 'nodes' | 'order'>} workflow
+ */
+export const scenarioNodes = ({ nodes, order }) => order.filter((id) => nodes[id].each === 'scenario')
+
+/** The nodes marked each="scenario", in declaration order. @param {Draft} draft */
+const markedScenario = ({ nodes, ids }) => ids.filter((id) => nodes[id]?.each === 'scenario')
+
+/** None or two nodes run per scenario. @param {Draft} draft */
+const scenarioPairReasons = (draft) => {
+  const marked = markedScenario(draft)
+  return when(![0, 2].includes(marked.length), `${SCENARIO_PAIR}; it is on ${marked.length}: ${marked.join(', ')}`)
+}
+
+/** The scenario review shows the scenarios the pair runs. @param {Draft} draft */
+const scenarioReviewReasons = (draft) => Object.values(draft.nodes)
+  .filter((node) => node.question === 'scenario-review' && markedScenario(draft).length === 0)
+  .map((node) => `node ${node.id}: question="scenario-review" needs the two nodes marked each="scenario", whose scenarios it shows`)
 
 /** @param {Draft} draft */
 const startAndExitReasons = ({ starts, exits }) => [
@@ -504,6 +532,8 @@ const WORKFLOW_CHECKS = Object.freeze([
   edgeAttributeReasons,
   outgoingEdgeReasons,
   proposalReasons,
+  scenarioPairReasons,
+  scenarioReviewReasons,
   branchReasons,
   startAndExitReasons,
   unreachableReasons,

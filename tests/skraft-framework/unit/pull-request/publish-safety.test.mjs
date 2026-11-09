@@ -109,16 +109,16 @@ test('a test plan and a consistency matrix an agent wrote are shown inert: no co
     '``Fixes #7`` for ``@alice``, &lt;details',
   ].join('\n'))
   assert.equal(section(body, 'Consistency matrix'), 'From `details/2026-10-11/consistency-matrix-checkout.md` in the tracking folder:\n\n| ADR | Verdict |\n| --- | --- |\n| ADR-001 | kept |\n- consistency-gate: PASS')
-  assert.equal(opening(body, 'RED evidence'), '<details><summary>RED evidence: 2 red commits</summary>')
+  assert.equal(opening(body, 'RED evidence'), '<details><summary>RED evidence: 1 red commit</summary>')
   assert.deepEqual([body.split('<details').length, body.split('</details>').length, body.includes('<!--')], [9, 9, false])
 })
 
 test('a red commit subject breaks no table: its pipes are escaped and its lines joined', async () => {
-  const host = scripted({ config: CONSENTED }, (it) => [...nominal(it).slice(0, 3), async (dispatch) => {
-    await nominal(it)[3](dispatch)
-    const last = it.git.repositories.get('').history.at(-3)
+  const host = scripted({ config: CONSENTED }, (it) => [...nominal(it).slice(0, 2), async (dispatch) => {
+    await nominal(it)[2](dispatch)
+    const last = it.git.repositories.get('').history.at(-1)
     last.subject = 'test(checkout): pays | refunds\nand more'
-  }])
+  }, nominal(it)[3]])
 
   await host.start()
 

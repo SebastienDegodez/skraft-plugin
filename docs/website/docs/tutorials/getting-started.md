@@ -38,10 +38,14 @@ Create `web/package.json`:
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "node --test"
+    "pretest": "node -e \"require('node:fs').mkdirSync('reports', { recursive: true })\"",
+    "test": "node --test --test-reporter=spec --test-reporter-destination=stdout --test-reporter=junit --test-reporter-destination=reports/junit.xml"
   }
 }
 ```
+
+The `test` script also writes a JUnit report to `web/reports/junit.xml`: the engine reads it to
+tell a failing assertion from a build error when it replays a commit.
 
 Create `web/src/cart.js`:
 
@@ -215,7 +219,9 @@ table is cut after its first rows.*
 
 The three warnings do not block this tutorial: the first says the repository has no remote yet (a run
 with an issue number is refused without one, step 5); the second says no mocking recipe exists for a JavaScript
-component, and the small repository calls no service; the third only concerns Copilot.
+component, and the small repository calls no service; the third only concerns Copilot. Without
+Docker or Podman, a fourth, `container-runtime`, says Microcks and Testcontainers scenarios would
+be reported INDETERMINATE: this repository has no database and calls no service.
 The last line is what matters: `no check failed`.
 
 ## 5. Start the story <!-- #5-start-the-story -->
@@ -287,14 +293,27 @@ itself: `git log --oneline -1 -- docs/adr` shows `docs(adr): ratify ADR-001`.
 
 ## 8. DISTILL and DELIVER <!-- #8-distill-and-deliver -->
 
-`acceptance-designer` writes the scenarios (in the folder the component's `bdd` names) and the
-test plan
-(`details/<YYYY-MM-DD>/test-plan-checkout.md`) and commits the failing acceptance tests. Four
-lenses review it (coverage, business-alignment, testability, boundary-enforcement).
+`acceptance-designer` writes the scenarios and the test plan
+(`details/<YYYY-MM-DD>/test-plan-checkout.md`): its `## Scenarios` table lists them as S1, S2, …
+in the order DELIVER builds them, all in `web`. It commits the failing acceptance test of S1 alone,
+`test(checkout): <title of S1>`. The engine replays that commit and reads
+`web/reports/junit.xml`: a test must fail on an assertion. Four lenses review it (coverage,
+business-alignment, testability, boundary-enforcement).
 
-`software-engineer` then delivers in TDD cycles: a `test(…)` commit that fails, then a `feat(…)` or
-`fix(…)` commit that makes it pass. The engine replays each red commit: a "red" commit whose tests
-pass is refused.
+Then a dialog titled **Scenarios** asks, with the scenarios the acceptance designer wrote (two
+here):
+
+```text
+Read the 2 scenarios of the story before DELIVER builds them, one at a time: S1 "<title>" (web, walking skeleton); S2 "<title>" (web). The acceptance test of S1 and its skeleton are commit <sha> "test(checkout): <title>": <files>. APPROVED delivers them; REVISE sends DISTILL back with your corrections (edit the .feature or the test yourself first if you like, and say so).
+```
+
+Open the test plan and the commit the question names, read them, then choose **APPROVED**.
+
+`software-engineer` then makes S1 pass: unit tests and code first, uncommitted, then one commit,
+`feat(checkout): <title of S1>`, chained to `npm test`. The engine replays it: S1's test passes
+and nothing fails. `acceptance-designer` writes the failing test of S2, `software-engineer` makes
+it pass, and so on: the pane shows `distill` and `deliver` again, with their pass, for each
+scenario.
 
 The engine then runs the component's gates (`test`), then the DELIVER review (test-integrity,
 architecture-boundaries, cold-reader), then mutation, once, on the reviewed code. The pane ticks
@@ -351,8 +370,8 @@ The tracking folder `.copilot-tracking/skraft-plans/checkout/` now holds:
 | `reviews/` | what each review pass read, and its `verdict.yaml` |
 
 Open `pull-request.md`: it is the result of your first run. `git log --oneline` shows, on
-`pay-by-card`, the research and design documents, the ratified ADR, the failing acceptance tests,
-then the red and green commits of each TDD cycle.
+`pay-by-card`, the research and design documents, the ratified ADR, then, for each scenario, its
+red `test(checkout): …` and its green `feat(checkout): …`.
 
 ## What you built <!-- #what-you-built -->
 

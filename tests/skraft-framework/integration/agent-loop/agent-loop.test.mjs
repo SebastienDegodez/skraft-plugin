@@ -5,7 +5,7 @@ import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node
 import { join } from 'node:path'
 import { runSkraftPipelineWorkflow } from '../../../../plugins/skraft-framework/engine/drivers/copilot-workflow/skraft-pipeline-workflow.mjs'
 import { PLUGIN_ROOT, actsAs, copilotHost, firstOptionPerson, simulatedContext, trackingDir } from '../copilot-workflow/simulated-host.mjs'
-import { FAMILY_MODELS, LENSES, SLUG, briefOf, finding, pipelineRepository, says, scriptedLlm, visualsKept, writesOnly } from '../support/pipeline-repository.mjs'
+import { FAMILY_MODELS, LENSES, SLUG, briefOf, finding, pipelineRepository, says, scenarioReviewText, scriptedLlm, visualsKept, writesOnly } from '../support/pipeline-repository.mjs'
 import { SKRAFT_COMMAND, SKRAFT_MJS, journal, skraft, tempFolder } from '../support/workspace.mjs'
 import { issueForge } from '../support/issue-forge.mjs'
 import { conduct, loop, startAgents, tokenLineOf } from './simulated-conductor.mjs'
@@ -51,6 +51,10 @@ test('the loop conducts the five phases to the end, the pr-writer and the publis
       status: 'waiting', slug: SLUG, phase: 'DESIGN', code: 'adr-ratification', dispatches: [], then: NEXT,
       reason: 'Ratify the Proposed ADRs docs/adr/adr-001-card-payment.md? RATIFIED marks them Accepted; REJECTED sends DESIGN back with your reason. Options: RATIFIED, REJECTED. Stop here and ask the human to answer it with skraft decide in their own terminal; then run next.',
     },
+    {
+      status: 'waiting', slug: SLUG, phase: 'DISTILL', code: 'scenario-review', dispatches: [], then: NEXT,
+      reason: `${scenarioReviewText(cwd)} Options: APPROVED, REVISE. Stop here and ask the human to answer it with skraft decide in their own terminal; then run next.`,
+    },
     step,
   ])
   assert.deepEqual(journal(cwd, SLUG).filter((event) => event.type === 'step.recorded' && event.step === 'publish').map(({ outcome }) => outcome), ['local'])
@@ -60,7 +64,7 @@ test('the loop conducts the five phases to the end, the pr-writer and the publis
     ...['RESEARCH', 'DESIGN', 'DISTILL', 'DELIVER', 'PUBLISH'].map((phase) => ['issue.comment-skipped', 'phase', phase, 'skraft-config.json does not set publish.pullRequest to true']),
     ['issue.comment-skipped', 'summary', null, 'skraft-config.json does not set publish.pullRequest to true'],
   ])
-  assert.deepEqual(journal(cwd, SLUG).filter((event) => event.type === 'question.answered').map(({ by }) => by), ['cli-tty'])
+  assert.deepEqual(journal(cwd, SLUG).filter((event) => event.type === 'question.answered').map(({ by }) => by), ['cli-tty', 'cli-tty'])
 })
 
 test('the loop runs the visuals node: a front end\'s light and dark screenshots are committed on the working branch and the pull request shows them', async (t) => {

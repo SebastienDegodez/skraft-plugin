@@ -1,6 +1,6 @@
 ---
 title: "Configure the components of your repository"
-description: "Detect the components into skraft-config.json, add a neighbour repository, replace a command, add a gate, choose base and mocks, then check."
+description: "Detect the components into skraft-config.json, add a neighbour repository, replace a command, add a gate, choose base, mocks and JUnit reports, then check."
 persona: software-engineer
 ---
 
@@ -15,7 +15,7 @@ use — and a wrong path costs silence, not a failure. Read each step's result b
 ## Prerequisites
 
 - The skraft plugin installed ([Install skraft on a host](./install-on-a-host.mdx)).
-- Node 22 or later, Git; Docker or Podman if a component keeps Microcks mocking.
+- Node 22 or later, Git; Docker or Podman, on which Microcks and the walking skeleton's database run by default.
 - A terminal open at the root of your working copy. `skraft` is the command that [`npm i -g @skraft/cli`](./install-on-a-host.mdx#skraft-command) sets up; the long line `node "<plugin folder>/engine/drivers/cli/skraft.mjs"` works without it.
 
 ## 1. Detect the components
@@ -99,8 +99,8 @@ a slug's first init: to change it, start a new slug.
 
 ## 6. Switch a component to in-memory mocks
 
-With neither Docker nor Podman on your machine, for a .NET, Java or Python component (TypeScript,
-JavaScript and React are in memory by default already):
+With neither Docker nor Podman on your machine, for a .NET, Java, Python, TypeScript or JavaScript
+component (React is in process by default already):
 
 ```json
 { "name": "api", "root": "services/payment-api", "stack": "dotnet",
@@ -109,7 +109,39 @@ JavaScript and React are in memory by default already):
 
 What you give up: [Adapting skraft: what each setting costs](../explanation/customisation-trade-offs.md).
 
-## 7. Say whether a component writes Gherkin
+The other rows of the [infrastructure policy](../reference/skraft-config.md#infrastructure) — the
+entry point, the internal gateways, the clock — keep the plugin's default for the stack. To run
+one on something else, name it under `infrastructure`, in `skraft-config.json` only:
+
+```json
+{ "name": "api", "root": "services/payment-api", "stack": "dotnet",
+  "infrastructure": { "internalGateway": { "walkingSkeleton": "in-memory" } } }
+```
+
+The external gateway row follows `mocking.strategy`; `infrastructure` refuses it.
+
+## 7. Point the engine at the JUnit reports
+
+The engine replays each failing acceptance test DISTILL commits and each scenario's green, and
+reads the JUnit XML its `test` command writes: without a report, every red is refused
+(`its test command wrote no test report`). Make the command write one where the stack's default
+expects it, relative to the component root:
+
+| Stack | Default `testReports` | For example |
+|---|---|---|
+| .NET | `**/TestResults/*.trx`, `**/TestResults/*.xml` | `dotnet test --logger trx` (built in), or `--logger "junit;LogFilePath=TestResults/junit.xml"` (JunitXml.TestLogger) |
+| Java | `**/target/surefire-reports/TEST-*.xml`, `**/build/test-results/test/*.xml` | Surefire and Gradle write them already |
+| Python | `reports/junit.xml` | `pytest --junitxml=reports/junit.xml` |
+| TypeScript, JavaScript, React | `reports/junit.xml` | `vitest run --reporter=default --reporter=junit --outputFile.junit=reports/junit.xml` |
+
+Elsewhere, name the paths:
+
+```json
+{ "name": "web", "root": "../payment-web", "stack": "react",
+  "testReports": ["test-results/junit.xml"] }
+```
+
+## 8. Say whether a component writes Gherkin
 
 Every component says it, one way or the other: tests are written in Gherkin or they are not, and
 the engine assumes neither. For one whose team writes plain tests — a batch job, a scheduler —
@@ -142,7 +174,7 @@ that component. `skraft init` writes the pairs it detects; `/skraft-init` asks f
 Configuration tab of the skraft canvas shows both what the file says and what the working copy
 holds.
 
-## 8. Settle the publication consents
+## 9. Settle the publication consents
 
 A run that publishes starts only once they are settled, so `skraft init` leaves them to you:
 
@@ -156,7 +188,7 @@ each question the answer was given to: an answer kept for an earlier version is 
 Without them a run is refused before its first agent, with
 `skraft is not initialised: run /skraft-init`.
 
-## 9. Check with `skraft doctor`
+## 10. Check with `skraft doctor`
 
 ```console
 $ skraft doctor
@@ -190,7 +222,7 @@ error separated by `; `:
 
 | Message | Fix |
 |---|---|
-| `component web: unknown key comands (allowed: name, root, stack, paths, commands, baseBranch, mocking, contractTesting, bdd, mutationReport)` | Fix the typo. |
+| `component web: unknown key comands (allowed: name, root, stack, paths, commands, baseBranch, mocking, contractTesting, bdd, mutationReport, infrastructure, testReports)` | Fix the typo. |
 | `component web: root must be a path relative to the working copy` | Write `web` or `../payment-web`, never `/srv/web` or `C:\…`. |
 | `components[1].name must be kebab-case, got "Api"` | Lower case and hyphens: `api`. |
 | `component api: mocking must be { "strategy": "microcks" or "inprocess" }` | An object, not a string. |

@@ -61,8 +61,8 @@ les plus performantes n'opposent pas vitesse et stabilité, elles obtiennent les
 Le moteur vérifie lui-même ce qu'une consigne ne fait qu'espérer. Il pré-crée le document
 qu'un agent doit remplir, contrôle qu'il est rempli, relance l'agent avec la liste de ce qui
 manque (trois tentatives au plus), puis s'arrête en nommant la cause. Il vérifie aussi après
-chaque étape que l'agent n'a écrit que là où il le peut, et que chaque commit rouge du TDD
-échoue vraiment. Aucun agent ne lance un autre agent :
+chaque étape que l'agent n'a écrit que là où il le peut, que le test d'acceptation
+rouge de chaque scénario échoue vraiment, et que son commit vert le fait passer. Aucun agent ne lance un autre agent :
 seul le **pilote d'hôte** (la partie de SKRAFT propre à chaque outil) lance les agents, sur
 ordre du moteur.
 
@@ -132,7 +132,7 @@ performance de l'organisation.
 
 1. **Un pilote sur un dépôt.** Choisissez un dépôt réel et une équipe volontaire. Installez
    le plugin `skraft` dans Claude Code, GitHub Copilot CLI ou VS Code. Prérequis : Node 22 ou plus
-   et Git ; Docker si un composant mocke ses dépendances avec Microcks (le défaut hors TypeScript, JavaScript et React).
+   et Git ; Docker si un composant mocke ses dépendances avec Microcks (le défaut hors React).
 2. **Décrire et vérifier les composants.** `skraft init` détecte les projets et écrit
    `skraft-config.json` ; `skraft doctor` vérifie que chaque commande peut tourner. L'équipe
    corrige les commandes qui ne marchent pas chez elle.

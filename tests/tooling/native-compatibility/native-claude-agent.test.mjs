@@ -62,7 +62,7 @@ test('actual native tree keeps native IDs, bounded tools, family models and one 
 test('an agent told to load a skill by name holds the skill tool on both hosts', () => {
   const loaders = readdirSync(join(defaultPluginRoot, copilot)).sort()
     .filter((file) => /load [^.]*by name/i.test(readFileSync(join(defaultPluginRoot, copilot, file), 'utf8')))
-  assert.deepEqual(loaders, ['acceptance-designer.agent.md', 'software-engineer-batch.agent.md', 'software-engineer.agent.md', 'solution-architect.agent.md'])
+  assert.deepEqual(loaders, ['acceptance-designer.agent.md', 'software-engineer.agent.md', 'solution-architect.agent.md'])
   for (const file of loaders) {
     assert.ok(header(readFileSync(join(defaultPluginRoot, copilot, file))).tools.includes('skill'), `${file} lacks skill`)
     assert.ok(header(readFileSync(join(defaultPluginRoot, native, file.replace('.agent.md', '.md')))).tools.includes('Skill'), `${file} twin lacks Skill`)

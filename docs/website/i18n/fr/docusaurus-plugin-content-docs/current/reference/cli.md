@@ -184,7 +184,7 @@ Ratify the Proposed ADRs docs/adr/adr-001-card-provider.md? RATIFIED marks them 
 | `reason` | string | raison du statut (le texte de la question en `waiting`), vide si aucune |
 | `phases` | `[{ phase, state }]` | une entrée par phase ; `state` = `pending`, `open` ou `closed` |
 | `current` | `{ step, phase, agent, gates, question, visit, attempt }` ou null | nœud en cours, `null` sinon ; `question` est le type de question sur un nœud question, `null` ailleurs |
-| `question` | `{ key, kind, text, options, refusals, header }` ou null | la question que le run attend, `null` si rien n'attend ; `header` = le libellé court qu'un dialogue ou le panneau affiche à côté (`ADR`, `Reporting`, `Pull request`, `Mutation`, `Environment`, `Blocked`) |
+| `question` | `{ key, kind, text, options, refusals, header }` ou null | la question que le run attend, `null` si rien n'attend ; `header` = le libellé court qu'un dialogue ou le panneau affiche à côté (`ADR`, `Reporting`, `Pull request`, `Scenarios`, `Mutation`, `Environment`, `Blocked`) |
 | `attempts` | number | nombre de tentatives démarrées |
 | `costUsd` | number ou null | somme des coûts journalisés, `null` si aucun |
 | `graph` | `{ nodes, edges }` | le graphe du workflow suivi (défaut ou `.skraft/`) ; sans workflow lisible, les étapes que nomme le journal et aucune arête |
@@ -215,6 +215,7 @@ Les questions, leurs options et leurs refus :
 | Type | Clé | Options | Refus |
 | --- | --- | --- | --- |
 | `adr-ratification` | `<nœud>-<n>` (`adr-1`) | `RATIFIED`, `REJECTED` | `REJECTED` |
+| `scenario-review` | `<nœud>-<n>` (`scenario_review-1`) | `APPROVED`, `REVISE` | `REVISE` |
 | `environment` | `<nœud>-<n>`, le nœud qui ne peut pas tourner (`gates-1`) | `RETRY`, `ABORT` | — |
 | `mutation-plan` | `<nœud>-<n>` (`mutation_plan-1`) | `APPLY`, une consigne, ou `STOP` (termine le run `blocked`, code `stopped`) | — |
 | `blocked` | `<nœud>-<n>`, le nœud qu'une consigne relance (`design-1`) | une consigne, ou `STOP` | — |

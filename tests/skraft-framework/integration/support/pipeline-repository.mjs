@@ -14,22 +14,37 @@ export const SLUG = 'checkout'
 /** The test command of the `app` component: node by its absolute path, so no PATH is needed. */
 export const TEST_COMMAND = `"${process.execPath}" tests/unit/check.mjs`
 
-/** `tests/unit/check.mjs`, in the unit place of a JavaScript component: fails while `src/pay.mjs` is missing or `pay(10)` is not `paid 10`. */
+/**
+ * `tests/unit/check.mjs`, in the unit place of a JavaScript component: fails while `src/pay.mjs`
+ * is missing or `pay(10)` is not `paid 10`. As a test runner does, it writes the JUnit report
+ * `reports/junit.xml` once its test ran, the assertion failing or passing, and none when the
+ * import fails before.
+ */
 export const CHECK = [
-  "let pay",
-  "try {",
+  "import { mkdirSync, writeFileSync } from 'node:fs'",
+  'const report = (body) => {',
+  "  mkdirSync('reports', { recursive: true })",
+  "  writeFileSync('reports/junit.xml', `<testsuite><testcase classname=\"check\" name=\"pay answers the amount paid\">${body}</testcase></testsuite>\\n`)",
+  '}',
+  'let pay',
+  'try {',
   "  ({ pay } = await import('../../src/pay.mjs'))",
-  "} catch {",
+  '} catch {',
   "  console.error('src/pay.mjs is missing')",
   '  process.exit(1)',
   '}',
   "if (pay(10) !== 'paid 10') {",
   '  console.error(`pay(10) answered ${pay(10)}`)',
+  '  report(`<failure message=\"pay(10) answered ${pay(10)}\"/>`)',
   '  process.exit(1)',
   '}',
+  "report('')",
   "console.log('pay ok')",
   '',
 ].join('\n')
+
+/** The skeleton the acceptance test calls: `pay` answering the empty value of its type, so that its assertion runs and fails. */
+export const SKELETON = "export const pay = () => ''\n"
 
 export const PAY = 'export const pay = (amount) => `paid ${amount}`\n'
 export const WRONG_PAY = 'export const pay = (amount) => `owed ${amount}`\n'
@@ -501,40 +516,77 @@ export const writesOnly = (result = { status: 'done', summary: 'outputs written'
   writeResult(brief, result)
 }
 
+/** Whether the brief puts a scenario of the story in the agent's hands. @param {Brief} brief */
+const onScenario = (brief) => brief.prompt.includes('\n- Scenario: ')
+
 /**
- * The engineer's TDD cycle: a red test commit while the code is missing or wrong, then the code.
+ * The engineer's work: on a scenario, the one green commit of the code with its unit test, once
+ * the scenario passes; on a pass with none (the gates or the review sent the work back, or a
+ * workflow that builds no scenario), its TDD cycle: a red test commit while the code is missing
+ * or wrong, then the code.
  * @param {string} code what src/pay.mjs holds once it is done
  * @returns {Act}
  */
 export const deliverWith = (code) => (brief, { cwd, slug }) => {
   const fixing = brief.prompt.includes('The gates failed on pass')
   fillOutputs(brief, fixing ? 'Fixed the amount.\n' : 'Paid by card.\n')
-  commit(cwd, `test(${slug}): ${fixing ? 'pay answers the amount paid' : 'pay a card amount'}`, { [`tests/pay-${fixing ? 'fix' : 'amount'}.md`]: 'pay(10) answers paid 10\n' }, brief)
-  commit(cwd, `${fixing ? 'fix' : 'feat'}(${slug}): pay by card`, { 'src/pay.mjs': code }, brief)
+  const test = { [`tests/pay-${fixing ? 'fix' : 'amount'}.md`]: 'pay(10) answers paid 10\n' }
+  if (onScenario(brief)) commit(cwd, `feat(${slug}): pay by card`, { ...test, 'src/pay.mjs': code }, brief)
+  else {
+    commit(cwd, `test(${slug}): ${fixing ? 'pay answers the amount paid' : 'pay a card amount'}`, test, brief)
+    commit(cwd, `${fixing ? 'fix' : 'feat'}(${slug}): pay by card`, { 'src/pay.mjs': code }, brief)
+  }
   writeResult(brief, { status: 'done', summary: 'delivered' })
+}
+
+/** CHECK taking a second before its assertion: replaying a commit then takes longer than the agent's work, on any machine. */
+export const SLOW_CHECK = CHECK.replace("if (pay(10) !== 'paid 10') {\n", "await new Promise((resolve) => setTimeout(resolve, 1000))\nif (pay(10) !== 'paid 10') {\n")
+
+/** The Scenarios table of the test plan: the story's one scenario, its walking skeleton, in `app`. */
+export const SCENARIOS = '\n## Scenarios\n\n| # | Scenario | Component | Tags |\n|---|---|---|---|\n| S1 | Customer pays by card | app | @walking-skeleton |\n'
+
+/**
+ * What the human is asked to read before DELIVER, on a run whose acceptance designer acts as
+ * NOMINAL's: the story's one scenario, and the last red commit DISTILL made of its acceptance test.
+ * @param {string} cwd @param {string} [slug]
+ */
+export const scenarioReviewText = (cwd, slug = SLUG) => {
+  const subject = `test(${slug}): pay by card`
+  const sha = git(cwd, 'log', '-1', '--format=%H', '--fixed-strings', `--grep=${subject}`).slice(0, 7)
+  return `Read the 1 scenario of the story before DELIVER builds them, one at a time: S1 "Customer pays by card" (app; @walking-skeleton). The acceptance test of S1 and its skeleton are commit ${sha} "${subject}": src/pay.mjs, tests/unit/check.mjs. APPROVED delivers them; REVISE sends DISTILL back with your corrections (edit the .feature or the test yourself first if you like, and say so).`
 }
 
 /**
- * CHECK taking a second to fail while src/pay.mjs is missing: replaying a red commit then takes
- * longer than the agent's work, on any machine.
+ * The acceptance designer committing `check` as its failing acceptance test, with the skeleton it
+ * calls, its test plan listing the story's scenario.
+ * @param {string} check @returns {Act}
  */
-export const SLOW_CHECK = CHECK.replace('} catch {\n', '} catch {\n  await new Promise((resolve) => setTimeout(resolve, 1000))\n')
-
-/** The acceptance designer committing `check` as its failing acceptance test. @param {string} check @returns {Act} */
 export const acceptanceWith = (check) => (brief, { cwd, slug }) => {
-  fillOutputs(brief, 'pay(10) answers paid 10.\n')
-  commit(cwd, `test(${slug}): pay by card`, { 'tests/unit/check.mjs': check }, brief)
+  fillOutputs(brief, `pay(10) answers paid 10.\n${SCENARIOS}`)
+  commit(cwd, `test(${slug}): pay by card`, { 'tests/unit/check.mjs': check, 'src/pay.mjs': SKELETON }, brief)
   writeResult(brief, { status: 'done', summary: 'acceptance test committed red' })
 }
 
-/** The engineer's TDD cycle opened by two red commits of the story while src/pay.mjs is missing, then the code. @type {Act} */
-export const twoRedsThenPay = (brief, { cwd, slug }) => {
-  fillOutputs(brief, 'Paid by card.\n')
-  commit(cwd, `test(${slug}): pay a card amount`, { 'tests/pay-amount.md': 'pay(10) answers paid 10\n' }, brief)
-  commit(cwd, `test(${slug}): pay by card twice`, { 'tests/pay-twice.md': 'pay(10) answers paid 10 each time\n' }, brief)
-  commit(cwd, `feat(${slug}): pay by card`, { 'src/pay.mjs': PAY }, brief)
-  writeResult(brief, { status: 'done', summary: 'delivered' })
+/**
+ * The acceptance designer of a workflow that builds no scenario committing `check` as acceptanceWith
+ * does, then a second failing test of the story.
+ * @param {string} check @returns {Act}
+ */
+export const twoRedsWith = (check) => (brief, repository) => {
+  acceptanceWith(check)(brief, repository)
+  commit(repository.cwd, `test(${repository.slug}): pay by card twice`, { 'tests/pay-twice.md': 'pay(10) answers paid 10 each time\n' }, brief)
 }
+
+/** The plugin's workflow as a repository ejected it before stories were built scenario by scenario: no each="scenario", no scenario review. */
+export const CYCLE_WORKFLOW = [
+  ['distill  [shape=box, agent="acceptance-designer", phase="DISTILL", each="scenario"]', 'distill  [shape=box, agent="acceptance-designer", phase="DISTILL"]'],
+  ['deliver  [shape=box, agent="software-engineer", phase="DELIVER", each="scenario"]', 'deliver  [shape=box, agent="software-engineer", phase="DELIVER"]'],
+  ['  scenario_review [shape=hexagon, question="scenario-review"]\n', ''],
+  ['  distill_review -> scenario_review [label="APPROVED"]\n  scenario_review -> deliver [label="APPROVED"]\n  scenario_review -> distill [label="REVISE", max_visits=2]\n', '  distill_review -> deliver [label="APPROVED"]\n'],
+].reduce((text, [old, now]) => {
+  if (!text.includes(old)) throw new Error(`the plugin's workflow no longer holds ${JSON.stringify(old)}`)
+  return text.replace(old, now)
+}, readFileSync(join(PLUGIN_ROOT, 'workflows', 'pipeline.skraft.dot'), 'utf8'))
 
 const CONTEXT_MAP = 'docs/architecture/context-map.md'
 

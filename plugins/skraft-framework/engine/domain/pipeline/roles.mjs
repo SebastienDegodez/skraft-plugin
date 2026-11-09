@@ -85,9 +85,6 @@ const ROLES = Object.freeze({
     shell: true,
   }),
   'software-engineer': DELIVERING,
-  // Experimental: the same role, for the descriptor that batches independent tests of one slice in
-  // one red commit; only an ejected workflow names it.
-  'software-engineer-batch': DELIVERING,
   // The pr-writer writes the prose of the pull request the publish node opens, nothing else.
   'pr-writer': Object.freeze({
     outputs: Object.freeze([Object.freeze({ path: 'details/{date}/pull-request-prose-{slug}.md', template: 'pull-request-prose.{language}.template.md' })]),

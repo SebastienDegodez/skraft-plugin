@@ -45,7 +45,7 @@ const OUTLINES = Object.freeze(['Scenario Outline', 'Scenario Template'])
  * The `.feature` files a test plan names, each once, back slashes read as separators.
  * @param {string} text @returns {string[]}
  */
-const namedFeatures = (text) => [...new Set([...text.replaceAll('\\', '/').matchAll(CITED)].map(([path]) => path))]
+export const namedFeatures = (text) => [...new Set([...text.replaceAll('\\', '/').matchAll(CITED)].map(([path]) => path))]
 
 /**
  * The scenarios a `.feature` holds, with the steps and the example rows of each.

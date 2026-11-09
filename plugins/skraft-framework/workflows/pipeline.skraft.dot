@@ -12,6 +12,9 @@
 // A parallelogram with publish="pull-request" pushes the branch and opens or updates its pull request, on the consent publish.pullRequest of skraft-config.json; a run starts only once /skraft-init has settled it.
 // A parallelogram with publish="playwright-visuals" runs each front end's e2e command and commits the screenshots its manifest lists, on the consent publish.visuals; when="frontend" skips it without a front end, and such a node then needs no consent.
 // each="survivor-file" runs an agent once per file holding mutants the mutation gate left alive, when the gate's FAIL edge leads to it; reached by another edge, it runs once, with what that edge brings.
+// each="scenario" goes on two agent nodes: the first writes the story's scenarios and the failing acceptance test of the first (its walking skeleton),
+// the second makes it pass with one green commit; then the engine runs them again for each next scenario, one failing test commit, one green commit, without edges and without the review.
+// scenario-review asks a human, once, to read the scenarios and the walking skeleton before DELIVER builds them: APPROVED goes on, REVISE sends DISTILL back with the corrections.
 // proposal=true on such an agent has it write a proposal per file, in a file the engine creates, and change no code.
 // Mutation runs last, on the code the DELIVER review approved; its survivors go to a proposal, the developer chooses (mutation_plan), then kill_mutants applies the choice.
 // mutation_gates runs the gates of gates again after kill_mutants: a gate node that runs every gate of a locked one stands in for it.
@@ -31,7 +34,7 @@ digraph skraft {
     design_review [shape=tripleoctagon, mandatory=true]
   }
   adr      [shape=hexagon, question="adr-ratification"]
-  distill  [shape=box, agent="acceptance-designer", phase="DISTILL"]
+  distill  [shape=box, agent="acceptance-designer", phase="DISTILL", each="scenario"]
   subgraph cluster_distill_review {
     label="DISTILL review"
     distill_review_lenses [shape=component]
@@ -42,7 +45,8 @@ digraph skraft {
     distill_review_refuter [shape=octagon, mandatory=true]
     distill_review [shape=tripleoctagon, mandatory=true]
   }
-  deliver  [shape=box, agent="software-engineer", phase="DELIVER"]
+  scenario_review [shape=hexagon, question="scenario-review"]
+  deliver  [shape=box, agent="software-engineer", phase="DELIVER", each="scenario"]
   gates    [shape=parallelogram, gate="build,format,lint,test,architecture,coverage", goal_gate=true, locked=true, phase="DELIVER"]
   deliver_review [shape=house, workflow="review", mandatory=true]
   mutation [shape=parallelogram, gate="mutation", goal_gate=true, locked=true]
@@ -75,7 +79,9 @@ digraph skraft {
   distill_review_lenses -> distill_review_boundary_enforcement -> distill_review_refuter
   distill_review_refuter -> distill_review
   distill_review -> distill [label="NEEDS_REWORK", max_visits=2]
-  distill_review -> deliver [label="APPROVED"]
+  distill_review -> scenario_review [label="APPROVED"]
+  scenario_review -> deliver [label="APPROVED"]
+  scenario_review -> distill [label="REVISE", max_visits=2]
   deliver -> gates
   gates -> deliver [label="FAIL", max_visits=3]
   gates -> deliver_review [label="PASS"]

@@ -9,7 +9,7 @@ import { runCli, USAGE } from '../../../../plugins/skraft-framework/engine/drive
 import { runSkraftPipelineWorkflow } from '../../../../plugins/skraft-framework/engine/drivers/copilot-workflow/skraft-pipeline-workflow.mjs'
 import { createNodeAdapters } from '../../../../plugins/skraft-framework/engine/infrastructure/node-adapters.mjs'
 import { actsAs, copilotHost, simulatedContext } from '../copilot-workflow/simulated-host.mjs'
-import { NOMINAL, SLUG, blocked, briefOf, commit, pipelineRepository, scriptedLlm } from '../support/pipeline-repository.mjs'
+import { CYCLE_WORKFLOW, NOMINAL, SLUG, blocked, briefOf, commit, designateWorkflow, pipelineRepository, scriptedLlm } from '../support/pipeline-repository.mjs'
 import { journal } from '../support/workspace.mjs'
 import { ISSUE, issueFile, repositoryOnForge } from '../support/issue-forge.mjs'
 import { fillsItsOutputs, scriptedModHost, stops } from '../claude-mod/support/scripted-mod-host.mjs'
@@ -106,7 +106,7 @@ test('skraft status prints the view of the active pipeline, as text or JSON', as
   assert.deepEqual(view, {
     slug: 'checkout', status: 'running', reason: '', phases: PHASES.map((phase) => ({ phase, state: 'pending' })), current: null, question: null, attempts: 0, costUsd: null, reviews: [], gates: [], agents: [],
   })
-  assert.deepEqual([graph.nodes.length, graph.edges.length, graph.nodes[0]], [18, 25, {
+  assert.deepEqual([graph.nodes.length, graph.edges.length, graph.nodes[0]], [19, 27, {
     id: 'research', kind: 'agent', phase: 'RESEARCH', what: 'solution-researcher', state: 'pending', outcome: null, visits: 0, attempts: 0, retries: 0, durationMs: 0, costUsd: null,
   }])
   assert.deepEqual((await inProcess(cwd, ['status'])).out, ['skraft checkout: running', ...PHASES.map((phase) => `${phase}  pending`)])
@@ -221,10 +221,12 @@ test('skraft init --from-artifacts is refused without DISCUSS stories, and on a 
 
 test('skraft status names the gate node a waiting run stands on, as the pane does, and how to answer its question', async (t) => {
   const { cwd } = pipelineRepository(t)
+  // A workflow that builds no scenario replays no commit of DELIVER: the gates are the first to run its tests.
+  designateWorkflow(cwd, CYCLE_WORKFLOW)
   // The engineer leaves a test command the machine reports as not found (exit 127): the gates stop the run, their node open.
   const breaksTheTests = (brief, repository) => {
     NOMINAL['software-engineer'](brief, repository)
-    commit(cwd, `chore(${SLUG}): hand the tests to a missing tool`, { 'tests/unit/check.mjs': 'process.exit(127)\n' })
+    commit(cwd, `test(${SLUG}): hand the tests to a missing tool`, { 'tests/unit/check.mjs': 'process.exit(127)\n' })
   }
   const llm = scriptedLlm({ cwd, acts: { 'software-engineer': [breaksTheTests] } })
   const { ctx } = simulatedContext({ args: { slug: SLUG }, otherwise: actsAs(llm) })

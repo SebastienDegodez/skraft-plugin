@@ -8,12 +8,10 @@ import { answerYaml } from '../support/answer-yaml.mjs'
 
 const LOCAL = 'skraft-config.local.json'
 
-/** The software engineer's TDD cycle, its red commit adding a gateway mock and a contract test, so that every lens of deliver_review runs. */
+/** The software engineer's green of the scenario, adding a gateway mock and a contract test, so that every lens of deliver_review runs. */
 const deliverTouchingMocksAndContracts = (host) => agent({
   work: ({ git }) => {
-    git.commit(`test(${SLUG}): Checkout pays by card`, ['tests/CheckoutTests.cs', 'tests/GatewayMock.cs', 'tests/PaymentContractTests.cs'])
-    git.commit(`feat(${SLUG}): Checkout pays by card`, ['src/Checkout.cs'])
-    git.commit(`refactor(${SLUG}): name the card payment`, ['src/Checkout.cs'])
+    git.commit(`feat(${SLUG}): Checkout pays by card`, ['src/Checkout.cs', 'tests/CheckoutTests.cs', 'tests/GatewayMock.cs', 'tests/PaymentContractTests.cs'])
   },
 })(host)
 

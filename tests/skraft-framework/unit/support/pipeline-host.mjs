@@ -15,6 +15,24 @@ import {
 } from './in-memory-host.mjs'
 
 export const SLUG = 'checkout'
+
+/**
+ * The plugin's workflow as a repository ejected it before stories were built scenario by
+ * scenario: no each="scenario", no scenario review. DISTILL's test commits are replayed, DELIVER
+ * commits whole TDD cycles, as on a pass the gates send back.
+ */
+export const CYCLE_WORKFLOW = [
+  ['distill  [shape=box, agent="acceptance-designer", phase="DISTILL", each="scenario"]', 'distill  [shape=box, agent="acceptance-designer", phase="DISTILL"]'],
+  ['deliver  [shape=box, agent="software-engineer", phase="DELIVER", each="scenario"]', 'deliver  [shape=box, agent="software-engineer", phase="DELIVER"]'],
+  ['  scenario_review [shape=hexagon, question="scenario-review"]\n', ''],
+  ['  distill_review -> scenario_review [label="APPROVED"]\n  scenario_review -> deliver [label="APPROVED"]\n  scenario_review -> distill [label="REVISE", max_visits=2]\n', '  distill_review -> deliver [label="APPROVED"]\n'],
+].reduce((text, [old, now]) => {
+  if (!text.includes(old)) throw new Error(`${JSON.stringify(old)} is not in the workflow`)
+  return text.replace(old, now)
+}, BUILT_IN_WORKFLOW)
+
+/** The options of a host whose repository ejected CYCLE_WORKFLOW. */
+export const CYCLE = Object.freeze({ files: Object.freeze({ '.skraft/pipeline.skraft.dot': CYCLE_WORKFLOW }) })
 /**
  * The docs folders the plugin's agents write in, as a repository that already has them holds
  * them; a scenario of a repository without them deletes them from the workspace.
@@ -55,7 +73,7 @@ export const pipelineHost = ({
   components = [API], config = {}, files = {}, behaviours = [], git = new InMemoryGit(), machine, replay, catalog = new InMemoryAgentCatalog(),
   workflow, clock = new FixedClock('2026-10-11T09:00:00.000Z'), answers = [], user, codeHost = new InMemoryCodeHost(),
   tracking = new InMemoryTracking(), owner = 'session-a', journalKeys = tracking.journalKeys, forge = 'github',
-  slug = SLUG,
+  slug = SLUG, scenarioReviews = null,
 } = {}) => {
   const answered = answeredConsents()
   const deps = {
@@ -67,7 +85,7 @@ export const pipelineHost = ({
     hasher: new FakeHasher(),
     journalKeys,
     agentRunner: new ScriptedAgentRunner(behaviours),
-    human: new ScriptedHuman(answers),
+    human: new ScriptedHuman(answers, { scenarioReviews }),
     progress: new RecordingProgress(),
     workspace: new InMemoryWorkspace({ 'skraft-config.json': JSON.stringify({ ...answered, ...config, components }), ...DOCS_FOLDERS, 'docs/architecture/context-map.md': '# Context map\n', ...files }),
     userSettings: new InMemoryUserSettings(user),
@@ -80,6 +98,7 @@ export const pipelineHost = ({
     runLock: new InMemoryRunLock(tracking, owner),
     timer: new ManualTimer(clock),
   }
+  deps.commitReplay.git ??= git
   strykerWritesItsReports(deps)
   const host = {
     deps,
@@ -140,7 +159,12 @@ const asked = (host) => host.tracking.journal(host.slug).filter((event) => event
 const passingMatrix = (slug) => Object.freeze([`details/2026-10-11/consistency-matrix-${slug}.md`, '| ADR | Verdict |\n- docs-relied-on: docs/architecture/context-map.md\n- consistency-gate: PASS\n'])
 export const PASSING_MATRIX = passingMatrix(SLUG)
 
-export const agent = ({ result = { status: 'done', summary: 'done' }, fill = true, records = true, work = () => {}, answer } = {}) => (host) => async () => {
+/**
+ * @param {{ result?: object | string | null, fill?: boolean, records?: boolean, work?: Function, answer?: object, plan?: Array<[string, string?, string?]>, exemption?: string }} [behaviour]
+ *   plan: the scenarios the acceptance designer lists on the pass that writes them, each `[title, component, tags]`;
+ *   one walking skeleton in the first component unless given; exemption: the walking skeleton exemption it declares under them
+ */
+export const agent = ({ result = { status: 'done', summary: 'done' }, fill = true, records = true, work, answer, plan, exemption } = {}) => (host) => async () => {
   const step = asked(host)
   const matrix = records && step.agent === 'solution-architect'
   const [matrixPath, matrixText] = passingMatrix(host.slug)
@@ -148,13 +172,74 @@ export const agent = ({ result = { status: 'done', summary: 'done' }, fill = tru
   if (fill) {
     for (const path of step.outputs.filter((output) => !(matrix && output === matrixPath))) {
       const before = (await host.tracking.read(host.slug, path)) ?? ''
-      await host.tracking.write(host.slug, path, `${before.replace(/\{\{[^{}]*\}\}/g, 'filled in')}\nFindings for ${step.step}.\n`)
+      await host.tracking.write(host.slug, path, `${before.replace(/\{\{[^{}]*\}\}/g, 'filled in')}\nFindings for ${step.step}.\n${plansScenarios(host, step) ? scenarioTable(host, plan, exemption) : ''}`)
     }
   }
   if (result !== null) await host.tracking.write(host.slug, step.result, typeof result === 'string' ? result : JSON.stringify(result))
-  work(host)
+  ;(work ?? scenarioWork(host, step))(host)
   return answer
 }
+
+/**
+ * What a scripted agent with no work of its own commits on a pass of a node marked
+ * each="scenario", as its descriptor asks: the acceptance designer the red of its scenario's
+ * acceptance test, the software engineer one green; nothing on any other pass or node.
+ * @param {ReturnType<typeof pipelineHost>} host @param {object} step its step.started
+ */
+const scenarioWork = (host, step) => {
+  if (!onScenarioNode(host, step)) return () => {}
+  const index = step.group ?? 1
+  if (step.agent === 'acceptance-designer') return scenarioCommit(host, { type: 'test', index, paths: 'tests', file: `Acceptance/S${index}AcceptanceTests.cs` })
+  if (step.agent === 'software-engineer' && step.group !== undefined && step.groups !== undefined) return scenarioCommit(host, { type: 'feat', index, paths: 'src', file: `Scenario${index}.cs` })
+  return () => {}
+}
+
+/**
+ * A commit of the scenario in the first component, under its first path of that kind, its body
+ * referencing the story's issue when it has one.
+ * @param {ReturnType<typeof pipelineHost>} host @param {{ type: string, index: number, paths: 'src' | 'tests', file: string }} commit
+ */
+const scenarioCommit = (host, { type, index, paths, file }) => ({ git }) => {
+  const [first = { root: '.', paths: { [paths]: [paths] } }] = JSON.parse(host.workspace.files.get('skraft-config.json')).components ?? []
+  const folder = [first.root, first.paths?.[paths]?.[0]].filter((part) => part && part !== '.').join('/')
+  const issue = host.events()[0]?.story?.issue
+  git.commit(`${type}(${host.slug}): scenario ${index}`, [`${folder === '' ? '' : `${folder}/`}${file}`], issue ? `Refs: #${issue}` : '')
+}
+
+/** The pass of the acceptance designer that writes the story's scenarios: the one on no scenario. @param {ReturnType<typeof pipelineHost>} host @param {object} step */
+const plansScenarios = (host, step) => step.agent === 'acceptance-designer' && step.group === undefined && onScenarioNode(host, step)
+
+/**
+ * Whether the step runs on a node the run's workflow, the repository's or the plugin's, marks
+ * each="scenario".
+ * @param {ReturnType<typeof pipelineHost>} host @param {object} step its step.started
+ */
+const onScenarioNode = (host, step) => new RegExp(`^\\s*${step.step}\\s*\\[[^\\]]*each="scenario"`, 'm').test(host.workspace.files.get('.skraft/pipeline.skraft.dot') ?? host.deps.workflowSource.text)
+
+/**
+ * The Scenarios table of a test plan: the scenarios given, or one walking skeleton in the first
+ * component of the configuration; then the walking skeleton exemption, when one is given.
+ * @param {ReturnType<typeof pipelineHost>} host @param {Array<[string, string?, string?]> | undefined} plan @param {string} [exemption]
+ */
+export const scenarioTable = (host, plan, exemption) => {
+  const [first = { name: 'api' }] = JSON.parse(host.workspace.files.get('skraft-config.json') ?? '{}').components ?? []
+  const rows = (plan ?? [['Customer pays by card']]).map(([title, component = first.name, tags], index) => `| S${index + 1} | ${title} | ${component} | ${tags ?? (index === 0 ? '@walking-skeleton' : '@happy-path')} |`)
+  return `\n## Scenarios\n\n| # | Scenario | Component | Tags |\n|---|---|---|---|\n${rows.join('\n')}\n${exemption === undefined ? '' : `\nWalking skeleton exemption: ${exemption}\n`}`
+}
+
+/**
+ * The scenario review a human is asked on a story whose plan is the default one, a walking
+ * skeleton alone, its acceptance test the red commit given.
+ * @param {{ sha?: string, subject?: string, files?: string, key?: string }} [red]
+ */
+export const scenarioReview = ({ sha = 'root-1', subject = `test(${SLUG}): scenario 1`, files = 'tests/Acceptance/S1AcceptanceTests.cs', key = 'scenario_review-1' } = {}) => ({
+  key,
+  kind: 'scenario-review',
+  text: `Read the 1 scenario of the story before DELIVER builds them, one at a time: S1 "Customer pays by card" (api; @walking-skeleton). The acceptance test of S1 and its skeleton are commit ${sha} "${subject}": ${files}. APPROVED delivers them; REVISE sends DISTILL back with your corrections (edit the .feature or the test yourself first if you like, and say so).`,
+  options: ['APPROVED', 'REVISE'],
+  refusals: ['REVISE'],
+  header: 'Scenarios',
+})
 
 /** What a pr-writer writes by default. */
 export const PROSE = Object.freeze({
@@ -192,7 +277,17 @@ export const tddCycle = (story = SLUG, name = 'Checkout', body = '') => ({ git }
 }
 
 /**
- * The nominal run: each agent of the default workflow does its part.
+ * The one green commit that makes a scenario pass in the api component: the code and the unit
+ * tests of its inner loop.
+ * @param {string} [story] @param {string} [name] @param {string} [body] its body: `Refs: #<issue>` for a story with one
+ */
+export const green = (story = SLUG, name = 'Checkout', body = '') => ({ git }) => {
+  git.commit(`feat(${story}): ${name} pays by card`, [`src/${name}.cs`, `tests/${name}Tests.cs`], body)
+}
+
+/**
+ * The nominal run: each agent of the default workflow does its part, the story's one scenario
+ * committed red by DISTILL, then green by DELIVER.
  * @param {ReturnType<typeof pipelineHost>} host
  * @param {string} [body] each commit's body: `Refs: #<issue>` for a story with one
  */
@@ -200,7 +295,7 @@ export const nominal = (host, body = '') => [
   agent()(host),
   agent({ work: ({ git }) => git.change('docs/adr/adr-001-card-payment.md') })(host),
   agent({ work: ({ git }) => git.commit('test(checkout): acceptance of the card payment', ['tests/Acceptance/CheckoutAcceptanceTests.cs'], body) })(host),
-  agent({ work: tddCycle(SLUG, 'Checkout', body) })(host),
+  agent({ work: green(SLUG, 'Checkout', body) })(host),
 ]
 
 /** A host whose agents behave as given, scripted after the host exists. @param {Parameters<typeof pipelineHost>[0]} options @param {(host: ReturnType<typeof pipelineHost>) => Function[]} script */

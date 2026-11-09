@@ -58,7 +58,7 @@ test('a repository agent between DESIGN and DISTILL is launched in its place, as
 
 test('in an ejected workflow an agent node runs its agent on the family its model= names, and a review node gives its family to the lenses that name none', async () => {
   const families = edit(BUILT_IN_WORKFLOW,
-    ['phase="DELIVER"]', 'phase="DELIVER", model="frontier"]'],
+    ['phase="DELIVER", each="scenario"]', 'phase="DELIVER", each="scenario", model="frontier"]'],
     ['lens="architecture-compliance"]', 'lens="architecture-compliance", model="frontier"]'],
     ['design_review [shape=tripleoctagon, mandatory=true]', 'design_review [shape=tripleoctagon, mandatory=true, model="standard"]'])
   const host = scripted(repositoryWorkflow(families), nominal)
@@ -74,7 +74,7 @@ test('in an ejected workflow an agent node runs its agent on the family its mode
 
 test('a family is any kebab-case word with a tier, such as gpt-luna; a review node names the refuter\'s family with refuter=, else it runs one tier above the strongest lens of its group', async () => {
   const families = edit(BUILT_IN_WORKFLOW,
-    ['phase="DISTILL"]', 'phase="DISTILL", model="gpt-luna"]'],
+    ['phase="DISTILL", each="scenario"]', 'phase="DISTILL", each="scenario", model="gpt-luna"]'],
     ['lens="consistency"]', 'lens="consistency", model="gpt-luna"]'],
     ['design_review [shape=tripleoctagon, mandatory=true]', 'design_review [shape=tripleoctagon, mandatory=true, refuter="gpt-luna"]'])
   const host = scripted(repositoryWorkflow(families), (it) => [...nominal(it).slice(0, 2), agent()(it), ...nominal(it).slice(2)])
@@ -272,28 +272,4 @@ test('a skipped gate interrupted before it was recorded is not started twice', a
 
   assert.equal((await host.run()).status, 'done')
   assert.equal(host.events().filter((event) => event.type === 'step.started' && event.step === 'gates').length, 1)
-})
-
-test('an ejected workflow that delivers with software-engineer-batch runs it as the plugin\'s, with the software-engineer\'s write scope, and replays its batched red commit', async () => {
-  const batched = edit(BUILT_IN_WORKFLOW, ['deliver  [shape=box, agent="software-engineer", phase="DELIVER"]', 'deliver  [shape=box, agent="software-engineer-batch", phase="DELIVER"]'])
-  const catalog = new InMemoryAgentCatalog({ plugin: [...PLUGIN_AGENTS, 'software-engineer-batch'] })
-  const host = scripted({ ...repositoryWorkflow(batched), catalog }, (it) => {
-    const [research, design, distill] = nominal(it)
-    return [research, design, distill, agent({
-      work: ({ git }) => {
-        git.commit(`test(${SLUG}): Checkout refuses card amounts that are not numbers`, ['tests/CheckoutTests.cs'])
-        git.commit(`feat(${SLUG}): Checkout refuses card amounts that are not numbers`, ['src/Checkout.cs'])
-      },
-    })(it)]
-  })
-
-  assert.equal((await host.start()).status, 'done')
-
-  assert.deepEqual(host.agentRunner.dispatches.map(({ agent: id, source }) => `${id} ${source}`), [
-    'solution-researcher plugin', 'solution-architect plugin', 'acceptance-designer plugin', 'software-engineer-batch plugin', 'pr-writer plugin',
-  ])
-  const deliver = host.agentRunner.dispatches[3].prompt.split('\n')
-  assert.ok(deliver.includes('- src') && deliver.includes('- tests'), 'the batch agent writes the source and test paths')
-  assert.ok(deliver.some((line) => line.includes('/changes/') && line.endsWith('change-log.md')), 'the batch agent fills the change log')
-  assert.deepEqual(host.replay.lines(), ['root-2 ./. $ dotnet test', 'root-3 ./. $ dotnet test'], 'the acceptance test of DISTILL, then the batched red')
 })

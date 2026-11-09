@@ -2,7 +2,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { BUILT_IN_WORKFLOW, InMemoryCodeHost, ScriptedMachine } from '../support/in-memory-host.mjs'
 import { edit } from '../workflow/support.mjs'
-import { agent, finding, lenses, nominal, prWriter, PROSE_TEMPLATE_FR, refutes, REFS_42, says, scripted, SLUG, tddCycle } from '../support/pipeline-host.mjs'
+import { agent, CYCLE, finding, green, lenses, nominal, prWriter, PROSE_TEMPLATE_FR, refutes, REFS_42, says, scripted, SLUG, tddCycle } from '../support/pipeline-host.mjs'
 import { opening, section } from '../support/description.mjs'
 import { answerYaml } from '../support/answer-yaml.mjs'
 
@@ -60,14 +60,19 @@ test('a French story\'s pull request is in French: the pr-writer fills a French 
     '',
     'Findings for distill.',
     '',
+    '#### Scenarios',
+    '',
+    '| # | Scenario | Component | Tags |',
+    '|---|---|---|---|',
+    '| S1 | Customer pays by card | api | `@walking-skeleton` |',
+    '',
     '</details>',
     '',
-    '<details><summary>Preuves RED: 2 commits red</summary>',
+    '<details><summary>Preuves RED: 1 commit red</summary>',
     '',
     '| Commit | Sujet | Code de sortie du rejeu |',
     '| --- | --- | ---: |',
     '| `root-2` | test(checkout): acceptance of the card payment | 1 |',
-    '| `root-3` | test(checkout): Checkout pays by card | 1 |',
     '',
     'Les extraits de sortie des rejeux ne sont pas encore consignés.',
     '',
@@ -111,6 +116,7 @@ test('a French story\'s pull request is in French: the pr-writer fills a French 
     '| adr | DESIGN | 1 | 1 | 0 | 0 s | - | skipped |',
     '| distill | DISTILL | 1 | 1 | 0 | 0 s | - | done |',
     '| distill_review | DISTILL | 1 | 1 | 0 | 0 s | - | approved |',
+    '| scenario_review | DISTILL | 1 | 1 | 0 | 0 s | - | answered |',
     '| deliver | DELIVER | 1 | 1 | 0 | 0 s | - | done |',
     '| gates | DELIVER | 1 | 1 | 0 | 0 s | - | pass |',
     '| deliver_review | DELIVER | 1 | 1 | 0 | 0 s | - | approved |',
@@ -118,7 +124,7 @@ test('a French story\'s pull request is in French: the pr-writer fills a French 
     '| visuals | DELIVER | 1 | 1 | 0 | 0 s | - | skipped |',
     '| pr_writer | PUBLISH | 1 | 1 | 0 | 0 s | - | done |',
     '| publish | PUBLISH | 1 | 1 | 0 | 0 s | - | en cours |',
-    '| Total | | | 13 | 0 | 0 s | - | |',
+    '| Total | | | 14 | 0 | 0 s | - | |',
     '',
     PRUNE,
     '',
@@ -189,14 +195,19 @@ test('a French story\'s review, failed gate, decisions and costs are told in Fre
   assert.ok(section(failing, 'Résumé du run').endsWith('\n\nLes coûts sont approximatifs (~) : chacun est ce que la session Claude Code a coûté pendant que l\'agent tournait ; il inclut donc tout autre échange de cette session pendant ce temps.\n\n' + PRUNE), section(failing, 'Résumé du run'))
   assert.equal(section(failing, 'Mention de l\'IA'), 'Cette pull request a été préparée par skraft avec des agents IA sur les familles de modèles implementer (modèles nommés par l\'hôte : claude-sonnet-5). Ce qui change, Pourquoi et Hors périmètre ont été rédigés par l\'agent pr-writer ; toutes les autres sections sont rendues par le moteur à partir du journal du run. Un humain la relit avant sa fusion.')
 
-  const lastRed = scripted({ config: { ...CONSENTED, tdd: { replay: 'last-red' } }, codeHost: french() }, (it) => [...nominal(it, REFS_42).slice(0, 3), agent({ work: (h) => { tddCycle(SLUG, 'Checkout', REFS_42)(h); h.git.commit('test(checkout): Checkout refunds', ['tests/RefundTests.cs'], REFS_42); h.git.commit('feat(checkout): Checkout refunds', ['src/Refund.cs'], REFS_42) } })(it)])
+  const lastRed = scripted({ ...CYCLE, config: { ...CONSENTED, tdd: { replay: 'last-red' } }, codeHost: french() }, (it) => [...nominal(it, REFS_42).slice(0, 2), agent({ work: (h) => {
+    h.git.commit('test(checkout): acceptance of the card payment', ['tests/Acceptance/CheckoutAcceptanceTests.cs'], REFS_42)
+    tddCycle(SLUG, 'Checkout', REFS_42)(h)
+    h.git.commit('test(checkout): Checkout refunds', ['tests/RefundTests.cs'], REFS_42)
+    h.git.commit('feat(checkout): Checkout refunds', ['src/Refund.cs'], REFS_42)
+  } })(it), agent()(it)])
   await lastRed.start(FRENCH)
   assert.ok(section(await bodyOf(lastRed), 'Preuves RED').includes('\n| `root-3` | test(checkout): Checkout pays by card | non rejoué |\n'), section(await bodyOf(lastRed), 'Preuves RED'))
 
   const adr = '---\nadr: 1\ntitle: Card payment\nstatus: Proposed\nsupersedes: null\nratified_by: null\n---\n\n# ADR-001 — Card payment\n\n**Status:** Proposed\n'
   const unlocked = edit(BUILT_IN_WORKFLOW, ['mutation [shape=parallelogram, gate="mutation", goal_gate=true, locked=true]', 'mutation [shape=parallelogram, gate="mutation", goal_gate=true, locked=true, unlock="no mutation tool for this stack yet"]'])
   const decided = scripted({ config: CONSENTED, codeHost: french(), workflow: unlocked, files: { 'docs/adr/adr-001-card-payment.md': adr }, answers: [{ answer: 'RATIFIED' }] }, (it) => [
-    agent()(it), agent()(it), agent()(it), agent({ work: tddCycle(SLUG, 'Checkout', REFS_42) })(it),
+    agent()(it), agent()(it), agent()(it), agent({ work: green(SLUG, 'Checkout', REFS_42) })(it),
   ])
   await decided.start(FRENCH)
   assert.equal(section(await bodyOf(decided), 'Décisions appliquées'), [

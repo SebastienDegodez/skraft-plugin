@@ -153,7 +153,7 @@ Revue `distill_review` : 4 lentilles, verdict calculé par le moteur.
 | **G6** | `testability` | Chaque scénario a une entrée dans le plan d'implémentation. | high |
 | **G11** | `testability` | Chaque cas d'usage nouveau a son test d'acceptation à l'emplacement des tests unitaires de son langage (.NET : projet `<Context>.UnitTest`, `<Context>.UnitTests` ou `<Context>.Tests` ; Java : module `-unit-test(s)` ; Python, TypeScript, JavaScript, React : `<chemin des tests>/unit/`). | blocker |
 | **T1** | `testability` | Chaque scénario et chaque test vérifient un comportement par un résultat observable et ne dépendent d'aucun temps, ordre ou aléa qu'ils ne fixent pas. | high |
-| **T2** | `testability` | Chaque valeur d'entrée et attendue du test d'acceptation externe égale le `.feature` mot pour mot ; le test ne porte que le premier scénario. | blocker |
+| **T2** | `testability` | Chaque valeur d'entrée et attendue du test d'acceptation externe égale le `.feature` mot pour mot ; le test ne porte que le scénario en cours. | blocker |
 | **T3** | `testability` | Le test d'acceptation externe existe et son premier scénario échoue sur une assertion métier ; le code de production du patch est un squelette dont les signatures rendent la valeur vide de leur type. | blocker |
 | **G7** | `boundary-enforcement` | Chaque scénario du plan de test vise un cas d'usage Application que nomme le modèle d'événements (une de ses Commands ou Queries) ; une étape du plan d'implémentation qui n'écrit le test d'acceptation d'aucun scénario (un test API ou HTTP d'un cercle suivant) est hors de sa portée. | blocker |
 | **G8** | `boundary-enforcement` | Le plan de test identifie au moins un scénario walking skeleton par flux. | high |
@@ -183,6 +183,17 @@ et une ligne de la matrice de couverture qui ne nomme aucun Gherkin écrit `—`
 combien de scénarios il en faut : une histoire dont l'`ac-draft` n'en déclare aucun ne se voit
 demander aucun scénario. C'est un plancher sous G1, pas G1 :
 la lentille `coverage` juge toujours à quel critère répond chaque scénario.
+
+**Contrôle du moteur.** Les scénarios que DELIVER construit : après chaque tentative du premier
+passage, le moteur lit le tableau `## Scenarios` du plan de test (`scenarios`) : identifiants dans
+l'ordre, un titre chacun, un composant de `skraft-config.json`, S1 seul tagué `@walking-skeleton`
+dans un composant qui n'est pas `react`, ou une exemption `library`, `refactoring` ou `docs-only`
+et aucun tag ([règles et messages](./phases.md#scenarios)). G8 reste à la lentille : chaque flux
+a-t-il son walking skeleton.
+
+La revue tourne une fois, sur le premier passage : son test d'acceptation ne porte que S1 (T2,
+T3). Les passages de `distill` qui écrivent les tests des scénarios suivants ne sont pas revus ;
+le rejeu de leur rouge, et le vert qui doit les faire passer, les vérifient.
 
 ## DELIVER <!-- #deliver -->
 
@@ -214,9 +225,53 @@ lentilles jugent une pull request par `skraft review --pr`.
 ([déclencheurs](./workflow-dot.mdx#conditional-lenses)).
 
 Le moteur vérifie aussi, sans identifiant de gate, les commits de chaque tentative
-(`commits.checked`) : message conventionnel, `Refs: #<issue>` en dernière ligne, aucune issue
-fermée, un commit vert précédé d'un rouge, chaque rouge rejoué en échec
-([`tdd.replay`](./skraft-config.md#tdd)).
+(`commits.checked`) : [Commits et rejeux](#commits).
+
+## Commits et rejeux <!-- #commits -->
+
+Chaque commit d'une tentative est jugé dans son ordre ; un commit refusé le reste tant qu'il ne
+quitte pas l'historique. Le brief donne le message exact du rouge et du vert d'un scénario.
+
+| Type | Sorte | Règle |
+| --- | --- | --- |
+| `test` | rouge | un test en échec d'un composant (`no-component` sinon) |
+| `feat`, `fix` | vert | le code qui le fait passer |
+| `refactor`, `style`, `perf` | refactor | un changement sous le vert |
+| `docs`, `chore`, `build`, `ci`, `revert` | autre | hors TDD : ne change aucun fichier des chemins `src` ou `tests` d'un composant (`outside-tdd`) |
+| tout le reste | invalide | `not-conventional` |
+
+Chaque message finit son corps par `Refs: #<issue>` quand l'histoire en a une
+(`issue-reference-missing`), ne cite aucune autre issue (`issue-not-in-story`) et n'en ferme
+aucune (`issue-closed`).
+
+| Passage | Permis | Refusé |
+| --- | --- | --- |
+| `distill`, qui écrit le test d'acceptation d'un scénario | un rouge, le test et le squelette qu'il appelle, dans le composant du scénario ; le rouge du scénario existe après le passage ; les fichiers `.feature` et Markdown l'accompagnent ou vont dans un commit `docs`, où qu'ils soient | un second rouge (`oracle-split`) ; un rouge dans un autre ou un second composant (`oracle-component`) ; un rouge sans fichier des chemins de test du composant (`oracle-without-test`) ; un vert ou un refactor (`code-in-oracle`) ; aucun |
+| `deliver` sur le scénario k | un vert, enchaîné en bash : `<commande de test> && git add <fichiers> && git commit …` | un rouge (`test-in-scenario`) ; un refactor (`refactor-in-scenario`) ; un second vert (`second-green`) ; un changement à un fichier des commits du test d'acceptation du scénario hors des chemins `src` du composant (`oracle-touched`) ; un changement à un autre composant (`other-component`) ; aucun |
+| `deliver` renvoyé par les gates ou la revue, après le dernier scénario | rouges, verts et refactors sur toute l'histoire ; rouges non rejoués | un vert sans rouge depuis le dernier vert (`green-without-red`) ; sur un passage que les gates ont renvoyé, leur échec tient lieu du premier rouge |
+| `kill_mutants` | des tests qui tuent des mutants et passent | — |
+
+**Rejeux.** Le moteur lance la commande `test` du composant, puis `e2e` quand il en a une et que
+le rejeu de `test` n'a pas tranché, dans une copie jetable du commit, et lit les rapports JUnit
+XML ou TRX qu'elle y écrit ([`testReports`](./skraft-config.md#component)). Le code de sortie seul
+ne distingue pas une assertion en échec d'une erreur de build. Un rouge se lit sur les cas de test
+des fichiers de test qu'il commite, quand les rapports les nomment (l'identifiant d'un cas de test
+porte le nom de son fichier), sur tous les cas de test sinon ; un échec dont le message nomme une
+exception levée par le code (`NotImplementedException`, `NullReferenceException`, `TypeError`,
+`AttributeError`…) est une erreur, jamais une assertion. Les rapports que les tests d'un composant
+écrivent dans la copie de travail sont la sortie du run : jamais hors du périmètre d'écriture,
+jamais laissés non commités.
+
+| Rejoué | Lecture | Effet |
+| --- | --- | --- |
+| un rouge de test d'acceptation | `assertion` : un cas de test avec `<failure>` | rouge prouvé ; ses cas de test en échec deviennent les tests du scénario |
+| | `no-report` (erreur de build, de collecte ou d'import), `error` seule, `skipped`, `green`, `timeout` | refusé, `not-red` : `its test command wrote no test report: …`, `its tests end on an error, never on an assertion: …`, `no test fails and some are skipped: …`, `its tests pass at it`, `its test command did not finish in time` |
+| | `indeterminate` : aucun runtime de conteneurs ne répond (Docker ou Podman) | l'étape reste ouverte : question `environment`, `…no container runtime answers (Docker or Podman), so the tests that need one could not run; start Docker or Podman, then retry` ; jamais sauté, jamais remplacé par une doublure |
+| le vert du scénario k | la commande `test`, et `e2e` quand des tests e2e ont prouvé le rouge : les tests du scénario passent, aucun test n'échoue ni ne finit en erreur, chaque commande sort avec 0 | accepté |
+| | un test échoue ou finit en erreur ; un test du scénario absent des rapports ou sauté ; une commande sort avec un code non nul ; aucun rapport | refusé, `not-green` : `these tests fail at it: …`, `the scenario's tests do not pass at it: …`, `<command> exits <code>`, `its test command wrote no test report: …` |
+
+[`tdd.replay`](./skraft-config.md#tdd) choisit quels rouges d'une tentative sont rejoués. Le rouge
+d'un test e2e n'est prouvé que si les tests `e2e` passent à son parent.
 
 ## Revue : réponse, réfutation, verdict <!-- #review-run -->
 

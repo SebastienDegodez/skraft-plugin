@@ -232,9 +232,14 @@ export class ScriptedAgentRunner {
  * what the human does first (fix the machine); once the script runs out, every question gets null.
  */
 export class ScriptedHuman {
-  /** @param {Array<{ answer: string, reason?: string | null } | null>} answers */
-  constructor(answers = []) {
+  /**
+   * @param {Array<{ answer: string, reason?: string | null } | null>} answers
+   * @param {{ scenarioReviews?: Array<{ answer: string, reason?: string | null } | null> | null }} [options] the answers to
+   *   the scenario review, in order; null approves every one, as a human who reads and agrees
+   */
+  constructor(answers = [], { scenarioReviews = null } = {}) {
     this.answers = [...answers]
+    this.scenarioReviews = scenarioReviews === null ? null : [...scenarioReviews]
     /** @type {Array<{ key: string, kind: string, text: string, options: string[], refusals: string[], header: string }>} */
     this.questions = []
     /** @type {string[]} what the engine put in front of the human, in order */
@@ -243,10 +248,18 @@ export class ScriptedHuman {
   async show(view) { this.shown.push(view) }
   async ask(question) {
     this.questions.push(question)
+    if (question.kind === 'scenario-review') return this.reviewScenarios()
     const scripted = this.answers.shift() ?? null
     const next = typeof scripted === 'function' ? await scripted(question) : scripted
     return next === null ? null : { answer: next.answer, reason: next.reason ?? null }
   }
+}
+
+/** A scenario review answered: APPROVED unless scripted. */
+ScriptedHuman.prototype.reviewScenarios = function reviewScenarios() {
+  if (this.scenarioReviews === null) return { answer: 'APPROVED', reason: null }
+  const next = this.scenarioReviews.shift() ?? null
+  return next === null ? null : { answer: next.answer, reason: next.reason ?? null }
 }
 
 export class RecordingProgress {
@@ -450,6 +463,14 @@ export class InMemoryGit {
     at.repo.history.push({ sha, subject, body, files })
     return sha
   }
+  /** The subject of a commit of any repository, null for an unknown sha. @param {string} sha */
+  subjectOf(sha) {
+    for (const repo of this.repositories.values()) {
+      const found = repo.history.find((commit) => commit.sha === sha)
+      if (found) return found.subject
+    }
+    return null
+  }
   async unavailable() { return this.missing }
   async remoteUrl() { return this.remote }
   async repository(dir) {
@@ -545,12 +566,16 @@ const shaPrefix = (top) => (top === '' ? 'root' : top.replaceAll('../', 'up-').r
  */
 export class ScriptedReplay {
   /**
-   * @param {{ exits?: Record<string, number | null>, outputs?: Record<string, string>, clock?: FixedClock | null, takesMs?: number }} [options]
-   *   exits: by `'<sha>'`, or by `'<sha> <argv>'` for one command at that commit; outputs: what a `'<sha> <argv>'` prints
+   * @param {{ exits?: Record<string, number | null | 'timeout'>, outputs?: Record<string, string>, reports?: Record<string, string | null>, clock?: FixedClock | null, takesMs?: number }} [options]
+   *   exits: by `'<sha>'`, or by `'<sha> <argv>'` for one command at that commit, `'timeout'` for a command the runner stopped
+   *   when its time ran out; outputs: what a `'<sha> <argv>'` prints;
+   *   reports: the JUnit XML the tests write, by `'<sha>'` or `'<sha> <argv>'`, null for none; unscripted, one test case
+   *   per command, failing on an assertion when it exits non-zero, passing otherwise
    */
-  constructor({ exits = {}, outputs = {}, clock = null, takesMs = 0 } = {}) {
+  constructor({ exits = {}, outputs = {}, reports = {}, clock = null, takesMs = 0 } = {}) {
     this.exits = exits
     this.outputs = outputs
+    this.reports = reports
     this.clock = clock
     this.takesMs = takesMs
     /** @type {Array<{ repository: string, sha: string, cwd: string, argv: string[], importRoots: string[] }>} each program tried, in order */
@@ -562,19 +587,44 @@ export class ScriptedReplay {
     for (const argv of choices) {
       this.replays.push({ ...request, argv })
       const exitCode = this.exitOf({ ...request, argv })
-      if (exitCode !== null) return { started: true, exitCode, stdout: this.outputs[`${request.sha} ${argv.join(' ')}`] ?? `${argv.join(' ')} at ${request.sha}\n`, stderr: '' }
+      if (exitCode === 'timeout') return { started: true, exitCode: null, stdout: '', stderr: '', error: `${argv[0]} did not finish within 600 s`, reports: [] }
+      if (exitCode !== null) return { started: true, exitCode, stdout: this.outputs[`${request.sha} ${argv.join(' ')}`] ?? `${argv.join(' ')} at ${request.sha}\n`, stderr: '', reports: this.reportsOf({ ...request, argv }, exitCode) }
     }
     return { started: false, exitCode: null, stdout: '', stderr: '', error: `could not start ${choices.map(([program]) => program).join(' nor ')}` }
   }
-  /** The exit of `'<sha> <argv>'` when scripted, else of the sha, else 1 (a failing test). */
+  /** The JUnit reports of a command that ran: scripted, else one test case named after its command. */
+  reportsOf({ sha, argv, cwd }, exitCode) {
+    const line = `${sha} ${argv.join(' ')}`
+    const scripted = line in this.reports ? this.reports[line] : this.reports[sha]
+    if (scripted === null) return []
+    return [{ path: `${cwd}/reports/junit.xml`, text: scripted ?? junitReport([[testId(argv), exitCode === 0 ? 'passed' : 'failed']]) }]
+  }
+  /**
+   * The exit of `'<sha> <argv>'` when scripted, else of the sha, else 0 at a feat or fix commit
+   * of the git double it reads (its tests pass), else 1 (a failing test).
+   */
   exitOf({ sha, argv }) {
     const line = `${sha} ${argv.join(' ')}`
     if (line in this.exits) return this.exits[line]
-    return sha in this.exits ? this.exits[sha] : 1
+    if (sha in this.exits) return this.exits[sha]
+    return /^(feat|fix)\b/.test(this.git?.subjectOf(sha) ?? '') ? 0 : 1
   }
   /** The replays, as `'<sha> <repository>/<cwd> $ <argv>'`, then ` [import <roots>]` for a Python program's import roots. */
   lines() { return this.replays.map(({ sha, repository, cwd, argv, importRoots }) => `${sha} ${repository}/${cwd} $ ${argv.join(' ')}${importRoots.length > 0 ? ` [import ${importRoots.join(', ')}]` : ''}`) }
 }
+
+/** The test case a command's unscripted report holds: `Tests.<program> <first argument>`. @param {string[]} argv */
+export const testId = (argv) => `Tests.${argv.slice(0, 2).join(' ')}`
+
+/**
+ * A JUnit XML report holding these test cases, each `[id, outcome]`, the id `<classname>.<name>`.
+ * @param {Array<[string, 'passed' | 'failed' | 'error' | 'skipped', string?]>} cases
+ */
+export const junitReport = (cases) => `<?xml version="1.0"?>\n<testsuite>${cases.map(([id, outcome, message = 'expected another value']) => {
+  const [classname, ...name] = id.split('.')
+  const body = { passed: '', failed: `<failure message="${message}"/>`, error: `<error message="${message}"/>`, skipped: '<skipped/>' }[outcome]
+  return `<testcase classname="${classname}" name="${name.join('.')}">${body}</testcase>`
+}).join('')}</testsuite>\n`
 
 /** The agents the default workflow starts: its agents, its lenses and the refuter. */
 export const PLUGIN_AGENTS = Object.freeze([

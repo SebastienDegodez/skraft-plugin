@@ -16,7 +16,8 @@ Pourquoi un moteur et des pilotes, et le contrat du pilote Copilot :
 | Outil | Version | Pour |
 | --- | --- | --- |
 | Node | 22 ou plus | le moteur, la ligne de commande `skraft`, l'extension Copilot ; `skraft doctor` le vérifie |
-| Git | — | la base de chaque composant, les commits, les rejeux de commits rouges |
+| Git | — | la base de chaque composant, les commits, les rejeux de commits rouges et verts |
+| Docker ou Podman | — | les tests qui font tourner Microcks ou Testcontainers, la base du walking skeleton par défaut ; sans l'un ni l'autre, leur rejeu est INDETERMINATE et le run attend ; `skraft doctor` nomme celui qui répond |
 | `gh` | connecté à l'hôte du dépôt | seulement pour lire l'issue de la story (`--issue`), ouvrir la pull request, commenter l'issue, `skraft review --pr` ; le moteur ne passe jamais par un serveur MCP ; voir [Forge](./skraft-config.md#github-through-gh) |
 | `az` | connecté à l'organisation, avec son extension `azure-devops` | sur Azure DevOps seulement, pour lire le work item de la story (`--issue`), y tenir le commentaire du run et ouvrir la pull request, et revoir une pull request (`skraft review --pr` : la lire, tenir le fil de revue) ; le moteur ne passe jamais par un serveur MCP ; voir [Forge](./skraft-config.md#azure-devops-through-az) |
 | Copilot CLI | — | Copilot CLI ; sous VS Code, le pilote SDK (`skraft-run.mjs`) le lance sans interface |
@@ -104,7 +105,7 @@ question, ses options et un en-tête (`ADR`, `Reporting`, `Environment`) :
 | --- | --- |
 | une option qui n'est pas un refus | enregistrée comme réponse ; le run continue |
 | un refus (`REJECTED`) | une deuxième boîte : `Why REJECTED? Type the reason under Other; it goes back to the agent.` ; le texte tapé sous Other est la raison ; `Not now` ou `Answer later` ne donnent pas de réponse |
-| du texte tapé sous Other dans la première boîte | une option tapée, quelle que soit la casse, vaut cette option ; un autre texte est un refus avec ce texte pour raison quand la question en a un (`adr-ratification`), la consigne d'une question `blocked` ou `mutation-plan`, et sinon une réponse refusée (le run attend) |
+| du texte tapé sous Other dans la première boîte | une option tapée, quelle que soit la casse, vaut cette option ; un autre texte est un refus avec ce texte pour raison quand la question en a un (`adr-ratification`, `scenario-review`), la consigne d'une question `blocked` ou `mutation-plan`, et sinon une réponse refusée (le run attend) |
 | une consigne tapée sous Other | montrée en retour dans une boîte `Send this instruction to <step>? <instruction>` avec `SEND` et `CANCEL` : `SEND` l'enregistre et le run continue ; `CANCEL` repose la question |
 | un texte sans mot tapé comme consigne (`5`, `42?`, `ok`) | refusé sans être montré en retour, et la question est reposée |
 | boîte fermée, celle de `SEND`/`CANCEL` comprise | pas de réponse : le run attend `/skraft decide` |
@@ -153,7 +154,7 @@ Le bloc montre le texte du panneau pour un run `checkout` en DESIGN, tel que le 
 de vue du mod. À côté d'une boîte de dialogue, tant qu'une question attend (la capture a été faite
 quand le consentement de publication était encore demandé pendant un run ; `/skraft-init` le règle
 avant, et la question sur laquelle un run s'arrête est l'une de `adr-ratification`,
-`mutation-plan`, `environment` ou `blocked`) :
+`scenario-review`, `mutation-plan`, `environment` ou `blocked`) :
 
 ![Claude Code : à gauche la boîte de dialogue Pull request avec ACCEPTED, DECLINED et Type something ; à droite le panneau Skraft, « skraft checkout — waiting », RESEARCH ouverte sur publish_consent, les étapes des autres phases à venir, puis la question et la façon d'y répondre](/img/screenshots/shared/claude-skraft-pane.png)
 

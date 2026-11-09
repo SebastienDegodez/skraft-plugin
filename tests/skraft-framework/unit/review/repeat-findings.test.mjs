@@ -232,10 +232,10 @@ test('a finding the engine reads again word for word where the refuter refuted i
   const host = scripted({ files: { [ADR]: adr() } }, (it) => [
     ...nominal(it).slice(0, 2),
     agent({ work: ({ git }) => {
-      git.patched('tests/Acceptance/PayTests.cs', ['new file mode 100644', '--- /dev/null', '+++ b/tests/Acceptance/PayTests.cs', '@@ -0,0 +1,1 @@', '+// test'])
-      git.commit('test(checkout): acceptance of the card payment', ['tests/Acceptance/PayTests.cs'])
+      for (const path of ['tests/Acceptance/PayTests.cs', 'tests/Acceptance/RefundTests.cs']) git.patched(path, ['new file mode 100644', '--- /dev/null', `+++ b/${path}`, '@@ -0,0 +1,1 @@', '+// test'])
+      git.commit('test(checkout): acceptance of the card payment', ['tests/Acceptance/PayTests.cs', 'tests/Acceptance/RefundTests.cs'])
     } })(it),
-    agent({ fill: false })(it),
+    agent({ fill: false, work: () => {} })(it),
     () => ({ ok: false, unavailable: true, text: '', error: 'stop here' }),
   ])
   host.agentRunner.review = lenses({ refuter: [refutes('refuted', 'the unit project holds it'), refutes('confirmed')] })

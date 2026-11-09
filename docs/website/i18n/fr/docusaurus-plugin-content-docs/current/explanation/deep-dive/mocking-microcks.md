@@ -37,16 +37,33 @@ graph LR
 
 Le mocking est **côté consommateur** : il remplace ce que le service-sous-test appelle,
 jamais le service lui-même. La stratégie est le `mocking.strategy` du composant dans
-`skraft-config.json` — `microcks` par défaut pour toutes les stacks — et le moteur nomme la
+`skraft-config.json` — `microcks` par défaut pour toutes les stacks sauf React, `inprocess` pour elle — et le moteur nomme la
 skill correspondante dans le brief ; l'agent ne la choisit jamais.
 
 | Stratégie résolue | Câblage concret |
 | --- | --- |
-| `microcks` (défaut) | un conteneur Microcks amorcé depuis le contrat du dépendant |
-| `inprocess` (surcharge) | un double in-process — `fakeiteasy`, `nsubstitute` ou `moq` |
+| `microcks` (défaut sauf pour React) | un conteneur Microcks amorcé depuis le contrat du dépendant |
+| `inprocess` (défaut de React, surcharge ailleurs) | un double in-process — `fakeiteasy`, `nsubstitute` ou `moq` en .NET ; MSW devant le back d'un composant React |
 
-Le câblage passe par les mêmes commits rouge/vert que le code métier (le test échoue
-d'abord, puis passe). Le dépendant est mocké ; le service-sous-test ne l'est pas.
+Le câblage part dans les commits du scénario, comme le code métier : le test d'acceptation que
+DISTILL a commité échoue d'abord, le vert du software engineer le fait passer. Le dépendant est
+mocké ; le service-sous-test ne l'est pas.
+
+## Où tourne Microcks
+
+Le mocking est une rangée d'une [politique d'infrastructure](../../reference/skraft-config.md#infrastructure)
+plus large : sur quoi les tests d'un composant font tourner chaque sorte de dépendance. Une
+gateway externe — un service REST, SOAP, GraphQL ou gRPC, un broker comme Kafka, RabbitMQ ou MQTT, un webhook
+émis — tourne sur Microcks, dans un scénario ciblé comme dans le walking skeleton. Un front React
+remplace son back par MSW dans les tests ciblés, et joue ses tests end-to-end Playwright contre
+Microcks. Les défauts de la politique viennent du plugin, par stack ; DISTILL reçoit l'effective
+dans son brief, et `skraft doctor` l'affiche avec sa source.
+
+Les tests démarrent Microcks eux-mêmes, par Testcontainers, depuis l'image uber native, un
+conteneur par session de tests, dans le setup global du framework de test (xUnit, JUnit, pytest,
+Vitest, Playwright). Docker et Podman conviennent tous deux. Quand aucun ne répond, le moteur ne
+saute pas le test et ne remplace pas Microcks par un double in-process : il signale le rejeu
+INDETERMINATE et attend qu'un humain en démarre un ([Commits et rejeux](../../reference/gates.md#commits)).
 
 ## Comment la lentille de fidélité l'audite
 

@@ -38,6 +38,7 @@ The `answer:` line gives the key (`adr-1`) and the allowed answers:
 | Question | Answers | Reason required |
 |---|---|---|
 | `adr-ratification` | `RATIFIED`, `REJECTED` | with `REJECTED` |
+| `scenario-review` (header `Scenarios`) | `APPROVED`, `REVISE` | with `REVISE`: your corrections, sent to DISTILL |
 | `review-consent` (`skraft review --pr --publish`, header `PR comment`) | `ACCEPTED`, `DECLINED` | — |
 | `environment` | `RETRY` (once the machine is repaired), `ABORT` | — |
 | `mutation-plan` | `APPLY`, an instruction of your own, or `STOP` | — |
@@ -51,7 +52,7 @@ What each answer triggers: [Questions to a human](../reference/run-journal.md#hu
 <TabItem value="claude-code" label="Claude Code" default>
 
 1. Pick an option in the dialog the mod opens (header `ADR`, `Pull request`, `Environment`…).
-2. For `REJECTED`, a second dialog asks for the reason: type it under **Other**.
+2. For a refusal (`REJECTED`, `REVISE`), a second dialog asks for the reason: type it under **Other**.
 3. For a `blocked` or `mutation-plan` question, type your instruction under **Other**, or pick
    `STOP` (`APPLY`).
 
@@ -86,7 +87,7 @@ Enter to select · ↑/↓ to navigate · Esc to cancel
 <TabItem value="copilot-cli" label="GitHub Copilot CLI">
 
 1. Copilot asks the question once, in the chat: pick an option, or type your instruction.
-2. For `REJECTED`, type the reason in the field that follows.
+2. For a refusal (`REJECTED`, `REVISE`), type the reason in the field that follows.
 
 When the question could not be asked (`autopilot` mode, no dialog) or you closed it, the workflow
 writes `Waiting for you — <question>` and pauses. Either:
@@ -131,6 +132,10 @@ recorded (`host`, `decide`, `host-confirmed`, `cli-tty`).
 - **`REJECTED` on an ADR**: the architect runs DESIGN again with your reason. Past 3 rejections,
   the run asks the `blocked` question on `design`: an instruction starts the architect again,
   `STOP` ends the run (`loop-ceiling`).
+- **`REVISE` on the scenarios**: the acceptance designer runs DISTILL again with your corrections,
+  then its review and the question come back. Edit the `.feature` or the test yourself first if
+  you like, and say so in the reason. Past 2 revisions, the run asks the `blocked` question on
+  `distill`.
 - **`DECLINED` on a consent**: the answer is written in `skraft-config.json`
   (`publish.pullRequest` or `publish.visuals`) and not asked again; the run goes on locally
   ([Publish a run's pull request](./publish-pull-request.md)).

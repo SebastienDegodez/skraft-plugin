@@ -27,7 +27,7 @@ Five mandatory rules that govern how tests are designed in a Clean Architecture 
 **TBU detection checklist (run after GREEN):**
 - [ ] Can I delete the production implementation and still have the test pass? → Wired? YES = TBU
 - [ ] Is the use case wired in the DI container? → Not tested if no integration test exercises the wiring
-- [ ] Does the acceptance test use an `InMemory` implementation, not the real one? → Correct for unit pass; add integration test for real wiring
+- [ ] Does the acceptance test use an `InMemory` implementation, not the real one? → Correct for a targeted scenario; the walking skeleton proves the real wiring
 
 ---
 
@@ -121,53 +121,64 @@ Allowed `Extraction Reason` codes:
 - `branch_unreachable_via_AC` — Gate (a)
 - `combinatorial_economy` — Gate (b)
 
-| Scenario | Use Case Boundary | Layer | Extraction Reason | Double Type | Walking Skeleton | Priority |
-|---|---|---|---|---|---|---|
-| Happy path — driver eligible | `CheckEligibilityUseCase` | Application | — | InMemory repository | A | P1 |
-| Edge — driver at age limit | `CheckEligibilityUseCase` | Application | — | InMemory repository | A | P1 |
-| Rejection — too many accidents | `CheckEligibilityUseCase` | Application | — | InMemory repository | A | P2 |
-| Combinatorial sweep — premium grid | `PricingPolicy.computePremium` | Domain | `combinatorial_economy` | None (pure function) | — | P2 |
-| Infrastructure — real persistence | `IEligibilityRepository` | Infrastructure | — | Real DB (Testcontainers) | — | P3 |
+| Scenario | Use Case Boundary | Layer | Extraction Reason | Double Type | Priority |
+|---|---|---|---|---|---|
+| S1 Driver checks eligibility (walking skeleton) | `CheckEligibilityUseCase` | Entry point | — | real entry point, Testcontainers PostgreSQL, Microcks risk API | P1 |
+| S2 Driver at age limit obtains eligibility | `CheckEligibilityUseCase` | Application | — | in-memory repository, Microcks risk API | P1 |
+| S3 Rejection — too many accidents | `CheckEligibilityUseCase` | Application | — | in-memory repository, Microcks risk API | P2 |
+| Combinatorial sweep — premium grid | `PricingPolicy.computePremium` | Domain | `combinatorial_economy` | None (pure function) | P2 |
+
+`Double Type` names what each dependency of the test runs on, from the infrastructure policy below.
 
 **Priority:**
-- P1 — happy path, walking skeleton basis
+- P1 — walking skeleton, happy path
 - P2 — business rule coverage, edge cases
 - P3 — infrastructure, integration, error paths
 
 ---
 
-## Walking Skeleton Strategy
+## Walking Skeleton
 
-A walking skeleton is the thinnest possible slice that exercises the full path from use case to output — enough to prove the wiring works.
+S1 of every story, built first: the thinnest slice that runs the real path, from the entry point
+through the use case to the real internal gateways.
 
-### 4 Strategies
+- One per story, tagged `@walking-skeleton`, in a back-end component, never a React front end.
+- Its acceptance test drives the real entry point (HTTP endpoint, CLI command, webhook received,
+  topic consumed), wired by the production composition root; it lives in the integration-test
+  place of its component.
+- Exemptions, declared under the test plan's `## Scenarios` table as
+  `Walking skeleton exemption: <value>`, with no scenario tagged `@walking-skeleton`:
 
-| Strategy | When to use | Setup |
+  | Exemption | Holds when |
+  |---|---|
+  | `library` | a pure library: the component has no entry point |
+  | `refactoring` | the story adds no public interface: no endpoint, command, message or public type |
+  | `docs-only` | the story changes configuration or documentation only, no source file |
+
+  An exemption the story's changes contradict is a blocker.
+
+## Infrastructure Policy
+
+What each kind of dependency runs on, in a targeted scenario (every scenario but the walking
+skeleton) and in the walking skeleton. A component overrides a row with `infrastructure` in
+`skraft-config.json`; the brief names each component's effective policy.
+
+| Dependency | Targeted scenario | Walking skeleton |
 |---|---|---|
-| **A — Full InMemory** | Feature is purely internal (no external services) | InMemory repository, no real I/O |
-| **B — Real local + Fake costly** | Feature needs a local DB but avoids expensive external calls | Testcontainers DB + fake/stub for external service |
-| **C — Real local** | Feature integrates with controllable local infrastructure | Testcontainers for all local dependencies |
-| **D — Configurable** | Feature must run in both unit and integration mode | Strategy/feature flag selects double type at test startup |
+| Entry point: controller, CLI, UI, webhook received, topic consumed | in-process | real |
+| Internal gateway: repository, database, cache | in-memory | Testcontainers |
+| External gateway: REST, SOAP, GraphQL, gRPC, Kafka, RabbitMQ, MQTT, WebSocket, webhook sent | Microcks | Microcks |
+| Clock, randomness | fake | fake |
+| React front end → back end, targeted tests | MSW | — |
+| React front end → back end, Playwright e2e | Microcks | — |
 
-### Decision Tree
-
-```
-Does the feature write to or read from persistent storage?
-├── NO  → Strategy A (full InMemory)
-└── YES → Does it call an expensive external service (payment, SMS, AI)?
-          ├── YES → Strategy B (real local DB + fake external)
-          └── NO  → Is the storage local and controllable?
-                    ├── YES → Strategy C (real local with Testcontainers)
-                    └── NO  → Strategy D (configurable)
-```
-
-### Walking Skeleton Sizing
-
-- **2–5 walking skeletons per feature** (one per major flow variant)
-- **15–20 focused scenarios total** per feature (detailed behaviour coverage)
-- Tag walking skeleton scenarios with `@smoke` for fast validation
-
----
+- The external gateway row, and a React front end's rows to the back end, follow the component's
+  `mocking.strategy`: `microcks` by default, `inprocess` for a `react` component; a back-end
+  component set to `inprocess` runs its external gateways on an in-process double.
+- Microcks runs from Testcontainers (the uber native image), one container per test session,
+  started in the test runner's global setup (`mocking-microcks-<stack>`).
+- Docker or Podman runs the containers. With neither: the scenario is INDETERMINATE and reported;
+  never skipped, never moved to a fake.
 
 ## Layer Assignment Rules
 
@@ -175,6 +186,7 @@ Does the feature write to or read from persistent storage?
 |---|---|---|---|
 | Use case / command handler | `UnitTest` | Application | InMemory application interfaces |
 | Domain policy / specification | `UnitTest` | Domain | None (pure function — call directly) |
+| Walking skeleton (S1) | `IntegrationTest` | Entry point → use case → internal gateways | Real entry point, Testcontainers, Microcks |
 | Repository adapter | `IntegrationTest` | Infrastructure | Real DB via Testcontainers |
 | API controller / endpoint | `IntegrationTest` | API | In-process app host (WebApplicationFactory or equivalent) |
 | Architecture boundaries | `IntegrationTest` | Architecture | Static analysis (NetArchTest, ArchUnit, etc.) |
@@ -192,4 +204,4 @@ Does the feature write to or read from persistent storage?
 - [coverage-matrix-template.md](references/coverage-matrix-template.md) — blank coverage matrix template
 - [layer-assignment-rules.md](references/layer-assignment-rules.md) — detailed rules per layer
 - [boundary-enforcement-principle.md](references/boundary-enforcement-principle.md) — use case boundary enforcement and TBU prevention
-- [walking-skeleton-strategy.md](references/walking-skeleton-strategy.md) — 4 strategies with decision tree and examples
+- [walking-skeleton-strategy.md](references/walking-skeleton-strategy.md) — walking skeleton, exemptions and the infrastructure policy, with an example

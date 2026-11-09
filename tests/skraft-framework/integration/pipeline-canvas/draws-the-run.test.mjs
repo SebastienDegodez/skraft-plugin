@@ -51,7 +51,7 @@ test('the canvas draws the workflow as the run goes: a review in progress, then 
   assert.deepEqual(outline(content).slice(0, 3), [
     ['✓ RESEARCH', 'closed', [['✓ research — solution-researcher: done', 'done']]],
     ['▶ DESIGN', 'open', [['✓ design — solution-architect: done, pass 2', 'done'], ['✓ design_review — consistency, architecture-compliance, fitness: approved, pass 2', 'done'], ['▶ adr — adr-ratification', 'open']]],
-    ['· DISTILL', 'pending', [['· distill — acceptance-designer', 'pending'], ['· distill_review — coverage, business-alignment, testability, boundary-enforcement', 'pending']]],
+    ['· DISTILL', 'pending', [['· distill — acceptance-designer', 'pending'], ['· distill_review — coverage, business-alignment, testability, boundary-enforcement', 'pending'], ['· scenario_review — scenario-review', 'pending']]],
   ])
   assert.deepEqual(content.phases.map(({ key }) => key), ['phase-RESEARCH', 'phase-DESIGN', 'phase-DISTILL', 'phase-DELIVER', 'phase-PUBLISH'])
   assert.deepEqual(content.phases[1].steps.map(({ key }) => key), ['step-design', 'step-design_review', 'step-adr'])

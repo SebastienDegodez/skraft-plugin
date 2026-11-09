@@ -21,11 +21,17 @@ scripts/ folder next to this SKILL.md, never in the consumer repository. Every s
 | Gate | Command line in `skraft-config.json` |
 |---|---|
 | build | `dotnet build --nologo` |
-| test | `dotnet test --nologo` |
+| test | `dotnet test --nologo --logger trx` |
 | format | `dotnet format --verify-no-changes` |
 | architecture | `dotnet test --nologo --filter "FullyQualifiedName~.ArchitectureTests."` when any test project, `*.IntegrationTest` included, holds an `ArchitectureTests` class (NetArchTest / ArchUnitNET); otherwise `node "<skill>/scripts/no-mocks-in-core.mjs" --root . --evidence .copilot-tracking/skraft-gates/architecture` |
 | coverage | `node "<skill>/scripts/coverage-core.mjs" --root . --evidence .copilot-tracking/skraft-gates/coverage` |
 | mutation | `node "<skill>/scripts/mutation-core.mjs" --root . --evidence .copilot-tracking/skraft-gates/mutation --since {baseSha}` |
+
+The `test` line writes one report per test project under `<project>/TestResults/`, where the
+component's `testReports` looks by default (`**/TestResults/*.trx`, `**/TestResults/*.xml`):
+`--logger trx`, built into `dotnet test`, or `--logger "junit;LogFilePath=TestResults/junit.xml"`
+with the `JunitXml.TestLogger` package in every test project. The engine reads it to tell a
+failing assertion from a build error.
 
 `--evidence` is the folder where the script keeps its own report files, relative to `--root`;
 for a component below the repository root, climb to the repository's `.copilot-tracking/`

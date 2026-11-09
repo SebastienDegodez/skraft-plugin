@@ -1,5 +1,8 @@
 import { CONFIG_FILE, withPublishSetting } from '../../domain/config/skraft-config.mjs'
-import { APPLY, BLOCKED, REVIEW_CEILING, acceptable, reviewCeilingText, STOP, blockText, decideUsage, edgeAnswerOf, environmentText, mutationPlanText, questionKey, questionOf, ratificationText, readAnswer } from '../../domain/decisions/questions.mjs'
+import { APPLY, BLOCKED, REVIEW_CEILING, acceptable, reviewCeilingText, STOP, blockText, decideUsage, edgeAnswerOf, environmentText, mutationPlanText, questionKey, questionOf, ratificationText, readAnswer, scenarioReviewText } from '../../domain/decisions/questions.mjs'
+import { deriveRun } from '../../domain/journal/run-state.mjs'
+import { namedFeatures } from '../../domain/pipeline/gherkin-records.mjs'
+import { scenarioNodes } from '../../domain/workflow/workflow.mjs'
 import { trackingFolder } from '../../domain/pipeline/roles.mjs'
 import { causeFields } from '../../domain/pipeline/next-step.mjs'
 import { issueOf } from '../../domain/pipeline/commits.mjs'
@@ -81,8 +84,31 @@ const planChosen = ({ deps, slug }, { answer, subjects, step }) => {
   return { failures: answer === APPLY ? [`Apply the proposals in ${paths}`] : [/** @type {string} */ (answer), `The proposals it departs from: ${paths}`] }
 }
 
+/**
+ * The scenario review: the story's scenarios and the red of its walking skeleton, read by a
+ * human once before DELIVER builds them; REVISE sends their corrections to DISTILL.
+ * @type {Questionnaire}
+ */
+const SCENARIO_REVIEW = {
+  plan: async (context) => scenarioReviewPlan(context, deriveRun(context.journal.events)),
+  act: async (_, asked) => ({ failures: asked.answer === 'APPROVED' ? [] : [`A human read the scenarios and the walking skeleton and asks for these corrections: ${asked.reason}`] }),
+}
+
+/**
+ * The scenarios, the `.feature` files the test plan names and the red of S1, once the node that
+ * writes them recorded them; a question the machine cannot ask before.
+ * @param {Context} context @param {RunState} run @returns {Promise<Plan>}
+ */
+const scenarioReviewPlan = async (context, { scenarios, nodes }) => {
+  if (scenarios === null) return { environment: 'the run recorded no scenario of the story to show yet; put the scenario review after the node that writes them' }
+  const oracle = scenarios.oracles[1]
+  const [plan] = nodes[scenarioNodes(context.loaded.workflow)[0]].outputs
+  const features = namedFeatures(/** @type {string} */ (await context.deps.files.read(context.slug, plan)))
+  return { text: scenarioReviewText({ scenarios: scenarios.list, features, oracle }), subjects: oracle.files }
+}
+
 /** @type {Readonly<Record<NodeQuestion, Questionnaire>>} */
-const QUESTIONNAIRES = Object.freeze({ 'adr-ratification': RATIFICATION, 'mutation-plan': MUTATION_PLAN })
+const QUESTIONNAIRES = Object.freeze({ 'adr-ratification': RATIFICATION, 'mutation-plan': MUTATION_PLAN, 'scenario-review': SCENARIO_REVIEW })
 
 /** @param {string[] | string} adrs a string: why they cannot be listed @returns {Plan} */
 const adrPlan = (adrs) => {

@@ -1,6 +1,6 @@
 ---
 title: "DELIVER"
-description: "Why DELIVER turns the contract green in checked TDD cycles, runs mutation last and once on reviewed code, and lets the developer treat surviving mutants."
+description: "Why DELIVER turns the contract green one scenario and one checked commit at a time, runs mutation once on reviewed code, and lets the developer treat survivors."
 persona: software-engineer
 phase: deliver
 hide_table_of_contents: true
@@ -10,26 +10,52 @@ import FlowFigure from '@site/src/components/FlowFigure';
 
 # DELIVER
 
-Turn the contract green in small proven steps, have the code reviewed, then test the tests —
-once, last.
+Turn the contract green one scenario at a time, each in one proven commit, have the code
+reviewed, then test the tests — once, last.
 
 ## Why this phase exists
 
 Code is the only artifact that goes to production. DELIVER grows it from the contract DISTILL
-left failing: the `software-engineer` works in **Outside-In TDD**, from the acceptance test to
-the unit tests, then to the code ([Freeman & Pryce, 2009](../../reference/citations.mdx#cite-freeman-goos-2009)).
-Each step is a commit: a red `test(…)`, a green `feat(…)` or `fix(…)`, a `refactor(…)`.
+left failing, one scenario at a time: the `software-engineer` works in **Outside-In TDD**, from
+the scenario's acceptance test to the unit tests, then to the code
+([Freeman & Pryce, 2009](../../reference/citations.mdx#cite-freeman-goos-2009)). It runs the inner red → green →
+refactor loop without committing it, then commits once, when the scenario passes: a `feat(…)`
+chained to the test command, `<test> && git add <files> && git commit …`.
 
-The engine does not take the agent's word for it. It reads those commits, replays each red to
-check it fails, and refuses a green with no red before it. Test first
-([Beck, 2003](../../reference/citations.mdx#cite-beck-tdd-2003)) becomes a fact in the git history, not a promise.
+The engine does not take the agent's word for it. DISTILL's red was replayed and proven; DELIVER's
+green is replayed too: the scenario's acceptance tests must pass at it, and no test may fail.
+Test first ([Beck, 2003](../../reference/citations.mdx#cite-beck-tdd-2003)) becomes a fact in the git history, not a
+promise: for each scenario, a red commit of its acceptance test, then a green commit.
 
 :::info[☕ Running example — Starbucks *(illustrative)*]
 
-The scenario enters. DELIVER implements the total calculation and loyalty crediting in **red →
-green** cycles, the review reads the code, then **mutation** shows the tests genuinely protect the
-loyalty rule. The code goes into a pull request.
+S1 enters, red. DELIVER implements payment and loyalty crediting and turns it green in one
+commit; DISTILL then writes the failing test of S2, the unavailable drink, and DELIVER turns it
+green. The gates run, the review reads the code, then **mutation** shows the tests genuinely
+protect the loyalty rule. The code goes into a pull request.
 :::
+
+## One scenario, one green commit
+
+A committed TDD cycle costs two commits, and an agent pays each one in turns: running the tests,
+reading their output, writing the message. Per scenario, DELIVER commits once. The unit tests
+of the inner loop are still written first; they go into the green, and mutation, run last on the
+whole story, is what proves they would catch a mistake.
+
+Three rules keep that single commit honest:
+
+- **The acceptance tests are an immutable oracle.** DISTILL wrote them; the green never changes
+  them, outside the skeleton they call. A test fitted to the code proves nothing, so a wrong test
+  goes back to DISTILL: the engineer stops, naming it.
+- **A scenario belongs to one component.** Its green changes no other component; a change needed
+  elsewhere is a missing scenario.
+- **The commit follows the test, in bash.** The brief gives the exact command, so the commit
+  happens only when the tests pass. DISTILL's red is never chained that way: only reading the
+  output tells a build error from the expected failure.
+
+Once the last scenario is green, the gates run. A pass the gates or the review send back works on
+the whole story with the classic cycle: a red, then the fix; on a pass the gates sent back, their
+failure stands for the red.
 
 ## The order: gates, review, then mutation
 
@@ -85,15 +111,19 @@ developer chooses **how** to reach it, never **whether** to.
 
 ## Tests wired by the same agent
 
-The `software-engineer` wires its own integration tests, within its own red / green cycles: the
+The `software-engineer` wires its own integration tests, inside the scenario it makes pass: the
 brief the engine composes names each component's mocking skills, and the contract-testing ones
-when the component turns it on. It starts no sub-agent. When the change touches a mock or a
+when the component turns it on. What each dependency runs on comes from the component's
+[infrastructure policy](../../reference/skraft-config.md#infrastructure), which the acceptance
+tests DISTILL committed already follow. It starts no sub-agent. When the change touches a mock or a
 contract, the matching fidelity lens joins the review. The why:
 [Mocking with Microcks](../deep-dive/mocking-microcks.md) and
 [Contract testing](../deep-dive/contract-testing.md).
 
 ## Trade-offs
 
+- **The inner loop leaves no trace in the history.** Only each scenario's red and green are
+  committed; nobody sees the unit tests written in between fail. Mutation and the review judge them.
 - **A human may be asked at the end of the run.** When mutation fails, the run waits for the
   answer to `mutation-plan`. That is the price of a decision that commits the code.
 - **A review rework does not re-measure mutation.** It goes back through the faster gates;

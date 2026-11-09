@@ -370,7 +370,7 @@ test('an invalid skraft-config.json refuses the gates with every error, instead 
     'baseBranch must be a git ref, got "--orphan"',
     'forge must be "github" or "azure-devops"',
     'publish must be an object of visuals, pullRequest, reviewComment and draft, each true or false',
-    'component web: unknown key comands (allowed: name, root, stack, paths, commands, baseBranch, mocking, contractTesting, bdd, mutationReport)',
+    'component web: unknown key comands (allowed: name, root, stack, paths, commands, baseBranch, mocking, contractTesting, bdd, mutationReport, infrastructure, testReports)',
     'component web: root must be a path relative to the working copy',
     'components[1].name must be kebab-case, got "Api"',
     'component Api: stack must be one of dotnet, java, python, typescript, javascript, react',

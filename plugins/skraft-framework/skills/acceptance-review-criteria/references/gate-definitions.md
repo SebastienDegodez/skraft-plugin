@@ -120,36 +120,40 @@ If YES → ambiguous → flag.
 
 ### G11 — Inner-Loop Boundary Presence
 
-**Definition:** For every use case named in the coverage matrix that is NEW to this story (not reused from a prior story), the outer acceptance test enters at the Application layer and lives in the unit-test place of its component's language, per `clean-architecture-testing` — not solely via an Integration/HTTP test — and the file physically exists in the repo, referenced from `impl-plan-{story}.md`.
+**Definition:** The acceptance test of the scenario in progress lives where its kind puts it, per `clean-architecture-testing`, and the file physically exists in the repo, referenced from `impl-plan-{story}.md`:
 
-| Language | Unit-test place |
-|---|---|
-| .NET | a `tests/<Context>.UnitTest/` project (`.UnitTests`, `.Unit.Test`, `.Unit.Tests`, `.Test` and `.Tests` too); a project whose name ends in none of these never passes |
-| Java | the `<context>-unit-test` or `<context>-unit-tests` module |
-| Any other (TypeScript, JavaScript, Python, React…) | a `unit` folder right under the component's test path in `skraft-config.json` (`tests/unit/`, `test/unit/`), or that test path itself when it is named `unit` |
+| Scenario | Place | Entry |
+|---|---|---|
+| Walking skeleton (S1 tagged `@walking-skeleton`) | the integration-test place of its component | the real entry point (HTTP endpoint, CLI command, consumed message) |
+| Any other, S1 of an exempt story included | the unit-test place of its component's language | the use case boundary (Application layer) |
 
-**Why this gate exists:** `outside-in-tdd`'s Concentric Circle Expansion mandates Phase 1 (Application-layer acceptance test + domain unit tests) GREEN before Phase 2 (API/HTTP integration test) or Phase 3 (Infrastructure) begins. A DISTILL pass that ships only HTTP/Integration tests for a brand-new use case has silently skipped Phase 1 — G1–G10 do not detect this because they check Gherkin/plan artefacts, never the actual test files on disk.
+| Language | Unit-test place | Integration-test place |
+|---|---|---|
+| .NET | a `tests/<Context>.UnitTest/` project (`.UnitTests`, `.Unit.Test`, `.Unit.Tests`, `.Test` and `.Tests` too); a project whose name ends in none of these never is it | `<Context>.IntegrationTest(s)` or `<Context>.Integration.Test(s)` |
+| Java | the `<context>-unit-test` or `<context>-unit-tests` module | `<context>-integration-test(s)` |
+| Any other (TypeScript, JavaScript, Python, React…) | a `unit` folder right under the component's test path in `skraft-config.json` (`tests/unit/`, `test/unit/`), or that test path itself when it is named `unit` | an `integration` folder right under it |
+
+**Why this gate exists:** `outside-in-tdd`'s Concentric circles put the Application-layer acceptance test of a targeted scenario in the fast unit suite, and the walking skeleton's real path in the integration suite. A targeted scenario covered only by an HTTP or Integration test is one circle removed from the boundary DELIVER implements against; a walking skeleton entering through the use case proves no wiring. G1–G10 check Gherkin and plan artefacts, never the test files on disk.
 
 **How to check:**
-1. From the boundary-enforcement coverage matrix (see G7), list every use case boundary named in `test-plan-{story}.md` and in the event model.
-2. Mark which use cases are NEW to this story (introduced here) vs REUSED (already existed before this story, only extended).
-3. For each NEW use case, use `search/codebase` to look for its acceptance test file in the component's unit-test place (table above).
-4. If no such file exists, or the only test coverage for that use case lives in the integration project or folder (`*.IntegrationTest(s)`, `*.Integration.Test(s)`, `*-integration-test(s)`, `<test path>/integration/`) or elsewhere under the test path, flag it.
+1. Find the scenario in progress (S1) in the test plan's `## Scenarios` table: its component, and whether it is tagged `@walking-skeleton`.
+2. Search the place its kind takes (tables above) for its acceptance test file.
+3. Flag a missing file, a file in the other place, or a test entering anywhere but its entry.
 
 **Auto-fail example:**
 ```
-test-plan-eligibility.md: use case "CheckDriverHistoryUseCase" — NEW this story
-Repo search: tests/Eligibility.IntegrationTest/Api/DriverHistoryEndpointTests.cs (found)
-             tests/Eligibility.UnitTest/Features/DriverHistory/*.cs (NOT FOUND)
-→ G11 BLOCKER: outer loop entered via HTTP endpoint, not the Application use case boundary.
+test-plan-eligibility.md: S1 "Driver checks eligibility" — @walking-skeleton, component api (.NET)
+Repo search: tests/Eligibility.UnitTest/Features/Eligibility/EligibilityAcceptanceTests.cs (found, calls CheckEligibilityUseCase)
+             tests/Eligibility.IntegrationTest/** (NOT FOUND)
+→ G11 BLOCKER: the walking skeleton enters through the use case, not the real entry point.
 
-test-plan-checkout.md: use case "pay" — NEW this story, component JavaScript, test path tests/
+test-plan-checkout.md: S1 "Customer pays an order" — exempt (library), component JavaScript, test path tests/
 Repo search: tests/pay.test.mjs (found, at the test path root)
              tests/unit/** (NOT FOUND)
 → G11 BLOCKER: the acceptance test is not in tests/unit/.
 ```
 
-**Severity:** BLOCKER — the acceptance test does not exercise the Application layer directly, so the RED it proves (G10) is not a RED of the use case itself; it is one circle removed from the boundary DELIVER must implement against.
+**Severity:** BLOCKER — the RED the test proves (T3) is not a RED of the boundary DELIVER must implement against.
 
 ---
 
@@ -157,7 +161,7 @@ Repo search: tests/pay.test.mjs (found, at the test path root)
 
 ### G7 — Layer Boundary Compliance
 
-**Definition:** Each row in the coverage matrix (`test-plan-{story}.md`) targets an Application layer use case the event model `docs/domain/event-model/{bounded-context}.md` names (one of its Commands or Queries). No scenario targets an Infrastructure adapter as its primary entry point. An implementation-plan step that writes no scenario's acceptance test (an API, HTTP or Infrastructure test of a later circle) is no row of the matrix: never a G7 finding.
+**Definition:** Each row in the coverage matrix (`test-plan-{story}.md`), the walking skeleton's included, targets an Application layer use case the event model `docs/domain/event-model/{bounded-context}.md` names (one of its Commands or Queries). No scenario targets an Infrastructure adapter as its primary entry point. An implementation-plan step that writes no scenario's acceptance test (an API, HTTP or Infrastructure test of a later circle) is no row of the matrix: never a G7 finding.
 
 **How to check:**
 1. Read the event model `docs/domain/event-model/{bounded-context}.md` of the story's bounded context — its Commands and Queries are the list of valid use case boundaries
@@ -169,16 +173,21 @@ Repo search: tests/pay.test.mjs (found, at the test path root)
 
 ---
 
-### G8 — Walking Skeleton Coverage
+### G8 — Walking Skeleton
 
-**Definition:** At least one walking skeleton scenario per major feature flow is identified in the test plan (marked "Walking Skeleton ✅" or tagged `@smoke` in the feature file).
+**Definition:** S1 is the story's walking skeleton, tagged `@walking-skeleton`, in a back-end component: its acceptance test drives the real entry point through the use case to the real internal gateways (the database on Testcontainers), external gateways and clock as the infrastructure policy says (`test-design-mandates`). Or the test plan declares, under its `## Scenarios` table, `Walking skeleton exemption: <value>`, and the story's changes bear it out:
 
-**How to check:**
-1. Identify the major feature flows (happy path + primary rejection path)
-2. Verify the coverage matrix has ≥1 walking skeleton entry per flow
-3. Verify the corresponding scenario in the feature file has the `@smoke` tag
+| Exemption | Holds when |
+|---|---|
+| `library` | the component is a pure library: no entry point at all |
+| `refactoring` | the story and the patch add no public interface: no endpoint, command, message or public type |
+| `docs-only` | the story changes configuration or documentation only: no source file |
 
-**Severity:** HIGH — without a walking skeleton, DELIVER has no scaffolding to start from.
+**How to check:** the engine already refuses a table that tags a scenario other than S1, puts S1 in a `react` component, names an unknown exemption, or declares `docs-only` while a commit changes a component's source.
+1. No exemption: open S1's acceptance test. It starts the component through its production composition root and sends the request, command or message the story's entry point takes; the use case and the internal gateways it reaches are the real ones, the database a Testcontainers container. A test that calls the use case, or an in-memory repository, is a finding.
+2. An exemption: check it against the story and the patch; an entry point the component has (`library`), or a public interface the story adds (`refactoring`), is a finding.
+
+**Severity:** BLOCKER — without a real walking skeleton, DELIVER builds every scenario on wiring nothing proved; an exemption the changes contradict hides that.
 
 ---
 
@@ -186,15 +195,17 @@ Repo search: tests/pay.test.mjs (found, at the test path root)
 
 **Definition:** Every scenario tagged `@visual` (a visual/positional/style AC per `bdd-methodology`)
 has at least one corresponding Playwright E2E spec under `tests/e2e/`, referenced in
-`impl-plan-{story}.md`. A unit/jsdom test entry does NOT satisfy this gate.
+`impl-plan-{story}.md`. Its red is functional: it fails on roles and texts the page shows.
+The screenshots are evidence the `visuals` step captures from the e2e run, judged there, never an
+assertion of the acceptance test. A unit/jsdom test entry does NOT satisfy this gate.
 
 **How to check:**
 1. List all `@visual`-tagged scenarios in the `.feature` files
 2. List all `tests/e2e/` entries in `impl-plan-{story}.md`
-3. Verify each `@visual` scenario maps to ≥1 E2E spec performing a real measurement
-   (`boundingBox()`, `getComputedStyle()` colour, computed layout)
-4. Flag any `@visual` scenario whose only planned coverage is a unit/jsdom test — jsdom has no
-   real layout engine, so `getBoundingClientRect()` always returns zeros there
+3. Verify each `@visual` scenario maps to ≥1 E2E spec asserting its roles and texts in a real
+   browser
+4. Flag any `@visual` scenario whose only planned coverage is a unit/jsdom test — jsdom renders
+   no page, so what it asserts is never what the person sees
 
 **Severity:** HIGH — a `@visual` AC closed only by a unit test is a structural proxy, not proof of
 the rendered result; the real visual regression risk is uncaught.
@@ -232,13 +243,13 @@ during DELIVER integration otherwise, after both implementations are already wri
 | B1 | business-alignment | Every scenario is an outcome the story asks for | HIGH |
 | G5 | testability | Unambiguous steps | HIGH |
 | G6 | testability | Impl plan covers all scenarios | HIGH |
-| G11 | testability | NEW use case has an Application-layer acceptance test in its language's unit-test place (.NET `<Context>.UnitTest`), not only Integration/HTTP | BLOCKER |
+| G11 | testability | The scenario in progress's acceptance test is in the place its kind takes: walking skeleton in the integration place through the entry point; any other in the unit-test place through the use case | BLOCKER |
 | T1 | testability | One observable behaviour per scenario, nothing unfixed (time, order, randomness) | HIGH |
-| T2 | testability | Acceptance test values equal the `.feature` verbatim | BLOCKER |
-| T3 | testability | Acceptance test fails on a business assertion, not on setup; production code is a skeleton answering empty values | BLOCKER |
+| T2 | testability | The tests hold the scenario in progress only, its values equal to the `.feature` verbatim | BLOCKER |
+| T3 | testability | Acceptance test fails on a business assertion, not on setup; production code is a skeleton answering empty values (and the walking skeleton's entry point wired to it) | BLOCKER |
 | G7 | boundary-enforcement | Coverage matrix → valid use case boundary | BLOCKER |
-| G8 | boundary-enforcement | ≥1 walking skeleton per flow | HIGH |
+| G8 | boundary-enforcement | S1 is a real walking skeleton, or the declared exemption holds | BLOCKER |
 | G9 | boundary-enforcement | `@visual` scenarios ↔ Playwright E2E spec bijection | HIGH |
 | G10 | boundary-enforcement | Comparable hooks/adapters/clients share a consistent convention | HIGH |
-| E1 | boundary-enforcement | Acceptance test drives only the use case | BLOCKER |
-| E2 | boundary-enforcement | Doubles only at the outer edge | HIGH |
+| E1 | boundary-enforcement | Acceptance test drives only its entry: the use case, or the walking skeleton's entry point | BLOCKER |
+| E2 | boundary-enforcement | Each dependency runs on its infrastructure policy's mechanism | HIGH |

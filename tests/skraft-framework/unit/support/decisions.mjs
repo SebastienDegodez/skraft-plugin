@@ -1,6 +1,6 @@
 // What the decision scenarios share: ADR files as an architect writes them, and an architect
 // that writes them into the working copy and commits them.
-import { agent, SLUG, tddCycle } from './pipeline-host.mjs'
+import { agent, green, SLUG } from './pipeline-host.mjs'
 
 export const ADR_1 = 'docs/adr/adr-001-card-payment.md'
 export const ADR_2 = 'docs/adr/adr-002-card-tokens.md'
@@ -63,10 +63,10 @@ const withRows = (index, numbers) => numbers.reduce((text, number) => {
 }, index)
 
 /**
- * The agents after DESIGN: the acceptance designer, then the engineer's TDD cycle.
- * @param {ReturnType<typeof import('./pipeline-host.mjs').pipelineHost>} host @param {string} [body] each commit's body
+ * The agents after DESIGN: the acceptance designer, then the engineer's green of the scenario.
+ * @param {ReturnType<typeof import('./pipeline-host.mjs').pipelineHost>} host @param {string} [body] the green's body
  */
-export const afterDesign = (host, body = '') => [agent()(host), agent({ work: tddCycle(SLUG, 'Checkout', body) })(host)]
+export const afterDesign = (host, body = '') => [agent()(host), agent({ work: green(SLUG, 'Checkout', body) })(host)]
 
 /** @param {ReturnType<typeof import('./pipeline-host.mjs').pipelineHost>} host */
 export const dispatched = (host) => host.agentRunner.dispatches.map((dispatch) => dispatch.label)

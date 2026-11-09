@@ -152,7 +152,7 @@ The `distill_review` review: 4 lenses, verdict computed by the engine.
 | **G6** | `testability` | Every scenario has an entry in the implementation plan. | high |
 | **G11** | `testability` | Every use case new to the story has its acceptance test in its language's unit-test place (.NET: the `<Context>.UnitTest`, `<Context>.UnitTests` or `<Context>.Tests` project; Java: the `-unit-test(s)` module; Python, TypeScript, JavaScript, React: `<test path>/unit/`). | blocker |
 | **T1** | `testability` | Each scenario and test checks one behaviour through an observable outcome and depends on no time, order or randomness it does not fix. | high |
-| **T2** | `testability` | Every input and expected value the outer acceptance test holds equals the `.feature` verbatim; the test holds the first scenario only. | blocker |
+| **T2** | `testability` | Every input and expected value the outer acceptance test holds equals the `.feature` verbatim; the test holds the scenario in progress only. | blocker |
 | **T3** | `testability` | The outer acceptance test exists and its first scenario fails on a business assertion; the patch's production code is a skeleton whose signatures answer the empty value of their type. | blocker |
 | **G7** | `boundary-enforcement` | Every scenario in the test plan targets an Application use case the event model names (one of its Commands or Queries); an implementation-plan step that writes no scenario's acceptance test (an API or HTTP test of a later circle) is out of its scope. | blocker |
 | **G8** | `boundary-enforcement` | The test plan identifies at least one walking-skeleton scenario per flow. | high |
@@ -179,6 +179,17 @@ files it cites are read, so the files of another story are never charged to this
 coverage-matrix row that names no Gherkin writes `—`. The criteria answer how many scenarios it
 takes: a story whose `ac-draft` declares none is asked for none. This is a floor under G1, not G1 itself: the `coverage` lens still
 judges which criterion each scenario answers.
+
+**Engine check.** The scenarios DELIVER builds: after each attempt of the first pass, the engine
+reads the `## Scenarios` table of the test plan (`scenarios`): ids in order, one title each, a
+component of `skraft-config.json`, S1 alone tagged `@walking-skeleton` in a component that is not
+`react`, or an exemption `library`, `refactoring` or `docs-only` and no tag
+([rules and messages](./phases.md#scenarios)). G8 stays the lens's: whether each flow has its
+walking skeleton.
+
+The review runs once, on the first pass: its acceptance test holds S1 alone (T2, T3). The passes
+of `distill` that write the next scenarios' tests are not reviewed; the replay of their red, and
+the green that must make them pass, check them.
 
 ## DELIVER <!-- #deliver -->
 
@@ -209,10 +220,52 @@ a pull request through `skraft review --pr`.
 changes that touch contracts (`when="contract"`)
 ([triggers](./workflow-dot.mdx#conditional-lenses)).
 
-The engine also checks, with no gate id, the commits of each attempt (`commits.checked`): a
-conventional message, `Refs: #<issue>` as the last line, no issue closed, a green commit preceded
-by a red one, each red one replayed and failing
-([`tdd.replay`](./skraft-config.md#tdd)).
+The engine also checks, with no gate id, the commits of each attempt (`commits.checked`):
+[Commits and replays](#commits).
+
+## Commits and replays <!-- #commits -->
+
+Every commit of an attempt is judged in its order; a commit refused stays refused until it leaves
+the history. The brief gives the exact message of a scenario's red and green.
+
+| Type | Kind | Rule |
+| --- | --- | --- |
+| `test` | red | a failing test of a component (`no-component` otherwise) |
+| `feat`, `fix` | green | the code that makes it pass |
+| `refactor`, `style`, `perf` | refactor | a change under green |
+| `docs`, `chore`, `build`, `ci`, `revert` | other | outside TDD: changes no file of a component's `src` or `tests` paths (`outside-tdd`) |
+| anything else | invalid | `not-conventional` |
+
+Every message ends its body with `Refs: #<issue>` when the story has one (`issue-reference-missing`),
+cites no other issue (`issue-not-in-story`) and closes none (`issue-closed`).
+
+| Pass | Allowed | Refused |
+| --- | --- | --- |
+| `distill`, writing a scenario's acceptance test | one red, the test and the skeleton it calls, in the scenario's component; the scenario's red exists after the pass; `.feature` and Markdown files go with it or in a `docs` commit, wherever they live | a second red (`oracle-split`); a red in another or a second component (`oracle-component`); a red with no file of the component's test paths (`oracle-without-test`); a green or refactor (`code-in-oracle`); none at all |
+| `deliver` on scenario k | one green, chained in bash: `<test command> && git add <files> && git commit …` | a red (`test-in-scenario`); a refactor (`refactor-in-scenario`); a second green (`second-green`); a change to a file of the scenario's acceptance-test commits outside the component's `src` paths (`oracle-touched`); a change to another component (`other-component`); none at all |
+| `deliver` sent back by the gates or the review, after the last scenario | reds, greens and refactors on the whole story; reds not replayed | a green with no red since the last green (`green-without-red`); on a pass the gates sent back, their failure stands for the first red |
+| `kill_mutants` | tests that kill mutants and pass | — |
+
+**Replays.** The engine runs the component's `test` command, then `e2e` when it has one and the
+`test` replay did not settle it, in a throwaway checkout of the commit, and reads the JUnit XML
+or TRX reports it writes there ([`testReports`](./skraft-config.md#component)). The exit code alone
+cannot tell a failing assertion from a build error. A red is read on the test cases of the test
+files it commits, when the reports name them (a test case's id holds its file's name), on every
+test case otherwise; a failure whose message names an exception the code threw
+(`NotImplementedException`, `NullReferenceException`, `TypeError`, `AttributeError`, …) is an
+error, never an assertion. The reports a component's tests write in the working copy are the run's
+output: never out of the write scope, never left uncommitted.
+
+| Replayed | Reading | Effect |
+| --- | --- | --- |
+| a red of an acceptance test | `assertion`: a test case with `<failure>` | red proven; its failing test cases become the scenario's tests |
+| | `no-report` (build, collection or import error), `error` only, `skipped`, `green`, `timeout` | refused, `not-red`: `its test command wrote no test report: …`, `its tests end on an error, never on an assertion: …`, `no test fails and some are skipped: …`, `its tests pass at it`, `its test command did not finish in time` |
+| | `indeterminate`: no container runtime answers (Docker or Podman) | the step stays open: `environment` question, `…no container runtime answers (Docker or Podman), so the tests that need one could not run; start Docker or Podman, then retry`; never skipped, never replaced by a double |
+| the green of scenario k | the `test` command, and `e2e` when e2e tests proved the red: the scenario's tests pass, no test fails or errs, every command exits 0 | accepted |
+| | a test fails or errs; a test of the scenario missing from the reports or skipped; a command exits non-zero; no report | refused, `not-green`: `these tests fail at it: …`, `the scenario's tests do not pass at it: …`, `<command> exits <code>`, `its test command wrote no test report: …` |
+
+[`tdd.replay`](./skraft-config.md#tdd) chooses which reds of an attempt are replayed. A red of an
+e2e test is proven only when the `e2e` tests pass at its parent.
 
 ## Review: answer, refutation, verdict <!-- #review-run -->
 

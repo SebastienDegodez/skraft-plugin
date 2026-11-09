@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { agent, API, finding, lenses, nominal, REFS_42, refutes, reviews, says, scripted, SLUG, tddCycle, TRACKING } from '../support/pipeline-host.mjs'
+import { agent, API, finding, green, lenses, nominal, REFS_42, refutes, reviews, says, scripted, SLUG, tddCycle, TRACKING } from '../support/pipeline-host.mjs'
 import { opening, section } from '../support/description.mjs'
 import { answerYaml } from '../support/answer-yaml.mjs'
 
@@ -29,7 +29,8 @@ test('every lens of each phase passing approves the phase, and the run goes on t
   assert.equal(outcome.status, 'done')
   assert.deepEqual(reviews(host), [
     ['design_review', 1, 'approved', 'adr'],
-    ['distill_review', 1, 'approved', 'deliver'],
+    ['distill_review', 1, 'approved', 'scenario_review'],
+    ['scenario_review', 1, 'answered', 'deliver'],
     ['deliver_review', 1, 'approved', 'mutation'],
   ])
   assert.deepEqual(host.agentRunner.batches.map((batch) => batch.map(({ agent: id }) => id)), [
@@ -159,7 +160,7 @@ test('the changes a lens reads are those since the base of the run, without the 
   assert.equal(await host.tracking.read(SLUG, 'reviews/design_review-1/changed-files.txt'), 'docs/adr/adr-001-card-payment.md\n')
   assert.equal(await host.tracking.read(SLUG, 'reviews/design_review-1/changes.patch'), 'diff --git a/docs/adr/adr-001-card-payment.md b/docs/adr/adr-001-card-payment.md\n+# ADR 001: pay by card\n')
   assert.equal(await host.tracking.read(SLUG, 'reviews/deliver_review-1/changed-files.txt'), [
-    'docs/adr/adr-001-card-payment.md', 'tests/Acceptance/CheckoutAcceptanceTests.cs', 'tests/CheckoutTests.cs', 'src/Checkout.cs', '',
+    'docs/adr/adr-001-card-payment.md', 'tests/Acceptance/CheckoutAcceptanceTests.cs', 'src/Checkout.cs', 'tests/CheckoutTests.cs', '',
   ].join('\n'))
 })
 
@@ -186,8 +187,7 @@ test('a lens whose trigger matches a changed path or an added line runs with the
     ...nominal(it).slice(0, 3),
     agent({ work: ({ git }) => {
       git.adds('tests/CheckoutTests.cs', 'var server = WireMockServer.Start();')
-      git.commit('test(checkout): Checkout pays by card', ['tests/CheckoutTests.cs'])
-      git.commit('feat(checkout): Checkout pays by card', ['src/Checkout.cs'])
+      git.commit('feat(checkout): Checkout pays by card', ['tests/CheckoutTests.cs', 'src/Checkout.cs'])
     } })(it),
   ])
 
@@ -203,8 +203,7 @@ test('a lens whose trigger matches a changed path or an added line runs with the
     ...nominal(it).slice(0, 3),
     agent({ work: ({ git }) => {
       git.removes('src/Checkout.cs', 'var server = WireMockServer.Start();')
-      git.commit('test(checkout): the payment contract is honoured', ['tests/Contracts/PaymentContractTests.cs'])
-      git.commit('feat(checkout): Checkout pays by card', ['src/Checkout.cs'])
+      git.commit('feat(checkout): Checkout pays by card', ['tests/Contracts/PaymentContractTests.cs', 'src/Checkout.cs'])
     } })(it),
   ])
   await contracts.start()
@@ -237,7 +236,7 @@ test('a blind lens reads the changes without the decision records and design doc
     agent()(it),
     agent({ work: ({ git }) => git.commit('docs(checkout): ADR and design of the card payment', [...records, ...designs]) })(it),
     agent({ work: ({ git }) => git.commit('test(checkout): acceptance of the card payment', ['tests/Acceptance/CheckoutAcceptanceTests.cs', CODE_BEHIND, ...scenarios]) })(it),
-    agent({ work: tddCycle() })(it),
+    agent({ work: green() })(it),
   ])
 
   await host.start()
@@ -710,7 +709,7 @@ test('a review with only medium and low findings left after three passes lets th
     `Every finding with its context: ${VERDICT_3}`,
     'ACCEPT takes these findings as they stand and goes on (they are listed in the run report and the pull request); an instruction runs design again with every finding and the instruction; STOP ends the run.',
   ].join('\n'))
-  assert.deepEqual(reviews(host).slice(2, 4), [['design_review', 3, 'needs-rework', null], ['distill_review', 1, 'approved', 'deliver']])
+  assert.deepEqual(reviews(host).slice(2, 4), [['design_review', 3, 'needs-rework', null], ['distill_review', 1, 'approved', 'scenario_review']])
   assert.equal(host.agentRunner.dispatches.filter((dispatch) => dispatch.agent === 'solution-architect').length, 3)
   const report = await host.tracking.read(SLUG, 'run-report.md')
   assert.ok(report.includes('\n## Accepted findings\n\n| Review | Severity | Finding | Where | What |\n| --- | --- | --- | --- | --- |\n| design_review | medium | consistency F1 | docs/architecture/payments.md:7 | a read model is classified twice |\n| design_review | low | consistency F2 | - | a typo \\| in the title |\n'), report)
@@ -765,20 +764,23 @@ test('ACCEPT given with skraft decide at the ceiling of distill_review closes DI
   assert.deepEqual(host.events().filter((event) => event.type.startsWith('question.')).map(({ type, key, kind, answer }) => [type, key, kind, answer]), [
     ['question.asked', 'distill-1', 'review-ceiling', undefined],
     ['question.answered', 'distill-1', undefined, 'ACCEPT'],
+    ['question.asked', 'scenario_review-1', 'scenario-review', undefined],
+    ['question.answered', 'scenario_review-1', undefined, 'APPROVED'],
   ])
   const after = host.events().slice(host.events().findIndex((event) => event.type === 'question.answered'))
-  assert.deepEqual(after.filter((event) => event.type === 'phase.closed' || event.type === 'step.started').slice(0, 3).map(({ type, phase, step }) => `${type} ${phase} ${step ?? ''}`.trim()), [
+  assert.deepEqual(after.filter((event) => event.type === 'phase.closed' || event.type === 'step.started').slice(0, 4).map(({ type, phase, step }) => `${type} ${phase} ${step ?? ''}`.trim()), [
     // The resumed run picks up the open attempt of deliver: no new step.started for it, no question again.
-    'phase.closed DISTILL', 'step.started DELIVER deliver', 'step.started DELIVER gates',
+    'step.started DISTILL scenario_review', 'phase.closed DISTILL', 'step.started DELIVER deliver', 'step.started DELIVER gates',
   ])
   assert.deepEqual(reviews(host).filter(([step]) => step !== 'design_review'), [
     ['distill_review', 1, 'needs-rework', 'distill'], ['distill_review', 2, 'needs-rework', 'distill'], ['distill_review', 3, 'needs-rework', null],
+    ['scenario_review', 1, 'answered', 'deliver'],
     ['deliver_review', 1, 'approved', 'mutation'],
   ])
   assert.equal(host.agentRunner.dispatches.filter((dispatch) => dispatch.agent === 'acceptance-designer').length, 3)
   const engineer = host.agentRunner.dispatches.find((dispatch) => dispatch.agent === 'software-engineer')
   assert.ok(!engineer.prompt.includes('A human refused') && !engineer.prompt.includes('What pass'), engineer.prompt)
-  assert.deepEqual(host.events().filter((event) => event.type === 'step.started' && event.step === 'deliver').map(({ visit, attempt, missing, feedback, sentBy, instruction, group }) => [visit, attempt, missing, feedback, sentBy, instruction, group]), [[1, 1, [], [], undefined, undefined, undefined]])
+  assert.deepEqual(host.events().filter((event) => event.type === 'step.started' && event.step === 'deliver').map(({ visit, attempt, missing, feedback, sentBy, instruction, group }) => [visit, attempt, missing, feedback, sentBy, instruction, group]), [[1, 1, [], [], undefined, undefined, 1]])
   const report = await host.tracking.read(SLUG, 'run-report.md')
   // Only what the ceiling's question asked about: not design_review's findings, not the consents answered ACCEPTED before.
   assert.equal(report.slice(report.indexOf('## Accepted findings'), report.indexOf('## Forge writes') < 0 ? report.indexOf('Started at') : report.indexOf('## Forge writes')), [
@@ -804,10 +806,11 @@ test('ACCEPT at the ceiling of deliver_review, a call to .skraft/review.skraft.d
   assert.deepEqual(reviews(host).filter(([step]) => step === 'deliver_review'), [
     ['deliver_review', 1, 'needs-rework', 'deliver'], ['deliver_review', 2, 'needs-rework', 'deliver'], ['deliver_review', 3, 'needs-rework', null],
   ])
-  const [asked] = host.human.questions
+  assert.deepEqual(host.human.questions.map(({ kind }) => kind), ['scenario-review', 'review-ceiling'])
+  const [, asked] = host.human.questions
   assert.deepEqual([asked.kind, asked.options], ['review-ceiling', ['ACCEPT', 'STOP']])
   assert.ok(asked.text.startsWith('deliver_review: deliver did not fix every finding after 3 passes'), asked.text)
-  const answered = host.events().findIndex((event) => event.type === 'question.answered')
+  const answered = host.events().findLastIndex((event) => event.type === 'question.answered')
   assert.equal(host.events().slice(answered).find((event) => event.type === 'step.started').step, 'mutation')
 })
 
@@ -908,7 +911,6 @@ test('the engine reads in the patch the skips added to tests, the test files del
   const host = scripted({}, (it) => [
     ...nominal(it).slice(0, 3),
     agent({ work: ({ git }) => {
-      tddCycle()({ git })
       git.patched('tests/CheckoutTests.cs', [
         '--- a/tests/CheckoutTests.cs', '+++ b/tests/CheckoutTests.cs', '@@ -10,4 +10,3 @@',
         '-    [Fact]', '+    [Fact(Skip = "flaky on CI")]', '     public void PaysByCard() {',
@@ -922,7 +924,7 @@ test('the engine reads in the patch the skips added to tests, the test files del
       git.patched('src/latest.ts', ['--- a/src/latest.ts', '+++ b/src/latest.ts', '@@ -2,1 +2,0 @@', '-  expect(version).toBe(2)'])
       git.patched('tests/fixtures/payment.json', ['deleted file mode 100644', '--- a/tests/fixtures/payment.json', '+++ /dev/null'])
       git.patched('src/specs/payment.yaml', ['deleted file mode 100644', '--- a/src/specs/payment.yaml', '+++ /dev/null'])
-      git.commit('refactor(checkout): trim the payment tests', ['tests/TotalTests.cs', 'tests/RefundTests.cs', 'src/test_refunds.py', 'src/App.test.tsx', 'src/latest.ts', 'tests/fixtures/payment.json', 'src/specs/payment.yaml'])
+      git.commit('feat(checkout): Checkout pays by card', ['tests/CheckoutTests.cs', 'src/Checkout.cs', 'tests/TotalTests.cs', 'tests/RefundTests.cs', 'src/test_refunds.py', 'src/App.test.tsx', 'src/latest.ts', 'tests/fixtures/payment.json', 'src/specs/payment.yaml'])
     } })(it),
   ])
   const unavailable = { ok: false, text: '', unavailable: true, error: 'finding-refuter is not installed' }

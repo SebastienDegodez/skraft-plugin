@@ -1,0 +1,12 @@
+{
+  "components": [
+    {
+      "name": "api",
+      "root": "services/api",
+      "stack": "dotnet",
+      "testReports": [
+        "reports/../junit.xml"
+      ]
+    }
+  ]
+}

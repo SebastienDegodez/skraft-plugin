@@ -16,7 +16,7 @@ import { instructionOf } from '../decisions/questions.mjs'
  * @typedef {{
  *   visit: number, attempt: number, outputs: string[], documents: string[], heads: Head[],
  *   sentBy: 'gate' | 'review' | 'ask' | 'answer' | null, redByGateFailure: boolean,
- *   groups: import('../gates/mutation-report.mjs').SurvivorGroup[],
+ *   groups: Group[],
  *   open: OpenAttempt | null, last: RunEvent | null, previous: RunEvent | null,
  * }} NodeState
  *   visit: how many times the run entered the node; attempt: within that visit. outputs: the
@@ -25,7 +25,19 @@ import { instructionOf } from '../decisions/questions.mjs'
  *   attempt's of this visit. sentBy: what sent the run back into this visit, kept for each of
  *   its attempts. redByGateFailure: this visit started on gate failures, which stand for its red
  *   commit; a visit the review or a human refusal opened has no failing test, so its agent
- *   commits a red one, as does a visit a human's choice opened. groups: the surviving mutants this visit works on, one dispatch per file.
+ *   commits a red one, as does a visit a human's choice opened. groups: the surviving mutants this visit works on, one dispatch per file,
+ *   or the story's scenarios, one visit each.
+ * @typedef {import('../gates/mutation-report.mjs').SurvivorGroup | import('../pipeline/scenarios.mjs').StoryScenario} Group
+ * @typedef {{ scenario: number, sha: string, subject: string, component: string, files: string[], tests: string[], command: 'test' | 'e2e' }} Oracle
+ *   the red commit of a scenario's acceptance test: files relative to the working copy; tests:
+ *   the ids of the test cases that failed on an assertion when the engine replayed it; command:
+ *   the command whose reports hold them.
+ * @typedef {{
+ *   list: import('../pipeline/scenarios.mjs').StoryScenario[], exemption: import('../pipeline/scenarios.mjs').Exemption,
+ *   oracles: Record<number, Oracle>, delivered: number,
+ * }} Scenarios
+ *   the story's scenarios as the last plan the acceptance designer wrote lists them, the red of
+ *   each scenario's acceptance test, and how many scenarios a green made pass since.
  *   last and previous: this visit's last two step.recorded.
  * @typedef {{
  *   key: string, kind: import('../decisions/questions.mjs').QuestionKind, step: string, visit: number,
@@ -52,6 +64,7 @@ import { instructionOf } from '../decisions/questions.mjs'
  *   costUsd: number | null,
  *   questions: Record<string, AskedQuestion>,
  *   question: AskedQuestion | null,
+ *   scenarios: Scenarios | null,
  * }} RunState
  *   last: the run's last step.recorded; traversals: how often each edge `from->to` was taken;
  *   phaseStarted: when the first step of each phase started; replayMs: time spent replaying
@@ -100,7 +113,7 @@ const untimed = () => ({
   replayWarned: [],
 })
 
-/** @returns {Pick<RunState, 'finished' | 'stopped' | 'attempts' | 'costUsd' | 'questions' | 'question'>} */
+/** @returns {Pick<RunState, 'finished' | 'stopped' | 'attempts' | 'costUsd' | 'questions' | 'question' | 'scenarios'>} */
 const unfinished = () => ({
   finished: null,
   stopped: null,
@@ -108,6 +121,7 @@ const unfinished = () => ({
   costUsd: null,
   questions: {},
   question: null,
+  scenarios: null,
 })
 
 /**
@@ -193,7 +207,23 @@ const recorded = (run, event) => {
   run.last = event
   run.traversals[edgeKey(event.step, event.next)] = (run.traversals[edgeKey(event.step, event.next)] ?? 0) + 1
   run.question = null
+  run.scenarios = scenariosAfter(run.scenarios, event)
 }
+
+/**
+ * The story's scenarios after a step: a plan the acceptance designer wrote starts them over,
+ * keeping no red but the one it records; a red of an acceptance test is kept by scenario; a
+ * green counts its scenario delivered.
+ * @param {Scenarios | null} scenarios @param {RunEvent} event @returns {Scenarios | null}
+ */
+const scenariosAfter = (scenarios, event) => {
+  const planned = event.scenarios ? { list: event.scenarios, exemption: event.exemption, oracles: {}, delivered: 0 } : scenarios
+  if (planned === null) return null
+  return { ...planned, oracles: withOracle(planned.oracles, event.oracle), delivered: Math.max(planned.delivered, event.green?.scenario ?? 0) }
+}
+
+/** @param {Record<number, Oracle>} oracles @param {Oracle | undefined} oracle */
+const withOracle = (oracles, oracle) => (oracle ? { ...oracles, [oracle.scenario]: oracle } : oracles)
 
 /** What a recorded step adds to the run's replay time and cost. @param {RunState} run @param {RunEvent} event @param {string} phase */
 const addTotals = (run, event, phase) => {

@@ -19,7 +19,7 @@ test('a rejected ADR sends the architect back with the human\'s reason, on a new
   const brief = host.agentRunner.dispatches[2].prompt
   assert.ok(brief.includes('- Pass: 2, after a human refused the work'), brief)
   assert.ok(brief.endsWith(['', 'A human refused the work of pass 1:', `- ${ADR_1}: ${REASON}`].join('\n')), brief)
-  assert.deepEqual(eventsOf(host, 'question.answered').map(({ key, answer, reason }) => [key, answer, reason]), [['adr-1', 'REJECTED', REASON], ['adr-2', 'RATIFIED', null]])
+  assert.deepEqual(eventsOf(host, 'question.answered').map(({ key, answer, reason }) => [key, answer, reason]), [['adr-1', 'REJECTED', REASON], ['adr-2', 'RATIFIED', null], ['scenario_review-1', 'APPROVED', null]])
   assert.deepEqual(eventsOf(host, 'step.recorded').filter((event) => event.step === 'adr').map(({ visit, answer, next, failures }) => [visit, answer, next, failures]), [
     [1, 'REJECTED', 'design', [`${ADR_1}: ${REASON}`]],
     [2, 'RATIFIED', 'distill', []],

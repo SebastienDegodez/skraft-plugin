@@ -33,32 +33,60 @@ this first traversal possible without freezing the infrastructure.
 
 ## Application in SKRAFT
 
-In DELIVER, the first slice delivered for a feature is deliberately a walking skeleton.
-DISTILL gate **G8** requires it: "at least one walking skeleton scenario per major
-flow".
+Every story starts with one. In DISTILL, the test plan lists the scenarios in the order DELIVER
+builds them; S1, tagged `@walking-skeleton`, is the walking skeleton, in a back-end component:
+entry point → use case → real database. The engine refuses a plan that tags another scenario,
+tags none, or puts S1 in a React front end. DISTILL commits S1's failing acceptance test first, a
+human reads it with the other scenarios, and DELIVER makes it pass before any other scenario gets
+its test. The `boundary-enforcement` lens still checks, through gate **G8**, that each flow has
+its walking-skeleton scenario.
 
 ```text
-Slice 1 (walking skeleton) — crosses EVERYTHING, does the minimum:
-  API  ──►  Application (use case)  ──►  Domain  ──►  Infrastructure
-  (1 endpoint)   (1 handler)         (1 invariant)   (1 repo stub)
+S1 (walking skeleton) — crosses EVERYTHING, does the minimum:
+  entry point ──►  use case  ──►  Domain  ──►  real database
+  (real)          (1 handler)   (1 invariant)  (Testcontainers)
 
   ✔ the end-to-end acceptance scenario passes
-  ✔ deployment works
   ✔ every boundary is wired
 
-Following slices — thicken each layer on this living skeleton.
+S2…SN — targeted scenarios that thicken each layer on this living skeleton.
 ```
 
 The pipeline gains an integration proof **from the very first slice**, instead of
 deferring it. Everything after adds to a system that already works.
 
+What each kind of dependency runs on is what sets S1 apart from the targeted scenarios that
+follow:
+
+| Dependency | Targeted scenarios | Walking skeleton |
+| --- | --- | --- |
+| Entry point (controller, CLI, UI, webhook received, topic consumed) | in process | real |
+| Internal gateway (repository, database, cache) | in memory | Testcontainers |
+| External gateway (REST, SOAP, GraphQL, gRPC, Kafka, webhook sent…) | Microcks | Microcks |
+| Clock, randomness | fake | fake |
+
+These are the plugin's defaults; a team overrides them per component in `skraft-config.json`
+([infrastructure policy](../../reference/skraft-config.md#infrastructure)). A React front end
+carries no walking skeleton of its own: its targeted tests stand in for the back end with MSW,
+its Playwright end-to-end tests run against Microcks. A test that needs a container never runs
+without one: with neither Docker nor Podman answering, the engine reports it INDETERMINATE and
+waits.
+
+Not every story opens a new path. One that adds no entry point declares why under the table:
+`library` (a pure library), `refactoring` (no new public interface) or `docs-only`
+(configuration or documents only). The engine checks the last one against the diff: a `docs-only`
+story whose commits change a component's source is refused.
+
 ## Pitfalls & anti-patterns
 
-- **Fake skeleton**: a slice that skips a layer (e.g. simulates the API in memory)
-  does not prove integration — it is not a walking skeleton.
+- **Fake skeleton**: a slice that skips a layer (e.g. simulates the API or the database in
+  memory) does not prove integration — it is not a walking skeleton.
 - **Oversized skeleton**: trying to do everything "properly" in slice 1 cancels the
   benefit; the first slice must be *tiny*.
 - **Letting it die**: a skeleton no longer run in CI stops being an integration proof.
+- **An exemption of convenience**: declaring `library` or `refactoring` to skip the skeleton. The
+  engine checks only `docs-only` against the diff; the human who reads the scenarios is there for
+  the others.
 
 ## Sources
 

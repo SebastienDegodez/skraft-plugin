@@ -16,7 +16,7 @@
     "en": "Figure 1 — The DELIVER loop, read from `workflows/pipeline.skraft.dot` the way the canvas's Workflow tab reads it. Open a step to see its sub-tasks, or pick a scenario to follow the engine's path."
   },
   "order": [
-    "distill_review",
+    "scenario_review",
     "deliver",
     "gates",
     "deliver_review",
@@ -28,15 +28,18 @@
   ],
   "nodes": [
     {
-      "id": "distill_review",
+      "id": "scenario_review",
       "kind": "terminal",
       "io": "in",
       "chips": [
         {
-          "fr": "tests rouges",
-          "en": "red tests"
+          "fr": "scénarios relus",
+          "en": "scenarios read"
         },
-        "story"
+        {
+          "fr": "S1 rouge",
+          "en": "S1 red"
+        }
       ],
       "x": 196,
       "y": 12,
@@ -52,9 +55,10 @@
       "y": 86,
       "w": 304,
       "h": 82,
+      "each": "scenario",
       "role": {
-        "fr": "Fait passer le contrat au vert en cycles TDD que le moteur rejoue.",
-        "en": "Turns the contract green in TDD cycles the engine replays."
+        "fr": "Fait passer chaque scénario au vert en un seul commit, après le rouge que DISTILL commite pour lui ; le moteur rejoue l'un et l'autre.",
+        "en": "Makes each scenario pass in one green commit, after the red DISTILL commits for it; the engine replays both."
       },
       "in": [
         {
@@ -63,7 +67,10 @@
         }
       ],
       "out": [
-        "commits TDD"
+        {
+          "fr": "un vert par scénario",
+          "en": "one green per scenario"
+        }
       ]
     },
     {
@@ -220,8 +227,8 @@
   ],
   "edges": [
     {
-      "id": "distill_review->deliver",
-      "from": "distill_review",
+      "id": "scenario_review->deliver",
+      "from": "scenario_review",
       "to": "deliver",
       "label": "APPROVED",
       "maxVisits": null
@@ -679,13 +686,13 @@
           "fig": "main",
           "edges": [],
           "nodes": [
-            "distill_review"
+            "scenario_review"
           ]
         },
         {
           "fig": "main",
           "edges": [
-            "distill_review->deliver"
+            "scenario_review->deliver"
           ],
           "nodes": [
             "deliver"
@@ -807,7 +814,7 @@
         {
           "fig": "main",
           "nodes": [
-            "distill_review"
+            "scenario_review"
           ],
           "via": null
         },

@@ -37,26 +37,37 @@ boucle externe (acceptation) qui encadre une boucle interne (unitaire).
 
 ## Application dans SKRAFT
 
-La phase DELIVER applique la **double boucle**. La boucle externe est le scénario
-d'acceptation issu de DISTILL ; la boucle interne est le cycle RED → GREEN → REFACTOR
-unitaire.
+Le pipeline applique la **double boucle**, un scénario à la fois. La boucle externe est le
+scénario d'acceptation : DISTILL commite son test en échec, et le moteur rejoue ce commit pour
+prouver qu'il échoue sur une assertion. La boucle interne est le cycle RED → GREEN → REFACTOR
+unitaire, que le `software-engineer` tourne en DELIVER sans le commiter.
 
 ```text
-┌─ Boucle externe (acceptation, depuis DISTILL) ───────────────┐
-│  RED  : le scénario .feature échoue (rien n'est câblé)        │
-│   ┌─ Boucle interne (unitaire) ──────────────────────────┐   │
+┌─ Boucle externe (acceptation, scénario k) ───────────────────┐
+│  RED  : DISTILL commite le test du scénario, en échec         │
+│         → test(<story>): <scénario>   (rejoué : assertion)    │
+│   ┌─ Boucle interne (unitaire, non commitée) ─────────────┐  │
 │   │  RED → un test unitaire échoue                         │   │
 │   │  GREEN → implémentation minimale qui le fait passer    │   │
 │   │  REFACTOR → on nettoie sans changer le comportement    │   │
 │   └────────────────────────────────────────────────────────┘  │
-│  GREEN : le scénario d'acceptation passe à son tour          │
+│  GREEN : le scénario d'acceptation passe à son tour           │
+│         → feat(<story>): <scénario>   (rejoué : passe)        │
 └──────────────────────────────────────────────────────────────┘
+puis le scénario k+1
 ```
 
-Concrètement, le `software-engineer` ne crée une interface (port) que lorsqu'un test
-unitaire en a besoin pour isoler une frontière — jamais « au cas où ». Le test
-d'acceptation reste rouge tant que la tranche n'est pas complète, ce qui garde le cap
-sur le comportement métier.
+Concrètement, le `software-engineer` ne crée une interface que lorsqu'un test unitaire en a
+besoin pour isoler une frontière — jamais « au cas où ». Le test d'acceptation reste rouge tant
+que le scénario n'est pas complet, ce qui garde le cap sur le comportement métier, et il ne
+change jamais : écrit par un autre agent, il est l'oracle que le code doit satisfaire. Chaque
+scénario se termine par un seul commit vert, enchaîné à la commande de test pour n'avoir lieu
+qu'une fois les tests passés.
+
+Un seul test d'acceptation est rouge à la fois. DISTILL écrit le test du scénario suivant une
+fois le précédent passé, si bien qu'un rouge dans l'historique nomme toujours le scénario en
+cours. Le moteur ne voit jamais échouer les tests unitaires de la boucle interne ; la mutation,
+lancée en dernier sur toute la story, montre qu'ils détecteraient une erreur.
 
 ## Pièges & anti-patterns
 

@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { BUILT_IN_WORKFLOW, InMemoryAgentCatalog, InMemoryGit, ScriptedMachine } from '../support/in-memory-host.mjs'
-import { agent, API, finding, lenses, nominal, reviews, says, scripted, SLUG, tddCycle, TRACKING } from '../support/pipeline-host.mjs'
+import { agent, API, finding, green, lenses, nominal, reviews, says, scenarioReview, scripted, SLUG, tddCycle, TRACKING } from '../support/pipeline-host.mjs'
 import { dispatched, eventsOf } from '../support/decisions.mjs'
 import { edit, WITH_SECURITY } from '../workflow/support.mjs'
 
@@ -56,6 +56,7 @@ test('a loop that reached its max_visits asks a human; an instruction runs the n
   const machine = new ScriptedMachine({ exits: { '. $ dotnet test': 1, '../web $ npx eslint .': 1 } })
   const passes = [1, 2, 3, 4, 5, 6].map((n) => (it) => agent({ work: (h) => {
     if (n === 6) Object.assign(machine.exits, { '. $ dotnet test': 0, '../web $ npx eslint .': 0 })
+    if (n === 1) return green(SLUG, 'Pass1')(h)
     tddCycle(SLUG, `Pass${n}`)(h)
     h.git.commit(`refactor(checkout): pass ${n} of the cart`, ['../web/src/Cart.tsx'])
   } })(it))
@@ -66,10 +67,10 @@ test('a loop that reached its max_visits asks a human; an instruction runs the n
   await host.decide({ answer: 'Mock the bank gateway in the tests' })
   const outcome = await host.run()
 
-  const failures = [`api/test: exited 1 (evidence: ${TRACKING}/gates/api/test-4.log)`, `web/lint: exited 1 (evidence: ${TRACKING}/gates/web/lint-4.log)`]
+  const failures = [`api/test: exited 1 (evidence: ${TRACKING}/gates/api/test-4.log)`, `web/lint: exited 1 (evidence: ${TRACKING}/gates/web/lint-3.log)`]
   const text = `deliver is blocked: gates -> deliver was taken as often as its max_visits allows.\nLeft by gates (2):\n- ${failures[0]}\n- ${failures[1]}\n An instruction runs deliver again on a new pass with what is left above and the instruction; STOP ends the run.`
   assert.deepEqual(waiting, { status: 'waiting', slug: SLUG, phase: 'DELIVER', code: 'blocked', reason: `${text} Answer with skraft decide deliver-1 "<instruction>"|STOP.` })
-  assert.deepEqual(eventsOf(host, 'question.asked').map(({ key, step, visit, text: asked }) => [key, step, visit, asked]), [['deliver-1', 'deliver', 4, text]])
+  assert.deepEqual(eventsOf(host, 'question.asked').map(({ key, step, visit, text: asked }) => [key, step, visit, asked]), [['scenario_review-1', 'scenario_review', 1, scenarioReview().text], ['deliver-1', 'deliver', 4, text]])
   assert.equal(outcome.status, 'done')
   assert.deepEqual(eventsOf(host, 'step.recorded').filter((event) => event.step === 'gates').map(({ visit, outcome: result, code, next, ceiling }) => [visit, result, code, next, ceiling]), [
     [1, 'fail', null, 'deliver', undefined], [2, 'fail', null, 'deliver', undefined], [3, 'fail', null, 'deliver', undefined], [4, 'fail', 'loop-ceiling', null, 'deliver'], [5, 'fail', null, 'deliver', undefined], [6, 'pass', null, 'deliver_review', undefined],
@@ -113,11 +114,11 @@ const resigned = async (host, lines) => {
 
 test('a loop stopped at its max_visits by a journal written before the ceiling was journaled stays blocked, as it was, and asks nothing', async () => {
   const machine = new ScriptedMachine({ exits: { '. $ dotnet test': 1 } })
-  const passes = [1, 2, 3, 4].map((n) => (it) => agent({ work: tddCycle(SLUG, `Pass${n}`) })(it))
+  const passes = [1, 2, 3, 4].map((n) => (it) => agent({ work: n === 1 ? green(SLUG, 'Pass1') : tddCycle(SLUG, `Pass${n}`) })(it))
   const host = scripted({ machine }, (it) => [agent()(it), agent()(it), agent()(it), ...passes.map((pass) => pass(it))])
   const append = host.tracking.append.bind(host.tracking)
   host.tracking.append = async (slug, line) => {
-    if (line.includes('"type":"question.asked"')) throw new Error('written before the blocked question existed')
+    if (line.includes('"type":"question.asked"') && line.includes('"kind":"blocked"')) throw new Error('written before the blocked question existed')
     return append(slug, line)
   }
   await assert.rejects(host.start(), /written before the blocked question existed/)
@@ -129,7 +130,7 @@ test('a loop stopped at its max_visits by a journal written before the ceiling w
   const outcome = await host.run()
 
   assert.deepEqual([outcome.status, outcome.code], ['blocked', 'loop-ceiling'])
-  assert.deepEqual(eventsOf(host, 'question.asked'), [])
+  assert.deepEqual(eventsOf(host, 'question.asked').map(({ key }) => key), ['scenario_review-1'])
   assert.equal(host.types().at(-1), 'run.finished')
 })
 

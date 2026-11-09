@@ -87,27 +87,67 @@ Toute clé hors de cette liste est refusée.
 | `stack` | string | obligatoire | `dotnet`, `java`, `python`, `typescript`, `javascript` ou `react` |
 | `commands` | object | `{}` | nom → ligne de commande ; nom parmi `build`, `format`, `lint`, `test`, `architecture`, `coverage`, `mutation`, `e2e` ; ligne non vide |
 | `baseBranch` | string | absent (retombe sur le `baseBranch` global) | ref git ; `null` vaut absent |
-| `mocking` | object | `inprocess` pour `typescript`, `javascript` et `react`, `microcks` sinon | `strategy` vaut `microcks`, `inprocess` ou `null` ; absent ou `null` vaut le défaut de la stack. Le moteur la passe dans le brief et choisit la skill de mocking correspondante |
+| `mocking` | object | `inprocess` pour `react`, `microcks` sinon | `strategy` vaut `microcks`, `inprocess` ou `null` ; absent ou `null` vaut le défaut de la stack. Le moteur la passe dans le brief et choisit la skill de mocking correspondante |
 | `paths` | object | `["."]` pour chaque clé, toute la racine | `{ "src": […], "tests": […] }`, dossiers relatifs à la racine du composant, jamais absolus ni commençant par `..` ; `skraft init` les écrit. En DELIVER, le software engineer n'écrit que là (droits d'écriture) |
 | `contractTesting` | boolean | `false` | `true` fait lire au software engineer les skills de contract testing de sa stack ; les lentilles de revue voient le réglage parmi ceux du composant |
 | `bdd` | liste ou `false` | obligatoire | où chaque runner du composant lit ses scénarios et les définitions qui les lient : une liste de `{ runner, features, steps }`, les dossiers relatifs à la racine du composant, `runner` facultatif, et `steps` facultatif aussi — omis, les scénarios sont écrits et rien ne leur est demandé, donc aucun runner ne les lit. **Une paire par runner**, parce que la portée de liaison est celle du runner : une définition d'une autre paire ne lie aucun pas de celle-ci, donc un composant qui porte plusieurs projets de tests en déclare une chacun. `false` n'en nomme aucune, et ne demande aucun `.feature` à DISTILL : l'acceptance designer prend ses scénarios dans la colonne `Scenario` du plan de test, et TDD tourne comme toujours. **Aucune clé, et un `true` nu, ne décident rien** : le moteur n'invente aucun dossier — un dossier que personne n'a choisi est un dossier que le runner peut ne jamais lire — donc un run est refusé avec `skraft is not initialised: run /skraft-init (<composant>: bdd is unanswered)` et `skraft doctor` échoue sur ce composant. C'est une pratique qui se déclare, jamais un seuil : un composant qui nomme ses dossiers est tenu à ses scénarios en entier. Les dossiers sont là où DISTILL écrit les scénarios de l'histoire et là où le moteur les relit : une seule résolution pour le brief, le périmètre d'écriture de l'acceptance designer, le dossier que le moteur crée avant sa tentative, et le contrôle. Un dossier déclaré qui n'est pas un dossier de la copie de travail fait échouer `skraft doctor`, et une paire qui nomme un runner dont le `steps` n'est pas un dossier refuse le run (`bdd-unbound`) — un runner sans liaisons n'exécute rien ; `features` en est exempté, puisque DISTILL le crée avec le premier scénario. Les mots-clés Gherkin sont en anglais, quelle que soit la langue des phrases. `skraft init` détecte les paires, `/skraft-init` demande celles qu'il n'a pas trouvées, `skraft doctor` les nomme, le moteur passe les dossiers dans le brief, et les lentilles de revue voient le réglage parmi ceux du composant |
 | `mutationReport` | string | absent : le rapport qu'écrit l'outil de la stack, relatif à la racine : `StrykerOutput/reports/mutation-report.json` (.NET), `reports/mutation/mutation.json` (TypeScript, JavaScript, React), `mutation-report.json` (Python), `target/pit-reports/mutations.xml` (Java ; `build/reports/pitest/mutations.xml` quand la commande de mutation nomme Gradle) | le fichier où la commande `mutation` écrit son rapport, relatif à la racine du composant, jamais absolu ni hors d'elle. La gate de mutation y lit les mutants survivants et juge la barre 100 % / 80 % |
+| `infrastructure` | object | `{}` : chaque ligne est celle du plugin ([politique d'infrastructure](#infrastructure)) | les lignes de la politique que les tests du composant surchargent : `entryPoint`, `internalGateway` et `clock`, chacune `{ "targeted", "walkingSkeleton" }` ; pour `react`, `entryPoint` et `clock` `{ "targeted" }` et `frontToBack` `{ "targeted", "e2e" }`. Chaque valeur parmi `in-process`, `real`, `in-memory`, `testcontainers`, `microcks`, `fake`, `msw`. `externalGateway` est refusée : `mocking.strategy` la fixe. Un étage omis garde le mécanisme du plugin |
+| `testReports` | liste de strings | celui de la stack : `**/TestResults/*.trx` et `**/TestResults/*.xml` (.NET), `**/target/surefire-reports/TEST-*.xml` et `**/build/test-results/test/*.xml` (Java), `reports/junit.xml` (Python, TypeScript, JavaScript, React) | où les commandes `test` et `e2e` du composant écrivent leur JUnit XML : au moins un chemin ou glob relatif à la racine du composant, jamais absolu ni nommant `..` ; normalisé (`./reports/junit.xml` devient `reports/junit.xml`). Le moteur les lit quand il rejoue un commit : un rouge sans rapport est refusé ([Commits et rejeux](./gates.md#commits)) |
 
 Les seuils qualité (couverture, mutation…) ne sont **pas** configurables : aucune clé ne les
 porte.
+
+## Politique d'infrastructure <!-- #infrastructure -->
+
+Sur quoi les tests d'un composant font tourner chaque sorte de dépendance, dans un scénario ciblé
+et dans le walking skeleton. Un composant `react` n'en a pas, le walking skeleton vivant dans un
+composant back : son passage de bout en bout est `e2e`. Une ligne que nomme l'`infrastructure` du
+composant l'emporte ; `skraft doctor` affiche une ligne par rangée avec sa source : `plugin`,
+`skraft-config.json` (une surcharge) ou `skraft-config.json (mocking.strategy)` (une stratégie de mocking autre que celle par défaut de la stack).
+
+| Rangée | Couvre | Ciblé | Walking skeleton |
+| --- | --- | --- | --- |
+| `entryPoint` | contrôleur, CLI, UI, webhook reçu, topic consommé | `in-process` | `real` |
+| `internalGateway` | repository, base de données, cache | `in-memory` | `testcontainers` |
+| `externalGateway` | REST, SOAP, GraphQL, gRPC, Kafka, RabbitMQ, MQTT, WebSocket, webhook émis | `microcks`, ou `in-process` quand `mocking.strategy` vaut `inprocess` | comme le ciblé |
+| `clock` | horloge, aléa | `fake` | `fake` |
+
+| Rangée (`react`) | Ciblé | E2E |
+| --- | --- | --- |
+| `entryPoint` | `in-process` | — |
+| `frontToBack` | `msw`, ou `microcks` quand `mocking.strategy` vaut `microcks` | `microcks` |
+| `clock` | `fake` | — |
+
+| Mécanisme | Outil que nomme doctor |
+| --- | --- |
+| `in-process` | `WebApplicationFactory` (.NET), `MockMvc / @SpringBootTest` (Java), `FastAPI TestClient` (Python), `app.inject / supertest` (TypeScript, JavaScript), `Testing Library` (React) |
+| `testcontainers` | Testcontainers |
+| `microcks` | Microcks uber native image via Testcontainers, one container per test session ; `Playwright + Microcks` en `e2e` |
+| `msw` | MSW |
+
+`testcontainers` et `microcks` demandent Docker ou Podman : `skraft doctor` nomme celui qui
+répond, ou avertit `Microcks and Testcontainers scenarios will be reported INDETERMINATE until
+Docker or Podman runs`. Seul `skraft-config.json` porte `infrastructure`, comme toute clé de composant.
+
+```json
+{ "name": "api", "root": "services/payment-api", "stack": "dotnet",
+  "infrastructure": { "internalGateway": { "walkingSkeleton": "in-memory" } } }
+```
 
 ## `tdd` <!-- #tdd -->
 
 | Clé | Valeur | Effet |
 | --- | --- | --- |
-| `replay` | `all` (défaut) | le moteur rejoue chaque commit rouge (`test(<story>): …`) d'une tentative avec la commande `test` de son composant, et vérifie qu'il échoue |
+| `replay` | `all` (défaut) | le moteur rejoue chaque commit rouge d'un test d'acceptation (`test(<story>): …`, DISTILL) avec la commande `test` de son composant, lit ses rapports JUnit (`testReports`) et vérifie qu'il échoue sur une assertion ([Commits et rejeux](./gates.md#commits)) |
 | `replay` | `last-red` | seul le dernier commit rouge de chaque story (même portée de commit) est rejoué |
 | `replay` | `null` | vaut `all` |
 
 Avec `all`, quand les rejeux dépassent 20 % de la durée d'une phase, le moteur journalise
 `tdd.replay-slow` une fois par phase et affiche `<slug>: replaying test commits took N% of
 <PHASE>; set "tdd": { "replay": "last-red" } in skraft-config.json to replay only the last test
-commit of each story`. Toute autre valeur : `tdd must be { "replay": "all" or "last-red" }`.
+commit of each story`. Toute autre valeur : `tdd must be { "replay": "all" or "last-red" }`. Le
+rejeu du commit vert d'un scénario ne dépend pas de cette clé.
 
 ## `publish` <!-- #publish -->
 
@@ -234,7 +274,7 @@ Dans les messages, `<label>` vaut `component <name>` si le nom est une chaîne, 
 | entrée pas un objet | `components[<index>] must be an object` |
 | nom | `components[<index>].name must be kebab-case, got <valeur JSON>` |
 | nom en double | `component name <name> is used twice` |
-| clé inconnue | `<label>: unknown key <clé> (allowed: name, root, stack, paths, commands, baseBranch, mocking, contractTesting, bdd, mutationReport)` |
+| clé inconnue | `<label>: unknown key <clé> (allowed: name, root, stack, paths, commands, baseBranch, mocking, contractTesting, bdd, mutationReport, infrastructure, testReports)` |
 | racine | `<label>: root must be a path relative to the working copy` |
 | stack | `<label>: stack must be one of dotnet, java, python, typescript, javascript, react` |
 | `commands` pas un objet | `<label>: commands must be an object of command lines` |
@@ -246,6 +286,8 @@ Dans les messages, `<label>` vaut `component <name>` si le nom est une chaîne, 
 | `contractTesting` | `<label>: contractTesting must be true or false` |
 | `bdd` | `<label>: bdd must be true, false, or a list of { runner, features, steps } whose folders are inside the component root; steps may be left out when nothing binds the scenarios` |
 | `mutationReport` | `<label>: mutationReport must be a file inside the component root` |
+| `infrastructure` | `<label>: infrastructure must be an object of rows (allowed: <rangées>)` ; `<label>: infrastructure.externalGateway is set by mocking.strategy; write "mocking": { "strategy": ... } instead` ; `<label>: unknown infrastructure row <rangée> (allowed: <rangées>)` ; `<label>: infrastructure.<rangée> must be an object of <étages>` ; `<label>: infrastructure.<rangée>: unknown field <étage> (allowed: <étages>)` ; `<label>: infrastructure.<rangée>.<étage> must be one of in-process, real, in-memory, testcontainers, microcks, fake, msw` |
+| `testReports` | `<label>: testReports must list the JUnit XML files its tests write, as paths or patterns inside the component root` |
 
 ## Lignes de commande <!-- #command-lines -->
 
@@ -301,9 +343,9 @@ composant : `.venv/bin/python`, `.venv/Scripts/python.exe`, puis `python` et `py
 PATH. Le fichier garde `python` et reste le même sous Windows, macOS et Linux. Tout autre
 programme démarre tel qu'écrit.
 
-Avec Microcks (le défaut hors TypeScript, JavaScript et React), les tests qui l'utilisent font
-tourner Microcks dans un conteneur, Docker ou Podman. Le moteur n'en cherche pas : un tel test
-échoue quand aucun conteneur ne répond, comme tout test en échec.
+Avec Microcks (le défaut hors React), les tests qui l'utilisent font tourner Microcks dans un
+conteneur, Docker ou Podman. Les gates n'en cherchent pas : un tel test échoue quand aucun
+conteneur ne répond, comme tout test en échec ; `skraft doctor` avertit quand aucun ne répond.
 
 ## Classes d'échec <!-- #failure-classes -->
 

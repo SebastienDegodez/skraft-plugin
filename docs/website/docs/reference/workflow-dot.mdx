@@ -84,7 +84,7 @@ Attributes common to every shape: `label`, `shape`, `phase`. Any other attribute
 | `outputs` | paths separated by `,`, relative to the tracking folder, without `..` | replaces the outputs of the agent's role; `{date}` and `{slug}` filled at dispatch |
 | `writes` | paths separated by `,`, relative to the working copy | added to the paths the agent's role may write |
 | `max_attempts` | positive integer | attempts per pass; default **3** |
-| `each` | `survivor-file` | reached by the mutation gate's `FAIL` edge: one dispatch per file holding surviving mutants; reached by another edge: one dispatch, with what that edge brings |
+| `each` | `survivor-file` or `scenario` | `survivor-file`: reached by the mutation gate's `FAIL` edge, one dispatch per file holding surviving mutants; reached by another edge, one dispatch, with what that edge brings. `scenario`: on two agent nodes or on none; the first in run order writes the story's scenarios and the failing acceptance test of S1, then that of each next scenario; the second makes each pass with one green commit. The engine alternates them on the scenarios of the test plan's `## Scenarios` table without edges, each pass a visit of its own; after the last scenario, the second leaves by its edge ([Phases](./phases.md#distill)) |
 | `proposal` | `true` or `false` | with `each="survivor-file"` (required): the agent writes one proposal per file in the file the engine creates (`proposals/<node>-<visit>-g<n>.md`) and changes no code |
 | `gate` | a list among `build`, `format`, `lint`, `test`, `architecture`, `coverage`, `mutation` | run in that order, whatever the written order |
 | `goal_gate` | `true` or `false` | once the changed components pass, runs the other components too |
@@ -94,7 +94,7 @@ Attributes common to every shape: `label`, `shape`, `phase`. Any other attribute
 | `when` (publication) | `frontend` | skips the node when no component is a front end |
 | `lens` | kebab-case name | the lens `<name>` is the agent `<name>-lens`; at most once per review |
 | `when` (lens) | `mock` or `contract` | see [Conditional lenses](#conditional-lenses) |
-| `question` | `adr-ratification` or `mutation-plan` | see [Phases](./phases.md#human-questions) |
+| `question` | `adr-ratification`, `scenario-review` or `mutation-plan` | see [Phases](./phases.md#human-questions) |
 | `workflow` | kebab-case base name (`review`) | the called workflow |
 | `with_<input>` | `base`, `head`, `story`, `documents` or `components` | binds the called workflow's input `<input>` to this value of the run |
 | `mandatory` | `true` | see [Mandatory nodes](#mandatory-nodes); `mandatory=false` is refused |
@@ -126,7 +126,9 @@ return every error. A workflow is refused when:
 | wrong number of outgoing edges | `node <id>: gate node needs exactly one PASS edge, has N`, and so on |
 | label on an edge that takes none | `edge <a> -> <b>: only an edge leaving a gate, a review's fan-in (shape=tripleoctagon), a call (shape=house) or an ask node takes a label` |
 | agent, lens, `finding-refuter` or a skill a lens lists found nowhere | the node, the agent and the skill named |
-| `proposal=true` without `each` | `node <id>: proposal=true needs each="survivor-file", the mutants it proposes for` |
+| `proposal=true` without `each="survivor-file"` | `node <id>: proposal=true needs each="survivor-file", the mutants it proposes for` |
+| `each="scenario"` on one node, or on more than two | `each="scenario" goes on two agent nodes, the one that writes each scenario's failing acceptance test, then the one that makes it pass; it is on <n>: <nodes>` |
+| `question="scenario-review"` with no node marked `each="scenario"` | `node <id>: question="scenario-review" needs the two nodes marked each="scenario", whose scenarios it shows` |
 | `lenses="…"` form (former) | refused; the message writes out, as DOT, the nodes and edges that replace it |
 
 When valid, `skraft workflow check` prints `<file> is valid: phases RESEARCH, DESIGN, …` and, for
@@ -313,9 +315,10 @@ from the predecessor.
 | `design` | `box` | `agent="solution-architect"` | DESIGN |
 | `design_review_lenses` → `design_review` | review | lenses `consistency`, `architecture-compliance`, `fitness`; fan-in `mandatory=true` | (DESIGN) |
 | `adr` | `hexagon` | `question="adr-ratification"` | (DESIGN) |
-| `distill` | `box` | `agent="acceptance-designer"` | DISTILL |
+| `distill` | `box` | `agent="acceptance-designer"`, `each="scenario"` | DISTILL |
 | `distill_review_lenses` → `distill_review` | review | lenses `coverage`, `business-alignment`, `testability`, `boundary-enforcement`; fan-in `mandatory=true` | (DISTILL) |
-| `deliver` | `box` | `agent="software-engineer"` | DELIVER |
+| `scenario_review` | `hexagon` | `question="scenario-review"` | (DISTILL) |
+| `deliver` | `box` | `agent="software-engineer"`, `each="scenario"` | DELIVER |
 | `gates` | `parallelogram` | `gate="build,format,lint,test,architecture,coverage"`, `goal_gate=true`, `locked=true` | DELIVER |
 | `deliver_review` | `house` | `workflow="review"`, `mandatory=true` | (DELIVER) |
 | `mutation` | `parallelogram` | `gate="mutation"`, `goal_gate=true`, `locked=true` | (DELIVER) |
@@ -336,7 +339,9 @@ from the predecessor.
 | `adr -> distill` | `RATIFIED` | — |
 | `adr -> design` | `REJECTED` | 1 |
 | `distill_review -> distill` | `NEEDS_REWORK` | 2 |
-| `distill_review -> deliver` | `APPROVED` | — |
+| `distill_review -> scenario_review` | `APPROVED` | — |
+| `scenario_review -> deliver` | `APPROVED` | — |
+| `scenario_review -> distill` | `REVISE` | 2 |
 | `gates -> deliver` | `FAIL` | 3 |
 | `gates -> deliver_review` | `PASS` | — |
 | `deliver_review -> deliver` | `NEEDS_REWORK` | 2 |
@@ -351,7 +356,8 @@ from the predecessor.
 
 The other edges carry neither label nor ceiling: `start -> research -> design`, `distill -> distill_review_lenses`, `deliver -> gates`,
 `kill_proposal -> mutation_plan`, `kill_mutants -> mutation_review_lenses`, `visuals -> pr_writer -> publish -> exit`, and those of
-each review.
+each review. No edge leads `deliver` back to `distill`: the engine alternates them on the
+scenarios (`each="scenario"`).
 
 ## See also {/* #see-also */}
 

@@ -133,8 +133,8 @@ test('an agent of the host conducts a story to the end through the tools alone, 
 
   assert.deepEqual(texts(started), [`${SLUG} is the active pipeline`])
   assert.deepEqual(step, { status: 'done', slug: SLUG, phase: 'PUBLISH', code: null, reason: 'PUBLISH closed', dispatches: [], then: null })
-  assert.deepEqual(steps.filter(({ status }) => status === 'waiting').map(({ code, then }) => [code, then]), [['adr-ratification', 'call the skraft_next tool with {}']])
-  assert.deepEqual(journal(cwd, SLUG).filter(({ type }) => type === 'question.answered').map(({ by }) => by), ['cli-tty'])
+  assert.deepEqual(steps.filter(({ status }) => status === 'waiting').map(({ code, then }) => [code, then]), [['adr-ratification', 'call the skraft_next tool with {}'], ['scenario-review', 'call the skraft_next tool with {}']])
+  assert.deepEqual(journal(cwd, SLUG).filter(({ type }) => type === 'question.answered').map(({ by }) => by), ['cli-tty', 'cli-tty'])
   assert.equal(journal(cwd, SLUG).at(-1).type, 'run.finished')
   await host.close()
 })

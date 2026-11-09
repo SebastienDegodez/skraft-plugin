@@ -7,10 +7,9 @@ import { ALL_KILLED, mutants, pitReport, strykerReport } from '../support/mutati
 
 const REPORT = 'StrykerOutput/reports/mutation-report.json'
 const STRYKER = '. $ dotnet stryker'
-/** The story's TDD cycle: its test, then the source files it changes; body: each commit's body. */
+/** The green of the story's scenario: the source files it changes, with their unit test; body: its body. */
 const changing = (files, body = '') => ({ git }) => {
-  git.commit(`test(${SLUG}): checkout pays by card`, ['tests/CheckoutTests.cs'], body)
-  git.commit(`feat(${SLUG}): checkout pays by card`, files, body)
+  git.commit(`feat(${SLUG}): checkout pays by card`, ['tests/CheckoutTests.cs', ...files], body)
 }
 const upToDeliver = (it, files = ['src/Checkout.cs', 'src/Refund.cs'], body = '') => [agent()(it), agent()(it), agent()(it), agent({ work: changing(files, body) })(it)]
 const recorded = (host, step) => host.events().filter((event) => event.type === 'step.recorded' && event.step === step)
@@ -313,7 +312,11 @@ test('each stack reads the report its default mutation command writes', async ()
   for (const [stack, mutation, report] of expected) {
     const component = { ...API, stack, commands: { test: 'dotnet test', mutation } }
     const writesNone = { [`. $ ${mutation}`]: () => {} }
-    const host = scripted({ components: [component], machine: new ScriptedMachine({ installed: ['git', 'dotnet', 'mvn', 'gradlew', 'python', 'npx'], meanwhile: writesNone }) }, (it) => upToDeliver(it))
+    const frontEnd = stack === 'react' ? { plan: [['Customer sees the price', 'api', '@happy-path']], exemption: 'library' } : {}
+    const host = scripted({ components: [component], machine: new ScriptedMachine({ installed: ['git', 'dotnet', 'mvn', 'gradlew', 'python', 'npx'], meanwhile: writesNone }) }, (it) => {
+      const [research, design, , deliver] = upToDeliver(it)
+      return [research, design, agent(frontEnd)(it), deliver]
+    })
     const outcome = await host.start()
     assert.ok(outcome.reason.includes(`the mutation report ${report} is missing;`), `${stack}: ${outcome.reason}`)
   }
@@ -371,13 +374,12 @@ test('a component reads its mutants where mutationReport says, PIT\'s mutations.
     'orders/src/main/java/com/acme/Order.java': 'class Order {}\n', 'orders/src/main/kotlin/com/acme/Fee.kt': 'class Fee\n', 'orders/src/main/com/acme/Tax.java': 'class Tax {}\n',
     'orders/src/main/java/com/acme/domain/Price.java': 'class Price {}\n',
   }
-  const orderCycle = ({ git }) => {
-    git.commit(`test(${SLUG}): order`, ['orders/src/test/OrderTest.java'])
-    git.commit(`feat(${SLUG}): order`, [...Object.keys(sources), 'orders/src/main/scala/com/acme/Ship.scala'])
+  const orderGreen = ({ git }) => {
+    git.commit(`feat(${SLUG}): order`, ['orders/src/test/OrderTest.java', ...Object.keys(sources), 'orders/src/main/scala/com/acme/Ship.scala'])
   }
   const killsOrders = (it) => agent({ work: ({ git }) => git.commit(`test(${SLUG}): kill the order mutants`, ['orders/src/test/OrderTest.java']) })(it)
   const host = scripted({ components: [service], machine: new ScriptedMachine(), files: sources, answers: APPLYING }, (it) => [
-    agent()(it), agent()(it), agent()(it), agent({ work: orderCycle })(it), ...Array.from({ length: 5 }, () => proposer(it)), killsOrders(it),
+    agent()(it), agent()(it), agent()(it), agent({ work: orderGreen })(it), ...Array.from({ length: 5 }, () => proposer(it)), killsOrders(it),
   ])
   const report = pitReport([
     ['com.acme.Order$Line', 'Order.java', 42, 'ConditionalsBoundaryMutator', 'changed conditional boundary', 'SURVIVED'],
@@ -415,14 +417,14 @@ test('a component reads its mutants where mutationReport says, PIT\'s mutations.
     { file: 'orders/src/main/kotlin/com/acme/Fee.kt', mutants: ['orders/src/main/kotlin/com/acme/Fee.kt:5 MathMutator (Replaced integer subtraction) survived'] },
   ])
 
-  const unlisted = scripted({ components: [service], machine: new ScriptedMachine(), files: sources }, (it) => [agent()(it), agent()(it), agent()(it), agent({ work: orderCycle })(it)])
+  const unlisted = scripted({ components: [service], machine: new ScriptedMachine(), files: sources }, (it) => [agent()(it), agent()(it), agent()(it), agent({ work: orderGreen })(it)])
   unlisted.git.changedFiles = whileMutating(unlisted)
   mutationRounds(unlisted, [report], { line: 'orders $ mvn pitest', path: 'orders/target/pit/mutations.xml' })
   await assert.rejects(unlisted.start(), /unexpected dispatch/)
   assert.deepEqual(recorded(unlisted, 'mutation')[0].failures, [`orders/mutation: exited 1, core 75% < 100%, boundary 14% < 80%, 7 mutants survive (evidence: ${TRACKING}/gates/orders/mutation-1.log)`])
   assert.deepEqual(recorded(unlisted, 'mutation')[0].survivors[0], { file: 'orders/com/acme/Gone.java', mutants: ['orders/com/acme/Gone.java:3 RemoveCallsMutator survived'] })
 
-  const notPit = scripted({ components: [service], machine: new ScriptedMachine() }, (it) => [agent()(it), agent()(it), agent()(it), agent({ work: orderCycle })(it)])
+  const notPit = scripted({ components: [service], machine: new ScriptedMachine() }, (it) => [agent()(it), agent()(it), agent()(it), agent({ work: orderGreen })(it)])
   mutationRounds(notPit, ['<html><body>PIT report</body></html>'], { line: 'orders $ mvn pitest', path: 'orders/target/pit/mutations.xml' })
   assert.ok((await notPit.start()).reason.includes('the mutation report orders/target/pit/mutations.xml is not a PIT mutations.xml report;'))
 })

@@ -25,8 +25,8 @@ ne fait que le sien.
   de VS Code lance l'agent que le moteur demande et lui rend la réponse.
 
 Un cinquième acteur garde les décisions qui engagent l'équipe : **l'humain**. Il ratifie les
-ADR, consent à la publication, choisit comment traiter les mutants survivants. Aucun agent ne
-répond à sa place.
+ADR, lit les scénarios avant que DELIVER ne les construise, consent à la publication, choisit
+comment traiter les mutants survivants. Aucun agent ne répond à sa place.
 
 ```mermaid
 graph TD

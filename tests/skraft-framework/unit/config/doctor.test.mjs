@@ -4,8 +4,8 @@ import { createDoctor } from '../../../../plugins/skraft-framework/engine/applic
 import { BUILT_IN_WORKFLOW, GITHUB_REMOTE, InMemoryAgentCatalog, InMemoryCodeHost, InMemoryCopilotSdk, InMemoryHostSettings, InMemoryPullRequests, InMemorySourceControl, InMemoryUserSettings, InMemoryWorkflowSource, InMemoryWorkspace, ScriptedMachine } from '../support/in-memory-host.mjs'
 import { edit, withLenses } from '../workflow/support.mjs'
 
-const API = { name: 'api', root: 'services/payment-api', stack: 'dotnet', bdd: false, commands: { build: 'dotnet build --nologo', test: 'dotnet test --nologo', mutation: 'dotnet stryker --since:{baseSha}' } }
-const WEB = { name: 'web', root: '../payment-web', stack: 'react', bdd: false, mocking: { strategy: 'inprocess' }, commands: { test: 'npx vitest run', e2e: 'npx playwright test' } }
+const API = { name: 'api', root: 'services/payment-api', stack: 'dotnet', bdd: false, commands: { build: 'dotnet build --nologo', test: 'dotnet test --nologo --logger trx', mutation: 'dotnet stryker --since:{baseSha}' } }
+const WEB = { name: 'web', root: '../payment-web', stack: 'react', bdd: false, mocking: { strategy: 'inprocess' }, commands: { test: 'npx vitest run --reporter=junit', e2e: 'npx playwright test' } }
 const MICROCKS_WEB = { ...WEB, mocking: { strategy: 'microcks' } }
 const FOLDERS = { 'services/payment-api/Payment.sln': '', '../payment-web/package.json': '{}' }
 
@@ -29,6 +29,21 @@ const BY_DEFAULT = [
   { subject: 'models/claude-code', status: 'ok', detail: "every family the workflow's agents run on has a model on claude-code" },
   { subject: 'models/copilot', status: 'warn', detail: "no model on copilot for researcher (1 dispatch), planner (1 dispatch), reviewer (13 dispatches), standard (4 dispatches), implementer (4 dispatches), economy (1 dispatch); these run on the session's model" },
 ]
+
+/** The infrastructure lines of API and of WEB mocking with Microcks, and the runtime that answers. */
+const MICROCKS = 'Microcks uber native image via Testcontainers, one container per test session'
+const INFRASTRUCTURE = [
+  'api (dotnet) entry point: in-process (targeted), real (walking skeleton) — WebApplicationFactory; source plugin',
+  'api (dotnet) internal gateway: in-memory (targeted), testcontainers (walking skeleton) — Testcontainers; source plugin',
+  `api (dotnet) external gateway: microcks (targeted), microcks (walking skeleton) — ${MICROCKS}; source plugin`,
+  'api (dotnet) clock: fake (targeted), fake (walking skeleton); source plugin',
+  'api (dotnet) JUnit reports: **/TestResults/*.trx, **/TestResults/*.xml',
+  'web (react) entry point: in-process (targeted) — Testing Library; source plugin',
+  `web (react) front to back: microcks (targeted), microcks (e2e) — ${MICROCKS}; Playwright + Microcks; source skraft-config.json (mocking.strategy)`,
+  'web (react) clock: fake (targeted); source plugin',
+  'web (react) JUnit reports: reports/junit.xml',
+].map((detail) => ({ subject: 'infrastructure', status: 'ok', detail }))
+const DOCKER = { subject: 'container-runtime', status: 'ok', detail: 'docker answers docker info' }
 
 /** Without the Copilot CLI, VS Code runs the pipeline through the agent loop. */
 const NO_SDK = {
@@ -78,7 +93,7 @@ test('doctor names where each runner reads a component\'s scenarios, fails on a 
 
 const failures = (report) => report.checks.filter((check) => check.status === 'fail').map(({ subject, detail }) => `${subject}: ${detail}`)
 
-test('every program found and the forge reachable: doctor passes without running any command, a container runtime included', async () => {
+test('every program found and the forge reachable: doctor passes without running any command of a component, asks the container runtime whether it answers, and shows the infrastructure of each component\'s tests', async () => {
   const { machine, doctor: check } = doctor({ components: [API, MICROCKS_WEB] })
 
   const report = await check.check()
@@ -94,11 +109,41 @@ test('every program found and the forge reachable: doctor passes without running
       { subject: 'api/mutation', status: 'ok', detail: 'dotnet → /usr/local/bin/dotnet' },
       { subject: 'web/test', status: 'ok', detail: 'npx → /usr/local/bin/npx' },
       { subject: 'web/e2e', status: 'ok', detail: 'npx → /usr/local/bin/npx' },
+      ...INFRASTRUCTURE,
+      DOCKER,
       ...BY_DEFAULT,
       NO_SDK,
     ],
   })
-  assert.deepEqual(machine.lines(), [])
+  assert.deepEqual(machine.lines(), ['. $ docker info'])
+})
+
+test('doctor names the container runtime that answers when a component\'s policy runs a container, docker first, else warns that Microcks and Testcontainers scenarios will be indeterminate, never failing; it asks none when no policy runs one', async () => {
+  const INDETERMINATE = 'Microcks and Testcontainers scenarios will be reported INDETERMINATE until Docker or Podman runs'
+  const runtimeOn = async ({ installed = ['dotnet', 'npx'], exits = {}, components = [API, WEB] } = {}) => {
+    const machine = new ScriptedMachine({ installed, exits })
+    const report = await doctor({ components, machine }).doctor.check()
+    return { ok: report.ok, checks: report.checks.filter(({ subject }) => subject === 'container-runtime'), asked: machine.runs.filter(({ argv }) => argv[1] === 'info') }
+  }
+  const asked = (...runtimes) => runtimes.map((runtime) => ({ argv: [runtime, 'info'], cwd: '.', timeoutMs: 15_000 }))
+  const warned = (detail) => [{ subject: 'container-runtime', status: 'warn', detail: `${detail}; ${INDETERMINATE}` }]
+
+  assert.deepEqual(await runtimeOn({ installed: ['dotnet', 'npx', 'docker', 'podman'] }), { ok: true, checks: [DOCKER], asked: asked('docker') })
+  assert.deepEqual(await runtimeOn({ installed: ['dotnet', 'npx', 'podman'] }), { ok: true, checks: [{ subject: 'container-runtime', status: 'ok', detail: 'podman answers podman info' }], asked: asked('podman') })
+  assert.deepEqual(await runtimeOn({ installed: ['dotnet', 'npx', 'docker', 'podman'], exits: { '. $ docker info': 1 } }), { ok: true, checks: [{ subject: 'container-runtime', status: 'ok', detail: 'podman answers podman info' }], asked: asked('docker', 'podman') })
+  assert.deepEqual(await runtimeOn(), { ok: true, checks: warned('neither docker nor podman is on the PATH'), asked: [] })
+  assert.deepEqual(await runtimeOn({ installed: ['dotnet', 'npx', 'docker'], exits: { '. $ docker info': null } }), { ok: true, checks: warned('docker does not answer docker info'), asked: asked('docker') })
+  assert.deepEqual(await runtimeOn({ installed: ['dotnet', 'npx', 'docker', 'podman'], exits: { '. $ docker info': 1, '. $ podman info': 125 } }), {
+    ok: true, checks: warned('docker does not answer docker info, podman does not answer podman info'), asked: asked('docker', 'podman'),
+  })
+
+  const inProcess = { ...API, mocking: { strategy: 'inprocess' }, infrastructure: { internalGateway: { walkingSkeleton: 'in-memory' } } }
+  const msw = { ...WEB, infrastructure: { frontToBack: { e2e: 'msw' } } }
+  assert.deepEqual(await runtimeOn({ components: [inProcess, msw] }), { ok: true, checks: [], asked: [] })
+  const quiet = await doctor({ components: [inProcess, msw], machine: new ScriptedMachine({ installed: ['dotnet', 'npx', 'docker'] }) }).doctor.check()
+  assert.deepEqual(quiet.checks.slice(-4).map(({ subject }) => subject), ['infrastructure', 'models/claude-code', 'models/copilot', 'vscode'], 'the infrastructure lines lead straight to the models')
+  assert.deepEqual((await runtimeOn({ components: [inProcess, WEB] })).checks, warned('neither docker nor podman is on the PATH'), 'one component whose end-to-end run uses Microcks is enough')
+  assert.deepEqual((await runtimeOn({ components: [{ ...API, mocking: { strategy: 'inprocess' } }, msw] })).checks, warned('neither docker nor podman is on the PATH'), 'a walking skeleton on Testcontainers is enough')
 })
 
 test('doctor says how VS Code runs the pipeline: through the Copilot SDK the Copilot CLI ships, else the agent loop, configuration or not', async () => {
@@ -159,18 +204,20 @@ test('--run starts every command once from its component root, with the base, an
 
   assert.deepEqual(machine.lines(), [
     'services/payment-api $ dotnet build --nologo',
-    'services/payment-api $ dotnet test --nologo',
+    'services/payment-api $ dotnet test --nologo --logger trx',
     'services/payment-api $ dotnet stryker --since:a1',
-    '../payment-web $ npx vitest run',
+    '../payment-web $ npx vitest run --reporter=junit',
     '../payment-web $ npx playwright test',
+    '. $ docker info',
   ])
-  assert.deepEqual(report.checks.slice(2), [
+  assert.deepEqual(report.checks.slice(2).filter(({ subject }) => subject !== 'infrastructure'), [
     { subject: 'forge', status: 'ok', detail: 'github, deduced from the Git remote' },
     { subject: 'api/build', status: 'ok', detail: 'dotnet build --nologo passed' },
-    { subject: 'api/test', status: 'ok', detail: 'dotnet test --nologo passed' },
+    { subject: 'api/test', status: 'ok', detail: 'dotnet test --nologo --logger trx passed' },
     { subject: 'api/mutation', status: 'ok', detail: 'dotnet stryker --since:a1 passed' },
-    { subject: 'web/test', status: 'ok', detail: 'npx vitest run passed' },
+    { subject: 'web/test', status: 'ok', detail: 'npx vitest run --reporter=junit passed' },
     { subject: 'web/e2e', status: 'fail', detail: 'npx playwright test exited 1; its output is in .copilot-tracking/skraft-doctor/web/e2e.log' },
+    DOCKER,
     ...BY_DEFAULT,
     NO_SDK,
   ])
@@ -178,7 +225,7 @@ test('--run starts every command once from its component root, with the base, an
     await workspace.read('.copilot-tracking/skraft-doctor/web/e2e.log'),
     '$ npx playwright test\ncwd: ../payment-web\nresult: exited 1\n--- stdout\nnpx playwright test output\n\n--- stderr\nit failed\n\n',
   )
-  assert.equal(await workspace.read('.copilot-tracking/skraft-doctor/web/test.log'), '$ npx vitest run\ncwd: ../payment-web\nresult: exited 0\n--- stdout\nnpx vitest run output\n\n--- stderr\n\n')
+  assert.equal(await workspace.read('.copilot-tracking/skraft-doctor/web/test.log'), '$ npx vitest run --reporter=junit\ncwd: ../payment-web\nresult: exited 0\n--- stdout\nnpx vitest run --reporter=junit output\n\n--- stderr\n\n')
 })
 
 test('the families an ejected workflow names count, and those with no model for a host are a warning, not a failure', async () => {
@@ -245,14 +292,14 @@ test('--run without a base cannot start a {baseSha} command and says why', async
 test('a component asking for skills found nowhere is a warning naming them after its commands, never a failure: Java has no mocking or contract testing skill, JavaScript no mocking skill, TypeScript no contract testing skill', async () => {
   const orders = { name: 'orders', root: 'orders', stack: 'java', bdd: false, contractTesting: true, commands: { test: 'mvn test' } }
   const admin = { name: 'admin', root: 'admin', stack: 'javascript', bdd: false, commands: { test: 'npm test' } }
-  const shop = { name: 'shop', root: 'shop', stack: 'typescript', bdd: false, contractTesting: true, commands: { test: 'npx vitest run' } }
+  const shop = { name: 'shop', root: 'shop', stack: 'typescript', bdd: false, contractTesting: true, commands: { test: 'npx vitest run --reporter=junit' } }
   const files = { ...FOLDERS, 'orders/pom.xml': '', 'admin/package.json': '{}', 'shop/package.json': '{}' }
   const { doctor: check } = doctor({ components: [API, orders, admin, shop], files })
 
   const report = await check.check()
 
   assert.equal(report.ok, true)
-  assert.deepEqual(report.checks.filter(({ subject }) => !subject.startsWith('models') && subject !== 'vscode').slice(3).map(({ subject, status }) => `${subject} ${status}`), [
+  assert.deepEqual(report.checks.filter(({ subject }) => !['infrastructure', 'container-runtime', 'vscode'].includes(subject) && !subject.startsWith('models')).slice(3).map(({ subject, status }) => `${subject} ${status}`), [
     'api/build ok', 'api/test ok', 'api/mutation ok',
     'orders/test ok', 'orders warn',
     'admin/test ok', 'admin warn',
@@ -260,7 +307,7 @@ test('a component asking for skills found nowhere is a warning naming them after
   ])
   assert.deepEqual(report.checks.filter(({ status, subject }) => status === 'warn' && !subject.startsWith('models')), [
     { subject: 'orders', status: 'warn', detail: 'skills found nowhere, in the plugin or the working copy: mocking-microcks-java, contract-testing-java; mocking-strategy-roster and contract-testing say which recipe its tests use instead, or that they stop' },
-    { subject: 'admin', status: 'warn', detail: 'skills found nowhere, in the plugin or the working copy: mocking-inprocess-javascript; mocking-strategy-roster and contract-testing say which recipe its tests use instead, or that they stop' },
+    { subject: 'admin', status: 'warn', detail: 'skills found nowhere, in the plugin or the working copy: mocking-microcks-javascript; mocking-strategy-roster and contract-testing say which recipe its tests use instead, or that they stop' },
     { subject: 'shop', status: 'warn', detail: 'skills found nowhere, in the plugin or the working copy: contract-testing-typescript; mocking-strategy-roster and contract-testing say which recipe its tests use instead, or that they stop' },
   ])
 })

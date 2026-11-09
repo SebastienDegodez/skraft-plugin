@@ -47,7 +47,7 @@ test('an answer the host\'s own dialog gives during the run is journaled with th
   const outcome = await host.start()
 
   assert.equal(outcome.status, 'done')
-  assert.deepEqual(eventsOf(host, 'question.answered').map(({ key, answer, by }) => [key, answer, by]), [['adr-1', 'RATIFIED', 'host-confirmed']])
+  assert.deepEqual(eventsOf(host, 'question.answered').map(({ key, answer, by }) => [key, answer, by]), [['adr-1', 'RATIFIED', 'host-confirmed'], ['scenario_review-1', 'APPROVED', 'host-confirmed']])
   assert.deepEqual(host.git.engineCommits.map((commit) => commit.message), ['docs(adr): ratify ADR-001'])
 })
 

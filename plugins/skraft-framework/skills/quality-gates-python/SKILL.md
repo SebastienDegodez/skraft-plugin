@@ -31,13 +31,15 @@ scripts/ folder next to this SKILL.md, never in the consumer repository. Every s
 | Gate | Command line in `skraft-config.json` |
 |---|---|
 | build | `python -m compileall -q src` |
-| test | `python -m pytest -q -p no:cacheprovider` |
+| test | `python -m pytest -q -p no:cacheprovider --junitxml=reports/junit.xml` |
 | lint | the project's checked-in linter or type checker (`python -m ruff check`, `python -m mypy src`) |
 | architecture | `python -c "from importlinter.cli import lint_imports_command; lint_imports_command()"` (import-linter has no `-m` entry point; `clean-architecture-python` requires a contract) |
 | coverage | `node "<skill>/scripts/coverage-core.mjs" --root . --evidence .copilot-tracking/skraft-gates/coverage` |
 | mutation | `node "<skill>/scripts/mutation-gate.mjs" --root . --scope core --config cosmic-ray-core.toml --evidence .copilot-tracking/skraft-gates/mutation --since {baseSha}` |
 
-Use the `.venv` interpreter path in place of `python` when it is not on the path. `--evidence`
+The `test` line writes the JUnit XML report where the component's `testReports` looks by
+default, `reports/junit.xml`: the engine reads it to tell a failing assertion from a
+collection or import error. Use the `.venv` interpreter path in place of `python` when it is not on the path. `--evidence`
 is the folder where the script keeps its own report files, relative to `--root`. `{baseSha}` is
 replaced by the engine. Outside a pipeline, put the commit `git merge-base HEAD main` prints in its place.
 

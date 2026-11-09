@@ -23,8 +23,9 @@ SKRAFT is not a monolithic agent. The work splits into four roles, and each does
 - **The host driver** executes: the Claude Code mod, the Copilot workflow or the VS Code agent
   loop starts the agent the engine asks for and hands back its answer.
 
-A fifth actor keeps the decisions that commit the team: **the human**. They ratify ADRs, consent
-to publication, choose how surviving mutants are treated. No agent answers in their place.
+A fifth actor keeps the decisions that commit the team: **the human**. They ratify ADRs, read the
+scenarios before DELIVER builds them, consent to publication, choose how surviving mutants are
+treated. No agent answers in their place.
 
 ```mermaid
 graph TD

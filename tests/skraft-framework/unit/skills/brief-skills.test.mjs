@@ -50,13 +50,13 @@ test("an agent's own skills stay out of its brief: only the skills of the compon
   ].join('\n')), deliver)
 })
 
-test('the agent of the TDD cycles reads the mocking skill of each component, and the contract testing skills only for a component that turns them on, each once; a JavaScript, TypeScript or React component mocks in process unless it names Microcks', async () => {
+test('the agent of the TDD cycles reads the mocking skill of each component, and the contract testing skills only for a component that turns them on, each once; a React component mocks in process and a back end with Microcks unless it names the other', async () => {
   const catalog = catalogOf(
     { 'software-engineer': ['outside-in-tdd'] },
     ['outside-in-tdd', 'mocking-inprocess-dotnet', 'mocking-microcks-dotnet', 'mocking-microcks-typescript', 'mocking-inprocess-typescript', 'contract-testing', 'contract-testing-dotnet'],
   )
-  const ADMIN = { ...WEB, name: 'admin', root: '../admin', stack: 'javascript', bdd: [{ features: 'features' }] }
-  const SHOP = { ...WEB, name: 'shop', root: '../shop', stack: 'typescript', mocking: { strategy: 'microcks' }, bdd: [
+  const ADMIN = { ...WEB, name: 'admin', root: '../admin', stack: 'typescript', bdd: [{ features: 'features' }] }
+  const SHOP = { ...WEB, name: 'shop', root: '../shop', stack: 'typescript', mocking: { strategy: 'inprocess' }, bdd: [
     { features: 'features', steps: 'features/step_definitions' },
     { features: 'tests/specs', steps: 'tests/specs/steps' },
   ] }
@@ -82,8 +82,8 @@ test('the agent of the TDD cycles reads the mocking skill of each component, and
     '- Components:',
     '- api: . (dotnet), mocking: inprocess, contract testing: on, bdd: off, tests: dotnet test',
     '- web: ../web (react), mocking: inprocess, contract testing: off, bdd: off, tests: npm test',
-    '- admin: ../admin (javascript), mocking: inprocess, contract testing: off, bdd: features, tests: npm test',
-    '- shop: ../shop (typescript), mocking: microcks, contract testing: off, bdd: features → features/step_definitions, tests/specs → tests/specs/steps, tests: npm test',
+    '- admin: ../admin (typescript), mocking: microcks, contract testing: off, bdd: features, tests: npm test',
+    '- shop: ../shop (typescript), mocking: inprocess, contract testing: off, bdd: features → features/step_definitions, tests/specs → tests/specs/steps, tests: npm test',
     '- pay: ../pay (dotnet), mocking: inprocess, contract testing: on, bdd: off, tests: dotnet test',
   ].join('\n')), deliver)
 })
@@ -92,22 +92,22 @@ test('a skill found nowhere is named in the brief with its component, never read
   const catalog = catalogOf({}, ['mocking-microcks-dotnet', 'contract-testing', 'mocking-inprocess-typescript', 'mocking-microcks-typescript'])
   const java = { name: 'orders', root: 'orders', stack: 'java', bdd: false, paths: { src: ['src/main'], tests: ['src/test'] }, commands: { test: 'mvn test' }, contractTesting: true }
   const admin = { ...WEB, name: 'admin', root: 'admin', stack: 'javascript' }
-  const shop = { ...WEB, name: 'shop', root: 'shop', stack: 'typescript', bdd: false, mocking: { strategy: 'microcks' }, contractTesting: true }
+  const shop = { ...WEB, name: 'shop', root: 'shop', stack: 'typescript', bdd: false, mocking: { strategy: 'inprocess' }, contractTesting: true }
   const host = scripted({ catalog, components: [java, admin, shop] }, (it) => [
     agent()(it),
     agent({ work: ({ git }) => git.commit('docs(checkout): ADR for the order', ['docs/adr/adr-001-order.md']) })(it),
     agent({ work: ({ git }) => git.commit('test(checkout): acceptance of the order', ['orders/src/test/OrderAcceptanceTest.java']) })(it),
-    agent({ work: ({ git }) => git.commit('test(checkout): an order needs a line', ['orders/src/test/OrderTest.java']) })(it),
+    agent({ work: ({ git }) => git.commit('feat(checkout): an order needs a line', ['orders/src/main/Order.java', 'orders/src/test/OrderTest.java']) })(it),
   ])
 
   await host.start()
 
   const [, , distill, deliver] = host.agentRunner.dispatches.map((dispatch) => dispatch.prompt)
-  assert.deepEqual(skillLines(deliver), ['- /plugin/skills/contract-testing/SKILL.md', '- /plugin/skills/mocking-microcks-typescript/SKILL.md'])
+  assert.deepEqual(skillLines(deliver), ['- /plugin/skills/contract-testing/SKILL.md', '- /plugin/skills/mocking-inprocess-typescript/SKILL.md'])
   assert.deepEqual(sectionLines(deliver, NOWHERE), [
     '- mocking-microcks-java (orders)',
     '- contract-testing-java (orders)',
-    '- mocking-inprocess-javascript (admin)',
+    '- mocking-microcks-javascript (admin)',
     '- contract-testing-typescript (shop)',
   ])
   assert.deepEqual(sectionLines(distill, NOWHERE), [])

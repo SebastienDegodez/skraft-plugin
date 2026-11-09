@@ -44,7 +44,7 @@ saying so. skraft starts from there: **a craft rule exists only if a check runs 
 ```mermaid
 flowchart LR
     V1["Well-crafted<br/>software"] --> M1["Locked gates<br/>fixed quality bar"]
-    V2["Steadily<br/>adding value"] --> M2["Walking skeleton<br/>red → green commits"]
+    V2["Steadily<br/>adding value"] --> M2["Walking skeleton<br/>one scenario at a time,<br/>red → green commits"]
     V3["Community of<br/>professionals"] --> M3["Review before review<br/>lenses + refutation"]
     V4["Productive<br/>partnerships"] --> M4["Human decisions<br/>ADR ratification, consents"]
 ```
@@ -69,15 +69,18 @@ each gate are in the [gates reference](../reference/gates.md).
 
 Craftsmanship moves in small increments that work. In skraft, this takes two forms.
 
-- **The walking skeleton.** In DISTILL, the `acceptance-designer` commits failing acceptance tests
-  and the skeleton they call; the `boundary-enforcement` lens requires at least one walking
-  skeleton scenario per flow (its G8). See
+- **The walking skeleton.** The first scenario of every story, S1, crosses a back-end component
+  from its entry point to a real database; the engine refuses a test plan that does not tag it
+  `@walking-skeleton` or declare why the story needs none, and the `boundary-enforcement` lens
+  requires at least one walking skeleton scenario per flow (its G8). See
   [Walking Skeleton](./deep-dive/walking-skeleton.md).
-- **The red → green → refactor cycle.** In DELIVER, the engine reads the `software-engineer`'s
-  commits: a `test(…)` is the red, a `feat(…)` or `fix(…)` the green, a `refactor(…)` the
-  clean-up. It replays the test command at each red commit and refuses a green with no red before
-  it. Beck's test first ([Beck, 2003](../reference/citations.mdx#cite-beck-tdd-2003)) becomes a fact checked in
-  the git history, not a promise. See
+- **One scenario, one red, one green.** In DISTILL, the `acceptance-designer` commits the failing
+  acceptance test of one scenario and the skeleton it calls; the engine replays it and accepts it
+  only when a test fails on an assertion. In DELIVER, the `software-engineer` runs the
+  red → green → refactor loop of its unit tests, then commits once: a `feat(…)` the engine
+  replays too, which must make the scenario pass without touching its acceptance test. Then the
+  next scenario. Beck's test first ([Beck, 2003](../reference/citations.mdx#cite-beck-tdd-2003)) becomes a fact
+  checked in the git history, not a promise. See
   [Outside-In TDD](./deep-dive/outside-in-tdd.md).
 
 ### Testing the tests: mutation testing
@@ -113,7 +116,7 @@ and the tests with no context at all and checks that they speak the business lan
 
 A craftsperson does not decide alone what commits their client. In the workflow, a hexagon is a
 question asked to a human: `adr-ratification` has the ADRs ratified before DISTILL,
-`mutation-plan` has the developer decide what to do with the mutants the gate left alive. Without
+`scenario-review` has the scenarios read before DELIVER builds them, `mutation-plan` has the developer decide what to do with the mutants the gate left alive. Without
 an answer, the run waits; no agent can answer in the human's place. The agreement to push a
 branch is given once, before any run, and a run that lacks it is refused rather than left
 waiting. See
@@ -123,7 +126,7 @@ waiting. See
 
 ```mermaid
 flowchart LR
-    D["deliver<br/>software-engineer"] --> G["locked gates<br/>build · format · lint · test<br/>architecture · coverage"]
+    D["deliver<br/>software-engineer<br/>one scenario at a time"] --> G["locked gates<br/>build · format · lint · test<br/>architecture · coverage"]
     G -- "FAIL" --> D
     G -- "PASS" --> DR["DELIVER review<br/>lenses + verdict"]
     DR -- "NEEDS_REWORK" --> D

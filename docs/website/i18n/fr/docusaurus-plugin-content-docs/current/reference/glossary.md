@@ -130,7 +130,7 @@ Dans SKRAFT, un point de vue spécialisé de la revue adverse, porté par un age
 ## M
 
 **Microcks**
-Outil qui simule les API dont dépend un composant, à partir de leurs contrats ; il tourne dans un conteneur, Docker ou Podman. C'est le mocking par défaut d'un composant (`"mocking": { "strategy": "microcks" }`) : les tests qui l'utilisent exigent alors que Docker ou Podman tourne. `inprocess` s'en passe.
+Outil qui simule les API dont dépend un composant, à partir de leurs contrats ; ses tests le démarrent par Testcontainers (image uber native, un conteneur par session de tests), sur Docker ou Podman. C'est le mocking par défaut de toutes les stacks sauf React (`"mocking": { "strategy": "microcks" }`) : les tests qui l'utilisent exigent alors que Docker ou Podman tourne, et un rejeu sans l'un ni l'autre est INDETERMINATE, jamais sauté. `inprocess` s'en passe.
 → Voir [Microcks](./skraft-config.md)
 
 **MoSCoW**
@@ -150,7 +150,7 @@ Technique qui modifie légèrement le code source (introduit des "mutants") pour
 ## N
 
 **Nœud question**
-Un nœud du workflow de forme `hexagon` qui pose une question à un humain (`question="adr-ratification"`). Ses arêtes sortantes portent les réponses en label ; un refus (`REJECTED`) ramène au nœud dont il refuse le travail.
+Un nœud du workflow de forme `hexagon` qui pose une question à un humain (`question="adr-ratification"`, `"scenario-review"`, `"mutation-plan"`). Ses arêtes sortantes portent les réponses en label ; un refus (`REJECTED`, `REVISE`) ramène au nœud dont il refuse le travail.
 → Voir [Répondre à une question du run](../how-to/answer-a-question.mdx)
 
 ## O
@@ -180,10 +180,14 @@ Les quatre phases RESEARCH → DESIGN → DISTILL → DELIVER qu'une story trave
 Le slug écrit dans `.copilot-tracking/skraft-plans/.active-slug` : le run sur lequel agissent `skraft status`, `skraft gate` et la reprise. Un par copie de travail (donc par worktree) ; il ne change que par un init explicite, jamais deviné.
 → Voir [Pipeline actif](./run-journal.md)
 
+**Politique d'infrastructure**
+Sur quoi les tests d'un composant font tourner chaque sorte de dépendance, dans un scénario ciblé et dans le walking skeleton : point d'entrée en process / réel, gateway interne en mémoire / Testcontainers, gateway externe Microcks (le `mocking.strategy` du composant), horloge et aléa fake ; pour un front React, MSW dans les tests ciblés et Microcks dans l'e2e Playwright. Défauts du plugin par stack, surchargés par composant (`infrastructure`) dans `skraft-config.json` seulement.
+→ Voir [skraft-config.json](./skraft-config.md#infrastructure)
+
 ## Q
 
 **Question d'environnement**
-La question que le moteur pose quand la machine ne peut pas exécuter une étape (programme introuvable, Git en échec) : `Fix it, then RETRY; or ABORT the run.` `RETRY` revérifie ou relance la même étape ; `ABORT` bloque le run.
+La question que le moteur pose quand la machine ne peut pas exécuter une étape (programme introuvable, Git en échec, ni Docker ni Podman ne répondant à un rejeu) : `Fix it, then RETRY; or ABORT the run.` `RETRY` revérifie ou relance la même étape ; `ABORT` bloque le run.
 → Voir [Reprendre ou débloquer un run](../how-to/resume-a-run.mdx)
 
 ## R
@@ -198,6 +202,10 @@ L'agent qui vérifie un finding `blocker`, `high` ou `medium` en relisant l'endr
 
 **Reviewer**
 Agent IA en lecture seule qui juge les artefacts d'un agent exécuteur, sans jamais les modifier (principe CQS). En V2, les reviewers de phase laissent la place à des lentilles isolées dont le moteur combine les findings en verdict.
+
+**Revue des scénarios**
+La question (`scenario-review`) à laquelle un humain répond une fois la revue de DISTILL approuvée : elle nomme les scénarios de l'histoire dans l'ordre où DELIVER les construit et le test d'acceptation en échec de S1. `APPROVED` les livre un à un ; `REVISE` renvoie DISTILL avec les corrections.
+→ Voir [Répondre à une question du run](../how-to/answer-a-question.mdx)
 
 **Rework**
 Travail à refaire parce qu'il n'a pas passé la revue. SKRAFT vise à réduire le rework en filtrant les défauts tôt dans le pipeline.
@@ -249,7 +257,8 @@ Résultat d'une revue. En V2, le moteur le calcule à partir des findings typés
 ## W
 
 **Walking Skeleton**
-Première itération d'un projet qui traverse toutes les couches de l'architecture de bout en bout avec une fonctionnalité minimale. Valide l'architecture avant de construire les détails.
+Première itération d'un projet qui traverse toutes les couches de l'architecture de bout en bout avec une fonctionnalité minimale. Valide l'architecture avant de construire les détails. Dans SKRAFT, le scénario S1 de chaque histoire, tagué `@walking-skeleton`, dans un composant back : point d'entrée → cas d'usage → vraie base. Une histoire sans nouveau point d'entrée déclare plutôt une exemption (`library`, `refactoring`, `docs-only`).
+→ Voir [Walking Skeleton](../explanation/deep-dive/walking-skeleton.md)
 
 ## Sources
 
