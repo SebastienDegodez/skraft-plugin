@@ -405,8 +405,8 @@ export class InMemoryGit {
    *   tracked: the files it already holds, relative to its top; null when Git cannot list them;
    *   published: the files that first commit holds, relative to the working copy; commitFails:
    *   why every commit the engine makes fails, null when it succeeds; remote: the URL of the
-   *   working copy's remote, null without one; hex: commits named as Git names them, in
-   *   hexadecimal (`c0ffee<n>`), rather than `<repository>-<n>`
+   *   working copy's remote, null without one; hex: commits named as Git names them, forty
+   *   hexadecimal digits (hexSha), rather than `<repository>-<n>`
    */
   constructor({ repositories = { '.': { mergeBases: { main: 'root-0' } } }, unavailable = null, published = [], commitFails = null, remote = GITHUB_REMOTE, hex = false } = {}) {
     this.hex = hex
@@ -424,7 +424,7 @@ export class InMemoryGit {
     this.repositories = new Map(Object.entries(repositories).map(([top, { mergeBases = {}, tracked = [] }]) => {
 
       const key = tidy(top)
-      return [key, { mergeBases, tracked, history: [{ sha: hex ? 'c0ffee0' : `${shaPrefix(key)}-0`, subject: 'initial', body: '', files: [] }], dirty: new Set() }]
+      return [key, { mergeBases, tracked, history: [{ sha: hex ? hexSha(0) : `${shaPrefix(key)}-0`, subject: 'initial', body: '', files: [] }], dirty: new Set() }]
     }))
   }
   /** The repository holding a working-copy path, and the path inside it. */
@@ -461,7 +461,7 @@ export class InMemoryGit {
     const files = paths.map((path) => this.locate(path).inner)
     for (const file of files) at.repo.dirty.delete(file)
     at.repo.made = (at.repo.made ?? 0) + 1
-    const sha = this.hex ? `c0ffee${at.repo.made}` : `${shaPrefix(at.top)}-${at.repo.made}`
+    const sha = this.hex ? hexSha(at.repo.made) : `${shaPrefix(at.top)}-${at.repo.made}`
     at.repo.history.push({ sha, subject, body, files })
     return sha
   }
@@ -521,7 +521,7 @@ export class InMemoryGit {
     return this.published.has(file) || at.repo.history.slice(1, upTo + 1).some((commit) => commit.files.includes(at.inner))
   }
   async commitFiles(dir, paths, message) {
-    if (this.commitFails !== null) return { ok: false, error: this.commitFails }
+    if (this.commitFails !== null) return { ok: false, error: this.commitFails, output: `${this.commitFails}\nhusky - pre-commit script failed (code 1)\n` }
     this.engineCommits.push({ dir, paths, message })
     const [subject, ...rest] = message.split('\n')
     this.commit(subject, paths.map((path) => tidy(`${dir}/${path}`)), rest.join('\n').trim())
@@ -531,7 +531,7 @@ export class InMemoryGit {
   async commitCopies(dir, copies, message) {
     const refused = copies.filter(({ from }) => this.refuses.includes(from)).map(({ from }) => from)
     if (refused.length > 0) return { ok: false, error: 'refused', refused }
-    if (this.commitFails !== null) return { ok: false, error: this.commitFails }
+    if (this.commitFails !== null) return { ok: false, error: this.commitFails, output: `${this.commitFails}\nhusky - pre-commit script failed (code 1)\n` }
     this.copies.push(...copies.map(({ from, to }) => ({ from, to })))
     return this.commitFiles(dir, copies.map(({ to }) => to), message)
   }
@@ -559,6 +559,9 @@ export class InMemoryGit {
     this.patches[inner] = [...(this.patches[inner] ?? []), ...lines]
   }
 }
+/** The n-th commit of a repository whose commits are named as Git names them: `c0ffee<n>`, forty digits. @param {number} n */
+export const hexSha = (n) => `c0ffee${n}`.padEnd(40, '0')
+
 const shaPrefix = (top) => (top === '' ? 'root' : top.replaceAll('../', 'up-').replaceAll('/', '-'))
 
 /**

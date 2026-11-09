@@ -42,6 +42,7 @@ import { findComponentSkills } from './component-skills.mjs'
 import { proposedAdrs } from '../decisions/adr-ratification.mjs'
 import { attemptSignature, gateSignature, repeatedGate } from './failure-signatures.mjs'
 import { REPEATS } from '../../domain/pipeline/failure-signature.mjs'
+import { gateIncident } from './gate-incidents.mjs'
 
 /**
  * @typedef {import('./active-run.mjs').RunOutcome} RunOutcome
@@ -694,6 +695,7 @@ const briefPaths = ({ deps, slug, config }, run, next, { role, outputs, result, 
     inputs: [...inputsOf(run, next.node.id), ...(scan === null ? [] : [scan])].map(at),
     outputs: outputs.map(at),
     result: at(result),
+    scratch: { logs: at('logs/'), tmp: at('.tmp/') },
     allowed: allowedPaths(role, { slug, components: config.components }),
   }
 }
@@ -732,9 +734,9 @@ const briefComponent = (component, sha) => {
 const judgeAttempt = async (context, run, next, attempt) => {
   const checked = await checkAttempt(context, run, next, attempt)
   if (checked.commits.length > 0) await context.journal.append('commits.checked', { step: next.node.id, visit: next.visit, attempt: next.attempt, commits: checked.commits, ...unsettled(checked) })
-  if (checked.environment !== null) return escalate(context, next, checked.environment)
+  if (checked.environment !== null) return escalate(context, next, checked.environment, checked.incident)
   const committed = await commitDone(context, run, next, checked)
-  if (typeof committed === 'string') return escalate(context, next, committed)
+  if (committed !== null && 'environment' in committed) return escalate(context, next, committed.environment, committed.incident)
   await recordAttempt(context, run, next, { ...attempt, checked, committed })
   await warnSlowReplay(context, next.phase)
   return null
@@ -869,7 +871,7 @@ const gate = async (context, run, next) => {
   const started = context.deps.clock.now()
   const { gates, failure } = await gateResults(context, run, node)
   const failures = gates.filter((result) => result.status === 'fail').map((result) => `${result.component}/${result.gate}: ${result.reason} (evidence: ${result.evidence})`)
-  if (failure === 'environment') return escalate(context, next, failures.join('; '))
+  if (failure === 'environment' || failure === 'unknown') return escalate(context, next, failures.join('; '), gateIncident(gates, failure))
   const signature = failure === null ? null : await gateSignature(context, { step: node.id, failures })
   await recordGate(context, run, next, { failure, failures, signature, started, survivors: groupSurvivors(gates.flatMap((result) => result.survivors ?? [])) })
   return null

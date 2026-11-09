@@ -28,9 +28,10 @@ import { planOf, replayScenarioGreen, scenarioFailures, scenarioJudging, scenari
  * @typedef {{
  *   missing: string[], failures: string[], code: FailureCode | null, commits: CheckedCommit[],
  *   environment: null, replayMs: number, uncommitted?: UncommittedFile[], scenario?: import('./scenario-checks.mjs').ScenarioRecord,
- * } | { commits: CheckedCommit[], environment: string }} StepCheck
+ * } | { commits: CheckedCommit[], environment: string, incident?: import('../../domain/pipeline/incidents.mjs').Incident }} StepCheck
  *   environment: why the machine could not check the step (a missing test command, Git
- *   failing); the step then stays open. uncommitted: the files in its scope the agent changed
+ *   failing); the step then stays open. incident: whose it is to fix and where the command that
+ *   stopped printed, when a replay stopped; else the machine's, with no log. uncommitted: the files in its scope the agent changed
  *   and left uncommitted, which the engine commits once the step is done: only an agent with no
  *   shell gets there, one with a shell is refused for them; absent when the agent is blocked.
  * @typedef {{ repository: string, file: string, path: string }} UncommittedFile
@@ -100,7 +101,7 @@ export const checkStep = async (context, step) => {
   const read = await readAttempt(context, step)
   if ('stop' in read) return read.stop
   const commits = await checkCommits(context.deps, context, { ...step, plan: read.plan.plan })
-  if (commits.environment !== null) return { ...environmentOnly(commits.environment), commits: commits.checked }
+  if (commits.environment !== null) return { ...environmentOnly(commits.environment), commits: commits.checked, ...incidentOf(commits) }
   const adr = await adrFailures(context.deps, { base: context.base, touched: read.touched })
   if (typeof adr === 'string') return { ...environmentOnly(adr), commits: commits.checked }
   const found = [...resultFailures(read.reading), ...read.records, ...read.plan.failures, ...read.prose, ...read.scope.failures, ...adrLines(adr), ...commits.found]
@@ -167,6 +168,9 @@ const adrLines = (lines) => lines.map((line) => ({ code: /** @type {const} */ ('
 
 /** @param {string} reason @returns {StepCheck} */
 const environmentOnly = (reason) => ({ commits: [], environment: reason })
+
+/** The incident a replay that stopped the check left; none when Git stopped it first. @param {{ incident?: import('../../domain/pipeline/incidents.mjs').Incident | null }} commits */
+const incidentOf = ({ incident }) => (incident ? { incident } : {})
 
 /**
  * The outputs the attempt left as they were before it.
@@ -310,7 +314,7 @@ const isRootFile = (path, root) => {
  * the scenario the pass works on; each red of an acceptance test replayed, and the green of a
  * scenario; the environment reason when the machine cannot check them.
  * @param {CheckDeps} deps
- * @param {Pick<CheckContext, 'config' | 'base' | 'story'>} run
+ * @param {Pick<CheckContext, 'config' | 'base' | 'story' | 'slug'>} run
  * @param {{ role: import('../../domain/pipeline/roles.mjs').Role, visitHeads: Head[], redByGateFailure: boolean, known: KnownCommits, scenario: ScenarioPass | null, plan: import('../../domain/pipeline/scenarios.mjs').ScenarioPlan | null }} step
  * @returns {Promise<{ environment: string, checked: CheckedCommit[] } | { environment: null, checked: CheckedCommit[], found: Failure[], replayMs: number, scenario: import('./scenario-checks.mjs').ScenarioRecord }>}
  */
@@ -322,7 +326,7 @@ const checkCommits = async (deps, run, step) => {
   const tally = emptyTally()
   const environment = await replayed(deps, { run, step, judged, tally })
   const checked = report(judged, tally.replays)
-  return environment === null ? { environment, checked, ...passFound(judged, { issue, tally, components: run.config.components }, step) } : { environment, checked }
+  return environment === null ? { environment, checked, ...passFound(judged, { issue, tally, components: run.config.components }, step) } : { environment, checked, incident: tally.incident }
 }
 
 /**
@@ -349,12 +353,13 @@ const judgedPass = (history, { issue, components }, { redByGateFailure, scenario
  * Replays the reds of an acceptance test, never a red of an inner loop nor a test that kills a
  * surviving mutant, then the green of a scenario.
  * @param {CheckDeps} deps
- * @param {{ run: Pick<CheckContext, 'config' | 'base'>, step: Parameters<typeof checkCommits>[2], judged: JudgedCommit[], tally: import('./commit-replays.mjs').ReplayTally }} pass
+ * @param {{ run: Pick<CheckContext, 'config' | 'base' | 'slug'>, step: Parameters<typeof checkCommits>[2], judged: JudgedCommit[], tally: import('./commit-replays.mjs').ReplayTally }} pass
  * @returns {Promise<string | null>}
  */
 const replayed = async (deps, { run, step, judged, tally }) => {
-  const reds = await replayReds(deps, tally, { config: run.config, base: run.base, judged: step.role.tdd === 'red' ? judged : [], known: step.known })
-  return reds ?? replayScenarioGreen(deps, { base: run.base, tally }, { judged, scenario: step.scenario, components: run.config.components })
+  // Stryker disable next-line ArrayDeclaration: a list that holds no red commit replays none
+  const reds = await replayReds(deps, tally, { config: run.config, base: run.base, judged: step.role.tdd === 'red' ? judged : [], known: step.known, slug: run.slug })
+  return reds ?? replayScenarioGreen(deps, { base: run.base, tally, slug: run.slug }, { judged, scenario: step.scenario, components: run.config.components })
 }
 
 /** @param {JudgedCommit[]} judged @param {{ details: Map<string, string>, issue: number | null }} context @returns {Failure[]} */

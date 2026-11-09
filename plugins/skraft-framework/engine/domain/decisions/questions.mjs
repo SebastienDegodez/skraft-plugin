@@ -1,5 +1,6 @@
 import { inert } from '../reporting/markdown-safety.mjs'
 import { REPEATS } from '../pipeline/failure-signature.mjs'
+import { causeLines } from '../pipeline/incidents.mjs'
 
 /**
  * The questions a run asks a human, and how an answer to one is read. A question node of the
@@ -139,10 +140,16 @@ export const mutationPlanText = (proposals) =>
   `The mutation gate failed; a proposal for its surviving mutants is in ${proposals.join(', ')}. ${APPLY} applies it; or write how to treat them instead; ${STOP} ends the run.`
 
 /**
- * The text of an environment question.
+ * The text of an environment question: why the step cannot run, its cause, the file that holds
+ * what the failing command printed, and what each answer does.
  * @param {string} step the node that could not run @param {string} reason why
+ * @param {import('../pipeline/incidents.mjs').Incident} incident
  */
-export const environmentText = (step, reason) => `${step} cannot run on this machine: ${reason}. Fix it, then RETRY; or ABORT the run.`
+export const environmentText = (step, reason, incident) => [
+  `${step} cannot run on this machine: ${reason}.`,
+  ...causeLines(incident),
+  `Fix it, then RETRY: ${step} runs again where it stopped, using no new attempt; or ABORT: the run ends.`,
+].join('\n')
 
 /**
  * The text of a blocked question: the node an instruction runs again, why it is blocked, from

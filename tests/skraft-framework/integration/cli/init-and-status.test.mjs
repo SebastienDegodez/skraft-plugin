@@ -243,7 +243,7 @@ test('skraft status names the gate node a waiting run stands on, as the pane doe
     'gates: build, format, lint, test, architecture, coverage (gates)',
     'answer: skraft decide gates-1 RETRY|ABORT',
   ])
-  assert.match(status.out.at(-1), /^gates cannot run on this machine: app\/test: exited 127 \(evidence: .+test-1\.log\)\. Fix it, then RETRY; or ABORT the run\.$/)
+  assert.match(status.out.at(-1), /^gates cannot run on this machine: app\/test: exited 127 \(evidence: .+test-1\.log\)\.\nCause: the machine: .+\nOutput: .+gates\/app\/test-1\.log\nFix it, then RETRY: gates runs again where it stopped, using no new attempt; or ABORT: the run ends\.$/)
   assert.deepEqual(JSON.parse((await inProcess(cwd, ['status', '--json'])).out.join('\n')).current, {
     step: 'gates', phase: 'DELIVER', agent: null, gates: ['build', 'format', 'lint', 'test', 'architecture', 'coverage'], question: null, visit: 1, attempt: 1,
   })

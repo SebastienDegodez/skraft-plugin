@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { BUILT_IN_WORKFLOW, InMemoryGit, InMemoryTracking, ScriptedMachine, failingAnotherTest } from '../support/in-memory-host.mjs'
+import { BUILT_IN_WORKFLOW, InMemoryGit, InMemoryTracking, ScriptedMachine, failingAnotherTest, hexSha } from '../support/in-memory-host.mjs'
 import { agent, API, green, scripted, SLUG, tddCycle, TRACKING } from '../support/pipeline-host.mjs'
 
 const WEB = { name: 'web', root: '../web', stack: 'react', bdd: false, mocking: { strategy: 'inprocess' }, paths: { src: ['src'], tests: ['src'] }, commands: { lint: 'npx eslint .' } }
@@ -86,9 +86,9 @@ test('gates of two components, one failing on another test at each round, are se
 })
 
 test('an agent refused twice the same way, its commit made again under another sha, trips the breaker on its second attempt', async () => {
-  const git = new InMemoryGit({ hex: true, repositories: { '.': { mergeBases: { main: 'c0ffee0' } } } })
+  const git = new InMemoryGit({ hex: true, repositories: { '.': { mergeBases: { main: hexSha(0) } } } })
   const wip = ({ git: made }) => {
-    made.reset('.', 'c0ffee0')
+    made.reset('.', hexSha(0))
     made.commit('wip', ['tests/PayTests.cs'])
   }
   const host = scripted({ git }, (it) => [agent()(it), agent()(it), agent({ work: wip })(it), agent({ work: wip })(it), agent()(it)])
@@ -126,9 +126,9 @@ test('gates whose loop reaches its max_visits as their failure comes back the th
 
 test('an agent that keeps coming back to the same failure, another one between, stops at the third time though it has attempts left', async () => {
   const workflow = BUILT_IN_WORKFLOW.replace('deliver  [shape=box, agent="software-engineer", phase="DELIVER", each="scenario"]', 'deliver  [shape=box, agent="software-engineer", phase="DELIVER", each="scenario", max_attempts=6]')
-  const git = new InMemoryGit({ hex: true, repositories: { '.': { mergeBases: { main: 'c0ffee0' } } } })
+  const git = new InMemoryGit({ hex: true, repositories: { '.': { mergeBases: { main: hexSha(0) } } } })
   const again = (subject) => ({ git: made }) => {
-    made.reset('.', 'c0ffee1')
+    made.reset('.', hexSha(1))
     made.commit(subject, ['src/Checkout.cs'])
   }
   const host = scripted({ git, files: { '.skraft/pipeline.skraft.dot': workflow } }, (it) => [

@@ -358,7 +358,7 @@ test('a mutation run without a readable report waits for a human, naming where t
 
     const outcome = await host.start()
 
-    assert.deepEqual(outcome, { status: 'waiting', slug: SLUG, phase: 'DELIVER', code: 'environment', reason: waitingOnEnvironment('mutation', lookedFor(exit)) })
+    assert.deepEqual(outcome, { status: 'waiting', slug: SLUG, phase: 'DELIVER', code: 'environment', reason: waitingOnEnvironment('mutation', lookedFor(exit), 1, { log: `${TRACKING}/gates/api/mutation-1.log` }) })
   }
 
   for (const report of ['not JSON at all', '{ "files": [] }', JSON.stringify({ files: { 'src/Checkout.cs': { mutants: [{ id: '1', mutatorName: 'Equality', status: 'Survived' }] } } })]) {

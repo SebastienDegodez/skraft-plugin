@@ -95,7 +95,7 @@ test('a gate the machine cannot run waits for a human; once fixed and retried, t
 
   assert.deepEqual(outcome, {
     status: 'waiting', slug: SLUG, phase: 'DELIVER', code: 'environment',
-    reason: waitingOnEnvironment('gates', `api/build: command not found: dotnet; install it or change the command in skraft-config.json (evidence: ${TRACKING}/gates/api/build-1.log)`),
+    reason: waitingOnEnvironment('gates', `api/build: command not found: dotnet; install it or change the command in skraft-config.json (evidence: ${TRACKING}/gates/api/build-1.log)`, 1, { log: `${TRACKING}/gates/api/build-1.log` }),
   })
   assert.deepEqual(host.types().slice(-3), ['step.started', 'gate.ran', 'question.asked'])
   assert.equal((await host.view()).current.gates.length, 6)
@@ -116,7 +116,7 @@ test('a gate the machine cannot run waits for a human; once fixed and retried, t
   assert.equal((await both.start()).reason, waitingOnEnvironment('gates', [
     `api/build: command not found: dotnet; install it or change the command in skraft-config.json (evidence: ${TRACKING}/gates/api/build-1.log)`,
     `web/lint: command not found: npx; install it or change the command in skraft-config.json (evidence: ${TRACKING}/gates/web/lint-1.log)`,
-  ].join('; ')))
+  ].join('; '), 1, { log: `${TRACKING}/gates/api/build-1.log` }))
 })
 
 test('the goal gate runs the gates of the components the story touched, then those of every other one', async () => {
@@ -149,7 +149,7 @@ test('a gate node that is not a goal gate runs its own gates on the touched comp
   ])
 })
 
-test('a component with none of a gate node\'s gates fails it as environment', async () => {
+test('a component with none of a gate node\'s gates fails it as environment, its configuration\'s to fix', async () => {
   const workflow = BUILT_IN_WORKFLOW
     .replace('gates    [shape=parallelogram', 'quick [shape=parallelogram, gate="lint"]\n  gates    [shape=parallelogram')
     .replace('deliver -> gates', 'deliver -> quick -> gates')
@@ -157,7 +157,7 @@ test('a component with none of a gate node\'s gates fails it as environment', as
 
   const outcome = await host.start()
 
-  assert.deepEqual([outcome.code, outcome.reason], ['environment', waitingOnEnvironment('quick', `api/none: no gate command; give it at least one of lint in skraft-config.json (evidence: ${TRACKING}/gates/api)`)])
+  assert.deepEqual([outcome.code, outcome.reason], ['environment', waitingOnEnvironment('quick', `api/none: no gate command; give it at least one of lint in skraft-config.json (evidence: ${TRACKING}/gates/api)`, 1, { owner: 'config' })])
 })
 
 test('a failing gate with no FAIL edge stops the run with the gate failures', async () => {

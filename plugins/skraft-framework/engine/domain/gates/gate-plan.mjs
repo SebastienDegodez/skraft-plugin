@@ -1,10 +1,12 @@
 import { normalizeRelative, pathUnder } from '../config/relative-path.mjs'
 import { mutationOutputsOf } from './mutation-report.mjs'
+import { endedByMachine } from '../pipeline/incidents.mjs'
 
 /**
  * @typedef {import('../config/skraft-config.mjs').Component} Component
- * @typedef {'environment' | 'deterministic'} FailureClass
+ * @typedef {'environment' | 'unknown' | 'deterministic'} FailureClass
  *   environment: the machine is missing something a human must provide (a command);
+ *   unknown: a signal or a crash stopped the command, which no check of the code explains;
  *   deterministic: the command ran and failed, and fails the same way until the code changes.
  */
 
@@ -23,6 +25,7 @@ const NOT_FOUND_EXIT = Object.freeze([127, 9009])
  */
 export const failureOf = ({ started, exitCode }) => {
   if (!started || exitCode === null || NOT_FOUND_EXIT.includes(exitCode)) return 'environment'
+  if (endedByMachine(exitCode)) return 'unknown'
   return exitCode === 0 ? null : 'deterministic'
 }
 

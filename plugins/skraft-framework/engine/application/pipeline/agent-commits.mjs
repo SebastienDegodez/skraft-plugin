@@ -1,4 +1,5 @@
 import { engineMessage, issueOf } from '../../domain/pipeline/commits.mjs'
+import { refusedCommit } from './refused-commits.mjs'
 
 /**
  * The commit the engine makes for an agent with no shell: what it changed in its scope, once its
@@ -10,19 +11,21 @@ import { engineMessage, issueOf } from '../../domain/pipeline/commits.mjs'
 
 /**
  * Commits the files a done attempt of an agent with no shell left; null when there is nothing to
- * commit, a string when Git refused the commit.
- * @param {{ sourceControl: import('../ports/source-control.mjs').SourceControl }} deps
+ * commit, why and the incident when Git refused the commit.
+ * @param {{ sourceControl: import('../ports/source-control.mjs').SourceControl, files: import('../ports/tracking-files.mjs').TrackingFiles }} deps
  * @param {{ slug: string, step: string, story: { issue?: number | null } | null }} run
  * @param {UncommittedFile[]} files
- * @returns {Promise<EngineCommit | null | string>}
+ * @returns {Promise<EngineCommit | null | Refused>}
  */
-export const commitForAgent = async ({ sourceControl }, { slug, step, story }, files) => {
+export const commitForAgent = async (deps, { slug, step, story }, files) => {
   if (files.length === 0) return null
   const subject = `docs(${slug}): ${step} ${slug}`
   for (const repository of new Set(files.map((file) => file.repository))) {
     const inside = files.filter((file) => file.repository === repository).map((file) => file.file)
-    const commit = await sourceControl.commitFiles(repository, inside, engineMessage(subject, issueOf(story)))
-    if (!commit.ok) return `Git refused to commit what ${step} wrote in ${repository}; check git status, then retry`
+    const commit = await deps.sourceControl.commitFiles(repository, inside, engineMessage(subject, issueOf(story)))
+    if (!commit.ok) return { environment: `Git refused to commit what ${step} wrote in ${repository}; check git status, then retry`, incident: await refusedCommit(deps, { slug, step }, commit) }
   }
   return { subject, files: files.map((file) => file.path) }
 }
+
+/** @typedef {{ environment: string, incident: import('../../domain/pipeline/incidents.mjs').Incident }} Refused */

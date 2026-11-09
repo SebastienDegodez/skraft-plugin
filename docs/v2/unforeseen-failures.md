@@ -1,7 +1,7 @@
 # Le moteur skraft face à l'imprévu
 
-> Branche : `feat/unforeseen-failures`, empilée sur `feat/564-deliver-per-scenario` (PR #567),
-> vers `integration/v2-next` (lots 1 à 5). Lots 6 et 7 : 2.1.0, seulement si les données le
+> Branche : `feat/unforeseen-failures`, PR #568, empilée sur `feat/564-deliver-per-scenario`
+> (PR #567), vers `integration/v2-next` (lots 1 à 5, dans cette seule PR). Lots 6 et 7 : 2.1.0, seulement si les données le
 > justifient.
 > Ce document est la référence du travail : chaque lot s'y coche, chaque décision s'y écrit.
 
@@ -80,8 +80,13 @@ qu'elle touche.
 | D1 | Seuil de la signature | **3 occurrences par nœud depuis son dernier passage réussi** ; 2 tentatives consécutives identiques d'un même nœud restent le disjoncteur, désormais normalisé | Un test instable qui échoue une fois puis passe n'atteint jamais 3. Compter sur tout le run arrêtait à tort une boucle qui progresse (mutation qui échoue, passe, puis rechute) : le compte repart à zéro quand le nœud passe, comme `mutation-stalled` |
 | D2 | `logs/` et `.tmp/` | **Oui** : ignorés par git, hors contrôle des droits d'écriture | Ce sont des sorties du run, comme les rapports de test que #567 exclut déjà |
 | D3 | Déclencheur du lot 6 | Les seuils de la section 7 | Décider sur des données, pas sur une intuition |
-| D4 | Suivi | **Ce document**, sans issue séparée ; **une PR par lot**, empilées | Demandé ; la revue reste lisible lot par lot |
+| D4 | Suivi | **Ce document**, sans issue séparée ; **une seule PR (#568)** pour les lots 1 à 5, un commit par lot | Demandé (« fais tout dans la même ») |
 | D5 | Empreinte | Hash FNV-1a 32 bits de la preuve normalisée, en hexadécimal, calculé en JavaScript pur | Le domaine n'importe pas `node:crypto` ; l'empreinte reste courte dans le journal |
+| D6 | `TMPDIR` des commandes du moteur | **Non redirigé** vers `.tmp/` ; seuls les agents sont orientés vers `logs/` et `.tmp/` | Une demande d'autorisation ne vient que d'un outil d'agent, jamais d'une commande lancée par le moteur. Un `TMPDIR` long dans la copie de travail casse les sockets Unix (104 caractères sous macOS) de MSBuild, Gradle ou Python : ce serait créer des imprévus |
+| D7 | Fin de sortie d'une commande | **Écrite dans un log** sous `logs/` ; le journal et les questions nomment ce log, sans recopier la sortie | Règle du moteur : les messages sont fixés par le code, jamais de stderr dans le journal ni dans une question |
+| D8 | Cause « config » d'un rouge sans rapport | Reconnue par la règle de `skraft doctor` (la commande lance un runner connu qui n'écrit pas de rapport là où `testReports` regarde), sans rejeu au parent | Déterministe et sans coût ; un rejeu au parent confond un composant neuf, sans test, avec une config fausse |
+| D9 | « Inconnu » | Une commande arrêtée par un signal ou un plantage : code de sortie > 128 (POSIX) ou code de plantage Windows (≥ `0xC0000000`) ; elle passe par la question `environment` avec la cause `unknown` | Ni un test rouge, ni une config : l'agent n'y peut rien, l'humain lit le log |
+| D10 | Propriétaire sur `step.recorded` | **Pas de champ** : une tentative refusée ou une étape de gates en échec revient toujours à l'agent ; seule une escalade porte un `incident` (`owner`, `log`) | Un champ toujours égal à `agent` n'informe de rien |
 
 ## 5. Lots V2
 
@@ -121,6 +126,24 @@ qu'elle touche.
 
 ### Lot 2 — Incident structuré, propriétaire et dossier temporaire
 
+Livré ainsi (D6, D7, D8, D10) :
+- [x] une escalade (`question.asked` de type `environment`) porte `incident` : `{ owner, log }`,
+  `owner` ∈ `environment`, `config`, `unknown` ;
+- [x] la question `environment` dit la cause, le log (`Output:`) et ce que fait chaque réponse
+  (RETRY relance là où l'étape s'est arrêtée, sans tentative ; ABORT termine le run) ;
+- [x] la sortie de chaque rejeu va dans `logs/replay-<sha court>-<composant>-<commande>.log`
+  (`-parent` pour le rejeu e2e au commit parent) ; un refus de rouge ou de green nomme ce log, et
+  le rejeu journalisé (`commits.checked`) porte `log` ;
+- [x] cause `config` : une commande de rejeu sans `test`, à syntaxe shell ou qui installe des
+  dépendances ; un rejeu sans rapport dont la commande lance un runner connu qui n'écrit pas de
+  JUnit là où `testReports` regarde (D8) ;
+- [x] un commit du moteur refusé par Git (hook, identité, verrou) écrit la sortie de Git dans
+  `logs/commit-<nœud>.log` et l'escalade la nomme (commit d'un agent sans shell, ratification des
+  ADR) ;
+- [x] chaque agent est dit d'envoyer la sortie de ses commandes sous `logs/` et ses fichiers
+  temporaires sous `.tmp/` du run, jamais sous `/tmp` ni hors de la copie de travail ;
+- [x] `logs/` et `.tmp/` ne sont pas des documents de la phase (ni lentilles, ni revue).
+
 - [ ] Incident ajouté à `step.recorded` : `category`, `owner`, `argv`, `exitCode`, `tail` (fin
   de sortie bornée), `attempts`, `signature`.
 - [ ] Table `cause → propriétaire` codée en dur dans le domaine :
@@ -156,10 +179,12 @@ qu'elle touche.
 
 ### Lot 3 — Inconnu : arrêt avec diagnostic
 
-- [ ] Un incident « inconnu » arrête l'étape **sans consommer de tentative d'agent**.
-- [ ] La question existante (`blocked` ou `environment`) est enrichie de l'incident : quoi, où,
-  commande, code, fin de sortie, ce qui a déjà été tenté, chemin du log complet.
-- [ ] Le développeur choisit avec les options existantes ; rien de nouveau à ratifier.
+- [x] Un incident « inconnu » (D9 : signal ou plantage, gate ou rejeu) arrête l'étape **sans
+  consommer de tentative d'agent** : classe d'échec `unknown`, question `environment`.
+- [x] La question est enrichie de l'incident : quoi (la raison), où (l'étape), la commande et son
+  code dans la raison, la cause, le log complet ; la fin de sortie reste dans le log (D7).
+- [x] Le développeur choisit avec les options existantes ; rien de nouveau à ratifier.
+- Un code 128 (Git sur une erreur fatale) reste un échec de vérification, renvoyé à l'agent.
 
 ### Lot 4 — Rapport d'arrêt et de fin
 
@@ -258,8 +283,8 @@ n'apportera rien de plus qu'un bon diagnostic, et on s'arrête au lot 7.
 
 | Lot | Branche / PR | État | Notes |
 |---|---|---|---|
-| 1 | `feat/unforeseen-failures` | fait | mutation 100 % (domaine, application) ; un journal V2 écrit avant le lot 1 n'a pas de signature : deux échecs consécutifs y déclenchent le disjoncteur (V2 non publiée) |
-| 2 | | à faire | |
-| 3 | | à faire | |
-| 4 | | à faire | |
-| 5 | | à faire | |
+| 1 | `feat/unforeseen-failures` (#568) | fait | mutation 100 % (domaine, application) ; un journal V2 écrit avant le lot 1 n'a pas de signature : deux échecs consécutifs y déclenchent le disjoncteur (V2 non publiée) |
+| 2 | `feat/unforeseen-failures` (#568) | fait | mutation 100 % (domaine, application) |
+| 3 | #568 | fait | livré avec le lot 2, même commit |
+| 4 | #568 | à faire | |
+| 5 | #568 | à faire | |

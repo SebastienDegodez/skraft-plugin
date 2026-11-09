@@ -13,6 +13,8 @@ import { loadConfig } from '../config/bases.mjs'
 import { forgeMissing } from '../config/forge.mjs'
 import { leave } from './run-routes.mjs'
 import { verdictPath } from '../review/review-runs.mjs'
+import { MACHINE } from '../../domain/pipeline/incidents.mjs'
+import { refusedCommit } from './refused-commits.mjs'
 
 /**
  * The questions a run puts to a human: an ask node's, and the one the engine asks when the
@@ -37,7 +39,7 @@ import { verdictPath } from '../review/review-runs.mjs'
  * @typedef {{ answered: Answer } | { text: string, subjects: string[] } | { environment: string }} Plan
  *   answered: the question needs no human (nothing to ratify);
  *   environment: the machine cannot tell what to ask.
- * @typedef {{ failures: string[] } | { environment: string } | { stop: string }} Act
+ * @typedef {{ failures: string[] } | { environment: string, incident?: import('../../domain/pipeline/incidents.mjs').Incident } | { stop: string }} Act
  *   failures: what goes on to the node an answer leads to; stop: why the answer ends the run.
  * @typedef {{ plan: (context: Context) => Promise<Plan>, act: (context: Context, asked: AskedQuestion, run: RunState) => Promise<Act> }} Questionnaire
  */
@@ -45,8 +47,8 @@ import { verdictPath } from '../review/review-runs.mjs'
 /** @type {Questionnaire} */
 const RATIFICATION = {
   plan: async ({ deps }) => adrPlan(await proposedAdrs(deps)),
-  act: async ({ deps }, asked, run) => (asked.answer === 'RATIFIED'
-    ? committed(await ratify(deps, { adrs: asked.subjects, day: dayOf(deps.clock.now()), issue: issueOf(run.story) }))
+  act: async ({ deps, slug }, asked, run) => (asked.answer === 'RATIFIED'
+    ? committed({ deps, slug, step: asked.step }, await ratify(deps, { adrs: asked.subjects, day: dayOf(deps.clock.now()), issue: issueOf(run.story) }))
     : { failures: [`${asked.subjects.join(', ')}: ${asked.reason}`] }),
 }
 
@@ -116,8 +118,13 @@ const adrPlan = (adrs) => {
   return adrs.length === 0 ? { answered: { answer: 'RATIFIED', reason: 'no Proposed ADR to ratify' } } : { text: ratificationText(adrs), subjects: adrs }
 }
 
-/** @param {{ ok: true } | { ok: false, error: string }} commit @returns {Act} */
-const committed = (commit) => (commit.ok ? { failures: [] } : { environment: commit.error })
+/**
+ * The ratification committed goes on; Git refusing its commit asks a human, naming what Git printed.
+ * @param {{ deps: { files: import('../ports/tracking-files.mjs').TrackingFiles }, slug: string, step: string }} at
+ * @param {{ ok: true } | { ok: false, error: string, output: string }} commit
+ * @returns {Promise<Act>}
+ */
+const committed = async ({ deps, slug, step }, commit) => (commit.ok ? { failures: [] } : { environment: commit.error, incident: await refusedCommit(deps, { slug, step }, commit) })
 
 /**
  * An ask node: the question asked once, its answer acted on, the run routed by it.
@@ -205,7 +212,7 @@ export const waiting = ({ slug }, asked, phase) => ({
  */
 const settleAsk = async (context, run, next, asked) => {
   const done = await QUESTIONNAIRES[/** @type {NodeQuestion} */ (next.node.question)].act(context, asked, run)
-  if ('environment' in done) return escalate(context, next, done.environment)
+  if ('environment' in done) return escalate(context, next, done.environment, done.incident)
   const answered = { answer: /** @type {string} */ (asked.answer), reason: asked.reason, outcome: /** @type {const} */ ('answered') }
   return recordAsk(context, run, next, 'stop' in done ? { ...answered, failures: [], stop: done.stop } : { ...answered, failures: done.failures })
 }
@@ -267,14 +274,15 @@ const retried = async (context, phase) => {
 }
 
 /**
- * The machine cannot run the step: the engine asks a human to fix it and RETRY, or ABORT. The
- * step stays open; the run settles the question before anything else.
+ * The machine cannot run the step: the engine asks a human to fix it and RETRY, or ABORT, with
+ * the incident it knows of. The step stays open; the run settles the question before anything else.
  * @param {Context} context @param {Pick<WorkStep, 'node' | 'visit'>} next @param {string} reason
+ * @param {import('../../domain/pipeline/incidents.mjs').Incident} [incident]
  * @returns {Promise<null>}
  */
-export const escalate = async ({ journal }, { node, visit }, reason) => {
-  const question = questionOf('environment', nextKey(journal, node.id), environmentText(node.id, reason))
-  await journal.append('question.asked', { ...question, step: node.id, visit, subjects: [] })
+export const escalate = async ({ journal }, { node, visit }, reason, incident = MACHINE) => {
+  const question = questionOf('environment', nextKey(journal, node.id), environmentText(node.id, reason, incident))
+  await journal.append('question.asked', { ...question, step: node.id, visit, subjects: [], incident })
   return null
 }
 

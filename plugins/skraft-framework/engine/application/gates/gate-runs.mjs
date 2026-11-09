@@ -8,6 +8,7 @@ import { workingCopyOf } from '../../domain/review/locations.mjs'
 import { baseOf } from '../config/bases.mjs'
 import { JournalConflict } from '../journal/run-journal.mjs'
 import { startFirst } from './program-start.mjs'
+import { endedByMachine } from '../../domain/pipeline/incidents.mjs'
 
 /**
  * @typedef {import('../../domain/config/skraft-config.mjs').Component} Component
@@ -74,14 +75,17 @@ const stoppedBy = (error, { components, gates }) => {
 }
 
 /**
- * Environment when any failed gate is, so a human looks first; null when every gate passed.
+ * The class of the failed gate a human looks at first: the machine, then a signal or a crash,
+ * then the code; null when every gate passed.
  * @param {GateResult[]} gates @returns {FailureClass | null}
  */
 const failureOfGates = (gates) => {
-  const failed = gates.filter((gate) => gate.status === 'fail')
-  if (failed.length === 0) return null
-  return failed.some((gate) => gate.failure === 'environment') ? 'environment' : 'deterministic'
+  const failed = gates.map((gate) => gate.failure)
+  return CLASS_ORDER.find((failure) => failed.includes(failure)) ?? null
 }
+
+/** @type {readonly FailureClass[]} */
+const CLASS_ORDER = Object.freeze(['environment', 'unknown', 'deterministic'])
 
 /**
  * The components whose gates run, the skipped ones left out: every one for `all`, the touched
@@ -177,7 +181,7 @@ const runOne = async (deps, context, { gate, baseSha }) => {
  */
 const judgeRun = async (deps, ran, tried) => {
   const failure = tried.result === null ? 'environment' : failureOf(tried.result)
-  if (ran.gate !== 'mutation' || failure === 'environment') return { failure, reason: tried.reason, survivors: null, scores: null }
+  if (ran.gate !== 'mutation' || failure === 'environment' || failure === 'unknown') return { failure, reason: tried.reason, survivors: null, scores: null }
   return judgeMutation(deps, ran, tried, failure)
 }
 
@@ -377,4 +381,7 @@ const startReason = (result) => (result.truncated ? `${endReason(result)}; ${OUT
  */
 const endReason = (result) => !result.started
   ? `${result.error}; install it or change the command in ${CONFIG_FILE}`
-  : result.exitCode === null ? `${result.error}; run it again` : `exited ${result.exitCode}`
+  : result.exitCode === null ? `${result.error}; run it again` : exitText(result.exitCode)
+
+/** @param {number} exitCode */
+const exitText = (exitCode) => (endedByMachine(exitCode) ? `was stopped by a signal or crashed (exit ${exitCode}), not by a failing check` : `exited ${exitCode}`)

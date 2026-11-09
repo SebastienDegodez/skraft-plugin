@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { BUILT_IN_WORKFLOW, InMemoryGit } from '../support/in-memory-host.mjs'
-import { agent, API, CYCLE, scripted, SLUG } from '../support/pipeline-host.mjs'
+import { agent, API, CYCLE, scripted, SLUG, TRACKING } from '../support/pipeline-host.mjs'
 import { waitingOnEnvironment } from '../support/decisions.mjs'
 
 /** A component that keeps its scenarios in docs/features, so its designer may write them there. */
@@ -256,7 +256,7 @@ test('the engine commits what an agent with no shell left in a neighbour reposit
   assert.deepEqual(host.git.engineCommits.map(({ dir, paths }) => [dir, paths]), [['.', ['docs/architecture/context-map.md']], ['../web', ['docs/payment.md']]])
 })
 
-test('Git refusing the engine\'s commit of an architect\'s documents asks the human to fix the machine, with a message of its own', async () => {
+test('Git refusing the engine\'s commit of an architect\'s documents asks the human to fix the machine, with a message of its own and what Git printed, a hook\'s refusal included', async () => {
   const host = scripted({ git: new InMemoryGit({ commitFails: 'fatal: index.lock exists' }) }, (it) => [
     agent()(it),
     agent({ work: ({ git }) => git.change(...DESIGN_DOCUMENTS) })(it),
@@ -265,8 +265,9 @@ test('Git refusing the engine\'s commit of an architect\'s documents asks the hu
 
   const outcome = await host.start()
 
-  assert.deepEqual(outcome, { status: 'waiting', slug: SLUG, phase: 'DESIGN', code: 'environment', reason: waitingOnEnvironment('design', 'Git refused to commit what design wrote in .; check git status, then retry') })
+  assert.deepEqual(outcome, { status: 'waiting', slug: SLUG, phase: 'DESIGN', code: 'environment', reason: waitingOnEnvironment('design', 'Git refused to commit what design wrote in .; check git status, then retry', 1, { log: `${TRACKING}/logs/commit-design.log` }) })
   assert.deepEqual(recorded(host, 'design'), [])
+  assert.match(host.tracking.files.get(`${SLUG}/logs/commit-design.log`), /\n--- output\nfatal: index\.lock exists\nhusky - pre-commit script failed \(code 1\)\n/)
 })
 
 test('Git that cannot list what a repository holds uncommitted since the agent\'s last commit waits for a human', async () => {

@@ -1,8 +1,8 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { InMemoryGit } from '../support/in-memory-host.mjs'
-import { agent, pipelineHost, REFS_42, scenarioReview, scripted, SLUG } from '../support/pipeline-host.mjs'
-import { ADR_1, ADR_2, adrText, afterDesign, architect, dispatched, eventsOf, INDEX, indexText, UNLISTABLE_ADRS, waitingOnEnvironment } from '../support/decisions.mjs'
+import { agent, pipelineHost, REFS_42, scenarioReview, scripted, SLUG, TRACKING } from '../support/pipeline-host.mjs'
+import { ADR_1, ADR_2, adrText, afterDesign, architect, dispatched, eventsOf, INDEX, indexText, UNLISTABLE_ADRS, environmentQuestion, waitingOnEnvironment } from '../support/decisions.mjs'
 
 const RATIFY = `Ratify the Proposed ADRs ${ADR_1}? RATIFIED marks them Accepted; REJECTED sends DESIGN back with your reason.`
 const DRAFTS = '- Proposed ADRs, drafts no human has ratified: rewrite each in place when the feedback or a story asks for a change, keep it Proposed, never supersede it:'
@@ -205,7 +205,8 @@ test('a ratification Git cannot commit asks the human to fix the machine; RETRY 
   const outcome = await host.start()
 
   assert.deepEqual({ status: outcome.status, code: outcome.code }, { status: 'waiting', code: 'environment' })
-  assert.equal((await host.view()).question.text, 'adr cannot run on this machine: git commit failed: Please tell me who you are. Fix it, then RETRY; or ABORT the run.')
+  assert.equal((await host.view()).question.text, environmentQuestion('adr', 'git commit failed: Please tell me who you are', { log: `${TRACKING}/logs/commit-adr.log` }))
+  assert.equal(host.tracking.files.get(`${SLUG}/logs/commit-adr.log`), '$ git commit (adr)\nresult: git commit failed: Please tell me who you are\n--- output\ngit commit failed: Please tell me who you are\nhusky - pre-commit script failed (code 1)\n\n')
   git.commitFails = null
   assert.equal((await host.decide({ answer: 'RETRY' })).ok, true)
   assert.equal((await host.run()).status, 'done')

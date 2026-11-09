@@ -78,8 +78,27 @@ export const eventsOf = (host, type) => host.events().filter((event) => event.ty
  * The reason a run gives while it waits for a human to fix the machine.
  * @param {string} step the node that could not run @param {string} reason why @param {number} [count] the rank of the question among those the node asked
  */
-export const waitingOnEnvironment = (step, reason, count = 1) =>
-  `${step} cannot run on this machine: ${reason}. Fix it, then RETRY; or ABORT the run. Answer with skraft decide ${step}-${count} RETRY|ABORT.`
+export const waitingOnEnvironment = (step, reason, count = 1, incident = {}) =>
+  `${environmentQuestion(step, reason, incident)} Answer with skraft decide ${step}-${count} RETRY|ABORT.`
+
+/** What a human reads of each cause the engine does not send back to an agent. */
+const CAUSES = Object.freeze({
+  environment: 'the machine: a program, a service, a permission or a Git hook it lacks or refuses',
+  config: 'skraft-config.json: a command or a path it gives the engine',
+  unknown: 'none the engine knows: the command was stopped by a signal or crashed, which no failing check explains',
+})
+
+/**
+ * The text of the environment question on a step: why it cannot run, its cause, the log of what
+ * the failing command printed, what each answer does.
+ * @param {string} step @param {string} reason @param {{ owner?: keyof typeof CAUSES, log?: string | null }} [incident]
+ */
+export const environmentQuestion = (step, reason, { owner = 'environment', log = null } = {}) => [
+  `${step} cannot run on this machine: ${reason}.`,
+  `Cause: ${CAUSES[owner]}.`,
+  ...(log === null ? [] : [`Output: ${log}`]),
+  `Fix it, then RETRY: ${step} runs again where it stopped, using no new attempt; or ABORT: the run ends.`,
+].join('\n')
 
 /** Why an ADR folder the machine cannot list stops a run: fixed, never the text of what refused it. */
 export const UNLISTABLE_ADRS = 'docs/adr cannot be listed: Git or the file system refused to read it'

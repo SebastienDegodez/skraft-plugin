@@ -12,14 +12,15 @@ import { issueOf } from './commits.mjs'
  *   agent: string, phase: string, slug: string,
  *   story: { issue?: number | null, title?: string | null } | null,
  *   visit: number, attempt: number, maxAttempts: number,
- *   skills: string[], nowhere: import('./component-skills.mjs').ComponentSkill[], inputs: string[], outputs: string[], result: string,
+ *   skills: string[], nowhere: import('./component-skills.mjs').ComponentSkill[], inputs: string[], outputs: string[], result: string, scratch: { logs: string, tmp: string },
  *   allowed: string[], components: BriefComponent[], tdd: import('./roles.mjs').TddMode, commits: boolean,
  *   missing: string[], feedback: string[], instruction: string | null, sentBy: 'gate' | 'review' | 'ask' | 'answer' | null, acceptance: string[],
  *   mutants: { file: string, mutants: string[], group: number, of: number } | null,
  *   drafts: string[], proposal: boolean, language: import('../reporting/language.mjs').Language | null, checklists: string[],
  *   scenario?: BriefScenario | null, policy?: string[],
  * }} Brief
- *   skills (the SKILL.md files of its components the agent reads first), inputs, outputs, result and missing are absolute paths;
+ *   skills (the SKILL.md files of its components the agent reads first), inputs, outputs, result, scratch and missing are absolute paths;
+ *   scratch: where the agent sends what its commands print, and keeps its temporary files;
  *   nowhere: the skills its components ask for that neither the plugin nor the working copy provides; allowed is relative to the working
  *   copy; components: those whose paths the agent may write, empty otherwise. tdd: the commits
  *   the agent makes, a whole TDD cycle or failing tests only. commits: whether the agent commits,
@@ -78,10 +79,11 @@ const headerLines = ({ agent, phase, slug, story, visit, attempt, maxAttempts, s
 ]
 
 /** What the agent reads, fills and may change, and the commits it makes. @param {Brief} brief */
-const workLines = ({ inputs, outputs, result, allowed, components, tdd, commits, story, sentBy, acceptance, proposal, scenario = null }) => [
+const workLines = ({ inputs, outputs, result, scratch, allowed, components, tdd, commits, story, sentBy, acceptance, proposal, scenario = null }) => [
   ...section('- Read first:', inputs),
   ...section('- Fill each output in place; keep the path, create no other copy:', outputs),
   `- Write your result as JSON to ${result}: ${RESULT_SHAPE}`,
+  `- Send what the commands you run print to files under ${scratch.logs}, and keep your temporary files under ${scratch.tmp}; write nothing under /tmp nor outside the working copy.`,
   ...section('- Change nothing outside these paths of the working copy; the engine refuses the step otherwise:', writablePaths(allowed, components)),
   ...section('- Components:', components.map(componentLine)),
   ...(scenario === null ? commitLines(tdd, sentBy) : []),
