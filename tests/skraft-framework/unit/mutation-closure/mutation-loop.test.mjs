@@ -451,6 +451,34 @@ test('a run stopped in a group resumes there: the groups already done are not di
   ])
 })
 
+test('a group whose agent stops blocked runs again on that group once a human answers with an instruction, then on the groups after it', async () => {
+  const blocked = { status: 'blocked', summary: 'the rounding rule of a refund is undecided' }
+  const host = scripted({ machine: new ScriptedMachine(), answers: [{ answer: 'A refund rounds half up' }, ...APPLYING] }, (it) => [
+    ...upToDeliver(it, ['src/Checkout.cs', 'src/Refund.cs', 'src/Ledger.cs']),
+    proposer(it),
+    agent({ result: blocked })(it),
+    proposer(it),
+    proposer(it),
+    killer('Refund')(it),
+  ])
+  mutationRounds(host, [twoFiles])
+
+  const outcome = await host.start()
+
+  assert.equal(outcome.status, 'done', outcome.reason)
+  const after = host.agentRunner.dispatches.slice(4).filter(({ agent: id }) => id !== 'pr-writer')
+  assert.deepEqual(after.map(({ label }) => label), [
+    `skraft ${SLUG} · kill_proposal · group 1 of 3 · attempt 1`,
+    `skraft ${SLUG} · kill_proposal · group 2 of 3 · attempt 1`,
+    `skraft ${SLUG} · kill_proposal · pass 2 · group 2 of 3 · attempt 1`,
+    `skraft ${SLUG} · kill_proposal · pass 2 · group 3 of 3 · attempt 1`,
+    `skraft ${SLUG} · kill_mutants · attempt 1`,
+  ])
+  assert.ok(after[2].prompt.includes(after[1].prompt.match(/Propose how to treat the surviving mutants of [^\n]+\n- [^\n]+/)[0]), after[2].prompt)
+  assert.ok(after[2].prompt.includes('A refund rounds half up'), after[2].prompt)
+  assert.deepEqual(recorded(host, 'kill_proposal').map(({ visit, group, outcome: result }) => [visit, group, result]), [[1, 1, 'done'], [1, 2, 'failed'], [2, 2, 'done'], [2, 3, 'done']])
+})
+
 test('a proposal commits as its agent does: one played by an agent with no shell is told to commit nothing', async () => {
   const workflow = BUILT_IN_WORKFLOW.replace('kill_proposal [shape=box, agent="software-engineer"', 'kill_proposal [shape=box, agent="solution-researcher"')
   const host = scripted({ machine: new ScriptedMachine(), files: { '.skraft/pipeline.skraft.dot': workflow }, answers: APPLYING }, (it) => [...upToDeliver(it, undefined, REFS_42), ...round(it, 1, 'Checkout', REFS_42)])

@@ -460,18 +460,18 @@ const openAttempt = async (context, run, next, job) => {
   const heads = await headsOf(context.deps, run.base)
   const { phase, node, visit, attempt, missing, feedback } = next
   const { agent, outputs, result, assignment } = job
-  await context.journal.append('step.started', { step: node.id, phase, agent, visit, attempt, outputs, result, missing, feedback, ...causeFields(next), ...groupFields(next), heads, assignment, host: context.deps.agentRunner.host })
+  await context.journal.append('step.started', { step: node.id, phase, agent, visit, attempt, outputs, result, missing, feedback, ...causeFields(next), ...groupFields(run, next), heads, assignment, host: context.deps.agentRunner.host })
   return heads
 }
 
 /**
- * The group an attempt works on; the visit's first attempt also lists them all: the first group
- * of surviving mutants, each scenario, which has a visit of its own.
- * @param {WorkStep} next
+ * The group an attempt works on; the attempt that opens a visit also lists them all: a visit starts
+ * on the first group of surviving mutants, on each scenario, or on the group a human reopens.
+ * @param {RunState} run @param {WorkStep} next
  */
-const groupFields = ({ group, groups, attempt, node }) => {
+const groupFields = (run, { group, groups, node, visit }) => {
   if (group === null) return {}
-  return attempt === 1 && (group === 1 || node.each === 'scenario') ? { group, groups } : { group }
+  return run.nodes[node.id]?.visit === visit ? { group } : { group, groups }
 }
 
 /** Where an attempt keeps the documents of the tracking folder as it found them. @param {string} result the attempt's result file */

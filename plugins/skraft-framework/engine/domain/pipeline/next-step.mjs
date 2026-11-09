@@ -134,7 +134,9 @@ const resume = (workflow, run, [id, { open: attempt }]) => {
 /**
  * A human's instruction lifts the block: the node runs again on a new pass, with the failures
  * the block left (the findings of a review at its loop ceiling) as its feedback and the
- * instruction apart, so that the agent never works from the instruction alone (#500).
+ * instruction apart, so that the agent never works from the instruction alone (#500). It works on
+ * the group the blocked step worked on, its scenario or its file of surviving mutants: a node
+ * blocks on its own step, and a review blocking at its ceiling works on none.
  * @param {Workflow} workflow @param {RunState} run @param {string} id @param {string} instruction
  * @returns {NextStep}
  */
@@ -142,17 +144,8 @@ const reopen = (workflow, run, id, instruction) => {
   const node = workflow.nodes[id]
   if (!node) return changed(id)
   const last = /** @type {RunEvent} */ (run.last)
-  return enter(node, { ...FRESH, visit: run.nodes[id].visit + 1, feedback: last.failures, instruction, sentBy: 'ask', ...keptScenario(node, run, last) }, run)
+  return enter(node, { ...FRESH, visit: run.nodes[id].visit + 1, feedback: last.failures, instruction, sentBy: 'ask', ...groupOf(run, id, last.group) }, run)
 }
-
-/**
- * A scenario node a human's instruction reopens works on the scenario the blocked step worked on:
- * a node blocks on its own step, and a review blocking at its ceiling works on none, so DISTILL
- * reopens on the pass that writes the scenarios.
- * @param {WorkflowNode} node @param {RunState} run @param {RunEvent} last
- * @returns {Partial<Pick<Entry, 'group' | 'groups'>>}
- */
-const keptScenario = (node, run, last) => (node.each === 'scenario' ? groupOf(run, node.id, last.group) : {})
 
 /**
  * What a human's answer to a block decides: an instruction reopens the node, an acceptance goes
