@@ -113,7 +113,7 @@ export const replayScenarioGreen = (deps, run, { judged, scenario, components })
   if (scenario?.kind !== 'delivery' || green === undefined) return Promise.resolve(null)
   const component = /** @type {Component} */ (components.find(({ name }) => name === /** @type {StoryScenario} */ (scenario.scenario).component))
   const oracle = /** @type {Oracle} */ (scenario.oracles.find((candidate) => candidate.scenario === scenario.index))
-  return replayGreen(deps, run, green, { component, command: oracle.command, red: oracle.sha })
+  return replayGreen(deps, run, green, { component, command: oracle.command, red: oracle.sha, tests: acceptanceFiles(oracle, components) })
 }
 
 /**

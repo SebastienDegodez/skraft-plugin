@@ -43,9 +43,11 @@ const commit = (root, { subject, date, trees }) => {
   return git(root, ['rev-parse', 'HEAD'])
 }
 
-const writeReplay = (root, shas, { commit: index, label, log }) => {
+// A replay's log holds the run at one commit; `named`, when given, is the commit whose short SHA
+// names the file (the engine names a red's parent log after the red on a green's brief).
+const writeReplay = (root, shas, { commit: index, named = index, label, log }) => {
   const sha = shas[index]
-  const path = join(history.logs, `replay-${sha.slice(0, 7)}-${history.component}-${label}.log`)
+  const path = join(history.logs, `replay-${shas[named].slice(0, 7)}-${history.component}-${label}.log`)
   const text = readFileSync(join(fixtures, log), 'utf8').replaceAll('{{sha}}', sha).replaceAll('{{sha7}}', sha.slice(0, 7))
   mkdirSync(dirname(join(root, path)), { recursive: true })
   writeFileSync(join(root, path), text)

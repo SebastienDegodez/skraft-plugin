@@ -397,7 +397,7 @@ question nomment ce fichier, sans jamais recopier ce qu'il contient.
 
 | Fichier | Écrit quand | Contenu |
 | --- | --- | --- |
-| `logs/replay-<sha court>-<composant>-<commande>.log` | chaque rejeu d'un commit rouge ou vert ; `<commande>` vaut `test` ou `e2e`, `test-parent` ou `e2e-parent` pour une commande en échec d'un rouge rejouée à son parent | la commande rejouée, son dossier, le commit et sa sortie, puis ce qu'elle a affiché, tel quel |
+| `logs/replay-<sha court>-<composant>-<commande>.log` | chaque rejeu d'un commit rouge ou vert ; `<commande>` vaut `test` ou `e2e`, `test-parent` ou `e2e-parent` pour une commande en échec d'un rouge rejouée à son parent, `<sha court>` restant celui du rouge | la commande rejouée, son dossier, le commit et sa sortie, puis ce qu'elle a affiché, tel quel |
 | `logs/judge-<sha court>-<red\|green>.md` | le juge du rejeu répond sur un commit rouge ou vert avec un verdict que le moteur lit | sa réponse entière, telle qu'écrite : ce que montrent les logs, puis le bloc YAML avec `decision` et `note` |
 | `logs/commit-<nœud>.log` | Git refuse un commit que fait le moteur (un hook, une identité absente, un verrou) : le commit pour un agent sans shell, le commit de ratification des ADR | `$ git commit (<nœud>)`, `result: git commit failed: exit N`, puis `--- output` et ce que Git a affiché |
 | tout autre fichier de `logs/` | un agent lance une commande | ce que la commande a affiché |

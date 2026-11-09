@@ -102,7 +102,7 @@ test('a scenario proven by its e2e tests has them replayed at its green beside i
 
   assert.deepEqual(host.replay.lines(), ['root-1 ./. $ npx vitest run', 'root-1 ./. $ npx playwright test', 'root-0 ./. $ npx playwright test', 'root-2 ./. $ npx vitest run', 'root-2 ./. $ npx playwright test'])
   assert.deepEqual(recorded(host, 'distill').at(-1).oracle, { scenario: 1, sha: 'root-1', subject: 'test(checkout): scenario 1', component: 'web', files: ['e2e/pay.spec.ts'], command: 'e2e' })
-  assert.ok(host.agentRunner.judged[1].prompt.includes(`\nThe red of its scenario is root-1; its replay printed to ${logOf('root-1', 'web', 'e2e')}\n`), host.agentRunner.judged[1].prompt)
+  assert.ok(host.agentRunner.judged[1].prompt.includes(`\nThe red of its scenario is root-1; its replay printed to ${logOf('root-1', 'web', 'e2e')}, and at its parent to ${logOf('root-1', 'web', 'e2e-parent')}\nThe acceptance tests of its scenario: e2e/pay.spec.ts\n`), host.agentRunner.judged[1].prompt)
   assert.deepEqual(recorded(host, 'deliver')[0].failures, [`commit root-2 "feat(checkout): scenario 1" does not make the scenario pass: the replay judge sends it back: read ${TRACKING}/logs/judge-root-2-green.md`])
 })
 

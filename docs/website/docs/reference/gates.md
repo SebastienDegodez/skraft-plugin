@@ -254,8 +254,9 @@ commands in a throwaway checkout, from the component root, and tells apart only 
 `logs/replay-<short sha>-<component>-<command>.log`, `-parent` added for a replay at the commit's
 parent ([Logs](./run-journal.md#logs)). The replay judge,
 [`replay-judge`](pathname:///dashboard/#agent-replay-judge), an agent the driver starts at depth 1,
-reads those logs and the commit (`git -C "<repository>" show <sha>`), through RTK when
-`rtk --version` answers (skraft does not install RTK), and changes nothing: a commit or a file it
+reads each log whole with its file-reading tool, never through a tool that summarises it (a
+summary drops the line that settles a decision: a skip, a test count, a failure printed in another
+language), then the commit (`git show`), and changes nothing: a commit or a file it
 changes in the working copy stops the step on the `environment` question, cause `judge`. It ends
 on a YAML block:
 
@@ -273,7 +274,7 @@ held to the write scope: list it in `.gitignore`.
 | --- | --- | --- |
 | a red of an acceptance test | the `test` command of each component it touches exits 0, then the `e2e` command of those that have one exits 0 too | refused, `not-red`, the judge not asked: `is not red: the tests of <components> pass at it; the replay's output is in <log>`, `pass at it, and so do the e2e tests of <components>; …` when e2e tests ran |
 | | a command fails: a non-zero exit, a program that did not start, a timeout | each failing command replayed at the commit's parent, then the judge asked: the commit, its files, the scenario's index and title, each command line, how it ended and its log |
-| the green of scenario k | its component's `test` command, and `e2e` when e2e tests proved the red | the judge always asked, every command exiting 0 included, with the red's sha and the log of its replay |
+| the green of scenario k | its component's `test` command, and `e2e` when e2e tests proved the red | the judge always asked, every command exiting 0 included, with the red's sha, the logs of its replay at the red and at its parent, and the red's acceptance-test files |
 | a red or a green, judged | `accept` | the red stands and becomes the scenario's oracle, with the command that proved it (`test` or `e2e`); the green stands |
 | | `send-back` | refused, `not-red` or `not-green`: `the replay judge sends it back: read <judge answer>` |
 | | `retry` | the commands run again once, the commit then reporting what they find, and the judge is asked again, its brief saying so; a second `retry` asks a human |
@@ -285,7 +286,8 @@ The judge accepts a red whose scenario test fails on its assertion at the commit
 exist, does not run or fails otherwise at the parent; it sends back a red that fails before the
 assertion runs (build, test collection, an import, a skeleton's exception), where only another
 test fails or the scenario's test is skipped. It accepts a green whose commands all exit 0 and
-whose scenario test runs and passes, no test skipped. It answers `retry` for a cause that passes
+whose log shows the scenario test passed, by its name or by as many tests run as at its red, none
+failed or skipped; it asks a human when the only failing test already failed before the red. It answers `retry` for a cause that passes
 (a network timeout, a busy port), `ask-human` for what no agent can give (a program not
 installed, a container runtime that does not answer, a credential).
 [`tdd.replay`](./skraft-config.md#tdd) chooses which reds of an attempt are replayed; a red an

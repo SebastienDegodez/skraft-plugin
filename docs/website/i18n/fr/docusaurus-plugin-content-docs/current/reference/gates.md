@@ -259,8 +259,9 @@ qu'un code de sortie 0. Ce qu'affiche chaque commande va, tel quel, dans
 `logs/replay-<sha court>-<composant>-<commande>.log`, suffixé `-parent` pour un rejeu au parent
 du commit ([Logs](./run-journal.md#logs)). Le juge du rejeu,
 [`replay-judge`](pathname:///dashboard/#agent-replay-judge), un agent que le driver lance à
-profondeur 1, lit ces logs et le commit (`git -C "<dépôt>" show <sha>`), à travers RTK quand
-`rtk --version` répond (skraft n'installe pas RTK), et ne change rien : un commit ou un fichier
+profondeur 1, lit chaque log en entier avec son outil de lecture, jamais à travers un outil qui le résume
+(un résumé perd la ligne qui décide : un test sauté, un compte de tests, un échec écrit dans une
+autre langue), puis le commit (`git show`), et ne change rien : un commit ou un fichier
 qu'il change dans la copie de travail arrête l'étape sur la question `environment`, cause `judge`.
 Il finit sur un bloc YAML :
 
@@ -279,7 +280,7 @@ test) est un changement comme un autre, tenu au périmètre d'écriture : listez
 | --- | --- | --- |
 | un rouge de test d'acceptation | la commande `test` de chaque composant qu'il touche sort avec 0, puis la commande `e2e` de ceux qui en ont une sort avec 0 aussi | refusé, `not-red`, sans demander au juge : `is not red: the tests of <components> pass at it; the replay's output is in <log>`, `pass at it, and so do the e2e tests of <components>; …` quand des tests e2e ont tourné |
 | | une commande échoue : un code de sortie non nul, un programme qui n'a pas démarré, un délai dépassé | chaque commande en échec rejouée au parent du commit, puis le juge interrogé : le commit, ses fichiers, l'indice et le titre du scénario, chaque ligne de commande, comment elle a fini et son log |
-| le vert du scénario k | la commande `test` de son composant, et `e2e` quand des tests e2e ont prouvé le rouge | le juge toujours interrogé, même quand chaque commande sort avec 0, avec le sha du rouge et le log de son rejeu |
+| le vert du scénario k | la commande `test` de son composant, et `e2e` quand des tests e2e ont prouvé le rouge | le juge toujours interrogé, même quand chaque commande sort avec 0, avec le sha du rouge, les logs de son rejeu au rouge et à son parent, et les fichiers de test d'acceptation du rouge |
 | un rouge ou un vert, jugé | `accept` | le rouge tient et devient l'oracle du scénario, avec la commande qui l'a prouvé (`test` ou `e2e`) ; le vert tient |
 | | `send-back` | refusé, `not-red` ou `not-green` : `the replay judge sends it back: read <judge answer>` |
 | | `retry` | les commandes tournent encore une fois, le commit rapportant alors ce qu'elles trouvent, et le juge est réinterrogé, son brief le disant ; un second `retry` interroge un humain |
@@ -291,7 +292,9 @@ Le juge accepte un rouge dont le test du scénario échoue sur son assertion au 
 parent, n'existe pas, ne tourne pas ou échoue autrement ; il renvoie un rouge qui échoue avant que
 l'assertion ne tourne (build, collecte des tests, un import, l'exception d'un squelette), où seul
 un autre test échoue ou dont le test du scénario est sauté. Il accepte un vert dont toutes les
-commandes sortent avec 0 et dont le test du scénario tourne et passe, aucun test sauté. Il répond
+commandes sortent avec 0 et dont le log montre que le test du scénario a passé, par son nom ou par
+autant de tests lancés qu'au rouge, aucun en échec ni sauté ; il interroge un humain quand le seul
+test en échec échouait déjà avant le rouge. Il répond
 `retry` pour une cause qui passe (un délai réseau, un port occupé), `ask-human` pour ce qu'aucun
 agent ne peut donner (un programme non installé, un runtime de conteneurs qui ne répond pas, un
 identifiant). [`tdd.replay`](./skraft-config.md#tdd) choisit quels rouges d'une tentative sont

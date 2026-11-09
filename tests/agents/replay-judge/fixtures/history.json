@@ -82,6 +82,7 @@
       ],
       "replays": [
         { "commit": 1, "label": "test", "log": "logs/green-skipped/red.log" },
+        { "commit": 0, "named": 1, "label": "test-parent", "log": "logs/green-skipped/red-parent.log" },
         { "commit": 2, "label": "test", "log": "logs/green-skipped/commit.log" }
       ]
     },
@@ -93,6 +94,7 @@
       ],
       "replays": [
         { "commit": 1, "label": "test", "log": "logs/green-accepted/red.log" },
+        { "commit": 0, "named": 1, "label": "test-parent", "log": "logs/green-accepted/red-parent.log" },
         { "commit": 2, "label": "test", "log": "logs/green-accepted/commit.log" }
       ]
     }

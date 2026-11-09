@@ -395,7 +395,7 @@ file, never copy what it holds.
 
 | File | Written when | Content |
 | --- | --- | --- |
-| `logs/replay-<short sha>-<component>-<command>.log` | each replay of a red or a green commit; `<command>` is `test` or `e2e`, `test-parent` or `e2e-parent` for a failing command of a red replayed at its parent | the replayed command, its folder, the commit and its exit, then what it printed, unchanged |
+| `logs/replay-<short sha>-<component>-<command>.log` | each replay of a red or a green commit; `<command>` is `test` or `e2e`, `test-parent` or `e2e-parent` for a failing command of a red replayed at its parent, `<short sha>` staying the red's | the replayed command, its folder, the commit and its exit, then what it printed, unchanged |
 | `logs/judge-<short sha>-<red\|green>.md` | the replay judge answers on a red or a green commit with a verdict the engine reads | its whole answer, as written: what the logs show, then the YAML block with `decision` and `note` |
 | `logs/commit-<node>.log` | Git refuses a commit the engine makes (a hook, a missing identity, a lock): the commit for an agent with no shell, the ADR ratification commit | `$ git commit (<node>)`, `result: git commit failed: exit N`, then `--- output` and what Git printed |
 | any other file of `logs/` | an agent runs a command | what the command printed |

@@ -35,7 +35,7 @@ test('a red whose tests fail is replayed at its parent too, and the replay judge
     'Its files: tests/Acceptance/S1AcceptanceTests.cs, src/PayOrder.cs',
     'The engine replayed, each in a throwaway checkout, from the component root:',
     `- api: \`dotnet test\` at the commit root-1: exit 1; printed to ${logOf('root-1')}`,
-    `- api: \`dotnet test\` at its parent root-0: exit 1; printed to ${logOf('root-0', 'test-parent')}`,
+    `- api: \`dotnet test\` at its parent root-0: exit 1; printed to ${logOf('root-1', 'test-parent')}`,
     ...SHAPE,
   ].join('\n'))
   assert.equal(host.tracking.files.get(`${SLUG}/logs/judge-root-1-red.md`), judgeAnswer('accept'))
@@ -52,7 +52,7 @@ test('a replay that could not start, or that ran out of time, goes to the judge 
   const lines = judged(host)[0].prompt.split('\n')
   assert.deepEqual(lines.filter((line) => line.startsWith('- api:')), [
     `- api: \`dotnet test\` at the commit root-1: could not start dotnet; printed to ${logOf('root-1')}`,
-    `- api: \`dotnet test\` at its parent root-0: dotnet did not finish within 600 s; printed to ${logOf('root-0', 'test-parent')}`,
+    `- api: \`dotnet test\` at its parent root-0: dotnet did not finish within 600 s; printed to ${logOf('root-1', 'test-parent')}`,
   ])
 })
 
@@ -140,8 +140,8 @@ test('what the judge costs counts in the cost of the step it judges, and the mod
   assert.deepEqual([judge.cost, judge.model], [0.25, 'claude-sonnet'])
 })
 
-test('a green is judged with the red of its scenario: its brief names where that red printed; sent back, the green is refused naming the answer', async () => {
-  const host = scripted({}, (it) => [...research(it), agent()(it), agent()(it), unavailable])
+test('a green is judged with the red of its scenario: its brief names where that red printed, at the red and at its parent, and its acceptance tests; sent back, the green is refused naming the answer', async () => {
+  const host = scripted({}, (it) => [...research(it), agent({ work: ({ git }) => git.commit('test(checkout): scenario 1', ['tests/Acceptance/S1AcceptanceTests.cs', 'tests/Acceptance/S1Steps.cs', 'src/PayOrder.cs']) })(it), agent()(it), unavailable])
   host.agentRunner.judge = judging(judgeAnswer('accept'), judgeAnswer('send-back', 'the acceptance test is skipped at it'))
 
   await host.start()
@@ -152,11 +152,14 @@ test('a green is judged with the red of its scenario: its brief names where that
     'Judge the green commit root-2 "feat(checkout): scenario 1", for scenario 1 "Customer pays by card".',
     'Its repository: .',
     'Its files: src/Scenario1.cs',
-    `The red of its scenario is root-1; its replay printed to ${logOf('root-1')}`,
+    `The red of its scenario is root-1; its replay printed to ${logOf('root-1')}, and at its parent to ${logOf('root-1', 'test-parent')}`,
+    'The acceptance tests of its scenario: tests/Acceptance/S1AcceptanceTests.cs, tests/Acceptance/S1Steps.cs',
     'The engine replayed, each in a throwaway checkout, from the component root:',
     `- api: \`dotnet test\` at the commit root-2: exit 0; printed to ${logOf('root-2')}`,
     ...SHAPE,
   ].join('\n'))
+  assert.ok(host.tracking.files.has(`${SLUG}/logs/replay-root-1-api-test-parent.log`), 'the red\'s parent log the green brief names exists')
+  assert.match(host.tracking.files.get(`${SLUG}/logs/replay-root-1-api-test-parent.log`), /\ncommit: root-0\n/)
   assert.deepEqual(recorded(host, 'deliver')[0].failures, [`commit root-2 "feat(checkout): scenario 1" does not make the scenario pass: the replay judge sends it back: read ${answerOf('root-2', 'green')}`])
   assert.equal(checked(host, 'deliver')[0].commits[0].verdict, 'not-green')
 })

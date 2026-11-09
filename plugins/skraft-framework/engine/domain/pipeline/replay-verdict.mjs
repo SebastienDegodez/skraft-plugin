@@ -14,10 +14,11 @@ import { parseAnswerYaml } from '../review/answer-yaml.mjs'
  * @typedef {{
  *   kind: 'red' | 'green', sha: string, subject: string, repository: string, files: string[],
  *   scenario: { index: number, title: string } | null, replays: ReplayFact[], parents: ReplayFact[],
- *   red: { sha: string, log: string } | null, retried: boolean,
+ *   red: { sha: string, log: string, parentLog: string, tests: string[] } | null, retried: boolean,
  * }} JudgeRequest
  *   parents: the failing commands of a red, replayed at its parent; red: on a green, the red of its
- *   scenario and where its replay printed; retried: the commands ran again after a retry.
+ *   scenario, where its replay printed at the red and at its parent, and the acceptance-test files
+ *   it committed; retried: the commands ran again after a retry.
  */
 
 /** The agent that judges a replayed red or green. */
@@ -78,7 +79,13 @@ const commitLines = (request) => [
   `Judge the ${request.kind} commit ${request.sha} "${request.subject}"${scenarioText(request.scenario)}.`,
   `Its repository: ${request.repository}`,
   `Its files: ${request.files.join(', ')}`,
-  ...(request.red === null ? [] : [`The red of its scenario is ${request.red.sha}; its replay printed to ${request.red.log}`]),
+  ...(request.red === null ? [] : redLines(request.red)),
+]
+
+/** On a green: its scenario's red, where its replay printed, and its acceptance tests. @param {NonNullable<JudgeRequest['red']>} red */
+const redLines = ({ sha, log, parentLog, tests }) => [
+  `The red of its scenario is ${sha}; its replay printed to ${log}, and at its parent to ${parentLog}`,
+  `The acceptance tests of its scenario: ${tests.join(', ')}`,
 ]
 
 /** @param {JudgeRequest['scenario']} scenario */

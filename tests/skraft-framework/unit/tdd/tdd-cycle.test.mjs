@@ -308,7 +308,7 @@ test('e2e tests that fail at the parent of a red commit too go to the judge with
   assert.deepEqual(host.replay.lines(), ['up-web-1 ../web/. $ npx vitest run', 'up-web-1 ../web/. $ npx playwright test', 'up-web-0 ../web/. $ npx playwright test'])
   assert.deepEqual(host.agentRunner.judged[0].prompt.split('\n').filter((line) => line.startsWith('- web:')), [
     `- web: \`npx playwright test\` at the commit up-web-: exit 1; printed to ${logOf('up-web-1', 'web', 'e2e')}`,
-    `- web: \`npx playwright test\` at its parent up-web-: exit 1; printed to ${logOf('up-web-0', 'web', 'e2e-parent')}`,
+    `- web: \`npx playwright test\` at its parent up-web-: exit 1; printed to ${logOf('up-web-1', 'web', 'e2e-parent')}`,
   ])
   assert.deepEqual(checked(host)[0].commits.map(({ verdict, replay }) => [verdict, replayOf(replay)]), [['not-red', ['web', 'e2e', 1, logOf('up-web-1', 'web', 'e2e'), 'send-back']]])
 })

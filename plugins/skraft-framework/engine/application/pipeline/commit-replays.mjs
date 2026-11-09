@@ -45,6 +45,9 @@ import { judgeCommit } from './replay-judge.mjs'
  * @typedef {{ component: Component, command: Extract<ReplayCommand, { environment: null }>, replay: Replay, fact: ReplayFact }} Ran
  * @typedef {{ stop: string | null, ran: Ran[] }} Replayed
  * @typedef {'test' | 'e2e'} ReplayedCommand
+ * @typedef {{ component: Component, command: ReplayedCommand, red: string, tests: string[] }} GreenScenario
+ *   the scenario a green makes pass: its component, the command that proved its red, the sha of
+ *   that red and the acceptance-test files it committed.
  */
 
 /** @returns {ReplayTally} */
@@ -117,7 +120,7 @@ const judgeRed = async (deps, run, { red, components, failed }) => {
  * Replays the component's tests at the green commit of a scenario, and its e2e tests when they
  * proved the scenario's red; the judge decides whether the scenario passes and nothing else fails.
  * @param {ReplayDeps} deps @param {ReplayRun} run @param {JudgedCommit} green
- * @param {{ component: Component, command: ReplayedCommand, red: string }} scenario red: the sha of the scenario's red
+ * @param {GreenScenario} scenario
  * @returns {Promise<string | null>} why the run stops before the replay settles
  */
 export const replayGreen = async (deps, run, green, scenario) => {
@@ -127,7 +130,7 @@ export const replayGreen = async (deps, run, green, scenario) => {
   return decide(run, { commit: green, judgement, refusal: 'not-green' }, () => replayGreen(deps, { ...run, retried: true }, green, scenario))
 }
 
-/** @param {import('../config/bases.mjs').Base[]} base @param {{ component: Component, command: ReplayedCommand }} scenario */
+/** @param {import('../config/bases.mjs').Base[]} base @param {GreenScenario} scenario */
 const greenCommands = (base, { component, command }) => [
   ...commandsOf(base, [component], 'test'),
   ...(command === 'e2e' ? commandsOf(base, [component], 'e2e') : []),
@@ -135,9 +138,14 @@ const greenCommands = (base, { component, command }) => [
 
 /**
  * The scenario's red as the judge of its green reads it: its sha, and where its replay printed.
- * @param {ReplayDeps} deps @param {ReplayRun} run @param {{ component: Component, command: ReplayedCommand, red: string }} scenario
+ * @param {ReplayDeps} deps @param {ReplayRun} run @param {GreenScenario} scenario
  */
-const redOf = ({ files }, { slug }, { component, command, red }) => ({ sha: red, log: files.location(slug, logPath(red, component, command)) })
+const redOf = ({ files }, { slug }, { component, command, red, tests }) => ({
+  sha: red,
+  log: files.location(slug, logPath(red, component, command)),
+  parentLog: files.location(slug, logPath(red, component, `${command}-parent`)),
+  tests,
+})
 
 /**
  * What the judge decided, recorded on the commit's replay: accept leaves the commit as it is, a
@@ -186,7 +194,7 @@ const sentBack = (answer) => `the replay judge sends it back: read ${answer}`
 
 /**
  * @param {ReplayRun} run @param {JudgedCommit} commit
- * @param {{ replays: Ran[], parents: Ran[], red: { sha: string, log: string } | null }} facts
+ * @param {{ replays: Ran[], parents: Ran[], red: import('../../domain/pipeline/replay-verdict.mjs').JudgeRequest['red'] }} facts
  * @returns {import('../../domain/pipeline/replay-verdict.mjs').JudgeRequest}
  */
 const requestOf = ({ scenario, retried }, { kind, sha, subject, repository, files }, { replays, parents, red }) => ({
@@ -208,7 +216,7 @@ const replayAt = async (deps, run, at, commands) => {
   const ran = []
   for (const { component, command } of commands) {
     if (command.environment !== null) return { stop: configured(run.tally, command.environment), ran }
-    const one = await timedRun(deps, run, { repository: at.commit.repository, sha: at.sha, component, command, label: `${command.name}${at.suffix}` })
+    const one = await timedRun(deps, run, { repository: at.commit.repository, sha: at.sha, component, command, log: logPath(at.commit.sha, component, `${command.name}${at.suffix}`) })
     if (interruptedBy(/** @type {number} */ (one.replay.exitCode))) return { stop: interrupted(run.tally, one), ran }
     if (at.suffix === '') reportReplay(run.tally, at.commit.sha, one.replay)
     ran.push(one)
@@ -300,19 +308,19 @@ const parsedCommand = (base, component, name) => {
 /**
  * Runs a program on a commit's files from a component's folder, the first of its choices that
  * starts, as the gates run it (`python`: the component's virtual environment first); its time
- * counts as replaying. What it printed goes to a log of the run, named by the commit, the
- * component and the command.
+ * counts as replaying. What it printed goes to a log of the run, named by the commit judged, the
+ * component and the command, `-parent` added for a replay at its parent.
  * @param {ReplayDeps} deps @param {ReplayRun} run
- * @param {{ repository: string, sha: string, component: Component, command: Extract<ReplayCommand, { environment: null }>, label: string }} replay
+ * @param {{ repository: string, sha: string, component: Component, command: Extract<ReplayCommand, { environment: null }>, log: string }} replay log: where it prints, in the run's folder
  * @returns {Promise<Ran>}
  */
-const timedRun = async (deps, run, { repository, sha, component, command, label }) => {
+const timedRun = async (deps, run, { repository, sha, component, command, log: path }) => {
   const started = deps.clock.now()
   const cwd = /** @type {string} */ (pathUnder(component.root, repository))
   const answer = await deps.commitReplay.run({ repository, sha, cwd, choices: programChoices(command.argv), importRoots: importRootsOf(component) })
   const durationMs = deps.clock.now().getTime() - started.getTime()
   run.tally.replayMs += durationMs
-  const log = await writeLog(deps, run.slug, { sha, component, argv: command.argv, label }, answer)
+  const log = await writeLog(deps, run.slug, { sha, component, argv: command.argv, path }, answer)
   return ranOf({ component, command, sha }, { exitCode: answer.exitCode, error: answer.error, durationMs, log })
 }
 
@@ -334,11 +342,10 @@ const logPath = (sha, component, label) => `logs/replay-${sha.slice(0, 7)}-${com
 /**
  * Writes what a replay printed under the run's logs folder, as it printed it; returns where, absolute.
  * @param {ReplayDeps} deps @param {string} slug
- * @param {{ sha: string, component: Component, argv: string[], label: string }} replay
+ * @param {{ sha: string, component: Component, argv: string[], path: string }} replay sha: the commit replayed; path: the log's, in the run's folder
  * @param {import('../ports/command-runner.mjs').CommandResult} answer
  */
-const writeLog = async ({ files }, slug, { sha, component, argv, label }, answer) => {
-  const path = logPath(sha, component, label)
+const writeLog = async ({ files }, slug, { sha, component, argv, path }, answer) => {
   await files.write(slug, path, [`$ ${argv.join(' ')}`, `cwd: ${component.root}`, `commit: ${sha}`, `exit: ${answer.exitCode ?? answer.error}`, '--- stdout', answer.stdout, '--- stderr', answer.stderr, ''].join('\n'))
   return files.location(slug, path)
 }

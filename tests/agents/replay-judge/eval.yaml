@@ -17,7 +17,8 @@ scoring:
 # Nine single-decision stimuli, one per situation the judge must tell apart. Each prompt is
 # the engine's brief (replay-verdict.mjs `judgeBrief`), byte for byte except for one point:
 # the engine names each log by its absolute path, but the trial workspace is a fresh copy whose
-# path no spec can know, so the brief names it from the repository root, the workspace.
+# path no spec can know, so the brief names it from the repository root, the workspace. On a
+# green, the red's parent log is named after the red, as the green brief names it.
 #
 # Budget: 5 runs × 9 stimuli = 45 sessions. That is a first read per situation, not a verdict:
 # a verdict you can defend on one stimulus needs 12–15 trials. The human decides that spend,
@@ -496,7 +497,8 @@ stimuli:
       Judge the green commit b169b0f6ae58f63f2c0359ae6ce2275ca5e4b981 "feat(discount): an expired member pays the standard price", for scenario 1 "An expired member pays the standard price".
       Its repository: .
       Its files: src/price.js, test/expired-membership.test.js
-      The red of its scenario is ba3a9164a434df1b01cf25dd57dd84563db6b81f; its replay printed to .copilot-tracking/skraft-plans/loyalty-discount/logs/replay-ba3a916-loyalty-test.log
+      The red of its scenario is ba3a9164a434df1b01cf25dd57dd84563db6b81f; its replay printed to .copilot-tracking/skraft-plans/loyalty-discount/logs/replay-ba3a916-loyalty-test.log, and at its parent to .copilot-tracking/skraft-plans/loyalty-discount/logs/replay-ba3a916-loyalty-test-parent.log
+      The acceptance tests of its scenario: test/expired-membership.test.js
       The engine replayed, each in a throwaway checkout, from the component root:
       - loyalty: `node --test` at the commit b169b0f: exit 0; printed to .copilot-tracking/skraft-plans/loyalty-discount/logs/replay-b169b0f-loyalty-test.log
       End your final message with this YAML document, in a fenced block:
@@ -549,7 +551,7 @@ stimuli:
           env:
             CHECK: unchanged
             EXPECTED_HEAD: b169b0f6ae58f63f2c0359ae6ce2275ca5e4b981
-            TRACKING_SHA: b764e130d67b5ddbc339fc44fb0bcfec2f7506b84e9dd9c20aa0536630906b2b
+            TRACKING_SHA: 7957b2bfc1362c8648a279374067771cfa372d419b241f6f7397079bd6df418d
             ORACLE_SHA: *oracle-sha
           timeout: 30s
 
@@ -558,7 +560,8 @@ stimuli:
       Judge the green commit fdb1f214528f067cf8c9c488bd8a9af233b39f40 "feat(discount): an expired member pays the standard price", for scenario 1 "An expired member pays the standard price".
       Its repository: .
       Its files: src/price.js
-      The red of its scenario is ba3a9164a434df1b01cf25dd57dd84563db6b81f; its replay printed to .copilot-tracking/skraft-plans/loyalty-discount/logs/replay-ba3a916-loyalty-test.log
+      The red of its scenario is ba3a9164a434df1b01cf25dd57dd84563db6b81f; its replay printed to .copilot-tracking/skraft-plans/loyalty-discount/logs/replay-ba3a916-loyalty-test.log, and at its parent to .copilot-tracking/skraft-plans/loyalty-discount/logs/replay-ba3a916-loyalty-test-parent.log
+      The acceptance tests of its scenario: test/expired-membership.test.js
       The engine replayed, each in a throwaway checkout, from the component root:
       - loyalty: `node --test` at the commit fdb1f21: exit 0; printed to .copilot-tracking/skraft-plans/loyalty-discount/logs/replay-fdb1f21-loyalty-test.log
       End your final message with this YAML document, in a fenced block:
@@ -611,6 +614,6 @@ stimuli:
           env:
             CHECK: unchanged
             EXPECTED_HEAD: fdb1f214528f067cf8c9c488bd8a9af233b39f40
-            TRACKING_SHA: 8233f7034149ce393e98895ba67e8451071597df8b491b9c112bf2116bff1f18
+            TRACKING_SHA: 7ff8a060238d5032fd726903b66fce4da9deb0be2c455ee368344f451883f12c
             ORACLE_SHA: *oracle-sha
           timeout: 30s
