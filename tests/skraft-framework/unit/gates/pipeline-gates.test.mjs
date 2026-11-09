@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { BUILT_IN_WORKFLOW, FixedClock, InMemoryGit, ScriptedMachine, failingAnotherTest } from '../support/in-memory-host.mjs'
+import { BUILT_IN_WORKFLOW, FixedClock, InMemoryGit, ScriptedMachine } from '../support/in-memory-host.mjs'
 import { agent, API, CYCLE, green, scripted, SLUG, tddCycle, TRACKING } from '../support/pipeline-host.mjs'
 import { waitingOnEnvironment } from '../support/decisions.mjs'
 
@@ -50,8 +50,8 @@ test('DELIVER does not close while a gate fails: the engineer gets a new pass wi
   assert.ok(!host.types().includes('tdd.replay-slow'))
 })
 
-test('gates that keep failing, each time another way, stop the run once the loop reached its max_visits', async () => {
-  const machine = new ScriptedMachine({ exits: { '. $ dotnet test': 1 }, outputs: { '. $ dotnet test': failingAnotherTest() } })
+test('gates that keep failing stop the run once the loop reached its max_visits', async () => {
+  const machine = new ScriptedMachine({ exits: { '. $ dotnet test': 1 } })
   const host = scripted({ machine, answers: [{ answer: 'STOP' }] }, (it) => [...upToDeliver(it), ...[1, 2, 3, 4].map((n) => agent({ work: passOf(n) })(it))])
 
   const outcome = await host.start()

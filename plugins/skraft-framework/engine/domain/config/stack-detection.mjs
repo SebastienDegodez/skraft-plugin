@@ -123,17 +123,6 @@ const javascriptStack = (dependencies, has) => {
  * @typedef {{ scripts: Record<string, unknown>, dependencies: Record<string, unknown>, stack: Stack }} Package
  */
 
-/** What makes Vitest and Jest write the JUnit report the engine reads when it replays a commit. */
-const VITEST_JUNIT = '--reporter=default --reporter=junit --outputFile.junit=reports/junit.xml'
-const JEST_JUNIT = '--reporters=default --reporters=jest-junit'
-
-/**
- * Whether the package's test script runs this runner without writing JUnit yet: `npm test --`
- * passes it the reporter.
- * @param {Record<string, unknown>} scripts @param {RegExp} runner
- */
-const scriptRuns = ({ test }, runner) => runner.test(String(test)) && !/junit/.test(String(test))
-
 /**
  * The line init proposes for each command of a package, first match wins: the package's own
  * script, then the tool its stack or dependencies imply. No match, no command.
@@ -146,11 +135,8 @@ const JAVASCRIPT_COMMANDS = Object.freeze({
   ],
   lint: [{ when: ({ scripts }) => typeof scripts.lint === 'string', line: 'npm run lint' }],
   test: [
-    { when: ({ scripts }) => scriptRuns(scripts, /\bvitest\b/), line: `npm test -- ${VITEST_JUNIT}` },
-    { when: ({ scripts, dependencies }) => scriptRuns(scripts, /\bjest\b/) && 'jest-junit' in dependencies, line: `npm test -- ${JEST_JUNIT}` },
     { when: ({ scripts }) => typeof scripts.test === 'string', line: 'npm test' },
-    { when: ({ dependencies }) => 'vitest' in dependencies, line: `npx vitest run ${VITEST_JUNIT}` },
-    { when: ({ dependencies }) => 'jest' in dependencies && 'jest-junit' in dependencies, line: `npx jest ${JEST_JUNIT}` },
+    { when: ({ dependencies }) => 'vitest' in dependencies, line: 'npx vitest run --reporter=default --reporter=junit --outputFile.junit=reports/junit.xml' },
     { when: ({ dependencies }) => 'jest' in dependencies, line: 'npx jest' },
   ],
 })

@@ -6,7 +6,7 @@ import { redsToReplay } from '../../domain/pipeline/commits.mjs'
 import { isCode, ownersOf } from '../../domain/pipeline/component-files.mjs'
 import { failingIds, notGreenBecause, notRedBecause, readReplay } from '../../domain/pipeline/junit.mjs'
 import { baseOf } from '../config/bases.mjs'
-import { missingReports } from '../../domain/config/infrastructure-policy.mjs'
+import { missingReport } from '../../domain/config/infrastructure-policy.mjs'
 import { endedByMachine, interruptedBy } from '../../domain/pipeline/incidents.mjs'
 
 /**
@@ -189,9 +189,9 @@ const stoppedReplay = (tally, at, { answer, reading }) => {
  * @returns {{ reason: string, owner: Incident['owner'] } | null}
  */
 const unreportedReason = ({ sha, component, command }, reading) => {
-  const missing = missingReports(component).find((report) => report.command === command.name)
-  if (reading !== 'no-report' || missing === undefined) return null
-  return { owner: 'config', reason: `replaying ${sha.slice(0, 7)} for ${component.name}: its ${command.name} command "${command.line}" writes no JUnit report where testReports looks; add ${missing.add} to it in ${CONFIG_FILE}, then retry` }
+  const missing = command.name === 'test' ? missingReport(component) : null
+  if (reading !== 'no-report' || missing === null) return null
+  return { owner: 'config', reason: `replaying ${sha.slice(0, 7)} for ${component.name}: its ${command.name} command "${command.line}" writes no JUnit report where testReports looks; add ${missing} to it in ${CONFIG_FILE}, then retry` }
 }
 
 /**

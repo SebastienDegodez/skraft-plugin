@@ -7,9 +7,9 @@ const upToDeliver = (it) => [agent()(it), agent()(it), agent()(it)]
 const reportOf = (host) => host.tracking.files.get(`${SLUG}/run-report.md`)
 const sectionOf = (report, title) => report.split(`\n${title}\n\n`)[1].split(/\n\n(?=## |Started at )/)[0]
 
-test('a run that waits on a human tells in its report the question and how to answer it, each commit and its verdict, and the failures sent back by signature', async () => {
-  const machine = new ScriptedMachine({ exits: { '. $ dotnet test': 1 }, outputs: { '. $ dotnet test': () => '  Failed CheckoutTests.PaysByCard [12 ms]\n' } })
-  const host = scripted({ machine }, (it) => [agent({ fill: false })(it), ...upToDeliver(it), ...[1, 2, 3].map((n) => agent({ work: n === 1 ? green() : tddCycle(SLUG, `Pass${n}`) })(it))])
+test('a run that waits on a human tells in its report the question and how to answer it, each commit and its verdict, and the failures sent back by step', async () => {
+  const machine = new ScriptedMachine({ exits: { '. $ dotnet test': 1 } })
+  const host = scripted({ machine }, (it) => [agent({ fill: false })(it), ...upToDeliver(it), ...[1, 2, 3, 4].map((n) => agent({ work: n === 1 ? green() : tddCycle(SLUG, `Pass${n}`) })(it))])
 
   const outcome = await host.start()
 
@@ -34,13 +34,15 @@ test('a run that waits on a human tells in its report the question and how to an
     '| deliver | root-6 | test(checkout): Pass3 pays by card | red | ok |',
     '| deliver | root-7 | feat(checkout): Pass3 pays by card | green | ok |',
     '| deliver | root-8 | refactor(checkout): name the card payment | refactor | ok |',
+    '| deliver | root-9 | test(checkout): Pass4 pays by card | red | ok |',
+    '| deliver | root-10 | feat(checkout): Pass4 pays by card | green | ok |',
+    '| deliver | root-11 | refactor(checkout): name the card payment | refactor | ok |',
   ].join('\n'))
-  const gates = host.events().filter(({ type, step }) => type === 'step.recorded' && step === 'gates')
   assert.equal(sectionOf(report, '## Refusals'), [
-    '| Step | Signature | Times | First failure |',
-    '| --- | --- | --- | --- |',
-    `| research | ${host.events().find(({ type, step }) => type === 'step.recorded' && step === 'research').signature} | 1 | missing research/2026-10-11/checkout-research.md |`,
-    `| gates | ${gates[0].signature} | 3 | api/test: exited 1 (evidence: ${TRACKING}/gates/api/test-1.log) |`,
+    '| Step | Times | First failure |',
+    '| --- | --- | --- |',
+    '| research | 1 | missing research/2026-10-11/checkout-research.md |',
+    `| gates | 4 | api/test: exited 1 (evidence: ${TRACKING}/gates/api/test-1.log) |`,
   ].join('\n'))
   assert.ok(question.text.endsWith(`\nThe run so far (commits, refusals, incidents): ${TRACKING}/run-report.md`), question.text)
 })

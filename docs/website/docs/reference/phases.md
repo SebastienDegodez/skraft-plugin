@@ -281,7 +281,7 @@ with `scenarios`. Why S1 is a walking skeleton: [Walking Skeleton](../explanatio
 | `scenario-review` | node `scenario_review` | `APPROVED`, `REVISE` | `REVISE` | `Scenarios` |
 | `mutation-plan` | node `mutation_plan` | `APPLY`, an instruction, or `STOP` | — | `Mutation` |
 | `environment` | the engine, when a step cannot run on the machine or with what `skraft-config.json` gives it, a replay included (no Docker or Podman answers, a runner that writes no report); its text names the cause and the log ([causes](./run-journal.md#environment-question)) | `RETRY`, `ABORT` | — | `Environment` |
-| `blocked` | the engine, when an agent answers `blocked`, a loop reaches its `max_visits`, a gate step fails the same way 3 times since it last passed or a lens answers `inconclusive` | an instruction, or `STOP` | — | `Blocked` |
+| `blocked` | the engine, when an agent answers `blocked`, a loop reaches its `max_visits` or a lens answers `inconclusive` | an instruction, or `STOP` | — | `Blocked` |
 | `review-consent` | `skraft review --pr --publish` | `ACCEPTED`, `DECLINED` | — | `PR comment` |
 
 No run asks for a publication consent: `/skraft-init` settles them before any run, in

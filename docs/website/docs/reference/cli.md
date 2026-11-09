@@ -223,10 +223,10 @@ The questions, their options and their refusals:
 | `blocked` | `<node>-<n>`, the node an instruction runs again (`design-1`) | an instruction, or `STOP` | — |
 
 A block no longer ends the run by itself. When an agent answers `blocked`, a loop reaches its
-`max_visits`, a gate step fails the same way 3 times since it last passed, or a lens of a review
-answers `inconclusive`, the engine asks the `blocked` question about the node to run again: the
-agent itself, the node the capped edge or the gates' `FAIL` edge leads back to (the engineer after
-the gates, the architect after a review or a rejected ADR), or the review. Its text holds what the
+`max_visits` (the gates' `FAIL` edge included), or a lens of a review answers `inconclusive`,
+the engine asks the `blocked` question about the node to run again: the agent itself, the node
+the capped edge leads back to (the engineer after the gates, the architect after a review or a
+rejected ADR), or the review. Its text holds what the
 engine checked, what the blocked step left (the agent's reason, the gates' failures), the file
 that keeps the agent's own words, and where the run report is:
 
@@ -238,7 +238,7 @@ Left by design (1):
 The run so far (commits, refusals, incidents): <tracking folder>/run-report.md
 design_review is blocked: a lens answered inconclusive; the verdict is in <tracking folder>/reviews/design_review-1/verdict.yaml. An instruction runs design_review again on a new pass with it; STOP ends the run.
 The run so far (commits, refusals, incidents): <tracking folder>/run-report.md
-deliver is blocked: gates failed the same way 3 times since it last passed, so it does not send the work back again.
+deliver is blocked: gates -> deliver was taken as often as its max_visits allows.
 Left by gates (1):
 - api/test: exited 1 (evidence: <tracking folder>/gates/api/test-3.log)
  An instruction runs deliver again on a new pass with what is left above and the instruction; STOP ends the run.
@@ -276,8 +276,8 @@ run on the same slug, runs that node again on a new pass, the instruction given 
 a human's feedback (to each lens the review asks, for a review); no edge into the node counts
 as taken any more, so its loop has its whole budget again. Blocked again, it asks again
 (`design-2`). `STOP` (in any case) ends the run `blocked`, with the code and reason of the
-block, and nothing else. A breaker (an agent failing the same way on its last two attempts, or
-3 times since it last passed), an attempt ceiling, a missing edge or a stalled mutation loop
+block, and nothing else. A breaker (an agent whose last two refused attempts failed the same
+way), an attempt ceiling, a missing edge or a stalled mutation loop
 still end the run without a question.
 
 A key names the node that asks the question, then the question's rank among those that node
@@ -390,9 +390,10 @@ journal or a tampered one, only the first line and the reason are printed (`idle
 **`--json` output**: `{ slug, status, reason, steps: [{ step, phase, visits, attempts, retries,
 durationMs, costUsd, outcome }], totals: { attempts, retries, durationMs, costUsd }, answers:
 [{ key, kind, step, answer, reason, by }], waiting: { key, kind, step, text, options } or null,
-commits: [{ step, sha, subject, kind, verdict }], refusals: [{ step, signature, times, failure }],
-incidents: [{ key, step, owner, log, answer }], startedAt, elapsedMs }`: `sha` short, `failure` the
-first failure of that signature, `answer` `null` while the question waits. Code 1 only for
+commits: [{ step, sha, subject, kind, verdict }], refusals: [{ step, times, failure }],
+incidents: [{ key, step, owner, log, answer }], startedAt, elapsedMs }`: `sha` short, `times` how
+often an attempt or a gate step of that node failed, `failure` the first failure, `answer` `null`
+while the question waits. Code 1 only for
 `tampered`.
 
 ## `skraft publish`

@@ -107,7 +107,7 @@ const casesReading = (cases) => {
 
 /** Why a red that is not proven is refused, by reading. @type {Readonly<Record<Exclude<Reading, 'assertion' | 'indeterminate'>, string>>} */
 const NOT_RED = Object.freeze({
-  'no-report': 'its test command wrote no test report: the build, the test collection or an import failed before any test ran, or the command writes none where testReports looks (skraft doctor names what to add)',
+  'no-report': 'its test command wrote no test report: the build, the test collection or an import failed before any test ran',
   error: 'its tests end on an error, never on an assertion: make the skeleton answer the empty value of its type so that the assertion runs',
   skipped: 'no test fails and some are skipped: a scenario\'s test is never skipped',
   green: 'its tests pass at it',

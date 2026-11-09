@@ -99,10 +99,6 @@ An architectural pattern where the state of a system is reconstructed from a seq
 What a failed gate is: `environment` (the machine or the config must change: missing program, program stopped), `unknown` (the command was stopped by a signal or crashed: a human reads its log) or `deterministic` (the command failed: the code must change).
 → See [Failure class](../how-to/run-gates.md)
 
-**Failure signature**
-Eight hexadecimal digits that name a failure once what varies between tries is taken out (times, durations, processes, ports, shas, temporary folders, attempt numbers, the working copy). An agent failing the same way on its last two attempts, or a node failing the same way 3 times since it last passed, is not sent the work back again.
-→ See [Tracking folder and journal](./run-journal.md#events)
-
 **Finding**
 A defect a lens reports: the gate concerned, a severity (`blocker`, `high`, `medium`, `low`), a location and a description. Only `blocker`, `high` and `medium` findings that stand send the work back.
 → See [Gates](./gates.md#lens-answer)

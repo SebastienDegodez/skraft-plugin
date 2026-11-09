@@ -86,7 +86,7 @@ test('a component that overrides its infrastructure policy in skraft-config.json
 
 test('a red of an acceptance test whose tests write no report, end on an error, are skipped, time out or pass is refused, and DISTILL tries again', async () => {
   const cases = [
-    [{ reports: { 'root-1': null } }, 'its test command wrote no test report: the build, the test collection or an import failed before any test ran, or the command writes none where testReports looks (skraft doctor names what to add)'],
+    [{ reports: { 'root-1': null } }, 'its test command wrote no test report: the build, the test collection or an import failed before any test ran'],
     [{ reports: { 'root-1': junitReport([['Acceptance.pays', 'error']]) } }, 'its tests end on an error, never on an assertion: make the skeleton answer the empty value of its type so that the assertion runs'],
     [{ exits: { 'root-1': 0 }, reports: { 'root-1': junitReport([['Acceptance.pays', 'skipped'], ['Unit.other', 'passed']]) } }, 'no test fails and some are skipped: a scenario\'s test is never skipped'],
     [{ exits: { 'root-1': 0 } }, 'the tests of api pass at it'],
@@ -104,11 +104,9 @@ test('a red with no report from a test command that writes none where the engine
 
   const outcome = await host.start()
 
-  assert.deepEqual([outcome.status, outcome.reason], ['waiting', waitingOnEnvironment('distill', 'replaying root-1 for api: its test command "dotnet test" writes no JUnit report where testReports looks; add --logger trx (VSTest) or --report-trx (Microsoft.Testing.Platform) to it in skraft-config.json, then retry', 1, { owner: 'config', log: logOf('root-1') })])
+  assert.deepEqual([outcome.status, outcome.reason], ['waiting', waitingOnEnvironment('distill', 'replaying root-1 for api: its test command "dotnet test" writes no JUnit report where testReports looks; add --logger trx to it in skraft-config.json, then retry', 1, { owner: 'config', log: logOf('root-1') })])
   assert.deepEqual(recorded(host, 'distill'), [])
-  const { signature, ...incident } = host.events().filter(({ type }) => type === 'question.asked').at(-1).incident
-  assert.deepEqual(incident, { owner: 'config', log: logOf('root-1') })
-  assert.match(signature, /^[0-9a-f]{8}$/)
+  assert.deepEqual(host.events().filter(({ type }) => type === 'question.asked').at(-1).incident, { owner: 'config', log: logOf('root-1') })
   assert.match(host.tracking.files.get(`${SLUG}/logs/replay-root-1-api-test.log`), /^\$ dotnet test\ncwd: \.\ncommit: root-1\nexit: 1\n--- stdout\n/)
 })
 
@@ -236,7 +234,7 @@ test('a green after which the scenario\'s acceptance tests still fail, are missi
   const cases = [
     [{ exits: { 'root-2': 1 }, reports: { 'root-2': junitReport([['Tests.dotnet test', 'failed'], ['Tests.Unit.Rounds', 'error']]) } }, notGreen('these tests fail at it: Tests.dotnet test, Tests.Unit.Rounds')],
     [{ reports: { 'root-1': junitReport([['Tests.S1AcceptanceTests.Pays', 'failed'], ['Tests.S1AcceptanceTests.Receipt', 'failed']]), 'root-2': junitReport([['Tests.S1AcceptanceTests.Pays', 'skipped'], ['Tests.Unit.Rounds', 'passed']]) } }, notGreen('the scenario\'s tests do not pass at it: Tests.S1AcceptanceTests.Pays, Tests.S1AcceptanceTests.Receipt')],
-    [{ reports: { 'root-2': null } }, notGreen('its test command wrote no test report: the build, the test collection or an import failed before any test ran, or the command writes none where testReports looks (skraft doctor names what to add)')],
+    [{ reports: { 'root-2': null } }, notGreen('its test command wrote no test report: the build, the test collection or an import failed before any test ran')],
   ]
   for (const [scripting, failures] of cases) {
     const host = scripted({ components: [TRX], replay: new ScriptedReplay(scripting) }, (it) => [...research(it), agent()(it), agent()(it), unavailable])

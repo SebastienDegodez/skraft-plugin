@@ -220,10 +220,6 @@ Le statut d'un run dont la question n'a pas encore de réponse. Le run ne fait p
 
 ## S
 
-**Signature d'échec**
-Huit chiffres hexadécimaux qui nomment un échec une fois retiré ce qui varie d'un essai à l'autre (heures, durées, processus, ports, sha, dossiers temporaires, numéros de tentative, la copie de travail). Un agent qui échoue de la même façon à ses deux dernières tentatives, ou un nœud qui échoue de la même façon 3 fois depuis son dernier passage réussi, ne reçoit plus le travail en retour.
-→ Voir [Dossier de suivi et journal](./run-journal.md#events)
-
 **Skill**
 Dans SKRAFT, une pratique outillée encapsulée dans un fichier `SKILL.md`. Une skill définit quoi faire, comment le faire et quelles références la justifient.
 → Voir [Skills](pathname:///dashboard/)

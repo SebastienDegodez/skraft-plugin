@@ -81,8 +81,8 @@ During a run, an `environment` or `unknown` failure sends nothing back to the en
 no attempt: the run asks the `environment` question, whose `Cause:` line says who fixes it and
 whose `Output:` line, when a command ran, names its evidence file. Repair, then answer `RETRY`
 ([Answer a run's question](./answer-a-question.mdx)). A `deterministic` failure goes back to the
-engineer; the same failure 3 times since the gates last passed asks the `blocked` question
-instead.
+engineer through the gates' `FAIL` edge, until that edge's `max_visits`; then the run asks the
+`blocked` question.
 
 ## Troubleshooting
 

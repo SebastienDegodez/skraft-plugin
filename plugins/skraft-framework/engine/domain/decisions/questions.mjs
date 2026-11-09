@@ -1,5 +1,4 @@
 import { inert } from '../reporting/markdown-safety.mjs'
-import { REPEATS } from '../pipeline/failure-signature.mjs'
 import { causeLines } from '../pipeline/incidents.mjs'
 
 /**
@@ -179,7 +178,6 @@ const leftBy = ({ from, failures }) => (failures.length === 0 ? '' : `\nLeft by 
 const BLOCKS = Object.freeze({
   'agent-blocked': ({ agent, details }) => `${agent} says it cannot go on; its reason is in ${details}`,
   'loop-ceiling': ({ from, step }) => `${from} -> ${step} was taken as often as its max_visits allows`,
-  'repeated-failure': ({ from }) => `${from} failed the same way ${REPEATS} times since it last passed, so it does not send the work back again`,
   'lens-inconclusive': ({ details }) => `a lens answered inconclusive; the verdict is in ${details}`,
 })
 

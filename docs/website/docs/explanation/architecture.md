@@ -127,12 +127,11 @@ sequenceDiagram
 keeps each fact before the next step is decided.*
 
 A missing output starts the agent again with the list of what is missing, within its attempts.
-The engine knows a failure that comes back by its signature: what failed and why, once what
-varies from one try to the next (times, durations, processes, ports, shas, temporary folders) is
-taken out. The same failure twice in a row stops the run earlier, because a third identical
-attempt would teach nothing; the same failure 3 times on a node since it last passed, across
-passes, is not sent back again, and a gate step then asks a human for an instruction. The count
-is read from the journal, so a resumed run keeps it. A step the machine cannot run (program not
+An agent whose last two refused attempts failed exactly the same way (the same missing outputs
+and the same failures, compared as written) stops the run earlier, because a third identical
+attempt would teach nothing. A failed gate step sends the work back through its `FAIL` edge
+until that edge's `max_visits`; then the run asks a human for an instruction. Attempts and
+edges taken are read from the journal, so a resumed run keeps them. A step the machine cannot run (program not
 found, git failing, a command stopped by a signal or crashed), or cannot run with what
 `skraft-config.json` gives it, is not blamed on the agent and uses none of its attempts: the
 engine asks a human, naming whose it is to fix and the log of what the command printed, then

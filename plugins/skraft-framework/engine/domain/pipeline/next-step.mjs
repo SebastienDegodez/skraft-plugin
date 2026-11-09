@@ -1,5 +1,4 @@
 import { edgeKey } from '../journal/run-state.mjs'
-import { REPEATS } from './failure-signature.mjs'
 import { acceptedOf, instructionOf, questionSpec } from '../decisions/questions.mjs'
 import { scenarioNodes } from '../workflow/workflow.mjs'
 
@@ -27,7 +26,7 @@ import { scenarioNodes } from '../workflow/workflow.mjs'
  * @typedef {Entry & { kind: 'agent' | 'gate' | 'review' | 'ask' | 'publish' | 'call', phase: string, node: WorkflowNode }} WorkStep
  * @typedef {{ kind: 'skip', phase: string, node: WorkflowNode, visit: number, resumed: OpenAttempt | null }} SkipStep
  *   a locked gate the repository's workflow unlocked.
- * @typedef {'agent-blocked' | 'repeated' | 'breaker' | 'ceiling' | 'route' | 'workflow-changed'} BlockCause
+ * @typedef {'agent-blocked' | 'breaker' | 'ceiling' | 'route' | 'workflow-changed'} BlockCause
  * @typedef {{ kind: 'blocked', phase: string | null, node: WorkflowNode | null, cause: BlockCause, last: RunEvent | null, previous: RunEvent | null, missingNode: string | null, reopens: string | null }} BlockedStep
  *   reopens: the node a human's instruction runs again on a new pass; null for a block no
  *   instruction lifts.
@@ -193,8 +192,8 @@ const begin = (workflow, run) => {
  */
 const retry = (node, run, last) => {
   const { previous } = run.nodes[last.step]
-  const cause = refusalBlock(node, run, previous, last)
-  // The agent that says it is blocked runs again on a human's instruction; a repeated failure, a breaker or a ceiling is no question to a human.
+  const cause = refusalBlock(node, previous, last)
+  // The agent that says it is blocked runs again on a human's instruction; a breaker or a ceiling is no question to a human.
   if (cause !== null) return { kind: 'blocked', phase: node.phase, node, cause, last, previous, missingNode: null, reopens: cause === 'agent-blocked' ? node.id : null }
   return enter(node, { visit: last.visit, attempt: last.attempt + 1, missing: last.missing, feedback: last.failures, instruction: null, sentBy: run.nodes[last.step].sentBy, resumed: null, ...groupOf(run, last.step, last.group) }, run)
 }
@@ -216,16 +215,14 @@ const nextGroup = (node, run, last) => {
 }
 
 /**
- * Why a refused attempt blocks the run: the agent said so, its failure came back as often as a
- * run allows since the node last passed, it failed the same way on its last two attempts, or it used its last attempt; null
- * when it gets another one. The same way is the same signature.
- * @param {WorkflowNode} node @param {RunState} run @param {RunEvent | null} previous @param {RunEvent} last
+ * Why a refused attempt blocks the run: the agent said so, it failed the same way twice, or it
+ * used its last attempt; null when it gets another one.
+ * @param {WorkflowNode} node @param {RunEvent | null} previous @param {RunEvent} last
  * @returns {BlockCause | null}
  */
-const refusalBlock = (node, run, previous, last) => {
+const refusalBlock = (node, previous, last) => {
   if (last.code === 'agent-blocked') return 'agent-blocked'
-  if (run.signatures[last.step][last.signature] >= REPEATS) return 'repeated'
-  if (previous !== null && previous.signature === last.signature) return 'breaker'
+  if (previous !== null && sameFailure(previous, last)) return 'breaker'
   // Stryker disable next-line StringLiteral: a refusal that is not the breaker's is told as the ceiling, whatever its cause
   if (last.attempt >= (node.maxAttempts ?? DEFAULT_ATTEMPTS)) return 'ceiling'
   return null
@@ -312,12 +309,18 @@ const changed = (id) => ({ kind: 'blocked', phase: null, node: null, cause: 'wor
 
 /**
  * The node a human's instruction runs again when no edge leads on from a node: the one a loop
- * at its max_visits, or a gate that failed the same way as often as a run allows, leads back to,
- * as its step recorded it; a review a lens left without a verdict; null for a block no
- * instruction lifts, and for a ceiling a journal written before it recorded where its edge leads.
+ * at its max_visits leads back to, as its step recorded it, a review a lens left without a
+ * verdict; null for a block no instruction lifts, and for a ceiling a journal written before it
+ * recorded where its edge leads.
  * @param {RunEvent} last
  */
-const reopened = (last) => last.ceiling ?? (last.outcome === 'blocked' ? last.step : null)
+const reopened = (last) => {
+  if (last.code === 'loop-ceiling') return last.ceiling ?? null
+  return last.outcome === 'blocked' ? last.step : null
+}
+
+/** Two attempts of a pass refused for the same reasons. @param {RunEvent} a @param {RunEvent} b */
+const sameFailure = (a, b) => JSON.stringify([a.missing, a.failures]) === JSON.stringify([b.missing, b.failures])
 
 /**
  * The edge leaving the node with that label; for an ask node, the unlabeled one when no edge has the answer.

@@ -30,9 +30,7 @@ scripts/ folder next to this SKILL.md, never in the consumer repository. Every s
 The `test` line writes one report per test project under `<project>/TestResults/`, where the
 component's `testReports` looks by default (`**/TestResults/*.trx`, `**/TestResults/*.xml`):
 `--logger trx`, built into `dotnet test`, or `--logger "junit;LogFilePath=TestResults/junit.xml"`
-with the `JunitXml.TestLogger` package in every test project. Under Microsoft.Testing.Platform,
-`--logger` does not exist: `dotnet test --report-trx` writes the TRX under each project's
-`bin/<configuration>/<framework>/TestResults/`, which the default also reads. The engine reads it to tell a
+with the `JunitXml.TestLogger` package in every test project. The engine reads it to tell a
 failing assertion from a build error.
 
 `--evidence` is the folder where the script keeps its own report files, relative to `--root`;

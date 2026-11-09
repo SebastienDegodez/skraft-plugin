@@ -224,11 +224,10 @@ Les questions, leurs options et leurs refus :
 | `blocked` | `<nœud>-<n>`, le nœud qu'une consigne relance (`design-1`) | une consigne, ou `STOP` | — |
 
 Un blocage ne termine plus le run à lui seul. Quand un agent répond `blocked`, qu'une boucle
-atteint son `max_visits`, qu'une étape de gates échoue de la même façon 3 fois depuis son dernier
-passage réussi ou qu'une lentille d'une revue répond `inconclusive`, le moteur pose la question
-`blocked` sur le nœud à relancer : l'agent lui-même, le nœud vers lequel revient l'arête plafonnée
-ou l'arête `FAIL` des gates (l'ingénieur après les gates, l'architecte après une revue ou un ADR
-rejeté), ou la revue. Son texte porte ce que le moteur a vérifié, ce que l'étape bloquée a laissé
+atteint son `max_visits` (l'arête `FAIL` des gates comprise) ou qu'une lentille d'une revue
+répond `inconclusive`, le moteur pose la question `blocked` sur le nœud à relancer : l'agent
+lui-même, le nœud vers lequel revient l'arête plafonnée (l'ingénieur après les gates,
+l'architecte après une revue ou un ADR rejeté), ou la revue. Son texte porte ce que le moteur a vérifié, ce que l'étape bloquée a laissé
 (la raison de l'agent, les échecs des gates), le fichier qui garde les mots de l'agent et
 l'emplacement du rapport du run :
 
@@ -240,7 +239,7 @@ Left by design (1):
 The run so far (commits, refusals, incidents): <dossier de suivi>/run-report.md
 design_review is blocked: a lens answered inconclusive; the verdict is in <dossier de suivi>/reviews/design_review-1/verdict.yaml. An instruction runs design_review again on a new pass with it; STOP ends the run.
 The run so far (commits, refusals, incidents): <dossier de suivi>/run-report.md
-deliver is blocked: gates failed the same way 3 times since it last passed, so it does not send the work back again.
+deliver is blocked: gates -> deliver was taken as often as its max_visits allows.
 Left by gates (1):
 - api/test: exited 1 (evidence: <dossier de suivi>/gates/api/test-3.log)
  An instruction runs deliver again on a new pass with what is left above and the instruction; STOP ends the run.
@@ -279,8 +278,8 @@ agent comme retour d'un humain (à chaque lentille que la revue interroge, pour 
 aucune arête vers ce nœud ne compte plus comme empruntée, sa boucle retrouve donc tout son
 budget. Bloqué de nouveau, il redemande (`design-2`). `STOP` (quelle que soit la casse) termine
 le run `blocked`, avec le code et la raison du blocage, et rien d'autre. Un disjoncteur (un agent
-qui échoue de la même façon à ses deux dernières tentatives, ou 3 fois depuis son dernier passage
-réussi), un plafond de tentatives, une arête manquante ou une boucle de mutation sans progrès
+dont les deux dernières tentatives refusées ont échoué de la même façon), un plafond de
+tentatives, une arête manquante ou une boucle de mutation sans progrès
 terminent toujours le run sans question.
 
 Une clé nomme le nœud qui pose la question, puis le rang de la question parmi celles que ce
@@ -394,9 +393,10 @@ et la raison s'affichent (`idle`, `not-initialised`, `tampered`).
 **Sortie `--json`** : `{ slug, status, reason, steps: [{ step, phase, visits, attempts, retries,
 durationMs, costUsd, outcome }], totals: { attempts, retries, durationMs, costUsd }, answers:
 [{ key, kind, step, answer, reason, by }], waiting: { key, kind, step, text, options } ou null,
-commits: [{ step, sha, subject, kind, verdict }], refusals: [{ step, signature, times, failure }],
-incidents: [{ key, step, owner, log, answer }], startedAt, elapsedMs }` : `sha` court, `failure` le
-premier échec de cette signature, `answer` `null` tant que la question attend. Code 1 seulement
+commits: [{ step, sha, subject, kind, verdict }], refusals: [{ step, times, failure }],
+incidents: [{ key, step, owner, log, answer }], startedAt, elapsedMs }` : `sha` court, `times`
+combien de fois une tentative ou une étape de gates de ce nœud a échoué, `failure` le premier
+échec, `answer` `null` tant que la question attend. Code 1 seulement
 pour `tampered`.
 
 ## `skraft publish`

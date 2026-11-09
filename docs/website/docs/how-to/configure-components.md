@@ -131,10 +131,10 @@ the component root:
 
 | Stack | Default `testReports` | For example |
 |---|---|---|
-| .NET | `**/TestResults/*.trx`, `**/TestResults/*.xml` | `dotnet test --logger trx` (VSTest, built in), `dotnet test --report-trx` (Microsoft.Testing.Platform, under `bin/`), or `--logger "junit;LogFilePath=TestResults/junit.xml"` (JunitXml.TestLogger) |
-| Java | `**/target/surefire-reports/TEST-*.xml`, `**/target/failsafe-reports/TEST-*.xml`, `**/build/test-results/*/*.xml` | Surefire, Failsafe and every Gradle test task write them already |
-| Python | `reports/junit.xml` | `pytest --junitxml=reports/junit.xml`; pytest runs unittest tests too, `python -m unittest` writes none |
-| TypeScript, JavaScript, React | `reports/junit.xml`, `junit.xml` | `vitest run --reporter=default --reporter=junit --outputFile.junit=reports/junit.xml`; Jest with `--reporters=default --reporters=jest-junit` (`junit.xml`); Playwright with `reporter: [['junit', { outputFile: 'reports/junit.xml' }]]` in `playwright.config` |
+| .NET | `**/TestResults/*.trx`, `**/TestResults/*.xml` | `dotnet test --logger trx` (built in), or `--logger "junit;LogFilePath=TestResults/junit.xml"` (JunitXml.TestLogger) |
+| Java | `**/target/surefire-reports/TEST-*.xml`, `**/build/test-results/test/*.xml` | Surefire and Gradle write them already |
+| Python | `reports/junit.xml` | `pytest --junitxml=reports/junit.xml` |
+| TypeScript, JavaScript, React | `reports/junit.xml` | `vitest run --reporter=default --reporter=junit --outputFile.junit=reports/junit.xml` |
 
 Elsewhere, name the paths:
 

@@ -131,13 +131,12 @@ sequenceDiagram
 chaque fait avant que la suite soit décidée.*
 
 Une sortie absente relance l'agent avec la liste de ce qui manque, dans la limite de ses
-tentatives. Le moteur reconnaît un échec qui revient à sa signature : ce qui a échoué et
-pourquoi, une fois retiré ce qui varie d'un essai à l'autre (heures, durées, processus, ports,
-sha, dossiers temporaires). Le même échec deux fois de suite arrête le run plus tôt, parce qu'une
-troisième tentative identique n'apprendrait rien ; le même échec 3 fois sur un nœud depuis son
-dernier passage réussi, d'un passage à l'autre, n'est plus renvoyé, et une étape de gates
-demande alors une consigne à un humain. Le compte est relu dans le journal, si bien qu'un run
-repris le garde. Une étape que la machine ne peut pas exécuter (programme introuvable, git en
+tentatives. Un agent dont les deux dernières tentatives refusées ont échoué exactement de la même
+façon (les mêmes sorties absentes et les mêmes échecs, comparés tels qu'écrits) arrête le run plus
+tôt, parce qu'une troisième tentative identique n'apprendrait rien. Une étape de gates en échec
+renvoie le travail par son arête `FAIL` jusqu'au `max_visits` de cette arête ; le run demande
+alors une consigne à un humain. Les tentatives et les arêtes empruntées sont relues dans le
+journal, si bien qu'un run repris les garde. Une étape que la machine ne peut pas exécuter (programme introuvable, git en
 échec, une commande arrêtée par un signal ou qui a planté), ou pas avec ce que lui donne
 `skraft-config.json`, n'est pas imputée à l'agent et ne consomme aucune de ses tentatives : le
 moteur demande à un humain, en nommant à qui revient la correction et le log de ce qu'a affiché

@@ -40,8 +40,6 @@ import { commitForAgent } from './agent-commits.mjs'
 import { writeStructuralScan } from './structural-scan.mjs'
 import { findComponentSkills } from './component-skills.mjs'
 import { proposedAdrs } from '../decisions/adr-ratification.mjs'
-import { attemptSignature, gateSignature, repeatedGate } from './failure-signatures.mjs'
-import { REPEATS } from '../../domain/pipeline/failure-signature.mjs'
 import { gateIncident } from './gate-incidents.mjs'
 
 /**
@@ -331,15 +329,10 @@ const refusedBy = (context, { cause, node, previous }, event) => {
   const agent = /** @type {{ agent: string }} */ (node).agent
   if (cause === 'agent-blocked') return { code: event.code, reason: `${agent} is blocked: ${event.failures[0]}` }
   const details = refusalDetails(context, event)
-  return { code: event.code, reason: `${agent} ${REFUSED[/** @type {keyof typeof REFUSED} */ (cause)](event, previous)}: ${details}` }
+  return cause === 'breaker'
+    ? { code: event.code, reason: `${agent} failed the same way on attempts ${/** @type {{ attempt: number }} */ (previous).attempt} and ${event.attempt}: ${details}` }
+    : { code: event.code, reason: `${agent} still failed after ${event.attempt} attempts: ${details}` }
 }
-
-/** How an agent failed, by why the run stops. */
-const REFUSED = Object.freeze({
-  repeated: () => `failed the same way ${REPEATS} times since it last passed`,
-  breaker: (/** @type {import('../../domain/journal/run-state.mjs').RunEvent} */ event, /** @type {import('../../domain/journal/run-state.mjs').RunEvent} */ previous) => `failed the same way on attempts ${previous.attempt} and ${event.attempt}`,
-  ceiling: (/** @type {import('../../domain/journal/run-state.mjs').RunEvent} */ event) => `still failed after ${event.attempt} attempts`,
-})
 
 /** @param {Context} context @param {import('../../domain/journal/run-state.mjs').RunEvent} event */
 const refusalDetails = ({ deps, slug }, event) => [
@@ -795,16 +788,9 @@ const recordAttempt = async (context, run, { node, visit, attempt, group, groups
     code: failed ? checked.code : routed.code ?? null,
     missing: checked.missing, failures: checked.failures,
     next: routed.next, ceiling: routed.ceiling, reason: routed.reason, model, // undefined on a resume that did not start the agent
-    ...spent(context, started, checked.replayMs, cost), ...(committed ? { committed } : {}), ...checkedFields(context, node.id, checked, failed),
+    ...spent(context, started, checked.replayMs, cost), ...(committed ? { committed } : {}), ...(failed ? {} : checked.scenario),
   })
 }
-
-/**
- * What a checked attempt adds to its step: a refused one its signature, a done one what it
- * records of the story's scenarios.
- * @param {Context} context @param {string} step @param {Awaited<ReturnType<typeof checkStep>>} checked @param {boolean} failed
- */
-const checkedFields = (context, step, checked, failed) => (failed ? { signature: attemptSignature(context, { step, ...checked }) } : checked.scenario)
 
 /**
  * Where a done attempt leads: a group of surviving mutants hands over to the next one of its
@@ -872,8 +858,7 @@ const gate = async (context, run, next) => {
   const { gates, failure } = await gateResults(context, run, node)
   const failures = gates.filter((result) => result.status === 'fail').map((result) => `${result.component}/${result.gate}: ${result.reason} (evidence: ${result.evidence})`)
   if (failure === 'interrupted' || failure === 'environment' || failure === 'unknown') return stoppedGates(context, next, { gates, failure, failures })
-  const signature = failure === null ? null : await gateSignature(context, { step: node.id, failures })
-  await recordGate(context, run, next, { failure, failures, signature, started, survivors: groupSurvivors(gates.flatMap((result) => result.survivors ?? [])) })
+  await recordGate(context, run, next, { failure, failures, started, survivors: groupSurvivors(gates.flatMap((result) => result.survivors ?? [])) })
   return null
 }
 
@@ -917,16 +902,16 @@ const withOtherComponents = async (deps, request, touched) => {
 /**
  * Records the gate node: passed or failed, with the node it leads to.
  * @param {Context} context @param {RunState} run @param {WorkStep} next
- * @param {{ failure: string | null, failures: string[], signature: string | null, started: Date, survivors: import('../../domain/gates/mutation-report.mjs').SurvivorGroup[] }} outcome
- *   signature: a failed pass's; survivors: the mutants the node's mutation runs left alive, by file
+ * @param {{ failure: string | null, failures: string[], started: Date, survivors: import('../../domain/gates/mutation-report.mjs').SurvivorGroup[] }} outcome
+ *   survivors: the mutants the node's mutation runs left alive, by file
  */
-const recordGate = async (context, run, { node, visit, attempt }, { failure, failures, signature, started, survivors }) => {
-  const routed = gateRoute(context, run, node.id, { failed: failure !== null, signature, failures, survivors })
+const recordGate = async (context, run, { node, visit, attempt }, { failure, failures, started, survivors }) => {
+  const routed = gateRoute(context, run, node.id, { failed: failure !== null, failures, survivors })
   await context.journal.append('step.recorded', {
     step: node.id, visit, attempt,
     outcome: failure === null ? 'pass' : 'fail',
     code: routed.code ?? null,
-    failures, ...(signature === null ? {} : { signature }),
+    failures,
     survivors,
     next: routed.next, ceiling: routed.ceiling, reason: routed.reason,
     durationMs: context.deps.clock.now().getTime() - started.getTime(),
@@ -935,20 +920,17 @@ const recordGate = async (context, run, { node, visit, attempt }, { failure, fai
 
 /**
  * Where a gate node goes: a failed one that left as many mutants alive for its last rounds stops
- * the run, one that failed the same way as often as a run allows asks a human; a blocked route
- * names the mutants that remain.
+ * the run; a blocked route names the mutants that remain.
  * @param {Context} context @param {RunState} run @param {string} id
- * @param {{ failed: boolean, signature: string | null, failures: string[], survivors: import('../../domain/gates/mutation-report.mjs').SurvivorGroup[] }} outcome
- *   signature: null when the gates passed
+ * @param {{ failed: boolean, failures: string[], survivors: import('../../domain/gates/mutation-report.mjs').SurvivorGroup[] }} outcome
  * @returns {{ next: string | null, code?: string, reason?: string, ceiling?: string | null }}
  */
-const gateRoute = (context, run, id, { failed, signature, failures, survivors }) => {
+const gateRoute = (context, run, id, { failed, failures, survivors }) => {
   const named = survivors.flatMap(({ mutants }) => mutants)
   if (failed && named.length > 0 && isStalled([...survivorCounts(context.journal, id), named.length])) {
     return { next: null, code: 'mutation-stalled', reason: `${id} left as many mutants alive for ${ROUNDS_WITHOUT_PROGRESS} rounds; ${aliveCount(named.length)}: ${named.join('; ')}` }
   }
-  const routed = leave(context, run, id, failed ? 'FAIL' : 'PASS', [...failures, ...named])
-  return failed ? repeatedGate(run, id, { routed, signature: /** @type {string} */ (signature), failures }) : routed
+  return leave(context, run, id, failed ? 'FAIL' : 'PASS', [...failures, ...named])
 }
 
 /**

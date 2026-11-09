@@ -400,7 +400,7 @@ const inside = (path, folder) => (folder === '' ? path : path.slice(folder.lengt
  */
 export class InMemoryGit {
   /**
-   * @param {{ repositories?: Record<string, { mergeBases?: Record<string, string>, tracked?: string[] | null }>, unavailable?: string | null, published?: string[], commitFails?: string | null, remote?: string | null }} [options]
+   * @param {{ repositories?: Record<string, { mergeBases?: Record<string, string>, tracked?: string[] | null }>, unavailable?: string | null, published?: string[], commitFails?: string | null, remote?: string | null, hex?: boolean }} [options]
    *   every repository starts with one commit, `<top>-0`, which its merge bases usually name;
    *   tracked: the files it already holds, relative to its top; null when Git cannot list them;
    *   published: the files that first commit holds, relative to the working copy; commitFails:
@@ -928,20 +928,18 @@ export class InMemoryWorkflowSource {
  */
 export class ScriptedMachine {
   /**
-   * @param {{ installed?: string[], exits?: Record<string, number | null>, clock?: FixedClock, takesMs?: number, meanwhile?: Record<string, () => Promise<void> | void>, floods?: string[], outputs?: Record<string, () => string> }} [options]
+   * @param {{ installed?: string[], exits?: Record<string, number | null>, clock?: FixedClock, takesMs?: number, meanwhile?: Record<string, () => Promise<void> | void>, floods?: string[] }} [options]
    *   exits: null for a program stopped before it exited; clock advances by takesMs per run;
    *   meanwhile: what happens elsewhere on the machine while that command line runs; floods:
-   *   the command lines whose output passes the runner's limit, kept cut; outputs: what a command
-   *   line prints, asked at each run
+   *   the command lines whose output passes the runner's limit, kept cut
    */
-  constructor({ installed = ['git', 'docker', 'dotnet', 'npm', 'npx', 'mvn', 'python'], exits = {}, clock = null, takesMs = 0, meanwhile = {}, floods = [], outputs = {} } = {}) {
+  constructor({ installed = ['git', 'docker', 'dotnet', 'npm', 'npx', 'mvn', 'python'], exits = {}, clock = null, takesMs = 0, meanwhile = {}, floods = [] } = {}) {
     this.installed = new Set(installed)
     this.exits = exits
     this.clock = clock
     this.takesMs = takesMs
     this.meanwhile = meanwhile
     this.floods = new Set(floods)
-    this.outputs = outputs
     /** @type {Array<{ argv: string[], cwd: string }>} */
     this.runs = []
   }
@@ -960,18 +958,12 @@ export class ScriptedMachine {
     await this.meanwhile[line]?.()
     if (this.exits[line] === null) return { started: true, exitCode: null, stdout: '', stderr: '', error: `${argv[0]} was stopped by SIGKILL` }
     const exitCode = this.exits[line] ?? 0
-    const output = { stdout: this.outputs[line]?.() ?? `${argv.join(' ')} output\n`, stderr: exitCode === 0 ? '' : 'it failed\n' }
+    const output = { stdout: `${argv.join(' ')} output\n`, stderr: exitCode === 0 ? '' : 'it failed\n' }
     if (this.floods.has(line)) return { started: true, exitCode, stdout: `${output.stdout}\n… output cut …\n`, stderr: output.stderr, truncated: true }
     return { started: true, exitCode, ...output }
   }
   /** The command lines run, as `'<cwd> $ <argv>'`. */
   lines() { return this.runs.map(({ argv, cwd }) => `${cwd} $ ${argv.join(' ')}`) }
-}
-
-/** A test command that fails on another test at each run: the work goes on, never the same way twice. */
-export const failingAnotherTest = () => {
-  let run = 0
-  return () => `Failed CheckoutTests.Case${(run += 1)}\n`
 }
 
 /**

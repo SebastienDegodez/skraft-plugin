@@ -47,14 +47,11 @@ gates refuse the run.
 - `e2e` — the end-to-end command, for a front end only.
 
 The `test` command, and `e2e`, must write JUnit XML where the component's `testReports` says,
-by default: .NET `**/TestResults/*.trx` or `**/TestResults/*.xml` (`--logger trx` under VSTest,
-`--report-trx` under Microsoft.Testing.Platform, or `--logger "junit;LogFilePath=TestResults/junit.xml"`
-with `JunitXml.TestLogger`); Java Surefire's `**/target/surefire-reports/TEST-*.xml`, Failsafe's
-`**/target/failsafe-reports/TEST-*.xml` or Gradle's `**/build/test-results/*/*.xml`; Python
-`reports/junit.xml` (pytest `--junitxml=reports/junit.xml`, never `python -m unittest`, which writes
-none); TypeScript, JavaScript and React `reports/junit.xml` or `junit.xml` (Vitest
-`--reporter=default --reporter=junit --outputFile.junit=reports/junit.xml`, Jest's `jest-junit`,
-Playwright's junit reporter with `outputFile: 'reports/junit.xml'`).
+by default: .NET `**/TestResults/*.trx` or `**/TestResults/*.xml` (`--logger trx`, built in, or
+`--logger "junit;LogFilePath=TestResults/junit.xml"` with `JunitXml.TestLogger`); Java Surefire's
+`**/target/surefire-reports/TEST-*.xml` or Gradle's `**/build/test-results/test/*.xml`; Python
+`reports/junit.xml` (`--junitxml=reports/junit.xml`); TypeScript, JavaScript and React
+`reports/junit.xml` (Vitest `--reporter=default --reporter=junit --outputFile.junit=reports/junit.xml`).
 The engine reads it to tell a test failing on an assertion from a build error: for a `test`
 command that writes none, propose the reporter above.
 

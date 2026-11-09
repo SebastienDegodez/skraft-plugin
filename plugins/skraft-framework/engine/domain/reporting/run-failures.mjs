@@ -3,12 +3,12 @@ import { cell, inert } from './markdown-safety.mjs'
 
 /**
  * What run-report.md tells of a run that stops or waits: each commit it checked and its verdict,
- * the failures sent back to an agent by signature, the incidents asked of a human, and the
+ * the failures sent back to an agent by step, the incidents asked of a human, and the
  * question it waits on.
  *
  * @typedef {import('../journal/run-state.mjs').RunEvent} RunEvent
  * @typedef {{ step: string, sha: string, subject: string, kind: string, verdict: string }} CommitRow
- * @typedef {{ step: string, signature: string, times: number, failure: string }} RefusalRow
+ * @typedef {{ step: string, times: number, failure: string }} RefusalRow
  * @typedef {{ key: string, step: string, owner: string, log: string | null, answer: string | null }} IncidentRow
  * @typedef {{ key: string, kind: import('../decisions/questions.mjs').QuestionKind, step: string, text: string, options: string[] }} Waiting
  */
@@ -31,29 +31,31 @@ export const commitsTable = (rows) => [
 ]
 
 /**
- * The failures sent back to an agent, one row per node and signature: how often it came back,
- * and what it said first.
+ * The failures sent back to an agent, one row per node: how often an attempt or a gate step of
+ * it failed, and what the first one said.
  * @param {RunEvent[]} events @returns {RefusalRow[]}
  */
 export const refusalRows = (events) => {
   /** @type {Map<string, RefusalRow>} */
   const rows = new Map()
-  for (const event of events.filter(({ type, signature }) => type === 'step.recorded' && signature !== undefined)) countRefusal(rows, event)
+  for (const event of events.filter(({ type, outcome }) => type === 'step.recorded' && FAILED.includes(outcome))) countRefusal(rows, event)
   return [...rows.values()]
 }
 
+/** The outcomes of a refused attempt and of a failed gate step. */
+const FAILED = Object.freeze(['failed', 'fail'])
+
 /** @param {Map<string, RefusalRow>} rows @param {RunEvent} event */
-const countRefusal = (rows, { step, signature, missing = [], failures }) => {
-  const key = `${step} ${signature}`
-  const row = rows.get(key) ?? { step, signature, times: 0, failure: [...missing.map((/** @type {string} */ path) => `missing ${path}`), ...failures][0] }
-  rows.set(key, { ...row, times: row.times + 1 })
+const countRefusal = (rows, { step, missing = [], failures }) => {
+  const row = rows.get(step) ?? { step, times: 0, failure: [...missing.map((/** @type {string} */ path) => `missing ${path}`), ...failures][0] }
+  rows.set(step, { ...row, times: row.times + 1 })
 }
 
 /** @param {RefusalRow[]} rows */
 export const refusalsTable = (rows) => [
-  '| Step | Signature | Times | First failure |',
-  '| --- | --- | --- | --- |',
-  ...rows.map(({ step, signature, times, failure }) => `| ${step} | ${signature} | ${times} | ${cell(inert(failure))} |`),
+  '| Step | Times | First failure |',
+  '| --- | --- | --- |',
+  ...rows.map(({ step, times, failure }) => `| ${step} | ${times} | ${cell(inert(failure))} |`),
 ]
 
 /** The incidents asked of a human, with the answer each got, null while it waits. @param {RunEvent[]} events @returns {IncidentRow[]} */

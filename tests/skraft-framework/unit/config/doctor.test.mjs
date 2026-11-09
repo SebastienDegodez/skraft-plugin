@@ -41,11 +41,8 @@ const INFRASTRUCTURE = [
   'web (react) entry point: in-process (targeted) — Testing Library; source plugin',
   `web (react) front to back: microcks (targeted), microcks (e2e) — ${MICROCKS}; Playwright + Microcks; source skraft-config.json (mocking.strategy)`,
   'web (react) clock: fake (targeted); source plugin',
-  'web (react) JUnit reports: reports/junit.xml, junit.xml',
-].map((detail) => ({ subject: 'infrastructure', status: 'ok', detail })).concat({
-  subject: 'infrastructure', status: 'warn',
-  detail: "web (react) e2e command \"npx playwright test\" writes no JUnit report where testReports looks: add a junit reporter writing reports/junit.xml (reporter: [['junit', { outputFile: 'reports/junit.xml' }]] in playwright.config), or the engine refuses every red of an acceptance test as writing no report, unless a configuration file of the runner already writes one",
-})
+  'web (react) JUnit reports: reports/junit.xml',
+].map((detail) => ({ subject: 'infrastructure', status: 'ok', detail }))
 const DOCKER = { subject: 'container-runtime', status: 'ok', detail: 'docker answers docker info' }
 
 /** Without the Copilot CLI, VS Code runs the pipeline through the agent loop. */

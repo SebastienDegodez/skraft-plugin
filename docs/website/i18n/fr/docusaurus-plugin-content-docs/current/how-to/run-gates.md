@@ -83,8 +83,8 @@ Pendant un run, un échec `environment` ou `unknown` ne renvoie rien à l'ingén
 aucune tentative : le run pose la question `environment`, dont la ligne `Cause:` dit qui corrige
 et la ligne `Output:`, quand une commande a tourné, nomme son fichier de preuve. Réparez, puis répondez `RETRY`
 ([Répondre à une question du run](./answer-a-question.mdx)). Un échec `deterministic` revient à
-l'ingénieur ; le même échec 3 fois depuis le dernier passage réussi des gates pose plutôt la
-question `blocked`.
+l'ingénieur par l'arête `FAIL` des gates, jusqu'au `max_visits` de cette arête ; le run pose
+alors la question `blocked`.
 
 ## Dépannage
 
