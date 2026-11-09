@@ -100,6 +100,43 @@ Generated catalogue, evaluation, dashboard, and graph outputs must not be commit
 
 ## Client compatibility
 
+### Native capabilities and read-only review
+
+Research and architecture authors declare native file editing and execution:
+Copilot `edit/createFile`, `edit/editFiles`, `execute/runInTerminal`; Claude
+`Write`, `Edit`, `Bash`. Their output and source-write boundaries are unchanged.
+These declarations are not evidence that a particular SDK host exposes them.
+Do not replace native identifiers with guessed SDK names.
+
+The DESIGN, DISTILL and DELIVER reviewers and their lenses have no file-writing
+tools or general terminal. Reviewers return their canonical verdict YAML.
+The orchestrator prepares the structural scan, deterministic evidence
+verification and Git inputs, then passes the returned verdict unchanged to
+the existing `artifact.mjs review-verdict` renderer. It checks the file before
+recording the review or verdict through `state.mjs`. Schema errors return to
+the reviewer; IO errors stop progression. Builds, tests, mutation runs and
+producer-owned evidence remain the specialist's responsibility.
+
+Standalone reviewer calls return YAML too; an authorized caller must render
+it before using it as persisted pipeline evidence. A response alone cannot
+close a phase.
+
+For a VS Code Copilot SDK tool gap, record the VS Code build, plugin revision,
+selected descriptor URI, tool-reference translation and actual tool schema
+from a fresh invocation. Compare that exact probe with other users before
+attributing a difference to Windows or macOS. Native Copilot chat, SDK chat
+and CLI discovery are different validation targets.
+
+After source validation, explicitly load the corrected local plugin in a new
+session using the target host's plugin loader; editing this checkout does not
+reload installed descriptors or existing subagents. Never patch an installed
+cache as a substitute for source validation. In an isolated temporary workspace,
+check that an author reads, creates, edits and executes a harmless command;
+check that a reviewer reads and returns YAML without write or terminal tools;
+then check parent-owned persistence and both allowed and denied hooks. Clean
+the witness files. Record the loaded descriptor path and revision with results.
+Until that fresh-session test passes, SDK compatibility remains unverified.
+
 Copilot CLI 1.0.74 introduced Open Plugin Spec v1 support. That does not imply identical
 discovery or hook behavior across Copilot CLI, VS Code, and Claude Code. This package declares
 the v1 schema and retains native compatibility manifests. The root [plugin.json](plugin.json)
