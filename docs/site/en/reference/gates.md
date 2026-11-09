@@ -214,8 +214,8 @@ repository owner accepted that trade deliberately — quality is not negotiable.
 | **G6** | Mutation score meets the bar. | The final full mutation evidence exited `0`: core first (Domain and Application, 100%), then boundary (API and Infrastructure, 80%). |
 | **G7** | No mocks in the Domain/Application core. | Grep-based attestation: zero mock-framework symbol in those layers. |
 | **G8** | Full conventional commit message. | Each covered commit uses the feature scope, sign-off and known issue reference; closure requires genuinely finished work and all required gates passed. |
-| **G9** | No test tampering (RED→GREEN integrity). | For each cycle, the test file changed only by **addition** between RED and GREEN snapshots. |
-| **G10** | RED observed: the test ran and **failed** before the implementation landed. | For each cycle, a RED stdout captured in the software-engineer dispatch at RED time and hashed by sha256, plus a recorded **non-zero** exit code. |
+| **G9** | No test tampering (RED→GREEN integrity). | For each scenario, its acceptance test file changed only by **addition** between its RED `test` commit and its green commit. |
+| **G10** | RED observed: the test ran and **failed** before the implementation landed. | For each scenario, the RED stdout of its acceptance test captured before its implementation and hashed by sha256, plus a recorded **non-zero** exit code. |
 | **G11** | Line coverage meets the bar. | The coverage runner, invoked with the bar's threshold flags (100% line on Domain and Application), exited `0`. |
 
 **G8 policy:** inline commit rules in the existing agents, on both native clients

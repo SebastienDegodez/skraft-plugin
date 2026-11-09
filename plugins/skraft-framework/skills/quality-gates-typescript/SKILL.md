@@ -135,9 +135,10 @@ only declare types have nothing to run and are listed apart. `--threshold` is re
 
 ## G8 / G9 / G10
 
-As in every adapter: G8 from the Git tree; G9 from `git show HEAD:<test file>` snapshots
-taken at RED and at GREEN; G10 at RED, before the implementation, with the G1 line narrowed
-to the cycle's test and `--name qg-red-{cycle}`:
+As in every adapter: G8 from the Git tree; G9 from `git show <commit>:<test file>` snapshots of
+each scenario's acceptance test file at its `test` commit and at its green commit; G10 at the
+scenario's RED, before its implementation, with the G1 line narrowed to the scenario's acceptance
+test and `--name qg-red-{cycle}`, one cycle per scenario:
 
 ```bash
 node "<skill>/scripts/capture.mjs" --root . --evidence "$EV" --name qg-red-1 -- {bin:vitest} run tests/unit/todos/application/CompleteTodo.test.ts
@@ -148,6 +149,6 @@ The recorded exit code MUST be non-zero. The capture cannot be reconstructed aft
 ## Producer flow at the end of the story
 
 1. Run G1/G2, G3, G4, G5, G6 core then boundary, G7, G11 — each through its script.
-2. Dump the RED and GREEN snapshots per cycle; check every G10 capture exists with a non-zero exit.
+2. Dump the RED and GREEN snapshots per scenario; check every G10 capture exists with a non-zero exit.
 3. `repo_root_rev = git rev-parse HEAD`; build `commits_covered[]` from the DELIVER base.
 4. Assemble `$EV/qg-{story}.json` (contract v4) with `"tech_adapter": "quality-gates-typescript"`, commit `$EV` alone, then run `qg-verify`.

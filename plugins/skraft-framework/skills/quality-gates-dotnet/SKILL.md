@@ -184,13 +184,12 @@ each full message against the contract's G8 rules.
 
 ## G9 — Test integrity (RED→GREEN snapshots)
 
-For every TDD cycle, capture both snapshots when each commit lands:
+One cycle per scenario: its acceptance test file at the `test` commit that holds it RED and at
+the scenario's green commit. Write both snapshots at the end of the story, from those commits:
 
 ```bash
-# at RED:
-node "<skill>/scripts/snapshot.mjs" --evidence "$EV" --name red-1-SomeTests.cs --file tests/MonAssurance.UnitTests/Eligibilite/SomeTests.cs
-# at GREEN (after the implementation commit):
-node "<skill>/scripts/snapshot.mjs" --evidence "$EV" --name green-1-SomeTests.cs --file tests/MonAssurance.UnitTests/Eligibilite/SomeTests.cs
+node "<skill>/scripts/snapshot.mjs" --evidence "$EV" --name red-1-SomeAcceptanceTests.cs --rev <test commit> --file tests/MonAssurance.UnitTests/Features/Eligibilite/SomeAcceptanceTests.cs
+node "<skill>/scripts/snapshot.mjs" --evidence "$EV" --name green-1-SomeAcceptanceTests.cs --rev <green commit> --file tests/MonAssurance.UnitTests/Features/Eligibilite/SomeAcceptanceTests.cs
 ```
 
 `snapshot.mjs` writes the exact bytes of `git show <rev>:<file>` (`--rev`, default `HEAD`) into
@@ -203,12 +202,12 @@ that is the Iron Rule of Tests, mechanically verifiable).
 
 ## G10 — RED observed
 
-For every TDD cycle, capture the failing run **at RED**, before the
-implementation lands. Run the G1/G2 test command narrowed to the cycle's test:
+For every scenario, capture the failing run of its acceptance test **at RED**, before the
+scenario's implementation lands. Run the G1/G2 test command narrowed to that acceptance test:
 
 ```bash
-# at RED, for cycle {cycle} of story {story} — BEFORE writing the implementation:
-node "<skill>/scripts/capture.mjs" --evidence "$EV" --name qg-red-{cycle} -- dotnet test --nologo --filter "FullyQualifiedName~SomeTests"
+# at RED, for scenario {cycle} of story {story} — BEFORE writing its implementation:
+node "<skill>/scripts/capture.mjs" --evidence "$EV" --name qg-red-{cycle} -- dotnet test --nologo --filter "FullyQualifiedName~SomeAcceptanceTests"
 ```
 
 This capture CANNOT be reconstructed afterwards: once the implementation is in,
@@ -234,8 +233,8 @@ G9 keeps the commit/snapshot job unchanged.
 
 1. Run G1/G2, G3 (if separate), G4 (if separate), G5, G6 core then boundary, G7, G11 —
    each through `capture.mjs` or its script, which write stdout, exit code and hash into `$EV`.
-2. For each cycle, write the RED + GREEN snapshots with `snapshot.mjs`.
-3. For each cycle, check the G10 RED captures taken at RED time are present in `$EV`
+2. For each scenario, write the RED + GREEN snapshots with `snapshot.mjs --rev`.
+3. For each scenario, check the G10 RED captures taken at RED time are present in `$EV`
    (`qg-red-{cycle}.stdout` / `.exit` / `.stdout.sha256`) with a non-zero exit. They are
    NOT re-runnable here — a missing capture is `status: "fail"`, never `not_applicable`.
 4. `repo_root_rev = git rev-parse HEAD` — the last work commit.
