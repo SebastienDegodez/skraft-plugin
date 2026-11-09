@@ -92,7 +92,8 @@ test('a blocked step asks the person for an instruction in a text field, then to
   // #500: the instruction typed is shown back and confirmed before it is recorded; an option typed needs no confirmation.
   assert.deepEqual(session.asked.map(({ kind }) => kind), ['input', 'confirm', 'input'])
   assert.equal(session.asked[1].message, 'Send this instruction to design? Use the bank gateway')
-  assert.match(session.asked[0].message, /^design is blocked: solution-architect says it cannot go on; [^]* An instruction runs design again on a new pass with what is left above and the instruction; STOP ends the run\.$/)
+  assert.match(session.asked[0].message, /^design is blocked: solution-architect says it cannot go on; [^]* An instruction runs design again on a new pass with what is left above and the instruction; STOP ends the run\.\nThe run so far \(commits, refusals, incidents\): .+$/)
+  assert.equal(session.asked[0].message.split('\n').at(-1), `The run so far (commits, refusals, incidents): ${join(cwd, '.copilot-tracking', 'skraft-plans', SLUG, 'run-report.md')}`)
   assert.ok(phaseCalls(calls)[2].prompt.includes('\nA human refused the work of pass 1:\n- Use the bank gateway'), phaseCalls(calls)[2].prompt)
   assert.deepEqual(journal(cwd, SLUG).filter((event) => event.type === 'question.answered').map(({ key, answer, by }) => [key, answer, by]), [['design-1', 'Use the bank gateway', 'host-confirmed'], ['design-2', 'STOP', 'host-confirmed']])
 })

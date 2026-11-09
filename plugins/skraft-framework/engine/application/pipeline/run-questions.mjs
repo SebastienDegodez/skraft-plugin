@@ -15,6 +15,7 @@ import { leave } from './run-routes.mjs'
 import { verdictPath } from '../review/review-runs.mjs'
 import { MACHINE } from '../../domain/pipeline/incidents.mjs'
 import { refusedCommit } from './refused-commits.mjs'
+import { RUN_REPORT_FILE } from '../../domain/reporting/run-report.mjs'
 
 /**
  * The questions a run puts to a human: an ask node's, and the one the engine asks when the
@@ -280,8 +281,9 @@ const retried = async (context, phase) => {
  * @param {import('../../domain/pipeline/incidents.mjs').Incident} [incident]
  * @returns {Promise<null>}
  */
-export const escalate = async ({ journal }, { node, visit }, reason, incident = MACHINE) => {
-  const question = questionOf('environment', nextKey(journal, node.id), environmentText(node.id, reason, incident))
+export const escalate = async (context, { node, visit }, reason, incident = MACHINE) => {
+  const { journal } = context
+  const question = questionOf('environment', nextKey(journal, node.id), withReport(context, environmentText(node.id, reason, incident)))
   await journal.append('question.asked', { ...question, step: node.id, visit, subjects: [], incident })
   return null
 }
@@ -316,10 +318,17 @@ export const blockQuestion = async (context, run, next) => {
   const ceiling = reviewCeilingOf(context, next, step)
   if (ceiling !== null) {
     const kind = acceptable(ceiling.findings) ? REVIEW_CEILING : BLOCKED
-    return askQuestion(context, { kind, step, visit: run.nodes[step].visit }, { text: reviewCeilingText(ceiling), subjects: [] })
+    return askQuestion(context, { kind, step, visit: run.nodes[step].visit }, { text: withReport(context, reviewCeilingText(ceiling)), subjects: [] })
   }
-  return askQuestion(context, { kind: BLOCKED, step, visit: run.nodes[step].visit }, { text: blockText(blockOf(context, next, step)), subjects: [] })
+  return askQuestion(context, { kind: BLOCKED, step, visit: run.nodes[step].visit }, { text: withReport(context, blockText(blockOf(context, next, step))), subjects: [] })
 }
+
+/**
+ * A question on a run that stopped ends with where its report is: the commits and their
+ * verdicts, the failures and the incidents so far.
+ * @param {{ deps: { files: import('../ports/tracking-files.mjs').TrackingFiles }, slug: string }} context @param {string} text
+ */
+const withReport = ({ deps, slug }, text) => `${text}\nThe run so far (commits, refusals, incidents): ${deps.files.location(slug, RUN_REPORT_FILE)}`
 
 /**
  * What a review that reached its ceiling left (#499): its findings with their context and where

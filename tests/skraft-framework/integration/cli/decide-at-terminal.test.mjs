@@ -2,6 +2,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { spawnSync } from 'node:child_process'
 import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
 import { PassThrough } from 'node:stream'
 import { terminalConfirm } from '../../../../plugins/skraft-framework/engine/drivers/cli/terminal-confirm.mjs'
 import { PAY_OR_NOTHING, SLUG, blocked, deliverWith, killsZero, pipelineRepository, proposesZero, scriptedLlm } from '../support/pipeline-repository.mjs'
@@ -49,7 +50,8 @@ test('an agent of the agent loop that says it is blocked waits on the person; th
     startAgents(step, llm)
     ;({ step } = await loop(cwd, ['record']))
   }
-  assert.match(step.reason, /^design is blocked: [^]* STOP ends the run\. Options: an instruction in quotes, or STOP\. Stop here and ask the human to answer it with skraft decide in their own terminal; then run next\.$/)
+  assert.match(step.reason, /^design is blocked: [^]* STOP ends the run\.\nThe run so far \(commits, refusals, incidents\): .+ Options: an instruction in quotes, or STOP\. Stop here and ask the human to answer it with skraft decide in their own terminal; then run next\.$/)
+  assert.equal(step.reason.split('\n').at(-1), `The run so far (commits, refusals, incidents): ${join(cwd, '.copilot-tracking', 'skraft-plans', SLUG, 'run-report.md')} Options: an instruction in quotes, or STOP. Stop here and ask the human to answer it with skraft decide in their own terminal; then run next.`)
   const asked = []
 
   const decided = await skraft(cwd, ['decide', 'design-1', 'Use the bank gateway'], { confirm: async (question) => { asked.push(question); return true } })

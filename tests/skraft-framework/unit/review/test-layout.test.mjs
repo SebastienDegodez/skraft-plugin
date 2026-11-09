@@ -2,6 +2,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { agent, API, nominal, scripted, SLUG, TRACKING } from '../support/pipeline-host.mjs'
 import { InMemoryAgentCatalog } from '../support/in-memory-host.mjs'
+import { REPORT_LINE } from '../support/decisions.mjs'
 
 /** A DISTILL that commits these files, each added (new) unless named in `changed`. @param {string[]} added @param {string[]} [changed] */
 const distill = (added, changed = []) => agent({ work: ({ git }) => {
@@ -50,6 +51,7 @@ test('the engine\'s own G11 findings left at a review\'s ceiling are asked about
     '',
     `Every finding with its context: ${TRACKING}/reviews/distill_review-3/verdict.yaml`,
     'A blocker or high finding cannot be accepted: an instruction runs distill again with every finding and the instruction; STOP ends the run.',
+    REPORT_LINE,
   ].join('\n'))
 })
 

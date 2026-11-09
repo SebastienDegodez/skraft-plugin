@@ -1,6 +1,6 @@
 // What the decision scenarios share: ADR files as an architect writes them, and an architect
 // that writes them into the working copy and commits them.
-import { agent, green, SLUG } from './pipeline-host.mjs'
+import { agent, green, SLUG, TRACKING } from './pipeline-host.mjs'
 
 export const ADR_1 = 'docs/adr/adr-001-card-payment.md'
 export const ADR_2 = 'docs/adr/adr-002-card-tokens.md'
@@ -98,7 +98,14 @@ export const environmentQuestion = (step, reason, { owner = 'environment', log =
   `Cause: ${CAUSES[owner]}.`,
   ...(log === null ? [] : [`Output: ${log}`]),
   `Fix it, then RETRY: ${step} runs again where it stopped, using no new attempt; or ABORT: the run ends.`,
+  REPORT_LINE,
 ].join('\n')
+
+/** The line a question on a stopped run ends with: where its report is. */
+export const REPORT_LINE = `The run so far (commits, refusals, incidents): ${TRACKING}/run-report.md`
+
+/** The text of a question on a stopped run, its report named last. @param {string} text */
+export const withReport = (text) => `${text}\n${REPORT_LINE}`
 
 /** Why an ADR folder the machine cannot list stops a run: fixed, never the text of what refused it. */
 export const UNLISTABLE_ADRS = 'docs/adr cannot be listed: Git or the file system refused to read it'

@@ -8,6 +8,7 @@ import { answerYaml } from '../support/answer-yaml.mjs'
 const checksAnswer = (each) => answerYaml({ checks: each.map(([finding, verdict, reason = `${verdict} by the patch`]) => ({ finding, verdict, reason })) })
 import { BUILT_IN_REVIEW, BUILT_IN_WORKFLOW, InMemoryAgentCatalog, InMemoryGit } from '../support/in-memory-host.mjs'
 import { ejectedPipeline, edit, withLenses } from '../workflow/support.mjs'
+import { REPORT_LINE } from '../support/decisions.mjs'
 
 const CONTEXT_MAP = 'details/2026-10-11/context-map.md'
 const MATRIX = 'details/2026-10-11/consistency-matrix-checkout.md'
@@ -658,6 +659,7 @@ test('a review whose blocker or high finding is left after three passes asks the
     '',
     `Every finding with its context: ${VERDICT_3}`,
     'A blocker or high finding cannot be accepted: an instruction runs design again with every finding and the instruction; STOP ends the run.',
+    REPORT_LINE,
   ].join('\n'))
   assert.deepEqual(outcome, {
     status: 'blocked', slug: SLUG, phase: 'DESIGN', code: 'loop-ceiling',
@@ -708,6 +710,7 @@ test('a review with only medium and low findings left after three passes lets th
     '',
     `Every finding with its context: ${VERDICT_3}`,
     'ACCEPT takes these findings as they stand and goes on (they are listed in the run report and the pull request); an instruction runs design again with every finding and the instruction; STOP ends the run.',
+    REPORT_LINE,
   ].join('\n'))
   assert.deepEqual(reviews(host).slice(2, 4), [['design_review', 3, 'needs-rework', null], ['distill_review', 1, 'approved', 'scenario_review']])
   assert.equal(host.agentRunner.dispatches.filter((dispatch) => dispatch.agent === 'solution-architect').length, 3)

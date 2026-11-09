@@ -27,7 +27,7 @@ const sameTestFailing = (root = '/work') => {
   }
 }
 
-const BLOCKED = `deliver is blocked: gates failed the same way 3 times since it last passed, so it does not send the work back again.\nLeft by gates (1):\n- api/test: exited 1 (evidence: ${TRACKING}/gates/api/test-3.log)\n An instruction runs deliver again on a new pass with what is left above and the instruction; STOP ends the run.`
+const BLOCKED = `deliver is blocked: gates failed the same way 3 times since it last passed, so it does not send the work back again.\nLeft by gates (1):\n- api/test: exited 1 (evidence: ${TRACKING}/gates/api/test-3.log)\n An instruction runs deliver again on a new pass with what is left above and the instruction; STOP ends the run.\nThe run so far (commits, refusals, incidents): ${TRACKING}/run-report.md`
 
 /** A build that passes, printing something else at each run. */
 const buildNumbered = () => {

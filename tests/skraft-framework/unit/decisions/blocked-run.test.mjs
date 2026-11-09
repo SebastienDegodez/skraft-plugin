@@ -13,7 +13,7 @@ const INSTRUCTION = 'Use the bank gateway of Acme'
 const NO_PROVIDER = 'The story names no payment provider.'
 const blockedAgent = (it) => agent({ result: { status: 'blocked', summary: NO_PROVIDER } })(it)
 const NO_WORD = 'an instruction tells the agent in words what to do; write a sentence, or STOP'
-const RESEARCH_BLOCKED = `research is blocked: solution-researcher says it cannot go on; its reason is in ${TRACKING}/results/research-1-1.json.\nLeft by research (1):\n- ${NO_PROVIDER}\n An instruction runs research again on a new pass with what is left above and the instruction; STOP ends the run.`
+const RESEARCH_BLOCKED = `research is blocked: solution-researcher says it cannot go on; its reason is in ${TRACKING}/results/research-1-1.json.\nLeft by research (1):\n- ${NO_PROVIDER}\n An instruction runs research again on a new pass with what is left above and the instruction; STOP ends the run.\nThe run so far (commits, refusals, incidents): ${TRACKING}/run-report.md`
 
 test('an agent that says it is blocked asks a human what to do instead of ending the run', async () => {
   const host = scripted({}, (it) => [blockedAgent(it)])
@@ -68,7 +68,7 @@ test('a loop that reached its max_visits asks a human; an instruction runs the n
   const outcome = await host.run()
 
   const failures = [`api/test: exited 1 (evidence: ${TRACKING}/gates/api/test-4.log)`, `web/lint: exited 1 (evidence: ${TRACKING}/gates/web/lint-3.log)`]
-  const text = `deliver is blocked: gates -> deliver was taken as often as its max_visits allows.\nLeft by gates (2):\n- ${failures[0]}\n- ${failures[1]}\n An instruction runs deliver again on a new pass with what is left above and the instruction; STOP ends the run.`
+  const text = `deliver is blocked: gates -> deliver was taken as often as its max_visits allows.\nLeft by gates (2):\n- ${failures[0]}\n- ${failures[1]}\n An instruction runs deliver again on a new pass with what is left above and the instruction; STOP ends the run.\nThe run so far (commits, refusals, incidents): ${TRACKING}/run-report.md`
   assert.deepEqual(waiting, { status: 'waiting', slug: SLUG, phase: 'DELIVER', code: 'blocked', reason: `${text} Answer with skraft decide deliver-1 "<instruction>"|STOP.` })
   assert.deepEqual(eventsOf(host, 'question.asked').map(({ key, step, visit, text: asked }) => [key, step, visit, asked]), [['scenario_review-1', 'scenario_review', 1, scenarioReview().text], ['deliver-1', 'deliver', 4, text]])
   assert.equal(outcome.status, 'done')
@@ -90,7 +90,7 @@ test('a loop stopped at its max_visits by an edge out of a step that refused not
   await host.decide({ answer: INSTRUCTION })
   await host.run()
 
-  const text = 'design is blocked: lint_design -> design was taken as often as its max_visits allows. An instruction runs design again on a new pass with it; STOP ends the run.'
+  const text = `design is blocked: lint_design -> design was taken as often as its max_visits allows. An instruction runs design again on a new pass with it; STOP ends the run.\nThe run so far (commits, refusals, incidents): ${TRACKING}/run-report.md`
   assert.deepEqual(waiting, { status: 'waiting', slug: SLUG, phase: 'DESIGN', code: 'blocked', reason: `${text} Answer with skraft decide design-1 "<instruction>"|STOP.` })
   const reopened = host.agentRunner.dispatches.find((dispatch) => dispatch.label === `skraft ${SLUG} · design · pass 3 · attempt 1`)
   assert.ok(reopened.prompt.endsWith(`\n\nA human refused the work of pass 2:\n- ${INSTRUCTION}`), reopened.prompt)
@@ -142,7 +142,7 @@ test('a lens that reaches no verdict asks a human; an instruction runs the revie
   await host.decide({ answer: INSTRUCTION })
   const outcome = await host.run()
 
-  const text = `design_review is blocked: a lens answered inconclusive; the verdict is in ${TRACKING}/reviews/design_review-1/verdict.yaml. An instruction runs design_review again on a new pass with it; STOP ends the run.`
+  const text = `design_review is blocked: a lens answered inconclusive; the verdict is in ${TRACKING}/reviews/design_review-1/verdict.yaml. An instruction runs design_review again on a new pass with it; STOP ends the run.\nThe run so far (commits, refusals, incidents): ${TRACKING}/run-report.md`
   assert.deepEqual(waiting, { status: 'waiting', slug: SLUG, phase: 'DESIGN', code: 'blocked', reason: `${text} Answer with skraft decide design_review-1 "<instruction>"|STOP.` })
   assert.deepEqual([outcome.phase, outcome.code], ['DISTILL', 'agent-unavailable'])
   assert.deepEqual(reviews(host), [['design_review', 1, 'blocked', null], ['design_review', 2, 'approved', 'adr']])
