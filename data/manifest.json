@@ -1,5 +1,5 @@
 {
-  "generated": "2026-11-09T16:54:27.169Z",
+  "generated": "2026-11-09T17:41:19.945Z",
   "sessions": [
     {
       "id": "scheduled/2026-09-28/acceptance-designer/absent-acceptance-criteria-halt-the-distillation--main--run0",
@@ -4588,7 +4588,7 @@
         "a-new-feature-is-driven-by-its-tests-not-characterized",
         "pr-567"
       ],
-      "mtime": 1794243263347.9941
+      "mtime": 1794246076270.9907
     },
     {
       "id": "pr/567/characterize-with-contracts/a-new-feature-is-driven-by-its-tests-not-characterized--baseline--run1",
@@ -4601,7 +4601,7 @@
         "a-new-feature-is-driven-by-its-tests-not-characterized",
         "pr-567"
       ],
-      "mtime": 1794243263345.9941
+      "mtime": 1794246076327.9119
     },
     {
       "id": "pr/567/characterize-with-contracts/a-new-feature-is-driven-by-its-tests-not-characterized--baseline--run2",
@@ -4614,7 +4614,7 @@
         "a-new-feature-is-driven-by-its-tests-not-characterized",
         "pr-567"
       ],
-      "mtime": 1794243263347.9941
+      "mtime": 1794246076328.9119
     },
     {
       "id": "pr/567/characterize-with-contracts/a-new-feature-is-driven-by-its-tests-not-characterized--baseline--run3",
@@ -4627,7 +4627,7 @@
         "a-new-feature-is-driven-by-its-tests-not-characterized",
         "pr-567"
       ],
-      "mtime": 1794243263347.9941
+      "mtime": 1794246076388.9119
     },
     {
       "id": "pr/567/characterize-with-contracts/a-new-feature-is-driven-by-its-tests-not-characterized--baseline--run4",
@@ -4640,7 +4640,7 @@
         "a-new-feature-is-driven-by-its-tests-not-characterized",
         "pr-567"
       ],
-      "mtime": 1794243263344.9941
+      "mtime": 1794246076390.9119
     },
     {
       "id": "pr/567/characterize-with-contracts/a-suspected-bug-is-pinned-not-fixed--baseline--run0",
@@ -4653,7 +4653,7 @@
         "a-suspected-bug-is-pinned-not-fixed",
         "pr-567"
       ],
-      "mtime": 1794243263341.9941
+      "mtime": 1794246076390.9119
     },
     {
       "id": "pr/567/characterize-with-contracts/a-suspected-bug-is-pinned-not-fixed--baseline--run1",
@@ -4666,7 +4666,7 @@
         "a-suspected-bug-is-pinned-not-fixed",
         "pr-567"
       ],
-      "mtime": 1794243263346.9941
+      "mtime": 1794246076391.9119
     },
     {
       "id": "pr/567/characterize-with-contracts/a-suspected-bug-is-pinned-not-fixed--baseline--run2",
@@ -4679,7 +4679,7 @@
         "a-suspected-bug-is-pinned-not-fixed",
         "pr-567"
       ],
-      "mtime": 1794243263339.9941
+      "mtime": 1794246076449.9119
     },
     {
       "id": "pr/567/characterize-with-contracts/a-suspected-bug-is-pinned-not-fixed--baseline--run3",
@@ -4692,7 +4692,7 @@
         "a-suspected-bug-is-pinned-not-fixed",
         "pr-567"
       ],
-      "mtime": 1794243263342.9941
+      "mtime": 1794246076451.9119
     },
     {
       "id": "pr/567/characterize-with-contracts/a-suspected-bug-is-pinned-not-fixed--baseline--run4",
@@ -4705,7 +4705,7 @@
         "a-suspected-bug-is-pinned-not-fixed",
         "pr-567"
       ],
-      "mtime": 1794243263328.9941
+      "mtime": 1794246076450.9119
     },
     {
       "id": "pr/567/characterize-with-contracts/tests-before-a-refactor-pin-today-s-behaviour-quirks-included--baseline--run0",
@@ -4718,7 +4718,7 @@
         "tests-before-a-refactor-pin-today-s-behaviour-quirks-included",
         "pr-567"
       ],
-      "mtime": 1794243263333.9941
+      "mtime": 1794246076452.9119
     },
     {
       "id": "pr/567/characterize-with-contracts/tests-before-a-refactor-pin-today-s-behaviour-quirks-included--baseline--run1",
@@ -4731,7 +4731,7 @@
         "tests-before-a-refactor-pin-today-s-behaviour-quirks-included",
         "pr-567"
       ],
-      "mtime": 1794243263335.9941
+      "mtime": 1794246076452.9119
     },
     {
       "id": "pr/567/characterize-with-contracts/tests-before-a-refactor-pin-today-s-behaviour-quirks-included--baseline--run2",
@@ -4744,7 +4744,7 @@
         "tests-before-a-refactor-pin-today-s-behaviour-quirks-included",
         "pr-567"
       ],
-      "mtime": 1794243263335.9941
+      "mtime": 1794246076521.9119
     },
     {
       "id": "pr/567/characterize-with-contracts/tests-before-a-refactor-pin-today-s-behaviour-quirks-included--baseline--run3",
@@ -4757,7 +4757,7 @@
         "tests-before-a-refactor-pin-today-s-behaviour-quirks-included",
         "pr-567"
       ],
-      "mtime": 1794243263336.9941
+      "mtime": 1794246076524.9119
     },
     {
       "id": "pr/567/characterize-with-contracts/tests-before-a-refactor-pin-today-s-behaviour-quirks-included--baseline--run4",
@@ -4770,7 +4770,7 @@
         "tests-before-a-refactor-pin-today-s-behaviour-quirks-included",
         "pr-567"
       ],
-      "mtime": 1794243263336.9941
+      "mtime": 1794246076524.9119
     },
     {
       "id": "pr/567/characterize-with-contracts/a-new-feature-is-driven-by-its-tests-not-characterized--skilled--run0",
@@ -4783,7 +4783,7 @@
         "a-new-feature-is-driven-by-its-tests-not-characterized",
         "pr-567"
       ],
-      "mtime": 1794243263334.9941
+      "mtime": 1794246076526.9119
     },
     {
       "id": "pr/567/characterize-with-contracts/a-new-feature-is-driven-by-its-tests-not-characterized--skilled--run1",
@@ -4796,7 +4796,7 @@
         "a-new-feature-is-driven-by-its-tests-not-characterized",
         "pr-567"
       ],
-      "mtime": 1794243263339.9941
+      "mtime": 1794246076529.04
     },
     {
       "id": "pr/567/characterize-with-contracts/a-new-feature-is-driven-by-its-tests-not-characterized--skilled--run2",
@@ -4809,7 +4809,7 @@
         "a-new-feature-is-driven-by-its-tests-not-characterized",
         "pr-567"
       ],
-      "mtime": 1794243263339.9941
+      "mtime": 1794246076529.04
     },
     {
       "id": "pr/567/characterize-with-contracts/a-new-feature-is-driven-by-its-tests-not-characterized--skilled--run3",
@@ -4822,7 +4822,7 @@
         "a-new-feature-is-driven-by-its-tests-not-characterized",
         "pr-567"
       ],
-      "mtime": 1794243263342.9941
+      "mtime": 1794246076529.04
     },
     {
       "id": "pr/567/characterize-with-contracts/a-new-feature-is-driven-by-its-tests-not-characterized--skilled--run4",
@@ -4835,7 +4835,7 @@
         "a-new-feature-is-driven-by-its-tests-not-characterized",
         "pr-567"
       ],
-      "mtime": 1794243263342.9941
+      "mtime": 1794246076530.1663
     },
     {
       "id": "pr/567/characterize-with-contracts/a-suspected-bug-is-pinned-not-fixed--skilled--run0",
@@ -4848,7 +4848,7 @@
         "a-suspected-bug-is-pinned-not-fixed",
         "pr-567"
       ],
-      "mtime": 1794243263348.9941
+      "mtime": 1794246076530.1663
     },
     {
       "id": "pr/567/characterize-with-contracts/a-suspected-bug-is-pinned-not-fixed--skilled--run1",
@@ -4861,7 +4861,7 @@
         "a-suspected-bug-is-pinned-not-fixed",
         "pr-567"
       ],
-      "mtime": 1794243263347.9941
+      "mtime": 1794246076575.912
     },
     {
       "id": "pr/567/characterize-with-contracts/a-suspected-bug-is-pinned-not-fixed--skilled--run2",
@@ -4874,7 +4874,7 @@
         "a-suspected-bug-is-pinned-not-fixed",
         "pr-567"
       ],
-      "mtime": 1794243263342.9941
+      "mtime": 1794246076574.912
     },
     {
       "id": "pr/567/characterize-with-contracts/a-suspected-bug-is-pinned-not-fixed--skilled--run3",
@@ -4887,7 +4887,7 @@
         "a-suspected-bug-is-pinned-not-fixed",
         "pr-567"
       ],
-      "mtime": 1794243263347.9941
+      "mtime": 1794246076574.912
     },
     {
       "id": "pr/567/characterize-with-contracts/a-suspected-bug-is-pinned-not-fixed--skilled--run4",
@@ -4900,7 +4900,7 @@
         "a-suspected-bug-is-pinned-not-fixed",
         "pr-567"
       ],
-      "mtime": 1794243263347.9941
+      "mtime": 1794246076574.912
     },
     {
       "id": "pr/567/characterize-with-contracts/tests-before-a-refactor-pin-today-s-behaviour-quirks-included--skilled--run0",
@@ -4913,7 +4913,7 @@
         "tests-before-a-refactor-pin-today-s-behaviour-quirks-included",
         "pr-567"
       ],
-      "mtime": 1794243263347.9941
+      "mtime": 1794246076575.912
     },
     {
       "id": "pr/567/characterize-with-contracts/tests-before-a-refactor-pin-today-s-behaviour-quirks-included--skilled--run1",
@@ -4926,7 +4926,7 @@
         "tests-before-a-refactor-pin-today-s-behaviour-quirks-included",
         "pr-567"
       ],
-      "mtime": 1794243263347.9941
+      "mtime": 1794246076640.1074
     },
     {
       "id": "pr/567/characterize-with-contracts/tests-before-a-refactor-pin-today-s-behaviour-quirks-included--skilled--run2",
@@ -4939,7 +4939,7 @@
         "tests-before-a-refactor-pin-today-s-behaviour-quirks-included",
         "pr-567"
       ],
-      "mtime": 1794243263348.9941
+      "mtime": 1794246076643.912
     },
     {
       "id": "pr/567/characterize-with-contracts/tests-before-a-refactor-pin-today-s-behaviour-quirks-included--skilled--run3",
@@ -4952,7 +4952,7 @@
         "tests-before-a-refactor-pin-today-s-behaviour-quirks-included",
         "pr-567"
       ],
-      "mtime": 1794243263347.9941
+      "mtime": 1794246076643.912
     },
     {
       "id": "pr/567/characterize-with-contracts/tests-before-a-refactor-pin-today-s-behaviour-quirks-included--skilled--run4",
@@ -4965,7 +4965,7 @@
         "tests-before-a-refactor-pin-today-s-behaviour-quirks-included",
         "pr-567"
       ],
-      "mtime": 1794243263347.9941
+      "mtime": 1794246076643.912
     },
     {
       "id": "pr/567/quality-gates-typescript/typescript-front-end-bring-the-application-code-to-the-mutation-bar--baseline--run0",
@@ -4978,7 +4978,7 @@
         "typescript-front-end-bring-the-application-code-to-the-mutation-bar",
         "pr-567"
       ],
-      "mtime": 1794243263412.9944
+      "mtime": 1794246076705.912
     },
     {
       "id": "pr/567/quality-gates-typescript/typescript-front-end-bring-the-application-code-to-the-mutation-bar--baseline--run1",
@@ -4991,7 +4991,7 @@
         "typescript-front-end-bring-the-application-code-to-the-mutation-bar",
         "pr-567"
       ],
-      "mtime": 1794243263424.9944
+      "mtime": 1794246076707.912
     },
     {
       "id": "pr/567/quality-gates-typescript/typescript-front-end-bring-the-application-code-to-the-mutation-bar--baseline--run2",
@@ -5004,7 +5004,7 @@
         "typescript-front-end-bring-the-application-code-to-the-mutation-bar",
         "pr-567"
       ],
-      "mtime": 1794243263424.9944
+      "mtime": 1794246076707.912
     },
     {
       "id": "pr/567/quality-gates-typescript/typescript-front-end-bring-the-application-code-to-the-mutation-bar--baseline--run3",
@@ -5017,7 +5017,7 @@
         "typescript-front-end-bring-the-application-code-to-the-mutation-bar",
         "pr-567"
       ],
-      "mtime": 1794243263424.9944
+      "mtime": 1794246076706.912
     },
     {
       "id": "pr/567/quality-gates-typescript/typescript-front-end-bring-the-application-code-to-the-mutation-bar--baseline--run4",
@@ -5030,7 +5030,7 @@
         "typescript-front-end-bring-the-application-code-to-the-mutation-bar",
         "pr-567"
       ],
-      "mtime": 1794243263424.9944
+      "mtime": 1794246076708.912
     },
     {
       "id": "pr/567/quality-gates-typescript/typescript-front-end-does-the-application-code-meet-the-mutation-bar--baseline--run0",
@@ -5043,7 +5043,7 @@
         "typescript-front-end-does-the-application-code-meet-the-mutation-bar",
         "pr-567"
       ],
-      "mtime": 1794243263402.9944
+      "mtime": 1794246076705.912
     },
     {
       "id": "pr/567/quality-gates-typescript/typescript-front-end-does-the-application-code-meet-the-mutation-bar--baseline--run1",
@@ -5056,7 +5056,7 @@
         "typescript-front-end-does-the-application-code-meet-the-mutation-bar",
         "pr-567"
       ],
-      "mtime": 1794243263413.9944
+      "mtime": 1794246076708.912
     },
     {
       "id": "pr/567/quality-gates-typescript/typescript-front-end-does-the-application-code-meet-the-mutation-bar--baseline--run2",
@@ -5069,7 +5069,7 @@
         "typescript-front-end-does-the-application-code-meet-the-mutation-bar",
         "pr-567"
       ],
-      "mtime": 1794243263424.9944
+      "mtime": 1794246076708.912
     },
     {
       "id": "pr/567/quality-gates-typescript/typescript-front-end-does-the-application-code-meet-the-mutation-bar--baseline--run3",
@@ -5082,7 +5082,7 @@
         "typescript-front-end-does-the-application-code-meet-the-mutation-bar",
         "pr-567"
       ],
-      "mtime": 1794243263419.9944
+      "mtime": 1794246076707.912
     },
     {
       "id": "pr/567/quality-gates-typescript/typescript-front-end-does-the-application-code-meet-the-mutation-bar--baseline--run4",
@@ -5095,7 +5095,7 @@
         "typescript-front-end-does-the-application-code-meet-the-mutation-bar",
         "pr-567"
       ],
-      "mtime": 1794243263420.9944
+      "mtime": 1794246076707.912
     },
     {
       "id": "pr/567/quality-gates-typescript/typescript-front-end-mutation-testing-on-a-red-suite--baseline--run0",
@@ -5108,7 +5108,7 @@
         "typescript-front-end-mutation-testing-on-a-red-suite",
         "pr-567"
       ],
-      "mtime": 1794243263425.9944
+      "mtime": 1794246076708.912
     },
     {
       "id": "pr/567/quality-gates-typescript/typescript-front-end-mutation-testing-on-a-red-suite--baseline--run1",
@@ -5121,7 +5121,7 @@
         "typescript-front-end-mutation-testing-on-a-red-suite",
         "pr-567"
       ],
-      "mtime": 1794243263420.9944
+      "mtime": 1794246076708.912
     },
     {
       "id": "pr/567/quality-gates-typescript/typescript-front-end-mutation-testing-on-a-red-suite--baseline--run2",
@@ -5134,7 +5134,7 @@
         "typescript-front-end-mutation-testing-on-a-red-suite",
         "pr-567"
       ],
-      "mtime": 1794243263413.9944
+      "mtime": 1794246076708.912
     },
     {
       "id": "pr/567/quality-gates-typescript/typescript-front-end-mutation-testing-on-a-red-suite--baseline--run3",
@@ -5147,7 +5147,7 @@
         "typescript-front-end-mutation-testing-on-a-red-suite",
         "pr-567"
       ],
-      "mtime": 1794243263424.9944
+      "mtime": 1794246076709.912
     },
     {
       "id": "pr/567/quality-gates-typescript/typescript-front-end-mutation-testing-on-a-red-suite--baseline--run4",
@@ -5160,7 +5160,7 @@
         "typescript-front-end-mutation-testing-on-a-red-suite",
         "pr-567"
       ],
-      "mtime": 1794243263424.9944
+      "mtime": 1794246076709.912
     },
     {
       "id": "pr/567/quality-gates-typescript/typescript-front-end-bring-the-application-code-to-the-mutation-bar--skilled--run0",
@@ -5173,7 +5173,7 @@
         "typescript-front-end-bring-the-application-code-to-the-mutation-bar",
         "pr-567"
       ],
-      "mtime": 1794243263416.9944
+      "mtime": 1794246076836.9124
     },
     {
       "id": "pr/567/quality-gates-typescript/typescript-front-end-bring-the-application-code-to-the-mutation-bar--skilled--run1",
@@ -5186,7 +5186,7 @@
         "typescript-front-end-bring-the-application-code-to-the-mutation-bar",
         "pr-567"
       ],
-      "mtime": 1794243263425.9944
+      "mtime": 1794246076841.9124
     },
     {
       "id": "pr/567/quality-gates-typescript/typescript-front-end-bring-the-application-code-to-the-mutation-bar--skilled--run2",
@@ -5199,7 +5199,7 @@
         "typescript-front-end-bring-the-application-code-to-the-mutation-bar",
         "pr-567"
       ],
-      "mtime": 1794243263425.9944
+      "mtime": 1794246076842.9124
     },
     {
       "id": "pr/567/quality-gates-typescript/typescript-front-end-bring-the-application-code-to-the-mutation-bar--skilled--run3",
@@ -5212,7 +5212,7 @@
         "typescript-front-end-bring-the-application-code-to-the-mutation-bar",
         "pr-567"
       ],
-      "mtime": 1794243263425.9944
+      "mtime": 1794246076841.9124
     },
     {
       "id": "pr/567/quality-gates-typescript/typescript-front-end-bring-the-application-code-to-the-mutation-bar--skilled--run4",
@@ -5225,7 +5225,7 @@
         "typescript-front-end-bring-the-application-code-to-the-mutation-bar",
         "pr-567"
       ],
-      "mtime": 1794243263425.9944
+      "mtime": 1794246076842.9124
     },
     {
       "id": "pr/567/quality-gates-typescript/typescript-front-end-does-the-application-code-meet-the-mutation-bar--skilled--run0",
@@ -5238,7 +5238,7 @@
         "typescript-front-end-does-the-application-code-meet-the-mutation-bar",
         "pr-567"
       ],
-      "mtime": 1794243263417.9944
+      "mtime": 1794246076842.9124
     },
     {
       "id": "pr/567/quality-gates-typescript/typescript-front-end-does-the-application-code-meet-the-mutation-bar--skilled--run1",
@@ -5251,7 +5251,7 @@
         "typescript-front-end-does-the-application-code-meet-the-mutation-bar",
         "pr-567"
       ],
-      "mtime": 1794243263425.9944
+      "mtime": 1794246076842.9124
     },
     {
       "id": "pr/567/quality-gates-typescript/typescript-front-end-does-the-application-code-meet-the-mutation-bar--skilled--run2",
@@ -5264,7 +5264,7 @@
         "typescript-front-end-does-the-application-code-meet-the-mutation-bar",
         "pr-567"
       ],
-      "mtime": 1794243263425.9944
+      "mtime": 1794246076843.9124
     },
     {
       "id": "pr/567/quality-gates-typescript/typescript-front-end-does-the-application-code-meet-the-mutation-bar--skilled--run3",
@@ -5277,7 +5277,7 @@
         "typescript-front-end-does-the-application-code-meet-the-mutation-bar",
         "pr-567"
       ],
-      "mtime": 1794243263426.9944
+      "mtime": 1794246076841.9124
     },
     {
       "id": "pr/567/quality-gates-typescript/typescript-front-end-does-the-application-code-meet-the-mutation-bar--skilled--run4",
@@ -5290,7 +5290,7 @@
         "typescript-front-end-does-the-application-code-meet-the-mutation-bar",
         "pr-567"
       ],
-      "mtime": 1794243263425.9944
+      "mtime": 1794246076841.9124
     },
     {
       "id": "pr/567/quality-gates-typescript/typescript-front-end-mutation-testing-on-a-red-suite--skilled--run0",
@@ -5303,7 +5303,7 @@
         "typescript-front-end-mutation-testing-on-a-red-suite",
         "pr-567"
       ],
-      "mtime": 1794243263424.9944
+      "mtime": 1794246076835.9124
     },
     {
       "id": "pr/567/quality-gates-typescript/typescript-front-end-mutation-testing-on-a-red-suite--skilled--run1",
@@ -5316,7 +5316,7 @@
         "typescript-front-end-mutation-testing-on-a-red-suite",
         "pr-567"
       ],
-      "mtime": 1794243263426.9944
+      "mtime": 1794246076842.9124
     },
     {
       "id": "pr/567/quality-gates-typescript/typescript-front-end-mutation-testing-on-a-red-suite--skilled--run2",
@@ -5329,7 +5329,7 @@
         "typescript-front-end-mutation-testing-on-a-red-suite",
         "pr-567"
       ],
-      "mtime": 1794243263425.9944
+      "mtime": 1794246076841.9124
     },
     {
       "id": "pr/567/quality-gates-typescript/typescript-front-end-mutation-testing-on-a-red-suite--skilled--run3",
@@ -5342,7 +5342,7 @@
         "typescript-front-end-mutation-testing-on-a-red-suite",
         "pr-567"
       ],
-      "mtime": 1794243263426.9944
+      "mtime": 1794246076841.9124
     },
     {
       "id": "pr/567/quality-gates-typescript/typescript-front-end-mutation-testing-on-a-red-suite--skilled--run4",
@@ -5355,7 +5355,7 @@
         "typescript-front-end-mutation-testing-on-a-red-suite",
         "pr-567"
       ],
-      "mtime": 1794243263425.9944
+      "mtime": 1794246076841.9124
     }
   ]
 }
