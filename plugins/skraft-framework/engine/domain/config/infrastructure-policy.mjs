@@ -186,23 +186,34 @@ const checkStages = ({ at, stages, fields }, errors) => {
 /** @param {unknown} value @returns {value is Record<string, any>} */
 const isRecord = (value) => value !== null && typeof value === 'object' && !Array.isArray(value)
 
-/**
- * The runners whose test command writes no JUnit report unless told to, what tells them, and the
- * option to add.
- */
-const REPORTING = Object.freeze([
-  Object.freeze({ runs: /\bdotnet\s+test\b/, writes: /--logger\b/, add: '--logger trx' }),
-  Object.freeze({ runs: /\bpytest\b/, writes: /--junit-?xml\b/, add: '--junitxml=reports/junit.xml' }),
-  Object.freeze({ runs: /\bvitest\b/, writes: /junit/, add: '--reporter=default --reporter=junit --outputFile.junit=reports/junit.xml' }),
-  Object.freeze({ runs: /\bjest\b/, writes: /junit/, add: 'the jest-junit reporter (--reporters=default --reporters=jest-junit)' }),
-])
+/** A runner that never writes JUnit XML: nothing on its line tells it to. */
+const NEVER = /(?!)/
 
 /**
- * What a component's test command lacks to write the JUnit report the engine reads when it
- * replays a commit; null when it writes one, has none, or runs a runner nothing tells apart.
- * @param {Component} component @returns {string | null}
+ * The runners whose test or e2e command writes no JUnit report unless told to, what tells them,
+ * and what to add.
  */
-export const missingReport = ({ commands }) => {
-  const line = String(commands.test)
-  return REPORTING.find(({ runs, writes }) => runs.test(line) && !writes.test(line))?.add ?? null
+const REPORTING = Object.freeze([
+  Object.freeze({ runs: /\bdotnet\s+test\b/, writes: /--logger\b|--report-trx\b/, add: '--logger trx (VSTest) or --report-trx (Microsoft.Testing.Platform)' }),
+  Object.freeze({ runs: /\bpytest\b/, writes: /--junit-?xml\b/, add: '--junitxml=reports/junit.xml' }),
+  Object.freeze({ runs: /\bunittest\b/, writes: NEVER, add: 'python -m pytest -q -p no:cacheprovider --junitxml=reports/junit.xml in its place, which runs unittest tests too' }),
+  Object.freeze({ runs: /\bvitest\b/, writes: /junit/, add: '--reporter=default --reporter=junit --outputFile.junit=reports/junit.xml' }),
+  Object.freeze({ runs: /\bjest\b/, writes: /junit/, add: 'the jest-junit reporter (--reporters=default --reporters=jest-junit), which writes junit.xml' }),
+  Object.freeze({ runs: /\bplaywright\s+test\b/, writes: /junit/, add: "a junit reporter writing reports/junit.xml (reporter: [['junit', { outputFile: 'reports/junit.xml' }]] in playwright.config)" }),
+])
+
+/** The commands the engine replays, whose reports it reads. */
+const REPLAYED = Object.freeze(['test', 'e2e'])
+
+/**
+ * What each command a component's commits are replayed with lacks to write the JUnit report the
+ * engine reads; none for a command that writes one, is not set, or runs a runner nothing tells apart.
+ * @param {Component} component @returns {Array<{ command: string, line: string, add: string }>}
+ */
+export const missingReports = ({ commands }) => REPLAYED.flatMap((command) => missingIn(command, String(commands[command])))
+
+/** @param {string} command @param {string} line the command's; "undefined", which no runner runs, when it is not set */
+const missingIn = (command, line) => {
+  const runner = REPORTING.find(({ runs, writes }) => runs.test(line) && !writes.test(line))
+  return runner === undefined ? [] : [{ command, line, add: runner.add }]
 }

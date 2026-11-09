@@ -123,16 +123,16 @@ The external gateway row follows `mocking.strategy`; `infrastructure` refuses it
 ## 7. Point the engine at the JUnit reports
 
 The engine replays each failing acceptance test DISTILL commits and each scenario's green, and
-reads the JUnit XML its `test` command writes: without a report, every red is refused
+reads the JUnit XML its `test` and `e2e` commands write: without a report, every red is refused
 (`its test command wrote no test report`). Make the command write one where the stack's default
 expects it, relative to the component root:
 
 | Stack | Default `testReports` | For example |
 |---|---|---|
-| .NET | `**/TestResults/*.trx`, `**/TestResults/*.xml` | `dotnet test --logger trx` (built in), or `--logger "junit;LogFilePath=TestResults/junit.xml"` (JunitXml.TestLogger) |
-| Java | `**/target/surefire-reports/TEST-*.xml`, `**/build/test-results/test/*.xml` | Surefire and Gradle write them already |
-| Python | `reports/junit.xml` | `pytest --junitxml=reports/junit.xml` |
-| TypeScript, JavaScript, React | `reports/junit.xml` | `vitest run --reporter=default --reporter=junit --outputFile.junit=reports/junit.xml` |
+| .NET | `**/TestResults/*.trx`, `**/TestResults/*.xml` | `dotnet test --logger trx` (VSTest, built in), `dotnet test --report-trx` (Microsoft.Testing.Platform, under `bin/`), or `--logger "junit;LogFilePath=TestResults/junit.xml"` (JunitXml.TestLogger) |
+| Java | `**/target/surefire-reports/TEST-*.xml`, `**/target/failsafe-reports/TEST-*.xml`, `**/build/test-results/*/*.xml` | Surefire, Failsafe and every Gradle test task write them already |
+| Python | `reports/junit.xml` | `pytest --junitxml=reports/junit.xml`; pytest runs unittest tests too, `python -m unittest` writes none |
+| TypeScript, JavaScript, React | `reports/junit.xml`, `junit.xml` | `vitest run --reporter=default --reporter=junit --outputFile.junit=reports/junit.xml`; Jest with `--reporters=default --reporters=jest-junit` (`junit.xml`); Playwright with `reporter: [['junit', { outputFile: 'reports/junit.xml' }]]` in `playwright.config` |
 
 Elsewhere, name the paths:
 

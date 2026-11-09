@@ -7,7 +7,7 @@ import { findComponentSkills } from '../pipeline/component-skills.mjs'
 import { forgeCheck } from './forge-check.mjs'
 import { modelChecks } from './model-checks.mjs'
 import { joinRelative } from '../../domain/config/relative-path.mjs'
-import { missingReport, needsContainers, policyLines } from '../../domain/config/infrastructure-policy.mjs'
+import { missingReports, needsContainers, policyLines } from '../../domain/config/infrastructure-policy.mjs'
 
 /**
  * @typedef {import('../../domain/config/skraft-config.mjs').Component} Component
@@ -101,15 +101,15 @@ const infrastructureChecks = (component) => [...[...policyLines(component), `${c
   .map((detail) => ({ subject: 'infrastructure', status: /** @type {const} */ ('ok'), detail })), ...reportWarning(component)]
 
 /**
- * A warning when the component's test command writes no JUnit report: the engine would refuse
- * every red of an acceptance test as writing none.
+ * A warning for each command of the component that writes no JUnit report: the engine would
+ * refuse every red of an acceptance test as writing none.
  * @param {import('../../domain/config/skraft-config.mjs').Component} component @returns {DoctorCheck[]}
  */
-const reportWarning = (component) => {
-  const add = missingReport(component)
-  if (add === null) return []
-  return [{ subject: 'infrastructure', status: 'warn', detail: `${component.name} (${component.stack}) test command "${component.commands.test}" writes no JUnit report where testReports looks: add ${add}, or the engine refuses every red of an acceptance test as writing no report, unless a configuration file of the runner already writes one` }]
-}
+const reportWarning = (component) => missingReports(component).map(({ command, line, add }) => ({
+  subject: 'infrastructure',
+  status: /** @type {const} */ ('warn'),
+  detail: `${component.name} (${component.stack}) ${command} command "${line}" writes no JUnit report where testReports looks: add ${add}, or the engine refuses every red of an acceptance test as writing no report, unless a configuration file of the runner already writes one`,
+}))
 
 /** The container runtimes doctor asks, in order. */
 const RUNTIMES = Object.freeze(['docker', 'podman'])

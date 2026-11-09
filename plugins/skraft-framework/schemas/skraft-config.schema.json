@@ -333,7 +333,7 @@
           "type": "object"
         },
         "testReports": {
-          "description": "Where the component's test and e2e commands write JUnit XML, paths or globs relative to the component root; absent: its stack's (dotnet **/TestResults/*.trx and **/TestResults/*.xml; java **/target/surefire-reports/TEST-*.xml and **/build/test-results/test/*.xml; python, typescript, javascript and react reports/junit.xml).",
+          "description": "Where the component's test and e2e commands write JUnit XML, paths or globs relative to the component root; absent: its stack's (dotnet **/TestResults/*.trx and **/TestResults/*.xml; java **/target/surefire-reports/TEST-*.xml, **/target/failsafe-reports/TEST-*.xml and **/build/test-results/*/*.xml; python reports/junit.xml; typescript, javascript and react reports/junit.xml and junit.xml).",
           "type": "array",
           "minItems": 1,
           "items": {

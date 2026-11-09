@@ -230,7 +230,7 @@ test('a .NET API and a React front in one working copy give two components', asy
       name: 'payment-api', root: 'services/payment-api', stack: 'dotnet', paths: { src: ['src/'], tests: [] },
       commands: DOTNET_COMMANDS,
     },
-    { name: 'web', root: 'web', stack: 'react', paths: { src: ['src/'], tests: ['src/'] }, commands: { build: 'npm run build', lint: 'npm run lint', test: 'npm test', mutation: STRYKER_JS } },
+    { name: 'web', root: 'web', stack: 'react', paths: { src: ['src/'], tests: ['src/'] }, commands: { build: 'npm run build', lint: 'npm run lint', test: 'npm test -- --reporter=default --reporter=junit --outputFile.junit=reports/junit.xml', mutation: STRYKER_JS } },
   ])
 })
 
@@ -303,7 +303,7 @@ test('init keeps every component and key the developer wrote, and adds only the 
     components: [
       written.components[0],
       { name: 'api-2', root: 'tools/api', stack: 'javascript', paths: { src: ['./'], tests: ['./'] }, commands: { mutation: STRYKER_JS } },
-      { name: 'web', root: 'web', stack: 'react', paths: { src: ['./'], tests: ['./'] }, commands: { build: 'npm run build', lint: 'npm run lint', test: 'npm test', mutation: STRYKER_JS } },
+      { name: 'web', root: 'web', stack: 'react', paths: { src: ['./'], tests: ['./'] }, commands: { build: 'npm run build', lint: 'npm run lint', test: 'npm test -- --reporter=default --reporter=junit --outputFile.junit=reports/junit.xml', mutation: STRYKER_JS } },
     ],
   })
 
@@ -375,6 +375,14 @@ for (const [behaviour, files, expected] of [
     { stack: 'typescript', paths: { src: ['./'], tests: ['./'] }, commands: { build: 'npx tsc --noEmit', mutation: STRYKER_JS } }],
   ['a package with jest is tested with jest, from its __tests__ folder', { 'package.json': JSON.stringify({ devDependencies: { jest: '^29.0.0' } }), '__tests__/pay.test.js': '' },
     { stack: 'javascript', paths: { src: ['./'], tests: ['__tests__/'] }, commands: { test: 'npx jest', mutation: STRYKER_JS } }],
+  ['a package with jest and jest-junit writes its JUnit report through jest-junit', { 'package.json': JSON.stringify({ devDependencies: { jest: '^29.0.0', 'jest-junit': '^16.0.0' } }), '__tests__/pay.test.js': '' },
+    { stack: 'javascript', paths: { src: ['./'], tests: ['__tests__/'] }, commands: { test: 'npx jest --reporters=default --reporters=jest-junit', mutation: STRYKER_JS } }],
+  ['a test script that runs jest, with jest-junit, gets its reporters after --', { 'package.json': JSON.stringify({ scripts: { test: 'jest --coverage' }, devDependencies: { jest: '^29.0.0', 'jest-junit': '^16.0.0' } }), '__tests__/pay.test.js': '' },
+    { stack: 'javascript', paths: { src: ['./'], tests: ['__tests__/'] }, commands: { test: 'npm test -- --reporters=default --reporters=jest-junit', mutation: STRYKER_JS } }],
+  ['a test script that already writes JUnit runs as written', { 'package.json': JSON.stringify({ scripts: { test: 'vitest run --reporter=junit' }, devDependencies: { vitest: '^3.0.0' } }), '__tests__/pay.test.js': '' },
+    { stack: 'javascript', paths: { src: ['./'], tests: ['__tests__/'] }, commands: { test: 'npm test', mutation: STRYKER_JS } }],
+  ['a test script that runs jest without jest-junit runs as written', { 'package.json': JSON.stringify({ scripts: { test: 'jest' }, devDependencies: { jest: '^29.0.0' } }), '__tests__/pay.test.js': '' },
+    { stack: 'javascript', paths: { src: ['./'], tests: ['__tests__/'] }, commands: { test: 'npm test', mutation: STRYKER_JS } }],
   ['a package keeps its tests in its tests folder', { 'package.json': '{}', 'src/pay.js': '', 'tests/pay.test.js': '' },
     { stack: 'javascript', paths: { src: ['src/'], tests: ['tests/'] }, commands: NO_COMMANDS }],
   ['a package keeps its tests in its test folder', { 'package.json': '{}', 'test/pay.test.js': '' },

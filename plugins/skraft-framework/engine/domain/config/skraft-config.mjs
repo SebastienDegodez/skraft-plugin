@@ -93,11 +93,11 @@ export const MOCKING_STRATEGIES = Object.freeze(['microcks', 'inprocess'])
 /** Where each stack's test runner writes JUnit XML when the component names nowhere, relative to its root. */
 const TEST_REPORTS = Object.freeze({
   dotnet: ['**/TestResults/*.trx', '**/TestResults/*.xml'],
-  java: ['**/target/surefire-reports/TEST-*.xml', '**/build/test-results/test/*.xml'],
+  java: ['**/target/surefire-reports/TEST-*.xml', '**/target/failsafe-reports/TEST-*.xml', '**/build/test-results/*/*.xml'],
   python: ['reports/junit.xml'],
-  typescript: ['reports/junit.xml'],
-  javascript: ['reports/junit.xml'],
-  react: ['reports/junit.xml'],
+  typescript: ['reports/junit.xml', 'junit.xml'],
+  javascript: ['reports/junit.xml', 'junit.xml'],
+  react: ['reports/junit.xml', 'junit.xml'],
 })
 
 /** What a pair may name, and nothing else. */

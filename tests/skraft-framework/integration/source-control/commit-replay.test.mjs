@@ -71,12 +71,13 @@ test('a program replayed at a commit runs on that commit\'s files, and the worki
   assert.equal(before.worktrees, 1)
 })
 
-test('the JUnit reports a replayed program writes are read from its checkout, by the component\'s globs, before the checkout goes', async (t) => {
+test('the JUnit reports a replayed program writes are read from its checkout, by the component\'s globs, build output included and dependencies left out, before the checkout goes', async (t) => {
   const repo = tempFolder(t)
   mkdirSync(join(repo, 'services', 'api'), { recursive: true })
   writeFileSync(join(repo, 'services', 'api', 'report.mjs'), [
     "import { mkdirSync, writeFileSync } from 'node:fs'",
-    "mkdirSync('reports', { recursive: true }); mkdirSync('Tests/TestResults', { recursive: true })",
+    "mkdirSync('reports', { recursive: true }); mkdirSync('Tests/TestResults', { recursive: true }); mkdirSync('Tests/bin/Debug/net10.0/TestResults', { recursive: true }); mkdirSync('node_modules/runner/TestResults', { recursive: true })",
+    "writeFileSync('Tests/bin/Debug/net10.0/TestResults/platform.xml', '<testsuite/>'); writeFileSync('node_modules/runner/TestResults/vendor.xml', '<testsuite/>')",
     "writeFileSync('reports/junit.xml', '<testsuite><testcase name=\"pays\"><failure message=\"no\"/></testcase></testsuite>')",
     "writeFileSync('Tests/TestResults/junit.xml', '<testsuite><testcase name=\"refunds\"/></testsuite>')",
     "writeFileSync('reports/other.txt', 'not a report')",
@@ -90,6 +91,7 @@ test('the JUnit reports a replayed program writes are read from its checkout, by
   assert.equal(answer.exitCode, 1)
   assert.deepEqual(answer.reports, [
     { path: 'Tests/TestResults/junit.xml', text: '<testsuite><testcase name="refunds"/></testsuite>' },
+    { path: 'Tests/bin/Debug/net10.0/TestResults/platform.xml', text: '<testsuite/>' },
     { path: 'reports/junit.xml', text: '<testsuite><testcase name="pays"><failure message="no"/></testcase></testsuite>' },
   ])
   assert.equal(existsSync(join(repo, 'services', 'api', 'reports')), false)

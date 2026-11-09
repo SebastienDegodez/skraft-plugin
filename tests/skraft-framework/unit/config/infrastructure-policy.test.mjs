@@ -34,7 +34,7 @@ test('doctor shows the plugin\'s policy of each stack row by row: a back end moc
     'ok web (react) entry point: in-process (targeted) — Testing Library; source plugin',
     'ok web (react) front to back: msw (targeted), microcks (e2e) — MSW; Playwright + Microcks; source plugin',
     'ok web (react) clock: fake (targeted); source plugin',
-    'ok web (react) JUnit reports: reports/junit.xml',
+    'ok web (react) JUnit reports: reports/junit.xml, junit.xml',
   ])
 })
 
@@ -50,10 +50,10 @@ test('each stack hosts its entry point in the test process with its own tool and
     'ok javascript (javascript) entry point: in-process (targeted), real (walking skeleton) — app.inject / supertest; source plugin',
   ])
   assert.deepEqual(stacks.map((stack) => of(stack, 'JUnit reports')), [
-    'ok java (java) JUnit reports: **/target/surefire-reports/TEST-*.xml, **/build/test-results/test/*.xml',
+    'ok java (java) JUnit reports: **/target/surefire-reports/TEST-*.xml, **/target/failsafe-reports/TEST-*.xml, **/build/test-results/*/*.xml',
     'ok python (python) JUnit reports: reports/junit.xml',
-    'ok typescript (typescript) JUnit reports: reports/junit.xml',
-    'ok javascript (javascript) JUnit reports: reports/junit.xml',
+    'ok typescript (typescript) JUnit reports: reports/junit.xml, junit.xml',
+    'ok javascript (javascript) JUnit reports: reports/junit.xml, junit.xml',
   ])
   assert.deepEqual(stacks.map((stack) => of(stack, 'external gateway')), stacks.map((stack) => `ok ${stack} (${stack}) external gateway: microcks (targeted), microcks (walking skeleton) — ${MICROCKS}; source plugin`))
 })
@@ -93,7 +93,7 @@ test('a component names where its tests write JUnit XML, inside its root, normal
   }
 })
 
-test('a test command that writes no JUnit report where the engine reads it is a warning naming the option to add; a command that writes one, or whose runner the doctor cannot tell, is not', async () => {
+test('a test or e2e command that writes no JUnit report where the engine reads it is a warning naming the option to add; a command that writes one, or whose runner the doctor cannot tell, is not', async () => {
   const warnings = async (components) => (await doctorOn(components)).checks.filter(({ subject, status }) => subject === 'infrastructure' && status === 'warn').map(({ detail }) => detail)
   const why = 'or the engine refuses every red of an acceptance test as writing no report, unless a configuration file of the runner already writes one'
 
@@ -102,17 +102,23 @@ test('a test command that writes no JUnit report where the engine reads it is a 
     component('jobs', 'python', { commands: { test: 'python -m pytest -q' } }),
     component('web', 'react', { commands: { test: 'npx vitest run' } }),
     component('cli', 'javascript', { commands: { test: 'npx jest' } }),
+    component('legacy', 'python', { commands: { test: 'python -m unittest discover' } }),
+    component('shop', 'react', { commands: { test: 'npx vitest run --reporter=junit --outputFile.junit=reports/junit.xml', e2e: 'npx playwright test' } }),
   ]), [
-    `api (dotnet) test command "dotnet test --nologo" writes no JUnit report where testReports looks: add --logger trx, ${why}`,
+    `api (dotnet) test command "dotnet test --nologo" writes no JUnit report where testReports looks: add --logger trx (VSTest) or --report-trx (Microsoft.Testing.Platform), ${why}`,
     `jobs (python) test command "python -m pytest -q" writes no JUnit report where testReports looks: add --junitxml=reports/junit.xml, ${why}`,
     `web (react) test command "npx vitest run" writes no JUnit report where testReports looks: add --reporter=default --reporter=junit --outputFile.junit=reports/junit.xml, ${why}`,
-    `cli (javascript) test command "npx jest" writes no JUnit report where testReports looks: add the jest-junit reporter (--reporters=default --reporters=jest-junit), ${why}`,
+    `cli (javascript) test command "npx jest" writes no JUnit report where testReports looks: add the jest-junit reporter (--reporters=default --reporters=jest-junit), which writes junit.xml, ${why}`,
+    `legacy (python) test command "python -m unittest discover" writes no JUnit report where testReports looks: add python -m pytest -q -p no:cacheprovider --junitxml=reports/junit.xml in its place, which runs unittest tests too, ${why}`,
+    `shop (react) e2e command "npx playwright test" writes no JUnit report where testReports looks: add a junit reporter writing reports/junit.xml (reporter: [['junit', { outputFile: 'reports/junit.xml' }]] in playwright.config), ${why}`,
   ])
   assert.deepEqual(await warnings([
     component('api', 'dotnet', { commands: { test: 'dotnet test --logger "junit;LogFilePath=TestResults/junit.xml"' } }),
     component('jobs', 'python', { commands: { test: 'python -m pytest --junitxml=reports/junit.xml' } }),
     component('web', 'react', { commands: { test: 'npm test' } }),
     component('svc', 'java', { commands: { test: 'mvn -B test' } }),
+    component('mtp', 'dotnet', { commands: { test: 'dotnet test --report-trx' } }),
+    component('shop', 'react', { commands: { test: 'npx vitest run --reporter=junit --outputFile.junit=reports/junit.xml', e2e: 'npx playwright test --reporter=junit' } }),
   ]), [])
 })
 
