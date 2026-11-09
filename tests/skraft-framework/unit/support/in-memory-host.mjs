@@ -405,9 +405,11 @@ export class InMemoryGit {
    *   tracked: the files it already holds, relative to its top; null when Git cannot list them;
    *   published: the files that first commit holds, relative to the working copy; commitFails:
    *   why every commit the engine makes fails, null when it succeeds; remote: the URL of the
-   *   working copy's remote, null without one
+   *   working copy's remote, null without one; hex: commits named as Git names them, in
+   *   hexadecimal (`c0ffee<n>`), rather than `<repository>-<n>`
    */
-  constructor({ repositories = { '.': { mergeBases: { main: 'root-0' } } }, unavailable = null, published = [], commitFails = null, remote = GITHUB_REMOTE } = {}) {
+  constructor({ repositories = { '.': { mergeBases: { main: 'root-0' } } }, unavailable = null, published = [], commitFails = null, remote = GITHUB_REMOTE, hex = false } = {}) {
+    this.hex = hex
     this.missing = unavailable
     this.remote = remote
     this.published = new Set(published.map(tidy))
@@ -422,7 +424,7 @@ export class InMemoryGit {
     this.repositories = new Map(Object.entries(repositories).map(([top, { mergeBases = {}, tracked = [] }]) => {
 
       const key = tidy(top)
-      return [key, { mergeBases, tracked, history: [{ sha: `${shaPrefix(key)}-0`, subject: 'initial', body: '', files: [] }], dirty: new Set() }]
+      return [key, { mergeBases, tracked, history: [{ sha: hex ? 'c0ffee0' : `${shaPrefix(key)}-0`, subject: 'initial', body: '', files: [] }], dirty: new Set() }]
     }))
   }
   /** The repository holding a working-copy path, and the path inside it. */
@@ -459,7 +461,7 @@ export class InMemoryGit {
     const files = paths.map((path) => this.locate(path).inner)
     for (const file of files) at.repo.dirty.delete(file)
     at.repo.made = (at.repo.made ?? 0) + 1
-    const sha = `${shaPrefix(at.top)}-${at.repo.made}`
+    const sha = this.hex ? `c0ffee${at.repo.made}` : `${shaPrefix(at.top)}-${at.repo.made}`
     at.repo.history.push({ sha, subject, body, files })
     return sha
   }
@@ -923,18 +925,20 @@ export class InMemoryWorkflowSource {
  */
 export class ScriptedMachine {
   /**
-   * @param {{ installed?: string[], exits?: Record<string, number | null>, clock?: FixedClock, takesMs?: number, meanwhile?: Record<string, () => Promise<void> | void>, floods?: string[] }} [options]
+   * @param {{ installed?: string[], exits?: Record<string, number | null>, clock?: FixedClock, takesMs?: number, meanwhile?: Record<string, () => Promise<void> | void>, floods?: string[], outputs?: Record<string, () => string> }} [options]
    *   exits: null for a program stopped before it exited; clock advances by takesMs per run;
    *   meanwhile: what happens elsewhere on the machine while that command line runs; floods:
-   *   the command lines whose output passes the runner's limit, kept cut
+   *   the command lines whose output passes the runner's limit, kept cut; outputs: what a command
+   *   line prints, asked at each run
    */
-  constructor({ installed = ['git', 'docker', 'dotnet', 'npm', 'npx', 'mvn', 'python'], exits = {}, clock = null, takesMs = 0, meanwhile = {}, floods = [] } = {}) {
+  constructor({ installed = ['git', 'docker', 'dotnet', 'npm', 'npx', 'mvn', 'python'], exits = {}, clock = null, takesMs = 0, meanwhile = {}, floods = [], outputs = {} } = {}) {
     this.installed = new Set(installed)
     this.exits = exits
     this.clock = clock
     this.takesMs = takesMs
     this.meanwhile = meanwhile
     this.floods = new Set(floods)
+    this.outputs = outputs
     /** @type {Array<{ argv: string[], cwd: string }>} */
     this.runs = []
   }
@@ -953,12 +957,18 @@ export class ScriptedMachine {
     await this.meanwhile[line]?.()
     if (this.exits[line] === null) return { started: true, exitCode: null, stdout: '', stderr: '', error: `${argv[0]} was stopped by SIGKILL` }
     const exitCode = this.exits[line] ?? 0
-    const output = { stdout: `${argv.join(' ')} output\n`, stderr: exitCode === 0 ? '' : 'it failed\n' }
+    const output = { stdout: this.outputs[line]?.() ?? `${argv.join(' ')} output\n`, stderr: exitCode === 0 ? '' : 'it failed\n' }
     if (this.floods.has(line)) return { started: true, exitCode, stdout: `${output.stdout}\n… output cut …\n`, stderr: output.stderr, truncated: true }
     return { started: true, exitCode, ...output }
   }
   /** The command lines run, as `'<cwd> $ <argv>'`. */
   lines() { return this.runs.map(({ argv, cwd }) => `${cwd} $ ${argv.join(' ')}`) }
+}
+
+/** A test command that fails on another test at each run: the work goes on, never the same way twice. */
+export const failingAnotherTest = () => {
+  let run = 0
+  return () => `Failed CheckoutTests.Case${(run += 1)}\n`
 }
 
 /**

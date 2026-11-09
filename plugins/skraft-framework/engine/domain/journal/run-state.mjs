@@ -65,11 +65,13 @@ import { instructionOf } from '../decisions/questions.mjs'
  *   questions: Record<string, AskedQuestion>,
  *   question: AskedQuestion | null,
  *   scenarios: Scenarios | null,
+ *   signatures: Record<string, Record<string, number>>,
  * }} RunState
  *   last: the run's last step.recorded; traversals: how often each edge `from->to` was taken;
  *   phaseStarted: when the first step of each phase started; replayMs: time spent replaying
  *   red commits, per phase. questions: by key; question: the last one asked whose answer is not
- *   acted on yet (a step recorded after it, or a RETRY, acts on it).
+ *   acted on yet (a step recorded after it, or a RETRY, acts on it). signatures: by node, how
+ *   often each failure came back since the node last passed, by signature.
  */
 
 /** @param {string} from @param {string} to */
@@ -113,7 +115,7 @@ const untimed = () => ({
   replayWarned: [],
 })
 
-/** @returns {Pick<RunState, 'finished' | 'stopped' | 'attempts' | 'costUsd' | 'questions' | 'question' | 'scenarios'>} */
+/** @returns {Pick<RunState, 'finished' | 'stopped' | 'attempts' | 'costUsd' | 'questions' | 'question' | 'scenarios' | 'signatures'>} */
 const unfinished = () => ({
   finished: null,
   stopped: null,
@@ -122,6 +124,7 @@ const unfinished = () => ({
   questions: {},
   question: null,
   scenarios: null,
+  signatures: {},
 })
 
 /**
@@ -199,15 +202,28 @@ const NO_RED = Object.freeze(['review', 'ask', 'answer'])
 /** @param {RunState} run @param {RunEvent} event */
 const recorded = (run, event) => {
   const node = run.nodes[event.step]
-  node.previous = node.last
-  node.last = event
-  node.documents = [...new Set([...node.documents, ...(event.documents ?? [])])]
   addTotals(run, event, /** @type {OpenAttempt} */ (node.open).phase)
-  node.open = null
+  closeAttempt(node, event)
   run.last = event
   run.traversals[edgeKey(event.step, event.next)] = (run.traversals[edgeKey(event.step, event.next)] ?? 0) + 1
   run.question = null
   run.scenarios = scenariosAfter(run.scenarios, event)
+  run.signatures = { ...run.signatures, [event.step]: failuresAfter(run.signatures[event.step], event) }
+}
+
+/**
+ * A node's failures after its step: one more of its signature when it failed, none left once it
+ * passed.
+ * @param {Record<string, number> | undefined} failures @param {RunEvent} event
+ */
+const failuresAfter = (failures, { signature }) => (signature === undefined ? {} : { ...failures, [signature]: (failures?.[signature] ?? 0) + 1 })
+
+/** The node's attempt is closed by its step: the last two steps of the visit, the documents written. @param {NodeState} node @param {RunEvent} event */
+const closeAttempt = (node, event) => {
+  node.previous = node.last
+  node.last = event
+  node.documents = [...new Set([...node.documents, ...(event.documents ?? [])])]
+  node.open = null
 }
 
 /**

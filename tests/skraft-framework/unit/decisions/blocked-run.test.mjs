@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { BUILT_IN_WORKFLOW, InMemoryAgentCatalog, InMemoryGit, ScriptedMachine } from '../support/in-memory-host.mjs'
+import { BUILT_IN_WORKFLOW, InMemoryAgentCatalog, InMemoryGit, ScriptedMachine, failingAnotherTest } from '../support/in-memory-host.mjs'
 import { agent, API, finding, green, lenses, nominal, reviews, says, scenarioReview, scripted, SLUG, tddCycle, TRACKING } from '../support/pipeline-host.mjs'
 import { dispatched, eventsOf } from '../support/decisions.mjs'
 import { edit, WITH_SECURITY } from '../workflow/support.mjs'
@@ -53,7 +53,7 @@ test('an instruction runs the blocked node again on a new pass of the same run, 
 })
 
 test('a loop that reached its max_visits asks a human; an instruction runs the node it loops back to again, its loop budget reset', async () => {
-  const machine = new ScriptedMachine({ exits: { '. $ dotnet test': 1, '../web $ npx eslint .': 1 } })
+  const machine = new ScriptedMachine({ exits: { '. $ dotnet test': 1, '../web $ npx eslint .': 1 }, outputs: { '. $ dotnet test': failingAnotherTest() } })
   const passes = [1, 2, 3, 4, 5, 6].map((n) => (it) => agent({ work: (h) => {
     if (n === 6) Object.assign(machine.exits, { '. $ dotnet test': 0, '../web $ npx eslint .': 0 })
     if (n === 1) return green(SLUG, 'Pass1')(h)
@@ -113,7 +113,7 @@ const resigned = async (host, lines) => {
 }
 
 test('a loop stopped at its max_visits by a journal written before the ceiling was journaled stays blocked, as it was, and asks nothing', async () => {
-  const machine = new ScriptedMachine({ exits: { '. $ dotnet test': 1 } })
+  const machine = new ScriptedMachine({ exits: { '. $ dotnet test': 1 }, outputs: { '. $ dotnet test': failingAnotherTest() } })
   const passes = [1, 2, 3, 4].map((n) => (it) => agent({ work: n === 1 ? green(SLUG, 'Pass1') : tddCycle(SLUG, `Pass${n}`) })(it))
   const host = scripted({ machine }, (it) => [agent()(it), agent()(it), agent()(it), ...passes.map((pass) => pass(it))])
   const append = host.tracking.append.bind(host.tracking)
