@@ -9,6 +9,7 @@ tools:
   - Edit
   - Grep
   - Glob
+  - Bash
   - mcp__graphify__*
 metadata:
   cost_role_class: planner  # B12 target class — cross-cutting reasoning warrants planner capacity (genesis token-economy)

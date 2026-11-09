@@ -8,6 +8,7 @@ tools:
   - edit/createFile
   - edit/editFiles
   - search/codebase
+  - execute/runInTerminal
   - graphify/*
 metadata:
   cost_role_class: researcher  # B12 target class — read-heavy investigation, no code authoring (genesis token-economy)
