@@ -51,7 +51,7 @@ const dotnetProject = ({ folder }) => ({
   paths: { src: orRoot(folder(['src'])), tests: folder(['tests', 'test']) },
   commands: {
     build: 'dotnet build --nologo',
-    test: 'dotnet test --nologo --logger trx',
+    test: 'dotnet test --nologo',
     format: 'dotnet format --verify-no-changes',
     mutation: 'dotnet stryker --since:{baseSha} --reporter json --output StrykerOutput',
   },
@@ -90,7 +90,7 @@ const pythonProject = ({ folder }) => {
   return {
     stack: 'python',
     paths: { src: orRoot(src), tests: folder(['tests', 'test']) },
-    commands: { build: `python -m compileall -q ${src.length > 0 ? 'src' : '.'}`, test: 'python -m pytest -q -p no:cacheprovider --junitxml=reports/junit.xml', mutation: 'python -m mutmut run' },
+    commands: { build: `python -m compileall -q ${src.length > 0 ? 'src' : '.'}`, test: 'python -m pytest -q -p no:cacheprovider', mutation: 'python -m mutmut run' },
   }
 }
 
@@ -136,7 +136,7 @@ const JAVASCRIPT_COMMANDS = Object.freeze({
   lint: [{ when: ({ scripts }) => typeof scripts.lint === 'string', line: 'npm run lint' }],
   test: [
     { when: ({ scripts }) => typeof scripts.test === 'string', line: 'npm test' },
-    { when: ({ dependencies }) => 'vitest' in dependencies, line: 'npx vitest run --reporter=default --reporter=junit --outputFile.junit=reports/junit.xml' },
+    { when: ({ dependencies }) => 'vitest' in dependencies, line: 'npx vitest run' },
     { when: ({ dependencies }) => 'jest' in dependencies, line: 'npx jest' },
   ],
 })

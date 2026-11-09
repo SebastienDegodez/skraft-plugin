@@ -40,11 +40,11 @@ root; a component stops at its first failing gate.
 
 | Rule | Detail |
 | --- | --- |
-| Result | `pass` (exit 0) or `fail`, class `interrupted`, `environment`, `unknown` or `deterministic` ([failure classes](./skraft-config.md#failure-classes)) |
+| Result | `pass` (exit 0) or `fail`, class `interrupted`, `environment` or `deterministic` ([failure classes](./skraft-config.md#failure-classes)) |
 | Component with no gate command | gate `none`, `fail`, class `environment`; in a run, the `environment` question names the cause `config` |
 | Scope | the components changed since their base; `goal_gate=true` then runs all the others; `skraft gate --all` runs them all |
 | Edges | every gate of the node passes: the `PASS` edge; one fails: the `FAIL` edge (`gates`: `PASS` to `deliver_review`, `FAIL` to `deliver`; `mutation`: `PASS` to `visuals`, `FAIL` to `kill_proposal`; `mutation_gates`: `PASS` to `mutation`, `FAIL` to `kill_mutants`) |
-| Machine | a gate step that fails as `environment` or `unknown` takes no edge: the run asks the `environment` question ([causes](./run-journal.md#environment-question)), sends nothing back to an agent and uses none of its attempts |
+| Machine | a gate step that fails as `environment` takes no edge: the run asks the `environment` question ([causes](./run-journal.md#environment-question)), sends nothing back to an agent and uses none of its attempts; a gate stopped by a signal or a crash fails as `deterministic` and takes the `FAIL` edge with its evidence, like a failing check |
 | Loop ceiling | a failed gate step takes its `FAIL` edge until that edge's `max_visits`; one more failure asks the `blocked` question (code `loop-ceiling`) about the node that edge leads to; an instruction sends the work back there, `STOP` ends the run |
 | Mutation | the engine reads the report of the `mutation` command (`mutationReport`) and judges two bars: **100 %** on the core (Domain, Application), **80 %** on the boundary (the rest); it runs once, after `deliver_review` approved; on failure, `kill_proposal` writes one proposal per file of survivors, the `mutation-plan` question lets the developer choose (`APPLY`, their instruction, `STOP`), then `kill_mutants` applies the choice ([Phases](./phases.md#deliver)) |
 | Thresholds | none is configurable |
@@ -248,32 +248,49 @@ cites no other issue (`issue-not-in-story`) and closes none (`issue-closed`).
 | `deliver` sent back by the gates or the review, after the last scenario | reds, greens and refactors on the whole story; reds not replayed | a green with no red since the last green (`green-without-red`); on a pass the gates sent back, their failure stands for the first red |
 | `kill_mutants` | tests that kill mutants and pass | — |
 
-**Replays.** The engine runs the component's `test` command, then `e2e` when it has one and the
-`test` replay did not settle it, in a throwaway checkout of the commit, and reads the JUnit XML
-or TRX reports it writes there ([`testReports`](./skraft-config.md#component)). The exit code alone
-cannot tell a failing assertion from a build error. A red is read on the test cases of the test
-files it commits, when the reports name them (a test case's id holds its file's name), on every
-test case otherwise; a failure whose message names an exception the code threw
-(`NotImplementedException`, `NullReferenceException`, `TypeError`, `AttributeError`, …) is an
-error, never an assertion. The reports a component's tests write in the working copy are the run's
-output: never out of the write scope, never left uncommitted. What each replay printed goes to
-`logs/replay-<short sha>-<component>-<command>.log` ([Logs](./run-journal.md#logs)); the reason of
-a refused red or green names it: `the replay's output is in <log>`.
+**Replays.** The engine reads no test report and no runner's output: it replays a commit's
+commands in a throwaway checkout, from the component root, and tells apart only an exit code of
+0. What each command printed goes, unchanged, to
+`logs/replay-<short sha>-<component>-<command>.log`, `-parent` added for a replay at the commit's
+parent ([Logs](./run-journal.md#logs)). The replay judge,
+[`replay-judge`](pathname:///dashboard/#agent-replay-judge), an agent the driver starts at depth 1,
+reads those logs and the commit (`git -C "<repository>" show <sha>`), through RTK when
+`rtk --version` answers (skraft does not install RTK), and changes nothing: a commit or a file it
+changes in the working copy stops the step on the `environment` question, cause `judge`. It ends
+on a YAML block:
 
-| Replayed | Reading | Effect |
+```yaml
+decision: send-back    # accept | send-back | retry | ask-human
+note: "<what the logs show, and what the agent or the human has to do>"
+```
+
+The engine reads only `decision`; it keeps the whole answer, as written, in
+`logs/judge-<short sha>-<red|green>.md`. An answer it cannot read is asked once more, with the
+reason. A file the tests write in the working copy (a test report) is a change like any other,
+held to the write scope: list it in `.gitignore`.
+
+| Replayed | What happens | Effect |
 | --- | --- | --- |
-| a red of an acceptance test | `assertion`: a test case with `<failure>` | red proven; its failing test cases become the scenario's tests |
-| | `no-report` (build, collection or import error), `error` only, `skipped`, `green`, `timeout` | refused, `not-red`: `its test command wrote no test report: …`, `its tests end on an error, never on an assertion: …`, `no test fails and some are skipped: …`, `its tests pass at it`, `its test command did not finish in time` |
-| | `indeterminate`: no container runtime answers (Docker or Podman) | the step stays open: `environment` question, `…no container runtime answers (Docker or Podman), so the tests that need one could not run; start Docker or Podman, then retry`; never skipped, never replaced by a double |
-| the green of scenario k | the `test` command, and `e2e` when e2e tests proved the red: the scenario's tests pass, no test fails or errs, every command exits 0 | accepted |
-| | a test fails or errs; a test of the scenario missing from the reports or skipped; a command exits non-zero; no report | refused, `not-green`: `these tests fail at it: …`, `the scenario's tests do not pass at it: …`, `<command> exits <code>`, `its test command wrote no test report: …` |
-| a red or a green | `no-report`, from a command that runs a runner `skraft doctor` knows writes none where `testReports` looks | the step stays open: `environment` question, cause `config`: `replaying <sha> for <component>: its test command "<line>" writes no JUnit report where testReports looks; add <what it lacks> to it in skraft-config.json, then retry` |
-| | the command was stopped by a signal or crashed (exit above 128) | the step stays open: `environment` question, cause `unknown`: `replaying <sha> for <component>: <line> was stopped by a signal or crashed (exit <code>)` |
-| | a person interrupted the command (exit 130, or `0xC000013A` on Windows) | the run stops (`interrupted`), asks nothing and refuses nothing; the next run replays the commit |
+| a red of an acceptance test | the `test` command of each component it touches exits 0, then the `e2e` command of those that have one exits 0 too | refused, `not-red`, the judge not asked: `is not red: the tests of <components> pass at it; the replay's output is in <log>`, `pass at it, and so do the e2e tests of <components>; …` when e2e tests ran |
+| | a command fails: a non-zero exit, a program that did not start, a timeout | each failing command replayed at the commit's parent, then the judge asked: the commit, its files, the scenario's index and title, each command line, how it ended and its log |
+| the green of scenario k | its component's `test` command, and `e2e` when e2e tests proved the red | the judge always asked, every command exiting 0 included, with the red's sha and the log of its replay |
+| a red or a green, judged | `accept` | the red stands and becomes the scenario's oracle, with the command that proved it (`test` or `e2e`); the green stands |
+| | `send-back` | refused, `not-red` or `not-green`: `the replay judge sends it back: read <judge answer>` |
+| | `retry` | the commands run again once, the commit then reporting what they find, and the judge is asked again, its brief saying so; a second `retry` asks a human |
+| | `ask-human`; two answers the engine cannot read; a host that cannot start the judge | the step stays open: `environment` question, cause `judge`: `the replay judge asks a human about the <red\|green> commit <short sha>: read <judge answer>` (`replay-judge answered 2 times with no verdict the engine reads (…)`, `the host could not start replay-judge`); `RETRY` replays and judges again, using no new attempt |
+| a red or a green | a person interrupted a command (exit 130, or `0xC000013A` on Windows) | the run stops (`interrupted`), asks nothing and refuses nothing; the next run replays the commit |
 | | no `test` command, a command that uses shell syntax or installs dependencies | the step stays open: `environment` question, cause `config`, nothing replayed |
 
-[`tdd.replay`](./skraft-config.md#tdd) chooses which reds of an attempt are replayed. A red of an
-e2e test is proven only when the `e2e` tests pass at its parent.
+The judge accepts a red whose scenario test fails on its assertion at the commit and does not
+exist, does not run or fails otherwise at the parent; it sends back a red that fails before the
+assertion runs (build, test collection, an import, a skeleton's exception), where only another
+test fails or the scenario's test is skipped. It accepts a green whose commands all exit 0 and
+whose scenario test runs and passes, no test skipped. It answers `retry` for a cause that passes
+(a network timeout, a busy port), `ask-human` for what no agent can give (a program not
+installed, a container runtime that does not answer, a credential).
+[`tdd.replay`](./skraft-config.md#tdd) chooses which reds of an attempt are replayed; a red an
+earlier attempt of the pass replayed keeps its verdict. What each ask of the judge cost, an
+unreadable answer included, is journaled with its decision and added to the step's `cost`.
 
 ## Review: answer, refutation, verdict <!-- #review-run -->
 

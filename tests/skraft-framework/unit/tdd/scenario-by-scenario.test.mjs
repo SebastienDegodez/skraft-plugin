@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { InMemoryGit, ScriptedMachine, ScriptedReplay, junitReport } from '../support/in-memory-host.mjs'
+import { InMemoryGit, ScriptedMachine, ScriptedReplay, judgeAnswer } from '../support/in-memory-host.mjs'
 import { API, CYCLE_WORKFLOW, REFS_42, SLUG, TRACKING, agent, scripted, tddCycle } from '../support/pipeline-host.mjs'
 import { waitingOnEnvironment } from '../support/decisions.mjs'
 
@@ -9,8 +9,8 @@ const research = (it) => [agent()(it), agent()(it)]
 /** Where the engine keeps what the replay of a commit printed. */
 const logOf = (sha, component = 'api', command = 'test') => `${TRACKING}/logs/replay-${sha}-${component}-${command}.log`
 const printed = (...logs) => `the replay's output is in ${logs.join(', ')}`
-/** The api component, its tests writing the TRX report the engine reads. */
-const TRX = { ...API, commands: { ...API.commands, test: 'dotnet test --logger trx' } }
+/** The judge answering from a queue, then accepting. @param {Array<string | object>} answers */
+const judging = (...answers) => () => answers.shift() ?? judgeAnswer('accept')
 const recorded = (host, step) => host.events().filter((event) => event.type === 'step.recorded' && event.step === step)
 const checked = (host, step) => host.events().filter((event) => event.type === 'commits.checked' && event.step === step)
 const labels = (host) => host.agentRunner.dispatches.map(({ label }) => label)
@@ -36,13 +36,13 @@ test('a story of three scenarios is delivered one scenario at a time: the red of
     `skraft ${SLUG} · distill · pass 3 · scenario 3 of 3 · attempt 1`,
     `skraft ${SLUG} · deliver · pass 3 · scenario 3 of 3 · attempt 1`,
   ])
-  assert.deepEqual([...checked(host, 'distill'), ...checked(host, 'deliver')].sort((a, b) => a.commits[0].sha.localeCompare(b.commits[0].sha, 'en', { numeric: true })).map((event) => event.commits.map(({ subject, kind, verdict, replay }) => [subject, kind, verdict, replay?.reading])), [
-    [['test(checkout): scenario 1', 'red', 'ok', 'assertion']],
-    [['feat(checkout): scenario 1', 'green', 'ok', 'green']],
-    [['test(checkout): scenario 2', 'red', 'ok', 'assertion']],
-    [['feat(checkout): scenario 2', 'green', 'ok', 'green']],
-    [['test(checkout): scenario 3', 'red', 'ok', 'assertion']],
-    [['feat(checkout): scenario 3', 'green', 'ok', 'green']],
+  assert.deepEqual([...checked(host, 'distill'), ...checked(host, 'deliver')].sort((a, b) => a.commits[0].sha.localeCompare(b.commits[0].sha, 'en', { numeric: true })).map((event) => event.commits.map(({ subject, kind, verdict, replay }) => [subject, kind, verdict, replay?.judge.decision])), [
+    [['test(checkout): scenario 1', 'red', 'ok', 'accept']],
+    [['feat(checkout): scenario 1', 'green', 'ok', 'accept']],
+    [['test(checkout): scenario 2', 'red', 'ok', 'accept']],
+    [['feat(checkout): scenario 2', 'green', 'ok', 'accept']],
+    [['test(checkout): scenario 3', 'red', 'ok', 'accept']],
+    [['feat(checkout): scenario 3', 'green', 'ok', 'accept']],
   ])
   assert.deepEqual(recorded(host, 'distill_review').length, 1)
   assert.deepEqual(host.events().filter((event) => event.type === 'phase.closed').map(({ phase }) => phase), ['RESEARCH', 'DESIGN', 'DISTILL', 'DELIVER', 'PUBLISH'])
@@ -50,7 +50,8 @@ test('a story of three scenarios is delivered one scenario at a time: the red of
     .filter((event) => (event.type === 'phase.closed' && event.phase === 'DISTILL') || (['step.started', 'step.recorded'].includes(event.type) && ['distill', 'deliver'].includes(event.step)))
     .map((event) => (event.type === 'phase.closed' ? 'DISTILL closed' : `${event.type === 'step.started' ? 'start' : 'done'} ${event.step} ${event.visit}`))
   assert.deepEqual(loop, ['start distill 1', 'done distill 1', 'start deliver 1', 'done deliver 1', 'start distill 2', 'done distill 2', 'start deliver 2', 'done deliver 2', 'start distill 3', 'done distill 3', 'DISTILL closed', 'start deliver 3', 'done deliver 3'], 'DISTILL closes once the red of the last scenario is written')
-  assert.deepEqual(host.replay.lines(), ['root-1 ./. $ dotnet test', 'root-2 ./. $ dotnet test', 'root-3 ./. $ dotnet test', 'root-4 ./. $ dotnet test', 'root-5 ./. $ dotnet test', 'root-6 ./. $ dotnet test'])
+  assert.deepEqual(host.replay.lines(), ['root-1 ./. $ dotnet test', 'root-0 ./. $ dotnet test', 'root-2 ./. $ dotnet test', 'root-3 ./. $ dotnet test', 'root-2 ./. $ dotnet test', 'root-4 ./. $ dotnet test', 'root-5 ./. $ dotnet test', 'root-4 ./. $ dotnet test', 'root-6 ./. $ dotnet test'])
+  assert.deepEqual(host.agentRunner.judged.map(({ label }) => label.split(' · ').slice(1, 3).join(' · ')), ['distill · judge red root-1 of attempt 1', 'deliver · judge green root-2 of attempt 1', 'distill · judge red root-3 of attempt 1', 'deliver · judge green root-4 of attempt 1', 'distill · judge red root-5 of attempt 1', 'deliver · judge green root-6 of attempt 1'])
 })
 
 test('the engineer is told its scenario, the acceptance tests it never changes and the exact green commit; the designer the next scenario and the exact red', async () => {
@@ -84,98 +85,25 @@ test('a component that overrides its infrastructure policy in skraft-config.json
   assert.match(promptOf(host, `skraft ${SLUG} · distill · attempt 1`), /\n- api \(dotnet\) internal gateway: testcontainers \(targeted\), testcontainers \(walking skeleton\)[^\n]*; source skraft-config.json\n/)
 })
 
-test('a red of an acceptance test whose tests write no report, end on an error, are skipped, time out or pass is refused, and DISTILL tries again', async () => {
-  const cases = [
-    [{ reports: { 'root-1': null } }, 'its test command wrote no test report: the build, the test collection or an import failed before any test ran'],
-    [{ reports: { 'root-1': junitReport([['Acceptance.pays', 'error']]) } }, 'its tests end on an error, never on an assertion: make the skeleton answer the empty value of its type so that the assertion runs'],
-    [{ exits: { 'root-1': 0 }, reports: { 'root-1': junitReport([['Acceptance.pays', 'skipped'], ['Unit.other', 'passed']]) } }, 'no test fails and some are skipped: a scenario\'s test is never skipped'],
-    [{ exits: { 'root-1': 0 } }, 'the tests of api pass at it'],
-    [{ exits: { 'root-1': 'timeout' } }, 'its test command did not finish in time'],
-  ]
-  for (const [scripting, why] of cases) {
-    const host = scripted({ components: [TRX], replay: new ScriptedReplay(scripting) }, (it) => [...research(it), agent()(it), unavailable])
-    await host.start()
-    assert.deepEqual(recorded(host, 'distill').map(({ outcome, code, failures }) => [outcome, code, failures]), [['failed', 'tdd', [`commit root-1 "test(checkout): scenario 1" is not red: ${why}; ${printed(logOf('root-1'))}; a test commit must fail on an assertion before the code that makes it pass`]]], why)
-  }
-})
-
-test('a red with no report from a test command that writes none where the engine reads it waits for a human to fix the configuration: the agent keeps its attempts', async () => {
-  const host = scripted({ replay: new ScriptedReplay({ reports: { 'root-1': null } }) }, (it) => [...research(it), agent()(it), unavailable])
-
-  const outcome = await host.start()
-
-  assert.deepEqual([outcome.status, outcome.reason], ['waiting', waitingOnEnvironment('distill', 'replaying root-1 for api: its test command "dotnet test" writes no JUnit report where testReports looks; add --logger trx to it in skraft-config.json, then retry', 1, { owner: 'config', log: logOf('root-1') })])
-  assert.deepEqual(recorded(host, 'distill'), [])
-  assert.deepEqual(host.events().filter(({ type }) => type === 'question.asked').at(-1).incident, { owner: 'config', log: logOf('root-1') })
-  assert.match(host.tracking.files.get(`${SLUG}/logs/replay-root-1-api-test.log`), /^\$ dotnet test\ncwd: \.\ncommit: root-1\nexit: 1\n--- stdout\n/)
-})
-
-test('the TRX report dotnet test writes with --logger trx proves a red, the same as a JUnit one', async () => {
-  const trx = (outcome, message = '') => `<?xml version="1.0"?><TestRun><Results><UnitTestResult testName="Checkout.Acceptance.PaysByCard" outcome="${outcome}">${message === '' ? '' : `<Output><ErrorInfo><Message>${message}</Message></ErrorInfo></Output>`}</UnitTestResult><UnitTestResult testName="Checkout.Unit.Other" outcome="Passed" /></Results></TestRun>`
-  const proven = scripted({ replay: new ScriptedReplay({ reports: { 'root-1': trx('Failed', 'Assert.Equal() Failure: expected 42') } }) }, (it) => [...research(it), agent()(it), unavailable])
-  await proven.start()
-  assert.deepEqual(checked(proven, 'distill')[0].commits.map(({ verdict, replay }) => [verdict, replay.reading, replay.tests]), [['ok', 'assertion', ['Checkout.Acceptance.PaysByCard']]])
-
-  const skipped = scripted({ replay: new ScriptedReplay({ exits: { 'root-1': 0 }, reports: { 'root-1': trx('NotExecuted') } }) }, (it) => [...research(it), agent()(it), unavailable])
-  await skipped.start()
-  assert.deepEqual(checked(skipped, 'distill')[0].commits.map(({ verdict, replay }) => [verdict, replay.reading]), [['not-red', 'skipped']])
-
-  const aborted = scripted({ replay: new ScriptedReplay({ reports: { 'root-1': trx('Error') } }) }, (it) => [...research(it), agent()(it), unavailable])
-  await aborted.start()
-  assert.deepEqual(checked(aborted, 'distill')[0].commits.map(({ verdict, replay }) => [verdict, replay.reading]), [['not-red', 'error']])
-})
-
-test('a red is judged on the tests of the files it commits: its acceptance test failing on an assertion, never an exception nor another test failing', async () => {
-  const notRed = (why) => [['failed', 'tdd', [`commit root-1 "test(checkout): scenario 1" is not red: ${why}; ${printed(logOf('root-1'))}; a test commit must fail on an assertion before the code that makes it pass`]]]
-  const skippedBesideFailing = scripted({ replay: new ScriptedReplay({ reports: { 'root-1': junitReport([['Checkout.S1AcceptanceTests.PaysByCard', 'skipped'], ['Checkout.UnitTests.Rounds', 'failed']]) } }) }, (it) => [...research(it), agent({ work: red(1, ['tests/Acceptance/S1AcceptanceTests.cs', 'src/Rounds.cs']) })(it), unavailable])
-  await skippedBesideFailing.start()
-  assert.deepEqual(recorded(skippedBesideFailing, 'distill').map(({ outcome, code, failures }) => [outcome, code, failures]), notRed('no test fails and some are skipped: a scenario\'s test is never skipped'))
-
-  const thrown = scripted({ replay: new ScriptedReplay({ reports: { 'root-1': junitReport([['Checkout.S1AcceptanceTests.PaysByCard', 'failed', 'System.NotImplementedException : The method or operation is not implemented.']]) } }) }, (it) => [...research(it), agent()(it), unavailable])
-  await thrown.start()
-  assert.deepEqual(recorded(thrown, 'distill').map(({ outcome, code, failures }) => [outcome, code, failures]), notRed('its tests end on an error, never on an assertion: make the skeleton answer the empty value of its type so that the assertion runs'))
-
-  const proven = scripted({ replay: new ScriptedReplay({ reports: { 'root-1': junitReport([['Checkout.S1AcceptanceTests.PaysByCard', 'failed', 'Assert.Equal() Failure'], ['Checkout.UnitTests.Rounds', 'failed']]) } }) }, (it) => [...research(it), agent()(it), unavailable])
-  await proven.start()
-  assert.deepEqual(recorded(proven, 'distill').at(-1).oracle.tests, ['Checkout.S1AcceptanceTests.PaysByCard'])
-
+test('a red that commits no test of its component is refused before any replay', async () => {
   const untested = scripted({}, (it) => [...research(it), agent({ work: red(1, ['src/PayOrder.cs']) })(it), unavailable])
   await untested.start()
   assert.deepEqual(recorded(untested, 'distill')[0].failures, ['commit root-1 "test(checkout): scenario 1" commits no test of its component: the acceptance test of the scenario goes in its test paths, with the skeleton it calls'])
+  assert.deepEqual(untested.replay.lines(), [])
 })
 
-test('a scenario proven by its e2e tests is made to pass when its e2e tests pass at the green, and every command it replays there exits 0', async () => {
+test('a scenario proven by its e2e tests has them replayed at its green beside its tests, and the judge reads both', async () => {
   const FRONT = { name: 'web', root: '.', stack: 'react', bdd: false, paths: { src: ['src'], tests: ['tests', 'e2e'] }, commands: { test: 'npx vitest run', e2e: 'npx playwright test', mutation: 'npx stryker run' } }
-  const replay = new ScriptedReplay({
-    exits: { 'root-1 npx vitest run': 0, 'root-0 npx playwright test': 0, 'root-2 npx vitest run': 0, 'root-2 npx playwright test': 1 },
-    reports: {
-      'root-1 npx playwright test': junitReport([['e2e/pay.spec.ts.customer pays by card', 'failed']]),
-      'root-2 npx playwright test': junitReport([['e2e/pay.spec.ts.customer pays by card', 'failed']]),
-    },
-  })
+  const replay = new ScriptedReplay({ exits: { 'root-1 npx vitest run': 0, 'root-0 npx playwright test': 0, 'root-2 npx vitest run': 0, 'root-2 npx playwright test': 1 } })
   const host = scripted({ components: [FRONT], replay }, (it) => [...research(it), agent({ plan: [['Customer pays by card', 'web', '@walking-skeleton']], work: red(1, ['e2e/pay.spec.ts']) })(it), agent({ work: greenOf(1, ['src/Pay.tsx']) })(it), unavailable])
+  host.agentRunner.judge = judging(judgeAnswer('accept'), judgeAnswer('send-back', 'the e2e test still fails'))
 
   await host.start()
 
-  assert.deepEqual(recorded(host, 'distill').at(-1).oracle, { scenario: 1, sha: 'root-1', subject: 'test(checkout): scenario 1', component: 'web', files: ['e2e/pay.spec.ts'], tests: ['e2e/pay.spec.ts.customer pays by card'], command: 'e2e' })
-  assert.deepEqual(recorded(host, 'deliver')[0].failures, [`commit root-2 "feat(checkout): scenario 1" does not make the scenario pass: these tests fail at it: e2e/pay.spec.ts.customer pays by card; ${printed(logOf('root-2', 'web'), logOf('root-2', 'web', 'e2e'))}`])
-  assert.deepEqual(host.replay.lines().slice(-2), ['root-2 ./. $ npx vitest run', 'root-2 ./. $ npx playwright test'])
-
-  const exiting = scripted({ replay: new ScriptedReplay({ exits: { 'root-2': 3 }, reports: { 'root-2': junitReport([['Tests.dotnet test', 'passed']]) } }) }, (it) => [...research(it), agent()(it), agent()(it), unavailable])
-  await exiting.start()
-  assert.deepEqual(recorded(exiting, 'deliver')[0].failures, [`commit root-2 "feat(checkout): scenario 1" does not make the scenario pass: dotnet test exits 3; ${printed(logOf('root-2'))}`])
-})
-
-test('a red whose tests need a container runtime none of which answers waits for a human: never skipped, never refused', async () => {
-  const replay = new ScriptedReplay({ reports: { 'root-1': junitReport([['Acceptance.pays', 'error', 'Could not find a valid Docker environment']]) } })
-  const host = scripted({ replay }, (it) => [...research(it), agent()(it), unavailable])
-
-  const outcome = await host.start()
-
-  assert.deepEqual([outcome.status, outcome.reason], ['waiting', waitingOnEnvironment('distill', 'replaying root-1 for api: no container runtime answers (Docker or Podman), so the tests that need one could not run; start Docker or Podman, then retry', 1, { log: logOf('root-1') })])
-
-  const python = scripted({ replay: new ScriptedReplay({ reports: { 'root-1': null }, outputs: { 'root-1 dotnet test': "docker.errors.DockerException: Error while fetching server API version: ('Connection aborted.', FileNotFoundError(2, 'No such file or directory'))\n" } }) }, (it) => [...research(it), agent()(it), unavailable])
-  assert.equal((await python.start()).status, 'waiting')
+  assert.deepEqual(host.replay.lines(), ['root-1 ./. $ npx vitest run', 'root-1 ./. $ npx playwright test', 'root-0 ./. $ npx playwright test', 'root-2 ./. $ npx vitest run', 'root-2 ./. $ npx playwright test'])
+  assert.deepEqual(recorded(host, 'distill').at(-1).oracle, { scenario: 1, sha: 'root-1', subject: 'test(checkout): scenario 1', component: 'web', files: ['e2e/pay.spec.ts'], command: 'e2e' })
+  assert.ok(host.agentRunner.judged[1].prompt.includes(`\nThe red of its scenario is root-1; its replay printed to ${logOf('root-1', 'web', 'e2e')}\n`), host.agentRunner.judged[1].prompt)
+  assert.deepEqual(recorded(host, 'deliver')[0].failures, [`commit root-2 "feat(checkout): scenario 1" does not make the scenario pass: the replay judge sends it back: read ${TRACKING}/logs/judge-root-2-green.md`])
 })
 
 test('a green that changes the scenario\'s acceptance test, commits its inner tests apart or touches another component is refused', async () => {
@@ -194,15 +122,6 @@ test('a green that changes the scenario\'s acceptance test, commits its inner te
     assert.deepEqual(recorded(host, 'deliver').map(({ outcome, code, failures }) => [outcome, code, failures]), [['failed', 'tdd', [why]]], why)
     assert.deepEqual(checked(host, 'deliver').flatMap(({ commits }) => commits.filter(({ verdict }) => verdict !== 'ok').map(({ replay }) => replay)).filter((replay) => replay !== null), [], why)
   }
-})
-
-test('the test reports the component\'s tests write in the working copy are the run\'s output, never a change to commit nor out of scope', async () => {
-  const REPORTING = { ...API, testReports: ['reports/junit.xml', '**/TestResults/*.trx'] }
-  const host = scripted({ components: [REPORTING] }, (it) => [...research(it), agent({ work: (h) => { red(1)(h); h.git.change('reports/junit.xml') } })(it), agent({ work: (h) => { greenOf(1)(h); h.git.change('tests/Api.Tests/TestResults/run.trx') } })(it), unavailable])
-
-  await host.start()
-
-  assert.deepEqual([...recorded(host, 'distill'), ...recorded(host, 'deliver')].map(({ outcome, failures }) => [outcome, failures]), [['done', []], ['done', []]])
 })
 
 test('a component whose source path is its whole root keeps its acceptance tests immutable, and its documents outside TDD', async () => {
@@ -226,34 +145,16 @@ test('two components sharing a root each own the files of their own paths', asyn
   const outcome = await host.start()
 
   assert.equal(outcome.status, 'done', outcome.reason)
-  assert.deepEqual(host.replay.lines().slice(2), ['root-3 ./. $ npx vitest run', 'root-4 ./. $ npx vitest run'])
+  assert.deepEqual(host.replay.lines().slice(3), ['root-3 ./. $ npx vitest run', 'root-2 ./. $ npx vitest run', 'root-4 ./. $ npx vitest run'])
 })
 
-test('a green after which the scenario\'s acceptance tests still fail, are missing or skipped, or that writes no report, is refused; one the machine cannot replay waits for a human', async () => {
-  const notGreen = (why) => [`commit root-2 "feat(checkout): scenario 1" does not make the scenario pass: ${why}; ${printed(logOf('root-2'))}`]
-  const cases = [
-    [{ exits: { 'root-2': 1 }, reports: { 'root-2': junitReport([['Tests.dotnet test', 'failed'], ['Tests.Unit.Rounds', 'error']]) } }, notGreen('these tests fail at it: Tests.dotnet test, Tests.Unit.Rounds')],
-    [{ reports: { 'root-1': junitReport([['Tests.S1AcceptanceTests.Pays', 'failed'], ['Tests.S1AcceptanceTests.Receipt', 'failed']]), 'root-2': junitReport([['Tests.S1AcceptanceTests.Pays', 'skipped'], ['Tests.Unit.Rounds', 'passed']]) } }, notGreen('the scenario\'s tests do not pass at it: Tests.S1AcceptanceTests.Pays, Tests.S1AcceptanceTests.Receipt')],
-    [{ reports: { 'root-2': null } }, notGreen('its test command wrote no test report: the build, the test collection or an import failed before any test ran')],
-  ]
-  for (const [scripting, failures] of cases) {
-    const host = scripted({ components: [TRX], replay: new ScriptedReplay(scripting) }, (it) => [...research(it), agent()(it), agent()(it), unavailable])
-    await host.start()
-    assert.deepEqual(recorded(host, 'deliver')[0].failures, failures)
-  }
-
+test('a green the machine cannot replay goes to the judge, which asks a human when no agent can fix it', async () => {
   const machine = scripted({ replay: new ScriptedReplay({ exits: { 'root-2': null } }) }, (it) => [...research(it), agent()(it), agent()(it), unavailable])
+  machine.agentRunner.judge = judging(judgeAnswer('accept'), judgeAnswer('ask-human', 'dotnet is not installed'))
   const outcome = await machine.start()
-  assert.deepEqual([outcome.status, outcome.reason], ['waiting', waitingOnEnvironment('deliver', 'replaying root-2 for api: could not start dotnet', 1, { log: logOf('root-2') })])
-})
-
-test('a test case a report names without its class is known by its name alone', async () => {
-  const report = '<?xml version="1.0"?><testsuite><testcase name="pays by card"><failure message="expected 42"/></testcase></testsuite>'
-  const host = scripted({ replay: new ScriptedReplay({ reports: { 'root-1': report } }) }, (it) => [...research(it), agent()(it), unavailable])
-
-  await host.start()
-
-  assert.deepEqual(recorded(host, 'distill').at(-1).oracle.tests, ['pays by card'])
+  const answer = `${TRACKING}/logs/judge-root-2-green.md`
+  assert.deepEqual([outcome.status, outcome.reason], ['waiting', waitingOnEnvironment('deliver', `the replay judge asks a human about the green commit root-2: read ${answer}`, 1, { owner: 'judge', log: answer })])
+  assert.ok(machine.agentRunner.judged[1].prompt.includes(`\n- api: \`dotnet test\` at the commit root-2: could not start dotnet; printed to ${logOf('root-2')}\n`), machine.agentRunner.judged[1].prompt)
 })
 
 test('a docs or chore commit that changes a component\'s source or tests is refused, wherever it is made', async () => {
@@ -460,13 +361,14 @@ test('a scenario review a workflow asks before the scenarios are written waits o
   assert.deepEqual([outcome.status, outcome.reason], ['waiting', waitingOnEnvironment('scenario_review', 'the run recorded no scenario of the story to show yet; put the scenario review after the node that writes them')])
 })
 
-test('a red an earlier attempt proved stays the scenario\'s oracle when the pass is tried again, its failing tests the ones the green makes pass', async () => {
+test('a red an earlier attempt proved stays the scenario\'s oracle when the pass is tried again, and is not judged again', async () => {
   const PLAN = 'details/2026-10-11/test-plan-checkout.md'
   const host = scripted({}, (it) => [...research(it), agent({ work: (h) => { red(1)(h); h.tracking.write(SLUG, PLAN, '# Test plan\n') }, fill: false })(it), agent({ work: () => {} })(it), agent()(it), unavailable])
 
   await host.start()
 
-  assert.deepEqual(recorded(host, 'distill').map(({ outcome, oracle }) => [outcome, oracle?.tests, oracle?.command]), [['failed', undefined, undefined], ['done', ['Tests.dotnet test'], 'test']])
+  assert.deepEqual(recorded(host, 'distill').map(({ outcome, oracle }) => [outcome, oracle?.command]), [['failed', undefined], ['done', 'test']])
+  assert.deepEqual(host.agentRunner.judged.map(({ label }) => label.split(' · ').slice(1, 3).join(' · ')), ['distill · judge red root-1 of attempt 1', 'deliver · judge green root-2 of attempt 1'])
   assert.deepEqual(recorded(host, 'deliver').map(({ outcome, failures }) => [outcome, failures]), [['done', []]])
 })
 

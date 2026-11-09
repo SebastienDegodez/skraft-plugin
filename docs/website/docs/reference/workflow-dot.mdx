@@ -125,7 +125,7 @@ return every error. A workflow is refused when:
 | missing required attribute | `node <id>: a <shape> node needs <key>="…"` |
 | wrong number of outgoing edges | `node <id>: gate node needs exactly one PASS edge, has N`, and so on |
 | label on an edge that takes none | `edge <a> -> <b>: only an edge leaving a gate, a review's fan-in (shape=tripleoctagon), a call (shape=house) or an ask node takes a label` |
-| agent, lens, `finding-refuter` or a skill a lens lists found nowhere | the node, the agent and the skill named |
+| agent, lens, `finding-refuter`, `replay-judge` (on an agent node whose commits the engine replays: `each="scenario"`, or a role that commits acceptance tests) or a skill a lens lists found nowhere | the node, the agent and the skill named |
 | `proposal=true` without `each="survivor-file"` | `node <id>: proposal=true needs each="survivor-file", the mutants it proposes for` |
 | `each="scenario"` on one node, or on more than two | `each="scenario" goes on two agent nodes, the one that writes each scenario's failing acceptance test, then the one that makes it pass; it is on <n>: <nodes>` |
 | `question="scenario-review"` with no node marked `each="scenario"` | `node <id>: question="scenario-review" needs the two nodes marked each="scenario", whose scenarios it shows` |

@@ -118,7 +118,7 @@ test('a component in a neighbour repository is checked in that repository, again
   const started = host.events().find((event) => event.type === 'step.started' && event.step === 'distill')
   assert.deepEqual(started.heads, [{ repository: '.', sha: 'root-0', dirty: [] }, { repository: '../web', sha: 'up-web-0', dirty: [] }])
   assert.deepEqual(recorded(host, 'distill')[0].failures, ['out of write scope: ../web/scripts/release.sh', 'left uncommitted: ../web/src/Draft.tsx; commit it or undo the change'])
-  assert.deepEqual(host.replay.lines(), ['up-web-1 ../web/. $ npx vitest run'])
+  assert.deepEqual(host.replay.lines(), ['up-web-1 ../web/. $ npx vitest run', 'up-web-0 ../web/. $ npx vitest run'], 'its red is replayed in that repository, then at its parent there')
 })
 
 test('Git that cannot list a repository\'s changes waits for a human; once retried, the step is checked again', async () => {

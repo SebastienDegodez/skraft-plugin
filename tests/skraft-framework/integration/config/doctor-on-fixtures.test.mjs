@@ -34,8 +34,8 @@ const declineGherkin = (cwd) => {
 }
 
 // The stub PATH holds no container runtime: doctor warns of it after the infrastructure of each
-// component's tests, one line per row and one for its JUnit reports, never failing. The plugin
-// ships no mocking skill for Java: doctor warns of it after the component's commands.
+// component's tests, one line per row, never failing. The plugin ships no mocking skill for Java:
+// doctor warns of it after the component's commands.
 for (const [fixture, stack, commands, paths, skills = []] of [
   ['payment', 'dotnet', ['build', 'format', 'test', 'mutation'], { src: ['src/'], tests: ['tests/'] }],
   ['payment-spring', 'java', ['build', 'test', 'mutation'], {
@@ -58,10 +58,9 @@ for (const [fixture, stack, commands, paths, skills = []] of [
     const lines = doctor.stdout.trim().split(/\r?\n/)
     assert.deepEqual(checksOf(lines).map((line) => line.split(': ')[0]), [
       'ok    plugin', 'ok    node', 'ok    config', 'WARN  forge', ...commands.map((name) => `ok    ${fixture}/${name}`), `FAIL  ${fixture}/bdd`, ...skills,
-      ...Array.from({ length: stack === 'react' ? 4 : 5 }, () => 'ok    infrastructure'), 'WARN  container-runtime',
+      ...Array.from({ length: stack === 'react' ? 3 : 4 }, () => 'ok    infrastructure'), 'WARN  container-runtime',
       'ok    models/claude-code', 'WARN  models/copilot', 'ok    vscode',
     ])
-    assert.match(checksOf(lines).find((line) => line.includes(' JUnit reports: ')), new RegExp(`^ok {4}infrastructure: ${fixture} \\(${stack}\\) JUnit reports: \\S`))
     assert.match(checksOf(lines).find((line) => line.startsWith('FAIL')), /bdd: the component does not say whether it describes its behaviour in Gherkin; run \/skraft-init, or write "bdd" in skraft-config\.json$/)
     assert.equal(lines.at(-1), 'skraft doctor: 1 checks failed')
     assert.match(lines[0], /^ok {4}plugin: skraft \S+$/)
@@ -193,7 +192,7 @@ test('doctor passes on Microcks components without any container runtime on the 
   assert.equal(report.status, 0)
   const { checks } = JSON.parse(report.stdout)
   assert.deepEqual(checks.filter(({ status }) => status !== 'ok').map(({ subject }) => subject), ['forge', 'container-runtime', 'models/copilot'])
-  assert.equal(checks.find(({ subject }) => subject === 'container-runtime').detail, 'neither docker nor podman is on the PATH; Microcks and Testcontainers scenarios will be reported INDETERMINATE until Docker or Podman runs')
+  assert.equal(checks.find(({ subject }) => subject === 'container-runtime').detail, 'neither docker nor podman is on the PATH; the tests that need Microcks or Testcontainers cannot run until Docker or Podman runs')
   assert.equal(checks.find(({ detail }) => detail.includes('external gateway')).detail, 'payment-fastapi (python) external gateway: microcks (targeted), microcks (walking skeleton) — Microcks uber native image via Testcontainers, one container per test session; source plugin')
 })
 

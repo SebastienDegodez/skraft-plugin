@@ -113,7 +113,7 @@ export const replayScenarioGreen = (deps, run, { judged, scenario, components })
   if (scenario?.kind !== 'delivery' || green === undefined) return Promise.resolve(null)
   const component = /** @type {Component} */ (components.find(({ name }) => name === /** @type {StoryScenario} */ (scenario.scenario).component))
   const oracle = /** @type {Oracle} */ (scenario.oracles.find((candidate) => candidate.scenario === scenario.index))
-  return replayGreen(deps, run, green, { component, tests: oracle.tests, command: oracle.command })
+  return replayGreen(deps, run, green, { component, command: oracle.command, red: oracle.sha })
 }
 
 /**
@@ -149,13 +149,13 @@ const exemptionBreaches = (judged, exemption, components) => (exemption !== 'doc
  * What a done pass leaves for the next: the plan it wrote, the red of its scenario (the one it
  * committed, else the one an earlier pass did), the green that made it pass.
  * @param {JudgedCommit[]} judged @param {ScenarioPass | null} scenario
- * @param {{ plan: ScenarioPlan | null, tests: Map<string, string[]>, commands: Map<string, 'test' | 'e2e'>, components: Component[] }} context
+ * @param {{ plan: ScenarioPlan | null, commands: Map<string, 'test' | 'e2e'>, components: Component[] }} context
  * @returns {ScenarioRecord}
  */
-export const scenarioRecord = (judged, scenario, { plan, tests, commands, components }) => {
+export const scenarioRecord = (judged, scenario, { plan, commands, components }) => {
   if (scenario === null) return {}
   if (scenario.kind === 'delivery') return greenRecord(judged, scenario)
-  const oracle = newOracle(judged, scenario.index, { tests, commands, components }) ?? scenario.oracles[0]
+  const oracle = newOracle(judged, scenario.index, { commands, components }) ?? scenario.oracles[0]
   return { ...(plan === null ? {} : { scenarios: plan.scenarios, exemption: plan.exemption }), oracle }
 }
 
@@ -166,15 +166,14 @@ export const scenarioRecord = (judged, scenario, { plan, tests, commands, compon
 const greenRecord = (judged, { index }) => ({ green: { scenario: index } })
 
 /**
- * The red the pass committed for its scenario, with the test cases its replay saw fail and the
- * command whose reports hold them.
+ * The red the pass committed for its scenario, with the command whose replay proved it.
  * @param {JudgedCommit[]} judged @param {number} index
- * @param {{ tests: Map<string, string[]>, commands: Map<string, 'test' | 'e2e'>, components: Component[] }} context
+ * @param {{ commands: Map<string, 'test' | 'e2e'>, components: Component[] }} context
  * @returns {Oracle | null}
  */
-const newOracle = (judged, index, { tests, commands, components }) => {
+const newOracle = (judged, index, { commands, components }) => {
   const red = judged.find((commit) => commit.kind === 'red')
   if (red === undefined) return null
   const { name } = ownersOf(components, red.files)[0]
-  return { scenario: index, sha: red.sha, subject: red.subject, component: name, files: red.files, tests: /** @type {string[]} */ (tests.get(red.sha)), command: /** @type {'test' | 'e2e'} */ (commands.get(red.sha)) }
+  return { scenario: index, sha: red.sha, subject: red.subject, component: name, files: red.files, command: /** @type {'test' | 'e2e'} */ (commands.get(red.sha)) }
 }

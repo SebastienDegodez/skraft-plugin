@@ -48,16 +48,16 @@ test('a run that waits on a human tells in its report the question and how to an
 })
 
 test('an incident asked of a human stays in the report with its cause, its log and the answer it got; a table cell holds no pipe nor line break of a failure', async () => {
-  const machine = new ScriptedMachine({ exits: { '. $ dotnet test': 137 } })
+  const machine = new ScriptedMachine({ installed: ['git'] })
   const host = scripted({ machine }, (it) => [...upToDeliver(it), agent({ work: green() })(it)])
 
   await host.start()
   const waiting = sectionOf(reportOf(host), '## Incidents')
-  machine.exits['. $ dotnet test'] = 0
+  machine.installed.add('dotnet')
   await host.decide({ answer: 'RETRY' })
   const outcome = await host.run()
 
-  const row = (answer) => ['| Question | Step | Cause | Output | Answer |', '| --- | --- | --- | --- | --- |', `| gates-1 | gates | unknown | ${TRACKING}/gates/api/test-1.log | ${answer} |`].join('\n')
+  const row = (answer) => ['| Question | Step | Cause | Output | Answer |', '| --- | --- | --- | --- | --- |', `| gates-1 | gates | environment | ${TRACKING}/gates/api/build-1.log | ${answer} |`].join('\n')
   assert.equal(waiting, row('waiting'))
   assert.equal(outcome.status, 'done', outcome.reason)
   assert.equal(sectionOf(reportOf(host), '## Incidents'), row('RETRY'))

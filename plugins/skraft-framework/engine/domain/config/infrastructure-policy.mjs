@@ -185,24 +185,3 @@ const checkStages = ({ at, stages, fields }, errors) => {
 
 /** @param {unknown} value @returns {value is Record<string, any>} */
 const isRecord = (value) => value !== null && typeof value === 'object' && !Array.isArray(value)
-
-/**
- * The runners whose test command writes no JUnit report unless told to, what tells them, and the
- * option to add.
- */
-const REPORTING = Object.freeze([
-  Object.freeze({ runs: /\bdotnet\s+test\b/, writes: /--logger\b/, add: '--logger trx' }),
-  Object.freeze({ runs: /\bpytest\b/, writes: /--junit-?xml\b/, add: '--junitxml=reports/junit.xml' }),
-  Object.freeze({ runs: /\bvitest\b/, writes: /junit/, add: '--reporter=default --reporter=junit --outputFile.junit=reports/junit.xml' }),
-  Object.freeze({ runs: /\bjest\b/, writes: /junit/, add: 'the jest-junit reporter (--reporters=default --reporters=jest-junit)' }),
-])
-
-/**
- * What a component's test command lacks to write the JUnit report the engine reads when it
- * replays a commit; null when it writes one, has none, or runs a runner nothing tells apart.
- * @param {Component} component @returns {string | null}
- */
-export const missingReport = ({ commands }) => {
-  const line = String(commands.test)
-  return REPORTING.find(({ runs, writes }) => runs.test(line) && !writes.test(line))?.add ?? null
-}

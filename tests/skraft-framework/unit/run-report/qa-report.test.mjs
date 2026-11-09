@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { agent, API, finding, lenses, nominal, REFS_42, refutes, says, scripted, SLUG } from '../support/pipeline-host.mjs'
-import { InMemoryGit, ScriptedMachine, ScriptedReplay } from '../support/in-memory-host.mjs'
+import { InMemoryGit, ScriptedMachine, ScriptedReplay, judgeAnswer } from '../support/in-memory-host.mjs'
 import { ALL_KILLED, strykerReport } from '../support/mutation-reports.mjs'
 
 /** A front end in a repository of its own, which the story does not change. */
@@ -106,8 +106,9 @@ test('before DISTILL the QA report has no test plan, no red commit and no gate; 
   ].join('\n'))
 })
 
-test('a red commit the machine could not replay is no TDD red commit of the QA report while the run waits for the machine', async () => {
+test('a red commit the machine could not replay is no TDD red commit of the QA report while the run waits for a human', async () => {
   const host = scripted({ replay: new ScriptedReplay({ exits: { 'root-1': null } }) }, (it) => [agent()(it), agent()(it), agent({ work: ({ git }) => git.commit('test(checkout): acceptance', ['tests/AcceptanceTests.cs']) })(it)])
+  host.agentRunner.judge = () => judgeAnswer('ask-human', 'dotnet is not installed')
 
   const outcome = await host.start()
 

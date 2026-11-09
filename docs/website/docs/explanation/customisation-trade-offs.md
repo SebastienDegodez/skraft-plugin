@@ -18,7 +18,7 @@ number of attempts, the verdicts, the gates and their thresholds.
 
 | What you adapt | Where | Guide |
 | --- | --- | --- |
-| Components, commands, gates, base, mocking, test infrastructure, JUnit reports | `skraft-config.json` | [Configure the components](../how-to/configure-components.md) |
+| Components, commands, gates, base, mocking, test infrastructure | `skraft-config.json` | [Configure the components](../how-to/configure-components.md) |
 | Each agent's model and reasoning effort | `models`, `assign` (four layers) | [Choose the agents' models](../how-to/choose-models.md) |
 | A review's lenses | `.skraft/pipeline.skraft.dot`, `.skraft/review.skraft.dot` | [Add a lens to a review](../how-to/customise-review.md) |
 | Agents and questions of your repository | `.skraft/pipeline.skraft.dot` | [The DOT workflow](../reference/workflow-dot.mdx) |

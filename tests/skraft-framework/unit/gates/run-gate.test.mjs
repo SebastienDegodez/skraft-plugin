@@ -370,7 +370,7 @@ test('an invalid skraft-config.json refuses the gates with every error, instead 
     'baseBranch must be a git ref, got "--orphan"',
     'forge must be "github" or "azure-devops"',
     'publish must be an object of visuals, pullRequest, reviewComment and draft, each true or false',
-    'component web: unknown key comands (allowed: name, root, stack, paths, commands, baseBranch, mocking, contractTesting, bdd, mutationReport, infrastructure, testReports)',
+    'component web: unknown key comands (allowed: name, root, stack, paths, commands, baseBranch, mocking, contractTesting, bdd, mutationReport, infrastructure)',
     'component web: root must be a path relative to the working copy',
     'components[1].name must be kebab-case, got "Api"',
     'component Api: stack must be one of dotnet, java, python, typescript, javascript, react',
@@ -419,13 +419,13 @@ test('an output cut past the runner\'s limit is said in the reason and the evide
   assert.match(await tracking.read('checkout', 'gates/web/test-1.log'), new RegExp(`^result: fail \\(deterministic\\): exited 1; ${cut}$`, 'm'))
 })
 
-test('a command stopped before it exits fails as environment, and the run says to run it again', async () => {
+test('a command stopped before it exits fails like a failing check, its evidence for the agent saying to run it again', async () => {
   const machine = new ScriptedMachine({ exits: { '../payment-web $ npx vitest run': null } })
   const { gate } = await hostWith({ components: [WEB], machine })
 
   const outcome = await gate('all')
 
-  assert.deepEqual([outcome.failure, outcome.reason], ['environment', 'web/test: npx was stopped by SIGKILL; run it again'])
+  assert.deepEqual([outcome.failure, outcome.reason], ['deterministic', 'web/test: npx was stopped by SIGKILL; run it again'])
 })
 
 test('another run writing the journal during the gates blocks this one, keeping the gates already journaled', async () => {

@@ -58,10 +58,11 @@ printed on its `Output:` line:
 | `Cause:` starts with | Fix before `RETRY` |
 |---|---|
 | `the machine` | install or start the program or the service, grant the permission or fix the Git hook; the `Output:` log says which |
-| `skraft-config.json` | change the command or the path the first line names; it says what to add ([Configure the components](./configure-components.md)) |
-| `none the engine knows` | read the `Output:` log: the command was stopped by a signal or crashed (memory, a killed process) |
+| `skraft-config.json` | change the command or the path the first line names ([Configure the components](./configure-components.md)) |
+| `what the replay judge read` | read the judge's answer the `Output:` line names (`logs/judge-<short sha>-<red\|green>.md`): its note says what the logs show and what to fix on the machine (a program, a container runtime, a credential) |
 
-`RETRY` runs the step again where it stopped and uses none of the agent's attempts.
+`RETRY` runs the step again where it stopped and uses none of the agent's attempts; after a
+judge's question, it replays the commit and asks the judge again.
 
 ## 2. Answer from your host
 

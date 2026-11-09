@@ -23,7 +23,9 @@ refactor loop without committing it, then commits once, when the scenario passes
 chained to the test command, `<test> && git add <files> && git commit …`.
 
 The engine does not take the agent's word for it. DISTILL's red was replayed and proven; DELIVER's
-green is replayed too: the scenario's acceptance tests must pass at it, and no test may fail.
+green is replayed too, and the [replay judge](pathname:///dashboard/#agent-replay-judge) reads
+the replay's log next to the red's: the scenario's acceptance tests must pass at it, and no test
+may fail or be skipped.
 Test first ([Beck, 2003](../../reference/citations.mdx#cite-beck-tdd-2003)) becomes a fact in the git history, not a
 promise: for each scenario, a red commit of its acceptance test, then a green commit.
 

@@ -18,7 +18,7 @@ nombre de tentatives, les verdicts, les gates et leurs seuils.
 
 | Ce que vous adaptez | Où | Guide |
 | --- | --- | --- |
-| Composants, commandes, gates, base, mocking, infrastructure de test, rapports JUnit | `skraft-config.json` | [Configurer les composants](../how-to/configure-components.md) |
+| Composants, commandes, gates, base, mocking, infrastructure de test | `skraft-config.json` | [Configurer les composants](../how-to/configure-components.md) |
 | Modèle et niveau de réflexion de chaque agent | `models`, `assign` (quatre couches) | [Choisir les modèles des agents](../how-to/choose-models.md) |
 | Lentilles d'une revue | `.skraft/pipeline.skraft.dot`, `.skraft/review.skraft.dot` | [Ajouter une lentille à une revue](../how-to/customise-review.md) |
 | Agents et questions de votre dépôt | `.skraft/pipeline.skraft.dot` | [Le workflow DOT](../reference/workflow-dot.mdx) |

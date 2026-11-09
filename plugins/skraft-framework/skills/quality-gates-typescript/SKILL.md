@@ -37,14 +37,10 @@ scripts/ folder next to this SKILL.md, never in the consumer repository. Every s
 |---|---|
 | build | `npx tsc --noEmit` |
 | lint | `npx eslint . --max-warnings 0` |
-| test | `npx vitest run --reporter=default --reporter=junit --outputFile.junit=reports/junit.xml` |
+| test | `npx vitest run` |
 | architecture | `node "<skill>/scripts/architecture-gate.mjs" --root . --evidence .copilot-tracking/skraft-gates/architecture` |
 | coverage | `node "<skill>/scripts/coverage-core.mjs" --root . --evidence .copilot-tracking/skraft-gates/coverage` |
 | mutation | `node "<skill>/scripts/mutation-gate.mjs" --root . --scope core --config stryker.core.json --evidence .copilot-tracking/skraft-gates/mutation --since {baseSha}` |
-
-The `test` line writes the JUnit XML report where the component's `testReports` looks by
-default, `reports/junit.xml`: the engine reads it to tell a failing assertion from a build or
-import error.
 
 `--evidence` is the folder where the script keeps its own report files, relative to `--root`.
 `{baseSha}` is replaced by the engine. Outside a pipeline, put the commit `git merge-base HEAD main` prints in its place.

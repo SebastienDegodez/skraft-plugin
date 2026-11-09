@@ -80,8 +80,8 @@ Le craft avance par petits incréments qui marchent. Dans skraft, cela prend deu
   `boundary-enforcement` exige au moins un scénario walking skeleton par flux (son G8). Voir
   [Walking Skeleton](./deep-dive/walking-skeleton.md).
 - **Un scénario, un rouge, un vert.** En DISTILL, l'`acceptance-designer` commite le test
-  d'acceptation en échec d'un scénario et le squelette qu'il appelle ; le moteur le rejoue et ne
-  l'accepte que si un test échoue sur une assertion. En DELIVER, le `software-engineer` tourne la
+  d'acceptation en échec d'un scénario et le squelette qu'il appelle ; le moteur le rejoue et le juge
+  du rejeu ne l'accepte que si le test du scénario échoue sur une assertion. En DELIVER, le `software-engineer` tourne la
   boucle rouge → vert → refactor de ses tests unitaires, puis commite une fois : un `feat(…)` que
   le moteur rejoue aussi, et qui doit faire passer le scénario sans toucher à son test
   d'acceptation. Puis le scénario suivant. Le test d'abord de Beck

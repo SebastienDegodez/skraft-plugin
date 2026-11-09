@@ -40,14 +40,13 @@ $ git init -b main
   "private": true,
   "type": "module",
   "scripts": {
-    "pretest": "node -e \"require('node:fs').mkdirSync('reports', { recursive: true })\"",
-    "test": "node --test --test-reporter=spec --test-reporter-destination=stdout --test-reporter=junit --test-reporter-destination=reports/junit.xml"
+    "test": "node --test --test-reporter=spec --test-reporter-destination=stdout"
   }
 }
 ```
 
-The `test` script also writes a JUnit report to `web/reports/junit.xml`, which the engine reads
-when it replays a commit.
+The `test` script prints each test and why it fails to the standard output, which the replay
+judge reads when the engine replays a commit.
 
 `web/src/cart.js`:
 
@@ -145,8 +144,8 @@ $ skraft doctor
 ```
 
 The last line of `skraft doctor` says `no check failed, 3 with a warning` (4 without Docker or
-Podman: `container-runtime` then says Microcks and Testcontainers scenarios would be reported
-INDETERMINATE, and this repository has no database). No warning blocks:
+Podman: `container-runtime` then says the tests that need Microcks or Testcontainers could not
+run, and this repository has no database). No warning blocks:
 `forge` says the repository has no remote yet, `web` has no JavaScript mocking recipe, and the small repository calls no service; `models/copilot`
 says that, with no model configured, each agent runs on your session's model.
 

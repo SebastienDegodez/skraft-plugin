@@ -7,7 +7,7 @@ import { findComponentSkills } from '../pipeline/component-skills.mjs'
 import { forgeCheck } from './forge-check.mjs'
 import { modelChecks } from './model-checks.mjs'
 import { joinRelative } from '../../domain/config/relative-path.mjs'
-import { missingReport, needsContainers, policyLines } from '../../domain/config/infrastructure-policy.mjs'
+import { needsContainers, policyLines } from '../../domain/config/infrastructure-policy.mjs'
 
 /**
  * @typedef {import('../../domain/config/skraft-config.mjs').Component} Component
@@ -37,7 +37,7 @@ const NODE_MAJOR = 22
 /**
  * Doctor — checks that every command of every component can run on this machine: Node, the
  * configuration, the forge, each component's root, each command's program, the skills the agents writing
- * its tests are asked to read, the infrastructure policy of its tests and where they write JUnit XML,
+ * its tests are asked to read, the infrastructure policy of its tests,
  * Docker or Podman when a policy runs a container, then what each agent the workflow dispatches
  * runs on, per host, and last how VS Code runs the pipeline.
  * With `run`, starts each command once from its component's root.
@@ -94,28 +94,16 @@ const configuredChecks = async (deps, config, { run, base }) => {
 }
 
 /**
- * What the component's tests run each dependency on, row by row, then where they write JUnit XML.
+ * What the component's tests run each dependency on, row by row.
  * @param {Component} component @returns {DoctorCheck[]}
  */
-const infrastructureChecks = (component) => [...[...policyLines(component), `${component.name} (${component.stack}) JUnit reports: ${component.testReports.join(', ')}`]
-  .map((detail) => ({ subject: 'infrastructure', status: /** @type {const} */ ('ok'), detail })), ...reportWarning(component)]
-
-/**
- * A warning when the component's test command writes no JUnit report: the engine would refuse
- * every red of an acceptance test as writing none.
- * @param {import('../../domain/config/skraft-config.mjs').Component} component @returns {DoctorCheck[]}
- */
-const reportWarning = (component) => {
-  const add = missingReport(component)
-  if (add === null) return []
-  return [{ subject: 'infrastructure', status: 'warn', detail: `${component.name} (${component.stack}) test command "${component.commands.test}" writes no JUnit report where testReports looks: add ${add}, or the engine refuses every red of an acceptance test as writing no report, unless a configuration file of the runner already writes one` }]
-}
+const infrastructureChecks = (component) => policyLines(component).map((detail) => ({ subject: 'infrastructure', status: /** @type {const} */ ('ok'), detail }))
 
 /** The container runtimes doctor asks, in order. */
 const RUNTIMES = Object.freeze(['docker', 'podman'])
 /** How long a runtime may take to answer `info`. */
 const RUNTIME_TIMEOUT_MS = 15_000
-const INDETERMINATE = 'Microcks and Testcontainers scenarios will be reported INDETERMINATE until Docker or Podman runs'
+const NO_CONTAINERS = 'the tests that need Microcks or Testcontainers cannot run until Docker or Podman runs'
 
 /**
  * The first container runtime on the PATH that answers, when a component's policy runs a
@@ -129,7 +117,7 @@ const containerChecks = async (deps, components) => {
   for (const runtime of found) {
     if (await answers(deps, runtime)) return [{ subject: 'container-runtime', status: 'ok', detail: `${runtime} answers ${runtime} info` }]
   }
-  return [{ subject: 'container-runtime', status: 'warn', detail: `${silent(found)}; ${INDETERMINATE}` }]
+  return [{ subject: 'container-runtime', status: 'warn', detail: `${silent(found)}; ${NO_CONTAINERS}` }]
 }
 
 /** Whether `<runtime> info` exits 0. @param {DoctorDeps} deps @param {string} runtime */

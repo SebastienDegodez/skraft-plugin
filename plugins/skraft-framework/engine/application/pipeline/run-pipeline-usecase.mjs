@@ -16,6 +16,7 @@ import { statusLine } from '../../domain/reporting/run-status.mjs'
 import { renderWorkflowView, WORKFLOW_FILE } from '../../domain/reporting/workflow-view.mjs'
 import { aliveCount, groupSurvivors, isStalled, ROUNDS_WITHOUT_PROGRESS } from '../../domain/gates/mutation-report.mjs'
 import { gatesOf } from '../../domain/gates/gate-plan.mjs'
+import { REPLAY_JUDGE } from '../../domain/pipeline/replay-verdict.mjs'
 import { openActiveRun } from './active-run.mjs'
 import { holdRun, LockLost, writingWhileHeld } from './run-lock.mjs'
 import { baseOf, loadConfig } from '../config/bases.mjs'
@@ -751,15 +752,19 @@ const failedCheck = ({ missing, failures }) => missing.length > 0 || failures.le
  * @param {Context} context @param {RunState} run @param {WorkStep} next
  * @param {{ job: Job, heads: any }} attempt
  */
-const checkAttempt = ({ deps, slug, config, journal, loaded }, run, { node, attempt, feedback, sentBy, group }, { job, heads }) => {
+const checkAttempt = ({ deps, slug, config, journal, loaded }, run, { node, visit, attempt, feedback, sentBy, group }, { job, heads }) => {
   const inState = attempt > 1
   const { role, outputs, precreated, result } = job
-  return checkStep({ deps, slug, config, base: run.base, story: run.story }, {
+  const judge = { source: loaded.sources[REPLAY_JUDGE], assignment: judgeAssignment(config), slug, step: node.id, visit, attempt }
+  return checkStep({ deps, slug, config, base: run.base, story: run.story, judge }, {
     role, outputs, precreated, result, known: knownCommits(journal), scenario: scenarioPassOf(loaded.workflow, run, { node, group }),
     visitHeads: inState ? run.nodes[node.id].heads : heads,
     redByGateFailure: inState ? run.nodes[node.id].redByGateFailure : redByGates(feedback, sentBy),
   })
 }
+
+/** What the replay judge runs on: the configuration's rule for it, else the plugin's. @param {import('../../domain/config/skraft-config.mjs').SkraftConfig} config */
+const judgeAssignment = (config) => assignmentOf(config, { agent: REPLAY_JUDGE, type: 'refuter', named: null })
 
 /**
  * A check the machine stopped settled none of its commits: its verdicts are those before the
@@ -788,7 +793,7 @@ const recordAttempt = async (context, run, { node, visit, attempt, group, groups
     code: failed ? checked.code : routed.code ?? null,
     missing: checked.missing, failures: checked.failures,
     next: routed.next, ceiling: routed.ceiling, reason: routed.reason, model, // undefined on a resume that did not start the agent
-    ...spent(context, started, checked.replayMs, cost), ...(committed ? { committed } : {}), ...(failed ? {} : checked.scenario),
+    ...spent(context, started, checked.replayMs, withJudge(cost, checked.judgeCost)), ...(committed ? { committed } : {}), ...(failed ? {} : checked.scenario),
   })
 }
 
@@ -809,6 +814,12 @@ const routeDone = (context, run, { node, group, groups }) => (loopsOn(context, {
 const loopsOn = ({ loaded }, { node, group, groups }) => group !== null && (group < groups.length || node.id === scenarioNodes(loaded.workflow)[0])
 
 /** @param {Context} context @param {Date} started @param {number | undefined} replayMs @param {number | undefined} cost */
+/**
+ * What an attempt cost with the replay judge's share; undefined when the host tells neither.
+ * @param {number | undefined} cost @param {number | undefined} judgeCost
+ */
+const withJudge = (cost, judgeCost) => (judgeCost === undefined ? cost : (cost ?? 0) + judgeCost)
+
 const spent = ({ deps }, started, replayMs, cost) => ({
   durationMs: deps.clock.now().getTime() - started.getTime(),
   replayMs,
@@ -857,16 +868,17 @@ const gate = async (context, run, next) => {
   const started = context.deps.clock.now()
   const { gates, failure } = await gateResults(context, run, node)
   const failures = gates.filter((result) => result.status === 'fail').map((result) => `${result.component}/${result.gate}: ${result.reason} (evidence: ${result.evidence})`)
-  if (failure === 'interrupted' || failure === 'environment' || failure === 'unknown') return stoppedGates(context, next, { gates, failure, failures })
+  if (failure === 'interrupted' || failure === 'environment') return stoppedGates(context, next, { gates, failure, failures })
   await recordGate(context, run, next, { failure, failures, started, survivors: groupSurvivors(gates.flatMap((result) => result.survivors ?? [])) })
   return null
 }
 
 /**
- * Gates a person interrupted stop the run; gates the machine could not run, or that a signal or a
- * crash ended, ask a human.
+ * Gates a person interrupted stop the run; gates that wait on what a human must provide (a
+ * program, a command, a readable mutation report) ask one. Any other failure goes back to the
+ * agent.
  * @param {Context} context @param {WorkStep} next
- * @param {{ gates: import('../gates/gate-runs.mjs').GateResult[], failure: 'interrupted' | 'environment' | 'unknown', failures: string[] }} stopped
+ * @param {{ gates: import('../gates/gate-runs.mjs').GateResult[], failure: 'interrupted' | 'environment', failures: string[] }} stopped
  */
 const stoppedGates = (context, next, { gates, failure, failures }) => (failure === 'interrupted'
   ? interrupted(context, next.phase, failures.join('; '))

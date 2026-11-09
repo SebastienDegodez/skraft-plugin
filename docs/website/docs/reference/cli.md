@@ -329,13 +329,13 @@ On a refusal or a block, the summary carries the code: `skraft <slug>: gates ref
 | `scope` | string | `touched` or `all` |
 | `components` | string[] | components selected |
 | `gates` | `GateResult[]` | see below |
-| `failure` | string or null | `environment` when at least one environment failure, otherwise `unknown` when a gate was stopped by a signal or crashed, otherwise `deterministic` on failure, `null` with no failure |
+| `failure` | string or null | `interrupted` when a person stopped a gate, otherwise `environment` when at least one environment failure, otherwise `deterministic` on failure (a gate stopped by a signal or a crash included), `null` with no failure |
 | `code` | string or null | refusal or block code |
 | `reason` | string | summary |
 | `phase` | null | present only on a refusal or block coming from the active pipeline |
 
 Each `GateResult`: `component`, `gate` (`none` for a component with no gate command),
-`status` (`pass`, `fail`), `failure` (`environment`, `unknown`, `deterministic`, `null`), `reason`,
+`status` (`pass`, `fail`), `failure` (`interrupted`, `environment`, `deterministic`, `null`), `reason`,
 `evidence` (absolute path of the evidence file; for the `none` gate, the `gates/<component>`
 folder, where no file is written).
 

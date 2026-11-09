@@ -4,7 +4,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { actsAs, scriptedModHost } from './support/scripted-mod-host.mjs'
 import { answerChoices } from '../../../../plugins/skraft-framework/engine/drivers/claude-mod/run-view.mjs'
-import { ADR, ADR_PATH, decisionsIndex, INDEX_PATH, NOMINAL, PAY_OR_NOTHING, SLUG, blocked, commit, deliverWith, fillOutputs, killsZero, pipelineRepository, proposesZero, scenarioReviewText, scriptedLlm, writeResult } from '../support/pipeline-repository.mjs'
+import { ADR, ADR_PATH, decisionsIndex, INDEX_PATH, NOMINAL, PAY_OR_NOTHING, SLUG, blocked, commit, deliverWith, fillOutputs, judgeLabel, killsZero, pipelineRepository, proposesZero, scenarioReviewText, scriptedLlm, writeResult } from '../support/pipeline-repository.mjs'
 import { git, journal } from '../support/workspace.mjs'
 
 const RATIFY = `Ratify the Proposed ADRs ${ADR_PATH}? RATIFIED marks them Accepted; REJECTED sends DESIGN back with your reason.`
@@ -55,7 +55,8 @@ test('a dismissed dialog leaves the run waiting; /skraft decide records the answ
   assert.equal(text, `${SLUG}: adr-1 answered RATIFIED; run the pipeline again to go on\nskraft ${SLUG} started — progress in the Skraft pane.`)
   assert.equal((await mod.settled()).status, 'done')
   assert.deepEqual(descriptions(mod), [
-    `skraft ${SLUG} · research · attempt 1`, `skraft ${SLUG} · design · attempt 1`, `skraft ${SLUG} · distill · attempt 1`, `skraft ${SLUG} · deliver · scenario 1 of 1 · attempt 1`, `skraft ${SLUG} · pr_writer · attempt 1`,
+    `skraft ${SLUG} · research · attempt 1`, `skraft ${SLUG} · design · attempt 1`, `skraft ${SLUG} · distill · attempt 1`, judgeLabel(cwd, 'red'),
+    `skraft ${SLUG} · deliver · scenario 1 of 1 · attempt 1`, judgeLabel(cwd, 'green'), `skraft ${SLUG} · pr_writer · attempt 1`,
   ])
 })
 
@@ -72,7 +73,8 @@ test('after the conversation moved into a subfolder of the working copy, /skraft
   assert.equal(text, `${SLUG}: adr-1 answered RATIFIED; run the pipeline again to go on\nskraft ${SLUG} started — progress in the Skraft pane.`)
   assert.equal((await mod.settled()).status, 'done')
   assert.deepEqual(descriptions(mod), [
-    `skraft ${SLUG} · research · attempt 1`, `skraft ${SLUG} · design · attempt 1`, `skraft ${SLUG} · distill · attempt 1`, `skraft ${SLUG} · deliver · scenario 1 of 1 · attempt 1`, `skraft ${SLUG} · pr_writer · attempt 1`,
+    `skraft ${SLUG} · research · attempt 1`, `skraft ${SLUG} · design · attempt 1`, `skraft ${SLUG} · distill · attempt 1`, judgeLabel(cwd, 'red'),
+    `skraft ${SLUG} · deliver · scenario 1 of 1 · attempt 1`, judgeLabel(cwd, 'green'), `skraft ${SLUG} · pr_writer · attempt 1`,
   ])
   assert.ok(!existsSync(join(cwd, subfolder, '.copilot-tracking')))
 })
@@ -244,7 +246,7 @@ test('text typed under Other is a rejection with that reason; a reason dialog le
   const typed = pipelineRepository(t)
   const { mod } = await runOn(typed.cwd, [REASON, 'RATIFIED'])
   assert.deepEqual(journal(typed.cwd, SLUG).filter((event) => event.type === 'question.answered').map(({ answer, reason }) => [answer, reason]), [['REJECTED', REASON], ['RATIFIED', null], ['APPROVED', null]])
-  assert.equal(phaseSpawns(mod).length, 6)
+  assert.equal(phaseSpawns(mod).length, 8)
 
   const later = pipelineRepository(t)
   const { mod: waiting, outcome } = await runOn(later.cwd, ['REJECTED', 'Not now'])
@@ -309,7 +311,7 @@ test('skraft-config.json left invalid in the environment dialog stops the run be
   writeFileSync(configPath, config)
   await mod.command(SLUG)
   assert.equal((await mod.settled()).status, 'done')
-  assert.equal(phaseSpawns(mod).length, 5)
+  assert.equal(phaseSpawns(mod).length, 7)
 })
 
 test('an unpublished ADR the architect supersedes on the refused pass is refused; edited in place, it is asked again', async (t) => {

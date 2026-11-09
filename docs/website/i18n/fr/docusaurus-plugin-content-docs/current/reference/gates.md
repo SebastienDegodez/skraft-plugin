@@ -41,11 +41,11 @@ racine du composant ; un composant s'arrête à sa première gate en échec.
 
 | Règle | Détail |
 | --- | --- |
-| Résultat | `pass` (sortie 0) ou `fail`, classe `interrupted`, `environment`, `unknown` ou `deterministic` ([classes d'échec](./skraft-config.md#failure-classes)) |
+| Résultat | `pass` (sortie 0) ou `fail`, classe `interrupted`, `environment` ou `deterministic` ([classes d'échec](./skraft-config.md#failure-classes)) |
 | Composant sans commande de gate | gate `none`, `fail`, classe `environment` ; dans un run, la question `environment` nomme la cause `config` |
 | Portée | les composants modifiés depuis leur base ; `goal_gate=true` lance ensuite tous les autres ; `skraft gate --all` les lance tous |
 | Arêtes | toutes les gates du nœud passent : arête `PASS` ; une échoue : arête `FAIL` (`gates` : `PASS` vers `deliver_review`, `FAIL` vers `deliver` ; `mutation` : `PASS` vers `visuals`, `FAIL` vers `kill_proposal` ; `mutation_gates` : `PASS` vers `mutation`, `FAIL` vers `kill_mutants`) |
-| Machine | une étape de gates qui échoue en `environment` ou `unknown` ne prend aucune arête : le run pose la question `environment` ([causes](./run-journal.md#environment-question)), ne renvoie rien à un agent et ne consomme aucune de ses tentatives |
+| Machine | une étape de gates qui échoue en `environment` ne prend aucune arête : le run pose la question `environment` ([causes](./run-journal.md#environment-question)), ne renvoie rien à un agent et ne consomme aucune de ses tentatives ; une gate arrêtée par un signal ou un plantage échoue en `deterministic` et prend l'arête `FAIL` avec sa preuve, comme une vérification en échec |
 | Plafond de boucle | une étape de gates en échec prend son arête `FAIL` jusqu'au `max_visits` de cette arête ; un échec de plus pose la question `blocked` (code `loop-ceiling`) sur le nœud vers lequel mène cette arête ; une consigne y renvoie le travail, `STOP` termine le run |
 | Mutation | le moteur lit le rapport de la commande `mutation` (`mutationReport`) et juge deux barres : **100 %** sur le cœur (Domain, Application), **80 %** sur la frontière (le reste) ; elle tourne une fois, après l'approbation de `deliver_review` ; en échec, `kill_proposal` écrit une proposition par fichier de survivants, la question `mutation-plan` laisse le développeur choisir (`APPLY`, sa consigne, `STOP`), puis `kill_mutants` applique le choix ([Phases](./phases.md#deliver)) |
 | Seuils | aucun n'est configurable |
@@ -253,33 +253,51 @@ aucune (`issue-closed`).
 | `deliver` renvoyé par les gates ou la revue, après le dernier scénario | rouges, verts et refactors sur toute l'histoire ; rouges non rejoués | un vert sans rouge depuis le dernier vert (`green-without-red`) ; sur un passage que les gates ont renvoyé, leur échec tient lieu du premier rouge |
 | `kill_mutants` | des tests qui tuent des mutants et passent | — |
 
-**Rejeux.** Le moteur lance la commande `test` du composant, puis `e2e` quand il en a une et que
-le rejeu de `test` n'a pas tranché, dans une copie jetable du commit, et lit les rapports JUnit
-XML ou TRX qu'elle y écrit ([`testReports`](./skraft-config.md#component)). Le code de sortie seul
-ne distingue pas une assertion en échec d'une erreur de build. Un rouge se lit sur les cas de test
-des fichiers de test qu'il commite, quand les rapports les nomment (l'identifiant d'un cas de test
-porte le nom de son fichier), sur tous les cas de test sinon ; un échec dont le message nomme une
-exception levée par le code (`NotImplementedException`, `NullReferenceException`, `TypeError`,
-`AttributeError`…) est une erreur, jamais une assertion. Les rapports que les tests d'un composant
-écrivent dans la copie de travail sont la sortie du run : jamais hors du périmètre d'écriture,
-jamais laissés non commités. Ce qu'affiche chaque rejeu va dans
-`logs/replay-<sha court>-<composant>-<commande>.log` ([Logs](./run-journal.md#logs)) ; la raison
-d'un rouge ou d'un vert refusé le nomme : `the replay's output is in <log>`.
+**Rejeux.** Le moteur ne lit aucun rapport de test ni la sortie d'aucun runner : il rejoue les
+commandes d'un commit dans une copie jetable, depuis la racine du composant, et ne distingue
+qu'un code de sortie 0. Ce qu'affiche chaque commande va, tel quel, dans
+`logs/replay-<sha court>-<composant>-<commande>.log`, suffixé `-parent` pour un rejeu au parent
+du commit ([Logs](./run-journal.md#logs)). Le juge du rejeu,
+[`replay-judge`](pathname:///dashboard/#agent-replay-judge), un agent que le driver lance à
+profondeur 1, lit ces logs et le commit (`git -C "<dépôt>" show <sha>`), à travers RTK quand
+`rtk --version` répond (skraft n'installe pas RTK), et ne change rien : un commit ou un fichier
+qu'il change dans la copie de travail arrête l'étape sur la question `environment`, cause `judge`.
+Il finit sur un bloc YAML :
 
-| Rejoué | Lecture | Effet |
+```yaml
+decision: send-back    # accept | send-back | retry | ask-human
+note: "<what the logs show, and what the agent or the human has to do>"
+```
+
+Le moteur ne lit que `decision` ; il garde la réponse entière, telle qu'écrite, dans
+`logs/judge-<sha court>-<red|green>.md`. Une réponse qu'il ne peut pas lire est redemandée une
+fois, avec la raison. Un fichier que les tests écrivent dans la copie de travail (un rapport de
+test) est un changement comme un autre, tenu au périmètre d'écriture : listez-le dans
+`.gitignore`.
+
+| Rejoué | Ce qui se passe | Effet |
 | --- | --- | --- |
-| un rouge de test d'acceptation | `assertion` : un cas de test avec `<failure>` | rouge prouvé ; ses cas de test en échec deviennent les tests du scénario |
-| | `no-report` (erreur de build, de collecte ou d'import), `error` seule, `skipped`, `green`, `timeout` | refusé, `not-red` : `its test command wrote no test report: …`, `its tests end on an error, never on an assertion: …`, `no test fails and some are skipped: …`, `its tests pass at it`, `its test command did not finish in time` |
-| | `indeterminate` : aucun runtime de conteneurs ne répond (Docker ou Podman) | l'étape reste ouverte : question `environment`, `…no container runtime answers (Docker or Podman), so the tests that need one could not run; start Docker or Podman, then retry` ; jamais sauté, jamais remplacé par une doublure |
-| le vert du scénario k | la commande `test`, et `e2e` quand des tests e2e ont prouvé le rouge : les tests du scénario passent, aucun test n'échoue ni ne finit en erreur, chaque commande sort avec 0 | accepté |
-| | un test échoue ou finit en erreur ; un test du scénario absent des rapports ou sauté ; une commande sort avec un code non nul ; aucun rapport | refusé, `not-green` : `these tests fail at it: …`, `the scenario's tests do not pass at it: …`, `<command> exits <code>`, `its test command wrote no test report: …` |
-| un rouge ou un vert | `no-report`, venant d'une commande qui lance un runner dont `skraft doctor` sait qu'il n'en écrit pas là où regarde `testReports` | l'étape reste ouverte : question `environment`, cause `config` : `replaying <sha> for <component>: its test command "<line>" writes no JUnit report where testReports looks; add <ce qui manque> to it in skraft-config.json, then retry` |
-| | la commande a été arrêtée par un signal ou a planté (sortie au-dessus de 128) | l'étape reste ouverte : question `environment`, cause `unknown` : `replaying <sha> for <component>: <line> was stopped by a signal or crashed (exit <code>)` |
-| | une personne a interrompu la commande (sortie 130, ou `0xC000013A` sous Windows) | le run s'arrête (`interrupted`), ne demande rien et ne refuse rien ; le run suivant rejoue le commit |
+| un rouge de test d'acceptation | la commande `test` de chaque composant qu'il touche sort avec 0, puis la commande `e2e` de ceux qui en ont une sort avec 0 aussi | refusé, `not-red`, sans demander au juge : `is not red: the tests of <components> pass at it; the replay's output is in <log>`, `pass at it, and so do the e2e tests of <components>; …` quand des tests e2e ont tourné |
+| | une commande échoue : un code de sortie non nul, un programme qui n'a pas démarré, un délai dépassé | chaque commande en échec rejouée au parent du commit, puis le juge interrogé : le commit, ses fichiers, l'indice et le titre du scénario, chaque ligne de commande, comment elle a fini et son log |
+| le vert du scénario k | la commande `test` de son composant, et `e2e` quand des tests e2e ont prouvé le rouge | le juge toujours interrogé, même quand chaque commande sort avec 0, avec le sha du rouge et le log de son rejeu |
+| un rouge ou un vert, jugé | `accept` | le rouge tient et devient l'oracle du scénario, avec la commande qui l'a prouvé (`test` ou `e2e`) ; le vert tient |
+| | `send-back` | refusé, `not-red` ou `not-green` : `the replay judge sends it back: read <judge answer>` |
+| | `retry` | les commandes tournent encore une fois, le commit rapportant alors ce qu'elles trouvent, et le juge est réinterrogé, son brief le disant ; un second `retry` interroge un humain |
+| | `ask-human` ; deux réponses que le moteur ne peut pas lire ; un hôte qui ne peut pas lancer le juge | l'étape reste ouverte : question `environment`, cause `judge` : `the replay judge asks a human about the <red\|green> commit <short sha>: read <judge answer>` (`replay-judge answered 2 times with no verdict the engine reads (…)`, `the host could not start replay-judge`) ; `RETRY` rejoue et rejuge, sans nouvelle tentative |
+| un rouge ou un vert | une personne a interrompu une commande (sortie 130, ou `0xC000013A` sous Windows) | le run s'arrête (`interrupted`), ne demande rien et ne refuse rien ; le run suivant rejoue le commit |
 | | pas de commande `test`, une commande à syntaxe shell ou qui installe des dépendances | l'étape reste ouverte : question `environment`, cause `config`, rien n'est rejoué |
 
-[`tdd.replay`](./skraft-config.md#tdd) choisit quels rouges d'une tentative sont rejoués. Le rouge
-d'un test e2e n'est prouvé que si les tests `e2e` passent à son parent.
+Le juge accepte un rouge dont le test du scénario échoue sur son assertion au commit et, au
+parent, n'existe pas, ne tourne pas ou échoue autrement ; il renvoie un rouge qui échoue avant que
+l'assertion ne tourne (build, collecte des tests, un import, l'exception d'un squelette), où seul
+un autre test échoue ou dont le test du scénario est sauté. Il accepte un vert dont toutes les
+commandes sortent avec 0 et dont le test du scénario tourne et passe, aucun test sauté. Il répond
+`retry` pour une cause qui passe (un délai réseau, un port occupé), `ask-human` pour ce qu'aucun
+agent ne peut donner (un programme non installé, un runtime de conteneurs qui ne répond pas, un
+identifiant). [`tdd.replay`](./skraft-config.md#tdd) choisit quels rouges d'une tentative sont
+rejoués ; un rouge qu'une tentative précédente de la passe a rejoué garde son verdict. Ce qu'a
+coûté chaque question au juge, réponse illisible comprise, est journalisé avec sa décision et
+s'ajoute au `cost` de l'étape.
 
 ## Revue : réponse, réfutation, verdict <!-- #review-run -->
 

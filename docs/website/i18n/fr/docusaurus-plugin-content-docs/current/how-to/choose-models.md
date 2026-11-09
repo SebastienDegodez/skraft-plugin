@@ -38,8 +38,8 @@ models on claude-code:
 ```
 
 Sans réglage, les lentilles tournent sur `reviewer` et `solution-researcher` sur `researcher` (palier
-`economy` pour les deux), `solution-architect` sur `planner` (`frontier`), `pr-writer` sur `economy`, les
-autres agents sur `implementer` (`standard`). Sous Claude Code, `economy`, `standard` et
+`economy` pour les deux), `solution-architect` sur `planner` (`frontier`), `pr-writer` sur `economy`, `replay-judge` sur
+`standard`, les autres agents sur `implementer` (`standard`). Sous Claude Code, `economy`, `standard` et
 `frontier` donnent `haiku`, `sonnet` et `opus` ; sous Copilot, aucun modèle : l'agent tourne sur
 celui de la session.
 
@@ -104,7 +104,8 @@ défaut :
 La règle par agent l'emporte sur la famille que nomme un workflow éjecté (`model=`,
 `refuter=`), puis viennent la règle par type, puis `assign.default`. `finding-refuter` tourne
 un palier au-dessus de la lentille la plus forte qu'il vérifie, `frontier` au plus, sauf règle
-qui le nomme.
+qui le nomme. `replay-judge` se résout avec le type d'agent `refuter` : une règle
+`assign.types.refuter` s'y applique dès qu'aucune règle par agent ne le nomme.
 
 ## 5. Vérifier
 

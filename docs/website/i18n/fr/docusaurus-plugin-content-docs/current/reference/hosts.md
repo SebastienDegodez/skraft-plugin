@@ -17,7 +17,7 @@ Pourquoi un moteur et des pilotes, et le contrat du pilote Copilot :
 | --- | --- | --- |
 | Node | 22 ou plus | le moteur, la ligne de commande `skraft`, l'extension Copilot ; `skraft doctor` le vérifie |
 | Git | — | la base de chaque composant, les commits, les rejeux de commits rouges et verts |
-| Docker ou Podman | — | les tests qui font tourner Microcks ou Testcontainers, la base du walking skeleton par défaut ; sans l'un ni l'autre, leur rejeu est INDETERMINATE et le run attend ; `skraft doctor` nomme celui qui répond |
+| Docker ou Podman | — | les tests qui font tourner Microcks ou Testcontainers, la base du walking skeleton par défaut ; sans l'un ni l'autre, le juge du rejeu demande à un humain d'en démarrer un et le run attend ; `skraft doctor` nomme celui qui répond |
 | `gh` | connecté à l'hôte du dépôt | seulement pour lire l'issue de la story (`--issue`), ouvrir la pull request, commenter l'issue, `skraft review --pr` ; le moteur ne passe jamais par un serveur MCP ; voir [Forge](./skraft-config.md#github-through-gh) |
 | `az` | connecté à l'organisation, avec son extension `azure-devops` | sur Azure DevOps seulement, pour lire le work item de la story (`--issue`), y tenir le commentaire du run et ouvrir la pull request, et revoir une pull request (`skraft review --pr` : la lire, tenir le fil de revue) ; le moteur ne passe jamais par un serveur MCP ; voir [Forge](./skraft-config.md#azure-devops-through-az) |
 | Copilot CLI | — | Copilot CLI ; sous VS Code, le pilote SDK (`skraft-run.mjs`) le lance sans interface |

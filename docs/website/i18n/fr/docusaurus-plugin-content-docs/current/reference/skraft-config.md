@@ -68,7 +68,7 @@ flowchart TD
 | `tdd` | object | `{ "replay": "all" }` | `{ "replay": "all" }`, `{ "replay": "last-red" }` ; `replay` absent ou `null` vaut `all` ; voir [tdd](#tdd) |
 | `publish` | object | `{}` | voir [publish](#publish) |
 | `models` | object | les alias Claude Code du plugin par palier | famille de modèle → `tier` et, par hôte (`claude-code`, `copilot`), `{ "model": nom ou liste, "effort": niveau }` ; voir [Choisir les modèles des agents](../how-to/choose-models.md) |
-| `assign` | object | lentilles `reviewer`, workers `implementer`, `solution-researcher` `researcher`, `solution-architect` `planner`, `pr-writer` `economy`, défaut `implementer` | `{ "default", "types", "agents" }` : une famille, `inherit`, ou `{ "family", "<hôte>": { "effort" } }` ; lu aussi dans `~/.skraft/config.json` et `skraft-config.local.json` |
+| `assign` | object | lentilles `reviewer`, workers `implementer`, `solution-researcher` `researcher`, `solution-architect` `planner`, `pr-writer` `economy`, `replay-judge` `standard`, défaut `implementer` | `{ "default", "types", "agents" }` : une famille, `inherit`, ou `{ "family", "<hôte>": { "effort" } }` ; lu aussi dans `~/.skraft/config.json` et `skraft-config.local.json` |
 | `rank`, `workflow` | — | — | refusées : `rank is no key: …`, `workflow is no key: …` |
 | `configurationConfirmed` | booléen | `false` | dans `skraft-config.local.json` seulement (refusé dans ce fichier et dans `~/.skraft/config.json`). Écrit `true` par le moteur quand vous répondez START à *Démarrer ce run avec la configuration de cette copie de travail ?*, qu'un run Copilot pose avant sa première phase tant qu'il est absent, et de nouveau avec `configure: true`. L'onglet Configuration du canvas skraft modifie la forge, les composants et les consentements de ce fichier, et l'`assign` et les `models` de `skraft-config.local.json`, vérifiés comme un run les charge |
 | toute autre clé | quelconque | — | conservée telle quelle, jamais lue ni réécrite |
@@ -93,7 +93,6 @@ Toute clé hors de cette liste est refusée.
 | `bdd` | liste ou `false` | obligatoire | où chaque runner du composant lit ses scénarios et les définitions qui les lient : une liste de `{ runner, features, steps }`, les dossiers relatifs à la racine du composant, `runner` facultatif, et `steps` facultatif aussi — omis, les scénarios sont écrits et rien ne leur est demandé, donc aucun runner ne les lit. **Une paire par runner**, parce que la portée de liaison est celle du runner : une définition d'une autre paire ne lie aucun pas de celle-ci, donc un composant qui porte plusieurs projets de tests en déclare une chacun. `false` n'en nomme aucune, et ne demande aucun `.feature` à DISTILL : l'acceptance designer prend ses scénarios dans la colonne `Scenario` du plan de test, et TDD tourne comme toujours. **Aucune clé, et un `true` nu, ne décident rien** : le moteur n'invente aucun dossier — un dossier que personne n'a choisi est un dossier que le runner peut ne jamais lire — donc un run est refusé avec `skraft is not initialised: run /skraft-init (<composant>: bdd is unanswered)` et `skraft doctor` échoue sur ce composant. C'est une pratique qui se déclare, jamais un seuil : un composant qui nomme ses dossiers est tenu à ses scénarios en entier. Les dossiers sont là où DISTILL écrit les scénarios de l'histoire et là où le moteur les relit : une seule résolution pour le brief, le périmètre d'écriture de l'acceptance designer, le dossier que le moteur crée avant sa tentative, et le contrôle. Un dossier déclaré qui n'est pas un dossier de la copie de travail fait échouer `skraft doctor`, et une paire qui nomme un runner dont le `steps` n'est pas un dossier refuse le run (`bdd-unbound`) — un runner sans liaisons n'exécute rien ; `features` en est exempté, puisque DISTILL le crée avec le premier scénario. Les mots-clés Gherkin sont en anglais, quelle que soit la langue des phrases. `skraft init` détecte les paires, `/skraft-init` demande celles qu'il n'a pas trouvées, `skraft doctor` les nomme, le moteur passe les dossiers dans le brief, et les lentilles de revue voient le réglage parmi ceux du composant |
 | `mutationReport` | string | absent : le rapport qu'écrit l'outil de la stack, relatif à la racine : `StrykerOutput/reports/mutation-report.json` (.NET), `reports/mutation/mutation.json` (TypeScript, JavaScript, React), `mutation-report.json` (Python), `target/pit-reports/mutations.xml` (Java ; `build/reports/pitest/mutations.xml` quand la commande de mutation nomme Gradle) | le fichier où la commande `mutation` écrit son rapport, relatif à la racine du composant, jamais absolu ni hors d'elle. La gate de mutation y lit les mutants survivants et juge la barre 100 % / 80 % |
 | `infrastructure` | object | `{}` : chaque ligne est celle du plugin ([politique d'infrastructure](#infrastructure)) | les lignes de la politique que les tests du composant surchargent : `entryPoint`, `internalGateway` et `clock`, chacune `{ "targeted", "walkingSkeleton" }` ; pour `react`, `entryPoint` et `clock` `{ "targeted" }` et `frontToBack` `{ "targeted", "e2e" }`. Chaque valeur parmi `in-process`, `real`, `in-memory`, `testcontainers`, `microcks`, `fake`, `msw`. `externalGateway` est refusée : `mocking.strategy` la fixe. Un étage omis garde le mécanisme du plugin |
-| `testReports` | liste de strings | celui de la stack : `**/TestResults/*.trx` et `**/TestResults/*.xml` (.NET), `**/target/surefire-reports/TEST-*.xml` et `**/build/test-results/test/*.xml` (Java), `reports/junit.xml` (Python, TypeScript, JavaScript, React) | où les commandes `test` et `e2e` du composant écrivent leur JUnit XML : au moins un chemin ou glob relatif à la racine du composant, jamais absolu ni nommant `..` ; normalisé (`./reports/junit.xml` devient `reports/junit.xml`). Le moteur les lit quand il rejoue un commit : un rouge sans rapport est refusé ([Commits et rejeux](./gates.md#commits)) |
 
 Les seuils qualité (couverture, mutation…) ne sont **pas** configurables : aucune clé ne les
 porte.
@@ -127,7 +126,7 @@ composant l'emporte ; `skraft doctor` affiche une ligne par rangée avec sa sour
 | `msw` | MSW |
 
 `testcontainers` et `microcks` demandent Docker ou Podman : `skraft doctor` nomme celui qui
-répond, ou avertit `Microcks and Testcontainers scenarios will be reported INDETERMINATE until
+répond, ou avertit `the tests that need Microcks or Testcontainers cannot run until
 Docker or Podman runs`. Seul `skraft-config.json` porte `infrastructure`, comme toute clé de composant.
 
 ```json
@@ -139,7 +138,7 @@ Docker or Podman runs`. Seul `skraft-config.json` porte `infrastructure`, comme 
 
 | Clé | Valeur | Effet |
 | --- | --- | --- |
-| `replay` | `all` (défaut) | le moteur rejoue chaque commit rouge d'un test d'acceptation (`test(<story>): …`, DISTILL) avec la commande `test` de son composant, lit ses rapports JUnit (`testReports`) et vérifie qu'il échoue sur une assertion ([Commits et rejeux](./gates.md#commits)) |
+| `replay` | `all` (défaut) | le moteur rejoue chaque commit rouge d'un test d'acceptation (`test(<story>): …`, DISTILL) avec la commande `test` de son composant, et le juge du rejeu lit ce qu'elle a affiché ([Commits et rejeux](./gates.md#commits)) |
 | `replay` | `last-red` | seul le dernier commit rouge de chaque story (même portée de commit) est rejoué |
 | `replay` | `null` | vaut `all` |
 
@@ -274,7 +273,7 @@ Dans les messages, `<label>` vaut `component <name>` si le nom est une chaîne, 
 | entrée pas un objet | `components[<index>] must be an object` |
 | nom | `components[<index>].name must be kebab-case, got <valeur JSON>` |
 | nom en double | `component name <name> is used twice` |
-| clé inconnue | `<label>: unknown key <clé> (allowed: name, root, stack, paths, commands, baseBranch, mocking, contractTesting, bdd, mutationReport, infrastructure, testReports)` |
+| clé inconnue | `<label>: unknown key <clé> (allowed: name, root, stack, paths, commands, baseBranch, mocking, contractTesting, bdd, mutationReport, infrastructure)` |
 | racine | `<label>: root must be a path relative to the working copy` |
 | stack | `<label>: stack must be one of dotnet, java, python, typescript, javascript, react` |
 | `commands` pas un objet | `<label>: commands must be an object of command lines` |
@@ -287,7 +286,6 @@ Dans les messages, `<label>` vaut `component <name>` si le nom est une chaîne, 
 | `bdd` | `<label>: bdd must be true, false, or a list of { runner, features, steps } whose folders are inside the component root; steps may be left out when nothing binds the scenarios` |
 | `mutationReport` | `<label>: mutationReport must be a file inside the component root` |
 | `infrastructure` | `<label>: infrastructure must be an object of rows (allowed: <rangées>)` ; `<label>: infrastructure.externalGateway is set by mocking.strategy; write "mocking": { "strategy": ... } instead` ; `<label>: unknown infrastructure row <rangée> (allowed: <rangées>)` ; `<label>: infrastructure.<rangée> must be an object of <étages>` ; `<label>: infrastructure.<rangée>: unknown field <étage> (allowed: <étages>)` ; `<label>: infrastructure.<rangée>.<étage> must be one of in-process, real, in-memory, testcontainers, microcks, fake, msw` |
-| `testReports` | `<label>: testReports must list the JUnit XML files its tests write, as paths or patterns inside the component root` |
 
 ## Lignes de commande <!-- #command-lines -->
 
@@ -351,14 +349,14 @@ conteneur ne répond, comme tout test en échec ; `skraft doctor` avertit quand 
 
 | Classe | Cas | Raison affichée | Qui agit |
 | --- | --- | --- | --- |
-| `environment` | programme ou dossier introuvable, programme impossible à lancer | `<erreur>; install it or change the command in skraft-config.json` | un humain, sur la machine ou la config |
+| `environment` | programme ou dossier introuvable, programme impossible à lancer | `<erreur>; install it or change the command in skraft-config.json` | un humain, sur la machine ou la config : la question `environment` ; jamais un agent |
 | `environment` | code de sortie 127 (sh) ou 9009 (cmd) | `exited <code>` | idem |
-| `environment` | programme arrêté par un signal, sans code de sortie | `<programme> was stopped by <signal>; run it again` | idem |
 | `environment` | ligne refusée (syntaxe shell, guillemet, `{baseSha}`) | `command "<ligne>" <raison>` | idem |
-| `environment` | composant sans commande de gate | message `no gate command` ci-dessus | idem |
+| `environment` | composant sans commande de gate | message `no gate command` ci-dessus | idem, cause `config` |
+| `environment` | `mutation` seulement : un run fini avant que son outil puisse finir (sans code de sortie, un signal ou un plantage), un rapport illisible, ou un run en échec dont le rapport ne compte aucun mutant | comment il a fini, puis `; the mutation report <chemin> …` quand le rapport est en cause (`is missing; …`, `counts no mutant of a run that failed`) | idem |
 | `interrupted` | code de sortie 130 (SIGINT sous POSIX) ou `0xC000013A` (Ctrl-C sous Windows) : une personne a arrêté la commande | `was interrupted by a person (exit <code>)` | personne : le run s'arrête (`interrupted`), ne demande rien, et le run suivant reprend l'étape |
-| `unknown` | code de sortie au-dessus de 128, sauf 130 : un signal sous POSIX (128 + son numéro), un code de plantage à partir de `0xC0000000` sous Windows | `was stopped by a signal or crashed (exit <code>), not by a failing check` | un humain, qui lit la preuve ; jamais un agent |
-| `deterministic` | tout autre code de sortie non nul, 128 compris (erreur fatale de Git) | `exited <code>` | le code doit changer |
+| `deterministic` | tout autre code de sortie non nul : une vérification en échec, 128 (erreur fatale de Git), un signal sous POSIX (128 + son numéro), un code de plantage à partir de `0xC0000000` sous Windows | `exited <code>` ; `was stopped by a signal or crashed (exit <code>), not by a failing check` | l'agent, par l'arête `FAIL` de la gate, avec la preuve : il corrige le code, ou s'arrête `blocked` en nommant ce qui manque à la machine |
+| `deterministic` | programme arrêté sans code de sortie (un signal, un délai dépassé) | `<erreur>; run it again` (`<programme> was stopped by <signal>; run it again`) | idem |
 
 Sous la CLI et Copilot, la sortie d'une commande est gardée jusqu'à 64 Mio par flux. Au-delà, la preuve en garde le
 début et la fin autour de `… output cut …`, la commande va jusqu'au bout, et son code de sortie

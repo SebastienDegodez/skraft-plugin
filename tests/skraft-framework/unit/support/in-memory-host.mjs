@@ -205,8 +205,17 @@ export class ScriptedAgentRunner {
     this.batchCostUsd = undefined
     /** @type {((dispatch: {agent: string, label: string, prompt: string}) => Promise<object|void>) | null} what answers a pr-writer, apart from the queue */
     this.writer = null
+    /** @type {(dispatch: {agent: string, label: string, prompt: string}) => Promise<object|string>|object|string} what answers the replay judge, apart from the queue: it accepts */
+    this.judge = () => judgeAnswer('accept')
+    /** @type {Array<{agent: string, label: string, prompt: string}>} the replay judge's dispatches, kept apart from the queue's */
+    this.judged = []
+  }
+  async judging(dispatch) {
+    this.judged.push(dispatch)
+    return answerOf(await this.judge(dispatch))
   }
   async run(dispatch) {
+    if (dispatch.agent === 'replay-judge') return this.judging(dispatch)
     this.dispatches.push(dispatch)
     if (dispatch.agent === 'pr-writer' && this.writer !== null) return (await this.writer(dispatch)) ?? { ok: true, text: 'done' }
     const behaviour = this.behaviours.shift()
@@ -225,6 +234,12 @@ export class ScriptedAgentRunner {
   /** Every lens and refuter dispatch, batch after batch. */
   reviewed() { return this.batches.flat() }
 }
+
+/** The replay judge's answer: its decision and a note, as the brief asks. @param {string} decision @param {string} [note] */
+export const judgeAnswer = (decision, note = 'the logs show it') => ['```yaml', answerYaml({ decision, note }), '```'].join('\n')
+
+/** @param {object | string} answer */
+const answerOf = (answer) => (typeof answer === 'string' ? { ok: true, text: answer } : answer)
 
 /**
  * The human at the host: each question gets the next scripted answer, `{ answer, reason }`,
@@ -571,16 +586,13 @@ const shaPrefix = (top) => (top === '' ? 'root' : top.replaceAll('../', 'up-').r
  */
 export class ScriptedReplay {
   /**
-   * @param {{ exits?: Record<string, number | null | 'timeout'>, outputs?: Record<string, string>, reports?: Record<string, string | null>, clock?: FixedClock | null, takesMs?: number }} [options]
+   * @param {{ exits?: Record<string, number | null | 'timeout'>, outputs?: Record<string, string>, clock?: FixedClock | null, takesMs?: number }} [options]
    *   exits: by `'<sha>'`, or by `'<sha> <argv>'` for one command at that commit, `'timeout'` for a command the runner stopped
-   *   when its time ran out; outputs: what a `'<sha> <argv>'` prints;
-   *   reports: the JUnit XML the tests write, by `'<sha>'` or `'<sha> <argv>'`, null for none; unscripted, one test case
-   *   per command, failing on an assertion when it exits non-zero, passing otherwise
+   *   when its time ran out; outputs: what a `'<sha> <argv>'` prints
    */
-  constructor({ exits = {}, outputs = {}, reports = {}, clock = null, takesMs = 0 } = {}) {
+  constructor({ exits = {}, outputs = {}, clock = null, takesMs = 0 } = {}) {
     this.exits = exits
     this.outputs = outputs
-    this.reports = reports
     this.clock = clock
     this.takesMs = takesMs
     /** @type {Array<{ repository: string, sha: string, cwd: string, argv: string[], importRoots: string[] }>} each program tried, in order */
@@ -592,17 +604,10 @@ export class ScriptedReplay {
     for (const argv of choices) {
       this.replays.push({ ...request, argv })
       const exitCode = this.exitOf({ ...request, argv })
-      if (exitCode === 'timeout') return { started: true, exitCode: null, stdout: '', stderr: '', error: `${argv[0]} did not finish within 600 s`, reports: [] }
-      if (exitCode !== null) return { started: true, exitCode, stdout: this.outputs[`${request.sha} ${argv.join(' ')}`] ?? `${argv.join(' ')} at ${request.sha}\n`, stderr: '', reports: this.reportsOf({ ...request, argv }, exitCode) }
+      if (exitCode === 'timeout') return { started: true, exitCode: null, stdout: '', stderr: '', error: `${argv[0]} did not finish within 600 s` }
+      if (exitCode !== null) return { started: true, exitCode, stdout: this.outputs[`${request.sha} ${argv.join(' ')}`] ?? `${argv.join(' ')} at ${request.sha}\n`, stderr: '' }
     }
     return { started: false, exitCode: null, stdout: '', stderr: '', error: `could not start ${choices.map(([program]) => program).join(' nor ')}` }
-  }
-  /** The JUnit reports of a command that ran: scripted, else one test case named after its command. */
-  reportsOf({ sha, argv, cwd }, exitCode) {
-    const line = `${sha} ${argv.join(' ')}`
-    const scripted = line in this.reports ? this.reports[line] : this.reports[sha]
-    if (scripted === null) return []
-    return [{ path: `${cwd}/reports/junit.xml`, text: scripted ?? junitReport([[testId(argv), exitCode === 0 ? 'passed' : 'failed']]) }]
   }
   /**
    * The exit of `'<sha> <argv>'` when scripted, else of the sha, else 0 at a feat or fix commit
@@ -618,18 +623,6 @@ export class ScriptedReplay {
   lines() { return this.replays.map(({ sha, repository, cwd, argv, importRoots }) => `${sha} ${repository}/${cwd} $ ${argv.join(' ')}${importRoots.length > 0 ? ` [import ${importRoots.join(', ')}]` : ''}`) }
 }
 
-/** The test case a command's unscripted report holds: `Tests.<program> <first argument>`. @param {string[]} argv */
-export const testId = (argv) => `Tests.${argv.slice(0, 2).join(' ')}`
-
-/**
- * A JUnit XML report holding these test cases, each `[id, outcome]`, the id `<classname>.<name>`.
- * @param {Array<[string, 'passed' | 'failed' | 'error' | 'skipped', string?]>} cases
- */
-export const junitReport = (cases) => `<?xml version="1.0"?>\n<testsuite>${cases.map(([id, outcome, message = 'expected another value']) => {
-  const [classname, ...name] = id.split('.')
-  const body = { passed: '', failed: `<failure message="${message}"/>`, error: `<error message="${message}"/>`, skipped: '<skipped/>' }[outcome]
-  return `<testcase classname="${classname}" name="${name.join('.')}">${body}</testcase>`
-}).join('')}</testsuite>\n`
 
 /** The agents the default workflow starts: its agents, its lenses and the refuter. */
 export const PLUGIN_AGENTS = Object.freeze([
@@ -637,7 +630,7 @@ export const PLUGIN_AGENTS = Object.freeze([
   'consistency-lens', 'architecture-compliance-lens', 'fitness-lens',
   'coverage-lens', 'business-alignment-lens', 'testability-lens', 'boundary-enforcement-lens',
   'test-integrity-lens', 'architecture-boundaries-lens', 'cold-reader-lens', 'mock-fidelity-lens', 'contract-fidelity-lens',
-  'finding-refuter', 'pr-writer',
+  'finding-refuter', 'pr-writer', 'replay-judge',
 ])
 
 /** The mocking and contract testing skills the plugin ships, the skills a component asks for. */

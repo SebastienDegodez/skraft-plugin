@@ -37,11 +37,9 @@ const INFRASTRUCTURE = [
   'api (dotnet) internal gateway: in-memory (targeted), testcontainers (walking skeleton) — Testcontainers; source plugin',
   `api (dotnet) external gateway: microcks (targeted), microcks (walking skeleton) — ${MICROCKS}; source plugin`,
   'api (dotnet) clock: fake (targeted), fake (walking skeleton); source plugin',
-  'api (dotnet) JUnit reports: **/TestResults/*.trx, **/TestResults/*.xml',
   'web (react) entry point: in-process (targeted) — Testing Library; source plugin',
   `web (react) front to back: microcks (targeted), microcks (e2e) — ${MICROCKS}; Playwright + Microcks; source skraft-config.json (mocking.strategy)`,
   'web (react) clock: fake (targeted); source plugin',
-  'web (react) JUnit reports: reports/junit.xml',
 ].map((detail) => ({ subject: 'infrastructure', status: 'ok', detail }))
 const DOCKER = { subject: 'container-runtime', status: 'ok', detail: 'docker answers docker info' }
 
@@ -119,7 +117,7 @@ test('every program found and the forge reachable: doctor passes without running
 })
 
 test('doctor names the container runtime that answers when a component\'s policy runs a container, docker first, else warns that Microcks and Testcontainers scenarios will be indeterminate, never failing; it asks none when no policy runs one', async () => {
-  const INDETERMINATE = 'Microcks and Testcontainers scenarios will be reported INDETERMINATE until Docker or Podman runs'
+  const INDETERMINATE = 'the tests that need Microcks or Testcontainers cannot run until Docker or Podman runs'
   const runtimeOn = async ({ installed = ['dotnet', 'npx'], exits = {}, components = [API, WEB] } = {}) => {
     const machine = new ScriptedMachine({ installed, exits })
     const report = await doctor({ components, machine }).doctor.check()

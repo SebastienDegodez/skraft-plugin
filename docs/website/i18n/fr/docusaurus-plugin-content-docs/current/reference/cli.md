@@ -331,13 +331,13 @@ Pour un refus ou un blocage, la synthèse porte le code : `skraft <slug>: gates 
 | `scope` | string | `touched` ou `all` |
 | `components` | string[] | composants retenus |
 | `gates` | `GateResult[]` | voir ci-dessous |
-| `failure` | string ou null | `environment` si au moins un échec d'environnement, sinon `unknown` si une gate a été arrêtée par un signal ou a planté, sinon `deterministic` en cas d'échec, `null` sans échec |
+| `failure` | string ou null | `interrupted` si une personne a arrêté une gate, sinon `environment` si au moins un échec d'environnement, sinon `deterministic` en cas d'échec (une gate arrêtée par un signal ou un plantage comprise), `null` sans échec |
 | `code` | string ou null | code de refus ou de blocage |
 | `reason` | string | synthèse |
 | `phase` | null | présent seulement sur un refus ou blocage venu du pipeline actif |
 
 Chaque `GateResult` : `component`, `gate` (`none` pour un composant sans commande de gate),
-`status` (`pass`, `fail`), `failure` (`environment`, `unknown`, `deterministic`, `null`), `reason`,
+`status` (`pass`, `fail`), `failure` (`interrupted`, `environment`, `deterministic`, `null`), `reason`,
 `evidence` (chemin absolu du fichier de preuve ; pour la gate `none`, le dossier
 `gates/<composant>`, où aucun fichier n'est écrit).
 

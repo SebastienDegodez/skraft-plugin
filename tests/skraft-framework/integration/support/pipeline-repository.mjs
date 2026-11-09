@@ -700,16 +700,36 @@ export const reviewBriefOf = (prompt) => {
  *   what one lens or the refuter answers to one brief: its final message.
  */
 
+/** The replay judge's final message. @param {string} decision @param {string} [note] */
+export const judgeVerdict = (decision, note = 'the logs show it') => ['```yaml', `decision: ${decision}`, `note: "${note}"`, '```'].join('\n')
+
+/**
+ * The label the replay judge is started under on the nominal run: `red` for the acceptance
+ * designer's test commit in DISTILL, `green` for the software engineer's feat commit of the
+ * scenario in DELIVER; each named by the first 7 characters of its sha.
+ * @param {string} cwd @param {'red' | 'green'} kind
+ */
+export const judgeLabel = (cwd, kind) => {
+  const [step, subject] = kind === 'red' ? ['distill', `test(${SLUG}): pay by card`] : ['deliver', `feat(${SLUG}): pay by card`]
+  const sha = git(cwd, 'log', '-1', '--format=%H', '--fixed-strings', `--grep=${subject}`).slice(0, 7)
+  return `skraft ${SLUG} · ${step} · judge ${kind} ${sha} of attempt 1 · attempt 1`
+}
+
 /**
  * The scripted LLM of one run: each dispatch is answered by the next act queued for its agent,
  * else by its NOMINAL act. A lens `<name>` answers the next of `reviews[name]`, the refuter the
  * next of `reviews.refuter`; what a queue does not script passes, or is confirmed.
- * `dispatched` lists the phase briefs in dispatch order, `reviewed` the lens and refuter briefs.
- * @param {{ cwd: string, slug?: string, acts?: Record<string, Act[]>, reviews?: Record<string, ReviewAnswer[]> }} options
+ * The replay judge answers the next of `judges`, else accepts.
+ * `dispatched` lists the phase briefs in dispatch order, `reviewed` the lens and refuter briefs,
+ * `judged` the replay judge's.
+ * @param {{ cwd: string, slug?: string, acts?: Record<string, Act[]>, reviews?: Record<string, ReviewAnswer[]>, judges?: string[] }} options
  */
-export const scriptedLlm = ({ cwd, slug = SLUG, acts = {}, reviews = {} }) => {
+export const scriptedLlm = ({ cwd, slug = SLUG, acts = {}, reviews = {}, judges = [] }) => {
   const queues = Object.fromEntries(Object.entries(acts).map(([agent, list]) => [agent, [...list]]))
   const answers = Object.fromEntries(Object.entries(reviews).map(([name, list]) => [name, [...list]]))
+  const verdicts = [...judges]
+  /** @type {string[]} */
+  const judged = []
   /** @type {Brief[]} */
   const dispatched = []
   /** @type {Array<NonNullable<ReturnType<typeof reviewBriefOf>>>} */
@@ -722,14 +742,21 @@ export const scriptedLlm = ({ cwd, slug = SLUG, acts = {}, reviews = {} }) => {
     if (next !== undefined) return next
     return brief.name === 'refuter' ? refutes('confirmed') : says(brief.lens, 'pass')
   }
+  /** The replay judge's final message: the next scripted one, else it accepts. @param {string} prompt @returns {string} */
+  const judge = (prompt) => {
+    judged.push(prompt)
+    return verdicts.shift() ?? judgeVerdict('accept')
+  }
   return {
     dispatched,
     reviewed,
+    judged,
     /**
      * Acts on one brief, as the agent it names; a lens or the refuter returns its final message.
      * @param {string} prompt @returns {string | undefined}
      */
     act: (prompt) => {
+      if (prompt.startsWith('Judge the ')) return judge(prompt)
       const asked = reviewBriefOf(prompt)
       if (asked !== null) return review(asked)
       const brief = briefOf(prompt)

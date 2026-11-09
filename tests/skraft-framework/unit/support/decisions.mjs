@@ -86,6 +86,7 @@ const CAUSES = Object.freeze({
   environment: 'the machine: a program, a service, a permission or a Git hook it lacks or refuses',
   config: 'skraft-config.json: a command or a path it gives the engine',
   unknown: 'none the engine knows: the command was stopped by a signal or crashed, which no failing check explains',
+  judge: 'what the replay judge read in the replay of a commit: nothing an agent can change fixes it',
 })
 
 /**

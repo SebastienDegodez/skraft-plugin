@@ -23,8 +23,9 @@ rouge → vert → refactor sans la commiter, puis commite une fois, quand le sc
 `feat(…)` enchaîné à la commande de test, `<test> && git add <fichiers> && git commit …`.
 
 Le moteur ne croit pas l'agent sur parole. Le rouge de DISTILL a été rejoué et prouvé ; le vert de
-DELIVER est rejoué aussi : les tests d'acceptation du scénario doivent y passer, et aucun test ne
-doit échouer. Le test d'abord ([Beck, 2003](../../reference/citations.mdx#cite-beck-tdd-2003)) devient un fait dans
+DELIVER est rejoué aussi, et le [juge du rejeu](pathname:///dashboard/#agent-replay-judge) lit le
+log du rejeu à côté de celui du rouge : les tests d'acceptation du scénario doivent y passer, et
+aucun test ne doit échouer ni être sauté. Le test d'abord ([Beck, 2003](../../reference/citations.mdx#cite-beck-tdd-2003)) devient un fait dans
 l'historique git, pas une promesse : pour chaque scénario, un commit rouge de son test
 d'acceptation, puis un commit vert.
 

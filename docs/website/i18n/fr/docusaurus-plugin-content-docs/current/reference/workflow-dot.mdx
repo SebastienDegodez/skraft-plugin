@@ -125,7 +125,7 @@ rendent toutes les erreurs. Un workflow est refusé quand :
 | attribut obligatoire absent | `node <id>: a <forme> node needs <clé>="…"` |
 | nombre d'arêtes sortantes faux | `node <id>: gate node needs exactly one PASS edge, has N`, etc. |
 | étiquette sur une arête qui n'en prend pas | `edge <a> -> <b>: only an edge leaving a gate, a review's fan-in (shape=tripleoctagon), a call (shape=house) or an ask node takes a label` |
-| agent, lentille, `finding-refuter` ou skill qu'une lentille liste introuvable | le nœud, l'agent et la skill nommés |
+| agent, lentille, `finding-refuter`, `replay-judge` (sur un nœud d'agent dont le moteur rejoue les commits : `each="scenario"`, ou un rôle qui commite des tests d'acceptation) ou skill qu'une lentille liste introuvable | le nœud, l'agent et la skill nommés |
 | `proposal=true` sans `each="survivor-file"` | `node <id>: proposal=true needs each="survivor-file", the mutants it proposes for` |
 | `each="scenario"` sur un seul nœud, ou sur plus de deux | `each="scenario" goes on two agent nodes, the one that writes each scenario's failing acceptance test, then the one that makes it pass; it is on <n>: <nœuds>` |
 | `question="scenario-review"` sans nœud marqué `each="scenario"` | `node <id>: question="scenario-review" needs the two nodes marked each="scenario", whose scenarios it shows` |

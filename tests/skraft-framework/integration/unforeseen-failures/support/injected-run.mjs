@@ -16,12 +16,14 @@ const ANSWERS = Object.freeze({ ADR: 'RATIFIED', Scenarios: 'APPROVED' })
 /**
  * `/skraft checkout` on the repository, the scripted LLM answering every spawn, until the run
  * stops. `answers` overrides ANSWERS by header with an answer, or a function that gives it; null
- * closes the dialog. `dialogs` keeps each one with the number of spawns made before it.
+ * closes the dialog. `dialogs` keeps each one with the number of spawns made before it. The
+ * replay judge answers the next of `judges`, else accepts; `llm.judged` keeps its briefs.
  * @param {string} cwd
- * @param {{ acts?: Record<string, import('../../support/pipeline-repository.mjs').Act[]>, answers?: Record<string, string | null | (() => string | null)> }} [options]
+ * @param {{ acts?: Record<string, import('../../support/pipeline-repository.mjs').Act[]>, answers?: Record<string, string | null | (() => string | null)>, judges?: string[] }} [options]
  */
-export const runOn = async (cwd, { acts, answers = {} } = {}) => {
-  const mod = await scriptedModHost({ cwd, otherwise: actsAs(scriptedLlm({ cwd, acts })) })
+export const runOn = async (cwd, { acts, answers = {}, judges = [] } = {}) => {
+  const llm = scriptedLlm({ cwd, acts, judges })
+  const mod = await scriptedModHost({ cwd, otherwise: actsAs(llm) })
   /** @type {Array<{ header: string, question: string, spawns: number }>} */
   const dialogs = []
   mod.host.ask = async (question, options) => {
@@ -32,7 +34,7 @@ export const runOn = async (cwd, { acts, answers = {} } = {}) => {
     return answer
   }
   await mod.command(SLUG)
-  return { mod, dialogs, outcome: await mod.settled() }
+  return { mod, llm, dialogs, outcome: await mod.settled() }
 }
 
 /** `/skraft decide RETRY`, then the run until it stops again. @param {{ command: (args: string) => Promise<string>, settled: () => Promise<any> }} mod */
@@ -68,7 +70,7 @@ export const recorded = (events, step) => events.filter((event) => event.type ==
 /** What the engine says of each cause the agent cannot fix. */
 export const CAUSES = Object.freeze({
   environment: 'the machine: a program, a service, a permission or a Git hook it lacks or refuses',
-  unknown: 'none the engine knows: the command was stopped by a signal or crashed, which no failing check explains',
+  judge: 'what the replay judge read in the replay of a commit: nothing an agent can change fixes it',
 })
 
 /**

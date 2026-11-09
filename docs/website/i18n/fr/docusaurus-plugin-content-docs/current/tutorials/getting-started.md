@@ -38,14 +38,14 @@ Créez `web/package.json` :
   "private": true,
   "type": "module",
   "scripts": {
-    "pretest": "node -e \"require('node:fs').mkdirSync('reports', { recursive: true })\"",
-    "test": "node --test --test-reporter=spec --test-reporter-destination=stdout --test-reporter=junit --test-reporter-destination=reports/junit.xml"
+    "test": "node --test --test-reporter=spec --test-reporter-destination=stdout"
   }
 }
 ```
 
-Le script `test` écrit aussi un rapport JUnit dans `web/reports/junit.xml` : le moteur le lit pour
-distinguer une assertion en échec d'une erreur de build quand il rejoue un commit.
+Le script `test` affiche chaque test et la raison de son échec sur la sortie standard : quand le
+moteur rejoue un commit, le juge du rejeu lit cette sortie pour distinguer une assertion en échec
+d'une erreur de build.
 
 Créez `web/src/cart.js` :
 
@@ -221,7 +221,7 @@ Les trois avertissements ne bloquent pas ce tutoriel : le premier dit que le dé
 de remote (un run avec un numéro d'issue est refusé sans remote, étape 5) ; le deuxième, qu'aucune recette de mocking
 n'existe pour un composant JavaScript, et le petit dépôt n'appelle aucun service ; le troisième ne
 concerne que Copilot. Sans Docker ni Podman, un quatrième, `container-runtime`, dit que les
-scénarios Microcks et Testcontainers seraient signalés INDETERMINATE : ce dépôt n'a pas de base et
+tests qui demandent Microcks ou Testcontainers ne pourraient pas tourner : ce dépôt n'a pas de base et
 n'appelle aucun service. La dernière ligne compte : `no check failed`.
 
 ## 5. Lancer la story <!-- #5-start-the-story -->
@@ -296,8 +296,8 @@ seul : `git log --oneline -1 -- docs/adr` montre `docs(adr): ratify ADR-001`.
 `acceptance-designer` écrit les scénarios et le plan de test
 (`details/<AAAA-MM-JJ>/test-plan-checkout.md`) : son tableau `## Scenarios` les liste en S1, S2, …
 dans l'ordre où DELIVER les construit, tous dans `web`. Il ne commite que le test d'acceptation en
-échec de S1, `test(checkout): <titre de S1>`. Le moteur rejoue ce commit et lit
-`web/reports/junit.xml` : un test doit échouer sur une assertion. Quatre lentilles le revoient
+échec de S1, `test(checkout): <titre de S1>`. Le moteur rejoue ce commit et le juge du rejeu lit
+ce qu'a affiché `npm test` : un test doit échouer sur une assertion. Quatre lentilles le revoient
 (coverage, business-alignment, testability, boundary-enforcement).
 
 Puis une boîte de dialogue intitulée **Scenarios** demande, avec les scénarios qu'a écrits le
@@ -310,8 +310,8 @@ Read the 2 scenarios of the story before DELIVER builds them, one at a time: S1 
 Ouvrez le plan de test et le commit que nomme la question, lisez-les, puis choisissez **APPROVED**.
 
 `software-engineer` fait ensuite passer S1 : tests unitaires et code d'abord, sans commit, puis un
-seul commit, `feat(checkout): <titre de S1>`, enchaîné à `npm test`. Le moteur le rejoue : le test
-de S1 passe et rien n'échoue. `acceptance-designer` écrit le test en échec de S2,
+seul commit, `feat(checkout): <titre de S1>`, enchaîné à `npm test`. Le moteur le rejoue et le juge du
+rejeu lit la sortie : le test de S1 passe et rien n'échoue. `acceptance-designer` écrit le test en échec de S2,
 `software-engineer` le fait passer, et ainsi de suite : le panneau montre à nouveau `distill` et
 `deliver`, avec leur passage, pour chaque scénario.
 
@@ -367,7 +367,7 @@ Le dossier de suivi `.copilot-tracking/skraft-plans/checkout/` contient maintena
 | `qa-report.md` | le plan de test, les dernières gates avec le score de mutation, les commits rouges, le verdict de chaque revue |
 | `pull-request.md` | la description de la pull request, prête à publier |
 | `gates/web/` | la sortie de chaque gate |
-| `logs/` | ce qu'a affiché chaque rejeu d'un commit rouge ou vert |
+| `logs/` | ce qu'a affiché chaque rejeu d'un commit rouge ou vert, et les réponses du juge du rejeu |
 | `reviews/` | ce que chaque passage de revue a lu, et son `verdict.yaml` |
 
 Ouvrez `pull-request.md` : c'est le résultat de votre premier run. `git log --oneline` montre, sur

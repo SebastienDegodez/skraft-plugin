@@ -20,13 +20,11 @@ scripts/ folder next to this SKILL.md, never in the consumer repository.
 | Gate | Command line in `skraft-config.json` |
 |---|---|
 | test, build, lint | the package's own `test`, `build`, `typecheck` or `lint` script (`npm run lint`), only when it exists; an absent script is no gate, never a pass |
-| test (no script) | `node --test --test-reporter=spec --test-reporter-destination=stdout --test-reporter=junit --test-reporter-destination=reports/junit.xml <explicit test paths>` |
+| test (no script) | `node --test --test-reporter=spec --test-reporter-destination=stdout <explicit test paths>` |
 | mutation | `node "<skill>/scripts/run-gates.mjs" --root . --package <package-dir> --core <core-config> --boundary <boundary-config> --evidence .copilot-tracking/skraft-gates/mutation --since {baseSha}` |
 
-- The `test` command writes the JUnit XML report where the component's `testReports` looks by
-  default, `reports/junit.xml`: the engine reads it to tell a failing assertion from a load
-  error. A package `test` script adds the two `--test-reporter` pairs above. `node --test`
-  creates no folder: commit `reports/.gitignore` holding `*` and `!.gitignore`.
+- The `test` command prints the spec reporter to stdout only, which names each failing test and
+  why; a package `test` script adds the same `--test-reporter` pair.
 - `{baseSha}` is replaced by the engine. Outside a pipeline, put the commit
   `git merge-base HEAD main` prints in its place.
 - Never use `npx` or install packages for a gate. `node --check <source>` checks syntax only;

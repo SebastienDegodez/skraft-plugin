@@ -84,7 +84,7 @@ The SKRAFT code that decides every pipeline step (order, expected outputs, retri
 → See [Engine](../explanation/architecture.md)
 
 **Environment question**
-The question the engine asks when a step cannot run on the machine or with what `skraft-config.json` gives it (program not found, Git failing, no Docker or Podman answering a replay, a command stopped by a signal or crashed). It names the cause (the machine, `skraft-config.json`, or none the engine knows) and the log of the failing command. `RETRY` runs the same step again where it stopped, using no new attempt; `ABORT` blocks the run.
+The question the engine asks when a step cannot run on the machine or with what `skraft-config.json` gives it (program not found, Git failing, a gate command missing), or when the replay judge asks a human about a replayed commit. It names the cause (the machine, `skraft-config.json`, or what the replay judge read) and the log of the failing command or the judge's answer. `RETRY` runs the same step again where it stopped, using no new attempt; `ABORT` blocks the run.
 → See [The environment question](./run-journal.md#environment-question)
 
 **Event Modeling**
@@ -96,7 +96,7 @@ An architectural pattern where the state of a system is reconstructed from a seq
 ## F
 
 **Failure class**
-What a failed gate is: `environment` (the machine or the config must change: missing program, program stopped), `unknown` (the command was stopped by a signal or crashed: a human reads its log) or `deterministic` (the command failed: the code must change).
+What a failed gate is: `interrupted` (a person stopped it: the run stops), `environment` (the machine or the config must change: missing program, refused command line, unreadable mutation report: a human acts) or `deterministic` (the command failed, a signal or a crash included: the agent gets its evidence through the `FAIL` edge).
 → See [Failure class](../how-to/run-gates.md)
 
 **Finding**
@@ -147,7 +147,7 @@ In SKRAFT, a specialised viewpoint of the adversarial review, carried by an isol
 ## M
 
 **Microcks**
-A tool that simulates the APIs a component depends on, from their contracts; its tests start it through Testcontainers (uber native image, one container per test session), on Docker or Podman. It is the default mocking of every stack but React (`"mocking": { "strategy": "microcks" }`): the tests that use it then need Docker or Podman running, and a replay without either is INDETERMINATE, never skipped. `inprocess` does without it.
+A tool that simulates the APIs a component depends on, from their contracts; its tests start it through Testcontainers (uber native image, one container per test session), on Docker or Podman. It is the default mocking of every stack but React (`"mocking": { "strategy": "microcks" }`): the tests that use it then need Docker or Podman running; without either, the replay judge asks a human to start one, and the test is never skipped. `inprocess` does without it.
 → See [Microcks](./skraft-config.md)
 
 **MoSCoW**
@@ -193,6 +193,10 @@ Work that must be redone because it did not pass review. SKRAFT aims to reduce r
 **Refuter (`finding-refuter`)**
 The agent that checks a `blocker`, `high` or `medium` finding by reading the cited location: `confirmed`, `refuted` (citing the line read) or `unverifiable`. A refuted finding does not count.
 → See [Gates](./gates.md#refutation)
+
+**Replay judge (`replay-judge`)**
+The agent the engine asks about each red or green commit it replays. It reads the logs of the replays and the commit, changes nothing, and answers `accept`, `send-back`, `retry` or `ask-human` with a note; the engine itself reads no test report.
+→ See [Commits and replays](./gates.md#commits)
 
 **Reviewer**
 A read-only AI agent that judges the artifacts of an executor agent and never modifies them (CQS principle). In V2, phase reviewers give way to isolated lenses whose findings the engine combines into a verdict.

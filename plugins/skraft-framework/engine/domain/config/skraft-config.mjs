@@ -34,15 +34,13 @@ export { HOSTS } from './model-assignment.mjs'
  *   bddPaths: BddPair[],
  *   mutationReport: string | null,
  *   infrastructure: import('./infrastructure-policy.mjs').Infrastructure,
- *   testReports: string[],
  * }} Component
  *   root is relative to the working copy, normalised (`.`, `services/api`, `../payment-web`).
  *   paths are relative to root, normalised; `['.']` (the whole root) when the file names none,
  *   or an empty list (`skraft init` on a project with no tests folder yet). mutationReport: where
  *   the mutation command writes its report, relative to root; null for the one its stack's tool writes.
  *   infrastructure: the rows of its tests' infrastructure policy the component overrides, {} when
- *   it overrides none. testReports: where its test and e2e commands write JUnit XML, paths or
- *   patterns relative to root, normalised; its stack's when the file names none.
+ *   it overrides none.
  * @typedef {{ runner: string | null, features: string, steps: string | null }} BddPair
  *   Where a story's scenarios are written, and where the definitions that bind them live, both
  *   relative to the component root. A component declares one pair per runner: the binding scope is
@@ -90,20 +88,11 @@ export const STACKS = Object.freeze(['dotnet', 'java', 'python', 'typescript', '
 const REPLAY_MODES = Object.freeze(['all', 'last-red'])
 export const MOCKING_STRATEGIES = Object.freeze(['microcks', 'inprocess'])
 
-/** Where each stack's test runner writes JUnit XML when the component names nowhere, relative to its root. */
-const TEST_REPORTS = Object.freeze({
-  dotnet: ['**/TestResults/*.trx', '**/TestResults/*.xml'],
-  java: ['**/target/surefire-reports/TEST-*.xml', '**/build/test-results/test/*.xml'],
-  python: ['reports/junit.xml'],
-  typescript: ['reports/junit.xml'],
-  javascript: ['reports/junit.xml'],
-  react: ['reports/junit.xml'],
-})
 
 /** What a pair may name, and nothing else. */
 const BDD_KEYS = Object.freeze(['runner', 'features', 'steps'])
 const NAME = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
-const COMPONENT_KEYS = Object.freeze(['name', 'root', 'stack', 'paths', 'commands', 'baseBranch', 'mocking', 'contractTesting', 'bdd', 'mutationReport', 'infrastructure', 'testReports'])
+const COMPONENT_KEYS = Object.freeze(['name', 'root', 'stack', 'paths', 'commands', 'baseBranch', 'mocking', 'contractTesting', 'bdd', 'mutationReport', 'infrastructure'])
 /** The gates, and `e2e`, which doctor checks but no gate runs. */
 export const COMMAND_NAMES = Object.freeze([...GATE_ORDER, 'e2e'])
 /** What only the team's file holds. */
@@ -371,7 +360,6 @@ const FIELD_CHECKS = Object.freeze([
     if (entry.mutationReport !== undefined && !isInnerFolder(entry.mutationReport)) errors.push(`${label}: mutationReport must be a file inside the component root`)
   },
   ({ entry, label, errors }) => {
-    if (entry.testReports !== undefined && !isPatternList(entry.testReports)) errors.push(`${label}: testReports must list the JUnit XML files its tests write, as paths or patterns inside the component root`)
   },
   ({ entry, label, errors }) => {
     infrastructureOf(entry.infrastructure, { stack: entry.stack, label }, errors)
@@ -415,14 +403,13 @@ const componentFrom = (entry, { paths, commands, baseBranch, strategy, gherkin }
 })
 
 /**
- * How the component's tests are read: where its mutation report is, the rows of its
- * infrastructure policy it overrides, and where its tests write JUnit XML, its stack's by default.
+ * How the component's tests are read: where its mutation report is, and the rows of its
+ * infrastructure policy it overrides.
  * @param {Record<string, any>} entry
  */
-const testsOf = ({ stack, mutationReport, infrastructure = {}, testReports = TEST_REPORTS[/** @type {Stack} */ (stack)] }) => ({
+const testsOf = ({ mutationReport, infrastructure = {} }) => ({
   mutationReport: mutationReport === undefined ? null : normalizeRelative(mutationReport),
   infrastructure,
-  testReports: testReports.map(normalizeRelative),
 })
 
 /**

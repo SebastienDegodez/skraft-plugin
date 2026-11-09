@@ -17,7 +17,7 @@ const runOn = async (agentHost, { local, review = lenses({}) } = {}) => {
 /** The log lines that say what an agent runs on. */
 const modelLines = (host) => host.progress.lines.filter((line) => line.startsWith(`${SLUG}: `) && line.includes(' — '))
 
-test('under Copilot with no Copilot model configured, the log says the host chooses the model of each agent it starts, lenses and refuter included, and each start names the host', async () => {
+test('under Copilot with no Copilot model configured, the log says the host chooses the model of each agent it starts, lenses, refuter and replay judge included, and each start names the host', async () => {
   const host = await runOn('copilot', {
     review: lenses({ consistency: [says('consistency', 'fail', [finding('F1', 'high', 'the ADR contradicts the context map')])], refuter: [refutes('refuted')] }),
   })
@@ -28,8 +28,10 @@ test('under Copilot with no Copilot model configured, the log says the host choo
     `${SLUG}: design_review (consistency, architecture-compliance, fitness) — reviewer · economy · model chosen by the host`,
     `${SLUG}: design_review refutes consistency F1 — standard · model chosen by the host`,
     `${SLUG}: acceptance-designer, attempt 1 — implementer · standard · model chosen by the host`,
+    `${SLUG}: distill judges the red commit root-2 — standard · model chosen by the host`,
     `${SLUG}: distill_review (coverage, business-alignment, testability, boundary-enforcement) — reviewer · economy · model chosen by the host`,
     `${SLUG}: software-engineer, attempt 1 — implementer · standard · model chosen by the host`,
+    `${SLUG}: deliver judges the green commit root-3 — standard · model chosen by the host`,
     `${SLUG}: deliver_review (test-integrity, architecture-boundaries, cold-reader, mock-fidelity, contract-fidelity) — reviewer · economy · model chosen by the host`,
     `${SLUG}: pr-writer, attempt 1 — economy · model chosen by the host`,
   ])

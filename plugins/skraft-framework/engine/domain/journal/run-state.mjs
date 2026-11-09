@@ -28,10 +28,9 @@ import { instructionOf } from '../decisions/questions.mjs'
  *   commits a red one, as does a visit a human's choice opened. groups: the surviving mutants this visit works on, one dispatch per file,
  *   or the story's scenarios, one visit each.
  * @typedef {import('../gates/mutation-report.mjs').SurvivorGroup | import('../pipeline/scenarios.mjs').StoryScenario} Group
- * @typedef {{ scenario: number, sha: string, subject: string, component: string, files: string[], tests: string[], command: 'test' | 'e2e' }} Oracle
- *   the red commit of a scenario's acceptance test: files relative to the working copy; tests:
- *   the ids of the test cases that failed on an assertion when the engine replayed it; command:
- *   the command whose reports hold them.
+ * @typedef {{ scenario: number, sha: string, subject: string, component: string, files: string[], command: 'test' | 'e2e' }} Oracle
+ *   the red commit of a scenario's acceptance test: files relative to the working copy; command:
+ *   the command whose replay proved it, which its green replays too.
  * @typedef {{
  *   list: import('../pipeline/scenarios.mjs').StoryScenario[], exemption: import('../pipeline/scenarios.mjs').Exemption,
  *   oracles: Record<number, Oracle>, delivered: number,

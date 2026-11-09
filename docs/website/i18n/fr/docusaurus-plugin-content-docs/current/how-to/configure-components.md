@@ -1,6 +1,6 @@
 ---
 title: "Configurer les composants de votre dépôt"
-description: "Détecter les composants dans skraft-config.json, ajouter un dépôt voisin, remplacer une commande, ajouter une gate, choisir base, mocks, rapports JUnit."
+description: "Détecter les composants dans skraft-config.json, ajouter un dépôt voisin, remplacer une commande, ajouter une gate, choisir base et mocks, vérifier."
 persona: software-engineer
 ---
 
@@ -124,28 +124,19 @@ stack. Pour en faire tourner une sur autre chose, nommez-la sous `infrastructure
 
 La rangée de la gateway externe suit `mocking.strategy` ; `infrastructure` la refuse.
 
-## 7. Indiquer au moteur les rapports JUnit
+## 7. Laisser la commande de test afficher ce qui a échoué
 
 Le moteur rejoue chaque test d'acceptation en échec que DISTILL commite et le vert de chaque
-scénario, et lit le JUnit XML qu'écrivent ses commandes `test` et `e2e`. Sans rapport, un rouge
-ou un vert est refusé (`its test command wrote no test report`) ; quand la commande lance un
-runner ci-dessous sans l'option qui en écrit un, le run vous pose plutôt la question
-(`environment`, cause `config`), en nommant quoi ajouter. Faites écrire la commande là où
-l'attend le défaut de la stack, relatif à la racine du composant :
+scénario avec la commande `test` du composant (et `e2e`), et garde ce qu'affiche la commande dans
+un log du run. Il ne lit aucun rapport de test, JUnit ou autre : le juge du rejeu lit ce log
+([Commits et rejeux](../reference/gates.md#commits)). La commande `test` n'a donc besoin d'aucune
+option de reporter pour skraft ; sa sortie par défaut, qui nomme chaque test en échec et pourquoi,
+est ce que lit le juge.
 
-| Stack | `testReports` par défaut | Par exemple |
-|---|---|---|
-| .NET | `**/TestResults/*.trx`, `**/TestResults/*.xml` | `dotnet test --logger trx` (intégré), ou `--logger "junit;LogFilePath=TestResults/junit.xml"` (JunitXml.TestLogger) |
-| Java | `**/target/surefire-reports/TEST-*.xml`, `**/build/test-results/test/*.xml` | Surefire et Gradle les écrivent déjà |
-| Python | `reports/junit.xml` | `pytest --junitxml=reports/junit.xml` |
-| TypeScript, JavaScript, React | `reports/junit.xml` | `vitest run --reporter=default --reporter=junit --outputFile.junit=reports/junit.xml` |
-
-Ailleurs, nommez les chemins :
-
-```json
-{ "name": "web", "root": "../payment-web", "stack": "react",
-  "testReports": ["test-results/junit.xml"] }
-```
+Un rapport qu'une commande écrit dans la copie de travail (le fichier JUnit de votre propre CI, un
+dossier TRX) est un changement comme un autre, tenu au périmètre d'écriture : listez-le dans
+`.gitignore`. Une clé `testReports` restée d'une version précédente est refusée comme inconnue :
+retirez-la.
 
 ## 8. Dire si un composant écrit du Gherkin
 
@@ -229,7 +220,7 @@ ses erreurs séparées par `; ` :
 
 | Message | Correction |
 |---|---|
-| `component web: unknown key comands (allowed: name, root, stack, paths, commands, baseBranch, mocking, contractTesting, bdd, mutationReport, infrastructure, testReports)` | Corriger la faute de frappe. |
+| `component web: unknown key comands (allowed: name, root, stack, paths, commands, baseBranch, mocking, contractTesting, bdd, mutationReport, infrastructure)` | Corriger la faute de frappe, ou retirer la clé. |
 | `component web: root must be a path relative to the working copy` | Écrire `web` ou `../payment-web`, jamais `/srv/web` ni `C:\…`. |
 | `components[1].name must be kebab-case, got "Api"` | Minuscules et tirets : `api`. |
 | `component api: mocking must be { "strategy": "microcks" or "inprocess" }` | Un objet, pas une chaîne. |

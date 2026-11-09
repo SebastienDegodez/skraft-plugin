@@ -5,7 +5,7 @@ import { join } from 'node:path'
 import { runSkraftPipelineWorkflow } from '../../../../plugins/skraft-framework/engine/drivers/copilot-workflow/skraft-pipeline-workflow.mjs'
 import { PLUGIN_ROOT, copilotHost, actsAs, answeringSession, firstOptionPerson, simulatedContext } from './simulated-host.mjs'
 import {
-  CHECK, LENSES, NOMINAL, PAY, PAY_OR_NOTHING, SCENARIOS, REFUSED_WORKFLOWS, SECURITY_AGENT, CYCLE_WORKFLOW, SLOW_CHECK, SLUG, acceptanceWith, componentSkillsBriefed, designateWorkflow, twoRedsWith, WRONG_PAY, blocked, briefOf, commit, deliverWith, killsZero, proposesZero, fillOutputs, batchesSorted, lensDispatches, lensLabels, pipelineRepository, reviewsOf,
+  CHECK, LENSES, NOMINAL, PAY, PAY_OR_NOTHING, SCENARIOS, REFUSED_WORKFLOWS, SECURITY_AGENT, CYCLE_WORKFLOW, SLOW_CHECK, SLUG, acceptanceWith, componentSkillsBriefed, designateWorkflow, twoRedsWith, WRONG_PAY, blocked, briefOf, commit, deliverWith, judgeLabel, killsZero, proposesZero, fillOutputs, batchesSorted, lensDispatches, lensLabels, pipelineRepository, reviewsOf,
   issueProgressKept, scriptedLlm, visualsKept, writeResult, writesOnly,
 } from '../support/pipeline-repository.mjs'
 import { git, journal } from '../support/workspace.mjs'
@@ -45,12 +45,14 @@ test('the four phases run on a real repository: each agent commits its part, the
     `skraft:solution-architect | skraft ${SLUG} · design · attempt 1`,
     ...lensDispatches('design_review'),
     `skraft:acceptance-designer | skraft ${SLUG} · distill · attempt 1`,
+    `skraft:replay-judge | ${judgeLabel(cwd, 'red')}`,
     ...lensDispatches('distill_review'),
     `skraft:software-engineer | skraft ${SLUG} · deliver · scenario 1 of 1 · attempt 1`,
+    `skraft:replay-judge | ${judgeLabel(cwd, 'green')}`,
     ...lensDispatches('deliver_review'),
     `skraft:pr-writer | skraft ${SLUG} · pr_writer · attempt 1`,
   ]))
-  assert.deepEqual(calls.filter((call) => !call.prompt.includes('- Story: #42 — Pay by card')).map(({ agent }) => agent), ['skraft:cold-reader-lens'])
+  assert.deepEqual(calls.filter((call) => !call.prompt.includes('- Story: #42 — Pay by card')).map(({ agent }) => agent), ['skraft:replay-judge', 'skraft:replay-judge', 'skraft:cold-reader-lens'])
   const [started] = events
   const issue = join(cwd, '.copilot-tracking', 'skraft-plans', SLUG, ...issueFile(started.at.slice(0, 10)).split('/'))
   assert.deepEqual([started.artifacts, briefOf(calls.find(({ agent }) => agent === 'skraft:solution-researcher').prompt).inputs], [[issueFile(started.at.slice(0, 10))], [issue]])
@@ -143,7 +145,8 @@ test('gates that fail send DELIVER back as pass 2 with the failing gate in its b
   const { outcome, calls, events } = await runOn(cwd, { acts: { 'software-engineer': [deliverWith(WRONG_PAY)] } })
 
   assert.deepEqual(outcome, { status: 'done', slug: SLUG, phase: 'PUBLISH', code: null, reason: 'PUBLISH closed' })
-  const delivering = calls.slice(3 + LENSES.design_review.length + LENSES.distill_review.length)
+  // research, design and its lenses, distill, the judge of its red and its lenses
+  const delivering = calls.slice(4 + LENSES.design_review.length + LENSES.distill_review.length)
   assert.deepEqual(batchesSorted(delivering.map((call) => call.label)), batchesSorted([`skraft ${SLUG} · deliver · attempt 1`, `skraft ${SLUG} · deliver · pass 2 · attempt 1`, ...lensLabels('deliver_review'), `skraft ${SLUG} · pr_writer · attempt 1`]))
   assert.ok(delivering[1].prompt.includes('- Pass: 2, after the gates sent the work back'), delivering[1].prompt)
   assert.match(delivering[1].prompt, /\nThe gates failed on pass 1:\n- app\/test: exited 1 \(evidence: .+test-1\.log\)/)
@@ -262,7 +265,7 @@ test('a repository workflow dispatches its own agent between the architect and t
   assert.deepEqual(outcome, { status: 'done', slug: SLUG, phase: 'DELIVER', code: null, reason: 'DELIVER closed' })
   const agents = calls.filter(({ agent }) => !agent.endsWith('-lens') && !agent.endsWith('finding-refuter'))
   assert.deepEqual(agents.map(({ agent }) => agent), [
-    'skraft:solution-researcher', 'skraft:solution-architect', SECURITY_AGENT, 'skraft:acceptance-designer', 'skraft:software-engineer',
+    'skraft:solution-researcher', 'skraft:solution-architect', SECURITY_AGENT, 'skraft:acceptance-designer', 'skraft:replay-judge', 'skraft:software-engineer',
   ])
   assert.equal(agents[2].label, `skraft ${SLUG} · security · attempt 1`)
   assert.match(agents[2].prompt, new RegExp(`^## Skraft dispatch: ${SECURITY_AGENT} \\(DESIGN\\)\\n`))

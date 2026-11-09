@@ -131,9 +131,10 @@ An agent whose last two refused attempts failed exactly the same way (the same m
 and the same failures, compared as written) stops the run earlier, because a third identical
 attempt would teach nothing. A failed gate step sends the work back through its `FAIL` edge
 until that edge's `max_visits`; then the run asks a human for an instruction. Attempts and
-edges taken are read from the journal, so a resumed run keeps them. A step the machine cannot run (program not
-found, git failing, a command stopped by a signal or crashed), or cannot run with what
-`skraft-config.json` gives it, is not blamed on the agent and uses none of its attempts: the
+edges taken are read from the journal, so a resumed run keeps them. A gate stopped by a signal or
+a crash fails like a check: its evidence goes back to the agent. A step the machine cannot run
+(program not found, git failing), or cannot run with what `skraft-config.json` gives it, is not
+blamed on the agent and uses none of its attempts: the
 engine asks a human, naming whose it is to fix and the log of what the command printed, then
 retry or abort. The codes:
 [Tracking and journal](../reference/run-journal.md#statuses-and-codes).
@@ -161,6 +162,21 @@ review verdict. Each of these checks is tested without a host, and behaves the s
 Why they left the v1 hooks: [Guardrails](./guardrails.md). How
 the workflow that carries them is read and copied:
 [DOT workflow](../reference/workflow-dot.mdx).
+
+### What the engine reads, and what an agent reads
+
+The engine reads only stable formats: a Conventional Commit message, a file that exists, a folder
+a step may write to, an exit code. It reads no test report (JUnit, TRX or another) and no runner's output.
+To check a red or a green commit, it replays the commit's test commands in a throwaway checkout and
+keeps what each printed, unchanged, in a log. An exit code of 0 is all it tells apart: a red whose
+commands all pass is refused on the spot. Everything else goes to the
+[replay judge](pathname:///dashboard/#agent-replay-judge), an agent the driver starts at depth 1,
+like a lens: it reads the logs, the parent's when a red failed, and the commit, and answers
+`accept`, `send-back`, `retry` or `ask-human` with a note. The engine reads the decision alone and
+keeps the answer as the evidence a human or the next attempt reads. A decision only the machine
+can settle (a program not installed, a container runtime that does not answer) reaches a human
+through the same `environment` question as any other step. The rules:
+[Commits and replays](../reference/gates.md#commits).
 
 ## Alternatives considered
 

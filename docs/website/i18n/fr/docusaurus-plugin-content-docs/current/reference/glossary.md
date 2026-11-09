@@ -39,7 +39,7 @@ Liste priorisée de fonctionnalités ou User Stories à développer. Le backlog 
 ## C
 
 **Classe d'échec**
-Nature d'une gate en échec : `environment` (la machine ou la config doit changer : programme absent, programme arrêté), `unknown` (la commande a été arrêtée par un signal ou a planté : un humain lit son log) ou `deterministic` (la commande a échoué : le code doit changer).
+Nature d'une gate en échec : `interrupted` (une personne l'a arrêtée : le run s'arrête), `environment` (la machine ou la config doit changer : programme absent, ligne de commande refusée, rapport de mutation illisible : un humain agit) ou `deterministic` (la commande a échoué, un signal ou un plantage compris : l'agent reçoit sa preuve par l'arête `FAIL`).
 → Voir [Classe d'échec](../how-to/run-gates.md)
 
 **Composant**
@@ -118,6 +118,10 @@ Les six qualités d'une bonne story : indépendante, négociable, porteuse de va
 Fichier du dossier de suivi où le moteur écrit un événement par ligne, chaque ligne portant le hachage de la précédente. L'état du run est recalculé depuis lui ; une modification à la main est détectée.
 → Voir [Journal (events.jsonl)](./run-journal.md)
 
+**Juge du rejeu (`replay-judge`)**
+L'agent que le moteur interroge sur chaque commit rouge ou vert qu'il rejoue. Il lit les logs des rejeux et le commit, ne change rien, et répond `accept`, `send-back`, `retry` ou `ask-human` avec une note ; le moteur lui-même ne lit aucun rapport de test.
+→ Voir [Commits et rejeux](./gates.md#commits)
+
 ## L
 
 **Langage ubiquitaire**
@@ -130,7 +134,7 @@ Dans SKRAFT, un point de vue spécialisé de la revue adverse, porté par un age
 ## M
 
 **Microcks**
-Outil qui simule les API dont dépend un composant, à partir de leurs contrats ; ses tests le démarrent par Testcontainers (image uber native, un conteneur par session de tests), sur Docker ou Podman. C'est le mocking par défaut de toutes les stacks sauf React (`"mocking": { "strategy": "microcks" }`) : les tests qui l'utilisent exigent alors que Docker ou Podman tourne, et un rejeu sans l'un ni l'autre est INDETERMINATE, jamais sauté. `inprocess` s'en passe.
+Outil qui simule les API dont dépend un composant, à partir de leurs contrats ; ses tests le démarrent par Testcontainers (image uber native, un conteneur par session de tests), sur Docker ou Podman. C'est le mocking par défaut de toutes les stacks sauf React (`"mocking": { "strategy": "microcks" }`) : les tests qui l'utilisent exigent alors que Docker ou Podman tourne ; sans l'un ni l'autre, le juge de rejeu demande à un humain d'en démarrer un, et le test n'est jamais sauté. `inprocess` s'en passe.
 → Voir [Microcks](./skraft-config.md)
 
 **MoSCoW**
@@ -187,7 +191,7 @@ Sur quoi les tests d'un composant font tourner chaque sorte de dépendance, dans
 ## Q
 
 **Question d'environnement**
-La question que le moteur pose quand une étape ne peut pas tourner sur la machine ou avec ce que lui donne `skraft-config.json` (programme introuvable, Git en échec, ni Docker ni Podman ne répondant à un rejeu, une commande arrêtée par un signal ou qui a planté). Elle nomme la cause (la machine, `skraft-config.json`, ou aucune que le moteur connaisse) et le log de la commande en échec. `RETRY` relance la même étape là où elle s'est arrêtée, sans consommer de tentative ; `ABORT` bloque le run.
+La question que le moteur pose quand une étape ne peut pas tourner sur la machine ou avec ce que lui donne `skraft-config.json` (programme introuvable, Git en échec, une commande de gate absente), ou quand le juge du rejeu interroge un humain sur un commit rejoué. Elle nomme la cause (la machine, `skraft-config.json`, ou ce qu'a lu le juge du rejeu) et le log de la commande en échec ou la réponse du juge. `RETRY` relance la même étape là où elle s'est arrêtée, sans consommer de tentative ; `ABORT` bloque le run.
 → Voir [La question environment](./run-journal.md#environment-question)
 
 ## R

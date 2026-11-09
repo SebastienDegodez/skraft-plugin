@@ -1,6 +1,6 @@
 ---
 title: "Configure the components of your repository"
-description: "Detect the components into skraft-config.json, add a neighbour repository, replace a command, add a gate, choose base, mocks and JUnit reports, then check."
+description: "Detect the components into skraft-config.json, add a neighbour repository, replace a command, add a gate, choose base and mocks, then check."
 persona: software-engineer
 ---
 
@@ -120,28 +120,18 @@ one on something else, name it under `infrastructure`, in `skraft-config.json` o
 
 The external gateway row follows `mocking.strategy`; `infrastructure` refuses it.
 
-## 7. Point the engine at the JUnit reports
+## 7. Let the test command print what failed
 
-The engine replays each failing acceptance test DISTILL commits and each scenario's green, and
-reads the JUnit XML its `test` and `e2e` commands write. Without a report, a red or a green is
-refused (`its test command wrote no test report`); when the command runs a runner below without
-the option that writes one, the run asks you instead (`environment` question, cause `config`),
-naming what to add. Make the command write one where the stack's default expects it, relative to
-the component root:
+The engine replays each failing acceptance test DISTILL commits and each scenario's green with
+the component's `test` command (and `e2e`), and keeps what the command prints in a log of the run.
+It reads no test report, JUnit or other: the replay judge reads that log
+([Commits and replays](../reference/gates.md#commits)). So the `test` command needs no reporter
+option for skraft; its default output, which names each failing test and why, is what the judge
+reads.
 
-| Stack | Default `testReports` | For example |
-|---|---|---|
-| .NET | `**/TestResults/*.trx`, `**/TestResults/*.xml` | `dotnet test --logger trx` (built in), or `--logger "junit;LogFilePath=TestResults/junit.xml"` (JunitXml.TestLogger) |
-| Java | `**/target/surefire-reports/TEST-*.xml`, `**/build/test-results/test/*.xml` | Surefire and Gradle write them already |
-| Python | `reports/junit.xml` | `pytest --junitxml=reports/junit.xml` |
-| TypeScript, JavaScript, React | `reports/junit.xml` | `vitest run --reporter=default --reporter=junit --outputFile.junit=reports/junit.xml` |
-
-Elsewhere, name the paths:
-
-```json
-{ "name": "web", "root": "../payment-web", "stack": "react",
-  "testReports": ["test-results/junit.xml"] }
-```
+A report a command writes in the working copy (your own CI's JUnit file, a TRX folder) is a change
+like any other, held to the write scope: list it in `.gitignore`. A `testReports` key left from an
+earlier version is refused as unknown: remove it.
 
 ## 8. Say whether a component writes Gherkin
 
@@ -224,7 +214,7 @@ error separated by `; `:
 
 | Message | Fix |
 |---|---|
-| `component web: unknown key comands (allowed: name, root, stack, paths, commands, baseBranch, mocking, contractTesting, bdd, mutationReport, infrastructure, testReports)` | Fix the typo. |
+| `component web: unknown key comands (allowed: name, root, stack, paths, commands, baseBranch, mocking, contractTesting, bdd, mutationReport, infrastructure)` | Fix the typo, or remove the key. |
 | `component web: root must be a path relative to the working copy` | Write `web` or `../payment-web`, never `/srv/web` or `C:\…`. |
 | `components[1].name must be kebab-case, got "Api"` | Lower case and hyphens: `api`. |
 | `component api: mocking must be { "strategy": "microcks" or "inprocess" }` | An object, not a string. |

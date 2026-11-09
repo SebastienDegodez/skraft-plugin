@@ -128,9 +128,7 @@ const shallowFirst = (a, b) => a.split('/').length - b.split('/').length
 const runThenRemoveWorktree = async (commandRunner, replay, worktree) => {
   try {
     if (!(await dependencyLinks(commandRunner, 'link', replay.repository, worktree))) return notCheckedOut(replay, 'the dependencies installed in the working copy could not be linked')
-    const cwd = `${worktree.path}/${replay.cwd}`
-    const answer = await runFirst(commandRunner, replay, cwd)
-    return { ...answer, reports: await reportsIn(commandRunner, cwd, replay.reports) }
+    return await runFirst(commandRunner, replay, `${worktree.path}/${replay.cwd}`)
   } finally {
     await removeWorktree(commandRunner, replay.repository, worktree)
   }
@@ -148,26 +146,6 @@ const runFirst = async (commandRunner, { choices, importRoots }, cwd) => {
   }
   return { started: false, exitCode: null, stdout: '', stderr: '', error: `could not start ${choices.map(([program]) => program).join(' nor ')}` }
 }
-
-/**
- * The JUnit reports the program wrote in the checkout, by the globs the component gives, each
- * file once, in path order; none when node cannot run.
- * @param {CommandRunner} commandRunner @param {string} cwd absolute @param {string[]} globs relative to cwd
- * @returns {Promise<Array<{ path: string, text: string }>>}
- */
-const reportsIn = async (commandRunner, cwd, globs) => {
-  // Stryker disable next-line StringLiteral: an empty argument reads as a glob no path matches; only a glob starting with a dash, which no report path does, needs the separator
-  const read = await commandRunner.run({ argv: ['node', '-e', READ_REPORTS, '--', ...globs], cwd, timeoutMs: STEP_TIMEOUT_MS })
-  return succeeded(read) ? JSON.parse(read.stdout) : []
-}
-
-/**
- * Prints as JSON the files under its folder whose path, `/`-separated, matches one of its globs
- * (`**` any folders, `*` and `?` within a name), dependency and Git folders and what it cannot
- * read left out, at most 500 files of at most 5 MB each and 32 MB of JSON in all, half the output
- * a command keeps. One line, no double quote, like the others.
- */
-const READ_REPORTS = "const { readdirSync, readFileSync, statSync } = module.require('node:fs'); const { join } = module.require('node:path'); const globs = globalThis.process.argv.slice(1); const pattern = (glob) => new RegExp('^' + glob.split('/').map((part) => part === '**' ? '(?:.+/)?' : part.replace(/[.+^${}()|[\\]\\\\]/g, '\\\\$&').replace(/[*]/g, '[^/]*').replace(/[?]/g, '[^/]') + '/').join('').replace(/[(][?]:[.][+][/][)][?]$|[/]$/, '') + '$'); const matchers = globs.map(pattern); const skipped = ['node_modules', '.git', '.venv', 'bin', 'obj']; const found = []; let size = 0; const attempt = (read) => { try { return read() } catch { return null } }; const keep = (path, file) => { const text = attempt(() => (statSync(file).size <= 5242880 ? readFileSync(file, 'utf8') : null)); size += text === null ? 0 : JSON.stringify({ path, text }).length + 1; if (text !== null && size <= 33554432) found.push({ path, text }) }; const walk = (folder, at, depth) => { for (const entry of attempt(() => readdirSync(folder, { withFileTypes: true })) ?? []) { const path = at === '' ? entry.name : at + '/' + entry.name; if (entry.isDirectory() && depth < 12 && !skipped.includes(entry.name)) walk(join(folder, entry.name), path, depth + 1); else if (entry.isFile() && matchers.some((matcher) => matcher.test(path)) && found.length < 500) keep(path, join(folder, entry.name)) } }; walk('.', '', 0); found.sort((a, b) => (a.path < b.path ? -1 : 1)); globalThis.process.stdout.write(JSON.stringify(found))"
 
 /** What the launcher exits with when its program cannot start, as a shell does. */
 const NOT_STARTED = 127

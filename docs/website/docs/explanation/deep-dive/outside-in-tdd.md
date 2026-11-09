@@ -36,8 +36,9 @@ Freeman & Pryce formalise the "outside-in" variant with its double loop: an oute
 ## Application in SKRAFT
 
 The pipeline applies the **double loop**, one scenario at a time. The outer loop is the
-acceptance scenario: DISTILL commits its failing test, and the engine replays that commit to
-prove it fails on an assertion. The inner loop is the unit RED → GREEN → REFACTOR cycle, which
+acceptance scenario: DISTILL commits its failing test, the engine replays that commit, and the
+[replay judge](pathname:///dashboard/#agent-replay-judge) reads the replay's log to confirm it
+fails on an assertion. The inner loop is the unit RED → GREEN → REFACTOR cycle, which
 the `software-engineer` runs in DELIVER without committing it.
 
 ```text

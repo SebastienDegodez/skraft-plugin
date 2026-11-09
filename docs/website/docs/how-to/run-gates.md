@@ -73,16 +73,16 @@ result: fail (deterministic): exited 1
 
 | Class | What happened | What to do |
 |---|---|---|
-| `deterministic` | the command ran and returned a non-zero code | fix the code or the test from `stderr`, then run again |
-| `environment` | program not found, shell syntax, component without a gate, program stopped, mutation report missing | repair the machine or the command, then run again; running again unchanged gives the same failure |
-| `unknown` | the command was stopped by a signal or crashed (exit above 128) | read the evidence (memory, a killed process, a crash), then run again |
+| `deterministic` | the command ran and returned a non-zero code, was stopped by a signal or crashed (exit above 128), or ended with no exit code | fix the code or the test from `stderr`, free memory or fix the crash, then run again |
+| `environment` | program not found, shell syntax, component without a gate; a mutation report missing, or a mutation run that ended early | repair the machine or the command, then run again; running again unchanged gives the same failure |
 
-During a run, an `environment` or `unknown` failure sends nothing back to the engineer and uses
-no attempt: the run asks the `environment` question, whose `Cause:` line says who fixes it and
-whose `Output:` line, when a command ran, names its evidence file. Repair, then answer `RETRY`
-([Answer a run's question](./answer-a-question.mdx)). A `deterministic` failure goes back to the
-engineer through the gates' `FAIL` edge, until that edge's `max_visits`; then the run asks the
-`blocked` question.
+During a run, an `environment` failure sends nothing back to the engineer and uses no attempt: the
+run asks the `environment` question, whose `Cause:` line says who fixes it and whose `Output:`
+line, when a command ran, names its evidence file. Repair, then answer `RETRY`
+([Answer a run's question](./answer-a-question.mdx)). A `deterministic` failure, a signal or a
+crash included, goes back to the engineer with its evidence through the gates' `FAIL` edge, until
+that edge's `max_visits`; then the run asks the `blocked` question. The engineer fixes the code, or
+stops `blocked` naming what the machine lacks.
 
 ## Troubleshooting
 

@@ -35,22 +35,25 @@ une fois S1 au vert.
 
 À son premier passage, DISTILL écrit les scénarios, le plan de test et le test d'acceptation du
 premier scénario, et commite ce test **en échec**, en un seul commit `test` dont le brief donne
-le message. Le moteur rejoue ce commit et lit le rapport de tests qu'écrit la commande de test du
-composant : il n'accepte le rouge que si un test échoue sur une **assertion**. C'est la boucle
+le message. Le moteur rejoue ce commit avec la commande de test du composant et garde ce qu'elle
+affiche ; quand les tests échouent, il les rejoue aussi au commit parent, et le
+[juge du rejeu](pathname:///dashboard/#agent-replay-judge) lit les deux logs et le commit. Le
+rouge ne tient que si le test du scénario échoue sur une **assertion** ; un rouge dont tous les
+tests passent est refusé sans interroger le juge. C'est la boucle
 externe du TDD outside-in : commencer par un test qui décrit ce que le système doit faire, vu
 de l'extérieur ([Freeman & Pryce, 2009](../../reference/citations.mdx#cite-freeman-goos-2009)).
 
 Encore faut-il que l'échec ait du sens. Un test qui échoue parce qu'un module n'existe pas ne
-prouve rien : il échouerait aussi pour une story fausse, et il n'écrit aucun rapport de tests,
-donc le moteur le refuse. DISTILL écrit donc aussi le **squelette** que le test appelle — les cas
+prouve rien : il échouerait aussi pour une story fausse, avant qu'aucune assertion ne tourne,
+donc le juge le renvoie. DISTILL écrit donc aussi le **squelette** que le test appelle — les cas
 d'usage que nomme le modèle d'événements, chacun rendant la valeur vide de son type, sans
 comportement — pour que le test échoue sur une **assertion métier**. Remplacer le module manquant
 par une doublure dans les tests est refusé : le squelette est le vrai module, que DELIVER
 remplira. Un test qui finit en erreur, est sauté, passe ou ne finit jamais est refusé de même.
 
 La machine peut aussi être en cause. Quand aucun runtime de conteneurs ne répond, les tests qui
-ont besoin de Docker ou de Podman ne peuvent pas tourner : le moteur le dit et attend qu'un
-humain en démarre un. L'étape n'est ni sautée ni jouée contre une doublure à la place.
+ont besoin de Docker ou de Podman ne peuvent pas tourner : le juge le lit dans le log et demande
+à un humain d'en démarrer un. L'étape n'est ni sautée ni jouée contre une doublure à la place.
 
 ## Un scénario à la fois
 

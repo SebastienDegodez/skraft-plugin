@@ -34,21 +34,24 @@ failing acceptance test of S1 only; S2's test comes once S1 is green.
 
 On its first pass, DISTILL writes the scenarios, the test plan, and the acceptance test of the
 first scenario, and commits that test **failing**, in one `test` commit whose message the brief
-gives. The engine replays the commit and reads the test report the component's test command
-writes: it accepts the red only when a test fails on an **assertion**. This is the outer loop of
+gives. The engine replays the commit with the component's test command and keeps what it
+prints; when the tests fail, it replays them at the parent commit too, and the
+[replay judge](pathname:///dashboard/#agent-replay-judge) reads both logs and the commit. The red
+stands only when the scenario's test fails on an **assertion**; a red whose tests all pass is
+refused without asking the judge. This is the outer loop of
 outside-in TDD: start with a test that describes what the system must do, seen from the outside
 ([Freeman & Pryce, 2009](../../reference/citations.mdx#cite-freeman-goos-2009)).
 
 The failure still has to mean something. A test that fails because a module does not exist
-proves nothing: it would fail for a wrong story too, and it writes no test report, so the engine
-refuses it. DISTILL therefore also writes the **skeleton** the test calls — the use cases the
+proves nothing: it would fail for a wrong story too, before any assertion runs, so the judge
+sends it back. DISTILL therefore also writes the **skeleton** the test calls — the use cases the
 event model names, each returning the empty value of its type, with no behaviour — so the test
 fails on a **business assertion**. Replacing the missing module with a test double is refused:
 the skeleton is the real module, which DELIVER will fill in. A test that errors, is skipped,
 passes or never finishes is refused the same way.
 
 The machine can also be the one at fault. When no container runtime answers, the tests that need
-Docker or Podman cannot run: the engine says so and waits for a human to start one. The step is
+Docker or Podman cannot run: the judge reads it in the log and asks a human to start one. The step is
 neither skipped nor run against a double instead.
 
 ## One scenario at a time

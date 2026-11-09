@@ -61,9 +61,9 @@ and `skraft doctor` shows it with its source.
 
 The tests start Microcks themselves, through Testcontainers, from the uber native image, one
 container per test session, in the global setup of the test framework (xUnit, JUnit, pytest,
-Vitest, Playwright). Docker and Podman both serve. With neither answering, the engine does not
-skip the test nor swap Microcks for an in-process double: it reports the replay INDETERMINATE and
-waits for a human to start one ([Commits and replays](../../reference/gates.md#commits)).
+Vitest, Playwright). Docker and Podman both serve. With neither answering, nothing skips the test nor swaps Microcks for an in-process double: the
+replay judge reads the replay's log and asks a human to start one, and the run waits
+([Commits and replays](../../reference/gates.md#commits)).
 
 ## How the fidelity lens audits it
 

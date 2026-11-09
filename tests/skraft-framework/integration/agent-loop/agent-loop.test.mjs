@@ -43,8 +43,8 @@ test('the loop conducts the five phases to the end, the pr-writer and the publis
   assert.deepEqual(step, { status: 'done', slug: SLUG, phase: 'PUBLISH', code: null, reason: 'PUBLISH closed', dispatches: [], then: null })
   assert.deepEqual(dispatched(steps), [
     ['solution-researcher@copilot-small'], ['solution-architect@copilot-large'], lensesOn(LENSES.design_review),
-    ['acceptance-designer@copilot-medium'], lensesOn(LENSES.distill_review),
-    ['software-engineer@copilot-medium'], lensesOn(LENSES.deliver_review), ['pr-writer@copilot-small'],
+    ['acceptance-designer@copilot-medium'], ['replay-judge@copilot-medium'], lensesOn(LENSES.distill_review),
+    ['software-engineer@copilot-medium'], ['replay-judge@copilot-medium'], lensesOn(LENSES.deliver_review), ['pr-writer@copilot-small'],
   ])
   assert.deepEqual(steps.filter((each) => each.status !== 'dispatch'), [
     {

@@ -331,14 +331,6 @@
         "infrastructure": {
           "description": "The rows of the plugin's infrastructure policy this component's tests override, by dependency kind: entryPoint, internalGateway and clock for a back end, entryPoint, frontToBack and clock for React; each stage one of the mechanisms. externalGateway follows mocking.strategy.",
           "type": "object"
-        },
-        "testReports": {
-          "description": "Where the component's test and e2e commands write JUnit XML, paths or globs relative to the component root; absent: its stack's (dotnet **/TestResults/*.trx and **/TestResults/*.xml; java **/target/surefire-reports/TEST-*.xml and **/build/test-results/test/*.xml; python, typescript, javascript and react reports/junit.xml).",
-          "type": "array",
-          "minItems": 1,
-          "items": {
-            "$ref": "#/$defs/innerPattern"
-          }
         }
       },
       "allOf": [

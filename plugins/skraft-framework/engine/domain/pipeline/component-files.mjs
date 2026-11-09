@@ -49,25 +49,6 @@ const kindOf = (file, component) => {
 export const ownersOf = (components, files) => [...new Set(files.map((file) => ownerOf(file, components)).filter((owner) => owner !== null))]
 
 /**
- * Whether a file is a test report its component's tests write, as its `testReports` patterns
- * name it: the run's output, never a change of the story.
- * @param {string} file relative to the working copy @param {readonly (CodeComponent & { testReports?: readonly string[] })[]} components
- */
-export const isTestReport = (file, components) => {
-  const owner = ownerOf(file, components)
-  return owner !== null && /** @type {readonly string[]} */ (owner.testReports).some((pattern) => globPattern(pattern).test(/** @type {string} */ (pathUnder(file, owner.root))))
-}
-
-/**
- * A pattern of paths as a regular expression: `**` any folders, `*` and `?` within a name.
- * @param {string} glob
- */
-export const globPattern = (glob) => new RegExp(`^${glob.split('/').map(globPart).join('').replace(/\/$/, '')}$`)
-
-/** @param {string} part a name of a pattern, `**` included @returns {string} */
-const globPart = (part) => (part === '**' ? '(?:.+/)?' : `${part.replace(/[.+^${}()|[\]\\]/g, '\\$&').replaceAll('*', '[^/]*').replaceAll('?', '[^/]')}/`)
-
-/**
  * Whether a file is code of the component it belongs to, under one of its paths of that kind.
  * @param {string} file @param {readonly CodeComponent[]} components @param {ReadonlyArray<'src' | 'tests'>} [kinds]
  */

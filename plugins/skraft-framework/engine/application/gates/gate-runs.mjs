@@ -75,8 +75,8 @@ const stoppedBy = (error, { components, gates }) => {
 }
 
 /**
- * The class of the failed gate the run acts on first: a person who interrupted it, the machine,
- * a signal or a crash, then the code; null when every gate passed.
+ * The class of the failed gate the run acts on first: a person who interrupted it, what a human
+ * must provide, then the code; null when every gate passed.
  * @param {GateResult[]} gates @returns {FailureClass | null}
  */
 const failureOfGates = (gates) => {
@@ -85,7 +85,7 @@ const failureOfGates = (gates) => {
 }
 
 /** @type {readonly FailureClass[]} */
-const CLASS_ORDER = Object.freeze(['interrupted', 'environment', 'unknown', 'deterministic'])
+const CLASS_ORDER = Object.freeze(['interrupted', 'environment', 'deterministic'])
 
 /**
  * The components whose gates run, the skipped ones left out: every one for `all`, the touched
@@ -180,10 +180,17 @@ const runOne = async (deps, context, { gate, baseSha }) => {
  * @returns {Promise<Judged>}
  */
 const judgeRun = async (deps, ran, tried) => {
-  const failure = tried.result === null ? 'environment' : failureOf(tried.result)
+  const failure = tried.result === null || (ran.gate === 'mutation' && endedEarly(tried.result)) ? 'environment' : failureOf(tried.result)
   if (ran.gate !== 'mutation' || STOPPED.includes(/** @type {FailureClass} */ (failure))) return { failure, reason: tried.reason, survivors: null, scores: null }
   return judgeMutation(deps, ran, tried, failure)
 }
+
+/**
+ * Whether a run ended before its tool could finish: a timeout, a signal or a crash, a person's
+ * Ctrl-C aside. A mutation report left then may be an earlier run's, so it proves nothing.
+ * @param {Started} result
+ */
+const endedEarly = ({ exitCode }) => exitCode === null || (endedByMachine(exitCode) && !interruptedBy(exitCode))
 
 /**
  * A mutation run fails while a scope of the files in scope misses its bar, and hands out the
@@ -389,5 +396,5 @@ const exitText = (exitCode) => {
   return endedByMachine(exitCode) ? `was stopped by a signal or crashed (exit ${exitCode}), not by a failing check` : `exited ${exitCode}`
 }
 
-/** The classes of a mutation run its report cannot judge: a person, the machine or a crash stopped it. @type {readonly FailureClass[]} */
-const STOPPED = Object.freeze(['interrupted', 'environment', 'unknown'])
+/** The classes of a mutation run its report cannot judge: a person stopped it, or it could not start. @type {readonly FailureClass[]} */
+const STOPPED = Object.freeze(['interrupted', 'environment'])

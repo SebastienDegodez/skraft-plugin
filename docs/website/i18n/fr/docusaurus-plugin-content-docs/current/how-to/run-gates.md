@@ -75,16 +75,16 @@ result: fail (deterministic): exited 1
 
 | Classe | Ce qui s'est passé | Quoi faire |
 |---|---|---|
-| `deterministic` | la commande a tourné et rendu un code non nul | corriger le code ou le test d'après `stderr`, puis relancer |
-| `environment` | programme introuvable, syntaxe shell, composant sans gate, programme arrêté, rapport de mutation absent | réparer la machine ou la commande, puis relancer ; relancer sans rien changer redonne le même échec |
-| `unknown` | la commande a été arrêtée par un signal ou a planté (sortie au-dessus de 128) | lire la preuve (mémoire, processus tué, plantage), puis relancer |
+| `deterministic` | la commande a tourné et rendu un code non nul, a été arrêtée par un signal ou a planté (sortie au-dessus de 128), ou a fini sans code de sortie | corriger le code ou le test d'après `stderr`, libérer de la mémoire ou corriger le plantage, puis relancer |
+| `environment` | programme introuvable, syntaxe shell, composant sans gate ; un rapport de mutation absent, ou un run de mutation fini avant son terme | réparer la machine ou la commande, puis relancer ; relancer sans rien changer redonne le même échec |
 
-Pendant un run, un échec `environment` ou `unknown` ne renvoie rien à l'ingénieur et ne consomme
-aucune tentative : le run pose la question `environment`, dont la ligne `Cause:` dit qui corrige
-et la ligne `Output:`, quand une commande a tourné, nomme son fichier de preuve. Réparez, puis répondez `RETRY`
-([Répondre à une question du run](./answer-a-question.mdx)). Un échec `deterministic` revient à
-l'ingénieur par l'arête `FAIL` des gates, jusqu'au `max_visits` de cette arête ; le run pose
-alors la question `blocked`.
+Pendant un run, un échec `environment` ne renvoie rien à l'ingénieur et ne consomme aucune
+tentative : le run pose la question `environment`, dont la ligne `Cause:` dit qui corrige et la
+ligne `Output:`, quand une commande a tourné, nomme son fichier de preuve. Réparez, puis répondez
+`RETRY` ([Répondre à une question du run](./answer-a-question.mdx)). Un échec `deterministic`, un
+signal ou un plantage compris, revient à l'ingénieur avec sa preuve par l'arête `FAIL` des gates,
+jusqu'au `max_visits` de cette arête ; le run pose alors la question `blocked`. L'ingénieur
+corrige le code, ou s'arrête `blocked` en nommant ce qui manque à la machine.
 
 ## Dépannage
 

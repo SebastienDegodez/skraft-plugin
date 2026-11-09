@@ -1,20 +1,21 @@
 /**
  * Who can fix a failure, and what the engine tells a human of one it cannot send back to an agent.
  *
- * @typedef {'agent' | 'environment' | 'config' | 'unknown' | 'interrupted'} Owner
+ * @typedef {'agent' | 'environment' | 'config' | 'interrupted' | 'judge'} Owner
  *   agent: its work, which the run sends back to it; environment: the machine (a program, a
  *   service, a permission, a Git hook); config: skraft-config.json (a command, a path);
- *   unknown: a command stopped by a signal or a crash, which nothing tells apart; interrupted:
- *   a person who stopped the command (Ctrl-C), whom the run never asks again
+ *   interrupted: a person who stopped the command (Ctrl-C), whom the run never asks again;
+ *   judge: what the replay judge found that no agent can fix
  * @typedef {{ owner: Exclude<Owner, 'agent'>, log: string | null }} Incident
- *   log: the file that holds what the failing command printed, absolute; null when none ran
+ *   log: the file that holds what the failing command printed, or the judge's answer, absolute;
+ *   null when none ran
  */
 
 /** What a human reads of each cause the engine does not send back to an agent. */
 const CAUSES = Object.freeze({
   environment: 'the machine: a program, a service, a permission or a Git hook it lacks or refuses',
   config: 'skraft-config.json: a command or a path it gives the engine',
-  unknown: 'none the engine knows: the command was stopped by a signal or crashed, which no failing check explains',
+  judge: 'what the replay judge read in the replay of a commit: nothing an agent can change fixes it',
 })
 
 /** @param {Incident} incident */

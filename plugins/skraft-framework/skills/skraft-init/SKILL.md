@@ -46,15 +46,6 @@ gates refuse the run.
   component's gates, and nothing checks its boundaries.
 - `e2e` — the end-to-end command, for a front end only.
 
-The `test` command, and `e2e`, must write JUnit XML where the component's `testReports` says,
-by default: .NET `**/TestResults/*.trx` or `**/TestResults/*.xml` (`--logger trx`, built in, or
-`--logger "junit;LogFilePath=TestResults/junit.xml"` with `JunitXml.TestLogger`); Java Surefire's
-`**/target/surefire-reports/TEST-*.xml` or Gradle's `**/build/test-results/test/*.xml`; Python
-`reports/junit.xml` (`--junitxml=reports/junit.xml`); TypeScript, JavaScript and React
-`reports/junit.xml` (Vitest `--reporter=default --reporter=junit --outputFile.junit=reports/junit.xml`).
-The engine reads it to tell a test failing on an assertion from a build error: for a `test`
-command that writes none, propose the reporter above.
-
 Propose each command and have the developer confirm it. A command the developer writes always
 wins. Then run `<cli> doctor --run` and fix every failure before you go on: a command that does
 not run is worse than an absent one.

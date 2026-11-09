@@ -40,14 +40,13 @@ $ git init -b main
   "private": true,
   "type": "module",
   "scripts": {
-    "pretest": "node -e \"require('node:fs').mkdirSync('reports', { recursive: true })\"",
-    "test": "node --test --test-reporter=spec --test-reporter-destination=stdout --test-reporter=junit --test-reporter-destination=reports/junit.xml"
+    "test": "node --test --test-reporter=spec --test-reporter-destination=stdout"
   }
 }
 ```
 
-Le script `test` écrit aussi un rapport JUnit dans `web/reports/junit.xml`, que le moteur lit
-quand il rejoue un commit.
+Le script `test` affiche chaque test et la raison de son échec sur la sortie standard, que le
+juge du rejeu lit quand le moteur rejoue un commit.
 
 `web/src/cart.js` :
 
@@ -146,8 +145,8 @@ $ skraft doctor
 ```
 
 La dernière ligne de `skraft doctor` dit `no check failed, 3 with a warning` (4 sans Docker ni
-Podman : `container-runtime` dit alors que les scénarios Microcks et Testcontainers seraient
-signalés INDETERMINATE, et ce dépôt n'a pas de base). Aucun des
+Podman : `container-runtime` dit alors que les tests qui demandent Microcks ou Testcontainers ne
+pourraient pas tourner, et ce dépôt n'a pas de base). Aucun des
 avertissements ne bloque : `forge` dit que le dépôt n'a pas encore de remote, `web` n'a pas de recette de mocking JavaScript, et le petit dépôt
 n'appelle aucun service ; `models/copilot` dit que, sans modèle configuré, chaque agent tourne sur le
 modèle de votre session.

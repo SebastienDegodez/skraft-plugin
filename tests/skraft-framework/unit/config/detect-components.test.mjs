@@ -13,8 +13,8 @@ const configure = async (files, request = {}) => {
 const proposed = async (files, request) => (await configure(files, request)).workspace.config().components
 
 const REACT = JSON.stringify({ scripts: { build: 'vite build', lint: 'eslint .', test: 'vitest run' }, dependencies: { react: '^19.0.0' }, devDependencies: { vitest: '^3.0.0' } })
-const DOTNET_COMMANDS = { build: 'dotnet build --nologo', test: 'dotnet test --nologo --logger trx', format: 'dotnet format --verify-no-changes', mutation: 'dotnet stryker --since:{baseSha} --reporter json --output StrykerOutput' }
-const PYTHON_COMMANDS = { build: 'python -m compileall -q .', test: 'python -m pytest -q -p no:cacheprovider --junitxml=reports/junit.xml', mutation: 'python -m mutmut run' }
+const DOTNET_COMMANDS = { build: 'dotnet build --nologo', test: 'dotnet test --nologo', format: 'dotnet format --verify-no-changes', mutation: 'dotnet stryker --since:{baseSha} --reporter json --output StrykerOutput' }
+const PYTHON_COMMANDS = { build: 'python -m compileall -q .', test: 'python -m pytest -q -p no:cacheprovider', mutation: 'python -m mutmut run' }
 /** What init proposes to mutate any JavaScript, TypeScript or React package. */
 const STRYKER_JS = 'npx stryker run --incremental --reporters json,clear-text'
 
@@ -263,7 +263,7 @@ test('a neighbour repository named at init becomes a component with its root rel
 
   assert.deepEqual(components.map(({ name, root, stack, commands }) => [name, root, stack, commands]), [
     ['payment-authorization', '.', 'dotnet', DOTNET_COMMANDS],
-    ['payment-web', '../payment-web', 'typescript', { build: 'npx tsc --noEmit', test: 'npx vitest run --reporter=default --reporter=junit --outputFile.junit=reports/junit.xml', mutation: STRYKER_JS }],
+    ['payment-web', '../payment-web', 'typescript', { build: 'npx tsc --noEmit', test: 'npx vitest run', mutation: STRYKER_JS }],
   ])
 })
 
@@ -278,7 +278,7 @@ test('Java, Python and plain JavaScript projects get their own stacks, paths and
   })
 
   assert.deepEqual(components.map(({ name, stack, paths, commands }) => [name, stack, paths, commands]), [
-    ['payment-fastapi', 'python', { src: ['src/'], tests: ['tests/'] }, { build: 'python -m compileall -q src', test: 'python -m pytest -q -p no:cacheprovider --junitxml=reports/junit.xml', mutation: 'python -m mutmut run' }],
+    ['payment-fastapi', 'python', { src: ['src/'], tests: ['tests/'] }, { build: 'python -m compileall -q src', test: 'python -m pytest -q -p no:cacheprovider', mutation: 'python -m mutmut run' }],
     ['payment-spring', 'java', { src: ['payment-domain/', 'payment-app/'], tests: ['payment-unit-test/', 'tests/'] }, { build: 'mvn -B -q -DskipTests package', test: 'mvn -B -q test', mutation: 'mvn -B -q org.pitest:pitest-maven:mutationCoverage -DoutputFormats=XML -DtimestampedReports=false -DwithHistory' }],
     ['scripts', 'javascript', { src: ['./'], tests: ['./'] }, { test: 'npm test', mutation: STRYKER_JS }],
   ])

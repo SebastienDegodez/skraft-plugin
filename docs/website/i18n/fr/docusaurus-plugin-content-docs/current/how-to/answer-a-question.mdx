@@ -59,10 +59,11 @@ Une question `environment` dit qui corrige sur sa ligne `Cause:`, et où la comm
 | `Cause:` commence par | À corriger avant `RETRY` |
 |---|---|
 | `the machine` | installer ou démarrer le programme ou le service, accorder la permission ou corriger le hook Git ; le log `Output:` dit lequel |
-| `skraft-config.json` | changer la commande ou le chemin que nomme la première ligne ; elle dit quoi ajouter ([Configurer les composants](./configure-components.md)) |
-| `none the engine knows` | lire le log `Output:` : la commande a été arrêtée par un signal ou a planté (mémoire, processus tué) |
+| `skraft-config.json` | changer la commande ou le chemin que nomme la première ligne ([Configurer les composants](./configure-components.md)) |
+| `what the replay judge read` | lire la réponse du juge que nomme la ligne `Output:` (`logs/judge-<sha court>-<red\|green>.md`) : sa note dit ce que montrent les logs et quoi corriger sur la machine (un programme, un runtime de conteneurs, un identifiant) |
 
-`RETRY` relance l'étape là où elle s'est arrêtée et ne consomme aucune tentative de l'agent.
+`RETRY` relance l'étape là où elle s'est arrêtée et ne consomme aucune tentative de l'agent ;
+après une question du juge, il rejoue le commit et réinterroge le juge.
 
 ## 2. Répondre depuis votre hôte
 

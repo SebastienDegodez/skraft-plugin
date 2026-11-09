@@ -71,7 +71,8 @@ Ce sont les défauts du plugin ; une équipe les surcharge par composant dans `s
 ([politique d'infrastructure](../../reference/skraft-config.md#infrastructure)). Un front React ne
 porte pas de walking skeleton à lui : ses tests ciblés remplacent le back par MSW, ses tests
 end-to-end Playwright tournent contre Microcks. Un test qui a besoin d'un conteneur ne tourne
-jamais sans : quand ni Docker ni Podman ne répond, le moteur le signale INDETERMINATE et attend.
+jamais sans : quand ni Docker ni Podman ne répond, le juge du rejeu demande à un humain d'en
+démarrer un et le run attend.
 
 Toute story n'ouvre pas un nouveau chemin. Celle qui n'ajoute aucun point d'entrée déclare
 pourquoi sous le tableau : `library` (une pure librairie), `refactoring` (aucune nouvelle

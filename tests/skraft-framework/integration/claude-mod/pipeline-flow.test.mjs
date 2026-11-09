@@ -4,7 +4,7 @@ import { existsSync, mkdirSync, readFileSync, realpathSync, rmSync, writeFileSyn
 import { join } from 'node:path'
 import { actsAs, scriptedModHost } from './support/scripted-mod-host.mjs'
 import {
-  CHECK, LENSES, NOMINAL, PAY, PAY_OR_NOTHING, SCENARIOS, REFUSED_WORKFLOWS, SECURITY_AGENT, CYCLE_WORKFLOW, SLOW_CHECK, SLUG, acceptanceWith, componentSkillsBriefed, designateWorkflow, twoRedsWith, WRONG_PAY, blocked, briefOf, commit, deliverWith, killsZero, proposesZero, fillOutputs, lensDispatches, lensLabels, pipelineRepository, reviewsOf,
+  CHECK, LENSES, NOMINAL, PAY, PAY_OR_NOTHING, SCENARIOS, REFUSED_WORKFLOWS, SECURITY_AGENT, CYCLE_WORKFLOW, SLOW_CHECK, SLUG, acceptanceWith, componentSkillsBriefed, designateWorkflow, twoRedsWith, WRONG_PAY, blocked, briefOf, commit, deliverWith, judgeLabel, killsZero, proposesZero, fillOutputs, lensDispatches, lensLabels, pipelineRepository, reviewsOf,
   issueProgressKept, scriptedLlm, visualsKept, writeResult, writesOnly,
 } from '../support/pipeline-repository.mjs'
 import { git, journal } from '../support/workspace.mjs'
@@ -49,12 +49,14 @@ test('/skraft runs the four phases on a real repository: each subagent commits i
     `skraft:solution-architect | skraft ${SLUG} · design · attempt 1`,
     ...lensDispatches('design_review'),
     `skraft:acceptance-designer | skraft ${SLUG} · distill · attempt 1`,
+    `skraft:replay-judge | ${judgeLabel(cwd, 'red')}`,
     ...lensDispatches('distill_review'),
     `skraft:software-engineer | skraft ${SLUG} · deliver · scenario 1 of 1 · attempt 1`,
+    `skraft:replay-judge | ${judgeLabel(cwd, 'green')}`,
     ...lensDispatches('deliver_review'),
     `skraft:pr-writer | skraft ${SLUG} · pr_writer · attempt 1`,
   ])
-  assert.deepEqual(spawns.filter((spawn) => !spawn.prompt.includes('- Story: #42 — Pay by card')).map(({ subagentType }) => subagentType), ['skraft:cold-reader-lens'])
+  assert.deepEqual(spawns.filter((spawn) => !spawn.prompt.includes('- Story: #42 — Pay by card')).map(({ subagentType }) => subagentType), ['skraft:replay-judge', 'skraft:replay-judge', 'skraft:cold-reader-lens'])
   assert.deepEqual(reviewsOf(events), [['design_review', 1, 'approved', 'adr'], ['distill_review', 1, 'approved', 'scenario_review'], ['scenario_review', 1, 'answered', 'deliver'], ['deliver_review', 1, 'approved', 'mutation']])
   assert.deepEqual(events.filter((event) => event.type === 'phase.closed').map((event) => event.phase), ['RESEARCH', 'DESIGN', 'DISTILL', 'DELIVER', 'PUBLISH'])
   assert.deepEqual(mod.asked.map(({ options }) => [options.header, options.options]).slice(0, 1), [['ADR', ['RATIFIED', 'REJECTED']]])
@@ -135,7 +137,8 @@ test('gates that fail send DELIVER back as pass 2 with the failing gate in its b
   const { outcome, spawns, events, mod } = await runOn(cwd, { acts: { 'software-engineer': [deliverWith(WRONG_PAY)] } })
 
   assert.deepEqual(outcome, { status: 'done', slug: SLUG, phase: 'PUBLISH', code: null, reason: 'PUBLISH closed' })
-  const delivering = spawns.slice(3 + LENSES.design_review.length + LENSES.distill_review.length)
+  // research, design and its lenses, distill, the judge of its red and its lenses
+  const delivering = spawns.slice(4 + LENSES.design_review.length + LENSES.distill_review.length)
   assert.deepEqual(delivering.map((spawn) => spawn.description), [`skraft ${SLUG} · deliver · attempt 1`, `skraft ${SLUG} · deliver · pass 2 · attempt 1`, ...lensLabels('deliver_review'), `skraft ${SLUG} · pr_writer · attempt 1`])
   assert.ok(delivering[1].prompt.includes('- Pass: 2, after the gates sent the work back'), delivering[1].prompt)
   assert.match(delivering[1].prompt, /\nThe gates failed on pass 1:\n- app\/test: exited 1 \(evidence: .+test-1\.log\)/)
@@ -248,7 +251,7 @@ test('a repository workflow spawns its own agent between the architect and the a
   assert.deepEqual(outcome, { status: 'done', slug: SLUG, phase: 'DELIVER', code: null, reason: 'DELIVER closed' })
   const agents = spawns.filter(({ subagentType }) => !subagentType.endsWith('-lens') && !subagentType.endsWith('finding-refuter'))
   assert.deepEqual(agents.map(({ subagentType }) => subagentType), [
-    'skraft:solution-researcher', 'skraft:solution-architect', SECURITY_AGENT, 'skraft:acceptance-designer', 'skraft:software-engineer',
+    'skraft:solution-researcher', 'skraft:solution-architect', SECURITY_AGENT, 'skraft:acceptance-designer', 'skraft:replay-judge', 'skraft:software-engineer',
   ])
   assert.equal(agents[2].description, `skraft ${SLUG} · security · attempt 1`)
   assert.ok(mod.published.at(-1).log.includes(`${SLUG}: ${SECURITY_AGENT}, attempt 1 — implementer · standard · sonnet`))

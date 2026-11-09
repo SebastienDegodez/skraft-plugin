@@ -1,0 +1,56 @@
+$ mvn test
+cwd: .
+commit: {{sha}}
+exit: 0
+--- stdout
+[INFO] Scanning for projects...
+[INFO] 
+[INFO] ------------------------< com.example:loyalty >-------------------------
+[INFO] Building loyalty 1.0.0-SNAPSHOT
+[INFO]   from pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+Downloading from central: https://repo.maven.apache.org/maven2/org/postgresql/postgresql/42.7.7/postgresql-42.7.7.pom
+Downloaded from central: https://repo.maven.apache.org/maven2/org/postgresql/postgresql/42.7.7/postgresql-42.7.7.pom (3.3 kB at 14 kB/s)
+Downloading from central: https://repo.maven.apache.org/maven2/org/checkerframework/checker-qual/3.49.3/checker-qual-3.49.3.pom
+Downloaded from central: https://repo.maven.apache.org/maven2/org/checkerframework/checker-qual/3.49.3/checker-qual-3.49.3.pom (2.1 kB at 54 kB/s)
+Downloading from central: https://repo.maven.apache.org/maven2/org/postgresql/postgresql/42.7.7/postgresql-42.7.7.jar
+Downloading from central: https://repo.maven.apache.org/maven2/org/checkerframework/checker-qual/3.49.3/checker-qual-3.49.3.jar
+Downloaded from central: https://repo.maven.apache.org/maven2/org/checkerframework/checker-qual/3.49.3/checker-qual-3.49.3.jar (238 kB at 2.3 MB/s)
+Downloaded from central: https://repo.maven.apache.org/maven2/org/postgresql/postgresql/42.7.7/postgresql-42.7.7.jar (1.1 MB at 9.6 MB/s)
+[INFO] 
+[INFO] --- resources:3.3.1:resources (default-resources) @ loyalty ---
+[INFO] skip non existing resourceDirectory /private/var/folders/k8/9wq3zv5n1xd7c2m4hpt60r8w0000gn/T/skraft-replay-501/6e0a9c4d2b17/{{sha7}}-Ky8dFs/src/main/resources
+[INFO] 
+[INFO] --- compiler:3.13.0:compile (default-compile) @ loyalty ---
+[INFO] Recompiling the module because of changed source code.
+[INFO] Compiling 5 source files with javac [debug release 21] to target/classes
+[INFO] 
+[INFO] --- resources:3.3.1:testResources (default-testResources) @ loyalty ---
+[INFO] Copying 1 resource from src/test/resources to target/test-classes
+[INFO] 
+[INFO] --- compiler:3.13.0:testCompile (default-testCompile) @ loyalty ---
+[INFO] Recompiling the module because of changed dependency.
+[INFO] Compiling 1 source file with javac [debug release 21] to target/test-classes
+[INFO] 
+[INFO] --- surefire:3.2.5:test (default-test) @ loyalty ---
+[INFO] Using auto detected provider org.apache.maven.surefire.junitplatform.JUnitPlatformProvider
+[INFO] 
+[INFO] -------------------------------------------------------
+[INFO]  T E S T S
+[INFO] -------------------------------------------------------
+[INFO] Running com.example.loyalty.PriceCalculatorTest
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.021 s -- in com.example.loyalty.PriceCalculatorTest
+[INFO] 
+[INFO] Results:
+[INFO] 
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0
+[INFO] 
+[INFO] ------------------------------------------------------------------------
+[INFO] BUILD SUCCESS
+[INFO] ------------------------------------------------------------------------
+[INFO] Total time:  1.408 s
+[INFO] Finished at: 2026-11-02T10:31:21+01:00
+[INFO] ------------------------------------------------------------------------
+
+--- stderr
+

@@ -15,11 +15,7 @@
         "clock": {
           "targeted": "real"
         }
-      },
-      "testReports": [
-        "./reports/unit.xml",
-        "tests/**/TestResults/*.xml"
-      ]
+      }
     },
     {
       "name": "web",
@@ -39,10 +35,7 @@
         "clock": {
           "targeted": "fake"
         }
-      },
-      "testReports": [
-        "reports/junit.xml"
-      ]
+      }
     }
   ]
 }

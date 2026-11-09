@@ -13,7 +13,7 @@ const LENSES = {
 const PLUGIN_AGENTS = {
   'solution-researcher': 'plugin', 'solution-architect': 'plugin', 'acceptance-designer': 'plugin', 'software-engineer': 'plugin',
   ...Object.fromEntries(Object.values(LENSES).flat().map((lens) => [`${lens}-lens`, 'plugin'])),
-  'finding-refuter': 'plugin', 'pr-writer': 'plugin',
+  'finding-refuter': 'plugin', 'pr-writer': 'plugin', 'replay-judge': 'plugin',
 }
 /** The line, from 1, of the first line of the text that starts with `start`. */
 const lineOf = (text, start) => text.split('\n').findIndex((line) => line.startsWith(start)) + 1

@@ -38,8 +38,9 @@ boucle externe (acceptation) qui encadre une boucle interne (unitaire).
 ## Application dans SKRAFT
 
 Le pipeline applique la **double boucle**, un scénario à la fois. La boucle externe est le
-scénario d'acceptation : DISTILL commite son test en échec, et le moteur rejoue ce commit pour
-prouver qu'il échoue sur une assertion. La boucle interne est le cycle RED → GREEN → REFACTOR
+scénario d'acceptation : DISTILL commite son test en échec, le moteur rejoue ce commit, et le
+[juge du rejeu](pathname:///dashboard/#agent-replay-judge) lit le log du rejeu pour confirmer
+qu'il échoue sur une assertion. La boucle interne est le cycle RED → GREEN → REFACTOR
 unitaire, que le `software-engineer` tourne en DELIVER sans le commiter.
 
 ```text

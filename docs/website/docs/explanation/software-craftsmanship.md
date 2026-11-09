@@ -75,8 +75,8 @@ Craftsmanship moves in small increments that work. In skraft, this takes two for
   requires at least one walking skeleton scenario per flow (its G8). See
   [Walking Skeleton](./deep-dive/walking-skeleton.md).
 - **One scenario, one red, one green.** In DISTILL, the `acceptance-designer` commits the failing
-  acceptance test of one scenario and the skeleton it calls; the engine replays it and accepts it
-  only when a test fails on an assertion. In DELIVER, the `software-engineer` runs the
+  acceptance test of one scenario and the skeleton it calls; the engine replays it and the replay
+  judge accepts it only when the scenario's test fails on an assertion. In DELIVER, the `software-engineer` runs the
   red → green → refactor loop of its unit tests, then commits once: a `feat(…)` the engine
   replays too, which must make the scenario pass without touching its acceptance test. Then the
   next scenario. Beck's test first ([Beck, 2003](../reference/citations.mdx#cite-beck-tdd-2003)) becomes a fact

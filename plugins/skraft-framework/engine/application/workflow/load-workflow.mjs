@@ -1,4 +1,6 @@
 import { lensAgent, readLensSpec, REFUTER } from '../../domain/review/lenses.mjs'
+import { REPLAY_JUDGE } from '../../domain/pipeline/replay-verdict.mjs'
+import { roleOf } from '../../domain/pipeline/roles.mjs'
 import { checkMandatory } from '../../domain/workflow/mandatory.mjs'
 import { checkLocks, readWorkflow } from '../../domain/workflow/workflow.mjs'
 import { ejectedPath, withCalls } from './called-workflows.mjs'
@@ -121,14 +123,25 @@ const missingSkills = async (agentCatalog, { node, agent, what }) => {
  * @param {import('../../domain/workflow/workflow.mjs').WorkflowNode} node
  * @returns {WantedAgent[]}
  */
-const agentsOf = ({ id, kind, agent, lenses }) => {
-  if (kind === 'agent') return [{ node: id, agent: /** @type {string} */ (agent), what: `agent ${agent}`, reviews: false }]
+const agentsOf = (node) => {
+  const { id, kind, agent, lenses } = node
+  if (kind === 'agent') return [{ node: id, agent: /** @type {string} */ (agent), what: `agent ${agent}`, reviews: false }, ...(replays(node) ? [judgeOf(id)] : [])]
   if (kind !== 'review' && kind !== 'call') return []
   return [
     ...lenses.map(lensNameOf).map((lens) => ({ node: id, agent: lensAgent(lens), what: `lens ${lens} (agent ${lensAgent(lens)})`, reviews: true })),
     { node: id, agent: REFUTER, what: `agent ${REFUTER}`, reviews: true },
   ]
 }
+
+/**
+ * Whether the engine replays the commits of an agent node: the reds of an agent whose commits
+ * are acceptance tests, the reds and greens of a node marked each="scenario".
+ * @param {import('../../domain/workflow/workflow.mjs').WorkflowNode} node
+ */
+const replays = (node) => node.each === 'scenario' || roleOf(node).tdd === 'red'
+
+/** The replay judge, which the engine asks about each red and green it replays. @param {string} node @returns {WantedAgent} */
+const judgeOf = (node) => ({ node, agent: REPLAY_JUDGE, what: `agent ${REPLAY_JUDGE}`, reviews: false })
 
 /** The lens a node's spec names. @param {string} spec a spec the workflow already checked */
 const lensNameOf = (spec) => /** @type {import('../../domain/review/lenses.mjs').LensSpec} */ (readLensSpec(spec)).name
