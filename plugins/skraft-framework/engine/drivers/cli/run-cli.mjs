@@ -299,7 +299,7 @@ const publish = async (args, services, console) => {
 const confirmedOf = (confirmed) => {
   if (confirmed === true) return { ok: true }
   return confirmed === null
-    ? { ok: false, code: 'no-terminal', reason: 'skraft decide records a person\'s answer: run it yourself in an interactive terminal; nothing was recorded' }
+    ? { ok: false, code: 'no-terminal', reason: 'skraft decide records a person\'s answer: run it yourself in an interactive terminal of your own, not an agent\'s shell; nothing was recorded' }
     : { ok: false, code: 'not-confirmed', reason: 'not confirmed; nothing was recorded' }
 }
 

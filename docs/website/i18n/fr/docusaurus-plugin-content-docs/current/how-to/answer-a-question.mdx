@@ -176,7 +176,7 @@ Une réponse refusée n'enregistre rien ; le run attend toujours.
 | `adr-1 was already answered RATIFIED` | Rien à faire : reprendre le run. |
 | `REJECTED needs the reason, which goes back to the agent` | Ajouter `--reason "…"`. |
 | `the answer must be one of RATIFIED, REJECTED` | Écrire une des options. |
-| `skraft decide records a person's answer: run it yourself in an interactive terminal; nothing was recorded` | Lancer la commande vous-même, dans un terminal interactif. |
+| `skraft decide records a person's answer: run it yourself in an interactive terminal of your own, not an agent's shell; nothing was recorded` | Lancer la commande vous-même, dans un terminal interactif. |
 | `Refused: …; nothing was recorded.` (Copilot) | Répondre par `skraft decide` dans un terminal, puis reprendre le workflow. |
 | `not recorded — no active pipeline in this working copy` (Claude Code), alors que `skraft status` montre le run en attente | Répondre par `skraft decide <clé> …` dans un terminal, puis `/skraft <slug>` dans Claude Code. |
 | Vous avez écrit la réponse dans la conversation au lieu de la boîte de dialogue | Ce n'est pas une réponse : le run attend toujours. Utiliser `/skraft decide`. |

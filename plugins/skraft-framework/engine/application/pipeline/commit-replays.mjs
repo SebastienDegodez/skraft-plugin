@@ -7,7 +7,7 @@ import { isCode, ownersOf } from '../../domain/pipeline/component-files.mjs'
 import { failingIds, notGreenBecause, notRedBecause, readReplay } from '../../domain/pipeline/junit.mjs'
 import { baseOf } from '../config/bases.mjs'
 import { missingReports } from '../../domain/config/infrastructure-policy.mjs'
-import { endedByMachine } from '../../domain/pipeline/incidents.mjs'
+import { endedByMachine, interruptedBy } from '../../domain/pipeline/incidents.mjs'
 
 /**
  * The engine replays a commit's tests in a throwaway checkout and reads the JUnit reports they
@@ -222,12 +222,15 @@ const machineReason = ({ sha, component, command }, answer, reading) => {
   const where = `replaying ${sha.slice(0, 7)} for ${component.name}`
   if (reading === 'indeterminate') return { owner: 'environment', reason: `${where}: no container runtime answers (Docker or Podman), so the tests that need one could not run; start Docker or Podman, then retry` }
   const failure = failureOf(answer)
-  if (reading === 'timeout' || (failure !== 'environment' && failure !== 'unknown')) return null
+  if (reading === 'timeout' || failure === null || failure === 'deterministic') return null
   return { owner: failure, reason: `${where}: ${answer.error ?? endText(command.line, /** @type {number} */ (answer.exitCode))}` }
 }
 
 /** @param {string} line @param {number} exitCode */
-const endText = (line, exitCode) => (endedByMachine(exitCode) ? `${line} was stopped by a signal or crashed (exit ${exitCode})` : `${line} exited ${exitCode}`)
+const endText = (line, exitCode) => {
+  if (interruptedBy(exitCode)) return `${line} was interrupted by a person (exit ${exitCode})`
+  return endedByMachine(exitCode) ? `${line} was stopped by a signal or crashed (exit ${exitCode})` : `${line} exited ${exitCode}`
+}
 
 /** A red proven. @type {ComponentReplay} */
 const PROVEN = Object.freeze({ environment: null, proven: true, reading: 'assertion' })
@@ -263,7 +266,7 @@ const atParent = (tally, replay, answer) => {
   const failure = failureOf(answer)
   if (failure === null) return PROVEN
   if (NO_TESTS.test(`${answer.stdout}\n${answer.stderr}`)) return UNPROVEN
-  tally.incident = { owner: failure === 'unknown' ? 'unknown' : 'environment', log: answer.log }
+  tally.incident = { owner: failure === 'deterministic' ? 'environment' : failure, log: answer.log }
   return { environment: parentReason(replay, failure) }
 }
 
@@ -274,6 +277,7 @@ const atParent = (tally, replay, answer) => {
 const parentReason = ({ red, component, command }, failure) => {
   const at = `replaying ${red.sha.slice(0, 7)} for ${component.name}: ${command.line}`
   if (failure === 'environment') return `${at} could not run at its parent, so its failure proves nothing; fix the machine, then retry`
+  if (failure === 'interrupted') return `${at} was interrupted by a person at its parent`
   return `${at} fails at its parent too, so its failure proves nothing; make ${command.line} pass at that parent on this machine, then retry`
 }
 

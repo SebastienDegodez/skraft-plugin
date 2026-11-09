@@ -349,7 +349,8 @@ any failing test; `skraft doctor` warns when neither answers.
 | `environment` | program stopped by a signal, with no exit code | `<program> was stopped by <signal>; run it again` | same |
 | `environment` | line refused (shell syntax, quote, `{baseSha}`) | `command "<line>" <reason>` | same |
 | `environment` | component with no gate command | `no gate command` message above | same |
-| `unknown` | exit code above 128: a signal on POSIX (128 + its number), a crash code from `0xC0000000` on Windows | `was stopped by a signal or crashed (exit <code>), not by a failing check` | a human, reading the evidence; never an agent |
+| `interrupted` | exit code 130 (SIGINT on POSIX) or `0xC000013A` (Ctrl-C on Windows): a person stopped the command | `was interrupted by a person (exit <code>)` | nobody: the run stops (`interrupted`), asks nothing, and the next run picks the step up |
+| `unknown` | exit code above 128, 130 aside: a signal on POSIX (128 + its number), a crash code from `0xC0000000` on Windows | `was stopped by a signal or crashed (exit <code>), not by a failing check` | a human, reading the evidence; never an agent |
 | `deterministic` | any other non-zero exit code, 128 included (Git's fatal error) | `exited <code>` | the code must change |
 
 Under the CLI and Copilot, a command's output is kept up to 64 MiB per stream. Past that, the evidence keeps its head and

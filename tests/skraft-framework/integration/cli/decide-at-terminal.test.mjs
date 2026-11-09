@@ -33,7 +33,7 @@ test('skraft decide records an answer only once the person confirms it at their 
   const unattended = await skraft(cwd, ['decide', 'adr-1', 'RATIFIED'], { confirm: async () => null })
 
   assert.deepEqual(declined, { status: 1, stdout: '', stderr: 'not confirmed; nothing was recorded\n' })
-  assert.deepEqual(unattended, { status: 1, stdout: '', stderr: "skraft decide records a person's answer: run it yourself in an interactive terminal; nothing was recorded\n" })
+  assert.deepEqual(unattended, { status: 1, stdout: '', stderr: "skraft decide records a person's answer: run it yourself in an interactive terminal of your own, not an agent's shell; nothing was recorded\n" })
   assert.deepEqual(answers(cwd), [])
   const confirmed = await skraft(cwd, ['decide', 'adr-1', 'REJECTED', '--reason', 'use the bank gateway'], { confirm: person(true) })
   assert.equal(confirmed.status, 0, confirmed.stderr)
@@ -97,7 +97,7 @@ test('started as a program with no terminal to type in, skraft decide records no
 
   const run = spawnSync(process.execPath, [SKRAFT_MJS, 'decide', 'RATIFIED'], { cwd, encoding: 'utf8', input: 'y\n', env: { ...process.env, HOME: `${cwd}-home`, USERPROFILE: `${cwd}-home` } })
 
-  assert.deepEqual({ status: run.status, stderr: run.stderr }, { status: 1, stderr: "skraft decide records a person's answer: run it yourself in an interactive terminal; nothing was recorded\n" })
+  assert.deepEqual({ status: run.status, stderr: run.stderr }, { status: 1, stderr: "skraft decide records a person's answer: run it yourself in an interactive terminal of your own, not an agent's shell; nothing was recorded\n" })
   assert.deepEqual(answers(cwd), [])
 })
 
@@ -112,4 +112,21 @@ test('the terminal asks on its output and takes y or yes, in any case, as a yes;
 
   assert.deepEqual(await confirmOn(' Yes '), [true, 'record? '])
   assert.deepEqual([(await confirmOn('y'))[0], (await confirmOn('Y'))[0], (await confirmOn('yess'))[0], (await confirmOn('ay'))[0], (await confirmOn(''))[0]], [true, true, false, false, false])
+})
+
+test('a terminal its host marks as an AI agent\'s shell takes no answer: an agent typing skraft decide there records nothing, a person\'s terminal still does', async () => {
+  const typedIn = async (env, isTTY = true) => {
+    const input = Object.assign(new PassThrough(), { isTTY })
+    const output = new PassThrough()
+    const confirmed = terminalConfirm({ input, output, env })('record? ')
+    input.write('y\n')
+    return [await confirmed, output.read()?.toString() ?? '']
+  }
+
+  for (const marker of ['AI_AGENT', 'COPILOT_AGENT_SESSION_ID', 'CLAUDECODE']) {
+    assert.deepEqual(await typedIn({ PATH: '/usr/bin', [marker]: '1' }), [null, ''], marker)
+  }
+  assert.deepEqual(await typedIn({ PATH: '/usr/bin', AI_AGENT: '' }), [true, 'record? '])
+  assert.deepEqual(await typedIn({ PATH: '/usr/bin' }), [true, 'record? '])
+  assert.deepEqual(await typedIn({ PATH: '/usr/bin' }, false), [null, ''])
 })

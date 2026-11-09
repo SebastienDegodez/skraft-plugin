@@ -41,7 +41,7 @@ racine du composant ; un composant s'arrête à sa première gate en échec.
 
 | Règle | Détail |
 | --- | --- |
-| Résultat | `pass` (sortie 0) ou `fail`, classe `environment`, `unknown` ou `deterministic` ([classes d'échec](./skraft-config.md#failure-classes)) |
+| Résultat | `pass` (sortie 0) ou `fail`, classe `interrupted`, `environment`, `unknown` ou `deterministic` ([classes d'échec](./skraft-config.md#failure-classes)) |
 | Composant sans commande de gate | gate `none`, `fail`, classe `environment` ; dans un run, la question `environment` nomme la cause `config` |
 | Portée | les composants modifiés depuis leur base ; `goal_gate=true` lance ensuite tous les autres ; `skraft gate --all` les lance tous |
 | Arêtes | toutes les gates du nœud passent : arête `PASS` ; une échoue : arête `FAIL` (`gates` : `PASS` vers `deliver_review`, `FAIL` vers `deliver` ; `mutation` : `PASS` vers `visuals`, `FAIL` vers `kill_proposal` ; `mutation_gates` : `PASS` vers `mutation`, `FAIL` vers `kill_mutants`) |
@@ -275,6 +275,7 @@ d'un rouge ou d'un vert refusé le nomme : `the replay's output is in <log>`.
 | | un test échoue ou finit en erreur ; un test du scénario absent des rapports ou sauté ; une commande sort avec un code non nul ; aucun rapport | refusé, `not-green` : `these tests fail at it: …`, `the scenario's tests do not pass at it: …`, `<command> exits <code>`, `its test command wrote no test report: …` |
 | un rouge ou un vert | `no-report`, venant d'une commande qui lance un runner dont `skraft doctor` sait qu'il n'en écrit pas là où regarde `testReports` | l'étape reste ouverte : question `environment`, cause `config` : `replaying <sha> for <component>: its test command "<line>" writes no JUnit report where testReports looks; add <ce qui manque> to it in skraft-config.json, then retry` |
 | | la commande a été arrêtée par un signal ou a planté (sortie au-dessus de 128) | l'étape reste ouverte : question `environment`, cause `unknown` : `replaying <sha> for <component>: <line> was stopped by a signal or crashed (exit <code>)` |
+| | une personne a interrompu la commande (sortie 130, ou `0xC000013A` sous Windows) | le run s'arrête (`interrupted`), ne demande rien et ne refuse rien ; le run suivant rejoue le commit |
 | | pas de commande `test`, une commande à syntaxe shell ou qui installe des dépendances | l'étape reste ouverte : question `environment`, cause `config`, rien n'est rejoué |
 
 [`tdd.replay`](./skraft-config.md#tdd) choisit quels rouges d'une tentative sont rejoués. Le rouge

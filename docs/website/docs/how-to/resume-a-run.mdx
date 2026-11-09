@@ -87,6 +87,7 @@ The code shows in the Claude Code mod's final notification
 | Code | Action |
 |---|---|
 | `agent-failed` | Resume: the same attempt runs again. |
+| `interrupted` | Resume: the gates, or the replay, a person stopped run again. |
 | `agent-unavailable` | Install or enable the plugin, accept the agent's start, then resume; the attempt is not used up. When other calls of the same agent succeeded in this run, the failure was passing: resume as is. |
 | `pipeline-locked` | Another session drives the run: let it finish. A lease not renewed for 2 minutes is taken over by the next resume. |
 | `journal-changed` | Another terminal writes to the same journal: wait until it stops, then resume. |

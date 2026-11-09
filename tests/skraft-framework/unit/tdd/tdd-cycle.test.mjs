@@ -451,3 +451,11 @@ test('a replay share at a fifth of the phase or below is not reported, and a pha
   await twice.start()
   assert.deepEqual(twice.events().filter((event) => event.type === 'tdd.replay-slow').map((event) => event.phase), ['DISTILL'])
 })
+
+test('e2e tests a person interrupts at the parent of a red commit stop the run: nothing proves or refuses the red', async () => {
+  const host = scripted(cycle({ components: [API, PLAYED], replay: new ScriptedReplay({ exits: { 'root-1 npx vitest run': 0, 'root-0 npx playwright test': 130 } }) }), (it) => [...distilling(it, ({ git }) => git.commit('test(checkout): a won game', ['web/e2e/game.spec.ts'])), unavailable])
+
+  const outcome = await host.start()
+
+  assert.deepEqual([outcome.code, outcome.reason], ['interrupted', 'replaying root-1 for web: npx playwright test was interrupted by a person at its parent; run the pipeline again to go on'])
+})

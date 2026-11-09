@@ -61,6 +61,17 @@ Ce que le pilote suppose déjà sans mesure ; la prochaine passe de la sonde rem
 | tout hôte : nom sous lequel les prompts MCP `init`, `run`, `status`, `review` apparaissent dans le menu `/` | — | not measured | `drivers/cli/mcp-prompts.mjs` |
 | tout hôte : `notifications/progress` affichées pendant un appel long (`skraft_next`, `skraft_gate`) quand l'hôte envoie un `progressToken` | — | not measured | `drivers/cli/mcp-server.mjs` |
 
+### Shell d'un agent : terminal et variables — 2026-11-09 (branche feat/564-deliver-per-scenario, `skraft decide`)
+
+Mesuré depuis l'outil shell d'un agent de l'app GitHub Copilot (CLI 1.0.102), en mode synchrone et asynchrone : `node -e` lit `process.stdin.isTTY` et l'environnement.
+
+| Contrôle | Verdict | Supposé par |
+| --- | --- | --- |
+| Copilot (app) : le shell d'un agent n'a pas de terminal interactif (`isTTY` indéfini), synchrone comme asynchrone | pass (1.0.102) | `drivers/cli/terminal-confirm.mjs` : `skraft decide` y est refusé (`no-terminal`) |
+| Copilot (app) : le shell d'un agent porte `AI_AGENT` (`github_copilot_app_agent`), `COPILOT_AGENT_SESSION_ID` et `COPILOT_CLI=1` | pass (1.0.102) | `terminal-confirm.mjs` refuse aussi un terminal interactif qui porte `AI_AGENT` ou `COPILOT_AGENT_SESSION_ID` |
+| Copilot CLI (terminal) : le shell asynchrone d'un agent, que `write_bash` alimente, est-il un pseudo-terminal, et porte-t-il les mêmes variables | not measured | la garde par variables ferme le cas s'il l'est |
+| Claude Code : l'outil Bash d'un agent porte `CLAUDECODE=1` | not measured ici (documenté par Claude Code) | `terminal-confirm.mjs` refuse un terminal qui la porte |
+
 ### Sonde d'hôte Copilot — 2026-11-06 (branche feat/mcp-server, serveur MCP du plugin)
 
 Copilot CLI GitHub Copilot CLI 1.0.105. · SDK 1.0.104-4 · Node v26.12.1 · linux 6.12.8. Aucun appel de modèle (`node eng/host-probe/copilot-probe.mjs --sdk <SDK 1.0.104-4>`, sans `--agent-calls` ni `--report-issues`).

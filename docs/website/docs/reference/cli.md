@@ -200,7 +200,10 @@ for `tampered`.
 
 **Effect.** Records a human's answer to the question the active pipeline waits on (one
 `question.answered` event, `by: "cli-tty"`), once the person confirms it at the terminal:
-`skraft decide: record <answer> for <key>? [y/N]`. Only `y` records. It runs nothing: the next run of the pipeline
+`skraft decide: record <answer> for <key>? [y/N]`. Only `y` records. Without an interactive
+terminal, or in a shell its host marks as an AI agent's (`AI_AGENT`, `COPILOT_AGENT_SESSION_ID` or
+`CLAUDECODE` set), nothing is asked and nothing is recorded (`no-terminal`): an agent cannot
+answer for a person. It runs nothing: the next run of the pipeline
 acts on the answer, without starting again an agent that already finished.
 
 | Argument / option | Value | Rule |
@@ -290,7 +293,7 @@ stdout, code 0. Refusal: the message on stderr, code 1.
 | `no-question` | `no question adr-2; waiting: adr-1`, or `no question to answer; no question is waiting` |
 | `already-answered` | `adr-1 was already answered RATIFIED` |
 | `invalid-answer` | `the answer must be one of RATIFIED, REJECTED`; `REJECTED needs the reason, which goes back to the agent`; for a `blocked` question `the answer must be an instruction, or STOP` (`… or APPLY or STOP` for `mutation-plan`) and `an instruction is at most 1000 characters` (the value is never echoed) |
-| `no-terminal` | `skraft decide records a person's answer: run it yourself in an interactive terminal; nothing was recorded` |
+| `no-terminal` | `skraft decide records a person's answer: run it yourself in an interactive terminal of your own, not an agent's shell; nothing was recorded` |
 | `not-confirmed` | `not confirmed; nothing was recorded` |
 
 ## `skraft gate [--all] [--json]`

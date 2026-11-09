@@ -356,7 +356,8 @@ conteneur ne répond, comme tout test en échec ; `skraft doctor` avertit quand 
 | `environment` | programme arrêté par un signal, sans code de sortie | `<programme> was stopped by <signal>; run it again` | idem |
 | `environment` | ligne refusée (syntaxe shell, guillemet, `{baseSha}`) | `command "<ligne>" <raison>` | idem |
 | `environment` | composant sans commande de gate | message `no gate command` ci-dessus | idem |
-| `unknown` | code de sortie au-dessus de 128 : un signal sous POSIX (128 + son numéro), un code de plantage à partir de `0xC0000000` sous Windows | `was stopped by a signal or crashed (exit <code>), not by a failing check` | un humain, qui lit la preuve ; jamais un agent |
+| `interrupted` | code de sortie 130 (SIGINT sous POSIX) ou `0xC000013A` (Ctrl-C sous Windows) : une personne a arrêté la commande | `was interrupted by a person (exit <code>)` | personne : le run s'arrête (`interrupted`), ne demande rien, et le run suivant reprend l'étape |
+| `unknown` | code de sortie au-dessus de 128, sauf 130 : un signal sous POSIX (128 + son numéro), un code de plantage à partir de `0xC0000000` sous Windows | `was stopped by a signal or crashed (exit <code>), not by a failing check` | un humain, qui lit la preuve ; jamais un agent |
 | `deterministic` | tout autre code de sortie non nul, 128 compris (erreur fatale de Git) | `exited <code>` | le code doit changer |
 
 Sous la CLI et Copilot, la sortie d'une commande est gardée jusqu'à 64 Mio par flux. Au-delà, la preuve en garde le

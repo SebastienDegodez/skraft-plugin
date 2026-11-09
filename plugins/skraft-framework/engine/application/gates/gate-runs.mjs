@@ -8,7 +8,7 @@ import { workingCopyOf } from '../../domain/review/locations.mjs'
 import { baseOf } from '../config/bases.mjs'
 import { JournalConflict } from '../journal/run-journal.mjs'
 import { startFirst } from './program-start.mjs'
-import { endedByMachine } from '../../domain/pipeline/incidents.mjs'
+import { endedByMachine, interruptedBy } from '../../domain/pipeline/incidents.mjs'
 
 /**
  * @typedef {import('../../domain/config/skraft-config.mjs').Component} Component
@@ -75,8 +75,8 @@ const stoppedBy = (error, { components, gates }) => {
 }
 
 /**
- * The class of the failed gate a human looks at first: the machine, then a signal or a crash,
- * then the code; null when every gate passed.
+ * The class of the failed gate the run acts on first: a person who interrupted it, the machine,
+ * a signal or a crash, then the code; null when every gate passed.
  * @param {GateResult[]} gates @returns {FailureClass | null}
  */
 const failureOfGates = (gates) => {
@@ -85,7 +85,7 @@ const failureOfGates = (gates) => {
 }
 
 /** @type {readonly FailureClass[]} */
-const CLASS_ORDER = Object.freeze(['environment', 'unknown', 'deterministic'])
+const CLASS_ORDER = Object.freeze(['interrupted', 'environment', 'unknown', 'deterministic'])
 
 /**
  * The components whose gates run, the skipped ones left out: every one for `all`, the touched
@@ -181,7 +181,7 @@ const runOne = async (deps, context, { gate, baseSha }) => {
  */
 const judgeRun = async (deps, ran, tried) => {
   const failure = tried.result === null ? 'environment' : failureOf(tried.result)
-  if (ran.gate !== 'mutation' || failure === 'environment' || failure === 'unknown') return { failure, reason: tried.reason, survivors: null, scores: null }
+  if (ran.gate !== 'mutation' || STOPPED.includes(/** @type {FailureClass} */ (failure))) return { failure, reason: tried.reason, survivors: null, scores: null }
   return judgeMutation(deps, ran, tried, failure)
 }
 
@@ -384,4 +384,10 @@ const endReason = (result) => !result.started
   : result.exitCode === null ? `${result.error}; run it again` : exitText(result.exitCode)
 
 /** @param {number} exitCode */
-const exitText = (exitCode) => (endedByMachine(exitCode) ? `was stopped by a signal or crashed (exit ${exitCode}), not by a failing check` : `exited ${exitCode}`)
+const exitText = (exitCode) => {
+  if (interruptedBy(exitCode)) return `was interrupted by a person (exit ${exitCode})`
+  return endedByMachine(exitCode) ? `was stopped by a signal or crashed (exit ${exitCode}), not by a failing check` : `exited ${exitCode}`
+}
+
+/** The classes of a mutation run its report cannot judge: a person, the machine or a crash stopped it. @type {readonly FailureClass[]} */
+const STOPPED = Object.freeze(['interrupted', 'environment', 'unknown'])

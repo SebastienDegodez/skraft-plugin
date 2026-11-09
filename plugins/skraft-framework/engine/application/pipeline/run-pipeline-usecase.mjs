@@ -734,7 +734,7 @@ const briefComponent = (component, sha) => {
 const judgeAttempt = async (context, run, next, attempt) => {
   const checked = await checkAttempt(context, run, next, attempt)
   if (checked.commits.length > 0) await context.journal.append('commits.checked', { step: next.node.id, visit: next.visit, attempt: next.attempt, commits: checked.commits, ...unsettled(checked) })
-  if (checked.environment !== null) return escalate(context, next, checked.environment, checked.incident)
+  if (checked.environment !== null) return checked.incident?.owner === 'interrupted' ? interrupted(context, next.phase, checked.environment) : escalate(context, next, checked.environment, checked.incident)
   const committed = await commitDone(context, run, next, checked)
   if (committed !== null && 'environment' in committed) return escalate(context, next, committed.environment, committed.incident)
   await recordAttempt(context, run, next, { ...attempt, checked, committed })
@@ -871,11 +871,21 @@ const gate = async (context, run, next) => {
   const started = context.deps.clock.now()
   const { gates, failure } = await gateResults(context, run, node)
   const failures = gates.filter((result) => result.status === 'fail').map((result) => `${result.component}/${result.gate}: ${result.reason} (evidence: ${result.evidence})`)
-  if (failure === 'environment' || failure === 'unknown') return escalate(context, next, failures.join('; '), gateIncident(gates, failure))
+  if (failure === 'interrupted' || failure === 'environment' || failure === 'unknown') return stoppedGates(context, next, { gates, failure, failures })
   const signature = failure === null ? null : await gateSignature(context, { step: node.id, failures })
   await recordGate(context, run, next, { failure, failures, signature, started, survivors: groupSurvivors(gates.flatMap((result) => result.survivors ?? [])) })
   return null
 }
+
+/**
+ * Gates a person interrupted stop the run; gates the machine could not run, or that a signal or a
+ * crash ended, ask a human.
+ * @param {Context} context @param {WorkStep} next
+ * @param {{ gates: import('../gates/gate-runs.mjs').GateResult[], failure: 'interrupted' | 'environment' | 'unknown', failures: string[] }} stopped
+ */
+const stoppedGates = (context, next, { gates, failure, failures }) => (failure === 'interrupted'
+  ? interrupted(context, next.phase, failures.join('; '))
+  : escalate(context, next, failures.join('; '), gateIncident(gates, failure)))
 
 /** @param {Context} context @param {WorkStep} next */
 const openGate = async ({ deps, slug, journal }, { phase, node, visit, attempt, sentBy, resumed }) => {
@@ -1043,6 +1053,14 @@ const skip = async (context, run, { phase, node, visit, resumed }) => {
   deps.progress.log(`${slug}: ${node.id} skipped, unlocked: ${reason}`)
   return null
 }
+
+/**
+ * A person interrupted a command the step ran (Ctrl-C): the run stops there, asking nothing and
+ * sending nothing back; the next run picks the step up.
+ * @param {Context} context @param {string} phase @param {string} reason what was interrupted
+ * @returns {Promise<RunOutcome>}
+ */
+const interrupted = (context, phase, reason) => stop(context, phase, 'interrupted', `${reason}; run the pipeline again to go on`)
 
 /**
  * The host or the machine stopped the run: the step stays open, and the next run picks it up.

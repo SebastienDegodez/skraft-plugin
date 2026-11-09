@@ -201,7 +201,10 @@ seulement pour `tampered`.
 
 **Effet.** Enregistre la réponse d'un humain à la question que le pipeline actif attend (un
 événement `question.answered`, `by: "cli-tty"`), une fois que la personne l'a confirmée au
-terminal : `skraft decide: record <answer> for <key>? [y/N]`. Seul `y` enregistre. Il ne lance rien : le prochain run du
+terminal : `skraft decide: record <answer> for <key>? [y/N]`. Seul `y` enregistre. Sans terminal
+interactif, ou dans un shell que son hôte marque comme celui d'un agent IA (`AI_AGENT`,
+`COPILOT_AGENT_SESSION_ID` ou `CLAUDECODE` posée), rien n'est demandé ni enregistré
+(`no-terminal`) : un agent ne peut pas répondre à la place d'une personne. Il ne lance rien : le prochain run du
 pipeline agit selon la réponse, sans relancer un agent qui a déjà fini.
 
 | Argument / option | Valeur | Règle |
@@ -293,7 +296,7 @@ sur stdout, code 0. Refus : le message sur stderr, code 1.
 | `no-question` | `no question adr-2; waiting: adr-1`, ou `no question to answer; no question is waiting` |
 | `already-answered` | `adr-1 was already answered RATIFIED` |
 | `invalid-answer` | `the answer must be one of RATIFIED, REJECTED` ; `REJECTED needs the reason, which goes back to the agent` ; pour une question `blocked`, `the answer must be an instruction, or STOP` (`… or APPLY or STOP` pour `mutation-plan`) et `an instruction is at most 1000 characters` (la valeur n'est jamais reprise) |
-| `no-terminal` | `skraft decide records a person's answer: run it yourself in an interactive terminal; nothing was recorded` |
+| `no-terminal` | `skraft decide records a person's answer: run it yourself in an interactive terminal of your own, not an agent's shell; nothing was recorded` |
 | `not-confirmed` | `not confirmed; nothing was recorded` |
 
 ## `skraft gate [--all] [--json]`

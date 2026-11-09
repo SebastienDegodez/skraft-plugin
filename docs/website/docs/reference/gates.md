@@ -40,7 +40,7 @@ root; a component stops at its first failing gate.
 
 | Rule | Detail |
 | --- | --- |
-| Result | `pass` (exit 0) or `fail`, class `environment`, `unknown` or `deterministic` ([failure classes](./skraft-config.md#failure-classes)) |
+| Result | `pass` (exit 0) or `fail`, class `interrupted`, `environment`, `unknown` or `deterministic` ([failure classes](./skraft-config.md#failure-classes)) |
 | Component with no gate command | gate `none`, `fail`, class `environment`; in a run, the `environment` question names the cause `config` |
 | Scope | the components changed since their base; `goal_gate=true` then runs all the others; `skraft gate --all` runs them all |
 | Edges | every gate of the node passes: the `PASS` edge; one fails: the `FAIL` edge (`gates`: `PASS` to `deliver_review`, `FAIL` to `deliver`; `mutation`: `PASS` to `visuals`, `FAIL` to `kill_proposal`; `mutation_gates`: `PASS` to `mutation`, `FAIL` to `kill_mutants`) |
@@ -269,6 +269,7 @@ a refused red or green names it: `the replay's output is in <log>`.
 | | a test fails or errs; a test of the scenario missing from the reports or skipped; a command exits non-zero; no report | refused, `not-green`: `these tests fail at it: …`, `the scenario's tests do not pass at it: …`, `<command> exits <code>`, `its test command wrote no test report: …` |
 | a red or a green | `no-report`, from a command that runs a runner `skraft doctor` knows writes none where `testReports` looks | the step stays open: `environment` question, cause `config`: `replaying <sha> for <component>: its test command "<line>" writes no JUnit report where testReports looks; add <what it lacks> to it in skraft-config.json, then retry` |
 | | the command was stopped by a signal or crashed (exit above 128) | the step stays open: `environment` question, cause `unknown`: `replaying <sha> for <component>: <line> was stopped by a signal or crashed (exit <code>)` |
+| | a person interrupted the command (exit 130, or `0xC000013A` on Windows) | the run stops (`interrupted`), asks nothing and refuses nothing; the next run replays the commit |
 | | no `test` command, a command that uses shell syntax or installs dependencies | the step stays open: `environment` question, cause `config`, nothing replayed |
 
 [`tdd.replay`](./skraft-config.md#tdd) chooses which reds of an attempt are replayed. A red of an

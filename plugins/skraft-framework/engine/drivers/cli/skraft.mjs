@@ -18,7 +18,7 @@ const servicesAt = (directory) => ({
   workingCopyName: () => basename(directory),
   adapters: (/** @type {'copilot' | undefined} */ agentHost) => createNodeAdapters({ cwd: directory, pluginRoot: pluginFolder, agentHost }),
   command: () => `node "${fileURLToPath(import.meta.url)}"`,
-  confirm: terminalConfirm({ input: process.stdin, output: process.stderr }),
+  confirm: terminalConfirm({ input: process.stdin, output: process.stderr, env: process.env }),
 })
 
 /** Whether `directory` is the plugin folder or inside it, where a host may start the MCP server. @param {string} directory */
