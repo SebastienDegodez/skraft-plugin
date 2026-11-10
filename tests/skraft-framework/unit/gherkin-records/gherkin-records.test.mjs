@@ -276,8 +276,8 @@ test('a component that writes its tests without Gherkin is asked for no scenario
 
   assert.deepEqual(distill(unit), [[1, 'done', null, []]], 'nothing reads a .feature of a component that declines Gherkin')
   assert.equal(outcome.status, 'done', outcome.reason)
-  assert.equal((await gherkin.start()).status, 'blocked', 'the same attempt, in a component that declares Gherkin, is sent back')
-  assert.equal((await both.start()).status, 'blocked', 'one component writing Gherkin holds the story to its scenarios, whatever the others write')
+  assert.equal((await gherkin.start()).code, 'blocked', 'the same attempt, in a component that declares Gherkin, is sent back')
+  assert.equal((await both.start()).code, 'blocked', 'one component writing Gherkin holds the story to its scenarios, whatever the others write')
 })
 
 test('the scenarios live where the component says: the folder of its pair, not a folder the engine picked', async () => {
@@ -289,7 +289,7 @@ test('the scenarios live where the component says: the folder of its pair, not a
 
   assert.deepEqual(distill(named), [[1, 'done', null, []]], 'the plan names it, the component declares the folder, and the designer wrote it there')
   assert.equal(outcome.status, 'done', outcome.reason)
-  assert.equal((await elsewhere.start()).status, 'blocked', 'a .feature under docs/features is nowhere this component reads')
+  assert.equal((await elsewhere.start()).code, 'blocked', 'a .feature under docs/features is nowhere this component reads')
 })
 
 test('the folder a component declares is the one the engine creates and the one the designer may write in, wherever it sits', async () => {
@@ -352,7 +352,7 @@ test('skraft reads Gherkin in English, however a file spaces its language header
     assert.deepEqual([result, code, failures], ['failed', 'gherkin-records', declares],
       `attempt ${attempt}: indented, tight against the colon or spaced before it, the header is read, and the language is the only reason given, since a file skraft cannot read says nothing about the story's coverage`)
   }
-  assert.equal(outcome.status, 'blocked', outcome.reason)
+  assert.equal(outcome.code, 'blocked', outcome.reason)
   await keywords.start()
   assert.deepEqual(distill(keywords)[0][3], [`${CARD} opens no scenario; ${ENGLISH_ONLY}`],
     'without the header, the keywords are what skraft cannot read')

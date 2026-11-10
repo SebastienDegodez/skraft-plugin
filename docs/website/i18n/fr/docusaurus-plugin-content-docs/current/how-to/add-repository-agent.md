@@ -100,7 +100,7 @@ Commitez `.skraft/` et les fichiers de l'agent : l'étape tourne au prochain run
 | `user_docs reaches the exit without passing mandatory node deliver_review; …` | Même cause : le nœud contourne la revue DELIVER. |
 | `node user_docs: attribute <clé> is not supported on a box node (supported: …)` | N'utiliser que les attributs listés à l'étape 2. |
 | `out of write scope: <chemin>` dans le journal | L'agent a écrit hors de `writes` : élargir `writes`, ou resserrer son prompt. |
-| `missing-outputs` | L'agent n'a pas rempli une sortie de `outputs` après ses tentatives : corriger son prompt, puis démarrer un nouveau slug. |
+| `<node> is blocked: <agent> still failed after 3 attempts`, `missing outputs: <path>` en dessous | L'agent n'a pas rempli une sortie de `outputs` après ses tentatives : corriger son prompt, puis répondre à la question `blocked` par une consigne, qui le relance sur un nouveau passage. `STOP` termine le run avec `missing-outputs`. |
 | L'agent du plugin tourne à la place du vôtre | Un agent de skraft porte le même identifiant : renommer le vôtre. |
 
 ## Étapes suivantes <!-- #next-steps -->

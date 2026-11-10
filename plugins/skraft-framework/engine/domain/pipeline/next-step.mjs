@@ -28,8 +28,9 @@ import { scenarioNodes } from '../workflow/workflow.mjs'
  *   a locked gate the repository's workflow unlocked.
  * @typedef {'agent-blocked' | 'breaker' | 'ceiling' | 'route' | 'workflow-changed'} BlockCause
  * @typedef {{ kind: 'blocked', phase: string | null, node: WorkflowNode | null, cause: BlockCause, last: RunEvent | null, previous: RunEvent | null, missingNode: string | null, reopens: string | null }} BlockedStep
- *   reopens: the node a human's instruction runs again on a new pass; null for a block no
- *   instruction lifts.
+ *   reopens: the node a human's instruction runs again on a new pass: the agent a refusal
+ *   blocks, the node a loop at its ceiling leads back to, a review a lens left without a verdict;
+ *   null for a block no instruction lifts.
  * @typedef {{ kind: 'close-phase', phase: string }} ClosePhaseStep
  * @typedef {{ kind: 'done', phase: string | null }} DoneStep
  * @typedef {WorkStep | SkipStep | BlockedStep | ClosePhaseStep | DoneStep} NextStep
@@ -133,8 +134,9 @@ const resume = (workflow, run, [id, { open: attempt }]) => {
 
 /**
  * A human's instruction lifts the block: the node runs again on a new pass, with the failures
- * the block left (the findings of a review at its loop ceiling) as its feedback and the
- * instruction apart, so that the agent never works from the instruction alone (#500). It works on
+ * the block left (the findings of a review at its loop ceiling, the refusals of an agent's last
+ * attempt) as its feedback, the outputs that attempt left missing, and the instruction apart, so
+ * that the agent never works from the instruction alone (#500). It works on
  * the group the blocked step worked on, its scenario or its file of surviving mutants: a node
  * blocks on its own step, and a review blocking at its ceiling works on none.
  * @param {Workflow} workflow @param {RunState} run @param {string} id @param {string} instruction
@@ -144,7 +146,7 @@ const reopen = (workflow, run, id, instruction) => {
   const node = workflow.nodes[id]
   if (!node) return changed(id)
   const last = /** @type {RunEvent} */ (run.last)
-  return enter(node, { ...FRESH, visit: run.nodes[id].visit + 1, feedback: last.failures, instruction, sentBy: 'ask', ...groupOf(run, id, last.group) }, run)
+  return enter(node, { ...FRESH, visit: run.nodes[id].visit + 1, missing: last.missing ?? [], feedback: last.failures, instruction, sentBy: 'ask', ...groupOf(run, id, last.group) }, run)
 }
 
 /**
@@ -186,15 +188,15 @@ const begin = (workflow, run) => {
 }
 
 /**
- * A refused attempt is tried again with what it was refused for, unless the run is blocked.
+ * A refused attempt is tried again with what it was refused for; a refusal that blocks the run
+ * asks a human, whose instruction runs the agent again on a new pass.
  * @param {WorkflowNode} node @param {RunState} run @param {RunEvent} last
  * @returns {NextStep}
  */
 const retry = (node, run, last) => {
   const { previous } = run.nodes[last.step]
   const cause = refusalBlock(node, previous, last)
-  // The agent that says it is blocked runs again on a human's instruction; a breaker or a ceiling is no question to a human.
-  if (cause !== null) return { kind: 'blocked', phase: node.phase, node, cause, last, previous, missingNode: null, reopens: cause === 'agent-blocked' ? node.id : null }
+  if (cause !== null) return { kind: 'blocked', phase: node.phase, node, cause, last, previous, missingNode: null, reopens: node.id }
   return enter(node, { visit: last.visit, attempt: last.attempt + 1, missing: last.missing, feedback: last.failures, instruction: null, sentBy: run.nodes[last.step].sentBy, resumed: null, ...groupOf(run, last.step, last.group) }, run)
 }
 
@@ -223,7 +225,6 @@ const nextGroup = (node, run, last) => {
 const refusalBlock = (node, previous, last) => {
   if (last.code === 'agent-blocked') return 'agent-blocked'
   if (previous !== null && sameFailure(previous, last)) return 'breaker'
-  // Stryker disable next-line StringLiteral: a refusal that is not the breaker's is told as the ceiling, whatever its cause
   if (last.attempt >= (node.maxAttempts ?? DEFAULT_ATTEMPTS)) return 'ceiling'
   return null
 }

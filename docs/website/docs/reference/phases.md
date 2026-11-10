@@ -99,7 +99,7 @@ Verdict: `review-verdict.mjs --phase discuss`, same rules and same budget as DIS
 | Allowed writes | the tracking folder only |
 | `docs/` already covers the story | the research document says so and cites the files of `docs/` with `#file:`; the engine reads those citations, so a file they name must exist |
 | Check | output filled: not empty, different from the template, no `{{…}}` left. Research records after each attempt: the document cites a file of the working copy as `#file:<path from the repository root>[:start[-end]]` (an external source by its URL). Each `#file:` citation — forward or back slashes, a path named once however often it is cited — names a readable file of the working copy (an absolute path, a path with a `..` segment or one in `.copilot-tracking/` is read nowhere and fails the same way), and its `start` and `end` lines sit within that file's length. A path written from a component root (`#file:src/…` for the `web` component) fails with its path from the repository root (`#file:web/src/…`), every component inside the repository that holds it named. Text without `#file:` is no citation and is never checked (`research-records`) |
-| Attempts | 3 (the `max_attempts` default); then `missing-outputs`, or `research-records` when the document is there and its citations still fail |
+| Attempts | 3 (the `max_attempts` default), fewer when two attempts in a row are refused the same way; then the `blocked` question about `research`: an instruction runs the researcher again on a new pass, `STOP` ends the run with `missing-outputs`, or `research-records` when the document is there and its citations still fail |
 
 ## DESIGN <!-- #design -->
 
@@ -118,7 +118,7 @@ Verdict: `review-verdict.mjs --phase discuss`, same rules and same budget as DIS
 | Commits | none by the architect, which has no shell: once `design` is done, the engine commits what it changed under its allowed paths as `docs(<story>): design <story>`, ending with `Refs: #<issue>` when the story has one, and journals it as `committed` on the step's `step.recorded` |
 | Existing documentation | instruction to the agent: a file of `docs/` is completed, not rewritten. When `docs/` already covers the story, the consistency matrix says so and cites the files of `docs/`, and the phase moves on. Engine check: the matrix's `docs-relied-on:` line lists at least one file of `docs/adr`, `docs/architecture`, `docs/domain/event-model` or `docs/features`, or a `.feature` wherever its component keeps it, and each listed file exists in the working copy |
 | Engine checks | DESIGN records after each attempt: a consistency matrix reading `consistency-gate: PASS` (G10), no ADR named `*-rejected.md`, `*-accepted.md`, `*-deprecated.md` or `*-superseded.md` (G14), each `**Supersedes:**` with its registry row (G2, G12), the `docs-relied-on:` line of the matrix (files of the durable `docs/` folders, and the `.feature` files wherever their component keeps them, that exist); an index row for each ADR written (`design-records`); draft ADRs: `Proposed`, no version, no code file, acceptance criterion identifier, ticket or other ADR cited (only the ADR it replaces, on its `Supersedes:`/`Amends:` line), a one-sentence `decision`, no draft history; ADRs on the base: only their status lines change, `Accepted` only to `Superseded by ADR-NNN` or `Deprecated`, never deleted; a status of the closed set (`adr-lifecycle`) |
-| Persistent failure | `missing-outputs` when the consistency matrix is missing after the last attempt, `design-records` otherwise |
+| Persistent failure | after the last attempt, or two attempts in a row refused the same way, the `blocked` question about `design`; `STOP` ends the run with `missing-outputs` when the consistency matrix is missing, `design-records` otherwise |
 
 | Lens | Gates |
 | --- | --- |
@@ -201,7 +201,8 @@ Walking skeleton exemption: none
 | any other exemption | `<plan>: walking skeleton exemption "<value>" must be none, library, refactoring, docs-only` |
 | `docs-only`: no commit of the story changes a component's `src` paths | `the story declares its walking skeleton exempt as docs only, and commit <sha> changes <file>, source of <component>; remove the exemption and tag S1 @walking-skeleton` |
 
-Each failure sends the agent of the pass back with the line; after its last attempt, the run stops
+Each failure sends the agent of the pass back with the line; after its last attempt, or two
+attempts in a row refused the same way, the run asks the `blocked` question, and `STOP` ends it
 with `scenarios`. Why S1 is a walking skeleton: [Walking Skeleton](../explanation/deep-dive/walking-skeleton.md).
 
 ## DELIVER <!-- #deliver -->
@@ -281,7 +282,7 @@ with `scenarios`. Why S1 is a walking skeleton: [Walking Skeleton](../explanatio
 | `scenario-review` | node `scenario_review` | `APPROVED`, `REVISE` | `REVISE` | `Scenarios` |
 | `mutation-plan` | node `mutation_plan` | `APPLY`, an instruction, or `STOP` | — | `Mutation` |
 | `environment` | the engine, when a step cannot run on the machine or with what `skraft-config.json` gives it, or when the replay judge asks a human about a replayed commit; its text names the cause and the log ([causes](./run-journal.md#environment-question)) | `RETRY`, `ABORT` | — | `Environment` |
-| `blocked` | the engine, when an agent answers `blocked`, a loop reaches its `max_visits` or a lens answers `inconclusive` | an instruction, or `STOP` | — | `Blocked` |
+| `blocked` | the engine, when an agent answers `blocked`, an agent is refused the same way on two attempts in a row or on its last attempt, a loop reaches its `max_visits` or a lens answers `inconclusive` | an instruction, or `STOP` | — | `Blocked` |
 | `review-consent` | `skraft review --pr --publish` | `ACCEPTED`, `DECLINED` | — | `PR comment` |
 
 No run asks for a publication consent: `/skraft-init` settles them before any run, in

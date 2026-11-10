@@ -222,19 +222,27 @@ The questions, their options and their refusals:
 | `mutation-plan` | `<node>-<n>` (`mutation_plan-1`) | `APPLY`, an instruction, or `STOP` (ends the run `blocked`, code `stopped`) | — |
 | `blocked` | `<node>-<n>`, the node an instruction runs again (`design-1`) | an instruction, or `STOP` | — |
 
-A block no longer ends the run by itself. When an agent answers `blocked`, a loop reaches its
-`max_visits` (the gates' `FAIL` edge included), or a lens of a review answers `inconclusive`,
-the engine asks the `blocked` question about the node to run again: the agent itself, the node
-the capped edge leads back to (the engineer after the gates, the architect after a review or a
-rejected ADR), or the review. Its text holds what the
-engine checked, what the blocked step left (the agent's reason, the gates' failures), the file
-that keeps the agent's own words, and where the run report is:
+A block no longer ends the run by itself. When an agent answers `blocked`, an agent is refused
+the same way on two attempts in a row of a pass or on its last attempt (`max_attempts`), a loop
+reaches its `max_visits` (the gates' `FAIL` edge included), or a lens of a review answers
+`inconclusive`, the engine asks the `blocked` question about the node to run again: the agent
+itself, the node the capped edge leads back to (the engineer after the gates, the architect
+after a review or a rejected ADR), or the review. Its text holds what the
+engine checked, what the blocked step left (the agent's reason, its missing outputs and
+refusals, the gates' failures), the file that keeps the agent's own words, and where the run
+report is:
 
 ```
 design is blocked: solution-architect says it cannot go on; its reason is in <tracking folder>/results/design-1-1.json.
 Left by design (1):
 - which payment provider?
  An instruction runs design again on a new pass with what is left above and the instruction; STOP ends the run.
+The run so far (commits, refusals, incidents): <tracking folder>/run-report.md
+research is blocked: solution-researcher failed the same way on attempts 1 and 2.
+Left by research (2):
+- missing outputs: <tracking folder>/research/2026-10-11/checkout-research.md
+- result is missing
+ An instruction runs research again on a new pass with what is left above and the instruction; STOP ends the run.
 The run so far (commits, refusals, incidents): <tracking folder>/run-report.md
 design_review is blocked: a lens answered inconclusive; the verdict is in <tracking folder>/reviews/design_review-1/verdict.yaml. An instruction runs design_review again on a new pass with it; STOP ends the run.
 The run so far (commits, refusals, incidents): <tracking folder>/run-report.md
@@ -245,7 +253,10 @@ Left by gates (1):
 The run so far (commits, refusals, incidents): <tracking folder>/run-report.md
 ```
 
-The agent run again gets what the block left first, then the instruction.
+The agent run again gets what the block left first, then the instruction. An agent refused on
+its attempts starts the new pass at attempt 1, with its whole `max_attempts` again; its brief
+lists the outputs still missing (`Missing outputs from pass <n>:`), then its refusals
+(`What pass <n> left when it was blocked:`), then the instruction.
 
 A review whose loop to its producer reaches `max_visits` (2 for each review of the shipped
 workflow: 3 passes) is not sent back again. Its question says that the producer did not fix every
@@ -276,9 +287,9 @@ run on the same slug, runs that node again on a new pass, the instruction given 
 a human's feedback (to each lens the review asks, for a review); no edge into the node counts
 as taken any more, so its loop has its whole budget again. Blocked again, it asks again
 (`design-2`). `STOP` (in any case) ends the run `blocked`, with the code and reason of the
-block, and nothing else. A breaker (an agent whose last two refused attempts failed the same
-way), an attempt ceiling, a missing edge or a stalled mutation loop
-still end the run without a question.
+block, and nothing else: for a refused agent, the code of its last refusal (`missing-outputs`,
+`research-records`…). A missing edge, a stalled mutation loop or a node the workflow no longer
+holds (`workflow-changed`) still end the run without a question.
 
 A key names the node that asks the question, then the question's rank among those that node
 asked in the run, whatever their kind: `adr-1`, then `adr-2` after a rejection or when Git

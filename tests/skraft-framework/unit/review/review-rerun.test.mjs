@@ -487,7 +487,7 @@ test('a DELIVER pass the review opened is told which commit each finding takes: 
   assert.equal((await strengthened.start()).status, 'done')
   assert.deepEqual(strengthened.events().filter((event) => event.type === 'step.recorded' && event.step === 'deliver').map(({ visit, outcome }) => [visit, outcome]), [[1, 'done'], [2, 'done']])
 
-  const again = scripted({}, (it) => [...nominal(it), agent({ work: ({ git }) => git.commit('fix(checkout): assert the card amount', ['src/Checkout.cs']) })(it), agent()(it)])
+  const again = scripted({ answers: [{ answer: 'STOP' }] }, (it) => [...nominal(it), agent({ work: ({ git }) => git.commit('fix(checkout): assert the card amount', ['src/Checkout.cs']) })(it), agent()(it)])
   again.agentRunner.review = lenses({ 'test-integrity': [integrity] })
   assert.equal((await again.start()).code, 'tdd')
   assert.deepEqual(again.events().filter((event) => event.type === 'step.recorded' && event.step === 'deliver').map(({ visit, attempt, outcome }) => [visit, attempt, outcome]), [[1, 1, 'done'], [2, 1, 'failed'], [2, 2, 'failed']])

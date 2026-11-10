@@ -38,7 +38,7 @@ test('skraft_decide asks nothing when the active pipeline waits on no question, 
   const { cwd, cleanup } = await workingCopy()
   t.after(cleanup)
   const { ctx } = simulatedContext({ args: { slug: 'checkout' }, behaviours: [writesNothing, writesNothing] })
-  await runSkraftPipelineWorkflow(ctx, copilotHost(cwd))
+  await runSkraftPipelineWorkflow(ctx, copilotHost(cwd, PLUGIN_ROOT, firstOptionPerson()))
   const session = firstOptionPerson()
 
   assert.equal(await decideTool(cwd, session).handler({}), 'Refused: no question is waiting (the active pipeline is blocked); nothing was recorded.')

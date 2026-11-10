@@ -345,14 +345,32 @@ const reviewCeilingOf = ({ deps, slug }, { last }, step) => {
 
 /**
  * What the blocked question says of the block: only what the engine checked, and the file that
- * holds the agent's own words.
+ * holds the agent's own words. An agent refused the same way twice or on its last attempt is
+ * told by that cause, with its missing outputs and refusals.
  * @param {Context} context @param {BlockedStep} next @param {string} step
  * @returns {import('../../domain/decisions/questions.mjs').Block}
  */
-const blockOf = (context, { node, last }, step) => {
-  const { code, step: from, failures } = /** @type {RunEvent} */ (last)
-  return { step, code, from, agent: /** @type {WorkStep['node']} */ (node).agent, details: detailsOf(context, /** @type {RunEvent} */ (last)), failures }
+const blockOf = (context, { node, last, cause }, step) => {
+  const event = /** @type {RunEvent} */ (last)
+  const refused = REFUSALS.includes(cause)
+  return {
+    step, code: refused ? cause : event.code, from: event.step, agent: /** @type {WorkStep['node']} */ (node).agent,
+    details: detailsOf(context, event), failures: refused ? refusalLines(context, event) : event.failures, attempt: event.attempt,
+  }
 }
+
+/** The blocks an agent's refusals cause, asked about by their cause rather than by the code of the last refusal. */
+const REFUSALS = Object.freeze(['breaker', 'ceiling'])
+
+/**
+ * What an agent's refused attempt left: its missing outputs, where they are, then its refusals.
+ * @param {{ deps: { files: import('../ports/tracking-files.mjs').TrackingFiles }, slug: string }} context @param {RunEvent} event
+ * @returns {string[]}
+ */
+export const refusalLines = ({ deps, slug }, event) => [
+  ...(event.missing.length > 0 ? [`missing outputs: ${event.missing.map((/** @type {string} */ path) => deps.files.location(slug, path)).join(', ')}`] : []),
+  ...event.failures,
+]
 
 /**
  * The file that holds what the engine does not repeat of a block, absolute; null when the

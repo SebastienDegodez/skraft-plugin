@@ -135,9 +135,10 @@ every criterion that forbids one.
 | G2 | every ADR the run wrote has its row in `docs/adr/decisions-index.md` |
 | G2 | an ADR on the base branch changes only its status lines and is never deleted (`adr-lifecycle`) |
 
-A failure sends the architect back with one line per record; after its last attempt, the run
-stops with `design-records`. The consistency matrix is also DESIGN's declared output: when it is
-missing, the run stops with `missing-outputs` instead.
+A failure sends the architect back with one line per record; after its last attempt, or two
+attempts in a row refused the same way, the run asks the `blocked` question, and `STOP` ends it
+with `design-records`. The consistency matrix is also DESIGN's declared output: when it is
+missing, `STOP` ends it with `missing-outputs` instead.
 
 ## DISTILL <!-- #distill -->
 

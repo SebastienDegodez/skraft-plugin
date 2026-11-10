@@ -128,8 +128,9 @@ keeps each fact before the next step is decided.*
 
 A missing output starts the agent again with the list of what is missing, within its attempts.
 An agent whose last two refused attempts failed exactly the same way (the same missing outputs
-and the same failures, compared as written) stops the run earlier, because a third identical
-attempt would teach nothing. A failed gate step sends the work back through its `FAIL` edge
+and the same failures, compared as written) is not started a third time, because an identical
+attempt would teach nothing: the run asks a human for an instruction, as it does after the
+agent's last attempt, and the instruction starts the agent again on a new pass. A failed gate step sends the work back through its `FAIL` edge
 until that edge's `max_visits`; then the run asks a human for an instruction. Attempts and
 edges taken are read from the journal, so a resumed run keeps them. A gate stopped by a signal or
 a crash fails like a check: its evidence goes back to the agent. A step the machine cannot run

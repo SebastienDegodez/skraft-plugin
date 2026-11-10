@@ -225,7 +225,7 @@ test('a document left as its template, with a placeholder left, blank or deleted
     async (it) => it.tracking.write(SLUG, RESEARCH, '  \n'),
     async (it) => { it.tracking.files.delete(`${SLUG}/${RESEARCH}`) },
   ]) {
-    const host = scripted({}, (it) => [agent({ fill: false, work: () => write(it) })(it), agent({ fill: false, work: () => write(it) })(it)])
+    const host = scripted({ answers: [{ answer: 'STOP' }] }, (it) => [agent({ fill: false, work: () => write(it) })(it), agent({ fill: false, work: () => write(it) })(it)])
 
     const outcome = await host.start()
 
@@ -383,7 +383,7 @@ test('a run whose journal another writer changed meanwhile stops without breakin
 })
 
 test('a blocked run run again writes nothing more', async () => {
-  const host = scripted({}, (it) => [agent({ fill: false })(it), agent({ fill: false })(it)])
+  const host = scripted({ answers: [{ answer: 'STOP' }] }, (it) => [agent({ fill: false })(it), agent({ fill: false })(it)])
   const first = await host.start()
   const lines = await host.tracking.lines(SLUG)
 

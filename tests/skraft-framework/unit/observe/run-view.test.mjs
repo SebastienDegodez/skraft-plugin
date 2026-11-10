@@ -137,7 +137,7 @@ test('the view of a run at its gates names them, and of a completed run says don
 })
 
 test('the view of a blocked run keeps the reason, and of a tampered journal says it is tampered', async () => {
-  const host = scripted({}, (it) => [agent({ fill: false })(it), agent({ fill: false })(it)])
+  const host = scripted({ answers: [{ answer: 'STOP' }] }, (it) => [agent({ fill: false })(it), agent({ fill: false })(it)])
   const blocked = await host.start()
 
   const view = await host.view()

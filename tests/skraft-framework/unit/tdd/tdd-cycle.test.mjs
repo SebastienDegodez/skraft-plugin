@@ -72,7 +72,7 @@ test('a green commit with no red before it is refused, and so is the next green 
 
   const outcome = await host.start()
 
-  assert.equal(outcome.reason.split(':')[0], 'software-engineer failed the same way on attempts 1 and 2')
+  assert.equal(outcome.reason.split('\n')[0], 'deliver is blocked: software-engineer failed the same way on attempts 1 and 2.')
   assert.deepEqual(recorded(host, 'deliver')[0].failures, [
     'commit root-1 "feat(checkout): pay by card" makes code pass with no test commit since the last feat or fix; rewrite it after a failing test commit',
     'commit root-5 "fix(checkout): refund rounding" makes code pass with no test commit since the last feat or fix; rewrite it after a failing test commit',
@@ -121,9 +121,11 @@ test('a refused commit stays refused on the next attempts of the pass, and a red
 
   const outcome = await host.start()
 
-  assert.deepEqual([outcome.code, outcome.reason], [
-    'commit-convention',
-    'acceptance-designer failed the same way on attempts 1 and 2: commit root-2 "wip" is not a conventional commit (type(scope): subject); reword it',
+  assert.deepEqual([outcome.code, ...outcome.reason.split('\n').slice(0, 3)], [
+    'blocked',
+    'distill is blocked: acceptance-designer failed the same way on attempts 1 and 2.',
+    'Left by distill (1):',
+    '- commit root-2 "wip" is not a conventional commit (type(scope): subject); reword it',
   ])
   assert.deepEqual(checked(host).map((event) => event.commits.map((commit) => `${commit.sha} ${commit.verdict} ${commit.replay?.exitCode}`)), [
     ['root-1 ok 1', 'root-2 not-conventional undefined'], ['root-1 ok 1', 'root-2 not-conventional undefined'],

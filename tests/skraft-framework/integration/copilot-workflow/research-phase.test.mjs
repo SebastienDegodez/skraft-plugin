@@ -120,12 +120,12 @@ test('a filled output and a done result close RESEARCH; a blocked architect then
   assert.equal(logs.at(-2), `Waiting for you — design is blocked: solution-architect says it cannot go on; its reason is in ${reason}.\nLeft by design (1):\n- needs a decision on the payment provider\n An instruction runs design again on a new pass with what is left above and the instruction; STOP ends the run.\nThe run so far (commits, refusals, incidents): ${join(trackingDir(cwd, 'checkout'), 'run-report.md')}`)
 })
 
-test('an absent output is dispatched again with its path listed missing; the same failure twice blocks the run', async (t) => {
+test('an absent output is dispatched again with its path listed missing; the same failure twice pauses the run on a question to the person', async (t) => {
   const { cwd, cleanup } = await workingCopy()
   t.after(cleanup)
   const { ctx, calls, logs } = simulatedContext({ args: { slug: 'checkout' }, behaviours: [writesNothing, writesNothing] })
 
-  const outcome = await runSkraftPipelineWorkflow(ctx, host(cwd))
+  const outcome = await settled(runSkraftPipelineWorkflow(ctx, host(cwd)))
 
   const path = await researchPath(cwd, 'checkout')
   assert.equal(calls.length, 2)
@@ -133,10 +133,10 @@ test('an absent output is dispatched again with its path listed missing; the sam
   assert.ok(!calls[0].prompt.includes('Missing outputs'))
   assert.ok(calls[1].prompt.includes(`Missing outputs from attempt 1 of 3:\n- ${path}`), calls[1].prompt)
   assert.ok(calls[1].prompt.includes(`Refused in attempt 1 of 3:\n- result is missing`), calls[1].prompt)
-  assert.equal(outcome.status, 'blocked')
-  assert.equal(outcome.code, 'missing-outputs')
-  assert.ok(outcome.reason.startsWith(`solution-researcher failed the same way on attempts 1 and 2: missing outputs: ${path}; result `), outcome.reason)
-  assert.equal(logs.at(-1), `checkout: blocked (missing-outputs): ${outcome.reason}`)
+  assert.deepEqual(outcome, { paused: 'research-1' })
+  const waiting = logs.find((line) => line.startsWith('Waiting for you — '))
+  assert.ok(waiting?.startsWith('Waiting for you — research is blocked: solution-researcher failed the same way on attempts 1 and 2.\nLeft by research ('), waiting)
+  assert.ok(waiting.includes(`\n- missing outputs: ${path}\n- result is missing\n`), waiting)
 })
 
 test('a journal edited by hand blocks the run as tampered and dispatches nothing', async (t) => {

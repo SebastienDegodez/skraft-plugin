@@ -136,9 +136,10 @@ critère qui en interdit un.
 | G2 | chaque ADR écrit par le run a sa ligne dans `docs/adr/decisions-index.md` |
 | G2 | un ADR de la branche de base ne change que ses lignes de statut et n'est jamais supprimé (`adr-lifecycle`) |
 
-Un manquement renvoie l'architecte avec une ligne par trace ; après sa dernière tentative, le
-run s'arrête avec `design-records`. La matrice de cohérence est aussi la sortie déclarée de DESIGN : quand
-elle manque, le run s'arrête avec `missing-outputs`.
+Un manquement renvoie l'architecte avec une ligne par trace ; après sa dernière tentative, ou
+deux tentatives de suite refusées de la même façon, le run pose la question `blocked`, et `STOP`
+le termine avec `design-records`. La matrice de cohérence est aussi la sortie déclarée de DESIGN :
+quand elle manque, `STOP` le termine avec `missing-outputs`.
 
 ## DISTILL <!-- #distill -->
 

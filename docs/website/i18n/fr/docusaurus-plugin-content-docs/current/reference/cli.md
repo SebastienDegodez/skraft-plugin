@@ -223,12 +223,14 @@ Les questions, leurs options et leurs refus :
 | `mutation-plan` | `<nœud>-<n>` (`mutation_plan-1`) | `APPLY`, une consigne, ou `STOP` (termine le run `blocked`, code `stopped`) | — |
 | `blocked` | `<nœud>-<n>`, le nœud qu'une consigne relance (`design-1`) | une consigne, ou `STOP` | — |
 
-Un blocage ne termine plus le run à lui seul. Quand un agent répond `blocked`, qu'une boucle
-atteint son `max_visits` (l'arête `FAIL` des gates comprise) ou qu'une lentille d'une revue
-répond `inconclusive`, le moteur pose la question `blocked` sur le nœud à relancer : l'agent
-lui-même, le nœud vers lequel revient l'arête plafonnée (l'ingénieur après les gates,
-l'architecte après une revue ou un ADR rejeté), ou la revue. Son texte porte ce que le moteur a vérifié, ce que l'étape bloquée a laissé
-(la raison de l'agent, les échecs des gates), le fichier qui garde les mots de l'agent et
+Un blocage ne termine plus le run à lui seul. Quand un agent répond `blocked`, qu'un agent est
+refusé de la même façon à deux tentatives de suite d'un passage ou à sa dernière tentative
+(`max_attempts`), qu'une boucle atteint son `max_visits` (l'arête `FAIL` des gates comprise) ou
+qu'une lentille d'une revue répond `inconclusive`, le moteur pose la question `blocked` sur le
+nœud à relancer : l'agent lui-même, le nœud vers lequel revient l'arête plafonnée (l'ingénieur
+après les gates, l'architecte après une revue ou un ADR rejeté), ou la revue. Son texte porte ce
+que le moteur a vérifié, ce que l'étape bloquée a laissé (la raison de l'agent, ses sorties
+absentes et ses refus, les échecs des gates), le fichier qui garde les mots de l'agent et
 l'emplacement du rapport du run :
 
 ```
@@ -236,6 +238,12 @@ design is blocked: solution-architect says it cannot go on; its reason is in <do
 Left by design (1):
 - which payment provider?
  An instruction runs design again on a new pass with what is left above and the instruction; STOP ends the run.
+The run so far (commits, refusals, incidents): <dossier de suivi>/run-report.md
+research is blocked: solution-researcher failed the same way on attempts 1 and 2.
+Left by research (2):
+- missing outputs: <dossier de suivi>/research/2026-10-11/checkout-research.md
+- result is missing
+ An instruction runs research again on a new pass with what is left above and the instruction; STOP ends the run.
 The run so far (commits, refusals, incidents): <dossier de suivi>/run-report.md
 design_review is blocked: a lens answered inconclusive; the verdict is in <dossier de suivi>/reviews/design_review-1/verdict.yaml. An instruction runs design_review again on a new pass with it; STOP ends the run.
 The run so far (commits, refusals, incidents): <dossier de suivi>/run-report.md
@@ -246,7 +254,10 @@ Left by gates (1):
 The run so far (commits, refusals, incidents): <dossier de suivi>/run-report.md
 ```
 
-L'agent relancé reçoit d'abord ce que le blocage a laissé, puis la consigne.
+L'agent relancé reçoit d'abord ce que le blocage a laissé, puis la consigne. Un agent refusé sur
+ses tentatives commence le nouveau passage à la tentative 1, avec tout son `max_attempts` ; son
+brief liste les sorties encore absentes (`Missing outputs from pass <n>:`), puis ses refus
+(`What pass <n> left when it was blocked:`), puis la consigne.
 
 Une revue dont la boucle vers son producteur atteint `max_visits` (2 pour chaque revue du workflow
 livré : 3 passages) ne renvoie plus le travail. Sa question dit que le producteur n'a pas corrigé
@@ -277,9 +288,9 @@ le même run sur le même slug, relance ce nœud sur un nouveau passage, la cons
 agent comme retour d'un humain (à chaque lentille que la revue interroge, pour une revue) ;
 aucune arête vers ce nœud ne compte plus comme empruntée, sa boucle retrouve donc tout son
 budget. Bloqué de nouveau, il redemande (`design-2`). `STOP` (quelle que soit la casse) termine
-le run `blocked`, avec le code et la raison du blocage, et rien d'autre. Un disjoncteur (un agent
-dont les deux dernières tentatives refusées ont échoué de la même façon), un plafond de
-tentatives, une arête manquante ou une boucle de mutation sans progrès
+le run `blocked`, avec le code et la raison du blocage, et rien d'autre : pour un agent refusé,
+le code de son dernier refus (`missing-outputs`, `research-records`…). Une arête manquante, une
+boucle de mutation sans progrès ou un nœud que le workflow n'a plus (`workflow-changed`)
 terminent toujours le run sans question.
 
 Une clé nomme le nœud qui pose la question, puis le rang de la question parmi celles que ce

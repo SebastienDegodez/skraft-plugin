@@ -229,9 +229,9 @@ const PROPOSAL_RULES = [
   '  change no file outside the tracking folder and make no commit. The developer chooses from your proposal; another step applies it.',
 ].join('\n')
 
-/** The outputs the previous attempt left empty. @param {Brief} brief */
-const missingLines = ({ missing, attempt, maxAttempts }) => (missing.length > 0
-  ? ['', `Missing outputs from attempt ${attempt - 1} of ${maxAttempts}:`, ...missing.map((path) => `- ${path}`)]
+/** The outputs the previous attempt left empty, or the pass a human reopened. @param {Brief} brief */
+const missingLines = ({ missing, attempt, maxAttempts, visit }) => (missing.length > 0
+  ? ['', `Missing outputs from ${attempt > 1 ? `attempt ${attempt - 1} of ${maxAttempts}` : `pass ${visit - 1}`}:`, ...missing.map((path) => `- ${path}`)]
   : [])
 
 /**

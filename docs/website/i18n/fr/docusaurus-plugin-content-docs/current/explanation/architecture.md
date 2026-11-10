@@ -132,8 +132,10 @@ chaque fait avant que la suite soit décidée.*
 
 Une sortie absente relance l'agent avec la liste de ce qui manque, dans la limite de ses
 tentatives. Un agent dont les deux dernières tentatives refusées ont échoué exactement de la même
-façon (les mêmes sorties absentes et les mêmes échecs, comparés tels qu'écrits) arrête le run plus
-tôt, parce qu'une troisième tentative identique n'apprendrait rien. Une étape de gates en échec
+façon (les mêmes sorties absentes et les mêmes échecs, comparés tels qu'écrits) n'est pas lancé une
+troisième fois, parce qu'une tentative identique n'apprendrait rien : le run demande une consigne à
+un humain, comme après la dernière tentative de l'agent, et la consigne relance l'agent sur un
+nouveau passage. Une étape de gates en échec
 renvoie le travail par son arête `FAIL` jusqu'au `max_visits` de cette arête ; le run demande
 alors une consigne à un humain. Les tentatives et les arêtes empruntées sont relues dans le
 journal, si bien qu'un run repris les garde. Une gate arrêtée par un signal ou un plantage échoue comme une

@@ -56,7 +56,7 @@ test('skraft publish says why it opens nothing: no forge, a run not done, no act
   await running.start()
   assert.deepEqual(await running.publish(), { ok: false, slug: SLUG, code: 'not-done', reason: `${SLUG} has not completed; skraft publish opens the pull request of a completed run` })
   assert.deepEqual(running.codeHost.calls, [])
-  const blocked = scripted({}, (it) => [agent({ fill: false })(it), agent({ fill: false })(it)])
+  const blocked = scripted({ answers: [{ answer: 'STOP' }] }, (it) => [agent({ fill: false })(it), agent({ fill: false })(it)])
   assert.equal((await blocked.start()).status, 'blocked')
   assert.equal((await blocked.publish()).code, 'not-done')
 

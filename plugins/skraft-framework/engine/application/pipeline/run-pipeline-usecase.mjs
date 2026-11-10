@@ -29,7 +29,7 @@ import { JournalConflict } from '../journal/run-journal.mjs'
 import { runReview } from '../review/review-runs.mjs'
 import { boundInputs } from './review-inputs.mjs'
 import { leave } from './run-routes.mjs'
-import { answerOrWait, askStep, blockQuestion, escalate, settleEnvironment } from './run-questions.mjs'
+import { answerOrWait, askStep, blockQuestion, escalate, refusalLines, settleEnvironment } from './run-questions.mjs'
 import { confirmConfiguration } from './configuration-question.mjs'
 import { cannotStart } from './initialised.mjs'
 import { publishStep } from './publish-step.mjs'
@@ -329,17 +329,11 @@ const blockedBy = (context, next) => {
 const refusedBy = (context, { cause, node, previous }, event) => {
   const agent = /** @type {{ agent: string }} */ (node).agent
   if (cause === 'agent-blocked') return { code: event.code, reason: `${agent} is blocked: ${event.failures[0]}` }
-  const details = refusalDetails(context, event)
+  const details = refusalLines(context, event).join('; ')
   return cause === 'breaker'
     ? { code: event.code, reason: `${agent} failed the same way on attempts ${/** @type {{ attempt: number }} */ (previous).attempt} and ${event.attempt}: ${details}` }
     : { code: event.code, reason: `${agent} still failed after ${event.attempt} attempts: ${details}` }
 }
-
-/** @param {Context} context @param {import('../../domain/journal/run-state.mjs').RunEvent} event */
-const refusalDetails = ({ deps, slug }, event) => [
-  ...(event.missing.length > 0 ? [`missing outputs: ${event.missing.map((/** @type {string} */ path) => deps.files.location(slug, path)).join(', ')}`] : []),
-  ...event.failures,
-].join('; ')
 
 /**
  * @typedef {{

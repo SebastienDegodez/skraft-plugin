@@ -99,7 +99,7 @@ Verdict : `review-verdict.mjs --phase discuss`, mêmes règles et même budget q
 | Écriture permise | le dossier de suivi seulement |
 | `docs/` couvre déjà la story | le document de recherche le dit et cite les fichiers de `docs/` avec `#file:` ; le moteur lit ces citations, donc un fichier qu'elles nomment doit exister |
 | Contrôle | sortie remplie : non vide, différente du gabarit, sans `{{…}}`. Traces RESEARCH après chaque tentative : le document cite un fichier de la copie de travail sous la forme `#file:<chemin depuis la racine du dépôt>[:début[-fin]]` (une source externe par son URL). Chaque citation `#file:` — barres obliques ou inverses, un chemin nommé une seule fois quel que soit le nombre de citations — nomme un fichier lisible de la copie de travail (un chemin absolu, un chemin à segment `..` ou situé dans `.copilot-tracking/` n’est jamais lu et échoue de la même façon), et ses lignes `début` et `fin` tiennent dans la longueur de ce fichier. Un chemin écrit depuis la racine d'un composant (`#file:src/…` pour le composant `web`) échoue avec son chemin depuis la racine du dépôt (`#file:web/src/…`), chaque composant du dépôt qui le contient nommé. Un texte sans `#file:` n'est pas une citation et n'est jamais contrôlé (`research-records`) |
-| Tentatives | 3 (défaut de `max_attempts`) ; ensuite `missing-outputs`, ou `research-records` quand le document est là et que ses citations échouent encore |
+| Tentatives | 3 (défaut de `max_attempts`), moins quand deux tentatives de suite sont refusées de la même façon ; ensuite la question `blocked` sur `research` : une consigne relance le chercheur sur un nouveau passage, `STOP` termine le run avec `missing-outputs`, ou `research-records` quand le document est là et que ses citations échouent encore |
 
 ## DESIGN <!-- #design -->
 
@@ -118,7 +118,7 @@ Verdict : `review-verdict.mjs --phase discuss`, mêmes règles et même budget q
 | Commits | aucun par l'architecte, qui n'a pas de shell : une fois `design` réussi, le moteur commite ce qu'il a changé dans ses chemins permis en `docs(<story>): design <story>`, terminé par `Refs: #<issue>` quand la story en a une, et le journalise en `committed` sur le `step.recorded` de l'étape |
 | Documentation existante | consigne à l'agent : un fichier de `docs/` est complété, pas réécrit. Quand `docs/` couvre déjà la story, la matrice de cohérence le dit et cite les fichiers de `docs/`, et la phase passe à la suite. Contrôle du moteur : la ligne `docs-relied-on:` de la matrice liste au moins un fichier de `docs/adr`, `docs/architecture`, `docs/domain/event-model` ou `docs/features`, ou un `.feature` là où son composant le garde, et chaque fichier listé existe dans la copie de travail |
 | Contrôles du moteur | traces DESIGN après chaque tentative : matrice de cohérence `consistency-gate: PASS` (G10), aucun ADR nommé `*-rejected.md`, `*-accepted.md`, `*-deprecated.md` ou `*-superseded.md` (G14), chaque `**Supersedes:**` avec sa ligne de registre (G2, G12), la ligne `docs-relied-on:` de la matrice (fichiers des dossiers durables de `docs/`, et les `.feature` là où leur composant les garde, qui existent) ; une ligne d'index pour chaque ADR écrit (`design-records`) ; ADR brouillons : `Proposed`, aucune version, aucun fichier de code, identifiant de critère d'acceptation, ticket ni autre ADR cité (seulement l'ADR qu'il remplace, sur sa ligne `Supersedes:`/`Amends:`), un `decision` d'une phrase, aucun historique de brouillon ; ADR de la base : seules leurs lignes de statut changent, `Accepted` seulement vers `Superseded by ADR-NNN` ou `Deprecated`, jamais supprimés ; un statut du jeu fermé (`adr-lifecycle`) |
-| Échec persistant | `missing-outputs` quand la matrice de cohérence manque après la dernière tentative, `design-records` sinon |
+| Échec persistant | après la dernière tentative, ou deux tentatives de suite refusées de la même façon, la question `blocked` sur `design` ; `STOP` termine le run avec `missing-outputs` quand la matrice de cohérence manque, `design-records` sinon |
 
 | Lentille | Gates |
 | --- | --- |
@@ -201,8 +201,9 @@ Walking skeleton exemption: none
 | toute autre exemption | `<plan>: walking skeleton exemption "<valeur>" must be none, library, refactoring, docs-only` |
 | `docs-only` : aucun commit de l'histoire ne change les chemins `src` d'un composant | `the story declares its walking skeleton exempt as docs only, and commit <sha> changes <fichier>, source of <composant>; remove the exemption and tag S1 @walking-skeleton` |
 
-Chaque échec renvoie l'agent du passage avec la ligne ; après sa dernière tentative, le run
-s'arrête avec `scenarios`. Pourquoi S1 est un walking skeleton :
+Chaque échec renvoie l'agent du passage avec la ligne ; après sa dernière tentative, ou deux
+tentatives de suite refusées de la même façon, le run pose la question `blocked`, et `STOP` le
+termine avec `scenarios`. Pourquoi S1 est un walking skeleton :
 [Walking Skeleton](../explanation/deep-dive/walking-skeleton.md).
 
 ## DELIVER <!-- #deliver -->
@@ -282,7 +283,7 @@ s'arrête avec `scenarios`. Pourquoi S1 est un walking skeleton :
 | `scenario-review` | nœud `scenario_review` | `APPROVED`, `REVISE` | `REVISE` | `Scenarios` |
 | `mutation-plan` | nœud `mutation_plan` | `APPLY`, une consigne, ou `STOP` | — | `Mutation` |
 | `environment` | le moteur, quand une étape ne peut pas tourner sur la machine ou avec ce que lui donne `skraft-config.json`, ou quand le juge du rejeu interroge un humain sur un commit rejoué ; son texte nomme la cause et le log ([causes](./run-journal.md#environment-question)) | `RETRY`, `ABORT` | — | `Environment` |
-| `blocked` | le moteur, quand un agent répond `blocked`, qu'une boucle atteint son `max_visits` ou qu'une lentille répond `inconclusive` | une consigne, ou `STOP` | — | `Blocked` |
+| `blocked` | le moteur, quand un agent répond `blocked`, qu'un agent est refusé de la même façon à deux tentatives de suite ou à sa dernière tentative, qu'une boucle atteint son `max_visits` ou qu'une lentille répond `inconclusive` | une consigne, ou `STOP` | — | `Blocked` |
 | `review-consent` | `skraft review --pr --publish` | `ACCEPTED`, `DECLINED` | — | `PR comment` |
 
 Aucun run ne demande de consentement de publication : `/skraft-init` les règle avant tout run,

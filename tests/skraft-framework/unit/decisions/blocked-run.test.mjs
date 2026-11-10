@@ -52,6 +52,27 @@ test('an instruction runs the blocked node again on a new pass of the same run, 
   assert.ok((await host.tracking.read(SLUG, 'run-report.md')).includes(`\n| research-1 | research | ${INSTRUCTION} | decide |\n`))
 })
 
+test('an agent refused the same way twice asks a human; an instruction runs it again on a new pass with every attempt, told its missing outputs, its refusals and the instruction', async () => {
+  const host = scripted({}, (it) => [agent({ fill: false, result: null })(it), agent({ fill: false, result: null })(it), agent()(it), unavailable])
+  const output = `${TRACKING}/research/2026-10-11/${SLUG}-research.md`
+  const text = `research is blocked: solution-researcher failed the same way on attempts 1 and 2.\nLeft by research (2):\n- missing outputs: ${output}\n- result is missing\n An instruction runs research again on a new pass with what is left above and the instruction; STOP ends the run.\nThe run so far (commits, refusals, incidents): ${TRACKING}/run-report.md`
+
+  const asked = await host.start()
+  await host.decide({ key: 'research-1', answer: INSTRUCTION })
+  const outcome = await host.run()
+
+  assert.deepEqual(asked, { status: 'waiting', slug: SLUG, phase: 'RESEARCH', code: 'blocked', reason: `${text} Answer with skraft decide research-1 "<instruction>"|STOP.` })
+  assert.deepEqual(host.human.questions.map(({ key, kind, text: told }) => [key, kind, told]), [['research-1', 'blocked', text]])
+  assert.deepEqual([outcome.phase, outcome.code], ['DESIGN', 'agent-unavailable'])
+  assert.deepEqual(dispatched(host).slice(0, 3), [`skraft ${SLUG} · research · attempt 1`, `skraft ${SLUG} · research · attempt 2`, `skraft ${SLUG} · research · pass 2 · attempt 1`])
+  assert.ok(host.agentRunner.dispatches[2].prompt.endsWith(`\n\nMissing outputs from pass 1:\n- ${output}\n\nWhat pass 1 left when it was blocked:\n- result is missing\n\nA human refused the work of pass 1:\n- ${INSTRUCTION}`), host.agentRunner.dispatches[2].prompt)
+  assert.deepEqual(eventsOf(host, 'step.started').filter((event) => event.step === 'research').map(({ visit, attempt, missing, feedback, instruction }) => [visit, attempt, missing, feedback, instruction]), [
+    [1, 1, [], [], undefined],
+    [1, 2, [`research/2026-10-11/${SLUG}-research.md`], ['result is missing'], undefined],
+    [2, 1, [`research/2026-10-11/${SLUG}-research.md`], ['result is missing'], INSTRUCTION],
+  ])
+})
+
 test('a loop that reached its max_visits asks a human; an instruction runs the node it loops back to again, its loop budget reset', async () => {
   const machine = new ScriptedMachine({ exits: { '. $ dotnet test': 1, '../web $ npx eslint .': 1 } })
   const passes = [1, 2, 3, 4, 5, 6].map((n) => (it) => agent({ work: (h) => {

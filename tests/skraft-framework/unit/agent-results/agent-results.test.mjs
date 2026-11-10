@@ -5,10 +5,16 @@ import { agent, scripted, SLUG, TRACKING } from '../support/pipeline-host.mjs'
 const unavailable = () => ({ ok: false, unavailable: true, text: '' })
 const recorded = (host) => host.events().filter((event) => event.type === 'step.recorded')
 
-test('two identical invalid results stop the run without a third attempt, null and a number alike', async () => {
-  const host = scripted({}, (it) => [agent({ result: '{ "status": "finished" }' })(it), agent({ result: '{ "status": "finished" }' })(it)])
+test('two identical invalid results ask a human without a third attempt, null and a number alike; STOP ends the run with them', async () => {
+  const host = scripted({ answers: [{ answer: 'STOP' }] }, (it) => [agent({ result: '{ "status": "finished" }' })(it), agent({ result: '{ "status": "finished" }' })(it)])
 
   const outcome = await host.start()
+
+  assert.deepEqual(host.human.questions.map(({ key, kind, text }) => [key, kind, text.split('\n').slice(0, 3)]), [['research-1', 'blocked', [
+    'research is blocked: solution-researcher failed the same way on attempts 1 and 2.',
+    'Left by research (1):',
+    `- result status must be "done" or "blocked"; summary must be a non-empty string`,
+  ]]])
 
   assert.deepEqual(outcome, {
     status: 'blocked', slug: SLUG, phase: 'RESEARCH', code: 'invalid-result',
@@ -26,16 +32,21 @@ test('two identical invalid results stop the run without a third attempt, null a
   ])
   assert.deepEqual(host.events().at(-1), { ...host.events().at(-1), type: 'run.finished', status: 'blocked', code: 'invalid-result', reason: outcome.reason })
 
-  const scalars = scripted({}, (it) => [agent({ result: 'null' })(it), agent({ result: '42' })(it)])
+  const scalars = scripted({ answers: [{ answer: 'STOP' }] }, (it) => [agent({ result: 'null' })(it), agent({ result: '42' })(it)])
   assert.equal((await scalars.start()).reason, `solution-researcher failed the same way on attempts 1 and 2: result must hold a JSON object`)
 })
 
-test('different invalid results get every attempt, then the run stops at the ceiling', async () => {
-  const host = scripted({}, (it) => [agent({ result: null })(it), agent({ result: 'not json' })(it), agent({ result: '[]' })(it)])
+test('different invalid results get every attempt, then a human is asked; STOP ends the run at the ceiling', async () => {
+  const host = scripted({ answers: [{ answer: 'STOP' }] }, (it) => [agent({ result: null })(it), agent({ result: 'not json' })(it), agent({ result: '[]' })(it)])
 
   const outcome = await host.start()
 
   assert.equal(host.agentRunner.dispatches.length, 3)
+  assert.deepEqual(host.human.questions.map(({ key, kind, text }) => [key, kind, text.split('\n').slice(0, 3)]), [['research-1', 'blocked', [
+    'research is blocked: solution-researcher still failed after 3 attempts.',
+    'Left by research (1):',
+    '- result must hold a JSON object',
+  ]]])
   assert.deepEqual(outcome, {
     status: 'blocked', slug: SLUG, phase: 'RESEARCH', code: 'invalid-result',
     reason: `solution-researcher still failed after 3 attempts: result must hold a JSON object`,
@@ -73,7 +84,7 @@ test('an agent that reports itself blocked gets no other attempt: a human who an
 })
 
 test('missing outputs and an invalid result are both told, missing outputs naming the refusal', async () => {
-  const host = scripted({}, (it) => [agent({ fill: false, result: null })(it), agent({ fill: false, result: null })(it)])
+  const host = scripted({ answers: [{ answer: 'STOP' }] }, (it) => [agent({ fill: false, result: null })(it), agent({ fill: false, result: null })(it)])
 
   const outcome = await host.start()
 

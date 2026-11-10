@@ -168,10 +168,12 @@ export const blockText = (block) => `${block.step} is blocked: ${BLOCKS[block.co
 const leftBy = ({ from, failures }) => (failures.length === 0 ? '' : `\nLeft by ${from} (${failures.length}):\n${failures.map((failure) => `- ${failure}`).join('\n')}\n`)
 
 /**
- * @typedef {{ step: string, code: string, from: string, agent: string | null, details: string | null, failures: readonly string[] }} Block
- *   step: the node an instruction runs again; code: what its step recorded; from: the node that
- *   recorded it; details: the file holding the agent's reason or the review's verdict;
- *   failures: what the step that blocked left, the findings of a review at its loop ceiling.
+ * @typedef {{ step: string, code: string, from: string, agent: string | null, details: string | null, failures: readonly string[], attempt: number }} Block
+ *   step: the node an instruction runs again; code: what its step recorded, or `breaker` for an
+ *   agent refused the same way on two attempts in a row, `ceiling` for one refused on its last
+ *   attempt; from: the node that recorded it; details: the file holding the agent's reason or
+ *   the review's verdict; failures: what the step that blocked left, the findings of a review at
+ *   its loop ceiling, an agent's missing outputs and refusals; attempt: the attempt that blocked.
  */
 
 /** Why a block stops the run, by the code its step recorded. @type {Readonly<Record<string, (block: Block) => string>>} */
@@ -179,6 +181,8 @@ const BLOCKS = Object.freeze({
   'agent-blocked': ({ agent, details }) => `${agent} says it cannot go on; its reason is in ${details}`,
   'loop-ceiling': ({ from, step }) => `${from} -> ${step} was taken as often as its max_visits allows`,
   'lens-inconclusive': ({ details }) => `a lens answered inconclusive; the verdict is in ${details}`,
+  breaker: ({ agent, attempt }) => `${agent} failed the same way on attempts ${attempt - 1} and ${attempt}`,
+  ceiling: ({ agent, attempt }) => `${agent} still failed after ${attempt} attempts`,
 })
 
 /**
