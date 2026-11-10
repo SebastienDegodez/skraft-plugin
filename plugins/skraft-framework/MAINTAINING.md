@@ -100,6 +100,41 @@ Generated catalogue, evaluation, dashboard, and graph outputs must not be commit
 
 ## Client compatibility
 
+### Tool declaration checks
+
+Run the declaration checks from the repository root:
+
+```bash
+node --test tests/skraft-framework/plugin-packaging/agent-tools.unit.test.mjs
+```
+
+The checks cover both plugins and three target profiles: VS Code Local,
+Copilot SDK and Claude Code. Local and Copilot use the Copilot descriptors;
+Claude uses its native descriptors. Block lists and inline lists must preserve
+the same tool boundary. Missing declarations, duplicate entries, wrong value
+types, unknown references and unresolved restricted Claude agent IDs fail.
+
+The supported references are a bounded SKRAFT contract, not every tool a host
+could provide. VS Code references are checked against upstream revision
+`d9cccddf6b34357c58b5bbfb60ea03d4c4d1df65` and the
+[custom agent reference](https://code.visualstudio.com/docs/agents/reference/custom-agent-file-reference#tools).
+Claude names follow the [tools reference](https://code.claude.com/docs/en/tools-reference)
+and [subagent format](https://code.claude.com/docs/en/sub-agents#frontmatter-reference).
+Verify new references against those sources before extending the supported set.
+
+MCP namespaces are reported as external dependencies, not verified installed
+tools. The versioned Claude contract reports `TaskOutput` as historical:
+Claude Code removed it in 2.1.277; newer hosts use `Read` on the background
+output file. Passing declaration tests does not establish support on those
+newer hosts. Existing descriptors are not migrated by this check.
+
+These are offline contract tests using SKRAFT's YAML reader, not executions of
+the three harness parsers. They neither reproduce the Configure Tools UI nor
+prove that a running agent receives its declared tools. Repeat the fresh-session
+probe below separately for Local, Copilot SDK and the supported Claude version;
+record failures and version limits rather than treating static success as a
+live compatibility result.
+
 ### Native capabilities and read-only review
 
 Research and architecture authors declare native file editing and execution:
