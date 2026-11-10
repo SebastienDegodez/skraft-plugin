@@ -72,11 +72,11 @@ export function initProject(name, { cwd = process.cwd(), log = (line) => process
 	]) dotnet(['add', from, 'reference', to], cwd)
 
 	log('\n📦 Adding NuGet packages...')
-	for (const [target, pkg] of [
+	for (const [target, pkg, version] of [
 		[project('Infrastructure'), 'Microsoft.Extensions.DependencyInjection.Abstractions'],
-		[tests('IntegrationTests'), 'Microsoft.AspNetCore.Mvc.Testing'],
+		[tests('IntegrationTests'), 'Microsoft.AspNetCore.Mvc.Testing', '10.0.1'],
 		[tests('IntegrationTests'), 'NetArchTest.Rules'],
-	]) dotnet(['add', target, 'package', pkg], cwd)
+	]) dotnet(['add', target, 'package', pkg, ...(version ? ['--version', version] : [])], cwd)
 
 	log('\n📂 Creating directory structure...')
 	for (const dir of ['src/{p}.Domain/Shared', 'src/{p}.Application/Shared', 'src/{p}.Infrastructure/Shared',
