@@ -115,8 +115,10 @@ test('commitFiles says Git refused the commit by its exit code, and gives what G
 
   const outcome = await sourceControl.commitFiles('.', ['docs/adr/adr-001-payment.md'], 'docs(adr): ratify ADR-001')
 
-  // The hook's stderr stays out of the reason, which reaches the journal and the next prompts; the engine writes it to a log.
-  assert.deepEqual(outcome, { ok: false, error: 'git commit failed: exit 1', output: 'no commits today\n' })
+  // The hook's stderr stays out of the reason, which reaches the journal and the next prompts; the engine writes it to a log,
+  // after what Git itself warned (on Windows, the LF it will turn into CRLF).
+  assert.deepEqual([outcome.ok, outcome.error], [false, 'git commit failed: exit 1'])
+  assert.ok(outcome.output.endsWith('no commits today\n'), outcome.output)
 })
 
 test('existsAt reads a path relative to a working copy that is a folder of its repository', async (t) => {

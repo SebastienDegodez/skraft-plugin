@@ -183,7 +183,7 @@ test('a test commit whose tests pass is refused as not red', async (t) => {
   const { outcome, spawns, events } = await runOn(cwd, { acts: { 'acceptance-designer': [green, blocked('cannot make it fail')] } })
 
   const sha = git(cwd, 'rev-parse', '--short=7', 'HEAD')
-  const refusal = `commit ${sha} "test(${SLUG}): pay by card" is not red: the tests of app pass at it; the replay's output is in ${join(realpathSync(cwd), '.copilot-tracking', 'skraft-plans', SLUG, 'logs', `replay-${sha}-app-test.log`)}; a test commit must fail on an assertion before the code that makes it pass`
+  const refusal = `commit ${sha} "test(${SLUG}): pay by card" is not red: the tests of app pass at it; the replay's output is in ${[realpathSync(cwd), '.copilot-tracking', 'skraft-plans', SLUG, 'logs', `replay-${sha}-app-test.log`].join('/')}; a test commit must fail on an assertion before the code that makes it pass`
   assert.deepEqual(recorded(events, 'distill').map(({ code, failures }) => [code, failures]), [['tdd', [refusal]], ['agent-blocked', ['cannot make it fail']]])
   const retried = spawns.find((spawn) => spawn.description === `skraft ${SLUG} · distill · attempt 2`)
   assert.ok(retried.prompt.includes(`Refused in attempt 1 of 3:\n- ${refusal}`), retried.prompt)

@@ -52,8 +52,11 @@ export const NOMINAL_AGENTS = Object.freeze(['solution-researcher', 'solution-ar
 /** The journal's events. @param {string} cwd */
 export const eventsOf = (cwd) => journal(cwd, SLUG)
 
-/** The absolute path of a file of the run's folder. @param {string} cwd @param {string} path `/`-separated */
-export const runFile = (cwd, path) => join(cwd, '.copilot-tracking', 'skraft-plans', SLUG, ...path.split('/'))
+/**
+ * The absolute path of a file of the run's folder, as the Claude Code mod names it: `/` after the
+ * working copy, which Windows takes too. @param {string} cwd @param {string} path `/`-separated
+ */
+export const runFile = (cwd, path) => [cwd, '.copilot-tracking', 'skraft-plans', SLUG, path].join('/')
 
 /** The journal as written, every line of it. @param {string} cwd */
 export const journalText = (cwd) => readFileSync(runFile(cwd, 'events.jsonl'), 'utf8')

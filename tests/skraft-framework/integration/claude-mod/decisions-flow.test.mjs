@@ -125,7 +125,7 @@ test('a blocked architect is asked in a dialog; the instruction typed under Othe
     ['Send this instruction to design? Use the', ['SEND', 'CANCEL']],
   ])
   assert.match(mod.asked[0].question, /^design is blocked: solution-architect says it cannot go on; its reason is in .*design-1-1\.json\.\nLeft by design \(1\):\n- .+\n An instruction runs design again on a new pass with what is left above and the instruction; STOP ends the run\.\nThe run so far \(commits, refusals, incidents\): .+$/)
-  assert.equal(mod.asked[0].question.split('\n').at(-1), `The run so far (commits, refusals, incidents): ${join(cwd, '.copilot-tracking', 'skraft-plans', SLUG, 'run-report.md')}`)
+  assert.equal(mod.asked[0].question.split('\n').at(-1), `The run so far (commits, refusals, incidents): ${[cwd, '.copilot-tracking', 'skraft-plans', SLUG, 'run-report.md'].join('/')}`)
   assert.ok(spawnOf(mod, 'design · pass 2 · attempt 1').prompt.includes('\nA human refused the work of pass 1:\n- Use the bank gateway'))
   assert.deepEqual(journal(cwd, SLUG).filter((event) => event.type === 'question.answered').map(({ key, answer, by }) => [key, answer, by]), [['design-1', 'Use the bank gateway', 'host'], ['adr-1', 'RATIFIED', 'host'], ['scenario_review-1', 'APPROVED', 'host']])
 })
