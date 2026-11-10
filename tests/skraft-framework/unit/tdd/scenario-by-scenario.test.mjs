@@ -44,6 +44,7 @@ test('a story of three scenarios is delivered one scenario at a time: the red of
     [['test(checkout): scenario 3', 'red', 'ok', 'accept']],
     [['feat(checkout): scenario 3', 'green', 'ok', 'accept']],
   ])
+  assert.ok(promptOf(host, `skraft ${SLUG} · deliver · pass 2 · scenario 2 of 3 · attempt 1`).includes('\n- Pass: 2\n- Attempt: 1 of '), 'a next scenario is no pass anything sent back')
   assert.deepEqual(recorded(host, 'distill_review').length, 1)
   assert.deepEqual(host.events().filter((event) => event.type === 'phase.closed').map(({ phase }) => phase), ['RESEARCH', 'DESIGN', 'DISTILL', 'DELIVER', 'PUBLISH'])
   const loop = host.events()

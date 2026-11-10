@@ -175,6 +175,8 @@ test('the core needs every mutant detected and the boundary 80 %, also from a ru
     ['pass', [], []],
   ])
   assert.deepEqual(host.events().filter((event) => event.type === 'gate.ran' && event.gate === 'mutation').map(({ status, survivors }) => [status, survivors]), [['fail', 1], ['fail', 5], ['pass', null]])
+  const secondKill = host.agentRunner.dispatches.find(({ label }) => label === `skraft ${SLUG} · kill_mutants · pass 2 · attempt 1`)
+  assert.ok(secondKill.prompt.includes('\n- Pass: 2, after a human chose how to go on\n'), secondKill.prompt)
 })
 
 test('with no change Git can list since the base, every file of the report is judged', async () => {

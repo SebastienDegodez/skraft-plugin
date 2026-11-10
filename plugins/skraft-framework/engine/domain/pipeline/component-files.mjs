@@ -7,7 +7,8 @@ import { joinRelative, pathUnder } from '../config/relative-path.mjs'
  * @typedef {{ name: string, root: string, paths: { src: readonly string[], tests: readonly string[] } }} CodeComponent
  */
 
-const TRACKING = '.copilot-tracking'
+/** The folder of the runs' own bookkeeping, which is no component's. */
+export const TRACKING = '.copilot-tracking'
 
 /**
  * The component a file belongs to: the deepest root holding it, and among components sharing that

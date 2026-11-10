@@ -175,7 +175,7 @@ test('the pr-writer is told where to write its prose and what to read; a summary
     '- Fill each output in place; keep the path, create no other copy:',
     `- ${TRACKING}/details/2026-10-11/pull-request-prose-${SLUG}.md`,
     `- Write your result as JSON to ${TRACKING}/results/pr_writer-1-1.json: {"status": "done" | "blocked", "summary": "<what you did, or why you cannot go on>"}`,
-    `- Send what the commands you run print to files under ${TRACKING}/logs/, and keep your temporary files under ${TRACKING}/.tmp/; write nothing under /tmp nor outside the working copy.`,
+    `- Send what the commands you run print to files under ${TRACKING}/logs/, and keep your temporary files under ${TRACKING}/.tmp/; write no file outside the working copy, the system's temporary folder included.`,
     '- Change nothing outside these paths of the working copy; the engine refuses the step otherwise:',
     `- .copilot-tracking/skraft-plans/${SLUG}`,
   ].join('\n'))

@@ -62,7 +62,7 @@ test('an agent of the agent loop that says it is blocked waits on the person; th
   assert.deepEqual(answers(cwd), [['design-1', 'Use the bank gateway', 'cli-tty']])
   assert.equal(step.status, 'dispatch')
   const brief = readFileSync(step.dispatches[0].brief, 'utf8')
-  assert.ok(brief.includes('- Pass: 2, after a human refused the work'), brief)
+  assert.ok(brief.includes('- Pass: 2, after a human sent the work back'), brief)
   assert.ok(brief.includes('\nA human refused the work of pass 1:\n- Use the bank gateway\n'), brief)
 })
 
@@ -129,4 +129,12 @@ test('a terminal its host marks as an AI agent\'s shell takes no answer: an agen
   assert.deepEqual(await typedIn({ PATH: '/usr/bin', AI_AGENT: '' }), [true, 'record? '])
   assert.deepEqual(await typedIn({ PATH: '/usr/bin' }), [true, 'record? '])
   assert.deepEqual(await typedIn({ PATH: '/usr/bin' }, false), [null, ''])
+})
+
+test('a terminal closed before the person answers (Ctrl-D) is a no, never a crash', async () => {
+  const input = Object.assign(new PassThrough(), { isTTY: true })
+  const confirmed = terminalConfirm({ input, output: new PassThrough(), env: {} })('record? ')
+  input.end()
+
+  assert.equal(await confirmed, false)
 })

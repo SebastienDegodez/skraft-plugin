@@ -29,6 +29,12 @@ test('each test commit is replayed with its component\'s test command, and confi
   assert.equal(outcome.status, 'done')
   assert.deepEqual(host.replay.lines(), ['root-1 ./. $ dotnet test', 'root-0 ./. $ dotnet test', 'root-4 ./. $ dotnet test', 'root-3 ./. $ dotnet test'])
   assert.equal(host.agentRunner.judged[0].prompt.split('\n')[0], 'Judge the red commit root-1 "test(checkout): Checkout pays by card".', 'a pass that works on no scenario names none')
+  const deliver = host.agentRunner.dispatches.find(({ label }) => label.includes(' · deliver · '))
+  assert.ok(deliver.prompt.includes([
+    '  lint and format fixes in a `style` commit. The engine refuses a feat or fix commit with no test commit since the last feat or fix',
+    '  (on a pass the gates sent back, their failure counts as that test),',
+    '  and any commit that is not `type(scope): subject`.',
+  ].join('\n')), deliver.prompt)
   assert.deepEqual(checked(host).map((event) => [event.step, event.visit, event.attempt, event.commits.map(({ repository, sha, subject, kind, verdict, replay }) => [repository, sha, subject, kind, verdict, replayOf(replay)])]), [[
     'distill', 1, 1, [
       ['.', 'root-1', 'test(checkout): Checkout pays by card', 'red', 'ok', ['api', 'test', 1, logOf('root-1', 'api'), 'accept']],

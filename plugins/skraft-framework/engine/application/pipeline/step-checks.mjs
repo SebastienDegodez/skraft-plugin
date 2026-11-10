@@ -3,6 +3,7 @@ import { CONFIG_FILE } from '../../domain/config/skraft-config.mjs'
 import { joinRelative, pathUnder } from '../../domain/config/relative-path.mjs'
 import { readResult } from '../../domain/pipeline/agent-result.mjs'
 import { breaksConvention, commitFailure, issueOf, judgeCommits } from '../../domain/pipeline/commits.mjs'
+import { TRACKING } from '../../domain/pipeline/component-files.mjs'
 import { isFilled } from '../../domain/pipeline/outputs.mjs'
 import { proseProblems, readProse } from '../../domain/reporting/pull-request-prose.mjs'
 import { allowedPaths, makesCommits, rootFiles, trackingFolder } from '../../domain/pipeline/roles.mjs'
@@ -118,11 +119,19 @@ export const checkStep = async (context, step) => {
  * @param {CheckContext} context @param {Parameters<typeof checkCommits>[2]} step
  */
 const judgedCommits = async (context, step) => {
-  const before = await headsOf(context.deps, context.base)
+  const before = await workingCopyOf(context)
   const commits = await checkCommits(context.deps, context, step)
-  if (JSON.stringify(await headsOf(context.deps, context.base)) === JSON.stringify(before)) return commits
+  if (await workingCopyOf(context) === before) return commits
   return { environment: JUDGE_MOVED, checked: commits.checked, incident: /** @type {const} */ ({ owner: 'judge', log: null }) }
 }
+
+/**
+ * Each repository's HEAD and changed files, the tracking folder left out: the engine writes there
+ * while it checks (replay logs, the judge's answers, the journal).
+ * @param {CheckContext} context
+ */
+const workingCopyOf = async ({ deps, base }) => JSON.stringify((await headsOf(deps, base))
+  .map(({ repository, sha, dirty }) => ({ repository, sha, dirty: dirty.filter(({ path }) => pathUnder(path, TRACKING) === null) })))
 
 /** Why a step stops when the working copy changed while its commits were checked. */
 const JUDGE_MOVED = 'the replay judge changed the working copy (a commit or a file) while it judged; undo that change, then retry'

@@ -19,8 +19,18 @@ export const terminalConfirm = ({ input, output, env = {} }) => async (question)
   if (input.isTTY !== true || AGENT_SHELL.some((name) => (env[name] ?? '') !== '')) return null
   const reading = createInterface({ input, output })
   try {
-    return /^y(es)?$/i.test((await reading.question(question)).trim())
+    return /^y(es)?$/i.test((await answerOf(reading, question)).trim())
   } finally {
     reading.close()
   }
 }
+
+/**
+ * The line the person types; nothing, a no, when the terminal closes first (Ctrl-D).
+ * @param {import('node:readline/promises').Interface} reading @param {string} question
+ * @returns {Promise<string>}
+ */
+const answerOf = (reading, question) => new Promise((resolve) => {
+  reading.once('close', () => resolve(''))
+  reading.question(question).then(resolve, () => resolve(''))
+})

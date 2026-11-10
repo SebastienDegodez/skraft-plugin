@@ -205,6 +205,18 @@ test('a green whose replay a person interrupts stops the run before the judge is
   assert.deepEqual(judged(host).map(({ label }) => label.split(' · ')[2]), ['judge red root-1 of attempt 1'])
 })
 
+test('what the engine writes in the tracking folder while the judge works is no change of the judge\'s', async () => {
+  const host = scripted({}, (it) => [...research(it), agent()(it), unavailable])
+  host.agentRunner.judge = () => {
+    host.git.change('.copilot-tracking/skraft-plans/checkout/logs/replay-root-1-api-test.log')
+    return judgeAnswer('accept')
+  }
+
+  await host.start()
+
+  assert.deepEqual(recorded(host, 'distill').map(({ outcome }) => outcome), ['done'])
+})
+
 test('a judge that changes the working copy while it judges stops the step for a human, whatever it answers', async () => {
   for (const change of [(git) => git.change('src/Injected.cs'), (git) => git.commit('chore(checkout): sneak', ['src/Injected.cs'])]) {
     const host = scripted({}, (it) => [...research(it), agent()(it), unavailable])

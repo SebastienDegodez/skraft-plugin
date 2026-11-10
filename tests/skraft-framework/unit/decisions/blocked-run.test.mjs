@@ -39,7 +39,7 @@ test('an instruction runs the blocked node again on a new pass of the same run, 
   assert.deepEqual([outcome.status, outcome.phase, outcome.code], ['blocked', 'DESIGN', 'agent-unavailable'])
   assert.deepEqual(dispatched(host), [`skraft ${SLUG} · research · attempt 1`, `skraft ${SLUG} · research · pass 2 · attempt 1`, `skraft ${SLUG} · design · attempt 1`])
   const brief = host.agentRunner.dispatches[1].prompt
-  assert.ok(brief.includes('- Pass: 2, after a human refused the work'), brief)
+  assert.ok(brief.includes('- Pass: 2, after a human sent the work back'), brief)
   // #500: the agent gets what the block left, not the instruction alone.
   assert.ok(brief.endsWith(`\n\nWhat pass 1 left when it was blocked:\n- ${NO_PROVIDER}\n\nA human refused the work of pass 1:\n- ${INSTRUCTION}`), brief)
   assert.deepEqual(eventsOf(host, 'step.started').filter((event) => event.step === 'research').map(({ visit, attempt, feedback, instruction, sentBy }) => [visit, attempt, feedback, instruction, sentBy]), [

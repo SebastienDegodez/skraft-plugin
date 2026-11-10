@@ -47,7 +47,7 @@ test('a repository agent between DESIGN and DISTILL is launched in its place, as
     `- ${TRACKING}/security/2026-10-11/${SLUG}-review.md`,
     `- ${TRACKING}/notes.md`,
     `- Write your result as JSON to ${TRACKING}/results/security-1-1.json: {"status": "done" | "blocked", "summary": "<what you did, or why you cannot go on>"}`,
-    `- Send what the commands you run print to files under ${TRACKING}/logs/, and keep your temporary files under ${TRACKING}/.tmp/; write nothing under /tmp nor outside the working copy.`,
+    `- Send what the commands you run print to files under ${TRACKING}/logs/, and keep your temporary files under ${TRACKING}/.tmp/; write no file outside the working copy, the system's temporary folder included.`,
     '- Change nothing outside these paths of the working copy; the engine refuses the step otherwise:',
     `- .copilot-tracking/skraft-plans/${SLUG}`,
     '- docs/security',
