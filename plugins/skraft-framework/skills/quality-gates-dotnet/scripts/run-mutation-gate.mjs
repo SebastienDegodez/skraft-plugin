@@ -95,6 +95,16 @@ function untestedChanges(parsed, root, changedInScope) {
 	})
 }
 
+// Stryker.NET 4.14.1 reads --since through its own git library, which in a linked `git worktree`
+// diffs the main working copy, not the worktree: every mutant of the worktree's changed sources came
+// out "Removed by since filter". The gate lists the changed sources itself with git, so it hands
+// Stryker those files; with none, --since leaves nothing to mutate wherever it diffs.
+function scopeArguments(since, changedInScope) {
+	if (!since) return []
+	if (changedInScope.length === 0) return [`--since:${since}`]
+	return changedInScope.flatMap((file) => ['--mutate', `**/${file}`])
+}
+
 // The score is recomputed from the tested mutants: Stryker exits 0 when it could not
 // compute one, e.g. when no test ran and every mutant stayed Pending. judged: the report is
 // sound, so its score alone decides.
@@ -193,8 +203,7 @@ export function runMutationGate(argv, { expected, scope, core = false, prefix, c
 		const manifest = join(evidence, `${prefix}.json`)
 		mkdirSync(evidence, { recursive: true })
 		writeFileSync(stdout, '')
-		const args = ['stryker', '--config-file', effective, '--output', runDir]
-		if (since) args.push(`--since:${since}`)
+		const args = ['stryker', '--config-file', effective, '--output', runDir, ...scopeArguments(since, changedInScope)]
 		const strykerStatus = dotnet(args, { cwd: root, output: stdout }).status
 		let status = strykerStatus
 

@@ -52,7 +52,9 @@ if (args[1] === 'init') {
 
 const config = option('--config-file')
 const output = option('--output')
-appendFileSync(process.env.FAKE_DOTNET_LOG, `${process.cwd()}\t${config}\t${output}\n`)
+// The fourth field is how the run is scoped: each --since and --mutate argument, in order.
+const scope = args.flatMap((arg, index) => (arg.startsWith('--since') ? [arg] : arg === '--mutate' ? [`--mutate ${args[index + 1]}`] : []))
+appendFileSync(process.env.FAKE_DOTNET_LOG, `${process.cwd()}\t${config}\t${output}\t${scope.join(' ')}\n`)
 const text = readFileSync(config, 'utf8')
 // Like Stryker.NET 4.14: an empty project or module name aborts the run.
 if (/"(project|module)": *""/.test(text)) { process.stderr.write('Project file cannot be empty.\n'); process.exit(1) }
