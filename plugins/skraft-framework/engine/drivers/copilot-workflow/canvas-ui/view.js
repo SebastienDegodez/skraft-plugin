@@ -291,11 +291,44 @@ const renderTypeRules = (draft, choices, lang) => `<div class="fields">
     ${choices.types.map((type) => `<label class="field"><span>${esc(type)}</span><select data-field="assign.types.${esc(type)}"><option value="">${esc(ui(lang, 'teamRule'))}</option>${options(choices.families, ruleFamily(draft.assign.types?.[type]))}</select></label>`).join('')}
   </div>`
 
+/** A models field of the draft: `models.<family>.<host>.model`. */
+export const isModelsField = (path) => path.startsWith('models.') && path.endsWith('.model')
+
+/**
+ * What a models field gives the draft: its names, in order; nothing when it is empty, which leaves the
+ * choice to the host; else the text as typed, which the page flags and never sends.
+ * @param {string} text @param {string} rule the pattern a model name follows, as the engine states it
+ */
+export const modelNames = (text, rule) => {
+  if (text.trim() === '') return undefined
+  const name = new RegExp(rule)
+  const names = text.split(',').map((each) => each.trim())
+  return names.every((each) => name.test(each)) ? names : text
+}
+
+/** The models fields of the draft that still hold text, not names: the person has not corrected them. */
+export const invalidModels = (draft) => Object.entries(draft.models).flatMap(([family, hosts]) => Object.entries(hosts).filter(([, setting]) => typeof setting.model === 'string').map(([host]) => `models.${family}.${host}.model`))
+
+export const modelsErrorId = (path) => `error-${path}`
+
+/** The rule a flagged models field breaks, right under the field. */
+export const modelsError = (path, lang) => `<span class="error field-error" id="${esc(modelsErrorId(path))}">${esc(ui(lang, 'modelsRule'))}</span>`
+
+/** What a models field holds: the names it lists, else the text typed that the page flags. */
+const modelsText = (model) => (Array.isArray(model) ? model.join(', ') : model ?? '')
+
+/** The models field of a family on a host; while it holds text the engine would refuse, it is flagged and the rule is under it. */
+const renderModelsField = (family, host, model, lang) => {
+  const path = `models.${family}.${host}.model`
+  const flagged = typeof model === 'string'
+  return `<input type="text" spellcheck="false" data-field="${esc(path)}" value="${esc(modelsText(model))}" placeholder="${esc(ui(lang, 'teamRule'))}" aria-label="${esc(`${family} · ${host} · ${ui(lang, 'model')}`)}"${flagged ? ` aria-invalid="true" aria-describedby="${esc(modelsErrorId(path))}"` : ''}>${flagged ? modelsError(path, lang) : ''}`
+}
+
 /** Each family's models and effort on each host, as the person's own layer sets them. */
 const renderFamilies = (draft, choices, lang) => `<table class="grid families"><thead><tr><th>${esc(ui(lang, 'family'))}</th>${choices.hosts.map((host) => `<th>${esc(host)} — ${esc(ui(lang, 'model'))}</th><th>${esc(ui(lang, 'effort'))}</th>`).join('')}</tr></thead>
     <tbody>${choices.families.filter((family) => family !== 'inherit').map((family) => `<tr><td><code>${esc(family)}</code></td>${choices.hosts.map((host) => {
     const setting = draft.models[family]?.[host] ?? {}
-    return `<td><input type="text" spellcheck="false" data-field="models.${esc(family)}.${esc(host)}.model" value="${esc((setting.model ?? []).join(', '))}" placeholder="—"></td><td><select data-field="models.${esc(family)}.${esc(host)}.effort"><option value="">—</option>${options(choices.efforts, setting.effort ?? '')}</select></td>`
+    return `<td>${renderModelsField(family, host, setting.model, lang)}</td><td><select data-field="models.${esc(family)}.${esc(host)}.effort"><option value="">—</option>${options(choices.efforts, setting.effort ?? '')}</select></td>`
   }).join('')}</tr>`).join('')}</tbody></table>`
 
 const renderModels = (configuration, draft, layout, lang) => {
@@ -304,7 +337,7 @@ const renderModels = (configuration, draft, layout, lang) => {
   return `<section class="section"><h2 class="section-head">${esc(ui(lang, 'models'))}</h2><p class="section-note">${esc(ui(lang, 'modelsNote', { file: configuration.files.local }))}</p>
     <div class="groups">${groups}</div>
     <h3 class="sub-head">${esc(ui(lang, 'byType'))}</h3>${renderTypeRules(draft, configuration.choices, lang)}
-    <h3 class="sub-head">${esc(ui(lang, 'families'))}</h3><div class="scroll">${renderFamilies(draft, configuration.choices, lang)}</div></section>`
+    <h3 class="sub-head">${esc(ui(lang, 'families'))}</h3><p class="section-note" id="models-help">${esc(ui(lang, 'modelsHelp'))}</p><div class="scroll">${renderFamilies(draft, configuration.choices, lang)}</div></section>`
 }
 
 const renderBar = (configuration, lang) => `<section class="section"><h2 class="section-head">${esc(ui(lang, 'bar'))}</h2><p class="section-note">${esc(ui(lang, 'barNote'))}</p>
@@ -350,14 +383,18 @@ export const renderConfiguration = (configuration, draft, lang, layout, stand) =
 
 /**
  * The save bar of the Configuration tab: what is saved, and once it is saved while the run waits on
- * its configuration question, that the run still waits for the answer in the chat.
+ * its configuration question, that the run still waits for the answer in the chat. While a models
+ * field holds a name the engine would refuse, it says to correct it and saves nothing.
  * @param {'none' | 'asked' | 'saved'} stand where the run stands on its configuration question
  */
-export const renderSaveBar = (state, lang, stand) => `<div class="bar-inner">
-    <p class="bar-state${state.dirty ? ' is-dirty' : ''}">${esc(ui(lang, state.dirty ? 'dirty' : 'clean'))}${state.stale ? `<span class="note">${esc(ui(lang, 'changedOnDisk'))}</span>` : ''}${stand === 'saved' ? `<span class="note note-saved">${esc(ui(lang, 'configSavedBar'))}</span>` : ''}${state.error ? `<span class="error" role="alert">${esc(state.error)}</span>` : ''}</p>
+export const renderSaveBar = (state, lang, stand) => {
+  const flagged = invalidModels(state.draft).length > 0
+  return `<div class="bar-inner">
+    <p class="bar-state${state.dirty ? ' is-dirty' : ''}">${esc(ui(lang, state.dirty ? 'dirty' : 'clean'))}${state.stale ? `<span class="note">${esc(ui(lang, 'changedOnDisk'))}</span>` : ''}${stand === 'saved' ? `<span class="note note-saved">${esc(ui(lang, 'configSavedBar'))}</span>` : ''}${flagged ? `<span class="error">${esc(ui(lang, 'modelsFix'))}</span>` : ''}${state.error ? `<span class="error" role="alert">${esc(state.error)}</span>` : ''}</p>
     <div class="bar-actions"><button type="button" class="ghost" data-action="discard"${state.dirty ? '' : ' disabled'}>${esc(ui(lang, 'discard'))}</button>
-    <button type="button" class="primary" data-action="save"${state.dirty && !state.saving ? '' : ' disabled'}>${esc(ui(lang, state.saving ? 'saving' : 'save'))}</button></div>
+    <button type="button" class="primary" data-action="save"${state.dirty && !state.saving && !flagged ? '' : ' disabled'}>${esc(ui(lang, state.saving ? 'saving' : 'save'))}</button></div>
   </div>`
+}
 
 // ── Workflow ─────────────────────────────────────────────────────────────
 

@@ -77,6 +77,20 @@ Une famille est un palier (`economy` < `standard` < `frontier` < `premium`), un 
 `tier` (`deep-review`). Ce qu'une famille ne précise pas vient de son palier, puis de l'hôte.
 Un nom de famille n'est jamais un modèle versionné (`gpt-5.5` est refusé comme famille).
 
+Un nom de modèle est un seul mot de lettres, de chiffres, de `.`, `_` et `-`, qui commence par une
+lettre ou un chiffre, sans espace ; une liste compte au moins un nom. Dans un fichier, une liste
+est un tableau, jamais une chaîne avec des virgules. Toute autre valeur est refusée : `skraft doctor`
+échoue et un run est refusé (`config-invalid`).
+
+L'onglet Configuration du canvas skraft modifie ces mêmes clés dans `skraft-config.local.json`.
+Sous *Familles : modèle et effort par hôte*, chaque hôte a une colonne *Modèles, essayés dans
+l’ordre* avec un champ texte par famille. Saisissez les noms séparés par des virgules, espaces
+permis autour d'une virgule (`model-a, model-b`) : l'hôte essaie le premier, puis le suivant s'il
+est indisponible. Un champ laissé vide n'écrit aucun `model` pour cette famille et cet hôte : les
+couches en dessous (votre fichier utilisateur, celui de l'équipe, les valeurs par défaut du plugin)
+s'appliquent, et l'hôte choisit là où aucune n'en nomme. Un nom que la règle refuse est signalé sur
+son champ, la règle affichée dessous ; Enregistrer reste fermé tant qu'il n'est pas corrigé.
+
 ## 4. Affecter une famille aux agents
 
 Sous `assign`, par agent, par type d'agent (`phase`, `lens`, `refuter`, `worker`) ou par
@@ -129,6 +143,7 @@ journalisé, quoi que disent les fichiers depuis.
 
 | Signe | Action |
 |---|---|
+| `FAIL  config: skraft-config.local.json is invalid: models.economy.copilot.model must be a model name or a non-empty list of model names, tried in order (a name is letters, digits, ".", "_" or "-", starting with a letter or a digit, with no space)` | Corriger le nom : sans espace ni virgule, une lettre ou un chiffre en tête. Plusieurs modèles forment un tableau JSON, pas une chaîne. |
 | `FAIL  models: assign.agents.fitnes-lens: no agent fitnes-lens in the plugin, .claude/agents/ or .github/agents/; did you mean fitness-lens?` | Corriger le nom de l'agent. |
 | `WARN  models/copilot: no model on copilot for … ; these run on the session's model` | Normal sans modèle Copilot ; sinon donner un `model` à ces familles pour `copilot`. |
 | `WARN  models/claude-code: CLAUDE_CODE_EFFORT_LEVEL is set …` | Retirer la variable : Claude Code l'applique à chaque agent, par-dessus le niveau choisi. |

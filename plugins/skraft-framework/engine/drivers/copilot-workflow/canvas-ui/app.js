@@ -7,7 +7,7 @@
 // opened, never in the page.
 import { languageOf, ui } from './i18n.js'
 import { createReconnect } from './reconnect.js'
-import { TABS, announcement, configurationStand, esc, renderArrows, renderConfiguration, renderHeader, renderJournal, reasonText, renderRun, renderSaveBar, renderWorkflows, shownWorkflow } from './view.js'
+import { TABS, announcement, configurationStand, esc, invalidModels, isModelsField, modelNames, modelsError, modelsErrorId, renderArrows, renderConfiguration, renderHeader, renderJournal, reasonText, renderRun, renderSaveBar, renderWorkflows, shownWorkflow } from './view.js'
 
 const params = new URLSearchParams(location.search)
 const token = params.get('t') ?? ''
@@ -45,13 +45,19 @@ const stand = () => configurationStand(content, view)
 
 const clone = (value) => JSON.parse(JSON.stringify(value ?? {}))
 
+/** The models of the person's own layer with each `model` a list: a file may write one plain name, which a field holds as a list of one. */
+const modelLists = (models) => {
+  for (const hosts of Object.values(models)) for (const setting of Object.values(hosts)) if (typeof setting.model === 'string') setting.model = [setting.model]
+  return models
+}
+
 /** What the person may change of the configuration, as the fields hold it. */
 const editable = (configuration) => ({
   forge: configuration.forge.named,
   components: clone(configuration.components),
   consents: Object.fromEntries(configuration.consents.map(({ key, value }) => [key, value])),
   assign: clone(configuration.models.assign),
-  models: clone(configuration.models.models),
+  models: modelLists(clone(configuration.models.models)),
 })
 
 const toast = (text, kind = 'info') => {
@@ -204,10 +210,7 @@ const valueOf = (el, path) => {
   if (path.endsWith('.bdd')) return bddValue(el, path)
   if (el.type === 'checkbox') return el.checked
   if (path.startsWith('components.')) return el.value
-  if (path.endsWith('.model')) {
-    const names = el.value.split(',').map((name) => name.trim()).filter((name) => name !== '')
-    return names.length === 0 ? undefined : names
-  }
+  if (isModelsField(path)) return modelNames(el.value, content.configuration.choices.modelName)
   return el.value === '' ? undefined : el.value
 }
 
@@ -216,6 +219,25 @@ const ruleValue = (path, value) => {
   const rule = path.split('.').reduce((node, key) => node?.[key], view.draft)
   if (rule === null || typeof rule !== 'object' || value === undefined) return value
   return { ...rule, family: value }
+}
+
+/**
+ * A models field that holds text the engine would refuse is flagged where it is, with the rule under it,
+ * and the flag goes when the text is names again. The field is not drawn again: the person goes on
+ * typing in it, caret, selection and undo history kept.
+ */
+const flagModels = (el, path, value) => {
+  const flagged = typeof value === 'string'
+  if (!isModelsField(path) || (el.getAttribute('aria-invalid') === 'true') === flagged) return
+  el.parentElement.querySelector('.field-error')?.remove()
+  if (!flagged) {
+    el.removeAttribute('aria-invalid')
+    el.removeAttribute('aria-describedby')
+    return
+  }
+  el.setAttribute('aria-invalid', 'true')
+  el.setAttribute('aria-describedby', modelsErrorId(path))
+  el.insertAdjacentHTML('afterend', modelsError(path, lang))
 }
 
 const edited = (el) => {
@@ -229,6 +251,7 @@ const edited = (el) => {
   view.error = null
   // an edit made after a save takes the save's words back, in the top bar, the notice and the bar; a field in use keeps its caret across the draw
   if (stand() !== before) return render()
+  flagModels(el, path, value)
   return patch($('bar'), renderSaveBar(view, lang, stand()))
 }
 
@@ -238,6 +261,8 @@ const discard = () => {
   view.error = null
   view.draft = editable(content.configuration)
   view.read = JSON.stringify(view.draft)
+  // the fields were edited where they stand: what was last drawn is no longer what they show, so the panel is drawn again whatever it holds
+  delete $('panel').dataset.html
   render()
 }
 
@@ -251,6 +276,7 @@ const editOf = (draft) => ({
 })
 
 const save = async () => {
+  if (invalidModels(view.draft).length > 0) return
   view.saving = true
   patch($('bar'), renderSaveBar(view, lang, stand()))
   try {

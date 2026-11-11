@@ -202,6 +202,9 @@ input[type='text']:hover, select:hover { border-color: var(--accent); }
 .bar-state { font-size: 0.875rem; color: var(--ink-soft); }
 .bar-state.is-dirty { color: var(--warn); font-weight: 700; }
 .error { display: block; margin-top: 0.15rem; color: var(--fail); font-weight: 400; overflow-wrap: anywhere; }
+/* under a field in a table cell: no width of its own, so that the rule never widens the column, only wraps in it */
+.field-error { width: 0; min-width: 100%; margin-top: 0.3rem; font-size: 0.75rem; line-height: 1.35; }
+input[type='text'][aria-invalid='true'] { border-color: var(--fail); }
 .bar-actions { display: flex; gap: 0.5rem; }
 .primary, .ghost { display: inline-flex; align-items: center; gap: 0.45rem; padding: 0.45rem 0.95rem; border-radius: 6px; font-weight: 700; font-size: 0.875rem; transition: background-color 160ms var(--ease-out), border-color 160ms var(--ease-out), opacity 160ms; }
 .primary { border: 1px solid var(--accent); background: var(--accent); color: var(--on-accent); }
@@ -337,6 +340,7 @@ kbd { padding: 0 0.35rem; border: 1px solid var(--rule-strong); border-radius: 4
   .swatch .seg-pending { stroke: CanvasText; }
   :focus-visible { outline-color: Highlight; }
   .needs-you { border: 2px solid ButtonText; }
+  input[type='text'][aria-invalid='true'] { border-width: 2px; }
 }
 
 @media (prefers-contrast: more) {
