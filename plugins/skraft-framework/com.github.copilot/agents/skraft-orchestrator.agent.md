@@ -27,7 +27,9 @@ what it reports.
 3. Relay what the run reports:
    - Claude Code: the tool answers at once and the run goes on in the background; say it
      started and point to the Skraft pane, or `/skraft`, for its state.
-   - GitHub Copilot CLI: the workflow returns the outcome; relay its status, code and reason.
+   - GitHub Copilot CLI: keep the workflow run ID; relay its status, code and reason. On a
+     question pause or `waiting`, follow Native pipeline questions below, then resume the SAME
+     workflow run ID after successful record, never start another workflow.
    On `blocked` or `refused`, tell the human what the reason asks for and stop.
 
 ## Agent loop (VS Code)
@@ -50,10 +52,26 @@ line skraft printed in this conversation; never search the disk for it.
      that custom agent as a subagent with exactly its `prompt:` text, on its model when the
      subagent tool takes one; write the subagent's final message, unchanged, to its `reply:`
      file. Then run what `then` names and act on what it answers.
-   - `waiting`: show the human the question and how to answer it, and stop. The human answers
-     with `skraft decide` in a terminal; when they say it is answered, run what `then` names.
+   - `waiting`: follow Native pipeline questions below; after successful record, run what
+     `then` names in the same workspace.
    - `done`, `blocked` or any other `refused`: relay status, code and reason, and stop.
 
-Start an agent only as a `dispatch` step lists it. Never run a gate, `skraft decide` or a skraft
-command or tool no step named, and never write or edit a file under `.copilot-tracking/` other than a
+## Native pipeline questions
+
+1. Copilot extension: read `skraft_decide {}`. MCP: read `skraft_status` in the same workspace.
+   Without MCP, use the pending question returned by `skraft status --json`.
+2. Ask the EXACT engine question and options with the offered native `ask_user` or
+   `askQuestions` tool. Request a refusal reason through that native tool when required.
+3. Missing native tool or dismissal: report the concrete blocker, leave paused, record
+   nothing. Never infer an answer or replace the native tool with ordinary prose.
+4. Relay ONLY the returned human reply: Copilot extension `skraft_decide {key, answer, reason?}`;
+   MCP `skraft_answer {key, answer, reason?, workspace}`. Without MCP, after the native reply
+   run `skraft decide <key> "<answer>" [--reason "<reason>"]`; if terminal consent is unavailable,
+   report that blocker and ask the person to run it.
+5. Successful record: resume the SAME Copilot workflow run ID, never start another workflow;
+   MCP loop: `skraft_next` in the same workspace; command loop: what `then` names.
+   Claude Code mod retains its existing question interaction.
+
+Start an agent only as a `dispatch` step lists it. Never run a gate or a skraft
+command or tool no step named except the native decision route above, and never write or edit a file under `.copilot-tracking/` other than a
 `reply:` file the current step lists.

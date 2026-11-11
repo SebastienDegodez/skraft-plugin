@@ -106,26 +106,35 @@ Enter to select · ↑/↓ to navigate · Esc to cancel
 </TabItem>
 <TabItem value="copilot-cli" label="GitHub Copilot CLI">
 
-1. Copilot pose la question une seule fois, dans le chat : choisissez une option, ou tapez votre
-   consigne.
+1. Le workflow écrit la question exacte en attente et se met en pause. Demandez à Copilot de la
+   présenter via l'outil natif proposé `ask_user` ou `askQuestions` : choisissez une option,
+   ou tapez votre consigne.
 2. Pour un refus (`REJECTED`, `REVISE`), tapez la raison dans le champ qui suit.
 
-Si la question n'a pas pu être posée (mode `autopilot`, pas de boîte de dialogue) ou que vous
-l'avez fermée, le workflow écrit `Waiting for you — <question>` et se met en pause. Au choix :
-
-- reprenez le workflow depuis `/workflows` : la question est reposée ;
-- demandez à Copilot, dans le chat, de vous poser la question skraft en attente : l'outil
-  `skraft_decide` vous la pose dans la boîte de dialogue, puis répond
-  `Recorded: … Resume the paused skraft-pipeline run (/workflows).` Reprenez alors le workflow.
+Copilot lit `skraft_decide {}` sans poser de question ni enregistrer, puis relaie uniquement
+votre réponse native avec `skraft_decide {key, answer, reason?}`. Aucune seconde confirmation.
+Après `Recorded: …`, Copilot reprend le MÊME ID de run du workflow ; si cet ID est absent,
+reprenez ce run en pause depuis `/workflows`, pas un nouveau workflow.
 
 `/skraft decide [<clé>] <réponse>` agit ici autrement que sous Claude Code : elle n'enregistre rien des mots
-tapés. Le dialogue de Copilot pose de nouveau la question et enregistre ce qu'il donne : répondez-y ;
-une fois enregistré, reprenez le run en pause depuis `/workflows`.
+tapés. L'outil natif de question fournit la réponse.
+Si l'outil est absent ou que vous fermez la question, Copilot signale ce blocage, laisse le run
+en pause et n'enregistre rien ; une réponse en prose ordinaire ne le remplace pas.
 
 Le canvas `skraft-pipeline` montre la question mais ne prend aucune réponse.
+Cette voie couvre uniquement les questions du pipeline ; la publication REVIEW demande
+toujours une confirmation explicite de l'hôte, pas une réponse relayée par le modèle.
 
 </TabItem>
 <TabItem value="vscode" label="VS Code ou terminal">
+
+Dans la boucle MCP de VS Code, l'orchestrateur lit `skraft_status`, pose la question exacte
+et ses options via l'outil natif proposé `ask_user` ou `askQuestions`, puis relaie votre réponse
+avec `skraft_answer {key, answer, reason?, workspace}`. Une raison de refus vient du même
+outil natif. Un enregistrement réussi continue par `skraft_next` dans le même espace de travail.
+Outil natif absent ou question fermée : blocage concret, run en pause, aucun enregistrement.
+
+La voie terminal autonome garde son consentement interactif :
 
 ```console
 $ skraft decide adr-1 REJECTED --reason "prendre le prestataire déjà sous contrat"
@@ -178,7 +187,7 @@ Une réponse refusée n'enregistre rien ; le run attend toujours.
 | `REJECTED needs the reason, which goes back to the agent` | Ajouter `--reason "…"`. |
 | `the answer must be one of RATIFIED, REJECTED` | Écrire une des options. |
 | `skraft decide records a person's answer: run it yourself in an interactive terminal of your own, not an agent's shell; nothing was recorded` | Lancer la commande vous-même, dans un terminal interactif. |
-| `Refused: …; nothing was recorded.` (Copilot) | Répondre par `skraft decide` dans un terminal, puis reprendre le workflow. |
+| `Refused: …; nothing was recorded.` (Copilot) | Corriger la clé, l'option ou la raison requise ; relayer de nouveau la réponse native, puis reprendre le même run. |
 | `not recorded — no active pipeline in this working copy` (Claude Code), alors que `skraft status` montre le run en attente | Répondre par `skraft decide <clé> …` dans un terminal, puis `/skraft <slug>` dans Claude Code. |
 | Vous avez écrit la réponse dans la conversation au lieu de la boîte de dialogue | Ce n'est pas une réponse : le run attend toujours. Utiliser `/skraft decide`. |
 

@@ -7,7 +7,7 @@ import { parseArgs, reportMarkdown, requiredFailures, runProbe, toolText } from 
 import { planIssueActions } from '../../../eng/host-probe/issues.mjs'
 import { CONFIGURED_MODELS, NATIVE_TOOLS, REFUSALS, WORKFLOWS_UNAVAILABLE, notRegistered, simulatedSdk } from './simulated-copilot-host.mjs'
 
-const SHARED_MCP_TOOLS = ['skraft_doctor', 'skraft_gate', 'skraft_init', 'skraft_journal', 'skraft_migrate', 'skraft_report', 'skraft_status', 'skraft_workflow_check', 'skraft_workflow_diff', 'skraft_workflow_eject']
+const SHARED_MCP_TOOLS = ['skraft_answer', 'skraft_doctor', 'skraft_gate', 'skraft_init', 'skraft_journal', 'skraft_migrate', 'skraft_report', 'skraft_status', 'skraft_workflow_check', 'skraft_workflow_diff', 'skraft_workflow_eject']
 const FAST = { tools: 50, isolationTools: 50, poll: 10, settle: 0 }
 const ENVIRONMENT = { copilot: '1.0.100', sdk: 'test', node: 'v22', os: 'linux' }
 
@@ -52,10 +52,11 @@ test('on a host that behaves as the issues say, every host premise is measured, 
     'skraft-workflow-registered': 'pass',
     'unknown-arg-ignored': 'fail',
     'decide-without-confirm': 'fail',
+    'skraft-decide-read-question': 'pass',
     'skraft-canvas-registered': 'pass',
     'skraft-canvas-opens': 'pass',
     'skraft-canvas-read-only': 'pass',
-    'skraft-decide-one-question': 'pass',
+    'skraft-decide-relayed-answer': 'pass',
     'decide-after-cd': 'fail',
     'skraft-mcp-server-loaded': 'pass',
     'skraft-mcp-loop-hidden': 'pass',
@@ -72,7 +73,7 @@ test('on a host that behaves as the issues say, every host premise is measured, 
   assert.deepEqual(report.checks.find((item) => item.id === 'bad-tool-name-isolation').observed, { status: 'rpc-error', error: notRegistered('skraft-probe-iso') })
   const decided = report.checks.find((item) => item.id === 'decide-without-confirm')
   assert.deepEqual(decided.observed.answeredBy, [])
-  assert.equal(decided.observed.hostAsked, 1)
+  assert.equal(decided.observed.hostAsked, 0)
   assert.equal(report.checks.find((item) => item.id === 'decide-after-cd').observed.answeredInSecondRepo, true)
   assert.deepEqual(['select', 'input'].map((kind) => report.checks.find((item) => item.id === `${kind}-joined-session-from-workflow`).observed), [
     { accepted: { elicitation: true, value: 'RATIFIED' }, declined: { elicitation: true, value: null }, requests: [{ fields: ['selection'], options: ['RATIFIED', 'REJECTED'] }, { fields: ['selection'], options: ['RATIFIED', 'REJECTED'] }] },
@@ -146,7 +147,7 @@ test('a host that refuses a join carrying a canvas fails both canvas requirement
   assert.deepEqual(planIssueActions(report, { openTitles: new Set() }).filter((action) => action.kind === 'open').map((action) => action.check), ['canvas-accepted-at-join', 'skraft-canvas-registered'])
 })
 
-test('the skraft-pipeline canvas opens on the pipeline that waits on adr-0 and shows its question on the page\'s stream, but takes no answer; skraft_decide puts that question once and records the option chosen', async (t) => {
+test('the canvas shows the pending question without taking an answer; the decision tool reads then records the relayed option without elicitation', async (t) => {
   const { report } = await probe(t)
   const observed = (id) => report.checks.find((item) => item.id === id).observed
 
@@ -156,9 +157,13 @@ test('the skraft-pipeline canvas opens on the pipeline that waits on adr-0 and s
     csp: "default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; base-uri 'none'; form-action 'none'", question: 'adr-0', contentStatus: 'waiting',
   })
   assert.deepEqual(observed('skraft-canvas-read-only'), { posted: { status: 404, body: { error: 'nothing here' } }, answeredBy: [], hostAsked: 0 })
-  assert.deepEqual(observed('skraft-decide-one-question'), {
+  assert.deepEqual(observed('skraft-decide-read-question'), {
+    question: { key: 'adr-0', kind: 'adr-ratification', text: 'Ratify the Proposed ADRs ADR-001?', options: ['RATIFIED', 'REJECTED'], refusals: ['REJECTED'], header: 'ADR' },
+    hostAsked: 0, answered: 0,
+  })
+  assert.deepEqual(observed('skraft-decide-relayed-answer'), {
     toolResult: 'Recorded: probe-question: adr-0 answered RATIFIED; run the pipeline again to go on. Resume the paused skraft-pipeline run (/workflows).',
-    requests: [{ fields: ['selection'], options: ['RATIFIED', 'REJECTED'] }], answered: [['RATIFIED', 'host-confirmed']],
+    requests: [], answered: [['RATIFIED', 'decide']],
   })
 })
 
@@ -185,13 +190,14 @@ test('a host that drops the query string of a canvas url fails both open require
   assert.equal(report.checks.find((item) => item.id === 'skraft-canvas-opens').observed.tokenInUrl, false)
 })
 
-test('a joined session that declares no elicitation leaves the question skraft_decide should put unasked and unrecorded, and its check fails', async (t) => {
+test('a joined session without extension elicitation can read and record native-relayed replies without asking again', async (t) => {
   const { report, verdicts } = await probe(t, { joinedElicitation: false })
 
-  assert.equal(verdicts['skraft-decide-one-question'], 'fail')
-  assert.deepEqual(report.checks.find((item) => item.id === 'skraft-decide-one-question').observed, {
-    toolResult: 'Refused: this Copilot host cannot put a question to you; answer it with skraft decide adr-0 RATIFIED|REJECTED typed in a terminal; nothing was recorded.',
-    requests: [], answered: [],
+  assert.equal(verdicts['skraft-decide-read-question'], 'pass')
+  assert.equal(verdicts['skraft-decide-relayed-answer'], 'pass')
+  assert.deepEqual(report.checks.find((item) => item.id === 'skraft-decide-relayed-answer').observed, {
+    toolResult: 'Recorded: probe-question: adr-0 answered RATIFIED; run the pipeline again to go on. Resume the paused skraft-pipeline run (/workflows).',
+    requests: [], answered: [['RATIFIED', 'decide']],
   })
 })
 

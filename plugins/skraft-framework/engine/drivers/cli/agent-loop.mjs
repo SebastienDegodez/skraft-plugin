@@ -175,13 +175,12 @@ const afterRun = async (deps, outcome) => (outcome.status === 'waiting'
   : ended(outcome))
 
 /**
- * The question the run waits on, for the conducting agent to show, with no command that answers
- * it: the human answers in their own terminal.
+ * The exact question and native-answer handoff for the conducting agent.
  * @param {LoopDeps} deps
  */
 const askTheHuman = async ({ adapters }) => {
   const question = /** @type {NonNullable<import('../../application/pipeline/observe-usecase.mjs').RunView['question']>} */ ((await createObserve(adapters).view()).question)
-  return `${question.text} Options: ${optionsText(question)}. Stop here and ask the human to answer it with skraft decide in their own terminal; then run next.`
+  return `${question.text} Options: ${optionsText(question)}. Ask the EXACT question and options with the offered native ask_user or askQuestions tool; request a refusal reason there. Relay ONLY the returned human reply through skraft_answer in the same workspace, then run next. Without MCP, record that native reply with decide in a terminal. Missing native tool or dismissal: report the concrete blocker, leave paused and record nothing.`
 }
 
 /**

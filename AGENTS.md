@@ -105,10 +105,15 @@ the probe or a test says otherwise.
   refused value.
 - **Messages are fixed by code.** No exception text or stderr in the journal, an outcome, a prompt
   or a tool result.
-- **A human decision needs the host.** Under Copilot, record an answer only after
-  `session.ui.confirm`/`select` returns it (literal `true` or an offered option); refuse without
-  elicitation, in `autopilot`, or when the mode cannot be read; journal `by: 'host-confirmed'`.
-  No agent, skill or prompt names `skraft_decide`.
+- **Pipeline questions use native chat.** The model asks the engine's exact question and
+  options through the offered native `ask_user` or `askQuestions` tool, requests a refusal
+  reason there, then relays only the human reply through `skraft_decide` (Copilot extension)
+  or `skraft_answer` (MCP). Trust the model's relay; no receipt or second confirmation.
+  Journal `by: 'decide'`, then resume the same workflow run ID (MCP loop: `skraft_next`).
+  Missing native tool or dismissal: report the concrete blocker, leave paused, record nothing.
+  Review publication and other non-pipeline consents keep their existing host confirmation:
+  `session.ui.confirm` must return literal `true`; refuse without elicitation, in `autopilot`
+  or when mode cannot be read; journal `by: 'host-confirmed'`.
 - **Commands are bounded.** `signal`, `timeoutMs`, output cap, process group ended as a whole.
 - **No pre-tool hook**, ever; a returning post-tool hook gives `additionalContext` only.
 - **A check counts once seen failing**, and a report says what it examined.

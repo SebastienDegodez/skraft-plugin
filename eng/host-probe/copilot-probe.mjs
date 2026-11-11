@@ -251,14 +251,14 @@ const askChecks = async (session, suffix, answers) => {
 }
 const ASKED = Object.freeze({
   select: {
-    expected: "Dans un run de workflow, le `session.ui.select(message, options)` de la session jointe atteint l'hôte avec les options en `enum` du champ `selection` ; accepté, l'option choisie revient ; refusé, `null`. C'est ainsi que le run `skraft-pipeline` pose une question à options : la valeur rendue est la réponse, sans confirmation de plus.",
+    expected: "Compatibilité de dialogue injecté : dans un run de workflow, `session.ui.select(message, options)` de la session jointe atteint l'hôte avec les options en `enum` du champ `selection` ; accepté, l'option choisie revient ; refusé, `null`. Le workflow de production utilise désormais la pause et le relais natif du modèle.",
     title: 'V2 — une question à options ne se pose pas depuis un run de workflow Copilot', labels: ['bug', 'gain:reliability'],
-    body: "Le pilote Copilot (`drivers/copilot-workflow/ctx-human.mjs`) pose chaque question du run par `session.ui.select` de la session jointe. La sonde ne voit pas l'hôte recevoir cette question, ou n'en reçoit pas l'option choisie : le run se mettrait en pause à chaque question.",
+    body: "La sonde de compatibilité du dialogue injecté ne voit pas l'hôte recevoir `session.ui.select` ou n'en reçoit pas l'option choisie. Le chemin natif de production n'utilise pas ce dialogue.",
   },
   input: {
-    expected: "Dans un run de workflow, le `session.ui.input(message)` de la session jointe atteint l'hôte avec un champ texte `value` ; accepté, le texte saisi revient ; refusé, `null`. C'est ainsi que le run `skraft-pipeline` demande l'instruction d'une étape bloquée et la raison d'un refus.",
+    expected: "Compatibilité de dialogue injecté : dans un run de workflow, `session.ui.input(message)` de la session jointe atteint l'hôte avec un champ texte `value` ; accepté, le texte saisi revient ; refusé, `null`. Le workflow de production utilise désormais la pause et le relais natif du modèle.",
     title: "V2 — une instruction ne se demande pas depuis un run de workflow Copilot", labels: ['bug', 'gain:reliability'],
-    body: "Le pilote Copilot (`drivers/copilot-workflow/ctx-human.mjs`) demande l'instruction d'une étape bloquée et la raison d'un refus par `session.ui.input` de la session jointe. La sonde ne voit pas l'hôte recevoir ce champ, ou n'en reçoit pas le texte saisi.",
+    body: "La sonde de compatibilité du dialogue injecté ne voit pas l'hôte recevoir `session.ui.input` ou n'en reçoit pas le texte saisi. Le chemin natif de production n'utilise pas ce dialogue.",
   },
 })
 
@@ -661,6 +661,7 @@ const skraftChecks = async ({ sdk, client, dirs, models }) => {
     checks.push(...await skraftWorkflowChecks(session))
     if (loaded) {
       checks.push(await decideWithoutConfirm(session, dirs, answers))
+      checks.push(await decideReadQuestion(session, dirs, answers))
       checks.push(...await skraftCanvasChecks(session, dirs, answers))
       checks.push(await decideOneQuestion(session, dirs, answers))
       checks.push(await decideAfterCd(session, dirs, pluginRoot, answers))
@@ -742,31 +743,46 @@ const decideWithoutConfirm = async (session, dirs, answers) => {
 }
 
 /**
- * `skraft_decide` puts the question adr-0 waits on to the host once, as a choice among its
- * options; the option the host's handler chooses is journaled host-confirmed, with no
- * confirmation after it. Runs before decide-after-cd moves the session to the second working copy.
+ * The production tool reads without elicitation or writes, then records a relayed reply.
+ * This measures routing only, not the model's native question or desktop rendering.
  */
+const decideReadQuestion = async (session, dirs, answers) => {
+  const before = answers.calls.length
+  const result = await execTool(session, 'skraft_decide', {})
+  let question
+  try { question = JSON.parse(result.text).question } catch {}
+  const answered = (await questionEvents(dirs.questionA)).filter((event) => event.type === 'question.answered')
+  const hostAsked = answers.calls.length - before
+  const exact = JSON.stringify(question) === JSON.stringify({ key: 'adr-0', kind: 'adr-ratification', text: 'Ratify the Proposed ADRs ADR-001?', options: ['RATIFIED', 'REJECTED'], refusals: ['REJECTED'], header: 'ADR' })
+  return check({
+    id: 'skraft-decide-read-question', expected: 'Reading skraft_decide {} returns the exact pending question, with no host elicitation and no journaled answer.',
+    verdict: result.ok ? (exact && hostAsked === 0 && answered.length === 0 ? 'pass' : 'fail') : 'inconclusive',
+    observed: { question, hostAsked, answered: answered.length },
+    title: 'V2 — skraft_decide does not read the pending question without elicitation', labels: ['bug', 'gain:reliability'],
+    body: 'The production decision tool must expose the engine question without asking or recording it.',
+  })
+}
+
 const decideOneQuestion = async (session, dirs, answers) => {
   answers.mode = 'accept'
   const before = answers.calls.length
-  const result = await execTool(session, 'skraft_decide', {})
+  const result = await execTool(session, 'skraft_decide', { key: 'adr-0', answer: 'RATIFIED' })
   answers.mode = 'decline'
   const requests = answers.calls.slice(before).map(({ fields, options }) => ({ fields, options }))
   const answered = (await questionEvents(dirs.questionA)).filter((event) => event.type === 'question.answered').map(({ answer, by }) => [answer, by])
-  const once = requests.length === 1 && requests[0].fields.join() === 'selection' && requests[0].options?.join() === 'RATIFIED,REJECTED'
   return check({
-    id: 'skraft-decide-one-question',
-    expected: "`skraft_decide`, sans argument, pose à l'hôte la question qu'attend le pipeline actif, une seule fois, comme un choix parmi ses options (`selection` en `enum`) ; l'option que choisit le handler de l'hôte est journalisée `host-confirmed`, sans confirmation de plus.",
-    verdict: result.ok ? (once && answered.length === 1 && answered[0].join() === 'RATIFIED,host-confirmed' ? 'pass' : 'fail') : 'inconclusive',
+    id: 'skraft-decide-relayed-answer',
+    expected: 'skraft_decide {key, answer} records the relayed native human reply once, by decide, without host elicitation.',
+    verdict: result.ok ? (requests.length === 0 && answered.length === 1 && answered[0].join() === 'RATIFIED,decide' ? 'pass' : 'fail') : 'inconclusive',
     observed: { toolResult: result.text ?? result.error, requests, answered },
-    title: 'V2 — skraft_decide ne pose pas la question une seule fois sous Copilot', labels: ['bug', 'gain:reliability'],
-    body: "Dans un hôte SDK headless avec le plugin skraft-framework, `skraft_decide` ne pose pas à l'hôte la question qu'attend le pipeline actif en une seule élicitation à options, ou ne journalise pas l'option choisie `host-confirmed` : la personne répondrait deux fois, ou pas du tout.",
+    title: 'V2 — skraft_decide does not record the relayed answer without elicitation', labels: ['bug', 'gain:reliability'],
+    body: 'The production decision tool must record the relayed reply once, without a second confirmation.',
   })
 }
 
 // The skraft-pipeline canvas of the real plugin, in the working copy that waits on adr-0: declared,
 // opened headless with the question on its stream, and taking no answer from its page. Runs
-// before skraft-decide-one-question answers adr-0.
+// before skraft-decide-relayed-answer answers adr-0.
 const SKRAFT_CANVAS = 'skraft-pipeline'
 const SKRAFT_INSTANCE = 'skraft-probe-pipeline'
 const SKRAFT_CANVAS_EXPECTED = Object.freeze({
@@ -878,7 +894,7 @@ const decideAfterCd = async (session, dirs, pluginRoot, answers) => {
   await sleep(T.settle)
   await currentTools(session).catch(() => undefined)
   answers.mode = 'accept'
-  const result = await execTool(session, 'skraft_decide', {})
+  const result = await execTool(session, 'skraft_decide', { key: 'adr-0', answer: 'RATIFIED' })
   answers.mode = 'decline'
   const answeredInB = (await questionEvents(dirs.questionB)).some((event) => event.type === 'question.answered')
   return check({

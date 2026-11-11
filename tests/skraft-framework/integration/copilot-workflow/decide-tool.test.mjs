@@ -5,16 +5,9 @@ import { mkdir, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { runSkraftPipelineWorkflow } from '../../../../plugins/skraft-framework/engine/drivers/copilot-workflow/skraft-pipeline-workflow.mjs'
 import { createSkraftDecideTool } from '../../../../plugins/skraft-framework/engine/drivers/copilot-workflow/skraft-decide-tool.mjs'
-import { createHostConfirmation } from '../../../../plugins/skraft-framework/engine/drivers/copilot-workflow/host-confirmation.mjs'
 import { PLUGIN_ROOT, copilotHost, eventsPath, firstOptionPerson, simulatedContext, workingCopy, writesNothing, decideTool } from './simulated-host.mjs'
 
 const decide = (cwd) => decideTool(cwd)
-
-test('skraft_decide takes no argument: the model chooses neither the question nor the answer', () => {
-  const tool = decide('.')
-  assert.equal(tool.name, 'skraft_decide')
-  assert.deepEqual(tool.parameters, { type: 'object', properties: {}, additionalProperties: false })
-})
 
 test('skraft_decide refuses without an active pipeline and creates nothing', async (t) => {
   const { cwd, cleanup } = await workingCopy()
@@ -50,7 +43,7 @@ test('skraft_decide asks nothing when the active pipeline waits on no question, 
 
 test('skraft_decide reads the session\'s directory on each call: with none known yet, it asks nothing', async () => {
   const session = firstOptionPerson()
-  const tool = createSkraftDecideTool({ directory: () => null, pluginRoot: PLUGIN_ROOT, home: '.', dialog: createHostConfirmation({ session: () => session }) })
+  const tool = createSkraftDecideTool({ directory: () => null, pluginRoot: PLUGIN_ROOT, home: '.' })
 
   assert.equal(await tool.handler({}), 'Refused: the session has no working directory yet; nothing was recorded.')
   assert.deepEqual(session.asked, [])

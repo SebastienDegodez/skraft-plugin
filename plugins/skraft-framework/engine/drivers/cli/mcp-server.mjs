@@ -1,12 +1,14 @@
 import { offeredTools, refusalOf, toolListing } from './mcp-tools.mjs'
 import { offeredPrompts, promptListing, promptMessages, promptRefusalOf } from './mcp-prompts.mjs'
 import { chosenWorkspace, givenWorkingCopy, rootFolders } from './mcp-roots.mjs'
+import { createDecide } from '../../application/decisions/decide-usecase.mjs'
 
 /**
  * `skraft mcp`: the commands of this driver served to an agent host as MCP tools, JSON-RPC over
  * stdin and stdout, one message per line. stdout carries only the protocol; the server's own log
  * goes to stderr. A tool runs the command line it stands for, in the same process, so a tool and
- * the command never differ.
+ * the command never differ. skraft_answer alone calls Decide directly, without terminal consent
+ * or argv conversion of the human's text.
  *
  * @typedef {import('./run-cli.mjs').CliServices} CliServices
  * @typedef {import('./run-cli.mjs').Console} Console
@@ -61,7 +63,8 @@ const instructionsFor = (loop) => [
   'skraft runs a delivery pipeline (research, design, distill, deliver) in the repository the host shares.',
   'Before the first prompt in a repository, call skraft_doctor. When its config check fails, or a run is refused with configuration-incomplete, set skraft up with the skraft-init skill, which calls skraft_init.',
   loop ? STARTS.loop : STARTS.host,
-  'A question the run waits on, publishing, a review verdict comment and the V2 migration take a person: they run skraft decide, skraft publish, skraft review --publish or skraft migrate in their own terminal.',
+  'For a pipeline question, read skraft_status, ask the EXACT text and options through the offered native ask_user or askQuestions tool, and request a refusal reason there. Relay ONLY its returned human reply with skraft_answer {key, answer, reason?, workspace}. After successful record resume the SAME workflow run ID; for the MCP loop call skraft_next in the same workspace. Missing native tool or dismissal: report the concrete blocker, leave paused and record nothing, never infer an answer or use ordinary prose instead.',
+  'Publishing, a review verdict comment and the V2 migration keep terminal consent: the person runs skraft publish, skraft review --publish or skraft migrate in their own terminal.',
 ].join(' ')
 
 /**
@@ -213,8 +216,17 @@ const runTool = async (session, tool, args, token) => {
   if (session.closed) return refusedResult('closed: the host closed the connection; nothing ran')
   const captured = capturing(progress(session, token))
   const services = { ...session.services.at(place.directory), confirm: async () => null, then: mcpThen(args.workspace) }
-  const code = await guarded(session, tool, () => session.run(tool.argv(args), services, captured.console))
+  const code = await guarded(session, tool, () => tool.name === 'skraft_answer'
+    ? recordAnswer(services, args, captured.console)
+    : session.run(tool.argv(args), services, captured.console))
   return toolResult(code, captured)
+}
+
+/** @param {CliServices} services @param {Record<string, any>} args @param {Console} console */
+const recordAnswer = async (services, { key, answer, reason }, console) => {
+  const outcome = await createDecide(services.adapters()).decide({ key, answer, reason })
+  console.out(JSON.stringify(outcome))
+  return outcome.ok ? 0 : 1
 }
 
 /**

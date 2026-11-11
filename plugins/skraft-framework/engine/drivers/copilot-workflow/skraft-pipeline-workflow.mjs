@@ -14,7 +14,7 @@ import { readArgs } from './workflow-args.mjs'
  *   the active run's journal, when it can be written, ends with run.stopped under that code.
  * @typedef {{ slug?: unknown, issue?: unknown, title?: unknown, base?: unknown, fromArtifacts?: unknown, agentIds?: unknown }} WorkflowArgs
  * @typedef {import('./ctx-agent-runner.mjs').AgentContext & import('./ctx-human.mjs').PauseContext & { args?: WorkflowArgs, signal?: AbortSignal }} WorkflowContext
- * @typedef {import('./host-confirmation.mjs').HostDialog} HostDialog
+ * @typedef {import('./host-confirmation.mjs').HostDialog | null} HostDialog
  * @typedef {import('./canvas-opener.mjs').CanvasOpener} CanvasOpener
  * @typedef {{ cwd: string | null, pluginRoot: string, home: string, dialog: HostDialog, canvas: CanvasOpener }} Host
  *   cwd: the session's working directory when the run starts, null while unknown;
@@ -34,7 +34,10 @@ export const SKRAFT_PIPELINE_META = Object.freeze({
     'fromArtifacts?: true to start a new slug in DESIGN from the DISCUSS stories in its tracking folder, ' +
     'configure?: true to show the configuration and ask whether to start with it, as on the first run of a working copy, ' +
     'agentIds?: { [agent file id]: session agent id } }. ' +
-    'The Copilot model and reasoning effort of each agent come from models and assign in the skraft configuration, never from args.',
+    'The Copilot model and reasoning effort of each agent come from models and assign in the skraft configuration, never from args. ' +
+    'On pause, read skraft_decide {}, ask the exact question and options with the offered native ask_user or askQuestions tool, ' +
+    'relay the human reply with skraft_decide {key, answer, reason?}, then resume the SAME workflow run ID. ' +
+    'Missing native tool or dismissal: record nothing, report the blocker and leave this run paused.',
   phases: Object.freeze([
     Object.freeze({ title: 'RESEARCH', detail: 'Solution Researcher' }),
     Object.freeze({ title: 'DESIGN', detail: 'Solution Architect' }),

@@ -1,24 +1,21 @@
 import { decideUsage } from '../../domain/decisions/questions.mjs'
 import { askInHost } from './host-question.mjs'
 import { isCancellation } from './cancellation.mjs'
+import { NATIVE_GUIDANCE } from './skraft-decide-tool.mjs'
 
 /**
- * HumanInteraction on a Copilot dynamic workflow: the question is put to the person once, in
- * Copilot's own dialog, during the run (host-question.mjs); what they give is the answer,
- * journaled with the dialog's provenance. When Copilot cannot put it, or the person does not
- * answer, the run says so in its log, with how to answer, and `ctx.pause(key)` pauses it durably;
- * resumed, the run puts the question again. The log names no tool: no prompt does. What a
- * question is about is shown on its tab of the skraft canvas (canvas-opener.mjs).
+ * Registered pipelines use a null dialog: expose the exact question in chat and pause.
+ * Explicit injected dialogs retain their host-specific interaction for compatibility.
  *
  * A run the host cancelled puts no question: it rethrows the cancellation, so that a command the
  * cancellation ended is not taken for the machine's fault and asked RETRY again and again.
  *
  * @typedef {{ log: (message: string) => void, pause: (key: string) => Promise<unknown>, signal?: AbortSignal }} PauseContext
- * @param {{ ctx: PauseContext, dialog: import('./host-confirmation.mjs').HostDialog, canvas: import('./canvas-opener.mjs').CanvasOpener }} options
+ * @param {{ ctx: PauseContext, dialog: import('./host-confirmation.mjs').HostDialog | null, canvas: import('./canvas-opener.mjs').CanvasOpener }} options
  * @returns {import('../../application/ports/human-interaction.mjs').HumanInteraction}
  */
 export const createCtxHuman = ({ ctx, dialog, canvas }) => Object.freeze({
-  by: dialog.by,
+  by: dialog === null ? 'decide' : dialog.by,
   show: (view) => canvas.show(view),
   ask: (question) => askPerson(ctx, dialog, question),
 })
@@ -26,15 +23,25 @@ export const createCtxHuman = ({ ctx, dialog, canvas }) => Object.freeze({
 /**
  * The person's answer in Copilot's dialog; null once the run paused on a question not answered.
  * A cancelled run asks nothing and rethrows its cancellation.
- * @param {PauseContext} ctx @param {import('./host-confirmation.mjs').HostDialog} dialog
+ * @param {PauseContext} ctx @param {import('./host-confirmation.mjs').HostDialog | null} dialog
  * @param {import('../../domain/decisions/questions.mjs').Question} question
  */
 const askPerson = async (ctx, dialog, question) => {
   if (isCancellation(ctx.signal)) throw /** @type {AbortSignal} */ (ctx.signal).reason ?? new DOMException('Workflow run was aborted', 'AbortError')
+  if (dialog === null) return waitInChat(ctx, question)
   const put = await askInHost(dialog, question)
   if (put.ok) return put.given
   ctx.log(`Waiting for you — ${question.text}`)
   ctx.log(howToAnswer(question, put.reason))
+  await ctx.pause(question.key)
+  return null
+}
+
+/** @param {PauseContext} ctx @param {import('../../domain/decisions/questions.mjs').Question} question */
+const waitInChat = async (ctx, question) => {
+  ctx.log(`Waiting for you — ${question.text}`)
+  ctx.log(JSON.stringify({ question }))
+  ctx.log(NATIVE_GUIDANCE)
   await ctx.pause(question.key)
   return null
 }

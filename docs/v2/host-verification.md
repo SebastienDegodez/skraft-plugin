@@ -5,6 +5,36 @@ Ce que le pilote Copilot suppose de l'hôte, mesuré par `eng/host-probe/copilot
 
 ## Mesures
 
+### 2026-11-12 — questions natives, relais du modèle
+
+Mesuré dans la copie isolée de cette modification, sur macOS, Node 22.23.2,
+Copilot CLI **1.0.109** (version du programme réellement lancé), SDK **1.0.109**.
+Sonde headless sans `--agent-calls`, sans appel de modèle ni publication d'issue :
+43 contrôles, **35 pass**, **5 inconclusive**, **3 fail** de prémisses historiques
+(`unknown-arg-ignored`, `decide-without-confirm`, `decide-after-cd`).
+Ces échecs de prémisse ne sont pas une certification du rendu natif.
+
+| Contrôle | Verdict | Observé |
+| --- | --- | --- |
+| `skraft-decide-read-question` | pass | `{}` rend la question exacte `{key,kind,text,options,refusals,header}` ; zéro élicitation, zéro réponse journalisée |
+| `skraft-decide-relayed-answer` | pass | `{key,answer}` enregistre `RATIFIED` une fois, `by: "decide"` ; zéro élicitation |
+| `decide-after-cd` (#245, prémisse historique) | fail | seul le second espace de travail reçoit la réponse ; le premier reste inchangé |
+| dialogue injecté `select` / `input` | pass | compatibilité conservée ; le workflow de production ne l'utilise plus pour les questions du pipeline |
+
+Les scénarios d'intégration du workflow **réellement enregistré** couvrent la pause avant
+tout agent, `START`, la continuation de questions ADR et scénarios, et `STOP` d'une étape
+bloquée, avec le même contexte de run, sans question ni agent doublé et sans appel `session.ui`.
+Le MCP `skraft_answer` passe directement par Decide dans l'espace choisi, sans consentement TTY.
+Le canvas reste une vue sans route de réponse ; le consentement de publication REVIEW reste
+une confirmation explicite de l'hôte.
+
+Application desktop servant cette conversation : **1.2.0**, version estampillée, lue avec
+`get_app_info`. **Non mesuré** : présentation native `ask_user` / `askQuestions` par le modèle,
+rendu desktop / VS Code, réponse humaine réelle. Les tests simulent le relais ; la sonde
+mesure la lecture et l'enregistrement, pas la fidélité du modèle. Le contrat fait désormais
+confiance au modèle pour relayer la réponse native, sans reçu ni seconde confirmation.
+Les sections suivantes gardent leurs mesures historiques de l'ancien dialogue.
+
 ### En attente de mesure
 
 Ce que le pilote suppose déjà sans mesure ; la prochaine passe de la sonde remplace chaque ligne par son verdict.
@@ -358,10 +388,10 @@ Non mesuré : que l'app GitHub Copilot (2.0.0-alpha.14) et VS Code affichent dan
 
 ### Canvas `skraft-pipeline` : modèle de menace et cadre
 
-- **Le canvas ne prend aucune réponse** (depuis le 2026-10-29). Sa page n'a ni bouton ni route de réponse, et les actions offertes au modèle (`get_pipeline`, `get_configuration`) sont en lecture seule : chaque question se pose dans le chat, par l'élicitation de l'hôte (règle « A human decision needs the host » d'`AGENTS.md`). « Démarrer avec cette configuration ? » aussi : l'onglet Configuration la montre, la réponse START ou STOP vient du chat et se journalise `host-confirmed`.
+- **Le canvas ne prend aucune réponse** (depuis le 2026-10-29). Sa page n'a ni bouton ni route de réponse, et les actions offertes au modèle (`get_pipeline`, `get_configuration`) sont en lecture seule. Depuis le relais natif, chaque question du pipeline passe par l'outil natif proposé au modèle (exception pipeline d'`AGENTS.md`), y compris START/STOP de configuration : journal `by: "decide"`, sans attestation de l'hôte.
 - **L'onglet Configuration écrit la configuration, et rien d'autre** (#355). Sa seule route d'écriture, `POST /configuration`, exige le jeton du panneau dans l'en-tête `X-Skraft-Token` (comparé en temps constant ; un formulaire d'un autre site ne pose pas d'en-tête), aucune autre `Origin` que celle du panneau, `Content-Type: application/json` et un corps de 64 Kio au plus. Le moteur vérifie la modification avec les règles du chargement de la configuration et n'écrit rien quand un fichier serait invalide. Aucune action du modèle n'écrit la configuration : un argument écrit par un modèle ne choisit jamais un modèle ni une commande.
 - **Le jeton tient à l'écart les autres lecteurs.** Chaque panneau a un jeton aléatoire qui ne voyage que dans l'url que `open` rend à l'hôte (`http://127.0.0.1:<port>/?t=<jeton>`) ; la page et le flux l'exigent, comparé par empreinte SHA-256 en temps constant, et le HTML ne le porte pas. Un autre processus local ou une page de navigateur ne lit donc pas la vue du run. Le Host doit être l'adresse loopback liée (pas de rebinding DNS), le serveur n'écoute que sur 127.0.0.1, et `Referrer-Policy: no-referrer` garde le jeton hors des en-têtes `Referer`.
-- **La limite de débit** (`host-confirmation.mjs`, cinq demandes en dix minutes, partagée par le run et `skraft_decide`) ne compte une demande qu'une fois passées les gardes d'élicitation et de mode, juste avant d'appeler le dialogue. Une requête refusée avant ne la consomme pas.
+- **Ancienne limite de débit** : le plafond de cinq dialogues en dix minutes a été retiré le 2026-11-04. Le chemin natif ne lance aucun dialogue depuis le workflow ou `skraft_decide`.
 - **`Sec-Fetch-Site` (#430).** Le flux et l'enregistrement exigent, avec le jeton, un `Sec-Fetch-Site` absent, `same-origin` ou `none` : une requête qu'un navigateur dit venue d'un autre site (`cross-site`) ou d'une autre origine du même site (`same-site`, un autre port de 127.0.0.1) est refusée 403, même avec le jeton. Jamais sur `GET /` : l'hôte navigue le cadre depuis sa propre origine (`cross-site`), et l'origine qui l'embarque n'est pas mesurée.
 - **`Cross-Origin-Resource-Policy: same-origin` (#430)** sur les assets, le flux et les réponses JSON (refus compris), **pas sur la page** : sous un embarqueur COEP `require-corp`, un document en `same-origin` serait bloqué dans le cadre, et l'origine qui embarque le panneau reste non mesurée.
 - **Limites de connexion (#430, Node 22.17.1).** `requestTimeout` et `headersTimeout` à 10 s, `keepAliveTimeout` à 5 s, `connectionsCheckingInterval` à un dixième du délai de requête : une socket muette ou une requête dont les en-têtes ne finissent pas reçoit 408 et est fermée, une connexion inactive est fermée. Un flux SSE n'est pas coupé : `requestTimeout` ne couvre que la réception de la requête (mesuré, une réponse ouverte 3 s). `server.close()` n'aboutit pas tant qu'une connexion qui n'a envoyé aucune requête reste ouverte : `closeAllConnections()` suit donc `close()`. Un écouteur `error` sans effet évite qu'un événement sans écouteur n'emporte le processus de la session.
@@ -381,7 +411,10 @@ Sous VS Code, une action du canvas tourne hors de tout tour de chat et `session.
 
 Non mesuré : un dialogue que la personne ferme sans répondre pourrait rendre `undefined` plutôt que `false` ; il serait alors lu comme `not-asked`, sans enregistrement non plus.
 
-#### Limites du dialogue d'hôte (#418)
+#### Limites historiques du dialogue d'hôte (#418)
+
+Cette table décrit l'ancien chemin et ses tests au moment de la mesure. Le relais natif
+n'attend aucune réponse dans l'extension ; la compatibilité de dialogue injecté reste séparée.
 
 | Point | Côté moteur (hôte simulé) | Côté hôte réel |
 | --- | --- | --- |
