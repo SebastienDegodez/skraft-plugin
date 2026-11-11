@@ -5,7 +5,7 @@ import { parseYaml } from '../../plugins/skraft-framework/src/domain/yaml-parser
 // extensions/copilot/package.json (languageModelTools / languageModelToolSets).
 // https://code.visualstudio.com/docs/agents/reference/custom-agent-file-reference#tools
 const copilotTools = new Set([
-  'agent', 'read', 'edit', 'execute', 'search', 'web', 'todo',
+  'agent', 'read', 'edit', 'execute', 'search', 'web', 'todo', 'skill',
   'read/readFile',
   'edit/createFile', 'edit/createDirectory', 'edit/editFiles',
   'search/codebase', 'search/fileSearch', 'search/textSearch', 'search/usages', 'search/listDirectory',
@@ -15,7 +15,7 @@ const copilotTools = new Set([
 
 // https://code.claude.com/docs/en/tools-reference
 // https://code.claude.com/docs/en/sub-agents#restrict-which-tools-a-subagent-can-use
-const claudeTools = new Set(['Read', 'Write', 'Edit', 'Grep', 'Glob', 'Bash', 'TaskOutput', 'TaskStop', 'Agent'])
+const claudeTools = new Set(['Read', 'Write', 'Edit', 'Grep', 'Glob', 'Bash', 'TaskOutput', 'TaskStop', 'Agent', 'Skill'])
 const externalServers = ['graphify', 'github', 'ado', 'gitlab']
 const historicalTools = new Map([
   ['TaskOutput', 'TaskOutput was removed in Claude Code 2.1.277; use Read on the background output file on newer versions.'],
