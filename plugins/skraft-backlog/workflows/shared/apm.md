@@ -439,6 +439,7 @@ jobs:
           private-key: ${{ env.ROW_PRIVATE_KEY }}
           owner: ${{ matrix.group.owner != '' && matrix.group.owner || github.repository_owner }}
           repositories: ${{ matrix.group.repositories }}
+          permission-contents: read
       - name: Select APM package token
         id: package-token
         env:

@@ -9,6 +9,7 @@ tools:
   - Edit
   - Grep
   - Glob
+  - Bash
   - mcp__graphify__*
   - Skill
 metadata:

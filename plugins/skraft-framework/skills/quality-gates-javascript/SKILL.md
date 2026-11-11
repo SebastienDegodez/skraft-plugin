@@ -21,10 +21,10 @@ Missing tooling, unsupported scope, failed gates or absent evidence block delive
   `node --test tests/skraft-framework/quality-gates/quality-gates-javascript-*.test.mjs`.
 - Plain no-emit JavaScript has no compilation step: `node --check <source>` checks
   syntax only. Do not label it TypeScript compilation or architecture validation.
-- Capture ordinary commands, and every RED run, at execution time with the bundled
+- Capture ordinary commands, and each scenario's acceptance RED run, at execution time with the bundled
   `node "<skill>/scripts/capture.mjs" --evidence <dir> --name qg-tests -- npm --prefix <package> run test`:
   it runs without a shell and writes `<name>.stdout`, `<name>.exit` and `<name>.stdout.sha256`.
-  Write G9 snapshots with `node "<skill>/scripts/snapshot.mjs" --evidence <dir> --name red-1-<file> --file <path>`.
+  Write G9 snapshots of each scenario's acceptance test at its `test` and green commits with `node "<skill>/scripts/snapshot.mjs" --evidence <dir> --name red-1-<file> --rev <commit> --file <path>`.
   `<skill>` is this skill's folder, the one holding this SKILL.md. The mutation runner
   below captures mutation only.
 - G11 line coverage is **not implemented** here. Native Node coverage may aid

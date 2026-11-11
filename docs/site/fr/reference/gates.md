@@ -220,8 +220,8 @@ compromis délibérément — la qualité ne se négocie pas.
 | **G6** | Le score de mutation atteint la barre. | L'évidence finale complète de mutation sort en `0` : le cœur d'abord (Domain et Application, 100 %), puis la frontière (API et Infrastructure, 80 %). |
 | **G7** | Aucun mock dans le cœur Domain/Application. | Attestation par grep : zéro symbole de framework de mock dans ces couches. |
 | **G8** | Message complet du commit conventionnel. | Chaque commit couvert utilise le scope fonctionnel, le sign-off et l'issue connue ; la cloture exige un travail reellement termine et toutes les gates requises passees. |
-| **G9** | Aucune altération de test (intégrité RED→GREEN). | Pour chaque cycle, le fichier de test n'a changé que par **ajout** entre les snapshots RED et GREEN. |
-| **G10** | RED constaté : le test a bien été exécuté et a **échoué** avant l'arrivée de l'implémentation. | Pour chaque cycle, un stdout RED capturé dans le dispatch du software-engineer au moment du RED et haché en sha256, plus un code de sortie **non nul** enregistré. |
+| **G9** | Aucune altération de test (intégrité RED→GREEN). | Pour chaque scénario, son fichier de test d'acceptance n'a changé que par **ajout** entre son commit `test` RED et son commit green. |
+| **G10** | RED constaté : le test a bien été exécuté et a **échoué** avant l'arrivée de l'implémentation. | Pour chaque scénario, le stdout RED de son test d'acceptance capturé avant son implémentation et haché en sha256, plus un code de sortie **non nul** enregistré. |
 | **G11** | La couverture de lignes atteint la barre. | Le runner de couverture, invoqué avec les drapeaux de seuil de la barre (100 % de lignes sur Domain et Application), sort en `0`. |
 
 **Politique G8 :** consignes de commit directement dans les agents existants,

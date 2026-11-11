@@ -465,9 +465,7 @@
         "docs/adr/decisions-index.md"
       ],
       "outputs": [
-        ".copilot-tracking/skraft-plans/{projectSlug}/reviews/{date}/deliver-review-{N}.md",
-        ".copilot-tracking/skraft-plans/{projectSlug}/reviews/{date}/diff-{story}.patch (optional, Phase 2 diff the lenses read)",
-        ".copilot-tracking/skraft-plans/{projectSlug}/reviews/{date}/files-{story}.txt (optional, Phase 2 changed-file list)"
+        ".copilot-tracking/skraft-plans/{projectSlug}/reviews/{date}/deliver-review-{N}.md"
       ]
     },
     "Skraft - Software Engineer": {
@@ -564,7 +562,11 @@
     "refactoring-worker": [],
     "Skraft - Orchestrator": [],
     "Skraft - Software Engineer Reviewer": [
-      ".copilot-tracking/skraft-plans/{projectSlug}/details/{date}/stack-commands.md"
+      ".copilot-tracking/skraft-plans/{projectSlug}/details/{date}/stack-commands.md",
+      ".copilot-tracking/skraft-plans/{projectSlug}/reviews/{date}/qg-verify-{story}.json",
+      ".copilot-tracking/skraft-plans/{projectSlug}/reviews/{date}/commits-{story}.txt",
+      ".copilot-tracking/skraft-plans/{projectSlug}/reviews/{date}/diff-{story}.patch",
+      ".copilot-tracking/skraft-plans/{projectSlug}/reviews/{date}/files-{story}.txt"
     ],
     "Skraft - Software Engineer": [
       ".copilot-tracking/skraft-plans/{projectSlug}/details/{date}/contracts-{story}.md",
@@ -580,7 +582,8 @@
       ".copilot-tracking/skraft-plans/{projectSlug}/details/{date}/supersession-plan-{story}.md",
       "docs/adr/supersessions.md",
       ".copilot-tracking/skraft-plans/{projectSlug}/blockers/{date}/decision-drift-*.md",
-      ".copilot-tracking/skraft-plans/{projectSlug}/details/{date}/structural-scan.json"
+      ".copilot-tracking/skraft-plans/{projectSlug}/details/{date}/structural-scan.json",
+      ".copilot-tracking/skraft-plans/{projectSlug}/reviews/{date}/structural-scan-current.json"
     ],
     "Skraft - Solution Architect": [
       ".copilot-tracking/skraft-plans/{projectSlug}/details/{date}/structural-scan.json"

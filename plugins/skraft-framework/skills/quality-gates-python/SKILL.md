@@ -110,10 +110,10 @@ non-zero below 100%, on a failing test, on a core file never imported, or on a
 
 ## G8 / G9 / G10
 
-As in every adapter: G8 from the Git tree; G9 from snapshots of the test file taken at RED
-and at GREEN with `node "<skill>/scripts/snapshot.mjs" --evidence "$EV" --name red-1-test_place_order.py --file <path>`
-(exact `git show` bytes, `--rev` defaults to `HEAD`); G10 at RED, before the implementation, with the G1 line narrowed
-to the cycle's test and `--name qg-red-{cycle}`:
+As in every adapter: G8 from the Git tree; G9 from snapshots of each scenario's acceptance test file
+at its `test` commit and at its green commit with `node "<skill>/scripts/snapshot.mjs" --evidence "$EV" --name red-1-test_place_order.py --rev <commit> --file <path>`
+(exact `git show` bytes, `--rev` defaults to `HEAD`); G10 at the scenario's RED, before its implementation, with the G1 line narrowed
+to the scenario's acceptance test and `--name qg-red-{cycle}`, one cycle per scenario:
 
 ```bash
 node "<skill>/scripts/capture.mjs" --root . --evidence "$EV" --name qg-red-1 -- {python} -m pytest -q -p no:cacheprovider tests/unit/place_order/test_place_order.py
@@ -124,6 +124,6 @@ The recorded exit code MUST be non-zero. The capture cannot be reconstructed aft
 ## Producer flow at the end of the story
 
 1. Run G1/G2, G3, G4, G5, G6 core then boundary, G7, G11 — each through its script.
-2. Write the RED and GREEN snapshots per cycle with `snapshot.mjs`; check every G10 capture exists with a non-zero exit.
+2. Write the RED and GREEN snapshots per scenario with `snapshot.mjs --rev`; check every G10 capture exists with a non-zero exit.
 3. `repo_root_rev = git rev-parse HEAD`; build `commits_covered[]` from the DELIVER base.
 4. Assemble `$EV/qg-{story}.json` (contract v4) with `"tech_adapter": "quality-gates-python"`, commit `$EV` alone, then run `node "<skill>/scripts/qg-verify/cli/qg-verify.mjs" --log "$EV/qg-{story}.json"`: it must print `"verdict": "pass"`.

@@ -62,7 +62,7 @@ You are the skraft ENGINEERING pipeline orchestrator with dedicated gates and re
 
 You consume a refined story from the PRODUCT layer as your input. You do **NOT** do backlog discovery or story refinement: they come from the skraft-backlog plugin, or from any tool or person that writes `plans/{date}/stories-{milestone}.md` and `plans/{date}/ac-draft-{story}.md`. If no refined story is available yet, say so and point the developer at the skraft-backlog plugin's backlog planner — do not triage or refine it yourself.
 
-**You NEVER produce a phase's work yourself** — including toolchain configuration, quality-gate runs and their evidence. You dispatch, collect verdicts, manage retries, update state, and route confirmed report publication through the shared lifecycle and selected provider skill.
+**You NEVER produce a phase's work yourself** — including toolchain configuration, quality-gate runs and their evidence. You dispatch, prepare only the deterministic review inputs listed below, persist returned verdicts unchanged, manage retries, update state, and route confirmed report publication through the shared lifecycle and selected provider skill.
 
 ## Phase 0: LOAD STATE (B4 PLAN MEMENTO) — rehydrate once
 
@@ -96,7 +96,7 @@ Run `node "$SKRAFT_PLUGIN_ROOT/src/cli/state.mjs" <subcommand> [--slug {projectS
 | `get [--field F]` | you rehydrate (whole state) or need one field |
 | `mark-phase-started --phase {P}` | before the first dispatch of the current phase |
 | `record-artifact --phase {P} --path {rel}` | a specialist produced an expected artefact |
-| `record-review-artifact --phase {P} --path {rel}` | a reviewer wrote its verdict file |
+| `record-review-artifact --phase {P} --path {rel}` | the renderer persisted the reviewer's unchanged verdict |
 | `record-verdict --phase {P} --verdict {V}` | a review returned; `V` is `APPROVED`, or `CHANGES_REQUESTED` for `NEEDS_REWORK` and `REJECTED` |
 | `incr-retry --phase {P}` | you re-dispatch a phase after a non-APPROVED verdict |
 | `handoff --agent "{agent}"` | before every specialist and reviewer dispatch: prints the handoff block you paste verbatim |
@@ -130,8 +130,8 @@ Sub-agents run in isolated contexts and never read or write pipeline state — t
 ## Working context (provided by orchestrator)
 - Story / issue: {confirmed issue number or none} — {title}
 - Feature scope: {stable kebab-case slug from approved feature context}
-- Output path (write here): {exact resolved phase output directory}
-- Artifact convention: write only to the exact path above; tracked Markdown starts with `<!-- markdownlint-disable-file -->`.
+- Output path: {exact resolved phase output directory}
+- Artifact convention: specialists write only to the exact path above; tracked Markdown starts with `<!-- markdownlint-disable-file -->`. Reviewers never write; return canonical verdict YAML for orchestrator-owned persistence.
 
 {the block printed by `node "$SKRAFT_PLUGIN_ROOT/src/cli/state.mjs" handoff --agent "{agent}"`, pasted verbatim}
 ```
@@ -149,7 +149,7 @@ with final body line `Refs: #N` for intermediate work or `Closes #N` only when
 the whole issue is genuinely finished and all required gates pass. Unknown issue:
 omit the line. Do not produce commits or gate evidence yourself.
 
-The sub-agent never touches `state.json` or `skraft-config.json`; it consumes the dispatch payload and writes only its artefacts. The orchestrator records the resulting verdict and paths into state via the CLI after the sub-agent returns.
+The sub-agent never touches `state.json` or `skraft-config.json`; specialists write only their artefacts, reviewers return canonical verdict YAML without writing. The orchestrator renders that unchanged YAML and records the verdict and paths through the state CLI after the reviewer returns.
 
 For DESIGN and DISTILL:
 
@@ -162,9 +162,11 @@ Before the phase's first dispatch, run `state.mjs mark-phase-started --slug {slu
 Verify the expected artefacts exist at the dated pipeline paths (see Dispatch table). If missing, count as implicit failure. Record each one with `state.mjs record-artifact --slug {slug} --phase {P} --path {path relative to the tracking directory}`; the reviewer dispatch is refused until the phase has a recorded artefact.
 
 **Step 3 — Dispatch reviewer**
-Dispatch the reviewer with the Dispatch context header and its handoff block: the block lists the artefacts under review and, on a re-review, the previous review. Do NOT summarize or interpret — pass raw paths only. The reviewer applies the `adversarial-review-lenses` skill and writes its verdict file to `reviews/{date}/`.
+Prepare the deterministic inputs below, then dispatch the reviewer with the Dispatch context header and its handoff block: the block lists the artefacts under review and, on a re-review, the previous review. Add the prepared paths verbatim. Do NOT summarize or interpret. The reviewer applies the `adversarial-review-lenses` skill and returns canonical verdict YAML without writing.
 
 **Step 4 — Handle verdict**
+
+Before any action in the table, persist the returned YAML with Review persistence below. No successful rendering and file verification means no `record-verdict`, transition or report publication.
 
 | Verdict | Action |
 |---|---|
@@ -172,6 +174,65 @@ Dispatch the reviewer with the Dispatch context header and its handoff block: th
 | `NEEDS_REWORK` with `escalation: environment` | `state.mjs record-review-artifact --phase {P} --path {review path}`, `state.mjs record-verdict --phase {P} --verdict CHANGES_REQUESTED`. Do NOT `incr-retry` and do NOT re-dispatch the specialist. Stop and show the user the environment cause and the command the review names. When the user reports the environment fixed: in DESIGN or DISTILL, re-dispatch the reviewer only, with its handoff block; in DELIVER, re-dispatch the engineer with its handoff block and the addendum `Environment re-gate: re-run only the gates the previous review names inconclusive; change no code.`, then the reviewer with its handoff block. |
 | `NEEDS_REWORK` | `state.mjs record-review-artifact --phase {P} --path {review path}`, `state.mjs record-verdict --phase {P} --verdict CHANGES_REQUESTED`, then `state.mjs incr-retry --phase {P}`. If attempts < `userPreferences.maxRetriesPerPhase + 1`: re-dispatch the specialist with the Retry prompt template below. Else: stop, surface to user. |
 | `REJECTED` | `state.mjs record-review-artifact --phase {P} --path {review path}`, `state.mjs record-verdict --phase {P} --verdict CHANGES_REQUESTED`. Stop pipeline immediately. Surface blockage to user; no unsolicited remote phase comment. |
+
+### Deterministic review preparation
+
+Only run the commands listed here for review preparation; never run builds,
+tests, mutation runners or regenerate producer-owned quality evidence.
+Resolve the tracking root and dated review directory from the dispatch context.
+Create that directory before redirecting output. Use the host's native shell,
+write UTF-8 files, and check every command's exit status before dispatch.
+
+For each DESIGN review, including re-reviews, run:
+
+```bash
+node "$SKRAFT_PLUGIN_ROOT/src/cli/structural-scan.mjs" --out "{review directory}/structural-scan-current.json"
+```
+
+Supply this path in addition to the original recorded structural scan.
+Never overwrite or re-record the architect's original scan.
+
+Before each DELIVER review, including re-reviews, take `baseSha` from
+`phaseHistory.DELIVER` and the exact returned evidence-log path. Run:
+
+```bash
+node "$SKRAFT_PLUGIN_ROOT/src/cli/qg-verify.mjs" --log "{evidence log path}" > "{review directory}/qg-verify-{story}.json"
+git log --format='commit %H%n%B' {DELIVER baseSha}..HEAD > "{review directory}/commits-{story}.txt"
+git diff {DELIVER baseSha}..HEAD > "{review directory}/diff-{story}.patch"
+git diff --name-status {DELIVER baseSha}..HEAD > "{review directory}/files-{story}.txt"
+git rev-parse HEAD
+```
+
+`qg-verify` exits 0/1/2 for pass/fail/inconclusive; preserve its JSON in all
+three cases and pass it unchanged. Missing or malformed output, a launch
+failure, or any failed Git/scan command blocks dispatch; never manufacture
+empty results. Supply all four paths and the returned SHA as `reviewed_sha`.
+On a re-review with a previous `reviewed_sha`, also run
+`git diff --name-only {previous reviewed_sha}..HEAD` and pass the returned
+changed-file list verbatim. If the previous revision is absent, require full
+fan-out. Verify HEAD still equals `reviewed_sha` after preparation and after
+the reviewer returns; if changed, prepare fresh inputs and re-dispatch before
+recording a verdict.
+
+### Review persistence
+
+Render only the reviewer's returned canonical YAML. Never alter its judgment,
+findings, dissent, revision or escalation. Select the exact basename by phase:
+DESIGN `design-review-{N}.md`, DISTILL `distill-review-{N}.md`, DELIVER
+`deliver-review-{N}.md`; never derive it from a story title.
+
+```bash
+node "$SKRAFT_PLUGIN_ROOT/src/cli/artifact.mjs" review-verdict --out "{exact review path}" <<'EOF'
+{the returned canonical verdict YAML, unchanged}
+EOF
+```
+
+On PowerShell, pipe a single-quoted here-string containing that same YAML into
+the command instead of using a Bash heredoc. Check successful exit and read
+the exact output file before recording its path. On schema failure, pass the
+renderer error to the reviewer for a corrected full YAML response; never
+repair or synthesize it yourself. On IO/tool failure, stop and surface the
+failure; never record a success-shaped fallback.
 
 ### RESEARCH (reviewer-less phase — specialist-only)
 
@@ -261,7 +322,7 @@ Paths use the resolved tracking root, normally `.copilot-tracking/skraft-plans/{
 | Phase | Specialist | Reviewer | Expected artefacts |
 |---|---|---|---|
 | RESEARCH | `Skraft - Solution Researcher` | — (none; closed via manual `close-phase`) | `research/{date}/{slug}-research.md` |
-| DESIGN | `Skraft - Solution Architect` | `Skraft - Solution Architect Reviewer` | `details/{date}/event-model-*.md`, `details/{date}/contracts-*.md`. ADRs live in repository `docs/adr/` and exist only for decisions the eligibility gate admits; their absence is not a missing artefact. |
+| DESIGN | `Skraft - Solution Architect` | `Skraft - Solution Architect Reviewer` | `details/{date}/event-model-*.md`, `details/{date}/diagrams-*.md`, `details/{date}/contracts-*.md`, `details/{date}/context-map.md`, `details/{date}/consistency-matrix-{story}.md`. ADRs live in repository `docs/adr/` and exist only for decisions the eligibility gate admits; their absence is not a missing artefact. |
 | DISTILL | `Skraft - Acceptance Designer` | `Skraft - Acceptance Designer Reviewer` | `features/*.feature`, `details/{date}/test-plan-*.md`, `details/{date}/impl-plan-*.md`, `tests/**/{Feature}AcceptanceTests.cs` (RED) |
 | DELIVER | `Skraft - Software Engineer` | `Skraft - Software Engineer Reviewer` | Committed code + passing tests + `changes/{date}/change-log.md` |
 
@@ -279,7 +340,7 @@ DELIVER has no separate sub-pipeline: you run the engineer↔reviewer loop from 
    The block carries the `.feature` file(s), `test-plan-{story}.md`, `impl-plan-{story}.md`, `contracts-{story}.md`, `docs/adr/decisions-index.md`, the research conventions and the stack-commands file. Every DELIVER re-dispatch — rework included — carries the same block and the same additions.
 
    Require engineer-owned quality evidence, change log, actual-impact outcome data and frontend manifest on success or blockage. Engineering rigor stays unchanged; resume unfinished COMMIT & VERIFY work, but never rerun gates just to publish.
-3. Record the engineer's change log and quality-evidence log with `state.mjs record-artifact --phase DELIVER`, then dispatch `Skraft - Software Engineer Reviewer` with the Dispatch context header, its handoff block (it carries the `.feature`, `test-plan-{story}.md`, `impl-plan-{story}.md`, contracts and decisions index), and the raw outcome, forecast, quality-evidence, change-log and manifest refs. Keep all four core lenses mandatory and cold-reader inputs unchanged.
+3. Record the engineer's change log and quality-evidence log with `state.mjs record-artifact --phase DELIVER`, prepare fresh inputs under Deterministic review preparation, then dispatch `Skraft - Software Engineer Reviewer` with the Dispatch context header, its handoff block (it carries the `.feature`, `test-plan-{story}.md`, `impl-plan-{story}.md`, contracts and decisions index), the prepared paths and `reviewed_sha`, and the raw outcome, forecast, quality-evidence, change-log and manifest refs. Keep all four core lenses mandatory and cold-reader inputs unchanged.
 4. Handle the verdict with the Step 4 verdict table, using `userPreferences.maxRetriesPerPhase + 1` total attempts.
 5. On final `APPROVED` or blocked DELIVER, record the persisted review and route the outcome below. Engineer owns capture and change-log production, never you. Mark pipeline complete only on engineering approval; publication failure does not change that verdict.
 
@@ -310,7 +371,7 @@ The reviewer returned `NEEDS_REWORK`. Work in rework mode: address ALL findings,
 Revise your output in place at the same dated paths.
 ```
 
-After the rework returns, dispatch the reviewer with its handoff block: its mode line reads `re-review`.
+After the rework returns, prepare fresh deterministic review inputs, then dispatch the reviewer with its handoff block: its mode line reads `re-review`.
 
 ## Error handling
 
