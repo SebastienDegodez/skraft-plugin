@@ -3,6 +3,20 @@
 Toutes les modifications notables de ce projet sont documentées ici.
 Format basé sur [Conventional Commits](https://www.conventionalcommits.org/) — versionnage [SemVer](https://semver.org/).
 
+## [1.16.0](https://github.com/SebastienDegodez/skraft-plugin/compare/v1.15.3...v1.16.0) (2026-11-11)
+
+### ✨ Features
+
+* **agents:** Copilot models 5.5/6 + skill tool for all agents ([#572](https://github.com/SebastienDegodez/skraft-plugin/issues/572)) ([0e32d72](https://github.com/SebastienDegodez/skraft-plugin/commit/0e32d72c56eb9284a38bc143dc67075c7ea4da6b))
+
+### 🐛 Bug Fixes
+
+* **agents:** align native capabilities and read-only review ownership ([#570](https://github.com/SebastienDegodez/skraft-plugin/issues/570)) ([a3c97ad](https://github.com/SebastienDegodez/skraft-plugin/commit/a3c97adb37dcae803bd31eb97fbe3a16cdc7acaf))
+
+### ⚡ Performance
+
+* **agents:** commit one green per scenario, inner TDD uncommitted ([#569](https://github.com/SebastienDegodez/skraft-plugin/issues/569)) ([8f094fe](https://github.com/SebastienDegodez/skraft-plugin/commit/8f094fe832bf993a6a0ed2af4f21ea79faee09e7)), closes [#8](https://github.com/SebastienDegodez/skraft-plugin/issues/8) [#567](https://github.com/SebastienDegodez/skraft-plugin/issues/567) [#561](https://github.com/SebastienDegodez/skraft-plugin/issues/561)
+
 ## [1.15.3](https://github.com/SebastienDegodez/skraft-plugin/compare/v1.15.2...v1.15.3) (2026-10-30)
 
 ### 🐛 Bug Fixes
