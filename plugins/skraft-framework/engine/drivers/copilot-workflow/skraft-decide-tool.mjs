@@ -59,6 +59,7 @@ const asked = async ({ directory, pluginRoot, home, dialog }, args) => {
 // Stryker disable StringLiteral: text shown to the host and the model; no engine behaviour reads it
 const DESCRIPTION =
   'Put the question the active skraft-pipeline run is waiting on to the person in Copilot, and record their answer. Takes no argument. ' +
+  'This tool asks the question itself: call it before asking the person anything, and never put the question, its options or a choice to them with another tool or in the chat first. ' +
   'Then tell them to resume the skraft-pipeline run.'
 const NO_DIRECTORY = 'the session has no working directory yet'
 // Stryker restore StringLiteral

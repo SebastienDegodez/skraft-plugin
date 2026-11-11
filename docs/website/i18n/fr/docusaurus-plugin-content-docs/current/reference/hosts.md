@@ -265,7 +265,7 @@ durable par `ctx.pause(<clé>)` :
 
 ```
 Waiting for you — <question>
-adr-1 was not answered: <why>. Resume this run to be asked again, ask Copilot in the chat to put the question to you, or type skraft decide adr-1 RATIFIED|REJECTED in a terminal and resume this run.
+adr-1 was not answered: <why>. Resume this run to be asked again, ask Copilot in the chat to open the dialog of this question (Copilot does not ask it in its own words), or type skraft decide adr-1 RATIFIED|REJECTED in a terminal and resume this run.
 ```
 
 À la différence du mod Claude Code, un texte sans mot écrit comme consigne n'est pas redemandé :
