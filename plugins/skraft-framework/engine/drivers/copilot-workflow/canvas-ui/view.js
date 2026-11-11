@@ -29,8 +29,26 @@ export const icon = (name, label) => `<svg class="icon icon-${name}" viewBox="0 
 
 export const TABS = Object.freeze(['run', 'configuration', 'workflow', 'journal'])
 
+/**
+ * Where the run stands on its configuration question: 'none' when it asks nothing of the
+ * configuration, 'asked' while it waits for the go-ahead, 'saved' once the person saved the
+ * configuration and has not edited since. A save answers nothing: the question stays open until
+ * START or STOP comes from the Copilot chat, so the page says both, that it saved and what waits.
+ * @param {any} content the content drawn @param {{ savedFor: string | null, dirty: boolean }} state the view state
+ * @returns {'none' | 'asked' | 'saved'}
+ */
+export const configurationStand = (content, state) => {
+  const question = content?.question
+  if (question?.kind !== 'configuration') return 'none'
+  return question.key === state.savedFor && !state.dirty ? 'saved' : 'asked'
+}
+
 /** The header button that leads to the question the run waits on; none while none waits. It answers nothing. */
-const renderNeedsYou = (question, lang) => (question ? `<button type="button" class="needs-you" data-action="needs-you" aria-keyshortcuts="n" title="${esc(ui(lang, 'needsYouHint'))}">${icon('question')}<span>${esc(ui(lang, 'needsYou'))}</span><code>${esc(question.key)}</code><kbd aria-hidden="true">n</kbd></button>` : '')
+const renderNeedsYou = (question, stand, lang) => {
+  if (!question) return ''
+  const saved = stand === 'saved'
+  return `<button type="button" class="needs-you${saved ? ' is-saved' : ''}" data-action="needs-you" aria-keyshortcuts="n" title="${esc(ui(lang, saved ? 'needsYouSavedHint' : 'needsYouHint'))}">${icon(saved ? 'pass' : 'question')}<span>${esc(ui(lang, saved ? 'needsYouSaved' : 'needsYou'))}</span><code>${esc(question.key)}</code><kbd aria-hidden="true">n</kbd></button>`
+}
 
 /** The top bar: the brand, the slug, the tabs, the button to the waiting question, where the run stands. */
 export const renderHeader = (content, view, lang) => {
@@ -40,7 +58,7 @@ export const renderHeader = (content, view, lang) => {
   const status = content?.status ?? 'idle'
   return `<div class="brand"><span class="brand-mark">skraft</span><span class="brand-sep">/</span><span class="slug">${esc(slug || 'pipeline')}</span></div>
     <div class="tabs" role="tablist">${tabs}</div>
-    ${renderNeedsYou(content?.question ?? null, lang)}
+    ${renderNeedsYou(content?.question ?? null, configurationStand(content, view), lang)}
     <p class="run-status s-${esc(status)}"><span class="dot"></span>${esc(words.status[status] ?? status)}</p>`
 }
 
@@ -67,11 +85,12 @@ const STEP_ICONS = { done: 'pass', closed: 'pass', open: 'open', pending: 'pendi
  */
 export const reasonText = (outcome, lang) => (outcome.code ? dictionary(lang).ui[`reason_${outcome.code}`] : undefined) ?? outcome.reason
 
-/** The question the run waits on, where to answer it. */
-const renderQuestion = (question, lang) => (question === null ? '' : `<section class="callout" id="question" tabindex="-1" data-focus="question" aria-labelledby="question-head">
+/** The question the run waits on, where to answer it; once the configuration is saved, that the save did not answer it. */
+const renderQuestion = (question, stand, lang) => (question === null ? '' : `<section class="callout" id="question" tabindex="-1" data-focus="question" aria-labelledby="question-head">
     <h2 id="question-head">${icon('question')}<span>${esc(ui(lang, 'waitingOn'))}</span><code>${esc(question.key)}</code><span class="pill">${esc(question.header)}</span></h2>
     <p class="callout-text">${esc(question.text)}</p>
     <p class="callout-how">${esc(ui(lang, 'answerHow', { key: question.key, usage: question.usage }))}</p>
+    ${stand === 'saved' ? `<p class="callout-saved">${icon('pass')}<span>${esc(ui(lang, 'configSaved'))}</span></p>` : ''}
   </section>`)
 
 /** One phase: its state, then its steps. */
@@ -118,10 +137,10 @@ const renderFacts = (details, lang) => {
   return `${facts.length === 0 ? '' : `<ul class="facts">${facts.map(factLine).join('')}</ul>`}${folded}`
 }
 
-/** The Run tab: the run in figures, the question, the phases, then what the steps came to. */
-export const renderRun = (content, lang) => `<div class="inner">
+/** The Run tab: the run in figures, the question, the phases, then what the steps came to. @param {'none' | 'asked' | 'saved'} stand where the run stands on its configuration question */
+export const renderRun = (content, lang, stand) => `<div class="inner">
     ${content.phases.length === 0 ? '' : renderSummary(content, lang)}
-    ${renderQuestion(content.question, lang)}
+    ${renderQuestion(content.question, stand, lang)}
     ${content.question === null || content.reason !== content.question.text ? `<p class="reason">${esc(reasonText(content, lang))}</p>` : ''}
     <section class="section"><h2 class="section-head">${esc(ui(lang, 'phases'))}</h2>
       ${content.phases.length === 0 ? `<p class="muted">${esc(ui(lang, 'noPhases'))}</p>` : `<ol class="phases">${content.phases.map((phase) => renderPhase(phase, lang)).join('')}</ol>`}
@@ -297,14 +316,26 @@ const renderForge = (configuration, draft, lang) => `<section class="section"><h
       <div class="fields is-wide"><label class="field"><span>${esc(ui(lang, 'forgeUsed'))}</span><select data-field="forge"><option value="">${esc(ui(lang, 'fromRemote', { forge: FORGE_NAMES[configuration.forge.deduced] }))}</option>${options(configuration.choices.forges, draft.forge ?? '', FORGE_NAMES)}</select></label></div>${configuration.forge.namedIn === null ? '' : `<p class="muted small-note">${esc(ui(lang, 'forgeNamedIn', { file: configuration.forge.namedIn }))}</p>`}
     </section>`
 
+/** The notice that opens the Configuration tab: what a notice says to the person, in a tone and a glyph. */
+const configNotice = (tone, glyph, text) => `<div class="notice ${tone}" id="config-state">${icon(glyph)}<p>${esc(text)}</p></div>`
+
+/** What the Configuration tab opens with: what the run waits for on this configuration, else whether the working copy confirmed it. */
+const renderConfigState = (configuration, stand, lang) => {
+  if (stand === 'saved') return configNotice('n-pass', 'pass', ui(lang, 'configSaved'))
+  if (stand === 'asked') return configNotice('n-warn', 'question', ui(lang, 'configAsked'))
+  if (configuration.confirmed) return configNotice('n-pass', 'pass', ui(lang, 'confirmed'))
+  return configNotice('n-warn', 'question', ui(lang, 'unconfirmed'))
+}
+
 /**
  * The Configuration tab: what a run starts with, the person's draft of it in the fields.
  * @param {{ phaseOf: (step: string) => string, open: Set<string> }} layout the phase of each step; the agent groups the person opened
+ * @param {'none' | 'asked' | 'saved'} stand where the run stands on its configuration question
  */
-export const renderConfiguration = (configuration, draft, lang, layout) => {
+export const renderConfiguration = (configuration, draft, lang, layout, stand) => {
   if (configuration.status !== 'ok') return `<div class="inner"><div class="notice n-fail"><p>${esc(reasonText(configuration, lang))}</p></div></div>`
   return `<div class="inner">
-    <div class="notice ${configuration.confirmed ? 'n-pass' : 'n-warn'}">${icon(configuration.confirmed ? 'pass' : 'question')}<p>${esc(ui(lang, configuration.confirmed ? 'confirmed' : 'unconfirmed'))}</p></div>
+    ${renderConfigState(configuration, stand, lang)}
     ${renderForge(configuration, draft, lang)}
     <section class="section"><h2 class="section-head">${esc(ui(lang, 'components'))}</h2><p class="section-note">${esc(ui(lang, 'componentsNote', { file: configuration.files.team }))}</p>
       ${draft.components.length === 0 ? `<p class="muted">${esc(ui(lang, 'noComponents'))}</p>` : `<div class="cards">${draft.components.map((component, index) => renderComponent(component, index, configuration.choices, lang)).join('')}</div>`}
@@ -317,9 +348,13 @@ export const renderConfiguration = (configuration, draft, lang, layout) => {
   </div>`
 }
 
-/** The save bar of the Configuration tab. */
-export const renderSaveBar = (state, lang) => `<div class="bar-inner">
-    <p class="bar-state${state.dirty ? ' is-dirty' : ''}">${esc(ui(lang, state.dirty ? 'dirty' : 'clean'))}${state.stale ? `<span class="note">${esc(ui(lang, 'changedOnDisk'))}</span>` : ''}${state.error ? `<span class="error" role="alert">${esc(state.error)}</span>` : ''}</p>
+/**
+ * The save bar of the Configuration tab: what is saved, and once it is saved while the run waits on
+ * its configuration question, that the run still waits for the answer in the chat.
+ * @param {'none' | 'asked' | 'saved'} stand where the run stands on its configuration question
+ */
+export const renderSaveBar = (state, lang, stand) => `<div class="bar-inner">
+    <p class="bar-state${state.dirty ? ' is-dirty' : ''}">${esc(ui(lang, state.dirty ? 'dirty' : 'clean'))}${state.stale ? `<span class="note">${esc(ui(lang, 'changedOnDisk'))}</span>` : ''}${stand === 'saved' ? `<span class="note note-saved">${esc(ui(lang, 'configSavedBar'))}</span>` : ''}${state.error ? `<span class="error" role="alert">${esc(state.error)}</span>` : ''}</p>
     <div class="bar-actions"><button type="button" class="ghost" data-action="discard"${state.dirty ? '' : ' disabled'}>${esc(ui(lang, 'discard'))}</button>
     <button type="button" class="primary" data-action="save"${state.dirty && !state.saving ? '' : ' disabled'}>${esc(ui(lang, state.saving ? 'saving' : 'save'))}</button></div>
   </div>`

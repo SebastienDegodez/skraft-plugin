@@ -122,6 +122,11 @@ const FR = {
     journalBy: 'par {by}',
     needsYou: 'On a besoin de vous',
     needsYouHint: 'Aller à la question qui attend (n). Vous y répondez dans le chat Copilot.',
+    needsYouSaved: 'Enregistré : répondez dans le chat',
+    needsYouSavedHint: 'Configuration enregistrée. Le run attend encore votre réponse, START ou STOP, dans le chat Copilot. Aller à la question (n).',
+    configAsked: 'Le run attend votre feu vert sur cette configuration. Changez ce qu’il faut et enregistrez, puis répondez START ou STOP dans le chat Copilot : le run relit la configuration quand vous répondez START.',
+    configSaved: 'Configuration enregistrée. Le run attend toujours votre réponse, START ou STOP, dans le chat Copilot ; il lit cette configuration quand vous répondez START.',
+    configSavedBar: 'Le run attend toujours votre réponse, START ou STOP, dans le chat Copilot.',
   },
 }
 
@@ -237,6 +242,11 @@ const EN = {
     journalBy: 'by {by}',
     needsYou: 'We need you',
     needsYouHint: 'Go to the question the run waits on (n). You answer it in the Copilot chat.',
+    needsYouSaved: 'Saved: answer in the chat',
+    needsYouSavedHint: 'Configuration saved. The run still waits for your answer, START or STOP, in the Copilot chat. Go to the question (n).',
+    configAsked: 'The run waits for your go-ahead on this configuration. Change what you need and save, then answer START or STOP in the Copilot chat: the run reads the configuration again when you answer START.',
+    configSaved: 'Configuration saved. The run still waits for your answer, START or STOP, in the Copilot chat; it reads this configuration when you answer START.',
+    configSavedBar: 'The run still waits for your answer, START or STOP, in the Copilot chat.',
   },
 }
 

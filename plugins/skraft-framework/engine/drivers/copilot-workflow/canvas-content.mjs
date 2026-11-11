@@ -19,7 +19,7 @@ import { editedDigest } from './edited-files.mjs'
  * @typedef {import('../../domain/reporting/run-graph.mjs').GraphNode} GraphNode
  * @typedef {{ key: string, text: string, state: string }} Line
  * @typedef {{ key: string, text: string, state: string, steps: Line[] }} PhaseLines
- * @typedef {{ key: string, header: string, text: string, usage: string, how: string }} Question
+ * @typedef {{ key: string, kind: string, header: string, text: string, usage: string, how: string }} Question
  * @typedef {{ title: string, status: string, code?: string, reason: string, phases: PhaseLines[], details: Line[], question: Question | null }} PanelContent
  * @typedef {{ directory: () => string | null, pluginRoot: string, home: string }} ContentHost
  */
@@ -266,7 +266,8 @@ const questionOf = (question) => (question === null ? null : withUsage(question,
 
 /**
  * The question with what to type after `skraft decide <key>`; `how` is the English sentence the
- * model reads, the page words it in the person's language from `usage`.
- * @param {{ key: string, header: string, text: string }} question @param {string} usage @returns {Question}
+ * model reads, the page words it in the person's language from `usage`; `kind` lets the page tell
+ * the configuration question from the others.
+ * @param {{ key: string, kind: string, header: string, text: string }} question @param {string} usage @returns {Question}
  */
-const withUsage = ({ key, header, text }, usage) => ({ key, header, text, usage, how: `Answer it in the Copilot chat, where Copilot puts it to you; or type skraft decide ${key} ${usage} in a terminal.` })
+const withUsage = ({ key, kind, header, text }, usage) => ({ key, kind, header, text, usage, how: `Answer it in the Copilot chat, where Copilot puts it to you; or type skraft decide ${key} ${usage} in a terminal.` })
