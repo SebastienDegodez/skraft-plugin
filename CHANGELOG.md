@@ -3,6 +3,17 @@
 Toutes les modifications notables de ce projet sont documentées ici.
 Format basé sur [Conventional Commits](https://www.conventionalcommits.org/) — versionnage [SemVer](https://semver.org/).
 
+## [2.0.0-alpha.81](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.80...v2.0.0-alpha.81) (2026-11-11)
+
+### ✨ Features
+
+* **engine:** deliver scenario by scenario, judged by a replay judge from what the tests print ([#567](https://github.com/SebastienDegodez/skraft-plugin/issues/567)) ([41caeab](https://github.com/SebastienDegodez/skraft-plugin/commit/41caeabd9a4af906c49c56ef69fa483d1c042105)), closes [#564](https://github.com/SebastienDegodez/skraft-plugin/issues/564)
+
+### 🐛 Bug Fixes
+
+* **engine:** skraft asks a pending question once under Copilot, never the agent first ([#573](https://github.com/SebastienDegodez/skraft-plugin/issues/573)) ([2f74dd0](https://github.com/SebastienDegodez/skraft-plugin/commit/2f74dd0fd1c150de3df7ad8ddf380fae669c3202))
+* **skills:** the .NET mutation gate scopes Stryker to the changed sources it lists itself ([#558](https://github.com/SebastienDegodez/skraft-plugin/issues/558)) ([2947981](https://github.com/SebastienDegodez/skraft-plugin/commit/29479818d398c5e75d235b80e06ade1ff4acb7a7)), closes [#8](https://github.com/SebastienDegodez/skraft-plugin/issues/8)
+
 ## [2.0.0-alpha.80](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.79...v2.0.0-alpha.80) (2026-11-08)
 
 ### ♻️ Refactoring
