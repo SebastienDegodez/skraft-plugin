@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { mkdtempSync, readFileSync } from 'node:fs'
+import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs'
 import { spawnSync } from 'node:child_process'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -8,6 +8,7 @@ import { fileURLToPath } from 'node:url'
 import { ARTIFACTS, normalize, validate } from '../../../plugins/skraft-framework/src/domain/artifact-registry.mjs'
 import { parseReviewVerdict } from '../../../plugins/skraft-framework/src/domain/artifact-policy.mjs'
 import { renderArtifact } from '../../../plugins/skraft-framework/src/application/render-artifact.mjs'
+import { parseYaml } from '../../../plugins/skraft-framework/src/domain/yaml-parser.mjs'
 
 // Mirrors how plugins/skraft-framework/src/cli/artifact.mjs resolves templates at runtime: relative
 // to the plugin root (this repo's skraft-framework plugin directory), so this test exercises the
@@ -110,4 +111,39 @@ test('artifact CLI: an unknown verdict exits 2 and names the allowed values', ()
   const error = JSON.parse(run.stderr)
   assert.equal(error.error, 'invalid_field_values')
   assert.deepEqual(error.invalid[0].allowed, ['APPROVED', 'NEEDS_REWORK', 'REJECTED'])
+})
+
+test('parent persistence: returned rejection, dissent and revision survive rendering in both review schemas', (t) => {
+  const dir = mkdtempSync(join(tmpdir(), 'review-handoff-'))
+  t.after(() => rmSync(dir, { recursive: true, force: true }))
+  const responses = [
+    { ...reviewVerdict('REJECTED'), synthesis: { blocking_findings: ['G1'], dissent: 'Minority finding upheld.' } },
+    {
+      status: 'NEEDS_REWORK',
+      lens_results: [{ lens: 'quality-gates', verdict: 'inconclusive', defects: [] }],
+      synthesis: { risk: { contribution: 0 } },
+      summary: 'Verifier unavailable.',
+      dissent_analysis: 'Do not approve absent evidence.',
+      escalation: 'environment',
+      reviewed_sha: 'a'.repeat(40),
+    },
+  ]
+  for (const [index, response] of responses.entries()) {
+    const out = join(dir, `review-${index}.md`)
+    const run = spawnSync(process.execPath, [cliPath, 'review-verdict', '--out', out], {
+      input: JSON.stringify(response),
+      encoding: 'utf8',
+    })
+    assert.equal(run.status, 0, run.stderr)
+    const persisted = readFileSync(out, 'utf8').match(/```yaml\n([\s\S]*?)\n```/)[1]
+    assert.deepEqual(parseYaml(persisted), response)
+    assert.notEqual(parseReviewVerdict(readFileSync(out, 'utf8')), 'APPROVED')
+  }
+  const invalid = join(dir, 'invalid-review.md')
+  const run = spawnSync(process.execPath, [cliPath, 'review-verdict', '--out', invalid], {
+    input: JSON.stringify({ verdict: 'APPROVED' }),
+    encoding: 'utf8',
+  })
+  assert.equal(run.status, 2)
+  assert.equal(existsSync(invalid), false)
 })

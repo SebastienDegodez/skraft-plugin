@@ -8,6 +8,7 @@ tools:
   - edit/createFile
   - edit/editFiles
   - search/codebase
+  - execute/runInTerminal
   - graphify/*
 metadata:
   cost_role_class: planner  # B12 target class — cross-cutting reasoning warrants planner capacity (genesis token-economy)

@@ -38,6 +38,7 @@ test('the unit test project gets no mocking library', async (t) => {
 	const packages = calls.filter((call) => call[2] === 'package').map((call) => `${call[1]} ${call[3]}`)
 	assert.equal(packages.some((line) => /UnitTests/.test(line)), false)
 	assert.ok(packages.includes('tests/Ordering.IntegrationTests/Ordering.IntegrationTests.csproj NetArchTest.Rules'))
+	assert.ok(calls.some((call) => call.join(' ') === 'add tests/Ordering.IntegrationTests/Ordering.IntegrationTests.csproj package Microsoft.AspNetCore.Mvc.Testing --version 10.0.1'))
 })
 
 test('templates are written with the project name and Class1.cs is removed', async (t) => {

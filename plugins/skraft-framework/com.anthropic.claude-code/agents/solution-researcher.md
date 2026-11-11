@@ -9,6 +9,7 @@ tools:
   - Edit
   - Grep
   - Glob
+  - Bash
   - mcp__graphify__*
 metadata:
   cost_role_class: researcher  # B12 target class — read-heavy investigation, no code authoring (genesis token-economy)
