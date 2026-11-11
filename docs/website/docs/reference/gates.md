@@ -40,10 +40,12 @@ root; a component stops at its first failing gate.
 
 | Rule | Detail |
 | --- | --- |
-| Result | `pass` (exit 0) or `fail`, class `environment` or `deterministic` ([failure classes](./skraft-config.md#failure-classes)) |
-| Component with no gate command | gate `none`, `fail`, class `environment` |
+| Result | `pass` (exit 0) or `fail`, class `interrupted`, `environment` or `deterministic` ([failure classes](./skraft-config.md#failure-classes)) |
+| Component with no gate command | gate `none`, `fail`, class `environment`; in a run, the `environment` question names the cause `config` |
 | Scope | the components changed since their base; `goal_gate=true` then runs all the others; `skraft gate --all` runs them all |
 | Edges | every gate of the node passes: the `PASS` edge; one fails: the `FAIL` edge (`gates`: `PASS` to `deliver_review`, `FAIL` to `deliver`; `mutation`: `PASS` to `visuals`, `FAIL` to `kill_proposal`; `mutation_gates`: `PASS` to `mutation`, `FAIL` to `kill_mutants`) |
+| Machine | a gate step that fails as `environment` takes no edge: the run asks the `environment` question ([causes](./run-journal.md#environment-question)), sends nothing back to an agent and uses none of its attempts; a gate stopped by a signal or a crash fails as `deterministic` and takes the `FAIL` edge with its evidence, like a failing check |
+| Loop ceiling | a failed gate step takes its `FAIL` edge until that edge's `max_visits`; one more failure asks the `blocked` question (code `loop-ceiling`) about the node that edge leads to; an instruction sends the work back there, `STOP` ends the run |
 | Mutation | the engine reads the report of the `mutation` command (`mutationReport`) and judges two bars: **100 %** on the core (Domain, Application), **80 %** on the boundary (the rest); it runs once, after `deliver_review` approved; on failure, `kill_proposal` writes one proposal per file of survivors, the `mutation-plan` question lets the developer choose (`APPLY`, their instruction, `STOP`), then `kill_mutants` applies the choice ([Phases](./phases.md#deliver)) |
 | Thresholds | none is configurable |
 | Lock | `gates` and `mutation` are `locked=true`: a copy of the workflow drops them only with `unlock="<reason>"` ([The DOT workflow](./workflow-dot.mdx#locked-nodes)) |
@@ -133,9 +135,10 @@ every criterion that forbids one.
 | G2 | every ADR the run wrote has its row in `docs/adr/decisions-index.md` |
 | G2 | an ADR on the base branch changes only its status lines and is never deleted (`adr-lifecycle`) |
 
-A failure sends the architect back with one line per record; after its last attempt, the run
-stops with `design-records`. The consistency matrix is also DESIGN's declared output: when it is
-missing, the run stops with `missing-outputs` instead.
+A failure sends the architect back with one line per record; after its last attempt, or two
+attempts in a row refused the same way, the run asks the `blocked` question, and `STOP` ends it
+with `design-records`. The consistency matrix is also DESIGN's declared output: when it is
+missing, `STOP` ends it with `missing-outputs` instead.
 
 ## DISTILL <!-- #distill -->
 
@@ -152,7 +155,7 @@ The `distill_review` review: 4 lenses, verdict computed by the engine.
 | **G6** | `testability` | Every scenario has an entry in the implementation plan. | high |
 | **G11** | `testability` | Every use case new to the story has its acceptance test in its language's unit-test place (.NET: the `<Context>.UnitTest`, `<Context>.UnitTests` or `<Context>.Tests` project; Java: the `-unit-test(s)` module; Python, TypeScript, JavaScript, React: `<test path>/unit/`). | blocker |
 | **T1** | `testability` | Each scenario and test checks one behaviour through an observable outcome and depends on no time, order or randomness it does not fix. | high |
-| **T2** | `testability` | Every input and expected value the outer acceptance test holds equals the `.feature` verbatim; the test holds the first scenario only. | blocker |
+| **T2** | `testability` | Every input and expected value the outer acceptance test holds equals the `.feature` verbatim; the test holds the scenario in progress only. | blocker |
 | **T3** | `testability` | The outer acceptance test exists and its first scenario fails on a business assertion; the patch's production code is a skeleton whose signatures answer the empty value of their type. | blocker |
 | **G7** | `boundary-enforcement` | Every scenario in the test plan targets an Application use case the event model names (one of its Commands or Queries); an implementation-plan step that writes no scenario's acceptance test (an API or HTTP test of a later circle) is out of its scope. | blocker |
 | **G8** | `boundary-enforcement` | The test plan identifies at least one walking-skeleton scenario per flow. | high |
@@ -179,6 +182,17 @@ files it cites are read, so the files of another story are never charged to this
 coverage-matrix row that names no Gherkin writes `—`. The criteria answer how many scenarios it
 takes: a story whose `ac-draft` declares none is asked for none. This is a floor under G1, not G1 itself: the `coverage` lens still
 judges which criterion each scenario answers.
+
+**Engine check.** The scenarios DELIVER builds: after each attempt of the first pass, the engine
+reads the `## Scenarios` table of the test plan (`scenarios`): ids in order, one title each, a
+component of `skraft-config.json`, S1 alone tagged `@walking-skeleton` in a component that is not
+`react`, or an exemption `library`, `refactoring` or `docs-only` and no tag
+([rules and messages](./phases.md#scenarios)). G8 stays the lens's: whether each flow has its
+walking skeleton.
+
+The review runs once, on the first pass: its acceptance test holds S1 alone (T2, T3). The passes
+of `distill` that write the next scenarios' tests are not reviewed; the replay of their red, and
+the green that must make them pass, check them.
 
 ## DELIVER <!-- #deliver -->
 
@@ -209,10 +223,77 @@ a pull request through `skraft review --pr`.
 changes that touch contracts (`when="contract"`)
 ([triggers](./workflow-dot.mdx#conditional-lenses)).
 
-The engine also checks, with no gate id, the commits of each attempt (`commits.checked`): a
-conventional message, `Refs: #<issue>` as the last line, no issue closed, a green commit preceded
-by a red one, each red one replayed and failing
-([`tdd.replay`](./skraft-config.md#tdd)).
+The engine also checks, with no gate id, the commits of each attempt (`commits.checked`):
+[Commits and replays](#commits).
+
+## Commits and replays <!-- #commits -->
+
+Every commit of an attempt is judged in its order; a commit refused stays refused until it leaves
+the history. The brief gives the exact message of a scenario's red and green.
+
+| Type | Kind | Rule |
+| --- | --- | --- |
+| `test` | red | a failing test of a component (`no-component` otherwise) |
+| `feat`, `fix` | green | the code that makes it pass |
+| `refactor`, `style`, `perf` | refactor | a change under green |
+| `docs`, `chore`, `build`, `ci`, `revert` | other | outside TDD: changes no file of a component's `src` or `tests` paths (`outside-tdd`) |
+| anything else | invalid | `not-conventional` |
+
+Every message ends its body with `Refs: #<issue>` when the story has one (`issue-reference-missing`),
+cites no other issue (`issue-not-in-story`) and closes none (`issue-closed`).
+
+| Pass | Allowed | Refused |
+| --- | --- | --- |
+| `distill`, writing a scenario's acceptance test | one red, the test and the skeleton it calls, in the scenario's component; the scenario's red exists after the pass; `.feature` and Markdown files go with it or in a `docs` commit, wherever they live | a second red (`oracle-split`); a red in another or a second component (`oracle-component`); a red with no file of the component's test paths (`oracle-without-test`); a green or refactor (`code-in-oracle`); none at all |
+| `deliver` on scenario k | one green, chained in bash: `<test command> && git add <files> && git commit …` | a red (`test-in-scenario`); a refactor (`refactor-in-scenario`); a second green (`second-green`); a change to a file of the scenario's acceptance-test commits outside the component's `src` paths (`oracle-touched`); a change to another component (`other-component`); none at all |
+| `deliver` sent back by the gates or the review, after the last scenario | reds, greens and refactors on the whole story; reds not replayed | a green with no red since the last green (`green-without-red`); on a pass the gates sent back, their failure stands for the first red |
+| `kill_mutants` | tests that kill mutants and pass | — |
+
+**Replays.** The engine reads no test report and no runner's output: it replays a commit's
+commands in a throwaway checkout, from the component root, and tells apart only an exit code of
+0. What each command printed goes, unchanged, to
+`logs/replay-<short sha>-<component>-<command>.log`, `-parent` added for a replay at the commit's
+parent ([Logs](./run-journal.md#logs)). The replay judge,
+[`replay-judge`](pathname:///dashboard/#agent-replay-judge), an agent the driver starts at depth 1,
+reads each log whole with its file-reading tool, never through a tool that summarises it (a
+summary drops the line that settles a decision: a skip, a test count, a failure printed in another
+language), then the commit (`git show`), and changes nothing: a commit or a file it
+changes in the working copy stops the step on the `environment` question, cause `judge`. It ends
+on a YAML block:
+
+```yaml
+decision: send-back    # accept | send-back | retry | ask-human
+note: "<what the logs show, and what the agent or the human has to do>"
+```
+
+The engine reads only `decision`; it keeps the whole answer, as written, in
+`logs/judge-<short sha>-<red|green>.md`. An answer it cannot read is asked once more, with the
+reason. A file the tests write in the working copy (a test report) is a change like any other,
+held to the write scope: list it in `.gitignore`.
+
+| Replayed | What happens | Effect |
+| --- | --- | --- |
+| a red of an acceptance test | the `test` command of each component it touches exits 0, then the `e2e` command of those that have one exits 0 too | refused, `not-red`, the judge not asked: `is not red: the tests of <components> pass at it; the replay's output is in <log>`, `pass at it, and so do the e2e tests of <components>; …` when e2e tests ran |
+| | a command fails: a non-zero exit, a program that did not start, a timeout | each failing command replayed at the commit's parent, then the judge asked: the commit, its files, the scenario's index and title, each command line, how it ended and its log |
+| the green of scenario k | its component's `test` command, and `e2e` when e2e tests proved the red | the judge always asked, every command exiting 0 included, with the red's sha, the logs of its replay at the red and at its parent, and the red's acceptance-test files |
+| a red or a green, judged | `accept` | the red stands and becomes the scenario's oracle, with the command that proved it (`test` or `e2e`); the green stands |
+| | `send-back` | refused, `not-red` or `not-green`: `the replay judge sends it back: read <judge answer>` |
+| | `retry` | the commands run again once, the commit then reporting what they find, and the judge is asked again, its brief saying so; a second `retry` asks a human |
+| | `ask-human`; two answers the engine cannot read; a host that cannot start the judge | the step stays open: `environment` question, cause `judge`: `the replay judge asks a human about the <red\|green> commit <short sha>: read <judge answer>` (`replay-judge answered 2 times with no verdict the engine reads (…)`, `the host could not start replay-judge`); `RETRY` replays and judges again, using no new attempt |
+| a red or a green | a person interrupted a command (exit 130, or `0xC000013A` on Windows) | the run stops (`interrupted`), asks nothing and refuses nothing; the next run replays the commit |
+| | no `test` command, a command that uses shell syntax or installs dependencies | the step stays open: `environment` question, cause `config`, nothing replayed |
+
+The judge accepts a red whose scenario test fails on its assertion at the commit and does not
+exist, does not run or fails otherwise at the parent; it sends back a red that fails before the
+assertion runs (build, test collection, an import, a skeleton's exception), where only another
+test fails or the scenario's test is skipped. It accepts a green whose commands all exit 0 and
+whose log shows the scenario test passed, by its name or by as many tests run as at its red, none
+failed or skipped; it asks a human when the only failing test already failed before the red. It answers `retry` for a cause that passes
+(a network timeout, a busy port), `ask-human` for what no agent can give (a program not
+installed, a container runtime that does not answer, a credential).
+[`tdd.replay`](./skraft-config.md#tdd) chooses which reds of an attempt are replayed; a red an
+earlier attempt of the pass replayed keeps its verdict. What each ask of the judge cost, an
+unreadable answer included, is journaled with its decision and added to the step's `cost`.
 
 ## Review: answer, refutation, verdict <!-- #review-run -->
 

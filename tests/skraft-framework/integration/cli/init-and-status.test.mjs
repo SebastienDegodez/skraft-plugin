@@ -9,7 +9,7 @@ import { runCli, USAGE } from '../../../../plugins/skraft-framework/engine/drive
 import { runSkraftPipelineWorkflow } from '../../../../plugins/skraft-framework/engine/drivers/copilot-workflow/skraft-pipeline-workflow.mjs'
 import { createNodeAdapters } from '../../../../plugins/skraft-framework/engine/infrastructure/node-adapters.mjs'
 import { actsAs, copilotHost, simulatedContext } from '../copilot-workflow/simulated-host.mjs'
-import { NOMINAL, SLUG, blocked, briefOf, commit, pipelineRepository, scriptedLlm } from '../support/pipeline-repository.mjs'
+import { CYCLE_WORKFLOW, NOMINAL, SLUG, blocked, briefOf, commit, designateWorkflow, pipelineRepository, scriptedLlm } from '../support/pipeline-repository.mjs'
 import { journal } from '../support/workspace.mjs'
 import { ISSUE, issueFile, repositoryOnForge } from '../support/issue-forge.mjs'
 import { fillsItsOutputs, scriptedModHost, stops } from '../claude-mod/support/scripted-mod-host.mjs'
@@ -106,7 +106,7 @@ test('skraft status prints the view of the active pipeline, as text or JSON', as
   assert.deepEqual(view, {
     slug: 'checkout', status: 'running', reason: '', phases: PHASES.map((phase) => ({ phase, state: 'pending' })), current: null, question: null, attempts: 0, costUsd: null, reviews: [], gates: [], agents: [],
   })
-  assert.deepEqual([graph.nodes.length, graph.edges.length, graph.nodes[0]], [18, 25, {
+  assert.deepEqual([graph.nodes.length, graph.edges.length, graph.nodes[0]], [19, 27, {
     id: 'research', kind: 'agent', phase: 'RESEARCH', what: 'solution-researcher', state: 'pending', outcome: null, visits: 0, attempts: 0, retries: 0, durationMs: 0, costUsd: null,
   }])
   assert.deepEqual((await inProcess(cwd, ['status'])).out, ['skraft checkout: running', ...PHASES.map((phase) => `${phase}  pending`)])
@@ -121,7 +121,7 @@ test('skraft report prints the time, cost and retries of each step of the active
   assert.equal(text.code, 0)
   assert.deepEqual(text.out.slice(0, 3), [`skraft ${SLUG}: waiting`, '| Step | Phase | Visits | Attempts | Retries | Time | Cost | Outcome |', '| --- | --- | ---: | ---: | ---: | ---: | ---: | --- |'])
   assert.match(text.out.at(-2), /^\| Total \| \| \| \d+ \| 0 \| \d+ s \| - \| \|$/)
-  assert.equal(text.out.at(-1), `design is blocked: solution-architect says it cannot go on; its reason is in ${tracking(cwd, SLUG, 'results', 'design-1-1.json')}.\nLeft by design (1):\n- stop after the research\n An instruction runs design again on a new pass with what is left above and the instruction; STOP ends the run.`)
+  assert.equal(text.out.at(-1), `design is blocked: solution-architect says it cannot go on; its reason is in ${tracking(cwd, SLUG, 'results', 'design-1-1.json')}.\nLeft by design (1):\n- stop after the research\n An instruction runs design again on a new pass with what is left above and the instruction; STOP ends the run.\nThe run so far (commits, refusals, incidents): ${tracking(cwd, SLUG, 'run-report.md')}`)
   const json = JSON.parse((await inProcess(cwd, ['report', '--json'])).out.join('\n'))
   assert.deepEqual(json.steps.find((step) => step.step === 'design'), { step: 'design', phase: 'DESIGN', visits: 1, attempts: 1, retries: 0, durationMs: json.steps.find((step) => step.step === 'design').durationMs, costUsd: null, outcome: 'failed' })
   assert.deepEqual(await inProcess(cwd, ['report', '--all']), { code: 2, out: [], err: [USAGE] })
@@ -221,10 +221,12 @@ test('skraft init --from-artifacts is refused without DISCUSS stories, and on a 
 
 test('skraft status names the gate node a waiting run stands on, as the pane does, and how to answer its question', async (t) => {
   const { cwd } = pipelineRepository(t)
+  // A workflow that builds no scenario replays no commit of DELIVER: the gates are the first to run its tests.
+  designateWorkflow(cwd, CYCLE_WORKFLOW)
   // The engineer leaves a test command the machine reports as not found (exit 127): the gates stop the run, their node open.
   const breaksTheTests = (brief, repository) => {
     NOMINAL['software-engineer'](brief, repository)
-    commit(cwd, `chore(${SLUG}): hand the tests to a missing tool`, { 'tests/unit/check.mjs': 'process.exit(127)\n' })
+    commit(cwd, `test(${SLUG}): hand the tests to a missing tool`, { 'tests/unit/check.mjs': 'process.exit(127)\n' })
   }
   const llm = scriptedLlm({ cwd, acts: { 'software-engineer': [breaksTheTests] } })
   const { ctx } = simulatedContext({ args: { slug: SLUG }, otherwise: actsAs(llm) })
@@ -241,7 +243,14 @@ test('skraft status names the gate node a waiting run stands on, as the pane doe
     'gates: build, format, lint, test, architecture, coverage (gates)',
     'answer: skraft decide gates-1 RETRY|ABORT',
   ])
-  assert.match(status.out.at(-1), /^gates cannot run on this machine: app\/test: exited 127 \(evidence: .+test-1\.log\)\. Fix it, then RETRY; or ABORT the run\.$/)
+  const testLog = tracking(cwd, SLUG, 'gates', 'app', 'test-1.log')
+  assert.equal(status.out.at(-1), [
+    `gates cannot run on this machine: app/test: exited 127 (evidence: ${testLog}).`,
+    'Cause: the machine: a program, a service, a permission or a Git hook it lacks or refuses.',
+    `Output: ${testLog}`,
+    'Fix it, then RETRY: gates runs again where it stopped, using no new attempt; or ABORT: the run ends.',
+    `The run so far (commits, refusals, incidents): ${tracking(cwd, SLUG, 'run-report.md')}`,
+  ].join('\n'))
   assert.deepEqual(JSON.parse((await inProcess(cwd, ['status', '--json'])).out.join('\n')).current, {
     step: 'gates', phase: 'DELIVER', agent: null, gates: ['build', 'format', 'lint', 'test', 'architecture', 'coverage'], question: null, visit: 1, attempt: 1,
   })

@@ -17,7 +17,7 @@ le résultat de chaque étape avant le run suivant.
 ## Prérequis
 
 - Le plugin skraft installé ([Installer skraft sur un hôte](./install-on-a-host.mdx)).
-- Node 22 ou plus, Git ; Docker ou Podman si un composant garde le mocking Microcks.
+- Node 22 ou plus, Git ; Docker ou Podman, sur lequel tournent par défaut Microcks et la base du walking skeleton.
 - Un terminal ouvert à la racine de votre copie de travail. `skraft` est la commande que [`npm i -g @skraft/cli`](./install-on-a-host.mdx#skraft-command) met en place ; la ligne longue `node "<dossier du plugin>/engine/drivers/cli/skraft.mjs"` marche sans elle.
 
 ## 1. Détecter les composants
@@ -102,8 +102,8 @@ journalisée au premier init d'un slug : pour en changer, démarrez un nouveau s
 
 ## 6. Passer un composant en mocks en mémoire
 
-Sans Docker ni Podman sur votre poste, pour un composant .NET, Java ou Python (TypeScript,
-JavaScript et React sont déjà en mémoire par défaut) :
+Sans Docker ni Podman sur votre poste, pour un composant .NET, Java, Python, TypeScript ou
+JavaScript (React est déjà in-process par défaut) :
 
 ```json
 { "name": "api", "root": "services/payment-api", "stack": "dotnet",
@@ -112,7 +112,33 @@ JavaScript et React sont déjà en mémoire par défaut) :
 
 Ce que vous perdez : [Adapter skraft : ce que coûte chaque réglage](../explanation/customisation-trade-offs.md).
 
-## 7. Dire si un composant écrit du Gherkin
+Les autres rangées de la [politique d'infrastructure](../reference/skraft-config.md#infrastructure)
+— le point d'entrée, les gateways internes, l'horloge — gardent le défaut du plugin pour la
+stack. Pour en faire tourner une sur autre chose, nommez-la sous `infrastructure`, dans
+`skraft-config.json` seulement :
+
+```json
+{ "name": "api", "root": "services/payment-api", "stack": "dotnet",
+  "infrastructure": { "internalGateway": { "walkingSkeleton": "in-memory" } } }
+```
+
+La rangée de la gateway externe suit `mocking.strategy` ; `infrastructure` la refuse.
+
+## 7. Laisser la commande de test afficher ce qui a échoué
+
+Le moteur rejoue chaque test d'acceptation en échec que DISTILL commite et le vert de chaque
+scénario avec la commande `test` du composant (et `e2e`), et garde ce qu'affiche la commande dans
+un log du run. Il ne lit aucun rapport de test, JUnit ou autre : le juge du rejeu lit ce log
+([Commits et rejeux](../reference/gates.md#commits)). La commande `test` n'a donc besoin d'aucune
+option de reporter pour skraft ; sa sortie par défaut, qui nomme chaque test en échec et pourquoi,
+est ce que lit le juge.
+
+Un rapport qu'une commande écrit dans la copie de travail (le fichier JUnit de votre propre CI, un
+dossier TRX) est un changement comme un autre, tenu au périmètre d'écriture : listez-le dans
+`.gitignore`. Une clé `testReports` restée d'une version précédente est refusée comme inconnue :
+retirez-la.
+
+## 8. Dire si un composant écrit du Gherkin
 
 Chaque composant le dit, d'une façon ou de l'autre : ses tests s'écrivent en Gherkin ou non, et le
 moteur ne suppose ni l'un ni l'autre. Pour celui dont l'équipe écrit des tests ordinaires — un
@@ -146,7 +172,7 @@ ce composant. `skraft init` écrit les paires qu'il détecte ; `/skraft-init` de
 l'onglet Configuration du canvas skraft montre à la fois ce que dit le fichier et ce que porte la
 copie de travail.
 
-## 8. Régler les consentements de publication
+## 9. Régler les consentements de publication
 
 Un run qui publie ne démarre qu'une fois qu'ils sont réglés, et `skraft init` vous les laisse :
 
@@ -160,7 +186,7 @@ version de chaque question la réponse a été donnée : une réponse gardée po
 antérieure n'est pas réglée. Sans elles, un run est refusé avant son premier agent, avec
 `skraft is not initialised: run /skraft-init`.
 
-## 9. Vérifier avec `skraft doctor`
+## 10. Vérifier avec `skraft doctor`
 
 ```console
 $ skraft doctor
@@ -194,7 +220,7 @@ ses erreurs séparées par `; ` :
 
 | Message | Correction |
 |---|---|
-| `component web: unknown key comands (allowed: name, root, stack, paths, commands, baseBranch, mocking, contractTesting, bdd, mutationReport)` | Corriger la faute de frappe. |
+| `component web: unknown key comands (allowed: name, root, stack, paths, commands, baseBranch, mocking, contractTesting, bdd, mutationReport, infrastructure)` | Corriger la faute de frappe, ou retirer la clé. |
 | `component web: root must be a path relative to the working copy` | Écrire `web` ou `../payment-web`, jamais `/srv/web` ni `C:\…`. |
 | `components[1].name must be kebab-case, got "Api"` | Minuscules et tirets : `api`. |
 | `component api: mocking must be { "strategy": "microcks" or "inprocess" }` | Un objet, pas une chaîne. |

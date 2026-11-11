@@ -89,7 +89,7 @@ test('a run from an issue keeps one comment on it, posted when the first phase c
     '',
     'Pull request: https://github.example.com/acme/shop/pull/42',
     '',
-    'Total: 13 attempts, 0 retries, 0 s, cost ~$0.75 (approximate: what the Claude Code session cost while each agent ran, anything else exchanged meanwhile included).',
+    'Total: 14 attempts, 0 retries, 0 s, cost ~$0.75 (approximate: what the Claude Code session cost while each agent ran, anything else exchanged meanwhile included).',
     '',
     `Run report and evidence: in the working copy, under the run's tracking folder (slug \`${SLUG}\`).`,
     '',
@@ -249,7 +249,7 @@ test('each gate shows its last result and its log, a mutation gate that handed m
 
 test('a blocked run is summarised where it stopped by its status and code: neither what an agent wrote nor a path of the machine reaches the issue', async () => {
   const host = scripted({ config: CONSENTED, answers: [{ answer: 'STOP' }] }, (it) => [agent({ result: { status: 'blocked', summary: 'No provider named. Closes #7, ask @alice.' } })(it)])
-  const missing = scripted({ config: CONSENTED }, (it) => [agent({ fill: false })(it), agent({ fill: false })(it)])
+  const missing = scripted({ config: CONSENTED, answers: [{ answer: 'STOP' }] }, (it) => [agent({ fill: false })(it), agent({ fill: false })(it)])
 
   const outcome = await host.start(STORY)
 
@@ -368,7 +368,7 @@ test('a French story\'s comment is in French, the pull request shown once by its
     '',
     'Pull request : https://github.example.com/acme/shop/pull/42',
     '',
-    'Total : 13 tentatives, 0 reprises, 0 s, coût ~$0.75 (approximatif : ce que la session Claude Code a coûté pendant que chaque agent tournait, tout autre échange de cette session inclus).',
+    'Total : 14 tentatives, 0 reprises, 0 s, coût ~$0.75 (approximatif : ce que la session Claude Code a coûté pendant que chaque agent tournait, tout autre échange de cette session inclus).',
     '',
     `Rapport du run et preuves : dans la copie de travail, sous le dossier de suivi du run (slug \`${SLUG}\`).`,
     '',

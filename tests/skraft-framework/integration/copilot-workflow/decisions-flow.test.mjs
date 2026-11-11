@@ -4,7 +4,7 @@ import { readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { runSkraftPipelineWorkflow } from '../../../../plugins/skraft-framework/engine/drivers/copilot-workflow/skraft-pipeline-workflow.mjs'
 import { PLUGIN_ROOT, copilotHost, actsAs, answeringSession, simulatedContext, decideTool } from './simulated-host.mjs'
-import { ADR, ADR_PATH, decisionsIndex, INDEX_PATH, NOMINAL, SLUG, blocked, commit, fillOutputs, pipelineRepository, scriptedLlm, TEST_COMMAND, writeResult } from '../support/pipeline-repository.mjs'
+import { ADR, ADR_PATH, decisionsIndex, INDEX_PATH, NOMINAL, SLUG, blocked, commit, fillOutputs, pipelineRepository, scenarioReviewText, scriptedLlm, TEST_COMMAND, writeResult } from '../support/pipeline-repository.mjs'
 import { journal } from '../support/workspace.mjs'
 
 const REASON = 'use the bank gateway, not Stripe'
@@ -21,8 +21,11 @@ test('each question is put to the person once, as a choice among its options in 
   const outcome = await runSkraftPipelineWorkflow(ctx, copilotHost(cwd, PLUGIN_ROOT, session))
 
   assert.equal(outcome.status, 'done')
-  assert.deepEqual(session.asked, [{ kind: 'select', message: `Ratify the Proposed ADRs ${ADR_PATH}? RATIFIED marks them Accepted; REJECTED sends DESIGN back with your reason.`, options: ['RATIFIED', 'REJECTED'] }])
-  assert.deepEqual(journal(cwd, SLUG).filter((event) => event.type === 'question.answered').map(({ key, answer, reason, by }) => [key, answer, reason, by]), [['adr-1', 'RATIFIED', null, 'host-confirmed']])
+  assert.deepEqual(session.asked, [
+    { kind: 'select', message: `Ratify the Proposed ADRs ${ADR_PATH}? RATIFIED marks them Accepted; REJECTED sends DESIGN back with your reason.`, options: ['RATIFIED', 'REJECTED'] },
+    { kind: 'select', message: scenarioReviewText(cwd), options: ['APPROVED', 'REVISE'] },
+  ])
+  assert.deepEqual(journal(cwd, SLUG).filter((event) => event.type === 'question.answered').map(({ key, answer, reason, by }) => [key, answer, reason, by]), [['adr-1', 'RATIFIED', null, 'host-confirmed'], ['scenario_review-1', 'APPROVED', null, 'host-confirmed']])
   assert.equal(logs.some((line) => line.startsWith('Waiting for you')), false, logs.join('\n'))
 })
 
@@ -38,7 +41,7 @@ test('a refusal chosen in Copilot asks its reason next, in a text field; the arc
     ['select', `Ratify the Proposed ADRs ${ADR_PATH}? RATIFIED marks them Accepted; REJECTED sends DESIGN back with your reason.`],
     ['input', 'ADR: why REJECTED? Your reason goes back to the agent.'],
   ])
-  assert.deepEqual(journal(cwd, SLUG).filter((event) => event.type === 'question.answered').map(({ key, answer, reason, by }) => [key, answer, reason, by]), [['adr-1', 'REJECTED', REASON, 'host-confirmed'], ['adr-2', 'RATIFIED', null, 'host-confirmed']])
+  assert.deepEqual(journal(cwd, SLUG).filter((event) => event.type === 'question.answered').map(({ key, answer, reason, by }) => [key, answer, reason, by]), [['adr-1', 'REJECTED', REASON, 'host-confirmed'], ['adr-2', 'RATIFIED', null, 'host-confirmed'], ['scenario_review-1', 'APPROVED', null, 'host-confirmed']])
   assert.ok(phaseCalls(calls)[2].prompt.endsWith(`A human refused the work of pass 1:\n- ${ADR_PATH}: ${REASON}`), phaseCalls(calls)[2].prompt)
 })
 
@@ -89,7 +92,8 @@ test('a blocked step asks the person for an instruction in a text field, then to
   // #500: the instruction typed is shown back and confirmed before it is recorded; an option typed needs no confirmation.
   assert.deepEqual(session.asked.map(({ kind }) => kind), ['input', 'confirm', 'input'])
   assert.equal(session.asked[1].message, 'Send this instruction to design? Use the bank gateway')
-  assert.match(session.asked[0].message, /^design is blocked: solution-architect says it cannot go on; [^]* An instruction runs design again on a new pass with what is left above and the instruction; STOP ends the run\.$/)
+  assert.match(session.asked[0].message, /^design is blocked: solution-architect says it cannot go on; [^]* An instruction runs design again on a new pass with what is left above and the instruction; STOP ends the run\.\nThe run so far \(commits, refusals, incidents\): .+$/)
+  assert.equal(session.asked[0].message.split('\n').at(-1), `The run so far (commits, refusals, incidents): ${join(cwd, '.copilot-tracking', 'skraft-plans', SLUG, 'run-report.md')}`)
   assert.ok(phaseCalls(calls)[2].prompt.includes('\nA human refused the work of pass 1:\n- Use the bank gateway'), phaseCalls(calls)[2].prompt)
   assert.deepEqual(journal(cwd, SLUG).filter((event) => event.type === 'question.answered').map(({ key, answer, by }) => [key, answer, by]), [['design-1', 'Use the bank gateway', 'host-confirmed'], ['design-2', 'STOP', 'host-confirmed']])
 })
@@ -129,7 +133,7 @@ test('a question the person dismisses in Copilot pauses the run, which says how 
   const outcome = await runSkraftPipelineWorkflow(ctx, copilotHost(cwd, PLUGIN_ROOT, session))
 
   assert.equal(outcome.status, 'done')
-  assert.deepEqual(session.asked.map(({ kind }) => kind), ['select', 'select'])
+  assert.deepEqual(session.asked.map(({ kind, options }) => [kind, options]), [['select', ['RATIFIED', 'REJECTED']], ['select', ['RATIFIED', 'REJECTED']], ['select', ['APPROVED', 'REVISE']]])
 })
 
 test('a run Copilot cannot put its question in pauses and says why; skraft_decide then puts that question once, a refusal with its reason, and the resumed run sends the architect back, and only it', async (t) => {
@@ -201,8 +205,8 @@ test('a gate the machine cannot run pauses the run on an environment question; R
   const outcome = await runSkraftPipelineWorkflow(ctx, copilotHost(cwd, PLUGIN_ROOT, session))
 
   assert.equal(outcome.status, 'done')
-  assert.equal(phaseCalls(calls).length, 5)
-  assert.deepEqual(session.asked.map(({ options }) => options), [['RATIFIED', 'REJECTED'], ['RETRY', 'ABORT'], ['RETRY', 'ABORT']])
+  assert.equal(phaseCalls(calls).length, 7)
+  assert.deepEqual(session.asked.map(({ options }) => options), [['RATIFIED', 'REJECTED'], ['APPROVED', 'REVISE'], ['RETRY', 'ABORT'], ['RETRY', 'ABORT']])
   assert.deepEqual(journal(cwd, SLUG).filter((event) => event.type === 'step.started' && event.step === 'gates').length, 1)
 })
 

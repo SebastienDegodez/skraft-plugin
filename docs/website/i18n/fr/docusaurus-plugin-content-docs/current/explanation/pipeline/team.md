@@ -18,15 +18,17 @@ ne fait que le sien.
   `solution-architect` (DESIGN), `acceptance-designer` (DISTILL), `software-engineer` (DELIVER),
   `pr-writer` (la prose de la pull request).
 - **Les juges** lisent sans rien modifier : les lentilles de revue, chacune sur un seul angle,
-  et `finding-refuter`, qui confirme ou réfute chaque finding qui renverrait le travail.
+  `finding-refuter`, qui confirme ou réfute chaque finding qui renverrait le travail, et
+  [`replay-judge`](pathname:///dashboard/#agent-replay-judge), qui lit les logs de chaque commit
+  rouge et vert que rejoue le moteur, ceux de DISTILL et de DELIVER.
 - **Le moteur** décide : l'étape suivante, ce que l'agent reçoit, la sortie attendue, les
   gates, le verdict d'une revue. C'est du code testé, le même sur tous les hôtes.
 - **Le pilote d'hôte** exécute : le mod Claude Code, le workflow Copilot ou la boucle d'agent
   de VS Code lance l'agent que le moteur demande et lui rend la réponse.
 
 Un cinquième acteur garde les décisions qui engagent l'équipe : **l'humain**. Il ratifie les
-ADR, consent à la publication, choisit comment traiter les mutants survivants. Aucun agent ne
-répond à sa place.
+ADR, lit les scénarios avant que DELIVER ne les construise, consent à la publication, choisit
+comment traiter les mutants survivants. Aucun agent ne répond à sa place.
 
 ```mermaid
 graph TD
@@ -35,6 +37,7 @@ graph TD
     P -->|lance, profondeur 1| A[Producteur]
     P -->|lance, profondeur 1| L[Lentilles]
     P -->|lance, profondeur 1| F[finding-refuter]
+    P -->|lance, profondeur 1| R[replay-judge]
     M -->|verdict, étape suivante| P
 ```
 
@@ -52,7 +55,7 @@ sont dans le moteur, et l'état du run dans le [journal d'événements](../event
 
 ## Pourquoi seul le pilote lance des agents
 
-**Profondeur 1** : le pilote lance chaque agent, lentilles et réfuteur compris, et aucun agent
+**Profondeur 1** : le pilote lance chaque agent, lentilles, réfuteur et juge du rejeu compris, et aucun agent
 n'en lance un autre. En v1, le reviewer de DELIVER lançait lui-même ses lentilles, à
 profondeur 2. Cela coûtait un contexte de plus, dupliquait des contrôles, et le comportement
 dépendait de ce que chaque hôte permettait à un sous-agent.

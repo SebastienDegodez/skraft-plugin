@@ -5,7 +5,7 @@ Deterministic agentic software delivery for Claude Code, GitHub Copilot CLI and 
 Give SKRAFT one refined story. Specialist agents research it, design it, turn it into
 acceptance tests and deliver tested code; read-only review lenses challenge each phase. The
 **skraft engine**, not the model's goodwill, decides every step: phase order, expected outputs,
-write scope, gates, review verdict and the commits of each TDD cycle. It runs the same way on
+write scope, gates, review verdict and the red and green commit of each scenario. It runs the same way on
 every host, on Windows, macOS and Linux, and costs nothing per tool call: the plugin ships no
 command hooks.
 
@@ -15,8 +15,8 @@ command hooks.
   its outputs, checks them afterwards, and refuses a step that wrote outside its scope (git
   diff after each step).
 - **Proof, not claims.** Build, format, lint, tests, architecture, coverage and mutation run
-  from the commands in `skraft-config.json`; the engine writes the evidence. A red TDD commit
-  is replayed to confirm it really fails.
+  from the commands in `skraft-config.json`; the engine writes the evidence. Each scenario's red
+  acceptance test is replayed to confirm it fails on an assertion.
 - **Craft by default.** Outside-In TDD, BDD, Clean Architecture per stack, contract testing,
   ADRs and mutation testing ship as skills the agents read before they start.
 - **Resumable and tamper-evident.** Every fact of a run lands in a hash-chained, signed
@@ -109,40 +109,6 @@ each phase: [Phases](https://sebastiendegodez.github.io/skraft-plugin/reference/
 [DOT workflow](https://sebastiendegodez.github.io/skraft-plugin/reference/workflow-dot); adapting it:
 [Copy and adapt the workflow](https://sebastiendegodez.github.io/skraft-plugin/how-to/eject-workflow).
 
-### Experimental: batched TDD in DELIVER
-
-`software-engineer-batch` delivers a story like `software-engineer`, with one difference: the
-independent tests one production slice makes pass go into **one red commit** instead of one
-cycle each. The technical input cases of an entry point (wrong type, NaN, null, number as text)
-always become one batch, usually one parameterized test; a test whose behaviour builds on
-another's code still gets its own cycle. The engine treats it exactly as the original: same
-write scope, every red commit replayed, a green without a red refused. Each `test` commit's
-change-log line ends with `BATCH: <n> tests`.
-
-The shipped workflow keeps `software-engineer`. To switch a repository to the batch agent:
-
-```text
-skraft workflow eject      copies the pipeline into .skraft/pipeline.skraft.dot
-```
-
-In `.skraft/pipeline.skraft.dot`, change the agent of the `deliver` node only (the mutation
-nodes `kill_proposal` and `kill_mutants` stay on `software-engineer`):
-
-```dot
-deliver  [shape=box, agent="software-engineer-batch", phase="DELIVER"]
-```
-
-```text
-skraft workflow check      validates the copy
-skraft workflow diff       shows the one changed line against the plugin's workflow
-```
-
-The next run uses it. To switch back, restore `agent="software-engineer"` or delete
-`.skraft/pipeline.skraft.dot`. To compare both, run the same story on two working copies, one
-on each workflow, and read `run-report.md` (time and cost of DELIVER), the mutation gate and the
-DELIVER verdict side by side. Leave `"tdd": { "replay": "last-red" }` out of the comparison: it
-changes a second thing at once.
-
 ## What the engine guarantees
 
 | Check | What you get |
@@ -151,7 +117,7 @@ changes a second thing at once.
 | Expected outputs | Each output is pre-created from its template; a missing or invalid one is asked again with what was wrong, up to three attempts, and the same failure twice stops the run |
 | Write scope | After each step, the git diff is compared with what that agent may write; a step outside it is refused |
 | Gates | DELIVER closes only when the commands of `skraft-config.json` pass; mutation must reach 100 % on Domain and Application, 80 % elsewhere |
-| TDD | A red commit whose tests pass, or a green commit with no red before it, is refused |
+| TDD | One scenario at a time: a red acceptance test that fails on no assertion, a second green, or a green that changes the acceptance test or another component is refused |
 | Review verdict | Lenses return typed findings; the engine refutes, counts and decides |
 | Human decisions | A question waits for a person's answer; under Copilot, only a host-confirmed answer is recorded |
 | Journal | `events.jsonl` is hash-chained and signed with a key of your machine; a hand edit stops the run |

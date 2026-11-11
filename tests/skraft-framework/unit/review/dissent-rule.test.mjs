@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { agent, API, finding, lenses, nominal, refutes, says, scripted, SLUG, tddCycle, TRACKING } from '../support/pipeline-host.mjs'
+import { agent, API, finding, green, lenses, nominal, refutes, says, scripted, SLUG, TRACKING } from '../support/pipeline-host.mjs'
 import { BUILT_IN_WORKFLOW } from '../support/in-memory-host.mjs'
 import { ejectedPipeline, withLenses } from '../workflow/support.mjs'
 
@@ -65,9 +65,8 @@ test('the engine\'s own G9 findings are never a dissent, even when no lens finds
   const host = scripted({}, (it) => [
     ...nominal(it).slice(0, 3),
     agent({ work: ({ git }) => {
-      tddCycle()({ git })
       git.patched('tests/CheckoutTests.cs', ['--- a/tests/CheckoutTests.cs', '+++ b/tests/CheckoutTests.cs', '@@ -9,1 +9,1 @@', '-    [Fact]', '+    [Fact(Skip = "flaky")]'])
-      git.commit('refactor(checkout): skip the flaky test', ['tests/CheckoutTests.cs'])
+      green()({ git })
     } })(it),
     () => ({ ok: false, unavailable: true, text: '', error: 'stop here' }),
   ])

@@ -1,6 +1,6 @@
 ---
 title: "DISTILL"
-description: "Pourquoi DISTILL écrit le contrat avant le code : scénarios métier, test d'acceptation qui échoue pour la bonne raison, squelette sans comportement."
+description: "Pourquoi DISTILL écrit le contrat avant le code : scénarios métier, un test d'acceptation à la fois qui échoue pour la bonne raison, lus par un humain."
 persona: software-engineer
 phase: distill
 ---
@@ -8,7 +8,7 @@ phase: distill
 # DISTILL
 
 Écrire le contrat avant le code : DISTILL transforme les décisions de DESIGN en scénarios que
-le métier peut lire et en un test d'acceptation qui échoue.
+le métier peut lire et, un scénario à la fois, en un test d'acceptation qui échoue.
 
 ## Pourquoi cette phase existe
 
@@ -23,24 +23,73 @@ SKRAFT évite qu'un même agent ajuste le test à son code.
 
 :::info[☕ Fil rouge — Starbucks *(exemple illustratif)*]
 
-L'ADR et le modèle d'événements entrent. DISTILL écrit le **scénario Gherkin** : « Étant donné
-un panier avec un latte / Quand le paiement est validé / Alors un reçu est émis et des points
-fidélité sont crédités. » Ce scénario devient le contrat que DELIVER doit rendre vert.
+L'ADR et le modèle d'événements entrent. DISTILL écrit chaque scénario de la story, dans l'ordre
+où DELIVER les construira. S1, le walking skeleton : « Étant donné un panier avec un latte /
+Quand le paiement est validé / Alors un reçu est émis et des points fidélité sont crédités », du
+point d'entrée de commande jusqu'à la vraie base. S2 : « une boisson indisponible ne peut pas être
+ajoutée au panier ». Il ne commite en échec que le test d'acceptation de S1 ; celui de S2 vient
+une fois S1 au vert.
 :::
 
 ## Un rouge qui prouve quelque chose
 
-DISTILL ne s'arrête pas aux scénarios : il écrit le premier test d'acceptation et le commite
-**en échec**. Le moteur rejoue ce commit et vérifie que le test échoue vraiment. C'est la boucle
+À son premier passage, DISTILL écrit les scénarios, le plan de test et le test d'acceptation du
+premier scénario, et commite ce test **en échec**, en un seul commit `test` dont le brief donne
+le message. Le moteur rejoue ce commit avec la commande de test du composant et garde ce qu'elle
+affiche ; quand les tests échouent, il les rejoue aussi au commit parent, et le
+[juge du rejeu](pathname:///dashboard/#agent-replay-judge) lit les deux logs et le commit. Le
+rouge ne tient que si le test du scénario échoue sur une **assertion** ; un rouge dont tous les
+tests passent est refusé sans interroger le juge. C'est la boucle
 externe du TDD outside-in : commencer par un test qui décrit ce que le système doit faire, vu
 de l'extérieur ([Freeman & Pryce, 2009](../../reference/citations.mdx#cite-freeman-goos-2009)).
 
 Encore faut-il que l'échec ait du sens. Un test qui échoue parce qu'un module n'existe pas ne
-prouve rien : il échouerait aussi pour une story fausse. DISTILL écrit donc aussi le
-**squelette** que le test appelle — les cas d'usage que nomme le modèle d'événements, chacun rendant la
-valeur vide de son type, sans comportement — pour que le test échoue sur une **assertion
-métier**. Remplacer le module manquant par une doublure dans les tests est refusé : le squelette
-est le vrai module, que DELIVER remplira.
+prouve rien : il échouerait aussi pour une story fausse, avant qu'aucune assertion ne tourne,
+donc le juge le renvoie. DISTILL écrit donc aussi le **squelette** que le test appelle — les cas
+d'usage que nomme le modèle d'événements, chacun rendant la valeur vide de son type, sans
+comportement — pour que le test échoue sur une **assertion métier**. Remplacer le module manquant
+par une doublure dans les tests est refusé : le squelette est le vrai module, que DELIVER
+remplira. Un test qui finit en erreur, est sauté, passe ou ne finit jamais est refusé de même.
+
+La machine peut aussi être en cause. Quand aucun runtime de conteneurs ne répond, les tests qui
+ont besoin de Docker ou de Podman ne peuvent pas tourner : le juge le lit dans le log et demande
+à un humain d'en démarrer un. L'étape n'est ni sautée ni jouée contre une doublure à la place.
+
+## Un scénario à la fois
+
+Le plan de test liste les scénarios dans un tableau `## Scenarios`, de S1 à SN, dans l'ordre où
+DELIVER les construit, chacun dans le seul composant où vit son test. S1 est le
+[walking skeleton](../deep-dive/walking-skeleton.md) : tagué `@walking-skeleton`, il traverse un
+composant back de son point d'entrée jusqu'à une vraie base. Une story sans nouveau point
+d'entrée — une librairie, un refactoring, des documents seulement — déclare plutôt cette
+exemption sous le tableau.
+
+DISTILL n'écrit le test que du scénario en cours. Un test écrit pour un scénario à venir
+resterait rouge pendant toute la livraison, et rien ne distinguerait son rouge d'une régression.
+Alors, après la revue de DISTILL et la lecture d'un humain, le moteur alterne : DELIVER fait
+passer S1 au vert, puis DISTILL écrit le test en échec de S2, DELIVER le fait passer, et ainsi de
+suite. Ces passages suivants ne sont pas revus à nouveau ; le rejeu de chaque rouge, et le vert
+qui doit le faire passer, les vérifient.
+
+Le brief dit aussi à DISTILL sur quoi les tests de chaque composant font tourner leurs
+dépendances, dans un scénario ciblé et dans le walking skeleton : le point d'entrée en process ou
+réel, les gateways internes en mémoire ou dans Testcontainers, les gateways externes sur
+Microcks, l'horloge simulée. Cette [politique d'infrastructure](../../reference/skraft-config.md#infrastructure)
+vient des défauts du plugin par stack, qu'une équipe surcharge par composant dans
+`skraft-config.json`. Pourquoi Microcks : [Mocking avec Microcks](../deep-dive/mocking-microcks.md).
+
+## Un humain lit les scénarios
+
+Avant que DELIVER ne construise quoi que ce soit, le run pose à un humain la question
+`scenario-review` : voici les scénarios dans l'ordre, S1 marqué walking skeleton, et le commit du
+test en échec de S1. `APPROVED` laisse DELIVER les construire un à un ; `REVISE` renvoie DISTILL
+avec les corrections, que l'humain peut aussi faire d'abord dans le `.feature` ou le test. Sous
+Copilot, comme pour la ratification d'un ADR, seule la boîte de dialogue de l'hôte enregistre la
+réponse.
+
+C'est le moment le moins coûteux pour corriger le contrat : chaque test qui suit est écrit
+d'après lui, et un scénario qui manque maintenant est une tranche que DELIVER ne pourra pas
+construire plus tard.
 
 ## Des scénarios gardés dans le dépôt
 
@@ -66,9 +115,10 @@ restent testés.
 
 ## Quatre regards sur le contrat
 
-Quatre lentilles relisent le travail : la **couverture** (chaque critère a son scénario, avec
-ses cas limites), l'**alignement métier** (aucun détail d'implémentation dans une étape), la
-**testabilité** (chaque étape est implémentable, le rouge est le bon), et les **frontières**
+Quatre lentilles relisent le premier passage, une fois : la **couverture** (chaque critère a son
+scénario, avec ses cas limites), l'**alignement métier** (aucun détail d'implémentation dans une
+étape), la **testabilité** (chaque étape est implémentable, le rouge est le bon, le test ne porte
+que le scénario en cours), et les **frontières**
 (le test d'acceptation ne pilote que le cas d'usage, au moins un walking skeleton par flux).
 Le moteur calcule le verdict ; un `NEEDS_REWORK` renvoie l'acceptance-designer avec les findings
 retenus. Son brief donne le chemin d'`acceptance-review-criteria`, les gates selon lesquels ces

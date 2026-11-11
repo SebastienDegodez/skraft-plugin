@@ -1,8 +1,8 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { InMemoryGit } from '../support/in-memory-host.mjs'
-import { agent, pipelineHost, REFS_42, scripted, SLUG } from '../support/pipeline-host.mjs'
-import { ADR_1, ADR_2, adrText, afterDesign, architect, dispatched, eventsOf, INDEX, indexText, UNLISTABLE_ADRS, waitingOnEnvironment } from '../support/decisions.mjs'
+import { agent, pipelineHost, REFS_42, scenarioReview, scripted, SLUG, TRACKING } from '../support/pipeline-host.mjs'
+import { ADR_1, ADR_2, adrText, afterDesign, architect, dispatched, eventsOf, INDEX, indexText, UNLISTABLE_ADRS, environmentQuestion, waitingOnEnvironment } from '../support/decisions.mjs'
 
 const RATIFY = `Ratify the Proposed ADRs ${ADR_1}? RATIFIED marks them Accepted; REJECTED sends DESIGN back with your reason.`
 const DRAFTS = '- Proposed ADRs, drafts no human has ratified: rewrite each in place when the feedback or a story asks for a change, keep it Proposed, never supersede it:'
@@ -57,12 +57,12 @@ test('skraft decide RATIFIED, then the next run marks the ADR Accepted, commits 
   assert.equal(outcome.status, 'done')
   assert.deepEqual(dispatched(host), [
     `skraft ${SLUG} · research · attempt 1`, `skraft ${SLUG} · design · attempt 1`,
-    `skraft ${SLUG} · distill · attempt 1`, `skraft ${SLUG} · deliver · attempt 1`, `skraft ${SLUG} · pr_writer · attempt 1`,
+    `skraft ${SLUG} · distill · attempt 1`, `skraft ${SLUG} · deliver · scenario 1 of 1 · attempt 1`, `skraft ${SLUG} · pr_writer · attempt 1`,
   ])
   assert.equal(await host.workspace.read(ADR_1), adrText().replace('status: Proposed', 'status: Accepted').replace('ratified_by: null', 'ratified_by: "human 2026-10-11"').replace('**Status:** Proposed', '**Status:** Accepted'))
   assert.equal(await host.workspace.read(INDEX), indexText(['| ADR-001 | Card payment | Accepted | Stripe | Pay by card through Stripe | human 2026-10-11 | 2026-10-11 |']))
   assert.deepEqual(host.git.engineCommits, [{ dir: '.', paths: [ADR_1, INDEX], message: 'docs(adr): ratify ADR-001' }])
-  assert.deepEqual(eventsOf(host, 'question.answered').map(({ key, answer, reason, by }) => [key, answer, reason, by]), [['adr-1', 'RATIFIED', null, 'decide']])
+  assert.deepEqual(eventsOf(host, 'question.answered').map(({ key, answer, reason, by }) => [key, answer, reason, by]), [['adr-1', 'RATIFIED', null, 'decide'], ['scenario_review-1', 'APPROVED', null, 'host']])
   const [adr] = eventsOf(host, 'step.recorded').filter((event) => event.step === 'adr')
   assert.deepEqual({ outcome: adr.outcome, answer: adr.answer, next: adr.next, failures: adr.failures }, { outcome: 'answered', answer: 'RATIFIED', next: 'distill', failures: [] })
   assert.deepEqual(eventsOf(host, 'phase.closed').map((event) => event.phase), ['RESEARCH', 'DESIGN', 'DISTILL', 'DELIVER', 'PUBLISH'])
@@ -91,8 +91,9 @@ test('a DESIGN blocked on the ADR it drafted, resumed by a human instruction, st
   assert.deepEqual(eventsOf(host, 'question.asked').map(({ key, kind, step, visit, subjects }) => [key, kind, step, visit, subjects]), [
     ['design-1', 'blocked', 'design', 1, []],
     ['adr-1', 'adr-ratification', 'adr', 1, [ADR_1]],
+    ['scenario_review-1', 'scenario-review', 'scenario_review', 1, ['tests/Acceptance/S1AcceptanceTests.cs']],
   ])
-  assert.deepEqual(eventsOf(host, 'question.answered').map(({ key, answer }) => [key, answer]), [['design-1', instruction], ['adr-1', 'RATIFIED']])
+  assert.deepEqual(eventsOf(host, 'question.answered').map(({ key, answer }) => [key, answer]), [['design-1', instruction], ['adr-1', 'RATIFIED'], ['scenario_review-1', 'APPROVED']])
   assert.deepEqual(dispatched(host).slice(0, 4), [
     `skraft ${SLUG} · research · attempt 1`, `skraft ${SLUG} · design · attempt 1`, `skraft ${SLUG} · design · pass 2 · attempt 1`, `skraft ${SLUG} · distill · attempt 1`,
   ])
@@ -111,7 +112,7 @@ test('a host that asks in a dialog gets the answer in the same run', async () =>
   const outcome = await host.start()
 
   assert.equal(outcome.status, 'done')
-  assert.deepEqual(eventsOf(host, 'question.answered').map(({ answer, by }) => [answer, by]), [['RATIFIED', 'host']])
+  assert.deepEqual(eventsOf(host, 'question.answered').map(({ answer, by }) => [answer, by]), [['RATIFIED', 'host'], ['APPROVED', 'host']])
   assert.ok(host.progress.lines.includes(`${SLUG}: adr RATIFIED`), host.progress.lines.join('\n'))
 })
 
@@ -141,7 +142,7 @@ test('with no Proposed ADR, DESIGN goes on to DISTILL without a question', async
   const outcome = await host.start()
 
   assert.equal(outcome.status, 'done')
-  assert.deepEqual(host.human.questions, [])
+  assert.deepEqual(host.human.questions, [scenarioReview()])
   const [adr] = eventsOf(host, 'step.recorded').filter((event) => event.step === 'adr')
   assert.deepEqual({ outcome: adr.outcome, answer: adr.answer, next: adr.next, reason: adr.reason }, { outcome: 'skipped', answer: 'RATIFIED', next: 'distill', reason: 'no Proposed ADR to ratify' })
   assert.deepEqual(host.git.engineCommits, [])
@@ -204,11 +205,12 @@ test('a ratification Git cannot commit asks the human to fix the machine; RETRY 
   const outcome = await host.start()
 
   assert.deepEqual({ status: outcome.status, code: outcome.code }, { status: 'waiting', code: 'environment' })
-  assert.equal((await host.view()).question.text, 'adr cannot run on this machine: git commit failed: Please tell me who you are. Fix it, then RETRY; or ABORT the run.')
+  assert.equal((await host.view()).question.text, environmentQuestion('adr', 'git commit failed: Please tell me who you are', { log: `${TRACKING}/logs/commit-adr.log` }))
+  assert.equal(host.tracking.files.get(`${SLUG}/logs/commit-adr.log`), '$ git commit (adr)\nresult: git commit failed: Please tell me who you are\n--- output\ngit commit failed: Please tell me who you are\nhusky - pre-commit script failed (code 1)\n\n')
   git.commitFails = null
   assert.equal((await host.decide({ answer: 'RETRY' })).ok, true)
   assert.equal((await host.run()).status, 'done')
-  assert.deepEqual(host.human.questions.map((question) => question.key), ['adr-1', 'adr-2'])
+  assert.deepEqual(host.human.questions.map((question) => question.key), ['adr-1', 'adr-2', 'scenario_review-1'])
   assert.deepEqual(host.git.engineCommits.map((commit) => commit.message), ['docs(adr): ratify ADR-001'])
 })
 

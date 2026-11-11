@@ -7,10 +7,9 @@ import { ALL_KILLED, mutants, pitReport, strykerReport } from '../support/mutati
 
 const REPORT = 'StrykerOutput/reports/mutation-report.json'
 const STRYKER = '. $ dotnet stryker'
-/** The story's TDD cycle: its test, then the source files it changes; body: each commit's body. */
+/** The green of the story's scenario: the source files it changes, with their unit test; body: its body. */
 const changing = (files, body = '') => ({ git }) => {
-  git.commit(`test(${SLUG}): checkout pays by card`, ['tests/CheckoutTests.cs'], body)
-  git.commit(`feat(${SLUG}): checkout pays by card`, files, body)
+  git.commit(`feat(${SLUG}): checkout pays by card`, ['tests/CheckoutTests.cs', ...files], body)
 }
 const upToDeliver = (it, files = ['src/Checkout.cs', 'src/Refund.cs'], body = '') => [agent()(it), agent()(it), agent()(it), agent({ work: changing(files, body) })(it)]
 const recorded = (host, step) => host.events().filter((event) => event.type === 'step.recorded' && event.step === step)
@@ -176,6 +175,8 @@ test('the core needs every mutant detected and the boundary 80 %, also from a ru
     ['pass', [], []],
   ])
   assert.deepEqual(host.events().filter((event) => event.type === 'gate.ran' && event.gate === 'mutation').map(({ status, survivors }) => [status, survivors]), [['fail', 1], ['fail', 5], ['pass', null]])
+  const secondKill = host.agentRunner.dispatches.find(({ label }) => label === `skraft ${SLUG} · kill_mutants · pass 2 · attempt 1`)
+  assert.ok(secondKill.prompt.includes('\n- Pass: 2, after a human chose how to go on\n'), secondKill.prompt)
 })
 
 test('with no change Git can list since the base, every file of the report is judged', async () => {
@@ -313,7 +314,11 @@ test('each stack reads the report its default mutation command writes', async ()
   for (const [stack, mutation, report] of expected) {
     const component = { ...API, stack, commands: { test: 'dotnet test', mutation } }
     const writesNone = { [`. $ ${mutation}`]: () => {} }
-    const host = scripted({ components: [component], machine: new ScriptedMachine({ installed: ['git', 'dotnet', 'mvn', 'gradlew', 'python', 'npx'], meanwhile: writesNone }) }, (it) => upToDeliver(it))
+    const frontEnd = stack === 'react' ? { plan: [['Customer sees the price', 'api', '@happy-path']], exemption: 'library' } : {}
+    const host = scripted({ components: [component], machine: new ScriptedMachine({ installed: ['git', 'dotnet', 'mvn', 'gradlew', 'python', 'npx'], meanwhile: writesNone }) }, (it) => {
+      const [research, design, , deliver] = upToDeliver(it)
+      return [research, design, agent(frontEnd)(it), deliver]
+    })
     const outcome = await host.start()
     assert.ok(outcome.reason.includes(`the mutation report ${report} is missing;`), `${stack}: ${outcome.reason}`)
   }
@@ -355,7 +360,7 @@ test('a mutation run without a readable report waits for a human, naming where t
 
     const outcome = await host.start()
 
-    assert.deepEqual(outcome, { status: 'waiting', slug: SLUG, phase: 'DELIVER', code: 'environment', reason: waitingOnEnvironment('mutation', lookedFor(exit)) })
+    assert.deepEqual(outcome, { status: 'waiting', slug: SLUG, phase: 'DELIVER', code: 'environment', reason: waitingOnEnvironment('mutation', lookedFor(exit), 1, { log: `${TRACKING}/gates/api/mutation-1.log` }) })
   }
 
   for (const report of ['not JSON at all', '{ "files": [] }', JSON.stringify({ files: { 'src/Checkout.cs': { mutants: [{ id: '1', mutatorName: 'Equality', status: 'Survived' }] } } })]) {
@@ -371,13 +376,12 @@ test('a component reads its mutants where mutationReport says, PIT\'s mutations.
     'orders/src/main/java/com/acme/Order.java': 'class Order {}\n', 'orders/src/main/kotlin/com/acme/Fee.kt': 'class Fee\n', 'orders/src/main/com/acme/Tax.java': 'class Tax {}\n',
     'orders/src/main/java/com/acme/domain/Price.java': 'class Price {}\n',
   }
-  const orderCycle = ({ git }) => {
-    git.commit(`test(${SLUG}): order`, ['orders/src/test/OrderTest.java'])
-    git.commit(`feat(${SLUG}): order`, [...Object.keys(sources), 'orders/src/main/scala/com/acme/Ship.scala'])
+  const orderGreen = ({ git }) => {
+    git.commit(`feat(${SLUG}): order`, ['orders/src/test/OrderTest.java', ...Object.keys(sources), 'orders/src/main/scala/com/acme/Ship.scala'])
   }
   const killsOrders = (it) => agent({ work: ({ git }) => git.commit(`test(${SLUG}): kill the order mutants`, ['orders/src/test/OrderTest.java']) })(it)
   const host = scripted({ components: [service], machine: new ScriptedMachine(), files: sources, answers: APPLYING }, (it) => [
-    agent()(it), agent()(it), agent()(it), agent({ work: orderCycle })(it), ...Array.from({ length: 5 }, () => proposer(it)), killsOrders(it),
+    agent()(it), agent()(it), agent()(it), agent({ work: orderGreen })(it), ...Array.from({ length: 5 }, () => proposer(it)), killsOrders(it),
   ])
   const report = pitReport([
     ['com.acme.Order$Line', 'Order.java', 42, 'ConditionalsBoundaryMutator', 'changed conditional boundary', 'SURVIVED'],
@@ -415,14 +419,14 @@ test('a component reads its mutants where mutationReport says, PIT\'s mutations.
     { file: 'orders/src/main/kotlin/com/acme/Fee.kt', mutants: ['orders/src/main/kotlin/com/acme/Fee.kt:5 MathMutator (Replaced integer subtraction) survived'] },
   ])
 
-  const unlisted = scripted({ components: [service], machine: new ScriptedMachine(), files: sources }, (it) => [agent()(it), agent()(it), agent()(it), agent({ work: orderCycle })(it)])
+  const unlisted = scripted({ components: [service], machine: new ScriptedMachine(), files: sources }, (it) => [agent()(it), agent()(it), agent()(it), agent({ work: orderGreen })(it)])
   unlisted.git.changedFiles = whileMutating(unlisted)
   mutationRounds(unlisted, [report], { line: 'orders $ mvn pitest', path: 'orders/target/pit/mutations.xml' })
   await assert.rejects(unlisted.start(), /unexpected dispatch/)
   assert.deepEqual(recorded(unlisted, 'mutation')[0].failures, [`orders/mutation: exited 1, core 75% < 100%, boundary 14% < 80%, 7 mutants survive (evidence: ${TRACKING}/gates/orders/mutation-1.log)`])
   assert.deepEqual(recorded(unlisted, 'mutation')[0].survivors[0], { file: 'orders/com/acme/Gone.java', mutants: ['orders/com/acme/Gone.java:3 RemoveCallsMutator survived'] })
 
-  const notPit = scripted({ components: [service], machine: new ScriptedMachine() }, (it) => [agent()(it), agent()(it), agent()(it), agent({ work: orderCycle })(it)])
+  const notPit = scripted({ components: [service], machine: new ScriptedMachine() }, (it) => [agent()(it), agent()(it), agent()(it), agent({ work: orderGreen })(it)])
   mutationRounds(notPit, ['<html><body>PIT report</body></html>'], { line: 'orders $ mvn pitest', path: 'orders/target/pit/mutations.xml' })
   assert.ok((await notPit.start()).reason.includes('the mutation report orders/target/pit/mutations.xml is not a PIT mutations.xml report;'))
 })
@@ -447,6 +451,34 @@ test('a run stopped in a group resumes there: the groups already done are not di
   assert.deepEqual(recorded(host, 'kill_proposal').map(({ group, attempt, outcome: result, next }) => [group, attempt, result, next]), [
     [1, 1, 'done', null], [2, 1, 'done', 'mutation_plan'],
   ])
+})
+
+test('a group whose agent stops blocked runs again on that group once a human answers with an instruction, then on the groups after it', async () => {
+  const blocked = { status: 'blocked', summary: 'the rounding rule of a refund is undecided' }
+  const host = scripted({ machine: new ScriptedMachine(), answers: [{ answer: 'A refund rounds half up' }, ...APPLYING] }, (it) => [
+    ...upToDeliver(it, ['src/Checkout.cs', 'src/Refund.cs', 'src/Ledger.cs']),
+    proposer(it),
+    agent({ result: blocked })(it),
+    proposer(it),
+    proposer(it),
+    killer('Refund')(it),
+  ])
+  mutationRounds(host, [twoFiles])
+
+  const outcome = await host.start()
+
+  assert.equal(outcome.status, 'done', outcome.reason)
+  const after = host.agentRunner.dispatches.slice(4).filter(({ agent: id }) => id !== 'pr-writer')
+  assert.deepEqual(after.map(({ label }) => label), [
+    `skraft ${SLUG} · kill_proposal · group 1 of 3 · attempt 1`,
+    `skraft ${SLUG} · kill_proposal · group 2 of 3 · attempt 1`,
+    `skraft ${SLUG} · kill_proposal · pass 2 · group 2 of 3 · attempt 1`,
+    `skraft ${SLUG} · kill_proposal · pass 2 · group 3 of 3 · attempt 1`,
+    `skraft ${SLUG} · kill_mutants · attempt 1`,
+  ])
+  assert.ok(after[2].prompt.includes(after[1].prompt.match(/Propose how to treat the surviving mutants of [^\n]+\n- [^\n]+/)[0]), after[2].prompt)
+  assert.ok(after[2].prompt.includes('A refund rounds half up'), after[2].prompt)
+  assert.deepEqual(recorded(host, 'kill_proposal').map(({ visit, group, outcome: result }) => [visit, group, result]), [[1, 1, 'done'], [1, 2, 'failed'], [2, 2, 'done'], [2, 3, 'done']])
 })
 
 test('a proposal commits as its agent does: one played by an agent with no shell is told to commit nothing', async () => {

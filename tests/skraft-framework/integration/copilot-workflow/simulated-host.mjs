@@ -47,15 +47,19 @@ export const copilotHost = (cwd, pluginRoot = PLUGIN_ROOT, session = null, optio
 /**
  * A joined Copilot session whose person answers each dialog in turn with the next of `answers`
  * (a function is called, and what it gives or throws is the dialog's); none left, with what
- * `otherwise` gives for the dialog (dismissed, null, by default). `asked` keeps each dialog: its
- * kind (`select`, `input`, `confirm`), its message and, for a select, its options.
- * @param {{ answers?: unknown[], otherwise?: (dialog: { kind: string, message: string, options?: string[] }) => unknown, mode?: unknown, elicitation?: boolean, modeGet?: () => Promise<unknown> }} [person]
+ * `otherwise` gives for the dialog (dismissed, null, by default). The scenario review, a choice
+ * of APPROVED or REVISE, takes none of them: the person answers it APPROVED, as one who reads the
+ * scenarios and agrees, unless `scenarioReviews` scripts its answers in order. `asked` keeps each
+ * dialog: its kind (`select`, `input`, `confirm`), its message and, for a select, its options.
+ * @param {{ answers?: unknown[], scenarioReviews?: unknown[], otherwise?: (dialog: { kind: string, message: string, options?: string[] }) => unknown, mode?: unknown, elicitation?: boolean, modeGet?: () => Promise<unknown> }} [person]
  */
-export const answeringSession = ({ answers = [], otherwise = () => null, mode = 'interactive', elicitation = true, modeGet } = {}) => {
+export const answeringSession = ({ answers = [], scenarioReviews = [], otherwise = () => null, mode = 'interactive', elicitation = true, modeGet } = {}) => {
   const asked = []
+  const reviews = [...scenarioReviews]
   const next = async (dialog) => {
     asked.push(dialog)
-    const answer = answers.length > 0 ? answers.shift() : otherwise(dialog)
+    const reviewing = dialog.options?.join(' ') === 'APPROVED REVISE'
+    const answer = reviewing ? (reviews.length > 0 ? reviews.shift() : 'APPROVED') : answers.length > 0 ? answers.shift() : otherwise(dialog)
     return typeof answer === 'function' ? answer() : answer
   }
   return {

@@ -37,8 +37,8 @@ models on claude-code:
 ```
 
 With no setting, lenses run on `reviewer` and `solution-researcher` on `researcher` (both tier
-`economy`), `solution-architect` on `planner` (`frontier`), `pr-writer` on `economy`, every
-other agent on `implementer` (`standard`). On Claude Code, `economy`, `standard` and `frontier`
+`economy`), `solution-architect` on `planner` (`frontier`), `pr-writer` on `economy`, `replay-judge` on
+`standard`, every other agent on `implementer` (`standard`). On Claude Code, `economy`, `standard` and `frontier`
 give `haiku`, `sonnet` and `opus`; on Copilot, no model: the agent runs on the session's.
 
 ## 2. Choose the file
@@ -99,7 +99,9 @@ Under `assign`, per agent, per agent type (`phase`, `lens`, `refuter`, `worker`)
 
 The per-agent rule wins over the family an ejected workflow names (`model=`, `refuter=`), then
 comes the per-type rule, then `assign.default`. `finding-refuter` runs one tier above the
-strongest lens it checks, `frontier` at most, unless a rule names it.
+strongest lens it checks, `frontier` at most, unless a rule names it. `replay-judge` is resolved
+with the agent type `refuter`: an `assign.types.refuter` rule applies to it once no agent rule
+names it.
 
 ## 5. Check
 

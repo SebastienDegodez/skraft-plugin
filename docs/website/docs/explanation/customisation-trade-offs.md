@@ -18,7 +18,7 @@ number of attempts, the verdicts, the gates and their thresholds.
 
 | What you adapt | Where | Guide |
 | --- | --- | --- |
-| Components, commands, gates, base, mocking | `skraft-config.json` | [Configure the components](../how-to/configure-components.md) |
+| Components, commands, gates, base, mocking, test infrastructure | `skraft-config.json` | [Configure the components](../how-to/configure-components.md) |
 | Each agent's model and reasoning effort | `models`, `assign` (four layers) | [Choose the agents' models](../how-to/choose-models.md) |
 | A review's lenses | `.skraft/pipeline.skraft.dot`, `.skraft/review.skraft.dot` | [Add a lens to a review](../how-to/customise-review.md) |
 | Agents and questions of your repository | `.skraft/pipeline.skraft.dot` | [The DOT workflow](../reference/workflow-dot.mdx) |
@@ -52,6 +52,9 @@ command that runs and proves nothing.
 | Leave a component with no gate | Any proof about that component; the engine reports it as an `environment` failure | `no gate command; …` from `skraft gate` |
 | Set `--base` or `baseBranch` to a ref that is too recent | Changed files fall outside the compared range | `no component changed since its base; no gate to run` while code did change |
 | Remove the `adr` ask node | Human ratification of the ADRs, which stay `Proposed` | `skraft workflow diff` shows the node gone |
+| Remove the `scenario_review` ask node | A human's reading of the scenarios and the walking skeleton before DELIVER builds them | `skraft workflow diff` shows the node gone |
+| Remove `each="scenario"` from `distill` and `deliver` | The one-scenario-at-a-time order and the replay of each green: DISTILL commits its acceptance tests in one pass, DELIVER's commits are judged by their order only | `skraft workflow diff` shows the attribute gone |
+| Run the walking skeleton's entry point or internal gateways in memory (`infrastructure`) | The integration proof of S1: it no longer reaches a real entry point or database | `skraft doctor` prints the row with `source skraft-config.json` |
 | Set a component to `bdd: false` | The business-readable specification of that component: DISTILL is asked for no `.feature`, so its acceptance tests no longer carry the verbatim values of a scenario a domain expert can read | No `.feature` written for its features, and the test plan's `Feature File` column all dashes |
 | Edit `events.jsonl` by hand to unblock a run | The journal as evidence: the run is blocked with `journal-tampered` | [Resume or unblock a run](../how-to/resume-a-run.mdx) |
 

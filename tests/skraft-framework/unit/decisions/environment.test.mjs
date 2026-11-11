@@ -1,12 +1,12 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { InMemoryGit, ScriptedMachine } from '../support/in-memory-host.mjs'
-import { API, SETTLED_PUBLISH, SLUG, TRACKING, agent, scripted, tddCycle } from '../support/pipeline-host.mjs'
-import { ADR_1, adrText, architect, eventsOf, waitingOnEnvironment } from '../support/decisions.mjs'
+import { API, SETTLED_PUBLISH, SLUG, TRACKING, agent, green, scenarioReview, scripted } from '../support/pipeline-host.mjs'
+import { ADR_1, adrText, architect, environmentQuestion, eventsOf, waitingOnEnvironment } from '../support/decisions.mjs'
 
 const BUILD = `api/build: command not found: dotnet; install it or change the command in skraft-config.json (evidence: ${TRACKING}/gates/api/build-1.log)`
-const QUESTION = `gates cannot run on this machine: ${BUILD}. Fix it, then RETRY; or ABORT the run.`
-const toTheGates = (it) => [agent()(it), agent()(it), agent()(it), agent({ work: tddCycle() })(it)]
+const QUESTION = environmentQuestion('gates', BUILD, { log: `${TRACKING}/gates/api/build-1.log` })
+const toTheGates = (it) => [agent()(it), agent()(it), agent()(it), agent({ work: green() })(it)]
 const noDotnet = () => new ScriptedMachine({ installed: ['git'] })
 
 test('a gate the machine cannot run asks the human to fix it; the run waits, and RETRY runs the same gate node again', async () => {
@@ -16,7 +16,7 @@ test('a gate the machine cannot run asks the human to fix it; the run waits, and
   const outcome = await host.start()
 
   assert.deepEqual(outcome, { status: 'waiting', slug: SLUG, phase: 'DELIVER', code: 'environment', reason: `${QUESTION} Answer with skraft decide gates-1 RETRY|ABORT.` })
-  assert.deepEqual(host.human.questions, [{ key: 'gates-1', kind: 'environment', text: QUESTION, options: ['RETRY', 'ABORT'], refusals: [], header: 'Environment' }])
+  assert.deepEqual(host.human.questions, [scenarioReview(), { key: 'gates-1', kind: 'environment', text: QUESTION, options: ['RETRY', 'ABORT'], refusals: [], header: 'Environment' }])
   assert.deepEqual(host.types().slice(-3), ['step.started', 'gate.ran', 'question.asked'])
   assert.equal((await host.view()).current.step, 'gates')
 
@@ -36,8 +36,8 @@ test('a host that asks in a dialog retries at once; the same failure again asks 
   const outcome = await host.start()
 
   assert.deepEqual({ status: outcome.status, code: outcome.code }, { status: 'waiting', code: 'environment' })
-  assert.deepEqual(host.human.questions.map((question) => question.key), ['gates-1', 'gates-2'])
-  assert.deepEqual(eventsOf(host, 'question.answered').map(({ key, answer, by }) => [key, answer, by]), [['gates-1', 'RETRY', 'host']])
+  assert.deepEqual(host.human.questions.map((question) => question.key), ['scenario_review-1', 'gates-1', 'gates-2'])
+  assert.deepEqual(eventsOf(host, 'question.answered').map(({ key, answer, by }) => [key, answer, by]), [['scenario_review-1', 'APPROVED', 'host'], ['gates-1', 'RETRY', 'host']])
 })
 
 test('ABORT ends the run blocked on the environment, and it stays blocked', async () => {
@@ -110,12 +110,12 @@ test('ABORT in the dialog ends the run blocked on the environment, whatever the 
 
 test('each node counts its own questions: a ratification, then a gate the machine cannot run, asks adr-1 then gates-1', async () => {
   const host = scripted({ machine: noDotnet(), answers: [{ answer: 'RATIFIED' }] }, (it) => [
-    agent()(it), architect({ [ADR_1]: adrText() })(it), agent()(it), agent({ work: tddCycle() })(it),
+    agent()(it), architect({ [ADR_1]: adrText() })(it), agent()(it), agent({ work: green() })(it),
   ])
 
   await host.start()
 
-  assert.deepEqual(host.human.questions.map(({ key }) => key), ['adr-1', 'gates-1'])
+  assert.deepEqual(host.human.questions.map(({ key }) => key), ['adr-1', 'scenario_review-1', 'gates-1'])
 })
 
 test('every question is keyed by the node that asks it and its rank there: a node named environment keeps its answer when Git fails, and RETRY ratifies', async () => {
@@ -131,7 +131,7 @@ test('every question is keyed by the node that asks it and its rank there: a nod
   const git = new InMemoryGit({ commitFails: 'git commit failed: index.lock exists' })
   const host = scripted({ workflow, git, answers: [{ answer: 'RATIFIED' }] }, (it) => [architect({ [ADR_1]: adrText() })(it)])
 
-  assert.deepEqual((await host.start()).reason, waitingOnEnvironment('environment', 'git commit failed: index.lock exists', 2))
+  assert.deepEqual((await host.start()).reason, waitingOnEnvironment('environment', 'git commit failed: index.lock exists', 2, { log: `${TRACKING}/logs/commit-environment.log` }))
   assert.deepEqual(host.human.questions.map(({ key, kind }) => [key, kind]), [['environment-1', 'adr-ratification'], ['environment-2', 'environment']])
   git.commitFails = null
   assert.equal((await host.decide({ answer: 'RETRY' })).ok, true)
@@ -153,6 +153,6 @@ test('a human who fixes skraft-config.json in the dialog, then answers RETRY, ge
   const outcome = await host.start()
 
   assert.equal(outcome.status, 'done')
-  assert.deepEqual(host.human.questions.map((question) => question.key), ['deliver-1'])
+  assert.deepEqual(host.human.questions.map((question) => question.key), ['distill-1', 'scenario_review-1'])
   assert.deepEqual(host.machine.lines(), ['. $ npm run build', '. $ npm test', '. $ npm run mutate'])
 })

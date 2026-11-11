@@ -183,7 +183,7 @@ Ratify the Proposed ADRs docs/adr/adr-001-card-provider.md? RATIFIED marks them 
 | `reason` | string | reason for the status (the question text while `waiting`), empty when none |
 | `phases` | `[{ phase, state }]` | one entry per phase; `state` = `pending`, `open` or `closed` |
 | `current` | `{ step, phase, agent, gates, question, visit, attempt }` or null | the node in progress, `null` otherwise; `question` is the question kind on an ask node, `null` elsewhere |
-| `question` | `{ key, kind, text, options, refusals, header }` or null | the question the run waits on, `null` when nothing waits; `header` = the short label a dialog or the pane shows beside it (`ADR`, `Reporting`, `Pull request`, `Mutation`, `Environment`, `Blocked`) |
+| `question` | `{ key, kind, text, options, refusals, header }` or null | the question the run waits on, `null` when nothing waits; `header` = the short label a dialog or the pane shows beside it (`ADR`, `Reporting`, `Pull request`, `Scenarios`, `Mutation`, `Environment`, `Blocked`) |
 | `attempts` | number | number of attempts started |
 | `costUsd` | number or null | sum of journaled costs, `null` when none |
 | `graph` | `{ nodes, edges }` | the graph of the workflow the run follows (default or `.skraft/`); with no readable workflow, the steps the journal names and no edge |
@@ -200,7 +200,10 @@ for `tampered`.
 
 **Effect.** Records a human's answer to the question the active pipeline waits on (one
 `question.answered` event, `by: "cli-tty"`), once the person confirms it at the terminal:
-`skraft decide: record <answer> for <key>? [y/N]`. Only `y` records. It runs nothing: the next run of the pipeline
+`skraft decide: record <answer> for <key>? [y/N]`. Only `y` records. Without an interactive
+terminal, or in a shell its host marks as an AI agent's (`AI_AGENT`, `COPILOT_AGENT_SESSION_ID` or
+`CLAUDECODE` set), nothing is asked and nothing is recorded (`no-terminal`): an agent cannot
+answer for a person. It runs nothing: the next run of the pipeline
 acts on the answer, without starting again an agent that already finished.
 
 | Argument / option | Value | Rule |
@@ -214,26 +217,46 @@ The questions, their options and their refusals:
 | Kind | Key | Options | Refusal |
 | --- | --- | --- | --- |
 | `adr-ratification` | `<node>-<n>` (`adr-1`) | `RATIFIED`, `REJECTED` | `REJECTED` |
+| `scenario-review` | `<node>-<n>` (`scenario_review-1`) | `APPROVED`, `REVISE` | `REVISE` |
 | `environment` | `<node>-<n>`, the node that cannot run (`gates-1`) | `RETRY`, `ABORT` | — |
 | `mutation-plan` | `<node>-<n>` (`mutation_plan-1`) | `APPLY`, an instruction, or `STOP` (ends the run `blocked`, code `stopped`) | — |
 | `blocked` | `<node>-<n>`, the node an instruction runs again (`design-1`) | an instruction, or `STOP` | — |
 
-A block no longer ends the run by itself. When an agent answers `blocked`, a loop reaches its
-`max_visits`, or a lens of a review answers `inconclusive`, the engine asks the `blocked`
-question about the node to run again: the agent itself, the node the capped edge leads back to
-(the engineer after the gates, the architect after a review or a rejected ADR), or the review.
-Its text holds what the engine checked, what the blocked step left (the agent's reason, the
-gates' failures), and the file that keeps the agent's own words:
+A block no longer ends the run by itself. When an agent answers `blocked`, an agent is refused
+the same way on two attempts in a row of a pass or on its last attempt (`max_attempts`), a loop
+reaches its `max_visits` (the gates' `FAIL` edge included), or a lens of a review answers
+`inconclusive`, the engine asks the `blocked` question about the node to run again: the agent
+itself, the node the capped edge leads back to (the engineer after the gates, the architect
+after a review or a rejected ADR), or the review. Its text holds what the
+engine checked, what the blocked step left (the agent's reason, its missing outputs and
+refusals, the gates' failures), the file that keeps the agent's own words, and where the run
+report is:
 
 ```
 design is blocked: solution-architect says it cannot go on; its reason is in <tracking folder>/results/design-1-1.json.
 Left by design (1):
 - which payment provider?
  An instruction runs design again on a new pass with what is left above and the instruction; STOP ends the run.
+The run so far (commits, refusals, incidents): <tracking folder>/run-report.md
+research is blocked: solution-researcher failed the same way on attempts 1 and 2.
+Left by research (2):
+- missing outputs: <tracking folder>/research/2026-10-11/checkout-research.md
+- result is missing
+ An instruction runs research again on a new pass with what is left above and the instruction; STOP ends the run.
+The run so far (commits, refusals, incidents): <tracking folder>/run-report.md
 design_review is blocked: a lens answered inconclusive; the verdict is in <tracking folder>/reviews/design_review-1/verdict.yaml. An instruction runs design_review again on a new pass with it; STOP ends the run.
+The run so far (commits, refusals, incidents): <tracking folder>/run-report.md
+deliver is blocked: gates -> deliver was taken as often as its max_visits allows.
+Left by gates (1):
+- api/test: exited 1 (evidence: <tracking folder>/gates/api/test-3.log)
+ An instruction runs deliver again on a new pass with what is left above and the instruction; STOP ends the run.
+The run so far (commits, refusals, incidents): <tracking folder>/run-report.md
 ```
 
-The agent run again gets what the block left first, then the instruction.
+The agent run again gets what the block left first, then the instruction. An agent refused on
+its attempts starts the new pass at attempt 1, with its whole `max_attempts` again; its brief
+lists the outputs still missing (`Missing outputs from pass <n>:`), then its refusals
+(`What pass <n> left when it was blocked:`), then the instruction.
 
 A review whose loop to its producer reaches `max_visits` (2 for each review of the shipped
 workflow: 3 passes) is not sent back again. Its question says that the producer did not fix every
@@ -256,6 +279,7 @@ Medium and low (1):
 
 Every finding with its context: <tracking folder>/reviews/design_review-3/verdict.yaml
 ACCEPT takes these findings as they stand and goes on (they are listed in the run report and the pull request); an instruction runs design again with every finding and the instruction; STOP ends the run.
+The run so far (commits, refusals, incidents): <tracking folder>/run-report.md
 ```
 
 `skraft decide design-1 "Use the bank gateway of Acme"`: the next run of the pipeline, the same
@@ -263,8 +287,9 @@ run on the same slug, runs that node again on a new pass, the instruction given 
 a human's feedback (to each lens the review asks, for a review); no edge into the node counts
 as taken any more, so its loop has its whole budget again. Blocked again, it asks again
 (`design-2`). `STOP` (in any case) ends the run `blocked`, with the code and reason of the
-block, and nothing else. A breaker, an attempt ceiling, a missing edge or a stalled mutation
-loop still end the run without a question.
+block, and nothing else: for a refused agent, the code of its last refusal (`missing-outputs`,
+`research-records`…). A missing edge, a stalled mutation loop or a node the workflow no longer
+holds (`workflow-changed`) still end the run without a question.
 
 A key names the node that asks the question, then the question's rank among those that node
 asked in the run, whatever their kind: `adr-1`, then `adr-2` after a rejection or when Git
@@ -279,7 +304,7 @@ stdout, code 0. Refusal: the message on stderr, code 1.
 | `no-question` | `no question adr-2; waiting: adr-1`, or `no question to answer; no question is waiting` |
 | `already-answered` | `adr-1 was already answered RATIFIED` |
 | `invalid-answer` | `the answer must be one of RATIFIED, REJECTED`; `REJECTED needs the reason, which goes back to the agent`; for a `blocked` question `the answer must be an instruction, or STOP` (`… or APPLY or STOP` for `mutation-plan`) and `an instruction is at most 1000 characters` (the value is never echoed) |
-| `no-terminal` | `skraft decide records a person's answer: run it yourself in an interactive terminal; nothing was recorded` |
+| `no-terminal` | `skraft decide records a person's answer: run it yourself in an interactive terminal of your own, not an agent's shell; nothing was recorded` |
 | `not-confirmed` | `not confirmed; nothing was recorded` |
 
 ## `skraft gate [--all] [--json]`
@@ -315,13 +340,13 @@ On a refusal or a block, the summary carries the code: `skraft <slug>: gates ref
 | `scope` | string | `touched` or `all` |
 | `components` | string[] | components selected |
 | `gates` | `GateResult[]` | see below |
-| `failure` | string or null | `environment` when at least one environment failure, otherwise `deterministic` on failure, `null` with no failure |
+| `failure` | string or null | `interrupted` when a person stopped a gate, otherwise `environment` when at least one environment failure, otherwise `deterministic` on failure (a gate stopped by a signal or a crash included), `null` with no failure |
 | `code` | string or null | refusal or block code |
 | `reason` | string | summary |
 | `phase` | null | present only on a refusal or block coming from the active pipeline |
 
 Each `GateResult`: `component`, `gate` (`none` for a component with no gate command),
-`status` (`pass`, `fail`), `failure` (`environment`, `deterministic`, `null`), `reason`,
+`status` (`pass`, `fail`), `failure` (`interrupted`, `environment`, `deterministic`, `null`), `reason`,
 `evidence` (absolute path of the evidence file; for the `none` gate, the `gates/<component>`
 folder, where no file is written).
 
@@ -340,7 +365,9 @@ and evidence format:
 ## `skraft report [--json]`
 
 **Effect.** Reads the active pipeline's journal and prints the time, cost and retries of each
-step; writes nothing. The engine writes the same table to `run-report.md` after each step.
+step; writes nothing. The engine writes the same table to `run-report.md` after each step,
+followed by the question the run waits on, the commits it checked, the failures sent back to an
+agent and the incidents asked of a human ([Run report](./run-journal.md#run-report)).
 
 **Text output**:
 
@@ -373,7 +400,12 @@ journal or a tampered one, only the first line and the reason are printed (`idle
 
 **`--json` output**: `{ slug, status, reason, steps: [{ step, phase, visits, attempts, retries,
 durationMs, costUsd, outcome }], totals: { attempts, retries, durationMs, costUsd }, answers:
-[{ key, kind, step, answer, reason, by }], startedAt, elapsedMs }`. Code 1 only for `tampered`.
+[{ key, kind, step, answer, reason, by }], waiting: { key, kind, step, text, options } or null,
+commits: [{ step, sha, subject, kind, verdict }], refusals: [{ step, times, failure }],
+incidents: [{ key, step, owner, log, answer }], startedAt, elapsedMs }`: `sha` short, `times` how
+often an attempt or a gate step of that node failed, `failure` the first failure, `answer` `null`
+while the question waits. Code 1 only for
+`tampered`.
 
 ## `skraft publish`
 

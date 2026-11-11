@@ -111,10 +111,12 @@ avant que DISTILL commence. Un refus renvoie l'architecte au travail, avec la ra
 
 ### Étape 5 — DISTILL : écrire le contrat exécutable
 
-L'`acceptance-designer` traduit l'architecture en **scénario Gherkin**, lisible
-par le métier :
+L'`acceptance-designer` traduit l'architecture en **scénarios Gherkin**, lisibles par le métier,
+dans l'ordre où DELIVER les construira. Le premier est le walking skeleton, du point d'entrée de
+commande jusqu'à la vraie base :
 
 ```gherkin
+@walking-skeleton
 Scénario: payer une boisson personnalisée
   Étant donné un panier contenant un latte taille moyenne, lait d'avoine
   Quand le paiement est validé
@@ -122,24 +124,28 @@ Scénario: payer une boisson personnalisée
   Et des points de fidélité sont crédités au client
 ```
 
-Il écrit aussi le test d'acceptation correspondant et le squelette de code qu'il appelle, et
-les commite **en échec** : le moteur rejoue le test pour vérifier qu'il échoue vraiment.
+Le second suit le troisième critère : une boisson indisponible ne peut pas être ajoutée au
+panier. Le plan de test les liste en S1 et S2. Pour S1 seulement, le concepteur écrit le test
+d'acceptation et le squelette de code qu'il appelle, et les commite **en échec** : le moteur
+rejoue le test pour vérifier qu'il échoue sur une assertion. Après la revue, une personne lit les
+deux scénarios et le test de S1, et les approuve.
 
 - **Ce qui entre :** l'ADR + le modèle d'événements.
-- **Ce qui sort :** le `.feature`, le plan de test et le test d'acceptation rouge.
+- **Ce qui sort :** le `.feature`, le plan de test avec S1 et S2, et le test d'acceptation rouge de S1.
 
 ➡️ Détail de la phase : [DISTILL](./distill.md).
 
 ### Étape 6 — DELIVER : implémenter, guidé par les tests
 
-Le `software-engineer` rend le scénario vert en **Outside-In TDD** : test rouge, code vert,
-nettoyage, commit après commit. Le moteur lance les gates (build, tests, architecture,
+Le `software-engineer` rend S1 vert en **Outside-In TDD** : tests unitaires d'abord, puis le
+code, puis un commit vert, que le moteur rejoue. DISTILL écrit ensuite le test en échec de S2, et
+l'ingénieur le rend vert de la même façon. Le moteur lance les gates (build, tests, architecture,
 couverture), puis la revue DELIVER relit le code. Une fois le code approuvé, la **mutation**
 passe une fois, en dernier : elle vérifie que les tests attraperaient une erreur dans la règle
 de fidélité. Si un mutant survit, l'agent propose comment le traiter et c'est le développeur
 qui choisit.
 
-- **Ce qui entre :** le test d'acceptation rouge + le plan.
+- **Ce qui entre :** le test d'acceptation rouge de S1 + le plan.
 - **Ce qui sort :** le code revu, la mutation passée, puis la pull request.
 
 ➡️ Détail de la phase : [DELIVER](./deliver.mdx).
@@ -155,8 +161,8 @@ d'ingénierie, sans perdre son contexte :
 | DISCUSS | Story INVEST + 3 critères d'acceptation |
 | RESEARCH | Document de recherche cité + recommandation |
 | DESIGN | ADR ratifié (paiement via ACL) + modèle d'événements |
-| DISTILL | Scénario Gherkin + test d'acceptation rouge |
-| DELIVER | Code revu + mutation passée + pull request |
+| DISTILL | Scénarios Gherkin S1, S2 + test d'acceptation rouge de S1 |
+| DELIVER | Un commit rouge et un vert par scénario + code revu + mutation passée + pull request |
 
 Chaque artefact est devenu le **contexte** de l'étape suivante, et chaque relais est resté
 relisible : ce qui n'était pas écrit n'a pas été transmis.

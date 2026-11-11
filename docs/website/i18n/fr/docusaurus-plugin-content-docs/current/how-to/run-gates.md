@@ -75,12 +75,16 @@ result: fail (deterministic): exited 1
 
 | Classe | Ce qui s'est passé | Quoi faire |
 |---|---|---|
-| `deterministic` | la commande a tourné et rendu un code non nul | corriger le code ou le test d'après `stderr`, puis relancer |
-| `environment` | programme introuvable, syntaxe shell, composant sans gate, programme arrêté, rapport de mutation absent | réparer la machine ou la commande, puis relancer ; relancer sans rien changer redonne le même échec |
+| `deterministic` | la commande a tourné et rendu un code non nul, a été arrêtée par un signal ou a planté (sortie au-dessus de 128), ou a fini sans code de sortie | corriger le code ou le test d'après `stderr`, libérer de la mémoire ou corriger le plantage, puis relancer |
+| `environment` | programme introuvable, syntaxe shell, composant sans gate ; un rapport de mutation absent, ou un run de mutation fini avant son terme | réparer la machine ou la commande, puis relancer ; relancer sans rien changer redonne le même échec |
 
-Pendant un run, un échec `environment` n'arrête pas le run : il pose la question
-`<node> cannot run on this machine: <reason>. Fix it, then RETRY; or ABORT the run.` Réparez,
-puis répondez `RETRY` ([Répondre à une question du run](./answer-a-question.mdx)).
+Pendant un run, un échec `environment` ne renvoie rien à l'ingénieur et ne consomme aucune
+tentative : le run pose la question `environment`, dont la ligne `Cause:` dit qui corrige et la
+ligne `Output:`, quand une commande a tourné, nomme son fichier de preuve. Réparez, puis répondez
+`RETRY` ([Répondre à une question du run](./answer-a-question.mdx)). Un échec `deterministic`, un
+signal ou un plantage compris, revient à l'ingénieur avec sa preuve par l'arête `FAIL` des gates,
+jusqu'au `max_visits` de cette arête ; le run pose alors la question `blocked`. L'ingénieur
+corrige le code, ou s'arrête `blocked` en nommant ce qui manque à la machine.
 
 ## Dépannage
 
@@ -90,6 +94,7 @@ puis répondez `RETRY` ([Répondre à une question du run](./answer-a-question.m
 | `command "npm ci && npx vitest run" uses shell syntax (&&); put the steps in a script and call the script` | Mettre les étapes dans un script (`"test:ci": "npm ci && vitest run"` dans `package.json`) et écrire `"test": "npm run test:ci"`. |
 | `no gate command; give it at least one of build, format, lint, test, architecture, coverage, mutation in skraft-config.json` | Ajouter au moins une gate au composant. |
 | `npx was stopped by SIGKILL; run it again` | Relancer (mémoire, interruption). |
+| `was stopped by a signal or crashed (exit 137), not by a failing check` | Lire le fichier de preuve, libérer de la mémoire ou corriger le plantage, puis relancer. |
 | `… the mutation report web/reports/mutation/mutation.json is missing; have the command write it there, or name the file it writes with mutationReport …` | Faire écrire le rapport à cet endroit, ou le nommer avec `mutationReport` sur le composant. |
 | Un test qui a besoin de Microcks échoue faute de conteneur | Démarrer Docker ou Podman, puis `skraft gate` ; ou passer le composant en `"mocking": { "strategy": "inprocess" }` ([ce que vous perdez](../explanation/customisation-trade-offs.md)). |
 | Windows : `npm.cmd` écrit dans la commande | Écrire `npm`, `npx` ou `gradlew.bat` : le moteur trouve le programme avec PATHEXT et lance `.cmd` et `.bat` par cmd.exe. |

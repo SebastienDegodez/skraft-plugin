@@ -111,7 +111,7 @@ Scenario: ...
 | `@happy-path` | The primary success scenario |
 | `@edge-case` | Boundary values, limit conditions |
 | `@error-case` | System errors, missing data, invalid state |
-| `@smoke` | Minimal set for walking skeleton validation (mark ≤3 per feature) |
+| `@walking-skeleton` | S1 of the story, the one scenario its walking skeleton runs, unless the test plan declares an exemption (`test-design-mandates`) |
 | `@visual` | Marks a scenario whose AC is expressed in visual/positional/style terms — requires a companion Playwright E2E test with a real measurement, see Visual AC Rule below |
 | `@frontend` `@backend` `@api` `@http` `@ui` `@infrastructure` `@database` `@persistence` | ❌ FORBIDDEN — layer leak: embed implementation vocabulary in the Gherkin layer |
 

@@ -1,11 +1,16 @@
 import { normalizeRelative, pathUnder } from '../config/relative-path.mjs'
 import { mutationOutputsOf } from './mutation-report.mjs'
+import { interruptedBy } from '../pipeline/incidents.mjs'
 
 /**
  * @typedef {import('../config/skraft-config.mjs').Component} Component
- * @typedef {'environment' | 'deterministic'} FailureClass
- *   environment: the machine is missing something a human must provide (a command);
- *   deterministic: the command ran and failed, and fails the same way until the code changes.
+ * @typedef {'interrupted' | 'environment' | 'deterministic'} FailureClass
+ *   interrupted: a person stopped the command (Ctrl-C);
+ *   environment: what a human must provide before the gate can tell anything: a program the
+ *   machine lacks (it did not start, or the shell found none: 127, 9009), a command the
+ *   configuration lacks, a mutation report that cannot be read;
+ *   deterministic: the command ran and failed, ran out of time, or a signal or a crash stopped
+ *   it: its evidence goes back to the agent, which fixes the code or stops blocked.
  */
 
 /** The commands that are gates, in the order they run. Other commands (`e2e`…) are not gates. */
@@ -22,8 +27,9 @@ const NOT_FOUND_EXIT = Object.freeze([127, 9009])
  * @returns {FailureClass | null} null when the command passed
  */
 export const failureOf = ({ started, exitCode }) => {
-  if (!started || exitCode === null || NOT_FOUND_EXIT.includes(exitCode)) return 'environment'
-  return exitCode === 0 ? null : 'deterministic'
+  if (!started || NOT_FOUND_EXIT.includes(/** @type {number} */ (exitCode))) return 'environment'
+  if (exitCode === 0) return null
+  return interruptedBy(/** @type {number} */ (exitCode)) ? 'interrupted' : 'deterministic'
 }
 
 /** Changes under the tracking folder are the run's own bookkeeping, never a component's. */

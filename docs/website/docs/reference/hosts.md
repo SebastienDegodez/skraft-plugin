@@ -16,7 +16,8 @@ Why an engine and drivers, and the Copilot driver contract:
 | Tool | Version | For |
 | --- | --- | --- |
 | Node | 22 or later | the engine, the `skraft` command line, the Copilot extension; `skraft doctor` checks it |
-| Git | — | each component's base, commits, replays of red commits |
+| Git | — | each component's base, commits, replays of red and green commits |
+| Docker or Podman | — | the tests that run Microcks or Testcontainers, the walking skeleton's database by default; without either, the replay judge asks a human to start one and the run waits; `skraft doctor` names the one that answers |
 | `gh` | signed in to the repository's host | only to read the story's issue (`--issue`), open the pull request, comment on the issue, `skraft review --pr`; the engine never goes through an MCP server; see [Forge](./skraft-config.md#github-through-gh) |
 | `az` | signed in to the organization, with its `azure-devops` extension | on Azure DevOps only, to read the story's work item (`--issue`), keep the run's comment on it, open the pull request, and review a pull request (`skraft review --pr`: read it, keep the review's thread); the engine never goes through an MCP server; see [Forge](./skraft-config.md#azure-devops-through-az) |
 | Copilot CLI | — | Copilot CLI; under VS Code, the SDK driver (`skraft-run.mjs`) starts it headless |
@@ -103,7 +104,7 @@ options and a header (`ADR`, `Reporting`, `Environment`):
 | --- | --- |
 | an option that is not a refusal | recorded as the answer; the run goes on |
 | a refusal (`REJECTED`) | a second dialog: `Why REJECTED? Type the reason under Other; it goes back to the agent.`; the text typed under Other is the reason; `Not now` or `Answer later` give no answer |
-| text typed under Other in the first dialog | an option typed in any case is that option; other text is a refusal with that text as its reason when the question has one (`adr-ratification`), the instruction for a `blocked` or `mutation-plan` question, and is refused as an answer otherwise (the run waits) |
+| text typed under Other in the first dialog | an option typed in any case is that option; other text is a refusal with that text as its reason when the question has one (`adr-ratification`, `scenario-review`), the instruction for a `blocked` or `mutation-plan` question, and is refused as an answer otherwise (the run waits) |
 | an instruction typed under Other | shown back in a dialog `Send this instruction to <step>? <instruction>` with `SEND` and `CANCEL`: `SEND` records it and the run goes on; `CANCEL` puts the question again |
 | a text with no word typed as an instruction (`5`, `42?`, `ok`) | refused without being shown back, and the question is put again |
 | dialog dismissed, the `SEND`/`CANCEL` one included | no answer: the run waits for `/skraft decide` |
@@ -148,7 +149,7 @@ skraft checkout — running
 The block shows the pane's text for a `checkout` run in DESIGN, as the mod's view tests check it.
 Next to a dialog, while a question waits (the figure was captured when the publication consent was
 still asked inside a run; `/skraft-init` settles it beforehand now, and the question a run stops on
-is one of `adr-ratification`, `mutation-plan`, `environment` or `blocked`):
+is one of `adr-ratification`, `scenario-review`, `mutation-plan`, `environment` or `blocked`):
 
 ![Claude Code: on the left the Pull request dialog with ACCEPTED, DECLINED and Type something; on the right the Skraft pane, "skraft checkout — waiting", RESEARCH open on publish_consent, the steps of the other phases to come, then the question and how to answer it](/img/screenshots/shared/claude-skraft-pane.png)
 

@@ -1,0 +1,30 @@
+$ node --test
+cwd: .
+commit: {{sha}}
+exit: 0
+--- stdout
+TAP version 13
+# Subtest: a basket without membership pays the sum of its items
+ok 1 - a basket without membership pays the sum of its items
+  ---
+  duration_ms: 0.384916
+  type: 'test'
+  ...
+# Subtest: an active member gets ten percent off
+ok 2 - an active member gets ten percent off
+  ---
+  duration_ms: 0.065834
+  type: 'test'
+  ...
+1..2
+# tests 2
+# suites 0
+# pass 2
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 63.577208
+
+--- stderr
+

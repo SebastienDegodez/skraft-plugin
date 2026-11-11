@@ -18,7 +18,7 @@ A short document that records an architectural decision: the context, the option
 → See [Patterns](./patterns.md)
 
 **Ask node**
-A workflow node of shape `hexagon` that puts a question to a human (`question="adr-ratification"`). Its outgoing edges are labelled with the answers; a refusal (`REJECTED`) leads back to the node whose work it refuses.
+A workflow node of shape `hexagon` that puts a question to a human (`question="adr-ratification"`, `"scenario-review"`, `"mutation-plan"`). Its outgoing edges are labelled with the answers; a refusal (`REJECTED`, `REVISE`) leads back to the node whose work it refuses.
 → See [Answer a run's question](../how-to/answer-a-question.mdx)
 
 **Agent**
@@ -84,8 +84,8 @@ The SKRAFT code that decides every pipeline step (order, expected outputs, retri
 → See [Engine](../explanation/architecture.md)
 
 **Environment question**
-The question the engine asks when the machine cannot run a step (program not found, Git failing): `Fix it, then RETRY; or ABORT the run.` `RETRY` checks or runs the same step again; `ABORT` blocks the run.
-→ See [Resume or unblock a run](../how-to/resume-a-run.mdx)
+The question the engine asks when a step cannot run on the machine or with what `skraft-config.json` gives it (program not found, Git failing, a gate command missing), or when the replay judge asks a human about a replayed commit. It names the cause (the machine, `skraft-config.json`, or what the replay judge read) and the log of the failing command or the judge's answer. `RETRY` runs the same step again where it stopped, using no new attempt; `ABORT` blocks the run.
+→ See [The environment question](./run-journal.md#environment-question)
 
 **Event Modeling**
 A specification technique that describes a system as a sequence of events over time. Facilitates communication between technical and business teams.
@@ -96,7 +96,7 @@ An architectural pattern where the state of a system is reconstructed from a seq
 ## F
 
 **Failure class**
-What a failed gate is: `environment` (the machine or the config must change: missing program, program stopped) or `deterministic` (the command failed: the code must change).
+What a failed gate is: `interrupted` (a person stopped it: the run stops), `environment` (the machine or the config must change: missing program, refused command line, unreadable mutation report: a human acts) or `deterministic` (the command failed, a signal or a crash included: the agent gets its evidence through the `FAIL` edge).
 → See [Failure class](../how-to/run-gates.md)
 
 **Finding**
@@ -124,6 +124,10 @@ The set of agents, instructions and skills for GitHub Copilot published by Micro
 
 ## I
 
+**Infrastructure policy**
+What a component's tests run each kind of dependency on, in a targeted scenario and in the walking skeleton: entry point in process / real, internal gateway in memory / Testcontainers, external gateway Microcks (the component's `mocking.strategy`), clock and randomness fake; for a React front end, MSW in targeted tests and Microcks in Playwright e2e. Plugin defaults per stack, overridden per component (`infrastructure`) in `skraft-config.json` only.
+→ See [skraft-config.json](./skraft-config.md#infrastructure)
+
 **INVEST**
 The six qualities of a good story: independent, negotiable, valuable, estimable, small, testable (Wake, 2003).
 → See [The backlog](../explanation/backlog.md)
@@ -143,7 +147,7 @@ In SKRAFT, a specialised viewpoint of the adversarial review, carried by an isol
 ## M
 
 **Microcks**
-A tool that simulates the APIs a component depends on, from their contracts; it runs in a container, Docker or Podman. It is a component's default mocking (`"mocking": { "strategy": "microcks" }`): the tests that use it then need Docker or Podman running. `inprocess` does without it.
+A tool that simulates the APIs a component depends on, from their contracts; its tests start it through Testcontainers (uber native image, one container per test session), on Docker or Podman. It is the default mocking of every stack but React (`"mocking": { "strategy": "microcks" }`): the tests that use it then need Docker or Podman running; without either, the replay judge asks a human to start one, and the test is never skipped. `inprocess` does without it.
 → See [Microcks](./skraft-config.md)
 
 **MoSCoW**
@@ -190,10 +194,22 @@ Work that must be redone because it did not pass review. SKRAFT aims to reduce r
 The agent that checks a `blocker`, `high` or `medium` finding by reading the cited location: `confirmed`, `refuted` (citing the line read) or `unverifiable`. A refuted finding does not count.
 → See [Gates](./gates.md#refutation)
 
+**Replay judge (`replay-judge`)**
+The agent the engine asks about each red or green commit it replays. It reads the logs of the replays and the commit, changes nothing, and answers `accept`, `send-back`, `retry` or `ask-human` with a note; the engine itself reads no test report.
+→ See [Commits and replays](./gates.md#commits)
+
 **Reviewer**
 A read-only AI agent that judges the artifacts of an executor agent and never modifies them (CQS principle). In V2, phase reviewers give way to isolated lenses whose findings the engine combines into a verdict.
 
+**Run report**
+`run-report.md`, rewritten from the journal after each step: time, cost and retries of each step, the question the run waits on, each commit checked and its verdict, the failures sent back to an agent, the incidents asked of a human.
+→ See [Run report](./run-journal.md#run-report)
+
 ## S
+
+**Scenario review**
+The question (`scenario-review`) a human answers once the DISTILL review approves: it names the story's scenarios in the order DELIVER builds them and S1's failing acceptance test. `APPROVED` delivers them one at a time; `REVISE` sends DISTILL back with the corrections.
+→ See [Answer a run's question](../how-to/answer-a-question.mdx)
 
 **Skill**
 In SKRAFT, a tooled practice encapsulated in a `SKILL.md` file. A skill defines what to do, how to do it, and which references justify it.
@@ -247,7 +263,8 @@ The status of a run whose question has no answer yet. The run does nothing more 
 → See [Resume or unblock a run](../how-to/resume-a-run.mdx)
 
 **Walking Skeleton**
-The first iteration of a project that cuts through all architecture layers end to end with a minimal feature. Validates the architecture before building the details.
+The first iteration of a project that cuts through all architecture layers end to end with a minimal feature. Validates the architecture before building the details. In SKRAFT, scenario S1 of each story, tagged `@walking-skeleton`, in a back-end component: entry point → use case → real database. A story with no new entry point declares an exemption instead (`library`, `refactoring`, `docs-only`).
+→ See [Walking Skeleton](../explanation/deep-dive/walking-skeleton.md)
 
 ## Sources
 

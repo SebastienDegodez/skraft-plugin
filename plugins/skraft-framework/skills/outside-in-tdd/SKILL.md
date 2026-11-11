@@ -29,7 +29,7 @@ layer a rule's code lands in**. Load the owner for everything else:
 |---|---|
 | What the behaviour is, and whether it is approved | `bdd-methodology` |
 | Test project, test layer, which double, test examples | `clean-architecture-testing` |
-| Whether a Domain test is authorized; coverage matrix; walking-skeleton count and strategy | `test-design-mandates` |
+| Whether a Domain test is authorized; coverage matrix; walking skeleton and its exemptions; what each dependency runs on | `test-design-mandates` |
 | Commit-time self-check, placeholder assertions (C5) | `craft-discipline` |
 | Cleaning up test code that already passes | `test-refactoring-catalog` |
 | Policy vs Domain Service vs Specification | `architecture-patterns` |
@@ -62,7 +62,8 @@ step. Never build a class no active scenario requires.
    idiomatic, domain semantics, no speculative branch, no unrequested error handling, no
    abstraction the test does not force. If the test was misunderstood, revise the test and
    restart from RED; never iterate on the code instead.
-5. **VERIFY, then commit** — run *Post-GREEN wiring verification*. Never commit on red.
+5. **VERIFY, then commit** — run *Post-GREEN wiring verification*, then commit as *Commit policy*
+   says. Never commit on red.
 
 **Iron rule:** never modify a failing test to make it pass; fix the implementation. Stuck after
 3 attempts: revert to the last green and escalate.
@@ -71,14 +72,30 @@ step. Never build a class no active scenario requires.
 
 - **Interactive session:** the developer reviews and explicitly validates the failing test
   before you continue.
-- **skraft DELIVER:** the recorded red commit is the inspection. Commit the failing test before
-  any production code exists, then continue to GREEN in the same run; never stop after RED to wait.
+- **skraft DELIVER:** the recorded red commit is the inspection: on a scenario pass, DISTILL's red
+  of the scenario's acceptance test, which the engine replays; on a pass with no scenario, your own
+  failing test, committed before any production code exists. Continue to GREEN in the same run;
+  never stop after RED to wait.
 - **Delegating a slice to a worker or subagent:** never put RED and SYNTHESIZE GREEN in the same
   instruction. Send RED only (write the test, stub to compile, run, report the failing output);
   inspect that output yourself — show it to the developer and wait for "proceed" when one is
   present; then send GREEN. The inspection stays with whoever delegates; a worker told to act
   unattended reports the failing test and stops. A `PAUSE` note in a plan or inside the worker's
   own instruction does not create the stop: only a separate dispatch does.
+
+## Commit policy
+
+What a run commits, by pass. The test command's output tells a failing assertion from a build
+error only when read: a red is never chained to a commit; a green is.
+
+| Pass | Commits |
+|---|---|
+| Acceptance test of the scenario in progress (skraft DISTILL) | One `test` commit: its acceptance test and the skeleton it calls, after a run whose output shows a failing business assertion |
+| Scenario in progress (skraft DELIVER) | The inner cycles commit nothing. One `feat` or `fix` commit once the scenario passes, its unit tests and every format or lint fix included, chained in bash: `<test command> && git add <each file> && git commit -s -m "<subject>" -m "Refs: #N"`, the message exactly as the brief gives it |
+| No scenario: gates or review sent the story back, mutant kills, a session without skraft | Each cycle: `test` with the failing test, then `feat` or `fix` with the code; `refactor` for a change under green |
+
+The acceptance tests of a scenario are its oracle: the green never changes them. A wrong one is
+named and sent back to whoever wrote it.
 
 ## Ordered test list (TPP + FLFI)
 
@@ -99,8 +116,7 @@ per test. Persist it next to the plan; consume it head-first.
   transformations, never by a leap.
 - **F — Fast:** the acceptance entry opens the list and stays red; units drive the inside;
   integration entries come after (*Concentric circles*).
-- **I — Incremental:** one entry, one slice, one commit. An entry needing two transformations is
-  two entries.
+- **I — Incremental:** one entry, one slice. An entry needing two transformations is two entries.
 - GREEN applies exactly the declared transformation, even when a later entry will obviously need
   more. Never two failing tests at once besides the outer acceptance test.
 - After a GREEN, re-plan only in writing (entry added, removed, reordered, transformation
@@ -159,16 +175,20 @@ Code no approved behaviour asks for and no test covers: delete it. Run no mutati
 
 ## Walking skeleton and slicing
 
-- **One walking skeleton at a time**, driven to GREEN before the next. Its acceptance test proves
-  end-to-end wiring with real infrastructure (filesystem, DB, subprocess, HTTP); fake only costly
-  externals such as paid APIs. Thinnest slice: hardcoded values, minimal branching, no error
-  handling beyond what the test requires.
+- **Walking skeleton:** S1 of each story, driven to GREEN before any other scenario. Its acceptance
+  test drives the real entry point through the use case to the real internal gateways (database on
+  Testcontainers); external gateways and the clock as the infrastructure policy says
+  (`test-design-mandates`). Thinnest slice: hardcoded values, minimal branching, no error handling
+  beyond what the test requires. A pure library, a refactoring with no new public interface, or a
+  configuration or documentation change has none.
 - **First delivery** holds only the approved outcome; defer unapproved validations, states and
   abstractions.
-- **One acceptance test at a time:** the `.feature` file is the backlog. Write the executable test
-  for one scenario, drive it to green, commit, then write the next. Never author them all up front
-  with all but one skipped. A later test that goes green on its first run because an earlier
-  slice covered it is correct: confirm it with the deletion test.
+- **One acceptance test at a time:** the `.feature` file is the backlog. Only the scenario in
+  progress has an executable acceptance test: write it, see it fail on an assertion, drive it to
+  green, commit, then write the next. Never author them all up front with all but one skipped.
+- A scenario's test that passes on its first run adds no behaviour: it is an example of the
+  earlier scenario whose code makes it pass, an `Examples` row of that one. Under skraft its red
+  is refused: name both scenarios and stop.
 
 ## Concentric circles
 

@@ -2,7 +2,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { BUILT_IN_WORKFLOW, InMemoryCodeHost, InMemoryGit, ScriptedMachine, ScriptedReplay } from '../support/in-memory-host.mjs'
 import { edit } from '../workflow/support.mjs'
-import { agent, API, finding, forgeLostAtFirstAgent, lenses, nominal, prWriter, PROSE_TEMPLATE, refutes, REFS_42, says, scripted, SLUG, tddCycle, TRACKING } from '../support/pipeline-host.mjs'
+import { agent, API, CYCLE, finding, forgeLostAtFirstAgent, lenses, nominal, prWriter, PROSE_TEMPLATE, refutes, REFS_42, says, scripted, SLUG, tddCycle, TRACKING } from '../support/pipeline-host.mjs'
 import { passing } from '../support/in-memory-host.mjs'
 import { eventsOf } from '../support/decisions.mjs'
 import { opening, section } from '../support/description.mjs'
@@ -61,14 +61,19 @@ test('the run ends by opening a draft pull request from its branch to its base, 
     '',
     'Findings for distill.',
     '',
+    '#### Scenarios',
+    '',
+    '| # | Scenario | Component | Tags |',
+    '|---|---|---|---|',
+    '| S1 | Customer pays by card | api | `@walking-skeleton` |',
+    '',
     '</details>',
     '',
-    '<details><summary>RED evidence: 2 red commits</summary>',
+    '<details><summary>RED evidence: 1 red commit</summary>',
     '',
     '| Commit | Subject | Replay exit code |',
     '| --- | --- | ---: |',
     '| `root-2` | test(checkout): acceptance of the card payment | 1 |',
-    '| `root-3` | test(checkout): Checkout pays by card | 1 |',
     '',
     'Output excerpts of the replays are not recorded yet.',
     '',
@@ -112,6 +117,7 @@ test('the run ends by opening a draft pull request from its branch to its base, 
     '| adr | DESIGN | 1 | 1 | 0 | 0 s | - | skipped |',
     '| distill | DISTILL | 1 | 1 | 0 | 0 s | - | done |',
     '| distill_review | DISTILL | 1 | 1 | 0 | 0 s | - | approved |',
+    '| scenario_review | DISTILL | 1 | 1 | 0 | 0 s | - | answered |',
     '| deliver | DELIVER | 1 | 1 | 0 | 0 s | - | done |',
     '| gates | DELIVER | 1 | 1 | 0 | 0 s | - | pass |',
     '| deliver_review | DELIVER | 1 | 1 | 0 | 0 s | - | approved |',
@@ -119,7 +125,7 @@ test('the run ends by opening a draft pull request from its branch to its base, 
     '| visuals | DELIVER | 1 | 1 | 0 | 0 s | - | skipped |',
     '| pr_writer | PUBLISH | 1 | 1 | 0 | 0 s | - | done |',
     '| publish | PUBLISH | 1 | 1 | 0 | 0 s | - | in progress |',
-    '| Total | | | 13 | 0 | 0 s | - | |',
+    '| Total | | | 14 | 0 | 0 s | - | |',
     '',
     'To find the tests that kill no mutant on their own, the developer runs `/skraft:prune-tests` on a component; it proposes, the developer decides each test.',
     '',
@@ -169,6 +175,7 @@ test('the pr-writer is told where to write its prose and what to read; a summary
     '- Fill each output in place; keep the path, create no other copy:',
     `- ${TRACKING}/details/2026-10-11/pull-request-prose-${SLUG}.md`,
     `- Write your result as JSON to ${TRACKING}/results/pr_writer-1-1.json: {"status": "done" | "blocked", "summary": "<what you did, or why you cannot go on>"}`,
+    `- Send what the commands you run print to files under ${TRACKING}/logs/, and keep your temporary files under ${TRACKING}/.tmp/; write no file outside the working copy, the system's temporary folder included.`,
     '- Change nothing outside these paths of the working copy; the engine refuses the step otherwise:',
     `- .copilot-tracking/skraft-plans/${SLUG}`,
   ].join('\n'))
@@ -448,10 +455,11 @@ test('two reviews with the same lens each show what the refuter said of their ow
 })
 
 test('a red commit the engine refused is not shown as evidence, only the one that replaced it', async () => {
-  const host = scripted({ config: CONSENTED, replay: new ScriptedReplay({ exits: { 'root-3': 0 } }) }, (it) => [
-    ...nominal(it).slice(0, 3),
+  const host = scripted({ config: CONSENTED, replay: new ScriptedReplay({ exits: { 'root-2': 0 } }) }, (it) => [
+    ...nominal(it).slice(0, 2),
     agent({ work: ({ git }) => { git.commit('test(checkout): pay passes already', ['tests/PayTests.cs']) } })(it),
-    agent({ work: ({ git }) => { git.reset('.', 'root-2'); git.commit('test(checkout): pay fails first | twice', ['tests/PayTests.cs']); git.commit('feat(checkout): pay', ['src/Pay.cs']) } })(it),
+    agent({ work: ({ git }) => { git.reset('.', 'root-1'); git.commit('test(checkout): pay fails first | twice', ['tests/PayTests.cs']) } })(it),
+    agent({ work: ({ git }) => { git.commit('feat(checkout): pay', ['src/Pay.cs']) } })(it),
   ])
 
   assert.equal((await host.start()).status, 'done')
@@ -469,7 +477,7 @@ test('the decisions the description shows: each ADR ratified in the run with its
   const host = scripted({ config: CONSENTED, files, answers: [{ answer: 'REJECTED', reason: 'drop the tokens' }, { answer: 'RATIFIED' }] }, (it) => [
     agent()(it), agent()(it),
     agent({ work: ({ workspace }) => { workspace.files.delete('docs/adr/adr-002-card-tokens.md') } })(it),
-    agent()(it), agent({ work: ({ git }) => { git.commit('test(checkout): pay', ['tests/PayTests.cs']); git.commit('feat(checkout): pay', ['src/Pay.cs']) } })(it),
+    agent()(it), agent({ work: ({ git }) => { git.commit('feat(checkout): pay', ['tests/PayTests.cs', 'src/Pay.cs']) } })(it),
   ])
 
   await host.start()
@@ -486,7 +494,12 @@ test('the decisions the description shows: each ADR ratified in the run with its
 })
 
 test('a red commit replayed only as the last of its story says so, and a component the machine could not gate shows only the gates that ran once fixed', async () => {
-  const lastRed = scripted({ config: { ...CONSENTED, tdd: { replay: 'last-red' } } }, (it) => [...nominal(it).slice(0, 3), agent({ work: (h) => { tddCycle()(h); h.git.commit('test(checkout): Checkout refunds', ['tests/RefundTests.cs']); h.git.commit('feat(checkout): Checkout refunds', ['src/Refund.cs']) } })(it)])
+  const lastRed = scripted({ ...CYCLE, config: { ...CONSENTED, tdd: { replay: 'last-red' } } }, (it) => [...nominal(it).slice(0, 2), agent({ work: (h) => {
+    h.git.commit('test(checkout): acceptance of the card payment', ['tests/Acceptance/CheckoutAcceptanceTests.cs'])
+    tddCycle()(h)
+    h.git.commit('test(checkout): Checkout refunds', ['tests/RefundTests.cs'])
+    h.git.commit('feat(checkout): Checkout refunds', ['src/Refund.cs'])
+  } })(it), agent()(it)])
   await lastRed.start()
   assert.ok(section(await lastRed.tracking.read(SLUG, 'pull-request-body.md'), 'RED evidence').includes('\n| `root-3` | test(checkout): Checkout pays by card | not replayed |\n'))
 
@@ -494,7 +507,7 @@ test('a red commit replayed only as the last of its story says so, and a compone
     await ungated.workspace.write('skraft-config.json', JSON.stringify({ ...CONSENTED, components: [{ ...API, commands: { build: 'dotnet build', mutation: 'dotnet stryker' } }] }))
     return { answer: 'RETRY' }
   }
-  const ungated = scripted({ config: CONSENTED, components: [{ ...API, commands: {} }], answers: [fixing] }, (it) => [
+  const ungated = scripted({ ...CYCLE, config: CONSENTED, components: [{ ...API, commands: {} }], answers: [fixing] }, (it) => [
     agent()(it), agent()(it), agent()(it), agent({ work: ({ git }) => { git.commit('refactor(checkout): name the payment', ['src/Pay.cs']) } })(it),
   ])
   assert.equal((await ungated.start()).status, 'done')

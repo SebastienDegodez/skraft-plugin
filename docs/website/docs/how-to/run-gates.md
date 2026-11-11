@@ -73,12 +73,16 @@ result: fail (deterministic): exited 1
 
 | Class | What happened | What to do |
 |---|---|---|
-| `deterministic` | the command ran and returned a non-zero code | fix the code or the test from `stderr`, then run again |
-| `environment` | program not found, shell syntax, component without a gate, program stopped, mutation report missing | repair the machine or the command, then run again; running again unchanged gives the same failure |
+| `deterministic` | the command ran and returned a non-zero code, was stopped by a signal or crashed (exit above 128), or ended with no exit code | fix the code or the test from `stderr`, free memory or fix the crash, then run again |
+| `environment` | program not found, shell syntax, component without a gate; a mutation report missing, or a mutation run that ended early | repair the machine or the command, then run again; running again unchanged gives the same failure |
 
-During a run, an `environment` failure does not stop the run: it asks
-`<node> cannot run on this machine: <reason>. Fix it, then RETRY; or ABORT the run.` Repair, then
-answer `RETRY` ([Answer a run's question](./answer-a-question.mdx)).
+During a run, an `environment` failure sends nothing back to the engineer and uses no attempt: the
+run asks the `environment` question, whose `Cause:` line says who fixes it and whose `Output:`
+line, when a command ran, names its evidence file. Repair, then answer `RETRY`
+([Answer a run's question](./answer-a-question.mdx)). A `deterministic` failure, a signal or a
+crash included, goes back to the engineer with its evidence through the gates' `FAIL` edge, until
+that edge's `max_visits`; then the run asks the `blocked` question. The engineer fixes the code, or
+stops `blocked` naming what the machine lacks.
 
 ## Troubleshooting
 
@@ -88,6 +92,7 @@ answer `RETRY` ([Answer a run's question](./answer-a-question.mdx)).
 | `command "npm ci && npx vitest run" uses shell syntax (&&); put the steps in a script and call the script` | Put the steps in a script (`"test:ci": "npm ci && vitest run"` in `package.json`) and write `"test": "npm run test:ci"`. |
 | `no gate command; give it at least one of build, format, lint, test, architecture, coverage, mutation in skraft-config.json` | Add at least one gate to the component. |
 | `npx was stopped by SIGKILL; run it again` | Run again (memory, interruption). |
+| `was stopped by a signal or crashed (exit 137), not by a failing check` | Read the evidence file, free memory or fix the crash, then run again. |
 | `… the mutation report web/reports/mutation/mutation.json is missing; have the command write it there, or name the file it writes with mutationReport …` | Have the report written there, or name it with `mutationReport` on the component. |
 | A test that needs Microcks fails for want of a container | Start Docker or Podman, then `skraft gate`; or switch the component to `"mocking": { "strategy": "inprocess" }` ([what you give up](../explanation/customisation-trade-offs.md)). |
 | Windows: `npm.cmd` written in the command | Write `npm`, `npx` or `gradlew.bat`: the engine finds the program with PATHEXT and runs `.cmd` and `.bat` through cmd.exe. |

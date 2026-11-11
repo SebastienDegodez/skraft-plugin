@@ -42,7 +42,7 @@ test('the engine creates the docs folders of a role that the repository does not
     ['design', [{ repository: '.', sha: 'root-1', dirty: [] }]],
     ['distill', [{ repository: '.', sha: 'root-3', dirty: [] }]],
     ['deliver', [{ repository: '.', sha: 'root-4', dirty: [] }]],
-    ['pr_writer', [{ repository: '.', sha: 'root-7', dirty: [] }]],
+    ['pr_writer', [{ repository: '.', sha: 'root-5', dirty: [] }]],
   ])
 })
 

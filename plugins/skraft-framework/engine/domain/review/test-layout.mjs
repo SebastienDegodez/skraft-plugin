@@ -15,9 +15,9 @@ import { isTestFile } from './patch-scan.mjs'
  * (`tests/unit`, `tests/MonAssurance.UnitTests`). A .NET or Java place is read on the whole
  * path, so it may sit anywhere under the test path. A folder that names both, such as
  * `<Context>.Integration.Tests`, is the integration place.
- * A test file added elsewhere under a component's test path is a blocker at its path; a
- * component that gains test files and none in its unit place is a blocker too: the acceptance
- * test of a new use case goes there. Whether every new use case has one stays the lens's call.
+ * A test file added elsewhere under a component's test path is a blocker at its path. A story
+ * built scenario by scenario may add its walking skeleton's acceptance test alone, in the
+ * integration place: whether every new use case has a test in the unit place stays the lens's call.
  *
  * @typedef {import('./answers.mjs').Finding} Finding
  * @typedef {import('../config/skraft-config.mjs').Component} Component
@@ -74,11 +74,9 @@ export const layoutFindings = (patch, components) => {
 const componentFindings = (component, added) => {
   const roots = component.paths.tests.map((path) => joinRelative(component.root, path))
   const places = PLACES[component.stack] ?? UNDER_TESTS
-  const placed = added.flatMap((path) => placedUnder(roots, path))
-  if (placed.length === 0) return []
-  const astray = placed.filter((test) => !places.unit(test) && !places.integration(test))
+  return added.flatMap((path) => placedUnder(roots, path))
+    .filter((test) => !places.unit(test) && !places.integration(test))
     .map((test) => ({ location: test.path, description: `a test added outside ${places.where(test.root)} and the integration place of ${component.stack}, where clean-architecture-testing puts it` }))
-  return placed.some(places.unit) ? astray : [...astray, { location: roots[0], description: `${component.name} gains tests and none in ${places.where(roots[0])}: the acceptance test of a new use case goes there` }]
 }
 
 /**

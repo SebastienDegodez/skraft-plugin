@@ -1,11 +1,13 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { BUILT_IN_WORKFLOW, FixedClock, InMemoryGit, ScriptedMachine } from '../support/in-memory-host.mjs'
-import { agent, API, scripted, SLUG, tddCycle, TRACKING } from '../support/pipeline-host.mjs'
+import { agent, API, CYCLE, green, scripted, SLUG, tddCycle, TRACKING } from '../support/pipeline-host.mjs'
 import { waitingOnEnvironment } from '../support/decisions.mjs'
 
 const upToDeliver = (it) => [agent()(it), agent()(it), agent()(it)]
-const deliver = (it) => agent({ work: tddCycle() })(it)
+const deliver = (it) => agent({ work: green() })(it)
+/** The engineer's work on pass n: the green of the scenario on the first, a TDD cycle on a pass the gates sent back. */
+const passOf = (n) => (n === 1 ? green(SLUG, `Pass${n}`) : tddCycle(SLUG, `Pass${n}`))
 const recorded = (host, step) => host.events().filter((event) => event.type === 'step.recorded' && event.step === step)
 const unavailable = () => ({ ok: false, unavailable: true, text: '' })
 const WEB = { name: 'web', root: '../web', stack: 'react', bdd: false, mocking: { strategy: 'inprocess' }, paths: { src: ['src'], tests: ['src'] }, commands: { lint: 'npx eslint .' } }
@@ -40,7 +42,7 @@ test('DELIVER does not close while a gate fails: the engineer gets a new pass wi
   ].join('\n')), second.prompt)
   assert.ok(second.prompt.endsWith(`\n- Gate commands: before you write your result, run those of each component you changed, from its root, and fix every failure; the gates step runs them next and sends a failure back as a new pass:\n- api: build: dotnet build; test: dotnet test\n\nThe gates failed on pass 1:\n- ${failure}`), second.prompt)
   assert.deepEqual(host.events().filter((event) => event.type === 'step.started' && event.step === 'deliver').map(({ visit, attempt, feedback, outputs, result }) => [visit, attempt, feedback, outputs, result]), [
-    [1, 1, [], ['changes/2026-10-11/change-log.md'], 'results/deliver-1-1.json'],
+    [1, 1, [], ['changes/2026-10-11/change-log.md'], 'results/deliver-1-g1-1.json'],
     [2, 1, [failure], ['changes/2026-10-11/change-log.md'], 'results/deliver-2-1.json'],
   ])
   assert.ok(host.progress.lines.includes(`${SLUG}: software-engineer, pass 2, attempt 1 — implementer · standard · sonnet`))
@@ -50,7 +52,7 @@ test('DELIVER does not close while a gate fails: the engineer gets a new pass wi
 
 test('gates that keep failing stop the run once the loop reached its max_visits', async () => {
   const machine = new ScriptedMachine({ exits: { '. $ dotnet test': 1 } })
-  const host = scripted({ machine, answers: [{ answer: 'STOP' }] }, (it) => [...upToDeliver(it), ...[1, 2, 3, 4].map((n) => agent({ work: tddCycle('checkout', `Pass${n}`) })(it))])
+  const host = scripted({ machine, answers: [{ answer: 'STOP' }] }, (it) => [...upToDeliver(it), ...[1, 2, 3, 4].map((n) => agent({ work: passOf(n) })(it))])
 
   const outcome = await host.start()
 
@@ -72,7 +74,7 @@ test('a max_visits on the engineer\'s edge stops the run once the engineer used 
     .replace('deliver -> gates', 'deliver -> gates [max_visits=2]')
     .replace('gates -> deliver [label="FAIL", max_visits=3]', 'gates -> deliver [label="FAIL"]')
   const machine = new ScriptedMachine({ exits: { '. $ dotnet test': 1 } })
-  const host = scripted({ machine, files: { '.skraft/pipeline.skraft.dot': workflow }, answers: [{ answer: 'STOP' }] }, (it) => [...upToDeliver(it), ...[1, 2, 3].map((n) => agent({ work: tddCycle('checkout', `Pass${n}`) })(it))])
+  const host = scripted({ machine, files: { '.skraft/pipeline.skraft.dot': workflow }, answers: [{ answer: 'STOP' }] }, (it) => [...upToDeliver(it), ...[1, 2, 3].map((n) => agent({ work: passOf(n) })(it))])
 
   const outcome = await host.start()
 
@@ -93,7 +95,7 @@ test('a gate the machine cannot run waits for a human; once fixed and retried, t
 
   assert.deepEqual(outcome, {
     status: 'waiting', slug: SLUG, phase: 'DELIVER', code: 'environment',
-    reason: waitingOnEnvironment('gates', `api/build: command not found: dotnet; install it or change the command in skraft-config.json (evidence: ${TRACKING}/gates/api/build-1.log)`),
+    reason: waitingOnEnvironment('gates', `api/build: command not found: dotnet; install it or change the command in skraft-config.json (evidence: ${TRACKING}/gates/api/build-1.log)`, 1, { log: `${TRACKING}/gates/api/build-1.log` }),
   })
   assert.deepEqual(host.types().slice(-3), ['step.started', 'gate.ran', 'question.asked'])
   assert.equal((await host.view()).current.gates.length, 6)
@@ -105,7 +107,7 @@ test('a gate the machine cannot run waits for a human; once fixed and retried, t
   assert.deepEqual(recorded(host, 'gates').map((event) => [event.visit, event.attempt, event.outcome]), [[1, 1, 'pass']])
 
   const front = { ...WEB, root: 'web', commands: { lint: 'npx eslint .', test: 'npx vitest run' } }
-  const both = scripted({ components: [API, front], machine: new ScriptedMachine({ installed: ['git'] }) }, (it) => [...upToDeliver(it), agent({
+  const both = scripted({ ...CYCLE, components: [API, front], machine: new ScriptedMachine({ installed: ['git'] }) }, (it) => [...upToDeliver(it), agent({
     work: ({ git }) => {
       git.commit('test(checkout): cart', ['tests/CartTests.cs', 'web/src/Cart.test.tsx'])
       git.commit('feat(checkout): cart', ['src/Cart.cs', 'web/src/Cart.tsx'])
@@ -114,13 +116,13 @@ test('a gate the machine cannot run waits for a human; once fixed and retried, t
   assert.equal((await both.start()).reason, waitingOnEnvironment('gates', [
     `api/build: command not found: dotnet; install it or change the command in skraft-config.json (evidence: ${TRACKING}/gates/api/build-1.log)`,
     `web/lint: command not found: npx; install it or change the command in skraft-config.json (evidence: ${TRACKING}/gates/web/lint-1.log)`,
-  ].join('; ')))
+  ].join('; '), 1, { log: `${TRACKING}/gates/api/build-1.log` }))
 })
 
 test('the goal gate runs the gates of the components the story touched, then those of every other one', async () => {
   const web = { ...WEB, commands: { lint: 'npx eslint .', test: 'npx vitest run', e2e: 'npx playwright test' } }
   const machine = new ScriptedMachine({ exits: { '. $ dotnet test': 1 } })
-  const host = scripted({ components: [API, web], git: twoRepositories(), machine }, (it) => [...upToDeliver(it), agent({ work: ({ git: repos }) => { repos.commit('test(checkout): cart', ['../web/src/Cart.test.tsx']); repos.commit('feat(checkout): cart', ['../web/src/Cart.tsx']) } })(it), unavailable])
+  const host = scripted({ ...CYCLE, components: [API, web], git: twoRepositories(), machine }, (it) => [...upToDeliver(it), agent({ work: ({ git: repos }) => { repos.commit('test(checkout): cart', ['../web/src/Cart.test.tsx']); repos.commit('feat(checkout): cart', ['../web/src/Cart.tsx']) } })(it), unavailable])
 
   await host.start()
 
@@ -147,7 +149,7 @@ test('a gate node that is not a goal gate runs its own gates on the touched comp
   ])
 })
 
-test('a component with none of a gate node\'s gates fails it as environment', async () => {
+test('a component with none of a gate node\'s gates fails it as environment, its configuration\'s to fix', async () => {
   const workflow = BUILT_IN_WORKFLOW
     .replace('gates    [shape=parallelogram', 'quick [shape=parallelogram, gate="lint"]\n  gates    [shape=parallelogram')
     .replace('deliver -> gates', 'deliver -> quick -> gates')
@@ -155,7 +157,7 @@ test('a component with none of a gate node\'s gates fails it as environment', as
 
   const outcome = await host.start()
 
-  assert.deepEqual([outcome.code, outcome.reason], ['environment', waitingOnEnvironment('quick', `api/none: no gate command; give it at least one of lint in skraft-config.json (evidence: ${TRACKING}/gates/api)`)])
+  assert.deepEqual([outcome.code, outcome.reason], ['environment', waitingOnEnvironment('quick', `api/none: no gate command; give it at least one of lint in skraft-config.json (evidence: ${TRACKING}/gates/api)`, 1, { owner: 'config' })])
 })
 
 test('a failing gate with no FAIL edge stops the run with the gate failures', async () => {
@@ -173,12 +175,19 @@ test('a failing gate with no FAIL edge stops the run with the gate failures', as
   })
 })
 
-test('a run without components stops at the gates and says how to get them', async () => {
+test('a run without components stops at the first node that needs one and says how to get them: the scenarios, else the gates', async () => {
   const host = scripted({ components: [] }, (it) => [...upToDeliver(it), agent()(it)])
 
   const outcome = await host.start()
 
   assert.deepEqual(outcome, {
+    status: 'blocked', slug: SLUG, phase: 'DISTILL', code: 'no-components',
+    reason: 'skraft-config.json lists no component, so distill has no component to write the story\'s scenarios in; run skraft init to detect them',
+  })
+  assert.deepEqual(host.agentRunner.dispatches.map(({ agent: id }) => id), ['solution-researcher', 'solution-architect'])
+
+  const cycle = scripted({ ...CYCLE, components: [] }, (it) => [...upToDeliver(it), agent()(it)])
+  assert.deepEqual(await cycle.start(), {
     status: 'blocked', slug: SLUG, phase: 'DELIVER', code: 'no-components',
     reason: 'skraft-config.json lists no component, so gates has nothing to run; run skraft init to detect them',
   })

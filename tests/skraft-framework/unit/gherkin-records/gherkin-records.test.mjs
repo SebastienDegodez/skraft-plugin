@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { agent, API, nominal, scripted, SLUG } from '../support/pipeline-host.mjs'
+import { agent, API, nominal, scenarioTable, scripted, SLUG } from '../support/pipeline-host.mjs'
 
 /** A component that describes its behaviour in Gherkin, which is what the scenarios of this folder are about. */
 const GHERKIN = Object.freeze({ ...API, bdd: [{ features: 'docs/features', steps: 'tests/Steps' }] })
@@ -35,20 +35,29 @@ const ONE_CRITERION = '# Acceptance criteria — checkout\n\n## AC-1 — A card 
 /** A coverage matrix naming one `.feature` per row, as `test-design-mandates` lays it out. @param {string[]} cited */
 const matrix = (cited) => ['| # | Scenario | Feature File |', ...cited.map((name, index) => `| ${index + 1} | A card is paid | \`${name}\` |`)].join('\n')
 
+const RED = 'test(checkout): acceptance of the card payment'
+
 /**
  * An acceptance designer that writes its test plan, its acceptance criteria and the Gherkin files
- * given, drops the working copy files named, and commits the lot beside its acceptance test.
- * @param {{ features?: Record<string, string>, cited?: string[], criteria?: string, tracked?: Record<string, string>, drop?: string[] }} [attempt]
+ * given, drops the working copy files named, and commits the lot beside its acceptance test, in
+ * the one test commit of its scenario: an attempt after a refused one amends it. The Gherkin
+ * files of another component than the scenario's go in a docs commit after it.
+ * @param {{ features?: Record<string, string>, elsewhere?: Record<string, string>, cited?: string[], criteria?: string, tracked?: Record<string, string>, drop?: string[] }} [attempt]
  */
-const designer = ({ features = {}, cited = ['pay-by-card.feature'], criteria = ONE_CRITERION, tracked = {}, drop = [] } = {}) => agent({
+const designer = ({ features = {}, elsewhere = {}, cited = ['pay-by-card.feature'], criteria = ONE_CRITERION, tracked = {}, drop = [] } = {}) => agent({
   fill: false,
-  work: ({ git, workspace, tracking }) => {
-    tracking.write(SLUG, PLAN, `${matrix(cited)}\n`)
+  work: (host) => {
+    const { git, workspace, tracking } = host
+    tracking.write(SLUG, PLAN, `${matrix(cited)}\n${scenarioTable(host)}`)
     tracking.write(SLUG, CRITERIA, criteria)
     for (const [path, text] of Object.entries(tracked)) tracking.write(SLUG, path, text)
     for (const path of drop) workspace.files.delete(path)
-    for (const [path, text] of Object.entries(features)) workspace.files.set(path, text)
-    git.commit('test(checkout): acceptance of the card payment', ['tests/Acceptance/CheckoutAcceptanceTests.cs', ...Object.keys(features)])
+    for (const [path, text] of Object.entries({ ...features, ...elsewhere })) workspace.files.set(path, text)
+    const { history } = git.locate('.').repo
+    const earlier = history.findIndex(({ subject }) => subject === RED)
+    if (earlier > 0) git.reset('.', history[earlier - 1].sha)
+    git.commit(RED, ['tests/Acceptance/CheckoutAcceptanceTests.cs', ...Object.keys(features)])
+    if (Object.keys(elsewhere).length > 0) git.commit('docs(checkout): the scenarios of the other components', Object.keys(elsewhere))
   },
 })
 
@@ -260,27 +269,27 @@ test("the story is read from what its plan names: the .feature of another contex
 test('a component that writes its tests without Gherkin is asked for no scenario: the plan may name a .feature nobody wrote and DISTILL closes', async () => {
   const attempt = () => designer({ cited: ['pay-by-card.feature'], drop: ['docs/features/.gitkeep'] })
   const unit = runOf([attempt()], [{ ...API, bdd: false }])
-  const gherkin = runOf([attempt()])
-  const both = runOf([attempt()], [{ ...API, bdd: false }, { ...GHERKIN, name: 'web', root: 'web' }])
+  const gherkin = runOf([attempt(), attempt()])
+  const both = runOf([attempt(), attempt()], [{ ...API, bdd: false }, { ...GHERKIN, name: 'web', root: 'web' }])
 
   const outcome = await unit.start()
 
   assert.deepEqual(distill(unit), [[1, 'done', null, []]], 'nothing reads a .feature of a component that declines Gherkin')
   assert.equal(outcome.status, 'done', outcome.reason)
-  assert.equal((await gherkin.start()).status, 'blocked', 'the same attempt, in a component that declares Gherkin, is sent back')
-  assert.equal((await both.start()).status, 'blocked', 'one component writing Gherkin holds the story to its scenarios, whatever the others write')
+  assert.equal((await gherkin.start()).code, 'blocked', 'the same attempt, in a component that declares Gherkin, is sent back')
+  assert.equal((await both.start()).code, 'blocked', 'one component writing Gherkin holds the story to its scenarios, whatever the others write')
 })
 
 test('the scenarios live where the component says: the folder of its pair, not a folder the engine picked', async () => {
   const inTests = { ...API, bdd: [{ features: 'tests/Features', steps: 'tests/Steps' }] }
   const named = runOf([designer({ features: { 'tests/Features/checkout/pay-by-card.feature': SCENARIO } })], [inTests])
-  const elsewhere = runOf([designer({ features: { [CARD]: SCENARIO } })], [inTests])
+  const elsewhere = runOf([designer({ features: { [CARD]: SCENARIO } }), designer({ features: { [CARD]: SCENARIO } })], [inTests])
 
   const outcome = await named.start()
 
   assert.deepEqual(distill(named), [[1, 'done', null, []]], 'the plan names it, the component declares the folder, and the designer wrote it there')
   assert.equal(outcome.status, 'done', outcome.reason)
-  assert.equal((await elsewhere.start()).status, 'blocked', 'a .feature under docs/features is nowhere this component reads')
+  assert.equal((await elsewhere.start()).code, 'blocked', 'a .feature under docs/features is nowhere this component reads')
 })
 
 test('the folder a component declares is the one the engine creates and the one the designer may write in, wherever it sits', async () => {
@@ -327,11 +336,13 @@ test('skraft reads Gherkin in English, however a file spaces its language header
   const transfer = 'docs/features/pay-by-transfer.feature'
   const store = 'docs/features/pay-in-store.feature'
   const spelt = ['pay-by-card.feature', 'pay-later.feature', 'pay-by-transfer.feature', 'pay-in-store.feature']
-  const foreign = runOf([designer({
+  const french = () => designer({
     cited: spelt,
     features: { [CARD]: FRENCH, [LATER]: headed('  # language: fr'), [transfer]: headed('#language:fr'), [store]: headed('# language : fr') },
-  })])
-  const keywords = runOf([designer({ features: { [CARD]: FRENCH.replace('# language: fr\n', '') } })])
+  })
+  const foreign = runOf([french(), french()])
+  const unheaded = () => designer({ features: { [CARD]: FRENCH.replace('# language: fr\n', '') } })
+  const keywords = runOf([unheaded(), unheaded()])
 
   const outcome = await foreign.start()
 
@@ -341,7 +352,7 @@ test('skraft reads Gherkin in English, however a file spaces its language header
     assert.deepEqual([result, code, failures], ['failed', 'gherkin-records', declares],
       `attempt ${attempt}: indented, tight against the colon or spaced before it, the header is read, and the language is the only reason given, since a file skraft cannot read says nothing about the story's coverage`)
   }
-  assert.equal(outcome.status, 'blocked', outcome.reason)
+  assert.equal(outcome.code, 'blocked', outcome.reason)
   await keywords.start()
   assert.deepEqual(distill(keywords)[0][3], [`${CARD} opens no scenario; ${ENGLISH_ONLY}`],
     'without the header, the keywords are what skraft cannot read')
@@ -359,8 +370,9 @@ test('a story spanning two components is checked against the folders of both, ea
   const web = { ...API, name: 'web', root: 'web', bdd: [{ features: 'features', steps: 'tests/Steps' }] }
   const SHIP = 'web/features/checkout/ship.feature'
   const shipping = SCENARIO.replace('Pay by card', 'Ship the basket').replace('pays a basket with a valid card', 'ships a paid basket')
-  const both = runOf([designer({ cited: ['pay-by-card.feature', 'ship.feature'], features: { [CARD]: SCENARIO, [SHIP]: shipping } })], [GHERKIN, web])
-  const half = runOf([designer({ cited: ['pay-by-card.feature', 'ship.feature'], features: { [CARD]: SCENARIO } })], [GHERKIN, web])
+  const both = runOf([designer({ cited: ['pay-by-card.feature', 'ship.feature'], features: { [CARD]: SCENARIO }, elsewhere: { [SHIP]: shipping } })], [GHERKIN, web])
+  const halfway = () => designer({ cited: ['pay-by-card.feature', 'ship.feature'], features: { [CARD]: SCENARIO } })
+  const half = runOf([halfway(), halfway()], [GHERKIN, web])
 
   const outcome = await both.start()
 

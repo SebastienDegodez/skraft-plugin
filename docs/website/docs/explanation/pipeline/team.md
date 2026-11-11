@@ -16,15 +16,18 @@ SKRAFT is not a monolithic agent. The work splits into four roles, and each does
 - **Producers** write an artifact: `solution-researcher` (RESEARCH), `solution-architect`
   (DESIGN), `acceptance-designer` (DISTILL), `software-engineer` (DELIVER), `pr-writer` (the
   pull request prose).
-- **Judges** read without modifying anything: the review lenses, each from a single angle, and
-  `finding-refuter`, which confirms or refutes each finding that would send the work back.
+- **Judges** read without modifying anything: the review lenses, each from a single angle,
+  `finding-refuter`, which confirms or refutes each finding that would send the work back, and
+  [`replay-judge`](pathname:///dashboard/#agent-replay-judge), which reads the logs of each red
+  and green commit the engine replays, DISTILL's and DELIVER's.
 - **The engine** decides: the next step, what the agent receives, the expected output, the
   gates, the verdict of a review. It is tested code, the same on every host.
 - **The host driver** executes: the Claude Code mod, the Copilot workflow or the VS Code agent
   loop starts the agent the engine asks for and hands back its answer.
 
-A fifth actor keeps the decisions that commit the team: **the human**. They ratify ADRs, consent
-to publication, choose how surviving mutants are treated. No agent answers in their place.
+A fifth actor keeps the decisions that commit the team: **the human**. They ratify ADRs, read the
+scenarios before DELIVER builds them, consent to publication, choose how surviving mutants are
+treated. No agent answers in their place.
 
 ```mermaid
 graph TD
@@ -33,6 +36,7 @@ graph TD
     P -->|starts, depth 1| A[Producer]
     P -->|starts, depth 1| L[Lenses]
     P -->|starts, depth 1| F[finding-refuter]
+    P -->|starts, depth 1| R[replay-judge]
     M -->|verdict, next step| P
 ```
 
@@ -50,7 +54,7 @@ the engine, and the run state is in the [event journal](../event-journal.md).
 
 ## Why only the driver starts agents
 
-**Depth 1**: the driver starts every agent, lenses and refuter included, and no agent starts
+**Depth 1**: the driver starts every agent, lenses, refuter and replay judge included, and no agent starts
 another. In v1, the DELIVER reviewer started its own lenses, at depth 2. That cost one more
 context, duplicated checks, and the behaviour depended on what each host allowed a sub-agent to
 do.

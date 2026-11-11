@@ -5,6 +5,7 @@ import { PLUGIN_DEFAULTS } from './model-assignment.mjs'
 import { modelSettingsOf, unrankedFamilies } from './model-settings.mjs'
 import { CONSENT_KEYS, CONSENT_VERSIONS } from '../decisions/consents.mjs'
 import { FORGES } from './forge.mjs'
+import { defaultMocking, infrastructureOf } from './infrastructure-policy.mjs'
 
 export { HOSTS } from './model-assignment.mjs'
 
@@ -32,11 +33,14 @@ export { HOSTS } from './model-assignment.mjs'
  *   bdd: boolean | null,
  *   bddPaths: BddPair[],
  *   mutationReport: string | null,
+ *   infrastructure: import('./infrastructure-policy.mjs').Infrastructure,
  * }} Component
  *   root is relative to the working copy, normalised (`.`, `services/api`, `../payment-web`).
  *   paths are relative to root, normalised; `['.']` (the whole root) when the file names none,
  *   or an empty list (`skraft init` on a project with no tests folder yet). mutationReport: where
  *   the mutation command writes its report, relative to root; null for the one its stack's tool writes.
+ *   infrastructure: the rows of its tests' infrastructure policy the component overrides, {} when
+ *   it overrides none.
  * @typedef {{ runner: string | null, features: string, steps: string | null }} BddPair
  *   Where a story's scenarios are written, and where the definitions that bind them live, both
  *   relative to the component root. A component declares one pair per runner: the binding scope is
@@ -83,12 +87,12 @@ const MERGED = 'the merged configuration'
 export const STACKS = Object.freeze(['dotnet', 'java', 'python', 'typescript', 'javascript', 'react'])
 const REPLAY_MODES = Object.freeze(['all', 'last-red'])
 export const MOCKING_STRATEGIES = Object.freeze(['microcks', 'inprocess'])
-const IN_PROCESS_STACKS = Object.freeze(['typescript', 'javascript', 'react'])
+
 
 /** What a pair may name, and nothing else. */
 const BDD_KEYS = Object.freeze(['runner', 'features', 'steps'])
 const NAME = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
-const COMPONENT_KEYS = Object.freeze(['name', 'root', 'stack', 'paths', 'commands', 'baseBranch', 'mocking', 'contractTesting', 'bdd', 'mutationReport'])
+const COMPONENT_KEYS = Object.freeze(['name', 'root', 'stack', 'paths', 'commands', 'baseBranch', 'mocking', 'contractTesting', 'bdd', 'mutationReport', 'infrastructure'])
 /** The gates, and `e2e`, which doctor checks but no gate runs. */
 export const COMMAND_NAMES = Object.freeze([...GATE_ORDER, 'e2e'])
 /** What only the team's file holds. */
@@ -355,6 +359,11 @@ const FIELD_CHECKS = Object.freeze([
   ({ entry, label, errors }) => {
     if (entry.mutationReport !== undefined && !isInnerFolder(entry.mutationReport)) errors.push(`${label}: mutationReport must be a file inside the component root`)
   },
+  ({ entry, label, errors }) => {
+  },
+  ({ entry, label, errors }) => {
+    infrastructureOf(entry.infrastructure, { stack: entry.stack, label }, errors)
+  },
 ])
 
 /**
@@ -390,11 +399,18 @@ const componentFrom = (entry, { paths, commands, baseBranch, strategy, gherkin }
   mocking: { strategy },
   contractTesting: entry.contractTesting === true,
   ...gherkin,
-  mutationReport: entry.mutationReport === undefined ? null : normalizeRelative(entry.mutationReport),
+  ...testsOf(entry),
 })
 
-/** The strategy of a component that names none: in process for a JavaScript, TypeScript or React stack, Microcks otherwise. @param {unknown} stack */
-const defaultMocking = (stack) => (IN_PROCESS_STACKS.includes(/** @type {string} */ (stack)) ? 'inprocess' : 'microcks')
+/**
+ * How the component's tests are read: where its mutation report is, and the rows of its
+ * infrastructure policy it overrides.
+ * @param {Record<string, any>} entry
+ */
+const testsOf = ({ mutationReport, infrastructure = {} }) => ({
+  mutationReport: mutationReport === undefined ? null : normalizeRelative(mutationReport),
+  infrastructure,
+})
 
 /**
  * @param {Record<string, any>} entry @param {string} label @param {string[]} errors
@@ -494,6 +510,12 @@ const readPaths = (paths, key, listed, label, errors) => {
   if (isFolderList(listed)) paths[key] = listed.map(normalizeRelative)
   else errors.push(`${label}: paths.${key} must list folders inside the component root`)
 }
+
+/** One path or pattern or more, each inside the component root: relative, and never naming `..`. @param {unknown} listed */
+const isPatternList = (listed) => Array.isArray(listed) && listed.length > 0 && listed.every(isInnerPattern)
+
+/** @param {unknown} pattern */
+const isInnerPattern = (pattern) => typeof pattern === 'string' && pattern.trim() !== '' && !isAbsolutePath(pattern) && !pattern.split(/[\\/]/).includes('..')
 
 /** Folders inside a component root: relative, and never above it. @param {unknown} listed @returns {listed is string[]} */
 const isFolderList = (listed) => Array.isArray(listed) && listed.every(isInnerFolder)

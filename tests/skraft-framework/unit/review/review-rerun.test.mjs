@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { withContext } from '../support/answer-yaml.mjs'
-import { agent, API, finding, lenses, nominal, REFS_42, refutes, reviews, says, scripted, SLUG, tddCycle, TRACKING } from '../support/pipeline-host.mjs'
+import { agent, API, CYCLE, finding, lenses, nominal, REFS_42, refutes, reviews, says, scripted, SLUG, tddCycle, TRACKING } from '../support/pipeline-host.mjs'
 import { ejectedPipeline, edit, withLenses } from '../workflow/support.mjs'
 import { BUILT_IN_WORKFLOW, InMemoryAgentCatalog, PLUGIN_AGENTS } from '../support/in-memory-host.mjs'
 import { indexFor } from '../support/decisions.mjs'
@@ -444,10 +444,11 @@ test('every attempt of a pass the review opened is told the review sent the work
     [1, 1, null], [2, 1, 'review'], [2, 2, 'review'],
   ])
 
-  const distill = scripted({}, (it) => [...nominal(it).slice(0, 3), agent({ work: ({ git }) => {
-    git.commit('docs(checkout): note the refusal', ['tests/Acceptance/README.md'])
+  // DISTILL's acceptance tests are named to DELIVER by a workflow that builds no scenario.
+  const distill = scripted(CYCLE, (it) => [...nominal(it).slice(0, 3), agent({ work: ({ git }) => {
+    git.commit('docs(checkout): note the refusal', ['ACCEPTANCE.md'])
     git.commit('test(checkout): refuse a zero amount', ['tests/Acceptance/RefusalAcceptanceTests.cs'])
-  } })(it), ...nominal(it).slice(3)])
+  } })(it), agent({ work: tddCycle() })(it)])
   distill.agentRunner.review = lenses({ coverage: [says('coverage', 'fail', [finding('F1', 'blocker', 'a criterion has no scenario')])] })
   assert.equal((await distill.start()).status, 'done')
   const failing = distill.agentRunner.dispatches.find((dispatch) => dispatch.label === `skraft ${SLUG} · distill · pass 2 · attempt 1`).prompt
@@ -460,7 +461,8 @@ test('every attempt of a pass the review opened is told the review sent the work
 
 test('a DELIVER pass the review opened is told which commit each finding takes: a fix with no red commit is refused, a strengthened test goes in a refactor', async () => {
   const integrity = says('test-integrity', 'fail', [finding('F1', 'blocker', 'the test asserts nothing', { gate: 'G7' })])
-  const host = scripted({}, (it) => [...nominal(it), agent({ work: ({ git }) => git.commit('fix(checkout): assert the card amount', ['src/Checkout.cs']) })(it)])
+  // DISTILL's acceptance tests are named to DELIVER by a workflow that builds no scenario.
+  const host = scripted(CYCLE, (it) => [...nominal(it).slice(0, 3), agent({ work: tddCycle() })(it), agent({ work: ({ git }) => git.commit('fix(checkout): assert the card amount', ['src/Checkout.cs']) })(it)])
   host.agentRunner.review = lenses({ 'test-integrity': [integrity] })
   host.agentRunner.behaviours.push(() => ({ ok: false, unavailable: true, text: '', error: 'stop here' }))
 
@@ -485,7 +487,7 @@ test('a DELIVER pass the review opened is told which commit each finding takes: 
   assert.equal((await strengthened.start()).status, 'done')
   assert.deepEqual(strengthened.events().filter((event) => event.type === 'step.recorded' && event.step === 'deliver').map(({ visit, outcome }) => [visit, outcome]), [[1, 'done'], [2, 'done']])
 
-  const again = scripted({}, (it) => [...nominal(it), agent({ work: ({ git }) => git.commit('fix(checkout): assert the card amount', ['src/Checkout.cs']) })(it), agent()(it)])
+  const again = scripted({ answers: [{ answer: 'STOP' }] }, (it) => [...nominal(it), agent({ work: ({ git }) => git.commit('fix(checkout): assert the card amount', ['src/Checkout.cs']) })(it), agent()(it)])
   again.agentRunner.review = lenses({ 'test-integrity': [integrity] })
   assert.equal((await again.start()).code, 'tdd')
   assert.deepEqual(again.events().filter((event) => event.type === 'step.recorded' && event.step === 'deliver').map(({ visit, attempt, outcome }) => [visit, attempt, outcome]), [[1, 1, 'done'], [2, 1, 'failed'], [2, 2, 'failed']])
@@ -572,7 +574,7 @@ test('a lens reads the skills its descriptor lists before any other input, and s
 test('a changed path that is no readable file, such as a nested repository, is reviewed by its name', async () => {
   const host = scripted({}, (it) => [
     ...nominal(it).slice(0, 3),
-    agent({ work: (work) => { tddCycle()(work); work.git.commit('chore(checkout): vendor the payments SDK', ['src/PaymentsSdk']) } })(it),
+    agent({ work: ({ git }) => git.commit('feat(checkout): Checkout pays by card with the vendored payments SDK', ['src/Checkout.cs', 'tests/CheckoutTests.cs', 'src/PaymentsSdk']) })(it),
   ])
   const read = host.deps.workspace.read.bind(host.deps.workspace)
   host.deps.workspace.read = async (path) => {

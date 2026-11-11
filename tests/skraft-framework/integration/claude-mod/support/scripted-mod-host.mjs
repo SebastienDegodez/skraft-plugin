@@ -84,7 +84,7 @@ export const actsAs = (llm) => async (spawn, host) => {
  * @param {{
  *   cwd?: string, behaviours?: Array<(spawn: any, host: any) => Promise<object>>, costs?: Array<number | null>,
  *   otherwise?: (spawn: any, host: any) => Promise<object>, turnCostUsd?: number, answers?: Array<string | null>, home?: string | null,
- *   nodeHome?: string | null, forge?: import('node:test').TestContext,
+ *   nodeHome?: string | null, forge?: import('node:test').TestContext, scenarioReviews?: Array<string | null>,
  * }} [options]
  *   home: what `$.env.get('HOME')` answers, `<working copy>-home` by default, never the machine's.
  *   nodeHome: the home folder node names (`lock-file-command.mjs home`), home by default, never
@@ -92,13 +92,15 @@ export const actsAs = (llm) => async (spawn, host) => {
  *   otherwise: the behaviour of a spawn once the queued ones are spent; without it such a spawn is rejected.
  *   turnCostUsd: what each completed turn adds to the session cost, which then starts at 0, in place of `costs`.
  *   answers: what the human picks or types in each `$.ui.ask` dialog, null for a dismissed one;
- *   once they are spent, the first option.
+ *   once they are spent, the first option. The scenario review (header Scenarios) takes none of
+ *   them: the human answers it APPROVED, as one who reads the scenarios and agrees, unless
+ *   `scenarioReviews` scripts its answers in order.
  *   forge: the test whose length the working copy, then a Git repository, has the story's issue
  *   on the forge of issueForge.
  * @returns timeline: `spawn <description>` when `$.agent.spawn` is called, `complete <description>`
  *   when that subagent's turn.complete reaches the driver, in the order they happen.
  */
-export const scriptedModHost = async ({ cwd, behaviours = [], costs = [], otherwise, turnCostUsd, answers = [], home, nodeHome, forge } = {}) => {
+export const scriptedModHost = async ({ cwd, behaviours = [], costs = [], otherwise, turnCostUsd, answers = [], scenarioReviews = [], home, nodeHome, forge } = {}) => {
   const root = cwd ?? (await answeredWorkingCopy())
   if (forge !== undefined) repositoryOnForge(forge, root)
   const homeFolder = home === undefined ? `${root}-home` : home
@@ -113,6 +115,7 @@ export const scriptedModHost = async ({ cwd, behaviours = [], costs = [], otherw
   /** @type {Array<{ question: string, options: { options: readonly string[], header: string } }>} */
   const asked = []
   const replies = [...answers]
+  const reviews = [...scenarioReviews]
   const scripted = [...behaviours]
   const costQueue = [...costs]
   let agents = 0
@@ -162,7 +165,8 @@ export const scriptedModHost = async ({ cwd, behaviours = [], costs = [], otherw
     },
     ask: async (/** @type {string} */ question, /** @type {{ options: readonly string[], header: string }} */ options) => {
       asked.push({ question, options })
-      const reply = replies.length > 0 ? replies.shift() : options.options[0]
+      const queue = options.header === 'Scenarios' ? reviews : replies
+      const reply = queue.length > 0 ? queue.shift() : options.options[0]
       if (reply === null) throw new Error('dismissed')
       return reply
     },

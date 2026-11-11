@@ -88,6 +88,7 @@ Le code s'affiche dans la notification de fin du mod Claude Code
 | Code | Action |
 |---|---|
 | `agent-failed` | Reprendre : la même tentative est relancée. |
+| `interrupted` | Reprendre : les gates, ou le rejeu, qu'une personne a arrêtés repartent. |
 | `agent-unavailable` | Installer ou activer le plugin, accepter le lancement de l'agent, puis reprendre ; la tentative n'est pas consommée. Quand d'autres appels du même agent ont abouti dans ce run, l'échec était passager : reprendre tel quel. |
 | `pipeline-locked` | Une autre session conduit le run : la laisser finir. Un bail non renouvelé depuis 2 minutes est repris par la reprise suivante. |
 | `journal-changed` | Un autre terminal écrit dans le même journal : attendre qu'il s'arrête, puis reprendre. |
@@ -96,7 +97,7 @@ Le code s'affiche dans la notification de fin du mod Claude Code
 | `no-active-pipeline`, `not-initialised` | `skraft init <slug>` ou `/skraft <slug>`. |
 | `config-invalid` | Corriger chaque erreur listée ([Configurer les composants](./configure-components.md)), puis reprendre. |
 | `base-unresolved` | Écrire `baseBranch` dans `skraft-config.json` ou passer `--base <ref>` au premier init. |
-| `missing-outputs`, `loop-ceiling`, `environment`, `stopped` | Définitif pour ce slug : lire la raison dans le journal, corriger la cause, démarrer un nouveau slug. |
+| `missing-outputs`, `loop-ceiling`, `environment`, `stopped` | Définitif pour ce slug : lire la raison, puis `run-report.md` (ses commits, refus et incidents, [Rapport du run](../reference/run-journal.md#run-report)), corriger la cause, démarrer un nouveau slug. |
 
 Tous les codes, leur message et leur action :
 [Statuts et codes](../reference/run-journal.md#statuses-and-codes).

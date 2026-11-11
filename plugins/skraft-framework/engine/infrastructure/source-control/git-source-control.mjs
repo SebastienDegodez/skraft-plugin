@@ -242,4 +242,4 @@ const succeeded = (result) => result.started && result.exitCode === 0
 
 /** @param {string} what @param {import('../../application/ports/command-runner.mjs').CommandResult} result */
 // The tool's stderr stays out: it reaches the journal, an outcome and the next prompts. result.error is fixed by the runner.
-const failed = (what, result) => ({ ok: /** @type {const} */ (false), error: `${what} failed: ${result.error ?? `exit ${result.exitCode}`}` })
+const failed = (what, result) => ({ ok: /** @type {const} */ (false), error: `${what} failed: ${result.error ?? `exit ${result.exitCode}`}`, output: `${result.stdout}${result.stderr}` })

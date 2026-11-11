@@ -1,4 +1,5 @@
 import { inert } from '../reporting/markdown-safety.mjs'
+import { causeLines } from '../pipeline/incidents.mjs'
 
 /**
  * The questions a run asks a human, and how an answer to one is read. A question node of the
@@ -6,9 +7,11 @@ import { inert } from '../reporting/markdown-safety.mjs'
  * the environment question itself when the machine cannot run a step, and the blocked question
  * when a block a human can lift stops the run: an instruction runs the blocked node again with
  * it, STOP ends the run. The mutation-plan question takes APPLY, an instruction of the
- * developer's own, which goes on as APPLY does, or STOP.
+ * developer's own, which goes on as APPLY does, or STOP. The scenario-review question shows the
+ * story's scenarios and its walking skeleton before DELIVER builds them: APPROVED goes on, REVISE
+ * sends DISTILL back with the human's corrections.
  *
- * @typedef {'adr-ratification' | 'mutation-plan'} NodeQuestion
+ * @typedef {'adr-ratification' | 'mutation-plan' | 'scenario-review'} NodeQuestion
  * @typedef {NodeQuestion | 'environment' | 'review-consent' | 'blocked' | 'review-ceiling' | 'configuration'} QuestionKind
  * @typedef {{ options: readonly string[], refusals: readonly string[], header: string, instruction: boolean }} QuestionSpec
  *   options: the answers, the one that lets the run go on first; refusals: the answers that send
@@ -42,6 +45,7 @@ export const APPLY = 'APPLY'
 const QUESTIONS = Object.freeze({
   'adr-ratification': Object.freeze({ options: Object.freeze(['RATIFIED', 'REJECTED']), refusals: Object.freeze(['REJECTED']), header: 'ADR', instruction: false }),
   'mutation-plan': Object.freeze({ options: Object.freeze([APPLY, STOP]), refusals: Object.freeze([]), header: 'Mutation', instruction: true }),
+  'scenario-review': Object.freeze({ options: Object.freeze(['APPROVED', 'REVISE']), refusals: Object.freeze(['REVISE']), header: 'Scenarios', instruction: false }),
   environment: Object.freeze({ options: Object.freeze(['RETRY', 'ABORT']), refusals: Object.freeze([]), header: 'Environment', instruction: false }),
   'review-consent': Object.freeze({ options: Object.freeze(['ACCEPTED', 'DECLINED']), refusals: Object.freeze([]), header: 'PR comment', instruction: false }),
   [BLOCKED]: Object.freeze({ options: Object.freeze([STOP]), refusals: Object.freeze([]), header: 'Blocked', instruction: true }),
@@ -50,7 +54,7 @@ const QUESTIONS = Object.freeze({
 })
 
 /** The questions a workflow node may ask. */
-export const NODE_QUESTIONS = Object.freeze(/** @type {NodeQuestion[]} */ (['adr-ratification', 'mutation-plan']))
+export const NODE_QUESTIONS = Object.freeze(/** @type {NodeQuestion[]} */ (['adr-ratification', 'mutation-plan', 'scenario-review']))
 
 /** A reason is kept on one line, at most this long. */
 const REASON_LENGTH = 500
@@ -115,6 +119,19 @@ export const REVIEW_CONSENT_TEXT =
   'ACCEPTED or DECLINED; the answer is kept in ~/.skraft/config.json for this repository, for every later review.'
 
 /**
+ * The text of the scenario review question: the scenarios in the order DELIVER builds them, the
+ * `.feature` files the test plan names, and the red of the walking skeleton's acceptance test.
+ * @param {{ scenarios: Array<{ index: number, title: string, component: string, tags: string[] }>, features: string[], oracle: { sha: string, subject: string, files: string[] } }} story
+ */
+export const scenarioReviewText = ({ scenarios, features, oracle }) =>
+  `Read the ${scenarios.length} scenario${scenarios.length === 1 ? '' : 's'} of the story before DELIVER builds them, one at a time${features.length === 0 ? '' : `, as ${features.join(', ')} write${features.length === 1 ? 's' : ''} them`}: ${scenarios.map(scenarioLabel).join('; ')}. ` +
+  `The acceptance test of S1 and its skeleton are commit ${oracle.sha.slice(0, 7)} "${oracle.subject}": ${oracle.files.join(', ')}. ` +
+  'APPROVED delivers them; REVISE sends DISTILL back with your corrections (edit the .feature or the test yourself first if you like, and say so).'
+
+/** @param {{ index: number, title: string, component: string, tags: string[] }} scenario */
+const scenarioLabel = ({ index, title, component, tags }) => `S${index} "${title}" (${[component, tags.join(' ')].filter((part) => part !== '').join('; ')})`
+
+/**
  * The text of the mutation plan question.
  * @param {string[]} proposals the proposals for the surviving mutants, relative to the working copy
  */
@@ -122,10 +139,16 @@ export const mutationPlanText = (proposals) =>
   `The mutation gate failed; a proposal for its surviving mutants is in ${proposals.join(', ')}. ${APPLY} applies it; or write how to treat them instead; ${STOP} ends the run.`
 
 /**
- * The text of an environment question.
+ * The text of an environment question: why the step cannot run, its cause, the file that holds
+ * what the failing command printed, and what each answer does.
  * @param {string} step the node that could not run @param {string} reason why
+ * @param {import('../pipeline/incidents.mjs').Incident} incident
  */
-export const environmentText = (step, reason) => `${step} cannot run on this machine: ${reason}. Fix it, then RETRY; or ABORT the run.`
+export const environmentText = (step, reason, incident) => [
+  `${step} cannot run on this machine: ${reason}.`,
+  ...causeLines(incident),
+  `Fix it, then RETRY: ${step} runs again where it stopped, using no new attempt; or ABORT: the run ends.`,
+].join('\n')
 
 /**
  * The text of a blocked question: the node an instruction runs again, why it is blocked, from
@@ -145,10 +168,12 @@ export const blockText = (block) => `${block.step} is blocked: ${BLOCKS[block.co
 const leftBy = ({ from, failures }) => (failures.length === 0 ? '' : `\nLeft by ${from} (${failures.length}):\n${failures.map((failure) => `- ${failure}`).join('\n')}\n`)
 
 /**
- * @typedef {{ step: string, code: string, from: string, agent: string | null, details: string | null, failures: readonly string[] }} Block
- *   step: the node an instruction runs again; code: what its step recorded; from: the node that
- *   recorded it; details: the file holding the agent's reason or the review's verdict;
- *   failures: what the step that blocked left, the findings of a review at its loop ceiling.
+ * @typedef {{ step: string, code: string, from: string, agent: string | null, details: string | null, failures: readonly string[], attempt: number }} Block
+ *   step: the node an instruction runs again; code: what its step recorded, or `breaker` for an
+ *   agent refused the same way on two attempts in a row, `ceiling` for one refused on its last
+ *   attempt; from: the node that recorded it; details: the file holding the agent's reason or
+ *   the review's verdict; failures: what the step that blocked left, the findings of a review at
+ *   its loop ceiling, an agent's missing outputs and refusals; attempt: the attempt that blocked.
  */
 
 /** Why a block stops the run, by the code its step recorded. @type {Readonly<Record<string, (block: Block) => string>>} */
@@ -156,6 +181,8 @@ const BLOCKS = Object.freeze({
   'agent-blocked': ({ agent, details }) => `${agent} says it cannot go on; its reason is in ${details}`,
   'loop-ceiling': ({ from, step }) => `${from} -> ${step} was taken as often as its max_visits allows`,
   'lens-inconclusive': ({ details }) => `a lens answered inconclusive; the verdict is in ${details}`,
+  breaker: ({ agent, attempt }) => `${agent} failed the same way on attempts ${attempt - 1} and ${attempt}`,
+  ceiling: ({ agent, attempt }) => `${agent} still failed after ${attempt} attempts`,
 })
 
 /**

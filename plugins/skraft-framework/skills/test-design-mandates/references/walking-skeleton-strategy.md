@@ -1,155 +1,101 @@
-# Walking Skeleton Strategy
+# Walking Skeleton and Infrastructure Policy
 
 ## Definition
 
-A walking skeleton is the **thinnest possible slice** that exercises the full path from use case to output boundary. It proves the wiring works end-to-end before behaviour detail is added.
+The walking skeleton is S1 of every story: the thinnest slice that runs the **real path**, from the
+component's entry point through the use case to its real internal gateways. It proves the wiring
+before any other scenario adds behaviour. It is not a feature test: one happy path, hardcoded
+values where the story allows, no error handling beyond what the test needs.
 
-A walking skeleton is NOT a feature test. It is the scaffolding that validates the pipeline exists.
+- One per story, tagged `@walking-skeleton` in the `.feature` and in the test plan's
+  `## Scenarios` table, always S1.
+- In a back-end component; a React front end has none (its end-to-end run is Playwright's).
+- Its acceptance test lives in the component's integration-test place and drives the real entry
+  point the story adds or changes, wired by the production composition root.
 
 ---
 
-## The 4 Strategies
+## Exemptions
 
-### Strategy A — Full InMemory
+A story with no new path to prove declares it under the `## Scenarios` table and tags no scenario
+`@walking-skeleton`; S1 is then a targeted scenario like the others.
 
-**When:** The feature has no external dependencies. All behaviour is internal.
+```
+Walking skeleton exemption: library
+```
 
-**Setup:**
-- Use case boundary: real use case
-- Application interfaces: InMemory implementations (no I/O)
-- Domain: real domain objects
-- No containers, no network, no file system
+| Exemption | Holds when | Contradicted by |
+|---|---|---|
+| `library` | the component is a pure library: no entry point | an entry point in the component |
+| `refactoring` | the story adds no public interface | a new endpoint, command, message or public type |
+| `docs-only` | the story changes configuration or documentation only | a changed source file |
 
-**Test speed:** < 100ms
-**Tag:** `@smoke`
+An exemption the story's changes contradict is a blocker.
 
-**Example:**
+---
+
+## Infrastructure Policy
+
+What each kind of dependency runs on. A **targeted scenario** is every scenario but the walking
+skeleton: it lives in the unit-test place and enters through the use case.
+
+| Dependency | Examples | Targeted scenario | Walking skeleton |
+|---|---|---|---|
+| Entry point | controller, CLI, UI, webhook received, topic consumed | in-process | real |
+| Internal gateway | repository, database, cache | in-memory | Testcontainers |
+| External gateway | REST, SOAP, GraphQL, gRPC, Kafka, RabbitMQ, MQTT, WebSocket, webhook sent | Microcks | Microcks |
+| Clock, randomness | — | fake | fake |
+
+A React front end:
+
+| Dependency | Targeted tests | Playwright e2e |
+|---|---|---|
+| The back end it calls | MSW | Microcks |
+
+- The plugin holds these defaults per stack. A component overrides a row with `infrastructure`
+  in `skraft-config.json`, in the team file only; the external gateway row follows its
+  `mocking.strategy`. The brief of the acceptance designer names each component's effective
+  policy, and `skraft doctor` shows it with its source.
+- Internal or external is ownership, not transport: a database the component owns is internal;
+  an API, a broker topic or a webhook another team owns is external.
+- Microcks runs from Testcontainers, the uber native image, **one container per test session**,
+  started in the test runner's global setup (xUnit fixture, JUnit extension, pytest session
+  fixture, Vitest or Playwright `globalSetup`): `mocking-microcks-<stack>`.
+- Docker or Podman runs the containers. With neither: the scenario is INDETERMINATE and reported,
+  never skipped, never replaced by a fake.
+
+---
+
+## Example — .NET walking skeleton
+
 ```csharp
-// InMemoryEligibilityRepository seeded with known data
-var repo = new InMemoryEligibilityRepository();
-var useCase = new CheckEligibilityUseCase(repo, new EligibilityPolicy());
-var result = await useCase.Handle(new CheckEligibilityCommand(driverId));
-result.IsEligible.Should().BeTrue();
+// Driver checks eligibility
+[Fact]
+public async Task Driver_checks_eligibility()
+{
+    // EligibilityApiFactory: WebApplicationFactory<Program> over the production composition root,
+    // PostgreSQL from Testcontainers, the risk API from the session's Microcks container.
+    var client = _factory.CreateClient();
+
+    var response = await client.PostAsJsonAsync("/eligibility", new { driverId = "DRV-001" });
+
+    var result = await response.Content.ReadFromJsonAsync<EligibilityResponse>();
+    result!.Eligible.Should().BeTrue();
+}
 ```
+
+Lives in `tests/Eligibility.IntegrationTest/`. Every later scenario of the story enters through
+`CheckEligibilityUseCase` in `tests/Eligibility.UnitTest/`, with an in-memory repository.
 
 ---
 
-### Strategy B — Real Local + Fake Costly External
+## Checklist
 
-**When:** The feature needs local persistence (DB) but calls an expensive external service (payment gateway, SMS, AI API, third-party risk engine).
-
-**Setup:**
-- Application interfaces for costly externals: Fake/Stub returning controlled responses
-- Local storage: Testcontainers (PostgreSQL, Redis, etc.)
-- Use case: real
-
-**Test speed:** 5–30s (container startup)
-**Tag:** `@smoke @integration`
-
-**Example:**
-```csharp
-// Real PostgreSQL (Testcontainers) + fake external risk scoring service
-var riskService = new FakeRiskScoringService(score: 720); // controlled response
-var repo = new PostgreSqlEligibilityRepository(testDb.ConnectionString);
-var useCase = new CheckEligibilityUseCase(repo, riskService, new EligibilityPolicy());
-var result = await useCase.Handle(new CheckEligibilityCommand(driverId));
-result.IsEligible.Should().BeTrue();
-```
-
----
-
-### Strategy C — Real Local
-
-**When:** The feature integrates with controllable local infrastructure only (database, cache, message broker). No expensive external calls.
-
-**Setup:**
-- All infrastructure: Testcontainers
-- Use case: real
-- No fakes — everything is real
-
-**Test speed:** 5–30s
-**Tag:** `@smoke @integration`
-
-**Example:**
-```csharp
-// Real PostgreSQL + real Redis via Testcontainers
-var repo = new PostgreSqlEligibilityRepository(testDb.ConnectionString);
-var cache = new RedisEligibilityCache(testRedis.ConnectionString);
-var useCase = new CheckEligibilityUseCase(repo, cache, new EligibilityPolicy());
-var result = await useCase.Handle(new CheckEligibilityCommand(driverId));
-result.IsEligible.Should().BeTrue();
-```
-
----
-
-### Strategy D — Configurable
-
-**When:** The test must run in both unit mode (CI fast pass) and integration mode (CI full pass). Environment or feature flag switches the double.
-
-**Setup:**
-- Factory or DI configuration selects: InMemory (unit) or Testcontainers (integration)
-- Controlled by environment variable or test fixture flag
-
-**Test speed:** Variable
-**Tag:** `@smoke` (unit mode) + `@smoke @integration` (integration mode)
-
-**Example:**
-```csharp
-// Configurable via environment variable
-var repository = Environment.GetEnvironmentVariable("TEST_MODE") == "integration"
-    ? new PostgreSqlEligibilityRepository(testDb.ConnectionString)
-    : (IEligibilityRepository) new InMemoryEligibilityRepository();
-```
-
----
-
-## Decision Tree
-
-```
-Does the feature write to or read from persistent storage?
-│
-├── NO → Strategy A (Full InMemory)
-│
-└── YES
-    │
-    Does it call an expensive external service?
-    (payment, SMS, AI, third-party risk engine)
-    │
-    ├── YES → Strategy B (Real local DB + Fake costly external)
-    │
-    └── NO
-        │
-        Is the storage local and controllable?
-        (your own DB, cache, broker — not a SaaS)
-        │
-        ├── YES → Strategy C (Real local with Testcontainers)
-        │
-        └── NO → Strategy D (Configurable)
-```
-
----
-
-## Sizing
-
-| Metric | Guideline |
-|---|---|
-| Walking skeletons per feature | 2–5 (one per major flow variant) |
-| Focused scenarios per feature | 15–20 (detailed behaviour coverage) |
-| @smoke scenarios | ≤3 per feature (fastest confidence signal) |
-
-**Walking skeleton ≠ full feature test.** Once the skeleton passes, add focused scenarios for each business rule, boundary condition, and error path.
-
----
-
-## Walking Skeleton Checklist
-
-Before marking a walking skeleton complete:
-
-- [ ] The test enters through the use case boundary (not a shortcut)
-- [ ] The test asserts at the output boundary (return value or application interface)
-- [ ] All collaborators are explicitly configured (no magic DI in unit tests)
-- [ ] The skeleton tag is applied (`@smoke`)
-- [ ] The coverage matrix row is marked "Walking Skeleton ✅"
+- [ ] S1 is tagged `@walking-skeleton`, in a back-end component, or the exemption line holds
+- [ ] The test sends what the entry point takes (request, command, message), not a use case call
+- [ ] The use case and the internal gateways are the production ones; the database runs on Testcontainers
+- [ ] External gateways and the clock run as the policy says, never on a hand-written fake
+- [ ] The test asserts the business outcome the entry point returns or the state it leaves
 
 ---
 
@@ -157,7 +103,7 @@ Before marking a walking skeleton complete:
 
 | Anti-pattern | Problem |
 |---|---|
-| Walking skeleton that tests nothing | Just verifies the test runs without asserting an outcome |
-| Walking skeleton skipping the use case | Calls repository directly — not end-to-end |
-| Too many walking skeletons | >5 per feature = the skeleton has become the test suite |
-| Walking skeleton without a coverage matrix entry | Not tracked, not reviewed |
+| Walking skeleton that calls the use case | Proves no wiring: it is a targeted scenario |
+| Walking skeleton on an in-memory repository | The real internal gateway is never run |
+| An exemption the diff contradicts | Hides a path nothing proves |
+| A second walking skeleton | The slow suite grows; every later scenario is targeted |

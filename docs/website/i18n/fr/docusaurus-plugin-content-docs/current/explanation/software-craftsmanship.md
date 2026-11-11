@@ -49,7 +49,7 @@ l'exécute**.
 ```mermaid
 flowchart LR
     V1["Logiciel bien conçu"] --> M1["Gates verrouillées<br/>seuil de qualité fixe"]
-    V2["Ajouter de la valeur<br/>régulièrement"] --> M2["Walking skeleton<br/>commits rouge → vert"]
+    V2["Ajouter de la valeur<br/>régulièrement"] --> M2["Walking skeleton<br/>un scénario à la fois,<br/>commits rouge → vert"]
     V3["Communauté de<br/>professionnels"] --> M3["Revue avant la revue<br/>lentilles + réfutation"]
     V4["Partenariats<br/>productifs"] --> M4["Décisions humaines<br/>ratification d'ADR, consentements"]
 ```
@@ -74,14 +74,17 @@ d'ajustement. Le détail des gates est dans la [référence des gates](../refere
 
 Le craft avance par petits incréments qui marchent. Dans skraft, cela prend deux formes.
 
-- **Le walking skeleton.** En DISTILL, l'`acceptance-designer` commite des tests d'acceptation
-  qui échouent et le squelette qu'ils appellent ; la lentille `boundary-enforcement` exige au
-  moins un scénario walking skeleton par flux (son G8). Voir
+- **Le walking skeleton.** Le premier scénario de chaque story, S1, traverse un composant back
+  de son point d'entrée jusqu'à une vraie base ; le moteur refuse un plan de test qui ne le tague
+  pas `@walking-skeleton` ni ne déclare pourquoi la story n'en a pas besoin, et la lentille
+  `boundary-enforcement` exige au moins un scénario walking skeleton par flux (son G8). Voir
   [Walking Skeleton](./deep-dive/walking-skeleton.md).
-- **Le cycle rouge → vert → refactor.** En DELIVER, le moteur lit les commits du
-  `software-engineer` : un `test(…)` est le rouge, un `feat(…)` ou `fix(…)` le vert, un
-  `refactor(…)` le nettoyage. Il rejoue la commande de test à chaque commit rouge et refuse un
-  vert qui n'a pas de rouge avant lui. Le test d'abord de Beck
+- **Un scénario, un rouge, un vert.** En DISTILL, l'`acceptance-designer` commite le test
+  d'acceptation en échec d'un scénario et le squelette qu'il appelle ; le moteur le rejoue et le juge
+  du rejeu ne l'accepte que si le test du scénario échoue sur une assertion. En DELIVER, le `software-engineer` tourne la
+  boucle rouge → vert → refactor de ses tests unitaires, puis commite une fois : un `feat(…)` que
+  le moteur rejoue aussi, et qui doit faire passer le scénario sans toucher à son test
+  d'acceptation. Puis le scénario suivant. Le test d'abord de Beck
   ([Beck, 2003](../reference/citations.mdx#cite-beck-tdd-2003)) devient un fait vérifié dans l'historique git,
   pas une promesse. Voir [Outside-In TDD](./deep-dive/outside-in-tdd.md).
 
@@ -119,7 +122,7 @@ lentille `architecture-boundaries` applique les règles d'Object Calisthenics au
 
 Un artisan ne décide pas seul de ce qui engage son client. Dans le workflow, un hexagone est
 une question posée à un humain : `adr-ratification` fait ratifier les ADR avant DISTILL,
-`mutation-plan` fait décider au développeur quoi faire des mutants que la gate a laissés vivants.
+`scenario-review` fait lire les scénarios avant que DELIVER ne les construise, `mutation-plan` fait décider au développeur quoi faire des mutants que la gate a laissés vivants.
 Sans réponse, le run attend ; aucun agent ne peut répondre à la place de l'humain. L'accord pour
 pousser une branche se donne une fois, avant tout run, et un run qui en manque est refusé plutôt
 que laissé en attente. Voir
@@ -129,7 +132,7 @@ que laissé en attente. Voir
 
 ```mermaid
 flowchart LR
-    D["deliver<br/>software-engineer"] --> G["gates verrouillées<br/>build · format · lint · test<br/>architecture · coverage"]
+    D["deliver<br/>software-engineer<br/>un scénario à la fois"] --> G["gates verrouillées<br/>build · format · lint · test<br/>architecture · coverage"]
     G -- "FAIL" --> D
     G -- "PASS" --> DR["revue DELIVER<br/>lentilles + verdict"]
     DR -- "NEEDS_REWORK" --> D

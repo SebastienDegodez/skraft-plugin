@@ -7,6 +7,7 @@ import { findComponentSkills } from '../pipeline/component-skills.mjs'
 import { forgeCheck } from './forge-check.mjs'
 import { modelChecks } from './model-checks.mjs'
 import { joinRelative } from '../../domain/config/relative-path.mjs'
+import { needsContainers, policyLines } from '../../domain/config/infrastructure-policy.mjs'
 
 /**
  * @typedef {import('../../domain/config/skraft-config.mjs').Component} Component
@@ -14,7 +15,8 @@ import { joinRelative } from '../../domain/config/relative-path.mjs'
  * @typedef {import('../../domain/config/skraft-config.mjs').SkraftConfig} SkraftConfig
  * @typedef {{ subject: string, status: 'ok' | 'warn' | 'fail', detail: string }} DoctorCheck
  *   subject: `node`, `config`, `forge`, `models`, `models/<host>`, `<component>`,
- *   `<component>/<command>` or `vscode`; warn: worth knowing, never a failure.
+ *   `<component>/<command>`, `infrastructure`, `container-runtime` or `vscode`; warn: worth
+ *   knowing, never a failure.
  * @typedef {{ ok: boolean, checks: DoctorCheck[], assignments: import('./model-checks.mjs').AssignmentTable | null }} DoctorReport
  *   assignments: what each agent the workflow dispatches runs on, by host; null when the
  *   configuration or the workflow cannot be read.
@@ -35,8 +37,9 @@ const NODE_MAJOR = 22
 /**
  * Doctor — checks that every command of every component can run on this machine: Node, the
  * configuration, the forge, each component's root, each command's program, the skills the agents writing
- * its tests are asked to read, Docker for Microcks, then what
- * each agent the workflow dispatches runs on, per host, and last how VS Code runs the pipeline.
+ * its tests are asked to read, the infrastructure policy of its tests,
+ * Docker or Podman when a policy runs a container, then what each agent the workflow dispatches
+ * runs on, per host, and last how VS Code runs the pipeline.
  * With `run`, starts each command once from its component's root.
  * @param {DoctorDeps} deps
  */
@@ -75,7 +78,7 @@ const vscodeCheck = (location) => ({
 })
 
 /**
- * The base with `run`, each component, then Docker.
+ * The base with `run`, each component, the infrastructure of their tests, then the container runtime.
  * @param {DoctorDeps} deps @param {SkraftConfig} config
  * @param {{ run: boolean, base: string | null }} request
  * @returns {Promise<DoctorCheck[]>}
@@ -87,8 +90,41 @@ const configuredChecks = async (deps, config, { run, base }) => {
   for (const component of config.components) {
     checks.push(...await componentChecks(deps, component, { run, baseSha: baseShaOf(resolved, component.name) }))
   }
-  return checks
+  return [...checks, ...config.components.flatMap(infrastructureChecks), ...await containerChecks(deps, config.components)]
 }
+
+/**
+ * What the component's tests run each dependency on, row by row.
+ * @param {Component} component @returns {DoctorCheck[]}
+ */
+const infrastructureChecks = (component) => policyLines(component).map((detail) => ({ subject: 'infrastructure', status: /** @type {const} */ ('ok'), detail }))
+
+/** The container runtimes doctor asks, in order. */
+const RUNTIMES = Object.freeze(['docker', 'podman'])
+/** How long a runtime may take to answer `info`. */
+const RUNTIME_TIMEOUT_MS = 15_000
+const NO_CONTAINERS = 'the tests that need Microcks or Testcontainers cannot run until Docker or Podman runs'
+
+/**
+ * The first container runtime on the PATH that answers, when a component's policy runs a
+ * container; a warning, never a failure, when none does.
+ * @param {DoctorDeps} deps @param {Component[]} components @returns {Promise<DoctorCheck[]>}
+ */
+const containerChecks = async (deps, components) => {
+  if (!components.some(needsContainers)) return []
+  // Stryker disable next-line StringLiteral: the working copy resolves '' and '.' to the same folder
+  const found = (await Promise.all(RUNTIMES.map((runtime) => deps.executables.locate(runtime, '.')))).flatMap((located, index) => (located === null ? [] : [RUNTIMES[index]]))
+  for (const runtime of found) {
+    if (await answers(deps, runtime)) return [{ subject: 'container-runtime', status: 'ok', detail: `${runtime} answers ${runtime} info` }]
+  }
+  return [{ subject: 'container-runtime', status: 'warn', detail: `${silent(found)}; ${NO_CONTAINERS}` }]
+}
+
+/** Whether `<runtime> info` exits 0. @param {DoctorDeps} deps @param {string} runtime */
+const answers = async (deps, runtime) => (await deps.commandRunner.run({ argv: [runtime, 'info'], cwd: '.', timeoutMs: RUNTIME_TIMEOUT_MS })).exitCode === 0
+
+/** Why no runtime answers. @param {string[]} found the runtimes on the PATH */
+const silent = (found) => (found.length === 0 ? `neither ${RUNTIMES.join(' nor ')} is on the PATH` : found.map((runtime) => `${runtime} does not answer ${runtime} info`).join(', '))
 
 /**
  * The config check, and the configuration once it names at least one component.

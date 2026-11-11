@@ -1,6 +1,6 @@
 ---
 title: "DELIVER"
-description: "Pourquoi DELIVER passe le contrat au vert en cycles TDD vérifiés, mute le code revu une seule fois, en dernier, et confie au développeur les mutants survivants."
+description: "Pourquoi DELIVER passe le contrat au vert un scénario et un commit vérifié à la fois, mute une fois le code revu, et confie les survivants au développeur."
 persona: software-engineer
 phase: deliver
 hide_table_of_contents: true
@@ -10,28 +10,54 @@ import FlowFigure from '@site/src/components/FlowFigure';
 
 # DELIVER
 
-Faire passer le contrat au vert en petits pas prouvés, faire relire le code, puis tester les
-tests — une fois, en dernier.
+Faire passer le contrat au vert un scénario à la fois, chacun en un commit prouvé, faire relire
+le code, puis tester les tests — une fois, en dernier.
 
 ## Pourquoi cette phase existe
 
 Le code est le seul artefact qui part en production. DELIVER le fait naître du contrat que
-DISTILL a laissé en échec : le `software-engineer` avance en **Outside-In TDD**, du test
-d'acceptation vers les tests unitaires, puis vers le code
-([Freeman & Pryce, 2009](../../reference/citations.mdx#cite-freeman-goos-2009)). Chaque pas est un commit : un
-`test(…)` rouge, un `feat(…)` ou `fix(…)` vert, un `refactor(…)`.
+DISTILL a laissé en échec, un scénario à la fois : le `software-engineer` avance en
+**Outside-In TDD**, du test d'acceptation du scénario vers les tests unitaires, puis vers le code
+([Freeman & Pryce, 2009](../../reference/citations.mdx#cite-freeman-goos-2009)). Il tourne la boucle interne
+rouge → vert → refactor sans la commiter, puis commite une fois, quand le scénario passe : un
+`feat(…)` enchaîné à la commande de test, `<test> && git add <fichiers> && git commit …`.
 
-Le moteur ne croit pas l'agent sur parole. Il lit ces commits, rejoue chaque rouge pour
-vérifier qu'il échoue, et refuse un vert qui n'a pas de rouge avant lui. Le test d'abord
-([Beck, 2003](../../reference/citations.mdx#cite-beck-tdd-2003)) devient un fait dans l'historique git, pas une
-promesse.
+Le moteur ne croit pas l'agent sur parole. Le rouge de DISTILL a été rejoué et prouvé ; le vert de
+DELIVER est rejoué aussi, et le [juge du rejeu](pathname:///dashboard/#agent-replay-judge) lit le
+log du rejeu à côté de celui du rouge : les tests d'acceptation du scénario doivent y passer, et
+aucun test ne doit échouer ni être sauté. Le test d'abord ([Beck, 2003](../../reference/citations.mdx#cite-beck-tdd-2003)) devient un fait dans
+l'historique git, pas une promesse : pour chaque scénario, un commit rouge de son test
+d'acceptation, puis un commit vert.
 
 :::info[☕ Fil rouge — Starbucks *(exemple illustratif)*]
 
-Le scénario entre. DELIVER implémente le calcul du total et l'attribution des points en cycles
-**rouge → vert**, la revue relit le code, puis la **mutation** atteste que les tests protègent
-réellement la règle de fidélité. Le code part en pull request.
+S1 entre, rouge. DELIVER implémente le paiement et l'attribution des points et le fait passer au
+vert en un commit ; DISTILL écrit ensuite le test en échec de S2, la boisson indisponible, et
+DELIVER le fait passer au vert. Les gates passent, la revue relit le code, puis la **mutation**
+atteste que les tests protègent réellement la règle de fidélité. Le code part en pull request.
 :::
+
+## Un scénario, un commit vert
+
+Un cycle TDD commité coûte deux commits, et un agent paie chacun en tours : lancer les tests, lire
+leur sortie, écrire le message. Par scénario, DELIVER ne commite qu'une fois. Les tests
+unitaires de la boucle interne s'écrivent toujours d'abord ; ils partent dans le vert, et la
+mutation, lancée en dernier sur toute la story, prouve qu'ils détecteraient une erreur.
+
+Trois règles gardent ce commit unique honnête :
+
+- **Les tests d'acceptation sont un oracle immuable.** DISTILL les a écrits ; le vert ne les
+  change jamais, hors du squelette qu'ils appellent. Un test ajusté au code ne prouve rien, donc
+  un test faux retourne à DISTILL : l'ingénieur s'arrête en le nommant.
+- **Un scénario appartient à un seul composant.** Son vert ne change aucun autre composant ; un
+  changement nécessaire ailleurs est un scénario qui manque.
+- **Le commit suit le test, en bash.** Le brief donne la commande exacte, si bien que le commit
+  n'a lieu que si les tests passent. Le rouge de DISTILL n'est jamais enchaîné ainsi : seule la
+  lecture de la sortie distingue une erreur de build de l'échec attendu.
+
+Une fois le dernier scénario au vert, les gates passent. Un passage que renvoient les gates ou la
+revue travaille sur toute la story avec le cycle classique : un rouge, puis la correction ; sur un
+passage que les gates ont renvoyé, leur échec tient lieu du rouge.
 
 ## L'ordre : gates, revue, puis mutation
 
@@ -90,15 +116,20 @@ développeur choisit **comment** l'atteindre, jamais **s'il** faut l'atteindre.
 
 ## Les tests câblés par le même agent
 
-Le `software-engineer` câble lui-même ses tests d'intégration, dans ses propres cycles rouge /
-vert : le brief que compose le moteur nomme les skills de mocking de chaque composant, et ceux
-de contract testing quand le composant l'active. Il ne lance aucun sous-agent. Quand le
+Le `software-engineer` câble lui-même ses tests d'intégration, dans le scénario qu'il fait
+passer : le brief que compose le moteur nomme les skills de mocking de chaque composant, et ceux
+de contract testing quand le composant l'active. Sur quoi tourne chaque dépendance vient de la
+[politique d'infrastructure](../../reference/skraft-config.md#infrastructure) du composant, que
+suivent déjà les tests d'acceptation commités par DISTILL. Il ne lance aucun sous-agent. Quand le
 changement touche un mock ou un contrat, la lentille de fidélité correspondante rejoint la
 revue. Le pourquoi : [Mocking avec Microcks](../deep-dive/mocking-microcks.md)
 et [Contract testing](../deep-dive/contract-testing.md).
 
 ## Les compromis
 
+- **La boucle interne ne laisse aucune trace dans l'historique.** Seuls le rouge et le vert de
+  chaque scénario sont commités ; personne ne voit échouer les tests unitaires écrits entre les
+  deux. La mutation et la revue les jugent.
 - **Un humain peut être sollicité en fin de run.** Quand la mutation échoue, le run attend la
   réponse à `mutation-plan`. C'est le prix d'une décision qui engage le code.
 - **Une reprise de revue ne remesure pas la mutation.** Elle repasse par les gates, plus

@@ -184,7 +184,7 @@ Ratify the Proposed ADRs docs/adr/adr-001-card-provider.md? RATIFIED marks them 
 | `reason` | string | raison du statut (le texte de la question en `waiting`), vide si aucune |
 | `phases` | `[{ phase, state }]` | une entrée par phase ; `state` = `pending`, `open` ou `closed` |
 | `current` | `{ step, phase, agent, gates, question, visit, attempt }` ou null | nœud en cours, `null` sinon ; `question` est le type de question sur un nœud question, `null` ailleurs |
-| `question` | `{ key, kind, text, options, refusals, header }` ou null | la question que le run attend, `null` si rien n'attend ; `header` = le libellé court qu'un dialogue ou le panneau affiche à côté (`ADR`, `Reporting`, `Pull request`, `Mutation`, `Environment`, `Blocked`) |
+| `question` | `{ key, kind, text, options, refusals, header }` ou null | la question que le run attend, `null` si rien n'attend ; `header` = le libellé court qu'un dialogue ou le panneau affiche à côté (`ADR`, `Reporting`, `Pull request`, `Scenarios`, `Mutation`, `Environment`, `Blocked`) |
 | `attempts` | number | nombre de tentatives démarrées |
 | `costUsd` | number ou null | somme des coûts journalisés, `null` si aucun |
 | `graph` | `{ nodes, edges }` | le graphe du workflow suivi (défaut ou `.skraft/`) ; sans workflow lisible, les étapes que nomme le journal et aucune arête |
@@ -201,7 +201,10 @@ seulement pour `tampered`.
 
 **Effet.** Enregistre la réponse d'un humain à la question que le pipeline actif attend (un
 événement `question.answered`, `by: "cli-tty"`), une fois que la personne l'a confirmée au
-terminal : `skraft decide: record <answer> for <key>? [y/N]`. Seul `y` enregistre. Il ne lance rien : le prochain run du
+terminal : `skraft decide: record <answer> for <key>? [y/N]`. Seul `y` enregistre. Sans terminal
+interactif, ou dans un shell que son hôte marque comme celui d'un agent IA (`AI_AGENT`,
+`COPILOT_AGENT_SESSION_ID` ou `CLAUDECODE` posée), rien n'est demandé ni enregistré
+(`no-terminal`) : un agent ne peut pas répondre à la place d'une personne. Il ne lance rien : le prochain run du
 pipeline agit selon la réponse, sans relancer un agent qui a déjà fini.
 
 | Argument / option | Valeur | Règle |
@@ -215,26 +218,46 @@ Les questions, leurs options et leurs refus :
 | Type | Clé | Options | Refus |
 | --- | --- | --- | --- |
 | `adr-ratification` | `<nœud>-<n>` (`adr-1`) | `RATIFIED`, `REJECTED` | `REJECTED` |
+| `scenario-review` | `<nœud>-<n>` (`scenario_review-1`) | `APPROVED`, `REVISE` | `REVISE` |
 | `environment` | `<nœud>-<n>`, le nœud qui ne peut pas tourner (`gates-1`) | `RETRY`, `ABORT` | — |
 | `mutation-plan` | `<nœud>-<n>` (`mutation_plan-1`) | `APPLY`, une consigne, ou `STOP` (termine le run `blocked`, code `stopped`) | — |
 | `blocked` | `<nœud>-<n>`, le nœud qu'une consigne relance (`design-1`) | une consigne, ou `STOP` | — |
 
-Un blocage ne termine plus le run à lui seul. Quand un agent répond `blocked`, qu'une boucle
-atteint son `max_visits` ou qu'une lentille d'une revue répond `inconclusive`, le moteur pose la
-question `blocked` sur le nœud à relancer : l'agent lui-même, le nœud vers lequel revient l'arête
-plafonnée (l'ingénieur après les gates, l'architecte après une revue ou un ADR rejeté), ou la
-revue. Son texte porte ce que le moteur a vérifié, ce que l'étape bloquée a laissé (la raison
-de l'agent, les échecs des gates) et le fichier qui garde les mots de l'agent :
+Un blocage ne termine plus le run à lui seul. Quand un agent répond `blocked`, qu'un agent est
+refusé de la même façon à deux tentatives de suite d'un passage ou à sa dernière tentative
+(`max_attempts`), qu'une boucle atteint son `max_visits` (l'arête `FAIL` des gates comprise) ou
+qu'une lentille d'une revue répond `inconclusive`, le moteur pose la question `blocked` sur le
+nœud à relancer : l'agent lui-même, le nœud vers lequel revient l'arête plafonnée (l'ingénieur
+après les gates, l'architecte après une revue ou un ADR rejeté), ou la revue. Son texte porte ce
+que le moteur a vérifié, ce que l'étape bloquée a laissé (la raison de l'agent, ses sorties
+absentes et ses refus, les échecs des gates), le fichier qui garde les mots de l'agent et
+l'emplacement du rapport du run :
 
 ```
 design is blocked: solution-architect says it cannot go on; its reason is in <dossier de suivi>/results/design-1-1.json.
 Left by design (1):
 - which payment provider?
  An instruction runs design again on a new pass with what is left above and the instruction; STOP ends the run.
+The run so far (commits, refusals, incidents): <dossier de suivi>/run-report.md
+research is blocked: solution-researcher failed the same way on attempts 1 and 2.
+Left by research (2):
+- missing outputs: <dossier de suivi>/research/2026-10-11/checkout-research.md
+- result is missing
+ An instruction runs research again on a new pass with what is left above and the instruction; STOP ends the run.
+The run so far (commits, refusals, incidents): <dossier de suivi>/run-report.md
 design_review is blocked: a lens answered inconclusive; the verdict is in <dossier de suivi>/reviews/design_review-1/verdict.yaml. An instruction runs design_review again on a new pass with it; STOP ends the run.
+The run so far (commits, refusals, incidents): <dossier de suivi>/run-report.md
+deliver is blocked: gates -> deliver was taken as often as its max_visits allows.
+Left by gates (1):
+- api/test: exited 1 (evidence: <dossier de suivi>/gates/api/test-3.log)
+ An instruction runs deliver again on a new pass with what is left above and the instruction; STOP ends the run.
+The run so far (commits, refusals, incidents): <dossier de suivi>/run-report.md
 ```
 
-L'agent relancé reçoit d'abord ce que le blocage a laissé, puis la consigne.
+L'agent relancé reçoit d'abord ce que le blocage a laissé, puis la consigne. Un agent refusé sur
+ses tentatives commence le nouveau passage à la tentative 1, avec tout son `max_attempts` ; son
+brief liste les sorties encore absentes (`Missing outputs from pass <n>:`), puis ses refus
+(`What pass <n> left when it was blocked:`), puis la consigne.
 
 Une revue dont la boucle vers son producteur atteint `max_visits` (2 pour chaque revue du workflow
 livré : 3 passages) ne renvoie plus le travail. Sa question dit que le producteur n'a pas corrigé
@@ -257,6 +280,7 @@ Medium and low (1):
 
 Every finding with its context: <dossier de suivi>/reviews/design_review-3/verdict.yaml
 ACCEPT takes these findings as they stand and goes on (they are listed in the run report and the pull request); an instruction runs design again with every finding and the instruction; STOP ends the run.
+The run so far (commits, refusals, incidents): <dossier de suivi>/run-report.md
 ```
 
 `skraft decide design-1 "Utiliser la passerelle bancaire d'Acme"` : le run suivant du pipeline,
@@ -264,9 +288,10 @@ le même run sur le même slug, relance ce nœud sur un nouveau passage, la cons
 agent comme retour d'un humain (à chaque lentille que la revue interroge, pour une revue) ;
 aucune arête vers ce nœud ne compte plus comme empruntée, sa boucle retrouve donc tout son
 budget. Bloqué de nouveau, il redemande (`design-2`). `STOP` (quelle que soit la casse) termine
-le run `blocked`, avec le code et la raison du blocage, et rien d'autre. Un disjoncteur, un
-plafond de tentatives, une arête manquante ou une boucle de mutation sans progrès terminent
-toujours le run sans question.
+le run `blocked`, avec le code et la raison du blocage, et rien d'autre : pour un agent refusé,
+le code de son dernier refus (`missing-outputs`, `research-records`…). Une arête manquante, une
+boucle de mutation sans progrès ou un nœud que le workflow n'a plus (`workflow-changed`)
+terminent toujours le run sans question.
 
 Une clé nomme le nœud qui pose la question, puis le rang de la question parmi celles que ce
 nœud a posées dans le run, tous types confondus : `adr-1`, puis `adr-2` après un rejet ou
@@ -281,7 +306,7 @@ sur stdout, code 0. Refus : le message sur stderr, code 1.
 | `no-question` | `no question adr-2; waiting: adr-1`, ou `no question to answer; no question is waiting` |
 | `already-answered` | `adr-1 was already answered RATIFIED` |
 | `invalid-answer` | `the answer must be one of RATIFIED, REJECTED` ; `REJECTED needs the reason, which goes back to the agent` ; pour une question `blocked`, `the answer must be an instruction, or STOP` (`… or APPLY or STOP` pour `mutation-plan`) et `an instruction is at most 1000 characters` (la valeur n'est jamais reprise) |
-| `no-terminal` | `skraft decide records a person's answer: run it yourself in an interactive terminal; nothing was recorded` |
+| `no-terminal` | `skraft decide records a person's answer: run it yourself in an interactive terminal of your own, not an agent's shell; nothing was recorded` |
 | `not-confirmed` | `not confirmed; nothing was recorded` |
 
 ## `skraft gate [--all] [--json]`
@@ -317,13 +342,13 @@ Pour un refus ou un blocage, la synthèse porte le code : `skraft <slug>: gates 
 | `scope` | string | `touched` ou `all` |
 | `components` | string[] | composants retenus |
 | `gates` | `GateResult[]` | voir ci-dessous |
-| `failure` | string ou null | `environment` si au moins un échec d'environnement, sinon `deterministic` en cas d'échec, `null` sans échec |
+| `failure` | string ou null | `interrupted` si une personne a arrêté une gate, sinon `environment` si au moins un échec d'environnement, sinon `deterministic` en cas d'échec (une gate arrêtée par un signal ou un plantage comprise), `null` sans échec |
 | `code` | string ou null | code de refus ou de blocage |
 | `reason` | string | synthèse |
 | `phase` | null | présent seulement sur un refus ou blocage venu du pipeline actif |
 
 Chaque `GateResult` : `component`, `gate` (`none` pour un composant sans commande de gate),
-`status` (`pass`, `fail`), `failure` (`environment`, `deterministic`, `null`), `reason`,
+`status` (`pass`, `fail`), `failure` (`interrupted`, `environment`, `deterministic`, `null`), `reason`,
 `evidence` (chemin absolu du fichier de preuve ; pour la gate `none`, le dossier
 `gates/<composant>`, où aucun fichier n'est écrit).
 
@@ -343,7 +368,8 @@ d'échec et format des preuves :
 
 **Effet.** Lit le journal du pipeline actif et affiche le temps, le coût et les relances de
 chaque étape ; n'écrit rien. Le moteur écrit le même tableau dans `run-report.md` après chaque
-étape.
+étape, suivi de la question qu'attend le run, des commits qu'il a vérifiés, des échecs renvoyés à
+un agent et des incidents posés à un humain ([Rapport du run](./run-journal.md#run-report)).
 
 **Sortie texte** :
 
@@ -377,8 +403,12 @@ et la raison s'affichent (`idle`, `not-initialised`, `tampered`).
 
 **Sortie `--json`** : `{ slug, status, reason, steps: [{ step, phase, visits, attempts, retries,
 durationMs, costUsd, outcome }], totals: { attempts, retries, durationMs, costUsd }, answers:
-[{ key, kind, step, answer, reason, by }], startedAt, elapsedMs }`. Code 1 seulement pour
-`tampered`.
+[{ key, kind, step, answer, reason, by }], waiting: { key, kind, step, text, options } ou null,
+commits: [{ step, sha, subject, kind, verdict }], refusals: [{ step, times, failure }],
+incidents: [{ key, step, owner, log, answer }], startedAt, elapsedMs }` : `sha` court, `times`
+combien de fois une tentative ou une étape de gates de ce nœud a échoué, `failure` le premier
+échec, `answer` `null` tant que la question attend. Code 1 seulement
+pour `tampered`.
 
 ## `skraft publish`
 

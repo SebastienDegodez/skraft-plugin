@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { agent, API, finding, lenses, nominal, REFS_42, refutes, says, scripted, SLUG } from '../support/pipeline-host.mjs'
-import { InMemoryGit, ScriptedMachine, ScriptedReplay } from '../support/in-memory-host.mjs'
+import { InMemoryGit, ScriptedMachine, ScriptedReplay, judgeAnswer } from '../support/in-memory-host.mjs'
 import { ALL_KILLED, strykerReport } from '../support/mutation-reports.mjs'
 
 /** A front end in a repository of its own, which the story does not change. */
@@ -26,7 +26,6 @@ test('after each step the tracking folder holds qa-report.md: the test plan, eac
 
   assert.ok(seen[0].includes('\n## Gates\n\nNo gate has run yet.\n'), seen[0])
   const acceptance = 'test(checkout): acceptance of the card payment'
-  const red = 'test(checkout): Checkout pays by card'
   assert.equal(await host.tracking.read(SLUG, QA), [
     '<!-- markdownlint-disable-file -->',
     `# QA report — ${SLUG}`,
@@ -65,7 +64,6 @@ test('after each step the tracking folder holds qa-report.md: the test plan, eac
     '| Commit | Subject | Replay exit code |',
     '| --- | --- | ---: |',
     `| \`${shaOf(host, acceptance)}\` | \`${acceptance}\` | 1 |`,
-    `| \`${shaOf(host, red)}\` | \`${red}\` | 1 |`,
     '',
     '## Reviews',
     '',
@@ -108,8 +106,9 @@ test('before DISTILL the QA report has no test plan, no red commit and no gate; 
   ].join('\n'))
 })
 
-test('a red commit the machine could not replay is no TDD red commit of the QA report while the run waits for the machine', async () => {
+test('a red commit the machine could not replay is no TDD red commit of the QA report while the run waits for a human', async () => {
   const host = scripted({ replay: new ScriptedReplay({ exits: { 'root-1': null } }) }, (it) => [agent()(it), agent()(it), agent({ work: ({ git }) => git.commit('test(checkout): acceptance', ['tests/AcceptanceTests.cs']) })(it)])
+  host.agentRunner.judge = () => judgeAnswer('ask-human', 'dotnet is not installed')
 
   const outcome = await host.start()
 
@@ -126,16 +125,14 @@ test('a mutation score names each scope with every survivor, a commit subject wi
   const machine = new ScriptedMachine()
   const subject = 'test(checkout): `Order` pays by card | refund'
   const kill = 'test(checkout): kill the mutants of Order'
-  const work = ({ git }) => {
-    git.commit(subject, ['tests/OrderTests.cs'])
-    git.commit('feat(checkout): Order pays by card', ['src/Checkout.Domain/Order.cs', 'src/Checkout.Api/Endpoints.cs'])
-  }
+  const red = ({ git }) => git.commit(subject, ['tests/OrderTests.cs'])
+  const work = ({ git }) => git.commit('feat(checkout): Order pays by card', ['src/Checkout.Domain/Order.cs', 'src/Checkout.Api/Endpoints.cs'])
   const seen = []
   const killer = (it) => async (dispatch) => {
     seen.push(await it.tracking.read(SLUG, QA))
     await agent({ work: ({ git }) => git.commit(kill, ['tests/OrderKillTests.cs']) })(it)(dispatch)
   }
-  const host = scripted({ machine, answers: [{ answer: 'APPLY' }] }, (it) => [agent()(it), agent()(it), agent()(it), agent({ work })(it), agent()(it), killer(it)])
+  const host = scripted({ machine, answers: [{ answer: 'APPLY' }] }, (it) => [agent()(it), agent()(it), agent({ work: red })(it), agent({ work })(it), agent()(it), killer(it)])
   const reports = [report, ALL_KILLED]
   machine.meanwhile['. $ dotnet stryker'] = async () => {
     const next = reports.shift()
@@ -177,7 +174,7 @@ test('a review a lens the host could not start left open is in progress, with wh
 
 test('a component whose gates stopped before mutation shows its gates alone', async () => {
   const machine = new ScriptedMachine({ exits: { '. $ dotnet test': 1 } })
-  const deliver = (it) => agent({ work: ({ git }) => { git.commit('test(checkout): pay', ['tests/PayTests.cs']); git.commit('feat(checkout): pay', ['src/Pay.cs']) } })(it)
+  const deliver = (it) => agent({ work: ({ git }) => git.commit('feat(checkout): pay', ['tests/PayTests.cs', 'src/Pay.cs']) })(it)
   const host = scripted({ machine }, (it) => [agent()(it), agent()(it), agent()(it), deliver(it), () => ({ ok: false, unavailable: true, text: '' })])
 
   await host.start()
@@ -193,10 +190,7 @@ test('a component whose gates stopped before mutation shows its gates alone', as
 
 test('a mutation run whose report was not read says so, and shows no score or survivor of an earlier run', async () => {
   const machine = new ScriptedMachine()
-  const work = ({ git }) => {
-    git.commit('test(checkout): Order pays by card', ['tests/OrderTests.cs'])
-    git.commit('feat(checkout): Order pays by card', ['src/Checkout.Domain/Order.cs'])
-  }
+  const work = ({ git }) => git.commit('feat(checkout): Order pays by card', ['tests/OrderTests.cs', 'src/Checkout.Domain/Order.cs'])
   const seen = []
   const kill = ({ git, tracking }) => {
     seen.push(tracking.files.get(`${SLUG}/${QA}`))

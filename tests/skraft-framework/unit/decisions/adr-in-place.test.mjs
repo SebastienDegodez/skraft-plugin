@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { InMemoryGit } from '../support/in-memory-host.mjs'
-import { agent, scripted, SLUG } from '../support/pipeline-host.mjs'
+import { agent, scenarioReview, scripted, SLUG } from '../support/pipeline-host.mjs'
 import { ADR_1, ADR_2, adrText, afterDesign, architect, eventsOf, INDEX, indexFor, UNLISTABLE_ADRS, waitingOnEnvironment } from '../support/decisions.mjs'
 
 const REASON = 'tokens belong in ADR-001'
@@ -31,7 +31,7 @@ test('an ADR not on the default branch that a new ADR supersedes is refused; edi
     [2, 1, 'failed', 'adr-lifecycle', [`${ADR_2} supersedes ADR-001, which is not on the default branch yet: edit ${ADR_1} in place instead`]],
     [2, 2, 'done', null, []],
   ])
-  assert.deepEqual(host.human.questions.map((question) => question.key), ['adr-1', 'adr-2'])
+  assert.deepEqual(host.human.questions.map((question) => question.key), ['adr-1', 'adr-2', 'scenario_review-1'])
   assert.match(await host.workspace.read(ADR_1), /^title: Card payment with tokens\nstatus: Accepted$/m)
 })
 
@@ -76,7 +76,7 @@ test('an ADR ratified in this run and changed again must go back to Proposed bef
     [1, 1, 'failed', 'adr-lifecycle', [`${ADR_1} is not on the default branch yet and was changed: set its status back to Proposed; the engine asks for its ratification again`]],
     [1, 2, 'done', null, []],
   ])
-  assert.equal(host.human.questions.length, 1)
+  assert.deepEqual(host.human.questions.map((question) => question.key), ['adr-1', 'scenario_review-1'])
 })
 
 test('an unpublished ADR keeps no draft history: amended_in_place, amended_by or a history section are refused', async () => {
@@ -135,7 +135,10 @@ test('an ADR on the default branch is still superseded the usual way: a new ADR 
 
   assert.equal(outcome.status, 'done')
   assert.deepEqual(designRecords(host), [[1, 1, 'done', null, []]])
-  assert.deepEqual(host.human.questions.map((question) => question.text.split('?')[0]), [`Ratify the Proposed ADRs ${ADR_2}`])
+  assert.deepEqual(host.human.questions.map((question) => question.text.split('?')[0]), [
+    `Ratify the Proposed ADRs ${ADR_2}`,
+    scenarioReview({ sha: 'root-3' }).text,
+  ])
   assert.equal(await host.workspace.read(ADR_1), superseded)
 })
 

@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { ScriptedMachine } from '../support/in-memory-host.mjs'
-import { agent, scripted, SLUG, TRACKING } from '../support/pipeline-host.mjs'
+import { agent, scenarioReview, scripted, SLUG, TRACKING } from '../support/pipeline-host.mjs'
 import { ALL_KILLED, strykerReport } from '../support/mutation-reports.mjs'
 
 const REPORT = 'StrykerOutput/reports/mutation-report.json'
@@ -16,8 +16,7 @@ const twoFiles = strykerReport({
 
 const delivering = (it) => agent({
   work: ({ git }) => {
-    git.commit(`test(${SLUG}): checkout pays by card`, ['tests/CheckoutTests.cs'])
-    git.commit(`feat(${SLUG}): checkout pays by card`, ['src/Checkout.cs', 'src/Refund.cs'])
+    git.commit(`feat(${SLUG}): checkout pays by card`, ['tests/CheckoutTests.cs', 'src/Checkout.cs', 'src/Refund.cs'])
   },
 })(it)
 const upToDeliver = (it) => [agent()(it), agent()(it), agent()(it), delivering(it)]
@@ -75,14 +74,15 @@ test('a failing mutation run gets a proposal per file of survivors, then one que
     'filled in',
   ].join('\n')), proposal)
 
-  assert.deepEqual(host.human.questions.map(({ key, kind, options, header, text }) => [key, kind, options, header, text]), [[
+  const review = scenarioReview()
+  assert.deepEqual(host.human.questions.map(({ key, kind, options, header, text }) => [key, kind, options, header, text]), [[review.key, review.kind, review.options, review.header, review.text], [
     'mutation_plan-1', 'mutation-plan', ['APPLY', 'STOP'], 'Mutation',
     `The mutation gate failed; a proposal for its surviving mutants is in ${PROPOSALS.join(', ')}. APPLY applies it; or write how to treat them instead; STOP ends the run.`,
   ]])
-  const asked = host.events().find((event) => event.type === 'question.asked')
-  assert.deepEqual([asked.step, asked.subjects], ['mutation_plan', PROPOSALS])
+  const asked = host.events().filter((event) => event.type === 'question.asked')
+  assert.deepEqual(asked.map(({ step, subjects }) => [step, subjects]), [['scenario_review', ['tests/Acceptance/S1AcceptanceTests.cs']], ['mutation_plan', PROPOSALS]])
   const answered = host.events().filter((event) => event.type === 'question.answered')
-  assert.deepEqual(answered.map(({ key, answer, by }) => [key, answer, by]), [['mutation_plan-1', 'APPLY', 'host-confirmed']])
+  assert.deepEqual(answered.map(({ key, answer, by }) => [key, answer, by]), [['scenario_review-1', 'APPROVED', 'host-confirmed'], ['mutation_plan-1', 'APPLY', 'host-confirmed']])
 
   assert.ok(kill.prompt.includes(['A human chose how to go on:', `- Apply the proposals in ${PROPOSALS.map((path) => `/work/${path}`).join(', ')}`].join('\n')), kill.prompt)
   assert.ok(kill.prompt.includes('- Kill each mutant with a `test(<story>): …` commit whose test passes on the code as it is.'), kill.prompt)
@@ -152,7 +152,7 @@ test('with no answer at the host, the run waits on the mutation plan; skraft dec
   assert.equal((await host.decide({ answer: 'Keep', reason: 'the guard, mark it equivalent' })).ok, true)
   assert.deepEqual(await host.decide({ answer: 'APPLY' }), { ok: false, slug: SLUG, key: null, code: 'already-answered', reason: 'mutation_plan-1 was already answered' })
   assert.equal((await host.run()).status, 'done')
-  assert.deepEqual(host.events().filter((event) => event.type === 'question.answered').map(({ answer, by }) => [answer, by]), [['Keep the guard, mark it equivalent', 'decide']])
+  assert.deepEqual(host.events().filter((event) => event.type === 'question.answered').map(({ answer, by }) => [answer, by]), [['APPROVED', 'host'], ['Keep the guard, mark it equivalent', 'decide']])
   assert.ok(afterDeliver(host)[2].prompt.includes('A human chose how to go on:\n- Keep the guard, mark it equivalent\n'), afterDeliver(host)[2].prompt)
 })
 

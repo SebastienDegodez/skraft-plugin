@@ -205,8 +205,17 @@ export class ScriptedAgentRunner {
     this.batchCostUsd = undefined
     /** @type {((dispatch: {agent: string, label: string, prompt: string}) => Promise<object|void>) | null} what answers a pr-writer, apart from the queue */
     this.writer = null
+    /** @type {(dispatch: {agent: string, label: string, prompt: string}) => Promise<object|string>|object|string} what answers the replay judge, apart from the queue: it accepts */
+    this.judge = () => judgeAnswer('accept')
+    /** @type {Array<{agent: string, label: string, prompt: string}>} the replay judge's dispatches, kept apart from the queue's */
+    this.judged = []
+  }
+  async judging(dispatch) {
+    this.judged.push(dispatch)
+    return answerOf(await this.judge(dispatch))
   }
   async run(dispatch) {
+    if (dispatch.agent === 'replay-judge') return this.judging(dispatch)
     this.dispatches.push(dispatch)
     if (dispatch.agent === 'pr-writer' && this.writer !== null) return (await this.writer(dispatch)) ?? { ok: true, text: 'done' }
     const behaviour = this.behaviours.shift()
@@ -226,15 +235,26 @@ export class ScriptedAgentRunner {
   reviewed() { return this.batches.flat() }
 }
 
+/** The replay judge's answer: its decision and a note, as the brief asks. @param {string} decision @param {string} [note] */
+export const judgeAnswer = (decision, note = 'the logs show it') => ['```yaml', answerYaml({ decision, note }), '```'].join('\n')
+
+/** @param {object | string} answer */
+const answerOf = (answer) => (typeof answer === 'string' ? { ok: true, text: answer } : answer)
+
 /**
  * The human at the host: each question gets the next scripted answer, `{ answer, reason }`,
  * or null (dismissed, nobody there), or what a function of the question returns once it did
  * what the human does first (fix the machine); once the script runs out, every question gets null.
  */
 export class ScriptedHuman {
-  /** @param {Array<{ answer: string, reason?: string | null } | null>} answers */
-  constructor(answers = []) {
+  /**
+   * @param {Array<{ answer: string, reason?: string | null } | null>} answers
+   * @param {{ scenarioReviews?: Array<{ answer: string, reason?: string | null } | null> | null }} [options] the answers to
+   *   the scenario review, in order; null approves every one, as a human who reads and agrees
+   */
+  constructor(answers = [], { scenarioReviews = null } = {}) {
     this.answers = [...answers]
+    this.scenarioReviews = scenarioReviews === null ? null : [...scenarioReviews]
     /** @type {Array<{ key: string, kind: string, text: string, options: string[], refusals: string[], header: string }>} */
     this.questions = []
     /** @type {string[]} what the engine put in front of the human, in order */
@@ -243,10 +263,18 @@ export class ScriptedHuman {
   async show(view) { this.shown.push(view) }
   async ask(question) {
     this.questions.push(question)
+    if (question.kind === 'scenario-review') return this.reviewScenarios()
     const scripted = this.answers.shift() ?? null
     const next = typeof scripted === 'function' ? await scripted(question) : scripted
     return next === null ? null : { answer: next.answer, reason: next.reason ?? null }
   }
+}
+
+/** A scenario review answered: APPROVED unless scripted. */
+ScriptedHuman.prototype.reviewScenarios = function reviewScenarios() {
+  if (this.scenarioReviews === null) return { answer: 'APPROVED', reason: null }
+  const next = this.scenarioReviews.shift() ?? null
+  return next === null ? null : { answer: next.answer, reason: next.reason ?? null }
 }
 
 export class RecordingProgress {
@@ -387,14 +415,16 @@ const inside = (path, folder) => (folder === '' ? path : path.slice(folder.lengt
  */
 export class InMemoryGit {
   /**
-   * @param {{ repositories?: Record<string, { mergeBases?: Record<string, string>, tracked?: string[] | null }>, unavailable?: string | null, published?: string[], commitFails?: string | null, remote?: string | null }} [options]
+   * @param {{ repositories?: Record<string, { mergeBases?: Record<string, string>, tracked?: string[] | null }>, unavailable?: string | null, published?: string[], commitFails?: string | null, remote?: string | null, hex?: boolean }} [options]
    *   every repository starts with one commit, `<top>-0`, which its merge bases usually name;
    *   tracked: the files it already holds, relative to its top; null when Git cannot list them;
    *   published: the files that first commit holds, relative to the working copy; commitFails:
    *   why every commit the engine makes fails, null when it succeeds; remote: the URL of the
-   *   working copy's remote, null without one
+   *   working copy's remote, null without one; hex: commits named as Git names them, forty
+   *   hexadecimal digits (hexSha), rather than `<repository>-<n>`
    */
-  constructor({ repositories = { '.': { mergeBases: { main: 'root-0' } } }, unavailable = null, published = [], commitFails = null, remote = GITHUB_REMOTE } = {}) {
+  constructor({ repositories = { '.': { mergeBases: { main: 'root-0' } } }, unavailable = null, published = [], commitFails = null, remote = GITHUB_REMOTE, hex = false } = {}) {
+    this.hex = hex
     this.missing = unavailable
     this.remote = remote
     this.published = new Set(published.map(tidy))
@@ -409,7 +439,7 @@ export class InMemoryGit {
     this.repositories = new Map(Object.entries(repositories).map(([top, { mergeBases = {}, tracked = [] }]) => {
 
       const key = tidy(top)
-      return [key, { mergeBases, tracked, history: [{ sha: `${shaPrefix(key)}-0`, subject: 'initial', body: '', files: [] }], dirty: new Set() }]
+      return [key, { mergeBases, tracked, history: [{ sha: hex ? hexSha(0) : `${shaPrefix(key)}-0`, subject: 'initial', body: '', files: [] }], dirty: new Set() }]
     }))
   }
   /** The repository holding a working-copy path, and the path inside it. */
@@ -446,9 +476,17 @@ export class InMemoryGit {
     const files = paths.map((path) => this.locate(path).inner)
     for (const file of files) at.repo.dirty.delete(file)
     at.repo.made = (at.repo.made ?? 0) + 1
-    const sha = `${shaPrefix(at.top)}-${at.repo.made}`
+    const sha = this.hex ? hexSha(at.repo.made) : `${shaPrefix(at.top)}-${at.repo.made}`
     at.repo.history.push({ sha, subject, body, files })
     return sha
+  }
+  /** The subject of a commit of any repository, null for an unknown sha. @param {string} sha */
+  subjectOf(sha) {
+    for (const repo of this.repositories.values()) {
+      const found = repo.history.find((commit) => commit.sha === sha)
+      if (found) return found.subject
+    }
+    return null
   }
   async unavailable() { return this.missing }
   async remoteUrl() { return this.remote }
@@ -498,7 +536,7 @@ export class InMemoryGit {
     return this.published.has(file) || at.repo.history.slice(1, upTo + 1).some((commit) => commit.files.includes(at.inner))
   }
   async commitFiles(dir, paths, message) {
-    if (this.commitFails !== null) return { ok: false, error: this.commitFails }
+    if (this.commitFails !== null) return { ok: false, error: this.commitFails, output: `${this.commitFails}\nhusky - pre-commit script failed (code 1)\n` }
     this.engineCommits.push({ dir, paths, message })
     const [subject, ...rest] = message.split('\n')
     this.commit(subject, paths.map((path) => tidy(`${dir}/${path}`)), rest.join('\n').trim())
@@ -508,7 +546,7 @@ export class InMemoryGit {
   async commitCopies(dir, copies, message) {
     const refused = copies.filter(({ from }) => this.refuses.includes(from)).map(({ from }) => from)
     if (refused.length > 0) return { ok: false, error: 'refused', refused }
-    if (this.commitFails !== null) return { ok: false, error: this.commitFails }
+    if (this.commitFails !== null) return { ok: false, error: this.commitFails, output: `${this.commitFails}\nhusky - pre-commit script failed (code 1)\n` }
     this.copies.push(...copies.map(({ from, to }) => ({ from, to })))
     return this.commitFiles(dir, copies.map(({ to }) => to), message)
   }
@@ -536,6 +574,9 @@ export class InMemoryGit {
     this.patches[inner] = [...(this.patches[inner] ?? []), ...lines]
   }
 }
+/** The n-th commit of a repository whose commits are named as Git names them: `c0ffee<n>`, forty digits. @param {number} n */
+export const hexSha = (n) => `c0ffee${n}`.padEnd(40, '0')
+
 const shaPrefix = (top) => (top === '' ? 'root' : top.replaceAll('../', 'up-').replaceAll('/', '-'))
 
 /**
@@ -545,8 +586,9 @@ const shaPrefix = (top) => (top === '' ? 'root' : top.replaceAll('../', 'up-').r
  */
 export class ScriptedReplay {
   /**
-   * @param {{ exits?: Record<string, number | null>, outputs?: Record<string, string>, clock?: FixedClock | null, takesMs?: number }} [options]
-   *   exits: by `'<sha>'`, or by `'<sha> <argv>'` for one command at that commit; outputs: what a `'<sha> <argv>'` prints
+   * @param {{ exits?: Record<string, number | null | 'timeout'>, outputs?: Record<string, string>, clock?: FixedClock | null, takesMs?: number }} [options]
+   *   exits: by `'<sha>'`, or by `'<sha> <argv>'` for one command at that commit, `'timeout'` for a command the runner stopped
+   *   when its time ran out; outputs: what a `'<sha> <argv>'` prints
    */
   constructor({ exits = {}, outputs = {}, clock = null, takesMs = 0 } = {}) {
     this.exits = exits
@@ -562,19 +604,25 @@ export class ScriptedReplay {
     for (const argv of choices) {
       this.replays.push({ ...request, argv })
       const exitCode = this.exitOf({ ...request, argv })
+      if (exitCode === 'timeout') return { started: true, exitCode: null, stdout: '', stderr: '', error: `${argv[0]} did not finish within 600 s` }
       if (exitCode !== null) return { started: true, exitCode, stdout: this.outputs[`${request.sha} ${argv.join(' ')}`] ?? `${argv.join(' ')} at ${request.sha}\n`, stderr: '' }
     }
     return { started: false, exitCode: null, stdout: '', stderr: '', error: `could not start ${choices.map(([program]) => program).join(' nor ')}` }
   }
-  /** The exit of `'<sha> <argv>'` when scripted, else of the sha, else 1 (a failing test). */
+  /**
+   * The exit of `'<sha> <argv>'` when scripted, else of the sha, else 0 at a feat or fix commit
+   * of the git double it reads (its tests pass), else 1 (a failing test).
+   */
   exitOf({ sha, argv }) {
     const line = `${sha} ${argv.join(' ')}`
     if (line in this.exits) return this.exits[line]
-    return sha in this.exits ? this.exits[sha] : 1
+    if (sha in this.exits) return this.exits[sha]
+    return /^(feat|fix)\b/.test(this.git?.subjectOf(sha) ?? '') ? 0 : 1
   }
   /** The replays, as `'<sha> <repository>/<cwd> $ <argv>'`, then ` [import <roots>]` for a Python program's import roots. */
   lines() { return this.replays.map(({ sha, repository, cwd, argv, importRoots }) => `${sha} ${repository}/${cwd} $ ${argv.join(' ')}${importRoots.length > 0 ? ` [import ${importRoots.join(', ')}]` : ''}`) }
 }
+
 
 /** The agents the default workflow starts: its agents, its lenses and the refuter. */
 export const PLUGIN_AGENTS = Object.freeze([
@@ -582,7 +630,7 @@ export const PLUGIN_AGENTS = Object.freeze([
   'consistency-lens', 'architecture-compliance-lens', 'fitness-lens',
   'coverage-lens', 'business-alignment-lens', 'testability-lens', 'boundary-enforcement-lens',
   'test-integrity-lens', 'architecture-boundaries-lens', 'cold-reader-lens', 'mock-fidelity-lens', 'contract-fidelity-lens',
-  'finding-refuter', 'pr-writer',
+  'finding-refuter', 'pr-writer', 'replay-judge',
 ])
 
 /** The mocking and contract testing skills the plugin ships, the skills a component asks for. */

@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { BUILT_IN_WORKFLOW, InMemoryGit } from '../support/in-memory-host.mjs'
-import { agent, API, scripted, SLUG, tddCycle } from '../support/pipeline-host.mjs'
+import { agent, API, CYCLE, scripted, SLUG, TRACKING } from '../support/pipeline-host.mjs'
 import { waitingOnEnvironment } from '../support/decisions.mjs'
 
 /** A component that keeps its scenarios in docs/features, so its designer may write them there. */
@@ -19,9 +19,10 @@ test('the architect writing in src/ is refused with the files at fault, and told
 
   await host.start()
 
+  const outsideTdd = `commit root-2 "docs(checkout): sketch" changes a component's source or tests outside TDD; a docs, chore, build, ci or revert commit changes neither: put that change in the test, feat or fix commit it belongs to`
   const [refused] = recorded(host, 'design')
-  assert.deepEqual([refused.outcome, refused.code, refused.failures], ['failed', 'write-scope', ['out of write scope: src/Sketch.cs', 'out of write scope: src/Checkout.cs']])
-  assert.ok(host.agentRunner.dispatches[2].prompt.endsWith('\n\nRefused in attempt 1 of 3:\n- out of write scope: src/Sketch.cs\n- out of write scope: src/Checkout.cs'))
+  assert.deepEqual([refused.outcome, refused.code, refused.failures], ['failed', 'write-scope', ['out of write scope: src/Sketch.cs', 'out of write scope: src/Checkout.cs', outsideTdd]])
+  assert.ok(host.agentRunner.dispatches[2].prompt.endsWith(`\n\nRefused in attempt 1 of 3:\n- out of write scope: src/Sketch.cs\n- out of write scope: src/Checkout.cs\n- ${outsideTdd}`))
 })
 
 test('the researcher writing a design document under docs/ is refused: those are DESIGN\'s', async () => {
@@ -73,7 +74,7 @@ test('files out of scope stay refused on the next attempt of the pass, resumed o
 })
 
 test('the software engineer writing the source and test paths of its components is accepted', async () => {
-  const host = scripted({}, (it) => [agent()(it), agent()(it), agent()(it), agent({ work: (h) => { tddCycle()(h); h.git.commit('refactor(checkout): a card fixture', ['tests/Fixtures/card.json']); h.git.change(`.copilot-tracking/skraft-plans/${SLUG}/notes.md`) } })(it)])
+  const host = scripted({}, (it) => [agent()(it), agent()(it), agent()(it), agent({ work: (h) => { h.git.commit('feat(checkout): Checkout pays by card', ['src/Checkout.cs', 'tests/CheckoutTests.cs', 'tests/Fixtures/card.json']); h.git.change(`.copilot-tracking/skraft-plans/${SLUG}/notes.md`) } })(it)])
 
   const outcome = await host.start()
 
@@ -94,7 +95,7 @@ test('no agent may change skraft-config.json or the workflow file, even inside i
   const everywhere = { ...API, paths: { src: ['.'], tests: ['.'] } }
   const host = scripted({ components: [everywhere], files: { '.skraft/pipeline.skraft.dot': BUILT_IN_WORKFLOW } }, (it) => [
     agent()(it), agent()(it), agent()(it),
-    agent({ work: ({ git }) => { tddCycle()({ git }); git.commit('docs(checkout): the card payment in the README', ['README.md']); git.change('skraft-config.json', '.skraft/pipeline.skraft.dot') } })(it),
+    agent({ work: ({ git }) => { git.commit('feat(checkout): Checkout pays by card, as the README says', ['src/Checkout.cs', 'tests/CheckoutTests.cs', 'README.md']); git.change('skraft-config.json', '.skraft/pipeline.skraft.dot') } })(it),
     unavailable,
   ])
 
@@ -106,18 +107,18 @@ test('no agent may change skraft-config.json or the workflow file, even inside i
 test('a component in a neighbour repository is checked in that repository, against its own paths', async () => {
   const WEB = { name: 'web', root: '../web', stack: 'react', bdd: false, mocking: { strategy: 'inprocess' }, paths: { src: ['src'], tests: ['src'] }, commands: { test: 'npx vitest run' } }
   const git = new InMemoryGit({ repositories: { '.': { mergeBases: { main: 'root-0' } }, '../web': { mergeBases: { main: 'up-web-0' } } } })
-  const host = scripted({ components: [API, WEB], git }, (it) => [
-    agent()(it), agent()(it), agent()(it),
+  const host = scripted({ ...CYCLE, components: [API, WEB], git }, (it) => [
+    agent()(it), agent()(it),
     agent({ work: ({ git: repos }) => { repos.commit('test(checkout): cart', ['../web/src/Cart.test.tsx']); repos.commit('feat(checkout): cart', ['../web/src/Cart.tsx']); repos.commit('build(checkout): the cart\'s dependencies', ['../web/package.json']); repos.change('../web/scripts/release.sh', '../web/src/Draft.tsx') } })(it),
     unavailable,
   ])
 
   await host.start()
 
-  const started = host.events().find((event) => event.type === 'step.started' && event.step === 'deliver')
+  const started = host.events().find((event) => event.type === 'step.started' && event.step === 'distill')
   assert.deepEqual(started.heads, [{ repository: '.', sha: 'root-0', dirty: [] }, { repository: '../web', sha: 'up-web-0', dirty: [] }])
-  assert.deepEqual(recorded(host, 'deliver')[0].failures, ['out of write scope: ../web/scripts/release.sh', 'left uncommitted: ../web/src/Draft.tsx; commit it or undo the change'])
-  assert.deepEqual(host.replay.lines(), ['up-web-1 ../web/. $ npx vitest run'])
+  assert.deepEqual(recorded(host, 'distill')[0].failures, ['out of write scope: ../web/scripts/release.sh', 'left uncommitted: ../web/src/Draft.tsx; commit it or undo the change'])
+  assert.deepEqual(host.replay.lines(), ['up-web-1 ../web/. $ npx vitest run', 'up-web-0 ../web/. $ npx vitest run'], 'its red is replayed in that repository, then at its parent there')
 })
 
 test('Git that cannot list a repository\'s changes waits for a human; once retried, the step is checked again', async () => {
@@ -179,7 +180,7 @@ test('the acceptance designer writes the skeleton its failing test calls in the 
 
   assert.deepEqual(recorded(host, 'distill').map((event) => [event.outcome, event.failures]), [['done', []]])
 
-  const designing = scripted({}, (it) => [agent()(it), agent()(it), agent({ work: ({ git }) => git.change(...DESIGN_DOCUMENTS) })(it), unavailable])
+  const designing = scripted({}, (it) => [agent()(it), agent()(it), agent({ work: ({ git }) => { git.change(...DESIGN_DOCUMENTS); git.commit('test(checkout): pay by card', ['tests/Acceptance/PayTests.cs']) } })(it), unavailable])
   await designing.start()
   assert.deepEqual(recorded(designing, 'distill')[0].failures, DESIGN_DOCUMENTS.map((path) => `out of write scope: ${path}`))
 })
@@ -255,7 +256,7 @@ test('the engine commits what an agent with no shell left in a neighbour reposit
   assert.deepEqual(host.git.engineCommits.map(({ dir, paths }) => [dir, paths]), [['.', ['docs/architecture/context-map.md']], ['../web', ['docs/payment.md']]])
 })
 
-test('Git refusing the engine\'s commit of an architect\'s documents asks the human to fix the machine, with a message of its own', async () => {
+test('Git refusing the engine\'s commit of an architect\'s documents asks the human to fix the machine, with a message of its own and what Git printed, a hook\'s refusal included', async () => {
   const host = scripted({ git: new InMemoryGit({ commitFails: 'fatal: index.lock exists' }) }, (it) => [
     agent()(it),
     agent({ work: ({ git }) => git.change(...DESIGN_DOCUMENTS) })(it),
@@ -264,8 +265,9 @@ test('Git refusing the engine\'s commit of an architect\'s documents asks the hu
 
   const outcome = await host.start()
 
-  assert.deepEqual(outcome, { status: 'waiting', slug: SLUG, phase: 'DESIGN', code: 'environment', reason: waitingOnEnvironment('design', 'Git refused to commit what design wrote in .; check git status, then retry') })
+  assert.deepEqual(outcome, { status: 'waiting', slug: SLUG, phase: 'DESIGN', code: 'environment', reason: waitingOnEnvironment('design', 'Git refused to commit what design wrote in .; check git status, then retry', 1, { log: `${TRACKING}/logs/commit-design.log` }) })
   assert.deepEqual(recorded(host, 'design'), [])
+  assert.match(host.tracking.files.get(`${SLUG}/logs/commit-design.log`), /\n--- output\nfatal: index\.lock exists\nhusky - pre-commit script failed \(code 1\)\n/)
 })
 
 test('Git that cannot list what a repository holds uncommitted since the agent\'s last commit waits for a human', async () => {

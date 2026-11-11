@@ -62,7 +62,10 @@ Un run interrompu — hôte fermé, machine éteinte, agent arrêté — reprend
 arrêté : le moteur relit le journal et recalcule l'étape suivante. Rien n'est relancé « pour
 voir ». Une étape lancée dont la sortie est déjà remplie est enregistrée sans relancer l'agent ;
 un agent que l'hôte n'a pas pu lancer ne consomme pas sa tentative ; la base de comparaison git,
-journalisée au premier démarrage, reste celle du run. Une question sans réponse met le run en
+journalisée au premier démarrage, reste celle du run ; les tentatives consommées et les arêtes
+empruntées restent comptées, si bien qu'un échec qui revient sans cesse atteint toujours sa
+limite ; une story construite
+scénario par scénario reprend au scénario en cours. Une question sans réponse met le run en
 attente ; le relancer repose la même question et ne lance aucun agent.
 
 Un run que la v1 a laissé en cours n'est pas perdu : `skraft migrate` lui écrit un journal à

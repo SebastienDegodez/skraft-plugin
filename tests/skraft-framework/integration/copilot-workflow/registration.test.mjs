@@ -7,7 +7,7 @@ import { register } from '../../../../plugins/skraft-framework/engine/drivers/co
 import { createInit } from '../../../../plugins/skraft-framework/engine/application/pipeline/init-usecase.mjs'
 import { openJournal } from '../../../../plugins/skraft-framework/engine/application/journal/run-journal.mjs'
 import { createNodeAdapters } from '../../../../plugins/skraft-framework/engine/infrastructure/node-adapters.mjs'
-import { PLUGIN_ROOT, eventsPath, simulatedContext, stops, workingCopy, writesNothing } from './simulated-host.mjs'
+import { PLUGIN_ROOT, eventsPath, firstOptionPerson, simulatedContext, stops, workingCopy, writesNothing } from './simulated-host.mjs'
 import { registered, simulatedSdk } from './simulated-sdk.mjs'
 import { request, tokenOf } from '../pipeline-canvas/canvas-host.mjs'
 
@@ -157,8 +157,11 @@ const twoRepositories = async (t) => {
   return { first: a.cwd, second: b.cwd }
 }
 
-/** A session that reports this working directory once joined. */
-const joinedAt = (workingDirectory) => simulatedSdk({ session: { rpc: { metadata: { snapshot: async () => ({ workingDirectory }) } } } })
+/** A session that reports this working directory once joined, its person answering each question with its first option, a blocked step with STOP. */
+const joinedAt = (workingDirectory) => {
+  const person = firstOptionPerson()
+  return simulatedSdk({ session: { ...person, rpc: { ...person.rpc, metadata: { snapshot: async () => ({ workingDirectory }) } } } })
+}
 
 const registerWith = (sdk, home) => register({ defineWorkflow: sdk.defineWorkflow, joinSession: sdk.joinSession, createCanvas: sdk.createCanvas, CanvasError: sdk.CanvasError, pluginRoot: PLUGIN_ROOT, home })
 

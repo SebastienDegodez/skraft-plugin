@@ -33,7 +33,8 @@ const declineGherkin = (cwd) => {
   writeFileSync(file, `${JSON.stringify(config, null, 2)}\n`)
 }
 
-// Doctor asks no container runtime of any component. The plugin ships no mocking skill for Java:
+// The stub PATH holds no container runtime: doctor warns of it after the infrastructure of each
+// component's tests, one line per row, never failing. The plugin ships no mocking skill for Java:
 // doctor warns of it after the component's commands.
 for (const [fixture, stack, commands, paths, skills = []] of [
   ['payment', 'dotnet', ['build', 'format', 'test', 'mutation'], { src: ['src/'], tests: ['tests/'] }],
@@ -56,7 +57,9 @@ for (const [fixture, stack, commands, paths, skills = []] of [
     assert.equal(doctor.status, 1, doctor.stdout)
     const lines = doctor.stdout.trim().split(/\r?\n/)
     assert.deepEqual(checksOf(lines).map((line) => line.split(': ')[0]), [
-      'ok    plugin', 'ok    node', 'ok    config', 'WARN  forge', ...commands.map((name) => `ok    ${fixture}/${name}`), `FAIL  ${fixture}/bdd`, ...skills, 'ok    models/claude-code', 'WARN  models/copilot', 'ok    vscode',
+      'ok    plugin', 'ok    node', 'ok    config', 'WARN  forge', ...commands.map((name) => `ok    ${fixture}/${name}`), `FAIL  ${fixture}/bdd`, ...skills,
+      ...Array.from({ length: stack === 'react' ? 3 : 4 }, () => 'ok    infrastructure'), 'WARN  container-runtime',
+      'ok    models/claude-code', 'WARN  models/copilot', 'ok    vscode',
     ])
     assert.match(checksOf(lines).find((line) => line.startsWith('FAIL')), /bdd: the component does not say whether it describes its behaviour in Gherkin; run \/skraft-init, or write "bdd" in skraft-config\.json$/)
     assert.equal(lines.at(-1), 'skraft doctor: 1 checks failed')
@@ -68,7 +71,7 @@ for (const [fixture, stack, commands, paths, skills = []] of [
     writeFileSync(file, `${JSON.stringify(answered, null, 2)}\n`)
     const again = await skraft(cwd, ['doctor'], { env: machine(t) })
     assert.equal(again.status, 0, again.stdout)
-    assert.equal(again.stdout.trim().split(/\r?\n/).at(-1), `skraft doctor: no check failed, ${2 + skills.length} with a warning`)
+    assert.equal(again.stdout.trim().split(/\r?\n/).at(-1), `skraft doctor: no check failed, ${3 + skills.length} with a warning`)
   })
 }
 
@@ -178,7 +181,7 @@ test('doctor names the missing command and exits 1; the developer\'s command the
   assert.equal((await skraft(cwd, ['doctor'], { env })).status, 0)
 })
 
-test('doctor passes on Microcks components without any container runtime on the machine', async (t) => {
+test('doctor passes on Microcks components without any container runtime on the machine, warning that their container scenarios will be indeterminate', async (t) => {
   const cwd = copyFixture(FIXTURES['payment-fastapi'], join(tempFolder(t), 'payment-fastapi'))
   const env = machine(t, ['python'])
   assert.equal((await skraft(cwd, ['init'], { env })).status, 0)
@@ -187,7 +190,10 @@ test('doctor passes on Microcks components without any container runtime on the 
   const report = await skraft(cwd, ['doctor', '--json'], { env })
 
   assert.equal(report.status, 0)
-  assert.deepEqual(JSON.parse(report.stdout).checks.filter(({ status }) => status !== 'ok').map(({ subject }) => subject), ['forge', 'models/copilot'])
+  const { checks } = JSON.parse(report.stdout)
+  assert.deepEqual(checks.filter(({ status }) => status !== 'ok').map(({ subject }) => subject), ['forge', 'container-runtime', 'models/copilot'])
+  assert.equal(checks.find(({ subject }) => subject === 'container-runtime').detail, 'neither docker nor podman is on the PATH; the tests that need Microcks or Testcontainers cannot run until Docker or Podman runs')
+  assert.equal(checks.find(({ detail }) => detail.includes('external gateway')).detail, 'payment-fastapi (python) external gateway: microcks (targeted), microcks (walking skeleton) — Microcks uber native image via Testcontainers, one container per test session; source plugin')
 })
 
 test('python runs from the virtual environment of the component, laid out the way this OS makes one', async (t) => {

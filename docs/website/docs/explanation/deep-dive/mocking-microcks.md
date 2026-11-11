@@ -37,16 +37,33 @@ graph LR
 
 Mocking is **consumer-side**: it replaces what the service-under-test calls, never
 the service itself. The strategy is the component's `mocking.strategy` in
-`skraft-config.json` — `microcks` by default for every stack — and the engine names the
+`skraft-config.json` — `microcks` by default for every stack but React, `inprocess` there — and the engine names the
 matching skill in the brief; the agent never chooses it.
 
 | Resolved strategy | Concrete wiring |
 | --- | --- |
-| `microcks` (default) | a Microcks container seeded from the downstream contract |
-| `inprocess` (override) | an in-process double — `fakeiteasy`, `nsubstitute` or `moq` |
+| `microcks` (default but for React) | a Microcks container seeded from the downstream contract |
+| `inprocess` (React's default, an override elsewhere) | an in-process double — `fakeiteasy`, `nsubstitute` or `moq` in .NET; MSW in front of a React component's back end |
 
-The wiring goes through the same red/green commits as the business code (the test
-fails first, then passes). The downstream is mocked; the service-under-test is not.
+The wiring goes into the scenario's commits, like the business code: the acceptance test DISTILL
+committed fails first, the software engineer's green makes it pass. The downstream is mocked;
+the service-under-test is not.
+
+## Where Microcks runs
+
+Mocking is one row of a wider [infrastructure policy](../../reference/skraft-config.md#infrastructure):
+what a component's tests run each kind of dependency on. An external gateway — a REST, SOAP,
+GraphQL or gRPC service, a broker such as Kafka, RabbitMQ or MQTT, a webhook sent — runs on Microcks, in a
+targeted scenario and in the walking skeleton alike. A React front end stands in for its back end
+with MSW in targeted tests, and runs its Playwright end-to-end tests against Microcks. The
+policy's defaults come from the plugin, per stack; DISTILL receives the effective one in its brief,
+and `skraft doctor` shows it with its source.
+
+The tests start Microcks themselves, through Testcontainers, from the uber native image, one
+container per test session, in the global setup of the test framework (xUnit, JUnit, pytest,
+Vitest, Playwright). Docker and Podman both serve. With neither answering, nothing skips the test nor swaps Microcks for an in-process double: the
+replay judge reads the replay's log and asks a human to start one, and the run waits
+([Commits and replays](../../reference/gates.md#commits)).
 
 ## How the fidelity lens audits it
 

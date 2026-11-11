@@ -14,7 +14,7 @@ tools:
 Find every integration test whose downstream mock is wired against the component's mocking strategy, not wired at all, or replaced by a real call. Report; never repair.
 
 - Read the patch; open a whole file only when the patch lacks the context a finding needs.
-- Read the components file your brief lists: the component whose `root` holds the test sets the strategy in `mocking.strategy`; a component without `mocking` uses `microcks`.
+- Read the components file your brief lists: the component whose `root` holds the test sets the strategy in `mocking.strategy`; a component without `mocking` uses `microcks`, a `react` one `inprocess`.
 
 | Gate | Name | Criterion | Severity |
 |---|---|---|---|
@@ -25,8 +25,8 @@ Find every integration test whose downstream mock is wired against the component
 
 ## M1 — strategy followed
 
-- Strategy `inprocess`: the test uses an in-process double injected into the test host, never a Microcks container.
-- Strategy `microcks`: the test seeds a Microcks container from the downstream contract, never a hand-rolled `HttpMessageHandler` or in-process double.
+- Strategy `inprocess`: the test uses an in-process double injected into the test host, never a Microcks container; a React front end's Playwright e2e test reaches the back end through Microcks whatever its strategy.
+- Strategy `microcks`: the test reaches a Microcks container seeded from the downstream contract, the test session's one from the global setup, never a hand-rolled `HttpMessageHandler` or in-process double.
 
 ## M2 — mock wired
 

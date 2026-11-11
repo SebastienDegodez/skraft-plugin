@@ -36,33 +36,61 @@ ports rend cette première traversée possible sans figer l'infrastructure.
 
 ## Application dans SKRAFT
 
-En DELIVER, la première slice livrée pour une feature est délibérément un walking
-skeleton. La gate DISTILL **G8** l'exige : « au moins un scénario walking skeleton par
-flux majeur ».
+Chaque story commence par lui. En DISTILL, le plan de test liste les scénarios dans l'ordre où
+DELIVER les construit ; S1, tagué `@walking-skeleton`, est le walking skeleton, dans un composant
+back : point d'entrée → cas d'usage → vraie base. Le moteur refuse un plan qui tague un autre
+scénario, n'en tague aucun, ou place S1 dans un front React. DISTILL commite d'abord le test
+d'acceptation en échec de S1, un humain le lit avec les autres scénarios, et DELIVER le fait
+passer avant qu'aucun autre scénario n'ait son test. La lentille `boundary-enforcement` vérifie
+toujours, par la gate **G8**, que chaque flux a son scénario walking skeleton.
 
 ```text
-Slice 1 (walking skeleton) — traverse TOUT, fait le minimum :
-  API  ──►  Application (use case)  ──►  Domain  ──►  Infrastructure
-  (1 endpoint)   (1 handler)         (1 invariant)   (1 repo stub)
+S1 (walking skeleton) — traverse TOUT, fait le minimum :
+  point d'entrée ──►  cas d'usage  ──►  Domain  ──►  vraie base
+  (réel)             (1 handler)     (1 invariant)  (Testcontainers)
 
   ✔ le scénario d'acceptation end-to-end passe
-  ✔ le déploiement fonctionne
   ✔ chaque frontière est câblée
 
-Slices suivantes — on épaissit chaque couche sur ce squelette vivant.
+S2…SN — scénarios ciblés qui épaississent chaque couche sur ce squelette vivant.
 ```
 
 Le pipeline gagne une preuve d'intégration **dès la première tranche**, au lieu de la
 repousser. Tout ce qui suit s'ajoute à un système qui marche déjà.
 
+Ce sur quoi tourne chaque sorte de dépendance distingue S1 des scénarios ciblés qui suivent :
+
+| Dépendance | Scénarios ciblés | Walking skeleton |
+| --- | --- | --- |
+| Point d'entrée (contrôleur, CLI, UI, webhook reçu, topic consommé) | en process | réel |
+| Gateway interne (repository, base, cache) | en mémoire | Testcontainers |
+| Gateway externe (REST, SOAP, GraphQL, gRPC, Kafka, webhook émis…) | Microcks | Microcks |
+| Horloge, aléa | fake | fake |
+
+Ce sont les défauts du plugin ; une équipe les surcharge par composant dans `skraft-config.json`
+([politique d'infrastructure](../../reference/skraft-config.md#infrastructure)). Un front React ne
+porte pas de walking skeleton à lui : ses tests ciblés remplacent le back par MSW, ses tests
+end-to-end Playwright tournent contre Microcks. Un test qui a besoin d'un conteneur ne tourne
+jamais sans : quand ni Docker ni Podman ne répond, le juge du rejeu demande à un humain d'en
+démarrer un et le run attend.
+
+Toute story n'ouvre pas un nouveau chemin. Celle qui n'ajoute aucun point d'entrée déclare
+pourquoi sous le tableau : `library` (une pure librairie), `refactoring` (aucune nouvelle
+interface publique) ou `docs-only` (configuration ou documents seulement). Le moteur vérifie la
+dernière contre le diff : une story `docs-only` dont les commits changent la source d'un
+composant est refusée.
+
 ## Pièges & anti-patterns
 
-- **Faux skeleton** : une tranche qui saute une couche (ex. simule l'API en mémoire)
+- **Faux skeleton** : une tranche qui saute une couche (ex. simule l'API ou la base en mémoire)
   ne prouve pas l'intégration — ce n'est pas un walking skeleton.
 - **Skeleton trop gros** : vouloir tout faire « correctement » dès la slice 1 annule
   le bénéfice ; la première tranche doit être *minuscule*.
 - **Le laisser mourir** : un squelette qui n'est plus exécuté en CI cesse d'être une
   preuve d'intégration.
+- **Une exemption de confort** : déclarer `library` ou `refactoring` pour sauter le squelette. Le
+  moteur ne vérifie que `docs-only` contre le diff ; l'humain qui lit les scénarios est là pour
+  les autres.
 
 ## Sources
 

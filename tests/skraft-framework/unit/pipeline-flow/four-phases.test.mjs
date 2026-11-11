@@ -20,7 +20,7 @@ test('the nominal run goes through RESEARCH, DESIGN, DISTILL and DELIVER, the ga
     `solution-researcher plugin skraft ${SLUG} · research · attempt 1`,
     `solution-architect plugin skraft ${SLUG} · design · attempt 1`,
     `acceptance-designer plugin skraft ${SLUG} · distill · attempt 1`,
-    `software-engineer plugin skraft ${SLUG} · deliver · attempt 1`,
+    `software-engineer plugin skraft ${SLUG} · deliver · scenario 1 of 1 · attempt 1`,
     `pr-writer plugin skraft ${SLUG} · pr_writer · attempt 1`,
   ])
   assert.deepEqual(host.types(), [
@@ -30,7 +30,8 @@ test('the nominal run goes through RESEARCH, DESIGN, DISTILL and DELIVER, the ga
     'step.started', 'review.lens', 'review.lens', 'review.lens', 'step.recorded',
     'step.started', 'step.recorded', 'phase.closed', 'issue.comment-skipped',
     'step.started', 'commits.checked', 'step.recorded',
-    'step.started', 'review.lens', 'review.lens', 'review.lens', 'review.lens', 'step.recorded', 'phase.closed', 'issue.comment-skipped',
+    'step.started', 'review.lens', 'review.lens', 'review.lens', 'review.lens', 'step.recorded',
+    'step.started', 'question.asked', 'question.answered', 'step.recorded', 'phase.closed', 'issue.comment-skipped',
     'step.started', 'commits.checked', 'step.recorded',
     'step.started', 'gate.ran', 'gate.ran', 'step.recorded',
     'step.started', 'review.lens', 'review.lens', 'review.lens', 'step.recorded',
@@ -52,7 +53,8 @@ test('the nominal run goes through RESEARCH, DESIGN, DISTILL and DELIVER, the ga
     ['design_review', 'approved', null, 'adr'],
     ['adr', 'skipped', null, 'distill'],
     ['distill', 'done', null, 'distill_review'],
-    ['distill_review', 'approved', null, 'deliver'],
+    ['distill_review', 'approved', null, 'scenario_review'],
+    ['scenario_review', 'answered', null, 'deliver'],
     ['deliver', 'done', null, 'gates'],
     ['gates', 'pass', null, 'deliver_review'],
     ['deliver_review', 'approved', null, 'mutation'],
@@ -68,9 +70,9 @@ test('the nominal run goes through RESEARCH, DESIGN, DISTILL and DELIVER, the ga
     'phase DESIGN', `${SLUG}: solution-architect, attempt 1 — planner · frontier · opus`,
     `${SLUG}: design_review (consistency, architecture-compliance, fitness) — reviewer · economy · haiku`, `${SLUG}: design_review APPROVED: every lens passed`,
     `${SLUG}: adr RATIFIED (no Proposed ADR to ratify)`, `${SLUG}: DESIGN closed`,
-    'phase DISTILL', `${SLUG}: acceptance-designer, attempt 1 — implementer · standard · sonnet`,
-    `${SLUG}: distill_review (coverage, business-alignment, testability, boundary-enforcement) — reviewer · economy · haiku`, `${SLUG}: distill_review APPROVED: every lens passed`, `${SLUG}: DISTILL closed`,
-    'phase DELIVER', `${SLUG}: software-engineer, attempt 1 — implementer · standard · sonnet`, `${SLUG}: gates (build, format, lint, test, architecture, coverage)`,
+    'phase DISTILL', `${SLUG}: acceptance-designer, attempt 1 — implementer · standard · sonnet`, `${SLUG}: distill judges the red commit root-2 — standard · sonnet`,
+    `${SLUG}: distill_review (coverage, business-alignment, testability, boundary-enforcement) — reviewer · economy · haiku`, `${SLUG}: distill_review APPROVED: every lens passed`, `${SLUG}: scenario_review APPROVED`, `${SLUG}: DISTILL closed`,
+    'phase DELIVER', `${SLUG}: software-engineer, attempt 1 — implementer · standard · sonnet`, `${SLUG}: deliver judges the green commit root-3 — standard · sonnet`, `${SLUG}: gates (build, format, lint, test, architecture, coverage)`,
     `${SLUG}: deliver_review (test-integrity, architecture-boundaries, cold-reader, mock-fidelity, contract-fidelity) — reviewer · economy · haiku`, `${SLUG}: deliver_review APPROVED: every lens passed`, `${SLUG}: mutation (mutation)`,
     `${SLUG}: visuals: no component of skraft-config.json is a front end (stack react, or an e2e command)`, `${SLUG}: DELIVER closed`,
     'phase PUBLISH', `${SLUG}: pr-writer, attempt 1 — economy · haiku`, `${SLUG}: publish: pull request not opened: skraft-config.json sets publish.pullRequest to false; pull-request.md holds its description, and skraft publish opens it once that is fixed`, `${SLUG}: PUBLISH closed`,
@@ -94,6 +96,7 @@ test('each agent is told its story, inputs, outputs, result file and the paths i
     '- Fill each output in place; keep the path, create no other copy:',
     `- ${TRACKING}/${RESEARCH}`,
     `- Write your result as JSON to ${TRACKING}/results/research-1-1.json: ${RESULT_SHAPE}`,
+    `- Send what the commands you run print to files under ${TRACKING}/logs/, and keep your temporary files under ${TRACKING}/.tmp/; write no file outside the working copy, the system's temporary folder included.`,
     '- Change nothing outside these paths of the working copy; the engine refuses the step otherwise:',
     `- .copilot-tracking/skraft-plans/${SLUG}`,
   ].join('\n'))
@@ -109,6 +112,7 @@ test('each agent is told its story, inputs, outputs, result file and the paths i
     '- Fill each output in place; keep the path, create no other copy:',
     `- ${TRACKING}/${MATRIX}`,
     `- Write your result as JSON to ${TRACKING}/results/design-1-1.json: ${RESULT_SHAPE}`,
+    `- Send what the commands you run print to files under ${TRACKING}/logs/, and keep your temporary files under ${TRACKING}/.tmp/; write no file outside the working copy, the system's temporary folder included.`,
     '- Change nothing outside these paths of the working copy; the engine refuses the step otherwise:',
     `- .copilot-tracking/skraft-plans/${SLUG}`,
     '- docs/adr',
@@ -130,7 +134,8 @@ test('each agent is told its story, inputs, outputs, result file and the paths i
     `- ${TRACKING}/${TEST_PLAN}`,
     '- Fill each output in place; keep the path, create no other copy:',
     `- ${TRACKING}/${CHANGE_LOG}`,
-    `- Write your result as JSON to ${TRACKING}/results/deliver-1-1.json: ${RESULT_SHAPE}`,
+    `- Write your result as JSON to ${TRACKING}/results/deliver-1-g1-1.json: ${RESULT_SHAPE}`,
+    `- Send what the commands you run print to files under ${TRACKING}/logs/, and keep your temporary files under ${TRACKING}/.tmp/; write no file outside the working copy, the system's temporary folder included.`,
     '- Change nothing outside these paths of the working copy; the engine refuses the step otherwise:',
     `- .copilot-tracking/skraft-plans/${SLUG}`,
     '- src',
@@ -138,16 +143,14 @@ test('each agent is told its story, inputs, outputs, result file and the paths i
     '- ./* (the files right in the root of api)',
     '- Components:',
     '- api: . (dotnet), mocking: inprocess, contract testing: off, bdd: off, tests: dotnet test',
-    '- Commit each TDD cycle: `test(<story>): …` with the failing test, then `feat(<story>): …` or `fix(<story>): …` with the code that makes it pass,',
-    '  then `refactor(<story>): …` if needed. Tests that pass from the start (coverage) go with the code they cover, or in a `refactor` commit;',
-    '  lint and format fixes in a `style` commit. The engine runs the tests at every test commit and refuses one whose tests pass,',
-    '  a feat or fix commit with no test commit since the last feat or fix (on a pass the gates sent back, their failure counts as that test),',
-    '  and any commit that is not `type(scope): subject`. A refused commit stays refused until you rewrite it.',
-    '  A test commit whose only failing tests are e2e tests holds all of them, or a failing unit test too; otherwise they go in the feat or fix that makes them pass.',
     '- Commit every file you change outside the tracking folder before you write your result, as `type(<story>): subject` (`docs(<story>): …` for a document); the engine refuses a change left uncommitted.',
     '- End every commit body with `Refs: #42`; never close the issue in a commit: the pull request closes it.',
-    '- The acceptance tests DISTILL committed stay red until your code passes them; they are not the test of your first cycle:',
-    `  your first commit is a failing \`test(<story>): …\` of the inner loop, never a \`feat\`. DISTILL's: ${distillRed} "test(checkout): acceptance of the card payment"`,
+    '- Scenario: 1 of 1 — "Customer pays by card" (component api, tags @walking-skeleton)',
+    '- Acceptance tests DISTILL committed, which you never change (a wrong one: stop blocked, naming it):',
+    `- ${distillRed} "test(checkout): acceptance of the card payment": tests/Acceptance/CheckoutAcceptanceTests.cs`,
+    '- Make it pass with outside-in TDD, unit tests included, and commit nothing until it passes; change no file of another component than api.',
+    '- Once it passes, commit once, in bash (never PowerShell), naming each file you changed:',
+    '  dotnet test && git add <each file you changed> && git commit -s -m "feat(checkout): customer pays by card" -m "Refs: #42"',
     '- Gate commands: before you write your result, run those of each component you changed, from its root, and fix every failure; the gates step runs them next and sends a failure back as a new pass:',
     '- api: build: dotnet build; test: dotnet test',
   ].join('\n'))
@@ -158,12 +161,21 @@ test('each agent is told its story, inputs, outputs, result file and the paths i
     '- ./* (the files right in the root of api)',
     '- Components:',
     '- api: . (dotnet), mocking: inprocess, contract testing: off, bdd: off, tests: dotnet test',
-    '- Commit the failing acceptance tests as `test(<story>): …`, with the skeleton they call: the use cases the event model names, each answering',
-    '  the empty value of its type, no behaviour; a test failing on a missing module proves nothing. The engine runs the tests at every test commit and refuses one whose tests pass,',
-    '  and any commit that is not `type(scope): subject`. A refused commit stays refused until you rewrite it.',
-    '  A test commit whose only failing tests are e2e tests holds all of them, or a failing unit test too; otherwise they go in the feat or fix that makes them pass.',
     '- Commit every file you change outside the tracking folder before you write your result, as `type(<story>): subject` (`docs(<story>): …` for a document); the engine refuses a change left uncommitted.',
     '- End every commit body with `Refs: #42`; never close the issue in a commit: the pull request closes it.',
+    '- Scenarios: write every scenario of the story, then list them in your test plan under a `## Scenarios` heading, as the table',
+    '  `| # | Scenario | Component | Tags |`, one row per scenario, S1, S2, … in the order DELIVER builds them, each in the component where its test lives.',
+    '  S1 is the walking skeleton, tagged `@walking-skeleton`, in a back-end component; a story with no new entry point writes instead',
+    '  `Walking skeleton exemption: library`, `refactoring` or `docs-only` under the table, and tags no scenario `@walking-skeleton`.',
+    '- Write the failing acceptance test of S1 only, with the skeleton it calls; write no test for a later scenario and never skip one:',
+    '  each next scenario gets its own pass once the one before passes.',
+    '- Run the test once and read its output: it fails on an assertion. Then commit the test, the skeleton and the scenarios in one commit, exactly:',
+    '  git commit -s -m "test(checkout): <the title of S1, as your test plan writes it>" -m "Refs: #42"',
+    '- How the tests of each component treat what the code depends on, in the targeted scenarios and in the walking skeleton S1:',
+    '- api (dotnet) entry point: in-process (targeted), real (walking skeleton) — WebApplicationFactory; source plugin',
+    '- api (dotnet) internal gateway: in-memory (targeted), testcontainers (walking skeleton) — Testcontainers; source plugin',
+    '- api (dotnet) external gateway: in-process (targeted), in-process (walking skeleton) — WebApplicationFactory; source skraft-config.json (mocking.strategy)',
+    '- api (dotnet) clock: fake (targeted), fake (walking skeleton); source plugin',
     '- Before you write your result, check your outputs against every gate of /plugin/skills/acceptance-review-criteria/SKILL.md, the gates the review of your phase judges them by, and fix each one they fail.',
   ].join('\n')), host.agentRunner.dispatches[2].prompt)
 })
@@ -213,7 +225,7 @@ test('a document left as its template, with a placeholder left, blank or deleted
     async (it) => it.tracking.write(SLUG, RESEARCH, '  \n'),
     async (it) => { it.tracking.files.delete(`${SLUG}/${RESEARCH}`) },
   ]) {
-    const host = scripted({}, (it) => [agent({ fill: false, work: () => write(it) })(it), agent({ fill: false, work: () => write(it) })(it)])
+    const host = scripted({ answers: [{ answer: 'STOP' }] }, (it) => [agent({ fill: false, work: () => write(it) })(it), agent({ fill: false, work: () => write(it) })(it)])
 
     const outcome = await host.start()
 
@@ -250,6 +262,7 @@ test('a missing document is asked again with its path, and a retry that fills it
     '- Fill each output in place; keep the path, create no other copy:',
     `- ${TRACKING}/${RESEARCH}`,
     `- Write your result as JSON to ${TRACKING}/results/research-1-2.json: ${RESULT_SHAPE}`,
+    `- Send what the commands you run print to files under ${TRACKING}/logs/, and keep your temporary files under ${TRACKING}/.tmp/; write no file outside the working copy, the system's temporary folder included.`,
     '- Change nothing outside these paths of the working copy; the engine refuses the step otherwise:',
     `- .copilot-tracking/skraft-plans/${SLUG}`,
     '',
@@ -370,7 +383,7 @@ test('a run whose journal another writer changed meanwhile stops without breakin
 })
 
 test('a blocked run run again writes nothing more', async () => {
-  const host = scripted({}, (it) => [agent({ fill: false })(it), agent({ fill: false })(it)])
+  const host = scripted({ answers: [{ answer: 'STOP' }] }, (it) => [agent({ fill: false })(it), agent({ fill: false })(it)])
   const first = await host.start()
   const lines = await host.tracking.lines(SLUG)
 

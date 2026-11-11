@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { InMemoryGit } from '../support/in-memory-host.mjs'
-import { agent, scripted, SLUG } from '../support/pipeline-host.mjs'
+import { agent, scripted, SLUG, TRACKING } from '../support/pipeline-host.mjs'
 import { ADR_1, ADR_2, adrText, afterDesign, architect, dispatched, eventsOf } from '../support/decisions.mjs'
 
 const REASON = 'Stripe is not allowed here: use the bank gateway'
@@ -17,9 +17,9 @@ test('a rejected ADR sends the architect back with the human\'s reason, on a new
   assert.equal(outcome.status, 'done')
   assert.deepEqual(dispatched(host).slice(1, 3), [`skraft ${SLUG} · design · attempt 1`, `skraft ${SLUG} · design · pass 2 · attempt 1`])
   const brief = host.agentRunner.dispatches[2].prompt
-  assert.ok(brief.includes('- Pass: 2, after a human refused the work'), brief)
+  assert.ok(brief.includes('- Pass: 2, after a human sent the work back'), brief)
   assert.ok(brief.endsWith(['', 'A human refused the work of pass 1:', `- ${ADR_1}: ${REASON}`].join('\n')), brief)
-  assert.deepEqual(eventsOf(host, 'question.answered').map(({ key, answer, reason }) => [key, answer, reason]), [['adr-1', 'REJECTED', REASON], ['adr-2', 'RATIFIED', null]])
+  assert.deepEqual(eventsOf(host, 'question.answered').map(({ key, answer, reason }) => [key, answer, reason]), [['adr-1', 'REJECTED', REASON], ['adr-2', 'RATIFIED', null], ['scenario_review-1', 'APPROVED', null]])
   assert.deepEqual(eventsOf(host, 'step.recorded').filter((event) => event.step === 'adr').map(({ visit, answer, next, failures }) => [visit, answer, next, failures]), [
     [1, 'REJECTED', 'design', [`${ADR_1}: ${REASON}`]],
     [2, 'RATIFIED', 'distill', []],
@@ -51,7 +51,7 @@ test('rejected as often as the REJECTED edge allows, the run stops at its max_vi
   })
   assert.equal(host.agentRunner.dispatches.length, 3)
   // An ask node at its ceiling is no review: the question is the blocked one, with what the rejection left.
-  assert.deepEqual(eventsOf(host, 'question.asked').at(-1).text, `design is blocked: adr -> design was taken as often as its max_visits allows.\nLeft by adr (1):\n- ${ADR_1}: round 2\n An instruction runs design again on a new pass with what is left above and the instruction; STOP ends the run.`)
+  assert.deepEqual(eventsOf(host, 'question.asked').at(-1).text, `design is blocked: adr -> design was taken as often as its max_visits allows.\nLeft by adr (1):\n- ${ADR_1}: round 2\n An instruction runs design again on a new pass with what is left above and the instruction; STOP ends the run.\nThe run so far (commits, refusals, incidents): ${TRACKING}/run-report.md`)
 })
 
 test('a published ADR the human rejects is not touched by the engine', async () => {

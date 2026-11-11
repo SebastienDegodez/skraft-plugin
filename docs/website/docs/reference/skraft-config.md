@@ -67,7 +67,7 @@ flowchart TD
 | `tdd` | object | `{ "replay": "all" }` | `{ "replay": "all" }`, `{ "replay": "last-red" }`; `replay` absent or `null` counts as `all`; see [tdd](#tdd) |
 | `publish` | object | `{}` | see [publish](#publish) |
 | `models` | object | the plugin's Claude Code aliases per tier | model family → `tier` and, per host (`claude-code`, `copilot`), `{ "model": name or list, "effort": level }`; see [Choose the agents' models](../how-to/choose-models.md) |
-| `assign` | object | lenses `reviewer`, workers `implementer`, `solution-researcher` `researcher`, `solution-architect` `planner`, `pr-writer` `economy`, default `implementer` | `{ "default", "types", "agents" }`: a family, `inherit`, or `{ "family", "<host>": { "effort" } }`; also read from `~/.skraft/config.json` and `skraft-config.local.json` |
+| `assign` | object | lenses `reviewer`, workers `implementer`, `solution-researcher` `researcher`, `solution-architect` `planner`, `pr-writer` `economy`, `replay-judge` `standard`, default `implementer` | `{ "default", "types", "agents" }`: a family, `inherit`, or `{ "family", "<host>": { "effort" } }`; also read from `~/.skraft/config.json` and `skraft-config.local.json` |
 | `rank`, `workflow` | — | — | refused: `rank is no key: …`, `workflow is no key: …` |
 | `configurationConfirmed` | boolean | `false` | in `skraft-config.local.json` only (refused in this file and in `~/.skraft/config.json`). Written `true` by the engine when you answer START to *Start this run with the configuration of this working copy?*, which a Copilot run asks before its first phase while it is absent, and again with `configure: true`. The Configuration tab of the skraft canvas edits the forge, the components and the consents of this file and the `assign` and `models` of `skraft-config.local.json`, checked as a run loads them |
 | any other key | any | — | kept as is, never read or rewritten |
@@ -86,26 +86,64 @@ Any key outside this list is refused.
 | `stack` | string | required | `dotnet`, `java`, `python`, `typescript`, `javascript` or `react` |
 | `commands` | object | `{}` | name → command line; name among `build`, `format`, `lint`, `test`, `architecture`, `coverage`, `mutation`, `e2e`; non-empty line |
 | `baseBranch` | string | absent (falls back to the global `baseBranch`) | git ref; `null` counts as absent |
-| `mocking` | object | `inprocess` for `typescript`, `javascript` and `react`, `microcks` otherwise | `strategy` is `microcks`, `inprocess` or `null`; absent or `null` means the stack's default. The engine passes it in the brief and picks the matching mocking skill |
+| `mocking` | object | `inprocess` for `react`, `microcks` otherwise | `strategy` is `microcks`, `inprocess` or `null`; absent or `null` means the stack's default. The engine passes it in the brief and picks the matching mocking skill |
 | `paths` | object | `["."]` for each key, the whole root | `{ "src": […], "tests": […] }`, folders relative to the component root, never absolute nor starting with `..`; `skraft init` writes them. In DELIVER, the software engineer may write only there (write scope) |
 | `contractTesting` | boolean | `false` | `true` makes the software engineer read the contract testing skills of its stack; the review lenses see the setting among the component settings |
 | `bdd` | list or `false` | required | where each runner of the component reads its scenarios and the definitions that bind them: a list of `{ runner, features, steps }`, folders relative to the component root, `runner` optional, and `steps` optional too — left out, the scenarios are written and nothing is asked of them, so no runner reads them. **One pair per runner**, because the binding scope is the runner's own: a definition of another pair binds no step of this one, so a component holding several test projects declares one pair each. `false` names none, and asks DISTILL for no `.feature`: the acceptance designer takes its scenarios from the test plan's `Scenario` column and TDD runs as it always does. **No key at all, and a bare `true`, decide nothing**: the engine invents no folder — one nobody chose is one the runner may never read — so a run is refused with `skraft is not initialised: run /skraft-init (<component>: bdd is unanswered)` and `skraft doctor` fails on that component. It declares a practice, never a threshold: a component that names its folders is held to its scenarios in full. The folders are where DISTILL writes the story's scenarios and where the engine reads them back: one resolution for the brief, the write scope of the acceptance designer, the folder the engine creates before its attempt, and the check. A declared folder that is no folder of the working copy fails `skraft doctor`, and a pair naming a runner whose `steps` is no folder refuses the run (`bdd-unbound`) — a runner with no bindings executes nothing; `features` is exempt, since DISTILL creates it with the first scenario. The Gherkin keywords are English whatever language the sentences are in. `skraft init` detects the pairs, `/skraft-init` asks for the ones it did not find, `skraft doctor` names them, the engine passes the folders in the brief, and the review lenses see the setting among the component settings |
 | `mutationReport` | string | absent: the report the stack's tool writes, relative to the root: `StrykerOutput/reports/mutation-report.json` (.NET), `reports/mutation/mutation.json` (TypeScript, JavaScript, React), `mutation-report.json` (Python), `target/pit-reports/mutations.xml` (Java; `build/reports/pitest/mutations.xml` when the mutation command names Gradle) | the file the `mutation` command writes its report to, relative to the component root, never absolute nor outside it. The mutation gate reads its surviving mutants there and judges the 100 % / 80 % bar |
+| `infrastructure` | object | `{}`: every row is the plugin's ([infrastructure policy](#infrastructure)) | the rows of the policy the component's tests override: `entryPoint`, `internalGateway` and `clock`, each `{ "targeted", "walkingSkeleton" }`; for `react`, `entryPoint` and `clock` `{ "targeted" }` and `frontToBack` `{ "targeted", "e2e" }`. Each value among `in-process`, `real`, `in-memory`, `testcontainers`, `microcks`, `fake`, `msw`. `externalGateway` is refused: `mocking.strategy` sets it. A stage left out keeps the plugin's mechanism |
 
 Quality thresholds (coverage, mutation…) are **not** configurable: no key carries them.
+
+## Infrastructure policy <!-- #infrastructure -->
+
+What a component's tests run each kind of dependency on, in a targeted scenario and in the
+walking skeleton. A `react` component has none, the walking skeleton living in a back component:
+its end-to-end run is `e2e`. A row the component's `infrastructure` names wins; `skraft doctor` prints
+one line per row with its source: `plugin`, `skraft-config.json` (an override) or `skraft-config.json (mocking.strategy)` (a mocking strategy other than the stack's default).
+
+| Row | Covers | Targeted | Walking skeleton |
+| --- | --- | --- | --- |
+| `entryPoint` | controller, CLI, UI, webhook received, topic consumed | `in-process` | `real` |
+| `internalGateway` | repository, database, cache | `in-memory` | `testcontainers` |
+| `externalGateway` | REST, SOAP, GraphQL, gRPC, Kafka, RabbitMQ, MQTT, WebSocket, webhook sent | `microcks`, or `in-process` when `mocking.strategy` is `inprocess` | same as targeted |
+| `clock` | clock, randomness | `fake` | `fake` |
+
+| Row (`react`) | Targeted | E2E |
+| --- | --- | --- |
+| `entryPoint` | `in-process` | — |
+| `frontToBack` | `msw`, or `microcks` when `mocking.strategy` is `microcks` | `microcks` |
+| `clock` | `fake` | — |
+
+| Mechanism | Tool doctor names |
+| --- | --- |
+| `in-process` | `WebApplicationFactory` (.NET), `MockMvc / @SpringBootTest` (Java), `FastAPI TestClient` (Python), `app.inject / supertest` (TypeScript, JavaScript), `Testing Library` (React) |
+| `testcontainers` | Testcontainers |
+| `microcks` | Microcks uber native image via Testcontainers, one container per test session; `Playwright + Microcks` in `e2e` |
+| `msw` | MSW |
+
+`testcontainers` and `microcks` need Docker or Podman: `skraft doctor` names the one that
+answers, or warns `the tests that need Microcks or Testcontainers cannot run until
+Docker or Podman runs`. Only `skraft-config.json` holds `infrastructure`, as every component key.
+
+```json
+{ "name": "api", "root": "services/payment-api", "stack": "dotnet",
+  "infrastructure": { "internalGateway": { "walkingSkeleton": "in-memory" } } }
+```
 
 ## `tdd` <!-- #tdd -->
 
 | Key | Value | Effect |
 | --- | --- | --- |
-| `replay` | `all` (default) | the engine replays each red commit (`test(<story>): …`) of an attempt with its component's `test` command, and checks that it fails |
+| `replay` | `all` (default) | the engine replays each red commit of an acceptance test (`test(<story>): …`, DISTILL) with its component's `test` command, and the replay judge reads what it printed ([Commits and replays](./gates.md#commits)) |
 | `replay` | `last-red` | only the last red commit of each story (same commit scope) is replayed |
 | `replay` | `null` | counts as `all` |
 
 With `all`, when the replays take more than 20 % of a phase's duration, the engine journals
 `tdd.replay-slow` once per phase and prints `<slug>: replaying test commits took N% of <PHASE>;
 set "tdd": { "replay": "last-red" } in skraft-config.json to replay only the last test commit of
-each story`. Any other value: `tdd must be { "replay": "all" or "last-red" }`.
+each story`. Any other value: `tdd must be { "replay": "all" or "last-red" }`. The replay of a
+scenario's green commit does not depend on this key.
 
 ## `publish` <!-- #publish -->
 
@@ -230,7 +268,7 @@ otherwise.
 | entry not an object | `components[<index>] must be an object` |
 | name | `components[<index>].name must be kebab-case, got <JSON value>` |
 | duplicate name | `component name <name> is used twice` |
-| unknown key | `<label>: unknown key <key> (allowed: name, root, stack, paths, commands, baseBranch, mocking, contractTesting, bdd, mutationReport)` |
+| unknown key | `<label>: unknown key <key> (allowed: name, root, stack, paths, commands, baseBranch, mocking, contractTesting, bdd, mutationReport, infrastructure)` |
 | root | `<label>: root must be a path relative to the working copy` |
 | stack | `<label>: stack must be one of dotnet, java, python, typescript, javascript, react` |
 | `commands` not an object | `<label>: commands must be an object of command lines` |
@@ -242,6 +280,7 @@ otherwise.
 | `contractTesting` | `<label>: contractTesting must be true or false` |
 | `bdd` | `<label>: bdd must be true, false, or a list of { runner, features, steps } whose folders are inside the component root; steps may be left out when nothing binds the scenarios` |
 | `mutationReport` | `<label>: mutationReport must be a file inside the component root` |
+| `infrastructure` | `<label>: infrastructure must be an object of rows (allowed: <rows>)`; `<label>: infrastructure.externalGateway is set by mocking.strategy; write "mocking": { "strategy": ... } instead`; `<label>: unknown infrastructure row <row> (allowed: <rows>)`; `<label>: infrastructure.<row> must be an object of <stages>`; `<label>: infrastructure.<row>: unknown field <stage> (allowed: <stages>)`; `<label>: infrastructure.<row>.<stage> must be one of in-process, real, in-memory, testcontainers, microcks, fake, msw` |
 
 ## Command lines <!-- #command-lines -->
 
@@ -295,20 +334,22 @@ root: `.venv/bin/python`, `.venv/Scripts/python.exe`, then `python` and `python3
 PATH. The file keeps `python` and stays the same on Windows, macOS and Linux. Any other
 program starts as written.
 
-With Microcks (the default outside TypeScript, JavaScript and React), the tests that use it run
-Microcks in a container, Docker or Podman. The engine does not look for one: such a test fails when
-no container answers, like any failing test.
+With Microcks (the default outside React), the tests that use it run Microcks in a container,
+Docker or Podman. The gates do not look for one: such a test fails when no container answers, like
+any failing test; `skraft doctor` warns when neither answers.
 
 ## Failure classes <!-- #failure-classes -->
 
 | Class | Case | Reason shown | Who acts |
 | --- | --- | --- | --- |
-| `environment` | program or folder not found, program cannot start | `<error>; install it or change the command in skraft-config.json` | a human, on the machine or the config |
+| `environment` | program or folder not found, program cannot start | `<error>; install it or change the command in skraft-config.json` | a human, on the machine or the config: the `environment` question; never an agent |
 | `environment` | exit code 127 (sh) or 9009 (cmd) | `exited <code>` | same |
-| `environment` | program stopped by a signal | `<program> was stopped by <signal>; run it again` | same |
 | `environment` | line refused (shell syntax, quote, `{baseSha}`) | `command "<line>" <reason>` | same |
-| `environment` | component with no gate command | `no gate command` message above | same |
-| `deterministic` | any other non-zero exit code | `exited <code>` | the code must change |
+| `environment` | component with no gate command | `no gate command` message above | same, cause `config` |
+| `environment` | `mutation` only: a run that ended before its tool could finish (no exit code, a signal or a crash), a report that cannot be read, or a failed run whose report counts no mutant | how it ended, then `; the mutation report <path> …` when the report is the cause (`is missing; …`, `counts no mutant of a run that failed`) | same |
+| `interrupted` | exit code 130 (SIGINT on POSIX) or `0xC000013A` (Ctrl-C on Windows): a person stopped the command | `was interrupted by a person (exit <code>)` | nobody: the run stops (`interrupted`), asks nothing, and the next run picks the step up |
+| `deterministic` | any other non-zero exit code: a failing check, 128 (Git's fatal error), a signal on POSIX (128 + its number), a crash code from `0xC0000000` on Windows | `exited <code>`; `was stopped by a signal or crashed (exit <code>), not by a failing check` | the agent, through the gate's `FAIL` edge, with the evidence: it fixes the code, or stops `blocked` naming what the machine lacks |
+| `deterministic` | program stopped with no exit code (a signal, a timeout) | `<error>; run it again` (`<program> was stopped by <signal>; run it again`) | same |
 
 Under the CLI and Copilot, a command's output is kept up to 64 MiB per stream. Past that, the evidence keeps its head and
 its tail around `… output cut …`, the command still runs to its end, and its exit code still

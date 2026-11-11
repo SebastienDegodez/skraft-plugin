@@ -71,6 +71,25 @@ test('a program replayed at a commit runs on that commit\'s files, and the worki
   assert.equal(before.worktrees, 1)
 })
 
+test('what a replayed program writes stays in its checkout and goes with it: the working copy never sees it', async (t) => {
+  const repo = tempFolder(t)
+  mkdirSync(join(repo, 'services', 'api'), { recursive: true })
+  writeFileSync(join(repo, 'services', 'api', 'write.mjs'), [
+    "import { mkdirSync, writeFileSync } from 'node:fs'",
+    "mkdirSync('out', { recursive: true })",
+    "writeFileSync('out/result.txt', 'written by the replay')",
+    'process.exit(1)',
+  ].join('\n'))
+  const sha = commitAll(repo, 'write')
+  const replay = createGitCommitReplay({ commandRunner: createNodeCommandRunner({ root: repo }) })
+
+  const answer = await replay.run({ repository: '.', sha, cwd: 'services/api', choices: [[process.execPath, 'write.mjs']], importRoots: [] })
+
+  assert.equal(answer.exitCode, 1)
+  assert.equal(existsSync(join(repo, 'services', 'api', 'out')), false)
+  assert.equal(git(repo, 'status', '--porcelain'), '')
+})
+
 test('the program starts from a component folder of the commit, in a neighbour repository too', async (t) => {
   const { work, repo, a, b, repository } = replayRepository(t, { neighbour: true })
   const replay = createGitCommitReplay({ commandRunner: createNodeCommandRunner({ root: work }) })

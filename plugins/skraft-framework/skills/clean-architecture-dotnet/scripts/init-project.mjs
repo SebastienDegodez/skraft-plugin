@@ -40,6 +40,9 @@ function dotnet(args, cwd) {
 	if (result.status !== 0) throw new Error(`dotnet ${args.join(' ')} exited ${result.status}`)
 }
 
+const FRAMEWORK = 'net10.0'
+const FRAMEWORK_MAJOR = '10.*'
+
 export function initProject(name, { cwd = process.cwd(), log = (line) => process.stdout.write(`${line}\n`), bus = false } = {}) {
 	if (!/^[A-Za-z_][A-Za-z0-9_.]*$/.test(name ?? '')) throw new Error('Project name required: a C# identifier such as Ordering')
 	const p = (path) => path.replaceAll('{p}', name)
@@ -52,14 +55,14 @@ export function initProject(name, { cwd = process.cwd(), log = (line) => process
 
 	log('\n📁 Creating source projects...')
 	for (const [layer, template] of [['Domain', 'classlib'], ['Application', 'classlib'], ['Infrastructure', 'classlib'], ['Api', 'web']]) {
-		dotnet(['new', template, '-n', p(`{p}.${layer}`), '-o', p(`src/{p}.${layer}`), '-f', 'net10.0'], cwd)
+		dotnet(['new', template, '-n', p(`{p}.${layer}`), '-o', p(`src/{p}.${layer}`), '-f', FRAMEWORK], cwd)
 		rmSync(join(cwd, p(`src/{p}.${layer}/Class1.cs`)), { force: true })
 		dotnet(['sln', 'add', project(layer)], cwd)
 	}
 
 	log('\n🧪 Creating test projects...')
 	for (const kind of ['UnitTest', 'IntegrationTest']) {
-		dotnet(['new', 'xunit', '-n', p(`{p}.${kind}`), '-o', p(`tests/{p}.${kind}`), '-f', 'net10.0'], cwd)
+		dotnet(['new', 'xunit', '-n', p(`{p}.${kind}`), '-o', p(`tests/{p}.${kind}`), '-f', FRAMEWORK], cwd)
 		dotnet(['sln', 'add', tests(kind)], cwd)
 	}
 
@@ -78,11 +81,12 @@ export function initProject(name, { cwd = process.cwd(), log = (line) => process
 	]) dotnet(['add', from, 'reference', to], cwd)
 
 	log('\n📦 Adding NuGet packages...')
-	for (const [target, pkg] of [
+	// Mvc.Testing ships with ASP.NET Core: its next major targets only the next framework.
+	for (const [target, pkg, version] of [
 		[project('Infrastructure'), 'Microsoft.Extensions.DependencyInjection.Abstractions'],
-		[tests('IntegrationTest'), 'Microsoft.AspNetCore.Mvc.Testing'],
+		[tests('IntegrationTest'), 'Microsoft.AspNetCore.Mvc.Testing', FRAMEWORK_MAJOR],
 		[tests('IntegrationTest'), 'NetArchTest.Rules'],
-	]) dotnet(['add', target, 'package', pkg], cwd)
+	]) dotnet(['add', target, 'package', pkg, ...(version ? ['--version', version] : [])], cwd)
 
 	log('\n📂 Creating directory structure...')
 	for (const dir of ['src/{p}.Domain/Shared', 'src/{p}.Application/Shared', 'src/{p}.Infrastructure/Shared',

@@ -63,7 +63,7 @@ lenses:
 synthesis:
   blocking_findings: []
   recommendations:
-    - "Consider adding a @smoke tag to Scenario 2 for walking skeleton signalling."
+    - "Consider naming the downstream API in the Double Type cell of S2."
   dissent: ""
 ```
 

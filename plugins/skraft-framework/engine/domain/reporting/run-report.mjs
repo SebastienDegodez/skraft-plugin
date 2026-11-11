@@ -2,6 +2,7 @@ import { cell } from './markdown-safety.mjs'
 import { agentModels, modelName } from './agent-models.mjs'
 import { forgeWrites, forgeWritesTable } from './forge-writes.mjs'
 import { acceptedFindings, acceptedTable } from './accepted-findings.mjs'
+import { commitRows, commitsTable, incidentRows, incidentsTable, refusalRows, refusalsTable, waitingLines, waitingOn } from './run-failures.mjs'
 
 /**
  * The run report: time, cost and retries of each step, and every answer a human gave, read from
@@ -19,7 +20,11 @@ import { acceptedFindings, acceptedTable } from './accepted-findings.mjs'
  *   step: the node the question was about; by: how the journal knows a person gave it.
  * @typedef {import('./agent-models.mjs').AgentModel} AgentModel
  * @typedef {import('./forge-writes.mjs').ForgeWrite} ForgeWrite
- * @typedef {{ steps: StepReport[], totals: ReportTotals, answers: HumanAnswer[], accepted: import('./accepted-findings.mjs').AcceptedFinding[], agents: AgentModel[], writes: ForgeWrite[], startedAt: string | null, elapsedMs: number }} RunReport
+ * @typedef {{
+ *   steps: StepReport[], totals: ReportTotals, answers: HumanAnswer[], accepted: import('./accepted-findings.mjs').AcceptedFinding[], agents: AgentModel[], writes: ForgeWrite[],
+ *   waiting: import('./run-failures.mjs').Waiting | null, commits: import('./run-failures.mjs').CommitRow[], refusals: import('./run-failures.mjs').RefusalRow[], incidents: import('./run-failures.mjs').IncidentRow[],
+ *   startedAt: string | null, elapsedMs: number,
+ * }} RunReport
  *   steps: in the order they first started; answers: in the order they were given; accepted: the
  *   findings a human accepted at a review's ceiling, in journal order; writes: each
  *   write on the forge with its outcome, in journal order; agents: what
@@ -36,8 +41,14 @@ export const runReport = (events) => {
   const rows = new Map()
   for (const event of events) ON_EVENT[event.type]?.(rows, event)
   const steps = [...rows.values()].map(stepOf)
-  return { steps, totals: totalsOf(steps), answers: answersOf(events), accepted: acceptedFindings(events), agents: agentModels(events), writes: forgeWrites(events), startedAt: events[0]?.at ?? null, elapsedMs: elapsedOf(events) }
+  return { steps, totals: totalsOf(steps), answers: answersOf(events), accepted: acceptedFindings(events), agents: agentModels(events), writes: forgeWrites(events), ...failuresOf(events), startedAt: events[0]?.at ?? null, elapsedMs: elapsedOf(events) }
 }
+
+/**
+ * What the run tells of its failures and of the question it waits on.
+ * @param {RunEvent[]} events @returns {Pick<RunReport, 'waiting' | 'commits' | 'refusals' | 'incidents'>}
+ */
+const failuresOf = (events) => ({ waiting: waitingOn(events), commits: commitRows(events), refusals: refusalRows(events), incidents: incidentRows(events) })
 
 /** Each answer a human gave, with the question it answers. @param {RunEvent[]} events @returns {HumanAnswer[]} */
 const answersOf = (events) => {
@@ -92,8 +103,10 @@ const sum = (values) => values.reduce((total, value) => total + value, 0)
 const elapsedOf = (events) => (events.length === 0 ? 0 : Date.parse(events[events.length - 1].at) - Date.parse(events[0].at))
 
 /**
- * run-report.md: the status line, one row per step, the totals, what each agent ran on, the
- * answers humans gave, the findings they accepted, each write on the forge with its outcome, when the run started.
+ * run-report.md: the status line, one row per step, the totals, the question the run waits on, each
+ * commit it checked and its verdict, the failures sent back to an agent and the incidents asked of
+ * a human, what each agent ran on, the answers humans gave, the findings they accepted, each write
+ * on the forge with its outcome, when the run started.
  * @param {{ slug: string, status: string, report: RunReport }} report
  */
 export const renderRunReport = ({ slug, status, report }) => [
@@ -107,8 +120,12 @@ export const renderRunReport = ({ slug, status, report }) => [
   '',
 ].join('\n')
 
-/** The titled tables under the steps, each only when it has rows. @param {RunReport} report */
+/** The titled tables under the steps, each only when it has rows, the question the run waits on first. @param {RunReport} report */
 const sectionsOf = (report) => [
+  ...(report.waiting === null ? [] : ['## Waiting on', '', ...waitingLines(report.waiting), '']),
+  ...section('## Commits', report.commits, commitsTable),
+  ...section('## Refusals', report.refusals, refusalsTable),
+  ...section('## Incidents', report.incidents, incidentsTable),
   ...section('## Agents', report.agents, agentsTable),
   ...section('## Human answers', report.answers, answersTable),
   ...section('## Accepted findings', report.accepted, acceptedTable),

@@ -38,12 +38,31 @@ The `answer:` line gives the key (`adr-1`) and the allowed answers:
 | Question | Answers | Reason required |
 |---|---|---|
 | `adr-ratification` | `RATIFIED`, `REJECTED` | with `REJECTED` |
+| `scenario-review` (header `Scenarios`) | `APPROVED`, `REVISE` | with `REVISE`: your corrections, sent to DISTILL |
 | `review-consent` (`skraft review --pr --publish`, header `PR comment`) | `ACCEPTED`, `DECLINED` | — |
-| `environment` | `RETRY` (once the machine is repaired), `ABORT` | — |
+| `environment` | `RETRY` (once the machine or `skraft-config.json` is repaired), `ABORT` | — |
 | `mutation-plan` | `APPLY`, an instruction of your own, or `STOP` | — |
 | `blocked` | an instruction for the agent, or `STOP` | — |
 
 What each answer triggers: [Questions to a human](../reference/run-journal.md#human-questions).
+
+An `environment`, `blocked` or `review-ceiling` question ends with
+`The run so far (commits, refusals, incidents): <tracking folder>/run-report.md`. Open that file:
+`## Waiting on` quotes the question and the exact `skraft decide` line; `## Commits`,
+`## Refusals` and `## Incidents` show what the run did before it stopped
+([Run report](../reference/run-journal.md#run-report)).
+
+An `environment` question says who fixes it on its `Cause:` line, and where the failing command
+printed on its `Output:` line:
+
+| `Cause:` starts with | Fix before `RETRY` |
+|---|---|
+| `the machine` | install or start the program or the service, grant the permission or fix the Git hook; the `Output:` log says which |
+| `skraft-config.json` | change the command or the path the first line names ([Configure the components](./configure-components.md)) |
+| `what the replay judge read` | read the judge's answer the `Output:` line names (`logs/judge-<short sha>-<red\|green>.md`): its note says what the logs show and what to fix on the machine (a program, a container runtime, a credential) |
+
+`RETRY` runs the step again where it stopped and uses none of the agent's attempts; after a
+judge's question, it replays the commit and asks the judge again.
 
 ## 2. Answer from your host
 
@@ -51,7 +70,7 @@ What each answer triggers: [Questions to a human](../reference/run-journal.md#hu
 <TabItem value="claude-code" label="Claude Code" default>
 
 1. Pick an option in the dialog the mod opens (header `ADR`, `Pull request`, `Environment`…).
-2. For `REJECTED`, a second dialog asks for the reason: type it under **Other**.
+2. For a refusal (`REJECTED`, `REVISE`), a second dialog asks for the reason: type it under **Other**.
 3. For a `blocked` or `mutation-plan` question, type your instruction under **Other**, or pick
    `STOP` (`APPLY`).
 
@@ -86,7 +105,7 @@ Enter to select · ↑/↓ to navigate · Esc to cancel
 <TabItem value="copilot-cli" label="GitHub Copilot CLI">
 
 1. Copilot asks the question once, in the chat: pick an option, or type your instruction.
-2. For `REJECTED`, type the reason in the field that follows.
+2. For a refusal (`REJECTED`, `REVISE`), type the reason in the field that follows.
 
 When the question could not be asked (`autopilot` mode, no dialog) or you closed it, the workflow
 writes `Waiting for you — <question>` and pauses. Either:
@@ -131,6 +150,10 @@ recorded (`host`, `decide`, `host-confirmed`, `cli-tty`).
 - **`REJECTED` on an ADR**: the architect runs DESIGN again with your reason. Past 3 rejections,
   the run asks the `blocked` question on `design`: an instruction starts the architect again,
   `STOP` ends the run (`loop-ceiling`).
+- **`REVISE` on the scenarios**: the acceptance designer runs DISTILL again with your corrections,
+  then its review and the question come back. Edit the `.feature` or the test yourself first if
+  you like, and say so in the reason. Past 2 revisions, the run asks the `blocked` question on
+  `distill`.
 - **`DECLINED` on a consent**: the answer is written in `skraft-config.json`
   (`publish.pullRequest` or `publish.visuals`) and not asked again; the run goes on locally
   ([Publish a run's pull request](./publish-pull-request.md)).
@@ -151,7 +174,7 @@ A refused answer records nothing; the run still waits.
 | `adr-1 was already answered RATIFIED` | Nothing to do: resume the run. |
 | `REJECTED needs the reason, which goes back to the agent` | Add `--reason "…"`. |
 | `the answer must be one of RATIFIED, REJECTED` | Write one of the options. |
-| `skraft decide records a person's answer: run it yourself in an interactive terminal; nothing was recorded` | Run the command yourself, in an interactive terminal. |
+| `skraft decide records a person's answer: run it yourself in an interactive terminal of your own, not an agent's shell; nothing was recorded` | Run the command yourself, in an interactive terminal. |
 | `Refused: …; nothing was recorded.` (Copilot) | Answer with `skraft decide` in a terminal, then resume the workflow. |
 | `not recorded — no active pipeline in this working copy` (Claude Code), while `skraft status` shows the run waiting | Answer with `skraft decide <key> …` in a terminal, then `/skraft <slug>` in Claude Code. |
 | You typed your answer in the conversation instead of the dialog | It is no answer: the run still waits. Use `/skraft decide`. |

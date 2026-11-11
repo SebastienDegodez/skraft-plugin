@@ -54,6 +54,104 @@
         }
       ]
     },
+    "mechanism": {
+      "description": "What a row of the infrastructure policy runs a dependency on in a test.",
+      "enum": [
+        "in-process",
+        "real",
+        "in-memory",
+        "testcontainers",
+        "microcks",
+        "fake",
+        "msw"
+      ]
+    },
+    "innerPattern": {
+      "description": "A path or a glob inside the component root: relative, never absolute, never naming ..",
+      "type": "string",
+      "allOf": [
+        {
+          "pattern": "\\S"
+        },
+        {
+          "not": {
+            "pattern": "^([\\\\/]|[A-Za-z]:)"
+          }
+        },
+        {
+          "not": {
+            "pattern": "(^|[\\\\/])\\.\\.([\\\\/]|$)"
+          }
+        }
+      ]
+    },
+    "backStages": {
+      "type": "object",
+      "properties": {
+        "targeted": {
+          "$ref": "#/$defs/mechanism"
+        },
+        "walkingSkeleton": {
+          "$ref": "#/$defs/mechanism"
+        }
+      },
+      "additionalProperties": false
+    },
+    "targetedStage": {
+      "type": "object",
+      "properties": {
+        "targeted": {
+          "$ref": "#/$defs/mechanism"
+        }
+      },
+      "additionalProperties": false
+    },
+    "frontToBackStages": {
+      "type": "object",
+      "properties": {
+        "targeted": {
+          "$ref": "#/$defs/mechanism"
+        },
+        "e2e": {
+          "$ref": "#/$defs/mechanism"
+        }
+      },
+      "additionalProperties": false
+    },
+    "backInfrastructure": {
+      "description": "The rows a back-end component overrides; externalGateway follows mocking.strategy.",
+      "type": "object",
+      "properties": {
+        "entryPoint": {
+          "$ref": "#/$defs/backStages"
+        },
+        "internalGateway": {
+          "$ref": "#/$defs/backStages"
+        },
+        "externalGateway": false,
+        "clock": {
+          "$ref": "#/$defs/backStages"
+        }
+      },
+      "additionalProperties": false
+    },
+    "frontInfrastructure": {
+      "description": "The rows a React component overrides; it has no walking skeleton, its end-to-end run is e2e.",
+      "type": "object",
+      "properties": {
+        "entryPoint": {
+          "$ref": "#/$defs/targetedStage"
+        },
+        "frontToBack": {
+          "$ref": "#/$defs/frontToBackStages"
+        },
+        "externalGateway": false,
+        "clock": {
+          "$ref": "#/$defs/targetedStage"
+        }
+      },
+      "additionalProperties": false
+    },
     "component": {
       "type": "object",
       "required": [
@@ -166,6 +264,7 @@
           "$ref": "skraft-config.local.schema.json#/$defs/baseBranch"
         },
         "mocking": {
+          "description": "How the component's tests mock what another team owns: microcks by default, inprocess by default for react.",
           "type": "object",
           "properties": {
             "strategy": {
@@ -228,8 +327,40 @@
               }
             }
           ]
+        },
+        "infrastructure": {
+          "description": "The rows of the plugin's infrastructure policy this component's tests override, by dependency kind: entryPoint, internalGateway and clock for a back end, entryPoint, frontToBack and clock for React; each stage one of the mechanisms. externalGateway follows mocking.strategy.",
+          "type": "object"
         }
       },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "stack": {
+                "const": "react"
+              }
+            },
+            "required": [
+              "stack"
+            ]
+          },
+          "then": {
+            "properties": {
+              "infrastructure": {
+                "$ref": "#/$defs/frontInfrastructure"
+              }
+            }
+          },
+          "else": {
+            "properties": {
+              "infrastructure": {
+                "$ref": "#/$defs/backInfrastructure"
+              }
+            }
+          }
+        }
+      ],
       "additionalProperties": false
     }
   }

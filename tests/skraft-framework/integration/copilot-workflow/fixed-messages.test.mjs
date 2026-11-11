@@ -5,7 +5,7 @@ import { join } from 'node:path'
 import { runSkraftPipelineWorkflow } from '../../../../plugins/skraft-framework/engine/drivers/copilot-workflow/skraft-pipeline-workflow.mjs'
 import { PLUGIN_ROOT, actsAs, copilotHost, eventsPath, firstOptionPerson, simulatedContext, trackingDir, workingCopy } from './simulated-host.mjs'
 import { SENTINEL } from './simulated-sdk.mjs'
-import { SLUG, WRONG_PAY, deliverWith, pipelineRepository, scriptedLlm } from '../support/pipeline-repository.mjs'
+import { CYCLE_WORKFLOW, SLUG, WRONG_PAY, deliverWith, designateWorkflow, pipelineRepository, scriptedLlm } from '../support/pipeline-repository.mjs'
 
 /** Every place a model or the person reads: the outcome, the workflow log, the journal, each prompt and each tool result or dialog. */
 const modelFacing = ({ outcome, logs, calls, cwd, slug, toolResults = [] }) => [
@@ -32,6 +32,8 @@ test('the text of an error a Copilot agent call throws reaches neither the outco
 
 test('what a failing gate writes on stderr stays in its evidence log, out of the outcome, the log, the journal, the prompts and the questions put to the person', async (t) => {
   const { cwd } = pipelineRepository(t)
+  // A workflow that builds no scenario takes the wrong code to its gates: none replays the green.
+  designateWorkflow(cwd, CYCLE_WORKFLOW)
   const llm = scriptedLlm({ cwd, acts: { 'software-engineer': [deliverWith(WRONG_PAY)] } })
   const { ctx, calls, logs } = simulatedContext({ args: { slug: SLUG }, otherwise: actsAs(llm) })
   const session = firstOptionPerson()

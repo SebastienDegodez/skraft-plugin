@@ -1,6 +1,6 @@
 // What the decision scenarios share: ADR files as an architect writes them, and an architect
 // that writes them into the working copy and commits them.
-import { agent, SLUG, tddCycle } from './pipeline-host.mjs'
+import { agent, green, SLUG, TRACKING } from './pipeline-host.mjs'
 
 export const ADR_1 = 'docs/adr/adr-001-card-payment.md'
 export const ADR_2 = 'docs/adr/adr-002-card-tokens.md'
@@ -63,10 +63,10 @@ const withRows = (index, numbers) => numbers.reduce((text, number) => {
 }, index)
 
 /**
- * The agents after DESIGN: the acceptance designer, then the engineer's TDD cycle.
- * @param {ReturnType<typeof import('./pipeline-host.mjs').pipelineHost>} host @param {string} [body] each commit's body
+ * The agents after DESIGN: the acceptance designer, then the engineer's green of the scenario.
+ * @param {ReturnType<typeof import('./pipeline-host.mjs').pipelineHost>} host @param {string} [body] the green's body
  */
-export const afterDesign = (host, body = '') => [agent()(host), agent({ work: tddCycle(SLUG, 'Checkout', body) })(host)]
+export const afterDesign = (host, body = '') => [agent()(host), agent({ work: green(SLUG, 'Checkout', body) })(host)]
 
 /** @param {ReturnType<typeof import('./pipeline-host.mjs').pipelineHost>} host */
 export const dispatched = (host) => host.agentRunner.dispatches.map((dispatch) => dispatch.label)
@@ -78,8 +78,35 @@ export const eventsOf = (host, type) => host.events().filter((event) => event.ty
  * The reason a run gives while it waits for a human to fix the machine.
  * @param {string} step the node that could not run @param {string} reason why @param {number} [count] the rank of the question among those the node asked
  */
-export const waitingOnEnvironment = (step, reason, count = 1) =>
-  `${step} cannot run on this machine: ${reason}. Fix it, then RETRY; or ABORT the run. Answer with skraft decide ${step}-${count} RETRY|ABORT.`
+export const waitingOnEnvironment = (step, reason, count = 1, incident = {}) =>
+  `${environmentQuestion(step, reason, incident)} Answer with skraft decide ${step}-${count} RETRY|ABORT.`
+
+/** What a human reads of each cause the engine does not send back to an agent. */
+const CAUSES = Object.freeze({
+  environment: 'the machine: a program, a service, a permission or a Git hook it lacks or refuses',
+  config: 'skraft-config.json: a command or a path it gives the engine',
+  unknown: 'none the engine knows: the command was stopped by a signal or crashed, which no failing check explains',
+  judge: 'what the replay judge read in the replay of a commit: nothing an agent can change fixes it',
+})
+
+/**
+ * The text of the environment question on a step: why it cannot run, its cause, the log of what
+ * the failing command printed, what each answer does.
+ * @param {string} step @param {string} reason @param {{ owner?: keyof typeof CAUSES, log?: string | null }} [incident]
+ */
+export const environmentQuestion = (step, reason, { owner = 'environment', log = null } = {}) => [
+  `${step} cannot run on this machine: ${reason}.`,
+  `Cause: ${CAUSES[owner]}.`,
+  ...(log === null ? [] : [`Output: ${log}`]),
+  `Fix it, then RETRY: ${step} runs again where it stopped, using no new attempt; or ABORT: the run ends.`,
+  REPORT_LINE,
+].join('\n')
+
+/** The line a question on a stopped run ends with: where its report is. */
+export const REPORT_LINE = `The run so far (commits, refusals, incidents): ${TRACKING}/run-report.md`
+
+/** The text of a question on a stopped run, its report named last. @param {string} text */
+export const withReport = (text) => `${text}\n${REPORT_LINE}`
 
 /** Why an ADR folder the machine cannot list stops a run: fixed, never the text of what refused it. */
 export const UNLISTABLE_ADRS = 'docs/adr cannot be listed: Git or the file system refused to read it'

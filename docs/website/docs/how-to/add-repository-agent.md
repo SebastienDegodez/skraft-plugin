@@ -59,7 +59,9 @@ and remove the `deliver -> gates` edge it replaces.
 | `model` | its model family ([Choose the agents' models](./choose-models.md)) |
 
 The brief the engine gives the agent lists these outputs, the paths it may write and the other
-steps' outputs to read. After each attempt, the engine checks that every output is filled and
+steps' outputs to read; it also tells it to send what its commands print under the run's `logs/`
+and to keep its temporary files under the run's `.tmp/`, never under `/tmp` nor outside the
+working copy. After each attempt, the engine checks that every output is filled and
 that nothing was written outside those paths. The agent commits its own changes: the brief asks it
 to commit every file it changes outside the tracking folder, and a change it leaves uncommitted is
 refused (`uncommitted`). The engine commits only for the plugin's agents that have no shell
@@ -98,7 +100,7 @@ Commit `.skraft/` and the agent's files: the step runs on the next run.
 | `user_docs reaches the exit without passing mandatory node deliver_review; …` | Same cause: the node bypasses the DELIVER review. |
 | `node user_docs: attribute <key> is not supported on a box node (supported: …)` | Use only the attributes listed in step 2. |
 | `out of write scope: <path>` in the journal | The agent wrote outside `writes`: widen `writes`, or tighten its prompt. |
-| `missing-outputs` | The agent did not fill an output of `outputs` after its attempts: fix its prompt, then start a new slug. |
+| `<node> is blocked: <agent> still failed after 3 attempts`, `missing outputs: <path>` under it | The agent did not fill an output of `outputs` after its attempts: fix its prompt, then answer the `blocked` question with an instruction, which starts it again on a new pass. `STOP` ends the run with `missing-outputs`. |
 | The plugin's agent runs instead of yours | A skraft agent carries the same id: rename yours. |
 
 ## Next steps <!-- #next-steps -->

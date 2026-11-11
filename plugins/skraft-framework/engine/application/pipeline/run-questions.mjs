@@ -1,5 +1,8 @@
 import { CONFIG_FILE, withPublishSetting } from '../../domain/config/skraft-config.mjs'
-import { APPLY, BLOCKED, REVIEW_CEILING, acceptable, reviewCeilingText, STOP, blockText, decideUsage, edgeAnswerOf, environmentText, mutationPlanText, questionKey, questionOf, ratificationText, readAnswer } from '../../domain/decisions/questions.mjs'
+import { APPLY, BLOCKED, REVIEW_CEILING, acceptable, reviewCeilingText, STOP, blockText, decideUsage, edgeAnswerOf, environmentText, mutationPlanText, questionKey, questionOf, ratificationText, readAnswer, scenarioReviewText } from '../../domain/decisions/questions.mjs'
+import { deriveRun } from '../../domain/journal/run-state.mjs'
+import { namedFeatures } from '../../domain/pipeline/gherkin-records.mjs'
+import { scenarioNodes } from '../../domain/workflow/workflow.mjs'
 import { trackingFolder } from '../../domain/pipeline/roles.mjs'
 import { causeFields } from '../../domain/pipeline/next-step.mjs'
 import { issueOf } from '../../domain/pipeline/commits.mjs'
@@ -10,6 +13,9 @@ import { loadConfig } from '../config/bases.mjs'
 import { forgeMissing } from '../config/forge.mjs'
 import { leave } from './run-routes.mjs'
 import { verdictPath } from '../review/review-runs.mjs'
+import { MACHINE } from '../../domain/pipeline/incidents.mjs'
+import { refusedCommit } from './refused-commits.mjs'
+import { RUN_REPORT_FILE } from '../../domain/reporting/run-report.mjs'
 
 /**
  * The questions a run puts to a human: an ask node's, and the one the engine asks when the
@@ -34,7 +40,7 @@ import { verdictPath } from '../review/review-runs.mjs'
  * @typedef {{ answered: Answer } | { text: string, subjects: string[] } | { environment: string }} Plan
  *   answered: the question needs no human (nothing to ratify);
  *   environment: the machine cannot tell what to ask.
- * @typedef {{ failures: string[] } | { environment: string } | { stop: string }} Act
+ * @typedef {{ failures: string[] } | { environment: string, incident?: import('../../domain/pipeline/incidents.mjs').Incident } | { stop: string }} Act
  *   failures: what goes on to the node an answer leads to; stop: why the answer ends the run.
  * @typedef {{ plan: (context: Context) => Promise<Plan>, act: (context: Context, asked: AskedQuestion, run: RunState) => Promise<Act> }} Questionnaire
  */
@@ -42,8 +48,8 @@ import { verdictPath } from '../review/review-runs.mjs'
 /** @type {Questionnaire} */
 const RATIFICATION = {
   plan: async ({ deps }) => adrPlan(await proposedAdrs(deps)),
-  act: async ({ deps }, asked, run) => (asked.answer === 'RATIFIED'
-    ? committed(await ratify(deps, { adrs: asked.subjects, day: dayOf(deps.clock.now()), issue: issueOf(run.story) }))
+  act: async ({ deps, slug }, asked, run) => (asked.answer === 'RATIFIED'
+    ? committed({ deps, slug, step: asked.step }, await ratify(deps, { adrs: asked.subjects, day: dayOf(deps.clock.now()), issue: issueOf(run.story) }))
     : { failures: [`${asked.subjects.join(', ')}: ${asked.reason}`] }),
 }
 
@@ -81,8 +87,31 @@ const planChosen = ({ deps, slug }, { answer, subjects, step }) => {
   return { failures: answer === APPLY ? [`Apply the proposals in ${paths}`] : [/** @type {string} */ (answer), `The proposals it departs from: ${paths}`] }
 }
 
+/**
+ * The scenario review: the story's scenarios and the red of its walking skeleton, read by a
+ * human once before DELIVER builds them; REVISE sends their corrections to DISTILL.
+ * @type {Questionnaire}
+ */
+const SCENARIO_REVIEW = {
+  plan: async (context) => scenarioReviewPlan(context, deriveRun(context.journal.events)),
+  act: async (_, asked) => ({ failures: asked.answer === 'APPROVED' ? [] : [`A human read the scenarios and the walking skeleton and asks for these corrections: ${asked.reason}`] }),
+}
+
+/**
+ * The scenarios, the `.feature` files the test plan names and the red of S1, once the node that
+ * writes them recorded them; a question the machine cannot ask before.
+ * @param {Context} context @param {RunState} run @returns {Promise<Plan>}
+ */
+const scenarioReviewPlan = async (context, { scenarios, nodes }) => {
+  if (scenarios === null) return { environment: 'the run recorded no scenario of the story to show yet; put the scenario review after the node that writes them' }
+  const oracle = scenarios.oracles[1]
+  const [plan] = nodes[scenarioNodes(context.loaded.workflow)[0]].outputs
+  const features = namedFeatures(/** @type {string} */ (await context.deps.files.read(context.slug, plan)))
+  return { text: scenarioReviewText({ scenarios: scenarios.list, features, oracle }), subjects: oracle.files }
+}
+
 /** @type {Readonly<Record<NodeQuestion, Questionnaire>>} */
-const QUESTIONNAIRES = Object.freeze({ 'adr-ratification': RATIFICATION, 'mutation-plan': MUTATION_PLAN })
+const QUESTIONNAIRES = Object.freeze({ 'adr-ratification': RATIFICATION, 'mutation-plan': MUTATION_PLAN, 'scenario-review': SCENARIO_REVIEW })
 
 /** @param {string[] | string} adrs a string: why they cannot be listed @returns {Plan} */
 const adrPlan = (adrs) => {
@@ -90,8 +119,13 @@ const adrPlan = (adrs) => {
   return adrs.length === 0 ? { answered: { answer: 'RATIFIED', reason: 'no Proposed ADR to ratify' } } : { text: ratificationText(adrs), subjects: adrs }
 }
 
-/** @param {{ ok: true } | { ok: false, error: string }} commit @returns {Act} */
-const committed = (commit) => (commit.ok ? { failures: [] } : { environment: commit.error })
+/**
+ * The ratification committed goes on; Git refusing its commit asks a human, naming what Git printed.
+ * @param {{ deps: { files: import('../ports/tracking-files.mjs').TrackingFiles }, slug: string, step: string }} at
+ * @param {{ ok: true } | { ok: false, error: string, output: string }} commit
+ * @returns {Promise<Act>}
+ */
+const committed = async ({ deps, slug, step }, commit) => (commit.ok ? { failures: [] } : { environment: commit.error, incident: await refusedCommit(deps, { slug, step }, commit) })
 
 /**
  * An ask node: the question asked once, its answer acted on, the run routed by it.
@@ -179,7 +213,7 @@ export const waiting = ({ slug }, asked, phase) => ({
  */
 const settleAsk = async (context, run, next, asked) => {
   const done = await QUESTIONNAIRES[/** @type {NodeQuestion} */ (next.node.question)].act(context, asked, run)
-  if ('environment' in done) return escalate(context, next, done.environment)
+  if ('environment' in done) return escalate(context, next, done.environment, done.incident)
   const answered = { answer: /** @type {string} */ (asked.answer), reason: asked.reason, outcome: /** @type {const} */ ('answered') }
   return recordAsk(context, run, next, 'stop' in done ? { ...answered, failures: [], stop: done.stop } : { ...answered, failures: done.failures })
 }
@@ -241,14 +275,16 @@ const retried = async (context, phase) => {
 }
 
 /**
- * The machine cannot run the step: the engine asks a human to fix it and RETRY, or ABORT. The
- * step stays open; the run settles the question before anything else.
+ * The machine cannot run the step: the engine asks a human to fix it and RETRY, or ABORT, with
+ * the incident it knows of. The step stays open; the run settles the question before anything else.
  * @param {Context} context @param {Pick<WorkStep, 'node' | 'visit'>} next @param {string} reason
+ * @param {import('../../domain/pipeline/incidents.mjs').Incident} [incident]
  * @returns {Promise<null>}
  */
-export const escalate = async ({ journal }, { node, visit }, reason) => {
-  const question = questionOf('environment', nextKey(journal, node.id), environmentText(node.id, reason))
-  await journal.append('question.asked', { ...question, step: node.id, visit, subjects: [] })
+export const escalate = async (context, { node, visit }, reason, incident = MACHINE) => {
+  const { journal } = context
+  const question = questionOf('environment', nextKey(journal, node.id), withReport(context, environmentText(node.id, reason, incident)))
+  await journal.append('question.asked', { ...question, step: node.id, visit, subjects: [], incident })
   return null
 }
 
@@ -282,10 +318,17 @@ export const blockQuestion = async (context, run, next) => {
   const ceiling = reviewCeilingOf(context, next, step)
   if (ceiling !== null) {
     const kind = acceptable(ceiling.findings) ? REVIEW_CEILING : BLOCKED
-    return askQuestion(context, { kind, step, visit: run.nodes[step].visit }, { text: reviewCeilingText(ceiling), subjects: [] })
+    return askQuestion(context, { kind, step, visit: run.nodes[step].visit }, { text: withReport(context, reviewCeilingText(ceiling)), subjects: [] })
   }
-  return askQuestion(context, { kind: BLOCKED, step, visit: run.nodes[step].visit }, { text: blockText(blockOf(context, next, step)), subjects: [] })
+  return askQuestion(context, { kind: BLOCKED, step, visit: run.nodes[step].visit }, { text: withReport(context, blockText(blockOf(context, next, step))), subjects: [] })
 }
+
+/**
+ * A question on a run that stopped ends with where its report is: the commits and their
+ * verdicts, the failures and the incidents so far.
+ * @param {{ deps: { files: import('../ports/tracking-files.mjs').TrackingFiles }, slug: string }} context @param {string} text
+ */
+const withReport = ({ deps, slug }, text) => `${text}\nThe run so far (commits, refusals, incidents): ${deps.files.location(slug, RUN_REPORT_FILE)}`
 
 /**
  * What a review that reached its ceiling left (#499): its findings with their context and where
@@ -302,14 +345,32 @@ const reviewCeilingOf = ({ deps, slug }, { last }, step) => {
 
 /**
  * What the blocked question says of the block: only what the engine checked, and the file that
- * holds the agent's own words.
+ * holds the agent's own words. An agent refused the same way twice or on its last attempt is
+ * told by that cause, with its missing outputs and refusals.
  * @param {Context} context @param {BlockedStep} next @param {string} step
  * @returns {import('../../domain/decisions/questions.mjs').Block}
  */
-const blockOf = (context, { node, last }, step) => {
-  const { code, step: from, failures } = /** @type {RunEvent} */ (last)
-  return { step, code, from, agent: /** @type {WorkStep['node']} */ (node).agent, details: detailsOf(context, /** @type {RunEvent} */ (last)), failures }
+const blockOf = (context, { node, last, cause }, step) => {
+  const event = /** @type {RunEvent} */ (last)
+  const refused = REFUSALS.includes(cause)
+  return {
+    step, code: refused ? cause : event.code, from: event.step, agent: /** @type {WorkStep['node']} */ (node).agent,
+    details: detailsOf(context, event), failures: refused ? refusalLines(context, event) : event.failures, attempt: event.attempt,
+  }
 }
+
+/** The blocks an agent's refusals cause, asked about by their cause rather than by the code of the last refusal. */
+const REFUSALS = Object.freeze(['breaker', 'ceiling'])
+
+/**
+ * What an agent's refused attempt left: its missing outputs, where they are, then its refusals.
+ * @param {{ deps: { files: import('../ports/tracking-files.mjs').TrackingFiles }, slug: string }} context @param {RunEvent} event
+ * @returns {string[]}
+ */
+export const refusalLines = ({ deps, slug }, event) => [
+  ...(event.missing.length > 0 ? [`missing outputs: ${event.missing.map((/** @type {string} */ path) => deps.files.location(slug, path)).join(', ')}`] : []),
+  ...event.failures,
+]
 
 /**
  * The file that holds what the engine does not repeat of a block, absolute; null when the

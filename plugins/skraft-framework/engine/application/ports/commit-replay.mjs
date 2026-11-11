@@ -8,7 +8,8 @@
  *   try, in order, in that one checkout: the first that starts runs; importRoots: folders of the
  *   commit, relative to cwd, put first on a Python program's import path (PYTHONPATH), before
  *   whatever was there; empty for any other program.
- * @typedef {{ run: (request: ReplayRequest) => Promise<import('./command-runner.mjs').CommandResult> }} CommitReplay
+ * @typedef {import('./command-runner.mjs').CommandResult} ReplayResult
+ * @typedef {{ run: (request: ReplayRequest) => Promise<ReplayResult> }} CommitReplay
  *   A commit that cannot be checked out answers started: false with its error, no choice tried;
  *   so does a checkout where no choice starts: `could not start <program> nor <program>`.
  */

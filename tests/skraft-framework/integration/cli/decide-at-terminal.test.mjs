@@ -2,6 +2,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { spawnSync } from 'node:child_process'
 import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
 import { PassThrough } from 'node:stream'
 import { terminalConfirm } from '../../../../plugins/skraft-framework/engine/drivers/cli/terminal-confirm.mjs'
 import { PAY_OR_NOTHING, SLUG, blocked, deliverWith, killsZero, pipelineRepository, proposesZero, scriptedLlm } from '../support/pipeline-repository.mjs'
@@ -32,7 +33,7 @@ test('skraft decide records an answer only once the person confirms it at their 
   const unattended = await skraft(cwd, ['decide', 'adr-1', 'RATIFIED'], { confirm: async () => null })
 
   assert.deepEqual(declined, { status: 1, stdout: '', stderr: 'not confirmed; nothing was recorded\n' })
-  assert.deepEqual(unattended, { status: 1, stdout: '', stderr: "skraft decide records a person's answer: run it yourself in an interactive terminal; nothing was recorded\n" })
+  assert.deepEqual(unattended, { status: 1, stdout: '', stderr: "skraft decide records a person's answer: run it yourself in an interactive terminal of your own, not an agent's shell; nothing was recorded\n" })
   assert.deepEqual(answers(cwd), [])
   const confirmed = await skraft(cwd, ['decide', 'adr-1', 'REJECTED', '--reason', 'use the bank gateway'], { confirm: person(true) })
   assert.equal(confirmed.status, 0, confirmed.stderr)
@@ -49,7 +50,8 @@ test('an agent of the agent loop that says it is blocked waits on the person; th
     startAgents(step, llm)
     ;({ step } = await loop(cwd, ['record']))
   }
-  assert.match(step.reason, /^design is blocked: [^]* STOP ends the run\. Options: an instruction in quotes, or STOP\. Stop here and ask the human to answer it with skraft decide in their own terminal; then run next\.$/)
+  assert.match(step.reason, /^design is blocked: [^]* STOP ends the run\.\nThe run so far \(commits, refusals, incidents\): .+ Options: an instruction in quotes, or STOP\. Stop here and ask the human to answer it with skraft decide in their own terminal; then run next\.$/)
+  assert.equal(step.reason.split('\n').at(-1), `The run so far (commits, refusals, incidents): ${join(cwd, '.copilot-tracking', 'skraft-plans', SLUG, 'run-report.md')} Options: an instruction in quotes, or STOP. Stop here and ask the human to answer it with skraft decide in their own terminal; then run next.`)
   const asked = []
 
   const decided = await skraft(cwd, ['decide', 'design-1', 'Use the bank gateway'], { confirm: async (question) => { asked.push(question); return true } })
@@ -60,7 +62,7 @@ test('an agent of the agent loop that says it is blocked waits on the person; th
   assert.deepEqual(answers(cwd), [['design-1', 'Use the bank gateway', 'cli-tty']])
   assert.equal(step.status, 'dispatch')
   const brief = readFileSync(step.dispatches[0].brief, 'utf8')
-  assert.ok(brief.includes('- Pass: 2, after a human refused the work'), brief)
+  assert.ok(brief.includes('- Pass: 2, after a human sent the work back'), brief)
   assert.ok(brief.includes('\nA human refused the work of pass 1:\n- Use the bank gateway\n'), brief)
 })
 
@@ -78,6 +80,8 @@ test('the agent loop waits on the mutation plan, naming its options and an instr
   }
   await untilAsked()
   await skraft(cwd, ['decide', 'adr-1', 'RATIFIED'], { confirm: async () => true })
+  await untilAsked()
+  await skraft(cwd, ['decide', 'scenario_review-1', 'APPROVED'], { confirm: async () => true })
 
   const step = await untilAsked()
   const decided = await skraft(cwd, ['decide', 'mutation_plan-1', 'Test pay(0) only'], { confirm: async () => true })
@@ -93,7 +97,7 @@ test('started as a program with no terminal to type in, skraft decide records no
 
   const run = spawnSync(process.execPath, [SKRAFT_MJS, 'decide', 'RATIFIED'], { cwd, encoding: 'utf8', input: 'y\n', env: { ...process.env, HOME: `${cwd}-home`, USERPROFILE: `${cwd}-home` } })
 
-  assert.deepEqual({ status: run.status, stderr: run.stderr }, { status: 1, stderr: "skraft decide records a person's answer: run it yourself in an interactive terminal; nothing was recorded\n" })
+  assert.deepEqual({ status: run.status, stderr: run.stderr }, { status: 1, stderr: "skraft decide records a person's answer: run it yourself in an interactive terminal of your own, not an agent's shell; nothing was recorded\n" })
   assert.deepEqual(answers(cwd), [])
 })
 
@@ -108,4 +112,29 @@ test('the terminal asks on its output and takes y or yes, in any case, as a yes;
 
   assert.deepEqual(await confirmOn(' Yes '), [true, 'record? '])
   assert.deepEqual([(await confirmOn('y'))[0], (await confirmOn('Y'))[0], (await confirmOn('yess'))[0], (await confirmOn('ay'))[0], (await confirmOn(''))[0]], [true, true, false, false, false])
+})
+
+test('a terminal its host marks as an AI agent\'s shell takes no answer: an agent typing skraft decide there records nothing, a person\'s terminal still does', async () => {
+  const typedIn = async (env, isTTY = true) => {
+    const input = Object.assign(new PassThrough(), { isTTY })
+    const output = new PassThrough()
+    const confirmed = terminalConfirm({ input, output, env })('record? ')
+    input.write('y\n')
+    return [await confirmed, output.read()?.toString() ?? '']
+  }
+
+  for (const marker of ['AI_AGENT', 'COPILOT_AGENT_SESSION_ID', 'CLAUDECODE']) {
+    assert.deepEqual(await typedIn({ PATH: '/usr/bin', [marker]: '1' }), [null, ''], marker)
+  }
+  assert.deepEqual(await typedIn({ PATH: '/usr/bin', AI_AGENT: '' }), [true, 'record? '])
+  assert.deepEqual(await typedIn({ PATH: '/usr/bin' }), [true, 'record? '])
+  assert.deepEqual(await typedIn({ PATH: '/usr/bin' }, false), [null, ''])
+})
+
+test('a terminal closed before the person answers (Ctrl-D) is a no, never a crash', async () => {
+  const input = Object.assign(new PassThrough(), { isTTY: true })
+  const confirmed = terminalConfirm({ input, output: new PassThrough(), env: {} })('record? ')
+  input.end()
+
+  assert.equal(await confirmed, false)
 })

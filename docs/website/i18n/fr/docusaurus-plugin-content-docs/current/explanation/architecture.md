@@ -131,10 +131,19 @@ sequenceDiagram
 chaque fait avant que la suite soit décidée.*
 
 Une sortie absente relance l'agent avec la liste de ce qui manque, dans la limite de ses
-tentatives ; le même échec deux fois arrête le run plus tôt, parce qu'une troisième tentative
-identique n'apprendrait rien. Une étape que la machine ne peut pas exécuter (programme
-introuvable, git en échec) n'est pas imputée à l'agent : le moteur demande à un humain de
-réparer, puis de relancer ou d'abandonner. Les codes : [Suivi et journal](../reference/run-journal.md#statuses-and-codes).
+tentatives. Un agent dont les deux dernières tentatives refusées ont échoué exactement de la même
+façon (les mêmes sorties absentes et les mêmes échecs, comparés tels qu'écrits) n'est pas lancé une
+troisième fois, parce qu'une tentative identique n'apprendrait rien : le run demande une consigne à
+un humain, comme après la dernière tentative de l'agent, et la consigne relance l'agent sur un
+nouveau passage. Une étape de gates en échec
+renvoie le travail par son arête `FAIL` jusqu'au `max_visits` de cette arête ; le run demande
+alors une consigne à un humain. Les tentatives et les arêtes empruntées sont relues dans le
+journal, si bien qu'un run repris les garde. Une gate arrêtée par un signal ou un plantage échoue comme une
+vérification : sa preuve revient à l'agent. Une étape que la machine ne peut pas exécuter
+(programme introuvable, git en échec), ou pas avec ce que lui donne `skraft-config.json`, n'est
+pas imputée à l'agent et ne consomme aucune de ses tentatives : le
+moteur demande à un humain, en nommant à qui revient la correction et le log de ce qu'a affiché
+la commande, puis de relancer ou d'abandonner. Les codes : [Suivi et journal](../reference/run-journal.md#statuses-and-codes).
 
 ## Profondeur 1
 
@@ -160,6 +169,22 @@ rouges et verts du TDD ; le cycle de vie des ADR ; le verdict des revues. Chacun
 contrôles est testé sans hôte, et se comporte pareil partout. Pourquoi ils ont quitté les hooks
 de la v1 : [Garde-fous](./guardrails.md). Comment le workflow
 qui les porte se lit et se copie : [Workflow DOT](../reference/workflow-dot.mdx).
+
+### Ce que lit le moteur, et ce que lit un agent
+
+Le moteur ne lit que des formats stables : un message de Conventional Commit, un fichier qui
+existe, un dossier où une étape a le droit d'écrire, un code de sortie. Il ne lit aucun rapport de
+test (JUnit, TRX ou autre) ni la sortie d'aucun runner. Pour vérifier un commit rouge ou vert, il rejoue
+les commandes de test du commit dans une copie jetable et garde ce que chacune a affiché, tel
+quel, dans un log. Il ne distingue qu'un code de sortie 0 : un rouge dont toutes les commandes
+passent est refusé sur-le-champ. Tout le reste va au
+[juge du rejeu](pathname:///dashboard/#agent-replay-judge), un agent que le pilote lance à
+profondeur 1, comme une lentille : il lit les logs, ceux du parent quand un rouge a échoué, et le
+commit, et répond `accept`, `send-back`, `retry` ou `ask-human` avec une note. Le moteur ne lit
+que la décision et garde la réponse comme la preuve que lit un humain ou la tentative suivante.
+Une décision que seule la machine peut trancher (un programme non installé, un runtime de
+conteneurs qui ne répond pas) arrive à un humain par la même question `environment` que toute
+autre étape. Les règles : [Commits et rejeux](../reference/gates.md#commits).
 
 ## Alternatives écartées
 

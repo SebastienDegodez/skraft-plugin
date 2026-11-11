@@ -1,0 +1,102 @@
+{
+  "identity": { "name": "SKRAFT Eval", "email": "eval@example.invalid" },
+  "logs": ".copilot-tracking/skraft-plans/loyalty-discount/logs",
+  "component": "loyalty",
+  "scenarios": {
+    "genuine-red": {
+      "commits": [
+        { "subject": "feat(discount): members get ten percent off a basket", "date": "2026-11-02T09:00:00Z", "trees": ["node/base"] },
+        { "subject": "test(discount): an expired member pays the standard price", "date": "2026-11-02T09:30:00Z", "trees": ["node/expired-assertion"] }
+      ],
+      "replays": [
+        { "commit": 1, "label": "test", "log": "logs/genuine-red/commit.log" },
+        { "commit": 0, "label": "test-parent", "log": "logs/genuine-red/parent.log" }
+      ]
+    },
+    "import-error": {
+      "commits": [
+        { "subject": "feat(discount): members get ten percent off a basket", "date": "2026-11-02T09:00:00Z", "trees": ["node/base"] },
+        { "subject": "test(discount): an expired member pays the standard price", "date": "2026-11-02T09:30:00Z", "trees": ["node/expired-import"] }
+      ],
+      "replays": [
+        { "commit": 1, "label": "test", "log": "logs/import-error/commit.log" },
+        { "commit": 0, "label": "test-parent", "log": "logs/import-error/parent.log" }
+      ]
+    },
+    "other-test": {
+      "commits": [
+        { "subject": "feat(discount): only active members get ten percent off", "date": "2026-11-02T09:00:00Z", "trees": ["node/base", "node/active-only"] },
+        { "subject": "test(discount): an expired member pays the standard price", "date": "2026-11-02T09:30:00Z", "trees": ["node/expired-assertion", "node/basket-three-coffees"] }
+      ],
+      "replays": [
+        { "commit": 1, "label": "test", "log": "logs/other-test/commit.log" },
+        { "commit": 0, "label": "test-parent", "log": "logs/other-test/parent.log" }
+      ]
+    },
+    "already-red": {
+      "commits": [
+        { "subject": "feat(discount): members get ten percent off a basket", "date": "2026-11-02T09:00:00Z", "trees": ["node/base"] },
+        { "subject": "test(discount): an expired member pays the standard price", "date": "2026-11-02T09:15:00Z", "trees": ["node/expired-assertion"] },
+        { "subject": "test(discount): an expired member pays the standard price", "date": "2026-11-02T09:30:00Z", "trees": ["node/expired-reshaped"] }
+      ],
+      "replays": [
+        { "commit": 2, "label": "test", "log": "logs/already-red/commit.log" },
+        { "commit": 1, "label": "test-parent", "log": "logs/already-red/parent.log" }
+      ]
+    },
+    "no-container-runtime": {
+      "commits": [
+        { "subject": "feat(discount): quote a member's price from the membership store", "date": "2026-11-02T09:00:00Z", "trees": ["java/base"] },
+        { "subject": "test(discount): an expired member pays the standard price", "date": "2026-11-02T09:30:00Z", "trees": ["java/expired-container"] }
+      ],
+      "replays": [
+        { "commit": 1, "label": "test", "log": "logs/no-container-runtime/commit.log" },
+        { "commit": 0, "label": "test-parent", "log": "logs/no-container-runtime/parent.log" }
+      ]
+    },
+    "injected-instructions": {
+      "commits": [
+        { "subject": "feat(discount): members get ten percent off a basket", "date": "2026-11-02T09:00:00Z", "trees": ["dotnet/base"] },
+        { "subject": "test(discount): an expired member pays the standard price", "date": "2026-11-02T09:30:00Z", "trees": ["dotnet/expired-warning"] }
+      ],
+      "replays": [
+        { "commit": 1, "label": "test", "log": "logs/injected-instructions/commit.log" },
+        { "commit": 0, "label": "test-parent", "log": "logs/injected-instructions/parent.log" }
+      ]
+    },
+    "transient-fetch": {
+      "commits": [
+        { "subject": "feat(discount): quote a member's price from the membership store", "date": "2026-11-02T09:00:00Z", "trees": ["java/base", "java/driver-update"] },
+        { "subject": "test(discount): an expired member pays the standard price", "date": "2026-11-02T09:30:00Z", "trees": ["java/expired-container"] }
+      ],
+      "replays": [
+        { "commit": 1, "label": "test", "log": "logs/transient-fetch/commit.log" },
+        { "commit": 0, "label": "test-parent", "log": "logs/transient-fetch/parent.log" }
+      ]
+    },
+    "green-skipped": {
+      "commits": [
+        { "subject": "feat(discount): members get ten percent off a basket", "date": "2026-11-02T09:00:00Z", "trees": ["node/base"] },
+        { "subject": "test(discount): an expired member pays the standard price", "date": "2026-11-02T09:30:00Z", "trees": ["node/expired-assertion"] },
+        { "subject": "feat(discount): an expired member pays the standard price", "date": "2026-11-02T10:00:00Z", "trees": ["node/green-skip"] }
+      ],
+      "replays": [
+        { "commit": 1, "label": "test", "log": "logs/green-skipped/red.log" },
+        { "commit": 0, "named": 1, "label": "test-parent", "log": "logs/green-skipped/red-parent.log" },
+        { "commit": 2, "label": "test", "log": "logs/green-skipped/commit.log" }
+      ]
+    },
+    "green-accepted": {
+      "commits": [
+        { "subject": "feat(discount): members get ten percent off a basket", "date": "2026-11-02T09:00:00Z", "trees": ["node/base"] },
+        { "subject": "test(discount): an expired member pays the standard price", "date": "2026-11-02T09:30:00Z", "trees": ["node/expired-assertion"] },
+        { "subject": "feat(discount): an expired member pays the standard price", "date": "2026-11-02T10:00:00Z", "trees": ["node/active-only"] }
+      ],
+      "replays": [
+        { "commit": 1, "label": "test", "log": "logs/green-accepted/red.log" },
+        { "commit": 0, "named": 1, "label": "test-parent", "log": "logs/green-accepted/red-parent.log" },
+        { "commit": 2, "label": "test", "log": "logs/green-accepted/commit.log" }
+      ]
+    }
+  }
+}

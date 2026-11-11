@@ -1,41 +1,43 @@
 import { readOrName } from '../shared/workspace-reading.mjs'
 import { CONFIG_FILE } from '../../domain/config/skraft-config.mjs'
 import { joinRelative, pathUnder } from '../../domain/config/relative-path.mjs'
-import { installerIn, parseCommand, programChoices } from '../../domain/gates/command-line.mjs'
-import { failureOf } from '../../domain/gates/gate-plan.mjs'
 import { readResult } from '../../domain/pipeline/agent-result.mjs'
-import { breaksConvention, commitFailure, issueOf, judgeCommits, redsToReplay } from '../../domain/pipeline/commits.mjs'
+import { breaksConvention, commitFailure, issueOf, judgeCommits } from '../../domain/pipeline/commits.mjs'
+import { TRACKING } from '../../domain/pipeline/component-files.mjs'
 import { isFilled } from '../../domain/pipeline/outputs.mjs'
 import { proseProblems, readProse } from '../../domain/reporting/pull-request-prose.mjs'
 import { allowedPaths, makesCommits, rootFiles, trackingFolder } from '../../domain/pipeline/roles.mjs'
 import { adrFailures } from '../decisions/adr-checks.mjs'
-import { baseOf } from '../config/bases.mjs'
+import { emptyTally, replayReds, report } from './commit-replays.mjs'
 import { checkDesignRecords } from './design-records.mjs'
 import { checkGherkinRecords } from './gherkin-records.mjs'
 import { checkResearchRecords } from './research-records.mjs'
 import { EJECTED } from '../workflow/called-workflows.mjs'
+import { planOf, replayScenarioGreen, scenarioFailures, scenarioJudging, scenarioRecord } from './scenario-checks.mjs'
 
 /**
  * @typedef {import('../../domain/journal/run-state.mjs').Head} Head
  * @typedef {import('../../domain/pipeline/commits.mjs').JudgedCommit} JudgedCommit
  * @typedef {import('../../domain/config/skraft-config.mjs').Component} Component
  * @typedef {import('../../domain/config/skraft-config.mjs').SkraftConfig} SkraftConfig
- * @typedef {'missing-outputs' | 'invalid-result' | 'design-records' | 'research-records' | 'gherkin-records' | 'pull-request-prose' | 'agent-blocked' | 'write-scope' | 'uncommitted' | 'adr-lifecycle' | 'commit-convention' | 'tdd'} FailureCode
+ * @typedef {'missing-outputs' | 'invalid-result' | 'design-records' | 'research-records' | 'gherkin-records' | 'scenarios' | 'pull-request-prose' | 'agent-blocked' | 'write-scope' | 'uncommitted' | 'adr-lifecycle' | 'commit-convention' | 'tdd'} FailureCode
  * @typedef {{
  *   repository: string, sha: string, subject: string, kind: string, verdict: string,
- *   replay: { component: string, command: ReplayedCommand, exitCode: number | null, durationMs: number } | null,
+ *   replay: import('./commit-replays.mjs').Replay | null,
  * }} CheckedCommit
  * @typedef {{
  *   missing: string[], failures: string[], code: FailureCode | null, commits: CheckedCommit[],
- *   environment: null, replayMs: number, uncommitted?: UncommittedFile[],
- * } | { commits: CheckedCommit[], environment: string }} StepCheck
+ *   environment: null, replayMs: number, judgeCost?: number, uncommitted?: UncommittedFile[], scenario?: import('./scenario-checks.mjs').ScenarioRecord,
+ * } | { commits: CheckedCommit[], environment: string, incident?: import('../../domain/pipeline/incidents.mjs').Incident }} StepCheck
  *   environment: why the machine could not check the step (a missing test command, Git
- *   failing); the step then stays open. uncommitted: the files in its scope the agent changed
+ *   failing); the step then stays open. incident: whose it is to fix and where the command that
+ *   stopped printed, when a replay stopped; else the machine's, with no log. judgeCost: what the
+ *   replay judge cost, when the host tells. uncommitted: the files in its scope the agent changed
  *   and left uncommitted, which the engine commits once the step is done: only an agent with no
  *   shell gets there, one with a shell is refused for them; absent when the agent is blocked.
  * @typedef {{ repository: string, file: string, path: string }} UncommittedFile
  *   file: relative to its repository; path: relative to the working copy.
- * @typedef {Map<string, { verdict: string, replay: CheckedCommit['replay'] }>} KnownCommits
+ * @typedef {import('./commit-replays.mjs').KnownCommits} KnownCommits
  *   what earlier attempts of the pass found for each commit they checked, by sha.
  * @typedef {{
  *   files: import('../ports/tracking-files.mjs').TrackingFiles,
@@ -44,19 +46,22 @@ import { EJECTED } from '../workflow/called-workflows.mjs'
  *   sourceControl: import('../ports/source-control.mjs').SourceControl,
  *   commitReplay: import('../ports/commit-replay.mjs').CommitReplay,
  *   clock: import('../ports/clock.mjs').Clock,
+ *   agentRunner: import('../ports/agent-runner.mjs').AgentRunner,
+ *   progress: import('../ports/pipeline-progress.mjs').PipelineProgress,
  * }} CheckDeps
  * @typedef {{ code: FailureCode, line: string }} Failure
  * @typedef {{ allowed: string[], roots: string[], engineFiles: string[] }} WriteScope
  * @typedef {{
  *   deps: CheckDeps, slug: string, config: import('../../domain/config/skraft-config.mjs').SkraftConfig,
  *   base: import('../config/bases.mjs').Base[], story: { issue?: number | null } | null,
+ *   judge: import('./replay-judge.mjs').JudgeRun,
  * }} CheckContext
- * @typedef {{ replays: Map<string, CheckedCommit['replay']>, details: Map<string, string>, replayMs: number }} ReplayTally
- *   what the replays of the pass found so far: the replay each red reports (its first that did not pass, else its last), why a red is not red, the time spent.
+ *   judge: what the replay judge runs on, and the attempt whose commits it judges
+ * @typedef {import('./scenario-checks.mjs').ScenarioPass} ScenarioPass
  */
 
 /** Failure codes, the first one found naming the step's refusal. */
-const PRIORITY = /** @type {const} */ (['missing-outputs', 'invalid-result', 'design-records', 'research-records', 'gherkin-records', 'pull-request-prose', 'write-scope', 'uncommitted', 'adr-lifecycle', 'commit-convention', 'tdd'])
+const PRIORITY = /** @type {const} */ (['missing-outputs', 'invalid-result', 'design-records', 'research-records', 'gherkin-records', 'scenarios', 'pull-request-prose', 'write-scope', 'uncommitted', 'adr-lifecycle', 'commit-convention', 'tdd'])
 
 /**
  * Where each repository of the run stands before an attempt: its HEAD and the files already
@@ -92,27 +97,51 @@ const contentHash = async ({ workspace, hasher }, path) => {
  * @param {CheckContext} context
  * @param {{
  *   role: import('../../domain/pipeline/roles.mjs').Role, outputs: string[], precreated: Array<string | null>, result: string,
- *   visitHeads: Head[], redByGateFailure: boolean, known: KnownCommits,
- * }} step visitHeads: the heads when the pass started; redByGateFailure: the gates sent the work back, their failure standing for a red test
+ *   visitHeads: Head[], redByGateFailure: boolean, known: KnownCommits, scenario: ScenarioPass | null,
+ * }} step visitHeads: the heads when the pass started; redByGateFailure: the gates sent the work back, their failure standing for a red test;
+ *   scenario: the scenario the pass works on, null for none
  * @returns {Promise<StepCheck>}
  */
 export const checkStep = async (context, step) => {
   const read = await readAttempt(context, step)
   if ('stop' in read) return read.stop
-  const commits = await checkCommits(context.deps, context, step)
-  if (commits.environment !== null) return { ...environmentOnly(commits.environment), commits: commits.checked }
+  const commits = await judgedCommits(context, { ...step, plan: read.plan.plan })
+  if (commits.environment !== null) return { ...environmentOnly(commits.environment), commits: commits.checked, ...incidentOf(commits) }
   const adr = await adrFailures(context.deps, { base: context.base, touched: read.touched })
   if (typeof adr === 'string') return { ...environmentOnly(adr), commits: commits.checked }
-  const found = [...resultFailures(read.reading), ...read.records, ...read.prose, ...read.scope.failures, ...adrLines(adr), ...commits.found]
-  return { ...refusal(read.missing, found, commits), uncommitted: read.scope.uncommitted }
+  const found = [...resultFailures(read.reading), ...read.records, ...read.plan.failures, ...read.prose, ...read.scope.failures, ...adrLines(adr), ...commits.found]
+  return { ...refusal(read.missing, found, commits), uncommitted: read.scope.uncommitted, scenario: commits.scenario }
 }
+
+/**
+ * The attempt's commits checked, the working copy as the replay judge found it: a judge has a
+ * shell to read with, and one that changed HEAD or a file stops the step for a human.
+ * @param {CheckContext} context @param {Parameters<typeof checkCommits>[2]} step
+ */
+const judgedCommits = async (context, step) => {
+  const before = await workingCopyOf(context)
+  const commits = await checkCommits(context.deps, context, step)
+  if (await workingCopyOf(context) === before) return commits
+  return { environment: JUDGE_MOVED, checked: commits.checked, incident: /** @type {const} */ ({ owner: 'judge', log: null }) }
+}
+
+/**
+ * Each repository's HEAD and changed files, the tracking folder left out: the engine writes there
+ * while it checks (replay logs, the judge's answers, the journal).
+ * @param {CheckContext} context
+ */
+const workingCopyOf = async ({ deps, base }) => JSON.stringify((await headsOf(deps, base))
+  .map(({ repository, sha, dirty }) => ({ repository, sha, dirty: dirty.filter(({ path }) => pathUnder(path, TRACKING) === null) })))
+
+/** Why a step stops when the working copy changed while its commits were checked. */
+const JUDGE_MOVED = 'the replay judge changed the working copy (a commit or a file) while it judged; undo that change, then retry'
 
 /**
  * What the attempt left before its commits: its outputs, its result, the files out of its scope
  * or left uncommitted, and the records its role keeps; the check that stops the step when one does.
  * @param {CheckContext} context
  * @param {Parameters<typeof checkStep>[1]} step
- * @returns {Promise<{ stop: StepCheck } | { missing: string[], reading: import('../../domain/pipeline/agent-result.mjs').ResultReading, touched: string[], scope: { failures: Failure[], uncommitted: UncommittedFile[] }, records: Failure[], prose: Failure[] }>}
+ * @returns {Promise<{ stop: StepCheck } | { missing: string[], reading: import('../../domain/pipeline/agent-result.mjs').ResultReading, touched: string[], scope: { failures: Failure[], uncommitted: UncommittedFile[] }, records: Failure[], prose: Failure[], plan: Awaited<ReturnType<typeof planOf>> }>}
  */
 const readAttempt = async ({ deps, slug, config, base }, step) => {
   const missing = await missingOutputs(deps, slug, step)
@@ -124,7 +153,7 @@ const readAttempt = async ({ deps, slug, config, base }, step) => {
   if (typeof scope === 'string') return { stop: environmentOnly(scope) }
   const records = await keptRecords(deps, step, { slug, base, config })
   if (typeof records === 'string') return { stop: environmentOnly(records) }
-  return { missing, reading, touched, scope, records, prose: await proseFailures(deps, slug, step, missing) }
+  return { missing, reading, touched, scope, records, prose: await proseFailures(deps, slug, step, missing), plan: await planOf(deps, { slug, components: config.components }, step, missing) }
 }
 
 /**
@@ -167,6 +196,9 @@ const adrLines = (lines) => lines.map((line) => ({ code: /** @type {const} */ ('
 
 /** @param {string} reason @returns {StepCheck} */
 const environmentOnly = (reason) => ({ commits: [], environment: reason })
+
+/** The incident a replay that stopped the check left; none when Git stopped it first. @param {{ incident?: import('../../domain/pipeline/incidents.mjs').Incident | null }} commits */
+const incidentOf = ({ incident }) => (incident ? { incident } : {})
 
 /**
  * The outputs the attempt left as they were before it.
@@ -228,11 +260,11 @@ const uncommittedPaths = async ({ sourceControl }, visitHeads) => {
 /**
  * The step's refusal: every failure found, the code of the first one by priority.
  * @param {string[]} missing @param {Failure[]} found
- * @param {{ checked: CheckedCommit[], replayMs: number }} commits
+ * @param {{ checked: CheckedCommit[], replayMs: number, judgeCost?: number }} commits
  * @returns {StepCheck}
  */
-const refusal = (missing, found, { checked, replayMs }) => ({
-  missing, failures: found.map((failure) => failure.line), code: refusalCode(missing, found), commits: checked, environment: null, replayMs,
+const refusal = (missing, found, { checked, replayMs, judgeCost }) => ({
+  missing, failures: found.map((failure) => failure.line), code: refusalCode(missing, found), commits: checked, environment: null, replayMs, judgeCost,
 })
 
 /** @param {string[]} missing @param {Failure[]} found @returns {FailureCode | null} */
@@ -306,23 +338,67 @@ const isRootFile = (path, root) => {
 }
 
 /**
- * The commits of the pass judged against the convention, the story's issue and the TDD cycle,
- * each red commit replayed, except the tests that kill surviving mutants, which pass on the code
- * they test; the environment reason when the machine cannot check them.
+ * The commits of the pass judged against the convention, the story's issue, the TDD cycle and
+ * the scenario the pass works on; each red of an acceptance test replayed, and the green of a
+ * scenario; the environment reason when the machine cannot check them.
  * @param {CheckDeps} deps
- * @param {Pick<CheckContext, 'config' | 'base' | 'story'>} run
- * @param {{ role: import('../../domain/pipeline/roles.mjs').Role, visitHeads: Head[], redByGateFailure: boolean, known: KnownCommits }} step
- * @returns {Promise<{ environment: string, checked: CheckedCommit[] } | { environment: null, checked: CheckedCommit[], found: Failure[], replayMs: number }>}
+ * @param {Pick<CheckContext, 'config' | 'base' | 'story' | 'slug' | 'judge'>} run
+ * @param {{ role: import('../../domain/pipeline/roles.mjs').Role, visitHeads: Head[], redByGateFailure: boolean, known: KnownCommits, scenario: ScenarioPass | null, plan: import('../../domain/pipeline/scenarios.mjs').ScenarioPlan | null }} step
+ * @returns {Promise<{ environment: string, checked: CheckedCommit[] } | { environment: null, checked: CheckedCommit[], found: Failure[], replayMs: number, judgeCost: number | undefined, scenario: import('./scenario-checks.mjs').ScenarioRecord }>}
  */
-const checkCommits = async (deps, { config, base, story }, { role, visitHeads, redByGateFailure, known }) => {
-  const history = await commitsOf(deps, visitHeads)
+const checkCommits = async (deps, run, step) => {
+  const history = await commitsOf(deps, step.visitHeads)
   if (typeof history === 'string') return { environment: history, checked: [] }
-  const issue = issueOf(story)
-  const judged = judgeCommits(history, { redByGateFailure, issue })
-  const replayed = await replayReds(deps, { config, base, judged: role.tdd === 'kill' ? [] : judged, known })
-  const checked = report(judged, replayed.replays)
-  if (replayed.environment !== null) return { environment: replayed.environment, checked }
-  return { environment: null, checked, found: commitFailures(judged, { details: replayed.details, issue }), replayMs: replayed.replayMs }
+  const issue = issueOf(run.story)
+  const judged = judgedPass(history, { issue, components: run.config.components }, step)
+  const tally = emptyTally()
+  const environment = await replayed(deps, { run, step, judged, tally })
+  const checked = report(judged, tally.replays)
+  return environment === null ? { environment, checked, ...passFound(judged, { issue, tally, components: run.config.components }, step) } : { environment, checked, incident: tally.incident }
+}
+
+/**
+ * What the commits of a pass leave once judged and replayed: the failures, the replay time, what
+ * the pass records for the scenarios after it.
+ * @param {JudgedCommit[]} judged
+ * @param {{ issue: number | null, tally: import('./commit-replays.mjs').ReplayTally, components: Component[] }} run
+ * @param {Parameters<typeof checkCommits>[2]} step
+ */
+const passFound = (judged, { issue, tally, components }, { scenario, plan }) => ({
+  found: [...commitFailures(judged, { details: tally.details, issue }), ...scenarioFailures(judged, scenario, { plan, components })],
+  replayMs: tally.replayMs,
+  judgeCost: tally.judgeCost,
+  scenario: scenarioRecord(judged, scenario, { plan, commands: tally.commands, components }),
+})
+
+/**
+ * The pass's commits judged in their order, by the scenario it works on.
+ * @param {import('../../domain/pipeline/commits.mjs').StepCommit[]} history
+ * @param {{ issue: number | null, components: Component[] }} run @param {Parameters<typeof checkCommits>[2]} step
+ */
+const judgedPass = (history, { issue, components }, { redByGateFailure, scenario, plan }) => judgeCommits(history, { redByGateFailure, issue, scenario: scenarioJudging(scenario, plan, components), components })
+
+/**
+ * Replays the reds of an acceptance test, never a red of an inner loop nor a test that kills a
+ * surviving mutant, then the green of a scenario.
+ * @param {CheckDeps} deps
+ * @param {{ run: Pick<CheckContext, 'config' | 'base' | 'slug' | 'judge'>, step: Parameters<typeof checkCommits>[2], judged: JudgedCommit[], tally: import('./commit-replays.mjs').ReplayTally }} pass
+ * @returns {Promise<string | null>}
+ */
+const replayed = async (deps, { run, step, judged, tally }) => {
+  const replaying = { base: run.base, tally, slug: run.slug, judge: run.judge, scenario: judgedScenario(step), retried: false }
+  // Stryker disable next-line ArrayDeclaration: a list that holds no red commit replays none
+  const reds = await replayReds(deps, replaying, { config: run.config, judged: step.role.tdd === 'red' ? judged : [], known: step.known })
+  return reds ?? replayScenarioGreen(deps, replaying, { judged, scenario: step.scenario, components: run.config.components })
+}
+
+/**
+ * The scenario the judge is told the pass works on: the plan's first on the pass that writes it.
+ * @param {Parameters<typeof checkCommits>[2]} step @returns {{ index: number, title: string } | null}
+ */
+const judgedScenario = ({ scenario, plan }) => {
+  const told = scenario?.scenario ?? plan?.scenarios[0] ?? null
+  return told === null ? null : { index: told.index, title: told.title }
 }
 
 /** @param {JudgedCommit[]} judged @param {{ details: Map<string, string>, issue: number | null }} context @returns {Failure[]} */
@@ -345,261 +421,3 @@ const commitsOf = async ({ sourceControl }, visitHeads) => {
   }
   return commits
 }
-
-/**
- * Replays the test command of each component a red commit of the pass touches, at that commit,
- * unless an earlier attempt of the pass already did. A red whose tests pass everywhere is
- * refused; a machine that cannot run them stops the check.
- * @param {CheckDeps} deps
- * @param {{ config: import('../../domain/config/skraft-config.mjs').SkraftConfig, base: import('../config/bases.mjs').Base[], judged: JudgedCommit[], known: KnownCommits }} request
- */
-const replayReds = async (deps, { config, base, judged, known }) => {
-  /** @type {ReplayTally} */
-  const tally = { replays: new Map(), details: new Map(), replayMs: 0 }
-  for (const red of redsToReplay(judged, config.tdd.replay)) {
-    const environment = await settleRed(deps, { config, base, known, tally }, red)
-    if (environment !== null) return { environment, ...tally }
-  }
-  return { environment: null, ...tally }
-}
-
-/**
- * Settles one red commit: from an earlier attempt, as touching no component, or by replaying it.
- * @param {CheckDeps} deps
- * @param {{ config: import('../../domain/config/skraft-config.mjs').SkraftConfig, base: import('../config/bases.mjs').Base[], known: KnownCommits, tally: ReplayTally }} run
- * @param {JudgedCommit} red
- * @returns {Promise<string | null>} why the machine could not replay it, null once settled
- */
-const settleRed = async (deps, { config, base, known, tally }, red) => {
-  const components = componentsOf(config.components, red.files)
-  const earlier = known.get(red.sha)
-  if (earlier) return reuseEarlier(tally, red, { earlier, components })
-  if (components.length === 0) return withoutComponent(red)
-  return replayRed(deps, { base, tally }, red, components)
-}
-
-/**
- * @param {ReplayTally} tally @param {JudgedCommit} red
- * @param {{ earlier: { verdict: string, replay: CheckedCommit['replay'] }, components: Component[] }} found
- * @returns {null} an earlier replay always settles the red
- */
-const reuseEarlier = (tally, red, { earlier, components }) => {
-  red.verdict = /** @type {import('../../domain/pipeline/commits.mjs').CommitVerdict} */ (earlier.verdict)
-  tally.replays.set(red.sha, earlier.replay)
-  tally.details.set(red.sha, notRed(components, earlier.replay))
-  return null
-}
-
-/** @param {JudgedCommit} red @returns {null} a red touching no component is settled without a replay */
-const withoutComponent = (red) => {
-  red.verdict = 'no-component'
-  return null
-}
-
-/**
- * Replays the red: the test command of each component it touches, then, when they all pass, the
- * e2e command of those that have one; refuses it when every one passes.
- * @param {CheckDeps} deps @param {ReplayRun} run
- * @param {JudgedCommit} red @param {Component[]} components
- * @returns {Promise<string | null>} why the machine could not replay it
- */
-const replayRed = async (deps, run, red, components) => {
-  const tested = await replayEach(deps, run, red, components.map((component) => ({ component, command: testCommandOf(run.base, component) })))
-  if (tested.environment !== null || tested.failing) return tested.environment
-  const played = await replayEach(deps, run, red, components.filter(hasE2e).map((component) => ({ component, command: parsedCommand(run.base, component, 'e2e') })))
-  if (played.environment === null && !played.failing) markNotRed(run.tally, red, components)
-  return played.environment
-}
-
-/**
- * Runs each command at the red commit; the first the machine cannot run stops the others.
- * @param {CheckDeps} deps @param {ReplayRun} run @param {JudgedCommit} red
- * @param {Array<{ component: Component, command: ReplayCommand }>} commands
- * @returns {Promise<{ environment: string } | { environment: null, failing: boolean }>}
- */
-const replayEach = async (deps, run, red, commands) => {
-  let failing = false
-  for (const { component, command } of commands) {
-    const replay = await replayCommand(deps, run.tally, { red, component, command })
-    if (replay.environment !== null) return replay
-    failing ||= replay.failure === 'deterministic'
-  }
-  return { environment: null, failing }
-}
-
-/** @param {Component} component */
-const hasE2e = (component) => component.commands.e2e !== undefined
-
-/** @param {ReplayTally} tally @param {JudgedCommit} red @param {Component[]} components */
-const markNotRed = (tally, red, components) => {
-  red.verdict = 'not-red'
-  tally.details.set(red.sha, notRed(components, tally.replays.get(red.sha)))
-}
-
-/**
- * @typedef {{ base: import('../config/bases.mjs').Base[], tally: ReplayTally }} ReplayRun
- * @typedef {{ environment: string } | { environment: null, failure: ReturnType<typeof failureOf> }} ComponentReplay
- * @typedef {{ environment: string } | { environment: null, name: ReplayedCommand, line: string, argv: string[] }} ReplayCommand
- * @typedef {'test' | 'e2e'} ReplayedCommand
- */
-
-/**
- * Runs one command of a component at the red commit; a command that cannot start or ends for
- * the machine's reasons is no failure of the tests, and neither is an e2e failure its parent shows.
- * @param {CheckDeps} deps @param {ReplayTally} tally
- * @param {{ red: JudgedCommit, component: Component, command: ReplayCommand }} replay
- * @returns {Promise<ComponentReplay>}
- */
-const replayCommand = async (deps, tally, { red, component, command }) => {
-  if (command.environment !== null) return command
-  const answer = await timedReplay(deps, tally, { red, component, command })
-  const failure = failureOf(answer)
-  if (failure === 'environment') return { environment: `replaying ${red.sha.slice(0, 7)} for ${component.name}: ${answer.error ?? `${command.line} exited ${answer.exitCode}`}` }
-  if (failure === null || command.name === 'test') return { environment: null, failure }
-  return failureAtParent(deps, tally, { red, component, command })
-}
-
-/** An e2e failure that proves the red. @type {ComponentReplay} */
-const RED = Object.freeze({ environment: null, failure: 'deterministic' })
-/** An e2e failure its parent shows too, for a reason the agent can act on: it proves nothing. @type {ComponentReplay} */
-const UNPROVEN = Object.freeze({ environment: null, failure: null })
-/** What Playwright prints when it finds no test to run, and exits 1. */
-const NO_TESTS = /No tests found/
-
-/**
- * An e2e failure proves the red only when the e2e tests pass at the commit's parent: a machine
- * that cannot run them (no browser, a busy port, missing dependencies) fails them there too. A
- * parent that is a red commit of the pass is not replayed again: its e2e replay tells.
- * @param {CheckDeps} deps @param {ReplayTally} tally
- * @param {{ red: JudgedCommit, component: Component, command: { line: string, argv: string[] } }} replay
- * @returns {Promise<ComponentReplay>}
- */
-const failureAtParent = async (deps, tally, replay) => {
-  const known = tally.replays.get(replay.red.parent)
-  if (known?.command === 'e2e' && known.component === replay.component.name) return known.exitCode === 0 ? RED : UNPROVEN
-  const { red, component, command } = replay
-  return atParent(replay, await timedRun(deps, tally, { repository: red.repository, sha: red.parent, component, argv: command.argv }))
-}
-
-/**
- * What the e2e replay at the parent tells: the red proven, an e2e test committed with no other
- * test to fail beside it, or a machine that cannot run the e2e tests.
- * @param {{ red: JudgedCommit, component: Component, command: { line: string } }} replay
- * @param {import('../ports/command-runner.mjs').CommandResult} answer
- * @returns {ComponentReplay}
- */
-const atParent = ({ red, component, command }, answer) => {
-  const failure = failureOf(answer)
-  if (failure === null) return RED
-  const at = `replaying ${red.sha.slice(0, 7)} for ${component.name}: ${command.line}`
-  if (failure === 'environment') return { environment: `${at} could not run at its parent, so its failure proves nothing; fix the machine, then retry` }
-  if (NO_TESTS.test(`${answer.stdout}\n${answer.stderr}`)) return UNPROVEN
-  return { environment: `${at} fails at its parent too, so its failure proves nothing; make ${command.line} pass at that parent on this machine, then retry` }
-}
-
-/**
- * The argv that runs a component's tests; the environment reason when it has none that parses.
- * @param {import('../config/bases.mjs').Base[]} base @param {Component} component
- * @returns {ReplayCommand}
- */
-const testCommandOf = (base, component) => {
-  const line = component.commands.test
-  if (line === undefined) return { environment: `component ${component.name} has no test command; add commands.test to it in ${CONFIG_FILE} so test commits can be replayed` }
-  return parsedCommand(base, component, 'test')
-}
-
-/**
- * The argv of a component's command the component declares; the environment reason when it does not parse.
- * @param {import('../config/bases.mjs').Base[]} base @param {Component} component @param {ReplayedCommand} name
- * @returns {ReplayCommand}
- */
-const parsedCommand = (base, component, name) => {
-  const line = /** @type {string} */ (component.commands[name])
-  const parsed = parseCommand(line, { baseSha: baseOf(base, component.name)?.sha ?? null })
-  if (!parsed.ok) return { environment: `${component.name} command ${JSON.stringify(line)} ${parsed.reason}` }
-  const installer = installerIn(parsed.argv)
-  if (installer !== null) return { environment: `${component.name} command ${JSON.stringify(line)} runs ${installer}: replayed at a commit, it would change through the replay's links the dependencies the working copy installed; take the install out of it` }
-  return { environment: null, name, line, argv: parsed.argv }
-}
-
-/**
- * Replays the red in the component's folder, timed and reported.
- * @param {Pick<CheckDeps, 'clock' | 'commitReplay'>} deps @param {ReplayTally} tally
- * @param {{ red: JudgedCommit, component: Component, command: { name: ReplayedCommand, argv: string[] } }} replay
- */
-const timedReplay = async (deps, tally, { red, component, command }) => {
-  const answer = await timedRun(deps, tally, { repository: red.repository, sha: red.sha, component, argv: command.argv })
-  reportReplay(tally, red.sha, { component: component.name, command: command.name, exitCode: answer.exitCode, durationMs: answer.durationMs })
-  return answer
-}
-
-/**
- * Runs a program on a commit's files from a component's folder, the first of its choices that
- * starts, as the gates run it (`python`: the component's virtual environment first); its time
- * counts as replaying.
- * @param {Pick<CheckDeps, 'clock' | 'commitReplay'>} deps @param {ReplayTally} tally
- * @param {{ repository: string, sha: string, component: Component, argv: string[] }} run
- */
-const timedRun = async (deps, tally, { repository, sha, component, argv }) => {
-  const started = deps.clock.now()
-  const cwd = /** @type {string} */ (pathUnder(component.root, repository))
-  const answer = await deps.commitReplay.run({ repository, sha, cwd, choices: programChoices(argv), importRoots: importRootsOf(component) })
-  const durationMs = deps.clock.now().getTime() - started.getTime()
-  tally.replayMs += durationMs
-  return { ...answer, durationMs }
-}
-
-/**
- * A Python component's source folders, which come first on the replayed program's import path:
- * an editable install in the virtual environment the replay links would import the working
- * copy's code instead of the commit's. None for another stack.
- * @param {Component} component @returns {string[]}
- */
-const importRootsOf = (component) => (component.stack === 'python' ? component.paths.src : [])
-
-/**
- * The replay a commit reports: its first that did not pass, else its last.
- * @param {ReplayTally} tally @param {string} sha @param {NonNullable<CheckedCommit['replay']>} replay
- */
-const reportReplay = (tally, sha, replay) => {
-  const reported = tally.replays.get(sha)
-  if (!reported || reported.exitCode === 0) tally.replays.set(sha, replay)
-}
-
-/** Why its failing e2e tests do not make a commit red. */
-const E2E_ALONE = 'its failing e2e tests prove nothing alone: they fail at its parent too, a test commit of this pass or one with no e2e test yet; commit them all in one commit, or with a failing unit test, or with the code that makes them pass'
-
-/**
- * Why a red is not red: its e2e tests failed but proved nothing, as the failing replay it reports
- * shows (a failing test command makes it red); else every test command passed, then every e2e command.
- * @param {Component[]} components @param {CheckedCommit['replay'] | undefined} replay
- */
-const notRed = (components, replay) => (replay?.exitCode ? E2E_ALONE : `the tests of ${names(components)} pass at it${e2ePassed(components.filter(hasE2e))}`)
-
-/** @param {Component[]} played the components whose e2e tests ran */
-const e2ePassed = (played) => (played.length === 0 ? '' : `, and so do the e2e tests of ${names(played)}`)
-
-/** @param {Component[]} components */
-const names = (components) => components.map(({ name }) => name).join(', ')
-
-/**
- * The components a commit's files belong to, each file to the deepest component root holding
- * it; files of the tracking folder belong to none.
- * @param {Component[]} components @param {string[]} files relative to the working copy
- */
-const componentsOf = (components, files) => {
-  /** @type {Set<Component>} */
-  const touched = new Set()
-  for (const file of files.filter((path) => pathUnder(path, '.copilot-tracking') === null)) {
-    const owner = components
-      .filter((component) => pathUnder(file, component.root) !== null)
-      .sort((a, b) => b.root.length - a.root.length)[0]
-    if (owner) touched.add(owner)
-  }
-  return [...touched]
-}
-
-/** @param {JudgedCommit[]} judged @param {Map<string, CheckedCommit['replay']>} replays @returns {CheckedCommit[]} */
-const report = (judged, replays) => judged
-  .map(({ repository, sha, subject, kind, verdict }) => ({ repository, sha, subject, kind, verdict, replay: replays.get(sha) ?? null }))
-

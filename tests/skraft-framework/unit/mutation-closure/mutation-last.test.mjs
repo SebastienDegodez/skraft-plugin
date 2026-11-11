@@ -6,8 +6,7 @@ import { agent, lenses, scripted, says, finding, SLUG } from '../support/pipelin
 const DELIVER = ['deliver', 'gates', 'deliver_review', 'mutation']
 const delivering = (it) => agent({
   work: ({ git }) => {
-    git.commit(`test(${SLUG}): checkout pays by card`, ['tests/CheckoutTests.cs'])
-    git.commit(`feat(${SLUG}): checkout pays by card`, ['src/Checkout.cs'])
+    git.commit(`feat(${SLUG}): checkout pays by card`, ['tests/CheckoutTests.cs', 'src/Checkout.cs'])
   },
 })(it)
 const renaming = (it) => agent({ work: ({ git }) => git.commit(`refactor(${SLUG}): name the card payment`, ['src/Checkout.cs']) })(it)

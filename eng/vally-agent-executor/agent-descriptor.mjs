@@ -20,6 +20,7 @@ const AGENT_PATHS = new Map([
   ['solution-architect', pluginAgent('solution-architect')],
   ['acceptance-designer', pluginAgent('acceptance-designer')],
   ['software-engineer', pluginAgent('software-engineer')],
+  ['replay-judge', pluginAgent('replay-judge')],
   ['architecture-boundaries-lens', pluginAgent('reviewer-lenses/architecture-boundaries-lens')],
   ['cold-reader-lens', pluginAgent('reviewer-lenses/cold-reader-lens')],
   ['test-integrity-lens', pluginAgent('reviewer-lenses/test-integrity-lens')],

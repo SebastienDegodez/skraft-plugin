@@ -26,7 +26,7 @@ test("every committed flow is what the generator makes from today's workflow", a
 
 test('the DELIVER column, its folds and its sub-tasks come from the workflow the engine reads', async () => {
   const flow = await buildFlow(layout(), texts())
-  assert.deepEqual(flow.order, ['distill_review', 'deliver', 'gates', 'deliver_review', 'mutation', 'visuals', 'pr_writer', 'publish', 'exit'])
+  assert.deepEqual(flow.order, ['scenario_review', 'deliver', 'gates', 'deliver_review', 'mutation', 'visuals', 'pr_writer', 'publish', 'exit'])
   assert.deepEqual(sub(flow, 'gates').all, ['build', 'format', 'lint', 'test', 'architecture', 'coverage'])
   assert.deepEqual(sub(flow, 'mutation').all, ['kill_proposal', 'mutation_plan', 'kill_mutants', 'mutation_review', 'mutation_gates'])
   assert.deepEqual(sub(flow, 'deliver_review').all, ['test_integrity', 'architecture_boundaries', 'cold_reader', 'mock_fidelity', 'contract_fidelity'])
