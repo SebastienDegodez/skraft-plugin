@@ -22,7 +22,10 @@ minimum unit of deliverable value; each slice maps to Gherkin (Given = prior sta
 command, Then = event and/or read model).
 
 - Name events as business facts, never implementation steps (`SaveToDatabase`).
-- Every command can be rejected: model its rejection event.
+- Model a rejection as an event only when the business records it or reacts to it; a rejection
+  that changes no state is an error result of the command.
+- A trigger enters from outside: a user, another context, the clock, the application start. A
+  step inside one use case is no command.
 - Every command has a read model the user needed before acting.
 - Model only the slices the current stories require.
 
@@ -59,16 +62,25 @@ All seven context-map patterns with their risks: [references/ddd-strategic.md](r
 
 ## DDD Tactical Patterns
 
-- **Aggregate:** one root, all access through it; invariants enforced atomically inside, never
-  across aggregates; reference other aggregates by ID only; one repository per aggregate; prefer
-  small (more than 3–5 child entities is a smell). Two entities share an aggregate only when a
-  business invariant needs them in one transaction.
+- **Aggregate:** only for an invariant that must hold across successive or concurrent changes of
+  one identity: the aggregate is that transaction boundary. One root, all access through it;
+  invariants enforced atomically inside, never across aggregates; reference other aggregates by
+  ID only; one repository per aggregate; prefer small (more than 3–5 child entities is a smell).
+  Two entities share an aggregate only when a business invariant needs them in one transaction.
+  An invariant checked once at construction goes into a self-validating value object or a
+  first-class collection; a rule spanning values goes into a policy or a domain service, never
+  into an anaemic aggregate. A design with no aggregate is valid when no identity changes.
 - **Value object:** immutable, equal by value, self-validating; replaces primitives.
 - **Domain event:** past tense (`EligibilityChecked`, not `EligibilityCheckEvent`), minimal
   immutable payload, raised by the aggregate root after the state change.
-- **Repository:** one per aggregate, domain-named methods, returns aggregates, no ORM type in the
-  interface. Interface in **Domain** when it persists an aggregate, in **Application** for a CRUD
-  entity or a read model, never in Infrastructure; the tactical design records the choice, never an ADR.
+- **Repository:** one per aggregate, never for anything else; domain-named methods, returns
+  aggregates, no ORM type in the interface. Interface in **Domain** when it persists an aggregate,
+  in **Application** for a CRUD entity or a read model, never in Infrastructure; the tactical
+  design records the choice, never an ADR. A source read once (configuration, a catalog loaded at
+  start) sits behind an Application loading interface, not a repository.
+- **Published contract:** an interface another story, context or extension consumes carries the
+  inputs and outputs that consumer needs and an evolution rule (additions only; readers ignore
+  what they do not know). Build nothing for the consumer itself.
 - **Domain service:** stateless logic spanning several aggregates; logic of one aggregate stays in
   it; infrastructural logic goes behind an Application interface.
 - **Policy / Specification:** a named rule; a Specification is a composable predicate

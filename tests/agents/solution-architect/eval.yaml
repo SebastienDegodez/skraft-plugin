@@ -2,7 +2,7 @@ name: solution-architect
 version: 0.1.0
 description: >-
   Verifies that the real SKRAFT Solution Architect loads its mandatory architecture skills,
-  turns a refined story into decisions of record without writing code or tests, halts when the
+  turns a refined story into a design of record, with no ADR for what the design documents carry, without writing code or tests, halts when the
   acceptance criteria it depends on are absent, and surfaces a contradicted decision instead of
   silently rewriting it.
 type: capability
@@ -72,12 +72,21 @@ stimuli:
         config:
           pattern: '(?i)(?:\[SKILL MISSING\]|skills? could not be loaded|skill directory not present)'
       - type: run-command
-        name: A new decision of record is added to the decision set
+        name: The settled choices are recorded in the design documents
         config:
           command: bash
           args:
             - '-lc'
-            - '[ "$(ls docs/adr/adr-*.md | wc -l)" -ge 2 ]'
+            - '[ -n "$(git status --porcelain -- docs/architecture docs/domain)" ]'
+          expected_exit_code: 0
+          timeout: 30s
+      - type: run-command
+        name: No decision of record ratifies the command and query split
+        config:
+          command: bash
+          args:
+            - '-lc'
+            - 'files=$(git ls-files --others --exclude-standard -- "docs/adr/adr-*.md"); [ -z "$files" ] || ! grep -qiE "command ?/ ?query classification|classification of (every|each|the) trigger|\bCQS\b" $files'
           expected_exit_code: 0
           timeout: 30s
       - type: diff-contains

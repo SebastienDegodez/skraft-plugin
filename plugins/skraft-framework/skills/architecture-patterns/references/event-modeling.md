@@ -56,6 +56,8 @@ event pointing to the downstream command.
 | Events like `SaveToDatabase`, `CallExternalAPI` | Name the business fact |
 | A command with no preceding view | Add the read model the user needed |
 | 15 aggregates of 1–2 events for 5 stories | Merge aggregates whose events must stay consistent together |
-| Every command has exactly one success event | Add the rejection event |
+| Every command has exactly one success event and the business records its denials | Add the rejection event |
+| A rejection event no story observes and that changes no state | Return an error result; drop the event |
+| Steps inside one use case modelled as commands or queries | Keep only the trigger that enters from outside |
 | `UserCreatedSuccessfully` raised from a service | Raise facts from aggregates; no "Successfully" |
 | 30 slices for 3 stories | Model only what the current stories require |

@@ -23,6 +23,11 @@
 |---|---|---|
 | {{#file:path_from_repository_root}} | {{test_name}} | {{behaviour}} |
 
+## Product and architecture context
+| Source | Kind | Authority | Requirements covered | Consumers of what the story publishes |
+|---|---|---|---|---|
+| {{#file:path_from_repository_root}} | architecture / PRD | {{rules / outranked by}} | {{requirement_ids}} | {{story_or_requirement_or_extension}} |
+
 ## Key discoveries
 {{patterns_examples_pitfalls}}
 

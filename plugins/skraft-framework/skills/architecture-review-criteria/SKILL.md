@@ -44,10 +44,20 @@ needs":
 | Element | Question |
 |---|---|
 | Bounded context | Which story requires it to be separate? |
-| Aggregate | Which invariant does it enforce, and which story produces it? |
+| Aggregate | Which invariant must hold across successive or concurrent changes of one identity, and which story produces them? An invariant checked once at construction belongs to a self-validating value object or a first-class collection. |
+| Repository | Which aggregate does it persist? A source read once, at start, sits behind an Application loading interface. |
+| Domain event | Which story observes it, or which business fact does it record? A rejection that changes no state is an error result. |
 | Event Sourcing | Which story requires an audit trail or temporal queries? |
 | Saga | Which cross-aggregate workflow spans several stories? |
 | ACL | Which conflicting upstream model requires translation, or is the downstream Core? |
+
+A published interface shaped for a consumer the research names (G19) is no "future need": the
+need is named. Code or a component built for that consumer is.
+
+Judge a published interface by the distance to its consumer: a consumer in another context or an
+extension loaded from outside the repository is coupled through a published contract (Open Host
+Service / Published Language), never through domain types; a consumer inside the same module may
+share the model.
 
 **G11 — admissible forces** for CQRS, Event Sourcing, Saga, eventual consistency, a service split
 or an ACL: read/write asymmetry (shape, scale or freshness), an audit trail or temporal query a

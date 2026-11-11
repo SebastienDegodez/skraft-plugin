@@ -4,13 +4,16 @@ Each gate: what to check, one failing case (✗), one passing case (✓).
 
 ## G1 — Every structural commitment has an ADR
 
-List every aggregate, bounded context, pattern (CQRS, Event Sourcing, Saga) and context-map
-relationship in the diagrams, plus every commitment the structural scan detects in existing code.
-Index the ADRs by topic. Each element needs an `Accepted` ADR or a `Proposed` ADR of this pass;
-code carrying a pattern no ADR covers needs a back-fill ADR.
+List every bounded context, pattern (CQRS with a bus, Event Sourcing, Saga), context-map
+relationship and aggregate crossing an existing boundary in the diagrams, plus every commitment
+the structural scan detects in existing code. Index the ADRs by topic. Each element needs an
+`Accepted` ADR or a `Proposed` ADR of this pass; code carrying a pattern no ADR covers needs a
+back-fill ADR. An aggregate inside one context, a value object, a domain event, a repository or a
+gateway is recorded by the tactical design: no ADR is missing for it.
 
 - ✗ The diagram shows Event Sourcing on `EligibilityAggregate`; no ADR evaluates it.
 - ✓ ADR-003 accepts the ACL between the two contexts and says why Conformist was rejected.
+- ✓ `ProposalAggregate` with its invariant in the tactical design, no ADR: no finding.
 
 ## G2 — No contradicting ADRs
 
@@ -66,15 +69,23 @@ ADR text:
 ## G7 — Every story has a trigger
 
 Every story ID in the stories file maps to at least one Command or Query in an event model; a
-pure-read story uses a Query.
+pure-read story uses a Query. A trigger enters from outside the use case: a user, another
+context, the clock, the application start. A call between two steps of one use case is no
+trigger and needs no Command or Query.
 
 - ✗ US-03 (renew eligibility) has no `RenewEligibility` command anywhere.
+- ✗ `NormalizeName` and `ComputeHash` modelled as Queries: both are steps inside `ImportCatalog`.
+- ✓ `LoadCatalog` as the Command the application start triggers.
 
 ## G8 — No dangling command
 
 Every Command of a business bounded context has at least one domain event for its successful outcome. Queries are exempt. A front-end or UI component is exempt: it declares no Command of its own and only triggers a Command of a business context.
 
-- ✓ `CheckEligibility` → `EligibilityChecked` + `EligibilityDenied`.
+A rejection that changes no state is an error result of the Command, not a domain event; a
+rejection the business records or reacts to is a domain event. Neither is required.
+
+- ✓ `CheckEligibility` → `EligibilityChecked` + `EligibilityDenied` (the denial is kept and shown).
+- ✓ `SubmitProposal` → `ProposalSubmitted`; an invalid proposal returns an error, no event.
 - ✓ The front component `eligibility-web` triggers `CheckEligibility` of the Eligibility context and declares no event: exempt.
 
 ## G9 — Nothing unjustified
@@ -83,6 +94,11 @@ Apply the questions in SKILL.md (*Fitness judgements*) to every aggregate, conte
 adoption, saga and ACL.
 
 - ✗ `FraudDetectionContext` appears; no story in scope involves fraud.
+- ✗ `AlgorithmCatalogAggregate` with `IAlgorithmCatalogRepository`: the catalog is loaded once at
+  start and never changed; a self-validating value object behind an Application loading
+  interface holds the rule.
+- ✓ A published interface whose signature carries the inputs a consumer the research names
+  needs, with nothing implemented for that consumer (G19): no finding.
 
 ## G10 — Reconciliation journal
 
@@ -154,6 +170,19 @@ object they name is the one the tactical design defines.
 
 - ✗ The event model gives `CheckEligibility` the field `DriverId: DriverId`; the tactical design
   names the value object `DriverIdentifier`.
+
+## G19 — Published contract
+
+An interface the research names a consumer for (a sibling story, a PRD requirement, an extension
+loaded from outside the repository) carries in the tactical design: the inputs and outputs that
+consumer needs, its layer and an evolution rule (additions only; readers ignore what they do not
+know). Nothing is designed or implemented for the consumer itself.
+
+- ✗ The research names the scoring requirement as consumer of `AlgorithmPlugin`; the tactical
+  design gives it only the inputs of the current story and no evolution rule.
+- ✗ The design adds a `ScoringService` for the sibling story: G9.
+- ✓ `AlgorithmPlugin` takes `Sample` and returns `Measure`, the scoring requirement's inputs, with
+  "additions only" as its evolution rule.
 
 ## F1 — Quality attributes answered
 
