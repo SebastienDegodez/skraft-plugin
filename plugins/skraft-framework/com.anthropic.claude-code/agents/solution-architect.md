@@ -10,6 +10,7 @@ tools:
   - Grep
   - Glob
   - mcp__graphify__*
+  - Skill
 metadata:
   cost_role_class: planner  # B12 target class — cross-cutting reasoning warrants planner capacity (genesis token-economy)
   dispatched_by: Skraft - Orchestrator

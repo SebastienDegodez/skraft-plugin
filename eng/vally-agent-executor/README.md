@@ -123,5 +123,5 @@ relevant to that behavior.
 ## Known constraints
 
 - Repository runner requests Vally 0.12.0; current developer machine may expose another global version. Plugin contract must be verified against pinned repository version.
-- Software Engineer source declares `Claude Sonnet 5`, while runtime model uses Vally's concrete supported model id.
+- Software Engineer source declares `claude-sonnet-5.5`, while runtime model still comes from Vally's model option.
 - Agent prose makes `quality-gates-dotnet` stack-conditional, but framework configuration currently marks it mandatory. A non-.NET implementation slice must expose and resolve this mismatch rather than silently ignore it.

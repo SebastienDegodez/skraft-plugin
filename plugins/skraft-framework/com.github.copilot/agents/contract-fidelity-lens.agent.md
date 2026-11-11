@@ -1,11 +1,12 @@
 ---
 name: contract-fidelity-lens
 description: "Reviewer lens: audits provider-side contract tests — baseline WAF+HttpClient always present, Microcks VerifyAsync honored when opt-in, ProblemDetails/codes/headers asserted, no real downstream call."
-model: Claude Haiku 4.5
+model: claude-haiku-5.5
 user-invocable: false
 tools: 
   - read/readFile
   - search/codebase
+  - skill
 metadata:
   cost_role_class: reviewer  # B12 target class — read-only lens, never planner (genesis token-economy)
   dispatched_by: software-engineer-reviewer

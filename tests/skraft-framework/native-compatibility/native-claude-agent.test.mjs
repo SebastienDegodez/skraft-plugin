@@ -9,12 +9,12 @@ import { agentAliases, translateAgentLinks } from '../../../scripts/lib/agent-li
 
 const native = 'com.anthropic.claude-code/agents'
 const copilot = 'com.github.copilot/agents'
-const descriptor = ({ name = 'Display Lens', model = 'GPT-5.6 Luna', role = 'reviewer', tools = ['read/readFile', 'search/codebase'], children, requirement, body = 'Read only.\n' } = {}) =>
+const descriptor = ({ name = 'Display Lens', model = 'gpt-6-luna', role = 'reviewer', tools = ['read/readFile', 'search/codebase'], children, requirement, body = 'Read only.\n' } = {}) =>
   `---\nname: ${name}\ndescription: >-\n  Review changes.\nmodel: ${model}\n# Local comment\nuser-invocable: false\ntools:\n${tools.map((tool) => `  - ${tool}\n`).join('')}${children ? `agents:\n${children.map((child) => `  - ${child}\n`).join('')}` : ''}metadata:\n  cost_role_class: ${role}\n${requirement ? `  model_requirement: "${requirement}"\n` : ''}  skills: [review]\n---\n${body}`
 const header = (text) => parseYaml(text.toString().match(/^---\n([\s\S]*?)\n---/)[1])
 const project = (options) => projectNativeClaudeAgents([{ source: `${copilot}/lens.agent.md`, content: Buffer.from(descriptor(options)) }], { exists: () => true })[0].content
 
-for (const [role, model, expected] of [['reviewer', 'GPT-5.6 Luna', 'haiku'], ['implementer', 'claude-sonnet-5', 'sonnet'], ['planner', 'Claude Opus 5', 'opus']]) {
+for (const [role, model, expected] of [['reviewer', 'gpt-6-luna', 'haiku'], ['implementer', 'Claude Sonnet 5.5', 'sonnet'], ['planner', 'claude-opus-5.5', 'opus']]) {
   test(`explicit new-pair helper maps ${role} to bounded native ${expected}`, () => {
     const data = header(project({ role, model }))
     assert.equal(data.model, expected)
@@ -22,6 +22,9 @@ for (const [role, model, expected] of [['reviewer', 'GPT-5.6 Luna', 'haiku'], ['
     assert.deepEqual(data.tools, ['Read', 'Grep', 'Glob'])
   })
 }
+test('explicit new-pair helper maps the skill tool to native Skill', () => {
+  assert.deepEqual(header(project({ tools: ['read/readFile', 'skill'] })).tools, ['Read', 'Skill'])
+})
 for (const options of [{ tools: ['unknown'] }, { role: 'unknown' }, { requirement: 'Unknown-class' }, { model: 'inherit' }, { tools: ['execute/sendToTerminal'] }, { tools: ['edit/createDirectory'] }, { children: ['missing'] }]) {
   test(`explicit helper rejects unmapped capability ${JSON.stringify(options)}`, () => assert.throws(() => project(options)))
 }
@@ -54,7 +57,8 @@ test('actual native tree retains 20 IDs, bounded tools, native models and four p
     if (data['user-invocable']) publicIds.push(data.name)
     assert.equal(data.tools.includes('*'), false)
     assert.equal(data.tools.includes('mcp__*'), false)
-    if (file.endsWith('-lens.md')) assert.deepEqual(data.tools, ['Read', 'Grep', 'Glob'])
+    assert.ok(data.tools.includes('Skill'), `${file} lacks Skill`)
+    if (file.endsWith('-lens.md')) assert.deepEqual(data.tools, ['Read', 'Grep', 'Glob', 'Skill'])
   }
   assert.deepEqual(models, { haiku: 8, sonnet: 10, opus: 1, inherit: 1 })
   assert.deepEqual(publicIds, ['brownfield-analyst', 'brownfield-harness-builder', 'brownfield-refactorer', 'skraft-orchestrator'])

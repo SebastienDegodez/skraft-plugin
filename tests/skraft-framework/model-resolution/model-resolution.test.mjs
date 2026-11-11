@@ -54,25 +54,25 @@ test('tierForClass rejects an unknown class', () => {
 })
 
 test('modelForTier returns the preferred model of each tier', () => {
-  assert.equal(modelForTier(ModelTier('economy')), 'GPT-5.6 Luna')
-  assert.equal(modelForTier(ModelTier('standard')), 'Claude Sonnet 5.5')
-  assert.equal(modelForTier(ModelTier('frontier')), 'Claude Opus 5')
+  assert.equal(modelForTier(ModelTier('economy')), 'gpt-6-luna')
+  assert.equal(modelForTier(ModelTier('standard')), 'claude-sonnet-5.5')
+  assert.equal(modelForTier(ModelTier('frontier')), 'claude-opus-5.5')
 })
 
 test('economy accepts either Luna or Haiku, under any spelling a harness uses', () => {
   const accepted = modelsForTier(ModelTier('economy'))
-  for (const model of ['GPT-5.6 Luna', 'GPT-5.6 Luna (copilot)', 'gpt-5.6-luna']) {
+  for (const model of ['gpt-6-luna', 'GPT-6 Luna (copilot)', 'GPT-6 Luna']) {
     assert.ok(accepted.includes(model), `Luna spelling not accepted: ${model}`)
   }
-  for (const model of ['Claude Haiku 4.5', 'Claude Haiku 4.5 (copilot)']) {
+  for (const model of ['claude-haiku-5.5', 'Claude Haiku 5.5 (copilot)']) {
     assert.ok(accepted.includes(model), `Haiku spelling not accepted: ${model}`)
   }
 })
 
 test('economy prefers Luna without forbidding Haiku', () => {
   const accepted = modelsForTier(ModelTier('economy'))
-  assert.equal(accepted[0], 'GPT-5.6 Luna', 'the preferred entry is what --apply pins')
-  assert.ok(accepted.includes('Claude Haiku 4.5'), 'a preference must not become an exclusion')
+  assert.equal(accepted[0], 'gpt-6-luna', 'the preferred entry is what --apply pins')
+  assert.ok(accepted.includes('claude-haiku-5.5'), 'a preference must not become an exclusion')
 })
 
 test('each tier accepts every spelling a harness uses', () => {
@@ -81,7 +81,7 @@ test('each tier accepts every spelling a harness uses', () => {
   // `--apply` rewrite an agent that already sits on the right model.
   for (const [tier, family] of [['standard', 'Sonnet'], ['frontier', 'Opus']]) {
     const accepted = modelsForTier(ModelTier(tier))
-    for (const model of [`Claude ${family} 5`, `Claude ${family} 5 (copilot)`, `claude-${family.toLowerCase()}-5`]) {
+    for (const model of [`Claude ${family} 5.5`, `Claude ${family} 5.5 (copilot)`, `claude-${family.toLowerCase()}-5.5`]) {
       assert.ok(accepted.includes(model), `${family} spelling not accepted on ${tier}: ${model}`)
     }
   }
@@ -89,7 +89,7 @@ test('each tier accepts every spelling a harness uses', () => {
 
 test('frontier rejects Sonnet, so a planner pinned to it is reported as drift', () => {
   const accepted = modelsForTier(ModelTier('frontier'))
-  for (const model of ['Claude Sonnet 5', 'Claude Sonnet 5 (copilot)', 'claude-sonnet-5']) {
+  for (const model of ['claude-sonnet-5.5', 'Claude Sonnet 5.5 (copilot)', 'Claude Sonnet 5.5']) {
     assert.ok(!accepted.includes(model), `Sonnet accepted on frontier: ${model}`)
   }
 })
@@ -124,43 +124,43 @@ test('floorForRequirement ignores non-string inputs even if they stringify to a 
 test('resolveModel maps a plain reviewer to economy', () => {
   const resolved = resolveModel({ costRoleClass: 'reviewer' })
   assert.equal(resolved.tier, 'economy')
-  assert.equal(resolved.model, 'GPT-5.6 Luna')
+  assert.equal(resolved.model, 'gpt-6-luna')
   assert.deepEqual([...resolved.accepted], [...modelsForTier(ModelTier('economy'))])
 })
 
 test('resolveModel maps an implementer to standard', () => {
   const resolved = resolveModel({ costRoleClass: 'implementer' })
   assert.equal(resolved.tier, 'standard')
-  assert.equal(resolved.model, 'Claude Sonnet 5.5')
+  assert.equal(resolved.model, 'claude-sonnet-5.5')
 })
 
 test('resolveModel maps a researcher to standard', () => {
   const resolved = resolveModel({ costRoleClass: 'researcher' })
   assert.equal(resolved.tier, 'standard')
-  assert.equal(resolved.model, 'Claude Sonnet 5.5')
+  assert.equal(resolved.model, 'claude-sonnet-5.5')
 })
 
 test('resolveModel maps a planner to frontier', () => {
   const resolved = resolveModel({ costRoleClass: 'planner' })
   assert.equal(resolved.tier, 'frontier')
-  assert.equal(resolved.model, 'Claude Opus 5')
+  assert.equal(resolved.model, 'claude-opus-5.5')
 })
 
 test('resolveModel raises a reviewer to standard when a Sonnet floor applies (override branch)', () => {
   const resolved = resolveModel({ costRoleClass: 'reviewer', modelRequirement: 'Sonnet-class or above.' })
   assert.equal(resolved.tier, 'standard')
-  assert.equal(resolved.model, 'Claude Sonnet 5.5')
-  assert.ok(!resolved.accepted.includes('GPT-5.6 Luna'), 'the floor must exclude the economy models')
+  assert.equal(resolved.model, 'claude-sonnet-5.5')
+  assert.ok(!resolved.accepted.includes('gpt-6-luna'), 'the floor must exclude the economy models')
 })
 
 test('resolveModel keeps an implementer at standard when a Sonnet floor applies (no downgrade)', () => {
   const resolved = resolveModel({ costRoleClass: 'implementer', modelRequirement: 'Sonnet-class or above.' })
   assert.equal(resolved.tier, 'standard')
-  assert.equal(resolved.model, 'Claude Sonnet 5.5')
+  assert.equal(resolved.model, 'claude-sonnet-5.5')
 })
 
 test('resolveModel does not lower a planner below frontier despite a Sonnet floor', () => {
   const resolved = resolveModel({ costRoleClass: 'planner', modelRequirement: 'Sonnet-class or above.' })
   assert.equal(resolved.tier, 'frontier')
-  assert.equal(resolved.model, 'Claude Opus 5')
+  assert.equal(resolved.model, 'claude-opus-5.5')
 })

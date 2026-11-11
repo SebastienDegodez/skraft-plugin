@@ -77,17 +77,17 @@ const agentWithModelList = ({ name, items, cls = 'implementer' }) =>
 
 test('parseAgentFrontmatter parses a model: block list into an array', () => {
   const fm = parseAgentFrontmatter(
-    agentWithModelList({ name: 'a', items: ['Claude Sonnet 5', 'claude-sonnet-5', 'Claude Sonnet 4.6', 'claude-sonnet-4.6'] }),
+    agentWithModelList({ name: 'a', items: ['claude-sonnet-5.5', 'Claude Sonnet 5.5', 'Claude Sonnet 4.6', 'claude-sonnet-4.6'] }),
   )
-  assert.deepEqual(fm.model, ['Claude Sonnet 5', 'claude-sonnet-5', 'Claude Sonnet 4.6', 'claude-sonnet-4.6'])
+  assert.deepEqual(fm.model, ['claude-sonnet-5.5', 'Claude Sonnet 5.5', 'Claude Sonnet 4.6', 'claude-sonnet-4.6'])
 })
 
 test('planAgent treats a model list containing the resolved model as compliant (no drift)', () => {
   const plan = planAgent(
-    agentWithModelList({ name: 'a', items: ['Claude Sonnet 5', 'claude-sonnet-5', 'Claude Sonnet 4.6'], cls: 'implementer' }),
+    agentWithModelList({ name: 'a', items: ['claude-sonnet-5.5', 'Claude Sonnet 5.5', 'Claude Sonnet 4.6'], cls: 'implementer' }),
     { allowList: new Set() },
   )
-  assert.equal(plan.resolvedModel, 'Claude Sonnet 5.5')
+  assert.equal(plan.resolvedModel, 'claude-sonnet-5.5')
   assert.equal(plan.changed, false)
 })
 
@@ -101,19 +101,19 @@ test('planAgent still flags drift when a model list omits the resolved model', (
 
 test('applyModel collapses a prior model: list back to a single scalar line', () => {
   const before = agentWithModelList({ name: 'a', items: ['claude-sonnet-4.6', 'claude-sonnet-4'], cls: 'implementer' })
-  const after = applyModel(before, 'Claude Sonnet 5')
-  assert.match(after, /^model: Claude Sonnet 5$/m)
+  const after = applyModel(before, 'claude-sonnet-5.5')
+  assert.match(after, /^model: claude-sonnet-5\.5$/m)
   assert.doesNotMatch(after, /^\s+-\s*claude-sonnet-4\.6\s*$/m)
   assert.match(after, /^tools: read\/readFile$/m)
 })
 
 test('parseAgentFrontmatter parses a model: list even when the "model:" line has a trailing space', () => {
-  const raw = agentWithModelList({ name: 'a', items: ['Claude Sonnet 5', 'claude-sonnet-5'], cls: 'implementer' }).replace(
+  const raw = agentWithModelList({ name: 'a', items: ['claude-sonnet-5.5', 'Claude Sonnet 5.5'], cls: 'implementer' }).replace(
     'model:\n',
     'model: \n',
   )
   const fm = parseAgentFrontmatter(raw)
-  assert.deepEqual(fm.model, ['Claude Sonnet 5', 'claude-sonnet-5'])
+  assert.deepEqual(fm.model, ['claude-sonnet-5.5', 'Claude Sonnet 5.5'])
 })
 
 // --- pure: planAgent ---
@@ -122,7 +122,7 @@ test('planAgent marks a reviewer to be changed from inherit to the economy model
   const plan = planAgent(agent({ name: 'r', cls: 'reviewer' }), { allowList: new Set() })
   assert.equal(plan.skipped, false)
   assert.equal(plan.currentModel, 'inherit')
-  assert.equal(plan.resolvedModel, 'GPT-5.6 Luna')
+  assert.equal(plan.resolvedModel, 'gpt-6-luna')
   assert.equal(plan.changed, true)
 })
 
@@ -131,12 +131,12 @@ test('planAgent applies the Sonnet floor override for a reviewer with a requirem
     agent({ name: 'se-rev', cls: 'reviewer', requirement: 'Sonnet-class or above.' }),
     { allowList: new Set() },
   )
-  assert.equal(plan.resolvedModel, 'Claude Sonnet 5.5')
+  assert.equal(plan.resolvedModel, 'claude-sonnet-5.5')
 })
 
 test('planAgent resolves a researcher to Sonnet 5.5', () => {
   const plan = planAgent(agent({ name: 'res', cls: 'researcher' }), { allowList: new Set() })
-  assert.equal(plan.resolvedModel, 'Claude Sonnet 5.5')
+  assert.equal(plan.resolvedModel, 'claude-sonnet-5.5')
 })
 
 test('planAgent skips an allow-listed agent', () => {
@@ -161,21 +161,21 @@ test('planAgent skips an agent that has no cost_role_class', () => {
 })
 
 test('planAgent reports changed=false when the model already matches', () => {
-  const plan = planAgent(agent({ name: 'r', model: 'GPT-5.6 Luna', cls: 'reviewer' }), {
+  const plan = planAgent(agent({ name: 'r', model: 'gpt-6-luna', cls: 'reviewer' }), {
     allowList: new Set(),
   })
   assert.equal(plan.changed, false)
 })
 
 test('planAgent leaves a reviewer alone on any accepted economy model, preferred or not', () => {
-  for (const model of ['GPT-5.6 Luna', 'GPT-5.6 Luna (copilot)', 'gpt-5.6-luna', 'Claude Haiku 4.5']) {
+  for (const model of ['gpt-6-luna', 'GPT-6 Luna (copilot)', 'GPT-6 Luna', 'claude-haiku-5.5']) {
     const plan = planAgent(agent({ name: 'r', model, cls: 'reviewer' }), { allowList: new Set() })
     assert.equal(plan.changed, false, `an accepted model must not be re-pinned: ${model}`)
   }
 })
 
 test('planAgent still flags a reviewer sitting on a model no tier accepts', () => {
-  const plan = planAgent(agent({ name: 'r', model: 'Claude Sonnet 5', cls: 'reviewer' }), {
+  const plan = planAgent(agent({ name: 'r', model: 'claude-sonnet-5.5', cls: 'reviewer' }), {
     allowList: new Set(),
   })
   assert.equal(plan.changed, true, 'accepting several models is not accepting any model')
@@ -185,15 +185,15 @@ test('planAgent still flags a reviewer sitting on a model no tier accepts', () =
 
 test('applyModel rewrites only the top-level model line', () => {
   const before = agent({ name: 'r', model: 'inherit', cls: 'reviewer', requirement: 'Sonnet-class or above.' })
-  const after = applyModel(before, 'GPT-5.6 Luna')
-  assert.match(after, /^model: GPT-5\.6 Luna$/m)
+  const after = applyModel(before, 'gpt-6-luna')
+  assert.match(after, /^model: gpt-6-luna$/m)
   assert.match(after, /model_requirement: "Sonnet-class or above\."/)
   assert.doesNotMatch(after, /^model: inherit$/m)
 })
 
 test('applyModel is idempotent', () => {
-  const once = applyModel(agent({ name: 'r', cls: 'reviewer' }), 'GPT-5.6 Luna')
-  const twice = applyModel(once, 'GPT-5.6 Luna')
+  const once = applyModel(agent({ name: 'r', cls: 'reviewer' }), 'gpt-6-luna')
+  const twice = applyModel(once, 'gpt-6-luna')
   assert.equal(twice, once)
 })
 
@@ -215,7 +215,7 @@ test('main --check returns 1 and reports drift when agents do not match policy',
   const { io, errs } = capture()
   const code = main(['--check', '--dir', agents], io)
   assert.equal(code, 1)
-  assert.ok(errs.some((line) => /drift: rev .* expected one of: GPT-5\.6 Luna \|/.test(line)))
+  assert.ok(errs.some((line) => /drift: rev .* expected one of: gpt-6-luna \|/.test(line)))
   await rm(dir, { recursive: true, force: true })
 })
 
@@ -224,9 +224,9 @@ test('main --apply pins models, leaves the orchestrator on inherit, then --check
 
   assert.equal(main(['--apply', '--dir', agents], capture().io), 0)
 
-  assert.match(await readFile(join(agents, 'rev.md'), 'utf8'), /^model: GPT-5\.6 Luna$/m)
-  assert.match(await readFile(join(agents, 'impl.md'), 'utf8'), /^model: Claude Sonnet 5\.5$/m)
-  assert.match(await readFile(join(agents, 'nested', 'lens.md'), 'utf8'), /^model: GPT-5\.6 Luna$/m)
+  assert.match(await readFile(join(agents, 'rev.md'), 'utf8'), /^model: gpt-6-luna$/m)
+  assert.match(await readFile(join(agents, 'impl.md'), 'utf8'), /^model: claude-sonnet-5\.5$/m)
+  assert.match(await readFile(join(agents, 'nested', 'lens.md'), 'utf8'), /^model: gpt-6-luna$/m)
   assert.match(await readFile(join(agents, 'orch.md'), 'utf8'), /^model: inherit$/m)
 
   const { io, out } = capture()
@@ -252,9 +252,9 @@ test('main --emit --json lists resolved models and omits allow-listed agents', a
   main(['--emit', '--json', '--dir', agents], io)
   const rows = JSON.parse(out.join('\n'))
   const byName = Object.fromEntries(rows.map((r) => [r.name, r.resolvedModel]))
-  assert.equal(byName.rev, 'GPT-5.6 Luna')
-  assert.equal(byName.impl, 'Claude Sonnet 5.5')
-  assert.equal(byName.lens, 'GPT-5.6 Luna')
+  assert.equal(byName.rev, 'gpt-6-luna')
+  assert.equal(byName.impl, 'claude-sonnet-5.5')
+  assert.equal(byName.lens, 'gpt-6-luna')
   assert.ok(!('skraft-orchestrator' in byName))
   await rm(dir, { recursive: true, force: true })
 })
@@ -264,8 +264,8 @@ test('main --emit without --json prints a tab-separated table', async () => {
   const { io, out } = capture()
   main(['--emit', '--dir', agents], io)
   const text = out.join('\n')
-  assert.match(text, /^rev\tGPT-5\.6 Luna$/m)
-  assert.match(text, /^impl\tClaude Sonnet 5\.5$/m)
+  assert.match(text, /^rev\tgpt-6-luna$/m)
+  assert.match(text, /^impl\tclaude-sonnet-5\.5$/m)
   assert.doesNotMatch(text, /skraft-orchestrator/)
   await rm(dir, { recursive: true, force: true })
 })

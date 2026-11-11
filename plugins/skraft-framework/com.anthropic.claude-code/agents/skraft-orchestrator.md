@@ -23,6 +23,7 @@ tools:
   - mcp__github__*
   - mcp__ado__*
   - mcp__gitlab__*
+  - Skill
 agents:
   - Skraft - Solution Researcher
   - Skraft - Solution Architect
