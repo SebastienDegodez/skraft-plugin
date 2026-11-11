@@ -30,6 +30,8 @@ what it reports.
    - Claude Code: the tool answers at once and the run goes on in the background; say it
      started and point to the Skraft pane, or `/skraft`, for its state.
    - GitHub Copilot CLI: the workflow returns the outcome; relay its status, code and reason.
+     Never put a question the run waits on to the human yourself, with a question tool or in the
+     chat: skraft asks it in Copilot's own dialog, and a second asking only duplicates it.
    On `blocked` or `refused`, tell the human what the reason asks for and stop.
 
 ## Agent loop (VS Code)

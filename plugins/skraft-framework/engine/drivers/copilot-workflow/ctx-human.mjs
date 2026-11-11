@@ -44,4 +44,4 @@ const askPerson = async (ctx, dialog, question) => {
  * @param {import('../../domain/decisions/questions.mjs').Question} question @param {string} why
  */
 const howToAnswer = (question, why) =>
-  `${question.key} was not answered: ${why}. Resume this run to be asked again, ask Copilot in the chat to put the question to you, or type skraft decide ${question.key} ${decideUsage(question)} in a terminal and resume this run.`
+  `${question.key} was not answered: ${why}. Resume this run to be asked again, ask Copilot in the chat to open the dialog of this question (Copilot does not ask it in its own words), or type skraft decide ${question.key} ${decideUsage(question)} in a terminal and resume this run.`

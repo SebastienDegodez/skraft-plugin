@@ -59,7 +59,7 @@ test('a refusal whose reason the person leaves blank or dismisses is not recorde
 
     assert.deepEqual(session.asked.map(({ kind }) => kind), ['select', 'input'])
     assert.deepEqual(journal(cwd, SLUG).filter((event) => event.type === 'question.answered'), [])
-    assert.equal(logs.at(-1), `adr-1 was not answered: ${why}. Resume this run to be asked again, ask Copilot in the chat to put the question to you, or type skraft decide adr-1 RATIFIED|REJECTED in a terminal and resume this run.`)
+    assert.equal(logs.at(-1), `adr-1 was not answered: ${why}. Resume this run to be asked again, ask Copilot in the chat to open the dialog of this question (Copilot does not ask it in its own words), or type skraft decide adr-1 RATIFIED|REJECTED in a terminal and resume this run.`)
   }
 })
 
@@ -104,7 +104,7 @@ test('an instruction the person writes in Copilot, then does not send, pauses th
   const { ctx, logs } = simulatedContext({ args: { slug: SLUG }, otherwise: actsAs(llm) })
 
   await assert.rejects(runSkraftPipelineWorkflow(ctx, copilotHost(cwd, PLUGIN_ROOT, answeringSession({ answers: ['Use the bank gateway', false] }))), { name: 'AbortError', message: 'paused at design-1' })
-  assert.equal(logs.at(-1), 'design-1 was not answered: you did not send the instruction you wrote. Resume this run to be asked again, ask Copilot in the chat to put the question to you, or type skraft decide design-1 "<instruction>"|STOP in a terminal and resume this run.')
+  assert.equal(logs.at(-1), 'design-1 was not answered: you did not send the instruction you wrote. Resume this run to be asked again, ask Copilot in the chat to open the dialog of this question (Copilot does not ask it in its own words), or type skraft decide design-1 "<instruction>"|STOP in a terminal and resume this run.')
   const unshown = () => { throw new Error('no dialog outside a chat turn') }
   const again = simulatedContext({ args: { slug: SLUG }, otherwise: actsAs(llm) })
   await assert.rejects(runSkraftPipelineWorkflow(again.ctx, copilotHost(cwd, PLUGIN_ROOT, answeringSession({ answers: ['Use the bank gateway', unshown] }))), { name: 'AbortError', message: 'paused at design-1' })
@@ -128,7 +128,7 @@ test('a question the person dismisses in Copilot pauses the run, which says how 
   await assert.rejects(runSkraftPipelineWorkflow(ctx, copilotHost(cwd, PLUGIN_ROOT, session)), { name: 'AbortError', message: 'paused at adr-1' })
   assert.deepEqual(logs.slice(-2), [
     `Waiting for you — Ratify the Proposed ADRs ${ADR_PATH}? RATIFIED marks them Accepted; REJECTED sends DESIGN back with your reason.`,
-    'adr-1 was not answered: you did not answer the question in Copilot. Resume this run to be asked again, ask Copilot in the chat to put the question to you, or type skraft decide adr-1 RATIFIED|REJECTED in a terminal and resume this run.',
+    'adr-1 was not answered: you did not answer the question in Copilot. Resume this run to be asked again, ask Copilot in the chat to open the dialog of this question (Copilot does not ask it in its own words), or type skraft decide adr-1 RATIFIED|REJECTED in a terminal and resume this run.',
   ])
   const outcome = await runSkraftPipelineWorkflow(ctx, copilotHost(cwd, PLUGIN_ROOT, session))
 
@@ -141,7 +141,7 @@ test('a run Copilot cannot put its question in pauses and says why; skraft_decid
   const { ctx, calls, logs } = simulatedContext({ args: { slug: SLUG }, otherwise: actsAs(scriptedLlm({ cwd })) })
 
   await assert.rejects(runSkraftPipelineWorkflow(ctx, host(cwd)), { name: 'AbortError', message: 'paused at adr-1' })
-  assert.equal(logs.at(-1), 'adr-1 was not answered: this Copilot host cannot put a question to you. Resume this run to be asked again, ask Copilot in the chat to put the question to you, or type skraft decide adr-1 RATIFIED|REJECTED in a terminal and resume this run.')
+  assert.equal(logs.at(-1), 'adr-1 was not answered: this Copilot host cannot put a question to you. Resume this run to be asked again, ask Copilot in the chat to open the dialog of this question (Copilot does not ask it in its own words), or type skraft decide adr-1 RATIFIED|REJECTED in a terminal and resume this run.')
 
   const dismissed = answeringSession({ answers: ['REJECTED', null] })
   assert.equal(await decideTool(cwd, dismissed).handler({}), 'Refused: you did not answer the question in Copilot; answer it with skraft decide adr-1 RATIFIED|REJECTED typed in a terminal; nothing was recorded.')
