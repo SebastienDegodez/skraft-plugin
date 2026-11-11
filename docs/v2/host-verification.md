@@ -21,6 +21,7 @@ Ce que le pilote suppose déjà sans mesure ; la prochaine passe de la sonde rem
 | agent lancé : même question sous Claude Code et sous VS Code | — | not measured, hors de cette sonde | idem |
 | Claude Code (mod) : effort d'un sous-agent réécrit par `turn.step` avec `CLAUDE_CODE_EFFORT_LEVEL` posée, lancements en parallèle, autre modèle que `sonnet`, session interactive | #258 | not measured | `agent-runner.mjs` (`createAgentEfforts`), `claude-mod-driver.mjs` (`turnStep`), `skraft-mod.tsx` (`turn.step`) ; mesuré sur 2.1.291 et 2.1.314 sous `-p`, lancements en parallèle compris (3 simultanés, 60 pas), voir la section #258 |
 | panneau déjà ouvert : le rendu (app Copilot, VS Code, TUI) recharge-t-il la page quand open rend une autre url ? | #430 | not measured, demande une session interactive avec un rendu de canvas (la sonde est headless) | rien : le serveur pousse l'onglet dans le flux de la page ouverte |
+| Copilot (app, CLI) : le modèle n'ouvre pas de lui-même le canvas `skraft-pipeline`, dont la description dit de ne l'ouvrir que sur demande de la personne | #537 | not measured, demande un appel de modèle (la sonde n'en fait pas sans `--agent-calls`) | `engine/drivers/copilot-workflow/pipeline-canvas.mjs` (`DESCRIPTION`) : plus aucun run n'ouvre le canvas |
 | format des champs lus : `System.Description` et `Microsoft.VSTS.Common.AcceptanceCriteria` par `az boards work-item show`, sur un work item créé à la main (HTML) et un créé par un agent en Markdown (`multilineFieldsFormat`) | #395 | not measured ; supposé : HTML ou Markdown selon le champ, d'où la conversion `markdownOf` seulement quand le texte contient une balise | `domain/pipeline/html-markdown.mjs`, `domain/pipeline/work-item.mjs` |
 | `az boards work-item show` d'un work item absent ou illisible : stderr `TF401232`, et « absent » comme « sans accès » le partagent-ils | #395 | not measured | `infrastructure/code-host/az-boards.mjs` (`NO_SUCH_WORK_ITEM`) : lu seulement pour distinguer `issue-not-found`, jamais transmis |
 | `az boards work-item show` avec `--detect=false` et sans `--fields` (un champ absent du process peut-il faire échouer l'appel) | #395 | not measured | `infrastructure/code-host/az-boards.mjs` |
@@ -61,16 +62,13 @@ Ce que le pilote suppose déjà sans mesure ; la prochaine passe de la sonde rem
 | tout hôte : nom sous lequel les prompts MCP `init`, `run`, `status`, `review` apparaissent dans le menu `/` | — | not measured | `drivers/cli/mcp-prompts.mjs` |
 | tout hôte : `notifications/progress` affichées pendant un appel long (`skraft_next`, `skraft_gate`) quand l'hôte envoie un `progressToken` | — | not measured | `drivers/cli/mcp-server.mjs` |
 
-### Shell d'un agent : terminal et variables — 2026-11-09 (branche feat/564-deliver-per-scenario, `skraft decide`)
+### Sonde d'hôte Copilot — 2026-11-11 (branche fix/canvas-hve-alignment, le run n'ouvre plus le canvas, #537)
 
-Mesuré depuis l'outil shell d'un agent de l'app GitHub Copilot (CLI 1.0.102), en mode synchrone et asynchrone : `node -e` lit `process.stdin.isTTY` et l'environnement.
+Aucune passe de la sonde : le contrôle `canvas-open-from-extension` est retiré, avec l'outil `skraft_probe_canvas_open_self` du canvas de la sonde. Il mesurait ce que faisait le run `skraft-pipeline` avant #537 : ouvrir son canvas sur l'onglet Configuration par `session.rpc.canvas.open` de sa session jointe (`canvas-opener.mjs`, supprimé). Le pilote n'ouvre plus rien : le canvas s'ouvre quand la personne le demande, par l'outil `open_canvas` que l'hôte offre au modèle (`canvas-agent-tools`, inchangé) ou par `/skraft status`. Un contrôle que rien ne suppose ne reste pas dans la sonde.
 
-| Contrôle | Verdict | Supposé par |
-| --- | --- | --- |
-| Copilot (app) : le shell d'un agent n'a pas de terminal interactif (`isTTY` indéfini), synchrone comme asynchrone | pass (1.0.102) | `drivers/cli/terminal-confirm.mjs` : `skraft decide` y est refusé (`no-terminal`) |
-| Copilot (app) : le shell d'un agent porte `AI_AGENT` (`github_copilot_app_agent`), `COPILOT_AGENT_SESSION_ID` et `COPILOT_CLI=1` | pass (1.0.102) | `terminal-confirm.mjs` refuse aussi un terminal interactif qui porte `AI_AGENT` ou `COPILOT_AGENT_SESSION_ID` |
-| Copilot CLI (terminal) : le shell asynchrone d'un agent, que `write_bash` alimente, est-il un pseudo-terminal, et porte-t-il les mêmes variables | not measured | la garde par variables ferme le cas s'il l'est |
-| Claude Code : l'outil Bash d'un agent porte `CLAUDECODE=1` | not measured ici (documenté par Claude Code) | `terminal-confirm.mjs` refuse un terminal qui la porte |
+Les lignes `canvas-open-from-extension` des sections plus bas (CLI 1.0.102-1) restent l'historique : l'hôte savait ouvrir un canvas depuis l'extension, skraft ne s'en sert plus. `canvas-reopen-other-tab` reste : un panneau déjà ouvert que la personne fait rouvrir sur un autre onglet.
+
+Non mesuré : que le modèle n'ouvre pas le canvas de lui-même, sa description lui disant de ne l'ouvrir que sur demande (ligne ajoutée à « En attente de mesure »).
 
 ### Sonde d'hôte Copilot — 2026-11-11 (branche fix/canvas-hve-alignment, erreur de hooks dans le journal)
 
@@ -92,6 +90,17 @@ Question : quand le runtime écrit-il une ligne `[ERROR] [rust:hooks]` pour un p
 Lecture : un plugin au schéma v1 ne lit ses hooks que sous `com.github.copilot/hooks/hooks.json`. Un `hooks/hooks.json` à la racine, celui du mod Claude Code, n'est plus lu ; le runtime l'écrit dans `<COPILOT_HOME>/logs/process-*.log`, une ligne par session, déjà là quand `createSession` rend la main, sans que la session échoue. Un fichier `{}` est rejeté (« hooks must be an object ») ; `{ "hooks": {} }` est accepté et ne déclare rien, d'où ce contenu pour la copie Copilot et le fichier racine gardé pour Claude Code. `baseDirectory` devient le `COPILOT_HOME` du runtime que le SDK lance (stdio, tcp) et n'a aucun effet en processus (commentaire du SDK, `copilot-sdk/index.js`) : le témoin y reste silencieux et le verdict `inconclusive`, jamais un `pass` à tort. Non mesuré : Copilot CLI 1.0.109 et 1.0.102-1, l'épingle de `copilot-host-smoke.yml`, où le contrôle n'est donc pas exigé.
 
 Mutations à la main : témoin ignoré (`if (witness.length === 0)` remplacé par `if (false)`) → le test de l'hôte silencieux échoue ; copie `com.github.copilot/hooks/hooks.json` retirée du plugin → 13 tests de la sonde échouent et, sur le runtime réel, le contrôle rend `fail` avec la ligne du plugin `skraft`. Restauré, tout passe.
+
+### Shell d'un agent : terminal et variables — 2026-11-09 (branche feat/564-deliver-per-scenario, `skraft decide`)
+
+Mesuré depuis l'outil shell d'un agent de l'app GitHub Copilot (CLI 1.0.102), en mode synchrone et asynchrone : `node -e` lit `process.stdin.isTTY` et l'environnement.
+
+| Contrôle | Verdict | Supposé par |
+| --- | --- | --- |
+| Copilot (app) : le shell d'un agent n'a pas de terminal interactif (`isTTY` indéfini), synchrone comme asynchrone | pass (1.0.102) | `drivers/cli/terminal-confirm.mjs` : `skraft decide` y est refusé (`no-terminal`) |
+| Copilot (app) : le shell d'un agent porte `AI_AGENT` (`github_copilot_app_agent`), `COPILOT_AGENT_SESSION_ID` et `COPILOT_CLI=1` | pass (1.0.102) | `terminal-confirm.mjs` refuse aussi un terminal interactif qui porte `AI_AGENT` ou `COPILOT_AGENT_SESSION_ID` |
+| Copilot CLI (terminal) : le shell asynchrone d'un agent, que `write_bash` alimente, est-il un pseudo-terminal, et porte-t-il les mêmes variables | not measured | la garde par variables ferme le cas s'il l'est |
+| Claude Code : l'outil Bash d'un agent porte `CLAUDECODE=1` | not measured ici (documenté par Claude Code) | `terminal-confirm.mjs` refuse un terminal qui la porte |
 
 ### Sonde d'hôte Copilot — 2026-11-06 (branche feat/mcp-server, serveur MCP du plugin)
 

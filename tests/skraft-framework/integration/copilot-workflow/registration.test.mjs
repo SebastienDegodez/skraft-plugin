@@ -301,7 +301,7 @@ test('the registered run puts its question in the joined session\'s dialog; dism
   assert.match(asked[0][1], /^research is blocked: solution-researcher says it cannot go on; /)
 })
 
-test('the registered run opens the canvas of the joined session on its Configuration tab when nobody confirmed the configuration', async (t) => {
+test('the registered run never opens the canvas of the joined session, whatever the host renders: the configuration question is put in its dialog', async (t) => {
   const repositories = await twoRepositories(t)
   rmSync(join(repositories.first, 'skraft-config.local.json'), { force: true })
   const asked = []
@@ -314,7 +314,7 @@ test('the registered run opens the canvas of the joined session on its Configura
 
   await workflow.run(simulatedContext({ args: { slug: 'checkout' }, behaviours: [writesNothing] }).ctx).catch(() => {})
 
-  assert.deepEqual(opens, [{ canvasId: 'skraft-pipeline', instanceId: 'skraft-run', input: { tab: 'configuration' } }])
+  assert.deepEqual(opens, [])
   assert.deepEqual(asked.map(([kind]) => kind), ['select'])
 })
 

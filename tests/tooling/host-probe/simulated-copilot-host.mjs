@@ -176,13 +176,6 @@ const simulatedSession = (config, { preload, skraftLoads, agents, refusals, mode
   function addProbeCanvas() {
     const seen = { createCanvas: true, opened: [], closed: [], actions: [] }
     tools.set('skraft_probe_canvas_state', async () => JSON.stringify(seen))
-    tools.set('skraft_probe_canvas_open_self', async () => {
-      try {
-        return JSON.stringify({ result: await canvases.rpc.open({ canvasId: 'skraft-probe-canvas', instanceId: 'skraft-probe-self', input: { tab: 'configuration' } }), error: null })
-      } catch (failure) {
-        return JSON.stringify({ result: null, error: failure.message })
-      }
-    })
     canvases.declare({
       declaration: { id: 'skraft-probe-canvas', displayName: 'skraft probe canvas', actions: [{ name: 'probe_state' }] },
       open: async (ctx) => {

@@ -45,7 +45,6 @@ test('on a host that behaves as the issues say, every host premise is measured, 
     'canvas-action-invoke': 'pass',
     'confirm-from-canvas': 'pass',
     'canvas-close': 'pass',
-    'canvas-open-from-extension': 'pass',
     'canvas-reopen-other-tab': 'pass',
     'canvas-agent-tools': 'pass',
     'skraft-extension-loaded': 'pass',
@@ -163,10 +162,10 @@ test('the skraft-pipeline canvas opens on the pipeline that waits on adr-0 and s
   })
 })
 
-test('a host that cannot open a canvas fails both open requirements and the open from the extension, and the skraft canvas page is not measured', async (t) => {
+test('a host that cannot open a canvas fails both open requirements, and the skraft canvas page is not measured', async (t) => {
   const { report, verdicts } = await probe(t, { refuseCanvasOpen: true })
 
-  assert.deepEqual(['canvas-open-headless', 'skraft-canvas-opens', 'skraft-canvas-read-only', 'canvas-open-from-extension'].map((id) => verdicts[id]), ['fail', 'fail', 'inconclusive', 'fail'])
+  assert.deepEqual(['canvas-open-headless', 'skraft-canvas-opens', 'skraft-canvas-read-only'].map((id) => verdicts[id]), ['fail', 'fail', 'inconclusive'])
   assert.equal(report.checks.find((item) => item.id === 'skraft-canvas-opens').observed.error, 'Canvas rendering is not available')
   assert.deepEqual(planIssueActions(report, { openTitles: new Set() }).filter((action) => action.kind === 'open').map((action) => action.check), ['canvas-open-headless', 'skraft-canvas-opens'])
 })
