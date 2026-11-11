@@ -113,14 +113,15 @@ never a promise that it exists.
   instructed to act autonomously does not satisfy this by asking anyway — it reports the failing
   test and stops there.
 - **SKRAFT DELIVER (the software engineer, dispatched once per story):** the inspection is the
-  recorded RED run. Capture the failing run narrowed to the new test (quality gate G10) before any
-  production code exists, then continue to SYNTHESIZE GREEN in the same dispatch — never stop after
-  RED to wait for an inspection. `qg-verify` rejects a cycle whose RED capture is missing or exited
-  zero, and the DELIVER reviewer's `test-integrity` lens inspects every captured RED against the
-  test plan.
+  recorded red of the scenario's acceptance test (quality gate G10), committed as a `test` commit
+  before any production code of that scenario exists; each inner unit test's red is run and read,
+  not captured. Continue to SYNTHESIZE GREEN in the same dispatch — never stop after RED to wait
+  for an inspection. `qg-verify` rejects a scenario whose RED capture is missing or exited zero,
+  and the DELIVER reviewer's `test-integrity` lens inspects every captured RED against the test
+  plan.
 
-In every mode, no implementation is written until the inspection — or, in SKRAFT DELIVER, the RED
-capture — exists.
+In every mode, no implementation is written until the inspection — or, in SKRAFT DELIVER, the
+scenario's RED capture — exists.
 
 Orient design before synthesis: which pattern (specification, factory, builder), which layer owns
 the logic, immutability and return values vs mutations.
@@ -149,7 +150,22 @@ Refining code instead of revising RED means you are back in 3-step TDD — stop 
 
 - Run the **Post-GREEN Wiring Verification** below to detect Fixture Theater.
 - Run the **Coverage and Mutation Gate** below.
-- Commit. The message format is `craft-discipline` C9. **Never commit on red.**
+- Commit as *Commit policy* says. The message format is `craft-discipline` C9. **A red is never chained to a commit**; the
+  only red commit is a scenario's `test` commit.
+
+## Commit policy
+
+What a run commits, by pass. The test command's output tells a failing assertion from a build
+error only when read: a red is never chained to a commit; a green is.
+
+| Pass | Commits |
+|---|---|
+| Acceptance test of the scenario in progress (skraft DISTILL for the first, DELIVER for the next) | One `test` commit: its acceptance test and the skeleton it calls, after a run whose output shows a failing business assertion, formatted and linted before the commit |
+| Scenario in progress (skraft DELIVER) | The inner cycles commit nothing. One `feat` or `fix` commit once the scenario passes, its unit tests and every format or lint fix included, chained so it commits only when the run passes: `<test command> && git add <each file> && git commit -s -m "<subject>" -m "Refs: #N"` |
+| No scenario: gates or review sent the story back, mutant kills, a session without skraft | Each cycle: `feat` or `fix` with its test and the code, once green; `refactor` for a change under green |
+
+The acceptance tests of a scenario are its oracle: the green never changes them. A wrong one is
+named and sent back to whoever wrote it.
 
 ## Quick Reference
 
@@ -159,7 +175,7 @@ Refining code instead of revising RED means you are back in 3-step TDD — stop 
 | **RED** | Write test, stub until it compiles, run | Test fails on **behavior** (assertion), not compilation |
 | **Guidance** (**MANDATORY**) | Orient the approach, **name the type and layer that will own the rule**, + **the failing test is inspected** | Owning type and layer stated before the implementation is written, the RED output has been seen by someone other than its implementer |
 | **SYNTHESIZE GREEN** | Synthesize the smallest slice the test demands, clean the first time | Tests green, architecture respected, nothing built the test did not force |
-| **COMMIT & VERIFY** | Wiring verification, mutation gate, commit | Production files in the diff, mutation gate run and its survivors resolved, never on red |
+| **COMMIT & VERIFY** | Wiring verification, mutation gate, commit | Production files in the diff, mutation gate run and its survivors resolved, red only in a scenario's `test` commit |
 
 ## Common Rationalizations
 
@@ -317,7 +333,8 @@ This skill decides **in what order** you take them and what "done" means for one
 - Unit tests only if needed to decompose a complex GREEN.
 - The AT drives ALL implementation. A later scenario's test may go green on its first run because an
   earlier skeleton already covered it — that is correct. Confirm it with the deletion test rather
-  than assuming it.
+  than assuming it. Under skraft it has no red to capture: commit it alone as `test`, record no
+  cycle for it, and name the earlier scenario on its change-log line.
 
 ## Concentric Circle Expansion
 
@@ -338,7 +355,8 @@ For test project placement and folder naming conventions, see `clean-architectur
 
 ## One Acceptance Test at a Time
 
-Every commit leaves the suite fully green — no `[Skip]`, no `[Ignore]`, nothing disabled
+Every commit leaves the suite fully green, except a scenario's `test` commit, red on that one
+acceptance test only — no `[Skip]`, no `[Ignore]`, nothing disabled
 (`craft-discipline` C1, C2, C5). That rules out the common shortcut of authoring every acceptance
 test up front and skipping all but one: a skipped test asserts nothing and carries a false green
 through every commit until someone remembers to enable it.
@@ -346,9 +364,9 @@ through every commit until someone remembers to enable it.
 Author acceptance tests **on demand**, one per slice:
 
 1. The approved scenarios live in the `.feature` file. That is the backlog — it costs nothing and blocks nothing.
-2. Write the executable acceptance test for **one** scenario. It is RED.
-3. Drive it through the 4-phase cycle until green.
-4. Commit — the whole suite is green, nothing is skipped.
+2. Write the executable acceptance test for **one** scenario. It is RED: commit it (*Commit policy*).
+3. Drive it through the inner cycles until green, committing nothing.
+4. Commit once — the whole suite is green, nothing is skipped.
 5. Write the next scenario's acceptance test. Repeat.
 
 A scenario whose test has not been written yet is not "skipped" — it is not started, and the

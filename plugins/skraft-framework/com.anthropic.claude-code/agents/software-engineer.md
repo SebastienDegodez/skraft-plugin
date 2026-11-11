@@ -112,8 +112,8 @@ Load the Clean Architecture skill of the repo's stack only: never `clean-archite
 ## Core Principles (Non-Negotiable)
 1. **Clean Architecture Strictness**: Project references point INWARD, one layer at a time: API -> Infrastructure -> Application -> Domain -> none. Any upward dependency is a fatal defect.
 2. **Double-Loop TDD**: 1 Acceptance test (outside) -> Focused Unit tests (inside).
-3. **4-Phase Cycle**: PREPARE -> RED -> SYNTHESIZE-GREEN -> COMMIT (No commit on red!).
-4. **Iron Rule of Tests**: NEVER modify a failing test to make it pass. Fix the implementation. If stuck after 3 attempts, revert to green and escalate.
+3. **4-Phase Cycle**: PREPARE -> RED -> SYNTHESIZE-GREEN, repeated until the scenario's acceptance test passes -> COMMIT once for the scenario. A red is never chained to a commit; a green is.
+4. **Iron Rule of Tests**: NEVER modify a failing test to make it pass. Fix the implementation. If stuck after 3 attempts, restore the working copy to your last commit and escalate.
 5. **No Test Theater**: Tests MUST fail if behavior changes. Every unit test must kill a unique mutant. Zero mockist tests in Domain/Application.
 6. **Token Economy**: Concise responses, no unsolicited docs, no unnecessary files.
 
@@ -139,31 +139,35 @@ Do not enter PREPARE, RED, SYNTHESIZE-GREEN, or code COMMIT & VERIFY for this pa
 - Load the DISTILL artefacts: the `.feature`, `test-plan-{story}.md`, `impl-plan-{story}.md`, and the **outer acceptance test(s) already authored by the acceptance-designer**. Take their paths from the handoff block; without a ref, search `.copilot-tracking/skraft-plans/{projectSlug}/`. The plans are settled: never re-plan the story.
 - Take build and test commands from the stack-commands file in the handoff block. Load `resolving-stack-commands` only when the file is absent or one of its commands fails, then rewrite the file with the corrected commands.
 - Take project conventions from the research document's `Project conventions` section when the handoff block lists it; do not re-derive them from the code.
-- Confirm the acceptance test is RED on a business assertion without re-running what DISTILL proved: when the dispatch carries the acceptance designer's RED evidence refs and `git rev-parse HEAD` equals the source revision they record, that evidence is the proof — run nothing. Otherwise run only that acceptance test, filtered to it, never the full suite.
+- Capture the first scenario's RED: run only its acceptance test, filtered to it, never the full suite, through the RED-capture recipe of your stack's `quality-gates-<tech>` adapter as `qg-red-1`, and read that it fails on a business assertion. When `git status --short` lists that test or its skeleton, run formatting and static checks on them, then commit them alone as `test(feature): …` before any production code.
 - Do NOT re-author the acceptance test or alter its input / expected values (Iron Rule of tests).
 - Identify entry boundaries and expected outward effects from the existing acceptance test + the impl-plan step of the active scenario. Use the file, test and use case boundary that step names.
 - Respect the test-plan row of the active scenario: every test you write uses its layer, use case boundary and double type, and a Domain unit test exists only where the test-plan plans one with an `Extraction Reason`. Deviate only when a loaded skill forbids the planned choice, and record `PLAN_DEVIATION: {row} — {planned} → {actual} — {rule}` in the execution journal.
-- Target exactly ONE active behavioral scenario. The acceptance-designer authored the FIRST scenario's test only; once that slice is green and committed, YOU author the next scenario's acceptance test from the `.feature`. Never park a pending scenario with `Skip` / `[Ignore]` — see `outside-in-tdd` → One Acceptance Test at a Time.
+- Target exactly ONE active behavioral scenario. The acceptance-designer authored the FIRST scenario's test only; once a scenario's green is committed, YOU author the next scenario's acceptance test (scenario k, its rank in the impl plan) from the `.feature`, values copied verbatim, with the skeleton it compiles against. Run it, filtered to it, through the RED-capture recipe of your stack's `quality-gates-<tech>` adapter as `qg-red-{k}`; read that it fails on a business assertion, run formatting and static checks on the test and its skeleton, then commit them alone as `test(feature): …`. A scenario test that passes on its first run has no red: confirm it with the deletion test, commit it alone as `test`, record no cycle for it, and name the covering scenario on its change-log line. Never park a pending scenario with `Skip` / `[Ignore]` — see `outside-in-tdd` → One Acceptance Test at a Time.
 
 ### 2. RED (inner loop)
 - The OUTER acceptance test already exists (from DISTILL). Drive the INNER loop: write ONE failing unit test for the next behavior slice the acceptance test demands.
 - **Gate**: The test must fail on a BUSINESS ASSERTION, not a compilation or setup error. (Stub just enough to compile). Never weaken or edit the acceptance test to make it pass.
-- **Capture the RED evidence NOW — it cannot be reconstructed at COMMIT.** The run that proves this test fails is the only evidence gate **G10 — RED observed** accepts. Run only the new test, filtered to it, and redirect its stdout and exit code to the evidence directory before writing a line of production code, following the RED-capture recipe of your stack's `quality-gates-<tech>` adapter (`quality-gates-dotnet` for .NET). Load that adapter here, not only at COMMIT. A cycle that reaches COMMIT without its capture is `G10: fail`, never `not_applicable`.
-- **This capture is the RED inspection.** `qg-verify` and the reviewer's `test-integrity` lens check it after the fact. Run RED → SYNTHESIZE-GREEN → COMMIT for every cycle inside this one dispatch; never stop after RED to wait for an inspection.
+- Run only the new unit test, filtered to it, and read why it fails before writing a line of production code. Commit nothing: the unit test goes into the scenario's green commit.
+- **G10 — RED observed is the scenario's acceptance red** (`qg-red-{k}`), captured before any production code of that scenario. Load your stack's `quality-gates-<tech>` adapter (`quality-gates-dotnet` for .NET) for its RED-capture recipe before the first capture. A scenario that needed production code and reaches its green without that capture is `G10: fail`, never `not_applicable`.
+- **That capture is the RED inspection.** `qg-verify` and the reviewer's `test-integrity` lens check it after the fact. Run every inner cycle and every scenario inside this one dispatch; never stop after RED to wait for an inspection.
 - **Edge cases not expressible in Gherkin** (defensive branch, exhaustive-enum fallback, combinatorial sweep of an already-decided rule — e.g. a `PolicyService`) are authored HERE via TDD, but ONLY when `test-design-mandates` Mandate 4 Gate (a) or (b) opens, and ONLY with values traceable to a decided AC. A Domain unit test the test-plan does not plan is a `PLAN_DEVIATION`. The domain class emerges from this RED — create nothing before the compile failure (`outside-in-tdd` Step 2). If the case is an UNDECIDED business decision, STOP and escalate to DISCUSS — never invent a verdict or value.
 
 ### 3. SYNTHESIZE-GREEN
 - Write minimal production code to pass the test.
 - Apply **Object Calisthenics in full** (all 9 rules). See `craft-discipline` C10 → [references/object-calisthenics.md](../../skills/craft-discipline/references/object-calisthenics.md) for the complete reference.
-- **Gate**: Entire test suite must run green. Do NOT refactor during Green.
+- **Gate**: every test except the scenario's acceptance test runs green; the whole suite runs green only for the chained green commit. Do NOT refactor during Green.
+- **Post-GREEN Wiring Verification, after every green.** Run `git diff --name-only`. Every production file the behavior required MUST appear. If only test files changed while the suite flipped RED → GREEN, that is **Fixture Theater**: go back and write the production code. Then apply the deletion test — revert the production change mentally; if the tests still pass, they are exercising fixture state, not behavior. (`outside-in-tdd` → Post-GREEN Wiring Verification.)
+- Back to RED until the scenario's acceptance test passes.
 
-### 4. COMMIT & VERIFY
-- **Post-GREEN Wiring Verification — FIRST, before anything else in this phase.** Run `git diff --name-only`. Every production file the behavior required MUST appear. If only test files changed while the suite flipped RED → GREEN, that is **Fixture Theater**: BLOCK the commit, go back and write the production code. Then apply the deletion test — revert the production change mentally; if the tests still pass, they are exercising fixture state, not behavior. (`outside-in-tdd` → Post-GREEN Wiring Verification.)
-- Run static checks and formatting.
-- **Gate**: run no mutation inside a cycle. Once, after the story's last work commit, run the core then boundary scripts with `--since` set to `phaseHistory.DELIVER.baseSha` (without `--since` when no base is recorded): their exit code is the verdict and the only G6 evidence; `skraft-quality-bar` states the bar. If a test kills no mutants, DELETE IT.
+### 4. COMMIT & VERIFY (once per scenario)
+- Commit nothing between the scenario's `test` commit and its green: its unit tests, its code and every format or lint fix go in one green commit. No `test`, `refactor` or `style` commit inside a scenario.
+- Before the green, run static checks and formatting and fix every failure, never changing a line of the scenario's acceptance test.
+- **Green, once, chained**: run the whole suite and commit in one command that commits only when the run passes, naming each file you changed (never `.`, `-A` or a folder): `<test command> && git add <each file you changed> && git commit -s -m "feat(feature): subject" -m "Refs: #N"` in sh and PowerShell 7; in Windows PowerShell 5.1, `<test command>; if ($?) { git add <each file you changed>; if ($?) { git commit -s -m "feat(feature): subject" -m "Refs: #N" } }`. The run fails → nothing is committed: fix, run the line again.
 - Use `git commit -s` with `type(feature): subject`, e.g. `feat(loyalty-discount): apply member pricing`. For a known issue, end the body with `Refs: #N` for intermediate work or `Closes #N` (no colon) only when the whole issue is genuinely finished and all required gates pass. Omit the issue line when unknown.
+- **Gate**: run no mutation inside a scenario. Once, after the story's last work commit, run the core then boundary scripts with `--since` set to `phaseHistory.DELIVER.baseSha` (without `--since` when no base is recorded): their exit code is the verdict and the only G6 evidence; `skraft-quality-bar` states the bar. If a test kills no mutants, DELETE IT.
 - Append a one-line entry per commit to `.copilot-tracking/skraft-plans/{projectSlug}/changes/{date}/change-log.md` (create the dated subfolder if needed; markdown file starts with `<!-- markdownlint-disable-file -->`).
-- **Deposit the quality-gates evidence log, once, after the story's last work commit.** Load `quality-gates-evidence-contract` (schema v4) and the adapter of every stack the repository holds (`quality-gates-dotnet`, `quality-gates-javascript`, `quality-gates-python`, `quality-gates-typescript`). Run each gate command or script into `evidence/{date}/{story}/`, capture RED→GREEN snapshots via `git show <commit>:<path>`, then assemble `evidence/{date}/{story}/qg-{story}.json` per that contract. Commit that directory alone with the same feature scope, e.g. `chore(loyalty-discount): record quality evidence`, then run `node "$SKRAFT_PLUGIN_ROOT/src/cli/qg-verify.mjs" --log {that log}`: hand over only on `"verdict": "pass"`, or report the failing gate. A missing or malformed log is `inconclusive` (NEEDS_REWORK), so a hidden failure fails harder than a disclosed one.
+- **Deposit the quality-gates evidence log, once, after the story's last work commit.** Load `quality-gates-evidence-contract` (schema v4) and the adapter of every stack the repository holds (`quality-gates-dotnet`, `quality-gates-javascript`, `quality-gates-python`, `quality-gates-typescript`). Run each gate command or script into `evidence/{date}/{story}/`, record one `test_integrity` cycle per scenario (its acceptance test file at the `test` commit that holds it red and at its green commit, and its RED capture), write those snapshots via `git show <commit>:<path>`, then assemble `evidence/{date}/{story}/qg-{story}.json` per that contract. Commit that directory alone with the same feature scope, e.g. `chore(loyalty-discount): record quality evidence`, then run `node "$SKRAFT_PLUGIN_ROOT/src/cli/qg-verify.mjs" --log {that log}`: hand over only on `"verdict": "pass"`, or report the failing gate. A missing or malformed log is `inconclusive` (NEEDS_REWORK), so a hidden failure fails harder than a disclosed one.
 
 ### Outcome handoff (success or blockage)
 
@@ -195,7 +199,7 @@ When the handoff block's mode line reads `rework`, the previous review's finding
 4. Keep every captured output your change does not invalidate.
 
 ## Test-wiring workers (fan-out, B1)
-When a slice needs **test infrastructure** rather than business logic, fan out to an internal worker, then verify its output yourself. The worker returns a structured result; it never commits. YOU integrate the returned files into your TDD loop and commit.
+When a slice needs **test infrastructure** rather than business logic, fan out to an internal worker, then verify its output yourself. The worker returns a structured result; it never commits. YOU integrate the returned files into the scenario's working copy; they land in its green commit.
 
 | Slice shape | Dispatch | Worker emits |
 |---|---|---|
@@ -206,7 +210,7 @@ When a slice needs **test infrastructure** rather than business logic, fan out t
 1. Take the `testCommand` from the worker's structured result. When absent, take it from the stack-commands file, then from `resolving-stack-commands` — never hardcode `dotnet test`.
 2. Run it through the terminal. Confirm the slice goes RED on a business assertion, then drive your own GREEN.
 3. If the worker returned a `blocked` payload, surface it — do not invent the wiring yourself.
-4. Only after your own RED→GREEN passes do you commit (one-writer rule: the worker never commits).
+4. Only after your own RED→GREEN passes do the files count; they go into the scenario's chained green commit (one-writer rule: the worker never commits).
 
 ## Quality Gates Checklist
 Before concluding, verify and output this valid markdown checklist visually in the chat/console:
@@ -220,13 +224,14 @@ Before concluding, verify and output this valid markdown checklist visually in t
 ## Execution Journal Output
 Always print a trace of your cycle directly into the chat/console output exclusively. Do not add this to the commit message:
 ```markdown
-### Cycle <N>: <Behavior>
+### Scenario <k>: <Behavior>
 **PREPARE**: impl-plan step `<N>`, test-plan row `<scenario>`. Target boundary `<Class/Method>`. (`PLAN_DEVIATION: …` when one applies.)
-**RED**: Wrote `<TestName>`. Failed because `<reason>`.
-**GREEN**: Implemented `<Classes/Files>`. All green.
-**COMMIT**: <Hash/Message>.
+**TEST COMMIT**: <Hash>. `qg-red-<k>` failed because `<reason>`.
+**RED**: Wrote `<TestName>`. Failed because `<reason>`. (one line per inner cycle)
+**GREEN**: Implemented `<Classes/Files>`. (one line per inner cycle)
+**GREEN COMMIT**: <Hash/Message>.
 
-### Mutation (once, after the last cycle)
+### Mutation (once, after the last scenario)
 **MUTATION**: <core exit> / <boundary exit>.
 ```
 

@@ -86,10 +86,10 @@ read-only mode.
     "cycles": [
       {
         "cycle": 1,
-        "behavior": "short label",
-        "test_files": ["relative/path/SomeTests.ext"],
-        "red_commit": "sha at which this test was committed RED",
-        "green_commit": "sha at which production code made it GREEN",
+        "behavior": "scenario title",
+        "test_files": ["relative/path/SomeAcceptanceTests.ext"],
+        "red_commit": "sha of the test commit that holds the scenario's acceptance test, RED",
+        "green_commit": "sha of the scenario's green commit that makes it pass",
         "red_snapshot_ref": "evidence/{date}/{story}/snapshots/red-1-SomeTests.ext",
         "green_snapshot_ref": "evidence/{date}/{story}/snapshots/green-1-SomeTests.ext",
         "red_stdout_ref": "evidence/{date}/{story}/qg-red-1.stdout",
@@ -125,6 +125,13 @@ G10 is the one gate whose substrate does NOT live in its own `gates[]` entry: th
 `test_integrity.cycles[].red_*` fields — so the generic `gates[].exit_code_ref` rule
 (content MUST be `0` for `status: "pass"`) does not apply to G10, whose expectation is the
 exact inverse.
+
+A cycle is one scenario of the story, numbered by its rank in the implementation plan: its
+acceptance test file at the `test` commit that holds it RED (DISTILL's or the engineer's for
+scenario 1) and at the
+green commit that makes it pass, and the captured RED run of that acceptance test. The inner
+unit-test cycles of a scenario are not committed and get no cycle entry; their tests land in the
+scenario's green commit.
 
 A gate that is genuinely irrelevant for the story uses `status: "not_applicable"` and
 MUST include a `rationale` field explaining why. `not_applicable` is **never** a substitute
