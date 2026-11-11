@@ -288,6 +288,18 @@ export const writeCommandPlugin = async (root) => {
   return dir
 }
 
+/** The hooks witness: an Agent Plugins manifest and a hooks manifest at the plugin root only, the layout skraft-framework had before its Copilot copy. */
+export const writeHooksWitnessPlugin = async (root) => {
+  const dir = join(root, 'probe-hooks-witness')
+  await write(join(dir, 'plugin.json'), json({
+    $schema: 'https://agent-plugins.org/schemas/1.0.0/plugin.schema.json',
+    name: 'skraft-probe-hooks', version: '0.0.0', description: 'skraft host probe fixture',
+    extensions: { 'com.github.copilot': {} },
+  }))
+  await write(join(dir, 'hooks', 'hooks.json'), json({ modules: ['./probe-mod.tsx'] }))
+  return dir
+}
+
 export const QUESTION_SLUG = 'probe-question'
 export const QUESTION_KEY = 'adr-0'
 

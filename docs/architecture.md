@@ -23,6 +23,7 @@ plugins/
     hooks/skraft-mod.tsx              module du mod Claude Code : câblage de `$`, une ligne par appel
     com.github.copilot/agents/        19 descripteurs `.agent.md`
     com.github.copilot/extensions/skraft-pipeline/   extension Copilot : workflow `skraft-pipeline`, outil `skraft_decide`
+    com.github.copilot/hooks/hooks.json   { "hooks": {} } généré par `plugin:sync` : aucun hook, journal de l'hôte silencieux
     com.anthropic.claude-code/agents/ 19 descripteurs Claude Code `.md`
     engine/                           le moteur (§2)
     workflows/                        pipeline.skraft.dot, review.skraft.dot (§4)

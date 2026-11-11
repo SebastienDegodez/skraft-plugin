@@ -184,6 +184,10 @@ L'extension `com.github.copilot/extensions/skraft-pipeline/` enregistre les work
 Le répertoire de travail est celui de la session, relu au démarrage d'un run et à chaque appel
 d'outil.
 
+Le plugin livre aussi `com.github.copilot/hooks/hooks.json` avec un objet `hooks` vide : Copilot
+CLI ne lit les hooks d'un plugin que là, et écrit une erreur dans son journal à chaque session
+sans lui ([pourquoi](../explanation/guardrails.md)).
+
 ### Commande `/skraft` <!-- #skraft-command -->
 
 Le plugin `skraft` livre `com.github.copilot/commands/skraft.md`, qui donne à Copilot la syntaxe de

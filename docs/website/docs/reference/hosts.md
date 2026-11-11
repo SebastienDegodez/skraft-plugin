@@ -178,6 +178,10 @@ The `com.github.copilot/extensions/skraft-pipeline/` extension registers the `sk
 and `skraft-review` workflows, the `skraft_decide` tool and the `skraft-pipeline` canvas. The
 working directory is the session's, read again when a run starts and on each tool call.
 
+The plugin also ships `com.github.copilot/hooks/hooks.json` with an empty `hooks` object: Copilot
+CLI reads a plugin's hooks only there, and logs an error at every session without it
+([why](../explanation/guardrails.md)).
+
 ### `/skraft` command <!-- #skraft-command -->
 
 The `skraft` plugin ships `com.github.copilot/commands/skraft.md`, which gives Copilot the syntax of

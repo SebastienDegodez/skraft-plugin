@@ -72,6 +72,27 @@ Mesuré depuis l'outil shell d'un agent de l'app GitHub Copilot (CLI 1.0.102), e
 | Copilot CLI (terminal) : le shell asynchrone d'un agent, que `write_bash` alimente, est-il un pseudo-terminal, et porte-t-il les mêmes variables | not measured | la garde par variables ferme le cas s'il l'est |
 | Claude Code : l'outil Bash d'un agent porte `CLAUDECODE=1` | not measured ici (documenté par Claude Code) | `terminal-confirm.mjs` refuse un terminal qui la porte |
 
+### Sonde d'hôte Copilot — 2026-11-11 (branche fix/canvas-hve-alignment, erreur de hooks dans le journal)
+
+Runtime de l'app GitHub Copilot 1.0.106-8 (`~/Library/Caches/github-copilot-sdk/cli/1.0.106-8/` : `copilot-runtime` nu, puis le binaire `copilot` complet) · SDK 1.0.106-8 · Node v22.23.2 · darwin 25.5.0. Aucun appel de modèle. Le contrôle `plugin-hooks-quiet` est celui de `eng/host-probe/copilot-probe.mjs`, lancé seul par un script jetable hors dépôt : la sonde entière suppose un runtime qui lance les extensions, et le runtime nu n'en a pas (`Failed to initialize standalone session extensions: No extension launch provider is registered for standalone extensions`).
+
+Question : quand le runtime écrit-il une ligne `[ERROR] [rust:hooks]` pour un plugin qui déclare le schéma Agent Plugins v1, et que livrer pour que les plugins skraft n'en fassent écrire aucune ? Chaque variante est un plugin au `$schema` v1 chargé par `createSession({ pluginDirectories })` sous un `COPILOT_HOME` neuf (`baseDirectory`) ; le journal `logs/` est lu après `disconnect`.
+
+| Contrôle | Issue | Verdict | Observé |
+| --- | --- | --- | --- |
+| `hooks/hooks.json` seul, à la racine (`{ "modules": [...] }`) | — | ligne | `[ERROR] [rust:hooks] Plugin "<nom>" declares the Agent Plugins v1 $schema, so its hooks are read only from "com.github.copilot/hooks/hooks.json". "hooks/hooks.json" at the plugin root is no longer read; move it there.` |
+| racine = `{ "hooks": {} }` | — | ligne | la même : le fichier racine n'est plus lu, quel que soit son contenu |
+| `com.github.copilot/hooks/hooks.json` = `{}`, seul ou avec le fichier racine | — | ligne | `[ERROR] [rust:hooks] [plugin-source "<nom>"] Invalid hooks config for plugin "<nom>" at "<dossier>/com.github.copilot/hooks/hooks.json": hooks: hooks must be an object` |
+| racine + `com.github.copilot/hooks/hooks.json` = `{ "hooks": {} }` | — | silence | aucune ligne |
+| aucun fichier de hooks ; ou hooks sous `com.anthropic.claude-code/hooks/hooks.json` | — | silence | aucune ligne |
+| `plugin-hooks-quiet`, runtime nu | ouvre une issue en cas d'échec | pass | `witness` : 1 ligne ; `plugins` : `[]` (4,3 s) |
+| `plugin-hooks-quiet`, runtime nu, copie `com.github.copilot/hooks/hooks.json` retirée de skraft-framework | ouvre une issue en cas d'échec | fail | `plugins` : `[ERROR] [rust:hooks] Plugin "skraft" declares the Agent Plugins v1 $schema … move it there.` |
+| `plugin-hooks-quiet`, binaire `copilot` complet | ouvre une issue en cas d'échec | pass | `witness` : 2 lignes identiques ; `plugins` : `[]` (5,7 s) |
+
+Lecture : un plugin au schéma v1 ne lit ses hooks que sous `com.github.copilot/hooks/hooks.json`. Un `hooks/hooks.json` à la racine, celui du mod Claude Code, n'est plus lu ; le runtime l'écrit dans `<COPILOT_HOME>/logs/process-*.log`, une ligne par session, déjà là quand `createSession` rend la main, sans que la session échoue. Un fichier `{}` est rejeté (« hooks must be an object ») ; `{ "hooks": {} }` est accepté et ne déclare rien, d'où ce contenu pour la copie Copilot et le fichier racine gardé pour Claude Code. `baseDirectory` devient le `COPILOT_HOME` du runtime que le SDK lance (stdio, tcp) et n'a aucun effet en processus (commentaire du SDK, `copilot-sdk/index.js`) : le témoin y reste silencieux et le verdict `inconclusive`, jamais un `pass` à tort. Non mesuré : Copilot CLI 1.0.109 et 1.0.102-1, l'épingle de `copilot-host-smoke.yml`, où le contrôle n'est donc pas exigé.
+
+Mutations à la main : témoin ignoré (`if (witness.length === 0)` remplacé par `if (false)`) → le test de l'hôte silencieux échoue ; copie `com.github.copilot/hooks/hooks.json` retirée du plugin → 13 tests de la sonde échouent et, sur le runtime réel, le contrôle rend `fail` avec la ligne du plugin `skraft`. Restauré, tout passe.
+
 ### Sonde d'hôte Copilot — 2026-11-06 (branche feat/mcp-server, serveur MCP du plugin)
 
 Copilot CLI GitHub Copilot CLI 1.0.105. · SDK 1.0.104-4 · Node v26.12.1 · linux 6.12.8. Aucun appel de modèle (`node eng/host-probe/copilot-probe.mjs --sdk <SDK 1.0.104-4>`, sans `--agent-calls` ni `--report-issues`).

@@ -2,7 +2,7 @@
 // as the issues the probe measures describe. The skraft extension is registered through the
 // real register, so the skraft checks measure the driver as it is.
 import { spawn } from 'node:child_process'
-import { existsSync, readdirSync, readFileSync } from 'node:fs'
+import { appendFileSync, existsSync, mkdirSync, readdirSync, readFileSync } from 'node:fs'
 import { createServer } from 'node:http'
 import { basename, isAbsolute, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -28,9 +28,12 @@ export const notRegistered = (name) => `No workflow registered with name "${name
 export const NATIVE_TOOLS = Object.freeze(['bash', 'view', 'edit'])
 
 /**
- * @param {{ commands?: 'listed' | 'none' | 'duplicate', commandInput?: 'appended' | 'absent', preload?: 'preloads' | 'ignores' | 'everyone-knows', skraftLoads?: boolean, models?: string[], agents?: Array<{ id: string, name: string }>, refusals?: { model: string | null, effort: string | null }, staleSnapshot?: boolean, nativeTools?: string[], workflowRunError?: string | null, refuseCanvases?: boolean, canvasConfirmUnheard?: boolean, refuseCanvasOpen?: boolean, joinedElicitation?: boolean, dropCanvasQuery?: boolean, reopenFocusesOnly?: boolean, askedUnanswered?: boolean, undeclaredPhase?: 'listed' | 'throws' | 'ignored' | 'shifts' | 'forgets', mcpClient?: string | null }} [host]
+ * @param {{ commands?: 'listed' | 'none' | 'duplicate', commandInput?: 'appended' | 'absent', hooksLog?: 'v1-rule' | 'silent' | 'every-plugin', preload?: 'preloads' | 'ignores' | 'everyone-knows', skraftLoads?: boolean, models?: string[], agents?: Array<{ id: string, name: string }>, refusals?: { model: string | null, effort: string | null }, staleSnapshot?: boolean, nativeTools?: string[], workflowRunError?: string | null, refuseCanvases?: boolean, canvasConfirmUnheard?: boolean, refuseCanvasOpen?: boolean, joinedElicitation?: boolean, dropCanvasQuery?: boolean, reopenFocusesOnly?: boolean, askedUnanswered?: boolean, undeclaredPhase?: 'listed' | 'throws' | 'ignored' | 'shifts' | 'forgets', mcpClient?: string | null }} [host]
  *   commands: whether the plugins' com.github.copilot/commands/*.md files are listed (named by the plugin name rule),
  *   not listed, or listed twice; commandInput: whether a command's typed input reaches its prompt;
+ *   hooksLog: what the runtime writes under a client's baseDirectory/logs when a session loads plugins: v1-rule applies
+ *   what CLI 1.0.106-8 does to each plugin's real files (HOOKS_RULE below), silent writes nothing, every-plugin writes
+ *   the error of a hooks manifest at the root for every plugin, whatever its files;
  *   refusals: what ctx.agent throws, null when it accepts the call; staleSnapshot: metadata.snapshot
  *   keeps the first working directory after a change; nativeTools: the host's own tools;
  *   workflowRunError: what every rpc.workflow.run throws, as a host with no login does (WORKFLOWS_UNAVAILABLE);
@@ -44,16 +47,53 @@ export const NATIVE_TOOLS = Object.freeze(['bash', 'view', 'edit'])
  *   title meta.phases does not declare (listed with no ordinal, throws, dropped, shifts: the declared phase opened after it loses its ordinal, or forgets: it is left out of the run detail);
  *   mcpClient: the clientInfo.name the host gives the servers it starts from a plugin's mcp.json, null when it starts none
  */
-export const simulatedSdk = ({ preload = 'ignores', skraftLoads = true, models = CATALOGUE, agents, refusals = REFUSALS, staleSnapshot = false, home, nativeTools = NATIVE_TOOLS, workflowRunError = null, refuseCanvases = false, canvasConfirmUnheard = false, refuseCanvasOpen = false, joinedElicitation = true, dropCanvasQuery = false, reopenFocusesOnly = false, askedUnanswered = false, undeclaredPhase = 'listed', commands = 'listed', commandInput = 'appended', mcpClient = 'GitHub Copilot CLI' } = {}) => {
+export const simulatedSdk = ({ preload = 'ignores', skraftLoads = true, models = CATALOGUE, agents, refusals = REFUSALS, staleSnapshot = false, home, nativeTools = NATIVE_TOOLS, workflowRunError = null, refuseCanvases = false, canvasConfirmUnheard = false, refuseCanvasOpen = false, joinedElicitation = true, dropCanvasQuery = false, reopenFocusesOnly = false, askedUnanswered = false, undeclaredPhase = 'listed', commands = 'listed', commandInput = 'appended', mcpClient = 'GitHub Copilot CLI', hooksLog = 'v1-rule' } = {}) => {
   class CopilotClient {
+    constructor(options = {}) { this.baseDirectory = options.baseDirectory }
     async start() {}
     async stop() { return [] }
     async listModels() { return models.map((id) => ({ id, name: id, capabilities: {} })) }
     async createSession(config) {
+      if (this.baseDirectory !== undefined) logHooksErrors(this.baseDirectory, config.pluginDirectories ?? [], hooksLog)
       return simulatedSession(config, { preload, skraftLoads, agents, refusals, models, staleSnapshot, home, nativeTools, workflowRunError, refuseCanvases, canvasConfirmUnheard, refuseCanvasOpen, joinedElicitation, dropCanvasQuery, reopenFocusesOnly, askedUnanswered, undeclaredPhase, commands, commandInput, mcpClient }).ready
     }
   }
   return { CopilotClient, approveAll: () => ({ kind: 'approve-once' }) }
+}
+
+const V1_SCHEMA = /^https:\/\/agent-plugins\.org\/schemas\/1\./
+const readJson = (path) => JSON.parse(readFileSync(path, 'utf8'))
+const manifestOf = (dir) => existsSync(join(dir, 'plugin.json')) ? readJson(join(dir, 'plugin.json')) : {}
+const isObject = (value) => typeof value === 'object' && value !== null && !Array.isArray(value)
+
+const rootHooksIgnored = (name) => `Plugin "${name}" declares the Agent Plugins v1 $schema, so its hooks are read only from "com.github.copilot/hooks/hooks.json". "hooks/hooks.json" at the plugin root is no longer read; move it there.`
+const hooksNotAnObject = (name, path) => `[plugin-source "${name}"] Invalid hooks config for plugin "${name}" at "${path}": hooks: hooks must be an object`
+
+/**
+ * HOOKS_RULE, as measured on the CLI 1.0.106-8 runtime (2026-11-11): a plugin that declares the Agent Plugins v1
+ * schema has its hooks read only from com.github.copilot/hooks/hooks.json. A file there with no `hooks` object is
+ * an error; no file there and a hooks/hooks.json at the root is another; a `hooks` object, even empty, is silent.
+ */
+const hooksErrorsOf = (dir) => {
+  const manifest = manifestOf(dir)
+  if (!V1_SCHEMA.test(manifest.$schema ?? '')) return []
+  const namespaced = join(dir, 'com.github.copilot', 'hooks', 'hooks.json')
+  if (existsSync(namespaced)) return isObject(readJson(namespaced).hooks) ? [] : [hooksNotAnObject(manifest.name, namespaced)]
+  return existsSync(join(dir, 'hooks', 'hooks.json')) ? [rootHooksIgnored(manifest.name)] : []
+}
+
+const hooksLines = (dirs, mode) => {
+  if (mode === 'silent') return []
+  if (mode === 'every-plugin') return dirs.map((dir) => rootHooksIgnored(manifestOf(dir).name ?? basename(dir)))
+  return dirs.flatMap(hooksErrorsOf)
+}
+
+/** The runtime's process log under the client's baseDirectory, a timestamp in front of each line as in a real log. */
+const logHooksErrors = (home, dirs, mode) => {
+  const lines = hooksLines(dirs, mode)
+  if (lines.length === 0) return
+  mkdirSync(join(home, 'logs'), { recursive: true })
+  appendFileSync(join(home, 'logs', 'process-simulated.log'), lines.map((line) => `${new Date().toISOString()} [ERROR] [rust:hooks] ${line}\n`).join(''))
 }
 
 const simulatedSession = (config, { preload, skraftLoads, agents, refusals, models, staleSnapshot, home, nativeTools, workflowRunError, refuseCanvases, canvasConfirmUnheard, refuseCanvasOpen, joinedElicitation, dropCanvasQuery, reopenFocusesOnly, askedUnanswered, undeclaredPhase, commands: commandsHost, commandInput, mcpClient }) => {

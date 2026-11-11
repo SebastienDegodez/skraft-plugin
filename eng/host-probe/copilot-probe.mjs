@@ -12,7 +12,7 @@ import { mkdir, mkdtemp, realpath, rm, writeFile } from 'node:fs/promises'
 import { homedir, platform, release, tmpdir } from 'node:os'
 import { basename, dirname, isAbsolute, join, resolve } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
-import { PROBE_CANVAS, PROBE_CANVAS_QUERY, PROBE_COMMAND, PROBE_PRELOAD, QUESTION_KEY, QUESTION_SLUG, questionEvents, writeCanvasPlugin, writeCommandPlugin, writeIsolationPlugins, writeProbePlugins, writeQuestionRepo } from './fixtures.mjs'
+import { PROBE_CANVAS, PROBE_CANVAS_QUERY, PROBE_COMMAND, PROBE_PRELOAD, QUESTION_KEY, QUESTION_SLUG, questionEvents, writeCanvasPlugin, writeCommandPlugin, writeHooksWitnessPlugin, writeIsolationPlugins, writeProbePlugins, writeQuestionRepo } from './fixtures.mjs'
 import { DEFAULT_REPO, reportToGitHub } from './issues.mjs'
 import { mergePatch } from '../../plugins/skraft-framework/engine/domain/config/merge-patch.mjs'
 
@@ -979,7 +979,7 @@ const listCommands = async (session) => (await withTimeout(session.rpc.commands.
 const commandSeen = ({ name, aliases, kind, input }) => ({ name, aliases: aliases ?? [], kind, hint: input?.hint ?? '' })
 const duplicatesIn = (names) => [...new Set(names.filter((name, index) => names.indexOf(name) !== index))]
 
-const commandSession = ({ sdk, client, dirs }, pluginDirectories) => client.createSession({
+const pluginSession = ({ sdk, client, dirs }, pluginDirectories) => client.createSession({
   ...dirs.session, workingDirectory: dirs.repoA, pluginDirectories, requestExtensions: false, onPermissionRequest: permissionHandler(sdk),
 })
 
@@ -1000,7 +1000,7 @@ const commandFailure = (error) => [
 
 const probeCommandChecks = async (context) => {
   let session
-  try { session = await commandSession(context, [context.dirs.plugins.command]) } catch (error) { return commandFailure(error) }
+  try { session = await pluginSession(context, [context.dirs.plugins.command]) } catch (error) { return commandFailure(error) }
   try {
     const listed = await listCommands(session)
     const relevant = listed.filter(({ name }) => name === PROBE_COMMAND.plugin || name === PROBE_COMMAND.other || name.startsWith(`${PROBE_COMMAND.plugin}:`))
@@ -1068,7 +1068,7 @@ const skraftTyped = async (session, listed) => {
 const skraftCommandCheck = async (context) => {
   const id = 'skraft-command-listed'
   let session
-  try { session = await commandSession(context, [join(REPO_ROOT, 'plugins', 'skraft-framework'), join(REPO_ROOT, 'plugins', 'skraft-backlog')]) } catch (error) {
+  try { session = await pluginSession(context, [join(REPO_ROOT, 'plugins', 'skraft-framework'), join(REPO_ROOT, 'plugins', 'skraft-backlog')]) } catch (error) {
     return check({ id, ...SKRAFT_COMMAND_REQUIREMENT, observed: { error: messageOf(error) } })
   }
   try {
@@ -1081,6 +1081,66 @@ const skraftCommandCheck = async (context) => {
     return check({ id, ...SKRAFT_COMMAND_REQUIREMENT, observed: { error: messageOf(error) } })
   } finally {
     await session.disconnect?.().catch(() => undefined)
+  }
+}
+
+// ---------------------------------------------------------------------------------------------
+// Check: the runtime logs no hooks error for the skraft plugins
+
+const SKRAFT_PLUGINS = Object.freeze(['skraft-framework', 'skraft-backlog', 'skraft-brownfield'])
+const HOOKS_ERROR = /\[ERROR\] \[rust:hooks\]/
+const HOOKS_EXPECTED = "Une session qui charge les plugins skraft-framework, skraft-backlog et skraft-brownfield ne fait écrire au runtime aucune ligne `[ERROR] [rust:hooks]` dans son journal (`<COPILOT_HOME>/logs`). Un plugin témoin, dont les hooks ne sont qu'à la racine, en fait écrire une : sans elle, le journal n'est pas lu et le verdict reste inconclusif ; la sonde rapporte les lignes lues pour le témoin et pour les plugins."
+const HOOKS_REQUIREMENT = Object.freeze({
+  expected: HOOKS_EXPECTED,
+  title: 'V2 — Copilot journalise une erreur de hooks à chaque session avec un plugin skraft', labels: ['bug', 'gain:reliability'],
+  body: "Le runtime Copilot écrit une ligne `[ERROR] [rust:hooks]` dans son journal à chaque création de session avec un plugin skraft : un plugin qui déclare le schéma Agent Plugins v1 ne lit ses hooks que sous `com.github.copilot/hooks/hooks.json`, et un `hooks/hooks.json` à la racine n'est plus lu.",
+})
+
+const logLines = (home) => {
+  const logs = join(home, 'logs')
+  const files = existsSync(logs) ? readdirSync(logs).filter((file) => file.endsWith('.log')) : []
+  return files.flatMap((file) => readFileSync(join(logs, file), 'utf8').split(/\r?\n/))
+}
+
+/** A hooks error line from its level on, without the timestamp that changes at every run. */
+const hooksErrorLine = (line) => {
+  const at = line.search(HOOKS_ERROR)
+  return at < 0 ? null : line.slice(at, at + 300)
+}
+
+/**
+ * The hooks errors the runtime logs, under a home of its own, for a session that loads only `plugins`.
+ * `baseDirectory` is the runtime's COPILOT_HOME when the SDK spawns it (stdio, its default); an in-process
+ * runtime ignores it, logs elsewhere, and leaves the witness silent: the verdict is then inconclusive.
+ */
+const hooksErrorsFor = async ({ sdk, dirs }, plugins, label) => {
+  const home = join(dirs.root, `hooks-home-${label}`)
+  const client = new sdk.CopilotClient({ logLevel: 'error', baseDirectory: home })
+  try {
+    await client.start()
+    const session = await pluginSession({ sdk, client, dirs }, plugins)
+    await sleep(T.settle)
+    await session.disconnect?.().catch(() => undefined)
+  } finally {
+    await client.stop().catch(() => undefined)
+  }
+  return logLines(home).map(hooksErrorLine).filter((line) => line !== null)
+}
+
+/** A silent witness proves nothing about a silent plugin: the log was not read, or the host no longer logs this error. */
+const hooksVerdict = ({ witness, plugins }) => {
+  if (witness.length === 0) return 'inconclusive'
+  return plugins.length === 0 ? 'pass' : 'fail'
+}
+
+const pluginHooksCheck = async (context) => {
+  const id = 'plugin-hooks-quiet'
+  try {
+    const witness = await hooksErrorsFor(context, [context.dirs.plugins.hooksWitness], 'witness')
+    const plugins = await hooksErrorsFor(context, SKRAFT_PLUGINS.map((name) => join(REPO_ROOT, 'plugins', name)), 'skraft')
+    return check({ id, ...HOOKS_REQUIREMENT, verdict: hooksVerdict({ witness, plugins }), observed: { witness, plugins } })
+  } catch (error) {
+    return check({ id, ...HOOKS_REQUIREMENT, observed: { error: messageOf(error) } })
   }
 }
 
@@ -1100,7 +1160,7 @@ export const runProbe = async ({ sdk, sdkPath, environment, workRoot, home = hom
   dirs.session = sdkPath ? { extensionSdkPath: sdkPath } : {}
   await mkdir(dirs.repoA, { recursive: true })
   await mkdir(dirs.repoB, { recursive: true })
-  dirs.plugins = { ...await writeProbePlugins(root), command: await writeCommandPlugin(root) }
+  dirs.plugins = { ...await writeProbePlugins(root), command: await writeCommandPlugin(root), hooksWitness: await writeHooksWitnessPlugin(root) }
   const client = new sdk.CopilotClient({ logLevel: 'error' })
   await client.start()
   const checks = []
@@ -1116,6 +1176,8 @@ export const runProbe = async ({ sdk, sdkPath, environment, workRoot, home = hom
     checks.push(...await skraftChecks({ sdk, client, dirs, models }))
     log('plugin commands…')
     checks.push(...await commandChecks({ sdk, client, dirs, agentCalls }))
+    log('plugin hooks…')
+    checks.push(await pluginHooksCheck({ sdk, dirs }))
     log('native tools…')
     checks.push(await nativeToolNames(sdk, client, dirs))
   } finally {
