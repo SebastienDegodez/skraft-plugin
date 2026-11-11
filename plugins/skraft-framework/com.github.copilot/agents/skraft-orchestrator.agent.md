@@ -20,6 +20,7 @@ tools:
   - github/*
   - ado/*
   - gitlab/*
+  - skill
 agents:
   - Skraft - Solution Researcher
   - Skraft - Solution Architect

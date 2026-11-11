@@ -11,6 +11,7 @@ tools:
   - Grep
   - Glob
   - Bash
+  - Skill
 agents:
   - planning-invest-lens
   - planning-ac-quality-lens

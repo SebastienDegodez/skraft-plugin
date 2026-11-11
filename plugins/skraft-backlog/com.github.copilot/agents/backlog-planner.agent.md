@@ -1,7 +1,7 @@
 ---
 name: Skraft - Backlog Planner
 description: Use when refining raw GitHub issues into well-structured user stories with acceptance criteria, effort estimation, and milestone assignment. Activate on "refine", "plan sprint", "write stories", "split issue", "milestone planning", or when preparing a refined story before handing off to the skraft engineering orchestrator. Runs standalone (product layer) — the developer invokes it directly; it is not part of the skraft engineering pipeline.
-model: Claude Sonnet 5
+model: claude-sonnet-5.5
 user-invocable: true
 tools:
   - agent
@@ -12,6 +12,7 @@ tools:
   - search/codebase
   - execute/runInTerminal
   - github/*
+  - skill
 agents:
   - planning-invest-lens
   - planning-ac-quality-lens

@@ -10,6 +10,7 @@ tools:
   - search/codebase
   - execute/runInTerminal
   - execute/getTerminalOutput
+  - skill
 metadata:
   cost_role_class: implementer  # B12 target class — bounded, single-item work (genesis token-economy)
   dispatched_by: brownfield-refactorer

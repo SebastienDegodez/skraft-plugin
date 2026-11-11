@@ -11,6 +11,7 @@ tools:
   - Glob
   - Bash
   - TaskOutput
+  - Skill
 metadata:
   cost_role_class: implementer  # B12 target class (genesis token-economy)
   genesis_patterns:

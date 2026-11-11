@@ -1,7 +1,7 @@
 ---
 name: Skraft - Backlog Discoverer
 description: "Use when discovering, triaging, or prioritizing GitHub issues for a project. Supports three discovery modes: user-assigned issues, artifact-driven discovery from code changes, and search-based exploration. Activate on 'discover backlog', 'triage issues', 'what should I work on', 'find open issues', or at the start of engineering work before invoking the skraft orchestrator. Runs standalone (product layer) — the developer invokes it directly; it is not part of the skraft engineering pipeline."
-model: Claude Sonnet 5
+model: claude-sonnet-5.5
 user-invocable: true
 tools:
   - agent
@@ -12,6 +12,7 @@ tools:
   - search/codebase
   - execute/runInTerminal
   - github/*
+  - skill
 agents:
   - discovery-completeness-lens
   - discovery-prioritization-lens

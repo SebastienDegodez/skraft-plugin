@@ -1,11 +1,12 @@
 ---
 name: planning-coherence-lens
 description: "Reviewer lens: judges whether the sprint is realistic, fits its milestone theme, and can be delivered in dependency order."
-model: GPT-5.6 Luna
+model: gpt-6-luna
 user-invocable: false
 tools: 
   - read/readFile
   - search/codebase
+  - skill
 metadata:
   cost_role_class: reviewer  # B12 target class — read-only lens, never planner (genesis token-economy)
   dispatched_by: backlog-planner

@@ -11,6 +11,7 @@ tools:
   - Glob
   - Bash
   - mcp__graphify__*
+  - Skill
 metadata:
   cost_role_class: researcher  # B12 target class — read-heavy investigation, no code authoring (genesis token-economy)
   dispatched_by: Skraft - Orchestrator

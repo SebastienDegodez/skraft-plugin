@@ -11,6 +11,7 @@ tools:
   - Grep
   - Glob
   - Bash
+  - Skill
 agents:
   - discovery-completeness-lens
   - discovery-prioritization-lens

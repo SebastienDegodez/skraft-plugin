@@ -1,11 +1,12 @@
 ---
 name: planning-ac-quality-lens
 description: "Reviewer lens: judges whether acceptance criteria are complete and admit exactly one reading by a domain expert."
-model: GPT-5.6 Luna
+model: gpt-6-luna
 user-invocable: false
 tools: 
   - read/readFile
   - search/codebase
+  - skill
 metadata:
   cost_role_class: reviewer  # B12 target class — read-only lens, never planner (genesis token-economy)
   dispatched_by: backlog-planner

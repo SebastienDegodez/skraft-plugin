@@ -1,11 +1,12 @@
 ---
 name: discovery-completeness-lens
 description: "Reviewer lens: judges whether a triage run was thorough enough that no critical issue stayed hidden."
-model: GPT-5.6 Luna
+model: gpt-6-luna
 user-invocable: false
 tools: 
   - read/readFile
   - search/codebase
+  - skill
 metadata:
   cost_role_class: reviewer  # B12 target class — read-only lens, never planner (genesis token-economy)
   dispatched_by: backlog-discoverer

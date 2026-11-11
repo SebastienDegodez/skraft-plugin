@@ -1,11 +1,12 @@
 ---
 name: planning-invest-lens
 description: "Reviewer lens: judges whether each refined story is independently deliverable and valuable on its own terms."
-model: GPT-5.6 Luna
+model: gpt-6-luna
 user-invocable: false
 tools: 
   - read/readFile
   - search/codebase
+  - skill
 metadata:
   cost_role_class: reviewer  # B12 target class — read-only lens, never planner (genesis token-economy)
   dispatched_by: backlog-planner

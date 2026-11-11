@@ -7,6 +7,7 @@ tools:
   - read/readFile
   - search/codebase
   - agent
+  - skill
 metadata:
   cost_role_class: reviewer  # B12 target class — never promote to planner (genesis token-economy)
   dispatched_by: Skraft - Orchestrator

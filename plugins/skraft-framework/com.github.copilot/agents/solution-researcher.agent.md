@@ -1,7 +1,7 @@
 ---
 name: Skraft - Solution Researcher
 description: Use when investigating a codebase or external sources to produce a verified, cited research document BEFORE any design or implementation — the RESEARCH phase of the SKRAFT engineering pipeline (evidence before building, never author production code). Activate on 'research', 'investigate', 'find existing patterns', 'evidence before building', 'what does the codebase already do', 'spike', 'prior art', or when the pipeline enters RESEARCH. It investigates and cites — it does NOT design architecture, choose ADRs, or write production code.
-model: Claude Sonnet 5
+model: claude-sonnet-5.5
 user-invocable: false
 tools:
   - read/readFile
@@ -10,6 +10,7 @@ tools:
   - search/codebase
   - execute/runInTerminal
   - graphify/*
+  - skill
 metadata:
   cost_role_class: researcher  # B12 target class — read-heavy investigation, no code authoring (genesis token-economy)
   dispatched_by: Skraft - Orchestrator

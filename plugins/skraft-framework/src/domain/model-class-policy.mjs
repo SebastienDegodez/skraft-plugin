@@ -20,24 +20,22 @@ const CLASS_TIER = Object.freeze({
 // frontmatter and the evaluation runner under different spellings.
 const TIER_MODELS = Object.freeze({
   economy: Object.freeze([
-    'GPT-5.6 Luna',
-    'GPT-5.6 Luna (copilot)',
-    'gpt-5.6-luna',
-    'Claude Haiku 4.5',
-    'Claude Haiku 4.5 (copilot)',
+    'gpt-6-luna',
+    'GPT-6 Luna',
+    'GPT-6 Luna (copilot)',
+    'claude-haiku-5.5',
+    'Claude Haiku 5.5',
+    'Claude Haiku 5.5 (copilot)',
   ]),
   standard: Object.freeze([
+    'claude-sonnet-5.5',
     'Claude Sonnet 5.5',
     'Claude Sonnet 5.5 (copilot)',
-    'claude-sonnet-5.5',
-    'Claude Sonnet 5',
-    'Claude Sonnet 5 (copilot)',
-    'claude-sonnet-5',
   ]),
   frontier: Object.freeze([
-    'Claude Opus 5',
-    'Claude Opus 5 (copilot)',
-    'claude-opus-5',
+    'claude-opus-5.5',
+    'Claude Opus 5.5',
+    'Claude Opus 5.5 (copilot)',
   ]),
 })
 

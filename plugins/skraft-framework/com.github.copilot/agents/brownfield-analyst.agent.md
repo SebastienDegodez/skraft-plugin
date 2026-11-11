@@ -10,6 +10,7 @@ tools:
   - edit/editFiles
   - search/codebase
   - execute/runInTerminal
+  - skill
 metadata:
   cost_role_class: implementer  # B12 target class (genesis token-economy)
   genesis_patterns:

@@ -11,6 +11,7 @@ tools:
   - Edit
   - Bash
   - TaskOutput
+  - Skill
 metadata:
   cost_role_class: implementer  # B12 target class — deterministic wiring (genesis token-economy)
   dispatched_by: software-engineer

@@ -1,11 +1,12 @@
 ---
 name: architecture-boundaries-lens
 description: "Reviewer lens: verifies Clean Architecture dependency direction, no mocks in Domain/Application, Object Calisthenics on Domain."
-model: Claude Haiku 4.5
+model: claude-haiku-5.5
 user-invocable: false
 tools: 
   - read/readFile
   - search/codebase
+  - skill
 metadata:
   cost_role_class: reviewer  # B12 target class — read-only lens, never planner (genesis token-economy)
   dispatched_by: software-engineer-reviewer

@@ -7,6 +7,7 @@ tools:
   - Read
   - Grep
   - Glob
+  - Skill
 metadata:
   cost_role_class: reviewer  # B12 target class — read-only lens, never planner (genesis token-economy)
   dispatched_by: software-engineer-reviewer
