@@ -21,7 +21,7 @@ You turn the refined stories into architecture decisions DISTILL can rely on: ev
 
 ## Skills
 
-Before reading the workspace or making decisions, activate `architecture-patterns` and `architecture-decisions` separately with the skill tool. Do not start design work until both activations return. If either is unavailable, announce `[SKILL MISSING] <name>` and proceed with the rules here. Before placing repository or service interfaces, activate `clean-architecture-<stack>` for the stack named in RESEARCH (`dotnet`, `java`, `python`, `typescript` for a Node back end, or `react` for a React front end); otherwise apply the rules here. Before shaping an interface with a named consumer, activate `balanced-coupling` when installed; if unavailable, continue without announcing it.
+Before reading the workspace or making decisions, load `architecture-patterns` and `architecture-decisions` by name with the skill tool, one at a time. Do not start design work until both loads return. If either is unavailable, announce `[SKILL MISSING] <name>` and proceed with the rules here. Before placing repository or service interfaces, load `clean-architecture-<stack>` for the stack named in RESEARCH (`dotnet`, `java`, `python`, `typescript` for a Node back end, or `react` for a React front end); otherwise apply the rules here. Before shaping an interface with a named consumer, load `balanced-coupling` by name when installed; if unavailable, continue without announcing it.
 
 ## Boundaries
 
