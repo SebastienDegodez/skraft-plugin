@@ -321,8 +321,37 @@ export const writeQuestionRepo = async (dir, pluginRoot, home) => {
 }
 
 /** The events of the question fixture's journal. */
-export const questionEvents = async (dir) => {
+export const questionEvents = async (dir, slug = QUESTION_SLUG) => {
   const { readFile } = await import('node:fs/promises')
-  const text = await readFile(join(dir, '.copilot-tracking', 'skraft-plans', QUESTION_SLUG, 'events.jsonl'), 'utf8')
+  const text = await readFile(join(dir, '.copilot-tracking', 'skraft-plans', slug, 'events.jsonl'), 'utf8')
   return text.split(/\r?\n/).filter((line) => line !== '').map((line) => JSON.parse(line))
+}
+
+export const INCIDENT_SLUG = 'probe-incident'
+export const INCIDENT_STEP = 'research'
+
+/**
+ * A working copy whose active pipeline waits on an environment question raised by an unforeseen
+ * failure, made with the engine itself: the question text names the output file, and only that
+ * file holds `token`, so a session that quotes the token has read the output.
+ */
+export const writeIncidentRepo = async (dir, pluginRoot, home, token) => {
+  await mkdir(dir, { recursive: true })
+  const engine = (path) => import(pathToFileURL(join(pluginRoot, 'engine', path)).href)
+  const { createNodeAdapters } = await engine('infrastructure/node-adapters.mjs')
+  const { createInit } = await engine('application/pipeline/init-usecase.mjs')
+  const { openJournal } = await engine('application/journal/run-journal.mjs')
+  const { environmentText, questionKey, questionOf } = await engine('domain/decisions/questions.mjs')
+  const adapters = createNodeAdapters({ cwd: dir, pluginRoot, home })
+  const initialised = await createInit(adapters).init({ slug: INCIDENT_SLUG })
+  if (!initialised.ok) throw new Error(`fixture init refused: ${initialised.reason}`)
+  const opened = await openJournal(adapters, INCIDENT_SLUG)
+  if (!opened.ok) throw new Error(`fixture journal: ${opened.reason}`)
+  const log = join(dir, '.copilot-tracking', 'skraft-plans', INCIDENT_SLUG, 'logs', 'research-unknown-1.log')
+  await write(log, `$ node tools/fetch-index.mjs\nError: ${token}: the index service refused the connection (ECONNREFUSED 127.0.0.1:7700)\n`)
+  const incident = { owner: 'unknown', log }
+  const failure = { category: 'unknown', owner: 'unknown', argv: ['node', 'tools/fetch-index.mjs'], exitCode: 1, attempts: 1, signature: 'unknown:node:1', log }
+  const question = questionOf('environment', questionKey(INCIDENT_STEP, 0), environmentText(INCIDENT_STEP, 'a command failed in a way skraft does not recognise', incident))
+  await opened.journal.append('question.asked', { ...question, step: INCIDENT_STEP, visit: 1, subjects: [], incident, incidents: [failure] })
+  return { dir, key: question.key, options: question.options, log }
 }

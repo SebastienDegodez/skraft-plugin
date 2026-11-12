@@ -28,7 +28,7 @@ export const notRegistered = (name) => `No workflow registered with name "${name
 export const NATIVE_TOOLS = Object.freeze(['bash', 'view', 'edit'])
 
 /**
- * @param {{ commands?: 'listed' | 'none' | 'duplicate', commandInput?: 'appended' | 'absent', hooksLog?: 'v1-rule' | 'silent' | 'every-plugin', preload?: 'preloads' | 'ignores' | 'everyone-knows', skraftLoads?: boolean, models?: string[], agents?: Array<{ id: string, name: string }>, refusals?: { model: string | null, effort: string | null }, staleSnapshot?: boolean, nativeTools?: string[], workflowRunError?: string | null, refuseCanvases?: boolean, canvasConfirmUnheard?: boolean, refuseCanvasOpen?: boolean, joinedElicitation?: boolean, dropCanvasQuery?: boolean, reopenFocusesOnly?: boolean, askedUnanswered?: boolean, undeclaredPhase?: 'listed' | 'throws' | 'ignored' | 'shifts' | 'forgets', mcpClient?: string | null }} [host]
+ * @param {{ commands?: 'listed' | 'none' | 'duplicate', commandInput?: 'appended' | 'absent', hooksLog?: 'v1-rule' | 'silent' | 'every-plugin', preload?: 'preloads' | 'ignores' | 'everyone-knows', skraftLoads?: boolean, models?: string[], agents?: Array<{ id: string, name: string }>, refusals?: { model: string | null, effort: string | null }, staleSnapshot?: boolean, nativeTools?: string[], workflowRunError?: string | null, refuseCanvases?: boolean, canvasConfirmUnheard?: boolean, refuseCanvasOpen?: boolean, joinedElicitation?: boolean, dropCanvasQuery?: boolean, reopenFocusesOnly?: boolean, askedUnanswered?: boolean, undeclaredPhase?: 'listed' | 'throws' | 'ignored' | 'shifts' | 'forgets', mcpClient?: string | null, incidentModel?: 'reads' | 'guesses' }} [host]
  *   commands: whether the plugins' com.github.copilot/commands/*.md files are listed (named by the plugin name rule),
  *   not listed, or listed twice; commandInput: whether a command's typed input reaches its prompt;
  *   hooksLog: what the runtime writes under a client's baseDirectory/logs when a session loads plugins: v1-rule applies
@@ -47,7 +47,7 @@ export const NATIVE_TOOLS = Object.freeze(['bash', 'view', 'edit'])
  *   title meta.phases does not declare (listed with no ordinal, throws, dropped, shifts: the declared phase opened after it loses its ordinal, or forgets: it is left out of the run detail);
  *   mcpClient: the clientInfo.name the host gives the servers it starts from a plugin's mcp.json, null when it starts none
  */
-export const simulatedSdk = ({ preload = 'ignores', skraftLoads = true, models = CATALOGUE, agents, refusals = REFUSALS, staleSnapshot = false, home, nativeTools = NATIVE_TOOLS, workflowRunError = null, refuseCanvases = false, canvasConfirmUnheard = false, refuseCanvasOpen = false, joinedElicitation = true, dropCanvasQuery = false, reopenFocusesOnly = false, askedUnanswered = false, undeclaredPhase = 'listed', commands = 'listed', commandInput = 'appended', mcpClient = 'GitHub Copilot CLI', hooksLog = 'v1-rule' } = {}) => {
+export const simulatedSdk = ({ preload = 'ignores', skraftLoads = true, models = CATALOGUE, agents, refusals = REFUSALS, staleSnapshot = false, home, nativeTools = NATIVE_TOOLS, workflowRunError = null, refuseCanvases = false, canvasConfirmUnheard = false, refuseCanvasOpen = false, joinedElicitation = true, dropCanvasQuery = false, reopenFocusesOnly = false, askedUnanswered = false, undeclaredPhase = 'listed', commands = 'listed', commandInput = 'appended', mcpClient = 'GitHub Copilot CLI', hooksLog = 'v1-rule', incidentModel = 'reads' } = {}) => {
   class CopilotClient {
     constructor(options = {}) { this.baseDirectory = options.baseDirectory }
     async start() {}
@@ -55,7 +55,7 @@ export const simulatedSdk = ({ preload = 'ignores', skraftLoads = true, models =
     async listModels() { return models.map((id) => ({ id, name: id, capabilities: {} })) }
     async createSession(config) {
       if (this.baseDirectory !== undefined) logHooksErrors(this.baseDirectory, config.pluginDirectories ?? [], hooksLog)
-      return simulatedSession(config, { preload, skraftLoads, agents, refusals, models, staleSnapshot, home, nativeTools, workflowRunError, refuseCanvases, canvasConfirmUnheard, refuseCanvasOpen, joinedElicitation, dropCanvasQuery, reopenFocusesOnly, askedUnanswered, undeclaredPhase, commands, commandInput, mcpClient }).ready
+      return simulatedSession(config, { preload, skraftLoads, agents, refusals, models, staleSnapshot, home, nativeTools, workflowRunError, refuseCanvases, canvasConfirmUnheard, refuseCanvasOpen, joinedElicitation, dropCanvasQuery, reopenFocusesOnly, askedUnanswered, undeclaredPhase, commands, commandInput, mcpClient, incidentModel }).ready
     }
   }
   return { CopilotClient, approveAll: () => ({ kind: 'approve-once' }) }
@@ -96,7 +96,7 @@ const logHooksErrors = (home, dirs, mode) => {
   appendFileSync(join(home, 'logs', 'process-simulated.log'), lines.map((line) => `${new Date().toISOString()} [ERROR] [rust:hooks] ${line}\n`).join(''))
 }
 
-const simulatedSession = (config, { preload, skraftLoads, agents, refusals, models, staleSnapshot, home, nativeTools, workflowRunError, refuseCanvases, canvasConfirmUnheard, refuseCanvasOpen, joinedElicitation, dropCanvasQuery, reopenFocusesOnly, askedUnanswered, undeclaredPhase, commands: commandsHost, commandInput, mcpClient }) => {
+const simulatedSession = (config, { preload, skraftLoads, agents, refusals, models, staleSnapshot, home, nativeTools, workflowRunError, refuseCanvases, canvasConfirmUnheard, refuseCanvasOpen, joinedElicitation, dropCanvasQuery, reopenFocusesOnly, askedUnanswered, undeclaredPhase, commands: commandsHost, commandInput, mcpClient, incidentModel }) => {
   const atLoad = config.workingDirectory
   let mode = 'interactive'
   let tracked = null
@@ -242,7 +242,21 @@ const simulatedSession = (config, { preload, skraftLoads, agents, refusals, mode
     mcp: simulatedMcp(config, mcpClient),
   }
   rpc.canvas = canvases.rpc
-  const session = { rpc, disconnect: async () => { await canvases.closeAll() } }
+  const watchers = new Set()
+  const emit = (type, data) => { for (const watcher of watchers) watcher({ type, data }) }
+  const call = async (toolName, args) => {
+    emit('tool.execution_start', { toolName, arguments: args })
+    return (await rpc.tools.execute({ name: toolName, arguments: args })).textResultForLlm
+  }
+  const session = {
+    rpc, disconnect: async () => { await canvases.closeAll() },
+    on: (type, handler) => {
+      const watcher = typeof type === 'function' ? type : (event) => { if (event.type === type) handler(event) }
+      watchers.add(watcher)
+      return () => watchers.delete(watcher)
+    },
+    sendAndWait: async () => ({ data: { content: await scriptedIncidentModel(call, emit, incidentModel) } }),
+  }
   return { ready: Promise.all(joins).then(() => session) }
 }
 
@@ -267,6 +281,21 @@ const simulatedPhases = (declared, mode) => {
     currentPhase: entered.at(-1) ?? null, declaredPhaseCount: declared.length,
   })
   return { enter, detail }
+}
+
+/**
+ * The model of a simulated session that is asked to settle a pending incident question: it reads
+ * the question, then reads the output file it names (`reads`) or not (`guesses`), records ABORT,
+ * and quotes the identifier it found.
+ */
+const scriptedIncidentModel = async (call, emit, behaviour) => {
+  const { question } = JSON.parse(await call('skraft_decide', {}))
+  const log = /^Output: (.+)$/m.exec(question.text)[1]
+  if (behaviour === 'reads') emit('tool.execution_start', { toolName: 'view', arguments: { path: log } })
+  const found = behaviour === 'reads' ? /Error: ([^:]+):/.exec(readFileSync(log, 'utf8'))[1] : 'unknown'
+  await call('skraft_decide', { key: question.key, answer: 'ABORT' })
+  emit('assistant.usage', { model: 'simulated', inputTokens: 10, outputTokens: 5, cost: 1, copilotUsage: { totalNanoAiu: 42 } })
+  return `${found} ABORT`
 }
 
 /** The two preload probe agents the Agent Plugins probe fixture declares. */
