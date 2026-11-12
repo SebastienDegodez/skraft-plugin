@@ -464,6 +464,12 @@ const writeFile = (path, text) => {
   writeFileSync(path, text, 'utf8')
 }
 
+/** @param {string} template */
+export const filledResearch = (template) => template.replace(/\{\{[^{}]*\}\}/g, 'filled in')
+  .replace('(Source: filled in)', '(Source: https://example.com/research)')
+  .replace('| filled in | filled in | filled in |', '| | | |')
+  .replace('structural patterns DESIGN reuses: filled in -> filled in', 'structural patterns DESIGN reuses:')
+
 /** Fills every output of the brief: the pre-created text with its placeholders filled, then `text`. */
 export const fillOutputs = (brief, text = 'Findings.\n') => {
   for (const path of brief.outputs) {
@@ -473,7 +479,8 @@ export const fillOutputs = (brief, text = 'Findings.\n') => {
     } catch {
       // the engine pre-created nothing at this path
     }
-    writeFile(path, `${before.replace(/\{\{[^{}]*\}\}/g, 'filled in')}\n${text}`)
+    const output = brief.agent === 'solution-researcher' ? filledResearch(before) : before.replace(/\{\{[^{}]*\}\}/g, 'filled in')
+    writeFile(path, `${output}\n${text}`)
   }
 }
 

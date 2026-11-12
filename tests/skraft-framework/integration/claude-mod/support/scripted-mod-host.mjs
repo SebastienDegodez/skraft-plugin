@@ -6,7 +6,7 @@ import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { createClaudeModDriver } from '../../../../../plugins/skraft-framework/engine/drivers/claude-mod/claude-mod-driver.mjs'
-import { briefOf } from '../../support/pipeline-repository.mjs'
+import { briefOf, filledResearch } from '../../support/pipeline-repository.mjs'
 import { repositoryOnForge } from '../../support/issue-forge.mjs'
 
 export const PLUGIN_ROOT = fileURLToPath(new URL('../../../../../plugins/skraft-framework/', import.meta.url))
@@ -54,7 +54,11 @@ const writeResult = (prompt, status, summary) => nodeModFs.write(briefPaths(prom
  * would ({ agentId } or { deny }), or completes the turn itself.
  */
 export const fillsItsOutputs = (text = '\n## Key discoveries\nThe cart lives in src/cart.\n') => async (spawn, host) => {
-  for (const path of briefPaths(spawn.prompt).outputs) await nodeModFs.write(path, `${(await nodeModFs.read(path)).replace(/\{\{[^{}]*\}\}/g, 'filled in')}${text}`)
+  for (const path of briefPaths(spawn.prompt).outputs) {
+    const before = await nodeModFs.read(path)
+    const output = briefOf(spawn.prompt).agent === 'solution-researcher' ? filledResearch(before) : before.replace(/\{\{[^{}]*\}\}/g, 'filled in')
+    await nodeModFs.write(path, `${output}${text}`)
+  }
   await writeResult(spawn.prompt, 'done', 'research written')
   return host.answer(spawn)
 }
@@ -66,7 +70,8 @@ export const stops = (summary = 'needs a decision on the payment provider') => a
 }
 /** The host dies once the agent wrote its outputs and its result: its turn never completes. */
 export const fillsThenHostDies = () => async (spawn, host) => {
-  for (const path of briefPaths(spawn.prompt).outputs) await nodeModFs.write(path, 'Findings.\n')
+  const output = briefOf(spawn.prompt).agent === 'solution-researcher' ? filledResearch(RESEARCH_TEMPLATE) : 'Findings.\n'
+  for (const path of briefPaths(spawn.prompt).outputs) await nodeModFs.write(path, output)
   await writeResult(spawn.prompt, 'done', 'research written')
   return host.started(spawn)
 }
