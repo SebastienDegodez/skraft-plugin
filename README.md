@@ -133,12 +133,14 @@ VS Code, where it is expected to say what to type without starting a run from th
 npm ci --prefix plugins/skraft-framework/engine
 npm run test:engine               # engine unit and integration tests
 npm run lint:engine               # function size and complexity limits
-npm run mutation:engine:changed   # Stryker on the engine lines changed since integration/v2-next
+npm run mutation:engine:changed   # optional, on explicit request: changed engine lines
 npm run skills:check && npm run plugin:check && npm run backlog:check
 node scripts/local-ci.mjs         # mirrors CI locally
 ```
 
-Contribution rules, test placement and mutation rules are in [`AGENTS.md`](AGENTS.md).
+Contribution rules, test placement and optional mutation commands are in [`AGENTS.md`](AGENTS.md).
+Engine mutation testing is not required or launched automatically; user-project mutation gates
+are unchanged.
 
 ## Versioning & releases
 
@@ -167,7 +169,7 @@ change history.
 1. Branch off the integration branch named in [`AGENTS.md`](AGENTS.md).
 2. Use **Conventional Commits** (required for automatic versioning).
 3. `node scripts/local-ci.mjs` must pass.
-4. Open a Pull Request: CI runs the tests on Windows, macOS and Linux, mutation, lint and the
+4. Open a Pull Request: CI runs the tests on Windows, macOS and Linux, lint and the
    agent policy checks.
 
 ## License

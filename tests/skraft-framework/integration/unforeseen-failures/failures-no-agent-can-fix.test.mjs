@@ -134,7 +134,7 @@ test('a test command whose program does not exist escalates to config with its r
   assert.deepEqual(agentsOf(mod.spawns), NOMINAL_AGENTS)
 })
 
-test('a test command that crashes in the gates (exit 139) is not sent to the engineer; its log and unknown cause are put to the human', async (t) => {
+test('a test command that crashes in the gates (exit 139) requests a host judgment, never a human dialog or an engineer retry', async (t) => {
   const { cwd } = pipelineRepository(t)
   const fixed = join(cwd, '..', 'crash-fixed')
   const crashing = checkWith([
@@ -148,17 +148,18 @@ test('a test command that crashes in the gates (exit 139) is not sent to the eng
     findsNothingToChange(brief, context)
   }
 
-  const { mod, outcome } = await runOn(cwd, { acts: { 'acceptance-designer': [acceptanceWith(crashing)], 'software-engineer': [NOMINAL['software-engineer'], fixesTheCrash] } })
+  const { mod, dialogs, outcome } = await runOn(cwd, { acts: { 'acceptance-designer': [acceptanceWith(crashing)], 'software-engineer': [NOMINAL['software-engineer'], fixesTheCrash] } })
 
   const events = eventsOf(cwd)
   const log = runFile(cwd, 'gates/app/test-1.log')
-  const asked = lastOf(events, 'question.asked', 'environment')
-  assert.deepEqual([outcome.status, outcome.phase, outcome.code], ['waiting', 'DELIVER', 'environment'])
-  assert.deepEqual([asked.step, asked.options, asked.incident.owner, asked.incident.log], ['gates', ['RETRY', 'ABORT'], 'unknown', log])
-  assert.match(asked.text, /Cause: the failure has not been classified; skraft stopped without sending it to an agent\./)
+  const asked = lastOf(events, 'question.asked', 'unforeseen')
+  assert.deepEqual([outcome.status, outcome.phase, outcome.code], ['waiting', 'DELIVER', 'unforeseen'])
+  assert.deepEqual([asked.step, asked.options, asked.incident.owner, asked.incident.log], ['gates', ['RETRY', 'RETRY_WITH_NOTE', 'SEND_TO:deliver', 'STOP'], 'unknown', log])
+  assert.match(asked.text, /This is not a human question/)
+  assert.equal(dialogs.some(({ header }) => header === 'Incident'), false)
   assert.deepEqual(recorded(events, 'gates'), [])
   assert.ok(readFileSync(log, 'utf8').includes('Segmentation fault'), readFileSync(log, 'utf8'))
   assert.equal(journalText(cwd).includes('Segmentation fault'), false)
   assert.deepEqual(agentsOf(mod.spawns), ['solution-researcher', 'solution-architect', 'acceptance-designer', 'software-engineer'])
-  t.diagnostic('cost: 1 engineer dispatch; the crash is held for a human decision')
+  t.diagnostic('cost: 1 engineer dispatch; the crash is held for one host judgment, with no paid model call in this test')
 })

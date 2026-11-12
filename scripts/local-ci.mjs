@@ -4,7 +4,7 @@
 // so a change can be controlled locally before it ever reaches the pipeline.
 //
 //   node scripts/local-ci.mjs            # fast gates: tests + drift guards
-//   node scripts/local-ci.mjs --mutation # also run Stryker on the engine lines changed since origin/integration/v2-next
+//   node scripts/local-ci.mjs --mutation # optional, on explicit request: changed engine lines
 //   node scripts/local-ci.mjs --dotnet   # also run the .NET gate scripts on real Stryker.NET
 //   node scripts/local-ci.mjs --docs     # also build the handbook (docs/website), check its layout
 //                                        # and run the Playwright site suite on it (tests/site)
@@ -86,7 +86,7 @@ const run = (gate) => {
 
 const results = fastGates.map(run)
 
-// Mutation only runs when the fast gates are green (it needs a passing suite).
+// Engine mutation is opt-in only, never an automatic gate.
 if (withMutation && results.every((r) => r.ok)) {
   results.push(
     run({

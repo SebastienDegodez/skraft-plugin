@@ -24,8 +24,14 @@ export const NO_REASON = Object.freeze(['Not now', 'Answer later'])
  * @returns {HumanInteraction}
  */
 export const createDialogHuman = ({ ask }) => Object.freeze({
-  ask: (question) => (takesInstruction(question.kind) ? instructed(ask, question, MAX_ROUNDS) : answered(ask, question)),
+  ask: (question) => askHuman(ask, question),
 })
+
+/** @param {AskDialog} ask @param {Question} question @returns {Promise<HumanAnswer | null>} */
+const askHuman = async (ask, question) => {
+  if (question.kind === 'unforeseen') return null
+  return takesInstruction(question.kind) ? instructed(ask, question, MAX_ROUNDS) : answered(ask, question)
+}
 
 /** How often a question that takes an instruction is put before the run waits for `/skraft decide`. */
 const MAX_ROUNDS = 3

@@ -42,6 +42,7 @@ import { instructionOf } from '../decisions/questions.mjs'
  *   key: string, kind: import('../decisions/questions.mjs').QuestionKind, step: string, visit: number,
  *   text: string, options: string[], refusals: string[], header: string, subjects: string[],
  *   answer: string | null, reason: string | null,
+ *   incident?: import('../pipeline/incidents.mjs').Incident, incidents?: import('../pipeline/incidents.mjs').FailureIncident[],
  * }} AskedQuestion
  *   step: the node it is about (an ask node, or the node the machine could not run); subjects:
  *   what it asks about (the ADRs to ratify).
@@ -234,6 +235,7 @@ const addTotals = (run, event, phase) => {
 const asked = (run, event) => {
   const { key, kind, step, visit, text, options, refusals, header, subjects } = event
   run.questions[key] = { key, kind, step, visit, text, options, refusals, header, subjects, answer: null, reason: null }
+  if (event.incident) Object.assign(run.questions[key], { incident: event.incident, incidents: event.incidents ?? [] })
   run.question = run.questions[key]
 }
 
@@ -254,8 +256,16 @@ const answered = (run, event) => {
   const question = run.questions[event.key]
   question.answer = event.answer
   question.reason = event.reason
+  if (question.kind === 'unforeseen' && event.answer.startsWith('RETRY')) retryIncident(run, question, event)
   if (question.kind === 'environment' && event.answer === 'RETRY') run.question = null
   if (instructionOf(question) !== null) untraverse(run, question.step)
+}
+
+/** @param {RunState} run @param {AskedQuestion} question @param {RunEvent} event */
+const retryIncident = (run, question, event) => {
+  const open = /** @type {OpenAttempt} */ (run.nodes[question.step].open)
+  if (event.reason !== null) open.feedback = [...(open.feedback ?? []), event.reason]
+  run.question = null
 }
 
 /** @param {RunState} run @param {string} step */

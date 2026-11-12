@@ -92,8 +92,9 @@ export const currentText = ({ step, agent, gates, question, visit, attempt }) =>
  * one an instruction, the words after the key.
  * @param {NonNullable<RunView['question']>} question
  */
-const answerText = ({ key, kind, options, refusals }) =>
-  `answer: /skraft decide ${key} ${answersOf(kind, options)}${refusals.length > 0 ? ` (with your reason after ${refusals.join(' or ')})` : ''}`
+const answerText = ({ key, kind, options, refusals }) => kind === 'unforeseen'
+  ? `host-llm judgment: read skraft_status, then skraft_answer for ${key} with observed model, cost and costUnit; not a human confirmation`
+  : `answer: /skraft decide ${key} ${answersOf(kind, options)}${refusals.length > 0 ? ` (with your reason after ${refusals.join(' or ')})` : ''}`
 
 /** The options, an instruction before STOP for a question that takes one. @param {import('../../domain/decisions/questions.mjs').QuestionKind} kind @param {string[]} options */
 const answersOf = (kind, options) => (takesInstruction(kind) ? [...options.filter((option) => option !== STOP), '<instruction>', STOP] : options).join('|')
@@ -103,7 +104,7 @@ const answersOf = (kind, options) => (takesInstruction(kind) ? [...options.filte
  * nothing waits or while a run drives, whose own dialog asks.
  * @param {PipelineSnapshot} snapshot @returns {AnswerChoice[]}
  */
-export const answerChoices = ({ view: { question }, live }) => (question === null || live
+export const answerChoices = ({ view: { question }, live }) => (question === null || live || question.kind === 'unforeseen'
   ? []
   : question.options.map((option) => ({ key: `answer-${question.key}-${option}`, label: option, question: question.key, answer: option })))
 

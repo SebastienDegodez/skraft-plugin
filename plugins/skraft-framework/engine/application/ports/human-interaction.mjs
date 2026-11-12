@@ -3,7 +3,7 @@
  * `ctx.pause`); the engine reads and journals whatever comes back.
  *
  * @typedef {import('../../domain/decisions/questions.mjs').Question} Question
- * @typedef {{ answer: string, reason: string | null }} HumanAnswer
+ * @typedef {{ answer: string, reason: string | null, by?: string, model?: string, cost?: number, costUnit?: string }} HumanAnswer
  *   answer: as the human gave it; reason: what they wrote with it, null without.
  * @typedef {{ ask: (question: Question) => Promise<HumanAnswer | null>, by?: string }} HumanInteraction
  *   ask: null when nobody answers now (the dialog was dismissed, no one is there, the host has

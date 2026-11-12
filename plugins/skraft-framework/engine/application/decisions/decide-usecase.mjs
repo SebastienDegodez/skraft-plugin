@@ -1,4 +1,5 @@
-import { readAnswer, takesInstruction } from '../../domain/decisions/questions.mjs'
+import { mayAnswerQuestion, readAnswer, takesInstruction } from '../../domain/decisions/questions.mjs'
+import { judgmentUsage, readJudgment } from '../../domain/decisions/unforeseen.mjs'
 import { HUMAN_PROVENANCES, deriveRun } from '../../domain/journal/run-state.mjs'
 import { openActiveRun } from '../pipeline/active-run.mjs'
 import { JournalConflict } from '../journal/run-journal.mjs'
@@ -6,7 +7,7 @@ import { JournalConflict } from '../journal/run-journal.mjs'
 /**
  * @typedef {import('../../domain/journal/run-state.mjs').RunState} RunState
  * @typedef {import('../../domain/journal/run-state.mjs').AskedQuestion} AskedQuestion
- * @typedef {{ slug?: string | null, key?: string | null, answer: unknown, reason?: unknown }} Decision
+ * @typedef {{ slug?: string | null, key?: string | null, answer: unknown, reason?: unknown, by?: string, model?: unknown, cost?: unknown, costUnit?: unknown }} Decision
  *   key: the question's; the run's open question when absent.
  * @typedef {{ ok: boolean, slug: string | null, key: string | null, code: string | null, reason: string }} DecideOutcome
  * @typedef {import('../ports/decision-confirmation.mjs').DecisionConfirmation} DecisionConfirmation
@@ -20,7 +21,7 @@ const UNKNOWN_PROVENANCE = 'this host records decisions under a provenance the e
 const TYPED = Object.freeze({ by: 'decide', confirm: async () => /** @type {const} */ ({ ok: true }) })
 
 /**
- * Decide — records a human's answer to the question the active pipeline waits on. It runs
+ * Decide — records a human reply or a distinct host judgment to the pending question. It runs
  * nothing: the next run acts on the answer.
  * @param {DecideDeps} deps
  */
@@ -36,9 +37,28 @@ const decide = async (deps, decision) => {
   const { slug, journal } = opened
   const found = questionFor(deriveRun(journal.events), decision.key ?? null)
   if (!found.ok) return refused(slug, decision.key ?? null, found.code, found.reason)
-  const reading = readAnswer(found.question, decision)
-  if (!reading.ok) return refused(slug, found.question.key, 'invalid-answer', reading.reason)
-  return confirmThenRecord(deps.confirmation ?? TYPED, journal, slug, found.question, reading)
+  return answerQuestion(deps, journal, slug, found.question, decision)
+}
+
+/** @param {DecideDeps} deps @param {import('../journal/run-journal.mjs').OpenJournal} journal @param {string} slug @param {AskedQuestion} question @param {Decision} decision */
+const answerQuestion = async (deps, journal, slug, question, decision) => {
+  const by = decision.by ?? deps.confirmation?.by ?? 'decide'
+  if (!mayAnswerQuestion(question.kind, by)) return refused(slug, question.key, 'human-required', 'this question requires a human answer; host-llm cannot decide it')
+  if (question.kind === 'unforeseen') return recordJudgment(journal, slug, question, decision)
+  const reading = readAnswer(question, decision)
+  if (!reading.ok) return refused(slug, question.key, 'invalid-answer', reading.reason)
+  return confirmThenRecord(deps.confirmation ?? TYPED, journal, slug, question, reading)
+}
+
+/** @param {import('../journal/run-journal.mjs').OpenJournal} journal @param {string} slug @param {AskedQuestion} question @param {Decision} decision */
+export const recordJudgment = async (journal, slug, question, decision) => {
+  const reading = readJudgment(question, decision)
+  if (!reading.ok) {
+    const stopped = await record(journal, slug, question, { answer: 'STOP', reason: reading.reason, by: decision.by === 'host-llm' ? 'host-llm' : 'unverified', ...judgmentUsage(decision) })
+    if (!stopped.ok) return stopped
+    return refused(slug, question.key, 'invalid-judgment', reading.reason)
+  }
+  return record(journal, slug, question, { answer: reading.answer, reason: reading.reason, by: 'host-llm', ...judgmentUsage(reading) })
 }
 
 /**
@@ -56,12 +76,12 @@ const confirmThenRecord = async (confirmation, journal, slug, question, reading)
 
 /**
  * @param {import('../journal/run-journal.mjs').OpenJournal} journal @param {string} slug @param {AskedQuestion} question
- * @param {{ answer: string, reason: string | null, by: string }} reading
+ * @param {{ answer: string, reason: string | null, by: string, model?: string | null, cost?: number | null, costUnit?: unknown }} reading
  * @returns {Promise<DecideOutcome>}
  */
-const record = async (journal, slug, { key }, { answer, reason, by }) => {
+const record = async (journal, slug, { key }, { answer, reason, by, ...usage }) => {
   try {
-    await journal.append('question.answered', { key, answer, reason, by })
+    await journal.append('question.answered', { key, answer, reason, by, ...usage })
   } catch (error) {
     if (!(error instanceof JournalConflict)) throw error
     return refused(slug, key, 'journal-changed', error.message)

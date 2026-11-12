@@ -29,7 +29,7 @@ import { JournalConflict } from '../journal/run-journal.mjs'
 import { runReview } from '../review/review-runs.mjs'
 import { boundInputs } from './review-inputs.mjs'
 import { leave } from './run-routes.mjs'
-import { answerOrWait, askStep, blockQuestion, escalate, refusalLines, settleEnvironment } from './run-questions.mjs'
+import { answerOrWait, askStep, blockQuestion, escalate, refusalLines, settleEnvironment, settleUnforeseen } from './run-questions.mjs'
 import { confirmConfiguration } from './configuration-question.mjs'
 import { cannotStart } from './initialised.mjs'
 import { publishStep } from './publish-step.mjs'
@@ -230,6 +230,7 @@ const writeReports = async ({ deps, slug, journal, loaded }) => {
  * @returns {Promise<RunOutcome | null>}
  */
 const take = (context, shown, run, next) => {
+  if (run.question?.kind === 'unforeseen') return settleUnforeseen(context, run, run.question)
   if (run.question?.kind === 'environment') return settleEnvironment(context, run, run.question)
   if (next.kind === 'done') return finish(context, run, next)
   if (next.kind === 'blocked') return block(context, run, next)
@@ -908,7 +909,7 @@ const gate = async (context, run, next) => {
 const stoppedGates = async (context, run, next, { gates, failure, failures, started }) => {
   if (failure === 'interrupted') return interrupted(context, next.phase, failures.join('; '))
   const incidents = await failureIncidents(context, next.node.id, failure, gates)
-  if (incidents.some((incident) => incident.attempts >= REPEATED_FAILURES)) {
+  if (failure !== 'unknown' && incidents.some((incident) => incident.attempts >= REPEATED_FAILURES)) {
     await recordGate(context, run, next, { gates, failure, failures, started, survivors: [] })
     return null
   }

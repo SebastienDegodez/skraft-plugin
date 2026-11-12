@@ -110,16 +110,16 @@ test('a gate the machine cannot run waits for a human; once fixed and retried, t
   ].join('; '), 1, { owner: 'config', log: `${TRACKING}/gates/api/build-1.log` }))
 })
 
-test('a gate stopped by a signal is unknown, asks the human, and never retries the engineer', async () => {
+test('a gate stopped by a signal is unknown, asks for one host judgment, and never retries the engineer', async () => {
   const machine = new ScriptedMachine({ exits: { '. $ dotnet test': 137 } })
   const host = scripted({ machine }, (it) => [...upToDeliver(it), deliver(it)])
 
   const outcome = await host.start()
 
-  assert.deepEqual([outcome.status, outcome.code], ['waiting', 'environment'])
-  assert.match(outcome.reason, /Cause: the failure has not been classified/)
-  assert.match(outcome.reason, /Output: .*gates\/api\/test-1\.log/)
-  assert.equal(host.human.questions.find(({ kind }) => kind === 'environment').kind, 'environment')
+  assert.deepEqual([outcome.status, outcome.code], ['waiting', 'unforeseen'])
+  assert.match(outcome.reason, /unforeseen incident/)
+  assert.match(outcome.reason, /Read .*gates\/api\/test-1\.log/)
+  assert.equal(host.human.questions.find(({ kind }) => kind === 'unforeseen').kind, 'unforeseen')
   assert.equal(host.events().find((event) => event.type === 'gate.ran' && event.gate === 'test').failure, 'unknown')
   assert.equal(host.agentRunner.dispatches.filter(({ label }) => label.includes('deliver')).length, 1)
   assert.equal(recorded(host, 'gates').length, 0)

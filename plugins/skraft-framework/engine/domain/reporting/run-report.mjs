@@ -16,7 +16,7 @@ import { commitRows, commitsTable, incidentRows, incidentsTable, refusalRows, re
  * }} StepReport
  *   outcome: what its last attempt recorded, null while an attempt is open.
  * @typedef {{ attempts: number, retries: number, durationMs: number, costUsd: number | null }} ReportTotals
- * @typedef {{ key: string, kind: string, step: string, answer: string, reason: string | null, by: string }} HumanAnswer
+ * @typedef {{ key: string, kind: string, step: string, answer: string, reason: string | null, by: string, model?: string | null, cost?: number | null, costUnit?: string | null }} HumanAnswer
  *   step: the node the question was about; by: how the journal knows a person gave it.
  * @typedef {import('./agent-models.mjs').AgentModel} AgentModel
  * @typedef {import('./forge-writes.mjs').ForgeWrite} ForgeWrite
@@ -53,9 +53,9 @@ const failuresOf = (events) => ({ waiting: waitingOn(events), commits: commitRow
 /** Each answer a human gave, with the question it answers. @param {RunEvent[]} events @returns {HumanAnswer[]} */
 const answersOf = (events) => {
   const asked = new Map(events.filter((event) => event.type === 'question.asked').map((event) => [event.key, event]))
-  return events.filter((event) => event.type === 'question.answered').map(({ key, answer, reason, by }) => {
+  return events.filter((event) => event.type === 'question.answered').map(({ key, answer, reason, by, model, cost, costUnit }) => {
     const { kind, step } = /** @type {RunEvent} */ (asked.get(key))
-    return { key, kind, step, answer, reason, by }
+    return { key, kind, step, answer, reason, by, ...(kind === 'unforeseen' ? { model: model ?? null, cost: cost ?? null, costUnit: costUnit ?? null } : {}) }
   })
 }
 
@@ -127,7 +127,8 @@ const sectionsOf = (report) => [
   ...section('## Refusals', report.refusals, refusalsTable),
   ...section('## Incidents', report.incidents, incidentsTable),
   ...section('## Agents', report.agents, agentsTable),
-  ...section('## Human answers', report.answers, answersTable),
+  ...section('## Human answers', report.answers.filter(({ kind }) => kind !== 'unforeseen'), answersTable),
+  ...section('## Automated judgments', report.answers.filter(({ kind }) => kind === 'unforeseen'), judgmentsTable),
   ...section('## Accepted findings', report.accepted, acceptedTable),
   ...section('## Forge writes', report.writes, forgeWritesTable),
 ]
@@ -173,6 +174,13 @@ export const answersTable = (answers) => [
   '| Question | Step | Answer | By |',
   '| --- | --- | --- | --- |',
   ...answers.map(({ key, step, answer, reason, by }) => `| ${key} | ${step} | ${cell(reason === null ? answer : `${answer}: ${reason}`)} | ${by} |`),
+]
+
+/** Judgment costs remain separate from agent USD totals; nano-AIU is not USD. @param {HumanAnswer[]} answers */
+const judgmentsTable = (answers) => [
+  '| Question | Step | Action | By | Model | Cost | Unit |',
+  '| --- | --- | --- | --- | --- | ---: | --- |',
+  ...answers.map(({ key, step, answer, reason, by, model, cost, costUnit }) => `| ${key} | ${step} | ${cell(reason === null ? answer : `${answer}: ${reason}`)} | ${by} | ${cell(model ?? '-')} | ${cost ?? '-'} | ${cell(costUnit ?? '-')} |`),
 ]
 
 /**

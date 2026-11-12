@@ -79,7 +79,7 @@ test('a gate stopped by a signal or a crash, on POSIX or on Windows, stops as un
     const outcome = await host.start()
 
     const evidence = `${TRACKING}/gates/api/test-1.log`
-    assert.deepEqual([outcome.status, outcome.code], ['waiting', 'environment'], String(exit))
+    assert.deepEqual([outcome.status, outcome.code], ['waiting', 'unforeseen'], String(exit))
     assert.deepEqual(asked(host).incident, { owner: 'unknown', log: evidence }, String(exit))
     assert.equal(host.events().some(({ type, step }) => type === 'step.recorded' && step === 'gates'), false, String(exit))
     assert.equal(dispatched(host, 'deliver'), 1, String(exit))
@@ -150,16 +150,16 @@ test('an unknown gate failure stops before a later unavailable gate, naming the 
   assert.deepEqual(asked(host).incident, { owner: 'unknown', log: `${TRACKING}/gates/api/test-1.log` })
 })
 
-test('a mutation run stopped by a signal, or by its time running out, is not judged by its report, which may be an earlier run\'s: a human is asked', async () => {
-  const cases = [[137, 'was stopped by a signal or crashed (exit 137), not by a failing check'], [null, 'dotnet was stopped by SIGKILL; run it again']]
-  for (const [exit, why] of cases) {
+test('a mutation run stopped by a signal, or by its time running out, is not judged by its stale report: a host judgment is requested', async () => {
+  for (const exit of [137, null]) {
     const machine = new ScriptedMachine({ exits: { '. $ dotnet stryker': exit } })
     const host = scripted({ machine }, (it) => [...upToDeliver(it), agent({ work: green() })(it)])
 
     const outcome = await host.start()
 
-    assert.equal(outcome.code, 'environment', String(exit))
-    assert.ok(outcome.reason.startsWith(`mutation cannot run on this machine: api/mutation: ${why} (evidence: `), outcome.reason)
+    assert.equal(outcome.code, 'unforeseen', String(exit))
+    assert.ok(outcome.reason.startsWith('mutation stopped on an unforeseen incident. Read '), outcome.reason)
+    assert.equal(host.events().findLast(({ type }) => type === 'gate.ran').failure, 'unknown')
     assert.deepEqual(asked(host).incident, { owner: 'unknown', log: `${TRACKING}/gates/api/mutation-1.log` })
   }
 })

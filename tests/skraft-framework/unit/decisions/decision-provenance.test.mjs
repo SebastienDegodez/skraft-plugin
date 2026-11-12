@@ -51,6 +51,19 @@ test('an answer the host\'s own dialog gives during the run is journaled with th
   assert.deepEqual(host.git.engineCommits.map((commit) => commit.message), ['docs(adr): ratify ADR-001'])
 })
 
+test('a host LLM cannot ratify an ADR reserved for a person', async () => {
+  const host = scripted({ answers: [{ answer: 'RATIFIED' }] }, proposed)
+  host.human.by = 'host-llm'
+
+  const outcome = await host.start()
+
+  assert.deepEqual(eventsOf(host, 'question.answered'), [], 'a host LLM answer must not be recorded as human ADR ratification')
+  assert.deepEqual([outcome.status, outcome.code], ['waiting', 'adr-ratification'])
+  assert.equal(await host.workspace.read(ADR_1), adrText())
+  assert.deepEqual(host.git.engineCommits, [])
+  assert.equal(host.agentRunner.dispatches.length, 2, 'no agent may run past DESIGN without human ratification')
+})
+
 test('a decision the host does not confirm is refused with the host\'s reason, and nothing is journaled', async () => {
   const host = scripted({}, proposed)
   await host.start()

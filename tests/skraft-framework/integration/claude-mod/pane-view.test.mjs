@@ -88,6 +88,9 @@ test('the pane offers one answer button per option of the question the run waits
   assert.deepEqual(viewRows(waiting).find((row) => row.key === 'question'), { key: 'question', text: 'answer: /skraft decide adr-1 RATIFIED|REJECTED (with your reason after REJECTED)', tone: 'reason' })
   assert.deepEqual(answerChoices({ view: RUNNING, log: [], live: false }), [])
   assert.deepEqual(answerChoices({ view: waiting, log: [], live: true }), [])
+  const judgment = { ...waiting, question: { ...waiting.question, kind: 'unforeseen', options: ['RETRY', 'STOP'], refusals: [] } }
+  assert.deepEqual(answerChoices({ view: judgment, log: [], live: false }), [], 'model judgments are not human answer buttons')
+  assert.match(viewRows(judgment).find(({ key }) => key === 'question').text, /host-llm.*skraft_answer/)
 })
 
 test('the current node names its pass after the first, and a gate node shows its gates instead of an agent', () => {

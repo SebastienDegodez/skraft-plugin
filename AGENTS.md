@@ -109,7 +109,7 @@ the probe or a test says otherwise.
   refused value.
 - **Messages are fixed by code.** No exception text or stderr in the journal, an outcome, a prompt
   or a tool result.
-- **Pipeline questions use native chat.** The model asks the engine's exact question and
+- **Human pipeline questions use native chat.** The model asks the engine's exact question and
   options through the offered native `ask_user` or `askQuestions` tool, requests a refusal
   reason there, then relays only the human reply through `skraft_decide` (Copilot extension)
   or `skraft_answer` (MCP). Trust the model's relay; no receipt or second confirmation.
@@ -118,6 +118,12 @@ the probe or a test says otherwise.
   Review publication and other non-pipeline consents keep their existing host confirmation:
   `session.ui.confirm` must return literal `true`; refuse without elicitation, in `autopilot`
   or when mode cannot be read; journal `by: 'host-confirmed'`.
+- **Unforeseen questions are not human confirmations.** The host session reads the incident
+  evidence and submits only an offered action, `by: 'host-llm'`, with observed model, cost and
+  unit. Missing usage or an invalid action records a diagnostic STOP, never invented metrics.
+  At most one automated intervention per signature; the next occurrence asks a person.
+  Human questions refuse `host-llm`. The versioned known-signature table contains only
+  author-reviewed incidents and records `by: 'known-signature'`, never a human provenance.
 - **Commands are bounded.** `signal`, `timeoutMs`, output cap, process group ended as a whole.
 - **No pre-tool hook**, ever; a returning post-tool hook gives `additionalContext` only.
 - **A check counts once seen failing**, and a report says what it examined.
@@ -202,8 +208,8 @@ Apply the `clean-architecture-testing` and `outside-in-tdd` skills to the engine
 
 ## Engine core: outside-in TDD from the use case
 
-Applies to every change in `engine/domain/` and `engine/application/`, including closing mutation
-gaps. Follow the plugin's `outside-in-tdd` skill; these rules add what the engine needs.
+Applies to every change in `engine/domain/` and `engine/application/`.
+Follow the plugin's `outside-in-tdd` skill; these rules add what the engine needs.
 
 - Enter through `application/` first. A use case (`createInit`, `createRunGate`,
   `createConfigureComponents`, `createDoctor`, `createRunPipeline`, `createObserve`…) is the only
@@ -217,35 +223,28 @@ gaps. Follow the plugin's `outside-in-tdd` skill; these rules add what the engin
 - Before writing a scenario, sharpen an existing one in the same feature folder (more fields
   asserted, data with two elements instead of one, a hyphenated slug). A new test exists only for a
   behaviour no scenario shows. Name tests by behaviour, never by mutant or ticket.
-- Every surviving or uncovered mutant in `domain/` or `application/` ends one of three ways, and
-  the target is 100 %:
-  1. **No behaviour asks for the code** → delete it (unreachable guard, a fallback the port
-     contract already rules out, a field no caller reads).
-  2. **A behaviour asks for it** → a use-case scenario shows that behaviour and kills the mutant.
-  3. **The mutant changes nothing observable** → `// Stryker disable next-line <Mutator>: <reason>`
-     on that line only.
 - No code for a later lot. A phase, a field, a step kind or a default that only a future lot will
-  read is written by that lot, with its scenario. Never exclude a mutant because "lot N will use it".
-- Code reached only from a child process is invisible to Stryker: drive the CLI and the drivers in
-  the test process (`runCli`, the driver factories); keep one test that starts the executable.
-- Stryker needs the npm registry. Where it is unreachable, prove each kill by hand-applying the
-  mutant; the local mutation run is the verdict.
+  read is written by that lot, with its scenario.
+- Drive the CLI and the drivers in the test process (`runCli`, the driver factories); keep one
+  test that starts the executable.
 
 ## Mutation rules
 
+- Mutation testing of this repository is optional, only on explicit request. No mutation score
+  or mutant-kill proof is required for a contribution, and CI and hooks never launch engine
+  mutation tests automatically. This does not change the mutation gates shipped to user projects.
 - Config: `plugins/skraft-framework/engine/stryker.config.mjs`, incremental, run with
   `npm run mutation:engine` after `npm ci --prefix plugins/skraft-framework/engine`.
 - It mutates all of `engine/` except `drivers/cli/skraft.mjs`. Never keep a hand-maintained
   `mutate` list. `thresholds.break` is 80; change thresholds only on explicit instruction.
-- A pull request mutates only the engine lines it added or changed since its merge base with the
-  branch it targets: `node eng/mutation-scope.mjs --base origin/<base> --run`
+- An explicitly requested changed-lines run mutates only the engine lines added or changed since
+  the merge base with the target branch: `node eng/mutation-scope.mjs --base origin/<base> --run`
   (`npm run mutation:engine:changed` against `integration/v2-next`, uncommitted changes
-  included; `node scripts/local-ci.mjs --mutation` runs the same). Mutation runs locally only:
-  the CI job is switched off (`if: false`) because a runner is slower.
+  included; `node scripts/local-ci.mjs --mutation` runs the same).
 - Run Stryker as a non-root user: as root, a test that relies on a read-only file
   (`agent-loop/loop-lease.test.mjs`) passes no more and the initial run fails.
-- Kill a surviving mutant with a sharper acceptance scenario, never with a test written for that
-  mutant. Exclude an equivalent mutant only with its reason.
+- When using the optional command, kill a surviving mutant with a sharper acceptance scenario,
+  never with a test written for that mutant. Exclude an equivalent mutant only with its reason.
 
 ## Lint rules
 
@@ -390,8 +389,8 @@ npm run test:engine            # engine unit + integration
 npm run test:tooling           # repo tooling
 npm run test:cli               # the skraft command (cli/)
 npm run test:skill-scripts     # skill scripts (needs npm ci --prefix plugins/skraft-framework/engine)
-npm run mutation:engine        # Stryker, incremental
-npm run mutation:engine:changed  # Stryker on the engine lines changed since integration/v2-next
+npm run mutation:engine        # optional, on explicit request: Stryker, incremental
+npm run mutation:engine:changed  # optional, on explicit request: changed engine lines
 npm run lint:engine            # ESLint function-size and complexity limits on the engine
 npm run skills:check && npm run plugin:check && npm run backlog:check
 node scripts/agent-policy/resolve-model-bin.mjs --check --forbid-model

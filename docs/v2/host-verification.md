@@ -5,6 +5,22 @@ Ce que le pilote Copilot suppose de l'hôte, mesuré par `eng/host-probe/copilot
 
 ## Mesures
 
+### #566 — périmètre des preuves existantes
+
+Les mesures du 2026-11-12 ci-dessous sont historiques : le jugement `unforeseen` est désormais
+implémenté par #566, sur démarrage anticipé autorisé par l'auteur. Elles prouvent lecture et
+réponse pendant une pause, pas la qualité du nouveau jugement ni l'accès à son coût individuel
+dans une session interactive. Les nouveaux tests des pilotes couvrent le schéma
+`{key, answer, by: "host-llm", model, cost, costUnit, reason?}` et ses refus sur hôtes simulés.
+Ils ne sont pas une nouvelle mesure de CLI. Le pilote ne suppose pas de métrique manquante :
+usage incomplet → arrêt diagnostiqué, aucune valeur fabriquée.
+
+| Contrôle encore non mesuré en session réelle | État |
+| --- | --- |
+| `unforeseen` avec coût individuel observable par la session, distinct du total après le run, sur Copilot CLI et Claude Code | non mesuré ; refus sûr si usage absent |
+| Jugement interactif, VS Code, qualité des actions et gain réel | non mesuré |
+| Pannes #565 sur Linux/Windows et absence de permission hors dépôt pendant un run réel | preuves absentes sur cette branche |
+
 ### 2026-11-12 — incident lu et répondu en pause, deux hôtes (#566)
 
 Sonde payante autorisée par le mainteneur, **un passage par hôte**, macOS (darwin 25.5.0),
