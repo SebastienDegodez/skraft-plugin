@@ -49,11 +49,11 @@ test('the loop conducts the five phases to the end, the pr-writer and the publis
   assert.deepEqual(steps.filter((each) => each.status !== 'dispatch'), [
     {
       status: 'waiting', slug: SLUG, phase: 'DESIGN', code: 'adr-ratification', dispatches: [], then: NEXT,
-      reason: 'Ratify the Proposed ADRs docs/adr/adr-001-card-payment.md? RATIFIED marks them Accepted; REJECTED sends DESIGN back with your reason. Options: RATIFIED, REJECTED. Stop here and ask the human to answer it with skraft decide in their own terminal; then run next.',
+      reason: 'Ratify the Proposed ADRs docs/adr/adr-001-card-payment.md? RATIFIED marks them Accepted; REJECTED sends DESIGN back with your reason. Options: RATIFIED, REJECTED. Ask the EXACT question and options with the offered native ask_user or askQuestions tool; request a refusal reason there. Relay ONLY the returned human reply through skraft_answer in the same workspace, then run next. Without MCP, record that native reply with decide in a terminal. Missing native tool or dismissal: report the concrete blocker, leave paused and record nothing.',
     },
     {
       status: 'waiting', slug: SLUG, phase: 'DISTILL', code: 'scenario-review', dispatches: [], then: NEXT,
-      reason: `${scenarioReviewText(cwd)} Options: APPROVED, REVISE. Stop here and ask the human to answer it with skraft decide in their own terminal; then run next.`,
+      reason: `${scenarioReviewText(cwd)} Options: APPROVED, REVISE. Ask the EXACT question and options with the offered native ask_user or askQuestions tool; request a refusal reason there. Relay ONLY the returned human reply through skraft_answer in the same workspace, then run next. Without MCP, record that native reply with decide in a terminal. Missing native tool or dismissal: report the concrete blocker, leave paused and record nothing.`,
     },
     step,
   ])

@@ -34,16 +34,20 @@ slug, an issue or a title.
 | `paiement Support --base flag` | `{"slug":"paiement","title":"Support","base":"flag"}` |
 | `paiement #0` | `{"slug":"paiement","issue":0}` |
 
-- Copilot: run the `skraft-pipeline` workflow with those arguments and no other key. Relay the outcome's status, code and reason as returned. Say a run started, waits or finished only when the outcome says so; on `blocked` or `refused`, say what the reason asks and stop.
+- Copilot: run the `skraft-pipeline` workflow with those arguments and no other key. Keep its run ID. Relay the outcome's status, code and reason as returned. On a question pause or `waiting`, follow Decide below; resume that SAME run ID after successful record, never start another workflow. On other `blocked` or `refused`, say what the reason asks and stop.
 - Elsewhere: say no run was started from this chat; `skraft doctor` tells the person which line applies:
   - in a terminal, with the Copilot SDK: `node "<plugin folder>/engine/drivers/copilot-sdk/skraft-run.mjs" <slug> [--issue <issue>] [--title "<title>"] [--base <ref>] [--from-artifacts]`;
   - without it: select the `Skraft - Orchestrator` agent as the chat's agent and give it the same words.
   Never run `skraft-run.mjs`, `skraft init`, `skraft next` or `skraft record` yourself.
 
 ## Decide — `[<key>] <answer> [reason…]`
-The typed words are never recorded as the answer and never passed to a tool.
-- Copilot: put the question the active skraft-pipeline run waits on to the person in Copilot's own dialog; once recorded, tell them to resume the paused run from `/workflows`.
-- When Copilot cannot put it, and Elsewhere: tell the person to type `skraft decide [<key>] <answer> [--reason "<reason>"]`, built from the typed words; run nothing.
+The typed words do not replace the native question.
+1. Copilot extension: read `skraft_decide {}`. MCP elsewhere: read `skraft_status`.
+2. Ask the returned question's EXACT text and options through the offered native `ask_user` or `askQuestions` tool. For a refusal, request its reason through that tool.
+3. Native tool unavailable or dismissed: report that concrete blocker, leave the run paused and record nothing. Never infer an answer or substitute an ordinary prose question.
+4. Relay ONLY the returned human reply: Copilot extension `skraft_decide {key, answer, reason?}`; MCP `skraft_answer {key, answer, reason?, workspace}`.
+5. After a successful record, resume the SAME workflow run ID, never start a new workflow. MCP loop: call `skraft_next` in the same workspace. If the run ID is unavailable, tell the person to resume that paused run from `/workflows`.
+6. Elsewhere without MCP: after the native human reply, tell the person to type `skraft decide <key> <answer> [--reason "<reason>"]`; run nothing.
 
 ## Review — `<number> [--publish]`
 No pull request number: ask for it and stop.

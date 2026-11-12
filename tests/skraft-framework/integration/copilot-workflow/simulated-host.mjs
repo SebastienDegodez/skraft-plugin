@@ -97,7 +97,7 @@ export const firstOptionPerson = () => answeringSession({ otherwise: ({ options 
  * @param {string} cwd @param {object} [session] @param {object} [options] what createHostConfirmation takes besides the session
  */
 export const decideTool = (cwd, session = firstOptionPerson(), options = {}) => createSkraftDecideTool({
-  directory: () => cwd, pluginRoot: PLUGIN_ROOT, home: `${cwd}-home`, dialog: createHostConfirmation({ session: () => session, ...options }),
+  directory: () => cwd, pluginRoot: PLUGIN_ROOT, home: `${cwd}-home`,
 })
 
 export const trackingDir = (cwd, slug) => join(cwd, '.copilot-tracking', 'skraft-plans', slug)

@@ -90,10 +90,17 @@ the CLI version in `docs/v2/host-verification.md`. The reason is simple: a host 
 The other rules follow from the same concern. Only the extension entry point imports the Copilot
 SDK. Nothing throws on the run path: every failure becomes an outcome with a status, a code and a
 reason fixed by the code, never an exception text. The workflow's arguments, written by a model,
-are refused as soon as a key is unknown, without ever echoing the refused value. A human decision
-is journaled (`by: 'host-confirmed'`) only once the host's dialog has returned it, and the driver refuses to ask in
-`autopilot` mode or when the host cannot ask a question: a model cannot answer in a person's
-place.
+are refused as soon as a key is unknown, without ever echoing the refused value. Pipeline questions
+pause for native chat: the model presents the exact engine question and options through the
+offered `ask_user` or `askQuestions` tool, requests a refusal reason there, then relays only the
+human reply with `skraft_decide` (Copilot extension) or `skraft_answer` (MCP). This deliberate
+trust in the model needs no receipt or second confirmation; the journal records `by: 'decide'`,
+not host attestation. A successful record resumes the same workflow run ID, never a new run;
+the MCP loop continues with `skraft_next` in the same workspace. A missing native tool or
+dismissal leaves the run paused, with a concrete blocker and no record. The canvas stays read-only.
+Review publication and other non-pipeline consents retain their existing host confirmation;
+Copilot review publication records `by: 'host-confirmed'` only after the host returns literal
+`true`, and refuses without elicitation, in `autopilot` or when mode cannot be read.
 
 ## The driver ↔ engine loop
 

@@ -7,7 +7,8 @@ import { register } from '../../../../plugins/skraft-framework/engine/drivers/co
 import { createInit } from '../../../../plugins/skraft-framework/engine/application/pipeline/init-usecase.mjs'
 import { openJournal } from '../../../../plugins/skraft-framework/engine/application/journal/run-journal.mjs'
 import { createNodeAdapters } from '../../../../plugins/skraft-framework/engine/infrastructure/node-adapters.mjs'
-import { PLUGIN_ROOT, eventsPath, firstOptionPerson, simulatedContext, stops, workingCopy, writesNothing } from './simulated-host.mjs'
+import { PLUGIN_ROOT, actsAs, eventsPath, firstOptionPerson, journalEvents, settled, simulatedContext, stops, workingCopy, writesNothing } from './simulated-host.mjs'
+import { pipelineRepository, scriptedLlm, SLUG } from '../support/pipeline-repository.mjs'
 import { registered, simulatedSdk } from './simulated-sdk.mjs'
 import { request, tokenOf } from '../pipeline-canvas/canvas-host.mjs'
 
@@ -165,11 +166,61 @@ const joinedAt = (workingDirectory) => {
 
 const registerWith = (sdk, home) => register({ defineWorkflow: sdk.defineWorkflow, joinSession: sdk.joinSession, createCanvas: sdk.createCanvas, CanvasError: sdk.CanvasError, pluginRoot: PLUGIN_ROOT, home })
 
+test('registered pipeline pauses before spawning, then consumes native START and blocked-step STOP in the same run without host dialogs', async (t) => {
+  const repositories = await twoRepositories(t)
+  rmSync(join(repositories.first, 'skraft-config.local.json'), { force: true })
+  const sdk = joinedAt(repositories.first)
+  await registerWith(sdk, `${repositories.first}-home`)
+  const [{ workflows: [workflow], tools: [tool] }] = sdk.joins
+  const { ctx, calls } = simulatedContext({ args: { slug: 'checkout' }, behaviours: [stops()] })
+
+  assert.deepEqual(await settled(workflow.run(ctx)), { paused: 'configuration-1' })
+  assert.deepEqual(calls, [])
+  assert.deepEqual(sdk.session.asked, [])
+  const { question } = JSON.parse(await tool.handler({}))
+  assert.deepEqual(question.options, ['START', 'STOP'])
+  assert.match(await tool.handler({ key: question.key, answer: 'START' }), /^Recorded:/)
+  assert.deepEqual(await settled(workflow.run(ctx)), { paused: 'research-1' })
+  assert.equal(calls.length, 1)
+  assert.match(await tool.handler({ key: 'research-1', answer: 'STOP' }), /^Recorded:/)
+  const stopped = await workflow.run(ctx)
+  assert.deepEqual([stopped.status, stopped.code], ['blocked', 'agent-blocked'])
+  assert.deepEqual(sdk.session.asked, [])
+  const events = await journalEvents(repositories.first, 'checkout')
+  assert.deepEqual(events.filter(({ type }) => type === 'question.asked').map(({ key }) => key), ['configuration-1', 'research-1'])
+  assert.deepEqual(events.filter(({ type }) => type === 'question.answered').map(({ answer, by }) => [answer, by]), [['START', 'decide'], ['STOP', 'decide']])
+})
+
+test('registered question nodes consume native answers on the same workflow context without re-asking or repeating an agent', async (t) => {
+  const { cwd } = pipelineRepository(t)
+  const sdk = joinedAt(cwd)
+  await registerWith(sdk, `${cwd}-home`)
+  const [{ workflows: [workflow], tools: [tool] }] = sdk.joins
+  const { ctx, calls } = simulatedContext({ args: { slug: SLUG }, otherwise: actsAs(scriptedLlm({ cwd })) })
+  assert.deepEqual(await settled(workflow.run(ctx)), { paused: 'adr-1' })
+  const callsBefore = calls.length
+  assert.match(await tool.handler({ key: 'adr-1', answer: 'RATIFIED' }), /^Recorded:/)
+  assert.deepEqual(await settled(workflow.run(ctx)), { paused: 'scenario_review-1' })
+  assert.equal(calls.filter(({ label }) => label.includes(' · design · attempt 1')).length, 1)
+  assert.ok(calls.length > callsBefore)
+  assert.match(await tool.handler({ key: 'scenario_review-1', answer: 'APPROVED' }), /^Recorded:/)
+  assert.equal((await workflow.run(ctx)).status, 'done')
+  assert.deepEqual(sdk.session.asked, [])
+  const events = await journalEvents(cwd, SLUG)
+  assert.deepEqual(events.filter(({ type }) => type === 'question.asked').map(({ key }) => key), ['adr-1', 'scenario_review-1'])
+  assert.deepEqual(events.filter(({ type }) => type === 'question.answered').map(({ by }) => by), ['decide', 'decide'])
+})
+
 /** Runs the registered workflow on a new slug, then calls the registered tool. */
 const runAndDecide = async (sdk, slug) => {
   const [{ workflows: [workflow], tools: [tool] }] = sdk.joins
   const { ctx } = simulatedContext({ args: { slug }, behaviours: [writesNothing] })
-  return { outcome: await workflow.run(ctx), decided: await tool.handler({}) }
+  let outcome = await settled(workflow.run(ctx))
+  if (outcome.paused) {
+    assert.match(await tool.handler({ key: outcome.paused, answer: 'STOP' }), /^Recorded:/)
+    outcome = await workflow.run(ctx)
+  }
+  return { outcome, decided: await tool.handler({}) }
 }
 
 /** Which of the two repositories holds the slug's journal. */
@@ -288,20 +339,22 @@ const waitingOnRatification = async (repositories) => {
   await opened.journal.append('question.asked', { key: 'adr-1', kind: 'adr-ratification', text: 'Ratify?', options: ['RATIFIED', 'REJECTED'], refusals: ['REJECTED'], header: 'ADR', step: 'adr', visit: 1, subjects: [] })
 }
 
-test('the registered run puts its question in the joined session\'s dialog; dismissed there, the run pauses on it', async (t) => {
+test('the registered run logs its exact blocked question and pauses without any joined-session dialog', async (t) => {
   const repositories = await twoRepositories(t)
   const asked = []
   const sdk = dismissingSession(repositories, asked)
   await registerWith(sdk, `${repositories.first}-home`)
   const [workflow] = sdk.joins[0].workflows
-  const { ctx } = simulatedContext({ args: { slug: 'checkout' }, behaviours: [stops('which payment provider?')] })
+  const { ctx, logs } = simulatedContext({ args: { slug: 'checkout' }, behaviours: [stops('which payment provider?')] })
 
   await assert.rejects(workflow.run(ctx), { name: 'AbortError', message: 'paused at research-1' })
-  assert.deepEqual(asked.map(([kind]) => kind), ['input'])
-  assert.match(asked[0][1], /^research is blocked: solution-researcher says it cannot go on; /)
+  assert.deepEqual(asked, [])
+  const pending = JSON.parse(await sdk.joins[0].tools[0].handler({})).question
+  assert.match(pending.text, /^research is blocked: solution-researcher says it cannot go on; /)
+  assert.deepEqual(JSON.parse(logs.find((line) => line.startsWith('{"question":'))).question, pending)
 })
 
-test('the registered run never opens the canvas of the joined session, whatever the host renders: the configuration question is put in its dialog', async (t) => {
+test('the registered run never opens the canvas of the joined session, whatever the host renders, nor a dialog: the configuration question waits in the chat', async (t) => {
   const repositories = await twoRepositories(t)
   rmSync(join(repositories.first, 'skraft-config.local.json'), { force: true })
   const asked = []
@@ -315,10 +368,10 @@ test('the registered run never opens the canvas of the joined session, whatever 
   await workflow.run(simulatedContext({ args: { slug: 'checkout' }, behaviours: [writesNothing] }).ctx).catch(() => {})
 
   assert.deepEqual(opens, [])
-  assert.deepEqual(asked.map(([kind]) => kind), ['select'])
+  assert.deepEqual(asked, [])
 })
 
-test('the registered tool puts the question once in the joined session\'s dialog, with no confirmation after it', async (t) => {
+test('the registered tool reads the exact pending question without any joined-session dialog', async (t) => {
   const repositories = await twoRepositories(t)
   const asked = []
   const sdk = dismissingSession(repositories, asked)
@@ -327,8 +380,8 @@ test('the registered tool puts the question once in the joined session\'s dialog
 
   const decided = await sdk.joins[0].tools[0].handler({})
 
-  assert.equal(decided, 'Refused: you did not answer the question in Copilot; answer it with skraft decide adr-1 RATIFIED|REJECTED typed in a terminal; nothing was recorded.')
-  assert.deepEqual(asked, [['select', 'Ratify?', ['RATIFIED', 'REJECTED']]])
+  assert.deepEqual(JSON.parse(decided).question, { key: 'adr-1', kind: 'adr-ratification', text: 'Ratify?', options: ['RATIFIED', 'REJECTED'], refusals: ['REJECTED'], header: 'ADR' })
+  assert.deepEqual(asked, [])
 })
 
 test('the registered canvas takes no answer: its page has no answer route, and nothing is asked', async (t) => {

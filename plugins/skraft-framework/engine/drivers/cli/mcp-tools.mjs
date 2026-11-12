@@ -1,10 +1,11 @@
 /**
  * The tools the MCP server offers: each one is a command line of this driver, built from
- * arguments a model wrote. The commands that take a person's yes (`decide`, `publish`, `journal
+ * arguments a model wrote, except skraft_answer which records a native human reply directly.
+ * The commands that take terminal consent (`publish`, `journal
  * adopt`, `review --publish`, `migrate` that writes) are not tools: a person runs them in a
  * terminal.
  *
- * @typedef {'string' | 'boolean' | 'count' | 'strings'} Kind
+ * @typedef {'string' | 'text' | 'boolean' | 'count' | 'strings'} Kind
  *   string: a word that does not start with `-`; count: a positive whole number; strings: a list
  *   of such words.
  * @typedef {{ kind: Kind, description: string }} Parameter
@@ -34,6 +35,18 @@ const tool = ({ parameters = {}, required = [], ...rest }) => Object.freeze({ ..
 
 /** @type {readonly SkraftTool[]} */
 export const TOOLS = Object.freeze([
+  tool({
+    name: 'skraft_answer', title: 'Record the native human reply',
+    description: 'Read the pending question from skraft_status. Ask its exact text and options through the offered native ask_user or askQuestions tool; request a refusal reason there. Relay only the returned human reply here, then resume the SAME workflow run ID (skraft_next for the MCP loop). If the native tool is unavailable or dismissed, report the blocker, leave the run paused and record nothing.',
+    parameters: {
+      key: { kind: 'string', description: 'the exact pending question key' },
+      answer: { kind: 'text', description: 'the answer returned by the native question tool' },
+      reason: { kind: 'text', description: 'the human refusal reason, when required' },
+    },
+    required: ['key', 'answer'], annotations: LOCAL,
+    // Stryker disable next-line ArrayDeclaration: skraft_answer calls Decide directly; no caller reads this argv
+    argv: () => [],
+  }),
   tool({
     name: 'skraft_doctor', title: 'Check skraft is ready',
     description: 'Checks the repository is ready for skraft: skraft-config.json, each component command, the workflow and the model of each agent. Call it before the first prompt in a repository; when its config check fails, set skraft up with skraft_init.',
@@ -130,6 +143,7 @@ export const offeredTools = (loop) => TOOLS.filter((each) => loop || each.loop !
 /** The JSON Schema of each kind. @type {Record<Kind, object>} */
 const SCHEMAS = Object.freeze({
   string: { type: 'string', minLength: 1 },
+  text: { type: 'string', minLength: 1 },
   boolean: { type: 'boolean' },
   count: { type: 'integer', minimum: 1 },
   strings: { type: 'array', items: { type: 'string', minLength: 1 } },
@@ -147,6 +161,7 @@ export const toolListing = ({ name, title, description, parameters, required, an
 /** What each kind requires, as a refusal says it. @type {Record<Kind, string>} */
 const KIND_TEXT = Object.freeze({
   string: 'a non-empty text that does not start with -', boolean: 'true or false',
+  text: 'a non-empty text',
   count: 'a positive whole number', strings: 'a list of non-empty texts that do not start with -',
 })
 
@@ -156,6 +171,7 @@ const isWord = (given) => typeof given === 'string' && given.length > 0 && !give
 /** Whether the value is of the kind. @type {Record<Kind, (given: unknown) => boolean>} */
 const CHECKS = Object.freeze({
   string: isWord,
+  text: (given) => typeof given === 'string' && given.trim().length > 0,
   boolean: (given) => typeof given === 'boolean',
   count: (given) => Number.isSafeInteger(given) && /** @type {number} */ (given) >= 1,
   strings: (given) => Array.isArray(given) && given.every(isWord),
