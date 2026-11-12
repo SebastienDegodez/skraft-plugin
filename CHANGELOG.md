@@ -3,6 +3,12 @@
 Toutes les modifications notables de ce projet sont documentées ici.
 Format basé sur [Conventional Commits](https://www.conventionalcommits.org/) — versionnage [SemVer](https://semver.org/).
 
+## [2.0.0-alpha.84](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.83...v2.0.0-alpha.84) (2026-11-12)
+
+### 🐛 Bug Fixes
+
+* **agents:** make DESIGN modeling proportionate and Vally-ready ([#576](https://github.com/SebastienDegodez/skraft-plugin/issues/576)) ([c88f9a2](https://github.com/SebastienDegodez/skraft-plugin/commit/c88f9a2276fa87619282d42d6adac00eda56a769))
+
 ## [2.0.0-alpha.83](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.82...v2.0.0-alpha.83) (2026-11-12)
 
 ### 🐛 Bug Fixes
