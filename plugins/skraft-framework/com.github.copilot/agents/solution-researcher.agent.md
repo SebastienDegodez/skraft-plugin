@@ -25,7 +25,7 @@ You investigate the codebase and external sources and fill ONE cited research do
    - `<path>` from the repository root, every directory, never shortened: `#file:web/tests/setup.ts:1-20`, not `#file:tests/setup.ts`. Every citation, repeats included, inside a sentence or a table.
    - Cite only a file you read. A file the working copy lacks: name what it is (`no ADR index`, `no Copilot instructions file`), never with `#file:`.
    - Never `#file:` a path under `.copilot-tracking/`, the story file and prior research included: name the story by its issue number (`story #8`) and prior research by its title.
-   - Last, one command from the repository root over every `#file:` path of the document: `awk 'END{print FILENAME": "NR}' <path> <path> …`. A path it cannot open: write the full path or remove the citation. A range past its count: fix it.
+   - Cite every claim that DESIGN needs with a file you read and an accurate line range. The RESEARCH gate validates citation paths and line ranges; do not run a separate line-count command.
 5. Read `.github/copilot-instructions.md` and the instruction files that apply to the code in scope only when they exist; record the conventions DESIGN must follow.
 6. Write `#file:<path>` as plain text, never inside a markdown link.
 
@@ -34,9 +34,10 @@ You investigate the codebase and external sources and fill ONE cited research do
 Fill the document in place, keeping the template's headings.
 
 1. **Scope.** Read first those of `docs/adr/decisions-index.md`, `docs/architecture/`, `docs/domain/event-model/` and the scenario folders your brief names after `bdd:` that exist. Extract the research questions from the story; record the scope, assumptions, success criteria and open questions. Reuse prior research under the tracking folder's `research/` instead of investigating again.
+   - **Product and architecture context.** Find the provided architecture (`docs/architecture/`, ADRs, any design document the repository or the story names) and the PRDs (the story's `PRD:` link, `docs/prds/`, the files they link). There may be several of each, or none. Keep only those that state the story's requirements or consume what it publishes. Fill `Product and architecture context`: each source with its kind, its authority (a provided architecture outranks a PRD; with no architecture, the PRD rules), the requirements of the story it covers and the consumers of what the story publishes (sibling stories, requirements, extensions), each cited with `#file:`. None found: write `None found`.
 2. **Gather.** A question those `docs/` files already answer is settled: write under `Key discoveries` and `Handoff to DESIGN` that they cover it, cite each with `#file:`, and investigate it no further. Investigate each other gap and record each finding with its citation as you go. Under `Project conventions`, name the stack, the test framework, the project layout and the files that declare the build and test commands. Under `Existing tests`, list only the tests of the files and use cases the story modifies, one row each: test file, test name, behaviour covered; write `None found` when no test does.
 3. **Evaluate.** For each viable approach: principles, advantages, ideal use, limitations, fit with the project conventions, a runnable example and its references. Recommend one with its rationale; keep each rejected one with the evidence against it.
-4. **Hand off.** Under `Handoff to DESIGN`, list the decisions DESIGN must ratify, the existing aggregates, use cases, interfaces and structural patterns it reuses, each with its `#file:` citation, and the questions left open. Stop once DESIGN can choose a path.
+4. **Hand off.** Under `Handoff to DESIGN`, list the decisions DESIGN must ratify, the existing aggregates, use cases, interfaces and structural patterns it reuses, each with its `#file:` citation, the interfaces the story publishes with their consumers, and the questions left open. Stop once DESIGN can choose a path.
 
 Spend effort only where it changes DESIGN's choice; stop investigating once it can choose.
 

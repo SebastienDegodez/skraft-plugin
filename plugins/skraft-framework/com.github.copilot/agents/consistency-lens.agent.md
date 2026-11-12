@@ -22,7 +22,7 @@ Read the skill file your brief lists under Skill before any other input; judge w
 
 | Gate | Name | Criterion | Severity |
 |---|---|---|---|
-| G1 | Every structural commitment has an ADR | Every structural commitment shown in a diagram or detected in the structural scan report has an `Accepted` ADR, or a `Proposed` ADR of this pass, justifying it. | blocker |
+| G1 | Every structural commitment has an ADR | Every structural commitment shown in a diagram or detected in the structural scan report (bounded context, context-map relationship, CQRS with a bus, Event Sourcing, Saga, an aggregate crossing an existing boundary) has an `Accepted` ADR, or a `Proposed` ADR of this pass, justifying it. An aggregate inside one context, a value object, a domain event, a repository or a gateway is recorded by the tactical design: no ADR is missing for it. | blocker |
 | G2 | No contradicting ADRs | No two ADRs contradict each other; every row of `docs/adr/supersessions.md` has its new ADR carrying the `**Supersedes:**` line. | blocker |
 | G10 | Reconciliation journal | The back-propagation journal of the consistency matrix explains every reconciliation rewrite (a label or classification drift aligned on its ADR); a change answering a review finding is not one and needs no entry. | blocker |
 | G12 | Planned supersessions realised | Every `supersession-plan-{story}.md` row has its new ADR carrying the `**Supersedes:**` line, and no event model or diagram still cites the superseded ADR as source of truth. Historical mentions in prose are not findings. | blocker |

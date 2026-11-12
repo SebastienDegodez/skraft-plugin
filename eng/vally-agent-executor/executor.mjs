@@ -147,7 +147,7 @@ const selectedAgentEvent = (agent) => ({
 })
 
 const readOnlyTools = ['skill', 'glob', 'grep', 'view']
-const workspaceWriteTools = [...readOnlyTools, 'edit', 'bash']
+const workspaceWriteTools = [...readOnlyTools, 'create', 'edit', 'bash']
 // The runtime spells its sub-agent dispatch built-in `task` (see BuiltInTools.
 // Isolated in @github/copilot-sdk). Enabling a name it does not know is silent:
 // the session starts, the agent is told to delegate, no dispatch tool exists, so
