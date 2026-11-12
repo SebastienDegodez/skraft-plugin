@@ -42,6 +42,8 @@ import { writeStructuralScan } from './structural-scan.mjs'
 import { findComponentSkills } from './component-skills.mjs'
 import { proposedAdrs } from '../decisions/adr-ratification.mjs'
 import { gateIncident } from './gate-incidents.mjs'
+import { failureSignatureInput, REPEATED_FAILURES, signatureOccurrences } from '../../domain/pipeline/failure-signature.mjs'
+import { parseCommand } from '../../domain/gates/command-line.mjs'
 
 /**
  * @typedef {import('./active-run.mjs').RunOutcome} RunOutcome
@@ -778,17 +780,40 @@ const knownCommits = (journal) => new Map(journal.events
  * @param {{ job: Job, started: Date, cost?: number, model?: string | null, checked: Awaited<ReturnType<typeof checkStep>>, committed: import('./agent-commits.mjs').EngineCommit | null }} attempt
  *   committed: the engine's commit of what an agent with no shell changed, journaled with the step
  */
-const recordAttempt = async (context, run, { node, visit, attempt, group, groups }, { job, started, cost, model, checked, committed }) => {
+const recordAttempt = async (context, run, next, attempt) => context.journal.append(
+  'step.recorded', await attemptRecord(context, run, next, attempt),
+)
+
+/** @param {Context} context @param {RunState} run @param {WorkStep} next @param {Parameters<typeof recordAttempt>[3]} attempt */
+const attemptRecord = async (context, run, { node, visit, attempt, group, groups }, { job, started, cost, model, checked, committed }) => {
   const failed = failedCheck(checked)
-  const routed = failed ? { next: null } : routeDone(context, run, { node, group, groups })
-  await context.journal.append('step.recorded', {
+  const incidents = failed ? await attemptIncidents(context, node.id, checked) : []
+  const routed = failed ? repeatedAttemptRoute(node.id, incidents) : routeDone(context, run, { node, group, groups })
+  return {
     step: node.id, visit, attempt, ...(group === null ? {} : { group }), documents: await documentsWritten(context, job),
-    outcome: failed ? 'failed' : 'done',
-    code: failed ? checked.code : routed.code ?? null,
-    missing: checked.missing, failures: checked.failures,
-    next: routed.next, ceiling: routed.ceiling, reason: routed.reason, model, // undefined on a resume that did not start the agent
+    outcome: failed ? 'failed' : 'done', code: attemptCode(failed, checked, routed),
+    missing: checked.missing, failures: checked.failures, incidents,
+    next: routed.next, ceiling: routed.ceiling, reason: routed.reason, model,
     ...spent(context, started, checked.replayMs, withJudge(cost, checked.judgeCost)), ...(committed ? { committed } : {}), ...(failed ? {} : checked.scenario),
-  })
+  }
+}
+
+/** @param {boolean} failed @param {{ code: string | null }} checked @param {{ code?: string }} routed */
+const attemptCode = (failed, checked, routed) => (failed ? routed.code ?? checked.code : routed.code ?? null)
+
+/** @param {Context} context @param {string} step @param {Extract<Awaited<ReturnType<typeof checkStep>>, { environment: null }>} checked */
+const attemptIncidents = async ({ deps, slug, journal }, step, checked) => {
+  const signature = await deps.hasher.sha256(failureSignatureInput({
+    step, cause: checked.code ?? 'agent', proof: [...checked.missing, ...checked.failures].join('\n'),
+    root: repositoryRoot(deps.files, slug), slug,
+  }))
+  return [{ category: checked.code ?? 'agent', owner: 'agent', argv: [], exitCode: null, attempts: signatureOccurrences(journal.events, signature) + 1, signature, log: null }]
+}
+
+/** @param {string} step @param {import('../../domain/pipeline/incidents.mjs').FailureIncident[]} incidents */
+const repeatedAttemptRoute = (step, incidents) => {
+  const repeated = incidents.find(({ attempts }) => attempts >= REPEATED_FAILURES)
+  return repeated ? repeatedFailureRoute(step, repeated) : { next: null }
 }
 
 /**
@@ -863,7 +888,7 @@ const gate = async (context, run, next) => {
   const { gates, failure } = await gateResults(context, run, node)
   const failures = gates.filter((result) => result.status === 'fail').map((result) => `${result.component}/${result.gate}: ${result.reason} (evidence: ${result.evidence})`)
   if (failure === 'interrupted' || failure === 'environment') return stoppedGates(context, next, { gates, failure, failures })
-  await recordGate(context, run, next, { failure, failures, started, survivors: groupSurvivors(gates.flatMap((result) => result.survivors ?? [])) })
+  await recordGate(context, run, next, { gates, failure, failures, started, survivors: groupSurvivors(gates.flatMap((result) => result.survivors ?? [])) })
   return null
 }
 
@@ -908,21 +933,90 @@ const withOtherComponents = async (deps, request, touched) => {
 /**
  * Records the gate node: passed or failed, with the node it leads to.
  * @param {Context} context @param {RunState} run @param {WorkStep} next
- * @param {{ failure: string | null, failures: string[], started: Date, survivors: import('../../domain/gates/mutation-report.mjs').SurvivorGroup[] }} outcome
+ * @param {{ gates: import('../gates/gate-runs.mjs').GateResult[], failure: string | null, failures: string[], started: Date, survivors: import('../../domain/gates/mutation-report.mjs').SurvivorGroup[] }} outcome
  *   survivors: the mutants the node's mutation runs left alive, by file
  */
-const recordGate = async (context, run, { node, visit, attempt }, { failure, failures, started, survivors }) => {
-  const routed = gateRoute(context, run, node.id, { failed: failure !== null, failures, survivors })
-  await context.journal.append('step.recorded', {
-    step: node.id, visit, attempt,
+const recordGate = async (context, run, { node, visit, attempt }, { gates, failure, failures, started, survivors }) => {
+  const incidents = failure === null ? [] : await failureIncidents(context, node.id, failure, gates)
+  const routed = routeGate(context, run, node.id, failure, failures, survivors, incidents)
+  await context.journal.append('step.recorded', gateRecord(node.id, visit, attempt, failure, failures, survivors, incidents, routed, context.deps.clock.now().getTime() - started.getTime()))
+}
+
+/** @param {Context} context @param {RunState} run @param {string} step @param {string | null} failure @param {string[]} failures @param {import('../../domain/gates/mutation-report.mjs').SurvivorGroup[]} survivors @param {import('../../domain/pipeline/incidents.mjs').FailureIncident[]} incidents */
+const routeGate = (context, run, step, failure, failures, survivors, incidents) => {
+  const repeated = incidents.find(({ attempts }) => attempts >= REPEATED_FAILURES)
+  return repeated ? repeatedFailureRoute(step, repeated) : gateRoute(context, run, step, { failed: failure !== null, failures, survivors })
+}
+
+/** @param {string} step @param {number} visit @param {number} attempt @param {string | null} failure @param {string[]} failures @param {import('../../domain/gates/mutation-report.mjs').SurvivorGroup[]} survivors @param {import('../../domain/pipeline/incidents.mjs').FailureIncident[]} incidents @param {{ next: string | null, code?: string, reason?: string, ceiling?: string | null }} routed @param {number} durationMs */
+const gateRecord = (step, visit, attempt, failure, failures, survivors, incidents, routed, durationMs) => ({
+    step, visit, attempt,
     outcome: failure === null ? 'pass' : 'fail',
     code: routed.code ?? null,
     failures,
     survivors,
+    incidents,
     next: routed.next, ceiling: routed.ceiling, reason: routed.reason,
-    durationMs: context.deps.clock.now().getTime() - started.getTime(),
+    durationMs,
   })
+
+/** @param {Context} context @param {string} step @param {string} failure @param {import('../gates/gate-runs.mjs').GateResult[]} gates */
+const failureIncidents = async (context, step, failure, gates) => Promise.all(
+  gates.filter(({ status }) => status === 'fail').map((gate) => failureIncident(context, step, failure, gate)),
+)
+
+/** @param {Context} context @param {string} step @param {string} failure @param {import('../gates/gate-runs.mjs').GateResult} gate @returns {Promise<import('../../domain/pipeline/incidents.mjs').FailureIncident>} */
+const failureIncident = async ({ deps, slug, journal }, step, failure, gate) => {
+  const { event, output } = await gateEvidence(deps.files, journal.events, slug, gate.evidence)
+  const signature = await gateSignature(deps.hasher, step, failure, gate, output, repositoryRoot(deps.files, slug), slug)
+  return {
+    category: gate.failure ?? failure, owner: incidentOwner(gate.failure ?? failure),
+    argv: gateArgv(event), exitCode: event?.exitCode ?? null,
+    attempts: signatureOccurrences(journal.events, signature) + 1, signature, log: gate.evidence,
+  }
 }
+
+/** @param {import('../ports/tracking-files.mjs').TrackingFiles} files @param {import('../journal/run-journal.mjs').OpenJournal['events']} events @param {string} slug @param {string} evidence */
+const gateEvidence = async (files, events, slug, evidence) => ({
+  event: events.findLast((entry) => gateEvidenceMatches(files, slug, evidence, entry)),
+  output: await files.read(slug, evidence),
+})
+
+/** @param {import('../ports/tracking-files.mjs').TrackingFiles} files @param {string} slug @param {string} evidence @param {import('../../domain/journal/run-state.mjs').RunEvent} event */
+const gateEvidenceMatches = (files, slug, evidence, event) =>
+  event.type === 'gate.ran' && typeof event.evidence === 'string' && files.location(slug, event.evidence) === evidence
+
+/** @param {import('../ports/hasher.mjs').Hasher} hasher @param {string} step @param {string} failure @param {import('../gates/gate-runs.mjs').GateResult} gate @param {string | null} output @param {string} root @param {string} slug */
+const gateSignature = (hasher, step, failure, gate, output, root, slug) => hasher.sha256(failureSignatureInput({
+  step, cause: gate.failure ?? failure,
+  proof: `${gate.component}/${gate.gate}: ${gate.reason} (evidence: ${gate.evidence})\n${output ?? 'evidence log unavailable'}`,
+  root, slug,
+}))
+
+/** @param {import('../journal/run-journal.mjs').RunEvent | undefined} event */
+const gateArgv = (event) => {
+  const command = parseCommand(event?.command ?? '')
+  return command.ok ? command.argv : []
+}
+
+/** @param {import('../ports/tracking-files.mjs').TrackingFiles} files @param {string} slug */
+const repositoryRoot = (files, slug) => {
+  const path = files.location(slug, 'events.jsonl').replaceAll('\\', '/')
+  const suffix = `/.copilot-tracking/skraft-plans/${slug}/events.jsonl`
+  return path.endsWith(suffix) ? path.slice(0, -suffix.length) : ''
+}
+
+/** @type {Readonly<Record<string, import('../../domain/pipeline/incidents.mjs').FailureIncident['owner']>>} */
+const INCIDENT_OWNERS = Object.freeze({ deterministic: 'agent', environment: 'environment', interrupted: 'interrupted', config: 'config', judge: 'judge' })
+
+/** @param {string} failure */
+const incidentOwner = (failure) => INCIDENT_OWNERS[failure] ?? 'unknown'
+
+/** @param {string} step @param {{ attempts: number, signature: string, log: string | null }} incident */
+const repeatedFailureRoute = (step, incident) => ({
+  next: null, code: 'repeated-failure',
+  reason: `${step} stopped after ${incident.attempts} occurrences of failure signature ${incident.signature}; evidence: ${incident.log ?? 'unavailable'}`,
+})
 
 /**
  * Where a gate node goes: a failed one that left as many mutants alive for its last rounds stops

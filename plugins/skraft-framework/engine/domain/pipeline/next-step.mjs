@@ -224,6 +224,7 @@ const nextGroup = (node, run, last) => {
  */
 const refusalBlock = (node, previous, last) => {
   if (last.code === 'agent-blocked') return 'agent-blocked'
+  if (last.code === 'repeated-failure') return 'breaker'
   if (previous !== null && sameFailure(previous, last)) return 'breaker'
   if (last.attempt >= (node.maxAttempts ?? DEFAULT_ATTEMPTS)) return 'ceiling'
   return null
