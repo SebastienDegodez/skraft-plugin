@@ -16,6 +16,7 @@ const WEB = Object.freeze({ name: 'payment-web', root: '../payment-web', stack: 
 const TEAM = Object.freeze({ baseBranch: 'develop', tdd: { replay: 'last-red' }, publish: { visuals: false, draft: false }, components: [API, WEB] })
 const LOCAL = 'skraft-config.local.json'
 const SHAPE = 'skraft-config.json is invalid: component payment-api: bdd must be true, false, or a list of { runner, features, steps } whose folders are inside the component root; steps may be left out when nothing binds the scenarios'
+const MODEL_NAMES = 'must be a model name or a non-empty list of model names, tried in order (a name is letters, digits, ".", "_" or "-", starting with a letter or a digit, with no space)'
 
 /** The Configuration tab's use case on a working copy whose files say what is given. */
 const configuration = ({ team = TEAM, local, user, files = {}, remote = GITHUB_REMOTE } = {}) => {
@@ -54,6 +55,7 @@ test('the view shows the forge the files name and the one the Git remote names, 
     types: ['phase', 'lens', 'refuter', 'worker'],
     efforts: ['low', 'medium', 'high', 'xhigh', 'max'],
     families: ['inherit', 'economy', 'standard', 'frontier', 'premium', 'reviewer', 'researcher', 'implementer', 'planner'],
+    modelName: '^[A-Za-z0-9][A-Za-z0-9._-]*$',
   })
 })
 
@@ -176,6 +178,7 @@ test('an edit the configuration would refuse writes nothing, with why; so does a
   const refusals = [
     [{ components: [{ name: 'payment-api', stack: 'cobol' }], consents: { pullRequest: true } }, 'skraft-config.json is invalid: component payment-api: stack must be one of dotnet, java, python, typescript, javascript, react'],
     [{ assign: { agents: { 'solution-architect': 'gpt-5.5' } } }, 'skraft-config.local.json is invalid: assign.agents.solution-architect must be a model family, inherit, or { "family": ..., "<host>": { "effort": ... } }'],
+    [{ models: { standard: { copilot: { model: ['claude-haiku-4.5', 'gpt 5'] } } } }, `skraft-config.local.json is invalid: models.standard.copilot.model ${MODEL_NAMES}`],
     [{ components: [{ name: 'checkout' }] }, 'the edit names a component skraft-config.json does not list; skraft init adds components'],
     [{ components: [{ name: 'payment-api', bdd: 'yes' }] }, SHAPE],
     [{ components: [{ name: 'payment-api', bdd: [] }] }, SHAPE],

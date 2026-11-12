@@ -41,6 +41,16 @@ const refuses = async (promise, message) => {
     return true
   })
 }
+
+/** Expects the action to fail because there is no backlog to act on: a refusal under its own canvas error code. */
+const refusesNone = async (promise, message) => {
+  await assert.rejects(promise, (error) => {
+    assert.ok(error instanceof UserError, `${error.name}: ${error.message}`)
+    assert.equal(error.code, 'skraft_backlog_none')
+    assert.match(error.message, message)
+    return true
+  })
+}
 const posts = (github) => github.calls.filter((c) => c.args.includes('POST'))
 
 test('the controller declares what the agent may do: read, explain, focus and preview, never review or create', async (t) => {
@@ -61,6 +71,7 @@ test('the controller declares what the agent may do: read, explain, focus and pr
 test('get_state tells where every story stands, with the INVEST letters and DoR items that fail', async (t) => {
   const { run } = await setUp(t)
   const state = await run('get_state')
+  assert.equal(state.backlog, true)
   assert.equal(state.slug, SLUG)
   assert.equal(state.repo, REPO)
   assert.deepEqual(state.coverage, { fr: 4, covered: 4, deferred: 0 })
@@ -76,12 +87,14 @@ test('get_state tells where every story stands, with the INVEST letters and DoR 
   assert.equal(state.stories[0].title, "Recevoir la décision d'éligibilité")
 })
 
-test('without a backlog every reading action is a request to run the workflow first', async (t) => {
+test('without a backlog get_state answers that there is none and what to run; an action on a backlog is refused as having nothing to act on', async (t) => {
   const { run, controller } = await setUp(t, { workspace: false })
   assert.equal(controller.state.slug, null)
-  await refuses(run('get_state'), /no backlog in this workspace: run the skraft-prd-backlog workflow first/)
-  await refuses(run('focus_story', { id: 'EP-001-S01' }), /no backlog in this workspace/)
-  await refuses(run('preview_creation'), /no backlog in this workspace/)
+  assert.deepEqual(await run('get_state'), { backlog: false, slug: null, reason: 'no backlog in this workspace: run the skraft-prd-backlog workflow first' })
+  await refusesNone(run('focus_story', { id: 'EP-001-S01' }), /no backlog in this workspace/)
+  await refusesNone(run('preview_creation'), /no backlog in this workspace/)
+  await refusesNone(run('list_framing'), /no backlog in this workspace/)
+  await refusesNone(run('answer_framing', { id: 'FQ-1', text: 'Keep the MVP small' }), /no backlog in this workspace/)
   assert.deepEqual(controller.snapshot(), { backlogs: [], slug: null, error: null, focus: null, busy: null, diagnostics: null, repo: null, assessment: null, preview: null, result: null })
 })
 
@@ -98,7 +111,8 @@ test('a run that has not sliced yet is shown from its first file: where it stand
   assert.deepEqual(snapshot.diagnostics.inventory, { fr: 1, nfr: 1, epics: 1 })
   assert.deepEqual(snapshot.diagnostics.map, { state: 'missing', stories: 0 })
   assert.deepEqual(Object.keys(snapshot.diagnostics.run.agents), ['slice · attempt 1'])
-  await refuses(run('get_state'), /no story map yet/)
+  assert.deepEqual(await run('get_state'), { backlog: false, slug: SLUG, reason: `${SLUG}: no story map yet — the run is in SLICE (running)` })
+  await refusesNone(run('explain_story', { id: 'EP-001-S01' }), /no story map yet/)
   await writeFile(join(dir, 'story-map.json'), '{ broken', 'utf8')
   await controller.poll()
   assert.equal(controller.snapshot().diagnostics.map.state, 'unreadable')
@@ -120,7 +134,7 @@ test('a backlog whose map cannot be read is reported with the reason', async (t)
   await writeFile(join(dir, 'story-map.json'), '{ broken', 'utf8')
   assert.equal(await controller.poll(), true)
   assert.match(controller.state.error, /story-map\.json is missing or cannot be read/)
-  await refuses(run('get_state'), /story-map\.json is missing or cannot be read/)
+  assert.deepEqual(await run('get_state'), { backlog: false, slug: SLUG, reason: controller.state.error })
 })
 
 test('open_backlog shows another backlog of the workspace and forgets the focus, the dry run and the repository', async (t) => {
@@ -139,6 +153,16 @@ test('open_backlog shows another backlog of the workspace and forgets the focus,
   assert.equal(summary.repo, null)
   assert.deepEqual([controller.state.focus, controller.state.preview, controller.state.repo], [null, null, null])
   assert.deepEqual(controller.snapshot().backlogs.sort(), ['autre-prd', SLUG].sort())
+})
+
+test('open_backlog on a backlog whose run has not sliced yet switches to it and says why there is nothing to review', async (t) => {
+  const { cwd, run, controller, changes } = await setUp(t)
+  await writeJson(join(backlogDir(cwd, 'en-cours'), 'progress.json'), { version: 1, run: { startedAt: '2026-10-20T10:00:00.000Z', phase: 'SLICE', status: 'running', mode: 'full' }, stories: {} })
+  await controller.poll()
+  const before = changes.length
+  assert.deepEqual(await run('open_backlog', { slug: 'en-cours' }), { backlog: false, slug: 'en-cours', reason: 'en-cours: no story map yet — the run is in SLICE (running)' })
+  assert.equal(controller.state.slug, 'en-cours')
+  assert.equal(changes.length, before + 1, 'the panel is told')
 })
 
 test('focus_story opens a known story; unknown or malformed ids are refused', async (t) => {

@@ -1,4 +1,4 @@
-import { AGENT_TYPES, EFFORTS, FAMILY, HOSTS, INHERIT, isTier, ownOf, TIERS, tierOf } from './model-assignment.mjs'
+import { AGENT_TYPES, EFFORTS, FAMILY, HOSTS, INHERIT, isTier, MODEL_NAME, ownOf, TIERS, tierOf } from './model-assignment.mjs'
 
 /**
  * `models` and `assign` as one layer of the configuration writes them, checked in the order
@@ -17,6 +17,7 @@ const AGENT_ID = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
 const FAMILY_WORD = 'a kebab-case word whose every part starts with a letter, such as implementer or gpt-codex (gpt-5.5 is a model, not a family)'
 const RULE = 'a model family, inherit, or { "family": ..., "<host>": { "effort": ... } }'
 const MODEL_IN_ASSIGN = 'a model is chosen in models, by family, never in assign'
+const MODEL_NAME_RULE = 'a name is letters, digits, ".", "_" or "-", starting with a letter or a digit, with no space'
 
 /** @param {Record<string, any>} raw @param {string[]} errors @returns {ModelSettings} */
 export const modelSettingsOf = (raw, errors) => ({ models: modelsOf(raw.models, errors), assign: assignOf(raw.assign, errors) })
@@ -87,7 +88,7 @@ const hostSettingFieldOf = (at, setting, errors) => {
 /** @type {Readonly<Record<string, { valid: (value: unknown) => boolean, expected: string, read: (value: any) => unknown }>>} */
 const HOST_FIELDS = Object.freeze({
   __proto__: null,
-  model: { valid: (value) => isModelNames(value), expected: 'must be a model name or a non-empty list of model names, tried in order', read: (value) => [value].flat() },
+  model: { valid: (value) => isModelNames(value), expected: `must be a model name or a non-empty list of model names, tried in order (${MODEL_NAME_RULE})`, read: (value) => [value].flat() },
   effort: { valid: (value) => EFFORTS.includes(/** @type {any} */ (value)), expected: `must be one of ${EFFORTS.join(', ')}`, read: (value) => value },
 })
 
@@ -100,7 +101,7 @@ const hostFieldOf = (at, key, value, errors) => {
 }
 
 /** @param {unknown} name */
-const isModelName = (name) => typeof name === 'string' && name.trim() !== ''
+const isModelName = (name) => typeof name === 'string' && MODEL_NAME.test(name)
 
 /** @param {unknown} names */
 const isModelNames = (names) => isModelName(names) || (Array.isArray(names) && names.length > 0 && names.every(isModelName))

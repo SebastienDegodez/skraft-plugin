@@ -12,17 +12,28 @@ import { diagnosticsOf, handoffDir, isSlug, listBacklogs, loadBacklog, readFrami
 import { acceptedOf, decide, proposeCorrections, withDecisions } from '../corrections.mjs'
 import { openQuestionsOf } from '../story.mjs'
 
+/** What the agent and the panel read when the workspace holds no backlog yet. */
+const NO_BACKLOG = 'no backlog in this workspace: run the skraft-prd-backlog workflow first'
+
 /**
  * A request the user can correct: a 400, never a crash. Its text is fixed by code: it never
  * echoes a value the agent or the panel sent and the controller refused.
  */
 export class UserError extends Error {
-  /** @param {string} message */
-  constructor(message) {
+  /**
+   * @param {string} message
+   * @param {string} [code] the canvas error code the agent reads: a request to correct, unless the
+   *   backlog the action needs is not there
+   */
+  constructor(message, code = 'skraft_backlog_invalid_request') {
     super(message)
     this.name = 'UserError'
+    this.code = code
   }
 }
+
+/** A refusal because there is no backlog to act on yet: the request itself is not wrong. @param {string} message */
+const nothingToActOn = (message) => new UserError(message, 'skraft_backlog_none')
 
 /** How long a dry run stays valid for the creation that follows it. */
 export const PREVIEW_TTL_MS = 15 * 60 * 1000
@@ -130,8 +141,11 @@ export const createController = ({ cwd: directory, gh, now = () => new Date(), p
 
   const repoOf = () => state.repo ?? state.assessment?.repo ?? null
 
+  /** Why there is no backlog to assess: the run's own words when one is in view, else the workspace holds none. */
+  const whyNone = () => state.error ?? NO_BACKLOG
+
   const requireBacklog = () => {
-    if (!state.assessment) throw new UserError(state.error ?? 'no backlog in this workspace: run the skraft-prd-backlog workflow first')
+    if (!state.assessment) throw nothingToActOn(whyNone())
     return state.assessment
   }
 
@@ -162,11 +176,16 @@ export const createController = ({ cwd: directory, gh, now = () => new Date(), p
     repo: repoOf(), assessment: state.assessment, preview: state.preview && { ...state.preview, key: undefined }, result: state.result,
   })
 
-  /** A summary small enough for the agent: no story file, only where each story stands. */
+  /**
+   * A summary small enough for the agent: no story file, only where each story stands. Without a
+   * backlog to assess (none yet, a run that has not sliced, a map that cannot be read) it says so
+   * and why: reading the state is not an error.
+   */
   const summary = () => {
-    const a = requireBacklog()
+    const a = state.assessment
+    if (!a) return { backlog: false, slug: state.slug, reason: whyNone() }
     return {
-      slug: a.slug, repo: repoOf(), run: a.run, coverage: a.coverage, counts: a.counts, mapProblems: a.mapCheck.problems,
+      backlog: true, slug: a.slug, repo: repoOf(), run: a.run, coverage: a.coverage, counts: a.counts, mapProblems: a.mapCheck.problems,
       stories: a.stories.map((s) => ({
         id: s.id, title: s.title, state: s.state, review: s.review, verdict: s.verdict,
         failing: [...Object.entries(s.invest), ...Object.entries(s.dor)].filter(([, line]) => line.status === 'fail').map(([key]) => (/\d/.test(key) ? `DoR ${key}` : key)),
@@ -222,7 +241,7 @@ export const createController = ({ cwd: directory, gh, now = () => new Date(), p
 
   /** The framing of the backlog in view: questions, recommendation, answer, and what is left. */
   const framingView = async () => {
-    if (!state.slug) throw new UserError('no backlog in this workspace: run the skraft-prd-backlog workflow first')
+    if (!state.slug) throw nothingToActOn(NO_BACKLOG)
     const framing = await readFraming(cwd(), state.slug)
     if (!framing) return { slug: state.slug, questions: [], open: 0 }
     const questions = framing.questions.map((q) => ({ ...q, answer: framing.answers[q.id]?.text ?? null, answeredAt: framing.answers[q.id]?.at ?? null }))
@@ -245,7 +264,7 @@ export const createController = ({ cwd: directory, gh, now = () => new Date(), p
   const actions = [
     {
       name: 'get_state', agent: true,
-      description: 'Where every story of the backlog in view stands: state, human review, INVEST letters and DoR items that fail.',
+      description: 'Where every story of the backlog in view stands: state, human review, INVEST letters and DoR items that fail. With no backlog to assess (none yet, or a run that has not sliced) it answers backlog: false and why.',
       inputSchema: { type: 'object', properties: {}, additionalProperties: false },
       run: async () => summary(),
     },
@@ -320,7 +339,7 @@ export const createController = ({ cwd: directory, gh, now = () => new Date(), p
       description: 'Answers one framing question (an option or free text); an empty text withdraws the answer. Resume the workflow to slice with the answers.',
       inputSchema: { type: 'object', additionalProperties: false, required: ['id', 'text'], properties: { id: { type: 'string' }, text: { type: 'string' } } },
       run: async ({ id, text }) => exclusive('frame', async () => {
-        if (!state.slug) throw new UserError('no backlog in this workspace: run the skraft-prd-backlog workflow first')
+        if (!state.slug) throw nothingToActOn(NO_BACKLOG)
         if (typeof id !== 'string' || typeof text !== 'string') throw new UserError('id and text must be strings')
         try {
           await writeFramingAnswer(cwd(), state.slug, { id, text, at: now().toISOString() })

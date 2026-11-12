@@ -34,6 +34,8 @@ export const ROLES = Object.freeze(/** @type {Readonly<Record<string, Tier>>} */
 export const INHERIT = 'inherit'
 /** A family: a kebab-case word whose every part starts with a letter, so never a versioned model (`gpt-5.5`). */
 export const FAMILY = /^[a-z][a-z0-9]*(?:-[a-z][a-z0-9]*)*$/
+/** A model as a host is told its name: one word of letters, digits, ".", "_" and "-", the first a letter or a digit. */
+export const MODEL_NAME = /^[A-Za-z0-9][A-Za-z0-9._-]*$/
 
 /** Layer 1, the plugin's defaults: Claude Code's aliases for each tier, and who runs on what. */
 export const PLUGIN_DEFAULTS = Object.freeze({

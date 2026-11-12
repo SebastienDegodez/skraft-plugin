@@ -45,7 +45,6 @@ test('on a host that behaves as the issues say, every host premise is measured, 
     'canvas-action-invoke': 'pass',
     'confirm-from-canvas': 'pass',
     'canvas-close': 'pass',
-    'canvas-open-from-extension': 'pass',
     'canvas-reopen-other-tab': 'pass',
     'canvas-agent-tools': 'pass',
     'skraft-extension-loaded': 'pass',
@@ -65,6 +64,7 @@ test('on a host that behaves as the issues say, every host premise is measured, 
     'plugin-command-listed': 'pass',
     'plugin-command-input': 'pass',
     'skraft-command-listed': 'pass',
+    'plugin-hooks-quiet': 'pass',
   })
   assert.deepEqual(report.checks.find((item) => item.id === 'skraft-mcp-server-loaded').observed, { servers: [{ name: 'skraft', status: 'connected', sourcePlugin: 'skraft-framework' }], tools: SHARED_MCP_TOOLS })
   assert.deepEqual(report.checks.find((item) => item.id === 'skraft-mcp-loop-hidden').observed, { offered: [] })
@@ -162,10 +162,10 @@ test('the skraft-pipeline canvas opens on the pipeline that waits on adr-0 and s
   })
 })
 
-test('a host that cannot open a canvas fails both open requirements and the open from the extension, and the skraft canvas page is not measured', async (t) => {
+test('a host that cannot open a canvas fails both open requirements, and the skraft canvas page is not measured', async (t) => {
   const { report, verdicts } = await probe(t, { refuseCanvasOpen: true })
 
-  assert.deepEqual(['canvas-open-headless', 'skraft-canvas-opens', 'skraft-canvas-read-only', 'canvas-open-from-extension'].map((id) => verdicts[id]), ['fail', 'fail', 'inconclusive', 'fail'])
+  assert.deepEqual(['canvas-open-headless', 'skraft-canvas-opens', 'skraft-canvas-read-only'].map((id) => verdicts[id]), ['fail', 'fail', 'inconclusive'])
   assert.equal(report.checks.find((item) => item.id === 'skraft-canvas-opens').observed.error, 'Canvas rendering is not available')
   assert.deepEqual(planIssueActions(report, { openTitles: new Set() }).filter((action) => action.kind === 'open').map((action) => action.check), ['canvas-open-headless', 'skraft-canvas-opens'])
 })
@@ -393,4 +393,27 @@ test('a host that lists no plugin command, or lists a command twice, fails plugi
   assert.deepEqual([dropped.verdicts['plugin-command-input'], dropped.report.checks.find((item) => item.id === 'plugin-command-input').observed.placement], ['fail', 'absent'])
   assert.equal(dropped.verdicts['skraft-command-listed'], 'fail')
   assert.equal(dropped.report.checks.find((item) => item.id === 'skraft-command-listed').observed.typed.placement, 'absent')
+})
+
+const hooksCheck = (report) => report.checks.find((item) => item.id === 'plugin-hooks-quiet')
+
+test('the skraft plugins make the host log no hooks error, which counts because a witness plugin with its hooks only at the root makes it log one', async (t) => {
+  const { report, verdicts } = await probe(t)
+
+  assert.equal(verdicts['plugin-hooks-quiet'], 'pass')
+  assert.equal(hooksCheck(report)?.observed.witness.length, 1)
+  assert.match(hooksCheck(report)?.observed.witness[0], /^\[ERROR\] \[rust:hooks\] Plugin "skraft-probe-hooks" declares the Agent Plugins v1 \$schema/)
+  assert.deepEqual(hooksCheck(report)?.observed.plugins, [])
+})
+
+test('a host that logs a hooks error for the skraft plugins fails plugin-hooks-quiet and opens an issue; a host whose log shows nothing, not even for the witness, leaves it inconclusive', async (t) => {
+  const noisy = await probe(t, { hooksLog: 'every-plugin' })
+  assert.equal(noisy.verdicts['plugin-hooks-quiet'], 'fail')
+  assert.match(hooksCheck(noisy.report)?.observed.plugins[0], /^\[ERROR\] \[rust:hooks\] Plugin "skraft" declares/)
+  assert.deepEqual(planIssueActions(noisy.report, { openTitles: new Set() }).filter((action) => action.kind === 'open').map((action) => action.check), ['plugin-hooks-quiet'])
+
+  const silent = await probe(t, { hooksLog: 'silent' })
+  assert.equal(silent.verdicts['plugin-hooks-quiet'], 'inconclusive')
+  assert.deepEqual(hooksCheck(silent.report)?.observed, { witness: [], plugins: [] })
+  assert.deepEqual(planIssueActions(silent.report, { openTitles: new Set() }).filter((action) => action.check === 'plugin-hooks-quiet'), [])
 })

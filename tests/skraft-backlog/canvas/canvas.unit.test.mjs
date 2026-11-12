@@ -123,6 +123,17 @@ test('without a backlog the canvas opens empty', async (t) => {
   assert.equal(answer.status, 'No backlog yet')
 })
 
+test('without a backlog the agent reads that there is none, and an action on a backlog is not called an invalid request', async (t) => {
+  const { action } = await setUp(t, { workspace: false })
+  const reason = 'no backlog in this workspace: run the skraft-prd-backlog workflow first'
+  assert.deepEqual(await action('get_state').handler({ input: {} }), { backlog: false, slug: null, reason })
+  await assert.rejects(action('focus_story').handler({ input: { id: 'EP-001-S01' } }), (error) => {
+    assert.ok(error instanceof FakeCanvasError)
+    assert.deepEqual([error.code, error.message], ['skraft_backlog_none', reason])
+    return true
+  })
+})
+
 test('an action of the agent answers its result; a refusal and a crash come back as canvas errors', async (t) => {
   const { action, controller } = await setUp(t)
   const state = await action('get_state').handler({ input: {} })

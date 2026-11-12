@@ -1,5 +1,5 @@
 import { COMMAND_NAMES, CONFIG_FILE, configText, LOCAL_CONFIG_FILE, MOCKING_STRATEGIES, readConfigLayers, refusalOf, STACKS, USER_CONFIG_FILE } from '../../domain/config/skraft-config.mjs'
-import { AGENT_TYPES, EFFORTS, HOSTS, INHERIT, ROLES, TIERS } from '../../domain/config/model-assignment.mjs'
+import { AGENT_TYPES, EFFORTS, HOSTS, INHERIT, MODEL_NAME, ROLES, TIERS } from '../../domain/config/model-assignment.mjs'
 import { EDITED_CONSENTS, editedLocal, editedTeam, editRefusal } from '../../domain/config/configuration-edit.mjs'
 import { FORGES } from '../../domain/config/forge.mjs'
 import { consentOf } from '../../domain/decisions/consents.mjs'
@@ -90,11 +90,12 @@ const shown = ({ config }) => ({
   choices: choicesOf(config),
 })
 
-/** What each field may be set to. @param {SkraftConfig} config */
+/** What each field may be set to; modelName: the pattern a model name follows, which the page checks a typed list by. @param {SkraftConfig} config */
 const choicesOf = (config) => ({
   forges: [...FORGES],
   stacks: [...STACKS], mocking: [...MOCKING_STRATEGIES], commands: [...COMMAND_NAMES], hosts: [...HOSTS], types: [...AGENT_TYPES], efforts: [...EFFORTS],
   families: [INHERIT, ...TIERS, ...Object.keys(ROLES), ...Object.keys(config.models).filter((family) => !TIERS.includes(/** @type {any} */ (family)) && !Object.hasOwn(ROLES, family))],
+  modelName: MODEL_NAME.source,
 })
 
 /**
