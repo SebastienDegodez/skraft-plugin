@@ -3,6 +3,12 @@
 Toutes les modifications notables de ce projet sont documentées ici.
 Format basé sur [Conventional Commits](https://www.conventionalcommits.org/) — versionnage [SemVer](https://semver.org/).
 
+## [2.0.0-alpha.85](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.84...v2.0.0-alpha.85) (2026-11-12)
+
+### 🐛 Bug Fixes
+
+* **engine:** validate research records ([#578](https://github.com/SebastienDegodez/skraft-plugin/issues/578)) ([3dd905d](https://github.com/SebastienDegodez/skraft-plugin/commit/3dd905dc9503c60a45e2937c8f5879c1fee1a80f)), closes [#517](https://github.com/SebastienDegodez/skraft-plugin/issues/517)
+
 ## [2.0.0-alpha.84](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.83...v2.0.0-alpha.84) (2026-11-12)
 
 ### 🐛 Bug Fixes
