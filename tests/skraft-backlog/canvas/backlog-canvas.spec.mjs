@@ -1,7 +1,7 @@
 // The backlog canvas in a real browser, over the fixture workspace and a fake `gh`. Each test starts
 // its own server on a fresh workspace, so a review or a creation never leaks into the next test.
 import { spawn } from 'node:child_process'
-import { readFile, writeFile } from 'node:fs/promises'
+import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { expect, test } from '@playwright/test'
@@ -536,6 +536,17 @@ test.describe('narrow panel', () => {
   })
 })
 
+test('choosing a backlog whose run has not sliced yet shows where the run stands, and no error', async ({ page }) => {
+  const running = join(fixture.cwd, '.copilot-tracking', 'skraft-plans', 'en-cours', 'backlog')
+  await mkdir(running, { recursive: true })
+  await writeFile(join(running, 'progress.json'), JSON.stringify({ version: 1, run: { startedAt: '2026-10-20T10:00:00.000Z', phase: 'SLICE', status: 'running', mode: 'full' }, stories: {} }))
+  const pick = page.locator('select[data-action="open-backlog"]')
+  await expect(pick.locator('option')).toHaveCount(2)
+  await pick.selectOption('en-cours')
+  await expect(page.locator('.diagnostics code').first()).toHaveText('en-cours')
+  await expect(page.locator('#toast')).not.toHaveClass(/show/)
+})
+
 test.describe('empty workspace', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('about:blank')
@@ -593,3 +604,101 @@ for (const target of ['html', 'body']) {
     await expect.poll(ground).toBe(day)
   })
 }
+
+/** Computed styles of the first node a selector matches. */
+const stylesOf = (page, selector, names) => page.locator(selector).first().evaluate((node, wanted) => {
+  const styles = getComputedStyle(node)
+  return Object.fromEntries(wanted.map((name) => [name, styles[name]]))
+}, names)
+
+/** What a system colour is, computed: a span left out of forced colours takes it as it is. */
+const systemColour = (page, keyword) => page.evaluate((name) => {
+  const probe = document.body.appendChild(document.createElement('span'))
+  probe.style.forcedColorAdjust = 'none'
+  probe.style.backgroundColor = name
+  const { backgroundColor } = getComputedStyle(probe)
+  probe.remove()
+  return backgroundColor
+}, keyword)
+
+/** Where the content of a row starts: marking the open story must not push it aside. */
+const contentLeft = (page, selector) => page.locator(selector).first().evaluate((node) => node.firstElementChild.getBoundingClientRect().left)
+
+const SYSTEM_COLOURS = ['Highlight', 'HighlightText', 'Canvas', 'CanvasText']
+
+test('in forced colours the review keeps the selected tab, the open story, the pressed filter, the strips and the lit passage in view', async ({ page }) => {
+  await page.emulateMedia({ forcedColors: 'active' })
+  const [marked, onMarked, ground, ink] = await Promise.all(SYSTEM_COLOURS.map((name) => systemColour(page, name)))
+
+  expect(await stylesOf(page, '.tab[aria-selected="true"]', ['borderBottomStyle', 'borderBottomWidth', 'borderBottomColor'])).toEqual({ borderBottomStyle: 'solid', borderBottomWidth: '3px', borderBottomColor: marked })
+
+  expect(await stylesOf(page, '.row[aria-current="true"]', ['borderLeftWidth', 'borderLeftColor'])).toEqual({ borderLeftWidth: '4px', borderLeftColor: marked })
+  expect((await stylesOf(page, '.row:not([aria-current="true"])', ['borderLeftColor'])).borderLeftColor).toBe(ground)
+  expect(await contentLeft(page, '.row[aria-current="true"]')).toBe(await contentLeft(page, '.row:not([aria-current="true"])'))
+
+  expect(await stylesOf(page, '.filter[aria-pressed="true"]', ['forcedColorAdjust', 'backgroundColor', 'color', 'borderTopColor'])).toEqual({ forcedColorAdjust: 'none', backgroundColor: marked, color: onMarked, borderTopColor: marked })
+  expect((await stylesOf(page, '.filter[aria-pressed="true"] .count', ['color'])).color).toBe(onMarked)
+  expect((await stylesOf(page, '.filter[aria-pressed="false"]', ['backgroundColor'])).backgroundColor).not.toBe(marked)
+  await page.keyboard.press('Tab')
+  await page.locator('.filter').first().focus()
+  expect((await stylesOf(page, '.filter:focus-visible', ['outlineColor'])).outlineColor).toBe(marked)
+
+  expect(await stylesOf(page, '.cell.v-pass', ['forcedColorAdjust', 'backgroundColor'])).toEqual({ forcedColorAdjust: 'none', backgroundColor: ink })
+  expect(await stylesOf(page, '.tick.s-pass', ['forcedColorAdjust', 'backgroundColor', 'opacity'])).toEqual({ forcedColorAdjust: 'none', backgroundColor: ink, opacity: '1' })
+  const [fail, pass] = await Promise.all(['.cell.v-fail', '.cell.v-pass'].map((selector) => stylesOf(page, selector, ['height'])))
+  expect(parseFloat(fail.height)).toBeGreaterThan(parseFloat(pass.height))
+
+  const headHeight = () => epicHead(page, 'EP-001').evaluate((node) => node.offsetHeight)
+  const unfolded = await headHeight()
+  await epicHead(page, 'EP-001').click()
+  expect(await stylesOf(page, '.epic.has-current.folded > .epic-head', ['borderBottomStyle', 'borderBottomWidth', 'borderBottomColor'])).toEqual({ borderBottomStyle: 'solid', borderBottomWidth: '2px', borderBottomColor: marked })
+  expect(await headHeight()).toBe(unfolded)
+  await epicHead(page, 'EP-001').click()
+
+  await page.locator('.line-head[data-line="N"]').click()
+  await page.locator('.line.open [data-action="reveal"][data-item="AC-02"]').click()
+  await expect(page.locator('.lit')).toHaveCount(1)
+  expect(await stylesOf(page, '.lit', ['outlineStyle', 'outlineWidth', 'outlineColor', 'outlineOffset'])).toEqual({ outlineStyle: 'solid', outlineWidth: '2px', outlineColor: marked, outlineOffset: '-2px' })
+
+  await page.locator('.cell.v-pass').first().evaluate((node) => { node.className = 'cell v-pending' })
+  await page.locator('.tick.s-pass').first().evaluate((node) => { node.className = 'tick s-pending' })
+  const outline = `${ink} 0px 0px 0px 1px inset`
+  expect(await stylesOf(page, '.cell.v-pending', ['backgroundColor', 'boxShadow'])).toEqual({ backgroundColor: 'rgba(0, 0, 0, 0)', boxShadow: outline })
+  expect(await stylesOf(page, '.tick.s-pending', ['backgroundColor', 'boxShadow'])).toEqual({ backgroundColor: 'rgba(0, 0, 0, 0)', boxShadow: outline })
+})
+
+test('in forced colours the progress view keeps the open story, the bar, its legend and the focused card in view', async ({ page }) => {
+  await page.emulateMedia({ forcedColors: 'active' })
+  const [marked, , ground, ink] = await Promise.all(SYSTEM_COLOURS.map((name) => systemColour(page, name)))
+  await tab(page, 'Suivi').click()
+  await expect(page.locator('.progress-track')).toBeVisible()
+
+  expect(await stylesOf(page, '.track-row[aria-current="true"]', ['borderLeftWidth', 'borderLeftColor'])).toEqual({ borderLeftWidth: '4px', borderLeftColor: marked })
+  expect((await stylesOf(page, '.track-row:not([aria-current="true"])', ['borderLeftColor'])).borderLeftColor).toBe(ground)
+  expect(await contentLeft(page, '.track-row[aria-current="true"]')).toBe(await contentLeft(page, '.track-row:not([aria-current="true"])'))
+  expect(await stylesOf(page, '.progress-track', ['borderTopStyle', 'borderTopWidth', 'borderTopColor'])).toEqual({ borderTopStyle: 'solid', borderTopWidth: '1px', borderTopColor: ink })
+  expect((await stylesOf(page, '.swatch', ['forcedColorAdjust'])).forcedColorAdjust).toBe('none')
+  expect(await stylesOf(page, '.track-row .tick.s-pass', ['backgroundColor'])).toEqual({ backgroundColor: ink })
+
+  await page.keyboard.press('Tab')
+  await card(page, 'EP-001').focus()
+  expect(await stylesOf(page, '#track-EP-001:focus-visible', ['outlineStyle', 'outlineWidth', 'outlineColor'])).toEqual({ outlineStyle: 'solid', outlineWidth: '2px', outlineColor: marked })
+})
+
+test('with more contrast asked, the soft and faint text, the pending outlines and the rules get stronger', async ({ page }) => {
+  await page.locator('.cell').first().evaluate((node) => { node.className = 'cell v-pending' })
+  const read = async () => ({
+    soft: (await stylesOf(page, '.coverage', ['color'])).color,
+    faint: (await stylesOf(page, '.filter .count', ['color'])).color,
+    pending: (await stylesOf(page, '.cell.v-pending', ['boxShadow'])).boxShadow,
+    rule: (await stylesOf(page, '.epic', ['borderTopColor'])).borderTopColor,
+    strong: (await stylesOf(page, '.filter[aria-pressed="true"]', ['borderTopColor'])).borderTopColor,
+  })
+  const plain = await read()
+  expect(plain.soft).not.toBe((await stylesOf(page, 'body', ['color'])).color)
+
+  await page.emulateMedia({ contrast: 'more' })
+  const more = await read()
+  expect(more.soft).toBe((await stylesOf(page, 'body', ['color'])).color)
+  for (const key of ['faint', 'pending', 'rule', 'strong']) expect(more[key], key).not.toBe(plain[key])
+})

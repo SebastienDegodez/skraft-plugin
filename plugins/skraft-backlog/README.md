@@ -107,7 +107,10 @@ a story rewritten afterwards needs a new review. **Dry run** previews the GitHub
 reviewed story, closed over the stories it waits on. **Create** then publishes exactly that
 selection through the workflow's publisher; nothing is created twice. Reviewing and creating are
 panel actions only. The agent can read the state, open a story, explain it and run the dry run
-(`get_state`, `open_backlog`, `focus_story`, `explain_story`, `preview_creation`).
+(`get_state`, `open_backlog`, `focus_story`, `explain_story`, `preview_creation`). With no backlog
+to assess (none in the workspace yet, or a run that has not sliced), `get_state` and
+`open_backlog` answer `{ backlog: false, slug, reason }` instead of failing, and an action that
+needs a backlog is refused with the canvas error code `skraft_backlog_none`.
 
 The canvas writes `review.json` (the reviews, and the repository chosen with `set_repo`, which a
 new canvas keeps), `answers.json` (the draft answers) and `published.json` next to the backlog, and a

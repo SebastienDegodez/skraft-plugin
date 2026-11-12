@@ -34,7 +34,9 @@ decides: every check is a function here, every verdict comes from `review-verdic
 - `server.mjs`: the loopback server (per-process token, loopback Host, server-sent events).
 - `canvas.mjs`: the declaration passed to `createCanvas`.
 - `ui/`: the panel (`view.mjs` renders, `app.mjs` wires, `i18n.mjs` words every check in French and
-  English).
+  English, `styles.css` keeps the selected tab, the open story, the pressed filter, the strips and
+  the progress bar in view under forced colours, and strengthens the soft text and the rules under
+  `prefers-contrast: more`).
 
 The Copilot entry is `com.github.copilot/extensions/skraft-prd-backlog/extension.mjs`. Tested
 against a simulated `ctx` and a fake `gh` (`tests/skraft-backlog/prd-backlog/`,
@@ -129,7 +131,10 @@ type Progress = { version: 1,
 Every review file records the fingerprint of each story file it judged (`fingerprints`). The
 canvas drops a lens finding made on a version of the file that has changed since (a correction,
 a rework, a split): `assessment.stories[].staleFindings` counts them. The assessment carries
-`run` (the run in progress or the last one) and `stories[].progress`; `get_state` returns both.
+`run` (the run in progress or the last one) and `stories[].progress`; `get_state` returns both. With
+no assessment (no backlog, no story map yet, a map that cannot be read) `get_state` returns
+`{ backlog: false, slug, reason }`, `reason` being the run's own words; with one it returns
+`backlog: true` first.
 
 ## Framing (FRAME): questions before the first slice
 
