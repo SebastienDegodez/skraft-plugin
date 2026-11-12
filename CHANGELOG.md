@@ -3,6 +3,12 @@
 Toutes les modifications notables de ce projet sont documentées ici.
 Format basé sur [Conventional Commits](https://www.conventionalcommits.org/) — versionnage [SemVer](https://semver.org/).
 
+## [2.0.0-alpha.83](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.82...v2.0.0-alpha.83) (2026-11-12)
+
+### 🐛 Bug Fixes
+
+* **engine:** route pipeline questions through native chat ([#574](https://github.com/SebastienDegodez/skraft-plugin/issues/574)) ([9b6288e](https://github.com/SebastienDegodez/skraft-plugin/commit/9b6288e37120a273dcedf846d5c96366a448a9e9))
+
 ## [2.0.0-alpha.82](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.81...v2.0.0-alpha.82) (2026-11-12)
 
 ### ✨ Features
