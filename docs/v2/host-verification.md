@@ -15,6 +15,13 @@ dans une session interactive. Les nouveaux tests des pilotes couvrent le schéma
 Ils ne sont pas une nouvelle mesure de CLI. Le pilote ne suppose pas de métrique manquante :
 usage incomplet → arrêt diagnostiqué, aucune valeur fabriquée.
 
+Validation locale du mod avec Claude Code **2.1.319**, sans appel de modèle :
+`claude plugin validate plugins/skraft-framework` et les **5 tests** de
+`node tests/skraft-framework/integration/claude-mod/run-plugin-test.mjs` passent.
+Le validateur refuse `$.env.get(name)` et impose un nom littéral ; le raccord de #565 lit
+donc `$.env.get('JAVA_TOOL_OPTIONS')`. Variables déclarées par le module : `HOME`,
+`USERPROFILE`, `JAVA_TOOL_OPTIONS`. Avertissement de catalogue non bloquant : icône absente.
+
 | Contrôle encore non mesuré en session réelle | État |
 | --- | --- |
 | `unforeseen` avec coût individuel observable par la session, distinct du total après le run, sur Copilot CLI et Claude Code | non mesuré ; refus sûr si usage absent |

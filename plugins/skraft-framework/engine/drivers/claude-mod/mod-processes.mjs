@@ -4,7 +4,7 @@ import { joinPath } from './mod-files.mjs'
  * @typedef {{ cwd?: string, timeoutMs?: number, env?: Record<string, string> }} RunInit
  * @typedef {{ exitCode: number, stdout: string, stderr: string }} RunResult
  * @typedef {(argv: string[], init?: RunInit) => Promise<RunResult>} ModRun
- * @typedef {(name: string) => Promise<string | undefined>} ModEnvironment
+ * @typedef {(name: 'JAVA_TOOL_OPTIONS') => Promise<string | undefined>} ModEnvironment
  *   `$.process.run`: rejects when the program cannot be started, or is still running at the timeout.
  */
 
