@@ -172,13 +172,14 @@ Copilot first asks you to approve the workflow run and its limits: answer **Yes*
 always approve this workflow at these limits in this repo**.
 
 Before any phase, on the first run of a working copy, Copilot asks once in the chat: *Start this run
-with the configuration of this working copy?* If your client shows canvases, the `skraft-pipeline`
-canvas opens on its **Configuration** tab: the forge, the components and their commands, the
-consents, the model of each agent and the quality bar. Edit what you need there and save, then
-answer **START**. START is kept in `skraft-config.local.json`, so the next runs start without asking;
-STOP starts nothing. Pass `configure: true` to the workflow to be asked again. The canvas also has a
-**Run** tab (where the run stands) and a **Workflow** tab (each workflow the run can follow, the
-current step highlighted).
+with the configuration of this working copy?* The run never opens the canvas by itself. To read or
+change the configuration first, ask Copilot to open the `skraft-pipeline` canvas on its
+**Configuration** tab: the forge, the components and their commands, the consents, the model of
+each agent and the quality bar. Edit what you need and save: the question stays in the chat, so
+then answer **START**. START is kept in `skraft-config.local.json`, so the next runs start without
+asking; STOP starts nothing. Pass `configure: true` to the workflow to be asked again. The canvas
+also has a **Run** tab (where the run stands) and a **Workflow** tab (each workflow the run can
+follow, the current step highlighted).
 
 ## 5. Watch the run start on RESEARCH <!-- #5-watch-the-run-start-on-research -->
 

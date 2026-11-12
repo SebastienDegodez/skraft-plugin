@@ -46,7 +46,7 @@ export const backlogCanvas = ({ createCanvas, CanvasError, cwd, gh, log = () => 
    * said in a fixed text that carries none of the exception's.
    */
   const toCanvasError = (error) => (error instanceof CanvasError ? error
-    : error?.name === 'UserError' ? new CanvasError('skraft_backlog_invalid_request', error.message)
+    : error?.name === 'UserError' ? new CanvasError(error.code, error.message)
       : new CanvasError('skraft_backlog_error', CRASHED))
 
   const canvas = createCanvas({

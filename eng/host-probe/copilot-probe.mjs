@@ -12,7 +12,7 @@ import { mkdir, mkdtemp, realpath, rm, writeFile } from 'node:fs/promises'
 import { homedir, platform, release, tmpdir } from 'node:os'
 import { basename, dirname, isAbsolute, join, resolve } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
-import { PROBE_CANVAS, PROBE_CANVAS_QUERY, PROBE_COMMAND, PROBE_PRELOAD, QUESTION_KEY, QUESTION_SLUG, questionEvents, writeCanvasPlugin, writeCommandPlugin, writeIsolationPlugins, writeProbePlugins, writeQuestionRepo } from './fixtures.mjs'
+import { PROBE_CANVAS, PROBE_CANVAS_QUERY, PROBE_COMMAND, PROBE_PRELOAD, QUESTION_KEY, QUESTION_SLUG, questionEvents, writeCanvasPlugin, writeCommandPlugin, writeHooksWitnessPlugin, writeIsolationPlugins, writeProbePlugins, writeQuestionRepo } from './fixtures.mjs'
 import { DEFAULT_REPO, reportToGitHub } from './issues.mjs'
 import { mergePatch } from '../../plugins/skraft-framework/engine/domain/config/merge-patch.mjs'
 
@@ -450,14 +450,13 @@ const BADTOOL_EXPECTED = "Un nom d'outil refusé par l'hôte (`bad name!`) empor
 const CANVAS_TOOL = 'skraft_probe_canvas_state'
 /** The tools a session offers the model to reach canvases (CLI 1.0.102-1, with requestCanvasRenderer). */
 export const CANVAS_AGENT_TOOLS = Object.freeze(['invoke_canvas_action', 'list_canvas_capabilities', 'open_canvas'])
-const CANVAS_IDS = Object.freeze(['canvas-accepted-at-join', 'canvas-open-headless', 'canvas-action-invoke', 'confirm-from-canvas', 'canvas-close', 'canvas-open-from-extension', 'canvas-reopen-other-tab', 'canvas-agent-tools'])
+const CANVAS_IDS = Object.freeze(['canvas-accepted-at-join', 'canvas-open-headless', 'canvas-action-invoke', 'confirm-from-canvas', 'canvas-close', 'canvas-reopen-other-tab', 'canvas-agent-tools'])
 const CANVAS_EXPECTED = Object.freeze({
   'canvas-accepted-at-join': "Un `joinSession` qui porte un canvas (`createCanvas`) et un outil est accepté : `session.rpc.canvas.list()` nomme le canvas et l'outil est proposé.",
   'canvas-open-headless': "`session.rpc.canvas.open` d'une session SDK headless appelle le `open` de l'extension, qui démarre son serveur loopback : l'instance rend son `url` avec sa chaîne de requête intacte (`?t=…`, où le canvas skraft met son jeton), la page répond 200 ; rouvrir la même instance rappelle `open`.",
   'canvas-action-invoke': "`session.rpc.canvas.action.invoke` sur une instance ouverte atteint le `handler` de l'action et rend son résultat.",
   'confirm-from-canvas': "Une requête de la page du canvas (POST sur son serveur loopback, hors de tout appel d'outil) fait appeler `session.ui.confirm` à la session jointe : le handler d'élicitation de l'hôte reçoit la question et `true` revient quand il accepte. Le canvas `skraft-pipeline` n'en use plus : il ne prend aucune réponse.",
   'canvas-close': '`session.rpc.canvas.close` appelle le `onClose` de l\'extension pour cette instance.',
-  'canvas-open-from-extension': "Depuis un appel d'outil, la session jointe de l'extension ouvre son propre canvas par `session.rpc.canvas.open` : l'hôte appelle le `open` de l'extension pour cette instance avec l'`input` donné (`{ tab: 'configuration' }`), et l'appel rend sans erreur. C'est ainsi que le run `skraft-pipeline` ouvre l'onglet Configuration avant de demander s'il démarre.",
   'canvas-reopen-other-tab': "`session.rpc.canvas.open` sur une instance déjà ouverte, avec un autre `input` (`{ tab: 'configuration' }`), rappelle le `open` de l'extension avec ce nouvel `input` : le canvas peut alors pousser l'onglet à la page déjà ouverte. Observé sans verdict : l'url que l'hôte rend et garde (`listOpen`) et les événements `session.canvas.opened`, ce qu'un rendu reçoit.",
   'canvas-agent-tools': "Sans `requestCanvasRenderer`, la session n'offre au modèle aucun outil de canvas ; avec, elle offre `list_canvas_capabilities`, `open_canvas` et `invoke_canvas_action`.",
 })
@@ -536,20 +535,7 @@ const openCanvasChecks = async (session, { url }, answers) => {
   return [action, confirmed, check({
     id: 'canvas-close', expected: CANVAS_EXPECTED['canvas-close'],
     verdict: closed === null ? 'inconclusive' : closed.includes(PROBE_INSTANCE) ? 'pass' : 'fail', observed: { closed },
-  }), await openedFromExtension(session), await reopenedOtherTab(session)]
-}
-
-/** The extension opens its own canvas through its joined session, from a tool call. */
-const openedFromExtension = async (session) => {
-  const answer = parseJson((await execTool(session, 'skraft_probe_canvas_open_self')).text)
-  const opened = ((await canvasSeen(session))?.opened ?? []).filter(({ instanceId }) => instanceId === 'skraft-probe-self')
-  const input = opened[0]?.input ?? null
-  await rpcOr(() => session.rpc.canvas.close({ instanceId: 'skraft-probe-self' }))
-  return check({
-    id: 'canvas-open-from-extension', expected: CANVAS_EXPECTED['canvas-open-from-extension'],
-    verdict: answer === null ? 'inconclusive' : answer.error === null && opened.length === 1 && input?.tab === 'configuration' ? 'pass' : 'fail',
-    observed: { answer, openCalls: opened.length, input },
-  })
+  }), await reopenedOtherTab(session)]
 }
 
 const RETAB_INSTANCE = 'skraft-probe-retab'
@@ -995,7 +981,7 @@ const listCommands = async (session) => (await withTimeout(session.rpc.commands.
 const commandSeen = ({ name, aliases, kind, input }) => ({ name, aliases: aliases ?? [], kind, hint: input?.hint ?? '' })
 const duplicatesIn = (names) => [...new Set(names.filter((name, index) => names.indexOf(name) !== index))]
 
-const commandSession = ({ sdk, client, dirs }, pluginDirectories) => client.createSession({
+const pluginSession = ({ sdk, client, dirs }, pluginDirectories) => client.createSession({
   ...dirs.session, workingDirectory: dirs.repoA, pluginDirectories, requestExtensions: false, onPermissionRequest: permissionHandler(sdk),
 })
 
@@ -1016,7 +1002,7 @@ const commandFailure = (error) => [
 
 const probeCommandChecks = async (context) => {
   let session
-  try { session = await commandSession(context, [context.dirs.plugins.command]) } catch (error) { return commandFailure(error) }
+  try { session = await pluginSession(context, [context.dirs.plugins.command]) } catch (error) { return commandFailure(error) }
   try {
     const listed = await listCommands(session)
     const relevant = listed.filter(({ name }) => name === PROBE_COMMAND.plugin || name === PROBE_COMMAND.other || name.startsWith(`${PROBE_COMMAND.plugin}:`))
@@ -1084,7 +1070,7 @@ const skraftTyped = async (session, listed) => {
 const skraftCommandCheck = async (context) => {
   const id = 'skraft-command-listed'
   let session
-  try { session = await commandSession(context, [join(REPO_ROOT, 'plugins', 'skraft-framework'), join(REPO_ROOT, 'plugins', 'skraft-backlog')]) } catch (error) {
+  try { session = await pluginSession(context, [join(REPO_ROOT, 'plugins', 'skraft-framework'), join(REPO_ROOT, 'plugins', 'skraft-backlog')]) } catch (error) {
     return check({ id, ...SKRAFT_COMMAND_REQUIREMENT, observed: { error: messageOf(error) } })
   }
   try {
@@ -1097,6 +1083,66 @@ const skraftCommandCheck = async (context) => {
     return check({ id, ...SKRAFT_COMMAND_REQUIREMENT, observed: { error: messageOf(error) } })
   } finally {
     await session.disconnect?.().catch(() => undefined)
+  }
+}
+
+// ---------------------------------------------------------------------------------------------
+// Check: the runtime logs no hooks error for the skraft plugins
+
+const SKRAFT_PLUGINS = Object.freeze(['skraft-framework', 'skraft-backlog', 'skraft-brownfield'])
+const HOOKS_ERROR = /\[ERROR\] \[rust:hooks\]/
+const HOOKS_EXPECTED = "Une session qui charge les plugins skraft-framework, skraft-backlog et skraft-brownfield ne fait écrire au runtime aucune ligne `[ERROR] [rust:hooks]` dans son journal (`<COPILOT_HOME>/logs`). Un plugin témoin, dont les hooks ne sont qu'à la racine, en fait écrire une : sans elle, le journal n'est pas lu et le verdict reste inconclusif ; la sonde rapporte les lignes lues pour le témoin et pour les plugins."
+const HOOKS_REQUIREMENT = Object.freeze({
+  expected: HOOKS_EXPECTED,
+  title: 'V2 — Copilot journalise une erreur de hooks à chaque session avec un plugin skraft', labels: ['bug', 'gain:reliability'],
+  body: "Le runtime Copilot écrit une ligne `[ERROR] [rust:hooks]` dans son journal à chaque création de session avec un plugin skraft : un plugin qui déclare le schéma Agent Plugins v1 ne lit ses hooks que sous `com.github.copilot/hooks/hooks.json`, et un `hooks/hooks.json` à la racine n'est plus lu.",
+})
+
+const logLines = (home) => {
+  const logs = join(home, 'logs')
+  const files = existsSync(logs) ? readdirSync(logs).filter((file) => file.endsWith('.log')) : []
+  return files.flatMap((file) => readFileSync(join(logs, file), 'utf8').split(/\r?\n/))
+}
+
+/** A hooks error line from its level on, without the timestamp that changes at every run. */
+const hooksErrorLine = (line) => {
+  const at = line.search(HOOKS_ERROR)
+  return at < 0 ? null : line.slice(at, at + 300)
+}
+
+/**
+ * The hooks errors the runtime logs, under a home of its own, for a session that loads only `plugins`.
+ * `baseDirectory` is the runtime's COPILOT_HOME when the SDK spawns it (stdio, its default); an in-process
+ * runtime ignores it, logs elsewhere, and leaves the witness silent: the verdict is then inconclusive.
+ */
+const hooksErrorsFor = async ({ sdk, dirs }, plugins, label) => {
+  const home = join(dirs.root, `hooks-home-${label}`)
+  const client = new sdk.CopilotClient({ logLevel: 'error', baseDirectory: home })
+  try {
+    await client.start()
+    const session = await pluginSession({ sdk, client, dirs }, plugins)
+    await sleep(T.settle)
+    await session.disconnect?.().catch(() => undefined)
+  } finally {
+    await client.stop().catch(() => undefined)
+  }
+  return logLines(home).map(hooksErrorLine).filter((line) => line !== null)
+}
+
+/** A silent witness proves nothing about a silent plugin: the log was not read, or the host no longer logs this error. */
+const hooksVerdict = ({ witness, plugins }) => {
+  if (witness.length === 0) return 'inconclusive'
+  return plugins.length === 0 ? 'pass' : 'fail'
+}
+
+const pluginHooksCheck = async (context) => {
+  const id = 'plugin-hooks-quiet'
+  try {
+    const witness = await hooksErrorsFor(context, [context.dirs.plugins.hooksWitness], 'witness')
+    const plugins = await hooksErrorsFor(context, SKRAFT_PLUGINS.map((name) => join(REPO_ROOT, 'plugins', name)), 'skraft')
+    return check({ id, ...HOOKS_REQUIREMENT, verdict: hooksVerdict({ witness, plugins }), observed: { witness, plugins } })
+  } catch (error) {
+    return check({ id, ...HOOKS_REQUIREMENT, observed: { error: messageOf(error) } })
   }
 }
 
@@ -1116,7 +1162,7 @@ export const runProbe = async ({ sdk, sdkPath, environment, workRoot, home = hom
   dirs.session = sdkPath ? { extensionSdkPath: sdkPath } : {}
   await mkdir(dirs.repoA, { recursive: true })
   await mkdir(dirs.repoB, { recursive: true })
-  dirs.plugins = { ...await writeProbePlugins(root), command: await writeCommandPlugin(root) }
+  dirs.plugins = { ...await writeProbePlugins(root), command: await writeCommandPlugin(root), hooksWitness: await writeHooksWitnessPlugin(root) }
   const client = new sdk.CopilotClient({ logLevel: 'error' })
   await client.start()
   const checks = []
@@ -1132,6 +1178,8 @@ export const runProbe = async ({ sdk, sdkPath, environment, workRoot, home = hom
     checks.push(...await skraftChecks({ sdk, client, dirs, models }))
     log('plugin commands…')
     checks.push(...await commandChecks({ sdk, client, dirs, agentCalls }))
+    log('plugin hooks…')
+    checks.push(await pluginHooksCheck({ sdk, dirs }))
     log('native tools…')
     checks.push(await nativeToolNames(sdk, client, dirs))
   } finally {

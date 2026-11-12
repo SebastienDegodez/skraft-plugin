@@ -4,19 +4,21 @@ import { isCancellation } from './cancellation.mjs'
 import { NATIVE_GUIDANCE } from './skraft-decide-tool.mjs'
 
 /**
- * Registered pipelines use a null dialog: expose the exact question in chat and pause.
- * Explicit injected dialogs retain their host-specific interaction for compatibility.
+ * HumanInteraction on a Copilot dynamic workflow. A registered pipeline (null dialog) puts no
+ * Copilot dialog: it logs the exact question and the native guidance, then `ctx.pause(key)`; the
+ * model asks it with the host's native question tool and relays the reply through skraft_decide.
+ * An injected dialog keeps Copilot's own dialog (host-question.mjs). The run never opens the
+ * skraft canvas: the person asks for it.
  *
  * A run the host cancelled puts no question: it rethrows the cancellation, so that a command the
  * cancellation ended is not taken for the machine's fault and asked RETRY again and again.
  *
  * @typedef {{ log: (message: string) => void, pause: (key: string) => Promise<unknown>, signal?: AbortSignal }} PauseContext
- * @param {{ ctx: PauseContext, dialog: import('./host-confirmation.mjs').HostDialog | null, canvas: import('./canvas-opener.mjs').CanvasOpener }} options
+ * @param {{ ctx: PauseContext, dialog: import('./host-confirmation.mjs').HostDialog | null }} options
  * @returns {import('../../application/ports/human-interaction.mjs').HumanInteraction}
  */
-export const createCtxHuman = ({ ctx, dialog, canvas }) => Object.freeze({
+export const createCtxHuman = ({ ctx, dialog }) => Object.freeze({
   by: dialog === null ? 'decide' : dialog.by,
-  show: (view) => canvas.show(view),
   ask: (question) => askPerson(ctx, dialog, question),
 })
 

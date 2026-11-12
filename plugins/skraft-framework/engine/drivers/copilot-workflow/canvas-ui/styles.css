@@ -96,6 +96,7 @@ button:disabled { cursor: not-allowed; }
 .n-warn .icon { color: var(--warn); }
 .n-fail { border-left-color: var(--fail); color: var(--fail); }
 .note { display: block; margin-top: 0.15rem; color: var(--warn); font-size: 0.8125rem; font-weight: 400; }
+.note-saved { color: var(--pass); }
 .pill { padding: 0.05rem 0.5rem; border: 1px solid var(--rule-strong); border-radius: 999px; color: var(--ink-soft); font-size: 0.75rem; font-weight: 700; }
 
 /* ── run ───────────────────────────────────────────────────────────────── */
@@ -104,6 +105,8 @@ button:disabled { cursor: not-allowed; }
 .callout h2 code { color: var(--ink); }
 .callout-text { margin-top: 0.45rem; max-width: 80ch; overflow-wrap: anywhere; }
 .callout-how { margin-top: 0.35rem; color: var(--ink-soft); font-size: 0.875rem; overflow-wrap: anywhere; }
+.callout-saved { display: flex; gap: 0.45rem; align-items: flex-start; margin-top: 0.5rem; color: var(--pass); font-size: 0.875rem; overflow-wrap: anywhere; }
+.callout-saved .icon { margin-top: 0.15rem; }
 .phases { display: grid; grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr)); gap: 0.75rem; }
 .phase { padding: 0.75rem 0.9rem 0.85rem; border: 1px solid var(--rule-strong); border-radius: 8px; background: var(--panel); }
 .phase.p-open { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) inset; }
@@ -199,6 +202,9 @@ input[type='text']:hover, select:hover { border-color: var(--accent); }
 .bar-state { font-size: 0.875rem; color: var(--ink-soft); }
 .bar-state.is-dirty { color: var(--warn); font-weight: 700; }
 .error { display: block; margin-top: 0.15rem; color: var(--fail); font-weight: 400; overflow-wrap: anywhere; }
+/* under a field in a table cell: no width of its own, so that the rule never widens the column, only wraps in it */
+.field-error { width: 0; min-width: 100%; margin-top: 0.3rem; font-size: 0.75rem; line-height: 1.35; }
+input[type='text'][aria-invalid='true'] { border-color: var(--fail); }
 .bar-actions { display: flex; gap: 0.5rem; }
 .primary, .ghost { display: inline-flex; align-items: center; gap: 0.45rem; padding: 0.45rem 0.95rem; border-radius: 6px; font-weight: 700; font-size: 0.875rem; transition: background-color 160ms var(--ease-out), border-color 160ms var(--ease-out), opacity 160ms; }
 .primary { border: 1px solid var(--accent); background: var(--accent); color: var(--on-accent); }
@@ -306,6 +312,8 @@ input[type='text']:hover, select:hover { border-color: var(--accent); }
 /* Forced colours drop box shadows and author backgrounds: what they carried (the selected tab, the open phase and step, the chosen consent, the status dot, the progress fills) is drawn with borders, outlines and system colours. */
 .needs-you { display: inline-flex; align-items: center; gap: 0.45rem; padding: 0.3rem 0.75rem; border: 1px solid color-mix(in srgb, var(--warn) 55%, var(--rule-strong)); border-radius: 6px; background: color-mix(in srgb, var(--warn) 9%, var(--panel)); color: var(--warn); font-size: 0.875rem; font-weight: 700; }
 .needs-you:hover { border-color: var(--warn); }
+.needs-you.is-saved { border-color: color-mix(in srgb, var(--pass) 55%, var(--rule-strong)); background: color-mix(in srgb, var(--pass) 9%, var(--panel)); color: var(--pass); }
+.needs-you.is-saved:hover { border-color: var(--pass); }
 .needs-you code { color: var(--ink); }
 kbd { padding: 0 0.35rem; border: 1px solid var(--rule-strong); border-radius: 4px; font-family: var(--mono); font-size: 0.75rem; color: var(--ink-soft); }
 .callout:focus { outline: 2px solid var(--accent); outline-offset: 2px; }
@@ -332,6 +340,7 @@ kbd { padding: 0 0.35rem; border: 1px solid var(--rule-strong); border-radius: 4
   .swatch .seg-pending { stroke: CanvasText; }
   :focus-visible { outline-color: Highlight; }
   .needs-you { border: 2px solid ButtonText; }
+  input[type='text'][aria-invalid='true'] { border-width: 2px; }
 }
 
 @media (prefers-contrast: more) {

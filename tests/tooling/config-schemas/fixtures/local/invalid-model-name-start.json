@@ -1,0 +1,9 @@
+{
+  "models": {
+    "reviewer": {
+      "claude-code": {
+        "model": "-opus"
+      }
+    }
+  }
+}

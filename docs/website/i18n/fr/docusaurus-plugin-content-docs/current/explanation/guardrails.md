@@ -43,6 +43,11 @@ Résultat : aucun hook de commande n'est livré. Le fichier `hooks/hooks.json` n
 démarre le pipeline et le panneau Skraft. Ce module ne réagit à aucun appel d'outil ; il pilote
 le moteur, comme le workflow Copilot sous Copilot.
 
+Copilot CLI ne lit les hooks d'un plugin que dans `com.github.copilot/hooks/hooks.json`, et écrit
+une erreur dans son journal à chaque session quand ce fichier manque (mesuré sur la 1.0.106-8,
+`docs/v2/host-verification.md`). Le plugin le livre donc avec un objet `hooks` vide : il ne déclare
+aucun hook, et le journal de l'hôte reste silencieux.
+
 ## Ce qui remplace chaque garde-fou
 
 - **L'ordre des phases** : le moteur calcule l'étape suivante depuis le graphe du workflow et le

@@ -3,6 +3,12 @@
 Toutes les modifications notables de ce projet sont documentées ici.
 Format basé sur [Conventional Commits](https://www.conventionalcommits.org/) — versionnage [SemVer](https://semver.org/).
 
+## [2.0.0-alpha.82](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.81...v2.0.0-alpha.82) (2026-11-12)
+
+### ✨ Features
+
+* **engine:** skraft canvases aligned on HVE: open on request, models field, saved configuration, backlog empty state, quiet hooks ([#575](https://github.com/SebastienDegodez/skraft-plugin/issues/575)) ([24bc7f4](https://github.com/SebastienDegodez/skraft-plugin/commit/24bc7f4e9f00f51793e0f863a5b17c092517096e)), closes [#537](https://github.com/SebastienDegodez/skraft-plugin/issues/537) [#538](https://github.com/SebastienDegodez/skraft-plugin/issues/538) [#211](https://github.com/SebastienDegodez/skraft-plugin/issues/211)
+
 ## [2.0.0-alpha.81](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.80...v2.0.0-alpha.81) (2026-11-11)
 
 ### ✨ Features

@@ -354,7 +354,7 @@ test('the registered run logs its exact blocked question and pauses without any 
   assert.deepEqual(JSON.parse(logs.find((line) => line.startsWith('{"question":'))).question, pending)
 })
 
-test('the registered run opens the canvas of the joined session on its Configuration tab when nobody confirmed the configuration', async (t) => {
+test('the registered run never opens the canvas of the joined session, whatever the host renders, nor a dialog: the configuration question waits in the chat', async (t) => {
   const repositories = await twoRepositories(t)
   rmSync(join(repositories.first, 'skraft-config.local.json'), { force: true })
   const asked = []
@@ -367,7 +367,7 @@ test('the registered run opens the canvas of the joined session on its Configura
 
   await workflow.run(simulatedContext({ args: { slug: 'checkout' }, behaviours: [writesNothing] }).ctx).catch(() => {})
 
-  assert.deepEqual(opens, [{ canvasId: 'skraft-pipeline', instanceId: 'skraft-run', input: { tab: 'configuration' } }])
+  assert.deepEqual(opens, [])
   assert.deepEqual(asked, [])
 })
 

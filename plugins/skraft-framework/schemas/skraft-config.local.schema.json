@@ -52,18 +52,18 @@
       ]
     },
     "modelNames": {
-      "description": "A model name, or a list tried in order.",
+      "description": "A model name, or a list tried in order. A name is letters, digits, \".\", \"_\" or \"-\", starting with a letter or a digit, with no space.",
       "anyOf": [
         {
           "type": "string",
-          "pattern": "\\S"
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"
         },
         {
           "type": "array",
           "minItems": 1,
           "items": {
             "type": "string",
-            "pattern": "\\S"
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"
           }
         },
         {

@@ -171,12 +171,6 @@ session = await sdk.joinSession({
   canvases,
   tools: [
     { name: 'skraft_probe_canvas_state', description: 'skraft host probe: report what the canvas received', parameters: { type: 'object', properties: {} }, skipPermission: true, handler: async () => JSON.stringify(seen) },
-    {
-      name: 'skraft_probe_canvas_open_self', description: 'skraft host probe: open the canvas of this extension from the extension', parameters: { type: 'object', properties: {} }, skipPermission: true,
-      handler: async () => {
-        try { return JSON.stringify({ result: (await withTimeout(session.rpc.canvas.open({ canvasId: '${PROBE_CANVAS}', instanceId: 'skraft-probe-self', input: { tab: 'configuration' } }), 30000)) ?? null, error: null }) } catch (failure) { return JSON.stringify({ result: null, error: messageOf(failure) }) }
-      },
-    },
   ],
 })
 `
@@ -285,6 +279,18 @@ export const writeCommandPlugin = async (root) => {
   }))
   await write(join(dir, 'com.github.copilot', 'commands', `${PROBE_COMMAND.plugin}.md`), commandSource('skraft host probe command named like its plugin', PROBE_COMMAND.hint))
   await write(join(dir, 'com.github.copilot', 'commands', `${PROBE_COMMAND.other}.md`), commandSource('skraft host probe command named otherwise'))
+  return dir
+}
+
+/** The hooks witness: an Agent Plugins manifest and a hooks manifest at the plugin root only, the layout skraft-framework had before its Copilot copy. */
+export const writeHooksWitnessPlugin = async (root) => {
+  const dir = join(root, 'probe-hooks-witness')
+  await write(join(dir, 'plugin.json'), json({
+    $schema: 'https://agent-plugins.org/schemas/1.0.0/plugin.schema.json',
+    name: 'skraft-probe-hooks', version: '0.0.0', description: 'skraft host probe fixture',
+    extensions: { 'com.github.copilot': {} },
+  }))
+  await write(join(dir, 'hooks', 'hooks.json'), json({ modules: ['./probe-mod.tsx'] }))
   return dir
 }
 

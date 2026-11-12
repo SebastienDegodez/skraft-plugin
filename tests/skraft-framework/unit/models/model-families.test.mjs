@@ -8,6 +8,8 @@ import { answerYaml } from '../support/answer-yaml.mjs'
 
 const LOCAL = 'skraft-config.local.json'
 
+/** What a refusal of a model name says: the list the host tries in order, and the rule a name follows. */
+const MODEL_NAMES = 'must be a model name or a non-empty list of model names, tried in order (a name is letters, digits, ".", "_" or "-", starting with a letter or a digit, with no space)'
 /** The software engineer's green of the scenario, adding a gateway mock and a contract test, so that every lens of deliver_review runs. */
 const deliverTouchingMocksAndContracts = (host) => agent({
   work: ({ git }) => {
@@ -324,18 +326,28 @@ test('models names families, each with an optional tier and a model and an effor
     'skraft-config.json is invalid: models: "gpt-5" must be a model family, a kebab-case word whose every part starts with a letter, such as implementer or gpt-codex (gpt-5.5 is a model, not a family)',
     'models: "inherit" must be a model family, a kebab-case word whose every part starts with a letter, such as implementer or gpt-codex (gpt-5.5 is a model, not a family)',
     'models.standard: a tier takes no tier',
-    'models.standard.claude-code.model must be a model name or a non-empty list of model names, tried in order',
-    'models.standard.copilot.model must be a model name or a non-empty list of model names, tried in order',
+    `models.standard.claude-code.model ${MODEL_NAMES}`,
+    `models.standard.copilot.model ${MODEL_NAMES}`,
     'models.standard.copilot.effort must be one of low, medium, high, xhigh, max',
     'models.standard: unknown key vscode (allowed: tier, claude-code, copilot)',
     'models.opus must be an object: an optional tier beside one block per host (claude-code, copilot)',
     'models.haiku.tier must be one of economy, standard, frontier, premium',
-    'models.haiku.copilot.model must be a model name or a non-empty list of model names, tried in order',
+    `models.haiku.copilot.model ${MODEL_NAMES}`,
     'models.haiku.claude-code must be an object: { "model": ..., "effort": ... }',
-    'models.kimi.copilot.model must be a model name or a non-empty list of model names, tried in order',
+    `models.kimi.copilot.model ${MODEL_NAMES}`,
     'models.kimi.copilot: unknown key temperature (allowed: model, effort)',
   ].join('; '))
   assert.equal(await refusal({ config: { models: ['sonnet'] } }), 'skraft-config.json is invalid: models must be an object of model families: tiers, roles or free families')
+})
+
+test('a model name is one word of letters, digits, ".", "_" and "-" starting with a letter or a digit: a space, a comma or any other character refuses the run, alone or in a list', async () => {
+  const invalid = ['gpt 5', ' gpt-5', 'gpt-5 ', 'gpt-5, haiku', 'gpt-5,haiku', 'gpt;5', '-gpt', '.gpt', '_gpt', 'gpt/5', 'gpt:5', 'sonnet[1m]', 'modèle', 'gpt\n5']
+
+  for (const name of invalid) {
+    for (const model of [name, ['claude-haiku-4.5', name]]) {
+      assert.equal(await refusal({ config: { models: { standard: { copilot: { model } } } } }), `skraft-config.json is invalid: models.standard.copilot.model ${MODEL_NAMES}`, JSON.stringify(name))
+    }
+  }
 })
 
 test('assign names a family or inherit by default, by type and by agent, an object adding an effort per host but never a model', async () => {
@@ -399,10 +411,10 @@ test('a free family needs a tier once the layers are merged: one layer may give 
 })
 
 /**
- * Doctor on a working copy with one component and these layers. hostSettings: what the hosts set
- * outside skraft (CLAUDE_CODE_EFFORT_LEVEL, ~/.copilot/settings.json).
+ * Doctor on a working copy with one component and these layers. user: ~/.skraft/config.json;
+ * hostSettings: what the hosts set outside skraft (CLAUDE_CODE_EFFORT_LEVEL, ~/.copilot/settings.json).
  */
-const doctorOn = ({ config = {}, local, hostSettings = new InMemoryHostSettings() } = {}) => {
+const doctorOn = ({ config = {}, local, user, hostSettings = new InMemoryHostSettings() } = {}) => {
   const workspace = new InMemoryWorkspace({
     'services/api/Api.sln': '',
     'skraft-config.json': JSON.stringify({ components: [{ name: 'api', root: 'services/api', stack: 'dotnet', bdd: false, mocking: { strategy: 'inprocess' }, commands: { build: 'dotnet build' } }], ...config }),
@@ -410,7 +422,7 @@ const doctorOn = ({ config = {}, local, hostSettings = new InMemoryHostSettings(
   })
   const machine = new ScriptedMachine()
   return createDoctor({
-    workspace, userSettings: new InMemoryUserSettings(), workflowSource: new InMemoryWorkflowSource(), executables: machine, commandRunner: machine,
+    workspace, userSettings: new InMemoryUserSettings(user === undefined ? undefined : JSON.stringify(user)), workflowSource: new InMemoryWorkflowSource(), executables: machine, commandRunner: machine,
     sourceControl: new InMemorySourceControl(), runtime: { nodeVersion: () => 'v22.11.0' }, agentCatalog: new InMemoryAgentCatalog(), hostSettings,
     copilotSdk: new InMemoryCopilotSdk(), forges: { github: { codeHost: new InMemoryCodeHost(), pullRequests: new InMemoryPullRequests() } },
   })
@@ -522,4 +534,26 @@ test('doctor fails the configuration when a free family has no tier once the lay
     subject: 'config', status: 'fail', detail: 'the merged configuration is invalid: models.gpt-codex is a free family: give it a "tier" (economy, standard, frontier, premium)',
   })
   assert.equal(report.assignments, null)
+})
+
+test('doctor fails the configuration with the rule of a model name, and the file that holds it, whichever layer a name breaking it is written in', async () => {
+  const written = { models: { standard: { copilot: { model: ['claude-haiku-4.5', 'gpt 5'] } } } }
+  const layers = [['skraft-config.json', { config: written }], ['skraft-config.local.json', { local: written }], ['~/.skraft/config.json', { user: written }]]
+
+  for (const [file, layer] of layers) {
+    const report = await doctorOn(layer).check()
+
+    assert.equal(report.ok, false, file)
+    assert.deepEqual(report.checks.find(({ subject }) => subject === 'config'), { subject: 'config', status: 'fail', detail: `${file} is invalid: models.standard.copilot.model ${MODEL_NAMES}` }, file)
+    assert.equal(report.assignments, null, file)
+  }
+})
+
+test('doctor takes every name the rule allows and keeps the order the host tries them in', async () => {
+  const names = ['A', 'Z', 'a', 'z', '0', '9', 'x-Z_z.Aa09', 'Claude-Opus_4.8', 'o3-mini', 'gpt-5.5-codex']
+
+  const report = await doctorOn({ local: { models: { reviewer: { copilot: { model: names } } } } }).check()
+
+  assert.equal(report.checks.find(({ subject }) => subject === 'config').status, 'ok')
+  assert.deepEqual(report.assignments.copilot.find(({ agent: id }) => id === 'coverage-lens').model, names)
 })
