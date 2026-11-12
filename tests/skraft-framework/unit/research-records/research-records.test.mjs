@@ -296,6 +296,51 @@ test('a malformed external research URL sends the researcher back, and a valid H
   assert.equal(outcome.status, 'done')
 })
 
+test('an external research URL containing whitespace sends the researcher back', async () => {
+  const complete = completeResearch()
+  const invalid = complete.replace('https://example.com/research', 'https://example.com/research notes')
+  const host = scripted({}, (it) => [
+    researcher(invalid)(it),
+    researcher(complete)(it),
+    ...nominal(it).slice(1),
+  ])
+  host.deps.templates.templates['research.template.md'] = TEMPLATE
+
+  const outcome = await host.start()
+
+  assert.deepEqual(recorded(host), [
+    [1, 'failed', 'research-records', [
+      `${RESEARCH} cites invalid source URL "https://example.com/research notes" (#517)`,
+    ]],
+    [2, 'done', null, []],
+  ])
+  assert.equal(outcome.status, 'done')
+})
+
+test('external research sources are checked independently across lines', async () => {
+  const complete = completeResearch()
+  const invalid = complete.replace(
+    '(Source: https://example.com/research)',
+    '(Source: https://example.com/research notes\n- Another source (Source: https://example.org/research)',
+  )
+  const host = scripted({}, (it) => [
+    researcher(invalid)(it),
+    researcher(complete)(it),
+    ...nominal(it).slice(1),
+  ])
+  host.deps.templates.templates['research.template.md'] = TEMPLATE
+
+  const outcome = await host.start()
+
+  assert.deepEqual(recorded(host), [
+    [1, 'failed', 'research-records', [
+      `${RESEARCH} cites invalid source URL "https://example.com/research notes" (#517)`,
+    ]],
+    [2, 'done', null, []],
+  ])
+  assert.equal(outcome.status, 'done')
+})
+
 test('evaluated approaches require exactly one recommended option and at least one rejected option', async () => {
   const complete = completeResearch()
   const duplicate = complete.replace('### Option B (rejected)', '### Option B (recommended)')
@@ -349,6 +394,22 @@ test('an Existing tests row must name a test in its existing file', async () => 
   assert.equal(outcome.status, 'done')
 })
 
+test('an Existing tests name wrapped in backticks is found in its cited file', async () => {
+  const testFile = 'tests/checkout/card-payment.test.mjs'
+  const complete = completeResearch()
+    .replace('| | | |', `| #file:${testFile} | \`records card payment\` | card payment |`)
+  const host = scripted({ files: { [testFile]: "test('records card payment', () => {})" } }, (it) => [
+    researcher(complete)(it),
+    ...nominal(it).slice(1),
+  ])
+  host.deps.templates.templates['research.template.md'] = TEMPLATE
+
+  const outcome = await host.start()
+
+  assert.deepEqual(recorded(host), [[1, 'done', null, []]])
+  assert.equal(outcome.status, 'done')
+})
+
 test('a Handoff to DESIGN pair must name a symbol in its existing file', async () => {
   const sourceFile = 'src/Payments/PaymentService.mjs'
   const complete = completeResearch()
@@ -367,6 +428,54 @@ test('a Handoff to DESIGN pair must name a symbol in its existing file', async (
   assert.deepEqual(recorded(host), [
     [1, 'failed', 'research-records', [
       `${RESEARCH} cannot find "PaymentAuthorization" in ${sourceFile} (#517)`,
+    ]],
+    [2, 'done', null, []],
+  ])
+  assert.equal(outcome.status, 'done')
+})
+
+test('Handoff accepts bulleted rows, inline names, and multiple names for one cited file', async () => {
+  const sourceFile = 'src/Payments/PaymentService.mjs'
+  const complete = completeResearch()
+  const handoff = '- Existing aggregates, use cases, interfaces and structural patterns DESIGN reuses:\n'
+  const rows = [
+    '- authorizePayment -> #file:' + sourceFile,
+    '- `capturePayment` -> #file:' + sourceFile,
+    '- authorizePayment, capturePayment -> #file:' + sourceFile,
+  ].join('\n')
+  const output = complete.replace(handoff, `${handoff}${rows}\n`)
+  const host = scripted({ files: { [sourceFile]: 'export function authorizePayment() {} export function capturePayment() {}' } }, (it) => [
+    researcher(output)(it),
+    ...nominal(it).slice(1),
+  ])
+  host.deps.templates.templates['research.template.md'] = TEMPLATE
+
+  const outcome = await host.start()
+
+  assert.deepEqual(recorded(host), [[1, 'done', null, []]])
+  assert.equal(outcome.status, 'done')
+})
+
+test('every Handoff name is checked against its cited file', async () => {
+  const sourceFile = 'src/Payments/PaymentService.mjs'
+  const complete = completeResearch()
+  const handoff = '- Existing aggregates, use cases, interfaces and structural patterns DESIGN reuses:\n'
+  const invalid = complete.replace(
+    handoff,
+    `${handoff}- authorizePayment, missingPayment -> #file:${sourceFile}\n`,
+  )
+  const host = scripted({ files: { [sourceFile]: 'export function authorizePayment() {}' } }, (it) => [
+    researcher(invalid)(it),
+    researcher(complete)(it),
+    ...nominal(it).slice(1),
+  ])
+  host.deps.templates.templates['research.template.md'] = TEMPLATE
+
+  const outcome = await host.start()
+
+  assert.deepEqual(recorded(host), [
+    [1, 'failed', 'research-records', [
+      `${RESEARCH} cannot find "missingPayment" in ${sourceFile} (#517)`,
     ]],
     [2, 'done', null, []],
   ])

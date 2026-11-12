@@ -27,7 +27,7 @@ const APPROACHES = /^## Evaluated approaches\s*\n([\s\S]*?)(?=^##\s|$(?![\s\S]))
 const APPROACH_STATUS = /^### .+\((recommended|rejected)\)\s*$/gim
 const EXISTING_TESTS = /^### Existing tests\s*\n([\s\S]*?)(?=^#{1,3}\s|$(?![\s\S]))/m
 const HANDOFF = /^## Handoff to DESIGN\s*\n([\s\S]*?)(?=^##\s|$(?![\s\S]))/m
-const SOURCE_URL = /\(Source:\s*([^\s)]+)\)/g
+const SOURCE_URL = /\(Source:\s*([^)\n]*)(?:\)|$)/gm
 const HTTP_URL = /^https?:\/\/(?:localhost|(?:[a-z\d-]+\.)+[a-z\d-]+)(?::\d+)?(?:[/?#][^\s]*)?$/i
 /** A path the engine never reads: absolute, climbing out with `..`, or in its own tracking folder. */
 const OUTSIDE = /^(?:\/|[A-Za-z]:|\.copilot-tracking\/)|(?:^|\/)\.\.(?:\/|$)/
@@ -126,11 +126,14 @@ const isExistingTestsHeader = (cells) => cells[0] === 'Test file' && cells[1] ==
 const readExistingTestRow = (line) => {
   const [citation, name] = cellsOf(line)
   const file = citationsOf(citation ?? '')[0]?.path ?? ''
-  return { file, name }
+  return { file, name: cleanName(name ?? '') }
 }
 
 /** @param {string} line */
 const cellsOf = (line) => line.split('|').slice(1, -1).map((cell) => cell.trim())
+
+/** @param {string} name */
+const cleanName = (name) => name.trim().replace(/^`|`$/g, '')
 
 /** Handoff names must appear in their cited files. @param {Document} document @param {Text[]} cited */
 const handoffFailures = ({ path, text }, cited) => handoffPairs(text)
@@ -141,19 +144,20 @@ const handoffFailures = ({ path, text }, cited) => handoffPairs(text)
 const handoffPairs = (text) => (HANDOFF.exec(text)?.[1] ?? '')
   .split('\n')
   .filter((line) => line.includes('->'))
-  .map(readHandoffPair)
-  .filter(({ name, file }) => name && file)
+  .flatMap(readHandoffPairs)
 
 /** @param {string} line */
-const readHandoffPair = (line) => {
+const readHandoffPairs = (line) => {
   const [before, citation] = line.split('->')
-  const name = before.slice(before.lastIndexOf(':') + 1).trim()
-  return { name, file: citationsOf(citation ?? '')[0]?.path ?? '' }
+  const description = before.replace(/^\s*-\s*/, '')
+  const names = description.slice(description.lastIndexOf(':') + 1).split(',').map(cleanName).filter(Boolean)
+  const file = citationsOf(citation ?? '')[0]?.path ?? ''
+  return names.map((name) => ({ name, file }))
 }
 
 /** Source URLs in External research only. @param {string} text */
 const externalSources = (text) => [...(EXTERNAL.exec(text)?.[1] ?? '').matchAll(SOURCE_URL)]
-  .map(([, url]) => url)
+  .map(([, url]) => url.trim())
 
 /** Every H2, and the H3s beneath Research executed. @param {string} text */
 const sectionsOf = (text) => {
