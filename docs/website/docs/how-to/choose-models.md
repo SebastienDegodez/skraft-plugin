@@ -74,6 +74,19 @@ A family is a tier (`economy` < `standard` < `frontier` < `premium`), a role (`r
 (`deep-review`). What a family leaves out comes from its tier, then from the host. A family name
 is never a versioned model (`gpt-5.5` is refused as a family).
 
+A model name is one word of letters, digits, `.`, `_` and `-`, starting with a letter or a digit,
+with no space; a list holds at least one. In a file a list is an array, never one string with
+commas. Any other value is refused: `skraft doctor` fails and a run is refused (`config-invalid`).
+
+The Configuration tab of the skraft canvas edits the same keys in `skraft-config.local.json`.
+Under *Families: model and effort per host*, each host has a column *Models, tried in order* with
+one text field per family. Type the names separated by commas, spaces around a comma allowed
+(`model-a, model-b`): the host tries the first, then the next if it is unavailable. A field left
+empty writes no `model` for that family and host, so the layers below it (your user file, the
+team's file, the plugin's defaults) apply, and the host decides where none names one. A name the
+rule refuses is flagged on its field, the rule shown under it; Save stays closed until it is
+fixed.
+
 ## 4. Assign a family to the agents
 
 Under `assign`, per agent, per agent type (`phase`, `lens`, `refuter`, `worker`) or by default:
@@ -125,6 +138,7 @@ files say since.
 
 | Sign | Action |
 |---|---|
+| `FAIL  config: skraft-config.local.json is invalid: models.economy.copilot.model must be a model name or a non-empty list of model names, tried in order (a name is letters, digits, ".", "_" or "-", starting with a letter or a digit, with no space)` | Fix the name: no space, no comma, a letter or a digit first. Several models are a JSON array, not one string. |
 | `FAIL  models: assign.agents.fitnes-lens: no agent fitnes-lens in the plugin, .claude/agents/ or .github/agents/; did you mean fitness-lens?` | Fix the agent's name. |
 | `WARN  models/copilot: no model on copilot for … ; these run on the session's model` | Normal without a Copilot model; otherwise give those families a `model` for `copilot`. |
 | `WARN  models/claude-code: CLAUDE_CODE_EFFORT_LEVEL is set …` | Unset the variable: Claude Code applies it to every agent, over the chosen effort. |

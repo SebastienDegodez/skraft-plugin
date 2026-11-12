@@ -14,13 +14,12 @@ import { readArgs } from './workflow-args.mjs'
  *   the active run's journal, when it can be written, ends with run.stopped under that code.
  * @typedef {{ slug?: unknown, issue?: unknown, title?: unknown, base?: unknown, fromArtifacts?: unknown, agentIds?: unknown }} WorkflowArgs
  * @typedef {import('./ctx-agent-runner.mjs').AgentContext & import('./ctx-human.mjs').PauseContext & { args?: WorkflowArgs, signal?: AbortSignal }} WorkflowContext
- * @typedef {import('./host-confirmation.mjs').HostDialog} HostDialog
- * @typedef {import('./canvas-opener.mjs').CanvasOpener} CanvasOpener
- * @typedef {{ cwd: string | null, pluginRoot: string, home: string, dialog: HostDialog, canvas: CanvasOpener }} Host
+ * @typedef {import('./host-confirmation.mjs').HostDialog | null} HostDialog
+ * @typedef {{ cwd: string | null, pluginRoot: string, home: string, dialog: HostDialog }} Host
  *   cwd: the session's working directory when the run starts, null while unknown;
  *   home: the folder that holds the developer's `.skraft/config.json`; dialog: where the run puts
- *   its questions to the person; canvas: where it shows what a question is about.
- * @typedef {{ pluginRoot: string, agentIds: Record<string, string>, dialog: HostDialog, canvas: CanvasOpener, confirm: 'once' | 'always' }} Runner
+ *   its questions to the person.
+ * @typedef {{ pluginRoot: string, agentIds: Record<string, string>, dialog: HostDialog, confirm: 'once' | 'always' }} Runner
  *   confirm: the configuration is confirmed once per working copy, or at this start (`configure`).
  */
 
@@ -34,7 +33,10 @@ export const SKRAFT_PIPELINE_META = Object.freeze({
     'fromArtifacts?: true to start a new slug in DESIGN from the DISCUSS stories in its tracking folder, ' +
     'configure?: true to show the configuration and ask whether to start with it, as on the first run of a working copy, ' +
     'agentIds?: { [agent file id]: session agent id } }. ' +
-    'The Copilot model and reasoning effort of each agent come from models and assign in the skraft configuration, never from args.',
+    'The Copilot model and reasoning effort of each agent come from models and assign in the skraft configuration, never from args. ' +
+    'On pause, read skraft_decide {}, ask the exact question and options with the offered native ask_user or askQuestions tool, ' +
+    'relay the human reply with skraft_decide {key, answer, reason?}, then resume the SAME workflow run ID. ' +
+    'Missing native tool or dismissal: record nothing, report the blocker and leave this run paused.',
   phases: Object.freeze([
     Object.freeze({ title: 'RESEARCH', detail: 'Solution Researcher' }),
     Object.freeze({ title: 'DESIGN', detail: 'Solution Architect' }),
@@ -117,13 +119,13 @@ const stoppedUnexpectedly = async (host) => {
  * @param {Host & { cwd: string }} host
  * @returns {Promise<RunOutcome>}
  */
-const runIn = async (ctx, { cwd, pluginRoot, home, dialog, canvas }) => {
+const runIn = async (ctx, { cwd, pluginRoot, home, dialog }) => {
   const read = await readArgs(ctx)
   if (!read.ok) return read.outcome
   const { slug, issue, title, base, fromArtifacts, configure, agentIds } = read.args
   const adapters = { ...createNodeAdapters({ cwd, pluginRoot, agentHost: 'copilot', home, signal: ctx.signal }) }
   /** @type {Runner} */
-  const runner = { pluginRoot, agentIds, dialog, canvas, confirm: configure === true ? 'always' : 'once' }
+  const runner = { pluginRoot, agentIds, dialog, confirm: configure === true ? 'always' : 'once' }
   return slug === undefined || slug === null
     ? run(ctx, adapters, runner)
     : initThenRun(ctx, adapters, { ...runner, slug, story: storyOf(issue, title), base, fromArtifacts: fromArtifacts === true })
@@ -148,10 +150,10 @@ const initThenRun = async (ctx, adapters, { slug, story, base, fromArtifacts, ..
  * @param {ReturnType<typeof createNodeAdapters>} adapters
  * @param {Runner & { slug?: string }} request
  */
-const run = (ctx, adapters, { pluginRoot, agentIds, dialog, canvas, confirm, slug }) => createRunPipeline({
+const run = (ctx, adapters, { pluginRoot, agentIds, dialog, confirm, slug }) => createRunPipeline({
   ...adapters,
   agentRunner: createCtxAgentRunner({ ctx, pluginRoot, agentIds }),
-  human: createCtxHuman({ ctx, dialog, canvas }),
+  human: createCtxHuman({ ctx, dialog }),
   progress: createCtxProgress({ ctx }),
 }).run({ ...(slug ? { slug } : {}), confirmConfiguration: confirm })
 

@@ -41,9 +41,9 @@ l'avancement. Il est le seul à lancer des agents (profondeur 1).
 | Pilote | Hôte | Lance les agents | Pose les questions | Montre le run |
 | --- | --- | --- | --- | --- |
 | `drivers/claude-mod/` | Claude Code | `$.agent.spawn`, lot en parallèle | `$.ui.ask`, boutons du panneau | panneau Skraft, `/skraft` |
-| `drivers/copilot-workflow/` | Copilot CLI | `ctx.agent`, borné par `maxConcurrentSubagents` | question posée une fois dans le chat (`session.ui.select` ou `input`) ; `ctx.pause` sans réponse, puis l'outil `skraft_decide` ou `skraft decide` | canvas `skraft-pipeline`, journal `/workflows` |
+| `drivers/copilot-workflow/` | Copilot CLI | `ctx.agent`, borné par `maxConcurrentSubagents` | `ctx.pause` ; le modèle pose la question exacte via `ask_user` ou `askQuestions`, relaie par `skraft_decide`, reprend le même ID de run | canvas `skraft-pipeline`, journal `/workflows` |
 | `drivers/copilot-sdk/` | VS Code, SDK Copilot présent | lance le CLI Copilot sans interface et y suit le workflow `skraft-pipeline` | dans le terminal | terminal |
-| `drivers/cli/` | VS Code sans SDK, et tout terminal | `skraft next` écrit les briefs, l'agent orchestrateur lance les sous-agents, `skraft record` reprend ; lentilles en séquence | `skraft decide` | `skraft status`, `WORKFLOW.md` |
+| `drivers/cli/` | VS Code sans SDK, et tout terminal | `skraft next` écrit les briefs, l'agent orchestrateur lance les sous-agents, `skraft record` reprend ; lentilles en séquence | question native puis MCP `skraft_answer` ; terminal autonome : `skraft decide` | `skraft status`, `WORKFLOW.md` |
 
 Cas d'usage appelés par chaque pilote :
 
@@ -58,8 +58,8 @@ Cas d'usage appelés par chaque pilote :
 | Hôte | Démarrer ou reprendre un run | Répondre à une question | Suivre le run |
 | --- | --- | --- | --- |
 | Claude Code | `/skraft <slug> [#issue] [titre]`, ou l'agent `skraft-orchestrator` | la boîte de dialogue, les boutons du panneau, ou `/skraft decide <réponse>` | le panneau Skraft, `/skraft` |
-| Copilot CLI | `/skraft <slug> [#issue] [titre…]` ([la commande](#skraft-command)), ou l'agent `skraft:skraft-orchestrator` ; les deux lancent le workflow `skraft-pipeline` | la boîte de dialogue de Copilot dans le chat ; sinon l'outil `skraft_decide` ou `skraft decide` dans un terminal | le canvas `skraft-pipeline`, le journal `/workflows`, `skraft status` |
-| VS Code | `/skraft` dans le chat dit quoi taper mais ne lance aucun run depuis là ; `node "<dossier du plugin>/engine/drivers/copilot-sdk/skraft-run.mjs" <slug>` ; sans SDK Copilot, l'agent `skraft-orchestrator`, qui conduit `skraft next` / `skraft record` | `skraft decide` dans un terminal | `skraft status`, `WORKFLOW.md` |
+| Copilot CLI | `/skraft <slug> [#issue] [titre…]` ([la commande](#skraft-command)), ou l'agent `skraft:skraft-orchestrator` ; les deux lancent le workflow `skraft-pipeline` | question native dans le chat ; le modèle relaie la réponse humaine par `skraft_decide` | le canvas `skraft-pipeline`, le journal `/workflows`, `skraft status` |
+| VS Code | `/skraft` dans le chat dit quoi taper mais ne lance aucun run depuis là ; `node "<dossier du plugin>/engine/drivers/copilot-sdk/skraft-run.mjs" <slug>` ; sans SDK Copilot, l'agent `skraft-orchestrator`, qui conduit `skraft next` / `skraft record` | boucle MCP : question native puis `skraft_answer` ; terminal SDK : `skraft decide` | `skraft status`, `WORKFLOW.md` |
 
 Sans slug, le run reprend le pipeline actif de la copie de travail. Une seule session conduit un
 pipeline à la fois : une seconde est refusée (`pipeline-locked`) tant que la première tient le
@@ -184,6 +184,10 @@ L'extension `com.github.copilot/extensions/skraft-pipeline/` enregistre les work
 Le répertoire de travail est celui de la session, relu au démarrage d'un run et à chaque appel
 d'outil.
 
+Le plugin livre aussi `com.github.copilot/hooks/hooks.json` avec un objet `hooks` vide : Copilot
+CLI ne lit les hooks d'un plugin que là, et écrit une erreur dans son journal à chaque session
+sans lui ([pourquoi](../explanation/guardrails.md)).
+
 ### Commande `/skraft` <!-- #skraft-command -->
 
 Le plugin `skraft` livre `com.github.copilot/commands/skraft.md`, qui donne à Copilot la syntaxe de
@@ -204,7 +208,7 @@ Le premier mot choisit la route. Une route passe par Copilot seulement quand la 
 | --- | --- | --- |
 | `/skraft`, `/skraft status`, `/skraft help` | ouvre le canvas `skraft-pipeline` sur l'onglet Run ; ne démarre ni ne reprend rien | dit de taper `skraft status` |
 | `/skraft <slug> [#issue] [titre…] [--base <ref>] [--from-artifacts]` | lance `skraft-pipeline` avec `{ slug, issue, title, base, fromArtifacts }` et relaie son statut, son code et sa raison | ne lance rien : donne la ligne `skraft-run.mjs` à taper, ou dit de choisir l'agent `Skraft - Orchestrator` |
-| `/skraft decide [<clé>] <réponse> [raison…]` | le dialogue de Copilot pose de nouveau la question ; la réponse tapée n'est jamais enregistrée | dit de taper `skraft decide [<clé>] <réponse> [--reason "<raison>"]` |
+| `/skraft decide [<clé>] <réponse> [raison…]` | lit `skraft_decide {}`, pose la question exacte via l'outil natif, relaie sa réponse humaine, reprend le même ID de run | MCP : question native puis `skraft_answer` ; sans MCP : réponse native puis terminal `skraft decide` |
 | `/skraft review <numéro> [--publish]` | lance `skraft-review` avec `pr` et `publish` | dit de taper `skraft review --pr <numéro> [--publish]` |
 | `/skraft backlog [critères…]` | passe la main aux agents du backlog (ci-dessous) | idem |
 
@@ -217,7 +221,7 @@ Exemples, les mêmes que sous Claude Code :
 ```
 
 Deux écarts voulus avec Claude Code. `decide` n'enregistre rien des mots tapés : sous Copilot, une décision humaine
-n'est enregistrée qu'après le dialogue de l'hôte. `backlog` est un mot réservé, sauf quand un pipeline nommé `backlog`
+est relayée par le modèle depuis la réponse humaine rendue par l'outil natif de question. `backlog` est un mot réservé, sauf quand un pipeline nommé `backlog`
 existe déjà (`.copilot-tracking/skraft-plans/backlog/`) : `/skraft backlog …` prend alors la route Run, reprend ou démarre
 ce pipeline, et dit que, pour la route backlog, vous sélectionnez directement `Skraft - Backlog Discoverer` comme agent du chat.
 
@@ -249,44 +253,38 @@ Le workflow rend `{ status, slug, phase, code, reason }` (`status` = `done`, `bl
 `waiting` ou `refused`) et journalise `<slug>: <status> (<code>): <raison>`. Une reprise ne
 relance pas un agent dont les sorties sont déjà remplies.
 
-Quand le moteur pose une question, le workflow la pose une seule fois à la personne, dans la
-boîte de dialogue de Copilot, dans le chat : un choix parmi ses options (`session.ui.select`), ou
-un champ texte pour une question qui prend une consigne, celle d'une étape `blocked` ou le
-`mutation-plan`, où la personne écrit une option ou sa consigne (`session.ui.input`). Un refus
-(`REJECTED`) demande ensuite sa raison, dans un champ texte. La valeur que rend la boîte de
-dialogue est la réponse, journalisée `by: "host-confirmed"`, et le run continue ; une consigne
-écrite dans le champ texte est d'abord montrée en retour (`Send this instruction to <step>?
-<instruction>`, `session.ui.confirm`) et n'est enregistrée qu'une fois que la personne la
-confirme. Le run pose autant de questions qu'il lui faut. Quand Copilot ne peut pas poser la
-question (pas de boîte de dialogue, mode `autopilot`, mode qu'il ne dit pas), que la personne la
-ferme, ou qu'elle n'envoie pas la consigne écrite (`<why>` vaut alors `you did not send the
-instruction you wrote`), le workflow écrit pourquoi et comment répondre, puis se met en pause
-durable par `ctx.pause(<clé>)` :
+Quand le moteur pose une question, le workflow enregistré écrit son texte exact et sa
+question structurée, puis se met en pause durable par `ctx.pause(<clé>)`, sans appeler `session.ui`.
+Le modèle lit `skraft_decide {}`, présente ce texte exact et ces options via l'outil natif proposé
+`ask_user` ou `askQuestions`, et y demande toute raison de refus. Seule la réponse humaine
+rendue est relayée avec `skraft_decide {key, answer, reason?}`, journalisée `by: "decide"`
+sans reçu ni seconde confirmation. Un enregistrement réussi reprend le MÊME ID de run,
+jamais un nouveau workflow. Outil natif absent ou question fermée : run en pause, blocage
+concret, aucun enregistrement.
 
 ```
 Waiting for you — <question>
-adr-1 was not answered: <why>. Resume this run to be asked again, ask Copilot in the chat to put the question to you, or type skraft decide adr-1 RATIFIED|REJECTED in a terminal and resume this run.
+{"question": {"key": "<key>", "kind": "<kind>", "text": "<question>", "options": ["<option>"], "refusals": [], "header": "<header>"}}
+Present this exact question and options through the offered native ask_user or askQuestions tool.
 ```
 
-À la différence du mod Claude Code, un texte sans mot écrit comme consigne n'est pas redemandé :
-le run écrit `<slug>: <key> not answered: an instruction tells the agent in words what to do;
-write a sentence, or STOP` et se termine `waiting`, à répondre par `skraft decide` ou l'outil
-`skraft_decide`.
+Decide garde la validation des options, les raisons de refus obligatoires et les limites de
+consigne : plus de 1000 caractères ou aucun mot est refusé, sans enregistrement.
 
 ### Canvas `skraft-pipeline` <!-- #canvas -->
 
 | Règle | Détail |
 | --- | --- |
 | Entrée | `tab` seulement, l'onglet que la page montre d'abord (`run`, `configuration` ou `workflow`) ; un slug ou toute autre clé est refusé ; il montre le pipeline actif (`.active-slug`) du répertoire de la session, relu à chaque ouverture, action et rafraîchissement |
-| Contenu | quatre onglets. **Run** : chaque phase et ses étapes, le dernier passage de chaque revue, les derniers résultats de gate de chaque composant, les arêtes empruntées, la question en attente ; aucun coût. **Configuration** : la forge, les composants tels qu'écrits, les consentements, les modèles et ce que chaque agent du workflow reçoit par hôte, la barre de qualité en lecture seule. **Workflow** : chaque workflow que le run peut suivre, pas à pas, l'étape en cours du run mise en évidence. **Journal** : en lecture seule, d'après `events.jsonl` ; chaque étape enregistrée (passe, essai, résultat, arête empruntée) et chaque décision humaine (réponse, raison, `by`), les 200 dernières, avec l'état de la chaîne de hachage (intacte, rompue, invérifiable) ; une chaîne rompue n'affiche aucune entrée |
-| Action | `get_pipeline` et `get_configuration`, en lecture seule ; la page n'a ni formulaire ni route de réponse. La seule écriture est une modification de la configuration depuis l'onglet Configuration : composants et consentements vont dans `skraft-config.json`, `assign` et `models` dans `skraft-config.local.json` ; le moteur vérifie chaque modification comme un run la charge et n'écrit rien qu'il refuserait |
+| Contenu | quatre onglets. **Run** : chaque phase et ses étapes, le dernier passage de chaque revue, les derniers résultats de gate de chaque composant, les arêtes empruntées, la question en attente ; aucun coût. **Configuration** : la forge, les composants tels qu'écrits, les consentements, les modèles (un champ texte par famille et par hôte : les noms essayés dans l'ordre, séparés par des virgules ; un champ laissé vide laisse décider les couches en dessous et l'hôte) et ce que chaque agent du workflow reçoit par hôte, la barre de qualité en lecture seule. **Workflow** : chaque workflow que le run peut suivre, pas à pas, l'étape en cours du run mise en évidence. **Journal** : en lecture seule, d'après `events.jsonl` ; chaque étape enregistrée (passe, essai, résultat, arête empruntée) et chaque décision humaine (réponse, raison, `by`), les 200 dernières, avec l'état de la chaîne de hachage (intacte, rompue, invérifiable) ; une chaîne rompue n'affiche aucune entrée |
+| Action | `get_pipeline` et `get_configuration`, en lecture seule ; la page n'a ni formulaire ni route de réponse. La seule écriture est une modification de la configuration depuis l'onglet Configuration : composants et consentements vont dans `skraft-config.json`, `assign` et `models` dans `skraft-config.local.json` ; le moteur vérifie chaque modification comme un run la charge et n'écrit rien qu'il refuserait. La page applique la règle du nom de modèle à la frappe : un nom refusé est signalé sur son champ et rien n'est envoyé tant qu'un nom est signalé |
 | Serveur | un serveur sur 127.0.0.1 par instance ouverte, jeton dans l'URL, CSP `default-src 'none'` ; 4 instances au plus ; la seule route qui écrit est `POST /configuration` (jeton dans `X-Skraft-Token`, JSON d'au plus 64 Kio) |
 
 La question en attente est suivie de `Answer it in the
 Copilot chat, where Copilot puts it to you; or type skraft decide <key> <answers> in a
 terminal.` ; il ne prend aucune réponse.
 
-Tant qu'une question attend, un bouton **On a besoin de vous** s'affiche dans l'en-tête. Il mène à la question sur l'onglet Run, comme la touche `n` hors d'un champ. Il ne répond à rien : la réponse passe par la boîte de dialogue de Copilot ou par `skraft decide`.
+Tant qu'une question attend, un bouton **On a besoin de vous** s'affiche dans l'en-tête. Il mène à la question sur l'onglet Run, comme la touche `n` hors d'un champ. Il ne répond à rien : la réponse passe par le chat natif ou par la voie terminal autonome `skraft decide`.
 
 La capture ci-dessous a été faite quand le consentement de publication était encore demandé
 pendant un run ; le bouton et l'encadré fonctionnent de même pour les questions sur lesquelles un
@@ -296,18 +294,15 @@ run s'arrête aujourd'hui.
 
 La page parle la langue du navigateur, français ou anglais. Les phrases que le driver fixe (aucun répertoire de travail, un pipeline ou une configuration illisible, une configuration non enregistrée, où répondre à la question) et les mots propres de la page la suivent ; ce que le moteur écrit (les étapes et leurs résultats, les revues, la question, les refus du moteur) s'affiche tel que le moteur l'a écrit, et le modèle lit le texte anglais de `get_pipeline` et `get_configuration`. Chaque phase dit son état en un mot (close, en cours, à venir) et chaque étape en un mot que seul un lecteur d'écran lit ; une région vivante polie annonce un nouvel état du run et une question qui se met à attendre. Les consentements sont un seul arrêt de tabulation par groupe : les flèches, Début et Fin déplacent le choix. En couleurs forcées, le choix retenu, l'onglet sélectionné et la phase et l'étape en cours gardent un fond, une bordure ou un contour, et `prefers-contrast: more` assombrit le texte discret et les filets. Après cinq tentatives de rejoindre son serveur (environ 45 s), la page dit de fermer le canvas et de le rouvrir depuis Copilot : un serveur relancé a une nouvelle adresse et un nouveau jeton, qu'un rechargement n'atteint pas. Le tout est vérifié dans un navigateur aux couleurs et au contraste émulés ; il n'a été lu ni avec un lecteur d'écran ni avec le contraste élevé de Windows.
 
-Avant la première phase d'une copie de travail, le workflow ouvre le canvas sur son onglet Configuration et pose dans le chat la question `configuration` : *Démarrer ce run avec la configuration de cette copie de travail ?* `START` continue et est gardé dans `skraft-config.local.json` (`configurationConfirmed`), si bien que les runs suivants démarrent sans demander ; `STOP` ne démarre rien. Passez `configure: true` au workflow pour qu'on vous le redemande. Le CLI et le mod Claude Code ne la posent jamais.
+Avant la première phase d'une copie de travail, le workflow pose dans le chat la question `configuration` : *Démarrer ce run avec la configuration de cette copie de travail ?* `START` continue et est gardé dans `skraft-config.local.json` (`configurationConfirmed`), si bien que les runs suivants démarrent sans demander ; `STOP` ne démarre rien. Passez `configure: true` au workflow pour qu'on vous le redemande. Le workflow n'ouvre jamais le canvas : pour lire ou modifier la configuration avant de répondre, demandez à Copilot de l'ouvrir sur son onglet Configuration ; enregistrer une modification laisse la question attendre votre réponse dans le chat. Le CLI et le mod Claude Code ne la posent jamais.
 
 ### Outil `skraft_decide` <!-- #skraft-decide -->
 
-Sans argument ; toute clé est refusée. Il pose à la personne, une seule
-fois, la question qu'attend le pipeline actif, dans la boîte de dialogue de Copilot, comme le
-run, et enregistre ce qu'elle donne par le même cas d'usage que `skraft decide` (mêmes règles et
-refus : une consigne de plus de 1000 caractères, ou sans mot, est refusée ; une consigne écrite
-est montrée en retour et n'est enregistrée qu'une fois confirmée), journalisé `by: "host-confirmed"`.
-Ni la question ni la réponse ne viennent du modèle. Sans boîte de dialogue, en mode `autopilot`,
-ou quand la personne ne répond pas, rien n'est enregistré et la personne répond par `skraft
-decide` dans un terminal. Il répond `Recorded: <slug>: <key> answered <answer>; run the pipeline
+`{}` lit la question exacte en attente en JSON sans élicitation ni écriture.
+`{key, answer, reason?}` enregistre via Decide la réponse humaine native relayée par le modèle,
+avec `by: "decide"`. Clé et réponse sont requises ensemble ; les soumissions inconnues,
+invalides, périmées ou déjà enregistrées sont refusées. Aucun reçu ni seconde confirmation.
+L'outil répond `Recorded: <slug>: <key> answered <answer>; run the pipeline
 again to go on. Resume the paused skraft-pipeline run (/workflows).`, ou `Refused: <raison>;
 nothing was recorded.` Reprendre le run applique la réponse ; les agents déjà passés ne sont pas
 relancés.
@@ -384,8 +379,10 @@ Sans SDK Copilot, l'agent `skraft-orchestrator` conduit la boucle de la ligne de
 2. L'orchestrateur lance chaque agent nommé, sur le modèle indiqué, et garde sa réponse finale
    dans son fichier de réponse.
 3. `skraft record` remet les réponses au run et continue comme `next`.
-4. Une question arrête la boucle : un humain répond par `skraft decide` dans son terminal, puis
-   l'orchestrateur relance `skraft next`.
+4. Une question arrête la boucle : l'orchestrateur lit `skraft_status`, pose le texte exact et
+   les options via l'outil natif de question, relaie la réponse humaine par MCP
+   `skraft_answer {key, answer, reason?, workspace}`, puis appelle `skraft_next` dans cet espace.
+   Sans MCP, la voie terminal autonome garde `skraft decide` et son consentement TTY.
 
 Les lentilles passent l'une après l'autre. Le journal est celui du workflow Copilot, sans les
 modèles ni les coûts que la boucle ne peut pas connaître. Synopsis, sorties et codes :
@@ -399,8 +396,8 @@ modèles ni les coûts que la boucle ne peut pas connaître. Synopsis, sorties e
 | Modèle passé à l'agent | oui, le premier modèle Claude Code de la famille | oui, la liste des modèles Copilot, avec repli | oui (workflow Copilot) | nommé dans la sortie de `next` ; l'orchestrateur le choisit |
 | Niveau de réflexion passé | non (celui du fichier agent) | oui (`reasoningEffort`), retiré si Copilot le refuse | oui (workflow Copilot) | non |
 | Coût journalisé | oui, USD approximatif | non | non | non |
-| Question posée dans l'hôte | oui : dialogue et boutons du panneau | oui : dialogue dans le chat ; refusé en `autopilot` ou sans dialogue | non : `skraft decide` | non : `skraft decide` |
-| `by` journalisé pour une réponse | `host` (dialogue, bouton), `decide` (`/skraft decide`) | `host-confirmed` | `cli-tty` | `cli-tty` |
+| Question posée dans l'hôte | oui : dialogue et boutons du panneau | outil natif du chat, relais du modèle | non : `skraft decide` | outil natif du chat, relais MCP |
+| `by` journalisé pour une réponse du pipeline | `host` (dialogue, bouton), `decide` (`/skraft decide`) | `decide` | `cli-tty` | `decide` (MCP), `cli-tty` (terminal) |
 | Vue du run | panneau Skraft | canvas `skraft-pipeline` (lecture seule) | terminal | `skraft status`, `WORKFLOW.md` |
 | Revue d'une pull request | `/skraft review <numéro>` | `/skraft review <numéro>`, ou le workflow `skraft-review` | `skraft review --pr` (boucle) | `skraft review --pr` (boucle) |
 | Commande `/skraft` disponible | oui (le mod) | oui, mesurée `/skraft` dans le registre du SDK (CLI 1.0.105 ; menu non lu) | branchée, non mesurée sous VS Code | branchée, non mesurée sous VS Code |

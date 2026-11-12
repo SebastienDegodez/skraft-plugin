@@ -112,7 +112,7 @@ const conductOverMcp = async (host, cwd, llm) => {
     steps.push(step)
     if (step.status === 'waiting') {
       const { question } = JSON.parse((await skraft(cwd, ['status', '--json'])).stdout)
-      await skraft(cwd, ['decide', question.key, question.options[0]])
+      assert.equal((await host.json('skraft_answer', { key: question.key, answer: question.options[0] })).ok, true)
       step = await host.json('skraft_next')
     } else if (step.status === 'dispatch') {
       startAgents(step, llm)
@@ -134,7 +134,7 @@ test('an agent of the host conducts a story to the end through the tools alone, 
   assert.deepEqual(texts(started), [`${SLUG} is the active pipeline`])
   assert.deepEqual(step, { status: 'done', slug: SLUG, phase: 'PUBLISH', code: null, reason: 'PUBLISH closed', dispatches: [], then: null })
   assert.deepEqual(steps.filter(({ status }) => status === 'waiting').map(({ code, then }) => [code, then]), [['adr-ratification', 'call the skraft_next tool with {}'], ['scenario-review', 'call the skraft_next tool with {}']])
-  assert.deepEqual(journal(cwd, SLUG).filter(({ type }) => type === 'question.answered').map(({ by }) => by), ['cli-tty', 'cli-tty'])
+  assert.deepEqual(journal(cwd, SLUG).filter(({ type }) => type === 'question.answered').map(({ by }) => by), ['decide', 'decide'])
   assert.equal(journal(cwd, SLUG).at(-1).type, 'run.finished')
   await host.close()
 })

@@ -42,6 +42,11 @@ Claude Code mod's, which gives Claude Code the `/skraft` command, the tool that 
 pipeline and the Skraft pane. That module reacts to no tool call; it drives the engine, as the
 Copilot workflow does under Copilot.
 
+Copilot CLI reads a plugin's hooks only from `com.github.copilot/hooks/hooks.json`, and logs an
+error at every session when that file is missing (measured on 1.0.106-8,
+`docs/v2/host-verification.md`). The plugin therefore ships it with an empty `hooks` object: it
+declares no hook, and the host's log stays quiet.
+
 ## What replaces each guardrail
 
 - **The phase order**: the engine computes the next step from the workflow graph and the journal;

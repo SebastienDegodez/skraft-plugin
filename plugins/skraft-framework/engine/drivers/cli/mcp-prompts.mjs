@@ -11,7 +11,7 @@
 const LOOP = [
   'Act on the status of each answer, and only on it:',
   '- dispatch, or refused with the code not-recorded: start each listed agent as a subagent, one after the other, with exactly its prompt, on its model when the subagent tool takes one; write its final message unchanged to its reply file; then do what then says.',
-  '- waiting: show the person the question and how to answer it, and stop; they answer with skraft decide in their own terminal. When they say it is answered, call skraft_next.',
+  '- waiting: read skraft_status in the same workspace; present its EXACT question text and options with the offered native ask_user or askQuestions tool; request a refusal reason there. Relay ONLY the returned human reply with skraft_answer {key, answer, reason?, workspace}, then call skraft_next in that workspace. Missing native tool or dismissal: report the concrete blocker, leave paused and record nothing; never infer an answer or substitute ordinary prose.',
   '- done, blocked or any other refused: relay the status, the code and the reason, and stop.',
   'Never write a file under .copilot-tracking/ other than a reply file the current answer lists.',
 ].join('\n')

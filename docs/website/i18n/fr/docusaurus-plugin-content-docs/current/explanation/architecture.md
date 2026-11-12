@@ -93,10 +93,18 @@ Les autres règles découlent du même souci. Seul le point d'entrée de l'exten
 Copilot. Rien ne lève d'exception sur le chemin d'un run : chaque échec devient un résultat
 avec un statut, un code et une raison fixée par le code, jamais un texte d'exception. Les
 arguments du workflow, écrits par un modèle, sont refusés dès qu'une clé est inconnue, sans
-jamais reprendre la valeur refusée. Une décision humaine n'est journalisée (`by: 'host-confirmed'`) qu'une fois rendue
-par la boîte de dialogue de l'hôte, et le pilote refuse de la demander en mode `autopilot` ou
-quand l'hôte ne sait pas poser de question : un modèle ne peut pas répondre à la place d'une
-personne.
+jamais reprendre la valeur refusée. Les questions du pipeline mettent le run en pause pour le chat
+natif : le modèle présente la question exacte du moteur et ses options via l'outil proposé
+`ask_user` ou `askQuestions`, y demande la raison d'un refus, puis relaie uniquement la réponse
+humaine avec `skraft_decide` (extension Copilot) ou `skraft_answer` (MCP). Cette confiance
+délibérée dans le modèle ne demande ni reçu ni seconde confirmation ; le journal note
+`by: 'decide'`, pas une attestation de l'hôte. Un enregistrement réussi reprend le même ID
+de run du workflow, jamais un nouveau run ; la boucle MCP continue avec `skraft_next` dans
+le même espace de travail. Un outil natif absent ou une question fermée laisse le run en pause,
+avec un blocage concret et aucun enregistrement. Le canvas reste en lecture seule.
+La publication d'une revue et les autres consentements hors pipeline gardent leur confirmation
+d'hôte existante ; la publication d'une revue Copilot note `by: 'host-confirmed'` seulement
+après un retour littéral `true`, et refuse sans élicitation, en `autopilot` ou si le mode est illisible.
 
 ## La boucle pilote ↔ moteur
 

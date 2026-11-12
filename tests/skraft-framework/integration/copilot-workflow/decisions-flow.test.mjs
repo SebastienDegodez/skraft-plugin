@@ -136,48 +136,41 @@ test('a question the person dismisses in Copilot pauses the run, which says how 
   assert.deepEqual(session.asked.map(({ kind, options }) => [kind, options]), [['select', ['RATIFIED', 'REJECTED']], ['select', ['RATIFIED', 'REJECTED']], ['select', ['APPROVED', 'REVISE']]])
 })
 
-test('a run Copilot cannot put its question in pauses and says why; skraft_decide then puts that question once, a refusal with its reason, and the resumed run sends the architect back, and only it', async (t) => {
+test('a paused ratification consumes the native refusal with its reason, and the same run sends only the architect back', async (t) => {
   const { cwd } = pipelineRepository(t)
   const { ctx, calls, logs } = simulatedContext({ args: { slug: SLUG }, otherwise: actsAs(scriptedLlm({ cwd })) })
 
   await assert.rejects(runSkraftPipelineWorkflow(ctx, host(cwd)), { name: 'AbortError', message: 'paused at adr-1' })
   assert.equal(logs.at(-1), 'adr-1 was not answered: this Copilot host cannot put a question to you. Resume this run to be asked again, ask Copilot in the chat to put the question to you, or type skraft decide adr-1 RATIFIED|REJECTED in a terminal and resume this run.')
 
-  const dismissed = answeringSession({ answers: ['REJECTED', null] })
-  assert.equal(await decideTool(cwd, dismissed).handler({}), 'Refused: you did not answer the question in Copilot; answer it with skraft decide adr-1 RATIFIED|REJECTED typed in a terminal; nothing was recorded.')
+  assert.match(await decideTool(cwd).handler({ key: 'adr-1', answer: 'REJECTED' }), /^Refused:/)
   const person = answeringSession({ answers: ['REJECTED', REASON] })
-  assert.equal(await decideTool(cwd, person).handler({}), `Recorded: ${SLUG}: adr-1 answered REJECTED; run the pipeline again to go on. Resume the paused skraft-pipeline run (/workflows).`)
-  assert.deepEqual(person.asked.map(({ kind, message, options }) => [kind, message, options]), [
-    ['select', `Ratify the Proposed ADRs ${ADR_PATH}? RATIFIED marks them Accepted; REJECTED sends DESIGN back with your reason.`, ['RATIFIED', 'REJECTED']],
-    ['input', 'ADR: why REJECTED? Your reason goes back to the agent.', undefined],
-  ])
+  assert.equal(await decideTool(cwd, person).handler({ key: 'adr-1', answer: 'REJECTED', reason: REASON }), `Recorded: ${SLUG}: adr-1 answered REJECTED; run the pipeline again to go on. Resume the paused skraft-pipeline run (/workflows).`)
+  assert.deepEqual(person.asked, [])
 
   await assert.rejects(runSkraftPipelineWorkflow(ctx, host(cwd)), { name: 'AbortError', message: 'paused at adr-2' })
 
   const phases = phaseCalls(calls)
   assert.deepEqual(phases.map((call) => call.label), [`skraft ${SLUG} · research · attempt 1`, `skraft ${SLUG} · design · attempt 1`, `skraft ${SLUG} · design · pass 2 · attempt 1`])
   assert.ok(phases[2].prompt.endsWith(`A human refused the work of pass 1:\n- ${ADR_PATH}: ${REASON}`), phases[2].prompt)
-  assert.deepEqual(journal(cwd, SLUG).filter((event) => event.type === 'question.answered').map(({ key, answer, reason, by }) => [key, answer, reason, by]), [['adr-1', 'REJECTED', REASON, 'host-confirmed']])
+  assert.deepEqual(journal(cwd, SLUG).filter((event) => event.type === 'question.answered').map(({ key, answer, reason, by }) => [key, answer, reason, by]), [['adr-1', 'REJECTED', REASON, 'decide']])
 })
 
-test('skraft_decide asks a blocked step its instruction in a text field; one Decide refuses records nothing, and the instruction it takes sends the step back on resume', async (t) => {
+test('a native instruction passes Decide validation and sends the blocked step back on same-run resume without elicitation', async (t) => {
   const { cwd } = pipelineRepository(t)
   const llm = scriptedLlm({ cwd, acts: { 'solution-architect': [blocked('which payment provider?'), blocked('still unsure')] } })
   const { ctx, calls } = simulatedContext({ args: { slug: SLUG }, otherwise: actsAs(llm) })
   await assert.rejects(runSkraftPipelineWorkflow(ctx, host(cwd)), { name: 'AbortError', message: 'paused at design-1' })
   const person = answeringSession({ answers: ['x'.repeat(1001), '5', 'Use the bank gateway', false, 'Use the bank gateway', true] })
 
-  assert.equal(await decideTool(cwd, person).handler({}), 'Refused: an instruction is at most 1000 characters; nothing was recorded.')
-  assert.equal(await decideTool(cwd, person).handler({}), 'Refused: an instruction tells the agent in words what to do; write a sentence, or STOP; nothing was recorded.')
-  // The person answered and said no to sending it: no answer, but not « you did not answer ».
-  assert.equal(await decideTool(cwd, person).handler({}), 'Refused: you did not send the instruction you wrote; answer it with skraft decide design-1 "<instruction>"|STOP typed in a terminal; nothing was recorded.')
-  assert.equal(await decideTool(cwd, person).handler({}), `Recorded: ${SLUG}: design-1 answered Use the bank gateway; run the pipeline again to go on. Resume the paused skraft-pipeline run (/workflows).`)
-  // A refused text asks no confirmation; a confirmation declined records nothing.
-  assert.deepEqual(person.asked.map(({ kind }) => kind), ['input', 'input', 'input', 'confirm', 'input', 'confirm'])
+  assert.equal(await decideTool(cwd, person).handler({ key: 'design-1', answer: 'x'.repeat(1001) }), 'Refused: an instruction is at most 1000 characters; nothing was recorded.')
+  assert.equal(await decideTool(cwd, person).handler({ key: 'design-1', answer: '5' }), 'Refused: an instruction tells the agent in words what to do; write a sentence, or STOP; nothing was recorded.')
+  assert.equal(await decideTool(cwd, person).handler({ key: 'design-1', answer: 'Use the bank gateway' }), `Recorded: ${SLUG}: design-1 answered Use the bank gateway; run the pipeline again to go on. Resume the paused skraft-pipeline run (/workflows).`)
+  assert.deepEqual(person.asked, [])
   await assert.rejects(runSkraftPipelineWorkflow(ctx, host(cwd)), { name: 'AbortError', message: 'paused at design-2' })
 
   assert.ok(phaseCalls(calls)[2].prompt.includes('\nA human refused the work of pass 1:\n- Use the bank gateway'), phaseCalls(calls)[2].prompt)
-  assert.deepEqual(journal(cwd, SLUG).filter((event) => event.type === 'question.answered').map(({ key, answer, by }) => [key, answer, by]), [['design-1', 'Use the bank gateway', 'host-confirmed']])
+  assert.deepEqual(journal(cwd, SLUG).filter((event) => event.type === 'question.answered').map(({ key, answer, by }) => [key, answer, by]), [['design-1', 'Use the bank gateway', 'decide']])
 })
 
 test('a resumed run whose question is still open passes the pause and waits', async (t) => {

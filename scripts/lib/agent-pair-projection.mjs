@@ -69,15 +69,14 @@ export function buildPairProjection({ root, list, read, exists }) {
       conflicts.push('Claude registration must enumerate native files exactly once')
     }
   }
-  // A plugin without command hooks ships no Copilot hook copy: skraft-backlog has no
-  // manifest, and the V2 core's manifest only declares the Claude Code mod module.
+  // skraft-backlog has no hook manifest, so it ships no Copilot copy; a manifest that only
+  // declares the Claude Code mod module (the V2 core) gets a copy that declares no hook.
   const manifestText = read('hooks/hooks.json')
-  const hook = manifestText && !declaresModulesOnly(manifestText) ? manifestText : null
+  const copilotHook = manifestText ? copilotHookCopy(manifestText) : null
   for (const path of list('com.github.copilot/hooks', true)) {
-    if (!hook || path !== 'com.github.copilot/hooks/hooks.json') extra.push(path)
+    if (!copilotHook || path !== 'com.github.copilot/hooks/hooks.json') extra.push(path)
   }
-  if (hook) {
-    const copilotHook = copilotHookManifest(hook)
+  if (copilotHook) {
     files.push({ source: 'hooks/hooks.json', target: 'com.github.copilot/hooks/hooks.json', content: copilotHook })
     plan('com.github.copilot/hooks/hooks.json', copilotHook)
   }
@@ -89,6 +88,11 @@ export function buildPairProjection({ root, list, read, exists }) {
   plan('.agent-sync.json', oldBaseline && unchanged ? oldBaseline : Buffer.from(content))
   return { root, files, writes, removed: [], conflicts, missing: missing.sort(), stale: stale.sort(), extra: extra.sort() }
 }
+// A plugin that declares the Agent Plugins v1 $schema has its hooks read only from
+// com.github.copilot/hooks/hooks.json: Copilot CLI 1.0.106-8 logs an error at every session when
+// only the root manifest exists, and refuses `{}` ("hooks must be an object").
+const NO_COPILOT_HOOK = Buffer.from('{ "hooks": {} }\n')
+const copilotHookCopy = (manifest) => declaresModulesOnly(manifest) ? NO_COPILOT_HOOK : copilotHookManifest(manifest)
 const declaresModulesOnly = (text) => {
   try {
     const manifest = JSON.parse(text)

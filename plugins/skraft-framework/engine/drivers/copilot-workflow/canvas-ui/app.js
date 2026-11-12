@@ -7,7 +7,7 @@
 // opened, never in the page.
 import { languageOf, ui } from './i18n.js'
 import { createReconnect } from './reconnect.js'
-import { TABS, announcement, esc, renderArrows, renderConfiguration, renderHeader, renderJournal, reasonText, renderRun, renderSaveBar, renderWorkflows, shownWorkflow } from './view.js'
+import { TABS, announcement, configurationStand, esc, invalidModels, isModelsField, modelNames, modelsError, modelsErrorId, renderArrows, renderConfiguration, renderHeader, renderJournal, reasonText, renderRun, renderSaveBar, renderWorkflows, shownWorkflow } from './view.js'
 
 const params = new URLSearchParams(location.search)
 const token = params.get('t') ?? ''
@@ -26,6 +26,8 @@ const view = {
   stale: false,
   saving: false,
   error: /** @type {string | null} */ (null),
+  /** The key of the configuration question the person saved the configuration for, while it waits; a save answers nothing. */
+  savedFor: /** @type {string | null} */ (null),
   /** The agent groups of the Configuration tab the person opened. */
   groups: /** @type {Set<string>} */ (new Set()),
 }
@@ -38,7 +40,16 @@ const phaseOf = (workflows) => {
 /** @type {any} */
 let content = null
 
+/** Where the run stands on its configuration question: asked, saved by the person, or no such question. */
+const stand = () => configurationStand(content, view)
+
 const clone = (value) => JSON.parse(JSON.stringify(value ?? {}))
+
+/** The models of the person's own layer with each `model` a list: a file may write one plain name, which a field holds as a list of one. */
+const modelLists = (models) => {
+  for (const hosts of Object.values(models)) for (const setting of Object.values(hosts)) if (typeof setting.model === 'string') setting.model = [setting.model]
+  return models
+}
 
 /** What the person may change of the configuration, as the fields hold it. */
 const editable = (configuration) => ({
@@ -46,7 +57,7 @@ const editable = (configuration) => ({
   components: clone(configuration.components),
   consents: Object.fromEntries(configuration.consents.map(({ key, value }) => [key, value])),
   assign: clone(configuration.models.assign),
-  models: clone(configuration.models.models),
+  models: modelLists(clone(configuration.models.models)),
 })
 
 const toast = (text, kind = 'info') => {
@@ -78,10 +89,10 @@ const patch = (node, html) => {
 }
 
 const renderPanel = () => {
-  if (view.tab === 'configuration') return renderConfiguration(content.configuration, view.draft, lang, { phaseOf: phaseOf(content.workflows), open: view.groups })
+  if (view.tab === 'configuration') return renderConfiguration(content.configuration, view.draft, lang, { phaseOf: phaseOf(content.workflows), open: view.groups }, stand())
   if (view.tab === 'workflow') return renderWorkflows(content.workflows, view.workflow, lang)
   if (view.tab === 'journal') return renderJournal(content.journal, lang)
-  return renderRun(content, lang)
+  return renderRun(content, lang, stand())
 }
 
 const render = () => {
@@ -90,7 +101,7 @@ const render = () => {
   if (content === null) return
   app.dataset.state = 'ready'
   patch($('panel'), renderPanel())
-  patch($('bar'), view.tab === 'configuration' && content.configuration.status === 'ok' ? renderSaveBar(view, lang) : '')
+  patch($('bar'), view.tab === 'configuration' && content.configuration.status === 'ok' ? renderSaveBar(view, lang, stand()) : '')
   if (view.tab === 'workflow') drawArrows()
 }
 
@@ -118,6 +129,7 @@ const boxOf = (rect, origin) => ({ top: rect.top - origin.top, bottom: rect.bott
 const received = (next) => {
   const said = announcement(content, next, lang)
   if (said !== '') $('announcer').textContent = said
+  const before = stand()
   content = next
   if (next.configuration.status !== 'ok') return render()
   const read = JSON.stringify(editable(next.configuration))
@@ -126,10 +138,10 @@ const received = (next) => {
     view.read = read
     view.stale = false
   } else if (read !== view.read) view.stale = true
-  // a field being typed in is not drawn again: only the top and the bar say what changed
-  if (!view.dirty || view.tab !== 'configuration') return render()
+  // a field being typed in is not drawn again: only the top and the bar say what changed, unless the question the notice speaks of changed
+  if (!view.dirty || view.tab !== 'configuration' || stand() !== before) return render()
   patch($('top'), renderHeader(content, view, lang))
-  patch($('bar'), renderSaveBar(view, lang))
+  patch($('bar'), renderSaveBar(view, lang, stand()))
   return undefined
 }
 
@@ -198,10 +210,7 @@ const valueOf = (el, path) => {
   if (path.endsWith('.bdd')) return bddValue(el, path)
   if (el.type === 'checkbox') return el.checked
   if (path.startsWith('components.')) return el.value
-  if (path.endsWith('.model')) {
-    const names = el.value.split(',').map((name) => name.trim()).filter((name) => name !== '')
-    return names.length === 0 ? undefined : names
-  }
+  if (isModelsField(path)) return modelNames(el.value, content.configuration.choices.modelName)
   return el.value === '' ? undefined : el.value
 }
 
@@ -212,15 +221,38 @@ const ruleValue = (path, value) => {
   return { ...rule, family: value }
 }
 
+/**
+ * A models field that holds text the engine would refuse is flagged where it is, with the rule under it,
+ * and the flag goes when the text is names again. The field is not drawn again: the person goes on
+ * typing in it, caret, selection and undo history kept.
+ */
+const flagModels = (el, path, value) => {
+  const flagged = typeof value === 'string'
+  if (!isModelsField(path) || (el.getAttribute('aria-invalid') === 'true') === flagged) return
+  el.parentElement.querySelector('.field-error')?.remove()
+  if (!flagged) {
+    el.removeAttribute('aria-invalid')
+    el.removeAttribute('aria-describedby')
+    return
+  }
+  el.setAttribute('aria-invalid', 'true')
+  el.setAttribute('aria-describedby', modelsErrorId(path))
+  el.insertAdjacentHTML('afterend', modelsError(path, lang))
+}
+
 const edited = (el) => {
   const path = /** @type {string} */ (el.dataset.field)
   const value = valueOf(el, path)
+  const before = stand()
   setAt(view.draft, path, path.startsWith('assign.') ? ruleValue(path, value) : value)
   view.draft.assign = pruned(view.draft.assign)
   view.draft.models = pruned(view.draft.models)
   view.dirty = JSON.stringify(view.draft) !== view.read
   view.error = null
-  patch($('bar'), renderSaveBar(view, lang))
+  // an edit made after a save takes the save's words back, in the top bar, the notice and the bar; a field in use keeps its caret across the draw
+  if (stand() !== before) return render()
+  flagModels(el, path, value)
+  return patch($('bar'), renderSaveBar(view, lang, stand()))
 }
 
 const discard = () => {
@@ -229,6 +261,8 @@ const discard = () => {
   view.error = null
   view.draft = editable(content.configuration)
   view.read = JSON.stringify(view.draft)
+  // the fields were edited where they stand: what was last drawn is no longer what they show, so the panel is drawn again whatever it holds
+  delete $('panel').dataset.html
   render()
 }
 
@@ -242,8 +276,9 @@ const editOf = (draft) => ({
 })
 
 const save = async () => {
+  if (invalidModels(view.draft).length > 0) return
   view.saving = true
-  patch($('bar'), renderSaveBar(view, lang))
+  patch($('bar'), renderSaveBar(view, lang, stand()))
   try {
     const answer = await fetch('/configuration', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Skraft-Token': token }, body: JSON.stringify(editOf(view.draft)) })
     const body = await answer.json().catch(() => ({}))
@@ -253,14 +288,20 @@ const save = async () => {
   }
 }
 
+/** The configuration question the run waits on, by its key; none for any other question. */
+const waitingConfiguration = () => (content?.question?.kind === 'configuration' ? content.question.key : null)
+
+/** A save, which answers nothing: while the run waits on its configuration question, the page says it was saved and that the run still waits for the answer in the chat. */
 const saved = (ok, reason) => {
   view.saving = false
   view.error = ok ? null : reason
   if (ok) {
     view.dirty = false
     view.stale = false
+    view.savedFor = waitingConfiguration()
   }
   toast(reason, ok ? 'info' : 'error')
+  if (ok && stand() === 'saved') $('announcer').textContent = ui(lang, 'configSaved')
   render()
 }
 

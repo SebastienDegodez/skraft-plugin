@@ -18,8 +18,9 @@ import { startPanel } from './canvas-server.mjs'
  * closed by `onClose`; `open` takes the tab the page shows first, and pushes it to a page already
  * open. It takes no answer, neither from its actions, read-only, nor from
  * its page: Copilot puts each question to the person in the chat (ctx-human.mjs); no action
- * writes the configuration, which a model never chooses. A refusal or a failure is a CanvasError
- * with a fixed text.
+ * writes the configuration, which a model never chooses. No run opens it either: it opens when
+ * the person asks for it, and its description tells the model to open it only then. A refusal or
+ * a failure is a CanvasError with a fixed text.
  *
  * @typedef {import('./canvas-content.mjs').ContentHost & {
  *   createCanvas: (options: object) => object,
@@ -38,7 +39,7 @@ export const PIPELINE_CANVAS = 'skraft-pipeline'
 const MAX_PANELS = 4
 
 // Stryker disable StringLiteral: text shown to the person and the model; no engine behaviour reads it
-const DESCRIPTION = "Follow the active skraft pipeline of this working copy live: the workflow's phases and steps, the step under way, reviews, gates and the question it waits on."
+const DESCRIPTION = "Follow the active skraft pipeline of this working copy live: the workflow's phases and steps, the step under way, reviews, gates and the question it waits on. Open it only when the person asks to see it."
 const GET_DESCRIPTION = 'Return what the skraft-pipeline canvas shows now: phases and steps, the step under way, reviews, gates and the question the run waits on. Changes nothing.'
 const CONFIGURATION_DESCRIPTION = 'Return the configuration a skraft run of this working copy starts with, as its Configuration tab shows it: the forge, components and their commands, consents, models of each agent, quality bar. Changes nothing.'
 // Stryker restore StringLiteral

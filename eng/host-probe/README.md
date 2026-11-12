@@ -45,8 +45,8 @@ The session asks for extension access once: the probe approves it for its own fi
 | `confirm-in-autopilot` | #244 | whether the host still relays `confirm` in `autopilot` |
 | `confirm-from-workflow` | #244 | `ctx.session.ui.confirm` inside a workflow run |
 | `confirm-joined-session-from-workflow` | opens one on failure | the joined session's `session.ui.confirm` and `rpc.mode.get` inside a workflow run, as the `skraft-review` consent calls them |
-| `select-joined-session-from-workflow` | opens one on failure | the joined session's `session.ui.select` inside a workflow run reaches the host's handler with the options, and returns the chosen one (`null` when declined): how the `skraft-pipeline` run asks a question with options |
-| `input-joined-session-from-workflow` | opens one on failure | the joined session's `session.ui.input` inside a workflow run reaches the host's handler as a text field, and returns the text (`null` when declined): how the run asks a blocked step's instruction and a refusal's reason |
+| `select-joined-session-from-workflow` | opens one on failure | compatibility measurement: joined session `session.ui.select` reaches the host and returns the chosen option (`null` when declined); not the registered pipeline's native-chat path |
+| `input-joined-session-from-workflow` | opens one on failure | compatibility measurement: joined session `session.ui.input` reaches the host and returns text (`null` when declined); not the registered pipeline's native-chat path |
 | `throwing-workflow` | #247 | what the host returns for a workflow that throws |
 | `workflow-undeclared-phase` | — | `ctx.phase` of a title `meta.phases` does not declare does not throw, the run completes, and `getRunDetail` lists the phase entered with a null ordinal, and a declared phase opened before and after it keeps its ordinal and counts both entries (a phase only an ejected workflow names, #429); a measurement |
 | `broken-workflow-isolation` | #246 | a workflow without `phases` takes the tool of the same join down |
@@ -56,7 +56,6 @@ The session asks for extension access once: the probe approves it for its own fi
 | `canvas-action-invoke` | — | `session.rpc.canvas.action.invoke` reaches the action's handler and returns its result |
 | `confirm-from-canvas` | — | a POST to the canvas page's loopback server, outside any tool call, makes the joined session's `session.ui.confirm` reach the host's handler (no skraft path uses it: the `skraft-pipeline` canvas takes no answer) |
 | `canvas-close` | — | `session.rpc.canvas.close` calls the extension's `onClose` |
-| `canvas-open-from-extension` | — | from a tool call, the extension's joined session opens its own canvas with `session.rpc.canvas.open`: the host calls the extension's `open` with the input given (`{ tab: 'configuration' }`), checked against the canvas's `inputSchema` |
 | `canvas-reopen-other-tab` | — | reopening an open instance with another input calls the extension's open with that input; reports the url the host returns and keeps (listOpen) and its session.canvas.opened events |
 | `canvas-agent-tools` | — | the model gets no canvas tool without `requestCanvasRenderer`, and `list_canvas_capabilities`, `open_canvas`, `invoke_canvas_action` with it |
 | `skraft-extension-loaded` | opens one on failure | `skraft_decide` is offered |
@@ -66,7 +65,8 @@ The session asks for extension access once: the probe approves it for its own fi
 | `skraft-canvas-registered` | opens one on failure | the `skraft-pipeline` canvas is declared in the session (`session.rpc.canvas.list()`) |
 | `skraft-canvas-opens` | opens one on failure | `session.rpc.canvas.open` of `skraft-pipeline`, in a working copy whose pipeline waits on `adr-0`, gives a loopback url and the slug's title; the page answers 200 under `default-src 'none'` and its event stream, opened with the page's token, carries `adr-0` |
 | `skraft-canvas-read-only` | — | the canvas takes no answer: a POST `/answer` with the page's token and Origin answers 404, nothing is asked of the host nor journaled |
-| `skraft-decide-one-question` | opens one on failure | `skraft_decide`, with no argument, puts the question the active pipeline waits on to the host once, as a choice among its options; the option chosen is journaled `host-confirmed`, with no confirmation after it |
+| `skraft-decide-read-question` | opens one on failure | `skraft_decide {}` returns the exact pending question, with no elicitation or journaled answer |
+| `skraft-decide-relayed-answer` | opens one on failure | `skraft_decide {key, answer}` records once with `by: 'decide'`, without elicitation; replaces retired `skraft-decide-one-question` check |
 | `decide-after-cd` | #245 | `skraft_decide` still acts on the first repository after `/cd` |
 | `skraft-mcp-server-loaded` | opens one on failure | the `skraft` server of the plugin's `mcp.json` is started (`session.rpc.mcp.list()`) and `session.rpc.mcp.listTools` lists `skraft_status` |
 | `skraft-mcp-loop-hidden` | opens one on failure | that server offers none of `skraft_start`, `skraft_next`, `skraft_record`, `skraft_review`: the CLI does not name itself `Visual Studio Code` at the handshake; inconclusive when the server is not loaded |
@@ -76,12 +76,17 @@ The session asks for extension access once: the probe approves it for its own fi
 | `plugin-command-listed` | opens one on failure | `session.rpc.commands.list({ includeSkills: true })` lists, once each, the commands a plugin ships under `com.github.copilot/commands/`; reports each `name`, `aliases`, `kind` and `input.hint` (a command named like its plugin and one that is not, which shows the prefix rule) |
 | `plugin-command-input` | opens one on failure | `session.rpc.commands.invoke({ name, input })` returns an `agent-prompt`; reports whether the typed text is appended, substituted for `$ARGUMENTS` or absent (absent fails) |
 | `skraft-command-listed` | opens one on failure | with the real `plugins/skraft-framework` and `plugins/skraft-backlog`, `skraft` and `skraft-refine` are listed once each, no name masking another; reports the exposed names, how the input of the real `skraft` command lands (absent fails), and the `rpc.skills.list()` entries |
+| `plugin-hooks-quiet` | opens one on failure | a session that loads the real `plugins/skraft-framework`, `skraft-backlog` and `skraft-brownfield` makes the runtime write no `[ERROR] [rust:hooks]` line under its `logs/`. Each session gets a runtime of its own through `baseDirectory` (its `COPILOT_HOME`, honoured when the SDK spawns the runtime over stdio; an in-process runtime ignores it). A witness plugin that holds its hooks only at the root must log one first: no line for the witness means the log was not read, and the verdict is `inconclusive`. Reports the lines read for the witness and for the plugins |
 | `copilot-model-refusal` | opens one on failure | with `--agent-calls`: what `ctx.agent` answers for an unknown model; passes when the host accepts it or `refusalOf` reads the error as `model`; the error text is in the report |
 | `copilot-effort-refusal` | opens one on failure | with `--agent-calls`: what `ctx.agent` answers for `reasoningEffort: 'max'` on the first listed model whose name has no `claude`; passes when the host accepts it or `refusalOf` reads the error as `effort` |
 | `agent-skills-preload` | — | with `--agent-calls`: an Agent Plugins fixture holds a skill with a token, an agent that lists it under `skills:` and a twin without; each is asked, with no tool, for the token. `pass` when only the first knows it (Copilot preloads the field), `fail` when neither does, `inconclusive` when the twin knows it too or an agent is not listed |
 
 A check linked to an issue states the issue's premise: `pass` means the premise was measured as
 the issue says. Paste the Markdown report into `docs/v2/host-verification.md`.
+
+The read/record checks measure tool routing, not a model's native question call or desktop
+rendering. Pipeline questions deliberately trust the model's relay of the developer reply;
+review publication retains host confirmation. Historical issue premises stay distinct.
 
 Tests: `tests/tooling/host-probe/` runs the probe against a simulated SDK.
 

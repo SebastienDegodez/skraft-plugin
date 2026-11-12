@@ -65,7 +65,7 @@ test('the canvas draws the workflow as the run goes: a review in progress, then 
     chosen('finding-refuter', 'design_review', 'standard'),
   ])
   assert.deepEqual(content.question, {
-    key: 'adr-1', header: 'ADR', text: RATIFY, usage: 'RATIFIED|REJECTED',
+    key: 'adr-1', kind: 'adr-ratification', header: 'ADR', text: RATIFY, usage: 'RATIFIED|REJECTED',
     how: 'Answer it in the Copilot chat, where Copilot puts it to you; or type skraft decide adr-1 RATIFIED|REJECTED in a terminal.',
   })
   const stream = contentStream(t, opened.url, await tokenOf(opened.url))
@@ -90,7 +90,7 @@ test('the canvas shows a blocked step\'s question and says to answer it in the c
 
   const { question } = await shown()
   assert.deepEqual({ ...question, text: question.text.replace(/; its reason is in .*?\.json\./, '; its reason is in <result>.') }, {
-    key: 'design-1', header: 'Blocked',
+    key: 'design-1', kind: 'blocked', header: 'Blocked',
     text: `design is blocked: solution-architect says it cannot go on; its reason is in <result>.\nLeft by design (1):\n- which payment provider?\n An instruction runs design again on a new pass with what is left above and the instruction; STOP ends the run.\nThe run so far (commits, refusals, incidents): ${join(cwd, '.copilot-tracking', 'skraft-plans', SLUG, 'run-report.md')}`,
     usage: '"<instruction>"|STOP',
     how: 'Answer it in the Copilot chat, where Copilot puts it to you; or type skraft decide design-1 "<instruction>"|STOP in a terminal.',

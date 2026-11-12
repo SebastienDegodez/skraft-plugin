@@ -174,10 +174,11 @@ Copilot vous demande d'abord d'approuver le lancement du workflow et ses limites
 ou **Yes, and always approve this workflow at these limits in this repo**.
 
 Avant toute phase, au premier run d'une copie de travail, Copilot pose une fois dans le chat :
-*Démarrer ce run avec la configuration de cette copie de travail ?* Si votre client affiche les
-canvases, le canvas `skraft-pipeline` s'ouvre sur son onglet **Configuration** : la forge, les
-composants et leurs commandes, les consentements, le modèle de chaque agent et la barre de
-qualité. Modifiez ce qu'il faut et enregistrez, puis répondez **START**. START est gardé dans
+*Démarrer ce run avec la configuration de cette copie de travail ?* Le run n'ouvre jamais le canvas
+de lui-même. Pour voir ou changer la configuration d'abord, demandez à Copilot d'ouvrir le canvas
+`skraft-pipeline` sur son onglet **Configuration** : la forge, les composants et leurs commandes,
+les consentements, le modèle de chaque agent et la barre de qualité. Modifiez ce qu'il faut et
+enregistrez : la question reste dans le chat, répondez ensuite **START**. START est gardé dans
 `skraft-config.local.json`, si bien que les runs suivants démarrent sans demander ; STOP ne démarre
 rien. Passez `configure: true` au workflow pour qu'on vous le redemande. Le canvas a aussi un onglet
 **Run** (où en est le run) et un onglet **Workflow** (chaque workflow que le run peut suivre,

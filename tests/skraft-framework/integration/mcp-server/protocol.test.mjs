@@ -4,7 +4,7 @@ import { PROTOCOL_VERSIONS } from '../../../../plugins/skraft-framework/engine/d
 import { mcpHost } from './mcp-host.mjs'
 
 const TOOL_NAMES = [
-  'skraft_doctor', 'skraft_init', 'skraft_start', 'skraft_next', 'skraft_record', 'skraft_status', 'skraft_report',
+  'skraft_answer', 'skraft_doctor', 'skraft_init', 'skraft_start', 'skraft_next', 'skraft_record', 'skraft_status', 'skraft_report',
   'skraft_journal', 'skraft_gate', 'skraft_review', 'skraft_workflow_check', 'skraft_workflow_diff', 'skraft_workflow_eject', 'skraft_migrate',
 ]
 
@@ -61,7 +61,7 @@ test('a host that runs the pipeline itself, an unknown one or one that gives no 
 
     assert.deepEqual(tools.map(({ name }) => name), TOOL_NAMES.filter((name) => !LOOP_TOOLS.includes(name)), String(client))
     assert.deepEqual(prompts.map(({ name }) => name), ['init', 'status'])
-    assert.doesNotMatch(instructions, /skraft_start|skraft_next|skraft_record|skraft_review/)
+    assert.doesNotMatch(instructions, /calls skraft_start|then skraft_next and skraft_record/)
     assert.match(instructions, /A story or a review runs through the host's own skraft pipeline \(the skraft-pipeline and skraft-review workflows on GitHub Copilot CLI, \/skraft on Claude Code\), which the Skraft orchestrator agent starts; this server starts none\./)
     assert.deepEqual(calls.map(({ error }) => error), LOOP_TOOLS.map(() => ({ code: -32602, message: 'Unknown tool' })))
     assert.deepEqual(prompted.map(({ error }) => error), LOOP_PROMPTS.map(() => ({ code: -32602, message: 'Unknown prompt' })))
@@ -141,7 +141,6 @@ test('the prompts set skraft up, run a story, show where it stands and review a 
   const [runText] = run.result.messages.map(({ role, content }) => `${role}: ${content.text}`)
   assert.match(runText, /^user: Call skraft_start with \{"slug":"pay-by-card","issue":42\}, then skraft_next\.\n/)
   assert.match(runText, /write its final message unchanged to its reply file; then do what then says\./)
-  assert.match(runText, /they answer with skraft decide in their own terminal/)
   assert.match(review.result.messages[0].content.text, /^Call skraft_review with \{"pr":7\}\./)
   assert.match(setUp.result.messages[0].content.text, /^Call skraft_doctor\. Then follow the skraft-init skill/)
   assert.deepEqual((await host.request('prompts/get', { name: 'run', arguments: { slug: 'pay-by-card' } })).result.messages[0].content.text.split('\n')[0], 'Call skraft_start with {"slug":"pay-by-card"}, then skraft_next.')

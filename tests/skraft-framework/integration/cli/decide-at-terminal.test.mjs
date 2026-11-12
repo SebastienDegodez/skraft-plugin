@@ -50,8 +50,8 @@ test('an agent of the agent loop that says it is blocked waits on the person; th
     startAgents(step, llm)
     ;({ step } = await loop(cwd, ['record']))
   }
-  assert.match(step.reason, /^design is blocked: [^]* STOP ends the run\.\nThe run so far \(commits, refusals, incidents\): .+ Options: an instruction in quotes, or STOP\. Stop here and ask the human to answer it with skraft decide in their own terminal; then run next\.$/)
-  assert.equal(step.reason.split('\n').at(-1), `The run so far (commits, refusals, incidents): ${join(cwd, '.copilot-tracking', 'skraft-plans', SLUG, 'run-report.md')} Options: an instruction in quotes, or STOP. Stop here and ask the human to answer it with skraft decide in their own terminal; then run next.`)
+  assert.match(step.reason, /^design is blocked: [^]* STOP ends the run\.\nThe run so far \(commits, refusals, incidents\): .+ Options: an instruction in quotes, or STOP\. Ask the EXACT question and options/)
+  assert.ok(step.reason.includes(`The run so far (commits, refusals, incidents): ${join(cwd, '.copilot-tracking', 'skraft-plans', SLUG, 'run-report.md')}`))
   const asked = []
 
   const decided = await skraft(cwd, ['decide', 'design-1', 'Use the bank gateway'], { confirm: async (question) => { asked.push(question); return true } })
@@ -87,7 +87,7 @@ test('the agent loop waits on the mutation plan, naming its options and an instr
   const decided = await skraft(cwd, ['decide', 'mutation_plan-1', 'Test pay(0) only'], { confirm: async () => true })
   const { step: next } = await loop(cwd, ['next'])
 
-  assert.match(step.reason, /^The mutation gate failed; .* STOP ends the run\. Options: APPLY, an instruction in quotes, or STOP\. Stop here and ask the human to answer it with skraft decide in their own terminal; then run next\.$/)
+  assert.match(step.reason, /^The mutation gate failed; .* STOP ends the run\. Options: APPLY, an instruction in quotes, or STOP\. Ask the EXACT question and options/)
   assert.equal(decided.status, 0, decided.stderr)
   assert.ok(readFileSync(next.dispatches[0].brief, 'utf8').includes('\nA human chose how to go on:\n- Test pay(0) only\n'))
 })

@@ -8,7 +8,6 @@ import { fileURLToPath } from 'node:url'
 import { briefOf } from '../support/pipeline-repository.mjs'
 import { createSkraftDecideTool } from '../../../../plugins/skraft-framework/engine/drivers/copilot-workflow/skraft-decide-tool.mjs'
 import { createHostConfirmation } from '../../../../plugins/skraft-framework/engine/drivers/copilot-workflow/host-confirmation.mjs'
-import { createCanvasOpener } from '../../../../plugins/skraft-framework/engine/drivers/copilot-workflow/canvas-opener.mjs'
 
 export const PLUGIN_ROOT = fileURLToPath(new URL('../../../../plugins/skraft-framework/', import.meta.url))
 export const TEMPLATE_PATH = join(PLUGIN_ROOT, 'assets', 'templates', 'research.template.md')
@@ -41,7 +40,7 @@ export const workingCopy = async () => {
  * @param {object} [options] what createHostConfirmation takes besides the session
  */
 export const copilotHost = (cwd, pluginRoot = PLUGIN_ROOT, session = null, options = {}) => ({
-  cwd, pluginRoot, home: `${cwd}-home`, dialog: createHostConfirmation({ session: () => session, ...options }), canvas: createCanvasOpener({ session: () => session }),
+  cwd, pluginRoot, home: `${cwd}-home`, dialog: createHostConfirmation({ session: () => session, ...options }),
 })
 
 /**
@@ -98,7 +97,7 @@ export const firstOptionPerson = () => answeringSession({ otherwise: ({ options 
  * @param {string} cwd @param {object} [session] @param {object} [options] what createHostConfirmation takes besides the session
  */
 export const decideTool = (cwd, session = firstOptionPerson(), options = {}) => createSkraftDecideTool({
-  directory: () => cwd, pluginRoot: PLUGIN_ROOT, home: `${cwd}-home`, dialog: createHostConfirmation({ session: () => session, ...options }),
+  directory: () => cwd, pluginRoot: PLUGIN_ROOT, home: `${cwd}-home`,
 })
 
 export const trackingDir = (cwd, slug) => join(cwd, '.copilot-tracking', 'skraft-plans', slug)

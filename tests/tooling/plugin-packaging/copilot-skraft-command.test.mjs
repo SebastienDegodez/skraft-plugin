@@ -82,16 +82,6 @@ test('the command routes the word backlog differently from Claude Code only when
   assert.doesNotMatch(prose, /ask(ing)? whether they meant/)
 })
 
-test('no shipped prompt names the skraft_decide tool', () => {
-  const plugins = ['skraft-framework', 'skraft-backlog', 'skraft-brownfield'].map((name) => join(repoRoot, 'plugins', name))
-  const prompts = plugins
-    .flatMap((root) => ['com.github.copilot/agents', 'com.anthropic.claude-code/agents', 'skills', 'com.github.copilot/commands', 'commands'].map((dir) => join(root, dir)))
-    .flatMap(walk)
-    .filter((path) => path.endsWith('.md'))
-  assert.ok(prompts.length > 0)
-  assert.deepEqual(prompts.filter((path) => readFileSync(path, 'utf8').includes('skraft_decide')), [])
-})
-
 test('the command names only agents the plugins ship', () => {
   const shipped = [framework, backlog]
     .flatMap((root) => walk(join(root, 'com.github.copilot/agents')))

@@ -1,0 +1,16 @@
+{
+  "models": {
+    "implementer": {
+      "claude-code": {
+        "model": "sonnet"
+      },
+      "copilot": {
+        "model": [
+          "Claude-Opus_4.8",
+          "o3-mini",
+          "9"
+        ]
+      }
+    }
+  }
+}

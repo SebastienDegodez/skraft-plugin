@@ -5,6 +5,36 @@ Ce que le pilote Copilot suppose de l'hôte, mesuré par `eng/host-probe/copilot
 
 ## Mesures
 
+### 2026-11-12 — questions natives, relais du modèle
+
+Mesuré dans la copie isolée de cette modification, sur macOS, Node 22.23.2,
+Copilot CLI **1.0.109** (version du programme réellement lancé), SDK **1.0.109**.
+Sonde headless sans `--agent-calls`, sans appel de modèle ni publication d'issue :
+43 contrôles, **35 pass**, **5 inconclusive**, **3 fail** de prémisses historiques
+(`unknown-arg-ignored`, `decide-without-confirm`, `decide-after-cd`).
+Ces échecs de prémisse ne sont pas une certification du rendu natif.
+
+| Contrôle | Verdict | Observé |
+| --- | --- | --- |
+| `skraft-decide-read-question` | pass | `{}` rend la question exacte `{key,kind,text,options,refusals,header}` ; zéro élicitation, zéro réponse journalisée |
+| `skraft-decide-relayed-answer` | pass | `{key,answer}` enregistre `RATIFIED` une fois, `by: "decide"` ; zéro élicitation |
+| `decide-after-cd` (#245, prémisse historique) | fail | seul le second espace de travail reçoit la réponse ; le premier reste inchangé |
+| dialogue injecté `select` / `input` | pass | compatibilité conservée ; le workflow de production ne l'utilise plus pour les questions du pipeline |
+
+Les scénarios d'intégration du workflow **réellement enregistré** couvrent la pause avant
+tout agent, `START`, la continuation de questions ADR et scénarios, et `STOP` d'une étape
+bloquée, avec le même contexte de run, sans question ni agent doublé et sans appel `session.ui`.
+Le MCP `skraft_answer` passe directement par Decide dans l'espace choisi, sans consentement TTY.
+Le canvas reste une vue sans route de réponse ; le consentement de publication REVIEW reste
+une confirmation explicite de l'hôte.
+
+Application desktop servant cette conversation : **1.2.0**, version estampillée, lue avec
+`get_app_info`. **Non mesuré** : présentation native `ask_user` / `askQuestions` par le modèle,
+rendu desktop / VS Code, réponse humaine réelle. Les tests simulent le relais ; la sonde
+mesure la lecture et l'enregistrement, pas la fidélité du modèle. Le contrat fait désormais
+confiance au modèle pour relayer la réponse native, sans reçu ni seconde confirmation.
+Les sections suivantes gardent leurs mesures historiques de l'ancien dialogue.
+
 ### En attente de mesure
 
 Ce que le pilote suppose déjà sans mesure ; la prochaine passe de la sonde remplace chaque ligne par son verdict.
@@ -21,6 +51,7 @@ Ce que le pilote suppose déjà sans mesure ; la prochaine passe de la sonde rem
 | agent lancé : même question sous Claude Code et sous VS Code | — | not measured, hors de cette sonde | idem |
 | Claude Code (mod) : effort d'un sous-agent réécrit par `turn.step` avec `CLAUDE_CODE_EFFORT_LEVEL` posée, lancements en parallèle, autre modèle que `sonnet`, session interactive | #258 | not measured | `agent-runner.mjs` (`createAgentEfforts`), `claude-mod-driver.mjs` (`turnStep`), `skraft-mod.tsx` (`turn.step`) ; mesuré sur 2.1.291 et 2.1.314 sous `-p`, lancements en parallèle compris (3 simultanés, 60 pas), voir la section #258 |
 | panneau déjà ouvert : le rendu (app Copilot, VS Code, TUI) recharge-t-il la page quand open rend une autre url ? | #430 | not measured, demande une session interactive avec un rendu de canvas (la sonde est headless) | rien : le serveur pousse l'onglet dans le flux de la page ouverte |
+| Copilot (app, CLI) : le modèle n'ouvre pas de lui-même le canvas `skraft-pipeline`, dont la description dit de ne l'ouvrir que sur demande de la personne | #537 | not measured, demande un appel de modèle (la sonde n'en fait pas sans `--agent-calls`) | `engine/drivers/copilot-workflow/pipeline-canvas.mjs` (`DESCRIPTION`) : plus aucun run n'ouvre le canvas |
 | format des champs lus : `System.Description` et `Microsoft.VSTS.Common.AcceptanceCriteria` par `az boards work-item show`, sur un work item créé à la main (HTML) et un créé par un agent en Markdown (`multilineFieldsFormat`) | #395 | not measured ; supposé : HTML ou Markdown selon le champ, d'où la conversion `markdownOf` seulement quand le texte contient une balise | `domain/pipeline/html-markdown.mjs`, `domain/pipeline/work-item.mjs` |
 | `az boards work-item show` d'un work item absent ou illisible : stderr `TF401232`, et « absent » comme « sans accès » le partagent-ils | #395 | not measured | `infrastructure/code-host/az-boards.mjs` (`NO_SUCH_WORK_ITEM`) : lu seulement pour distinguer `issue-not-found`, jamais transmis |
 | `az boards work-item show` avec `--detect=false` et sans `--fields` (un champ absent du process peut-il faire échouer l'appel) | #395 | not measured | `infrastructure/code-host/az-boards.mjs` |
@@ -60,6 +91,35 @@ Ce que le pilote suppose déjà sans mesure ; la prochaine passe de la sonde rem
 | VS Code : `clientInfo.name` envoyé à `initialize` vaut `Visual Studio Code` (ou `Visual Studio Code - Insiders`) ; Claude Code envoie un autre nom | — | not measured ; lu dans microsoft/vscode `src/vs/workbench/contrib/mcp/common/mcpServerRequestHandler.ts` (`productService.nameLong`), rien lu pour Claude Code ; Copilot CLI 1.0.105 mesuré (section suivante). Un nom inattendu cache la boucle d'agent (repli `node`), jamais l'inverse | `drivers/cli/mcp-server.mjs` (`LOOP_HOSTS`) |
 | tout hôte : nom sous lequel les prompts MCP `init`, `run`, `status`, `review` apparaissent dans le menu `/` | — | not measured | `drivers/cli/mcp-prompts.mjs` |
 | tout hôte : `notifications/progress` affichées pendant un appel long (`skraft_next`, `skraft_gate`) quand l'hôte envoie un `progressToken` | — | not measured | `drivers/cli/mcp-server.mjs` |
+
+### Sonde d'hôte Copilot — 2026-11-11 (branche fix/canvas-hve-alignment, le run n'ouvre plus le canvas, #537)
+
+Aucune passe de la sonde : le contrôle `canvas-open-from-extension` est retiré, avec l'outil `skraft_probe_canvas_open_self` du canvas de la sonde. Il mesurait ce que faisait le run `skraft-pipeline` avant #537 : ouvrir son canvas sur l'onglet Configuration par `session.rpc.canvas.open` de sa session jointe (`canvas-opener.mjs`, supprimé). Le pilote n'ouvre plus rien : le canvas s'ouvre quand la personne le demande, par l'outil `open_canvas` que l'hôte offre au modèle (`canvas-agent-tools`, inchangé) ou par `/skraft status`. Un contrôle que rien ne suppose ne reste pas dans la sonde.
+
+Les lignes `canvas-open-from-extension` des sections plus bas (CLI 1.0.102-1) restent l'historique : l'hôte savait ouvrir un canvas depuis l'extension, skraft ne s'en sert plus. `canvas-reopen-other-tab` reste : un panneau déjà ouvert que la personne fait rouvrir sur un autre onglet.
+
+Non mesuré : que le modèle n'ouvre pas le canvas de lui-même, sa description lui disant de ne l'ouvrir que sur demande (ligne ajoutée à « En attente de mesure »).
+
+### Sonde d'hôte Copilot — 2026-11-11 (branche fix/canvas-hve-alignment, erreur de hooks dans le journal)
+
+Runtime de l'app GitHub Copilot 1.0.106-8 (`~/Library/Caches/github-copilot-sdk/cli/1.0.106-8/` : `copilot-runtime` nu, puis le binaire `copilot` complet) · SDK 1.0.106-8 · Node v22.23.2 · darwin 25.5.0. Aucun appel de modèle. Le contrôle `plugin-hooks-quiet` est celui de `eng/host-probe/copilot-probe.mjs`, lancé seul par un script jetable hors dépôt : la sonde entière suppose un runtime qui lance les extensions, et le runtime nu n'en a pas (`Failed to initialize standalone session extensions: No extension launch provider is registered for standalone extensions`).
+
+Question : quand le runtime écrit-il une ligne `[ERROR] [rust:hooks]` pour un plugin qui déclare le schéma Agent Plugins v1, et que livrer pour que les plugins skraft n'en fassent écrire aucune ? Chaque variante est un plugin au `$schema` v1 chargé par `createSession({ pluginDirectories })` sous un `COPILOT_HOME` neuf (`baseDirectory`) ; le journal `logs/` est lu après `disconnect`.
+
+| Contrôle | Issue | Verdict | Observé |
+| --- | --- | --- | --- |
+| `hooks/hooks.json` seul, à la racine (`{ "modules": [...] }`) | — | ligne | `[ERROR] [rust:hooks] Plugin "<nom>" declares the Agent Plugins v1 $schema, so its hooks are read only from "com.github.copilot/hooks/hooks.json". "hooks/hooks.json" at the plugin root is no longer read; move it there.` |
+| racine = `{ "hooks": {} }` | — | ligne | la même : le fichier racine n'est plus lu, quel que soit son contenu |
+| `com.github.copilot/hooks/hooks.json` = `{}`, seul ou avec le fichier racine | — | ligne | `[ERROR] [rust:hooks] [plugin-source "<nom>"] Invalid hooks config for plugin "<nom>" at "<dossier>/com.github.copilot/hooks/hooks.json": hooks: hooks must be an object` |
+| racine + `com.github.copilot/hooks/hooks.json` = `{ "hooks": {} }` | — | silence | aucune ligne |
+| aucun fichier de hooks ; ou hooks sous `com.anthropic.claude-code/hooks/hooks.json` | — | silence | aucune ligne |
+| `plugin-hooks-quiet`, runtime nu | ouvre une issue en cas d'échec | pass | `witness` : 1 ligne ; `plugins` : `[]` (4,3 s) |
+| `plugin-hooks-quiet`, runtime nu, copie `com.github.copilot/hooks/hooks.json` retirée de skraft-framework | ouvre une issue en cas d'échec | fail | `plugins` : `[ERROR] [rust:hooks] Plugin "skraft" declares the Agent Plugins v1 $schema … move it there.` |
+| `plugin-hooks-quiet`, binaire `copilot` complet | ouvre une issue en cas d'échec | pass | `witness` : 2 lignes identiques ; `plugins` : `[]` (5,7 s) |
+
+Lecture : un plugin au schéma v1 ne lit ses hooks que sous `com.github.copilot/hooks/hooks.json`. Un `hooks/hooks.json` à la racine, celui du mod Claude Code, n'est plus lu ; le runtime l'écrit dans `<COPILOT_HOME>/logs/process-*.log`, une ligne par session, déjà là quand `createSession` rend la main, sans que la session échoue. Un fichier `{}` est rejeté (« hooks must be an object ») ; `{ "hooks": {} }` est accepté et ne déclare rien, d'où ce contenu pour la copie Copilot et le fichier racine gardé pour Claude Code. `baseDirectory` devient le `COPILOT_HOME` du runtime que le SDK lance (stdio, tcp) et n'a aucun effet en processus (commentaire du SDK, `copilot-sdk/index.js`) : le témoin y reste silencieux et le verdict `inconclusive`, jamais un `pass` à tort. Non mesuré : Copilot CLI 1.0.109 et 1.0.102-1, l'épingle de `copilot-host-smoke.yml`, où le contrôle n'est donc pas exigé.
+
+Mutations à la main : témoin ignoré (`if (witness.length === 0)` remplacé par `if (false)`) → le test de l'hôte silencieux échoue ; copie `com.github.copilot/hooks/hooks.json` retirée du plugin → 13 tests de la sonde échouent et, sur le runtime réel, le contrôle rend `fail` avec la ligne du plugin `skraft`. Restauré, tout passe.
 
 ### Shell d'un agent : terminal et variables — 2026-11-09 (branche feat/564-deliver-per-scenario, `skraft decide`)
 
@@ -358,10 +418,10 @@ Non mesuré : que l'app GitHub Copilot (2.0.0-alpha.14) et VS Code affichent dan
 
 ### Canvas `skraft-pipeline` : modèle de menace et cadre
 
-- **Le canvas ne prend aucune réponse** (depuis le 2026-10-29). Sa page n'a ni bouton ni route de réponse, et les actions offertes au modèle (`get_pipeline`, `get_configuration`) sont en lecture seule : chaque question se pose dans le chat, par l'élicitation de l'hôte (règle « A human decision needs the host » d'`AGENTS.md`). « Démarrer avec cette configuration ? » aussi : l'onglet Configuration la montre, la réponse START ou STOP vient du chat et se journalise `host-confirmed`.
+- **Le canvas ne prend aucune réponse** (depuis le 2026-10-29). Sa page n'a ni bouton ni route de réponse, et les actions offertes au modèle (`get_pipeline`, `get_configuration`) sont en lecture seule. Depuis le relais natif, chaque question du pipeline passe par l'outil natif proposé au modèle (exception pipeline d'`AGENTS.md`), y compris START/STOP de configuration : journal `by: "decide"`, sans attestation de l'hôte.
 - **L'onglet Configuration écrit la configuration, et rien d'autre** (#355). Sa seule route d'écriture, `POST /configuration`, exige le jeton du panneau dans l'en-tête `X-Skraft-Token` (comparé en temps constant ; un formulaire d'un autre site ne pose pas d'en-tête), aucune autre `Origin` que celle du panneau, `Content-Type: application/json` et un corps de 64 Kio au plus. Le moteur vérifie la modification avec les règles du chargement de la configuration et n'écrit rien quand un fichier serait invalide. Aucune action du modèle n'écrit la configuration : un argument écrit par un modèle ne choisit jamais un modèle ni une commande.
 - **Le jeton tient à l'écart les autres lecteurs.** Chaque panneau a un jeton aléatoire qui ne voyage que dans l'url que `open` rend à l'hôte (`http://127.0.0.1:<port>/?t=<jeton>`) ; la page et le flux l'exigent, comparé par empreinte SHA-256 en temps constant, et le HTML ne le porte pas. Un autre processus local ou une page de navigateur ne lit donc pas la vue du run. Le Host doit être l'adresse loopback liée (pas de rebinding DNS), le serveur n'écoute que sur 127.0.0.1, et `Referrer-Policy: no-referrer` garde le jeton hors des en-têtes `Referer`.
-- **La limite de débit** (`host-confirmation.mjs`, cinq demandes en dix minutes, partagée par le run et `skraft_decide`) ne compte une demande qu'une fois passées les gardes d'élicitation et de mode, juste avant d'appeler le dialogue. Une requête refusée avant ne la consomme pas.
+- **Ancienne limite de débit** : le plafond de cinq dialogues en dix minutes a été retiré le 2026-11-04. Le chemin natif ne lance aucun dialogue depuis le workflow ou `skraft_decide`.
 - **`Sec-Fetch-Site` (#430).** Le flux et l'enregistrement exigent, avec le jeton, un `Sec-Fetch-Site` absent, `same-origin` ou `none` : une requête qu'un navigateur dit venue d'un autre site (`cross-site`) ou d'une autre origine du même site (`same-site`, un autre port de 127.0.0.1) est refusée 403, même avec le jeton. Jamais sur `GET /` : l'hôte navigue le cadre depuis sa propre origine (`cross-site`), et l'origine qui l'embarque n'est pas mesurée.
 - **`Cross-Origin-Resource-Policy: same-origin` (#430)** sur les assets, le flux et les réponses JSON (refus compris), **pas sur la page** : sous un embarqueur COEP `require-corp`, un document en `same-origin` serait bloqué dans le cadre, et l'origine qui embarque le panneau reste non mesurée.
 - **Limites de connexion (#430, Node 22.17.1).** `requestTimeout` et `headersTimeout` à 10 s, `keepAliveTimeout` à 5 s, `connectionsCheckingInterval` à un dixième du délai de requête : une socket muette ou une requête dont les en-têtes ne finissent pas reçoit 408 et est fermée, une connexion inactive est fermée. Un flux SSE n'est pas coupé : `requestTimeout` ne couvre que la réception de la requête (mesuré, une réponse ouverte 3 s). `server.close()` n'aboutit pas tant qu'une connexion qui n'a envoyé aucune requête reste ouverte : `closeAllConnections()` suit donc `close()`. Un écouteur `error` sans effet évite qu'un événement sans écouteur n'emporte le processus de la session.
@@ -381,7 +441,10 @@ Sous VS Code, une action du canvas tourne hors de tout tour de chat et `session.
 
 Non mesuré : un dialogue que la personne ferme sans répondre pourrait rendre `undefined` plutôt que `false` ; il serait alors lu comme `not-asked`, sans enregistrement non plus.
 
-#### Limites du dialogue d'hôte (#418)
+#### Limites historiques du dialogue d'hôte (#418)
+
+Cette table décrit l'ancien chemin et ses tests au moment de la mesure. Le relais natif
+n'attend aucune réponse dans l'extension ; la compatibilité de dialogue injecté reste séparée.
 
 | Point | Côté moteur (hôte simulé) | Côté hôte réel |
 | --- | --- | --- |

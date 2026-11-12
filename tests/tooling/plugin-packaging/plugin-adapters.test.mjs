@@ -63,11 +63,32 @@ test('CLI accepts only flat runtime layout and defaults to read-only check', () 
   assert.deepEqual(parseArgs([]), { mode: 'check', pluginRoot: defaultPluginRoot, layout: 'flat' })
   for (const args of [['--layout', 'nested'], ['--check', '--apply'], ['--unknown'], ['--plugin-root']]) assert.throws(() => parseArgs(args))
 })
-test('a hook manifest that only declares mod modules gets no Copilot copy', (t) => {
+test('a hook manifest that only declares mod modules gets a Copilot copy that declares no hook', (t) => {
   const root = fixture(t)
   put(root, 'hooks/hooks.json', '{ "modules": ["./mod.tsx"] }\n')
   rmSync(join(root, 'com.github.copilot/hooks'), { recursive: true, force: true })
+  assert.equal(sync(root, 'check').ok, false)
+  sync(root)
+  assert.equal(readFileSync(join(root, 'com.github.copilot/hooks/hooks.json'), 'utf8'), '{ "hooks": {} }\n')
+  assert.equal(readFileSync(join(root, 'hooks/hooks.json'), 'utf8'), '{ "modules": ["./mod.tsx"] }\n')
   assert.equal(sync(root, 'check').ok, true)
   put(root, 'com.github.copilot/hooks/hooks.json', '{}\n')
+  assert.equal(sync(root, 'check').ok, false)
+})
+
+test('a hook manifest that declares command hooks gets a Copilot copy that keeps them, read from the plugin root', (t) => {
+  const root = fixture(t)
+  put(root, 'hooks/hooks.json', '{ "hooks": { "SessionStart": [{ "command": "${CLAUDE_PLUGIN_ROOT}/on-start.sh" }] } }\n')
+  sync(root)
+  assert.equal(readFileSync(join(root, 'com.github.copilot/hooks/hooks.json'), 'utf8'), '{ "hooks": { "SessionStart": [{ "command": "${PLUGIN_ROOT}/on-start.sh" }] } }\n')
+  assert.equal(sync(root, 'check').ok, true)
+})
+
+test('a hook manifest without a root manifest leaves no Copilot hook copy', (t) => {
+  const root = fixture(t)
+  rmSync(join(root, 'hooks'), { recursive: true, force: true })
+  rmSync(join(root, 'com.github.copilot/hooks'), { recursive: true, force: true })
+  assert.equal(sync(root, 'check').ok, true)
+  put(root, 'com.github.copilot/hooks/hooks.json', '{ "hooks": {} }\n')
   assert.equal(sync(root, 'check').ok, false)
 })
