@@ -26,6 +26,11 @@ stimuli:
       how this service should be shaped to support it, and leave behind something the next
       person can act on and argue with — including which choices are now settled for this
       codebase and why.
+
+      For this run, write the consistency matrix to
+      `.copilot-tracking/skraft-plans/pricing/details/2026-11-12/consistency-matrix-discount.md`.
+      Write the run result JSON to
+      `.copilot-tracking/skraft-plans/pricing/results/design-1-1.json`.
     tags:
       agent: solution-architect
       scenario: refined-story-to-decisions
@@ -54,6 +59,7 @@ stimuli:
         - src: fixtures/refined-story/src/CheckoutPricing.Application/CalculateLoyaltyDiscount.cs
           dest: src/CheckoutPricing.Application/CalculateLoyaltyDiscount.cs
       commands:
+        - 'mkdir -p .copilot-tracking/skraft-plans/pricing/details/2026-11-12 .copilot-tracking/skraft-plans/pricing/results'
         - 'git init --quiet'
         - 'git config user.email eval@example.invalid'
         - 'git config user.name "SKRAFT Evaluation"'
@@ -92,7 +98,17 @@ stimuli:
       - type: diff-contains
         name: Design artefacts land in the DESIGN artefact location
         config:
-          pattern: '\.copilot-tracking/skraft-plans/pricing/details/\d{4}-\d{2}-\d{2}/'
+          pattern: '\.copilot-tracking/skraft-plans/pricing/details/\d{4}-\d{2}-\d{2}/consistency-matrix-discount\.md'
+      - type: file-matches
+        name: The design matrix records a passing consistency gate
+        config:
+          path: '.copilot-tracking/skraft-plans/pricing/details/2026-11-12/consistency-matrix-discount.md'
+          pattern: '(?m)^-\s*consistency-gate:\s*PASS\b'
+      - type: file-matches
+        name: The run result records completion
+        config:
+          path: '.copilot-tracking/skraft-plans/pricing/results/design-1-1.json'
+          pattern: '(?s)"status"\s*:\s*"done".*"summary"\s*:\s*".+"'
       - type: run-command
         name: No production or test code is written during design
         config:
@@ -118,6 +134,9 @@ stimuli:
     prompt: |
       Design the loyalty tier pricing change for this service so the next phase can start
       from it.
+
+      For this run, write the blocked result JSON to
+      `.copilot-tracking/skraft-plans/pricing/results/design-1-1.json`.
     tags:
       agent: solution-architect
       scenario: missing-acceptance-criteria
@@ -143,13 +162,33 @@ stimuli:
           dest: src/CheckoutPricing.Domain/LoyaltyTier.cs
         - src: fixtures/refined-story/src/CheckoutPricing.Application/CalculateLoyaltyDiscount.cs
           dest: src/CheckoutPricing.Application/CalculateLoyaltyDiscount.cs
+      commands:
+        - 'mkdir -p .copilot-tracking/skraft-plans/pricing/results'
+        - 'git init --quiet'
+        - 'git config user.email eval@example.invalid'
+        - 'git config user.name "SKRAFT Evaluation"'
+        - 'git add .'
+        - 'git commit --quiet -m "test: story with absent acceptance criteria"'
     graders:
       - type: completed
       - type: output-matches
-        name: The missing input is reported as a structured blocker
+        name: The missing input is returned as a human decision with alternatives
         config:
-          pattern: '(?s)"status"\s*:\s*"blocked"'
-      - type: diff-empty
+          pattern: '(?is)"status"\s*:\s*"blocked".*"summary"\s*:\s*".*(?:A\).*B\).*C\)|A[,;].*B[,;].*C)'
+      - type: file-matches
+        name: The run result records the unanswered product decision
+        config:
+          path: '.copilot-tracking/skraft-plans/pricing/results/design-1-1.json'
+          pattern: '(?is)"status"\s*:\s*"blocked".*"summary"\s*:\s*".*(?:A\).*B\).*C\)|A[,;].*B[,;].*C)'
+      - type: run-command
+        name: No partial design is left for downstream phases
+        config:
+          command: bash
+          args:
+            - '-lc'
+            - 'test -z "$(git status --porcelain -- docs/adr docs/architecture docs/domain/event-model .copilot-tracking/skraft-plans/pricing/details)"'
+          expected_exit_code: 0
+          timeout: 30s
       - type: skill-invocation
         name: Mandatory design skills are loaded
         config:
@@ -163,6 +202,9 @@ stimuli:
       One of them settled where reductions get computed, and it was taken for a very different
       kind of reduction. Design this story properly and make sure nobody downstream inherits a
       contradiction they cannot see.
+
+      For this run, the blocked result JSON belongs at
+      `.copilot-tracking/skraft-plans/pricing/results/design-1-1.json`.
     tags:
       agent: solution-architect
       scenario: contradicted-decision
@@ -193,6 +235,7 @@ stimuli:
         - src: fixtures/refined-story/src/CheckoutPricing.Application/CalculateLoyaltyDiscount.cs
           dest: src/CheckoutPricing.Application/CalculateLoyaltyDiscount.cs
       commands:
+        - 'mkdir -p .copilot-tracking/skraft-plans/pricing/results'
         - 'git init --quiet'
         - 'git config user.email eval@example.invalid'
         - 'git config user.name "SKRAFT Evaluation"'
@@ -217,13 +260,22 @@ stimuli:
             - 'docs/adr/adr-002-reductions-in-api-layer.md'
           expected_exit_code: 0
           timeout: 30s
+      - type: output-matches
+        name: The conflict is returned as a human decision with alternatives
+        config:
+          pattern: '(?is)A\).*B\).*C\).*"status"\s*:\s*"blocked"'
+      - type: file-matches
+        name: The run result records the unresolved decision
+        config:
+          path: '.copilot-tracking/skraft-plans/pricing/results/design-1-1.json'
+          pattern: '(?s)"status"\s*:\s*"blocked".*"summary"\s*:\s*".*(?:A\).*B\).*C\)|A[,;].*B[,;].*C)'
       - type: run-command
-        name: The contradiction is recorded where a human can ratify it
+        name: No partial design is left for downstream phases
         config:
           command: bash
           args:
             - '-lc'
-            - 'git status --porcelain -- .copilot-tracking docs/adr | grep -qiE "supersession|decision-drift|blocker"'
+            - 'test -z "$(git status --porcelain -- docs/adr docs/architecture docs/domain/event-model .copilot-tracking/skraft-plans/pricing/details)"'
           expected_exit_code: 0
           timeout: 30s
       - type: run-command

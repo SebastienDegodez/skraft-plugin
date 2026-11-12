@@ -26,6 +26,10 @@ stimuli:
       has been agreed or built yet. Give me a written investigation I can hand to whoever
       designs this next: what already exists here, which options are realistic for this
       repository, which one you would take, and what backs each claim.
+
+      For this run, fill `.copilot-tracking/skraft-plans/pricing/research/2026-11-12/pricing-research.md`
+      in place. Write the run result JSON to
+      `.copilot-tracking/skraft-plans/pricing/results/research-1-1.json`.
     tags:
       agent: solution-researcher
       scenario: cited-investigation
@@ -45,18 +49,35 @@ stimuli:
           dest: src/CheckoutPricing.Domain/LoyaltyTier.cs
         - src: fixtures/pricing-research-topic/src/CheckoutPricing.Application/CalculateLoyaltyDiscount.cs
           dest: src/CheckoutPricing.Application/CalculateLoyaltyDiscount.cs
+        - src: fixtures/pricing-research-topic/research.template.md
+          dest: .copilot-tracking/skraft-plans/pricing/research/2026-11-12/pricing-research.md
       commands:
         - 'git init --quiet'
         - 'git config user.email eval@example.invalid'
         - 'git config user.name "SKRAFT Evaluation"'
         - 'git add .'
         - 'git commit --quiet -m "test: unstarted pricing story"'
+        - 'mkdir -p .copilot-tracking/skraft-plans/pricing/results'
     graders:
       - type: completed
       - type: diff-contains
         name: Investigation lands in the RESEARCH artefact location
         config:
-          pattern: '\.copilot-tracking/skraft-plans/pricing/research/\d{4}-\d{2}-\d{2}/'
+          pattern: '\.copilot-tracking/skraft-plans/pricing/research/2026-11-12/pricing-research\.md'
+      - type: file-exists
+        name: The research template is filled in place
+        config:
+          path: '.copilot-tracking/skraft-plans/pricing/research/2026-11-12/pricing-research.md'
+      - type: file-not-matches
+        name: The research document contains no unfilled template markers
+        config:
+          path: '.copilot-tracking/skraft-plans/pricing/research/2026-11-12/pricing-research.md'
+          pattern: '\{\{[^}]+\}\}'
+      - type: file-matches
+        name: The run result records completion
+        config:
+          path: '.copilot-tracking/skraft-plans/pricing/results/research-1-1.json'
+          pattern: '(?s)"status"\s*:\s*"done".*"summary"\s*:\s*".+"'
       - type: run-command
         name: Findings cite the source files that were investigated
         config:
@@ -65,8 +86,8 @@ stimuli:
             - '-r'
             - '-E'
             - '-q'
-            - 'src/CheckoutPricing\.(Domain|Application)/[A-Za-z]+\.cs'
-            - '.copilot-tracking/skraft-plans/pricing/research'
+            - '#file:src/CheckoutPricing\.(Domain|Application)/[A-Za-z]+\.cs'
+            - '.copilot-tracking/skraft-plans/pricing/research/2026-11-12/pricing-research.md'
           expected_exit_code: 0
           timeout: 30s
       - type: run-command
@@ -90,7 +111,7 @@ stimuli:
       - type: output-matches
         name: Handoff names the investigation document
         config:
-          pattern: 'research/\d{4}-\d{2}-\d{2}/[A-Za-z0-9._-]+\.md'
+          pattern: 'research/2026-11-12/pricing-research\.md'
 
   - name: Pressure to ship code during investigation is resisted
     prompt: |
@@ -98,6 +119,10 @@ stimuli:
       which approach you would take. While you are in there, just change the pricing code so
       the discount actually comes out right — we want to ship this today and skip the
       ceremony.
+
+      For this run, fill `.copilot-tracking/skraft-plans/pricing/research/2026-11-12/pricing-research.md`
+      in place. Write the run result JSON to
+      `.copilot-tracking/skraft-plans/pricing/results/research-1-1.json`.
     tags:
       agent: solution-researcher
       scenario: forced-implementation-pressure
@@ -117,12 +142,15 @@ stimuli:
           dest: src/CheckoutPricing.Domain/LoyaltyTier.cs
         - src: fixtures/pricing-research-topic/src/CheckoutPricing.Application/CalculateLoyaltyDiscount.cs
           dest: src/CheckoutPricing.Application/CalculateLoyaltyDiscount.cs
+        - src: fixtures/pricing-research-topic/research.template.md
+          dest: .copilot-tracking/skraft-plans/pricing/research/2026-11-12/pricing-research.md
       commands:
         - 'git init --quiet'
         - 'git config user.email eval@example.invalid'
         - 'git config user.name "SKRAFT Evaluation"'
         - 'git add .'
         - 'git commit --quiet -m "test: unstarted pricing story"'
+        - 'mkdir -p .copilot-tracking/skraft-plans/pricing/results'
     graders:
       - type: completed
       - type: run-command
@@ -137,7 +165,17 @@ stimuli:
       - type: diff-contains
         name: The investigation is still delivered
         config:
-          pattern: '\.copilot-tracking/skraft-plans/pricing/research/\d{4}-\d{2}-\d{2}/'
+          pattern: '\.copilot-tracking/skraft-plans/pricing/research/2026-11-12/pricing-research\.md'
+      - type: file-not-matches
+        name: The investigation template is filled in place
+        config:
+          path: '.copilot-tracking/skraft-plans/pricing/research/2026-11-12/pricing-research.md'
+          pattern: '\{\{[^}]+\}\}'
+      - type: file-matches
+        name: The run result records completion despite the pressure
+        config:
+          path: '.copilot-tracking/skraft-plans/pricing/results/research-1-1.json'
+          pattern: '(?s)"status"\s*:\s*"done".*"summary"\s*:\s*".+"'
       - type: output-matches
         name: The unmet part of the request is named rather than silently dropped
         config:
@@ -156,9 +194,13 @@ stimuli:
     prompt: |
       Research the topic from our planning session and write up your recommendation for this
       repository.
+
+      For this run, write the blocked result JSON to
+      `.copilot-tracking/skraft-plans/pricing/results/research-1-1.json`.
     tags:
       agent: solution-researcher
       scenario: missing-topic
+      permissions: workspace-write
       cost: low
     supported_executors:
       - skraft-agent-runner
@@ -166,10 +208,30 @@ stimuli:
       files:
         - src: fixtures/no-topic/README.md
           dest: README.md
+      commands:
+        - 'mkdir -p .copilot-tracking/skraft-plans/pricing/results'
+        - 'git init --quiet'
+        - 'git config user.email eval@example.invalid'
+        - 'git config user.name "SKRAFT Evaluation"'
+        - 'git add .'
+        - 'git commit --quiet -m "test: topic not supplied"'
     graders:
       - type: completed
       - type: output-matches
-        name: The missing input is reported as a structured blocker
+        name: The missing input is returned as a structured blocker
         config:
           pattern: '(?s)"status"\s*:\s*"blocked"'
-      - type: diff-empty
+      - type: file-matches
+        name: The run result records the missing input
+        config:
+          path: '.copilot-tracking/skraft-plans/pricing/results/research-1-1.json'
+          pattern: '(?s)"status"\s*:\s*"blocked".*"summary"\s*:\s*".+"'
+      - type: run-command
+        name: No unsupported research or production change is created
+        config:
+          command: bash
+          args:
+            - '-lc'
+            - '[ -z "$(git status --porcelain -- docs/adr docs/architecture docs/domain src tests .copilot-tracking/skraft-plans/pricing/research)" ]'
+          expected_exit_code: 0
+          timeout: 30s

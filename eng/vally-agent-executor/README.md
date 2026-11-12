@@ -64,15 +64,11 @@ Agent prose such as `I loaded outside-in-tdd` satisfies none of these proofs.
 
 ## Pilot safety
 
-Initial missing-precondition pilot is read-only:
-
-- custom agent receives skill + read-only workspace tools only;
-- Copilot permission handler approves reads and rejects writes/shell requests;
-- Vally owns isolated workspace;
-- infinite sessions and session telemetry are disabled;
-- one worker and bounded timeout are required for live run.
-
-Tool mapping and file writes belong to later Node red-to-green slice, after routing is proven.
+Stimuli are read-only unless they declare `tags.permissions: workspace-write`. That
+scope enables `create`, `edit`, and `bash`; the Copilot permission handler still
+confines reads and writes to the prepared workspace and limits shell commands.
+Vally owns the isolated workspace, and infinite sessions and session telemetry
+remain disabled.
 
 ## Current status
 
