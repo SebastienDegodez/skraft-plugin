@@ -52,7 +52,8 @@ test('a folder of the role the machine cannot list gets no .gitkeep: the run ask
 
   const outcome = await host.start()
 
-  assert.deepEqual(outcome, { status: 'waiting', slug: SLUG, phase: 'DESIGN', code: 'environment', reason: waitingOnEnvironment('adr', UNLISTABLE_ADRS) })
+  assert.deepEqual({ status: outcome.status, slug: outcome.slug, phase: outcome.phase, code: outcome.code }, { status: 'waiting', slug: SLUG, phase: 'DESIGN', code: 'environment' })
+  assert.ok(outcome.reason.startsWith(waitingOnEnvironment('adr', UNLISTABLE_ADRS).split('\nThe run so far')[0]))
   assert.equal(host.workspace.files.has('docs/adr/.gitkeep'), false)
   assert.deepEqual(folderCommits(host), [['docs/domain/event-model/.gitkeep']])
 })

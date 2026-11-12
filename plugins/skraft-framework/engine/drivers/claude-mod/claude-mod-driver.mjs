@@ -47,6 +47,7 @@ import { takesInstruction } from '../../domain/decisions/questions.mjs'
  *   spawn: (args: SpawnArgs) => Promise<SpawnResult>,
  *   ask: import('./dialog-human.mjs').AskDialog,
  *   run: import('./mod-processes.mjs').ModRun,
+ *   environment: import('./mod-processes.mjs').ModEnvironment,
  *   sessionCostUsd: () => Promise<number | null>,
  *   later: (run: () => void) => void,
  *   every: (ms: number, run: () => void) => { cancel: () => void },
@@ -184,7 +185,7 @@ const compose = async (host) => {
     ...pluginPorts(files, host.pluginRoot, root),
     hasher: createWebCryptoHasher(),
     ...configurationPorts(host, files, root),
-    ...gitPorts(createModCommandRunner({ run: host.run, root })),
+    ...gitPorts(createModCommandRunner({ run: host.run, root, environment: host.environment })),
   }
 }
 

@@ -130,7 +130,8 @@ test('Git that cannot list a repository\'s changes waits for a human; once retri
 
   const outcome = await host.run()
 
-  assert.deepEqual(outcome, { status: 'waiting', slug: SLUG, phase: 'RESEARCH', code: 'environment', reason: waitingOnEnvironment('research', 'Git cannot list what changed in . since root-0') })
+  assert.deepEqual({ status: outcome.status, slug: outcome.slug, phase: outcome.phase, code: outcome.code }, { status: 'waiting', slug: SLUG, phase: 'RESEARCH', code: 'environment' })
+  assert.ok(outcome.reason.startsWith(waitingOnEnvironment('research', 'Git cannot list what changed in . since root-0').split('\nThe run so far')[0]))
   assert.deepEqual(host.types(), ['run.started', 'step.started', 'question.asked'])
   broken = false
   await host.decide({ answer: 'RETRY' })
@@ -265,7 +266,9 @@ test('Git refusing the engine\'s commit of an architect\'s documents asks the hu
 
   const outcome = await host.start()
 
-  assert.deepEqual(outcome, { status: 'waiting', slug: SLUG, phase: 'DESIGN', code: 'environment', reason: waitingOnEnvironment('design', 'Git refused to commit what design wrote in .; check git status, then retry', 1, { log: `${TRACKING}/logs/commit-design.log` }) })
+  assert.deepEqual({ status: outcome.status, slug: outcome.slug, phase: outcome.phase, code: outcome.code }, { status: 'waiting', slug: SLUG, phase: 'DESIGN', code: 'environment' })
+  assert.ok(outcome.reason.startsWith(waitingOnEnvironment('design', 'Git refused to commit what design wrote in .; check git status, then retry', 1, { log: `${TRACKING}/logs/commit-design.log` }).split('\nThe run so far')[0]))
+  assert.match(outcome.reason, /Incidents: design signature .*1 occurrences; log .*commit-design\.log\./)
   assert.deepEqual(recorded(host, 'design'), [])
   assert.match(host.tracking.files.get(`${SLUG}/logs/commit-design.log`), /\n--- output\nfatal: index\.lock exists\nhusky - pre-commit script failed \(code 1\)\n/)
 })
@@ -278,5 +281,6 @@ test('Git that cannot list what a repository holds uncommitted since the agent\'
 
   const outcome = await host.start()
 
-  assert.deepEqual(outcome, { status: 'waiting', slug: SLUG, phase: 'RESEARCH', code: 'environment', reason: waitingOnEnvironment('research', 'Git cannot list what changed in . since root-1') })
+  assert.deepEqual({ status: outcome.status, slug: outcome.slug, phase: outcome.phase, code: outcome.code }, { status: 'waiting', slug: SLUG, phase: 'RESEARCH', code: 'environment' })
+  assert.ok(outcome.reason.startsWith(waitingOnEnvironment('research', 'Git cannot list what changed in . since root-1').split('\nThe run so far')[0]))
 })

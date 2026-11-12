@@ -5,21 +5,14 @@ import { agent, scripted, SLUG, TRACKING } from '../support/pipeline-host.mjs'
 const unavailable = () => ({ ok: false, unavailable: true, text: '' })
 const recorded = (host) => host.events().filter((event) => event.type === 'step.recorded')
 
-test('two identical invalid results ask a human without a third attempt, null and a number alike; STOP ends the run with them', async () => {
-  const host = scripted({ answers: [{ answer: 'STOP' }] }, (it) => [agent({ result: '{ "status": "finished" }' })(it), agent({ result: '{ "status": "finished" }' })(it)])
+test('two identical invalid results stop without a third attempt or a human question, null and a number alike', async () => {
+  const host = scripted({}, (it) => [agent({ result: '{ "status": "finished" }' })(it), agent({ result: '{ "status": "finished" }' })(it)])
 
   const outcome = await host.start()
 
-  assert.deepEqual(host.human.questions.map(({ key, kind, text }) => [key, kind, text.split('\n').slice(0, 3)]), [['research-1', 'blocked', [
-    'research is blocked: solution-researcher failed the same way on attempts 1 and 2.',
-    'Left by research (1):',
-    `- result status must be "done" or "blocked"; summary must be a non-empty string`,
-  ]]])
-
-  assert.deepEqual(outcome, {
-    status: 'blocked', slug: SLUG, phase: 'RESEARCH', code: 'invalid-result',
-    reason: `solution-researcher failed the same way on attempts 1 and 2: result status must be "done" or "blocked"; summary must be a non-empty string`,
-  })
+  assert.deepEqual({ status: outcome.status, slug: outcome.slug, phase: outcome.phase, code: outcome.code }, { status: 'blocked', slug: SLUG, phase: 'RESEARCH', code: 'repeated-failure' })
+  assert.match(outcome.reason, /^research stopped after 2 occurrences of failure signature .*; evidence: unavailable$/)
+  assert.deepEqual(host.human.questions, [])
   assert.equal(host.agentRunner.dispatches.length, 2)
   assert.ok(host.agentRunner.dispatches[1].prompt.endsWith([
     '',
@@ -28,12 +21,12 @@ test('two identical invalid results ask a human without a third attempt, null an
   ].join('\n')))
   assert.deepEqual(recorded(host).map(({ outcome: result, code, failures }) => [result, code, failures]), [
     ['failed', 'invalid-result', [`result status must be "done" or "blocked"; summary must be a non-empty string`]],
-    ['failed', 'invalid-result', [`result status must be "done" or "blocked"; summary must be a non-empty string`]],
+    ['failed', 'repeated-failure', [`result status must be "done" or "blocked"; summary must be a non-empty string`]],
   ])
-  assert.deepEqual(host.events().at(-1), { ...host.events().at(-1), type: 'run.finished', status: 'blocked', code: 'invalid-result', reason: outcome.reason })
+  assert.deepEqual(host.events().at(-1), { ...host.events().at(-1), type: 'run.finished', status: 'blocked', code: 'repeated-failure', reason: outcome.reason })
 
-  const scalars = scripted({ answers: [{ answer: 'STOP' }] }, (it) => [agent({ result: 'null' })(it), agent({ result: '42' })(it)])
-  assert.equal((await scalars.start()).reason, `solution-researcher failed the same way on attempts 1 and 2: result must hold a JSON object`)
+  const scalars = scripted({}, (it) => [agent({ result: 'null' })(it), agent({ result: '42' })(it)])
+  assert.match((await scalars.start()).reason, /^research stopped after 2 occurrences of failure signature .*; evidence: unavailable$/)
 })
 
 test('different invalid results get every attempt, then a human is asked; STOP ends the run at the ceiling', async () => {
@@ -88,8 +81,8 @@ test('missing outputs and an invalid result are both told, missing outputs namin
 
   const outcome = await host.start()
 
-  assert.equal(outcome.code, 'missing-outputs')
-  assert.equal(outcome.reason, `solution-researcher failed the same way on attempts 1 and 2: missing outputs: ${TRACKING}/research/2026-10-11/${SLUG}-research.md; result is missing`)
+  assert.equal(outcome.code, 'repeated-failure')
+  assert.match(outcome.reason, /^research stopped after 2 occurrences of failure signature .*; evidence: unavailable$/)
   assert.ok(host.agentRunner.dispatches[1].prompt.endsWith([
     '', 'Missing outputs from attempt 1 of 3:', `- ${TRACKING}/research/2026-10-11/${SLUG}-research.md`,
     '', 'Refused in attempt 1 of 3:', `- result is missing`,

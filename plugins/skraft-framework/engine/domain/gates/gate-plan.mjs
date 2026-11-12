@@ -1,16 +1,16 @@
 import { normalizeRelative, pathUnder } from '../config/relative-path.mjs'
 import { mutationOutputsOf } from './mutation-report.mjs'
-import { interruptedBy } from '../pipeline/incidents.mjs'
+import { endedByMachine, interruptedBy } from '../pipeline/incidents.mjs'
 
 /**
  * @typedef {import('../config/skraft-config.mjs').Component} Component
- * @typedef {'interrupted' | 'environment' | 'deterministic'} FailureClass
+ * @typedef {'interrupted' | 'environment' | 'deterministic' | 'unknown'} FailureClass
  *   interrupted: a person stopped the command (Ctrl-C);
  *   environment: what a human must provide before the gate can tell anything: a program the
  *   machine lacks (it did not start, or the shell found none: 127, 9009), a command the
  *   configuration lacks, a mutation report that cannot be read;
- *   deterministic: the command ran and failed, ran out of time, or a signal or a crash stopped
- *   it: its evidence goes back to the agent, which fixes the code or stops blocked.
+ *   deterministic: the command ran and failed; its evidence goes back to the agent;
+ *   unknown: the command timed out or stopped unexpectedly, with no known failing check.
  */
 
 /** The commands that are gates, in the order they run. Other commands (`e2e`…) are not gates. */
@@ -21,15 +21,23 @@ export const gatesOf = (component) => GATE_ORDER.filter((gate) => gate in compon
 
 /** Exit codes a shell gives when it cannot find the command: 127 (sh), 9009 (cmd). */
 const NOT_FOUND_EXIT = Object.freeze([127, 9009])
+const PERMISSION_DENIED = /\b(?:EACCES|EPERM|permission denied|access is denied|access denied)\b/i
 
 /**
- * @param {{ started: boolean, exitCode: number | null }} result
+ * @param {{ started: boolean, exitCode: number | null, stdout?: string, stderr?: string }} result
  * @returns {FailureClass | null} null when the command passed
  */
-export const failureOf = ({ started, exitCode }) => {
+export const failureOf = ({ started, exitCode, stdout = '', stderr = '' }) => {
   if (!started || NOT_FOUND_EXIT.includes(/** @type {number} */ (exitCode))) return 'environment'
   if (exitCode === 0) return null
-  return interruptedBy(/** @type {number} */ (exitCode)) ? 'interrupted' : 'deterministic'
+  return startedFailure(exitCode, stdout, stderr)
+}
+
+/** @param {number | null} exitCode @param {string} stdout @param {string} stderr */
+const startedFailure = (exitCode, stdout, stderr) => {
+  if (PERMISSION_DENIED.test(`${stdout}\n${stderr}`)) return 'environment'
+  if (interruptedBy(/** @type {number} */ (exitCode))) return 'interrupted'
+  return exitCode === null || endedByMachine(/** @type {number} */ (exitCode)) ? 'unknown' : 'deterministic'
 }
 
 /** Changes under the tracking folder are the run's own bookkeeping, never a component's. */

@@ -9,6 +9,7 @@ import { createNodeAdapters } from '../../../../plugins/skraft-framework/engine/
 import { actsAs, copilotHost, simulatedContext, workingCopy } from '../copilot-workflow/simulated-host.mjs'
 import { NOMINAL, SLUG, blocked, commit, fillOutputs, finding, pipelineRepository, says, scriptedLlm, writeResult } from '../support/pipeline-repository.mjs'
 import { BOUNDED, contentStream, pipelineCanvas, tokenOf } from './canvas-host.mjs'
+import { withoutReportSummary } from '../support/run-report-summary.mjs'
 
 const RATIFY = 'Ratify the Proposed ADRs docs/adr/adr-001-card-payment.md? RATIFIED marks them Accepted; REJECTED sends DESIGN back with your reason.'
 const NO_ACTIVE_PIPELINE = 'no active pipeline in this working copy (.copilot-tracking/skraft-plans/.active-slug); start one with an explicit slug'
@@ -89,7 +90,7 @@ test('the canvas shows a blocked step\'s question and says to answer it in the c
   await assert.rejects(runSkraftPipelineWorkflow(ctx, copilotHost(cwd)), { message: 'paused at design-1' })
 
   const { question } = await shown()
-  assert.deepEqual({ ...question, text: question.text.replace(/; its reason is in .*?\.json\./, '; its reason is in <result>.') }, {
+  assert.deepEqual({ ...question, text: withoutReportSummary(question.text.replace(/; its reason is in .*?\.json\./, '; its reason is in <result>.')) }, {
     key: 'design-1', kind: 'blocked', header: 'Blocked',
     text: `design is blocked: solution-architect says it cannot go on; its reason is in <result>.\nLeft by design (1):\n- which payment provider?\n An instruction runs design again on a new pass with what is left above and the instruction; STOP ends the run.\nThe run so far (commits, refusals, incidents): ${join(cwd, '.copilot-tracking', 'skraft-plans', SLUG, 'run-report.md')}`,
     usage: '"<instruction>"|STOP',

@@ -8,11 +8,13 @@ test('volatile evidence normalizes across hosts while meaningful errors and line
   const first = [
     '2026-11-12T15:12:35.398+01:00 PID=782 elapsed 12.3 s commit c0ffee1234567 id 12ab34cd-1234-5678-90ab-cdef12345678 localhost:50321',
     'at 15:12:35.398 Error: ECONNRESET',
+    'research/2026-11-12/checkout-research.md',
     '/Users/alice/project/.copilot-tracking/skraft-plans/run-104/gates/api/test-1.log',
   ].join('\n')
   const second = [
     '2026-11-13T19:47:01.100-04:00 pid:943 elapsed 6 s commit f0ffee1234567 id 89ab34cd-1234-5678-90ab-cdef12345678 localhost:61234',
     'at 19:47:01.100 Error: ECONNRESET',
+    'research/2026-11-13/checkout-research.md',
     'C:\\work\\project\\.copilot-tracking\\skraft-plans\\run-928\\gates\\api\\test-2.log',
   ].join('\n')
 

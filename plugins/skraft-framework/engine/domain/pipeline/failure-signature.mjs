@@ -3,9 +3,10 @@ export const REPEATED_FAILURES = 2
 
 const VARIABLE_TEXT = Object.freeze([
   [/\b\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:?\d{2})?\b/gi, '<time>'],
+  [/\b\d{4}-\d{2}-\d{2}\b/g, '<date>'],
   [/\b\d{1,2}[/-]\d{1,2}[/-]\d{2,4}\s+\d{1,2}:\d{2}:\d{2}(?:\.\d+)?(?:\s*[AP]M)?\b/gi, '<time>'],
   [/\b\d{1,2}:\d{2}:\d{2}(?:\.\d+)?(?:\s*[AP]M)?\b/gi, '<time>'],
-  [/\b(?:pid|process(?:\s+id)?)\s*[:=#]?\s*\d+\b/gi, '<pid>'],
+  [/\b(?:pid|proce(?:ss(?:\s+id)?)?)\s*[:=#]?\s*\d+\b/gi, '<pid>'],
   [/\b\d+(?:\.\d+)?\s*(?:ms|msec|seconds?|secs?|s)\b/gi, '<duration>'],
   [/\b[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}\b/gi, '<guid>'],
   [/\b[0-9a-f]{7,40}\b/gi, '<sha>'],
@@ -43,5 +44,5 @@ const replaceVariable = (proof, [pattern, replacement]) => proof.replace(pattern
 
 /** @param {Array<{ type?: string, incidents?: Array<{ signature?: string }> }>} events @param {string} signature */
 export const signatureOccurrences = (events, signature) => events
-  .filter(({ type, incidents = [] }) => type === 'step.recorded' && incidents.some((incident) => incident.signature === signature))
+  .filter(({ type, incidents = [] }) => (type === 'step.recorded' || type === 'question.asked') && incidents.some((incident) => incident.signature === signature))
   .length

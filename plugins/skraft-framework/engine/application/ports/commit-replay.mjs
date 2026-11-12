@@ -2,9 +2,11 @@
  * CommitReplay — runs one program on the files of a commit, in a throwaway checkout that
  * leaves the working copy as it is.
  *
- * @typedef {{ repository: string, sha: string, cwd: string, choices: string[][], importRoots: string[] }} ReplayRequest
+ * @typedef {{ repository: string, sha: string, cwd: string, choices: string[][], importRoots: string[], env?: Readonly<Record<string, string>>, javaTmpDir?: string }} ReplayRequest
  *   repository: the repository top, relative to the working copy; cwd: the folder the program
- *   starts from, relative to the repository top (`.`, `services/api`); choices: the argvs to
+ *   starts from, relative to the repository top (`.`, `services/api`); env: variables added to
+ *   the replayed program's environment; javaTmpDir: the Java runtime's temporary directory;
+ *   choices: the argvs to
  *   try, in order, in that one checkout: the first that starts runs; importRoots: folders of the
  *   commit, relative to cwd, put first on a Python program's import path (PYTHONPATH), before
  *   whatever was there; empty for any other program.

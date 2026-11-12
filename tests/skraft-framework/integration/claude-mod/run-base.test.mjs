@@ -53,15 +53,16 @@ test('the run_pipeline tool takes a base, and a base Git cannot find is refused 
 })
 
 test('a mod host whose $.process.run cannot start git starts the run with no base', async (t) => {
-  const mod = await scriptedModHost({ behaviours: [fillsItsOutputs(), stops()] })
+  const { cwd } = repository(t)
+  const mod = await scriptedModHost({ cwd, behaviours: [fillsItsOutputs(), stops()] })
   t.after(mod.cleanup)
   const run = mod.host.run
   mod.host.run = async (argv, init) => {
-    if (argv[0] === 'git') throw new Error('process.run is not allowed')
+    if (argv[0] === 'git' && argv.includes('rev-parse')) throw new Error('process.run is not allowed')
     return run(argv, init)
   }
 
-  await mod.command('checkout')
+  assert.equal(await mod.command('checkout'), 'skraft checkout started — progress in the Skraft pane.')
   assert.equal((await mod.settled()).code, 'agent-blocked')
 
   assert.deepEqual((await mod.journal('checkout'))[0].base, [])
@@ -71,6 +72,7 @@ test('$.process.run as the CommandRunner: cwd from the working copy, a refused s
   const calls = []
   const runner = createModCommandRunner({
     root: '/work/payment-api',
+    environment: async () => '-Xmx1g -Dapp=kept',
     run: async (argv, init) => {
       calls.push({ argv, init })
       if (argv[0] === 'missing') throw new Error('$.process.run (skraft): missing: ENOENT')
@@ -86,4 +88,8 @@ test('$.process.run as the CommandRunner: cwd from the working copy, a refused s
   assert.equal((await runner.run({ argv: ['slow'], cwd: '.', timeoutMs: 120_000 })).error, 'slow did not finish within 120 s')
   await runner.run({ argv: ['npm', 'run', 'e2e'], cwd: '.', timeoutMs: 900_000 })
   assert.deepEqual(calls.slice(-2).map(({ init }) => init.timeoutMs), [120_000, 600_000])
+  await runner.run({ argv: ['node', 'test.mjs'], cwd: '.', env: { TMPDIR: '/work/.tmp' } })
+  assert.deepEqual(calls.at(-1).init.env, { TMPDIR: '/work/.tmp' })
+  await runner.run({ argv: ['mvn', 'test'], cwd: '.', javaTmpDir: '/work with space/.tmp' })
+  assert.equal(calls.at(-1).init.env.JAVA_TOOL_OPTIONS, '-Xmx1g -Dapp=kept -Djava.io.tmpdir="/work with space/.tmp"')
 })

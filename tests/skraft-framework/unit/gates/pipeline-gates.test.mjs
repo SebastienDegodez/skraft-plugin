@@ -2,7 +2,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { BUILT_IN_WORKFLOW, FixedClock, InMemoryGit, ScriptedMachine } from '../support/in-memory-host.mjs'
 import { agent, API, CYCLE, green, scripted, SLUG, tddCycle, TRACKING } from '../support/pipeline-host.mjs'
-import { waitingOnEnvironment } from '../support/decisions.mjs'
+import { waitingOnEnvironment, withoutReportSummary } from '../support/decisions.mjs'
 
 const upToDeliver = (it) => [agent()(it), agent()(it), agent()(it)]
 const deliver = (it) => agent({ work: green() })(it)
@@ -50,26 +50,21 @@ test('DELIVER does not close while a gate fails: the engineer gets a new pass wi
   assert.ok(!host.types().includes('tdd.replay-slow'))
 })
 
-test('gates that keep failing stop the run once the loop reached its max_visits', async () => {
+test('gates that fail with the same signature twice stop the run before another engineer dispatch', async () => {
   const machine = new ScriptedMachine({ exits: { '. $ dotnet test': 1 } })
   const host = scripted({ machine, answers: [{ answer: 'STOP' }] }, (it) => [...upToDeliver(it), ...[1, 2, 3, 4].map((n) => agent({ work: passOf(n) })(it))])
 
   const outcome = await host.start()
 
-  const failure = (n) => `api/test: exited 1 (evidence: ${TRACKING}/gates/api/test-${n}.log)`
-  assert.deepEqual(outcome, {
-    status: 'blocked', slug: SLUG, phase: 'DELIVER', code: 'loop-ceiling',
-    reason: `gates -> deliver was already taken 3 times, its max_visits; ${failure(4)}`,
-  })
-  assert.equal(host.agentRunner.dispatches.length, 7)
-  assert.deepEqual(recorded(host, 'gates').map(({ visit, outcome: result, code, next }) => [visit, result, code, next]), [
-    [1, 'fail', null, 'deliver'], [2, 'fail', null, 'deliver'], [3, 'fail', null, 'deliver'], [4, 'fail', 'loop-ceiling', null],
-  ])
+  assert.deepEqual([outcome.status, outcome.code], ['blocked', 'repeated-failure'])
+  assert.equal(recorded(host, 'gates').length, 2)
+  assert.equal(host.agentRunner.dispatches.length, 5)
+  assert.deepEqual(host.human.questions.filter(({ kind }) => kind === 'environment'), [])
   assert.ok(!host.events().some((event) => event.type === 'phase.closed' && event.phase === 'DELIVER'))
-  assert.deepEqual(host.events().at(-1), { ...host.events().at(-1), type: 'run.finished', status: 'blocked', code: 'loop-ceiling', reason: outcome.reason })
+  assert.deepEqual(host.events().at(-1), { ...host.events().at(-1), type: 'run.finished', status: 'blocked', code: 'repeated-failure', reason: outcome.reason })
 })
 
-test('a max_visits on the engineer\'s edge stops the run once the engineer used it up, with its reason', async () => {
+test('a repeated gate failure stops before the engineer edge can be taken again', async () => {
   const workflow = BUILT_IN_WORKFLOW
     .replace('deliver -> gates', 'deliver -> gates [max_visits=2]')
     .replace('gates -> deliver [label="FAIL", max_visits=3]', 'gates -> deliver [label="FAIL"]')
@@ -78,13 +73,9 @@ test('a max_visits on the engineer\'s edge stops the run once the engineer used 
 
   const outcome = await host.start()
 
-  const reason = 'deliver -> gates was already taken 2 times, its max_visits'
-  assert.deepEqual(outcome, { status: 'blocked', slug: SLUG, phase: 'DELIVER', code: 'loop-ceiling', reason })
-  assert.deepEqual(recorded(host, 'deliver').map(({ visit, outcome: result, code, next, reason: why }) => [visit, result, code, next, why]), [
-    [1, 'done', null, 'gates', undefined],
-    [2, 'done', null, 'gates', undefined],
-    [3, 'done', 'loop-ceiling', null, reason],
-  ])
+  assert.deepEqual([outcome.status, outcome.code], ['blocked', 'repeated-failure'])
+  assert.equal(recorded(host, 'deliver').length, 2)
+  assert.equal(host.agentRunner.dispatches.filter(({ label }) => label.includes('deliver')).length, 2)
 })
 
 test('a gate the machine cannot run waits for a human; once fixed and retried, the same gate node runs again', async () => {
@@ -93,9 +84,9 @@ test('a gate the machine cannot run waits for a human; once fixed and retried, t
 
   const outcome = await host.start()
 
-  assert.deepEqual(outcome, {
+  assert.deepEqual(withoutReportSummary(outcome), {
     status: 'waiting', slug: SLUG, phase: 'DELIVER', code: 'environment',
-    reason: waitingOnEnvironment('gates', `api/build: command not found: dotnet; install it or change the command in skraft-config.json (evidence: ${TRACKING}/gates/api/build-1.log)`, 1, { log: `${TRACKING}/gates/api/build-1.log` }),
+    reason: waitingOnEnvironment('gates', `api/build: command not found: dotnet; install it or change the command in skraft-config.json (evidence: ${TRACKING}/gates/api/build-1.log)`, 1, { owner: 'config', log: `${TRACKING}/gates/api/build-1.log` }),
   })
   assert.deepEqual(host.types().slice(-3), ['step.started', 'gate.ran', 'question.asked'])
   assert.equal((await host.view()).current.gates.length, 6)
@@ -113,10 +104,25 @@ test('a gate the machine cannot run waits for a human; once fixed and retried, t
       git.commit('feat(checkout): cart', ['src/Cart.cs', 'web/src/Cart.tsx'])
     },
   })(it)])
-  assert.equal((await both.start()).reason, waitingOnEnvironment('gates', [
+  assert.equal(withoutReportSummary((await both.start()).reason), waitingOnEnvironment('gates', [
     `api/build: command not found: dotnet; install it or change the command in skraft-config.json (evidence: ${TRACKING}/gates/api/build-1.log)`,
     `web/lint: command not found: npx; install it or change the command in skraft-config.json (evidence: ${TRACKING}/gates/web/lint-1.log)`,
-  ].join('; '), 1, { log: `${TRACKING}/gates/api/build-1.log` }))
+  ].join('; '), 1, { owner: 'config', log: `${TRACKING}/gates/api/build-1.log` }))
+})
+
+test('a gate stopped by a signal is unknown, asks the human, and never retries the engineer', async () => {
+  const machine = new ScriptedMachine({ exits: { '. $ dotnet test': 137 } })
+  const host = scripted({ machine }, (it) => [...upToDeliver(it), deliver(it)])
+
+  const outcome = await host.start()
+
+  assert.deepEqual([outcome.status, outcome.code], ['waiting', 'environment'])
+  assert.match(outcome.reason, /Cause: the failure has not been classified/)
+  assert.match(outcome.reason, /Output: .*gates\/api\/test-1\.log/)
+  assert.equal(host.human.questions.find(({ kind }) => kind === 'environment').kind, 'environment')
+  assert.equal(host.events().find((event) => event.type === 'gate.ran' && event.gate === 'test').failure, 'unknown')
+  assert.equal(host.agentRunner.dispatches.filter(({ label }) => label.includes('deliver')).length, 1)
+  assert.equal(recorded(host, 'gates').length, 0)
 })
 
 test('the goal gate runs the gates of the components the story touched, then those of every other one', async () => {
@@ -157,7 +163,7 @@ test('a component with none of a gate node\'s gates fails it as environment, its
 
   const outcome = await host.start()
 
-  assert.deepEqual([outcome.code, outcome.reason], ['environment', waitingOnEnvironment('quick', `api/none: no gate command; give it at least one of lint in skraft-config.json (evidence: ${TRACKING}/gates/api)`, 1, { owner: 'config' })])
+  assert.deepEqual(withoutReportSummary([outcome.code, outcome.reason]), ['environment', waitingOnEnvironment('quick', `api/none: no gate command; give it at least one of lint in skraft-config.json (evidence: ${TRACKING}/gates/api)`, 1, { owner: 'config' })])
 })
 
 test('a failing gate with no FAIL edge stops the run with the gate failures', async () => {

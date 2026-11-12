@@ -38,7 +38,7 @@ import { endedByMachine, interruptedBy } from '../../domain/pipeline/incidents.m
  * @typedef {{ slug: string, component: Component, scope: GateScope, journal: GateRunRequest['journal'], only: readonly string[] }} GateContext
  * @typedef {{ argv: string[], started: boolean, exitCode: number | null, stdout: string, stderr: string, error?: string, truncated?: true }} Started
  * @typedef {{ shown: string, result: Started | null, durationMs: number, reason: string }} Attempt
- * @typedef {{ cwd: string, timeoutMs: number | undefined }} Where
+ * @typedef {{ cwd: string, timeoutMs: number | undefined, env?: Record<string, string>, javaTmpDir?: string }} Where
  *   cwd: the component's root; timeoutMs: how long the program may run, no limit when undefined.
  */
 
@@ -53,16 +53,18 @@ import { endedByMachine, interruptedBy } from '../../domain/pipeline/incidents.m
 export const runGates = async (deps, { slug, journal, components, base, scope, only = GATE_ORDER, skip = [] }) => {
   const shaOf = (/** @type {Component} */ component) => baseOf(base, component.name)?.sha ?? null
   const selected = await selectComponents(deps, components, { scope, skip, shaOf })
-  const names = selected.map(({ name }) => name)
   /** @type {GateResult[]} */
   const gates = []
   try {
     await runEachComponent(deps, { slug, scope, journal, only }, { selected, shaOf, gates })
   } catch (error) {
-    return stoppedBy(error, { components: names, gates })
+    return stoppedBy(error, { components: selected.map(({ name }) => name), gates })
   }
-  return { components: names, gates, failure: failureOfGates(gates), conflict: null }
+  return { components: selected.map(({ name }) => name), gates, failure: failureOfGates(gates), conflict: null }
 }
+
+/** @param {GateRunDeps} deps @param {string} slug */
+const clearTemporary = ({ files }, slug) => files.clearTemporary(slug)
 
 /**
  * Another writer of the journal stops the gates with those run until then; any other error is
@@ -85,7 +87,7 @@ const failureOfGates = (gates) => {
 }
 
 /** @type {readonly FailureClass[]} */
-const CLASS_ORDER = Object.freeze(['interrupted', 'environment', 'deterministic'])
+const CLASS_ORDER = Object.freeze(['interrupted', 'unknown', 'environment', 'deterministic'])
 
 /**
  * The components whose gates run, the skipped ones left out: every one for `all`, the touched
@@ -159,11 +161,18 @@ const runOne = async (deps, context, { gate, baseSha }) => {
   const line = component.commands[gate]
   const evidence = nextEvidencePath(journal, component, gate)
   if (gate === 'mutation') await clearReport(deps, component)
-  const tried = await startCommand(deps, component, { line, baseSha })
+  const tried = await startInTemporaryDirectory(deps, slug, component, { line, baseSha })
   const { failure, reason, survivors, scores } = await judgeRun(deps, { slug, component, gate, baseSha }, tried)
   const status = failure === null ? 'pass' : 'fail'
   await recordGate(deps, context, { gate, line, status, failure, evidence, tried: { ...tried, reason }, survivors, scores })
   return { component: component.name, gate, status, failure, reason, evidence: deps.files.location(slug, evidence), survivors }
+}
+
+/** @param {GateRunDeps} deps @param {string} slug @param {Component} component @param {{ line: string, baseSha: string | null }} request */
+const startInTemporaryDirectory = async (deps, slug, component, { line, baseSha }) => {
+  const tmp = deps.files.location(slug, '.tmp')
+  await clearTemporary(deps, slug)
+  return startCommand(deps, component, { line, baseSha, env: { TMPDIR: tmp, TEMP: tmp, TMP: tmp }, javaTmpDir: tmp })
 }
 
 /**
@@ -180,17 +189,10 @@ const runOne = async (deps, context, { gate, baseSha }) => {
  * @returns {Promise<Judged>}
  */
 const judgeRun = async (deps, ran, tried) => {
-  const failure = tried.result === null || (ran.gate === 'mutation' && endedEarly(tried.result)) ? 'environment' : failureOf(tried.result)
+  const failure = tried.result === null ? 'environment' : failureOf(tried.result)
   if (ran.gate !== 'mutation' || STOPPED.includes(/** @type {FailureClass} */ (failure))) return { failure, reason: tried.reason, survivors: null, scores: null }
   return judgeMutation(deps, ran, tried, failure)
 }
-
-/**
- * Whether a run ended before its tool could finish: a timeout, a signal or a crash, a person's
- * Ctrl-C aside. A mutation report left then may be an earlier run's, so it proves nothing.
- * @param {Started} result
- */
-const endedEarly = ({ exitCode }) => exitCode === null || (endedByMachine(exitCode) && !interruptedBy(exitCode))
 
 /**
  * A mutation run fails while a scope of the files in scope misses its bar, and hands out the
@@ -352,13 +354,13 @@ export const evidenceLog = (component, failure, { shown, result, reason }) => [
  * program choice that starts taken; a line that does not parse is not started.
  * shown: the command as the evidence writes it.
  * @param {Pick<GateRunDeps, 'commandRunner' | 'clock'>} deps @param {Component} component
- * @param {{ line: string, baseSha: string | null, timeoutMs?: number }} request timeoutMs: how long it may run
+ * @param {{ line: string, baseSha: string | null, timeoutMs?: number, env?: Record<string, string>, javaTmpDir?: string }} request timeoutMs: how long it may run
  * @returns {Promise<Attempt>}
  */
-export const startCommand = async (deps, component, { line, baseSha, timeoutMs }) => {
+export const startCommand = async (deps, component, { line, baseSha, timeoutMs, env, javaTmpDir }) => {
   const parsed = parseCommand(line, { baseSha })
   if (!parsed.ok) return { shown: line, result: null, durationMs: 0, reason: `command ${JSON.stringify(line)} ${parsed.reason}` }
-  return startTimed(deps, parsed.argv, { cwd: component.root, timeoutMs })
+  return startTimed(deps, parsed.argv, { cwd: component.root, timeoutMs, env, javaTmpDir })
 }
 
 /**
@@ -397,4 +399,4 @@ const exitText = (exitCode) => {
 }
 
 /** The classes of a mutation run its report cannot judge: a person stopped it, or it could not start. @type {readonly FailureClass[]} */
-const STOPPED = Object.freeze(['interrupted', 'environment'])
+const STOPPED = Object.freeze(['interrupted', 'environment', 'unknown'])

@@ -24,6 +24,18 @@ const CAUSES = Object.freeze({
 /** @param {Incident} incident */
 export const causeLines = ({ owner, log }) => [`Cause: ${CAUSES[owner]}.`, ...(log === null ? [] : [`Output: ${log}`])]
 
+/** A cause the engine does not classify is never sent back to an agent. */
+/** @type {Readonly<Record<string, Owner>>} */
+const OWNERS = Object.freeze({
+  'missing-outputs': 'agent', 'invalid-result': 'agent', 'design-records': 'agent', 'research-records': 'agent',
+  'gherkin-records': 'agent', scenarios: 'agent', 'pull-request-prose': 'agent', 'agent-blocked': 'agent',
+  'write-scope': 'agent', uncommitted: 'agent', 'adr-lifecycle': 'agent', 'commit-convention': 'agent', tdd: 'agent', agent: 'agent',
+  deterministic: 'agent', environment: 'environment', config: 'config', interrupted: 'interrupted', judge: 'judge',
+})
+
+/** @param {string} cause @returns {Owner} */
+export const ownerOfCause = (cause) => OWNERS[cause] ?? 'unknown'
+
 /** The incident of a machine that cannot run a step, when nothing more is known of it. @type {Incident} */
 export const MACHINE = Object.freeze({ owner: 'environment', log: null })
 

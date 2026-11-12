@@ -130,10 +130,8 @@ test('a researcher that writes the same invalid result twice is blocked without 
 
   assert.equal(calls.length, 2)
   assert.ok(calls[1].prompt.includes(`Refused in attempt 1 of 3:\n- result status must be "done" or "blocked"`), calls[1].prompt)
-  assert.deepEqual(outcome, {
-    status: 'blocked', slug: SLUG, phase: 'RESEARCH', code: 'invalid-result',
-    reason: `solution-researcher failed the same way on attempts 1 and 2: result status must be "done" or "blocked"`,
-  })
+  assert.deepEqual([outcome.status, outcome.slug, outcome.phase, outcome.code], ['blocked', SLUG, 'RESEARCH', 'repeated-failure'])
+  assert.match(outcome.reason, /^research stopped after 2 occurrences of failure signature [0-9a-f]{64}; evidence: unavailable$/)
   assert.equal(events.filter((event) => event.type === 'step.started' && event.step === 'research').length, 2)
 })
 

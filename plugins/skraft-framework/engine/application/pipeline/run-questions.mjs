@@ -15,7 +15,8 @@ import { leave } from './run-routes.mjs'
 import { verdictPath } from '../review/review-runs.mjs'
 import { MACHINE } from '../../domain/pipeline/incidents.mjs'
 import { refusedCommit } from './refused-commits.mjs'
-import { RUN_REPORT_FILE } from '../../domain/reporting/run-report.mjs'
+import { RUN_REPORT_FILE, runReport } from '../../domain/reporting/run-report.mjs'
+import { REPEATED_FAILURES } from '../../domain/pipeline/failure-signature.mjs'
 
 /**
  * The questions a run puts to a human: an ask node's, and the one the engine asks when the
@@ -40,7 +41,7 @@ import { RUN_REPORT_FILE } from '../../domain/reporting/run-report.mjs'
  * @typedef {{ answered: Answer } | { text: string, subjects: string[] } | { environment: string }} Plan
  *   answered: the question needs no human (nothing to ratify);
  *   environment: the machine cannot tell what to ask.
- * @typedef {{ failures: string[] } | { environment: string, incident?: import('../../domain/pipeline/incidents.mjs').Incident } | { stop: string }} Act
+ * @typedef {{ failures: string[] } | { environment: string, incident?: import('../../domain/pipeline/incidents.mjs').Incident, incidents?: import('../../domain/pipeline/incidents.mjs').FailureIncident[] } | { stop: string }} Act
  *   failures: what goes on to the node an answer leads to; stop: why the answer ends the run.
  * @typedef {{ plan: (context: Context) => Promise<Plan>, act: (context: Context, asked: AskedQuestion, run: RunState) => Promise<Act> }} Questionnaire
  */
@@ -48,8 +49,8 @@ import { RUN_REPORT_FILE } from '../../domain/reporting/run-report.mjs'
 /** @type {Questionnaire} */
 const RATIFICATION = {
   plan: async ({ deps }) => adrPlan(await proposedAdrs(deps)),
-  act: async ({ deps, slug }, asked, run) => (asked.answer === 'RATIFIED'
-    ? committed({ deps, slug, step: asked.step }, await ratify(deps, { adrs: asked.subjects, day: dayOf(deps.clock.now()), issue: issueOf(run.story) }))
+  act: async ({ deps, journal, slug }, asked, run) => (asked.answer === 'RATIFIED'
+    ? committed({ deps, journal, slug, step: asked.step }, await ratify(deps, { adrs: asked.subjects, day: dayOf(deps.clock.now()), issue: issueOf(run.story) }))
     : { failures: [`${asked.subjects.join(', ')}: ${asked.reason}`] }),
 }
 
@@ -121,11 +122,15 @@ const adrPlan = (adrs) => {
 
 /**
  * The ratification committed goes on; Git refusing its commit asks a human, naming what Git printed.
- * @param {{ deps: { files: import('../ports/tracking-files.mjs').TrackingFiles }, slug: string, step: string }} at
+ * @param {{ deps: import('./run-pipeline-usecase.mjs').PipelineDeps, journal: import('../journal/run-journal.mjs').OpenJournal, slug: string, step: string }} at
  * @param {{ ok: true } | { ok: false, error: string, output: string }} commit
  * @returns {Promise<Act>}
  */
-const committed = async ({ deps, slug, step }, commit) => (commit.ok ? { failures: [] } : { environment: commit.error, incident: await refusedCommit(deps, { slug, step }, commit) })
+const committed = async ({ deps, journal, slug, step }, commit) => {
+  if (commit.ok) return { failures: [] }
+  const incident = await refusedCommit({ ...deps, journal }, { slug, step }, commit)
+  return { environment: commit.error, incident, incidents: [incident] }
+}
 
 /**
  * An ask node: the question asked once, its answer acted on, the run routed by it.
@@ -213,7 +218,7 @@ export const waiting = ({ slug }, asked, phase) => ({
  */
 const settleAsk = async (context, run, next, asked) => {
   const done = await QUESTIONNAIRES[/** @type {NodeQuestion} */ (next.node.question)].act(context, asked, run)
-  if ('environment' in done) return escalate(context, next, done.environment, done.incident)
+  if ('environment' in done) return escalate(context, next, done.environment, done.incident, done.incidents)
   const answered = { answer: /** @type {string} */ (asked.answer), reason: asked.reason, outcome: /** @type {const} */ ('answered') }
   return recordAsk(context, run, next, 'stop' in done ? { ...answered, failures: [], stop: done.stop } : { ...answered, failures: done.failures })
 }
@@ -279,12 +284,21 @@ const retried = async (context, phase) => {
  * the incident it knows of. The step stays open; the run settles the question before anything else.
  * @param {Context} context @param {Pick<WorkStep, 'node' | 'visit'>} next @param {string} reason
  * @param {import('../../domain/pipeline/incidents.mjs').Incident} [incident]
+ * @param {import('../../domain/pipeline/incidents.mjs').FailureIncident[]} [incidents]
  * @returns {Promise<null>}
  */
-export const escalate = async (context, { node, visit }, reason, incident = MACHINE) => {
+export const escalate = async (context, { node, visit, attempt = 1 }, reason, incident = MACHINE, incidents = []) => {
   const { journal } = context
-  const question = questionOf('environment', nextKey(journal, node.id), withReport(context, environmentText(node.id, reason, incident)))
-  await journal.append('question.asked', { ...question, step: node.id, visit, subjects: [], incident })
+  const stop = incidents.find(({ attempts }) => attempts >= REPEATED_FAILURES)
+  if (stop !== undefined) return recordIncidentStop(context, { step: node.id, visit, attempt, reason }, incidents, stop)
+  const question = questionOf('environment', nextKey(journal, node.id), withReport(context, environmentText(node.id, reason, incident), node.id, incidents))
+  await journal.append('question.asked', { ...question, step: node.id, visit, subjects: [], incident, ...(incidents.length === 0 ? {} : { incidents }) })
+  return null
+}
+
+/** @param {Context} context @param {{ step: string, visit: number, attempt: number, reason: string }} stop @param {import('../../domain/pipeline/incidents.mjs').FailureIncident[]} incidents @param {import('../../domain/pipeline/incidents.mjs').FailureIncident} incident */
+const recordIncidentStop = async ({ journal }, { step, visit, attempt, reason }, incidents, incident) => {
+  await journal.append('step.recorded', { step, visit, attempt, outcome: 'failed', code: 'repeated-failure', missing: [], failures: [reason], incidents, next: null, reason: `${step} stopped after ${incident.attempts} occurrences of failure signature ${incident.signature}; evidence: ${incident.log ?? 'unavailable'}`, durationMs: 0 })
   return null
 }
 
@@ -318,17 +332,64 @@ export const blockQuestion = async (context, run, next) => {
   const ceiling = reviewCeilingOf(context, next, step)
   if (ceiling !== null) {
     const kind = acceptable(ceiling.findings) ? REVIEW_CEILING : BLOCKED
-    return askQuestion(context, { kind, step, visit: run.nodes[step].visit }, { text: withReport(context, reviewCeilingText(ceiling)), subjects: [] })
+    return askQuestion(context, { kind, step, visit: run.nodes[step].visit }, { text: withReport(context, reviewCeilingText(ceiling), step), subjects: [] })
   }
-  return askQuestion(context, { kind: BLOCKED, step, visit: run.nodes[step].visit }, { text: withReport(context, blockText(blockOf(context, next, step))), subjects: [] })
+  return askQuestion(context, { kind: BLOCKED, step, visit: run.nodes[step].visit }, { text: withReport(context, blockText(blockOf(context, next, step)), step), subjects: [] })
 }
 
 /**
  * A question on a run that stopped ends with where its report is: the commits and their
  * verdicts, the failures and the incidents so far.
- * @param {{ deps: { files: import('../ports/tracking-files.mjs').TrackingFiles }, slug: string }} context @param {string} text
+ * @param {Context} context @param {string} text @param {string} step
  */
-const withReport = ({ deps, slug }, text) => `${text}\nThe run so far (commits, refusals, incidents): ${deps.files.location(slug, RUN_REPORT_FILE)}`
+const withReport = (context, text, step, pendingIncidents = []) => {
+  return [text, ...reportContextLines(context, step, pendingIncidents)].join('\n')
+}
+
+/** @param {Context} context @param {string} step @param {import('../../domain/pipeline/incidents.mjs').FailureIncident[]} pending */
+const reportContextLines = (context, step, pending) => {
+  const { events } = context.journal
+  const report = runReport(events)
+  return [...currentScenarioLines(events, step), ...summaryLines(report, events, step, pending), `The run so far (commits, refusals, incidents): ${context.deps.files.location(context.slug, RUN_REPORT_FILE)}`]
+}
+
+/** @param {import('../../domain/reporting/run-report.mjs').RunReport} report @param {RunEvent[]} events @param {string} step @param {import('../../domain/pipeline/incidents.mjs').FailureIncident[]} pending */
+const summaryLines = (report, events, step, pending) => [
+  `Commits: ${report.commits.map(({ step: name, sha, verdict }) => `${sha} ${name} ${verdict}`).join('; ') || 'none'}.`,
+  `Step verdicts: ${report.steps.map(({ step: name, outcome, attempts }) => `${name} ${outcome ?? 'running'} (${attempts} attempts)`).join('; ') || 'none'}.`,
+  `Refusals: ${report.refusals.map(({ step: name, owner, times }) => `${name} (${owner}, ${times})`).join('; ') || 'none'}.`,
+  ...openFindingsLines(events),
+  `Incidents: ${incidentSummary(report.incidents, step, pending) || 'none'}.`,
+]
+
+/** @param {import('../../domain/reporting/run-failures.mjs').IncidentRow[]} prior @param {string} step @param {import('../../domain/pipeline/incidents.mjs').FailureIncident[]} pending */
+const incidentSummary = (prior, step, pending) => [...prior, ...pending.map((incident) => ({ step, signature: incident.signature, attempts: incident.attempts, log: incident.log }))]
+  .map(({ step: name, signature, attempts, log }) => `${name} signature ${signature ?? 'unavailable'}; ${attempts ?? 0} occurrences; log ${log ?? 'unavailable'}`)
+  .join('; ')
+
+/** @param {RunEvent[]} events @param {string} step */
+const currentScenarioLines = (events, step) => {
+  return scenarioLines(scenarioFor(deriveRun(events), step))
+}
+
+/** @param {RunState} run @param {string} step */
+const scenarioFor = (run, step) => scenarioAt(run.scenarios, groupOf(run, step))
+
+/** @param {RunState} run @param {string} step */
+const groupOf = (run, step) => run.nodes[step]?.open?.group ?? run.nodes[step]?.last?.group
+
+/** @param {RunState['scenarios']} scenarios @param {number | null | undefined} index */
+const scenarioAt = (scenarios, index) => (index == null ? null : scenarios?.list.find(({ index: number }) => number === index) ?? null)
+
+/** @param {import('../../domain/pipeline/scenarios.mjs').StoryScenario | null} scenario */
+const scenarioLines = (scenario) => (scenario === null ? [] : [`Scenario in progress: S${scenario.index} ${scenario.title} (${scenario.component}).`])
+
+/** @param {RunEvent[]} events */
+const openFindingsLines = (events) => {
+  const latest = events.at(-1)
+  if (latest?.type !== 'step.recorded' || !Array.isArray(latest.findings) || latest.findings.length === 0) return ['Open findings: none.']
+  return [`Open findings: ${latest.findings.length} after ${latest.visit} review rounds at ${latest.step}.`]
+}
 
 /**
  * What a review that reached its ceiling left (#499): its findings with their context and where

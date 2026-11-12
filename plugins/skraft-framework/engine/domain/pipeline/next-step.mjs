@@ -196,7 +196,7 @@ const begin = (workflow, run) => {
 const retry = (node, run, last) => {
   const { previous } = run.nodes[last.step]
   const cause = refusalBlock(node, previous, last)
-  if (cause !== null) return { kind: 'blocked', phase: node.phase, node, cause, last, previous, missingNode: null, reopens: node.id }
+  if (cause !== null) return { kind: 'blocked', phase: node.phase, node, cause, last, previous, missingNode: null, reopens: cause === 'route' ? null : node.id }
   return enter(node, { visit: last.visit, attempt: last.attempt + 1, missing: last.missing, feedback: last.failures, instruction: null, sentBy: run.nodes[last.step].sentBy, resumed: null, ...groupOf(run, last.step, last.group) }, run)
 }
 
@@ -224,7 +224,7 @@ const nextGroup = (node, run, last) => {
  */
 const refusalBlock = (node, previous, last) => {
   if (last.code === 'agent-blocked') return 'agent-blocked'
-  if (last.code === 'repeated-failure') return 'breaker'
+  if (last.code === 'repeated-failure' || last.code === 'unknown-failure') return 'route'
   if (previous !== null && sameFailure(previous, last)) return 'breaker'
   if (last.attempt >= (node.maxAttempts ?? DEFAULT_ATTEMPTS)) return 'ceiling'
   return null

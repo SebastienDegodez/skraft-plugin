@@ -4,6 +4,7 @@
  * @typedef {{
  *   read: (slug: string, path: string) => Promise<string | null>,
  *   write: (slug: string, path: string, text: string) => Promise<void>,
+ *   clearTemporary: (slug: string) => Promise<void>,
  *   location: (slug: string, path: string) => string,
  *   list: (slug: string, folder: string) => Promise<string[]>,
  *   pipelines: () => Promise<string[]>,
@@ -12,5 +13,6 @@
  *   missing folders. location: the absolute path an agent is given. list: the files under
  *   `<slug>/<folder>/` at any depth, relative to `<slug>/`, sorted; [] when the folder is absent.
  *   pipelines: the kebab-case slugs whose folder holds at least one file, sorted.
+ *   clearTemporary: empties the run's `.tmp/` directory and leaves it ready to use.
  */
 export {}

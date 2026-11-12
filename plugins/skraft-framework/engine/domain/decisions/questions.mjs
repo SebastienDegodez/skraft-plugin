@@ -1,3 +1,4 @@
+import { CONFIG_FILE } from '../config/skraft-config.mjs'
 import { inert } from '../reporting/markdown-safety.mjs'
 import { causeLines } from '../pipeline/incidents.mjs'
 
@@ -147,8 +148,12 @@ export const mutationPlanText = (proposals) =>
 export const environmentText = (step, reason, incident) => [
   `${step} cannot run on this machine: ${reason}.`,
   ...causeLines(incident),
+  ...(doctorHint(incident.owner, reason) ? ['Run `skraft doctor` to check the command and runtime.'] : []),
   `Fix it, then RETRY: ${step} runs again where it stopped, using no new attempt; or ABORT: the run ends.`,
 ].join('\n')
+
+/** @param {import('../pipeline/incidents.mjs').Incident['owner']} owner @param {string} reason */
+const doctorHint = (owner, reason) => owner === 'config' || /\b(?:docker|podman)\b/i.test(reason)
 
 /**
  * The text of a blocked question: the node an instruction runs again, why it is blocked, from

@@ -60,6 +60,19 @@ test('a program on the PATH, a .cmd shim under Windows included, runs with its a
   assert.equal((await createNodeExecutables({ root, env }).locate('tool', '.'))?.toLowerCase(), join(bin, process.platform === 'win32' ? 'tool.cmd' : 'tool').toLowerCase())
 })
 
+test('Java temporary directory is added to JAVA_TOOL_OPTIONS without replacing existing options', async (t) => {
+  const root = tempFolder(t)
+  const script = join(root, 'options.mjs')
+  writeFileSync(script, "process.stdout.write(process.env.JAVA_TOOL_OPTIONS ?? '')\n")
+  const runner = createNodeCommandRunner({ root, env: { ...process.env, JAVA_TOOL_OPTIONS: '-Xmx1g -Dapp=kept' } })
+  const tmp = join(root, 'folder with space', '.tmp')
+
+  const result = await runner.run({ argv: [process.execPath, script], cwd: '.', javaTmpDir: tmp })
+
+  assert.equal(result.exitCode, 0)
+  assert.equal(result.stdout, `-Xmx1g -Dapp=kept -Djava.io.tmpdir="${tmp}"`)
+})
+
 test('locate finds a program on the PATH or at a path from the folder, and nothing else', async (t) => {
   const root = tempFolder(t)
   mkdirSync(join(root, 'web'))

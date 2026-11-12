@@ -6,6 +6,7 @@ import { actsAs, scriptedModHost } from './support/scripted-mod-host.mjs'
 import { answerChoices } from '../../../../plugins/skraft-framework/engine/drivers/claude-mod/run-view.mjs'
 import { ADR, ADR_PATH, decisionsIndex, INDEX_PATH, NOMINAL, PAY_OR_NOTHING, SLUG, blocked, commit, deliverWith, fillOutputs, judgeLabel, killsZero, pipelineRepository, proposesZero, scenarioReviewText, scriptedLlm, writeResult } from '../support/pipeline-repository.mjs'
 import { git, journal } from '../support/workspace.mjs'
+import { withoutReportSummary } from '../support/run-report-summary.mjs'
 
 const RATIFY = `Ratify the Proposed ADRs ${ADR_PATH}? RATIFIED marks them Accepted; REJECTED sends DESIGN back with your reason.`
 /** The dialog of the scenario review of a run on the repository at cwd. @param {string} cwd */
@@ -124,7 +125,7 @@ test('a blocked architect is asked in a dialog; the instruction typed under Othe
     [mod.asked[0].question.split('\n')[0].slice(0, 40), ['STOP']],
     ['Send this instruction to design? Use the', ['SEND', 'CANCEL']],
   ])
-  assert.match(mod.asked[0].question, /^design is blocked: solution-architect says it cannot go on; its reason is in .*design-1-1\.json\.\nLeft by design \(1\):\n- .+\n An instruction runs design again on a new pass with what is left above and the instruction; STOP ends the run\.\nThe run so far \(commits, refusals, incidents\): .+$/)
+  assert.match(withoutReportSummary(mod.asked[0].question), /^design is blocked: solution-architect says it cannot go on; its reason is in .*design-1-1\.json\.\nLeft by design \(1\):\n- .+\n An instruction runs design again on a new pass with what is left above and the instruction; STOP ends the run\.\nThe run so far \(commits, refusals, incidents\): .+$/)
   assert.equal(mod.asked[0].question.split('\n').at(-1), `The run so far (commits, refusals, incidents): ${[cwd, '.copilot-tracking', 'skraft-plans', SLUG, 'run-report.md'].join('/')}`)
   assert.ok(spawnOf(mod, 'design · pass 2 · attempt 1').prompt.includes('\nA human refused the work of pass 1:\n- Use the bank gateway'))
   assert.deepEqual(journal(cwd, SLUG).filter((event) => event.type === 'question.answered').map(({ key, answer, by }) => [key, answer, by]), [['design-1', 'Use the bank gateway', 'host'], ['adr-1', 'RATIFIED', 'host'], ['scenario_review-1', 'APPROVED', 'host']])

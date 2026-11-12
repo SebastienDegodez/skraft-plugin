@@ -149,13 +149,14 @@ test('two components sharing a root each own the files of their own paths', asyn
   assert.deepEqual(host.replay.lines().slice(3), ['root-3 ./. $ npx vitest run', 'root-2 ./. $ npx vitest run', 'root-4 ./. $ npx vitest run'])
 })
 
-test('a green the machine cannot replay goes to the judge, which asks a human when no agent can fix it', async () => {
-  const machine = scripted({ replay: new ScriptedReplay({ exits: { 'root-2': null } }) }, (it) => [...research(it), agent()(it), agent()(it), unavailable])
+test('a green replay that times out goes to the judge, which asks a human when no agent can fix it', async () => {
+  const machine = scripted({ replay: new ScriptedReplay({ exits: { 'root-2': 'timeout' } }) }, (it) => [...research(it), agent()(it), agent()(it), unavailable])
   machine.agentRunner.judge = judging(judgeAnswer('accept'), judgeAnswer('ask-human', 'dotnet is not installed'))
   const outcome = await machine.start()
   const answer = `${TRACKING}/logs/judge-root-2-green.md`
-  assert.deepEqual([outcome.status, outcome.reason], ['waiting', waitingOnEnvironment('deliver', `the replay judge asks a human about the green commit root-2: read ${answer}`, 1, { owner: 'judge', log: answer })])
-  assert.ok(machine.agentRunner.judged[1].prompt.includes(`\n- api: \`dotnet test\` at the commit root-2: could not start dotnet; printed to ${logOf('root-2')}\n`), machine.agentRunner.judged[1].prompt)
+  assert.equal(outcome.status, 'waiting')
+  assert.ok(outcome.reason.startsWith(waitingOnEnvironment('deliver', `the replay judge asks a human about the green commit root-2: read ${answer}`, 1, { owner: 'judge', log: answer }).split('\nThe run so far')[0]))
+  assert.ok(machine.agentRunner.judged[1].prompt.includes(`\n- api: \`dotnet test\` at the commit root-2: dotnet did not finish within 600 s; printed to ${logOf('root-2')}\n`), machine.agentRunner.judged[1].prompt)
 })
 
 test('a docs or chore commit that changes a component\'s source or tests is refused, wherever it is made', async () => {
@@ -359,7 +360,8 @@ test('a scenario review a workflow asks before the scenarios are written waits o
 
   const outcome = await host.start()
 
-  assert.deepEqual([outcome.status, outcome.reason], ['waiting', waitingOnEnvironment('scenario_review', 'the run recorded no scenario of the story to show yet; put the scenario review after the node that writes them')])
+  assert.equal(outcome.status, 'waiting')
+  assert.ok(outcome.reason.startsWith(waitingOnEnvironment('scenario_review', 'the run recorded no scenario of the story to show yet; put the scenario review after the node that writes them').split('\nThe run so far')[0]))
 })
 
 test('a red an earlier attempt proved stays the scenario\'s oracle when the pass is tried again, and is not judged again', async () => {
