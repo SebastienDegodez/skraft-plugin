@@ -1,8 +1,10 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
 import { agent, API, nominal, scripted, SLUG } from '../support/pipeline-host.mjs'
 
 const RESEARCH = 'research/2026-10-11/checkout-research.md'
+const TEMPLATE = readFileSync(new URL('../../../../plugins/skraft-framework/assets/templates/research.template.md', import.meta.url), 'utf8')
 /** A file of the working copy the harness holds, one line long. */
 const MAP = 'docs/architecture/context-map.md'
 /** Two lines, the last one without its newline, as a repository ends a file. */
@@ -32,6 +34,13 @@ const citing = (paths) => [
   '',
 ].join('\n')
 
+const completeResearch = () => TEMPLATE.replace(/\{\{[^{}]*\}\}/g, 'filled')
+  .replace('(Source: filled)', '(Source: https://example.com/research)')
+  .replace('### filled (recommended)', '### Option A (recommended)')
+  .replace('### filled (rejected)', '### Option B (rejected)')
+  .replace('| filled | filled | filled |', '| | | |')
+  .replace('structural patterns DESIGN reuses: filled -> filled', 'structural patterns DESIGN reuses:')
+
 /** What the run recorded of each RESEARCH attempt. */
 const recorded = (host) => host.events()
   .filter((event) => event.type === 'step.recorded' && event.step === 'research')
@@ -44,7 +53,7 @@ const outOfRange = (cite, lines) => `${RESEARCH} cites #file:${cite}, outside th
 
 test('a #file: citation of a path the working copy has not sends the researcher back, wherever the citation sits and however often it cites it, and the run goes on once every cited file exists', async () => {
   const host = scripted({}, (it) => [
-    researcher('#file:src/Pricing/Discount.cs holds the fee, read in `#file:src/Pricing/Fee.cs` and again in #file:src/Pricing/Fee.cs, each with the tax (#file:src/Pricing/Tax.cs) of #file:src/Pricing/Vat.cs.\n')(it),
+    researcher('#file:src/Pricing/Discount.cs holds the fee, read in `#file:src/Pricing/Fee.cs` and again in #file:src/Pricing/Fee.cs, each with the tax (#file:src/Pricing/Tax.cs) of #file:src/Pricing/Vat.cs. #file:card-payment.test.mjs covers payment.\n')(it),
     researcher(citing(['src/Pricing/Receipt.cs']))(it),
     researcher(citing([MAP]))(it),
     ...nominal(it).slice(1),
@@ -53,7 +62,7 @@ test('a #file: citation of a path the working copy has not sends the researcher 
   const outcome = await host.start()
 
   assert.deepEqual(recorded(host), [
-    [1, 'failed', 'research-records', [noFile('src/Pricing/Discount.cs'), noFile('src/Pricing/Fee.cs'), noFile('src/Pricing/Tax.cs'), noFile('src/Pricing/Vat.cs')]],
+    [1, 'failed', 'research-records', [noFile('src/Pricing/Discount.cs'), noFile('src/Pricing/Fee.cs'), noFile('src/Pricing/Tax.cs'), noFile('src/Pricing/Vat.cs'), noFile('card-payment.test.mjs')]],
     [2, 'failed', 'research-records', [noFile('src/Pricing/Receipt.cs')]],
     [3, 'done', null, []],
   ])
@@ -247,4 +256,119 @@ test('a #file: citation written from a component root sends the researcher back 
     ]],
     [2, 'done', null, []],
   ])
+})
+
+test('a research document missing a section from its template sends the researcher back, and a complete document opens DESIGN', async () => {
+  const missing = 'Scope and success criteria'
+  const complete = completeResearch()
+  const host = scripted({}, (it) => [
+    researcher(complete.replace(`## ${missing}\n`, ''))(it),
+    researcher(complete)(it),
+    ...nominal(it).slice(1),
+  ])
+  host.deps.templates.templates['research.template.md'] = TEMPLATE
+
+  const outcome = await host.start()
+
+  assert.deepEqual(recorded(host), [
+    [1, 'failed', 'research-records', [`${RESEARCH} is missing section "${missing}" (#517)`]],
+    [2, 'done', null, []],
+  ])
+  assert.equal(outcome.status, 'done')
+})
+
+test('a malformed external research URL sends the researcher back, and a valid HTTPS URL opens DESIGN', async () => {
+  const complete = completeResearch()
+  const invalid = complete.replace('https://example.com/research', 'not-a-url')
+  const host = scripted({}, (it) => [
+    researcher(invalid)(it),
+    researcher(complete)(it),
+    ...nominal(it).slice(1),
+  ])
+  host.deps.templates.templates['research.template.md'] = TEMPLATE
+
+  const outcome = await host.start()
+
+  assert.deepEqual(recorded(host), [
+    [1, 'failed', 'research-records', [`${RESEARCH} cites invalid source URL "not-a-url" (#517)`]],
+    [2, 'done', null, []],
+  ])
+  assert.equal(outcome.status, 'done')
+})
+
+test('evaluated approaches require exactly one recommended option and at least one rejected option', async () => {
+  const complete = completeResearch()
+  const duplicate = complete.replace('### Option B (rejected)', '### Option B (recommended)')
+  const noRecommended = complete.replace('### Option A (recommended)', '### Option A')
+  const host = scripted({}, (it) => [
+    researcher(duplicate)(it),
+    researcher(noRecommended)(it),
+    researcher(complete)(it),
+    ...nominal(it).slice(1),
+  ])
+  host.deps.templates.templates['research.template.md'] = TEMPLATE
+
+  const outcome = await host.start()
+
+  assert.deepEqual(recorded(host), [
+    [1, 'failed', 'research-records', [
+      `${RESEARCH} must have exactly one recommended approach under "Evaluated approaches" (found 2) (#517)`,
+      `${RESEARCH} must have at least one rejected approach under "Evaluated approaches" (#517)`,
+    ]],
+    [2, 'failed', 'research-records', [
+      `${RESEARCH} must have exactly one recommended approach under "Evaluated approaches" (found 0) (#517)`,
+    ]],
+    [3, 'done', null, []],
+  ])
+  assert.equal(outcome.status, 'done')
+})
+
+test('an Existing tests row must name a test in its existing file', async () => {
+  const testFile = 'tests/checkout/card-payment.test.mjs'
+  const complete = completeResearch()
+    .replace('| | | |', `| #file:${testFile} | records card payment | card payment |`)
+  const missingFile = complete.replace(`#file:${testFile}`, '#file:card-payment.test.mjs')
+  const missingTest = complete.replace('records card payment', 'captures card payment')
+  const host = scripted({ files: { [testFile]: "test('records card payment', () => {})" } }, (it) => [
+    researcher(missingFile)(it),
+    researcher(missingTest)(it),
+    researcher(complete)(it),
+    ...nominal(it).slice(1),
+  ])
+  host.deps.templates.templates['research.template.md'] = TEMPLATE
+
+  const outcome = await host.start()
+
+  assert.deepEqual(recorded(host), [
+    [1, 'failed', 'research-records', [noFile('card-payment.test.mjs')]],
+    [2, 'failed', 'research-records', [
+      `${RESEARCH} cannot find test "captures card payment" in ${testFile} (#517)`,
+    ]],
+    [3, 'done', null, []],
+  ])
+  assert.equal(outcome.status, 'done')
+})
+
+test('a Handoff to DESIGN pair must name a symbol in its existing file', async () => {
+  const sourceFile = 'src/Payments/PaymentService.mjs'
+  const complete = completeResearch()
+  const handoff = '- Existing aggregates, use cases, interfaces and structural patterns DESIGN reuses:'
+  const missingSymbol = complete.replace(`${handoff}\n`, `${handoff} PaymentAuthorization -> #file:${sourceFile}\n`)
+  const existingSymbol = complete.replace(`${handoff}\n`, `${handoff} authorizePayment -> #file:${sourceFile}\n`)
+  const host = scripted({ files: { [sourceFile]: 'export function authorizePayment() {}' } }, (it) => [
+    researcher(missingSymbol)(it),
+    researcher(existingSymbol)(it),
+    ...nominal(it).slice(1),
+  ])
+  host.deps.templates.templates['research.template.md'] = TEMPLATE
+
+  const outcome = await host.start()
+
+  assert.deepEqual(recorded(host), [
+    [1, 'failed', 'research-records', [
+      `${RESEARCH} cannot find "PaymentAuthorization" in ${sourceFile} (#517)`,
+    ]],
+    [2, 'done', null, []],
+  ])
+  assert.equal(outcome.status, 'done')
 })

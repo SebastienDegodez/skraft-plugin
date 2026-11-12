@@ -5,7 +5,7 @@ import { mkdtemp, readFile, rm, writeFile, mkdir } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { briefOf } from '../support/pipeline-repository.mjs'
+import { briefOf, filledResearch } from '../support/pipeline-repository.mjs'
 import { createSkraftDecideTool } from '../../../../plugins/skraft-framework/engine/drivers/copilot-workflow/skraft-decide-tool.mjs'
 import { createHostConfirmation } from '../../../../plugins/skraft-framework/engine/drivers/copilot-workflow/host-confirmation.mjs'
 
@@ -120,7 +120,7 @@ const write = async (path, text) => {
 /** A behaviour that fills every listed output with the template plus findings, and writes its result. */
 export const fillsOutputs = (findings = 'Findings.\n') => async ({ prompt, outputs }) => {
   const template = await readFile(TEMPLATE_PATH, 'utf8')
-  for (const path of outputs) await write(path, `${template.replace(/\{\{[^{}]*\}\}/g, 'filled in')}${findings}`)
+  for (const path of outputs) await write(path, `${filledResearch(template)}${findings}`)
   await write(/** @type {string} */ (briefOf(prompt).result), JSON.stringify({ status: 'done', summary: 'research written' }))
   return 'research written'
 }

@@ -178,11 +178,18 @@ const proseFailures = async ({ files }, slug, { role, outputs }, missing) => {
  * @param {{ slug: string, base: import('../config/bases.mjs').Base[], config: SkraftConfig }} run
  * @returns {Promise<Failure[] | string>} a string: why the machine could not read them
  */
-const keptRecords = async (deps, { role }, { slug, base, config }) => {
+const keptRecords = async (deps, { role, precreated }, { slug, base, config }) => {
   if (role.records) return coded('design-records', await checkDesignRecords(deps, { slug, base }))
-  if (role.citations) return coded('research-records', await checkResearchRecords(deps, { slug, roots: config.components.map(({ root }) => root) }))
+  if (role.citations) return researchRecords(deps, slug, precreated, config)
   if (role.scenarios && writesGherkin(config)) return coded('gherkin-records', await checkGherkinRecords(deps, { slug, components: config.components }))
   return []
+}
+
+/** @param {CheckDeps} deps @param {string} slug @param {Array<string | null>} precreated @param {SkraftConfig} config */
+const researchRecords = async (deps, slug, precreated, config) => {
+  const template = precreated[0]
+  if (template === null || template === undefined) return 'RESEARCH template was not loaded'
+  return coded('research-records', await checkResearchRecords(deps, { slug, template, roots: config.components.map(({ root }) => root) }))
 }
 
 /** Whether any component of the run describes its behaviour in Gherkin. @param {SkraftConfig} config */

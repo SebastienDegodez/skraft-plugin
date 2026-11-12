@@ -6,10 +6,11 @@
  *
  * @typedef {{ path: string, text: string | null }} Text
  * @typedef {{ path: string, text: string }} Document a research document of the tracking folder, as the engine read it
- * @typedef {{ documents: Document[], cited: Text[], roots: string[] }} Records
+ * @typedef {{ documents: Document[], cited: Text[], roots: string[], template: string }} Records
  *   documents: the research documents of the tracking folder; cited: the paths their `#file:`
  *   citations name and, for each, the same path under every component root, text null when the
- *   working copy has none or the path is no readable file; roots: the component roots.
+ *   working copy has none or the path is no readable file; roots: the component roots;
+ *   template: the template this attempt started from.
  */
 
 import { joinRelative } from '../config/relative-path.mjs'
@@ -19,6 +20,15 @@ const RESEARCH = /(^|\/)research\/[^/]+\/[^/]+\.md$/
 const CITATION = /#file:((?:[A-Za-z]:)?[^\s`'"()<>[\],;:]+)(?::(\d+)(?:[-\u2013](\d+))?)?/g
 /** A citation that closes a sentence keeps its full stop, which no file name ends with. */
 const FULL_STOP = /\.$/
+/** The headings the template requires: every H2 and H3 below Research executed. */
+const SECTION = /^##(#?) ([^\n]+)$/gm
+const EXTERNAL = /^### External research\s*\n([\s\S]*?)(?=^#{1,3}\s|$(?![\s\S]))/m
+const APPROACHES = /^## Evaluated approaches\s*\n([\s\S]*?)(?=^##\s|$(?![\s\S]))/m
+const APPROACH_STATUS = /^### .+\((recommended|rejected)\)\s*$/gim
+const EXISTING_TESTS = /^### Existing tests\s*\n([\s\S]*?)(?=^#{1,3}\s|$(?![\s\S]))/m
+const HANDOFF = /^## Handoff to DESIGN\s*\n([\s\S]*?)(?=^##\s|$(?![\s\S]))/m
+const SOURCE_URL = /\(Source:\s*([^\s)]+)\)/g
+const HTTP_URL = /^https?:\/\/(?:localhost|(?:[a-z\d-]+\.)+[a-z\d-]+)(?::\d+)?(?:[/?#][^\s]*)?$/i
 /** A path the engine never reads: absolute, climbing out with `..`, or in its own tracking folder. */
 const OUTSIDE = /^(?:\/|[A-Za-z]:|\.copilot-tracking\/)|(?:^|\/)\.\.(?:\/|$)/
 
@@ -63,10 +73,98 @@ export const underRoots = (path, roots) => roots.filter((root) => root !== '.' &
  * @param {Records} records
  * @returns {string[]}
  */
-export const researchFailures = ({ documents, cited, roots }) => documents.flatMap((document) => [
+export const researchFailures = ({ documents, cited, roots, template }) => documents.flatMap((document) => [
+  ...sectionFailures(document, template),
+  ...sourceFailures(document),
+  ...approachFailures(document),
+  ...existingTestFailures(document, cited),
+  ...handoffFailures(document, cited),
   ...missingCitations(document, cited, roots),
   ...rangeFailures(document, cited),
 ])
+
+/** Sections required by the template and absent from a research document. @param {Document} document @param {string} template */
+const sectionFailures = ({ path, text }, template) => sectionsOf(template)
+  .filter((section) => !new Set(sectionsOf(text)).has(section))
+  .map((section) => `${path} is missing section "${section}" (#517)`)
+
+/** External citations must be well-formed HTTP(S) URLs with a dotted host or localhost. @param {Document} document */
+const sourceFailures = ({ path, text }) => externalSources(text)
+  .filter((url) => !HTTP_URL.test(url))
+  .map((url) => `${path} cites invalid source URL "${url}" (#517)`)
+
+/** Evaluated approaches need one recommendation and at least one rejection. @param {Document} document */
+const approachFailures = ({ path, text }) => {
+  const section = APPROACHES.exec(text)?.[1]
+  if (section === undefined) return []
+  const statuses = [...section.matchAll(APPROACH_STATUS)].map(([, status]) => status.toLowerCase())
+  const recommended = statuses.filter((status) => status === 'recommended').length
+  const rejected = statuses.includes('rejected')
+  return [
+    ...(recommended === 1 ? [] : [`${path} must have exactly one recommended approach under "Evaluated approaches" (found ${recommended}) (#517)`]),
+    ...(rejected ? [] : [`${path} must have at least one rejected approach under "Evaluated approaches" (#517)`]),
+  ]
+}
+
+/** Existing test rows must name a test in their cited files. @param {Document} document @param {Text[]} cited */
+const existingTestFailures = ({ path, text }, cited) => existingTestRows(text)
+  .filter(({ file, name }) => textOf(cited, file) !== null && !textOf(cited, file)?.includes(name))
+  .map(({ file, name }) => `${path} cannot find test "${name}" in ${file} (#517)`)
+
+/** Rows in the template's Existing tests table. @param {string} text */
+const existingTestRows = (text) => {
+  const section = EXISTING_TESTS.exec(text)?.[1] ?? ''
+  const lines = section.split('\n').filter((line) => line.trim().startsWith('|'))
+  if (!isExistingTestsHeader(cellsOf(lines[0] ?? ''))) return []
+  return lines.slice(2).map(readExistingTestRow).filter(({ file, name }) => file && name)
+}
+
+/** @param {string[]} cells */
+const isExistingTestsHeader = (cells) => cells[0] === 'Test file' && cells[1] === 'Test name'
+
+/** @param {string} line */
+const readExistingTestRow = (line) => {
+  const [citation, name] = cellsOf(line)
+  const file = citationsOf(citation ?? '')[0]?.path ?? ''
+  return { file, name }
+}
+
+/** @param {string} line */
+const cellsOf = (line) => line.split('|').slice(1, -1).map((cell) => cell.trim())
+
+/** Handoff names must appear in their cited files. @param {Document} document @param {Text[]} cited */
+const handoffFailures = ({ path, text }, cited) => handoffPairs(text)
+  .filter(({ file, name }) => textOf(cited, file) !== null && !textOf(cited, file)?.includes(name))
+  .map(({ file, name }) => `${path} cannot find "${name}" in ${file} (#517)`)
+
+/** Name/path pairs from Handoff to DESIGN. @param {string} text */
+const handoffPairs = (text) => (HANDOFF.exec(text)?.[1] ?? '')
+  .split('\n')
+  .filter((line) => line.includes('->'))
+  .map(readHandoffPair)
+  .filter(({ name, file }) => name && file)
+
+/** @param {string} line */
+const readHandoffPair = (line) => {
+  const [before, citation] = line.split('->')
+  const name = before.slice(before.lastIndexOf(':') + 1).trim()
+  return { name, file: citationsOf(citation ?? '')[0]?.path ?? '' }
+}
+
+/** Source URLs in External research only. @param {string} text */
+const externalSources = (text) => [...(EXTERNAL.exec(text)?.[1] ?? '').matchAll(SOURCE_URL)]
+  .map(([, url]) => url)
+
+/** Every H2, and the H3s beneath Research executed. @param {string} text */
+const sectionsOf = (text) => {
+  const sections = []
+  let parent = ''
+  for (const [, level, title] of text.matchAll(SECTION)) {
+    if (!level) parent = title
+    if (!level || parent === 'Research executed') sections.push(title)
+  }
+  return sections
+}
 
 /** Each line range a document cites that its file does not hold. @param {Document} document @param {Text[]} cited */
 const rangeFailures = ({ path, text }, cited) => citationsOf(text)
