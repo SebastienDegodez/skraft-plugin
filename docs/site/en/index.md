@@ -36,7 +36,7 @@ what you are trying to do:
 | Door | For… | Start with |
 | --- | --- | --- |
 | **Learn** (tutorial) | following a guided path | [Getting started]({{ "/en/tutorials/getting-started" | relative_url }}), [The running example]({{ "/en/explanation/pipeline/fil-rouge" | relative_url }}) |
-| **Do** (how-to) | solving a precise task | [Customization]({{ "/en/how-to/customisation" | relative_url }}), [Genesis & contributing]({{ "/en/how-to/contributing" | relative_url }}) |
+| **Do** (how-to) | solving a precise task | [Set up your machine]({{ "/en/how-to/machine-setup" | relative_url }}), [Customization]({{ "/en/how-to/customisation" | relative_url }}), [Genesis & contributing]({{ "/en/how-to/contributing" | relative_url }}) |
 | **Understand** (explanation) | knowing *why* it is built this way | [The pipeline]({{ "/en/explanation/pipeline/" | relative_url }}), [Review before review]({{ "/en/explanation/why-review-before-review" | relative_url }}) |
 | **Look up** (reference) | finding a precise fact | [Agentic catalogue]({{ "/en/dashboard/" | relative_url }}), [Gates]({{ "/en/reference/gates" | relative_url }}), [Patterns]({{ "/en/reference/patterns" | relative_url }}) |
 
