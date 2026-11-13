@@ -994,10 +994,10 @@ const failureIncident = async ({ deps, slug, journal }, step, failure, gate) => 
 }
 
 /** @param {import('../ports/tracking-files.mjs').TrackingFiles} files @param {import('../journal/run-journal.mjs').OpenJournal['events']} events @param {string} slug @param {string} evidence */
-const gateEvidence = async (files, events, slug, evidence) => ({
-  event: events.findLast((entry) => gateEvidenceMatches(files, slug, evidence, entry)),
-  output: await files.read(slug, evidence),
-})
+const gateEvidence = async (files, events, slug, evidence) => {
+  const event = events.findLast((entry) => gateEvidenceMatches(files, slug, evidence, entry))
+  return { event, output: event === undefined ? null : await files.read(slug, event.evidence) }
+}
 
 /** @param {import('../ports/tracking-files.mjs').TrackingFiles} files @param {string} slug @param {string} evidence @param {import('../../domain/journal/run-state.mjs').RunEvent} event */
 const gateEvidenceMatches = (files, slug, evidence, event) =>

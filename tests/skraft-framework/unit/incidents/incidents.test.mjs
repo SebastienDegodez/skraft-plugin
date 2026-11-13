@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { InMemoryGit, ScriptedMachine, ScriptedReplay, hexSha, judgeAnswer } from '../support/in-memory-host.mjs'
+import { InMemoryGit, InMemoryTracking, ScriptedMachine, ScriptedReplay, hexSha, judgeAnswer } from '../support/in-memory-host.mjs'
 import { API, SLUG, TRACKING, agent, green, scripted, tddCycle } from '../support/pipeline-host.mjs'
 import { waitingOnEnvironment } from '../support/decisions.mjs'
 import { ownerOfCause } from '../../../../plugins/skraft-framework/engine/domain/pipeline/incidents.mjs'
@@ -139,6 +139,30 @@ test('agent failures with attempt-specific log paths share a signature and stop 
   assert.deepEqual(failures.map(({ incidents }) => incidents[0].attempts), [1, 2])
   assert.equal(failures[1].code, 'repeated-failure')
   assert.equal(dispatched(host, 'research'), 2)
+})
+
+test('different failed checks in Windows evidence logs do not stop the run as a repeated failure', async () => {
+  const tracking = new InMemoryTracking({ root: 'C:\\work tree\\.copilot-tracking\\skraft-plans' })
+  tracking.location = (slug, path) => `${tracking.root}\\${slug}\\${path.replaceAll('/', '\\')}`
+  const machine = new ScriptedMachine()
+  const run = machine.run.bind(machine)
+  const failures = ['Expected Accepted, got Pending', 'Expected Accepted, got Rejected']
+  machine.run = async (request) => {
+    const result = await run(request)
+    if (request.argv[0] !== 'dotnet' || request.argv[1] !== 'test' || failures.length === 0) return result
+    return { ...result, exitCode: 1, stderr: failures.shift() }
+  }
+  const host = scripted({ tracking, machine }, (it) => [
+    ...upToDeliver(it), agent({ work: green() })(it), agent({ work: green() })(it), agent({ work: green() })(it),
+  ])
+
+  const outcome = await host.start()
+
+  assert.equal(outcome.status, 'done', outcome.reason)
+  const gates = host.events().filter(({ type, step }) => type === 'step.recorded' && step === 'gates')
+  assert.deepEqual(gates.map(({ outcome: result }) => result), ['fail', 'fail', 'pass'])
+  assert.notEqual(gates[0].incidents[0].signature, gates[1].incidents[0].signature)
+  assert.deepEqual(gates.slice(0, 2).map(({ incidents }) => incidents[0].attempts), [1, 1])
 })
 
 test('an unknown gate failure stops before a later unavailable gate, naming the first log', async () => {
