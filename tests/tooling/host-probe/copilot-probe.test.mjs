@@ -60,6 +60,7 @@ test('on a host that behaves as the issues say, every host premise is measured, 
     'skraft-mcp-server-loaded': 'pass',
     'skraft-mcp-loop-hidden': 'pass',
     'session-agents': 'pass',
+    'agent-mcp-reach': 'pass',
     'copilot-models-available': 'pass',
     'incident-read-answered': 'inconclusive',
     'skraft-tool-names-free': 'pass',
@@ -80,6 +81,20 @@ test('on a host that behaves as the issues say, every host premise is measured, 
     { accepted: { elicitation: true, value: 'RATIFIED' }, declined: { elicitation: true, value: null }, requests: [{ fields: ['selection'], options: ['RATIFIED', 'REJECTED'] }, { fields: ['selection'], options: ['RATIFIED', 'REJECTED'] }] },
     { accepted: { elicitation: true, value: 'skraft probe instruction' }, declined: { elicitation: true, value: null }, requests: [{ fields: ['value'], options: null }, { fields: ['value'], options: null }] },
   ])
+})
+
+test('a tool of the plugin MCP server is offered to the agent whose tools name it, and to no other; a host that ignores that list fails the check', async (t) => {
+  const reachOf = (report) => report.checks.find((item) => item.id === 'agent-mcp-reach')
+
+  const gated = reachOf((await probe(t)).report)
+  assert.equal(gated.verdict, 'pass')
+  assert.ok(gated.observed.declared.includes('skraft-skraft_doctor'), 'the agent that declares the tool is offered it')
+  assert.ok(!gated.observed.control.includes('skraft-skraft_doctor'), 'the agent that declares another tool is not')
+  assert.equal(gated.observed.declaredAs, 'skraft/skraft_doctor')
+
+  const ignored = reachOf((await probe(t, { agentTools: 'ignored' })).report)
+  assert.equal(ignored.verdict, 'fail')
+  assert.ok(ignored.observed.control.includes('skraft-skraft_doctor'), 'a host that ignores the list hands the tool to an agent that never asked for it')
 })
 
 test('with --agent-calls, a skill an agent lists under skills is measured as preloaded only when that agent knows its token and its twin without the field does not', async (t) => {
