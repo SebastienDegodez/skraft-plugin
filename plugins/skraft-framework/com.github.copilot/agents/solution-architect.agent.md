@@ -9,6 +9,7 @@ tools:
   - edit/editFiles
   - search/codebase
   - graphify/*
+  - skraft/skraft_precheck
   - skill
 skills:
   - architecture-patterns
@@ -99,3 +100,4 @@ The ADRs are the source of truth; the event model and the diagrams must agree wi
    - the ADR is `Proposed`: rewrite the ADR or the artefact, whichever the stories and the feedback contradict, and fill the row again;
    - the ADR is `Accepted` and a story contradicts it: write a new ADR that supersedes it (step 2);
    - otherwise: you are blocked (boundary 5).
+8. Before writing your result, call `skraft_precheck` and correct every anomaly it answers, then call it again, until it answers `passed`. It starts no agent and approves nothing: a `passed` is not a review.

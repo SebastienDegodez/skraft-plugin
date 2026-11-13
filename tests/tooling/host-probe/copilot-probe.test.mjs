@@ -7,7 +7,7 @@ import { parseArgs, reportMarkdown, requiredFailures, runProbe, toolText } from 
 import { planIssueActions } from '../../../eng/host-probe/issues.mjs'
 import { CONFIGURED_MODELS, NATIVE_TOOLS, REFUSALS, WORKFLOWS_UNAVAILABLE, notRegistered, simulatedSdk } from './simulated-copilot-host.mjs'
 
-const SHARED_MCP_TOOLS = ['skraft_answer', 'skraft_doctor', 'skraft_gate', 'skraft_init', 'skraft_journal', 'skraft_migrate', 'skraft_report', 'skraft_status', 'skraft_workflow_check', 'skraft_workflow_diff', 'skraft_workflow_eject']
+const SHARED_MCP_TOOLS = ['skraft_answer', 'skraft_doctor', 'skraft_gate', 'skraft_init', 'skraft_journal', 'skraft_migrate', 'skraft_precheck', 'skraft_report', 'skraft_status', 'skraft_workflow_check', 'skraft_workflow_diff', 'skraft_workflow_eject']
 const FAST = { tools: 50, isolationTools: 50, poll: 10, settle: 0 }
 const ENVIRONMENT = { copilot: '1.0.100', sdk: 'test', node: 'v22', os: 'linux' }
 

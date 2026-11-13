@@ -44,6 +44,7 @@ usage: skraft --version
        skraft next [--json]                                              run the active pipeline until it needs agents or a human
        skraft record [--json]                                            hand the saved agent replies to the run, then go on
        skraft gate [--all] [--json]                                      run the gates of the changed components (all with --all)
+       skraft precheck [--json]                                          run, inside the open attempt, the records check the engine runs on its submission, and keep what it read
        skraft doctor [--run] [--base <ref>] [--json]                     check every command can run (--run: run each once)
        skraft review --pr <number> [--publish] [--record] [--json]       review one pull request with the review workflow (--publish: keep its verdict in a comment)
        skraft workflow eject [review]                                    copy the plugin pipeline into .skraft/ (review: the review alone)
@@ -363,6 +364,33 @@ Codes possibles : `no-active-pipeline`, `not-initialised`, `config-invalid`, `no
 d'échec et format des preuves :
 [skraft-config.json](./skraft-config.md) et
 [Dossier de suivi et journal](./run-journal.md).
+
+## `skraft precheck [--json]`
+
+**Effet.** Lance, dans la tentative ouverte du pipeline actif, le contrôle des traces que le
+moteur lance à la remise de cette étape, et rend chaque anomalie avec l'artefact et la règle
+qu'elle enfreint. Seule l'étape de conception en a un. Il ne lance aucun agent, ne change rien de
+ce que l'agent a écrit et n'approuve rien : le moteur contrôle de nouveau à la remise, et la revue
+a toujours lieu. Il écrit ce que le contrôle a lu à côté des documents de la tentative, dans
+`details/<date>/precheck-<étape>.json` : chaque chemin avec l'empreinte du contenu qu'il portait,
+et aucune empreinte pour un chemin qui ne portait rien, l'inventaire du dossier de suivi compris.
+Un agent sans shell l'appelle par l'outil MCP `skraft_precheck`.
+
+| Option | Effet |
+| --- | --- |
+| `--json` | sortie JSON au lieu du texte |
+
+**Sortie texte** — une ligne par anomalie, puis une ligne de synthèse :
+
+```
+fail  <artefact> : <la règle enfreinte>
+skraft precheck: <synthèse>
+```
+
+**Sortie `--json`** : `status` (`passed`, `failed`, `refused`, `blocked`), `slug`, `step`,
+`attempt`, `check` (`design-records`), `failures` (string[]), `code`, `reason`. Il sort 0 quand
+`passed`, 1 sinon. `precheck-unavailable` refuse un appel fait entre deux étapes ou sur une étape
+qui ne tient aucune trace.
 
 ## `skraft report [--json]`
 

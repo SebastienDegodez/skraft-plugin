@@ -9,6 +9,7 @@ import { createObserve } from '../../../../plugins/skraft-framework/engine/appli
 import { createRunPipeline } from '../../../../plugins/skraft-framework/engine/application/pipeline/run-pipeline-usecase.mjs'
 import { createDecide } from '../../../../plugins/skraft-framework/engine/application/decisions/decide-usecase.mjs'
 import { createPublish } from '../../../../plugins/skraft-framework/engine/application/publish/publish-usecase.mjs'
+import { createPrecheck } from '../../../../plugins/skraft-framework/engine/application/pipeline/precheck-usecase.mjs'
 import {
   BUILT_IN_WORKFLOW, FakeHasher, FixedClock, InMemoryAgentCatalog, InMemoryCodeHost, InMemoryGit, InMemoryPullRequests, InMemoryRunLock, InMemoryTemplates, InMemoryTracking, InMemoryUserSettings, InMemoryWorkflowSource, InMemoryWorkspace,
   ManualTimer, RecordingProgress, ScriptedAgentRunner, ScriptedHuman, ScriptedMachine, ScriptedReplay,
@@ -131,6 +132,8 @@ export const pipelineHost = ({
     decide: (decision) => createDecide(deps).decide(decision),
     /** skraft publish. */
     publish: () => createPublish(deps).publish(),
+    /** skraft precheck, as a producer agent calls it during its attempt. @param {object} [request] */
+    precheck: (request = {}) => createPrecheck(deps).precheck(request),
     /** Init then RunPipeline. @param {object} [request] */
     start: async (request = {}) => {
       const initialised = await host.init(request)
@@ -176,7 +179,7 @@ export const agent = ({ result = { status: 'done', summary: 'done' }, fill = tru
     }
   }
   if (result !== null) await host.tracking.write(host.slug, step.result, typeof result === 'string' ? result : JSON.stringify(result))
-  ;(work ?? scenarioWork(host, step))(host)
+  await (work ?? scenarioWork(host, step))(host)
   return answer
 }
 

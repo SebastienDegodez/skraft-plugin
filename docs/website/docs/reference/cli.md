@@ -44,6 +44,7 @@ usage: skraft --version
        skraft next [--json]                                              run the active pipeline until it needs agents or a human
        skraft record [--json]                                            hand the saved agent replies to the run, then go on
        skraft gate [--all] [--json]                                      run the gates of the changed components (all with --all)
+       skraft precheck [--json]                                          run, inside the open attempt, the records check the engine runs on its submission, and keep what it read
        skraft doctor [--run] [--base <ref>] [--json]                     check every command can run (--run: run each once)
        skraft review --pr <number> [--publish] [--record] [--json]       review one pull request with the review workflow (--publish: keep its verdict in a comment)
        skraft workflow eject [review]                                    copy the plugin pipeline into .skraft/ (review: the review alone)
@@ -361,6 +362,33 @@ Possible codes: `no-active-pipeline`, `not-initialised`, `config-invalid`, `no-c
 and evidence format:
 [skraft-config.json](./skraft-config.md) and
 [Tracking folder and journal](./run-journal.md).
+
+## `skraft precheck [--json]`
+
+**Effect.** Runs, inside the open attempt of the active pipeline, the records check the engine runs
+when that step is submitted, and answers every anomaly with the artefact and the rule it breaks.
+Only the design step has one. It starts no agent, changes nothing the agent wrote and approves
+nothing: the engine checks again at the submission, and the review still happens. It writes what
+the check read beside the attempt's documents, in
+`details/<date>/precheck-<step>.json`: each path with the hash of the content it held, and no hash
+for a path that held nothing, the inventory of the tracking folder included. An agent without a
+shell calls it through the `skraft_precheck` MCP tool.
+
+| Option | Effect |
+| --- | --- |
+| `--json` | JSON output instead of text |
+
+**Text output** — one line per anomaly, then a summary line:
+
+```
+fail  <artefact>: <the rule it breaks>
+skraft precheck: <summary>
+```
+
+**`--json` output**: `status` (`passed`, `failed`, `refused`, `blocked`), `slug`, `step`,
+`attempt`, `check` (`design-records`), `failures` (string[]), `code`, `reason`. It exits 0 when
+`passed`, 1 otherwise. `precheck-unavailable` refuses a call made between steps or on a step that
+keeps no records.
 
 ## `skraft report [--json]`
 

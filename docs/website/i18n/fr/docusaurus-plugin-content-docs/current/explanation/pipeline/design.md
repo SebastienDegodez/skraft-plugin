@@ -59,6 +59,13 @@ patterns, qui refuse tout agrégat ou pattern qu'aucune story ne justifie. Le mo
 plus, sans lentille, les traces qu'un humain ne devrait pas avoir à relire : matrice de
 cohérence, nommage et registre des ADR remplacés, index des décisions, et règles des ADR (aucune version, une décision d'une phrase, un vocabulaire de statut fermé, un ADR publié modifié seulement sur ses lignes de statut).
 
+L'architecte lance lui-même ces contrôles mécaniques, pendant sa tentative, avec
+`skraft_precheck` : chaque anomalie revient avec l'artefact et la règle qu'elle enfreint, si bien
+qu'une matrice dont la ligne de porte lit `FAIL`, ou un chemin `docs-relied-on` qui ne nomme aucun
+fichier de la copie de travail, se corrige sur place au lieu de coûter un rejeu. Le précontrôle ne
+lance aucun agent et n'approuve rien : le moteur contrôle de nouveau à la remise de l'étape, et les
+lentilles font toujours leur revue.
+
 La revue a lieu **avant** la ratification. Un humain ne relit ainsi que des ADR déjà
 cohérents ; il répond `RATIFIED` ou `REJECTED` avec une raison qui repart chez l'architecte.
 Seul le moteur passe un ADR en `Accepted`, après cette réponse. Aucun agent ne peut ratifier à

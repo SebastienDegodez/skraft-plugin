@@ -3,6 +3,7 @@ import { createObserve } from '../../application/pipeline/observe-usecase.mjs'
 import { createDecide } from '../../application/decisions/decide-usecase.mjs'
 import { createConfigureComponents } from '../../application/config/configure-components-usecase.mjs'
 import { createRunGate } from '../../application/gates/run-gate-usecase.mjs'
+import { createPrecheck } from '../../application/pipeline/precheck-usecase.mjs'
 import { createDoctor } from '../../application/diagnostics/doctor-usecase.mjs'
 import { createWorkflowCommands } from '../../application/workflow/workflow-commands-usecase.mjs'
 import { createPublish } from '../../application/publish/publish-usecase.mjs'
@@ -353,6 +354,21 @@ const gate = async (args, services, console) => {
   return outcome.status === 'passed' ? 0 : 1
 }
 
+/** @param {string[]} args @param {CliServices} services @param {Console} console */
+const precheck = async (args, services, console) => {
+  const options = optionsOf(args, { flags: ['--json'] })
+  if (options === undefined) return usage(console)
+  const outcome = await createPrecheck(services.adapters()).precheck({})
+  print(options['--json'] === true, outcome, precheckLines, console)
+  return outcome.status === 'passed' ? 0 : 1
+}
+
+/** @param {Awaited<ReturnType<ReturnType<typeof createPrecheck>['precheck']>>} outcome */
+const precheckLines = (outcome) => [
+  ...outcome.failures.map((failure) => `fail  ${failure}`),
+  `skraft precheck: ${outcome.reason}`,
+]
+
 /** @param {Awaited<ReturnType<ReturnType<typeof createRunGate>['run']>>} outcome */
 const gateLines = (outcome) => [
   ...outcome.gates.map((result) =>
@@ -506,6 +522,7 @@ const TABLE = [
   ['next', loopStep('next'), [{ synopsis: '[--json]', summary: 'run the active pipeline until it needs agents or a human' }]],
   ['record', loopStep('record'), [{ synopsis: '[--json]', summary: 'hand the saved agent replies to the run, then go on' }]],
   ['gate', gate, [{ synopsis: '[--all] [--json]', summary: 'run the gates of the changed components (all with --all)' }]],
+  ['precheck', precheck, [{ synopsis: '[--json]', summary: "run, inside the open attempt, the records check the engine runs on its submission, and keep what it read" }]],
   ['doctor', doctor, [{ synopsis: '[--run] [--base <ref>] [--json]', summary: 'check every command can run (--run: run each once)' }]],
   ['review', review, [{ synopsis: '--pr <number> [--publish] [--record] [--json]', summary: 'review one pull request with the review workflow (--publish: keep its verdict in a comment)' }]],
   ['workflow', workflow, [

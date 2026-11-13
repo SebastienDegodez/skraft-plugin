@@ -49,6 +49,7 @@ answer, so a failing doctor or gate still answers its JSON.
 | `skraft_report` | — | `report --json` | every host |
 | `skraft_journal` | `last?` | `journal show [--last <n>] --json` | every host |
 | `skraft_gate` | `all?` | `gate [--all] --json` | every host |
+| `skraft_precheck` | — | `precheck --json` | every host |
 | `skraft_review` | `pr`, `record?` | `review --pr <n> [--record] --json` | VS Code |
 | `skraft_workflow_check` | — | `workflow check --json` | every host |
 | `skraft_workflow_diff` | — | `workflow diff --json` | every host |
