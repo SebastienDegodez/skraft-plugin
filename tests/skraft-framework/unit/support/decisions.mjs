@@ -98,6 +98,7 @@ export const environmentQuestion = (step, reason, { owner = 'environment', log =
   `${step} cannot run on this machine: ${reason}.`,
   `Cause: ${CAUSES[owner]}.`,
   ...(log === null ? [] : [`Output: ${log}`]),
+  ...(owner === 'config' ? ['Run `skraft doctor` to check the command and runtime.'] : []),
   `Fix it, then RETRY: ${step} runs again where it stopped, using no new attempt; or ABORT: the run ends.`,
   REPORT_LINE,
 ].join('\n')
@@ -107,6 +108,14 @@ export const REPORT_LINE = `The run so far (commits, refusals, incidents): ${TRA
 
 /** The text of a question on a stopped run, its report named last. @param {string} text */
 export const withReport = (text) => `${text}\n${REPORT_LINE}`
+
+/** Removes the diagnostic block from an exact-message assertion; dedicated tests assert its contents. */
+export const withoutReportSummary = (value) => {
+  if (typeof value === 'string') return value.replace(/\n(?:Scenario in progress: [^\n]+\n)?Commits: [^\n]*\nStep verdicts: [^\n]*\nRefusals: [^\n]*\nOpen findings: [^\n]*\nIncidents: [^\n]*(?=\nThe run so far)/, '')
+  if (Array.isArray(value)) return value.map(withoutReportSummary)
+  if (value !== null && typeof value === 'object') return Object.fromEntries(Object.entries(value).map(([key, item]) => [key, withoutReportSummary(item)]))
+  return value
+}
 
 /** Why an ADR folder the machine cannot list stops a run: fixed, never the text of what refused it. */
 export const UNLISTABLE_ADRS = 'docs/adr cannot be listed: Git or the file system refused to read it'

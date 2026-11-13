@@ -96,7 +96,13 @@ test('a refuter answer that cannot be read twice leaves the finding unverifiable
 
 test('a lens the host cannot start stops the run; the next run asks only the lenses that had not answered', async () => {
   const host = scripted({}, (it) => [...nominal(it).slice(0, 2), ...nominal(it).slice(2)])
-  host.agentRunner.review = lenses({ consistency: [{ ok: false, text: '', unavailable: true, error: 'consistency-lens is not installed' }] })
+  const answers = lenses({ consistency: [{ ok: false, text: '', unavailable: true, error: 'consistency-lens is not installed' }] })
+  const scratch = []
+  host.agentRunner.review = async (dispatch) => {
+    if (dispatch.agent === 'fitness-lens') await host.tracking.write(SLUG, '.tmp/fitness-notes', 'x')
+    if (dispatch.agent === 'consistency-lens') scratch.push(await host.tracking.list(SLUG, '.tmp'))
+    return answers(dispatch)
+  }
 
   const stopped = await host.start()
 
@@ -106,6 +112,7 @@ test('a lens the host cannot start stops the run; the next run asks only the len
   const resumed = await host.run()
 
   assert.equal(resumed.status, 'done')
+  assert.deepEqual(scratch, [[], ['.tmp/fitness-notes']])
   assert.deepEqual(host.agentRunner.batches[1].map((dispatch) => dispatch.agent), ['consistency-lens'])
   assert.equal(host.events().filter((event) => event.type === 'step.started' && event.step === 'design_review').length, 1)
 })
@@ -489,7 +496,7 @@ test('a DELIVER pass the review opened is told which commit each finding takes: 
 
   const again = scripted({ answers: [{ answer: 'STOP' }] }, (it) => [...nominal(it), agent({ work: ({ git }) => git.commit('fix(checkout): assert the card amount', ['src/Checkout.cs']) })(it), agent()(it)])
   again.agentRunner.review = lenses({ 'test-integrity': [integrity] })
-  assert.equal((await again.start()).code, 'tdd')
+  assert.equal((await again.start()).code, 'repeated-failure')
   assert.deepEqual(again.events().filter((event) => event.type === 'step.recorded' && event.step === 'deliver').map(({ visit, attempt, outcome }) => [visit, attempt, outcome]), [[1, 1, 'done'], [2, 1, 'failed'], [2, 2, 'failed']])
 })
 

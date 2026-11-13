@@ -122,11 +122,9 @@ test('a researcher that writes the same invalid result twice is blocked without 
   assert.equal(spawns.length, 2)
   assert.ok(spawns[1].prompt.includes(`Refused in attempt 1 of 3:\n- result status must be "done" or "blocked"`), spawns[1].prompt)
   assert.deepEqual([result, briefOf(spawns[1].prompt).result].map((path) => path.split(/[\\/]/).at(-1)), ['research-1-1.json', 'research-1-2.json'])
-  assert.deepEqual(outcome, {
-    status: 'blocked', slug: SLUG, phase: 'RESEARCH', code: 'invalid-result',
-    reason: `solution-researcher failed the same way on attempts 1 and 2: result status must be "done" or "blocked"`,
-  })
-  assert.equal(mod.notes.at(-1), `skraft ${SLUG}: blocked (invalid-result) — ${outcome.reason}`)
+  assert.deepEqual([outcome.status, outcome.slug, outcome.phase, outcome.code], ['blocked', SLUG, 'RESEARCH', 'repeated-failure'])
+  assert.match(outcome.reason, /^research stopped after 2 occurrences of failure signature [0-9a-f]{64}; evidence: unavailable$/)
+  assert.equal(mod.notes.at(-1), `skraft ${SLUG}: blocked (repeated-failure) — ${outcome.reason}`)
 })
 
 test('gates that fail send DELIVER back as pass 2 with the failing gate in its brief, then the run completes', async (t) => {

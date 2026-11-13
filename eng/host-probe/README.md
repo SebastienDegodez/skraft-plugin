@@ -29,6 +29,7 @@ On Windows use the same commands from PowerShell. Options:
 | `--keep` | off | keep the temporary fixtures |
 | `--require <id,...>` | none | exit 1 when one of these checks does not pass or is not in the report (the CI smoke) |
 | `--agent-calls` | off | run the checks that start agents through `ctx.agent` (may spend AI credits): the two refusal checks (one agent each) and `agent-skills-preload` (two agents) |
+| `--incident-session` | off | run `incident-read-answered`: one model session on the host's default model (spends AI credits) |
 
 The session asks for extension access once: the probe approves it for its own fixtures and for
 `plugins/skraft-framework`.
@@ -80,6 +81,13 @@ The session asks for extension access once: the probe approves it for its own fi
 | `copilot-model-refusal` | opens one on failure | with `--agent-calls`: what `ctx.agent` answers for an unknown model; passes when the host accepts it or `refusalOf` reads the error as `model`; the error text is in the report |
 | `copilot-effort-refusal` | opens one on failure | with `--agent-calls`: what `ctx.agent` answers for `reasoningEffort: 'max'` on the first listed model whose name has no `claude`; passes when the host accepts it or `refusalOf` reads the error as `effort` |
 | `agent-skills-preload` | — | with `--agent-calls`: an Agent Plugins fixture holds a skill with a token, an agent that lists it under `skills:` and a twin without; each is asked, with no tool, for the token. `pass` when only the first knows it (Copilot preloads the field), `fail` when neither does, `inconclusive` when the twin knows it too or an agent is not listed |
+| `incident-read-answered` | #566 | with `--incident-session` (one model session, the host's default model; spends AI credits): a working copy paused on the `environment` question of an unforeseen failure, whose output file alone holds a token. The session, offered only `skraft_decide` and `view`, is told the decision is delegated to it. `pass` when it reads the question with `skraft_decide {}`, records one menu option once (`by: decide`), quotes the token and the host is asked nothing; reports the calls, the reply and each `assistant.usage` (model, tokens, cost, nano-AIU) |
+
+Claude Code: `node eng/host-probe/claude-incident-probe.mjs` measures the same pause under
+`claude -p` (the host's default model, `--max-budget-usd 1`, tools `Read`, `skraft_status` and
+`skraft_answer` of the plugin's MCP server, loaded with `--plugin-dir plugins/skraft-framework`).
+It writes `host-probe-results/claude-incident-probe-<date>.json`: verdict, calls, reply, the
+tools and plugins of the `init` event, model and `total_cost_usd`.
 
 A check linked to an issue states the issue's premise: `pass` means the premise was measured as
 the issue says. Paste the Markdown report into `docs/v2/host-verification.md`.

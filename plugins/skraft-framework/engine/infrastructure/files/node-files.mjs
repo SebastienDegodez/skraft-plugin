@@ -1,9 +1,9 @@
 import { randomUUID } from 'node:crypto'
-import { appendFile, chmod, mkdir, readFile, readdir, rename, stat, writeFile } from 'node:fs/promises'
+import { appendFile, chmod, mkdir, readFile, readdir, rename, rm, stat, writeFile } from 'node:fs/promises'
 import { dirname, join, relative, sep } from 'node:path'
 
 /** @returns {import('../tracking/tracking-store.mjs').FileFunctions} */
-export const createNodeFiles = () => Object.freeze({ read, write, replace, append, join, list: listFiles })
+export const createNodeFiles = () => Object.freeze({ read, write, replace, append, clearDirectory, join, list: listFiles })
 
 /**
  * @param {string} path
@@ -52,6 +52,12 @@ const replace = async (path, text) => {
 const append = async (path, text) => {
   await mkdir(dirname(path), { recursive: true })
   await appendFile(path, text, 'utf8')
+}
+
+/** @param {string} path */
+const clearDirectory = async (path) => {
+  await rm(path, { recursive: true, force: true })
+  await mkdir(path, { recursive: true })
 }
 
 /**

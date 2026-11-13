@@ -9,7 +9,10 @@ const sectionOf = (report, title) => report.split(`\n${title}\n\n`)[1].split(/\n
 
 test('a run that waits on a human tells in its report the question and how to answer it, each commit and its verdict, and the failures sent back by step', async () => {
   const machine = new ScriptedMachine({ exits: { '. $ dotnet test': 1 } })
-  const host = scripted({ machine }, (it) => [agent({ fill: false })(it), ...upToDeliver(it), ...[1, 2, 3, 4].map((n) => agent({ work: n === 1 ? green() : tddCycle(SLUG, `Pass${n}`) })(it))])
+  const host = scripted({ machine }, (it) => [agent({ fill: false })(it), ...upToDeliver(it), ...[1, 2, 3, 4].map((n) => agent({ work: (host) => {
+    machine.exits['. $ dotnet test'] = n
+    return (n === 1 ? green() : tddCycle(SLUG, `Pass${n}`))(host)
+  } })(it))])
 
   const outcome = await host.start()
 
@@ -39,12 +42,16 @@ test('a run that waits on a human tells in its report the question and how to an
     '| deliver | root-11 | refactor(checkout): name the card payment | refactor | ok |',
   ].join('\n'))
   assert.equal(sectionOf(report, '## Refusals'), [
-    '| Step | Times | First failure |',
-    '| --- | --- | --- |',
-    '| research | 1 | missing research/2026-10-11/checkout-research.md |',
-    `| gates | 4 | api/test: exited 1 (evidence: ${TRACKING}/gates/api/test-1.log) |`,
+    '| Step | Owner | Times | First failure |',
+    '| --- | --- | --- | --- |',
+    '| research | agent | 1 | missing research/2026-10-11/checkout-research.md |',
+    `| gates | agent | 4 | api/test: exited 1 (evidence: ${TRACKING}/gates/api/test-1.log) |`,
   ].join('\n'))
   assert.ok(question.text.endsWith(`\nThe run so far (commits, refusals, incidents): ${TRACKING}/run-report.md`), question.text)
+  assert.match(question.text, /Step verdicts: .*research.*gates/)
+  assert.match(question.text, /Refusals: .*research \(agent,/)
+  assert.match(question.text, /Incidents: .*signature.*occurrences.*log/)
+  assert.match(report, /\| gates \| deterministic \| agent \| [a-f0-9]{16} \| 1 \| .*gates\/api\/test-4\.log \| waiting \|/)
 })
 
 test('an incident asked of a human stays in the report with its cause, its log and the answer it got; a table cell holds no pipe nor line break of a failure', async () => {
@@ -57,10 +64,13 @@ test('an incident asked of a human stays in the report with its cause, its log a
   await host.decide({ answer: 'RETRY' })
   const outcome = await host.run()
 
-  const row = (answer) => ['| Question | Step | Cause | Output | Answer |', '| --- | --- | --- | --- | --- |', `| gates-1 | gates | environment | ${TRACKING}/gates/api/build-1.log | ${answer} |`].join('\n')
-  assert.equal(waiting, row('waiting'))
+  assert.match(waiting, /^\| Step \| Cause \| Owner \| Signature \| Occurrences \| Output \| Answer \|/)
+  assert.match(waiting, /\| gates \| config \| config \| [a-f0-9]{16} \| 1 \|/)
+  assert.ok(waiting.includes(`${TRACKING}/gates/api/build-1.log`))
   assert.equal(outcome.status, 'done', outcome.reason)
-  assert.equal(sectionOf(reportOf(host), '## Incidents'), row('RETRY'))
+  const updated = sectionOf(reportOf(host), '## Incidents')
+  assert.match(updated, /\| gates \| config \| config \| [a-f0-9]{16} \| 1 \|/)
+  assert.ok(updated.endsWith(`| ${TRACKING}/gates/api/build-1.log | RETRY |`))
   assert.ok(!reportOf(host).includes('## Waiting on'), reportOf(host))
 })
 
@@ -70,5 +80,5 @@ test('an incident the configuration must fix, with no command run, has no log in
 
   await host.start()
 
-  assert.equal(sectionOf(reportOf(host), '## Incidents'), ['| Question | Step | Cause | Output | Answer |', '| --- | --- | --- | --- | --- |', '| distill-1 | distill | config | - | waiting |'].join('\n'))
+  assert.equal(sectionOf(reportOf(host), '## Incidents'), ['| Step | Cause | Owner | Signature | Occurrences | Output | Answer |', '| --- | --- | --- | --- | ---: | --- | --- |', '| distill | config | config | - | - | - | waiting |'].join('\n'))
 })

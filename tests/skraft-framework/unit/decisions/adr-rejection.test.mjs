@@ -2,7 +2,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { InMemoryGit } from '../support/in-memory-host.mjs'
 import { agent, scripted, SLUG, TRACKING } from '../support/pipeline-host.mjs'
-import { ADR_1, ADR_2, adrText, afterDesign, architect, dispatched, eventsOf } from '../support/decisions.mjs'
+import { ADR_1, ADR_2, adrText, afterDesign, architect, dispatched, eventsOf, withoutReportSummary } from '../support/decisions.mjs'
 
 const REASON = 'Stripe is not allowed here: use the bank gateway'
 const refused = (it) => [agent()(it), architect({ [ADR_1]: adrText() })(it)]
@@ -51,7 +51,7 @@ test('rejected as often as the REJECTED edge allows, the run stops at its max_vi
   })
   assert.equal(host.agentRunner.dispatches.length, 3)
   // An ask node at its ceiling is no review: the question is the blocked one, with what the rejection left.
-  assert.deepEqual(eventsOf(host, 'question.asked').at(-1).text, `design is blocked: adr -> design was taken as often as its max_visits allows.\nLeft by adr (1):\n- ${ADR_1}: round 2\n An instruction runs design again on a new pass with what is left above and the instruction; STOP ends the run.\nThe run so far (commits, refusals, incidents): ${TRACKING}/run-report.md`)
+  assert.equal(withoutReportSummary(eventsOf(host, 'question.asked').at(-1).text), `design is blocked: adr -> design was taken as often as its max_visits allows.\nLeft by adr (1):\n- ${ADR_1}: round 2\n An instruction runs design again on a new pass with what is left above and the instruction; STOP ends the run.\nThe run so far (commits, refusals, incidents): ${TRACKING}/run-report.md`)
 })
 
 test('a published ADR the human rejects is not touched by the engine', async () => {

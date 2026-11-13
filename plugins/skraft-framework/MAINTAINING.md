@@ -94,11 +94,13 @@ script shared by several skills; `npm run skills:check` fails on drift.
 npm ci --prefix plugins/skraft-framework/engine
 npm run test:engine               # unit (use cases with InMemory doubles) and integration (real infrastructure, drivers on a simulated host)
 npm run lint:engine               # function size and complexity limits
-npm run mutation:engine:changed   # Stryker on the engine lines changed since integration/v2-next
+npm run mutation:engine:changed   # optional, on explicit request: changed engine lines
 ```
 
 Tests never live inside `plugins/`: they are under `tests/skraft-framework/unit/<feature>/` and
 `tests/skraft-framework/integration/<feature>/`.
+Engine mutation testing is optional, never an automatic CI or hook requirement. Mutation gates
+shipped to user projects are unchanged.
 
 ### Before a pull request
 

@@ -42,7 +42,7 @@ import { judgeCommit } from './replay-judge.mjs'
  *   slug: the run whose logs folder keeps what each replay printed; scenario: the one the pass
  *   works on; retried: the commit's commands run again after the judge asked it.
  * @typedef {{ environment: string } | { environment: null, name: ReplayedCommand, line: string, argv: string[] }} ReplayCommand
- * @typedef {{ component: Component, command: Extract<ReplayCommand, { environment: null }>, replay: Replay, fact: ReplayFact }} Ran
+ * @typedef {{ component: Component, command: Extract<ReplayCommand, { environment: null }>, replay: Replay, fact: ReplayFact, started: boolean }} Ran
  * @typedef {{ stop: string | null, ran: Ran[] }} Replayed
  * @typedef {'test' | 'e2e'} ReplayedCommand
  * @typedef {{ component: Component, command: ReplayedCommand, red: string, tests: string[] }} GreenScenario
@@ -217,6 +217,7 @@ const replayAt = async (deps, run, at, commands) => {
   for (const { component, command } of commands) {
     if (command.environment !== null) return { stop: configured(run.tally, command.environment), ran }
     const one = await timedRun(deps, run, { repository: at.commit.repository, sha: at.sha, component, command, log: logPath(at.commit.sha, component, `${command.name}${at.suffix}`) })
+    if (!one.started) return { stop: configured(run.tally, `${command.line} could not start; change it in ${CONFIG_FILE}`, one.fact.log), ran }
     if (interruptedBy(/** @type {number} */ (one.replay.exitCode))) return { stop: interrupted(run.tally, one), ran }
     if (at.suffix === '') reportReplay(run.tally, at.commit.sha, one.replay)
     ran.push(one)
@@ -240,8 +241,8 @@ const hasE2e = (component) => component.commands.e2e !== undefined
  * A command the configuration gives that the engine cannot replay: the configuration's to fix.
  * @param {ReplayTally} tally @param {string} reason @returns {string}
  */
-const configured = (tally, reason) => {
-  tally.incident = { owner: 'config', log: null }
+const configured = (tally, reason, log = null) => {
+  tally.incident = { owner: 'config', log }
   return reason
 }
 
@@ -317,21 +318,24 @@ const parsedCommand = (base, component, name) => {
 const timedRun = async (deps, run, { repository, sha, component, command, log: path }) => {
   const started = deps.clock.now()
   const cwd = /** @type {string} */ (pathUnder(component.root, repository))
-  const answer = await deps.commitReplay.run({ repository, sha, cwd, choices: programChoices(command.argv), importRoots: importRootsOf(component) })
+  await deps.files.clearTemporary(run.slug)
+  const tmp = deps.files.location(run.slug, '.tmp')
+  const env = { TMPDIR: tmp, TEMP: tmp, TMP: tmp }
+  const answer = await deps.commitReplay.run({ repository, sha, cwd, choices: programChoices(command.argv), importRoots: importRootsOf(component), env, javaTmpDir: tmp })
   const durationMs = deps.clock.now().getTime() - started.getTime()
   run.tally.replayMs += durationMs
   const log = await writeLog(deps, run.slug, { sha, component, argv: command.argv, path }, answer)
-  return ranOf({ component, command, sha }, { exitCode: answer.exitCode, error: answer.error, durationMs, log })
+  return ranOf({ component, command, sha }, { started: answer.started, exitCode: answer.exitCode, error: answer.error, durationMs, log })
 }
 
 /**
  * A replay as the commit reports it, and as the judge reads it.
  * @param {{ component: Component, command: Extract<ReplayCommand, { environment: null }>, sha: string }} at
- * @param {{ exitCode: number | null, error?: string, durationMs: number, log: string }} ended
+ * @param {{ started: boolean, exitCode: number | null, error?: string, durationMs: number, log: string }} ended
  * @returns {Ran}
  */
-const ranOf = ({ component, command, sha }, { exitCode, error, durationMs, log }) => ({
-  component, command,
+const ranOf = ({ component, command, sha }, { started, exitCode, error, durationMs, log }) => ({
+  component, command, started,
   replay: { component: component.name, command: command.name, exitCode, durationMs, log },
   fact: { component: component.name, line: command.line, sha, exitCode, ...(exitCode === null ? { error } : {}), log },
 })

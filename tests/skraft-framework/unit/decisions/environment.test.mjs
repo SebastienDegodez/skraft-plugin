@@ -5,7 +5,7 @@ import { API, SETTLED_PUBLISH, SLUG, TRACKING, agent, green, scenarioReview, scr
 import { ADR_1, adrText, architect, environmentQuestion, eventsOf, waitingOnEnvironment } from '../support/decisions.mjs'
 
 const BUILD = `api/build: command not found: dotnet; install it or change the command in skraft-config.json (evidence: ${TRACKING}/gates/api/build-1.log)`
-const QUESTION = environmentQuestion('gates', BUILD, { log: `${TRACKING}/gates/api/build-1.log` })
+const QUESTION = environmentQuestion('gates', BUILD, { owner: 'config', log: `${TRACKING}/gates/api/build-1.log` })
 const toTheGates = (it) => [agent()(it), agent()(it), agent()(it), agent({ work: green() })(it)]
 const noDotnet = () => new ScriptedMachine({ installed: ['git'] })
 
@@ -15,8 +15,12 @@ test('a gate the machine cannot run asks the human to fix it; the run waits, and
 
   const outcome = await host.start()
 
-  assert.deepEqual(outcome, { status: 'waiting', slug: SLUG, phase: 'DELIVER', code: 'environment', reason: `${QUESTION} Answer with skraft decide gates-1 RETRY|ABORT.` })
-  assert.deepEqual(host.human.questions, [scenarioReview(), { key: 'gates-1', kind: 'environment', text: QUESTION, options: ['RETRY', 'ABORT'], refusals: [], header: 'Environment' }])
+  assert.deepEqual({ status: outcome.status, slug: outcome.slug, phase: outcome.phase, code: outcome.code }, { status: 'waiting', slug: SLUG, phase: 'DELIVER', code: 'environment' })
+  assert.ok(outcome.reason.startsWith(QUESTION.split('\nFix it')[0]))
+  assert.match(outcome.reason, /Run `skraft doctor`.*Step verdicts:.*Incidents: gates signature .*1 occurrences/s)
+  assert.deepEqual(host.human.questions.slice(0, 1), [scenarioReview()])
+  assert.equal(host.human.questions[1].key, 'gates-1')
+  assert.ok(host.human.questions[1].text.startsWith(QUESTION.split('\nFix it')[0]))
   assert.deepEqual(host.types().slice(-3), ['step.started', 'gate.ran', 'question.asked'])
   assert.equal((await host.view()).current.step, 'gates')
 
@@ -30,13 +34,13 @@ test('a gate the machine cannot run asks the human to fix it; the run waits, and
   assert.equal(host.agentRunner.dispatches.length, 5)
 })
 
-test('a host that asks in a dialog retries at once; the same failure again asks a new question', async () => {
+test('a host that asks in a dialog retries at once; the same failure again stops the run', async () => {
   const host = scripted({ machine: noDotnet(), answers: [{ answer: 'RETRY' }] }, toTheGates)
 
   const outcome = await host.start()
 
-  assert.deepEqual({ status: outcome.status, code: outcome.code }, { status: 'waiting', code: 'environment' })
-  assert.deepEqual(host.human.questions.map((question) => question.key), ['scenario_review-1', 'gates-1', 'gates-2'])
+  assert.deepEqual({ status: outcome.status, code: outcome.code }, { status: 'blocked', code: 'repeated-failure' })
+  assert.deepEqual(host.human.questions.map((question) => question.key), ['scenario_review-1', 'gates-1'])
   assert.deepEqual(eventsOf(host, 'question.answered').map(({ key, answer, by }) => [key, answer, by]), [['scenario_review-1', 'APPROVED', 'host'], ['gates-1', 'RETRY', 'host']])
 })
 
@@ -45,7 +49,9 @@ test('ABORT ends the run blocked on the environment, and it stays blocked', asyn
 
   const outcome = await host.start()
 
-  assert.deepEqual(outcome, { status: 'blocked', slug: SLUG, phase: 'DELIVER', code: 'environment', reason: `aborted by a human: ${QUESTION}` })
+  assert.deepEqual({ status: outcome.status, slug: outcome.slug, phase: outcome.phase, code: outcome.code }, { status: 'blocked', slug: SLUG, phase: 'DELIVER', code: 'environment' })
+  assert.ok(outcome.reason.startsWith(`aborted by a human: ${QUESTION.split('\nFix it')[0]}`))
+  assert.match(outcome.reason, /Run `skraft doctor`/)
   assert.deepEqual(host.types().slice(-4), ['question.asked', 'question.answered', 'step.recorded', 'run.finished'])
   const aborted = eventsOf(host, 'step.recorded').at(-1)
   assert.deepEqual({ step: aborted.step, visit: aborted.visit, attempt: aborted.attempt, outcome: aborted.outcome, code: aborted.code, next: aborted.next }, { step: 'gates', visit: 1, attempt: 1, outcome: 'aborted', code: 'environment', next: null })
@@ -131,7 +137,9 @@ test('every question is keyed by the node that asks it and its rank there: a nod
   const git = new InMemoryGit({ commitFails: 'git commit failed: index.lock exists' })
   const host = scripted({ workflow, git, answers: [{ answer: 'RATIFIED' }] }, (it) => [architect({ [ADR_1]: adrText() })(it)])
 
-  assert.deepEqual((await host.start()).reason, waitingOnEnvironment('environment', 'git commit failed: index.lock exists', 2, { log: `${TRACKING}/logs/commit-environment.log` }))
+  const initial = await host.start()
+  assert.ok(initial.reason.startsWith(waitingOnEnvironment('environment', 'git commit failed: index.lock exists', 2, { log: `${TRACKING}/logs/commit-environment.log` }).split('\nThe run so far')[0]))
+  assert.match(initial.reason, /Incidents: environment signature .*1 occurrences; log .*commit-environment\.log\./)
   assert.deepEqual(host.human.questions.map(({ key, kind }) => [key, kind]), [['environment-1', 'adr-ratification'], ['environment-2', 'environment']])
   git.commitFails = null
   assert.equal((await host.decide({ answer: 'RETRY' })).ok, true)

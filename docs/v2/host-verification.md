@@ -5,6 +5,51 @@ Ce que le pilote Copilot suppose de l'hôte, mesuré par `eng/host-probe/copilot
 
 ## Mesures
 
+### #566 — périmètre des preuves existantes
+
+Les mesures du 2026-11-12 ci-dessous sont historiques : le jugement `unforeseen` est désormais
+implémenté par #566, sur démarrage anticipé autorisé par l'auteur. Elles prouvent lecture et
+réponse pendant une pause, pas la qualité du nouveau jugement ni l'accès à son coût individuel
+dans une session interactive. Les nouveaux tests des pilotes couvrent le schéma
+`{key, answer, by: "host-llm", model, cost, costUnit, reason?}` et ses refus sur hôtes simulés.
+Ils ne sont pas une nouvelle mesure de CLI. Le pilote ne suppose pas de métrique manquante :
+usage incomplet → arrêt diagnostiqué, aucune valeur fabriquée.
+
+Validation locale du mod avec Claude Code **2.1.319**, sans appel de modèle :
+`claude plugin validate plugins/skraft-framework` et les **5 tests** de
+`node tests/skraft-framework/integration/claude-mod/run-plugin-test.mjs` passent.
+Le validateur refuse `$.env.get(name)` et impose un nom littéral ; le raccord de #565 lit
+donc `$.env.get('JAVA_TOOL_OPTIONS')`. Variables déclarées par le module : `HOME`,
+`USERPROFILE`, `JAVA_TOOL_OPTIONS`. Avertissement de catalogue non bloquant : icône absente.
+
+| Contrôle encore non mesuré en session réelle | État |
+| --- | --- |
+| `unforeseen` avec coût individuel observable par la session, distinct du total après le run, sur Copilot CLI et Claude Code | non mesuré ; refus sûr si usage absent |
+| Jugement interactif, VS Code, qualité des actions et gain réel | non mesuré |
+| Pannes #565 sur Linux/Windows et absence de permission hors dépôt pendant un run réel | preuves absentes sur cette branche |
+
+### 2026-11-12 — incident lu et répondu en pause, deux hôtes (#566)
+
+Sonde payante autorisée par le mainteneur, **un passage par hôte**, macOS (darwin 25.5.0),
+Node 22.23.2, modèle par défaut de chaque hôte. Fixture : copie de travail en pause sur la
+question `environment` (`research-1`, options `RETRY` / `ABORT`) d'un échec imprévu
+(`incident.owner: unknown`) ; seul le fichier de sortie nommé par la question contient un jeton.
+Le prompt délègue la décision à la session. Mesure de lecture et de relais, **pas** d'un
+jugement LLM des incidents : seuils de données de #566 non atteints, rien n'est implémenté.
+
+| Hôte | Contrôle | Verdict | Examiné | Modèle rapporté | Coût observé |
+| --- | --- | --- | --- | --- | --- |
+| Copilot CLI **1.0.109**, SDK **1.0.109** | `incident-read-answered` (`copilot-probe.mjs --incident-session`) | pass | outils offerts `skraft_decide`, `view` ; appels `skraft_decide {}` → `view` du log → `skraft_decide {key: research-1, answer: RETRY, reason}` ; journal : une réponse `RETRY`, `by: decide` ; jeton cité ; zéro élicitation de l'hôte | `claude-sonnet-5.5` | 4 `assistant.usage`, multiplicateur 1 chacun ; 2 387 510 000 nano-AIU au total ; 22 777 jetons d'entrée, 660 de sortie |
+| Claude Code **2.1.319** (`-p`, `--plugin-dir`) | `claude-incident-read-answered` (`claude-incident-probe.mjs`) | pass | serveur `plugin:skraft:skraft` connecté (plugin `skraft@inline` 2.0.0-alpha.83, l'installation `user` non chargée) ; outils `mcp__plugin_skraft_skraft__skraft_*` ; appels `skraft_status {}` → `Read` du log → `skraft_answer {key: research-1, answer: RETRY, workspace}` ; journal : une réponse `RETRY`, `by: decide` ; jeton cité ; aucun refus de permission | `claude-haiku-5-5` | `total_cost_usd` 0,0219 (base `list`) ; 456 jetons de sortie, 221 317 lus en cache, 97 236 écrits en cache |
+
+Même passage Copilot, contrôles sans modèle : 44 contrôles, 37 pass, 4 inconclusive,
+3 fail de prémisses historiques (`unknown-arg-ignored`, `decide-without-confirm`,
+`decide-after-cd`), inchangés.
+
+Non mesuré : le modèle choisit-il la bonne option (les deux sessions ont pris `RETRY` sur
+un refus de connexion, sans vérité de terrain), session interactive, VS Code, relais d'une
+réponse humaine sur ce chemin, autre modèle que celui par défaut.
+
 ### 2026-11-12 — questions natives, relais du modèle
 
 Mesuré dans la copie isolée de cette modification, sur macOS, Node 22.23.2,
@@ -87,7 +132,7 @@ Ce que le pilote suppose déjà sans mesure ; la prochaine passe de la sonde rem
 | Claude Code : la skill `prune-tests` exposée sous `/skraft:prune-tests`, appelable par le développeur, jamais chargée par le modèle (`disable-model-invocation: true`) | #341 | not measured ; nom supposé par la règle `<plugin>:<skill>`, ni la doc how-to ni la référence des commandes ne sont écrites avant la mesure | `skills/prune-tests/SKILL.md`, `domain/reporting/pull-request.mjs` (ligne qui suggère la commande) |
 | Copilot CLI et VS Code : la skill `prune-tests` listée par `session.rpc.commands.list({ includeSkills: true })` sous `skraft:prune-tests`, et `disable-model-invocation` respecté | #341 | not measured ; même règle de nom que `/skraft-backlog:skraft-refine` (sonde #252), non vérifiée pour une skill | `skills/prune-tests/SKILL.md` |
 | Copilot runtime (VS Code en mode Copilot, app GitHub Copilot) : le client déclare `roots` à `initialize` et rend la copie de travail dans `roots/list` ; sinon, le processus démarre dans la copie de travail | #534 | measured false (2026-11-07, Copilot runtime 1.0.107, VS Code 1.145.2, macOS) : aucune capacité `roots`, cwd = `<plugin>/plugins/skraft-framework`, un serveur par session ; environnement `COPILOT_AGENT_SESSION_ID`, `COPILOT_PLUGIN_ROOT`, `PLUGIN_ROOT`, `AI_AGENT` | `drivers/cli/mcp-roots.mjs` : sans dossier offert, l'argument `workspace` donne le chemin absolu de la copie de travail git, hors plugin ; la skill `skraft-init` et l'orchestrateur le passent toujours |
-| Claude Code : les `mcpServers` de `.claude-plugin/plugin.json` démarrent avec `${CLAUDE_PLUGIN_ROOT}` remplacé ; nom des outils offerts (`mcp__plugin_skraft_skraft__skraft_status` supposé), sans collision avec `mcp__skraft__run_pipeline` du mod ; `roots` déclaré | — | not measured ; `claude plugin validate` 2.1.296 passe | `.claude-plugin/plugin.json`, `drivers/cli/mcp-server.mjs` |
+| Claude Code : les `mcpServers` de `.claude-plugin/plugin.json` démarrent avec `${CLAUDE_PLUGIN_ROOT}` remplacé ; nom des outils offerts (`mcp__plugin_skraft_skraft__skraft_status` supposé), sans collision avec `mcp__skraft__run_pipeline` du mod ; `roots` déclaré | #566 | measured true pour le démarrage et les noms (2026-11-12, Claude Code 2.1.319, `-p --plugin-dir`, macOS) : serveur `plugin:skraft:skraft` connecté, outils `mcp__plugin_skraft_skraft__skraft_*`, `skraft_answer` enregistre dans la copie de travail ; collision avec le mod et `roots` not measured | `.claude-plugin/plugin.json`, `drivers/cli/mcp-server.mjs` |
 | VS Code : `clientInfo.name` envoyé à `initialize` vaut `Visual Studio Code` (ou `Visual Studio Code - Insiders`) ; Claude Code envoie un autre nom | — | not measured ; lu dans microsoft/vscode `src/vs/workbench/contrib/mcp/common/mcpServerRequestHandler.ts` (`productService.nameLong`), rien lu pour Claude Code ; Copilot CLI 1.0.105 mesuré (section suivante). Un nom inattendu cache la boucle d'agent (repli `node`), jamais l'inverse | `drivers/cli/mcp-server.mjs` (`LOOP_HOSTS`) |
 | tout hôte : nom sous lequel les prompts MCP `init`, `run`, `status`, `review` apparaissent dans le menu `/` | — | not measured | `drivers/cli/mcp-prompts.mjs` |
 | tout hôte : `notifications/progress` affichées pendant un appel long (`skraft_next`, `skraft_gate`) quand l'hôte envoie un `progressToken` | — | not measured | `drivers/cli/mcp-server.mjs` |

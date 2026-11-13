@@ -1,6 +1,7 @@
 import { createDecide } from '../../application/decisions/decide-usecase.mjs'
 import { createObserve } from '../../application/pipeline/observe-usecase.mjs'
 import { createNodeAdapters } from '../../infrastructure/node-adapters.mjs'
+import { UNFORESEEN_GUIDANCE } from '../../domain/decisions/unforeseen.mjs'
 
 /**
  * @typedef {{ directory: () => string | null, pluginRoot: string, home: string }} ToolHost
@@ -46,12 +47,13 @@ const asked = async ({ directory, pluginRoot, home }, args) => {
   const { question, status } = await createObserve(adapters).view()
   return question === null
     ? refused(`no question is waiting (the active pipeline is ${status})`)
-    : JSON.stringify({ question, guidance: NATIVE_GUIDANCE })
+    : JSON.stringify({ question, guidance: question.kind === 'unforeseen' ? UNFORESEEN_GUIDANCE : NATIVE_GUIDANCE })
 }
 
 // Stryker disable StringLiteral: text shown to the host and the model; no engine behaviour reads it
 const DESCRIPTION =
   'Read the exact pending question with {}. ' +
+  'For unforeseen, follow its host-llm judgment guidance and record observed model/cost/unit, never a human confirmation. ' +
   'After the developer replies through the native question tool, submit {key, answer, reason?}. ' +
   'Never infer an answer or submit on dismissal. Resume the same skraft-pipeline workflow run ID.'
 const NO_DIRECTORY = 'the session has no working directory yet'
@@ -68,26 +70,38 @@ const UNREADABLE = 'Refused: skraft could not read or write its tracking folder 
 
 const PARAMETERS = Object.freeze({
   type: 'object', additionalProperties: false,
-  properties: { key: { type: 'string', minLength: 1 }, answer: { type: 'string', minLength: 1 }, reason: { type: 'string', minLength: 1 } },
+  properties: {
+    key: { type: 'string', minLength: 1 }, answer: { type: 'string', minLength: 1 }, reason: { type: 'string', minLength: 1 },
+    by: { type: 'string', enum: ['host-llm'] }, model: { type: 'string' }, cost: { type: 'number' }, costUnit: { type: 'string' },
+  },
 })
 
 /** @param {string} why */
 const refused = (why) => `Refused: ${why}; nothing was recorded.`
 
-/** @param {unknown} args @returns {args is { key: string, answer: string, reason?: string }} */
+/** @param {unknown} args @returns {args is { key: string, answer: string, reason?: string, by?: string, model?: string, cost?: number, costUnit?: string }} */
 const validArgs = (args) => {
   if (typeof args !== 'object' || args === null || Array.isArray(args)) return false
   const entries = Object.entries(args)
   if (entries.length === 0) return true
-  return entries.every(([key, value]) => ['key', 'answer', 'reason'].includes(key) && typeof value === 'string' && value.trim().length > 0)
+  return entries.every(([key, value]) => validField(key, value))
     && 'key' in args && 'answer' in args
+}
+
+/** @param {string} key @param {unknown} value */
+const validField = (key, value) => {
+  if (key === 'by') return value === 'host-llm'
+  if (key === 'cost') return typeof value === 'number' && Number.isFinite(value)
+  if (key === 'model' || key === 'costUnit') return typeof value === 'string'
+  return ['key', 'answer', 'reason'].includes(key) && typeof value === 'string' && value.trim().length > 0
 }
 
 /**
  * @param {ReturnType<typeof createNodeAdapters>} adapters
- * @param {{ key: string, answer: string, reason?: string }} decision
+ * @param {import('../../application/decisions/decide-usecase.mjs').Decision} decision
  */
 const recorded = async (adapters, decision) => {
   const outcome = await createDecide(adapters).decide(decision)
+  if (outcome.code === 'invalid-judgment') return `Stopped: ${outcome.reason}. STOP was recorded; resume the paused skraft-pipeline run to finish its diagnostic.`
   return outcome.ok ? `Recorded: ${outcome.reason}. Resume the paused skraft-pipeline run (/workflows).` : refused(outcome.reason)
 }

@@ -1,3 +1,5 @@
+import { UNFORESEEN_GUIDANCE } from '../../domain/decisions/unforeseen.mjs'
+
 /**
  * The tools the MCP server offers: each one is a command line of this driver, built from
  * arguments a model wrote, except skraft_answer which records a native human reply directly.
@@ -5,7 +7,7 @@
  * adopt`, `review --publish`, `migrate` that writes) are not tools: a person runs them in a
  * terminal.
  *
- * @typedef {'string' | 'text' | 'boolean' | 'count' | 'strings'} Kind
+ * @typedef {'string' | 'text' | 'boolean' | 'count' | 'strings' | 'number'} Kind
  *   string: a word that does not start with `-`; count: a positive whole number; strings: a list
  *   of such words.
  * @typedef {{ kind: Kind, description: string }} Parameter
@@ -36,12 +38,16 @@ const tool = ({ parameters = {}, required = [], ...rest }) => Object.freeze({ ..
 /** @type {readonly SkraftTool[]} */
 export const TOOLS = Object.freeze([
   tool({
-    name: 'skraft_answer', title: 'Record the native human reply',
-    description: 'Read the pending question from skraft_status. Ask its exact text and options through the offered native ask_user or askQuestions tool; request a refusal reason there. Relay only the returned human reply here, then resume the SAME workflow run ID (skraft_next for the MCP loop). If the native tool is unavailable or dismissed, report the blocker, leave the run paused and record nothing.',
+    name: 'skraft_answer', title: 'Record a human reply or host judgment',
+    description: `Read the pending question from skraft_status. For unforeseen only: ${UNFORESEEN_GUIDANCE} For every other kind, ask its exact text and options through the offered native ask_user or askQuestions tool; request a refusal reason there. Relay only the returned human reply here, omitting by and usage, then resume the SAME workflow run ID (skraft_next for the MCP loop). If the native tool is unavailable or dismissed, report the blocker, leave the run paused and record nothing.`,
     parameters: {
       key: { kind: 'string', description: 'the exact pending question key' },
-      answer: { kind: 'text', description: 'the answer returned by the native question tool' },
-      reason: { kind: 'text', description: 'the human refusal reason, when required' },
+      answer: { kind: 'text', description: 'the native human reply, or one exact offered action for unforeseen' },
+      reason: { kind: 'text', description: 'the human refusal reason, or the bounded inert note for RETRY_WITH_NOTE' },
+      by: { kind: 'text', description: 'host-llm for a model judgment; omit for a native human reply' },
+      model: { kind: 'text', description: 'observed model of this judgment, metadata only, never a model selector' },
+      cost: { kind: 'number', description: 'observed cost of this judgment, not the session total' },
+      costUnit: { kind: 'text', description: 'USD or nano-AIU as observed, never converted' },
     },
     required: ['key', 'answer'], annotations: LOCAL,
     // Stryker disable next-line ArrayDeclaration: skraft_answer calls Decide directly; no caller reads this argv
@@ -146,6 +152,7 @@ const SCHEMAS = Object.freeze({
   text: { type: 'string', minLength: 1 },
   boolean: { type: 'boolean' },
   count: { type: 'integer', minimum: 1 },
+  number: { type: 'number' },
   strings: { type: 'array', items: { type: 'string', minLength: 1 } },
 })
 
@@ -162,6 +169,7 @@ export const toolListing = ({ name, title, description, parameters, required, an
 const KIND_TEXT = Object.freeze({
   string: 'a non-empty text that does not start with -', boolean: 'true or false',
   text: 'a non-empty text',
+  number: 'a finite number',
   count: 'a positive whole number', strings: 'a list of non-empty texts that do not start with -',
 })
 
@@ -174,6 +182,7 @@ const CHECKS = Object.freeze({
   text: (given) => typeof given === 'string' && given.trim().length > 0,
   boolean: (given) => typeof given === 'boolean',
   count: (given) => Number.isSafeInteger(given) && /** @type {number} */ (given) >= 1,
+  number: (given) => typeof given === 'number' && Number.isFinite(given),
   strings: (given) => Array.isArray(given) && given.every(isWord),
 })
 

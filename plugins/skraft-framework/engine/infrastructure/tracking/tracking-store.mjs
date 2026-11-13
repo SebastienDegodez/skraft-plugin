@@ -4,6 +4,7 @@ import { isSlug } from '../../domain/pipeline/slug.mjs'
  * @typedef {{
  *   read: (path: string) => Promise<string | null>,
  *   write: (path: string, text: string) => Promise<void>,
+ *   clearDirectory: (path: string) => Promise<void>,
  *   replace?: (path: string, text: string) => Promise<void>,
  *   append: (path: string, text: string) => Promise<void>,
  *   join: (...parts: string[]) => string,
@@ -11,7 +12,8 @@ import { isSlug } from '../../domain/pipeline/slug.mjs'
  * }} FileFunctions
  *   The few file operations the tracking folder needs, on any host: Node's fs or the
  *   Claude Code mod's `$.fs`. read: null when absent. write and append create folders.
- *   replace: write beside, then rename over the file; absent on a host that cannot rename.
+ *   clearDirectory: removes the contents and leaves an empty directory. replace: write beside,
+ *   then rename over the file; absent on a host that cannot rename.
  *   list: every file under the folder at any depth, relative to it, `/`-separated; null when
  *   the path is not a folder (or the host cannot list it).
  */
@@ -99,6 +101,7 @@ const createTrackingFiles = ({ files, at, base }) =>
   Object.freeze({
     read: (slug, path) => files.read(at(slug, path)),
     write: (slug, path, text) => files.write(at(slug, path), text),
+    clearTemporary: (slug) => files.clearDirectory(at(slug, '.tmp')),
     location: at,
     list: (slug, folder) => listUnder(files, at, slug, folder),
     pipelines: () => pipelinesIn(files, base),

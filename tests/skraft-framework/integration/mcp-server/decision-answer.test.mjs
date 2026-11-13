@@ -12,10 +12,29 @@ const waiting = async (cwd, kind = 'adr-ratification') => {
   const opened = await openJournal(adapters, SLUG)
   await opened.journal.append('question.asked', {
     key: 'native-1', kind, text: 'Ratify the payment design?',
-    options: kind === 'blocked' ? ['STOP'] : ['RATIFIED', 'REJECTED'],
+    options: kind === 'unforeseen' ? ['RETRY', 'STOP'] : kind === 'blocked' ? ['STOP'] : ['RATIFIED', 'REJECTED'],
     refusals: kind === 'blocked' ? [] : ['REJECTED'], header: 'Design', step: 'design', visit: 1, subjects: [],
   })
+
 }
+
+test('host judgment records observed usage without human consent; protected questions reject its provenance', async (t) => {
+  for (const kind of ['unforeseen', 'adr-ratification', 'blocked', 'review-ceiling']) {
+    const { cwd } = pipelineRepository(t)
+    await waiting(cwd, kind)
+    const host = mcpHost({ workingDirectory: cwd })
+    t.after(() => host.close())
+    await host.initialize()
+    const decision = { key: 'native-1', answer: kind === 'unforeseen' ? 'RETRY' : 'STOP', by: 'host-llm', model: 'observed-test-model', cost: 0.02, costUnit: 'USD' }
+    const result = await host.call('skraft_answer', decision)
+    assert.ok(result.content[0].text.startsWith('{'), 'judgment must reach the engine, not be rejected as an unknown tool argument')
+    const reply = JSON.parse(result.content[0].text)
+    assert.equal(reply.code, kind === 'unforeseen' ? null : 'human-required', kind)
+    const answers = journal(cwd, SLUG).filter(({ type }) => type === 'question.answered')
+    assert.deepEqual(answers.map(({ by, model, cost, costUnit }) => ({ by, model, cost, costUnit })), kind === 'unforeseen'
+      ? [{ by: 'host-llm', model: decision.model, cost: 0.02, costUnit: 'USD' }] : [])
+  }
+})
 
 test('native answer records in the selected workspace without terminal consent, preserving refusal reason and rejecting stale or duplicate keys', async (t) => {
   const { cwd } = pipelineRepository(t)

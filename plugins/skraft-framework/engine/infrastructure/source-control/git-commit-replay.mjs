@@ -139,9 +139,9 @@ const runThenRemoveWorktree = async (commandRunner, replay, worktree) => {
  * @param {CommandRunner} commandRunner @param {Pick<Replay, 'choices' | 'importRoots'>} replay @param {string} cwd absolute
  * @returns {Promise<CommandResult>}
  */
-const runFirst = async (commandRunner, { choices, importRoots }, cwd) => {
+const runFirst = async (commandRunner, { choices, importRoots, env, javaTmpDir }, cwd) => {
   for (const argv of choices) {
-    const answer = await commandRunner.run({ argv: launched(argv, importRoots), cwd })
+    const answer = await commandRunner.run({ argv: launched(argv, importRoots), cwd, ...(env === undefined ? {} : { env }), javaTmpDir })
     if (answer.started && answer.exitCode !== NOT_STARTED) return answer
   }
   return { started: false, exitCode: null, stdout: '', stderr: '', error: `could not start ${choices.map(([program]) => program).join(' nor ')}` }

@@ -36,8 +36,16 @@ export const createNodeExecutables = ({ root, platform = process.platform, env =
  * @returns {CommandRunner}
  */
 export const createNodeCommandRunner = ({ root, platform = process.platform, env = process.env, signal, timeoutMs, maxOutputBytes = MAX_OUTPUT_BYTES }) => Object.freeze({
-  run: async (request) => runCommand(request.argv, resolve(root, request.cwd), { platform, env: { ...env, ...request.env } }, limitsOf(request, { signal, timeoutMs, maxOutputBytes })),
+  run: async (request) => runCommand(request.argv, resolve(root, request.cwd), { platform, env: commandEnvironment(env, request) }, limitsOf(request, { signal, timeoutMs, maxOutputBytes })),
 })
+
+/** @param {NodeJS.ProcessEnv} host @param {import('../../application/ports/command-runner.mjs').CommandRequest} request */
+const commandEnvironment = (host, request) => {
+  const env = { ...host, ...request.env }
+  if (request.javaTmpDir === undefined) return env
+  const option = `-Djava.io.tmpdir="${request.javaTmpDir.replaceAll('"', '\\"')}"`
+  return { ...env, JAVA_TOOL_OPTIONS: [env.JAVA_TOOL_OPTIONS, option].filter(Boolean).join(' ') }
+}
 
 /**
  * @param {import('../../application/ports/command-runner.mjs').CommandRequest} request @param {Limits} runner

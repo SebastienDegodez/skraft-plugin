@@ -35,6 +35,11 @@ export class InMemoryTracking {
   // TrackingFiles
   async read(slug, rel) { return this.files.get(this.key(slug, rel)) ?? null }
   async write(slug, rel, text) { this.files.set(this.key(slug, rel), text) }
+  async clear(slug, folder) {
+    const prefix = this.key(slug, `${folder}/`)
+    for (const path of this.files.keys()) if (path.startsWith(prefix)) this.files.delete(path)
+  }
+  async clearTemporary(slug) { await this.clear(slug, '.tmp') }
   location(slug, rel) { return `${this.root}/${slug}/${rel}` }
   async list(slug, folder) {
     const prefix = folder === '' || folder === '.' ? `${slug}/` : this.key(slug, `${folder}/`)
@@ -932,6 +937,10 @@ export class ScriptedMachine {
     this.floods = new Set(floods)
     /** @type {Array<{ argv: string[], cwd: string }>} */
     this.runs = []
+    /** @type {Array<Record<string, string>>} */
+    this.envs = []
+    /** @type {Array<string | undefined>} */
+    this.javaTmpDirs = []
   }
   /** @param {string} program @param {string} cwd */
   installedAt(program, cwd) {
@@ -940,8 +949,10 @@ export class ScriptedMachine {
     return this.installed.has(path) ? `/work/${path}` : null
   }
   async locate(program, cwd = '.') { return this.installedAt(program, cwd) }
-  async run({ argv, cwd, timeoutMs }) {
+  async run({ argv, cwd, timeoutMs, env = {}, javaTmpDir }) {
     this.runs.push({ argv, cwd, ...(timeoutMs === undefined ? {} : { timeoutMs }) })
+    this.envs.push(env)
+    this.javaTmpDirs.push(javaTmpDir)
     if (this.installedAt(argv[0], cwd) === null) return { started: false, exitCode: null, stdout: '', stderr: '', error: `command not found: ${argv[0]}` }
     await this.clock?.pass(this.takesMs)
     const line = `${cwd} $ ${argv.join(' ')}`

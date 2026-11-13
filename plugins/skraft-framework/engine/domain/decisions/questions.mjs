@@ -1,3 +1,4 @@
+import { CONFIG_FILE } from '../config/skraft-config.mjs'
 import { inert } from '../reporting/markdown-safety.mjs'
 import { causeLines } from '../pipeline/incidents.mjs'
 
@@ -12,7 +13,7 @@ import { causeLines } from '../pipeline/incidents.mjs'
  * sends DISTILL back with the human's corrections.
  *
  * @typedef {'adr-ratification' | 'mutation-plan' | 'scenario-review'} NodeQuestion
- * @typedef {NodeQuestion | 'environment' | 'review-consent' | 'blocked' | 'review-ceiling' | 'configuration'} QuestionKind
+ * @typedef {NodeQuestion | 'environment' | 'unforeseen' | 'review-consent' | 'blocked' | 'review-ceiling' | 'configuration'} QuestionKind
  * @typedef {{ options: readonly string[], refusals: readonly string[], header: string, instruction: boolean }} QuestionSpec
  *   options: the answers, the one that lets the run go on first; refusals: the answers that send
  *   the work back and need a reason; header: a short label a dialog shows beside the question, at
@@ -47,6 +48,7 @@ const QUESTIONS = Object.freeze({
   'mutation-plan': Object.freeze({ options: Object.freeze([APPLY, STOP]), refusals: Object.freeze([]), header: 'Mutation', instruction: true }),
   'scenario-review': Object.freeze({ options: Object.freeze(['APPROVED', 'REVISE']), refusals: Object.freeze(['REVISE']), header: 'Scenarios', instruction: false }),
   environment: Object.freeze({ options: Object.freeze(['RETRY', 'ABORT']), refusals: Object.freeze([]), header: 'Environment', instruction: false }),
+  unforeseen: Object.freeze({ options: Object.freeze(['RETRY', 'RETRY_WITH_NOTE', 'STOP']), refusals: Object.freeze([]), header: 'Incident', instruction: false }),
   'review-consent': Object.freeze({ options: Object.freeze(['ACCEPTED', 'DECLINED']), refusals: Object.freeze([]), header: 'PR comment', instruction: false }),
   [BLOCKED]: Object.freeze({ options: Object.freeze([STOP]), refusals: Object.freeze([]), header: 'Blocked', instruction: true }),
   [REVIEW_CEILING]: Object.freeze({ options: Object.freeze([ACCEPT, STOP]), refusals: Object.freeze([]), header: 'Review', instruction: true }),
@@ -61,6 +63,9 @@ const REASON_LENGTH = 500
 
 /** @param {QuestionKind} kind @returns {QuestionSpec} */
 export const questionSpec = (kind) => QUESTIONS[kind]
+
+/** Whether the declared answer source may decide this question. @param {QuestionKind} kind @param {string} by */
+export const mayAnswerQuestion = (kind, by) => by !== 'host-llm' || kind === 'unforeseen'
 
 /** Whether a human may answer that question with words of their own. @param {QuestionKind} kind */
 export const takesInstruction = (kind) => QUESTIONS[kind].instruction
@@ -147,8 +152,12 @@ export const mutationPlanText = (proposals) =>
 export const environmentText = (step, reason, incident) => [
   `${step} cannot run on this machine: ${reason}.`,
   ...causeLines(incident),
+  ...(doctorHint(incident.owner, reason) ? ['Run `skraft doctor` to check the command and runtime.'] : []),
   `Fix it, then RETRY: ${step} runs again where it stopped, using no new attempt; or ABORT: the run ends.`,
 ].join('\n')
+
+/** @param {import('../pipeline/incidents.mjs').Incident['owner']} owner @param {string} reason */
+const doctorHint = (owner, reason) => owner === 'config' || /\b(?:docker|podman)\b/i.test(reason)
 
 /**
  * The text of a blocked question: the node an instruction runs again, why it is blocked, from

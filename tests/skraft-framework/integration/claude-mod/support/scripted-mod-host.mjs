@@ -8,6 +8,7 @@ import { fileURLToPath } from 'node:url'
 import { createClaudeModDriver } from '../../../../../plugins/skraft-framework/engine/drivers/claude-mod/claude-mod-driver.mjs'
 import { briefOf, filledResearch } from '../../support/pipeline-repository.mjs'
 import { repositoryOnForge } from '../../support/issue-forge.mjs'
+import { commitAll } from '../../support/workspace.mjs'
 
 export const PLUGIN_ROOT = fileURLToPath(new URL('../../../../../plugins/skraft-framework/', import.meta.url))
 export const RESEARCH_TEMPLATE = await readFile(join(PLUGIN_ROOT, 'assets', 'templates', 'research.template.md'), 'utf8')
@@ -27,11 +28,11 @@ export const nodeModFs = Object.freeze({
  * rejects when the program cannot be started. Under Windows, spawn without a shell finds only
  * an `.exe` on PATH: the fake gh the tests put first on PATH is a `gh.cmd`, so gh goes through
  * the shell, each argument quoted, as the real gh.exe needs no shell for the mod runtime.
- * @param {string[]} argv @param {{ cwd?: string }} [init]
+ * @param {string[]} argv @param {{ cwd?: string, env?: NodeJS.ProcessEnv }} [init]
  */
 export const nodeModRun = ([program, ...args], init = {}) => new Promise((resolve, reject) => {
   const shell = process.platform === 'win32' && program === 'gh'
-  const child = spawn(program, shell ? args.map((arg) => `"${arg}"`) : args, { cwd: init.cwd, stdio: ['ignore', 'pipe', 'pipe'], shell })
+  const child = spawn(program, shell ? args.map((arg) => `"${arg}"`) : args, { cwd: init.cwd, env: { ...process.env, ...init.env }, stdio: ['ignore', 'pipe', 'pipe'], shell })
   let stdout = ''
   let stderr = ''
   child.stdout.on('data', (chunk) => { stdout += chunk })
@@ -156,6 +157,7 @@ export const scriptedModHost = async ({ cwd, behaviours = [], costs = [], otherw
     fs: nodeModFs,
     cwd: async () => sessionCwd,
     home: async () => homeFolder,
+    environment: async (name) => process.env[name],
     pluginRoot: PLUGIN_ROOT,
     pluginName: 'skraft',
     run: (/** @type {string[]} */ argv, /** @type {any} */ init) => (argv[0] === 'node' && argv[2] === 'home' ? homeAnswer(nodeHomeFolder) : nodeModRun(argv, init)),
@@ -226,11 +228,12 @@ export const scriptedModHost = async ({ cwd, behaviours = [], costs = [], otherw
 /** What node prints for its home folder; it fails when it can name none. @param {string | null} folder */
 const homeAnswer = async (folder) => (folder === null ? { exitCode: 1, stdout: '', stderr: '' } : { exitCode: 0, stdout: `${folder}\n`, stderr: '' })
 
-/** A fresh working copy whose skraft-config.json has settled both publication consents: no to each. */
+/** A fresh Git working copy whose skraft-config.json has settled both publication consents: no to each. */
 const answeredWorkingCopy = async () => {
   const root = await mkdtemp(join(tmpdir(), 'skraft-mod-'))
   const publish = { pullRequest: false, visuals: false, questionVersions: { pullRequest: 2, visuals: 1 } }
   await writeFile(join(root, 'skraft-config.json'), JSON.stringify({ publish }), 'utf8')
+  commitAll(root)
   return root
 }
 

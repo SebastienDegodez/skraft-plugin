@@ -76,6 +76,21 @@ test('nothing changed since the bases but what StrykerJS left, its report and it
   assert.deepEqual((await dotnet.gate()).components, ['api'], 'a file named so is a change of a component StrykerJS does not mutate')
 })
 
+test('a gate clears stale scratch files and points all temporary environment variables into the run', async () => {
+  const tracking = new InMemoryTracking()
+  const machine = new ScriptedMachine({ meanwhile: { 'services/payment-api $ dotnet build --nologo': () => tracking.write('checkout', '.tmp/from-build.tmp', 'old') } })
+  const { gate } = await hostWith({ tracking, machine })
+  await tracking.write('checkout', '.tmp/stale.tmp', 'old')
+
+  await gate('all')
+
+  const tmp = tracking.location('checkout', '.tmp')
+  assert.ok(machine.envs.length > 0)
+  for (const env of machine.envs) assert.deepEqual(env, { TMPDIR: tmp, TEMP: tmp, TMP: tmp })
+  assert.deepEqual(machine.javaTmpDirs, Array(machine.javaTmpDirs.length).fill(tmp))
+  assert.deepEqual(await tracking.list('checkout', '.tmp'), [])
+})
+
 /** One repository at the working copy; `changed` lists what changed since `a1` by component root. */
 const hostOver = async (components, changed) => {
   const { sourceControl, gate } = await started({
@@ -419,13 +434,13 @@ test('an output cut past the runner\'s limit is said in the reason and the evide
   assert.match(await tracking.read('checkout', 'gates/web/test-1.log'), new RegExp(`^result: fail \\(deterministic\\): exited 1; ${cut}$`, 'm'))
 })
 
-test('a command stopped before it exits fails like a failing check, its evidence for the agent saying to run it again', async () => {
+test('a command stopped before it exits is unclassified, preserving evidence without blaming the engineer', async () => {
   const machine = new ScriptedMachine({ exits: { '../payment-web $ npx vitest run': null } })
   const { gate } = await hostWith({ components: [WEB], machine })
 
   const outcome = await gate('all')
 
-  assert.deepEqual([outcome.failure, outcome.reason], ['deterministic', 'web/test: npx was stopped by SIGKILL; run it again'])
+  assert.deepEqual([outcome.failure, outcome.reason], ['unknown', 'web/test: npx was stopped by SIGKILL; run it again'])
 })
 
 test('another run writing the journal during the gates blocks this one, keeping the gates already journaled', async () => {

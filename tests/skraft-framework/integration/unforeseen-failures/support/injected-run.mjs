@@ -73,6 +73,7 @@ export const recorded = (events, step) => events.filter((event) => event.type ==
 /** What the engine says of each cause the agent cannot fix. */
 export const CAUSES = Object.freeze({
   environment: 'the machine: a program, a service, a permission or a Git hook it lacks or refuses',
+  config: 'skraft-config.json: a command or a path it gives the engine',
   judge: 'what the replay judge read in the replay of a commit: nothing an agent can change fixes it',
 })
 
@@ -85,6 +86,7 @@ export const environmentText = (cwd, step, { reason, owner, log }) => [
   `${step} cannot run on this machine: ${reason}.`,
   `Cause: ${CAUSES[owner]}.`,
   ...(log === null ? [] : [`Output: ${log}`]),
+  ...(owner === 'config' ? ['Run `skraft doctor` to check the command and runtime.'] : []),
   `Fix it, then RETRY: ${step} runs again where it stopped, using no new attempt; or ABORT: the run ends.`,
   `The run so far (commits, refusals, incidents): ${runFile(cwd, 'run-report.md')}`,
 ].join('\n')

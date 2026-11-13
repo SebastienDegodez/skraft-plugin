@@ -8,7 +8,7 @@ import { answerYaml } from '../support/answer-yaml.mjs'
 const checksAnswer = (each) => answerYaml({ checks: each.map(([finding, verdict, reason = `${verdict} by the patch`]) => ({ finding, verdict, reason })) })
 import { BUILT_IN_REVIEW, BUILT_IN_WORKFLOW, InMemoryAgentCatalog, InMemoryGit } from '../support/in-memory-host.mjs'
 import { ejectedPipeline, edit, withLenses } from '../workflow/support.mjs'
-import { REPORT_LINE } from '../support/decisions.mjs'
+import { REPORT_LINE, withoutReportSummary } from '../support/decisions.mjs'
 
 const CONTEXT_MAP = 'details/2026-10-11/context-map.md'
 const MATRIX = 'details/2026-10-11/consistency-matrix-checkout.md'
@@ -636,7 +636,7 @@ test('a review whose blocker or high finding is left after three passes asks the
   assert.deepEqual(reviews(host).map(([, visit, result, next]) => [visit, result, next]), [[1, 'needs-rework', 'design'], [2, 'needs-rework', 'design'], [3, 'needs-rework', null]])
   const [asked] = host.human.questions
   assert.deepEqual([asked.kind, asked.options], ['blocked', ['STOP']])
-  assert.equal(asked.text, [
+  assert.equal(withoutReportSummary(asked.text), [
     'design_review: design did not fix every finding after 3 passes, so the run does not send it back again.',
     '',
     'Blocker and high (2):',
@@ -699,7 +699,7 @@ test('a review with only medium and low findings left after three passes lets th
   assert.equal(outcome.status, 'done')
   const [asked] = host.human.questions
   assert.deepEqual([asked.kind, asked.header, asked.options], ['review-ceiling', 'Review', ['ACCEPT', 'STOP']])
-  assert.equal(asked.text, [
+  assert.equal(withoutReportSummary(asked.text), [
     'design_review: design did not fix every finding after 3 passes, so the run does not send it back again.',
     '',
     'Medium and low (2):',

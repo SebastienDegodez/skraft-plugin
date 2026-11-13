@@ -21,6 +21,7 @@
 export const createModFiles = (fs, { run } = {}) => Object.freeze({
   read: (path) => readOrNull(fs, path),
   write: (path, text) => fs.write(path, text),
+  clearDirectory: (path) => clearDirectory(fs, run, path),
   append: (path, text) => appendText(fs, path, text),
   join: joinPath,
   list: (path) => listFiles(fs, run, path),
@@ -38,6 +39,20 @@ const readOrNull = async (fs, path) => {
 
 /** @param {ModFs} fs @param {string} path @param {string} text */
 const appendText = async (fs, path, text) => fs.write(path, `${(await readOrNull(fs, path)) ?? ''}${text}`)
+
+/** @param {ModFs} fs @param {ModRun | undefined} run @param {string} path */
+const clearDirectory = async (fs, run, path) => {
+  if (await fs.exists(path)) await cleanDirectory(run, path)
+  await fs.write(joinPath(path, '.kraft-tmp'), '')
+}
+
+/** @param {ModRun | undefined} run @param {string} path */
+const cleanDirectory = async (run, path) => {
+  if (run === undefined) throw new Error('Git cannot clear the run temporary folder')
+  const parent = path.slice(0, path.lastIndexOf('/'))
+  const result = await run(['git', 'clean', '-fdx', '--', '.tmp'], { cwd: parent })
+  if (result.exitCode !== 0) throw new Error('Git could not clear the run temporary folder')
+}
 
 /** @param {ModFs} fs @param {ModRun | undefined} run @param {string} path @returns {Promise<string[] | null>} */
 const listFiles = async (fs, run, path) => {

@@ -13,6 +13,7 @@ const answerOf = (sha, kind) => `${TRACKING}/logs/judge-${sha}-${kind}.md`
 const recorded = (host, step) => host.events().filter((event) => event.type === 'step.recorded' && event.step === step)
 const checked = (host, step) => host.events().filter((event) => event.type === 'commits.checked' && event.step === step)
 const judged = (host) => host.agentRunner.judged
+const waitingPrefix = (step, reason, incident) => waitingOnEnvironment(step, reason, 1, incident).split('\nThe run so far')[0]
 /** The judge answering from a queue (an answer, or what a function does then answers), then accepting. @param {Array<string | object | (() => string | object)>} answers */
 const judging = (...answers) => () => {
   const next = answers.shift() ?? judgeAnswer('accept')
@@ -44,14 +45,19 @@ test('a red whose tests fail is replayed at its parent too, and the replay judge
   assert.deepEqual(recorded(host, 'distill').at(-1).oracle, { scenario: 1, sha: 'root-1', subject: 'test(checkout): scenario 1', component: 'api', files: ['tests/Acceptance/S1AcceptanceTests.cs', 'src/PayOrder.cs'], command: 'test' })
 })
 
-test('a replay that could not start, or that ran out of time, goes to the judge with what stopped it', async () => {
-  const host = scripted({ replay: new ScriptedReplay({ exits: { 'root-1': null, 'root-0': 'timeout' } }) }, (it) => [...research(it), agent()(it), unavailable])
+test('a replay that cannot start escalates to config; one that runs out of time goes to the judge with its log', async () => {
+  const missing = scripted({ replay: new ScriptedReplay({ exits: { 'root-1': null } }) }, (it) => [...research(it), agent()(it), unavailable])
+  const outcome = await missing.start()
+  assert.ok(outcome.reason.startsWith(`distill cannot run on this machine: dotnet test could not start; change it in skraft-config.json.\nCause: skraft-config.json: a command or a path it gives the engine.\nOutput: ${logOf('root-1')}\nRun \`skraft doctor\` to check the command and runtime.`))
+  assert.deepEqual(judged(missing), [])
+
+  const host = scripted({ replay: new ScriptedReplay({ exits: { 'root-1': 'timeout', 'root-0': 'timeout' } }) }, (it) => [...research(it), agent()(it), unavailable])
 
   await host.start()
 
   const lines = judged(host)[0].prompt.split('\n')
   assert.deepEqual(lines.filter((line) => line.startsWith('- api:')), [
-    `- api: \`dotnet test\` at the commit root-1: could not start dotnet; printed to ${logOf('root-1')}`,
+    `- api: \`dotnet test\` at the commit root-1: dotnet did not finish within 600 s; printed to ${logOf('root-1')}`,
     `- api: \`dotnet test\` at its parent root-0: dotnet did not finish within 600 s; printed to ${logOf('root-1', 'test-parent')}`,
   ])
 })
@@ -81,7 +87,8 @@ test('a judge that asks for a retry has the commands replayed once more, then is
   const twice = scripted({}, (it) => [...research(it), agent()(it), unavailable])
   twice.agentRunner.judge = () => judgeAnswer('retry', 'still dropping')
   const outcome = await twice.start()
-  assert.deepEqual([outcome.status, outcome.reason], ['waiting', waitingOnEnvironment('distill', asksAbout('root-1', 'red'), 1, { owner: 'judge', log: answerOf('root-1', 'red') })])
+  assert.equal(outcome.status, 'waiting')
+  assert.ok(outcome.reason.startsWith(waitingPrefix('distill', asksAbout('root-1', 'red'), { owner: 'judge', log: answerOf('root-1', 'red') })))
 })
 
 test('a judge that finds nothing an agent can fix waits on a human, its answer the output to read; RETRY replays and judges the red again, using no new attempt', async () => {
@@ -90,7 +97,8 @@ test('a judge that finds nothing an agent can fix waits on a human, its answer t
 
   const outcome = await host.start()
 
-  assert.deepEqual([outcome.status, outcome.reason], ['waiting', waitingOnEnvironment('distill', asksAbout('root-1', 'red'), 1, { owner: 'judge', log: answerOf('root-1', 'red') })])
+  assert.equal(outcome.status, 'waiting')
+  assert.ok(outcome.reason.startsWith(waitingPrefix('distill', asksAbout('root-1', 'red'), { owner: 'judge', log: answerOf('root-1', 'red') })))
   assert.deepEqual(recorded(host, 'distill'), [])
   assert.deepEqual(host.events().filter(({ type }) => type === 'question.asked').at(-1).incident, { owner: 'judge', log: answerOf('root-1', 'red') })
   await host.decide({ answer: 'RETRY' })
@@ -122,7 +130,8 @@ test('a judge whose answer the engine cannot read is asked once more, told why; 
     const stuck = scripted({}, (it) => [...research(it), agent()(it), unavailable])
     stuck.agentRunner.judge = judge
     const outcome = await stuck.start()
-    assert.deepEqual([outcome.status, outcome.reason], ['waiting', waitingOnEnvironment('distill', asksAbout('root-1', 'red', why), 1, { owner: 'judge' })], why)
+    assert.equal(outcome.status, 'waiting', why)
+    assert.ok(outcome.reason.startsWith(waitingPrefix('distill', asksAbout('root-1', 'red', why), { owner: 'judge' })), outcome.reason)
     assert.equal(stuck.agentRunner.judged.length, asked, why)
     const recordedJudge = checked(stuck, 'distill')[0].commits[0].replay.judge
     assert.deepEqual([recordedJudge.decision, recordedJudge.answer, recordedJudge.model], ['ask-human', null, null], why)
@@ -227,7 +236,8 @@ test('a judge that changes the working copy while it judges stops the step for a
 
     const outcome = await host.start()
 
-    assert.deepEqual([outcome.status, outcome.reason], ['waiting', waitingOnEnvironment('distill', 'the replay judge changed the working copy (a commit or a file) while it judged; undo that change, then retry', 1, { owner: 'judge' })])
+    assert.equal(outcome.status, 'waiting')
+    assert.ok(outcome.reason.startsWith(waitingPrefix('distill', 'the replay judge changed the working copy (a commit or a file) while it judged; undo that change, then retry', { owner: 'judge' })))
     assert.deepEqual(recorded(host, 'distill'), [])
   }
 })

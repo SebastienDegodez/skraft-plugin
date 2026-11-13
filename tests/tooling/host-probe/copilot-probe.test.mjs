@@ -11,11 +11,11 @@ const SHARED_MCP_TOOLS = ['skraft_answer', 'skraft_doctor', 'skraft_gate', 'skra
 const FAST = { tools: 50, isolationTools: 50, poll: 10, settle: 0 }
 const ENVIRONMENT = { copilot: '1.0.100', sdk: 'test', node: 'v22', os: 'linux' }
 
-const probe = async (t, host, models = CONFIGURED_MODELS, agentCalls = false) => {
+const probe = async (t, host, models = CONFIGURED_MODELS, agentCalls = false, incidentSession = false) => {
   const workRoot = await mkdtemp(join(tmpdir(), 'skraft-host-probe-test-'))
   t.after(() => rm(workRoot, { recursive: true, force: true }))
   const home = join(workRoot, 'home')
-  const report = await runProbe({ sdk: simulatedSdk({ ...host, home }), environment: ENVIRONMENT, workRoot, home, models, agentCalls, timings: FAST })
+  const report = await runProbe({ sdk: simulatedSdk({ ...host, home }), environment: ENVIRONMENT, workRoot, home, models, agentCalls, incidentSession, timings: FAST })
   return { report, verdicts: Object.fromEntries(report.checks.map((item) => [item.id, item.verdict])) }
 }
 
@@ -61,6 +61,7 @@ test('on a host that behaves as the issues say, every host premise is measured, 
     'skraft-mcp-loop-hidden': 'pass',
     'session-agents': 'pass',
     'copilot-models-available': 'pass',
+    'incident-read-answered': 'inconclusive',
     'skraft-tool-names-free': 'pass',
     'plugin-command-listed': 'pass',
     'plugin-command-input': 'pass',
@@ -131,7 +132,7 @@ test('a canvas opens headless on its loopback page, its action and the page\'s c
   assert.deepEqual(observed('canvas-action-invoke'), { error: null, result: { result: { ok: true, opened: 2 } } })
   assert.deepEqual(observed('confirm-from-canvas'), { answer: { value: true, error: null }, hostAsked: 1 })
   assert.deepEqual(observed('canvas-close'), { closed: ['skraft-probe-instance'] })
-  assert.deepEqual({ ...observed('canvas-reopen-other-tab'), firstUrl: null, againUrl: null, keptUrl: null }, { error: null, inputs: [{}, { tab: 'configuration' }], firstUrl: null, againUrl: null, keptUrl: null, keptInput: { tab: 'configuration' }, openedEvents: null })
+  assert.deepEqual({ ...observed('canvas-reopen-other-tab'), firstUrl: null, againUrl: null, keptUrl: null }, { error: null, inputs: [{}, { tab: 'configuration' }], firstUrl: null, againUrl: null, keptUrl: null, keptInput: { tab: 'configuration' }, openedEvents: [] })
   assert.match(observed('canvas-reopen-other-tab').againUrl, /\?t=skraft-probe-token&tab=configuration$/)
   assert.equal(observed('canvas-reopen-other-tab').keptUrl, observed('canvas-reopen-other-tab').againUrl)
   assert.deepEqual(observed('canvas-agent-tools'), { without: [], withRenderer: ['invoke_canvas_action', 'list_canvas_capabilities', 'open_canvas'] })
@@ -349,9 +350,10 @@ test('the Markdown report lists each check with its issue and escapes table pipe
 })
 
 test('the command line takes known options only', () => {
-  assert.deepEqual(parseArgs(['--report-issues', '--dry-run', '--out', 'r']), { sdk: null, copilot: null, out: 'r', reportIssues: true, dryRun: true, repo: 'SebastienDegodez/skraft-plugin', keep: false, agentCalls: false, require: [] })
+  assert.deepEqual(parseArgs(['--report-issues', '--dry-run', '--out', 'r']), { sdk: null, copilot: null, out: 'r', reportIssues: true, dryRun: true, repo: 'SebastienDegodez/skraft-plugin', keep: false, agentCalls: false, incidentSession: false, require: [] })
   assert.deepEqual(parseArgs(["--require", "cwd-after-cd,skraft-extension-loaded"]).require, ["cwd-after-cd", "skraft-extension-loaded"])
   assert.equal(parseArgs(['--agent-calls']).agentCalls, true)
+  assert.equal(parseArgs(['--incident-session']).incidentSession, true)
   assert.throws(() => parseArgs(['--bogus']), /usage/)
   assert.throws(() => parseArgs(['--sdk']), /usage/)
 })
@@ -422,4 +424,22 @@ test('a host that logs a hooks error for the skraft plugins fails plugin-hooks-q
   assert.equal(silent.verdicts['plugin-hooks-quiet'], 'inconclusive')
   assert.deepEqual(hooksCheck(silent.report)?.observed, { witness: [], plugins: [] })
   assert.deepEqual(planIssueActions(silent.report, { openTitles: new Set() }).filter((action) => action.check === 'plugin-hooks-quiet'), [])
+})
+
+test('with --incident-session, a session that reads the incident question and its output, then records one option, passes; the prompt is the only model call reported', async (t) => {
+  const { report, verdicts } = await probe(t, {}, CONFIGURED_MODELS, false, true)
+  const observed = report.checks.find((item) => item.id === 'incident-read-answered').observed
+  assert.equal(verdicts['incident-read-answered'], 'pass')
+  assert.deepEqual(observed.answered, [{ key: 'research-1', answer: 'ABORT', by: 'decide' }])
+  assert.deepEqual(observed.calls.map(({ toolName }) => toolName), ['skraft_decide', 'view', 'skraft_decide'])
+  assert.equal(observed.quotedToken, true)
+  assert.equal(observed.hostAsked, 0)
+  assert.deepEqual(observed.usage, [{ model: 'simulated', inputTokens: 10, outputTokens: 5, cost: 1, totalNanoAiu: 42 }])
+  assert.match(reportMarkdown(report), /Un prompt au modèle par défaut \(--incident-session\)\./)
+})
+
+test('with --incident-session, a session that records an option without reading the output it names fails the incident check', async (t) => {
+  const { report, verdicts } = await probe(t, { incidentModel: 'guesses' }, CONFIGURED_MODELS, false, true)
+  assert.equal(verdicts['incident-read-answered'], 'fail')
+  assert.equal(report.checks.find((item) => item.id === 'incident-read-answered').observed.quotedToken, false)
 })

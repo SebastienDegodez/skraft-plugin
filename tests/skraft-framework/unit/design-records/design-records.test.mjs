@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { agent, API, nominal, scripted, SLUG } from '../support/pipeline-host.mjs'
-import { waitingOnEnvironment } from '../support/decisions.mjs'
+import { waitingOnEnvironment, withoutReportSummary } from '../support/decisions.mjs'
 
 const MATRIX = 'details/2026-10-11/consistency-matrix-checkout.md'
 const ADR = 'docs/adr/adr-002-refunds.md'
@@ -86,7 +86,7 @@ test('an ADR whose verdict sits in its file name, or a supersession the registry
       git.changedFiles = async (dir, sha) => (sha === 'root-0' ? null : changedFiles(dir, sha))
     } })(it),
   ])
-  assert.deepEqual(await unknown.start(), { status: 'waiting', slug: SLUG, phase: 'DESIGN', code: 'environment', reason: waitingOnEnvironment('design', 'Git cannot list what changed in . since root-0') })
+  assert.deepEqual(withoutReportSummary(await unknown.start()), { status: 'waiting', slug: SLUG, phase: 'DESIGN', code: 'environment', reason: waitingOnEnvironment('design', 'Git cannot list what changed in . since root-0') })
 
   const registered = scripted({ answers: [{ answer: 'RATIFIED' }], files: { [ADR]: supersedes.replace('[ADR-001]', '[ADR-1]'), 'docs/adr/supersessions.md': '| 2026-10-11 | ADR-001 | ADR-2 | refunds change the flow |\n', 'docs/adr/decisions-index.md': '| ADR | Title | Status |\n| --- | --- | --- |\n| [ADR-002](./adr-002-refunds.md) | Refunds | Proposed |\n' } }, (it) => [
     agent()(it),

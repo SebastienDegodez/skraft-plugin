@@ -8,6 +8,7 @@ import { terminalConfirm } from '../../../../plugins/skraft-framework/engine/dri
 import { PAY_OR_NOTHING, SLUG, blocked, deliverWith, killsZero, pipelineRepository, proposesZero, scriptedLlm } from '../support/pipeline-repository.mjs'
 import { SKRAFT_MJS, journal, skraft, tempFolder } from '../support/workspace.mjs'
 import { loop, startAgents } from '../agent-loop/simulated-conductor.mjs'
+import { withoutReportSummary } from '../support/run-report-summary.mjs'
 
 /** A repository whose run waits on the ratification of its ADR, reached through the agent loop. */
 const waitingOnRatification = async (t) => {
@@ -50,7 +51,7 @@ test('an agent of the agent loop that says it is blocked waits on the person; th
     startAgents(step, llm)
     ;({ step } = await loop(cwd, ['record']))
   }
-  assert.match(step.reason, /^design is blocked: [^]* STOP ends the run\.\nThe run so far \(commits, refusals, incidents\): .+ Options: an instruction in quotes, or STOP\. Ask the EXACT question and options/)
+  assert.match(withoutReportSummary(step.reason), /^design is blocked: [^]* STOP ends the run\.\nThe run so far \(commits, refusals, incidents\): .+ Options: an instruction in quotes, or STOP\. Ask the EXACT question and options/)
   assert.ok(step.reason.includes(`The run so far (commits, refusals, incidents): ${join(cwd, '.copilot-tracking', 'skraft-plans', SLUG, 'run-report.md')}`))
   const asked = []
 

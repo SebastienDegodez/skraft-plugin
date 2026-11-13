@@ -41,8 +41,10 @@ test('a pre-commit hook that refuses the ratification commit asks a human to fix
   const log = runFile(cwd, 'logs/commit-adr.log')
   const asked = lastOf(events, 'question.asked', 'environment')
   assert.deepEqual([outcome.status, outcome.phase, outcome.code], ['waiting', 'DESIGN', 'environment'])
-  assert.deepEqual([asked.step, asked.options, asked.incident], ['adr', ['RETRY', 'ABORT'], { owner: 'environment', log }])
-  assert.equal(asked.text, environmentText(cwd, 'adr', { reason: 'git commit failed: exit 1', owner: 'environment', log }))
+  assert.deepEqual([asked.step, asked.options, asked.incident.owner, asked.incident.log], ['adr', ['RETRY', 'ABORT'], 'environment', log])
+  assert.deepEqual([asked.incidents[0].category, asked.incidents[0].attempts, asked.incidents[0].argv], ['environment', 1, ['git', 'commit']])
+  assert.ok(asked.text.startsWith(environmentText(cwd, 'adr', { reason: 'git commit failed: exit 1', owner: 'environment', log }).split('\nThe run so far')[0]))
+  assert.match(asked.text, /Incidents: adr signature .*1 occurrences; log .*commit-adr\.log\./)
   assert.ok(readFileSync(log, 'utf8').includes(message), readFileSync(log, 'utf8'))
   assert.equal(journalText(cwd).includes(message), false)
   assert.equal(git(cwd, 'log', '--format=%s', '--', ADR_PATH).includes('docs(adr): ratify ADR-001'), false)
@@ -80,7 +82,8 @@ test('tests that find no container runtime when the acceptance red is replayed g
   const asked = lastOf(events, 'question.asked', 'environment')
   assert.deepEqual([outcome.status, outcome.phase, outcome.code], ['waiting', 'DISTILL', 'environment'])
   assert.deepEqual([asked.step, asked.incident], ['distill', { owner: 'judge', log: answer }])
-  assert.equal(asked.text, environmentText(cwd, 'distill', { reason: `the replay judge asks a human about the red commit ${sha}: read ${answer}`, owner: 'judge', log: answer }))
+  assert.ok(asked.text.startsWith(environmentText(cwd, 'distill', { reason: `the replay judge asks a human about the red commit ${sha}: read ${answer}`, owner: 'judge', log: answer }).split('\nThe run so far')[0]))
+  assert.match(asked.text, /Commits: .*Step verdicts:.*Incidents: none\./s)
   assert.ok(readFileSync(log, 'utf8').includes('Could not find a valid Docker environment'), readFileSync(log, 'utf8'))
   assert.ok(readFileSync(answer, 'utf8').includes('start Docker or Podman'), readFileSync(answer, 'utf8'))
   assert.ok(llm.judged[0].includes(`printed to ${log}\n`), llm.judged[0])
@@ -98,27 +101,31 @@ test('tests that find no container runtime when the acceptance red is replayed g
   assert.deepEqual(recorded(eventsOf(cwd), 'distill').map(({ attempt, outcome: result }) => [attempt, result]), [[1, 'done']])
 })
 
-test('a test command whose program does not exist goes to the replay judge at the replay of the acceptance red, told it could not start; the judge asking a human, no agent is dispatched again, and RETRY once skraft-config.json names a program that starts goes on to completion', async (t) => {
+test('a test command whose program does not exist escalates to config with its replay log and no judge; RETRY after fixing skraft-config.json completes without a new attempt', async (t) => {
   const { cwd } = pipelineRepository(t)
   const configPath = join(cwd, 'skraft-config.json')
   const config = readFileSync(configPath, 'utf8')
   const parsed = JSON.parse(config)
   writeFileSync(configPath, JSON.stringify({ ...parsed, components: [{ ...parsed.components[0], commands: { ...parsed.components[0].commands, test: 'skraft-no-such-runner tests/unit/check.mjs' } }] }, null, 2))
 
-  const { mod, llm, dialogs, outcome } = await runOn(cwd, { acts: { 'acceptance-designer': [commitsItsTestAlone] }, judges: [judgeVerdict('ask-human', 'skraft-no-such-runner is not installed')] })
+  const { mod, llm, dialogs, outcome } = await runOn(cwd, { acts: { 'acceptance-designer': [commitsItsTestAlone] } })
 
   const events = eventsOf(cwd)
   const sha = git(cwd, 'rev-parse', '--short=7', 'HEAD')
-  const answer = runFile(cwd, `logs/judge-${sha}-red.md`)
+  const log = runFile(cwd, `logs/replay-${sha}-app-test.log`)
   const asked = lastOf(events, 'question.asked', 'environment')
   assert.deepEqual([outcome.status, outcome.phase, outcome.code], ['waiting', 'DISTILL', 'environment'])
-  assert.deepEqual([asked.step, asked.incident], ['distill', { owner: 'judge', log: answer }])
-  assert.ok(llm.judged[0].includes(`\`skraft-no-such-runner tests/unit/check.mjs\` at the commit ${sha}: could not start skraft-no-such-runner; printed to ${runFile(cwd, `logs/replay-${sha}-app-test.log`)}\n`), llm.judged[0])
+  assert.deepEqual([asked.step, asked.incident], ['distill', { owner: 'config', log }])
+  assert.ok(asked.text.startsWith(environmentText(cwd, 'distill', {
+    reason: 'skraft-no-such-runner tests/unit/check.mjs could not start; change it in skraft-config.json',
+    owner: 'config', log,
+  }).split('\nThe run so far')[0]))
+  assert.deepEqual(llm.judged, [])
   assert.deepEqual(agentsOf(mod.spawns), ['solution-researcher', 'solution-architect', 'acceptance-designer'])
   assert.deepEqual(recorded(events, 'distill'), [])
   assert.equal(dialogs.at(-1).spawns, mod.spawns.length)
   const replayed = lastOf(events, 'commits.checked')
-  t.diagnostic(`cost: 0 agent dispatches, 1 judge, no attempt recorded; ${elapsedMs(replayed, asked)} ms from the replay to the environment question, ${elapsedMs(lastOf(events, 'step.started'), asked)} ms since distill started`)
+  t.diagnostic(`cost: 0 agent dispatches, no judge, no attempt recorded; ${elapsedMs(replayed, asked)} ms from the replay to the environment question, ${elapsedMs(lastOf(events, 'step.started'), asked)} ms since distill started`)
 
   writeFileSync(configPath, config)
   const retried = await retry(mod)
@@ -127,7 +134,7 @@ test('a test command whose program does not exist goes to the replay judge at th
   assert.deepEqual(agentsOf(mod.spawns), NOMINAL_AGENTS)
 })
 
-test('a test command that crashes in the gates (exit 139) goes back to the engineer with the gate\'s log, like any failing gate: no human is asked, and once it no longer crashes the gates pass and the run completes', async (t) => {
+test('a test command that crashes in the gates (exit 139) requests a host judgment, never a human dialog or an engineer retry', async (t) => {
   const { cwd } = pipelineRepository(t)
   const fixed = join(cwd, '..', 'crash-fixed')
   const crashing = checkWith([
@@ -141,18 +148,18 @@ test('a test command that crashes in the gates (exit 139) goes back to the engin
     findsNothingToChange(brief, context)
   }
 
-  const { mod, outcome } = await runOn(cwd, { acts: { 'acceptance-designer': [acceptanceWith(crashing)], 'software-engineer': [NOMINAL['software-engineer'], fixesTheCrash] } })
+  const { mod, dialogs, outcome } = await runOn(cwd, { acts: { 'acceptance-designer': [acceptanceWith(crashing)], 'software-engineer': [NOMINAL['software-engineer'], fixesTheCrash] } })
 
   const events = eventsOf(cwd)
   const log = runFile(cwd, 'gates/app/test-1.log')
-  assert.equal(outcome.status, 'done', outcome.reason)
-  assert.deepEqual(recorded(events, 'gates').map(({ visit, outcome: result, next, failures }) => [visit, result, next, failures]), [
-    [1, 'fail', 'deliver', [`app/test: was stopped by a signal or crashed (exit 139), not by a failing check (evidence: ${log})`]],
-    [2, 'pass', 'deliver_review', []],
-  ])
+  const asked = lastOf(events, 'question.asked', 'unforeseen')
+  assert.deepEqual([outcome.status, outcome.phase, outcome.code], ['waiting', 'DELIVER', 'unforeseen'])
+  assert.deepEqual([asked.step, asked.options, asked.incident.owner, asked.incident.log], ['gates', ['RETRY', 'RETRY_WITH_NOTE', 'SEND_TO:deliver', 'STOP'], 'unknown', log])
+  assert.match(asked.text, /This is not a human question/)
+  assert.equal(dialogs.some(({ header }) => header === 'Incident'), false)
+  assert.deepEqual(recorded(events, 'gates'), [])
   assert.ok(readFileSync(log, 'utf8').includes('Segmentation fault'), readFileSync(log, 'utf8'))
-  assert.equal(events.filter((event) => event.type === 'question.asked' && event.kind === 'environment').length, 0)
-  assert.deepEqual(agentsOf(mod.spawns), ['solution-researcher', 'solution-architect', 'acceptance-designer', 'software-engineer', 'software-engineer', 'pr-writer'])
-  const crashed = events.find((event) => event.type === 'gate.ran' && event.status === 'fail')
-  t.diagnostic(`cost: 1 dispatch of the engineer, no human; ${elapsedMs(crashed, lastOf(events, 'run.finished'))} ms from the crashed gate to the end of the run`)
+  assert.equal(journalText(cwd).includes('Segmentation fault'), false)
+  assert.deepEqual(agentsOf(mod.spawns), ['solution-researcher', 'solution-architect', 'acceptance-designer', 'software-engineer'])
+  t.diagnostic('cost: 1 engineer dispatch; the crash is held for one host judgment, with no paid model call in this test')
 })

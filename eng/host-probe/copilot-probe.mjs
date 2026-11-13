@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 // Copilot host probe: measures, through a headless SDK host and without any model call unless
-// --agent-calls is given, the host behaviours the skraft-pipeline driver relies on. Each check is linked to the issue it measures
+// --agent-calls or --incident-session is given, the host behaviours the skraft-pipeline driver relies on. Each check is linked to the issue it measures
 // (a comment with the result) or, for a requirement, opens an issue when it fails.
 //
 //   node eng/host-probe/copilot-probe.mjs [--sdk <copilot-sdk dir>] [--copilot <copilot binary>]
-//        [--out <dir>] [--report-issues [--dry-run]] [--repo owner/name] [--keep] [--agent-calls]
+//        [--out <dir>] [--report-issues [--dry-run]] [--repo owner/name] [--keep] [--agent-calls] [--incident-session]
 import { spawnSync } from 'node:child_process'
 import { get as httpGet } from 'node:http'
 import { existsSync, readdirSync, readFileSync } from 'node:fs'
@@ -12,7 +12,7 @@ import { mkdir, mkdtemp, realpath, rm, writeFile } from 'node:fs/promises'
 import { homedir, platform, release, tmpdir } from 'node:os'
 import { basename, dirname, isAbsolute, join, resolve } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
-import { PROBE_CANVAS, PROBE_CANVAS_QUERY, PROBE_COMMAND, PROBE_PRELOAD, QUESTION_KEY, QUESTION_SLUG, questionEvents, writeCanvasPlugin, writeCommandPlugin, writeHooksWitnessPlugin, writeIsolationPlugins, writeProbePlugins, writeQuestionRepo } from './fixtures.mjs'
+import { PROBE_CANVAS, PROBE_CANVAS_QUERY, PROBE_COMMAND, PROBE_PRELOAD, INCIDENT_SLUG, QUESTION_KEY, QUESTION_SLUG, questionEvents, writeCanvasPlugin, writeCommandPlugin, writeHooksWitnessPlugin, writeIsolationPlugins, writeIncidentRepo, writeProbePlugins, writeQuestionRepo } from './fixtures.mjs'
 import { DEFAULT_REPO, reportToGitHub } from './issues.mjs'
 import { mergePatch } from '../../plugins/skraft-framework/engine/domain/config/merge-patch.mjs'
 
@@ -1147,17 +1147,86 @@ const pluginHooksCheck = async (context) => {
 }
 
 // ---------------------------------------------------------------------------------------------
+// Check: a model session reads an incident question and answers it while the run is paused (#566).
+// The only check that sends a prompt; it runs with --incident-session.
+
+const INCIDENT_ID = 'incident-read-answered'
+const INCIDENT_EXPECTED = "Une session Copilot (modèle par défaut de l'hôte), à qui le développeur délègue la décision, lit la question `environment` d'un échec imprévu par `skraft_decide {}`, ouvre le fichier de sortie qu'elle nomme, enregistre une option du menu par `skraft_decide {key, answer}` une seule fois (`by: decide`), cite le jeton que seul ce fichier contient, sans élicitation de l'hôte (#566)."
+const INCIDENT_NEEDED = { reason: 'needs --incident-session: this check sends one prompt to the host default model, which spends AI credits' }
+const INCIDENT_TOOLS = Object.freeze(['skraft_decide', 'view'])
+const INCIDENT_TIMEOUT = 300_000
+
+export const incidentPrompt = () => [
+  'The skraft pipeline of this working copy is paused on a question. I delegate this decision to you: do not ask anyone.',
+  '1. Read the pending question with skraft_decide called with no arguments.',
+  '2. Open the output file the question names and read what the failing command printed.',
+  '3. Choose one of the offered options and record it with skraft_decide {key, answer}, once.',
+  'Then reply with one line: the identifier that follows "Error:" in that output, and the option you recorded.',
+].join('\n')
+
+/** Whether the session read, then answered once from the menu, and quoted what only the log holds. */
+export const incidentVerdict = ({ calls, answered, reply, hostAsked, token, options }) => {
+  if (reply === null) return 'inconclusive'
+  const decides = calls.filter(({ toolName }) => toolName === 'skraft_decide')
+  const read = decides.some(({ arguments: args }) => args?.key === undefined)
+  const recorded = answered.length === 1 && options.includes(answered[0].answer) && answered[0].by === 'decide'
+  return read && recorded && reply.includes(token) && hostAsked === 0 ? 'pass' : 'fail'
+}
+
+/** The tool calls and usage a session reports while it answers one prompt. */
+const sessionRecorder = (session) => {
+  const seen = { calls: [], usage: [] }
+  const stop = session.on((event) => {
+    if (event?.type === 'tool.execution_start') seen.calls.push({ toolName: event.data?.toolName, arguments: event.data?.arguments ?? null })
+    if (event?.type === 'assistant.usage') {
+      const { model, inputTokens, outputTokens, cost, copilotUsage } = event.data ?? {}
+      seen.usage.push({ model, inputTokens, outputTokens, cost, totalNanoAiu: copilotUsage?.totalNanoAiu })
+    }
+  })
+  return { seen, stop }
+}
+
+const incidentCheck = async ({ sdk, client, dirs, incidentSession }) => {
+  if (!incidentSession) return check({ id: INCIDENT_ID, issue: 566, expected: INCIDENT_EXPECTED, observed: INCIDENT_NEEDED })
+  const pluginRoot = join(REPO_ROOT, 'plugins', 'skraft-framework')
+  const token = `skraft-probe-incident-${Date.now().toString(36)}`
+  const fixture = await writeIncidentRepo(dirs.incident, pluginRoot, dirs.home, token)
+  const { answers, handler } = elicitationRecorder()
+  const session = await client.createSession({
+    ...dirs.session, workingDirectory: dirs.incident, pluginDirectories: [pluginRoot], requestExtensions: true,
+    availableTools: [...INCIDENT_TOOLS], onPermissionRequest: permissionHandler(sdk), onElicitationRequest: handler,
+  })
+  const { seen, stop } = sessionRecorder(session)
+  try {
+    const offered = [...await waitForTools(session, [...INCIDENT_TOOLS])]
+    let reply = null
+    let error = null
+    try { reply = (await session.sendAndWait({ prompt: incidentPrompt() }, INCIDENT_TIMEOUT))?.data?.content ?? '' } catch (caught) { error = messageOf(caught) }
+    const answered = (await questionEvents(dirs.incident, INCIDENT_SLUG)).filter((event) => event.type === 'question.answered').map(({ key, answer, by }) => ({ key, answer, by }))
+    const verdict = incidentVerdict({ calls: seen.calls, answered, reply, hostAsked: answers.calls.length, token, options: fixture.options })
+    return check({
+      id: INCIDENT_ID, issue: 566, expected: INCIDENT_EXPECTED, verdict,
+      observed: { offered, calls: seen.calls.map(({ toolName, arguments: args }) => ({ toolName, arguments: args })), answered, quotedToken: reply?.includes(token) ?? false, hostAsked: answers.calls.length, reply: reply?.slice(0, 300) ?? null, error, usage: seen.usage },
+    })
+  } finally {
+    stop?.()
+    await session.disconnect?.().catch(() => undefined)
+  }
+}
+
+// ---------------------------------------------------------------------------------------------
 // Run, report
 
 /**
  * Runs every check and returns the report. `sdk` is the `@github/copilot-sdk` module (or a
  * double in tests); `models`: the `models` of the skraft-config.json whose Copilot names are checked;
- * `agentCalls`: whether the checks that start an agent run.
+ * `agentCalls`: whether the checks that start an agent run; `incidentSession`: whether the incident
+ * check sends its prompt to the host default model.
  */
-export const runProbe = async ({ sdk, sdkPath, environment, workRoot, home = homedir(), models = {}, agentCalls = false, timings = {}, log = () => undefined }) => {
+export const runProbe = async ({ sdk, sdkPath, environment, workRoot, home = homedir(), models = {}, agentCalls = false, incidentSession = false, timings = {}, log = () => undefined }) => {
   T = { ...DEFAULT_TIMINGS, ...timings }
   const root = workRoot ?? await mkdtemp(join(tmpdir(), 'skraft-host-probe-'))
-  const dirs = { root, home, repoA: join(root, 'repo-a'), repoB: join(root, 'repo-b'), questionA: join(root, 'question-a'), questionB: join(root, 'question-b') }
+  const dirs = { root, home, repoA: join(root, 'repo-a'), repoB: join(root, 'repo-b'), questionA: join(root, 'question-a'), questionB: join(root, 'question-b'), incident: join(root, 'incident') }
   // The in-process runtime has no bundled SDK to fall back on for extension subprocesses.
   dirs.session = sdkPath ? { extensionSdkPath: sdkPath } : {}
   await mkdir(dirs.repoA, { recursive: true })
@@ -1176,6 +1245,8 @@ export const runProbe = async ({ sdk, sdkPath, environment, workRoot, home = hom
     checks.push(...await canvasChecks({ sdk, client, dirs, layout: probe.layout }))
     log('skraft-framework plugin…')
     checks.push(...await skraftChecks({ sdk, client, dirs, models }))
+    log('incident read and answered…')
+    checks.push(await incidentCheck({ sdk, client, dirs, incidentSession }))
     log('plugin commands…')
     checks.push(...await commandChecks({ sdk, client, dirs, agentCalls }))
     log('plugin hooks…')
@@ -1192,7 +1263,7 @@ export const runProbe = async ({ sdk, sdkPath, environment, workRoot, home = hom
 export const reportMarkdown = ({ date, environment, checks }) => [
   `## Sonde d'hôte Copilot — ${date.slice(0, 10)}`,
   '',
-  `Copilot CLI ${environment.copilot ?? '?'} · SDK ${environment.sdk ?? '?'} · Node ${environment.node} · ${environment.os}. ${checksCallAgents(checks) ? 'Appels d\'agent (--agent-calls).' : 'Aucun appel de modèle.'}`,
+  `Copilot CLI ${environment.copilot ?? '?'} · SDK ${environment.sdk ?? '?'} · Node ${environment.node} · ${environment.os}. ${modelCalls(checks)}`,
   '',
   '| Contrôle | Issue | Verdict | Observé |',
   '| --- | --- | --- | --- |',
@@ -1200,16 +1271,22 @@ export const reportMarkdown = ({ date, environment, checks }) => [
   '',
 ].join('\n')
 
-/** Whether the refusal checks started their agents. */
-const checksCallAgents = (checks) => checks.some((item) => item.id === 'copilot-model-refusal' && item.observed !== AGENT_CALLS_NEEDED)
+/** Which checks called a model: the refusal checks' agents, the incident check's prompt. */
+const modelCalls = (checks) => {
+  const calls = [
+    ...(checks.some((item) => item.id === 'copilot-model-refusal' && item.observed !== AGENT_CALLS_NEEDED) ? ['Appels d\'agent (--agent-calls).'] : []),
+    ...(checks.some((item) => item.id === INCIDENT_ID && item.observed !== INCIDENT_NEEDED) ? ['Un prompt au modèle par défaut (--incident-session).'] : []),
+  ]
+  return calls.length === 0 ? 'Aucun appel de modèle.' : calls.join(' ')
+}
 
 // ---------------------------------------------------------------------------------------------
 // CLI
 
-const USAGE = 'usage: node eng/host-probe/copilot-probe.mjs [--sdk <copilot-sdk dir>] [--copilot <copilot binary>] [--out <dir>] [--report-issues [--dry-run]] [--repo owner/name] [--keep] [--agent-calls] [--require <check,...>]'
+const USAGE = 'usage: node eng/host-probe/copilot-probe.mjs [--sdk <copilot-sdk dir>] [--copilot <copilot binary>] [--out <dir>] [--report-issues [--dry-run]] [--repo owner/name] [--keep] [--agent-calls] [--incident-session] [--require <check,...>]'
 
 export const parseArgs = (argv) => {
-  const options = { sdk: null, copilot: null, out: 'host-probe-results', reportIssues: false, dryRun: false, repo: DEFAULT_REPO, keep: false, agentCalls: false, require: [] }
+  const options = { sdk: null, copilot: null, out: 'host-probe-results', reportIssues: false, dryRun: false, repo: DEFAULT_REPO, keep: false, agentCalls: false, incidentSession: false, require: [] }
   for (let index = 0; index < argv.length; index++) {
     const arg = argv[index]
     const value = () => {
@@ -1225,6 +1302,7 @@ export const parseArgs = (argv) => {
     else if (arg === '--dry-run') options.dryRun = true
     else if (arg === '--keep') options.keep = true
     else if (arg === '--agent-calls') options.agentCalls = true
+    else if (arg === '--incident-session') options.incidentSession = true
     else if (arg === '--require') options.require = value().split(',').map((id) => id.trim()).filter(Boolean)
     else throw new Error(USAGE)
   }
@@ -1314,7 +1392,7 @@ const main = async () => {
   if (cli) process.env.COPILOT_CLI_PATH = cli
   const environment = { copilot, sdk: version, node: process.version, os: `${platform()} ${release()}` }
   console.log(`skraft host probe — Copilot ${environment.copilot ?? '?'}, SDK ${environment.sdk}`)
-  const report = await runProbe({ sdk, sdkPath: path, environment, models: configuredModels([join(homedir(), '.skraft', 'config.json'), resolve('skraft-config.json'), resolve('skraft-config.local.json')]), agentCalls: options.agentCalls, log: (line) => console.log(line) })
+  const report = await runProbe({ sdk, sdkPath: path, environment, models: configuredModels([join(homedir(), '.skraft', 'config.json'), resolve('skraft-config.json'), resolve('skraft-config.local.json')]), agentCalls: options.agentCalls, incidentSession: options.incidentSession, log: (line) => console.log(line) })
   await mkdir(options.out, { recursive: true })
   const stamp = report.date.replace(/[:.]/g, '-')
   await writeFile(join(options.out, `host-probe-${stamp}.json`), `${JSON.stringify(report, null, 2)}\n`)

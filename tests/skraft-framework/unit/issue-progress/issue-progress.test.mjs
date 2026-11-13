@@ -236,14 +236,14 @@ test('each gate shows its last result and its log, a mutation gate that handed m
     await host.workspace.write(MUTATION_REPORT, CHECKOUT_SURVIVORS)
   }
 
-  assert.equal((await host.start(STORY)).code, 'mutation-stalled')
+  assert.equal((await host.start(STORY)).code, 'repeated-failure')
 
   const { body } = host.codeHost.comments[0]
   assert.ok(body.includes([
     '\nQuality gates:',
-    '- api/build pass · `gates/api/build-3.log`',
-    '- api/test pass · `gates/api/test-3.log`',
-    '- api/mutation fail, 2 surviving mutants · `gates/api/mutation-3.log`\n',
+    '- api/build pass · `gates/api/build-2.log`',
+    '- api/test pass · `gates/api/test-2.log`',
+    '- api/mutation fail, 2 surviving mutants · `gates/api/mutation-2.log`\n',
   ].join('\n')), body)
 })
 
@@ -253,9 +253,9 @@ test('a blocked run is summarised where it stopped by its status and code: neith
 
   const outcome = await host.start(STORY)
 
-  assert.equal((await missing.start(STORY)).code, 'missing-outputs')
+  assert.equal((await missing.start(STORY)).code, 'repeated-failure')
   const told = missing.codeHost.comments[0].body
-  assert.ok(told.includes('\n### skraft · checkout — run blocked\n\nblocked (missing-outputs)\n\n- [ ] RESEARCH — stopped here\n'), told)
+  assert.ok(told.includes('\n### skraft · checkout — run blocked\n\nblocked (repeated-failure)\n\n- [ ] RESEARCH — stopped here\n'), told)
   assert.equal(told.includes(TRACKING), false, told)
   assert.equal(outcome.code, 'agent-blocked')
   assert.deepEqual(kept(host), ['keep comment #42'])
@@ -401,9 +401,9 @@ test('a French story\'s comment tells in French a review that sent the work back
     mutated.machine.exits[STRYKER] = 1
     await mutated.workspace.write(MUTATION_REPORT, CHECKOUT_SURVIVORS)
   }
-  assert.equal((await mutated.start(FRENCH)).code, 'mutation-stalled')
+  assert.equal((await mutated.start(FRENCH)).code, 'repeated-failure')
   const stalled = mutated.codeHost.comments[0].body
-  assert.ok(stalled.includes('\n- api/mutation fail, 2 mutants survivants · `gates/api/mutation-3.log`\n'), stalled)
-  assert.ok(stalled.includes('\n### skraft · checkout — run bloqué\n\nbloqué (mutation-stalled)\n\n'), stalled)
+  assert.ok(stalled.includes('\n- api/mutation fail, 2 mutants survivants · `gates/api/mutation-2.log`\n'), stalled)
+  assert.ok(stalled.includes('\n### skraft · checkout — run bloqué\n\nbloqué (repeated-failure)\n\n'), stalled)
   assert.ok(stalled.includes('\n- [ ] DELIVER — arrêté ici\n'), stalled)
 })

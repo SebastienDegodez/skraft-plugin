@@ -13,6 +13,7 @@ import { CYCLE_WORKFLOW, NOMINAL, SLUG, blocked, briefOf, commit, designateWorkf
 import { journal } from '../support/workspace.mjs'
 import { ISSUE, issueFile, repositoryOnForge } from '../support/issue-forge.mjs'
 import { fillsItsOutputs, scriptedModHost, stops } from '../claude-mod/support/scripted-mod-host.mjs'
+import { withoutReportSummary } from '../support/run-report-summary.mjs'
 
 const pluginRoot = fileURLToPath(new URL('../../../../plugins/skraft-framework/', import.meta.url))
 const cli = join(pluginRoot, 'engine', 'drivers', 'cli', 'skraft.mjs')
@@ -121,7 +122,7 @@ test('skraft report prints the time, cost and retries of each step of the active
   assert.equal(text.code, 0)
   assert.deepEqual(text.out.slice(0, 3), [`skraft ${SLUG}: waiting`, '| Step | Phase | Visits | Attempts | Retries | Time | Cost | Outcome |', '| --- | --- | ---: | ---: | ---: | ---: | ---: | --- |'])
   assert.match(text.out.at(-2), /^\| Total \| \| \| \d+ \| 0 \| \d+ s \| - \| \|$/)
-  assert.equal(text.out.at(-1), `design is blocked: solution-architect says it cannot go on; its reason is in ${tracking(cwd, SLUG, 'results', 'design-1-1.json')}.\nLeft by design (1):\n- stop after the research\n An instruction runs design again on a new pass with what is left above and the instruction; STOP ends the run.\nThe run so far (commits, refusals, incidents): ${tracking(cwd, SLUG, 'run-report.md')}`)
+  assert.equal(withoutReportSummary(text.out.at(-1)), `design is blocked: solution-architect says it cannot go on; its reason is in ${tracking(cwd, SLUG, 'results', 'design-1-1.json')}.\nLeft by design (1):\n- stop after the research\n An instruction runs design again on a new pass with what is left above and the instruction; STOP ends the run.\nThe run so far (commits, refusals, incidents): ${tracking(cwd, SLUG, 'run-report.md')}`)
   const json = JSON.parse((await inProcess(cwd, ['report', '--json'])).out.join('\n'))
   assert.deepEqual(json.steps.find((step) => step.step === 'design'), { step: 'design', phase: 'DESIGN', visits: 1, attempts: 1, retries: 0, durationMs: json.steps.find((step) => step.step === 'design').durationMs, costUsd: null, outcome: 'failed' })
   assert.deepEqual(await inProcess(cwd, ['report', '--all']), { code: 2, out: [], err: [USAGE] })
@@ -244,7 +245,7 @@ test('skraft status names the gate node a waiting run stands on, as the pane doe
     'answer: skraft decide gates-1 RETRY|ABORT',
   ])
   const testLog = tracking(cwd, SLUG, 'gates', 'app', 'test-1.log')
-  assert.equal(status.out.at(-1), [
+  assert.equal(withoutReportSummary(status.out.at(-1)), [
     `gates cannot run on this machine: app/test: exited 127 (evidence: ${testLog}).`,
     'Cause: the machine: a program, a service, a permission or a Git hook it lacks or refuses.',
     `Output: ${testLog}`,

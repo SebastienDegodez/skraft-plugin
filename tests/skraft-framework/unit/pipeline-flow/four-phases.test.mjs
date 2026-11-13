@@ -11,11 +11,28 @@ const ISSUE = 'plans/2026-10-11/issue-42.md'
 const RESULT_SHAPE = '{"status": "done" | "blocked", "summary": "<what you did, or why you cannot go on>"}'
 
 test('the nominal run goes through RESEARCH, DESIGN, DISTILL and DELIVER, the gates and the delivery review closing it, then PUBLISH writes the pull request', async () => {
-  const host = scripted({}, (it) => nominal(it, REFS_42))
+  const scratchAtDispatch = []
+  const host = scripted({}, (it) => nominal(it, REFS_42).map((behaviour, index) => async (dispatch) => {
+    scratchAtDispatch.push(await it.tracking.list(SLUG, '.tmp'))
+    const answer = await behaviour(dispatch)
+    await it.tracking.write(SLUG, `.tmp/from-agent-${index}`, 'old')
+    return answer
+  }))
+  await host.tracking.write(SLUG, '.tmp/stale', 'old')
+  const lens = host.agentRunner.review
+  const scratchAtLens = new Set()
+  host.agentRunner.review = async (dispatch) => {
+    scratchAtLens.add(JSON.stringify(await host.tracking.list(SLUG, '.tmp')))
+    await host.tracking.write(SLUG, `.tmp/${dispatch.agent}`, 'old')
+    return lens(dispatch)
+  }
 
   const outcome = await host.start({ story: { issue: 42, title: 'Pay by card' } })
 
   assert.deepEqual(outcome, { status: 'done', slug: SLUG, phase: 'PUBLISH', code: null, reason: 'PUBLISH closed' })
+  assert.deepEqual(scratchAtDispatch, [[], [], [], []])
+  assert.equal(scratchAtLens.has('[]'), true)
+  assert.deepEqual([...scratchAtLens].filter((seen) => JSON.parse(seen).some((path) => !path.endsWith('-lens'))), [])
   assert.deepEqual(host.agentRunner.dispatches.map(({ agent: id, source, label }) => `${id} ${source} ${label}`), [
     `solution-researcher plugin skraft ${SLUG} · research · attempt 1`,
     `solution-architect plugin skraft ${SLUG} · design · attempt 1`,
@@ -229,8 +246,8 @@ test('a document left as its template, with a placeholder left, blank or deleted
 
     const outcome = await host.start()
 
-    assert.equal(outcome.code, 'missing-outputs')
-    assert.equal(outcome.reason, `solution-researcher failed the same way on attempts 1 and 2: missing outputs: ${TRACKING}/${RESEARCH}`)
+    assert.equal(outcome.code, 'repeated-failure')
+    assert.match(outcome.reason, /^research stopped after 2 occurrences of failure signature [0-9a-f]+; evidence: unavailable$/)
   }
 })
 
@@ -391,7 +408,7 @@ test('a blocked run run again writes nothing more', async () => {
 
   assert.deepEqual(again, first)
   assert.deepEqual(await host.tracking.lines(SLUG), lines)
-  assert.deepEqual(host.events().at(-1), { ...host.events().at(-1), type: 'run.finished', status: 'blocked', code: 'missing-outputs', reason: first.reason })
+  assert.deepEqual(host.events().at(-1), { ...host.events().at(-1), type: 'run.finished', status: 'blocked', code: 'repeated-failure', reason: first.reason })
 })
 
 test('a configuration that became invalid stops the run before anything is dispatched', async () => {

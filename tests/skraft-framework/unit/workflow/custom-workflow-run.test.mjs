@@ -132,14 +132,12 @@ test('a repository agent leaving its outputs empty, writing outside its declared
 
   const outcome = await host.start()
 
-  assert.deepEqual([outcome.code, ...outcome.reason.split('\n').slice(0, 5)], [
-    'blocked',
-    'security is blocked: acme-security-reviewer failed the same way on attempts 1 and 2.',
-    'Left by security (3):',
-    `- missing outputs: ${TRACKING}/security/2026-10-11/${SLUG}-review.md, ${TRACKING}/notes.md`,
-    '- out of write scope: tests/Hack.cs',
-    '- left uncommitted: docs/security/threat-model.md; commit it or undo the change',
-  ])
+  assert.deepEqual([outcome.status, outcome.code], ['blocked', 'repeated-failure'])
+  const failures = host.events().filter((event) => event.type === 'step.recorded' && event.step === 'security')
+  assert.equal(failures.length, 2)
+  assert.deepEqual(failures[1].missing, [`security/2026-10-11/${SLUG}-review.md`, 'notes.md'])
+  assert.deepEqual(failures[1].failures, ['out of write scope: tests/Hack.cs', 'left uncommitted: docs/security/threat-model.md; commit it or undo the change'])
+  assert.deepEqual(host.human.questions, [])
   assert.deepEqual(host.git.engineCommits.map(({ paths }) => paths), [['docs/adr/adr-001-card-payment.md']])
 })
 

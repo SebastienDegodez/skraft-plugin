@@ -35,14 +35,23 @@ test('a run resumed on an ejected pipeline that dropped a node the run already p
   assert.deepEqual(reviews(host)[0], ['design_review', 1, 'approved', 'adr'])
 })
 
-test('a run interrupted before the agent finished dispatches the same attempt again, under the same label and brief', async () => {
-  const host = scripted({}, (it) => [agent({ fill: false })(it), interrupted, agent()(it), unavailable])
+test('a run interrupted before the agent finished dispatches the same attempt again, under the same label and brief, its scratch kept', async () => {
+  const scratch = []
+  const host = scripted({}, (it) => {
+    const seen = (behaviour) => async (dispatch) => { scratch.push(await it.tracking.list(SLUG, '.tmp')); return behaviour(dispatch) }
+    return [
+      async (dispatch) => { await it.tracking.write(SLUG, '.tmp/attempt-1', 'x'); return agent({ fill: false })(it)(dispatch) },
+      seen(async () => { await it.tracking.write(SLUG, '.tmp/attempt-2', 'x'); interrupted() }),
+      seen(agent()(it)), unavailable,
+    ]
+  })
   await host.init()
   await assert.rejects(host.run(), /host interrupted/)
   host.clock.advance(60 * 60_000)
 
   await host.run()
 
+  assert.deepEqual(scratch, [[], ['.tmp/attempt-2']])
   assert.deepEqual(host.agentRunner.dispatches.slice(0, 3).map((dispatch) => dispatch.label), [
     `skraft ${SLUG} · research · attempt 1`, `skraft ${SLUG} · research · attempt 2`, `skraft ${SLUG} · research · attempt 2`,
   ])

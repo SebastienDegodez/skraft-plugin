@@ -63,7 +63,7 @@ const instructionsFor = (loop) => [
   'skraft runs a delivery pipeline (research, design, distill, deliver) in the repository the host shares.',
   'Before the first prompt in a repository, call skraft_doctor. When its config check fails, or a run is refused with configuration-incomplete, set skraft up with the skraft-init skill, which calls skraft_init.',
   loop ? STARTS.loop : STARTS.host,
-  'For a pipeline question, read skraft_status, ask the EXACT text and options through the offered native ask_user or askQuestions tool, and request a refusal reason there. Relay ONLY its returned human reply with skraft_answer {key, answer, reason?, workspace}. After successful record resume the SAME workflow run ID; for the MCP loop call skraft_next in the same workspace. Missing native tool or dismissal: report the concrete blocker, leave paused and record nothing, never infer an answer or use ordinary prose instead.',
+  'For a pipeline question, read skraft_status. For unforeseen only, follow skraft_answer host-llm guidance with observed model/cost/unit, without a human dialog. For every other kind, ask the EXACT text and options through the offered native ask_user or askQuestions tool, and request a refusal reason there. Relay ONLY its returned human reply with skraft_answer {key, answer, reason?, workspace}. After successful record resume the SAME workflow run ID; for the MCP loop call skraft_next in the same workspace. Missing native tool or dismissal: report the concrete blocker, leave paused and record nothing, never infer a human answer or use ordinary prose instead.',
   'Publishing, a review verdict comment and the V2 migration keep terminal consent: the person runs skraft publish, skraft review --publish or skraft migrate in their own terminal.',
 ].join(' ')
 
@@ -223,8 +223,8 @@ const runTool = async (session, tool, args, token) => {
 }
 
 /** @param {CliServices} services @param {Record<string, any>} args @param {Console} console */
-const recordAnswer = async (services, { key, answer, reason }, console) => {
-  const outcome = await createDecide(services.adapters()).decide({ key, answer, reason })
+const recordAnswer = async (services, { key, answer, reason, by, model, cost, costUnit }, console) => {
+  const outcome = await createDecide(services.adapters()).decide({ key, answer, reason, by, model, cost, costUnit })
   console.out(JSON.stringify(outcome))
   return outcome.ok ? 0 : 1
 }

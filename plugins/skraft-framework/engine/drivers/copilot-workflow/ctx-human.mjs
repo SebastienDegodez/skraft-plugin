@@ -2,6 +2,7 @@ import { decideUsage } from '../../domain/decisions/questions.mjs'
 import { askInHost } from './host-question.mjs'
 import { isCancellation } from './cancellation.mjs'
 import { NATIVE_GUIDANCE } from './skraft-decide-tool.mjs'
+import { UNFORESEEN_GUIDANCE } from '../../domain/decisions/unforeseen.mjs'
 
 /**
  * HumanInteraction on a Copilot dynamic workflow. A registered pipeline (null dialog) puts no
@@ -30,7 +31,7 @@ export const createCtxHuman = ({ ctx, dialog }) => Object.freeze({
  */
 const askPerson = async (ctx, dialog, question) => {
   if (isCancellation(ctx.signal)) throw /** @type {AbortSignal} */ (ctx.signal).reason ?? new DOMException('Workflow run was aborted', 'AbortError')
-  if (dialog === null) return waitInChat(ctx, question)
+  if (dialog === null || question.kind === 'unforeseen') return waitInChat(ctx, question)
   const put = await askInHost(dialog, question)
   if (put.ok) return put.given
   ctx.log(`Waiting for you — ${question.text}`)
@@ -41,9 +42,9 @@ const askPerson = async (ctx, dialog, question) => {
 
 /** @param {PauseContext} ctx @param {import('../../domain/decisions/questions.mjs').Question} question */
 const waitInChat = async (ctx, question) => {
-  ctx.log(`Waiting for you — ${question.text}`)
+  ctx.log(`${question.kind === 'unforeseen' ? 'Waiting for host judgment' : 'Waiting for you'} — ${question.text}`)
   ctx.log(JSON.stringify({ question }))
-  ctx.log(NATIVE_GUIDANCE)
+  ctx.log(question.kind === 'unforeseen' ? UNFORESEEN_GUIDANCE : NATIVE_GUIDANCE)
   await ctx.pause(question.key)
   return null
 }

@@ -1,8 +1,8 @@
 #!/bin/sh
 # skraft local CI gate — mirrors .github/workflows/skraft-framework-ci.yml.
 # Installed into .git/hooks/pre-push by: npm run hooks:install
-# Runs the fast gates before every push. Use `npm run ci:local -- --mutation` to
-# also run mutation locally.
+# Runs the fast gates before every push, never engine mutation.
+# `npm run ci:local -- --mutation` remains optional, on explicit request.
 # A push that only deletes refs (a stale tag, a release note) sends no code: git
 # gives each deleted ref an all-zero local sha, and the gates have nothing to check.
 sends_code=false

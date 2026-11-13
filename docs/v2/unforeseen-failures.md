@@ -3,7 +3,56 @@
 > Branche : `feat/unforeseen-failures`, PR #568, empilée sur `feat/564-deliver-per-scenario`
 > (PR #567), vers `integration/v2-next` (lots 1 à 5, dans cette seule PR). Lots 6 et 7 : 2.1.0, seulement si les données le
 > justifient.
-> Ce document est la référence du travail : chaque lot s'y coche, chaque décision s'y écrit.
+> Cadre historique des lots 1 à 5. L'état courant de #565 et #566 ci-dessous prime sur
+> les reports et cases cochées historiques ; ceux-ci ne certifient pas les mesures de cette branche.
+
+## État courant — #565 et #566
+
+L'auteur a autorisé le démarrage de #566 sans attendre les seuils de la section 7. Cette
+dérogation ne vaut ni mesure du gain, ni validation de la qualité des choix du modèle.
+#565 est implémentée dans la branche de départ ; preuves Linux, Windows et absence de demande
+de permission hors dépôt pendant un run réel restent à obtenir.
+
+Un incident de propriétaire `unknown`, muni d'une signature, pose désormais `unforeseen`.
+La session hôte lit le log nommé par la question et répond via `skraft_decide` sur Copilot,
+ou `skraft_answer` sur MCP/Claude Code. Aucun nouveau sous-agent ni dialogue humain pour ce
+jugement. Questions humaines, dont `adr-ratification`, `review-ceiling` et `blocked`, refusent
+`by: host-llm` ; cette séparation de provenance ne prétend pas empêcher un modèle de mentir
+dans un relais humain, auquel le contrat d'hôte fait confiance.
+
+Schéma du jugement : `{key, answer, by: "host-llm", model, cost, costUnit, reason?}`.
+`model` désigne le modèle observé, jamais un sélecteur. `cost` est le coût observé de ce
+jugement, fini et positif ou nul ; unité `USD` ou `nano-AIU`, sans conversion. Ne pas recopier
+un total de session ni déduire une valeur absente : soumettre les champs effectivement
+observés ; une réponse sans usage complet enregistre `STOP`, puis la reprise clôt le run
+avec `invalid-judgment`. Aucune disponibilité automatique de ces métriques dans le tour
+interactif n'est affirmée. Les valeurs d'usage valides restent journalisées même si l'action
+est refusée.
+
+Menu fermé : `RETRY`, `RETRY_WITH_NOTE`, `SEND_TO:<producteur>` et `STOP`. Une note contient
+1 à 500 caractères après `inert` et mise sur une ligne ; elle reste une donnée de suivi,
+jamais une commande. `SEND_TO` n'offre que les arêtes `FAIL` vers un agent déjà prévu par
+le graphe : aucun saut par-dessus une gate verrouillée ou une question humaine. Les plafonds
+de visite restent applicables et une arête modifiée pendant la pause ne remplace pas le choix
+journalisé. Toute réponse hors menu ou invalide arrête avec diagnostic. Une seule intervention
+automatisée par signature sur tout le journal ; la suivante pose `environment` à une personne,
+y compris après reprise.
+
+`engine/domain/decisions/known-recoveries.mjs` contient la table versionnée signature → action.
+Elle est **vide** : aucun incident relu par l'auteur n'a fourni d'entrée. Une entrée future
+doit provenir d'un rapport effectivement relu, rester dans le menu proposé et sera journalisée
+`by: known-signature`, sans appel LLM. Aucune collecte, proposition ou alimentation automatique.
+Les notes ne sont pas inventées par la table.
+
+Le rapport distingue **Human answers** et **Automated judgments** ; ces derniers montrent
+provenance, modèle, coût et unité, séparément des totaux USD des agents.
+Les sondes du commit `14c9a464` prouvent lecture/réponse pendant une pause sur les deux hôtes,
+sur macOS seulement ; elles ne mesurent ni qualité du jugement, ni parcours interactif avec
+coût individuel accessible. Voir [preuves d'hôte](host-verification.md).
+
+La mutation de ce dépôt est désormais facultative, sur demande explicite ; ni CI ni hook
+ne la déclenchent. Commandes facultatives et gates de mutation des projets utilisateurs
+restent disponibles. Aucun passage Stryker n'est revendiqué pour #566.
 
 ## 1. Problème
 
@@ -256,7 +305,7 @@ rapport du run (`run-report.md`) liste commits, refus par signature et incidents
   vérifier sur un run réel (consigne `logs/`/`.tmp/` dans chaque brief ; D6).
 - [x] Aucune régression : unitaires, intégration, outillage, CLI, scripts de skills, manuel.
 
-## 6. Lots 2.1 (après mesure)
+## 6. Proposition historique des lots 2.1 (avant autorisation de #566)
 
 ### Lot 6 — Jugement LLM sur une partie des imprévus
 
@@ -295,7 +344,7 @@ fermé.
   développeurs.
 - Aucune proposition automatique, aucune nouvelle action hors du menu.
 
-## 7. Déclencheur du lot 6
+## 7. Déclencheur proposé du lot 6 (collecte non achevée)
 
 Il faut décider sur des données, pas sur un nombre arbitraire d'incidents :
 

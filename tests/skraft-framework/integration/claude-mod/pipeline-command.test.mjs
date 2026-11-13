@@ -140,8 +140,9 @@ test('an absent research document is asked again with its missing path; the same
   assert.deepEqual([result, briefPaths(mod.spawns[1].prompt).result].map((path) => path.split(/[\\/]/).at(-1)), ['research-1-1.json', 'research-1-2.json'])
   assert.equal(mod.spawns[1].description, 'skraft checkout · research · attempt 2')
   assert.equal(outcome.status, 'blocked')
-  assert.equal(outcome.code, 'missing-outputs')
-  assert.equal(mod.notes.at(-1), `skraft checkout: blocked (missing-outputs) — solution-researcher failed the same way on attempts 1 and 2: missing outputs: ${output}; result is missing`)
+  assert.equal(outcome.code, 'repeated-failure')
+  assert.match(outcome.reason, /^research stopped after 2 occurrences of failure signature [0-9a-f]{64}; evidence: unavailable$/)
+  assert.equal(mod.notes.at(-1), `skraft checkout: blocked (repeated-failure) — ${outcome.reason}`)
   assert.match(await mod.command(''), /^skraft checkout — blocked\n▶ RESEARCH\n· DESIGN\n/)
 }))
 

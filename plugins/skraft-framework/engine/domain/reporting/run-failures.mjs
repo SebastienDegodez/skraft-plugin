@@ -8,8 +8,8 @@ import { cell, inert } from './markdown-safety.mjs'
  *
  * @typedef {import('../journal/run-state.mjs').RunEvent} RunEvent
  * @typedef {{ step: string, sha: string, subject: string, kind: string, verdict: string }} CommitRow
- * @typedef {{ step: string, times: number, failure: string }} RefusalRow
- * @typedef {{ key: string, step: string, owner: string, log: string | null, answer: string | null }} IncidentRow
+ * @typedef {{ step: string, owner: string, times: number, failure: string }} RefusalRow
+ * @typedef {{ key: string | null, step: string, category: string, owner: string, signature: string | null, attempts: number | null, log: string | null, answer: string | null }} IncidentRow
  * @typedef {{ key: string, kind: import('../decisions/questions.mjs').QuestionKind, step: string, text: string, options: string[] }} Waiting
  */
 
@@ -46,30 +46,54 @@ export const refusalRows = (events) => {
 const FAILED = Object.freeze(['failed', 'fail'])
 
 /** @param {Map<string, RefusalRow>} rows @param {RunEvent} event */
-const countRefusal = (rows, { step, missing = [], failures }) => {
-  const row = rows.get(step) ?? { step, times: 0, failure: [...missing.map((/** @type {string} */ path) => `missing ${path}`), ...failures][0] }
-  rows.set(step, { ...row, times: row.times + 1 })
+const countRefusal = (rows, event) => ownersOf(event).forEach((owner) => countOwnerRefusal(rows, event, owner))
+
+/** @param {RunEvent} event */
+const ownersOf = ({ incidents = [] }) => {
+  const owners = [...new Set(incidents.map((incident) => incident.owner))]
+  return owners.length === 0 ? ['agent'] : owners
+}
+
+/** @param {Map<string, RefusalRow>} rows @param {RunEvent} event @param {string} owner */
+const countOwnerRefusal = (rows, { step, missing = [], failures }, owner) => {
+  const key = `${step}:${owner}`
+  const row = rows.get(key) ?? { step, owner, times: 0, failure: [...missing.map((/** @type {string} */ path) => `missing ${path}`), ...failures][0] }
+  rows.set(key, { ...row, times: row.times + 1 })
 }
 
 /** @param {RefusalRow[]} rows */
 export const refusalsTable = (rows) => [
-  '| Step | Times | First failure |',
-  '| --- | --- | --- |',
-  ...rows.map(({ step, times, failure }) => `| ${step} | ${times} | ${cell(inert(failure))} |`),
+  '| Step | Owner | Times | First failure |',
+  '| --- | --- | --- | --- |',
+  ...rows.map(({ step, owner, times, failure }) => `| ${step} | ${owner} | ${times} | ${cell(inert(failure))} |`),
 ]
 
-/** The incidents asked of a human, with the answer each got, null while it waits. @param {RunEvent[]} events @returns {IncidentRow[]} */
+/** The failures recorded and incidents asked of a human, with their latest occurrence and answer. @param {RunEvent[]} events @returns {IncidentRow[]} */
 export const incidentRows = (events) => {
+  const rows = new Map()
+  for (const event of events.filter(({ type }) => type === 'step.recorded' || type === 'question.asked')) addFailureIncidents(rows, event)
   const answers = new Map(events.filter(({ type }) => type === 'question.answered').map(({ key, answer }) => [key, answer]))
-  return events.filter(({ type, incident }) => type === 'question.asked' && incident !== undefined)
-    .map(({ key, step, incident }) => ({ key, step, owner: incident.owner, log: incident.log, answer: answers.get(key) ?? null }))
+  for (const question of events.filter(({ type, incident }) => type === 'question.asked' && incident !== undefined)) attachQuestion(rows, question, answers)
+  return [...rows.values()]
+}
+
+/** @param {Map<string, IncidentRow>} rows @param {RunEvent} event */
+const addFailureIncidents = (rows, { step, incidents = [] }) => incidents.forEach((incident) => {
+  rows.set(incident.signature, { key: null, step, category: incident.category, owner: incident.owner, signature: incident.signature, attempts: incident.attempts, log: incident.log, answer: null })
+})
+
+/** @param {Map<string, IncidentRow>} rows @param {RunEvent} question @param {Map<string, string>} answers */
+const attachQuestion = (rows, { key, step, incident }, answers) => {
+  const existing = [...rows.values()].findLast((row) => row.step === step && row.owner === incident.owner && row.log === incident.log)
+  if (existing) Object.assign(existing, { key, answer: answers.get(key) ?? null })
+  else rows.set(`question:${key}`, { key, step, category: incident.owner, owner: incident.owner, signature: null, attempts: null, log: incident.log, answer: answers.get(key) ?? null })
 }
 
 /** @param {IncidentRow[]} rows */
 export const incidentsTable = (rows) => [
-  '| Question | Step | Cause | Output | Answer |',
-  '| --- | --- | --- | --- | --- |',
-  ...rows.map(({ key, step, owner, log, answer }) => `| ${key} | ${step} | ${owner} | ${log ?? '-'} | ${answer ?? 'waiting'} |`),
+  '| Step | Cause | Owner | Signature | Occurrences | Output | Answer |',
+  '| --- | --- | --- | --- | ---: | --- | --- |',
+  ...rows.map(({ step, category, owner, signature, attempts, log, answer }) => `| ${cell(inert(step))} | ${cell(inert(category))} | ${owner} | ${signature ?? '-'} | ${attempts ?? '-'} | ${cell(inert(log ?? '-'))} | ${cell(inert(answer ?? 'waiting'))} |`),
 ]
 
 /** The question the run waits on: the last one asked with no answer; null when none waits. @param {RunEvent[]} events @returns {Waiting | null} */

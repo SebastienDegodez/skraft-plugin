@@ -12,6 +12,7 @@ import {
 } from './simulated-host.mjs'
 import { leaseLeftToExpire } from '../support/lease.mjs'
 import { repositoryOnForge } from '../support/issue-forge.mjs'
+import { withoutReportSummary } from '../support/run-report-summary.mjs'
 
 const host = (cwd) => copilotHost(cwd)
 
@@ -117,10 +118,10 @@ test('a filled output and a done result close RESEARCH; a blocked architect then
   ])
   assert.deepEqual(events.filter((event) => event.type === 'step.started' && event.agent !== undefined).map((event) => [event.agent, event.host]), [['solution-researcher', 'copilot'], ['solution-architect', 'copilot']])
   const reason = join(trackingDir(cwd, 'checkout'), 'results', 'design-1-1.json')
-  assert.equal(logs.at(-2), `Waiting for you — design is blocked: solution-architect says it cannot go on; its reason is in ${reason}.\nLeft by design (1):\n- needs a decision on the payment provider\n An instruction runs design again on a new pass with what is left above and the instruction; STOP ends the run.\nThe run so far (commits, refusals, incidents): ${join(trackingDir(cwd, 'checkout'), 'run-report.md')}`)
+  assert.equal(withoutReportSummary(logs.at(-2)), `Waiting for you — design is blocked: solution-architect says it cannot go on; its reason is in ${reason}.\nLeft by design (1):\n- needs a decision on the payment provider\n An instruction runs design again on a new pass with what is left above and the instruction; STOP ends the run.\nThe run so far (commits, refusals, incidents): ${join(trackingDir(cwd, 'checkout'), 'run-report.md')}`)
 })
 
-test('an absent output is dispatched again with its path listed missing; the same failure twice pauses the run on a question to the person', async (t) => {
+test('an absent output is dispatched again with its path listed missing; the same failure twice stops the run', async (t) => {
   const { cwd, cleanup } = await workingCopy()
   t.after(cleanup)
   const { ctx, calls, logs } = simulatedContext({ args: { slug: 'checkout' }, behaviours: [writesNothing, writesNothing] })
@@ -133,10 +134,9 @@ test('an absent output is dispatched again with its path listed missing; the sam
   assert.ok(!calls[0].prompt.includes('Missing outputs'))
   assert.ok(calls[1].prompt.includes(`Missing outputs from attempt 1 of 3:\n- ${path}`), calls[1].prompt)
   assert.ok(calls[1].prompt.includes(`Refused in attempt 1 of 3:\n- result is missing`), calls[1].prompt)
-  assert.deepEqual(outcome, { paused: 'research-1' })
-  const waiting = logs.find((line) => line.startsWith('Waiting for you — '))
-  assert.ok(waiting?.startsWith('Waiting for you — research is blocked: solution-researcher failed the same way on attempts 1 and 2.\nLeft by research ('), waiting)
-  assert.ok(waiting.includes(`\n- missing outputs: ${path}\n- result is missing\n`), waiting)
+  assert.deepEqual([outcome.status, outcome.code], ['blocked', 'repeated-failure'])
+  assert.match(outcome.reason, /^research stopped after 2 occurrences of failure signature [0-9a-f]{64}; evidence: unavailable$/)
+  assert.equal((await journalEvents(cwd, 'checkout')).filter((event) => event.type === 'question.asked').length, 0)
 })
 
 test('a journal edited by hand blocks the run as tampered and dispatches nothing', async (t) => {

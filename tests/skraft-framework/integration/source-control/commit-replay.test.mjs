@@ -71,6 +71,18 @@ test('a program replayed at a commit runs on that commit\'s files, and the worki
   assert.equal(before.worktrees, 1)
 })
 
+test('a replayed program receives its run-scoped temporary directory', async (t) => {
+  const repo = tempFolder(t)
+  const tmp = join(repo, '.copilot-tracking', 'skraft-plans', 'story', '.tmp')
+  writeFileSync(join(repo, 'env.mjs'), "const tmp = process.argv[2]; const java = `-Djava.io.tmpdir=\\\"${tmp}\\\"`; process.exit(['TMPDIR', 'TEMP', 'TMP'].every((key) => process.env[key] === tmp) && process.env.JAVA_TOOL_OPTIONS?.includes(java) ? 0 : 1)\n")
+  const sha = commitAll(repo, 'env')
+  const replay = createGitCommitReplay({ commandRunner: createNodeCommandRunner({ root: repo }) })
+
+  const answer = await replay.run({ repository: '.', sha, cwd: '.', choices: [[process.execPath, 'env.mjs', tmp]], importRoots: [], env: { TMPDIR: tmp, TEMP: tmp, TMP: tmp }, javaTmpDir: tmp })
+
+  assert.equal(answer.exitCode, 0)
+})
+
 test('what a replayed program writes stays in its checkout and goes with it: the working copy never sees it', async (t) => {
   const repo = tempFolder(t)
   mkdirSync(join(repo, 'services', 'api'), { recursive: true })

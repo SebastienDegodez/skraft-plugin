@@ -154,7 +154,9 @@ test('an ADR folder the machine cannot list asks the human to fix it, never skip
 
   const outcome = await host.start()
 
-  assert.deepEqual(outcome, { status: 'waiting', slug: SLUG, phase: 'DESIGN', code: 'environment', reason: waitingOnEnvironment('adr', UNLISTABLE_ADRS) })
+  assert.deepEqual({ status: outcome.status, slug: outcome.slug, phase: outcome.phase, code: outcome.code }, { status: 'waiting', slug: SLUG, phase: 'DESIGN', code: 'environment' })
+  assert.ok(outcome.reason.startsWith(waitingOnEnvironment('adr', UNLISTABLE_ADRS).split('\nThe run so far')[0]))
+  assert.match(outcome.reason, /Step verdicts:.*Incidents: none\./s)
   assert.deepEqual(eventsOf(host, 'step.recorded').filter((event) => event.step === 'adr'), [])
   host.workspace.unlistable.clear()
   assert.equal((await host.decide({ answer: 'RETRY' })).ok, true)
@@ -205,7 +207,9 @@ test('a ratification Git cannot commit asks the human to fix the machine; RETRY 
   const outcome = await host.start()
 
   assert.deepEqual({ status: outcome.status, code: outcome.code }, { status: 'waiting', code: 'environment' })
-  assert.equal((await host.view()).question.text, environmentQuestion('adr', 'git commit failed: Please tell me who you are', { log: `${TRACKING}/logs/commit-adr.log` }))
+  const question = (await host.view()).question.text
+  assert.ok(question.startsWith(environmentQuestion('adr', 'git commit failed: Please tell me who you are', { log: `${TRACKING}/logs/commit-adr.log` }).split('\nThe run so far')[0]))
+  assert.match(question, /Incidents: adr signature .*1 occurrences; log .*commit-adr\.log\./)
   assert.equal(host.tracking.files.get(`${SLUG}/logs/commit-adr.log`), '$ git commit (adr)\nresult: git commit failed: Please tell me who you are\n--- output\ngit commit failed: Please tell me who you are\nhusky - pre-commit script failed (code 1)\n\n')
   git.commitFails = null
   assert.equal((await host.decide({ answer: 'RETRY' })).ok, true)
