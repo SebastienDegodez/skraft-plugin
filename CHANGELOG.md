@@ -3,6 +3,28 @@
 Toutes les modifications notables de ce projet sont documentées ici.
 Format basé sur [Conventional Commits](https://www.conventionalcommits.org/) — versionnage [SemVer](https://semver.org/).
 
+## [2.0.0-alpha.88](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.87...v2.0.0-alpha.88) (2026-11-13)
+
+### ✨ Features
+
+* **agents:** Copilot models 5.5/6 + skill tool for all agents ([#572](https://github.com/SebastienDegodez/skraft-plugin/issues/572)) ([0e32d72](https://github.com/SebastienDegodez/skraft-plugin/commit/0e32d72c56eb9284a38bc143dc67075c7ea4da6b))
+* **agents:** integrate main capabilities into V2 ([db7524e](https://github.com/SebastienDegodez/skraft-plugin/commit/db7524ee7768682db2e77f0d6c2b12fab9326ce4))
+
+### 🐛 Bug Fixes
+
+* **agents:** align native capabilities and read-only review ownership ([#570](https://github.com/SebastienDegodez/skraft-plugin/issues/570)) ([a3c97ad](https://github.com/SebastienDegodez/skraft-plugin/commit/a3c97adb37dcae803bd31eb97fbe3a16cdc7acaf))
+* **canvas:** keep saved configuration as draft baseline ([28b2f9e](https://github.com/SebastienDegodez/skraft-plugin/commit/28b2f9e163f4983d625a7ab8e01986308202f562))
+* **docs:** publier la doc de la branche integration/v2-next ([#364](https://github.com/SebastienDegodez/skraft-plugin/issues/364)) ([6dbe45f](https://github.com/SebastienDegodez/skraft-plugin/commit/6dbe45fdcf5ea7af5c53f599bba16a9a11396dbc))
+* **site:** réparer le déploiement (AGENTVIZ épinglé via npm, une seule alpha) ([#381](https://github.com/SebastienDegodez/skraft-plugin/issues/381)) ([1e5c5b0](https://github.com/SebastienDegodez/skraft-plugin/commit/1e5c5b0185b7422d022b79d2d7665e7d42d6d81a)), closes [#376](https://github.com/SebastienDegodez/skraft-plugin/issues/376) [#375](https://github.com/SebastienDegodez/skraft-plugin/issues/375) [#375](https://github.com/SebastienDegodez/skraft-plugin/issues/375) [#376](https://github.com/SebastienDegodez/skraft-plugin/issues/376)
+
+### ⚡ Performance
+
+* **agents:** commit one green per scenario, inner TDD uncommitted ([#569](https://github.com/SebastienDegodez/skraft-plugin/issues/569)) ([8f094fe](https://github.com/SebastienDegodez/skraft-plugin/commit/8f094fe832bf993a6a0ed2af4f21ea79faee09e7)), closes [#8](https://github.com/SebastienDegodez/skraft-plugin/issues/8) [#567](https://github.com/SebastienDegodez/skraft-plugin/issues/567) [#561](https://github.com/SebastienDegodez/skraft-plugin/issues/561)
+
+### 📝 Documentation
+
+* **handbook:** set up a machine for SKRAFT (Copilot CLI permissions) ([#583](https://github.com/SebastienDegodez/skraft-plugin/issues/583)) ([cccf5a0](https://github.com/SebastienDegodez/skraft-plugin/commit/cccf5a02f162b6efa6adbd3f81a017fa46b6eed9))
+
 ## [2.0.0-alpha.87](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.86...v2.0.0-alpha.87) (2026-11-13)
 
 ### 🐛 Bug Fixes
