@@ -3,6 +3,12 @@
 Toutes les modifications notables de ce projet sont documentées ici.
 Format basé sur [Conventional Commits](https://www.conventionalcommits.org/) — versionnage [SemVer](https://semver.org/).
 
+## [2.0.0-alpha.87](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.86...v2.0.0-alpha.87) (2026-11-13)
+
+### 🐛 Bug Fixes
+
+* **agents:** a review searches the working copy before calling a symbol missing ([#552](https://github.com/SebastienDegodez/skraft-plugin/issues/552)) ([2430f93](https://github.com/SebastienDegodez/skraft-plugin/commit/2430f9363a0a8460101bbb14db1114bc80b91f59)), closes [#8](https://github.com/SebastienDegodez/skraft-plugin/issues/8)
+
 ## [2.0.0-alpha.86](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.85...v2.0.0-alpha.86) (2026-11-13)
 
 ### ✨ Features
