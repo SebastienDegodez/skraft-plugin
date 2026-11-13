@@ -185,6 +185,14 @@ parts:
     intro_fr: "Resoudre une tache precise : adapter le pipeline, proposer un nouveau pattern de maniere disciplinee."
     intro_en: "Solve a precise task: adapt the pipeline, propose a new pattern with discipline."
     pages:
+      - id: machine-setup
+        type: editorial
+        label_fr: "Configurer son poste"
+        label_en: "Set up your machine"
+        fr: "fr/how-to/machine-setup.md"
+        en: "en/how-to/machine-setup.md"
+        purpose_fr: "Regler Copilot CLI sur le poste pour un run SKRAFT : mode Assisted, consignes du relecteur, sites autorises, regles d'outils au lancement."
+        purpose_en: "Configure Copilot CLI on the machine for a SKRAFT run: Assisted mode, reviewer instructions, allowed sites, launch-time tool rules."
       - id: customisation
         type: editorial
         label_fr: "Customisation"

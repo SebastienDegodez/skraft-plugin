@@ -32,6 +32,9 @@ The first command adds the repository as a marketplace. The second installs the
 `skraft` plugin published by that marketplace. Then open `/plugin` and check that
 `skraft` appears under installed plugins.
 
+On GitHub Copilot CLI, [set up your machine]({{ "/en/how-to/machine-setup" | relative_url }})
+so the run stops asking for repetitive approvals.
+
 ### Windows workaround
 
 If `/plugin marketplace add` fails with `fatal: unable to checkout working tree`,

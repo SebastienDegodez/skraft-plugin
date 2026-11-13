@@ -36,7 +36,7 @@ cherchez à faire :
 | Porte | Pour… | Commencez par |
 | --- | --- | --- |
 | **Apprendre** (tutoriel) | suivre un parcours guidé | [Premiers pas]({{ "/fr/tutorials/getting-started" | relative_url }}), [Le fil rouge]({{ "/fr/explanation/pipeline/fil-rouge" | relative_url }}) |
-| **Faire** (guide pratique) | résoudre une tâche précise | [Customisation]({{ "/fr/how-to/customisation" | relative_url }}), [Genesis & contribution]({{ "/fr/how-to/contributing" | relative_url }}) |
+| **Faire** (guide pratique) | résoudre une tâche précise | [Configurer son poste]({{ "/fr/how-to/machine-setup" | relative_url }}), [Customisation]({{ "/fr/how-to/customisation" | relative_url }}), [Genesis & contribution]({{ "/fr/how-to/contributing" | relative_url }}) |
 | **Comprendre** (explication) | savoir *pourquoi* c'est construit ainsi | [Le pipeline]({{ "/fr/explanation/pipeline/" | relative_url }}), [La revue avant la revue]({{ "/fr/explanation/why-review-before-review" | relative_url }}) |
 | **Consulter** (référence) | retrouver un fait précis | [Catalogue agentique]({{ "/fr/dashboard/" | relative_url }}), [Gates]({{ "/fr/reference/gates" | relative_url }}), [Patterns]({{ "/fr/reference/patterns" | relative_url }}) |
 
