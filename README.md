@@ -139,8 +139,9 @@ node scripts/local-ci.mjs         # mirrors CI locally
 ```
 
 Contribution rules, test placement and optional mutation commands are in [`AGENTS.md`](AGENTS.md).
-Engine mutation testing is not required or launched automatically; user-project mutation gates
-are unchanged.
+Engine mutation testing is not required or launched automatically. Real mutation-tool smoke tests
+on fixture projects run only on a manual **skraft-framework CI** dispatch with `mutation_smoke`
+enabled (off by default); user-project mutation gates are unchanged.
 
 ## Versioning & releases
 

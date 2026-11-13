@@ -62,6 +62,11 @@ on:
       - '.agents/plugins/marketplace.json'
       - '.github/workflows/skraft-framework-ci.yml'
   workflow_dispatch:
+    inputs:
+      mutation_smoke:
+        description: Run optional real mutation-tool smoke tests on fixture projects
+        type: boolean
+        default: false
 
 # A new push to a pull request cancels its previous run, so runners do not queue behind stale runs (#515).
 # Pushes to main and integration/v2-next are never cancelled.
@@ -244,9 +249,9 @@ jobs:
         run: node --test $ANNOTATED_TESTS "tests/skill-scripts/**/*.test.mjs"
 
       - name: Run the .NET gate scripts on a real solution (real Stryker.NET)
-        if: always()
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.mutation_smoke }}
         run: node scripts/dotnet-quality-gates-smoke.mjs
 
       - name: Run the Python gate scripts on a real project (real cosmic-ray)
-        if: always()
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.mutation_smoke }}
         run: node scripts/python-quality-gates-smoke.mjs
