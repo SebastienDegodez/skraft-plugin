@@ -4,6 +4,7 @@ description: Use when investigating a codebase or external sources to produce a 
 user-invocable: false
 tools:
   - read/readFile
+  - skill
   - edit/createFile
   - edit/editFiles
   - search/codebase

@@ -4,6 +4,7 @@ description: "Pull request writer: writes the summary line, what changes, why an
 user-invocable: false
 tools:
   - read/readFile
+  - skill
   - search/codebase
   - edit/editFiles
   - edit/createFile

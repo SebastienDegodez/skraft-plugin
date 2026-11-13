@@ -8,6 +8,7 @@ description: >-
 model: inherit
 tools:
   - mcp__skraft__run_pipeline
+  - Skill
 user-invocable: true
 ---
 

@@ -115,3 +115,19 @@ node scripts/local-ci.mjs
 ```
 
 Generated catalogue, evaluation, dashboard and graph outputs are never committed.
+
+## Client compatibility
+
+Tool declaration checks are offline contracts, not executions of a host's parser. They do
+not prove that a running agent receives its declared tools. An MCP namespace is an external
+dependency, not evidence that the server is installed. Native Copilot chat, Copilot SDK and
+Claude Code are separate validation targets.
+
+For a host tool gap, record the host version, plugin revision, selected descriptor path,
+tool-reference translation and actual tool schema from a fresh invocation. Load the corrected
+source through that host's plugin loader in a new session: editing this checkout does not
+reload installed descriptors or existing agents. Never patch an installed cache instead.
+
+Check harmless reads, edits and commands for an author, and read-only behaviour for a lens;
+clean the witness files. Keep V2's engine-owned persistence and zero command hooks. Record
+failures and version limits rather than treating static success as live compatibility.

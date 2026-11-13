@@ -5,6 +5,7 @@ user-invocable: true
 tools:
   - agent
   - read/readFile
+  - skill
   - edit/createFile
   - edit/createDirectory
   - edit/editFiles

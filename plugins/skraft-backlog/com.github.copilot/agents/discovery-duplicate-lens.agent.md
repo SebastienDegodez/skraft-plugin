@@ -1,10 +1,10 @@
 ---
 name: discovery-duplicate-lens
 description: "Reviewer lens: judges whether issues describing the same problem were detected and linked instead of triaged twice."
-model: GPT-5.6 Luna
 user-invocable: false
 tools: 
   - read/readFile
+  - skill
   - search/codebase
 ---
 

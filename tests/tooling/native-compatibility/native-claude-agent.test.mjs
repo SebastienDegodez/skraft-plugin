@@ -23,6 +23,9 @@ for (const model of ['haiku', 'opus', 'gpt-luna', 'kimi']) {
     assert.deepEqual(data.tools, ['Read', 'Grep', 'Glob'])
   })
 }
+test('explicit new-pair helper maps the skill tool to native Skill', () => {
+  assert.deepEqual(header(project({ tools: ['read/readFile', 'skill'] })).tools, ['Read', 'Skill'])
+})
 for (const options of [{ tools: ['unknown'] }, { model: 'Display Name 1' }, { model: 'vendor-model-5' }, { model: 'inherit' }, { tools: ['execute/sendToTerminal'] }, { tools: ['edit/createDirectory'] }, { children: ['missing'] }]) {
   test(`explicit helper rejects unmapped capability ${JSON.stringify(options)}`, () => assert.throws(() => project(options)))
 }
@@ -55,7 +58,8 @@ test('actual native tree keeps native IDs, bounded tools, family models and one 
     if (data['user-invocable']) publicIds.push(data.name)
     assert.equal(data.tools.includes('*'), false)
     assert.equal(data.tools.includes('mcp__*'), false)
-    if (file.endsWith('-lens.md') || file === 'finding-refuter.md') assert.deepEqual(data.tools, ['Read', 'Grep', 'Glob'])
+    assert.ok(data.tools.includes('Skill'), `${file} lacks Skill`)
+    if (file.endsWith('-lens.md') || file === 'finding-refuter.md') assert.deepEqual(data.tools, ['Read', 'Grep', 'Glob', 'Skill'])
   }
   assert.deepEqual(publicIds, ['skraft-orchestrator'])
 })

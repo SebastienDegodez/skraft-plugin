@@ -6,6 +6,7 @@ tools:
   - read
   - search
   - read/readFile
+  - skill
   - search/textSearch
   - search/fileSearch
 skills:

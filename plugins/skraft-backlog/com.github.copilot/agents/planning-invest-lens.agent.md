@@ -1,10 +1,10 @@
 ---
 name: planning-invest-lens
 description: "Reviewer lens: judges whether each refined story is independently deliverable and valuable on its own terms."
-model: GPT-5.6 Luna
 user-invocable: false
 tools: 
   - read/readFile
+  - skill
   - search/codebase
 ---
 
