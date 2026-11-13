@@ -3,6 +3,12 @@
 Toutes les modifications notables de ce projet sont documentées ici.
 Format basé sur [Conventional Commits](https://www.conventionalcommits.org/) — versionnage [SemVer](https://semver.org/).
 
+## [2.0.0-alpha.86](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.85...v2.0.0-alpha.86) (2026-11-13)
+
+### ✨ Features
+
+* **engine:** bound unforeseen recovery and preserve decision provenance ([#580](https://github.com/SebastienDegodez/skraft-plugin/issues/580)) ([506bc67](https://github.com/SebastienDegodez/skraft-plugin/commit/506bc67ad0c7d00d3eff11d66613dcd06a16d2c7)), closes [#565](https://github.com/SebastienDegodez/skraft-plugin/issues/565) [#566](https://github.com/SebastienDegodez/skraft-plugin/issues/566)
+
 ## [2.0.0-alpha.85](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.84...v2.0.0-alpha.85) (2026-11-12)
 
 ### 🐛 Bug Fixes
