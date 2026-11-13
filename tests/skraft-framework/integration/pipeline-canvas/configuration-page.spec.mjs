@@ -16,8 +16,8 @@ test.beforeAll(async () => {
 test.afterAll(() => state.scope.close())
 
 /** Opens a panel and its page over `run`, on `tab`. */
-const open = async (page, run, tab = 'configuration') => {
-  state.panel = await openPanel({ where: { cwd: run.cwd }, home: run.home, tab })
+const open = async (page, run, tab = 'configuration', pollMs = 100) => {
+  state.panel = await openPanel({ where: { cwd: run.cwd }, home: run.home, tab, pollMs })
   state.errors = []
   page.on('pageerror', (error) => state.errors.push(error.message))
   await page.goto(state.panel.url)
@@ -87,12 +87,18 @@ const saysItWasSaved = (words) => async ({ page }) => {
 }
 
 const asksAgainOnceEditedAfterTheSave = (words) => async ({ page }) => {
-  await open(page, state.configuration)
+  await open(page, state.configuration, 'configuration', 30_000)
   await edit(page)
+  const savedCommand = await page.locator('.commands input[type="text"]').first().inputValue()
   await save(page)
   await expect(page.locator('.needs-you')).toContainText(words.needsYouSaved)
 
   await edit(page)
+
+  const other = await page.context().newPage()
+  await other.goto(state.panel.url)
+  await expect(other.locator('.commands input[type="text"]').first()).toHaveValue(savedCommand)
+  await other.close()
 
   await expect(page.locator('.needs-you')).toContainText(words.needsYou)
   await expect(page.locator('.bar-state .note')).toHaveCount(0)
