@@ -52,7 +52,8 @@ when `--allow-all`/`--yolo` already elevated the session. For one session only, 
 ## 2. Give the reviewer its instructions
 
 `assistedApprovalInstructions` addresses the Assisted reviewer only, never the agent. Write them
-in English, as short lists. Save this as `assisted-approval-instructions.md`:
+in English, as short lists. Save this as `assisted-approval-instructions.md` in the current
+directory from which you will run the command below:
 
 ```text
 Approve without asking:

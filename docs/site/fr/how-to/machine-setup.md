@@ -54,7 +54,8 @@ quand `--allow-all`/`--yolo` a déjà élevé la session. Pour une seule session
 ## 2. Donner ses consignes au relecteur
 
 `assistedApprovalInstructions` s'adresse au seul relecteur Assisted, jamais à l'agent.
-Rédigez-les en anglais, en listes courtes. Enregistrez ceci dans `assisted-approval-instructions.md` :
+Rédigez-les en anglais, en listes courtes. Enregistrez ceci dans `assisted-approval-instructions.md`,
+dans le répertoire courant depuis lequel vous exécuterez la commande ci-dessous :
 
 ```text
 Approve without asking:
