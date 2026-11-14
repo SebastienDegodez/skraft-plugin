@@ -475,6 +475,32 @@ jusqu'à ce que `/skraft-init` ou une édition à la main réponde pour lui.
 Le moteur n'écrit ni `mocking` ni
 `baseBranch` : les défauts s'appliquent.
 
+### Nouvelles suites de tests et chemins BDD <!-- #test-layouts -->
+
+Le [skill de tests](pathname:///dashboard/#skill-clean-architecture-testing) définit deux suites
+par contexte : `UnitTest` cible Application et Domain via les cas d'usage, avec un dossier par
+fonctionnalité ; `IntegrationTest` couvre API, Infrastructure, Application, Domain et architecture
+avec des tests ordinaires, sans Gherkin. Aucun test dans les modules de production. Les chemins
+déjà confirmés sont conservés ; ce sont des conventions pour les nouveaux projets, pas des
+défauts de détection.
+
+Les chemins sont relatifs à la racine du composant (racine du dépôt avec un seul composant).
+`<package>` désigne le chemin du package Java, par exemple `com/example/orders/unittest`.
+
+| Runner | Dossier `features` | Dossier `steps` | Condition de découverte |
+| --- | --- | --- | --- |
+| Cucumber-JVM | `<context>-unit-test/src/test/resources/features` (un sous-dossier par fonctionnalité) | `<context>-unit-test/src/test/java/<package>` (sous-packages par fonctionnalité avec `steps/`) | Sélecteur de ressources du classpath, package Java de glue correspondant et runner JUnit collecté par le build |
+| pytest-bdd | `tests/unit/<feature>/features` | `tests/unit/<feature>` | Module `test_*.py` collecté qui lie les scénarios ; steps décorés dans ce module, un `conftest.py` applicable ou des plugins enregistrés |
+| behave | `tests/unit/<feature>/features` | `tests/unit/<feature>/features/steps` | Appel explicite de cette racine de fonctionnalités ; ses fichiers `steps/*.py` y sont chargés |
+| Spécifications non exécutées | `docs/features/<context>/<feature>` | omis | `features` seul, sans `runner` ; aucune liaison générée |
+
+Chaque portée de liaisons indépendante a sa propre entrée ; un runner configuré pour lier
+plusieurs sous-dossiers de fonctionnalités peut déclarer leurs racines communes. Nommer un
+dossier `steps` ne suffit pas à sa collecte par pytest. Pytest ne lance pas behave ; un composant
+qui utilise les deux a besoin d'un script versionné qui lance les suites nécessaires et propage
+les échecs. Vérifier le nombre de scénarios exécutés et leurs liaisons, pas seulement un code
+de sortie nul. Sans pratique Gherkin, utiliser `"bdd": false`.
+
 ## Pièges & anti-patterns
 
 - **Accepter la détection sans la relire** : `skraft init` propose à partir de ce qu'il voit, et le

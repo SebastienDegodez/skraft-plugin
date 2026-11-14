@@ -462,6 +462,30 @@ are separate components.
 `skraft init` does not look at a component already listed, so an existing file keeps what it says
 until `/skraft-init` or a hand edit answers for it.
 
+### New test layouts and BDD paths <!-- #test-layouts -->
+
+The [testing skill](pathname:///dashboard/#skill-clean-architecture-testing) defines two suites
+per context: `UnitTest` targets Application and Domain through use cases, grouped by feature;
+`IntegrationTest` covers API, Infrastructure, Application, Domain and architecture with ordinary
+tests, without Gherkin. No tests live in production modules. Existing confirmed paths are kept;
+the following are conventions for new layouts, not detection defaults.
+
+Paths are relative to the component root (the repository root for a single component).
+`<package>` is the Java package path, for example `com/example/orders/unittest`.
+
+| Runner | `features` folder | `steps` folder | Discovery requirement |
+| --- | --- | --- | --- |
+| Cucumber-JVM | `<context>-unit-test/src/test/resources/features` (one subfolder per feature) | `<context>-unit-test/src/test/java/<package>` (feature subpackages with `steps/`) | Classpath resource selector, matching Java glue package and a JUnit runner collected by the build |
+| pytest-bdd | `tests/unit/<feature>/features` | `tests/unit/<feature>` | Collected `test_*.py` module binds scenarios; decorated steps in that module, applicable `conftest.py` or registered plugins |
+| behave | `tests/unit/<feature>/features` | `tests/unit/<feature>/features/steps` | Invoke that feature root explicitly; its `steps/*.py` files are loaded there |
+| Specifications not executed | `docs/features/<context>/<feature>` | omitted | `features` only, no `runner`; no generated bindings |
+
+Each independent binding scope has its own entry; a runner configured to bind several feature
+subfolders can declare their common roots. A folder named `steps` does not make pytest collect
+it. Running pytest does not run behave; a component using both needs a checked-in command
+script invoking the required suites and propagating failures. Confirm scenario counts and
+resolved bindings, not just a zero exit status. With no Gherkin practice, use `"bdd": false`.
+
 ## Pitfalls & anti-patterns
 
 - **Accepting the detection without reading it**: `skraft init` proposes from what it can see, and

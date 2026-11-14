@@ -92,11 +92,19 @@ Feature: Eligibility Check
 
 | Element | Convention | Example |
 |---|---|---|
-| Feature file | `{the component's scenarios folder}/{bounded-context}/{feature}.feature` | `docs/features/eligibility/check.feature` |
+| Executable feature file | The component's declared runner folder, grouped by feature inside its unit-test suite | `orders-unit-test/src/test/resources/features/place_order/place_order.feature` |
+| Specification-only feature file | `docs/features/{bounded-context}/{feature}/{name}.feature`, unless the component already declares another folder | `docs/features/eligibility/check/check.feature` |
 | Feature title | Business name of the feature | `Eligibility Check` |
 | Scenario title | `{Persona} {business action} {outcome}` | `Driver with clean record obtains eligibility` |
 | Steps | Business verb + domain noun | `the driver requests an eligibility check` |
 | Scenario Outline | Same as Scenario, state the variable | `Driver eligibility varies by accident count` |
+
+Read the component's `bdd` pairs before choosing a path; never append a context already
+represented by the test module or feature folder. Executable scenarios and bindings use the
+unit-test suite and call Application use cases. Integration and walking-skeleton tests use
+ordinary test code, not a second Gherkin runner. `clean-architecture-testing` owns the
+language-specific placement and discovery rules. With specifications only, declare `features`
+without `runner` or `steps`; with `bdd: false`, write no `.feature`.
 
 ## Tag Strategy
 
