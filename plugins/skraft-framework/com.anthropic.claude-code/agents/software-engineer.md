@@ -10,6 +10,7 @@ tools:
   - Edit
   - Grep
   - Glob
+  - mcp__plugin_skraft_skraft__skraft_precheck
   - Skill
 skills:
   - outside-in-tdd
@@ -64,6 +65,7 @@ Your brief names scenario k (`- Scenario: k of N …`), its component, the accep
 - Before the green, run the gate commands your brief lists for the component (`build`, `format`, `lint`; else `commands` of the component in `skraft-config.json`) and fix every failure.
 - **Green, once:** in bash, never PowerShell, run the line your brief gives with each file you changed named in place of `<each file you changed>` (never `.`, `-A` or a folder). The test command fails → nothing is committed: fix, run the line again.
 - Append one line to the change log your brief lists: `<short sha> <subject>`, plus each `PLAN_DEVIATION`.
+- **Before writing your result:** call `skraft_precheck`. It runs the mechanical checks of your submission on what you have written — your write scope, what you left uncommitted — and answers each anomaly with the check that found it. Correct every one, then call it again, until it answers `passed`. It reads none of your commits, starts no agent and approves nothing: a `passed` is not a review.
 
 ## Pass without a scenario
 
@@ -72,7 +74,7 @@ Your brief has no `- Scenario:` line: the gates or the DELIVER review sent the s
 - Commit each inner cycle as your brief's commit lines say: the failing unit test after RED, the code after the wiring check.
 - **Refactor commit** only for test code (`test-refactoring-catalog`) or a change your brief's feedback names, under green; never to clean up a green written dirty.
 - Append one line per commit to the change log your brief lists: `<short sha> <subject>`, plus its `PLAN_DEVIATION` if any.
-- **Before writing your result:** run the component's `build`, `format`, `lint` and `test` commands (`craft-discipline` C3, C4: your brief, else `commands` of the component in `skraft-config.json`) and fix every failure; commit format and lint fixes as `style`.
+- **Before writing your result:** run the component's `build`, `format`, `lint` and `test` commands (`craft-discipline` C3, C4: your brief, else `commands` of the component in `skraft-config.json`) and fix every failure; commit format and lint fixes as `style`. Then call `skraft_precheck` and correct every anomaly it answers, until it answers `passed`.
 
 ## Commits
 

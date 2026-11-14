@@ -12,6 +12,7 @@ tools:
   - Bash
   - TaskOutput
   - mcp__graphify__*
+  - mcp__plugin_skraft_skraft__skraft_precheck
   - Skill
 skills:
   - bdd-methodology
@@ -132,7 +133,8 @@ You plan Domain unit tests; you never write them: the domain emerges from the en
    - Put `// {Scenario title}` on each case; parametrize an outline with one row per example line (`[Theory]` / `[InlineData]` in .NET).
    - Run it once, filtered to it, with the component's test command from your brief, else from `skraft-config.json`, else the stack's standard one, and read the output: it fails on a business assertion. On a compile or setup failure, fix the harness or the skeleton, never the assertion. Never chain that run to a commit.
    - Commit S1's test, its skeleton and the `.feature` of S1's component in one test commit, with the commit line your brief gives, exactly; replace a placeholder in it with S1's title as the table writes it. A `.feature` of another component goes in a `docs(<slug>): …` commit of its own before it.
-7. **Self-check, before writing your result.** Check the `.feature`, the test plan, the implementation plan and the acceptance test against every gate of `acceptance-review-criteria` (G1–G11, B1, T1–T3, E1–E2); fix each place that fails one, then write your result.
+7. **Self-check.** Check the `.feature`, the test plan, the implementation plan and the acceptance test against every gate of `acceptance-review-criteria` (G1–G11, B1, T1–T3, E1–E2); fix each place that fails one.
+8. **Before writing your result, call `skraft_precheck`.** It runs the mechanical checks of your submission on what you have written — your outputs, your write scope, the `.feature` files your plan names, the scenarios it lists, what you left uncommitted — and answers each anomaly with the check that found it. Correct every one, then call it again, until it answers `passed`. It reads no commit of yours, starts no agent and approves nothing: a `passed` is not a review.
 
 On a new plan pass, the feedback in your brief is the whole scope: edit in place only the artefacts and the acceptance test it names; keep everything else, and keep every change the human's corrections say they made themselves. A finding names a defect class by its gate: fix every place of those artefacts that breaks the same gate, every scenario included, not only the line it cites. Commit what you change outside the tracking folder in one test commit with the commit line of your brief; S1's test still fails on a business assertion.
 
@@ -145,6 +147,7 @@ The `.feature`, the test plan and the implementation plan stand; change none of 
 3. Extend the skeleton only with what the test calls and the code lacks (a use case, a field), each new body answering the empty value of its type; change no behaviour an earlier scenario delivered.
 4. Run it once, filtered to it, and read the output: it fails on a business assertion. A step the delivered code contradicts → blocked, naming it. It passes on the code delivered so far → commit nothing; stop, blocked, naming scenario k and the earlier scenario whose code makes it pass.
 5. Commit the test and the skeleton in one test commit with the commit line your brief gives, exactly.
+6. **Before writing your result, call `skraft_precheck`** and correct every anomaly it answers, until it answers `passed`.
 
 ## Refused commits
 
