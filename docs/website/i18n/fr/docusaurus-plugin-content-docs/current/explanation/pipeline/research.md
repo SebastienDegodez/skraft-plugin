@@ -57,9 +57,14 @@ reste dans le dossier de suivi : il sert une seule story.
 
 ## Pas de revue, mais un juge en aval
 
-RESEARCH est la seule phase d'ingénierie sans lentilles de revue. Le moteur vérifie seulement
-que le document existe et qu'il est rempli : ni vide, ni identique au gabarit, sans marqueur
-laissé. Le jugement sur le fond revient à DESIGN, qui doit citer ces constats plutôt que de
+RESEARCH est la seule phase d'ingénierie sans lentilles de revue, mais elle n'est pas sans
+contrôle. Au-delà du document rempli — ni vide, ni identique au gabarit, sans marqueur laissé —
+une porte de citations le lit : les sections que le gabarit exige, les URL de sources bien formées,
+une approche recommandée et au moins une rejetée, chaque chemin et plage de lignes `#file:`
+confrontés à la copie de travail, et chaque nom cité sous *Existing tests* et *Handoff to DESIGN*
+confronté au fichier qu'il nomme. Le chercheur lance cette porte lui-même, pendant sa tentative,
+avec `skraft_precheck`, et corrige ce qu'elle lui rend au lieu de se faire renvoyer pour ça. Le
+jugement sur le fond revient à DESIGN, qui doit citer ces constats plutôt que de
 refouiller le code ; la cohérence entre la recherche et les ADR est ensuite jugée par la revue
 DESIGN. Une revue de plus coûterait un cycle de lentilles sur un document que la phase suivante
 relit de toute façon.

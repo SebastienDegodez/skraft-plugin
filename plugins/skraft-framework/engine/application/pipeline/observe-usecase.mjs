@@ -1,4 +1,4 @@
-import { deriveRun } from '../../domain/journal/run-state.mjs'
+import { deriveRun, openNode } from '../../domain/journal/run-state.mjs'
 import { reasonOf, statusOf, waitingOn } from '../../domain/reporting/run-status.mjs'
 import { runReport } from '../../domain/reporting/run-report.mjs'
 import { runGraph } from '../../domain/reporting/run-graph.mjs'
@@ -182,10 +182,9 @@ const phaseState = (run, phase) => {
 
 /** The node whose attempt is open; null between steps. @param {RunState} run @returns {RunView['current']} */
 const currentNode = (run) => {
-  const found = Object.entries(run.nodes).find(([, state]) => state.open !== null)
-  if (found === undefined) return null
-  const [step, { open }] = found
-  const attempt = /** @type {OpenAttempt} */ (open)
+  const found = openNode(run)
+  if (found === null) return null
+  const { step, open: attempt } = found
   return { step, phase: attempt.phase, agent: attempt.agent, gates: attempt.gates, question: attempt.question, visit: attempt.visit, attempt: attempt.attempt }
 }
 

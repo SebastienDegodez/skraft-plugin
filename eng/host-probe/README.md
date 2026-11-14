@@ -72,6 +72,7 @@ The session asks for extension access once: the probe approves it for its own fi
 | `skraft-mcp-server-loaded` | opens one on failure | the `skraft` server of the plugin's `mcp.json` is started (`session.rpc.mcp.list()`) and `session.rpc.mcp.listTools` lists `skraft_status` |
 | `skraft-mcp-loop-hidden` | opens one on failure | that server offers none of `skraft_start`, `skraft_next`, `skraft_record`, `skraft_review`: the CLI does not name itself `Visual Studio Code` at the handshake; inconclusive when the server is not loaded |
 | `session-agents` | opens one on failure | every `com.github.copilot/agents/*` resolves in `session.rpc.agent.list` |
+| `agent-mcp-reach` | #581 | whether a tool of the plugin's MCP server can be given to one producer agent and withheld from another: two sessions, each activating a custom agent that declares one tool, read what `rpc.tools.getCurrentMetadata` offers them. `pass` when the agent declaring `skraft-skraft_doctor` is offered it and the other is not, `fail` when the other is offered it too (the host ignores the list), `inconclusive` when the session offers no tool of that server at all. No model call |
 | `copilot-models-available` | opens one on failure | every Copilot name under `models` in the `skraft-config.json` of the directory the probe runs from is in `client.listModels()`; inconclusive when it names none |
 | `skraft-tool-names-free` | opens one on failure | the tool names of a session with no plugin (the host's own tools, listed in the report) include no tool the `skraft-pipeline` extension registers |
 | `plugin-command-listed` | opens one on failure | `session.rpc.commands.list({ includeSkills: true })` lists, once each, the commands a plugin ships under `com.github.copilot/commands/`; reports each `name`, `aliases`, `kind` and `input.hint` (a command named like its plugin and one that is not, which shows the prefix rule) |
@@ -82,6 +83,16 @@ The session asks for extension access once: the probe approves it for its own fi
 | `copilot-effort-refusal` | opens one on failure | with `--agent-calls`: what `ctx.agent` answers for `reasoningEffort: 'max'` on the first listed model whose name has no `claude`; passes when the host accepts it or `refusalOf` reads the error as `effort` |
 | `agent-skills-preload` | — | with `--agent-calls`: an Agent Plugins fixture holds a skill with a token, an agent that lists it under `skills:` and a twin without; each is asked, with no tool, for the token. `pass` when only the first knows it (Copilot preloads the field), `fail` when neither does, `inconclusive` when the twin knows it too or an agent is not listed |
 | `incident-read-answered` | #566 | with `--incident-session` (one model session, the host's default model; spends AI credits): a working copy paused on the `environment` question of an unforeseen failure, whose output file alone holds a token. The session, offered only `skraft_decide` and `view`, is told the decision is delegated to it. `pass` when it reads the question with `skraft_decide {}`, records one menu option once (`by: decide`), quotes the token and the host is asked nothing; reports the calls, the reply and each `assistant.usage` (model, tokens, cost, nano-AIU) |
+
+Claude Code: `node eng/host-probe/claude-subagent-mcp-probe.mjs` measures the same reach on the
+other driver, where it takes a dispatch to measure it (#581). Two `claude -p` sessions, each one
+dispatching one sub-agent that holds no file tool, so the plugin version it reports can only come
+from the tool: the first arm's agent declares `mcp__plugin_skraft_skraft__skraft_doctor`, the
+second declares `Glob`. `pass` when the first arm's call carries the dispatch's
+`parent_tool_use_id` — which is what attributes it to the sub-agent rather than the session — and
+its reply quotes the version, while the second arm calls no skraft tool. It spends credits:
+`--max-budget-usd` (1 by default) applies to each arm, on the host's default model. It writes
+`host-probe-results/claude-subagent-mcp-probe-<date>.json`.
 
 Claude Code: `node eng/host-probe/claude-incident-probe.mjs` measures the same pause under
 `claude -p` (the host's default model, `--max-budget-usd 1`, tools `Read`, `skraft_status` and

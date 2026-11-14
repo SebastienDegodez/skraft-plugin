@@ -90,6 +90,44 @@ test('a test plan that names a .feature the working copy does not hold sends the
   assert.equal(outcome.status, 'done', outcome.reason)
 })
 
+/** What the engine kept of the last pre-check of a step. @param {any} host @param {string} step */
+const receipt = (host, step) => JSON.parse(host.tracking.files.get(`${SLUG}/logs/precheck-${step}-inputs.json`))
+
+/**
+ * A designer that pre-checks its Gherkin records before it submits: it writes its plan and its
+ * criteria, asks while the working copy holds no features folder at all, then writes the
+ * `.feature` the plan names and commits the lot in its one test commit.
+ * @param {object[]} answers
+ */
+const prechecking = (answers) => agent({
+  fill: false,
+  work: async (host) => {
+    host.tracking.write(SLUG, PLAN, `${matrix(['pay-by-card.feature'])}\n${scenarioTable(host)}`)
+    host.tracking.write(SLUG, CRITERIA, ONE_CRITERION)
+    host.workspace.files.delete('docs/features/.gitkeep')
+    answers.push(await host.precheck())
+    host.workspace.files.set(CARD, SCENARIO)
+    host.git.commit(RED, ['tests/Acceptance/CheckoutAcceptanceTests.cs', CARD])
+  },
+})
+
+test('a designer that pre-checks its Gherkin records is told what its plan names and no .feature holds, and lands in one attempt what a send-back costs three', async () => {
+  const answers = []
+  const host = runOf([prechecking(answers)])
+
+  const outcome = await host.start()
+
+  assert.deepEqual(answers.map(({ status, failures }) => [status, failures.map(({ code, line }) => `${code}: ${line}`)]), [['failed', [
+    `gherkin-records: ${PLAN} names pay-by-card.feature, which is no .feature of the working copy (#524)`,
+    `gherkin-records: ${CRITERIA} declares 1 acceptance criterion, and 0 scenarios are written for it (#524)`,
+  ]]], 'the pre-check answers the gherkin-records lines of its own submission, each under the check that found them')
+  assert.deepEqual(distill(host), [[1, 'done', null, []]], 'the designer corrected them inside its attempt: one attempt, where the send-back cost three')
+  assert.deepEqual(receipt(host, 'distill').inputs.filter(({ source }) => source === 'workspace-list'),
+    [{ source: 'workspace-list', path: 'docs/features', hash: null }],
+    'the folder the check walked is in the receipt as listed, with no hash: the working copy holds none')
+  assert.equal(outcome.status, 'done', outcome.reason)
+})
+
 test('a test plan that names no .feature is asked for none: the designer goes on with its acceptance test alone', async () => {
   const plain = agent({ work: ({ git }) => git.commit('test(checkout): acceptance of the card payment', ['tests/Acceptance/CheckoutAcceptanceTests.cs']) })
   const host = runOf([plain])

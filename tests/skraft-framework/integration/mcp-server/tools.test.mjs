@@ -30,6 +30,7 @@ test('each tool answers what its command line prints in the same folder, a faili
     ['skraft_doctor', {}, ['doctor', '--json']],
     ['skraft_doctor', { run: true, base: 'main' }, ['doctor', '--run', '--base', 'main', '--json']],
     ['skraft_gate', { all: true }, ['gate', '--all', '--json']],
+    ['skraft_precheck', {}, ['precheck', '--json']],
     ['skraft_workflow_check', {}, ['workflow', 'check', '--json']],
     ['skraft_workflow_diff', {}, ['workflow', 'diff', '--json']],
     ['skraft_migrate', {}, ['migrate', '--dry-run', '--json']],

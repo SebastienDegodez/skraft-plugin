@@ -86,6 +86,15 @@ export const deriveRun = ([started, ...events]) => {
   return run
 }
 
+/**
+ * The node whose attempt is open, with that attempt; null between steps.
+ * @param {RunState} run @returns {{ step: string, open: OpenAttempt } | null}
+ */
+export const openNode = (run) => {
+  const found = Object.entries(run.nodes).find(([, state]) => state.open !== null)
+  return found === undefined ? null : { step: found[0], open: /** @type {OpenAttempt} */ (found[1].open) }
+}
+
 /** @param {RunEvent} started @returns {RunState} */
 const initialRun = (started) => ({
   story: started.story,

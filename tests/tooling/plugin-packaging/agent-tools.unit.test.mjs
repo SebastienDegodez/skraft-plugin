@@ -9,9 +9,9 @@ const repoRoot = fileURLToPath(new URL('../../../', import.meta.url))
 const descriptor = (field, newline = '\n') => ['---', 'name: probe', ...field.split('\n'), 'metadata:', '  tools: [not-a-top-level-tool]', '---', 'tools: [body-is-not-frontmatter]', ''].join(newline)
 
 for (const [client, names] of [
-  ['local', ['read/readFile', 'edit/editFiles', 'execute/runInTerminal', 'skill']],
-  ['copilot', ['read/readFile', 'edit/editFiles', 'execute/runInTerminal', 'skill']],
-  ['claude', ['Read', 'Edit', 'Bash', 'Skill']],
+  ['local', ['read/readFile', 'edit/editFiles', 'execute/runInTerminal', 'skraft/skraft_precheck', 'skill']],
+  ['copilot', ['read/readFile', 'edit/editFiles', 'execute/runInTerminal', 'skraft/skraft_precheck', 'skill']],
+  ['claude', ['Read', 'Edit', 'Bash', 'mcp__plugin_skraft_skraft__skraft_precheck', 'Skill']],
 ]) {
   test(`tools contract: ${client} preserves the same boundary across block, flow and scalar forms`, () => {
     const fields = [
@@ -52,6 +52,12 @@ for (const [field, client, error] of [
   ['tools: Agent(worker', 'claude', /unmatched opening/],
   ['tools: Read)', 'claude', /unmatched closing/],
   ['tools: [mcp__skraft__*]', 'claude', /unsupported claude/],
+  ['tools: [mcp__plugin_skraft_skraft__*]', 'claude', /unsupported claude/],
+  ['tools: [mcp__plugin_skraft_skraft__skraft_absent]', 'claude', /unsupported claude/],
+  ['tools: [skraft/*]', 'copilot', /unsupported copilot/],
+  ['tools: [skraft/skraft_absent]', 'copilot', /unsupported copilot/],
+  ['tools: [skraft/skraft_precheck]', 'claude', /unsupported claude/],
+  ['tools: [mcp__plugin_skraft_skraft__skraft_precheck]', 'local', /unsupported local/],
 ]) {
   test(`tools contract rejects ${client} ${JSON.stringify(field)}`, () => {
     assert.throws(() => validateAgentTools(descriptor(field), { client, agentIds: ['worker'] }), error)

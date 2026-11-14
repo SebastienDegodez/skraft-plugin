@@ -58,6 +58,12 @@ interfaces live, relations between contexts); **fitness** of the patterns, which
 aggregate or pattern no story justifies. The engine also checks, with no lens, the traces a
 human should not have to reread: consistency matrix, naming and register of superseded ADRs, the decisions index, and the ADR rules (no version, a one-sentence decision, a closed status vocabulary, a published ADR changed only in its status lines).
 
+The architect runs those same mechanical checks itself, during its attempt, with
+`skraft_precheck`: each anomaly comes back with the artefact and the rule it breaks, so a matrix
+whose gate line reads `FAIL`, or a `docs-relied-on` path that names no file of the working copy, is
+corrected on the spot instead of costing a replay. The pre-check starts no agent and approves
+nothing — the engine checks again when the step is submitted, and the lenses still review.
+
 The review happens **before** ratification. A human thus only reads ADRs that are already
 consistent; they answer `RATIFIED` or `REJECTED` with a reason that goes back to the architect.
 Only the engine moves an ADR to `Accepted`, after that answer. No agent can ratify in the human's

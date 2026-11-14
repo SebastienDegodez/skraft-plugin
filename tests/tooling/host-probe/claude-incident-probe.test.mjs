@@ -1,6 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { incidentVerdict, streamSummary } from '../../../eng/host-probe/claude-incident-probe.mjs'
+import { streamSummary } from '../../../eng/lib/claude-stream.mjs'
+import { incidentVerdict } from '../../../eng/host-probe/claude-incident-probe.mjs'
 
 const TOKEN = 'skraft-probe-incident-abc'
 const OPTIONS = ['RETRY', 'ABORT']

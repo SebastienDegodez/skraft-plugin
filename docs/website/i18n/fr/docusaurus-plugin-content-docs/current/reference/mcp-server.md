@@ -50,6 +50,7 @@ JSON.
 | `skraft_report` | — | `report --json` | tout hôte |
 | `skraft_journal` | `last?` | `journal show [--last <n>] --json` | tout hôte |
 | `skraft_gate` | `all?` | `gate [--all] --json` | tout hôte |
+| `skraft_precheck` | — | `precheck --json` | tout hôte |
 | `skraft_review` | `pr`, `record?` | `review --pr <n> [--record] --json` | VS Code |
 | `skraft_workflow_check` | — | `workflow check --json` | tout hôte |
 | `skraft_workflow_diff` | — | `workflow diff --json` | tout hôte |

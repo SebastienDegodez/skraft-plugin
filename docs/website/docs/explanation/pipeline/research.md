@@ -57,9 +57,13 @@ folder: it serves one story.
 
 ## No review, but a judge downstream
 
-RESEARCH is the only engineering phase without review lenses. The engine only checks that the
-document exists and is filled: not empty, not identical to the template, no placeholder left.
-Judging the substance falls to DESIGN, which must cite these findings rather than search the
+RESEARCH is the only engineering phase without review lenses, but it is not unchecked. Beyond the
+document being filled — not empty, not the template, no placeholder left — a citation gate reads
+it: the sections the template requires, well-formed source URLs, one recommended approach and at
+least one rejected, every `#file:` path and line range against the working copy, and every name
+cited under *Existing tests* and *Handoff to DESIGN* against the file it names. The researcher runs
+that gate itself, during its attempt, with `skraft_precheck`, and corrects what it answers instead
+of being sent back for it. Judging the substance falls to DESIGN, which must cite these findings rather than search the
 code again; consistency between the research and the ADRs is then judged by the DESIGN review.
 One more review would cost a round of lenses on a document the next phase reads anyway.
 

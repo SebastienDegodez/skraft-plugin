@@ -28,7 +28,7 @@ export const notRegistered = (name) => `No workflow registered with name "${name
 export const NATIVE_TOOLS = Object.freeze(['bash', 'view', 'edit'])
 
 /**
- * @param {{ commands?: 'listed' | 'none' | 'duplicate', commandInput?: 'appended' | 'absent', hooksLog?: 'v1-rule' | 'silent' | 'every-plugin', preload?: 'preloads' | 'ignores' | 'everyone-knows', skraftLoads?: boolean, models?: string[], agents?: Array<{ id: string, name: string }>, refusals?: { model: string | null, effort: string | null }, staleSnapshot?: boolean, nativeTools?: string[], workflowRunError?: string | null, refuseCanvases?: boolean, canvasConfirmUnheard?: boolean, refuseCanvasOpen?: boolean, joinedElicitation?: boolean, dropCanvasQuery?: boolean, reopenFocusesOnly?: boolean, askedUnanswered?: boolean, undeclaredPhase?: 'listed' | 'throws' | 'ignored' | 'shifts' | 'forgets', mcpClient?: string | null, incidentModel?: 'reads' | 'guesses' }} [host]
+ * @param {{ commands?: 'listed' | 'none' | 'duplicate', commandInput?: 'appended' | 'absent', hooksLog?: 'v1-rule' | 'silent' | 'every-plugin', preload?: 'preloads' | 'ignores' | 'everyone-knows', skraftLoads?: boolean, models?: string[], agents?: Array<{ id: string, name: string }>, refusals?: { model: string | null, effort: string | null }, staleSnapshot?: boolean, nativeTools?: string[], workflowRunError?: string | null, refuseCanvases?: boolean, canvasConfirmUnheard?: boolean, refuseCanvasOpen?: boolean, joinedElicitation?: boolean, dropCanvasQuery?: boolean, reopenFocusesOnly?: boolean, askedUnanswered?: boolean, undeclaredPhase?: 'listed' | 'throws' | 'ignored' | 'shifts' | 'forgets', mcpClient?: string | null, incidentModel?: 'reads' | 'guesses', agentTools?: 'declared' | 'ignored' }} [host]
  *   commands: whether the plugins' com.github.copilot/commands/*.md files are listed (named by the plugin name rule),
  *   not listed, or listed twice; commandInput: whether a command's typed input reaches its prompt;
  *   hooksLog: what the runtime writes under a client's baseDirectory/logs when a session loads plugins: v1-rule applies
@@ -46,8 +46,9 @@ export const NATIVE_TOOLS = Object.freeze(['bash', 'view', 'edit'])
  *   host's handler, but its answer never comes back (null); undeclaredPhase: what ctx.phase does with a
  *   title meta.phases does not declare (listed with no ordinal, throws, dropped, shifts: the declared phase opened after it loses its ordinal, or forgets: it is left out of the run detail);
  *   mcpClient: the clientInfo.name the host gives the servers it starts from a plugin's mcp.json, null when it starts none
+ *   agentTools: whether the tools an active custom agent declares gate what the session offers it, or are ignored
  */
-export const simulatedSdk = ({ preload = 'ignores', skraftLoads = true, models = CATALOGUE, agents, refusals = REFUSALS, staleSnapshot = false, home, nativeTools = NATIVE_TOOLS, workflowRunError = null, refuseCanvases = false, canvasConfirmUnheard = false, refuseCanvasOpen = false, joinedElicitation = true, dropCanvasQuery = false, reopenFocusesOnly = false, askedUnanswered = false, undeclaredPhase = 'listed', commands = 'listed', commandInput = 'appended', mcpClient = 'GitHub Copilot CLI', hooksLog = 'v1-rule', incidentModel = 'reads' } = {}) => {
+export const simulatedSdk = ({ preload = 'ignores', skraftLoads = true, models = CATALOGUE, agents, refusals = REFUSALS, staleSnapshot = false, home, nativeTools = NATIVE_TOOLS, workflowRunError = null, refuseCanvases = false, canvasConfirmUnheard = false, refuseCanvasOpen = false, joinedElicitation = true, dropCanvasQuery = false, reopenFocusesOnly = false, askedUnanswered = false, undeclaredPhase = 'listed', commands = 'listed', commandInput = 'appended', mcpClient = 'GitHub Copilot CLI', hooksLog = 'v1-rule', incidentModel = 'reads', agentTools = 'declared' } = {}) => {
   class CopilotClient {
     constructor(options = {}) { this.baseDirectory = options.baseDirectory }
     async start() {}
@@ -55,7 +56,7 @@ export const simulatedSdk = ({ preload = 'ignores', skraftLoads = true, models =
     async listModels() { return models.map((id) => ({ id, name: id, capabilities: {} })) }
     async createSession(config) {
       if (this.baseDirectory !== undefined) logHooksErrors(this.baseDirectory, config.pluginDirectories ?? [], hooksLog)
-      return simulatedSession(config, { preload, skraftLoads, agents, refusals, models, staleSnapshot, home, nativeTools, workflowRunError, refuseCanvases, canvasConfirmUnheard, refuseCanvasOpen, joinedElicitation, dropCanvasQuery, reopenFocusesOnly, askedUnanswered, undeclaredPhase, commands, commandInput, mcpClient, incidentModel }).ready
+      return simulatedSession(config, { preload, skraftLoads, agents, refusals, models, staleSnapshot, home, nativeTools, workflowRunError, refuseCanvases, canvasConfirmUnheard, refuseCanvasOpen, joinedElicitation, dropCanvasQuery, reopenFocusesOnly, askedUnanswered, undeclaredPhase, commands, commandInput, mcpClient, incidentModel, agentTools }).ready
     }
   }
   return { CopilotClient, approveAll: () => ({ kind: 'approve-once' }) }
@@ -96,7 +97,7 @@ const logHooksErrors = (home, dirs, mode) => {
   appendFileSync(join(home, 'logs', 'process-simulated.log'), lines.map((line) => `${new Date().toISOString()} [ERROR] [rust:hooks] ${line}\n`).join(''))
 }
 
-const simulatedSession = (config, { preload, skraftLoads, agents, refusals, models, staleSnapshot, home, nativeTools, workflowRunError, refuseCanvases, canvasConfirmUnheard, refuseCanvasOpen, joinedElicitation, dropCanvasQuery, reopenFocusesOnly, askedUnanswered, undeclaredPhase, commands: commandsHost, commandInput, mcpClient, incidentModel }) => {
+const simulatedSession = (config, { preload, skraftLoads, agents, refusals, models, staleSnapshot, home, nativeTools, workflowRunError, refuseCanvases, canvasConfirmUnheard, refuseCanvasOpen, joinedElicitation, dropCanvasQuery, reopenFocusesOnly, askedUnanswered, undeclaredPhase, commands: commandsHost, commandInput, mcpClient, incidentModel, agentTools }) => {
   const atLoad = config.workingDirectory
   let mode = 'interactive'
   let tracked = null
@@ -116,6 +117,23 @@ const simulatedSession = (config, { preload, skraftLoads, agents, refusals, mode
   const input = (message, options = {}) => elicited(message, 'value', { type: 'string', ...options })
   const tools = new Map([...nativeTools, ...(config.requestCanvasRenderer ? CANVAS_AGENT_TOOLS : [])].map((name) => [name, async () => name]))
   const canvases = simulatedCanvases({ refuseOpen: refuseCanvasOpen, dropQuery: dropCanvasQuery, reopenFocusesOnly })
+  /** The names the model sees for a plugin MCP server's tools: `<server>-<tool>`, asked once per session. */
+  let mcpNamed = null
+  const mcpNames = async () => {
+    if (mcpNamed !== null) return mcpNamed
+    const servers = mcpClient === null ? [] : declaredServers(config.pluginDirectories ?? [])
+    const named = []
+    for (const server of servers) named.push(...(await askServer(server, config.workingDirectory, mcpClient)).map(({ name }) => `${server.name}-${name}`))
+    mcpNamed = named
+    return named
+  }
+  /** The custom agent a session activates, when `agent` names one it carries; `tools: null` asks for every tool. */
+  const activeAgent = () => (config.customAgents ?? []).find(({ name }) => name === config.agent) ?? null
+  const offeredTo = (names) => {
+    const agent = activeAgent()
+    if (agent === null || agent.tools == null || agentTools === 'ignored') return names
+    return names.filter((name) => agent.tools.includes(name))
+  }
   const workflows = new Map()
   const listeners = []
   const joined = {
@@ -203,7 +221,7 @@ const simulatedSession = (config, { preload, skraftLoads, agents, refusals, mode
   const rpc = {
     tools: {
       initializeAndValidate: async () => ({}),
-      getCurrentMetadata: async () => ({ tools: [...tools.keys()].map((name) => ({ name, description: name })) }),
+      getCurrentMetadata: async () => ({ tools: offeredTo([...tools.keys(), ...await mcpNames()]).map((name) => ({ name, description: name })) }),
       execute: async ({ name, arguments: args }) => {
         const handler = tools.get(name)
         if (!handler) throw new Error(`unknown tool ${name}`)

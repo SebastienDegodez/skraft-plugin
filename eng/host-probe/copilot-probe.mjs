@@ -627,7 +627,8 @@ const postJson = async (url) => {
 // ---------------------------------------------------------------------------------------------
 // Checks: the real skraft-framework plugin
 
-const skraftChecks = async ({ sdk, client, dirs, models }) => {
+const skraftChecks = async (context) => {
+  const { sdk, client, dirs, models } = context
   const checks = []
   const pluginRoot = join(REPO_ROOT, 'plugins', 'skraft-framework')
   await writeQuestionRepo(dirs.questionA, pluginRoot, dirs.home)
@@ -654,6 +655,7 @@ const skraftChecks = async ({ sdk, client, dirs, models }) => {
     }
     checks.push(...await skraftMcpChecks(session))
     checks.push(await sessionAgents(session, pluginRoot))
+    checks.push(await agentMcpReach(context, pluginRoot))
   } finally {
     await session.disconnect?.().catch(() => undefined)
   }
@@ -694,6 +696,50 @@ const skraftMcpChecks = async (session) => {
       body: "Sous Copilot CLI, le serveur MCP `skraft` liste `skraft_start` : l'hôte se nomme `Visual Studio Code` à la poignée de main, et un agent peut démarrer un pipeline hors du workflow `skraft-pipeline`.",
     }),
   ]
+}
+
+/**
+ * The name the model sees for a tool of the plugin's MCP server under Copilot (`<server>-<tool>`,
+ * CLI 1.0.108), and the form a descriptor's `tools:` writes it in (`<server>/<tool>`, as the shipped
+ * agents already write `graphify/*`).
+ */
+const MCP_AGENT_TOOL = 'skraft-skraft_doctor'
+const MCP_AGENT_TOOL_DECLARED = 'skraft/skraft_doctor'
+const AGENT_MCP_REACH_EXPECTED = "Un agent reçoit un outil du serveur MCP du plugin quand son `tools:` le nomme, et ne le reçoit pas sinon : la session offre `skraft-skraft_doctor` à l'agent qui le déclare, et ne l'offre pas à celui qui déclare un autre outil (#581)."
+
+/** What one session offers its active agent, the agent declaring exactly `tools`. */
+const toolsOfferedToAgent = async (context, pluginRoot, tools) => {
+  const session = await pluginSession(context, [pluginRoot], {
+    customAgents: [{ name: 'mcp-reach', description: 'MCP reach probe', prompt: 'Report what the skraft MCP server says about this installation.', tools }],
+    agent: 'mcp-reach',
+  })
+  try {
+    await waitForTools(session, [tools[0]])
+    return [...await currentTools(session)].sort()
+  } finally {
+    await session.disconnect?.().catch(() => undefined)
+  }
+}
+
+/** Whether a producer agent can be given a pre-check tool at all, and whether declaring it is what decides. */
+const agentMcpReach = async (context, pluginRoot) => {
+  let declared
+  let control
+  try {
+    declared = await toolsOfferedToAgent(context, pluginRoot, [MCP_AGENT_TOOL])
+    control = await toolsOfferedToAgent(context, pluginRoot, ['view'])
+  } catch (error) {
+    return check({ id: 'agent-mcp-reach', expected: AGENT_MCP_REACH_EXPECTED, observed: { error: messageOf(error) } })
+  }
+  const reached = declared.includes(MCP_AGENT_TOOL)
+  const leaked = control.includes(MCP_AGENT_TOOL)
+  const reason = reached || leaked ? undefined : 'the session offers no tool of the plugin MCP server: nothing to gate'
+  return check({
+    id: 'agent-mcp-reach', expected: AGENT_MCP_REACH_EXPECTED, verdict: leaked ? 'fail' : reached ? 'pass' : 'inconclusive',
+    observed: { tool: MCP_AGENT_TOOL, declaredAs: MCP_AGENT_TOOL_DECLARED, declared, control, reason },
+    title: "V2 — un outil MCP n'atteint pas l'agent qui le déclare sous Copilot", labels: ['bug', 'gain:reliability'],
+    body: "Dans un hôte SDK headless, avec `pluginDirectories` sur `plugins/skraft-framework`, la session n'offre pas `skraft-skraft_doctor` à l'agent dont le `tools:` le nomme, ou l'offre à un agent qui ne le nomme pas : un précontrôle ne peut pas être donné à un agent producteur, ou ne peut pas lui être retiré (#581).",
+  })
 }
 
 const skraftWorkflowChecks = async (session) => {
@@ -981,8 +1027,8 @@ const listCommands = async (session) => (await withTimeout(session.rpc.commands.
 const commandSeen = ({ name, aliases, kind, input }) => ({ name, aliases: aliases ?? [], kind, hint: input?.hint ?? '' })
 const duplicatesIn = (names) => [...new Set(names.filter((name, index) => names.indexOf(name) !== index))]
 
-const pluginSession = ({ sdk, client, dirs }, pluginDirectories) => client.createSession({
-  ...dirs.session, workingDirectory: dirs.repoA, pluginDirectories, requestExtensions: false, onPermissionRequest: permissionHandler(sdk),
+const pluginSession = ({ sdk, client, dirs }, pluginDirectories, extra) => client.createSession({
+  ...dirs.session, workingDirectory: dirs.repoA, pluginDirectories, requestExtensions: false, onPermissionRequest: permissionHandler(sdk), ...extra,
 })
 
 const COMMAND_LISTED_EXPECTED = "Les commandes d'un plugin placées sous `com.github.copilot/commands/` sont listées par `session.rpc.commands.list`, chacune une fois ; la sonde rapporte leur nom exact (préfixe du plugin ou non), leurs alias, leur genre et leur indice d'argument."

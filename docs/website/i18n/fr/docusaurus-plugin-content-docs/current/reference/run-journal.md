@@ -444,6 +444,7 @@ quand elle a des lignes, puis le début du run.
 | `## Human answers` | `Question`, `Step`, `Answer`, `By` | chaque réponse qu'un humain a donnée |
 | `## Accepted findings` | | les findings qu'un humain a acceptés au plafond d'une revue |
 | `## Forge writes` | | chaque écriture sur la forge, avec son résultat |
+| `## Pre-checks` | `Step`, `Answered at`, `Status`, `Anomalies`, `Cause` | chaque précontrôle qu'un agent a lancé dans sa tentative (`prechecks` de `step.recorded`), dans l'ordre du journal ; `Cause` porte chaque anomalie rendue, `-` s'il n'en a rendu aucune |
 
 ```markdown
 ## Waiting on

@@ -111,6 +111,11 @@ export const TOOLS = Object.freeze([
     annotations: LOCAL, argv: (args) => ['gate', ...flag('--all', args.all), '--json'],
   }),
   tool({
+    name: 'skraft_precheck', title: 'Pre-check what the open attempt has written',
+    description: 'Runs, inside your own attempt, the mechanical checks the engine runs when you submit — your outputs, your write scope, the records your role keeps, the prose you write, the scenarios your plan names, the lifecycle of the decisions you touched: it answers every anomaly with the check that found it, the artefact and the rule it breaks, so you correct them now instead of being sent back. It reads no result file and no commit, since you write them last. It starts no agent, changes nothing you wrote, and approves nothing: the engine runs these checks again at the submission, and the review still happens.',
+    annotations: LOCAL, argv: () => ['precheck', '--json'],
+  }),
+  tool({
     name: 'skraft_review', title: 'Review a pull request',
     description: 'Reviews one pull request with the review workflow. On dispatch, start each listed agent as skraft_next asks, then do what then says. Publishing the verdict takes a person: skraft review --publish in a terminal.',
     parameters: { pr: { kind: 'count', description: 'the pull request number' }, record: { kind: 'boolean', description: 'hand the saved agent replies to the review' } },

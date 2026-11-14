@@ -1,9 +1,9 @@
 /**
  * The documents of a pipeline: every file of its tracking folder but those the engine keeps
  * (the journal, the session's lease, the agents' result files, the review inputs) and what
- * commands printed or left behind (the logs, the temporary files).
+ * commands and the engine's own checks printed or left behind (the logs, a pre-check's trail and
+ * its receipt, the temporary files).
  */
-
 const ENGINE_FILES = /^(events\.jsonl$|\.lock(\.|$)|results\/|reviews\/|logs\/|\.tmp\/)/
 
 /** @param {string} path relative to the pipeline's tracking folder */

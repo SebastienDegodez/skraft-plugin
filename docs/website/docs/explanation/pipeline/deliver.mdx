@@ -72,7 +72,10 @@ The engineer runs the same commands before it hands over. Its brief lists the ga
 each component it may change, mutation left out, with the run's base in place of `{baseSha}`, and
 tells it to fix every failure before it writes its result, on a rework pass too. The gates step
 stays the check; the brief saves the pass that a format or build failure found only there would
-cost.
+cost. Before writing its result it also calls `skraft_precheck`, which runs the mechanical checks
+of its own submission on what it has written — a file changed out of its write scope, a change left
+uncommitted — and answers each anomaly with the check that found it. That pre-check reads none of
+its commits and approves nothing: the submission runs these checks again, with the commits on top.
 
 ### Why mutation runs last
 

@@ -4,6 +4,7 @@ import { DEFAULT_ATTEMPTS, causeFields, nextStep } from '../../domain/pipeline/n
 import { composeBrief, dispatchLabel } from '../../domain/pipeline/dispatch-brief.mjs'
 import { dayOf, isFilled, outputPath, templateName } from '../../domain/pipeline/outputs.mjs'
 import { isDocument, writtenDocuments } from '../../domain/pipeline/documents.mjs'
+import { callsOf, callsPath } from '../../domain/pipeline/precheck-calls.mjs'
 import { SCAN_FILE } from '../../domain/pipeline/structural-scan.mjs'
 import { proposalPath, proposalTemplate } from '../../domain/pipeline/proposals.mjs'
 import { allowedPaths, checklistsOf, makesCommits, roleFolders, roleOf } from '../../domain/pipeline/roles.mjs'
@@ -488,6 +489,16 @@ const documentHashes = async ({ deps, slug }) => {
 }
 
 /**
+ * What the attempt leaves in the tracking folder: the documents it wrote, and the pre-checks it
+ * ran inside it, read from the trail each call appends to; no `prechecks` when it ran none.
+ * @param {Context} context @param {Job} job @param {{ step: string, visit: number, attempt: number }} of
+ */
+const attemptFiles = async (context, job, of) => {
+  const prechecks = callsOf(await context.deps.files.read(context.slug, callsPath(of.step)), of)
+  return { documents: await documentsWritten(context, job), ...(prechecks.length === 0 ? {} : { prechecks }) }
+}
+
+/**
  * The documents of the attempt: those it wrote in the tracking folder, against what it found
  * there, and the structural scan the engine wrote for it.
  * @param {Context} context @param {Job} job
@@ -794,7 +805,7 @@ const attemptRecord = async (context, run, { node, visit, attempt, group, groups
   const incidents = failed ? await attemptIncidents(context, node.id, checked) : []
   const routed = failed ? repeatedAttemptRoute(node.id, incidents) : routeDone(context, run, { node, group, groups })
   return {
-    step: node.id, visit, attempt, ...(group === null ? {} : { group }), documents: await documentsWritten(context, job),
+    step: node.id, visit, attempt, ...(group === null ? {} : { group }), ...await attemptFiles(context, job, { step: node.id, visit, attempt }),
     outcome: failed ? 'failed' : 'done', code: attemptCode(failed, checked, routed),
     missing: checked.missing, failures: checked.failures, incidents,
     next: routed.next, ceiling: routed.ceiling, reason: routed.reason, model,
