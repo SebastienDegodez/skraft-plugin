@@ -1,4 +1,5 @@
 import { parseYaml } from '../../eng/lib/yaml-parser.mjs'
+import { TOOLS } from '../../plugins/skraft-framework/engine/drivers/cli/mcp-tools.mjs'
 
 // Supported SKRAFT references, not an exhaustive runtime inventory.
 // VS Code d9cccddf6b34357c58b5bbfb60ea03d4c4d1df65:
@@ -16,6 +17,11 @@ const copilotTools = new Set([
 // https://code.claude.com/docs/en/tools-reference
 // https://code.claude.com/docs/en/sub-agents#restrict-which-tools-a-subagent-can-use
 const claudeTools = new Set(['Read', 'Write', 'Edit', 'Grep', 'Glob', 'Bash', 'TaskOutput', 'TaskStop', 'Agent', 'Skill'])
+// skraft's own MCP server needs no live inventory: `drivers/cli/mcp-tools.mjs` is the inventory,
+// and each host names those tools as `docs/v2/host-verification.md` measured it. By name only: a
+// wildcard over this server would hand an agent every tool the engine ever adds.
+const skraftClaudeTools = new Set(TOOLS.map(({ name }) => `mcp__plugin_skraft_skraft__${name}`))
+const skraftCopilotTools = new Set(TOOLS.map(({ name }) => `skraft/${name}`))
 const externalServers = ['graphify', 'github', 'ado', 'gitlab']
 const historicalTools = new Map([
   ['TaskOutput', 'TaskOutput was removed in Claude Code 2.1.277; use Read on the background output file on newer versions.'],
@@ -66,6 +72,7 @@ export function validateAgentTools(content, { client, agentIds = [] }) {
       externalTools.push(tool)
       continue
     }
+    if ((client === 'claude' ? skraftClaudeTools : skraftCopilotTools).has(tool)) continue
     if ((client === 'claude' ? claudeTools : copilotTools).has(tool)) {
       if (client === 'claude' && historicalTools.has(tool)) compatibilityWarnings.push(historicalTools.get(tool))
       continue
