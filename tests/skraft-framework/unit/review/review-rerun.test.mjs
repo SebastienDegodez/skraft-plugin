@@ -232,6 +232,13 @@ test('each way an answer cannot be read is told to the lens on its second ask', 
     ['lens: consistency\n\tverdict: pass', notYaml(2, 'is indented with a tab')],
     ['lens: consistency\nverdict: fail\nfindings:\n  - gate: G1\n    occurrences: "a.md:1"\n      - "b.md:2"', notYaml(6, 'is not a `key: value` line')],
     ['lens: consistency\nverdict: fail\nfindings:\n  - gate: G1\n    occurrences:\n      - "a.md:1"\n    - "b.md:2"', notYaml(7, 'is not a `key: value` line')],
+    ['lens: consistency\nverdict: pass\nfindings: []\n"lens verdict": pass', notYaml(4, 'is not a `key: value` line')],
+    ['"lens":consistency\nverdict: pass\nfindings: []', notYaml(1, 'is not a `key: value` line')],
+    ['lens("consistency") # mine\nverdict: pass\nfindings: []', notYaml(1, 'is not a `key: value` line')],
+    ['the lens("consistency")\nverdict: pass\nfindings: []', notYaml(1, 'is not a `key: value` line')],
+    [says('consistency', 'fail', [finding('F1', 'high', 'one', { severityReason: '' })]).replace('severityReason:', 'severityReason"":'), 'finding 1: severityReason is missing; say why this severity: what it breaks, for whom'],
+    [says('consistency', 'fail', [finding('F1', 'high', 'one', { severityReason: '' })]).replace('severityReason: ""', 'severityReason("")'), 'finding 1: severityReason is missing; say why this severity: what it breaks, for whom'],
+    [says('consistency', 'fail', [finding('F1', 'high', 'one')]).replace('severityReason:', '"severityRaison":'), 'finding 1: the key severityRaison is not in the contract; the keys are id, gate, severity, location, description, suggestion, severityReason, drift, occurrences'],
     [says('consistency', 'fail', [finding('F1', 'high', 'one'), { gate: 'G2', severity: 'major', description: 'two' }]), 'finding 2: severity must be one of blocker, high, medium, low'],
     [says('consistency', 'fail', [{ gate: 'G1', severity: 'high', description: '  ' }]), 'finding 1: description is empty'],
     [says('consistency', 'fail', [{ severity: 'high', description: 'no gate named' }]), 'finding 1: gate must name the gate of your table, such as G1'],
@@ -647,4 +654,48 @@ test('an answer in the usual YAML forms is read: comments, single quotes, blocks
     // At most 20 places, a reason cut at 300 characters.
     { id: 'F2', gate: 'C2', severity: 'low', location: '', description: 'a long finding', suggestion: null, severityReason: `${'r'.repeat(299)}…`, drift: 'label', occurrences: Array.from({ length: 20 }, (_, index) => `docs/c.md:${index + 1}`) },
   ])
+})
+
+test('a key wrapped in quotes, backticks or parentheses, or written as a call, is read as that key; the lens is not asked again and the journal names the lines cleaned', async () => {
+  const host = scripted({}, nominal)
+  const answer = [
+    '"lens": consistency',
+    'verdict: fail',
+    'findings:',
+    "  - 'id': F1",
+    '    gate: G2',
+    '    severity: high',
+    '    location: "docs/adr/adr-001.md:3"',
+    '    description: "the provider is not named (see the ADR)"',
+    '    severityReason"": "billing reads the provider"',
+    '    `drift`: structural',
+    '    "occurrences":',
+    '      - "docs/adr/adr-001.md:3"',
+    '  - id: F2',
+    '    gate: G3',
+    '    severity: low',
+    '    location: "docs/a.md:1"',
+    '    description: "two names"',
+    '    severityReason( "a reader hesitates" )',
+    '    (drift): label',
+    '    occurrences: "docs/a.md:1"',
+  ].join('\n')
+  host.agentRunner.review = lenses({ consistency: [answer], refuter: [refutes('refuted'), refutes('refuted')] })
+
+  assert.equal((await host.start()).status, 'done')
+
+  assert.deepEqual(host.agentRunner.reviewed().filter((dispatch) => dispatch.agent === 'consistency-lens').map((dispatch) => dispatch.label), [`skraft ${SLUG} · design_review · consistency · attempt 1`])
+  const [consistency, ...others] = host.events().filter((event) => event.type === 'review.lens' && event.step === 'design_review' && event.visit === 1).sort((a, b) => (a.lens === 'consistency' ? -1 : b.lens === 'consistency' ? 1 : 0))
+  assert.deepEqual(consistency.findings, [
+    { id: 'F1', gate: 'G2', severity: 'high', location: 'docs/adr/adr-001.md:3', description: 'the provider is not named (see the ADR)', suggestion: null, severityReason: 'billing reads the provider', drift: 'structural', occurrences: ['docs/adr/adr-001.md:3'] },
+    { id: 'F2', gate: 'G3', severity: 'low', location: 'docs/a.md:1', description: 'two names', suggestion: null, severityReason: 'a reader hesitates', drift: 'label', occurrences: ['docs/a.md:1'] },
+  ])
+  assert.deepEqual(consistency.cleanedLines, [1, 4, 9, 10, 11, 18, 19])
+  assert.deepEqual(others.map((event) => [event.lens, Object.hasOwn(event, 'cleanedLines')]), [['architecture-compliance', false], ['fitness', false]])
+
+  const refuted = scripted({}, nominal)
+  refuted.agentRunner.review = lenses({ consistency: [blocker], refuter: ['"verdict": refuted\nreason("the ADR names the provider at line 3")'] })
+
+  assert.equal((await refuted.start()).status, 'done')
+  assert.deepEqual(refuted.events().filter((event) => event.type === 'review.refuted').map(({ verdict, reason }) => [verdict, reason]), [['refuted', 'the ADR names the provider at line 3']])
 })

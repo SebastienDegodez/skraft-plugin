@@ -331,7 +331,7 @@ findings:                # [] quand elle ne trouve rien
 
 | Règle | Détail |
 | --- | --- |
-| Clés | seulement `lens`, `verdict`, `findings` ; par finding `id`, `gate`, `severity`, `location`, `description`, `suggestion`, `severityReason`, `drift`, `occurrences` ; toute autre clé refuse la réponse |
+| Clés | seulement `lens`, `verdict`, `findings` ; par finding `id`, `gate`, `severity`, `location`, `description`, `suggestion`, `severityReason`, `drift`, `occurrences` ; toute autre clé refuse la réponse ; une clé entourée ou suivie de guillemets, d'accents graves ou de parenthèses (`"verdict": fail`, `severityReason"": "…"`) ou écrite comme un appel (`severityReason("…")`) est lue comme la clé qu'elle contient, dans les réponses du réfutateur aussi |
 | Obligatoire | `gate`, `description`, `severityReason` (pourquoi cette sévérité), `drift` (`label`, `classification` ou `structural`) et `occurrences` (chaque `chemin:ligne` du même fait, en liste ou sur une ligne séparée par `,` ou `;`) ; un `id` absent devient le premier `F<n>` libre |
 | Valeurs | textes libres entre guillemets doubles ou en bloc littéral ; ni ancre, ni alias, ni tag ; casse de `verdict` et `severity` normalisée |
 | Plafond | au plus 20 findings ; un `pass` avec un finding blocker, high ou medium est refusé |
