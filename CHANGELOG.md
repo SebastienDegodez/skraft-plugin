@@ -3,6 +3,12 @@
 Toutes les modifications notables de ce projet sont documentées ici.
 Format basé sur [Conventional Commits](https://www.conventionalcommits.org/) — versionnage [SemVer](https://semver.org/).
 
+## [2.0.0-alpha.90](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.89...v2.0.0-alpha.90) (2026-11-14)
+
+### ✨ Features
+
+* **engine:** agents pre-check their work against the submission's mechanical checks ([#581](https://github.com/SebastienDegodez/skraft-plugin/issues/581)) ([#582](https://github.com/SebastienDegodez/skraft-plugin/issues/582)) ([9af889e](https://github.com/SebastienDegodez/skraft-plugin/commit/9af889ea4b31fca2e85a158c5745af2adec70081))
+
 ## [2.0.0-alpha.89](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.88...v2.0.0-alpha.89) (2026-11-14)
 
 ### 🐛 Bug Fixes
