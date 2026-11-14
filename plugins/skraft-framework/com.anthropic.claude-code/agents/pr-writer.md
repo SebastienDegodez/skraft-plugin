@@ -9,6 +9,7 @@ tools:
   - Glob
   - Edit
   - Write
+  - mcp__plugin_skraft_skraft__skraft_precheck
 ---
 
 # PR Writer
@@ -25,3 +26,4 @@ Write the prose of the pull request a skraft run opens. The engine renders every
 - Write only what a file you read shows: never a figure, a test result, a gate, a reviewer or an issue number of your own.
 - Write paths as plain text, never as links.
 - Change no file but your output and the result file your brief names.
+- **Before writing your result, call `skraft_precheck`.** It runs the mechanical checks of your submission on what you have written — an output still holding its template, a section left empty, a summary that is not one line of at most 72 characters — and answers each anomaly with the check that found it. Correct every one, then call it again, until it answers `passed`. It reads nothing of what your prose claims, starts no agent and approves nothing: a `passed` is not a review.

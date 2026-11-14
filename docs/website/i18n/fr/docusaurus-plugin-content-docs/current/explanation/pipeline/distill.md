@@ -91,6 +91,13 @@ C'est le moment le moins coûteux pour corriger le contrat : chaque test qui sui
 d'après lui, et un scénario qui manque maintenant est une tranche que DELIVER ne pourra pas
 construire plus tard.
 
+Le designer lance lui-même ces contrôles mécaniques, pendant sa tentative, avec
+`skraft_precheck` : les `.feature` que son plan nomme et que la copie de travail n'a pas, un
+critère auquel aucun scénario ne répond, un fichier laissé non committé — chacun revient avec le
+contrôle qui l'a trouvé, et la passe se corrige sur place au lieu de coûter un rejeu du commit
+rouge entier. Le précontrôle ne lit aucun de ses commits, ne lance aucun agent et n'approuve rien :
+le moteur revérifie à la remise de l'étape, et les lentilles relisent toujours.
+
 ## Des scénarios gardés dans le dépôt
 
 DISTILL écrit ses scénarios là où le dit le `bdd` du composant, sous la forme

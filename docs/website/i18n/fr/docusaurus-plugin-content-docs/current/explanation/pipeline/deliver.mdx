@@ -73,7 +73,11 @@ L'engineer lance les mêmes commandes avant de rendre la main. Son brief liste l
 gates de chaque composant qu'il peut modifier, mutation exclue, avec la base du run à la place de
 `{baseSha}`, et lui demande de corriger chaque échec avant d'écrire son résultat, à une passe de
 reprise aussi. L'étape des gates reste le contrôle ; le brief évite la passe que coûterait un
-échec de format ou de build découvert là seulement.
+échec de format ou de build découvert là seulement. Avant d'écrire son résultat il appelle aussi
+`skraft_precheck`, qui lance sur ce qu'il a écrit les contrôles mécaniques de sa propre remise — un
+fichier modifié hors de son périmètre d'écriture, un changement laissé non committé — et rend
+chaque anomalie avec le contrôle qui l'a trouvée. Ce précontrôle ne lit aucun de ses commits et
+n'approuve rien : la remise relance ces contrôles, les commits en plus.
 
 ### Pourquoi la mutation passe en dernier
 
