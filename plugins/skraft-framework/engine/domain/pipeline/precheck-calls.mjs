@@ -28,11 +28,14 @@ export const callsOf = (trail, { visit, attempt }) => parsedCalls(trail)
   .filter((call) => call.visit === visit && call.attempt === attempt)
   .map(({ at, status, failures, found }) => ({ at, status, failures, found }))
 
-/** Every call a trail holds. @param {string | null} trail @returns {PrecheckCall[]} */
-const parsedCalls = (trail) => (trail ?? '').split('\n')
-  .filter((line) => line !== '')
-  .map(asCall)
-  .filter((call) => call !== null)
+/**
+ * Every call a trail holds. A line no JSON reads is no call, the empty line each call ends on
+ * included, so a trail a crash left half-written still answers the calls it does hold.
+ * @param {string | null} trail @returns {PrecheckCall[]}
+ */
+const parsedCalls = (trail) => (trail === null
+  ? []
+  : trail.split('\n').map(asCall).filter((call) => call !== null))
 
 /** One line of the trail, null when it is no call. @param {string} line @returns {PrecheckCall | null} */
 const asCall = (line) => {

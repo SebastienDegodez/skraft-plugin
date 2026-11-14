@@ -3,14 +3,18 @@
  * it kept them (#581), in journal order. A step that ran none has no row.
  *
  * @typedef {import('../journal/run-state.mjs').RunEvent} RunEvent
- * @typedef {{ step: string, at: string, status: string, failures: number, found?: Array<{ code: string, line: string }> }} PrecheckRow
- *   found: each anomaly the call answered, with the check that found it.
+ * @typedef {{ step: string, at: string, status: string, failures: number, found: Array<{ code: string, line: string }> }} PrecheckRow
+ *   found: each anomaly the call answered, with the check that found it; the empty list for a call
+ *   that answered none, never absent: a call the engine journals always says what it found.
  */
 import { cell } from './markdown-safety.mjs'
 
-/** @param {RunEvent[]} events the run's journal @returns {PrecheckRow[]} */
+/**
+ * Every call the journal holds, with the step that recorded it: a step whose attempt asked nothing
+ * journals none, and no other event of the journal carries any.
+ * @param {RunEvent[]} events the run's journal @returns {PrecheckRow[]}
+ */
 export const precheckRows = (events) => events
-  .filter((event) => event.type === 'step.recorded')
   .flatMap((event) => (event.prechecks ?? []).map((/** @type {any} */ call) => ({ step: event.step, ...call })))
 
 /**
@@ -25,4 +29,4 @@ export const prechecksTable = (rows) => [
 ]
 
 /** Every anomaly of a call on one line, each under its check, `-` when it answered none. @param {PrecheckRow} row */
-const causeOf = ({ found }) => ((found ?? []).length === 0 ? '-' : cell((found ?? []).map(({ code, line }) => `${code}: ${line}`).join('; ')))
+const causeOf = ({ found }) => (found.length === 0 ? '-' : cell(found.map(({ code, line }) => `${code}: ${line}`).join('; ')))

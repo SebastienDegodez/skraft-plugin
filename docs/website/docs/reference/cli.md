@@ -44,7 +44,7 @@ usage: skraft --version
        skraft next [--json]                                              run the active pipeline until it needs agents or a human
        skraft record [--json]                                            hand the saved agent replies to the run, then go on
        skraft gate [--all] [--json]                                      run the gates of the changed components (all with --all)
-       skraft precheck [--json]                                          run, inside the open attempt, the records check the engine runs on its submission, and keep what it read
+       skraft precheck [--json]                                          run, inside the open attempt, the mechanical checks the engine runs on its submission, and keep what it read
        skraft doctor [--run] [--base <ref>] [--json]                     check every command can run (--run: run each once)
        skraft review --pr <number> [--publish] [--record] [--json]       review one pull request with the review workflow (--publish: keep its verdict in a comment)
        skraft workflow eject [review]                                    copy the plugin pipeline into .skraft/ (review: the review alone)
@@ -373,8 +373,8 @@ breaks. It reads no result file and no commit, which an agent writes last, so `i
 `commit-convention` and `tdd` stay for the submission. A step with no open attempt, or one whose
 node is no agent's, is refused. It starts no agent, changes nothing the agent wrote and approves
 nothing: the engine runs these checks again at the submission, and the review still happens. It
-writes what the checks read beside the attempt's documents, in
-`details/<date>/precheck-<step>.json`: each path with the hash of the content it held, and no hash
+writes what the checks read beside the step's trail, in
+`logs/precheck-<step>-inputs.json`: each path with the hash of the content it held, and no hash
 for a path that held nothing, the inventory of the tracking folder included. That receipt is the
 engine's record of the call, not a document of the step: the review serves it to no lens. It also
 appends the call itself to `logs/precheck-<step>.jsonl` — when it answered, the step, its visit,

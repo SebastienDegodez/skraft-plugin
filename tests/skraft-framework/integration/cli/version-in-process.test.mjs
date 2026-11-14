@@ -75,7 +75,7 @@ test('commands --json lists every usage line as data: the help of the skraft com
     command: 'decide', synopsis: '[<key>] <answer> [--reason <text>]', summary: 'answer the question the active pipeline waits on',
   })
   assert.deepEqual(listed.commands.find(({ command }) => command === 'precheck'), {
-    command: 'precheck', synopsis: '[--json]', summary: 'run, inside the open attempt, the records check the engine runs on its submission, and keep what it read',
+    command: 'precheck', synopsis: '[--json]', summary: 'run, inside the open attempt, the mechanical checks the engine runs on its submission, and keep what it read',
   })
   assert.deepEqual(listed.commands.filter(({ command }) => command === 'workflow').map(({ synopsis }) => synopsis), ['eject [review]', 'check [--json]', 'diff [--json]'])
   assert.deepEqual(lines.err, [])

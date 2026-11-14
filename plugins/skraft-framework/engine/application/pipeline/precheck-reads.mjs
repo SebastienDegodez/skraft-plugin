@@ -44,12 +44,12 @@ const notedRead = async (seen, workspace, path) => {
 /** @param {Map<string, Read>} seen @param {any} workspace @param {string} folder */
 const notedList = async (seen, workspace, folder) => {
   const listed = await workspace.list(folder)
-  note(seen, { source: 'workspace-list', path: folder, text: listed === null ? null : listed.map(nameOf).join('\n') })
+  note(seen, { source: 'workspace-list', path: folder, text: listed === null ? null : named(listed) })
   return listed
 }
 
-/** A listed entry as the note keeps it: its name, an entry the port answers as an object included. @param {any} entry */
-const nameOf = (entry) => (typeof entry === 'string' ? entry : entry.name)
+/** The entries as the note keeps them: one name per line, in the order the port answers them. @param {import('../ports/workspace.mjs').WorkspaceEntry[]} listed */
+const named = (listed) => listed.map(({ name }) => name).join('\n')
 
 /**
  * The deps a check runs through while the engine notes every read, and the log it fills. Only the

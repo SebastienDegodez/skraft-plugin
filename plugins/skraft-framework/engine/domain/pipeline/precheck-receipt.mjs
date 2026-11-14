@@ -1,13 +1,11 @@
 /**
  * Where the engine keeps what a pre-check read, inside the run's tracking folder: one file per
- * step, rewritten by each call, so the receipt is what the step's current attempt last read. The
+ * step, rewritten by each call, so the receipt is what the step's current attempt last read. It
+ * lives beside the step's trail of calls, in the folder the engine keeps its own records in: the
  * run's journal keeps a single writer — the process that holds the run — and a pre-check runs
- * inside an agent's attempt, so it writes beside the attempt's documents instead (#581).
- * @param {string} step @param {string} date the UTC calendar day of the call
+ * inside an agent's attempt, so it writes a file of its own instead (#581). A step's documents are
+ * what the step wrote; a receipt is the engine's record of a call, so it is none of them and no
+ * lens is ever served it.
+ * @param {string} step
  */
-export const receiptPath = (step, date) => `details/${date}/precheck-${step}.json`
-
-/** A path of the tracking folder that `receiptPath` names: the engine's record of a call, which no step wrote. @param {string} path */
-export const isReceipt = (path) => RECEIPT.test(path)
-
-const RECEIPT = /^details\/[^/]+\/precheck-[^/]+\.json$/
+export const receiptPath = (step) => `logs/precheck-${step}-inputs.json`

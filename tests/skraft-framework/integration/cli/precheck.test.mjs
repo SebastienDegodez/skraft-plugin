@@ -23,7 +23,7 @@ const designDispatched = async (cwd, llm, seen = []) => {
   return step
 }
 
-const receiptOf = (cwd) => JSON.parse(readFileSync(join(trackingDir(cwd, SLUG), 'details', TODAY, 'precheck-design.json'), 'utf8'))
+const receiptOf = (cwd) => JSON.parse(readFileSync(join(trackingDir(cwd, SLUG), 'logs', 'precheck-design-inputs.json'), 'utf8'))
 
 /** The trail of a step's pre-checks, one call per line. @param {string} cwd @param {string} step */
 const trailOf = (cwd, step) => readFileSync(join(trackingDir(cwd, SLUG), 'logs', `precheck-${step}.jsonl`), 'utf8')
@@ -40,6 +40,8 @@ test('an agent pre-checks the design of its own open attempt from the command li
     'the researcher is served by the same command, on its own step')
   assert.deepEqual([...new Set(before.flatMap(({ answer }) => answer.failures.map(({ code }) => code)))], ['missing-outputs', 'research-records'],
     'called before it filled its document, the pre-check answers the output the submission would miss, then the citations of the template it still holds')
+  assert.deepEqual(before[0].answer.failures[0], { code: 'missing-outputs', line: `missing research/${TODAY}/checkout-research.md` },
+    'the output the submission would miss is named, as the submission names it')
 
   const empty = await skraft(cwd, ['precheck', '--json'])
   const failed = JSON.parse(empty.stdout)
@@ -67,6 +69,13 @@ test('an agent pre-checks the design of its own open attempt from the command li
   const folder = await skraft(cwd, ['precheck', '--json'])
 
   assert.deepEqual(JSON.parse(folder.stdout).failures, [{ code: 'design-records', line: 'docs-relied-on lists docs/architecture/diagrams, which is no file of the working copy (#410)' }])
+  const reported = (await skraft(cwd, ['report'])).stdout.split('\n')
+  const header = reported.findIndex((line) => line.startsWith('| Step | Answered at |'))
+  assert.deepEqual(reported.slice(header, header + 2), ['| Step | Answered at | Status | Anomalies | Cause |', '| --- | --- | --- | ---: | --- |'],
+    'the report a human reads names the columns of the pre-checks it shows')
+  assert.match(reported[header + 2], new RegExp(`^\\| research \\| ${TODAY}T[0-9:.]+Z \\| failed \\| 6 \\| missing-outputs: missing research/${TODAY}/checkout-research\\.md; research-records: `),
+    'the call the researcher made is a row of its own: when it answered, its status, how many anomalies and each one under the check that found it')
+
   const trail = trailOf(cwd, 'design')
   assert.deepEqual(trail.map(({ status }) => status), ['failed', 'failed', 'passed', 'failed'], 'the trail holds one line per call of the attempt, in the order they ran')
   assert.deepEqual([...new Set(trail.map(({ step, visit, attempt }) => `${step} ${visit} ${attempt}`))], ['design 1 1'], 'each line names the step, its visit and its attempt')

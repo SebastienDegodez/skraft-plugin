@@ -1,5 +1,5 @@
 import { deriveRun, openNode } from '../../domain/journal/run-state.mjs'
-import { dayOf, templateName } from '../../domain/pipeline/outputs.mjs'
+import { templateName } from '../../domain/pipeline/outputs.mjs'
 import { receiptPath } from '../../domain/pipeline/precheck-receipt.mjs'
 import { callsPath, withCall } from '../../domain/pipeline/precheck-calls.mjs'
 import { roleOf } from '../../domain/pipeline/roles.mjs'
@@ -67,7 +67,7 @@ const applicable = async (deps, run) => {
   const loaded = await loadWorkflow(deps, { agents: false })
   if (!loaded.ok) return { ok: false, status: 'blocked', code: 'workflow-refused', reason: loaded.errors.join('; ') }
   const node = loaded.workflow.nodes[found.step]
-  if (node === undefined || node.kind !== 'agent') return refusal(UNAVAILABLE, `${found.step} is no agent step: a pre-check reads what an agent writes`)
+  if (node?.kind !== 'agent') return refusal(UNAVAILABLE, `${found.step} is no agent step: a pre-check reads what an agent writes`)
   return { ok: true, step: found.step, open: found.open, role: roleOf(node) }
 }
 
@@ -86,7 +86,7 @@ const runCheck = async (deps, on) => {
   const found = await writtenFailures(context(recorder.deps, on), await stepOf(deps, on))
   if (found.ok === false) return { ...nothingRead(slug), status: 'blocked', step, attempt: open.attempt, code: 'environment', reason: found.reason }
   const at = deps.clock.now()
-  await keepReceipt(deps, { slug, step, attempt: open.attempt, at, inputs: await receiptOf(deps, recorder.seen), failures: found.failures })
+  await keepReceipt(deps, { slug, step, attempt: open.attempt, inputs: await receiptOf(deps, recorder.seen), failures: found.failures })
   const status = found.failures.length === 0 ? 'passed' : 'failed'
   await trace(deps, slug, { at: at.toISOString(), step, visit: open.visit, attempt: open.attempt, status, failures: found.failures.length, found: found.failures })
   return { status, slug, step, attempt: open.attempt, failures: found.failures, code: null, reason: verdict(found.failures) }
@@ -118,10 +118,10 @@ const precreated = async (deps, { slug, run, role }) => {
   return Promise.all(role.outputs.map(({ template }) => (template === null ? null : deps.templates.read(templateName(template, language)))))
 }
 
-/** @param {any} deps @param {{ slug: string, step: string, attempt: number, at: Date, inputs: any[], failures: any[] }} call */
-const keepReceipt = async (deps, { slug, step, attempt, at, inputs, failures }) => {
+/** @param {any} deps @param {{ slug: string, step: string, attempt: number, inputs: any[], failures: any[] }} call */
+const keepReceipt = async (deps, { slug, step, attempt, inputs, failures }) => {
   const receipt = { step, attempt, inputs, failures }
-  await deps.files.write(slug, receiptPath(step, dayOf(at)), `${JSON.stringify(receipt, null, 2)}\n`)
+  await deps.files.write(slug, receiptPath(step), `${JSON.stringify(receipt, null, 2)}\n`)
 }
 
 /**

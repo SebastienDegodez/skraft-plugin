@@ -44,7 +44,7 @@ usage: skraft --version
        skraft next [--json]                                              run the active pipeline until it needs agents or a human
        skraft record [--json]                                            hand the saved agent replies to the run, then go on
        skraft gate [--all] [--json]                                      run the gates of the changed components (all with --all)
-       skraft precheck [--json]                                          run, inside the open attempt, the records check the engine runs on its submission, and keep what it read
+       skraft precheck [--json]                                          run, inside the open attempt, the mechanical checks the engine runs on its submission, and keep what it read
        skraft doctor [--run] [--base <ref>] [--json]                     check every command can run (--run: run each once)
        skraft review --pr <number> [--publish] [--record] [--json]       review one pull request with the review workflow (--publish: keep its verdict in a comment)
        skraft workflow eject [review]                                    copy the plugin pipeline into .skraft/ (review: the review alone)
@@ -376,8 +376,8 @@ aucun commit, qu'un agent écrit en dernier : `invalid-result`, `commit-conventi
 restent pour la remise. Une étape sans tentative ouverte, ou dont le nœud n'est pas celui d'un
 agent, est refusée. Il ne lance aucun agent, ne change rien de ce que l'agent a écrit et n'approuve
 rien : le moteur relance ces contrôles à la remise, et la revue a toujours lieu. Il écrit ce que
-les contrôles ont lu à côté des documents de la tentative, dans
-`details/<date>/precheck-<étape>.json` : chaque chemin avec l'empreinte du contenu qu'il portait,
+les contrôles ont lu à côté de la trace de l'étape, dans
+`logs/precheck-<étape>-inputs.json` : chaque chemin avec l'empreinte du contenu qu'il portait,
 et aucune empreinte pour un chemin qui ne portait rien, l'inventaire du dossier de suivi compris.
 Ce reçu est la trace du moteur pour cet appel, pas un document de l'étape : la revue ne le sert à
 aucune lentille. Il ajoute aussi l'appel lui-même à `logs/precheck-<étape>.jsonl` — l'heure de la

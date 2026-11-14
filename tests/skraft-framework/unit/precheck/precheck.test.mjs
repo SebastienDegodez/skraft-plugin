@@ -12,7 +12,7 @@ const RESEARCH = 'research/2026-10-11/checkout-research.md'
 
 /** What the engine kept of the last pre-check of a step, null when it kept none. @param {any} host @param {string} [step] */
 const receipt = (host, step = 'design') => {
-  const written = host.tracking.files.get(`${SLUG}/details/2026-10-11/precheck-${step}.json`)
+  const written = host.tracking.files.get(`${SLUG}/logs/precheck-${step}-inputs.json`)
   return written === undefined ? null : JSON.parse(written)
 }
 
@@ -130,11 +130,50 @@ test('a pre-check blocks, without a receipt, when the workflow the working copy 
   assert.equal(receipt(host), null, 'a blocked pre-check records nothing')
 })
 
-test('a pre-check blocks, without a receipt, when git can no longer tell what the story changed', async () => {
+/**
+ * The plugin's own pipeline as the working copy ejects it, with the step the attempt runs on
+ * renamed: a valid workflow the run's own step is no node of.
+ * @param {any} host
+ */
+const renamed = (host) => host.deps.workflowSource.text.replace(/\bdesign\b(?!_)/g, 'blueprint')
+
+test('a pre-check refuses what the working copy changed under the open attempt: a configuration the engine will not read blocks it, a workflow that renamed its step is refused', async () => {
   const answers = []
   const host = scripted({}, (it) => [
     agent()(it),
     agent({ records: false, work: async (inner) => {
+      const configured = await inner.workspace.read('skraft-config.json')
+      await inner.workspace.write('skraft-config.json', '{ "components": [')
+      answers.push(await inner.precheck())
+      await inner.workspace.write('skraft-config.json', configured)
+      await inner.workspace.write('.skraft/pipeline.skraft.dot', renamed(inner))
+      answers.push(await inner.precheck())
+      inner.workspace.files.delete('.skraft/pipeline.skraft.dot')
+    } })(it),
+    ...nominal(it).slice(2),
+  ])
+
+  await host.start()
+
+  assert.deepEqual(answers.map(({ status, code, step, attempt, failures }) => ({ status, code, step, attempt, failures })), [
+    { status: 'blocked', code: 'environment', step: 'design', attempt: 1, failures: [] },
+    { status: 'refused', code: 'precheck-unavailable', step: null, attempt: null, failures: [] },
+  ], 'a pre-check that read no check of the attempt answers no anomaly of it, and the refusal names no attempt it never opened')
+  assert.equal(answers[1].reason, 'design is no agent step: a pre-check reads what an agent writes',
+    'the workflow the working copy now holds runs no agent under the step the attempt is open on')
+  assert.match(answers[0].reason, /skraft-config\.json/)
+  assert.equal(receipt(host), null, 'none of them records a receipt')
+})
+
+test('a pre-check blocks, without a receipt, when git can no longer read a decision the attempt changed, or tell what the story changed at all', async () => {
+  const answers = []
+  const host = scripted({}, (it) => [
+    agent()(it),
+    agent({ records: false, work: async (inner) => {
+      inner.workspace.files.set(ADR_1, adrText({}))
+      inner.git.published.add(ADR_1)
+      inner.git.change(ADR_1)
+      answers.push(await inner.precheck())
       inner.git.locate('.').repo.history.length = 0
       answers.push(await inner.precheck())
     } })(it),
@@ -143,8 +182,12 @@ test('a pre-check blocks, without a receipt, when git can no longer tell what th
 
   await host.start()
 
-  assert.deepEqual(answers.map(({ status, code, step }) => ({ status, code, step })), [{ status: 'blocked', code: 'environment', step: 'design' }])
-  assert.match(answers[0].reason, /^Git cannot list what changed in /)
+  assert.deepEqual(answers.map(({ status, code, step }) => ({ status, code, step })),
+    [{ status: 'blocked', code: 'environment', step: 'design' }, { status: 'blocked', code: 'environment', step: 'design' }],
+    'a pre-check that cannot read what it checks against blocks on the machine, and answers no anomaly of the attempt')
+  assert.equal(answers[0].reason, `Git cannot read ${ADR_1} at root-0`, 'the decision is on the base, and its text there is what the check needs')
+  assert.match(answers[1].reason, /^Git cannot list what changed in /)
+  assert.deepEqual(answers.map(({ failures }) => failures), [[], []])
   assert.equal(receipt(host), null, 'a blocked pre-check records nothing')
 })
 
@@ -221,4 +264,63 @@ test('the pre-check answers the lifecycle of the decisions the attempt wrote, th
     'a pre-check answers every mechanical check of the submission, not only the records of the role')
   assert.deepEqual(answers.map(({ status }) => status), ['failed', 'passed'])
   assert.deepEqual(answers[1].failures, [])
+  assert.deepEqual(receipt(host).inputs.find(({ source }) => source === 'workspace-list'),
+    { source: 'workspace-list', path: 'docs/adr', hash: await host.deps.hasher.sha256('.gitkeep\ndecisions-index.md\nadr-001-card-payment.md') },
+    'the folder the decisions check walked is in the receipt too, with the hash of the names the working copy answered, in their order')
+})
+
+/** The two scenarios of a story delivered one at a time, which makes DISTILL run twice. */
+const TWO = [['Customer pays by card'], ['Customer is refused an expired card', 'api', '@error-case']]
+const S2 = 'tests/Acceptance/S2AcceptanceTests.cs'
+
+/** A commit of scenario k, as the designer and the engineer each make theirs. @param {number} index */
+const red = (index) => ({ git }) => git.commit(`test(${SLUG}): scenario ${index}`, [`tests/Acceptance/S${index}AcceptanceTests.cs`])
+const greenOf = (index) => ({ git }) => git.commit(`feat(${SLUG}): scenario ${index}`, [`src/Scenario${index}.cs`, `tests/Unit/Scenario${index}Tests.cs`])
+
+const TRAIL = `${SLUG}/logs/precheck-distill.jsonl`
+
+/** A trail a crash left half-written: the line it was appending stops mid-string. @param {any} host */
+const halfWritten = (host) => host.tracking.files.set(TRAIL, `${host.tracking.files.get(TRAIL)}{"at":"2026-10-11T00:00:00.000Z","step":"dist\n`)
+
+/** The pre-checks of a step, as the journal kept them per attempt. @param {any} host @param {string} step */
+const recordedCalls = (host, step) => host.events().filter((event) => event.type === 'step.recorded' && event.step === step)
+
+test('the trail keeps the calls of each attempt apart: the attempt sent back, the one that replaced it and the next scenario each journal their own, and none of them reads a commit', async () => {
+  const answers = []
+  const asked = async (/** @type {any} */ host) => answers.push(await host.precheck())
+  const host = scripted({}, (it) => [
+    agent()(it),
+    agent()(it),
+    agent({ plan: TWO, work: async (inner) => { await asked(inner); await asked(inner) } })(it),
+    agent({ plan: TWO, work: async (inner) => { await asked(inner); red(1)(inner) } })(it),
+    agent({ work: greenOf(1) })(it),
+    agent({ work: async (inner) => {
+      await asked(inner)
+      halfWritten(inner)
+      inner.git.change(S2)
+      await asked(inner)
+      red(2)(inner)
+      await asked(inner)
+    } })(it),
+    agent({ work: greenOf(2) })(it),
+  ])
+
+  assert.equal((await host.start()).status, 'done')
+
+  assert.deepEqual(recordedCalls(host, 'distill').map(({ visit, attempt, outcome, code }) => [visit, attempt, outcome, code]), [
+    [1, 1, 'failed', 'tdd'], [1, 2, 'done', null], [2, 1, 'done', null],
+  ], 'the attempt that committed no red is refused on a check no pre-check runs: a pre-check reads no commit')
+  assert.deepEqual(recordedCalls(host, 'distill').map(({ prechecks }) => prechecks.map(({ status }) => status)), [
+    ['passed', 'passed'], ['passed'], ['passed', 'failed', 'passed'],
+  ], 'each attempt journals the calls of its own visit and attempt, and no call of another')
+  assert.deepEqual(answers.map(({ status, step }) => `${step} ${status}`),
+    ['distill passed', 'distill passed', 'distill passed', 'distill passed', 'distill failed', 'distill passed'],
+    'the agents were told what the journal kept, in the order they asked')
+  assert.deepEqual(host.events().filter((event) => event.type === 'step.recorded' && 'prechecks' in event).map(({ step }) => step),
+    ['distill', 'distill', 'distill'], 'a step whose attempt asked nothing journals no pre-checks at all')
+  assert.deepEqual(recordedCalls(host, 'distill')[2].prechecks[1].found,
+    [{ code: 'uncommitted', line: `left uncommitted: ${S2}; commit it or undo the change` }],
+    'the call that failed holds the anomaly it answered, and the next scenario\'s commit clears it')
+  assert.deepEqual(host.tracking.files.get(TRAIL).split('\n').filter((line) => line !== '').length, 7,
+    'one trail holds the six calls of the step and the half-written line: the journal kept the calls it could read, each under its own attempt, and dropped that line')
 })

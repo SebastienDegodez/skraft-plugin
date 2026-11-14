@@ -524,7 +524,7 @@ const TABLE = [
   ['next', loopStep('next'), [{ synopsis: '[--json]', summary: 'run the active pipeline until it needs agents or a human' }]],
   ['record', loopStep('record'), [{ synopsis: '[--json]', summary: 'hand the saved agent replies to the run, then go on' }]],
   ['gate', gate, [{ synopsis: '[--all] [--json]', summary: 'run the gates of the changed components (all with --all)' }]],
-  ['precheck', precheck, [{ synopsis: '[--json]', summary: "run, inside the open attempt, the records check the engine runs on its submission, and keep what it read" }]],
+  ['precheck', precheck, [{ synopsis: '[--json]', summary: "run, inside the open attempt, the mechanical checks the engine runs on its submission, and keep what it read" }]],
   ['doctor', doctor, [{ synopsis: '[--run] [--base <ref>] [--json]', summary: 'check every command can run (--run: run each once)' }]],
   ['review', review, [{ synopsis: '--pr <number> [--publish] [--record] [--json]', summary: 'review one pull request with the review workflow (--publish: keep its verdict in a comment)' }]],
   ['workflow', workflow, [
