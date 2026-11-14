@@ -1,6 +1,6 @@
 ---
 name: clean-architecture-testing
-description: Use when it is unclear where a test belongs and what it is allowed to talk to — which test project and layer it goes in, whether it gets a real database, an in-memory fake, or no double at all, and whether a value object or a constructor is worth a test of its own. Also use when covering an adapter that calls an external API, a database or the file system, and when layer dependencies must be enforced by the build instead of by review.
+description: Use when organizing unit and integration test suites, placing executable business scenarios and their bindings, or choosing a test's entry point and doubles. Covers per-feature folders, Cucumber-JVM, pytest-bdd and behave discovery, rare extracted Domain tests, real infrastructure tests and architecture guards. Not for implementing a behaviour once its failing test is already correctly placed.
 ---
 
 # Clean Architecture Testing
@@ -35,7 +35,7 @@ A test asserting `new PolicyNumber("abc").value == "abc"` is noise. It tests the
 | Test project | Targets | Contains |
 |---|---|---|
 | `<Context>.UnitTest` | Domain + Application | Domain unit tests (rare, extracted rules) + Application acceptance tests (mocks on output gateways, in-memory fakes) |
-| `<Context>.IntegrationTest` | Infrastructure + API + Architecture | Infrastructure integration tests (real containers), API end-to-end tests (in-process app host), architecture tests |
+| `<Context>.IntegrationTest` | API + Infrastructure + Application + Domain | Full-stack API tests, Infrastructure integration tests (real containers), architecture tests; no Gherkin runner or bindings |
 
 ### Per-language mapping
 
@@ -67,6 +67,20 @@ after the GitHub issue, story ID, or sprint.
 
 One folder per feature or bounded behavior. The folder name answers "what does this test?"
 not "which ticket created it?"
+
+### Executable Gherkin and specification-only files
+
+- Executable `.feature` files and their bindings belong to `UnitTest`, grouped by feature;
+  bindings call the use case with real Domain objects. `IntegrationTest` uses ordinary tests,
+  including the walking skeleton through the real entry point; it never executes Gherkin.
+- Declare the folders actually read by each runner in the component's `bdd` list, relative to
+  its root. One pair per independent runner/binding scope, not one global pair per language.
+  Existing confirmed paths are not moved by configuration detection.
+- With no Gherkin runner, keep specifications in `docs/features/<context>/<feature>/` and
+  declare `features` only: no `runner`, no `steps`, no generated bindings. With no Gherkin
+  practice at all, write `bdd: false`.
+- Read `references/examples-java.md` or `references/examples-python.md` before choosing new
+  runner folders. A folder named `steps` proves neither pytest collection nor Cucumber glue.
 
 ### Forbidden combinations
 
