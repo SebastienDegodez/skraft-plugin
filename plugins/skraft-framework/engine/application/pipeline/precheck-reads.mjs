@@ -2,7 +2,7 @@
  * What a check read, as the engine notes it while the check runs: the proof of a pre-check is the
  * log of its reads, never a list of paths guessed beforehand, because a check discovers its inputs
  * by reading them — a consistency matrix names the documents to open next (#581).
- * @typedef {{ source: 'tracking' | 'tracking-list' | 'workspace', path: string, text: string | null }} Read
+ * @typedef {{ source: 'tracking' | 'tracking-list' | 'workspace' | 'workspace-list', path: string, text: string | null }} Read
  */
 
 /** @param {Map<string, Read>} seen @param {Read} entry */
@@ -22,21 +22,39 @@ const notedFiles = (seen, files) => Object.freeze({
   },
 })
 
-/** The working copy, read through the note; a path it cannot read is noted as read and still throws. */
+/**
+ * The working copy, read and listed through the note; a path it cannot read is noted as read and
+ * still throws, and a folder it cannot list is noted as listed and still answers what it answered.
+ */
 const notedWorkspace = (/** @type {Map<string, Read>} */ seen, /** @type {any} */ workspace) => Object.freeze({
-  read: async (/** @type {string} */ path) => {
-    try {
-      return note(seen, { source: 'workspace', path, text: await workspace.read(path) })
-    } catch (error) {
-      note(seen, { source: 'workspace', path, text: null })
-      throw error
-    }
-  },
+  read: (/** @type {string} */ path) => notedRead(seen, workspace, path),
+  list: (/** @type {string} */ folder) => notedList(seen, workspace, folder),
 })
+
+/** @param {Map<string, Read>} seen @param {any} workspace @param {string} path */
+const notedRead = async (seen, workspace, path) => {
+  try {
+    return note(seen, { source: 'workspace', path, text: await workspace.read(path) })
+  } catch (error) {
+    note(seen, { source: 'workspace', path, text: null })
+    throw error
+  }
+}
+
+/** @param {Map<string, Read>} seen @param {any} workspace @param {string} folder */
+const notedList = async (seen, workspace, folder) => {
+  const listed = await workspace.list(folder)
+  note(seen, { source: 'workspace-list', path: folder, text: listed === null ? null : listed.map(nameOf).join('\n') })
+  return listed
+}
+
+/** A listed entry as the note keeps it: its name, an entry the port answers as an object included. @param {any} entry */
+const nameOf = (entry) => (typeof entry === 'string' ? entry : entry.name)
 
 /**
  * The deps a check runs through while the engine notes every read, and the log it fills. Only the
- * ports a records check reads are wrapped: a check that read another would leave it unproven.
+ * ports the checks read are wrapped: a check that read another would leave it unproven. Git is no
+ * read of a file: what it answers of the heads and of the changed files is not in the receipt.
  * @param {any} deps @returns {{ seen: Map<string, Read>, deps: any }}
  */
 export const recordingReads = (deps) => {

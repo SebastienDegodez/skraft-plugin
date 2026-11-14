@@ -440,6 +440,7 @@ these sections, each only when it has rows, then when the run started.
 | `## Human answers` | `Question`, `Step`, `Answer`, `By` | every answer a human gave |
 | `## Accepted findings` | | the findings a human accepted at a review's ceiling |
 | `## Forge writes` | | each write on the forge, with its outcome |
+| `## Pre-checks` | `Step`, `Answered at`, `Status`, `Anomalies`, `Cause` | each pre-check an agent ran inside its attempt (`step.recorded` `prechecks`), in journal order; `Cause` holds every anomaly it answered, `-` for none |
 
 ```markdown
 ## Waiting on

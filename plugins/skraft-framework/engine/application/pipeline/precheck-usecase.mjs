@@ -1,27 +1,32 @@
 import { deriveRun, openNode } from '../../domain/journal/run-state.mjs'
-import { dayOf } from '../../domain/pipeline/outputs.mjs'
+import { dayOf, templateName } from '../../domain/pipeline/outputs.mjs'
 import { receiptPath } from '../../domain/pipeline/precheck-receipt.mjs'
+import { callsPath, withCall } from '../../domain/pipeline/precheck-calls.mjs'
 import { roleOf } from '../../domain/pipeline/roles.mjs'
 import { loadWorkflow } from '../workflow/load-workflow.mjs'
+import { loadConfig } from '../config/bases.mjs'
+import { storyLanguage } from '../publish/story-language.mjs'
 import { openActiveRun } from './active-run.mjs'
-import { checkDesignRecords } from './design-records.mjs'
+import { writtenFailures } from './step-checks.mjs'
 import { recordingReads, receiptOf } from './precheck-reads.mjs'
 
 /**
  * @typedef {{
  *   status: 'passed' | 'failed' | 'refused' | 'blocked', slug: string | null, step: string | null,
- *   attempt: number | null, check: string | null, failures: string[], code: string | null, reason: string,
+ *   attempt: number | null, failures: Array<{ code: string, line: string }>, code: string | null, reason: string,
  * }} PrecheckOutcome
+ *   failures: each anomaly with the check that found it, as the submission names them.
  */
 
 export const UNAVAILABLE = 'precheck-unavailable'
-const CHECK = 'design-records'
 
 /**
- * Precheck — `skraft precheck`: during a producer's attempt, runs the mechanical check the engine
- * runs on its submission and hands back what it found, so the agent corrects it without a replay.
- * It starts no agent, changes nothing of the agent's work, and approves nothing: the engine's own
- * check still runs at the submission (#581).
+ * Precheck — `skraft precheck`: during an agent's attempt, runs the mechanical checks the engine
+ * runs on its submission over what the attempt has written, and hands back every anomaly with the
+ * check that found it, so the agent corrects them without a replay. It reads no result file and no
+ * commit, since the agent writes them last. It starts no agent, changes nothing of the agent's
+ * work, and approves nothing: the engine's own checks still run at the submission, and the review
+ * still happens (#581).
  * @param {any} deps
  */
 export const createPrecheck = (deps) => Object.freeze({
@@ -37,19 +42,22 @@ const precheck = async (deps, { slug: requested } = {}) => {
   const run = deriveRun(journal.events)
   const found = await applicable(deps, run)
   if (found.ok === false) return { ...nothingRead(slug), status: found.status, code: found.code, reason: found.reason }
-  return runCheck(deps, { slug, base: run.base, step: found.step, attempt: found.attempt })
+  const loaded = await loadConfig(deps)
+  if (!loaded.ok) return { ...nothingRead(slug), status: 'blocked', step: found.step, attempt: found.open.attempt, code: 'environment', reason: loaded.reason }
+  return runCheck(deps, { slug, run, config: loaded.config, step: found.step, open: found.open, role: found.role })
 }
 
 /**
  * What a pre-check that read nothing of the step answers; its caller gives the status, the code and
  * the reason, so no default of them is ever read.
- * @param {string | null} slug @returns {Pick<PrecheckOutcome, 'slug' | 'step' | 'attempt' | 'check' | 'failures'>}
+ * @param {string | null} slug @returns {Pick<PrecheckOutcome, 'slug' | 'step' | 'attempt' | 'failures'>}
  */
-const nothingRead = (slug) => ({ slug, step: null, attempt: null, check: null, failures: [] })
+const nothingRead = (slug) => ({ slug, step: null, attempt: null, failures: [] })
 
 /**
- * The attempt a pre-check applies to: an open one whose role keeps the DESIGN records. Any other
- * step is refused rather than answered, so no agent reads a success it was never given.
+ * The attempt a pre-check applies to: an open one whose node plays a role, so the checks know
+ * what it owes. A step with no open attempt, or a node that plays none, is refused rather than
+ * answered, so no agent reads a success it was never given.
  * @param {any} deps @param {import('../../domain/journal/run-state.mjs').RunState} run
  */
 const applicable = async (deps, run) => {
@@ -59,32 +67,74 @@ const applicable = async (deps, run) => {
   const loaded = await loadWorkflow(deps, { agents: false })
   if (!loaded.ok) return { ok: false, status: 'blocked', code: 'workflow-refused', reason: loaded.errors.join('; ') }
   const node = loaded.workflow.nodes[found.step]
-  // Stryker disable next-line ConditionalExpression,LogicalOperator: the guard turns a step naming a node the workflow does not hold into a refusal instead of a crash; no workflow a run can follow reaches it, since the one it validated holds the nodes its journal names
-  if (node === undefined || !roleOf(node).records) {
-    return refusal(UNAVAILABLE, `${found.step} keeps no records a pre-check reads; only the design step has one`)
-  }
-  return { ok: true, step: found.step, attempt: found.open.attempt }
+  if (node === undefined || node.kind !== 'agent') return refusal(UNAVAILABLE, `${found.step} is no agent step: a pre-check reads what an agent writes`)
+  return { ok: true, step: found.step, open: found.open, role: roleOf(node) }
 }
 
 /** @param {string} code @param {string} reason */
 const refusal = (code, reason) => ({ ok: /** @type {const} */ (false), status: /** @type {const} */ ('refused'), code, reason })
 
 /**
- * The check, read through a recorder, and its receipt beside the attempt's documents: the step,
- * the attempt, what it read and what it found.
- * @param {any} deps @param {{ slug: string, base: any, step: string, attempt: number }} on
+ * The checks, read through a recorder, their receipt beside the attempt's documents — the step,
+ * the attempt, what they read and what they found — and the call itself in the step's trail.
+ * @param {any} deps @param {{ slug: string, run: any, config: any, step: string, open: any, role: any }} on
  * @returns {Promise<PrecheckOutcome>}
  */
-const runCheck = async (deps, { slug, base, step, attempt }) => {
+const runCheck = async (deps, on) => {
+  const { slug, step, open } = on
   const recorder = recordingReads(deps)
-  const found = await checkDesignRecords(recorder.deps, { slug, base })
-  if (typeof found === 'string') return { ...nothingRead(slug), status: 'blocked', step, attempt, code: 'environment', reason: found }
-  const receipt = { step, attempt, check: CHECK, inputs: await receiptOf(deps, recorder.seen), failures: found }
-  await deps.files.write(slug, receiptPath(step, dayOf(deps.clock.now())), `${JSON.stringify(receipt, null, 2)}\n`)
-  return { status: found.length === 0 ? 'passed' : 'failed', slug, step, attempt, check: CHECK, failures: found, code: null, reason: verdict(found) }
+  const found = await writtenFailures(context(recorder.deps, on), await stepOf(deps, on))
+  if (found.ok === false) return { ...nothingRead(slug), status: 'blocked', step, attempt: open.attempt, code: 'environment', reason: found.reason }
+  const at = deps.clock.now()
+  await keepReceipt(deps, { slug, step, attempt: open.attempt, at, inputs: await receiptOf(deps, recorder.seen), failures: found.failures })
+  const status = found.failures.length === 0 ? 'passed' : 'failed'
+  await trace(deps, slug, { at: at.toISOString(), step, visit: open.visit, attempt: open.attempt, status, failures: found.failures.length, found: found.failures })
+  return { status, slug, step, attempt: open.attempt, failures: found.failures, code: null, reason: verdict(found.failures) }
 }
 
-/** @param {string[]} failures */
+/** What the checks need of the run, through the deps that note every read. @param {any} deps @param {any} on */
+const context = (deps, { slug, config, run }) => ({ deps, slug, config, base: run.base })
+
+/**
+ * The attempt as the checks read it: the role it plays, the outputs it owes with the text the
+ * engine pre-created each from, and the heads its pass started on.
+ * @param {any} deps @param {any} on
+ */
+const stepOf = async (deps, { slug, run, role, open }) => ({
+  role,
+  outputs: open.outputs,
+  precreated: await precreated(deps, { slug, run, role }),
+  visitHeads: open.heads,
+})
+
+/**
+ * The text the engine pre-created each output from, in the order of the role's outputs: the
+ * template of the story's language for an output that names one, null for an output that names
+ * none. An output still holding its template counts as unfilled, as it does at the submission.
+ * @param {any} deps @param {{ slug: string, run: any, role: any }} on @returns {Promise<Array<string | null>>}
+ */
+const precreated = async (deps, { slug, run, role }) => {
+  const language = await storyLanguage(deps, slug, run)
+  return Promise.all(role.outputs.map(({ template }) => (template === null ? null : deps.templates.read(templateName(template, language)))))
+}
+
+/** @param {any} deps @param {{ slug: string, step: string, attempt: number, at: Date, inputs: any[], failures: any[] }} call */
+const keepReceipt = async (deps, { slug, step, attempt, at, inputs, failures }) => {
+  const receipt = { step, attempt, inputs, failures }
+  await deps.files.write(slug, receiptPath(step, dayOf(at)), `${JSON.stringify(receipt, null, 2)}\n`)
+}
+
+/**
+ * Appends the call to its step's trail, which the engine reads when it records the attempt: a
+ * pre-check never writes the run's journal, whose single writer is the process holding the run.
+ * @param {any} deps @param {string} slug @param {import('../../domain/pipeline/precheck-calls.mjs').PrecheckCall} call
+ */
+const trace = async (deps, slug, call) => {
+  const path = callsPath(call.step)
+  await deps.files.write(slug, path, withCall(await deps.files.read(slug, path), call))
+}
+
+/** @param {Array<{ code: string, line: string }>} failures */
 const verdict = (failures) => (failures.length === 0
-  ? 'the design records pass this check; the engine checks them again at the submission'
-  : `${failures.length} record(s) of this design do not pass: correct them and pre-check again`)
+  ? 'these checks pass on what this attempt has written; the engine runs them again at the submission'
+  : `${failures.length} anomaly(ies) of this attempt do not pass: correct them and pre-check again`)

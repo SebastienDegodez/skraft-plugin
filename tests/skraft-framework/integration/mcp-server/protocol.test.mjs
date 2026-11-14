@@ -45,8 +45,8 @@ test('VS Code, which has no pipeline of its own, gets the agent loop, kept for t
     assert.match(instructions, /Only the Skraft - Orchestrator agent conducts a pipeline: hand it the story\. It alone calls skraft_start, then skraft_next and skraft_record as each answer's then names\./)
     const byName = Object.fromEntries(tools.map((tool) => [tool.name, tool]))
     for (const name of ['skraft_start', 'skraft_next', 'skraft_record']) assert.match(byName[name].description, /^For the Skraft - Orchestrator agent only\. /)
-  assert.equal(byName.skraft_precheck.title, 'Pre-check the records of the open step')
-  assert.match(byName.skraft_precheck.description, /^Runs, inside your own attempt, the records check the engine runs when you submit: /)
+  assert.equal(byName.skraft_precheck.title, 'Pre-check what the open attempt has written')
+  assert.match(byName.skraft_precheck.description, /^Runs, inside your own attempt, the mechanical checks the engine runs when you submit — /)
   assert.match(byName.skraft_precheck.description, /It starts no agent, changes nothing you wrote, and approves nothing/)
     await host.close()
   }

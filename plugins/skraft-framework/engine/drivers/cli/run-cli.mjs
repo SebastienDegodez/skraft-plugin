@@ -10,6 +10,7 @@ import { createPublish } from '../../application/publish/publish-usecase.mjs'
 import { createAdoptJournal } from '../../application/journal/adopt-usecase.mjs'
 import { createMigrate } from '../../application/migration/migrate-usecase.mjs'
 import { answersTable, costText, reportTable } from '../../domain/reporting/run-report.mjs'
+import { prechecksTable } from '../../domain/reporting/run-prechecks.mjs'
 import { decideUsage } from '../../domain/decisions/questions.mjs'
 import { createAgentLoop } from './agent-loop.mjs'
 import { reviewThroughLoop } from './review-loop.mjs'
@@ -225,6 +226,7 @@ const reportLines = (shown) => [
   `${skraftOf(shown.slug)}: ${shown.status}`,
   ...(shown.steps.length > 0 ? reportTable(shown) : []),
   ...(shown.answers.length > 0 ? answersTable(shown.answers) : []),
+  ...(shown.prechecks.length > 0 ? prechecksTable(shown.prechecks) : []),
   ...(shown.reason ? [shown.reason] : []),
 ]
 
@@ -365,7 +367,7 @@ const precheck = async (args, services, console) => {
 
 /** @param {Awaited<ReturnType<ReturnType<typeof createPrecheck>['precheck']>>} outcome */
 const precheckLines = (outcome) => [
-  ...outcome.failures.map((failure) => `fail  ${failure}`),
+  ...outcome.failures.map(({ code, line }) => `fail  ${code}  ${line}`),
   `skraft precheck: ${outcome.reason}`,
 ]
 

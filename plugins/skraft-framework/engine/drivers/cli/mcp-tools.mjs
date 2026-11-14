@@ -111,8 +111,8 @@ export const TOOLS = Object.freeze([
     annotations: LOCAL, argv: (args) => ['gate', ...flag('--all', args.all), '--json'],
   }),
   tool({
-    name: 'skraft_precheck', title: 'Pre-check the records of the open step',
-    description: 'Runs, inside your own attempt, the records check the engine runs when you submit: it answers every anomaly with the artefact and the rule it breaks, so you correct them now instead of being sent back. It starts no agent, changes nothing you wrote, and approves nothing: the engine checks again at the submission. Only the design step has one.',
+    name: 'skraft_precheck', title: 'Pre-check what the open attempt has written',
+    description: 'Runs, inside your own attempt, the mechanical checks the engine runs when you submit — your outputs, your write scope, the records your role keeps, the prose you write, the scenarios your plan names, the lifecycle of the decisions you touched: it answers every anomaly with the check that found it, the artefact and the rule it breaks, so you correct them now instead of being sent back. It reads no result file and no commit, since you write them last. It starts no agent, changes nothing you wrote, and approves nothing: the engine runs these checks again at the submission, and the review still happens.',
     annotations: LOCAL, argv: () => ['precheck', '--json'],
   }),
   tool({

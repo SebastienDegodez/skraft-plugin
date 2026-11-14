@@ -367,14 +367,24 @@ d'échec et format des preuves :
 
 ## `skraft precheck [--json]`
 
-**Effet.** Lance, dans la tentative ouverte du pipeline actif, le contrôle des traces que le
-moteur lance à la remise de cette étape, et rend chaque anomalie avec l'artefact et la règle
-qu'elle enfreint. Seule l'étape de conception en a un. Il ne lance aucun agent, ne change rien de
-ce que l'agent a écrit et n'approuve rien : le moteur contrôle de nouveau à la remise, et la revue
-a toujours lieu. Il écrit ce que le contrôle a lu à côté des documents de la tentative, dans
+**Effet.** Lance, dans la tentative ouverte du pipeline actif, les contrôles mécaniques que le
+moteur lance à la remise de cette étape — les sorties que la tentative doit, son périmètre
+d'écriture, les traces que son rôle tient, la prose qu'elle écrit, les scénarios que son plan
+nomme, le cycle de vie des décisions qu'elle a touchées — et rend chaque anomalie avec le contrôle
+qui l'a trouvée, l'artefact et la règle qu'elle enfreint. Il ne lit aucun fichier de résultat ni
+aucun commit, qu'un agent écrit en dernier : `invalid-result`, `commit-convention` et `tdd`
+restent pour la remise. Une étape sans tentative ouverte, ou dont le nœud n'est pas celui d'un
+agent, est refusée. Il ne lance aucun agent, ne change rien de ce que l'agent a écrit et n'approuve
+rien : le moteur relance ces contrôles à la remise, et la revue a toujours lieu. Il écrit ce que
+les contrôles ont lu à côté des documents de la tentative, dans
 `details/<date>/precheck-<étape>.json` : chaque chemin avec l'empreinte du contenu qu'il portait,
 et aucune empreinte pour un chemin qui ne portait rien, l'inventaire du dossier de suivi compris.
-Un agent sans shell l'appelle par l'outil MCP `skraft_precheck`.
+Ce reçu est la trace du moteur pour cet appel, pas un document de l'étape : la revue ne le sert à
+aucune lentille. Il ajoute aussi l'appel lui-même à `logs/precheck-<étape>.jsonl` — l'heure de la
+réponse, l'étape, sa visite, sa tentative, son statut, le nombre d'anomalies rendues et chacune
+avec le contrôle qui l'a trouvée — que le moteur lit à l'enregistrement de la tentative : le journal garde donc les appels
+de cette tentative, et [`skraft report`](#skraft-report---json) les affiche. Un agent sans shell
+l'appelle par l'outil MCP `skraft_precheck`.
 
 | Option | Effet |
 | --- | --- |
@@ -388,16 +398,17 @@ skraft precheck: <synthèse>
 ```
 
 **Sortie `--json`** : `status` (`passed`, `failed`, `refused`, `blocked`), `slug`, `step`,
-`attempt`, `check` (`design-records`), `failures` (string[]), `code`, `reason`. Il sort 0 quand
-`passed`, 1 sinon. `precheck-unavailable` refuse un appel fait entre deux étapes ou sur une étape
+`attempt`, `failures` (`{ code, line }[]`, le code nommant le contrôle qui a trouvé l'anomalie),
+`code`, `reason`. Il sort 0 quand `passed`, 1 sinon. `precheck-unavailable` refuse un appel fait entre deux étapes ou sur une étape
 qui ne tient aucune trace.
 
 ## `skraft report [--json]`
 
 **Effet.** Lit le journal du pipeline actif et affiche le temps, le coût et les relances de
-chaque étape ; n'écrit rien. Le moteur écrit le même tableau dans `run-report.md` après chaque
-étape, suivi de la question qu'attend le run, des commits qu'il a vérifiés, des échecs renvoyés à
-un agent et des incidents posés à un humain ([Rapport du run](./run-journal.md#run-report)).
+chaque étape, puis chaque précontrôle qu'un agent a lancé dans sa tentative ; n'écrit rien. Le
+moteur écrit les mêmes tableaux dans `run-report.md` après chaque étape, suivis de la question
+qu'attend le run, des commits qu'il a vérifiés, des échecs renvoyés à un agent et des incidents
+posés à un humain ([Rapport du run](./run-journal.md#run-report)).
 
 **Sortie texte** :
 
@@ -414,6 +425,12 @@ Costs are approximate (~): each is what the Claude Code session cost while the a
 | design-1 | design | Use the bank gateway | cli-tty |
 <raison>
 ```
+
+Le tableau des précontrôles liste chaque appel auquel `skraft precheck` a répondu dans une
+tentative, dans l'ordre où ils ont tourné : l'étape, l'heure de la réponse, le contrôle lancé,
+son statut, le nombre d'anomalies rendues et chacune sous le contrôle qui l'a trouvée (`-` s'il
+n'en a rendu aucune) ; il n'apparaît qu'une fois qu'un agent en a lancé un.
+`run-report.md` le porte sous `## Pre-checks`.
 
 Le tableau des réponses liste chaque réponse qu'un humain a donnée dans le run, dans l'ordre :
 la clé de la question, le nœud qu'elle concernait, la réponse (suivie de la raison d'un refus),

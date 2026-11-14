@@ -138,6 +138,7 @@ test('after each step the tracking folder holds run-report.md, with the time, co
       { step: 'design_review', agent: 'fitness-lens', family: 'reviewer', tier: 'economy', host: 'claude-code', models: null, effort: null },
     ],
     writes: [],
+    prechecks: [],
     waiting: null,
     commits: [],
     refusals: [{ step: 'research', times: 1, failure: 'missing research/2026-10-11/checkout-research.md', owner: 'agent' }],
@@ -207,7 +208,7 @@ test('times read in seconds, minutes or hours, and WORKFLOW.md names what each k
 })
 
 test('the report of a journal edited by hand, or of a slug with no journal, is empty and says why', async () => {
-  const empty = { steps: [], totals: { attempts: 0, retries: 0, durationMs: 0, costUsd: null }, answers: [], accepted: [], agents: [], writes: [], waiting: null, commits: [], refusals: [], incidents: [], startedAt: null, elapsedMs: 0 }
+  const empty = { steps: [], totals: { attempts: 0, retries: 0, durationMs: 0, costUsd: null }, answers: [], accepted: [], agents: [], writes: [], prechecks: [], waiting: null, commits: [], refusals: [], incidents: [], startedAt: null, elapsedMs: 0 }
   const host = pipelineHost()
   await host.tracking.activate(SLUG)
   assert.deepEqual(await host.report(), { slug: SLUG, status: 'not-initialised', reason: `${SLUG} has no journal (events.jsonl)`, ...empty })
@@ -230,6 +231,7 @@ test('the report of a working copy with no active pipeline is empty and says why
     accepted: [],
     agents: [],
     writes: [],
+    prechecks: [],
     waiting: null,
     commits: [],
     refusals: [],

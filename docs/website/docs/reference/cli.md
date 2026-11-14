@@ -365,14 +365,24 @@ and evidence format:
 
 ## `skraft precheck [--json]`
 
-**Effect.** Runs, inside the open attempt of the active pipeline, the records check the engine runs
-when that step is submitted, and answers every anomaly with the artefact and the rule it breaks.
-Only the design step has one. It starts no agent, changes nothing the agent wrote and approves
-nothing: the engine checks again at the submission, and the review still happens. It writes what
-the check read beside the attempt's documents, in
+**Effect.** Runs, inside the open attempt of the active pipeline, the mechanical checks the engine
+runs when that step is submitted — the outputs the attempt owes, its write scope, the records its
+role keeps, the prose it writes, the scenarios its plan names, the lifecycle of the decisions it
+touched — and answers every anomaly with the check that found it, the artefact and the rule it
+breaks. It reads no result file and no commit, which an agent writes last, so `invalid-result`,
+`commit-convention` and `tdd` stay for the submission. A step with no open attempt, or one whose
+node is no agent's, is refused. It starts no agent, changes nothing the agent wrote and approves
+nothing: the engine runs these checks again at the submission, and the review still happens. It
+writes what the checks read beside the attempt's documents, in
 `details/<date>/precheck-<step>.json`: each path with the hash of the content it held, and no hash
-for a path that held nothing, the inventory of the tracking folder included. An agent without a
-shell calls it through the `skraft_precheck` MCP tool.
+for a path that held nothing, the inventory of the tracking folder included. That receipt is the
+engine's record of the call, not a document of the step: the review serves it to no lens. It also
+appends the call itself to `logs/precheck-<step>.jsonl` — when it answered, the step, its visit,
+its attempt, its status, how many anomalies it answered and each one with the check that found
+it — which the engine reads
+when it records the attempt, so the journal keeps the calls of that attempt and
+[`skraft report`](#skraft-report---json) shows them. An agent without a shell calls it through the
+`skraft_precheck` MCP tool.
 
 | Option | Effect |
 | --- | --- |
@@ -381,21 +391,22 @@ shell calls it through the `skraft_precheck` MCP tool.
 **Text output** — one line per anomaly, then a summary line:
 
 ```
-fail  <artefact>: <the rule it breaks>
+fail  <check>  <artefact>: <the rule it breaks>
 skraft precheck: <summary>
 ```
 
 **`--json` output**: `status` (`passed`, `failed`, `refused`, `blocked`), `slug`, `step`,
-`attempt`, `check` (`design-records`), `failures` (string[]), `code`, `reason`. It exits 0 when
-`passed`, 1 otherwise. `precheck-unavailable` refuses a call made between steps or on a step that
+`attempt`, `failures` (`{ code, line }[]`, the code naming the check that found the anomaly),
+`code`, `reason`. It exits 0 when `passed`, 1 otherwise. `precheck-unavailable` refuses a call made between steps or on a step that
 keeps no records.
 
 ## `skraft report [--json]`
 
 **Effect.** Reads the active pipeline's journal and prints the time, cost and retries of each
-step; writes nothing. The engine writes the same table to `run-report.md` after each step,
-followed by the question the run waits on, the commits it checked, the failures sent back to an
-agent and the incidents asked of a human ([Run report](./run-journal.md#run-report)).
+step, then every pre-check an agent ran inside its attempt; writes nothing. The engine writes the
+same tables to `run-report.md` after each step, followed by the question the run waits on, the
+commits it checked, the failures sent back to an agent and the incidents asked of a human
+([Run report](./run-journal.md#run-report)).
 
 **Text output**:
 
@@ -412,6 +423,10 @@ Costs are approximate (~): each is what the Claude Code session cost while the a
 | design-1 | design | Use the bank gateway | cli-tty |
 <reason>
 ```
+
+The pre-checks table lists every call `skraft precheck` answered inside an attempt, in the order
+they ran: the step, when it answered, its status, how many anomalies it answered and each one
+under the check that found it (`-` for none); it shows only once an agent ran one. `run-report.md` holds it under `## Pre-checks`.
 
 The answers table lists every answer a human gave in the run, in order: the question's key,
 the node it was about, the answer (a refusal's reason after it), and how the journal knows a

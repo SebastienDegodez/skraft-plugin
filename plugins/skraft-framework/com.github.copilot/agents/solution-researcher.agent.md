@@ -9,6 +9,7 @@ tools:
   - search/codebase
   - execute
   - graphify/*
+  - skraft/skraft_precheck
 ---
 
 # Solution-researcher agent
@@ -26,6 +27,7 @@ You investigate the codebase and external sources and fill ONE cited research do
    - Cite only a file you read. A file the working copy lacks: name what it is (`no ADR index`, `no Copilot instructions file`), never with `#file:`.
    - Never `#file:` a path under `.copilot-tracking/`, the story file and prior research included: name the story by its issue number (`story #8`) and prior research by its title.
    - Cite every claim that DESIGN needs with a file you read and an accurate line range. The RESEARCH gate validates citation paths and line ranges; do not run a separate line-count command.
+   - Before writing your result, call `skraft_precheck`: it runs the mechanical checks of your submission on what you have written — that gate among them — and answers each anomaly with the check that found it. Correct every one, then call it again, until it answers `passed`. It starts no agent and approves nothing: a `passed` is not a review.
 5. Read `.github/copilot-instructions.md` and the instruction files that apply to the code in scope only when they exist; record the conventions DESIGN must follow.
 6. Write `#file:<path>` as plain text, never inside a markdown link.
 
