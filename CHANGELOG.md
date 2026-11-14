@@ -3,6 +3,12 @@
 Toutes les modifications notables de ce projet sont documentées ici.
 Format basé sur [Conventional Commits](https://www.conventionalcommits.org/) — versionnage [SemVer](https://semver.org/).
 
+## [2.0.0-alpha.89](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.88...v2.0.0-alpha.89) (2026-11-14)
+
+### 🐛 Bug Fixes
+
+* **skills:** align Java and Python test suites with .NET ([#584](https://github.com/SebastienDegodez/skraft-plugin/issues/584)) ([9bee871](https://github.com/SebastienDegodez/skraft-plugin/commit/9bee871a21e43a212ac7945724ae5270334cec91))
+
 ## [2.0.0-alpha.88](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.87...v2.0.0-alpha.88) (2026-11-13)
 
 ### ✨ Features
