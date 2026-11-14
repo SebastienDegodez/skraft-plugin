@@ -3,6 +3,7 @@ import { agentModels, modelName } from './agent-models.mjs'
 import { forgeWrites, forgeWritesTable } from './forge-writes.mjs'
 import { acceptedFindings, acceptedTable } from './accepted-findings.mjs'
 import { commitRows, commitsTable, incidentRows, incidentsTable, refusalRows, refusalsTable, waitingLines, waitingOn } from './run-failures.mjs'
+import { precheckRows, prechecksTable } from './run-prechecks.mjs'
 
 /**
  * The run report: time, cost and retries of each step, and every answer a human gave, read from
@@ -22,6 +23,7 @@ import { commitRows, commitsTable, incidentRows, incidentsTable, refusalRows, re
  * @typedef {import('./forge-writes.mjs').ForgeWrite} ForgeWrite
  * @typedef {{
  *   steps: StepReport[], totals: ReportTotals, answers: HumanAnswer[], accepted: import('./accepted-findings.mjs').AcceptedFinding[], agents: AgentModel[], writes: ForgeWrite[],
+ *   prechecks: import('./run-prechecks.mjs').PrecheckRow[],
  *   waiting: import('./run-failures.mjs').Waiting | null, commits: import('./run-failures.mjs').CommitRow[], refusals: import('./run-failures.mjs').RefusalRow[], incidents: import('./run-failures.mjs').IncidentRow[],
  *   startedAt: string | null, elapsedMs: number,
  * }} RunReport
@@ -41,7 +43,7 @@ export const runReport = (events) => {
   const rows = new Map()
   for (const event of events) ON_EVENT[event.type]?.(rows, event)
   const steps = [...rows.values()].map(stepOf)
-  return { steps, totals: totalsOf(steps), answers: answersOf(events), accepted: acceptedFindings(events), agents: agentModels(events), writes: forgeWrites(events), ...failuresOf(events), startedAt: events[0]?.at ?? null, elapsedMs: elapsedOf(events) }
+  return { steps, totals: totalsOf(steps), answers: answersOf(events), accepted: acceptedFindings(events), agents: agentModels(events), writes: forgeWrites(events), prechecks: precheckRows(events), ...failuresOf(events), startedAt: events[0]?.at ?? null, elapsedMs: elapsedOf(events) }
 }
 
 /**
@@ -106,7 +108,8 @@ const elapsedOf = (events) => (events.length === 0 ? 0 : Date.parse(events[event
  * run-report.md: the status line, one row per step, the totals, the question the run waits on, each
  * commit it checked and its verdict, the failures sent back to an agent and the incidents asked of
  * a human, what each agent ran on, the answers humans gave, the findings they accepted, each write
- * on the forge with its outcome, when the run started.
+ * on the forge with its outcome, each pre-check an agent ran inside its attempt, when the run
+ * started.
  * @param {{ slug: string, status: string, report: RunReport }} report
  */
 export const renderRunReport = ({ slug, status, report }) => [
@@ -131,6 +134,7 @@ const sectionsOf = (report) => [
   ...section('## Automated judgments', report.answers.filter(({ kind }) => kind === 'unforeseen'), judgmentsTable),
   ...section('## Accepted findings', report.accepted, acceptedTable),
   ...section('## Forge writes', report.writes, forgeWritesTable),
+  ...section('## Pre-checks', report.prechecks, prechecksTable),
 ]
 
 /**

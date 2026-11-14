@@ -28,6 +28,43 @@ donc `$.env.get('JAVA_TOOL_OPTIONS')`. Variables déclarées par le module : `HO
 | Jugement interactif, VS Code, qualité des actions et gain réel | non mesuré |
 | Pannes #565 sur Linux/Windows et absence de permission hors dépôt pendant un run réel | preuves absentes sur cette branche |
 
+### 2026-11-13 — un outil MCP atteint un agent producteur, sur les deux pilotes (#581)
+
+Question : un agent producteur (`solution-researcher`, `solution-architect`,
+`acceptance-designer`, `software-engineer`) peut-il recevoir un outil du serveur MCP du plugin,
+pour précontrôler son travail dans sa tentative ? Linux, Node v22.22.2, plugin 2.0.0-alpha.86.
+La règle est la même sur les deux pilotes, **le nom de l'outil ne l'est pas**.
+
+| Hôte | Contrôle | Verdict | Examiné | Modèle | Coût |
+| --- | --- | --- | --- | --- | --- |
+| Copilot CLI **1.0.108**, SDK **1.0.9** | `agent-mcp-reach` (`copilot-probe.mjs`) | measured true | l'agent dont le `tools:` nomme `skraft-skraft_doctor` se voit offrir `["skraft-skraft_doctor","skill","sql"]` ; celui qui nomme `view` se voit offrir `["view","skill","sql"]` ; serveur `skraft` `connected` | aucun | aucun, **sans appel de modèle** |
+| Copilot CLI **1.0.108** | descripteur de plugin, `--agent`, `-p` | measured true pour la portée | un `.agent.md` de plugin qui déclare `skraft/skraft_doctor` se voit offrir l'outil sous le nom `skraft-skraft_doctor` (titre `Check skraft is ready`, `mcpServerName: skraft`) | `gpt-5.6-luna` | 1 premium request |
+| Claude Code **2.1.319** (`-p`, `--plugin-dir`) | `claude-subagent-mcp-reach` (`claude-subagent-mcp-probe.mjs`) | measured true | un sous-agent de profondeur 1 qui déclare `mcp__plugin_skraft_skraft__skraft_doctor` l'appelle et rend `2.0.0-alpha.86` ; l'appel porte le `parent_tool_use_id` de la dépêche et le compte rendu du sous-agent le liste sous `tools-used-before-summary` ; le sous-agent n'a ni `Read` ni `Bash`, la version ne vient d'ailleurs | défaut de l'hôte (`haiku` au relevé) | 0,82 USD pour quatre passages |
+| Claude Code **2.1.319** | `solution-architect` tel qu'il est livré | measured false | il répond `NO SKRAFT TOOL AVAILABLE`, **aucun appel tenté**, aucun refus de permission : son `tools:` ne nomme aucun outil skraft. Une ligne ajoutée à son descripteur suffit à le lui donner | défaut de l'hôte | compris ci-dessus |
+
+Nom des outils, par pilote : dans le descripteur, `mcp__plugin_<plugin>_<serveur>__<outil>` sous
+Claude Code et `<serveur>/<outil>` sous Copilot ; le modèle les voit sous ce même nom sous Claude
+Code et sous `<serveur>-<outil>` sous Copilot. Les deux arbres de descripteurs portent donc des
+noms différents pour le même outil.
+
+Deux observations du même passage :
+
+- **Copilot CLI, `-p` avec `--plugin-dir` : le serveur MCP du plugin ne se connecte jamais.**
+  `{"serverName":"skraft","status":"failed","error":"MCP server \"skraft\" connection was cancelled","errorClassification":"lifecycle_cancelled","configSource":"plugin"}`, reproduit deux fois,
+  y compris avec `--allow-all-tools` : ce n'est pas une permission. Le `github-mcp-server` intégré
+  se connecte dans la même session, et le même serveur est `connected` en session SDK ; démarré
+  directement il répond à un `initialize` en 230 ms. L'outil reste **offert** au modèle (les
+  définitions viennent de la configuration du plugin), donc l'agent l'appelle et reçoit
+  `MCP server 'skraft': connection was cancelled`. Un plugin **installé** plutôt que chargé par
+  `--plugin-dir` n'est pas mesuré.
+- **Claude Code : `--tools` ne filtre pas les outils MCP** (la session principale gardait les 11
+  outils `skraft`), et les agents de plugin portant `user-invocable: false` sont dépêchables comme
+  types de sous-agent en session headless.
+
+Non mesuré : le chemin de production sous Copilot est `ctx.agent(...)` dans un workflow
+d'extension (`drivers/copilot-workflow/ctx-agent-runner.mjs`) ; ce qui précède mesure l'agent
+**actif** d'une session. VS Code n'est pas mesuré.
+
 ### 2026-11-12 — incident lu et répondu en pause, deux hôtes (#566)
 
 Sonde payante autorisée par le mainteneur, **un passage par hôte**, macOS (darwin 25.5.0),
@@ -188,7 +225,7 @@ Question : Copilot CLI démarre-t-il le serveur `skraft` que déclare `plugins/s
 | `skraft-mcp-server-loaded` | ouvre une issue en cas d'échec | pass | un seul serveur : `{ name: skraft, status: connected, sourcePlugin: skraft }` ; outils `skraft_doctor`, `skraft_gate`, `skraft_init`, `skraft_journal`, `skraft_migrate`, `skraft_report`, `skraft_status`, `skraft_workflow_check`, `skraft_workflow_diff`, `skraft_workflow_eject` |
 | `skraft-mcp-loop-hidden` | ouvre une issue en cas d'échec | pass | `offered: []` : ni `skraft_start`, ni `skraft_next`, ni `skraft_record`, ni `skraft_review` |
 
-Lecture : Copilot CLI 1.0.105 lit `mcp.json` (Agent Plugins 1.0.0), remplace `${PLUGIN_ROOT}` dans `args` et démarre le serveur une seule fois, bien que `.claude-plugin/plugin.json` déclare le même serveur dans `mcpServers`. Le nom que le CLI donne à la poignée de main n'est pas `Visual Studio Code` : la boucle d'agent reste aux workflows `skraft-pipeline` et `skraft-review`. Le nom exact n'est pas relevé (la sonde lit la liste d'outils, pas la poignée de main). Le nom sous lequel le modèle voit ces outils dans la session reste non mesuré.
+Lecture : Copilot CLI 1.0.105 lit `mcp.json` (Agent Plugins 1.0.0), remplace `${PLUGIN_ROOT}` dans `args` et démarre le serveur une seule fois, bien que `.claude-plugin/plugin.json` déclare le même serveur dans `mcpServers`. Le nom que le CLI donne à la poignée de main n'est pas `Visual Studio Code` : la boucle d'agent reste aux workflows `skraft-pipeline` et `skraft-review`. Le nom exact n'est pas relevé (la sonde lit la liste d'outils, pas la poignée de main). Le nom sous lequel le modèle voit ces outils dans la session est mesuré depuis le 2026-11-13 (#581, section plus haut) : `skraft-<outil>`.
 
 Mutations à la main : verdict de `skraft-mcp-loop-hidden` sans regarder les outils offerts → le test « hôte nommé Visual Studio Code » échoue ; aucun serveur reconnu → 10 tests échouent. Restauré, tout passe.
 

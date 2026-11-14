@@ -10,11 +10,11 @@ import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { homedir, platform, release, tmpdir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { MCP_PREFIX, streamSummary } from '../lib/claude-stream.mjs'
 import { INCIDENT_SLUG, questionEvents, writeIncidentRepo } from './fixtures.mjs'
 
 const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..')
 const PLUGIN_ROOT = join(REPO_ROOT, 'plugins', 'skraft-framework')
-const MCP_PREFIX = 'mcp__plugin_skraft_skraft__'
 export const INCIDENT_TOOLS = Object.freeze(['Read', `${MCP_PREFIX}skraft_status`, `${MCP_PREFIX}skraft_answer`])
 const TIMEOUT = 300_000
 const EXPECTED = "Une session Claude Code `-p` (modèle par défaut de l'hôte), à qui le développeur délègue la décision, lit la question `environment` d'un échec imprévu par `skraft_status`, ouvre le fichier de sortie qu'elle nomme, enregistre une option du menu par `skraft_answer {key, answer}` une seule fois (`by: decide`), et cite le jeton que seul ce fichier contient (#566)."
@@ -33,27 +33,6 @@ export const claudeArgs = ({ pluginRoot, maxBudgetUsd }) => [
   '--tools', 'Read', '--allowedTools', ...INCIDENT_TOOLS, '--permission-prompts', 'none',
   '--no-session-persistence', '--max-budget-usd', String(maxBudgetUsd),
 ]
-
-const parseLine = (line) => {
-  try { return JSON.parse(line) } catch { return null }
-}
-
-/** What the stream of one `claude -p --output-format stream-json` run shows. */
-export const streamSummary = (text) => {
-  const events = text.split(/\r?\n/).map(parseLine).filter((event) => event !== null)
-  const init = events.find((event) => event.type === 'system' && event.subtype === 'init') ?? {}
-  const result = events.find((event) => event.type === 'result') ?? null
-  const calls = events.filter((event) => event.type === 'assistant').flatMap((event) => event.message?.content ?? [])
-    .filter((part) => part.type === 'tool_use').map(({ name, input }) => ({ name, input }))
-  return {
-    model: init.model ?? null, claudeCode: init.claude_code_version ?? null,
-    skraftTools: (init.tools ?? []).filter((name) => name.includes('skraft')),
-    mcpServers: (init.mcp_servers ?? []).filter(({ name }) => name.includes('skraft')),
-    plugins: init.plugins ?? null, calls,
-    reply: result?.result ?? null, isError: result?.is_error ?? null, costUsd: result?.total_cost_usd ?? null,
-    modelUsage: result?.modelUsage ?? null, denials: result?.permission_denials ?? [],
-  }
-}
 
 /** Whether the session read, then answered once from the menu, and quoted what only the log holds. */
 export const incidentVerdict = ({ summary, answered, token, options }) => {

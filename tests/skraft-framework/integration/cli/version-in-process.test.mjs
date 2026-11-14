@@ -25,7 +25,7 @@ test('--version answers the version recorded in plugin.json', async () => {
 
 test('an unknown command or a malformed option prints the usage on stderr and exits 2, touching nothing', async () => {
   for (const args of [
-    ['deploy'], ['status', '--verbose'], ['status', '--json', '--json'], ['gate', '--touched'], ['gate', '--all', '--all'],
+    ['deploy'], ['status', '--verbose'], ['status', '--json', '--json'], ['gate', '--touched'], ['gate', '--all', '--all'], ['precheck', '--all'], ['precheck', '--json', '--json'],
     ['journal'], ['journal', 'adopt', '--force'], ['journal', 'rotate'], ['journal', 'show', '--last'], ['journal', 'show', '--last', '0'], ['journal', 'show', '--all'], ['mcp', '--stdio'],
     ['doctor', '--fix'], ['doctor', '--base'], ['doctor', '--base', 'main', '--base', 'develop'], ['init', '--add'], ['init', '--force'],
     ['commands'], ['commands', '--yaml'], ['commands', '--json', '--json'], ['review'], ['review', '--pr'], ['review', '--pr', '0'], ['review', '--pr', 'twelve'], ['review', '--pr', '12', '--force'],
@@ -49,6 +49,7 @@ test('an unknown command or a malformed option prints the usage on stderr and ex
     'skraft next [--json]',
     'skraft record [--json]',
     'skraft gate [--all] [--json]',
+    'skraft precheck [--json]',
     'skraft doctor [--run] [--base <ref>] [--json]',
     'skraft review --pr <number> [--publish] [--record] [--json]',
     'skraft workflow eject [review]',
@@ -72,6 +73,9 @@ test('commands --json lists every usage line as data: the help of the skraft com
   )
   assert.deepEqual(listed.commands.find(({ command }) => command === 'decide'), {
     command: 'decide', synopsis: '[<key>] <answer> [--reason <text>]', summary: 'answer the question the active pipeline waits on',
+  })
+  assert.deepEqual(listed.commands.find(({ command }) => command === 'precheck'), {
+    command: 'precheck', synopsis: '[--json]', summary: 'run, inside the open attempt, the records check the engine runs on its submission, and keep what it read',
   })
   assert.deepEqual(listed.commands.filter(({ command }) => command === 'workflow').map(({ synopsis }) => synopsis), ['eject [review]', 'check [--json]', 'diff [--json]'])
   assert.deepEqual(lines.err, [])

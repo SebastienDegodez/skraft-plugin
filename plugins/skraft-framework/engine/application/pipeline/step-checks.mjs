@@ -143,18 +143,55 @@ const JUDGE_MOVED = 'the replay judge changed the working copy (a commit or a fi
  * @param {Parameters<typeof checkStep>[1]} step
  * @returns {Promise<{ stop: StepCheck } | { missing: string[], reading: import('../../domain/pipeline/agent-result.mjs').ResultReading, touched: string[], scope: { failures: Failure[], uncommitted: UncommittedFile[] }, records: Failure[], prose: Failure[], plan: Awaited<ReturnType<typeof planOf>> }>}
  */
-const readAttempt = async ({ deps, slug, config, base }, step) => {
-  const missing = await missingOutputs(deps, slug, step)
-  const reading = readResult(await deps.files.read(slug, step.result))
+const readAttempt = async (context, step) => {
+  const reading = readResult(await context.deps.files.read(context.slug, step.result))
   if (reading.ok && reading.result.status === 'blocked') return { stop: blockedBy(reading.result.summary) }
-  const touched = await touchedPaths(deps, step.visitHeads)
-  if (typeof touched === 'string') return { stop: environmentOnly(touched) }
-  const scope = await scopeFailures(deps, step, { slug, config, touched })
-  if (typeof scope === 'string') return { stop: environmentOnly(scope) }
-  const records = await keptRecords(deps, step, { slug, base, config })
-  if (typeof records === 'string') return { stop: environmentOnly(records) }
-  return { missing, reading, touched, scope, records, prose: await proseFailures(deps, slug, step, missing), plan: await planOf(deps, { slug, components: config.components }, step, missing) }
+  const written = await readWritten(context, step)
+  if ('stopped' in written) return { stop: environmentOnly(written.stopped) }
+  return { ...written, reading }
 }
+
+/**
+ * What the attempt wrote in the working copy, with no result file and no commit read: the outputs
+ * it has not filled, the files out of its write scope or left uncommitted, the records its role
+ * keeps, the prose it writes and the scenarios its plan names; `stopped` when the machine cannot
+ * read one of them.
+ * @param {CheckContext} context @param {Parameters<typeof checkStep>[1]} step
+ */
+const readWritten = async ({ deps, slug, config, base }, step) => {
+  const missing = await missingOutputs(deps, slug, step)
+  const touched = await touchedPaths(deps, step.visitHeads)
+  if (typeof touched === 'string') return { stopped: touched }
+  const scope = await scopeFailures(deps, step, { slug, config, touched })
+  if (typeof scope === 'string') return { stopped: scope }
+  const records = await keptRecords(deps, step, { slug, base, config })
+  if (typeof records === 'string') return { stopped: records }
+  return { missing, touched, scope, records, prose: await proseFailures(deps, slug, step, missing), plan: await planOf(deps, { slug, components: config.components }, step, missing) }
+}
+
+/**
+ * The failures a submission's mechanical checks already find in what the attempt wrote, reading
+ * no result file and no commit: its unfilled outputs, the files out of its write scope, the
+ * records its role keeps, the prose it writes, the scenarios its plan names and the lifecycle of
+ * the decisions it touched. `skraft precheck` answers them inside the attempt, so the agent
+ * corrects them instead of paying a replay; the submission runs these same checks again, with the
+ * result and the commits on top (#581).
+ * @param {CheckContext} context @param {Parameters<typeof checkStep>[1]} step
+ * @returns {Promise<{ ok: true, failures: Failure[] } | { ok: false, reason: string }>}
+ */
+export const writtenFailures = async (context, step) => {
+  const read = await readWritten(context, step)
+  if ('stopped' in read) return { ok: /** @type {const} */ (false), reason: read.stopped }
+  const adr = await adrFailures(context.deps, { base: context.base, touched: read.touched })
+  if (typeof adr === 'string') return { ok: /** @type {const} */ (false), reason: adr }
+  return { ok: /** @type {const} */ (true), failures: foundIn(read, adr) }
+}
+
+/** Every failure of one reading, in the order the submission reports them. @param {any} read @param {string[]} adr @returns {Failure[]} */
+const foundIn = (read, adr) => [
+  ...read.missing.map((/** @type {string} */ path) => failure('missing-outputs', `missing ${path}`)),
+  ...read.records, ...read.plan.failures, ...read.prose, ...read.scope.failures, ...adrLines(adr),
+]
 
 /**
  * What makes the pull request prose a role writes unfit for a description; nothing for another
