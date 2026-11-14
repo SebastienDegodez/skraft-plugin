@@ -2,9 +2,13 @@
 name: test-integrity-lens
 description: "Reviewer lens: detects test theater patterns and Iron Rule violations in test code."
 user-invocable: false
-tools: 
+tools:
+  - read
+  - search
   - read/readFile
-  - search/codebase
+  - skill
+  - search/textSearch
+  - search/fileSearch
 skills:
   - craft-discipline
 ---

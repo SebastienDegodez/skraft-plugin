@@ -3,6 +3,40 @@
 Toutes les modifications notables de ce projet sont documentées ici.
 Format basé sur [Conventional Commits](https://www.conventionalcommits.org/) — versionnage [SemVer](https://semver.org/).
 
+## [2.0.0-alpha.89](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.88...v2.0.0-alpha.89) (2026-11-14)
+
+### 🐛 Bug Fixes
+
+* **skills:** align Java and Python test suites with .NET ([#584](https://github.com/SebastienDegodez/skraft-plugin/issues/584)) ([9bee871](https://github.com/SebastienDegodez/skraft-plugin/commit/9bee871a21e43a212ac7945724ae5270334cec91))
+
+## [2.0.0-alpha.88](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.87...v2.0.0-alpha.88) (2026-11-13)
+
+### ✨ Features
+
+* **agents:** Copilot models 5.5/6 + skill tool for all agents ([#572](https://github.com/SebastienDegodez/skraft-plugin/issues/572)) ([0e32d72](https://github.com/SebastienDegodez/skraft-plugin/commit/0e32d72c56eb9284a38bc143dc67075c7ea4da6b))
+* **agents:** integrate main capabilities into V2 ([db7524e](https://github.com/SebastienDegodez/skraft-plugin/commit/db7524ee7768682db2e77f0d6c2b12fab9326ce4))
+
+### 🐛 Bug Fixes
+
+* **agents:** align native capabilities and read-only review ownership ([#570](https://github.com/SebastienDegodez/skraft-plugin/issues/570)) ([a3c97ad](https://github.com/SebastienDegodez/skraft-plugin/commit/a3c97adb37dcae803bd31eb97fbe3a16cdc7acaf))
+* **canvas:** keep saved configuration as draft baseline ([28b2f9e](https://github.com/SebastienDegodez/skraft-plugin/commit/28b2f9e163f4983d625a7ab8e01986308202f562))
+* **docs:** publier la doc de la branche integration/v2-next ([#364](https://github.com/SebastienDegodez/skraft-plugin/issues/364)) ([6dbe45f](https://github.com/SebastienDegodez/skraft-plugin/commit/6dbe45fdcf5ea7af5c53f599bba16a9a11396dbc))
+* **site:** réparer le déploiement (AGENTVIZ épinglé via npm, une seule alpha) ([#381](https://github.com/SebastienDegodez/skraft-plugin/issues/381)) ([1e5c5b0](https://github.com/SebastienDegodez/skraft-plugin/commit/1e5c5b0185b7422d022b79d2d7665e7d42d6d81a)), closes [#376](https://github.com/SebastienDegodez/skraft-plugin/issues/376) [#375](https://github.com/SebastienDegodez/skraft-plugin/issues/375) [#375](https://github.com/SebastienDegodez/skraft-plugin/issues/375) [#376](https://github.com/SebastienDegodez/skraft-plugin/issues/376)
+
+### ⚡ Performance
+
+* **agents:** commit one green per scenario, inner TDD uncommitted ([#569](https://github.com/SebastienDegodez/skraft-plugin/issues/569)) ([8f094fe](https://github.com/SebastienDegodez/skraft-plugin/commit/8f094fe832bf993a6a0ed2af4f21ea79faee09e7)), closes [#8](https://github.com/SebastienDegodez/skraft-plugin/issues/8) [#567](https://github.com/SebastienDegodez/skraft-plugin/issues/567) [#561](https://github.com/SebastienDegodez/skraft-plugin/issues/561)
+
+### 📝 Documentation
+
+* **handbook:** set up a machine for SKRAFT (Copilot CLI permissions) ([#583](https://github.com/SebastienDegodez/skraft-plugin/issues/583)) ([cccf5a0](https://github.com/SebastienDegodez/skraft-plugin/commit/cccf5a02f162b6efa6adbd3f81a017fa46b6eed9))
+
+## [2.0.0-alpha.87](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.86...v2.0.0-alpha.87) (2026-11-13)
+
+### 🐛 Bug Fixes
+
+* **agents:** a review searches the working copy before calling a symbol missing ([#552](https://github.com/SebastienDegodez/skraft-plugin/issues/552)) ([2430f93](https://github.com/SebastienDegodez/skraft-plugin/commit/2430f9363a0a8460101bbb14db1114bc80b91f59)), closes [#8](https://github.com/SebastienDegodez/skraft-plugin/issues/8)
+
 ## [2.0.0-alpha.86](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.85...v2.0.0-alpha.86) (2026-11-13)
 
 ### ✨ Features
@@ -675,6 +709,32 @@ this branch until the V2 engine replaces them.
 * **site:** handbook Diátaxis réécrit pour la V2 (FR/EN) ([#232](https://github.com/SebastienDegodez/skraft-plugin/issues/232)) ([4500a59](https://github.com/SebastienDegodez/skraft-plugin/commit/4500a59bf59c30196717ee5bd6f87418b84c19e5)), closes [#214](https://github.com/SebastienDegodez/skraft-plugin/issues/214)
 * **skills:** le seuil de mutation est jugé par le moteur depuis le rapport ([#266](https://github.com/SebastienDegodez/skraft-plugin/issues/266)) ([9f435ad](https://github.com/SebastienDegodez/skraft-plugin/commit/9f435ad3487785bbd5f019d4a51385191b1116c0)), closes [#219](https://github.com/SebastienDegodez/skraft-plugin/issues/219)
 * V2 plan, ADR-001 and a rewritten AGENTS.md ([4e9613e](https://github.com/SebastienDegodez/skraft-plugin/commit/4e9613e02ca9883d8e231ba3d3a35d05b8684926)), closes [#212](https://github.com/SebastienDegodez/skraft-plugin/issues/212)
+
+## [1.16.0](https://github.com/SebastienDegodez/skraft-plugin/compare/v1.15.3...v1.16.0) (2026-11-11)
+
+### ✨ Features
+
+* **agents:** Copilot models 5.5/6 + skill tool for all agents ([#572](https://github.com/SebastienDegodez/skraft-plugin/issues/572)) ([0e32d72](https://github.com/SebastienDegodez/skraft-plugin/commit/0e32d72c56eb9284a38bc143dc67075c7ea4da6b))
+
+### 🐛 Bug Fixes
+
+* **agents:** align native capabilities and read-only review ownership ([#570](https://github.com/SebastienDegodez/skraft-plugin/issues/570)) ([a3c97ad](https://github.com/SebastienDegodez/skraft-plugin/commit/a3c97adb37dcae803bd31eb97fbe3a16cdc7acaf))
+
+### ⚡ Performance
+
+* **agents:** commit one green per scenario, inner TDD uncommitted ([#569](https://github.com/SebastienDegodez/skraft-plugin/issues/569)) ([8f094fe](https://github.com/SebastienDegodez/skraft-plugin/commit/8f094fe832bf993a6a0ed2af4f21ea79faee09e7)), closes [#8](https://github.com/SebastienDegodez/skraft-plugin/issues/8) [#567](https://github.com/SebastienDegodez/skraft-plugin/issues/567) [#561](https://github.com/SebastienDegodez/skraft-plugin/issues/561)
+
+## [1.15.3](https://github.com/SebastienDegodez/skraft-plugin/compare/v1.15.2...v1.15.3) (2026-10-30)
+
+### 🐛 Bug Fixes
+
+* **site:** réparer le déploiement (AGENTVIZ épinglé via npm, une seule alpha) ([#381](https://github.com/SebastienDegodez/skraft-plugin/issues/381)) ([1e5c5b0](https://github.com/SebastienDegodez/skraft-plugin/commit/1e5c5b0185b7422d022b79d2d7665e7d42d6d81a)), closes [#376](https://github.com/SebastienDegodez/skraft-plugin/issues/376) [#375](https://github.com/SebastienDegodez/skraft-plugin/issues/375) [#375](https://github.com/SebastienDegodez/skraft-plugin/issues/375) [#376](https://github.com/SebastienDegodez/skraft-plugin/issues/376)
+
+## [1.15.2](https://github.com/SebastienDegodez/skraft-plugin/compare/v1.15.1...v1.15.2) (2026-10-29)
+
+### 🐛 Bug Fixes
+
+* **docs:** publier la doc de la branche integration/v2-next ([#364](https://github.com/SebastienDegodez/skraft-plugin/issues/364)) ([6dbe45f](https://github.com/SebastienDegodez/skraft-plugin/commit/6dbe45fdcf5ea7af5c53f599bba16a9a11396dbc))
 
 ## [1.15.1](https://github.com/SebastienDegodez/skraft-plugin/compare/v1.15.0...v1.15.1) (2026-10-11)
 

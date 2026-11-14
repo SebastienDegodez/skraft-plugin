@@ -1,10 +1,10 @@
 ---
 name: story-writer
 description: "Dispatched by the skraft-prd-backlog workflow: writes one story of an approved story map in full — examples, Given/When/Then criteria traced to the PRD, tasks and dev notes — as a story file. Never invoked directly."
-model: Claude Sonnet 5
 user-invocable: false
 tools:
   - read/readFile
+  - skill
   - edit/createFile
   - edit/editFiles
   - edit/createDirectory

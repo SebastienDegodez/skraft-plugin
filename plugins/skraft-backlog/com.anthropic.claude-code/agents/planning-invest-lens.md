@@ -7,6 +7,7 @@ tools:
   - Read
   - Grep
   - Glob
+  - Skill
 ---
 
 # Planning INVEST Lens

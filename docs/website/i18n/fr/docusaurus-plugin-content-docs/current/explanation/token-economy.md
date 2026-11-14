@@ -40,6 +40,12 @@ Chaque levier agit sur une dimension distincte de la dépense.
 | **Famille par agent** | La configuration donne à chaque agent une famille de modèle — par agent, par type (phase, lentille, réfutateur) ou par défaut — et à chaque famille un modèle et un niveau de réflexion par hôte. Les producteurs d'artefacts (architect, engineer) tournent sur les paliers les plus forts ; les lentilles, dont la tâche est bornée, sur le palier économique ; le réfutateur un palier au-dessus des lentilles qu'il vérifie. |
 | **Surface d'outils** | Aucun agent ne reçoit un catalogue MCP complet. Chaque agent ne voit que les outils dont il a besoin pour sa tâche précise. Chaque outil superflu est une invitation à raisonner inutilement. |
 
+Les modèles concrets épinglés dans les descripteurs Copilot de la v1 ne passent pas en V2 :
+modèle et effort viennent de la famille configurée au dispatch, pas d'un descripteur réécrit.
+Réduire les outils doit toujours laisser l'outil de chargement des skills à chaque agent qui
+en charge un par son nom. Rendre un skill découvrable ne prouve pas son activation ;
+l'évaluation enregistre les événements d'activation réels.
+
 Ces leviers ne sont pas indépendants. La discipline de cache et la famille par agent se
 renforcent mutuellement : un modèle de classe basse rechargeable depuis le cache KV coûte une
 fraction de ce qu'un modèle de classe haute recalculé coûterait. La surface d'outils et le

@@ -10,6 +10,7 @@ tools:
   - Edit
   - Grep
   - Glob
+  - Skill
   - Bash
   - mcp__ado__*
 agents:

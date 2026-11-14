@@ -40,6 +40,11 @@ acts on a distinct dimension of spend.
 | **Family by agent** | The configuration gives each agent a model family — by agent, by type (phase, lens, refuter) or by default — and each family a model and a reasoning effort per host. Artifact producers (architect, engineer) run on the stronger tiers; lenses, whose task is bounded, on the economy tier; the refuter one tier above the lenses it checks. |
 | **Tool surface** | No agent receives a full MCP catalogue. Each agent sees only the tools it needs for its specific task. Every superfluous tool is an invitation to reason unnecessarily. |
 
+V1's concrete model pins in Copilot descriptors do not carry into V2: model and effort come
+from the configured family at dispatch, not a rewritten descriptor. Narrowing tools must
+still leave the skill-loading tool to every agent that loads a skill by name. Making a skill
+discoverable is not proof that it activated; the evaluation records actual activation events.
+
 These levers are not independent. Cache discipline and per-agent model family reinforce
 each other: a low-class model reloaded from the KV cache costs a fraction of what a
 high-class model recomputed from scratch would. Tool surface and per-scenario dispatch

@@ -291,15 +291,18 @@ const save = async () => {
 /** The configuration question the run waits on, by its key; none for any other question. */
 const waitingConfiguration = () => (content?.question?.kind === 'configuration' ? content.question.key : null)
 
+const savedDraft = () => {
+  view.dirty = false
+  view.stale = false
+  view.read = JSON.stringify(view.draft)
+  view.savedFor = waitingConfiguration()
+}
+
 /** A save, which answers nothing: while the run waits on its configuration question, the page says it was saved and that the run still waits for the answer in the chat. */
 const saved = (ok, reason) => {
   view.saving = false
   view.error = ok ? null : reason
-  if (ok) {
-    view.dirty = false
-    view.stale = false
-    view.savedFor = waitingConfiguration()
-  }
+  if (ok) savedDraft()
   toast(reason, ok ? 'info' : 'error')
   if (ok && stand() === 'saved') $('announcer').textContent = ui(lang, 'configSaved')
   render()

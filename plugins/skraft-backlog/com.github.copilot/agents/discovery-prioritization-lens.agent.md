@@ -1,10 +1,10 @@
 ---
 name: discovery-prioritization-lens
 description: "Reviewer lens: judges whether triage priorities are coherent and the proposed sprint is honest about its capacity."
-model: GPT-5.6 Luna
 user-invocable: false
 tools: 
   - read/readFile
+  - skill
   - search/codebase
 ---
 

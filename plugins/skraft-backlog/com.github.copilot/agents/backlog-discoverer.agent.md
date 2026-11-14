@@ -1,11 +1,11 @@
 ---
 name: Skraft - Backlog Discoverer
 description: "Use when discovering, triaging, or prioritizing GitHub issues or Azure Boards work items for a project. Supports three discovery modes: user-assigned issues, artifact-driven discovery from code changes, and search-based exploration. Activate on 'discover backlog', 'triage issues', 'what should I work on', 'find open issues', or at the start of engineering work before invoking the skraft orchestrator. Runs standalone (product layer) — the developer invokes it directly; it is not part of the skraft engineering pipeline."
-model: Claude Sonnet 5
 user-invocable: true
 tools:
   - agent
   - read/readFile
+  - skill
   - edit/createFile
   - edit/editFiles
   - edit/createDirectory

@@ -3,8 +3,12 @@ name: architecture-compliance-lens
 description: "Reviewer lens: checks Clean Architecture and DDD rules — dependency direction, boundaries and layering — in what DESIGN wrote and changed."
 user-invocable: false
 tools:
+  - read
+  - search
   - read/readFile
-  - search/codebase
+  - skill
+  - search/textSearch
+  - search/fileSearch
 skills:
   - architecture-review-criteria
 ---

@@ -7,6 +7,7 @@ tools:
   - Read
   - Grep
   - Glob
+  - Skill
   - Edit
   - Write
   - mcp__plugin_skraft_skraft__skraft_precheck

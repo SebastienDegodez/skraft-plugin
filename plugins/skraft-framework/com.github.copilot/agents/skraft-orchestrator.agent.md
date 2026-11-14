@@ -5,7 +5,6 @@ description: >-
   DELIVER) for one refined story. Starts or resumes the pipeline, which the
   skraft engine runs and dispatches, and relays what it reports. Not for
   backlog discovery or story refinement (the skraft-backlog plugin).
-model: inherit
 user-invocable: true
 ---
 

@@ -3,8 +3,12 @@ name: fitness-lens
 description: "Reviewer lens: checks that the DESIGN answers the story's needs and quality attributes and adds nothing speculative."
 user-invocable: false
 tools:
+  - read
+  - search
   - read/readFile
-  - search/codebase
+  - skill
+  - search/textSearch
+  - search/fileSearch
 skills:
   - architecture-review-criteria
 ---

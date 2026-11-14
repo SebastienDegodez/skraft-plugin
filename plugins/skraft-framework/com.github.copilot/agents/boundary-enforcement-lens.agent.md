@@ -3,8 +3,12 @@ name: boundary-enforcement-lens
 description: "Reviewer lens: checks that DISTILL acceptance tests enter through the use case, or the real entry point for the walking skeleton, never reach into internals and run each dependency as the infrastructure policy says."
 user-invocable: false
 tools:
+  - read
+  - search
   - read/readFile
-  - search/codebase
+  - skill
+  - search/textSearch
+  - search/fileSearch
 skills:
   - acceptance-review-criteria
 ---

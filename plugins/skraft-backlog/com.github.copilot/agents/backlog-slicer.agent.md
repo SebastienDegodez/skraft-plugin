@@ -1,10 +1,10 @@
 ---
 name: backlog-slicer
 description: "Dispatched by the skraft-prd-backlog workflow: cuts an approved PRD into epics, stories in build order and milestones, and writes story-map.json. Never invoked directly."
-model: Claude Sonnet 5
 user-invocable: false
 tools:
   - read/readFile
+  - skill
   - edit/createFile
   - edit/editFiles
   - edit/createDirectory

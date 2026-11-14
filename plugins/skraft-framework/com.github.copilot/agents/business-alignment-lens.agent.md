@@ -3,8 +3,12 @@ name: business-alignment-lens
 description: "Reviewer lens: checks that DISTILL scenarios speak the domain language and match the story intent."
 user-invocable: false
 tools:
+  - read
+  - search
   - read/readFile
-  - search/codebase
+  - skill
+  - search/textSearch
+  - search/fileSearch
 skills:
   - acceptance-review-criteria
 ---

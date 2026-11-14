@@ -72,11 +72,11 @@ export const journalFile = (cwd) => join(cwd, '.copilot-tracking', 'skraft-plans
 let opened = 0
 /**
  * A panel of the canvas, as the host opens it. `where.cwd` is the session's directory, read live.
- * @param {{ where: { cwd: string | null }, home: string, tab?: string, journalRows?: number }} options
+ * @param {{ where: { cwd: string | null }, home: string, tab?: string, journalRows?: number, pollMs?: number }} options
  * @returns {Promise<{ url: string, reopen: (tab: string) => Promise<unknown>, close: () => Promise<unknown> }>}
  */
-export const openPanel = async ({ where, home, tab, journalRows = 200 }) => {
-  const canvas = /** @type {any} */ (createPipelineCanvas({ createCanvas: (options) => options, CanvasError, directory: () => where.cwd, pluginRoot: PLUGIN_ROOT, home, pollMs: 100, journalRows }))
+export const openPanel = async ({ where, home, tab, journalRows = 200, pollMs = 100 }) => {
+  const canvas = /** @type {any} */ (createPipelineCanvas({ createCanvas: (options) => options, CanvasError, directory: () => where.cwd, pluginRoot: PLUGIN_ROOT, home, pollMs, journalRows }))
   const instanceId = `page-${++opened}`
   const { url } = await canvas.open({ instanceId, input: tab ? { tab } : {} })
   return { url, reopen: (/** @type {string} */ reopenTab) => canvas.open({ instanceId, input: { tab: reopenTab } }), close: () => canvas.onClose({ instanceId }) }

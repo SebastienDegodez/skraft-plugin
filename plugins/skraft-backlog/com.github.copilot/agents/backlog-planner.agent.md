@@ -1,11 +1,11 @@
 ---
 name: Skraft - Backlog Planner
 description: Use when refining raw GitHub issues or Azure Boards work items into well-structured user stories with acceptance criteria, effort estimation, and milestone assignment. Activate on "refine", "plan sprint", "write stories", "split issue", "milestone planning", or when preparing a refined story before handing off to the skraft engineering orchestrator. Runs standalone (product layer) — the developer invokes it directly; it is not part of the skraft engineering pipeline.
-model: Claude Sonnet 5
 user-invocable: true
 tools:
   - agent
   - read/readFile
+  - skill
   - edit/createFile
   - edit/editFiles
   - edit/createDirectory

@@ -4,6 +4,7 @@ description: "Use when the human wants to make an existing or legacy service SAF
 user-invocable: true
 tools:
   - read/readFile
+  - skill
   - edit/createFile
   - edit/createDirectory
   - edit/editFiles

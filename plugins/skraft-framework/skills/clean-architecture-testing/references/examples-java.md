@@ -23,6 +23,61 @@ digraph maven_modules {
 
 `orders-integration-test` depends on `orders-api` so `@SpringBootTest` finds the `@SpringBootApplication`. Set `<classifier>exec</classifier>` on the `spring-boot-maven-plugin` `repackage` goal in `orders-api`; the repackaged jar hides its classes from dependents.
 
+## Test layout and executable scenarios
+
+Paths below are relative to the component root (the repository root for a single component).
+The four production modules have no `src/test/`. Both test modules group classes by feature.
+`orders-unit-test` depends on Application and reaches Domain transitively; the integration
+module reaches all four layers through Api. Test-library dependencies have test scope.
+
+| Suite | Feature files | Test code / bindings |
+|---|---|---|
+| `orders-unit-test` with Cucumber-JVM | `orders-unit-test/src/test/resources/features/<feature>/` | `orders-unit-test/src/test/java/com/example/orders/unittest/<feature>/steps/` |
+| `orders-integration-test` | none | `orders-integration-test/src/test/java/com/example/orders/integrationtest/<feature>/`; architecture in `architecture/` |
+| Specifications not executed | `docs/features/orders/<feature>/` | none |
+
+For a new JUnit Platform runner, put this suite in
+`orders-unit-test/src/test/java/com/example/orders/unittest/RunCucumberTest.java`:
+
+```java
+package com.example.orders.unittest;
+
+import org.junit.platform.suite.api.ConfigurationParameter;
+import org.junit.platform.suite.api.IncludeEngines;
+import org.junit.platform.suite.api.SelectClasspathResource;
+import org.junit.platform.suite.api.Suite;
+import static io.cucumber.junit.platform.engine.Constants.GLUE_PROPERTY_NAME;
+
+@Suite
+@IncludeEngines("cucumber")
+@SelectClasspathResource("features")
+@ConfigurationParameter(key = GLUE_PROPERTY_NAME, value = "com.example.orders.unittest")
+public class RunCucumberTest {}
+```
+
+The resource selector reads the feature subfolders; glue is a Java package, not a filesystem
+path. Keep bindings below that package and make them call Application use cases, without
+booting Spring. Add `cucumber-java`, `cucumber-junit-platform-engine` and
+`junit-platform-suite` as test dependencies in the unit-test pom; align Cucumber versions
+and JUnit Platform versions with their BOMs, and use Maven Surefire with JUnit Platform support.
+Keep the runner's name discoverable (`*Test` here). Run
+`mvn -B -q test -pl orders-unit-test -am -Dcucumber.plugin=pretty` and confirm scenarios
+and their resolved steps actually execute. Do not rely on Maven's exit code or the suite
+class's aggregate test count alone; retain Cucumber's scenario report.
+
+For this runner, the `bdd` entry is:
+
+```json
+{ "runner": "cucumber-jvm",
+  "features": "orders-unit-test/src/test/resources/features",
+  "steps": "orders-unit-test/src/test/java/com/example/orders/unittest" }
+```
+
+This one pair covers the runner's feature folders and glue subpackages. Another independently
+configured runner needs its own pair. Do not add Cucumber to `orders-integration-test`;
+write its API, persistence and architecture checks as ordinary JUnit tests. Keep existing
+runner selectors and confirmed paths when extending a repository.
+
 ## Domain — pure unit test (rare, extracted rule only)
 
 Only applies when a rule was extracted into a reusable Policy / Specification with a non-trivial edge-case matrix.

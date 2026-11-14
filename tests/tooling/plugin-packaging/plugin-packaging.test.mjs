@@ -4,6 +4,7 @@ import { existsSync, readFileSync, readdirSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { parseAgentFrontmatter } from '../../../scripts/agent-policy/resolve-model.mjs'
+import { parseYaml } from '../../../eng/lib/yaml-parser.mjs'
 import { buildProjection, projectPluginAdapters } from '../../../scripts/project-plugin-adapters.mjs'
 
 const here = dirname(fileURLToPath(import.meta.url))
@@ -92,5 +93,48 @@ test('plugin packaging: the hook manifest declares only the mod module, the Copi
 test('plugin packaging: no legacy fallback or extra Claude hook manifest ships', () => {
   for (const path of ['.plugin/plugin.json', 'com.anthropic.claude-code/hooks/hooks.json']) {
     assert.equal(existsSync(join(pluginRoot, path)), false, path)
+  }
+})
+
+test('native author capabilities: research and design retain execution and native editing', () => {
+  for (const id of ['solution-researcher', 'solution-architect']) {
+    for (const [tree, suffix, execution, editing] of [
+      ['com.github.copilot/agents', '.agent.md', /^(?:execute|execute\/runInTerminal)$/, 'edit/editFiles'],
+      ['com.anthropic.claude-code/agents', '.md', /^Bash$/, 'Edit'],
+    ]) {
+      const text = readFileSync(join(pluginRoot, tree, id + suffix), 'utf8')
+      const data = parseYaml(text.match(/^---\r?\n([\s\S]*?)\r?\n---/)[1])
+      assert.ok(data.tools.some((tool) => execution.test(tool)), `${id}: missing native execution`)
+      assert.ok(data.tools.includes(editing), `${id}: lost existing editing`)
+    }
+  }
+})
+
+test('native review capabilities: lenses and refuter cannot write files or run commands', () => {
+  for (const plugin of ['skraft-framework', 'skraft-backlog']) {
+    for (const [tree, forbidden] of [
+      ['com.github.copilot/agents', /^(?:edit|execute|agent)(?:\/|$)/],
+      ['com.anthropic.claude-code/agents', /^(?:Write|Edit|Bash|TaskOutput|TaskStop|Agent)(?:\(|$)/],
+    ]) {
+      const directory = join(pluginRoot, '..', plugin, tree)
+      const files = readdirSync(directory).filter((file) => /(?:-lens|finding-refuter)(?:\.agent)?\.md$/.test(file))
+      assert.ok(files.length > 0)
+      for (const file of files) {
+        const text = readFileSync(join(directory, file), 'utf8')
+        const data = parseYaml(text.match(/^---\r?\n([\s\S]*?)\r?\n---/)[1])
+        assert.equal(data.tools.some((tool) => forbidden.test(tool)), false, `${plugin}/${file}: source mutation capability`)
+      }
+    }
+  }
+})
+
+test('Copilot agents inherit model selection instead of pinning a model on any plugin', () => {
+  for (const plugin of ['skraft-framework', 'skraft-backlog', 'skraft-brownfield']) {
+    const directory = join(pluginRoot, '..', plugin, 'com.github.copilot/agents')
+    for (const file of readdirSync(directory)) {
+      const text = readFileSync(join(directory, file), 'utf8')
+      const data = parseYaml(text.match(/^---\r?\n([\s\S]*?)\r?\n---/)[1])
+      assert.equal(data.model, undefined, `${plugin}/${file}: model belongs to configuration`)
+    }
   }
 })

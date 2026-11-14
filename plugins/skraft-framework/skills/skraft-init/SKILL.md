@@ -100,6 +100,25 @@ every run with `skraft is not initialised`, and `skraft doctor` fails on it.
 One pair per runner: a definition of one pair binds no step of another, so a component holding
 several test projects carries several pairs.
 
+For new layouts, use `clean-architecture-testing`: executable scenarios and bindings belong
+to the unit-test suite, grouped by feature; integration tests, including the walking skeleton,
+use ordinary test code. Specification-only files use `docs/features/<context>/<feature>/`
+and a `features`-only entry. Never move an existing confirmed pair automatically.
+
+Before confirming an executable pair, check the runner's actual discovery configuration and
+run the selected scenarios with the developer's command:
+
+- Cucumber-JVM: classpath resource selector, Java glue package and discoverable JUnit runner;
+  a filesystem `steps` folder is not glue configuration.
+- pytest-bdd: collected `test_*.py` modules bind scenarios, and decorated steps are fixtures
+  in those modules, applicable `conftest.py` files or explicitly registered plugins. A
+  `steps` folder alone is not discovered.
+- behave: each selected feature root has its own `steps/` directory; pytest does not run it.
+  A wrapper command must invoke each independent behave root and propagate failures.
+
+Require executed scenario counts and resolved bindings, not just a successful process exit.
+Detection is a folder-name proposal, never proof that a runner executes those files.
+
 Every component leaves this step with a `bdd` list or `"bdd": false`, never with an absent key and
 never with a bare `true`: either of those is the state a run is refused for.
 

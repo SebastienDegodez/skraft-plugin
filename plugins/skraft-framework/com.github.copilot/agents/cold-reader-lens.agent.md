@@ -2,9 +2,13 @@
 name: cold-reader-lens
 description: "Reviewer lens: reads code and tests with zero prior context. Verifies business language, naming clarity, and intent visibility."
 user-invocable: false
-tools: 
+tools:
+  - read
+  - search
   - read/readFile
-  - search/codebase
+  - skill
+  - search/textSearch
+  - search/fileSearch
 ---
 
 # Cold Reader Lens

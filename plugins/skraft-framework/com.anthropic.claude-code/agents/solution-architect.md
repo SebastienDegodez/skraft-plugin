@@ -9,6 +9,7 @@ tools:
   - Edit
   - Grep
   - Glob
+  - Bash
   - mcp__graphify__*
   - mcp__plugin_skraft_skraft__skraft_precheck
   - Skill

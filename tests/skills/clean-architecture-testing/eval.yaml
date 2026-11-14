@@ -16,6 +16,88 @@ scoring:
   threshold: 1
 
 stimuli:
+  - name: 'Runner layout: Java executable scenarios stay in the fast suite'
+    prompt: |
+      We are about to add executable business examples to the service described
+      in the project notes. Recommend where those examples and their bindings
+      should live, and what makes the build actually execute them.
+
+      Explain which parts of the service each existing test suite covers. Keep
+      this to a layout and wiring recommendation; do not implement the service.
+    environment:
+      files:
+        - src: fixtures/test-layout/java.md
+          dest: README.md
+    graders:
+      - type: prompt
+        config:
+          scoring: scale_1_10
+      - type: skill-invocation
+        name: The skill under test is loaded
+        config:
+          required: [clean-architecture-testing]
+    rubric:
+      - Keeps executable examples and their bindings in the existing unit-test module, with folders or packages grouped by business feature.
+      - Gives component-relative locations for feature resources and Java binding sources, not paths inside a production module or a new test module.
+      - Makes resource selection, matching glue packages and JUnit/build discovery explicit so the proposed files are actually executed.
+      - Keeps whole-service and architecture tests in the existing integration-test module as ordinary tests, covering the API and its inner layers without a second Gherkin runner.
+      - Separates non-executed specifications from executable examples without manufacturing bindings for the former.
+
+  - name: 'Runner layout: Python scenario bindings are actually collected'
+    prompt: |
+      We are about to add executable business examples to the service described
+      in the project notes. Recommend where those examples and their bindings
+      should live, and what makes the test command actually execute them.
+
+      Keep this to the smallest layout and wiring recommendation for the
+      existing suites. Do not implement the service.
+    environment:
+      files:
+        - src: fixtures/test-layout/pytest-bdd.md
+          dest: README.md
+    graders:
+      - type: prompt
+        config:
+          scoring: scale_1_10
+      - type: skill-invocation
+        name: The skill under test is loaded
+        config:
+          required: [clean-architecture-testing]
+    rubric:
+      - Places executable feature files and Python bindings under the existing unit suite, grouped by business feature, outside production packages.
+      - Explicitly binds scenarios from a pytest-collected test module with correctly resolved feature paths.
+      - Makes decorated step functions available as pytest fixtures through collected test modules, applicable conftest files or explicitly registered plugins; never claims a steps directory is automatically imported.
+      - Keeps integration coverage as ordinary pytest tests over the API and its inner layers plus architecture, without introducing a Gherkin integration suite.
+      - Gives separate component-relative feature and binding folders for each independent binding scope, rather than assuming all feature folders share bindings.
+
+  - name: 'Runner layout: Each Python feature root executes with its own bindings'
+    prompt: |
+      The project notes describe our planned executable business examples.
+      Recommend where the examples and their bindings should live and how the
+      team's test command can execute both features as well as the existing
+      ordinary tests without silently skipping anything.
+
+      Keep this to a layout and wiring recommendation; do not implement the
+      service or invent another test suite.
+    environment:
+      files:
+        - src: fixtures/test-layout/behave.md
+          dest: README.md
+    graders:
+      - type: prompt
+        config:
+          scoring: scale_1_10
+      - type: skill-invocation
+        name: The skill under test is loaded
+        config:
+          required: [clean-architecture-testing]
+    rubric:
+      - Places each executable feature root under the unit suite with its own directly loaded steps directory, outside production packages.
+      - Invokes each independently bound feature root rather than assuming one parent-directory invocation loads all nested step directories.
+      - States that pytest does not execute behave scenarios and describes a test entry script that invokes all required suites and propagates failures.
+      - Keeps integration and architecture tests as ordinary pytest tests without a Gherkin integration runner.
+      - Gives component-relative feature and binding folder pairs for the two independent scopes without treating one scope's definitions as binding the other.
+
   # Deterministic decider. The adapter takes its HttpClient by constructor, so
   # replacing the transport and parking the test in the fast project is easy,
   # natural, and exactly the failure this stimulus has to be able to observe.

@@ -217,6 +217,13 @@ parts:
             doc: how-to/install-on-a-host
             purpose_fr: "Installer le plugin dans Claude Code, Copilot CLI ou VS Code, puis verifier que l'hote le voit et que la ligne de commande repond."
             purpose_en: "Install the plugin in Claude Code, Copilot CLI or VS Code, then check that the host sees it and that the command line answers."
+          - id: machine-setup
+            type: editorial
+            label_fr: "Configurer son poste"
+            label_en: "Set up your machine"
+            doc: how-to/machine-setup
+            purpose_fr: "Configurer les permissions de Copilot CLI sur son poste sans automatiser les décisions humaines du pipeline."
+            purpose_en: "Configure Copilot CLI permissions on your machine without automating the pipeline's human decisions."
           - id: configure-components
             type: editorial
             label_fr: "Configurer les composants"

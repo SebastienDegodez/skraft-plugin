@@ -1,10 +1,10 @@
 ---
 name: planning-dor-lens
 description: "Reviewer lens: judges whether every story clears the Definition of Ready and is free of the known refinement antipatterns."
-model: GPT-5.6 Luna
 user-invocable: false
 tools: 
   - read/readFile
+  - skill
   - search/codebase
 ---
 

@@ -9,6 +9,7 @@ tools:
   - Edit
   - Grep
   - Glob
+  - Skill
 skills:
   - story-elaboration
   - issue-refinement

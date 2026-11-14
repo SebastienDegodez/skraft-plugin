@@ -1,10 +1,10 @@
 ---
 name: planning-ac-quality-lens
 description: "Reviewer lens: judges whether acceptance criteria are complete and admit exactly one reading by a domain expert."
-model: GPT-5.6 Luna
 user-invocable: false
 tools: 
   - read/readFile
+  - skill
   - search/codebase
 ---
 

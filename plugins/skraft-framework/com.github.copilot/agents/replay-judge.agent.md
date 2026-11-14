@@ -6,6 +6,7 @@ tools:
   - execute/runInTerminal
   - execute/getTerminalOutput
   - read/readFile
+  - skill
   - search/codebase
   - search/fileSearch
   - search/textSearch

@@ -4,6 +4,7 @@ description: "Use when the human wants to reverse-engineer an existing or legacy
 user-invocable: true
 tools:
   - read/readFile
+  - skill
   - edit/createFile
   - edit/createDirectory
   - edit/editFiles

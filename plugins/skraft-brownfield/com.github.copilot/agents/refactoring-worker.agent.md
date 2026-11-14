@@ -4,6 +4,7 @@ description: "[Internal subagent — dispatched by brownfield-refactorer only] D
 user-invocable: false
 tools:
   - read/readFile
+  - skill
   - edit/createFile
   - edit/createDirectory
   - edit/editFiles

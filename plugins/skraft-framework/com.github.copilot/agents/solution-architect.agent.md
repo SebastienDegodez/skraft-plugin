@@ -8,6 +8,7 @@ tools:
   - edit/createFile
   - edit/editFiles
   - search/codebase
+  - execute/runInTerminal
   - graphify/*
   - skraft/skraft_precheck
   - skill

@@ -9,6 +9,7 @@ tools:
   - Edit
   - Grep
   - Glob
+  - Skill
 skills:
   - backlog-slicing
   - sprint-planning
