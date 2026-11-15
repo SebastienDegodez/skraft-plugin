@@ -4,15 +4,20 @@
  * under the key). A value is a quoted string, a plain word, a `|` or `>` block,
  * or nothing (null). Anchors, aliases, tags, flow collections and tabs are refused rather than
  * guessed, and so is a plain value holding `: ` or ` #`, which a reader cannot cut safely.
+ * One slip of a model is cleaned rather than refused, and the line counted: a key wrapped in or
+ * followed by quotes, backticks or parentheses (`"verdict": fail`, `severityReason"": "…"`), or
+ * written as a call (`severityReason("…")`). The key inside must still be one the reader knows.
  *
  * @typedef {{ number: number, indent: number, text: string }} Line
- * @typedef {{ lines: Line[], at: number }} Cursor
- * @typedef {{ ok: true, value: Record<string, any> } | { ok: false, error: string }} Parsed
+ * @typedef {{ lines: Line[], at: number, cleaned: number[] }} Cursor cleaned: the lines whose key was cleaned
+ * @typedef {{ ok: true, value: Record<string, any>, cleaned: number[] } | { ok: false, error: string }} Parsed
  */
 
 /** The keys whose value is a list of mappings, even when it holds none. */
 const LIST_KEYS = Object.freeze(['findings'])
 const ENTRY = /^([A-Za-z_][\w-]*):(?:[ \t]+(.*))?$/
+const NOISY_ENTRY = /^[`"'()]*([A-Za-z_][\w-]*)[`"'()]*:(?:[ \t](.*))?$/
+const CALL = /^([A-Za-z_][\w-]*)\((.*)\)$/
 const DOUBLE_QUOTED = /^"((?:[^"\\]|\\.)*)"[ \t]*(?:#.*)?$/
 const SINGLE_QUOTED = /^'((?:[^']|'')*)'[ \t]*(?:#.*)?$/
 const BLOCK = /^[|>][-+]?[ \t]*(?:#.*)?$/
@@ -31,7 +36,8 @@ const fail = (line, what) => {
  */
 export const parseAnswerYaml = (source) => {
   try {
-    return { ok: true, value: readDocument({ lines: linesOf(source), at: 0 }) }
+    const cursor = { lines: linesOf(source), at: 0, cleaned: [] }
+    return { ok: true, value: readDocument(cursor), cleaned: cursor.cleaned }
   } catch (error) {
     if (error instanceof AnswerYamlError) return { ok: false, error: error.message }
     throw error
@@ -59,7 +65,7 @@ const readDocument = (cursor) => {
   for (let line = next(cursor); line !== null; line = next(cursor)) {
     if (line.indent !== 0) fail(line, 'is indented where a top-level key belongs')
     cursor.at += 1
-    const { key, rest } = entryOf(line)
+    const { key, rest } = takeEntry(cursor, line)
     put(document, line, key, isList(cursor, key, rest) ? readList(cursor, line, rest) : readValue(cursor, line, rest))
   }
   return document
@@ -78,11 +84,19 @@ const next = (cursor) => {
   return cursor.lines[cursor.at] ?? null
 }
 
-/** @param {Line} line */
+/** @param {Line} line @returns {{ key: string, rest: string, cleaned: boolean }} */
 const entryOf = (line) => {
-  const match = ENTRY.exec(line.text)
+  const exact = ENTRY.exec(line.text)
+  const match = exact ?? NOISY_ENTRY.exec(line.text) ?? CALL.exec(line.text)
   if (match === null) fail(line, 'is not a `key: value` line')
-  return { key: match[1], rest: (match[2] ?? '').trim() }
+  return { key: match[1], rest: (match[2] ?? '').trim(), cleaned: exact === null }
+}
+
+/** The entry of a line, its number kept when its key had to be cleaned. @param {Cursor} cursor @param {Line} line */
+const takeEntry = (cursor, line) => {
+  const entry = entryOf(line)
+  if (entry.cleaned) cursor.cleaned.push(line.number)
+  return entry
 }
 
 /** @param {Record<string, any>} target @param {Line} line @param {string} key @param {unknown} value */
@@ -119,7 +133,7 @@ const readItem = (cursor, dash) => {
 
 /** @param {Cursor} cursor @param {Record<string, any>} item @param {Line} line */
 const readEntryInto = (cursor, item, line) => {
-  const { key, rest } = entryOf(line)
+  const { key, rest } = takeEntry(cursor, line)
   put(item, line, key, rest === '' && holdsValues(cursor, line) ? readValues(cursor) : readValue(cursor, line, rest))
 }
 

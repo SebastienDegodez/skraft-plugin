@@ -14,7 +14,7 @@ import { parseAnswerYaml } from './answer-yaml.mjs'
  *   engine's own findings have none.
  * @typedef {{ lens: string, verdict: 'pass' | 'fail' | 'inconclusive', findings: Finding[] }} LensResult
  * @typedef {{ verdict: 'confirmed' | 'refuted' | 'unverifiable', reason: string }} Refutation
- * @typedef {{ ok: true, value: Record<string, any> } | { ok: false, error: string }} Reading
+ * @typedef {import('./answer-yaml.mjs').Parsed} Reading
  */
 
 const SEVERITIES = Object.freeze(/** @type {Severity[]} */ (['blocker', 'high', 'medium', 'low']))
@@ -102,7 +102,8 @@ const unknownKey = (value, known) => Object.keys(value).find((key) => !known.inc
 /**
  * @param {string} answer the lens's final message
  * @param {string} lens the lens it was asked as
- * @returns {{ ok: true, result: LensResult } | { ok: false, error: string }}
+ * @returns {{ ok: true, result: LensResult, cleaned: number[] } | { ok: false, error: string }}
+ *   cleaned: the lines of the document whose key was cleaned before it was read
  */
 export const readLensAnswer = (answer, lens) => {
   const read = mappingOf(answer)
@@ -114,7 +115,7 @@ export const readLensAnswer = (answer, lens) => {
   const verdict = /** @type {LensResult['verdict']} */ (word(read.value.verdict))
   const contradicted = verdict === 'pass' ? findings.find((finding) => BLOCKING.includes(finding.severity)) : undefined
   if (contradicted !== undefined) return { ok: false, error: `verdict is pass but finding ${contradicted.id} is ${contradicted.severity}` }
-  return { ok: true, result: { lens, verdict, findings } }
+  return { ok: true, result: { lens, verdict, findings }, cleaned: read.cleaned }
 }
 
 /** What keeps a document from being the lens's answer; null when nothing does. @param {Record<string, any>} value @param {string} lens */

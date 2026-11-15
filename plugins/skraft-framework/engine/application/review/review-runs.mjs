@@ -550,7 +550,7 @@ const lensAsking = (review) => ({
 const answerOf = (reading, id, root) => {
   if (!reading.ok) return reading
   const findings = reading.result.findings.map((finding) => ({ ...finding, location: shortLocation(finding.location, root) }))
-  return { ok: /** @type {const} */ (true), result: { ...reading.result, lens: id, findings } }
+  return { ...reading, result: { ...reading.result, lens: id, findings } }
 }
 
 /** @param {Array<{ item: PlannedLens, error: string }>} unreadable */
@@ -577,14 +577,17 @@ const pathsOf = (skills) => skills.map(({ path }) => path)
 /** @param {Review['deps']} deps @param {string} slug @param {TrackedInput[]} inputs */
 const located = (deps, slug, inputs) => inputs.map(({ kind, path }) => ({ kind, path: deps.files.location(slug, path) }))
 
-/** @param {Review} review @param {PlannedLens} entry @param {{ result: LensResult }} reading @param {AgentAnswer} answer */
-const recordLens = async ({ journal, step, assignments }, { lens, fingerprint, gates }, { result }, answer) => {
+/** @param {Review} review @param {PlannedLens} entry @param {{ result: LensResult, cleaned: number[] }} reading @param {AgentAnswer} answer */
+const recordLens = async ({ journal, step, assignments }, { lens, fingerprint, gates }, { result, cleaned }, answer) => {
   const { verdict, findings } = result
   const cost = answer.costUsd
   const assignment = assignments.lenses[lens.agent]
-  await journal.append('review.lens', { step: step.node.id, visit: step.visit, lens: lens.id, agent: lens.agent, assignment, model: answer.model ?? null, fingerprint, verdict, findings, gates, cost })
+  await journal.append('review.lens', { step: step.node.id, visit: step.visit, lens: lens.id, agent: lens.agent, assignment, model: answer.model ?? null, fingerprint, verdict, findings, gates, cost, ...cleanedLines(cleaned) })
   return result
 }
+
+/** The lines of a lens answer whose key the reader cleaned, journaled only when there are some. @param {number[]} cleaned */
+const cleanedLines = (cleaned) => (cleaned.length > 0 ? { cleanedLines: cleaned } : {})
 
 /**
  * The refuter's word on each group of findings the lenses gave in this pass

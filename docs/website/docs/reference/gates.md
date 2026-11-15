@@ -323,7 +323,7 @@ findings:                # [] when it finds none
 
 | Rule | Detail |
 | --- | --- |
-| Keys | only `lens`, `verdict`, `findings`; per finding `id`, `gate`, `severity`, `location`, `description`, `suggestion`, `severityReason`, `drift`, `occurrences`; any other key refuses the answer |
+| Keys | only `lens`, `verdict`, `findings`; per finding `id`, `gate`, `severity`, `location`, `description`, `suggestion`, `severityReason`, `drift`, `occurrences`; any other key refuses the answer; a key wrapped in or followed by quotes, backticks or parentheses (`"verdict": fail`, `severityReason"": "…"`) or written as a call (`severityReason("…")`) is read as the key inside, the refuter's answers too |
 | Required | `gate`, `description`, `severityReason` (why this severity), `drift` (`label`, `classification` or `structural`) and `occurrences` (every `path:line` of the same fact, as a list or one line separated by `,` or `;`); a missing `id` becomes the first free `F<n>` |
 | Values | free texts in double quotes or a literal block scalar; no anchor, alias or tag; case of `verdict` and `severity` normalized |
 | Ceiling | at most 20 findings; a `pass` with a blocker, high or medium finding is refused |
