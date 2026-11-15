@@ -148,7 +148,8 @@ Tout vit dans `.copilot-tracking/skraft-plans/` de la copie de travail qui lance
 - **`<slug>/.lock`** : le bail de la session qui pilote le run (`<owner> <since> <renewed> [<ttl>]`),
   renouvelé toutes les 30 s, périmé après 2 min sans renouvellement. Une deuxième session est
   refusée (`pipeline-locked`) tant que la première renouvelle ; une session qui a perdu son bail
-  s'arrête (`lock-lost`). Quand la boucle `next` / `record` confie des agents, le bail reste
+  s'arrête (`lock-lost`). Une session dont la machine a dormi reprend son bail au réveil s'il est
+  intact (`lease.reclaimed`), par le même remplacement atomique qu'une prise de relais. Quand la boucle `next` / `record` confie des agents, le bail reste
   laissé le temps de leur travail, borné, et `record` le reprend.
 
 Chaque fichier, événement et code de refus : [Suivi et journal](website/i18n/fr/docusaurus-plugin-content-docs/current/reference/run-journal.md).

@@ -91,7 +91,9 @@ Avant d'ajouter un fait, le moteur vérifie que personne d'autre n'a écrit depu
 sinon il s'arrête plutôt que d'écraser. En amont, une session qui conduit un pipeline tient un
 **bail** sur lui et le renouvelle tant qu'elle travaille : une deuxième session sur le même
 pipeline est refusée, et un bail qui n'est plus renouvelé est la trace d'une session disparue,
-que la suivante peut reprendre.
+que la suivante peut reprendre. Une session dont la machine a dormi au-delà de son bail le
+reprend au réveil seulement si personne n'y a touché entre-temps ; si une autre session l'a
+pris, la dormeuse s'arrête sans rien écrire.
 
 ## `.active-slug` : jamais deviné
 

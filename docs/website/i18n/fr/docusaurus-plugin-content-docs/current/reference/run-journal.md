@@ -248,6 +248,7 @@ Sous Copilot CLI, l'onglet **Journal** du canvas `skraft-pipeline` lit ce fichie
 | `pull-request.details-kept` | le nœud `publish` ou `skraft publish`, une fois la pull request ouverte, mise à jour ou à jour | `number` ; `part` ; `parts` ; `url` du commentaire ; `bodyHash` de la partie |
 | `pull-request.details-skipped` | idem, quand une partie n'a pas pu être gardée | `number` ; `part` ; `parts` ; `reason` |
 | `issue.commented`, `issue.comment-skipped` | le run, à chaque transition qu'il rapporte sur l'issue de la story | `issue` ; `kind` ; `phase` ; `step` ; `event` ; `url` (commenté) ou `reason` (sauté) |
+| `lease.reclaimed` | le pipeline ou une revue de pull request, avant son fait suivant, quand la session a dépassé le délai de son bail (la machine a dormi) et l'a repris intact | `renewed` (dernier renouvellement avant la pause) ; `gapMs` |
 | `journal.adopted` | `skraft journal adopt` | `keyId` (la nouvelle clé) ; `previousKeyId` ; `unverified` (nombre de lignes d'avant non vérifiées) |
 
 Chaque entrée de `run.started.base` : `{ component, root, repository, ref, source, sha }`.
@@ -488,7 +489,7 @@ attend la réponse d'un humain), `done`.
 | `refused` | `pipeline-locked` | une autre session conduit le pipeline (`.lock` renouvelé depuis moins de 2 min) | `<slug> is driven by another session (started …, last seen …); let it finish or stop it, or run again after … if that session is gone` | attendre la fin de l'autre session, ou son expiration |
 | `refused` | `lock-unavailable` | la session ne peut pas écrire `.lock` | `<slug>: this session cannot write the pipeline's lock file (.copilot-tracking/skraft-plans/<slug>/.lock); …` | rendre le dossier de suivi inscriptible |
 | `refused` | `journal-unverifiable` | cette machine ne peut pas vérifier la signature du journal | `journal unverifiable: …` | restaurer la clé, ou `skraft journal adopt` |
-| `blocked` | `lock-lost` | la session a perdu le bail en cours de run | `<slug>: this session no longer holds the pipeline's lease …; this run stops here and writes nothing more` | relancer quand l'autre session a fini |
+| `blocked` | `lock-lost` | une autre session a repris le bail en cours de run, ou cette session n'a pas pu l'écrire ; un bail dont la session a dépassé le délai sans que personne n'y touche (la machine a dormi) est repris à la place, `lease.reclaimed` | `<slug>: this session no longer holds the pipeline's lease …; this run stops here and writes nothing more` | relancer quand l'autre session a fini |
 | `refused` | `no-components` | `skraft gate` sans composant | `skraft-config.json lists no component; run skraft init to detect them` | `skraft init` |
 | `blocked` | `journal-tampered` | chaîne cassée | `journal tampered: events.jsonl line N …; restore the file or start a new slug` | restaurer le fichier ou démarrer un nouveau slug |
 | `blocked` | `journal-changed` | un autre run écrit pendant celui-ci | `<slug>: another run wrote events.jsonl meanwhile; run again once it stops` | attendre la fin de l'autre run, relancer |

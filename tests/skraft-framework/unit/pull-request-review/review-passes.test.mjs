@@ -211,19 +211,30 @@ test('the lease is released once the review ends, so the next run takes it again
   assert.equal((await host.review()).pass, 2)
 })
 
-test('a review whose lease runs out while its lenses answer stops before it journals any more: lock-lost', async () => {
-  const host = reviewHost()
-  host.git.commit('feat: discount', ['src/Discount.cs'])
-  const review = host.agentRunner.review
-  host.agentRunner.review = (dispatch) => {
-    host.deps.clock.sleep(120_000)
-    return review(dispatch)
+test('a review whose machine sleeps while its lenses answer takes its lease back and goes on, unless another session took it: lock-lost', async () => {
+  for (const taken of [false, true]) {
+    const host = reviewHost()
+    host.git.commit('feat: discount', ['src/Discount.cs'])
+    const review = host.agentRunner.review
+    host.agentRunner.review = (dispatch) => {
+      host.deps.clock.sleep(120_000)
+      if (taken) host.reviews.files.set(`${SLUG}/.lock`, 'session-b 2026-10-20T09:01:00.000Z 2026-10-20T09:01:00.000Z\n')
+      return review(dispatch)
+    }
+
+    const outcome = await host.review()
+
+    if (taken) {
+      assert.deepEqual([outcome.status, outcome.code, outcome.pass, outcome.reason], ['stopped', 'lock-lost', null, LOST])
+      assert.deepEqual(host.events().map(({ type }) => type), ['step.started'])
+    } else {
+      assert.deepEqual([outcome.status, outcome.pass], ['APPROVED', 1])
+      assert.deepEqual(host.events().map(({ type }) => type), ['step.started', 'lease.reclaimed', 'review.lens', 'review.lens', 'review.lens', 'step.recorded'])
+      const { renewed, gapMs } = host.events()[1]
+      assert.deepEqual({ renewed, gapMs }, { renewed: '2026-10-20T09:00:00.000Z', gapMs: 360_000 })
+      assert.ok(host.progress.lines.includes(`${SLUG}: this session was paused for 360 s (the machine slept) and nobody took its lease meanwhile; it took it back and goes on`))
+    }
   }
-
-  const outcome = await host.review()
-
-  assert.deepEqual([outcome.status, outcome.code, outcome.pass, outcome.reason], ['stopped', 'lock-lost', null, LOST])
-  assert.deepEqual(host.events().map(({ type }) => type), ['step.started'])
 })
 
 test('a lease the machine cannot write stops the review before any lens runs, naming the review\'s lock file', async () => {

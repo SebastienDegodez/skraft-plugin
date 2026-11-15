@@ -145,7 +145,7 @@ const reviewOpened = async (context, held) => {
   await context.deps.agentRunner.held?.()
   const opened = await openSigned(context.deps, context.request.number)
   if ('stop' in opened) return stopped(context.request.number, null, opened.stop)
-  return reviewPass({ ...context, journal: writingWhileHeld(opened.journal, held, context.slug) })
+  return reviewPass({ ...context, journal: writingWhileHeld(opened.journal, held, context.slug, context.deps.progress) })
 }
 
 /** When the error is the agent runner's hand-over, the lease is left for its agents. @param {ReviewDeps} deps @param {import('../pipeline/run-lock.mjs').HeldRun} held @param {unknown} error */
