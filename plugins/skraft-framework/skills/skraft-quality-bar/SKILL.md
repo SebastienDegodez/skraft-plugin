@@ -37,7 +37,7 @@ rationale that grants an exemption.
 | Mutation Domain/Application meets the bar | blocking |
 | Mutation API/Infrastructure meets the bar | blocking |
 | Gherkin gate (user-approved scenarios) | blocking |
-| ADR for non-trivial decisions | blocking |
+| ADR for non-trivial decisions the architecture documents do not already state | blocking |
 | Object Calisthenics (Domain) | blocking |
 
 A gate that cannot run is not a passed gate. Report it as a failure and stop.

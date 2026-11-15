@@ -79,6 +79,8 @@ Use this table in the Context section of an ADR when the decision is genuinely h
 
 ### Scenario 3: Bounded Context Boundary Placement
 
+> The contexts and their relations are domain design: `ARCHITECTURE.md` and `docs/architecture/context-map.md`. An ADR is justified only for the isolation or coupling choice that departs from the baseline (module per context, event instead of a snapshot read).
+
 **Forces in tension:**
 
 | Placement option | Forces favouring it | Forces against it |

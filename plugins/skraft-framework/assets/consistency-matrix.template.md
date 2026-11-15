@@ -15,8 +15,8 @@ The matrix is the supervised-execution artefact for the cross-artefact consisten
 | `{date}` | persona invocation date | `YYYY-MM-DD` |
 | `{bounded-context}` | context map | kebab-case bounded context name |
 | `{story-id}` | story metadata | e.g. `story-41` |
-| `{concept-name}` | persona Phase 9 PLAN step | one row per structural concept named in any ADR |
-| `{adr-truth}` | ADR-{NNN} | the ratified classification (source of truth) |
+| `{concept-name}` | persona Phase 9 PLAN step | one row per structural concept named in any ADR or architecture document |
+| `{adr-truth}` | ADR-{NNN} or architecture document § section | the ratified or documented classification (source of truth) |
 | `{cell-value}` | grep result (Phase 9 EXEC step) | classification as found in that artefact |
 
 ---
@@ -73,13 +73,13 @@ Reviewer use: G10 reads the registry to know which artefacts are in scope for th
 
 **Story:** {story-id}
 **Date:** {YYYY-MM-DD}
-**Source of truth:** ADR set under `docs/adr/adr-*.md`
+**Source of truth:** ADR set under `docs/adr/adr-*.md`, or the architecture document a concept is described in (`ARCHITECTURE.md`, `docs/architecture/`)
 
 ## Matrix
 
-| Concept | ADR (source of truth) | event-model | diagrams | Cause | Verdict |
+| Concept | Source of truth (ADR or architecture document) | event-model | diagrams | Cause | Verdict |
 |---|---|---|---|---|---|
-| `{concept-name}` | `{adr-truth}` (ADR-{NNN}) | `{cell-value}` | `{cell-value}` | n/a \| LABEL_DRIFT \| CLASSIFICATION_DRIFT \| STRUCTURAL_DRIFT | PASS \| FAIL |
+| `{concept-name}` | `{adr-truth}` (ADR-{NNN} or `{document}` § `{section}`) | `{cell-value}` | `{cell-value}` | n/a \| LABEL_DRIFT \| CLASSIFICATION_DRIFT \| STRUCTURAL_DRIFT | PASS \| FAIL |
 
 ## Back-propagation journal
 

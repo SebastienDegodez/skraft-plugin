@@ -135,6 +135,9 @@ test('each agent is told its story, inputs, outputs, result file and the paths i
     '- docs/adr',
     '- docs/architecture',
     '- docs/domain/event-model',
+    '- ARCHITECTURE.md',
+    '- CONTRIBUTING.md',
+    '- AGENTS.md',
   ].join('\n'))
   const distillRed = host.events().find((event) => event.type === 'commits.checked' && event.step === 'distill').commits[0].sha.slice(0, 7)
   assert.equal(deliver, [

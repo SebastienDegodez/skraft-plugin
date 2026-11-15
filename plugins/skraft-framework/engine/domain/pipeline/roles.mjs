@@ -14,8 +14,9 @@ import { joinRelative } from '../config/relative-path.mjs'
  *   cycle: each failing test commit, then the code that passes it; red: failing acceptance tests
  *   only, with the skeleton they call; kill: tests that kill surviving mutants, which pass on the
  *   code they test; null: no test commit.
- * @typedef {{ outputs: readonly OutputSpec[], writes: readonly string[], components: readonly ComponentPaths[], records: boolean, scan: boolean, tdd: TddMode, prose: boolean, proposal: boolean, shell?: boolean, citations?: boolean, scenarios?: boolean }} Role
- *   writes: paths relative to the working copy; components: which paths of every component of
+ * @typedef {{ outputs: readonly OutputSpec[], writes: readonly string[], components: readonly ComponentPaths[], records: boolean, scan: boolean, tdd: TddMode, prose: boolean, proposal: boolean, files?: readonly string[], shell?: boolean, citations?: boolean, scenarios?: boolean }} Role
+ *   writes: folders relative to the working copy; files: files at the working copy's root the role
+ *   may change, never created as folders; components: which paths of every component of
  *   skraft-config.json the agent may write; records: the engine checks the DESIGN records
  *   (consistency matrix, ADR names and supersessions) its attempts leave;
  *   scan: the engine scans the code for its structural commitments before each attempt;
@@ -57,11 +58,12 @@ const ROLES = Object.freeze({
     proposal: false,
     shell: false,
   }),
-  // The architect keeps the repository's durable design documents under docs/; the consistency
-  // matrix of the story stays in the tracking folder.
+  // The architect keeps the repository's durable design documents under docs/ and the project's
+  // ARCHITECTURE.md, CONTRIBUTING.md and AGENTS.md; the consistency matrix of the story stays in the tracking folder.
   'solution-architect': Object.freeze({
     outputs: Object.freeze([Object.freeze({ path: 'details/{date}/consistency-matrix-{slug}.md', template: null })]),
     writes: Object.freeze(['docs/adr', 'docs/architecture', 'docs/domain/event-model']),
+    files: Object.freeze(['ARCHITECTURE.md', 'CONTRIBUTING.md', 'AGENTS.md']),
     components: Object.freeze([]),
     records: true,
     scan: true,
@@ -168,7 +170,7 @@ const NO_ROLE = Object.freeze({ outputs: Object.freeze([]), writes: Object.freez
  */
 export const allowedPaths = (role, { slug, components }) => [...new Set([
   trackingFolder(slug),
-  ...role.writes.map((path) => joinRelative(path)),
+  ...[...role.writes, ...(role.files ?? [])].map((path) => joinRelative(path)),
   ...(role.scenarios ? featuresFolders(components) : []),
   ...components.flatMap((component) => role.components.flatMap((kind) => component.paths[kind].map((path) => joinRelative(component.root, path)))),
 ])]

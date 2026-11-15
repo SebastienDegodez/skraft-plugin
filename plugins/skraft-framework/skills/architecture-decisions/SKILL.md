@@ -11,7 +11,7 @@ Architecture Decision Records (ADRs) are lightweight documents that capture arch
 
 **Purpose:** An ADR answers the question: "Why does the architecture look the way it does?" Future readers — including future you — should be able to understand any structural decision without needing to ask the original author.
 
-**Core rule:** One ADR per decision. A decision is a single, clear choice with trade-offs.
+**Core rule:** One ADR per decision. A decision is a single, clear choice with trade-offs. Zero ADRs is the normal outcome of a pass: what the team imposed or the project documents already state is written there, not in an ADR.
 
 ---
 
@@ -239,11 +239,25 @@ Run the gate on every candidate choice before writing an ADR body. Answer the qu
 
 ADRs record **additions** and **deviations** from the project baseline. The baseline itself — the conventions enforced by project skills and architecture tests — is never an ADR.
 
-### Q1 — Is the choice already enforced by a project skill or an automated architecture test?
+### Q0 — Is the choice imposed?
+
+Imposed by the team, the PRD, the platform or an earlier decision: a front-end stack, an end-to-end test tool, how static resources are served, a build plugin, a hosting target.
+
+YES → `NOT ELIGIBLE — constraint`. Destination: `ARCHITECTURE.md`, `CONTRIBUTING.md` or `AGENTS.md`.
+
+### Q1 — Is the choice already enforced by a project skill, an automated architecture test or a project document?
 
 Baseline examples: pure domain service with no IO (Clean Architecture layering, `clean-architecture-*` skill and architecture tests); CQS at method level, one handler per command or query; validation at the boundary with a pure core; convention-based DI registration; Value Object with a pure validator (tactical DDD); the repository pattern and where a repository interface lives, Domain or Application (`clean-architecture-*` skill).
 
-YES → `NOT ELIGIBLE — <skill, test or ADR that already enforces it>`. An ADR that mixes an eligible decision with a baseline one (an aggregate boundary plus where its repository interface lives) keeps the eligible decision only: delete the baseline part, never move it to a new ADR.
+The baseline includes `ARCHITECTURE.md`, `CONTRIBUTING.md`, `AGENTS.md` and `docs/architecture/`.
+
+YES → `NOT ELIGIBLE — <skill, test or ADR that already enforces it>`, or `NOT ELIGIBLE — documented in <file> § <section>`.
+
+### Q1b — Is it a project principle, convention or procedure?
+
+These belong in `ARCHITECTURE.md`, `CONTRIBUTING.md` or `AGENTS.md`, never in an ADR: where a kind of file lives (static resources, message files, tests), test naming and which build phase runs a test, the install command of a local tool, CI rules (pinned actions, runner), toolchain and version policy, a module responsibility, a rule such as "no business logic in the entry point". The usual layout is `AGENTS.md` linking `@ARCHITECTURE.md` (modules, dependency direction, targets) and `@CONTRIBUTING.md` (setup, validation commands, pull request rules).
+
+YES → `NOT ELIGIBLE — documentation: <file> § <section>`. The architect writes it in place in that file; never as an ADR section, and never as a review finding that sends it into an ADR. An ADR cites those files for the principles it respects and records only the trade-off between alternatives. A story that contradicts them is a blocked result for the human, not an ADR. An ADR that mixes an eligible decision with a baseline one (an aggregate boundary plus where its repository interface lives) keeps the eligible decision only: delete the baseline part, never move it to a new ADR.
 
 ### Q2 — Is the choice framed as a good practice or as avoiding an antipattern?
 
@@ -257,10 +271,10 @@ It does when it:
 - establishes or changes a layer boundary
 - chooses an aggregate boundary
 - **adopts** a pattern that adds complexity: CQRS+Bus, Event Sourcing, Saga, Specification, ACL, Published Language, Conformist
-- establishes a bounded context boundary or chooses a context-mapping relationship
+- chooses a physical isolation for a bounded context that departs from the baseline (a module or service per context instead of packages) or a coupling mechanism between contexts (an event instead of a read of a published snapshot). The contexts themselves, their Core/Supporting/Generic type, their relationships and the shared kernel are domain design: `ARCHITECTURE.md` and `docs/architecture/context-map.md`, never an ADR
 - affects a cross-cutting concern (error handling strategy, validation approach)
 
-NO → `NOT ELIGIBLE — no complexity addition beyond baseline`. Implementation details (naming, formatting), configuration choices (connection string format, environment variable names) and library versions without architectural impact land here; switching EF Core to Dapper does not, it changes the data access strategy. So do: where a UI component is placed or mounted; a route tree; a member added to an existing enum or vocabulary; page state or URL parameters wiring; a library inside an adopted framework, unless it imposes a layer boundary or a data-loading model — then the ADR records that constraint, not the library's use.
+NO → `NOT ELIGIBLE — no complexity addition beyond baseline`. Implementation details (naming, formatting), configuration choices (connection string format, environment variable names) and library versions without architectural impact land here; switching EF Core to Dapper does not, it changes the data access strategy. So do: a front-end stack; an end-to-end test tool; how static resources are served; a build plugin; where a UI component is placed or mounted; a route tree; a member added to an existing enum or vocabulary; page state or URL parameters wiring; a library inside an adopted framework, unless it imposes a layer boundary or a data-loading model — then the ADR records that constraint, not the library's use.
 
 ### Q4 — Did a story, an AC or a measurable force in the current batch raise the question?
 
@@ -272,7 +286,7 @@ NO → `NOT ELIGIBLE — unraised question; non-decision artefact (G14)`. A `Rej
 
 Score it against the 5 Universal Forces (Trade-off Framework below).
 
-High on all five → `NOT ELIGIBLE — no genuine trade-offs; should be baseline`. Tension between at least two forces → `ELIGIBLE — genuine trade-off`.
+Fewer than two alternatives genuinely possible → `NON-DECISION`. High on all five → `NOT ELIGIBLE — no genuine trade-offs; should be baseline`. Tension between at least two forces → `ELIGIBLE — genuine trade-off`.
 
 ### Gate output
 
@@ -281,18 +295,20 @@ One block per candidate:
 ```
 Candidate: Fail-closed posture for dispatch gate
 Verdict: ELIGIBLE
-Reason: Q1 NO, Q2 NO, Q3 YES (cross-cutting error strategy), Q4 YES (AC-04), Q5 YES (over-blocking vs silent drift)
+Reason: Q0 NO, Q1 NO, Q2 NO, Q3 YES (cross-cutting error strategy), Q4 YES (AC-04), Q5 YES (over-blocking vs silent drift)
+Destination: docs/adr/adr-004-fail-closed-dispatch.md
 
 Candidate: VO + validation at boundary
 Verdict: NOT ELIGIBLE
 Reason: Q1 YES — Clean Architecture layering + tactical DDD enforce this
+Destination: ARCHITECTURE.md § Modules (already stated)
 
 Candidate: No hardcoded phase names
 Verdict: NOT ELIGIBLE (as framed)
 Reason: Q2 YES — "no hardcoding" is a good practice, not a decision
 ```
 
-Write an ADR only for an `ELIGIBLE` candidate. Gate failures map to review findings: ADR-INFLATION (Q1, Q3), GOOD-PRACTICE ADR (Q2), BASELINE DRIFT (Q1 + Q3), UNRAISED QUESTION (Q4), NON-DECISION (Q5).
+Every candidate carries a `Destination: <document> § <section>`; a `NOT ELIGIBLE` choice is written in place there. Write an ADR only for an `ELIGIBLE` candidate. Gate failures map to review findings: DOC-AS-ADR (Q0, Q1b), ADR-INFLATION (Q1, Q3), GOOD-PRACTICE ADR (Q2), BASELINE DRIFT (Q1 + Q3), UNRAISED QUESTION (Q4), NON-DECISION (Q5).
 
 ---
 
