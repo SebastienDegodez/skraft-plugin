@@ -2,16 +2,20 @@
 
 Each gate: what to check, one failing case (✗), one passing case (✓).
 
-## G1 — Every structural commitment has an ADR
+## G1 — Every structural commitment has an ADR or a documented home
 
 List every bounded context, pattern (CQRS with a bus, Event Sourcing, Saga), context-map
 relationship and aggregate crossing an existing boundary in the diagrams, plus every commitment
 the structural scan detects in existing code. Index the ADRs by topic. Each element needs an
 `Accepted` ADR or a `Proposed` ADR of this pass; code carrying a pattern no ADR covers needs a
 back-fill ADR. An aggregate inside one context, a value object, a domain event, a repository or a
-gateway is recorded by the tactical design: no ADR is missing for it.
+gateway is recorded by the tactical design: no ADR is missing for it. An element the project's
+architecture documents (`ARCHITECTURE.md`, `docs/architecture/`) already describe needs no ADR
+when the matrix cites that document.
 
 - ✗ The diagram shows Event Sourcing on `EligibilityAggregate`; no ADR evaluates it.
+- ✗ "ADR-002: four bounded contexts as packages in existing modules" when `ARCHITECTURE.md` and `context-map.md` already state them.
+- ✓ Event Sourcing a story asks for, with its ADR.
 - ✓ ADR-003 accepts the ACL between the two contexts and says why Conformist was rejected.
 - ✓ `ProposalAggregate` with its invariant in the tactical design, no ADR: no finding.
 
@@ -136,9 +140,10 @@ See the baseline list in SKILL.md (*Fitness judgements*).
 
 ## G17 — Eligible subject
 
-An ADR decides a layer boundary, an aggregate boundary, a bounded context, a pattern adding complexity or a cross-cutting concern, and weighs a real trade-off. Any other subject is `ADR-INFLATION`; no alternative genuinely weighed is `NON-DECISION`.
+An ADR decides a layer boundary, an aggregate boundary, a bounded context, a pattern adding complexity or a cross-cutting concern, and weighs a real trade-off. Any other subject is `ADR-INFLATION`, as is a choice the project's architecture documents already state or a stack or test tooling the team imposed; no alternative genuinely weighed is `NON-DECISION`.
 
 - ✗ "ADR-012: Mount `PaymentBanner` in the checkout layout."
+- ✗ "ADR: web component without framework, Playwright for the end-to-end test, served by Quarkus."
 - ✓ "ADR-013: Route loaders fetch data before render, so pages hold no fetch logic."
 
 ## G18 — Decision level

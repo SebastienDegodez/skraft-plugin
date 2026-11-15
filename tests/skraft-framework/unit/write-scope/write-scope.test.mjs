@@ -8,6 +8,15 @@ import { waitingOnEnvironment } from '../support/decisions.mjs'
 const GHERKIN = Object.freeze({ ...API, bdd: [{ features: 'docs/features', steps: 'tests/Steps' }] })
 
 const unavailable = () => ({ ok: false, unavailable: true, text: '' })
+
+test('the architect keeps ARCHITECTURE.md, CONTRIBUTING.md, AGENTS.md and the context map in step; another root file is refused', async () => {
+  const PROJECT_DOCUMENTS = ['ARCHITECTURE.md', 'CONTRIBUTING.md', 'AGENTS.md', 'docs/architecture/context-map.md']
+  const host = scripted({}, (it) => [agent()(it), agent({ work: ({ git }) => git.change(...PROJECT_DOCUMENTS, 'README.md') })(it), unavailable])
+
+  await host.start()
+
+  assert.deepEqual(recorded(host, 'design')[0].failures, ['out of write scope: README.md'])
+})
 const recorded = (host, step) => host.events().filter((event) => event.type === 'step.recorded' && event.step === step)
 
 /** The durable design documents an architect keeps under docs/. */
