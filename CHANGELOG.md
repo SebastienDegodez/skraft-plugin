@@ -3,6 +3,12 @@
 Toutes les modifications notables de ce projet sont documentées ici.
 Format basé sur [Conventional Commits](https://www.conventionalcommits.org/) — versionnage [SemVer](https://semver.org/).
 
+## [2.0.0-alpha.91](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.90...v2.0.0-alpha.91) (2026-11-15)
+
+### 🐛 Bug Fixes
+
+* **engine:** read an answer key a model wrapped in quotes or wrote as a call ([#585](https://github.com/SebastienDegodez/skraft-plugin/issues/585)) ([cde92a8](https://github.com/SebastienDegodez/skraft-plugin/commit/cde92a81ef64a7bcc1daaeb83d02fd108fd19a5e))
+
 ## [2.0.0-alpha.90](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.89...v2.0.0-alpha.90) (2026-11-14)
 
 ### ✨ Features
