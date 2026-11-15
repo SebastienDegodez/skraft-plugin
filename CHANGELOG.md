@@ -3,6 +3,12 @@
 Toutes les modifications notables de ce projet sont documentées ici.
 Format basé sur [Conventional Commits](https://www.conventionalcommits.org/) — versionnage [SemVer](https://semver.org/).
 
+## [2.0.0-alpha.92](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.91...v2.0.0-alpha.92) (2026-11-15)
+
+### ✨ Features
+
+* **engine:** stop drafting ADRs for what project documents already state ([#589](https://github.com/SebastienDegodez/skraft-plugin/issues/589)) ([71b0ab3](https://github.com/SebastienDegodez/skraft-plugin/commit/71b0ab3c0545f2367932fc48e1209aa06668b259))
+
 ## [2.0.0-alpha.91](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.90...v2.0.0-alpha.91) (2026-11-15)
 
 ### 🐛 Bug Fixes
