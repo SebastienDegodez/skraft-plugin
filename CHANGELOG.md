@@ -3,6 +3,12 @@
 Toutes les modifications notables de ce projet sont documentées ici.
 Format basé sur [Conventional Commits](https://www.conventionalcommits.org/) — versionnage [SemVer](https://semver.org/).
 
+## [2.0.0-alpha.93](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.92...v2.0.0-alpha.93) (2026-11-15)
+
+### 🐛 Bug Fixes
+
+* **engine:** take back an untouched lease after the machine slept ([#590](https://github.com/SebastienDegodez/skraft-plugin/issues/590)) ([f1483cd](https://github.com/SebastienDegodez/skraft-plugin/commit/f1483cd379d57e76cf916bb06336a5337666977e))
+
 ## [2.0.0-alpha.92](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.91...v2.0.0-alpha.92) (2026-11-15)
 
 ### ✨ Features
