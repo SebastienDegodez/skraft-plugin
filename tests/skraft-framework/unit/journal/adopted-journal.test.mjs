@@ -195,7 +195,7 @@ test('every event type this engine writes is named among the unverified lines', 
     'run.started', 'run.finished', 'run.stopped', 'step.started', 'step.recorded', 'phase.closed', 'gate.ran', 'commits.checked',
     'question.asked', 'question.answered', 'review.lens', 'review.refuted', 'review.noted', 'review.cost', 'tdd.replay-slow', 'visuals.recorded',
     'publish.requested', 'pull-request.opened', 'pull-request.updated', 'pull-request.details-kept', 'pull-request.details-skipped',
-    'issue.commented', 'issue.comment-skipped', 'forge.write', 'pull-request.create-started',
+    'issue.commented', 'issue.comment-skipped', 'forge.write', 'pull-request.create-started', 'lease.reclaimed',
   ]
   const host = await movedHere()
   const lines = []

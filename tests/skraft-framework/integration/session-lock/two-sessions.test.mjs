@@ -101,11 +101,12 @@ test('processes creating the lock file at once: exactly one creates it, with its
   assert.deepEqual(await readdir(dirname(path)), ['.lock'])
 })
 
-test('processes taking over the same lease at once: exactly one replaces it, and no file is left aside', async (t) => {
+test('processes taking over the same lease at once, its own session taking it back among them: exactly one replaces it, and no file is left aside', async (t) => {
   const path = await folder(t)
   const gone = 'session-0 2026-10-11T08:00:00.000Z 2026-10-11T08:00:00.000Z\n'
   await lockCommand(['create', path, encodeURIComponent(gone)])
-  const texts = [1, 2, 3, 4, 5, 6].map((index) => `session-${index} 2026-10-11T09:00:00.000Z 2026-10-11T09:00:00.000Z\n`)
+  const reclaimed = 'session-0 2026-10-11T08:00:00.000Z 2026-10-11T09:00:00.000Z\n'
+  const texts = [reclaimed, ...[1, 2, 3, 4, 5].map((index) => `session-${index} 2026-10-11T09:00:00.000Z 2026-10-11T09:00:00.000Z\n`)]
 
   const exits = await Promise.all(texts.map((text) => commandProcess(['replace', path, encodeURIComponent(gone), encodeURIComponent(text)])))
 

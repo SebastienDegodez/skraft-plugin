@@ -134,6 +134,7 @@ test('the lease is renewed while an agent works long, so a second session is sti
 
   assert.deepEqual(second, lockedBy('2026-10-11T09:00:00.000Z', '2026-10-11T09:10:00.000Z', '2026-10-11T09:12:00.000Z'))
   assert.deepEqual(periods, [30_000])
+  assert.deepEqual(reclaims(first), [])
   const recorded = first.events().find((event) => event.type === 'step.recorded' && event.step === 'research')
   assert.deepEqual(recorded.documents.filter((path) => !path.startsWith('research/')), [])
   assert.deepEqual(first.timer.entries, [])
@@ -165,10 +166,107 @@ test('a session whose lease another session took over writes no more event and l
   assert.equal(host.events().at(-1).type, 'step.started')
 })
 
-test('a session that slept past its lease, its renewals never run, writes no more event once it wakes', async () => {
+/** The events the run wrote after the researcher started, each as its type and what it says of the lease. */
+const afterResearchStarted = (host) => {
+  const events = host.events()
+  const started = events.findIndex((event) => event.type === 'step.started' && event.step === 'research')
+  return events.slice(started + 1).map(({ type, renewed, gapMs }) => (type === 'lease.reclaimed' ? { type, renewed, gapMs } : { type }))
+}
+const reclaims = (host) => host.events().filter((event) => event.type === 'lease.reclaimed')
+/** The designer that comes after the researcher, stopping the run on a question. */
+const designerStops = (it) => agent({ result: { status: 'blocked', summary: 'needs a decision' } })(it)
+
+test('a session whose machine slept past its lease, nobody taking it meanwhile, takes it back and records the agent\'s work', async () => {
+  const host = scripted({}, (it) => [async (dispatch) => {
+    it.clock.sleep(381_400)
+    return agent()(it)(dispatch)
+  }, designerStops(it)])
+
+  const outcome = await host.start()
+
+  assert.notDeepEqual(outcome, LOST)
+  assert.deepEqual(afterResearchStarted(host).slice(0, 2), [
+    { type: 'lease.reclaimed', renewed: '2026-10-11T09:00:00.000Z', gapMs: 381_400 },
+    { type: 'step.recorded' },
+  ])
+  assert.equal(reclaims(host).length, 1)
+  assert.ok(host.progress.lines.includes(`${SLUG}: this session was paused for 381 s (the machine slept) and nobody took its lease meanwhile; it took it back and goes on`))
+  assert.equal(host.lock(), null)
+})
+
+test('a session that wakes past its lease\'s renewal time takes it back on its next renewal, its start kept', async () => {
+  for (const gap of [110_000, 381_000]) {
+    let lock = null
+    const host = scripted({}, (it) => [async (dispatch) => {
+      it.clock.sleep(gap)
+      await it.timer.tick()
+      lock = it.lock()
+      return agent()(it)(dispatch)
+    }, designerStops(it)])
+
+    await host.start()
+
+    assert.equal(lock, `session-a 2026-10-11T09:00:00.000Z ${new Date(Date.parse('2026-10-11T09:00:00.000Z') + gap).toISOString()}\n`)
+    assert.deepEqual(reclaims(host).map(({ gapMs }) => gapMs), [gap])
+    assert.ok(host.events().some((event) => event.type === 'step.recorded' && event.step === 'research'))
+  }
+})
+
+test('a renewal and a journal write that both find the lease past its time take it back once', async () => {
+  const host = scripted({}, (it) => [async (dispatch) => {
+    it.clock.sleep(381_000)
+    const replace = it.deps.runLock.replace.bind(it.deps.runLock)
+    // a lock write that takes a moment, as a rename on disk does: the journal write comes while the renewal's is under way
+    it.deps.runLock.replace = async (...write) => {
+      await new Promise((resolve) => { setTimeout(resolve, 10) })
+      return replace(...write)
+    }
+    void it.timer.tick()
+    return agent()(it)(dispatch)
+  }, designerStops(it)])
+
+  const outcome = await host.start()
+
+  assert.notDeepEqual(outcome, LOST)
+  assert.equal(reclaims(host).length, 1)
+  assert.ok(host.events().some((event) => event.type === 'step.recorded' && event.step === 'research'))
+})
+
+test('a session whose machine slept while the lease changed hands, vanished or was rewritten writes no more event and leaves the lock file as it is', async () => {
+  const changes = [
+    { lock: lease('session-b', '2026-10-11T09:03:00.000Z'), tick: true },
+    { lock: lease('session-b', '2026-10-11T09:03:00.000Z'), tick: false },
+    { lock: null, tick: false },
+    { lock: lease('session-a', '2026-10-11T09:00:00.000Z', '2026-10-11T09:05:00.000Z'), tick: false },
+  ]
+  for (const { lock, tick } of changes) {
+    let journal = []
+    const host = scripted({}, (it) => [async (dispatch) => {
+      it.clock.sleep(381_000)
+      if (lock === null) it.tracking.files.delete(`${SLUG}/.lock`)
+      else it.tracking.files.set(`${SLUG}/.lock`, lock)
+      if (tick) await it.timer.tick()
+      journal = await it.tracking.lines(SLUG)
+      return agent()(it)(dispatch)
+    }])
+
+    const outcome = await host.start()
+
+    assert.deepEqual(outcome, LOST)
+    assert.equal(host.lock(), lock)
+    assert.deepEqual(await host.tracking.lines(SLUG), journal)
+  }
+})
+
+test('a session that wakes while a third session takes the lease it is taking back writes no more event', async () => {
+  const third = lease('session-c', '2026-10-11T09:06:21.000Z')
   let journal = []
   const host = scripted({}, (it) => [async (dispatch) => {
-    it.clock.sleep(120_000)
+    it.clock.sleep(381_000)
+    it.deps.runLock.inGap = (slug) => {
+      it.deps.runLock.inGap = null
+      it.tracking.files.set(`${slug}/.lock`, third)
+    }
     journal = await it.tracking.lines(SLUG)
     return agent()(it)(dispatch)
   }])
@@ -176,23 +274,24 @@ test('a session that slept past its lease, its renewals never run, writes no mor
   const outcome = await host.start()
 
   assert.deepEqual(outcome, LOST)
+  assert.equal(host.lock(), third)
   assert.deepEqual(await host.tracking.lines(SLUG), journal)
 })
 
-test('a session that wakes too close to its lease\'s end renews nothing and writes no more event', async () => {
+test('a session whose machine fails to take its lease back after a sleep writes no more event, even when a later write works', async () => {
   let journal = []
-  let lock = null
   const host = scripted({}, (it) => [async (dispatch) => {
-    it.clock.sleep(110_000)
+    it.clock.sleep(381_000)
+    const replace = it.deps.runLock.replace
+    it.deps.runLock.replace = async () => { throw new Error('EIO: i/o error') }
     await it.timer.tick()
-    lock = it.lock()
+    it.deps.runLock.replace = replace
     journal = await it.tracking.lines(SLUG)
     return agent()(it)(dispatch)
   }])
 
   const outcome = await host.start()
 
-  assert.equal(lock, OWN_LEASE)
   assert.deepEqual(outcome, LOST)
   assert.deepEqual(await host.tracking.lines(SLUG), journal)
 })

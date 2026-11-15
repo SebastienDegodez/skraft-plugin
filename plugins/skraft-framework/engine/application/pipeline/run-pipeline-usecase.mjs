@@ -112,7 +112,7 @@ const runActive = async (deps, { requested, handedBack, confirm }) => {
   if (!opened.ok) return opened.outcome
   const lock = await holdRun(deps, opened.slug, { handedBack })
   if (!lock.ok) return lock.outcome
-  return runHeld(deps, { slug: opened.slug, journal: writingWhileHeld(opened.journal, lock.held, opened.slug), confirm }, { held: lock.held, handedBack })
+  return runHeld(deps, { slug: opened.slug, journal: writingWhileHeld(opened.journal, lock.held, opened.slug, deps.progress), confirm }, { held: lock.held, handedBack })
 }
 
 /**

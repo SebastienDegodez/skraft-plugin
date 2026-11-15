@@ -71,6 +71,10 @@ export const heldReason = (slug, { since, renewed, ttlMs }) =>
 export const lostReason = (slug) =>
   `${slug}: this session no longer holds the pipeline's lease (another session took it over, or renewing it failed); this run stops here and writes nothing more`
 
+/** @param {string} slug @param {number} gapMs how long the lease went unrenewed */
+export const reclaimedNote = (slug, gapMs) =>
+  `${slug}: this session was paused for ${Math.round(gapMs / 1000)} s (the machine slept) and nobody took its lease meanwhile; it took it back and goes on`
+
 /** @param {string} slug */
 export const racedReason = (slug) =>
   `${slug}: another session took over the lease a gone session left at the same moment; run again to see which one drives it`

@@ -85,7 +85,9 @@ exact format of the chain and the signature:
 Before appending a fact, the engine checks that nobody else has written since it read; otherwise
 it stops rather than overwrite. Upstream, a session that conducts a pipeline holds a **lease** on
 it and renews it while it works: a second session on the same pipeline is refused, and a lease no
-longer renewed is the trace of a vanished session, which the next one can take over.
+longer renewed is the trace of a vanished session, which the next one can take over. A session
+whose machine slept past its lease takes it back on waking only if nobody touched it meanwhile;
+if another session took it, the sleeper stops without writing.
 
 ## `.active-slug`: never guessed
 
