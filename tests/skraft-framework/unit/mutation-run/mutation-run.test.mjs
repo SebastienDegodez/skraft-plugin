@@ -1,11 +1,17 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { agent, pipelineHost, SLUG } from '../support/pipeline-host.mjs'
+import { agent, pipelineHost } from '../support/pipeline-host.mjs'
 import { mutants, strykerReport } from '../support/mutation-reports.mjs'
-import { BUILT_IN_MUTATION, BUILT_IN_WORKFLOW } from '../support/in-memory-host.mjs'
+import { BUILT_IN_MUTATION, BUILT_IN_WORKFLOW, InMemoryGit, InMemoryTracking } from '../support/in-memory-host.mjs'
 
-/** A mutation run: the plugin's mutation workflow, apart from any story's pipeline. */
-const mutationRun = (options = {}) => pipelineHost({ follows: 'mutation', ...options })
+/** The branch HEAD is on in these runs, and the run it names. */
+const BRANCH = 'feat/Checkout_Refund'
+const SLUG = 'feat-checkout-refund'
+
+/** A mutation run: the plugin's mutation workflow, on the branch's own run, apart from any story's pipeline. */
+const mutationRun = (options = {}) => pipelineHost({
+  follows: 'mutation', git: new InMemoryGit({ branch: BRANCH }), slug: SLUG, tracking: new InMemoryTracking({ root: '/work/.copilot-tracking/skraft-mutation' }), ...options,
+})
 
 test('a mutation run follows the plugin\'s mutation workflow: each component\'s mutation command runs, and a run whose scopes reach the bar ends there', async () => {
   const host = mutationRun()
@@ -70,6 +76,7 @@ test('a scope of the result below 80 fails the gate; its survivors, told file:li
     'src/Refund.cs:7 ArithmeticOperator survived', 'src/Checkout.cs:12 EqualityOperator survived', 'src/Checkout.cs:3 mutant survived',
   ]])
   const proposals = host.agentRunner.dispatches.map(({ label, prompt }) => [label, prompt.split('\n').filter((line) => line.startsWith('- src/') || line.startsWith('Propose'))])
+  assert.deepEqual(host.agentRunner.dispatches[0].prompt.split('\n').filter((line) => line.startsWith('- .copilot-tracking/')), [`- .copilot-tracking/skraft-mutation/${SLUG}`])
   assert.deepEqual(proposals, [
     [`skraft ${SLUG} · kill_proposal · group 1 of 2 · attempt 1`, ['Propose how to treat the surviving mutants of src/Checkout.cs (group 1 of 2):', '- src/Checkout.cs:3 mutant survived', '- src/Checkout.cs:12 EqualityOperator survived']],
     [`skraft ${SLUG} · kill_proposal · group 2 of 2 · attempt 1`, ['Propose how to treat the surviving mutants of src/Refund.cs (group 2 of 2):', '- src/Refund.cs:7 ArithmeticOperator survived']],
@@ -96,4 +103,51 @@ test('a result that cannot be read leaves the run to a human, whatever the repor
     assert.deepEqual([ran.failure, ran.scores], ['environment', null], why)
     assert.ok(outcome.reason.includes(`the mutation result ${host.tracking.location(SLUG, RESULT)} ${why}`), `${why}\n${outcome.reason}`)
   }
+})
+
+test('a mutation run is the branch\'s own: named after the branch HEAD is on, it starts there as the active run of its folder', async () => {
+  const host = mutationRun()
+
+  const started = await host.init()
+
+  assert.deepEqual([started.ok, started.slug, started.created], [true, SLUG, true], started.reason)
+  assert.equal(host.tracking.activeSlug, SLUG)
+  assert.deepEqual(host.types(), ['run.started'])
+  assert.equal(host.events()[0].story, null)
+})
+
+test('a mutation run that ended starts afresh at the next start: the last run is forgotten, its journal and its files', async () => {
+  const host = mutationRun()
+  assert.equal((await host.start()).status, 'done')
+  assert.ok(await host.tracking.read(SLUG, 'gates/api/mutation-1.log'))
+
+  const started = await host.init()
+
+  assert.deepEqual([started.ok, started.created], [true, true], started.reason)
+  assert.deepEqual(host.types(), ['run.started'])
+  assert.equal(await host.tracking.read(SLUG, 'gates/api/mutation-1.log'), null)
+})
+
+test('a mutation run that waits on a person resumes at the next start, its journal kept', async () => {
+  const host = mutationRun({ answers: [null] })
+  host.agentRunner.behaviours.push(agent()(host))
+  writesResult(host, { scopes: [{ name: 'global', score: 75, survivors: ['src/Refund.cs:7 ArithmeticOperator'] }] })
+  assert.equal((await host.start()).status, 'waiting')
+  const journaled = host.types()
+
+  const started = await host.init()
+
+  assert.deepEqual([started.ok, started.created], [true, false], started.reason)
+  assert.deepEqual(host.types(), journaled)
+})
+
+test('a mutation run needs a branch: on a detached HEAD it starts nothing', async () => {
+  const host = mutationRun({ git: new InMemoryGit({ branch: null }) })
+
+  const started = await host.init()
+
+  assert.deepEqual([started.ok, started.code], [false, 'detached-head'])
+  assert.equal(started.reason, 'HEAD is on no branch, and a mutation run is the run of one; check out the branch to mutate, then start it again')
+  assert.equal(host.tracking.activeSlug, null)
+  assert.deepEqual([...host.tracking.files.keys()], [])
 })

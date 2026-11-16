@@ -119,8 +119,11 @@ export const checklistsOf = (agent) => CHECKLISTS[agent] ?? []
  */
 export const makesCommits = (role) => role.shell !== false
 
-/** The tracking folder of a pipeline, relative to the working copy. @param {string} slug */
-export const trackingFolder = (slug) => `.copilot-tracking/skraft-plans/${slug}`
+/**
+ * The tracking folder of a run, relative to the working copy.
+ * @param {string} slug @param {string} [folder] where the runs' folders are, the pipelines' unless given
+ */
+export const trackingFolder = (slug, folder = '.copilot-tracking/skraft-plans') => `${folder}/${slug}`
 
 /** What an agent node marked proposal=true plays: its outputs are the proposals the engine creates per file. @type {Role} */
 const PROPOSAL = Object.freeze({ outputs: Object.freeze([]), writes: Object.freeze([]), components: Object.freeze([]), records: false, scan: false, tdd: null, prose: false, proposal: true })
@@ -163,13 +166,13 @@ export const roleFolders = (node, components) => {
 const NO_ROLE = Object.freeze({ outputs: Object.freeze([]), writes: Object.freeze([]), components: Object.freeze([]), records: false, scan: false, tdd: null, prose: false, proposal: false })
 
 /**
- * Every path an agent may change, relative to the working copy: its pipeline's tracking
- * folder, its role's paths, and the source or test paths of each component.
+ * Every path an agent may change, relative to the working copy: its run's tracking folder,
+ * its role's paths, and the source or test paths of each component.
  * @param {Role} role
- * @param {{ slug: string, components: readonly Component[] }} context
+ * @param {{ slug: string, folder: string, components: readonly Component[] }} context folder: where the runs' folders are
  */
-export const allowedPaths = (role, { slug, components }) => [...new Set([
-  trackingFolder(slug),
+export const allowedPaths = (role, { slug, folder, components }) => [...new Set([
+  trackingFolder(slug, folder),
   ...[...role.writes, ...(role.files ?? [])].map((path) => joinRelative(path)),
   ...(role.scenarios ? featuresFolders(components) : []),
   ...components.flatMap((component) => role.components.flatMap((kind) => component.paths[kind].map((path) => joinRelative(component.root, path)))),

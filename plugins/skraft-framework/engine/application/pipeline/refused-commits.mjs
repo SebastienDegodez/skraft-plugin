@@ -18,6 +18,6 @@ export const refusedCommit = async ({ files, hasher, journal }, { slug, step }, 
 /** @param {import('../ports/tracking-files.mjs').TrackingFiles} files @param {string} slug */
 const repositoryRoot = (files, slug) => {
   const path = files.location(slug, 'events.jsonl').replaceAll('\\', '/')
-  const suffix = `/.copilot-tracking/skraft-plans/${slug}/events.jsonl`
+  const suffix = `/${files.folder}/${slug}/events.jsonl`
   return path.endsWith(suffix) ? path.slice(0, -suffix.length) : ''
 }

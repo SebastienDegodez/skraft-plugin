@@ -6,8 +6,10 @@ import { answerYaml } from './answer-yaml.mjs'
 
 /** Tracking folder in memory: the journal store, the active pipeline and the phase files. */
 export class InMemoryTracking {
-  constructor({ root = '/work/.copilot-tracking/skraft-plans' } = {}) {
+  /** @param {{ root?: string, folder?: string }} [options] folder: root, relative to the working copy `/work` */
+  constructor({ root = '/work/.copilot-tracking/skraft-plans', folder = root.slice('/work/'.length) } = {}) {
     this.root = root
+    this.folder = folder
     /** @type {Map<string, string>} slug-relative path → text */
     this.files = new Map()
     this.activeSlug = null
@@ -40,6 +42,9 @@ export class InMemoryTracking {
     for (const path of this.files.keys()) if (path.startsWith(prefix)) this.files.delete(path)
   }
   async clearTemporary(slug) { await this.clear(slug, '.tmp') }
+  async forget(slug) {
+    for (const path of this.files.keys()) if (path.startsWith(`${slug}/`)) this.files.delete(path)
+  }
   location(slug, rel) { return `${this.root}/${slug}/${rel}` }
   async list(slug, folder) {
     const prefix = folder === '' || folder === '.' ? `${slug}/` : this.key(slug, `${folder}/`)
@@ -440,10 +445,12 @@ export class InMemoryGit {
    *   published: the files that first commit holds, relative to the working copy; commitFails:
    *   why every commit the engine makes fails, null when it succeeds; remote: the URL of the
    *   working copy's remote, null without one; hex: commits named as Git names them, forty
-   *   hexadecimal digits (hexSha), rather than `<repository>-<n>`
+   *   hexadecimal digits (hexSha), rather than `<repository>-<n>`; branch: the branch HEAD is on
+   *   in the working copy, null when HEAD is detached
    */
-  constructor({ repositories = { '.': { mergeBases: { main: 'root-0' } } }, unavailable = null, published = [], commitFails = null, remote = GITHUB_REMOTE, hex = false } = {}) {
+  constructor({ repositories = { '.': { mergeBases: { main: 'root-0' } } }, unavailable = null, published = [], commitFails = null, remote = GITHUB_REMOTE, hex = false, branch = 'feat/checkout' } = {}) {
     this.hex = hex
+    this.branchName = branch
     this.missing = unavailable
     this.remote = remote
     this.published = new Set(published.map(tidy))
@@ -521,6 +528,7 @@ export class InMemoryGit {
     return [...new Set(all)].filter((file) => under(file, at.inner)).map((file) => inside(file, at.inner))
   }
   async mergeBase(dir, ref) { return this.locate(dir)?.repo.mergeBases[ref] ?? null }
+  async branch() { return this.branchName }
   /** Whether a commit of the repository's history comes before another one, or is it. */
   async isAncestor(dir, ancestor, descendant) {
     if (typeof ancestor !== 'string' || typeof descendant !== 'string') throw new TypeError(`isAncestor of ${dir} needs two shas, got ${ancestor} and ${descendant}`)

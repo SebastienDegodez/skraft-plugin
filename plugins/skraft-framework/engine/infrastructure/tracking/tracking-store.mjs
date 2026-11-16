@@ -19,21 +19,25 @@ import { isSlug } from '../../domain/pipeline/slug.mjs'
  */
 
 export const TRACKING_FOLDER = ['.copilot-tracking', 'skraft-plans']
+/** Where a mutation run keeps its journal and files, one folder per branch, apart from the pipelines. */
+export const MUTATION_FOLDER = ['.copilot-tracking', 'skraft-mutation']
 /** Where a pull request review keeps its journal and files, one folder per pull request, apart from the pipelines. */
 export const REVIEWS_FOLDER = ['.copilot-tracking', 'skraft-reviews']
 
 /**
- * @typedef {{ files: FileFunctions, at: (slug: string, path: string) => string, base: string, activeSlugFile: string }} TrackingFolder
- *   at: the file at a `/`-separated path in a pipeline's folder; base: the tracking folder
+ * @typedef {{ files: FileFunctions, at: (slug: string, path: string) => string, base: string, relative: string, activeSlugFile: string }} TrackingFolder
+ *   at: the file at a `/`-separated path in a pipeline's folder; base: the tracking folder;
+ *   relative: the tracking folder from the working copy, `/`-separated
  */
 
 /**
  * The tracking folder of a working copy, `<root>/.copilot-tracking/skraft-plans/`, as the
  * three ports the use cases read and write: RunJournalStore, ActivePipeline, TrackingFiles.
- * @param {{ files: FileFunctions, root: string }} options root is the working copy
+ * @param {{ files: FileFunctions, root: string, parts?: string[] }} options root is the working
+ *   copy; parts: the folder from it, the pipelines' unless given (MUTATION_FOLDER: the mutation runs')
  */
-export const createTrackingStore = ({ files, root }) => {
-  const folder = trackingFolder(files, root, TRACKING_FOLDER)
+export const createTrackingStore = ({ files, root, parts = TRACKING_FOLDER }) => {
+  const folder = trackingFolder(files, root, parts)
   return Object.freeze({ journal: createJournal(folder), activePipeline: createActivePipeline(folder), files: createTrackingFiles(folder) })
 }
 
@@ -51,7 +55,7 @@ export const createReviewStore = ({ files, root }) => {
 const trackingFolder = (files, root, parts) => {
   const base = files.join(root, ...parts)
   const at = (/** @type {string} */ slug, /** @type {string} */ path) => files.join(base, ...insideFolder([slug, ...path.split('/')]))
-  return { files, at, base, activeSlugFile: files.join(base, '.active-slug') }
+  return { files, at, base, relative: parts.join('/'), activeSlugFile: files.join(base, '.active-slug') }
 }
 
 /**
@@ -97,14 +101,16 @@ const activeSlug = async (files, activeSlugFile) => {
  * @param {TrackingFolder} folder
  * @returns {import('../../application/ports/tracking-files.mjs').TrackingFiles}
  */
-const createTrackingFiles = ({ files, at, base }) =>
+const createTrackingFiles = ({ files, at, base, relative }) =>
   Object.freeze({
     read: (slug, path) => files.read(at(slug, path)),
     write: (slug, path, text) => files.write(at(slug, path), text),
     clearTemporary: (slug) => files.clearDirectory(at(slug, '.tmp')),
+    forget: (slug) => files.clearDirectory(at(slug, '')),
     location: at,
     list: (slug, folder) => listUnder(files, at, slug, folder),
     pipelines: () => pipelinesIn(files, base),
+    folder: relative,
   })
 
 /**

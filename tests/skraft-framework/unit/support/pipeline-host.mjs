@@ -5,6 +5,7 @@ import { readFileSync } from 'node:fs'
 import { answerYaml, withContext } from './answer-yaml.mjs'
 import { strykerWritesItsReports } from './mutation-reports.mjs'
 import { createInit } from '../../../../plugins/skraft-framework/engine/application/pipeline/init-usecase.mjs'
+import { createStartMutation } from '../../../../plugins/skraft-framework/engine/application/mutation/start-mutation-usecase.mjs'
 import { createObserve } from '../../../../plugins/skraft-framework/engine/application/pipeline/observe-usecase.mjs'
 import { createRunPipeline } from '../../../../plugins/skraft-framework/engine/application/pipeline/run-pipeline-usecase.mjs'
 import { createDecide } from '../../../../plugins/skraft-framework/engine/application/decisions/decide-usecase.mjs'
@@ -131,7 +132,7 @@ export const pipelineHost = ({
     events: () => tracking.journal(slug),
     types: () => tracking.journal(slug).map((event) => event.type),
     /** @param {object} [request] */
-    init: (request = {}) => createInit(deps).init({ slug, ...request }),
+    init: (request = {}) => (follows === 'mutation' ? createStartMutation(deps).start() : createInit(deps).init({ slug, ...request })),
     run: () => createRunPipeline(deps).run({ slug }),
     view: () => createObserve(deps).view(),
     report: () => createObserve(deps).report(),
