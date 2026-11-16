@@ -7,7 +7,8 @@ import { isTestFile } from './patch-scan.mjs'
  * places per language; each name in the singular or the plural, as the ecosystem spells it):
  *   dotnet     unit: a `<Context>.UnitTest(s)`, `<Context>.Unit.Test(s)` or `<Context>.Test(s)` folder
  *              integration: `<Context>.IntegrationTest(s)` or `<Context>.Integration.Test(s)`
- *   java       unit: a `<context>-unit-test(s)` folder   integration: `<context>-integration-test(s)`
+ *   java       the Maven convention: a module's `src/test/`, `*Test` (Surefire) unit and `*IT`
+ *              (Failsafe) integration; `<context>-unit-test(s)` and `-integration-test(s)` modules too
  *   otherwise  unit: `unit/` under the test path         integration: `integration/` under it
  *   (python, typescript, javascript, react: `tests/unit/` and `tests/integration/`)
  * The test paths are those skraft-config.json gives the component (`paths.tests`), from its root:
@@ -40,10 +41,17 @@ const NEW_FILE = /^diff --git a\/(.+) b\/\1\nnew file mode /gm
  */
 const placesOf = (unit, integration, where) => ({ unit: ({ path }) => unit.test(path) && !integration.test(path), integration: ({ path }) => integration.test(path), where: () => where })
 
-/** @type {Record<string, Places>} */
+/** A module's tests, the Maven convention: its `src/test/`, the dedicated test modules' included. */
+const MAVEN_TEST = /(^|\/)src\/test\//
+
+/**
+ * Java's class name, `*Test` or `*IT`, picks the speed, not the place: the lens judges it.
+ * @type {Record<string, Places>}
+ */
 const PLACES = Object.freeze({
   dotnet: placesOf(/(^|\/)[^/]+\.(Unit\.?)?Tests?\//, /(^|\/)[^/]+\.Integration\.?Tests?\//, 'a <Context>.UnitTest, <Context>.UnitTests or <Context>.Tests project'),
-  java: placesOf(/(^|\/)[^/]+-unit-tests?\//, /(^|\/)[^/]+-integration-tests?\//, 'a <context>-unit-test or <context>-unit-tests module'),
+  // Stryker disable next-line ArrowFunction: undefined, like false, is no place
+  java: { unit: ({ path }) => MAVEN_TEST.test(path), integration: () => false, where: () => 'the src/test folder of a module' },
 })
 
 /**

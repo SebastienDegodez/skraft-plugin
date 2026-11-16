@@ -1,27 +1,52 @@
-# Clean Architecture Testing — Java / Spring Boot (Maven)
+# Clean Architecture Testing — Java (Maven, Spring Boot or Quarkus)
 
-Full runnable examples per layer. Roles and doubles follow the tables in `SKILL.md` — identical across languages, only the library names differ (here: JUnit 5, Mockito, Testcontainers, Spring Boot Test, ArchUnit).
+Full runnable examples per layer. Roles and doubles follow the tables in `SKILL.md` — identical across languages, only the library names differ (here: JUnit 5, Mockito, Testcontainers, Spring Boot Test or Quarkus Test, ArchUnit).
+
+## Where the tests live: the Maven convention
+
+Each test sits in the `src/test` of the module it tests. The class name picks the speed:
+
+| Class | Run by | Speed | Holds |
+|---|---|---|---|
+| `*Test` | Surefire (`mvn test`) | unit | Domain tests (rare), Application acceptance tests, the Cucumber runner of the acceptance scenarios |
+| `*IT` | Failsafe (`mvn verify`) | integration | adapters on real containers, API end-to-end, walking skeleton, architecture guard |
+
+A test that starts the application (`@SpringBootTest`, `@QuarkusTest`, `@QuarkusIntegrationTest`) is always an `*IT`, in the entry-point module: the one whose `pom.xml` carries `spring-boot-maven-plugin` or `quarkus-maven-plugin`.
 
 ```dot
 digraph maven_modules {
     rankdir=LR;
     node [shape=box];
-    api [label="orders-api\n@SpringBootApplication"];
-    infra [label="orders-infrastructure\nadapters"];
-    app [label="orders-application\nuse cases, interfaces"];
-    domain [label="orders-domain"];
-    unit [label="orders-unit-test\nno container, no Spring context", style=filled];
-    it [label="orders-integration-test\nadapters, API e2e, architecture guard", style=filled];
-    third [label="orders-architecture-test", style=dashed, fontcolor=red, color=red];
-
+    api [label="orders-api (Spring Boot) / orders-app (Quarkus)\nentry point\nsrc/test: OrdersEndpointIT, LayerDependencyIT"];
+    infra [label="orders-infrastructure\nsrc/test: OrderRepositoryIT"];
+    app [label="orders-application\nsrc/test: PlaceOrderTest"];
+    domain [label="orders-domain\nsrc/test: EligibilityPolicyTest (rare)"];
     api -> infra -> app -> domain;
-    unit -> app;
-    it -> api;
-    third -> infra [style=dashed, color=red, label="forbidden: third test module"];
 }
 ```
 
-`orders-integration-test` depends on `orders-api` so `@SpringBootTest` finds the `@SpringBootApplication`. Set `<classifier>exec</classifier>` on the `spring-boot-maven-plugin` `repackage` goal in `orders-api`; the repackaged jar hides its classes from dependents.
+`mvn verify` runs both speeds; the fast loop is `mvn test`. Bind Failsafe once, in the parent `pom.xml`:
+
+```xml
+<build>
+  <plugins>
+    <plugin>
+      <groupId>org.apache.maven.plugins</groupId>
+      <artifactId>maven-failsafe-plugin</artifactId>
+      <executions>
+        <execution>
+          <goals><goal>integration-test</goal><goal>verify</goal></goals>
+        </execution>
+      </executions>
+    </plugin>
+  </plugins>
+</build>
+```
+
+- **Spring Boot:** `spring-boot-starter-parent` manages the Failsafe version and points it at `target/classes`. Without that parent, add `<configuration><classesDirectory>${project.build.outputDirectory}</classesDirectory></configuration>`: the repackaged jar hides the classes.
+- **Quarkus:** keep the Failsafe configuration the Quarkus project generator writes (`systemPropertyVariables`: `java.util.logging.manager`, `maven.home`, `native.image.path`). `@QuarkusIntegrationTest` and the native tests run against the artifact the entry-point module builds, so they live nowhere else.
+
+**Variant — dedicated test modules.** A repository that already has `orders-unit-test` and `orders-integration-test` modules keeps them: the unit module depends on `orders-application`, the integration module on the entry-point module (Spring Boot: set `<classifier>exec</classifier>` on the `repackage` goal so its classes stay visible). Never add a third test module.
 
 ## Test layout and executable scenarios
 
@@ -99,10 +124,10 @@ class EligibilityPolicyTest {
 
 ## Application — acceptance test (default layer, Mockito)
 
-Sociable test: real domain objects, mocks only on output gateways.
+In `orders-application/src/test`. Sociable test: real domain objects, mocks only on output gateways.
 
 ```java
-class PlaceOrderCommandHandlerTest {
+class PlaceOrderTest {
 
     @Test
     void handle_persistsOrderAndDispatchesEvent() {
@@ -133,11 +158,11 @@ Use a hand-written in-memory fake instead of `mock(...)` once more than three te
 
 ## Infrastructure — integration test with Testcontainers
 
-One container per test class. Real provider, never an in-memory JPA/Hibernate provider.
+In `orders-infrastructure/src/test`. One container per test class. Real provider, never an in-memory JPA/Hibernate provider.
 
 ```java
 @Testcontainers
-class OrderRepositoryTest {
+class OrderRepositoryIT {
 
     @Container
     static final PostgreSQLContainer<?> db = new PostgreSQLContainer<>("postgres:16-alpine");
@@ -172,13 +197,15 @@ class OrderRepositoryTest {
 }
 ```
 
-## API — end-to-end test with Spring Boot Test
+## API — end-to-end test (entry-point module)
 
-One happy-path test per endpoint + walking skeleton.
+One happy-path test per endpoint + walking skeleton, each an `*IT`.
+
+### Spring Boot — `orders-api/src/test`
 
 ```java
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
-class OrdersEndpointTest {
+class OrdersEndpointIT {
 
     @Autowired
     private TestRestTemplate client;
@@ -200,14 +227,43 @@ class OrdersEndpointTest {
 }
 ```
 
-For E2E tests that hit a DB, point `spring.datasource.*` at a Testcontainers database via `@DynamicPropertySource` (or `@ServiceConnection`). Downstream HTTP calls to external APIs → route them to a contract mock server (Microcks).
+Point `spring.datasource.*` at a Testcontainers database via `@ServiceConnection` (or `@DynamicPropertySource`).
+
+### Quarkus — `orders-app/src/test`
+
+```java
+@QuarkusTest
+class OrdersEndpointIT {
+
+    @Test
+    void postOrders_withValidBody_returns201() {
+        given().contentType(ContentType.JSON).body(new PlaceOrderRequest("Alice"))
+                .when().post("/orders")
+                .then().statusCode(201).header("Location", notNullValue());
+    }
+
+    @Test
+    void getOrder_whenMissing_returns404() {
+        when().get("/orders/" + UUID.randomUUID()).then().statusCode(404);
+    }
+}
+
+@QuarkusIntegrationTest
+class PackagedOrdersEndpointIT extends OrdersEndpointIT {
+    // the same checks against the built jar or native executable
+}
+```
+
+Leave the datasource URL unset in the `test` profile: Dev Services starts the database container. A test that needs its own container setup uses `@QuarkusTestResource` with a `QuarkusTestResourceLifecycleManager`.
+
+On either framework, downstream HTTP calls to external APIs → route them to a contract mock server (Microcks).
 
 ## Architecture guard
 
-In `orders-integration-test` (test scope: `com.tngtech.archunit:archunit-junit5:1.4.0`).
+In the entry-point module, `orders-api/src/test` or `orders-app/src/test` (test scope: `com.tngtech.archunit:archunit-junit5:1.4.0`).
 
 ```java
-package com.example.orders.integrationtest.architecture;
+package com.example.orders.architecture;
 
 import static com.tngtech.archunit.core.domain.JavaClass.Predicates.resideInAPackage;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.classes;
@@ -226,7 +282,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
-class LayerDependencyTest {
+class LayerDependencyIT {
 
     private static final String ROOT = "com.example.orders";
     private static final Pattern INTERNAL_DEPENDENCY = Pattern.compile(
@@ -237,7 +293,7 @@ class LayerDependencyTest {
 
     @ParameterizedTest
     @CsvSource({"orders-domain,", "orders-application, orders-domain",
-                "orders-infrastructure, orders-application", "orders-api, orders-infrastructure"})
+                "orders-infrastructure, orders-application", "orders-api, orders-infrastructure"}) // Quarkus: orders-app
     void each_module_references_only_its_inner_neighbour(String module, String allowed) throws Exception {
         var pom = Files.readString(root().resolve(module).resolve("pom.xml"));
         var internal = INTERNAL_DEPENDENCY.matcher(pom).results().map(match -> match.group(1)).toList();
@@ -283,7 +339,7 @@ class LayerDependencyTest {
 | Change | Guard |
 |---|---|
 | `orders-api` → `orders-application` reference | red |
-| Domain/Application imports `org.springframework..`, `jakarta.persistence..`, `com.fasterxml.jackson..` | red |
+| Domain/Application imports `org.springframework..`, `io.quarkus..`, `jakarta..`, `com.fasterxml.jackson..` | red |
 | Domain/Application uses `java.net.http.HttpClient`, `java.nio.file.Files`, `java.sql..` | red |
 | `…application.refund` imports `…application.authorization.PaymentGateway` | red |
 | Infrastructure imports Domain types; Api imports Application use cases (transitive) | green |

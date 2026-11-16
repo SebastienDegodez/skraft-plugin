@@ -188,9 +188,11 @@ skeleton) and in the walking skeleton. A component overrides a row with `infrast
 | Domain policy / specification | `UnitTest` | Domain | None (pure function — call directly) |
 | Walking skeleton (S1) | `IntegrationTest` | Entry point → use case → internal gateways | Real entry point, Testcontainers, Microcks |
 | Repository adapter | `IntegrationTest` | Infrastructure | Real DB via Testcontainers |
-| API controller / endpoint | `IntegrationTest` | API | In-process app host (WebApplicationFactory or equivalent) |
+| API controller / endpoint | `IntegrationTest` | API | In-process app host (WebApplicationFactory, `@SpringBootTest`, `@QuarkusTest`) |
 | Architecture boundaries | `IntegrationTest` | Architecture | Static analysis (NetArchTest, ArchUnit, etc.) |
 | Visual/positional/style assertion (`@visual`) | `E2E` (Playwright) | Presentation (E2E) | Real browser engine — `boundingBox()`, `getComputedStyle()` |
+
+`UnitTest` and `IntegrationTest` are the unit and integration-test places of the language (`clean-architecture-testing`). Java follows the Maven convention: a `*Test` in the `src/test` of the module under test, an `*IT` in the infrastructure or entry-point module's `src/test`.
 
 **Never:**
 - Test a domain entity by instantiating it directly in an Application acceptance test

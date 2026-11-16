@@ -41,7 +41,7 @@ Every test targets exactly one Clean Architecture layer. The layer determines th
 
 **Entry point:** Use case / command handler / query handler
 **Double type:** what the infrastructure policy names for a targeted scenario (test-design-mandates): InMemory for each internal gateway (repository, cache); Microcks, from the test session's container, for an external gateway (an in-process double when the component's `mocking.strategy` is `inprocess`); a fake clock
-**Project:** `tests/{Context}.UnitTest/`
+**Project:** the unit-test place of the language (`clean-architecture-testing`): .NET `tests/{Context}.UnitTest/`; Java a `*Test` in the `src/test` of the module under test
 **Speed:** Must run in < 1s total for the full suite. No I/O but the test session's Microcks container.
 
 **What to double:**
@@ -61,7 +61,7 @@ Every test targets exactly one Clean Architecture layer. The layer determines th
 
 **Entry point:** The public method signature of the policy / specification
 **Double type:** None. Pure function — no collaborators to double.
-**Project:** `tests/{Context}.UnitTest/`
+**Project:** the unit-test place of the language (`clean-architecture-testing`): .NET `tests/{Context}.UnitTest/`; Java a `*Test` in the `src/test` of the module under test
 
 **Do NOT write Domain tests for:**
 - Simple value objects (covered by Application tests)
@@ -75,7 +75,7 @@ Every test targets exactly one Clean Architecture layer. The layer determines th
 
 **Entry point:** The application interface contract
 **Double type:** Real infrastructure via Testcontainers
-**Project:** `tests/{Context}.IntegrationTest/`
+**Project:** the integration-test place of the language (`clean-architecture-testing`): .NET `tests/{Context}.IntegrationTest/`; Java an `*IT` in the infrastructure module's `src/test`
 
 **Test what:** Verify the adapter correctly implements the application interface contract — serialisation, queries, transactions, error handling.
 
@@ -86,8 +86,8 @@ Every test targets exactly one Clean Architecture layer. The layer determines th
 ## API Layer — Rules
 
 **Entry point:** HTTP endpoint (or message consumer entry)
-**Double type:** In-process application host (`WebApplicationFactory` in .NET, `@SpringBootTest` in Java)
-**Project:** `tests/{Context}.IntegrationTest/`
+**Double type:** In-process application host (`WebApplicationFactory` in .NET, `@SpringBootTest` or `@QuarkusTest` in Java)
+**Project:** the integration-test place of the language (`clean-architecture-testing`): .NET `tests/{Context}.IntegrationTest/`; Java an `*IT` in the entry-point module's `src/test` (the one carrying `spring-boot-maven-plugin` or `quarkus-maven-plugin`)
 
 **Test what:** DI wiring, HTTP status codes, request/response shapes, authentication/authorisation headers.
 
@@ -99,7 +99,7 @@ Every test targets exactly one Clean Architecture layer. The layer determines th
 
 **Entry point:** Static analysis of compiled code
 **Tool:** NetArchTest (.NET), ArchUnit (Java), similar
-**Project:** `tests/{Context}.IntegrationTest/`
+**Project:** the integration-test place of the language (`clean-architecture-testing`): .NET `tests/{Context}.IntegrationTest/`; Java an `*IT` in the entry-point module's `src/test` (the one carrying `spring-boot-maven-plugin` or `quarkus-maven-plugin`)
 
 **Assert:**
 - Each project references only its inner neighbour: API → Infrastructure → Application → Domain

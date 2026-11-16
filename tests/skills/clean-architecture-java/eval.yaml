@@ -1,6 +1,6 @@
 name: clean-architecture-java
 description: |
-  Verifies that a Java / Spring Boot service is laid out as Clean Architecture
+  Verifies that a Java service (Spring Boot or Quarkus) is laid out as Clean Architecture
   and stays that way: one Maven module per layer, each referencing only its inner
   neighbour, use cases as plain classes, and no port or adapter vocabulary;
   commands that return nothing, queries that return a read model, aggregates
@@ -14,6 +14,8 @@ description: |
   (authorization, shared). Probes without the skill wrote every greenfield class
   at the root of its layer package 0/4, and both arms reused the authorization
   gateway from refunds 0/2 until the skill said to move shared types to shared.
+  Quarkus greenfield (not probed yet): wiring from the entry module and the
+  Maven test convention, *Test for the use case, *IT for the test booting Quarkus.
 type: capability
 defaults:
   timeout: 4m
@@ -366,6 +368,139 @@ stimuli:
       - Declares the rate lookup as an interface the use case owns and implements the HTTP call outside the business layers.
       - Puts the HTTP endpoint in the module that boots the application and lets it call the use case class directly.
       - Keeps the 1000 EUR rule with the business code, out of the endpoint and the HTTP client.
+
+  # Decider, Quarkus. Empty repository again, so the layout, the CDI wiring and
+  # where the tests go are the agent's own call. The prompt asks for tests and
+  # names no test layout: the Maven convention puts the use-case test, a *Test,
+  # in the application module and the test that boots Quarkus, an *IT, in the
+  # module carrying quarkus-maven-plugin, with no test module added.
+  - name: 'Java greenfield: a Quarkus parcel tracking service, with its tests'
+    prompt: |
+      Start a new Java 21 / Quarkus 3 service at the root of this repository, built with Maven. Its first feature: a carrier
+      registers a parcel through POST /parcels (body: parcelId, weightKg). A parcel heavier
+      than 30 kg is refused with 422. Keep parcels in memory for now.
+
+      Write the production code for this first feature, the build files and its tests:
+      the business rule and the HTTP endpoint each tested.
+    constraints:
+      max_duration: 14m
+      max_agent_duration: 10m
+    environment:
+      commands:
+        - 'git init --quiet'
+        - 'git config user.email eval@example.invalid'
+        - 'git config user.name "SKRAFT Eval"'
+        - 'git commit --quiet --allow-empty -m "chore: empty repository"'
+    graders:
+      - *feature-folders
+      - type: run-command
+        name: 'Sentinel: the generated build compiles, tests included'
+        config:
+          command: bash
+          args:
+            - -c
+            - 'log="$(mktemp)"; mvn -B -q -ntp -DskipTests test-compile >"$log" 2>&1 && exit 0; tail -n 40 "$log"; exit 1'
+          expected_exit_code: 0
+          timeout: 8m
+      - type: run-command
+        name: Each layer is a Maven module that references only its inner neighbour, Quarkus built by the outer one
+        config:
+          command: node
+          args:
+            - -e
+            - |
+              const fs = require('fs'), path = require('path');
+              const walk = (d, acc = []) => {
+                for (const e of fs.readdirSync(d, { withFileTypes: true })) {
+                  if (['.git', 'target', 'node_modules'].includes(e.name)) continue;
+                  const p = path.join(d, e.name);
+                  e.isDirectory() ? walk(p, acc) : acc.push(p);
+                }
+                return acc;
+              };
+              const modules = walk('.').filter(f => path.basename(f) === 'pom.xml' && path.dirname(f) !== '.').map(p => {
+                const raw = fs.readFileSync(p, 'utf8');
+                const pom = raw.replace(/<parent>[\s\S]*?<\/parent>/, '').replace(/<dependencyManagement>[\s\S]*?<\/dependencyManagement>/, '');
+                return { dir: path.dirname(p), id: (pom.match(/<artifactId>([^<]+)<\/artifactId>/) || [])[1], pom, quarkus: /<artifactId>quarkus-maven-plugin<\/artifactId>/.test(raw) };
+              });
+              const ids = new Set(modules.map(m => m.id));
+              const internal = m => [...m.pom.matchAll(/<dependency>([\s\S]*?)<\/dependency>/g)]
+                .filter(d => !/<scope>test<\/scope>/.test(d[1]))
+                .map(d => (d[1].match(/<artifactId>([^<]+)<\/artifactId>/) || [])[1])
+                .filter(a => ids.has(a)).sort();
+              const layer = suffix => modules.find(m => new RegExp(('(^|-)' + (suffix) + '$')).test(m.id));
+              const [domain, application, infrastructure] = ['domain', 'application', 'infrastructure'].map(layer);
+              const entry = modules.find(m => m.quarkus && ![domain, application, infrastructure].includes(m));
+              const missing = Object.entries({ domain, application, infrastructure, 'Quarkus entry point (quarkus-maven-plugin)': entry }).filter(([, m]) => !m).map(([n]) => n);
+              if (missing.length) { console.log(('no Maven module of its own for: ' + (missing.join(', ')))); process.exit(1); }
+              const expected = [[domain, []], [application, [domain.id]], [infrastructure, [application.id]], [entry, [infrastructure.id]]];
+              const wrong = expected.filter(([m, want]) => JSON.stringify(internal(m)) !== JSON.stringify(want))
+                .map(([m, want]) => ((m.id) + ' references [' + (internal(m)) + '], expected [' + (want) + ']'));
+              if (wrong.length) { console.log(wrong.join('\n')); process.exit(1); }
+              console.log('one module per layer, each referencing only its inner neighbour; ' + entry.id + ' builds Quarkus');
+          expected_exit_code: 0
+          timeout: 1m
+      - type: run-command
+        name: The use-case test is a *Test of the application module, the test booting Quarkus an *IT of the entry module, no test module added
+        config:
+          command: node
+          args:
+            - -e
+            - |
+              const fs = require('fs'), path = require('path');
+              const walk = (d, acc = []) => {
+                for (const e of fs.readdirSync(d, { withFileTypes: true })) {
+                  if (['.git', 'target', 'node_modules'].includes(e.name)) continue;
+                  const p = path.join(d, e.name);
+                  e.isDirectory() ? walk(p, acc) : acc.push(p.split(path.sep).join('/'));
+                }
+                return acc;
+              };
+              const files = walk('.').map(f => f.replace(/^\.\//, ''));
+              const tests = files.filter(f => f.endsWith('.java') && f.includes('/src/test/'));
+              const read = f => fs.readFileSync(f, 'utf8');
+              const problems = [];
+              const testModules = files.filter(f => /(^|\/)pom\.xml$/.test(f) && /(^|[-\/])(tests?|it|unit-tests?|integration-tests?)\/pom\.xml$/.test(f));
+              if (testModules.length) problems.push('test module added: ' + testModules.join(', '));
+              const entryDir = files.filter(f => f.endsWith('/pom.xml') && /<artifactId>quarkus-maven-plugin<\/artifactId>/.test(read(f))).map(f => path.posix.dirname(f))[0];
+              const booting = tests.filter(f => /@Quarkus(Integration)?Test\b/.test(read(f)));
+              if (!booting.length) problems.push('no test boots Quarkus');
+              for (const f of booting) {
+                if (!/IT\.java$/.test(f)) problems.push(f + ': boots Quarkus but is not an *IT');
+                if (!entryDir || !f.startsWith(entryDir + '/src/test/')) problems.push(f + ': boots Quarkus outside the module carrying quarkus-maven-plugin');
+              }
+              const useCase = tests.filter(f => /(^|[-\/])application\/src\/test\//.test(f) && /Test\.java$/.test(f) && !/@Quarkus/.test(read(f)));
+              if (!useCase.length) problems.push('no *Test in the application module src/test');
+              if (problems.length) { console.log(problems.join('\n')); process.exit(1); }
+              console.log(useCase.length + ' use-case *Test, ' + booting.length + ' Quarkus *IT in ' + entryDir);
+          expected_exit_code: 0
+          timeout: 1m
+      - type: run-command
+        name: Domain and Application import neither Quarkus nor Jakarta, and the use case carries no CDI scope
+        config:
+          command: bash
+          args:
+            - -c
+            - |
+              hits="$(grep -rlE --include=*.java '^import (static )?(io\.quarkus|jakarta\.)|@(ApplicationScoped|Singleton|RequestScoped|Dependent)\b' . | grep -E '/src/main/' | grep -E '(^|[-/.])(domain|application)([/.]|$)' || true)"
+              [ -z "$hits" ] && exit 0
+              echo "$hits" | head -n 20
+              exit 1
+          expected_exit_code: 0
+          timeout: 1m
+      - type: prompt
+        config:
+          scoring: scale_1_10
+      - type: skill-invocation
+        name: The skill under test is loaded
+        config:
+          required:
+            - clean-architecture-java
+    rubric:
+      - Builds each layer as its own Maven module, with Quarkus built only by the module that boots the application.
+      - Wires the use case from the outer module, leaving the business classes free of CDI and Quarkus annotations.
+      - Tests the 30 kg rule through the use case, without starting Quarkus.
+      - Tests the endpoint by starting the application, as an integration test the regular build runs apart from the fast tests.
 
   # Regression guard. The fixture is already layered; the baseline extended it
   # correctly 2/2 in the probes. A tie is expected; a loss means the skill

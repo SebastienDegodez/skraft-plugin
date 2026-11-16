@@ -71,6 +71,9 @@ test('tests added in the unit or the integration place of their language pass, i
   const javaPlural = await reviewed({ components: [{ ...API, stack: 'java', paths: { src: ['src'], tests: ['.'] } }] }, ['checkout-unit-tests/src/test/java/PayTest.java', 'checkout-integration-tests/src/test/java/PayIT.java'])
   assert.deepEqual(layout(javaPlural), [])
 
+  const maven = await reviewed({ components: [{ ...API, stack: 'java', paths: { src: ['foundry-application/', 'foundry-app/'], tests: ['.'] } }] }, ['foundry-application/src/test/java/io/foundry/examples/ImportExamplesTest.java', 'foundry-app/src/test/java/io/foundry/NominalExamplesWalkingSkeletonIT.java', 'foundry-infrastructure/src/test/kotlin/io/foundry/MongoExamplesIT.kt', 'src/test/java/io/foundry/RefundTest.java'])
+  assert.deepEqual(layout(maven), [])
+
   const node = await reviewed({ components: [{ ...API, stack: 'javascript', paths: { src: ['src'], tests: ['tests'] } }] }, ['tests/unit/pay.test.mjs', 'tests/integration/pay-api.test.mjs'])
   assert.deepEqual(layout(node), [])
 })
@@ -81,6 +84,9 @@ test('a component whose new tests all sit in its integration place, as a walking
 
   const java = await reviewed({ components: [{ ...API, stack: 'java', paths: { src: ['src'], tests: ['.'] } }] }, ['checkout-integration-tests/src/test/java/PayIT.java'])
   assert.deepEqual(layout(java), [])
+
+  const skeleton = await reviewed({ components: [{ ...API, stack: 'java', paths: { src: ['foundry-app/'], tests: ['foundry-domain/src/test', 'foundry-app/src/test'] } }] }, ['foundry-app/src/test/java/io/foundry/app/examples/NominalExamplesWalkingSkeletonIT.java'])
+  assert.deepEqual(layout(skeleton), [])
 
   const python = await reviewed({ components: [{ ...API, stack: 'python', paths: { src: ['src'], tests: ['tests/py/unit', 'tests/py/integration'] } }] }, ['tests/py/integration/test_pay_api.py'])
   assert.deepEqual(layout(python), [])
@@ -121,7 +127,10 @@ test('a JavaScript or Java test added beside its unit place is named with that p
     'F1 G11 blocker pay.test.mjs: a test added outside unit/ and the integration place of javascript, where clean-architecture-testing puts it',
   ])
 
-  const java = await reviewed({ components: [{ ...API, stack: 'java', paths: { src: ['src'], tests: ['.'] } }] }, ['checkout-unit-test/src/test/java/PayTest.java', 'src/test/java/RefundTest.java'])
-  assert.deepEqual(layout(java), ['F1 G11 blocker src/test/java/RefundTest.java: a test added outside a <context>-unit-test or <context>-unit-tests module and the integration place of java, where clean-architecture-testing puts it'])
+  const java = await reviewed({ components: [{ ...API, stack: 'java', paths: { src: ['src'], tests: ['.'] } }] }, ['checkout-unit-test/src/test/java/PayTest.java', 'checkout-app/src/main/java/io/checkout/RefundTest.java', 'tests/RefundIT.java'])
+  assert.deepEqual(layout(java), [
+    'F1 G11 blocker checkout-app/src/main/java/io/checkout/RefundTest.java: a test added outside the src/test folder of a module and the integration place of java, where clean-architecture-testing puts it',
+    'F2 G11 blocker tests/RefundIT.java: a test added outside the src/test folder of a module and the integration place of java, where clean-architecture-testing puts it',
+  ])
   assert.ok(!(await java.tracking.read(SLUG, 'reviews/distill_review-1/verdict.yaml')).includes('dissent'))
 })
