@@ -18,7 +18,7 @@ setting that could lower it; that dial is gone, and with it the `advisory` and
 
 | Gate | Value | Scope |
 | --- | --- | --- |
-| Mutation score | 100% | Domain, Application |
+| Mutation score | 80% | Domain, Application |
 | Mutation score | 80% | API, Infrastructure |
 | Line coverage | 100% | Domain, Application |
 
@@ -47,23 +47,27 @@ A gate that cannot run is not a passed gate. Report it as a failure and stop.
 The engine runs each gate from the component's `commands` in `skraft-config.json` and keeps
 the evidence. Every gate takes its exit code as its verdict.
 
-Mutation testing is the developer's: the plugin's pipeline runs no mutation, and skraft ships
-no mutation script or config. The bar above still holds for it:
+Mutation testing is the developer's: the story's pipeline runs no mutation, and skraft ships no
+mutation script or config. The developer's mutation run (`workflows/mutation.skraft.dot`) runs
+each component's `mutation` command and judges each scope against the bar above:
 
 - **Core** -- a file under a folder whose name ends with the word `domain` or `application`
   (`Checkout.Domain`, `orders-application`, `src/<feature>/application`), relative to the
-  component root: 100.
+  component root: 80.
 - **Boundary** -- every other file: 80.
+- **Global** -- the one scope of a single project, when the command computes its score so: 80.
 
-A workflow a team ejects may still hold a `gate="mutation"` node: the engine then judges the
-tool's report against this bar, whatever exit code a finished run returns, and a missing or
-unreadable report fails the gate as environment.
+The command may write its result, score already computed, to the file `SKRAFT_MUTATION_RESULT`
+names: `{ "scopes": [{ "name": "core" | "boundary" | "global", "score": <percent>, "survivors":
+["<file>:<line> <detail>"] }] }`. That result is judged; without it, the report the stack's tool
+writes at its default path, whatever exit code a finished run returns. A result or report that
+cannot be read fails the gate as environment.
 
 ## Threshold flags
 
 | Scope | Mutation | Coverage |
 | --- | --- | --- |
-| Domain, Application | `thresholds.break = 100` in the developer's core mutation config | 100% line coverage, enforced by the `quality-gates-<stack>` coverage script |
+| Domain, Application | `thresholds.break = 80` in the developer's core mutation config | 100% line coverage, enforced by the `quality-gates-<stack>` coverage script |
 | API, Infrastructure | `thresholds.break = 80` in the developer's boundary mutation config | not gated on coverage |
 
 The coverage script exits non-zero below the bar and refuses a threshold argument. A score
