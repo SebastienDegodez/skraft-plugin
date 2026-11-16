@@ -3,6 +3,12 @@
 Toutes les modifications notables de ce projet sont documentées ici.
 Format basé sur [Conventional Commits](https://www.conventionalcommits.org/) — versionnage [SemVer](https://semver.org/).
 
+## [2.0.0-alpha.104](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.103...v2.0.0-alpha.104) (2026-11-16)
+
+### ✨ Features
+
+* **skills:** /skraft-mutation conducts the branch's mutation run, and the handbook says how to run, configure and leave out mutation ([#617](https://github.com/SebastienDegodez/skraft-plugin/issues/617)) ([a5c778d](https://github.com/SebastienDegodez/skraft-plugin/commit/a5c778d34002e02743ca30388c17bd492032ed01)), closes [#609](https://github.com/SebastienDegodez/skraft-plugin/issues/609)
+
 ## [2.0.0-alpha.103](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.102...v2.0.0-alpha.103) (2026-11-16)
 
 ### ✨ Features
