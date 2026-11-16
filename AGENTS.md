@@ -108,7 +108,8 @@ the probe or a test says otherwise.
   executable, an agent or a model outside the workflow and `skraft-config.json`; never echo a
   refused value.
 - **Messages are fixed by code.** No exception text or stderr in the journal, an outcome, a prompt
-  or a tool result.
+  or a tool result. An exception goes only to `logs/unexpected.log` of the run's tracking folder,
+  which nothing reads back, and the outcome names its path.
 - **Human pipeline questions use native chat.** The model asks the engine's exact question and
   options through the offered native `ask_user` or `askQuestions` tool, requests a refusal
   reason there, then relays only the human reply through `skraft_decide` (Copilot extension)
