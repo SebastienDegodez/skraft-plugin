@@ -344,10 +344,11 @@ parenthèses est héritée du prédécesseur.
 | `deliver_review -> deliver` | `NEEDS_REWORK` | 2 |
 | `deliver_review -> visuals` | `APPROVED` | — |
 
-Le workflow du plugin ne lance aucune mutation : le développeur la lance à part. Une équipe qui
-la veut dans son propre workflow ajoute un nœud `gate="mutation"`, et peut le faire suivre de la
-boucle de kill que les attributs ci-dessus permettent (`each="survivor-file"`, `proposal=true`,
-`question="mutation-plan"`).
+Le pipeline du plugin ne lance aucune mutation : le développeur la lance à part, dans un run qui
+suit `workflows/mutation.skraft.dot` (la gate `mutation`, puis la boucle de kill que les attributs
+ci-dessus permettent : `each="survivor-file"`, `proposal=true`, `question="mutation-plan"`), ou
+`.skraft/mutation.skraft.dot` quand la copie de travail en a une. Une équipe qui veut la mutation
+à chaque run de story ajoute un nœud `gate="mutation"` à son propre pipeline.
 
 Les autres arêtes n'ont ni étiquette ni plafond : `start -> research -> design`, `distill -> distill_review_lenses`, `deliver -> gates`,
 `visuals -> pr_writer -> publish -> exit`, et celles

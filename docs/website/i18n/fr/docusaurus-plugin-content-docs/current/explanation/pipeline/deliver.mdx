@@ -99,9 +99,13 @@ et à une question `mutation-plan`. Même ainsi, elle restait l'étape la plus l
 elle demandait une configuration de mutation que skraft écrivait pour le développeur, et ses
 survivants arrêtaient le run sur une question, tout à la fin.
 
-Le pipeline du plugin ne la lance donc plus. Le développeur choisit l'outil, écrit sa
-configuration et la lance quand il le décide, à part du pipeline de la story. Le seuil ne bouge
-pas : 100 % sur le cœur, 80 % sur la frontière, fixés par `skraft-quality-bar`.
+Le pipeline de la story ne la lance donc plus. Le développeur choisit l'outil, écrit sa
+configuration et la lance quand il le décide, à part du pipeline de la story : skraft donne à ce
+run un workflow à lui, `workflows/mutation.skraft.dot`, avec son propre journal. La commande peut
+rendre son score déjà calculé ([Le résultat de mutation](../../reference/skraft-config.md#mutation-result)),
+et les survivants d'un périmètre sous la barre vont à une proposition, au choix du développeur,
+puis à un kill. Le seuil ne bouge
+pas : 80 % sur le cœur et 80 % sur la frontière, jugés à part, fixés par `skraft-quality-bar`.
 
 Un mutant survivant n'a toujours pas une seule bonne réponse. Il finit de l'une de trois façons :
 
@@ -134,7 +138,7 @@ et [Contract testing](../deep-dive/contract-testing.md).
   deux. La revue les juge.
 - **Une story peut partir sans run de mutation.** Le pipeline ne prouve plus que les tests
   détecteraient une erreur ; le run du développeur le fait, quand il le lance.
-- **Pas de seuil négociable.** 100 % sur le cœur, 80 % sur la frontière, quel que soit le dépôt :
+- **Pas de seuil négociable.** 80 % sur le cœur et sur la frontière, quel que soit le dépôt :
   voir [Software craftsmanship](../software-craftsmanship.md).
 
 ## Sources

@@ -91,7 +91,6 @@ Toute clé hors de cette liste est refusée.
 | `paths` | object | `["."]` pour chaque clé, toute la racine | `{ "src": […], "tests": […] }`, dossiers relatifs à la racine du composant, jamais absolus ni commençant par `..` ; `skraft init` les écrit. En DELIVER, le software engineer n'écrit que là (droits d'écriture) |
 | `contractTesting` | boolean | `false` | `true` fait lire au software engineer les skills de contract testing de sa stack ; les lentilles de revue voient le réglage parmi ceux du composant |
 | `bdd` | liste ou `false` | obligatoire | où chaque runner du composant lit ses scénarios et les définitions qui les lient : une liste de `{ runner, features, steps }`, les dossiers relatifs à la racine du composant, `runner` facultatif, et `steps` facultatif aussi — omis, les scénarios sont écrits et rien ne leur est demandé, donc aucun runner ne les lit. **Une paire par runner**, parce que la portée de liaison est celle du runner : une définition d'une autre paire ne lie aucun pas de celle-ci, donc un composant qui porte plusieurs projets de tests en déclare une chacun. `false` n'en nomme aucune, et ne demande aucun `.feature` à DISTILL : l'acceptance designer prend ses scénarios dans la colonne `Scenario` du plan de test, et TDD tourne comme toujours. **Aucune clé, et un `true` nu, ne décident rien** : le moteur n'invente aucun dossier — un dossier que personne n'a choisi est un dossier que le runner peut ne jamais lire — donc un run est refusé avec `skraft is not initialised: run /skraft-init (<composant>: bdd is unanswered)` et `skraft doctor` échoue sur ce composant. C'est une pratique qui se déclare, jamais un seuil : un composant qui nomme ses dossiers est tenu à ses scénarios en entier. Les dossiers sont là où DISTILL écrit les scénarios de l'histoire et là où le moteur les relit : une seule résolution pour le brief, le périmètre d'écriture de l'acceptance designer, le dossier que le moteur crée avant sa tentative, et le contrôle. Un dossier déclaré qui n'est pas un dossier de la copie de travail fait échouer `skraft doctor`, et une paire qui nomme un runner dont le `steps` n'est pas un dossier refuse le run (`bdd-unbound`) — un runner sans liaisons n'exécute rien ; `features` en est exempté, puisque DISTILL le crée avec le premier scénario. Les mots-clés Gherkin sont en anglais, quelle que soit la langue des phrases. `skraft init` détecte les paires, `/skraft-init` demande celles qu'il n'a pas trouvées, `skraft doctor` les nomme, le moteur passe les dossiers dans le brief, et les lentilles de revue voient le réglage parmi ceux du composant |
-| `mutationReport` | string | absent : le rapport qu'écrit l'outil de la stack, relatif à la racine : `StrykerOutput/reports/mutation-report.json` (.NET), `reports/mutation/mutation.json` (TypeScript, JavaScript, React), `mutation-report.json` (Python), `target/pit-reports/mutations.xml` (Java ; `build/reports/pitest/mutations.xml` quand la commande de mutation nomme Gradle) | le fichier où la commande `mutation` écrit son rapport, relatif à la racine du composant, jamais absolu ni hors d'elle. La gate de mutation y lit les mutants survivants et juge la barre 100 % / 80 % |
 | `infrastructure` | object | `{}` : chaque ligne est celle du plugin ([politique d'infrastructure](#infrastructure)) | les lignes de la politique que les tests du composant surchargent : `entryPoint`, `internalGateway` et `clock`, chacune `{ "targeted", "walkingSkeleton" }` ; pour `react`, `entryPoint` et `clock` `{ "targeted" }` et `frontToBack` `{ "targeted", "e2e" }`. Chaque valeur parmi `in-process`, `real`, `in-memory`, `testcontainers`, `microcks`, `fake`, `msw`. `externalGateway` est refusée : `mocking.strategy` la fixe. Un étage omis garde le mécanisme du plugin |
 
 Les seuils qualité (couverture, mutation…) ne sont **pas** configurables : aucune clé ne les
@@ -273,7 +272,7 @@ Dans les messages, `<label>` vaut `component <name>` si le nom est une chaîne, 
 | entrée pas un objet | `components[<index>] must be an object` |
 | nom | `components[<index>].name must be kebab-case, got <valeur JSON>` |
 | nom en double | `component name <name> is used twice` |
-| clé inconnue | `<label>: unknown key <clé> (allowed: name, root, stack, paths, commands, baseBranch, mocking, contractTesting, bdd, mutationReport, infrastructure)` |
+| clé inconnue | `<label>: unknown key <clé> (allowed: name, root, stack, paths, commands, baseBranch, mocking, contractTesting, bdd, infrastructure)` |
 | racine | `<label>: root must be a path relative to the working copy` |
 | stack | `<label>: stack must be one of dotnet, java, python, typescript, javascript, react` |
 | `commands` pas un objet | `<label>: commands must be an object of command lines` |
@@ -284,7 +283,7 @@ Dans les messages, `<label>` vaut `component <name>` si le nom est une chaîne, 
 | `paths` | `<label>: paths must be { "src": [...], "tests": [...] }` ; `<label>: paths.<key> must list folders inside the component root` |
 | `contractTesting` | `<label>: contractTesting must be true or false` |
 | `bdd` | `<label>: bdd must be true, false, or a list of { runner, features, steps } whose folders are inside the component root; steps may be left out when nothing binds the scenarios` |
-| `mutationReport` | `<label>: mutationReport must be a file inside the component root` |
+| `mutationReport` | `<label>: mutationReport is gone; have the mutation command write its result to the file SKRAFT_MUTATION_RESULT names, or leave its tool's report where the tool writes it` |
 | `infrastructure` | `<label>: infrastructure must be an object of rows (allowed: <rangées>)` ; `<label>: infrastructure.externalGateway is set by mocking.strategy; write "mocking": { "strategy": ... } instead` ; `<label>: unknown infrastructure row <rangée> (allowed: <rangées>)` ; `<label>: infrastructure.<rangée> must be an object of <étages>` ; `<label>: infrastructure.<rangée>: unknown field <étage> (allowed: <étages>)` ; `<label>: infrastructure.<rangée>.<étage> must be one of in-process, real, in-memory, testcontainers, microcks, fake, msw` |
 
 ## Lignes de commande <!-- #command-lines -->
@@ -329,14 +328,40 @@ dans cet ordre, quel que soit l'ordre du fichier :
 | 6 | `coverage` |
 | 7 | `mutation` |
 
-`mutation` revient au développeur : ni le pipeline du plugin ni `skraft gate` ne la lancent ;
-seul un nœud `gate="mutation"` du workflow propre à une équipe le fait, et `skraft doctor`
-vérifie que son programme est trouvé. `e2e`, le seul autre nom permis, n'est pas une gate : `skraft gate` ne la lance pas, mais
+`mutation` revient au développeur : ni le pipeline de la story ni `skraft gate` ne la lancent ;
+le run de mutation du développeur (`workflows/mutation.skraft.dot`) la lance, comme un nœud
+`gate="mutation"` du workflow propre à une équipe, et `skraft doctor` vérifie que son programme
+est trouvé ([Le résultat de mutation](#mutation-result)). `e2e`, le seul autre nom permis, n'est pas une gate : `skraft gate` ne la lance pas, mais
 `skraft doctor` la vérifie. Un nom mal écrit (`tset`) rend la configuration invalide au lieu
 de sauter la gate en silence. Un composant sans aucune commande de gate échoue (gate `none`,
 classe `environment`) : `no gate command; give it at least one of build, format, lint, test,
 architecture, coverage in skraft-config.json` ; une commande `mutation` seule ne compte pas. Un composant s'arrête à sa première
 gate en échec.
+
+### Le résultat de mutation <!-- #mutation-result -->
+
+La commande `mutation` trouve dans la variable d'environnement `SKRAFT_MUTATION_RESULT` le chemin
+d'un fichier du run, à côté de son journal de preuve. Elle peut y écrire son résultat, score déjà
+calculé :
+
+```json
+{ "scopes": [
+  { "name": "core", "score": 84.2, "survivors": ["src/Checkout.Domain/Order.cs:12 EqualityOperator"] },
+  { "name": "boundary", "score": 91 }
+] }
+```
+
+| Champ | Règle |
+| --- | --- |
+| `name` | `core` et `boundary` pour un composant en Clean Architecture, chacun une fois au plus ; `global` seul pour un projet unique |
+| `score` | un pourcentage, de 0 à 100 ; chaque périmètre doit atteindre 80 |
+| `survivors` | facultatif : une ligne par mutant resté vivant, `<fichier>:<ligne> <détail>`, le fichier relatif à la racine du composant ; un périmètre sous 80 les confie à une proposition par fichier |
+
+Quand la commande n'y écrit rien, le moteur lit le rapport qu'écrit l'outil de la stack, relatif à
+la racine du composant : `StrykerOutput/reports/mutation-report.json` (.NET),
+`reports/mutation/mutation.json` (TypeScript, JavaScript, React), `mutation-report.json` (Python),
+`target/pit-reports/mutations.xml` (Java ; `build/reports/pitest/mutations.xml` quand la commande
+nomme Gradle). Un résultat ou un rapport illisible fait échouer la gate en `environment`.
 
 Une ligne qui commence par `python` lance le premier interpréteur trouvé depuis la racine du
 composant : `.venv/bin/python`, `.venv/Scripts/python.exe`, puis `python` et `python3` sur le

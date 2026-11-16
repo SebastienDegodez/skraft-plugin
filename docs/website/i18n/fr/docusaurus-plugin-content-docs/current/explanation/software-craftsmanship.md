@@ -60,9 +60,9 @@ reprend le manifeste, la colonne de droite est propre à skraft.*
 
 ### Un logiciel bien conçu : un seuil qui ne se négocie pas
 
-Le skill `skraft-quality-bar` est l'unique endroit où un seuil est écrit : 100 % de score de
-mutation et de couverture de lignes sur Domain et Application, 80 % de score de mutation sur
-API et Infrastructure. Il n'y a ni niveau « conseil », ni dérogation, ni réglage par dépôt ;
+Le skill `skraft-quality-bar` est l'unique endroit où un seuil est écrit : 80 % de score de
+mutation sur Domain et Application comme sur API et Infrastructure, jugés à part, et 100 % de
+couverture de lignes sur Domain et Application. Il n'y a ni niveau « conseil », ni dérogation, ni réglage par dépôt ;
 la configuration `skraft-config.json` choisit les **commandes** des gates, jamais leurs seuils.
 Dans `pipeline.skraft.dot`, le nœud `gates` de DELIVER est `locked` : le retirer d'une copie du
 workflow exige une raison écrite (`unlock="<raison>"`).
@@ -148,7 +148,7 @@ Le craft opposable a un coût, et skraft l'assume.
 
 - **La première tranche est plus lente.** Un walking skeleton et des tests rouges avant le
   code retardent la première démo ; ils évitent d'avoir à reconstruire la structure ensuite.
-- **100 % de mutation sur le cœur est exigeant.** Certains mutants ne changent rien
+- **80 % de mutation sur chaque périmètre est exigeant.** Certains mutants ne changent rien
   d'observable ; le skill `quality-gates-<stack>` du composant dit comment en exclure un, ligne
   par ligne et avec sa raison, plutôt que d'abaisser le seuil pour tous.
 - **Le pipeline ne prouve pas que les tests attrapent une erreur.** La mutation est le run du

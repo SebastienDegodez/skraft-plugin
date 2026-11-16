@@ -94,9 +94,12 @@ of survivors and a `mutation-plan` question. Even then it stayed the slowest ste
 it needed a mutation configuration skraft wrote for the developer, and its survivors stopped the
 run on a question at the very end.
 
-So the plugin's pipeline no longer runs it. The developer picks the tool, writes its
-configuration and runs it when they decide, apart from the story's pipeline. The bar does not
-move: 100 % on the core, 80 % on the boundary, stated by `skraft-quality-bar`.
+So the story's pipeline no longer runs it. The developer picks the tool, writes its
+configuration and runs it when they decide, apart from the story's pipeline: skraft gives that run
+a workflow of its own, `workflows/mutation.skraft.dot`, with its own journal. The command may hand
+its score over already computed ([The mutation result](../../reference/skraft-config.md#mutation-result)),
+and the survivors of a scope below the bar go to a proposal, a choice of the developer, then a kill. The bar does not
+move: 80 % on the core and 80 % on the boundary, judged apart, stated by `skraft-quality-bar`.
 
 A surviving mutant still has no single right answer. It ends one of three ways:
 
@@ -127,7 +130,7 @@ contract, the matching fidelity lens joins the review. The why:
   committed; nobody sees the unit tests written in between fail. The review judges them.
 - **A story can ship without a mutation run.** The pipeline no longer proves the tests would
   catch a mistake; the developer's own run does, when they make it.
-- **No negotiable threshold.** 100 % on the core, 80 % on the boundary, whatever the repository:
+- **No negotiable threshold.** 80 % on the core and on the boundary, whatever the repository:
   see [Software craftsmanship](../software-craftsmanship.md).
 
 ## Sources

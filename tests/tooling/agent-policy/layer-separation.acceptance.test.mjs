@@ -9,7 +9,7 @@ import { findShippedWorkflows } from '../../../eng/lib/shipped-workflows.mjs'
 // shipped pipeline so a future workflow edit cannot silently re-merge the product layer
 // (backlog discovery / refinement) back into the engineering pipeline.
 const root = join(dirname(fileURLToPath(import.meta.url)), '../../..')
-const pipeline = findShippedWorkflows(root).find((workflow) => workflow.entry && workflow.path.endsWith('/pipeline.skraft.dot'))
+const pipeline = findShippedWorkflows(root).find((workflow) => workflow.entry)
 
 test('layer separation: the pipeline is RESEARCH -> DESIGN -> DISTILL -> DELIVER -> PUBLISH', () => {
   assert.equal(pipeline.pluginDir, 'skraft-framework')

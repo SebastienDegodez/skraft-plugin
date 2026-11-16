@@ -10,6 +10,9 @@ import { readWorkflow } from '../../plugins/skraft-framework/engine/domain/workf
 
 const REFUTER = 'finding-refuter'
 
+/** The workflow a story's run starts from. */
+const STORY_PIPELINE = 'pipeline.skraft.dot'
+
 /**
  * What one parsed workflow names.
  *
@@ -37,7 +40,8 @@ export function workflowAgents(workflow) {
 /**
  * @param {string} root the repository root
  * @returns {Array<{ path: string, pluginDir: string, entry: boolean, phases: Array<{ phase: string, specialist: string }>, agents: string[] }>}
- *   path relative to root with `/`; entry: a workflow a run starts from, not one another workflow calls
+ *   path relative to root with `/`; entry: the workflow a story's run starts from, `pipeline.skraft.dot`;
+ *   neither a workflow another one calls nor one a run of its own follows (`mutation.skraft.dot`)
  */
 export function findShippedWorkflows(root) {
   const pluginsDir = join(root, 'plugins')
@@ -53,7 +57,7 @@ export function findShippedWorkflows(root) {
       return [{
         path: relative(root, join(dir, file)).split('\\').join('/'),
         pluginDir,
-        entry: asEntry.ok,
+        entry: asEntry.ok && file === STORY_PIPELINE,
         ...workflowAgents(read.workflow),
       }]
     })

@@ -90,8 +90,8 @@ however, are not negotiable: they are not configurable.
 ### What it takes to qualify a delivery
 
 The coverage gate leaves its evidence in the run folder. Mutation testing is the developer's:
-the pipeline runs none, and the developer's own run must reach 100 % on the business core and
-80 % elsewhere. `qa-report.md` gathers the test plan, the gates and the review verdicts for the
+the pipeline runs none, and the developer's own run must reach 80 % on the business core and
+elsewhere. `qa-report.md` gathers the test plan, the gates and the review verdicts for the
 QA team;
 `run-report.md` gives the time, cost and retries of each step. The run ends with a pull request
 described from the journal, with the screenshots of a front end.

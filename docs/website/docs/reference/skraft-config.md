@@ -90,7 +90,6 @@ Any key outside this list is refused.
 | `paths` | object | `["."]` for each key, the whole root | `{ "src": […], "tests": […] }`, folders relative to the component root, never absolute nor starting with `..`; `skraft init` writes them. In DELIVER, the software engineer may write only there (write scope) |
 | `contractTesting` | boolean | `false` | `true` makes the software engineer read the contract testing skills of its stack; the review lenses see the setting among the component settings |
 | `bdd` | list or `false` | required | where each runner of the component reads its scenarios and the definitions that bind them: a list of `{ runner, features, steps }`, folders relative to the component root, `runner` optional, and `steps` optional too — left out, the scenarios are written and nothing is asked of them, so no runner reads them. **One pair per runner**, because the binding scope is the runner's own: a definition of another pair binds no step of this one, so a component holding several test projects declares one pair each. `false` names none, and asks DISTILL for no `.feature`: the acceptance designer takes its scenarios from the test plan's `Scenario` column and TDD runs as it always does. **No key at all, and a bare `true`, decide nothing**: the engine invents no folder — one nobody chose is one the runner may never read — so a run is refused with `skraft is not initialised: run /skraft-init (<component>: bdd is unanswered)` and `skraft doctor` fails on that component. It declares a practice, never a threshold: a component that names its folders is held to its scenarios in full. The folders are where DISTILL writes the story's scenarios and where the engine reads them back: one resolution for the brief, the write scope of the acceptance designer, the folder the engine creates before its attempt, and the check. A declared folder that is no folder of the working copy fails `skraft doctor`, and a pair naming a runner whose `steps` is no folder refuses the run (`bdd-unbound`) — a runner with no bindings executes nothing; `features` is exempt, since DISTILL creates it with the first scenario. The Gherkin keywords are English whatever language the sentences are in. `skraft init` detects the pairs, `/skraft-init` asks for the ones it did not find, `skraft doctor` names them, the engine passes the folders in the brief, and the review lenses see the setting among the component settings |
-| `mutationReport` | string | absent: the report the stack's tool writes, relative to the root: `StrykerOutput/reports/mutation-report.json` (.NET), `reports/mutation/mutation.json` (TypeScript, JavaScript, React), `mutation-report.json` (Python), `target/pit-reports/mutations.xml` (Java; `build/reports/pitest/mutations.xml` when the mutation command names Gradle) | the file the `mutation` command writes its report to, relative to the component root, never absolute nor outside it. The mutation gate reads its surviving mutants there and judges the 100 % / 80 % bar |
 | `infrastructure` | object | `{}`: every row is the plugin's ([infrastructure policy](#infrastructure)) | the rows of the policy the component's tests override: `entryPoint`, `internalGateway` and `clock`, each `{ "targeted", "walkingSkeleton" }`; for `react`, `entryPoint` and `clock` `{ "targeted" }` and `frontToBack` `{ "targeted", "e2e" }`. Each value among `in-process`, `real`, `in-memory`, `testcontainers`, `microcks`, `fake`, `msw`. `externalGateway` is refused: `mocking.strategy` sets it. A stage left out keeps the plugin's mechanism |
 
 Quality thresholds (coverage, mutation…) are **not** configurable: no key carries them.
@@ -268,7 +267,7 @@ otherwise.
 | entry not an object | `components[<index>] must be an object` |
 | name | `components[<index>].name must be kebab-case, got <JSON value>` |
 | duplicate name | `component name <name> is used twice` |
-| unknown key | `<label>: unknown key <key> (allowed: name, root, stack, paths, commands, baseBranch, mocking, contractTesting, bdd, mutationReport, infrastructure)` |
+| unknown key | `<label>: unknown key <key> (allowed: name, root, stack, paths, commands, baseBranch, mocking, contractTesting, bdd, infrastructure)` |
 | root | `<label>: root must be a path relative to the working copy` |
 | stack | `<label>: stack must be one of dotnet, java, python, typescript, javascript, react` |
 | `commands` not an object | `<label>: commands must be an object of command lines` |
@@ -279,7 +278,7 @@ otherwise.
 | `paths` | `<label>: paths must be { "src": [...], "tests": [...] }`; `<label>: paths.<key> must list folders inside the component root` |
 | `contractTesting` | `<label>: contractTesting must be true or false` |
 | `bdd` | `<label>: bdd must be true, false, or a list of { runner, features, steps } whose folders are inside the component root; steps may be left out when nothing binds the scenarios` |
-| `mutationReport` | `<label>: mutationReport must be a file inside the component root` |
+| `mutationReport` | `<label>: mutationReport is gone; have the mutation command write its result to the file SKRAFT_MUTATION_RESULT names, or leave its tool's report where the tool writes it` |
 | `infrastructure` | `<label>: infrastructure must be an object of rows (allowed: <rows>)`; `<label>: infrastructure.externalGateway is set by mocking.strategy; write "mocking": { "strategy": ... } instead`; `<label>: unknown infrastructure row <row> (allowed: <rows>)`; `<label>: infrastructure.<row> must be an object of <stages>`; `<label>: infrastructure.<row>: unknown field <stage> (allowed: <stages>)`; `<label>: infrastructure.<row>.<stage> must be one of in-process, real, in-memory, testcontainers, microcks, fake, msw` |
 
 ## Command lines <!-- #command-lines -->
@@ -323,13 +322,38 @@ whatever the order in the file:
 | 6 | `coverage` |
 | 7 | `mutation` |
 
-`mutation` is the developer's: neither the plugin's pipeline nor `skraft gate` runs it; only a
-`gate="mutation"` node of a team's own workflow does, and `skraft doctor` checks that its program
-is found. `e2e`, the only other name allowed, is not a gate: `skraft gate` does not run it, but
+`mutation` is the developer's: neither the story's pipeline nor `skraft gate` runs it; the
+developer's mutation run (`workflows/mutation.skraft.dot`) does, as does a `gate="mutation"` node
+of a team's own workflow, and `skraft doctor` checks that its program is found ([The mutation
+result](#mutation-result)). `e2e`, the only other name allowed, is not a gate: `skraft gate` does not run it, but
 `skraft doctor` checks it. A misspelt name (`tset`) makes the configuration invalid instead
 of silently skipping the gate. A component with no gate command fails (gate `none`, class `environment`):
 `no gate command; give it at least one of build, format, lint, test, architecture, coverage in
 skraft-config.json`; a `mutation` command alone does not count. A component stops at its first failing gate.
+
+### The mutation result <!-- #mutation-result -->
+
+The `mutation` command finds in the environment variable `SKRAFT_MUTATION_RESULT` the path of a
+file of the run, beside its evidence log. It may write its result there, score already computed:
+
+```json
+{ "scopes": [
+  { "name": "core", "score": 84.2, "survivors": ["src/Checkout.Domain/Order.cs:12 EqualityOperator"] },
+  { "name": "boundary", "score": 91 }
+] }
+```
+
+| Field | Rule |
+| --- | --- |
+| `name` | `core` and `boundary` for a component in Clean Architecture, each at most once; `global` alone for a single project |
+| `score` | a percent, 0 to 100; each scope must reach 80 |
+| `survivors` | optional: one line per mutant left alive, `<file>:<line> <detail>`, the file relative to the component root; a scope below 80 hands them to one proposal per file |
+
+When the command writes nothing there, the engine reads the report the stack's tool writes, relative
+to the component root: `StrykerOutput/reports/mutation-report.json` (.NET),
+`reports/mutation/mutation.json` (TypeScript, JavaScript, React), `mutation-report.json` (Python),
+`target/pit-reports/mutations.xml` (Java; `build/reports/pitest/mutations.xml` when the command
+names Gradle). A result or a report that cannot be read fails the gate as `environment`.
 
 A line that starts with `python` starts the first interpreter found from the component's
 root: `.venv/bin/python`, `.venv/Scripts/python.exe`, then `python` and `python3` on the

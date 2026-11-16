@@ -178,7 +178,7 @@ The four phases RESEARCH → DESIGN → DISTILL → DELIVER a story goes through
 ## Q
 
 **Quality bar**
-The thresholds the `skraft-quality-bar` skill sets for every repository: 100 % mutation score and line coverage on Domain and Application, 80 % mutation score on API and Infrastructure. No configuration lowers them.
+The thresholds the `skraft-quality-bar` skill sets for every repository: 80 % mutation score on Domain and Application and on API and Infrastructure, judged apart, and 100 % line coverage on Domain and Application. No configuration lowers them.
 → See [Software craftsmanship](../explanation/software-craftsmanship.md)
 
 ## R
