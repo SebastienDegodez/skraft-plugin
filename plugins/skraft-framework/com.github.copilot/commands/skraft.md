@@ -42,7 +42,7 @@ slug, an issue or a title.
 
 ## Decide — `[<key>] <answer> [reason…]`
 The typed words do not replace the native question.
-1. Copilot extension: read `skraft_decide {}`. MCP elsewhere: read `skraft_status`.
+1. Copilot extension: when `skraft_decide` is not among your tools, find it with `tool_search_tool`; then read `skraft_decide {}`. MCP elsewhere: read `skraft_status`.
 2. Ask the returned question's EXACT text and options through the offered native `ask_user` or `askQuestions` tool. For a refusal, request its reason through that tool.
 3. Native tool unavailable or dismissed: report that concrete blocker, leave the run paused and record nothing. Never infer an answer or substitute an ordinary prose question.
 4. Relay ONLY the returned human reply: Copilot extension `skraft_decide {key, answer, reason?}`; MCP `skraft_answer {key, answer, reason?, workspace}`.

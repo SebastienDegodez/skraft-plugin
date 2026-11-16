@@ -27,7 +27,8 @@ Never pick a strategy from an instruction file or the test you are copying; the 
 | inprocess | python | `mocking-inprocess-python` |
 | microcks | typescript, react, javascript tested with Vitest | `mocking-microcks-typescript` |
 | inprocess | typescript, react, javascript tested with Vitest | `mocking-inprocess-typescript` |
-| microcks or inprocess | java | none |
+| microcks | java | `mocking-microcks-java` |
+| inprocess | java | `mocking-inprocess-java` |
 
 With `inprocess`, the recipe's library table picks the library: its rows are ordered by priority, take the first one already present in the test project.
 
