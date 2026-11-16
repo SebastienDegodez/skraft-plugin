@@ -3,6 +3,12 @@
 Toutes les modifications notables de ce projet sont documentées ici.
 Format basé sur [Conventional Commits](https://www.conventionalcommits.org/) — versionnage [SemVer](https://semver.org/).
 
+## [2.0.0-alpha.103](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.102...v2.0.0-alpha.103) (2026-11-16)
+
+### ✨ Features
+
+* **engine:** mutation is declared on request: skraft init --mutation, /skraft-init mutation and doctor's mutation line ([#616](https://github.com/SebastienDegodez/skraft-plugin/issues/616)) ([4849d9a](https://github.com/SebastienDegodez/skraft-plugin/commit/4849d9a7811eeba4a53eca275969648b55ed9202)), closes [#609](https://github.com/SebastienDegodez/skraft-plugin/issues/609)
+
 ## [2.0.0-alpha.102](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.101...v2.0.0-alpha.102) (2026-11-16)
 
 ### ✨ Features
