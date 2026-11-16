@@ -32,12 +32,11 @@ const REPORTS = Object.freeze({
 const GRADLE_REPORT = 'build/reports/pitest/mutations.xml'
 
 /**
- * The report a component's mutation command leaves, relative to the component root: the one
- * the developer names, else the one its stack's tool writes.
+ * The report a component's mutation command leaves, relative to the component root: the one its
+ * stack's tool writes.
  * @param {Component} component
  */
 export const mutationReportOf = (component) => {
-  if (component.mutationReport !== null) return component.mutationReport
   if (component.stack === 'java' && /gradle/.test(component.commands.mutation)) return GRADLE_REPORT
   return REPORTS[component.stack]
 }

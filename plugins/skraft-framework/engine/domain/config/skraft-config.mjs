@@ -32,13 +32,11 @@ export { HOSTS } from './model-assignment.mjs'
  *   contractTesting: boolean,
  *   bdd: boolean | null,
  *   bddPaths: BddPair[],
- *   mutationReport: string | null,
  *   infrastructure: import('./infrastructure-policy.mjs').Infrastructure,
  * }} Component
  *   root is relative to the working copy, normalised (`.`, `services/api`, `../payment-web`).
  *   paths are relative to root, normalised; `['.']` (the whole root) when the file names none,
- *   or an empty list (`skraft init` on a project with no tests folder yet). mutationReport: where
- *   the mutation command writes its report, relative to root; null for the one its stack's tool writes.
+ *   or an empty list (`skraft init` on a project with no tests folder yet).
  *   infrastructure: the rows of its tests' infrastructure policy the component overrides, {} when
  *   it overrides none.
  * @typedef {{ runner: string | null, features: string, steps: string | null }} BddPair
@@ -92,7 +90,16 @@ export const MOCKING_STRATEGIES = Object.freeze(['microcks', 'inprocess'])
 /** What a pair may name, and nothing else. */
 const BDD_KEYS = Object.freeze(['runner', 'features', 'steps'])
 const NAME = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
-const COMPONENT_KEYS = Object.freeze(['name', 'root', 'stack', 'paths', 'commands', 'baseBranch', 'mocking', 'contractTesting', 'bdd', 'mutationReport', 'infrastructure'])
+const COMPONENT_KEYS = Object.freeze(['name', 'root', 'stack', 'paths', 'commands', 'baseBranch', 'mocking', 'contractTesting', 'bdd', 'infrastructure'])
+
+/** The keys a component held once, each with what replaces it. */
+const GONE_KEYS = Object.freeze({
+  __proto__: null,
+  mutationReport: 'have the mutation command write its result to the file SKRAFT_MUTATION_RESULT names, or leave its tool\'s report where the tool writes it',
+})
+
+/** @param {string} label @param {string} key */
+const keyError = (label, key) => (key in GONE_KEYS ? `${label}: ${key} is gone; ${GONE_KEYS[key]}` : `${label}: unknown key ${key} (allowed: ${COMPONENT_KEYS.join(', ')})`)
 /** The gates, and `e2e`, which doctor checks but no gate runs. */
 export const COMMAND_NAMES = Object.freeze([...GATE_ORDER, 'e2e'])
 /** What only the team's file holds. */
@@ -345,7 +352,7 @@ const FIELD_CHECKS = Object.freeze([
     if (typeof entry.name !== 'string' || !NAME.test(entry.name)) errors.push(`${at}.name must be kebab-case, got ${JSON.stringify(entry.name ?? null)}`)
   },
   ({ entry, label, errors }) => {
-    for (const key of Object.keys(entry).filter((key) => !COMPONENT_KEYS.includes(key))) errors.push(`${label}: unknown key ${key} (allowed: ${COMPONENT_KEYS.join(', ')})`)
+    for (const key of Object.keys(entry).filter((key) => !COMPONENT_KEYS.includes(key))) errors.push(keyError(label, key))
   },
   ({ entry, label, errors }) => {
     if (typeof entry.root !== 'string' || entry.root.trim() === '' || isAbsolutePath(entry.root)) errors.push(`${label}: root must be a path relative to the working copy`)
@@ -355,9 +362,6 @@ const FIELD_CHECKS = Object.freeze([
   },
   ({ entry, label, errors }) => {
     if (entry.contractTesting !== undefined && typeof entry.contractTesting !== 'boolean') errors.push(`${label}: contractTesting must be true or false`)
-  },
-  ({ entry, label, errors }) => {
-    if (entry.mutationReport !== undefined && !isInnerFolder(entry.mutationReport)) errors.push(`${label}: mutationReport must be a file inside the component root`)
   },
   ({ entry, label, errors }) => {
   },
@@ -403,14 +407,10 @@ const componentFrom = (entry, { paths, commands, baseBranch, strategy, gherkin }
 })
 
 /**
- * How the component's tests are read: where its mutation report is, and the rows of its
- * infrastructure policy it overrides.
+ * How the component's tests are read: the rows of its infrastructure policy it overrides.
  * @param {Record<string, any>} entry
  */
-const testsOf = ({ mutationReport, infrastructure = {} }) => ({
-  mutationReport: mutationReport === undefined ? null : normalizeRelative(mutationReport),
-  infrastructure,
-})
+const testsOf = ({ infrastructure = {} }) => ({ infrastructure })
 
 /**
  * @param {Record<string, any>} entry @param {string} label @param {string[]} errors

@@ -77,7 +77,7 @@ const strykerReportOf = async (workspace, { argv, cwd }) => {
   try { config = JSON.parse(await workspace.read('skraft-config.json')) } catch { return null }
   const component = (config?.components ?? []).find((each) => each.root === cwd && STRYKER_REPORTS[each.stack] !== undefined && runs(each.commands?.mutation, argv))
   if (component === undefined) return null
-  const report = component.mutationReport ?? STRYKER_REPORTS[component.stack]
+  const report = STRYKER_REPORTS[component.stack]
   return cwd === '.' ? report : `${cwd}/${report}`
 }
 

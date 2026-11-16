@@ -79,7 +79,7 @@ test('a row a component overrides in skraft-config.json says so, keeps the plugi
 test('a component that still names its test reports is refused like any unknown key: the engine reads no report', async () => {
   assert.equal(
     await refusalOf([component('api', 'dotnet', { testReports: ['reports/junit.xml'] })]),
-    'skraft-config.json is invalid: component api: unknown key testReports (allowed: name, root, stack, paths, commands, baseBranch, mocking, contractTesting, bdd, mutationReport, infrastructure)',
+    'skraft-config.json is invalid: component api: unknown key testReports (allowed: name, root, stack, paths, commands, baseBranch, mocking, contractTesting, bdd, infrastructure)',
   )
 })
 

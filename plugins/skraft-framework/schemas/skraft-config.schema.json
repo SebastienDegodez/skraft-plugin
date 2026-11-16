@@ -309,25 +309,6 @@
             }
           ]
         },
-        "mutationReport": {
-          "description": "The file the mutation command writes its report to, relative to the component root; absent: the one the stack's tool writes.",
-          "type": "string",
-          "allOf": [
-            {
-              "pattern": "\\S"
-            },
-            {
-              "not": {
-                "pattern": "^([\\\\/]|[A-Za-z]:)"
-              }
-            },
-            {
-              "not": {
-                "pattern": "^\\.\\."
-              }
-            }
-          ]
-        },
         "infrastructure": {
           "description": "The rows of the plugin's infrastructure policy this component's tests override, by dependency kind: entryPoint, internalGateway and clock for a back end, entryPoint, frontToBack and clock for React; each stage one of the mechanisms. externalGateway follows mocking.strategy.",
           "type": "object"

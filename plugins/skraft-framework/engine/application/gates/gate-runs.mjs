@@ -333,7 +333,7 @@ const reportOf = async (deps, slug, component) => {
   // Stryker disable next-line StringLiteral: workingCopyOf drops the slug's folder and what follows it, so any file name stands for the slug's folder
   const workingCopy = workingCopyOf(deps.files.location(slug, 'marker'))
   const read = text === null || text === '' ? { ok: /** @type {const} */ (false), reason: 'is missing' } : readMutants(text, { report, root: component.root, workingCopy })
-  if (!read.ok) return { ok: false, reason: `the mutation report ${path} ${read.reason}; have the command write it there, or name the file it writes with mutationReport on ${component.name} in ${CONFIG_FILE}` }
+  if (!read.ok) return { ok: false, reason: `the mutation report ${path} ${read.reason}; have the command write it there, or its result to the file ${RESULT_VARIABLE} names` }
   return read
 }
 
