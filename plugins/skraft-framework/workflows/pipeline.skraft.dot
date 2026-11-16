@@ -8,16 +8,13 @@
 // by the verdict it returns: deliver_review runs review, the review a pull request gets too. The called workflow declares its inputs
 // (input_<name>="required" or "optional"); the call binds each one by name to what the run holds (base, head, story,
 // documents, components), with_<name>="<value>" binding it to another. A called workflow calls no other.
-// A hexagon asks a human: the run waits until `skraft decide` answers. mutation-plan takes APPLY, an instruction of the developer's own, or STOP, which ends the run.
+// A hexagon asks a human: the run waits until `skraft decide` answers.
 // A parallelogram with publish="pull-request" pushes the branch and opens or updates its pull request, on the consent publish.pullRequest of skraft-config.json; a run starts only once /skraft-init has settled it.
 // A parallelogram with publish="playwright-visuals" runs each front end's e2e command and commits the screenshots its manifest lists, on the consent publish.visuals; when="frontend" skips it without a front end, and such a node then needs no consent.
-// each="survivor-file" runs an agent once per file holding mutants the mutation gate left alive, when the gate's FAIL edge leads to it; reached by another edge, it runs once, with what that edge brings.
 // each="scenario" goes on two agent nodes: the first writes the story's scenarios and its failing walking skeleton, then, on its own pass, the failing acceptance test of the first scenario;
 // the second makes it pass with one green commit, the walking skeleton passing too; then the engine runs them again for each next scenario, one failing test commit, one green commit, without edges and without the review.
 // scenario-review asks a human, once, to read the scenarios, the walking skeleton and the acceptance test of the first scenario before DELIVER builds them: APPROVED goes on, REVISE sends DISTILL back with the corrections.
-// proposal=true on such an agent has it write a proposal per file, in a file the engine creates, and change no code.
-// Mutation runs last, on the code the DELIVER review approved; its survivors go to a proposal, the developer chooses (mutation_plan), then kill_mutants applies the choice.
-// mutation_gates runs the gates of gates again after kill_mutants: a gate node that runs every gate of a locked one stands in for it.
+// The pipeline runs no mutation: mutation testing is the developer's, run apart from the story's pipeline.
 digraph skraft {
   graph [version="2", goal="Deliver the story"]
 
@@ -49,15 +46,6 @@ digraph skraft {
   deliver  [shape=box, agent="software-engineer", phase="DELIVER", each="scenario"]
   gates    [shape=parallelogram, gate="build,format,lint,test,architecture,coverage", goal_gate=true, locked=true, phase="DELIVER"]
   deliver_review [shape=house, workflow="review", mandatory=true]
-  mutation [shape=parallelogram, gate="mutation", goal_gate=true, locked=true]
-  kill_proposal [shape=box, agent="software-engineer", each="survivor-file", proposal=true]
-  mutation_plan [shape=hexagon, question="mutation-plan"]
-  kill_mutants [shape=box, agent="software-engineer", each="survivor-file"]
-  mutation_review_lenses [shape=component]
-  mutation_review_test_integrity [shape=note, lens="test-integrity"]
-  mutation_review_refuter [shape=octagon, mandatory=true]
-  mutation_review [shape=tripleoctagon, mandatory=true]
-  mutation_gates [shape=parallelogram, gate="build,format,lint,test,architecture,coverage", goal_gate=true]
   visuals  [shape=parallelogram, publish="playwright-visuals", when="frontend"]
   pr_writer [shape=box, agent="pr-writer", phase="PUBLISH"]
   publish  [shape=parallelogram, publish="pull-request"]
@@ -86,17 +74,6 @@ digraph skraft {
   gates -> deliver [label="FAIL", max_visits=3]
   gates -> deliver_review [label="PASS"]
   deliver_review -> deliver [label="NEEDS_REWORK", max_visits=2]
-  deliver_review -> mutation [label="APPROVED"]
-  mutation -> visuals [label="PASS"]
-  mutation -> kill_proposal [label="FAIL", max_visits=5]
-  kill_proposal -> mutation_plan
-  mutation_plan -> kill_mutants [label="APPLY"]
-  kill_mutants -> mutation_review_lenses
-  mutation_review_lenses -> mutation_review_test_integrity -> mutation_review_refuter
-  mutation_review_refuter -> mutation_review
-  mutation_review -> kill_mutants [label="NEEDS_REWORK", max_visits=2]
-  mutation_review -> mutation_gates [label="APPROVED"]
-  mutation_gates -> kill_mutants [label="FAIL", max_visits=3]
-  mutation_gates -> mutation [label="PASS"]
+  deliver_review -> visuals [label="APPROVED"]
   visuals -> pr_writer -> publish -> exit
 }

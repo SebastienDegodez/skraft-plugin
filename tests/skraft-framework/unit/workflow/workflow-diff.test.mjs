@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { BUILT_IN_REVIEW, BUILT_IN_WORKFLOW } from '../support/in-memory-host.mjs'
+import { BUILT_IN_REVIEW, BUILT_IN_WORKFLOW, MUTATION_WORKFLOW } from '../support/in-memory-host.mjs'
 import { DELIVER_LENSES, ejectedPipeline, edit, host, reviewWithLenses, WITH_SECURITY, withLenses } from './support.mjs'
 
 test('diff lists the changes of the .skraft/review.skraft.dot of the working copy, prefixed with its path, even when only .skraft/review.skraft.dot was ejected', async () => {
@@ -67,7 +67,7 @@ test('diff lists the nodes and edges a repository workflow adds, drops and chang
 
 test('diff names every fact of a node or an edge that changed, and the nodes removed', async () => {
   const reshaped = edit(
-    BUILT_IN_WORKFLOW,
+    MUTATION_WORKFLOW,
     ['  research [shape=box, agent="solution-researcher", phase="RESEARCH"]\n', ''],
     ['start -> research -> design', 'start -> design'],
     ['phase="DESIGN"', 'phase="ARCHITECTURE"'],
@@ -80,7 +80,7 @@ test('diff names every fact of a node or an edge that changed, and the nodes rem
     ['gates -> deliver_review [label="PASS"]', 'gates -> deliver_review [label="FAIL"]'],
     ['graph [version="2", goal="Deliver the story"]', 'graph [version="2", goal="Deliver the story", skraft_version="2.0.0"]'],
   )
-  const { commands } = host({ files: ejectedPipeline(reshaped) })
+  const { commands } = host({ files: ejectedPipeline(reshaped), builtIn: MUTATION_WORKFLOW })
 
   assert.deepEqual(await commands.diff({ pluginVersion: '2.0.0' }), {
     ok: true,
@@ -117,7 +117,7 @@ test('diff names every fact of a node or an edge that changed, and the nodes rem
 
 test('diff names a publish node added, a node turned from publish to gate, a condition dropped, and each lens node added, dropped or changed', async () => {
   const reshaped = edit(
-    withLenses(BUILT_IN_WORKFLOW, 'mutation_review', ['cold-reader', 'test-integrity']),
+    withLenses(MUTATION_WORKFLOW, 'mutation_review', ['cold-reader', 'test-integrity']),
     ['    design_review_fitness [shape=note, lens="fitness"]\n', ''],
     ['  design_review_lenses -> design_review_fitness -> design_review_refuter\n', ''],
     ['lens="coverage"', 'lens="coverage", when="mock", model="frontier"'],
@@ -128,7 +128,7 @@ test('diff names a publish node added, a node turned from publish to gate, a con
     ['publish="playwright-visuals", when="frontend"]', 'publish="playwright-visuals"]'],
     ['graph [version="2", goal="Deliver the story"]', 'graph [version="2", goal="Deliver the story", skraft_version="2.0.0"]'],
   )
-  const { commands } = host({ files: ejectedPipeline(reshaped) })
+  const { commands } = host({ files: ejectedPipeline(reshaped), builtIn: MUTATION_WORKFLOW })
 
   assert.deepEqual((await commands.diff({ pluginVersion: '2.0.0' })).changes, [
     '+ node mutation_review_cold_reader (lens cold-reader)',
@@ -193,11 +193,11 @@ test('diff is refused without an ejected workflow, or when one is invalid', asyn
 })
 
 test('diff names the question an ask node changed to, with the edges that follow it', async () => {
-  const replanned = edit(BUILT_IN_WORKFLOW,
+  const replanned = edit(MUTATION_WORKFLOW,
     ['mutation_plan [shape=hexagon, question="mutation-plan"]', 'mutation_plan [shape=hexagon, question="adr-ratification"]'],
     ['mutation_plan -> kill_mutants [label="APPLY"]', 'mutation_plan -> kill_mutants [label="RATIFIED"]\n  mutation_plan -> mutation [label="REJECTED", max_visits=1]'],
     ['graph [version="2", goal="Deliver the story"]', 'graph [version="2", goal="Deliver the story", skraft_version="2.0.0"]'])
-  const { commands } = host({ files: ejectedPipeline(replanned) })
+  const { commands } = host({ files: ejectedPipeline(replanned), builtIn: MUTATION_WORKFLOW })
 
   assert.deepEqual((await commands.diff({ pluginVersion: '2.0.0' })).changes, [
     '~ node mutation_plan: question mutation-plan → adr-ratification',

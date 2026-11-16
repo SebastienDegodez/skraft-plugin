@@ -908,6 +908,40 @@ export class InMemoryPullRequests {
 /** The plugin's own `workflows/pipeline.skraft.dot`, read once: the default every test runs. */
 export const BUILT_IN_WORKFLOW = readFileSync(new URL('../../../../plugins/skraft-framework/workflows/pipeline.skraft.dot', import.meta.url), 'utf8')
 
+/**
+ * The plugin's pipeline as a repository ejected it to keep the mutation loop the plugin's pipeline
+ * no longer runs: mutation after the DELIVER review, its survivors proposed by file, the
+ * developer's choice applied, reviewed, and the gates and mutation run again.
+ */
+export const MUTATION_WORKFLOW = [
+  ['  visuals  [shape=parallelogram', `  mutation [shape=parallelogram, gate="mutation", goal_gate=true, locked=true]
+  kill_proposal [shape=box, agent="software-engineer", each="survivor-file", proposal=true]
+  mutation_plan [shape=hexagon, question="mutation-plan"]
+  kill_mutants [shape=box, agent="software-engineer", each="survivor-file"]
+  mutation_review_lenses [shape=component]
+  mutation_review_test_integrity [shape=note, lens="test-integrity"]
+  mutation_review_refuter [shape=octagon, mandatory=true]
+  mutation_review [shape=tripleoctagon, mandatory=true]
+  mutation_gates [shape=parallelogram, gate="build,format,lint,test,architecture,coverage", goal_gate=true]
+  visuals  [shape=parallelogram`],
+  ['  deliver_review -> visuals [label="APPROVED"]\n', `  deliver_review -> mutation [label="APPROVED"]
+  mutation -> visuals [label="PASS"]
+  mutation -> kill_proposal [label="FAIL", max_visits=5]
+  kill_proposal -> mutation_plan
+  mutation_plan -> kill_mutants [label="APPLY"]
+  kill_mutants -> mutation_review_lenses
+  mutation_review_lenses -> mutation_review_test_integrity -> mutation_review_refuter
+  mutation_review_refuter -> mutation_review
+  mutation_review -> kill_mutants [label="NEEDS_REWORK", max_visits=2]
+  mutation_review -> mutation_gates [label="APPROVED"]
+  mutation_gates -> kill_mutants [label="FAIL", max_visits=3]
+  mutation_gates -> mutation [label="PASS"]
+`],
+].reduce((text, [old, now]) => {
+  if (!text.includes(old)) throw new Error(`${JSON.stringify(old)} is not in the workflow`)
+  return text.replace(old, now)
+}, BUILT_IN_WORKFLOW)
+
 export const BUILT_IN_REVIEW = readFileSync(new URL('../../../../plugins/skraft-framework/workflows/review.skraft.dot', import.meta.url), 'utf8')
 
 export class InMemoryWorkflowSource {

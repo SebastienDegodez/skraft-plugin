@@ -17,6 +17,22 @@ const pipeline = shipped('pipeline.skraft.dot')
 const review = shipped('review.skraft.dot', { called: true })
 const answersOf = (question) => questionSpec(question).options
 const SHIPPED = { pipeline, review }
+/** A workflow of a team that still loops on its surviving mutants: one proposal per file of survivors. */
+const PROPOSING = readWorkflow([
+  'digraph proposing {',
+  '  start [shape=Mdiamond]',
+  '  deliver [shape=box, agent="software-engineer", phase="DELIVER"]',
+  '  mutation [shape=parallelogram, gate="mutation"]',
+  '  kill_proposal [shape=box, agent="software-engineer", each="survivor-file", proposal=true]',
+  '  plan [shape=hexagon, question="mutation-plan"]',
+  '  exit [shape=Msquare]',
+  '  start -> deliver -> mutation',
+  '  mutation -> exit [label="PASS"]',
+  '  mutation -> kill_proposal [label="FAIL"]',
+  '  kill_proposal -> plan',
+  '  plan -> exit [label="APPLY"]',
+  '}',
+].join('\n')).workflow
 const DIRECTIONS = ['LR', 'TB']
 
 const drawn = (flow) => flow.nodes.filter((node) => node.type !== 'phase')
@@ -69,9 +85,9 @@ describe('the flow drawn from a shipped workflow', () => {
     ])
   })
 
-  test('the gates and mutation nodes carry their lock, the mutation_gates node none', () => {
+  test('the gates node carries its lock, the deliver node none', () => {
     const flow = toFlow(pipeline, { direction: 'LR', answersOf })
-    assert.deepEqual(['gates', 'mutation', 'mutation_gates'].map((id) => byId(flow, id).data.node.locked), [true, true, false])
+    assert.deepEqual(['gates', 'deliver'].map((id) => byId(flow, id).data.node.locked), [true, false])
     assert.deepEqual(byId(flow, 'gates').data.node.gates, ['build', 'format', 'lint', 'test', 'architecture', 'coverage'])
   })
 
@@ -124,7 +140,7 @@ describe('the side panel of a node', () => {
   })
 
   test('shows an agent node with its agent, each= and proposal', () => {
-    const fields = panelFields(pipeline.nodes.kill_proposal)
+    const fields = panelFields(PROPOSING.nodes.kill_proposal)
     assert.deepEqual(fields.map(({ key, value }) => [key, value]), [
       ['id', 'kill_proposal'],
       ['kind', 'agent'],

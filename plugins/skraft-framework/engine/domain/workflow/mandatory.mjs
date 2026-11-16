@@ -83,7 +83,7 @@ const reworkReasons = (custom, { id, phase }) => {
  * The nodes the copy must not reach the exit from without the review: the start, the agent its
  * NEEDS_REWORK edge sends the work back to, and each agent of the review's phase the run only
  * reaches through the review (one added after it). A path the plugin's workflow has too is
- * kept (mutation_review runs only after kill_mutants: the start goes around it there).
+ * kept (a review that runs only after an agent of its own: the start goes around it there).
  * @param {Workflow} builtIn @param {Workflow} custom @param {WorkflowNode} node the plugin's review
  */
 const bypassReasons = (builtIn, custom, node) => [custom.start, ...custom.order.filter((id) => checkedAgent(custom, node, id))]

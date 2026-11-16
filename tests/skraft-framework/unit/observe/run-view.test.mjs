@@ -25,12 +25,6 @@ const PENDING_GRAPH = Object.freeze({
     node('deliver', 'agent', 'DELIVER', 'software-engineer'),
     node('gates', 'gate', 'DELIVER', GATES),
     node('deliver_review', 'call', 'DELIVER', 'test-integrity, architecture-boundaries, cold-reader, mock-fidelity, contract-fidelity'),
-    node('mutation', 'gate', 'DELIVER', 'mutation'),
-    node('kill_proposal', 'agent', 'DELIVER', 'software-engineer'),
-    node('mutation_plan', 'ask', 'DELIVER', 'mutation-plan'),
-    node('kill_mutants', 'agent', 'DELIVER', 'software-engineer'),
-    node('mutation_review', 'review', 'DELIVER', 'test-integrity'),
-    node('mutation_gates', 'gate', 'DELIVER', GATES),
     node('visuals', 'publish', 'DELIVER', 'publish playwright-visuals'),
     node('pr_writer', 'agent', 'PUBLISH', 'pr-writer'),
     node('publish', 'publish', 'PUBLISH', 'publish pull-request'),
@@ -41,10 +35,7 @@ const PENDING_GRAPH = Object.freeze({
     edge('distill', 'distill_review'), edge('distill_review', 'distill', 'NEEDS_REWORK'), edge('distill_review', 'scenario_review', 'APPROVED'),
     edge('scenario_review', 'deliver', 'APPROVED'), edge('scenario_review', 'distill', 'REVISE'),
     edge('deliver', 'gates'), edge('gates', 'deliver', 'FAIL'), edge('gates', 'deliver_review', 'PASS'),
-    edge('deliver_review', 'deliver', 'NEEDS_REWORK'), edge('deliver_review', 'mutation', 'APPROVED'), edge('mutation', 'visuals', 'PASS'),
-    edge('mutation', 'kill_proposal', 'FAIL'), edge('kill_proposal', 'mutation_plan'), edge('mutation_plan', 'kill_mutants', 'APPLY'),
-    edge('kill_mutants', 'mutation_review'), edge('mutation_review', 'kill_mutants', 'NEEDS_REWORK'), edge('mutation_review', 'mutation_gates', 'APPROVED'),
-    edge('mutation_gates', 'kill_mutants', 'FAIL'), edge('mutation_gates', 'mutation', 'PASS'),
+    edge('deliver_review', 'deliver', 'NEEDS_REWORK'), edge('deliver_review', 'visuals', 'APPROVED'),
     edge('visuals', 'pr_writer'), edge('pr_writer', 'publish'),
   ],
 })
@@ -122,7 +113,7 @@ test('the view of a run at its gates names them, and of a completed run says don
 
   assert.deepEqual(seen, [{ step: 'gates', phase: 'DELIVER', agent: null, gates: ['build', 'format', 'lint', 'test', 'architecture', 'coverage'], question: null, visit: 1, attempt: 1 }])
   assert.deepEqual(core(await host.view()), {
-    slug: SLUG, status: 'done', reason: 'PUBLISH closed', phases: phases('closed', 'closed', 'closed', 'closed', 'closed'), current: null, question: null, attempts: 15, costUsd: null,
+    slug: SLUG, status: 'done', reason: 'PUBLISH closed', phases: phases('closed', 'closed', 'closed', 'closed', 'closed'), current: null, question: null, attempts: 14, costUsd: null,
     reviews: [
       { step: 'design_review', visit: 1, verdict: 'approved', lenses: passing('consistency', 'architecture-compliance', 'fitness') },
       { step: 'distill_review', visit: 1, verdict: 'approved', lenses: passing('coverage', 'business-alignment', 'testability', 'boundary-enforcement') },
@@ -131,7 +122,6 @@ test('the view of a run at its gates names them, and of a completed run says don
     gates: [
       { component: 'api', gate: 'build', command: 'dotnet build', status: 'pass', durationMs: 0, evidence: 'gates/api/build-1.log', survivors: undefined },
       { component: 'api', gate: 'test', command: 'dotnet test', status: 'pass', durationMs: 0, evidence: 'gates/api/test-1.log', survivors: undefined },
-      { component: 'api', gate: 'mutation', command: 'dotnet stryker', status: 'pass', durationMs: 0, evidence: 'gates/api/mutation-1.log', survivors: null },
     ],
   })
 })
@@ -237,12 +227,6 @@ test('the view marks each step of the run done or in progress, with its outcome,
     ['deliver', 'done', 'done', 1, 1, 0, null],
     ['gates', 'done', 'pass', 1, 1, 0, null],
     ['deliver_review', 'done', 'approved', 1, 1, 0, 0.125],
-    ['mutation', 'done', 'pass', 1, 1, 0, null],
-    ['kill_proposal', 'pending', null, 0, 0, 0, null],
-    ['mutation_plan', 'pending', null, 0, 0, 0, null],
-    ['kill_mutants', 'pending', null, 0, 0, 0, null],
-    ['mutation_review', 'pending', null, 0, 0, 0, null],
-    ['mutation_gates', 'pending', null, 0, 0, 0, null],
     ['visuals', 'done', 'skipped', 1, 1, 0, null],
     ['pr_writer', 'done', 'done', 1, 1, 0, null],
     ['publish', 'done', 'local', 1, 1, 0, null],
@@ -251,7 +235,7 @@ test('the view marks each step of the run done or in progress, with its outcome,
   assert.deepEqual(graph.edges.filter((taken) => taken.taken > 0).map(({ from, to, taken }) => [from, to, taken]), [
     ['research', 'design', 1], ['design', 'design_review', 2],
     ['design_review', 'design', 1], ['design_review', 'adr', 1], ['adr', 'distill', 1], ['distill', 'distill_review', 1], ['distill_review', 'scenario_review', 1], ['scenario_review', 'deliver', 1],
-    ['deliver', 'gates', 1], ['gates', 'deliver_review', 1], ['deliver_review', 'mutation', 1], ['mutation', 'visuals', 1], ['visuals', 'pr_writer', 1], ['pr_writer', 'publish', 1],
+    ['deliver', 'gates', 1], ['gates', 'deliver_review', 1], ['deliver_review', 'visuals', 1], ['visuals', 'pr_writer', 1], ['pr_writer', 'publish', 1],
   ])
 })
 
@@ -288,7 +272,6 @@ test('the view shows the last result of each gate of each component, a test that
   assert.deepEqual((await host.view()).gates.map(({ gate, status, durationMs, evidence }) => [gate, status, durationMs, evidence]), [
     ['build', 'pass', 1_000, 'gates/api/build-2.log'],
     ['test', 'pass', 1_000, 'gates/api/test-2.log'],
-    ['mutation', 'pass', 1_000, 'gates/api/mutation-1.log'],
   ])
 })
 

@@ -26,19 +26,14 @@ test("every committed flow is what the generator makes from today's workflow", a
 
 test('the DELIVER column, its folds and its sub-tasks come from the workflow the engine reads', async () => {
   const flow = await buildFlow(layout(), texts())
-  assert.deepEqual(flow.order, ['scenario_review', 'deliver', 'gates', 'deliver_review', 'mutation', 'visuals', 'pr_writer', 'publish', 'exit'])
+  assert.deepEqual(flow.order, ['scenario_review', 'deliver', 'gates', 'deliver_review', 'visuals', 'pr_writer', 'publish', 'exit'])
   assert.deepEqual(sub(flow, 'gates').all, ['build', 'format', 'lint', 'test', 'architecture', 'coverage'])
-  assert.deepEqual(sub(flow, 'mutation').all, ['kill_proposal', 'mutation_plan', 'kill_mutants', 'mutation_review', 'mutation_gates'])
   assert.deepEqual(sub(flow, 'deliver_review').all, ['test_integrity', 'architecture_boundaries', 'cold_reader', 'mock_fidelity', 'contract_fidelity'])
-  const loop = flow.edges.find((e) => e.id === 'mutation->mutation')
-  assert.deepEqual([loop.label, loop.maxVisits, loop.via], ['FAIL', 5, 'kill_proposal'])
   const lenses = sub(flow, 'deliver_review').nodes
   assert.equal(lenses.find((n) => n.id === 'mock_fidelity').when, 'mock')
   assert.equal(lenses.find((n) => n.id === 'cold_reader').optional, true)
   assert.equal(lenses.find((n) => n.id === 'test_integrity').seal, 'mandatory')
-  assert.equal(sub(flow, 'mutation').nodes.find((n) => n.id === 'kill_proposal').each, 'survivor-file')
-  assert.ok(sub(flow, 'mutation').edges.find((e) => e.id === 'kill_proposal->mutation_plan').multi)
-  assert.deepEqual(flow.nodes.map((n) => n.kind), ['terminal', 'agent', 'gate', 'review', 'gate', 'code', 'agent', 'code', 'terminal'])
+  assert.deepEqual(flow.nodes.map((n) => n.kind), ['terminal', 'agent', 'gate', 'review', 'code', 'agent', 'code', 'terminal'])
 })
 
 test('the refuter is read from the node of review.skraft.dot its lenses join, sealed by its mandatory=, between them and the verdict', async () => {
@@ -79,23 +74,22 @@ test('a lens added to or removed from the review, a command dropped from a gate,
 test('a figure that loses an invariant is refused', async () => {
   const workflow = await readFlowWorkflow(texts())
   const invariants = invariantsOf(workflow, layout())
-  for (const expected of [{ node: 'gates' }, { node: 'mutation_plan' }, { lens: 'test_integrity', of: 'deliver_review' }, { refuter: 'deliver_review' }, { edge: 'deliver_review->deliver', label: 'NEEDS_REWORK' }]) {
+  for (const expected of [{ node: 'gates' }, { node: 'deliver_review' }, { lens: 'test_integrity', of: 'deliver_review' }, { refuter: 'deliver_review' }, { edge: 'deliver_review->deliver', label: 'NEEDS_REWORK' }]) {
     assert.ok(invariants.some((i) => JSON.stringify(i) === JSON.stringify(expected)), JSON.stringify(expected))
   }
   const flow = await buildFlow(layout(), texts())
   assert.deepEqual(missingInvariants(flow, invariants), [])
   const tampered = structuredClone(flow)
-  tampered.subs.mutation.nodes = tampered.subs.mutation.nodes.filter((n) => n.id !== 'mutation_plan')
+  tampered.subs.deliver_review.nodes = tampered.subs.deliver_review.nodes.filter((n) => n.id !== 'architecture_boundaries' && !n.refuter)
   tampered.edges = tampered.edges.filter((e) => e.id !== 'gates->deliver')
-  tampered.subs.deliver_review.nodes = tampered.subs.deliver_review.nodes.filter((n) => !n.refuter)
-  assert.deepEqual(missingInvariants(tampered, invariants), [{ node: 'mutation_plan' }, { refuter: 'deliver_review' }, { edge: 'gates->deliver', label: 'FAIL' }])
+  assert.deepEqual(missingInvariants(tampered, invariants), [{ lens: 'architecture_boundaries', of: 'deliver_review' }, { refuter: 'deliver_review' }, { edge: 'gates->deliver', label: 'FAIL' }])
 })
 
 test('the figure names only nodes the workflow has, and a scenario walks only edges it has', async () => {
   const unknown = { ...layout(), texts: { ...layout().texts, ghost: { role: 'x' } } }
   await assert.rejects(buildFlow(unknown, texts()), /layout text for ghost/)
-  const wrong = { ...layout(), scenarios: [{ id: 'bad', label: 'B', caption: 'c', path: ['deliver', 'mutation'] }] }
-  await assert.rejects(buildFlow(wrong, texts()), /scenario bad: no edge deliver->mutation/)
+  const wrong = { ...layout(), scenarios: [{ id: 'bad', label: 'B', caption: 'c', path: ['deliver', 'visuals'] }] }
+  await assert.rejects(buildFlow(wrong, texts()), /scenario bad: no edge deliver->visuals/)
   const verdict = { ...layout(), scenarios: [{ id: 'v', label: 'V', caption: 'c', path: ['deliver_review', { inside: 'deliver_review', refuter: 'confirmed', verdict: 'MAYBE' }] }] }
   await assert.rejects(buildFlow(verdict, texts()), /the verdict cannot be MAYBE/)
 })
@@ -122,11 +116,11 @@ test('cards are buttons that open a labelled panel; each actor and seal has a na
   const html = renderFigure(flow, { lang: 'fr' })
   assert.match(html, /<g class="sf-node sf-node--review"[^>]*role="button" tabindex="0" aria-expanded="false" aria-controls="sf-deliver-fr-panel-deliver_review"/)
   assert.match(html, /<section class="sf-panel" id="sf-deliver-fr-panel-deliver_review"[^>]*role="region"[^>]*hidden>/)
-  assert.match(html, /<title>Humain<\/title>/)
+  assert.match(html, /<title>Revue<\/title>/)
   assert.match(html, /<title>verrouillé<\/title>/)
-  assert.match(html, /<span class="sf-alt__actor">Humain ·<\/span> <code>mutation_plan<\/code>/)
+  assert.match(html, /<span class="sf-alt__actor">Revue ·<\/span> <code>deliver_review<\/code>/)
   assert.match(html, /<p class="sf-caption" aria-live="polite"><b>Nominal<\/b>/)
-  assert.match(renderFigure(flow, { lang: 'en' }), /<title>Human<\/title>/)
+  assert.match(renderFigure(flow, { lang: 'en' }), /<title>Review<\/title>/)
 })
 
 test('every scenario has its label and its sentence in French and in English, none empty', async () => {

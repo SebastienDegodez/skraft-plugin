@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { agent, API, finding, lenses, nominal, REFS_42, refutes, says, scripted, SLUG } from '../support/pipeline-host.mjs'
-import { InMemoryGit, ScriptedMachine, ScriptedReplay, judgeAnswer } from '../support/in-memory-host.mjs'
+import { InMemoryGit, MUTATION_WORKFLOW, ScriptedMachine, ScriptedReplay, judgeAnswer } from '../support/in-memory-host.mjs'
 import { ALL_KILLED, strykerReport } from '../support/mutation-reports.mjs'
 
 /** A front end in a repository of its own, which the story does not change. */
@@ -15,8 +15,8 @@ const TEST_PLAN = 'details/2026-10-11/test-plan-checkout.md'
 /** The sha of the red commit whose subject is given, short. @param {ReturnType<typeof scripted>} host @param {string} subject */
 const shaOf = (host, subject) => host.events().filter((event) => event.type === 'commits.checked').flatMap((event) => event.commits).find((commit) => commit.subject === subject).sha.slice(0, 7)
 
-test('after each step the tracking folder holds qa-report.md: the test plan, each component\'s last gates with its mutation score, the TDD red commits, the acceptance test of DISTILL first, and each review\'s verdict with its findings', async () => {
-  const host = scripted({ components: [API, WEB], git: twoRepositories() }, (it) => nominal(it, REFS_42))
+test('after each step the tracking folder holds qa-report.md: the test plan, each component\'s last gates with its mutation score in a workflow that runs mutation, the TDD red commits, the acceptance test of DISTILL first, and each review\'s verdict with its findings', async () => {
+  const host = scripted({ workflow: MUTATION_WORKFLOW, components: [API, WEB], git: twoRepositories() }, (it) => nominal(it, REFS_42))
   host.agentRunner.review = lenses({ consistency: [says('consistency', 'pass', [finding('F1', 'low', 'the context map names no owner')])], refuter: [refutes('refuted', 'the map names the owner')] })
   const seen = []
   host.machine.meanwhile['. $ dotnet build'] = async () => { seen.push(await host.tracking.read(SLUG, QA)) }
@@ -133,7 +133,7 @@ test('a mutation score names each scope with every survivor, a commit subject wi
     seen.push(await it.tracking.read(SLUG, QA))
     await agent({ work: ({ git }) => git.commit(kill, ['tests/OrderKillTests.cs']) })(it)(dispatch)
   }
-  const host = scripted({ machine, answers: [{ answer: 'APPLY' }] }, (it) => [agent()(it), agent()(it), agent({ work: red })(it), agent({ work })(it), agent()(it), killer(it)])
+  const host = scripted({ workflow: MUTATION_WORKFLOW, machine, answers: [{ answer: 'APPLY' }] }, (it) => [agent()(it), agent()(it), agent({ work: red })(it), agent({ work })(it), agent()(it), killer(it)])
   const reports = [report, ALL_KILLED]
   machine.meanwhile['. $ dotnet stryker'] = async () => {
     const next = reports.shift()
@@ -198,7 +198,7 @@ test('a mutation run whose report was not read says so, and shows no score or su
     seen.push(tracking.files.get(`${SLUG}/${QA}`))
     git.commit('test(checkout): kill the mutants of Order', ['tests/OrderKillTests.cs'])
   }
-  const host = scripted({ machine, answers: [{ answer: 'APPLY' }] }, (it) => [agent()(it), agent()(it), agent()(it), agent({ work })(it), agent()(it), agent({ work: kill })(it)])
+  const host = scripted({ workflow: MUTATION_WORKFLOW, machine, answers: [{ answer: 'APPLY' }] }, (it) => [agent()(it), agent()(it), agent()(it), agent({ work })(it), agent()(it), agent({ work: kill })(it)])
   const reports = [strykerReport({ 'src/Checkout.Domain/Order.cs': [[10, 'Equality', '!=', 'Survived']] })]
   machine.meanwhile['. $ dotnet stryker'] = async () => {
     machine.exits['. $ dotnet stryker'] = 1

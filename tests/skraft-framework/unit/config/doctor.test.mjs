@@ -27,7 +27,7 @@ const doctor = ({ components = [API, WEB], config = {}, machine = new ScriptedMa
 /** Without models in any file: Claude Code has the plugin's aliases, Copilot no model at all. */
 const BY_DEFAULT = [
   { subject: 'models/claude-code', status: 'ok', detail: "every family the workflow's agents run on has a model on claude-code" },
-  { subject: 'models/copilot', status: 'warn', detail: "no model on copilot for researcher (1 dispatch), planner (1 dispatch), reviewer (13 dispatches), standard (4 dispatches), implementer (4 dispatches), economy (1 dispatch); these run on the session's model" },
+  { subject: 'models/copilot', status: 'warn', detail: "no model on copilot for researcher (1 dispatch), planner (1 dispatch), reviewer (12 dispatches), standard (3 dispatches), implementer (2 dispatches), economy (1 dispatch); these run on the session's model" },
 ]
 
 /** The infrastructure lines of API and of WEB mocking with Microcks, and the runtime that answers. */
@@ -189,7 +189,7 @@ test('a command not found is named with the component and the command to change'
   ])
 })
 
-test('--run starts every command once from its component root, with the base, and names the one that fails with the log of its output', async () => {
+test('--run starts every command but mutation, the developer\'s to run, once from its component root, with the base, and names the one that fails with the log of its output', async () => {
   const machine = new ScriptedMachine({ exits: { '../payment-web $ npx playwright test': 1 } })
   const sourceControl = new InMemorySourceControl({
     '.': { top: '.', mergeBases: { main: 'a1' } },
@@ -203,7 +203,6 @@ test('--run starts every command once from its component root, with the base, an
   assert.deepEqual(machine.lines(), [
     'services/payment-api $ dotnet build --nologo',
     'services/payment-api $ dotnet test --nologo --logger trx',
-    'services/payment-api $ dotnet stryker --since:a1',
     '../payment-web $ npx vitest run --reporter=junit',
     '../payment-web $ npx playwright test',
     '. $ docker info',
@@ -212,7 +211,7 @@ test('--run starts every command once from its component root, with the base, an
     { subject: 'forge', status: 'ok', detail: 'github, deduced from the Git remote' },
     { subject: 'api/build', status: 'ok', detail: 'dotnet build --nologo passed' },
     { subject: 'api/test', status: 'ok', detail: 'dotnet test --nologo --logger trx passed' },
-    { subject: 'api/mutation', status: 'ok', detail: 'dotnet stryker --since:a1 passed' },
+    { subject: 'api/mutation', status: 'ok', detail: 'dotnet → /usr/local/bin/dotnet' },
     { subject: 'web/test', status: 'ok', detail: 'npx vitest run --reporter=junit passed' },
     { subject: 'web/e2e', status: 'fail', detail: 'npx playwright test exited 1; its output is in .copilot-tracking/skraft-doctor/web/e2e.log' },
     DOCKER,
@@ -237,7 +236,7 @@ test('the families an ejected workflow names count, and those with no model for 
 
   assert.deepEqual(await modelChecks(models({ frontier: { 'claude-code': null } })), [
     { subject: 'models/claude-code', status: 'warn', detail: "no model on claude-code for planner (2 dispatches), frontier (5 dispatches); these run on the agent file's model" },
-    { subject: 'models/copilot', status: 'warn', detail: "no model on copilot for researcher (1 dispatch), planner (2 dispatches), reviewer (7 dispatches), kimi (1 dispatch), implementer (4 dispatches), frontier (5 dispatches), standard (2 dispatches), economy (1 dispatch); these run on the session's model" },
+    { subject: 'models/copilot', status: 'warn', detail: "no model on copilot for researcher (1 dispatch), planner (2 dispatches), reviewer (6 dispatches), kimi (1 dispatch), implementer (2 dispatches), frontier (5 dispatches), standard (1 dispatch), economy (1 dispatch); these run on the session's model" },
   ])
   const mapped = await doctor({ components: [API, WEB], files, config: models({ economy: copilot, standard: copilot, frontier: copilot }) }).doctor.check()
   assert.equal(mapped.ok, true)
@@ -326,9 +325,9 @@ test('a command with shell syntax is reported before any program is looked for',
   assert.deepEqual(failures(await check.check()), ['web/test: "npm test > out.txt" uses shell syntax (>); put the steps in a script and call the script'])
 })
 
-test('a component with no gate command, or a --base that is not a ref, fails the doctor', async () => {
-  const { doctor: check } = doctor({ components: [{ ...WEB, commands: { e2e: 'npx playwright test' } }] })
-  assert.deepEqual(failures(await check.check()), ['web: no gate command; give it at least one of build, format, lint, test, architecture, coverage, mutation in skraft-config.json'])
+test('a component with no gate command, mutation, the developer\'s, aside, or a --base that is not a ref, fails the doctor', async () => {
+  const { doctor: check } = doctor({ components: [{ ...WEB, commands: { e2e: 'npx playwright test', mutation: 'npx stryker run' } }] })
+  assert.deepEqual(failures(await check.check()), ['web: no gate command; give it at least one of build, format, lint, test, architecture, coverage in skraft-config.json'])
 
   const flagged = doctor({ components: [{ ...API, mocking: { strategy: 'inprocess' } }] })
   assert.deepEqual(failures(await flagged.doctor.check({ run: true, base: '--independent' }))[0], 'base: --base must be a git ref: text with no blank that does not start with -')

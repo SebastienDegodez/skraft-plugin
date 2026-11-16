@@ -1,9 +1,12 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { BUILT_IN_WORKFLOW, InMemoryAgentCatalog, ScriptedMachine } from '../support/in-memory-host.mjs'
+import { InMemoryAgentCatalog, MUTATION_WORKFLOW, ScriptedMachine } from '../support/in-memory-host.mjs'
 import { agent, API, lenses, REFS_42, scripted, says, finding, SLUG, TRACKING } from '../support/pipeline-host.mjs'
 import { waitingOnEnvironment, withoutReportSummary } from '../support/decisions.mjs'
 import { ALL_KILLED, mutants, pitReport, strykerReport } from '../support/mutation-reports.mjs'
+
+// The mutation loop runs only in a pipeline that holds it: the plugin's no longer does.
+const mutating = (options = {}, script) => scripted({ workflow: MUTATION_WORKFLOW, ...options }, script)
 
 const REPORT = 'StrykerOutput/reports/mutation-report.json'
 const STRYKER = '. $ dotnet stryker'
@@ -63,7 +66,7 @@ const refundOnly = strykerReport({ 'src/Refund.cs': [[7, 'Arithmetic', '-', 'Sur
 
 test('surviving mutants of the files the story changed get one proposal per file, with the component\'s skills; the kill the developer chose, its gate commands run first, then test-integrity and the gates again until mutation passes', async () => {
   const catalog = new InMemoryAgentCatalog({ skillFiles: { 'mocking-inprocess-dotnet': '# skill\n' } })
-  const host = scripted({ machine: new ScriptedMachine(), catalog, answers: APPLYING }, (it) => [...upToDeliver(it), ...round(it, 2)])
+  const host = mutating({ machine: new ScriptedMachine(), catalog, answers: APPLYING }, (it) => [...upToDeliver(it), ...round(it, 2)])
   mutationRounds(host, [twoFiles])
 
   const outcome = await host.start()
@@ -139,7 +142,7 @@ test('the core and the boundary are judged apart: only the scope that misses its
   }
   const untouched = { 'src/Legacy.Domain/Old.cs': [[1, 'Equality', '!=', 'Survived']] }
   const changed = [...Object.keys(core), ...Object.keys(boundary)]
-  const host = scripted({ machine: new ScriptedMachine(), answers: APPLYING }, (it) => [...upToDeliver(it, changed), ...round(it, Object.keys(core).length)])
+  const host = mutating({ machine: new ScriptedMachine(), answers: APPLYING }, (it) => [...upToDeliver(it, changed), ...round(it, Object.keys(core).length)])
   mutationRounds(host, [strykerReport({ ...core, ...boundary, ...untouched })])
 
   const outcome = await host.start()
@@ -160,7 +163,7 @@ test('the core and the boundary are judged apart: only the scope that misses its
 })
 
 test('the core needs every mutant detected and the boundary 80 %, also from a run that exits 0', async () => {
-  const host = scripted({ machine: new ScriptedMachine(), answers: APPLYING }, (it) => [...upToDeliver(it, ['src/Checkout.Domain/Order.cs', 'src/Checkout.cs']), ...round(it, 1, 'Order'), ...round(it, 1)])
+  const host = mutating({ machine: new ScriptedMachine(), answers: APPLYING }, (it) => [...upToDeliver(it, ['src/Checkout.Domain/Order.cs', 'src/Checkout.cs']), ...round(it, 1, 'Order'), ...round(it, 1)])
   mutationRounds(host, [
     strykerReport({ 'src/Checkout.Domain/Order.cs': [...mutants(100, 'Killed'), [101, 'Equality', '!=', 'Survived']] }),
     strykerReport({ 'src/Checkout.Domain/Order.cs': mutants(3, 'Killed'), 'src/Checkout.cs': [...mutants(19, 'Killed'), ...mutants(5, 'Survived', 20)] }),
@@ -181,7 +184,7 @@ test('the core needs every mutant detected and the boundary 80 %, also from a ru
 })
 
 test('with no change Git can list since the base, every file of the report is judged', async () => {
-  const host = scripted({ machine: new ScriptedMachine(), answers: APPLYING }, (it) => [
+  const host = mutating({ machine: new ScriptedMachine(), answers: APPLYING }, (it) => [
     ...upToDeliver(it, ['src/Checkout.cs']),
     proposer(it),
     killer('Ledger')(it),
@@ -196,7 +199,7 @@ test('with no change Git can list since the base, every file of the report is ju
 })
 
 test('two rounds that leave no fewer mutants alive stop the run, naming the mutants that remain', async () => {
-  const host = scripted({ machine: new ScriptedMachine(), answers: APPLYING }, (it) => [...upToDeliver(it), ...round(it, 2), ...round(it, 2)])
+  const host = mutating({ machine: new ScriptedMachine(), answers: APPLYING }, (it) => [...upToDeliver(it), ...round(it, 2), ...round(it, 2)])
   mutationRounds(host, [twoFiles, twoFiles, twoFiles])
 
   const outcome = await host.start()
@@ -212,7 +215,7 @@ test('two rounds that leave no fewer mutants alive stop the run, naming the muta
 
 test('a round with fewer survivors is progress: the loop goes on until mutation passes', async () => {
   const fewer = strykerReport({ 'src/Refund.cs': [[7, 'Arithmetic', '-', 'Survived']] })
-  const host = scripted({ machine: new ScriptedMachine(), answers: APPLYING }, (it) => [...upToDeliver(it), ...round(it, 2), ...round(it, 1), ...round(it, 1, 'Refund')])
+  const host = mutating({ machine: new ScriptedMachine(), answers: APPLYING }, (it) => [...upToDeliver(it), ...round(it, 2), ...round(it, 1), ...round(it, 1, 'Refund')])
   mutationRounds(host, [twoFiles, checkoutOnly, fewer])
 
   const outcome = await host.start()
@@ -222,8 +225,8 @@ test('a round with fewer survivors is progress: the loop goes on until mutation 
 })
 
 test('a failed round that hands out no survivor is no round of the loop: the rounds around it still count their progress; its proposal answers what the gates said', async () => {
-  const workflow = BUILT_IN_WORKFLOW.replace('mutation [shape=parallelogram, gate="mutation"', 'mutation [shape=parallelogram, gate="test,mutation"')
-  const host = scripted({ machine: new ScriptedMachine(), files: { '.skraft/pipeline.skraft.dot': workflow }, answers: APPLYING }, (it) => [
+  const workflow = MUTATION_WORKFLOW.replace('mutation [shape=parallelogram, gate="mutation"', 'mutation [shape=parallelogram, gate="test,mutation"')
+  const host = mutating({ machine: new ScriptedMachine(), files: { '.skraft/pipeline.skraft.dot': workflow }, answers: APPLYING }, (it) => [
     ...upToDeliver(it), ...round(it, 2), ...round(it, 1), ...round(it, 1), ...round(it, 1),
   ])
   let tests = 0
@@ -243,7 +246,7 @@ test('a failed round that hands out no survivor is no round of the loop: the rou
 })
 
 /** The DELIVER phase as skraft shipped it before mutation ran last: mutation before the review, its survivors killed with no proposal. */
-const MUTATION_FIRST = BUILT_IN_WORKFLOW
+const MUTATION_FIRST = MUTATION_WORKFLOW
   .replace(/  kill_proposal \[.*\]\n  mutation_plan \[.*\]\n/, '')
   .replace(/  mutation_gates \[.*\]\n/, '')
   .replace(/  gates -> deliver_review \[label="PASS"\]\n[\s\S]*  mutation_gates -> mutation \[label="PASS"\]\n/, [
@@ -260,7 +263,7 @@ const MUTATION_FIRST = BUILT_IN_WORKFLOW
   ].join('\n'))
 
 test('a repeated mutation signature after a passing round still stops when the review reopens the loop', async () => {
-  const host = scripted({ machine: new ScriptedMachine(), files: { '.skraft/pipeline.skraft.dot': MUTATION_FIRST } }, (it) => [
+  const host = mutating({ machine: new ScriptedMachine(), files: { '.skraft/pipeline.skraft.dot': MUTATION_FIRST } }, (it) => [
     ...upToDeliver(it), killer('Checkout')(it),
     agent({ work: ({ git }) => git.commit(`refactor(${SLUG}): name the card payment`, ['src/Checkout.cs']) })(it),
     killer('Checkout')(it), killer('Checkout')(it),
@@ -281,17 +284,17 @@ test('a mutationReport outside the component root, or an each that is not surviv
     const started = await host.init()
     return started.ok ? (await host.run()).reason : started.reason
   }
-  const outside = scripted({ components: [{ ...API, mutationReport: '../report.json' }] }, () => [])
+  const outside = mutating({ components: [{ ...API, mutationReport: '../report.json' }] }, () => [])
   assert.match(await refusal(outside), /component api: mutationReport must be a file inside the component root/)
 
-  const workflow = BUILT_IN_WORKFLOW.replace('kill_mutants [shape=box, agent="software-engineer", each="survivor-file"', 'kill_mutants [shape=box, agent="software-engineer", each="file"')
-  const every = scripted({ files: { '.skraft/pipeline.skraft.dot': workflow } }, () => [])
+  const workflow = MUTATION_WORKFLOW.replace('kill_mutants [shape=box, agent="software-engineer", each="survivor-file"', 'kill_mutants [shape=box, agent="software-engineer", each="file"')
+  const every = mutating({ files: { '.skraft/pipeline.skraft.dot': workflow } }, () => [])
   assert.match(await refusal(every), /node kill_mutants: each="file" must be survivor-file/)
   assert.deepEqual([outside, every].map((host) => host.agentRunner.dispatches.length), [0, 0])
 })
 
 test('a report the failed run did not write again is not read: the run waits for a human', async () => {
-  const host = scripted({ machine: new ScriptedMachine(), answers: APPLYING }, (it) => [...upToDeliver(it), ...round(it, 2)])
+  const host = mutating({ machine: new ScriptedMachine(), answers: APPLYING }, (it) => [...upToDeliver(it), ...round(it, 2)])
   mutationRounds(host, [twoFiles, null])
 
   const outcome = await host.start()
@@ -316,7 +319,7 @@ test('each stack reads the report its default mutation command writes', async ()
     const component = { ...API, stack, commands: { test: 'dotnet test', mutation } }
     const writesNone = { [`. $ ${mutation}`]: () => {} }
     const frontEnd = stack === 'react' ? { plan: [['Customer sees the price', 'api', '@happy-path']], exemption: 'library' } : {}
-    const host = scripted({ components: [component], machine: new ScriptedMachine({ installed: ['git', 'dotnet', 'mvn', 'gradlew', 'python', 'npx'], meanwhile: writesNone }) }, (it) => {
+    const host = mutating({ components: [component], machine: new ScriptedMachine({ installed: ['git', 'dotnet', 'mvn', 'gradlew', 'python', 'npx'], meanwhile: writesNone }) }, (it) => {
       const [research, design, , deliver] = upToDeliver(it)
       return [research, design, agent(frontEnd)(it), deliver]
     })
@@ -326,9 +329,9 @@ test('each stack reads the report its default mutation command writes', async ()
 })
 
 test('the loop that reaches its max_visits stops the run, naming the mutants that remain', async () => {
-  const workflow = BUILT_IN_WORKFLOW.replace('mutation -> kill_proposal [label="FAIL", max_visits=5]', 'mutation -> kill_proposal [label="FAIL", max_visits=1]')
+  const workflow = MUTATION_WORKFLOW.replace('mutation -> kill_proposal [label="FAIL", max_visits=5]', 'mutation -> kill_proposal [label="FAIL", max_visits=1]')
   const fewer = strykerReport({ 'src/Checkout.cs': [[12, 'Equality', '!=', 'Survived']] })
-  const host = scripted({ machine: new ScriptedMachine(), files: { '.skraft/pipeline.skraft.dot': workflow }, answers: [{ answer: 'APPLY' }, { answer: 'STOP' }] }, (it) => [...upToDeliver(it), ...round(it, 2)])
+  const host = mutating({ machine: new ScriptedMachine(), files: { '.skraft/pipeline.skraft.dot': workflow }, answers: [{ answer: 'APPLY' }, { answer: 'STOP' }] }, (it) => [...upToDeliver(it), ...round(it, 2)])
   mutationRounds(host, [twoFiles, fewer])
 
   const outcome = await host.start()
@@ -342,7 +345,7 @@ test('the loop that reaches its max_visits stops the run, naming the mutants tha
 test('a failed mutation run whose report counts no mutant waits for a human: the tool stopped before it judged one', async () => {
   const unjudged = strykerReport({ 'src/Checkout.cs': [[12, 'Equality', '!=', 'RuntimeError'], [20, 'Boolean', 'false', 'CompileError'], [31, 'String', null, 'Pending']] })
   for (const report of [strykerReport({}), unjudged]) {
-    const host = scripted({ machine: new ScriptedMachine() }, (it) => [...upToDeliver(it)])
+    const host = mutating({ machine: new ScriptedMachine() }, (it) => [...upToDeliver(it)])
     mutationRounds(host, [report], { exit: 1 })
 
     const outcome = await host.start()
@@ -356,7 +359,7 @@ test('a failed mutation run whose report counts no mutant waits for a human: the
 test('a mutation run without a readable report waits for a human, naming where the report was looked for, whatever its exit code', async () => {
   const lookedFor = (exit) => `api/mutation: exited ${exit}; the mutation report ${REPORT} is missing; have the command write it there, or name the file it writes with mutationReport on api in skraft-config.json (evidence: ${TRACKING}/gates/api/mutation-1.log)`
   for (const exit of [1, 0]) {
-    const host = scripted({ machine: new ScriptedMachine() }, (it) => [...upToDeliver(it)])
+    const host = mutating({ machine: new ScriptedMachine() }, (it) => [...upToDeliver(it)])
     mutationRounds(host, [null], { exit })
 
     const outcome = await host.start()
@@ -365,7 +368,7 @@ test('a mutation run without a readable report waits for a human, naming where t
   }
 
   for (const report of ['not JSON at all', '{ "files": [] }', JSON.stringify({ files: { 'src/Checkout.cs': { mutants: [{ id: '1', mutatorName: 'Equality', status: 'Survived' }] } } })]) {
-    const garbled = scripted({ machine: new ScriptedMachine() }, (it) => [...upToDeliver(it)])
+    const garbled = mutating({ machine: new ScriptedMachine() }, (it) => [...upToDeliver(it)])
     mutationRounds(garbled, [report], { exit: 0 })
     assert.ok((await garbled.start()).reason.includes(`api/mutation: exited 0; the mutation report ${REPORT} is not a mutation-testing-elements report;`), report)
   }
@@ -381,7 +384,7 @@ test('a component reads its mutants where mutationReport says, PIT\'s mutations.
     git.commit(`feat(${SLUG}): order`, ['orders/src/test/OrderTest.java', ...Object.keys(sources), 'orders/src/main/scala/com/acme/Ship.scala'])
   }
   const killsOrders = (it) => agent({ work: ({ git }) => git.commit(`test(${SLUG}): kill the order mutants`, ['orders/src/test/OrderTest.java']) })(it)
-  const host = scripted({ components: [service], machine: new ScriptedMachine(), files: sources, answers: APPLYING }, (it) => [
+  const host = mutating({ components: [service], machine: new ScriptedMachine(), files: sources, answers: APPLYING }, (it) => [
     agent()(it), agent()(it), agent()(it), agent({ work: orderGreen })(it), ...Array.from({ length: 5 }, () => proposer(it)), killsOrders(it),
   ])
   const report = pitReport([
@@ -420,20 +423,20 @@ test('a component reads its mutants where mutationReport says, PIT\'s mutations.
     { file: 'orders/src/main/kotlin/com/acme/Fee.kt', mutants: ['orders/src/main/kotlin/com/acme/Fee.kt:5 MathMutator (Replaced integer subtraction) survived'] },
   ])
 
-  const unlisted = scripted({ components: [service], machine: new ScriptedMachine(), files: sources }, (it) => [agent()(it), agent()(it), agent()(it), agent({ work: orderGreen })(it)])
+  const unlisted = mutating({ components: [service], machine: new ScriptedMachine(), files: sources }, (it) => [agent()(it), agent()(it), agent()(it), agent({ work: orderGreen })(it)])
   unlisted.git.changedFiles = whileMutating(unlisted)
   mutationRounds(unlisted, [report], { line: 'orders $ mvn pitest', path: 'orders/target/pit/mutations.xml' })
   await assert.rejects(unlisted.start(), /unexpected dispatch/)
   assert.deepEqual(recorded(unlisted, 'mutation')[0].failures, [`orders/mutation: exited 1, core 75% < 100%, boundary 14% < 80%, 7 mutants survive (evidence: ${TRACKING}/gates/orders/mutation-1.log)`])
   assert.deepEqual(recorded(unlisted, 'mutation')[0].survivors[0], { file: 'orders/com/acme/Gone.java', mutants: ['orders/com/acme/Gone.java:3 RemoveCallsMutator survived'] })
 
-  const notPit = scripted({ components: [service], machine: new ScriptedMachine() }, (it) => [agent()(it), agent()(it), agent()(it), agent({ work: orderGreen })(it)])
+  const notPit = mutating({ components: [service], machine: new ScriptedMachine() }, (it) => [agent()(it), agent()(it), agent()(it), agent({ work: orderGreen })(it)])
   mutationRounds(notPit, ['<html><body>PIT report</body></html>'], { line: 'orders $ mvn pitest', path: 'orders/target/pit/mutations.xml' })
   assert.ok((await notPit.start()).reason.includes('the mutation report orders/target/pit/mutations.xml is not a PIT mutations.xml report;'))
 })
 
 test('a run stopped in a group resumes there: the groups already done are not dispatched again', async () => {
-  const host = scripted({ machine: new ScriptedMachine(), answers: APPLYING }, (it) => [
+  const host = mutating({ machine: new ScriptedMachine(), answers: APPLYING }, (it) => [
     ...upToDeliver(it),
     proposer(it),
     async (dispatch) => { await proposer(it)(dispatch); throw new Error('host interrupted') },
@@ -456,7 +459,7 @@ test('a run stopped in a group resumes there: the groups already done are not di
 
 test('a group whose agent stops blocked runs again on that group once a human answers with an instruction, then on the groups after it', async () => {
   const blocked = { status: 'blocked', summary: 'the rounding rule of a refund is undecided' }
-  const host = scripted({ machine: new ScriptedMachine(), answers: [{ answer: 'A refund rounds half up' }, ...APPLYING] }, (it) => [
+  const host = mutating({ machine: new ScriptedMachine(), answers: [{ answer: 'A refund rounds half up' }, ...APPLYING] }, (it) => [
     ...upToDeliver(it, ['src/Checkout.cs', 'src/Refund.cs', 'src/Ledger.cs']),
     proposer(it),
     agent({ result: blocked })(it),
@@ -483,8 +486,8 @@ test('a group whose agent stops blocked runs again on that group once a human an
 })
 
 test('a proposal commits as its agent does: one played by an agent with no shell is told to commit nothing', async () => {
-  const workflow = BUILT_IN_WORKFLOW.replace('kill_proposal [shape=box, agent="software-engineer"', 'kill_proposal [shape=box, agent="solution-researcher"')
-  const host = scripted({ machine: new ScriptedMachine(), files: { '.skraft/pipeline.skraft.dot': workflow }, answers: APPLYING }, (it) => [...upToDeliver(it, undefined, REFS_42), ...round(it, 1, 'Checkout', REFS_42)])
+  const workflow = MUTATION_WORKFLOW.replace('kill_proposal [shape=box, agent="software-engineer"', 'kill_proposal [shape=box, agent="solution-researcher"')
+  const host = mutating({ machine: new ScriptedMachine(), files: { '.skraft/pipeline.skraft.dot': workflow }, answers: APPLYING }, (it) => [...upToDeliver(it, undefined, REFS_42), ...round(it, 1, 'Checkout', REFS_42)])
   mutationRounds(host, [checkoutOnly])
 
   const outcome = await host.start({ story: { issue: 42, title: 'Pay by card' } })
@@ -497,7 +500,7 @@ test('a proposal commits as its agent does: one played by an agent with no shell
 })
 
 test('a refused attempt of a group is tried again on the same group, its mutants still listed; a kill commit of a story with an issue references it', async () => {
-  const host = scripted({ machine: new ScriptedMachine(), answers: APPLYING }, (it) => [
+  const host = mutating({ machine: new ScriptedMachine(), answers: APPLYING }, (it) => [
     ...upToDeliver(it, undefined, REFS_42),
     agent({ fill: false })(it),
     proposer(it),
@@ -527,7 +530,7 @@ test('a refused attempt of a group is tried again on the same group, its mutants
 })
 
 test('test-integrity refusing the killing tests sends the work back once, with its findings and no groups', async () => {
-  const host = scripted({ machine: new ScriptedMachine(), answers: APPLYING }, (it) => [
+  const host = mutating({ machine: new ScriptedMachine(), answers: APPLYING }, (it) => [
     ...upToDeliver(it), ...round(it, 2, 'Refund'),
     agent({ work: ({ git }) => git.commit(`refactor(${SLUG}): assert the refund amount`, ['tests/RefundTests.cs']) })(it),
   ])
@@ -545,7 +548,7 @@ test('test-integrity refusing the killing tests sends the work back once, with i
 })
 
 test('a mutation run passes on a report with no mutant, as a gate script writes it when the story changed no source of its scope', async () => {
-  const host = scripted({ components: [API], machine: new ScriptedMachine() }, (it) => upToDeliver(it))
+  const host = mutating({ components: [API], machine: new ScriptedMachine() }, (it) => upToDeliver(it))
   mutationRounds(host, [PASS], { passing: strykerReport({}) })
 
   assert.equal((await host.start()).status, 'done')
@@ -554,7 +557,7 @@ test('a mutation run passes on a report with no mutant, as a gate script writes 
 })
 
 test('a mutation run passes on a report that meets each bar, whatever its exit code and the survivors of a scope at its bar or of files the story left alone', async () => {
-  const host = scripted({ components: [API], machine: new ScriptedMachine() }, (it) => upToDeliver(it))
+  const host = mutating({ components: [API], machine: new ScriptedMachine() }, (it) => upToDeliver(it))
   const legacyBreaksTheProjectThreshold = strykerReport({ 'src/Checkout.cs': [...mutants(4, 'Killed'), [5, 'Equality', '!=', 'Survived']], 'src/Legacy.cs': mutants(9, 'Survived') })
   mutationRounds(host, [legacyBreaksTheProjectThreshold], { exit: 1 })
 

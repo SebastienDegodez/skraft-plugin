@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { BUILT_IN_WORKFLOW, ScriptedMachine } from '../support/in-memory-host.mjs'
+import { MUTATION_WORKFLOW, ScriptedMachine } from '../support/in-memory-host.mjs'
 import { agent, API, DOCS_FOLDERS, nominal, REFS_42, scripted, SLUG } from '../support/pipeline-host.mjs'
 import { ALL_KILLED, strykerReport } from '../support/mutation-reports.mjs'
 import { UNLISTABLE_ADRS, waitingOnEnvironment } from '../support/decisions.mjs'
@@ -61,11 +61,11 @@ test('a folder of the role the machine cannot list gets no .gitkeep: the run ask
 
 const REPORT = 'StrykerOutput/reports/mutation-report.json'
 const STRYKER = '. $ dotnet stryker'
-/** The built-in workflow whose proposal for surviving mutants is the acceptance designer's. */
-const DESIGNER_PROPOSES = BUILT_IN_WORKFLOW.replace('kill_proposal [shape=box, agent="software-engineer"', 'kill_proposal [shape=box, agent="acceptance-designer"')
+/** A workflow with the mutation loop, whose proposal for surviving mutants is the acceptance designer's. */
+const DESIGNER_PROPOSES = MUTATION_WORKFLOW.replace('kill_proposal [shape=box, agent="software-engineer"', 'kill_proposal [shape=box, agent="acceptance-designer"')
 
 test('a node that proposes for surviving mutants gets no folder of its agent\'s role: it changes nothing in the working copy', async () => {
-  const host = withoutDocsFolders({ components: [GHERKIN], machine: new ScriptedMachine(), answers: [{ answer: 'APPLY' }], files: { '.skraft/pipeline.skraft.dot': DESIGNER_PROPOSES } }, (it) => {
+  const host = withoutDocsFolders({ components: [GHERKIN], machine: new ScriptedMachine(), answers: [{ answer: 'APPLY' }], workflow: MUTATION_WORKFLOW, files: { '.skraft/pipeline.skraft.dot': DESIGNER_PROPOSES } }, (it) => {
     const [research, design, distill, deliver] = nominal(it)
     const removingScenarios = async () => {
       await deliver()

@@ -26,7 +26,7 @@ test('a run resumed on an ejected pipeline that dropped a node the run already p
   assert.equal((await host.run()).code, 'agent-unavailable')
   await host.workspace.write('.skraft/pipeline.skraft.dot', edit(BUILT_IN_WORKFLOW,
     ['  visuals  [shape=parallelogram, publish="playwright-visuals", when="frontend"]\n', ''],
-    ['mutation -> visuals [label="PASS"]', 'mutation -> pr_writer [label="PASS"]'],
+    ['deliver_review -> visuals [label="APPROVED"]', 'deliver_review -> pr_writer [label="APPROVED"]'],
     ['visuals -> pr_writer -> publish -> exit', 'pr_writer -> publish -> exit']))
   host.agentRunner.behaviours.push(nominal(host)[1], unavailable)
 

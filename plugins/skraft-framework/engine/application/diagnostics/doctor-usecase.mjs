@@ -1,6 +1,6 @@
 import { CONFIG_FILE, NO_COMPONENT, NO_GATE } from '../../domain/config/skraft-config.mjs'
 import { commandText, lookedFor, parseCommand, programChoices } from '../../domain/gates/command-line.mjs'
-import { gatesOf } from '../../domain/gates/gate-plan.mjs'
+import { gatesOf, STORY_GATES } from '../../domain/gates/gate-plan.mjs'
 import { baseOf, loadConfig, resolveBases } from '../config/bases.mjs'
 import { readWorkflows } from '../workflow/load-workflow.mjs'
 import { findComponentSkills } from '../pipeline/component-skills.mjs'
@@ -160,7 +160,7 @@ const componentChecks = async (deps, component, { run, baseSha }) => {
     return [{ subject: component.name, status: 'fail', detail: `root ${component.root} is not a folder` }]
   }
   /** @type {DoctorCheck[]} */
-  const checks = gatesOf(component).length === 0 ? [{ subject: component.name, status: 'fail', detail: NO_GATE }] : []
+  const checks = gatesOf(component).some((gate) => STORY_GATES.includes(gate)) ? [] : [{ subject: component.name, status: 'fail', detail: NO_GATE }]
   for (const name of commandNames(component)) checks.push(await commandCheck(deps, { component, name, run, baseSha }))
   return [...checks, ...await bddChecks(deps, component), ...await skillChecks(deps, component)]
 }
@@ -242,7 +242,7 @@ const commandCheck = async (deps, { component, name, run, baseSha }) => {
   const choices = programChoices(parsed.argv)
   const found = await locateFirst(deps, choices, component.root)
   if (found === null) return { subject, status: 'fail', detail: notFound({ component, name, program, choices }) }
-  if (!run) return { subject, status: 'ok', detail: `${program} → ${found.located}` }
+  if (!run || name === 'mutation') return { subject, status: 'ok', detail: `${program} → ${found.located}` }
   return runCheck(deps, subject, { argv: found.argv, cwd: component.root })
 }
 

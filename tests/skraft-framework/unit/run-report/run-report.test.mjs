@@ -203,7 +203,7 @@ test('times read in seconds, minutes or hours, and WORKFLOW.md names what each k
   assert.ok(workflow.includes('\n## PUBLISH\n\n- [x] pr_writer — pr-writer: done\n- [x] publish — publish pull-request: local\n'), workflow)
   const deliver = workflow.split('## DELIVER\n')[1].split('\n## ')[0]
   assert.deepEqual(deliver.split('\n').filter((line) => line.startsWith('- [')).map((line) => line.replace(/^- \[.\] /, '').split(' ')[0]), [
-    'deliver', 'gates', 'deliver_review', 'mutation', 'kill_proposal', 'mutation_plan', 'kill_mutants', 'mutation_review', 'mutation_gates', 'visuals',
+    'deliver', 'gates', 'deliver_review', 'visuals',
   ])
 })
 
