@@ -6246,6 +6246,33 @@
           "pValue": null
         },
         "metrics": null
+      },
+      {
+        "id": "43896449370:agent:replay-judge:2026-11-16T15:34:56.622Z",
+        "timestamp": "2026-11-16T15:34:56.622Z",
+        "commit": "71208b5ec8fc636589a7ef34df16ead2bdff4cd1",
+        "run": "43896449370",
+        "url": "https://github.com/SebastienDegodez/skraft-plugin/actions/runs/43896449370",
+        "runner": "vally-agent",
+        "model": "claude-sonnet-5.5",
+        "judgeModel": "none",
+        "state": "regression",
+        "reason": "broke conformance on 2 of 45 trial(s) (threshold 1)",
+        "descriptorSha": "10862123b130672ba7f071dd7d4d1aa7d9b74b5906a9add797ffba044dc54808",
+        "netWin": 0.9111111111111111,
+        "trialCount": 45,
+        "meanScore": 0.985,
+        "confidenceInterval": {
+          "low": null,
+          "high": null
+        },
+        "signTest": {
+          "wins": 0,
+          "ties": 0,
+          "losses": 0,
+          "pValue": null
+        },
+        "metrics": null
       }
     ]
   }
