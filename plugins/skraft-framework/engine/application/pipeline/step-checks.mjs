@@ -84,6 +84,28 @@ export const headsOf = async (deps, base) => {
   return heads
 }
 
+/**
+ * The engine's own files as they stand, with their content's hash: what an attempt may not change.
+ * @param {Pick<CheckDeps, 'workspace' | 'hasher'>} deps
+ * @returns {Promise<Array<{ path: string, hash: string | null }>>}
+ */
+export const engineHashes = async (deps) => Promise.all(ENGINE_FILES.map(async (path) => ({ path, hash: await contentHash(deps, path) })))
+
+/** The files of the engine no agent changes. */
+const ENGINE_FILES = Object.freeze([CONFIG_FILE])
+
+/**
+ * The changed files without the engine files still as they were when the attempt started: a person
+ * who changed one between attempts, or before a run resumed, does not make the agent answer for it.
+ * @param {Pick<CheckDeps, 'workspace' | 'hasher'>} deps @param {string[]} touched
+ * @param {Array<{ path: string, hash: string | null }> | undefined} before
+ */
+const withoutKeptEngineFiles = async (deps, touched, before) => {
+  const kept = []
+  for (const entry of before ?? []) if (entry.hash === (await contentHash(deps, entry.path))) kept.push(entry.path)
+  return touched.filter((path) => !kept.includes(path))
+}
+
 /** @param {Pick<CheckDeps, 'workspace' | 'hasher'>} deps @param {string} path relative to the working copy */
 const contentHash = async ({ workspace, hasher }, path) => {
   const text = await readOrName(workspace, path)
@@ -97,8 +119,8 @@ const contentHash = async ({ workspace, hasher }, path) => {
  * @param {CheckContext} context
  * @param {{
  *   role: import('../../domain/pipeline/roles.mjs').Role, outputs: string[], precreated: Array<string | null>, result: string,
- *   visitHeads: Head[], redByGateFailure: boolean, known: KnownCommits, scenario: ScenarioPass | null,
- * }} step visitHeads: the heads when the pass started; redByGateFailure: the gates sent the work back, their failure standing for a red test;
+ *   visitHeads: Head[], engineBefore?: Array<{ path: string, hash: string | null }>, redByGateFailure: boolean, known: KnownCommits, scenario: ScenarioPass | null,
+ * }} step visitHeads: the heads when the pass started; engineBefore: the engine files as the attempt found them; redByGateFailure: the gates sent the work back, their failure standing for a red test;
  *   scenario: the scenario the pass works on, null for none
  * @returns {Promise<StepCheck>}
  */
@@ -160,8 +182,9 @@ const readAttempt = async (context, step) => {
  */
 const readWritten = async ({ deps, slug, config, base }, step) => {
   const missing = await missingOutputs(deps, slug, step)
-  const touched = await touchedPaths(deps, step.visitHeads)
-  if (typeof touched === 'string') return { stopped: touched }
+  const changed = await touchedPaths(deps, step.visitHeads)
+  if (typeof changed === 'string') return { stopped: changed }
+  const touched = await withoutKeptEngineFiles(deps, changed, step.engineBefore)
   const scope = await scopeFailures(deps, step, { slug, config, touched })
   if (typeof scope === 'string') return { stopped: scope }
   const records = await keptRecords(deps, step, { slug, base, config })

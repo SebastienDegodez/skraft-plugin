@@ -104,13 +104,47 @@ test('no agent may change skraft-config.json or the workflow file, even inside i
   const everywhere = { ...API, paths: { src: ['.'], tests: ['.'] } }
   const host = scripted({ components: [everywhere], files: { '.skraft/pipeline.skraft.dot': BUILT_IN_WORKFLOW } }, (it) => [
     agent()(it), agent()(it), agent()(it),
-    agent({ work: ({ git }) => { git.commit('feat(checkout): Checkout pays by card, as the README says', ['src/Checkout.cs', 'tests/CheckoutTests.cs', 'README.md']); git.change('skraft-config.json', '.skraft/pipeline.skraft.dot') } })(it),
+    agent({ work: ({ git, workspace }) => { git.commit('feat(checkout): Checkout pays by card, as the README says', ['src/Checkout.cs', 'tests/CheckoutTests.cs', 'README.md']); editConfig(workspace); git.change('skraft-config.json', '.skraft/pipeline.skraft.dot') } })(it),
     unavailable,
   ])
 
   await host.start()
 
   assert.deepEqual(recorded(host, 'deliver')[0].failures, ['out of write scope: skraft-config.json', 'out of write scope: .skraft/pipeline.skraft.dot'])
+})
+
+/** A change of skraft-config.json's content. @param {{ files: Map<string, string> }} workspace */
+const editConfig = (workspace) => workspace.files.set('skraft-config.json', `${workspace.files.get('skraft-config.json')}\n`)
+
+test('a change of skraft-config.json made by a person before the run resumes is not the agent\'s', async () => {
+  const host = scripted({}, (it) => [
+    agent()(it),
+    async (dispatch) => { await agent()(it)(dispatch); throw new Error('host interrupted') },
+    unavailable,
+  ])
+  await assert.rejects(host.start(), /host interrupted/)
+
+  editConfig(host.workspace)
+  host.git.change('skraft-config.json')
+  await host.run()
+
+  assert.deepEqual(recorded(host, 'design').map((event) => [event.outcome, event.failures]), [['done', []]])
+})
+
+test('skraft-config.json changed by the agent stays refused on its next attempt until it is reverted', async () => {
+  const host = scripted({}, (it) => [
+    agent()(it),
+    agent({ work: ({ git, workspace }) => { editConfig(workspace); git.change('skraft-config.json') } })(it),
+    agent()(it),
+    unavailable,
+  ])
+
+  await host.start()
+
+  assert.deepEqual(recorded(host, 'design').map((event) => [event.attempt, event.outcome, event.failures]), [
+    [1, 'failed', ['out of write scope: skraft-config.json']],
+    [2, 'failed', ['out of write scope: skraft-config.json']],
+  ])
 })
 
 test('a component in a neighbour repository is checked in that repository, against its own paths', async () => {
