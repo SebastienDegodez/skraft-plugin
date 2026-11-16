@@ -3,6 +3,16 @@
 Toutes les modifications notables de ce projet sont documentées ici.
 Format basé sur [Conventional Commits](https://www.conventionalcommits.org/) — versionnage [SemVer](https://semver.org/).
 
+## [2.0.0-alpha.96](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.95...v2.0.0-alpha.96) (2026-11-16)
+
+### ✨ Features
+
+* **skills:** Java mocking skills and deferred-tool hint on pause ([#605](https://github.com/SebastienDegodez/skraft-plugin/issues/605)) ([ffa06b9](https://github.com/SebastienDegodez/skraft-plugin/commit/ffa06b99d74c0ac6c5d2e6aa7babac90bf74c2e0)), closes [#595](https://github.com/SebastienDegodez/skraft-plugin/issues/595)
+
+### 📝 Documentation
+
+* **copilot:** resume a finished run by starting the workflow again ([#604](https://github.com/SebastienDegodez/skraft-plugin/issues/604)) ([1a43b31](https://github.com/SebastienDegodez/skraft-plugin/commit/1a43b314c651b00c9d2e6a8e81fae88e06b19da0)), closes [#592](https://github.com/SebastienDegodez/skraft-plugin/issues/592)
+
 ## [2.0.0-alpha.95](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.94...v2.0.0-alpha.95) (2026-11-16)
 
 ### 🐛 Bug Fixes
