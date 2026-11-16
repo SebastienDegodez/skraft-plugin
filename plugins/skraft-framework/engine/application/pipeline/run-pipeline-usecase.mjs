@@ -456,10 +456,7 @@ const openStart = (journal) => /** @type {import('../../domain/journal/run-state
  */
 const openAttempt = async (context, run, next, job) => {
   if (next.resumed?.heads) return { heads: next.resumed.heads, engine: await engineAsFound(context, run, next) }
-  await context.deps.files.clearTemporary(context.slug)
-  await createRoleFolders(context, run, next.node)
-  await precreate(context, job)
-  await context.deps.files.write(context.slug, snapshotOf(job.result), JSON.stringify(await documentHashes(context)))
+  await prepareAttempt(context, run, next, job)
   const heads = await headsOf(context.deps, run.base)
   const engine = await engineAsFound(context, run, next)
   const { phase, node, visit, attempt, missing, feedback } = next
@@ -469,18 +466,39 @@ const openAttempt = async (context, run, next, job) => {
 }
 
 /**
+ * Clears the temporary files, creates the role's folders and pre-creates the outputs, then takes
+ * the snapshot of the documents the attempt starts from.
+ * @param {Context} context @param {RunState} run @param {WorkStep} next @param {Job} job
+ */
+const prepareAttempt = async (context, run, next, job) => {
+  await context.deps.files.clearTemporary(context.slug)
+  await createRoleFolders(context, run, next.node)
+  await precreate(context, job)
+  await context.deps.files.write(context.slug, snapshotOf(job.result), JSON.stringify(await documentHashes(context)))
+}
+
+/**
  * What the engine files looked like when the attempt began: as the previous attempt of the visit
  * found them when it was refused for changing one and no one resumed the run since, so that a
  * change the agent left stays refused; else as they stand now, a person's change before this
  * attempt or before the run resumed not being the agent's.
  * @param {Context} context @param {RunState} run @param {WorkStep} next
  */
-const engineAsFound = async ({ deps, journal }, run, { node, resumed, attempt }) => {
+const engineAsFound = async ({ deps, journal }, run, next) => {
   const now = await engineHashes(deps)
-  const refused = !resumed && attempt > 1 && run.nodes[node.id]?.last?.failures?.some((/** @type {string} */ line) => ENGINE_REFUSALS.has(line))
-  const started = journal.events.findLast((/** @type {import('../../domain/journal/run-state.mjs').RunEvent} */ event) => event.type === 'step.started' && event.step === node.id)
-  return refused && started?.engine ? started.engine : now
+  const started = refusedForEngine(run, next) ? lastStarted(journal, next.node.id) : undefined
+  return started?.engine ?? now
 }
+
+/**
+ * Whether the previous attempt of the visit was refused for changing an engine file, the run not
+ * resumed since. @param {RunState} run @param {WorkStep} next
+ */
+const refusedForEngine = (run, { node, resumed, attempt }) =>
+  !resumed && attempt > 1 && Boolean(run.nodes[node.id]?.last?.failures?.some((/** @type {string} */ line) => ENGINE_REFUSALS.has(line)))
+
+/** The last step.started of a step. @param {OpenJournal} journal @param {string} step */
+const lastStarted = (journal, step) => journal.events.findLast((/** @type {import('../../domain/journal/run-state.mjs').RunEvent} */ event) => event.type === 'step.started' && event.step === step)
 
 /** The refusals of an engine file. */
 const ENGINE_REFUSALS = new Set([`out of write scope: ${CONFIG_FILE}`])
