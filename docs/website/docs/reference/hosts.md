@@ -207,6 +207,11 @@ no agent, and says what to type.
 | `/skraft review <number> [--publish]` | runs `skraft-review` with `pr` and `publish` | tells you to type `skraft review --pr <number> [--publish]` |
 | `/skraft backlog [criteria…]` | hands over to the backlog agents (below) | same |
 
+A run that ended (`blocked`, `refused`, `error`) is resumed from its journal by starting `skraft-pipeline`
+again, with `{}` for the active pipeline or with the same arguments. Never use `resumeFromRunId` on it:
+the host answers `non_resumable`, or replays the outcome of the earlier pause while `skraft_status`
+reports `running`. Only a run paused on a question resumes under its own run ID (`/skraft decide`).
+
 Examples, the same as in Claude Code:
 
 ```console title="Claude Code"

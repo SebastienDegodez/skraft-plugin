@@ -212,6 +212,11 @@ Le premier mot choisit la route. Une route passe par Copilot seulement quand la 
 | `/skraft review <numéro> [--publish]` | lance `skraft-review` avec `pr` et `publish` | dit de taper `skraft review --pr <numéro> [--publish]` |
 | `/skraft backlog [critères…]` | passe la main aux agents du backlog (ci-dessous) | idem |
 
+Un run terminé (`blocked`, `refused`, `error`) se reprend depuis son journal en relançant `skraft-pipeline`,
+avec `{}` pour le pipeline actif ou avec les mêmes arguments. N'utilisez jamais `resumeFromRunId` sur lui :
+l'hôte répond `non_resumable`, ou rejoue le résultat de la pause précédente alors que `skraft_status`
+indique `running`. Seul un run en pause sur une question reprend sous son propre identifiant (`/skraft decide`).
+
 Exemples, les mêmes que sous Claude Code :
 
 ```console title="Claude Code"
