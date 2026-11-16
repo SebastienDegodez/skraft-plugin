@@ -64,7 +64,7 @@ const javaProject = ({ has, read }) => {
     stack: 'java',
     paths: javaPaths(maven ? mavenModules(/** @type {string} */ (read('pom.xml'))) : []),
     commands: maven
-      ? javaCommands(has('mvnw') ? './mvnw' : 'mvn', ['-B', '-q', '-DskipTests', 'package'], ['-B', '-q', 'test'], PIT_MAVEN)
+      ? javaCommands(has('mvnw') ? './mvnw' : 'mvn', ['-B', '-q', '-DskipTests', 'package'], ['-B', '-q', 'verify'], PIT_MAVEN)
       : javaCommands(has('gradlew') ? './gradlew' : 'gradle', ['build', '-x', 'test'], ['test'], ['pitest']),
   }
 }
@@ -73,15 +73,15 @@ const javaProject = ({ has, read }) => {
 const TEST_MODULE = /(^|-)(tests?|it)(-|$)/
 
 /**
- * The modules a parent POM lists, split into source and test modules; the Maven layout of a
- * single module otherwise.
+ * The modules a parent POM lists, split into source and test modules, each source module's
+ * `src/test/` a test path too (the Maven convention); the Maven layout of a single module otherwise.
  * @param {string[]} modules
  */
 const javaPaths = (modules) => {
   if (modules.length === 0) return { src: ['src/main/'], tests: ['src/test/'] }
   const testModules = modules.filter((name) => TEST_MODULE.test(name))
   const src = modules.filter((name) => !testModules.includes(name))
-  return { src: src.map((name) => `${name}/`), tests: testModules.map((name) => `${name}/`) }
+  return { src: src.map((name) => `${name}/`), tests: [...testModules.map((name) => `${name}/`), ...src.map((name) => `${name}/src/test/`)] }
 }
 
 /** @param {Project} project @returns {Detected} */

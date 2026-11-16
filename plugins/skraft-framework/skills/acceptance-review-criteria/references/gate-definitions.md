@@ -130,7 +130,7 @@ If YES → ambiguous → flag.
 | Language | Unit-test place | Integration-test place |
 |---|---|---|
 | .NET | a `tests/<Context>.UnitTest/` project (`.UnitTests`, `.Unit.Test`, `.Unit.Tests`, `.Test` and `.Tests` too); a project whose name ends in none of these never is it | `<Context>.IntegrationTest(s)` or `<Context>.Integration.Test(s)` |
-| Java | the `<context>-unit-test` or `<context>-unit-tests` module | `<context>-integration-test(s)` |
+| Java | a `*Test` class (Surefire) in the `src/test` of the module that holds the use case, or the `<context>-unit-test(s)` module | an `*IT` class (Failsafe) in the `src/test` of the entry-point module, whose `pom.xml` carries `spring-boot-maven-plugin` or `quarkus-maven-plugin`, or the `<context>-integration-test(s)` module; a test starting the application (`@SpringBootTest`, `@QuarkusTest`, `@QuarkusIntegrationTest`) is always an `*IT` |
 | Any other (TypeScript, JavaScript, Python, React…) | a `unit` folder right under the component's test path in `skraft-config.json` (`tests/unit/`, `test/unit/`), or that test path itself when it is named `unit` | an `integration` folder right under it |
 
 **Why this gate exists:** `outside-in-tdd`'s Concentric circles put the Application-layer acceptance test of a targeted scenario in the fast unit suite, and the walking skeleton's real path in the integration suite. A targeted scenario covered only by an HTTP or Integration test is one circle removed from the boundary DELIVER implements against; a walking skeleton entering through the use case proves no wiring. G1–G10 check Gherkin and plan artefacts, never the test files on disk.

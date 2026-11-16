@@ -40,7 +40,7 @@ for (const [fixture, stack, commands, paths, skills = []] of [
   ['payment', 'dotnet', ['build', 'format', 'test', 'mutation'], { src: ['src/'], tests: ['tests/'] }],
   ['payment-spring', 'java', ['build', 'test', 'mutation'], {
     src: ['payment-domain/', 'payment-application/', 'payment-infrastructure/', 'payment-app/'],
-    tests: ['payment-unit-test/', 'payment-integration-test/'],
+    tests: ['payment-unit-test/', 'payment-integration-test/', 'payment-domain/src/test/', 'payment-application/src/test/', 'payment-infrastructure/src/test/', 'payment-app/src/test/'],
   }, ['WARN  payment-spring']],
   ['payment-fastapi', 'python', ['build', 'test', 'mutation'], { src: ['src/'], tests: ['tests/'] }],
   ['react', 'react', ['build', 'lint', 'test', 'mutation'], { src: ['src/'], tests: ['tests/'] }],

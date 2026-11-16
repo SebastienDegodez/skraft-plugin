@@ -154,7 +154,7 @@ Revue `distill_review` : 4 lentilles, verdict calculé par le moteur.
 | **B1** | `business-alignment` | Chaque scénario exprime un résultat que la story demande ; aucun ne décrit un comportement qu'elle ne demande pas. | high |
 | **G5** | `testability` | Chaque étape est sans ambiguïté et implémentable seule. | high |
 | **G6** | `testability` | Chaque scénario a une entrée dans le plan d'implémentation. | high |
-| **G11** | `testability` | Chaque cas d'usage nouveau a son test d'acceptation à l'emplacement des tests unitaires de son langage (.NET : projet `<Context>.UnitTest`, `<Context>.UnitTests` ou `<Context>.Tests` ; Java : module `-unit-test(s)` ; Python, TypeScript, JavaScript, React : `<chemin des tests>/unit/`). | blocker |
+| **G11** | `testability` | Chaque cas d'usage nouveau a son test d'acceptation à l'emplacement des tests unitaires de son langage (.NET : projet `<Context>.UnitTest`, `<Context>.UnitTests` ou `<Context>.Tests` ; Java : une classe `*Test` sous le `src/test` d'un module, ou un module `-unit-test(s)` ; Python, TypeScript, JavaScript, React : `<chemin des tests>/unit/`). | blocker |
 | **T1** | `testability` | Chaque scénario et chaque test vérifient un comportement par un résultat observable et ne dépendent d'aucun temps, ordre ou aléa qu'ils ne fixent pas. | high |
 | **T2** | `testability` | Chaque valeur d'entrée et attendue du test d'acceptation externe égale le `.feature` mot pour mot ; le test ne porte que le scénario en cours. | blocker |
 | **T3** | `testability` | Le test d'acceptation externe existe et son premier scénario échoue sur une assertion métier ; le code de production du patch est un squelette dont les signatures rendent la valeur vide de leur type. | blocker |
@@ -170,7 +170,9 @@ emplacement unitaire. Un test ne compte que sous un chemin de tests que le compo
 (`paths.tests`) ; un chemin de tests qui est lui-même un emplacement compte comme tel
 (`tests/unit`, `tests/Orders.UnitTests`). .NET nomme ses emplacements
 `<Context>.UnitTest(s)`, `<Context>.Unit.Tests` ou `<Context>.Tests` et
-`<Context>.IntegrationTest(s)` ou `<Context>.Integration.Tests` ; Java `<context>-unit-test(s)` et
+`<Context>.IntegrationTest(s)` ou `<Context>.Integration.Tests` ; Java suit la convention Maven,
+sous le `src/test` d'un module une classe `*IT` (Failsafe) est d'intégration et tout autre test
+(Surefire `*Test`, Cucumber) unitaire, et accepte aussi les modules `<context>-unit-test(s)` et
 `<context>-integration-test(s)` ; toute autre stack `unit/` et `integration/` sous le chemin des tests.
 
 **Contrôle du moteur.** G1 : après chaque tentative d'`acceptance-designer`, sans lentille

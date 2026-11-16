@@ -153,7 +153,7 @@ The `distill_review` review: 4 lenses, verdict computed by the engine.
 | **B1** | `business-alignment` | Every scenario expresses an outcome the story asks for; none describes behaviour it does not ask for. | high |
 | **G5** | `testability` | Every step is unambiguous and implementable on its own. | high |
 | **G6** | `testability` | Every scenario has an entry in the implementation plan. | high |
-| **G11** | `testability` | Every use case new to the story has its acceptance test in its language's unit-test place (.NET: the `<Context>.UnitTest`, `<Context>.UnitTests` or `<Context>.Tests` project; Java: the `-unit-test(s)` module; Python, TypeScript, JavaScript, React: `<test path>/unit/`). | blocker |
+| **G11** | `testability` | Every use case new to the story has its acceptance test in its language's unit-test place (.NET: the `<Context>.UnitTest`, `<Context>.UnitTests` or `<Context>.Tests` project; Java: a `*Test` class under a module's `src/test`, or a `-unit-test(s)` module; Python, TypeScript, JavaScript, React: `<test path>/unit/`). | blocker |
 | **T1** | `testability` | Each scenario and test checks one behaviour through an observable outcome and depends on no time, order or randomness it does not fix. | high |
 | **T2** | `testability` | Every input and expected value the outer acceptance test holds equals the `.feature` verbatim; the test holds the scenario in progress only. | blocker |
 | **T3** | `testability` | The outer acceptance test exists and its first scenario fails on a business assertion; the patch's production code is a skeleton whose signatures answer the empty value of their type. | blocker |
@@ -168,8 +168,10 @@ integration places, and a component that gains tests with none in its unit place
 only under a test path the component configures (`paths.tests`); a test path that is itself a
 place counts as it (`tests/unit`, `tests/Orders.UnitTests`). .NET names its places
 `<Context>.UnitTest(s)`, `<Context>.Unit.Tests` or `<Context>.Tests` and
-`<Context>.IntegrationTest(s)` or `<Context>.Integration.Tests`; Java `<context>-unit-test(s)` and
-`<context>-integration-test(s)`; any other stack `unit/` and `integration/` under the test path.
+`<Context>.IntegrationTest(s)` or `<Context>.Integration.Tests`; Java follows the Maven convention,
+under a module's `src/test` a `*IT` class (Failsafe) is integration and any other test (Surefire
+`*Test`, Cucumber) unit, and accepts `<context>-unit-test(s)` and `<context>-integration-test(s)`
+modules too; any other stack `unit/` and `integration/` under the test path.
 
 **Engine check.** G1: after each `acceptance-designer` attempt, without a lens
 ([`gherkin-records`](./run-journal.md#statuses-and-codes)), the engine reads the scenarios the test

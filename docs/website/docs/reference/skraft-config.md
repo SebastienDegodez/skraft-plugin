@@ -414,7 +414,7 @@ In one folder, the first marker found in this order decides the stack:
 | Stack | Markers | `build` | `test` | Other commands |
 | --- | --- | --- | --- | --- |
 | `dotnet` | `*.sln`, `*.slnx`, `*.csproj`, `*.fsproj`, `*.vbproj` | `dotnet build --nologo` | `dotnet test --nologo` | `format`: `dotnet format --verify-no-changes`; `mutation`: `dotnet stryker --since:{baseSha}` |
-| `java` (Maven) | `pom.xml` | `mvn -B -q -DskipTests package` (`./mvnw` when present) | `mvn -B -q test` (`./mvnw` when present) | — |
+| `java` (Maven) | `pom.xml` | `mvn -B -q -DskipTests package` (`./mvnw` when present) | `mvn -B -q verify` (`./mvnw` when present): Surefire `*Test` then Failsafe `*IT` | — |
 | `java` (Gradle) | `build.gradle`, `build.gradle.kts` | `gradle build -x test` (`./gradlew` when present) | `gradle test` (`./gradlew` when present) | — |
 | `python` | `pyproject.toml`, `setup.py`, `setup.cfg`, `requirements.txt` | `python -m compileall -q src` (`.` with no `src` folder) | `python -m pytest -q -p no:cacheprovider` | — |
 | `react` / `typescript` / `javascript` | `package.json` | `npm run build` when a `build` script exists, otherwise `npx tsc --noEmit` (not for javascript) | `npm test` when a `test` script exists, otherwise `npx vitest run` with a vitest dependency, otherwise `npx jest` with a jest dependency | `lint`: `npm run lint` when a `lint` script exists |
@@ -429,7 +429,7 @@ Proposed `paths`:
 | --- | --- | --- |
 | `dotnet`, `python` | `src/` when it exists, otherwise `./` | `tests/` and/or `test/` when they exist |
 | `java` without modules | `src/main/` | `src/test/` |
-| `java` Maven with modules | the `pom.xml` `<module>`s other than test modules | the modules whose name holds the word `test`, `tests` or `it` (alone or separated by `-`) |
+| `java` Maven with modules | the `pom.xml` `<module>`s other than test modules | the modules whose name holds the word `test`, `tests` or `it` (alone or separated by `-`), then the `src/test/` of each other module |
 | JS / TS / React | `src/` when it exists, otherwise `./` | `tests/`, `test/`, `__tests__/` when they exist, otherwise as `src` |
 
 **Name**: the folder name in kebab-case (`PaymentApi` becomes `payment-api`), the working

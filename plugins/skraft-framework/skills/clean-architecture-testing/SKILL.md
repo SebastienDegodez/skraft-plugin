@@ -42,13 +42,15 @@ A test asserting `new PolicyNumber("abc").value == "abc"` is noise. It tests the
 | Ecosystem | `UnitTest` project | `IntegrationTest` project |
 |---|---|---|
 | .NET | `tests/<Context>.UnitTest/` csproj; an existing `.UnitTests`, `.Unit.Test(s)` or `.Test(s)` project is it | `tests/<Context>.IntegrationTest/` csproj; an existing `.IntegrationTests` or `.Integration.Test(s)` project is it |
-| Java (Maven / Gradle) | `<context>-unit-test` module (`-unit-tests` too) | `<context>-integration-test` module (`-integration-tests` too) |
+| Java (Maven / Gradle) | the `src/test` of the module under test, `*Test` classes run by Surefire (`mvn test`); an existing `<context>-unit-test(s)` module is it | `*IT` classes run by Failsafe (`mvn verify`), in the `src/test` of the infrastructure module (adapters) or of the entry-point module, the one carrying `spring-boot-maven-plugin` or `quarkus-maven-plugin` (API, walking skeleton, architecture); an existing `<context>-integration-test(s)` module is it |
 | Python | `tests/unit/` package | `tests/integration/` package |
 | React front end (Vitest) | `tests/unit/` folder | `tests/integration/` folder |
 | TypeScript / Node | `tests/unit/` folder | `tests/integration/` folder |
 
-Name a new project or module in the singular. `tests/` stands for the component's test path in
+Name a new project or module in the singular; Java adds no test module. `tests/` stands for the component's test path in
 `skraft-config.json` (`paths.tests`); a test path itself named `unit` or `integration` is that place.
+In Java the two "projects" are the two runners: a test that starts the application (`@SpringBootTest`,
+`@QuarkusTest`, `@QuarkusIntegrationTest`) is an `*IT`, never a `*Test`.
 
 ### Multi-context solutions
 
@@ -86,7 +88,7 @@ not "which ticket created it?"
 
 | Wrong | Why |
 |---|---|
-| Single test project mixing unit + integration | Slow tests pollute the fast loop; developers start skipping the suite |
+| Single test project mixing unit + integration | Slow tests pollute the fast loop; developers start skipping the suite (Java: a `*Test` that starts a container or the application is that mix) |
 | Splitting by production layer (`*.Domain.Test`, `*.Application.Test`, …) | Explodes project count, fights the boundary policy |
 | End-to-end app host test in `UnitTest` | API tests need full composition — belong in `IntegrationTest` |
 | Real container (DB / broker) in `UnitTest` | Breaks the <1 s suite promise |
@@ -120,7 +122,7 @@ Pick one mocking library per solution and stick to it. Same for the app host fac
 
 ## Per-Layer Examples (pseudo-code)
 
-Full runnable examples: [examples-dotnet.md](references/examples-dotnet.md) (.NET), [examples-java.md](references/examples-java.md) (Java / Spring Boot, Maven), [examples-python.md](references/examples-python.md) (Python, pytest) and [examples-react.md](references/examples-react.md) (React, Vitest). The roles are identical across languages.
+Full runnable examples: [examples-dotnet.md](references/examples-dotnet.md) (.NET), [examples-java.md](references/examples-java.md) (Java, Maven, Spring Boot or Quarkus), [examples-python.md](references/examples-python.md) (Python, pytest) and [examples-react.md](references/examples-react.md) (React, Vitest). The roles are identical across languages.
 
 ### Application — acceptance test
 
@@ -242,7 +244,7 @@ These thoughts signal you're about to violate the policy:
 ## References
 
 - [examples-dotnet.md](references/examples-dotnet.md) — full runnable .NET examples (FakeItEasy, Testcontainers, in-process app host, architecture scanner)
-- [examples-java.md](references/examples-java.md) — full runnable Java / Spring Boot examples (JUnit 5, Mockito, Testcontainers, ArchUnit)
+- [examples-java.md](references/examples-java.md) — full runnable Java examples, Spring Boot and Quarkus (JUnit 5, Mockito, Testcontainers, ArchUnit, Surefire/Failsafe)
 - [examples-python.md](references/examples-python.md) — runnable Python examples (pytest, hand-written fakes, testcontainers, FastAPI `TestClient`, import-linter)
 - [examples-react.md](references/examples-react.md) — runnable React examples (Vitest, in-memory gateways, Testing Library, MSW, the ESLint guard)
 - [architecture-rules.md](references/architecture-rules.md) — complete architecture rule set (project references + allow-list; .NET implementation)

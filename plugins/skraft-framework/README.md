@@ -155,7 +155,7 @@ resolved assignment. How-to: [Choose the agents' models](https://sebastiendegode
 |---|---|---|---|
 | .NET | `clean-architecture-dotnet` | `quality-gates-dotnet` (Stryker.NET) | Microcks (default) or in-process doubles; `WebApplicationFactory` |
 | Python | `clean-architecture-python` | `quality-gates-python` (cosmic-ray) | Microcks (default) or respx; FastAPI `TestClient` |
-| Java / Spring Boot | `clean-architecture-java` | not yet | not yet |
+| Java (Maven, Spring Boot or Quarkus) | `clean-architecture-java` | not yet | not yet |
 | TypeScript back end (Node, Vitest) | `clean-architecture-typescript` | `quality-gates-typescript` (StrykerJS on Vitest) | MSW (default) or Microcks |
 | React / TypeScript (Vitest) | `clean-architecture-react` | `quality-gates-typescript` (StrykerJS on Vitest) | MSW (default) or Microcks; no contract test, a front end exposes no API |
 | Node JavaScript | — | `quality-gates-javascript` (`node --test`, StrykerJS TAP) | MSW (default) or Microcks |
