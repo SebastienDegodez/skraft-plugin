@@ -12,6 +12,8 @@ import { gherkinFailures } from '../../domain/pipeline/gherkin-records.mjs'
  */
 /** A test plan of the tracking folder, as the acceptance designer's role names it. */
 const TEST_PLAN = /(^|\/)details\/[^/]+\/test-plan-[^/]+\.md$/
+/** A file of Gherkin scenarios. */
+const FEATURE = /\.feature$/
 /** The acceptance criteria of a story, as DISCUSS leaves them in the tracking folder. */
 const CRITERIA = /(^|\/)plans\/[^/]+\/ac-draft-[^/]+\.md$/
 
@@ -38,29 +40,26 @@ const documentsOf = async (deps, slug, paths) => {
 const trackedText = async (deps, slug, path) => (await deps.files.read(slug, path)) ?? ''
 
 /**
- * Every file of the folders the components declare for their scenarios, one bounded context deep,
- * as the designer writes them; none for a folder the working copy has not got.
+ * Every `.feature` under the folders the components declare for their scenarios, at any depth: a
+ * runner's folder (`src/__tests__`) holds nested folders and the step files beside the scenarios;
+ * none for a folder the working copy has not got.
  * @param {Workspace} workspace @param {readonly Component[]} components
  * @returns {Promise<Array<{ path: string, text: string }>>}
  */
 const featuresOf = async (workspace, components) => {
   const folders = featuresFolders(components)
-  const paths = (await Promise.all(folders.map((folder) => filesUnder(workspace, folder)))).flat()
+  const paths = (await Promise.all(folders.map((folder) => featuresUnder(workspace, folder)))).flat()
   const texts = await Promise.all(paths.map((path) => fileText(workspace, path)))
   return paths.map((path, index) => ({ path, text: texts[index] }))
 }
 
-/** The files of a features folder, those of its bounded contexts included. @param {Workspace} workspace @param {string} folder */
-const filesUnder = async (workspace, folder) => {
+/** The `.feature` files of a folder and of the folders under it. @param {Workspace} workspace @param {string} folder @returns {Promise<string[]>} */
+const featuresUnder = async (workspace, folder) => {
   const entries = await entriesOf(workspace, folder)
-  return (await Promise.all(entries.map((entry) => pathsOf(workspace, folder, entry)))).flat()
-}
-
-/** The paths an entry of a features folder holds: itself, or the files of its context. @param {Workspace} workspace @param {string} folder @param {import('../ports/workspace.mjs').WorkspaceEntry} entry @returns {Promise<string[]>} */
-const pathsOf = async (workspace, folder, entry) => {
-  if (entry.kind === 'file') return [`${folder}/${entry.name}`]
-  const entries = await entriesOf(workspace, `${folder}/${entry.name}`)
-  return entries.map((inner) => `${folder}/${entry.name}/${inner.name}`)
+  const found = await Promise.all(entries.map((entry) => entry.kind === 'dir'
+    ? featuresUnder(workspace, `${folder}/${entry.name}`)
+    : FEATURE.test(entry.name) ? [`${folder}/${entry.name}`] : []))
+  return found.flat()
 }
 
 /** The entries of a folder of the working copy, none when it is no folder of it. @param {Workspace} workspace @param {string} path */
