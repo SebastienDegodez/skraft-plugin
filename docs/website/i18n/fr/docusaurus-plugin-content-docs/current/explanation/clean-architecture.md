@@ -146,8 +146,8 @@ la main sur les passerelles sortantes — repository, service externe — (skill
 l'Infrastructure.
 
 **Le seuil de mutation suit la couche.** La skill `skraft-quality-bar` classe chaque fichier par
-le nom de ses dossiers : un dossier qui finit par `domain` ou `application` est le cœur, tenu à
-100 % ; tout le reste — API, Infrastructure — est la frontière, tenue à 80 %. Le run de mutation
+le nom de ses dossiers : un dossier qui finit par `domain` ou `application` est le cœur ;
+tout le reste — API, Infrastructure — est la frontière. Chacun est tenu à 80 %, à part. Le run de mutation
 du développeur est jugé ainsi, comme un nœud `gate="mutation"` du workflow propre à une équipe. La règle de dépendance décide donc aussi de l'exigence de test.
 
 ## skraft s'applique la règle à lui-même

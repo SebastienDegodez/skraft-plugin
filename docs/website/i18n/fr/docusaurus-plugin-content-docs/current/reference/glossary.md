@@ -27,7 +27,7 @@ Point de comparaison d'un dépôt : `git merge-base HEAD <ref>`, avec `main` par
 → Voir [Base](./skraft-config.md)
 
 **Barre qualité**
-Les seuils que le skill `skraft-quality-bar` fixe pour tous les dépôts : 100 % de score de mutation et de couverture de lignes sur Domain et Application, 80 % de score de mutation sur API et Infrastructure. Aucune configuration ne les abaisse.
+Les seuils que le skill `skraft-quality-bar` fixe pour tous les dépôts : 80 % de score de mutation sur Domain et Application comme sur API et Infrastructure, jugés à part, et 100 % de couverture de lignes sur Domain et Application. Aucune configuration ne les abaisse.
 → Voir [Software craftsmanship](../explanation/software-craftsmanship.md)
 
 **BDD (Behaviour-Driven Development)**

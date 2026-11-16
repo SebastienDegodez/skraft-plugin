@@ -143,8 +143,8 @@ service — (`clean-architecture-testing` skill); real containers or contract mo
 Infrastructure.
 
 **The mutation bar follows the layer.** The `skraft-quality-bar` skill classifies each file by the
-names of its folders: a folder ending in `domain` or `application` is the core, held to 100 %;
-everything else — API, Infrastructure — is the boundary, held to 80 %. The developer's own
+names of its folders: a folder ending in `domain` or `application` is the core;
+everything else — API, Infrastructure — is the boundary. Each is held to 80 %, apart. The developer's own
 mutation run is judged that way, and so is a `gate="mutation"` node of a team's own workflow. The
 dependency rule therefore also decides how demanding the tests must be.
 

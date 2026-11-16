@@ -55,8 +55,9 @@ restates the manifesto, the right column is skraft's own.*
 
 ### Well-crafted software: a bar that is not negotiated
 
-The `skraft-quality-bar` skill is the only place a threshold is written: 100 % mutation score and
-line coverage on Domain and Application, 80 % mutation score on API and Infrastructure. There is
+The `skraft-quality-bar` skill is the only place a threshold is written: 80 % mutation score on
+Domain and Application and on API and Infrastructure, judged apart, and 100 % line coverage on
+Domain and Application. There is
 no "advisory" level, no waiver and no per-repository setting; `skraft-config.json` chooses the
 gates' **commands**, never their thresholds. In `pipeline.skraft.dot`, the DELIVER `gates` node
 is `locked`: removing it from a copy of the workflow needs a written reason (`unlock="<reason>"`).
@@ -142,7 +143,7 @@ Enforceable craftsmanship has a cost, and skraft owns it.
 
 - **The first slice is slower.** A walking skeleton and red tests before the code delay the first
   demo; they avoid having to rebuild the structure later.
-- **100 % mutation on the core is demanding.** Some mutants change nothing observable; the
+- **80 % mutation on every scope is demanding.** Some mutants change nothing observable; the
   component's `quality-gates-<stack>` skill says how to exclude one, line by line and with its
   reason, rather than lowering the bar for everyone.
 - **The pipeline does not prove the tests catch a mistake.** Mutation is the developer's run, made

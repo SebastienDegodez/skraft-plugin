@@ -11,7 +11,7 @@ import { createDecide } from '../../../../plugins/skraft-framework/engine/applic
 import { createPublish } from '../../../../plugins/skraft-framework/engine/application/publish/publish-usecase.mjs'
 import { createPrecheck } from '../../../../plugins/skraft-framework/engine/application/pipeline/precheck-usecase.mjs'
 import {
-  BUILT_IN_WORKFLOW, FakeHasher, FixedClock, InMemoryAgentCatalog, InMemoryCodeHost, InMemoryGit, InMemoryPullRequests, InMemoryRunLock, InMemoryTemplates, InMemoryTracking, InMemoryUserSettings, InMemoryWorkflowSource, InMemoryWorkspace,
+  BUILT_IN_MUTATION, BUILT_IN_WORKFLOW, FakeHasher, FixedClock, InMemoryAgentCatalog, InMemoryCodeHost, InMemoryGit, InMemoryPullRequests, InMemoryRunLock, InMemoryTemplates, InMemoryTracking, InMemoryUserSettings, InMemoryWorkflowSource, InMemoryWorkspace,
   ManualTimer, RecordingProgress, ScriptedAgentRunner, ScriptedHuman, ScriptedMachine, ScriptedReplay,
 } from './in-memory-host.mjs'
 
@@ -68,13 +68,15 @@ export const API = Object.freeze({
  *   answers: what the human at the host answers, in order; user: the text of ~/.skraft/config.json;
  *   tracking: the tracking folder, shared with another session's host; owner: this session's id;
  *   journalKeys: the machine's journal keys, the tracking folder's machine by default;
- *   forge: the forge the code host double stands for, github unless given; slug: the run's slug, checkout unless given
+ *   forge: the forge the code host double stands for, github unless given; slug: the run's slug, checkout unless given;
+ *   follows: the workflow the run follows by its base name, the pipeline unless given; mutation follows the plugin's
+ *   mutation workflow unless workflow says otherwise
  */
 export const pipelineHost = ({
   components = [API], config = {}, files = {}, behaviours = [], git = new InMemoryGit(), machine, replay, catalog = new InMemoryAgentCatalog(),
   workflow, clock = new FixedClock('2026-10-11T09:00:00.000Z'), answers = [], user, codeHost = new InMemoryCodeHost(),
   tracking = new InMemoryTracking(), owner = 'session-a', journalKeys = tracking.journalKeys, forge = 'github',
-  slug = SLUG, scenarioReviews = null,
+  slug = SLUG, scenarioReviews = null, follows = 'pipeline',
 } = {}) => {
   const answered = answeredConsents()
   const deps = {
@@ -93,7 +95,7 @@ export const pipelineHost = ({
     sourceControl: git,
     commandRunner: machine ?? new ScriptedMachine({ clock }),
     commitReplay: replay ?? new ScriptedReplay({ clock }),
-    workflowSource: new InMemoryWorkflowSource(workflow),
+    workflowSource: follows === 'pipeline' ? new InMemoryWorkflowSource(workflow) : new InMemoryWorkflowSource(workflow ?? BUILT_IN_MUTATION, undefined, follows),
     agentCatalog: catalog,
     forges: { [forge]: { codeHost, pullRequests: new InMemoryPullRequests({ repository: codeHost.named }) } },
     runLock: new InMemoryRunLock(tracking, owner),

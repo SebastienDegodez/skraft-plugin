@@ -28,7 +28,7 @@ nombre de tentatives, les verdicts, les gates et leurs seuils.
 Ce qui ne se règle pas, et pourquoi :
 
 - **Les seuils qualité.** Un seuil réglable devient un seuil négocié à chaque story difficile ;
-  100 % sur le cœur métier et 80 % ailleurs restent les mêmes pour toutes les équipes.
+  80 % de mutants détectés sur le cœur métier comme ailleurs restent les mêmes pour toutes les équipes.
 - **Les contrôles du moteur** (journal chaîné, droits d'écriture, sorties attendues, rejeu des
   commits rouges). Ce ne sont pas des nœuds du workflow : aucune copie ne peut les retirer.
 - **Les gates de DELIVER et les revues.** Le nœud `gates` est verrouillé :

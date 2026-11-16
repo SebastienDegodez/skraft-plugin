@@ -340,9 +340,11 @@ from the predecessor.
 | `deliver_review -> deliver` | `NEEDS_REWORK` | 2 |
 | `deliver_review -> visuals` | `APPROVED` | — |
 
-The plugin's workflow runs no mutation: the developer runs it apart. A team that wants it in its
-own workflow adds a `gate="mutation"` node, and may follow it with the kill loop the attributes
-above allow (`each="survivor-file"`, `proposal=true`, `question="mutation-plan"`).
+The plugin's pipeline runs no mutation: the developer runs it apart, in a run that follows
+`workflows/mutation.skraft.dot` (the gate `mutation`, then the kill loop the attributes above allow:
+`each="survivor-file"`, `proposal=true`, `question="mutation-plan"`), or `.skraft/mutation.skraft.dot`
+when the working copy holds one. A team that wants mutation in every story's run adds a
+`gate="mutation"` node to its own pipeline.
 
 The other edges carry neither label nor ceiling: `start -> research -> design`, `distill -> distill_review_lenses`, `deliver -> gates`,
 `visuals -> pr_writer -> publish -> exit`, and those of

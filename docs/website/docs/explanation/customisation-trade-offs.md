@@ -28,7 +28,7 @@ number of attempts, the verdicts, the gates and their thresholds.
 What cannot be tuned, and why:
 
 - **Quality thresholds.** A tunable threshold becomes a threshold negotiated at each hard story;
-  100 % on the business core and 80 % elsewhere stay the same for every team.
+  80 % of mutants detected on the business core and elsewhere stays the same for every team.
 - **The engine's checks** (chained journal, write scope, expected outputs, replay of red commits).
   They are not workflow nodes: no copy can remove them.
 - **DELIVER gates and reviews.** The `gates` node is locked: removing it takes

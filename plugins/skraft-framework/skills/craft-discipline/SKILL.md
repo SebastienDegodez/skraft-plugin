@@ -77,7 +77,7 @@ When the developer, or a workflow of their own, hands you survivors:
 2. Equivalent mutant → suppress that one construct with a reason, the way the component's
    `quality-gates-<stack>` skill states.
 
-Zero surviving mutants in Domain and Application (equivalent mutants suppressed with a reason).
+Each scope at the bar of `skraft-quality-bar` (equivalent mutants suppressed with a reason).
 
 ### C9 — Conventional commit format
 

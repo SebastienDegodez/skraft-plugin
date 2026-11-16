@@ -11,7 +11,8 @@ import { lensesText, reviewPasses } from './review-passes.mjs'
  *
  * @typedef {import('../journal/run-state.mjs').RunEvent} RunEvent
  * @typedef {import('./run-facts.mjs').GateFact} GateFact
- * @typedef {{ scope: string, bar: number, detected: number, survivors: string[] }} JournaledScore
+ * @typedef {{ scope: string, bar: number, score: number, counted: number | null, survivors: string[] }} JournaledScore
+ *   counted: the mutants a report counts, null for a score the mutation command computed
  */
 
 export const QA_REPORT_FILE = 'qa-report.md'
@@ -76,11 +77,8 @@ const scoreLines = (scores) => {
   return [`Mutation score: ${scores.map(scoreText).join(', ')}.`, '', ...survivorLines(scores.flatMap((score) => score.survivors))]
 }
 
-/** `core 92 % (bar 100 %, 13 mutants)`, rounded down so that it never reads as the bar. @param {JournaledScore} score */
-const scoreText = ({ scope, bar, detected, survivors }) => {
-  const counted = detected + survivors.length
-  return `${scope} ${Math.floor((100 * detected) / counted)} % (bar ${bar} %, ${counted} ${counted === 1 ? 'mutant' : 'mutants'})`
-}
+/** `core 76 % (bar 80 %, 13 mutants)`, rounded down so that it never reads as the bar. @param {JournaledScore} score */
+const scoreText = ({ scope, bar, score, counted }) => `${scope} ${Math.floor(score)} % (bar ${bar} %${counted === null ? '' : `, ${counted} ${counted === 1 ? 'mutant' : 'mutants'}`})`
 
 /** @param {string[]} survivors */
 const survivorLines = (survivors) => (survivors.length === 0 ? ['No surviving mutant.'] : ['Surviving mutants:', '', ...survivors.map((line) => `- ${code(line)}`)])

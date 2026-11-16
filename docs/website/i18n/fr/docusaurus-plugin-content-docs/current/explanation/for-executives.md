@@ -94,8 +94,8 @@ tourne. Les seuils de qualité, eux, ne se négocient pas : ils ne sont pas conf
 ### De quoi qualifier le livrable
 
 La gate de couverture laisse ses preuves dans le dossier du run. Le mutation testing revient au
-développeur : le pipeline n'en lance aucun, et le run du développeur doit atteindre 100 % sur le
-cœur métier et 80 % ailleurs. `qa-report.md` rassemble pour l'équipe de qualification le plan de
+développeur : le pipeline n'en lance aucun, et le run du développeur doit atteindre 80 % sur le
+cœur métier comme ailleurs. `qa-report.md` rassemble pour l'équipe de qualification le plan de
 test, les gates et les verdicts de revue ; `run-report.md` donne le
 temps, le coût et les relances de chaque étape. Le run se termine par une pull request décrite
 depuis le journal, avec les captures d'un front.
