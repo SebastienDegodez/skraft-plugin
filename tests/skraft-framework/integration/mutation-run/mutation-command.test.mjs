@@ -49,6 +49,10 @@ test('skraft mutation mutates the branch HEAD is on, in its own run apart from t
 
   assert.equal(second.step.status, 'done', second.step.reason)
   assert.deepEqual(mutationJournal(cwd).filter(({ type }) => type === 'run.started').length, 1)
+  const doctor = JSON.parse((await skraft(cwd, ['doctor', '--json'])).stdout)
+  assert.deepEqual(doctor.checks.find(({ subject }) => subject === 'mutation'), {
+    subject: 'mutation', status: 'ok', detail: `app declares a mutation command; last run on ${BRANCH}: mutation passed (global 91 %), ended`,
+  })
 })
 
 test('a branch below the bar hands the proposals over, each with its brief and reply file, then mutation record', async (t) => {

@@ -180,10 +180,10 @@ const initOrConfigure = (args, services, console) =>
 
 /** @param {string[]} args @param {CliServices} services @param {Console} console */
 const configure = async (args, services, console) => {
-  const options = optionsOf(args, { repeated: ['--add'] })
+  const options = optionsOf(args, { repeated: ['--add'], flags: ['--mutation'] })
   if (options === undefined) return usage(console)
   const folders = /** @type {string[]} */ (options['--add'] ?? [])
-  return answer(await createConfigureComponents(services.adapters()).configure({ workingCopyName: services.workingCopyName(), folders }), console)
+  return answer(await createConfigureComponents(services.adapters()).configure({ workingCopyName: services.workingCopyName(), folders, mutation: options['--mutation'] === true }), console)
 }
 
 /** @param {string[]} args @param {CliServices} services @param {Console} console */
@@ -530,7 +530,7 @@ const unknown = (_args, _services, console) => usage(console)
 const TABLE = [
   ['--version', version, [{}]],
   ['init', initOrConfigure, [
-    { synopsis: '[--add <folder>]...', summary: 'detect the components into skraft-config.json' },
+    { synopsis: '[--add <folder>]... [--mutation]', summary: 'detect the components into skraft-config.json (--mutation: with their mutation command)' },
     { synopsis: '<slug> [--issue <number>] [--title <text>] [--base <ref>] [--from-artifacts]', summary: 'start or resume a pipeline' },
   ]],
   ['status', status, [{ synopsis: '[--json]' }]],
