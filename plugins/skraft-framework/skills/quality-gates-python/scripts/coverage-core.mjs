@@ -1,12 +1,13 @@
 #!/usr/bin/env node
-// G11 for Python: line coverage of the Domain and Application sources named by the core
-// cosmic-ray config, measured over the whole test suite. The bar (100%) lives here.
+// G11 for Python: line coverage of the Domain and Application sources (every source under a
+// folder whose last word is domain or application), measured over the whole test suite. The bar
+// (100%) lives here.
 import { mkdir, readFile, rm, writeFile } from 'node:fs/promises'
 import { realpathSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { coverageVerdict, noCoverHits, parseArgs, validateConfig } from './gate-policy.mjs'
-import { capture, distributionVersion, ensure, pythonEnv, pythonFiles, pythonVersion, readToml, repositoryRoot, resolvePython, sha256 } from './python-toolchain.mjs'
+import { coreRoots, coreSourceFiles, coverageVerdict, noCoverHits, parseArgs } from './gate-policy.mjs'
+import { capture, distributionVersion, ensure, pythonEnv, pythonVersion, repositoryPythonFiles, repositoryRoot, resolvePython, sha256 } from './python-toolchain.mjs'
 
 export async function runCoverageGate(input, { execute = capture } = {}) {
 	const lines = []
@@ -24,13 +25,13 @@ export async function runCoverageGate(input, { execute = capture } = {}) {
 		pythonVersion(python, root)
 		distributionVersion(python, root, 'coverage')
 		distributionVersion(python, root, 'pytest')
-		const config = validateConfig(readToml(python, root, resolve(root, input.config ?? 'cosmic-ray-core.toml')), 'core')
-		const files = await pythonFiles(root, config.modulePaths)
-		ensure(files.length > 0, 'The core config names no Python file')
+		const all = repositoryPythonFiles(root)
+		const files = coreSourceFiles(all)
+		ensure(files.length > 0, 'No Domain or Application source: the core is every Python file under a folder whose name ends with domain or application')
 		exitCode = 1
 		const dataFile = join(prefix, '.coverage')
 		const env = pythonEnv(python)
-		const run = await execute(python, ['-m', 'coverage', 'run', `--data-file=${dataFile}`, `--source=${config.modulePaths.join(',')}`, '-m', 'pytest', '-q', '-p', 'no:cacheprovider'],
+		const run = await execute(python, ['-m', 'coverage', 'run', `--data-file=${dataFile}`, `--source=${coreRoots(all).join(',')}`, '-m', 'pytest', '-q', '-p', 'no:cacheprovider'],
 			{ cwd: root, env, stdout: join(prefix, 'run.stdout') })
 		const testsOutput = await readFile(join(prefix, 'run.stdout'), 'utf8')
 		lines.push(...testsOutput.trimEnd().split(/\r?\n/).slice(-15))
@@ -62,7 +63,7 @@ export async function runCoverageGate(input, { execute = capture } = {}) {
 async function main() {
 	let result
 	try {
-		const input = parseArgs(process.argv.slice(2), { options: ['root', 'evidence', 'python', 'config', 'threshold'] })
+		const input = parseArgs(process.argv.slice(2), { options: ['root', 'evidence', 'python', 'threshold'] })
 		for (const required of ['root', 'evidence']) ensure(input[required], `--${required} is required`)
 		result = await runCoverageGate(input)
 	} catch (error) {

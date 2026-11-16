@@ -211,7 +211,7 @@ repository owner accepted that trade deliberately — quality is not negotiable.
 | **G3** | The build passes. | Compilation / type-check succeeded. |
 | **G4** | Static analysis passes. | Linter/analyzer reported no blocking issue. |
 | **G5** | Architecture rules pass. | Dependency-direction tests (Clean Architecture) pass. |
-| **G6** | Mutation score meets the bar. | The final full mutation evidence exited `0`: core first (Domain and Application, 100%), then boundary (API and Infrastructure, 80%). |
+| **G6** | Mutation score meets the bar. | The mutation gate ran every `commands.mutation` the developer declared in `skraft-config.json` and exited `0`: every scope it reported (core and boundary, or global) at 80% or more. `not_run` when none is declared. |
 | **G7** | No mocks in the Domain/Application core. | Grep-based attestation: zero mock-framework symbol in those layers. |
 | **G8** | Full conventional commit message. | Each covered commit uses the feature scope, sign-off and known issue reference; closure requires genuinely finished work and all required gates passed. |
 | **G9** | No test tampering (RED→GREEN integrity). | For each scenario, its acceptance test file changed only by **addition** between its RED `test` commit and its green commit. |
@@ -232,20 +232,26 @@ repository owner accepted that trade deliberately — quality is not negotiable.
   unchanged; the standalone subject audit remains a syntax check, not proof of
   completion.
 
-> **G6 is an exit code, not a number.** During a cycle, mutation may run in differential
-> core mode since the previous cycle's last commit, and is skipped when no core production
-> file changed; that is feedback, not evidence. Each `quality-gates-<tech>` adapter bundles
-> two final sequenced mutation scripts — `mutation-core.sh` then `mutation-boundary.sh` on
-> .NET. Each script carries its own expected value and passes it to the runner's
-> `--break-at`, so the runner exits non-zero below the bar and **that exit code is the
-> verdict**. Core runs first and short-circuits: there is nothing to learn from mutating
-> adapters while the domain is unproven. A score read from a report and judged in prose is
-> an opinion about a gate, not a gate — and G11 is attested the same way, by the coverage
-> runner's own threshold flags.
+> **Mutation is the developer's responsibility.** It must be done on every story, but
+> SKRAFT ships no mutation tool, config or scaffold. You choose the tool (Stryker.NET,
+> StrykerJS, cosmic-ray, mutmut, PIT…), configure it, and declare per component in
+> `skraft-config.json` the command that runs it (`components[].commands.mutation`, the v2
+> shape). That command writes its scores as JSON to the file named by `SKRAFT_MUTATION_RESULT`:
+> `core` and `boundary` for a Clean Architecture component, `global` for a single project, each
+> with its surviving mutants as `file:line detail` lines unless the team leaves them out. The
+> `mutation-testing` skill's gate runs those commands once, after the story's last work commit,
+> holds every scope to 80% and lists every reported survivor to kill; its **exit code** is the
+> verdict. A score read from a report
+> and judged in prose is an opinion about a gate, not a gate; G11 is attested the same way.
+> `/skraft-init mutation` sets it up, in the pipeline (DELIVER runs it on every story) or
+> outside it (`mutation.pipeline: false`: the developer runs `/skraft-mutation`, and DELIVER
+> reuses that run when it judged the same commit on a clean working copy). With no command
+> declared, or no such run, G6 is recorded `not_run` with its rationale: never `pass`, never
+> silent — `qg-verify` and the report both show it.
 
 > A genuinely irrelevant gate is marked `not_applicable` **with a rationale** — never
-> as a substitute for `fail` or missing evidence. A gate that *cannot* run — no mutation
-> runner installed, no SDK — is `fail`, never `not_applicable`.
+> as a substitute for `fail` or missing evidence. A gate that *cannot* run — a declared
+> mutation command that fails, no SDK — is `fail`, never `not_applicable`.
 
 ---
 

@@ -217,7 +217,7 @@ compromis délibérément — la qualité ne se négocie pas.
 | **G3** | Le build passe. | Compilation / vérification de types réussie. |
 | **G4** | L'analyse statique passe. | Linter/analyseur sans problème bloquant. |
 | **G5** | Les règles d'architecture passent. | Les tests de direction de dépendance (Clean Architecture) passent. |
-| **G6** | Le score de mutation atteint la barre. | L'évidence finale complète de mutation sort en `0` : le cœur d'abord (Domain et Application, 100 %), puis la frontière (API et Infrastructure, 80 %). |
+| **G6** | Le score de mutation atteint la barre. | La gate de mutation a lancé chaque `commands.mutation` déclarée par le développeur dans `skraft-config.json` et sort en `0` : chaque scope rapporté (core et boundary, ou global) atteint 80 %. `not_run` quand aucune n'est déclarée. |
 | **G7** | Aucun mock dans le cœur Domain/Application. | Attestation par grep : zéro symbole de framework de mock dans ces couches. |
 | **G8** | Message complet du commit conventionnel. | Chaque commit couvert utilise le scope fonctionnel, le sign-off et l'issue connue ; la cloture exige un travail reellement termine et toutes les gates requises passees. |
 | **G9** | Aucune altération de test (intégrité RED→GREEN). | Pour chaque scénario, son fichier de test d'acceptance n'a changé que par **ajout** entre son commit `test` RED et son commit green. |
@@ -239,22 +239,27 @@ ou recu de completion supplementaire.
   de preuves v3 reste inchange ; l'audit autonome des sujets reste un controle
   syntaxique, pas une preuve de completion.
 
-> **G6 est un code de sortie, pas un nombre.** Pendant un cycle, la mutation peut tourner
-> en mode cœur différentiel depuis le dernier commit du cycle précédent, et elle est sautée
-> quand aucun fichier de production cœur n'a changé ; c'est du feedback, pas une évidence.
-> Chaque adaptateur `quality-gates-<tech>` embarque deux scripts finaux de mutation
-> séquencés — `mutation-core.sh` puis `mutation-boundary.sh` en .NET. Chaque script porte
-> sa propre valeur attendue et la passe au `--break-at` du runner : le runner sort non nul
-> sous la barre, et **ce code de sortie est le verdict**. Le cœur passe en premier et
-> court-circuite : il n'y a rien à apprendre en mutant les adaptateurs tant que le domaine
-> n'est pas prouvé. Un score lu dans un rapport et jugé en prose est une opinion sur une
-> gate, pas une gate — et G11 s'atteste de la même façon, par les drapeaux de seuil du
-> runner de couverture.
+> **La mutation est la responsabilité du développeur.** Elle doit être faite à chaque story,
+> mais SKRAFT ne fournit ni outil de mutation, ni configuration, ni scaffold. Vous choisissez
+> l'outil (Stryker.NET, StrykerJS, cosmic-ray, mutmut, PIT…), vous le configurez, et vous
+> déclarez par composant dans `skraft-config.json` la commande qui le lance
+> (`components[].commands.mutation`, la forme de la v2). Cette commande écrit ses scores en JSON
+> dans le fichier désigné par `SKRAFT_MUTATION_RESULT` : `core` et `boundary` pour un composant
+> Clean Architecture, `global` pour un mono-projet, chacun avec ses mutants survivants en lignes
+> `fichier:ligne détail`, sauf si l'équipe les désactive. La gate du skill `mutation-testing`
+> lance ces commandes une fois, après le dernier commit de travail de la story, exige 80 % sur
+> chaque scope et liste chaque survivant rapporté à tuer ; son **code de sortie** fait verdict. Un score lu dans un rapport et
+> jugé en prose est une opinion sur une gate, pas une gate ; G11 s'atteste de la même façon.
+> `/skraft-init mutation` la configure, dans le pipeline (DELIVER la lance à chaque story) ou
+> hors du pipeline (`mutation.pipeline: false` : le développeur lance `/skraft-mutation`, et
+> DELIVER reprend ce run s'il a jugé le même commit sur une copie de travail propre). Sans
+> commande déclarée, ou sans ce run, G6 est enregistrée `not_run` avec sa justification : jamais
+> `pass`, jamais silencieuse — `qg-verify` et le rapport l'affichent.
 
 > Une gate réellement non pertinente est marquée `not_applicable` **avec
 > justification** — jamais en remplacement d'un `fail` ou d'une évidence manquante. Une
-> gate qui *ne peut pas* s'exécuter — runner de mutation absent, SDK absent — est `fail`,
-> jamais `not_applicable`.
+> gate qui *ne peut pas* s'exécuter — commande de mutation déclarée qui échoue, SDK absent —
+> est `fail`, jamais `not_applicable`.
 
 ---
 

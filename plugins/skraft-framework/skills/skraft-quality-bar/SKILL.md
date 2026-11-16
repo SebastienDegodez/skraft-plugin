@@ -1,6 +1,6 @@
 ---
 name: skraft-quality-bar
-description: Use before running, verifying, or reporting any quality gate. States the one permanent threshold for mutation score and line coverage, and the enforcement level of every gate. Load when about to invoke a mutation run, when deciding whether a gate blocks or merely warns, when writing or reviewing an evidence record, when a skill or descriptor appears to state a threshold of its own, and whenever a number would otherwise be copied from memory or from an older document. There are no tiers, no advisory level, and no override. Does not choose the toolchain command (resolving-stack-commands), classify survivors (mutation-testing), define the evidence schema (quality-gates-evidence-contract), or set the reviewer lens count (each review-criteria skill owns its own).
+description: Use before running, verifying, or reporting any quality gate. States the one permanent threshold for mutation score (global, developer-owned) and line coverage, and the enforcement level of every gate. Load when about to invoke a mutation run, when deciding whether a gate blocks or merely warns, when writing or reviewing an evidence record, when a skill or descriptor appears to state a threshold of its own, and whenever a number would otherwise be copied from memory or from an older document. There are no tiers, no advisory level, and no override. Does not choose the toolchain command (resolving-stack-commands), classify survivors (mutation-testing), define the evidence schema (quality-gates-evidence-contract), or set the reviewer lens count (each review-criteria skill owns its own).
 ---
 <!-- markdownlint-disable-file -->
 
@@ -18,9 +18,12 @@ setting that could lower it; that dial is gone, and with it the `advisory` and
 
 | Gate | Value | Scope |
 | --- | --- | --- |
-| Mutation score | 100% | Domain, Application |
-| Mutation score | 80% | API, Infrastructure |
+| Mutation score | 80% | each scope: core and boundary (Clean Architecture), or global (single project) |
 | Line coverage | 100% | Domain, Application |
+
+Core is Domain and Application; boundary is API, Infrastructure and UI. For line coverage,
+Domain and Application are any folder (or .NET project) whose name ends with `domain` or
+`application`.
 
 TDD variant is Outside-In double-loop, always. `outside-in-tdd` owns the sequence.
 
@@ -34,51 +37,38 @@ rationale that grants an exemption.
 | Clean Architecture boundaries | blocking |
 | TDD cycle respected | blocking |
 | Test integrity | blocking |
-| Mutation Domain/Application meets the bar | blocking |
-| Mutation API/Infrastructure meets the bar | blocking |
+| Mutation meets the bar, when the developer declared a command | blocking |
+| Mutation with no declared command | not run, reported |
 | Gherkin gate (user-approved scenarios) | blocking |
 | ADR for non-trivial decisions | blocking |
 | Object Calisthenics (Domain) | blocking |
 
-A gate that cannot run is not a passed gate. Report it as a failure and stop.
+A gate that cannot run is not a passed gate. Report it as a failure and stop. The one
+exception is mutation with no command declared: G6 is `not_run`, never `pass`, and the report
+says so.
 
-## Running the gate
+## Mutation is the developer's responsibility
 
-The comparison is never made by reading a number and judging it. Each
-`quality-gates-<tech>` adapter owns two durable scope configs plus deterministic runners
-that return verdicts as exit codes:
+Mutation testing must be done on every story, and running it is the developer's
+responsibility, not SKRAFT's. SKRAFT ships no mutation tool, no mutation config and no
+scaffold. The developer:
 
-1. **Core first** -- Domain and Application, expects 100.
-2. **Boundary second** -- API and Infrastructure, expects 80.
+1. picks the tool (Stryker.NET, StrykerJS, cosmic-ray, mutmut, PIT…) and its configuration;
+2. declares, per component in `skraft-config.json`, the command that runs it
+   (`components[].commands.mutation`, the v2 shape);
+3. makes that command compute the scores and write them as JSON to the file named by
+   `SKRAFT_MUTATION_RESULT`: `core` and `boundary` for a Clean Architecture component, `global`
+   for a single project; each scope may list its surviving mutants, one `file:line detail` line
+   each, which the team can leave out;
+4. may set the tool's own break threshold; SKRAFT judges 80% on every scope regardless.
 
-Core runs first and short-circuits: there is nothing to learn from mutating adapters
-while the domain is unproven. `resolving-stack-commands` detects the stack and routes
-to the adapter; the adapter owns the invocation.
+`mutation-testing`'s `mutation-gate` runs each declared command, reads each result and returns
+the verdict as its exit code: 0 pass, 1 fail, 2 blocked, 3 not run. You never judge a score by
+reading a number. No caller argument sets the bar: the gate refuses one.
 
-For .NET, `quality-gates-dotnet` scaffolds `stryker-config-core.json` and
-`stryker-config-boundary.json` at consumer repository root, and its core and boundary
-scripts validate and execute them. Checked-in configs are also local-debug and CI/CD interface.
-
-For Python, `quality-gates-python` scaffolds `cosmic-ray-core.toml` and
-`cosmic-ray-boundary.toml`; its mutation script runs one scope per call and carries both
-thresholds as literals.
-
-For TypeScript with Vitest, `quality-gates-typescript` scaffolds `stryker.core.json` and
-`stryker.boundary.json`; its `mutation-gate.mjs` runs one scope per call with the thresholds of
-its `gate-policy.mjs`.
-
-## Threshold flags
-
-Stated once so recipes copy rather than invent. Adapter scripts and the config scaffold
-carry each value as a literal, and guard tests assert those literals still equal the
-table above — checked restatements, not independent definitions.
-
-| Scope | Mutation | Coverage |
-| --- | --- | --- |
-| Domain, Application | `thresholds.break = 100` in the checked-in core Stryker config (written by the adapter's scaffold) | 100% line coverage, enforced by the adapter's coverage script |
-| API, Infrastructure | `thresholds.break = 80` in the checked-in boundary config | not gated on coverage |
-
-The runner reads the threshold from its config and exits non-zero below it; the
-coverage script exits non-zero below the bar. That exit code is the verdict. A run
-whose score is read from a report and judged in prose is not a gate — it is an
-opinion about a gate. No caller argument sets a threshold: the scripts refuse one.
+A team may run mutation outside the pipeline (`mutation.pipeline: false`, set by
+`/skraft-init mutation`): the developer runs `/skraft-mutation`, and DELIVER reuses that run when
+it judged HEAD on a clean working copy. With no command declared, or no such run, the gate exits
+3 and G6 is recorded `not_run` with its rationale. You
+never write the command, the tool config or the result yourself to make G6 run: tell the
+developer it is theirs to declare.

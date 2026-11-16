@@ -91,13 +91,6 @@ export function dotnet(args, { cwd, output = 'inherit', stderr } = {}) {
 	}
 }
 
-export function requireDotnetStryker() {
-	const probe = dotnet(['--version'], { output: 'ignore', stderr: 'ignore' })
-	if (probe.status === 127 || probe.status === 126) throw new Exit(3, 'dotnet is not on PATH')
-	// Stryker.NET reads --version as a project-version option, so probe with --help.
-	if (dotnet(['stryker', '--help'], { output: 'ignore', stderr: 'ignore' }).status !== 0) throw new Exit(3, 'dotnet stryker is not available')
-}
-
 export function requireDotnet() {
 	const probe = dotnet(['--version'], { output: 'ignore', stderr: 'ignore' })
 	if (probe.status === 127 || probe.status === 126) throw new Exit(3, 'dotnet is not on PATH')
