@@ -58,7 +58,7 @@ const DESCRIPTION =
   'Never infer an answer or submit on dismissal. Resume the same skraft-pipeline workflow run ID.'
 const NO_DIRECTORY = 'the session has no working directory yet'
 export const NATIVE_GUIDANCE =
-  'Present this exact question and options through the offered native ask_user or askQuestions tool. ' +
+  'When skraft_decide is not among your tools, find it with tool_search_tool first. Present this exact question and options through the offered native ask_user or askQuestions tool. ' +
   'For a refusal, request its reason through that tool. Relay only the returned human reply with skraft_decide {key, answer, reason?}, ' +
   'then resume the SAME workflow run ID. If the native tool is unavailable or dismissed, report that blocker, leave the run paused and record nothing.'
 // Stryker restore StringLiteral

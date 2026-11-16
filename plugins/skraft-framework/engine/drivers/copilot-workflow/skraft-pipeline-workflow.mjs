@@ -34,7 +34,7 @@ export const SKRAFT_PIPELINE_META = Object.freeze({
     'configure?: true to show the configuration and ask whether to start with it, as on the first run of a working copy, ' +
     'agentIds?: { [agent file id]: session agent id } }. ' +
     'The Copilot model and reasoning effort of each agent come from models and assign in the skraft configuration, never from args. ' +
-    'On pause, read skraft_decide {}, ask the exact question and options with the offered native ask_user or askQuestions tool, ' +
+    'On pause, when skraft_decide is not among your tools, find it with tool_search_tool; then read skraft_decide {}, ask the exact question and options with the offered native ask_user or askQuestions tool, ' +
     'relay the human reply with skraft_decide {key, answer, reason?}, then resume the SAME workflow run ID. ' +
     'Missing native tool or dismissal: record nothing, report the blocker and leave this run paused.',
   phases: Object.freeze([
