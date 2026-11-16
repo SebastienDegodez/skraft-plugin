@@ -34,18 +34,20 @@ test('a run the engine fails under ends with an error outcome, every key present
   assert.deepEqual(calls, [])
 })
 
-test('a run that fails after it started journals that it stopped on an unexpected error, with a fixed reason, and can be resumed', async (t) => {
+test('a run that fails after it started journals that it stopped on an unexpected error with a fixed reason, keeps the exception in a log of its folder the outcome names, and can be resumed', async (t) => {
   const { cwd, cleanup } = await workingCopy()
   t.after(cleanup)
   const { ctx, calls } = simulatedContext({ args: { slug: 'checkout' } })
   ctx.log = (message) => { if (message.startsWith('phase ')) throw new Error(`log closed ${cwd}`) }
+  const log = join(cwd, '.copilot-tracking', 'skraft-plans', 'checkout', 'logs', 'unexpected.log')
 
   const outcome = await runSkraftPipelineWorkflow(ctx, copilotHost(cwd))
 
-  assert.deepEqual(outcome, { status: 'error', slug: 'checkout', phase: null, code: 'unexpected', reason: UNEXPECTED })
+  assert.deepEqual(outcome, { status: 'error', slug: 'checkout', phase: null, code: 'unexpected', reason: `${UNEXPECTED}; the error is in ${log}` })
   assert.deepEqual(calls, [])
   const last = (await journalEvents(cwd, 'checkout')).at(-1)
   assert.deepEqual([last.type, last.code, last.reason], ['run.stopped', 'unexpected', UNEXPECTED])
+  assert.match(readFileSync(log, 'utf8'), /^Error: log closed /, 'the log holds the exception and its stack, which the journal never does')
 })
 
 test('a run whose signal is aborted rethrows what stopped it, and returns no outcome', async (t) => {

@@ -92,27 +92,48 @@ const guarded = async (ctx, { cwd, ...host }, signal) => {
     return cwd === null ? NO_DIRECTORY : await runIn(ctx, { cwd, ...host })
   } catch (error) {
     if (isCancellation(signal)) throw error
-    return stoppedUnexpectedly(/** @type {{ cwd: string, pluginRoot: string, home: string }} */ ({ cwd, pluginRoot: host.pluginRoot, home: host.home }))
+    return stoppedUnexpectedly(/** @type {{ cwd: string, pluginRoot: string, home: string }} */ ({ cwd, pluginRoot: host.pluginRoot, home: host.home }), error)
   }
 }
 
 /**
  * The unexpected outcome, journaled as run.stopped on the active run when its journal can be
- * written: the run is then blocked, and the next start resumes it.
+ * written: the run is then blocked, and the next start resumes it. The exception goes to a log of
+ * the run's tracking folder, which no prompt, journal or outcome reads; the outcome names where.
  * @param {{ cwd: string, pluginRoot: string, home: string }} host
+ * @param {unknown} error
  * @returns {Promise<RunOutcome>}
  */
-const stoppedUnexpectedly = async (host) => {
+const stoppedUnexpectedly = async (host, error) => {
   try {
-    const opened = await openActiveRun(createNodeAdapters(host), undefined)
+    const adapters = createNodeAdapters(host)
+    const opened = await openActiveRun(adapters, undefined)
     // Stryker disable next-line ConditionalExpression: with no active run the append below throws into the same catch
     if (!opened.ok) return UNEXPECTED
     await opened.journal.append('run.stopped', { code: UNEXPECTED.code, reason: UNEXPECTED.reason })
-    return { ...UNEXPECTED, slug: opened.slug }
+    const evidence = await writeEvidence(adapters.files, opened.slug, error)
+    return { ...UNEXPECTED, slug: opened.slug, reason: evidence === null ? UNEXPECTED.reason : `${UNEXPECTED.reason}; the error is in ${evidence}` }
   } catch {
     return UNEXPECTED
   }
 }
+
+/**
+ * The exception and its stack, written to the run's log folder.
+ * @param {import('../../application/ports/tracking-files.mjs').TrackingFiles} files @param {string} slug @param {unknown} error
+ * @returns {Promise<string | null>} the path of the log, null when it could not be written
+ */
+const writeEvidence = async (files, slug, error) => {
+  try {
+    await files.write(slug, UNEXPECTED_LOG, `${error instanceof Error ? (error.stack ?? error.message) : String(error)}\n`)
+    return files.location(slug, UNEXPECTED_LOG)
+  } catch {
+    return null
+  }
+}
+
+/** The log the unexpected error of a run is written to, in its tracking folder. */
+const UNEXPECTED_LOG = 'logs/unexpected.log'
 
 /**
  * @param {WorkflowContext} ctx
