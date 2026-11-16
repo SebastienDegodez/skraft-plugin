@@ -49,7 +49,8 @@ décide de l'ordre des phases, des sorties attendues, des relances et des gates.
 assistants font le travail ; ils ne décident pas s'il est fini.
 
 La discipline imposée ne change pas depuis la v1 : Outside-In TDD, Clean Architecture,
-revue adverse, mutation testing, BDD. Ce qui change, c'est qui la fait respecter.
+revue adverse, BDD. Ce qui change, c'est qui la fait respecter. Le mutation testing garde son
+seuil, mais il revient au développeur de le lancer, à part du pipeline.
 
 Les travaux de Forsgren, Humble et Kim (*Accelerate*, 2018) vont dans ce sens : les équipes
 les plus performantes n'opposent pas vitesse et stabilité, elles obtiennent les deux.
@@ -84,18 +85,18 @@ moteur, jamais par le modèle.
 ### Des équipes autonomes, sans attendre une release
 
 Chaque dépôt décrit ses composants et leurs commandes dans `skraft-config.json` : build,
-test, format, lint, couverture, architecture, mutation. SKRAFT détecte les projets
+test, format, lint, couverture, architecture, et la commande de mutation propre au développeur.
+SKRAFT détecte les projets
 (.NET, Java, Python, TypeScript, JavaScript, React), propose des commandes par défaut, et
 vérifie que chacune peut tourner. Une commande écrite par l'équipe est toujours celle qui
 tourne. Les seuils de qualité, eux, ne se négocient pas : ils ne sont pas configurables.
 
 ### De quoi qualifier le livrable
 
-Les gates de couverture et de mutation laissent leurs preuves dans le dossier du run. La
-mutation doit atteindre 100 % sur le cœur métier et 80 % ailleurs ; le moteur renvoie les
-mutants survivants à l'ingénieur, fichier par fichier, jusqu'à la barre ou jusqu'à un arrêt
-qui nomme ce qui reste. `qa-report.md` rassemble pour l'équipe de qualification le plan de
-test, les gates, les scores de mutation et les verdicts de revue ; `run-report.md` donne le
+La gate de couverture laisse ses preuves dans le dossier du run. Le mutation testing revient au
+développeur : le pipeline n'en lance aucun, et le run du développeur doit atteindre 100 % sur le
+cœur métier et 80 % ailleurs. `qa-report.md` rassemble pour l'équipe de qualification le plan de
+test, les gates et les verdicts de revue ; `run-report.md` donne le
 temps, le coût et les relances de chaque étape. Le run se termine par une pull request décrite
 depuis le journal, avec les captures d'un front.
 
@@ -150,8 +151,8 @@ parcours pas à pas.
 **Aujourd'hui** : les quatre phases RESEARCH, DESIGN, DISTILL et DELIVER conduites par le
 moteur dans Claude Code, Copilot CLI et VS Code ; un workflow personnalisable ; les droits
 d'écriture vérifiés par diff git à chaque étape ; la revue en code par lentilles isolées, avec
-un verdict calculé par le moteur ; les décisions humaines (ratification d'ADR, escalades) ; la
-boucle de clôture mutation ; le panneau Claude Code, le rapport de run et le rapport QA ; la
+un verdict calculé par le moteur ; les décisions humaines (ratification d'ADR, escalades) ; le
+panneau Claude Code, le rapport de run et le rapport QA ; la
 pull request de fin de run avec ses captures et son commentaire d'issue ; le plugin
 `skraft-brownfield` pour le code existant ; `skraft review --pr` pour revoir une pull request
 quelconque avec les mêmes lentilles ; `skraft migrate` pour les runs commencés en v1.
@@ -167,7 +168,7 @@ quelconque avec les mêmes lentilles ; `skraft migrate` pour les runs commencés
 | Développeur sous VS Code (Windows ou Mac) | Un run qui avance sans réglage caché ni blocage silencieux, et une reprise après interruption |
 | Développeur sous Claude Code ou Copilot CLI | Le même run, plus rapide quand l'hôte le permet |
 | Développeur dont un script ne marche pas chez lui | Remplacer une commande dans `skraft-config.json` sans attendre une release |
-| Équipe de qualification | Le plan de test et les preuves de couverture et de mutation |
+| Équipe de qualification | Le plan de test et les preuves de couverture |
 | Mainteneur de SKRAFT | Un moteur testé, mutable sans peur, où chaque contrôle a une valeur prouvée |
 
 ## Sources

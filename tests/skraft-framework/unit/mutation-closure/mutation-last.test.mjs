@@ -1,7 +1,10 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { ScriptedMachine } from '../support/in-memory-host.mjs'
+import { MUTATION_WORKFLOW, ScriptedMachine } from '../support/in-memory-host.mjs'
 import { agent, lenses, scripted, says, finding, SLUG } from '../support/pipeline-host.mjs'
+
+// The mutation loop runs only in a pipeline that holds it: the plugin's no longer does.
+const mutating = (options = {}, script) => scripted({ workflow: MUTATION_WORKFLOW, ...options }, script)
 
 const DELIVER = ['deliver', 'gates', 'deliver_review', 'mutation']
 const delivering = (it) => agent({
@@ -12,7 +15,7 @@ const delivering = (it) => agent({
 const renaming = (it) => agent({ work: ({ git }) => git.commit(`refactor(${SLUG}): name the card payment`, ['src/Checkout.cs']) })(it)
 
 test('mutation runs once, last, on the code the DELIVER review approved: a review rework goes back through deliver and the gates only', async () => {
-  const host = scripted({ machine: new ScriptedMachine() }, (it) => [agent()(it), agent()(it), agent()(it), delivering(it), renaming(it)])
+  const host = mutating({ machine: new ScriptedMachine() }, (it) => [agent()(it), agent()(it), agent()(it), delivering(it), renaming(it)])
   host.agentRunner.review = lenses({ 'cold-reader': [says('cold-reader', 'fail', [finding('CR1', 'high', 'Checkout reads as a payment')])] })
 
   const outcome = await host.start()

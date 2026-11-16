@@ -48,7 +48,8 @@ order, the expected outputs, the retries and the gates. The assistants do the wo
 not decide whether it is finished.
 
 The enforced discipline has not changed since v1: Outside-In TDD, Clean Architecture,
-adversarial review, mutation testing, BDD. What changes is who enforces it.
+adversarial review, BDD. What changes is who enforces it. Mutation testing keeps its bar, but
+it is the developer's to run, apart from the pipeline.
 
 The research of Forsgren, Humble and Kim (*Accelerate*, 2018) points the same way: the
 highest-performing teams do not trade speed against stability; they get both.
@@ -81,17 +82,17 @@ directory, result, output) is written by the engine, never by the model.
 ### Autonomous teams, without waiting for a release
 
 Each repository describes its components and their commands in `skraft-config.json`: build,
-test, format, lint, coverage, architecture, mutation. SKRAFT detects the projects (.NET,
+test, format, lint, coverage, architecture, and the developer's own mutation command. SKRAFT detects the projects (.NET,
 Java, Python, TypeScript, JavaScript, React), proposes default commands, and checks that each
 one can run. A command written by the team is always the one that runs. Quality thresholds,
 however, are not negotiable: they are not configurable.
 
 ### What it takes to qualify a delivery
 
-The coverage and mutation gates leave their evidence in the run folder. Mutation must reach
-100 % on the business core and 80 % elsewhere; the engine sends the surviving mutants back to
-the engineer, file by file, until the bar is met or the run names what remains. `qa-report.md`
-gathers the test plan, the gates, the mutation scores and the review verdicts for the QA team;
+The coverage gate leaves its evidence in the run folder. Mutation testing is the developer's:
+the pipeline runs none, and the developer's own run must reach 100 % on the business core and
+80 % elsewhere. `qa-report.md` gathers the test plan, the gates and the review verdicts for the
+QA team;
 `run-report.md` gives the time, cost and retries of each step. The run ends with a pull request
 described from the journal, with the screenshots of a front end.
 
@@ -143,7 +144,7 @@ through this step by step.
 **Today**: the four phases RESEARCH, DESIGN, DISTILL and DELIVER driven by the engine in
 Claude Code, Copilot CLI and VS Code; a customisable workflow; write scope checked by git diff
 at each step; code review through isolated lenses, with a verdict computed by the engine;
-human decisions (ADR ratification, escalations); the mutation closing loop; the Claude Code
+human decisions (ADR ratification, escalations); the Claude Code
 pane, the run report and the QA report; the end-of-run pull request with its screenshots and
 issue comment; `skraft review --pr` to review any pull request with the same lenses;
 `skraft migrate` for runs started with v1; the `skraft-brownfield` plugin for existing code.
@@ -159,7 +160,7 @@ issue comment; `skraft review --pr` to review any pull request with the same len
 | Developer on VS Code (Windows or Mac) | A run that progresses with no hidden setting or silent block, and resume after an interruption |
 | Developer on Claude Code or Copilot CLI | The same run, faster when the host allows it |
 | Developer whose script does not work on their machine | Replace a command in `skraft-config.json` without waiting for a release |
-| QA team | The test plan and the coverage and mutation evidence |
+| QA team | The test plan and the coverage evidence |
 | SKRAFT maintainer | A tested engine, safe to change, where every check has a proven value |
 
 ## Sources

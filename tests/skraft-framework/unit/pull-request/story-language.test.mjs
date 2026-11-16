@@ -81,13 +81,12 @@ test('a French story\'s pull request is in French: the pr-writer fills a French 
     '',
     '</details>',
     '',
-    '<details><summary>Portes de qualité: 3 réussies</summary>',
+    '<details><summary>Portes de qualité: 2 réussies</summary>',
     '',
     '| Composant | Porte | Commande | Résultat | Durée | Preuve |',
     '| --- | --- | --- | --- | ---: | --- |',
     '| api | build | `dotnet build` | pass | 0 s | `gates/api/build-1.log` |',
     '| api | test | `dotnet test` | pass | 0 s | `gates/api/test-1.log` |',
-    '| api | mutation | `dotnet stryker` | pass | 0 s | `gates/api/mutation-1.log` |',
     '',
     '</details>',
     '',
@@ -123,11 +122,10 @@ test('a French story\'s pull request is in French: the pr-writer fills a French 
     '| deliver | DELIVER | 1 | 1 | 0 | 0 s | - | done |',
     '| gates | DELIVER | 1 | 1 | 0 | 0 s | - | pass |',
     '| deliver_review | DELIVER | 1 | 1 | 0 | 0 s | - | approved |',
-    '| mutation | DELIVER | 1 | 1 | 0 | 0 s | - | pass |',
     '| visuals | DELIVER | 1 | 1 | 0 | 0 s | - | skipped |',
     '| pr_writer | PUBLISH | 1 | 1 | 0 | 0 s | - | done |',
     '| publish | PUBLISH | 1 | 1 | 0 | 0 s | - | en cours |',
-    '| Total | | | 15 | 1 | 0 s | - | |',
+    '| Total | | | 14 | 1 | 0 s | - | |',
     '',
     PRUNE,
     '',
@@ -208,14 +206,14 @@ test('a French story\'s review, failed gate, decisions and costs are told in Fre
   assert.ok(section(await bodyOf(lastRed), 'Preuves RED').includes('\n| `root-3` | test(checkout): Checkout pays by card | non rejoué |\n'), section(await bodyOf(lastRed), 'Preuves RED'))
 
   const adr = '---\nadr: 1\ntitle: Card payment\nstatus: Proposed\nsupersedes: null\nratified_by: null\n---\n\n# ADR-001 — Card payment\n\n**Status:** Proposed\n'
-  const unlocked = edit(BUILT_IN_WORKFLOW, ['mutation [shape=parallelogram, gate="mutation", goal_gate=true, locked=true]', 'mutation [shape=parallelogram, gate="mutation", goal_gate=true, locked=true, unlock="no mutation tool for this stack yet"]'])
+  const unlocked = edit(BUILT_IN_WORKFLOW, ['locked=true, phase="DELIVER"', 'locked=true, unlock="the team runs the gates in its own CI", phase="DELIVER"'])
   const decided = scripted({ config: CONSENTED, codeHost: french(), workflow: unlocked, files: { 'docs/adr/adr-001-card-payment.md': adr }, answers: [{ answer: 'RATIFIED' }] }, (it) => [
     agent()(it), agent()(it), agent()(it), agent({ work: green(SLUG, 'Checkout', REFS_42) })(it),
   ])
   await decided.start(FRENCH)
   assert.equal(section(await bodyOf(decided), 'Décisions appliquées'), [
     '- ADR-001 Card payment (`docs/adr/adr-001-card-payment.md`), ratifié dans ce run',
-    '- Porte verrouillée `mutation` sautée, déverrouillée : no mutation tool for this stack yet',
+    '- Porte verrouillée `gates` sautée, déverrouillée : the team runs the gates in its own CI',
   ].join('\n'))
 })
 

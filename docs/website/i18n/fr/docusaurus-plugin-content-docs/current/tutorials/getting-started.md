@@ -65,22 +65,6 @@ test('the total of a cart adds its prices', () => {
 })
 ```
 
-La gate de mutation lance StrykerJS. Installez-le dans `web` :
-
-```console
-$ npm install --save-dev --prefix web @stryker-mutator/core@9.6.1 @stryker-mutator/tap-runner@9.6.1
-```
-
-et créez `web/stryker.config.json` :
-
-```json
-{
-  "testRunner": "tap",
-  "mutate": ["src/**/*.js"],
-  "tap": { "testFiles": ["test/**/*.test.js"], "nodeArgs": ["--test-reporter=tap"] }
-}
-```
-
 Ajoutez `node_modules/` et `reports/` à un `.gitignore` à la racine de `shop`, enregistrez un
 premier commit, puis travaillez sur une branche à vous :
 
@@ -161,7 +145,9 @@ Ouvrez `skraft-config.json` à la racine de `shop` :
 }
 ```
 
-`test` vient du script de `web/package.json` ; `mutation` est le défaut StrykerJS. `paths` est aussi
+`test` vient du script de `web/package.json` ; `mutation` est le défaut StrykerJS, une commande à
+vous : le pipeline ne la lance jamais, le mutation testing est à vous de le lancer quand vous le
+choisissez. `paths` est aussi
 le **périmètre d'écriture** de DELIVER : le software engineer ne pourra écrire que dans `web/src` et
 `web/test`. `skraft init` a aussi ajouté `skraft-config.local.json`, votre couche personnelle, au
 `.gitignore`.
@@ -318,8 +304,7 @@ rejeu lit la sortie : le test de S1 et le walking skeleton passent et rien n'éc
 `deliver`, avec leur passage, pour chaque scénario.
 
 Le moteur lance ensuite les gates du composant (`test`), puis la revue DELIVER (test-integrity,
-architecture-boundaries, cold-reader), puis la mutation, une seule fois, sur le code revu. Le
-panneau coche `gates`, `deliver_review` et `mutation`.
+architecture-boundaries, cold-reader). Le panneau coche `gates` et `deliver_review`.
 
 ## 9. PUBLISH <!-- #9-publish -->
 
@@ -355,9 +340,9 @@ Relancez vous-même les gates sur le code livré :
 $ skraft gate --all
 ```
 
-![Terminal : skraft gate --all, pass web/test et pass web/mutation, « 2 gates passed on web »](/img/screenshots/shared/terminal-gates.svg)
+![Terminal : skraft gate --all, pass web/test, « 1 gates passed on web »](/img/screenshots/shared/terminal-gates.svg)
 
-*Figure 4 — Les deux gates du composant `web` passent.*
+*Figure 4 — La gate du composant `web` passe ; sa commande `mutation` est à vous de la lancer.*
 
 Le dossier de suivi `.copilot-tracking/skraft-plans/checkout/` contient maintenant :
 
@@ -366,7 +351,7 @@ Le dossier de suivi `.copilot-tracking/skraft-plans/checkout/` contient maintena
 | `events.jsonl` | le journal : un événement signé et chaîné par fait |
 | `WORKFLOW.md` | le graphe du workflow avec chaque étape faite |
 | `run-report.md` | le tableau qu'affiche `skraft report` (temps, coût et relances de chaque étape), puis chaque commit que le moteur a vérifié avec son verdict |
-| `qa-report.md` | le plan de test, les dernières gates avec le score de mutation, les commits rouges, le verdict de chaque revue |
+| `qa-report.md` | le plan de test, les dernières gates, les commits rouges, le verdict de chaque revue |
 | `pull-request.md` | la description de la pull request, prête à publier |
 | `gates/web/` | la sortie de chaque gate |
 | `logs/` | ce qu'a affiché chaque rejeu d'un commit rouge ou vert, et les réponses du juge du rejeu |

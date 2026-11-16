@@ -22,7 +22,7 @@ détail de chaque gate citée : [Gates](./gates.md).
 | RESEARCH | `skraft` | le moteur | `solution-researcher` | sortie remplie, traces RESEARCH | — |
 | DESIGN | `skraft` | le moteur | `solution-architect` | traces DESIGN, scan structurel, revue à 3 lentilles | `adr-ratification` |
 | DISTILL | `skraft` | le moteur | `acceptance-designer` | tableau `## Scenarios`, commits rouges rejoués, revue à 4 lentilles | `scenario-review` |
-| DELIVER | `skraft` | le moteur | `software-engineer` | un commit vert par scénario, rejoué ; gates, revue `review`, mutation | `mutation-plan` quand la mutation échoue |
+| DELIVER | `skraft` | le moteur | `software-engineer` | un commit vert par scénario, rejoué ; gates, revue `review` | — |
 | PUBLISH | `skraft` | le moteur | `pr-writer` | prose de la pull request | — |
 
 DISCOVER et DISCUSS ne passent pas par le moteur : aucun journal, aucune gate de commandes.
@@ -213,29 +213,16 @@ termine avec `scenarios`. Pourquoi le walking skeleton parcourt S1 :
 | `deliver` | agent `software-engineer`, `each="scenario"` | fait passer chaque scénario à son tour, un commit vert chacun, le vert de S1 faisant passer aussi le walking skeleton et chaque vert suivant le gardant au vert ; après le dernier, les passages que renvoient les gates ou la revue, sur toute l'histoire |
 | `gates` | gates `build,format,lint,test,architecture,coverage`, `goal_gate`, `locked` | commandes des composants modifiés, puis de tous |
 | `deliver_review` | appel `workflow="review"` | lentilles `test-integrity`, `architecture-boundaries`, `cold-reader`, `mock-fidelity` (`when="mock"`), `contract-fidelity` (`when="contract"`) |
-| `mutation` | gate `mutation`, `goal_gate`, `locked` | une fois, sur le code que `deliver_review` a approuvé ; barre 100 % cœur (Domain, Application), 80 % frontière |
-| `kill_proposal` | agent `software-engineer`, `each="survivor-file"`, `proposal=true` | un lancement par fichier portant des mutants survivants ; écrit une proposition, ne change aucun code |
-| `mutation_plan` | question `mutation-plan` | le développeur choisit : `APPLY`, sa propre consigne, ou `STOP` |
-| `kill_mutants` | agent `software-engineer`, `each="survivor-file"` | applique le choix, en un lancement |
-| `mutation_review` | revue | lentille `test-integrity` |
-| `mutation_gates` | gates `build,format,lint,test,architecture,coverage`, `goal_gate` | relance les gates après `kill_mutants`, avant une nouvelle mutation |
 | `visuals` | publication `playwright-visuals`, `when="frontend"` | commande `e2e` de chaque front end, captures commitées |
 
 | | |
 | --- | --- |
 | Brief sur un scénario | le scénario (`- Scenario: k of N — "<titre>" (component <c>, tags …)`) ; les tests d'acceptation que DISTILL a commités jusque-là, walking skeleton compris (`<sha> "<sujet>": <fichiers>`), que l'agent ne change jamais (s'il en trouve un faux, il s'arrête `blocked` en le nommant) ; le walking skeleton du composant du scénario, qui passe aussi à son commit ; le commit, exactement : `<commande de test> && git add <chaque fichier changé> && git commit -s -m "feat(<story>): <titre>" -m "Refs: #<issue>"` |
 | Sortie déclarée | `changes/{date}/change-log.md` |
-| Propositions | `proposals/kill_proposal-<visite>-g<n>.md`, une par fichier de survivants, créée par le moteur avec une section par mutant ; chaque ligne `{{outcome}}` devient `test: …`, `delete: …` ou `equivalent: …` |
 | Preuves | `gates/<composant>/<gate>-<n>.log` ; `visuals/<composant>/e2e-<n>.log` |
-| Écriture permise | `deliver`, `kill_mutants` : le dossier de suivi, les chemins `src` et `tests` de chaque composant, et les fichiers à leur racine ; `kill_proposal` : le dossier de suivi seulement, donc rien à commiter ; un changement hors de lui est refusé |
-| Commits | `deliver` sur un scénario : exactement un `feat(<story>): <titre du scénario>` (ou `fix`), enchaîné en bash à la commande de test comme l'écrit le brief ; aucun commit `test`, `refactor`, `style` ni `perf`, la boucle TDD interne restant non commitée ; aucun changement aux tests d'acceptation ni au walking skeleton hors des chemins `src` du composant, ni à un autre composant ; le moteur y rejoue les tests et le juge du rejeu décide, le walking skeleton du composant du scénario passant aussi ([Commits et rejeux](./gates.md#commits)). `deliver` renvoyé par les gates ou la revue : chaque `feat` ou `fix` après un `test(<story>): …` depuis le dernier vert, l'échec des gates tenant lieu de ce rouge sur un passage qu'elles ont renvoyé, `refactor` permis, rouges non rejoués. `kill_mutants` en mode `kill` : des tests qui tuent les mutants et passent. Chaque message conventionnel finit par `Refs: #<issue>` et ne ferme aucune issue ; un changement laissé non commité est refusé (`uncommitted`) |
-| Barre de mutation | 100 % sur le cœur, 80 % sur la frontière ; non configurable |
-
-| Réponse à `mutation-plan` | Effet |
-| --- | --- |
-| `APPLY` | `kill_mutants` reçoit `Apply the proposals in <chemins>` |
-| une consigne | `kill_mutants` reçoit la consigne et les propositions dont elle s'écarte |
-| `STOP` | `run.finished` `blocked`, code `stopped` |
+| Écriture permise | le dossier de suivi, les chemins `src` et `tests` de chaque composant, et les fichiers à leur racine ; un changement hors de lui est refusé |
+| Commits | `deliver` sur un scénario : exactement un `feat(<story>): <titre du scénario>` (ou `fix`), enchaîné en bash à la commande de test comme l'écrit le brief ; aucun commit `test`, `refactor`, `style` ni `perf`, la boucle TDD interne restant non commitée ; aucun changement aux tests d'acceptation ni au walking skeleton hors des chemins `src` du composant, ni à un autre composant ; le moteur y rejoue les tests et le juge du rejeu décide, le walking skeleton du composant du scénario passant aussi ([Commits et rejeux](./gates.md#commits)). `deliver` renvoyé par les gates ou la revue : chaque `feat` ou `fix` après un `test(<story>): …` depuis le dernier vert, l'échec des gates tenant lieu de ce rouge sur un passage qu'elles ont renvoyé, `refactor` permis, rouges non rejoués. Chaque message conventionnel finit par `Refs: #<issue>` et ne ferme aucune issue ; un changement laissé non commité est refusé (`uncommitted`) |
+| Mutation | aucune : le pipeline du plugin ne lance pas de mutation, le développeur la lance à part ; le workflow propre à une équipe peut encore porter un nœud `gate="mutation"` ([Le workflow DOT](./workflow-dot.mdx)) |
 
 | Lentille (`review`) | Gates |
 | --- | --- |
@@ -250,15 +237,7 @@ termine avec `scenarios`. Pourquoi le walking skeleton parcourt S1 :
 | `gates -> deliver` | `FAIL` | 3 |
 | `gates -> deliver_review` | `PASS` | — |
 | `deliver_review -> deliver` | `NEEDS_REWORK` | 2 |
-| `deliver_review -> mutation` | `APPROVED` | — |
-| `mutation -> visuals` | `PASS` | — |
-| `mutation -> kill_proposal` | `FAIL` | 5 |
-| `kill_proposal -> mutation_plan` | — | — |
-| `mutation_plan -> kill_mutants` | `APPLY` (une consigne suit aussi cette arête) | — |
-| `mutation_review -> kill_mutants` | `NEEDS_REWORK` | 2 |
-| `mutation_review -> mutation_gates` | `APPROVED` | — |
-| `mutation_gates -> kill_mutants` | `FAIL` | 3 |
-| `mutation_gates -> mutation` | `PASS` | — |
+| `deliver_review -> visuals` | `APPROVED` | — |
 
 ## PUBLISH <!-- #publish -->
 
@@ -281,7 +260,7 @@ termine avec `scenarios`. Pourquoi le walking skeleton parcourt S1 :
 | --- | --- | --- | --- | --- |
 | `adr-ratification` | nœud `adr` | `RATIFIED`, `REJECTED` | `REJECTED` | `ADR` |
 | `scenario-review` | nœud `scenario_review` | `APPROVED`, `REVISE` | `REVISE` | `Scenarios` |
-| `mutation-plan` | nœud `mutation_plan` | `APPLY`, une consigne, ou `STOP` | — | `Mutation` |
+| `mutation-plan` | un nœud `question="mutation-plan"` du workflow propre à une équipe ; celui du plugin n'en pose aucune | `APPLY`, une consigne, ou `STOP` | — | `Mutation` |
 | `environment` | le moteur, quand une étape ne peut pas tourner sur la machine ou avec ce que lui donne `skraft-config.json`, ou quand le juge du rejeu interroge un humain sur un commit rejoué ; son texte nomme la cause et le log ([causes](./run-journal.md#environment-question)) | `RETRY`, `ABORT` | — | `Environment` |
 | `blocked` | le moteur, quand un agent répond `blocked`, qu'un agent est refusé de la même façon à deux tentatives de suite ou à sa dernière tentative, qu'une boucle atteint son `max_visits` ou qu'une lentille répond `inconclusive` | une consigne, ou `STOP` | — | `Blocked` |
 | `review-consent` | `skraft review --pr --publish` | `ACCEPTED`, `DECLINED` | — | `PR comment` |

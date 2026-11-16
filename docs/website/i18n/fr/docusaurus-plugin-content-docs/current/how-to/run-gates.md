@@ -25,8 +25,9 @@ $ skraft gate
 
 Seuls les composants modifiés depuis leur base sont retenus (commits, index, fichiers modifiés
 ou non suivis). Pour chacun, les gates tournent dans l'ordre `build`, `format`, `lint`, `test`,
-`architecture`, `coverage`, `mutation` ; un composant s'arrête à sa première gate en échec, les
-autres continuent. Si rien n'a changé :
+`architecture`, `coverage` ; un composant s'arrête à sa première gate en échec, les autres
+continuent. Une commande `mutation` ne tourne jamais ici : le mutation testing revient au
+développeur, qui le lance à part. Si rien n'a changé :
 
 ```console
 skraft checkout: gates passed — no component changed since its base; no gate to run
@@ -45,8 +46,8 @@ pass  web/build
 pass  web/lint
 fail (deterministic)  web/test: exited 1
 pass  api/build
-fail (environment)  api/mutation: command not found: dotnet; install it or change the command in skraft-config.json
-skraft checkout: gates failed — web/test: exited 1; api/mutation: command not found: dotnet; …
+fail (environment)  api/test: command not found: dotnet; install it or change the command in skraft-config.json
+skraft checkout: gates failed — web/test: exited 1; api/test: command not found: dotnet; …
 ```
 
 Code de sortie : 0 si `passed`, 1 sinon. `--json` donne le même résultat pour un script, avec
@@ -76,7 +77,7 @@ result: fail (deterministic): exited 1
 | Classe | Ce qui s'est passé | Quoi faire |
 |---|---|---|
 | `deterministic` | la commande a tourné et rendu un code non nul, a été arrêtée par un signal ou a planté (sortie au-dessus de 128), ou a fini sans code de sortie | corriger le code ou le test d'après `stderr`, libérer de la mémoire ou corriger le plantage, puis relancer |
-| `environment` | programme introuvable, syntaxe shell, composant sans gate ; un rapport de mutation absent, ou un run de mutation fini avant son terme | réparer la machine ou la commande, puis relancer ; relancer sans rien changer redonne le même échec |
+| `environment` | programme introuvable, syntaxe shell, composant sans gate | réparer la machine ou la commande, puis relancer ; relancer sans rien changer redonne le même échec |
 
 Pendant un run, un échec `environment` ne renvoie rien à l'ingénieur et ne consomme aucune
 tentative : le run pose la question `environment`, dont la ligne `Cause:` dit qui corrige et la
@@ -92,10 +93,9 @@ corrige le code, ou s'arrête `blocked` en nommant ce qui manque à la machine.
 |---|---|
 | `command not found: dotnet; install it or change the command in skraft-config.json` | Installer le programme, ou écrire une commande qui marche chez vous. |
 | `command "npm ci && npx vitest run" uses shell syntax (&&); put the steps in a script and call the script` | Mettre les étapes dans un script (`"test:ci": "npm ci && vitest run"` dans `package.json`) et écrire `"test": "npm run test:ci"`. |
-| `no gate command; give it at least one of build, format, lint, test, architecture, coverage, mutation in skraft-config.json` | Ajouter au moins une gate au composant. |
+| `no gate command; give it at least one of build, format, lint, test, architecture, coverage in skraft-config.json` | Ajouter au moins une gate au composant. |
 | `npx was stopped by SIGKILL; run it again` | Relancer (mémoire, interruption). |
 | `was stopped by a signal or crashed (exit 137), not by a failing check` | Lire le fichier de preuve, libérer de la mémoire ou corriger le plantage, puis relancer. |
-| `… the mutation report web/reports/mutation/mutation.json is missing; have the command write it there, or name the file it writes with mutationReport …` | Faire écrire le rapport à cet endroit, ou le nommer avec `mutationReport` sur le composant. |
 | Un test qui a besoin de Microcks échoue faute de conteneur | Démarrer Docker ou Podman, puis `skraft gate` ; ou passer le composant en `"mocking": { "strategy": "inprocess" }` ([ce que vous perdez](../explanation/customisation-trade-offs.md)). |
 | Windows : `npm.cmd` écrit dans la commande | Écrire `npm`, `npx` ou `gradlew.bat` : le moteur trouve le programme avec PATHEXT et lance `.cmd` et `.bat` par cmd.exe. |
 

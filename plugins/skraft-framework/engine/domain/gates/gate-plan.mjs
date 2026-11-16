@@ -16,6 +16,12 @@ import { endedByMachine, interruptedBy } from '../pipeline/incidents.mjs'
 /** The commands that are gates, in the order they run. Other commands (`e2e`…) are not gates. */
 export const GATE_ORDER = Object.freeze(['build', 'format', 'lint', 'test', 'architecture', 'coverage', 'mutation'])
 
+/**
+ * The gates a story's run and `skraft gate` run: every gate but mutation, which the developer runs
+ * apart from the story; only a workflow node naming it with gate="mutation" runs it.
+ */
+export const STORY_GATES = Object.freeze(GATE_ORDER.filter((gate) => gate !== 'mutation'))
+
 /** @param {Component} component @returns {string[]} */
 export const gatesOf = (component) => GATE_ORDER.filter((gate) => gate in component.commands)
 

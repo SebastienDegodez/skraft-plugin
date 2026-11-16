@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { BUILT_IN_WORKFLOW, InMemoryCodeHost, ScriptedMachine } from '../support/in-memory-host.mjs'
+import { BUILT_IN_WORKFLOW, InMemoryCodeHost, MUTATION_WORKFLOW, ScriptedMachine } from '../support/in-memory-host.mjs'
 import { agent, finding, forgeLostAtFirstAgent, lenses, nominal, REFS_42, says, scripted, SLUG, TRACKING } from '../support/pipeline-host.mjs'
 import { ADR_1, adrText, afterDesign, architect, eventsOf } from '../support/decisions.mjs'
 import { strykerReport } from '../support/mutation-reports.mjs'
@@ -85,11 +85,10 @@ test('a run from an issue keeps one comment on it, posted when the first phase c
     'Quality gates:',
     '- api/build pass · `gates/api/build-1.log`',
     '- api/test pass · `gates/api/test-1.log`',
-    '- api/mutation pass · `gates/api/mutation-1.log`',
     '',
     'Pull request: https://github.example.com/acme/shop/pull/42',
     '',
-    'Total: 15 attempts, 1 retries, 0 s, cost ~$0.75 (approximate: what the Claude Code session cost while each agent ran, anything else exchanged meanwhile included).',
+    'Total: 14 attempts, 1 retries, 0 s, cost ~$0.75 (approximate: what the Claude Code session cost while each agent ran, anything else exchanged meanwhile included).',
     '',
     `Run report and evidence: in the working copy, under the run's tracking folder (slug \`${SLUG}\`).`,
     '',
@@ -230,7 +229,7 @@ test('a pull request the run updated after opening it is said updated', async ()
 })
 
 test('each gate shows its last result and its log, a mutation gate that handed mutants out how many survive', async () => {
-  const host = scripted({ config: CONSENTED, machine: new ScriptedMachine(), answers: [{ answer: 'APPLY' }, { answer: 'APPLY' }] }, (it) => [...nominal(it, REFS_42), agent()(it), killer(it), agent()(it), killer(it)])
+  const host = scripted({ config: CONSENTED, workflow: MUTATION_WORKFLOW, machine: new ScriptedMachine(), answers: [{ answer: 'APPLY' }, { answer: 'APPLY' }] }, (it) => [...nominal(it, REFS_42), agent()(it), killer(it), agent()(it), killer(it)])
   host.machine.meanwhile[STRYKER] = async () => {
     host.machine.exits[STRYKER] = 1
     await host.workspace.write(MUTATION_REPORT, CHECKOUT_SURVIVORS)
@@ -364,11 +363,10 @@ test('a French story\'s comment is in French, the pull request shown once by its
     'Portes de qualité :',
     '- api/build pass · `gates/api/build-1.log`',
     '- api/test pass · `gates/api/test-1.log`',
-    '- api/mutation pass · `gates/api/mutation-1.log`',
     '',
     'Pull request : https://github.example.com/acme/shop/pull/42',
     '',
-    'Total : 15 tentatives, 1 reprises, 0 s, coût ~$0.75 (approximatif : ce que la session Claude Code a coûté pendant que chaque agent tournait, tout autre échange de cette session inclus).',
+    'Total : 14 tentatives, 1 reprises, 0 s, coût ~$0.75 (approximatif : ce que la session Claude Code a coûté pendant que chaque agent tournait, tout autre échange de cette session inclus).',
     '',
     `Rapport du run et preuves : dans la copie de travail, sous le dossier de suivi du run (slug \`${SLUG}\`).`,
     '',
@@ -396,7 +394,7 @@ test('a French story\'s comment tells in French a review that sent the work back
   await updated.start(FRENCH)
   assert.ok(updated.codeHost.comments[0].body.includes('\nPull request : https://github.example.com/acme/shop/pull/42 (mise à jour)\n'), updated.codeHost.comments[0].body)
 
-  const mutated = scripted({ config: CONSENTED, codeHost: french(), machine: new ScriptedMachine(), answers: [{ answer: 'APPLY' }, { answer: 'APPLY' }] }, (it) => [...nominal(it, REFS_42), agent()(it), killer(it), agent()(it), killer(it)])
+  const mutated = scripted({ config: CONSENTED, workflow: MUTATION_WORKFLOW, codeHost: french(), machine: new ScriptedMachine(), answers: [{ answer: 'APPLY' }, { answer: 'APPLY' }] }, (it) => [...nominal(it, REFS_42), agent()(it), killer(it), agent()(it), killer(it)])
   mutated.machine.meanwhile[STRYKER] = async () => {
     mutated.machine.exits[STRYKER] = 1
     await mutated.workspace.write(MUTATION_REPORT, CHECKOUT_SURVIVORS)

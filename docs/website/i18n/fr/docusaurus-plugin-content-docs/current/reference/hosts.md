@@ -122,7 +122,7 @@ Le panneau **Skraft** montre les phases, chacune suivie de ses étapes du graphe
 venir ; ce que l'étape exécute, son résultat, son passage à partir du deuxième, son coût),
 l'agent en cours, le dernier passage de chaque revue (`review design_review: needs-rework —
 consistency fail (1), fitness pass`), le dernier résultat de chaque gate par composant
-(`gates api: test pass, mutation fail (3 survivors)`), le coût et les dernières lignes du
+(`gates api: test pass, coverage fail`), le coût et les dernières lignes du
 journal de progression, autant que la hauteur du panneau en laisse. `/skraft` affiche la même
 vue sans les étapes. Tant que le run attend, le panneau et `/skraft` montrent la question et
 `answer: /skraft decide adr-1 RATIFIED|REJECTED (with your reason after REJECTED)`, ou

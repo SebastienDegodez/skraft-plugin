@@ -32,7 +32,7 @@ test('every lens of each phase passing approves the phase, and the run goes on t
     ['design_review', 1, 'approved', 'adr'],
     ['distill_review', 1, 'approved', 'scenario_review'],
     ['scenario_review', 1, 'answered', 'deliver'],
-    ['deliver_review', 1, 'approved', 'mutation'],
+    ['deliver_review', 1, 'approved', 'visuals'],
   ])
   assert.deepEqual(host.agentRunner.batches.map((batch) => batch.map(({ agent: id }) => id)), [
     ['consistency-lens', 'architecture-compliance-lens', 'fitness-lens'],
@@ -778,7 +778,7 @@ test('ACCEPT given with skraft decide at the ceiling of distill_review closes DI
   assert.deepEqual(reviews(host).filter(([step]) => step !== 'design_review'), [
     ['distill_review', 1, 'needs-rework', 'distill'], ['distill_review', 2, 'needs-rework', 'distill'], ['distill_review', 3, 'needs-rework', null],
     ['scenario_review', 1, 'answered', 'deliver'],
-    ['deliver_review', 1, 'approved', 'mutation'],
+    ['deliver_review', 1, 'approved', 'visuals'],
   ])
   assert.deepEqual(host.agentRunner.dispatches.filter((dispatch) => dispatch.agent === 'acceptance-designer').map(({ label }) => label), [
     `skraft ${SLUG} · distill · attempt 1`, `skraft ${SLUG} · distill · pass 2 · scenario 1 of 1 · attempt 1`,
@@ -800,7 +800,7 @@ test('ACCEPT given with skraft decide at the ceiling of distill_review closes DI
   ].join('\n'))
 })
 
-test('ACCEPT at the ceiling of deliver_review, a call to .skraft/review.skraft.dot, goes on by its APPROVED edge to the mutation gate (#499)', async () => {
+test('ACCEPT at the ceiling of deliver_review, a call to .skraft/review.skraft.dot, goes on by its APPROVED edge to the visuals (#499)', async () => {
   const host = scripted({ answers: [{ answer: 'ACCEPT' }] }, (it) => [
     ...nominal(it),
     agent({ work: tddCycle(SLUG, 'Refund') })(it), agent({ work: tddCycle(SLUG, 'Discount') })(it),
@@ -818,7 +818,7 @@ test('ACCEPT at the ceiling of deliver_review, a call to .skraft/review.skraft.d
   assert.deepEqual([asked.kind, asked.options], ['review-ceiling', ['ACCEPT', 'STOP']])
   assert.ok(asked.text.startsWith('deliver_review: deliver did not fix every finding after 3 passes'), asked.text)
   const answered = host.events().findLastIndex((event) => event.type === 'question.answered')
-  assert.equal(host.events().slice(answered).find((event) => event.type === 'step.started').step, 'mutation')
+  assert.equal(host.events().slice(answered).find((event) => event.type === 'step.started').step, 'visuals')
 })
 
 test('ACCEPT for a review the workflow no longer has stops the run as changed, running nothing (#499)', async () => {

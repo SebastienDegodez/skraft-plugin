@@ -98,7 +98,7 @@ flowchart TB
     end
     subgraph DEL["DELIVER"]
         direction LR
-        C1["architecture gate<br/>locked"] --> C3["architecture-boundaries lens<br/>G4 · G5"] --> C2["mutation gate<br/>bar per layer, runs last"]
+        C1["architecture gate<br/>locked"] --> C3["architecture-boundaries lens<br/>G4 · G5"]
     end
     DES --> DIS --> DEL
 ```
@@ -142,9 +142,10 @@ lens, G4); mocks or hand-written in-memory fakes on the outgoing gateways — re
 service — (`clean-architecture-testing` skill); real containers or contract mocks to test
 Infrastructure.
 
-**The mutation bar follows the layer.** The `mutation` gate classifies each file by the names of
-its folders: a folder ending in `domain` or `application` is the core, judged at 100 %; everything
-else — API, Infrastructure — is the boundary, judged at 80 % (`skraft-quality-bar` skill). The
+**The mutation bar follows the layer.** The `skraft-quality-bar` skill classifies each file by the
+names of its folders: a folder ending in `domain` or `application` is the core, held to 100 %;
+everything else — API, Infrastructure — is the boundary, held to 80 %. The developer's own
+mutation run is judged that way, and so is a `gate="mutation"` node of a team's own workflow. The
 dependency rule therefore also decides how demanding the tests must be.
 
 ## skraft applies the rule to itself

@@ -12,8 +12,8 @@
 //     data built from the plugin sources (eng/catalog/scan.mjs, eng/dashboard/build.mjs) and its
 //     evidence and replay manifest read from tests/docs/replay; one capture per --theme, since the
 //     page follows prefers-color-scheme (<name>-light.png, <name>-dark.png);
-//   - replay: AGENTVIZ (npm package agentviz@1.2.0, the only download besides the tutorial's
-//     StrykerJS) opened from the dashboard's replay link on one recorded baseline/skilled pair.
+//   - replay: AGENTVIZ (npm package agentviz@1.2.0, the only download) opened from the
+//     dashboard's replay link on one recorded baseline/skilled pair.
 //
 //   node eng/docs/screenshots.mjs [--out docs/website/static/img/screenshots]
 //                                 [--only terminal,pipeline,backlog,dashboard,replay] [--theme light,dark]
@@ -207,7 +207,6 @@ const SHOP_FILES = {
     '})',
     '',
   ].join('\n'),
-  'web/stryker.config.json': `${JSON.stringify({ testRunner: 'tap', mutate: ['src/**/*.js'], tap: { testFiles: ['test/**/*.test.js'], nodeArgs: ['--test-reporter=tap'] } }, null, 2)}\n`,
   '.gitignore': 'node_modules/\nreports/\n',
 }
 
@@ -223,7 +222,6 @@ const shop = () => {
   }
   const git = (...args) => run('git', ['-c', 'user.name=Shop', '-c', 'user.email=shop@example.invalid', '-c', 'commit.gpgsign=false', ...args], cwd)
   git('init', '-q', '-b', 'main')
-  npm(['install', '--save-dev', '--no-audit', '--no-fund', '--prefix', 'web', '@stryker-mutator/core@9.6.1', '@stryker-mutator/tap-runner@9.6.1'], cwd)
   git('add', '.')
   git('commit', '-q', '-m', 'Start the shop')
   git('switch', '-q', '-c', 'pay-by-card')

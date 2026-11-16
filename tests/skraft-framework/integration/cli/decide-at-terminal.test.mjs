@@ -5,7 +5,7 @@ import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { PassThrough } from 'node:stream'
 import { terminalConfirm } from '../../../../plugins/skraft-framework/engine/drivers/cli/terminal-confirm.mjs'
-import { PAY_OR_NOTHING, SLUG, blocked, deliverWith, killsZero, pipelineRepository, proposesZero, scriptedLlm } from '../support/pipeline-repository.mjs'
+import { MUTATION_LOOP_WORKFLOW, designateWorkflow, PAY_OR_NOTHING, SLUG, blocked, deliverWith, killsZero, pipelineRepository, proposesZero, scriptedLlm } from '../support/pipeline-repository.mjs'
 import { SKRAFT_MJS, journal, skraft, tempFolder } from '../support/workspace.mjs'
 import { loop, startAgents } from '../agent-loop/simulated-conductor.mjs'
 import { withoutReportSummary } from '../support/run-report-summary.mjs'
@@ -69,6 +69,7 @@ test('an agent of the agent loop that says it is blocked waits on the person; th
 
 test('the agent loop waits on the mutation plan, naming its options and an instruction; the instruction the person confirms reaches the kill', async (t) => {
   const { cwd } = pipelineRepository(t)
+  designateWorkflow(cwd, MUTATION_LOOP_WORKFLOW)
   await skraft(cwd, ['init', SLUG])
   const llm = scriptedLlm({ cwd, acts: { 'software-engineer': [deliverWith(PAY_OR_NOTHING), proposesZero, killsZero] } })
   const untilAsked = async () => {

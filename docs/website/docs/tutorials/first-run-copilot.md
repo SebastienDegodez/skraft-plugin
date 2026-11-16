@@ -66,21 +66,10 @@ test('the total of a cart adds its prices', () => {
 })
 ```
 
-`web/stryker.config.json`, for the mutation gate:
-
-```json
-{
-  "testRunner": "tap",
-  "mutate": ["src/**/*.js"],
-  "tap": { "testFiles": ["test/**/*.test.js"], "nodeArgs": ["--test-reporter=tap"] }
-}
-```
-
-Create a `.gitignore` at the root holding two lines, `node_modules/` and `reports/`. Install
-StrykerJS, then commit on a branch of your own:
+Create a `.gitignore` at the root holding two lines, `node_modules/` and `reports/`, then commit
+on a branch of your own:
 
 ```console
-$ npm install --save-dev --prefix web @stryker-mutator/core@9.6.1 @stryker-mutator/tap-runner@9.6.1
 $ git add .
 $ git commit -m "Start the shop"
 $ git switch -c pay-by-card
@@ -115,7 +104,7 @@ From here on, `skraft …` means that full command, or the `skraft` command that
 ![Terminal: skraft init answers "skraft-config.json: web (javascript, web)"](/img/screenshots/shared/terminal-init.svg)
 
 *Figure 1 — One component, `web`, with its `test` and `mutation` commands, is written to
-`skraft-config.json`.*
+`skraft-config.json`. The pipeline runs `test`; `mutation` is yours to run.*
 
 A run that publishes starts only on a configuration that settles the publication consents, so
 answer them now, in `skraft-config.json`. This repository has no remote, so decline both:
@@ -228,8 +217,8 @@ the walking skeleton and the commit of S1's test. Open the test plan under
 choose **APPROVED** in the chat.
 
 The run then goes on without you: one scenario at a time, a green commit that the engine replays,
-then the next scenario's failing test; then the gates, the DELIVER review, mutation, and the pull
-request description. The `/workflows` log ends like this:
+then the next scenario's failing test; then the gates, the DELIVER review, and the pull request
+description. The `/workflows` log ends like this:
 
 ![skraft-pipeline workflow log: phase PUBLISH, pr-writer, the pull request not opened as publish.pullRequest is false, PUBLISH closed, then checkout: done: PUBLISH closed](/img/screenshots/shared/terminal-workflow-log.svg)
 
@@ -240,8 +229,7 @@ The canvas then ticks every phase:
 
 ![skraft-pipeline canvas: status DONE, "PUBLISH closed", RESEARCH to PUBLISH ticked with each step and its outcome, then the approved reviews and the passed gates](/img/screenshots/shared/pipeline-canvas-done.png)
 
-*Figure 4 — A finished run in the canvas (integration tests' scripted repository). The steps from
-`kill_proposal` to `mutation_gates` stay grey: no mutant survived.*
+*Figure 4 — A finished run in the canvas (integration tests' scripted repository).*
 
 Its **Journal** tab reads `events.jsonl` back: whether the hash chain is intact, then each recorded
 step and each human decision, with who confirmed it.

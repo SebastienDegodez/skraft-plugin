@@ -32,7 +32,7 @@ graph LR
     B -->|sourced research| R[Recommendation]
     R -->|ratified ADR + events| C[Architecture]
     C -->|failing acceptance tests| D[Specification]
-    D -->|reviewed code + mutation| E[Pull request]
+    D -->|reviewed code| E[Pull request]
 ```
 
 *Figure 1 — The Starbucks request and the artifact it becomes at each handoff, from idea to
@@ -143,12 +143,11 @@ The `software-engineer` makes S1 green with **Outside-In TDD**: unit tests first
 then one green commit, which the engine replays: S1's acceptance test and the walking skeleton
 both pass at it. DISTILL then writes S2's failing test, and the
 engineer turns it green the same way. The engine runs the gates (build, tests, architecture,
-coverage), then the DELIVER review reads the code. Once the code is approved, **mutation** runs once, last:
-it checks the tests would catch a mistake in the loyalty rule. If a mutant survives, the agent
-proposes how to treat it and the developer chooses.
+coverage), then the DELIVER review reads the code. Whether the tests would catch a mistake in the
+loyalty rule, the developer's own **mutation** run shows, apart from the pipeline.
 
 - **What enters:** the red walking skeleton + S1's red acceptance test + the plan.
-- **What exits:** the reviewed code, mutation passed, then the pull request.
+- **What exits:** the reviewed code, then the pull request.
 
 ➡️ Phase detail: [DELIVER](./deliver.mdx).
 
@@ -164,7 +163,7 @@ pipeline, without losing its context:
 | RESEARCH | Cited research document + recommendation |
 | DESIGN | Ratified ADR (payment via ACL) + event model |
 | DISTILL | Gherkin scenarios S1, S2 + red walking skeleton + S1's red acceptance test |
-| DELIVER | One red and one green commit per scenario + reviewed code + mutation passed + pull request |
+| DELIVER | One red and one green commit per scenario + reviewed code + pull request |
 
 Each artifact became the **context** of the next step, and every handoff stayed readable:
 what was not written down was not passed on.

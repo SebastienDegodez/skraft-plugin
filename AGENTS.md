@@ -233,7 +233,8 @@ Follow the plugin's `outside-in-tdd` skill; these rules add what the engine need
 
 - Mutation testing of this repository is optional, only on explicit request. No mutation score
   or mutant-kill proof is required for a contribution, and CI and hooks never launch engine
-  mutation tests automatically. This does not change the mutation gates shipped to user projects.
+  mutation tests automatically. This does not change the mutation bar of user projects, whose
+  mutation testing is their developers'.
 - Config: `plugins/skraft-framework/engine/stryker.config.mjs`, incremental, run with
   `npm run mutation:engine` after `npm ci --prefix plugins/skraft-framework/engine`.
 - It mutates all of `engine/` except `drivers/cli/skraft.mjs`. Never keep a hand-maintained

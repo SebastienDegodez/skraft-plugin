@@ -4,7 +4,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { actsAs, scriptedModHost } from './support/scripted-mod-host.mjs'
 import { answerChoices } from '../../../../plugins/skraft-framework/engine/drivers/claude-mod/run-view.mjs'
-import { ADR, ADR_PATH, decisionsIndex, INDEX_PATH, NOMINAL, PAY_OR_NOTHING, SLUG, blocked, commit, deliverWith, fillOutputs, judgeLabel, killsZero, pipelineRepository, proposesZero, scenarioReviewText, scriptedLlm, writeResult } from '../support/pipeline-repository.mjs'
+import { MUTATION_LOOP_WORKFLOW, designateWorkflow, ADR, ADR_PATH, decisionsIndex, INDEX_PATH, NOMINAL, PAY_OR_NOTHING, SLUG, blocked, commit, deliverWith, fillOutputs, judgeLabel, killsZero, pipelineRepository, proposesZero, scenarioReviewText, scriptedLlm, writeResult } from '../support/pipeline-repository.mjs'
 import { git, journal } from '../support/workspace.mjs'
 import { withoutReportSummary } from '../support/run-report-summary.mjs'
 
@@ -150,6 +150,7 @@ test('a blocked architect whose dialog is dismissed waits; /skraft decide record
 
 test('a mutation plan whose dialog is dismissed waits; /skraft decide records the words after the key as the instruction the kill gets', async (t) => {
   const { cwd } = pipelineRepository(t)
+  designateWorkflow(cwd, MUTATION_LOOP_WORKFLOW)
   const llm = scriptedLlm({ cwd, acts: { 'software-engineer': [deliverWith(PAY_OR_NOTHING), proposesZero, killsZero] } })
   const mod = await scriptedModHost({ cwd, otherwise: actsAs(llm), answers: ['RATIFIED', null] })
   await mod.command(SLUG)

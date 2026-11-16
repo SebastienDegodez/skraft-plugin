@@ -17,7 +17,7 @@ test('the Workflow tab shows, under each review and each call, the refuter its l
   const workflows = await createObserve(createNodeAdapters({ cwd, pluginRoot: PLUGIN_ROOT, home: `${cwd}-home` })).workflows()
 
   const pipeline = renderWorkflows(workflows, 'pipeline', 'en')
-  for (const [id, refuter] of [['design_review', 'design_review_refuter'], ['distill_review', 'distill_review_refuter'], ['deliver_review', 'refuter'], ['mutation_review', 'mutation_review_refuter']]) {
+  for (const [id, refuter] of [['design_review', 'design_review_refuter'], ['distill_review', 'distill_review_refuter'], ['deliver_review', 'refuter']]) {
     assert.match(card(pipeline, id), new RegExp(`<p class="refuter">.*<code>${refuter}</code> runs <code>finding-refuter</code> <span class="badge">mandatory</span></p>`), id)
   }
   assert.doesNotMatch(card(pipeline, 'gates'), /class="refuter"/)

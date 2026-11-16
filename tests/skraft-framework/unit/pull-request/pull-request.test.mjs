@@ -82,13 +82,12 @@ test('the run ends by opening a draft pull request from its branch to its base, 
     '',
     '</details>',
     '',
-    '<details><summary>Quality gates: 3 passed</summary>',
+    '<details><summary>Quality gates: 2 passed</summary>',
     '',
     '| Component | Gate | Command | Result | Time | Evidence |',
     '| --- | --- | --- | --- | ---: | --- |',
     '| api | build | `dotnet build` | pass | 0 s | `gates/api/build-1.log` |',
     '| api | test | `dotnet test` | pass | 0 s | `gates/api/test-1.log` |',
-    '| api | mutation | `dotnet stryker` | pass | 0 s | `gates/api/mutation-1.log` |',
     '',
     '</details>',
     '',
@@ -124,11 +123,10 @@ test('the run ends by opening a draft pull request from its branch to its base, 
     '| deliver | DELIVER | 1 | 1 | 0 | 0 s | - | done |',
     '| gates | DELIVER | 1 | 1 | 0 | 0 s | - | pass |',
     '| deliver_review | DELIVER | 1 | 1 | 0 | 0 s | - | approved |',
-    '| mutation | DELIVER | 1 | 1 | 0 | 0 s | - | pass |',
     '| visuals | DELIVER | 1 | 1 | 0 | 0 s | - | skipped |',
     '| pr_writer | PUBLISH | 1 | 1 | 0 | 0 s | - | done |',
     '| publish | PUBLISH | 1 | 1 | 0 | 0 s | - | in progress |',
-    '| Total | | | 15 | 1 | 0 s | - | |',
+    '| Total | | | 14 | 1 | 0 s | - | |',
     '',
     'To find the tests that kill no mutant on their own, the developer runs `/skraft:prune-tests` on a component; it proposes, the developer decides each test.',
     '',
@@ -490,10 +488,10 @@ test('the decisions the description shows: each ADR ratified in the run with its
     '- ADR-003 (`docs/adr/adr-003-refunds.md`), ratified in this run',
   ].join('\n'))
 
-  const unlocked = edit(BUILT_IN_WORKFLOW, ['mutation [shape=parallelogram, gate="mutation", goal_gate=true, locked=true]', 'mutation [shape=parallelogram, gate="mutation", goal_gate=true, locked=true, unlock="no mutation tool for this stack yet"]'])
+  const unlocked = edit(BUILT_IN_WORKFLOW, ['locked=true, phase="DELIVER"', 'locked=true, unlock="the team runs the gates in its own CI", phase="DELIVER"'])
   const skipping = scripted({ config: CONSENTED, workflow: unlocked }, (it) => nominal(it))
   await skipping.start()
-  assert.equal(section(await skipping.tracking.read(SLUG, 'pull-request-body.md'), 'Decisions applied'), '- Locked gate `mutation` skipped, unlocked: no mutation tool for this stack yet')
+  assert.equal(section(await skipping.tracking.read(SLUG, 'pull-request-body.md'), 'Decisions applied'), '- Locked gate `gates` skipped, unlocked: the team runs the gates in its own CI')
 })
 
 test('a red commit replayed only as the last of its story says so, and a component the machine could not gate shows only the gates that ran once fixed', async () => {
@@ -507,14 +505,14 @@ test('a red commit replayed only as the last of its story says so, and a compone
   assert.ok(section(await lastRed.tracking.read(SLUG, 'pull-request-body.md'), 'RED evidence').includes('\n| `root-3` | test(checkout): Checkout pays by card | not replayed |\n'))
 
   const fixing = async (question) => {
-    await ungated.workspace.write('skraft-config.json', JSON.stringify({ ...CONSENTED, components: [{ ...API, commands: { build: 'dotnet build', mutation: 'dotnet stryker' } }] }))
+    await ungated.workspace.write('skraft-config.json', JSON.stringify({ ...CONSENTED, components: [{ ...API, commands: { build: 'dotnet build', test: 'dotnet test' } }] }))
     return { answer: 'RETRY' }
   }
   const ungated = scripted({ ...CYCLE, config: CONSENTED, components: [{ ...API, commands: {} }], answers: [fixing] }, (it) => [
     agent()(it), agent()(it), agent()(it), agent({ work: ({ git }) => { git.commit('refactor(checkout): name the payment', ['src/Pay.cs']) } })(it),
   ])
   assert.equal((await ungated.start()).status, 'done')
-  assert.deepEqual(section(await ungated.tracking.read(SLUG, 'pull-request-body.md'), 'Quality gates').split('\n').slice(2).map((row) => row.split(' | ')[1]), ['build', 'mutation'])
+  assert.deepEqual(section(await ungated.tracking.read(SLUG, 'pull-request-body.md'), 'Quality gates').split('\n').slice(2).map((row) => row.split(' | ')[1]), ['build', 'test'])
 })
 
 /** A workflow whose gates lead to the pull request, passed or failed. */

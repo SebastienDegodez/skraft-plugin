@@ -68,18 +68,18 @@ const journalSize = (cwd) => statSync(join(cwd, '.copilot-tracking', 'skraft-pla
 
 test('a run the host cancels while a gate runs ends that command with every process it started', { skip: process.platform === 'win32' && 'Windows ends only the direct child (a written limit)', timeout: 120_000 }, async (t) => {
   const { cwd } = pipelineRepository(t)
-  const marker = join(cwd, 'mutation.pid')
+  const marker = join(cwd, 'lint.pid')
   const hang = `const { spawn } = require('node:child_process'); const sleeper = spawn('sleep', ['300'], { stdio: 'ignore' }); require('node:fs').writeFileSync(${JSON.stringify(marker)}, String(sleeper.pid)); setInterval(() => {}, 1000)\n`
   writeFileSync(join(cwd, 'tools', 'hang.cjs'), hang)
   const config = JSON.parse(readFileSync(join(cwd, 'skraft-config.json'), 'utf8'))
-  config.components[0].commands.mutation = `"${process.execPath}" tools/hang.cjs`
+  config.components[0].commands.lint = `"${process.execPath}" tools/hang.cjs`
   writeFileSync(join(cwd, 'skraft-config.json'), JSON.stringify(config, null, 2))
   git(cwd, 'add', '-A')
-  git(cwd, 'commit', '-q', '-m', 'chore: a mutation command that never ends')
+  git(cwd, 'commit', '-q', '-m', 'chore: a lint command that never ends')
   const controller = new AbortController()
   const { ctx } = simulatedContext({ args: { slug: SLUG }, signal: controller.signal, otherwise: actsAs(scriptedLlm({ cwd })) })
   let running = true
-  // The run goes through every phase before its mutation gate: a loaded machine makes it slow, not
+  // The run goes through every phase before its lint gate, which only the gates run: a loaded machine makes it slow, not
   // still. It is cancelled once the gate's command started, once it ended, or once its journal
   // stood still for STILL_MS: a run hung before the gate fails the test then, however long the
   // phases before took.
@@ -95,7 +95,7 @@ test('a run the host cancels while a gate runs ends that command with every proc
   const ended = await runAnsweringQuestions(ctx, cwd).catch((error) => error).finally(() => { running = false })
   await cancelOnceRunning
 
-  assert.equal(existsSync(marker), true, 'the run ended or stood still before its mutation gate started')
+  assert.equal(existsSync(marker), true, 'the run ended or stood still before its lint gate started')
   assert.equal(ended.name, 'AbortError')
   // A command the cancellation ended is not the machine's fault: once the run is cancelled no question is put to the
   // person, so none is answered RETRY and asked again (it looped, unseen, while dialogs were capped).

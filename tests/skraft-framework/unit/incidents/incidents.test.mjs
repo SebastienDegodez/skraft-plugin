@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { InMemoryGit, InMemoryTracking, ScriptedMachine, ScriptedReplay, hexSha, judgeAnswer } from '../support/in-memory-host.mjs'
+import { InMemoryGit, InMemoryTracking, MUTATION_WORKFLOW, ScriptedMachine, ScriptedReplay, hexSha, judgeAnswer } from '../support/in-memory-host.mjs'
 import { API, SLUG, TRACKING, agent, green, scripted, tddCycle } from '../support/pipeline-host.mjs'
 import { waitingOnEnvironment } from '../support/decisions.mjs'
 import { ownerOfCause } from '../../../../plugins/skraft-framework/engine/domain/pipeline/incidents.mjs'
@@ -177,7 +177,7 @@ test('an unknown gate failure stops before a later unavailable gate, naming the 
 test('a mutation run stopped by a signal, or by its time running out, is not judged by its stale report: a host judgment is requested', async () => {
   for (const exit of [137, null]) {
     const machine = new ScriptedMachine({ exits: { '. $ dotnet stryker': exit } })
-    const host = scripted({ machine }, (it) => [...upToDeliver(it), agent({ work: green() })(it)])
+    const host = scripted({ machine, workflow: MUTATION_WORKFLOW }, (it) => [...upToDeliver(it), agent({ work: green() })(it)])
 
     const outcome = await host.start()
 
@@ -245,7 +245,7 @@ test('gates of two components a person interrupts stop the run naming both', asy
 })
 
 test('a mutation run a person interrupts is not judged by its report: the run stops there', async () => {
-  const host = scripted({ machine: new ScriptedMachine({ exits: { '. $ dotnet stryker': 130 } }) }, (it) => [...upToDeliver(it), agent({ work: green() })(it)])
+  const host = scripted({ machine: new ScriptedMachine({ exits: { '. $ dotnet stryker': 130 } }), workflow: MUTATION_WORKFLOW }, (it) => [...upToDeliver(it), agent({ work: green() })(it)])
 
   const outcome = await host.start()
 

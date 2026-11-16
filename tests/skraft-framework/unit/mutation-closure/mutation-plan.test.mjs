@@ -1,8 +1,11 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { ScriptedMachine } from '../support/in-memory-host.mjs'
+import { MUTATION_WORKFLOW, ScriptedMachine } from '../support/in-memory-host.mjs'
 import { agent, scenarioReview, scripted, SLUG, TRACKING } from '../support/pipeline-host.mjs'
 import { ALL_KILLED, strykerReport } from '../support/mutation-reports.mjs'
+
+// The mutation loop runs only in a pipeline that holds it: the plugin's no longer does.
+const mutating = (options = {}, script) => scripted({ workflow: MUTATION_WORKFLOW, ...options }, script)
 
 const REPORT = 'StrykerOutput/reports/mutation-report.json'
 const STRYKER = '. $ dotnet stryker'
@@ -38,7 +41,7 @@ const failsOnce = (host) => {
 const afterDeliver = (host) => host.agentRunner.dispatches.slice(5).filter(({ agent: id }) => id !== 'pr-writer')
 
 test('a failing mutation run gets a proposal per file of survivors, then one question to the developer naming them; APPLY sends them to kill_mutants, then test-integrity, the gates and mutation, which passes', async () => {
-  const host = scripted({ machine: new ScriptedMachine(), answers: [{ answer: 'apply' }] }, (it) => [...upToDeliver(it), proposer(it), proposer(it), killer(it)])
+  const host = mutating({ machine: new ScriptedMachine(), answers: [{ answer: 'apply' }] }, (it) => [...upToDeliver(it), proposer(it), proposer(it), killer(it)])
   host.human.by = 'host-confirmed'
   failsOnce(host)
 
@@ -101,7 +104,7 @@ test('a failing mutation run gets a proposal per file of survivors, then one que
 
 test('an instruction instead of APPLY reaches kill_mutants as what the developer chose, with the proposals', async () => {
   const instruction = 'Delete the dead branch of Checkout instead of testing it'
-  const host = scripted({ machine: new ScriptedMachine(), answers: [{ answer: instruction }] }, (it) => [...upToDeliver(it), proposer(it), proposer(it), killer(it)])
+  const host = mutating({ machine: new ScriptedMachine(), answers: [{ answer: instruction }] }, (it) => [...upToDeliver(it), proposer(it), proposer(it), killer(it)])
   failsOnce(host)
 
   const outcome = await host.start()
@@ -118,7 +121,7 @@ test('an instruction instead of APPLY reaches kill_mutants as what the developer
 })
 
 test('ACCEPT typed at the mutation plan is an instruction like any other: kill_mutants reads it, and no review finding is listed as accepted', async () => {
-  const host = scripted({ machine: new ScriptedMachine(), answers: [{ answer: 'ACCEPT' }] }, (it) => [...upToDeliver(it), proposer(it), proposer(it), killer(it)])
+  const host = mutating({ machine: new ScriptedMachine(), answers: [{ answer: 'ACCEPT' }] }, (it) => [...upToDeliver(it), proposer(it), proposer(it), killer(it)])
   failsOnce(host)
 
   assert.equal((await host.start()).status, 'done')
@@ -130,7 +133,7 @@ test('ACCEPT typed at the mutation plan is an instruction like any other: kill_m
 
 test('the kill the developer chose names no failing test: a fix it commits needs its failing test first', async () => {
   const fixing = (it) => agent({ work: ({ git }) => git.commit(`fix(${SLUG}): refund the right amount`, ['src/Refund.cs']) })(it)
-  const host = scripted({ machine: new ScriptedMachine(), answers: [{ answer: 'APPLY' }] }, (it) => [...upToDeliver(it), proposer(it), proposer(it), fixing(it), agent({ work: ({ git }) => { git.reset('.', 'root-3'); git.commit(`test(${SLUG}): kill the checkout mutants`, ['tests/CheckoutTests.cs']) } })(it)])
+  const host = mutating({ machine: new ScriptedMachine(), answers: [{ answer: 'APPLY' }] }, (it) => [...upToDeliver(it), proposer(it), proposer(it), fixing(it), agent({ work: ({ git }) => { git.reset('.', 'root-3'); git.commit(`test(${SLUG}): kill the checkout mutants`, ['tests/CheckoutTests.cs']) } })(it)])
   failsOnce(host)
 
   const outcome = await host.start()
@@ -141,7 +144,7 @@ test('the kill the developer chose names no failing test: a fix it commits needs
 })
 
 test('with no answer at the host, the run waits on the mutation plan; skraft decide answers it with an instruction, in any words but STOP and APPLY', async () => {
-  const host = scripted({ machine: new ScriptedMachine() }, (it) => [...upToDeliver(it), proposer(it), proposer(it), killer(it)])
+  const host = mutating({ machine: new ScriptedMachine() }, (it) => [...upToDeliver(it), proposer(it), proposer(it), killer(it)])
   failsOnce(host)
 
   const waiting = await host.start()
@@ -157,7 +160,7 @@ test('with no answer at the host, the run waits on the mutation plan; skraft dec
 })
 
 test('STOP to the mutation plan ends the run blocked, the proposals kept, nothing applied', async () => {
-  const host = scripted({ machine: new ScriptedMachine(), answers: [{ answer: 'STOP' }] }, (it) => [...upToDeliver(it), proposer(it), proposer(it)])
+  const host = mutating({ machine: new ScriptedMachine(), answers: [{ answer: 'STOP' }] }, (it) => [...upToDeliver(it), proposer(it), proposer(it)])
   failsOnce(host)
 
   const outcome = await host.start()

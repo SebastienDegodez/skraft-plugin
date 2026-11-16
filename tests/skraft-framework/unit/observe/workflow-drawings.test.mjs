@@ -14,7 +14,7 @@ test('the workflows a run of this working copy can follow are drawn before any r
   assert.deepEqual([pipeline.name, pipeline.file, pipeline.goal, review.name, review.file, review.goal], ['pipeline', null, 'Deliver the story', 'review', null, 'Review the changes'])
   assert.deepEqual(pipeline.steps.map(({ id }) => id), [
     'research', 'design', 'design_review', 'adr', 'distill', 'distill_review', 'scenario_review', 'deliver', 'gates',
-    'deliver_review', 'mutation', 'kill_proposal', 'mutation_plan', 'kill_mutants', 'mutation_review', 'mutation_gates', 'visuals', 'pr_writer', 'publish',
+    'deliver_review', 'visuals', 'pr_writer', 'publish',
   ])
   const steps = Object.fromEntries(pipeline.steps.map((step) => [step.id, shape(step)]))
   assert.deepEqual(steps.design_review, {
@@ -22,7 +22,7 @@ test('the workflows a run of this working copy can follow are drawn before any r
     lenses: [{ lens: 'consistency', when: null }, { lens: 'architecture-compliance', when: null }, { lens: 'fitness', when: null }],
     refuter: { id: 'design_review_refuter', agent: 'finding-refuter', mandatory: true },
   })
-  assert.deepEqual([steps.deliver_review.refuter, steps.mutation_review.refuter.id, steps.gates.refuter], [{ id: 'refuter', agent: 'finding-refuter', mandatory: true }, 'mutation_review_refuter', null])
+  assert.deepEqual([steps.deliver_review.refuter, steps.distill_review.refuter.id, steps.gates.refuter], [{ id: 'refuter', agent: 'finding-refuter', mandatory: true }, 'distill_review_refuter', null])
   assert.deepEqual([steps.adr.question, steps.gates.gates, steps.gates.locked, steps.research.runs, steps.publish.publish, steps.deliver_review.calls], [
     'adr-ratification', ['build', 'format', 'lint', 'test', 'architecture', 'coverage'], true, 'solution-researcher', 'pull-request', 'review',
   ])

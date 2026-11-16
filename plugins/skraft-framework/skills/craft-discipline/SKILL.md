@@ -70,8 +70,8 @@ Test names, variables, and assertions use business vocabulary
 
 ### C8 — mutation score meets the bar
 
-In a skraft pipeline step, the engine's `mutation` gate runs the component's mutation command
-and reports the survivors; never launch a mutation run inside a step.
+Mutation testing is the developer's: never launch a mutation run inside a skraft pipeline step.
+When the developer, or a workflow of their own, hands you survivors:
 
 1. Real survivor → write ONE test at the exact edge.
 2. Equivalent mutant → suppress that one construct with a reason, the way the component's

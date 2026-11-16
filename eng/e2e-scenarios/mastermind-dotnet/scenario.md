@@ -20,8 +20,7 @@ composants, et l'étape `visuals` publie ses captures.
   `Mastermind.UnitTest` et `Mastermind.IntegrationTest` sous `api/tests/`.
 - `api` déclare `"mocking": { "strategy": "inprocess" }` : l'API n'appelle aucun service, et la
   stratégie Microcks par défaut exigerait Docker à chaque gate qui lance les tests.
-- Installer le clone demande aussi le SDK .NET 10 et `dotnet tool restore` (Stryker.NET), voir
-  son `README.md`.
+- Installer le clone demande aussi le SDK .NET 10, voir son `README.md`.
 
 ## Points de contrôle
 
@@ -67,12 +66,9 @@ GitHub.
 ### DELIVER
 
 - [ ] Des cycles TDD rouge puis vert, chacun committé, dans les deux composants.
-- [ ] `api` passe `build`, `format`, `test`, `architecture`, `coverage` et `mutation` ; `web`
-      passe `build`, `lint`, `test`, `architecture`, `coverage` et `mutation` ; chaque journal
-      de mutation annonce 100 % sur le cœur.
-      Écart connu (#314) : avec `--since`, le gate de mutation .NET peut passer sans tester un
-      fichier du Domain modifié ; un 100 % d'`api` ne vaut que si son journal liste les mutants
-      des fichiers que la story a changés.
+- [ ] `api` passe `build`, `format`, `test`, `architecture` et `coverage` ; `web` passe
+      `build`, `lint`, `test`, `architecture` et `coverage`. Le pipeline ne lance aucune
+      mutation : elle est au développeur.
 - [ ] Les routes se testent par `WebApplicationFactory` dans `Mastermind.IntegrationTest`, et
       `ArchitectureTests` y passe toujours.
 - Observation, sans case : relever les doubles de `Mastermind.UnitTest`. `clean-architecture-testing`

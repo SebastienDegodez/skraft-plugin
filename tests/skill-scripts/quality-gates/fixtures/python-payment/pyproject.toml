@@ -12,7 +12,6 @@ dependencies = []
 dev = [
     "pytest>=8",
     "coverage>=7.6",
-    "cosmic-ray>=8.3,<9",
 ]
 
 [tool.setuptools.packages.find]

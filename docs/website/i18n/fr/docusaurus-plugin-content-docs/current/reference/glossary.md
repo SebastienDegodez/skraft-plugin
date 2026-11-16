@@ -94,7 +94,7 @@ Un défaut qu'une lentille signale : la gate concernée, une sévérité (`block
 ## G
 
 **Gate (porte de qualité)**
-Une commande nommée d'un composant (`build`, `format`, `lint`, `test`, `architecture`, `coverage`, `mutation`) que le moteur lance lui-même pour prouver la qualité. Chaque gate laisse un fichier de preuve et un événement `gate.ran`. Le moteur les lance en DELIVER (les nœuds verrouillés `gates` et `mutation`) ; `skraft gate` les lance à la main.
+Une commande nommée d'un composant (`build`, `format`, `lint`, `test`, `architecture`, `coverage`, `mutation`) que le moteur lance lui-même pour prouver la qualité. Chaque gate laisse un fichier de preuve et un événement `gate.ran`. Le moteur les lance en DELIVER (le nœud verrouillé `gates`) ; `skraft gate` les lance à la main. `mutation` revient au développeur : le pipeline du plugin ne la lance nulle part.
 → Voir [skraft-config.json](./skraft-config.md) ; les critères de revue des lentilles : [Gates](./gates.md)
 
 **Gherkin**
@@ -145,7 +145,7 @@ Le code de SKRAFT qui décide de chaque étape du pipeline (ordre, sorties atten
 → Voir [Moteur](../explanation/architecture.md)
 
 **Mutant survivant**
-Une modification du code que les tests n'attrapent pas. Il finit de l'une de trois façons : un test qui le tue, le code supprimé, ou le mutant déclaré équivalent. En DELIVER, l'agent le propose et le développeur choisit (question `mutation-plan`).
+Une modification du code que les tests n'attrapent pas. Il finit de l'une de trois façons : un test qui le tue, le code supprimé, ou le mutant déclaré équivalent. Le développeur lance la mutation à part du pipeline et choisit ; un agent à qui il demande de l'aide lit les survivants avec la skill `quality-gates-<stack>` du composant.
 → Voir [DELIVER](../explanation/pipeline/deliver.mdx)
 
 **Mutation testing**

@@ -168,31 +168,11 @@ test('every component a scenario configures holds its project, and its gates nam
   }
 })
 
-test('a .NET component keeps the Stryker.NET config its mutation gate reads', () => {
-  for (const name of scenarios) {
-    for (const { name: component, root, commands } of componentsOf(name).filter(({ commands }) => /quality-gates-dotnet\/scripts\/mutation-core\.mjs/.test(commands.mutation ?? ''))) {
-      const config = posix.join(root, option(commands.mutation, 'root'), option(commands.mutation, 'config') ?? 'stryker-config-core.json')
-      assert.ok(existsSync(join(treeOf(name), config)), `${name} ${component}: no ${config}`)
-    }
-  }
-})
-
 test('a front end of a scenario guards its layers with the rules clean-architecture-react ships today', () => {
   const shipped = readFileSync(join(PLUGIN, 'skills', 'clean-architecture-react', 'eslint', 'clean-architecture.js'), 'utf8')
   for (const name of scenarios) {
     for (const { root } of componentsOf(name).filter(({ stack }) => stack === 'react')) {
       assert.equal(readFileSync(join(treeOf(name), root, 'eslint', 'clean-architecture.js'), 'utf8'), shipped, `${name} ${root}`)
-    }
-  }
-})
-
-test('a mutation gate from a quality-gates skill leaves the engine to read the report it publishes', () => {
-  for (const name of scenarios) {
-    for (const { name: component, commands, mutationReport } of componentsOf(name)) {
-      if (!/quality-gates-[a-z]+\/scripts\//.test(commands.mutation ?? '')) continue
-      // The script publishes at the engine's default path, and only for a run it accepts; its evidence copy is
-      // written whatever the run, so a mutationReport pointing there would let a refused run pass.
-      assert.equal(mutationReport, undefined, `${name} ${component}: mutationReport overrides the report the script publishes`)
     }
   }
 })

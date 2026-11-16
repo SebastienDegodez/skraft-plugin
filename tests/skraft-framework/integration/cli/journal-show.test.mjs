@@ -24,18 +24,18 @@ test('skraft journal show prints the state of the chain, then the last steps and
   const slow = journal(cwd, SLUG).filter((event) => event.type === 'tdd.replay-slow').length
 
   assert.deepEqual(timeless(last.stdout), [
-    `skraft ${SLUG}: journal verified, ${56 + slow} lines`,
-    'last 3 of 17 entries',
-    `${49 + slow}  <at>  visuals (DELIVER, pass 1, attempt 1): skipped → pr_writer`,
-    `${52 + slow}  <at>  pr_writer (PUBLISH, pass 1, attempt 1): done → publish`,
-    `${54 + slow}  <at>  publish (PUBLISH, pass 1, attempt 1): local → exit`,
+    `skraft ${SLUG}: journal verified, ${53 + slow} lines`,
+    'last 3 of 16 entries',
+    `${46 + slow}  <at>  visuals (DELIVER, pass 1, attempt 1): skipped → pr_writer`,
+    `${49 + slow}  <at>  pr_writer (PUBLISH, pass 1, attempt 1): done → publish`,
+    `${51 + slow}  <at>  publish (PUBLISH, pass 1, attempt 1): local → exit`,
   ])
   assert.equal(last.status, 0)
-  assert.equal(all.length, 18)
+  assert.equal(all.length, 17)
   assert.equal(all.find((line) => line.startsWith('14  ')), '14  <at>  adr-1: RATIFIED (by cli-tty)')
   assert.deepEqual({ ...json, entries: json.entries.map(({ at, ...entry }) => entry) }, {
-    slug: SLUG, chain: { state: 'verified', lines: 56 + slow, unverified: 0, reason: '' }, total: 17,
-    entries: [{ line: 54 + slow, kind: 'step', step: 'publish', phase: 'PUBLISH', pass: 1, attempt: 1, outcome: 'local', next: 'exit' }],
+    slug: SLUG, chain: { state: 'verified', lines: 53 + slow, unverified: 0, reason: '' }, total: 16,
+    entries: [{ line: 51 + slow, kind: 'step', step: 'publish', phase: 'PUBLISH', pass: 1, attempt: 1, outcome: 'local', next: 'exit' }],
   })
 })
 

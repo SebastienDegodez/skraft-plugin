@@ -313,8 +313,8 @@ sur stdout, code 0. Refus : le message sur stderr, code 1.
 ## `skraft gate [--all] [--json]`
 
 **Effet.** Lance les gates du pipeline actif : les commandes nommées `build`, `format`,
-`lint`, `test`, `architecture`, `coverage`, `mutation` de chaque composant, dans cet ordre,
-depuis la racine du composant. Chaque gate écrit une preuve et un événement `gate.ran`. Un
+`lint`, `test`, `architecture`, `coverage` de chaque composant, dans cet ordre, depuis la
+racine du composant ; une commande `mutation` revient au développeur et ne tourne jamais ici. Chaque gate écrit une preuve et un événement `gate.ran`. Un
 composant s'arrête à sa première gate en échec ; les autres composants continuent.
 
 | Option | Effet |

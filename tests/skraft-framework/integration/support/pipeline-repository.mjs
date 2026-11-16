@@ -237,6 +237,40 @@ export const dropMandatoryLens = (cwd) => {
   return '.skraft/pipeline.skraft.dot is invalid: mandatory node test_integrity (lens test-integrity between lenses and verdict of review) is missing; this node is mandatory and cannot be removed'
 }
 
+/**
+ * A repository workflow: the plugin's, with the mutation loop it no longer runs put back between
+ * the gates and the delivery review, the one place a repository copy may run it: a kill reaches
+ * the pull request only through the delivery review.
+ */
+export const MUTATION_LOOP_WORKFLOW = [
+  ['  visuals  [shape=parallelogram', `  mutation [shape=parallelogram, gate="mutation", goal_gate=true]
+  kill_proposal [shape=box, agent="software-engineer", each="survivor-file", proposal=true]
+  mutation_plan [shape=hexagon, question="mutation-plan"]
+  kill_mutants [shape=box, agent="software-engineer", each="survivor-file"]
+  mutation_review_lenses [shape=component]
+  mutation_review_test_integrity [shape=note, lens="test-integrity"]
+  mutation_review_refuter [shape=octagon]
+  mutation_review [shape=tripleoctagon]
+  mutation_gates [shape=parallelogram, gate="build,format,lint,test,architecture,coverage", goal_gate=true]
+  visuals  [shape=parallelogram`],
+  ['  gates -> deliver_review [label="PASS"]\n', `  gates -> mutation [label="PASS"]
+  mutation -> deliver_review [label="PASS"]
+  mutation -> kill_proposal [label="FAIL", max_visits=5]
+  kill_proposal -> mutation_plan
+  mutation_plan -> kill_mutants [label="APPLY"]
+  kill_mutants -> mutation_review_lenses
+  mutation_review_lenses -> mutation_review_test_integrity -> mutation_review_refuter
+  mutation_review_refuter -> mutation_review
+  mutation_review -> kill_mutants [label="NEEDS_REWORK", max_visits=2]
+  mutation_review -> mutation_gates [label="APPROVED"]
+  mutation_gates -> kill_mutants [label="FAIL", max_visits=3]
+  mutation_gates -> mutation [label="PASS"]
+`],
+].reduce((text, [old, now]) => {
+  if (!text.includes(old)) throw new Error(`${JSON.stringify(old)} is not in the plugin's workflow`)
+  return text.replace(old, now)
+}, readFileSync(join(PLUGIN_ROOT, 'workflows', 'pipeline.skraft.dot'), 'utf8'))
+
 /** A repository workflow: the plugin's, its design review with the repository lens last. */
 export const LENS_WORKFLOW = readFileSync(join(PLUGIN_ROOT, 'workflows', 'pipeline.skraft.dot'), 'utf8')
   .replace('  design_review [shape=tripleoctagon, mandatory=true]\n', `  design_review_acme_security [shape=note, lens="${SECURITY_LENS}"]\n  design_review [shape=tripleoctagon, mandatory=true]\n`)
@@ -400,7 +434,7 @@ export const issueProgressKept = (cwd, events) => {
     `<!-- skraft:issue-progress slug=${SLUG} -->`, `### skraft · ${SLUG} — run done`, '', 'done', '',
     '- [x] RESEARCH', '- [x] DESIGN', '- [x] DISTILL', '- [x] DELIVER', '- [x] PUBLISH', '',
   ].join('\n')), body)
-  assert.ok(body.includes('\nQuality gates:\n- app/test pass · `gates/app/test-1.log`\n- app/mutation pass · `gates/app/mutation-1.log`\n\nPull request: none opened or updated by this run.\n'), body)
+  assert.ok(body.includes('\nQuality gates:\n- app/test pass · `gates/app/test-1.log`\n\nPull request: none opened or updated by this run.\n'), body)
 }
 
 /**

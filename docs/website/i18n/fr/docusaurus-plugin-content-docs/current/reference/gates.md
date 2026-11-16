@@ -15,7 +15,7 @@ Où chaque revue se place dans le pipeline : [Phases](./phases.md).
 
 | Sorte | Identifiants | Qui la juge | Où |
 | --- | --- | --- | --- |
-| Gate de commandes | `build`, `format`, `lint`, `test`, `architecture`, `coverage`, `mutation` | le moteur, par le code de sortie de la commande du composant | nœuds `gates`, `mutation` et `mutation_gates` de DELIVER, `skraft gate` |
+| Gate de commandes | `build`, `format`, `lint`, `test`, `architecture`, `coverage`, `mutation` | le moteur, par le code de sortie de la commande du composant | nœud `gates` de DELIVER et `skraft gate` ; `mutation` seulement dans le workflow propre à une équipe |
 | Critère de revue | `G<n>`, et `C1`, `F1`, `B1`, `T<n>`, `E<n>`, `M<n>`, `K<n>` | une lentille, puis le moteur (DESIGN, DISTILL, DELIVER) ou `review-verdict.mjs` (DISCOVER, DISCUSS) | revues de chaque phase |
 | Contrôle du moteur rattaché à un critère | G2, G10, G12, G14 (DESIGN) ; G1 (`gherkin-records`), G11 (`testability#layout`) (DISTILL) ; G9 (`test-integrity#patch`) | le moteur, sans lentille | après la tentative de l'architecte ; après la tentative du concepteur d'acceptation ; dans le patch d'une revue |
 
@@ -31,25 +31,25 @@ racine du composant ; un composant s'arrête à sa première gate en échec.
 
 | Ordre | Gate | Nœud du workflow du plugin |
 | --- | --- | --- |
-| 1 | `build` | `gates`, `mutation_gates` |
-| 2 | `format` | `gates`, `mutation_gates` |
-| 3 | `lint` | `gates`, `mutation_gates` |
-| 4 | `test` | `gates`, `mutation_gates` |
-| 5 | `architecture` | `gates`, `mutation_gates` |
-| 6 | `coverage` | `gates`, `mutation_gates` |
-| 7 | `mutation` | `mutation` |
+| 1 | `build` | `gates` |
+| 2 | `format` | `gates` |
+| 3 | `lint` | `gates` |
+| 4 | `test` | `gates` |
+| 5 | `architecture` | `gates` |
+| 6 | `coverage` | `gates` |
+| 7 | `mutation` | aucun : elle revient au développeur ; `skraft gate` et `skraft doctor --run` la laissent aussi |
 
 | Règle | Détail |
 | --- | --- |
 | Résultat | `pass` (sortie 0) ou `fail`, classe `interrupted`, `environment` ou `deterministic` ([classes d'échec](./skraft-config.md#failure-classes)) |
 | Composant sans commande de gate | gate `none`, `fail`, classe `environment` ; dans un run, la question `environment` nomme la cause `config` |
 | Portée | les composants modifiés depuis leur base ; `goal_gate=true` lance ensuite tous les autres ; `skraft gate --all` les lance tous |
-| Arêtes | toutes les gates du nœud passent : arête `PASS` ; une échoue : arête `FAIL` (`gates` : `PASS` vers `deliver_review`, `FAIL` vers `deliver` ; `mutation` : `PASS` vers `visuals`, `FAIL` vers `kill_proposal` ; `mutation_gates` : `PASS` vers `mutation`, `FAIL` vers `kill_mutants`) |
+| Arêtes | toutes les gates du nœud passent : arête `PASS` ; une échoue : arête `FAIL` (`gates` : `PASS` vers `deliver_review`, `FAIL` vers `deliver`) |
 | Machine | une étape de gates qui échoue en `environment` ne prend aucune arête : le run pose la question `environment` ([causes](./run-journal.md#environment-question)), ne renvoie rien à un agent et ne consomme aucune de ses tentatives ; une gate arrêtée par un signal ou un plantage échoue en `deterministic` et prend l'arête `FAIL` avec sa preuve, comme une vérification en échec |
 | Plafond de boucle | une étape de gates en échec prend son arête `FAIL` jusqu'au `max_visits` de cette arête ; un échec de plus pose la question `blocked` (code `loop-ceiling`) sur le nœud vers lequel mène cette arête ; une consigne y renvoie le travail, `STOP` termine le run |
-| Mutation | le moteur lit le rapport de la commande `mutation` (`mutationReport`) et juge deux barres : **100 %** sur le cœur (Domain, Application), **80 %** sur la frontière (le reste) ; elle tourne une fois, après l'approbation de `deliver_review` ; en échec, `kill_proposal` écrit une proposition par fichier de survivants, la question `mutation-plan` laisse le développeur choisir (`APPLY`, sa consigne, `STOP`), puis `kill_mutants` applique le choix ([Phases](./phases.md#deliver)) |
+| Mutation | le workflow du plugin n'en lance aucune : le développeur la lance à part, contre la barre de `skraft-quality-bar`. Un nœud `gate="mutation"` du workflow propre à une équipe fait lire au moteur le rapport de la commande `mutation` (`mutationReport`) et juger deux barres : **100 %** sur le cœur (Domain, Application), **80 %** sur la frontière (le reste) |
 | Seuils | aucun n'est configurable |
-| Verrou | `gates` et `mutation` sont `locked=true` : une copie du workflow ne les retire qu'avec `unlock="<raison>"` ([Le workflow DOT](./workflow-dot.mdx#locked-nodes)) |
+| Verrou | `gates` est `locked=true` : une copie du workflow ne le retire qu'avec `unlock="<raison>"` ([Le workflow DOT](./workflow-dot.mdx#locked-nodes)) |
 | Preuve | `gates/<composant>/<gate>-<n>.log` et un événement `gate.ran` ([Dossier de suivi et journal](./run-journal.md#gate-evidence)) |
 
 ## Critères de revue <!-- #review-criteria -->
@@ -203,9 +203,8 @@ le rejeu de leur rouge, et le vert qui doit les faire passer, les vérifient.
 
 ## DELIVER <!-- #deliver -->
 
-DELIVER passe par les gates `gates`, l'appel `deliver_review` du workflow `review`, puis la gate
-`mutation` ; quand elle échoue, la revue `mutation_review` (lentille `test-integrity`) juge les
-tests de `kill_mutants` avant `mutation_gates`. Les mêmes
+DELIVER passe par les gates `gates`, puis par l'appel `deliver_review` du workflow `review`.
+Les mêmes
 lentilles jugent une pull request par `skraft review --pr`.
 
 | ID | Lentille | Critère | Sévérité |
@@ -256,7 +255,7 @@ aucune (`issue-closed`).
 | `distill`, qui écrit le test d'acceptation d'un scénario | un rouge, le test et le squelette qu'il appelle, dans le composant du scénario ; le rouge du scénario existe après le passage ; les fichiers `.feature` et Markdown l'accompagnent ou vont dans un commit `docs`, où qu'ils soient | un second rouge (`oracle-split`) ; un rouge dans un autre ou un second composant (`oracle-component`) ; un rouge sans fichier des chemins de test du composant (`oracle-without-test`) ; un vert ou un refactor (`code-in-oracle`) ; aucun |
 | `deliver` sur le scénario k | un vert, enchaîné en bash : `<commande de test> && git add <fichiers> && git commit …` | un rouge (`test-in-scenario`) ; un refactor (`refactor-in-scenario`) ; un second vert (`second-green`) ; un changement à un fichier des commits des tests d'acceptation, walking skeleton compris, hors des chemins `src` du composant (`oracle-touched`) ; un changement à un autre composant (`other-component`) ; aucun |
 | `deliver` renvoyé par les gates ou la revue, après le dernier scénario | rouges, verts et refactors sur toute l'histoire ; rouges non rejoués | un vert sans rouge depuis le dernier vert (`green-without-red`) ; sur un passage que les gates ont renvoyé, leur échec tient lieu du premier rouge |
-| `kill_mutants` | des tests qui tuent des mutants et passent | — |
+| `kill_mutants`, dans le workflow propre à une équipe | des tests qui tuent des mutants et passent | — |
 
 **Rejeux.** Le moteur ne lit aucun rapport de test ni la sortie d'aucun runner : il rejoue les
 commandes d'un commit dans une copie jetable, depuis la racine du composant, et ne distingue

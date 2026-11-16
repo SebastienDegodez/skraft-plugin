@@ -1,6 +1,6 @@
 import { CONFIG_FILE } from '../../domain/config/skraft-config.mjs'
 import { commandText, parseCommand } from '../../domain/gates/command-line.mjs'
-import { failureOf, GATE_ORDER, gatesOf, isTouched } from '../../domain/gates/gate-plan.mjs'
+import { failureOf, gatesOf, isTouched, STORY_GATES } from '../../domain/gates/gate-plan.mjs'
 import { isChanged, missedBars, missedText, scopeScores } from '../../domain/gates/mutation-bar.mjs'
 import { aliveCount, mutationReportOf, readMutants, sourceCandidates, survivorLine } from '../../domain/gates/mutation-report.mjs'
 import { joinRelative } from '../../domain/config/relative-path.mjs'
@@ -33,7 +33,7 @@ import { endedByMachine, interruptedBy } from '../../domain/pipeline/incidents.m
  *   slug: string, journal: import('../journal/run-journal.mjs').OpenJournal, components: Component[], base: ReadonlyArray<Base>,
  *   scope: GateScope, only?: readonly string[], skip?: readonly string[],
  * }} GateRunRequest
- *   only: the gates to run, every one of GATE_ORDER when absent; skip: components not to run.
+ *   only: the gates to run, every one of STORY_GATES (mutation aside) when absent; skip: components not to run.
  * @typedef {{ components: string[], gates: GateResult[], failure: FailureClass | null, conflict: string | null }} GateRun
  * @typedef {{ slug: string, component: Component, scope: GateScope, journal: GateRunRequest['journal'], only: readonly string[] }} GateContext
  * @typedef {{ argv: string[], started: boolean, exitCode: number | null, stdout: string, stderr: string, error?: string, truncated?: true }} Started
@@ -50,7 +50,7 @@ import { endedByMachine, interruptedBy } from '../../domain/pipeline/incidents.m
  * @param {GateRunDeps} deps @param {GateRunRequest} request @returns {Promise<GateRun>}
  */
 // Stryker disable next-line ArrayDeclaration: component names are kebab-case, so no component is named like the placeholder
-export const runGates = async (deps, { slug, journal, components, base, scope, only = GATE_ORDER, skip = [] }) => {
+export const runGates = async (deps, { slug, journal, components, base, scope, only = STORY_GATES, skip = [] }) => {
   const shaOf = (/** @type {Component} */ component) => baseOf(base, component.name)?.sha ?? null
   const selected = await selectComponents(deps, components, { scope, skip, shaOf })
   /** @type {GateResult[]} */

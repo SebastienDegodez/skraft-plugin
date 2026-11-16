@@ -136,7 +136,7 @@ chaque nœud déverrouillé, `; <nœud> is unlocked and skipped: <raison>`.
 
 ## Nœuds verrouillés {/* #locked-nodes */}
 
-Les gates de DELIVER du workflow du plugin (`gates`, `mutation`) portent `locked=true`. Une copie
+Les gates de DELIVER du workflow du plugin (`gates`) portent `locked=true`. Une copie
 qui les retire ou les change est refusée, sauf à les sauter avec `unlock="<raison>"`, que le
 journal et la pull request reprennent.
 
@@ -149,16 +149,16 @@ journal et la pull request reprennent.
 | est contourné | `<nœud> reaches the exit without passing <id>; keep the run going through <id>, or skip <id> with unlock="<reason>"` |
 
 Un nœud de gates qui lance toutes les gates d'un nœud verrouillé (son `goal_gate` compris) et
-n'est pas déverrouillé tient lieu de lui pour ce contrôle : dans le workflow du plugin,
-`mutation_gates` tient lieu de `gates` sur le chemin `kill_mutants -> … -> mutation`.
+n'est pas déverrouillé tient lieu de lui pour ce contrôle : dans le workflow d'une équipe qui
+lance la mutation, un nœud `mutation_gates` qui lance toutes les gates de `gates` en tient lieu
+sur le chemin `kill_mutants -> … -> mutation`.
 
 ## Nœuds obligatoires {/* #mandatory-nodes */}
 
 Les workflows du plugin marquent `mandatory=true` :
 
-- dans `pipeline.skraft.dot` : les fan-in `design_review`, `distill_review`, `mutation_review`,
-  leurs réfuteurs `design_review_refuter`, `distill_review_refuter`, `mutation_review_refuter`,
-  et l'appel `deliver_review` ;
+- dans `pipeline.skraft.dot` : les fan-in `design_review` et `distill_review`, leurs réfuteurs
+  `design_review_refuter` et `distill_review_refuter`, et l'appel `deliver_review` ;
 - dans `review.skraft.dot` : le fan-in `verdict`, son réfuteur `refuter` et les lentilles
   `test_integrity` et `architecture_boundaries`.
 
@@ -168,7 +168,7 @@ change rien, et `mandatory=false` est refusé.
 
 | Nœud obligatoire | Gardé quand |
 | --- | --- |
-| Fan-in d'une revue | il reste un fan-in de même id ; son arête `NEEDS_REWORK` revient vers un agent de sa phase dans le workflow du plugin (renommer cette phase est refusé) ; aucun chemin n'atteint la sortie sans lui depuis le départ, depuis cet agent, ou depuis un agent de sa phase que le run n'atteint qu'à travers la revue. Un chemin que le workflow du plugin a aussi est gardé : le run atteint la sortie autour de `mutation_review` depuis le départ quand la mutation passe |
+| Fan-in d'une revue | il reste un fan-in de même id ; son arête `NEEDS_REWORK` revient vers un agent de sa phase dans le workflow du plugin (renommer cette phase est refusé) ; aucun chemin n'atteint la sortie sans lui depuis le départ, depuis cet agent, ou depuis un agent de sa phase que le run n'atteint qu'à travers la revue. Un chemin que le workflow du plugin a aussi est gardé |
 | Appel | il reste un appel (`shape=house`) de même id, aux mêmes règles qu'un fan-in de revue. Il peut appeler un autre workflow : celui-ci doit garder les nœuds obligatoires du `review.skraft.dot` du plugin |
 | Nœud lentille | il garde son id, sa lentille (son `model=` peut changer), son fan-out et son fan-in, et ne porte aucun `when`. Ceux de `review.skraft.dot` sont vérifiés dans le fichier que lit l'appel, éjecté ou non |
 | Fan-in de `review.skraft.dot` | il garde son id (`verdict`), dans le workflow qu'appelle l'appel obligatoire, quel qu'il soit |
@@ -222,7 +222,7 @@ distill_review -> deliver [label="APPROVED"]
 deliver_review [shape=house, workflow="review", mandatory=true]
 gates -> deliver_review [label="PASS"]
 deliver_review -> deliver [label="NEEDS_REWORK", max_visits=2]
-deliver_review -> mutation [label="APPROVED"]
+deliver_review -> visuals [label="APPROVED"]
 ```
 
 | Règle | Détail |
@@ -324,12 +324,6 @@ parenthèses est héritée du prédécesseur.
 | `deliver` | `box` | `agent="software-engineer"`, `each="scenario"` | DELIVER |
 | `gates` | `parallelogram` | `gate="build,format,lint,test,architecture,coverage"`, `goal_gate=true`, `locked=true` | DELIVER |
 | `deliver_review` | `house` | `workflow="review"`, `mandatory=true` | (DELIVER) |
-| `mutation` | `parallelogram` | `gate="mutation"`, `goal_gate=true`, `locked=true` | (DELIVER) |
-| `kill_proposal` | `box` | `agent="software-engineer"`, `each="survivor-file"`, `proposal=true` | (DELIVER) |
-| `mutation_plan` | `hexagon` | `question="mutation-plan"` | (DELIVER) |
-| `kill_mutants` | `box` | `agent="software-engineer"`, `each="survivor-file"` | (DELIVER) |
-| `mutation_review_lenses` → `mutation_review` | revue | lentille `test-integrity` ; fan-in `mandatory=true` | (DELIVER) |
-| `mutation_gates` | `parallelogram` | `gate="build,format,lint,test,architecture,coverage"`, `goal_gate=true` | (DELIVER) |
 | `visuals` | `parallelogram` | `publish="playwright-visuals"`, `when="frontend"` | (DELIVER) |
 | `pr_writer` | `box` | `agent="pr-writer"` | PUBLISH |
 | `publish` | `parallelogram` | `publish="pull-request"` | (PUBLISH) |
@@ -348,17 +342,15 @@ parenthèses est héritée du prédécesseur.
 | `gates -> deliver` | `FAIL` | 3 |
 | `gates -> deliver_review` | `PASS` | — |
 | `deliver_review -> deliver` | `NEEDS_REWORK` | 2 |
-| `deliver_review -> mutation` | `APPROVED` | — |
-| `mutation -> visuals` | `PASS` | — |
-| `mutation -> kill_proposal` | `FAIL` | 5 |
-| `mutation_plan -> kill_mutants` | `APPLY` | — |
-| `mutation_review -> kill_mutants` | `NEEDS_REWORK` | 2 |
-| `mutation_review -> mutation_gates` | `APPROVED` | — |
-| `mutation_gates -> kill_mutants` | `FAIL` | 3 |
-| `mutation_gates -> mutation` | `PASS` | — |
+| `deliver_review -> visuals` | `APPROVED` | — |
+
+Le workflow du plugin ne lance aucune mutation : le développeur la lance à part. Une équipe qui
+la veut dans son propre workflow ajoute un nœud `gate="mutation"`, et peut le faire suivre de la
+boucle de kill que les attributs ci-dessus permettent (`each="survivor-file"`, `proposal=true`,
+`question="mutation-plan"`).
 
 Les autres arêtes n'ont ni étiquette ni plafond : `start -> research -> design`, `distill -> distill_review_lenses`, `deliver -> gates`,
-`kill_proposal -> mutation_plan`, `kill_mutants -> mutation_review_lenses`, `visuals -> pr_writer -> publish -> exit`, et celles
+`visuals -> pr_writer -> publish -> exit`, et celles
 de chaque revue. Aucune arête ne ramène `deliver` à `distill` : le moteur les alterne sur les
 scénarios (`each="scenario"`).
 

@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { BUILT_IN_REVIEW, BUILT_IN_WORKFLOW } from '../support/in-memory-host.mjs'
+import { BUILT_IN_REVIEW, BUILT_IN_WORKFLOW, MUTATION_WORKFLOW } from '../support/in-memory-host.mjs'
 import { scripted } from '../support/pipeline-host.mjs'
 import { DELIVER_LENSES, ejectedPipeline, edit, host, reviewWithLenses, withLenses } from './support.mjs'
 
@@ -114,8 +114,8 @@ test('a mandatory lens dropped from review.skraft.dot stays missing when the pip
 
   const noCall = edit(decoy,
     ['  deliver_review [shape=house, workflow="review", mandatory=true]\n', ''],
-    ['  gates -> deliver_review [label="PASS"]', '  gates -> mutation [label="PASS"]'],
-    ['  deliver_review -> deliver [label="NEEDS_REWORK", max_visits=2]\n  deliver_review -> mutation [label="APPROVED"]\n', ''])
+    ['  gates -> deliver_review [label="PASS"]', '  gates -> visuals [label="PASS"]'],
+    ['  deliver_review -> deliver [label="NEEDS_REWORK", max_visits=2]\n  deliver_review -> visuals [label="APPROVED"]\n', ''])
   assert.deepEqual(await checked(noCall), [
     `mandatory node deliver_review is missing as a call (shape=house); ${MANDATORY}`,
     lensMissing('test_integrity', 'test-integrity'), lensMissing('architecture_boundaries', 'architecture-boundaries'),
@@ -194,17 +194,15 @@ test('an agent of a mandatory review\'s phase that leads to the exit around the 
 
   const tweak = edit(BUILT_IN_WORKFLOW,
     ['gate="build,format,lint,test,architecture,coverage"', 'gate="build", unlock="the CI runs the other gates"'],
-    ['mutation -> visuals [label="PASS"]', 'mutation -> tweak [label="PASS"]\n  tweak [shape=box, agent="software-engineer", writes="src/**"]\n  tweak -> visuals'])
-  assert.deepEqual(await checked(tweak), [
-    'tweak reaches the exit without passing mutation; keep the run going through mutation, or skip mutation with unlock="<reason>"',
-    `tweak reaches the exit without passing mandatory node deliver_review; ${MANDATORY}`,
-  ])
+    ['deliver_review -> visuals [label="APPROVED"]', 'deliver_review -> tweak [label="APPROVED"]\n  tweak [shape=box, agent="software-engineer", writes="src/**"]\n  tweak -> visuals'])
+  assert.deepEqual(await checked(tweak), [`tweak reaches the exit without passing mandatory node deliver_review; ${MANDATORY}`])
 
   const beforeGates = edit(BUILT_IN_WORKFLOW, ['  deliver -> gates\n', '  deliver -> lint_fix\n  lint_fix [shape=box, agent="software-engineer"]\n  lint_fix -> gates\n'])
   assert.deepEqual(await checked(beforeGates), [])
 })
 
 test('a mandatory review the plugin\'s workflow runs only on some paths stays on the paths it is on there: mutation_review after kill_mutants', async () => {
-  const gated = edit(BUILT_IN_WORKFLOW, ['kill_mutants -> mutation_review_lenses', 'kill_mutants -> quick\n  quick [shape=parallelogram, gate="build"]\n  quick -> mutation_review_lenses [label="PASS"]\n  quick -> gates [label="FAIL"]'])
-  assert.deepEqual(await checked(gated), [`kill_mutants reaches the exit without passing mandatory node mutation_review; ${MANDATORY}`])
+  const gated = edit(MUTATION_WORKFLOW, ['kill_mutants -> mutation_review_lenses', 'kill_mutants -> quick\n  quick [shape=parallelogram, gate="build"]\n  quick -> mutation_review_lenses [label="PASS"]\n  quick -> gates [label="FAIL"]'])
+  const errors = (await host({ files: ejectedPipeline(gated), builtIn: MUTATION_WORKFLOW }).commands.check()).errors
+  assert.deepEqual(errors, [`kill_mutants reaches the exit without passing mandatory node mutation_review; ${MANDATORY}`])
 })

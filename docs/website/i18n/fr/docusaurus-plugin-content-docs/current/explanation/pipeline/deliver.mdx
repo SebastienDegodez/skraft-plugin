@@ -1,6 +1,6 @@
 ---
 title: "DELIVER"
-description: "Pourquoi DELIVER passe le contrat au vert un scénario et un commit vérifié à la fois, mute une fois le code revu, et confie les survivants au développeur."
+description: "Pourquoi DELIVER passe le contrat au vert un scénario et un commit vérifié à la fois, fait relire le code, et laisse le mutation testing au développeur."
 persona: software-engineer
 phase: deliver
 hide_table_of_contents: true
@@ -10,8 +10,8 @@ import FlowFigure from '@site/src/components/FlowFigure';
 
 # DELIVER
 
-Faire passer le contrat au vert un scénario à la fois, chacun en un commit prouvé, faire relire
-le code, puis tester les tests — une fois, en dernier.
+Faire passer le contrat au vert un scénario à la fois, chacun en un commit prouvé, puis faire
+relire le code. Tester les tests reste l'affaire du développeur.
 
 ## Pourquoi cette phase existe
 
@@ -35,8 +35,9 @@ d'acceptation, puis un commit vert.
 S1 entre, rouge, à côté du walking skeleton rouge. DELIVER complète la chaîne du point d'entrée
 de commande jusqu'à la base, implémente le paiement et l'attribution des points et les fait
 passer tous deux au vert en un commit ; DISTILL écrit ensuite le test en échec de S2, la boisson indisponible, et
-DELIVER le fait passer au vert. Les gates passent, la revue relit le code, puis la **mutation**
-atteste que les tests protègent réellement la règle de fidélité. Le code part en pull request.
+DELIVER le fait passer au vert. Les gates passent, la revue relit le code, et le code part en pull
+request. Que les tests protègent réellement la règle de fidélité, la **mutation** que lance le
+développeur l'atteste.
 :::
 
 ## Un scénario, un commit vert
@@ -44,7 +45,8 @@ atteste que les tests protègent réellement la règle de fidélité. Le code pa
 Un cycle TDD commité coûte deux commits, et un agent paie chacun en tours : lancer les tests, lire
 leur sortie, écrire le message. Par scénario, DELIVER ne commite qu'une fois. Les tests
 unitaires de la boucle interne s'écrivent toujours d'abord ; ils partent dans le vert, et la
-mutation, lancée en dernier sur toute la story, prouve qu'ils détecteraient une erreur.
+lentille test-integrity de la revue les lit. Qu'ils détecteraient une erreur, la mutation que
+lance le développeur le prouve.
 
 Trois règles gardent ce commit unique honnête :
 
@@ -63,18 +65,17 @@ Une fois le dernier scénario au vert, les gates passent. Un passage que renvoie
 revue travaille sur toute la story avec le cycle classique : un rouge, puis la correction ; sur un
 passage que les gates ont renvoyé, leur échec tient lieu du rouge.
 
-## L'ordre : gates, revue, puis mutation
+## L'ordre : gates, puis revue
 
 <FlowFigure flow="deliver" />
 
 Les gates de commandes passent d'abord : elles sont rapides, déterministes, et un build rouge
 n'a pas besoin d'un relecteur. Viennent ensuite les lentilles de la revue DELIVER : intégrité des
 tests, frontières d'architecture, lisibilité à froid, et, quand le changement en touche, fidélité
-des mocks et des contrats. Une reprise demandée par la revue repart par `deliver` et les gates,
-jamais par la mutation.
+des mocks et des contrats. Une reprise demandée par la revue repart par `deliver` et les gates.
 
 L'engineer lance les mêmes commandes avant de rendre la main. Son brief liste les commandes de
-gates de chaque composant qu'il peut modifier, mutation exclue, avec la base du run à la place de
+gates de chaque composant qu'il peut modifier, mutation exclue (elle revient au développeur), avec la base du run à la place de
 `{baseSha}`, et lui demande de corriger chaque échec avant d'écrire son résultat, à une passe de
 reprise aussi. L'étape des gates reste le contrôle ; le brief évite la passe que coûterait un
 échec de format ou de build découvert là seulement. Avant d'écrire son résultat il appelle aussi
@@ -83,44 +84,37 @@ fichier modifié hors de son périmètre d'écriture, un changement laissé non 
 chaque anomalie avec le contrôle qui l'a trouvée. Ce précontrôle ne lit aucun de ses commits et
 n'approuve rien : la remise relance ces contrôles, les commits en plus.
 
-### Pourquoi la mutation passe en dernier
+### Pourquoi la mutation revient au développeur
 
 Le mutation testing injecte de petites fautes dans le code et mesure la part que les tests
 attrapent ([Jia & Harman, 2011](../../reference/citations.mdx#cite-jia-mutation-2011)). C'est la seule mesure qui
-dit si une suite verte détecterait une erreur, et c'est aussi l'étape la plus coûteuse du
-pipeline.
+dit si une suite verte détecterait une erreur, et c'est aussi l'étape la plus coûteuse qu'une
+story puisse payer.
 
-Jusqu'à la version 2.0.0-alpha.18, elle passait juste après les gates, avant la revue. Elle
-tournait donc plusieurs fois : après chaque passe de correction des survivants, puis de nouveau
-après chaque reprise demandée par la revue — et elle jugeait un code que cette revue pouvait
-encore faire changer. Depuis 2.0.0-alpha.19, elle passe **une fois, en dernier**, sur le code
-que la revue a approuvé. Sur le chemin normal, la mesure la plus chère ne tourne qu'une fois, et
-elle mesure le code qui partira réellement.
+Jusqu'à la version 2.0.0-alpha.18, elle passait juste après les gates, avant la revue, puis de
+nouveau plusieurs fois : après chaque passe de correction des survivants, après chaque reprise
+demandée par la revue. À partir de 2.0.0-alpha.19, elle passait **une fois, en dernier**, sur le
+code que la revue avait approuvé, et un échec menait à une proposition par fichier de survivants
+et à une question `mutation-plan`. Même ainsi, elle restait l'étape la plus lente de chaque run,
+elle demandait une configuration de mutation que skraft écrivait pour le développeur, et ses
+survivants arrêtaient le run sur une question, tout à la fin.
 
-### Pourquoi c'est le développeur qui choisit
+Le pipeline du plugin ne la lance donc plus. Le développeur choisit l'outil, écrit sa
+configuration et la lance quand il le décide, à part du pipeline de la story. Le seuil ne bouge
+pas : 100 % sur le cœur, 80 % sur la frontière, fixés par `skraft-quality-bar`.
 
-Un mutant survivant n'a pas une seule bonne réponse. Il finit de l'une de trois façons :
+Un mutant survivant n'a toujours pas une seule bonne réponse. Il finit de l'une de trois façons :
 
 1. **un test plus précis le tue**, parce qu'une entrée que la story autorise distingue le mutant
    du code ;
 2. **le code est supprimé**, parce qu'aucun comportement de la story ne le demande ;
 3. **le mutant est déclaré équivalent**, parce qu'aucune entrée ne peut le distinguer du code.
 
-Ces trois issues n'ont pas les mêmes conséquences : la première ajoute une protection, la
-deuxième retire du code, la troisième accepte un écart. Distinguer un mutant équivalent est un
-problème connu pour être difficile, qu'aucun outil ne tranche seul
-([Jia & Harman, 2011](../../reference/citations.mdx#cite-jia-mutation-2011)). Laisser un agent « tuer les mutants »
-à sa guise l'invite à écrire des tests taillés pour le mutant plutôt que pour un comportement.
-
-Alors la décision est partagée. Pour chaque fichier qui garde des survivants, le
-`software-engineer` écrit une **proposition** dans un fichier que le moteur crée, une issue par
-mutant, sans toucher au code. La question `mutation-plan` montre ces propositions au développeur,
-qui répond `APPLY`, donne sa propre consigne, ou `STOP`. Le `software-engineer` applique ensuite
-ce choix en un seul passage ; la lentille `test-integrity` relit les tests ajoutés, les gates
-repassent, puis la mutation de nouveau.
-
-Le seuil, lui, ne bouge pas : la gate `mutation` reste verrouillée et sa barre fixe. Le
-développeur choisit **comment** l'atteindre, jamais **s'il** faut l'atteindre.
+Distinguer un mutant équivalent est un problème connu pour être difficile, qu'aucun outil ne
+tranche seul ([Jia & Harman, 2011](../../reference/citations.mdx#cite-jia-mutation-2011)) : le développeur
+décide. Un agent à qui il demande de l'aide lit les survivants avec la skill
+`quality-gates-<stack>` du composant, qui énonce chaque issue et comment neutraliser un mutant
+équivalent avec sa raison.
 
 ## Les tests câblés par le même agent
 
@@ -137,11 +131,9 @@ et [Contract testing](../deep-dive/contract-testing.md).
 
 - **La boucle interne ne laisse aucune trace dans l'historique.** Seuls le rouge et le vert de
   chaque scénario sont commités ; personne ne voit échouer les tests unitaires écrits entre les
-  deux. La mutation et la revue les jugent.
-- **Un humain peut être sollicité en fin de run.** Quand la mutation échoue, le run attend la
-  réponse à `mutation-plan`. C'est le prix d'une décision qui engage le code.
-- **Une reprise de revue ne remesure pas la mutation.** Elle repasse par les gates, plus
-  rapides ; la mutation juge une fois le code stabilisé.
+  deux. La revue les juge.
+- **Une story peut partir sans run de mutation.** Le pipeline ne prouve plus que les tests
+  détecteraient une erreur ; le run du développeur le fait, quand il le lance.
 - **Pas de seuil négociable.** 100 % sur le cœur, 80 % sur la frontière, quel que soit le dépôt :
   voir [Software craftsmanship](../software-craftsmanship.md).
 
@@ -153,7 +145,7 @@ et [Contract testing](../deep-dive/contract-testing.md).
 
 ## Voir aussi {/* #see-also */}
 
-- [Référence : DELIVER](../../reference/phases.md#deliver) — nœuds, propositions, réponses à `mutation-plan`, arêtes.
+- [Référence : DELIVER](../../reference/phases.md#deliver) — nœuds et arêtes.
 - [Référence : critères de revue de DELIVER](../../reference/gates.md#deliver).
 - [La revue avant la revue](../deep-dive/review-before-review.md).
 - [Lancer les gates](../../how-to/run-gates.md).

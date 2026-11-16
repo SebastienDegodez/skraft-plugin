@@ -151,7 +151,6 @@ test('a gate node that is not a goal gate runs its own gates on the touched comp
   assert.equal(outcome.status, 'done')
   assert.deepEqual(host.events().filter((event) => event.type === 'gate.ran').map(({ scope, component, gate, status }) => `${scope} ${component}/${gate} ${status}`), [
     'touched api/build pass', 'touched api/build pass', 'touched api/test pass', 'all web/lint pass',
-    'touched api/mutation pass', 'all web/mutation pass',
   ])
 })
 

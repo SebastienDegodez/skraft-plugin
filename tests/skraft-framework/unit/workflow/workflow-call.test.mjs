@@ -71,7 +71,7 @@ test('a call to a workflow found nowhere, named with a folder, or to one that ru
   for (const name of ['../review', 'review.skraft.dot', 'Review', 'review-', '-review']) {
     assert.deepEqual(await errorsOf(calling(`workflow="${name}"`)), [`node deliver_review: workflow="${name}" ${NAME}`], name)
   }
-  assert.deepEqual(await errorsOf(ejectedPipeline(edit(BUILT_IN_WORKFLOW, ['deliver_review -> mutation [label="APPROVED"]', 'deliver_review -> mutation [label="NEEDS_REWORK"]']))), [
+  assert.deepEqual(await errorsOf(ejectedPipeline(edit(BUILT_IN_WORKFLOW, ['deliver_review -> visuals [label="APPROVED"]', 'deliver_review -> visuals [label="NEEDS_REWORK"]']))), [
     'node deliver_review: call node needs exactly one APPROVED edge, has 0',
     'node deliver_review: call node takes at most one NEEDS_REWORK edge, has 2',
   ])

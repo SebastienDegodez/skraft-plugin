@@ -7,22 +7,17 @@ import { commitAll, git, journal, skraft, tempFolder } from '../support/workspac
 /**
  * `payment-api/` (the working copy, .NET) and `payment-web/` beside it (React, its own
  * repository). Every gate command is `node recorder.mjs <component>/<gate>`: it appends what
- * ran and from where to ran.log, and exits with the code in fail.json, if any. A mutation gate
- * also writes, where Stryker.NET writes it, a report whose one mutant is killed.
+ * ran and from where to ran.log, and exits with the code in fail.json, if any. The API names a
+ * mutation command too, which no gate runs: mutation is the developer's to run.
  */
 const twoRepositories = (t) => {
   const root = tempFolder(t)
   const recorder = join(root, 'recorder.mjs')
-  const killed = { schemaVersion: '1', files: { 'src/Payment.cs': { language: 'cs', source: '', mutants: [{ id: '1', mutatorName: 'Equality', status: 'Killed', location: { start: { line: 1, column: 1 }, end: { line: 1, column: 5 } } }] } } }
   writeFileSync(recorder, [
-    "import { appendFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'",
-    "import { basename, join } from 'node:path'",
+    "import { appendFileSync, existsSync, readFileSync } from 'node:fs'",
+    "import { basename } from 'node:path'",
     'const [, , gate, log, fail, ...rest] = process.argv',
     'appendFileSync(log, `${[basename(process.cwd()), gate, ...rest].join(\' \')}\\n`)',
-    "if (gate.endsWith('/mutation')) {",
-    "  mkdirSync(join('StrykerOutput', 'reports'), { recursive: true })",
-    `  writeFileSync(join('StrykerOutput', 'reports', 'mutation-report.json'), ${JSON.stringify(JSON.stringify(killed))})`,
-    '}',
     "const codes = existsSync(fail) ? JSON.parse(readFileSync(fail, 'utf8')) : {}",
     'process.exit(codes[gate] ?? 0)',
     '',
@@ -36,7 +31,7 @@ const twoRepositories = (t) => {
   writeFileSync(join(api, 'src', 'Payment.cs'), 'class Payment {}\n')
   writeFileSync(join(api, 'skraft-config.json'), JSON.stringify({
     components: [
-      { name: 'api', root: '.', stack: 'dotnet', mocking: { strategy: 'inprocess' }, commands: { build: command('api/build'), test: command('api/test'), mutation: `${command('api/mutation')} --since:{baseSha}` } },
+      { name: 'api', root: '.', stack: 'dotnet', mocking: { strategy: 'inprocess' }, commands: { build: command('api/build'), test: command('api/test'), coverage: `${command('api/coverage')} --since:{baseSha}`, mutation: `${command('api/mutation')} --since:{baseSha}` } },
       { name: 'web', root: '../payment-web', stack: 'react', mocking: { strategy: 'inprocess' }, commands: { lint: command('web/lint'), test: command('web/test') } },
     ],
   }, null, 2))
@@ -83,7 +78,7 @@ test('init journals the merge base of each repository; --base and baseBranch cho
   assert.deepEqual(journal(api, 'payout')[0].base.map(({ ref, source }) => `${ref} ${source}`), ['main flag', 'main flag', 'main flag'])
 })
 
-test('a change in the front runs the front gates only; --all runs every gate, each from its own root', async (t) => {
+test('a change in the front runs the front gates only; --all runs every gate but mutation, each from its own root', async (t) => {
   const { api, web, apiBase, ran, resetLog } = twoRepositories(t)
   assert.equal((await skraft(api, ['init', 'checkout'])).status, 0)
   writeFileSync(join(web, 'src', 'Cart.tsx'), 'export const Cart = () => null\n')
@@ -100,10 +95,10 @@ test('a change in the front runs the front gates only; --all runs every gate, ea
   const closure = await skraft(api, ['gate', '--all'])
 
   assert.equal(closure.status, 0, closure.stdout)
-  assert.deepEqual(ran(), ['payment-api api/build', 'payment-api api/test', `payment-api api/mutation --since:${apiBase}`, 'payment-web web/lint', 'payment-web web/test'])
-  const mutation = journal(api, 'checkout').find((event) => event.type === 'gate.ran' && event.gate === 'mutation')
-  assert.ok(mutation.command.endsWith('--since:{baseSha}'))
-  assert.match(readFileSync(join(api, '.copilot-tracking', 'skraft-plans', 'checkout', 'gates', 'api', 'mutation-1.log'), 'utf8'), new RegExp(`^\\$ node .*--since:${apiBase}\\ncwd: \\.\\nresult: pass`))
+  assert.deepEqual(ran(), ['payment-api api/build', 'payment-api api/test', `payment-api api/coverage --since:${apiBase}`, 'payment-web web/lint', 'payment-web web/test'])
+  const coverage = journal(api, 'checkout').find((event) => event.type === 'gate.ran' && event.gate === 'coverage')
+  assert.ok(coverage.command.endsWith('--since:{baseSha}'))
+  assert.match(readFileSync(join(api, '.copilot-tracking', 'skraft-plans', 'checkout', 'gates', 'api', 'coverage-1.log'), 'utf8'), new RegExp(`^\\$ node .*--since:${apiBase}\\ncwd: \\.\\nresult: pass`))
 })
 
 test('a failing gate exits 1 as deterministic; a missing program exits 1 as environment', async (t) => {

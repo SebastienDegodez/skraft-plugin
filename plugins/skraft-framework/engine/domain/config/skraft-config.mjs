@@ -1,4 +1,4 @@
-import { GATE_ORDER } from '../gates/gate-plan.mjs'
+import { GATE_ORDER, STORY_GATES } from '../gates/gate-plan.mjs'
 import { normalizeRelative } from './relative-path.mjs'
 import { mergePatch } from './merge-patch.mjs'
 import { PLUGIN_DEFAULTS } from './model-assignment.mjs'
@@ -103,7 +103,7 @@ export const CONFIRMED_KEY = 'configurationConfirmed'
 /** Why a config with no component cannot be checked or gated. */
 export const NO_COMPONENT = `${CONFIG_FILE} lists no component; run skraft init to detect them`
 /** Why a component with no gate command cannot prove anything. */
-export const NO_GATE = `no gate command; give it at least one of ${GATE_ORDER.join(', ')} in ${CONFIG_FILE}`
+export const NO_GATE = `no gate command; give it at least one of ${STORY_GATES.join(', ')} in ${CONFIG_FILE}`
 
 /**
  * The team's file, and the developer's beside it when given, over the plugin's defaults.

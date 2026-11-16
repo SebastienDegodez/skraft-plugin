@@ -99,7 +99,7 @@ flowchart TB
     end
     subgraph DEL["DELIVER"]
         direction LR
-        C1["gate architecture<br/>verrouillée"] --> C3["lentille architecture-boundaries<br/>G4 · G5"] --> C2["gate mutation<br/>seuil selon la couche, en dernier"]
+        C1["gate architecture<br/>verrouillée"] --> C3["lentille architecture-boundaries<br/>G4 · G5"]
     end
     DES --> DIS --> DEL
 ```
@@ -145,10 +145,10 @@ la main sur les passerelles sortantes — repository, service externe — (skill
 `clean-architecture-testing`) ; des conteneurs réels ou des mocks de contrat pour tester
 l'Infrastructure.
 
-**Le seuil de mutation suit la couche.** La gate `mutation` classe chaque fichier par le nom de
-ses dossiers : un dossier qui finit par `domain` ou `application` est le cœur, jugé à 100 % ;
-tout le reste — API, Infrastructure — est la frontière, jugée à 80 % (skill
-`skraft-quality-bar`). La règle de dépendance décide donc aussi de l'exigence de test.
+**Le seuil de mutation suit la couche.** La skill `skraft-quality-bar` classe chaque fichier par
+le nom de ses dossiers : un dossier qui finit par `domain` ou `application` est le cœur, tenu à
+100 % ; tout le reste — API, Infrastructure — est la frontière, tenue à 80 %. Le run de mutation
+du développeur est jugé ainsi, comme un nœud `gate="mutation"` du workflow propre à une équipe. La règle de dépendance décide donc aussi de l'exigence de test.
 
 ## skraft s'applique la règle à lui-même
 

@@ -1,12 +1,13 @@
 #!/usr/bin/env node
-// G7 for Python: no mocking library in the Domain/Application sources named by the core
-// cosmic-ray config, nor in the unit test package. Prints one hit per line; empty on pass.
+// G7 for Python: no mocking library in the Domain/Application sources (every source under a
+// folder whose last word is domain or application), nor in the unit test package. Prints one
+// hit per line; empty on pass.
 import { existsSync, realpathSync } from 'node:fs'
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { mockHits, parseArgs, validateConfig } from './gate-policy.mjs'
-import { ensure, pythonFiles, readToml, repositoryRoot, resolvePython, sha256 } from './python-toolchain.mjs'
+import { coreSourceFiles, mockHits, parseArgs } from './gate-policy.mjs'
+import { ensure, pythonFiles, repositoryPythonFiles, repositoryRoot, sha256 } from './python-toolchain.mjs'
 
 export async function runNoMocksGate(input) {
 	const root = await repositoryRoot(input.root)
@@ -16,11 +17,11 @@ export async function runNoMocksGate(input) {
 	let hits = []
 	let exitCode = 2
 	try {
-		const python = resolvePython(root, input.python)
-		const config = validateConfig(readToml(python, root, resolve(root, input.config ?? 'cosmic-ray-core.toml')), 'core')
+		const core = coreSourceFiles(repositoryPythonFiles(root))
+		ensure(core.length > 0, 'No Domain or Application source: the core is every Python file under a folder whose name ends with domain or application')
 		const testDirs = (input.tests ?? ['tests/unit']).filter((dir) => existsSync(resolve(root, dir)))
 		ensure(testDirs.length > 0, `No unit test package found (${(input.tests ?? ['tests/unit']).join(', ')})`)
-		const files = await pythonFiles(root, [...config.modulePaths, ...testDirs])
+		const files = [...new Set([...core, ...(await pythonFiles(root, testDirs))])].sort()
 		for (const name of files) hits.push(...mockHits(name, await readFile(join(root, name), 'utf8')))
 		exitCode = hits.length ? 1 : 0
 	} catch (error) {
@@ -36,7 +37,7 @@ export async function runNoMocksGate(input) {
 async function main() {
 	let result
 	try {
-		const input = parseArgs(process.argv.slice(2), { options: ['root', 'evidence', 'python', 'config'], repeatable: ['tests'] })
+		const input = parseArgs(process.argv.slice(2), { options: ['root', 'evidence', 'python'], repeatable: ['tests'] })
 		for (const required of ['root', 'evidence']) ensure(input[required], `--${required} is required`)
 		result = await runNoMocksGate(input)
 	} catch (error) {

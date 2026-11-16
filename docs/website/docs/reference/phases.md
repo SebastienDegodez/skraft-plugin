@@ -22,7 +22,7 @@ The detail of each gate cited: [Gates](./gates.md).
 | RESEARCH | `skraft` | the engine | `solution-researcher` | output filled, research records | — |
 | DESIGN | `skraft` | the engine | `solution-architect` | DESIGN records, structural scan, 3-lens review | `adr-ratification` |
 | DISTILL | `skraft` | the engine | `acceptance-designer` | `## Scenarios` table, red commits replayed, 4-lens review | `scenario-review` |
-| DELIVER | `skraft` | the engine | `software-engineer` | one green commit per scenario, replayed; gates, `review`, mutation | `mutation-plan` when mutation fails |
+| DELIVER | `skraft` | the engine | `software-engineer` | one green commit per scenario, replayed; gates, `review` | — |
 | PUBLISH | `skraft` | the engine | `pr-writer` | pull request prose | — |
 
 DISCOVER and DISCUSS do not go through the engine: no journal, no command gate. RESEARCH to
@@ -212,29 +212,16 @@ with `scenarios`. Why the walking skeleton walks S1: [Walking Skeleton](../expla
 | `deliver` | agent `software-engineer`, `each="scenario"` | makes each scenario pass in turn, one green commit each, S1's green making the walking skeleton pass too and every later green keeping it passing; after the last, the passes the gates or the review send back, on the whole story |
 | `gates` | gates `build,format,lint,test,architecture,coverage`, `goal_gate`, `locked` | commands of the changed components, then of all |
 | `deliver_review` | call `workflow="review"` | lenses `test-integrity`, `architecture-boundaries`, `cold-reader`, `mock-fidelity` (`when="mock"`), `contract-fidelity` (`when="contract"`) |
-| `mutation` | gate `mutation`, `goal_gate`, `locked` | once, on the code `deliver_review` approved; bar 100 % core (Domain, Application), 80 % boundary |
-| `kill_proposal` | agent `software-engineer`, `each="survivor-file"`, `proposal=true` | one dispatch per file holding surviving mutants; writes a proposal, changes no code |
-| `mutation_plan` | question `mutation-plan` | the developer chooses: `APPLY`, an instruction of their own, or `STOP` |
-| `kill_mutants` | agent `software-engineer`, `each="survivor-file"` | applies the choice, in one dispatch |
-| `mutation_review` | review | lens `test-integrity` |
-| `mutation_gates` | gates `build,format,lint,test,architecture,coverage`, `goal_gate` | runs the gates again after `kill_mutants`, before a new mutation run |
 | `visuals` | publication `playwright-visuals`, `when="frontend"` | each front end's `e2e` command, screenshots committed |
 
 | | |
 | --- | --- |
 | Brief on a scenario | the scenario (`- Scenario: k of N — "<title>" (component <c>, tags …)`); the acceptance tests DISTILL committed so far, the walking skeleton included (`<sha> "<subject>": <files>`), which the agent never changes (a wrong one: it stops `blocked`, naming it); the walking skeleton of the scenario's component, which passes at its commit too; the commit, exactly: `<test command> && git add <each file you changed> && git commit -s -m "feat(<story>): <title>" -m "Refs: #<issue>"` |
 | Declared output | `changes/{date}/change-log.md` |
-| Proposals | `proposals/kill_proposal-<visit>-g<n>.md`, one per file of survivors, created by the engine with a section per mutant; each `{{outcome}}` line becomes `test: …`, `delete: …` or `equivalent: …` |
 | Evidence | `gates/<component>/<gate>-<n>.log`; `visuals/<component>/e2e-<n>.log` |
-| Allowed writes | `deliver`, `kill_mutants`: the tracking folder, each component's `src` and `tests` paths, and the files at their roots; `kill_proposal`: the tracking folder only, so nothing to commit; a change outside it is refused |
-| Commits | `deliver` on a scenario: exactly one `feat(<story>): <scenario title>` (or `fix`), chained in bash to the test command as the brief writes it; no `test`, `refactor`, `style` or `perf` commit, the inner TDD loop staying uncommitted; no change to the acceptance tests or the walking skeleton outside the component's `src` paths, nor to another component; the engine replays the tests at it and the replay judge decides, the walking skeleton of the scenario's component passing too ([Commits and replays](./gates.md#commits)). `deliver` sent back by the gates or the review: each `feat` or `fix` after a `test(<story>): …` since the last green, the gate failure standing for that red on a pass the gates sent back, `refactor` allowed, reds not replayed. `kill_mutants` in `kill` mode: tests that kill mutants and pass. Each conventional message ends with `Refs: #<issue>` and closes no issue; a change left uncommitted is refused (`uncommitted`) |
-| Mutation bar | 100 % on the core, 80 % on the boundary; not configurable |
-
-| Answer to `mutation-plan` | Effect |
-| --- | --- |
-| `APPLY` | `kill_mutants` gets `Apply the proposals in <paths>` |
-| an instruction | `kill_mutants` gets the instruction and the proposals it departs from |
-| `STOP` | `run.finished` `blocked`, code `stopped` |
+| Allowed writes | the tracking folder, each component's `src` and `tests` paths, and the files at their roots; a change outside it is refused |
+| Commits | `deliver` on a scenario: exactly one `feat(<story>): <scenario title>` (or `fix`), chained in bash to the test command as the brief writes it; no `test`, `refactor`, `style` or `perf` commit, the inner TDD loop staying uncommitted; no change to the acceptance tests or the walking skeleton outside the component's `src` paths, nor to another component; the engine replays the tests at it and the replay judge decides, the walking skeleton of the scenario's component passing too ([Commits and replays](./gates.md#commits)). `deliver` sent back by the gates or the review: each `feat` or `fix` after a `test(<story>): …` since the last green, the gate failure standing for that red on a pass the gates sent back, `refactor` allowed, reds not replayed. Each conventional message ends with `Refs: #<issue>` and closes no issue; a change left uncommitted is refused (`uncommitted`) |
+| Mutation | none: the plugin's pipeline runs no mutation, the developer runs it apart; a team's own workflow may still hold a `gate="mutation"` node ([The DOT workflow](./workflow-dot.mdx)) |
 
 | Lens (`review`) | Gates |
 | --- | --- |
@@ -249,15 +236,7 @@ with `scenarios`. Why the walking skeleton walks S1: [Walking Skeleton](../expla
 | `gates -> deliver` | `FAIL` | 3 |
 | `gates -> deliver_review` | `PASS` | — |
 | `deliver_review -> deliver` | `NEEDS_REWORK` | 2 |
-| `deliver_review -> mutation` | `APPROVED` | — |
-| `mutation -> visuals` | `PASS` | — |
-| `mutation -> kill_proposal` | `FAIL` | 5 |
-| `kill_proposal -> mutation_plan` | — | — |
-| `mutation_plan -> kill_mutants` | `APPLY` (an instruction takes this edge too) | — |
-| `mutation_review -> kill_mutants` | `NEEDS_REWORK` | 2 |
-| `mutation_review -> mutation_gates` | `APPROVED` | — |
-| `mutation_gates -> kill_mutants` | `FAIL` | 3 |
-| `mutation_gates -> mutation` | `PASS` | — |
+| `deliver_review -> visuals` | `APPROVED` | — |
 
 ## PUBLISH <!-- #publish -->
 
@@ -280,7 +259,7 @@ with `scenarios`. Why the walking skeleton walks S1: [Walking Skeleton](../expla
 | --- | --- | --- | --- | --- |
 | `adr-ratification` | node `adr` | `RATIFIED`, `REJECTED` | `REJECTED` | `ADR` |
 | `scenario-review` | node `scenario_review` | `APPROVED`, `REVISE` | `REVISE` | `Scenarios` |
-| `mutation-plan` | node `mutation_plan` | `APPLY`, an instruction, or `STOP` | — | `Mutation` |
+| `mutation-plan` | a `question="mutation-plan"` node of a team's own workflow; the plugin's asks none | `APPLY`, an instruction, or `STOP` | — | `Mutation` |
 | `environment` | the engine, when a step cannot run on the machine or with what `skraft-config.json` gives it, or when the replay judge asks a human about a replayed commit; its text names the cause and the log ([causes](./run-journal.md#environment-question)) | `RETRY`, `ABORT` | — | `Environment` |
 | `blocked` | the engine, when an agent answers `blocked`, an agent is refused the same way on two attempts in a row or on its last attempt, a loop reaches its `max_visits` or a lens answers `inconclusive` | an instruction, or `STOP` | — | `Blocked` |
 | `review-consent` | `skraft review --pr --publish` | `ACCEPTED`, `DECLINED` | — | `PR comment` |

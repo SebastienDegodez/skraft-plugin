@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { createInit } from '../../../../plugins/skraft-framework/engine/application/pipeline/init-usecase.mjs'
 import { createRunGate } from '../../../../plugins/skraft-framework/engine/application/gates/run-gate-usecase.mjs'
 import { FixedClock, InMemorySourceControl, InMemoryTracking, ScriptedMachine, inMemoryDeps } from '../support/in-memory-host.mjs'
-import { mutants, strykerReport, strykerWritesItsReports } from '../support/mutation-reports.mjs'
+import { strykerWritesItsReports } from '../support/mutation-reports.mjs'
 
 const API = { name: 'api', root: 'services/payment-api', stack: 'dotnet', bdd: false, mocking: { strategy: 'inprocess' }, commands: { build: 'dotnet build --nologo', test: 'dotnet test --nologo', mutation: 'dotnet stryker --since:{baseSha}' } }
 const WEB = { name: 'web', root: '../payment-web', stack: 'react', bdd: false, mocking: { strategy: 'inprocess' }, commands: { lint: 'npx eslint .', test: 'npx vitest run' } }
@@ -34,7 +34,7 @@ const hostWith = ({ components = [API, WEB], changed = {}, machine = new Scripte
 
 const gatesRan = (tracking) => tracking.journal('checkout').filter((event) => event.type === 'gate.ran')
 
-test('a story that only touches the front runs only the front gates during the loop, and every gate at the close; the mutation report an earlier run left in the API touches nothing', async () => {
+test('a story that only touches the front runs only the front gates during the loop, and every gate at the close but mutation, the developer\'s to run; the mutation report an earlier run left in the API touches nothing', async () => {
   const { tracking, machine, sourceControl, gate } = await hostWith({ changed: { web: ['src/cart/Cart.tsx'], api: ['StrykerOutput/reports/mutation-report.json'] } })
 
   const loop = await gate('touched')
@@ -46,17 +46,16 @@ test('a story that only touches the front runs only the front gates during the l
   machine.runs = []
   const closure = await gate('all')
 
-  assert.deepEqual([closure.status, closure.components, closure.failure, closure.reason], ['passed', ['api', 'web'], null, '5 gates passed on api, web'])
+  assert.deepEqual([closure.status, closure.components, closure.failure, closure.reason], ['passed', ['api', 'web'], null, '4 gates passed on api, web'])
   assert.deepEqual(machine.lines(), [
     'services/payment-api $ dotnet build --nologo',
     'services/payment-api $ dotnet test --nologo',
-    'services/payment-api $ dotnet stryker --since:a1',
     '../payment-web $ npx eslint .',
     '../payment-web $ npx vitest run',
   ])
   assert.deepEqual(gatesRan(tracking).map(({ component, gate: name, scope, status }) => `${scope} ${component}/${name} ${status}`), [
     'touched web/lint pass', 'touched web/test pass',
-    'all api/build pass', 'all api/test pass', 'all api/mutation pass', 'all web/lint pass', 'all web/test pass',
+    'all api/build pass', 'all api/test pass', 'all web/lint pass', 'all web/test pass',
   ])
 })
 
@@ -132,23 +131,23 @@ test('components that share a root are all touched by a file changed there', asy
 })
 
 test('a command the developer wrote is the one that runs, with the base of its own repository', async () => {
-  const api = { ...API, commands: { test: 'dotnet test --filter "Category!=Slow|Category=Fast" --nologo \'\' --logger \'trx;LogFileName="run.trx"\'', mutation: 'dotnet stryker --since:{baseSha} --threshold-break 80' } }
-  const { tracking, machine, gate } = await hostWith({ components: [api, { ...WEB, commands: { mutation: 'npx stryker run --since {baseSha}' } }] })
+  const api = { ...API, commands: { test: 'dotnet test --filter "Category!=Slow|Category=Fast" --nologo \'\' --logger \'trx;LogFileName="run.trx"\'', coverage: 'dotnet coverage --since:{baseSha} --threshold 80' } }
+  const { tracking, machine, gate } = await hostWith({ components: [api, { ...WEB, commands: { test: 'npx vitest run --changed {baseSha}' } }] })
 
   await gate('all')
 
   assert.deepEqual(machine.runs, [
     { argv: ['dotnet', 'test', '--filter', 'Category!=Slow|Category=Fast', '--nologo', '', '--logger', 'trx;LogFileName="run.trx"'], cwd: 'services/payment-api' },
-    { argv: ['dotnet', 'stryker', '--since:a1', '--threshold-break', '80'], cwd: 'services/payment-api' },
-    { argv: ['npx', 'stryker', 'run', '--since', 'w1'], cwd: '../payment-web' },
+    { argv: ['dotnet', 'coverage', '--since:a1', '--threshold', '80'], cwd: 'services/payment-api' },
+    { argv: ['npx', 'vitest', 'run', '--changed', 'w1'], cwd: '../payment-web' },
   ])
   const firstLine = async (evidence) => (await tracking.read('checkout', evidence)).split('\n')[0]
-  assert.deepEqual([await firstLine('gates/api/test-1.log'), await firstLine('gates/api/mutation-1.log'), await firstLine('gates/web/mutation-1.log')], [
+  assert.deepEqual([await firstLine('gates/api/test-1.log'), await firstLine('gates/api/coverage-1.log'), await firstLine('gates/web/test-1.log')], [
     '$ dotnet test --filter "Category!=Slow|Category=Fast" --nologo "" --logger \'trx;LogFileName="run.trx"\'',
-    '$ dotnet stryker --since:a1 --threshold-break 80',
-    '$ npx stryker run --since w1',
+    '$ dotnet coverage --since:a1 --threshold 80',
+    '$ npx vitest run --changed w1',
   ])
-  assert.deepEqual(gatesRan(tracking).map(({ command }) => command), [api.commands.test, api.commands.mutation, 'npx stryker run --since {baseSha}'])
+  assert.deepEqual(gatesRan(tracking).map(({ command }) => command), [api.commands.test, api.commands.coverage, 'npx vitest run --changed {baseSha}'])
 })
 
 const PY = { name: 'py', root: 'services/py', stack: 'python', bdd: false, mocking: { strategy: 'inprocess' }, commands: { build: 'python -m compileall -q src', test: 'python -m pytest -q' } }
@@ -284,46 +283,15 @@ test('gates need an active, initialised pipeline and components to run', async (
   assert.deepEqual([tampered.status, tampered.slug, tampered.code, tampered.components, tampered.gates], ['blocked', 'checkout', 'journal-tampered', [], []])
 })
 
-test('a component outside Git always counts as touched, a {baseSha} command there cannot run, and its mutation report is judged whole', async () => {
-  const front = { name: 'front', root: '../../legacy/web', stack: 'react', bdd: false, mocking: { strategy: 'inprocess' }, commands: { mutation: 'npx stryker run' } }
-  const { machine, gate, workspace } = await started({ components: [{ ...API, root: '../../legacy/./api/' }, front] })
-  const report = strykerReport({ 'src/Old.tsx': [[3, 'Arithmetic', '+', 'Survived']], '/elsewhere/Checkout.Domain/Old.cs': [[4, 'Equality', null, 'NoCoverage']] })
-  machine.meanwhile['../../legacy/web $ npx stryker run'] = () => workspace.write('../../legacy/web/reports/mutation/mutation.json', report)
+test('a component outside Git always counts as touched, and a {baseSha} command there cannot run', async () => {
+  const front = { name: 'front', root: '../../legacy/web', stack: 'react', bdd: false, mocking: { strategy: 'inprocess' }, commands: { test: 'npx vitest run --changed {baseSha}' } }
+  const { machine, gate } = await started({ components: [{ ...API, root: '../../legacy/./api/' }, front] })
 
   const outcome = await gate('touched')
 
   assert.deepEqual(outcome.components, ['api', 'front'])
-  assert.deepEqual(machine.lines(), ['../../legacy/api $ dotnet build --nologo', '../../legacy/api $ dotnet test --nologo', '../../legacy/web $ npx stryker run'])
-  assert.equal(outcome.reason, 'api/mutation: command "dotnet stryker --since:{baseSha}" uses {baseSha} but the run has no base for this repository; front/mutation: exited 0, boundary 0% < 80%, 2 mutants survive')
-  assert.deepEqual(outcome.gates.at(-1).survivors, [
-    { file: '../../legacy/web/src/Old.tsx', line: 3, mutator: 'Arithmetic', replacement: '+', covered: true },
-    { file: '/elsewhere/Checkout.Domain/Old.cs', line: 4, mutator: 'Equality', replacement: null, covered: false },
-  ])
-})
-
-test('Stryker.NET\'s absolute paths are read under each component\'s root, a neighbour repository\'s too, whatever the case of the drive letter', async () => {
-  const api = { name: 'api', root: 'services/payment-application', stack: 'dotnet', bdd: false, mocking: { strategy: 'inprocess' }, commands: { mutation: 'dotnet stryker' } }
-  const back = { name: 'back', root: '../payment-back', stack: 'dotnet', bdd: false, mocking: { strategy: 'inprocess' }, commands: { mutation: 'dotnet stryker' } }
-  const { machine, gate, workspace } = await started({
-    components: [api, back],
-    tracking: new InMemoryTracking({ root: 'C:\\my-application\\.copilot-tracking\\skraft-plans' }),
-    sourceControl: new InMemorySourceControl({
-      '.': { top: '.', mergeBases: { main: 'a1' } },
-      'services/payment-application': { top: '.', mergeBases: { main: 'a1' }, changed: ['src/Pay.cs'] },
-      '../payment-back': { top: '../payment-back', mergeBases: { main: 'b1' }, changed: ['src/Refund.cs'] },
-    }),
-  })
-  machine.meanwhile['services/payment-application $ dotnet stryker'] = () => workspace.write('services/payment-application/StrykerOutput/reports/mutation-report.json', strykerReport({
-    'c:\\my-application\\services\\payment-application\\src\\Pay.cs': [[9, 'Equality', '!=', 'Survived'], ...mutants(3, 'Killed')],
-  }))
-  machine.meanwhile['../payment-back $ dotnet stryker'] = () => workspace.write('../payment-back/StrykerOutput/reports/mutation-report.json', strykerReport({
-    'C:\\payment-back\\src\\Refund.cs': [[7, 'Arithmetic', '-', 'Survived']],
-  }))
-
-  const outcome = await gate('all')
-
-  assert.equal(outcome.reason, 'api/mutation: exited 0, boundary 75% < 80%, 1 mutant survives; back/mutation: exited 0, boundary 0% < 80%, 1 mutant survives')
-  assert.deepEqual(outcome.gates.map(({ survivors }) => survivors.map(({ file, line }) => `${file}:${line}`)), [['services/payment-application/src/Pay.cs:9'], ['../payment-back/src/Refund.cs:7']])
+  assert.deepEqual(machine.lines(), ['../../legacy/api $ dotnet build --nologo', '../../legacy/api $ dotnet test --nologo'])
+  assert.equal(outcome.reason, 'front/test: command "npx vitest run --changed {baseSha}" uses {baseSha} but the run has no base for this repository')
 })
 
 test('each gate journals how long its command took, and each run of a gate keeps its own evidence', async () => {
@@ -353,7 +321,7 @@ test('a component with no gate command fails as environment instead of passing w
   const outcome = await gate('all')
 
   assert.deepEqual([outcome.status, outcome.failure], ['failed', 'environment'])
-  assert.equal(outcome.reason, 'web/none: no gate command; give it at least one of build, format, lint, test, architecture, coverage, mutation in skraft-config.json')
+  assert.equal(outcome.reason, 'web/none: no gate command; give it at least one of build, format, lint, test, architecture, coverage in skraft-config.json')
   assert.equal(outcome.gates[0].evidence, '/work/.copilot-tracking/skraft-plans/checkout/gates/web')
   assert.deepEqual(machine.runs, [])
   assert.deepEqual(gatesRan(tracking).map(({ component, gate: name, status, failure }) => [component, name, status, failure]), [['web', 'none', 'fail', 'environment']])
@@ -454,7 +422,7 @@ test('another run writing the journal during the gates blocks this one, keeping 
     { status: outcome.status, slug: outcome.slug, scope: outcome.scope, components: outcome.components, failure: outcome.failure, code: outcome.code, reason: outcome.reason },
     { status: 'blocked', slug: 'checkout', scope: 'all', components: ['api', 'web'], failure: null, code: 'journal-changed', reason: 'checkout: another run wrote events.jsonl meanwhile; run again once it stops' },
   )
-  assert.deepEqual(outcome.gates.map(({ component, gate: name, status }) => `${component}/${name} ${status}`), ['api/build pass', 'api/test pass', 'api/mutation pass'])
+  assert.deepEqual(outcome.gates.map(({ component, gate: name, status }) => `${component}/${name} ${status}`), ['api/build pass', 'api/test pass'])
   assert.equal(machine.lines().at(-1), '../payment-web $ npx eslint .')
 })
 

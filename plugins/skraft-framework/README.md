@@ -14,11 +14,12 @@ command hooks.
 - **Phases you can trust.** The engine starts an agent only when its inputs exist, pre-creates
   its outputs, checks them afterwards, and refuses a step that wrote outside its scope (git
   diff after each step).
-- **Proof, not claims.** Build, format, lint, tests, architecture, coverage and mutation run
+- **Proof, not claims.** Build, format, lint, tests, architecture and coverage run
   from the commands in `skraft-config.json`; the engine writes the evidence. Each scenario's red
   acceptance test is replayed to confirm it fails on an assertion.
 - **Craft by default.** Outside-In TDD, BDD, Clean Architecture per stack, contract testing,
-  ADRs and mutation testing ship as skills the agents read before they start.
+  ADRs and the kill of surviving mutants ship as skills the agents read before they start.
+  Mutation testing itself is the developer's: the pipeline runs none.
 - **Resumable and tamper-evident.** Every fact of a run lands in a hash-chained, signed
   journal in your repository; a run stops on a hand-edited journal and resumes exactly where
   it stopped.
@@ -54,7 +55,7 @@ skraft doctor --run     run each command once and say which one fails, and which
 ```
 
 `skraft-config.json` lists your **components**: root, stack, source and test paths, and the
-commands skraft runs (build, format, lint, test, architecture, coverage, mutation, e2e). A
+commands skraft runs (build, format, lint, test, architecture, coverage, e2e). A
 component can live in another repository (`"root": "../payment-web"`). A command you write
 always wins over a default; quality thresholds are not configurable. How-to:
 [Configure components](https://sebastiendegodez.github.io/skraft-plugin/how-to/configure-components); every field:
@@ -94,7 +95,7 @@ flowchart LR
 | `RESEARCH` | `solution-researcher` | — | Research document and constraints |
 | `DESIGN` | `solution-architect` | consistency, architecture-compliance, fitness; then you ratify the ADRs | ADRs, event model, tactical design |
 | `DISTILL` | `acceptance-designer` | coverage, business-alignment, testability, boundary-enforcement | Gherkin scenarios, test plan, failing acceptance tests |
-| `DELIVER` | `software-engineer` | after the gates, before mutation: test-integrity, architecture-boundaries, cold-reader, mock-fidelity, contract-fidelity; test-integrity again on mutant kills | Tested code, gate evidence, red/green commits |
+| `DELIVER` | `software-engineer` | after the gates: test-integrity, architecture-boundaries, cold-reader, mock-fidelity, contract-fidelity | Tested code, gate evidence, red/green commits |
 | `PUBLISH` | `pr-writer` | — | The branch's pull request, with screenshots of a front end |
 
 A `NEEDS_REWORK` verdict sends the work back to its specialist with the confirmed findings;
@@ -116,7 +117,7 @@ each phase: [Phases](https://sebastiendegodez.github.io/skraft-plugin/reference/
 | Phase order and inputs | An agent starts only when the workflow reaches it, with every input it needs in its brief |
 | Expected outputs | Each output is pre-created from its template; a missing or invalid one is asked again with what was wrong, up to three attempts, and the same failure twice stops the run |
 | Write scope | After each step, the git diff is compared with what that agent may write; a step outside it is refused |
-| Gates | DELIVER closes only when the commands of `skraft-config.json` pass; mutation must reach 100 % on Domain and Application, 80 % elsewhere |
+| Gates | DELIVER closes only when the commands of `skraft-config.json` pass |
 | TDD | One scenario at a time: a red acceptance test that fails on no assertion, a second green, or a green that changes the acceptance test or another component is refused |
 | Review verdict | Lenses return typed findings; the engine refutes, counts and decides |
 | Human decisions | A question waits for a person's answer; under Copilot, only a host-confirmed answer is recorded |
@@ -133,7 +134,7 @@ each phase: [Phases](https://sebastiendegodez.github.io/skraft-plugin/reference/
     ├── reviews/  gates/       review passes and gate evidence, written by the engine
     ├── WORKFLOW.md            the workflow graph with where the run stands
     ├── run-report.md          time, cost and retries of each step
-    ├── qa-report.md           test plan, gates, mutation, red commits, verdicts, for a QA team
+    ├── qa-report.md           test plan, gates, red commits, verdicts, for a QA team
     └── pull-request.md        the pull request description
 ```
 
@@ -151,17 +152,17 @@ resolved assignment. How-to: [Choose the agents' models](https://sebastiendegode
 
 ## Supported stacks
 
-| Stack | Clean Architecture | Quality gates and mutation | Mocking and contract tests |
+| Stack | Clean Architecture | Quality gates | Mocking and contract tests |
 |---|---|---|---|
-| .NET | `clean-architecture-dotnet` | `quality-gates-dotnet` (Stryker.NET) | Microcks (default) or in-process doubles; `WebApplicationFactory` |
-| Python | `clean-architecture-python` | `quality-gates-python` (cosmic-ray) | Microcks (default) or respx; FastAPI `TestClient` |
+| .NET | `clean-architecture-dotnet` | `quality-gates-dotnet` | Microcks (default) or in-process doubles; `WebApplicationFactory` |
+| Python | `clean-architecture-python` | `quality-gates-python` | Microcks (default) or respx; FastAPI `TestClient` |
 | Java (Maven, Spring Boot or Quarkus) | `clean-architecture-java` | not yet | not yet |
-| TypeScript back end (Node, Vitest) | `clean-architecture-typescript` | `quality-gates-typescript` (StrykerJS on Vitest) | MSW (default) or Microcks |
-| React / TypeScript (Vitest) | `clean-architecture-react` | `quality-gates-typescript` (StrykerJS on Vitest) | MSW (default) or Microcks; no contract test, a front end exposes no API |
-| Node JavaScript | — | `quality-gates-javascript` (`node --test`, StrykerJS TAP) | MSW (default) or Microcks |
+| TypeScript back end (Node, Vitest) | `clean-architecture-typescript` | `quality-gates-typescript` (Vitest) | MSW (default) or Microcks |
+| React / TypeScript (Vitest) | `clean-architecture-react` | `quality-gates-typescript` (Vitest) | MSW (default) or Microcks; no contract test, a front end exposes no API |
+| Node JavaScript | — | `quality-gates-javascript` (`node --test`) | MSW (default) or Microcks |
 
 Contract testing is off by default; a component turns it on with `"contractTesting": true`. In
-DELIVER, a component needs at least one gate command and a `mutation` command; without them the
+DELIVER, a component needs at least one gate command; without one the
 gate fails with a named reason (class `environment`): SKRAFT never guesses a command.
 
 ## Pull request at the end of a run
@@ -169,7 +170,7 @@ gate fails with a named reason (class `environment`): SKRAFT never guesses a com
 The run ends by pushing the branch and opening a draft pull request, or updating it. SKRAFT asks
 your consent once per repository and keeps it in `skraft-config.json` under `publish`. The
 `pr-writer` agent writes the summary; the engine renders the rest from the journal (gates,
-mutation, verdicts, ADRs). For a front end, the screenshots of its Playwright run are committed
+verdicts, ADRs). For a front end, the screenshots of its Playwright run are committed
 and shown in the pull request, after a separate consent. With your consent, a run started from an
 issue keeps one progress comment on that issue. Without consent, a remote or `gh`, the description stays in
 `pull-request.md` and `skraft publish` opens the pull request later. How-to:
