@@ -3,6 +3,15 @@
 Toutes les modifications notables de ce projet sont documentées ici.
 Format basé sur [Conventional Commits](https://www.conventionalcommits.org/) — versionnage [SemVer](https://semver.org/).
 
+## [2.0.0-alpha.95](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.94...v2.0.0-alpha.95) (2026-11-16)
+
+### 🐛 Bug Fixes
+
+* **acceptance-designer:** bound the skeleton DISTILL may commit ([#602](https://github.com/SebastienDegodez/skraft-plugin/issues/602)) ([1846bbf](https://github.com/SebastienDegodez/skraft-plugin/commit/1846bbf2b3f41c99cd9f24803edc4de76f18a1cb)), closes [#593](https://github.com/SebastienDegodez/skraft-plugin/issues/593)
+* **copilot-workflow:** keep the unexpected error in a run log ([#600](https://github.com/SebastienDegodez/skraft-plugin/issues/600)) ([418068f](https://github.com/SebastienDegodez/skraft-plugin/commit/418068f40a39cc9aa67bfa573c16681adcde1f27))
+* **engine:** read .feature files at any depth of a features folder ([#599](https://github.com/SebastienDegodez/skraft-plugin/issues/599)) ([7bfa47d](https://github.com/SebastienDegodez/skraft-plugin/commit/7bfa47daa5e3a4db6deb6865650e8e3308ac2919))
+* **replay-judge:** accept a red whose test an earlier run already left at the parent ([#601](https://github.com/SebastienDegodez/skraft-plugin/issues/601)) ([ca4896d](https://github.com/SebastienDegodez/skraft-plugin/commit/ca4896dcd8c3c14084a0301cba4094e1b256bf94)), closes [#596](https://github.com/SebastienDegodez/skraft-plugin/issues/596)
+
 ## [2.0.0-alpha.94](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.93...v2.0.0-alpha.94) (2026-11-16)
 
 ### ✨ Features
