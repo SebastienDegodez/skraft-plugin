@@ -147,7 +147,7 @@ test('a mutation score names each scope with every survivor, a commit subject wi
   assert.ok(seen[0].includes('\n| mutation | fail | 0 s | [gates/api/mutation-1.log](gates/api/mutation-1.log) |\n'), seen[0])
   assert.ok(seen[0].includes([
     '',
-    'Mutation score: core 50 % (bar 100 %, 2 mutants), boundary 80 % (bar 80 %, 5 mutants).',
+    'Mutation score: core 50 % (bar 80 %, 2 mutants), boundary 80 % (bar 80 %, 5 mutants).',
     '',
     'Surviving mutants:',
     '',
@@ -207,7 +207,7 @@ test('a mutation run whose report was not read says so, and shows no score or su
   }
 
   assert.equal((await host.start()).code, 'environment')
-  assert.ok(seen[0].includes('\nMutation score: core 0 % (bar 100 %, 1 mutant).\n'), seen[0])
+  assert.ok(seen[0].includes('\nMutation score: core 0 % (bar 80 %, 1 mutant).\n'), seen[0])
 
   const qa = await host.tracking.read(SLUG, QA)
   assert.ok(qa.includes([

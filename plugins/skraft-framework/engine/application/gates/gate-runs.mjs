@@ -3,6 +3,7 @@ import { commandText, parseCommand } from '../../domain/gates/command-line.mjs'
 import { failureOf, gatesOf, isTouched, STORY_GATES } from '../../domain/gates/gate-plan.mjs'
 import { isChanged, missedBars, missedText, scopeScores } from '../../domain/gates/mutation-bar.mjs'
 import { aliveCount, mutationReportOf, readMutants, sourceCandidates, survivorLine } from '../../domain/gates/mutation-report.mjs'
+import { readMutationResult, RESULT_VARIABLE } from '../../domain/gates/mutation-result.mjs'
 import { joinRelative } from '../../domain/config/relative-path.mjs'
 import { workingCopyOf } from '../../domain/review/locations.mjs'
 import { baseOf } from '../config/bases.mjs'
@@ -160,23 +161,39 @@ const runOne = async (deps, context, { gate, baseSha }) => {
   const { slug, component, journal } = context
   const line = component.commands[gate]
   const evidence = nextEvidencePath(journal, component, gate)
-  if (gate === 'mutation') await clearReport(deps, component)
-  const tried = await startInTemporaryDirectory(deps, slug, component, { line, baseSha })
-  const { failure, reason, survivors, scores } = await judgeRun(deps, { slug, component, gate, baseSha }, tried)
+  const result = gate === 'mutation' ? await prepareMutation(deps, slug, component, evidence) : null
+  const tried = await startInTemporaryDirectory(deps, slug, component, { line, baseSha, result })
+  const { failure, reason, survivors, scores } = await judgeRun(deps, { slug, component, gate, baseSha, result }, tried)
   const status = failure === null ? 'pass' : 'fail'
   await recordGate(deps, context, { gate, line, status, failure, evidence, tried: { ...tried, reason }, survivors, scores })
   return { component: component.name, gate, status, failure, reason, evidence: deps.files.location(slug, evidence), survivors }
 }
 
-/** @param {GateRunDeps} deps @param {string} slug @param {Component} component @param {{ line: string, baseSha: string | null }} request */
-const startInTemporaryDirectory = async (deps, slug, component, { line, baseSha }) => {
-  const tmp = deps.files.location(slug, '.tmp')
-  await clearTemporary(deps, slug)
-  return startCommand(deps, component, { line, baseSha, env: { TMPDIR: tmp, TEMP: tmp, TMP: tmp }, javaTmpDir: tmp })
+/**
+ * Before a mutation run: the report an earlier run left emptied, and where this run writes its
+ * result, beside its evidence log.
+ * @param {GateRunDeps} deps @param {string} slug @param {Component} component @param {string} evidence
+ * @returns {Promise<string>} the result's path in the run's folder
+ */
+const prepareMutation = async (deps, slug, component, evidence) => {
+  await clearReport(deps, component)
+  return evidence.replace(/\.log$/, '.result.json')
 }
 
 /**
- * @typedef {{ slug: string, component: Component, gate: string, baseSha: string | null }} Ran
+ * @param {GateRunDeps} deps @param {string} slug @param {Component} component
+ * @param {{ line: string, baseSha: string | null, result: string | null }} request result: where a mutation run writes its result
+ */
+const startInTemporaryDirectory = async (deps, slug, component, { line, baseSha, result }) => {
+  const tmp = deps.files.location(slug, '.tmp')
+  await clearTemporary(deps, slug)
+  const env = { TMPDIR: tmp, TEMP: tmp, TMP: tmp, ...(result === null ? {} : { [RESULT_VARIABLE]: deps.files.location(slug, result) }) }
+  return startCommand(deps, component, { line, baseSha, env, javaTmpDir: tmp })
+}
+
+/**
+ * @typedef {{ slug: string, component: Component, gate: string, baseSha: string | null, result: string | null }} Ran
+ *   result: where a mutation run writes its result in the run's folder, null for another gate
  * @typedef {{ failure: FailureClass | null, reason: string, survivors: Survivor[] | null, scores: ScopeScore[] | null }} Judged
  *   scores: the score of each scope of a mutation run whose report was read, null otherwise.
  * @typedef {import('../../domain/gates/mutation-bar.mjs').ScopeScore} ScopeScore
@@ -203,11 +220,45 @@ const judgeRun = async (deps, ran, tried) => {
  * @param {FailureClass | null} failure the class its exit code gives
  * @returns {Promise<Judged>}
  */
-const judgeMutation = async (deps, { slug, component, baseSha }, tried, failure) => {
+const judgeMutation = async (deps, ran, tried, failure) => {
+  const written = await deps.files.read(ran.slug, /** @type {string} */ (ran.result))
+  if (written !== null && written !== '') return judgeResult(deps, ran, tried, written)
+  return judgeReport(deps, ran, tried, failure)
+}
+
+/**
+ * The result the command wrote, its scores already computed, against the bar; one that cannot be
+ * read leaves the run to a human.
+ * @param {GateRunDeps} deps @param {Ran} ran @param {Attempt} tried @param {string} written
+ * @returns {Judged}
+ */
+const judgeResult = (deps, { slug, component, result }, tried, written) => {
+  const read = readMutationResult(written, component.root)
+  if (!read.ok) return { failure: 'environment', reason: `${tried.reason}; ${resultProblem(deps.files.location(slug, /** @type {string} */ (result)), read.reason)}`, survivors: null, scores: null }
+  return verdictOf(tried, read.scores)
+}
+
+/** @param {string} path @param {string} problem */
+const resultProblem = (path, problem) => `the mutation result ${path} ${problem}; write { "scopes": [{ "name": "core" | "boundary" | "global", "score": <percent>, "survivors": ["<file>:<line> <detail>"] }] } there, or nothing and the engine reads the report the tool writes`
+
+/**
+ * The report the stack's tool writes, its mutants in scope counted against the bar.
+ * @param {GateRunDeps} deps @param {Ran} ran @param {Attempt} tried @param {FailureClass | null} failure
+ * @returns {Promise<Judged>}
+ */
+const judgeReport = async (deps, { slug, component, baseSha }, tried, failure) => {
   const read = await reportOf(deps, slug, component)
   if (!read.ok) return { failure: 'environment', reason: `${tried.reason}; ${read.reason}`, survivors: null, scores: null }
   if (failure !== null && read.mutants.length === 0) return unprovenRun(component, tried)
-  const scores = scopeScores(await mutantsInScope(deps, component, { baseSha, read }), component.root)
+  return verdictOf(tried, scopeScores(await mutantsInScope(deps, component, { baseSha, read }), component.root))
+}
+
+/**
+ * A run fails while a scope misses its bar, and hands out the survivors of those scopes only.
+ * @param {Attempt} tried @param {import('../../domain/gates/mutation-bar.mjs').ScopeScore[]} scores
+ * @returns {Judged}
+ */
+const verdictOf = (tried, scores) => {
   const missed = missedBars(scores)
   if (missed.length > 0) return { ...missedVerdict(tried, missed), scores }
   return { failure: null, reason: `${tried.reason}, each scope meets its bar`, survivors: null, scores }
@@ -333,7 +384,7 @@ const recordGate = async (deps, { slug, component, scope, journal }, { gate, lin
  * Each scope's score as the journal keeps it: its survivors told on one line each.
  * @param {ScopeScore[] | null} scores
  */
-const journaledScores = (scores) => scores?.map(({ scope, bar, detected, survivors }) => ({ scope, bar, detected, survivors: survivors.map(survivorLine) })) ?? null
+const journaledScores = (scores) => scores?.map(({ scope, bar, score, counted, survivors }) => ({ scope, bar, score, counted, survivors: survivors.map(survivorLine) })) ?? null
 
 /**
  * The log of a command run from a component's root: the command, where, the result, then what

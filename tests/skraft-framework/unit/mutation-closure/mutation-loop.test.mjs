@@ -115,8 +115,8 @@ test('surviving mutants of the files the story changed get one proposal per file
   assert.deepEqual(recorded(host, 'mutation_review').map(({ outcome: result, next }) => [result, next]), [['approved', 'mutation_gates']])
   assert.ok(host.agentRunner.reviewed().some((dispatch) => dispatch.agent === 'test-integrity-lens' && dispatch.label.includes('mutation_review')))
   assert.deepEqual(host.events().filter((event) => event.type === 'gate.ran' && event.gate === 'mutation').map(({ status, failure, survivors, scores }) => [status, failure, survivors, scores]), [
-    ['fail', 'deterministic', 3, [{ scope: 'boundary', bar: 80, detected: 1, survivors: [CHECKOUT_12, 'src/Checkout.cs:20 Boolean (false) has no test covering it', 'src/Refund.cs:7 Arithmetic (-) survived'] }]],
-    ['pass', null, null, [{ scope: 'boundary', bar: 80, detected: 2, survivors: [] }]],
+    ['fail', 'deterministic', 3, [{ scope: 'boundary', bar: 80, score: 25, counted: 4, survivors: [CHECKOUT_12, 'src/Checkout.cs:20 Boolean (false) has no test covering it', 'src/Refund.cs:7 Arithmetic (-) survived'] }]],
+    ['pass', null, null, [{ scope: 'boundary', bar: 80, score: 100, counted: 2, survivors: [] }]],
   ])
   const killCommits = host.events().filter((event) => event.type === 'commits.checked' && event.step === 'kill_mutants').flatMap((event) => event.commits)
   assert.deepEqual(killCommits.map(({ subject, kind, verdict, replay }) => [subject, kind, verdict, replay]), [
@@ -149,7 +149,7 @@ test('the core and the boundary are judged apart: only the scope that misses its
 
   assert.equal(outcome.status, 'done', outcome.reason)
   const [first] = recorded(host, 'mutation')
-  assert.deepEqual(first.failures, [`api/mutation: exited 1, core 28% < 100%, 5 mutants survive (evidence: ${TRACKING}/gates/api/mutation-1.log)`])
+  assert.deepEqual(first.failures, [`api/mutation: exited 1, core 28% < 80%, 5 mutants survive (evidence: ${TRACKING}/gates/api/mutation-1.log)`])
   assert.deepEqual(first.survivors, [
     { file: 'src/Checkout.Domain/Order.cs', mutants: ['src/Checkout.Domain/Order.cs:10 Equality (!=) survived'] },
     { file: 'src/Orders_APPLICATION/Pay.cs', mutants: ['src/Orders_APPLICATION/Pay.cs:4 Block ({}) has no test covering it'] },
@@ -158,14 +158,14 @@ test('the core and the boundary are judged apart: only the scope that misses its
     { file: 'src/features/cart/application/useCart.ts', mutants: ['src/features/cart/application/useCart.ts:8 Boolean (false) survived'] },
   ])
   const [scores] = host.events().filter((event) => event.type === 'gate.ran' && event.gate === 'mutation').map((event) => event.scores)
-  assert.deepEqual(scores.map(({ scope, bar, detected, survivors }) => [scope, bar, detected, survivors.length]), [['core', 100, 2, 5], ['boundary', 80, 10, 2]])
+  assert.deepEqual(scores.map(({ scope, bar, score, counted, survivors }) => [scope, bar, Math.floor(score), counted, survivors.length]), [['core', 80, 28, 7, 5], ['boundary', 80, 83, 12, 2]])
   assert.deepEqual(scores[1].survivors, ['src/Checkout.Api/Endpoints.cs:9 Equality (!=) survived', 'src/Domain.Events/Paid.cs:2 String survived'])
 })
 
-test('the core needs every mutant detected and the boundary 80 %, also from a run that exits 0', async () => {
+test('the core and the boundary each need 80 % of their mutants detected, also from a run that exits 0', async () => {
   const host = mutating({ machine: new ScriptedMachine(), answers: APPLYING }, (it) => [...upToDeliver(it, ['src/Checkout.Domain/Order.cs', 'src/Checkout.cs']), ...round(it, 1, 'Order'), ...round(it, 1)])
   mutationRounds(host, [
-    strykerReport({ 'src/Checkout.Domain/Order.cs': [...mutants(100, 'Killed'), [101, 'Equality', '!=', 'Survived']] }),
+    strykerReport({ 'src/Checkout.Domain/Order.cs': [...mutants(3, 'Killed'), [4, 'Equality', '!=', 'Survived']] }),
     strykerReport({ 'src/Checkout.Domain/Order.cs': mutants(3, 'Killed'), 'src/Checkout.cs': [...mutants(19, 'Killed'), ...mutants(5, 'Survived', 20)] }),
     strykerReport({ 'src/Checkout.Domain/Order.cs': mutants(3, 'Killed'), 'src/Checkout.cs': [...mutants(4, 'Killed'), [5, 'Equality', '!=', 'Survived']] }),
   ], { exit: 0 })
@@ -174,7 +174,7 @@ test('the core needs every mutant detected and the boundary 80 %, also from a ru
 
   assert.equal(outcome.status, 'done', outcome.reason)
   assert.deepEqual(recorded(host, 'mutation').map(({ outcome: result, failures, survivors }) => [result, failures, survivors.map(({ file, mutants: alive }) => `${file} ${alive.length}`)]), [
-    ['fail', [`api/mutation: exited 0, core 99% < 100%, 1 mutant survives (evidence: ${TRACKING}/gates/api/mutation-1.log)`], ['src/Checkout.Domain/Order.cs 1']],
+    ['fail', [`api/mutation: exited 0, core 75% < 80%, 1 mutant survives (evidence: ${TRACKING}/gates/api/mutation-1.log)`], ['src/Checkout.Domain/Order.cs 1']],
     ['fail', [`api/mutation: exited 0, boundary 79% < 80%, 5 mutants survive (evidence: ${TRACKING}/gates/api/mutation-2.log)`], ['src/Checkout.cs 5']],
     ['pass', [], []],
   ])
@@ -408,7 +408,7 @@ test('a component reads its mutants where mutationReport says, PIT\'s mutations.
 
   assert.equal(outcome.status, 'done', outcome.reason)
   const [first] = recorded(host, 'mutation')
-  assert.deepEqual(first.failures, [`orders/mutation: exited 1, core 75% < 100%, boundary 16% < 80%, 6 mutants survive (evidence: ${TRACKING}/gates/orders/mutation-1.log)`])
+  assert.deepEqual(first.failures, [`orders/mutation: exited 1, core 75% < 80%, boundary 16% < 80%, 6 mutants survive (evidence: ${TRACKING}/gates/orders/mutation-1.log)`])
   assert.deepEqual(first.survivors, [
     { file: 'orders/com/acme/Ship.scala', mutants: ['orders/com/acme/Ship.scala:2 MathMutator survived'] },
     { file: 'orders/src/main/com/acme/Tax.java', mutants: ['orders/src/main/com/acme/Tax.java:8 VoidMethodCallMutator (removed call) survived'] },
@@ -427,7 +427,7 @@ test('a component reads its mutants where mutationReport says, PIT\'s mutations.
   unlisted.git.changedFiles = whileMutating(unlisted)
   mutationRounds(unlisted, [report], { line: 'orders $ mvn pitest', path: 'orders/target/pit/mutations.xml' })
   await assert.rejects(unlisted.start(), /unexpected dispatch/)
-  assert.deepEqual(recorded(unlisted, 'mutation')[0].failures, [`orders/mutation: exited 1, core 75% < 100%, boundary 14% < 80%, 7 mutants survive (evidence: ${TRACKING}/gates/orders/mutation-1.log)`])
+  assert.deepEqual(recorded(unlisted, 'mutation')[0].failures, [`orders/mutation: exited 1, core 75% < 80%, boundary 14% < 80%, 7 mutants survive (evidence: ${TRACKING}/gates/orders/mutation-1.log)`])
   assert.deepEqual(recorded(unlisted, 'mutation')[0].survivors[0], { file: 'orders/com/acme/Gone.java', mutants: ['orders/com/acme/Gone.java:3 RemoveCallsMutator survived'] })
 
   const notPit = mutating({ components: [service], machine: new ScriptedMachine() }, (it) => [agent()(it), agent()(it), agent()(it), agent({ work: orderGreen })(it)])

@@ -26,6 +26,9 @@ const NOTHING = Object.freeze({ read: async () => null })
 /** Where `skraft workflow eject` copies the plugin's pipeline, relative to the working copy. */
 export const WORKFLOW_FILE = ejectedPath('pipeline')
 
+/** Where the working copy keeps its copy of the workflow a run follows. @param {WorkflowFiles} deps */
+const ownPath = (deps) => ejectedPath(deps.workflowSource.name ?? 'pipeline')
+
 /**
  * The plugin's pipeline and the one the run follows: `.skraft/pipeline.skraft.dot` when the working
  * copy ejected it, else the plugin's; each read and checked on its own, with the workflows their
@@ -37,9 +40,9 @@ export const WORKFLOW_FILE = ejectedPath('pipeline')
 export const readWorkflows = async (deps) => {
   const shipped = await deps.workflowSource.builtIn()
   const builtIn = await shippedCalling(deps, shipped)
-  const own = await deps.workspace.read(WORKFLOW_FILE)
+  const own = await deps.workspace.read(ownPath(deps))
   const calls = Object.fromEntries(Object.values(builtIn.nodes).flatMap(({ id, call }) => (call === null ? [] : [[id, call.workflow]])))
-  return { name: own === null ? BUILT_IN : WORKFLOW_FILE, builtIn, read: await withCalls(deps, readWorkflow(own ?? shipped, { calls })) }
+  return { name: own === null ? BUILT_IN : ownPath(deps), builtIn, read: await withCalls(deps, readWorkflow(own ?? shipped, { calls })) }
 }
 
 /** The plugin's pipeline calling the plugin's workflows. @param {WorkflowFiles} deps @param {string} shipped its text */
