@@ -4,7 +4,7 @@
 import { spawnSync } from 'node:child_process'
 import { createHash } from 'node:crypto'
 import { closeSync, existsSync, openSync, readFileSync, realpathSync, statSync } from 'node:fs'
-import { basename, dirname, isAbsolute, join, resolve } from 'node:path'
+import { isAbsolute, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 export const sha256File = (path) => createHash('sha256').update(readFileSync(path)).digest('hex')
@@ -54,16 +54,6 @@ export function fromRoot(root, path) {
 	return isAbsolute(path) || /^[A-Za-z]:[\\/]/.test(path) ? path : join(root, path)
 }
 
-export function absoluteFile(root, path) {
-	const candidate = fromRoot(root, path)
-	try {
-		if (!statSync(candidate).isFile()) return null
-	} catch {
-		return null
-	}
-	return join(realpathSync(dirname(candidate)), basename(candidate))
-}
-
 export function dotnetCommand() {
 	const custom = process.env.SKRAFT_DOTNET
 	if (custom && /\.(mjs|cjs|js)$/.test(custom)) return [process.execPath, [custom]]
@@ -89,26 +79,6 @@ export function dotnet(args, { cwd, output = 'inherit', stderr } = {}) {
 	} finally {
 		if (fd !== undefined) closeSync(fd)
 	}
-}
-
-// The files changed since the merge base of `since` and HEAD, committed or not, untracked ones
-// included, relative to `root` with `/` separators.
-export function changedSince(root, since) {
-	const git = (args) => {
-		const result = spawnSync('git', ['-C', root, '-c', 'core.quotepath=off', ...args], { encoding: 'utf8', shell: false, windowsHide: true })
-		if (result.error || result.status !== 0) throw usageError(`git cannot list the files changed since ${since} in ${root}`)
-		return result.stdout
-	}
-	const base = git(['merge-base', since, 'HEAD']).trim()
-	const listed = [...git(['diff', '--name-only', '--relative', '--diff-filter=d', '-z', base, '--']).split('\0'), ...git(['ls-files', '--others', '--exclude-standard', '-z', '--']).split('\0')]
-	return [...new Set(listed.filter(Boolean).map((name) => name.split('\\').join('/')))].sort()
-}
-
-export function requireDotnetStryker() {
-	const probe = dotnet(['--version'], { output: 'ignore', stderr: 'ignore' })
-	if (probe.status === 127 || probe.status === 126) throw new Exit(3, 'dotnet is not on PATH')
-	// Stryker.NET reads --version as a project-version option, so probe with --help.
-	if (dotnet(['stryker', '--help'], { output: 'ignore', stderr: 'ignore' }).status !== 0) throw new Exit(3, 'dotnet stryker is not available')
 }
 
 export function requireDotnet() {

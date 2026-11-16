@@ -32,8 +32,7 @@ vérifie que sa configuration reste acceptée par le moteur, que chaque script d
 nomme existe dans le plugin, que chaque composant tient son projet (`package.json`, ou la
 solution .NET et les projets qu'elle liste), que ses verrous (`package-lock.json`, le
 `packages.lock.json` de chaque projet .NET) ne sont ignorés par git ni ici ni dans le bac à
-sable, que le moteur lit le rapport de mutation là où le gate l'écrit, et que chaque FR d'un PRD
-de scénario est sous un épic.
+sable, et que chaque FR d'un PRD de scénario est sous un épic.
 
 ## Prérequis
 

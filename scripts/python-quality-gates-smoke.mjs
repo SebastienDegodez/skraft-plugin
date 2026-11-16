@@ -3,28 +3,26 @@
 // python-quality-gates-smoke.mjs — do the Python quality-gate scripts judge a real run?
 //
 // The acceptance tests drive the scripts with a fake Python that answers what a test asks
-// for. They prove the scripts read pytest, coverage.py and cosmic-ray output correctly;
+// for. They prove the scripts read pytest and coverage.py output correctly;
 // they cannot prove the real tools still write it, nor that the scripts start them the
 // same way on Linux, macOS and Windows.
 //
 // So this runs the shipped scripts with the real toolchain on a small Clean Architecture
 // project, in a throwaway Git copy of tests/skill-scripts/quality-gates/fixtures/python-payment:
 //
-//   scaffold    configure-mutation.mjs writes the two cosmic-ray configs
-//   G7, G11     no mocking library in the core; 100% line coverage of domain + application
-//   G6 core     every core mutant killed, the equivalent @final mutant suppressed with a reason
-//   G6 boundary infrastructure + api over their bar
-//   since       a differential run with nothing changed mutates nothing and passes
-//   weakened    one test case removed: a core mutant survives and the gate fails
+//   G7, G11     no mocking library in the core (the domain and application folders);
+//               100% line coverage of that core
+//
+// Mutation testing is the developer's, run apart from skraft.
 //
 // Usage:  node scripts/python-quality-gates-smoke.mjs [--python <interpreter>] [--keep]
-//   --python  an interpreter that already holds pytest, coverage and cosmic-ray 8.x;
+//   --python  an interpreter that already holds pytest and coverage;
 //             without it, a .venv is created in the copy and `pip install -e ".[dev]"` runs.
 // Needs:  Python 3.11+ on PATH (python3, or python on Windows) and PyPI access without --python.
 // Exits:  0 every probe passed, 1 a probe failed, 2 the toolchain could not run.
 
 import { spawnSync } from 'node:child_process'
-import { cpSync, existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { cpSync, existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { basename, dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -34,10 +32,6 @@ const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const FIXTURE = join(repoRoot, 'tests', 'skill-scripts', 'quality-gates', 'fixtures', 'python-payment')
 const SCRIPTS = join(repoRoot, 'plugins', 'skraft-framework', 'skills', 'quality-gates-python', 'scripts')
 const LOCAL_STATE = new Set(['.venv', '__pycache__', '.pytest_cache', 'build'])
-
-// The case that alone kills the `amount <= 0` → `amount < 0` mutant of Money.
-const WEAKENED_TEST = 'tests/unit/test_money.py'
-const REMOVED_CASE = '[Decimal("0"), Decimal("-1")]'
 
 const { values: opts } = parseArgs({
   options: {
@@ -49,7 +43,7 @@ const { values: opts } = parseArgs({
 
 const USAGE = `usage: node scripts/python-quality-gates-smoke.mjs [--python <interpreter>] [--keep]
 
-  --python  use this interpreter (pytest, coverage, cosmic-ray 8.x installed) instead of a fresh .venv
+  --python  use this interpreter (pytest and coverage installed) instead of a fresh .venv
   --keep    keep the throwaway copy and its evidence on success
 `
 
@@ -104,7 +98,7 @@ const installVenv = (ctx) => {
 
 const pythonArgs = () => (opts.python ? ['--python', resolve(opts.python)] : [])
 
-// Evidence lands beside the copy, never inside it: the differential run must see a clean tree.
+// Evidence lands beside the copy, never inside it.
 const runGate = (ctx, script, prefix, evidence, ...args) => {
   const dir = join(ctx.root, evidence)
   const result = spawnSync(process.execPath, [join(SCRIPTS, script), '--root', ctx.repo, '--evidence', dir, ...args], { cwd: ctx.repo, encoding: 'utf8' })
@@ -117,19 +111,6 @@ const runGate = (ctx, script, prefix, evidence, ...args) => {
 
 const probes = [
   {
-    name: 'scaffold',
-    run: (ctx) => {
-      const result = spawnSync(process.execPath, [join(SCRIPTS, 'configure-mutation.mjs'), '--root', ctx.repo], { cwd: ctx.repo, encoding: 'utf8' })
-      if (result.status === 0) {
-        git(ctx.repo, 'add', '.')
-        git(ctx.repo, 'commit', '-q', '-m', 'chore(payment): mutation configs')
-      }
-      return { status: result.status, line: lastLine(result.stdout), stderr: result.stderr }
-    },
-    status: 0,
-    line: /cosmic-ray-boundary\.toml/,
-  },
-  {
     name: 'G7 no mocks in core',
     run: (ctx) => runGate(ctx, 'no-mocks-in-core.mjs', 'qg-mocks', 'evidence', ...pythonArgs()),
     status: 0,
@@ -140,36 +121,6 @@ const probes = [
     run: (ctx) => runGate(ctx, 'coverage-core.mjs', 'qg-coverage', 'evidence', ...pythonArgs()),
     status: 0,
     line: /^Domain\/Application line coverage 100% \(([1-9]\d*)\/\1 statements\)$/,
-  },
-  {
-    name: 'G6 core',
-    run: (ctx) => runGate(ctx, 'mutation-gate.mjs', 'qg-mutation', 'evidence', ...pythonArgs(), '--scope', 'core', '--config', 'cosmic-ray-core.toml'),
-    status: 0,
-    line: /^core mutation score 100\.00% meets 100% \([1-9]\d* killed, 0 survived, \d+ incompetent, [1-9]\d* suppressed by pragma\)$/,
-  },
-  {
-    name: 'G6 boundary',
-    run: (ctx) => runGate(ctx, 'mutation-gate.mjs', 'qg-mutation-boundary', 'evidence', ...pythonArgs(), '--scope', 'boundary', '--config', 'cosmic-ray-boundary.toml'),
-    status: 0,
-    line: /^boundary mutation score [\d.]+% meets 80% \([1-9]\d* killed, \d+ survived, \d+ incompetent, \d+ suppressed by pragma\)$/,
-  },
-  {
-    name: 'since, nothing changed',
-    run: (ctx) => runGate(ctx, 'mutation-gate.mjs', 'qg-mutation', 'checkpoint', ...pythonArgs(), '--scope', 'core', '--config', 'cosmic-ray-core.toml', '--since', git(ctx.repo, 'rev-parse', 'HEAD')),
-    status: 0,
-    line: /^No core source changed since [0-9a-f]{40}: nothing to mutate\.$/,
-  },
-  {
-    name: 'weakened test fails G6 core',
-    run: (ctx) => {
-      const path = join(ctx.repo, WEAKENED_TEST)
-      const source = readFileSync(path, 'utf8')
-      if (!source.includes(REMOVED_CASE)) throw new Error(`${WEAKENED_TEST} no longer holds the case this probe removes`)
-      writeFileSync(path, source.replace(REMOVED_CASE, '[Decimal("-1")]'))
-      return runGate(ctx, 'mutation-gate.mjs', 'qg-mutation', 'weakened', ...pythonArgs(), '--scope', 'core', '--config', 'cosmic-ray-core.toml')
-    },
-    status: 1,
-    line: /^core mutation gate failed: score [\d.]+% is below 100%$/,
   },
 ]
 

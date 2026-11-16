@@ -18,8 +18,7 @@
         "format": "dotnet format --verify-no-changes",
         "test": "dotnet test --nologo",
         "architecture": "dotnet test --nologo --filter \"FullyQualifiedName~.ArchitectureTests.\"",
-        "coverage": "node \"{{scripts:quality-gates-dotnet}}/coverage-core.mjs\" --root . --evidence reports/gates/coverage",
-        "mutation": "node \"{{scripts:quality-gates-dotnet}}/mutation-core.mjs\" --root . --evidence reports/gates/mutation --since {baseSha}"
+        "coverage": "node \"{{scripts:quality-gates-dotnet}}/coverage-core.mjs\" --root . --evidence reports/gates/coverage"
       },
       "mocking": {
         "strategy": "inprocess"
@@ -44,7 +43,6 @@
         "test": "npx vitest run",
         "architecture": "node \"{{scripts:quality-gates-typescript}}/architecture-gate.mjs\" --root .. --package web --evidence web/reports/gates/architecture",
         "coverage": "node \"{{scripts:quality-gates-typescript}}/coverage-core.mjs\" --root .. --package web --evidence web/reports/gates/coverage",
-        "mutation": "node \"{{scripts:quality-gates-typescript}}/mutation-gate.mjs\" --root .. --package web --scope core --config stryker.core.json --evidence web/reports/gates/mutation --since {baseSha}",
         "e2e": "npx playwright test"
       }
     }

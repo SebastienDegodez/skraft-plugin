@@ -51,8 +51,8 @@ GitHub.
 ### DELIVER
 
 - [ ] Des cycles TDD rouge puis vert, chacun committé, dans les deux composants.
-- [ ] `api` et `web` passent `build`, `lint`, `test`, `architecture`, `coverage` et
-      `mutation` ; chaque journal de mutation annonce 100 % sur le cœur.
+- [ ] `api` et `web` passent `build`, `lint`, `test`, `architecture` et `coverage`. Le
+      pipeline ne lance aucune mutation : elle est au développeur.
 - [ ] Les tests de la gateway HTTP du front doublent l'API avec MSW dans `tests/integration` ;
       `tests/unit` n'a que des doubles écrits à la main (aucun `vi.fn`, `vi.mock`, `vi.spyOn`
       ni MSW).

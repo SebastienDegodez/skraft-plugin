@@ -1,93 +1,21 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import {
-	LIMITS, bindInterpreter, coverageVerdict, mockHits, mutationVerdict, noCoverHits, pragmaProblems, renderConfig, selectChanged, validateConfig,
+	coreRoots, coreSourceFiles, coverageVerdict, isCoreFile, mockHits, noCoverHits,
 } from '../../../plugins/skraft-framework/skills/quality-gates-python/scripts/gate-policy.mjs'
 
-const table = (patch = {}) => ({
-	'cosmic-ray': {
-		'module-path': ['src/shop/domain', 'src/shop/application'], timeout: 30, 'excluded-modules': [],
-		'test-command': 'python -m pytest -x -q tests/unit', distributor: { name: 'local' }, ...patch,
-	},
+test('core is any source under a folder whose last word is domain or application, tests left out', () => {
+	for (const file of ['src/shop/domain/order.py', 'src/shop/application/place.py', 'billing_domain/rules.py', 'src/Checkout.Application/x.py', 'src/cart-domain/__init__.py']) {
+		assert.equal(isCoreFile(file), true, file)
+	}
+	for (const file of ['src/shop/api/routes.py', 'src/shop/infrastructure/db.py', 'src/domainx/a.py', 'tests/unit/domain/test_order.py', 'src/shop/domain/test_order.py', 'src/shop/domain/order_test.py', 'src/shop/domain/conftest.py', 'src/shop/domain/order.txt', 'src/shop/domain.py']) {
+		assert.equal(isCoreFile(file), false, file)
+	}
+	assert.deepEqual(coreSourceFiles(['b/domain/x.py', 'a/application/y.py', 'a/api/z.py', 'a\\domain\\w.py']), ['a/application/y.py', 'a/domain/w.py', 'b/domain/x.py'])
 })
 
-test('the thresholds are the quality bar: 100 core, 80 boundary', () => {
-	assert.deepEqual({ ...LIMITS }, { core: 100, boundary: 80 })
-})
-
-test('a checked-in config normalizes to module paths, timeout and test command', () => {
-	assert.deepEqual(validateConfig(table(), 'core'), {
-		modulePaths: ['src/shop/domain', 'src/shop/application'], timeout: 30, testCommand: 'python -m pytest -x -q tests/unit',
-	})
-	assert.deepEqual(validateConfig(table({ 'module-path': './src/shop/api' }), 'boundary').modulePaths, ['src/shop/api'])
-})
-
-const unsafe = {
-	unknownScope: [table(), 'other'],
-	extraTable: [{ ...table(), tool: {} }, 'core'],
-	filters: [table({ filters: { 'git-filter': { branch: 'main' } } }), 'core'],
-	exclusions: [table({ 'excluded-modules': ['src/shop/domain/legacy.py'] }), 'core'],
-	traversal: [table({ 'module-path': ['../other/src'] }), 'core'],
-	absolute: [table({ 'module-path': ['/srv/src'] }), 'core'],
-	drive: [table({ 'module-path': ['C:/src'] }), 'core'],
-	pattern: [table({ 'module-path': ['src/**/domain'] }), 'core'],
-	duplicate: [table({ 'module-path': ['src/a', './src/a'] }), 'core'],
-	noTimeout: [table({ timeout: 0 }), 'core'],
-	noTests: [table({ 'test-command': ' ' }), 'core'],
-	httpDistributor: [table({ distributor: { name: 'http', http: { 'worker-urls': [] } } }), 'core'],
-}
-for (const [name, [config, scope]] of Object.entries(unsafe)) {
-	test(`reject unsafe config: ${name}`, () => assert.throws(() => validateConfig(config, scope)))
-}
-
-test('the rendered config is the validated subset with a local distributor', () => {
-	const text = renderConfig({ modulePaths: ['src/shop/domain/order.py'], timeout: 30, testCommand: 'python -m pytest -q "tests/unit"' })
-	assert.match(text, /^\[cosmic-ray\]\nmodule-path = \["src\/shop\/domain\/order.py"\]\ntimeout = 30.0\nexcluded-modules = \[\]\ntest-command = "python -m pytest -q \\"tests\/unit\\""\n\n\[cosmic-ray.distributor\]\nname = "local"\n$/)
-	assert.throws(() => renderConfig({ modulePaths: [], timeout: 1, testCommand: 'x' }))
-})
-
-test('a leading python in the test command becomes the quoted project interpreter', () => {
-	assert.equal(bindInterpreter('python -m pytest -x tests/unit', 'C:\\repo\\.venv\\Scripts\\python.exe'), "'C:\\repo\\.venv\\Scripts\\python.exe' -m pytest -x tests/unit")
-	assert.equal(bindInterpreter('python3 -m pytest', '/r/.venv/bin/python'), "'/r/.venv/bin/python' -m pytest")
-	assert.equal(bindInterpreter('pytest -x', '/r/.venv/bin/python'), 'pytest -x')
-	assert.equal(bindInterpreter('python3.12 -m pytest', '/r/.venv/bin/python'), 'python3.12 -m pytest')
-	assert.throws(() => bindInterpreter('python -m pytest', "/it's/python"), /single quote/)
-})
-
-test('--since keeps only the scope files that changed', () => {
-	assert.deepEqual(selectChanged(['src/a.py', 'src/b.py'], ['src\\b.py', 'README.md']), ['src/b.py'])
-})
-
-const item = (line, operator = 'core/AddNot') => ({ mutations: [{ module_path: 'src/shop/domain/order.py', start_pos: [line, 0], operator_name: operator, occurrence: 0 }] })
-const result = (test_outcome, worker_outcome = 'normal') => ({ worker_outcome, test_outcome })
-
-test('core passes only with every tested mutant killed; suppressed and incompetent mutants stay visible', () => {
-	const pass = mutationVerdict([JSON.stringify([item(1), result('killed')]), JSON.stringify([item(2), result('incompetent')]), JSON.stringify([item(3), result(null, 'skipped')]), ''], 'core')
-	assert.equal(pass.passed, true)
-	assert.deepEqual([pass.killed, pass.incompetent, pass.suppressed, pass.score], [1, 1, 1, 100])
-	const fail = mutationVerdict([JSON.stringify([item(1), result('killed')]), JSON.stringify([item(9), result('survived')])], 'core')
-	assert.equal(fail.passed, false)
-	assert.deepEqual(fail.survivors, [{ module: 'src/shop/domain/order.py', line: 9, operator: 'core/AddNot', occurrence: 0 }])
-	assert.match(fail.problems.join(), /50.00% is below 100%/)
-})
-
-test('boundary passes at 80 and fails below', () => {
-	const lines = (killed, survived) => [...Array(killed).fill(JSON.stringify([item(1), result('killed')])), ...Array(survived).fill(JSON.stringify([item(2), result('survived')]))]
-	assert.equal(mutationVerdict(lines(4, 1), 'boundary').passed, true)
-	assert.equal(mutationVerdict(lines(3, 1), 'boundary').passed, false)
-})
-
-test('a mutant that never ran, a worker error or nothing tested fails the gate', () => {
-	assert.equal(mutationVerdict([JSON.stringify([item(1), null])], 'core').passed, false)
-	assert.equal(mutationVerdict([JSON.stringify([item(1), result(null, 'exception')])], 'core').passed, false)
-	assert.equal(mutationVerdict([JSON.stringify([item(1), result('incompetent')])], 'core').passed, false)
-	assert.equal(mutationVerdict([], 'core').passed, true)
-})
-
-test('a no-mutate pragma needs a reason', () => {
-	assert.deepEqual(pragmaProblems('a.py', '@final  # pragma: no mutate -- typing.final has no runtime effect\n'), [])
-	assert.equal(pragmaProblems('a.py', 'x = 1  # pragma: no mutate\n').length, 1)
-	assert.equal(pragmaProblems('a.py', 'x = 1  # pragma: no mutate -- ok\n').length, 1)
+test('coverage measures from each core folder', () => {
+	assert.deepEqual(coreRoots(['src/shop/domain/order.py', 'src/shop/domain/sub/x.py', 'src/shop/application/a.py', 'billing_domain/r.py']), ['billing_domain', 'src/shop/application', 'src/shop/domain'])
 })
 
 const coverage = (files) => ({ files: Object.fromEntries(Object.entries(files).map(([name, [statements, missing]]) => [name, {
