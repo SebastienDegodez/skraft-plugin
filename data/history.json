@@ -3,78 +3,6 @@
   "skills": {
     "outside-in-tdd": [
       {
-        "id": "39465584545:skill:outside-in-tdd:2026-10-20T17:48:10.126Z",
-        "timestamp": "2026-10-20T17:48:10.126Z",
-        "commit": "b7229715d21febac5c03f7624430d8ddef530725",
-        "run": "39465584545",
-        "url": "https://github.com/SebastienDegodez/skraft-plugin/actions/runs/39465584545",
-        "runner": "vally",
-        "model": "claude-sonnet-5.5",
-        "judgeModel": "gpt-5.6-luna",
-        "state": "no-improvement",
-        "reason": "no credible improvement (4W/4T/2L, sign test p=0.688, Wilcoxon p=0.219) [26 pair(s) excluded: the skill never activated on the skilled run]",
-        "descriptorSha": null,
-        "netWin": 0.2,
-        "trialCount": 10,
-        "meanScore": 0.08333333333333336,
-        "confidenceInterval": {
-          "low": -0.066133205199381,
-          "high": 0.23279987186604773
-        },
-        "signTest": {
-          "wins": 4,
-          "ties": 4,
-          "losses": 2,
-          "pValue": 0.6875
-        },
-        "metrics": {
-          "quality": {
-            "baseline": 0.774,
-            "skilled": 0.838,
-            "delta": 0.064
-          },
-          "activation": {
-            "expected": 28,
-            "actual": 2,
-            "unexpected": 1,
-            "rate": 0.071
-          },
-          "efficiency": {
-            "baseline": {
-              "durationMs": 74004,
-              "tokens": 72473,
-              "turns": 4,
-              "toolCalls": 3
-            },
-            "skilled": {
-              "durationMs": 73735,
-              "tokens": 75793,
-              "turns": 4,
-              "toolCalls": 3
-            },
-            "durationDeltaPercent": -0.4,
-            "tokenDeltaPercent": 4.6
-          },
-          "efficiencyPaired": {
-            "pairCount": 3,
-            "baseline": {
-              "durationMs": 80975,
-              "tokens": 123232,
-              "turns": 6,
-              "toolCalls": 4
-            },
-            "skilled": {
-              "durationMs": 87306,
-              "tokens": 142628,
-              "turns": 6,
-              "toolCalls": 5
-            },
-            "durationDeltaPercent": 7.8,
-            "tokenDeltaPercent": 15.7
-          }
-        }
-      },
-      {
         "id": "39904077356:skill:outside-in-tdd:2026-10-23T05:28:50.765Z",
         "timestamp": "2026-10-23T05:28:50.765Z",
         "commit": "230c485b913934c0f363483e95ec9a6121701429",
@@ -705,81 +633,81 @@
             "tokenDeltaPercent": 26.5
           }
         }
-      }
-    ],
-    "quality-gates-javascript": [
+      },
       {
-        "id": "37893574239:skill:quality-gates-javascript:2026-10-09T06:32:16.288Z",
-        "timestamp": "2026-10-09T06:32:16.288Z",
-        "commit": "64b68c30508b55576ecb6dd4cb798ee7b738e6b9",
-        "run": "37893574239",
-        "url": "https://github.com/SebastienDegodez/skraft-plugin/actions/runs/37893574239",
+        "id": "43957358945:skill:outside-in-tdd:2026-11-16T21:33:43.879Z",
+        "timestamp": "2026-11-16T21:33:43.879Z",
+        "commit": "b9189a842bb1eff8f4a17921114e29c0d484e5ff",
+        "run": "43957358945",
+        "url": "https://github.com/SebastienDegodez/skraft-plugin/actions/runs/43957358945",
         "runner": "vally",
-        "model": "gpt-5.6-luna",
+        "model": "claude-sonnet-5.5",
         "judgeModel": "gpt-5.6-luna",
-        "state": "inconclusive",
-        "reason": "underpowered (1W/9T/0L: 1 discordant pair(s); no tally below 6 can reach p<=0.05, so budget more runs) [5 pair(s) excluded: the skill never activated on the skilled run]",
+        "state": "pass",
+        "reason": "credibly better (18W/9T/3L, sign test p=0.001, Wilcoxon p=0.001) [6 pair(s) excluded: the skill never activated on the skilled run]",
         "descriptorSha": null,
-        "netWin": 0.1,
-        "trialCount": 10,
-        "meanScore": 0.16,
+        "netWin": 0.5,
+        "trialCount": 30,
+        "meanScore": 0.15555555555555556,
         "confidenceInterval": {
-          "low": -0.03726004591474097,
-          "high": 0.357260045914741
+          "low": -0.025381100232570453,
+          "high": 0.33649221134368157
         },
         "signTest": {
-          "wins": 1,
+          "wins": 18,
           "ties": 9,
-          "losses": 0,
-          "pValue": 1
+          "losses": 3,
+          "pValue": 0.0014896392822265625
         },
         "metrics": {
           "quality": {
-            "baseline": 0.357,
-            "skilled": 0.38,
-            "delta": 0.023
+            "baseline": 0.807,
+            "skilled": 0.942,
+            "delta": 0.135
           },
           "activation": {
-            "expected": 10,
-            "actual": 5,
+            "expected": 28,
+            "actual": 22,
             "unexpected": 0,
-            "rate": 0.5
+            "rate": 0.786
           },
           "efficiency": {
             "baseline": {
-              "durationMs": 16416,
-              "tokens": 90083,
-              "turns": 6,
-              "toolCalls": 8
+              "durationMs": 75908,
+              "tokens": 71984,
+              "turns": 4,
+              "toolCalls": 3
             },
             "skilled": {
-              "durationMs": 17060,
-              "tokens": 95729,
-              "turns": 6,
-              "toolCalls": 9
+              "durationMs": 85325,
+              "tokens": 84200,
+              "turns": 4,
+              "toolCalls": 3.5
             },
-            "durationDeltaPercent": 3.9,
-            "tokenDeltaPercent": 6.3
+            "durationDeltaPercent": 12.4,
+            "tokenDeltaPercent": 17
           },
           "efficiencyPaired": {
-            "pairCount": 5,
+            "pairCount": 22,
             "baseline": {
-              "durationMs": 15972,
-              "tokens": 90083,
-              "turns": 6,
-              "toolCalls": 9
+              "durationMs": 78284,
+              "tokens": 72266,
+              "turns": 4,
+              "toolCalls": 3
             },
             "skilled": {
-              "durationMs": 18440,
-              "tokens": 115317,
-              "turns": 7,
-              "toolCalls": 9
+              "durationMs": 86477,
+              "tokens": 90802,
+              "turns": 4,
+              "toolCalls": 4
             },
-            "durationDeltaPercent": 15.5,
-            "tokenDeltaPercent": 28
+            "durationDeltaPercent": 10.5,
+            "tokenDeltaPercent": 25.6
           }
         }
-      },
+      }
+    ],
+    "quality-gates-javascript": [
       {
         "id": "37915182010:skill:quality-gates-javascript:2026-10-09T10:12:13.616Z",
         "timestamp": "2026-10-09T10:12:13.616Z",
@@ -1361,6 +1289,78 @@
             },
             "durationDeltaPercent": 4.8,
             "tokenDeltaPercent": 24.7
+          }
+        }
+      },
+      {
+        "id": "43957358945:skill:quality-gates-javascript:2026-11-16T21:15:06.446Z",
+        "timestamp": "2026-11-16T21:15:06.446Z",
+        "commit": "b9189a842bb1eff8f4a17921114e29c0d484e5ff",
+        "run": "43957358945",
+        "url": "https://github.com/SebastienDegodez/skraft-plugin/actions/runs/43957358945",
+        "runner": "vally",
+        "model": "gpt-5.6-luna",
+        "judgeModel": "gpt-5.6-luna",
+        "state": "inconclusive",
+        "reason": "underpowered (1W/6T/0L: 1 discordant pair(s); no tally below 6 can reach p<=0.05, so budget more runs) [8 pair(s) excluded: the skill never activated on the skilled run]",
+        "descriptorSha": null,
+        "netWin": 0.14285714285714285,
+        "trialCount": 7,
+        "meanScore": 0.01333333333333333,
+        "confidenceInterval": {
+          "low": -0.25626189765458407,
+          "high": 0.2829285643212507
+        },
+        "signTest": {
+          "wins": 1,
+          "ties": 6,
+          "losses": 0,
+          "pValue": 1
+        },
+        "metrics": {
+          "quality": {
+            "baseline": 0.301,
+            "skilled": 0.317,
+            "delta": 0.016
+          },
+          "activation": {
+            "expected": 10,
+            "actual": 2,
+            "unexpected": 0,
+            "rate": 0.2
+          },
+          "efficiency": {
+            "baseline": {
+              "durationMs": 14815,
+              "tokens": 72043,
+              "turns": 6,
+              "toolCalls": 9
+            },
+            "skilled": {
+              "durationMs": 14520,
+              "tokens": 62029,
+              "turns": 5,
+              "toolCalls": 9
+            },
+            "durationDeltaPercent": -2,
+            "tokenDeltaPercent": -13.9
+          },
+          "efficiencyPaired": {
+            "pairCount": 2,
+            "baseline": {
+              "durationMs": 16267,
+              "tokens": 78684,
+              "turns": 6.5,
+              "toolCalls": 8.5
+            },
+            "skilled": {
+              "durationMs": 18222,
+              "tokens": 95154,
+              "turns": 7.5,
+              "toolCalls": 9.5
+            },
+            "durationDeltaPercent": 12,
+            "tokenDeltaPercent": 20.9
           }
         }
       }
@@ -5607,33 +5607,6 @@
   "agents": {
     "software-engineer": [
       {
-        "id": "42619441993:agent:software-engineer:2026-11-09T12:50:33.072Z",
-        "timestamp": "2026-11-09T12:50:33.072Z",
-        "commit": "8c5806031062fdfb068980b77dbf1faa7b29ade1",
-        "run": "42619441993",
-        "url": "https://github.com/SebastienDegodez/skraft-plugin/actions/runs/42619441993",
-        "runner": "vally-agent",
-        "model": "gpt-5.6-luna",
-        "judgeModel": "none",
-        "state": "pass",
-        "reason": "conforms on every trial (15/15 at or above 1)",
-        "descriptorSha": "465fba6d272384b2192aa24dbaff0a351d1abd6ed61b7a7ae7844bf3f3972416",
-        "netWin": 1,
-        "trialCount": 15,
-        "meanScore": 1,
-        "confidenceInterval": {
-          "low": null,
-          "high": null
-        },
-        "signTest": {
-          "wins": 0,
-          "ties": 0,
-          "losses": 0,
-          "pValue": null
-        },
-        "metrics": null
-      },
-      {
         "id": "42709508099:agent:software-engineer:2026-11-09T22:13:11.944Z",
         "timestamp": "2026-11-09T22:13:11.944Z",
         "commit": "e45b96593cc232b4bb8c6a99b8ed0d1e41ea12ff",
@@ -5864,6 +5837,33 @@
         "netWin": 1,
         "trialCount": 3,
         "meanScore": 1,
+        "confidenceInterval": {
+          "low": null,
+          "high": null
+        },
+        "signTest": {
+          "wins": 0,
+          "ties": 0,
+          "losses": 0,
+          "pValue": null
+        },
+        "metrics": null
+      },
+      {
+        "id": "43957358945:agent:software-engineer:2026-11-16T21:16:40.029Z",
+        "timestamp": "2026-11-16T21:16:40.029Z",
+        "commit": "b9189a842bb1eff8f4a17921114e29c0d484e5ff",
+        "run": "43957358945",
+        "url": "https://github.com/SebastienDegodez/skraft-plugin/actions/runs/43957358945",
+        "runner": "vally-agent",
+        "model": "gpt-5.6-luna",
+        "judgeModel": "none",
+        "state": "flaky",
+        "reason": "conforms on 14 of 15 trial(s); every scenario at or above 2/3 (threshold 1)",
+        "descriptorSha": "7d7f052b05272b65260edcb570f5ad51aa9a84132ea3f885f4b95c57ed0cbd9b",
+        "netWin": 0.8666666666666667,
+        "trialCount": 15,
+        "meanScore": 0.983,
         "confidenceInterval": {
           "low": null,
           "high": null
@@ -6151,33 +6151,6 @@
     ],
     "acceptance-designer": [
       {
-        "id": "42715703175:agent:acceptance-designer:2026-11-09T23:12:23.621Z",
-        "timestamp": "2026-11-09T23:12:23.621Z",
-        "commit": "1eb7b0e16eb52df13c680310f2356c03e8f2cd98",
-        "run": "42715703175",
-        "url": "https://github.com/SebastienDegodez/skraft-plugin/actions/runs/42715703175",
-        "runner": "vally-agent",
-        "model": "claude-sonnet-5.5",
-        "judgeModel": "none",
-        "state": "pass",
-        "reason": "conforms on every trial (20/20 at or above 0.9)",
-        "descriptorSha": "09df5eefede4113dbe7624ac28037276a4407dcec6a84321069d68a02af5d18d",
-        "netWin": 1,
-        "trialCount": 20,
-        "meanScore": 0.997,
-        "confidenceInterval": {
-          "low": null,
-          "high": null
-        },
-        "signTest": {
-          "wins": 0,
-          "ties": 0,
-          "losses": 0,
-          "pValue": null
-        },
-        "metrics": null
-      },
-      {
         "id": "42792739115:agent:acceptance-designer:2026-11-10T09:47:59.664Z",
         "timestamp": "2026-11-10T09:47:59.664Z",
         "commit": "3a41b08a7b9976cc9e6a2c96067c4aa107b30b62",
@@ -6408,6 +6381,33 @@
         "netWin": 0.7777777777777778,
         "trialCount": 9,
         "meanScore": 0.978,
+        "confidenceInterval": {
+          "low": null,
+          "high": null
+        },
+        "signTest": {
+          "wins": 0,
+          "ties": 0,
+          "losses": 0,
+          "pValue": null
+        },
+        "metrics": null
+      },
+      {
+        "id": "43957358945:agent:acceptance-designer:2026-11-16T21:30:40.704Z",
+        "timestamp": "2026-11-16T21:30:40.704Z",
+        "commit": "b9189a842bb1eff8f4a17921114e29c0d484e5ff",
+        "run": "43957358945",
+        "url": "https://github.com/SebastienDegodez/skraft-plugin/actions/runs/43957358945",
+        "runner": "vally-agent",
+        "model": "claude-sonnet-5.5",
+        "judgeModel": "none",
+        "state": "flaky",
+        "reason": "conforms on 19 of 20 trial(s); every scenario at or above 2/3 (threshold 0.9)",
+        "descriptorSha": "513d9ec63d93b4aba9bb3bf5dd770e490302435b36a00d693a97661000f60eca",
+        "netWin": 0.9,
+        "trialCount": 20,
+        "meanScore": 0.991,
         "confidenceInterval": {
           "low": null,
           "high": null
