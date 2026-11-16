@@ -29,9 +29,11 @@ test('under Copilot with no Copilot model configured, the log says the host choo
     `${SLUG}: design_review refutes consistency F1 — standard · model chosen by the host`,
     `${SLUG}: acceptance-designer, attempt 1 — implementer · standard · model chosen by the host`,
     `${SLUG}: distill judges the red commit root-2 — standard · model chosen by the host`,
+    `${SLUG}: acceptance-designer, pass 2, attempt 1 — implementer · standard · model chosen by the host`,
+    `${SLUG}: distill judges the red commit root-3 — standard · model chosen by the host`,
     `${SLUG}: distill_review (coverage, business-alignment, testability, boundary-enforcement) — reviewer · economy · model chosen by the host`,
     `${SLUG}: software-engineer, attempt 1 — implementer · standard · model chosen by the host`,
-    `${SLUG}: deliver judges the green commit root-3 — standard · model chosen by the host`,
+    `${SLUG}: deliver judges the green commit root-4 — standard · model chosen by the host`,
     `${SLUG}: deliver_review (test-integrity, architecture-boundaries, cold-reader, mock-fidelity, contract-fidelity) — reviewer · economy · model chosen by the host`,
     `${SLUG}: pr-writer, attempt 1 — economy · model chosen by the host`,
   ])

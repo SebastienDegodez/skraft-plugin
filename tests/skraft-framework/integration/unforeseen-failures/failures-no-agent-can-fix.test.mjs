@@ -98,7 +98,7 @@ test('tests that find no container runtime when the acceptance red is replayed g
 
   assert.equal(retried.outcome.status, 'done', retried.outcome.reason)
   assert.deepEqual(agentsOf(mod.spawns), NOMINAL_AGENTS)
-  assert.deepEqual(recorded(eventsOf(cwd), 'distill').map(({ attempt, outcome: result }) => [attempt, result]), [[1, 'done']])
+  assert.deepEqual(recorded(eventsOf(cwd), 'distill').map(({ group, attempt, outcome: result }) => [group, attempt, result]), [[undefined, 1, 'done'], [1, 1, 'done']])
 })
 
 test('a test command whose program does not exist escalates to config with its replay log and no judge; RETRY after fixing skraft-config.json completes without a new attempt', async (t) => {
@@ -160,6 +160,6 @@ test('a test command that crashes in the gates (exit 139) requests a host judgme
   assert.deepEqual(recorded(events, 'gates'), [])
   assert.ok(readFileSync(log, 'utf8').includes('Segmentation fault'), readFileSync(log, 'utf8'))
   assert.equal(journalText(cwd).includes('Segmentation fault'), false)
-  assert.deepEqual(agentsOf(mod.spawns), ['solution-researcher', 'solution-architect', 'acceptance-designer', 'software-engineer'])
+  assert.deepEqual(agentsOf(mod.spawns), ['solution-researcher', 'solution-architect', 'acceptance-designer', 'acceptance-designer', 'software-engineer'])
   t.diagnostic('cost: 1 engineer dispatch; the crash is held for one host judgment, with no paid model call in this test')
 })

@@ -116,7 +116,7 @@ test('an architect that finds the story covered by the design documents already 
     [1, 'done', null, [], [MATRIX, 'details/2026-10-11/structural-scan.json']],
   ])
   assert.match(await host.tracking.read(SLUG, MATRIX), /docs-relied-on: `docs\/architecture\/context-map\.md`, docs\/domain\/event-model\/payment\.md/)
-  assert.deepEqual(host.events().filter((event) => event.type === 'step.started').map((event) => event.step).filter((step) => ['design', 'design_review', 'distill'].includes(step)), ['design', 'design_review', 'distill'])
+  assert.deepEqual(host.events().filter((event) => event.type === 'step.started').map((event) => event.step).filter((step) => ['design', 'design_review', 'distill'].includes(step)), ['design', 'design_review', 'distill', 'distill'])
   for (const [path, text] of Object.entries(documented)) assert.equal(await host.workspace.read(path), text)
 })
 

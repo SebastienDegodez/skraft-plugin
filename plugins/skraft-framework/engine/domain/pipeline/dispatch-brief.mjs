@@ -39,12 +39,13 @@ import { issueOf } from './commits.mjs'
  *   the components' tests treat what they depend on, told to the agent that writes the scenarios.
  * @typedef {{
  *   kind: 'plan' | 'oracle' | 'delivery', index: number, of: number, title: string | null, component: string | null, tags: string[],
- *   oracles: Array<{ sha: string, subject: string, files: string[] }>, test: string | null,
+ *   oracles: Array<{ sha: string, subject: string, files: string[] }>, skeleton: { sha: string, subject: string, files: string[] } | null, test: string | null,
  * }} BriefScenario
  *   test is null only on the pass that writes the plan, whose scenarios are not listed yet.
  *   title, component and tags: as the test plan lists the scenario, null on the pass that writes
- *   the plan; oracles: the reds of the acceptance tests the delivery pass may not change; test:
- *   the scenario component's test command.
+ *   the plan; oracles: the reds of the acceptance tests the delivery pass may not change;
+ *   skeleton: the red of the walking skeleton of the scenario's component, which the delivery
+ *   pass keeps passing and may not change, null when it has none; test: the scenario component's test command.
  */
 
 /**
@@ -102,7 +103,7 @@ const scenarioLines = ({ scenario = null, slug, story, policy }) => {
   return [...SCENARIO_WORK[scenario.kind](scenario), ...SCENARIO_COMMIT[scenario.kind](scenario, message), ...section(POLICY, /** @type {string[]} */ (policy))]
 }
 
-const POLICY = '- How the tests of each component treat what the code depends on, in the targeted scenarios and in the walking skeleton S1:'
+const POLICY = '- How the tests of each component treat what the code depends on, in the scenarios\' acceptance tests (targeted) and in the walking skeleton:'
 
 /** @param {BriefScenario} scenario */
 const scenarioHeading = ({ index, of, title, component, tags }) => `- Scenario: ${index} of ${of} — "${title}" (component ${component}${tags.length > 0 ? `, tags ${tags.join(' ')}` : ''})`
@@ -110,21 +111,24 @@ const scenarioHeading = ({ index, of, title, component, tags }) => `- Scenario: 
 /** What a pass on a scenario does, by kind of pass. @type {Readonly<Record<BriefScenario['kind'], (scenario: BriefScenario) => string[]>>} */
 const SCENARIO_WORK = Object.freeze({
   plan: () => [
-    '- Scenarios: write every scenario of the story, then list them in your test plan under a `## Scenarios` heading, as the table',
+    '- Scenarios: write every scenario of the story, each tagged `@pending`, then list them in your test plan under a `## Scenarios` heading, as the table',
     '  `| # | Scenario | Component | Tags |`, one row per scenario, S1, S2, … in the order DELIVER builds them, each in the component where its test lives.',
-    '  S1 is the walking skeleton, tagged `@walking-skeleton`, in a back-end component; a story with no new entry point writes instead',
+    '  S1 is the scenario the walking skeleton walks, tagged `@walking-skeleton`, in a back-end component; a story with no new entry point writes instead',
     '  `Walking skeleton exemption: library`, `refactoring` or `docs-only` under the table, and tags no scenario `@walking-skeleton`.',
-    '- Write the failing acceptance test of S1 only, with the skeleton it calls; write no test for a later scenario and never skip one:',
-    '  each next scenario gets its own pass once the one before passes.',
+    '- Write the failing walking skeleton, a plain test with no Gherkin in the integration tests of S1\'s component: it enters by the real entry point,',
+    '  crosses the chain the production wiring builds, asserts the response\'s status, its shape and one value S1 names, and no other rule;',
+    '  with it, the skeleton of every class of that chain it lacks, each returning an empty value. Write no binding of a scenario:',
+    '  the acceptance test of S1 gets its own pass next. A story exempt of a walking skeleton writes none and commits its `.feature` files as `docs(<story>): …`.',
   ],
   oracle: (scenario) => [
     scenarioHeading(scenario),
-    '- Write the failing acceptance test of this scenario only, beside the earlier ones, and extend the skeleton it calls; change no test of an earlier scenario,',
-    '  write none for a later one, never skip one.',
+    '- Write the failing acceptance test of this scenario only, the binding of its Gherkin entering by its use case, beside the earlier ones, and extend the skeleton',
+    '  it calls; remove `@pending` from this scenario alone; change no test of an earlier scenario nor the walking skeleton, write none for a later one, never skip one.',
   ],
   delivery: (scenario) => [
     scenarioHeading(scenario),
-    ...section('- Acceptance tests DISTILL committed, which you never change (a wrong one: stop blocked, naming it):', scenario.oracles.map(({ sha, subject, files }) => `${sha.slice(0, 7)} "${subject}": ${files.join(', ')}`)),
+    ...section('- Acceptance tests DISTILL committed, which you never change (a wrong one: stop blocked, naming it):', [...scenario.oracles, ...(scenario.skeleton === null ? [] : [scenario.skeleton])].map(({ sha, subject, files }) => `${sha.slice(0, 7)} "${subject}": ${files.join(', ')}`)),
+    ...(scenario.skeleton === null ? [] : [`- The walking skeleton ${scenario.skeleton.sha.slice(0, 7)} passes at your commit too, beside this scenario's acceptance test.`]),
     `- Make it pass with outside-in TDD, unit tests included, and commit nothing until it passes; change no file of another component than ${scenario.component}.`,
   ],
 })
@@ -135,7 +139,7 @@ const SCENARIO_WORK = Object.freeze({
  * @type {Readonly<Record<BriefScenario['kind'], (scenario: BriefScenario, message: string) => string[]>>}
  */
 const SCENARIO_COMMIT = Object.freeze({
-  plan: (_, message) => ['- Run the test once and read its output: it fails on an assertion. Then commit the test, the skeleton and the scenarios in one commit, exactly:', `  ${message}`],
+  plan: (_, message) => ['- Run the walking skeleton once and read its output: it fails on an assertion. Then commit it, the skeleton of the chain and the scenarios in one commit, exactly:', `  ${message}`],
   oracle: (_, message) => ['- Run the test once and read its output: it fails on an assertion. Then commit the test and the skeleton in one commit, exactly:', `  ${message}`],
   delivery: ({ test }, message) => ['- Once it passes, commit once, in bash (never PowerShell), naming each file you changed:', `  ${test} && git add <each file you changed> && ${message}`],
 })
@@ -150,7 +154,7 @@ const SUBJECT_LENGTH = 72
  */
 const commitCommand = ({ kind, title }, { slug, issue }) => {
   const type = kind === 'delivery' ? 'feat' : 'test'
-  const subject = `${type}(${slug}): ${title === null ? '<the title of S1, as your test plan writes it>' : subjectOf(title, SUBJECT_LENGTH - type.length - slug.length - 4)}`
+  const subject = `${type}(${slug}): ${title === null ? 'walking skeleton of <the title of S1, as your test plan writes it>' : subjectOf(title, SUBJECT_LENGTH - type.length - slug.length - 4)}`
   return `git commit -s -m "${subject}"${issue === null ? '' : ` -m "Refs: #${issue}"`}`
 }
 

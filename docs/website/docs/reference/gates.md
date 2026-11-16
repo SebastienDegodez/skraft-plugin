@@ -153,13 +153,13 @@ The `distill_review` review: 4 lenses, verdict computed by the engine.
 | **B1** | `business-alignment` | Every scenario expresses an outcome the story asks for; none describes behaviour it does not ask for. | high |
 | **G5** | `testability` | Every step is unambiguous and implementable on its own. | high |
 | **G6** | `testability` | Every scenario has an entry in the implementation plan. | high |
-| **G11** | `testability` | Every use case new to the story has its acceptance test in its language's unit-test place (.NET: the `<Context>.UnitTest`, `<Context>.UnitTests` or `<Context>.Tests` project; Java: a `*Test` class under a module's `src/test`, or a `-unit-test(s)` module; Python, TypeScript, JavaScript, React: `<test path>/unit/`). | blocker |
+| **G11** | `testability` | Each test lives where its kind puts it: the walking skeleton, a plain test with no Gherkin, in its component's integration-test place (Java: an `*IT` class), entering through the real entry point; the acceptance test of every scenario, S1 included, the binding of its Gherkin, in its language's unit-test place (.NET: the `<Context>.UnitTest`, `<Context>.UnitTests` or `<Context>.Tests` project; Java: a `*Test` class under a module's `src/test`, or a `-unit-test(s)` module; Python, TypeScript, JavaScript, React: `<test path>/unit/`), entering through the use case. | blocker |
 | **T1** | `testability` | Each scenario and test checks one behaviour through an observable outcome and depends on no time, order or randomness it does not fix. | high |
-| **T2** | `testability` | Every input and expected value the outer acceptance test holds equals the `.feature` verbatim; the test holds the scenario in progress only. | blocker |
-| **T3** | `testability` | The outer acceptance test exists and its first scenario fails on a business assertion; the patch's production code is a skeleton whose signatures answer the empty value of their type. | blocker |
+| **T2** | `testability` | The patch holds the walking skeleton (unless the story is exempt) and the acceptance test of the scenario in progress only; a later scenario tagged `@pending` is no finding. Every input and expected value S1's acceptance test holds equals the `.feature` verbatim; the walking skeleton asserts the status, the shape and one value S1 names, and no value the `.feature` lacks. | blocker |
+| **T3** | `testability` | The walking skeleton and the acceptance test of the scenario in progress exist and each fails on an assertion, not on a compile, import or setup error; the patch's production code is a skeleton whose signatures answer the empty value of their type, with, for the walking skeleton, the entry point, ports and adapters of its chain wired in the composition root. | blocker |
 | **G7** | `boundary-enforcement` | Every scenario in the test plan targets an Application use case the event model names (one of its Commands or Queries); an implementation-plan step that writes no scenario's acceptance test (an API or HTTP test of a later circle) is out of its scope. | blocker |
-| **G8** | `boundary-enforcement` | The test plan identifies at least one walking-skeleton scenario per flow. | high |
-| **E1** | `boundary-enforcement` | The acceptance test drives only that use case: it never calls or asserts on a domain internal, a repository or an infrastructure class. Constructing the use case's real collaborators to hand them to its constructor is wiring, not a finding. | blocker |
+| **G8** | `boundary-enforcement` | The story has a walking skeleton walking S1, tagged `@walking-skeleton`, in a back-end component: a plain test with no Gherkin that drives the real entry point through the use case to the real internal gateways, S1 keeping its own acceptance test beside it; or the declared exemption (`library`, `refactoring`, `docs-only`) holds. | blocker |
+| **E1** | `boundary-enforcement` | The acceptance test of every scenario, S1 included, drives only its use case; the walking skeleton drives only the real entry point. Neither calls or asserts on a domain internal, a repository or an infrastructure class. Constructing the use case's real collaborators to hand them to its constructor, or the walking skeleton's test host and containers, is wiring, not a finding. | blocker |
 | **E2** | `boundary-enforcement` | Test doubles replace only outer-edge dependencies, never a domain object or the use case; DISTILL's skeleton is the real module. | high |
 
 **Engine check.** G11: the engine reads where the patch adds test files and reports, under the
@@ -185,14 +185,15 @@ coverage-matrix row that names no Gherkin writes `—`. The criteria answer how 
 takes: a story whose `ac-draft` declares none is asked for none. This is a floor under G1, not G1 itself: the `coverage` lens still
 judges which criterion each scenario answers.
 
-**Engine check.** The scenarios DELIVER builds: after each attempt of the first pass, the engine
+**Engine check.** The scenarios DELIVER builds: after each attempt of the plan pass, the engine
 reads the `## Scenarios` table of the test plan (`scenarios`): ids in order, one title each, a
 component of `skraft-config.json`, S1 alone tagged `@walking-skeleton` in a component that is not
 `react`, or an exemption `library`, `refactoring` or `docs-only` and no tag
-([rules and messages](./phases.md#scenarios)). G8 stays the lens's: whether each flow has its
-walking skeleton.
+([rules and messages](./phases.md#scenarios)). G8 stays the lens's: whether the walking skeleton
+runs the real path, S1 has its own acceptance test besides, and a declared exemption holds.
 
-The review runs once, on the first pass: its acceptance test holds S1 alone (T2, T3). The passes
+The review runs once, after the plan pass and S1's pass: the tests hold the walking skeleton and
+S1's acceptance test alone (T2, T3). The passes
 of `distill` that write the next scenarios' tests are not reviewed; the replay of their red, and
 the green that must make them pass, check them.
 
@@ -246,8 +247,9 @@ cites no other issue (`issue-not-in-story`) and closes none (`issue-closed`).
 
 | Pass | Allowed | Refused |
 | --- | --- | --- |
+| `distill`, plan pass | one red, the walking skeleton, the skeleton of its chain and the `.feature` of S1's component; the walking skeleton's red exists after the pass, unless the story is exempt, whose `.feature` files go in a `docs` commit | as below; none at all in a story that is not exempt |
 | `distill`, writing a scenario's acceptance test | one red, the test and the skeleton it calls, in the scenario's component; the scenario's red exists after the pass; `.feature` and Markdown files go with it or in a `docs` commit, wherever they live | a second red (`oracle-split`); a red in another or a second component (`oracle-component`); a red with no file of the component's test paths (`oracle-without-test`); a green or refactor (`code-in-oracle`); none at all |
-| `deliver` on scenario k | one green, chained in bash: `<test command> && git add <files> && git commit …` | a red (`test-in-scenario`); a refactor (`refactor-in-scenario`); a second green (`second-green`); a change to a file of the scenario's acceptance-test commits outside the component's `src` paths (`oracle-touched`); a change to another component (`other-component`); none at all |
+| `deliver` on scenario k | one green, chained in bash: `<test command> && git add <files> && git commit …` | a red (`test-in-scenario`); a refactor (`refactor-in-scenario`); a second green (`second-green`); a change to a file of the acceptance-test commits, the walking skeleton's included, outside the component's `src` paths (`oracle-touched`); a change to another component (`other-component`); none at all |
 | `deliver` sent back by the gates or the review, after the last scenario | reds, greens and refactors on the whole story; reds not replayed | a green with no red since the last green (`green-without-red`); on a pass the gates sent back, their failure stands for the first red |
 | `kill_mutants` | tests that kill mutants and pass | — |
 
@@ -277,19 +279,21 @@ held to the write scope: list it in `.gitignore`.
 | --- | --- | --- |
 | a red of an acceptance test | the `test` command of each component it touches exits 0, then the `e2e` command of those that have one exits 0 too | refused, `not-red`, the judge not asked: `is not red: the tests of <components> pass at it; the replay's output is in <log>`, `pass at it, and so do the e2e tests of <components>; …` when e2e tests ran |
 | | a command fails: a non-zero exit, a program that did not start, a timeout | each failing command replayed at the commit's parent, then the judge asked: the commit, its files, the scenario's index and title, each command line, how it ended and its log |
-| the green of scenario k | its component's `test` command, and `e2e` when e2e tests proved the red | the judge always asked, every command exiting 0 included, with the red's sha, the logs of its replay at the red and at its parent, and the red's acceptance-test files |
-| a red or a green, judged | `accept` | the red stands and becomes the scenario's oracle, with the command that proved it (`test` or `e2e`); the green stands |
+| the green of scenario k | its component's `test` command, and `e2e` when e2e tests proved the red or the walking skeleton's | the judge always asked, every command exiting 0 included, with the red's sha, the logs of its replay at the red and at its parent, and the red's acceptance-test files; the same for the walking skeleton's red when the scenario's component has one |
+| a red or a green, judged | `accept` | the red stands and becomes the scenario's oracle (on the plan pass, the story's walking skeleton), with the command that proved it (`test` or `e2e`); the green stands |
 | | `send-back` | refused, `not-red` or `not-green`: `the replay judge sends it back: read <judge answer>` |
 | | `retry` | the commands run again once, the commit then reporting what they find, and the judge is asked again, its brief saying so; a second `retry` asks a human |
 | | `ask-human`; two answers the engine cannot read; a host that cannot start the judge | the step stays open: `environment` question, cause `judge`: `the replay judge asks a human about the <red\|green> commit <short sha>: read <judge answer>` (`replay-judge answered 2 times with no verdict the engine reads (…)`, `the host could not start replay-judge`); `RETRY` replays and judges again, using no new attempt |
 | a red or a green | a person interrupted a command (exit 130, or `0xC000013A` on Windows) | the run stops (`interrupted`), asks nothing and refuses nothing; the next run replays the commit |
 | | no `test` command, a command that uses shell syntax or installs dependencies | the step stays open: `environment` question, cause `config`, nothing replayed |
 
-The judge accepts a red whose scenario test fails on its assertion at the commit and does not
+The judge accepts a red whose test — the walking skeleton on the plan pass, the scenario's
+acceptance test otherwise — fails on its assertion at the commit and does not
 exist, does not run or fails otherwise at the parent; it sends back a red that fails before the
 assertion runs (build, test collection, an import, a skeleton's exception), where only another
-test fails or the scenario's test is skipped. It accepts a green whose commands all exit 0 and
-whose log shows the scenario test passed, by its name or by as many tests run as at its red, none
+test fails or the commit's test is skipped; an earlier walking skeleton failing at the commit and
+at its parent alike settles nothing. It accepts a green whose commands all exit 0 and whose log
+shows the scenario test passed, and the walking skeleton too when the brief names its red, each by its name or by as many tests run as at its red, none
 failed or skipped; it asks a human when the only failing test already failed before the red. It answers `retry` for a cause that passes
 (a network timeout, a busy port), `ask-human` for what no agent can give (a program not
 installed, a container runtime that does not answer, a credential).

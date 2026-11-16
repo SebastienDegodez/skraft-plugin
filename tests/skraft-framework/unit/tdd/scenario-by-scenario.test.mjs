@@ -19,10 +19,12 @@ const THREE = [['Customer pays by card'], ['Customer is refused an expired card'
 const WEB = { name: 'web', root: 'web', stack: 'react', bdd: false, paths: { src: ['src'], tests: ['tests'] }, commands: { test: 'npx vitest run', mutation: 'npx stryker run' } }
 /** A red of scenario k of the api component, as the acceptance designer commits it. */
 const red = (index, files = [`tests/Acceptance/S${index}AcceptanceTests.cs`], body = '') => ({ git }) => git.commit(`test(${SLUG}): scenario ${index}`, files, body)
+/** The red of the story's walking skeleton, as the acceptance designer commits it on the pass that writes the plan. */
+const skeleton = (files = ['tests/Integration/WalkingSkeletonTests.cs'], body = '') => ({ git }) => git.commit(`test(${SLUG}): walking skeleton`, files, body)
 /** The green of scenario k, as the software engineer commits it. */
 const greenOf = (index, files = [`src/Scenario${index}.cs`, `tests/Unit/Scenario${index}Tests.cs`], body = '') => ({ git }) => git.commit(`feat(${SLUG}): scenario ${index}`, files, body)
 
-test('a story of three scenarios is delivered one scenario at a time: the red of its acceptance test, then one green, in order', async () => {
+test('a story of three scenarios is delivered one scenario at a time after its walking skeleton: the red of its acceptance test, then one green, in order', async () => {
   const host = scripted({}, (it) => [...research(it), agent({ plan: THREE })(it), agent()(it), agent()(it), agent()(it), agent()(it), agent()(it)])
 
   const outcome = await host.start()
@@ -30,13 +32,15 @@ test('a story of three scenarios is delivered one scenario at a time: the red of
   assert.equal(outcome.status, 'done', outcome.reason)
   assert.deepEqual(labels(host).filter((label) => /distill|deliver/.test(label)), [
     `skraft ${SLUG} · distill · attempt 1`,
+    `skraft ${SLUG} · distill · pass 2 · scenario 1 of 3 · attempt 1`,
     `skraft ${SLUG} · deliver · scenario 1 of 3 · attempt 1`,
-    `skraft ${SLUG} · distill · pass 2 · scenario 2 of 3 · attempt 1`,
+    `skraft ${SLUG} · distill · pass 3 · scenario 2 of 3 · attempt 1`,
     `skraft ${SLUG} · deliver · pass 2 · scenario 2 of 3 · attempt 1`,
-    `skraft ${SLUG} · distill · pass 3 · scenario 3 of 3 · attempt 1`,
+    `skraft ${SLUG} · distill · pass 4 · scenario 3 of 3 · attempt 1`,
     `skraft ${SLUG} · deliver · pass 3 · scenario 3 of 3 · attempt 1`,
   ])
   assert.deepEqual([...checked(host, 'distill'), ...checked(host, 'deliver')].sort((a, b) => a.commits[0].sha.localeCompare(b.commits[0].sha, 'en', { numeric: true })).map((event) => event.commits.map(({ subject, kind, verdict, replay }) => [subject, kind, verdict, replay?.judge.decision])), [
+    [['test(checkout): walking skeleton', 'red', 'ok', 'accept']],
     [['test(checkout): scenario 1', 'red', 'ok', 'accept']],
     [['feat(checkout): scenario 1', 'green', 'ok', 'accept']],
     [['test(checkout): scenario 2', 'red', 'ok', 'accept']],
@@ -50,29 +54,42 @@ test('a story of three scenarios is delivered one scenario at a time: the red of
   const loop = host.events()
     .filter((event) => (event.type === 'phase.closed' && event.phase === 'DISTILL') || (['step.started', 'step.recorded'].includes(event.type) && ['distill', 'deliver'].includes(event.step)))
     .map((event) => (event.type === 'phase.closed' ? 'DISTILL closed' : `${event.type === 'step.started' ? 'start' : 'done'} ${event.step} ${event.visit}`))
-  assert.deepEqual(loop, ['start distill 1', 'done distill 1', 'start deliver 1', 'done deliver 1', 'start distill 2', 'done distill 2', 'start deliver 2', 'done deliver 2', 'start distill 3', 'done distill 3', 'DISTILL closed', 'start deliver 3', 'done deliver 3'], 'DISTILL closes once the red of the last scenario is written')
-  assert.deepEqual(host.replay.lines(), ['root-1 ./. $ dotnet test', 'root-0 ./. $ dotnet test', 'root-2 ./. $ dotnet test', 'root-3 ./. $ dotnet test', 'root-2 ./. $ dotnet test', 'root-4 ./. $ dotnet test', 'root-5 ./. $ dotnet test', 'root-4 ./. $ dotnet test', 'root-6 ./. $ dotnet test'])
-  assert.deepEqual(host.agentRunner.judged.map(({ label }) => label.split(' · ').slice(1, 3).join(' · ')), ['distill · judge red root-1 of attempt 1', 'deliver · judge green root-2 of attempt 1', 'distill · judge red root-3 of attempt 1', 'deliver · judge green root-4 of attempt 1', 'distill · judge red root-5 of attempt 1', 'deliver · judge green root-6 of attempt 1'])
+  assert.deepEqual(loop, ['start distill 1', 'done distill 1', 'start distill 2', 'done distill 2', 'start deliver 1', 'done deliver 1', 'start distill 3', 'done distill 3', 'start deliver 2', 'done deliver 2', 'start distill 4', 'done distill 4', 'DISTILL closed', 'start deliver 3', 'done deliver 3'], 'DISTILL closes once the red of the last scenario is written')
+  assert.deepEqual(recorded(host, 'distill').map(({ group, next }) => [group, next]), [[undefined, null], [1, 'distill_review'], [2, null], [3, null]], 'the plan hands over to the red of S1, which leaves by the edge to the review')
+  assert.deepEqual(host.replay.lines(), ['root-1 ./. $ dotnet test', 'root-0 ./. $ dotnet test', 'root-2 ./. $ dotnet test', 'root-1 ./. $ dotnet test', 'root-3 ./. $ dotnet test', 'root-4 ./. $ dotnet test', 'root-3 ./. $ dotnet test', 'root-5 ./. $ dotnet test', 'root-6 ./. $ dotnet test', 'root-5 ./. $ dotnet test', 'root-7 ./. $ dotnet test'])
+  assert.deepEqual(host.agentRunner.judged.map(({ label }) => label.split(' · ').slice(1, 3).join(' · ')), ['distill · judge red root-1 of attempt 1', 'distill · judge red root-2 of attempt 1', 'deliver · judge green root-3 of attempt 1', 'distill · judge red root-4 of attempt 1', 'deliver · judge green root-5 of attempt 1', 'distill · judge red root-6 of attempt 1', 'deliver · judge green root-7 of attempt 1'])
 })
 
-test('the engineer is told its scenario, the acceptance tests it never changes and the exact green commit; the designer the next scenario and the exact red', async () => {
-  const host = scripted({}, (it) => [...research(it), agent({ plan: THREE.slice(0, 2), work: red(1, ['tests/Acceptance/S1AcceptanceTests.cs', 'src/PayOrder.cs'], REFS_42) })(it), agent({ work: greenOf(1, undefined, REFS_42) })(it), agent({ work: red(2, undefined, REFS_42) })(it), unavailable])
+test('the engineer is told its scenario, the acceptance tests it never changes, the walking skeleton and the exact green commit; the designer the next scenario and the exact red', async () => {
+  const host = scripted({}, (it) => [...research(it), agent({ plan: THREE.slice(0, 2), work: skeleton(['tests/Integration/WalkingSkeletonTests.cs', 'src/PayOrder.cs'], REFS_42) })(it), agent({ work: greenOf(1, undefined, REFS_42) })(it), agent({ work: red(2, undefined, REFS_42) })(it), unavailable])
+  host.firstReds.push(agent({ work: red(1, undefined, REFS_42) }))
 
   await host.start({ story: { issue: 42, title: 'Pay by card' } })
 
   const deliver = promptOf(host, `skraft ${SLUG} · deliver · scenario 1 of 2 · attempt 1`)
   assert.match(deliver, /\n- Scenario: 1 of 2 — "Customer pays by card" \(component api, tags @walking-skeleton\)\n/)
-  assert.match(deliver, /\n- Acceptance tests DISTILL committed, which you never change \(a wrong one: stop blocked, naming it\):\n- root-1 "test\(checkout\): scenario 1": tests\/Acceptance\/S1AcceptanceTests.cs\n/)
+  assert.ok(deliver.includes([
+    '- Acceptance tests DISTILL committed, which you never change (a wrong one: stop blocked, naming it):',
+    '- root-2 "test(checkout): scenario 1": tests/Acceptance/S1AcceptanceTests.cs',
+    '- root-1 "test(checkout): walking skeleton": tests/Integration/WalkingSkeletonTests.cs',
+    '- The walking skeleton root-1 passes at your commit too, beside this scenario\'s acceptance test.',
+  ].join('\n')), deliver)
   assert.match(deliver, /\n {2}dotnet test && git add <each file you changed> && git commit -s -m "feat\(checkout\): customer pays by card" -m "Refs: #42"\n/)
   assert.doesNotMatch(deliver, /Commit each TDD cycle/)
-  const distill = promptOf(host, `skraft ${SLUG} · distill · pass 2 · scenario 2 of 2 · attempt 1`)
+  const first = promptOf(host, `skraft ${SLUG} · distill · pass 2 · scenario 1 of 2 · attempt 1`)
+  assert.match(first, /\n- Scenario: 1 of 2 — "Customer pays by card" \(component api, tags @walking-skeleton\)\n/)
+  assert.match(first, /\n {2}git commit -s -m "test\(checkout\): customer pays by card" -m "Refs: #42"\n/)
+  const distill = promptOf(host, `skraft ${SLUG} · distill · pass 3 · scenario 2 of 2 · attempt 1`)
   assert.match(distill, /\n- Scenario: 2 of 2 — "Customer is refused an expired card" \(component api, tags @error-case\)\n/)
   assert.match(distill, /\n {2}git commit -s -m "test\(checkout\): customer is refused an expired card" -m "Refs: #42"\n/)
+  const plan = promptOf(host, `skraft ${SLUG} · distill · attempt 1`)
+  assert.match(plan, /\n {2}git commit -s -m "test\(checkout\): walking skeleton of <the title of S1, as your test plan writes it>" -m "Refs: #42"\n/)
   const policy = [
-    '- How the tests of each component treat what the code depends on, in the targeted scenarios and in the walking skeleton S1:',
+    '- How the tests of each component treat what the code depends on, in the scenarios\' acceptance tests (targeted) and in the walking skeleton:',
     '- api (dotnet) entry point: in-process (targeted), real (walking skeleton) — WebApplicationFactory; source plugin',
   ].join('\n')
-  assert.ok(promptOf(host, `skraft ${SLUG} · distill · attempt 1`).includes(policy), promptOf(host, `skraft ${SLUG} · distill · attempt 1`))
+  assert.ok(plan.includes(policy), plan)
+  assert.ok(first.includes(policy), first)
   assert.ok(distill.includes(policy))
   assert.ok(!deliver.includes(policy.split('\n')[0]))
 })
@@ -87,34 +104,54 @@ test('a component that overrides its infrastructure policy in skraft-config.json
 })
 
 test('a red that commits no test of its component is refused before any replay', async () => {
-  const untested = scripted({}, (it) => [...research(it), agent({ work: red(1, ['src/PayOrder.cs']) })(it), unavailable])
+  const untested = scripted({}, (it) => [...research(it), agent({ work: skeleton(['src/PayOrder.cs']) })(it), unavailable])
   await untested.start()
-  assert.deepEqual(recorded(untested, 'distill')[0].failures, ['commit root-1 "test(checkout): scenario 1" commits no test of its component: the acceptance test of the scenario goes in its test paths, with the skeleton it calls'])
+  assert.deepEqual(recorded(untested, 'distill')[0].failures, ['commit root-1 "test(checkout): walking skeleton" commits no test of its component: the acceptance test of the scenario goes in its test paths, with the skeleton it calls'])
   assert.deepEqual(untested.replay.lines(), [])
+
+  const first = scripted({}, (it) => [...research(it), agent()(it), unavailable])
+  first.firstReds.push(agent({ work: red(1, ['src/PayOrder.cs']) }))
+  await first.start()
+  assert.deepEqual(recorded(first, 'distill').slice(0, 2).map(({ group, attempt, failures }) => [group, attempt, failures]), [[undefined, 1, []], [1, 1, ['commit root-2 "test(checkout): scenario 1" commits no test of its component: the acceptance test of the scenario goes in its test paths, with the skeleton it calls']]])
+  assert.deepEqual(first.replay.lines(), ['root-1 ./. $ dotnet test', 'root-0 ./. $ dotnet test'])
 })
 
 test('a scenario proven by its e2e tests has them replayed at its green beside its tests, and the judge reads both', async () => {
   const FRONT = { name: 'web', root: '.', stack: 'react', bdd: false, paths: { src: ['src'], tests: ['tests', 'e2e'] }, commands: { test: 'npx vitest run', e2e: 'npx playwright test', mutation: 'npx stryker run' } }
-  const replay = new ScriptedReplay({ exits: { 'root-1 npx vitest run': 0, 'root-0 npx playwright test': 0, 'root-2 npx vitest run': 0, 'root-2 npx playwright test': 1 } })
-  const host = scripted({ components: [FRONT], replay }, (it) => [...research(it), agent({ plan: [['Customer pays by card', 'web', '@walking-skeleton']], work: red(1, ['e2e/pay.spec.ts']) })(it), agent({ work: greenOf(1, ['src/Pay.tsx']) })(it), unavailable])
-  host.agentRunner.judge = judging(judgeAnswer('accept'), judgeAnswer('send-back', 'the e2e test still fails'))
+  const replay = new ScriptedReplay({ exits: { 'root-2 npx vitest run': 0, 'root-1 npx playwright test': 0, 'root-3 npx vitest run': 0, 'root-3 npx playwright test': 1 } })
+  const host = scripted({ components: [FRONT], replay }, (it) => [...research(it), agent({ plan: [['Customer pays by card', 'web', '@walking-skeleton']], work: skeleton(['tests/WalkingSkeleton.test.tsx']) })(it), agent({ work: greenOf(1, ['src/Pay.tsx']) })(it), unavailable])
+  host.firstReds.push(agent({ work: red(1, ['e2e/pay.spec.ts']) }))
+  host.agentRunner.judge = judging(judgeAnswer('accept'), judgeAnswer('accept'), judgeAnswer('send-back', 'the e2e test still fails'))
 
   await host.start()
 
-  assert.deepEqual(host.replay.lines(), ['root-1 ./. $ npx vitest run', 'root-1 ./. $ npx playwright test', 'root-0 ./. $ npx playwright test', 'root-2 ./. $ npx vitest run', 'root-2 ./. $ npx playwright test'])
-  assert.deepEqual(recorded(host, 'distill').at(-1).oracle, { scenario: 1, sha: 'root-1', subject: 'test(checkout): scenario 1', component: 'web', files: ['e2e/pay.spec.ts'], command: 'e2e' })
-  assert.ok(host.agentRunner.judged[1].prompt.includes(`\nThe red of its scenario is root-1; its replay printed to ${logOf('root-1', 'web', 'e2e')}, and at its parent to ${logOf('root-1', 'web', 'e2e-parent')}\nThe acceptance tests of its scenario: e2e/pay.spec.ts\n`), host.agentRunner.judged[1].prompt)
-  assert.deepEqual(recorded(host, 'deliver')[0].failures, [`commit root-2 "feat(checkout): scenario 1" does not make the scenario pass: the replay judge sends it back: read ${TRACKING}/logs/judge-root-2-green.md`])
+  assert.deepEqual(host.replay.lines(), ['root-1 ./. $ npx vitest run', 'root-0 ./. $ npx vitest run', 'root-2 ./. $ npx vitest run', 'root-2 ./. $ npx playwright test', 'root-1 ./. $ npx playwright test', 'root-3 ./. $ npx vitest run', 'root-3 ./. $ npx playwright test'])
+  const [plan, first] = recorded(host, 'distill')
+  assert.deepEqual([plan.skeleton.command, first.oracle], ['test', { scenario: 1, sha: 'root-2', subject: 'test(checkout): scenario 1', component: 'web', files: ['e2e/pay.spec.ts'], command: 'e2e' }])
+  assert.ok(host.agentRunner.judged[2].prompt.includes(`\nThe red of its scenario is root-2; its replay printed to ${logOf('root-2', 'web', 'e2e')}, and at its parent to ${logOf('root-2', 'web', 'e2e-parent')}\nThe acceptance tests of its scenario: e2e/pay.spec.ts\n`), host.agentRunner.judged[2].prompt)
+  assert.deepEqual(recorded(host, 'deliver')[0].failures, [`commit root-3 "feat(checkout): scenario 1" does not make the scenario pass: the replay judge sends it back: read ${TRACKING}/logs/judge-root-3-green.md`])
+
+  const walked = new ScriptedReplay({ exits: { 'root-1 npx vitest run': 0, 'root-0 npx playwright test': 0, 'root-3 npx vitest run': 0, 'root-3 npx playwright test': 1 } })
+  const e2e = scripted({ components: [FRONT], replay: walked }, (it) => [...research(it), agent({ plan: [['Customer pays by card', 'web', '@walking-skeleton']], work: skeleton(['e2e/walking-skeleton.spec.ts']) })(it), agent({ work: greenOf(1, ['src/Pay.tsx']) })(it), unavailable])
+  e2e.firstReds.push(agent({ work: red(1, ['tests/pay.test.tsx']) }))
+  e2e.agentRunner.judge = judging(judgeAnswer('accept'), judgeAnswer('accept'), judgeAnswer('send-back', 'the walking skeleton still fails'))
+
+  await e2e.start()
+
+  assert.deepEqual(recorded(e2e, 'distill').map(({ skeleton: walking, oracle }) => (walking ?? oracle).command), ['e2e', 'test'])
+  assert.deepEqual(e2e.replay.lines().filter((line) => line.startsWith('root-3 ')), ['root-3 ./. $ npx vitest run', 'root-3 ./. $ npx playwright test'], 'the walking skeleton proven by e2e has them replayed at the green of S1')
+  assert.ok(e2e.agentRunner.judged[2].prompt.includes(`\nThe red of the story's walking skeleton is root-1; its replay printed to ${logOf('root-1', 'web', 'e2e')}, and at its parent to ${logOf('root-1', 'web', 'e2e-parent')}\nThe walking skeleton's tests, which pass at this green too: e2e/walking-skeleton.spec.ts\n`), e2e.agentRunner.judged[2].prompt)
 })
 
-test('a green that changes the scenario\'s acceptance test, commits its inner tests apart or touches another component is refused', async () => {
+test('a green that changes the scenario\'s acceptance test or the walking skeleton, commits its inner tests apart or touches another component is refused', async () => {
   const COMPONENTS = [API, WEB]
   const cases = [
-    [greenOf(1, ['src/Scenario1.cs', 'tests/Acceptance/S1AcceptanceTests.cs']), 'commit root-2 "feat(checkout): scenario 1" changes the scenario\'s acceptance tests, which DISTILL owns; undo that change, and if the test is wrong, stop blocked naming it'],
-    [(h) => { h.git.commit('test(checkout): unit of the payment', ['tests/Unit/PaymentTests.cs']); greenOf(1)(h) }, 'commit root-2 "test(checkout): unit of the payment" commits a test on its own: the tests of the inner loop go in the one feat or fix commit that makes the scenario pass'],
-    [greenOf(1, ['src/Scenario1.cs', 'web/src/Pay.tsx']), 'commit root-2 "feat(checkout): scenario 1" changes another component than the scenario\'s; that change needs a scenario of its own: stop blocked naming it'],
-    [(h) => { greenOf(1)(h); h.git.commit('feat(checkout): receipt', ['src/Receipt.cs']) }, 'commit root-3 "feat(checkout): receipt" is a second feat or fix commit for the scenario; make it pass in one commit'],
-    [(h) => { greenOf(1)(h); h.git.commit('refactor(checkout): name the payment', ['src/Scenario1.cs']) }, 'commit root-3 "refactor(checkout): name the payment" commits a change under green on its own: the scenario takes one feat or fix commit, refactoring included'],
+    [greenOf(1, ['src/Scenario1.cs', 'tests/Acceptance/S1AcceptanceTests.cs']), 'commit root-3 "feat(checkout): scenario 1" changes the scenario\'s acceptance tests, which DISTILL owns; undo that change, and if the test is wrong, stop blocked naming it'],
+    [greenOf(1, ['src/Scenario1.cs', 'tests/Integration/WalkingSkeletonTests.cs']), 'commit root-3 "feat(checkout): scenario 1" changes the scenario\'s acceptance tests, which DISTILL owns; undo that change, and if the test is wrong, stop blocked naming it'],
+    [(h) => { h.git.commit('test(checkout): unit of the payment', ['tests/Unit/PaymentTests.cs']); greenOf(1)(h) }, 'commit root-3 "test(checkout): unit of the payment" commits a test on its own: the tests of the inner loop go in the one feat or fix commit that makes the scenario pass'],
+    [greenOf(1, ['src/Scenario1.cs', 'web/src/Pay.tsx']), 'commit root-3 "feat(checkout): scenario 1" changes another component than the scenario\'s; that change needs a scenario of its own: stop blocked naming it'],
+    [(h) => { greenOf(1)(h); h.git.commit('feat(checkout): receipt', ['src/Receipt.cs']) }, 'commit root-4 "feat(checkout): receipt" is a second feat or fix commit for the scenario; make it pass in one commit'],
+    [(h) => { greenOf(1)(h); h.git.commit('refactor(checkout): name the payment', ['src/Scenario1.cs']) }, 'commit root-4 "refactor(checkout): name the payment" commits a change under green on its own: the scenario takes one feat or fix commit, refactoring included'],
     [() => {}, 'scenario 1 has no feat or fix commit: make its acceptance test pass, then commit once'],
   ]
   for (const [work, why] of cases) {
@@ -129,11 +166,11 @@ test('a component whose source path is its whole root keeps its acceptance tests
   const WHOLE = { ...API, paths: { src: ['.'], tests: ['tests'] } }
   const touched = scripted({ components: [WHOLE] }, (it) => [...research(it), agent()(it), agent({ work: greenOf(1, ['Scenario1.cs', 'tests/Acceptance/S1AcceptanceTests.cs']) })(it), unavailable])
   await touched.start()
-  assert.deepEqual(recorded(touched, 'deliver')[0].failures, ['commit root-2 "feat(checkout): scenario 1" changes the scenario\'s acceptance tests, which DISTILL owns; undo that change, and if the test is wrong, stop blocked naming it'])
+  assert.deepEqual(recorded(touched, 'deliver')[0].failures, ['commit root-3 "feat(checkout): scenario 1" changes the scenario\'s acceptance tests, which DISTILL owns; undo that change, and if the test is wrong, stop blocked naming it'])
 
-  const documented = scripted({ components: [WHOLE] }, (it) => [...research(it), agent({ work: (h) => { h.git.commit('docs(checkout): how to pay', ['README.md']); red(1)(h) } })(it), unavailable])
+  const documented = scripted({ components: [WHOLE] }, (it) => [...research(it), agent({ work: (h) => { h.git.commit('docs(checkout): how to pay', ['README.md']); skeleton()(h) } })(it), unavailable])
   await documented.start()
-  assert.deepEqual(recorded(documented, 'distill').map(({ outcome, failures }) => [outcome, failures]), [['done', []]])
+  assert.deepEqual(recorded(documented, 'distill').map(({ group, outcome, failures }) => [group, outcome, failures]), [[undefined, 'done', []], [1, 'done', []]])
 })
 
 test('two components sharing a root each own the files of their own paths', async () => {
@@ -146,21 +183,21 @@ test('two components sharing a root each own the files of their own paths', asyn
   const outcome = await host.start()
 
   assert.equal(outcome.status, 'done', outcome.reason)
-  assert.deepEqual(host.replay.lines().slice(3), ['root-3 ./. $ npx vitest run', 'root-2 ./. $ npx vitest run', 'root-4 ./. $ npx vitest run'])
+  assert.deepEqual(host.replay.lines().slice(4), ['root-3 ./. $ dotnet test', 'root-4 ./. $ npx vitest run', 'root-3 ./. $ npx vitest run', 'root-5 ./. $ npx vitest run'])
 })
 
 test('a green replay that times out goes to the judge, which asks a human when no agent can fix it', async () => {
-  const machine = scripted({ replay: new ScriptedReplay({ exits: { 'root-2': 'timeout' } }) }, (it) => [...research(it), agent()(it), agent()(it), unavailable])
-  machine.agentRunner.judge = judging(judgeAnswer('accept'), judgeAnswer('ask-human', 'dotnet is not installed'))
+  const machine = scripted({ replay: new ScriptedReplay({ exits: { 'root-3': 'timeout' } }) }, (it) => [...research(it), agent()(it), agent()(it), unavailable])
+  machine.agentRunner.judge = judging(judgeAnswer('accept'), judgeAnswer('accept'), judgeAnswer('ask-human', 'dotnet is not installed'))
   const outcome = await machine.start()
-  const answer = `${TRACKING}/logs/judge-root-2-green.md`
+  const answer = `${TRACKING}/logs/judge-root-3-green.md`
   assert.equal(outcome.status, 'waiting')
-  assert.ok(outcome.reason.startsWith(waitingOnEnvironment('deliver', `the replay judge asks a human about the green commit root-2: read ${answer}`, 1, { owner: 'judge', log: answer }).split('\nThe run so far')[0]))
-  assert.ok(machine.agentRunner.judged[1].prompt.includes(`\n- api: \`dotnet test\` at the commit root-2: dotnet did not finish within 600 s; printed to ${logOf('root-2')}\n`), machine.agentRunner.judged[1].prompt)
+  assert.ok(outcome.reason.startsWith(waitingOnEnvironment('deliver', `the replay judge asks a human about the green commit root-3: read ${answer}`, 1, { owner: 'judge', log: answer }).split('\nThe run so far')[0]))
+  assert.ok(machine.agentRunner.judged[2].prompt.includes(`\n- api: \`dotnet test\` at the commit root-3: dotnet did not finish within 600 s; printed to ${logOf('root-3')}\n`), machine.agentRunner.judged[2].prompt)
 })
 
 test('a docs or chore commit that changes a component\'s source or tests is refused, wherever it is made', async () => {
-  const host = scripted({}, (it) => [...research(it), agent({ work: (h) => { h.git.commit('docs(contract): payment API', ['.copilot-tracking/skraft-plans/checkout/contract.yaml', 'src/PaymentController.cs']); red(1)(h) } })(it), unavailable])
+  const host = scripted({}, (it) => [...research(it), agent({ work: (h) => { h.git.commit('docs(contract): payment API', ['.copilot-tracking/skraft-plans/checkout/contract.yaml', 'src/PaymentController.cs']); skeleton()(h) } })(it), unavailable])
 
   await host.start()
 
@@ -168,22 +205,22 @@ test('a docs or chore commit that changes a component\'s source or tests is refu
 
   const tests = scripted({}, (it) => [...research(it), agent()(it), agent({ work: (h) => { h.git.commit('chore(checkout): tidy the steps', ['tests/Acceptance/PaymentSteps.cs']); greenOf(1)(h) } })(it), unavailable])
   await tests.start()
-  assert.deepEqual(recorded(tests, 'deliver')[0].failures, ['commit root-2 "chore(checkout): tidy the steps" changes a component\'s source or tests outside TDD; a docs, chore, build, ci or revert commit changes neither: put that change in the test, feat or fix commit it belongs to'])
+  assert.deepEqual(recorded(tests, 'deliver')[0].failures, ['commit root-3 "chore(checkout): tidy the steps" changes a component\'s source or tests outside TDD; a docs, chore, build, ci or revert commit changes neither: put that change in the test, feat or fix commit it belongs to'])
 
   const documented = scripted({}, (it) => [...research(it), agent()(it), agent({ work: (h) => { h.git.commit('docs(checkout): the payment flow', ['src/README.md']); greenOf(1)(h) } })(it), unavailable])
   await documented.start()
   assert.deepEqual(recorded(documented, 'deliver').map(({ outcome, failures }) => [outcome, failures]), [['done', []]])
 })
 
-test('the scenarios of every component are Gherkin, not code: they go with the red of S1, or in a docs commit, whatever folder holds them', async () => {
+test('the scenarios of every component are Gherkin, not code: they go with the red of the walking skeleton, or in a docs commit, whatever folder holds them', async () => {
   const COMPONENTS = [API, { ...WEB, bdd: [{ features: 'tests/features' }] }]
-  const together = scripted({ components: COMPONENTS }, (it) => [...research(it), agent({ work: red(1, ['tests/Acceptance/S1AcceptanceTests.cs', 'web/tests/features/checkout/pay.feature']) })(it), unavailable])
+  const together = scripted({ components: COMPONENTS }, (it) => [...research(it), agent({ work: skeleton(['tests/Integration/WalkingSkeletonTests.cs', 'web/tests/features/checkout/pay.feature']) })(it), unavailable])
   await together.start()
-  assert.deepEqual(recorded(together, 'distill').map(({ outcome, failures }) => [outcome, failures]), [['done', []]])
+  assert.deepEqual(recorded(together, 'distill').map(({ group, outcome, failures }) => [group, outcome, failures]), [[undefined, 'done', []], [1, 'done', []]])
 
-  const apart = scripted({ components: COMPONENTS }, (it) => [...research(it), agent({ work: (h) => { h.git.commit('docs(checkout): the scenarios of the web front end', ['web/tests/features/checkout/pay.feature']); red(1)(h) } })(it), unavailable])
+  const apart = scripted({ components: COMPONENTS }, (it) => [...research(it), agent({ work: (h) => { h.git.commit('docs(checkout): the scenarios of the web front end', ['web/tests/features/checkout/pay.feature']); skeleton()(h) } })(it), unavailable])
   await apart.start()
-  assert.deepEqual(recorded(apart, 'distill').map(({ outcome, failures }) => [outcome, failures]), [['done', []]])
+  assert.deepEqual(recorded(apart, 'distill').map(({ group, outcome, failures }) => [group, outcome, failures]), [[undefined, 'done', []], [1, 'done', []]])
 })
 
 test('the test plan lists the scenarios, S1 the walking skeleton in a back-end component, or declares why the story has none', async () => {
@@ -213,11 +250,11 @@ test('the test plan lists the scenarios, S1 the walking skeleton in a back-end c
 })
 
 test('a repository whose only component is a front end has its walking skeleton there', async () => {
-  const host = scripted({ components: [{ ...WEB, root: '.' }] }, (it) => [...research(it), agent({ plan: [['Customer sees the price', 'web', '@walking-skeleton']], work: red(1, ['tests/price.test.tsx']) })(it), unavailable])
+  const host = scripted({ components: [{ ...WEB, root: '.' }] }, (it) => [...research(it), agent({ plan: [['Customer sees the price', 'web', '@walking-skeleton']], work: skeleton(['tests/price.test.tsx']) })(it), unavailable])
 
   await host.start()
 
-  assert.deepEqual(recorded(host, 'distill').map(({ outcome, failures }) => [outcome, failures]), [['done', []]])
+  assert.deepEqual(recorded(host, 'distill').map(({ group, outcome, failures, skeleton: walking, oracle }) => [group, outcome, failures, (walking ?? oracle).component]), [[undefined, 'done', [], 'web'], [1, 'done', [], 'web']])
 })
 
 test('a story declared exempt of a walking skeleton as docs only, whose commits change source, is refused', async () => {
@@ -234,16 +271,33 @@ test('a story declared exempt of a walking skeleton as docs only, whose commits 
   assert.deepEqual(recorded(host, 'distill').map(({ code, failures }) => [code, failures]), [['scenarios', ['the story declares its walking skeleton exempt as docs only, and commit root-1 "test(checkout): scenario 1" changes src/Skeleton.cs, source of api; remove the exemption and tag S1 @walking-skeleton']]])
 })
 
+test('a story exempt of a walking skeleton commits none: the acceptance test of S1 still gets its own pass, and its green replays no walking skeleton', async () => {
+  const host = scripted({ scenarioReviews: [{ answer: 'APPROVED' }] }, (it) => [...research(it), agent({ plan: [['Reader finds the API documented', 'api', '@happy-path']], exemption: 'library' })(it), agent()(it), unavailable])
+
+  await host.start()
+
+  assert.deepEqual(recorded(host, 'distill').map(({ group, outcome, exemption, skeleton, oracle }) => [group, outcome, exemption, skeleton, oracle?.sha]), [[undefined, 'done', 'library', null, undefined], [1, 'done', undefined, undefined, 'root-1']])
+  assert.match(host.human.questions.find(({ kind }) => kind === 'scenario-review').text, /\. The story has no walking skeleton \(exemption: library\)\. The acceptance test of S1 is commit root-1 "test\(checkout\): scenario 1": tests\/Acceptance\/S1AcceptanceTests.cs\. /)
+  const deliver = promptOf(host, `skraft ${SLUG} · deliver · scenario 1 of 1 · attempt 1`)
+  assert.match(deliver, /: tests\/Acceptance\/S1AcceptanceTests\.cs\n- Make it pass with outside-in TDD/)
+  assert.doesNotMatch(deliver, /walking skeleton/i)
+  assert.deepEqual(host.events().filter(({ type }) => type === 'question.asked').map(({ subjects }) => subjects), [['tests/Acceptance/S1AcceptanceTests.cs']])
+  assert.doesNotMatch(host.agentRunner.judged.at(-1).prompt, /walking skeleton/)
+})
+
 test('a human reads the scenarios and the walking skeleton before DELIVER builds them; REVISE sends DISTILL back with the corrections', async () => {
   const host = scripted({ scenarioReviews: [{ answer: 'REVISE', reason: 'S2 is a refused card, not an expired one' }, { answer: 'APPROVED' }] }, (it) => [
     ...research(it), agent({ plan: THREE.slice(0, 2) })(it), agent({ plan: THREE.slice(0, 2), work: () => {} })(it), agent()(it), agent()(it), agent()(it),
   ])
+  host.firstReds.push(agent(), agent({ work: () => {} }))
 
   const outcome = await host.start()
 
   assert.equal(outcome.status, 'done', outcome.reason)
   const [first, second] = host.human.questions.filter(({ kind }) => kind === 'scenario-review')
-  assert.equal(first.text, 'Read the 2 scenarios of the story before DELIVER builds them, one at a time: S1 "Customer pays by card" (api; @walking-skeleton); S2 "Customer is refused an expired card" (api; @error-case). The acceptance test of S1 and its skeleton are commit root-1 "test(checkout): scenario 1": tests/Acceptance/S1AcceptanceTests.cs. APPROVED delivers them; REVISE sends DISTILL back with your corrections (edit the .feature or the test yourself first if you like, and say so).')
+  assert.equal(first.text, 'Read the 2 scenarios of the story before DELIVER builds them, one at a time: S1 "Customer pays by card" (api; @walking-skeleton); S2 "Customer is refused an expired card" (api; @error-case). The walking skeleton and the skeleton of its chain are commit root-1 "test(checkout): walking skeleton": tests/Integration/WalkingSkeletonTests.cs. The acceptance test of S1 is commit root-2 "test(checkout): scenario 1": tests/Acceptance/S1AcceptanceTests.cs. APPROVED delivers them; REVISE sends DISTILL back with your corrections (edit the .feature or the test yourself first if you like, and say so).')
+  assert.equal(second.text, first.text, 'the pass REVISE sent back committed nothing new: the walking skeleton and the red of S1 stand')
+  assert.deepEqual(host.events().filter(({ type }) => type === 'question.asked').map(({ subjects }) => subjects), [['tests/Integration/WalkingSkeletonTests.cs', 'tests/Acceptance/S1AcceptanceTests.cs'], ['tests/Integration/WalkingSkeletonTests.cs', 'tests/Acceptance/S1AcceptanceTests.cs']])
   const named = scripted({}, (it) => [...research(it), agent({ work: (h) => { red(1, ['tests/Acceptance/S1AcceptanceTests.cs', 'tests/features/checkout/pay.feature'])(h); h.tracking.write(SLUG, 'details/2026-10-11/test-plan-checkout.md', `${h.tracking.files.get(`${SLUG}/details/2026-10-11/test-plan-checkout.md`)}\n| coverage | tests/features/checkout/pay.feature |\n`) } })(it), unavailable])
   await named.start()
   assert.match(named.human.questions.find(({ kind }) => kind === 'scenario-review').text, /one at a time, as tests\/features\/checkout\/pay.feature writes them: S1 /)
@@ -251,8 +305,10 @@ test('a human reads the scenarios and the walking skeleton before DELIVER builds
   await two.start()
   assert.match(two.human.questions.find(({ kind }) => kind === 'scenario-review').text, /one at a time, as tests\/features\/checkout\/pay.feature, tests\/features\/checkout\/refund.feature write them: S1 /)
   assert.equal(second.key, 'scenario_review-2')
-  assert.match(promptOf(host, `skraft ${SLUG} · distill · pass 2 · attempt 1`), /A human refused the work of pass 1:\n- A human read the scenarios and the walking skeleton and asks for these corrections: S2 is a refused card, not an expired one/)
-  assert.deepEqual(recorded(host, 'distill').map(({ visit, group, outcome: done }) => [visit, group, done]), [[1, undefined, 'done'], [2, undefined, 'done'], [3, 2, 'done']])
+  assert.match(promptOf(host, `skraft ${SLUG} · distill · pass 3 · attempt 1`), /A human refused the work of pass 2:\n- A human read the scenarios and the walking skeleton and asks for these corrections: S2 is a refused card, not an expired one/)
+  assert.deepEqual(recorded(host, 'distill').map(({ visit, group, outcome: done, skeleton: walking, oracle }) => [visit, group, done, walking?.sha, oracle?.sha]), [
+    [1, undefined, 'done', 'root-1', undefined], [2, 1, 'done', undefined, 'root-2'], [3, undefined, 'done', 'root-1', 'root-2'], [4, 1, 'done', undefined, 'root-2'], [5, 2, 'done', undefined, 'root-4'],
+  ], 'the plan sent back keeps the walking skeleton and the red of S1 it had, and the pass on S1 that commits nothing keeps that red')
 })
 
 test('a run stopped in the middle of scenario 2 resumes on scenario 2', async () => {
@@ -265,9 +321,10 @@ test('a run stopped in the middle of scenario 2 resumes on scenario 2', async ()
   assert.equal(outcome.status, 'done', outcome.reason)
   assert.deepEqual(labels(host).filter((label) => /distill|deliver/.test(label)), [
     `skraft ${SLUG} · distill · attempt 1`,
+    `skraft ${SLUG} · distill · pass 2 · scenario 1 of 2 · attempt 1`,
     `skraft ${SLUG} · deliver · scenario 1 of 2 · attempt 1`,
-    `skraft ${SLUG} · distill · pass 2 · scenario 2 of 2 · attempt 1`,
-    `skraft ${SLUG} · distill · pass 2 · scenario 2 of 2 · attempt 1`,
+    `skraft ${SLUG} · distill · pass 3 · scenario 2 of 2 · attempt 1`,
+    `skraft ${SLUG} · distill · pass 3 · scenario 2 of 2 · attempt 1`,
     `skraft ${SLUG} · deliver · pass 2 · scenario 2 of 2 · attempt 1`,
   ])
 })
@@ -287,17 +344,22 @@ test('a pass the gates send back after the last scenario fixes the whole story: 
 test('a pass that writes a scenario\'s acceptance test commits it once, in the scenario\'s component alone', async () => {
   const COMPONENTS = [API, WEB]
   const cases = [
-    [(h) => { red(1)(h); h.git.commit('test(checkout): scenario 1 again', ['tests/Acceptance/S1MoreTests.cs']) }, 'commit root-2 "test(checkout): scenario 1 again" is a second test commit for the scenario; commit its acceptance test and skeleton in one test commit'],
-    [red(1, ['tests/Acceptance/S1AcceptanceTests.cs', 'web/tests/pay.test.tsx']), 'commit root-1 "test(checkout): scenario 1" changes another component than the scenario\'s: its acceptance test lives in the component the test plan names for it'],
-    [red(1, ['web/tests/pay.test.tsx']), 'commit root-1 "test(checkout): scenario 1" changes another component than the scenario\'s: its acceptance test lives in the component the test plan names for it'],
-    [(h) => { red(1)(h); h.git.commit('feat(checkout): pay early', ['src/Pay.cs']) }, 'commit root-2 "feat(checkout): pay early" is no test commit: the acceptance test of a scenario and the skeleton it calls go in one test commit, and no behaviour'],
+    [(h) => { red(1)(h); h.git.commit('test(checkout): scenario 1 again', ['tests/Acceptance/S1MoreTests.cs']) }, 'commit root-3 "test(checkout): scenario 1 again" is a second test commit for the scenario; commit its acceptance test and skeleton in one test commit'],
+    [red(1, ['tests/Acceptance/S1AcceptanceTests.cs', 'web/tests/pay.test.tsx']), 'commit root-2 "test(checkout): scenario 1" changes another component than the scenario\'s: its acceptance test lives in the component the test plan names for it'],
+    [red(1, ['web/tests/pay.test.tsx']), 'commit root-2 "test(checkout): scenario 1" changes another component than the scenario\'s: its acceptance test lives in the component the test plan names for it'],
+    [(h) => { red(1)(h); h.git.commit('feat(checkout): pay early', ['src/Pay.cs']) }, 'commit root-3 "feat(checkout): pay early" is no test commit: the acceptance test of a scenario and the skeleton it calls go in one test commit, and no behaviour'],
     [() => {}, 'scenario 1 has no failing acceptance test committed: commit it with the skeleton it calls as one test commit'],
   ]
   for (const [work, why] of cases) {
-    const host = scripted({ components: COMPONENTS }, (it) => [...research(it), agent({ work })(it), unavailable])
+    const host = scripted({ components: COMPONENTS }, (it) => [...research(it), agent()(it), agent({ work })(it), unavailable])
+    host.agentRunner.firstRed = null
     await host.start()
-    assert.deepEqual(recorded(host, 'distill').map(({ outcome, code, failures }) => [outcome, code, failures]), [['failed', 'tdd', [why]]], why)
+    assert.deepEqual(recorded(host, 'distill').map(({ group, outcome, code, failures }) => [group, outcome, code, failures]), [[undefined, 'done', null, []], [1, 'failed', 'tdd', [why]]], why)
   }
+
+  const none = scripted({ components: COMPONENTS }, (it) => [...research(it), agent({ work: () => {} })(it), unavailable])
+  await none.start()
+  assert.deepEqual(recorded(none, 'distill').map(({ outcome, code, failures }) => [outcome, code, failures]), [['failed', 'tdd', ['the story has no failing walking skeleton committed: commit its test, which enters by the real entry point, with the skeleton of the chain it crosses as one test commit']]])
 })
 
 test('the exact commit of a scenario is its title made a subject: no quote, dollar, backquote nor backslash, spaces folded, the first letter lower case, cut on a word to 72 characters, no issue reference for a story without one', async () => {
@@ -310,11 +372,11 @@ test('the exact commit of a scenario is its title made a subject: no quote, doll
   assert.ok(deliver.includes(`\n- Scenario: 1 of 2 — "${LONG}" (component api, tags @walking-skeleton @happy-path)\n`), deliver)
   assert.ok(deliver.includes('\n  dotnet test && git add <each file you changed> && git commit -s -m "feat(checkout): customer pays 5 by card with a voucher that the shop"\n'), deliver)
   assert.equal('feat(checkout): customer pays 5 by card with a voucher that the shop'.length <= 72, true)
-  const distill = promptOf(host, `skraft ${SLUG} · distill · pass 2 · scenario 2 of 2 · attempt 1`)
+  const distill = promptOf(host, `skraft ${SLUG} · distill · pass 3 · scenario 2 of 2 · attempt 1`)
   assert.ok(distill.includes('\n- Scenario: 2 of 2 — "Customer gets a receipt" (component api)\n'), distill)
   assert.ok(distill.includes([
-    '- Write the failing acceptance test of this scenario only, beside the earlier ones, and extend the skeleton it calls; change no test of an earlier scenario,',
-    '  write none for a later one, never skip one.',
+    '- Write the failing acceptance test of this scenario only, the binding of its Gherkin entering by its use case, beside the earlier ones, and extend the skeleton',
+    '  it calls; remove `@pending` from this scenario alone; change no test of an earlier scenario nor the walking skeleton, write none for a later one, never skip one.',
     '- Run the test once and read its output: it fails on an assertion. Then commit the test and the skeleton in one commit, exactly:',
     '  git commit -s -m "test(checkout): customer gets a receipt"\n',
   ].join('\n')), distill)
@@ -324,13 +386,14 @@ test('the engineer is told every acceptance-test file of the reds so far, each r
   const NEIGHBOUR = { ...WEB, root: '../web' }
   const git = new InMemoryGit({ repositories: { '.': { mergeBases: { main: 'root-0' } }, '../web': { mergeBases: { main: 'up-web-0' } } } })
   const host = scripted({ components: [API, NEIGHBOUR], git }, (it) => [
-    ...research(it), agent({ plan: [['Customer pays by card'], ['Customer sees the receipt', 'web', '@happy-path']], work: red(1, ['tests/Acceptance/S1AcceptanceTests.cs', 'tests/Acceptance/PaymentSteps.cs']) })(it),
+    ...research(it), agent({ plan: [['Customer pays by card'], ['Customer sees the receipt', 'web', '@happy-path']] })(it),
     agent()(it), agent({ work: red(2, ['../web/tests/receipt.test.tsx']) })(it), unavailable,
   ])
+  host.firstReds.push(agent({ work: red(1, ['tests/Acceptance/S1AcceptanceTests.cs', 'tests/Acceptance/PaymentSteps.cs']) }))
 
   await host.start()
 
-  assert.ok(promptOf(host, `skraft ${SLUG} · deliver · scenario 1 of 2 · attempt 1`).includes('\n- root-1 "test(checkout): scenario 1": tests/Acceptance/S1AcceptanceTests.cs, tests/Acceptance/PaymentSteps.cs\n'))
+  assert.ok(promptOf(host, `skraft ${SLUG} · deliver · scenario 1 of 2 · attempt 1`).includes('\n- root-2 "test(checkout): scenario 1": tests/Acceptance/S1AcceptanceTests.cs, tests/Acceptance/PaymentSteps.cs\n- root-1 "test(checkout): walking skeleton": tests/Integration/WalkingSkeletonTests.cs\n'))
   assert.ok(promptOf(host, `skraft ${SLUG} · deliver · pass 2 · scenario 2 of 2 · attempt 1`).includes('\n- up-web- "test(checkout): scenario 2": ../web/tests/receipt.test.tsx\n'))
 })
 
@@ -364,14 +427,17 @@ test('a scenario review a workflow asks before the scenarios are written waits o
   assert.ok(outcome.reason.startsWith(waitingOnEnvironment('scenario_review', 'the run recorded no scenario of the story to show yet; put the scenario review after the node that writes them').split('\nThe run so far')[0]))
 })
 
-test('a red an earlier attempt proved stays the scenario\'s oracle when the pass is tried again, and is not judged again', async () => {
+test('a red an earlier attempt proved stays the walking skeleton, or the scenario\'s oracle, when the pass is tried again, and is not judged again', async () => {
   const PLAN = 'details/2026-10-11/test-plan-checkout.md'
-  const host = scripted({}, (it) => [...research(it), agent({ work: (h) => { red(1)(h); h.tracking.write(SLUG, PLAN, '# Test plan\n') }, fill: false })(it), agent({ work: () => {} })(it), agent()(it), unavailable])
+  const host = scripted({}, (it) => [...research(it), agent({ work: (h) => { skeleton()(h); h.tracking.write(SLUG, PLAN, '# Test plan\n') }, fill: false })(it), agent({ work: () => {} })(it), agent()(it), unavailable])
+  host.firstReds.push(agent({ result: null }), agent({ work: () => {} }))
 
   await host.start()
 
-  assert.deepEqual(recorded(host, 'distill').map(({ outcome, oracle }) => [outcome, oracle?.command]), [['failed', undefined], ['done', 'test']])
-  assert.deepEqual(host.agentRunner.judged.map(({ label }) => label.split(' · ').slice(1, 3).join(' · ')), ['distill · judge red root-1 of attempt 1', 'deliver · judge green root-2 of attempt 1'])
+  assert.deepEqual(recorded(host, 'distill').map(({ group, attempt, outcome, skeleton: walking, oracle }) => [group, attempt, outcome, walking?.sha, oracle?.sha]), [
+    [undefined, 1, 'failed', undefined, undefined], [undefined, 2, 'done', 'root-1', undefined], [1, 1, 'failed', undefined, undefined], [1, 2, 'done', undefined, 'root-2'],
+  ])
+  assert.deepEqual(host.agentRunner.judged.map(({ label }) => label.split(' · ').slice(1, 3).join(' · ')), ['distill · judge red root-1 of attempt 1', 'distill · judge red root-2 of attempt 1', 'deliver · judge green root-3 of attempt 1'])
   assert.deepEqual(recorded(host, 'deliver').map(({ outcome, failures }) => [outcome, failures]), [['done', []]])
 })
 
@@ -380,5 +446,5 @@ test('a pass that writes the acceptance test of a later scenario commits it, wha
 
   await host.start()
 
-  assert.deepEqual(recorded(host, 'distill').map(({ outcome, failures }) => [outcome, failures]), [['done', []], ['failed', ['scenario 2 has no failing acceptance test committed: commit it with the skeleton it calls as one test commit']]])
+  assert.deepEqual(recorded(host, 'distill').map(({ group, outcome, failures }) => [group, outcome, failures]), [[undefined, 'done', []], [1, 'done', []], [2, 'failed', ['scenario 2 has no failing acceptance test committed: commit it with the skeleton it calls as one test commit']]])
 })

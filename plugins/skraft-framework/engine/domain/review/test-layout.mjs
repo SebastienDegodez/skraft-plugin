@@ -17,8 +17,9 @@ import { isTestFile } from './patch-scan.mjs'
  * path, so it may sit anywhere under the test path. A folder that names both, such as
  * `<Context>.Integration.Tests`, is the integration place.
  * A test file added elsewhere under a component's test path is a blocker at its path. A story
- * built scenario by scenario may add its walking skeleton's acceptance test alone, in the
- * integration place: whether every new use case has a test in the unit place stays the lens's call.
+ * built scenario by scenario adds in DISTILL its walking skeleton, a plain test in the integration
+ * place, and the acceptance test of each scenario, its Gherkin's binding, in the unit place:
+ * whether every new use case has a test in the unit place stays the lens's call.
  *
  * @typedef {import('./answers.mjs').Finding} Finding
  * @typedef {import('../config/skraft-config.mjs').Component} Component

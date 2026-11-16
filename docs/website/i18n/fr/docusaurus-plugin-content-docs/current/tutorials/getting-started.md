@@ -295,23 +295,25 @@ seul : `git log --oneline -1 -- docs/adr` montre `docs(adr): ratify ADR-001`.
 
 `acceptance-designer` écrit les scénarios et le plan de test
 (`details/<AAAA-MM-JJ>/test-plan-checkout.md`) : son tableau `## Scenarios` les liste en S1, S2, …
-dans l'ordre où DELIVER les construit, tous dans `web`. Il ne commite que le test d'acceptation en
-échec de S1, `test(checkout): <titre de S1>`. Le moteur rejoue ce commit et le juge du rejeu lit
-ce qu'a affiché `npm test` : un test doit échouer sur une assertion. Quatre lentilles le revoient
+dans l'ordre où DELIVER les construit, tous dans `web`. Il commite d'abord le walking skeleton en
+échec, `test(checkout): walking skeleton of <titre de S1>`, puis, à son passage suivant, le seul
+test d'acceptation en échec de S1, `test(checkout): <titre de S1>`. Le moteur rejoue chaque commit
+et le juge du rejeu lit ce qu'a affiché `npm test` : un test doit échouer sur une assertion. Quatre
+lentilles les revoient
 (coverage, business-alignment, testability, boundary-enforcement).
 
 Puis une boîte de dialogue intitulée **Scenarios** demande, avec les scénarios qu'a écrits le
 concepteur d'acceptation (deux ici) :
 
 ```text
-Read the 2 scenarios of the story before DELIVER builds them, one at a time: S1 "<title>" (web, walking skeleton); S2 "<title>" (web). The acceptance test of S1 and its skeleton are commit <sha> "test(checkout): <title>": <files>. APPROVED delivers them; REVISE sends DISTILL back with your corrections (edit the .feature or the test yourself first if you like, and say so).
+Read the 2 scenarios of the story before DELIVER builds them, one at a time: S1 "<title>" (web, walking skeleton); S2 "<title>" (web). The walking skeleton and the skeleton of its chain are commit <sha> "test(checkout): walking skeleton of <title>": <files>. The acceptance test of S1 is commit <sha> "test(checkout): <title>": <files>. APPROVED delivers them; REVISE sends DISTILL back with your corrections (edit the .feature or the test yourself first if you like, and say so).
 ```
 
-Ouvrez le plan de test et le commit que nomme la question, lisez-les, puis choisissez **APPROVED**.
+Ouvrez le plan de test et les commits que nomme la question, lisez-les, puis choisissez **APPROVED**.
 
 `software-engineer` fait ensuite passer S1 : tests unitaires et code d'abord, sans commit, puis un
 seul commit, `feat(checkout): <titre de S1>`, enchaîné à `npm test`. Le moteur le rejoue et le juge du
-rejeu lit la sortie : le test de S1 passe et rien n'échoue. `acceptance-designer` écrit le test en échec de S2,
+rejeu lit la sortie : le test de S1 et le walking skeleton passent et rien n'échoue. `acceptance-designer` écrit le test en échec de S2,
 `software-engineer` le fait passer, et ainsi de suite : le panneau montre à nouveau `distill` et
 `deliver`, avec leur passage, pour chaque scénario.
 

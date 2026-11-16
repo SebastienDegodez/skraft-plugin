@@ -37,7 +37,7 @@ import { judgeCommit } from './replay-judge.mjs'
  *   cost, and what stopped the replays when the judge, a person or the configuration did.
  * @typedef {{
  *   base: import('../config/bases.mjs').Base[], tally: ReplayTally, slug: string, judge: JudgeRun,
- *   scenario: { index: number, title: string } | null, retried: boolean,
+ *   scenario: import('../../domain/pipeline/replay-verdict.mjs').JudgedScenario | null, retried: boolean,
  * }} ReplayRun
  *   slug: the run whose logs folder keeps what each replay printed; scenario: the one the pass
  *   works on; retried: the commit's commands run again after the judge asked it.
@@ -45,9 +45,11 @@ import { judgeCommit } from './replay-judge.mjs'
  * @typedef {{ component: Component, command: Extract<ReplayCommand, { environment: null }>, replay: Replay, fact: ReplayFact, started: boolean }} Ran
  * @typedef {{ stop: string | null, ran: Ran[] }} Replayed
  * @typedef {'test' | 'e2e'} ReplayedCommand
- * @typedef {{ component: Component, command: ReplayedCommand, red: string, tests: string[] }} GreenScenario
+ * @typedef {{ red: string, command: ReplayedCommand, tests: string[] }} SkeletonRed
+ * @typedef {{ component: Component, command: ReplayedCommand, red: string, tests: string[], skeleton: SkeletonRed | null }} GreenScenario
  *   the scenario a green makes pass: its component, the command that proved its red, the sha of
- *   that red and the acceptance-test files it committed.
+ *   that red and the acceptance-test files it committed; skeleton: the red of the walking
+ *   skeleton of that component, which the green keeps passing, null when it has none.
  */
 
 /** @returns {ReplayTally} */
@@ -126,14 +128,14 @@ const judgeRed = async (deps, run, { red, components, failed }) => {
 export const replayGreen = async (deps, run, green, scenario) => {
   const played = await replayAt(deps, run, { commit: green, sha: green.sha, suffix: '' }, greenCommands(run.base, scenario))
   if (played.stop !== null) return played.stop
-  const judgement = await judgeCommit(deps, run.judge, requestOf(run, green, { replays: played.ran, parents: [], red: redOf(deps, run, scenario) }))
+  const judgement = await judgeCommit(deps, run.judge, { ...requestOf(run, green, { replays: played.ran, parents: [], red: redOf(deps, run, scenario) }), skeleton: skeletonRedOf(deps, run, scenario) })
   return decide(run, { commit: green, judgement, refusal: 'not-green' }, () => replayGreen(deps, { ...run, retried: true }, green, scenario))
 }
 
 /** @param {import('../config/bases.mjs').Base[]} base @param {GreenScenario} scenario */
-const greenCommands = (base, { component, command }) => [
+const greenCommands = (base, { component, command, skeleton }) => [
   ...commandsOf(base, [component], 'test'),
-  ...(command === 'e2e' ? commandsOf(base, [component], 'e2e') : []),
+  ...([command, skeleton?.command].includes('e2e') ? commandsOf(base, [component], 'e2e') : []),
 ]
 
 /**
@@ -146,6 +148,12 @@ const redOf = ({ files }, { slug }, { component, command, red, tests }) => ({
   parentLog: files.location(slug, logPath(red, component, `${command}-parent`)),
   tests,
 })
+
+/**
+ * The walking skeleton's red as the judge of a green reads it, when the scenario's component has one.
+ * @param {ReplayDeps} deps @param {ReplayRun} run @param {GreenScenario} scenario
+ */
+const skeletonRedOf = (deps, run, { component, skeleton }) => (skeleton === null ? null : redOf(deps, run, { component, ...skeleton }))
 
 /**
  * What the judge decided, recorded on the commit's replay: accept leaves the commit as it is, a
@@ -198,7 +206,7 @@ const sentBack = (answer) => `the replay judge sends it back: read ${answer}`
  * @returns {import('../../domain/pipeline/replay-verdict.mjs').JudgeRequest}
  */
 const requestOf = ({ scenario, retried }, { kind, sha, subject, repository, files }, { replays, parents, red }) => ({
-  kind: kind === 'red' ? 'red' : 'green', sha, subject, repository, files, scenario, retried, red,
+  kind: kind === 'red' ? 'red' : 'green', sha, subject, repository, files, scenario, retried, red, skeleton: null,
   replays: replays.map(({ fact }) => fact),
   parents: parents.map(({ fact }) => fact),
 })

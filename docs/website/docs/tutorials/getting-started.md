@@ -294,23 +294,25 @@ itself: `git log --oneline -1 -- docs/adr` shows `docs(adr): ratify ADR-001`.
 
 `acceptance-designer` writes the scenarios and the test plan
 (`details/<YYYY-MM-DD>/test-plan-checkout.md`): its `## Scenarios` table lists them as S1, S2, …
-in the order DELIVER builds them, all in `web`. It commits the failing acceptance test of S1 alone,
-`test(checkout): <title of S1>`. The engine replays that commit and the replay judge reads what
-`npm test` printed: a test must fail on an assertion. Four lenses review it (coverage,
+in the order DELIVER builds them, all in `web`. It commits the failing walking skeleton first,
+`test(checkout): walking skeleton of <title of S1>`, then, on its next pass, the failing
+acceptance test of S1 alone, `test(checkout): <title of S1>`. The engine replays each commit and
+the replay judge reads what `npm test` printed: a test must fail on an assertion. Four lenses
+review them (coverage,
 business-alignment, testability, boundary-enforcement).
 
 Then a dialog titled **Scenarios** asks, with the scenarios the acceptance designer wrote (two
 here):
 
 ```text
-Read the 2 scenarios of the story before DELIVER builds them, one at a time: S1 "<title>" (web, walking skeleton); S2 "<title>" (web). The acceptance test of S1 and its skeleton are commit <sha> "test(checkout): <title>": <files>. APPROVED delivers them; REVISE sends DISTILL back with your corrections (edit the .feature or the test yourself first if you like, and say so).
+Read the 2 scenarios of the story before DELIVER builds them, one at a time: S1 "<title>" (web, walking skeleton); S2 "<title>" (web). The walking skeleton and the skeleton of its chain are commit <sha> "test(checkout): walking skeleton of <title>": <files>. The acceptance test of S1 is commit <sha> "test(checkout): <title>": <files>. APPROVED delivers them; REVISE sends DISTILL back with your corrections (edit the .feature or the test yourself first if you like, and say so).
 ```
 
-Open the test plan and the commit the question names, read them, then choose **APPROVED**.
+Open the test plan and the commits the question names, read them, then choose **APPROVED**.
 
 `software-engineer` then makes S1 pass: unit tests and code first, uncommitted, then one commit,
 `feat(checkout): <title of S1>`, chained to `npm test`. The engine replays it and the replay judge
-reads the output: S1's test passes and nothing fails. `acceptance-designer` writes the failing
+reads the output: S1's test and the walking skeleton pass and nothing fails. `acceptance-designer` writes the failing
 test of S2, `software-engineer` makes it pass, and so on: the pane shows `distill` and `deliver`
 again, with their pass, for each scenario.
 

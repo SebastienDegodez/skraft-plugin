@@ -43,6 +43,12 @@ scénario d'acceptation : DISTILL commite son test en échec, le moteur rejoue c
 qu'il échoue sur une assertion. La boucle interne est le cycle RED → GREEN → REFACTOR
 unitaire, que le `software-engineer` tourne en DELIVER sans le commiter.
 
+La story elle-même s'ouvre sur une boucle externe plus large, son
+[walking skeleton](walking-skeleton.md) : un test simple qui entre par le vrai point d'entrée et
+ne vérifie que le câblage. DISTILL le commite en échec avant le test d'acceptation de S1 ; le vert
+de S1 les fait passer tous deux, et chaque vert suivant garde le walking skeleton au vert. Le test
+d'acceptation de chaque scénario, S1 compris, entre par le cas d'usage.
+
 ```text
 ┌─ Boucle externe (acceptation, scénario k) ───────────────────┐
 │  RED  : DISTILL commite le test du scénario, en échec         │
@@ -65,7 +71,8 @@ change jamais : écrit par un autre agent, il est l'oracle que le code doit sati
 scénario se termine par un seul commit vert, enchaîné à la commande de test pour n'avoir lieu
 qu'une fois les tests passés.
 
-Un seul test d'acceptation est rouge à la fois. DISTILL écrit le test du scénario suivant une
+Un seul test d'acceptation est rouge à la fois, à côté du walking skeleton tant que S1 n'est pas
+vert. DISTILL écrit le test du scénario suivant une
 fois le précédent passé, si bien qu'un rouge dans l'historique nomme toujours le scénario en
 cours. Le moteur ne voit jamais échouer les tests unitaires de la boucle interne ; la mutation,
 lancée en dernier sur toute la story, montre qu'ils détecteraient une erreur.

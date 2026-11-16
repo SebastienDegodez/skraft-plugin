@@ -117,14 +117,14 @@ dans Infrastructure (G4). C'est la même lentille qui vérifie le modèle de
 [Domain-Driven Design](./domain-driven-design.md).
 
 **En DISTILL, on trace le chemin complet.** L'`acceptance-designer` écrit pour chaque scénario
-sa frontière de cas d'usage, sa couche et son type de doublure, puis commite le test
-d'acceptation rouge d'un scénario à la fois avec le squelette qu'il appelle. Le premier, S1, est
-le walking skeleton : la plus fine tranche qui traverse toutes les couches, du point d'entrée
-jusqu'à une vraie base, et prouve que le câblage existe
+sa frontière de cas d'usage, sa couche et son type de doublure, puis commite le walking skeleton
+rouge, puis le test d'acceptation rouge d'un scénario à la fois avec le squelette qu'il appelle.
+Le walking skeleton parcourt S1 : un test simple, la plus fine tranche qui traverse toutes les
+couches, du vrai point d'entrée jusqu'à une vraie base, et prouve que le câblage existe
 ([Freeman & Pryce, 2009](../reference/citations.mdx#cite-freeman-goos-2009)). Le moteur l'exige, dans un composant
-back, sauf si la story se déclare exemptée ; la lentille `boundary-enforcement` en exige au moins
-un par flux (G8). Les scénarios ciblés qui
-suivent gardent le cas d'usage et le pilotent en process, avec les gateways internes en mémoire
+back, sauf si la story se déclare exemptée ; la lentille `boundary-enforcement` vérifie qu'il
+parcourt ce vrai chemin (G8). Le test d'acceptation de chaque scénario, S1 compris, garde le cas
+d'usage et le pilote en process, avec les gateways internes en mémoire
 ([politique d'infrastructure](../reference/skraft-config.md#infrastructure)). Voir
 [Walking Skeleton](./deep-dive/walking-skeleton.md).
 

@@ -671,8 +671,14 @@ const briefScenario = ({ loaded, config }, run, next) => {
   if (pass === null) return null
   const told = pass.kind === 'plan' ? NOT_LISTED : /** @type {import('../../domain/pipeline/scenarios.mjs').StoryScenario} */ (pass.scenario)
   const { title, component, tags } = told
-  return { kind: pass.kind, index: pass.index, of: pass.of, title, component, tags, oracles: pass.oracles.map((oracle) => oracleTold(oracle, config.components)), test: scenarioTest(config, run, component) }
+  return { kind: pass.kind, index: pass.index, of: pass.of, title, component, tags, oracles: pass.oracles.map((oracle) => oracleTold(oracle, config.components)), skeleton: skeletonTold(pass, component, config.components), test: scenarioTest(config, run, component) }
 }
+
+/**
+ * The walking skeleton a delivery pass keeps passing: the one of its scenario's component.
+ * @param {import('./scenario-checks.mjs').ScenarioPass} pass @param {string | null} component @param {import('../../domain/config/skraft-config.mjs').Component[]} components
+ */
+const skeletonTold = ({ kind, skeleton }, component, components) => (kind === 'delivery' && skeleton?.component === component ? oracleTold(skeleton, components) : null)
 
 /** A scenario the pass that writes the plan has not listed yet. */
 const NOT_LISTED = Object.freeze({ title: null, component: null, tags: Object.freeze([]) })
@@ -882,10 +888,14 @@ const routeDone = (context, run, { node, group, groups }) => (loopsOn(context, {
 
 /**
  * Whether a done attempt hands over without an edge: to the next group of surviving mutants, or
- * within the story's scenarios.
+ * within the story's scenarios, where only the red of the first scenario leaves the node that
+ * writes the reds by its edge, to the review.
  * @param {Context} context @param {Pick<WorkStep, 'node' | 'group' | 'groups'>} next
  */
-const loopsOn = ({ loaded }, { node, group, groups }) => group !== null && (group < groups.length || node.id === scenarioNodes(loaded.workflow)[0])
+const loopsOn = ({ loaded }, { node, group, groups }) => {
+  if (node.id === scenarioNodes(loaded.workflow)[0]) return group !== 1
+  return group !== null && group < groups.length
+}
 
 /** @param {Context} context @param {Date} started @param {number | undefined} replayMs @param {number | undefined} cost */
 /**

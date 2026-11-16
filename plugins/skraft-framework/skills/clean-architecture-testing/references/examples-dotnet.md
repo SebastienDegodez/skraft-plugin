@@ -181,7 +181,7 @@ Full mocking + contract validation patterns (async protocols included) → upcom
 
 ## API — E2E with WebApplicationFactory
 
-One happy-path test per endpoint + walking skeleton.
+One happy-path test per endpoint, and the story's walking skeleton: a plain test, no Gherkin, asserting the status, the shape and one value S1 names. S1's acceptance test stays the Cucumber binding in the unit-test place.
 
 ```csharp
 public sealed class OrdersEndpointsTests : IClassFixture<WebApplicationFactory<Program>>

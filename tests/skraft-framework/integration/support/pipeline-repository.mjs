@@ -3,7 +3,7 @@
 // result JSON it names, change files and make real Git commits. The gates then run the
 // repository's real test command. No doubles: every driver test stages the same repository.
 import assert from 'node:assert/strict'
-import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { dirname, isAbsolute, join } from 'node:path'
 import { answerYaml, withContext } from '../../unit/support/answer-yaml.mjs'
 import { PLUGIN_ROOT, commitAll, git, tempFolder } from './workspace.mjs'
@@ -453,9 +453,10 @@ export const componentSkillsBriefed = (cwd, skillFolder, prompts) => {
     ['solution-researcher', [], []],
     ['solution-architect', [], []],
     ['acceptance-designer', [], []],
+    ['acceptance-designer', [], []],
     ['software-engineer', slashed([join(cwd, ...skillFolder.split('/'), 'SKILL.md'), join(PLUGIN_ROOT, 'skills', 'contract-testing', 'SKILL.md')]), ['contract-testing-javascript (app)']],
   ])
-  for (const path of briefs[3].skills) assert.ok(readFileSync(path, 'utf8').startsWith('---\nname: '), path)
+  for (const path of briefs[4].skills) assert.ok(readFileSync(path, 'utf8').startsWith('---\nname: '), path)
 }
 
 /** @param {string} path @param {string} text */
@@ -552,26 +553,45 @@ export const SLOW_CHECK = CHECK.replace("if (pay(10) !== 'paid 10') {\n", "await
 /** The Scenarios table of the test plan: the story's one scenario, its walking skeleton, in `app`. */
 export const SCENARIOS = '\n## Scenarios\n\n| # | Scenario | Component | Tags |\n|---|---|---|---|\n| S1 | Customer pays by card | app | @walking-skeleton |\n'
 
+/** The acceptance test of S1, as the acceptance designer commits it on the pass on that scenario. */
+export const FIRST_ACCEPTANCE = Object.freeze({ path: 'tests/acceptance/customer-pays-by-card.md', text: 'Given a basket of 10\nWhen the customer pays by card\nThen pay(10) answers paid 10\n' })
+
+/** The last commit whose subject is `subject`, by its short sha. @param {string} cwd @param {string} subject */
+const shortShaOf = (cwd, subject) => git(cwd, 'log', '-1', '--format=%H', '--fixed-strings', `--grep=${subject}`).slice(0, 7)
+
 /**
  * What the human is asked to read before DELIVER, on a run whose acceptance designer acts as
- * NOMINAL's: the story's one scenario, and the last red commit DISTILL made of its acceptance test.
+ * NOMINAL's: the story's one scenario, the last red commit DISTILL made of its walking skeleton,
+ * and the last of the acceptance test of S1.
  * @param {string} cwd @param {string} [slug]
  */
 export const scenarioReviewText = (cwd, slug = SLUG) => {
-  const subject = `test(${slug}): pay by card`
-  const sha = git(cwd, 'log', '-1', '--format=%H', '--fixed-strings', `--grep=${subject}`).slice(0, 7)
-  return `Read the 1 scenario of the story before DELIVER builds them, one at a time: S1 "Customer pays by card" (app; @walking-skeleton). The acceptance test of S1 and its skeleton are commit ${sha} "${subject}": src/pay.mjs, tests/unit/check.mjs. APPROVED delivers them; REVISE sends DISTILL back with your corrections (edit the .feature or the test yourself first if you like, and say so).`
+  const skeleton = `test(${slug}): pay by card`
+  const first = `test(${slug}): customer pays by card`
+  return `Read the 1 scenario of the story before DELIVER builds them, one at a time: S1 "Customer pays by card" (app; @walking-skeleton). The walking skeleton and the skeleton of its chain are commit ${shortShaOf(cwd, skeleton)} "${skeleton}": src/pay.mjs, tests/unit/check.mjs. The acceptance test of S1 is commit ${shortShaOf(cwd, first)} "${first}": ${FIRST_ACCEPTANCE.path}. APPROVED delivers them; REVISE sends DISTILL back with your corrections (edit the .feature or the test yourself first if you like, and say so).`
 }
 
 /**
- * The acceptance designer committing `check` as its failing acceptance test, with the skeleton it
- * calls, its test plan listing the story's scenario.
+ * The acceptance designer as its descriptor asks: on the pass that writes the plan, `check` as
+ * the failing walking skeleton, with the skeleton it calls, its test plan listing the story's
+ * scenario; on the pass on S1, the failing acceptance test of S1, committed once: a pass that
+ * finds it already committed (DISTILL sent back) commits nothing.
  * @param {string} check @returns {Act}
  */
-export const acceptanceWith = (check) => (brief, { cwd, slug }) => {
+export const acceptanceWith = (check) => (brief, repository) => {
+  if (onScenario(brief)) return firstAcceptance(brief, repository)
+  const { cwd, slug } = repository
   fillOutputs(brief, `pay(10) answers paid 10.\n${SCENARIOS}`)
   commit(cwd, `test(${slug}): pay by card`, { 'tests/unit/check.mjs': check, 'src/pay.mjs': SKELETON }, brief)
-  writeResult(brief, { status: 'done', summary: 'acceptance test committed red' })
+  writeResult(brief, { status: 'done', summary: 'walking skeleton committed red' })
+}
+
+/** The acceptance test of S1, committed red unless an earlier pass committed it. @type {Act} */
+const firstAcceptance = (brief, { cwd, slug }) => {
+  fillOutputs(brief, 'S1 has its acceptance test.\n')
+  const path = join(cwd, ...FIRST_ACCEPTANCE.path.split('/'))
+  if (!existsSync(path) || readFileSync(path, 'utf8') !== FIRST_ACCEPTANCE.text) commit(cwd, `test(${slug}): customer pays by card`, { [FIRST_ACCEPTANCE.path]: FIRST_ACCEPTANCE.text }, brief)
+  writeResult(brief, { status: 'done', summary: 'acceptance test of S1 committed red' })
 }
 
 /**
@@ -712,14 +732,18 @@ export const judgeVerdict = (decision, note = 'the logs show it') => ['```yaml',
 
 /**
  * The label the replay judge is started under on the nominal run: `red` for the acceptance
- * designer's test commit in DISTILL, `green` for the software engineer's feat commit of the
- * scenario in DELIVER; each named by the first 7 characters of its sha.
- * @param {string} cwd @param {'red' | 'green'} kind
+ * designer's walking skeleton in DISTILL, `first` for its acceptance test of S1 on the next pass,
+ * `green` for the software engineer's feat commit of the scenario in DELIVER; each named by the
+ * first 7 characters of its sha.
+ * @param {string} cwd @param {'red' | 'first' | 'green'} kind
  */
 export const judgeLabel = (cwd, kind) => {
-  const [step, subject] = kind === 'red' ? ['distill', `test(${SLUG}): pay by card`] : ['deliver', `feat(${SLUG}): pay by card`]
-  const sha = git(cwd, 'log', '-1', '--format=%H', '--fixed-strings', `--grep=${subject}`).slice(0, 7)
-  return `skraft ${SLUG} · ${step} · judge ${kind} ${sha} of attempt 1 · attempt 1`
+  const [step, subject, judged, pass] = {
+    red: ['distill', `test(${SLUG}): pay by card`, 'red', ''],
+    first: ['distill', `test(${SLUG}): customer pays by card`, 'red', ' · pass 2'],
+    green: ['deliver', `feat(${SLUG}): pay by card`, 'green', ''],
+  }[kind]
+  return `skraft ${SLUG} · ${step} · judge ${judged} ${shortShaOf(cwd, subject)} of attempt 1${pass} · attempt 1`
 }
 
 /**

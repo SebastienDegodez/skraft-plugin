@@ -24,10 +24,10 @@ test('a repository agent between DESIGN and DISTILL is launched in its place, as
 
   assert.equal(outcome.status, 'done')
   assert.deepEqual(host.agentRunner.dispatches.map(({ agent: id, source }) => `${id} ${source}`), [
-    'solution-researcher plugin', 'solution-architect plugin', 'acme-security-reviewer repository', 'acceptance-designer plugin', 'software-engineer plugin', 'pr-writer plugin',
+    'solution-researcher plugin', 'solution-architect plugin', 'acme-security-reviewer repository', 'acceptance-designer plugin', 'acceptance-designer plugin', 'software-engineer plugin', 'pr-writer plugin',
   ])
   assert.deepEqual(host.agentRunner.dispatches.map(({ agent: id, prompt }) => [id, prompt.includes('- Commit every file you change outside the tracking folder')]), [
-    ['solution-researcher', false], ['solution-architect', false], ['acme-security-reviewer', true], ['acceptance-designer', true], ['software-engineer', true], ['pr-writer', false],
+    ['solution-researcher', false], ['solution-architect', false], ['acme-security-reviewer', true], ['acceptance-designer', true], ['acceptance-designer', true], ['software-engineer', true], ['pr-writer', false],
   ])
   assert.deepEqual(host.git.engineCommits.map(({ message }) => message.split('\n')[0]), [`docs(${SLUG}): design ${SLUG}`])
   assert.equal(host.events()[0].workflow, '.skraft/pipeline.skraft.dot')
@@ -67,7 +67,7 @@ test('in an ejected workflow an agent node runs its agent on the family its mode
   assert.equal((await host.start()).status, 'done')
 
   assert.deepEqual(host.agentRunner.dispatches.map(({ agent: id, model, models }) => `${id} ${model} ${models['claude-code']}`), [
-    'solution-researcher researcher haiku', 'solution-architect planner opus', 'acceptance-designer implementer sonnet', 'software-engineer frontier opus', 'pr-writer economy haiku',
+    'solution-researcher researcher haiku', 'solution-architect planner opus', 'acceptance-designer implementer sonnet', 'acceptance-designer implementer sonnet', 'software-engineer frontier opus', 'pr-writer economy haiku',
   ])
   assert.deepEqual(host.agentRunner.batches[0].map(({ agent: id, model }) => `${id} ${model}`), ['consistency-lens standard', 'architecture-compliance-lens frontier', 'fitness-lens standard'])
   assert.deepEqual(host.agentRunner.batches[1].map(({ model }) => model), ['reviewer', 'reviewer', 'reviewer', 'reviewer'])
@@ -112,11 +112,13 @@ test('the model each agent, lens and check ran on is journaled, null when the ho
   }
   const again = agent()(host)
   host.agentRunner.behaviours.splice(2, 0, async (dispatch) => ({ ...(await again(dispatch) ?? { ok: true, text: 'done' }), model: `claude-${dispatch.model}-5.5` }))
+  const firstRed = host.agentRunner.firstRed
+  host.agentRunner.firstRed = async (dispatch) => ({ ...(await firstRed(dispatch)), model: `claude-${dispatch.model}-5.5` })
 
   await host.start()
 
   assert.deepEqual(host.events().filter((event) => event.type === 'step.recorded' && !event.step.endsWith('review') && event.step !== 'gates' && event.step !== 'mutation' && event.step !== 'adr' && !event.step.startsWith('publish') && !event.step.startsWith('visuals')).map(({ step, model }) => `${step} ${model}`), [
-    'research null', 'design claude-planner-5.5', 'design claude-planner-5.5', 'distill claude-implementer-5.5', 'deliver claude-implementer-5.5', 'pr_writer null',
+    'research null', 'design claude-planner-5.5', 'design claude-planner-5.5', 'distill claude-implementer-5.5', 'distill claude-implementer-5.5', 'deliver claude-implementer-5.5', 'pr_writer null',
   ])
   const lensModels = host.events().filter((event) => event.type === 'review.lens' && event.step !== 'design_review').map(({ lens, model }) => `${lens} ${model}`)
   assert.ok(lensModels.includes('cold-reader null') && lensModels.includes('coverage claude-reviewer-5.5'), lensModels.join('\n'))

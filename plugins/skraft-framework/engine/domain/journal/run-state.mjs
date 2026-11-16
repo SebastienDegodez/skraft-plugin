@@ -33,10 +33,11 @@ import { instructionOf } from '../decisions/questions.mjs'
  *   the command whose replay proved it, which its green replays too.
  * @typedef {{
  *   list: import('../pipeline/scenarios.mjs').StoryScenario[], exemption: import('../pipeline/scenarios.mjs').Exemption,
- *   oracles: Record<number, Oracle>, delivered: number,
+ *   oracles: Record<number, Oracle>, skeleton: Oracle | null, delivered: number,
  * }} Scenarios
  *   the story's scenarios as the last plan the acceptance designer wrote lists them, the red of
- *   each scenario's acceptance test, and how many scenarios a green made pass since.
+ *   each scenario's acceptance test, the red of the walking skeleton the plan's pass committed
+ *   (null for a story exempt of one), and how many scenarios a green made pass since.
  *   last and previous: this visit's last two step.recorded.
  * @typedef {{
  *   key: string, kind: import('../decisions/questions.mjs').QuestionKind, step: string, visit: number,
@@ -221,12 +222,12 @@ const recorded = (run, event) => {
 
 /**
  * The story's scenarios after a step: a plan the acceptance designer wrote starts them over,
- * keeping no red but the one it records; a red of an acceptance test is kept by scenario; a
+ * keeping no red but the walking skeleton and the one it records; a red of an acceptance test is kept by scenario; a
  * green counts its scenario delivered.
  * @param {Scenarios | null} scenarios @param {RunEvent} event @returns {Scenarios | null}
  */
 const scenariosAfter = (scenarios, event) => {
-  const planned = event.scenarios ? { list: event.scenarios, exemption: event.exemption, oracles: {}, delivered: 0 } : scenarios
+  const planned = event.scenarios ? { list: event.scenarios, exemption: event.exemption, oracles: {}, skeleton: event.skeleton ?? null, delivered: 0 } : scenarios
   if (planned === null) return null
   return { ...planned, oracles: withOracle(planned.oracles, event.oracle), delivered: Math.max(planned.delivered, event.green?.scenario ?? 0) }
 }

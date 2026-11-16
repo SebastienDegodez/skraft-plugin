@@ -175,12 +175,15 @@ Code no approved behaviour asks for and no test covers: delete it. Run no mutati
 
 ## Walking skeleton and slicing
 
-- **Walking skeleton:** S1 of each story, driven to GREEN before any other scenario. Its acceptance
-  test drives the real entry point through the use case to the real internal gateways (database on
-  Testcontainers); external gateways and the clock as the infrastructure policy says
-  (`test-design-mandates`). Thinnest slice: hardcoded values, minimal branching, no error handling
-  beyond what the test requires. A pure library, a refactoring with no new public interface, or a
+- **Walking skeleton:** the outer loop of the story, written first, failing, with the skeleton of
+  every class of its chain. A plain test, no Gherkin, it drives the real entry point through the
+  use case to the real internal gateways (database on Testcontainers); external gateways and the
+  clock as the infrastructure policy says (`test-design-mandates`). It asserts the status, the
+  shape and one value S1 names. A pure library, a refactoring with no new public interface, or a
   configuration or documentation change has none.
+- **Double loop:** each scenario's acceptance test, S1's included, is an inner loop entering by the
+  use case. S1 is green when its acceptance test and the walking skeleton both pass: thinnest
+  slice, hardcoded values, minimal branching. Every later green keeps the walking skeleton green.
 - **First delivery** holds only the approved outcome; defer unapproved validations, states and
   abstractions.
 - **One acceptance test at a time:** the `.feature` file is the backlog. Only the scenario in

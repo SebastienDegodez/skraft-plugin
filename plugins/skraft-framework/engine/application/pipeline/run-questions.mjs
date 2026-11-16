@@ -93,8 +93,8 @@ const planChosen = ({ deps, slug }, { answer, subjects, step }) => {
 }
 
 /**
- * The scenario review: the story's scenarios and the red of its walking skeleton, read by a
- * human once before DELIVER builds them; REVISE sends their corrections to DISTILL.
+ * The scenario review: the story's scenarios, the red of its walking skeleton and the red of S1's
+ * acceptance test, read by a human once before DELIVER builds them; REVISE sends their corrections to DISTILL.
  * @type {Questionnaire}
  */
 const SCENARIO_REVIEW = {
@@ -103,8 +103,8 @@ const SCENARIO_REVIEW = {
 }
 
 /**
- * The scenarios, the `.feature` files the test plan names and the red of S1, once the node that
- * writes them recorded them; a question the machine cannot ask before.
+ * The scenarios, the `.feature` files the test plan names, the red of the walking skeleton and
+ * the red of S1, once the node that writes them recorded them; a question the machine cannot ask before.
  * @param {Context} context @param {RunState} run @returns {Promise<Plan>}
  */
 const scenarioReviewPlan = async (context, { scenarios, nodes }) => {
@@ -112,7 +112,8 @@ const scenarioReviewPlan = async (context, { scenarios, nodes }) => {
   const oracle = scenarios.oracles[1]
   const [plan] = nodes[scenarioNodes(context.loaded.workflow)[0]].outputs
   const features = namedFeatures(/** @type {string} */ (await context.deps.files.read(context.slug, plan)))
-  return { text: scenarioReviewText({ scenarios: scenarios.list, features, oracle }), subjects: oracle.files }
+  const { skeleton, exemption, list } = scenarios
+  return { text: scenarioReviewText({ scenarios: list, features, skeleton, exemption, oracle }), subjects: [...(skeleton?.files ?? []), ...oracle.files] }
 }
 
 /** @type {Readonly<Record<NodeQuestion, Questionnaire>>} */

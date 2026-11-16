@@ -97,8 +97,8 @@ Quality thresholds (coverage, mutation…) are **not** configurable: no key carr
 
 ## Infrastructure policy <!-- #infrastructure -->
 
-What a component's tests run each kind of dependency on, in a targeted scenario and in the
-walking skeleton. A `react` component has none, the walking skeleton living in a back component:
+What a component's tests run each kind of dependency on, in a targeted scenario (every
+scenario's acceptance test, S1's included) and in the walking skeleton. A `react` component has none, the walking skeleton living in a back component:
 its end-to-end run is `e2e`. A row the component's `infrastructure` names wins; `skraft doctor` prints
 one line per row with its source: `plugin`, `skraft-config.json` (an override) or `skraft-config.json (mocking.strategy)` (a mocking strategy other than the stack's default).
 

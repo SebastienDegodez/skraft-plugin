@@ -36,31 +36,51 @@ ports rend cette première traversée possible sans figer l'infrastructure.
 
 ## Application dans SKRAFT
 
-Chaque story commence par lui. En DISTILL, le plan de test liste les scénarios dans l'ordre où
-DELIVER les construit ; S1, tagué `@walking-skeleton`, est le walking skeleton, dans un composant
-back : point d'entrée → cas d'usage → vraie base. Le moteur refuse un plan qui tague un autre
-scénario, n'en tague aucun, ou place S1 dans un front React. DISTILL commite d'abord le test
-d'acceptation en échec de S1, un humain le lit avec les autres scénarios, et DELIVER le fait
-passer avant qu'aucun autre scénario n'ait son test. La lentille `boundary-enforcement` vérifie
-toujours, par la gate **G8**, que chaque flux a son scénario walking skeleton.
+Chaque story commence par lui, boucle externe de son TDD en double boucle. En DISTILL, le plan de
+test liste les scénarios dans l'ordre où DELIVER les construit ; S1, tagué `@walking-skeleton`, est
+le scénario que parcourt le walking skeleton, dans un composant back. Le moteur refuse un plan qui
+tague un autre scénario, n'en tague aucun, ou place S1 dans un front React.
+
+Le walking skeleton est un test simple, sans Gherkin, à la place des tests d'intégration du
+composant : il entre par le vrai point d'entrée (HTTP, CLI, message) câblé par la composition
+root de production, et n'affirme que le câblage — le statut, la forme de la réponse et une valeur
+que S1 nomme mot pour mot. S1 garde à côté son propre test d'acceptation, le binding de son
+Gherkin, comme tout autre scénario : à la place des tests unitaires, par le cas d'usage, chaque
+valeur du scénario mot pour mot.
+
+| | Walking skeleton | Test d'acceptation de S1 |
+| --- | --- | --- |
+| Prouve | le câblage de toute la chaîne | la règle métier du scénario |
+| Forme | test simple, sans Gherkin | binding du `.feature` du scénario |
+| Entre par | le vrai point d'entrée | le cas d'usage |
+| Affirme | statut, forme, une valeur que nomme S1 | chaque valeur du scénario |
+| Écrit | au passage du plan de DISTILL, un par story | à son propre passage de DISTILL, juste après |
+
+Le passage du plan de DISTILL commite le walking skeleton en échec, avec le squelette de chaque
+classe de la chaîne qu'il traverse — point d'entrée, cas d'usage, ports, adaptateurs, câblage —
+chacune rendant une valeur vide. Le passage suivant commite le test d'acceptation de S1 en échec.
+Un humain lit les deux avec les scénarios, puis DELIVER fait passer S1 : son vert doit faire
+passer le test d'acceptation de S1 **et** le walking skeleton, et chaque vert suivant garde le
+walking skeleton au vert, sans toucher à ses fichiers. La lentille `boundary-enforcement` vérifie,
+par la gate **G8**, que le walking skeleton parcourt ce vrai chemin et que S1 a en plus son propre
+test d'acceptation.
 
 ```text
-S1 (walking skeleton) — traverse TOUT, fait le minimum :
-  point d'entrée ──►  cas d'usage  ──►  Domain  ──►  vraie base
-  (réel)             (1 handler)     (1 invariant)  (Testcontainers)
+Walking skeleton (boucle externe de S1) — traverse TOUT, affirme le câblage :
+  point d'entrée ──►  cas d'usage  ──►  ports/adaptateurs  ──►  vraie base
+  (réel)             (1 handler)     (câblés)               (Testcontainers)
 
-  ✔ le scénario d'acceptation end-to-end passe
-  ✔ chaque frontière est câblée
-
+Test d'acceptation de S1 — entre par le cas d'usage, affirme la règle métier.
 S2…SN — scénarios ciblés qui épaississent chaque couche sur ce squelette vivant.
 ```
 
 Le pipeline gagne une preuve d'intégration **dès la première tranche**, au lieu de la
 repousser. Tout ce qui suit s'ajoute à un système qui marche déjà.
 
-Ce sur quoi tourne chaque sorte de dépendance distingue S1 des scénarios ciblés qui suivent :
+Ce sur quoi tourne chaque sorte de dépendance distingue le walking skeleton du test
+d'acceptation de chaque scénario, S1 compris :
 
-| Dépendance | Scénarios ciblés | Walking skeleton |
+| Dépendance | Ciblé (chaque test d'acceptation) | Walking skeleton |
 | --- | --- | --- |
 | Point d'entrée (contrôleur, CLI, UI, webhook reçu, topic consommé) | en process | réel |
 | Gateway interne (repository, base, cache) | en mémoire | Testcontainers |
@@ -76,7 +96,8 @@ démarrer un et le run attend.
 
 Toute story n'ouvre pas un nouveau chemin. Celle qui n'ajoute aucun point d'entrée déclare
 pourquoi sous le tableau : `library` (une pure librairie), `refactoring` (aucune nouvelle
-interface publique) ou `docs-only` (configuration ou documents seulement). Le moteur vérifie la
+interface publique) ou `docs-only` (configuration ou documents seulement). Une exemption retire
+le walking skeleton seul, jamais le test d'acceptation de S1. Le moteur vérifie la
 dernière contre le diff : une story `docs-only` dont les commits changent la source d'un
 composant est refusée.
 
@@ -88,6 +109,9 @@ composant est refusée.
   le bénéfice ; la première tranche doit être *minuscule*.
 - **Le laisser mourir** : un squelette qui n'est plus exécuté en CI cesse d'être une
   preuve d'intégration.
+- **Un squelette à la place de S1** : un walking skeleton qui porte les assertions métier du
+  scénario double le test d'acceptation de S1 sur le chemin lent, et celui qui le remplace laisse
+  le Gherkin de S1 ne tourner nulle part.
 - **Une exemption de confort** : déclarer `library` ou `refactoring` pour sauter le squelette. Le
   moteur ne vérifie que `docs-only` contre le diff ; l'humain qui lit les scénarios est là pour
   les autres.

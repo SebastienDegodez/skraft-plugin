@@ -40,7 +40,7 @@ test("an agent's own skills stay out of its brief: only the skills of the compon
 
   await host.start({ story: { issue: 42, title: 'Pay by card' } })
 
-  const [research, , , deliver] = host.agentRunner.dispatches.map((dispatch) => dispatch.prompt)
+  const [research, , , , deliver] = host.agentRunner.dispatches.map((dispatch) => dispatch.prompt)
   assert.deepEqual(skillLines(research), [])
   assert.ok(deliver.includes([
     '- Attempt: 1 of 3',
@@ -65,7 +65,7 @@ test('the agent of the TDD cycles reads the mocking skill of each component, and
 
   await host.start()
 
-  const [research, design, distill, deliver] = host.agentRunner.dispatches.map((dispatch) => dispatch.prompt)
+  const [research, design, distill, , deliver] = host.agentRunner.dispatches.map((dispatch) => dispatch.prompt)
   const componentSkills = [
     '- /plugin/skills/mocking-inprocess-dotnet/SKILL.md',
     '- /plugin/skills/contract-testing/SKILL.md',
@@ -102,7 +102,7 @@ test('a skill found nowhere is named in the brief with its component, never read
 
   await host.start()
 
-  const [, , distill, deliver] = host.agentRunner.dispatches.map((dispatch) => dispatch.prompt)
+  const [, , distill, , deliver] = host.agentRunner.dispatches.map((dispatch) => dispatch.prompt)
   assert.deepEqual(skillLines(deliver), ['- /plugin/skills/contract-testing/SKILL.md', '- /plugin/skills/mocking-inprocess-typescript/SKILL.md'])
   assert.deepEqual(sectionLines(deliver, NOWHERE), [
     '- mocking-microcks-java (orders)',
@@ -118,7 +118,7 @@ test('the acceptance designer is told the review criteria to check its outputs a
   const CHECK = (path) => `- Before you write your result, check your outputs against every gate of ${path}, the gates the review of your phase judges them by, and fix each one they fail.`
   const repository = scripted({ catalog: new InMemoryAgentCatalog({ skillRoot: '/work/.github/skills', skillFiles: { 'acceptance-review-criteria': SKILL_TEXT } }) }, (it) => nominal(it, REFS_42))
   await repository.start({ story: { issue: 42, title: 'Pay by card' } })
-  const [, design, distill, deliver] = repository.agentRunner.dispatches.map((dispatch) => dispatch.prompt)
+  const [, design, distill, , deliver] = repository.agentRunner.dispatches.map((dispatch) => dispatch.prompt)
   assert.ok(distill.endsWith(`\n${CHECK('/work/.github/skills/acceptance-review-criteria/SKILL.md')}`), distill)
   assert.ok(![design, deliver].some((prompt) => prompt.includes('check your outputs against every gate')))
 

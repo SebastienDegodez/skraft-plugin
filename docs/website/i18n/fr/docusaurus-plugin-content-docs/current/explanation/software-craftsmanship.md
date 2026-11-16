@@ -74,17 +74,20 @@ d'ajustement. Le détail des gates est dans la [référence des gates](../refere
 
 Le craft avance par petits incréments qui marchent. Dans skraft, cela prend deux formes.
 
-- **Le walking skeleton.** Le premier scénario de chaque story, S1, traverse un composant back
-  de son point d'entrée jusqu'à une vraie base ; le moteur refuse un plan de test qui ne le tague
-  pas `@walking-skeleton` ni ne déclare pourquoi la story n'en a pas besoin, et la lentille
-  `boundary-enforcement` exige au moins un scénario walking skeleton par flux (son G8). Voir
+- **Le walking skeleton.** Chaque story s'ouvre sur un test simple qui parcourt son premier
+  scénario, S1, à travers un composant back de son vrai point d'entrée jusqu'à une vraie base, et
+  n'affirme que le câblage ; S1 garde son propre test d'acceptation par le cas d'usage. Le moteur
+  refuse un plan de test qui ne tague pas S1 `@walking-skeleton` ni ne déclare pourquoi la story
+  n'en a pas besoin, et la lentille `boundary-enforcement` vérifie que le walking skeleton
+  parcourt ce vrai chemin (son G8). Voir
   [Walking Skeleton](./deep-dive/walking-skeleton.md).
 - **Un scénario, un rouge, un vert.** En DISTILL, l'`acceptance-designer` commite le test
   d'acceptation en échec d'un scénario et le squelette qu'il appelle ; le moteur le rejoue et le juge
-  du rejeu ne l'accepte que si le test du scénario échoue sur une assertion. En DELIVER, le `software-engineer` tourne la
+  du rejeu ne l'accepte que si le test du scénario échoue sur une assertion ; le walking skeleton
+  est commité et rejoué de même avant S1. En DELIVER, le `software-engineer` tourne la
   boucle rouge → vert → refactor de ses tests unitaires, puis commite une fois : un `feat(…)` que
   le moteur rejoue aussi, et qui doit faire passer le scénario sans toucher à son test
-  d'acceptation. Puis le scénario suivant. Le test d'abord de Beck
+  d'acceptation, et garder le walking skeleton au vert. Puis le scénario suivant. Le test d'abord de Beck
   ([Beck, 2003](../reference/citations.mdx#cite-beck-tdd-2003)) devient un fait vérifié dans l'historique git,
   pas une promesse. Voir [Outside-In TDD](./deep-dive/outside-in-tdd.md).
 

@@ -119,6 +119,13 @@ export const pipelineHost = ({
     lock: () => tracking.files.get(`${slug}/.lock`) ?? null,
     /** What the next pr-writers do, in order; once spent, each writes PROSE. @type {Array<ReturnType<typeof prWriter>>} */
     prWriters: [],
+    /**
+     * What the acceptance designer's next passes on the first scenario do, the red of its
+     * acceptance test after the plan, in order; once spent, each commits it as agent() does.
+     * Set agentRunner.firstRed to null for the script's queue to answer them instead.
+     * @type {Array<ReturnType<typeof agent>>}
+     */
+    firstReds: [],
     events: () => tracking.journal(slug),
     types: () => tracking.journal(slug).map((event) => event.type),
     /** @param {object} [request] */
@@ -143,6 +150,7 @@ export const pipelineHost = ({
   }
   codeHost.read = (file) => tracking.files.get(file.slice(`${tracking.root}/`.length)) ?? ''
   deps.agentRunner.writer = (dispatch) => (host.prWriters.shift() ?? prWriter())(host)(dispatch)
+  deps.agentRunner.firstRed = (dispatch) => (host.firstReds.shift() ?? agent())(host)(dispatch)
   return host
 }
 
@@ -179,19 +187,21 @@ export const agent = ({ result = { status: 'done', summary: 'done' }, fill = tru
     }
   }
   if (result !== null) await host.tracking.write(host.slug, step.result, typeof result === 'string' ? result : JSON.stringify(result))
-  await (work ?? scenarioWork(host, step))(host)
+  await (work ?? scenarioWork(host, step, exemption))(host)
   return answer
 }
 
 /**
  * What a scripted agent with no work of its own commits on a pass of a node marked
- * each="scenario", as its descriptor asks: the acceptance designer the red of its scenario's
- * acceptance test, the software engineer one green; nothing on any other pass or node.
- * @param {ReturnType<typeof pipelineHost>} host @param {object} step its step.started
+ * each="scenario", as its descriptor asks: the acceptance designer the red of the walking
+ * skeleton on the pass that writes the plan (none for a story exempt of one), the red of its
+ * scenario's acceptance test on the others, the software engineer one green; nothing on any other pass or node.
+ * @param {ReturnType<typeof pipelineHost>} host @param {object} step its step.started @param {string} [exemption]
  */
-const scenarioWork = (host, step) => {
+const scenarioWork = (host, step, exemption) => {
   if (!onScenarioNode(host, step)) return () => {}
   const index = step.group ?? 1
+  if (plansScenarios(host, step)) return exemption === undefined ? scenarioCommit(host, { type: 'test', subject: 'walking skeleton', paths: 'tests', file: 'Integration/WalkingSkeletonTests.cs' }) : () => {}
   if (step.agent === 'acceptance-designer') return scenarioCommit(host, { type: 'test', index, paths: 'tests', file: `Acceptance/S${index}AcceptanceTests.cs` })
   if (step.agent === 'software-engineer' && step.group !== undefined && step.groups !== undefined) return scenarioCommit(host, { type: 'feat', index, paths: 'src', file: `Scenario${index}.cs` })
   return () => {}
@@ -200,13 +210,13 @@ const scenarioWork = (host, step) => {
 /**
  * A commit of the scenario in the first component, under its first path of that kind, its body
  * referencing the story's issue when it has one.
- * @param {ReturnType<typeof pipelineHost>} host @param {{ type: string, index: number, paths: 'src' | 'tests', file: string }} commit
+ * @param {ReturnType<typeof pipelineHost>} host @param {{ type: string, index?: number, subject?: string, paths: 'src' | 'tests', file: string }} commit
  */
-const scenarioCommit = (host, { type, index, paths, file }) => ({ git }) => {
+const scenarioCommit = (host, { type, index, subject = `scenario ${index}`, paths, file }) => ({ git }) => {
   const [first = { root: '.', paths: { [paths]: [paths] } }] = JSON.parse(host.workspace.files.get('skraft-config.json')).components ?? []
   const folder = [first.root, first.paths?.[paths]?.[0]].filter((part) => part && part !== '.').join('/')
   const issue = host.events()[0]?.story?.issue
-  git.commit(`${type}(${host.slug}): scenario ${index}`, [`${folder === '' ? '' : `${folder}/`}${file}`], issue ? `Refs: #${issue}` : '')
+  git.commit(`${type}(${host.slug}): ${subject}`, [`${folder === '' ? '' : `${folder}/`}${file}`], issue ? `Refs: #${issue}` : '')
 }
 
 /** The pass of the acceptance designer that writes the story's scenarios: the one on no scenario. @param {ReturnType<typeof pipelineHost>} host @param {object} step */
@@ -231,14 +241,14 @@ export const scenarioTable = (host, plan, exemption) => {
 }
 
 /**
- * The scenario review a human is asked on a story whose plan is the default one, a walking
- * skeleton alone, its acceptance test the red commit given.
- * @param {{ sha?: string, subject?: string, files?: string, key?: string }} [red]
+ * The scenario review a human is asked on a story whose plan is the default one, a single
+ * scenario: its walking skeleton the red commit `skeleton`, the acceptance test of S1 the red commit given.
+ * @param {{ skeleton?: string, sha?: string, subject?: string, files?: string, key?: string }} [red]
  */
-export const scenarioReview = ({ sha = 'root-1', subject = `test(${SLUG}): scenario 1`, files = 'tests/Acceptance/S1AcceptanceTests.cs', key = 'scenario_review-1' } = {}) => ({
+export const scenarioReview = ({ skeleton = 'root-1', sha = 'root-2', subject = `test(${SLUG}): scenario 1`, files = 'tests/Acceptance/S1AcceptanceTests.cs', key = 'scenario_review-1' } = {}) => ({
   key,
   kind: 'scenario-review',
-  text: `Read the 1 scenario of the story before DELIVER builds them, one at a time: S1 "Customer pays by card" (api; @walking-skeleton). The acceptance test of S1 and its skeleton are commit ${sha} "${subject}": ${files}. APPROVED delivers them; REVISE sends DISTILL back with your corrections (edit the .feature or the test yourself first if you like, and say so).`,
+  text: `Read the 1 scenario of the story before DELIVER builds them, one at a time: S1 "Customer pays by card" (api; @walking-skeleton). The walking skeleton and the skeleton of its chain are commit ${skeleton} "test(${SLUG}): walking skeleton": tests/Integration/WalkingSkeletonTests.cs. The acceptance test of S1 is commit ${sha} "${subject}": ${files}. APPROVED delivers them; REVISE sends DISTILL back with your corrections (edit the .feature or the test yourself first if you like, and say so).`,
   options: ['APPROVED', 'REVISE'],
   refusals: ['REVISE'],
   header: 'Scenarios',

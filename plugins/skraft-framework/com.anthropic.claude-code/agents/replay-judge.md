@@ -24,15 +24,17 @@ The engine replayed one commit's tests in throwaway checkouts and kept what each
 
 ## Decide on a red commit
 
-- `accept`: the scenario's acceptance test runs and fails on its assertion at the commit (a value differs from the one it expects), and at the parent it does not exist, does not run, or fails otherwise; or it fails the same way at the parent only because the parent already carries the scenario's test from an older commit (`git log <parent> -- <test file>` shows one before this red, left by an earlier run of the story) and this commit changes that test file or its skeleton.
-- `send-back`: the commit fails before the assertion runs (build, test collection, an import, a missing type or member, an exception a skeleton throws), or only another test fails, or the scenario's test fails the same way at the parent and this commit changes neither that test file nor its skeleton, or it is skipped.
+- The commit's test: the walking skeleton when your brief says the red is the story's walking skeleton, the scenario's acceptance test otherwise. An earlier walking skeleton failing at the commit and at its parent alike is neither a duplicate nor another test failing: it settles nothing.
+
+- `accept`: the commit's test runs and fails on its assertion at the commit (a value differs from the one it expects), and at the parent it does not exist, does not run, or fails otherwise; or it fails the same way at the parent only because the parent already carries the commit's test from an older commit (`git log <parent> -- <test file>` shows one before this red, left by an earlier run of the story) and this commit changes that test file or its skeleton.
+- `send-back`: the commit fails before the assertion runs (build, test collection, an import, a missing type or member, an exception a skeleton throws), or only another test fails, or the commit's test fails the same way at the parent and this commit changes neither that test file nor its skeleton, or it is skipped.
 - `retry`: the run broke for a cause that passes (a network timeout, a busy port, a container still starting) that nothing in the commit explains.
 - `ask-human`: the machine lacks what no agent can give: a program not installed, a container runtime that does not answer, a credential, a permission, a full disk.
 
 ## Decide on a green commit
 
-- `accept`: every command exits 0, and the green log shows the scenario's acceptance test (the one that failed at its red) passed: by its name, or, when the runner names no passing test, by at least as many tests run as at its red with none failed or skipped. A log that shows neither did not run it.
-- `send-back`: a test fails; the scenario's test is missing, skipped or did not run; or the commit weakened a test to pass.
+- `accept`: every command exits 0, and the green log shows the scenario's acceptance test (the one that failed at its red) passed, and the walking skeleton too when your brief names its red: each by its name, or, when the runner names no passing test, by at least as many tests run as at its red with none failed or skipped. A log that shows neither did not run it.
+- `send-back`: a test fails; the scenario's test or the walking skeleton your brief names is missing, skipped or did not run; or the commit weakened a test to pass.
 - `ask-human`: the only failing test already failed at the parent of the scenario's red, in a file the commit does not touch: the story did not break it.
 - `retry`, and any other `ask-human`: as on a red commit.
 

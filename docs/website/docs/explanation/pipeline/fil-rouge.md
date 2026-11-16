@@ -112,8 +112,8 @@ DISTILL starts. A rejection sends the architect back to work, with the reason.
 ### Step 5 — DISTILL: write the executable contract
 
 The `acceptance-designer` translates the architecture into **Gherkin scenarios**, readable by
-the business, in the order DELIVER will build them. The first is the walking skeleton, from the
-ordering endpoint to the real database:
+the business, in the order DELIVER will build them. The first is the one the walking skeleton
+walks, from the ordering endpoint to the real database:
 
 ```gherkin
 @walking-skeleton
@@ -125,26 +125,29 @@ Scenario: pay for a customised drink
 ```
 
 The second follows the third criterion: an unavailable drink cannot be added to the cart. The
-test plan lists them as S1 and S2. For S1 only, the designer writes the acceptance test and the
-code skeleton it calls, and commits them **failing**: the engine replays the test to check it
-fails on an assertion. After the review, a person reads the two scenarios and S1's test, and
-approves them.
+test plan lists them as S1 and S2. The designer first writes the walking skeleton, a plain test
+that orders through the real endpoint and checks the response's status, its shape and the receipt
+S1 names, with the skeleton of the chain it crosses, and commits them **failing**. On its next
+pass, it writes S1's acceptance test, the binding of the Gherkin through the use case, and commits
+it failing too. The engine replays each test to check it fails on an assertion. After the review,
+a person reads the two scenarios, the walking skeleton and S1's test, and approves them.
 
 - **What enters:** the ADR + the event model.
-- **What exits:** the `.feature`, the test plan with S1 and S2, and S1's red acceptance test.
+- **What exits:** the `.feature`, the test plan with S1 and S2, the red walking skeleton and S1's red acceptance test.
 
 ➡️ Phase detail: [DISTILL](./distill.md).
 
 ### Step 6 — DELIVER: implement, guided by tests
 
 The `software-engineer` makes S1 green with **Outside-In TDD**: unit tests first, then the code,
-then one green commit, which the engine replays. DISTILL then writes S2's failing test, and the
+then one green commit, which the engine replays: S1's acceptance test and the walking skeleton
+both pass at it. DISTILL then writes S2's failing test, and the
 engineer turns it green the same way. The engine runs the gates (build, tests, architecture,
 coverage), then the DELIVER review reads the code. Once the code is approved, **mutation** runs once, last:
 it checks the tests would catch a mistake in the loyalty rule. If a mutant survives, the agent
 proposes how to treat it and the developer chooses.
 
-- **What enters:** S1's red acceptance test + the plan.
+- **What enters:** the red walking skeleton + S1's red acceptance test + the plan.
 - **What exits:** the reviewed code, mutation passed, then the pull request.
 
 ➡️ Phase detail: [DELIVER](./deliver.mdx).
@@ -160,7 +163,7 @@ pipeline, without losing its context:
 | DISCUSS | INVEST story + 3 acceptance criteria |
 | RESEARCH | Cited research document + recommendation |
 | DESIGN | Ratified ADR (payment via ACL) + event model |
-| DISTILL | Gherkin scenarios S1, S2 + S1's red acceptance test |
+| DISTILL | Gherkin scenarios S1, S2 + red walking skeleton + S1's red acceptance test |
 | DELIVER | One red and one green commit per scenario + reviewed code + mutation passed + pull request |
 
 Each artifact became the **context** of the next step, and every handoff stayed readable:

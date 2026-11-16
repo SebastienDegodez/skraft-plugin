@@ -24,7 +24,7 @@ test('an unclassified incident asks the host LLM once with a closed recovery men
   assert.match(question.text, /Read.*test-1\.log.*model.*cost/s)
   assert.deepEqual((await host.view()).question.options, question.options)
   assert.equal(host.events().some(({ type }) => type === 'question.answered'), true, 'the earlier scenario review remains a human decision')
-  assert.equal(host.agentRunner.dispatches.length, 4)
+  assert.equal(host.agentRunner.dispatches.length, 5)
   assert.equal(host.slug, SLUG)
 })
 
@@ -48,7 +48,7 @@ test('a host LLM retry records its model and observed cost then resumes the same
   assert.match(markdown, /## Automated judgments[\s\S]*host-llm.*observed-test-model.*0\.02.*USD/)
   assert.equal(markdown.slice(markdown.indexOf('## Human answers'), markdown.indexOf('## Automated judgments')).includes('host-llm'), false)
   assert.deepEqual(host.events().filter(({ type, step }) => type === 'step.started' && step === 'gates').map(({ visit, attempt }) => [visit, attempt]), [[1, 1]])
-  assert.equal(host.agentRunner.dispatches.length, 5)
+  assert.equal(host.agentRunner.dispatches.length, 6)
 })
 
 test('the same signature after a resume goes back to a person, never to a second LLM judgment', async () => {
@@ -79,7 +79,7 @@ test('STOP ends the unforeseen run with a diagnostic and no later work', async (
   assert.deepEqual([stopped.status, stopped.code], ['blocked', 'unforeseen-stopped'])
   assert.match(stopped.reason, /gates.*STOP.*test-1\.log/)
   assert.equal((await host.run()).code, 'unforeseen-stopped')
-  assert.equal(host.agentRunner.dispatches.length, 4)
+  assert.equal(host.agentRunner.dispatches.length, 5)
 })
 
 test('an invalid action or missing usage stops diagnostically instead of waiting or guessing', async () => {
@@ -101,7 +101,7 @@ test('an invalid action or missing usage stops diagnostically instead of waiting
     assert.match(stopped.reason, /unforeseen.*(menu|observed model|inert note)/)
     assert.equal(stopped.reason.includes('untrusted'), false)
     assert.equal((await host.view()).question, null)
-    assert.equal(host.agentRunner.dispatches.length, 4)
+    assert.equal(host.agentRunner.dispatches.length, 5)
   }
 })
 
@@ -117,7 +117,7 @@ test('a selected return cannot silently follow a changed graph edge', async () =
   const stopped = await host.run()
 
   assert.deepEqual([stopped.status, stopped.code], ['blocked', 'workflow-changed'], stopped.reason)
-  assert.equal(host.agentRunner.dispatches.length, 4)
+  assert.equal(host.agentRunner.dispatches.length, 5)
 })
 
 test('RETRY_WITH_NOTE keeps only a bounded inert note and retries without another agent attempt', async () => {

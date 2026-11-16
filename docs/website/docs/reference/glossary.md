@@ -125,7 +125,7 @@ The set of agents, instructions and skills for GitHub Copilot published by Micro
 ## I
 
 **Infrastructure policy**
-What a component's tests run each kind of dependency on, in a targeted scenario and in the walking skeleton: entry point in process / real, internal gateway in memory / Testcontainers, external gateway Microcks (the component's `mocking.strategy`), clock and randomness fake; for a React front end, MSW in targeted tests and Microcks in Playwright e2e. Plugin defaults per stack, overridden per component (`infrastructure`) in `skraft-config.json` only.
+What a component's tests run each kind of dependency on, in a targeted scenario (every scenario's acceptance test, S1's included) and in the walking skeleton: entry point in process / real, internal gateway in memory / Testcontainers, external gateway Microcks (the component's `mocking.strategy`), clock and randomness fake; for a React front end, MSW in targeted tests and Microcks in Playwright e2e. Plugin defaults per stack, overridden per component (`infrastructure`) in `skraft-config.json` only.
 → See [skraft-config.json](./skraft-config.md#infrastructure)
 
 **INVEST**
@@ -208,7 +208,7 @@ A read-only AI agent that judges the artifacts of an executor agent and never mo
 ## S
 
 **Scenario review**
-The question (`scenario-review`) a human answers once the DISTILL review approves: it names the story's scenarios in the order DELIVER builds them and S1's failing acceptance test. `APPROVED` delivers them one at a time; `REVISE` sends DISTILL back with the corrections.
+The question (`scenario-review`) a human answers once the DISTILL review approves: it names the story's scenarios in the order DELIVER builds them, the failing walking skeleton (or the story's exemption) and S1's failing acceptance test. `APPROVED` delivers them one at a time; `REVISE` sends DISTILL back with the corrections.
 → See [Answer a run's question](../how-to/answer-a-question.mdx)
 
 **Skill**
@@ -263,7 +263,7 @@ The status of a run whose question has no answer yet. The run does nothing more 
 → See [Resume or unblock a run](../how-to/resume-a-run.mdx)
 
 **Walking Skeleton**
-The first iteration of a project that cuts through all architecture layers end to end with a minimal feature. Validates the architecture before building the details. In SKRAFT, scenario S1 of each story, tagged `@walking-skeleton`, in a back-end component: entry point → use case → real database. A story with no new entry point declares an exemption instead (`library`, `refactoring`, `docs-only`).
+The first iteration of a project that cuts through all architecture layers end to end with a minimal feature. Validates the architecture before building the details. In SKRAFT, the outer loop of each story: a plain test, with no Gherkin, that walks scenario S1 (tagged `@walking-skeleton`) in a back-end component, entry point → use case → real database, and asserts the wiring only; S1 keeps its own acceptance test through the use case. A story with no new entry point declares an exemption instead (`library`, `refactoring`, `docs-only`), which removes the walking skeleton, never S1's acceptance test.
 → See [Walking Skeleton](../explanation/deep-dive/walking-skeleton.md)
 
 ## Sources

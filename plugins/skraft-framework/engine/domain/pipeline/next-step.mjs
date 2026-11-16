@@ -87,18 +87,29 @@ const leaveNode = (workflow, run, node, last) => {
 }
 
 /**
- * The story's scenarios run without edges: a red of a scenario's acceptance test hands over to
- * the node that makes it pass, and a scenario made to pass to the red of the next one; null when
- * the node leaves by its edge (the plan, the last scenario, a pass on no scenario).
+ * The story's scenarios run without edges: the plan and its walking skeleton hand over to the red
+ * of the first scenario's acceptance test, a red of a later scenario to the node that makes it
+ * pass, and a scenario made to pass to the red of the next one; null when the node leaves by its
+ * edge (the red of the first scenario, to the review; the last scenario; a pass on no scenario).
  * @param {Workflow} workflow @param {RunState} run @param {WorkflowNode} node @param {RunEvent} last
  * @returns {NextStep | null}
  */
 const scenarioStep = (workflow, run, node, last) => {
-  if (node.each !== 'scenario' || typeof last.group !== 'number') return null
+  if (node.each !== 'scenario') return null
   const [oracle, delivery] = scenarioNodes(workflow)
-  if (node.id === oracle) return closesAfterLastRed(run, node, last.group) ?? enterScenario(workflow.nodes[delivery], run, last.group)
-  return last.group < run.nodes[node.id].groups.length ? enterScenario(workflow.nodes[oracle], run, last.group + 1) : null
+  if (node.id !== oracle) return nextScenario(workflow.nodes[oracle], run, node, last)
+  if (typeof last.group !== 'number') return enterScenario(node, run, 1)
+  if (last.group === 1) return null
+  return closesAfterLastRed(run, node, last.group) ?? enterScenario(workflow.nodes[delivery], run, last.group)
 }
+
+/**
+ * A scenario made to pass hands over to the red of the next one; the last, or a pass on none,
+ * leaves by its edge.
+ * @param {WorkflowNode} oracle @param {RunState} run @param {WorkflowNode} node @param {RunEvent} last
+ * @returns {NextStep | null}
+ */
+const nextScenario = (oracle, run, node, last) => (typeof last.group === 'number' && last.group < run.nodes[node.id].groups.length ? enterScenario(oracle, run, last.group + 1) : null)
 
 /**
  * The phase of the node that writes the reds closes once the red of the last scenario is written,

@@ -262,8 +262,8 @@ test('a replay a person interrupts stops the run without a question and without 
   assert.deepEqual(host.events().filter(({ type, step }) => type === 'step.recorded' && step === 'distill'), [])
   replay.exits['root-1'] = 1
   await host.run()
-  assert.deepEqual(host.replay.lines().filter((line) => line.startsWith('root-1 ')), ['root-1 ./. $ dotnet test', 'root-1 ./. $ dotnet test'])
-  assert.equal(dispatched(host, 'distill'), 1)
+  assert.deepEqual(host.replay.lines(), ['root-1 ./. $ dotnet test', 'root-1 ./. $ dotnet test', 'root-0 ./. $ dotnet test', 'root-2 ./. $ dotnet test', 'root-1 ./. $ dotnet test'])
+  assert.equal(dispatched(host, 'distill'), 2)
 })
 
 test('a replay a person interrupts names its commit by its short sha', async () => {

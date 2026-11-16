@@ -69,7 +69,7 @@ test('surviving mutants of the files the story changed get one proposal per file
   const outcome = await host.start()
 
   assert.equal(outcome.status, 'done')
-  const after = host.agentRunner.dispatches.slice(4).filter(({ agent: id }) => id !== 'pr-writer')
+  const after = host.agentRunner.dispatches.slice(5).filter(({ agent: id }) => id !== 'pr-writer')
   assert.deepEqual(after.map(({ agent: name, label, model }) => [name, label, model]), [
     ['software-engineer', `skraft ${SLUG} · kill_proposal · group 1 of 2 · attempt 1`, 'implementer'],
     ['software-engineer', `skraft ${SLUG} · kill_proposal · group 2 of 2 · attempt 1`, 'implementer'],
@@ -206,7 +206,7 @@ test('two rounds that leave no fewer mutants alive stop the run, naming the muta
   assert.deepEqual(recorded(host, 'mutation').map(({ visit, outcome: result, code, next }) => [visit, result, code, next]), [
     [1, 'fail', null, 'kill_proposal'], [2, 'fail', 'repeated-failure', null],
   ])
-  assert.equal(host.agentRunner.dispatches.length, 7)
+  assert.equal(host.agentRunner.dispatches.length, 8)
   assert.deepEqual(host.events().at(-1), { ...host.events().at(-1), type: 'run.finished', status: 'blocked', code: 'repeated-failure', reason: outcome.reason })
 })
 
@@ -444,7 +444,7 @@ test('a run stopped in a group resumes there: the groups already done are not di
   await assert.rejects(host.start(), /host interrupted/)
   assert.equal((await host.run()).status, 'done')
 
-  assert.deepEqual(host.agentRunner.dispatches.slice(4).filter(({ agent: id }) => id !== 'pr-writer').map(({ label }) => label), [
+  assert.deepEqual(host.agentRunner.dispatches.slice(5).filter(({ agent: id }) => id !== 'pr-writer').map(({ label }) => label), [
     `skraft ${SLUG} · kill_proposal · group 1 of 2 · attempt 1`,
     `skraft ${SLUG} · kill_proposal · group 2 of 2 · attempt 1`,
     `skraft ${SLUG} · kill_mutants · attempt 1`,
@@ -469,7 +469,7 @@ test('a group whose agent stops blocked runs again on that group once a human an
   const outcome = await host.start()
 
   assert.equal(outcome.status, 'done', outcome.reason)
-  const after = host.agentRunner.dispatches.slice(4).filter(({ agent: id }) => id !== 'pr-writer')
+  const after = host.agentRunner.dispatches.slice(5).filter(({ agent: id }) => id !== 'pr-writer')
   assert.deepEqual(after.map(({ label }) => label), [
     `skraft ${SLUG} · kill_proposal · group 1 of 3 · attempt 1`,
     `skraft ${SLUG} · kill_proposal · group 2 of 3 · attempt 1`,
@@ -503,14 +503,14 @@ test('a refused attempt of a group is tried again on the same group, its mutants
     proposer(it),
     proposer(it),
     killer('Checkout')(it),
-    agent({ work: ({ git }) => { git.reset('.', 'root-2'); killTest('Checkout', REFS_42)({ git }) } })(it),
+    agent({ work: ({ git }) => { git.reset('.', 'root-3'); killTest('Checkout', REFS_42)({ git }) } })(it),
   ])
   mutationRounds(host, [twoFiles])
 
   const outcome = await host.start({ story: { issue: 42, title: 'Pay by card' } })
 
   assert.equal(outcome.status, 'done', outcome.reason)
-  const after = host.agentRunner.dispatches.slice(4).filter(({ agent: id }) => id !== 'pr-writer')
+  const after = host.agentRunner.dispatches.slice(5).filter(({ agent: id }) => id !== 'pr-writer')
   assert.deepEqual(after.map(({ label }) => label), [
     `skraft ${SLUG} · kill_proposal · group 1 of 2 · attempt 1`,
     `skraft ${SLUG} · kill_proposal · group 1 of 2 · attempt 2`,
@@ -522,7 +522,7 @@ test('a refused attempt of a group is tried again on the same group, its mutants
   assert.ok(after[1].prompt.includes(`Missing outputs from attempt 1 of 3:\n- ${TRACKING}/proposals/kill_proposal-1-g1.md`), after[1].prompt)
   for (const proposal of after.slice(0, 3)) assert.ok(proposal.prompt.includes('- Commit every file you change outside the tracking folder before you write your result, as `type(<story>): subject` (`docs(<story>): …` for a document); the engine refuses a change left uncommitted.\n- End every commit body with `Refs: #42`; never close the issue in a commit: the pull request closes it.'), proposal.prompt)
   assert.ok(after[3].prompt.includes('- End every commit body with `Refs: #42`; never close the issue in a commit: the pull request closes it.'), after[3].prompt)
-  assert.ok(after[4].prompt.includes(`Refused in attempt 1 of 3:\n- commit root-3 "test(${SLUG}): kill the mutants of Checkout" does not end its message with "Refs: #42"`), after[4].prompt)
+  assert.ok(after[4].prompt.includes(`Refused in attempt 1 of 3:\n- commit root-4 "test(${SLUG}): kill the mutants of Checkout" does not end its message with "Refs: #42"`), after[4].prompt)
   assert.deepEqual(recorded(host, 'kill_proposal').map(({ group, attempt, outcome: result }) => [group, attempt, result]), [[1, 1, 'failed'], [1, 2, 'done'], [2, 1, 'done']])
 })
 

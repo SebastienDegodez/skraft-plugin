@@ -41,6 +41,11 @@ acceptance scenario: DISTILL commits its failing test, the engine replays that c
 fails on an assertion. The inner loop is the unit RED → GREEN → REFACTOR cycle, which
 the `software-engineer` runs in DELIVER without committing it.
 
+The story itself opens on a wider outer loop, its [walking skeleton](walking-skeleton.md): a
+plain test that enters through the real entry point and checks only the wiring. DISTILL commits
+it failing before S1's acceptance test; S1's green makes both pass, and every later green keeps the
+walking skeleton green. Each scenario's acceptance test, S1's included, enters through the use case.
+
 ```text
 ┌─ Outer loop (acceptance, scenario k) ────────────────────────┐
 │  RED  : DISTILL commits the scenario's test, failing          │
@@ -62,7 +67,7 @@ complete, which keeps the focus on business behaviour, and it never changes: wri
 agent, it is the oracle the code must meet. Each scenario ends in one green commit, chained to
 the test command so that it happens only once the tests pass.
 
-Only one acceptance test is red at a time. DISTILL writes the next scenario's test once the one
+Only one acceptance test is red at a time, beside the walking skeleton until S1 is green. DISTILL writes the next scenario's test once the one
 before passes, so a red in the history always names the scenario in progress. The inner loop's
 unit tests are never seen failing by the engine; mutation, run last on the whole story, is what
 shows they would catch a mistake.

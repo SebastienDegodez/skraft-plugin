@@ -44,9 +44,9 @@ def downstream_url(microcks):
     return microcks.get_rest_mock_endpoint("{Downstream+API+Name}", "1.0.0")
 ```
 
-- **Targeted scenario** (`tests/unit/`): hand the use case the real HTTP gateway built on
+- **Acceptance test of a scenario, S1 included** (`tests/unit/`): hand the use case the real HTTP gateway built on
   `downstream_url`.
-- **Walking skeleton / API test** (`tests/integration/`): build the app with it.
+- **Walking skeleton (plain test, no Gherkin) / API test** (`tests/integration/`): build the app with it.
 
 ```python
 # tests/integration/conftest.py
