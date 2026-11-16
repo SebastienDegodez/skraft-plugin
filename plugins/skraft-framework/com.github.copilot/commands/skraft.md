@@ -35,6 +35,7 @@ slug, an issue or a title.
 | `paiement #0` | `{"slug":"paiement","issue":0}` |
 
 - Copilot: run the `skraft-pipeline` workflow with those arguments and no other key. Keep its run ID. Relay the outcome's status, code and reason as returned. On a question pause or `waiting`, follow Decide below; resume that SAME run ID after successful record, never start another workflow. On other `blocked` or `refused`, say what the reason asks and stop.
+- A run that ended (`blocked`, `refused`, `error`) is never resumed with `resumeFromRunId`: the host answers `non_resumable`, or replays the outcome of the earlier pause while `skraft_status` reports `running`. Run `skraft-pipeline` again with `{}` (the active pipeline) or with the same arguments, and read the state from `skraft_status`.
 - Elsewhere: say no run was started from this chat; `skraft doctor` tells the person which line applies:
   - in a terminal, with the Copilot SDK: `node "<plugin folder>/engine/drivers/copilot-sdk/skraft-run.mjs" <slug> [--issue <issue>] [--title "<title>"] [--base <ref>] [--from-artifacts]`;
   - without it: select the `Skraft - Orchestrator` agent as the chat's agent and give it the same words.
