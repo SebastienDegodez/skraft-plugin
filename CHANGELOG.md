@@ -3,6 +3,13 @@
 Toutes les modifications notables de ce projet sont documentées ici.
 Format basé sur [Conventional Commits](https://www.conventionalcommits.org/) — versionnage [SemVer](https://semver.org/).
 
+## [2.0.0-alpha.98](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.97...v2.0.0-alpha.98) (2026-11-16)
+
+### 🐛 Bug Fixes
+
+* **engine:** give S1 a walking skeleton and an acceptance test of its own ([#611](https://github.com/SebastienDegodez/skraft-plugin/issues/611)) ([5342ab2](https://github.com/SebastienDegodez/skraft-plugin/commit/5342ab26ffa37b9df37e0dce0f1f9cd68e8e6afe))
+* **skills:** write no ADR for what the project already decides or keeps local ([#612](https://github.com/SebastienDegodez/skraft-plugin/issues/612)) ([5b685e8](https://github.com/SebastienDegodez/skraft-plugin/commit/5b685e89e6a13db916122f13933a5b5bc392d657))
+
 ## [2.0.0-alpha.97](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.96...v2.0.0-alpha.97) (2026-11-16)
 
 ### 🐛 Bug Fixes
