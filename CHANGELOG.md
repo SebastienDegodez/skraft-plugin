@@ -3,6 +3,12 @@
 Toutes les modifications notables de ce projet sont documentées ici.
 Format basé sur [Conventional Commits](https://www.conventionalcommits.org/) — versionnage [SemVer](https://semver.org/).
 
+## [2.0.0-alpha.100](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.99...v2.0.0-alpha.100) (2026-11-16)
+
+### 🐛 Bug Fixes
+
+* **engine:** base, Gherkin perimeter and gate commands found by [#577](https://github.com/SebastienDegodez/skraft-plugin/issues/577) ([#614](https://github.com/SebastienDegodez/skraft-plugin/issues/614)) ([b50faf3](https://github.com/SebastienDegodez/skraft-plugin/commit/b50faf3ebc6f1e83d9510ab2e0584f5e6dfc8fae))
+
 ## [2.0.0-alpha.99](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.98...v2.0.0-alpha.99) (2026-11-16)
 
 ### ✨ Features
