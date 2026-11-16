@@ -456,11 +456,23 @@ Dans un même dossier, le premier marqueur trouvé dans cet ordre décide de la 
 
 | Stack | Marqueurs | `build` | `test` | Autres commandes |
 | --- | --- | --- | --- | --- |
-| `dotnet` | `*.sln`, `*.slnx`, `*.csproj`, `*.fsproj`, `*.vbproj` | `dotnet build --nologo` | `dotnet test --nologo` | `format` : `dotnet format --verify-no-changes` ; `mutation` : `dotnet stryker --since:{baseSha}` |
+| `dotnet` | `*.sln`, `*.slnx`, `*.csproj`, `*.fsproj`, `*.vbproj` | `dotnet build --nologo` | `dotnet test --nologo` | `format` : `dotnet format --verify-no-changes` |
 | `java` (Maven) | `pom.xml` | `mvn -B -q -DskipTests package` (`./mvnw` si présent) | `mvn -B -q verify` (`./mvnw` si présent) : Surefire `*Test` puis Failsafe `*IT` | — |
 | `java` (Gradle) | `build.gradle`, `build.gradle.kts` | `gradle build -x test` (`./gradlew` si présent) | `gradle test` (`./gradlew` si présent) | — |
 | `python` | `pyproject.toml`, `setup.py`, `setup.cfg`, `requirements.txt` | `python -m compileall -q src` (`.` sans dossier `src`) | `python -m pytest -q -p no:cacheprovider` | — |
 | `react` / `typescript` / `javascript` | `package.json` | `npm run build` si script `build`, sinon `npx tsc --noEmit` (pas pour javascript) | `npm test` si script `test`, sinon `npx vitest run` si dépendance vitest, sinon `npx jest` si dépendance jest | `lint` : `npm run lint` si script `lint` |
+
+`skraft init` n'écrit aucune commande `mutation` : muter est le choix du développeur.
+`skraft init --mutation`, ou `/skraft-init mutation`, écrit celle de chaque stack aux composants
+qui n'en ont pas :
+
+| Stack | `mutation` |
+| --- | --- |
+| `dotnet` | `dotnet stryker --since:{baseSha} --reporter json --output StrykerOutput` |
+| `java` (Maven) | `mvn -B -q org.pitest:pitest-maven:mutationCoverage -DoutputFormats=XML -DtimestampedReports=false -DwithHistory` (`./mvnw` si présent) |
+| `java` (Gradle) | `gradle pitest` (`./gradlew` si présent) |
+| `python` | `python -m mutmut run` |
+| `react` / `typescript` / `javascript` | `npx stryker run --incremental --reporters json,clear-text` |
 
 Pour `package.json` : `react` si dépendance `react`, sinon `typescript` si `tsconfig.json`
 existe ou dépendance `typescript`, sinon `javascript`. Les dépendances lues sont

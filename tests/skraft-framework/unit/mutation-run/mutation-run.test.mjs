@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { agent, pipelineHost } from '../support/pipeline-host.mjs'
+import { API, agent, pipelineHost } from '../support/pipeline-host.mjs'
 import { mutants, strykerReport } from '../support/mutation-reports.mjs'
 import { BUILT_IN_MUTATION, BUILT_IN_WORKFLOW, InMemoryGit, InMemoryTracking } from '../support/in-memory-host.mjs'
 
@@ -149,5 +149,16 @@ test('a mutation run needs a branch: on a detached HEAD it starts nothing', asyn
   assert.deepEqual([started.ok, started.code], [false, 'detached-head'])
   assert.equal(started.reason, 'HEAD is on no branch, and a mutation run is the run of one; check out the branch to mutate, then start it again')
   assert.equal(host.tracking.activeSlug, null)
+  assert.deepEqual([...host.tracking.files.keys()], [])
+})
+
+test('a mutation run needs a component that declares a mutation command: with none, it starts nothing and says how to declare one', async () => {
+  const { mutation: _declared, ...commands } = API.commands
+  const host = mutationRun({ components: [{ ...API, commands }] })
+
+  const started = await host.init()
+
+  assert.deepEqual([started.ok, started.code, started.slug], [false, 'no-mutation-command', SLUG])
+  assert.equal(started.reason, 'no component of skraft-config.json declares a mutation command; declare them with /skraft-init mutation, or skraft init --mutation')
   assert.deepEqual([...host.tracking.files.keys()], [])
 })
