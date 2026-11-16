@@ -36,7 +36,7 @@ import { cannotStart } from './initialised.mjs'
 import { publishStep } from './publish-step.mjs'
 import { reportProgress } from '../publish/issue-progress.mjs'
 import { storyLanguage } from '../publish/story-language.mjs'
-import { checkStep, headsOf } from './step-checks.mjs'
+import { checkStep, engineHashes, headsOf } from './step-checks.mjs'
 import { acceptanceFiles, scenarioPassOf } from './scenario-checks.mjs'
 import { commitForAgent } from './agent-commits.mjs'
 import { writeStructuralScan } from './structural-scan.mjs'
@@ -365,12 +365,12 @@ const refusedBy = (context, { cause, node, previous }, event) => {
  */
 const dispatch = async (context, run, next) => {
   const job = await prepareJob(context, run, next)
-  const heads = await openAttempt(context, run, next, job)
+  const { heads, engine } = await openAttempt(context, run, next, job)
   context.deps.progress.log(`${context.slug}: ${job.agent}${passOf(next.visit)}, attempt ${next.attempt} — ${modelText(onHost(job.assignment, context.deps.agentRunner.host))}`)
   const started = context.deps.clock.now()
   const asked = await runAgent(context, run, next, job)
   if (asked.outcome !== null) return asked.outcome
-  return judgeAttempt(context, run, next, { job, heads, started, cost: asked.cost, model: asked.model })
+  return judgeAttempt(context, run, next, { job, heads, engine, started, cost: asked.cost, model: asked.model })
 }
 
 /** @param {number} visit */
@@ -451,21 +451,39 @@ const openStart = (journal) => /** @type {import('../../domain/journal/run-state
 
 /**
  * Opens the attempt in the journal, with its outputs pre-created, unless a resumed attempt is
- * already open; returns the heads the attempt started from.
+ * already open; returns the heads the attempt started from and the engine files as it found them.
  * @param {Context} context @param {RunState} run @param {WorkStep} next @param {Job} job
  */
 const openAttempt = async (context, run, next, job) => {
-  if (next.resumed?.heads) return next.resumed.heads
+  if (next.resumed?.heads) return { heads: next.resumed.heads, engine: await engineAsFound(context, run, next) }
   await context.deps.files.clearTemporary(context.slug)
   await createRoleFolders(context, run, next.node)
   await precreate(context, job)
   await context.deps.files.write(context.slug, snapshotOf(job.result), JSON.stringify(await documentHashes(context)))
   const heads = await headsOf(context.deps, run.base)
+  const engine = await engineAsFound(context, run, next)
   const { phase, node, visit, attempt, missing, feedback } = next
   const { agent, outputs, result, assignment } = job
-  await context.journal.append('step.started', { step: node.id, phase, agent, visit, attempt, outputs, result, missing, feedback, ...causeFields(next), ...groupFields(run, next), heads, assignment, host: context.deps.agentRunner.host })
-  return heads
+  await context.journal.append('step.started', { step: node.id, phase, agent, visit, attempt, outputs, result, missing, feedback, ...causeFields(next), ...groupFields(run, next), heads, engine, assignment, host: context.deps.agentRunner.host })
+  return { heads, engine }
 }
+
+/**
+ * What the engine files looked like when the attempt began: as the previous attempt of the visit
+ * found them when it was refused for changing one and no one resumed the run since, so that a
+ * change the agent left stays refused; else as they stand now, a person's change before this
+ * attempt or before the run resumed not being the agent's.
+ * @param {Context} context @param {RunState} run @param {WorkStep} next
+ */
+const engineAsFound = async ({ deps, journal }, run, { node, resumed, attempt }) => {
+  const now = await engineHashes(deps)
+  const refused = !resumed && attempt > 1 && run.nodes[node.id]?.last?.failures?.some((/** @type {string} */ line) => ENGINE_REFUSALS.has(line))
+  const started = journal.events.findLast((/** @type {import('../../domain/journal/run-state.mjs').RunEvent} */ event) => event.type === 'step.started' && event.step === node.id)
+  return refused && started?.engine ? started.engine : now
+}
+
+/** The refusals of an engine file. */
+const ENGINE_REFUSALS = new Set([`out of write scope: ${CONFIG_FILE}`])
 
 /**
  * The group an attempt works on; the attempt that opens a visit also lists them all: a visit starts
@@ -733,7 +751,7 @@ const briefComponent = (component, sha) => {
 /**
  * Checks what the attempt did and records it, unless the machine stopped it.
  * @param {Context} context @param {RunState} run @param {WorkStep} next
- * @param {{ job: Job, heads: any, started: Date, cost?: number, model?: string | null }} attempt
+ * @param {{ job: Job, heads: any, engine: Array<{ path: string, hash: string | null }>, started: Date, cost?: number, model?: string | null }} attempt
  * @returns {Promise<RunOutcome | null>}
  */
 const judgeAttempt = async (context, run, next, attempt) => {
@@ -761,15 +779,16 @@ const failedCheck = ({ missing, failures }) => missing.length > 0 || failures.le
 
 /**
  * @param {Context} context @param {RunState} run @param {WorkStep} next
- * @param {{ job: Job, heads: any }} attempt
+ * @param {{ job: Job, heads: any, engine: Array<{ path: string, hash: string | null }> }} attempt
  */
-const checkAttempt = ({ deps, slug, config, journal, loaded }, run, { node, visit, attempt, feedback, sentBy, group }, { job, heads }) => {
+const checkAttempt = ({ deps, slug, config, journal, loaded }, run, { node, visit, attempt, feedback, sentBy, group }, { job, heads, engine }) => {
   const inState = attempt > 1
   const { role, outputs, precreated, result } = job
   const judge = { source: loaded.sources[REPLAY_JUDGE], assignment: judgeAssignment(config), slug, step: node.id, visit, attempt }
   return checkStep({ deps, slug, config, base: run.base, story: run.story, judge }, {
     role, outputs, precreated, result, known: knownCommits(journal), scenario: scenarioPassOf(loaded.workflow, run, { node, group }),
     visitHeads: inState ? run.nodes[node.id].heads : heads,
+    engineBefore: engine,
     redByGateFailure: inState ? run.nodes[node.id].redByGateFailure : redByGates(feedback, sentBy),
   })
 }
