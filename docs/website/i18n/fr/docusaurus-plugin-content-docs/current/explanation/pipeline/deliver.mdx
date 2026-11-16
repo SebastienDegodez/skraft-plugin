@@ -24,15 +24,17 @@ rouge → vert → refactor sans la commiter, puis commite une fois, quand le sc
 
 Le moteur ne croit pas l'agent sur parole. Le rouge de DISTILL a été rejoué et prouvé ; le vert de
 DELIVER est rejoué aussi, et le [juge du rejeu](pathname:///dashboard/#agent-replay-judge) lit le
-log du rejeu à côté de celui du rouge : les tests d'acceptation du scénario doivent y passer, et
-aucun test ne doit échouer ni être sauté. Le test d'abord ([Beck, 2003](../../reference/citations.mdx#cite-beck-tdd-2003)) devient un fait dans
+log du rejeu à côté de celui du rouge : les tests d'acceptation du scénario doivent y passer, le
+[walking skeleton](../deep-dive/walking-skeleton.md) aussi, et aucun test ne doit échouer ni être
+sauté. Le test d'abord ([Beck, 2003](../../reference/citations.mdx#cite-beck-tdd-2003)) devient un fait dans
 l'historique git, pas une promesse : pour chaque scénario, un commit rouge de son test
 d'acceptation, puis un commit vert.
 
 :::info[☕ Fil rouge — Starbucks *(exemple illustratif)*]
 
-S1 entre, rouge. DELIVER implémente le paiement et l'attribution des points et le fait passer au
-vert en un commit ; DISTILL écrit ensuite le test en échec de S2, la boisson indisponible, et
+S1 entre, rouge, à côté du walking skeleton rouge. DELIVER complète la chaîne du point d'entrée
+de commande jusqu'à la base, implémente le paiement et l'attribution des points et les fait
+passer tous deux au vert en un commit ; DISTILL écrit ensuite le test en échec de S2, la boisson indisponible, et
 DELIVER le fait passer au vert. Les gates passent, la revue relit le code, puis la **mutation**
 atteste que les tests protègent réellement la règle de fidélité. Le code part en pull request.
 :::
@@ -46,8 +48,10 @@ mutation, lancée en dernier sur toute la story, prouve qu'ils détecteraient un
 
 Trois règles gardent ce commit unique honnête :
 
-- **Les tests d'acceptation sont un oracle immuable.** DISTILL les a écrits ; le vert ne les
-  change jamais, hors du squelette qu'ils appellent. Un test ajusté au code ne prouve rien, donc
+- **Les tests d'acceptation sont un oracle immuable.** DISTILL les a écrits, walking skeleton
+  compris ; le vert ne les change jamais, hors du squelette qu'ils appellent. Le vert de S1 fait
+  passer le test d'acceptation de S1 et le walking skeleton ; chaque vert suivant garde le walking
+  skeleton au vert. Un test ajusté au code ne prouve rien, donc
   un test faux retourne à DISTILL : l'ingénieur s'arrête en le nommant.
 - **Un scénario appartient à un seul composant.** Son vert ne change aucun autre composant ; un
   changement nécessaire ailleurs est un scénario qui manque.

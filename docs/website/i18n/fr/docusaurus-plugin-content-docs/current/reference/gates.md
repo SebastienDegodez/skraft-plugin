@@ -154,13 +154,13 @@ Revue `distill_review` : 4 lentilles, verdict calculé par le moteur.
 | **B1** | `business-alignment` | Chaque scénario exprime un résultat que la story demande ; aucun ne décrit un comportement qu'elle ne demande pas. | high |
 | **G5** | `testability` | Chaque étape est sans ambiguïté et implémentable seule. | high |
 | **G6** | `testability` | Chaque scénario a une entrée dans le plan d'implémentation. | high |
-| **G11** | `testability` | Chaque cas d'usage nouveau a son test d'acceptation à l'emplacement des tests unitaires de son langage (.NET : projet `<Context>.UnitTest`, `<Context>.UnitTests` ou `<Context>.Tests` ; Java : une classe `*Test` sous le `src/test` d'un module, ou un module `-unit-test(s)` ; Python, TypeScript, JavaScript, React : `<chemin des tests>/unit/`). | blocker |
+| **G11** | `testability` | Chaque test vit là où sa sorte le place : le walking skeleton, un test simple sans Gherkin, à l'emplacement des tests d'intégration de son composant (Java : une classe `*IT`), en entrant par le vrai point d'entrée ; le test d'acceptation de chaque scénario, S1 compris, le binding de son Gherkin, à l'emplacement des tests unitaires de son langage (.NET : projet `<Context>.UnitTest`, `<Context>.UnitTests` ou `<Context>.Tests` ; Java : une classe `*Test` sous le `src/test` d'un module, ou un module `-unit-test(s)` ; Python, TypeScript, JavaScript, React : `<chemin des tests>/unit/`), en entrant par le cas d'usage. | blocker |
 | **T1** | `testability` | Chaque scénario et chaque test vérifient un comportement par un résultat observable et ne dépendent d'aucun temps, ordre ou aléa qu'ils ne fixent pas. | high |
-| **T2** | `testability` | Chaque valeur d'entrée et attendue du test d'acceptation externe égale le `.feature` mot pour mot ; le test ne porte que le scénario en cours. | blocker |
-| **T3** | `testability` | Le test d'acceptation externe existe et son premier scénario échoue sur une assertion métier ; le code de production du patch est un squelette dont les signatures rendent la valeur vide de leur type. | blocker |
+| **T2** | `testability` | Le patch ne porte que le walking skeleton (sauf si l'histoire est exemptée) et le test d'acceptation du scénario en cours ; un scénario suivant tagué `@pending` n'est pas un finding. Chaque valeur d'entrée et attendue du test d'acceptation de S1 égale le `.feature` mot pour mot ; le walking skeleton affirme le statut, la forme et une valeur que nomme S1, et aucune valeur absente du `.feature`. | blocker |
+| **T3** | `testability` | Le walking skeleton et le test d'acceptation du scénario en cours existent et chacun échoue sur une assertion, pas sur une erreur de compilation, d'import ou de mise en place ; le code de production du patch est un squelette dont les signatures rendent la valeur vide de leur type, avec, pour le walking skeleton, le point d'entrée, les ports et les adaptateurs de sa chaîne câblés dans la composition root. | blocker |
 | **G7** | `boundary-enforcement` | Chaque scénario du plan de test vise un cas d'usage Application que nomme le modèle d'événements (une de ses Commands ou Queries) ; une étape du plan d'implémentation qui n'écrit le test d'acceptation d'aucun scénario (un test API ou HTTP d'un cercle suivant) est hors de sa portée. | blocker |
-| **G8** | `boundary-enforcement` | Le plan de test identifie au moins un scénario walking skeleton par flux. | high |
-| **E1** | `boundary-enforcement` | Le test d'acceptation ne pilote que ce cas d'usage : jamais d'appel ni d'assertion sur un élément interne du domaine, un repository ou une classe d'infrastructure. Construire les vrais collaborateurs du cas d'usage pour les passer à son constructeur est du câblage, pas un finding. | blocker |
+| **G8** | `boundary-enforcement` | L'histoire a un walking skeleton qui parcourt S1, tagué `@walking-skeleton`, dans un composant back : un test simple sans Gherkin qui pilote le vrai point d'entrée à travers le cas d'usage jusqu'aux vraies gateways internes, S1 gardant à côté son propre test d'acceptation ; ou l'exemption déclarée (`library`, `refactoring`, `docs-only`) tient. | blocker |
+| **E1** | `boundary-enforcement` | Le test d'acceptation de chaque scénario, S1 compris, ne pilote que son cas d'usage ; le walking skeleton ne pilote que le vrai point d'entrée. Ni l'un ni l'autre n'appelle ni n'affirme sur un élément interne du domaine, un repository ou une classe d'infrastructure. Construire les vrais collaborateurs du cas d'usage pour les passer à son constructeur, ou l'hôte de test et les conteneurs du walking skeleton, est du câblage, pas un finding. | blocker |
 | **E2** | `boundary-enforcement` | Les doublures ne remplacent que des dépendances du bord extérieur, jamais un objet du domaine ni le cas d'usage ; le squelette de DISTILL est le vrai module. | high |
 
 **Contrôle du moteur.** G11 : le moteur lit où le patch ajoute des fichiers de test et rapporte
@@ -189,15 +189,16 @@ combien de scénarios il en faut : une histoire dont l'`ac-draft` n'en déclare 
 demander aucun scénario. C'est un plancher sous G1, pas G1 :
 la lentille `coverage` juge toujours à quel critère répond chaque scénario.
 
-**Contrôle du moteur.** Les scénarios que DELIVER construit : après chaque tentative du premier
-passage, le moteur lit le tableau `## Scenarios` du plan de test (`scenarios`) : identifiants dans
+**Contrôle du moteur.** Les scénarios que DELIVER construit : après chaque tentative du passage
+du plan, le moteur lit le tableau `## Scenarios` du plan de test (`scenarios`) : identifiants dans
 l'ordre, un titre chacun, un composant de `skraft-config.json`, S1 seul tagué `@walking-skeleton`
 dans un composant qui n'est pas `react`, ou une exemption `library`, `refactoring` ou `docs-only`
-et aucun tag ([règles et messages](./phases.md#scenarios)). G8 reste à la lentille : chaque flux
-a-t-il son walking skeleton.
+et aucun tag ([règles et messages](./phases.md#scenarios)). G8 reste à la lentille : le walking
+skeleton parcourt-il le vrai chemin, S1 a-t-il en plus son propre test d'acceptation, une
+exemption déclarée tient-elle.
 
-La revue tourne une fois, sur le premier passage : son test d'acceptation ne porte que S1 (T2,
-T3). Les passages de `distill` qui écrivent les tests des scénarios suivants ne sont pas revus ;
+La revue tourne une fois, après le passage du plan et celui de S1 : les tests ne portent que le
+walking skeleton et le test d'acceptation de S1 (T2, T3). Les passages de `distill` qui écrivent les tests des scénarios suivants ne sont pas revus ;
 le rejeu de leur rouge, et le vert qui doit les faire passer, les vérifient.
 
 ## DELIVER <!-- #deliver -->
@@ -251,8 +252,9 @@ aucune (`issue-closed`).
 
 | Passage | Permis | Refusé |
 | --- | --- | --- |
+| `distill`, passage du plan | un rouge, le walking skeleton, le squelette de sa chaîne et le `.feature` du composant de S1 ; le rouge du walking skeleton existe après le passage, sauf pour une histoire exemptée, dont les fichiers `.feature` vont dans un commit `docs` | comme ci-dessous ; aucun dans une histoire non exemptée |
 | `distill`, qui écrit le test d'acceptation d'un scénario | un rouge, le test et le squelette qu'il appelle, dans le composant du scénario ; le rouge du scénario existe après le passage ; les fichiers `.feature` et Markdown l'accompagnent ou vont dans un commit `docs`, où qu'ils soient | un second rouge (`oracle-split`) ; un rouge dans un autre ou un second composant (`oracle-component`) ; un rouge sans fichier des chemins de test du composant (`oracle-without-test`) ; un vert ou un refactor (`code-in-oracle`) ; aucun |
-| `deliver` sur le scénario k | un vert, enchaîné en bash : `<commande de test> && git add <fichiers> && git commit …` | un rouge (`test-in-scenario`) ; un refactor (`refactor-in-scenario`) ; un second vert (`second-green`) ; un changement à un fichier des commits du test d'acceptation du scénario hors des chemins `src` du composant (`oracle-touched`) ; un changement à un autre composant (`other-component`) ; aucun |
+| `deliver` sur le scénario k | un vert, enchaîné en bash : `<commande de test> && git add <fichiers> && git commit …` | un rouge (`test-in-scenario`) ; un refactor (`refactor-in-scenario`) ; un second vert (`second-green`) ; un changement à un fichier des commits des tests d'acceptation, walking skeleton compris, hors des chemins `src` du composant (`oracle-touched`) ; un changement à un autre composant (`other-component`) ; aucun |
 | `deliver` renvoyé par les gates ou la revue, après le dernier scénario | rouges, verts et refactors sur toute l'histoire ; rouges non rejoués | un vert sans rouge depuis le dernier vert (`green-without-red`) ; sur un passage que les gates ont renvoyé, leur échec tient lieu du premier rouge |
 | `kill_mutants` | des tests qui tuent des mutants et passent | — |
 
@@ -283,19 +285,22 @@ test) est un changement comme un autre, tenu au périmètre d'écriture : listez
 | --- | --- | --- |
 | un rouge de test d'acceptation | la commande `test` de chaque composant qu'il touche sort avec 0, puis la commande `e2e` de ceux qui en ont une sort avec 0 aussi | refusé, `not-red`, sans demander au juge : `is not red: the tests of <components> pass at it; the replay's output is in <log>`, `pass at it, and so do the e2e tests of <components>; …` quand des tests e2e ont tourné |
 | | une commande échoue : un code de sortie non nul, un programme qui n'a pas démarré, un délai dépassé | chaque commande en échec rejouée au parent du commit, puis le juge interrogé : le commit, ses fichiers, l'indice et le titre du scénario, chaque ligne de commande, comment elle a fini et son log |
-| le vert du scénario k | la commande `test` de son composant, et `e2e` quand des tests e2e ont prouvé le rouge | le juge toujours interrogé, même quand chaque commande sort avec 0, avec le sha du rouge, les logs de son rejeu au rouge et à son parent, et les fichiers de test d'acceptation du rouge |
-| un rouge ou un vert, jugé | `accept` | le rouge tient et devient l'oracle du scénario, avec la commande qui l'a prouvé (`test` ou `e2e`) ; le vert tient |
+| le vert du scénario k | la commande `test` de son composant, et `e2e` quand des tests e2e ont prouvé le rouge ou celui du walking skeleton | le juge toujours interrogé, même quand chaque commande sort avec 0, avec le sha du rouge, les logs de son rejeu au rouge et à son parent, et les fichiers de test d'acceptation du rouge ; de même pour le rouge du walking skeleton quand le composant du scénario en a un |
+| un rouge ou un vert, jugé | `accept` | le rouge tient et devient l'oracle du scénario (au passage du plan, le walking skeleton de l'histoire), avec la commande qui l'a prouvé (`test` ou `e2e`) ; le vert tient |
 | | `send-back` | refusé, `not-red` ou `not-green` : `the replay judge sends it back: read <judge answer>` |
 | | `retry` | les commandes tournent encore une fois, le commit rapportant alors ce qu'elles trouvent, et le juge est réinterrogé, son brief le disant ; un second `retry` interroge un humain |
 | | `ask-human` ; deux réponses que le moteur ne peut pas lire ; un hôte qui ne peut pas lancer le juge | l'étape reste ouverte : question `environment`, cause `judge` : `the replay judge asks a human about the <red\|green> commit <short sha>: read <judge answer>` (`replay-judge answered 2 times with no verdict the engine reads (…)`, `the host could not start replay-judge`) ; `RETRY` rejoue et rejuge, sans nouvelle tentative |
 | un rouge ou un vert | une personne a interrompu une commande (sortie 130, ou `0xC000013A` sous Windows) | le run s'arrête (`interrupted`), ne demande rien et ne refuse rien ; le run suivant rejoue le commit |
 | | pas de commande `test`, une commande à syntaxe shell ou qui installe des dépendances | l'étape reste ouverte : question `environment`, cause `config`, rien n'est rejoué |
 
-Le juge accepte un rouge dont le test du scénario échoue sur son assertion au commit et, au
+Le juge accepte un rouge dont le test — le walking skeleton au passage du plan, le test
+d'acceptation du scénario sinon — échoue sur son assertion au commit et, au
 parent, n'existe pas, ne tourne pas ou échoue autrement ; il renvoie un rouge qui échoue avant que
 l'assertion ne tourne (build, collecte des tests, un import, l'exception d'un squelette), où seul
-un autre test échoue ou dont le test du scénario est sauté. Il accepte un vert dont toutes les
-commandes sortent avec 0 et dont le log montre que le test du scénario a passé, par son nom ou par
+un autre test échoue ou dont le test du commit est sauté ; un walking skeleton antérieur qui
+échoue au commit comme à son parent ne tranche rien. Il accepte un vert dont toutes les commandes
+sortent avec 0 et dont le log montre que le test du scénario a passé, et le walking skeleton aussi
+quand le brief nomme son rouge, chacun par son nom ou par
 autant de tests lancés qu'au rouge, aucun en échec ni sauté ; il interroge un humain quand le seul
 test en échec échouait déjà avant le rouge. Il répond
 `retry` pour une cause qui passe (un délai réseau, un port occupé), `ask-human` pour ce qu'aucun

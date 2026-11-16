@@ -57,6 +57,7 @@ test('a dismissed dialog leaves the run waiting; /skraft decide records the answ
   assert.equal((await mod.settled()).status, 'done')
   assert.deepEqual(descriptions(mod), [
     `skraft ${SLUG} · research · attempt 1`, `skraft ${SLUG} · design · attempt 1`, `skraft ${SLUG} · distill · attempt 1`, judgeLabel(cwd, 'red'),
+    `skraft ${SLUG} · distill · pass 2 · scenario 1 of 1 · attempt 1`, judgeLabel(cwd, 'first'),
     `skraft ${SLUG} · deliver · scenario 1 of 1 · attempt 1`, judgeLabel(cwd, 'green'), `skraft ${SLUG} · pr_writer · attempt 1`,
   ])
 })
@@ -75,6 +76,7 @@ test('after the conversation moved into a subfolder of the working copy, /skraft
   assert.equal((await mod.settled()).status, 'done')
   assert.deepEqual(descriptions(mod), [
     `skraft ${SLUG} · research · attempt 1`, `skraft ${SLUG} · design · attempt 1`, `skraft ${SLUG} · distill · attempt 1`, judgeLabel(cwd, 'red'),
+    `skraft ${SLUG} · distill · pass 2 · scenario 1 of 1 · attempt 1`, judgeLabel(cwd, 'first'),
     `skraft ${SLUG} · deliver · scenario 1 of 1 · attempt 1`, judgeLabel(cwd, 'green'), `skraft ${SLUG} · pr_writer · attempt 1`,
   ])
   assert.ok(!existsSync(join(cwd, subfolder, '.copilot-tracking')))
@@ -247,7 +249,7 @@ test('text typed under Other is a rejection with that reason; a reason dialog le
   const typed = pipelineRepository(t)
   const { mod } = await runOn(typed.cwd, [REASON, 'RATIFIED'])
   assert.deepEqual(journal(typed.cwd, SLUG).filter((event) => event.type === 'question.answered').map(({ answer, reason }) => [answer, reason]), [['REJECTED', REASON], ['RATIFIED', null], ['APPROVED', null]])
-  assert.equal(phaseSpawns(mod).length, 8)
+  assert.equal(phaseSpawns(mod).length, 10)
 
   const later = pipelineRepository(t)
   const { mod: waiting, outcome } = await runOn(later.cwd, ['REJECTED', 'Not now'])
@@ -312,7 +314,7 @@ test('skraft-config.json left invalid in the environment dialog stops the run be
   writeFileSync(configPath, config)
   await mod.command(SLUG)
   assert.equal((await mod.settled()).status, 'done')
-  assert.equal(phaseSpawns(mod).length, 7)
+  assert.equal(phaseSpawns(mod).length, 9)
 })
 
 test('an unpublished ADR the architect supersedes on the refused pass is refused; edited in place, it is asked again', async (t) => {

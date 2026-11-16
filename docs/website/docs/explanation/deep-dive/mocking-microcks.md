@@ -54,7 +54,7 @@ the service-under-test is not.
 Mocking is one row of a wider [infrastructure policy](../../reference/skraft-config.md#infrastructure):
 what a component's tests run each kind of dependency on. An external gateway — a REST, SOAP,
 GraphQL or gRPC service, a broker such as Kafka, RabbitMQ or MQTT, a webhook sent — runs on Microcks, in a
-targeted scenario and in the walking skeleton alike. A React front end stands in for its back end
+scenario's acceptance test (targeted) and in the walking skeleton alike. A React front end stands in for its back end
 with MSW in targeted tests, and runs its Playwright end-to-end tests against Microcks. The
 policy's defaults come from the plugin, per stack; DISTILL receives the effective one in its brief,
 and `skraft doctor` shows it with its source.

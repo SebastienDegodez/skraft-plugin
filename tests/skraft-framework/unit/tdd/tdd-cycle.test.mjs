@@ -160,8 +160,8 @@ test('a component without a test command waits for a human until it gets one', a
   await host.deps.workspace.write('skraft-config.json', JSON.stringify({ components: [API], publish: SETTLED_PUBLISH }))
   await host.decide({ answer: 'RETRY' })
   assert.equal((await host.run()).code, 'agent-unavailable')
-  assert.equal(host.agentRunner.dispatches.length, 4)
-  assert.deepEqual(recorded(host, 'distill').map((event) => event.outcome), ['done'])
+  assert.equal(host.agentRunner.dispatches.length, 5)
+  assert.deepEqual(recorded(host, 'distill').map((event) => [event.group, event.outcome]), [[undefined, 'done'], [1, 'done']])
 })
 
 test('a timed-out replay goes to the judge, and a human answers when the judge asks; a test command with shell syntax waits for a human to fix the configuration', async () => {
@@ -395,7 +395,7 @@ test('a replay share at a fifth of the phase or below is not reported, and a pha
   const replay = new ScriptedReplay({ clock, takesMs: 10_000 })
   const host = scripted({ clock, replay }, (it) => [
     agent()(it), agent()(it),
-    agent({ work: ({ git }) => { it.clock.advance(80_000); git.commit('test(checkout): acceptance', ['tests/AcceptanceTests.cs']) } })(it),
+    agent({ work: ({ git }) => { it.clock.advance(160_000); git.commit('test(checkout): acceptance', ['tests/AcceptanceTests.cs']) } })(it),
     agent({ work: green(SLUG, 'A') })(it),
   ])
   host.machine.clock = null

@@ -46,9 +46,9 @@ public sealed class MicrocksFixture : IAsyncLifetime
 The real API is `GetRestMockEndpoint(serviceName, version)` (`+` encodes a space in the service
 name, e.g. `"API+Pastries"`).
 
-- **Targeted scenario** (unit-test place): hand the use case the real HTTP gateway built on
+- **Acceptance test of a scenario, S1 included** (unit-test place): hand the use case the real HTTP gateway built on
   `fixture.Container.GetRestMockEndpoint("{Downstream+API+Name}", "1.0.0")`.
-- **Walking skeleton / API test** (integration-test place): point the host's client at it.
+- **Walking skeleton (plain test, no Gherkin) / API test** (integration-test place): point the host's client at it.
 
 ```csharp
 public sealed class {Sut}WebApplicationFactory(MicrocksFixture microcks) : WebApplicationFactory<Program>

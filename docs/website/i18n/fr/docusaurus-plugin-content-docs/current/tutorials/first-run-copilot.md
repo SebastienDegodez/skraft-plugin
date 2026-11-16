@@ -223,11 +223,11 @@ passe `Accepted` et le commite : `docs(adr): ratify ADR-001`.
 
 ## 7. Laisser finir DISTILL, DELIVER et PUBLISH <!-- #7-let-distill-deliver-and-publish-finish -->
 
-Une fois que les quatre lentilles de DISTILL ont approuvé les scénarios et le test d'acceptation en
-échec de S1, Copilot pose une question de plus, d'en-tête **Scenarios** : elle nomme chaque
-scénario de la story dans l'ordre où DELIVER les construit, S1 marqué walking skeleton, et le
-commit du test de S1. Ouvrez le plan de test sous `.copilot-tracking/skraft-plans/checkout/details/`
-et ce commit, lisez-les, puis choisissez **APPROVED** dans le chat.
+Une fois que les quatre lentilles de DISTILL ont approuvé les scénarios, le walking skeleton en
+échec et le test d'acceptation en échec de S1, Copilot pose une question de plus, d'en-tête
+**Scenarios** : elle nomme chaque scénario de la story dans l'ordre où DELIVER les construit, S1
+marqué walking skeleton, le commit du walking skeleton et le commit du test de S1. Ouvrez le plan
+de test sous `.copilot-tracking/skraft-plans/checkout/details/` et ces commits, lisez-les, puis choisissez **APPROVED** dans le chat.
 
 Le run continue ensuite sans vous : un scénario à la fois, un commit vert que le moteur rejoue,
 puis le test en échec du scénario suivant ; puis les gates, la revue DELIVER, la mutation, et la

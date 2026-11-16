@@ -9,7 +9,7 @@ import { causeLines } from '../pipeline/incidents.mjs'
  * when a block a human can lift stops the run: an instruction runs the blocked node again with
  * it, STOP ends the run. The mutation-plan question takes APPLY, an instruction of the
  * developer's own, which goes on as APPLY does, or STOP. The scenario-review question shows the
- * story's scenarios and its walking skeleton before DELIVER builds them: APPROVED goes on, REVISE
+ * story's scenarios, its walking skeleton and the acceptance test of S1 before DELIVER builds them: APPROVED goes on, REVISE
  * sends DISTILL back with the human's corrections.
  *
  * @typedef {'adr-ratification' | 'mutation-plan' | 'scenario-review'} NodeQuestion
@@ -125,13 +125,19 @@ export const REVIEW_CONSENT_TEXT =
 
 /**
  * The text of the scenario review question: the scenarios in the order DELIVER builds them, the
- * `.feature` files the test plan names, and the red of the walking skeleton's acceptance test.
- * @param {{ scenarios: Array<{ index: number, title: string, component: string, tags: string[] }>, features: string[], oracle: { sha: string, subject: string, files: string[] } }} story
+ * `.feature` files the test plan names, the red of the walking skeleton (or the exemption the
+ * story declares instead) and the red of S1's acceptance test.
+ * @typedef {{ sha: string, subject: string, files: string[] }} ReviewedRed
+ * @param {{ scenarios: Array<{ index: number, title: string, component: string, tags: string[] }>, features: string[], skeleton: ReviewedRed | null, exemption: string, oracle: ReviewedRed }} story
  */
-export const scenarioReviewText = ({ scenarios, features, oracle }) =>
+export const scenarioReviewText = ({ scenarios, features, skeleton, exemption, oracle }) =>
   `Read the ${scenarios.length} scenario${scenarios.length === 1 ? '' : 's'} of the story before DELIVER builds them, one at a time${features.length === 0 ? '' : `, as ${features.join(', ')} write${features.length === 1 ? 's' : ''} them`}: ${scenarios.map(scenarioLabel).join('; ')}. ` +
-  `The acceptance test of S1 and its skeleton are commit ${oracle.sha.slice(0, 7)} "${oracle.subject}": ${oracle.files.join(', ')}. ` +
+  `${skeleton === null ? `The story has no walking skeleton (exemption: ${exemption}).` : `The walking skeleton and the skeleton of its chain are ${redText(skeleton)}.`} ` +
+  `The acceptance test of S1 is ${redText(oracle)}. ` +
   'APPROVED delivers them; REVISE sends DISTILL back with your corrections (edit the .feature or the test yourself first if you like, and say so).'
+
+/** @param {ReviewedRed} red */
+const redText = ({ sha, subject, files }) => `commit ${sha.slice(0, 7)} "${subject}": ${files.join(', ')}`
 
 /** @param {{ index: number, title: string, component: string, tags: string[] }} scenario */
 const scenarioLabel = ({ index, title, component, tags }) => `S${index} "${title}" (${[component, tags.join(' ')].filter((part) => part !== '').join('; ')})`

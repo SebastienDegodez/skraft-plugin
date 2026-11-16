@@ -465,7 +465,7 @@ const replayed = async (deps, { run, step, judged, tally }) => {
  */
 const judgedScenario = ({ scenario, plan }) => {
   const told = scenario?.scenario ?? plan?.scenarios[0] ?? null
-  return told === null ? null : { index: told.index, title: told.title }
+  return told === null ? null : { index: told.index, title: told.title, walkingSkeleton: scenario?.kind === 'plan' }
 }
 
 /** @param {JudgedCommit[]} judged @param {{ details: Map<string, string>, issue: number | null }} context @returns {Failure[]} */

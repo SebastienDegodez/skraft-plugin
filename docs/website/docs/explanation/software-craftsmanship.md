@@ -69,16 +69,19 @@ each gate are in the [gates reference](../reference/gates.md).
 
 Craftsmanship moves in small increments that work. In skraft, this takes two forms.
 
-- **The walking skeleton.** The first scenario of every story, S1, crosses a back-end component
-  from its entry point to a real database; the engine refuses a test plan that does not tag it
-  `@walking-skeleton` or declare why the story needs none, and the `boundary-enforcement` lens
-  requires at least one walking skeleton scenario per flow (its G8). See
+- **The walking skeleton.** Every story opens on a plain test that walks its first scenario, S1,
+  across a back-end component from its real entry point to a real database, and asserts the wiring
+  only; S1 keeps its own acceptance test through the use case. The engine refuses a test plan that
+  does not tag S1 `@walking-skeleton` or declare why the story needs none, and the
+  `boundary-enforcement` lens checks that the walking skeleton runs that real path (its G8). See
   [Walking Skeleton](./deep-dive/walking-skeleton.md).
 - **One scenario, one red, one green.** In DISTILL, the `acceptance-designer` commits the failing
   acceptance test of one scenario and the skeleton it calls; the engine replays it and the replay
-  judge accepts it only when the scenario's test fails on an assertion. In DELIVER, the `software-engineer` runs the
+  judge accepts it only when the scenario's test fails on an assertion; the walking skeleton is
+  committed and replayed the same way before S1. In DELIVER, the `software-engineer` runs the
   red → green → refactor loop of its unit tests, then commits once: a `feat(…)` the engine
-  replays too, which must make the scenario pass without touching its acceptance test. Then the
+  replays too, which must make the scenario pass without touching its acceptance test, and keep the
+  walking skeleton passing. Then the
   next scenario. Beck's test first ([Beck, 2003](../reference/citations.mdx#cite-beck-tdd-2003)) becomes a fact
   checked in the git history, not a promise. See
   [Outside-In TDD](./deep-dive/outside-in-tdd.md).

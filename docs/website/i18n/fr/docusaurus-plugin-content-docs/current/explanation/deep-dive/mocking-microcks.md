@@ -54,7 +54,8 @@ mocké ; le service-sous-test ne l'est pas.
 Le mocking est une rangée d'une [politique d'infrastructure](../../reference/skraft-config.md#infrastructure)
 plus large : sur quoi les tests d'un composant font tourner chaque sorte de dépendance. Une
 gateway externe — un service REST, SOAP, GraphQL ou gRPC, un broker comme Kafka, RabbitMQ ou MQTT, un webhook
-émis — tourne sur Microcks, dans un scénario ciblé comme dans le walking skeleton. Un front React
+émis — tourne sur Microcks, dans le test d'acceptation d'un scénario (ciblé) comme dans le walking
+skeleton. Un front React
 remplace son back par MSW dans les tests ciblés, et joue ses tests end-to-end Playwright contre
 Microcks. Les défauts de la politique viennent du plugin, par stack ; DISTILL reçoit l'effective
 dans son brief, et `skraft doctor` l'affiche avec sa source.

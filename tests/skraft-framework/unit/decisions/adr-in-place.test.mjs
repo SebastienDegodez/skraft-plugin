@@ -137,7 +137,7 @@ test('an ADR on the default branch is still superseded the usual way: a new ADR 
   assert.deepEqual(designRecords(host), [[1, 1, 'done', null, []]])
   assert.deepEqual(host.human.questions.map((question) => question.text.split('?')[0]), [
     `Ratify the Proposed ADRs ${ADR_2}`,
-    scenarioReview({ sha: 'root-3' }).text,
+    scenarioReview({ skeleton: 'root-3', sha: 'root-4' }).text,
   ])
   assert.equal(await host.workspace.read(ADR_1), superseded)
 })

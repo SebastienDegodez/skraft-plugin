@@ -57,7 +57,8 @@ test('skraft decide RATIFIED, then the next run marks the ADR Accepted, commits 
   assert.equal(outcome.status, 'done')
   assert.deepEqual(dispatched(host), [
     `skraft ${SLUG} · research · attempt 1`, `skraft ${SLUG} · design · attempt 1`,
-    `skraft ${SLUG} · distill · attempt 1`, `skraft ${SLUG} · deliver · scenario 1 of 1 · attempt 1`, `skraft ${SLUG} · pr_writer · attempt 1`,
+    `skraft ${SLUG} · distill · attempt 1`, `skraft ${SLUG} · distill · pass 2 · scenario 1 of 1 · attempt 1`,
+    `skraft ${SLUG} · deliver · scenario 1 of 1 · attempt 1`, `skraft ${SLUG} · pr_writer · attempt 1`,
   ])
   assert.equal(await host.workspace.read(ADR_1), adrText().replace('status: Proposed', 'status: Accepted').replace('ratified_by: null', 'ratified_by: "human 2026-10-11"').replace('**Status:** Proposed', '**Status:** Accepted'))
   assert.equal(await host.workspace.read(INDEX), indexText(['| ADR-001 | Card payment | Accepted | Stripe | Pay by card through Stripe | human 2026-10-11 | 2026-10-11 |']))
@@ -91,7 +92,7 @@ test('a DESIGN blocked on the ADR it drafted, resumed by a human instruction, st
   assert.deepEqual(eventsOf(host, 'question.asked').map(({ key, kind, step, visit, subjects }) => [key, kind, step, visit, subjects]), [
     ['design-1', 'blocked', 'design', 1, []],
     ['adr-1', 'adr-ratification', 'adr', 1, [ADR_1]],
-    ['scenario_review-1', 'scenario-review', 'scenario_review', 1, ['tests/Acceptance/S1AcceptanceTests.cs']],
+    ['scenario_review-1', 'scenario-review', 'scenario_review', 1, ['tests/Integration/WalkingSkeletonTests.cs', 'tests/Acceptance/S1AcceptanceTests.cs']],
   ])
   assert.deepEqual(eventsOf(host, 'question.answered').map(({ key, answer }) => [key, answer]), [['design-1', instruction], ['adr-1', 'RATIFIED'], ['scenario_review-1', 'APPROVED']])
   assert.deepEqual(dispatched(host).slice(0, 4), [

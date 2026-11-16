@@ -1,6 +1,7 @@
 /**
  * The scenarios of a story, as the acceptance designer lists them in its test plan, in the order
- * DELIVER builds them, one failing acceptance test then one green commit each:
+ * DELIVER builds them, one failing acceptance test then one green commit each, after the walking
+ * skeleton the pass that writes them commits failing:
  *
  *   ## Scenarios
  *
@@ -10,8 +11,10 @@
  *
  *   Walking skeleton exemption: none
  *
- * S1 is the story's walking skeleton, tagged `@walking-skeleton`, in a back-end component when the
- * configuration has one; a story with no new entry point declares why it has none instead.
+ * S1 is the scenario the story's walking skeleton walks, tagged `@walking-skeleton`, in a back-end
+ * component when the configuration has one; its acceptance test is a scenario's like any other,
+ * the walking skeleton a plain test beside it. A story with no new entry point declares why it has
+ * none instead.
  *
  * @typedef {{ index: number, title: string, component: string, tags: string[] }} StoryScenario
  * @typedef {'none' | 'library' | 'refactoring' | 'docs-only'} Exemption

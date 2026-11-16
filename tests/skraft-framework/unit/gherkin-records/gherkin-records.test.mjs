@@ -61,10 +61,15 @@ const designer = ({ features = {}, elsewhere = {}, cited = ['pay-by-card.feature
   },
 })
 
-/** The attempts of DISTILL: what each one was told, in order. @param {{ events: () => Array<Record<string, any>> }} host */
+/** The attempts of DISTILL's pass that writes the plan and its Gherkin records: what each one was told, in order. @param {{ events: () => Array<Record<string, any>> }} host */
 const distill = (host) => host.events()
-  .filter((event) => event.type === 'step.recorded' && event.step === 'distill')
+  .filter((event) => event.type === 'step.recorded' && event.step === 'distill' && event.group === undefined)
   .map(({ attempt, outcome, code, failures }) => [attempt, outcome, code, failures])
+
+/** The passes of DISTILL on a scenario, after the plan: the red of each acceptance test. @param {{ events: () => Array<Record<string, any>> }} host */
+const scenarioPasses = (host) => host.events()
+  .filter((event) => event.type === 'step.recorded' && event.step === 'distill' && event.group !== undefined)
+  .map(({ group, attempt, outcome, failures }) => [group, attempt, outcome, failures])
 
 /** A run whose DISTILL step is the designers given, one per attempt. @param {Array<(host: any) => () => Promise<any>>} attempts */
 const runOf = (attempts, components = [GHERKIN]) => scripted({ components }, (it) => [...nominal(it).slice(0, 2), ...attempts.map((made) => made(it)), ...nominal(it).slice(3)])
@@ -87,6 +92,7 @@ test('a test plan that names a .feature the working copy does not hold sends the
     [2, 'failed', 'gherkin-records', [`${PLAN} names pay-later.feature, which is no .feature of the working copy (#524)`]],
     [3, 'done', null, []],
   ])
+  assert.deepEqual(scenarioPasses(host), [[1, 1, 'done', []]], 'the plan landed, the red of S1 follows it')
   assert.equal(outcome.status, 'done', outcome.reason)
 })
 
@@ -135,6 +141,7 @@ test('a test plan that names no .feature is asked for none: the designer goes on
   const outcome = await host.start()
 
   assert.deepEqual(distill(host), [[1, 'done', null, []]])
+  assert.deepEqual(scenarioPasses(host), [[1, 1, 'done', []]])
   assert.equal(outcome.status, 'done', outcome.reason)
 })
 

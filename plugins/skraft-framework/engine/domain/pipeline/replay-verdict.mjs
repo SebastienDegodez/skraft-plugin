@@ -11,14 +11,18 @@ import { parseAnswerYaml } from '../review/answer-yaml.mjs'
  * @typedef {{ component: string, line: string, sha: string, exitCode: number | null, error?: string, log: string }} ReplayFact
  *   one command the engine replayed: at a commit, its exit code (null when it did not start or
  *   was stopped, error then saying why) and the absolute path of what it printed.
+ * @typedef {{ index: number, title: string, walkingSkeleton: boolean }} JudgedScenario
+ *   walkingSkeleton: the red judged is the story's walking skeleton, which walks scenario `index`.
+ * @typedef {{ sha: string, log: string, parentLog: string, tests: string[] }} JudgedRed
  * @typedef {{
  *   kind: 'red' | 'green', sha: string, subject: string, repository: string, files: string[],
- *   scenario: { index: number, title: string } | null, replays: ReplayFact[], parents: ReplayFact[],
- *   red: { sha: string, log: string, parentLog: string, tests: string[] } | null, retried: boolean,
+ *   scenario: JudgedScenario | null, replays: ReplayFact[], parents: ReplayFact[],
+ *   red: JudgedRed | null, skeleton: JudgedRed | null, retried: boolean,
  * }} JudgeRequest
  *   parents: the failing commands of a red, replayed at its parent; red: on a green, the red of its
  *   scenario, where its replay printed at the red and at its parent, and the acceptance-test files
- *   it committed; retried: the commands ran again after a retry.
+ *   it committed; skeleton: on a green, the red of the walking skeleton it keeps passing, alike;
+ *   retried: the commands ran again after a retry.
  */
 
 /** The agent that judges a replayed red or green. */
@@ -80,6 +84,7 @@ const commitLines = (request) => [
   `Its repository: ${request.repository}`,
   `Its files: ${request.files.join(', ')}`,
   ...(request.red === null ? [] : redLines(request.red)),
+  ...(request.skeleton === null ? [] : skeletonLines(request.skeleton)),
 ]
 
 /** On a green: its scenario's red, where its replay printed, and its acceptance tests. @param {NonNullable<JudgeRequest['red']>} red */
@@ -88,8 +93,17 @@ const redLines = ({ sha, log, parentLog, tests }) => [
   `The acceptance tests of its scenario: ${tests.join(', ')}`,
 ]
 
+/** On a green: the walking skeleton it keeps passing, where its red printed, and its tests. @param {JudgedRed} skeleton */
+const skeletonLines = ({ sha, log, parentLog, tests }) => [
+  `The red of the story's walking skeleton is ${sha}; its replay printed to ${log}, and at its parent to ${parentLog}`,
+  `The walking skeleton's tests, which pass at this green too: ${tests.join(', ')}`,
+]
+
 /** @param {JudgeRequest['scenario']} scenario */
-const scenarioText = (scenario) => (scenario === null ? '' : `, for scenario ${scenario.index} "${scenario.title}"`)
+const scenarioText = (scenario) => {
+  if (scenario === null) return ''
+  return `, ${scenario.walkingSkeleton ? 'the walking skeleton of the story, which walks' : 'for'} scenario ${scenario.index} "${scenario.title}"`
+}
 
 /** @param {ReplayFact} fact @param {string} where */
 const factLine = ({ component, line, sha, exitCode, error, log }, where) => `- ${component}: \`${line}\` at ${where} ${sha.slice(0, 7)}: ${exitCode === null ? error : `exit ${exitCode}`}; printed to ${log}`

@@ -46,13 +46,15 @@ test('the four phases run on a real repository: each agent commits its part, the
     ...lensDispatches('design_review'),
     `skraft:acceptance-designer | skraft ${SLUG} · distill · attempt 1`,
     `skraft:replay-judge | ${judgeLabel(cwd, 'red')}`,
+    `skraft:acceptance-designer | skraft ${SLUG} · distill · pass 2 · scenario 1 of 1 · attempt 1`,
+    `skraft:replay-judge | ${judgeLabel(cwd, 'first')}`,
     ...lensDispatches('distill_review'),
     `skraft:software-engineer | skraft ${SLUG} · deliver · scenario 1 of 1 · attempt 1`,
     `skraft:replay-judge | ${judgeLabel(cwd, 'green')}`,
     ...lensDispatches('deliver_review'),
     `skraft:pr-writer | skraft ${SLUG} · pr_writer · attempt 1`,
   ]))
-  assert.deepEqual(calls.filter((call) => !call.prompt.includes('- Story: #42 — Pay by card')).map(({ agent }) => agent), ['skraft:replay-judge', 'skraft:replay-judge', 'skraft:cold-reader-lens'])
+  assert.deepEqual(calls.filter((call) => !call.prompt.includes('- Story: #42 — Pay by card')).map(({ agent }) => agent), ['skraft:replay-judge', 'skraft:replay-judge', 'skraft:replay-judge', 'skraft:cold-reader-lens'])
   const [started] = events
   const issue = join(cwd, '.copilot-tracking', 'skraft-plans', SLUG, ...issueFile(started.at.slice(0, 10)).split('/'))
   assert.deepEqual([started.artifacts, briefOf(calls.find(({ agent }) => agent === 'skraft:solution-researcher').prompt).inputs], [[issueFile(started.at.slice(0, 10))], [issue]])
@@ -62,6 +64,7 @@ test('the four phases run on a real repository: each agent commits its part, the
   assert.deepEqual(events.filter((event) => event.type === 'gate.ran').map(({ component, gate, status }) => `${component}/${gate} ${status}`), ['app/test pass', 'app/mutation pass'])
   assert.deepEqual(events.filter((event) => event.type === 'commits.checked').map(({ step, commits }) => [step, commits.map(({ subject, kind, verdict, replay }) => [subject, kind, verdict, replay?.exitCode ?? null])]), [
     ['distill', [[`test(${SLUG}): pay by card`, 'red', 'ok', 1]]],
+    ['distill', [[`test(${SLUG}): customer pays by card`, 'red', 'ok', 1]]],
     ['deliver', [[`feat(${SLUG}): pay by card`, 'green', 'ok', 0]]],
   ])
   assert.deepEqual(events.filter((event) => event.type === 'step.recorded' && event.step === 'design').map((event) => event.committed.subject), [`docs(${SLUG}): design ${SLUG}`])
@@ -212,7 +215,7 @@ test('replaying red commits for more than a fifth of a phase warns the developer
   const last = await runOn(lastRed.cwd, { acts: { 'acceptance-designer': [twoRedsWith(SLOW_CHECK)] } })
 
   assert.deepEqual([all.outcome.status, last.outcome.status], ['done', 'done'], `${all.outcome.reason} / ${last.outcome.reason}`)
-  assert.deepEqual(replaysOf(all.events), [['distill', [1]], ['deliver', [0]]])
+  assert.deepEqual(replaysOf(all.events), [['distill', [1]], ['distill', [1]], ['deliver', [0]]])
   const slow = all.events.filter((event) => event.type === 'tdd.replay-slow')
   assert.deepEqual(slow.map(({ phase }) => phase), ['DISTILL', 'DELIVER'])
   assert.ok(slow.every(({ replayMs, phaseMs }) => replayMs >= 1000 && replayMs > 0.2 * phaseMs), JSON.stringify(slow))

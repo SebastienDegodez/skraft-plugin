@@ -120,12 +120,12 @@ If YES → ambiguous → flag.
 
 ### G11 — Inner-Loop Boundary Presence
 
-**Definition:** The acceptance test of the scenario in progress lives where its kind puts it, per `clean-architecture-testing`, and the file physically exists in the repo, referenced from `impl-plan-{story}.md`:
+**Definition:** Each test lives where its kind puts it, per `clean-architecture-testing`, and the file physically exists in the repo, referenced from `impl-plan-{story}.md`:
 
-| Scenario | Place | Entry |
+| Test | Place | Entry |
 |---|---|---|
-| Walking skeleton (S1 tagged `@walking-skeleton`) | the integration-test place of its component | the real entry point (HTTP endpoint, CLI command, consumed message) |
-| Any other, S1 of an exempt story included | the unit-test place of its component's language | the use case boundary (Application layer) |
+| Walking skeleton (a plain test, no Gherkin, walking S1 tagged `@walking-skeleton`) | the integration-test place of its component | the real entry point (HTTP endpoint, CLI command, consumed message) |
+| Acceptance test of every scenario, S1 included (the binding of its Gherkin) | the unit-test place of its component's language | the use case boundary (Application layer) |
 
 | Language | Unit-test place | Integration-test place |
 |---|---|---|
@@ -136,8 +136,8 @@ If YES → ambiguous → flag.
 **Why this gate exists:** `outside-in-tdd`'s Concentric circles put the Application-layer acceptance test of a targeted scenario in the fast unit suite, and the walking skeleton's real path in the integration suite. A targeted scenario covered only by an HTTP or Integration test is one circle removed from the boundary DELIVER implements against; a walking skeleton entering through the use case proves no wiring. G1–G10 check Gherkin and plan artefacts, never the test files on disk.
 
 **How to check:**
-1. Find the scenario in progress (S1) in the test plan's `## Scenarios` table: its component, and whether it is tagged `@walking-skeleton`.
-2. Search the place its kind takes (tables above) for its acceptance test file.
+1. Find the scenario in progress (S1) in the test plan's `## Scenarios` table: its component, and whether the story declares a walking skeleton exemption.
+2. Search the place each kind takes (tables above): the walking skeleton (unless exempt) and S1's acceptance test.
 3. Flag a missing file, a file in the other place, or a test entering anywhere but its entry.
 
 **Auto-fail example:**
@@ -145,7 +145,7 @@ If YES → ambiguous → flag.
 test-plan-eligibility.md: S1 "Driver checks eligibility" — @walking-skeleton, component api (.NET)
 Repo search: tests/Eligibility.UnitTest/Features/Eligibility/EligibilityAcceptanceTests.cs (found, calls CheckEligibilityUseCase)
              tests/Eligibility.IntegrationTest/** (NOT FOUND)
-→ G11 BLOCKER: the walking skeleton enters through the use case, not the real entry point.
+→ G11 BLOCKER: S1's acceptance test is there, but no walking skeleton enters through the real entry point.
 
 test-plan-checkout.md: S1 "Customer pays an order" — exempt (library), component JavaScript, test path tests/
 Repo search: tests/pay.test.mjs (found, at the test path root)
@@ -175,7 +175,7 @@ Repo search: tests/pay.test.mjs (found, at the test path root)
 
 ### G8 — Walking Skeleton
 
-**Definition:** S1 is the story's walking skeleton, tagged `@walking-skeleton`, in a back-end component: its acceptance test drives the real entry point through the use case to the real internal gateways (the database on Testcontainers), external gateways and clock as the infrastructure policy says (`test-design-mandates`). Or the test plan declares, under its `## Scenarios` table, `Walking skeleton exemption: <value>`, and the story's changes bear it out:
+**Definition:** The story has a walking skeleton walking S1, tagged `@walking-skeleton`, in a back-end component: a plain test with no Gherkin that drives the real entry point through the use case to the real internal gateways (the database on Testcontainers), external gateways and clock as the infrastructure policy says (`test-design-mandates`). Or the test plan declares, under its `## Scenarios` table, `Walking skeleton exemption: <value>`, and the story's changes bear it out:
 
 | Exemption | Holds when |
 |---|---|
@@ -184,7 +184,7 @@ Repo search: tests/pay.test.mjs (found, at the test path root)
 | `docs-only` | the story changes configuration or documentation only: no source file |
 
 **How to check:** the engine already refuses a table that tags a scenario other than S1, puts S1 in a `react` component, names an unknown exemption, or declares `docs-only` while a commit changes a component's source.
-1. No exemption: open S1's acceptance test. It starts the component through its production composition root and sends the request, command or message the story's entry point takes; the use case and the internal gateways it reaches are the real ones, the database a Testcontainers container. A test that calls the use case, or an in-memory repository, is a finding.
+1. No exemption: open the walking skeleton. It starts the component through its production composition root and sends the request, command or message the story's entry point takes; the use case and the internal gateways it reaches are the real ones, the database a Testcontainers container. A walking skeleton that calls the use case, uses an in-memory repository or is a Gherkin binding is a finding; so is an S1 with no acceptance test of its own.
 2. An exemption: check it against the story and the patch; an entry point the component has (`library`), or a public interface the story adds (`refactoring`), is a finding.
 
 **Severity:** BLOCKER — without a real walking skeleton, DELIVER builds every scenario on wiring nothing proved; an exemption the changes contradict hides that.
@@ -243,13 +243,13 @@ during DELIVER integration otherwise, after both implementations are already wri
 | B1 | business-alignment | Every scenario is an outcome the story asks for | HIGH |
 | G5 | testability | Unambiguous steps | HIGH |
 | G6 | testability | Impl plan covers all scenarios | HIGH |
-| G11 | testability | The scenario in progress's acceptance test is in the place its kind takes: walking skeleton in the integration place through the entry point; any other in the unit-test place through the use case | BLOCKER |
+| G11 | testability | Each test is in the place its kind takes: the walking skeleton in the integration place through the entry point; each scenario's acceptance test, S1's included, in the unit-test place through the use case | BLOCKER |
 | T1 | testability | One observable behaviour per scenario, nothing unfixed (time, order, randomness) | HIGH |
-| T2 | testability | The tests hold the scenario in progress only, its values equal to the `.feature` verbatim | BLOCKER |
-| T3 | testability | Acceptance test fails on a business assertion, not on setup; production code is a skeleton answering empty values (and the walking skeleton's entry point wired to it) | BLOCKER |
+| T2 | testability | The tests hold the walking skeleton and the scenario in progress only, their values equal to the `.feature` verbatim; the walking skeleton asserts the wiring and one value of S1 | BLOCKER |
+| T3 | testability | The walking skeleton and the acceptance test fail on an assertion, not on setup; production code is a skeleton answering empty values (and the walking skeleton's chain wired to it) | BLOCKER |
 | G7 | boundary-enforcement | Coverage matrix → valid use case boundary | BLOCKER |
-| G8 | boundary-enforcement | S1 is a real walking skeleton, or the declared exemption holds | BLOCKER |
+| G8 | boundary-enforcement | The story's walking skeleton walks S1 through the real entry point, or the declared exemption holds | BLOCKER |
 | G9 | boundary-enforcement | `@visual` scenarios ↔ Playwright E2E spec bijection | HIGH |
 | G10 | boundary-enforcement | Comparable hooks/adapters/clients share a consistent convention | HIGH |
-| E1 | boundary-enforcement | Acceptance test drives only its entry: the use case, or the walking skeleton's entry point | BLOCKER |
+| E1 | boundary-enforcement | Each scenario's acceptance test, S1's included, drives only the use case; the walking skeleton only the entry point | BLOCKER |
 | E2 | boundary-enforcement | Each dependency runs on its infrastructure policy's mechanism | HIGH |

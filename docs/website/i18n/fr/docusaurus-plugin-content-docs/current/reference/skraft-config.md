@@ -100,7 +100,7 @@ porte.
 ## Politique d'infrastructure <!-- #infrastructure -->
 
 Sur quoi les tests d'un composant font tourner chaque sorte de dépendance, dans un scénario ciblé
-et dans le walking skeleton. Un composant `react` n'en a pas, le walking skeleton vivant dans un
+(le test d'acceptation de chaque scénario, S1 compris) et dans le walking skeleton. Un composant `react` n'en a pas, le walking skeleton vivant dans un
 composant back : son passage de bout en bout est `e2e`. Une ligne que nomme l'`infrastructure` du
 composant l'emporte ; `skraft doctor` affiche une ligne par rangée avec sa source : `plugin`,
 `skraft-config.json` (une surcharge) ou `skraft-config.json (mocking.strategy)` (une stratégie de mocking autre que celle par défaut de la stack).

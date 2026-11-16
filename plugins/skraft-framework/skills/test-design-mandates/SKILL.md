@@ -123,7 +123,8 @@ Allowed `Extraction Reason` codes:
 
 | Scenario | Use Case Boundary | Layer | Extraction Reason | Double Type | Priority |
 |---|---|---|---|---|---|
-| S1 Driver checks eligibility (walking skeleton) | `CheckEligibilityUseCase` | Entry point | — | real entry point, Testcontainers PostgreSQL, Microcks risk API | P1 |
+| Walking skeleton of S1 | `CheckEligibilityUseCase` | Entry point | — | real entry point, Testcontainers PostgreSQL, Microcks risk API | P1 |
+| S1 Driver checks eligibility | `CheckEligibilityUseCase` | Application | — | in-memory repository, Microcks risk API | P1 |
 | S2 Driver at age limit obtains eligibility | `CheckEligibilityUseCase` | Application | — | in-memory repository, Microcks risk API | P1 |
 | S3 Rejection — too many accidents | `CheckEligibilityUseCase` | Application | — | in-memory repository, Microcks risk API | P2 |
 | Combinatorial sweep — premium grid | `PricingPolicy.computePremium` | Domain | `combinatorial_economy` | None (pure function) | P2 |
@@ -139,13 +140,18 @@ Allowed `Extraction Reason` codes:
 
 ## Walking Skeleton
 
-S1 of every story, built first: the thinnest slice that runs the real path, from the entry point
-through the use case to the real internal gateways.
+The outer loop of the story, built first: a plain test, no Gherkin, that runs the real path from
+the entry point through the use case to the real internal gateways. S1, tagged
+`@walking-skeleton`, is the scenario it walks; S1 still has its own acceptance test, the Cucumber
+binding of its Gherkin, like every scenario.
 
-- One per story, tagged `@walking-skeleton`, in a back-end component, never a React front end.
-- Its acceptance test drives the real entry point (HTTP endpoint, CLI command, webhook received,
-  topic consumed), wired by the production composition root; it lives in the integration-test
-  place of its component.
+- One per story, in a back-end component, never a React front end.
+- It drives the real entry point (HTTP endpoint, CLI command, webhook received, topic consumed),
+  wired by the production composition root; it lives in the integration-test place of its component.
+- It asserts the wiring: the status, the shape of the response and one value S1 names, word for
+  word; never the scenario's other rules, which S1's acceptance test proves.
+- S1 is green when its acceptance test and the walking skeleton both pass; the walking skeleton
+  stays green at every later green.
 - Exemptions, declared under the test plan's `## Scenarios` table as
   `Walking skeleton exemption: <value>`, with no scenario tagged `@walking-skeleton`:
 
@@ -155,12 +161,13 @@ through the use case to the real internal gateways.
   | `refactoring` | the story adds no public interface: no endpoint, command, message or public type |
   | `docs-only` | the story changes configuration or documentation only, no source file |
 
-  An exemption the story's changes contradict is a blocker.
+  An exemption the story's changes contradict is a blocker. An exemption removes the walking
+  skeleton only, never S1's acceptance test.
 
 ## Infrastructure Policy
 
-What each kind of dependency runs on, in a targeted scenario (every scenario but the walking
-skeleton) and in the walking skeleton. A component overrides a row with `infrastructure` in
+What each kind of dependency runs on, in a targeted scenario (every scenario's acceptance test,
+S1's included) and in the walking skeleton. A component overrides a row with `infrastructure` in
 `skraft-config.json`; the brief names each component's effective policy.
 
 | Dependency | Targeted scenario | Walking skeleton |
@@ -186,7 +193,8 @@ skeleton) and in the walking skeleton. A component overrides a row with `infrast
 |---|---|---|---|
 | Use case / command handler | `UnitTest` | Application | InMemory application interfaces |
 | Domain policy / specification | `UnitTest` | Domain | None (pure function — call directly) |
-| Walking skeleton (S1) | `IntegrationTest` | Entry point → use case → internal gateways | Real entry point, Testcontainers, Microcks |
+| Walking skeleton (no Gherkin) | `IntegrationTest` | Entry point → use case → internal gateways | Real entry point, Testcontainers, Microcks |
+| Acceptance test of each scenario, S1 included (Cucumber binding) | `UnitTest` | Application | InMemory internal gateways, Microcks |
 | Repository adapter | `IntegrationTest` | Infrastructure | Real DB via Testcontainers |
 | API controller / endpoint | `IntegrationTest` | API | In-process app host (WebApplicationFactory, `@SpringBootTest`, `@QuarkusTest`) |
 | Architecture boundaries | `IntegrationTest` | Architecture | Static analysis (NetArchTest, ArchUnit, etc.) |

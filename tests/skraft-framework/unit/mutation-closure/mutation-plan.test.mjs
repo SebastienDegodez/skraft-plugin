@@ -35,7 +35,7 @@ const failsOnce = (host) => {
 }
 
 /** The dispatches after DELIVER's own, the pr-writer's left out. */
-const afterDeliver = (host) => host.agentRunner.dispatches.slice(4).filter(({ agent: id }) => id !== 'pr-writer')
+const afterDeliver = (host) => host.agentRunner.dispatches.slice(5).filter(({ agent: id }) => id !== 'pr-writer')
 
 test('a failing mutation run gets a proposal per file of survivors, then one question to the developer naming them; APPLY sends them to kill_mutants, then test-integrity, the gates and mutation, which passes', async () => {
   const host = scripted({ machine: new ScriptedMachine(), answers: [{ answer: 'apply' }] }, (it) => [...upToDeliver(it), proposer(it), proposer(it), killer(it)])
@@ -80,7 +80,7 @@ test('a failing mutation run gets a proposal per file of survivors, then one que
     `The mutation gate failed; a proposal for its surviving mutants is in ${PROPOSALS.join(', ')}. APPLY applies it; or write how to treat them instead; STOP ends the run.`,
   ]])
   const asked = host.events().filter((event) => event.type === 'question.asked')
-  assert.deepEqual(asked.map(({ step, subjects }) => [step, subjects]), [['scenario_review', ['tests/Acceptance/S1AcceptanceTests.cs']], ['mutation_plan', PROPOSALS]])
+  assert.deepEqual(asked.map(({ step, subjects }) => [step, subjects]), [['scenario_review', ['tests/Integration/WalkingSkeletonTests.cs', 'tests/Acceptance/S1AcceptanceTests.cs']], ['mutation_plan', PROPOSALS]])
   const answered = host.events().filter((event) => event.type === 'question.answered')
   assert.deepEqual(answered.map(({ key, answer, by }) => [key, answer, by]), [['scenario_review-1', 'APPROVED', 'host-confirmed'], ['mutation_plan-1', 'APPLY', 'host-confirmed']])
 
@@ -130,7 +130,7 @@ test('ACCEPT typed at the mutation plan is an instruction like any other: kill_m
 
 test('the kill the developer chose names no failing test: a fix it commits needs its failing test first', async () => {
   const fixing = (it) => agent({ work: ({ git }) => git.commit(`fix(${SLUG}): refund the right amount`, ['src/Refund.cs']) })(it)
-  const host = scripted({ machine: new ScriptedMachine(), answers: [{ answer: 'APPLY' }] }, (it) => [...upToDeliver(it), proposer(it), proposer(it), fixing(it), agent({ work: ({ git }) => { git.reset('.', 'root-2'); git.commit(`test(${SLUG}): kill the checkout mutants`, ['tests/CheckoutTests.cs']) } })(it)])
+  const host = scripted({ machine: new ScriptedMachine(), answers: [{ answer: 'APPLY' }] }, (it) => [...upToDeliver(it), proposer(it), proposer(it), fixing(it), agent({ work: ({ git }) => { git.reset('.', 'root-3'); git.commit(`test(${SLUG}): kill the checkout mutants`, ['tests/CheckoutTests.cs']) } })(it)])
   failsOnce(host)
 
   const outcome = await host.start()

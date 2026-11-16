@@ -199,7 +199,7 @@ class OrderRepositoryIT {
 
 ## API — end-to-end test (entry-point module)
 
-One happy-path test per endpoint + walking skeleton, each an `*IT`.
+One happy-path test per endpoint, and the story's walking skeleton, each an `*IT`: the walking skeleton is a plain test, no Gherkin, asserting the status, the shape and one value S1 names. S1's acceptance test stays the Cucumber binding, a `*Test` in the unit-test place.
 
 ### Spring Boot — `orders-api/src/test`
 

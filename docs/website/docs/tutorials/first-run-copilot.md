@@ -220,10 +220,11 @@ Open the ADR under `docs/adr/`, read it, then choose **RATIFIED** in the chat. T
 
 ## 7. Let DISTILL, DELIVER and PUBLISH finish <!-- #7-let-distill-deliver-and-publish-finish -->
 
-Once the four DISTILL lenses have approved the scenarios and the failing acceptance test of S1,
-Copilot asks one more question, headed **Scenarios**: it names each scenario of the story in the
-order DELIVER builds them, S1 marked walking skeleton, and the commit of S1's test. Open the test
-plan under `.copilot-tracking/skraft-plans/checkout/details/` and that commit, read them, then
+Once the four DISTILL lenses have approved the scenarios, the failing walking skeleton and the
+failing acceptance test of S1, Copilot asks one more question, headed **Scenarios**: it names each
+scenario of the story in the order DELIVER builds them, S1 marked walking skeleton, the commit of
+the walking skeleton and the commit of S1's test. Open the test plan under
+`.copilot-tracking/skraft-plans/checkout/details/` and those commits, read them, then
 choose **APPROVED** in the chat.
 
 The run then goes on without you: one scenario at a time, a green commit that the engine replays,

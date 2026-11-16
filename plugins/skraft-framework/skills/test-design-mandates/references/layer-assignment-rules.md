@@ -31,7 +31,8 @@ Every test targets exactly one Clean Architecture layer. The layer determines th
 | Domain entity invariant (rare, complex only) | `UnitTest` | Domain | None — construct and assert | Fast (<1s) |
 | Repository adapter (real persistence) | `IntegrationTest` | Infrastructure | Real DB (Testcontainers) | Slow (5–30s) |
 | External service adapter | `IntegrationTest` | Infrastructure | Microcks (Testcontainers) | Slow |
-| Walking skeleton (S1) | `IntegrationTest` | Entry point | Real entry point, internal gateways on Testcontainers, Microcks | Slow |
+| Walking skeleton (no Gherkin) | `IntegrationTest` | Entry point | Real entry point, internal gateways on Testcontainers, Microcks | Slow |
+| Acceptance test of each scenario, S1 included (Cucumber binding) | `UnitTest` | Application | InMemory internal gateways, Microcks | Fast |
 | API endpoint + DI wiring | `IntegrationTest` | API | `WebApplicationFactory` or in-process host | Slow |
 | Architecture boundaries (layer rules) | `IntegrationTest` | Architecture | Static analysis (NetArchTest, ArchUnit) | Medium |
 

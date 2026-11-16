@@ -27,7 +27,7 @@ test('DELIVER does not close while a gate fails: the engineer gets a new pass wi
     [1, 'fail', [failure], 'deliver', 2_000],
     [2, 'pass', [], 'deliver_review', 2_000],
   ])
-  const second = host.agentRunner.dispatches[4]
+  const second = host.agentRunner.dispatches[5]
   assert.equal(second.label, `skraft ${SLUG} · deliver · pass 2 · attempt 1`)
   assert.ok(second.prompt.includes([
     '- Pass: 2, after the gates sent the work back',
@@ -58,7 +58,7 @@ test('gates that fail with the same signature twice stop the run before another 
 
   assert.deepEqual([outcome.status, outcome.code], ['blocked', 'repeated-failure'])
   assert.equal(recorded(host, 'gates').length, 2)
-  assert.equal(host.agentRunner.dispatches.length, 5)
+  assert.equal(host.agentRunner.dispatches.length, 6)
   assert.deepEqual(host.human.questions.filter(({ kind }) => kind === 'environment'), [])
   assert.ok(!host.events().some((event) => event.type === 'phase.closed' && event.phase === 'DELIVER'))
   assert.deepEqual(host.events().at(-1), { ...host.events().at(-1), type: 'run.finished', status: 'blocked', code: 'repeated-failure', reason: outcome.reason })

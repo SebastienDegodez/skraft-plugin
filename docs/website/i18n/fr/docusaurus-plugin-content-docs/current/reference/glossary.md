@@ -185,7 +185,7 @@ Le slug écrit dans `.copilot-tracking/skraft-plans/.active-slug` : le run sur l
 → Voir [Pipeline actif](./run-journal.md)
 
 **Politique d'infrastructure**
-Sur quoi les tests d'un composant font tourner chaque sorte de dépendance, dans un scénario ciblé et dans le walking skeleton : point d'entrée en process / réel, gateway interne en mémoire / Testcontainers, gateway externe Microcks (le `mocking.strategy` du composant), horloge et aléa fake ; pour un front React, MSW dans les tests ciblés et Microcks dans l'e2e Playwright. Défauts du plugin par stack, surchargés par composant (`infrastructure`) dans `skraft-config.json` seulement.
+Sur quoi les tests d'un composant font tourner chaque sorte de dépendance, dans un scénario ciblé (le test d'acceptation de chaque scénario, S1 compris) et dans le walking skeleton : point d'entrée en process / réel, gateway interne en mémoire / Testcontainers, gateway externe Microcks (le `mocking.strategy` du composant), horloge et aléa fake ; pour un front React, MSW dans les tests ciblés et Microcks dans l'e2e Playwright. Défauts du plugin par stack, surchargés par composant (`infrastructure`) dans `skraft-config.json` seulement.
 → Voir [skraft-config.json](./skraft-config.md#infrastructure)
 
 ## Q
@@ -212,7 +212,7 @@ L'agent qui vérifie un finding `blocker`, `high` ou `medium` en relisant l'endr
 Agent IA en lecture seule qui juge les artefacts d'un agent exécuteur, sans jamais les modifier (principe CQS). En V2, les reviewers de phase laissent la place à des lentilles isolées dont le moteur combine les findings en verdict.
 
 **Revue des scénarios**
-La question (`scenario-review`) à laquelle un humain répond une fois la revue de DISTILL approuvée : elle nomme les scénarios de l'histoire dans l'ordre où DELIVER les construit et le test d'acceptation en échec de S1. `APPROVED` les livre un à un ; `REVISE` renvoie DISTILL avec les corrections.
+La question (`scenario-review`) à laquelle un humain répond une fois la revue de DISTILL approuvée : elle nomme les scénarios de l'histoire dans l'ordre où DELIVER les construit, le walking skeleton en échec (ou l'exemption de l'histoire) et le test d'acceptation en échec de S1. `APPROVED` les livre un à un ; `REVISE` renvoie DISTILL avec les corrections.
 → Voir [Répondre à une question du run](../how-to/answer-a-question.mdx)
 
 **Rework**
@@ -265,7 +265,7 @@ Résultat d'une revue. En V2, le moteur le calcule à partir des findings typés
 ## W
 
 **Walking Skeleton**
-Première itération d'un projet qui traverse toutes les couches de l'architecture de bout en bout avec une fonctionnalité minimale. Valide l'architecture avant de construire les détails. Dans SKRAFT, le scénario S1 de chaque histoire, tagué `@walking-skeleton`, dans un composant back : point d'entrée → cas d'usage → vraie base. Une histoire sans nouveau point d'entrée déclare plutôt une exemption (`library`, `refactoring`, `docs-only`).
+Première itération d'un projet qui traverse toutes les couches de l'architecture de bout en bout avec une fonctionnalité minimale. Valide l'architecture avant de construire les détails. Dans SKRAFT, la boucle externe de chaque histoire : un test simple, sans Gherkin, qui parcourt le scénario S1 (tagué `@walking-skeleton`) dans un composant back, point d'entrée → cas d'usage → vraie base, et n'affirme que le câblage ; S1 garde son propre test d'acceptation par le cas d'usage. Une histoire sans nouveau point d'entrée déclare plutôt une exemption (`library`, `refactoring`, `docs-only`), qui retire le walking skeleton, jamais le test d'acceptation de S1.
 → Voir [Walking Skeleton](../explanation/deep-dive/walking-skeleton.md)
 
 ## Sources
