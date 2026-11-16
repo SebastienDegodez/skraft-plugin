@@ -171,13 +171,15 @@ const runOne = async (deps, context, { gate, baseSha }) => {
 
 /**
  * Before a mutation run: the report an earlier run left emptied, and where this run writes its
- * result, beside its evidence log.
+ * result, beside its evidence log, created empty so that its folder exists for the command.
  * @param {GateRunDeps} deps @param {string} slug @param {Component} component @param {string} evidence
  * @returns {Promise<string>} the result's path in the run's folder
  */
 const prepareMutation = async (deps, slug, component, evidence) => {
   await clearReport(deps, component)
-  return evidence.replace(/\.log$/, '.result.json')
+  const result = evidence.replace(/\.log$/, '.result.json')
+  await deps.files.write(slug, result, '')
+  return result
 }
 
 /**
