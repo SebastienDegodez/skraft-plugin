@@ -118,7 +118,7 @@ Stated plainly: the framework no longer trades strictness for tokens. The repo-w
 depth dial that once did exactly that — fanning review out to 1, 2, or 4 lenses,
 scoping the mutation runs, switching the Gherkin gate on or off — has been removed, and
 it was also the pipeline's cost governor. Every run now pays the full shape: four
-lenses on every review, both sequenced mutation runs, the Gherkin gate always on. That
+lenses on every review, the Gherkin gate always on. That
 is a real and permanent increase in the floor cost of a run, and nothing on the quality
 side offsets it. The repository owner accepted the trade deliberately: quality is not
 negotiable, and a dial that lets a run buy its way under the bar is not a saving — it
@@ -150,10 +150,9 @@ Claude Code alias or `inherit` (its fallback), a Copilot agent file names no mod
 linter (`resolve-model --check --forbid-model`) fails otherwise. Together with cache
 discipline, the family choice is the principal governor of spend at present — and now the
 only one: the depth dial that used to share the job is gone, so the quality side of a
-run is a fixed cost rather than a variable one. The mutation gate illustrates it: each
-`quality-gates-<tech>` adapter bundles two sequenced scripts, core (Domain,
-Application) then boundary (API, Infrastructure), each carrying its expected value into
-the runner's `--break-at` so that the exit code is the verdict. Both run, every time.
+run is a fixed cost rather than a variable one. Mutation testing, the most expensive
+measure, left the pipeline for that reason: the developer runs it apart, when they choose,
+so no run pays for it.
 
 ### Designed, not yet implemented
 

@@ -120,7 +120,7 @@ The **Skraft** pane shows the phases, each followed by its steps of the workflow
 come; what the step runs, its outcome, its pass from the second on, its cost), the current
 agent, the last pass of each review (`review design_review: needs-rework — consistency fail
 (1), fitness pass`), the last result of each gate by component (`gates api: test pass,
-mutation fail (3 survivors)`), the cost and the latest lines of the progress log, as many as
+coverage fail`), the cost and the latest lines of the progress log, as many as
 the pane's height allows. `/skraft` prints the same view without the steps. While the run
 waits, the pane and `/skraft` show the question and `answer: /skraft decide adr-1
 RATIFIED|REJECTED (with your reason after REJECTED)`, or `answer: /skraft decide design-1

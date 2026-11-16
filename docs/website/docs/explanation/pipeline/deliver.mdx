@@ -1,6 +1,6 @@
 ---
 title: "DELIVER"
-description: "Why DELIVER turns the contract green one scenario and one checked commit at a time, runs mutation once on reviewed code, and lets the developer treat survivors."
+description: "Why DELIVER turns the contract green one scenario and one checked commit at a time, has the code reviewed, and leaves mutation testing to the developer."
 persona: software-engineer
 phase: deliver
 hide_table_of_contents: true
@@ -10,8 +10,8 @@ import FlowFigure from '@site/src/components/FlowFigure';
 
 # DELIVER
 
-Turn the contract green one scenario at a time, each in one proven commit, have the code
-reviewed, then test the tests — once, last.
+Turn the contract green one scenario at a time, each in one proven commit, then have the code
+reviewed. Testing the tests stays the developer's.
 
 ## Why this phase exists
 
@@ -34,16 +34,16 @@ promise: for each scenario, a red commit of its acceptance test, then a green co
 S1 enters, red, beside the red walking skeleton. DELIVER completes the chain from the ordering
 endpoint to the database, implements payment and loyalty crediting and turns both green in one
 commit; DISTILL then writes the failing test of S2, the unavailable drink, and DELIVER turns it
-green. The gates run, the review reads the code, then **mutation** shows the tests genuinely
-protect the loyalty rule. The code goes into a pull request.
+green. The gates run, the review reads the code, and the code goes into a pull request. Whether
+the tests genuinely protect the loyalty rule, the developer's own **mutation** run shows.
 :::
 
 ## One scenario, one green commit
 
 A committed TDD cycle costs two commits, and an agent pays each one in turns: running the tests,
 reading their output, writing the message. Per scenario, DELIVER commits once. The unit tests
-of the inner loop are still written first; they go into the green, and mutation, run last on the
-whole story, is what proves they would catch a mistake.
+of the inner loop are still written first; they go into the green, and the review's test-integrity
+lens reads them. Whether they would catch a mistake, the developer's own mutation run proves.
 
 Three rules keep that single commit honest:
 
@@ -62,17 +62,17 @@ Once the last scenario is green, the gates run. A pass the gates or the review s
 the whole story with the classic cycle: a red, then the fix; on a pass the gates sent back, their
 failure stands for the red.
 
-## The order: gates, review, then mutation
+## The order: gates, then review
 
 <FlowFigure flow="deliver" />
 
 The command gates run first: they are fast, deterministic, and a red build needs no reviewer.
 Then come the DELIVER review's lenses: test integrity, architecture boundaries, cold reading,
 and, when the change touches them, mock and contract fidelity. A rework the review asks for goes
-back through `deliver` and the gates, never through mutation.
+back through `deliver` and the gates.
 
 The engineer runs the same commands before it hands over. Its brief lists the gate commands of
-each component it may change, mutation left out, with the run's base in place of `{baseSha}`, and
+each component it may change, mutation left out (it is the developer's), with the run's base in place of `{baseSha}`, and
 tells it to fix every failure before it writes its result, on a rework pass too. The gates step
 stays the check; the brief saves the pass that a format or build failure found only there would
 cost. Before writing its result it also calls `skraft_precheck`, which runs the mechanical checks
@@ -80,42 +80,35 @@ of its own submission on what it has written — a file changed out of its write
 uncommitted — and answers each anomaly with the check that found it. That pre-check reads none of
 its commits and approves nothing: the submission runs these checks again, with the commits on top.
 
-### Why mutation runs last
+### Why mutation is the developer's
 
 Mutation testing injects small faults into the code and measures how many the tests catch
 ([Jia & Harman, 2011](../../reference/citations.mdx#cite-jia-mutation-2011)). It is the only measure that tells
-whether a green suite would detect a mistake, and it is also the most expensive step of the
-pipeline.
+whether a green suite would detect a mistake, and it is also the most expensive step a story can
+pay for.
 
-Up to version 2.0.0-alpha.18 it ran right after the gates, before the review. So it ran several
-times: after each pass fixing survivors, then again after each rework the review asked for — and
-it judged code that review could still change. Since 2.0.0-alpha.19, it runs **once, last**, on
-the code the review approved. On the normal path, the most expensive measure runs once, and it
-measures the code that will actually ship.
+Up to version 2.0.0-alpha.18 it ran right after the gates, before the review, then several times
+again: after each pass fixing survivors, after each rework the review asked for. From 2.0.0-alpha.19
+it ran **once, last**, on the code the review approved, and a failed run led to a proposal per file
+of survivors and a `mutation-plan` question. Even then it stayed the slowest step of every run,
+it needed a mutation configuration skraft wrote for the developer, and its survivors stopped the
+run on a question at the very end.
 
-### Why the developer chooses
+So the plugin's pipeline no longer runs it. The developer picks the tool, writes its
+configuration and runs it when they decide, apart from the story's pipeline. The bar does not
+move: 100 % on the core, 80 % on the boundary, stated by `skraft-quality-bar`.
 
-A surviving mutant has no single right answer. It ends one of three ways:
+A surviving mutant still has no single right answer. It ends one of three ways:
 
 1. **a sharper test kills it**, because an input the story allows tells the mutant from the
    code;
 2. **the code is deleted**, because no behaviour of the story asks for it;
 3. **the mutant is declared equivalent**, because no input can tell it from the code.
 
-These three outcomes do not have the same consequences: the first adds protection, the second
-removes code, the third accepts a gap. Telling an equivalent mutant apart is a known hard
-problem no tool settles on its own ([Jia & Harman, 2011](../../reference/citations.mdx#cite-jia-mutation-2011)).
-Letting an agent "kill the mutants" as it sees fit invites tests tailored to the mutant rather
-than to a behaviour.
-
-So the decision is shared. For each file that keeps survivors, the `software-engineer` writes a
-**proposal** in a file the engine creates, one outcome per mutant, without touching the code. The
-`mutation-plan` question shows those proposals to the developer, who answers `APPLY`, gives their
-own instruction, or `STOP`. The `software-engineer` then applies that choice in a single pass;
-the `test-integrity` lens reviews the tests added, the gates run again, then mutation again.
-
-The bar itself does not move: the `mutation` gate stays locked and its threshold fixed. The
-developer chooses **how** to reach it, never **whether** to.
+Telling an equivalent mutant apart is a known hard problem no tool settles on its own
+([Jia & Harman, 2011](../../reference/citations.mdx#cite-jia-mutation-2011)): the developer decides. An agent asked
+to help reads the survivors with the component's `quality-gates-<stack>` skill, which states each
+outcome and how to suppress an equivalent mutant with its reason.
 
 ## Tests wired by the same agent
 
@@ -131,11 +124,9 @@ contract, the matching fidelity lens joins the review. The why:
 ## Trade-offs
 
 - **The inner loop leaves no trace in the history.** Only each scenario's red and green are
-  committed; nobody sees the unit tests written in between fail. Mutation and the review judge them.
-- **A human may be asked at the end of the run.** When mutation fails, the run waits for the
-  answer to `mutation-plan`. That is the price of a decision that commits the code.
-- **A review rework does not re-measure mutation.** It goes back through the faster gates;
-  mutation judges the code once it has settled.
+  committed; nobody sees the unit tests written in between fail. The review judges them.
+- **A story can ship without a mutation run.** The pipeline no longer proves the tests would
+  catch a mistake; the developer's own run does, when they make it.
 - **No negotiable threshold.** 100 % on the core, 80 % on the boundary, whatever the repository:
   see [Software craftsmanship](../software-craftsmanship.md).
 
@@ -147,7 +138,7 @@ contract, the matching fidelity lens joins the review. The why:
 
 ## See also {/* #see-also */}
 
-- [Reference: DELIVER](../../reference/phases.md#deliver) — nodes, proposals, `mutation-plan` answers, edges.
+- [Reference: DELIVER](../../reference/phases.md#deliver) — nodes and edges.
 - [Reference: DELIVER review criteria](../../reference/gates.md#deliver).
 - [Review before review](../deep-dive/review-before-review.md).
 - [Run the gates](../../how-to/run-gates.md).

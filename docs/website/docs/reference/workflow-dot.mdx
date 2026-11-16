@@ -136,7 +136,7 @@ each unlocked node, `; <node> is unlocked and skipped: <reason>`.
 
 ## Locked nodes {/* #locked-nodes */}
 
-The DELIVER gates of the plugin's workflow (`gates`, `mutation`) carry `locked=true`. A copy that
+The DELIVER gates of the plugin's workflow (`gates`) carry `locked=true`. A copy that
 removes or changes them is refused, unless it skips them with `unlock="<reason>"`, which the
 journal and the pull request repeat.
 
@@ -149,16 +149,15 @@ journal and the pull request repeat.
 | is bypassed | `<node> reaches the exit without passing <id>; keep the run going through <id>, or skip <id> with unlock="<reason>"` |
 
 A gate node that runs every gate of a locked node (its `goal_gate` included) and is not unlocked
-stands in for it in this check: in the plugin's workflow, `mutation_gates` stands in for `gates`
-on the path `kill_mutants -> … -> mutation`.
+stands in for it in this check: in a team's workflow that runs mutation, a `mutation_gates` node
+running every gate of `gates` stands in for it on the path `kill_mutants -> … -> mutation`.
 
 ## Mandatory nodes {/* #mandatory-nodes */}
 
 The plugin's workflows mark `mandatory=true`:
 
-- in `pipeline.skraft.dot`: the fan-ins `design_review`, `distill_review`, `mutation_review`,
-  their refuters `design_review_refuter`, `distill_review_refuter`, `mutation_review_refuter`,
-  and the call `deliver_review`;
+- in `pipeline.skraft.dot`: the fan-ins `design_review` and `distill_review`, their refuters
+  `design_review_refuter` and `distill_review_refuter`, and the call `deliver_review`;
 - in `review.skraft.dot`: the fan-in `verdict`, its refuter `refuter` and the lenses
   `test_integrity` and `architecture_boundaries`.
 
@@ -168,7 +167,7 @@ changes nothing, and `mandatory=false` is refused.
 
 | Mandatory node | Kept when |
 | --- | --- |
-| Review fan-in | it is still a fan-in with the same id; its `NEEDS_REWORK` edge goes back to an agent of its phase in the plugin's workflow (renaming that phase is refused); no path reaches the exit without it from the start, from that agent, or from an agent of its phase the run reaches only through the review. A path the plugin's workflow has too is kept: the run reaches the exit around `mutation_review` from the start when mutation passes |
+| Review fan-in | it is still a fan-in with the same id; its `NEEDS_REWORK` edge goes back to an agent of its phase in the plugin's workflow (renaming that phase is refused); no path reaches the exit without it from the start, from that agent, or from an agent of its phase the run reaches only through the review. A path the plugin's workflow has too is kept |
 | Call | it is still a call (`shape=house`) with the same id, under the same rules as a review fan-in. It may call another workflow: that one must keep the mandatory nodes of the plugin's `review.skraft.dot` |
 | Lens node | it keeps its id, its lens (its `model=` may change), its fan-out and its fan-in, and carries no `when`. Those of `review.skraft.dot` are checked in the file the call reads, ejected or not |
 | Fan-in of `review.skraft.dot` | it keeps its id (`verdict`), in whatever workflow the mandatory call calls |
@@ -221,7 +220,7 @@ distill_review -> deliver [label="APPROVED"]
 deliver_review [shape=house, workflow="review", mandatory=true]
 gates -> deliver_review [label="PASS"]
 deliver_review -> deliver [label="NEEDS_REWORK", max_visits=2]
-deliver_review -> mutation [label="APPROVED"]
+deliver_review -> visuals [label="APPROVED"]
 ```
 
 | Rule | Detail |
@@ -321,12 +320,6 @@ from the predecessor.
 | `deliver` | `box` | `agent="software-engineer"`, `each="scenario"` | DELIVER |
 | `gates` | `parallelogram` | `gate="build,format,lint,test,architecture,coverage"`, `goal_gate=true`, `locked=true` | DELIVER |
 | `deliver_review` | `house` | `workflow="review"`, `mandatory=true` | (DELIVER) |
-| `mutation` | `parallelogram` | `gate="mutation"`, `goal_gate=true`, `locked=true` | (DELIVER) |
-| `kill_proposal` | `box` | `agent="software-engineer"`, `each="survivor-file"`, `proposal=true` | (DELIVER) |
-| `mutation_plan` | `hexagon` | `question="mutation-plan"` | (DELIVER) |
-| `kill_mutants` | `box` | `agent="software-engineer"`, `each="survivor-file"` | (DELIVER) |
-| `mutation_review_lenses` → `mutation_review` | review | lens `test-integrity`; fan-in `mandatory=true` | (DELIVER) |
-| `mutation_gates` | `parallelogram` | `gate="build,format,lint,test,architecture,coverage"`, `goal_gate=true` | (DELIVER) |
 | `visuals` | `parallelogram` | `publish="playwright-visuals"`, `when="frontend"` | (DELIVER) |
 | `pr_writer` | `box` | `agent="pr-writer"` | PUBLISH |
 | `publish` | `parallelogram` | `publish="pull-request"` | (PUBLISH) |
@@ -345,17 +338,14 @@ from the predecessor.
 | `gates -> deliver` | `FAIL` | 3 |
 | `gates -> deliver_review` | `PASS` | — |
 | `deliver_review -> deliver` | `NEEDS_REWORK` | 2 |
-| `deliver_review -> mutation` | `APPROVED` | — |
-| `mutation -> visuals` | `PASS` | — |
-| `mutation -> kill_proposal` | `FAIL` | 5 |
-| `mutation_plan -> kill_mutants` | `APPLY` | — |
-| `mutation_review -> kill_mutants` | `NEEDS_REWORK` | 2 |
-| `mutation_review -> mutation_gates` | `APPROVED` | — |
-| `mutation_gates -> kill_mutants` | `FAIL` | 3 |
-| `mutation_gates -> mutation` | `PASS` | — |
+| `deliver_review -> visuals` | `APPROVED` | — |
+
+The plugin's workflow runs no mutation: the developer runs it apart. A team that wants it in its
+own workflow adds a `gate="mutation"` node, and may follow it with the kill loop the attributes
+above allow (`each="survivor-file"`, `proposal=true`, `question="mutation-plan"`).
 
 The other edges carry neither label nor ceiling: `start -> research -> design`, `distill -> distill_review_lenses`, `deliver -> gates`,
-`kill_proposal -> mutation_plan`, `kill_mutants -> mutation_review_lenses`, `visuals -> pr_writer -> publish -> exit`, and those of
+`visuals -> pr_writer -> publish -> exit`, and those of
 each review. No edge leads `deliver` back to `distill`: the engine alternates them on the
 scenarios (`each="scenario"`).
 

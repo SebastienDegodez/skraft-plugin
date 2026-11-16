@@ -1,6 +1,6 @@
 ---
 title: "Software craftsmanship — pourquoi skraft en fait une règle"
-description: "Ce que veut dire le craft et comment skraft en fait des contrôles moteur : TDD outside-in, walking skeleton, mutation, revue avant la revue, décisions humaines."
+description: "Ce que veut dire le craft et comment skraft en fait des contrôles moteur : TDD outside-in, walking skeleton, revue avant la revue, décisions humaines."
 persona: tech-lead
 ---
 
@@ -64,8 +64,8 @@ Le skill `skraft-quality-bar` est l'unique endroit où un seuil est écrit : 100
 mutation et de couverture de lignes sur Domain et Application, 80 % de score de mutation sur
 API et Infrastructure. Il n'y a ni niveau « conseil », ni dérogation, ni réglage par dépôt ;
 la configuration `skraft-config.json` choisit les **commandes** des gates, jamais leurs seuils.
-Dans `pipeline.skraft.dot`, les nœuds `gates` et `mutation` de DELIVER sont `locked` : les
-retirer d'une copie du workflow exige une raison écrite (`unlock="<raison>"`).
+Dans `pipeline.skraft.dot`, le nœud `gates` de DELIVER est `locked` : le retirer d'une copie du
+workflow exige une raison écrite (`unlock="<raison>"`).
 
 C'est la réponse de skraft à l'idée de Mancuso : la qualité n'est pas une variable
 d'ajustement. Le détail des gates est dans la [référence des gates](../reference/gates.md).
@@ -95,15 +95,12 @@ Le craft avance par petits incréments qui marchent. Dans skraft, cela prend deu
 
 Une suite verte ne prouve pas qu'elle détecterait une erreur. Le mutation testing injecte de
 petites fautes dans le code et mesure la part que les tests attrapent
-([Jia & Harman, 2011](../reference/citations.mdx#cite-jia-mutation-2011)). Dans skraft, la gate `mutation`
-juge le rapport contre le seuil de `skraft-quality-bar` ; elle tourne en dernier, après que la revue DELIVER a
-approuvé le code, puis de nouveau après chaque cycle de kill (un rapport en échec retourne à
-`kill_proposal`, 5 passages au plus). Pour chaque fichier qui garde un mutant survivant, le
-`software-engineer` propose comment le tuer (`kill_proposal`) ; le développeur choisit
-(question `mutation-plan` : appliquer, donner sa propre consigne, ou arrêter le run), puis
-`kill_mutants` applique ce choix. La lentille
-`test-integrity` vérifie que les tests ajoutés peuvent réellement échouer (son G7) et qu'aucun test
-n'a été affaibli pour passer (son G9).
+([Jia & Harman, 2011](../reference/citations.mdx#cite-jia-mutation-2011)). Dans skraft, le mutation testing
+revient au développeur : le pipeline du plugin n'en lance aucun. Le développeur choisit l'outil,
+écrit sa configuration et le lance à part, contre le seuil de `skraft-quality-bar` ; un agent à
+qui il demande de l'aide lit les survivants avec la skill `quality-gates-<stack>` du composant.
+Dans le pipeline, la lentille `test-integrity` vérifie que les tests peuvent réellement échouer
+(son G7) et qu'aucun test n'a été affaibli pour passer (son G9).
 
 ### Une communauté de professionnels : la revue avant la revue
 
@@ -125,7 +122,7 @@ lentille `architecture-boundaries` applique les règles d'Object Calisthenics au
 
 Un artisan ne décide pas seul de ce qui engage son client. Dans le workflow, un hexagone est
 une question posée à un humain : `adr-ratification` fait ratifier les ADR avant DISTILL,
-`scenario-review` fait lire les scénarios avant que DELIVER ne les construise, `mutation-plan` fait décider au développeur quoi faire des mutants que la gate a laissés vivants.
+`scenario-review` fait lire les scénarios avant que DELIVER ne les construise.
 Sans réponse, le run attend ; aucun agent ne peut répondre à la place de l'humain. L'accord pour
 pousser une branche se donne une fois, avant tout run, et un run qui en manque est refusé plutôt
 que laissé en attente. Voir
@@ -139,14 +136,7 @@ flowchart LR
     G -- "FAIL" --> D
     G -- "PASS" --> DR["revue DELIVER<br/>lentilles + verdict"]
     DR -- "NEEDS_REWORK" --> D
-    DR -- "APPROVED" --> M["gate mutation<br/>verrouillée, en dernier"]
-    M -- "FAIL" --> KP["kill_proposal<br/>proposition par fichier"]
-    KP --> Q{{"mutation-plan<br/>le dev choisit"}}
-    Q -- "APPLY" --> K["kill_mutants"]
-    K --> R["revue test-integrity"]
-    R -- "APPROVED" --> MG["gates rejouées"]
-    MG -- "PASS" --> M
-    M -- "PASS" --> P["pr-writer puis publication"]
+    DR -- "APPROVED" --> P["pr-writer puis publication"]
 ```
 
 *Figure 2 — La boucle de DELIVER telle que la décrit `plugins/skraft-framework/workflows/pipeline.skraft.dot`,
@@ -161,6 +151,8 @@ Le craft opposable a un coût, et skraft l'assume.
 - **100 % de mutation sur le cœur est exigeant.** Certains mutants ne changent rien
   d'observable ; le skill `quality-gates-<stack>` du composant dit comment en exclure un, ligne
   par ligne et avec sa raison, plutôt que d'abaisser le seuil pour tous.
+- **Le pipeline ne prouve pas que les tests attrapent une erreur.** La mutation est le run du
+  développeur, fait à part : une story peut partir sans.
 - **Pas de mode « prototype ».** Un seuil qu'on peut baisser cesse d'être un seuil ; il n'y a
   donc aucun réglage pour l'assouplir.
 

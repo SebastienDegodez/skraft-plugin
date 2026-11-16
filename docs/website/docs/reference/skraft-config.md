@@ -35,7 +35,7 @@ flowchart TD
     F -->|read and validated| V{valid?}
     V -->|no| R[refused config-invalid<br/>every error]
     V -->|yes| B[base per repository<br/>git merge-base HEAD ref]
-    B --> G[skraft gate<br/>build → format → lint → test<br/>→ architecture → coverage → mutation]
+    B --> G[skraft gate<br/>build → format → lint → test<br/>→ architecture → coverage]
     F --> D[skraft doctor]
 ```
 
@@ -323,11 +323,13 @@ whatever the order in the file:
 | 6 | `coverage` |
 | 7 | `mutation` |
 
-`e2e`, the only other name allowed, is not a gate: `skraft gate` does not run it, but
+`mutation` is the developer's: neither the plugin's pipeline nor `skraft gate` runs it; only a
+`gate="mutation"` node of a team's own workflow does, and `skraft doctor` checks that its program
+is found. `e2e`, the only other name allowed, is not a gate: `skraft gate` does not run it, but
 `skraft doctor` checks it. A misspelt name (`tset`) makes the configuration invalid instead
 of silently skipping the gate. A component with no gate command fails (gate `none`, class `environment`):
-`no gate command; give it at least one of build, format, lint, test, architecture, coverage,
-mutation in skraft-config.json`. A component stops at its first failing gate.
+`no gate command; give it at least one of build, format, lint, test, architecture, coverage in
+skraft-config.json`; a `mutation` command alone does not count. A component stops at its first failing gate.
 
 A line that starts with `python` starts the first interpreter found from the component's
 root: `.venv/bin/python`, `.venv/Scripts/python.exe`, then `python` and `python3` on the

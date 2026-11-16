@@ -36,7 +36,7 @@ flowchart TD
     F -->|lu et validé| V{valide ?}
     V -->|non| R[refus config-invalid<br/>toutes les erreurs]
     V -->|oui| B[base par dépôt<br/>git merge-base HEAD ref]
-    B --> G[skraft gate<br/>build → format → lint → test<br/>→ architecture → coverage → mutation]
+    B --> G[skraft gate<br/>build → format → lint → test<br/>→ architecture → coverage]
     F --> D[skraft doctor]
 ```
 
@@ -329,11 +329,13 @@ dans cet ordre, quel que soit l'ordre du fichier :
 | 6 | `coverage` |
 | 7 | `mutation` |
 
-`e2e`, le seul autre nom permis, n'est pas une gate : `skraft gate` ne la lance pas, mais
+`mutation` revient au développeur : ni le pipeline du plugin ni `skraft gate` ne la lancent ;
+seul un nœud `gate="mutation"` du workflow propre à une équipe le fait, et `skraft doctor`
+vérifie que son programme est trouvé. `e2e`, le seul autre nom permis, n'est pas une gate : `skraft gate` ne la lance pas, mais
 `skraft doctor` la vérifie. Un nom mal écrit (`tset`) rend la configuration invalide au lieu
 de sauter la gate en silence. Un composant sans aucune commande de gate échoue (gate `none`,
 classe `environment`) : `no gate command; give it at least one of build, format, lint, test,
-architecture, coverage, mutation in skraft-config.json`. Un composant s'arrête à sa première
+architecture, coverage in skraft-config.json` ; une commande `mutation` seule ne compte pas. Un composant s'arrête à sa première
 gate en échec.
 
 Une ligne qui commence par `python` lance le premier interpréteur trouvé depuis la racine du

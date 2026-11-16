@@ -31,8 +31,8 @@ Ce qui ne se règle pas, et pourquoi :
   100 % sur le cœur métier et 80 % ailleurs restent les mêmes pour toutes les équipes.
 - **Les contrôles du moteur** (journal chaîné, droits d'écriture, sorties attendues, rejeu des
   commits rouges). Ce ne sont pas des nœuds du workflow : aucune copie ne peut les retirer.
-- **Les gates de DELIVER et les revues.** Les nœuds `gates` et `mutation` sont verrouillés :
-  en retirer un exige d'écrire `unlock="<raison>"`, que `skraft workflow diff` montre et que le
+- **Les gates de DELIVER et les revues.** Le nœud `gates` est verrouillé :
+  le retirer exige d'écrire `unlock="<raison>"`, que `skraft workflow diff` montre et que le
   journal garde. Les fan-in des revues, l'appel `deliver_review` et les lentilles
   `test-integrity` et `architecture-boundaries` sont obligatoires : aucune raison ne les retire.
 
@@ -45,8 +45,7 @@ peut pas voir, c'est une commande qui tourne et ne prouve rien.
 | --- | --- | --- |
 | Retirer une gate d'un composant (`architecture`, `coverage`) | La preuve correspondante : plus de contrôle des dépendances, plus de couverture | La gate n'apparaît plus dans la sortie de `skraft gate` ni dans `gates/<composant>/` |
 | Retirer une revue, l'appel à `review`, ou sa lentille `test-integrity` ou `architecture-boundaries` | Rien : le moteur refuse le workflow | `… this node is mandatory and cannot be removed` dans `skraft workflow check` |
-| Déverrouiller le nœud `mutation` | Le mutation testing, et la boucle qui traite les mutants survivants | `skraft workflow diff` montre le déverrouillage ; le run journalise le nœud sauté avec sa raison |
-| Supprimer la commande `mutation` d'un composant | Rien en silence : le run s'arrête à `mutation` en échec `environment` | La question `environment` sur le nœud `mutation` |
+| Ne jamais lancer votre propre mutation testing | La preuve que les tests attraperaient une erreur | Rien dans le run : le pipeline ne lance aucune mutation, seuls vos propres rapports le montrent |
 | Remplacer une commande par une qui ne teste rien (`"test": "node -e 0"`, un filtre qui exclut presque tout) | Toute la gate : elle passe à chaque fois | Une preuve `pass` dont `stdout` ne montre aucun test lancé |
 | Passer un composant en `inprocess` sans test de contrat | La garantie que vos mocks ressemblent encore au vrai service | Des tests verts, puis une panne à l'intégration |
 | Laisser un composant sans gate | Toute preuve sur ce composant ; le moteur le signale en échec `environment` | `no gate command; …` dans `skraft gate` |
@@ -66,10 +65,16 @@ commande a réellement fait.
 ## Le cas du mutation testing
 
 Le mutation testing introduit de petites fautes dans le code et vérifie que les tests les
-détectent (Jia & Harman, 2011). C'est la seule gate qui mesure les tests eux-mêmes : une
-couverture de 100 % dit que le code a tourné, pas qu'un test aurait remarqué qu'il change. Le
-retirer ne raccourcit pas seulement un run ; cela retire la preuve que les autres gates prouvent
-quelque chose. C'est pourquoi son nœud est verrouillé plutôt qu'optionnel.
+détectent (Jia & Harman, 2011). C'est la seule mesure des tests eux-mêmes : une couverture de
+100 % dit que le code a tourné, pas qu'un test aurait remarqué qu'il change. C'est aussi l'étape
+la plus lente qu'une story puisse payer, et celle qui dépend le plus d'un outil et de sa
+configuration.
+
+Le pipeline du plugin n'en lance donc aucun : le développeur le lance à part, avec l'outil et la
+configuration qu'il a choisis, contre le seuil de `skraft-quality-bar`. Le risque se déplace
+avec lui : une équipe qui ne le lance jamais perd la preuve que les autres gates prouvent quelque
+chose, et aucun run ne le dira. Une équipe qui le veut à chaque run met un nœud
+`gate="mutation"` dans son propre workflow ([Éjecter le workflow](../how-to/eject-workflow.mdx)).
 
 ## Sources
 

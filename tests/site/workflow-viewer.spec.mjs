@@ -6,8 +6,7 @@ const BASE = process.env.BASE_URL || 'http://localhost:4000/skraft-plugin'
 const PAGE = `${BASE}/explanation/pipeline`
 const PIPELINE_NODES = [
   'start', 'research', 'design', 'design_review', 'adr', 'distill',
-  'distill_review', 'deliver', 'gates', 'deliver_review', 'mutation', 'kill_proposal', 'mutation_plan',
-  'kill_mutants', 'mutation_review', 'mutation_gates', 'visuals', 'pr_writer', 'publish', 'exit',
+  'distill_review', 'deliver', 'gates', 'deliver_review', 'visuals', 'pr_writer', 'publish', 'exit',
 ]
 
 const viewer = (page) => page.locator('figure[data-workflow]').first()

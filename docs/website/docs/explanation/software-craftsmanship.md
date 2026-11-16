@@ -1,6 +1,6 @@
 ---
 title: "Software craftsmanship — why skraft makes it a rule"
-description: "What craftsmanship means and how skraft turns it into engine checks: outside-in TDD, walking skeleton, mutation testing, review before review, human decisions."
+description: "What craftsmanship means and how skraft turns it into engine checks: outside-in TDD, walking skeleton, review before review, human decisions."
 persona: tech-lead
 ---
 
@@ -58,9 +58,8 @@ restates the manifesto, the right column is skraft's own.*
 The `skraft-quality-bar` skill is the only place a threshold is written: 100 % mutation score and
 line coverage on Domain and Application, 80 % mutation score on API and Infrastructure. There is
 no "advisory" level, no waiver and no per-repository setting; `skraft-config.json` chooses the
-gates' **commands**, never their thresholds. In `pipeline.skraft.dot`, the DELIVER `gates` and
-`mutation` nodes are `locked`: removing them from a copy of the workflow needs a written reason
-(`unlock="<reason>"`).
+gates' **commands**, never their thresholds. In `pipeline.skraft.dot`, the DELIVER `gates` node
+is `locked`: removing it from a copy of the workflow needs a written reason (`unlock="<reason>"`).
 
 This is skraft's answer to Mancuso's point: quality is not an adjustment variable. The details of
 each gate are in the [gates reference](../reference/gates.md).
@@ -90,14 +89,12 @@ Craftsmanship moves in small increments that work. In skraft, this takes two for
 
 A green suite does not prove it would catch a mistake. Mutation testing injects small faults into
 the code and measures how many the tests catch
-([Jia & Harman, 2011](../reference/citations.mdx#cite-jia-mutation-2011)). In skraft, the `mutation` gate judges
-the report against the `skraft-quality-bar`; it runs last, after the DELIVER review has
-approved the code, and again after each kill cycle (a failing report goes back to `kill_proposal`, at most
-5 visits). For each file that keeps a surviving mutant, the `software-engineer` proposes how
-to kill it (`kill_proposal`); the developer chooses (the `mutation-plan` question: apply, give an
-instruction of their own, or stop the run), then `kill_mutants` applies that choice. The
-`test-integrity` lens checks that the
-added tests can really fail (its G7) and that no test was weakened to pass (its G9).
+([Jia & Harman, 2011](../reference/citations.mdx#cite-jia-mutation-2011)). In skraft, mutation testing is the
+developer's: the plugin's pipeline runs none. The developer picks the tool, writes its
+configuration and runs it apart, against the bar of `skraft-quality-bar`; an agent asked to help
+with the survivors reads them with the component's `quality-gates-<stack>` skill. Inside the
+pipeline, the `test-integrity` lens checks that the tests can really fail (its G7) and that no
+test was weakened to pass (its G9).
 
 ### A community of professionals: review before review
 
@@ -119,7 +116,7 @@ and the tests with no context at all and checks that they speak the business lan
 
 A craftsperson does not decide alone what commits their client. In the workflow, a hexagon is a
 question asked to a human: `adr-ratification` has the ADRs ratified before DISTILL,
-`scenario-review` has the scenarios read before DELIVER builds them, `mutation-plan` has the developer decide what to do with the mutants the gate left alive. Without
+`scenario-review` has the scenarios read before DELIVER builds them. Without
 an answer, the run waits; no agent can answer in the human's place. The agreement to push a
 branch is given once, before any run, and a run that lacks it is refused rather than left
 waiting. See
@@ -133,14 +130,7 @@ flowchart LR
     G -- "FAIL" --> D
     G -- "PASS" --> DR["DELIVER review<br/>lenses + verdict"]
     DR -- "NEEDS_REWORK" --> D
-    DR -- "APPROVED" --> M["mutation gate<br/>locked, runs last"]
-    M -- "FAIL" --> KP["kill_proposal<br/>one proposal per file"]
-    KP --> Q{{"mutation-plan<br/>the developer chooses"}}
-    Q -- "APPLY" --> K["kill_mutants"]
-    K --> R["test-integrity review"]
-    R -- "APPROVED" --> MG["gates run again"]
-    MG -- "PASS" --> M
-    M -- "PASS" --> P["pr-writer then publication"]
+    DR -- "APPROVED" --> P["pr-writer then publication"]
 ```
 
 *Figure 2 — The DELIVER loop as described by `plugins/skraft-framework/workflows/pipeline.skraft.dot`,
@@ -155,6 +145,8 @@ Enforceable craftsmanship has a cost, and skraft owns it.
 - **100 % mutation on the core is demanding.** Some mutants change nothing observable; the
   component's `quality-gates-<stack>` skill says how to exclude one, line by line and with its
   reason, rather than lowering the bar for everyone.
+- **The pipeline does not prove the tests catch a mistake.** Mutation is the developer's run, made
+  apart: a story can ship without one.
 - **No "prototype" mode.** A bar that can be lowered stops being a bar; there is therefore no
   setting to relax it.
 

@@ -106,7 +106,7 @@ A defect a lens reports: the gate concerned, a severity (`blocker`, `high`, `med
 ## G
 
 **Gate (quality gate)**
-A named command of a component (`build`, `format`, `lint`, `test`, `architecture`, `coverage`, `mutation`) that the engine runs itself to prove quality. Each gate leaves an evidence file and a `gate.ran` event. The engine runs them in DELIVER (the locked `gates` and `mutation` nodes); `skraft gate` runs them by hand.
+A named command of a component (`build`, `format`, `lint`, `test`, `architecture`, `coverage`, `mutation`) that the engine runs itself to prove quality. Each gate leaves an evidence file and a `gate.ran` event. The engine runs them in DELIVER (the locked `gates` node); `skraft gate` runs them by hand. `mutation` is the developer's: the plugin's pipeline runs it nowhere.
 → See [skraft-config.json](./skraft-config.md); the lenses' review criteria: [Gates](./gates.md)
 
 **Gherkin**
@@ -224,7 +224,7 @@ The v1 state file (`.copilot-tracking/skraft-plans/<slug>/state.json`), rewritte
 → See [Journal (events.jsonl)](./run-journal.md)
 
 **Surviving mutant**
-A change to the code the tests do not catch. It ends one of three ways: a test that kills it, the code deleted, or the mutant declared equivalent. In DELIVER the agent proposes and the developer chooses (`mutation-plan` question).
+A change to the code the tests do not catch. It ends one of three ways: a test that kills it, the code deleted, or the mutant declared equivalent. The developer runs mutation apart from the pipeline and chooses; an agent asked to help reads the survivors with the component's `quality-gates-<stack>` skill.
 → See [DELIVER](../explanation/pipeline/deliver.mdx)
 
 ## T

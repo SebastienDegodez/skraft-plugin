@@ -32,7 +32,7 @@ graph LR
     B -->|recherche sourcée| R[Recommandation]
     R -->|ADR ratifié + événements| C[Architecture]
     C -->|tests d'acceptation en échec| D[Spécification]
-    D -->|code revu + mutation| E[Pull request]
+    D -->|code revu| E[Pull request]
 ```
 
 *Figure 1 — La demande Starbucks et l'artefact qu'elle devient à chaque relais, de l'idée à la
@@ -144,13 +144,11 @@ Le `software-engineer` rend S1 vert en **Outside-In TDD** : tests unitaires d'ab
 code, puis un commit vert, que le moteur rejoue : le test d'acceptation de S1 et le walking
 skeleton y passent tous deux. DISTILL écrit ensuite le test en échec de S2, et
 l'ingénieur le rend vert de la même façon. Le moteur lance les gates (build, tests, architecture,
-couverture), puis la revue DELIVER relit le code. Une fois le code approuvé, la **mutation**
-passe une fois, en dernier : elle vérifie que les tests attraperaient une erreur dans la règle
-de fidélité. Si un mutant survit, l'agent propose comment le traiter et c'est le développeur
-qui choisit.
+couverture), puis la revue DELIVER relit le code. Que les tests attraperaient une erreur dans la
+règle de fidélité, la **mutation** que lance le développeur le montre, à part du pipeline.
 
 - **Ce qui entre :** le walking skeleton rouge + le test d'acceptation rouge de S1 + le plan.
-- **Ce qui sort :** le code revu, la mutation passée, puis la pull request.
+- **Ce qui sort :** le code revu, puis la pull request.
 
 ➡️ Détail de la phase : [DELIVER](./deliver.mdx).
 
@@ -166,7 +164,7 @@ d'ingénierie, sans perdre son contexte :
 | RESEARCH | Document de recherche cité + recommandation |
 | DESIGN | ADR ratifié (paiement via ACL) + modèle d'événements |
 | DISTILL | Scénarios Gherkin S1, S2 + walking skeleton rouge + test d'acceptation rouge de S1 |
-| DELIVER | Un commit rouge et un vert par scénario + code revu + mutation passée + pull request |
+| DELIVER | Un commit rouge et un vert par scénario + code revu + pull request |
 
 Chaque artefact est devenu le **contexte** de l'étape suivante, et chaque relais est resté
 relisible : ce qui n'était pas écrit n'a pas été transmis.

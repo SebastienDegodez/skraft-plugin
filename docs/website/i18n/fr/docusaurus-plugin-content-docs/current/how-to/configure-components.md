@@ -66,8 +66,8 @@ Une commande écrite dans `skraft-config.json` est toujours celle qui tourne. Mo
 ## 4. Ajouter une gate
 
 Ajoutez la commande sous l'un des noms `build`, `format`, `lint`, `test`, `architecture`,
-`coverage`, `mutation` (l'ordre d'exécution), ou `e2e`, que `skraft doctor` vérifie mais
-qu'aucune gate ne lance :
+`coverage` (l'ordre d'exécution) ; `mutation`, votre propre commande de mutation, que le pipeline
+ne lance jamais ; ou `e2e`, que `skraft doctor` vérifie mais qu'aucune gate ne lance :
 
 ```json
 "commands": {

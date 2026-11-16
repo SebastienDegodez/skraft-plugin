@@ -66,21 +66,10 @@ test('the total of a cart adds its prices', () => {
 })
 ```
 
-`web/stryker.config.json`, pour la gate de mutation :
-
-```json
-{
-  "testRunner": "tap",
-  "mutate": ["src/**/*.js"],
-  "tap": { "testFiles": ["test/**/*.test.js"], "nodeArgs": ["--test-reporter=tap"] }
-}
-```
-
-Créez un `.gitignore` à la racine qui contient deux lignes, `node_modules/` et `reports/`. Installez
-StrykerJS, puis commitez sur une branche à vous :
+Créez un `.gitignore` à la racine qui contient deux lignes, `node_modules/` et `reports/`, puis
+commitez sur une branche à vous :
 
 ```console
-$ npm install --save-dev --prefix web @stryker-mutator/core@9.6.1 @stryker-mutator/tap-runner@9.6.1
 $ git add .
 $ git commit -m "Start the shop"
 $ git switch -c pay-by-card
@@ -115,7 +104,7 @@ Dans la suite, `skraft …` veut dire cette commande complète, ou la commande `
 ![Terminal : skraft init répond « skraft-config.json: web (javascript, web) »](/img/screenshots/shared/terminal-init.svg)
 
 *Figure 1 — Un composant, `web`, avec ses commandes `test` et `mutation`, est écrit dans
-`skraft-config.json`.*
+`skraft-config.json`. Le pipeline lance `test` ; `mutation` est à vous de la lancer.*
 
 Un run qui publie ne démarre que sur une configuration dont les consentements de publication sont
 réglés : répondez-y maintenant, dans `skraft-config.json`. Ce dépôt n'a pas de remote, donc
@@ -230,8 +219,8 @@ marqué walking skeleton, le commit du walking skeleton et le commit du test de 
 de test sous `.copilot-tracking/skraft-plans/checkout/details/` et ces commits, lisez-les, puis choisissez **APPROVED** dans le chat.
 
 Le run continue ensuite sans vous : un scénario à la fois, un commit vert que le moteur rejoue,
-puis le test en échec du scénario suivant ; puis les gates, la revue DELIVER, la mutation, et la
-description de la pull request. Le journal de `/workflows` se termine ainsi :
+puis le test en échec du scénario suivant ; puis les gates, la revue DELIVER, et la description de
+la pull request. Le journal de `/workflows` se termine ainsi :
 
 ![Journal du workflow skraft-pipeline : phase PUBLISH, pr-writer, la pull request non ouverte car publish.pullRequest vaut false, PUBLISH closed, puis checkout: done: PUBLISH closed](/img/screenshots/shared/terminal-workflow-log.svg)
 
@@ -242,8 +231,7 @@ Le canvas coche alors chaque phase :
 
 ![Canvas skraft-pipeline : statut DONE, « PUBLISH closed », RESEARCH à PUBLISH cochées avec chaque étape et son résultat, puis les revues approuvées et les gates passées](/img/screenshots/shared/pipeline-canvas-done.png)
 
-*Figure 4 — Un run terminé dans le canvas (dépôt scripté des tests d'intégration). Les étapes
-`kill_proposal` à `mutation_gates` restent grises : aucun mutant n'a survécu.*
+*Figure 4 — Un run terminé dans le canvas (dépôt scripté des tests d'intégration).*
 
 Son onglet **Journal** relit `events.jsonl` : la chaîne de hachage est-elle intacte, puis chaque étape
 enregistrée et chaque décision humaine, avec qui l'a confirmée.

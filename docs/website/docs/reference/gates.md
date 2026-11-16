@@ -15,7 +15,7 @@ Where each review sits in the pipeline: [Phases](./phases.md).
 
 | Kind | Ids | Who judges it | Where |
 | --- | --- | --- | --- |
-| Command gate | `build`, `format`, `lint`, `test`, `architecture`, `coverage`, `mutation` | the engine, by the exit code of the component's command | DELIVER's `gates`, `mutation` and `mutation_gates` nodes, `skraft gate` |
+| Command gate | `build`, `format`, `lint`, `test`, `architecture`, `coverage`, `mutation` | the engine, by the exit code of the component's command | DELIVER's `gates` node and `skraft gate`; `mutation` only in a team's own workflow |
 | Review criterion | `G<n>`, and `C1`, `F1`, `B1`, `T<n>`, `E<n>`, `M<n>`, `K<n>` | a lens, then the engine (DESIGN, DISTILL, DELIVER) or `review-verdict.mjs` (DISCOVER, DISCUSS) | each phase's reviews |
 | Engine check tied to a criterion | G2, G10, G12, G14 (DESIGN); G1 (`gherkin-records`), G11 (`testability#layout`) (DISTILL); G9 (`test-integrity#patch`) | the engine, without a lens | after the architect's attempt; after the acceptance designer's attempt; in a review's patch |
 
@@ -30,25 +30,25 @@ root; a component stops at its first failing gate.
 
 | Order | Gate | Node of the plugin's workflow |
 | --- | --- | --- |
-| 1 | `build` | `gates`, `mutation_gates` |
-| 2 | `format` | `gates`, `mutation_gates` |
-| 3 | `lint` | `gates`, `mutation_gates` |
-| 4 | `test` | `gates`, `mutation_gates` |
-| 5 | `architecture` | `gates`, `mutation_gates` |
-| 6 | `coverage` | `gates`, `mutation_gates` |
-| 7 | `mutation` | `mutation` |
+| 1 | `build` | `gates` |
+| 2 | `format` | `gates` |
+| 3 | `lint` | `gates` |
+| 4 | `test` | `gates` |
+| 5 | `architecture` | `gates` |
+| 6 | `coverage` | `gates` |
+| 7 | `mutation` | none: the developer's; `skraft gate` and `skraft doctor --run` leave it too |
 
 | Rule | Detail |
 | --- | --- |
 | Result | `pass` (exit 0) or `fail`, class `interrupted`, `environment` or `deterministic` ([failure classes](./skraft-config.md#failure-classes)) |
 | Component with no gate command | gate `none`, `fail`, class `environment`; in a run, the `environment` question names the cause `config` |
 | Scope | the components changed since their base; `goal_gate=true` then runs all the others; `skraft gate --all` runs them all |
-| Edges | every gate of the node passes: the `PASS` edge; one fails: the `FAIL` edge (`gates`: `PASS` to `deliver_review`, `FAIL` to `deliver`; `mutation`: `PASS` to `visuals`, `FAIL` to `kill_proposal`; `mutation_gates`: `PASS` to `mutation`, `FAIL` to `kill_mutants`) |
+| Edges | every gate of the node passes: the `PASS` edge; one fails: the `FAIL` edge (`gates`: `PASS` to `deliver_review`, `FAIL` to `deliver`) |
 | Machine | a gate step that fails as `environment` takes no edge: the run asks the `environment` question ([causes](./run-journal.md#environment-question)), sends nothing back to an agent and uses none of its attempts; a gate stopped by a signal or a crash fails as `deterministic` and takes the `FAIL` edge with its evidence, like a failing check |
 | Loop ceiling | a failed gate step takes its `FAIL` edge until that edge's `max_visits`; one more failure asks the `blocked` question (code `loop-ceiling`) about the node that edge leads to; an instruction sends the work back there, `STOP` ends the run |
-| Mutation | the engine reads the report of the `mutation` command (`mutationReport`) and judges two bars: **100 %** on the core (Domain, Application), **80 %** on the boundary (the rest); it runs once, after `deliver_review` approved; on failure, `kill_proposal` writes one proposal per file of survivors, the `mutation-plan` question lets the developer choose (`APPLY`, their instruction, `STOP`), then `kill_mutants` applies the choice ([Phases](./phases.md#deliver)) |
+| Mutation | the plugin's workflow runs none: the developer runs it apart, against the bar of `skraft-quality-bar`. A `gate="mutation"` node of a team's own workflow has the engine read the report of the `mutation` command (`mutationReport`) and judge two bars: **100 %** on the core (Domain, Application), **80 %** on the boundary (the rest) |
 | Thresholds | none is configurable |
-| Lock | `gates` and `mutation` are `locked=true`: a copy of the workflow drops them only with `unlock="<reason>"` ([The DOT workflow](./workflow-dot.mdx#locked-nodes)) |
+| Lock | `gates` is `locked=true`: a copy of the workflow drops them only with `unlock="<reason>"` ([The DOT workflow](./workflow-dot.mdx#locked-nodes)) |
 | Evidence | `gates/<component>/<gate>-<n>.log` and a `gate.ran` event ([Tracking folder and journal](./run-journal.md#gate-evidence)) |
 
 ## Review criteria <!-- #review-criteria -->
@@ -199,9 +199,8 @@ the green that must make them pass, check them.
 
 ## DELIVER <!-- #deliver -->
 
-DELIVER goes through the `gates` gates, the `deliver_review` call of the `review` workflow, then
-the `mutation` gate; when it fails, the `mutation_review` review (lens `test-integrity`) judges
-`kill_mutants`'s tests before `mutation_gates`. The same lenses judge
+DELIVER goes through the `gates` gates, then the `deliver_review` call of the `review` workflow.
+The same lenses judge
 a pull request through `skraft review --pr`.
 
 | ID | Lens | Criterion | Severity |
@@ -251,7 +250,7 @@ cites no other issue (`issue-not-in-story`) and closes none (`issue-closed`).
 | `distill`, writing a scenario's acceptance test | one red, the test and the skeleton it calls, in the scenario's component; the scenario's red exists after the pass; `.feature` and Markdown files go with it or in a `docs` commit, wherever they live | a second red (`oracle-split`); a red in another or a second component (`oracle-component`); a red with no file of the component's test paths (`oracle-without-test`); a green or refactor (`code-in-oracle`); none at all |
 | `deliver` on scenario k | one green, chained in bash: `<test command> && git add <files> && git commit …` | a red (`test-in-scenario`); a refactor (`refactor-in-scenario`); a second green (`second-green`); a change to a file of the acceptance-test commits, the walking skeleton's included, outside the component's `src` paths (`oracle-touched`); a change to another component (`other-component`); none at all |
 | `deliver` sent back by the gates or the review, after the last scenario | reds, greens and refactors on the whole story; reds not replayed | a green with no red since the last green (`green-without-red`); on a pass the gates sent back, their failure stands for the first red |
-| `kill_mutants` | tests that kill mutants and pass | — |
+| `kill_mutants`, in a team's own workflow | tests that kill mutants and pass | — |
 
 **Replays.** The engine reads no test report and no runner's output: it replays a commit's
 commands in a throwaway checkout, from the component root, and tells apart only an exit code of

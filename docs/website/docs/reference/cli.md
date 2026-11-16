@@ -311,8 +311,8 @@ stdout, code 0. Refusal: the message on stderr, code 1.
 ## `skraft gate [--all] [--json]`
 
 **Effect.** Runs the gates of the active pipeline: the commands named `build`, `format`,
-`lint`, `test`, `architecture`, `coverage`, `mutation` of each component, in that order,
-from the component's root. Each gate writes evidence and one `gate.ran` event. A component
+`lint`, `test`, `architecture`, `coverage` of each component, in that order, from the
+component's root; a `mutation` command is the developer's and never runs here. Each gate writes evidence and one `gate.ran` event. A component
 stops at its first failing gate; the other components go on.
 
 | Option | Effect |

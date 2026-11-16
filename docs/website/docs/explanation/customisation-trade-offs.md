@@ -31,7 +31,7 @@ What cannot be tuned, and why:
   100 % on the business core and 80 % elsewhere stay the same for every team.
 - **The engine's checks** (chained journal, write scope, expected outputs, replay of red commits).
   They are not workflow nodes: no copy can remove them.
-- **DELIVER gates and reviews.** The `gates` and `mutation` nodes are locked: removing one takes
+- **DELIVER gates and reviews.** The `gates` node is locked: removing it takes
   writing `unlock="<reason>"`, which `skraft workflow diff` shows and the journal keeps. The review
   fan-ins, the `deliver_review` call and the `test-integrity` and `architecture-boundaries` lenses
   are mandatory: no reason removes them.
@@ -45,8 +45,7 @@ command that runs and proves nothing.
 | --- | --- | --- |
 | Remove a gate from a component (`architecture`, `coverage`) | The matching proof: no more dependency check, no more coverage | The gate no longer shows in the output of `skraft gate` nor in `gates/<component>/` |
 | Remove a review, the call to `review`, or its `test-integrity` or `architecture-boundaries` lens | Nothing: the engine refuses the workflow | `… this node is mandatory and cannot be removed` from `skraft workflow check` |
-| Unlock the `mutation` node | Mutation testing, and the loop that treats surviving mutants | `skraft workflow diff` shows the unlock; the run journals the node as skipped with its reason |
-| Delete a component's `mutation` command | Nothing silently: the run stops at `mutation` as an `environment` failure | The `environment` question on the `mutation` node |
+| Never run your own mutation testing | The proof that the tests would catch a mistake | Nothing in the run: the pipeline runs no mutation, so only your own reports show it |
 | Replace a command with one that tests nothing (`"test": "node -e 0"`, a filter that excludes almost everything) | The whole gate: it passes every time | `pass` evidence whose `stdout` shows no test run |
 | Switch a component to `inprocess` with no contract test | The guarantee that your mocks still look like the real service | Green tests, then a failure at integration |
 | Leave a component with no gate | Any proof about that component; the engine reports it as an `environment` failure | `no gate command; …` from `skraft gate` |
@@ -66,10 +65,15 @@ command really did.
 ## The case of mutation testing
 
 Mutation testing plants small faults in the code and checks that the tests catch them (Jia &
-Harman, 2011). It is the only gate that measures the tests themselves: 100 % coverage says the
-code ran, not that a test would have noticed it change. Removing it does not just shorten a run;
-it removes the proof that the other gates prove anything. That is why its node is locked rather
-than optional.
+Harman, 2011). It is the only measure of the tests themselves: 100 % coverage says the code ran,
+not that a test would have noticed it change. It is also the slowest step a story can pay for,
+and the one that depends most on a tool and its configuration.
+
+So the plugin's pipeline runs none: the developer runs it apart, with the tool and the
+configuration they chose, against the bar of `skraft-quality-bar`. The risk moves with it: a team
+that never runs it loses the proof that the other gates prove anything, and no run will say so.
+A team that wants it in every run puts a `gate="mutation"` node in its own workflow
+([Eject the workflow](../how-to/eject-workflow.mdx)).
 
 ## Sources
 

@@ -122,8 +122,7 @@ Disons-le franchement : le framework n'échange plus de la rigueur contre des to
 curseur de profondeur repo-wide qui faisait exactement cela — fan-out de la revue à 1, 2
 ou 4 lentilles, périmètre des runs de mutation, gate Gherkin activée ou non — a été
 supprimé, et il était aussi le gouverneur de coût du pipeline. Chaque run paie désormais
-la forme complète : quatre lentilles à chaque revue, les deux runs de mutation
-séquencés, la gate Gherkin toujours active. C'est une hausse réelle et permanente du
+la forme complète : quatre lentilles à chaque revue, la gate Gherkin toujours active. C'est une hausse réelle et permanente du
 coût plancher d'un run, que rien ne compense côté qualité. Le propriétaire du dépôt a
 accepté l'arbitrage délibérément : la qualité ne se négocie pas, et un curseur qui
 permet à un run d'acheter son passage sous la barre n'est pas une économie — c'est un
@@ -158,11 +157,9 @@ linter CI (`resolve-model --check --forbid-model`) échoue sinon. Avec la
 discipline de cache, ce choix de famille constitue le gouverneur principal de la dépense à
 l'heure actuelle — et désormais le seul : le curseur de profondeur qui partageait ce
 rôle a été supprimé, si bien que le versant qualité d'un run est un coût fixe et non
-plus une variable. La gate de mutation l'illustre : chaque adaptateur
-`quality-gates-<tech>` embarque deux scripts séquencés, core (Domain, Application) puis
-boundary (API, Infrastructure), chacun portant sa valeur attendue jusqu'au `--break-at`
-du runner, de sorte que le code de sortie fait le verdict. Les deux tournent, à chaque
-fois.
+plus une variable. Le mutation testing, la mesure la plus chère, a quitté le pipeline
+pour cette raison : le développeur le lance à part, quand il le choisit, si bien qu'aucun
+run ne le paie.
 
 ### Conçu, pas encore implémenté
 
