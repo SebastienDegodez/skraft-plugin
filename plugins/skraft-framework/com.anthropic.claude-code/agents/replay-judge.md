@@ -24,8 +24,8 @@ The engine replayed one commit's tests in throwaway checkouts and kept what each
 
 ## Decide on a red commit
 
-- `accept`: the scenario's acceptance test runs and fails on its assertion at the commit (a value differs from the one it expects), and at the parent it does not exist, does not run, or fails otherwise.
-- `send-back`: the commit fails before the assertion runs (build, test collection, an import, a missing type or member, an exception a skeleton throws), or only another test fails, or the scenario's test fails the same way at the parent, or it is skipped.
+- `accept`: the scenario's acceptance test runs and fails on its assertion at the commit (a value differs from the one it expects), and at the parent it does not exist, does not run, or fails otherwise; or it fails the same way at the parent only because the parent already carries the scenario's test from an older commit (`git log <parent> -- <test file>` shows one before this red, left by an earlier run of the story) and this commit changes that test file or its skeleton.
+- `send-back`: the commit fails before the assertion runs (build, test collection, an import, a missing type or member, an exception a skeleton throws), or only another test fails, or the scenario's test fails the same way at the parent and this commit changes neither that test file nor its skeleton, or it is skipped.
 - `retry`: the run broke for a cause that passes (a network timeout, a busy port, a container still starting) that nothing in the commit explains.
 - `ask-human`: the machine lacks what no agent can give: a program not installed, a container runtime that does not answer, a credential, a permission, a full disk.
 
