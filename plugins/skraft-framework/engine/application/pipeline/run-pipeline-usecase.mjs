@@ -743,7 +743,7 @@ const briefPaths = ({ deps, slug, config }, run, next, { role, outputs, result, 
     outputs: outputs.map(at),
     result: at(result),
     scratch: { logs: at('logs/'), tmp: at('.tmp/') },
-    allowed: allowedPaths(role, { slug, components: config.components }),
+    allowed: allowedPaths(role, { slug, folder: deps.files.folder, components: config.components }),
   }
 }
 
@@ -1077,7 +1077,7 @@ const gateArgv = (event) => {
 /** @param {import('../ports/tracking-files.mjs').TrackingFiles} files @param {string} slug */
 const repositoryRoot = (files, slug) => {
   const path = files.location(slug, 'events.jsonl').replaceAll('\\', '/')
-  const suffix = `/.copilot-tracking/skraft-plans/${slug}/events.jsonl`
+  const suffix = `/${files.folder}/${slug}/events.jsonl`
   return path.endsWith(suffix) ? path.slice(0, -suffix.length) : ''
 }
 

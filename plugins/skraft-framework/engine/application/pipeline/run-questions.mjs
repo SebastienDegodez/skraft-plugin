@@ -64,8 +64,8 @@ const RATIFICATION = {
  * @type {Questionnaire}
  */
 const MUTATION_PLAN = {
-  plan: async ({ slug, journal }) => {
-    const proposals = proposalsOf(journal.events).map((path) => `${trackingFolder(slug)}/${path}`)
+  plan: async ({ deps, slug, journal }) => {
+    const proposals = proposalsOf(journal.events).map((path) => `${trackingFolder(slug, deps.files.folder)}/${path}`)
     return { text: mutationPlanText(proposals), subjects: proposals }
   },
   act: async (context, asked) => planChosen(context, asked),
@@ -88,7 +88,7 @@ const proposalsOf = (events) => {
  */
 const planChosen = ({ deps, slug }, { answer, subjects, step }) => {
   if (answer === STOP) return { stop: `a human stopped the run at ${step}; the proposals are in ${subjects.join(', ')}` }
-  const paths = subjects.map((path) => deps.files.location(slug, path.slice(trackingFolder(slug).length + 1))).join(', ')
+  const paths = subjects.map((path) => deps.files.location(slug, path.slice(trackingFolder(slug, deps.files.folder).length + 1))).join(', ')
   return { failures: answer === APPLY ? [`Apply the proposals in ${paths}`] : [/** @type {string} */ (answer), `The proposals it departs from: ${paths}`] }
 }
 

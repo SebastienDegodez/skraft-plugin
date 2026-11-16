@@ -14,6 +14,7 @@ import { prechecksTable } from '../../domain/reporting/run-prechecks.mjs'
 import { decideUsage } from '../../domain/decisions/questions.mjs'
 import { createAgentLoop } from './agent-loop.mjs'
 import { reviewThroughLoop } from './review-loop.mjs'
+import { mutationAdapters, mutationThroughLoop } from './mutation-loop.mjs'
 import { serveMcp } from './mcp-server.mjs'
 
 /**
@@ -257,12 +258,18 @@ const answerLine = (question) =>
   `answer: skraft decide ${question.key} ${decideUsage(question)}${question.refusals.length > 0 ? ` (--reason <text> with ${question.refusals.join(' or ')})` : ''}`
 
 /** `decide [<key>] <answer> [--reason <text>]`. @param {string[]} args @param {CliServices} services @param {Console} console */
-const decide = async (args, services, console) => {
+const decide = (args, services, console) => decideOn(services.adapters(), args, services, console)
+
+/**
+ * The answer recorded on the run whose adapters are given: the active pipeline's, or the branch's mutation run's.
+ * @param {CliAdapters} adapters @param {string[]} args @param {CliServices} services @param {Console} console
+ */
+const decideOn = async (adapters, args, services, console) => {
   const asked = decisionOf(args)
   if (asked === undefined) return usage(console)
   const { key, given, options } = asked
   const confirmation = terminalConfirmation(services.confirm)
-  return answer(await createDecide({ ...services.adapters(), confirmation }).decide({ key, answer: given, reason: options['--reason'] ?? null }), console)
+  return answer(await createDecide({ ...adapters, confirmation }).decide({ key, answer: given, reason: options['--reason'] ?? null }), console)
 }
 
 /**
@@ -315,6 +322,20 @@ const loopStep = (step) => async (args, services, console) => {
   if (options === undefined) return usage(console)
   const loop = createAgentLoop({ adapters: services.adapters('copilot'), then: thenOf(services), log: console.err })
   const done = await loop[step]()
+  print(options['--json'] === true, done, loopLines, console)
+  return done.status === 'blocked' || done.status === 'refused' ? 1 : 0
+}
+
+/**
+ * `mutation [record] [--json]`, `mutation decide [<key>] <answer> [--reason <text>]`: the branch's mutation run, through the agent loop.
+ * @param {string[]} args @param {CliServices} services @param {Console} console
+ */
+const mutation = async (args, services, console) => {
+  if (args[0] === 'decide') return decideOn(mutationAdapters(services.adapters()), args.slice(1), services, console)
+  const [step, rest] = args[0] === 'record' ? [/** @type {const} */ ('record'), args.slice(1)] : [/** @type {const} */ ('next'), args]
+  const options = optionsOf(rest, { flags: ['--json'] })
+  if (options === undefined) return usage(console)
+  const done = await mutationThroughLoop({ adapters: services.adapters('copilot'), command: services.command(), log: console.err }, step)
   print(options['--json'] === true, done, loopLines, console)
   return done.status === 'blocked' || done.status === 'refused' ? 1 : 0
 }
@@ -526,6 +547,11 @@ const TABLE = [
   ['gate', gate, [{ synopsis: '[--all] [--json]', summary: 'run the gates of the changed components (all with --all)' }]],
   ['precheck', precheck, [{ synopsis: '[--json]', summary: "run, inside the open attempt, the mechanical checks the engine runs on its submission, and keep what it read" }]],
   ['doctor', doctor, [{ synopsis: '[--run] [--base <ref>] [--json]', summary: 'check every command can run (--run: run each once)' }]],
+  ['mutation', mutation, [
+    { synopsis: '[--json]', summary: 'mutate the branch HEAD is on with the mutation workflow, in its own run, until it needs agents or a human' },
+    { synopsis: 'record [--json]', summary: "hand the saved agent replies to the branch's mutation run, then go on" },
+    { synopsis: 'decide [<key>] <answer> [--reason <text>]', summary: "answer the question the branch's mutation run waits on" },
+  ]],
   ['review', review, [{ synopsis: '--pr <number> [--publish] [--record] [--json]', summary: 'review one pull request with the review workflow (--publish: keep its verdict in a comment)' }]],
   ['workflow', workflow, [
     { synopsis: 'eject [review]', summary: 'copy the plugin pipeline into .skraft/ (review: the review alone)' },

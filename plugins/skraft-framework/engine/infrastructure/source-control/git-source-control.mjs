@@ -15,6 +15,7 @@ export const createGitSourceControl = ({ commandRunner }) => Object.freeze({
   unavailable: () => unavailable(commandRunner),
   remoteUrl: () => remoteUrl(gitThrough(commandRunner)),
   ...gitFacts(gitThrough(commandRunner)),
+  branch: (/** @type {string} */ dir) => branch(gitThrough(commandRunner), dir),
   isAncestor: (/** @type {string} */ dir, /** @type {string} */ ancestor, /** @type {string} */ descendant) => isAncestor(gitThrough(commandRunner), dir, { ancestor, descendant }),
   commitFiles: (/** @type {string} */ dir, /** @type {string[]} */ paths, /** @type {string} */ message) => commitFiles(commandRunner, dir, { paths, message }),
   commitCopies: (/** @type {string} */ dir, /** @type {Copy[]} */ copies, /** @type {string} */ message) => commitCopies(commandRunner, dir, { copies, message }),
@@ -78,6 +79,9 @@ const mergeBase = async (git, dir, ref) => {
   const sha = await git(dir, ['merge-base', '--end-of-options', 'HEAD', ref])
   return sha?.trim() ?? null
 }
+
+/** @param {Git} git @param {string} dir @returns {Promise<string | null>} */
+const branch = async (git, dir) => (await git(dir, ['symbolic-ref', '--quiet', '--short', 'HEAD']))?.trim() || null
 
 /**
  * Files changed since the commit, untracked files included, relative to the folder.

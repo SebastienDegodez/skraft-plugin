@@ -39,6 +39,18 @@ test('head is the sha HEAD points at; a folder outside Git or a repository witho
   assert.equal(await runner.head('.'), null)
 })
 
+test('branch is the branch HEAD is on, slashes kept; a detached HEAD or a folder outside Git has none', async (t) => {
+  const { root, base, sourceControl } = repository(t)
+  git(root, 'checkout', '-q', '-b', 'feat/Checkout_Refund')
+  assert.equal(await sourceControl.branch('services/api'), 'feat/Checkout_Refund')
+
+  git(root, 'checkout', '-q', '--detach', base)
+  assert.equal(await sourceControl.branch('.'), null)
+
+  const outside = tempFolder(t)
+  assert.equal(await createGitSourceControl({ commandRunner: createNodeCommandRunner({ root: outside }) }).branch('.'), null)
+})
+
 test('commits since a sha come oldest first, with their parent, their subject, their body and the files they changed under the folder', async (t) => {
   const { root, base, sourceControl } = repository(t)
   const red = commit(root, 'test(payment): refund "full" (red) : fails\n\nRefs: #42', { 'services/api/src/Refund Test.cs': 'class RefundTest {}\n' })

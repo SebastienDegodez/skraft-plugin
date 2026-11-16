@@ -9,6 +9,7 @@
  *   remoteUrl: () => Promise<string | null>,
  *   repository: (dir: string) => Promise<string | null>,
  *   mergeBase: (dir: string, ref: string) => Promise<string | null>,
+ *   branch: (dir: string) => Promise<string | null>,
  *   isAncestor: (dir: string, ancestor: string, descendant: string) => Promise<boolean>,
  *   changedFiles: (dir: string, sha: string) => Promise<string[] | null>,
  *   head: (dir: string) => Promise<string | null>,
@@ -26,7 +27,8 @@
  *   or outside Git. dir is relative to the
  *   working copy. repository: the folder's repository top, relative
  *   to the working copy, null when dir is in no repository. mergeBase: `git merge-base HEAD
- *   <ref>` in dir, null when the ref or the merge base does not exist. isAncestor: whether the
+ *   <ref>` in dir, null when the ref or the merge base does not exist. branch: the branch HEAD is
+ *   on in dir, null when HEAD is detached. isAncestor: whether the
  *   first commit is the second or one it descends from; false when Git cannot tell. changedFiles: files
  *   under dir changed since sha (committed, staged, unstaged, untracked), relative to dir;
  *   null when Git cannot tell. head: the sha HEAD points at in dir, null when there is none.

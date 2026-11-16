@@ -287,7 +287,7 @@ const resultFailures = (reading) => (reading.ok ? [] : [{ code: 'invalid-result'
  * The files the attempt changed out of its write scope, then those in its scope it left
  * uncommitted outside the tracking folder: an agent with a shell commits its changes, refused
  * otherwise; the engine commits those of an agent with none, once its step is done.
- * @param {Pick<CheckDeps, 'sourceControl'>} deps
+ * @param {Pick<CheckDeps, 'sourceControl' | 'files'>} deps
  * @param {{ role: import('../../domain/pipeline/roles.mjs').Role, visitHeads: Head[] }} step
  * @param {{ slug: string, config: import('../../domain/config/skraft-config.mjs').SkraftConfig, touched: string[] }} attempt
  * @returns {Promise<{ failures: Failure[], uncommitted: UncommittedFile[] } | string>} a string: why Git cannot tell
@@ -295,8 +295,9 @@ const resultFailures = (reading) => (reading.ok ? [] : [{ code: 'invalid-result'
 const scopeFailures = async (deps, { role, visitHeads }, { slug, config, touched }) => {
   const left = await uncommittedPaths(deps, visitHeads)
   if (typeof left === 'string') return left
-  const refused = outOfScope(touched, writeScopeOf(role, { slug, config }))
-  const kept = left.filter(({ path }) => touched.includes(path) && !refused.includes(path) && pathUnder(path, trackingFolder(slug)) === null)
+  const folder = deps.files.folder
+  const refused = outOfScope(touched, writeScopeOf(role, { slug, folder, config }))
+  const kept = left.filter(({ path }) => touched.includes(path) && !refused.includes(path) && pathUnder(path, trackingFolder(slug, folder)) === null)
   const failures = [...refused.map((path) => failure('write-scope', `out of write scope: ${path}`)), ...(makesCommits(role) ? kept.map(uncommittedLine) : [])]
   return { failures, uncommitted: kept }
 }
@@ -361,11 +362,11 @@ const outOfScope = (touched, scope) => touched.filter((path) => isRefused(scope,
  * What the role may write: folders, the files right in component roots, never the engine's own
  * files: the configuration and the workflows of `.skraft/`.
  * @param {import('../../domain/pipeline/roles.mjs').Role} role
- * @param {{ slug: string, config: import('../../domain/config/skraft-config.mjs').SkraftConfig }} run
+ * @param {{ slug: string, folder: string, config: import('../../domain/config/skraft-config.mjs').SkraftConfig }} run folder: where the runs' folders are
  * @returns {WriteScope}
  */
-const writeScopeOf = (role, { slug, config }) => ({
-  allowed: allowedPaths(role, { slug, components: config.components }),
+const writeScopeOf = (role, { slug, folder, config }) => ({
+  allowed: allowedPaths(role, { slug, folder, components: config.components }),
   roots: rootFiles(role, config.components),
   engineFiles: [CONFIG_FILE],
 })
