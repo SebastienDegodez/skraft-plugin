@@ -142,7 +142,7 @@ Proposed → Accepted → Deprecated
          ↘ Rejected   (terminal)
 ```
 
-- **Proposed:** Decision is drafted and awaiting human ratification. A draft, not a record: rewrite it in place when a review, a human's refusal or a story asks for a change
+- **Proposed:** Decision is drafted and awaiting human ratification. A draft, not a record: rewrite it in place when a review or a story asks for a change; delete it when a human refuses it (see *A draft the human refuses*)
 - **Accepted:** Option was evaluated and adopted — the architecture reflects it
 - **Rejected:** Option was evaluated and explicitly declined — the ADR records the analysis so the debate is not re-run later without new evidence. Terminal: a `Rejected` ADR never becomes `Deprecated` or `Superseded`
 - **Deprecated:** An `Accepted` decision is no longer relevant (e.g., the feature was removed), but was never superseded
@@ -154,7 +154,9 @@ Proposed → Accepted → Deprecated
 - ADR-002 names ADR-001 on its `**Supersedes:**` line (or `**Amends:**` for a partial replacement) and its `supersedes:` (or `amends:`) header field, nowhere else. Its Context and Decision state its own decision without restating or citing ADR-001.
 - No ADR cites any other ADR, by `ADR-NNN`, link or `docs/adr/` path: any ADR may be superseded, so the reference goes stale.
 
-**No ADR is ever deleted.** The historical record of why a decision was made is as valuable as the decision itself.
+**No ADR on the default branch is ever deleted.** The historical record of why a decision was made is as valuable as the decision itself.
+
+**A draft the human refuses** is not a decision: delete its file and its row in `docs/adr/decisions-index.md`, renumber the remaining `Proposed` drafts of the pass so no number is skipped, and write the choice in place in its `Destination`. Never redraft it, never split it into other ADRs, never write another ADR on the same subject.
 
 **Which ADR is immutable — read its header `status`:**
 
@@ -205,7 +207,7 @@ An append-only registry, sibling of `docs/adr/supersessions.md`. One row per ADR
 | ADR | Title | Status | Chosen | Decision (1 line) | Ratified by | Date |
 |---|---|---|---|---|---|---|
 | 001 | CQRS dispatch bus | Accepted | CQRS+Bus | Introduce ICommandBus/IQueryBus pipeline over unchanged CQS | alice 2026-05-01 | 2026-05-01 |
-| 007 | Conformist Eligibility->Policy | Proposed | Conformist | Eligibility conforms to RiskProfile VO; ACL dropped | — | 2026-06-23 |
+| 007 | Event Sourcing for Policy | Proposed | Event Sourcing | Store Policy as events to answer the premium on any past date | — | 2026-06-23 |
 ```
 
 Write rule: when an ADR is first committed (`Status: Proposed`), append its row with `Ratified by: —`. On the ratification status flip, update **only** the `Status` and `Ratified by` cells of that row in place — once the ADR is `Accepted`, the row is never removed and never reordered (numbering stays monotonic, matching the supersession-registry doctrine); while it is `Proposed`, edit the row in place with its ADR.
@@ -235,23 +237,27 @@ This is the canonical definition of the `Proposed -> Accepted | Rejected` gate.
 
 ## Eligibility Gate — before drafting any ADR
 
-Run the gate on every candidate choice before writing an ADR body. Answer the questions in order; the first one that settles the verdict ends the gate.
+Run the gate on every candidate choice before writing an ADR body, none excepted: no kind of choice skips it. Every candidate starts `NOT ELIGIBLE`; it becomes `ELIGIBLE` only when it passes every question. Answer the questions in order; the first one that settles the verdict ends the gate.
 
-ADRs record **additions** and **deviations** from the project baseline. The baseline itself — the conventions enforced by project skills and architecture tests — is never an ADR.
+ADRs record **additions** and **deviations** from the project baseline. The baseline itself is never an ADR: the conventions enforced by project skills and architecture tests, and everything the project's documents or its `Accepted` ADRs already decide, whether or not a test enforces it.
 
-### Q0 — Is the choice imposed?
+### Q0 — Is the choice already decided?
+
+Search `ARCHITECTURE.md`, `CONTRIBUTING.md`, `AGENTS.md`, `docs/architecture/` (the context map and each context's tactical design) and the `Accepted` ADRs of `docs/adr/decisions-index.md`. A choice they state, under any wording, is decided: its bounded contexts, their relationships, a module per context, a rule written but not yet tested.
+
+YES → `NOT ELIGIBLE — documented in <path>:<line>`. Cite the line; the choice stays where it is written, or is completed there.
+
+### Q0b — Is the choice imposed?
 
 Imposed by the team, the PRD, the platform or an earlier decision: a front-end stack, an end-to-end test tool, how static resources are served, a build plugin, a hosting target.
 
 YES → `NOT ELIGIBLE — constraint`. Destination: `ARCHITECTURE.md`, `CONTRIBUTING.md` or `AGENTS.md`.
 
-### Q1 — Is the choice already enforced by a project skill, an automated architecture test or a project document?
+### Q1 — Is the choice already enforced by a project skill or an automated architecture test?
 
 Baseline examples: pure domain service with no IO (Clean Architecture layering, `clean-architecture-*` skill and architecture tests); CQS at method level, one handler per command or query; validation at the boundary with a pure core; convention-based DI registration; Value Object with a pure validator (tactical DDD); the repository pattern and where a repository interface lives, Domain or Application (`clean-architecture-*` skill).
 
-The baseline includes `ARCHITECTURE.md`, `CONTRIBUTING.md`, `AGENTS.md` and `docs/architecture/`.
-
-YES → `NOT ELIGIBLE — <skill, test or ADR that already enforces it>`, or `NOT ELIGIBLE — documented in <file> § <section>`.
+YES → `NOT ELIGIBLE — <skill or test that already enforces it>`.
 
 ### Q1b — Is it a project principle, convention or procedure?
 
@@ -263,16 +269,20 @@ YES → `NOT ELIGIBLE — documentation: <file> § <section>`. The architect wri
 
 Examples: "no hardcoded phase names", "don't duplicate validation logic", "avoid magic strings".
 
-YES → `NOT ELIGIBLE — baseline good practice / antipattern avoidance`. Exception: a choice reframed as a context-mapping relationship ("config as Published Language, guard as Conformist") goes on to Q3.
+YES → `NOT ELIGIBLE — baseline good practice / antipattern avoidance`. Reframing it as a context-mapping relationship ("config as Published Language, guard as Conformist") changes nothing: a relationship goes to `docs/architecture/context-map.md` (Q3).
 
-### Q3 — Does the choice add complexity beyond the baseline?
+### Q3 — Is the choice costly to undo and does it reach beyond one bounded context?
 
-It does when it:
-- establishes or changes a layer boundary
-- chooses an aggregate boundary
-- **adopts** a pattern that adds complexity: CQRS+Bus, Event Sourcing, Saga, Specification, ACL, Published Language, Conformist
-- chooses a physical isolation for a bounded context that departs from the baseline (a module or service per context instead of packages) or a coupling mechanism between contexts (an event instead of a read of a published snapshot). The contexts themselves, their Core/Supporting/Generic type, their relationships and the shared kernel are domain design: `ARCHITECTURE.md` and `docs/architecture/context-map.md`, never an ADR
-- affects a cross-cutting concern (error handling strategy, validation approach)
+Both must hold. Costly to undo: reversing it means migrating data, rewriting several modules or renegotiating a contract. Beyond one context: it binds several bounded contexts, modules, deployables or teams. It does when it:
+- establishes or changes a layer boundary for the whole application
+- chooses an aggregate boundary that crosses an existing context boundary
+- **adopts** a pattern that adds complexity across contexts: CQRS+Bus, Event Sourcing, Saga
+- chooses a physical isolation for a bounded context that departs from the baseline (a module or service per context instead of packages) or a coupling mechanism between contexts (an event instead of a read of a published snapshot)
+- affects a cross-cutting concern (error handling strategy, validation approach, transaction boundary)
+
+Domain design is never an ADR: the bounded contexts, their Core/Supporting/Generic type and their relationships (Anti-Corruption Layer, Conformist, Published Language, Open Host Service, Shared Kernel) go to `docs/architecture/context-map.md`.
+
+A choice confined to one bounded context → `NOT ELIGIBLE — local design`. Destination: `docs/architecture/{bounded-context}.md`. An aggregate inside the context, an Anti-Corruption Layer or translation inside its gateway, a mapping, a local type, a Specification.
 
 NO → `NOT ELIGIBLE — no complexity addition beyond baseline`. Implementation details (naming, formatting), configuration choices (connection string format, environment variable names) and library versions without architectural impact land here; switching EF Core to Dapper does not, it changes the data access strategy. So do: a front-end stack; an end-to-end test tool; how static resources are served; a build plugin; where a UI component is placed or mounted; a route tree; a member added to an existing enum or vocabulary; page state or URL parameters wiring; a library inside an adopted framework, unless it imposes a layer boundary or a data-loading model — then the ADR records that constraint, not the library's use.
 
@@ -281,6 +291,8 @@ NO → `NOT ELIGIBLE — no complexity addition beyond baseline`. Implementation
 Silence = baseline default. An AC requires evaluating the choice, the event model surfaced it as a decision point, or a technical constraint (performance, security, integration) forced it.
 
 NO → `NOT ELIGIBLE — unraised question; non-decision artefact (G14)`. A `Rejected` ADR follows the same rule.
+
+A choice argued from a future need fails Q4 too: "identical today but may diverge", "in case a second consumer appears", "ready for scale". Today's stories raise today's questions → `NOT ELIGIBLE — anticipation`.
 
 ### Q5 — Does the choice have genuine trade-offs?
 
@@ -295,7 +307,7 @@ One block per candidate:
 ```
 Candidate: Fail-closed posture for dispatch gate
 Verdict: ELIGIBLE
-Reason: Q0 NO, Q1 NO, Q2 NO, Q3 YES (cross-cutting error strategy), Q4 YES (AC-04), Q5 YES (over-blocking vs silent drift)
+Reason: Q0 NO, Q0b NO, Q1 NO, Q2 NO, Q3 YES (cross-cutting error strategy), Q4 YES (AC-04), Q5 YES (over-blocking vs silent drift)
 Destination: docs/adr/adr-004-fail-closed-dispatch.md
 
 Candidate: VO + validation at boundary
@@ -306,9 +318,24 @@ Destination: ARCHITECTURE.md § Modules (already stated)
 Candidate: No hardcoded phase names
 Verdict: NOT ELIGIBLE (as framed)
 Reason: Q2 YES — "no hardcoding" is a good practice, not a decision
+
+Candidate: Four bounded contexts, one package each in the existing modules
+Verdict: NOT ELIGIBLE
+Reason: Q0 YES — documented in ARCHITECTURE.md:24 and docs/architecture/context-map.md:8
+Destination: docs/architecture/context-map.md (already stated)
+
+Candidate: Anti-Corruption Layer translating the upstream submission into local types
+Verdict: NOT ELIGIBLE
+Reason: Q3 — local design: the translation sits in one context's gateway
+Destination: docs/architecture/proposal.md § Gateways
+
+Candidate: Separate local types because the two shapes "may diverge"
+Verdict: NOT ELIGIBLE
+Reason: Q4 — anticipation: the shapes are identical today and no story asks them to differ
+Destination: none; reuse the upstream shape
 ```
 
-Every candidate carries a `Destination: <document> § <section>`; a `NOT ELIGIBLE` choice is written in place there. Write an ADR only for an `ELIGIBLE` candidate. Gate failures map to review findings: DOC-AS-ADR (Q0, Q1b), ADR-INFLATION (Q1, Q3), GOOD-PRACTICE ADR (Q2), BASELINE DRIFT (Q1 + Q3), UNRAISED QUESTION (Q4), NON-DECISION (Q5).
+Every candidate carries a `Destination: <document> § <section>`; a `NOT ELIGIBLE` choice is written in place there. Write an ADR only for an `ELIGIBLE` candidate. Gate failures map to review findings: DOC-AS-ADR (Q0, Q0b, Q1b), ADR-INFLATION (Q1, Q3), GOOD-PRACTICE ADR (Q2), BASELINE DRIFT (Q1 + Q3), UNRAISED QUESTION (Q4), NON-DECISION (Q5).
 
 ---
 

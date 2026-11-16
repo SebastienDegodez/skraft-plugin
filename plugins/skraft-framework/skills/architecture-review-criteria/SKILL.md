@@ -59,8 +59,8 @@ extension loaded from outside the repository is coupled through a published cont
 Service / Published Language), never through domain types; a consumer inside the same module may
 share the model.
 
-**G11 — admissible forces** for CQRS, Event Sourcing, Saga, eventual consistency, a service split
-or an ACL: read/write asymmetry (shape, scale or freshness), an audit trail or temporal query a
+**G11 — admissible forces** for CQRS, Event Sourcing, Saga, eventual consistency or a service
+split: read/write asymmetry (shape, scale or freshness), an audit trail or temporal query a
 story requires, a cross-service boundary that cannot be one ACID transaction, a measured
 contention hotspot, a regulatory separation. "Consistency with existing code" alone is not one.
 The `Alternatives Rejected` section also needs a "do without the pattern" row argued on
@@ -74,6 +74,11 @@ architecture`, `Use repositories`, `Place the repository interface in Domain`, `
 baseline, or an addition on top of it (CQRS with a bus, Event Sourcing, a custom DI strategy), is
 valid.
 
-**G17 — eligibility.** A library ADR is eligible only through the constraint it imposes (layer boundary, data-loading model); a body about the library's usage is G17.
+An ADR that restates what `ARCHITECTURE.md`, `CONTRIBUTING.md`, `AGENTS.md`, `docs/architecture/`
+or an `Accepted` ADR already decides is G15 too, tested or not: cite the `path:line` it repeats.
+
+**G17 — eligibility.** An ADR whose choice stays inside one bounded context (an ACL or
+translation in its gateway, a mapping, a local type), records a bounded context or a context-map
+relationship, or is argued from a future need ("identical today", "may diverge") is G17. A library ADR is eligible only through the constraint it imposes (layer boundary, data-loading model); a body about the library's usage is G17.
 
 **G18 — decision level.** A line that would change when the code is refactored without changing the decision belongs in the tactical design, the diagrams or the code. A traceability reference (a user story, PRD or requirement id) is a finding at its line, the story that triggered the ADR included; a quality attribute stated with its measure as a force of the decision (`p95 ≤ 300 ms`, NFR id beside it or not) is none. The full list is in [references/gate-checks.md](references/gate-checks.md) G18.

@@ -1,7 +1,8 @@
 # DDD Strategic Design
 
-Strategic decisions (boundaries, relationships, subdomain classes) are architectural decisions:
-record them in ADRs.
+Strategic design (boundaries, relationships, subdomain classes) is domain design: record it in
+`docs/architecture/context-map.md`, never in an ADR. Only a physical isolation or a coupling
+mechanism between contexts that departs from the baseline goes through the ADR eligibility gate.
 
 ## Bounded context signals
 

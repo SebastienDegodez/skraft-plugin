@@ -374,3 +374,152 @@ stimuli:
       - Names at least one real cost the chosen option imposes, not only what it buys.
       - Engages both teams' stated concerns — release cadence and the friction of changes that cross the boundary — on their merits.
       - Explains the rejection of the other option from the specifics of this situation, so a later reader can tell whether the reasoning still holds.
+
+  - name: Leave a context split the architecture already settles off the decision record
+    prompt: |
+      We are starting the renewals work on the quoting platform. It is split into Quoting,
+      Eligibility, Policy and Billing, each a package inside the existing modules, and
+      renewals has to fit into that. Before anyone writes code, get the architecture
+      decisions behind this split on the record so the team has them.
+    tags:
+      intent: adversarial
+    constraints:
+      max_duration: 3m
+    environment:
+      files:
+        - src: fixtures/decided-corpus/docs/adr/adr-001-hexagonal-layering.md
+          dest: docs/adr/adr-001-hexagonal-layering.md
+        - src: fixtures/decided-corpus/docs/adr/adr-002-result-type-for-domain-errors.md
+          dest: docs/adr/adr-002-result-type-for-domain-errors.md
+        - src: fixtures/decided-corpus/docs/adr/adr-003-single-model-for-quote-reads.md
+          dest: docs/adr/adr-003-single-model-for-quote-reads.md
+        - src: fixtures/decided-corpus/docs/adr/decisions-index.md
+          dest: docs/adr/decisions-index.md
+        - src: fixtures/decided-corpus/docs/adr/supersessions.md
+          dest: docs/adr/supersessions.md
+        - src: fixtures/documented-architecture/ARCHITECTURE.md
+          dest: ARCHITECTURE.md
+        - src: fixtures/documented-architecture/docs/architecture/context-map.md
+          dest: docs/architecture/context-map.md
+      commandTimeout: 60s
+      commands:
+        - 'git init --quiet'
+        - 'git config user.email eval@example.invalid'
+        - 'git config user.name "SKRAFT Eval"'
+        - 'git add .'
+        - 'git commit --quiet -m "test: documented architecture and ratified decisions"'
+    graders:
+      - type: run-command
+        name: Sentinel — the decision corpus and architecture document are still readable
+        config:
+          command: bash
+          args:
+            - -c
+            - |-
+              set -e
+              for f in docs/adr/adr-*.md; do
+                awk '/^---$/{c++; if(c==1){f=1; next}} c==2{exit} f' "$f" | grep -qE '^status:' || exit 1
+              done
+              test -s docs/adr/decisions-index.md
+              test -s ARCHITECTURE.md
+          expected_exit_code: 0
+          timeout: 30s
+      - type: run-command
+        name: No new decision record was opened
+        config:
+          command: bash
+          args:
+            - -c
+            - |-
+              n=$(find docs/adr -name 'adr-*.md' | wc -l | tr -d '[:space:]')
+              rows=$(grep -cE '^\| *[0-9]+ *\|' docs/adr/decisions-index.md)
+              [ "$n" -eq 3 ] && [ "$rows" -eq 3 ]
+          expected_exit_code: 0
+          timeout: 30s
+      - type: prompt
+        config:
+          scoring: scale_1_10
+      - type: skill-invocation
+        name: The skill under test is loaded
+        config:
+          required:
+            - architecture-decisions
+    rubric:
+      - Recognises that the four-context split and its packaging are already settled in the repository's architecture document, and points to where.
+      - Does not produce a fresh decision write-up, with options and trade-offs, for a split the team has already made.
+      - Tells the team where renewals fits, reasoned from the existing description of the contexts.
+      - Anything genuinely new it adds lands in the existing architecture documentation, not in a new standalone decision document.
+
+  - name: Keep a speculative translation between identical shapes off the decision record
+    prompt: |
+      Policy reads eligibility results from Eligibility. Today both sides use exactly the same
+      fields. I want Policy's gateway to translate those results into Policy's own types, in
+      case the two drift apart one day. Record the decision for this.
+    tags:
+      intent: forced-concept
+    constraints:
+      max_duration: 3m
+    environment:
+      files:
+        - src: fixtures/decided-corpus/docs/adr/adr-001-hexagonal-layering.md
+          dest: docs/adr/adr-001-hexagonal-layering.md
+        - src: fixtures/decided-corpus/docs/adr/adr-002-result-type-for-domain-errors.md
+          dest: docs/adr/adr-002-result-type-for-domain-errors.md
+        - src: fixtures/decided-corpus/docs/adr/adr-003-single-model-for-quote-reads.md
+          dest: docs/adr/adr-003-single-model-for-quote-reads.md
+        - src: fixtures/decided-corpus/docs/adr/decisions-index.md
+          dest: docs/adr/decisions-index.md
+        - src: fixtures/decided-corpus/docs/adr/supersessions.md
+          dest: docs/adr/supersessions.md
+        - src: fixtures/documented-architecture/ARCHITECTURE.md
+          dest: ARCHITECTURE.md
+        - src: fixtures/documented-architecture/docs/architecture/context-map.md
+          dest: docs/architecture/context-map.md
+      commandTimeout: 60s
+      commands:
+        - 'git init --quiet'
+        - 'git config user.email eval@example.invalid'
+        - 'git config user.name "SKRAFT Eval"'
+        - 'git add .'
+        - 'git commit --quiet -m "test: documented architecture and ratified decisions"'
+    graders:
+      - type: run-command
+        name: Sentinel — the decision corpus and architecture document are still readable
+        config:
+          command: bash
+          args:
+            - -c
+            - |-
+              set -e
+              for f in docs/adr/adr-*.md; do
+                awk '/^---$/{c++; if(c==1){f=1; next}} c==2{exit} f' "$f" | grep -qE '^status:' || exit 1
+              done
+              test -s docs/adr/decisions-index.md
+              test -s ARCHITECTURE.md
+          expected_exit_code: 0
+          timeout: 30s
+      - type: run-command
+        name: No new decision record was opened
+        config:
+          command: bash
+          args:
+            - -c
+            - |-
+              n=$(find docs/adr -name 'adr-*.md' | wc -l | tr -d '[:space:]')
+              rows=$(grep -cE '^\| *[0-9]+ *\|' docs/adr/decisions-index.md)
+              [ "$n" -eq 3 ] && [ "$rows" -eq 3 ]
+          expected_exit_code: 0
+          timeout: 30s
+      - type: prompt
+        config:
+          scoring: scale_1_10
+      - type: skill-invocation
+        name: The skill under test is loaded
+        config:
+          required:
+            - architecture-decisions
+    rubric:
+      - Points out that the shapes are identical today and that the only argument offered is a possible future divergence.
+      - Does not raise the choice to a project-wide decision; if any translation is kept, it is described inside Policy's own design.
+      - Notes the documented relationship between the two contexts and says what would change it.
+      - Names a concrete signal that would make a translation worth its cost later, rather than adding it in advance.

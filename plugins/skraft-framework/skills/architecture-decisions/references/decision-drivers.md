@@ -95,6 +95,8 @@ Use this table in the Context section of an ADR when the decision is genuinely h
 
 ### Scenario 4: ACL vs Conformist Relationship
 
+> A relationship between contexts is domain design: the choice and its reason go to `docs/architecture/context-map.md`, the translation to the downstream context's tactical design. Weigh the forces below there; never in an ADR.
+
 **Forces in tension:**
 
 | Force | Conformist | Anti-Corruption Layer |

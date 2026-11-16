@@ -98,9 +98,9 @@ flowchart LR
 Starbucks).*
 
 La lentille `architecture-compliance` de la revue DESIGN exige que chaque relation entre
-contextes porte un pattern explicite et qu'aucune dépendance ne reste non déclarée (G6). Une
-ACL exige toujours un ADR, et cet ADR doit citer une force admissible et évaluer l'option « sans
-le pattern » (lentille `fitness`, G11).
+contextes porte un pattern explicite et qu'aucune dépendance ne reste non déclarée (G6). La
+relation, ACL comprise, s'écrit sur la context map et sa traduction dans le design tactique du
+contexte aval ; elle n'a jamais d'ADR à elle (lentille `fitness`, G17).
 
 ## Du stratégique au tactique
 
@@ -182,10 +182,13 @@ et reste dans le dossier de suivi du run. La liste complète :
 ## La cohérence entre artefacts
 
 Quatre artefacts décrivent le même modèle ; ils divergent facilement. Le `solution-architect`
-tient une **consistency matrix** par story : une ligne par concept qu'un ADR nomme, une colonne
-par artefact, un verdict par ligne. Les ADR sont la source de vérité ; sur une divergence de
-libellé ou de classification, l'artefact descriptif est réécrit pour reprendre le libellé de
-l'ADR, et la réécriture est journalisée. Le moteur relit ces enregistrements à chaque tentative, et l'humain ratifie les ADR avant que DISTILL ne s'appuie dessus. Le détail
+tient une **consistency matrix** par story : une ligne par concept dont les stories dépendent, une
+colonne par artefact, un verdict par ligne. La source de vérité est la documentation
+d'architecture du projet et ses ADR ; sur une divergence de libellé ou de classification,
+l'artefact descriptif est réécrit pour reprendre le libellé de la source, et la réécriture est
+journalisée. Un concept a besoin d'une source, jamais d'un ADR à lui. Le moteur relit ces
+enregistrements à chaque tentative, et l'humain ratifie les ADR, quand il y en a, avant que
+DISTILL ne s'appuie dessus. Le détail
 de la phase est dans [DESIGN](./pipeline/design.md).
 
 ## Les compromis
