@@ -330,6 +330,17 @@ test('the scenarios live where the component says: the folder of its pair, not a
   assert.equal((await elsewhere.start()).code, 'repeated-failure', 'a .feature under docs/features is nowhere this component reads; its repeated failure stops')
 })
 
+test('a features folder nests its scenarios at any depth, beside the step files of its runner', async () => {
+  const unit = { ...API, bdd: [{ features: 'src/__tests__', steps: 'src/__tests__' }] }
+  const deep = 'src/__tests__/components/Upload/components/Card/pay-by-card.feature'
+  const host = runOf([designer({ features: { [deep]: SCENARIO, 'src/__tests__/components/Upload/steps.test.ts': 'export {}' } })], [unit])
+
+  const outcome = await host.start()
+
+  assert.deepEqual(distill(host), [[1, 'done', null, []]])
+  assert.equal(outcome.status, 'done', outcome.reason)
+})
+
 test('the folder a component declares is the one the engine creates and the one the designer may write in, wherever it sits', async () => {
   const apart = { ...API, bdd: [{ features: 'specs/features', steps: 'tests/Steps' }] }
   const host = runOf([designer({ features: { 'specs/features/checkout/pay-by-card.feature': SCENARIO } })], [apart])
