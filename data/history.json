@@ -4183,6 +4183,78 @@
             "tokenDeltaPercent": 96.7
           }
         }
+      },
+      {
+        "id": "43898916152:skill:characterize-with-contracts:2026-11-16T15:46:53.273Z",
+        "timestamp": "2026-11-16T15:46:53.273Z",
+        "commit": "a766242b5b1e933164bbc7ee520d7161d7c3acde",
+        "run": "43898916152",
+        "url": "https://github.com/SebastienDegodez/skraft-plugin/actions/runs/43898916152",
+        "runner": "vally",
+        "model": "claude-sonnet-5.5",
+        "judgeModel": "gpt-5.6-luna",
+        "state": "inconclusive",
+        "reason": "underpowered (2W/8T/2L: 4 discordant pair(s); no tally below 6 can reach p<=0.05, so budget more runs) [3 pair(s) excluded: the skill never activated on the skilled run]",
+        "descriptorSha": null,
+        "netWin": 0,
+        "trialCount": 12,
+        "meanScore": 0.18666666666666665,
+        "confidenceInterval": {
+          "low": 0.07226666666666665,
+          "high": 0.30106666666666665
+        },
+        "signTest": {
+          "wins": 2,
+          "ties": 8,
+          "losses": 2,
+          "pValue": 1
+        },
+        "metrics": {
+          "quality": {
+            "baseline": 0.985,
+            "skilled": 0.985,
+            "delta": 0
+          },
+          "activation": {
+            "expected": 10,
+            "actual": 7,
+            "unexpected": 0,
+            "rate": 0.7
+          },
+          "efficiency": {
+            "baseline": {
+              "durationMs": 21797,
+              "tokens": 72926,
+              "turns": 4,
+              "toolCalls": 3
+            },
+            "skilled": {
+              "durationMs": 26852,
+              "tokens": 78045,
+              "turns": 4,
+              "toolCalls": 3
+            },
+            "durationDeltaPercent": 23.2,
+            "tokenDeltaPercent": 7
+          },
+          "efficiencyPaired": {
+            "pairCount": 7,
+            "baseline": {
+              "durationMs": 24197,
+              "tokens": 73841,
+              "turns": 4,
+              "toolCalls": 3
+            },
+            "skilled": {
+              "durationMs": 35566,
+              "tokens": 131139,
+              "turns": 5,
+              "toolCalls": 7
+            },
+            "durationDeltaPercent": 47,
+            "tokenDeltaPercent": 77.6
+          }
+        }
       }
     ],
     "mikado-method": [

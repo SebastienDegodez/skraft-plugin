@@ -1,5 +1,5 @@
 {
-  "generated": "2026-11-16T15:36:37.225Z",
+  "generated": "2026-11-16T15:47:26.790Z",
   "sessions": [
     {
       "id": "scheduled/2026-09-28/acceptance-designer/absent-acceptance-criteria-halt-the-distillation--main--run0",
@@ -4771,6 +4771,396 @@
         "pr-601"
       ],
       "mtime": 1794843395301.7441
+    },
+    {
+      "id": "pr/605/characterize-with-contracts/a-new-feature-is-driven-by-its-tests-not-characterized--baseline--run0",
+      "name": "characterize-with-contracts / A new feature is driven by its tests, not characterized (baseline, run 0)",
+      "url": "sessions/pr/605/characterize-with-contracts/a-new-feature-is-driven-by-its-tests-not-characterized--baseline--run0.jsonl",
+      "tags": [
+        "pr",
+        "characterize-with-contracts",
+        "baseline",
+        "a-new-feature-is-driven-by-its-tests-not-characterized",
+        "pr-605"
+      ],
+      "mtime": 1794844045106.7917
+    },
+    {
+      "id": "pr/605/characterize-with-contracts/a-new-feature-is-driven-by-its-tests-not-characterized--baseline--run1",
+      "name": "characterize-with-contracts / A new feature is driven by its tests, not characterized (baseline, run 1)",
+      "url": "sessions/pr/605/characterize-with-contracts/a-new-feature-is-driven-by-its-tests-not-characterized--baseline--run1.jsonl",
+      "tags": [
+        "pr",
+        "characterize-with-contracts",
+        "baseline",
+        "a-new-feature-is-driven-by-its-tests-not-characterized",
+        "pr-605"
+      ],
+      "mtime": 1794844045108.792
+    },
+    {
+      "id": "pr/605/characterize-with-contracts/a-new-feature-is-driven-by-its-tests-not-characterized--baseline--run2",
+      "name": "characterize-with-contracts / A new feature is driven by its tests, not characterized (baseline, run 2)",
+      "url": "sessions/pr/605/characterize-with-contracts/a-new-feature-is-driven-by-its-tests-not-characterized--baseline--run2.jsonl",
+      "tags": [
+        "pr",
+        "characterize-with-contracts",
+        "baseline",
+        "a-new-feature-is-driven-by-its-tests-not-characterized",
+        "pr-605"
+      ],
+      "mtime": 1794844045108.792
+    },
+    {
+      "id": "pr/605/characterize-with-contracts/a-new-feature-is-driven-by-its-tests-not-characterized--baseline--run3",
+      "name": "characterize-with-contracts / A new feature is driven by its tests, not characterized (baseline, run 3)",
+      "url": "sessions/pr/605/characterize-with-contracts/a-new-feature-is-driven-by-its-tests-not-characterized--baseline--run3.jsonl",
+      "tags": [
+        "pr",
+        "characterize-with-contracts",
+        "baseline",
+        "a-new-feature-is-driven-by-its-tests-not-characterized",
+        "pr-605"
+      ],
+      "mtime": 1794844045111.792
+    },
+    {
+      "id": "pr/605/characterize-with-contracts/a-new-feature-is-driven-by-its-tests-not-characterized--baseline--run4",
+      "name": "characterize-with-contracts / A new feature is driven by its tests, not characterized (baseline, run 4)",
+      "url": "sessions/pr/605/characterize-with-contracts/a-new-feature-is-driven-by-its-tests-not-characterized--baseline--run4.jsonl",
+      "tags": [
+        "pr",
+        "characterize-with-contracts",
+        "baseline",
+        "a-new-feature-is-driven-by-its-tests-not-characterized",
+        "pr-605"
+      ],
+      "mtime": 1794844045104.7917
+    },
+    {
+      "id": "pr/605/characterize-with-contracts/a-suspected-bug-is-pinned-not-fixed--baseline--run0",
+      "name": "characterize-with-contracts / A suspected bug is pinned, not fixed (baseline, run 0)",
+      "url": "sessions/pr/605/characterize-with-contracts/a-suspected-bug-is-pinned-not-fixed--baseline--run0.jsonl",
+      "tags": [
+        "pr",
+        "characterize-with-contracts",
+        "baseline",
+        "a-suspected-bug-is-pinned-not-fixed",
+        "pr-605"
+      ],
+      "mtime": 1794844045104.7917
+    },
+    {
+      "id": "pr/605/characterize-with-contracts/a-suspected-bug-is-pinned-not-fixed--baseline--run1",
+      "name": "characterize-with-contracts / A suspected bug is pinned, not fixed (baseline, run 1)",
+      "url": "sessions/pr/605/characterize-with-contracts/a-suspected-bug-is-pinned-not-fixed--baseline--run1.jsonl",
+      "tags": [
+        "pr",
+        "characterize-with-contracts",
+        "baseline",
+        "a-suspected-bug-is-pinned-not-fixed",
+        "pr-605"
+      ],
+      "mtime": 1794844045106.7917
+    },
+    {
+      "id": "pr/605/characterize-with-contracts/a-suspected-bug-is-pinned-not-fixed--baseline--run2",
+      "name": "characterize-with-contracts / A suspected bug is pinned, not fixed (baseline, run 2)",
+      "url": "sessions/pr/605/characterize-with-contracts/a-suspected-bug-is-pinned-not-fixed--baseline--run2.jsonl",
+      "tags": [
+        "pr",
+        "characterize-with-contracts",
+        "baseline",
+        "a-suspected-bug-is-pinned-not-fixed",
+        "pr-605"
+      ],
+      "mtime": 1794844045100.7917
+    },
+    {
+      "id": "pr/605/characterize-with-contracts/a-suspected-bug-is-pinned-not-fixed--baseline--run3",
+      "name": "characterize-with-contracts / A suspected bug is pinned, not fixed (baseline, run 3)",
+      "url": "sessions/pr/605/characterize-with-contracts/a-suspected-bug-is-pinned-not-fixed--baseline--run3.jsonl",
+      "tags": [
+        "pr",
+        "characterize-with-contracts",
+        "baseline",
+        "a-suspected-bug-is-pinned-not-fixed",
+        "pr-605"
+      ],
+      "mtime": 1794844045100.7917
+    },
+    {
+      "id": "pr/605/characterize-with-contracts/a-suspected-bug-is-pinned-not-fixed--baseline--run4",
+      "name": "characterize-with-contracts / A suspected bug is pinned, not fixed (baseline, run 4)",
+      "url": "sessions/pr/605/characterize-with-contracts/a-suspected-bug-is-pinned-not-fixed--baseline--run4.jsonl",
+      "tags": [
+        "pr",
+        "characterize-with-contracts",
+        "baseline",
+        "a-suspected-bug-is-pinned-not-fixed",
+        "pr-605"
+      ],
+      "mtime": 1794844045100.7917
+    },
+    {
+      "id": "pr/605/characterize-with-contracts/tests-before-a-refactor-pin-today-s-behaviour-quirks-included--baseline--run0",
+      "name": "characterize-with-contracts / Tests before a refactor pin today's behaviour, quirks included (baseline, run 0)",
+      "url": "sessions/pr/605/characterize-with-contracts/tests-before-a-refactor-pin-today-s-behaviour-quirks-included--baseline--run0.jsonl",
+      "tags": [
+        "pr",
+        "characterize-with-contracts",
+        "baseline",
+        "tests-before-a-refactor-pin-today-s-behaviour-quirks-included",
+        "pr-605"
+      ],
+      "mtime": 1794844045100.7917
+    },
+    {
+      "id": "pr/605/characterize-with-contracts/tests-before-a-refactor-pin-today-s-behaviour-quirks-included--baseline--run1",
+      "name": "characterize-with-contracts / Tests before a refactor pin today's behaviour, quirks included (baseline, run 1)",
+      "url": "sessions/pr/605/characterize-with-contracts/tests-before-a-refactor-pin-today-s-behaviour-quirks-included--baseline--run1.jsonl",
+      "tags": [
+        "pr",
+        "characterize-with-contracts",
+        "baseline",
+        "tests-before-a-refactor-pin-today-s-behaviour-quirks-included",
+        "pr-605"
+      ],
+      "mtime": 1794844045102.7917
+    },
+    {
+      "id": "pr/605/characterize-with-contracts/tests-before-a-refactor-pin-today-s-behaviour-quirks-included--baseline--run2",
+      "name": "characterize-with-contracts / Tests before a refactor pin today's behaviour, quirks included (baseline, run 2)",
+      "url": "sessions/pr/605/characterize-with-contracts/tests-before-a-refactor-pin-today-s-behaviour-quirks-included--baseline--run2.jsonl",
+      "tags": [
+        "pr",
+        "characterize-with-contracts",
+        "baseline",
+        "tests-before-a-refactor-pin-today-s-behaviour-quirks-included",
+        "pr-605"
+      ],
+      "mtime": 1794844045104.7917
+    },
+    {
+      "id": "pr/605/characterize-with-contracts/tests-before-a-refactor-pin-today-s-behaviour-quirks-included--baseline--run3",
+      "name": "characterize-with-contracts / Tests before a refactor pin today's behaviour, quirks included (baseline, run 3)",
+      "url": "sessions/pr/605/characterize-with-contracts/tests-before-a-refactor-pin-today-s-behaviour-quirks-included--baseline--run3.jsonl",
+      "tags": [
+        "pr",
+        "characterize-with-contracts",
+        "baseline",
+        "tests-before-a-refactor-pin-today-s-behaviour-quirks-included",
+        "pr-605"
+      ],
+      "mtime": 1794844045102.7917
+    },
+    {
+      "id": "pr/605/characterize-with-contracts/tests-before-a-refactor-pin-today-s-behaviour-quirks-included--baseline--run4",
+      "name": "characterize-with-contracts / Tests before a refactor pin today's behaviour, quirks included (baseline, run 4)",
+      "url": "sessions/pr/605/characterize-with-contracts/tests-before-a-refactor-pin-today-s-behaviour-quirks-included--baseline--run4.jsonl",
+      "tags": [
+        "pr",
+        "characterize-with-contracts",
+        "baseline",
+        "tests-before-a-refactor-pin-today-s-behaviour-quirks-included",
+        "pr-605"
+      ],
+      "mtime": 1794844045103.7917
+    },
+    {
+      "id": "pr/605/characterize-with-contracts/a-new-feature-is-driven-by-its-tests-not-characterized--skilled--run0",
+      "name": "characterize-with-contracts / A new feature is driven by its tests, not characterized (skilled, run 0)",
+      "url": "sessions/pr/605/characterize-with-contracts/a-new-feature-is-driven-by-its-tests-not-characterized--skilled--run0.jsonl",
+      "tags": [
+        "pr",
+        "characterize-with-contracts",
+        "skilled",
+        "a-new-feature-is-driven-by-its-tests-not-characterized",
+        "pr-605"
+      ],
+      "mtime": 1794844045101.7917
+    },
+    {
+      "id": "pr/605/characterize-with-contracts/a-new-feature-is-driven-by-its-tests-not-characterized--skilled--run1",
+      "name": "characterize-with-contracts / A new feature is driven by its tests, not characterized (skilled, run 1)",
+      "url": "sessions/pr/605/characterize-with-contracts/a-new-feature-is-driven-by-its-tests-not-characterized--skilled--run1.jsonl",
+      "tags": [
+        "pr",
+        "characterize-with-contracts",
+        "skilled",
+        "a-new-feature-is-driven-by-its-tests-not-characterized",
+        "pr-605"
+      ],
+      "mtime": 1794844045106.7917
+    },
+    {
+      "id": "pr/605/characterize-with-contracts/a-new-feature-is-driven-by-its-tests-not-characterized--skilled--run2",
+      "name": "characterize-with-contracts / A new feature is driven by its tests, not characterized (skilled, run 2)",
+      "url": "sessions/pr/605/characterize-with-contracts/a-new-feature-is-driven-by-its-tests-not-characterized--skilled--run2.jsonl",
+      "tags": [
+        "pr",
+        "characterize-with-contracts",
+        "skilled",
+        "a-new-feature-is-driven-by-its-tests-not-characterized",
+        "pr-605"
+      ],
+      "mtime": 1794844045106.7917
+    },
+    {
+      "id": "pr/605/characterize-with-contracts/a-new-feature-is-driven-by-its-tests-not-characterized--skilled--run3",
+      "name": "characterize-with-contracts / A new feature is driven by its tests, not characterized (skilled, run 3)",
+      "url": "sessions/pr/605/characterize-with-contracts/a-new-feature-is-driven-by-its-tests-not-characterized--skilled--run3.jsonl",
+      "tags": [
+        "pr",
+        "characterize-with-contracts",
+        "skilled",
+        "a-new-feature-is-driven-by-its-tests-not-characterized",
+        "pr-605"
+      ],
+      "mtime": 1794844045109.792
+    },
+    {
+      "id": "pr/605/characterize-with-contracts/a-new-feature-is-driven-by-its-tests-not-characterized--skilled--run4",
+      "name": "characterize-with-contracts / A new feature is driven by its tests, not characterized (skilled, run 4)",
+      "url": "sessions/pr/605/characterize-with-contracts/a-new-feature-is-driven-by-its-tests-not-characterized--skilled--run4.jsonl",
+      "tags": [
+        "pr",
+        "characterize-with-contracts",
+        "skilled",
+        "a-new-feature-is-driven-by-its-tests-not-characterized",
+        "pr-605"
+      ],
+      "mtime": 1794844045107.7917
+    },
+    {
+      "id": "pr/605/characterize-with-contracts/a-suspected-bug-is-pinned-not-fixed--skilled--run0",
+      "name": "characterize-with-contracts / A suspected bug is pinned, not fixed (skilled, run 0)",
+      "url": "sessions/pr/605/characterize-with-contracts/a-suspected-bug-is-pinned-not-fixed--skilled--run0.jsonl",
+      "tags": [
+        "pr",
+        "characterize-with-contracts",
+        "skilled",
+        "a-suspected-bug-is-pinned-not-fixed",
+        "pr-605"
+      ],
+      "mtime": 1794844045114.792
+    },
+    {
+      "id": "pr/605/characterize-with-contracts/a-suspected-bug-is-pinned-not-fixed--skilled--run1",
+      "name": "characterize-with-contracts / A suspected bug is pinned, not fixed (skilled, run 1)",
+      "url": "sessions/pr/605/characterize-with-contracts/a-suspected-bug-is-pinned-not-fixed--skilled--run1.jsonl",
+      "tags": [
+        "pr",
+        "characterize-with-contracts",
+        "skilled",
+        "a-suspected-bug-is-pinned-not-fixed",
+        "pr-605"
+      ],
+      "mtime": 1794844045109.792
+    },
+    {
+      "id": "pr/605/characterize-with-contracts/a-suspected-bug-is-pinned-not-fixed--skilled--run2",
+      "name": "characterize-with-contracts / A suspected bug is pinned, not fixed (skilled, run 2)",
+      "url": "sessions/pr/605/characterize-with-contracts/a-suspected-bug-is-pinned-not-fixed--skilled--run2.jsonl",
+      "tags": [
+        "pr",
+        "characterize-with-contracts",
+        "skilled",
+        "a-suspected-bug-is-pinned-not-fixed",
+        "pr-605"
+      ],
+      "mtime": 1794844045113.792
+    },
+    {
+      "id": "pr/605/characterize-with-contracts/a-suspected-bug-is-pinned-not-fixed--skilled--run3",
+      "name": "characterize-with-contracts / A suspected bug is pinned, not fixed (skilled, run 3)",
+      "url": "sessions/pr/605/characterize-with-contracts/a-suspected-bug-is-pinned-not-fixed--skilled--run3.jsonl",
+      "tags": [
+        "pr",
+        "characterize-with-contracts",
+        "skilled",
+        "a-suspected-bug-is-pinned-not-fixed",
+        "pr-605"
+      ],
+      "mtime": 1794844045110.792
+    },
+    {
+      "id": "pr/605/characterize-with-contracts/a-suspected-bug-is-pinned-not-fixed--skilled--run4",
+      "name": "characterize-with-contracts / A suspected bug is pinned, not fixed (skilled, run 4)",
+      "url": "sessions/pr/605/characterize-with-contracts/a-suspected-bug-is-pinned-not-fixed--skilled--run4.jsonl",
+      "tags": [
+        "pr",
+        "characterize-with-contracts",
+        "skilled",
+        "a-suspected-bug-is-pinned-not-fixed",
+        "pr-605"
+      ],
+      "mtime": 1794844045110.792
+    },
+    {
+      "id": "pr/605/characterize-with-contracts/tests-before-a-refactor-pin-today-s-behaviour-quirks-included--skilled--run0",
+      "name": "characterize-with-contracts / Tests before a refactor pin today's behaviour, quirks included (skilled, run 0)",
+      "url": "sessions/pr/605/characterize-with-contracts/tests-before-a-refactor-pin-today-s-behaviour-quirks-included--skilled--run0.jsonl",
+      "tags": [
+        "pr",
+        "characterize-with-contracts",
+        "skilled",
+        "tests-before-a-refactor-pin-today-s-behaviour-quirks-included",
+        "pr-605"
+      ],
+      "mtime": 1794844045114.792
+    },
+    {
+      "id": "pr/605/characterize-with-contracts/tests-before-a-refactor-pin-today-s-behaviour-quirks-included--skilled--run1",
+      "name": "characterize-with-contracts / Tests before a refactor pin today's behaviour, quirks included (skilled, run 1)",
+      "url": "sessions/pr/605/characterize-with-contracts/tests-before-a-refactor-pin-today-s-behaviour-quirks-included--skilled--run1.jsonl",
+      "tags": [
+        "pr",
+        "characterize-with-contracts",
+        "skilled",
+        "tests-before-a-refactor-pin-today-s-behaviour-quirks-included",
+        "pr-605"
+      ],
+      "mtime": 1794844045113.792
+    },
+    {
+      "id": "pr/605/characterize-with-contracts/tests-before-a-refactor-pin-today-s-behaviour-quirks-included--skilled--run2",
+      "name": "characterize-with-contracts / Tests before a refactor pin today's behaviour, quirks included (skilled, run 2)",
+      "url": "sessions/pr/605/characterize-with-contracts/tests-before-a-refactor-pin-today-s-behaviour-quirks-included--skilled--run2.jsonl",
+      "tags": [
+        "pr",
+        "characterize-with-contracts",
+        "skilled",
+        "tests-before-a-refactor-pin-today-s-behaviour-quirks-included",
+        "pr-605"
+      ],
+      "mtime": 1794844045114.792
+    },
+    {
+      "id": "pr/605/characterize-with-contracts/tests-before-a-refactor-pin-today-s-behaviour-quirks-included--skilled--run3",
+      "name": "characterize-with-contracts / Tests before a refactor pin today's behaviour, quirks included (skilled, run 3)",
+      "url": "sessions/pr/605/characterize-with-contracts/tests-before-a-refactor-pin-today-s-behaviour-quirks-included--skilled--run3.jsonl",
+      "tags": [
+        "pr",
+        "characterize-with-contracts",
+        "skilled",
+        "tests-before-a-refactor-pin-today-s-behaviour-quirks-included",
+        "pr-605"
+      ],
+      "mtime": 1794844045113.792
+    },
+    {
+      "id": "pr/605/characterize-with-contracts/tests-before-a-refactor-pin-today-s-behaviour-quirks-included--skilled--run4",
+      "name": "characterize-with-contracts / Tests before a refactor pin today's behaviour, quirks included (skilled, run 4)",
+      "url": "sessions/pr/605/characterize-with-contracts/tests-before-a-refactor-pin-today-s-behaviour-quirks-included--skilled--run4.jsonl",
+      "tags": [
+        "pr",
+        "characterize-with-contracts",
+        "skilled",
+        "tests-before-a-refactor-pin-today-s-behaviour-quirks-included",
+        "pr-605"
+      ],
+      "mtime": 1794844045114.792
     }
   ]
 }
