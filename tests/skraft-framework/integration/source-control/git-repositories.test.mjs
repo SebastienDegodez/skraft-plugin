@@ -42,6 +42,10 @@ test('the merge base is taken in the folder\'s own repository, and is null for a
   assert.equal(await sourceControl.mergeBase('../payment-web', 'main'), webBase)
   assert.equal(await sourceControl.mergeBase('../payment-web', 'origin/main'), null)
   assert.equal(await sourceControl.mergeBase('.', 'no-such-branch'), null)
+  const changed = git(work, 'rev-parse', 'HEAD').trim()
+  assert.equal(await sourceControl.isAncestor('services/api', workBase, changed), true)
+  assert.equal(await sourceControl.isAncestor('services/api', changed, workBase), false)
+  assert.equal(await sourceControl.isAncestor('.', workBase, 'no-such-branch'), false)
 })
 
 test('the files of a folder are those Git tracks or would add, relative to it; ignored ones are not, and outside Git there are none', async (t) => {

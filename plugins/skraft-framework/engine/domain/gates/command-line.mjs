@@ -58,9 +58,34 @@ export const parseCommand = (line, { baseSha = null } = {}) => {
   const text = baseSha ? line.replaceAll('{baseSha}', baseSha) : line
   const { words, quote } = scanWords(text)
   if (quote !== null) return { ok: false, reason: `has an unclosed ${quote} quote` }
+  const reason = shellReason(words)
+  return reason === null ? { ok: true, argv: words.map((candidate) => candidate.text) } : { ok: false, reason }
+}
+
+/**
+ * Why the words need a shell the engine does not start: syntax it would act on, or variables it
+ * would set before the program; null when they run as written.
+ * @param {Word[]} words @returns {string | null}
+ */
+const shellReason = (words) => {
   const shell = words.find((candidate) => !candidate.quoted && SHELL_SYNTAX.test(candidate.text))
-  if (shell !== undefined) return { ok: false, reason: `uses shell syntax (${shell.text}); put the steps in a script and call the script` }
-  return { ok: true, argv: words.map((candidate) => candidate.text) }
+  if (shell !== undefined) return `uses shell syntax (${shell.text}); put the steps in a script and call the script`
+  const assigned = assignmentsOf(words)
+  if (assigned.length > 0) return `sets ${assigned.join(', ')} before its program, which no shell reads; put the variables and the command in a script and call the script`
+  return null
+}
+
+/** A variable a shell sets for the program after it: `NAME=value`. */
+const ASSIGNMENT = /^([A-Za-z_]\w*)=/
+
+/**
+ * The variables the words set before the program, as a shell would read them; none when the
+ * first word is the program.
+ * @param {Word[]} words @returns {string[]}
+ */
+const assignmentsOf = (words) => {
+  const end = words.findIndex(({ text }) => !ASSIGNMENT.test(text))
+  return words.slice(0, end === -1 ? words.length : end).map(({ text }) => /** @type {RegExpExecArray} */ (ASSIGNMENT.exec(text))[1])
 }
 
 /**

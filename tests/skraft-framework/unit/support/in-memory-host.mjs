@@ -306,10 +306,15 @@ export class InMemoryWorkspace {
     this.files = new Map(Object.entries(files).map(([path, text]) => [tidy(path), text]))
     /** @type {Map<string, string>} */
     this.unlistable = new Map()
+    /** @type {Map<string, string>} files whose read rejects, as Node's does for what is no regular file */
+    this.unreadable = new Map()
     /** @type {Array<[string, string]>} each file replaced in one rename, with its new text, in order */
     this.replaced = []
   }
-  async read(path) { return this.files.get(tidy(path)) ?? null }
+  async read(path) {
+    if (this.unreadable.has(tidy(path))) throw new Error(this.unreadable.get(tidy(path)))
+    return this.files.get(tidy(path)) ?? null
+  }
   async write(path, text) { this.files.set(tidy(path), text) }
   async replace(path, text) {
     this.replaced.push([tidy(path), text])
@@ -369,7 +374,8 @@ export const GITHUB_REMOTE = 'https://github.com/acme/shop.git'
  */
 export class InMemorySourceControl {
   /**
-   * @param {Record<string, { top?: string, mergeBases?: Record<string, string>, changed?: string[] | null }>} folders
+   * @param {Record<string, { top?: string, mergeBases?: Record<string, string>, ancestry?: Record<string, string[]>, changed?: string[] | null }>} folders
+   *   ancestry: the commits each sha descends from
    * @param {{ unavailable?: string | null, remote?: string | null }} [options] unavailable: why Git cannot run here, null when it can;
    *   remote: the URL of the working copy's remote, null without one
    */
@@ -391,6 +397,11 @@ export class InMemorySourceControl {
     return [...new Set(all)].filter((file) => under(file, at.inner)).map((file) => inside(file, at.inner))
   }
   async mergeBase(dir, ref) { return this.folders[tidy(dir) || '.']?.mergeBases?.[ref] ?? null }
+  /** Like Git, which takes no null in its argv, it refuses a commit that is no sha. */
+  async isAncestor(dir, ancestor, descendant) {
+    if (typeof ancestor !== 'string' || typeof descendant !== 'string') throw new TypeError(`isAncestor of ${dir} needs two shas, got ${ancestor} and ${descendant}`)
+    return this.folders[tidy(dir) || '.']?.ancestry?.[descendant]?.includes(ancestor) ?? false
+  }
   /** Like Git, which takes no null in its argv, it refuses a base that is no sha. */
   async changedFiles(dir, sha) {
     if (typeof sha !== 'string') throw new TypeError(`changedFiles of ${dir} needs a sha, got ${sha}`)
@@ -504,6 +515,12 @@ export class InMemoryGit {
     return [...new Set(all)].filter((file) => under(file, at.inner)).map((file) => inside(file, at.inner))
   }
   async mergeBase(dir, ref) { return this.locate(dir)?.repo.mergeBases[ref] ?? null }
+  /** Whether a commit of the repository's history comes before another one, or is it. */
+  async isAncestor(dir, ancestor, descendant) {
+    if (typeof ancestor !== 'string' || typeof descendant !== 'string') throw new TypeError(`isAncestor of ${dir} needs two shas, got ${ancestor} and ${descendant}`)
+    const shas = this.locate(dir)?.repo.history.map(({ sha }) => sha) ?? []
+    return shas.includes(ancestor) && shas.includes(descendant) && shas.indexOf(ancestor) <= shas.indexOf(descendant)
+  }
   async head(dir) { return this.locate(dir)?.repo.history.at(-1).sha ?? null }
   async commits(dir, since) {
     const at = this.locate(dir)

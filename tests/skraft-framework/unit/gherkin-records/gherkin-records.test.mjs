@@ -431,3 +431,15 @@ test('a story spanning two components is checked against the folders of both, ea
   assert.deepEqual(distill(half)[0][3], [`${PLAN} names ship.feature, which is no .feature of the working copy (#524)`],
     'the folder of the second component is read too, so what it does not hold is missing')
 })
+
+test('a .feature the plan does not name is never opened: one of a component the story does not touch that the machine cannot read leaves DISTILL to close', async () => {
+  const web = { ...API, name: 'web', root: 'web', bdd: [{ features: 'features', steps: 'tests/Steps' }] }
+  const legacy = 'web/features/shell/errors/not-found.feature'
+  const host = runOf([designer({ features: { [CARD]: SCENARIO }, elsewhere: { [legacy]: FRENCH } })], [GHERKIN, web])
+  host.workspace.unreadable.set(legacy, `EISDIR: illegal operation on a directory, read '${legacy}'`)
+
+  const outcome = await host.start()
+
+  assert.deepEqual(distill(host), [[1, 'done', null, []]])
+  assert.equal(outcome.status, 'done', outcome.reason)
+})

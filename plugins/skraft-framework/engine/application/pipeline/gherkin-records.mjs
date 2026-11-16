@@ -1,5 +1,5 @@
 import { featuresFolders } from '../../domain/config/bdd-folders.mjs'
-import { gherkinFailures } from '../../domain/pipeline/gherkin-records.mjs'
+import { citedBy, gherkinFailures, namedFeatures } from '../../domain/pipeline/gherkin-records.mjs'
 
 /**
  * The Gherkin the acceptance designer's attempt leaves: every `.feature` its test plan names is a
@@ -26,7 +26,8 @@ export const checkGherkinRecords = async (deps, { slug, components }) => {
   const tracked = await deps.files.list(slug, '')
   const plans = await documentsOf(deps, slug, tracked.filter((path) => TEST_PLAN.test(path)))
   const criteria = await documentsOf(deps, slug, tracked.filter((path) => CRITERIA.test(path)))
-  return gherkinFailures({ plans, criteria, features: await featuresOf(deps.workspace, components) })
+  const named = plans.flatMap(({ text }) => namedFeatures(text))
+  return gherkinFailures({ plans, criteria, features: await featuresOf(deps.workspace, components, named) })
 }
 
 /** Each tracked file with its text. @param {GherkinDeps} deps @param {string} slug @param {string[]} paths */
@@ -40,15 +41,16 @@ const documentsOf = async (deps, slug, paths) => {
 const trackedText = async (deps, slug, path) => (await deps.files.read(slug, path)) ?? ''
 
 /**
- * Every `.feature` under the folders the components declare for their scenarios, at any depth: a
- * runner's folder (`src/__tests__`) holds nested folders and the step files beside the scenarios;
- * none for a folder the working copy has not got.
- * @param {Workspace} workspace @param {readonly Component[]} components
+ * Every `.feature` a test plan names, under the folders the components declare for their
+ * scenarios, at any depth: a runner's folder (`src/__tests__`) holds nested folders and the step
+ * files beside the scenarios; none for a folder the working copy has not got. Only those are
+ * opened: a file of another story, or of a component the story does not touch, is never read.
+ * @param {Workspace} workspace @param {readonly Component[]} components @param {string[]} named
  * @returns {Promise<Array<{ path: string, text: string }>>}
  */
-const featuresOf = async (workspace, components) => {
+const featuresOf = async (workspace, components, named) => {
   const folders = featuresFolders(components)
-  const paths = (await Promise.all(folders.map((folder) => featuresUnder(workspace, folder)))).flat()
+  const paths = (await Promise.all(folders.map((folder) => featuresUnder(workspace, folder)))).flat().filter((path) => citedBy(named, path))
   const texts = await Promise.all(paths.map((path) => fileText(workspace, path)))
   return paths.map((path, index) => ({ path, text: texts[index] }))
 }
@@ -66,6 +68,6 @@ const featuresUnder = async (workspace, folder) => {
 // Stryker disable next-line ArrayDeclaration: a stand-in entry names no path a plan can cite, so the walk reads the same files
 const entriesOf = async (workspace, path) => (await workspace.list(path)) ?? []
 
-/** The text of a file of the working copy, empty when it is a folder or gone. @param {Workspace} workspace @param {string} path */
+/** The text of a file of the working copy, empty when it is gone. @param {Workspace} workspace @param {string} path */
 // Stryker disable next-line StringLiteral: a file that is gone holds no scenario, as any stand-in text that opens none
 const fileText = async (workspace, path) => (await workspace.read(path)) ?? ''

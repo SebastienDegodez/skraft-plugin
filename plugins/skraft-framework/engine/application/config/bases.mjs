@@ -36,7 +36,7 @@ const INVALID_BASE = '--base must be a git ref: text with no blank that does not
 /**
  * The base of the working copy and of each component, each in its own repository:
  * `git merge-base HEAD <ref>`, ref = `--base` > component `baseBranch` > global `baseBranch`
- * > `main`; `origin/<ref>` when the ref is not a local branch. A folder in no repository has
+ * > `main`; `origin/<ref>` when the ref is not a local branch or is behind it. A folder in no repository has
  * no base. Components need Git itself: a host that cannot run it is refused.
  * @param {{ sourceControl: import('../ports/source-control.mjs').SourceControl }} deps
  * @param {{ config: SkraftConfig, flag: unknown }} request flag: `--base` as received, null when absent
@@ -122,17 +122,20 @@ const refOf = (flag, branch, baseBranch) => {
 }
 
 /**
- * The merge base with the local ref, else with `origin/<ref>`: the ref used and its sha, null
- * when neither has one.
+ * The newer of the merge bases with the local ref and with `origin/<ref>`: a local branch left
+ * behind its remote would compare the story with commits that are not its own. The ref used and
+ * its sha, null when neither has one.
  * @param {import('../ports/source-control.mjs').SourceControl} sourceControl
  * @param {string} root
  * @param {string} ref
  * @returns {Promise<[string, string | null]>}
  */
 const mergeBaseOf = async (sourceControl, root, ref) => {
-  const local = await sourceControl.mergeBase(root, ref)
-  if (local !== null) return [ref, local]
-  return [`origin/${ref}`, await sourceControl.mergeBase(root, `origin/${ref}`)]
+  const remote = `origin/${ref}`
+  const [local, tracked] = await Promise.all([sourceControl.mergeBase(root, ref), sourceControl.mergeBase(root, remote)])
+  if (local === null) return [remote, tracked]
+  if (tracked === null || tracked === local) return [ref, local]
+  return (await sourceControl.isAncestor(root, local, tracked)) ? [remote, tracked] : [ref, local]
 }
 
 /** @param {string | null} component */
