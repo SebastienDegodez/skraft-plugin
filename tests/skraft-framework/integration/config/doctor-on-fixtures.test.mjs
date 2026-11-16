@@ -34,14 +34,13 @@ const declineGherkin = (cwd) => {
 }
 
 // The stub PATH holds no container runtime: doctor warns of it after the infrastructure of each
-// component's tests, one line per row, never failing. The plugin ships no mocking skill for Java:
-// doctor warns of it after the component's commands.
-for (const [fixture, stack, commands, paths, skills = []] of [
+// component's tests, one line per row, never failing.
+for (const [fixture, stack, commands, paths] of [
   ['payment', 'dotnet', ['build', 'format', 'test', 'mutation'], { src: ['src/'], tests: ['tests/'] }],
   ['payment-spring', 'java', ['build', 'test', 'mutation'], {
     src: ['payment-domain/', 'payment-application/', 'payment-infrastructure/', 'payment-app/'],
     tests: ['payment-unit-test/', 'payment-integration-test/', 'payment-domain/src/test/', 'payment-application/src/test/', 'payment-infrastructure/src/test/', 'payment-app/src/test/'],
-  }, ['WARN  payment-spring']],
+  }],
   ['payment-fastapi', 'python', ['build', 'test', 'mutation'], { src: ['src/'], tests: ['tests/'] }],
   ['react', 'react', ['build', 'lint', 'test', 'mutation'], { src: ['src/'], tests: ['tests/'] }],
 ]) {
@@ -57,7 +56,7 @@ for (const [fixture, stack, commands, paths, skills = []] of [
     assert.equal(doctor.status, 1, doctor.stdout)
     const lines = doctor.stdout.trim().split(/\r?\n/)
     assert.deepEqual(checksOf(lines).map((line) => line.split(': ')[0]), [
-      'ok    plugin', 'ok    node', 'ok    config', 'WARN  forge', ...commands.map((name) => `ok    ${fixture}/${name}`), `FAIL  ${fixture}/bdd`, ...skills,
+      'ok    plugin', 'ok    node', 'ok    config', 'WARN  forge', ...commands.map((name) => `ok    ${fixture}/${name}`), `FAIL  ${fixture}/bdd`,
       ...Array.from({ length: stack === 'react' ? 3 : 4 }, () => 'ok    infrastructure'), 'WARN  container-runtime',
       'ok    models/claude-code', 'WARN  models/copilot', 'ok    vscode',
     ])
@@ -71,7 +70,7 @@ for (const [fixture, stack, commands, paths, skills = []] of [
     writeFileSync(file, `${JSON.stringify(answered, null, 2)}\n`)
     const again = await skraft(cwd, ['doctor'], { env: machine(t) })
     assert.equal(again.status, 0, again.stdout)
-    assert.equal(again.stdout.trim().split(/\r?\n/).at(-1), `skraft doctor: no check failed, ${3 + skills.length} with a warning`)
+    assert.equal(again.stdout.trim().split(/\r?\n/).at(-1), `skraft doctor: no check failed, 3 with a warning`)
   })
 }
 
