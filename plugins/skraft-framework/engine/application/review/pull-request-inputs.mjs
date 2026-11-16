@@ -79,6 +79,6 @@ const withRun = (artifacts, run) => {
 const componentsOf = async ({ workspace }, { components, workingCopyName }) => {
   if (components.length > 0) return components
   // Stryker disable next-line ArrayDeclaration: a listed component without a root or a name holds back no project
-  const detected = await newComponents(workspace, ['.'], [], workingCopyName)
+  const detected = await newComponents(workspace, ['.'], [], { workingCopyName, mutation: false })
   return /** @type {{ config: { components: Component[] } }} */ (readConfig(writeConfig({}, detected))).config.components
 }

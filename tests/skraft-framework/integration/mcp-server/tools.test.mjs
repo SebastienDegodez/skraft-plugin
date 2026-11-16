@@ -66,6 +66,12 @@ test('in a repository skraft has never seen, the doctor fails on its configurati
   assert.deepEqual(texts(detected), [texts(detected)[0]])
   assert.ok(config.components.some(({ root: folder }) => folder === 'portal'), JSON.stringify(config.components))
   assert.notEqual((await configCheck()).detail, before.detail)
+  assert.equal(config.components.some(({ commands }) => 'mutation' in commands), false)
+
+  const mutation = await host.call('skraft_init', { mutation: true })
+  assert.equal(mutation.isError, false)
+  assert.match(texts(mutation)[0], /; mutation: /)
+  assert.equal(JSON.parse(readFileSync(join(cwd, 'skraft-config.json'), 'utf8')).components.every(({ commands }) => 'mutation' in commands), true)
   await host.close()
 })
 

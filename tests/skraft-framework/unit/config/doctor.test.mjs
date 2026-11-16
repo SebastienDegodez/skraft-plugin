@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { createDoctor } from '../../../../plugins/skraft-framework/engine/application/diagnostics/doctor-usecase.mjs'
-import { BUILT_IN_WORKFLOW, GITHUB_REMOTE, InMemoryAgentCatalog, InMemoryCodeHost, InMemoryCopilotSdk, InMemoryHostSettings, InMemoryPullRequests, InMemorySourceControl, InMemoryUserSettings, InMemoryWorkflowSource, InMemoryWorkspace, ScriptedMachine } from '../support/in-memory-host.mjs'
+import { BUILT_IN_WORKFLOW, GITHUB_REMOTE, InMemoryAgentCatalog, InMemoryCodeHost, InMemoryCopilotSdk, InMemoryHostSettings, InMemoryPullRequests, InMemorySourceControl, InMemoryTracking, InMemoryUserSettings, InMemoryWorkflowSource, InMemoryWorkspace, ScriptedMachine } from '../support/in-memory-host.mjs'
 import { edit, withLenses } from '../workflow/support.mjs'
 
 const API = { name: 'api', root: 'services/payment-api', stack: 'dotnet', bdd: false, commands: { build: 'dotnet build --nologo', test: 'dotnet test --nologo --logger trx', mutation: 'dotnet stryker --since:{baseSha}' } }
@@ -10,7 +10,7 @@ const MICROCKS_WEB = { ...WEB, mocking: { strategy: 'microcks' } }
 const FOLDERS = { 'services/payment-api/Payment.sln': '', '../payment-web/package.json': '{}' }
 
 /** runner: the machine that starts the commands, the one that finds them unless told otherwise; config: the rest of skraft-config.json. */
-const doctor = ({ components = [API, WEB], config = {}, machine = new ScriptedMachine(), runner = machine, node = 'v22.11.0', files = FOLDERS, sourceControl = new InMemorySourceControl(), user, copilotSdk = new InMemoryCopilotSdk(), codeHost = new InMemoryCodeHost() } = {}) => {
+const doctor = ({ components = [API, WEB], config = {}, machine = new ScriptedMachine(), runner = machine, node = 'v22.11.0', files = FOLDERS, sourceControl = new InMemorySourceControl(), user, copilotSdk = new InMemoryCopilotSdk(), codeHost = new InMemoryCodeHost(), mutationRuns = new InMemoryTracking({ root: '/work/.copilot-tracking/skraft-mutation' }) } = {}) => {
   const workspace = new InMemoryWorkspace({ ...files, ...(components === null ? {} : { 'skraft-config.json': JSON.stringify({ ...config, components }) }) })
   const workflowSource = new InMemoryWorkflowSource()
   return {
@@ -19,7 +19,7 @@ const doctor = ({ components = [API, WEB], config = {}, machine = new ScriptedMa
     doctor: createDoctor({
       workspace, userSettings: new InMemoryUserSettings(user), workflowSource, executables: machine, commandRunner: runner, sourceControl, runtime: { nodeVersion: () => node },
       agentCatalog: new InMemoryAgentCatalog(), hostSettings: new InMemoryHostSettings(), copilotSdk,
-      forges: { github: { codeHost, pullRequests: new InMemoryPullRequests() } },
+      forges: { github: { codeHost, pullRequests: new InMemoryPullRequests() } }, mutationRun: { journal: mutationRuns },
     }),
   }
 }
@@ -107,6 +107,7 @@ test('every program found and the forge reachable: doctor passes without running
       { subject: 'api/mutation', status: 'ok', detail: 'dotnet → /usr/local/bin/dotnet' },
       { subject: 'web/test', status: 'ok', detail: 'npx → /usr/local/bin/npx' },
       { subject: 'web/e2e', status: 'ok', detail: 'npx → /usr/local/bin/npx' },
+      { subject: 'mutation', status: 'ok', detail: 'api declares a mutation command; no mutation run on feat/checkout yet: skraft mutation starts one' },
       ...INFRASTRUCTURE,
       DOCKER,
       ...BY_DEFAULT,
@@ -214,6 +215,7 @@ test('--run starts every command but mutation, the developer\'s to run, once fro
     { subject: 'api/mutation', status: 'ok', detail: 'dotnet → /usr/local/bin/dotnet' },
     { subject: 'web/test', status: 'ok', detail: 'npx vitest run --reporter=junit passed' },
     { subject: 'web/e2e', status: 'fail', detail: 'npx playwright test exited 1; its output is in .copilot-tracking/skraft-doctor/web/e2e.log' },
+    { subject: 'mutation', status: 'ok', detail: 'api declares a mutation command; no mutation run on feat/checkout yet: skraft mutation starts one' },
     DOCKER,
     ...BY_DEFAULT,
     NO_SDK,
@@ -301,6 +303,7 @@ test('a component asking for skills found nowhere is a warning naming them after
     'orders/test ok', 'orders warn',
     'admin/test ok', 'admin warn',
     'shop/test ok', 'shop warn',
+    'mutation ok',
   ])
   assert.deepEqual(report.checks.filter(({ status, subject }) => status === 'warn' && !subject.startsWith('models')), [
     { subject: 'orders', status: 'warn', detail: 'skills found nowhere, in the plugin or the working copy: mocking-microcks-java, contract-testing-java; mocking-strategy-roster and contract-testing say which recipe its tests use instead, or that they stop' },
@@ -337,4 +340,33 @@ test('a component with no gate command, mutation, the developer\'s, aside, or a 
 
   const flagged = doctor({ components: [{ ...API, mocking: { strategy: 'inprocess' } }] })
   assert.deepEqual(failures(await flagged.doctor.check({ run: true, base: '--independent' }))[0], 'base: --base must be a git ref: text with no blank that does not start with -')
+})
+
+/** The journal of the branch's mutation run: started, then `events`, each written as the engine writes it. */
+const mutationJournal = (events, slug = 'feat-checkout') => {
+  const runs = new InMemoryTracking({ root: '/work/.copilot-tracking/skraft-mutation' })
+  for (const event of [{ type: 'run.started', slug, workflow: 'mutation' }, ...events]) runs.files.set(`${slug}/events.jsonl`, `${runs.files.get(`${slug}/events.jsonl`) ?? ''}${JSON.stringify(event)}\n`)
+  return runs
+}
+
+/** The doctor's mutation line. */
+const mutationLine = async (options) => (await doctor(options).doctor.check()).checks.find(({ subject }) => subject === 'mutation')
+
+test('doctor tells which components declare a mutation command, and the last mutation run of the branch with its verdict; a failed one is worth knowing, never a failure', async () => {
+  const ran = (status, scores) => ({ type: 'gate.ran', gate: 'mutation', status, scores })
+
+  assert.deepEqual(await mutationLine({ components: [WEB] }), { subject: 'mutation', status: 'ok', detail: 'no component declares a mutation command; /skraft-init mutation declares one per component' })
+  assert.deepEqual(await mutationLine({ components: [API, { ...WEB, commands: { ...WEB.commands, mutation: 'npx stryker run' } }], mutationRuns: mutationJournal([
+    ran('pass', [{ scope: 'global', bar: 80, score: 91.4, counted: 12, survivors: [] }]), { type: 'run.finished', status: 'completed' },
+  ]) }), { subject: 'mutation', status: 'ok', detail: 'api, web declare a mutation command; last run on feat/checkout: mutation passed (global 91 %), ended' })
+  assert.deepEqual(await mutationLine({ mutationRuns: mutationJournal([
+    ran('fail', [{ scope: 'core', bar: 80, score: 70, counted: null, survivors: ['src/Pay.cs:3 x survived'] }, { scope: 'boundary', bar: 80, score: 85, counted: null, survivors: [] }]),
+    { type: 'step.started', step: 'kill_proposal' },
+  ]) }), { subject: 'mutation', status: 'warn', detail: 'api declares a mutation command; last run on feat/checkout: mutation failed (core 70 % < 80 %, boundary 85 %), going on' })
+  assert.deepEqual(await mutationLine({ mutationRuns: mutationJournal([ran('fail', null), { type: 'run.stopped', code: 'stopped' }]) }),
+    { subject: 'mutation', status: 'warn', detail: 'api declares a mutation command; last run on feat/checkout: mutation failed with no score, stopped' })
+  assert.deepEqual(await mutationLine({ mutationRuns: mutationJournal([]) }),
+    { subject: 'mutation', status: 'ok', detail: 'api declares a mutation command; last run on feat/checkout: mutation not judged yet, going on' })
+  assert.deepEqual(await mutationLine({ sourceControl: new InMemorySourceControl({}, { branch: null }) }),
+    { subject: 'mutation', status: 'ok', detail: 'api declares a mutation command; HEAD is on no branch: no mutation run to show' })
 })

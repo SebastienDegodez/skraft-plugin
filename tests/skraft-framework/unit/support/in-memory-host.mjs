@@ -387,11 +387,12 @@ export class InMemorySourceControl {
   /**
    * @param {Record<string, { top?: string, mergeBases?: Record<string, string>, ancestry?: Record<string, string[]>, changed?: string[] | null }>} folders
    *   ancestry: the commits each sha descends from
-   * @param {{ unavailable?: string | null, remote?: string | null }} [options] unavailable: why Git cannot run here, null when it can;
-   *   remote: the URL of the working copy's remote, null without one
+   * @param {{ unavailable?: string | null, remote?: string | null, branch?: string | null }} [options] unavailable: why Git cannot run here, null when it can;
+   *   remote: the URL of the working copy's remote, null without one; branch: the branch HEAD is on, null when detached
    */
-  constructor(folders = {}, { unavailable = null, remote = GITHUB_REMOTE } = {}) {
+  constructor(folders = {}, { unavailable = null, remote = GITHUB_REMOTE, branch = 'feat/checkout' } = {}) {
     this.folders = folders
+    this.branchName = branch
     this.missing = unavailable
     this.remote = remote
     /** @type {Array<{ dir: string, sha: string }>} */
@@ -408,6 +409,7 @@ export class InMemorySourceControl {
     return [...new Set(all)].filter((file) => under(file, at.inner)).map((file) => inside(file, at.inner))
   }
   async mergeBase(dir, ref) { return this.folders[tidy(dir) || '.']?.mergeBases?.[ref] ?? null }
+  async branch() { return this.branchName }
   /** Like Git, which takes no null in its argv, it refuses a commit that is no sha. */
   async isAncestor(dir, ancestor, descendant) {
     if (typeof ancestor !== 'string' || typeof descendant !== 'string') throw new TypeError(`isAncestor of ${dir} needs two shas, got ${ancestor} and ${descendant}`)

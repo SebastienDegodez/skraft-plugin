@@ -1,6 +1,6 @@
 ---
 name: skraft-init
-description: Use when the developer asks to initialise skraft in a working copy, or when a run refuses to start because the configuration is incomplete. Detects the components, then settles with the developer the base branch, the gate commands, the publication consents, BDD per component and the model choice, and writes them to skraft-config.json so that no run has to ask.
+description: Use when the developer asks to initialise skraft in a working copy, when a run refuses to start because the configuration is incomplete, or when the developer asks to set up mutation testing (`/skraft-init mutation`). Detects the components, then settles with the developer the base branch, the gate commands, the publication consents, BDD per component and the model choice, and writes them to skraft-config.json so that no run has to ask; with the argument `mutation`, declares only each component's mutation command.
 ---
 
 # skraft init
@@ -8,8 +8,10 @@ description: Use when the developer asks to initialise skraft in a working copy,
 You settle `skraft-config.json` with the developer, once, so that a run starts on `research` and
 asks nothing. Ask every question in this file; never guess an answer you could ask for.
 
+Called with the argument `mutation`, do the section *Mutation* alone, then stop.
+
 When the host lists the skraft MCP tools, use them instead of `<cli>`: `skraft_init` for
-`<cli> init` (`{ add: [<folder>, …] }` for `--add`), `skraft_doctor` for `<cli> doctor`
+`<cli> init` (`{ add: [<folder>, …] }` for `--add`, `{ mutation: true }` for `--mutation`), `skraft_doctor` for `<cli> doctor`
 (`{ run: true }` for `--run`). Pass `workspace`, the absolute path of the root of the working
 copy, to every skraft tool call. When a skraft tool refuses, tell the developer its refusal and
 stop: never run `<cli>` or any `node` command in its place. Only when the host lists no skraft
@@ -34,8 +36,8 @@ names another ref, leave it: the developer chose it.
 ## 3. The gate commands
 
 For each component, `commands` must hold at least one of `build`, `format`, `lint`, `test`,
-`architecture`, `coverage`, `mutation`, `e2e`; a component with none can prove nothing and the
-gates refuse the run.
+`architecture`, `coverage`, `e2e`; a component with none can prove nothing and the gates refuse
+the run. `mutation` counts for none of them: ask nothing about it here, *Mutation* declares it.
 
 `<cli> init` fills the commands of the stack it detected. Two it cannot detect:
 
@@ -152,5 +154,28 @@ again. Then tell the developer, in one line each:
 - which components were detected, with the gates each one can run;
 - what you wrote, and which file;
 - anything you left out, and what it costs them;
+- that `/skraft-init mutation` declares their mutation testing, when no component has a
+  `mutation` command;
 - that `npm i -g @skraft/cli` gives them `skraft` for their own terminal, when it answers nothing
   today. Never install it yourself, and keep using `<cli>`: the long line needs no install.
+
+## Mutation
+
+Mutation testing is the developer's: no run of the pipeline mutates, and nothing is declared
+until they ask for it.
+
+1. Run `<cli> init --mutation`. It writes the mutation command of each component's stack to
+   every component that has none, and keeps a command already written. Its reason names the
+   components that now carry one, and those whose root holds no project.
+2. Show each component's `mutation` command, one line each, and ask the developer to confirm it,
+   rewrite it, or leave the component out. A component left out loses its `mutation` key; write
+   nothing else for it.
+3. Install nothing and write no configuration of the tool (Stryker, PIT, mutmut): no scaffold.
+   Name what the command needs that the working copy lacks (the tool, its plugin, its
+   configuration file) and leave it to the developer.
+4. A command the developer writes either writes its result, score already computed, to the file
+   the environment variable `SKRAFT_MUTATION_RESULT` names, or leaves the report its tool writes
+   at the tool's default path. `skraft-quality-bar` gives the result's form and the bar.
+5. Run `<cli> doctor`. Its `mutation` line names the components that declare a command; fix every
+   `<component>/mutation` failure. Then tell the developer that `skraft mutation` runs mutation on
+   the branch HEAD is on, in its own run.

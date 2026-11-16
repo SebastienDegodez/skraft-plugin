@@ -8,6 +8,7 @@ import { forgeCheck } from './forge-check.mjs'
 import { modelChecks } from './model-checks.mjs'
 import { joinRelative } from '../../domain/config/relative-path.mjs'
 import { needsContainers, policyLines } from '../../domain/config/infrastructure-policy.mjs'
+import { mutationCheck } from './mutation-check.mjs'
 
 /**
  * @typedef {import('../../domain/config/skraft-config.mjs').Component} Component
@@ -15,7 +16,7 @@ import { needsContainers, policyLines } from '../../domain/config/infrastructure
  * @typedef {import('../../domain/config/skraft-config.mjs').SkraftConfig} SkraftConfig
  * @typedef {{ subject: string, status: 'ok' | 'warn' | 'fail', detail: string }} DoctorCheck
  *   subject: `node`, `config`, `forge`, `models`, `models/<host>`, `<component>`,
- *   `<component>/<command>`, `infrastructure`, `container-runtime` or `vscode`; warn: worth
+ *   `<component>/<command>`, `mutation`, `infrastructure`, `container-runtime` or `vscode`; warn: worth
  *   knowing, never a failure.
  * @typedef {{ ok: boolean, checks: DoctorCheck[], assignments: import('./model-checks.mjs').AssignmentTable | null }} DoctorReport
  *   assignments: what each agent the workflow dispatches runs on, by host; null when the
@@ -29,7 +30,7 @@ import { needsContainers, policyLines } from '../../domain/config/infrastructure
  *   sourceControl: import('../ports/source-control.mjs').SourceControl,
  *   runtime: import('../ports/runtime.mjs').Runtime,
  *   copilotSdk: import('../ports/copilot-sdk.mjs').CopilotSdk,
- * } & import('./model-checks.mjs').ModelCheckDeps & import('../config/forge.mjs').ForgeDeps} DoctorDeps
+ * } & import('./model-checks.mjs').ModelCheckDeps & import('../config/forge.mjs').ForgeDeps & import('./mutation-check.mjs').MutationCheckDeps} DoctorDeps
  */
 
 const NODE_MAJOR = 22
@@ -90,6 +91,7 @@ const configuredChecks = async (deps, config, { run, base }) => {
   for (const component of config.components) {
     checks.push(...await componentChecks(deps, component, { run, baseSha: baseShaOf(resolved, component.name) }))
   }
+  checks.push(await mutationCheck(deps, config.components))
   return [...checks, ...config.components.flatMap(infrastructureChecks), ...await containerChecks(deps, config.components)]
 }
 

@@ -62,8 +62,8 @@ export const TOOLS = Object.freeze([
   tool({
     name: 'skraft_init', title: 'Detect the components',
     description: 'Detects the components of the repository into skraft-config.json; never overwrites a value the file holds. Then settle the rest of the configuration with the skraft-init skill.',
-    parameters: { add: { kind: 'strings', description: 'folders to detect beyond the ones found' } },
-    annotations: { ...LOCAL, idempotentHint: true }, argv: (args) => ['init', ...(args.add ?? []).flatMap((/** @type {string} */ folder) => ['--add', folder])],
+    parameters: { add: { kind: 'strings', description: 'folders to detect beyond the ones found' }, mutation: { kind: 'boolean', description: 'write each component\'s mutation command too' } },
+    annotations: { ...LOCAL, idempotentHint: true }, argv: (args) => ['init', ...(args.add ?? []).flatMap((/** @type {string} */ folder) => ['--add', folder]), ...flag('--mutation', args.mutation)],
   }),
   tool({
     name: 'skraft_start', title: 'Start or resume a pipeline',

@@ -34,15 +34,16 @@ const declineGherkin = (cwd) => {
 }
 
 // The stub PATH holds no container runtime: doctor warns of it after the infrastructure of each
-// component's tests, one line per row, never failing.
+// component's tests, one line per row, never failing. init writes no mutation command, so doctor's
+// mutation line says no component declares one.
 for (const [fixture, stack, commands, paths] of [
-  ['payment', 'dotnet', ['build', 'format', 'test', 'mutation'], { src: ['src/'], tests: ['tests/'] }],
-  ['payment-spring', 'java', ['build', 'test', 'mutation'], {
+  ['payment', 'dotnet', ['build', 'format', 'test'], { src: ['src/'], tests: ['tests/'] }],
+  ['payment-spring', 'java', ['build', 'test'], {
     src: ['payment-domain/', 'payment-application/', 'payment-infrastructure/', 'payment-app/'],
     tests: ['payment-unit-test/', 'payment-integration-test/', 'payment-domain/src/test/', 'payment-application/src/test/', 'payment-infrastructure/src/test/', 'payment-app/src/test/'],
   }],
-  ['payment-fastapi', 'python', ['build', 'test', 'mutation'], { src: ['src/'], tests: ['tests/'] }],
-  ['react', 'react', ['build', 'lint', 'test', 'mutation'], { src: ['src/'], tests: ['tests/'] }],
+  ['payment-fastapi', 'python', ['build', 'test'], { src: ['src/'], tests: ['tests/'] }],
+  ['react', 'react', ['build', 'lint', 'test'], { src: ['src/'], tests: ['tests/'] }],
 ]) {
   test(`skraft init then doctor on the ${fixture} fixture: the Gherkin nobody answered is what is left to do, and doctor passes once it is`, async (t) => {
     const cwd = copyFixture(FIXTURES[fixture], join(tempFolder(t), fixture))
@@ -56,7 +57,7 @@ for (const [fixture, stack, commands, paths] of [
     assert.equal(doctor.status, 1, doctor.stdout)
     const lines = doctor.stdout.trim().split(/\r?\n/)
     assert.deepEqual(checksOf(lines).map((line) => line.split(': ')[0]), [
-      'ok    plugin', 'ok    node', 'ok    config', 'WARN  forge', ...commands.map((name) => `ok    ${fixture}/${name}`), `FAIL  ${fixture}/bdd`,
+      'ok    plugin', 'ok    node', 'ok    config', 'WARN  forge', ...commands.map((name) => `ok    ${fixture}/${name}`), `FAIL  ${fixture}/bdd`, 'ok    mutation',
       ...Array.from({ length: stack === 'react' ? 3 : 4 }, () => 'ok    infrastructure'), 'WARN  container-runtime',
       'ok    models/claude-code', 'WARN  models/copilot', 'ok    vscode',
     ])
