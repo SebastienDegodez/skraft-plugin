@@ -443,11 +443,23 @@ In one folder, the first marker found in this order decides the stack:
 
 | Stack | Markers | `build` | `test` | Other commands |
 | --- | --- | --- | --- | --- |
-| `dotnet` | `*.sln`, `*.slnx`, `*.csproj`, `*.fsproj`, `*.vbproj` | `dotnet build --nologo` | `dotnet test --nologo` | `format`: `dotnet format --verify-no-changes`; `mutation`: `dotnet stryker --since:{baseSha}` |
+| `dotnet` | `*.sln`, `*.slnx`, `*.csproj`, `*.fsproj`, `*.vbproj` | `dotnet build --nologo` | `dotnet test --nologo` | `format`: `dotnet format --verify-no-changes` |
 | `java` (Maven) | `pom.xml` | `mvn -B -q -DskipTests package` (`./mvnw` when present) | `mvn -B -q verify` (`./mvnw` when present): Surefire `*Test` then Failsafe `*IT` | — |
 | `java` (Gradle) | `build.gradle`, `build.gradle.kts` | `gradle build -x test` (`./gradlew` when present) | `gradle test` (`./gradlew` when present) | — |
 | `python` | `pyproject.toml`, `setup.py`, `setup.cfg`, `requirements.txt` | `python -m compileall -q src` (`.` with no `src` folder) | `python -m pytest -q -p no:cacheprovider` | — |
 | `react` / `typescript` / `javascript` | `package.json` | `npm run build` when a `build` script exists, otherwise `npx tsc --noEmit` (not for javascript) | `npm test` when a `test` script exists, otherwise `npx vitest run` with a vitest dependency, otherwise `npx jest` with a jest dependency | `lint`: `npm run lint` when a `lint` script exists |
+
+`skraft init` writes no `mutation` command: mutating is the developer's choice. `skraft init
+--mutation`, or `/skraft-init mutation`, writes the one of each stack to the components that
+have none:
+
+| Stack | `mutation` |
+| --- | --- |
+| `dotnet` | `dotnet stryker --since:{baseSha} --reporter json --output StrykerOutput` |
+| `java` (Maven) | `mvn -B -q org.pitest:pitest-maven:mutationCoverage -DoutputFormats=XML -DtimestampedReports=false -DwithHistory` (`./mvnw` when present) |
+| `java` (Gradle) | `gradle pitest` (`./gradlew` when present) |
+| `python` | `python -m mutmut run` |
+| `react` / `typescript` / `javascript` | `npx stryker run --incremental --reporters json,clear-text` |
 
 For `package.json`: `react` with a `react` dependency, otherwise `typescript` when
 `tsconfig.json` exists or with a `typescript` dependency, otherwise `javascript`. The

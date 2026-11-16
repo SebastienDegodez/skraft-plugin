@@ -147,6 +147,10 @@
     "message": "Lancer les gates",
     "description": "The label for the doc item 'Run the gates' in sidebar 'howTo', linking to the doc how-to/run-gates"
   },
+  "sidebar.howTo.doc.how-to/run-mutation": {
+    "message": "Lancer la mutation sur sa branche",
+    "description": "The label for the doc item 'Run mutation on your branch' in sidebar 'howTo', linking to the doc how-to/run-mutation"
+  },
   "sidebar.howTo.doc.how-to/resume-a-run": {
     "message": "Reprendre un run",
     "description": "The label for the doc item 'Resume a run' in sidebar 'howTo', linking to the doc how-to/resume-a-run"

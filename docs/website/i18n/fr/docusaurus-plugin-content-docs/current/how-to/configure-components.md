@@ -67,7 +67,8 @@ Une commande écrite dans `skraft-config.json` est toujours celle qui tourne. Mo
 
 Ajoutez la commande sous l'un des noms `build`, `format`, `lint`, `test`, `architecture`,
 `coverage` (l'ordre d'exécution) ; `mutation`, votre propre commande de mutation, que le pipeline
-ne lance jamais ; ou `e2e`, que `skraft doctor` vérifie mais qu'aucune gate ne lance :
+ne lance jamais et que [Lancer la mutation sur sa branche](./run-mutation.md) déclare ; ou `e2e`,
+que `skraft doctor` vérifie mais qu'aucune gate ne lance :
 
 ```json
 "commands": {

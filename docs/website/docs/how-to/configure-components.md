@@ -64,8 +64,9 @@ Write a command to be started **without a shell**, from the component's root:
 ## 4. Add a gate
 
 Add the command under one of the names `build`, `format`, `lint`, `test`, `architecture`,
-`coverage` (the run order); `mutation`, your own mutation command, which the pipeline never runs;
-or `e2e`, which `skraft doctor` checks but no gate runs:
+`coverage` (the run order); `mutation`, your own mutation command, which the pipeline never runs
+and [Run mutation on your branch](./run-mutation.md) declares; or `e2e`, which `skraft doctor`
+checks but no gate runs:
 
 ```json
 "commands": {

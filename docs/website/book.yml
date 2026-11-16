@@ -259,6 +259,13 @@ parts:
             doc: how-to/run-gates
             purpose_fr: "Lancer les gates des composants modifies ou de tous, lire leurs preuves, traiter un echec environment ou deterministic."
             purpose_en: "Run the gates of the changed components or of all, read their evidence, handle an environment or deterministic failure."
+          - id: run-mutation
+            type: editorial
+            label_fr: "Lancer la mutation sur sa branche"
+            label_en: "Run mutation on your branch"
+            doc: how-to/run-mutation
+            purpose_fr: "Declarer la commande de mutation, lancer skraft mutation sur sa branche, tuer les survivants, lire le verdict."
+            purpose_en: "Declare the mutation command, run skraft mutation on your branch, kill the survivors, read the verdict."
           - id: resume-a-run
             type: editorial
             label_fr: "Reprendre un run"
