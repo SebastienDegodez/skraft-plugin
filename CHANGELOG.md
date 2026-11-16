@@ -3,6 +3,12 @@
 Toutes les modifications notables de ce projet sont documentées ici.
 Format basé sur [Conventional Commits](https://www.conventionalcommits.org/) — versionnage [SemVer](https://semver.org/).
 
+## [2.0.0-alpha.97](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.96...v2.0.0-alpha.97) (2026-11-16)
+
+### 🐛 Bug Fixes
+
+* **engine:** do not charge a person's skraft-config.json change to the agent ([#603](https://github.com/SebastienDegodez/skraft-plugin/issues/603)) ([a0c1740](https://github.com/SebastienDegodez/skraft-plugin/commit/a0c1740c071d4f0ca8185d50634f003ceef54b37)), closes [#598](https://github.com/SebastienDegodez/skraft-plugin/issues/598)
+
 ## [2.0.0-alpha.96](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.95...v2.0.0-alpha.96) (2026-11-16)
 
 ### ✨ Features
