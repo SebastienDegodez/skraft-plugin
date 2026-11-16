@@ -504,3 +504,21 @@ test('a v4 log with the same mutation scope twice is refused', () => {
   fixture.quality.gates.push({ ...core })
   assert.match(renderOutcome(fixture), /duplicate quality gate/i)
 })
+
+test('a v5 log reports a G6 the developer did not run as not_run, with its rationale', () => {
+  const fixture = outcomeFixture()
+  fixture.quality.$schema = 'quality-gates-evidence/v5'
+  const index = fixture.quality.gates.findIndex(({ id }) => id === 'G6')
+  fixture.quality.gates[index] = { id: 'G6', label: 'Mutation score meets the bar', status: 'not_run', rationale: 'no component declares commands.mutation in skraft-config.json' }
+  const row = tableRow(renderOutcome(fixture), 'G6')
+  hasStatus(row, 'not_run')
+  includesText(row, 'no component declares commands.mutation')
+})
+
+test('not_run is refused outside G6 of a v5 log', () => {
+  const fixture = outcomeFixture()
+  fixture.quality.$schema = 'quality-gates-evidence/v5'
+  const index = fixture.quality.gates.findIndex(({ id }) => id === 'G2')
+  fixture.quality.gates[index] = { ...fixture.quality.gates[index], status: 'not_run', rationale: 'x' }
+  assert.doesNotMatch(tableRow(renderOutcome(fixture), 'G2'), /not_run/)
+})

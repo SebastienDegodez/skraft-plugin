@@ -1,6 +1,6 @@
 ---
 name: mutation-testing
-description: Use when entering COMMIT & VERIFY phase, killing surviving mutants, verifying test quality via mutation score, or analyzing supported Stryker.NET, Node TAP StrykerJS, TypeScript StrykerJS with the Vitest runner or Python cosmic-ray results after the test baseline is green
+description: Use when entering COMMIT & VERIFY phase, running the G6 mutation gate on the developer's declared mutation command, or killing the surviving mutants it lists after the test baseline is green. Mutation testing is the developer's responsibility; SKRAFT runs the command they declared, holds the scores it writes (core and boundary, or global) to the bar and lists its survivors.
 ---
 
 # Mutation Testing
@@ -11,75 +11,87 @@ Verify that tests **actually catch bugs** — not just execute code.
 
 A test that kills no mutant is noise. DELETE IT.
 
-## When to Load
+## The developer owns mutation
 
-- Entering phase 4 (COMMIT & VERIFY) of the TDD cycle.
-- Investigating a surviving mutant.
-- Confirming a kill after writing a boundary test.
+Mutation testing must be done on every story. Choosing the tool, configuring it and declaring
+it are the developer's responsibility. SKRAFT ships no mutation tool, config or scaffold. You
+never install a mutation tool, write its config, write `commands.mutation` or produce a report
+yourself to make G6 run. When G6 does not run, tell the developer it is theirs to declare.
 
-**Never run on a red baseline** — fix tests first.
+The developer declares one command per component in `skraft-config.json` at the repository
+root, the same shape as SKRAFT v2:
 
-## S7 — Deterministic Execution (Non-Negotiable)
-
-Mutation testing MUST cross the matching `quality-gates-<tech>` adapter. Do not embed,
-reconstruct, or improvise runner commands here. Load `skraft-quality-bar`, then use
-`resolving-stack-commands` to select the adapter.
-
-```
-1. Confirm ordinary tests are green
-2. Run once, after the story's last work commit, with `--since <DELIVER baseSha>`: every file the story changed is mutated and the score is the G6 evidence; full mode only when no base is recorded; never mutate inside a TDD cycle; local diagnostic may add repeatable `--overlay <config>`
-3. Adapter → validate durable configs, merge protected overlays, and run core gate
-4. Parse adapter-owned JSON report → extract survivors
-5. Decide: kill with a test, or suppress a proven equivalent narrowly
-6. Adapter → rerun core until green
-7. Repeat for boundary
+```json
+{
+  "components": [
+    { "name": "api", "root": "api", "stack": "dotnet", "commands": { "mutation": "node scripts/mutation.mjs --since {baseSha}" } },
+    { "name": "web", "root": "web", "stack": "typescript", "commands": { "mutation": "npm run mutation" } }
+  ]
+}
 ```
 
-## Node JavaScript / TAP
+- `root`: the folder the command runs in, inside the repository (`.` for the root).
+- `commands.mutation`: any shell command. `{baseSha}` becomes the base the gate gets with
+  `--since`.
+- The command runs the developer's tool, computes the scores and writes them, with the
+  surviving mutants, as JSON to the file named by the `SKRAFT_MUTATION_RESULT` environment
+  variable:
 
-For installed StrykerJS core + TAP 9.6.1, load
-`quality-gates-javascript`. Its single runner
-validates both durable configs, runs core then boundary, and captures fresh reports.
-Core-only runs diagnose failures but never prove combined G6. Full reruns start
-with core again; never reuse an earlier core receipt to unlock boundary.
+```json
+{
+  "scopes": [
+    { "name": "core", "score": 97.6, "survivors": ["src/Domain/Order.cs:12 Equality -> age > 18"] },
+    { "name": "boundary", "score": 85.7, "survivors": [] }
+  ]
+}
+```
 
-Frontend, TypeScript and other runners remain unsupported. No coverage gate is
-claimed. Do not improvise raw Stryker commands, install tooling, or analyze stale
-reports as gate evidence. StrykerJS uses native `thresholds.break`; do not translate
-.NET flags. This narrow adapter rejects source suppressions and ignored/error
-mutants; equivalent-mutant suppression below applies only when adapter supports it.
+  A Clean Architecture component writes `core` (Domain, Application) and `boundary` (API,
+  Infrastructure, UI); a single project writes one `global` scope. A score is a percentage,
+  0 to 100. Each survivor is one `file:line detail` line, the file relative to the component
+  root, the detail free text (mutator, replacement). `[]` means none survived; a 100% scope
+  lists none. `survivors` is optional: a team may leave it out, and the gate then prints
+  `(survivors not reported)` for that scope.
 
-`--since` selects changed files from the Git merge-base through the working tree,
-including staged, unstaged and untracked changes; its score covers the story's changed code,
-not the whole repository. `--overlay` is repeatable and
-diagnostic-only. Overlays cannot change thresholds, source scopes, reporters, or
-report paths. CI evidence uses checked-in configuration without overlays.
+## Run the gate (G6)
 
-## Python / cosmic-ray
+```bash
+node "<skill>/scripts/mutation-gate/cli/mutation-gate.mjs" --root . --evidence "$EV" --since "$BASE" --pipeline
+```
 
-For a `pyproject.toml` project, load `quality-gates-python`.
-`mutation-gate.mjs` runs one scope per call, core then boundary, from the checked-in
-`cosmic-ray-core.toml` / `cosmic-ray-boundary.toml`, with `--since <DELIVER baseSha>`; it runs
-the suite unmutated first and lists each survivor as `survived: <file>:<line> <operator>`.
-The only suppression is `# pragma: no mutate -- <reason>` on the mutated line; no
-`excluded-modules`, no filters, no threshold.
+`<skill>` is this skill's folder. `BASE` is `phaseHistory.DELIVER.baseSha`; drop `--since` only
+when no base is recorded and no command uses `{baseSha}`. Run it once, after the story's last
+work commit, on a green suite; never inside a TDD cycle.
 
-## TypeScript / StrykerJS with Vitest
+`--pipeline` marks DELIVER's run. When `skraft-config.json` sets `mutation.pipeline` to `false`,
+the team runs mutation outside the pipeline with `/skraft-mutation`: the gate then runs nothing
+and reuses the developer's last run when it judged HEAD on a clean working copy, or exits 3.
+`/skraft-init mutation` sets the mode and the commands; only the developer runs either skill.
 
-For a TypeScript package tested with Vitest, load
-`quality-gates-typescript`. `mutation-gate.mjs` runs one
-scope per call, core then boundary, from the checked-in `stryker.core.json` /
-`stryker.boundary.json`, with `--since <DELIVER baseSha>`; it runs Vitest unmutated first and
-lists each survivor as `survived: <file>:<line> <mutator>` or `no coverage: …`. The only
-suppression is `// Stryker disable next-line <mutator>: <reason>` above the mutated line; no
-negative `mutate` pattern, no ignorers, no threshold.
+For each declared component the gate runs the command in `root` with `SKRAFT_MUTATION_RESULT`
+pointing into the evidence folder, then reads what it wrote. Every scope of every component
+must reach `skraft-quality-bar`'s bar; no argument changes it.
+
+| Exit | Meaning | G6 entry |
+| --- | --- | --- |
+| 0 | every scope meets the bar, every command exited 0 | `pass` |
+| 1 | a scope below the bar, a command failed, no result or a malformed one (a survivor line included), or a tracked file was left modified | `fail` |
+| 2 | blocked: invalid `skraft-config.json` entry, or `{baseSha}` without `--since` | fix the input, rerun |
+| 3 | no component declares `commands.mutation`, or mutation runs outside the pipeline and no developer run covers HEAD | `not_run`, rationale from the stdout |
+
+Outputs: `qg-mutation.stdout` / `.exit` / `.stdout.sha256`, and `qg-mutation/` holding each
+command's log (`<component>.log`), its result (`<component>.result.json`) and
+`manifest.json`. Every reported survivor is listed in `qg-mutation.stdout` as
+`survived: <file>:<line> <detail> (<component> <scope>)`, the file relative to the repository:
+that list is what you kill. When the team reports no survivors, read the tool's output in
+`<component>.log`.
 
 ## Classify Survivors
 
 | Category | Action |
 |----------|--------|
 | **Real gap** — behavior change not caught | Write a boundary test to kill it |
-| **Equivalent mutant** — no observable difference | Add narrow runner-supported source suppression with rationale, then rerun |
+| **Equivalent mutant** — no observable difference | Suppress it with the developer's tool, narrowly and with a reason, then rerun |
 
 ### Equivalent mutant examples (do NOT write tests for these)
 
@@ -104,34 +116,25 @@ For each real survivor:
    ```
    Frontend example: for `age >= 18` mutated to `age > 18`, assert observable UI or
    state behavior at exactly `18`; do not assert the implementation expression.
-3. **Re-run the applicable adapter gate** to confirm the kill.
+3. **Re-run the gate** to confirm the kill.
 
 ## Accept Proven Equivalent Mutants
 
-Use only runner-supported, source-level, single-construct suppression (cosmic-ray: `# pragma: no mutate -- <reason>`). For Stryker.NET:
-
-```csharp
-// Stryker disable once Arithmetic: equivalent because normalized value is never observed
-var normalized = value + 0;
-```
-
-Name only relevant mutator; use `all` only when every mutation in next syntax construct
-is proven equivalent. Reason is mandatory. Never use global `ignore-mutations`, broad
-file exclusions, threshold changes, or prose-only waivers. Rerun full applicable gate;
-an ignored mutant remains visible in JSON evidence.
+Use only the tool's source-level, single-construct suppression, with a reason: Stryker
+`// Stryker disable once <Mutator>: <reason>`, cosmic-ray `# pragma: no mutate -- <reason>`.
+Never broaden the tool's config, exclude files, or lower its threshold to buy the score: the
+developer owns that config, and you do not edit it to pass G6.
 
 ## Gate Decision
 
-The adapter's exit code is the verdict — .NET uses `--break-at`, StrykerJS uses
-`thresholds.break` plus fresh-report validation. `skraft-quality-bar` states the bar
-for each scope. This skill decides only what a
-survivor means:
+The gate's exit code is the verdict. This skill decides only what a survivor means:
 
 | Survivors | Verdict |
 |---------------|---------|
 | None | ✅ Proceed to commit |
 | Only equivalent mutants, each narrowly suppressed with rationale; rerun green | ✅ Proceed |
-| Core below 100%, boundary below 80%, or any real core survivor | ❌ BLOCK — return to Step 4 |
+| Score below the bar, or any real survivor you can kill | ❌ BLOCK — kill it, rerun |
+| Exit 3 (no command declared) | G6 `not_run`; tell the developer; never block on it, never record `pass` |
 
 ## Mutation Categories Reference
 
@@ -144,8 +147,4 @@ survivor means:
 | Return value | `return true` → `return false` |
 | LINQ | `.Any()` ↔ `.All()`, `.First()` ↔ `.Last()` |
 
-Scope and exclusions belong to durable adapter configuration. Everything developer
-authored remains in scope unless deterministic adapter policy excludes it. DTO or
-ViewModel survivor still signals unasserted behavior. Core runs first; boundary never
-runs while core is red. Unsupported stack or missing adapter is failure, not permission
-to invent commands.
+DTO or ViewModel survivors still signal unasserted behavior.

@@ -1,12 +1,13 @@
 #!/usr/bin/env node
-// G7 for TypeScript: no mocking library and no Vitest/Jest test double in the core sources
-// named by the core Stryker config, nor in the unit tests. Prints one hit per line; empty on pass.
+// G7 for TypeScript: no mocking library and no Vitest/Jest test double in the core sources (every
+// production source under a folder whose last word is domain or application), nor in the unit
+// tests. Prints one hit per line; empty on pass.
 import { existsSync, realpathSync } from 'node:fs'
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { SOURCE, matchSources, mockHits, parseArgs, requiredFiles, validateConfig } from './gate-policy.mjs'
-import { ensure, loadScope, packageRoot, repositoryRoot, sha256, sourceFiles } from './ts-toolchain.mjs'
+import { SOURCE, coreSourceFiles, mockHits, parseArgs } from './gate-policy.mjs'
+import { ensure, packageRoot, repositoryRoot, sha256, sourceFiles } from './ts-toolchain.mjs'
 
 export async function runNoMocksGate(input) {
 	const root = await repositoryRoot(input.root)
@@ -17,7 +18,8 @@ export async function runNoMocksGate(input) {
 	let exitCode = 2
 	try {
 		const pkg = await packageRoot(root, input.package)
-		const scope = await loadScope({ root, pkg, config: input.config ?? 'stryker.core.json', scope: 'core', validate: validateConfig, match: matchSources, required: requiredFiles })
+		const scope = { files: coreSourceFiles(await sourceFiles(pkg)) }
+		ensure(scope.files.length > 0, 'No Domain or Application source: the core is every source under a folder whose name ends with domain or application')
 		const testDirs = (input.tests ?? ['tests/unit']).filter((dir) => existsSync(resolve(pkg, dir)))
 		ensure(testDirs.length > 0, `No unit test folder found (${(input.tests ?? ['tests/unit']).join(', ')})`)
 		const tests = (await Promise.all(testDirs.map((dir) => sourceFiles(pkg, dir)))).flat().filter((name) => SOURCE.test(name))
@@ -36,7 +38,7 @@ export async function runNoMocksGate(input) {
 async function main() {
 	let result
 	try {
-		const input = parseArgs(process.argv.slice(2), { options: ['root', 'package', 'evidence', 'config'], repeatable: ['tests'] })
+		const input = parseArgs(process.argv.slice(2), { options: ['root', 'package', 'evidence'], repeatable: ['tests'] })
 		for (const required of ['root', 'evidence']) ensure(input[required], `--${required} is required`)
 		result = await runNoMocksGate(input)
 	} catch (error) {

@@ -27,8 +27,7 @@ One directory per story, never shared with another story:
 ├── qg-tests.stdout                       # captured tool stdout (referenced by sha256)
 ├── qg-tests.exit                         # captured exit code
 ├── qg-build.stdout / qg-build.exit
-├── qg-mutation.*                         # core mutation gate (stdout, exit, report, manifest)
-├── qg-mutation-boundary.*                # boundary mutation gate
+├── qg-mutation.*                         # G6 mutation gate (stdout, exit, reports, manifest)
 ├── qg-mocks.stdout                       # G7 scan output — empty on pass
 ├── qg-coverage.*                         # G11 coverage gate
 ├── qg-red-{cycle}.stdout                 # captured stdout of the RED run (referenced by sha256)
@@ -49,7 +48,7 @@ read-only mode.
 
 ```json
 {
-  "$schema": "quality-gates-evidence/v4",
+  "$schema": "quality-gates-evidence/v5",
   "story": "string — story identifier (e.g. eligibilite-trottinette)",
   "produced_at": "ISO-8601 UTC timestamp",
   "producer": "software-engineer",
@@ -68,7 +67,7 @@ read-only mode.
     {
       "id": "G1",
       "label": "Acceptance test(s) pass",
-      "status": "pass | fail | not_applicable",
+      "status": "pass | fail | not_applicable | not_run (G6 only)",
       "command_executed": "verbatim shell command string",
       "exit_code_ref": "evidence/{date}/{story}/qg-tests.exit",
       "stdout_ref": "evidence/{date}/{story}/qg-tests.stdout",
@@ -113,7 +112,7 @@ they do NOT invent new ones. Adding a gate id is a contract change (new schema v
 | G3 | Build passes | compilation / static type-check succeeded |
 | G4 | Static analysis pass | linter / analyzer reported no blocking issue |
 | G5 | Architecture rules pass | dependency-direction tests pass (Clean Architecture) |
-| G6 | Mutation score meets the bar | one entry per scope, `"scope": "core"` and `"scope": "boundary"`: the mutation runner, reading the break threshold from the checked-in config of that scope, exited 0 |
+| G6 | Mutation score meets the bar | one global entry: `mutation-testing`'s gate ran every `commands.mutation` the developer declared and exited 0; `not_run` when it exited 3 (no command declared) |
 | G7 | No mocks in Domain/Application core | the adapter's scan of the Domain/Application projects and their unit tests printed nothing |
 | G8 | Conventional commit policy | each exact covered commit's full Git message satisfies feature scope, optional issue reference and sign-off under the shared policy below |
 | G9 | No test tampering (RED→GREEN integrity) | for every cycle, the test file changed only by ADDITION between RED and GREEN snapshots |
@@ -136,6 +135,12 @@ scenario's green commit.
 A gate that is genuinely irrelevant for the story uses `status: "not_applicable"` and
 MUST include a `rationale` field explaining why. `not_applicable` is **never** a substitute
 for `fail` or for missing evidence.
+
+G6 alone may be `status: "not_run"`, with a `rationale`, when the mutation gate exited 3: no
+component declares `commands.mutation`, and mutation is the developer's responsibility. Cite
+`qg-mutation.stdout` and `qg-mutation.exit` like any gate. `not_run` never stands for a failed
+or crashed run: a declared command that fails is `fail`. `qg-verify` passes it and reports a
+`notice` (`G6_NOT_RUN`) so the report shows it.
 
 ## Falsification surface (what qg-verify checks)
 
@@ -196,6 +201,8 @@ messages. A verified violation is `fail`; a message nobody can read is `inconclu
   - a `stdout_sha256` does not match the file content
   - a snapshot does not match `git show {commit}:{path}`
   - G8 actual message or completion claim cannot be independently verified with available tools
+- G6 `not_run` with a rationale in a v5 log → `pass`, with a `notice` finding; without a
+  rationale → `inconclusive`; `not_run` on any other gate or schema → `inconclusive`
 - Any of the following → `verdict: fail`:
   - a gate has `status: "fail"`
   - `metrics.tests_failed > 0` while `status: "pass"` (internal contradiction)
@@ -210,10 +217,13 @@ messages. A verified violation is `fail`; a message nobody can read is `inconclu
 
 ## Schema versioning
 
-`$schema: "quality-gates-evidence/v4"` is part of the contract. Bump the version
+`$schema: "quality-gates-evidence/v5"` is part of the contract. Bump the version
 when adding/removing gates or fields; old logs MUST still be parseable with their
 declared version.
 
+- **v5** — G6 is one global entry again: the developer's declared mutation commands, judged
+  together against one bar. G6 alone may be `not_run`, with a rationale, when no command is
+  declared. v4 logs still verify with their two scoped entries.
 - **v4** — G6 is recorded once per mutation scope with a `scope` field (`core`, `boundary`);
   its runner reads the break threshold from the checked-in config, so no `--break-at` flag is
   expected in `command_executed`. Evidence lives in one directory per story.

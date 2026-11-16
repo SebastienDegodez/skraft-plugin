@@ -3,30 +3,22 @@
 // dotnet-quality-gates-smoke.mjs — do the .NET quality-gate scripts judge a real run?
 //
 // The unit tests drive the scripts with a fake dotnet that writes whatever report a test
-// asks for. They prove the scripts read a report correctly; they cannot prove a real
-// Stryker.NET writes that report. Stryker.NET 4.14 showed the gap three times: `--version`
-// no longer printed a version, `init` wrote a config its own run refused, and a run where
-// no test ran exited 0 with every mutant left Pending.
+// asks for. They prove the scripts read a report correctly; they cannot prove the real
+// toolchain still writes it. Mutation (G6) is the developer's own command, run by the
+// mutation-testing skill's gate, so no mutation tool runs here.
 //
 // So this runs the shipped scripts with the real toolchain on a small Clean Architecture
 // solution, in a throwaway Git copy of tests/skraft-framework/quality-gates/fixtures/dotnet-checkout:
 //
-//   scaffold    configure-mutation.mjs writes configs Stryker.NET accepts
 //   G7, G11     no mocking framework in the core; 100% line coverage of Domain + Application
-//   G6 core     every core mutant killed, the score recomputed from the report
-//   G6 boundary API + Infrastructure over their bar
-//   since       a differential run with nothing changed tests nothing and passes
-//   weakened    one unit test removed: a core mutant survives and the gate fails
 //   init        clean-architecture-dotnet's init-project.mjs scaffolds a solution that builds
 //
-// Stryker.NET comes from the fixture's tool manifest, so the version is pinned there.
-//
 // Usage:  node scripts/dotnet-quality-gates-smoke.mjs [--keep]
-// Needs:  the .NET 10 SDK on PATH, and NuGet access to restore the tool and packages.
+// Needs:  the .NET 10 SDK on PATH, and NuGet access to restore the packages.
 // Exits:  0 every probe passed, 1 a probe failed, 2 the toolchain could not run.
 
 import { spawnSync } from 'node:child_process'
-import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { basename, dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -37,11 +29,6 @@ const FIXTURE = join(repoRoot, 'tests', 'skraft-framework', 'quality-gates', 'fi
 const SCRIPTS = join(repoRoot, 'plugins', 'skraft-framework', 'skills', 'quality-gates-dotnet', 'scripts')
 const INIT_PROJECT = join(repoRoot, 'plugins', 'skraft-framework', 'skills', 'clean-architecture-dotnet', 'scripts', 'init-project.mjs')
 const BUILD_OUTPUT = new Set(['bin', 'obj', 'StrykerOutput', 'TestResults'])
-
-// The fact that alone kills the `amount < 0` → `amount <= 0` mutant of LoyaltyDiscount.
-const WEAKENED_TEST = 'tests/Checkout.UnitTests/LoyaltyDiscountTests.cs'
-// A Windows checkout may hold CRLF line endings.
-const REMOVED_FACT = /\r?\n {4}\[Fact\]\r?\n {4}public void An_empty_order_costs_nothing\(\) =>\r?\n[^\r\n]*\r?\n/
 
 const { values: opts } = parseArgs({
   options: {
@@ -98,19 +85,6 @@ const runGate = (ctx, script, prefix, evidence, ...args) => {
 
 const probes = [
   {
-    name: 'scaffold',
-    run: (ctx) => {
-      const result = spawnSync(process.execPath, [join(SCRIPTS, 'configure-mutation.mjs'), '--root', ctx.repo], { cwd: ctx.repo, encoding: 'utf8' })
-      if (result.status === 0) {
-        git(ctx.repo, 'add', '.')
-        git(ctx.repo, 'commit', '-q', '-m', 'chore(checkout): mutation configs')
-      }
-      return { status: result.status, line: result.stdout.trimEnd().split('\n').at(-1) ?? '', stderr: result.stderr }
-    },
-    status: 0,
-    line: /^wrote .*stryker-config-boundary\.json$/,
-  },
-  {
     name: 'G7 no mocks in core',
     run: (ctx) => runGate(ctx, 'no-mocks-in-core.mjs', 'qg-mocks', 'evidence'),
     status: 0,
@@ -122,37 +96,7 @@ const probes = [
     status: 0,
     line: /^Line coverage \(Domain, Application\): ([1-9]\d*)\/\1 = 100%/,
   },
-  {
-    name: 'G6 core',
-    run: (ctx) => runGate(ctx, 'mutation-core.mjs', 'qg-mutation', 'evidence'),
-    status: 0,
-    line: /^Mutation score \(Domain,Application\): ([1-9]\d*)\/\1 tested mutants detected = 100%, bar 100%$/,
-  },
-  {
-    name: 'G6 boundary',
-    run: (ctx) => runGate(ctx, 'mutation-boundary.mjs', 'qg-mutation-boundary', 'evidence'),
-    status: 0,
-    line: /^Mutation score \(API,Infrastructure\): \d+\/[1-9]\d* tested mutants detected = [\d.]+%, bar 80%$/,
-  },
-  {
-    name: 'since, nothing changed',
-    run: (ctx) => runGate(ctx, 'mutation-core.mjs', 'qg-mutation', 'checkpoint', '--since', git(ctx.repo, 'rev-parse', 'HEAD')),
-    status: 0,
-    line: /^No Domain,Application mutant changed since [0-9a-f]{40}: nothing to test$/,
-  },
-  {
-    name: 'weakened test fails G6 core',
-    run: (ctx) => {
-      const path = join(ctx.repo, WEAKENED_TEST)
-      const source = readFileSync(path, 'utf8')
-      const weakened = source.replace(REMOVED_FACT, '\n')
-      if (weakened === source) throw new Error(`${WEAKENED_TEST} no longer holds the fact this probe removes`)
-      writeFileSync(path, weakened)
-      return runGate(ctx, 'mutation-core.mjs', 'qg-mutation', 'weakened')
-    },
-    status: 1,
-    line: /^Mutation score \(Domain,Application\): (\d+)\/(?!\1 )\d+ tested mutants detected = [\d.]+%, bar 100%$/,
-  },  {
+{
     name: 'clean-architecture-dotnet init-project builds',
     run: (ctx) => {
       const cwd = join(ctx.root, 'scaffold')
@@ -175,13 +119,6 @@ if (spawnSync('dotnet', ['--version'], { encoding: 'utf8' }).status !== 0) {
 }
 
 const ctx = prepare()
-const restore = spawnSync('dotnet', ['tool', 'restore'], { cwd: ctx.repo, encoding: 'utf8' })
-if (restore.status !== 0) {
-  log(`dotnet tool restore failed — Stryker.NET is unavailable:\n${restore.stderr || restore.stdout}`)
-  annotate('dotnet tool restore', restore.stderr || restore.stdout)
-  rmSync(ctx.root, { recursive: true, force: true })
-  process.exit(2)
-}
 log(`fixture copied to ${ctx.repo}`)
 
 let failed = 0

@@ -75,13 +75,6 @@ export async function sourceFiles(pkg, dir = 'src') {
 	return files.sort()
 }
 
-export function changedSince(root, since) {
-	const mergeBase = git(root, ['merge-base', since, 'HEAD'])
-	const changed = git(root, ['diff', '--name-only', '-z', mergeBase, '--']).split('\0').filter(Boolean)
-	const untracked = git(root, ['ls-files', '--others', '--exclude-standard', '-z', '--']).split('\0').filter(Boolean)
-	return { mergeBase, files: [...new Set([...changed, ...untracked])] }
-}
-
 export async function capture(command, args, { cwd, env = process.env, stdout, stderr }) {
 	const out = await open(stdout, 'wx')
 	let err
@@ -101,28 +94,3 @@ export async function capture(command, args, { cwd, env = process.env, stdout, s
 // Every tool call is `node <bin file> ...`, with CI set so no watcher or prompt starts.
 export const nodeEnv = () => ({ ...process.env, CI: 'true', FORCE_COLOR: '0', NO_COLOR: '1' })
 export const runNode = (bin, args, options) => capture(process.execPath, [bin, ...args], { env: nodeEnv(), ...options })
-
-// A scope's checked-in Stryker config: committed, valid, and the package sources it names.
-export async function loadScope({ root, pkg, config, scope, validate, match, required = () => [] }) {
-	const path = resolve(pkg, config)
-	const name = inside(root, path)
-	git(root, ['ls-files', '--error-unmatch', '--', name])
-	git(root, ['cat-file', '-e', `HEAD:${name}`])
-	const bytes = readFileSync(path)
-	let parsed
-	try {
-		parsed = JSON.parse(bytes.toString('utf8'))
-	} catch (error) {
-		throw new Error(`${name} is not JSON: ${error.message}`)
-	}
-	const options = validate(parsed, scope)
-	const all = await sourceFiles(pkg)
-	const files = match(all, options.mutate)
-	ensure(files.length > 0, `mutate in ${name} matches no source file`)
-	const empty = options.mutate.filter((pattern) => match(files, [pattern]).length === 0)
-	ensure(empty.length === 0, `mutate pattern matches no source file: ${empty.join(', ')}`)
-	const chosen = new Set(files)
-	const missing = required(all, scope).filter((file) => !chosen.has(file))
-	ensure(missing.length === 0, `${name} leaves ${scope} code out of mutation: ${missing.join(', ')}; mutate every file of the ${scope} layers`)
-	return { name, sha256: sha256(bytes), options, files }
-}

@@ -105,10 +105,10 @@ Load each skill below only when its trigger fires, never at startup.
 | `test-refactoring-catalog` | Refactoring a test (helpers, renaming, deduplication) |
 | `mutation-testing` | Entering phase 4 (COMMIT & VERIFY) |
 | `quality-gates-evidence-contract` | Entering phase 4 — defines the JSON contract for the evidence log you MUST deposit |
-| `quality-gates-dotnet` | Repo is a .NET solution (`*.sln` / `*.csproj`) — concrete `dotnet` / `stryker` recipes that populate the contract |
+| `quality-gates-dotnet` | Repo is a .NET solution (`*.sln` / `*.csproj`) — concrete `dotnet` recipes that populate the contract |
 | `quality-gates-javascript` | Repo has a plain JavaScript Node package (`package.json` without `vitest` or `typescript`) — JavaScript gates; its unsupported cases are blockers to report, never gates to skip |
-| `quality-gates-python` | Repo has a Python project (`pyproject.toml`) — Python gates and cosmic-ray mutation, run from the project's `.venv` |
-| `quality-gates-typescript` | Repo has a TypeScript package tested with Vitest (`vitest` in its `package.json`), a React front end included — Vitest, tsc, ESLint boundaries, v8 coverage and StrykerJS mutation, run from the package's `node_modules` |
+| `quality-gates-python` | Repo has a Python project (`pyproject.toml`) — Python gates, run from the project's `.venv` |
+| `quality-gates-typescript` | Repo has a TypeScript package tested with Vitest (`vitest` in its `package.json`), a React front end included — Vitest, tsc, ESLint boundaries and v8 coverage, run from the package's `node_modules` |
 | `resolving-stack-commands` | Needing a build or test command the stack-commands file does not hold, or one of its commands fails — never hardcode one |
 | `skraft-quality-bar` | Entering phase 4 — the thresholds the final gates enforce |
 | `qa-reporting` | Preparing the outcome handoff |
@@ -171,9 +171,9 @@ Do not enter PREPARE, RED, SYNTHESIZE-GREEN, or code COMMIT & VERIFY for this pa
 - Before the green, run static checks and formatting and fix every failure, never changing a line of the scenario's acceptance test.
 - **Green, once, chained**: run the whole suite and commit in one command that commits only when the run passes, naming each file you changed (never `.`, `-A` or a folder): `<test command> && git add <each file you changed> && git commit -s -m "feat(feature): subject" -m "Refs: #N"` in sh and PowerShell 7; in Windows PowerShell 5.1, `<test command>; if ($?) { git add <each file you changed>; if ($?) { git commit -s -m "feat(feature): subject" -m "Refs: #N" } }`. The run fails → nothing is committed: fix, run the line again.
 - Use `git commit -s` with `type(feature): subject`, e.g. `feat(loyalty-discount): apply member pricing`. For a known issue, end the body with `Refs: #N` for intermediate work or `Closes #N` (no colon) only when the whole issue is genuinely finished and all required gates pass. Omit the issue line when unknown.
-- **Gate**: run no mutation inside a scenario. Once, after the story's last work commit, run the core then boundary scripts with `--since` set to `phaseHistory.DELIVER.baseSha` (without `--since` when no base is recorded): their exit code is the verdict and the only G6 evidence; `skraft-quality-bar` states the bar. If a test kills no mutants, DELETE IT.
+- **Gate**: run no mutation inside a scenario. Once, after the story's last work commit, run `mutation-testing`'s gate with `--pipeline` and `--since` set to `phaseHistory.DELIVER.baseSha` (without `--since` when no base is recorded): its exit code is the verdict and the only G6 evidence; `skraft-quality-bar` states the bar. Exit 3 → record G6 `not_run` with the gate's first line as rationale and tell the developer: no command declared (`/skraft-init mutation` sets one up), or mutation runs outside the pipeline and no `/skraft-mutation` run covers HEAD. Never run `/skraft-mutation` or `/skraft-init` yourself, and never write a mutation command, config or result. If a test kills no mutants, DELETE IT.
 - Append a one-line entry per commit to `.copilot-tracking/skraft-plans/{projectSlug}/changes/{date}/change-log.md` (create the dated subfolder if needed; markdown file starts with `<!-- markdownlint-disable-file -->`).
-- **Deposit the quality-gates evidence log, once, after the story's last work commit.** Load `quality-gates-evidence-contract` (schema v4) and the adapter of every stack the repository holds (`quality-gates-dotnet`, `quality-gates-javascript`, `quality-gates-python`, `quality-gates-typescript`). Run each gate command or script into `evidence/{date}/{story}/`, record one `test_integrity` cycle per scenario (its acceptance test file at the `test` commit that holds it red and at its green commit, and its RED capture), write those snapshots via `git show <commit>:<path>`, then assemble `evidence/{date}/{story}/qg-{story}.json` per that contract. Commit that directory alone with the same feature scope, e.g. `chore(loyalty-discount): record quality evidence`, then run `node "$SKRAFT_PLUGIN_ROOT/src/cli/qg-verify.mjs" --log {that log}`: hand over only on `"verdict": "pass"`, or report the failing gate. A missing or malformed log is `inconclusive` (NEEDS_REWORK), so a hidden failure fails harder than a disclosed one.
+- **Deposit the quality-gates evidence log, once, after the story's last work commit.** Load `quality-gates-evidence-contract` (schema v5) and the adapter of every stack the repository holds (`quality-gates-dotnet`, `quality-gates-javascript`, `quality-gates-python`, `quality-gates-typescript`). Run each gate command or script into `evidence/{date}/{story}/`, record one `test_integrity` cycle per scenario (its acceptance test file at the `test` commit that holds it red and at its green commit, and its RED capture), write those snapshots via `git show <commit>:<path>`, then assemble `evidence/{date}/{story}/qg-{story}.json` per that contract. Commit that directory alone with the same feature scope, e.g. `chore(loyalty-discount): record quality evidence`, then run `node "$SKRAFT_PLUGIN_ROOT/src/cli/qg-verify.mjs" --log {that log}`: hand over only on `"verdict": "pass"`, or report the failing gate. A missing or malformed log is `inconclusive` (NEEDS_REWORK), so a hidden failure fails harder than a disclosed one.
 
 ### Outcome handoff (success or blockage)
 
@@ -199,7 +199,7 @@ When the handoff block's mode line reads `rework`, the previous review's finding
 1. Read the previous review the block names. Skip PREPARE's planning: the plans, the acceptance tests and your previous commits stand.
 2. Fix each finding with the smallest change. A production change still goes RED → SYNTHESIZE-GREEN → COMMIT through a test.
 3. Re-run only the gates your change invalidates:
-   - production or test code changed → the affected tests, then the core and boundary mutation runs `--since` the DELIVER `baseSha` and a new evidence log;
+   - production or test code changed → the affected tests, then the mutation gate `--since` the DELIVER `baseSha` and a new evidence log;
    - only commit messages, the change log or evidence metadata changed → regenerate the evidence log from the existing captures, commit it, and re-run `qg-verify`; never re-run tests or mutation;
    - the dispatch carries `Environment re-gate` → change no code; re-run only the gate captures the previous review names inconclusive, regenerate the evidence log, commit it, and re-run `qg-verify`.
 4. Keep every captured output your change does not invalidate.
@@ -222,7 +222,7 @@ When a slice needs **test infrastructure** rather than business logic, fan out t
 Before concluding, verify and output this valid markdown checklist visually in the chat/console:
 - [ ] Active acceptance and unit tests pass
 - [ ] Build and static analysis pass
-- [ ] Mutation gate passed on both scopes (core, then boundary)
+- [ ] Mutation gate passed, or G6 `not_run` reported to the developer (no command declared)
 - [ ] No mocks used inside Domain/Application core
 - [ ] Object Calisthenics — 9 rules verified on Domain (see craft-discipline C10)
 - [ ] Code committed using conventional commits
@@ -238,7 +238,7 @@ Always print a trace of your cycle directly into the chat/console output exclusi
 **GREEN COMMIT**: <Hash/Message>.
 
 ### Mutation (once, after the last scenario)
-**MUTATION**: <core exit> / <boundary exit>.
+**MUTATION**: <gate exit> — <score>, or not run.
 ```
 
 ## Constraints
