@@ -3,6 +3,12 @@
 Toutes les modifications notables de ce projet sont documentées ici.
 Format basé sur [Conventional Commits](https://www.conventionalcommits.org/) — versionnage [SemVer](https://semver.org/).
 
+## [2.0.0-alpha.99](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.98...v2.0.0-alpha.99) (2026-11-16)
+
+### ✨ Features
+
+* **engine:** the plugin's pipeline no longer runs mutation ([#610](https://github.com/SebastienDegodez/skraft-plugin/issues/610)) ([c096359](https://github.com/SebastienDegodez/skraft-plugin/commit/c0963599dfcd90454660b9dc27714a2e5a9c952c)), closes [#211](https://github.com/SebastienDegodez/skraft-plugin/issues/211)
+
 ## [2.0.0-alpha.98](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.97...v2.0.0-alpha.98) (2026-11-16)
 
 ### 🐛 Bug Fixes
