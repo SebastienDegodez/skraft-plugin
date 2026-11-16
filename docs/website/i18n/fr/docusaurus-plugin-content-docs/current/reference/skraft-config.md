@@ -298,6 +298,7 @@ ligne se comporte donc de la même façon sous sh, PowerShell et cmd.
 | Guillemets | `"…"` et `'…'` gardent les blancs dans un seul argument ; pas de caractère d'échappement |
 | `{baseSha}` | remplacé, avant le découpage, par le SHA de la base du dépôt du composant |
 | Syntaxe shell | un mot écrit sans guillemets qui contient <code>&#124;</code>, `&`, `;`, `<` ou `>` est refusé |
+| Variables | un `NOM=valeur` avant le programme est refusé : aucun shell ne le pose |
 | Rien d'interprété | pas de variable, de joker ni de redirection : chaque mot part tel quel au programme |
 | Programme | cherché dans le PATH (et PATHEXT sous Windows) ; un chemin avec `/` ou `\` part de la racine du composant |
 | Windows | un `.cmd` ou `.bat` (npm, npx, gradlew.bat) passe par cmd.exe, arguments échappés |
@@ -308,10 +309,12 @@ Messages de refus d'une ligne (précédés de `command "<ligne>"` dans une gate,
 | Cas | Message |
 | --- | --- |
 | syntaxe shell | `uses shell syntax (<mot>); put the steps in a script and call the script` |
+| variables avant le programme | `sets <NOM>, … before its program, which no shell reads; put the variables and the command in a script and call the script` |
 | guillemet non fermé | `has an unclosed <guillemet> quote` |
 | `{baseSha}` sans base | `uses {baseSha} but the run has no base for this repository` |
 
-Pour enchaîner des étapes (`a && b`), écrivez-les dans un script du dépôt et appelez le
+Pour enchaîner des étapes (`a && b`) ou poser des variables
+(`TESTCONTAINERS_RYUK_DISABLED=true mvn test`), écrivez-les dans un script du dépôt et appelez le
 script.
 
 ## Gates <!-- #gates -->
@@ -388,7 +391,9 @@ calculé dans le dépôt de chaque composant et dans celui de la copie de travai
 | 3 | `baseBranch` global | `config` |
 | 4 | `main` | `default` |
 
-- Si la ref n'a pas de merge-base locale, le moteur essaie `origin/<ref>`.
+- Le moteur prend aussi la merge-base avec `origin/<ref>` et garde la plus récente des deux : une
+  branche locale en retard sur sa branche distante cède la place à `origin/<ref>`, une branche en
+  avance est gardée. Si la ref n'a pas de merge-base locale, `origin/<ref>` est la seule.
 - Un dossier hors de tout dépôt n'a pas de base ; ce n'est pas une erreur.
 - Sans merge-base même avec `origin/<ref>` : refus `base-unresolved`, une partie par dépôt
   sans base (`the working copy (<dépôt>) has no merge base with <ref>` ou

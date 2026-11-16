@@ -33,6 +33,21 @@ test('without any setting, every repository is compared with its merge base with
   ])
 })
 
+test('a local branch behind its remote gives way to the remote, one ahead of it is kept: the base is the newer merge base of the two', async () => {
+  const sourceControl = new InMemorySourceControl({
+    '.': { top: '.', mergeBases: { main: 'a0', 'origin/main': 'a1' }, ancestry: { a1: ['a0'] } },
+    '../payment-web': { top: '../payment-web', mergeBases: { main: 'w2', 'origin/main': 'w1' }, ancestry: { w2: ['w1'] } },
+  })
+
+  const { started } = await start({ config: CONFIG({ baseBranch: null }), sourceControl })
+
+  assert.deepEqual(started.base.map(({ component, ref, source, sha }) => [component, ref, source, sha]), [
+    [null, 'origin/main', 'default', 'a1'],
+    ['api', 'origin/main', 'default', 'a1'],
+    ['web', 'main', 'default', 'w2'],
+  ])
+})
+
 test('a component in a neighbour repository takes its base in that repository', async () => {
   const sourceControl = twoRepositories()
   sourceControl.folders['../payment-web/app'] = { top: '../payment-web', mergeBases: { main: 'w9' } }

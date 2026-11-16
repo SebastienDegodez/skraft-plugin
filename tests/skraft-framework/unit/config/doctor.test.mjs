@@ -319,10 +319,16 @@ test('no configuration, an empty one, an invalid one, a missing root or an old N
   assert.deepEqual(failures(await doctor({ node: 'v20.18.0' }).doctor.check()), ['node: Node v20.18.0; skraft needs Node 22 or later'])
 })
 
-test('a command with shell syntax is reported before any program is looked for', async () => {
-  const { doctor: check } = doctor({ components: [{ ...WEB, commands: { test: 'npm test > out.txt' } }] })
+test('a command with shell syntax, or that sets variables before its program, is reported before any program is looked for; a program whose name holds = is looked for', async () => {
+  const commands = { test: 'npm test > out.txt', lint: 'NODE_ENV=test DEBUG= npx eslint .', build: 'CI=true', e2e: './e2e=smoke.sh' }
+  const { doctor: check } = doctor({ components: [{ ...WEB, commands }] })
 
-  assert.deepEqual(failures(await check.check()), ['web/test: "npm test > out.txt" uses shell syntax (>); put the steps in a script and call the script'])
+  assert.deepEqual(failures(await check.check()), [
+    'web/build: "CI=true" sets CI before its program, which no shell reads; put the variables and the command in a script and call the script',
+    'web/lint: "NODE_ENV=test DEBUG= npx eslint ." sets NODE_ENV, DEBUG before its program, which no shell reads; put the variables and the command in a script and call the script',
+    'web/test: "npm test > out.txt" uses shell syntax (>); put the steps in a script and call the script',
+    'web/e2e: command not found: ./e2e=smoke.sh (from ../payment-web); install it or change commands.e2e in skraft-config.json',
+  ])
 })
 
 test('a component with no gate command, mutation, the developer\'s, aside, or a --base that is not a ref, fails the doctor', async () => {

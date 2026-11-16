@@ -47,7 +47,9 @@ gates refuse the run.
 - `e2e` — the end-to-end command, for a front end only.
 
 Propose each command and have the developer confirm it. A command the developer writes always
-wins. Then run `<cli> doctor --run` and fix every failure before you go on: a command that does
+wins. A command runs with no shell, the same under sh, PowerShell and cmd: a pipe, a redirection,
+`&&` or a `VAR=value` before the program is refused. A command that needs variables or several
+steps is a script of the component, and the command calls the script. Then run `<cli> doctor --run` and fix every failure before you go on: a command that does
 not run is worse than an absent one.
 
 ## 4. The two publication consents
@@ -99,6 +101,10 @@ every run with `skraft is not initialised`, and `skraft doctor` fails on it.
 
 One pair per runner: a definition of one pair binds no step of another, so a component holding
 several test projects carries several pairs.
+
+A pair is `{ "runner": "<runner>", "features": "<folder>", "steps": "<folder>" }`, both folders
+relative to the component root and inside it; `runner` may be left out, and `steps` too when
+nothing binds the scenarios. `bdd` is a list of pairs, or `false`.
 
 For new layouts, use `clean-architecture-testing`: executable scenarios and bindings belong
 to the unit-test suite, grouped by feature; integration tests, including the walking skeleton,

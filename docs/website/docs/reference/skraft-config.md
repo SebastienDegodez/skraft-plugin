@@ -293,6 +293,7 @@ behaves the same way under sh, PowerShell and cmd.
 | Quotes | `"…"` and `'…'` keep blanks inside one argument; no escape character |
 | `{baseSha}` | replaced, before splitting, with the base SHA of the component's repository |
 | Shell syntax | a word written with no quotes that contains <code>&#124;</code>, `&`, `;`, `<` or `>` is refused |
+| Variables | a `NAME=value` before the program is refused: no shell sets it |
 | Nothing interpreted | no variable, wildcard or redirection: each word goes to the program as is |
 | Program | looked up on the PATH (and PATHEXT under Windows); a path with `/` or `\` starts from the component's root |
 | Windows | a `.cmd` or `.bat` (npm, npx, gradlew.bat) goes through cmd.exe, arguments escaped |
@@ -303,10 +304,11 @@ doctor):
 | Case | Message |
 | --- | --- |
 | shell syntax | `uses shell syntax (<word>); put the steps in a script and call the script` |
+| variables before the program | `sets <NAME>, … before its program, which no shell reads; put the variables and the command in a script and call the script` |
 | unclosed quote | `has an unclosed <quote> quote` |
 | `{baseSha}` with no base | `uses {baseSha} but the run has no base for this repository` |
 
-To chain steps (`a && b`), write them in a script of the repository and call the script.
+To chain steps (`a && b`) or set variables (`TESTCONTAINERS_RYUK_DISABLED=true mvn test`), write them in a script of the repository and call the script.
 
 ## Gates <!-- #gates -->
 
@@ -380,7 +382,9 @@ computed in each component's repository and in the working copy's.
 | 3 | global `baseBranch` | `config` |
 | 4 | `main` | `default` |
 
-- When the ref has no local merge base, the engine tries `origin/<ref>`.
+- The engine also takes the merge base with `origin/<ref>`, and keeps the newer of the two: a
+  local branch behind its remote gives way to `origin/<ref>`, one ahead of it is kept. When the
+  ref has no local merge base, `origin/<ref>` is the only one.
 - A folder outside any repository has no base; that is not an error.
 - With no merge base even with `origin/<ref>`: refused `base-unresolved`, one part per
   repository without a base (`the working copy (<repository>) has no merge base with <ref>`

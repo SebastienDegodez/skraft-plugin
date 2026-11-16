@@ -13,8 +13,8 @@
  * @typedef {{ path: string, text: string }} Document a file of the run, as the engine read it
  * @typedef {{ kind: string, title: string, steps: string[], examples: string[][] }} Scenario
  * @typedef {{ plans: Document[], features: Document[], criteria: Document[] }} Records
- *   plans: the test plans of the tracking folder; features: the files of the features folder of
- *   the working copy; criteria: the acceptance criteria of the story, `ac-draft-<story>.md`.
+ *   plans: the test plans of the tracking folder; features: the files of the features folders of
+ *   the working copy that the plans name, the story's; criteria: the acceptance criteria of the story, `ac-draft-<story>.md`.
  */
 
 /** A test plan names its scenarios' file in a cell of its coverage matrix, as a path or in backticks. */
@@ -74,13 +74,12 @@ const cellsOf = (line) => /** @type {string[]} */ (ROW.exec(line))[1].split('|')
  * @param {Records} records @returns {string[]}
  */
 export const gherkinFailures = ({ plans, features, criteria }) => {
-  const story = plans.flatMap((plan) => storyFeatures(plan, features))
-  const unread = story.flatMap(unreadable)
+  const unread = features.flatMap(unreadable)
   if (unread.length > 0) return unread
   return [
     ...plans.flatMap((plan) => missingFeatures(plan, features)),
-    ...story.flatMap(featureFailures),
-    ...criteria.flatMap((file) => coverageFailures(file, story)),
+    ...features.flatMap(featureFailures),
+    ...criteria.flatMap((file) => coverageFailures(file, features)),
   ]
 }
 
@@ -98,9 +97,12 @@ const unreadable = ({ path, text }) => {
   return scenariosOf(text).length === 0 ? [`${path} opens no scenario; ${ENGLISH}`] : []
 }
 
-/** The `.feature` files of the story: those its plan names, as the working copy holds them. @param {Document} plan @param {Document[]} features */
-const storyFeatures = ({ text }, features) => features
-  .filter(({ path }) => namedFeatures(text).some((named) => path === named || path.endsWith(`/${named}`)))
+/**
+ * Whether a file of the working copy is one of the `.feature` files named: the same path, or one
+ * that ends with it.
+ * @param {string[]} named from namedFeatures @param {string} path
+ */
+export const citedBy = (named, path) => named.some((name) => path === name || path.endsWith(`/${name}`))
 
 /**
  * Whether the story has a scenario for each criterion it holds. An outline counts once, however
@@ -116,7 +118,7 @@ const coverageFailures = ({ path, text }, features) => {
 
 /** Each `.feature` a plan names that the working copy does not hold. @param {Document} plan @param {Document[]} features */
 const missingFeatures = ({ path, text }, features) => namedFeatures(text)
-  .filter((named) => !features.some(({ path: held }) => held === named || held.endsWith(`/${named}`)))
+  .filter((named) => !features.some(({ path: held }) => citedBy([named], held)))
   .map((named) => `${path} names ${named}, which is no .feature of the working copy (#524)`)
 
 /** @param {Document} feature @returns {string[]} */
