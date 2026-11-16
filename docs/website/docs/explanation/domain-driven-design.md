@@ -97,9 +97,9 @@ flowchart LR
 Starbucks order); arrows go from upstream to downstream.*
 
 The `architecture-compliance` lens of the DESIGN review requires every relationship between
-contexts to carry an explicit pattern and no dependency to stay undeclared (G6). An ACL always
-needs an ADR, and that ADR must cite an admissible force and assess the "without the pattern"
-option (`fitness` lens, G11).
+contexts to carry an explicit pattern and no dependency to stay undeclared (G6). The relationship,
+an ACL included, is written on the context map and its translation in the downstream context's
+tactical design; it never gets an ADR of its own (`fitness` lens, G17).
 
 ## From strategic to tactical
 
@@ -177,11 +177,12 @@ The full list: [Durable documentation](../reference/run-journal.md#durable-docs)
 ## Consistency between artefacts
 
 Four artefacts describe the same model; they drift easily. The `solution-architect` keeps a
-**consistency matrix** per story: one row per concept an ADR names, one column per artefact, one
-verdict per row. The ADRs are the source of truth; on a label or classification drift, the
-descriptive artefact is rewritten to the ADR's label, and the rewrite is logged. The engine checks
-these records at each attempt, and the human ratifies the ADRs before DISTILL relies on them. The
-phase is detailed in [DESIGN](./pipeline/design.md).
+**consistency matrix** per story: one row per concept the stories rely on, one column per
+artefact, one verdict per row. The source of truth is the project's architecture documents and
+its ADRs; on a label or classification drift, the descriptive artefact is rewritten to the
+source's label, and the rewrite is logged. A concept needs a source, never an ADR of its own. The
+engine checks these records at each attempt, and the human ratifies the ADRs, when there are any,
+before DISTILL relies on them. The phase is detailed in [DESIGN](./pipeline/design.md).
 
 ## The trade-offs
 

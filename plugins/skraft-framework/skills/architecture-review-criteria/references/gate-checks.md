@@ -2,21 +2,22 @@
 
 Each gate: what to check, one failing case (✗), one passing case (✓).
 
-## G1 — Every structural commitment has an ADR or a documented home
+## G1 — Every structural commitment is decided somewhere
 
 List every bounded context, pattern (CQRS with a bus, Event Sourcing, Saga), context-map
 relationship and aggregate crossing an existing boundary in the diagrams, plus every commitment
-the structural scan detects in existing code. Index the ADRs by topic. Each element needs an
-`Accepted` ADR or a `Proposed` ADR of this pass; code carrying a pattern no ADR covers needs a
-back-fill ADR. An aggregate inside one context, a value object, a domain event, a repository or a
-gateway is recorded by the tactical design: no ADR is missing for it. An element the project's
-architecture documents (`ARCHITECTURE.md`, `docs/architecture/`) already describe needs no ADR
-when the matrix cites that document.
+the structural scan detects in existing code. Each element is decided in one source the matrix
+cites: the project's architecture documents (`ARCHITECTURE.md`, `docs/architecture/`, the context
+map and each context's tactical design), an `Accepted` ADR, or a `Proposed` ADR of this pass. A
+missing ADR is no finding by itself: the finding is an element no source decides. Bounded
+contexts, context-map relationships and an ACL are decided in `context-map.md` or the context's
+tactical design, never in an ADR. Code carrying CQRS with a bus, Event Sourcing or a saga that no
+source covers needs a back-fill ADR.
 
-- ✗ The diagram shows Event Sourcing on `EligibilityAggregate`; no ADR evaluates it.
-- ✗ "ADR-002: four bounded contexts as packages in existing modules" when `ARCHITECTURE.md` and `context-map.md` already state them.
+- ✗ The diagram shows Event Sourcing on `EligibilityAggregate`; no document or ADR decides it.
+- ✗ A new `ProposalSubmissions` context in the diagrams, absent from `context-map.md`.
 - ✓ Event Sourcing a story asks for, with its ADR.
-- ✓ ADR-003 accepts the ACL between the two contexts and says why Conformist was rejected.
+- ✓ The ACL from Policy to Eligibility is labelled in `context-map.md` and its translation sits in `docs/architecture/policy.md`; no ADR: no finding.
 - ✓ `ProposalAggregate` with its invariant in the tactical design, no ADR: no finding.
 
 ## G2 — No contradicting ADRs
@@ -61,14 +62,14 @@ invariant spanning two aggregates is a process rule: a saga reacting to both agg
 Every arrow between contexts in `context-map.md` carries one pattern (ACL, Conformist, Shared
 Kernel, Partnership, Open Host Service, Published Language), and every dependency between contexts
 in a diagram appears on the map. Cross-check each `Conformist` against the subdomain table and the
-ADR text:
+context's tactical design:
 
 - A Core downstream is never Conformist (V-DDD-09).
 - A published contract (ViewModel, event, DTO) consumed with a local copy or translation is OHS/PL
   upstream + ACL downstream, however trivial the translation (V-DDD-10).
 
 - ✗ `EligibilityContext → PolicyContext` unlabelled; or a Core `SubscriptionContext` labelled
-  Conformist while its ADR describes a local copy of `EligibilityViewModel`.
+  Conformist while `docs/architecture/subscription.md` describes a local copy of `EligibilityViewModel`.
 
 ## G7 — Every story has a trigger
 
@@ -107,13 +108,13 @@ adoption, saga and ACL.
 ## G10 — Reconciliation journal
 
 In each consistency matrix, every reconciliation rewrite (a `LABEL_DRIFT` or
-`CLASSIFICATION_DRIFT` aligned on its ADR) has a journal entry naming the rewritten artefact and
+`CLASSIFICATION_DRIFT` aligned on its source) has a journal entry naming the rewritten artefact and
 the cause. A change answering a review finding is not a reconciliation rewrite and needs no entry.
 
 ## G11 — Complexity-adding pattern justified
 
-For each ADR adopting CQRS, Event Sourcing, a saga, eventual consistency, a service split or an
-ACL: an admissible force in its Context (SKILL.md) and a "do without the pattern" row in
+For each ADR adopting CQRS, Event Sourcing, a saga, eventual consistency or a service split: an
+admissible force in its Context (SKILL.md) and a "do without the pattern" row in
 `Alternatives Rejected`.
 
 - ✗ "We use CQRS to stay consistent with the rest of the codebase."
@@ -136,13 +137,18 @@ detect either, is a finding.
 
 ## G15 — No baseline ADR
 
-See the baseline list in SKILL.md (*Fitness judgements*).
+See the baseline list in SKILL.md (*Fitness judgements*). An ADR that restates what the project's
+documents (`ARCHITECTURE.md`, `CONTRIBUTING.md`, `AGENTS.md`, `docs/architecture/`) or an
+`Accepted` ADR already decide, under any wording, is a finding.
+
+- ✗ "ADR-002: four bounded contexts as packages in existing modules" when `ARCHITECTURE.md` and `context-map.md` already state them.
 
 ## G17 — Eligible subject
 
-An ADR decides a layer boundary, an aggregate boundary, a bounded context, a pattern adding complexity or a cross-cutting concern, and weighs a real trade-off. Any other subject is `ADR-INFLATION`, as is a choice the project's architecture documents already state or a stack or test tooling the team imposed; no alternative genuinely weighed is `NON-DECISION`.
+An ADR decides a choice costly to undo that reaches beyond one bounded context: a layer boundary, an aggregate boundary crossing contexts, a physical isolation or coupling mechanism between contexts that departs from the baseline, a pattern adding complexity across contexts (CQRS with a bus, Event Sourcing, Saga) or a cross-cutting concern, and weighs a real trade-off. Any other subject is `ADR-INFLATION`: a choice confined to one bounded context (an ACL or translation in its gateway, a mapping, a local type), a bounded context or context-map relationship, a choice argued from a future need ("identical today", "may diverge"), a choice the project's architecture documents already state, a stack or test tooling the team imposed. No alternative genuinely weighed is `NON-DECISION`.
 
 - ✗ "ADR-012: Mount `PaymentBanner` in the checkout layout."
+- ✗ "ADR-004: Anti-Corruption Layer between the submission and the proposal" whose two shapes are identical today.
 - ✗ "ADR: web component without framework, Playwright for the end-to-end test, served by Quarkus."
 - ✓ "ADR-013: Route loaders fetch data before render, so pages hold no fetch logic."
 

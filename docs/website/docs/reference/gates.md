@@ -103,7 +103,7 @@ every criterion that forbids one.
 
 | ID | Lens | Criterion | Severity |
 | --- | --- | --- | --- |
-| **G1** | `consistency` | Every structural commitment shown in a diagram or detected in the structural scan has an `Accepted` ADR, or a `Proposed` ADR of this pass, justifying it. | blocker |
+| **G1** | `consistency` | Every structural commitment shown in a diagram or detected in the structural scan is decided in a source the matrix cites: the project's architecture documents, an `Accepted` ADR or a `Proposed` ADR of this pass. A missing ADR is no finding by itself. | blocker |
 | **G2** | `consistency` | No two ADRs contradict each other; every row of `docs/adr/supersessions.md` has its new ADR carrying the `**Supersedes:**` line. | blocker |
 | **G10** | `consistency` | The back-propagation journal of the consistency matrix explains every reconciliation rewrite. | blocker |
 | **G12** | `consistency` | Every `supersession-plan-{story}.md` row has its new ADR carrying `**Supersedes:**`, and no event model or diagram still cites the superseded ADR as source of truth. | blocker |
@@ -117,9 +117,9 @@ every criterion that forbids one.
 | **G7** | `fitness` | Every story maps to at least one Command or Query in the event model. | high |
 | **G8** | `fitness` | Every Command of a business bounded context has at least one domain event for its successful outcome; Queries and front-end components (which only trigger a business context's Command) are exempt. | high |
 | **G9** | `fitness` | Every aggregate, bounded context, Event Sourcing adoption or Saga traces to a story that requires it. | medium |
-| **G11** | `fitness` | Every ADR adopting CQRS, Event Sourcing, Saga, eventual consistency, a service split or an ACL cites an admissible force and evaluates the "do without" option. | high |
-| **G15** | `fitness` | No ADR ratifies a baseline already enforced by a `clean-architecture-*` skill or an architecture test, where a repository interface lives included. | high |
-| **G17** | `fitness` | Every ADR the pass wrote decides a layer boundary, an aggregate boundary, a bounded context, a pattern adding complexity or a cross-cutting concern, and weighs a real trade-off; another subject is `ADR-INFLATION`, no alternative weighed is `NON-DECISION`. | high |
+| **G11** | `fitness` | Every ADR adopting CQRS, Event Sourcing, Saga, eventual consistency or a service split cites an admissible force and evaluates the "do without" option. | high |
+| **G15** | `fitness` | No ADR ratifies a baseline already enforced by a `clean-architecture-*` skill or an architecture test, where a repository interface lives included, nor restates what the project's documents or an `Accepted` ADR already decide. | high |
+| **G17** | `fitness` | Every ADR the pass wrote decides a choice costly to undo that reaches beyond one bounded context (layer boundary, aggregate boundary crossing contexts, isolation or coupling between contexts, pattern adding complexity across contexts, cross-cutting concern) and weighs a real trade-off; a choice inside one context, a context or relationship, or a choice argued from a future need is `ADR-INFLATION`, no alternative weighed is `NON-DECISION`. | high |
 | **G18** | `fitness` | Every ADR the pass wrote holds one decision at decision level: no full signature, enum values, Value Object inventory, route tree, or traceability reference (user story, PRD or requirement id), the triggering story included. A quality attribute stated with its measure as a force of the decision is allowed. A code file, an acceptance criterion, a ticket or another ADR cited outside the `Supersedes:` or `Amends:` line is refused by the engine, not by the lens. | medium |
 | **F1** | `fitness` | Every quality attribute the story or research states has a design element that answers it. | high |
 
