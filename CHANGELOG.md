@@ -3,6 +3,12 @@
 Toutes les modifications notables de ce projet sont documentées ici.
 Format basé sur [Conventional Commits](https://www.conventionalcommits.org/) — versionnage [SemVer](https://semver.org/).
 
+## [2.0.0-alpha.94](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.93...v2.0.0-alpha.94) (2026-11-16)
+
+### ✨ Features
+
+* **engine:** Java tests follow the Maven convention, Spring Boot and Quarkus ([#591](https://github.com/SebastienDegodez/skraft-plugin/issues/591)) ([03cd0e3](https://github.com/SebastienDegodez/skraft-plugin/commit/03cd0e3058ebc5ddc48c4961c470303b57d1e85e))
+
 ## [2.0.0-alpha.93](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.92...v2.0.0-alpha.93) (2026-11-15)
 
 ### 🐛 Bug Fixes
