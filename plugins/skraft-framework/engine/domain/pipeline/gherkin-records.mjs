@@ -5,9 +5,10 @@
  *              its examples, and is titled once in its file; and the story has at least one
  *              scenario per acceptance criterion it holds (#524)
  *
- * The plan declares which `.feature` files are the story's: a coverage matrix row that names none
- * writes `—`, as `test-design-mandates` lays it out for a domain invariant or an adapter test. So
- * the files of another story are never read, and a plan that names none is asked for no scenario.
+ * The plan declares which `.feature` files are the story's in the rows of its coverage matrix: a
+ * row that names none writes `—`, as `test-design-mandates` lays it out for a domain invariant or
+ * an adapter test. Its prose may mention another story's file, which stays out. So the files of
+ * another story are never read, and a plan that names none is asked for no scenario.
  * The criteria answer how many it takes: a story whose `ac-draft` declares none is asked for none.
  *
  * @typedef {{ path: string, text: string }} Document a file of the run, as the engine read it
@@ -42,10 +43,14 @@ const KEYWORDS = Object.freeze(['Given', 'When', 'Then'])
 const OUTLINES = Object.freeze(['Scenario Outline', 'Scenario Template'])
 
 /**
- * The `.feature` files a test plan names, each once, back slashes read as separators.
+ * The `.feature` files the rows of a test plan's tables name, each once, back slashes read as
+ * separators; a file its prose mentions is not one of them.
  * @param {string} text @returns {string[]}
  */
-export const namedFeatures = (text) => [...new Set([...text.replaceAll('\\', '/').matchAll(CITED)].map(([path]) => path))]
+export const namedFeatures = (text) => {
+  const rows = text.split(/\r?\n/).filter((line) => ROW.test(line)).join('\n')
+  return [...new Set([...rows.replaceAll('\\', '/').matchAll(CITED)].map(([path]) => path))]
+}
 
 /**
  * The scenarios a `.feature` holds, with the steps and the example rows of each.
