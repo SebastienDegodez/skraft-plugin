@@ -2,7 +2,8 @@ import { UNFORESEEN_GUIDANCE } from '../../domain/decisions/unforeseen.mjs'
 
 /**
  * The tools the MCP server offers: each one is a command line of this driver, built from
- * arguments a model wrote, except skraft_answer which records a native human reply directly.
+ * arguments a model wrote, except skraft_answer, and skraft_mutation given an answer, which record
+ * a native human reply directly.
  * The commands that take terminal consent (`publish`, `journal
  * adopt`, `review --publish`, `migrate` that writes) are not tools: a person runs them in a
  * terminal.
@@ -121,6 +122,18 @@ export const TOOLS = Object.freeze([
     parameters: { pr: { kind: 'count', description: 'the pull request number' }, record: { kind: 'boolean', description: 'hand the saved agent replies to the review' } },
     required: ['pr'], annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: true }, loop: true,
     argv: (args) => ['review', '--pr', String(args.pr), ...flag('--record', args.record), '--json'],
+  }),
+  tool({
+    name: 'skraft_mutation', title: 'Run mutation on the branch',
+    description: 'Runs the mutation run of the branch HEAD is on, apart from any pipeline, until it needs agents or a person. On dispatch, start each listed agent with exactly its prompt, one after the other, write its final reply unchanged to its reply file, then do what then says. On waiting, ask the exact question through the offered native ask_user or askQuestions tool and relay only the returned human reply here, with key and answer.',
+    parameters: {
+      record: { kind: 'boolean', description: 'hand the saved agent replies to the mutation run' },
+      key: { kind: 'string', description: 'the exact key of the question the mutation run waits on' },
+      answer: { kind: 'text', description: 'the native human reply to that question' },
+      reason: { kind: 'text', description: 'the human refusal reason' },
+    },
+    annotations: LOCAL,
+    argv: (args) => ['mutation', ...flag('record', args.record), '--json'],
   }),
   tool({
     name: 'skraft_workflow_check', title: 'Check the workflow',

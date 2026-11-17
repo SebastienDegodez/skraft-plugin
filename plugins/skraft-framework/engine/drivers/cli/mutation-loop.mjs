@@ -9,8 +9,8 @@ import { createAgentLoop } from './agent-loop.mjs'
  * @typedef {import('./agent-loop.mjs').LoopAdapters & { mutationRun: MutationRun }} MutationAdapters
  * @typedef {Pick<import('./agent-loop.mjs').LoopAdapters, 'journal' | 'activePipeline' | 'files' | 'runLock' | 'workflowSource'>} MutationRun
  *   what replaces the pipeline's adapters for a mutation run
- * @typedef {{ adapters: MutationAdapters, command: string, log: (line: string) => void }} MutationLoopDeps
- *   command: how the conducting agent starts this script
+ * @typedef {{ adapters: MutationAdapters, then: import('./agent-loop.mjs').LoopThen, log: (line: string) => void }} MutationLoopDeps
+ *   then: what a step of the mutation run names to run next
  */
 
 /**
@@ -24,9 +24,9 @@ export const mutationAdapters = (adapters) => ({ ...adapters, ...adapters.mutati
  * @param {MutationLoopDeps} deps @param {'next' | 'record'} step
  * @returns {Promise<import('./agent-loop.mjs').LoopStep>}
  */
-export const mutationThroughLoop = async ({ adapters, command, log }, step) => {
+export const mutationThroughLoop = async ({ adapters, then, log }, step) => {
   const run = mutationAdapters(adapters)
-  const loop = createAgentLoop({ adapters: run, then: mutationThen(command), log })
+  const loop = createAgentLoop({ adapters: run, then, log })
   if (step === 'record') return loop.record()
   const started = await createStartMutation(run).start()
   if (!started.ok) return { status: 'refused', slug: started.slug, phase: null, code: started.code, reason: started.reason, dispatches: [], then: null }
@@ -34,13 +34,14 @@ export const mutationThroughLoop = async ({ adapters, command, log }, step) => {
 }
 
 /**
- * What the conducting agent runs once a step of the mutation run is done; a mutation run
+ * What the conducting agent runs once a step of the mutation run is done, on the command line:
+ * a person records the reply in their own terminal, which only they can confirm. A mutation run
  * reviews no pull request, so its review goes on as a record would.
  * @param {string} command @returns {import('./agent-loop.mjs').LoopThen}
  */
-const mutationThen = (command) => ({
+export const mutationCommandThen = (command) => ({
   next: `${command} mutation`,
   record: `${command} mutation record`,
-  decide: `${command} mutation decide`,
+  decide: (key) => `have the person run ${command} mutation decide ${key} "<the reply>" in their own terminal`,
   review: () => `${command} mutation record`,
 })

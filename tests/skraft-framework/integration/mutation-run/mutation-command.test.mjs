@@ -84,7 +84,7 @@ const proposes = {
   },
 }
 
-test('once the proposals are recorded, the run asks the developer for the plan, to answer with mutation decide; STOP ends it and the next start is afresh', async (t) => {
+test('once the proposals are recorded, the run asks the developer for the plan, to answer with mutation decide in their own terminal; STOP ends it and the next start is afresh', async (t) => {
   const cwd = onBranch(t, [{ name: 'global', score: 60, survivors: ['src/pay.mjs:3 ArithmeticOperator'] }])
   const { step: handed } = await mutation(cwd)
   startAgents(handed, proposes)
@@ -92,7 +92,7 @@ test('once the proposals are recorded, the run asks the developer for the plan, 
   const { status, step } = await mutation(cwd, ['record'])
 
   assert.deepEqual([status, step.status, step.code, step.then], [0, 'waiting', 'mutation-plan', `${SKRAFT_COMMAND} mutation`])
-  assert.match(step.reason, new RegExp(`record that native reply with ${SKRAFT_COMMAND.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')} mutation decide in a terminal`))
+  assert.ok(step.reason.includes(`Relay ONLY the returned human reply: have the person run ${SKRAFT_COMMAND} mutation decide mutation_plan-1 "<the reply>" in their own terminal, then run next.`), step.reason)
   assert.match(step.reason, /\.copilot-tracking\/skraft-mutation\/feat-card-refund\/proposals\/kill_proposal-1-g1\.md/)
 
   const decided = await skraft(cwd, ['mutation', 'decide', 'STOP'])

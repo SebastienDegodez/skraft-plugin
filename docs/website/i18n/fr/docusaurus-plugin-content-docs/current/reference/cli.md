@@ -559,7 +559,7 @@ de mutation (`.skraft/mutation.skraft.dot` quand la copie de travail l'a éject�
 | Démarrage | `skraft mutation` démarre le run de la branche, ou le reprend tant qu'il avance ou attend une personne ; un run terminé (fini ou arrêté) est oublié, journal et fichiers, donc chaque démarrage mute le code tel qu'il est, changements non commités compris |
 | Base | la merge base de chaque composant avec son `baseBranch`, comme pour un pipeline ; `{baseSha}` la reçoit |
 | Agents | `dispatch` confie les agents comme `next` ; `skraft mutation record` rend leurs réponses ; `then:` nomme `… mutation record` |
-| Question | le plan de mutation (`mutation-plan` : `APPLY`, une instruction entre guillemets, ou `STOP`) se répond avec `skraft mutation decide`, tapé dans votre propre terminal ; `then:` nomme `… mutation` |
+| Question | le plan de mutation (`mutation-plan` : `APPLY`, une instruction entre guillemets, ou `STOP`) se répond avec `skraft mutation decide`, tapé dans votre propre terminal, ou l'outil MCP `skraft_mutation` avec `key` et `answer` ; `then:` nomme `… mutation` |
 
 **Refus (code 1).**
 

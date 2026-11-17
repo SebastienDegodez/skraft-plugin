@@ -2,13 +2,14 @@ import { offeredTools, refusalOf, toolListing } from './mcp-tools.mjs'
 import { offeredPrompts, promptListing, promptMessages, promptRefusalOf } from './mcp-prompts.mjs'
 import { chosenWorkspace, givenWorkingCopy, rootFolders } from './mcp-roots.mjs'
 import { createDecide } from '../../application/decisions/decide-usecase.mjs'
+import { mutationAdapters } from './mutation-loop.mjs'
 
 /**
  * `skraft mcp`: the commands of this driver served to an agent host as MCP tools, JSON-RPC over
  * stdin and stdout, one message per line. stdout carries only the protocol; the server's own log
  * goes to stderr. A tool runs the command line it stands for, in the same process, so a tool and
- * the command never differ. skraft_answer alone calls Decide directly, without terminal consent
- * or argv conversion of the human's text.
+ * the command never differ. skraft_answer, and skraft_mutation given an answer, alone call Decide
+ * directly, without terminal consent or argv conversion of the human's text.
  *
  * @typedef {import('./run-cli.mjs').CliServices} CliServices
  * @typedef {import('./run-cli.mjs').Console} Console
@@ -215,16 +216,26 @@ const runTool = async (session, tool, args, token) => {
   if (place.directory === null) return refusedResult(place.reason)
   if (session.closed) return refusedResult('closed: the host closed the connection; nothing ran')
   const captured = capturing(progress(session, token))
-  const services = { ...session.services.at(place.directory), confirm: async () => null, then: mcpThen(args.workspace) }
-  const code = await guarded(session, tool, () => tool.name === 'skraft_answer'
-    ? recordAnswer(services, args, captured.console)
+  const services = { ...session.services.at(place.directory), confirm: async () => null, then: mcpThen(args.workspace), mutationThen: mcpMutationThen(args.workspace) }
+  const code = await guarded(session, tool, () => answering(tool, args)
+    ? recordAnswer(tool.name === 'skraft_mutation' ? mutationAdapters(services.adapters()) : services.adapters(), args, captured.console)
     : session.run(tool.argv(args), services, captured.console))
   return toolResult(code, captured)
 }
 
-/** @param {CliServices} services @param {Record<string, any>} args @param {Console} console */
-const recordAnswer = async (services, { key, answer, reason, by, model, cost, costUnit }, console) => {
-  const outcome = await createDecide(services.adapters()).decide({ key, answer, reason, by, model, cost, costUnit })
+/**
+ * Whether the call relays a human reply, recorded directly without terminal consent: always for
+ * skraft_answer, for skraft_mutation when it carries an answer.
+ * @param {SkraftTool} tool @param {Record<string, any>} args
+ */
+const answering = (tool, args) => tool.name === 'skraft_answer' || (tool.name === 'skraft_mutation' && args.answer !== undefined)
+
+/**
+ * The reply recorded on the run whose adapters are given: the active pipeline's, or the branch's mutation run's.
+ * @param {import('./run-cli.mjs').CliAdapters} adapters @param {Record<string, any>} args @param {Console} console
+ */
+const recordAnswer = async (adapters, { key, answer, reason, by, model, cost, costUnit }, console) => {
+  const outcome = await createDecide(adapters).decide({ key, answer, reason, by, model, cost, costUnit })
   console.out(JSON.stringify(outcome))
   return outcome.ok ? 0 : 1
 }
@@ -248,13 +259,30 @@ const offeredFolders = async (session) => {
 }
 
 /**
+ * How a step names a tool to call: with the same workspace.
+ * @param {string | undefined} workspace
+ */
+const caller = (workspace) => (/** @type {string} */ tool, /** @type {object} */ args) =>
+  `call the ${tool} tool with ${JSON.stringify(workspace === undefined ? args : { ...args, workspace })}`
+
+/**
  * What a loop step names to call next: the tool, with the same workspace.
  * @param {string | undefined} workspace @returns {import('./agent-loop.mjs').LoopThen}
  */
 const mcpThen = (workspace) => {
-  const call = (/** @type {string} */ tool, /** @type {object} */ args) =>
-    `call the ${tool} tool with ${JSON.stringify(workspace === undefined ? args : { ...args, workspace })}`
+  const call = caller(workspace)
   return { next: call('skraft_next', {}), record: call('skraft_record', {}), review: ({ number }) => call('skraft_review', { pr: number, record: true }) }
+}
+
+/**
+ * What a step of the mutation run names to call next: skraft_mutation, which records the human
+ * reply too. A mutation run reviews no pull request, so its review goes on as a record would.
+ * @param {string | undefined} workspace @returns {import('./agent-loop.mjs').LoopThen}
+ */
+const mcpMutationThen = (workspace) => {
+  const call = caller(workspace)
+  const record = call('skraft_mutation', { record: true })
+  return { next: call('skraft_mutation', {}), record, decide: (key) => call('skraft_mutation', { key, answer: '<the reply>' }), review: () => record }
 }
 
 /**
