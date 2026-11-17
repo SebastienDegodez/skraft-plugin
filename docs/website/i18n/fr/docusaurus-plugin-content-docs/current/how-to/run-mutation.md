@@ -56,10 +56,11 @@ L'agent que votre hôte conduit les lance et enregistre leurs réponses, puis :
 $ skraft mutation record
 ```
 
-Le run vous demande alors le plan (`mutation-plan`). Répondez dans votre propre terminal :
+Le run vous demande alors le plan (`mutation-plan`). Votre agent le pose dans le chat et relaie
+votre réponse par l'outil `skraft_mutation` ; depuis un terminal, répondez vous-même :
 
 ```console
-$ skraft mutation decide mutation-plan APPLY
+$ skraft mutation decide APPLY
 ```
 
 `APPLY` fait écrire les propositions en tests, revus, passés aux gates, puis mutés de nouveau ;

@@ -42,6 +42,7 @@ answer, so a failing doctor or gate still answers its JSON.
 | --- | --- | --- | --- |
 | `skraft_doctor` | `run?`, `base?` | `doctor [--run] [--base <ref>] --json` | every host |
 | `skraft_init` | `add?` (folders), `mutation?` | `init [--add <folder>]... [--mutation]` | every host |
+| `skraft_mutation` | `record?`, `key?`, `answer?`, `reason?` | `mutation [record] --json`; with `answer`, records the human reply on the branch's mutation run, as `skraft_answer` does on the pipeline | every host |
 | `skraft_start` | `slug`, `issue?`, `title?`, `base?`, `fromArtifacts?` | `init <slug> [--issue <n>] [--title <t>] [--base <ref>] [--from-artifacts]` | VS Code |
 | `skraft_next` | — | `next --json` | VS Code |
 | `skraft_record` | — | `record --json` | VS Code |

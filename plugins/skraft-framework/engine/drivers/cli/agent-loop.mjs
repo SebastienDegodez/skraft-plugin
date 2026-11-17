@@ -21,10 +21,11 @@ import { HandedOver, OWNER_FILE, PENDING_FILE, REPLIES_FILE, createLoopAgentRunn
  *   reason: string, dispatches: LoopDispatch[], then: string | null,
  * }} LoopStep
  *   then: the command to run once the step is done, null when the loop ends.
- * @typedef {{ next: string, record: string, decide?: string, review: (request: { number: number, publish: boolean }) => string }} LoopThen
+ * @typedef {{ next: string, record: string, decide?: (key: string) => string, review: (request: { number: number, publish: boolean }) => string }} LoopThen
  *   what the conducting agent runs once a step is done: a command line of this script
- *   (`node "<path>/skraft.mjs" next`), or the tool of the MCP server that runs it; decide: the
- *   command a person records an answer with in a terminal, `decide` unless given.
+ *   (`node "<path>/skraft.mjs" next`), or the tool of the MCP server that runs it; decide: how
+ *   the human reply to the question `key` is relayed to a run that is not the active pipeline,
+ *   which skraft_answer and decide record.
  * @typedef {{ adapters: LoopAdapters, then: LoopThen, log: (line: string) => void }} LoopDeps
  *   log: where the run's progress goes.
  */
@@ -181,8 +182,17 @@ const afterRun = async (deps, outcome) => (outcome.status === 'waiting'
  */
 const askTheHuman = async ({ adapters, then }) => {
   const question = /** @type {NonNullable<import('../../application/pipeline/observe-usecase.mjs').RunView['question']>} */ ((await createObserve(adapters).view()).question)
-  return `${question.text} Options: ${optionsText(question)}. Ask the EXACT question and options with the offered native ask_user or askQuestions tool; request a refusal reason there. Relay ONLY the returned human reply through skraft_answer in the same workspace, then run next. Without MCP, record that native reply with ${then.decide ?? 'decide'} in a terminal. Missing native tool or dismissal: report the concrete blocker, leave paused and record nothing.`
+  return `${question.text} Options: ${optionsText(question)}. Ask the EXACT question and options with the offered native ask_user or askQuestions tool; request a refusal reason there. ${relayText(then, question.key)} Missing native tool or dismissal: report the concrete blocker, leave paused and record nothing.`
 }
+
+/**
+ * How the human reply reaches the run: skraft_answer, or decide in a terminal, for the active
+ * pipeline; the run's own way otherwise.
+ * @param {import('./agent-loop.mjs').LoopThen} then @param {string} key
+ */
+const relayText = (then, key) => (then.decide === undefined
+  ? 'Relay ONLY the returned human reply through skraft_answer in the same workspace, then run next. Without MCP, record that native reply with decide in a terminal.'
+  : `Relay ONLY the returned human reply: ${then.decide(key)}, then run next.`)
 
 /**
  * The answers a question takes: its options, and the human's own instruction for one that takes it.

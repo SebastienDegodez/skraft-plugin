@@ -56,10 +56,11 @@ agent your host conducts starts them and saves their replies, then:
 $ skraft mutation record
 ```
 
-The run then asks you for the plan (`mutation-plan`). Answer in your own terminal:
+The run then asks you for the plan (`mutation-plan`). Your agent asks it in the chat and relays
+your reply with the `skraft_mutation` tool; from a terminal, answer it yourself:
 
 ```console
-$ skraft mutation decide mutation-plan APPLY
+$ skraft mutation decide APPLY
 ```
 
 `APPLY` has the proposals written as tests, reviewed, gated, then mutated again; an instruction in

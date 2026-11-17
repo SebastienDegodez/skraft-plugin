@@ -14,7 +14,7 @@ import { prechecksTable } from '../../domain/reporting/run-prechecks.mjs'
 import { decideUsage } from '../../domain/decisions/questions.mjs'
 import { createAgentLoop } from './agent-loop.mjs'
 import { reviewThroughLoop } from './review-loop.mjs'
-import { mutationAdapters, mutationThroughLoop } from './mutation-loop.mjs'
+import { mutationAdapters, mutationCommandThen, mutationThroughLoop } from './mutation-loop.mjs'
 import { serveMcp } from './mcp-server.mjs'
 
 /**
@@ -23,6 +23,7 @@ import { serveMcp } from './mcp-server.mjs'
  * @typedef {{
  *   pluginVersion: () => string, workingCopyName: () => string, adapters: (agentHost?: 'copilot') => CliAdapters, command: () => string,
  *   confirm: (question: string) => Promise<boolean | null>, then?: import('./agent-loop.mjs').LoopThen,
+ *   mutationThen?: import('./agent-loop.mjs').LoopThen,
  * } & Partial<import('./mcp-server.mjs').McpServices>} CliServices
  *   adapters: for the host whose agents the run starts, none to check for both; command: how an
  *   agent runs this command line, `node "<absolute path of skraft.mjs>"`; confirm: the person's
@@ -335,7 +336,8 @@ const mutation = async (args, services, console) => {
   const [step, rest] = args[0] === 'record' ? [/** @type {const} */ ('record'), args.slice(1)] : [/** @type {const} */ ('next'), args]
   const options = optionsOf(rest, { flags: ['--json'] })
   if (options === undefined) return usage(console)
-  const done = await mutationThroughLoop({ adapters: services.adapters('copilot'), command: services.command(), log: console.err }, step)
+  const then = services.mutationThen ?? mutationCommandThen(services.command())
+  const done = await mutationThroughLoop({ adapters: services.adapters('copilot'), then, log: console.err }, step)
   print(options['--json'] === true, done, loopLines, console)
   return done.status === 'blocked' || done.status === 'refused' ? 1 : 0
 }

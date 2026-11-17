@@ -550,7 +550,7 @@ workflow (`.skraft/mutation.skraft.dot` when the working copy ejected it, else t
 | Start | `skraft mutation` starts the branch's run, or resumes it while it goes on or waits on a person; a run that ended (finished or stopped) is forgotten, journal and files, so each start mutates the code as it stands, uncommitted changes included |
 | Base | each component's merge base with its `baseBranch`, as for a pipeline; `{baseSha}` takes it |
 | Agents | `dispatch` hands the agents over as `next` does; `skraft mutation record` hands their replies back; `then:` names `… mutation record` |
-| Question | the mutation plan (`mutation-plan`: `APPLY`, an instruction in quotes, or `STOP`) is answered with `skraft mutation decide`, typed in your own terminal; `then:` names `… mutation` |
+| Question | the mutation plan (`mutation-plan`: `APPLY`, an instruction in quotes, or `STOP`) is answered with `skraft mutation decide`, typed in your own terminal, or the MCP tool `skraft_mutation` with `key` and `answer`; `then:` names `… mutation` |
 
 **Refusals (code 1).**
 
