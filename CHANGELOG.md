@@ -3,6 +3,12 @@
 Toutes les modifications notables de ce projet sont documentées ici.
 Format basé sur [Conventional Commits](https://www.conventionalcommits.org/) — versionnage [SemVer](https://semver.org/).
 
+## [2.0.0-alpha.107](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.106...v2.0.0-alpha.107) (2026-11-17)
+
+### 🐛 Bug Fixes
+
+* **engine:** a story's .feature files are the ones the rows of its test plan cite, never one its prose mentions ([#619](https://github.com/SebastienDegodez/skraft-plugin/issues/619)) ([89c4133](https://github.com/SebastienDegodez/skraft-plugin/commit/89c413369404e05a386545fef0feb3abe6297c26)), closes [#541](https://github.com/SebastienDegodez/skraft-plugin/issues/541) [#555](https://github.com/SebastienDegodez/skraft-plugin/issues/555)
+
 ## [2.0.0-alpha.106](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.105...v2.0.0-alpha.106) (2026-11-17)
 
 ### ✨ Features
