@@ -55,7 +55,7 @@ const decisionOf = (text) => {
 /** @param {string} path @param {string} text */
 const decisionProblems = (path, text) => {
   const decision = decisionOf(text)
-  if (!decision) return [`${path} has no decision in its header: state it in one sentence`]
+  if (!decision) return [`${path} has no \`decision:\` key in its YAML header: add \`decision: <the verdict in one sentence>\` between the --- lines that open the file`]
   const count = decision.replace(CODE_SPAN, 'code').split(SENTENCE_END).length
   return count === 1 ? [] : [`${path} states its decision in ${count} sentences: keep one sentence and give each independent decision its own ADR`]
 }

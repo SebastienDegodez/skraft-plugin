@@ -260,7 +260,7 @@ test('the pre-check answers the lifecycle of the decisions the attempt wrote, th
 
   assert.equal((await host.start()).status, 'done')
 
-  assert.deepEqual(answers[0].failures, [{ code: 'adr-lifecycle', line: `${ADR_1} has no decision in its header: state it in one sentence` }],
+  assert.deepEqual(answers[0].failures, [{ code: 'adr-lifecycle', line: `${ADR_1} has no \`decision:\` key in its YAML header: add \`decision: <the verdict in one sentence>\` between the --- lines that open the file` }],
     'a pre-check answers every mechanical check of the submission, not only the records of the role')
   assert.deepEqual(answers.map(({ status }) => status), ['failed', 'passed'])
   assert.deepEqual(answers[1].failures, [])

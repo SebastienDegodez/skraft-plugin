@@ -103,7 +103,7 @@ test('the decision header of a draft ADR holds one sentence: a missing one and a
   const outcome = await host.start()
 
   assert.deepEqual(designRecords(host), [
-    [1, 1, 'failed', 'adr-lifecycle', [`${ADR_1} has no decision in its header: state it in one sentence`]],
+    [1, 1, 'failed', 'adr-lifecycle', [`${ADR_1} has no \`decision:\` key in its YAML header: add \`decision: <the verdict in one sentence>\` between the --- lines that open the file`]],
     [1, 2, 'failed', 'adr-lifecycle', [tooMany(2)]],
     [1, 3, 'done', null, []],
   ])
@@ -157,7 +157,7 @@ test('a draft ADR whose decision block is empty has no decision', async () => {
   await host.start()
 
   assert.deepEqual(designRecords(host), [
-    [1, 1, 'failed', 'adr-lifecycle', [`${ADR_1} has no decision in its header: state it in one sentence`]],
+    [1, 1, 'failed', 'adr-lifecycle', [`${ADR_1} has no \`decision:\` key in its YAML header: add \`decision: <the verdict in one sentence>\` between the --- lines that open the file`]],
     [1, 2, 'done', null, []],
   ])
 })
