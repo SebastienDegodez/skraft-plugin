@@ -3,6 +3,12 @@
 Toutes les modifications notables de ce projet sont documentées ici.
 Format basé sur [Conventional Commits](https://www.conventionalcommits.org/) — versionnage [SemVer](https://semver.org/).
 
+## [2.0.0-alpha.105](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.104...v2.0.0-alpha.105) (2026-11-17)
+
+### 🐛 Bug Fixes
+
+* **engine:** an ADR refused for its decision is told the header key it lacks, and the skill's template carries it ([#618](https://github.com/SebastienDegodez/skraft-plugin/issues/618)) ([472c63c](https://github.com/SebastienDegodez/skraft-plugin/commit/472c63cd5025909ce7e75b136dd4fb2e7078ed3a)), closes [#586](https://github.com/SebastienDegodez/skraft-plugin/issues/586)
+
 ## [2.0.0-alpha.104](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.103...v2.0.0-alpha.104) (2026-11-16)
 
 ### ✨ Features
