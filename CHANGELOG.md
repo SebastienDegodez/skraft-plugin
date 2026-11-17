@@ -3,6 +3,12 @@
 Toutes les modifications notables de ce projet sont documentées ici.
 Format basé sur [Conventional Commits](https://www.conventionalcommits.org/) — versionnage [SemVer](https://semver.org/).
 
+## [2.0.0-alpha.106](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.105...v2.0.0-alpha.106) (2026-11-17)
+
+### ✨ Features
+
+* **engine:** skraft_mutation conducts the branch's mutation run over MCP, the developer's plan relayed without a terminal ([#620](https://github.com/SebastienDegodez/skraft-plugin/issues/620)) ([df27ea7](https://github.com/SebastienDegodez/skraft-plugin/commit/df27ea725cce419ddcd3d8fc65164c69dff7b3c0)), closes [#609](https://github.com/SebastienDegodez/skraft-plugin/issues/609)
+
 ## [2.0.0-alpha.105](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.104...v2.0.0-alpha.105) (2026-11-17)
 
 ### 🐛 Bug Fixes
