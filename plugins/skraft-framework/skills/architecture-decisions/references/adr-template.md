@@ -2,13 +2,25 @@
 
 ## Overview
 
-This file provides the blank ADR template for direct copy-paste and a filled example from the auto-insurance (MonAssurance) domain.
+This file provides the blank ADR template for direct copy-paste and filled examples from the auto-insurance (MonAssurance) domain. Every ADR opens with the YAML header of `SKILL.md`'s template: the engine refuses an ADR whose header has no `decision:` key, however its body states the decision.
 
 ---
 
 ## Blank Template
 
 ```markdown
+---
+adr: {NNN}                    # int, matches filename
+title: {Short Title}
+status: Proposed             # Proposed | Accepted | Rejected | Deprecated | Superseded
+chosen: {picked option}      # one token/phrase — the option adopted
+decision: >                  # ONE sentence: the verdict in plain words
+  {We will ... / We will not adopt ... because ...}
+supersedes: {ADR-MMM | null}
+date: {YYYY-MM-DD}
+ratified_by: null            # "{human} {YYYY-MM-DD}" — set ONLY on Accept/Reject
+---
+
 # ADR-{NNN}: {Short Title}
 
 **Status:** Proposed | Accepted | Rejected | Deprecated | Superseded by ADR-{NNN}
@@ -48,6 +60,18 @@ This file provides the blank ADR template for direct copy-paste and a filled exa
 ## Filled Example 1: CQRS for Eligibility Check
 
 ```markdown
+---
+adr: 1
+title: Apply CQRS for Eligibility Check
+status: Accepted
+chosen: simple CQRS
+decision: >
+  We will separate the eligibility check's command handlers from its query handlers, both over the same relational database.
+supersedes: null
+date: 2026-05-01
+ratified_by: "Claire Martin 2026-05-03"
+---
+
 # ADR-001: Apply CQRS for Eligibility Check
 
 **Status:** Accepted
@@ -95,6 +119,18 @@ We will apply simple CQRS: separate command handlers (mutate state, raise domain
 ## Filled Example 2: Event Sourcing Rejected for Policy Renewal
 
 ```markdown
+---
+adr: 2
+title: Reject Event Sourcing for Policy Renewal
+status: Accepted
+chosen: state-based persistence
+decision: >
+  We will not apply Event Sourcing to the PolicyRenewalAggregate, which is persisted as its current state.
+supersedes: null
+date: 2026-05-02
+ratified_by: "Claire Martin 2026-05-04"
+---
+
 # ADR-002: Reject Event Sourcing for Policy Renewal
 
 **Status:** Accepted

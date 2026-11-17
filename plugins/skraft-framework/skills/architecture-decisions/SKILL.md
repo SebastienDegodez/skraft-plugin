@@ -390,5 +390,5 @@ Before writing the final ADR, verify:
 
 ## References
 
-- [adr-template.md](references/adr-template.md) — Blank template + filled auto-insurance example
+- [adr-template.md](references/adr-template.md) — Blank template + filled auto-insurance examples, each with its YAML header
 - [decision-drivers.md](references/decision-drivers.md) — Trade-off analysis framework and decision scenarios
