@@ -42,13 +42,14 @@ const RED = 'test(checkout): acceptance of the card payment'
  * given, drops the working copy files named, and commits the lot beside its acceptance test, in
  * the one test commit of its scenario: an attempt after a refused one amends it. The Gherkin
  * files of another component than the scenario's go in a docs commit after it.
- * @param {{ features?: Record<string, string>, elsewhere?: Record<string, string>, cited?: string[], criteria?: string, tracked?: Record<string, string>, drop?: string[] }} [attempt]
+ * notes: the plan's prose under its matrix.
+ * @param {{ features?: Record<string, string>, elsewhere?: Record<string, string>, cited?: string[], notes?: string, criteria?: string, tracked?: Record<string, string>, drop?: string[] }} [attempt]
  */
-const designer = ({ features = {}, elsewhere = {}, cited = ['pay-by-card.feature'], criteria = ONE_CRITERION, tracked = {}, drop = [] } = {}) => agent({
+const designer = ({ features = {}, elsewhere = {}, cited = ['pay-by-card.feature'], notes = '', criteria = ONE_CRITERION, tracked = {}, drop = [] } = {}) => agent({
   fill: false,
   work: (host) => {
     const { git, workspace, tracking } = host
-    tracking.write(SLUG, PLAN, `${matrix(cited)}\n${scenarioTable(host)}`)
+    tracking.write(SLUG, PLAN, `${matrix(cited)}\n${notes}${scenarioTable(host)}`)
     tracking.write(SLUG, CRITERIA, criteria)
     for (const [path, text] of Object.entries(tracked)) tracking.write(SLUG, path, text)
     for (const path of drop) workspace.files.delete(path)
@@ -449,4 +450,23 @@ test('a .feature the plan does not name is never opened: one of a component the 
 
   assert.deepEqual(distill(host), [[1, 'done', null, []]])
   assert.equal(outcome.status, 'done', outcome.reason)
+})
+
+test('the story\'s .feature files are the ones its coverage matrix names: a file its prose mentions, written in another language before skraft, is never read, and a row naming a file the working copy lacks still sends the designer back', async () => {
+  const notes = [
+    '',
+    `- Existing tests: the scenarios of \`pay-later.feature\` keep passing and are not replaced.`,
+    '- Wording: the steps follow the cents wording of docs/features/pay-later.feature.',
+    '',
+  ].join('\n')
+  const host = runOf([designer({ notes, features: { [CARD]: SCENARIO, [LATER]: FRENCH } })])
+  const lacking = () => designer({ cited: ['pay-by-card.feature', 'pay-in-store.feature'], notes, features: { [CARD]: SCENARIO, [LATER]: FRENCH } })
+  const missing = runOf([lacking(), lacking()])
+
+  const outcome = await host.start()
+
+  assert.deepEqual(distill(host), [[1, 'done', null, []]])
+  assert.equal(outcome.status, 'done', outcome.reason)
+  await missing.start()
+  assert.deepEqual(distill(missing)[0][3], [`${PLAN} names pay-in-store.feature, which is no .feature of the working copy (#524)`])
 })
