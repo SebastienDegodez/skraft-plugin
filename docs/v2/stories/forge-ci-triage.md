@@ -127,16 +127,31 @@ Ajouter un dispatcher GitHub Actions `workflow_dispatch` qui :
   `skraft-framework-ci.yml` si besoin).
 - `claude plugin validate plugins/skraft-framework` reste vert.
 
+### Routing
+
+Le dispatcher invoque `skraft forge run --workflow <name> --issue <n>`.
+`<name>` est un fichier `.skraft.dot` du plugin :
+
+- `--workflow epic-design` (défaut du YAML) → `epic-design.skraft.dot`
+  (livré par ce lot) : architecture end to end avec PR d'architecture.
+- `--workflow pipeline` → `pipeline.skraft.dot` (inchangé) : run complet
+  d'une story, pour les cas où l'architecture n'est pas séparée.
+- `--workflow epic-story` → `epic-story.skraft.dot` (livré par ce lot) :
+  delivery-only, exige `architecture` et `story` en inputs runtime —
+  aujourd'hui pas atteignable sans init-time brief lookup (A2 #624).
+
+Les commandes futures `skraft architecture --issue|--epic` (A5 #627) et
+`skraft run --issue` (A2 #624) choisiront le workflow sans passer par
+`forge run`, et appelleront la bonne commande selon le contexte.
+
 ### Dépendance et non-scope
 
-- **Dépendance dure** : `plugins/skraft-framework/workflows/epic-design.skraft.dot`
-  (story d'hier). Ce lot se merge quand même sans, mais un dispatch
-  `--workflow epic-design` échoue avec un message clair tant que le fichier
-  manque. Le dispatcher est paramétré par nom.
-- **Hors scope** : pivot `docs/architecture.md` + `### D-NNN`, verdict
-  `ARCHITECTURE_REVISION`, workflow `epic-story.skraft.dot`, input
-  `input_architecture` de `review.skraft.dot` — tout ça appartient à la
-  story d'hier.
+- **Dépendances satisfaites** : `plugins/skraft-framework/workflows/epic-design.skraft.dot`
+  et `.../epic-story.skraft.dot` sont livrés par ce même lot (dossier
+  `workflows/`).
+- **Hors scope** : commande dédiée `skraft architecture` (A5 #627),
+  lookup init-time du brief (A2 #624), nœud readiness (A3 #625),
+  support Azure DevOps complet (A4 #626) — chacun son lot.
 
 ### PR
 

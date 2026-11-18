@@ -1,0 +1,18 @@
+{
+  "epic": 211,
+  "note": "Fallback the forge-ci dispatcher reads when `gh search issues --match body 'Refs #<epic>'` returns nothing (rare, e.g. GitHub down or token scope misread). Hand-maintained; keep it close to the authoritative lot table in docs/website/docs/index.mdx.",
+  "lots": [
+    { "issue": 212, "lot": "0 – 2" },
+    { "issue": 213, "lot": "0 – 2" },
+    { "issue": 214, "lot": "0 – 2" },
+    { "issue": 215, "lot": "3" },
+    { "issue": 216, "lot": "4" },
+    { "issue": 217, "lot": "5" },
+    { "issue": 218, "lot": "6" },
+    { "issue": 219, "lot": "7" },
+    { "issue": 220, "lot": "8" },
+    { "issue": 221, "lot": "9" },
+    { "issue": 222, "lot": "10" },
+    { "issue": 223, "lot": "11" }
+  ]
+}
