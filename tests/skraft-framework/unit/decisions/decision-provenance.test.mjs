@@ -87,6 +87,17 @@ test('an answer the host is not asked to confirm, because it is not one the ques
   assert.deepEqual(confirming.asked, [])
 })
 
+test('an answer confirmed with the forge-comment provenance is accepted so `skraft forge answer` can record a human reply left on the GitHub issue', async () => {
+  const host = scripted({}, proposed)
+  await host.start()
+  const fromForge = confirmation('forge-comment', { ok: true })
+
+  const decided = await createDecide({ ...host.deps, confirmation: fromForge }).decide({ key: 'adr-1', answer: 'RATIFIED' })
+
+  assert.equal(decided.ok, true, decided.reason)
+  assert.deepEqual(eventsOf(host, 'question.answered').map(({ key, answer, by }) => [key, answer, by]), [['adr-1', 'RATIFIED', 'forge-comment']])
+})
+
 test('a confirmation whose provenance is not a person\'s is refused before anything is asked or journaled; the run still waits, and a person can still answer', async () => {
   const host = scripted({}, proposed)
   await host.start()
