@@ -27,6 +27,7 @@ export const createGhCodeHost = ({ commandRunner }) => Object.freeze({
   edit: (request) => edit(commandRunner, request),
   ...comments(commandRunner),
   issue: (number) => findIssue(commandRunner, number),
+  addLabel: (/** @type {number} */ number, /** @type {string} */ label) => addLabel(commandRunner, number, label),
   storyLink: (issue, closes) => `${closes ? 'Closes' : 'Refs'} #${issue}`,
   ...LIMITS,
 })
@@ -336,6 +337,20 @@ const keepIssueComment = async (commandRunner, request, locate, markerAt) => {
   const reason = `gh could not comment issue #${request.number} on ${remote.repository}`
   if (kept === LOST) return { ...refused(`${reason}: gh got no answer`), outcome: /** @type {const} */ ('unknown') }
   return kept ?? refused(reason)
+}
+
+/**
+ * The label posted on the issue of the remote's forge repository, through `gh api --method=POST
+ * repos/<owner>/<repo>/issues/<n>/labels --field=labels[]=<label>`. GitHub silently ignores a
+ * duplicate label, so a second call is idempotent.
+ * @param {CommandRunner} commandRunner @param {number} number @param {string} label
+ * @returns {Promise<import('../../application/ports/code-host.mjs').Done>}
+ */
+const addLabel = async (commandRunner, number, label) => {
+  const remote = await remoteOf(commandRunner)
+  if (remote === null) return refused(NO_REMOTE)
+  const result = await api({ commandRunner, remote }, `issues/${number}/labels`, ['--method=POST', `--field=labels[]=${label}`])
+  return succeeded(result) ? { ok: true } : refused(`gh could not add the ${label} label on issue #${number} of ${remote.repository}`)
 }
 
 /** A comment written that gh got no answer for: it may be on the forge. */
