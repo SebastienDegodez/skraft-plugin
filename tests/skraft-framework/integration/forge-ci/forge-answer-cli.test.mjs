@@ -40,6 +40,7 @@ test('skraft forge answer refuses without --issue and without a /skraft-answer l
   assert.equal(bad, 2, 'a non-numeric --issue is a usage error')
   const noAnswer = await runCli(['forge', 'answer', '--issue', '42'], servicesOf(host), console)
   assert.equal(noAnswer, 1)
-  assert.ok(err.some((line) => line.includes(`no /skraft-answer line on issue #42; nothing was recorded`)), err.join('\n'))
+  assert.ok(err.some((line) => line.includes(`no /skraft-answer line found in the comments of issue #42`)), err.join('\n'))
+  assert.ok(err.some((line) => line.includes(`/skraft-answer <key> <ANSWER>`)), 'the refusal reason documents the convention')
   assert.deepEqual(eventsOf(host, 'question.answered'), [])
 })

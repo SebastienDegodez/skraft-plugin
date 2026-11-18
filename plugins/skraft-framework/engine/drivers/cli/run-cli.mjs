@@ -536,7 +536,7 @@ const forgeAnswer = async (args, services, console) => {
   const listed = await adapters.forges.github.codeHost.listComments(issue)
   if (!listed.ok) return answer(listed, console)
   const picked = pickAnswerFrom(listed.comments, '')
-  if (picked === null) return answer({ ok: false, reason: `no /skraft-answer line on issue #${issue}; nothing was recorded` }, console)
+  if (picked === null) return answer({ ok: false, reason: `no /skraft-answer line found in the comments of issue #${issue}; a human reply opens with "/skraft-answer <key> <ANSWER>" (optionally with "reason: <text>" on the next line); nothing was recorded` }, console)
   const confirmation = { by: /** @type {const} */ ('forge-comment'), confirm: async () => ({ ok: /** @type {const} */ (true) }) }
   return answer(await createDecide({ ...adapters, confirmation }).decide({ key: picked.key, answer: picked.answer, reason: picked.reason }), console)
 }
