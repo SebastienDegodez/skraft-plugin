@@ -87,8 +87,8 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: node plugins/skraft-framework/engine/drivers/cli/skraft.mjs forge answer --issue ${{ matrix.number }} || true
-      - name: Run one engine pass of the pipeline for the issue
+      - name: Run one engine pass of the ${{ inputs.workflow }} workflow for the issue
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-        run: node plugins/skraft-framework/engine/drivers/cli/skraft.mjs forge run --issue ${{ matrix.number }}
+        run: node plugins/skraft-framework/engine/drivers/cli/skraft.mjs forge run --workflow ${{ inputs.workflow }} --issue ${{ matrix.number }}

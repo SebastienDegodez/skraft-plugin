@@ -19,6 +19,8 @@ import { mutationAdapters, mutationCommandThen, mutationThroughLoop } from './mu
 import { serveMcp } from './mcp-server.mjs'
 import { pickAnswerFrom } from './forge-answer-comment.mjs'
 import { createForgeHuman } from './forge-human.mjs'
+import { createNodeFiles } from '../../infrastructure/files/node-files.mjs'
+import { createPluginWorkflows } from '../../infrastructure/workflows/plugin-workflows.mjs'
 
 /**
  * @typedef {{ out: (line: string) => void, err: (line: string) => void }} Console
@@ -544,17 +546,24 @@ const forgeAnswer = async (args, services, console) => {
 /** @param {string} title */
 const slugOf = (title) => title.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
 
-/** `forge run --issue <n>`. Runs one engine pass of the active (or opened) pipeline with the forge-human adapter so any question lands on the issue as a comment. @param {string[]} args @param {CliServices} services @param {Console} console */
+/** `forge run [--workflow <name>] --issue <n>`. Runs one engine pass of the pipeline with the forge-human adapter so any question lands on the issue as a comment. --workflow selects the plugin's workflow file (`epic-design` for an architecture run, `pipeline` by default). @param {string[]} args @param {CliServices} services @param {Console} console */
 const forgeRun = async (args, services, console) => {
-  const options = optionsOf(args, { values: ['--issue'] })
+  const options = optionsOf(args, { values: ['--issue', '--workflow'] })
   if (options === undefined || !/^[1-9]\d*$/.test(String(options['--issue']))) return usage(console)
   const issueNumber = Number(options['--issue'])
-  const adapters = services.adapters()
+  const adapters = adaptersWithWorkflow(services, options['--workflow'])
   const opened = await openForIssue(adapters, issueNumber)
   if (!opened.ok) return answer(opened, console)
   const outcome = await runOneForgePass(adapters, opened.slug, issueNumber)
   console.out(JSON.stringify(outcome))
   return ['done', 'waiting'].includes(outcome.status) ? 0 : 1
+}
+
+/** The adapters with a workflowSource overridden to load `<name>.skraft.dot` from the plugin. @param {CliServices} services @param {string | string[] | true | undefined} workflowName */
+const adaptersWithWorkflow = (services, workflowName) => {
+  const base = services.adapters()
+  if (typeof workflowName !== 'string' || typeof services.pluginFolder !== 'function') return base
+  return { ...base, workflowSource: createPluginWorkflows({ files: createNodeFiles(), pluginRoot: services.pluginFolder(), name: workflowName }) }
 }
 
 /** Reads the issue through the code host and opens or resumes its run; returns a refusal when the forge or Init says no. @param {CliAdapters} adapters @param {number} issueNumber */
@@ -618,7 +627,7 @@ const TABLE = [
   ]],
   ['forge', forge, [
     { synopsis: 'answer --issue <n>', summary: 'relay the /skraft-answer reply a human left on the issue to the active pipeline, recorded by forge-comment' },
-    { synopsis: 'run --issue <n>', summary: 'run one engine pass of the pipeline for the issue, headless; any question goes to the issue as a comment' },
+    { synopsis: 'run [--workflow <name>] --issue <n>', summary: 'run one engine pass of the named workflow (`epic-design` or `pipeline`, default `pipeline`) for the issue, headless' },
   ]],
   ['commands', commands, [{ synopsis: '--json', summary: 'every command, its synopsis and summary, as JSON (help and completion of the skraft command)' }]],
   ['mcp', mcp, [{ summary: 'serve these commands to an agent host as MCP tools, over stdin and stdout (the host starts it from mcp.json)' }]],
