@@ -19,7 +19,8 @@ const askOnIssue = async ({ codeHost, files, slug, issueNumber }, question) => {
   const marker = `<sub>skraft-ask key=${question.key} run=${slug} step=${question.step}</sub>`
   const rel = `.tmp/forge/asks/${question.key}.body.md`
   await files.write(slug, rel, bodyFor(marker, question))
-  await codeHost.keepIssueComment({ number: issueNumber, marker, url: null, bodyFile: files.location(slug, rel) })
+  const kept = await codeHost.keepIssueComment({ number: issueNumber, marker, url: null, bodyFile: files.location(slug, rel) })
+  if (kept.ok) await files.write(slug, `forge/asks/${question.key}.json`, JSON.stringify({ url: kept.url }))
   await codeHost.addLabel(issueNumber, 'needs-clarification')
   return null
 }

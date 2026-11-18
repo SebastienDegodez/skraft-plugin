@@ -47,3 +47,26 @@ test('on ask, forge-human also adds the needs-clarification label on the issue',
 
   assert.deepEqual(codeHost.labels[42], ['needs-clarification'])
 })
+
+test('forge-human persists the comment URL under forge/asks/<key>.json so a later dispatch addresses the same comment directly', async () => {
+  const { tracking, codeHost } = wiredHost()
+  const forgeHuman = createForgeHuman({ codeHost, files: tracking, slug: SLUG, issueNumber: 42 })
+
+  await forgeHuman.ask(QUESTION)
+
+  const saved = await tracking.read(SLUG, 'forge/asks/adr-1.json')
+  assert.ok(saved, 'the ask record file is written')
+  assert.equal(JSON.parse(saved).url, codeHost.comments[0].url)
+})
+
+test('on a second ask with the same key, forge-human updates the same comment rather than duplicating it', async () => {
+  const { tracking, codeHost } = wiredHost()
+  const forgeHuman = createForgeHuman({ codeHost, files: tracking, slug: SLUG, issueNumber: 42 })
+
+  await forgeHuman.ask(QUESTION)
+  await forgeHuman.ask({ ...QUESTION, text: 'Ratify (clarified) the Proposed ADRs?' })
+
+  assert.equal(codeHost.comments.length, 1, 'still one comment on the issue')
+  assert.equal(codeHost.comments[0].edits, 1, 'the existing comment was updated once')
+  assert.match(codeHost.comments[0].body, /clarified/)
+})
