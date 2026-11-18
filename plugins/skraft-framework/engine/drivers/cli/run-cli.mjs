@@ -550,15 +550,26 @@ const forgeRun = async (args, services, console) => {
   if (options === undefined || !/^[1-9]\d*$/.test(String(options['--issue']))) return usage(console)
   const issueNumber = Number(options['--issue'])
   const adapters = services.adapters()
-  const read = await adapters.forges.github.codeHost.issue(issueNumber)
-  if (read.read !== 'issue') return answer({ ok: false, reason: `issue #${issueNumber} unreadable: ${read.reason ?? read.read}` }, console)
-  const slug = slugOf(read.issue.title) || `issue-${issueNumber}`
-  const initialised = await createInit(adapters).init({ slug, story: { issue: issueNumber, title: read.issue.title }, base: null, fromArtifacts: false })
-  if (!initialised.ok) return answer(initialised, console)
-  const human = createForgeHuman({ codeHost: adapters.forges.github.codeHost, files: adapters.files, slug, issueNumber })
-  const outcome = await createRunPipeline({ ...adapters, human }).run({ slug })
+  const opened = await openForIssue(adapters, issueNumber)
+  if (!opened.ok) return answer(opened, console)
+  const outcome = await runOneForgePass(adapters, opened.slug, issueNumber)
   console.out(JSON.stringify(outcome))
   return ['done', 'waiting'].includes(outcome.status) ? 0 : 1
+}
+
+/** Reads the issue through the code host and opens or resumes its run; returns a refusal when the forge or Init says no. @param {CliAdapters} adapters @param {number} issueNumber */
+const openForIssue = async (adapters, issueNumber) => {
+  const read = await adapters.forges.github.codeHost.issue(issueNumber)
+  if (read.read !== 'issue') return { ok: /** @type {const} */ (false), reason: `issue #${issueNumber} unreadable: ${read.reason ?? read.read}` }
+  const slug = slugOf(read.issue.title) || `issue-${issueNumber}`
+  const initialised = await createInit(adapters).init({ slug, story: { issue: issueNumber, title: read.issue.title }, base: null, fromArtifacts: false })
+  return initialised.ok ? { ok: /** @type {const} */ (true), slug } : initialised
+}
+
+/** One engine pass with the forge-human adapter injected so any ask lands on the issue as a comment. @param {CliAdapters} adapters @param {string} slug @param {number} issueNumber */
+const runOneForgePass = (adapters, slug, issueNumber) => {
+  const human = createForgeHuman({ codeHost: adapters.forges.github.codeHost, files: adapters.files, slug, issueNumber })
+  return createRunPipeline({ ...adapters, human }).run({ slug })
 }
 
 /** `forge answer --issue <n>`, `forge run --issue <n>`. @param {string[]} args @param {CliServices} services @param {Console} console */
