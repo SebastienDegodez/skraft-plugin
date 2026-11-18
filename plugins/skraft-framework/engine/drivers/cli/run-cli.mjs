@@ -1,6 +1,7 @@
 import { createInit } from '../../application/pipeline/init-usecase.mjs'
 import { createObserve } from '../../application/pipeline/observe-usecase.mjs'
 import { createDecide } from '../../application/decisions/decide-usecase.mjs'
+import { createRunPipeline } from '../../application/pipeline/run-pipeline-usecase.mjs'
 import { createConfigureComponents } from '../../application/config/configure-components-usecase.mjs'
 import { createRunGate } from '../../application/gates/run-gate-usecase.mjs'
 import { createPrecheck } from '../../application/pipeline/precheck-usecase.mjs'
@@ -17,6 +18,7 @@ import { reviewThroughLoop } from './review-loop.mjs'
 import { mutationAdapters, mutationCommandThen, mutationThroughLoop } from './mutation-loop.mjs'
 import { serveMcp } from './mcp-server.mjs'
 import { pickAnswerFrom } from '../forge-ci/answer-comment.mjs'
+import { createForgeHuman } from '../forge-ci/forge-human.mjs'
 
 /**
  * @typedef {{ out: (line: string) => void, err: (line: string) => void }} Console
@@ -539,10 +541,31 @@ const forgeAnswer = async (args, services, console) => {
   return answer(await createDecide({ ...adapters, confirmation }).decide({ key: picked.key, answer: picked.answer, reason: picked.reason }), console)
 }
 
-/** `forge answer --issue <n>`, `forge run <workflow> --issue <n>`. @param {string[]} args @param {CliServices} services @param {Console} console */
+/** @param {string} title */
+const slugOf = (title) => title.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
+
+/** `forge run --issue <n>`. Runs one engine pass of the active (or opened) pipeline with the forge-human adapter so any question lands on the issue as a comment. @param {string[]} args @param {CliServices} services @param {Console} console */
+const forgeRun = async (args, services, console) => {
+  const options = optionsOf(args, { values: ['--issue'] })
+  if (options === undefined || !/^[1-9]\d*$/.test(String(options['--issue']))) return usage(console)
+  const issueNumber = Number(options['--issue'])
+  const adapters = services.adapters()
+  const read = await adapters.forges.github.codeHost.issue(issueNumber)
+  if (read.read !== 'issue') return answer({ ok: false, reason: `issue #${issueNumber} unreadable: ${read.read}` }, console)
+  const slug = slugOf(read.issue.title) || `issue-${issueNumber}`
+  const initialised = await createInit(adapters).init({ slug, story: { issue: issueNumber, title: read.issue.title }, base: null, fromArtifacts: false })
+  if (!initialised.ok) return answer(initialised, console)
+  const human = createForgeHuman({ codeHost: adapters.forges.github.codeHost, files: adapters.files, slug, issueNumber })
+  const outcome = await createRunPipeline({ ...adapters, human }).run({ slug })
+  console.out(JSON.stringify(outcome))
+  return ['done', 'waiting'].includes(outcome.status) ? 0 : 1
+}
+
+/** `forge answer --issue <n>`, `forge run --issue <n>`. @param {string[]} args @param {CliServices} services @param {Console} console */
 const forge = async (args, services, console) => {
   const [action, ...rest] = args
   if (action === 'answer') return forgeAnswer(rest, services, console)
+  if (action === 'run') return forgeRun(rest, services, console)
   return usage(console)
 }
 
@@ -584,6 +607,7 @@ const TABLE = [
   ]],
   ['forge', forge, [
     { synopsis: 'answer --issue <n>', summary: 'relay the /skraft-answer reply a human left on the issue to the active pipeline, recorded by forge-comment' },
+    { synopsis: 'run --issue <n>', summary: 'run one engine pass of the pipeline for the issue, headless; any question goes to the issue as a comment' },
   ]],
   ['commands', commands, [{ synopsis: '--json', summary: 'every command, its synopsis and summary, as JSON (help and completion of the skraft command)' }]],
   ['mcp', mcp, [{ summary: 'serve these commands to an agent host as MCP tools, over stdin and stdout (the host starts it from mcp.json)' }]],
