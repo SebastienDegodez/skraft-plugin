@@ -551,7 +551,7 @@ const forgeRun = async (args, services, console) => {
   const issueNumber = Number(options['--issue'])
   const adapters = services.adapters()
   const read = await adapters.forges.github.codeHost.issue(issueNumber)
-  if (read.read !== 'issue') return answer({ ok: false, reason: `issue #${issueNumber} unreadable: ${read.read}` }, console)
+  if (read.read !== 'issue') return answer({ ok: false, reason: `issue #${issueNumber} unreadable: ${read.reason ?? read.read}` }, console)
   const slug = slugOf(read.issue.title) || `issue-${issueNumber}`
   const initialised = await createInit(adapters).init({ slug, story: { issue: issueNumber, title: read.issue.title }, base: null, fromArtifacts: false })
   if (!initialised.ok) return answer(initialised, console)
