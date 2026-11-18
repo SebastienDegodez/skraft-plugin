@@ -68,8 +68,11 @@ export const SKRAFT_PIPELINE_META = Object.freeze({
  * @param {Host} host
  * @returns {Promise<RunOutcome>}
  */
-export const runSkraftPipelineWorkflow = async (ctx, host) => {
-  const outcome = await guarded(ctx, host, ctx.signal)
+export const runSkraftPipelineWorkflow = (ctx, host) => runWorkflowBody(ctx, host, undefined)
+
+/** Shared body for the pipeline and architecture dynamic workflows: a workflowName selects the plugin's workflow file, `pipeline` by default. @param {WorkflowContext} ctx @param {Host} host @param {string | undefined} workflowName @returns {Promise<RunOutcome>} */
+export const runWorkflowBody = async (ctx, host, workflowName) => {
+  const outcome = await guarded(ctx, host, ctx.signal, workflowName)
   ctx.log(`${outcome.slug ?? 'skraft'}: ${outcome.status}${outcome.code ? ` (${outcome.code})` : ''}: ${outcome.reason}`)
   return outcome
 }
@@ -84,12 +87,12 @@ const UNEXPECTED = Object.freeze({
 })
 
 /**
- * @param {WorkflowContext} ctx @param {Host} host @param {AbortSignal | undefined} signal the run's, read when it starts
+ * @param {WorkflowContext} ctx @param {Host} host @param {AbortSignal | undefined} signal the run's, read when it starts @param {string | undefined} workflowName
  * @returns {Promise<RunOutcome>}
  */
-const guarded = async (ctx, { cwd, ...host }, signal) => {
+const guarded = async (ctx, { cwd, ...host }, signal, workflowName) => {
   try {
-    return cwd === null ? NO_DIRECTORY : await runIn(ctx, { cwd, ...host })
+    return cwd === null ? NO_DIRECTORY : await runIn(ctx, { cwd, ...host }, workflowName)
   } catch (error) {
     if (isCancellation(signal)) throw error
     return stoppedUnexpectedly(/** @type {{ cwd: string, pluginRoot: string, home: string }} */ ({ cwd, pluginRoot: host.pluginRoot, home: host.home }), error)
@@ -138,13 +141,14 @@ const UNEXPECTED_LOG = 'logs/unexpected.log'
 /**
  * @param {WorkflowContext} ctx
  * @param {Host & { cwd: string }} host
+ * @param {string | undefined} workflowName the plugin workflow file (`epic-design`, `pipeline`, ...), default when absent
  * @returns {Promise<RunOutcome>}
  */
-const runIn = async (ctx, { cwd, pluginRoot, home, dialog }) => {
+const runIn = async (ctx, { cwd, pluginRoot, home, dialog }, workflowName) => {
   const read = await readArgs(ctx)
   if (!read.ok) return read.outcome
   const { slug, issue, title, base, fromArtifacts, configure, agentIds } = read.args
-  const adapters = { ...createNodeAdapters({ cwd, pluginRoot, agentHost: 'copilot', home, signal: ctx.signal }) }
+  const adapters = { ...createNodeAdapters({ cwd, pluginRoot, agentHost: 'copilot', home, signal: ctx.signal, workflowName }) }
   /** @type {Runner} */
   const runner = { pluginRoot, agentIds, dialog, confirm: configure === true ? 'always' : 'once' }
   return slug === undefined || slug === null

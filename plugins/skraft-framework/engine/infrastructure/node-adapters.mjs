@@ -28,11 +28,11 @@ import { createCopilotSdkLocator } from './copilot/copilot-sdk-locator.mjs'
  *   the user's home by default.
  *   signal: ends every command still running when it aborts (the host cancelled the run).
  */
-export const createNodeAdapters = ({ cwd, pluginRoot, env = process.env, agentHost, home = homedir(), signal }) => {
+export const createNodeAdapters = ({ cwd, pluginRoot, env = process.env, agentHost, home = homedir(), signal, workflowName }) => {
   const files = createNodeFiles()
   return Object.freeze({
     ...trackedState(files, cwd),
-    ...pluginContent(files, { pluginRoot, cwd, agentHost }),
+    ...pluginContent(files, { pluginRoot, cwd, agentHost, workflowName }),
     ...timekeeping(),
     hasher: createWebCryptoHasher(),
     ...configuration(files, { cwd, home, env }),
@@ -74,9 +74,9 @@ const trackedState = (files, cwd) => {
  * @param {ReturnType<typeof createNodeFiles>} files
  * @param {{ pluginRoot: string, cwd: string, agentHost: import('./agents/agent-catalog.mjs').AgentHost | undefined }} where
  */
-const pluginContent = (files, { pluginRoot, cwd, agentHost }) => ({
+const pluginContent = (files, { pluginRoot, cwd, agentHost, workflowName }) => ({
   templates: createPluginTemplates({ files, pluginRoot }),
-  workflowSource: createPluginWorkflows({ files, pluginRoot }),
+  workflowSource: createPluginWorkflows({ files, pluginRoot, name: workflowName }),
   agentCatalog: createAgentCatalog({ files, pluginRoot, root: cwd, host: agentHost }),
   mutationRun: mutationRun(files, { pluginRoot, cwd }),
 })

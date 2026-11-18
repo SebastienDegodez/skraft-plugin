@@ -19,14 +19,12 @@ import { mutationAdapters, mutationCommandThen, mutationThroughLoop } from './mu
 import { serveMcp } from './mcp-server.mjs'
 import { pickAnswerFrom } from './forge-answer-comment.mjs'
 import { createForgeHuman } from './forge-human.mjs'
-import { createNodeFiles } from '../../infrastructure/files/node-files.mjs'
-import { createPluginWorkflows } from '../../infrastructure/workflows/plugin-workflows.mjs'
 
 /**
  * @typedef {{ out: (line: string) => void, err: (line: string) => void }} Console
  * @typedef {Parameters<typeof createInit>[0] & Parameters<typeof createRunGate>[0] & Parameters<typeof createDoctor>[0] & Parameters<typeof createConfigureComponents>[0] & Parameters<typeof createWorkflowCommands>[0] & import('./agent-loop.mjs').LoopAdapters & Parameters<typeof createPublish>[0] & Parameters<typeof createAdoptJournal>[0]} CliAdapters
  * @typedef {{
- *   pluginVersion: () => string, workingCopyName: () => string, adapters: (agentHost?: 'copilot') => CliAdapters, command: () => string,
+ *   pluginVersion: () => string, workingCopyName: () => string, adapters: (agentHost?: 'copilot', options?: { workflowName?: string }) => CliAdapters, command: () => string,
  *   confirm: (question: string) => Promise<boolean | null>, then?: import('./agent-loop.mjs').LoopThen,
  *   mutationThen?: import('./agent-loop.mjs').LoopThen,
  * } & Partial<import('./mcp-server.mjs').McpServices>} CliServices
@@ -551,19 +549,13 @@ const forgeRun = async (args, services, console) => {
   const options = optionsOf(args, { values: ['--issue', '--workflow'] })
   if (options === undefined || !/^[1-9]\d*$/.test(String(options['--issue']))) return usage(console)
   const issueNumber = Number(options['--issue'])
-  const adapters = adaptersWithWorkflow(services, options['--workflow'])
+  const workflowName = typeof options['--workflow'] === 'string' ? options['--workflow'] : undefined
+  const adapters = services.adapters(undefined, { workflowName })
   const opened = await openForIssue(adapters, issueNumber)
   if (!opened.ok) return answer(opened, console)
   const outcome = await runOneForgePass(adapters, opened.slug, issueNumber)
   console.out(JSON.stringify(outcome))
   return ['done', 'waiting'].includes(outcome.status) ? 0 : 1
-}
-
-/** The adapters with a workflowSource overridden to load `<name>.skraft.dot` from the plugin. @param {CliServices} services @param {string | string[] | true | undefined} workflowName */
-const adaptersWithWorkflow = (services, workflowName) => {
-  const base = services.adapters()
-  if (typeof workflowName !== 'string' || typeof services.pluginFolder !== 'function') return base
-  return { ...base, workflowSource: createPluginWorkflows({ files: createNodeFiles(), pluginRoot: services.pluginFolder(), name: workflowName }) }
 }
 
 /** Reads the issue through the code host and opens or resumes its run; returns a refusal when the forge or Init says no. @param {CliAdapters} adapters @param {number} issueNumber */

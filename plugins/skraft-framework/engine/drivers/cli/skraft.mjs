@@ -16,7 +16,7 @@ const pluginFolder = fileURLToPath(pluginRoot)
 const servicesAt = (directory) => ({
   pluginVersion: () => readPluginVersion(new URL('plugin.json', pluginRoot)),
   workingCopyName: () => basename(directory),
-  adapters: (/** @type {'copilot' | undefined} */ agentHost) => createNodeAdapters({ cwd: directory, pluginRoot: pluginFolder, agentHost }),
+  adapters: (/** @type {'copilot' | undefined} */ agentHost, /** @type {{ workflowName?: string }} */ options = {}) => createNodeAdapters({ cwd: directory, pluginRoot: pluginFolder, agentHost, ...options }),
   command: () => `node "${fileURLToPath(import.meta.url)}"`,
   confirm: terminalConfirm({ input: process.stdin, output: process.stderr, env: process.env }),
 })

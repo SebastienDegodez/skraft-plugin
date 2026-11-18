@@ -1,4 +1,5 @@
 import { SKRAFT_PIPELINE_META, runSkraftPipelineWorkflow } from './skraft-pipeline-workflow.mjs'
+import { SKRAFT_ARCHITECTURE_META, runSkraftArchitectureWorkflow } from './skraft-architecture-workflow.mjs'
 import { SKRAFT_REVIEW_META, runSkraftReviewWorkflow } from './skraft-review-workflow.mjs'
 import { createSkraftDecideTool } from './skraft-decide-tool.mjs'
 import { createSessionDirectory } from './session-dir.mjs'
@@ -25,6 +26,7 @@ import { createPipelineCanvas } from './pipeline-canvas.mjs'
 
 // Stryker disable StringLiteral: text shown to the person in the session log; no engine behaviour reads it
 const NO_WORKFLOW = 'skraft: the skraft-pipeline workflow could not be defined; it is not available in this session.'
+const NO_ARCHITECTURE = 'skraft: the skraft-architecture workflow could not be defined; run architecture by hand with skraft forge run --workflow epic-design in a terminal.'
 const NO_REVIEW = 'skraft: the skraft-review workflow could not be defined; review a pull request with skraft review --pr in a terminal.'
 const NO_TOOL = 'skraft: the skraft_decide tool could not be built; answer a skraft question with skraft decide in a terminal.'
 const TOOL_REFUSED = 'skraft: the host refused the skraft_decide tool; answer a skraft question with skraft decide in a terminal.'
@@ -73,6 +75,7 @@ export const register = async ({ defineWorkflow, joinSession, createCanvas, Canv
  */
 const definedWorkflows = ({ defineWorkflow, pluginRoot, home }, { directory, confirmation }, missing) => [
   ...built(() => defineWorkflow({ meta: SKRAFT_PIPELINE_META, run: (/** @type {any} */ ctx) => runSkraftPipelineWorkflow(ctx, { cwd: directory.current(), pluginRoot, home, dialog: null }) }), NO_WORKFLOW, missing),
+  ...built(() => defineWorkflow({ meta: SKRAFT_ARCHITECTURE_META, run: (/** @type {any} */ ctx) => runSkraftArchitectureWorkflow(ctx, { cwd: directory.current(), pluginRoot, home, dialog: null }) }), NO_ARCHITECTURE, missing),
   ...built(() => defineWorkflow({ meta: SKRAFT_REVIEW_META, run: (/** @type {any} */ ctx) => runSkraftReviewWorkflow(ctx, { cwd: directory.current(), pluginRoot, home, confirmation }) }), NO_REVIEW, missing),
 ]
 

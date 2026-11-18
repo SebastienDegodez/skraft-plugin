@@ -175,14 +175,14 @@ const userSettingsOf = (home, files) => Object.freeze({
   },
 })
 
-/** @param {ModHost} host */
-const compose = async (host) => {
+/** @param {ModHost} host @param {{ workflowName?: string }} [options] */
+const compose = async (host, options = {}) => {
   const files = createModFiles(host.fs, { run: host.run })
   const root = await workingCopyOf(host)
   return {
     ...trackingPorts(files, root),
     ...sessionPorts(host, files, root),
-    ...pluginPorts(files, host.pluginRoot, root),
+    ...pluginPorts(files, host.pluginRoot, root, options.workflowName),
     hasher: createWebCryptoHasher(),
     ...configurationPorts(host, files, root),
     ...gitPorts(createModCommandRunner({ run: host.run, root, environment: host.environment })),
@@ -250,10 +250,10 @@ const trackingPorts = (files, root) => {
   return { journal: tracking.journal, activePipeline: tracking.activePipeline, files: tracking.files, reviewJournal: reviews.journal, reviewFiles: reviews.files }
 }
 
-/** What the plugin ships: templates, workflows, agents. @param {ReturnType<typeof createModFiles>} files @param {string} pluginRoot @param {string} root */
-const pluginPorts = (files, pluginRoot, root) => ({
+/** What the plugin ships: templates, workflows (the one the request names, pipeline by default), agents. @param {ReturnType<typeof createModFiles>} files @param {string} pluginRoot @param {string} root @param {string} [workflowName] */
+const pluginPorts = (files, pluginRoot, root, workflowName) => ({
   templates: createPluginTemplates({ files, pluginRoot }),
-  workflowSource: createPluginWorkflows({ files, pluginRoot }),
+  workflowSource: createPluginWorkflows({ files, pluginRoot, name: workflowName }),
   agentCatalog: createAgentCatalog({ files, pluginRoot, root, host: 'claude-code' }),
 })
 
@@ -333,6 +333,7 @@ const runToEnd = async (driver, host, deps, slug) => {
 const answerCommand = async (driver, host, args) => {
   const request = parseSkraftCommand(args)
   if (request.command === 'run') return start(driver, host, request)
+  if (request.command === 'architecture') return start(driver, host, { ...request, fromArtifacts: false }, 'epic-design')
   if (request.command === 'decide') return decide(driver, host, request)
   if (request.command === 'review') return review(driver, host, request)
   return viewText(await createObserve(await compose(host)).view())
@@ -413,12 +414,12 @@ const pressedReason = async (host, deps, key, answer) => {
  * One run at a time: the request holds the driver until its run is launched or turned down.
  * @param {DriverState} driver @param {ModHost} host @param {StartRequest} request @returns {Promise<string>}
  */
-const start = async (driver, host, request) => {
+const start = async (driver, host, request, workflowName) => {
   if (driver.running !== null) return `skraft is already running ${driver.running}; see the Skraft pane.`
   driver.running = request.slug ?? 'the active pipeline'
   let launched = false
   try {
-    const answer = await startHeld(driver, host, request)
+    const answer = await startHeld(driver, host, request, workflowName)
     launched = answer.launched
     return answer.text
   } finally {
@@ -426,9 +427,9 @@ const start = async (driver, host, request) => {
   }
 }
 
-/** A named slug is initialised first. @param {DriverState} driver @param {ModHost} host @param {StartRequest} request @returns {Promise<StartAnswer>} */
-const startHeld = async (driver, host, { slug, story, base, fromArtifacts }) => {
-  const deps = await compose(host)
+/** A named slug is initialised first. @param {DriverState} driver @param {ModHost} host @param {StartRequest} request @param {string} [workflowName] @returns {Promise<StartAnswer>} */
+const startHeld = async (driver, host, { slug, story, base, fromArtifacts }, workflowName) => {
+  const deps = await compose(host, { workflowName })
   if (slug === null) return resumeActive(driver, host, deps)
   const initialised = await createInit(deps).init({ slug, story, base, fromArtifacts })
   if (!initialised.ok) return notLaunched(`skraft ${slug}: not started — ${initialised.reason}`)
