@@ -1,0 +1,94 @@
+name: skraft triage and design
+
+# Runs the forge-ci dispatcher on every open issue of the V2 epic. For each issue:
+#   1. `skraft forge answer --issue <n>` relays a reply a human left on the issue
+#      (the latest `/skraft-answer <key> <OPTION>` line) to the active run's Decide.
+#   2. `skraft forge run --issue <n>` reads the issue, opens or resumes its run, and
+#      runs one engine pass. Any question the agents raise (a solution-researcher or
+#      solution-architect that returned `{"status":"blocked", summary}`, the ADR
+#      ratification) is published as a GitHub comment on the issue and marked with
+#      the `needs-clarification` label; the run then ends `waiting`.
+#
+# Manual dispatch only. The ANTHROPIC_API_KEY secret must be set for the engine to
+# dispatch Claude Code agents from the runner.
+
+on:
+  workflow_dispatch:
+    inputs:
+      epic:
+        description: 'Epic issue number whose linked lots the workflow walks (Refs #<epic> filter).'
+        required: false
+        default: '211'
+      max_parallel:
+        description: 'How many issues to process at the same time; raise cautiously, agent runs cost model credits.'
+        required: false
+        default: '3'
+      dry_run:
+        description: 'When true, only `skraft forge run` is called; the answer intake is skipped.'
+        required: false
+        default: 'false'
+
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+
+concurrency:
+  group: skraft-triage-${{ github.event.inputs.epic }}
+  cancel-in-progress: false
+
+jobs:
+  scope:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.lots.outputs.matrix }}
+      count: ${{ steps.lots.outputs.count }}
+    steps:
+      - name: Resolve the V2 lots in scope
+        id: lots
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          EPIC: ${{ github.event.inputs.epic }}
+        run: |
+          set -euo pipefail
+          primary=$(gh search issues --repo "$GITHUB_REPOSITORY" --state open --json number,title --match body "Refs #$EPIC" | jq -c '[.[] | select(.title | test("^Lot ")) | {number: .number}]')
+          count=$(echo "$primary" | jq 'length')
+          if [ "$count" = "0" ] && [ -f docs/v2/lots.json ]; then
+            echo "primary search returned no lots, falling back to docs/v2/lots.json" >&2
+            primary=$(jq -c '[.lots[] | {number: .issue}]' docs/v2/lots.json)
+            count=$(echo "$primary" | jq 'length')
+          fi
+          echo "matrix=$(echo "$primary" | jq -c '{include: .}')" >> "$GITHUB_OUTPUT"
+          echo "count=$count" >> "$GITHUB_OUTPUT"
+
+  run:
+    needs: scope
+    if: needs.scope.outputs.count != '0'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      max-parallel: ${{ fromJson(github.event.inputs.max_parallel) }}
+      matrix: ${{ fromJson(needs.scope.outputs.matrix) }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Install engine dependencies
+        run: npm ci --prefix plugins/skraft-framework/engine
+      - name: Install Claude Code host
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          test -n "$ANTHROPIC_API_KEY" || { echo "ANTHROPIC_API_KEY is not set; the engine cannot dispatch agents" >&2; exit 1; }
+          npm install -g @anthropic-ai/claude-code
+      - name: Relay any human reply left on the issue
+        if: github.event.inputs.dry_run != 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: node plugins/skraft-framework/engine/drivers/cli/skraft.mjs forge answer --issue ${{ matrix.number }} || true
+      - name: Run one engine pass of the pipeline for the issue
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: node plugins/skraft-framework/engine/drivers/cli/skraft.mjs forge run --issue ${{ matrix.number }}
