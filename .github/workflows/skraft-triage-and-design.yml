@@ -1,13 +1,20 @@
 name: skraft triage and design
 
-# Runs the forge-ci dispatcher on every open issue of the V2 epic. For each issue:
+# Runs the forge-ci dispatcher on an entire V2 epic or on one user story. For each
+# issue in scope:
 #   1. `skraft forge answer --issue <n>` relays a reply a human left on the issue
 #      (the latest `/skraft-answer <key> <OPTION>` line) to the active run's Decide.
-#   2. `skraft forge run --issue <n>` reads the issue, opens or resumes its run, and
-#      runs one engine pass. Any question the agents raise (a solution-researcher or
-#      solution-architect that returned `{"status":"blocked", summary}`, the ADR
-#      ratification) is published as a GitHub comment on the issue and marked with
-#      the `needs-clarification` label; the run then ends `waiting`.
+#   2. `skraft forge run --workflow <name> --issue <n>` reads the issue, opens or
+#      resumes its run, and runs one engine pass. Any question the agents raise (a
+#      solution-researcher or solution-architect that returned
+#      `{"status":"blocked", summary}`, the ADR ratification) is published as a
+#      GitHub comment on the issue and marked with the `needs-clarification` label;
+#      the run then ends `waiting`.
+#
+# Two input shapes:
+#   - `issue`: a single user story to process alone (takes precedence when set).
+#   - `epic`:  an epic whose lots (issues titled `^Lot ` that reference `Refs #<epic>`
+#              in their body) the workflow walks. Default `211` (the V2 epic).
 #
 # Manual dispatch only. The ANTHROPIC_API_KEY secret must be set for the engine to
 # dispatch Claude Code agents from the runner.
@@ -15,10 +22,18 @@ name: skraft triage and design
 on:
   workflow_dispatch:
     inputs:
+      issue:
+        description: 'A single user story to process alone. When set, the epic input is ignored.'
+        required: false
+        default: ''
       epic:
-        description: 'Epic issue number whose linked lots the workflow walks (Refs #<epic> filter).'
+        description: 'The epic whose linked lots are processed (ignored when `issue` is set). Default V2 epic #211.'
         required: false
         default: '211'
+      workflow:
+        description: 'The plugin workflow each matrix job runs: `epic-design` (default, architecture + PR of architecture), `epic-story` (delivery of a briefed story), or `pipeline` (full story run).'
+        required: false
+        default: 'epic-design'
       max_parallel:
         description: 'How many issues to process at the same time; raise cautiously, agent runs cost model credits.'
         required: false
@@ -34,7 +49,7 @@ permissions:
   pull-requests: write
 
 concurrency:
-  group: skraft-triage-${{ github.event.inputs.epic }}
+  group: skraft-triage-${{ inputs.issue != '' && format('issue-{0}', inputs.issue) || format('epic-{0}', inputs.epic) }}
   cancel-in-progress: false
 
 jobs:
@@ -44,19 +59,32 @@ jobs:
       matrix: ${{ steps.lots.outputs.matrix }}
       count: ${{ steps.lots.outputs.count }}
     steps:
-      - name: Resolve the V2 lots in scope
+      - uses: actions/checkout@v4
+      - name: Resolve the scope — one user story or an epic's lots
         id: lots
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          EPIC: ${{ github.event.inputs.epic }}
+          ISSUE: ${{ inputs.issue }}
+          EPIC: ${{ inputs.epic }}
         run: |
           set -euo pipefail
-          primary=$(gh search issues --repo "$GITHUB_REPOSITORY" --state open --json number,title --match body "Refs #$EPIC" | jq -c '[.[] | select(.title | test("^Lot ")) | {number: .number}]')
-          count=$(echo "$primary" | jq 'length')
-          if [ "$count" = "0" ] && [ -f docs/v2/lots.json ]; then
-            echo "primary search returned no lots, falling back to docs/v2/lots.json" >&2
-            primary=$(jq -c '[.lots[] | {number: .issue}]' docs/v2/lots.json)
+          if [ -n "$ISSUE" ]; then
+            if ! printf '%s' "$ISSUE" | grep -Eq '^[1-9][0-9]*$'; then
+              echo "issue input '$ISSUE' is not a positive integer" >&2
+              exit 1
+            fi
+            primary=$(jq -nc --argjson n "$ISSUE" '[{number: $n}]')
+            count=1
+            echo "scope: single user story #$ISSUE" >&2
+          else
+            primary=$(gh search issues --repo "$GITHUB_REPOSITORY" --state open --json number,title --match body "Refs #$EPIC" | jq -c '[.[] | select(.title | test("^Lot ")) | {number: .number}]')
             count=$(echo "$primary" | jq 'length')
+            if [ "$count" = "0" ] && [ -f docs/v2/lots.json ]; then
+              echo "primary search returned no lots, falling back to docs/v2/lots.json" >&2
+              primary=$(jq -c '[.lots[] | {number: .issue}]' docs/v2/lots.json)
+              count=$(echo "$primary" | jq 'length')
+            fi
+            echo "scope: epic #$EPIC, $count lots" >&2
           fi
           echo "matrix=$(echo "$primary" | jq -c '{include: .}')" >> "$GITHUB_OUTPUT"
           echo "count=$count" >> "$GITHUB_OUTPUT"
@@ -67,7 +95,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
-      max-parallel: ${{ fromJson(github.event.inputs.max_parallel) }}
+      max-parallel: ${{ fromJson(inputs.max_parallel) }}
       matrix: ${{ fromJson(needs.scope.outputs.matrix) }}
     steps:
       - uses: actions/checkout@v4
@@ -83,7 +111,7 @@ jobs:
           test -n "$ANTHROPIC_API_KEY" || { echo "ANTHROPIC_API_KEY is not set; the engine cannot dispatch agents" >&2; exit 1; }
           npm install -g @anthropic-ai/claude-code
       - name: Relay any human reply left on the issue
-        if: github.event.inputs.dry_run != 'true'
+        if: inputs.dry_run != 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: node plugins/skraft-framework/engine/drivers/cli/skraft.mjs forge answer --issue ${{ matrix.number }} || true
