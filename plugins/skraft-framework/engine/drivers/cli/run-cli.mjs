@@ -17,8 +17,8 @@ import { createAgentLoop } from './agent-loop.mjs'
 import { reviewThroughLoop } from './review-loop.mjs'
 import { mutationAdapters, mutationCommandThen, mutationThroughLoop } from './mutation-loop.mjs'
 import { serveMcp } from './mcp-server.mjs'
-import { pickAnswerFrom } from '../forge-ci/answer-comment.mjs'
-import { createForgeHuman } from '../forge-ci/forge-human.mjs'
+import { pickAnswerFrom } from './forge-answer-comment.mjs'
+import { createForgeHuman } from './forge-human.mjs'
 
 /**
  * @typedef {{ out: (line: string) => void, err: (line: string) => void }} Console

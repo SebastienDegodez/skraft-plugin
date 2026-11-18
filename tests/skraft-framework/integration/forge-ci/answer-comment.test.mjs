@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { pickAnswerFrom } from '../../../../plugins/skraft-framework/engine/drivers/forge-ci/answer-comment.mjs'
+import { pickAnswerFrom } from '../../../../plugins/skraft-framework/engine/drivers/cli/forge-answer-comment.mjs'
 
 const BOT = 'skraft-bot'
 const URL = 'https://x/issue#issuecomment-'

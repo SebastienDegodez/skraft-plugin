@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { createForgeHuman } from '../../../../plugins/skraft-framework/engine/drivers/forge-ci/forge-human.mjs'
+import { createForgeHuman } from '../../../../plugins/skraft-framework/engine/drivers/cli/forge-human.mjs'
 import { InMemoryCodeHost, InMemoryTracking } from '../../unit/support/in-memory-host.mjs'
 
 const SLUG = 'checkout'
