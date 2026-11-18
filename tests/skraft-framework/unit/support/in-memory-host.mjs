@@ -774,6 +774,8 @@ export class InMemoryCodeHost {
     this.comments = []
     /** how many comments were ever posted */
     this.posted = 0
+    /** @type {Record<number, string[]>} the labels posted on each issue, in the order posted; GitHub ignores duplicates silently */
+    this.labels = {}
     /** @type {string[]} */
     this.calls = []
     /** @type {(file: string) => string} */
@@ -870,6 +872,12 @@ export class InMemoryCodeHost {
     this.reads.push(`read ${url.slice(url.indexOf('#'))}`)
     const found = [...this.comments, ...this.pullRequestComments].find((comment) => comment.url === url && !comment.hidden)
     return { ok: true, body: found?.body ?? null }
+  }
+  async addLabel(number, label) {
+    this.calls.push(`add label #${number} ${label}`)
+    if (this.fails.addLabel) return { ok: false, reason: this.fails.addLabel }
+    this.labels[number] = [...(this.labels[number] ?? []), label]
+    return this.answered('addLabel')
   }
 }
 

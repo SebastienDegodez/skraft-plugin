@@ -20,6 +20,7 @@ const askOnIssue = async ({ codeHost, files, slug, issueNumber }, question) => {
   const rel = `.tmp/forge/asks/${question.key}.body.md`
   await files.write(slug, rel, bodyFor(marker, question))
   await codeHost.keepIssueComment({ number: issueNumber, marker, url: null, bodyFile: files.location(slug, rel) })
+  await codeHost.addLabel(issueNumber, 'needs-clarification')
   return null
 }
 
