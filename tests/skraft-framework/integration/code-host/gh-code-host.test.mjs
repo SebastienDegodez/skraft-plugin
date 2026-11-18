@@ -481,3 +481,21 @@ test('a label is added on the issue of the remote\'s repository through gh api -
 
   assert.deepEqual(await repository(t, { remote: null }).codeHost().addLabel(42, 'needs-clarification'), { ok: false, reason: 'the working copy has no Git remote whose URL names a host and a repository' })
 })
+
+test('the issue\'s comments are read back with each author, body and URL, in posting order, through gh api --paginate; refused when no remote', async (t) => {
+  const { forge, codeHost } = repository(t)
+  forge.set({ signedIn: true, defaultBranch: 'main', open: [], created: '', login: 'sebastien', comments: [
+    { id: 901, number: 42, login: 'bot', body: '<sub>skraft-ask key=adr-1 run=checkout step=adr</sub>\nRatify?' },
+    { id: 902, number: 42, login: 'alice', body: '/skraft-answer adr-1 RATIFIED' },
+  ] })
+
+  const listed = await codeHost().listComments(42)
+
+  assert.deepEqual(listed, { ok: true, comments: [
+    { login: 'bot', body: '<sub>skraft-ask key=adr-1 run=checkout step=adr</sub>\nRatify?', url: 'https://github.example.com/acme/payment/issues/42#issuecomment-901' },
+    { login: 'alice', body: '/skraft-answer adr-1 RATIFIED', url: 'https://github.example.com/acme/payment/issues/42#issuecomment-902' },
+  ] })
+  assert.deepEqual(forge.calls().at(-1), ['api', '--hostname=github.example.com', '--paginate', '--jq=.[]', 'repos/acme/payment/issues/42/comments'])
+
+  assert.deepEqual(await repository(t, { remote: null }).codeHost().listComments(42), { ok: false, reason: 'the working copy has no Git remote whose URL names a host and a repository' })
+})
