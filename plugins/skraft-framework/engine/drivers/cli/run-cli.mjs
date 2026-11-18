@@ -16,6 +16,7 @@ import { createAgentLoop } from './agent-loop.mjs'
 import { reviewThroughLoop } from './review-loop.mjs'
 import { mutationAdapters, mutationCommandThen, mutationThroughLoop } from './mutation-loop.mjs'
 import { serveMcp } from './mcp-server.mjs'
+import { pickAnswerFrom } from '../forge-ci/answer-comment.mjs'
 
 /**
  * @typedef {{ out: (line: string) => void, err: (line: string) => void }} Console
@@ -524,6 +525,27 @@ const configText = ({ text }) => (text === undefined ? [] : ['would write skraft
 /** @param {MigrateOutcome['pipelines'][number]} pipeline */
 const pipelineLines = ({ status: state, reason, events = [] }) => [`${state}  ${reason}`, ...events.map((event) => `  would append: ${JSON.stringify(event)}`)]
 
+/** `forge answer --issue <n>`. @param {string[]} args @param {CliServices} services @param {Console} console */
+const forgeAnswer = async (args, services, console) => {
+  const options = optionsOf(args, { values: ['--issue'] })
+  if (options === undefined || !/^[1-9]\d*$/.test(String(options['--issue']))) return usage(console)
+  const issue = Number(options['--issue'])
+  const adapters = services.adapters()
+  const listed = await adapters.forges.github.codeHost.listComments(issue)
+  if (!listed.ok) return answer(listed, console)
+  const picked = pickAnswerFrom(listed.comments, '')
+  if (picked === null) return answer({ ok: false, reason: `no /skraft-answer line on issue #${issue}; nothing was recorded` }, console)
+  const confirmation = { by: /** @type {const} */ ('forge-comment'), confirm: async () => ({ ok: /** @type {const} */ (true) }) }
+  return answer(await createDecide({ ...adapters, confirmation }).decide({ key: picked.key, answer: picked.answer, reason: picked.reason }), console)
+}
+
+/** `forge answer --issue <n>`, `forge run <workflow> --issue <n>`. @param {string[]} args @param {CliServices} services @param {Console} console */
+const forge = async (args, services, console) => {
+  const [action, ...rest] = args
+  if (action === 'answer') return forgeAnswer(rest, services, console)
+  return usage(console)
+}
+
 /** @type {Command} */
 const unknown = (_args, _services, console) => usage(console)
 
@@ -559,6 +581,9 @@ const TABLE = [
     { synopsis: 'eject [review]', summary: 'copy the plugin pipeline into .skraft/ (review: the review alone)' },
     { synopsis: 'check [--json]', summary: 'validate the workflow a run follows' },
     { synopsis: 'diff [--json]', summary: 'compare the repository workflow with the plugin one' },
+  ]],
+  ['forge', forge, [
+    { synopsis: 'answer --issue <n>', summary: 'relay the /skraft-answer reply a human left on the issue to the active pipeline, recorded by forge-comment' },
   ]],
   ['commands', commands, [{ synopsis: '--json', summary: 'every command, its synopsis and summary, as JSON (help and completion of the skraft command)' }]],
   ['mcp', mcp, [{ summary: 'serve these commands to an agent host as MCP tools, over stdin and stdout (the host starts it from mcp.json)' }]],

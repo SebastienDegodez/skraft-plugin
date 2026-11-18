@@ -879,6 +879,11 @@ export class InMemoryCodeHost {
     this.labels[number] = [...(this.labels[number] ?? []), label]
     return this.answered('addLabel')
   }
+  async listComments(number) {
+    this.calls.push(`list comments #${number}`)
+    if (this.fails.listComments) return { ok: false, reason: this.fails.listComments }
+    return { ok: true, comments: this.comments.filter((comment) => comment.number === number && !comment.hidden).map((comment) => ({ login: comment.login ?? '', body: comment.body, url: comment.url })) }
+  }
 }
 
 /**
