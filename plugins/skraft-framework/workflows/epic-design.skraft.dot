@@ -1,0 +1,41 @@
+// The architecture workflow. Runs once per story or per epic to produce the architecture brief
+// and ratify its ADRs, before story delivery. Called by `skraft architecture --issue <n>` and
+// `skraft architecture --epic <n>` (A1 #623, A4 #626); writes the brief at
+// `docs/architecture/stories/<n>-<slug>.md` (for a story) or updates the shared architecture
+// documents (for an epic). pipeline.skraft.dot stays available for a full run, review.skraft.dot
+// is not touched: the DESIGN review here is inline, not called.
+// A review fans out (shape=component) to one lens node per branch (shape=note, lens="<name>", run
+// as the agent `<name>-lens`), joins its branches in the refuter (shape=octagon, finding-refuter)
+// and closes in a fan-in (shape=tripleoctagon) that computes the verdict. A hexagon asks a human.
+// skraft-config.json's `assign` chooses each agent's model family, `models` what a family runs on.
+digraph skraft {
+  graph [version="1", goal="Produce the architecture brief and ratify its ADRs"]
+
+  start    [shape=Mdiamond]
+  research [shape=box, agent="solution-researcher", phase="RESEARCH"]
+  design   [shape=box, agent="solution-architect", phase="DESIGN"]
+  subgraph cluster_design_review {
+    label="DESIGN review"
+    design_review_lenses [shape=component]
+    design_review_consistency [shape=note, lens="consistency"]
+    design_review_architecture_compliance [shape=note, lens="architecture-compliance"]
+    design_review_fitness [shape=note, lens="fitness"]
+    design_review_refuter [shape=octagon, mandatory=true]
+    design_review [shape=tripleoctagon, mandatory=true]
+  }
+  adr      [shape=hexagon, question="adr-ratification"]
+  pr_writer [shape=box, agent="pr-writer", phase="PUBLISH"]
+  publish  [shape=parallelogram, publish="pull-request"]
+  exit     [shape=Msquare]
+
+  start -> research -> design -> design_review_lenses
+  design_review_lenses -> design_review_consistency -> design_review_refuter
+  design_review_lenses -> design_review_architecture_compliance -> design_review_refuter
+  design_review_lenses -> design_review_fitness -> design_review_refuter
+  design_review_refuter -> design_review
+  design_review -> design  [label="NEEDS_REWORK", max_visits=2]
+  design_review -> adr     [label="APPROVED"]
+  adr -> pr_writer [label="RATIFIED"]
+  adr -> design    [label="REJECTED", max_visits=1]
+  pr_writer -> publish -> exit
+}

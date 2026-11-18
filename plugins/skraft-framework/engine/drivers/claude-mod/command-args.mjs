@@ -5,10 +5,13 @@
  * @typedef {{ command: 'status' }
  *   | { command: 'decide', key: string | null, answer: string | null, reason: string | null }
  *   | { command: 'review', number: number | null, publish: boolean }
- *   | { command: 'run', slug: string | null, story: Story, base: string | null, fromArtifacts: boolean }} SkraftRequest
+ *   | { command: 'run', slug: string | null, story: Story, base: string | null, fromArtifacts: boolean }
+ *   | { command: 'architecture', slug: string | null, story: Story, base: string | null }} SkraftRequest
  *   run with a null slug resumes the active pipeline; the slug is never guessed. base: the
  *   `--base <ref>` typed anywhere after the slug, null without one. fromArtifacts:
- *   `--from-artifacts` typed anywhere after the slug.
+ *   `--from-artifacts` typed anywhere after the slug. architecture runs the plugin's
+ *   epic-design workflow (research + design + ADR ratification + architecture PR) on the slug;
+ *   null slug resumes the active architecture run.
  */
 
 /**
@@ -20,6 +23,8 @@
  *   'checkout #42 Pay by card'  → run checkout, story { issue: 42, title: 'Pay by card' }
  *   'checkout --base develop'   → run checkout on the base develop
  *   'checkout --from-artifacts' → run checkout from its DISCUSS stories
+ *   'architecture checkout #42' → run epic-design on slug checkout, story { issue: 42, title: null }
+ *   'architecture'              → resume the active architecture run
  * @param {unknown} args everything after `/skraft`, as typed
  * @returns {SkraftRequest}
  */
@@ -28,7 +33,22 @@ export const parseSkraftCommand = (args) => {
   if (asksForStatus(first, rest)) return { command: 'status' }
   if (first === 'decide') return decideRequest(rest)
   if (first === 'review') return reviewRequest(rest)
+  if (first === 'architecture') return architectureRequest(rest)
   return runRequest(/** @type {string} */ (first), rest)
+}
+
+/**
+ * `architecture [<slug> [#<issue>] [title…]]`, with `--base <ref>` anywhere after the slug.
+ * Without a slug: resume the active architecture run.
+ * @param {string[]} typed @returns {{ command: 'architecture', slug: string | null, story: Story, base: string | null }}
+ */
+const architectureRequest = (typed) => {
+  const { base, story } = splitBase(typed)
+  const [slug, ...rest] = story
+  if (slug === undefined || slug.startsWith('--')) return { command: 'architecture', slug: null, story: null, base }
+  const issue = /^#(\d+)$/.exec(rest[0] ?? '')
+  const titleWords = issue ? rest.slice(1) : rest
+  return { command: 'architecture', slug, story: storyOf(issue ? Number(issue[1]) : null, titleWords.join(' ')), base }
 }
 
 /** Nothing typed, or a reserved word on its own. @param {string | undefined} first @param {string[]} rest */

@@ -52,6 +52,14 @@ test('/skraft decide … is the decide command, never a slug: an optional key, t
   assert.deepEqual(parseSkraftCommand('decide REJECTED not this one'), { command: 'decide', key: null, answer: 'REJECTED', reason: 'not this one' })
 })
 
+test('/skraft architecture <slug> [#issue] [title…] asks to run epic-design on that slug; without a slug, it resumes the active architecture run', () => {
+  assert.deepEqual(parseSkraftCommand('architecture'), { command: 'architecture', slug: null, story: null, base: null })
+  assert.deepEqual(parseSkraftCommand('architecture checkout'), { command: 'architecture', slug: 'checkout', story: null, base: null })
+  assert.deepEqual(parseSkraftCommand('architecture checkout #42'), { command: 'architecture', slug: 'checkout', story: { issue: 42, title: null }, base: null })
+  assert.deepEqual(parseSkraftCommand('architecture checkout #42 Pay by card'), { command: 'architecture', slug: 'checkout', story: { issue: 42, title: 'Pay by card' }, base: null })
+  assert.deepEqual(parseSkraftCommand('architecture checkout --base develop'), { command: 'architecture', slug: 'checkout', story: null, base: 'develop' })
+})
+
 test('the tool input becomes a run; no slug resumes the active pipeline', () => {
   assert.deepEqual(toolRequest({}), { command: 'run', slug: null, story: null, base: null, fromArtifacts: false })
   assert.deepEqual(toolRequest(undefined), { command: 'run', slug: null, story: null, base: null, fromArtifacts: false })

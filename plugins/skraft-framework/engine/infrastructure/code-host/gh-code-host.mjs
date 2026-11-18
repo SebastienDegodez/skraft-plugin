@@ -26,7 +26,7 @@ export const createGhCodeHost = ({ commandRunner }) => Object.freeze({
   create: (request) => create(commandRunner, request),
   edit: (request) => edit(commandRunner, request),
   ...comments(commandRunner),
-  issue: (number) => findIssue(commandRunner, number),
+  ...issueOps(commandRunner),
   storyLink: (issue, closes) => `${closes ? 'Closes' : 'Refs'} #${issue}`,
   ...LIMITS,
 })
@@ -40,6 +40,13 @@ const comments = (commandRunner) => ({
   keepIssueComment: (/** @type {import('../../application/ports/code-host.mjs').IssueCommentRequest} */ request) => keepIssueComment(commandRunner, request, remoteOf, OPENS),
   keepPullRequestComment: (/** @type {import('../../application/ports/code-host.mjs').PullRequestCommentRequest} */ request) => keepIssueComment(commandRunner, { ...request, requestFile: '' }, remoteOf, OPENS),
   readComment: (/** @type {string} */ url) => readComment(commandRunner, url, remoteOf),
+})
+
+/** The issue reads and writes beyond the comment route: the story itself, the forge-ci dispatcher's label and comment listing. @param {CommandRunner} commandRunner */
+const issueOps = (commandRunner) => ({
+  issue: (/** @type {number} */ number) => findIssue(commandRunner, number),
+  addLabel: (/** @type {number} */ number, /** @type {string} */ label) => addLabel(commandRunner, number, label),
+  listComments: (/** @type {number} */ number) => listComments(commandRunner, number),
 })
 
 const LIMITS = Object.freeze({
@@ -336,6 +343,35 @@ const keepIssueComment = async (commandRunner, request, locate, markerAt) => {
   const reason = `gh could not comment issue #${request.number} on ${remote.repository}`
   if (kept === LOST) return { ...refused(`${reason}: gh got no answer`), outcome: /** @type {const} */ ('unknown') }
   return kept ?? refused(reason)
+}
+
+/**
+ * The label posted on the issue of the remote's forge repository, through `gh api --method=POST
+ * repos/<owner>/<repo>/issues/<n>/labels --field=labels[]=<label>`. GitHub silently ignores a
+ * duplicate label, so a second call is idempotent.
+ * @param {CommandRunner} commandRunner @param {number} number @param {string} label
+ * @returns {Promise<import('../../application/ports/code-host.mjs').Done>}
+ */
+const addLabel = async (commandRunner, number, label) => {
+  const remote = await remoteOf(commandRunner)
+  if (remote === null) return refused(NO_REMOTE)
+  const result = await api({ commandRunner, remote }, `issues/${number}/labels`, ['--method=POST', `--field=labels[]=${label}`])
+  return succeeded(result) ? { ok: true } : refused(`gh could not add the ${label} label on issue #${number} of ${remote.repository}`)
+}
+
+/**
+ * The issue's comments on the remote's forge, each with its author's login, its body and its
+ * URL, in posting order; refused when the forge or gh does not answer. Reads only through
+ * `gh api --paginate issues/<n>/comments`, already whitelisted by forge-writes/references.
+ * @param {CommandRunner} commandRunner @param {number} number
+ */
+const listComments = async (commandRunner, number) => {
+  const remote = await remoteOf(commandRunner)
+  if (remote === null) return refused(NO_REMOTE)
+  const result = await api({ commandRunner, remote }, `issues/${number}/comments`, ['--paginate', '--jq=.[]'])
+  const parsed = succeeded(result) ? readComments(result.stdout) : null
+  if (parsed === null) return refused(`gh could not list the comments of issue #${number} on ${remote.repository}`)
+  return { ok: /** @type {const} */ (true), comments: parsed.map((one) => ({ login: one.user?.login ?? '', body: String(one.body ?? ''), url: String(one.html_url ?? '') })) }
 }
 
 /** A comment written that gh got no answer for: it may be on the forge. */

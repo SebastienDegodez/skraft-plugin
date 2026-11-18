@@ -19,7 +19,7 @@ const sourcesUnder = async (dir) => {
   return Promise.all(paths.map(async (path) => ({ path, source: await readFile(path, 'utf8') })))
 }
 
-const WORKFLOWS = ['skraft-pipeline', 'skraft-review']
+const WORKFLOWS = ['skraft-pipeline', 'skraft-architecture', 'skraft-review']
 const ALL = { workflows: WORKFLOWS, tools: ['skraft_decide'], canvases: ['skraft-pipeline'] }
 const NO_CANVAS = { ...ALL, canvases: [] }
 const NO_TOOL = { ...ALL, tools: [] }
@@ -98,16 +98,17 @@ test('a workflow definition the SDK rejects leaves the tool registered, and the 
   assert.deepEqual(registered(sdk.joins), [{ ...ALL, workflows: [] }])
   assert.deepEqual(sdk.logs, [
     { level: 'error', message: 'skraft: the skraft-pipeline workflow could not be defined; it is not available in this session.' },
+    { level: 'error', message: 'skraft: the skraft-architecture workflow could not be defined; run architecture by hand with skraft forge run --workflow epic-design in a terminal.' },
     { level: 'error', message: 'skraft: the skraft-review workflow could not be defined; review a pull request with skraft review --pr in a terminal.' },
   ])
 })
 
-test('a review workflow the SDK rejects leaves the pipeline workflow and the tool registered', async (t) => {
+test('a review workflow the SDK rejects leaves the pipeline and architecture workflows and the tool registered', async (t) => {
   const sdk = simulatedSdk({ defineFails: 'skraft-review' })
 
   await registerOn(t, sdk)
 
-  assert.deepEqual(registered(sdk.joins), [{ ...ALL, workflows: ['skraft-pipeline'] }])
+  assert.deepEqual(registered(sdk.joins), [{ ...ALL, workflows: ['skraft-pipeline', 'skraft-architecture'] }])
   assert.deepEqual(sdk.logs, [{ level: 'error', message: 'skraft: the skraft-review workflow could not be defined; review a pull request with skraft review --pr in a terminal.' }])
 })
 

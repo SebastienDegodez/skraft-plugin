@@ -1,6 +1,7 @@
 import { createInit } from '../../application/pipeline/init-usecase.mjs'
 import { createObserve } from '../../application/pipeline/observe-usecase.mjs'
 import { createDecide } from '../../application/decisions/decide-usecase.mjs'
+import { createRunPipeline } from '../../application/pipeline/run-pipeline-usecase.mjs'
 import { createConfigureComponents } from '../../application/config/configure-components-usecase.mjs'
 import { createRunGate } from '../../application/gates/run-gate-usecase.mjs'
 import { createPrecheck } from '../../application/pipeline/precheck-usecase.mjs'
@@ -16,12 +17,14 @@ import { createAgentLoop } from './agent-loop.mjs'
 import { reviewThroughLoop } from './review-loop.mjs'
 import { mutationAdapters, mutationCommandThen, mutationThroughLoop } from './mutation-loop.mjs'
 import { serveMcp } from './mcp-server.mjs'
+import { pickAnswerFrom } from './forge-answer-comment.mjs'
+import { createForgeHuman } from './forge-human.mjs'
 
 /**
  * @typedef {{ out: (line: string) => void, err: (line: string) => void }} Console
  * @typedef {Parameters<typeof createInit>[0] & Parameters<typeof createRunGate>[0] & Parameters<typeof createDoctor>[0] & Parameters<typeof createConfigureComponents>[0] & Parameters<typeof createWorkflowCommands>[0] & import('./agent-loop.mjs').LoopAdapters & Parameters<typeof createPublish>[0] & Parameters<typeof createAdoptJournal>[0]} CliAdapters
  * @typedef {{
- *   pluginVersion: () => string, workingCopyName: () => string, adapters: (agentHost?: 'copilot') => CliAdapters, command: () => string,
+ *   pluginVersion: () => string, workingCopyName: () => string, adapters: (agentHost?: 'copilot', options?: { workflowName?: string }) => CliAdapters, command: () => string,
  *   confirm: (question: string) => Promise<boolean | null>, then?: import('./agent-loop.mjs').LoopThen,
  *   mutationThen?: import('./agent-loop.mjs').LoopThen,
  * } & Partial<import('./mcp-server.mjs').McpServices>} CliServices
@@ -524,6 +527,60 @@ const configText = ({ text }) => (text === undefined ? [] : ['would write skraft
 /** @param {MigrateOutcome['pipelines'][number]} pipeline */
 const pipelineLines = ({ status: state, reason, events = [] }) => [`${state}  ${reason}`, ...events.map((event) => `  would append: ${JSON.stringify(event)}`)]
 
+/** `forge answer --issue <n>`. @param {string[]} args @param {CliServices} services @param {Console} console */
+const forgeAnswer = async (args, services, console) => {
+  const options = optionsOf(args, { values: ['--issue'] })
+  if (options === undefined || !/^[1-9]\d*$/.test(String(options['--issue']))) return usage(console)
+  const issue = Number(options['--issue'])
+  const adapters = services.adapters()
+  const listed = await adapters.forges.github.codeHost.listComments(issue)
+  if (!listed.ok) return answer(listed, console)
+  const picked = pickAnswerFrom(listed.comments, '')
+  if (picked === null) return answer({ ok: false, reason: `no /skraft-answer line found in the comments of issue #${issue}; a human reply opens with "/skraft-answer <key> <ANSWER>" (optionally with "reason: <text>" on the next line); nothing was recorded` }, console)
+  const confirmation = { by: /** @type {const} */ ('forge-comment'), confirm: async () => ({ ok: /** @type {const} */ (true) }) }
+  return answer(await createDecide({ ...adapters, confirmation }).decide({ key: picked.key, answer: picked.answer, reason: picked.reason }), console)
+}
+
+/** @param {string} title */
+const slugOf = (title) => title.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
+
+/** `forge run [--workflow <name>] --issue <n>`. Runs one engine pass of the pipeline with the forge-human adapter so any question lands on the issue as a comment. --workflow selects the plugin's workflow file (`epic-design` for an architecture run, `pipeline` by default). @param {string[]} args @param {CliServices} services @param {Console} console */
+const forgeRun = async (args, services, console) => {
+  const options = optionsOf(args, { values: ['--issue', '--workflow'] })
+  if (options === undefined || !/^[1-9]\d*$/.test(String(options['--issue']))) return usage(console)
+  const issueNumber = Number(options['--issue'])
+  const workflowName = typeof options['--workflow'] === 'string' ? options['--workflow'] : undefined
+  const adapters = services.adapters(undefined, { workflowName })
+  const opened = await openForIssue(adapters, issueNumber)
+  if (!opened.ok) return answer(opened, console)
+  const outcome = await runOneForgePass(adapters, opened.slug, issueNumber)
+  console.out(JSON.stringify(outcome))
+  return ['done', 'waiting'].includes(outcome.status) ? 0 : 1
+}
+
+/** Reads the issue through the code host and opens or resumes its run; returns a refusal when the forge or Init says no. @param {CliAdapters} adapters @param {number} issueNumber */
+const openForIssue = async (adapters, issueNumber) => {
+  const read = await adapters.forges.github.codeHost.issue(issueNumber)
+  if (read.read !== 'issue') return { ok: /** @type {const} */ (false), reason: `issue #${issueNumber} unreadable: ${read.reason ?? read.read}` }
+  const slug = slugOf(read.issue.title) || `issue-${issueNumber}`
+  const initialised = await createInit(adapters).init({ slug, story: { issue: issueNumber, title: read.issue.title }, base: null, fromArtifacts: false })
+  return initialised.ok ? { ok: /** @type {const} */ (true), slug } : initialised
+}
+
+/** One engine pass with the forge-human adapter injected so any ask lands on the issue as a comment. @param {CliAdapters} adapters @param {string} slug @param {number} issueNumber */
+const runOneForgePass = (adapters, slug, issueNumber) => {
+  const human = createForgeHuman({ codeHost: adapters.forges.github.codeHost, files: adapters.files, slug, issueNumber })
+  return createRunPipeline({ ...adapters, human }).run({ slug })
+}
+
+/** `forge answer --issue <n>`, `forge run --issue <n>`. @param {string[]} args @param {CliServices} services @param {Console} console */
+const forge = async (args, services, console) => {
+  const [action, ...rest] = args
+  if (action === 'answer') return forgeAnswer(rest, services, console)
+  if (action === 'run') return forgeRun(rest, services, console)
+  return usage(console)
+}
+
 /** @type {Command} */
 const unknown = (_args, _services, console) => usage(console)
 
@@ -559,6 +616,10 @@ const TABLE = [
     { synopsis: 'eject [review]', summary: 'copy the plugin pipeline into .skraft/ (review: the review alone)' },
     { synopsis: 'check [--json]', summary: 'validate the workflow a run follows' },
     { synopsis: 'diff [--json]', summary: 'compare the repository workflow with the plugin one' },
+  ]],
+  ['forge', forge, [
+    { synopsis: 'answer --issue <n>', summary: 'relay the /skraft-answer reply a human left on the issue to the active pipeline, recorded by forge-comment' },
+    { synopsis: 'run [--workflow <name>] --issue <n>', summary: 'run one engine pass of the named workflow (`epic-design` or `pipeline`, default `pipeline`) for the issue, headless' },
   ]],
   ['commands', commands, [{ synopsis: '--json', summary: 'every command, its synopsis and summary, as JSON (help and completion of the skraft command)' }]],
   ['mcp', mcp, [{ summary: 'serve these commands to an agent host as MCP tools, over stdin and stdout (the host starts it from mcp.json)' }]],

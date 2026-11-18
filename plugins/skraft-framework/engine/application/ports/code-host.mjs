@@ -58,6 +58,8 @@
  *   keepIssueComment: (request: IssueCommentRequest) => Promise<{ ok: true, url: string } | Failed>,
  *   keepPullRequestComment: (request: PullRequestCommentRequest) => Promise<{ ok: true, url: string } | Failed>,
  *   readComment: (url: string) => Promise<CommentReading>,
+ *   addLabel: (number: number, label: string) => Promise<Done>,
+ *   listComments: (number: number) => Promise<{ ok: true, comments: Array<{ login: string, body: string, url: string }> } | { ok: false, reason: string }>,
  *   issue: (number: number) => Promise<IssueReading>,
  *   storyLink: (issue: number, closes: boolean) => string | null,
  *   bodyLimit: number,
@@ -83,7 +85,10 @@
  *   there is no remote, no forge client, no sign-in to that forge, or the forge refused.
  *   keepPullRequestComment: keepIssueComment on a pull request (GitHub: the same comment route; Azure
  *   Repos: a thread of the pull request, posted closed, its first comment rewritten). readComment:
- *   the comment at a URL keepIssueComment or keepPullRequestComment gave, read back. bodyLimit: the
+ *   the comment at a URL keepIssueComment or keepPullRequestComment gave, read back. addLabel: adds
+ *   the label on the issue, idempotent (GitHub silently ignores a duplicate). listComments: the
+ *   issue's comments on the forge, each with its author login, body and URL, in posting order;
+ *   refused when the forge or gh does not answer. bodyLimit: the
  *   longest body the forge takes, in characters; commentLimit: the longest comment. takesRequestFile: whether the
  *   forge's client sends a JSON request file (az on Azure Boards), which keepIssueComment is then
  *   handed; false: no such file is written.

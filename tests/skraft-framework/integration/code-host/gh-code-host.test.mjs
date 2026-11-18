@@ -56,6 +56,11 @@ const FAKE_GH = [
   "    if (!comment) { process.stderr.write('gh: Not Found (HTTP 404)\\n'); process.exit(1) }",
   "    comment.body = readFileSync(option('field').slice('body=@'.length), 'utf8'); save(); said(urlOf(comment.number, comment.id))",
   "  }",
+  "  const labelsOn = /\\/issues\\/(\\d+)\\/labels$/.exec(path)",
+  "  if (labelsOn && option('method') === 'POST') {",
+  "    state.labels ??= {}; const n = Number(labelsOn[1])",
+  "    state.labels[n] = [...(state.labels[n] ?? []), option('field').slice('labels[]='.length)]; save(); said('[]')",
+  "  }",
   "  const number = Number(/\\/issues\\/(\\d+)\\/comments$/.exec(path)[1])",
   "  if (option('method') === 'POST') {",
   "    const id = Math.max(900, ...state.comments.map((one) => one.id)) + 1",
@@ -465,4 +470,32 @@ test('a pull request the run opened is read back by its number through gh pr vie
   assert.deepEqual(await host.readPullRequest(11), { ok: true, found: null })
   for (const number of [9, 10]) assert.deepEqual(await host.readPullRequest(number), { ok: false, reason: `gh could not read pull request #${number} of github.example.com/acme/payment` })
   assert.deepEqual(await repository(t, { remote: null }).codeHost().readPullRequest(7), { ok: false, reason: 'the working copy has no Git remote whose URL names a host and a repository' })
+})
+
+test('a label is added on the issue of the remote\'s repository through gh api --method=POST, refused when the working copy has no remote', async (t) => {
+  const { forge, codeHost } = repository(t)
+
+  assert.deepEqual(await codeHost().addLabel(42, 'needs-clarification'), { ok: true })
+  assert.deepEqual(forge.calls().at(-1), ['api', '--hostname=github.example.com', '--method=POST', '--field=labels[]=needs-clarification', 'repos/acme/payment/issues/42/labels'])
+  assert.deepEqual(JSON.parse(readFileSync(join(forge.bin, 'gh-state.json'), 'utf8')).labels, { 42: ['needs-clarification'] })
+
+  assert.deepEqual(await repository(t, { remote: null }).codeHost().addLabel(42, 'needs-clarification'), { ok: false, reason: 'the working copy has no Git remote whose URL names a host and a repository' })
+})
+
+test('the issue\'s comments are read back with each author, body and URL, in posting order, through gh api --paginate; refused when no remote', async (t) => {
+  const { forge, codeHost } = repository(t)
+  forge.set({ signedIn: true, defaultBranch: 'main', open: [], created: '', login: 'sebastien', comments: [
+    { id: 901, number: 42, login: 'bot', body: '<sub>skraft-ask key=adr-1 run=checkout step=adr</sub>\nRatify?' },
+    { id: 902, number: 42, login: 'alice', body: '/skraft-answer adr-1 RATIFIED' },
+  ] })
+
+  const listed = await codeHost().listComments(42)
+
+  assert.deepEqual(listed, { ok: true, comments: [
+    { login: 'bot', body: '<sub>skraft-ask key=adr-1 run=checkout step=adr</sub>\nRatify?', url: 'https://github.example.com/acme/payment/issues/42#issuecomment-901' },
+    { login: 'alice', body: '/skraft-answer adr-1 RATIFIED', url: 'https://github.example.com/acme/payment/issues/42#issuecomment-902' },
+  ] })
+  assert.deepEqual(forge.calls().at(-1), ['api', '--hostname=github.example.com', '--paginate', '--jq=.[]', 'repos/acme/payment/issues/42/comments'])
+
+  assert.deepEqual(await repository(t, { remote: null }).codeHost().listComments(42), { ok: false, reason: 'the working copy has no Git remote whose URL names a host and a repository' })
 })

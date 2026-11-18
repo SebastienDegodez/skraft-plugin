@@ -27,6 +27,9 @@ export const createAzCodeHost = ({ commandRunner }) => Object.freeze({
   ...pullRequestsOf(commandRunner),
   ...comments(commandRunner),
   issue: (number) => workItem(commandRunner, number),
+  // The forge-ci dispatcher is GitHub-only today: addLabel and listComments refuse with a fixed reason on Azure Boards.
+  addLabel: async () => ({ ok: /** @type {const} */ (false), reason: 'addLabel is not implemented on azure-devops; the forge-ci dispatcher runs on GitHub only today' }),
+  listComments: async () => ({ ok: /** @type {const} */ (false), reason: 'listComments is not implemented on azure-devops; the forge-ci dispatcher runs on GitHub only today' }),
   // Azure Repos links `#N`; `Fixes #N` also completes the work item when the pull request merges.
   storyLink: (issue, closes) => `${closes ? 'Fixes ' : ''}#${issue}`,
   // Azure DevOps refuses a pull request description past 4,000 characters.
