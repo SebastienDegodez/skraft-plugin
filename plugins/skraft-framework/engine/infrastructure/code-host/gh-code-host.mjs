@@ -26,9 +26,7 @@ export const createGhCodeHost = ({ commandRunner }) => Object.freeze({
   create: (request) => create(commandRunner, request),
   edit: (request) => edit(commandRunner, request),
   ...comments(commandRunner),
-  issue: (number) => findIssue(commandRunner, number),
-  addLabel: (/** @type {number} */ number, /** @type {string} */ label) => addLabel(commandRunner, number, label),
-  listComments: (/** @type {number} */ number) => listComments(commandRunner, number),
+  ...issueOps(commandRunner),
   storyLink: (issue, closes) => `${closes ? 'Closes' : 'Refs'} #${issue}`,
   ...LIMITS,
 })
@@ -42,6 +40,13 @@ const comments = (commandRunner) => ({
   keepIssueComment: (/** @type {import('../../application/ports/code-host.mjs').IssueCommentRequest} */ request) => keepIssueComment(commandRunner, request, remoteOf, OPENS),
   keepPullRequestComment: (/** @type {import('../../application/ports/code-host.mjs').PullRequestCommentRequest} */ request) => keepIssueComment(commandRunner, { ...request, requestFile: '' }, remoteOf, OPENS),
   readComment: (/** @type {string} */ url) => readComment(commandRunner, url, remoteOf),
+})
+
+/** The issue reads and writes beyond the comment route: the story itself, the forge-ci dispatcher's label and comment listing. @param {CommandRunner} commandRunner */
+const issueOps = (commandRunner) => ({
+  issue: (/** @type {number} */ number) => findIssue(commandRunner, number),
+  addLabel: (/** @type {number} */ number, /** @type {string} */ label) => addLabel(commandRunner, number, label),
+  listComments: (/** @type {number} */ number) => listComments(commandRunner, number),
 })
 
 const LIMITS = Object.freeze({
