@@ -30,45 +30,45 @@ stimuli:
       max_duration: 240m
     environment:
       files:
-        - src: fixtures/fourteen-scenarios/.gitignore
+        - src: fixtures/s14/.gitignore
           dest: .gitignore
-        - src: fixtures/fourteen-scenarios/skraft-config.json
+        - src: fixtures/s14/skraft-config.json
           dest: skraft-config.json
-        - src: fixtures/fourteen-scenarios/CheckoutPricing.slnx
+        - src: fixtures/s14/CheckoutPricing.slnx
           dest: CheckoutPricing.slnx
-        - src: fixtures/fourteen-scenarios/Directory.Build.props
+        - src: fixtures/s14/Directory.Build.props
           dest: Directory.Build.props
-        - src: fixtures/fourteen-scenarios/Directory.Packages.props
+        - src: fixtures/s14/Directory.Packages.props
           dest: Directory.Packages.props
-        - src: fixtures/fourteen-scenarios/src/CheckoutPricing.Domain/CheckoutPricing.Domain.csproj
+        - src: fixtures/s14/src/CheckoutPricing.Domain/CheckoutPricing.Domain.csproj
           dest: src/CheckoutPricing.Domain/CheckoutPricing.Domain.csproj
-        - src: fixtures/fourteen-scenarios/src/CheckoutPricing.Domain/LoyaltyTier.cs
+        - src: fixtures/s14/src/CheckoutPricing.Domain/LoyaltyTier.cs
           dest: src/CheckoutPricing.Domain/LoyaltyTier.cs
-        - src: fixtures/fourteen-scenarios/src/CheckoutPricing.Application/CheckoutPricing.Application.csproj
+        - src: fixtures/s14/src/CheckoutPricing.Application/CheckoutPricing.Application.csproj
           dest: src/CheckoutPricing.Application/CheckoutPricing.Application.csproj
-        - src: fixtures/fourteen-scenarios/src/CheckoutPricing.Application/CalculateLoyaltyDiscount.cs
+        - src: fixtures/s14/src/CheckoutPricing.Application/CalculateLoyaltyDiscount.cs
           dest: src/CheckoutPricing.Application/CalculateLoyaltyDiscount.cs
-        - src: fixtures/fourteen-scenarios/src/CheckoutPricing.Infrastructure/CheckoutPricing.Infrastructure.csproj
+        - src: fixtures/s14/src/CheckoutPricing.Infrastructure/CheckoutPricing.Infrastructure.csproj
           dest: src/CheckoutPricing.Infrastructure/CheckoutPricing.Infrastructure.csproj
-        - src: fixtures/fourteen-scenarios/src/CheckoutPricing.Infrastructure/InfrastructureMarker.cs
+        - src: fixtures/s14/src/CheckoutPricing.Infrastructure/InfrastructureMarker.cs
           dest: src/CheckoutPricing.Infrastructure/InfrastructureMarker.cs
-        - src: fixtures/fourteen-scenarios/src/CheckoutPricing.Api/CheckoutPricing.Api.csproj
+        - src: fixtures/s14/src/CheckoutPricing.Api/CheckoutPricing.Api.csproj
           dest: src/CheckoutPricing.Api/CheckoutPricing.Api.csproj
-        - src: fixtures/fourteen-scenarios/src/CheckoutPricing.Api/Program.cs
+        - src: fixtures/s14/src/CheckoutPricing.Api/Program.cs
           dest: src/CheckoutPricing.Api/Program.cs
-        - src: fixtures/fourteen-scenarios/tests/CheckoutPricing.UnitTest/CheckoutPricing.UnitTest.csproj
+        - src: fixtures/s14/tests/CheckoutPricing.UnitTest/CheckoutPricing.UnitTest.csproj
           dest: tests/CheckoutPricing.UnitTest/CheckoutPricing.UnitTest.csproj
-        - src: fixtures/fourteen-scenarios/tests/CheckoutPricing.UnitTest/LoyaltyDiscount/DiscountTests.cs
+        - src: fixtures/s14/tests/CheckoutPricing.UnitTest/LoyaltyDiscount/DiscountTests.cs
           dest: tests/CheckoutPricing.UnitTest/LoyaltyDiscount/DiscountTests.cs
-        - src: fixtures/fourteen-scenarios/tests/CheckoutPricing.IntegrationTest/CheckoutPricing.IntegrationTest.csproj
+        - src: fixtures/s14/tests/CheckoutPricing.IntegrationTest/CheckoutPricing.IntegrationTest.csproj
           dest: tests/CheckoutPricing.IntegrationTest/CheckoutPricing.IntegrationTest.csproj
-        - src: fixtures/fourteen-scenarios/tests/CheckoutPricing.IntegrationTest/Architecture/ArchitectureTests.cs
+        - src: fixtures/s14/tests/CheckoutPricing.IntegrationTest/Architecture/ArchitectureTests.cs
           dest: tests/CheckoutPricing.IntegrationTest/Architecture/ArchitectureTests.cs
-        - src: fixtures/fourteen-scenarios/.copilot-tracking/skraft-plans/pricing/features/discount.feature
+        - src: fixtures/s14/.copilot-tracking/skraft-plans/pricing/features/discount.feature
           dest: .copilot-tracking/skraft-plans/pricing/features/discount.feature
-        - src: fixtures/fourteen-scenarios/.copilot-tracking/skraft-plans/pricing/details/2026-08-07/impl.md
+        - src: fixtures/s14/.copilot-tracking/skraft-plans/pricing/details/2026-08-07/impl.md
           dest: .copilot-tracking/skraft-plans/pricing/details/2026-08-07/impl.md
-        - src: fixtures/fourteen-scenarios/.copilot-tracking/skraft-plans/pricing/state.json
+        - src: fixtures/s14/.copilot-tracking/skraft-plans/pricing/state.json
           dest: .copilot-tracking/skraft-plans/pricing/state.json
       commands:
         - 'dotnet restore CheckoutPricing.slnx'
