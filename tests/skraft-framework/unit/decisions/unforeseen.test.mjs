@@ -165,3 +165,21 @@ test('a judgment returned during the run cannot bypass usage validation through 
   const answer = host.events().filter(({ type }) => type === 'question.answered').at(-1)
   assert.deepEqual([answer.by, answer.model, answer.cost], ['host-llm', 'observed-test-model', 0.02])
 })
+
+test('an agent that stops without finishing asks the host LLM once for a recovery, whose retry dispatches the same attempt again; a person who stopped it still stops the run', async () => {
+  const host = scripted({}, (it) => [() => ({ ok: false, text: '' }), agent()(it), () => ({ ok: false, unavailable: true, text: '' })])
+
+  const outcome = await host.start()
+
+  assert.deepEqual([outcome.status, outcome.code], ['waiting', 'unforeseen'])
+  const question = asked(host)
+  assert.deepEqual([question.step, question.incident.owner, question.incidents[0].category], ['research', 'unknown', 'agent-failed'])
+  assert.match(question.text, /research stopped on an unforeseen incident/)
+  assert.equal((await host.decide(judgment('RETRY'))).ok, true)
+  await host.run()
+  assert.deepEqual(host.agentRunner.dispatches.slice(0, 2).map(({ label }) => label), Array(2).fill(`skraft ${SLUG} · research · attempt 1`))
+  assert.equal(host.events().filter(({ type, step }) => type === 'step.recorded' && step === 'research').at(0).outcome, 'done')
+
+  const stopped = scripted({}, () => [() => ({ ok: false, text: '', interrupted: true, error: 'aborted by the user' })])
+  assert.deepEqual(await stopped.start(), { status: 'blocked', slug: SLUG, phase: 'RESEARCH', code: 'agent-failed', reason: 'solution-researcher stopped without finishing: aborted by the user' })
+})

@@ -340,14 +340,14 @@ test('an agent the host cannot start stops the run without spending the attempt;
   assert.equal(host.events().filter((event) => event.type === 'step.started' && event.step === 'research').length, 1)
 })
 
-test('an agent that stops without finishing stops the run; one that answers nothing but did its work goes on', async () => {
-  const host = scripted({}, () => [() => ({ ok: false, text: '', error: 'aborted by the user' })])
+test('an agent a person stops without finishing stops the run; one that answers nothing but did its work goes on', async () => {
+  const host = scripted({}, () => [() => ({ ok: false, text: '', interrupted: true, error: 'aborted by the user' })])
 
   const outcome = await host.start()
 
   assert.deepEqual(outcome, { status: 'blocked', slug: SLUG, phase: 'RESEARCH', code: 'agent-failed', reason: 'solution-researcher stopped without finishing: aborted by the user' })
   assert.deepEqual(host.types(), ['run.started', 'step.started', 'run.stopped'])
-  host.agentRunner.behaviours.push(() => ({ ok: false, text: '' }))
+  host.agentRunner.behaviours.push(() => ({ ok: false, text: '', interrupted: true }))
   assert.equal((await host.run()).reason, 'solution-researcher stopped without finishing: no answer')
 
   host.agentRunner.behaviours.push(agent({ answer: { ok: false, text: '' } })(host), () => ({ ok: false, unavailable: true, text: '' }))

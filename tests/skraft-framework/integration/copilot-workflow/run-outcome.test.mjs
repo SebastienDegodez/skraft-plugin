@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { existsSync, readFileSync, statSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { runSkraftPipelineWorkflow } from '../../../../plugins/skraft-framework/engine/drivers/copilot-workflow/skraft-pipeline-workflow.mjs'
-import { PLUGIN_ROOT, actsAs, copilotHost, firstOptionPerson, journalEvents, simulatedContext, workingCopy } from './simulated-host.mjs'
+import { PLUGIN_ROOT, actsAs, copilotHost, firstOptionPerson, journalEvents, settled, simulatedContext, workingCopy } from './simulated-host.mjs'
 import { SLUG, pipelineRepository, scriptedLlm } from '../support/pipeline-repository.mjs'
 import { git } from '../support/workspace.mjs'
 
@@ -113,15 +113,16 @@ test('a run the host cancels while a gate runs ends that command with every proc
 /** Runs the workflow to its end, the person answering each question with its first option. */
 const runAnsweringQuestions = (ctx, cwd) => runSkraftPipelineWorkflow(ctx, copilotHost(cwd, PLUGIN_ROOT, firstOptionPerson()))
 
-test('an AbortError from an agent call while the run goes on is that agent\'s failure, not a cancellation', async (t) => {
+test('an AbortError from an agent call while the run goes on is that agent\'s failure, not a cancellation: the run asks for its recovery', async (t) => {
   const { cwd, cleanup } = await workingCopy()
   t.after(cleanup)
   const aborts = async () => { throw new DOMException('This operation was aborted', 'AbortError') }
   const { ctx } = simulatedContext({ args: { slug: 'checkout' }, behaviours: [aborts] })
 
-  const outcome = await runSkraftPipelineWorkflow(ctx, copilotHost(cwd))
+  assert.deepEqual(await settled(runSkraftPipelineWorkflow(ctx, copilotHost(cwd))), { paused: 'research-1' })
 
-  assert.deepEqual([outcome.status, outcome.code], ['blocked', 'agent-failed'])
+  const asked = (await journalEvents(cwd, 'checkout')).filter(({ type }) => type === 'question.asked').at(-1)
+  assert.deepEqual([asked.kind, asked.incidents[0].category], ['unforeseen', 'agent-failed'])
 })
 
 test('an agent call the host cancels stops the run there: the cancellation is rethrown and no agent failure is journaled', async (t) => {

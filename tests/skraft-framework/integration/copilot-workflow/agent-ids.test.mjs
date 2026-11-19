@@ -4,7 +4,7 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { createCtxAgentRunner, refusalOf } from '../../../../plugins/skraft-framework/engine/drivers/copilot-workflow/ctx-agent-runner.mjs'
 import { runSkraftPipelineWorkflow } from '../../../../plugins/skraft-framework/engine/drivers/copilot-workflow/skraft-pipeline-workflow.mjs'
-import { PLUGIN_ROOT, copilotHost, fillsOutputs, settled, simulatedContext, stops, workingCopy, ANSWERED } from './simulated-host.mjs'
+import { PLUGIN_ROOT, copilotHost, fillsOutputs, journalEvents, settled, simulatedContext, stops, workingCopy, ANSWERED } from './simulated-host.mjs'
 
 const DISPATCH = { agent: 'solution-researcher', source: 'plugin', label: 'skraft checkout · research · attempt 1', prompt: 'brief' }
 const REPOSITORY_DISPATCH = { agent: 'acme-security-reviewer', source: 'repository', label: 'skraft checkout · security · attempt 1', prompt: 'brief' }
@@ -209,15 +209,16 @@ test('the Copilot workflow finds a repository agent in .github/agents/, never in
   assert.match(outcome.reason, /node security: agent acme-security-reviewer not found/)
 })
 
-test('an agent call the host rejects stops the run as agent-failed instead of throwing', async (t) => {
+test('an agent call the host rejects pauses the run on an unforeseen incident instead of throwing', async (t) => {
   const { cwd, cleanup } = await workingCopy()
   t.after(cleanup)
   const rejects = async () => { throw new Error('unknown agent skraft:solution-researcher') }
   const { ctx, calls } = simulatedContext({ args: { slug: 'checkout' }, behaviours: [rejects] })
 
-  const outcome = await runSkraftPipelineWorkflow(ctx, copilotHost(cwd))
+  const outcome = await settled(runSkraftPipelineWorkflow(ctx, copilotHost(cwd)))
 
-  assert.equal(outcome.code, 'agent-failed')
-  assert.equal(outcome.reason, 'solution-researcher stopped without finishing: skraft:solution-researcher failed: the Copilot agent call failed')
+  assert.deepEqual(outcome, { paused: 'research-1' })
+  const asked = (await journalEvents(cwd, 'checkout')).filter(({ type }) => type === 'question.asked').at(-1)
+  assert.deepEqual([asked.kind, asked.incidents[0].category], ['unforeseen', 'agent-failed'])
   assert.deepEqual(calls.map(({ model }) => model), [undefined])
 })

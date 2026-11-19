@@ -369,7 +369,7 @@ const dispatch = async (context, run, next) => {
   context.deps.progress.log(`${context.slug}: ${job.agent}${passOf(next.visit)}, attempt ${next.attempt} — ${modelText(onHost(job.assignment, context.deps.agentRunner.host))}`)
   const started = context.deps.clock.now()
   const asked = await runAgent(context, run, next, job)
-  if (asked.outcome !== null) return asked.outcome
+  if (asked.outcome !== null || asked.asked) return asked.outcome
   return judgeAttempt(context, run, next, { job, heads, engine, started, cost: asked.cost, model: asked.model })
 }
 
@@ -614,18 +614,37 @@ const runAgent = async (context, run, next, job) => {
 }
 
 /**
- * The agent's answer: the run stops when the agent could not start, or stopped with its work
- * not done.
+ * The agent's answer: the run stops when the agent could not start, or when a person stopped it
+ * with its work not done; an agent that stopped by itself with its work not done is an
+ * unforeseen incident, whose recovery the run asks for.
  * @param {Context} context @param {RunState} run @param {WorkStep} next @param {Job} job
- * @returns {Promise<{ outcome: RunOutcome | null, cost?: number, model?: string | null }>}
+ * @returns {Promise<{ outcome: RunOutcome | null, asked?: boolean, cost?: number, model?: string | null }>}
  */
 const askAgent = async (context, run, next, job) => {
   const { agent } = job
   const answer = await context.deps.agentRunner.run(agentCall(context, run, next, job))
   if (answer.unavailable) return { outcome: await stop(context, next.phase, 'agent-unavailable', answer.error ?? `${agent} could not be started`) }
   const unfinished = !answer.ok && (await pending(context, job))
-  if (unfinished) return { outcome: await stop(context, next.phase, 'agent-failed', `${agent} stopped without finishing: ${answer.error ?? 'no answer'}`) }
+  if (unfinished) return unfinishedAgent(context, next, `${agent} stopped without finishing: ${answer.error ?? 'no answer'}`, answer)
   return { outcome: null, cost: answer.costUsd, model: answer.model ?? null }
+}
+
+/**
+ * A person who stopped the agent stops the run; an agent that stopped by itself is an incident
+ * of unknown cause, asked about with its signature.
+ * @param {Context} context @param {WorkStep} next @param {string} reason
+ * @param {{ interrupted?: boolean }} answer
+ */
+const unfinishedAgent = async (context, next, reason, { interrupted }) => {
+  if (interrupted) return { outcome: await stop(context, next.phase, 'agent-failed', reason) }
+  const incidents = await agentIncidents(context, next.node.id, reason)
+  return { outcome: await escalate(context, next, reason, { owner: 'unknown', log: null }, incidents), asked: true }
+}
+
+/** @param {Context} context @param {string} step @param {string} reason */
+const agentIncidents = async ({ deps, slug, journal }, step, reason) => {
+  const signature = await deps.hasher.sha256(failureSignatureInput({ step, cause: 'agent-failed', proof: reason, root: repositoryRoot(deps.files, slug), slug }))
+  return [{ category: 'agent-failed', owner: /** @type {const} */ ('unknown'), argv: [], exitCode: null, attempts: signatureOccurrences(journal.events, signature) + 1, signature, log: null }]
 }
 
 /** @param {Context} context @param {RunState} run @param {WorkStep} next @param {Job} job */

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { readFileSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
 import { runSkraftPipelineWorkflow } from '../../../../plugins/skraft-framework/engine/drivers/copilot-workflow/skraft-pipeline-workflow.mjs'
-import { PLUGIN_ROOT, actsAs, copilotHost, eventsPath, firstOptionPerson, simulatedContext, trackingDir, workingCopy } from './simulated-host.mjs'
+import { PLUGIN_ROOT, actsAs, copilotHost, eventsPath, firstOptionPerson, settled, simulatedContext, trackingDir, workingCopy } from './simulated-host.mjs'
 import { SENTINEL } from './simulated-sdk.mjs'
 import { CYCLE_WORKFLOW, SLUG, WRONG_PAY, deliverWith, designateWorkflow, pipelineRepository, scriptedLlm } from '../support/pipeline-repository.mjs'
 
@@ -24,9 +24,9 @@ test('the text of an error a Copilot agent call throws reaches neither the outco
   const throws = async () => { throw new Error(`${SENTINEL} at /home/someone/.ssh/id_rsa`) }
   const { ctx, logs, calls } = simulatedContext({ args: { slug: 'checkout' }, behaviours: [throws] })
 
-  const outcome = await runSkraftPipelineWorkflow(ctx, copilotHost(cwd))
+  const outcome = await settled(runSkraftPipelineWorkflow(ctx, copilotHost(cwd)))
 
-  assert.deepEqual([outcome.code, outcome.reason], ['agent-failed', 'solution-researcher stopped without finishing: skraft:solution-researcher failed: the Copilot agent call failed'])
+  assert.deepEqual(outcome, { paused: 'research-1' })
   assert.equal(modelFacing({ outcome, logs, calls, cwd, slug: 'checkout' }).includes(SENTINEL), false)
 })
 
