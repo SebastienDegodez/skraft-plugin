@@ -1,6 +1,6 @@
 import { strictEqual, match } from 'node:assert/strict'
 import { execFileSync, spawnSync } from 'node:child_process'
-import { chmodSync, cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
+import { chmodSync, cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { after, before, describe, it } from 'node:test'
@@ -60,6 +60,9 @@ before(() => {
   cpSync(join(repoRoot, 'plugins/skraft-framework/skills'), join(repo, 'plugins/skraft-framework/skills'), { recursive: true })
   mkdirSync(join(repo, 'tests/agents/demo-suite'), { recursive: true })
   writeFileSync(join(repo, 'tests/agents/demo-suite/eval.yaml'), 'name: demo-suite\nstimuli: []\n')
+  // The runner resolves eval models through the installed Vally; each worktree links this install.
+  if (existsSync(join(repoRoot, 'node_modules'))) symlinkSync(join(repoRoot, 'node_modules'), join(repo, 'node_modules'))
+  writeFileSync(join(repo, '.gitignore'), 'node_modules\n')
   execFileSync('git', ['init', '--quiet', '-b', 'base'], { cwd: repo })
   git('config', 'user.email', 'bench@example.invalid')
   git('config', 'user.name', 'Bench')
