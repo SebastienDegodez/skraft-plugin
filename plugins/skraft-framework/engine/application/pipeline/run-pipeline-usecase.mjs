@@ -614,8 +614,9 @@ const runAgent = async (context, run, next, job) => {
 }
 
 /**
- * The agent's answer: the run stops when the agent could not start, or when a person stopped it
- * with its work not done; an agent that stopped by itself with its work not done is an
+ * The agent's answer: the run stops when the host could not start the agent (a host loads a
+ * plugin's agents when its session starts, so no retry in this session finds it), or when a person
+ * stopped it with its work not done; an agent that stopped by itself with its work not done is an
  * unforeseen incident, whose recovery the run asks for.
  * @param {Context} context @param {RunState} run @param {WorkStep} next @param {Job} job
  * @returns {Promise<{ outcome: RunOutcome | null, asked?: boolean, cost?: number, model?: string | null }>}
@@ -637,14 +638,26 @@ const askAgent = async (context, run, next, job) => {
  */
 const unfinishedAgent = async (context, next, reason, { interrupted }) => {
   if (interrupted) return { outcome: await stop(context, next.phase, 'agent-failed', reason) }
-  const incidents = await agentIncidents(context, next.node.id, reason)
-  return { outcome: await escalate(context, next, reason, { owner: 'unknown', log: null }, incidents), asked: true }
+  return { outcome: await askRecovery(context, next, { category: 'agent-failed', reason }), asked: true }
 }
 
-/** @param {Context} context @param {string} step @param {string} reason */
-const agentIncidents = async ({ deps, slug, journal }, step, reason) => {
-  const signature = await deps.hasher.sha256(failureSignatureInput({ step, cause: 'agent-failed', proof: reason, root: repositoryRoot(deps.files, slug), slug }))
-  return [{ category: 'agent-failed', owner: /** @type {const} */ ('unknown'), argv: [], exitCode: null, attempts: signatureOccurrences(journal.events, signature) + 1, signature, log: null }]
+/**
+ * Asks how to recover from a failure of unknown cause: its reason goes to a log the question
+ * names, with the failure's signature and how often the run met it.
+ * @param {Context} context @param {WorkStep} next @param {{ category: string, reason: string }} failure
+ */
+const askRecovery = async (context, next, { category, reason }) => {
+  const { deps, slug, journal } = context
+  const signature = await deps.hasher.sha256(failureSignatureInput({ step: next.node.id, cause: category, proof: reason, root: repositoryRoot(deps.files, slug), slug }))
+  const log = await incidentLog(context, `logs/incident-${next.node.id}-${signature.slice(0, 7)}.log`, reason)
+  const incident = { category, owner: /** @type {const} */ ('unknown'), argv: [], exitCode: null, attempts: signatureOccurrences(journal.events, signature) + 1, signature, log }
+  return escalate(context, next, reason, { owner: 'unknown', log }, [incident])
+}
+
+/** Writes the reason of an incident where its question points. @param {Context} context @param {string} path @param {string} reason */
+const incidentLog = async ({ deps, slug }, path, reason) => {
+  await deps.files.write(slug, path, `${reason}\n`)
+  return deps.files.location(slug, path)
 }
 
 /** @param {Context} context @param {RunState} run @param {WorkStep} next @param {Job} job */
@@ -1160,9 +1173,19 @@ const review = async (context, run, next) => {
   const { deps, slug, journal, loaded, config } = context
   const inputs = boundInputs(next.node, { workflow: loaded.workflow, run, phase: next.phase, components: config.components, events: journal.events })
   const reviewed = await runReview({ deps, slug, journal, assignments, sources: loaded.sources, step: next, inputs })
-  if ('stop' in reviewed) return stop(context, next.phase, reviewed.stop.code, reviewed.stop.reason)
+  if ('stop' in reviewed) return stoppedReview(context, next, reviewed.stop)
   await recordReview(context, run, next, { reviewed, started })
   return null
+}
+
+/**
+ * A lens that never gave a readable verdict is an unforeseen incident, whose recovery the run
+ * asks for; any other stop of the review stops the run.
+ * @param {Context} context @param {WorkStep} next @param {{ code: string, reason: string }} stopped
+ */
+const stoppedReview = async (context, next, { code, reason }) => {
+  if (code !== 'lens-unreadable') return stop(context, next.phase, code, reason)
+  return askRecovery(context, next, { category: code, reason })
 }
 
 /**

@@ -48,22 +48,25 @@ test('a lens that passed with a low finding runs again on the next pass, its inp
   assert.deepEqual(askedOn(host, 'design_review', 2), ['consistency-lens', 'fitness-lens'])
 })
 
-test('an answer that cannot be read is asked once more with the reason; a second one stops the run naming the lens, and the resumed run asks only that lens again', async () => {
+test('an answer that cannot be read is asked once more with the reason; a second one asks for a recovery naming the lens, and the retried run asks only that lens again', async () => {
   const host = scripted({}, nominal)
   host.agentRunner.review = lenses({ consistency: ['Looks fine to me.', 'lens: consistency\nverdict: ok\nfindings: []'] })
 
   const outcome = await host.start()
 
   const reason = 'consistency-lens answered 2 times without a readable verdict: verdict "ok" is not one of pass, fail, inconclusive'
-  assert.deepEqual(outcome, { status: 'blocked', slug: SLUG, phase: 'DESIGN', code: 'lens-unreadable', reason })
+  assert.deepEqual([outcome.status, outcome.code], ['waiting', 'unforeseen'])
+  const question = host.events().filter((event) => event.type === 'question.asked').at(-1)
+  assert.deepEqual([question.step, question.incidents[0].category], ['design_review', 'lens-unreadable'])
+  assert.equal(await host.tracking.read(SLUG, question.incident.log.slice(question.incident.log.indexOf('logs/'))), `${reason}\n`)
   const asked = host.agentRunner.reviewed().filter((dispatch) => dispatch.agent === 'consistency-lens')
   assert.deepEqual(asked.map((dispatch) => dispatch.label), [`skraft ${SLUG} · design_review · consistency · attempt 1`, `skraft ${SLUG} · design_review · consistency · attempt 2`])
   assert.ok(asked[1].prompt.endsWith('\n\nYour previous answer was refused: the answer is not the YAML document the brief shows (line 1: is not a `key: value` line). Answer again with the YAML document only.'), asked[1].prompt)
   assert.deepEqual(host.agentRunner.batches.map((batch) => batch.map((dispatch) => dispatch.agent)), [['consistency-lens', 'architecture-compliance-lens', 'fitness-lens'], ['consistency-lens']])
-  assert.deepEqual(host.events().at(-1), { ...host.events().at(-1), type: 'run.stopped', code: 'lens-unreadable', reason })
   assert.equal(host.events().some((event) => event.type === 'step.recorded' && event.step === 'design_review'), false)
   assert.deepEqual(host.events().filter((event) => event.type === 'review.lens').map((event) => event.lens), ['architecture-compliance', 'fitness'])
 
+  assert.equal((await host.decide({ answer: 'RETRY', by: 'host-llm', model: 'observed-test-model', cost: 0.02, costUnit: 'USD' })).ok, true)
   assert.equal((await host.run()).status, 'done')
 
   assert.deepEqual(host.agentRunner.batches[2].map((dispatch) => dispatch.label), [`skraft ${SLUG} · design_review · consistency · attempt 1`])
@@ -308,10 +311,11 @@ test('every lens that answered unreadably twice is named', async () => {
   const host = scripted({}, (it) => nominal(it).slice(0, 2))
   host.agentRunner.review = lenses({ consistency: ['no', 'no'], fitness: ['[]', '[]'] })
 
-  const outcome = await host.start()
+  await host.start()
 
   const notYaml = 'the answer is not the YAML document the brief shows (line 1: is not a `key: value` line)'
-  assert.equal(outcome.reason, `consistency-lens answered 2 times without a readable verdict: ${notYaml}; fitness-lens answered 2 times without a readable verdict: ${notYaml}`)
+  const { incident } = host.events().filter((event) => event.type === 'question.asked').at(-1)
+  assert.equal(await host.tracking.read(SLUG, incident.log.slice(incident.log.indexOf('logs/'))), `consistency-lens answered 2 times without a readable verdict: ${notYaml}; fitness-lens answered 2 times without a readable verdict: ${notYaml}\n`)
 })
 
 test('each agent\'s documents in the tracking folder reach the lenses, by phase, with a shared context naming who wrote them', async () => {

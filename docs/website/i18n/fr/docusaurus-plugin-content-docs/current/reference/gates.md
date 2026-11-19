@@ -343,7 +343,7 @@ findings:                # [] quand elle ne trouve rien
 | Valeurs | textes libres entre guillemets doubles ou en bloc littéral ; ni ancre, ni alias, ni tag ; casse de `verdict` et `severity` normalisée |
 | Plafond | au plus 20 findings ; un `pass` avec un finding blocker, high ou medium est refusé |
 | Textes | ramenés sur une ligne et tronqués (description : 500 caractères) ; `location` rendue relative à la copie de travail, séparée par `/`, sans `./`, son `:ligne` gardé (un chemin hors de la copie de travail reste absolu) |
-| Réponse refusée | la lentille est relancée une fois avec la raison ; une seconde réponse illisible arrête le run avec `lens-unreadable` ; une reprise ne relance que les lentilles dont la réponse était illisible |
+| Réponse refusée | la lentille est relancée une fois avec la raison ; une seconde réponse illisible est un incident imprévu : le run attend sur la question `unforeseen`, sa raison dans `logs/incident-<étape>-<signature>.log` ; une nouvelle tentative ne relance que les lentilles dont la réponse était illisible |
 
 ### G9 lu par le moteur <!-- #g9-engine -->
 

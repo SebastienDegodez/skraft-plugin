@@ -333,7 +333,7 @@ findings:                # [] when it finds none
 | Values | free texts in double quotes or a literal block scalar; no anchor, alias or tag; case of `verdict` and `severity` normalized |
 | Ceiling | at most 20 findings; a `pass` with a blocker, high or medium finding is refused |
 | Texts | brought onto one line and cut (description: 500 characters); `location` made relative to the working copy, `/`-separated, `./` dropped, its `:line` kept (a path outside the working copy stays absolute) |
-| Refused answer | the lens is asked once more with the reason; a second unreadable answer stops the run with `lens-unreadable`; a resume asks again only the lenses whose answer could not be read |
+| Refused answer | the lens is asked once more with the reason; a second unreadable answer is an unforeseen incident: the run waits on the `unforeseen` question, its reason in `logs/incident-<step>-<signature>.log`; a retry asks again only the lenses whose answer could not be read |
 
 ### G9 read by the engine <!-- #g9-engine -->
 
