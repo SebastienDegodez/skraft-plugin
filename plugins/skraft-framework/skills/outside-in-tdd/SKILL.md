@@ -126,7 +126,7 @@ scenario's RED capture — exists.
 Orient design before synthesis: which pattern (specification, factory, builder), which layer owns
 the logic, immutability and return values vs mutations.
 
-**Name the owner in writing, before the implementation is written.** State the type that will hold
+**Name the owner in writing, once per behaviour, before its implementation is written.** State the type that will hold
 the rule and the layer it lives in, then check that answer against *When to Write Which* below.
 "The use case computes it" is valid only for orchestration or a simple rule.
 
@@ -145,6 +145,22 @@ descriptor means by "minimal production code".
 
 **No iteration after SYNTHESIZE GREEN** unless RED was wrong or architectural guidance changed.
 Refining code instead of revising RED means you are back in 3-step TDD — stop and restart.
+
+### Inner-loop pace
+
+- **Test list first.** Before the scenario's first inner RED, list its behaviours, one line each,
+  in your journal. No code.
+- **One RED per behaviour, not per example.** A RED is one test, or one parametrized test whose
+  rows triangulate the same rule (`craft-discipline` C11). Rows of two different rules never share
+  a RED.
+- **Pick the gear.** Write the obvious implementation when the acceptance criterion states the rule
+  (a rate table, a threshold, a formula). Fake it, then triangulate, only when the general rule is
+  not yet clear from the test.
+- **Run scope.** An inner RED and its GREEN run filtered: the new test, then the test project it
+  lives in. The whole suite runs once per scenario, before its green commit.
+- **Checks once per scenario.** After each inner GREEN, only `git diff --name-only` (wiring).
+  The deletion test, the placement check and the Object Calisthenics rules
+  (`craft-discipline` C10) run once on the scenario's whole diff, before its green commit.
 
 ### 4. COMMIT & VERIFY
 
@@ -287,7 +303,8 @@ thinking** above.
 
 ## Post-GREEN Wiring Verification (MANDATORY)
 
-After the suite turns green and BEFORE commit:
+Step 1 after every GREEN; steps 2 to 4 once per scenario, after the whole suite turns green and
+BEFORE its commit:
 
 1. Run `git diff --name-only`. Every production file the behavior required MUST appear in the diff.
 2. If only test files changed but tests flipped RED → GREEN → you hit **Fixture Theater**: the test
