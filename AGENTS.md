@@ -341,6 +341,11 @@ Descriptors are prompts an agent pays for on every run, not documentation.
 - Agent fixtures live under `tests/agents/<suite>/fixtures/<state>/`; specs stage explicit files
   from a named state.
 - `eng/run-vally-evals.sh` is the only eval entry point.
+- `eng/bench-agent-ab.sh <suite> <control-ref> <candidate-ref>` compares two versions of one
+  agent: the suite of the current checkout runs through each ref's `run-vally-evals.sh` in its
+  own worktree, then `eng/compare-agent-ab.mjs` reports cost, time (model, tools, tests) and
+  quality. A candidate that loses score or pass rate on any stimulus is a `quality-regression`
+  (exit 3). Output goes to `bench-results/`, never committed.
 - Evaluation models are pinned, in one place: `eng/eval-models.json` maps each evaluation family
   to a versioned model, names the default family and pins the judge. Nothing else under `eng/`,
   `scripts/`, `.github/workflows/`, `tests/skills/` or `tests/agents/` names a versioned model: a
