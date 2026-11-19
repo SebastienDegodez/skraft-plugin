@@ -129,7 +129,7 @@ const SCENARIO_WORK = Object.freeze({
     scenarioHeading(scenario),
     ...section('- Acceptance tests DISTILL committed, which you never change (a wrong one: stop blocked, naming it):', [...scenario.oracles, ...(scenario.skeleton === null ? [] : [scenario.skeleton])].map(({ sha, subject, files }) => `${sha.slice(0, 7)} "${subject}": ${files.join(', ')}`)),
     ...(scenario.skeleton === null ? [] : [`- The walking skeleton ${scenario.skeleton.sha.slice(0, 7)} passes at your commit too, beside this scenario's acceptance test.`]),
-    `- Make it pass with outside-in TDD, unit tests included, and commit nothing until it passes; change no file of another component than ${scenario.component}.`,
+    `- Make it pass with outside-in TDD, unit tests included, and commit nothing until it passes; change another component than ${scenario.component} only where scenario ${scenario.index} needs it, in the same commit.`,
   ],
 })
 

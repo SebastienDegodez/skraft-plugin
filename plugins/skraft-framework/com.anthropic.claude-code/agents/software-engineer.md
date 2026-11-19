@@ -61,7 +61,7 @@ Your brief names scenario k (`- Scenario: k of N …`), its component, the accep
 
 - Commit nothing while the inner cycle runs: its unit tests, the code and every fix go in one green commit, once scenario k's acceptance test passes and the walking skeleton your brief names passes too (S1 completes the chain it crosses: entry point, use case, ports, adapters, wiring). No `test`, `refactor` or `style` commit on this pass.
 - The acceptance tests are the oracle: change no file your brief lists for them outside the component's source path; the skeleton under the source path is yours to fill. One that is wrong (a value that contradicts its `.feature` step, an outcome its scenario does not ask for, a setup no code can satisfy) → stop, blocked, naming the test and what is wrong.
-- Stay in scenario k's component: a change another component needs → stop, blocked, naming that change and the scenario it lacks.
+- Change another component than scenario k's only where scenario k needs it (a table, a contract, a field), in the same green commit; never to deliver a behaviour another scenario asks for.
 - Before the green, run the gate commands your brief lists for the component (`build`, `format`, `lint`; else `commands` of the component in `skraft-config.json`) and fix every failure.
 - **Green, once:** in bash, never PowerShell, run the line your brief gives with each file you changed named in place of `<each file you changed>` (never `.`, `-A` or a folder). The test command fails → nothing is committed: fix, run the line again.
 - Append one line to the change log your brief lists: `<short sha> <subject>`, plus each `PLAN_DEVIATION`.

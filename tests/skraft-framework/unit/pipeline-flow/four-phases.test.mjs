@@ -182,7 +182,7 @@ test('each agent is told its story, inputs, outputs, result file and the paths i
     `- ${firstRed} "test(checkout): scenario 1": tests/Acceptance/S1AcceptanceTests.cs`,
     `- ${distillRed} "test(checkout): acceptance of the card payment": tests/Acceptance/CheckoutAcceptanceTests.cs`,
     `- The walking skeleton ${distillRed} passes at your commit too, beside this scenario's acceptance test.`,
-    '- Make it pass with outside-in TDD, unit tests included, and commit nothing until it passes; change no file of another component than api.',
+    '- Make it pass with outside-in TDD, unit tests included, and commit nothing until it passes; change another component than api only where scenario 1 needs it, in the same commit.',
     '- Once it passes, commit once, in bash (never PowerShell), naming each file you changed:',
     '  dotnet test && git add <each file you changed> && git commit -s -m "feat(checkout): customer pays by card" -m "Refs: #42"',
     '- Gate commands: before you write your result, run those of each component you changed, from its root, and fix every failure; the gates step runs them next and sends a failure back as a new pass:',

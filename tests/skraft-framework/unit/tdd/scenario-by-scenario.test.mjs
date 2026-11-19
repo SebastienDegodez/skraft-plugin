@@ -143,13 +143,12 @@ test('a scenario proven by its e2e tests has them replayed at its green beside i
   assert.ok(e2e.agentRunner.judged[2].prompt.includes(`\nThe red of the story's walking skeleton is root-1; its replay printed to ${logOf('root-1', 'web', 'e2e')}, and at its parent to ${logOf('root-1', 'web', 'e2e-parent')}\nThe walking skeleton's tests, which pass at this green too: e2e/walking-skeleton.spec.ts\n`), e2e.agentRunner.judged[2].prompt)
 })
 
-test('a green that changes the scenario\'s acceptance test or the walking skeleton, commits its inner tests apart or touches another component is refused', async () => {
+test('a green that changes the scenario\'s acceptance test or the walking skeleton, or commits its inner tests apart, is refused', async () => {
   const COMPONENTS = [API, WEB]
   const cases = [
     [greenOf(1, ['src/Scenario1.cs', 'tests/Acceptance/S1AcceptanceTests.cs']), 'commit root-3 "feat(checkout): scenario 1" changes the scenario\'s acceptance tests, which DISTILL owns; undo that change, and if the test is wrong, stop blocked naming it'],
     [greenOf(1, ['src/Scenario1.cs', 'tests/Integration/WalkingSkeletonTests.cs']), 'commit root-3 "feat(checkout): scenario 1" changes the scenario\'s acceptance tests, which DISTILL owns; undo that change, and if the test is wrong, stop blocked naming it'],
     [(h) => { h.git.commit('test(checkout): unit of the payment', ['tests/Unit/PaymentTests.cs']); greenOf(1)(h) }, 'commit root-3 "test(checkout): unit of the payment" commits a test on its own: the tests of the inner loop go in the one feat or fix commit that makes the scenario pass'],
-    [greenOf(1, ['src/Scenario1.cs', 'web/src/Pay.tsx']), 'commit root-3 "feat(checkout): scenario 1" changes another component than the scenario\'s; that change needs a scenario of its own: stop blocked naming it'],
     [(h) => { greenOf(1)(h); h.git.commit('feat(checkout): receipt', ['src/Receipt.cs']) }, 'commit root-4 "feat(checkout): receipt" is a second feat or fix commit for the scenario; make it pass in one commit'],
     [(h) => { greenOf(1)(h); h.git.commit('refactor(checkout): name the payment', ['src/Scenario1.cs']) }, 'commit root-4 "refactor(checkout): name the payment" commits a change under green on its own: the scenario takes one feat or fix commit, refactoring included'],
     [() => {}, 'scenario 1 has no feat or fix commit: make its acceptance test pass, then commit once'],
@@ -498,4 +497,14 @@ test('a red that passes at its commit and names no earlier scenario, or a later 
     await host.start()
     assert.equal(checked(host, 'distill').flatMap((event) => event.commits).find(({ subject }) => subject.endsWith('scenario 2')).verdict, 'not-red', body)
   }
+})
+
+test('a green that also changes another component the scenario needs is accepted, and the run journals that component', async () => {
+  const host = scripted({ components: [API, WEB] }, (it) => [...research(it), agent()(it), agent({ work: greenOf(1, ['src/Scenario1.cs', 'web/src/Pay.tsx']) })(it), unavailable])
+
+  await host.start()
+
+  const [delivered] = recorded(host, 'deliver')
+  assert.deepEqual([delivered.outcome, delivered.failures, delivered.green], ['done', [], { scenario: 1, others: ['web'] }])
+  assert.match(promptOf(host, `skraft ${SLUG} · deliver · scenario 1 of 1 · attempt 1`), /\n- Make it pass with outside-in TDD, unit tests included, and commit nothing until it passes; change another component than api only where scenario 1 needs it, in the same commit\.\n/)
 })

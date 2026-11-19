@@ -29,7 +29,7 @@ import { replayGreen } from './commit-replays.mjs'
  *   the walking skeleton; exemption: the walking skeleton's, as the last plan declared it;
  *   approved: the scenarios of the last plan, which every later pass keeps.
  * @typedef {{ code: 'scenarios' | 'tdd', line: string }} ScenarioFailure
- * @typedef {{ scenarios?: StoryScenario[], exemption?: string, skeleton?: Oracle | null, oracle?: Oracle, green?: { scenario: number } }} ScenarioRecord
+ * @typedef {{ scenarios?: StoryScenario[], exemption?: string, skeleton?: Oracle | null, oracle?: Oracle, green?: { scenario: number, others?: string[] } }} ScenarioRecord
  *   what a done pass journals for the passes after it.
  */
 
@@ -187,7 +187,7 @@ const exemptionBreaches = (judged, exemption, components) => (exemption !== 'doc
  */
 export const scenarioRecord = (judged, scenario, { plan, commands, components }) => {
   if (scenario === null) return {}
-  if (scenario.kind === 'delivery') return greenRecord(judged, scenario)
+  if (scenario.kind === 'delivery') return greenRecord(judged, scenario, components)
   if (scenario.kind === 'plan') return plan === null ? {} : planRecord(judged, scenario, { plan, commands, components })
   // Reds are committed in scenario order: a pass that commits none holds its own red last.
   const oracle = newOracle(judged, scenario.index, { commands, components }) ?? /** @type {Oracle} */ (scenario.oracles.at(-1))
@@ -209,10 +209,15 @@ const planRecord = (judged, scenario, { plan, commands, components }) => {
 }
 
 /**
- * The scenario a done delivery pass made pass: a done pass committed its one green.
- * @param {JudgedCommit[]} judged @param {ScenarioPass} scenario @returns {ScenarioRecord}
+ * The scenario a done delivery pass made pass, and the other components its one green changed.
+ * @param {JudgedCommit[]} judged @param {ScenarioPass} scenario @param {Component[]} components
+ * @returns {ScenarioRecord}
  */
-const greenRecord = (judged, { index }) => ({ green: { scenario: index } })
+const greenRecord = (judged, { index, scenario }, components) => {
+  const files = judged.filter((commit) => commit.kind === 'green').flatMap((commit) => commit.files)
+  const others = ownersOf(components, files).map(({ name }) => name).filter((name) => name !== /** @type {StoryScenario} */ (scenario).component)
+  return { green: others.length === 0 ? { scenario: index } : { scenario: index, others } }
+}
 
 /**
  * The red the pass committed for its scenario, with the command whose replay proved it.

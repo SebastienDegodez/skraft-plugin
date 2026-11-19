@@ -11,7 +11,7 @@ import { isCode, ownersOf } from './component-files.mjs'
  *
  * @typedef {'red' | 'green' | 'refactor' | 'other' | 'invalid'} CommitKind
  * @typedef {'ok' | 'not-conventional' | 'issue-reference-missing' | 'issue-closed' | 'issue-not-in-story' | 'outside-tdd' | 'green-without-red' | 'not-red' | 'no-component'
- *   | 'oracle-split' | 'oracle-component' | 'oracle-without-test' | 'code-in-oracle' | 'test-in-scenario' | 'refactor-in-scenario' | 'second-green' | 'oracle-touched' | 'other-component' | 'not-green'} CommitVerdict
+ *   | 'oracle-split' | 'oracle-component' | 'oracle-without-test' | 'code-in-oracle' | 'test-in-scenario' | 'refactor-in-scenario' | 'second-green' | 'oracle-touched' | 'not-green'} CommitVerdict
  * @typedef {import('./component-files.mjs').CodeComponent} CodeComponent
  * @typedef {{ kind: 'oracle', index: number, component: string | null }
  *   | { kind: 'delivery', index: number, component: string, immutable: string[] }} ScenarioJudging
@@ -157,11 +157,10 @@ const oracleVerdict = (commit, { kind, seen, components }, scenario) => {
 }
 
 /** @param {StepCommit} commit @param {Judging} judging @param {Extract<ScenarioJudging, { kind: 'delivery' }>} scenario @returns {CommitVerdict} */
-const deliveryVerdict = (commit, { kind, seen, components }, scenario) => {
+const deliveryVerdict = (commit, { kind, seen }, scenario) => {
   if (kind !== 'green') return kind === 'red' ? 'test-in-scenario' : 'refactor-in-scenario'
   if (seen.includes('green')) return 'second-green'
-  if (commit.files.some((file) => scenario.immutable.includes(file))) return 'oracle-touched'
-  return ownersOf(components, commit.files).some(({ name }) => name !== scenario.component) ? 'other-component' : 'ok'
+  return commit.files.some((file) => scenario.immutable.includes(file)) ? 'oracle-touched' : 'ok'
 }
 
 /** @param {StepCommit} commit @param {number | null} issue @returns {CommitVerdict | null} */
@@ -229,7 +228,6 @@ const FAILURES = Object.freeze({
   'refactor-in-scenario': (named) => `${named} commits a change under green on its own: the scenario takes one feat or fix commit, refactoring included`,
   'second-green': (named) => `${named} is a second feat or fix commit for the scenario; make it pass in one commit`,
   'oracle-touched': (named) => `${named} changes the scenario's acceptance tests, which DISTILL owns; undo that change, and if the test is wrong, stop blocked naming it`,
-  'other-component': (named) => `${named} changes another component than the scenario's; that change needs a scenario of its own: stop blocked naming it`,
   'not-green': (named, { detail }) => `${named} does not make the scenario pass: ${detail}`,
 })
 
