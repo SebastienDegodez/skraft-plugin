@@ -47,13 +47,12 @@ Each component line of your brief gives its `mocking:` strategy and whether `con
 Never park a test with `Skip`, `[Ignore]` or `.skip`.
 
 1. **Follow the implementation-plan step and the test-plan rows** of the scenario: every test you write uses its layer, use case boundary and double type. Write a Domain unit test only where the plan lists one with an `Extraction Reason`, or where `test-design-mandates` Mandate 4 gate (a) or (b) opens with values traced to a decided acceptance criterion. Deviate from a row only when a loaded skill forbids it, and write `PLAN_DEVIATION: {row} — {planned} → {actual} — {rule}` on the change-log line of the commit that holds the deviation.
-2. **RED.** Write one failing unit test for the next behaviour the acceptance test demands, and run it. It must fail on a business assertion: when it fails on a compile, import or setup error, stub just enough to compile and run it again. Create a domain class only once the compile failure asks for it.
+2. **RED.** Write the failing test of the next entry of your ordered test list (`outside-in-tdd`): one unit test, or one parametrized test whose rows triangulate that same rule (`craft-discipline` C11), never rows of two rules. Run it, filtered to it. It must fail on a business assertion: when it fails on a compile, import or setup error, stub just enough to compile and run it again. Create a domain class only once the compile failure asks for it.
 3. **Undecided case.** When a case needs a verdict or a value no acceptance criterion decides, write no test for it: stop, blocked, naming the question.
-4. **SYNTHESIZE GREEN.** Write the smallest slice the test demands, clean the first time, applying the nine Object Calisthenics rules (`craft-discipline` C10): no dirty green to tidy later. Run the component's whole suite: it passes.
-5. **Wiring check, after every green.** Run `git diff --name-only`:
-   - every production file the behaviour needs is listed; if only test files changed while the test went from red to green, the test passes on fixture state: write the production code first;
-   - revert the production change in your head: if the tests would still pass, they do not test the behaviour; rewrite them.
-6. Back to RED until the acceptance test passes, and the walking skeleton your brief names with it.
+4. **SYNTHESIZE GREEN.** Write the slice the test demands, clean the first time, to the nine Object Calisthenics rules (`craft-discipline` C10): no dirty green to tidy later. When the acceptance criterion states the rule outright (a rate table, a threshold, a cap, a formula), write it directly instead of climbing to it one constant at a time. Run the test filtered to it, then the test project it lives in: both pass.
+5. **Wiring check, after every inner green.** Run `git diff --name-only`: every production file the behaviour needs is listed; if only test files changed while the test went from red to green, the test passes on fixture state: write the production code first.
+6. **Once per scenario, before its green commit:** run the component's whole suite (the commit line does); revert the scenario's production change in your head: if the tests would still pass, they do not test the behaviour, rewrite them; check the nine Object Calisthenics rules and the placement (`outside-in-tdd` → Post-GREEN wiring verification) on every class of the scenario's diff.
+7. Back to RED until the acceptance test passes, and the walking skeleton your brief names with it.
 
 ## Scenario pass
 

@@ -56,13 +56,17 @@ step. Never build a class no active scenario requires.
 3. **Checkpoint (mandatory)** — before any production code:
    - The RED output is inspected by someone other than whoever writes the implementation
      (see *Inspection by mode*).
-   - Name in writing the type that will hold the rule and its layer, checked against
+   - Name in writing, once per rule, the type that will hold it and its layer, checked against
      *Where the code lives*.
 4. **SYNTHESIZE GREEN** — implement the smallest slice this test demands, clean the first time:
    idiomatic, domain semantics, no speculative branch, no unrequested error handling, no
    abstraction the test does not force. If the test was misunderstood, revise the test and
    restart from RED; never iterate on the code instead.
-5. **VERIFY, then commit** — run *Post-GREEN wiring verification*, then commit as *Commit policy*
+   - Run the test filtered to it, then the test project it lives in. The whole suite runs once
+     per scenario, before its commit.
+5. **Wiring** — after each inner GREEN, `git diff --name-only` (step 1 of *Post-GREEN wiring
+   verification*); the rest of that check runs once per scenario.
+6. **VERIFY, then commit** — run *Post-GREEN wiring verification*, then commit as *Commit policy*
    says. Never commit on red.
 
 **Iron rule:** never modify a failing test to make it pass; fix the implementation. Stuck after
@@ -116,12 +120,19 @@ per test. Persist it next to the plan; consume it head-first.
   transformations, never by a leap.
 - **F — Fast:** the acceptance entry opens the list and stays red; units drive the inside;
   integration entries come after (*Concentric circles*).
-- **I — Incremental:** one entry, one slice. An entry needing two transformations is two entries.
-- GREEN applies exactly the declared transformation, even when a later entry will obviously need
-  more. Never two failing tests at once besides the outer acceptance test.
+- **I — Incremental:** one entry, one slice. An entry needing two transformations is two entries,
+  except under *Obvious implementation* below.
+- **One entry per rule, not per example:** an entry may be one parametrized test whose rows
+  triangulate the same rule (`craft-discipline` C11). Rows of two rules never share an entry.
+- **Obvious implementation:** when the acceptance criterion states the rule outright (a rate
+  table, a threshold, a cap, a formula), its entry declares the transformation that writes it
+  (`case`, `unconditional→if`, `expression→function`) instead of climbing to it one constant at a
+  time.
+- Otherwise GREEN applies exactly the declared transformation, even when a later entry will
+  obviously need more. Never two failing tests at once besides the outer acceptance test.
 - After a GREEN, re-plan only in writing (entry added, removed, reordered, transformation
-  revised). Never re-plan to justify code already written; never merge entries to save a cycle;
-  never write the list after the code.
+  revised). Never re-plan to justify code already written; never merge entries of two rules to
+  save a cycle; never write the list after the code.
 
 ## Where the code lives
 
@@ -160,7 +171,8 @@ orchestrator.
 
 ## Post-GREEN wiring verification
 
-After the suite turns green, before the commit:
+Step 1 after every GREEN; steps 2 and 3 once per scenario, after the whole suite turns green and
+before its commit:
 
 1. `git diff --name-only`: every production file the behaviour required appears. Tests flipped
    RED → GREEN with only test files changed is **fixture theater** (the test setup implements the
