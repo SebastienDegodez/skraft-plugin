@@ -1,6 +1,6 @@
 import { commitName } from '../../domain/pipeline/commits.mjs'
 import { isCode, ownersOf } from '../../domain/pipeline/component-files.mjs'
-import { readScenarioPlan } from '../../domain/pipeline/scenarios.mjs'
+import { approvedPlanChanges, readScenarioPlan } from '../../domain/pipeline/scenarios.mjs'
 import { scenarioNodes } from '../../domain/workflow/workflow.mjs'
 import { replayGreen } from './commit-replays.mjs'
 
@@ -20,12 +20,14 @@ import { replayGreen } from './commit-replays.mjs'
  * @typedef {{
  *   kind: 'plan' | 'oracle' | 'delivery', index: number, of: number, scenario: StoryScenario | null,
  *   oracles: Oracle[], skeleton: Oracle | null, exemption: import('../../domain/pipeline/scenarios.mjs').Exemption,
+ *   approved: StoryScenario[],
  * }} ScenarioPass
  *   plan: the pass that writes the story's scenarios and the red of its walking skeleton; oracle:
  *   the red of scenario `index`'s acceptance test; delivery: its green. of: how many scenarios the
  *   last plan lists; oracles: the reds committed so far, those of scenarios 1 to `index`: a red of
  *   a later scenario is committed only once the scenario before it passes; skeleton: the red of
- *   the walking skeleton; exemption: the walking skeleton's, as the last plan declared it.
+ *   the walking skeleton; exemption: the walking skeleton's, as the last plan declared it;
+ *   approved: the scenarios of the last plan, which every later pass keeps.
  * @typedef {{ code: 'scenarios' | 'tdd', line: string }} ScenarioFailure
  * @typedef {{ scenarios?: StoryScenario[], exemption?: string, skeleton?: Oracle | null, oracle?: Oracle, green?: { scenario: number } }} ScenarioRecord
  *   what a done pass journals for the passes after it.
@@ -54,7 +56,7 @@ const NO_SCENARIOS = Object.freeze({ list: [], exemption: 'none', oracles: {}, s
  * @param {NonNullable<import('../../domain/journal/run-state.mjs').RunState['scenarios']>} scenarios
  * @param {ScenarioPass['kind']} kind @param {number} index @returns {ScenarioPass}
  */
-const passOn = ({ list, exemption, oracles, skeleton }, kind, index) => ({ kind, index, of: list.length, scenario: list[index - 1] ?? null, oracles: Object.values(oracles), skeleton, exemption })
+const passOn = ({ list, exemption, oracles, skeleton }, kind, index) => ({ kind, index, of: list.length, scenario: list[index - 1] ?? null, oracles: Object.values(oracles), skeleton, exemption, approved: list })
 
 /** @param {boolean} delivery @param {number | null} group @returns {ScenarioPass['kind']} */
 const passKind = (delivery, group) => {
@@ -63,18 +65,26 @@ const passKind = (delivery, group) => {
 }
 
 /**
- * The scenario plan of the acceptance designer's test plan, on the pass that writes it; nothing
- * on another pass, or while the test plan is missing.
+ * The scenario plan of the acceptance designer's test plan, on the pass that writes it; on a
+ * later pass of the designer, no plan but how its test plan departs from the approved one;
+ * nothing on another pass, or while the test plan is missing.
  * @param {{ files: import('../ports/tracking-files.mjs').TrackingFiles }} deps
  * @param {{ slug: string, components: Component[] }} run
  * @param {{ scenario: ScenarioPass | null, outputs: string[] }} step @param {string[]} missing
  * @returns {Promise<{ plan: ScenarioPlan | null, failures: ScenarioFailure[] }>}
  */
 export const planOf = async ({ files }, { slug, components }, { scenario, outputs }, missing) => {
-  if (scenario?.kind !== 'plan' || missing.includes(outputs[0])) return { plan: null, failures: [] }
+  if (!scenario || scenario.kind === 'delivery' || missing.includes(outputs[0])) return NO_PLAN
   const read = readScenarioPlan({ path: outputs[0], text: /** @type {string} */ (await files.read(slug, outputs[0])) }, components)
+  if (scenario.kind === 'oracle') return { plan: null, failures: read.ok ? approvedFailures(scenario, read.plan) : [] }
   return read.ok ? { plan: read.plan, failures: [] } : { plan: null, failures: read.failures.map((line) => ({ code: 'scenarios', line })) }
 }
+
+/** @type {{ plan: null, failures: ScenarioFailure[] }} */
+const NO_PLAN = Object.freeze({ plan: null, failures: [] })
+
+/** @param {ScenarioPass} scenario @param {ScenarioPlan} written @returns {ScenarioFailure[]} */
+const approvedFailures = ({ approved, index }, written) => approvedPlanChanges(approved, written.scenarios, index).map((line) => ({ code: /** @type {const} */ ('scenarios'), line }))
 
 /**
  * What the commit rules need of the scenario a pass works on.

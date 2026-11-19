@@ -119,3 +119,23 @@ const skeletonFailures = (path, { scenarios, exemption }, components) => {
  * @param {readonly PlanComponent[]} components @param {string} name
  */
 const frontEnd = (components, name) => components.some(({ stack }) => stack !== 'react') && components.find((component) => component.name === name)?.stack === 'react'
+
+/**
+ * How a test plan rewritten on a pass of an approved story departs from the approved scenarios:
+ * another count of rows, or a row whose title or component changed. Empty when it keeps them.
+ * @param {readonly StoryScenario[]} approved @param {readonly StoryScenario[]} written @param {number} index the scenario of the pass
+ * @returns {string[]}
+ */
+export const approvedPlanChanges = (approved, written, index) => {
+  if (written.length !== approved.length) return [`${APPROVED} lists ${written.length} where the approved plan lists ${approved.length}; ${restore(index)}`]
+  const changed = approved.find((scenario, at) => !sameScenario(scenario, written[at]))
+  return changed === undefined ? [] : [`${APPROVED} changes S${changed.index} of the approved plan; ${restore(index)}`]
+}
+
+const APPROVED = 'the scenarios are approved: the test plan'
+
+/** @param {number} index */
+const restore = (index) => `a pass on scenario ${index} changes no row of its ## Scenarios table, restore it`
+
+/** @param {StoryScenario} left @param {StoryScenario} right */
+const sameScenario = (left, right) => left.title === right.title && left.component === right.component

@@ -448,3 +448,20 @@ test('a pass that writes the acceptance test of a later scenario commits it, wha
 
   assert.deepEqual(recorded(host, 'distill').map(({ group, outcome, failures }) => [group, outcome, failures]), [[undefined, 'done', []], [1, 'done', []], [2, 'failed', ['scenario 2 has no failing acceptance test committed: commit it with the skeleton it calls as one test commit']]])
 })
+
+test('an approved scenario plan stays as approved: a pass on a later scenario that rewrites the scenarios of the test plan is sent back, and the next brief keeps the approved plan', async () => {
+  const merging = async (host) => {
+    const started = host.events().filter((event) => event.type === 'step.started').at(-1)
+    const [testPlan] = started.outputs
+    const before = await host.tracking.read(host.slug, testPlan)
+    await host.tracking.write(host.slug, testPlan, before.replace(/\n\| S3 \|[^\n]*/, ''))
+    await red(2)(host)
+  }
+  const host = scripted({}, (it) => [...research(it), agent({ plan: THREE })(it), agent()(it), agent({ work: merging })(it), agent()(it), unavailable])
+
+  await host.start()
+
+  const [, , second] = recorded(host, 'distill')
+  assert.deepEqual([second.group, second.failures], [2, ['the scenarios are approved: the test plan lists 2 where the approved plan lists 3; a pass on scenario 2 changes no row of its ## Scenarios table, restore it']])
+  assert.match(promptOf(host, `skraft ${SLUG} · distill · pass 3 · scenario 2 of 3 · attempt 2`), /\n- Scenario: 2 of 3 — "Customer is refused an expired card"/)
+})
