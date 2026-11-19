@@ -126,7 +126,7 @@ scenario's RED capture — exists.
 Orient design before synthesis: which pattern (specification, factory, builder), which layer owns
 the logic, immutability and return values vs mutations.
 
-**Name the owner in writing, before the implementation is written.** State the type that will hold
+**Name the owner in writing, once per rule, before its implementation is written.** State the type that will hold
 the rule and the layer it lives in, then check that answer against *When to Write Which* below.
 "The use case computes it" is valid only for orchestration or a simple rule.
 
@@ -145,6 +145,39 @@ descriptor means by "minimal production code".
 
 **No iteration after SYNTHESIZE GREEN** unless RED was wrong or architectural guidance changed.
 Refining code instead of revising RED means you are back in 3-step TDD — stop and restart.
+
+### Inner loop, at a model's pace
+
+- **The acceptance test is the first inner test.** When it states the rule with its examples,
+  go from its red to the code: write no unit test of your own. Write one only for what the
+  acceptance test does not pin down: a combinatorial rule `test-design-mandates` Mandate 4 opens
+  a gate for, or a case no example of the scenario reaches.
+- **One RED per rule, not per example.** A unit test is one test, or one parametrized test whose
+  rows triangulate the same rule (`craft-discipline` C11). Rows of two rules never share a RED.
+- **Write a stated rule whole.** When the acceptance criterion states the rule (a rate table, a
+  threshold, a cap, a formula), GREEN writes it; take a smaller step (a constant, then a branch)
+  only when the general rule is not clear from the test.
+- **Run scope.** Run the new test filtered to it, then the test project or module it lives in,
+  as *Run one test, then its project* gives by stack. The whole suite runs once per scenario,
+  in the command that commits its green.
+- **Short output.** Run tests at their quietest verbosity, failures only; read a full output
+  only to understand a failure.
+- **Checks once per scenario.** After each inner GREEN, only `git diff --name-only` (step 1 of
+  *Post-GREEN Wiring Verification*); its other steps and the Object Calisthenics rules
+  (`craft-discipline` C10) run once on the scenario's whole diff, before its commit.
+
+### Run one test, then its project
+
+| Stack | One test | Its project or module | Quiet, failures only |
+|---|---|---|---|
+| .NET | `dotnet test <test project> --filter "FullyQualifiedName~<Class>.<Method>"` | `dotnet test <test project>` | `--verbosity quiet` |
+| Java, Maven | `mvn -q test -Dtest=<Class>#<method>` (`-pl <module>` in a multi-module build) | `mvn -q test -pl <module>` | `-q` |
+| Java, Gradle | `gradle test --tests "<Class>.<method>"` (`:<module>:test`) | `gradle :<module>:test` | `-q` |
+| TypeScript, Vitest | `npx vitest run <file> -t "<name>"` | `npx vitest run <folder>` | `--reporter=dot` |
+| Python, pytest | `pytest <file>::<test>` | `pytest <folder>` | `-q` |
+
+The stack's test command from the stack-commands file stays the command of record: add only the
+filter and the verbosity to it, never replace it with another runner.
 
 ### 4. COMMIT & VERIFY
 
@@ -287,7 +320,8 @@ thinking** above.
 
 ## Post-GREEN Wiring Verification (MANDATORY)
 
-After the suite turns green and BEFORE commit:
+Step 1 after every GREEN; steps 2 to 4 once per scenario, after the whole suite turns green and
+BEFORE its commit:
 
 1. Run `git diff --name-only`. Every production file the behavior required MUST appear in the diff.
 2. If only test files changed but tests flipped RED → GREEN → you hit **Fixture Theater**: the test
