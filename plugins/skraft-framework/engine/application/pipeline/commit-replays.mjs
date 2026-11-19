@@ -1,7 +1,7 @@
 import { CONFIG_FILE } from '../../domain/config/skraft-config.mjs'
 import { pathUnder } from '../../domain/config/relative-path.mjs'
 import { installerIn, parseCommand, programChoices } from '../../domain/gates/command-line.mjs'
-import { redsToReplay } from '../../domain/pipeline/commits.mjs'
+import { coveringScenario, redsToReplay } from '../../domain/pipeline/commits.mjs'
 import { ownersOf } from '../../domain/pipeline/component-files.mjs'
 import { interruptedBy } from '../../domain/pipeline/incidents.mjs'
 import { baseOf } from '../config/bases.mjs'
@@ -101,7 +101,7 @@ const replayRed = async (deps, run, red, components) => {
   const played = failedOf(tested).length > 0 ? tested : await replayAt(deps, run, { commit: red, sha: red.sha, suffix: '' }, commandsOf(run.base, components.filter(hasE2e), 'e2e'))
   if (played.stop !== null) return played.stop
   const failed = failedOf(played)
-  return failed.length === 0 ? passedAtRed(run.tally, red, components) : judgeRed(deps, run, { red, components, failed })
+  return failed.length === 0 ? passedAtRed(run, red, components) : judgeRed(deps, run, { red, components, failed })
 }
 
 /**
@@ -260,10 +260,21 @@ const interrupted = (tally, { component, command, fact }) => {
   return `replaying ${fact.sha.slice(0, 7)} for ${component.name}: ${command.line} was interrupted by a person (exit ${fact.exitCode})`
 }
 
-/** A red whose commands all pass is no red. @param {ReplayTally} tally @param {JudgedCommit} red @param {Component[]} components @returns {null} */
-const passedAtRed = (tally, red, components) => {
+/**
+ * A red whose commands all pass is no red, unless it names the earlier scenario that already makes
+ * its scenario pass. @param {ReplayRun} run @param {JudgedCommit} red @param {Component[]} components @returns {null}
+ */
+const passedAtRed = ({ tally, scenario }, red, components) => {
+  const covering = scenario === null ? null : coveringScenario(red.body, scenario.index)
+  if (covering !== null) return coveredRed(red, covering)
   red.verdict = 'not-red'
   tally.details.set(red.sha, notRedDetail(components, /** @type {Replay} */ (tally.replays.get(red.sha))))
+  return null
+}
+
+/** @param {JudgedCommit} red @param {number} covering @returns {null} */
+const coveredRed = (red, covering) => {
+  red.covered = covering
   return null
 }
 

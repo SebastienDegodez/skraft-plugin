@@ -140,7 +140,10 @@ const SCENARIO_WORK = Object.freeze({
  */
 const SCENARIO_COMMIT = Object.freeze({
   plan: (_, message) => ['- Run the walking skeleton once and read its output: it fails on an assertion. Then commit it, the skeleton of the chain and the scenarios in one commit, exactly:', `  ${message}`],
-  oracle: (_, message) => ['- Run the test once and read its output: it fails on an assertion. Then commit the test and the skeleton in one commit, exactly:', `  ${message}`],
+  oracle: ({ index }, message) => [
+    '- Run the test once and read its output: it fails on an assertion. Then commit the test and the skeleton in one commit, exactly:', `  ${message}`,
+    ...(index > 1 ? [`- It passes already because an earlier scenario makes it pass: commit it the same, adding \`-m "Covered-by: S<n>"\` last, n that scenario's number (1 to ${index - 1}); never merge, drop or rewrite a scenario of the approved plan.`] : []),
+  ],
   delivery: ({ test }, message) => ['- Once it passes, commit once, in bash (never PowerShell), naming each file you changed:', `  ${test} && git add <each file you changed> && ${message}`],
 })
 

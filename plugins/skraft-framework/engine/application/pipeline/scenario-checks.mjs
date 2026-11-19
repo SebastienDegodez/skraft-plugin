@@ -180,7 +180,7 @@ const exemptionBreaches = (judged, exemption, components) => (exemption !== 'doc
  * What a done pass leaves for the next: the plan it wrote with the red of its walking skeleton
  * (the one it committed, else the one an earlier plan did; none for a story exempt of one), the
  * red of its scenario (the one it committed, else the one an earlier pass did), the green that
- * made it pass.
+ * made it pass; a red an earlier scenario already makes pass counts its scenario passed too.
  * @param {JudgedCommit[]} judged @param {ScenarioPass | null} scenario
  * @param {{ plan: ScenarioPlan | null, commands: Map<string, 'test' | 'e2e'>, components: Component[] }} context
  * @returns {ScenarioRecord}
@@ -190,7 +190,8 @@ export const scenarioRecord = (judged, scenario, { plan, commands, components })
   if (scenario.kind === 'delivery') return greenRecord(judged, scenario)
   if (scenario.kind === 'plan') return plan === null ? {} : planRecord(judged, scenario, { plan, commands, components })
   // Reds are committed in scenario order: a pass that commits none holds its own red last.
-  return { oracle: newOracle(judged, scenario.index, { commands, components }) ?? /** @type {Oracle} */ (scenario.oracles.at(-1)) }
+  const oracle = newOracle(judged, scenario.index, { commands, components }) ?? /** @type {Oracle} */ (scenario.oracles.at(-1))
+  return judged.some((commit) => commit.kind === 'red' && commit.covered !== undefined) ? { oracle, green: { scenario: scenario.index } } : { oracle }
 }
 
 /**

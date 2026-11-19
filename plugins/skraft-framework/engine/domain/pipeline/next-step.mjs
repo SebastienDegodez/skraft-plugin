@@ -89,7 +89,8 @@ const leaveNode = (workflow, run, node, last) => {
 /**
  * The story's scenarios run without edges: the plan and its walking skeleton hand over to the red
  * of the first scenario's acceptance test, a red of a later scenario to the node that makes it
- * pass, and a scenario made to pass to the red of the next one; null when the node leaves by its
+ * pass, and a scenario made to pass, or one an earlier scenario already makes pass, to the red of
+ * the next one; null when the node leaves by its
  * edge (the red of the first scenario, to the review; the last scenario; a pass on no scenario).
  * @param {Workflow} workflow @param {RunState} run @param {WorkflowNode} node @param {RunEvent} last
  * @returns {NextStep | null}
@@ -100,6 +101,7 @@ const scenarioStep = (workflow, run, node, last) => {
   if (node.id !== oracle) return nextScenario(workflow.nodes[oracle], run, node, last)
   if (typeof last.group !== 'number') return enterScenario(node, run, 1)
   if (last.group === 1) return null
+  if (last.green !== undefined) return nextScenario(node, run, node, last)
   return closesAfterLastRed(run, node, last.group) ?? enterScenario(workflow.nodes[delivery], run, last.group)
 }
 

@@ -846,7 +846,7 @@ const recordAttempt = async (context, run, next, attempt) => context.journal.app
 const attemptRecord = async (context, run, { node, visit, attempt, group, groups }, { job, started, cost, model, checked, committed }) => {
   const failed = failedCheck(checked)
   const incidents = failed ? await attemptIncidents(context, node.id, checked) : []
-  const routed = failed ? repeatedAttemptRoute(node.id, incidents) : routeDone(context, run, { node, group, groups })
+  const routed = failed ? repeatedAttemptRoute(node.id, incidents) : routeDone(context, run, { node, group, groups }, checked.scenario)
   return {
     step: node.id, visit, attempt, ...(group === null ? {} : { group }), ...await attemptFiles(context, job, { step: node.id, visit, attempt }),
     outcome: failed ? 'failed' : 'done', code: attemptCode(failed, checked, routed),
@@ -880,11 +880,22 @@ const repeatedAttemptRoute = (step, incidents) => {
 /**
  * Where a done attempt leads: a group of surviving mutants hands over to the next one of its
  * visit, a red of a scenario to its green, a green to the next scenario's red; the last one
- * leaves the node.
+ * leaves the node, and so does a red of the last scenario an earlier one already makes pass.
  * @param {Context} context @param {RunState} run @param {Pick<WorkStep, 'node' | 'group' | 'groups'>} next
+ * @param {{ green?: { scenario: number } }} [record] what the pass leaves for the next ones
  * @returns {{ next: string | null, code?: string, reason?: string, ceiling?: string | null }}
  */
-const routeDone = (context, run, { node, group, groups }) => (loopsOn(context, { node, group, groups }) ? { next: null } : leave(context, run, node.id, null, []))
+const routeDone = (context, run, { node, group, groups }, record = {}) => {
+  if (lastCovered(record, { group, groups })) return leave(context, run, scenarioNodes(context.loaded.workflow)[1], null, [])
+  return loopsOn(context, { node, group, groups }) ? { next: null } : leave(context, run, node.id, null, [])
+}
+
+/**
+ * Whether a red of the last scenario counted it passed: an earlier scenario already makes it
+ * pass, so the story leaves as its delivery would.
+ * @param {{ green?: { scenario: number } }} record @param {{ group: number | null, groups: unknown[] }} next
+ */
+const lastCovered = ({ green }, { group, groups }) => green !== undefined && group === groups.length
 
 /**
  * Whether a done attempt hands over without an edge: to the next group of surviving mutants, or

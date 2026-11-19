@@ -465,3 +465,37 @@ test('an approved scenario plan stays as approved: a pass on a later scenario th
   assert.deepEqual([second.group, second.failures], [2, ['the scenarios are approved: the test plan lists 2 where the approved plan lists 3; a pass on scenario 2 changes no row of its ## Scenarios table, restore it']])
   assert.match(promptOf(host, `skraft ${SLUG} · distill · pass 3 · scenario 2 of 3 · attempt 2`), /\n- Scenario: 2 of 3 — "Customer is refused an expired card"/)
 })
+
+test('a scenario an earlier one already makes pass is committed green, naming it, and skips its delivery: the next scenario follows, and a last one leaves to the gates', async () => {
+  const covered = (index, by) => red(index, undefined, `Covered-by: S${by}`)
+  const middle = scripted({ replay: new ScriptedReplay({ exits: { 'root-4': 0 } }) }, (it) => [...research(it), agent({ plan: THREE })(it), agent()(it), agent({ work: covered(2, 1) })(it), agent()(it), agent()(it), unavailable])
+
+  await middle.start()
+
+  assert.deepEqual(labels(middle).filter((label) => /distill|deliver/.test(label)), [
+    `skraft ${SLUG} · distill · attempt 1`,
+    `skraft ${SLUG} · distill · pass 2 · scenario 1 of 3 · attempt 1`,
+    `skraft ${SLUG} · deliver · scenario 1 of 3 · attempt 1`,
+    `skraft ${SLUG} · distill · pass 3 · scenario 2 of 3 · attempt 1`,
+    `skraft ${SLUG} · distill · pass 4 · scenario 3 of 3 · attempt 1`,
+    `skraft ${SLUG} · deliver · pass 2 · scenario 3 of 3 · attempt 1`,
+  ])
+  assert.deepEqual(checked(middle, 'distill').flatMap((event) => event.commits).filter(({ subject }) => subject.endsWith('scenario 2')).map(({ kind, verdict }) => [kind, verdict]), [['red', 'ok']])
+  assert.match(promptOf(middle, `skraft ${SLUG} · distill · pass 3 · scenario 2 of 3 · attempt 1`), /\n- It passes already because an earlier scenario makes it pass: commit it the same, adding `-m "Covered-by: S<n>"` last, n that scenario's number \(1 to 1\); never merge, drop or rewrite a scenario of the approved plan\.\n/)
+  assert.doesNotMatch(promptOf(middle, `skraft ${SLUG} · distill · pass 2 · scenario 1 of 3 · attempt 1`), /Covered-by/)
+
+  const last = scripted({ replay: new ScriptedReplay({ exits: { 'root-4': 0 } }) }, (it) => [...research(it), agent({ plan: THREE.slice(0, 2) })(it), agent()(it), agent({ work: covered(2, 1) })(it), unavailable])
+
+  await last.start()
+
+  assert.deepEqual(labels(last).filter((label) => /deliver/.test(label)), [`skraft ${SLUG} · deliver · scenario 1 of 2 · attempt 1`])
+  assert.deepEqual(recorded(last, 'distill').at(-1).next, 'gates')
+})
+
+test('a red that passes at its commit and names no earlier scenario, or a later one, is no red', async () => {
+  for (const body of ['', 'Covered-by: S2', 'Covered-by: S3']) {
+    const host = scripted({ replay: new ScriptedReplay({ exits: { 'root-4': 0 } }) }, (it) => [...research(it), agent({ plan: THREE })(it), agent()(it), agent({ work: red(2, undefined, body) })(it), unavailable])
+    await host.start()
+    assert.equal(checked(host, 'distill').flatMap((event) => event.commits).find(({ subject }) => subject.endsWith('scenario 2')).verdict, 'not-red', body)
+  }
+})

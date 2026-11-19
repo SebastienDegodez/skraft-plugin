@@ -21,7 +21,8 @@ import { isCode, ownersOf } from './component-files.mjs'
  *   once the red of its acceptance test is committed and proven.
  * @typedef {{ repository: string, sha: string, parent: string, subject: string, body: string, files: string[] }} StepCommit
  *   parent: its first parent's sha; body: the message after the subject; files relative to the working copy.
- * @typedef {StepCommit & { kind: CommitKind, scope: string | null, verdict: CommitVerdict }} JudgedCommit
+ * @typedef {StepCommit & { kind: CommitKind, scope: string | null, verdict: CommitVerdict, covered?: number }} JudgedCommit
+ *   covered: on a red whose tests pass at it, the earlier scenario its `Covered-by: S<n>` trailer names.
  */
 
 const CONVENTIONAL = /^([a-z]+)(?:\(([^()\r\n]+)\))?!?: \S/
@@ -57,6 +58,19 @@ const CLOSING = /\b(?:close[sd]?|fix(?:e[sd])?|resolve[sd]?)\b\s*:?\s*(?:[\w.-]+
 const REFERENCE_LINE = /^(?:refs|close[sd]?)\s*:/im
 /** A git trailer line other than the reference: `Signed-off-by: …`, `Co-authored-by: …`. */
 const TRAILER = /^(?!Refs:)[A-Za-z0-9-]+: \S/
+
+/** The trailer by which a red whose tests already pass names the earlier scenario that makes them pass. */
+const COVERED_BY = /^Covered-by: S(\d+)\s*$/m
+
+/**
+ * The earlier scenario a red of scenario `index` says makes its tests pass already; null when
+ * its body names none, or names this scenario or a later one.
+ * @param {string} body @param {number} index @returns {number | null}
+ */
+export const coveringScenario = (body, index) => {
+  const named = Number(COVERED_BY.exec(body)?.[1] ?? 0)
+  return named >= 1 && named < index ? named : null
+}
 
 /** The run's story issue, null when it has none. @param {{ issue?: number | null } | null} story */
 export const issueOf = (story) => story?.issue ?? null
