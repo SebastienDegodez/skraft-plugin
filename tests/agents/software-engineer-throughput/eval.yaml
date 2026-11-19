@@ -1,0 +1,376 @@
+name: software-engineer-throughput
+version: 0.1.0
+description: >-
+  Throughput benchmark of the real SKRAFT Software Engineer on a five-scenario .NET story
+  (about 25 inner TDD cycles), dispatched one scenario per turn with the engine's DELIVER
+  brief, every acceptance test committed by DISTILL. Run at two refs through
+  eng/bench-agent-ab.sh to compare cost, time and quality of two versions of the agent; a
+  hidden oracle checks every example of the feature whatever tests the agent wrote.
+type: capability
+defaults:
+  executor: skraft-agent-runner
+  timeout: 90m
+  model: standard
+  runs: 3
+scoring:
+  threshold: 0.9
+stimuli:
+  # One session for the five scenario passes: the engine starts a fresh session per pass,
+  # the executor cannot. Both arms run the same way, so the comparison holds; the cold start
+  # of each pass is not measured.
+  - name: Five-scenario .NET pricing story reaches GREEN one scenario per pass
+    turns:
+      - |
+        ## Skraft dispatch: software-engineer (DELIVER)
+        - Story: discount
+        - Feature scope: pricing
+        - Attempt: 1 of 3
+        - Skills (read each before you start):
+        - mocking-microcks-dotnet
+        - Read first:
+        - docs/features/pricing/discount.feature
+        - .copilot-tracking/skraft-plans/pricing/details/2026-08-07/impl.md
+        - Fill each output in place; keep the path, create no other copy:
+        - .copilot-tracking/skraft-plans/pricing/changes/2026-08-07/change-log.md
+        - Write your result as JSON to .copilot-tracking/skraft-plans/pricing/results/deliver-1-1.json: {"status": "done" | "blocked", "summary": "<what you did, or why you cannot go on>"}
+        - Change nothing outside these paths of the working copy; the engine refuses the step otherwise:
+        - .copilot-tracking/skraft-plans/pricing
+        - src
+        - tests
+        - ./* (the files right in the root of checkout-pricing)
+        - Components:
+        - checkout-pricing: . (dotnet), mocking: microcks, contract testing: off, bdd: on, tests: dotnet test CheckoutPricing.slnx --no-restore --filter "Scenario!=S2&Scenario!=S3&Scenario!=S4&Scenario!=S5"
+        - Reference no issue in a commit.
+        - Scenario: 1 of 5 — "S1 - Member receives the loyalty discount of their tier" (component checkout-pricing)
+        - Acceptance tests DISTILL committed, which you never change (a wrong one: stop blocked, naming it):
+        - "test: approved DISTILL fixture": tests/CheckoutPricing.UnitTest/LoyaltyDiscount/DiscountTests.cs
+        - Make it pass with outside-in TDD, unit tests included, and commit nothing until it passes; change no file of another component than checkout-pricing.
+        - Once it passes, commit once, in bash (never PowerShell), naming each file you changed:
+          dotnet test CheckoutPricing.slnx --no-restore --filter "Scenario!=S2&Scenario!=S3&Scenario!=S4&Scenario!=S5" && git add <each file you changed> && git commit -s -m "feat(pricing): s1 tier loyalty discount"
+      - |
+        ## Skraft dispatch: software-engineer (DELIVER)
+        - Story: discount
+        - Feature scope: pricing
+        - Attempt: 1 of 3
+        - Skills (read each before you start):
+        - mocking-microcks-dotnet
+        - Read first:
+        - docs/features/pricing/discount.feature
+        - .copilot-tracking/skraft-plans/pricing/details/2026-08-07/impl.md
+        - Fill each output in place; keep the path, create no other copy:
+        - .copilot-tracking/skraft-plans/pricing/changes/2026-08-07/change-log.md
+        - Write your result as JSON to .copilot-tracking/skraft-plans/pricing/results/deliver-2-1.json: {"status": "done" | "blocked", "summary": "<what you did, or why you cannot go on>"}
+        - Change nothing outside these paths of the working copy; the engine refuses the step otherwise:
+        - .copilot-tracking/skraft-plans/pricing
+        - src
+        - tests
+        - ./* (the files right in the root of checkout-pricing)
+        - Components:
+        - checkout-pricing: . (dotnet), mocking: microcks, contract testing: off, bdd: on, tests: dotnet test CheckoutPricing.slnx --no-restore --filter "Scenario!=S3&Scenario!=S4&Scenario!=S5"
+        - Reference no issue in a commit.
+        - Scenario: 2 of 5 — "S2 - The loyalty discount never exceeds 20.00 EUR" (component checkout-pricing)
+        - Acceptance tests DISTILL committed, which you never change (a wrong one: stop blocked, naming it):
+        - "test(pricing): s2 loyalty discount cap": tests/CheckoutPricing.UnitTest/LoyaltyDiscount/DiscountCapTests.cs
+        - Make it pass with outside-in TDD, unit tests included, and commit nothing until it passes; change no file of another component than checkout-pricing.
+        - Once it passes, commit once, in bash (never PowerShell), naming each file you changed:
+          dotnet test CheckoutPricing.slnx --no-restore --filter "Scenario!=S3&Scenario!=S4&Scenario!=S5" && git add <each file you changed> && git commit -s -m "feat(pricing): s2 loyalty discount cap"
+      - |
+        ## Skraft dispatch: software-engineer (DELIVER)
+        - Story: discount
+        - Feature scope: pricing
+        - Attempt: 1 of 3
+        - Skills (read each before you start):
+        - mocking-microcks-dotnet
+        - Read first:
+        - docs/features/pricing/discount.feature
+        - .copilot-tracking/skraft-plans/pricing/details/2026-08-07/impl.md
+        - Fill each output in place; keep the path, create no other copy:
+        - .copilot-tracking/skraft-plans/pricing/changes/2026-08-07/change-log.md
+        - Write your result as JSON to .copilot-tracking/skraft-plans/pricing/results/deliver-3-1.json: {"status": "done" | "blocked", "summary": "<what you did, or why you cannot go on>"}
+        - Change nothing outside these paths of the working copy; the engine refuses the step otherwise:
+        - .copilot-tracking/skraft-plans/pricing
+        - src
+        - tests
+        - ./* (the files right in the root of checkout-pricing)
+        - Components:
+        - checkout-pricing: . (dotnet), mocking: microcks, contract testing: off, bdd: on, tests: dotnet test CheckoutPricing.slnx --no-restore --filter "Scenario!=S4&Scenario!=S5"
+        - Reference no issue in a commit.
+        - Scenario: 3 of 5 — "S3 - No loyalty discount under a 30.00 EUR subtotal" (component checkout-pricing)
+        - Acceptance tests DISTILL committed, which you never change (a wrong one: stop blocked, naming it):
+        - "test(pricing): s3 minimum subtotal for a loyalty discount": tests/CheckoutPricing.UnitTest/LoyaltyDiscount/MinimumSubtotalTests.cs
+        - Make it pass with outside-in TDD, unit tests included, and commit nothing until it passes; change no file of another component than checkout-pricing.
+        - Once it passes, commit once, in bash (never PowerShell), naming each file you changed:
+          dotnet test CheckoutPricing.slnx --no-restore --filter "Scenario!=S4&Scenario!=S5" && git add <each file you changed> && git commit -s -m "feat(pricing): s3 minimum subtotal for a loyalty discount"
+      - |
+        ## Skraft dispatch: software-engineer (DELIVER)
+        - Story: discount
+        - Feature scope: pricing
+        - Attempt: 1 of 3
+        - Skills (read each before you start):
+        - mocking-microcks-dotnet
+        - Read first:
+        - docs/features/pricing/discount.feature
+        - .copilot-tracking/skraft-plans/pricing/details/2026-08-07/impl.md
+        - Fill each output in place; keep the path, create no other copy:
+        - .copilot-tracking/skraft-plans/pricing/changes/2026-08-07/change-log.md
+        - Write your result as JSON to .copilot-tracking/skraft-plans/pricing/results/deliver-4-1.json: {"status": "done" | "blocked", "summary": "<what you did, or why you cannot go on>"}
+        - Change nothing outside these paths of the working copy; the engine refuses the step otherwise:
+        - .copilot-tracking/skraft-plans/pricing
+        - src
+        - tests
+        - ./* (the files right in the root of checkout-pricing)
+        - Components:
+        - checkout-pricing: . (dotnet), mocking: microcks, contract testing: off, bdd: on, tests: dotnet test CheckoutPricing.slnx --no-restore --filter "Scenario!=S5"
+        - Reference no issue in a commit.
+        - Scenario: 4 of 5 — "S4 - The WELCOME5 promo code takes 5.00 EUR off after the loyalty discount" (component checkout-pricing)
+        - Acceptance tests DISTILL committed, which you never change (a wrong one: stop blocked, naming it):
+        - "test(pricing): s4 WELCOME5 promo code": tests/CheckoutPricing.UnitTest/LoyaltyDiscount/PromoCodeTests.cs
+        - Make it pass with outside-in TDD, unit tests included, and commit nothing until it passes; change no file of another component than checkout-pricing.
+        - Once it passes, commit once, in bash (never PowerShell), naming each file you changed:
+          dotnet test CheckoutPricing.slnx --no-restore --filter "Scenario!=S5" && git add <each file you changed> && git commit -s -m "feat(pricing): s4 WELCOME5 promo code"
+      - |
+        ## Skraft dispatch: software-engineer (DELIVER)
+        - Story: discount
+        - Feature scope: pricing
+        - Attempt: 1 of 3
+        - Skills (read each before you start):
+        - mocking-microcks-dotnet
+        - Read first:
+        - docs/features/pricing/discount.feature
+        - .copilot-tracking/skraft-plans/pricing/details/2026-08-07/impl.md
+        - Fill each output in place; keep the path, create no other copy:
+        - .copilot-tracking/skraft-plans/pricing/changes/2026-08-07/change-log.md
+        - Write your result as JSON to .copilot-tracking/skraft-plans/pricing/results/deliver-5-1.json: {"status": "done" | "blocked", "summary": "<what you did, or why you cannot go on>"}
+        - Change nothing outside these paths of the working copy; the engine refuses the step otherwise:
+        - .copilot-tracking/skraft-plans/pricing
+        - src
+        - tests
+        - ./* (the files right in the root of checkout-pricing)
+        - Components:
+        - checkout-pricing: . (dotnet), mocking: microcks, contract testing: off, bdd: on, tests: dotnet test CheckoutPricing.slnx --no-restore
+        - Reference no issue in a commit.
+        - Scenario: 5 of 5 — "S5 - Shipping is free from 50.00 EUR payable and always for Gold members" (component checkout-pricing)
+        - Acceptance tests DISTILL committed, which you never change (a wrong one: stop blocked, naming it):
+        - "test(pricing): s5 shipping fee": tests/CheckoutPricing.UnitTest/Shipping/ShippingFeeTests.cs
+        - Make it pass with outside-in TDD, unit tests included, and commit nothing until it passes; change no file of another component than checkout-pricing.
+        - Once it passes, commit once, in bash (never PowerShell), naming each file you changed:
+          dotnet test CheckoutPricing.slnx --no-restore && git add <each file you changed> && git commit -s -m "feat(pricing): s5 shipping fee"
+    tags:
+      agent: software-engineer
+      scenario: five-scenario-dotnet-delivery
+      permissions: workspace-write
+      cost: high
+    supported_executors:
+      - skraft-agent-runner
+    constraints:
+      max_turns: 5
+      max_duration: 90m
+    environment:
+      files:
+        - src: fixtures/five-scenarios/.copilot-tracking/skraft-plans/pricing/details/2026-08-07/impl.md
+          dest: .copilot-tracking/skraft-plans/pricing/details/2026-08-07/impl.md
+        - src: fixtures/five-scenarios/.gitignore
+          dest: .gitignore
+        - src: fixtures/five-scenarios/CheckoutPricing.slnx
+          dest: CheckoutPricing.slnx
+        - src: fixtures/five-scenarios/Directory.Build.props
+          dest: Directory.Build.props
+        - src: fixtures/five-scenarios/Directory.Packages.props
+          dest: Directory.Packages.props
+        - src: fixtures/five-scenarios/docs/features/pricing/discount.feature
+          dest: docs/features/pricing/discount.feature
+        - src: fixtures/five-scenarios/skraft-config.json
+          dest: skraft-config.json
+        - src: fixtures/five-scenarios/src/CheckoutPricing.Api/CheckoutPricing.Api.csproj
+          dest: src/CheckoutPricing.Api/CheckoutPricing.Api.csproj
+        - src: fixtures/five-scenarios/src/CheckoutPricing.Api/Program.cs
+          dest: src/CheckoutPricing.Api/Program.cs
+        - src: fixtures/five-scenarios/src/CheckoutPricing.Application/CalculateLoyaltyDiscount.cs
+          dest: src/CheckoutPricing.Application/CalculateLoyaltyDiscount.cs
+        - src: fixtures/five-scenarios/src/CheckoutPricing.Application/CalculateShippingFee.cs
+          dest: src/CheckoutPricing.Application/CalculateShippingFee.cs
+        - src: fixtures/five-scenarios/src/CheckoutPricing.Application/CheckoutPricing.Application.csproj
+          dest: src/CheckoutPricing.Application/CheckoutPricing.Application.csproj
+        - src: fixtures/five-scenarios/src/CheckoutPricing.Domain/CheckoutPricing.Domain.csproj
+          dest: src/CheckoutPricing.Domain/CheckoutPricing.Domain.csproj
+        - src: fixtures/five-scenarios/src/CheckoutPricing.Domain/LoyaltyTier.cs
+          dest: src/CheckoutPricing.Domain/LoyaltyTier.cs
+        - src: fixtures/five-scenarios/src/CheckoutPricing.Infrastructure/CheckoutPricing.Infrastructure.csproj
+          dest: src/CheckoutPricing.Infrastructure/CheckoutPricing.Infrastructure.csproj
+        - src: fixtures/five-scenarios/src/CheckoutPricing.Infrastructure/InfrastructureMarker.cs
+          dest: src/CheckoutPricing.Infrastructure/InfrastructureMarker.cs
+        - src: fixtures/five-scenarios/tests/CheckoutPricing.IntegrationTest/Architecture/ArchitectureTests.cs
+          dest: tests/CheckoutPricing.IntegrationTest/Architecture/ArchitectureTests.cs
+        - src: fixtures/five-scenarios/tests/CheckoutPricing.IntegrationTest/CheckoutPricing.IntegrationTest.csproj
+          dest: tests/CheckoutPricing.IntegrationTest/CheckoutPricing.IntegrationTest.csproj
+        - src: fixtures/five-scenarios/tests/CheckoutPricing.UnitTest/CheckoutPricing.UnitTest.csproj
+          dest: tests/CheckoutPricing.UnitTest/CheckoutPricing.UnitTest.csproj
+        - src: fixtures/five-scenarios/tests/CheckoutPricing.UnitTest/LoyaltyDiscount/DiscountCapTests.cs
+          dest: tests/CheckoutPricing.UnitTest/LoyaltyDiscount/DiscountCapTests.cs
+        - src: fixtures/five-scenarios/tests/CheckoutPricing.UnitTest/LoyaltyDiscount/DiscountTests.cs
+          dest: tests/CheckoutPricing.UnitTest/LoyaltyDiscount/DiscountTests.cs
+        - src: fixtures/five-scenarios/tests/CheckoutPricing.UnitTest/LoyaltyDiscount/MinimumSubtotalTests.cs
+          dest: tests/CheckoutPricing.UnitTest/LoyaltyDiscount/MinimumSubtotalTests.cs
+        - src: fixtures/five-scenarios/tests/CheckoutPricing.UnitTest/LoyaltyDiscount/PromoCodeTests.cs
+          dest: tests/CheckoutPricing.UnitTest/LoyaltyDiscount/PromoCodeTests.cs
+        - src: fixtures/five-scenarios/tests/CheckoutPricing.UnitTest/Shipping/ShippingFeeTests.cs
+          dest: tests/CheckoutPricing.UnitTest/Shipping/ShippingFeeTests.cs
+      commands:
+        - 'dotnet restore CheckoutPricing.slnx'
+        - 'git init --quiet --object-format=sha1'
+        - 'git config user.email eval@example.invalid'
+        - 'git config user.name "SKRAFT Eval"'
+        - >-
+          git -c core.autocrlf=false -c core.attributesFile=/dev/null add --chmod=-x --
+          .copilot-tracking/skraft-plans/pricing/details/2026-08-07/impl.md
+          .gitignore
+          CheckoutPricing.slnx
+          Directory.Build.props
+          Directory.Packages.props
+          docs/features/pricing/discount.feature
+          skraft-config.json
+          src/CheckoutPricing.Api/CheckoutPricing.Api.csproj
+          src/CheckoutPricing.Api/Program.cs
+          src/CheckoutPricing.Application/CalculateLoyaltyDiscount.cs
+          src/CheckoutPricing.Application/CheckoutPricing.Application.csproj
+          src/CheckoutPricing.Domain/CheckoutPricing.Domain.csproj
+          src/CheckoutPricing.Domain/LoyaltyTier.cs
+          src/CheckoutPricing.Infrastructure/CheckoutPricing.Infrastructure.csproj
+          src/CheckoutPricing.Infrastructure/InfrastructureMarker.cs
+          tests/CheckoutPricing.IntegrationTest/Architecture/ArchitectureTests.cs
+          tests/CheckoutPricing.IntegrationTest/CheckoutPricing.IntegrationTest.csproj
+          tests/CheckoutPricing.UnitTest/CheckoutPricing.UnitTest.csproj
+          tests/CheckoutPricing.UnitTest/LoyaltyDiscount/DiscountTests.cs
+        - 'git commit --quiet -m "test: approved DISTILL fixture"'
+        - 'git add -- tests/CheckoutPricing.UnitTest/LoyaltyDiscount/DiscountCapTests.cs'
+        - 'git commit --quiet -m "test(pricing): s2 loyalty discount cap"'
+        - 'git add -- tests/CheckoutPricing.UnitTest/LoyaltyDiscount/MinimumSubtotalTests.cs'
+        - 'git commit --quiet -m "test(pricing): s3 minimum subtotal for a loyalty discount"'
+        - 'git add -- tests/CheckoutPricing.UnitTest/LoyaltyDiscount/PromoCodeTests.cs'
+        - 'git commit --quiet -m "test(pricing): s4 WELCOME5 promo code"'
+        - 'git add -- tests/CheckoutPricing.UnitTest/Shipping/ShippingFeeTests.cs src/CheckoutPricing.Application/CalculateShippingFee.cs'
+        - 'git commit --quiet -m "test(pricing): s5 shipping fee"'
+    graders:
+      - type: completed
+      - type: run-command
+        name: Hidden oracle accepts every example of the feature
+        config:
+          command: node
+          args:
+            - -e
+            - |
+              const { execFileSync } = require("node:child_process");
+              const { mkdirSync, writeFileSync, rmSync } = require("node:fs");
+              const dir = "tests/CheckoutPricing.UnitTest/ZzOracle";
+              const file = dir + "/OracleTests.cs";
+              const oracle = `using CheckoutPricing.Application;
+              using CheckoutPricing.Domain;
+              namespace CheckoutPricing.UnitTest.ZzOracle;
+              public sealed class OracleTests
+              {
+                  [Theory]
+                  [InlineData(10_000, LoyaltyTier.Bronze, null, 500)]
+                  [InlineData(10_000, LoyaltyTier.Silver, null, 1_000)]
+                  [InlineData(10_000, LoyaltyTier.Gold, null, 1_500)]
+                  [InlineData(20_000, LoyaltyTier.Gold, null, 2_000)]
+                  [InlineData(30_000, LoyaltyTier.Silver, null, 2_000)]
+                  [InlineData(12_000, LoyaltyTier.Gold, null, 1_800)]
+                  [InlineData(2_999, LoyaltyTier.Gold, null, 0)]
+                  [InlineData(3_000, LoyaltyTier.Gold, null, 450)]
+                  [InlineData(10_000, LoyaltyTier.Silver, "WELCOME5", 1_500)]
+                  [InlineData(20_000, LoyaltyTier.Gold, "WELCOME5", 2_500)]
+                  [InlineData(2_000, LoyaltyTier.Bronze, "WELCOME5", 500)]
+                  [InlineData(10_000, LoyaltyTier.Silver, "SUMMER", 1_000)]
+                  [InlineData(7, LoyaltyTier.Gold, null, 0)]
+                  [InlineData(400, LoyaltyTier.Bronze, "WELCOME5", 400)]
+                  public void Discount(int subtotal, LoyaltyTier tier, string? code, int discount)
+                  {
+                      var quote = new CalculateLoyaltyDiscount().Handle(new CalculateLoyaltyDiscountQuery(subtotal, tier, code));
+                      Assert.Equal(new LoyaltyDiscountQuote(subtotal, discount, subtotal - discount, tier), quote);
+                  }
+
+                  [Theory]
+                  [InlineData(4_999, LoyaltyTier.Bronze, 490)]
+                  [InlineData(5_000, LoyaltyTier.Bronze, 0)]
+                  [InlineData(4_999, LoyaltyTier.Silver, 490)]
+                  [InlineData(1_000, LoyaltyTier.Gold, 0)]
+                  public void Shipping(int total, LoyaltyTier tier, int fee) =>
+                      Assert.Equal(fee, new CalculateShippingFee().Handle(new CalculateShippingFeeQuery(total, tier)));
+              }
+              `;
+              mkdirSync(dir, { recursive: true });
+              writeFileSync(file, oracle);
+              try {
+                execFileSync("dotnet", ["test", "tests/CheckoutPricing.UnitTest/CheckoutPricing.UnitTest.csproj", "--no-restore", "--filter", "FullyQualifiedName~ZzOracle"], { stdio: "inherit", timeout: 170000 });
+              } finally {
+                rmSync(dir, { recursive: true, force: true });
+              }
+          expected_exit_code: 0
+          timeout: 3m
+      - type: run-command
+        name: Complete repository test suite is GREEN
+        config:
+          command: dotnet
+          args:
+            - test
+            - CheckoutPricing.slnx
+            - --no-restore
+          expected_exit_code: 0
+          timeout: 3m
+      - type: run-command
+        name: Clean Architecture dependency tests are GREEN
+        config:
+          command: dotnet
+          args:
+            - test
+            - tests/CheckoutPricing.IntegrationTest/CheckoutPricing.IntegrationTest.csproj
+            - --no-restore
+            - --filter
+            - FullyQualifiedName~Architecture
+          expected_exit_code: 0
+          timeout: 2m
+      - type: diff-not-contains
+        name: DISTILL acceptance tests stayed intact
+        config:
+          pattern: '(?m)^diff --git a/tests/CheckoutPricing\.UnitTest/(?:LoyaltyDiscount/(?:Discount|DiscountCap|MinimumSubtotal|PromoCode)Tests|Shipping/ShippingFeeTests)\.cs '
+      - type: run-command
+        name: One green commit per scenario after DISTILL
+        config:
+          command: node
+          args:
+            - -e
+            - |
+              const { execFileSync } = require("node:child_process");
+              const assert = require("node:assert/strict");
+              const git = (...args) => execFileSync("git", ["--no-replace-objects", ...args], { encoding: "utf8", timeout: 5000 }).trimEnd();
+              const distill = git("log", "-1", "--format=%H", "--grep=^test(pricing): s5 shipping fee$");
+              const subjects = git("log", "--reverse", "--format=%s", distill + "..HEAD").split("\n").filter(Boolean);
+              for (let k = 1; k <= 5; k += 1) {
+                assert.ok(subjects.some((subject) => subject.startsWith("feat(pricing): s" + k + " ")), "no green commit for S" + k);
+              }
+              console.log(subjects.join("\n"));
+          expected_exit_code: 0
+          timeout: 1m
+      - type: run-command
+        name: No gate evidence is written and no mutation run is launched
+        config:
+          command: bash
+          args:
+            - '-lc'
+            - >-
+              found="$(find . -path ./.git -prune -o \( -name 'qg*.json' -o -name 'stryker-config*.json'
+              -o -name StrykerOutput -o -path '*/skraft-gates/*' -o -path './.copilot-tracking/*/evidence/*' \) -print)";
+              [ -z "$found" ] || { echo "$found"; exit 1; }
+          expected_exit_code: 0
+          timeout: 30s
+      - type: skill-invocation
+        name: The Java, Python, TypeScript and React Clean Architecture skills stayed out of a .NET solution
+        config:
+          disallowed:
+            - clean-architecture-java
+            - clean-architecture-python
+            - clean-architecture-typescript
+            - clean-architecture-react
+      - type: output-not-matches
+        config:
+          pattern: '(?i)(?:\[SKILL MISSING\]|skills? could not be loaded|skill directory not present)'
