@@ -56,14 +56,46 @@ step. Never build a class no active scenario requires.
 3. **Checkpoint (mandatory)** — before any production code:
    - The RED output is inspected by someone other than whoever writes the implementation
      (see *Inspection by mode*).
-   - Name in writing the type that will hold the rule and its layer, checked against
+   - Name in writing, once per rule, the type that will hold it and its layer, checked against
      *Where the code lives*.
-4. **SYNTHESIZE GREEN** — implement the smallest slice this test demands, clean the first time:
-   idiomatic, domain semantics, no speculative branch, no unrequested error handling, no
-   abstraction the test does not force. If the test was misunderstood, revise the test and
-   restart from RED; never iterate on the code instead.
+4. **SYNTHESIZE GREEN** — write the code this test demands, clean the first time: idiomatic,
+   domain semantics, no speculative branch, no unrequested error handling, no abstraction the
+   test does not force. When the acceptance criterion states the rule (a rate table, a
+   threshold, a cap, a formula), write it whole; take a smaller step (a constant, then a branch)
+   only when the general rule is not clear from the test. If the test was misunderstood, revise
+   the test and restart from RED; never iterate on the code instead.
 5. **VERIFY, then commit** — run *Post-GREEN wiring verification*, then commit as *Commit policy*
    says. Never commit on red.
+
+### Inner loop, at a model's pace
+
+- **The acceptance test is the first inner test.** When it states the rule with its examples,
+  go from its red to the code: write no unit test of your own. Write one only for what the
+  acceptance test does not pin down: a combinatorial rule `test-design-mandates` Mandate 4 opens
+  a gate for, or a case no example of the scenario reaches.
+- **One RED per rule, not per example.** A unit test is one test, or one parametrized test whose
+  rows triangulate the same rule (`craft-discipline` C11). Rows of two rules never share a RED.
+- **Run scope.** Run the new test filtered to it, then the test project or module it lives in,
+  as *Run one test, then its project* gives by stack. The whole suite runs once per scenario,
+  in the command that commits its green.
+- **Short output.** Run tests at their quietest verbosity, failures only; read a full output
+  only to understand a failure.
+- **Checks once per scenario.** After each inner GREEN, only `git diff --name-only` (step 1 of
+  *Post-GREEN wiring verification*); its other steps and the Object Calisthenics rules
+  (`craft-discipline` C10) run once on the scenario's whole diff, before its commit.
+
+### Run one test, then its project
+
+| Stack | One test | Its project or module | Quiet, failures only |
+|---|---|---|---|
+| .NET | `dotnet test <test project> --filter "FullyQualifiedName~<Class>.<Method>"` | `dotnet test <test project>` | `--verbosity quiet` |
+| Java, Maven | `mvn -q test -Dtest=<Class>#<method>` (`-pl <module>` in a multi-module build) | `mvn -q test -pl <module>` | `-q` |
+| Java, Gradle | `gradle test --tests "<Class>.<method>"` (`:<module>:test`) | `gradle :<module>:test` | `-q` |
+| TypeScript, Vitest | `npx vitest run <file> -t "<name>"` | `npx vitest run <folder>` | `--reporter=dot` |
+| Python, pytest | `pytest <file>::<test>` | `pytest <folder>` | `-q` |
+
+The component's test command from your brief stays the command of record: add only the
+filter and the verbosity to it, never replace it with another runner.
 
 **Iron rule:** never modify a failing test to make it pass; fix the implementation. Stuck after
 3 attempts: revert to the last green and escalate.
@@ -100,7 +132,9 @@ named and sent back to whoever wrote it.
 ## Ordered test list (TPP + FLFI)
 
 Before the first line of production code, write the ordered list of tests for the slice, one row
-per test. Persist it next to the plan; consume it head-first.
+per test. Persist it next to the plan; consume it head-first. The list orders the work; it never
+forces a step smaller than the rule the acceptance criterion states (*Inner loop, at a model's
+pace*).
 
 | # | Level (acceptance / unit / integration) | Behaviour name, business language | TPP transformation | Contradiction the current code cannot satisfy |
 |---|---|---|---|---|
@@ -116,11 +150,12 @@ per test. Persist it next to the plan; consume it head-first.
   transformations, never by a leap.
 - **F — Fast:** the acceptance entry opens the list and stays red; units drive the inside;
   integration entries come after (*Concentric circles*).
-- **I — Incremental:** one entry, one slice. An entry needing two transformations is two entries.
-- GREEN applies exactly the declared transformation, even when a later entry will obviously need
-  more. Never two failing tests at once besides the outer acceptance test.
+- **I — Incremental:** one entry per rule. An entry may declare the transformation that writes
+  a stated rule whole (`case`, `unconditional→if`, `expression→function`); split it only when
+  the rule is not clear from its test.
+- Never two failing tests at once besides the outer acceptance test.
 - After a GREEN, re-plan only in writing (entry added, removed, reordered, transformation
-  revised). Never re-plan to justify code already written; never merge entries to save a cycle;
+  revised). Never re-plan to justify code already written; never merge entries of two rules;
   never write the list after the code.
 
 ## Where the code lives
@@ -160,7 +195,8 @@ orchestrator.
 
 ## Post-GREEN wiring verification
 
-After the suite turns green, before the commit:
+Step 1 after every GREEN; steps 2 and 3 once per scenario, after the whole suite turns green and
+before its commit:
 
 1. `git diff --name-only`: every production file the behaviour required appears. Tests flipped
    RED → GREEN with only test files changed is **fixture theater** (the test setup implements the

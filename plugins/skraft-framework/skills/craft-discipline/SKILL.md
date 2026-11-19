@@ -94,7 +94,8 @@ Applicable to Domain code only.
 ### C11 — Parametrize Variations
 
 Multiple input variants for the same behavior MUST be a single parameterized test
-(`[Theory]/[InlineData]` in .NET, `@ParameterizedTest` in Java, `pytest.mark.parametrize` in Python),
+(`[Theory]/[InlineData]` in .NET, `@ParameterizedTest` in Java, `pytest.mark.parametrize` in Python,
+`it.each` / `test.each` in TypeScript and JavaScript),
 not duplicated test methods. One test method per behavior, one row per case.
 
 ### C12 — Every test is planned
