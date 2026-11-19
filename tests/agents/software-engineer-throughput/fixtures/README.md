@@ -6,7 +6,7 @@ merge on its own.
 
 ## Fixture states
 
-### `fourteen-scenarios`
+### `s14`
 
 Approved DISTILL handoff for a fourteen-scenario `discount` story, close in size to a real
 story:
