@@ -267,3 +267,162 @@ stimuli:
       - type: output-not-matches
         config:
           pattern: '(?i)(?:\[SKILL MISSING\]|skills? could not be loaded|skill directory not present)'
+
+  # C of the scenario-plan anomalies: a scenario whose rule lives in another component is
+  # delivered in one green that changes that component too, not stopped blocked.
+  - name: A scenario whose rate lives in another component is delivered there, in the same green
+    prompt: |
+      ## Skraft dispatch: software-engineer (DELIVER)
+      - Story: discount
+      - Feature scope: pricing
+      - Attempt: 1 of 3
+      - Read first:
+      - docs/features/pricing/discount.feature
+      - .copilot-tracking/skraft-plans/pricing/details/2026-08-07/impl.md
+      - Fill each output in place; keep the path, create no other copy:
+      - .copilot-tracking/skraft-plans/pricing/changes/2026-08-07/change-log.md
+      - Write your result as JSON to .copilot-tracking/skraft-plans/pricing/results/deliver-1-1.json: {"status": "done" | "blocked", "summary": "<what you did, or why you cannot go on>"}
+      - Change nothing outside these paths of the working copy; the engine refuses the step otherwise:
+      - .copilot-tracking/skraft-plans/pricing
+      - src
+      - tests
+      - rates/LoyaltyRates
+      - ./* (the files right in the root of checkout-pricing)
+      - rates/* (the files right in the root of loyalty-rates)
+      - Components:
+      - checkout-pricing: . (dotnet), mocking: microcks, contract testing: off, bdd: off, tests: dotnet test CheckoutPricing.slnx --no-restore
+      - loyalty-rates: rates (dotnet), mocking: microcks, contract testing: off, bdd: off, tests: dotnet build LoyaltyRates/LoyaltyRates.csproj --no-restore
+      - Reference no issue in a commit.
+      - Scenario: 1 of 1 — "Member receives the approved cart discount" (component checkout-pricing)
+      - Acceptance tests DISTILL committed, which you never change (a wrong one: stop blocked, naming it):
+      - "test: approved DISTILL fixture": tests/CheckoutPricing.UnitTest/LoyaltyDiscount/DiscountTests.cs
+      - Make it pass with outside-in TDD, unit tests included, and commit nothing until it passes; change another component than checkout-pricing only where scenario 1 needs it, in the same commit.
+      - Once it passes, commit once, in bash (never PowerShell), naming each file you changed:
+        dotnet test CheckoutPricing.slnx --no-restore && git add <each file you changed> && git commit -s -m "feat(pricing): member receives the approved cart discount"
+    tags:
+      agent: software-engineer
+      scenario: delivery-across-components
+      permissions: workspace-write
+      cost: medium
+    supported_executors:
+      - skraft-agent-runner
+    constraints:
+      max_turns: 1
+      max_duration: 15m
+    environment:
+      files:
+        - src: fixtures/rates-elsewhere/.copilot-tracking/skraft-plans/pricing/details/2026-08-07/impl.md
+          dest: .copilot-tracking/skraft-plans/pricing/details/2026-08-07/impl.md
+        - src: fixtures/rates-elsewhere/.copilot-tracking/skraft-plans/pricing/features/discount.feature
+          dest: docs/features/pricing/discount.feature
+        - src: fixtures/rates-elsewhere/.gitignore
+          dest: .gitignore
+        - src: fixtures/rates-elsewhere/CheckoutPricing.slnx
+          dest: CheckoutPricing.slnx
+        - src: fixtures/rates-elsewhere/Directory.Build.props
+          dest: Directory.Build.props
+        - src: fixtures/rates-elsewhere/Directory.Packages.props
+          dest: Directory.Packages.props
+        - src: fixtures/rates-elsewhere/rates/LoyaltyRates/LoyaltyRateTable.cs
+          dest: rates/LoyaltyRates/LoyaltyRateTable.cs
+        - src: fixtures/rates-elsewhere/rates/LoyaltyRates/LoyaltyRates.csproj
+          dest: rates/LoyaltyRates/LoyaltyRates.csproj
+        - src: fixtures/rates-elsewhere/skraft-config.json
+          dest: skraft-config.json
+        - src: fixtures/rates-elsewhere/src/CheckoutPricing.Api/CheckoutPricing.Api.csproj
+          dest: src/CheckoutPricing.Api/CheckoutPricing.Api.csproj
+        - src: fixtures/rates-elsewhere/src/CheckoutPricing.Api/Program.cs
+          dest: src/CheckoutPricing.Api/Program.cs
+        - src: fixtures/rates-elsewhere/src/CheckoutPricing.Application/CalculateLoyaltyDiscount.cs
+          dest: src/CheckoutPricing.Application/CalculateLoyaltyDiscount.cs
+        - src: fixtures/rates-elsewhere/src/CheckoutPricing.Application/CheckoutPricing.Application.csproj
+          dest: src/CheckoutPricing.Application/CheckoutPricing.Application.csproj
+        - src: fixtures/rates-elsewhere/src/CheckoutPricing.Domain/CheckoutPricing.Domain.csproj
+          dest: src/CheckoutPricing.Domain/CheckoutPricing.Domain.csproj
+        - src: fixtures/rates-elsewhere/src/CheckoutPricing.Domain/LoyaltyTier.cs
+          dest: src/CheckoutPricing.Domain/LoyaltyTier.cs
+        - src: fixtures/rates-elsewhere/src/CheckoutPricing.Infrastructure/CheckoutPricing.Infrastructure.csproj
+          dest: src/CheckoutPricing.Infrastructure/CheckoutPricing.Infrastructure.csproj
+        - src: fixtures/rates-elsewhere/src/CheckoutPricing.Infrastructure/InfrastructureMarker.cs
+          dest: src/CheckoutPricing.Infrastructure/InfrastructureMarker.cs
+        - src: fixtures/rates-elsewhere/tests/CheckoutPricing.IntegrationTest/Architecture/ArchitectureTests.cs
+          dest: tests/CheckoutPricing.IntegrationTest/Architecture/ArchitectureTests.cs
+        - src: fixtures/rates-elsewhere/tests/CheckoutPricing.IntegrationTest/CheckoutPricing.IntegrationTest.csproj
+          dest: tests/CheckoutPricing.IntegrationTest/CheckoutPricing.IntegrationTest.csproj
+        - src: fixtures/rates-elsewhere/tests/CheckoutPricing.UnitTest/CheckoutPricing.UnitTest.csproj
+          dest: tests/CheckoutPricing.UnitTest/CheckoutPricing.UnitTest.csproj
+        - src: fixtures/rates-elsewhere/tests/CheckoutPricing.UnitTest/LoyaltyDiscount/DiscountTests.cs
+          dest: tests/CheckoutPricing.UnitTest/LoyaltyDiscount/DiscountTests.cs
+      commands:
+        - 'dotnet restore CheckoutPricing.slnx'
+        - 'git init --quiet --object-format=sha1'
+        - 'git config user.email eval@example.invalid'
+        - 'git config user.name "SKRAFT Eval"'
+        - >-
+          git -c core.autocrlf=false -c core.attributesFile=/dev/null add --chmod=-x --
+          .copilot-tracking/skraft-plans/pricing/details/2026-08-07/impl.md
+          docs/features/pricing/discount.feature
+          .gitignore
+          CheckoutPricing.slnx
+          Directory.Build.props
+          Directory.Packages.props
+          rates/LoyaltyRates/LoyaltyRateTable.cs
+          rates/LoyaltyRates/LoyaltyRates.csproj
+          skraft-config.json
+          src/CheckoutPricing.Api/CheckoutPricing.Api.csproj
+          src/CheckoutPricing.Api/Program.cs
+          src/CheckoutPricing.Application/CalculateLoyaltyDiscount.cs
+          src/CheckoutPricing.Application/CheckoutPricing.Application.csproj
+          src/CheckoutPricing.Domain/CheckoutPricing.Domain.csproj
+          src/CheckoutPricing.Domain/LoyaltyTier.cs
+          src/CheckoutPricing.Infrastructure/CheckoutPricing.Infrastructure.csproj
+          src/CheckoutPricing.Infrastructure/InfrastructureMarker.cs
+          tests/CheckoutPricing.IntegrationTest/Architecture/ArchitectureTests.cs
+          tests/CheckoutPricing.IntegrationTest/CheckoutPricing.IntegrationTest.csproj
+          tests/CheckoutPricing.UnitTest/CheckoutPricing.UnitTest.csproj
+          tests/CheckoutPricing.UnitTest/LoyaltyDiscount/DiscountTests.cs
+        - 'git commit --quiet -m "test: approved DISTILL fixture"'
+    graders:
+      - type: completed
+      - type: run-command
+        name: Complete repository test suite is GREEN
+        config:
+          command: dotnet
+          args:
+            - test
+            - CheckoutPricing.slnx
+            - --no-restore
+          expected_exit_code: 0
+          timeout: 2m
+      - type: run-command
+        name: One green commit changes the rate table of the other component
+        config:
+          command: node
+          args:
+            - -e
+            - |
+              const { execFileSync } = require("node:child_process");
+              const git = (...args) => execFileSync("git", ["--no-replace-objects", ...args], { encoding: "utf8", timeout: 5000 }).trimEnd();
+              const seed = git("rev-list", "--max-parents=0", "HEAD").split("\n")[0];
+              const greens = git("log", "--format=%H %s", seed + "..HEAD").split("\n").filter((line) => / feat\(/.test(line));
+              if (greens.length !== 1) { console.log("expected one feat commit, got " + greens.length); process.exit(1); }
+              const files = git("diff-tree", "--no-commit-id", "--name-only", "-r", greens[0].split(" ")[0]).split("\n");
+              if (!files.includes("rates/LoyaltyRates/LoyaltyRateTable.cs")) { console.log("the green leaves the rate table unchanged: " + files.join(", ")); process.exit(1); }
+              console.log(files.join("\n"));
+          expected_exit_code: 0
+          timeout: 30s
+      - type: diff-not-contains
+        name: Approved outer acceptance test stayed intact
+        config:
+          pattern: '(?m)^diff --git a/tests/CheckoutPricing\.UnitTest/LoyaltyDiscount/DiscountTests\.cs '
+      - type: run-command
+        name: The result says done, not blocked
+        config:
+          command: node
+          args:
+            - -e
+            - |
+              const result = JSON.parse(require("node:fs").readFileSync(".copilot-tracking/skraft-plans/pricing/results/deliver-1-1.json", "utf8"));
+              if (result.status !== "done") { console.log(JSON.stringify(result)); process.exit(1); }
+          expected_exit_code: 0
+          timeout: 30s

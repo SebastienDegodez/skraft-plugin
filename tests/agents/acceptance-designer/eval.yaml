@@ -362,3 +362,135 @@ stimuli:
             - bdd-methodology
             - test-design-mandates
             - outside-in-tdd
+
+  # B of the scenario-plan anomalies: a scenario whose acceptance test passes on the code an
+  # earlier scenario delivered is committed with Covered-by, never merged into that scenario.
+  - name: A scenario the delivered code already satisfies is committed as covered, the approved plan untouched
+    prompt: |
+      ## Skraft dispatch: acceptance-designer (DISTILL)
+      - Story: discount
+      - Feature scope: pricing
+      - Pass: 3
+      - Attempt: 1 of 3
+      - Read first:
+      - docs/features/pricing/discount.feature
+      - .copilot-tracking/skraft-plans/pricing/details/2026-08-12/test-plan-pricing.md
+      - Fill each output in place; keep the path, create no other copy:
+      - .copilot-tracking/skraft-plans/pricing/details/2026-08-12/test-plan-pricing.md
+      - Write your result as JSON to .copilot-tracking/skraft-plans/pricing/results/distill-3-1.json: {"status": "done" | "blocked", "summary": "<what you did, or why you cannot go on>"}
+      - Change nothing outside these paths of the working copy; the engine refuses the step otherwise:
+      - .copilot-tracking/skraft-plans/pricing
+      - docs/features
+      - src
+      - tests
+      - ./* (the files right in the root of checkout-pricing)
+      - Components:
+      - checkout-pricing: . (dotnet), mocking: microcks, contract testing: off, bdd: off, tests: dotnet test CheckoutPricing.slnx --no-restore
+      - Reference no issue in a commit.
+      - Scenario: 2 of 2 — "A large Silver cart gets the Silver rate on its whole subtotal" (component checkout-pricing)
+      - Write the failing acceptance test of this scenario only, the binding of its Gherkin entering by its use case, beside the earlier ones, and extend the skeleton
+        it calls; remove `@pending` from this scenario alone; change no test of an earlier scenario nor the walking skeleton, write none for a later one, never skip one.
+      - Run the test once and read its output: it fails on an assertion. Then commit the test and the skeleton in one commit, exactly:
+        git commit -s -m "test(pricing): a large Silver cart gets the Silver rate on its whole subtotal"
+      - It passes already because an earlier scenario makes it pass: commit it the same, adding `-m "Covered-by: S<n>"` last, n that scenario's number (1 to 1); never merge, drop or rewrite a scenario of the approved plan.
+    tags:
+      agent: acceptance-designer
+      scenario: scenario-already-covered
+      permissions: workspace-write
+      cost: medium
+    supported_executors:
+      - skraft-agent-runner
+    environment:
+      files:
+        - src: fixtures/s1-delivered/.copilot-tracking/skraft-plans/pricing/details/2026-08-12/test-plan-pricing.md
+          dest: .copilot-tracking/skraft-plans/pricing/details/2026-08-12/test-plan-pricing.md
+        - src: fixtures/s1-delivered/.gitignore
+          dest: .gitignore
+        - src: fixtures/s1-delivered/CheckoutPricing.slnx
+          dest: CheckoutPricing.slnx
+        - src: fixtures/s1-delivered/Directory.Build.props
+          dest: Directory.Build.props
+        - src: fixtures/s1-delivered/Directory.Packages.props
+          dest: Directory.Packages.props
+        - src: fixtures/s1-delivered/docs/adr/decisions-index.md
+          dest: docs/adr/decisions-index.md
+        - src: fixtures/s1-delivered/docs/domain/event-model/checkout-pricing.md
+          dest: docs/domain/event-model/checkout-pricing.md
+        - src: fixtures/s1-delivered/docs/features/pricing/discount.feature
+          dest: docs/features/pricing/discount.feature
+        - src: fixtures/s1-delivered/skraft-config.json
+          dest: skraft-config.json
+        - src: fixtures/s1-delivered/src/CheckoutPricing.Application/CalculateLoyaltyDiscount.cs
+          dest: src/CheckoutPricing.Application/CalculateLoyaltyDiscount.cs
+        - src: fixtures/s1-delivered/src/CheckoutPricing.Application/CheckoutPricing.Application.csproj
+          dest: src/CheckoutPricing.Application/CheckoutPricing.Application.csproj
+        - src: fixtures/s1-delivered/src/CheckoutPricing.Domain/CheckoutPricing.Domain.csproj
+          dest: src/CheckoutPricing.Domain/CheckoutPricing.Domain.csproj
+        - src: fixtures/s1-delivered/src/CheckoutPricing.Domain/LoyaltyTier.cs
+          dest: src/CheckoutPricing.Domain/LoyaltyTier.cs
+        - src: fixtures/s1-delivered/tests/CheckoutPricing.UnitTest/CheckoutPricing.UnitTest.csproj
+          dest: tests/CheckoutPricing.UnitTest/CheckoutPricing.UnitTest.csproj
+        - src: fixtures/s1-delivered/tests/CheckoutPricing.UnitTest/LoyaltyDiscount/S1TierDiscountTests.cs
+          dest: tests/CheckoutPricing.UnitTest/LoyaltyDiscount/S1TierDiscountTests.cs
+      commands:
+        - 'dotnet restore CheckoutPricing.slnx'
+        - 'git init --quiet'
+        - 'git config user.email eval@example.invalid'
+        - 'git config user.name "SKRAFT Evaluation"'
+        - 'git add .'
+        - 'git commit --quiet -m "feat(pricing): member receives the loyalty discount of their tier"'
+    graders:
+      - type: completed
+      - type: run-command
+        name: The scenario is committed as covered by S1, its test only
+        config:
+          command: node
+          args:
+            - -e
+            - |
+              const { execFileSync } = require("node:child_process");
+              const git = (...args) => execFileSync("git", ["--no-replace-objects", ...args], { encoding: "utf8", timeout: 5000 }).trimEnd();
+              const seed = git("rev-list", "--max-parents=0", "HEAD").split("\n")[0];
+              const shas = git("rev-list", seed + "..HEAD").split("\n").filter(Boolean);
+              const reds = shas.filter((sha) => /^test\(/.test(git("show", "-s", "--format=%s", sha)));
+              if (reds.length !== 1) { console.log("expected one test commit, got " + reds.length); process.exit(1); }
+              if (!/^Covered-by: S1\s*$/m.test(git("show", "-s", "--format=%B", reds[0]))) { console.log("no Covered-by: S1 trailer"); process.exit(1); }
+              const code = git("diff", "--name-only", seed, "HEAD").split("\n").filter((file) => file.startsWith("src/"));
+              if (code.length > 0) { console.log("production code changed: " + code.join(", ")); process.exit(1); }
+          expected_exit_code: 0
+          timeout: 30s
+      - type: run-command
+        name: The approved plan keeps its two scenarios
+        config:
+          command: node
+          args:
+            - -e
+            - |
+              const plan = require("node:fs").readFileSync(".copilot-tracking/skraft-plans/pricing/details/2026-08-12/test-plan-pricing.md", "utf8");
+              const rows = plan.split("\n").filter((line) => /^\|\s*S\d+\s*\|/.test(line) && /checkout-pricing/.test(line));
+              const feature = require("node:fs").readFileSync("docs/features/pricing/discount.feature", "utf8");
+              const scenarios = feature.split("\n").filter((line) => /^\s*Scenario( Outline)?:/.test(line));
+              if (rows.length < 2 || scenarios.length !== 2) { console.log(rows.length + " plan rows, " + scenarios.length + " scenarios"); process.exit(1); }
+          expected_exit_code: 0
+          timeout: 30s
+      - type: run-command
+        name: The whole suite passes with the new test
+        config:
+          command: dotnet
+          args:
+            - test
+            - CheckoutPricing.slnx
+            - --no-restore
+          expected_exit_code: 0
+          timeout: 2m
+      - type: run-command
+        name: The result says done, not blocked
+        config:
+          command: node
+          args:
+            - -e
+            - |
+              const result = JSON.parse(require("node:fs").readFileSync(".copilot-tracking/skraft-plans/pricing/results/distill-3-1.json", "utf8"));
+              if (result.status !== "done") { console.log(JSON.stringify(result)); process.exit(1); }
+          expected_exit_code: 0
+          timeout: 30s

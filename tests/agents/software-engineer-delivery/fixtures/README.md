@@ -20,3 +20,10 @@ Prepare with `dotnet restore CheckoutPricing.slnx`. Baseline verification with
 
 The eval stages explicit files from this state. This prevents ignored local build outputs
 from becoming hidden fixture inputs.
+### `rates-elsewhere`
+
+The `approved-red` solution with a second component, `loyalty-rates` (root `rates`), the
+class library whose `LoyaltyRateTable` gives each tier's rate and that
+`CheckoutPricing.Application` references. The use case already applies the rate; the table has
+no Gold rate, so the outer acceptance test fails on its Gold row only. Delivering the scenario
+takes one green that changes the other component.
