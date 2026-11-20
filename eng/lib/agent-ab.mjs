@@ -74,7 +74,10 @@ export function trialProfile(record) {
   const usage = metrics.tokenUsage ?? {}
   const spans = toolSpans(record?.trajectory?.events)
   const tests = spans.filter(isTestRun)
-  const durationMs = Number(record?.durationMs ?? metrics.wallTimeMs ?? 0)
+  // The agent's work: first to last event of its session. The trial's own duration also holds
+  // the workspace setup (restore) and the grading, the same in both arms.
+  const trialMs = Number(record?.durationMs ?? 0)
+  const durationMs = Number(metrics.wallTimeMs) > 0 ? Number(metrics.wallTimeMs) : trialMs
   const toolMs = spans.reduce((total, span) => total + span.durationMs, 0)
   return {
     stimulus: record?.stimulus ?? record?.trajectory?.stimulus?.name ?? 'unknown',
@@ -82,6 +85,7 @@ export function trialProfile(record) {
     passed: record?.gradeResult?.passed === true,
     errored: record?.status === 'error',
     durationMs,
+    trialMs,
     toolMs,
     modelMs: Math.max(0, durationMs - toolMs),
     testRuns: tests.length,
@@ -99,6 +103,7 @@ export function trialProfile(record) {
 
 export const MEASURES = [
   'durationMs',
+  'trialMs',
   'modelMs',
   'toolMs',
   'testMs',
@@ -184,7 +189,7 @@ const plain = (value) => (value == null ? '—' : String(round(value, 0)))
 const signed = (value) => (value == null ? '—' : `${value > 0 ? '+' : ''}${value} %`)
 
 const ROWS = [
-  ['Durée', 'durationMs', seconds],
+  ['Durée du travail de l’agent', 'durationMs', seconds],
   ['  dont modèle', 'modelMs', seconds],
   ['  dont outils', 'toolMs', seconds],
   ['  dont tests', 'testMs', seconds],
@@ -197,6 +202,7 @@ const ROWS = [
   ['Coût (nano-AIU)', 'costNanoAiu', plain],
   ['Tours', 'turns', plain],
   ['Appels d’outils', 'toolCalls', plain],
+  ['Durée de l’essai (préparation et notation comprises)', 'trialMs', seconds],
   ['Score (médiane)', 'score', (value) => (value == null ? '—' : String(round(value, 3)))],
   ['Taux de réussite', 'passRate', (value) => (value == null ? '—' : `${round(value * 100, 0)} %`)],
 ]
@@ -219,7 +225,7 @@ export function renderAgentComparison(comparison, { controlRef = 'control', cand
   for (const entry of comparison.stimuli) {
     lines.push('', `### ${entry.stimulus}${entry.qualityHeld ? '' : ' — qualité en baisse'}`, '')
     lines.push('| Mesure | Δ |', '|---|---|')
-    for (const [label, key] of ROWS.slice(0, 13)) lines.push(`| ${label.trim()} | ${signed(entry.deltaPercent[key])} |`)
+    for (const [label, key] of ROWS.slice(0, 14)) lines.push(`| ${label.trim()} | ${signed(entry.deltaPercent[key])} |`)
     lines.push(`| Score | ${round(entry.control.score, 3) ?? '—'} → ${round(entry.candidate.score, 3) ?? '—'} |`)
   }
   return `${lines.join('\n')}\n`

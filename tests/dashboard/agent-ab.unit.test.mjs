@@ -10,7 +10,7 @@ const bash = (id, command, start, end, output = 'ok') => [
   { type: 'tool_result', timestamp: at(end), data: { toolName: 'bash', toolCallId: id, result: { content: output } } },
 ]
 
-const trial = ({ stimulus = 'story', score = 1, passed = true, durationMs = 60_000, tokens = 1000, events = [], cost }) => ({
+const trial = ({ stimulus = 'story', score = 1, passed = true, durationMs = 60_000, wallTimeMs, tokens = 1000, events = [], cost }) => ({
   type: 'trial-result',
   stimulus,
   durationMs,
@@ -20,6 +20,7 @@ const trial = ({ stimulus = 'story', score = 1, passed = true, durationMs = 60_0
     metrics: {
       tokenUsage: { totalTokens: tokens, inputTokens: tokens - 100, outputTokens: 100, cacheReadTokens: 0, ...(cost != null && { cost: { amount: cost } }) },
       turnCount: 3,
+      ...(wallTimeMs !== undefined && { wallTimeMs }),
       toolCallCount: events.filter(({ type }) => type === 'tool_call').length,
     },
   },
@@ -100,5 +101,13 @@ describe('A/B agent comparison', () => {
 
     match(markdown, /## A\/B agent — main → perf/)
     match(markdown, /\| Tokens \| 2000 \| 1000 \| -50 % \|/)
+  })
+
+  it('times the agent\'s work apart from the setup and grading of its trial', () => {
+    const profile = trialProfile(trial({ durationMs: 300_000, wallTimeMs: 200_000, events: bash('a', 'dotnet test X.slnx', 0, 20) }))
+
+    strictEqual(profile.durationMs, 200_000)
+    strictEqual(profile.trialMs, 300_000)
+    strictEqual(profile.modelMs, 180_000)
   })
 })
