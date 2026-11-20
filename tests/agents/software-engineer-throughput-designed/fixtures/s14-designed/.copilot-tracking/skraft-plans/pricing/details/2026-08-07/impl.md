@@ -63,7 +63,7 @@ Every scenario enters through one of these signatures; keep them exactly.
 | S14 | Application (UnitTest) | `QuoteCheckout` | none | No |
 
 Each scenario's acceptance test lives in `tests/CheckoutPricing.UnitTest/` as one test whose
-rows copy the scenario's examples in cents, tagged `[Trait("Scenario", "Sk")]`. The acceptance
+rows copy the scenario's examples in cents, its name starting with its scenario id (`S4_…`). The acceptance
 tests of S1 to S14 and the boundary stubs they compile against are committed RED in
 `test(discount): acceptance tests S1–S14`: `LoyaltyDiscount/DiscountTests.cs` (S1–S3, S9, S10),
 `LoyaltyDiscount/PromoCodeAcceptanceTests.cs` (S4–S8), `Shipping/ShippingFeeAcceptanceTests.cs`

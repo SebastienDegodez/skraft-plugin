@@ -13,7 +13,7 @@ A copy of `software-engineer-throughput/fixtures/s14`. Keep both identical.
 
 ### `s14-designed`
 
-- the acceptance test of every scenario, tagged `[Trait("Scenario", "Sk")]`, values in cents
+- the acceptance test of every scenario, its name starting with its scenario id (`S4_…`), values in cents
   copied from the `.feature`: S1–S3, S9, S10 in `LoyaltyDiscount/DiscountTests.cs`, S4–S8 in
   `PromoCodeAcceptanceTests.cs`, S11–S13 in `Shipping/ShippingFeeAcceptanceTests.cs`, S14 in
   `Checkout/QuoteCheckoutAcceptanceTests.cs`;
