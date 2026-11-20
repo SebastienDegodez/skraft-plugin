@@ -65,3 +65,11 @@ describe('agent turns', () => {
     strictEqual(markdown.includes('| edit | 1 | 1.0 s | 2 |'), true)
   })
 })
+
+it('a heredoc or redirect into a file is an edit, a chained test makes it edit+test', () => {
+  strictEqual(categoryOf('bash', "cat > src/A.cs <<'EOF'\nclass A {}\nEOF"), 'edit')
+  strictEqual(categoryOf('bash', "cat > src/A.cs <<'EOF'\nclass A {}\nEOF\ndotnet test --filter X"), 'edit+test')
+  strictEqual(categoryOf('bash', 'printf "x" > a.txt'), 'edit')
+  strictEqual(categoryOf('bash', 'cat src/A.cs'), 'read')
+  strictEqual(categoryOf('bash', 'cat src/A.cs | grep x'), 'read')
+})
