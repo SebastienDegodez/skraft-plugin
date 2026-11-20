@@ -136,7 +136,8 @@ const trials = (records) => records.filter((record) => record?.type === 'trial-r
  * Compares a control arm and a candidate arm of the same agent suite.
  *
  * `qualityHeld` is false as soon as a stimulus loses median score or pass rate:
- * a faster agent that lands fewer behaviours is a regression, not a gain.
+ * a faster agent that lands fewer behaviours is a regression, not a gain. A trial that
+ * errored (the agent never ran its task) makes the comparison `errored`: nothing was measured.
  *
  * @param {{ control: object[], candidate: object[] }} arms raw results.jsonl records
  */
@@ -171,8 +172,9 @@ export function compareAgentArms({ control, candidate }) {
   const cheaper = (percent(overallControl.totalTokens, overallCandidate.totalTokens) ?? 0) < 0
   const faster = (percent(overallControl.durationMs, overallCandidate.durationMs) ?? 0) < 0
 
+  const errored = overallControl.errors + overallCandidate.errors > 0
   return {
-    verdict: !qualityHeld ? 'quality-regression' : cheaper || faster ? 'improved' : 'no-gain',
+    verdict: errored ? 'errored' : !qualityHeld ? 'quality-regression' : cheaper || faster ? 'improved' : 'no-gain',
     underpowered: Math.min(overallControl.trials, overallCandidate.trials) < 5,
     overall: {
       control: overallControl,
@@ -213,7 +215,7 @@ export function renderAgentComparison(comparison, { controlRef = 'control', cand
   const lines = [
     `## A/B agent — ${controlRef} → ${candidateRef}`,
     '',
-    `**Verdict : ${comparison.verdict}**${comparison.underpowered ? ' (moins de 5 essais par bras : indicatif)' : ''}`,
+    `**Verdict : ${comparison.verdict}**${comparison.verdict === 'errored' ? ' — un essai au moins a échoué avant de travailler : rien n’est mesuré, voir run.log de chaque bras' : comparison.underpowered ? ' (moins de 5 essais par bras : indicatif)' : ''}`,
     '',
     `| Mesure (médiane) | ${controlRef} | ${candidateRef} | Δ |`,
     '|---|---|---|---|',

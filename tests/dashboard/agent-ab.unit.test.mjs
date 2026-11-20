@@ -110,4 +110,13 @@ describe('A/B agent comparison', () => {
     strictEqual(profile.trialMs, 300_000)
     strictEqual(profile.modelMs, 180_000)
   })
+
+  it('measures nothing when a trial errored before working', () => {
+    const errored = { ...trial({ score: 0, passed: false, tokens: 0 }), status: 'error' }
+
+    const comparison = compareAgentArms({ control: [errored], candidate: [errored] })
+
+    strictEqual(comparison.verdict, 'errored')
+    match(renderAgentComparison(comparison), /Verdict : errored\*\* — un essai au moins a échoué avant de travailler/)
+  })
 })
