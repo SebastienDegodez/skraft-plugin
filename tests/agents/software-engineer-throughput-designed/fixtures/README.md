@@ -1,7 +1,7 @@
 # CheckoutPricing throughput fixture, acceptance tests written
 
 Same story, solution and plans as `software-engineer-throughput/fixtures/s14`, copied here so the
-suite stands alone in any worktree. The spec seeds `s14`, then applies `s14-designed` as a second
+suite stands alone in any worktree. The spec seeds `s14`, then applies `s14-red` as a second
 commit, `test(discount): acceptance tests S1–S14`: what an acceptance-designer that writes every
 acceptance test hands over.
 
@@ -11,7 +11,7 @@ acceptance test hands over.
 
 A copy of `software-engineer-throughput/fixtures/s14`. Keep both identical.
 
-### `s14-designed`
+### `s14-red`
 
 - the acceptance test of every scenario, its name starting with its scenario id (`S4_…`), values in cents
   copied from the `.feature`: S1–S3, S9, S10 in `LoyaltyDiscount/DiscountTests.cs`, S4–S8 in

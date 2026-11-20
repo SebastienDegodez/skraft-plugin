@@ -71,23 +71,23 @@ stimuli:
           dest: .copilot-tracking/skraft-plans/pricing/details/2026-08-07/impl.md
         - src: fixtures/s14/.copilot-tracking/skraft-plans/pricing/state.json
           dest: .copilot-tracking/skraft-plans/pricing/state.json
-        - src: fixtures/s14-designed/src/CheckoutPricing.Domain/LoyaltyTier.cs
+        - src: fixtures/s14-red/src/CheckoutPricing.Domain/LoyaltyTier.cs
           dest: .designed/src/CheckoutPricing.Domain/LoyaltyTier.cs
-        - src: fixtures/s14-designed/src/CheckoutPricing.Application/CalculateLoyaltyDiscount.cs
+        - src: fixtures/s14-red/src/CheckoutPricing.Application/CalculateLoyaltyDiscount.cs
           dest: .designed/src/CheckoutPricing.Application/CalculateLoyaltyDiscount.cs
-        - src: fixtures/s14-designed/src/CheckoutPricing.Application/CalculateShippingFee.cs
+        - src: fixtures/s14-red/src/CheckoutPricing.Application/CalculateShippingFee.cs
           dest: .designed/src/CheckoutPricing.Application/CalculateShippingFee.cs
-        - src: fixtures/s14-designed/src/CheckoutPricing.Application/QuoteCheckout.cs
+        - src: fixtures/s14-red/src/CheckoutPricing.Application/QuoteCheckout.cs
           dest: .designed/src/CheckoutPricing.Application/QuoteCheckout.cs
-        - src: fixtures/s14-designed/tests/CheckoutPricing.UnitTest/LoyaltyDiscount/DiscountTests.cs
+        - src: fixtures/s14-red/tests/CheckoutPricing.UnitTest/LoyaltyDiscount/DiscountTests.cs
           dest: .designed/tests/CheckoutPricing.UnitTest/LoyaltyDiscount/DiscountTests.cs
-        - src: fixtures/s14-designed/tests/CheckoutPricing.UnitTest/LoyaltyDiscount/PromoCodeAcceptanceTests.cs
+        - src: fixtures/s14-red/tests/CheckoutPricing.UnitTest/LoyaltyDiscount/PromoCodeAcceptanceTests.cs
           dest: .designed/tests/CheckoutPricing.UnitTest/LoyaltyDiscount/PromoCodeAcceptanceTests.cs
-        - src: fixtures/s14-designed/tests/CheckoutPricing.UnitTest/Shipping/ShippingFeeAcceptanceTests.cs
+        - src: fixtures/s14-red/tests/CheckoutPricing.UnitTest/Shipping/ShippingFeeAcceptanceTests.cs
           dest: .designed/tests/CheckoutPricing.UnitTest/Shipping/ShippingFeeAcceptanceTests.cs
-        - src: fixtures/s14-designed/tests/CheckoutPricing.UnitTest/Checkout/QuoteCheckoutAcceptanceTests.cs
+        - src: fixtures/s14-red/tests/CheckoutPricing.UnitTest/Checkout/QuoteCheckoutAcceptanceTests.cs
           dest: .designed/tests/CheckoutPricing.UnitTest/Checkout/QuoteCheckoutAcceptanceTests.cs
-        - src: fixtures/s14-designed/.copilot-tracking/skraft-plans/pricing/details/2026-08-07/impl.md
+        - src: fixtures/s14-red/.copilot-tracking/skraft-plans/pricing/details/2026-08-07/impl.md
           dest: .designed/.copilot-tracking/skraft-plans/pricing/details/2026-08-07/impl.md
       commands:
         - 'dotnet restore CheckoutPricing.slnx'
