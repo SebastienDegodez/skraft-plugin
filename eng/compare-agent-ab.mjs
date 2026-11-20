@@ -2,7 +2,8 @@
 // Compares two results.jsonl files of the same agent suite run at two refs.
 //
 //   node eng/compare-agent-ab.mjs --control <results.jsonl> --candidate <results.jsonl> \
-//     [--control-ref main] [--candidate-ref perf/x] [--out report.json] [--markdown report.md]
+//     [--control-ref main] [--candidate-ref perf/x] [--control-reused <run dir>]
+//     [--out report.json] [--markdown report.md]
 //
 // Exit code: 0 improved or no-gain, 3 quality-regression, 4 errored, 2 usage error.
 
@@ -17,6 +18,7 @@ const { values } = parseArgs({
     candidate: { type: 'string' },
     'control-ref': { type: 'string', default: 'control' },
     'candidate-ref': { type: 'string', default: 'candidate' },
+    'control-reused': { type: 'string' },
     out: { type: 'string' },
     markdown: { type: 'string' },
   },
@@ -43,6 +45,7 @@ const comparison = compareAgentArms({ control: readJsonl(values.control), candid
 const markdown = renderAgentComparison(comparison, {
   controlRef: values['control-ref'],
   candidateRef: values['candidate-ref'],
+  controlReused: values['control-reused'],
 })
 
 if (values.out) writeFileSync(values.out, `${JSON.stringify(comparison, null, 2)}\n`)

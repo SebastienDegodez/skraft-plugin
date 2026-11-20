@@ -117,4 +117,31 @@ describe('A/B agent benchmark', () => {
     }
     match(readFileSync(join(repo, 'tests/agents/demo-suite/eval.yaml'), 'utf8'), /^ {2}runs: 3$/m)
   })
+
+  it('reuses the control arm of an earlier run of the same suite, and says so', () => {
+    const runs = join(workspace, 'bench/demo-suite')
+    strictEqual(bench('control', 'faster').status, 0)
+    const earlier = join(runs, readdirSync(runs).sort().at(-1))
+
+    const result = bench('control', 'faster', { CONTROL_FROM: earlier })
+
+    strictEqual(result.status, 0, result.stderr)
+    match(result.stdout, /Control arm reused from/)
+    match(result.stdout, /Bras contrôle repris d’un run précédent/)
+    match(result.stdout, /\| Tokens \| 2000 \| 1000 \| -50 % \|/)
+    const latest = join(runs, readdirSync(runs).sort().at(-1))
+    strictEqual(existsSync(join(latest, 'control/worktree')), false)
+    strictEqual(readFileSync(join(latest, 'control/reused-from'), 'utf8').trim(), earlier)
+  })
+
+  it('refuses to reuse a control arm that ran another version of the suite', () => {
+    const runs = join(workspace, 'bench/demo-suite')
+    const earlier = join(runs, readdirSync(runs).sort().at(-1))
+    writeFileSync(join(earlier, 'control/suite'), 'another-suite\n')
+
+    const result = bench('control', 'faster', { CONTROL_FROM: earlier })
+
+    strictEqual(result.status, 2)
+    match(result.stderr, /ran another version of tests\/agents\/demo-suite/)
+  })
 })

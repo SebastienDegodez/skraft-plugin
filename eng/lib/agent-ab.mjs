@@ -210,12 +210,13 @@ const ROWS = [
 ]
 
 /** Markdown report of a comparison, control on the left. */
-export function renderAgentComparison(comparison, { controlRef = 'control', candidateRef = 'candidate' } = {}) {
+export function renderAgentComparison(comparison, { controlRef = 'control', candidateRef = 'candidate', controlReused } = {}) {
   const { overall } = comparison
   const lines = [
     `## A/B agent — ${controlRef} → ${candidateRef}`,
     '',
     `**Verdict : ${comparison.verdict}**${comparison.verdict === 'errored' ? ' — un essai au moins a échoué avant de travailler : rien n’est mesuré, voir run.log de chaque bras' : comparison.underpowered ? ' (moins de 5 essais par bras : indicatif)' : ''}`,
+    ...(controlReused ? ['', `> Bras contrôle repris d’un run précédent (${controlReused}) : un tirage figé, indicatif, jamais un verdict à publier.`] : []),
     '',
     `| Mesure (médiane) | ${controlRef} | ${candidateRef} | Δ |`,
     '|---|---|---|---|',

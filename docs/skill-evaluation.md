@@ -260,6 +260,10 @@ RUNS=5 ARMS_SEQUENTIAL=1 ./eng/bench-agent-ab.sh <suite> <control-ref> <candidat
 - Verdict `improved`, `no-gain` or `quality-regression` (exit 3). Quality holds only when
   no stimulus loses median score or pass rate. Under 5 trials per arm, the report is
   marked indicative: the two arms are independent draws, not pairs.
+- `CONTROL_FROM=bench-results/<suite>/<stamp>` reuses the control arm of an earlier run
+  and runs only the candidate, to try several candidates against one control. It is refused
+  when that run's suite (spec and fixtures) differs from the current one. A reused arm is a
+  frozen draw: the report says so, and its verdict is never one to publish.
 
 `software-engineer-throughput` is the suite built for this: a fourteen-scenario .NET story
 over three use cases, two scenarios already covered by earlier ones, and a hidden oracle that
