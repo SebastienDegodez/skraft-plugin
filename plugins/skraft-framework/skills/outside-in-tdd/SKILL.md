@@ -58,7 +58,7 @@ step. Never build a class no active scenario requires.
      (see *Inspection by mode*).
    - Name in writing the type that will hold the rule and its layer, checked against
      *Where the code lives*.
-4. **SYNTHESIZE GREEN** — implement the smallest slice this test demands, clean the first time:
+4. **SYNTHESIZE GREEN** — write the code this test demands, the stated rule whole, clean the first time:
    idiomatic, domain semantics, no speculative branch, no unrequested error handling, no
    abstraction the test does not force. If the test was misunderstood, revise the test and
    restart from RED; never iterate on the code instead.
@@ -97,31 +97,23 @@ error only when read: a red is never chained to a commit; a green is.
 The acceptance tests of a scenario are its oracle: the green never changes them. A wrong one is
 named and sent back to whoever wrote it.
 
-## Ordered test list (TPP + FLFI)
+## Ordered test list
 
 Before the first line of production code, write the ordered list of tests for the slice, one row
 per test. Persist it next to the plan; consume it head-first.
 
-| # | Level (acceptance / unit / integration) | Behaviour name, business language | TPP transformation | Contradiction the current code cannot satisfy |
-|---|---|---|---|---|
+| # | Level (acceptance / unit / integration) | Behaviour name, business language | Contradiction the current code cannot satisfy |
+|---|---|---|---|
 
-- **Transformation:** for each entry, name the single transformation that turns the previous
-  GREEN into this one, highest first: `{}→nil`, `nil→constant`, `constant→constant+`,
-  `constant→scalar`, `statement→statements`, `unconditional→if`, `scalar→array`,
-  `array→container`, `statement→recursion`, `if→while`, `expression→function`,
-  `variable→assignment`, `case`.
-- **F — Failing:** an entry with no contradiction would pass on the current code; drop it.
-- **L — Least:** take next the entry whose GREEN needs the highest transformation. Degenerate and
-  boundary cases before the general case; reach the general case by accumulated
-  transformations, never by a leap.
-- **F — Fast:** the acceptance entry opens the list and stays red; units drive the inside;
+- **Failing:** an entry with no contradiction would pass on the current code; drop it.
+- **Order:** degenerate and boundary cases before the general case.
+- **Fast:** the acceptance entry opens the list and stays red; units drive the inside;
   integration entries come after (*Concentric circles*).
-- **I — Incremental:** one entry, one slice. An entry needing two transformations is two entries.
-- GREEN applies exactly the declared transformation, even when a later entry will obviously need
-  more. Never two failing tests at once besides the outer acceptance test.
-- After a GREEN, re-plan only in writing (entry added, removed, reordered, transformation
-  revised). Never re-plan to justify code already written; never merge entries to save a cycle;
-  never write the list after the code.
+- **One entry per behaviour.** GREEN writes the code its test demands; when the acceptance
+  criterion states the rule (a rate table, a threshold, a cap, a formula), it writes the rule
+  whole. Never two failing tests at once besides the outer acceptance test.
+- After a GREEN, re-plan only in writing (entry added, removed, reordered). Never re-plan to
+  justify code already written; never write the list after the code.
 
 ## Where the code lives
 
