@@ -18,7 +18,7 @@
 #   KEEP_WORKTREES=1              Keep both worktrees for inspection
 #   plus every variable eng/run-vally-evals.sh reads (MODEL, VALLY, ...).
 #
-# Exit code: 0 improved / no-gain, 3 quality regression, 1 an arm produced no results.
+# Exit code: 0 improved / no-gain, 3 quality regression, 4 a trial errored, 1 an arm produced no results.
 
 set -euo pipefail
 
