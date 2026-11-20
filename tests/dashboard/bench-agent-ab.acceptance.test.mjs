@@ -39,12 +39,13 @@ const commitArm = (branch, tokens, score) => {
   git('commit', '--quiet', '-m', `arm ${branch}`)
 }
 
-const bench = (control, candidate) =>
+const bench = (control, candidate, extra = {}) =>
   spawnSync('bash', [join(repo, 'eng/bench-agent-ab.sh'), 'demo-suite', control, candidate], {
     cwd: repo,
     encoding: 'utf8',
     env: {
       ...process.env,
+      ...extra,
       COPILOT_GITHUB_TOKEN: 'test-token',
       SKIP_EVALS: '',
       VALLY: fakeVally,
@@ -59,7 +60,7 @@ before(() => {
   cpSync(join(repoRoot, 'eng'), join(repo, 'eng'), { recursive: true })
   cpSync(join(repoRoot, 'plugins/skraft-framework/skills'), join(repo, 'plugins/skraft-framework/skills'), { recursive: true })
   mkdirSync(join(repo, 'tests/agents/demo-suite'), { recursive: true })
-  writeFileSync(join(repo, 'tests/agents/demo-suite/eval.yaml'), 'name: demo-suite\nstimuli: []\n')
+  writeFileSync(join(repo, 'tests/agents/demo-suite/eval.yaml'), 'name: demo-suite\ndefaults:\n  runs: 3\nstimuli: []\n')
   // The runner resolves eval models through the installed Vally; each worktree links this install.
   if (existsSync(join(repoRoot, 'node_modules'))) symlinkSync(join(repoRoot, 'node_modules'), join(repo, 'node_modules'))
   writeFileSync(join(repo, '.gitignore'), 'node_modules\n')
@@ -102,5 +103,18 @@ describe('A/B agent benchmark', () => {
 
     strictEqual(result.status, 3, result.stderr)
     match(result.stdout, /Verdict : quality-regression/)
+  })
+
+  it('runs each arm with the trial count RUNS asks for, the committed spec unchanged', () => {
+    const result = bench('control', 'faster', { RUNS: '1', KEEP_WORKTREES: '1' })
+
+    strictEqual(result.status, 0, result.stderr)
+    const runs = join(workspace, 'bench/demo-suite')
+    const latest = readdirSync(runs).sort().at(-1)
+    for (const arm of ['control', 'candidate']) {
+      match(readFileSync(join(runs, latest, arm, 'worktree/tests/agents/demo-suite/eval.yaml'), 'utf8'), /^ {2}runs: 1$/m)
+      git('worktree', 'remove', '--force', join(runs, latest, arm, 'worktree'))
+    }
+    match(readFileSync(join(repo, 'tests/agents/demo-suite/eval.yaml'), 'utf8'), /^ {2}runs: 3$/m)
   })
 })
