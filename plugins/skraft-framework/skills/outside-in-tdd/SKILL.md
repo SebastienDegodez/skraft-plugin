@@ -175,6 +175,10 @@ Refining code instead of revising RED means you are back in 3-step TDD — stop 
 | TypeScript, Vitest | `npx vitest run <file> -t "<name>"` | `npx vitest run <folder>` | `--reporter=dot` |
 | Python, pytest | `pytest <file>::<test>` | `pytest <folder>` | `-q` |
 
+Pending excluded — every test but the acceptance tests of scenarios not delivered yet:
+.NET `--filter "Scenario!=S5&Scenario!=S6"`; Maven `-Dgroups='!S5,!S6'` (JUnit `@Tag`);
+Vitest `-t "^(?!.*\b(S5|S6)\b)"`; pytest `-m "not s5 and not s6"`.
+
 The stack's test command from the stack-commands file stays the command of record: add only the
 filter and the verbosity to it, never replace it with another runner.
 
@@ -183,7 +187,7 @@ filter and the verbosity to it, never replace it with another runner.
 - Run the **Post-GREEN Wiring Verification** below to detect Fixture Theater.
 - Run the **Coverage and Mutation Gate** below.
 - Commit as *Commit policy* says. The message format is `craft-discipline` C9. **A red is never chained to a commit**; the
-  only red commit is a scenario's `test` commit.
+  only red commit is the story's `test` commit.
 
 ## Commit policy
 
@@ -192,8 +196,8 @@ error only when read: a red is never chained to a commit; a green is.
 
 | Pass | Commits |
 |---|---|
-| Acceptance test of the scenario in progress (skraft DISTILL for the first, DELIVER for the next) | One `test` commit: its acceptance test and the skeleton it calls, after a run whose output shows a failing business assertion, formatted and linted before the commit |
-| Scenario in progress (skraft DELIVER) | The inner cycles commit nothing. One `feat` or `fix` commit once the scenario passes, its unit tests and every format or lint fix included, chained so it commits only when the run passes: `<test command> && git add <each file> && git commit -s -m "<subject>" -m "Refs: #N"` |
+| Acceptance tests of the story (skraft DISTILL for the first, DELIVER for every other) | One `test` commit: every remaining scenario's acceptance test and the skeleton they call, after one run whose output shows each failing on a business assertion, formatted and linted before the commit |
+| Scenario in progress (skraft DELIVER) | The inner cycles commit nothing. One `feat` or `fix` commit once the scenario passes, its unit tests and every format or lint fix included, chained so it commits only when the run passes: `<test command, pending scenarios excluded> && git add <each file> && git commit -s -m "<subject>" -m "Refs: #N"` |
 | No scenario: gates or review sent the story back, mutant kills, a session without skraft | Each cycle: `feat` or `fix` with its test and the code, once green; `refactor` for a change under green |
 
 The acceptance tests of a scenario are its oracle: the green never changes them. A wrong one is
@@ -364,10 +368,10 @@ This skill decides **in what order** you take them and what "done" means for one
 - Implement the thinnest possible slice: hardcoded values, minimal branching, no error handling
   beyond what the AT requires.
 - Unit tests only if needed to decompose a complex GREEN.
-- The AT drives ALL implementation. A later scenario's test may go green on its first run because an
-  earlier skeleton already covered it — that is correct. Confirm it with the deletion test rather
-  than assuming it. Under skraft it has no red to capture: commit it alone as `test`, record no
-  cycle for it, and name the earlier scenario on its change-log line.
+- The AT drives ALL implementation. A later scenario's test may go green before its turn because an
+  earlier scenario's code already covers it — that is correct. Confirm it with the deletion test
+  rather than assuming it; record no cycle for it, and name the earlier scenario on its change-log
+  line.
 
 ## Concentric Circle Expansion
 
@@ -386,24 +390,28 @@ failures.
 
 For test project placement and folder naming conventions, see `clean-architecture-testing`.
 
-## One Acceptance Test at a Time
+## All Acceptance Tests First
 
-Every commit leaves the suite fully green, except a scenario's `test` commit, red on that one
-acceptance test only — no `[Skip]`, no `[Ignore]`, nothing disabled
-(`craft-discipline` C1, C2, C5). That rules out the common shortcut of authoring every acceptance
-test up front and skipping all but one: a skipped test asserts nothing and carries a false green
-through every commit until someone remembers to enable it.
+The story's scenarios are written as executable acceptance tests together, committed red in one
+`test` commit, then made green one scenario at a time. No `[Skip]`, no `[Ignore]`, nothing disabled
+(`craft-discipline` C5): a pending scenario stays an active, failing test.
 
-Author acceptance tests **on demand**, one per slice:
+1. Write the acceptance test of every scenario of the `.feature` that has none, values copied
+   verbatim, each tagged with its scenario id (`[Trait("Scenario", "S4")]`, `describe("S4 …")`,
+   `@pytest.mark.s4`), with the skeleton signatures they compile against and no behavior.
+2. Run the acceptance tests once, failures listed, and read that each fails on a business
+   assertion, never a build or setup error. A test that already passes needs no code: note it.
+3. Commit all of them, formatted and linted, in ONE `test` commit. One command: the run and the
+   commit never wait on each other's turn when the output was already read.
+4. For each scenario, in plan order, in one turn: run its tests filtered to it; when they pass, an
+   earlier scenario covers it — no commit, name the covering scenario on its change-log line.
+   Otherwise write the code, then chain the gate and the green commit: every test except the
+   pending scenarios' acceptance tests (*Run one test, then its project* → Pending excluded)
+   `&& git add … && git commit`.
+5. After the last scenario, the whole suite runs green, unfiltered.
 
-1. The approved scenarios live in the `.feature` file. That is the backlog — it costs nothing and blocks nothing.
-2. Write the executable acceptance test for **one** scenario. It is RED: commit it (*Commit policy*).
-3. Drive it through the inner cycles until green, committing nothing.
-4. Commit once — the whole suite is green, nothing is skipped.
-5. Write the next scenario's acceptance test. Repeat.
-
-A scenario whose test has not been written yet is not "skipped" — it is not started, and the
-`.feature` file already records that it is owed.
+Every green commit leaves the delivered scenarios and every other test green; only the
+acceptance tests of scenarios not delivered yet are red.
 
 ## When Orchestrating Subagents (MANDATORY)
 

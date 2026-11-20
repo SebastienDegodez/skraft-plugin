@@ -31,7 +31,7 @@ The acceptance test targeted by this iteration MUST pass. No `[Skip]`.
 dotnet test
 ```
 
-Zero red tests. Zero ignored tests.
+Zero red tests, except the committed acceptance tests of the story's scenarios not delivered yet (`outside-in-tdd` → All Acceptance Tests First). Zero ignored tests.
 
 ### C3 — Build passes
 
