@@ -48,10 +48,10 @@ Le scénario entre. DELIVER implémente le calcul du total et l'attribution des 
 DELIVER démarre depuis le bloc `state.mjs handoff`, pas depuis une reconstruction fraîche.
 Le bloc porte le `.feature`, `test-plan-{story}.md`, `impl-plan-{story}.md`,
 `contracts-{story}.md`, `docs/adr/decisions-index.md`, les conventions de recherche,
-`stack-commands.md` et l'évidence RED d'acceptation. Les retries portent le même bloc, donc
+`stack-commands.md` et le test d'acceptation RED. Les retries portent le même bloc, donc
 le plan de tests et le plan d'implémentation restent présents pendant le rework.
 
-L'inspection RED a lieu dans le dispatch du software-engineer : la capture G10 enregistrée
+L'inspection RED a lieu dans le dispatch du software-engineer : le commit `test` du scénario
 est l'inspection, et l'engineer continue RED → GREEN → COMMIT sans second dispatch. La
 mutation par cycle est différentielle depuis le dernier commit du cycle précédent et est
 sautée quand aucun fichier de production cœur n'a changé. Seul le run final complet cœur

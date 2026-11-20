@@ -100,7 +100,7 @@ Evaluate 4 lenses independently. Each lens sees only its designated inputs — f
 | G5 | Every step is unambiguous and independently implementable. | HIGH |
 | G6 | Every scenario in the feature files has a corresponding entry in the implementation plan. | HIGH |
 | G9 | Every input/expected value in the outer acceptance test matches the `.feature` verbatim — no invented or altered values. | BLOCKER |
-| G10 | The outer acceptance test exists and its first scenario fails on a business assertion (RED), not a compile/setup error. | BLOCKER |
+| G10 | The outer acceptance test exists, its stubs carry no behavior, and its first scenario asserts a business outcome those stubs cannot produce (RED by reading), never a placeholder (`craft-discipline` C5). | BLOCKER |
 | G11 | For every use case NEW to this story, an Application-layer test file exists under `tests/**/*.UnitTest/**` — not only an Integration/HTTP test under `tests/**/*.IntegrationTest/**`. | BLOCKER |
 
 ---

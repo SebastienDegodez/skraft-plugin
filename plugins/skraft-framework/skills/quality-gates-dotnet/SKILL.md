@@ -1,6 +1,6 @@
 ---
 name: quality-gates-dotnet
-description: Use when the active repository is a .NET solution (`.sln` / `.csproj` present) and the software-engineer must produce falsifiable evidence for the quality gates. Most gates are captured once, after the story's last work commit; the G10 RED capture is taken **at RED**, before any production code, and cannot be reconstructed later. Provides the concrete `dotnet` commands and how their outputs map onto the tech-agnostic schema. Mutation (G6) is the developer's, run through `mutation-testing`.
+description: Use when the active repository is a .NET solution (`.sln` / `.csproj` present) and the software-engineer must produce falsifiable evidence for the quality gates. Every gate is captured once, after the story's last work commit. Provides the concrete `dotnet` commands and how their outputs map onto the tech-agnostic schema. Mutation (G6) is the developer's, run through `mutation-testing`.
 ---
 
 # Quality Gates — .NET Adapter
@@ -132,49 +132,17 @@ the contract. The lens diffs the two snapshots and FAILS G9 if any line was
 removed or mutated in a pre-existing assertion (only additions are allowed —
 that is the Iron Rule of Tests, mechanically verifiable).
 
-## G10 — RED observed
-
-For every scenario, capture the failing run of its acceptance test **at RED**, before the
-scenario's implementation lands. Run the G1/G2 test command narrowed to that acceptance test:
-
-```bash
-# at RED, for scenario {cycle} of story {story} — BEFORE writing its implementation:
-node "<skill>/scripts/capture.mjs" --evidence "$EV" --name qg-red-{cycle} -- dotnet test --nologo --filter "FullyQualifiedName~SomeAcceptanceTests"
-```
-
-This capture CANNOT be reconstructed afterwards: once the implementation is in,
-the same command returns green. Run it while the cycle is red or the evidence
-does not exist.
-
-Populate the matching entry of `test_integrity.cycles[]`:
-
-- `red_stdout_ref` = `evidence/{date}/{story}/qg-red-{cycle}.stdout`
-- `red_stdout_sha256` = contents of `qg-red-{cycle}.stdout.sha256`
-- `red_exit_code_ref` = `evidence/{date}/{story}/qg-red-{cycle}.exit`
-
-G10's `gates[]` entry carries `status` (and `rationale`) **only** — no
-`command_executed`, no `exit_code_ref`. One story runs N RED commands but has a
-single gate entry, and the generic "exit code MUST be `0` for pass" rule is
-inverted here; the per-cycle `red_*` fields above are where its evidence lives.
-
-The recorded exit code MUST be NON-zero: a `0` means the test never failed and
-G10 is `status: "fail"`. G10 attests the RED *run*, nothing about commit SHAs —
-G9 keeps the commit/snapshot job unchanged.
-
 ## Producer flow at the end of the story
 
 1. Run G1/G2, G3 (if separate), G4 (if separate), G5, G6 (`mutation-testing`'s gate), G7, G11 —
    each through `capture.mjs` or its script, which write stdout, exit code and hash into `$EV`.
 2. For each scenario, write the RED + GREEN snapshots with `snapshot.mjs --rev`.
-3. For each scenario, check the G10 RED captures taken at RED time are present in `$EV`
-   (`qg-red-{cycle}.stdout` / `.exit` / `.stdout.sha256`) with a non-zero exit. They are
-   NOT re-runnable here — a missing capture is `status: "fail"`, never `not_applicable`.
-4. `repo_root_rev = git rev-parse HEAD` — the last work commit.
-5. Build `commits_covered[]` from `git log --format='%H%x09%s' {DELIVER baseSha}..HEAD` and
+3. `repo_root_rev = git rev-parse HEAD` — the last work commit.
+4. Build `commits_covered[]` from `git log --format='%H%x09%s' {DELIVER baseSha}..HEAD` and
    `git show --name-only --format= <sha>` per commit: every commit since DELIVER started.
-6. Assemble `$EV/qg-{story}.json` per `quality-gates-evidence-contract` (v5).
-7. Commit `$EV` alone: `git add "$EV" && git commit -s -m 'chore({feature}): record quality evidence for {story}'`.
-8. `node "<skill>/scripts/qg-verify/cli/qg-verify.mjs" --log "$EV/qg-{story}.json"` must print
+5. Assemble `$EV/qg-{story}.json` per `quality-gates-evidence-contract` (v6).
+6. Commit `$EV` alone: `git add "$EV" && git commit -s -m 'chore({feature}): record quality evidence for {story}'`.
+7. `node "<skill>/scripts/qg-verify/cli/qg-verify.mjs" --log "$EV/qg-{story}.json"` must print
    `"verdict": "pass"`; otherwise fix the gate or the log, never the verifier's input.
 
 If a tool is unavailable in the environment (no SDK), the

@@ -113,15 +113,14 @@ never a promise that it exists.
   instructed to act autonomously does not satisfy this by asking anyway — it reports the failing
   test and stops there.
 - **SKRAFT DELIVER (the software engineer, dispatched once per story):** the inspection is the
-  recorded red of the scenario's acceptance test (quality gate G10), committed as a `test` commit
-  before any production code of that scenario exists; each inner unit test's red is run and read,
-  not captured. Continue to SYNTHESIZE GREEN in the same dispatch — never stop after RED to wait
-  for an inspection. `qg-verify` rejects a scenario whose RED capture is missing or exited zero,
-  and the DELIVER reviewer's `test-integrity` lens inspects every captured RED against the test
-  plan.
+  scenario's acceptance test run red on a business assertion and committed as a `test` commit
+  before any production code of that scenario exists; no RED run is captured. Each inner unit
+  test's red is run and read. Continue to SYNTHESIZE GREEN in the same dispatch — never stop after
+  RED to wait for an inspection. The DELIVER reviewer's `test-integrity` lens inspects every `test`
+  commit against the test plan.
 
 In every mode, no implementation is written until the inspection — or, in SKRAFT DELIVER, the
-scenario's RED capture — exists.
+scenario's `test` commit — exists.
 
 Orient design before synthesis: which pattern (specification, factory, builder), which layer owns
 the logic, immutability and return values vs mutations.
@@ -409,7 +408,7 @@ A scenario whose test has not been written yet is not "skipped" — it is not st
 ## When Orchestrating Subagents (MANDATORY)
 
 Scope: an orchestrator that dispatches individual TDD slices. The SKRAFT orchestrator dispatches a
-whole story to the software engineer, whose RED inspection is the recorded G10 capture (see
+whole story to the software engineer, whose RED inspection is the scenario's `test` commit (see
 *Between RED and GREEN*); it never splits RED and GREEN into two dispatches.
 
 If you dispatch subagents to carry out a TDD slice — whatever the orchestration mechanism:

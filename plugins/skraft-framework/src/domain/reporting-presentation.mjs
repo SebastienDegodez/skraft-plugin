@@ -4,10 +4,13 @@ const MUTATION_SCOPES = ['core', 'boundary']
 // v4 records one G6 entry per mutation scope; v5 and earlier schemas carry a single G6.
 const scoped = (quality) => quality?.$schema === 'quality-gates-evidence/v4'
 const gateKey = (gate, quality) => (scoped(quality) && gate.id === 'G6' ? `G6/${gate.scope}` : gate.id)
-const rowIds = (quality) => gateIds.flatMap((id) => (id === 'G6' && scoped(quality) ? MUTATION_SCOPES.map((scope) => `G6/${scope}`) : [id]))
+// v6 drops G10: the acceptance RED commit is the proof, no RED run is captured.
+const withoutRed = (quality) => quality?.$schema === 'quality-gates-evidence/v6'
+const rowIds = (quality) => gateIds.filter((id) => !(id === 'G10' && withoutRed(quality)))
+  .flatMap((id) => (id === 'G6' && scoped(quality) ? MUTATION_SCOPES.map((scope) => `G6/${scope}`) : [id]))
 const statuses = ['pass', 'fail', 'not_applicable']
-// v5: a G6 the developer declared no mutation command for is not run, and reported as such.
-const notRun = (gate, quality) => gate.status === 'not_run' && gate.id === 'G6' && quality?.$schema === 'quality-gates-evidence/v5'
+// v5+: a G6 the developer declared no mutation command for is not run, and reported as such.
+const notRun = (gate, quality) => gate.status === 'not_run' && gate.id === 'G6' && /^quality-gates-evidence\/v[56]$/.test(quality?.$schema)
 const object = (value) => value !== null && typeof value === 'object' && !Array.isArray(value)
 const text = (value) => typeof value === 'string' && value.trim().length > 0
 const identifier = (value) => text(value) && /^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(value)
@@ -65,7 +68,7 @@ export function parseQualityEvidence(raw, data) {
   if (typeof raw !== 'string') return { error: 'Missing quality evidence document' }
   let quality
   try { quality = JSON.parse(raw) } catch { return { error: 'Malformed quality evidence JSON' } }
-  if (!object(quality) || !/^quality-gates-evidence\/v[12345]$/.test(quality.$schema)) {
+  if (!object(quality) || !/^quality-gates-evidence\/v[1-6]$/.test(quality.$schema)) {
     return { error: 'Unknown or missing quality evidence schema' }
   }
   if (quality.repo_root_rev !== data.revision || quality.story !== data.story) {

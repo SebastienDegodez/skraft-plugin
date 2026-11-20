@@ -43,7 +43,6 @@ metadata:
     - .copilot-tracking/skraft-plans/{projectSlug}/details/{date}/impl-plan-{story}.md
     - tests/**/{Feature}AcceptanceTests.cs
     - .copilot-tracking/skraft-plans/{projectSlug}/details/{date}/stack-commands.md (optional, build/test commands resolved once for later agents)
-    - .copilot-tracking/skraft-plans/{projectSlug}/evidence/{date}/{story}/acceptance-red.* (optional, RED proof of the acceptance tests)
 ---
 
 # Acceptance-Designer Agent
@@ -186,8 +185,7 @@ Author the executable Application-layer acceptance test (Step 1 of the impl-plan
 2. **Copy values VERBATIM** from each scenario in the `.feature` / `ac-draft`. Every input and expected outcome must match the AC character-for-character. Add a traceability comment on each case: `// {Scenario title}`.
 3. **Parametrize** AC tables with `[Theory]` / `[InlineData]` (see test-design-mandates); one `[InlineData]` row per example line.
 4. **Stub only to compile** — add the minimum production signature(s) so the test compiles. Write NO behavior.
-5. **Run and confirm RED**: take the build and test commands from `.copilot-tracking/skraft-plans/{projectSlug}/details/{date}/stack-commands.md` when the handoff block lists it. When the file is absent or one of its commands fails, resolve the commands via the `resolving-stack-commands` skill — never hardcode them — and write the file per that skill's stack-commands file contract. Run only the new acceptance test, filtered to it. The first scenario MUST fail on a **business assertion**, NOT on a compile or setup error. If it fails for setup reasons, fix the harness — never weaken the assertion.
-   Capture that run as the RED proof the engineer reuses: its stdout to `.copilot-tracking/skraft-plans/{projectSlug}/evidence/{date}/{story}/acceptance-red.stdout`, its exit code to `acceptance-red.exit`, and `git rev-parse HEAD` to `acceptance-red.rev` beside them.
+5. **Run and confirm RED**: take the build and test commands from `.copilot-tracking/skraft-plans/{projectSlug}/details/{date}/stack-commands.md` when the handoff block lists it. When the file is absent or one of its commands fails, resolve the commands via the `resolving-stack-commands` skill — never hardcode them — and write the file per that skill's stack-commands file contract. Run only the new acceptance test, filtered to it. The first scenario MUST fail on a **business assertion**, NOT on a compile or setup error. If it fails for setup reasons, fix the harness — never weaken the assertion. Capture nothing: the software-engineer commits this test as its RED.
 6. Author the executable test for the **first** scenario only, and leave it actively RED. Do NOT write tests for the remaining scenarios yet, and never mark one `Skip` / `[Ignore]` to park it — a skipped test asserts nothing and carries a false green through every commit (`craft-discipline` C1/C5). The remaining scenarios stay recorded in the `.feature` file and in `impl-plan-{story}.md`; the software-engineer authors each one's test when its slice starts (`outside-in-tdd` — One Acceptance Test at a Time).
 
 **Self-check before persisting** (output the result):
@@ -206,13 +204,12 @@ Write only the declared artefacts under `.copilot-tracking/skraft-plans/{project
 - `details/{date}/test-plan-{story}.md` — coverage matrix with layer assignment
 - `details/{date}/impl-plan-{story}.md` — sequenced implementation plan (outside-in order)
 - `details/{date}/stack-commands.md` — only when you resolved or corrected the commands at Step 6
-- `evidence/{date}/{story}/acceptance-red.stdout`, `.exit`, `.rev` — the RED proof of Step 6
 
 The outer acceptance test file lives under `tests/**` (committed alongside the plan), not under `.copilot-tracking/`.
 
 ### Rework mode (handoff mode `rework`)
 
-When the handoff block's mode line reads `rework`, the previous review's findings are the whole scope of this pass. Read the review the block names, skip Steps 1–2, and edit only the artefacts and the acceptance test the findings name, in place. Re-run the RED proof only when the acceptance test changed. Keep every other artefact as it is.
+When the handoff block's mode line reads `rework`, the previous review's findings are the whole scope of this pass. Read the review the block names, skip Steps 1–2, and edit only the artefacts and the acceptance test the findings name, in place. Re-run the RED check only when the acceptance test changed. Keep every other artefact as it is.
 
 ### 8. FORECAST HANDOFF
 
@@ -221,5 +218,5 @@ DISTILL reporting data. Write forecast JSON in the dispatched output directory,
 projecting the existing test/implementation plans: AC-to-test mapping and expected
 impact cited to approved sources. Label tests planned, never passed; no new plan,
 raw log dump, publication or state write. Leave `reviewRef` for router binding
-after review. Return exact repository-root-relative plan, forecast-data and RED
-evidence refs, full source revision and limitations; never guess a current-date path.
+after review. Return exact repository-root-relative plan, forecast-data and acceptance
+test refs, full source revision and limitations; never guess a current-date path.

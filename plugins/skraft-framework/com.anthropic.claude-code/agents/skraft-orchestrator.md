@@ -334,7 +334,7 @@ DELIVER has no separate sub-pipeline: you run the engineer↔reviewer loop from 
 
 1. Do not open the plans yourself. Run `state.mjs handoff --agent "Skraft - Software Engineer"`; its block resolves the recorded DISTILL refs.
 2. Dispatch `Skraft - Software Engineer` with the Dispatch context header, its handoff block pasted verbatim, and these additions — a missing entry makes the engineer re-plan the story:
-   - outer acceptance test path(s) and the RED evidence refs the acceptance designer returned
+   - outer acceptance test path(s) the acceptance designer returned
    - approved forecast ref, exact reporting output directory, confirmed media policy, `qa-reporting` skill name
 
    The block carries the `.feature` file(s), `test-plan-{story}.md`, `impl-plan-{story}.md`, `contracts-{story}.md`, `docs/adr/decisions-index.md`, the research conventions and the stack-commands file. Every DELIVER re-dispatch — rework included — carries the same block and the same additions.

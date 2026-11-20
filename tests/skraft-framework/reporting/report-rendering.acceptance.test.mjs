@@ -522,3 +522,15 @@ test('not_run is refused outside G6 of a v5 log', () => {
   fixture.quality.gates[index] = { ...fixture.quality.gates[index], status: 'not_run', rationale: 'x' }
   assert.doesNotMatch(tableRow(renderOutcome(fixture), 'G2'), /not_run/)
 })
+
+test('a v6 log has no G10 row: the acceptance RED commit is the proof', () => {
+  const fixture = outcomeFixture()
+  fixture.quality.$schema = 'quality-gates-evidence/v6'
+  fixture.quality.gates = fixture.quality.gates.filter(({ id }) => id !== 'G10')
+  for (const cycle of fixture.quality.test_integrity.cycles) {
+    delete cycle.red_stdout_ref; delete cycle.red_stdout_sha256; delete cycle.red_exit_code_ref
+  }
+  const report = renderOutcome(fixture)
+  assert.doesNotMatch(report, /^\| G10 \|/m)
+  hasStatus(tableRow(report, 'G9'), 'UNVERIFIED')
+})

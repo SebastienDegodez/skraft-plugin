@@ -368,8 +368,7 @@
         ".copilot-tracking/skraft-plans/{projectSlug}/details/{date}/test-plan-{story}.md",
         ".copilot-tracking/skraft-plans/{projectSlug}/details/{date}/impl-plan-{story}.md",
         "tests/**/{Feature}AcceptanceTests.cs",
-        ".copilot-tracking/skraft-plans/{projectSlug}/details/{date}/stack-commands.md (optional, build/test commands resolved once for later agents)",
-        ".copilot-tracking/skraft-plans/{projectSlug}/evidence/{date}/{story}/acceptance-red.* (optional, RED proof of the acceptance tests)"
+        ".copilot-tracking/skraft-plans/{projectSlug}/details/{date}/stack-commands.md (optional, build/test commands resolved once for later agents)"
       ]
     },
     "architecture-boundaries-lens": {
@@ -572,8 +571,7 @@
       ".copilot-tracking/skraft-plans/{projectSlug}/details/{date}/contracts-{story}.md",
       "docs/adr/decisions-index.md",
       ".copilot-tracking/skraft-plans/{projectSlug}/research/{date}/{slug}-research.md",
-      ".copilot-tracking/skraft-plans/{projectSlug}/details/{date}/stack-commands.md",
-      ".copilot-tracking/skraft-plans/{projectSlug}/evidence/{date}/{story}/acceptance-red.*"
+      ".copilot-tracking/skraft-plans/{projectSlug}/details/{date}/stack-commands.md"
     ],
     "Skraft - Solution Architect Reviewer": [
       ".copilot-tracking/skraft-plans/{projectSlug}/plans/{date}/stories-{milestone}.md",
