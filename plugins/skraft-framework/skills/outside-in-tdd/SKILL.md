@@ -408,7 +408,8 @@ The story's scenarios are written as executable acceptance tests together, commi
    Otherwise write the code, then chain the gate and the green commit: every test except the
    pending scenarios' acceptance tests (*Run one test, then its project* → Pending excluded)
    `&& git add … && git commit`.
-5. After the last scenario, the whole suite runs green, unfiltered.
+5. Loop until the last scenario: a red acceptance test after a green commit is a scenario still
+   owed, never a reason to stop. After the last one, the whole suite runs green, unfiltered.
 
 Every green commit leaves the delivered scenarios and every other test green; only the
 acceptance tests of scenarios not delivered yet are red.
