@@ -6,7 +6,8 @@
 #
 # The suite (tests/agents/<suite>/: spec + fixtures) is taken from the CURRENT
 # checkout and copied into both worktrees, so both arms see the same stimulus,
-# fixture and graders; only the descriptors, skills and plugin code differ.
+# fixture and graders, and so is the agent executor (eng/vally-agent-executor): only the
+# descriptors, skills and plugin code differ.
 # Each arm runs through eng/run-vally-evals.sh of its own ref — the only eval
 # entry point — then eng/compare-agent-ab.mjs reads the two results.jsonl.
 #
@@ -73,6 +74,11 @@ prepare_arm() {
     sed -i.bak -E "s/^(  runs:) [0-9]+$/\1 $RUNS/" "$TREE/tests/agents/$ARM_SUITE/eval.yaml"
     rm -f "$TREE/tests/agents/$ARM_SUITE/eval.yaml.bak"
   fi
+  # The harness is the current checkout's too: both arms get the same tools and permissions, so
+  # only the descriptors, skills and plugin code differ.
+  rm -rf "$TREE/eng/vally-agent-executor"
+  cp -R "$ROOT/eng/vally-agent-executor" "$TREE/eng/vally-agent-executor"
+  cp "$ROOT/eng/lib/front-matter.mjs" "$TREE/eng/lib/front-matter.mjs"
   # The executor imports the Copilot SDK; both arms share the current checkout's install.
   if [ -d "$ROOT/node_modules" ] && [ ! -e "$TREE/node_modules" ]; then
     ln -s "$ROOT/node_modules" "$TREE/node_modules"
