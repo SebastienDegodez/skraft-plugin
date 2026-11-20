@@ -1,0 +1,9 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../CheckoutPricing.Application/CheckoutPricing.Application.csproj" />
+    <ProjectReference Include="../CheckoutPricing.Infrastructure/CheckoutPricing.Infrastructure.csproj" />
+  </ItemGroup>
+</Project>

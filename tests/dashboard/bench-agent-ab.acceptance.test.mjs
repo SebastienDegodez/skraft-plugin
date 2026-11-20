@@ -61,6 +61,8 @@ before(() => {
   cpSync(join(repoRoot, 'plugins/skraft-framework/skills'), join(repo, 'plugins/skraft-framework/skills'), { recursive: true })
   mkdirSync(join(repo, 'tests/agents/demo-suite'), { recursive: true })
   writeFileSync(join(repo, 'tests/agents/demo-suite/eval.yaml'), 'name: demo-suite\ndefaults:\n  runs: 3\nstimuli: []\n')
+  mkdirSync(join(repo, 'tests/agents/demo-suite-written'), { recursive: true })
+  writeFileSync(join(repo, 'tests/agents/demo-suite-written/eval.yaml'), 'name: demo-suite-written\ndefaults:\n  runs: 3\nstimuli: []\n')
   // The runner resolves eval models through the installed Vally; each worktree links this install.
   if (existsSync(join(repoRoot, 'node_modules'))) symlinkSync(join(repoRoot, 'node_modules'), join(repo, 'node_modules'))
   writeFileSync(join(repo, '.gitignore'), 'node_modules\n')
@@ -116,6 +118,17 @@ describe('A/B agent benchmark', () => {
       git('worktree', 'remove', '--force', join(runs, latest, arm, 'worktree'))
     }
     match(readFileSync(join(repo, 'tests/agents/demo-suite/eval.yaml'), 'utf8'), /^ {2}runs: 3$/m)
+  })
+
+  it('runs the candidate on its own suite when it expects another handoff', () => {
+    const result = bench('control', 'faster', { CANDIDATE_SUITE: 'demo-suite-written' })
+
+    strictEqual(result.status, 0, result.stderr)
+    match(result.stdout, /A\/B demo-suite → demo-suite-written/)
+    match(result.stdout, /\| Tokens \| 2000 \| 1000 \| -50 % \|/)
+    const runs = join(workspace, 'bench/demo-suite')
+    const latest = join(runs, readdirSync(runs).sort().at(-1))
+    strictEqual(readFileSync(join(latest, 'candidate/suite-name'), 'utf8').trim(), 'demo-suite-written')
   })
 
   it('reuses the control arm of an earlier run of the same suite, and says so', () => {

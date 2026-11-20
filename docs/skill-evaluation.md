@@ -265,10 +265,21 @@ RUNS=5 ARMS_SEQUENTIAL=1 ./eng/bench-agent-ab.sh <suite> <control-ref> <candidat
   when that run's suite (spec and fixtures) differs from the current one. A reused arm is a
   frozen draw: the report says so, and its verdict is never one to publish.
 
+- `CONTROL_SUITE=` / `CANDIDATE_SUITE=` run one arm on another suite with the same stimulus
+  names, for a version of the agent that expects another handoff. The report compares the arms
+  stimulus by stimulus, so the names must match.
+
 `software-engineer-throughput` is the suite built for this: a fourteen-scenario .NET story
 over three use cases, two scenarios already covered by earlier ones, and a hidden oracle that
 checks every example of the feature whatever tests the agent wrote. A trial takes one to
 three hours: run a pilot of 3 trials per arm before funding 12 to 15.
+
+Two more suites price a change that moves work between phases.
+`software-engineer-throughput-designed` hands the engineer the same story with the acceptance
+tests of every scenario already committed RED, the handoff of an acceptance-designer that writes
+them all; `acceptance-designer-throughput` runs the designer on that story one phase earlier.
+A version that moves the tests from DELIVER to DISTILL is compared on both: the designer suite at
+the two refs, and the engineer suites with `CANDIDATE_SUITE=software-engineer-throughput-designed`.
 
 ## Running an evaluation
 
