@@ -76,6 +76,4 @@ the business assertion. Do not edit it.
 - NuGet restore completes before agent execution. Do not add or restore packages and do
   not use the network.
 - Negative subtotals, unknown tiers, persistence and HTTP transport are out of scope.
-- Load the .NET quality-gate adapter during COMMIT & VERIFY. If the mutation tool is
-  unavailable, capture that failed gate and return an honest blocker; never invent a
-  mutation score.
+- Load the .NET quality-gate adapter during COMMIT & VERIFY.
