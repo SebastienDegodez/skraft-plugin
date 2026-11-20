@@ -5,7 +5,7 @@
 //     [--control-ref main] [--candidate-ref perf/x] [--control-reused <run dir>]
 //     [--out report.json] [--markdown report.md]
 //
-// Exit code: 0 improved or no-gain, 3 quality-regression, 4 errored, 2 usage error.
+// Exit code: 0 improved or no-gain, 1 empty (an arm has no trial), 3 quality-regression, 4 errored, 2 usage error.
 
 import { readFileSync, writeFileSync } from 'node:fs'
 import { parseArgs } from 'node:util'
@@ -51,4 +51,4 @@ const markdown = renderAgentComparison(comparison, {
 if (values.out) writeFileSync(values.out, `${JSON.stringify(comparison, null, 2)}\n`)
 if (values.markdown) writeFileSync(values.markdown, markdown)
 process.stdout.write(markdown)
-process.exit({ 'quality-regression': 3, errored: 4 }[comparison.verdict] ?? 0)
+process.exit({ empty: 1, 'quality-regression': 3, errored: 4 }[comparison.verdict] ?? 0)

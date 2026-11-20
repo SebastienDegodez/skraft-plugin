@@ -119,4 +119,11 @@ describe('A/B agent comparison', () => {
     strictEqual(comparison.verdict, 'errored')
     match(renderAgentComparison(comparison), /Verdict : errored\*\* — un essai au moins a échoué avant de travailler/)
   })
+
+  it('compares nothing when an arm holds no trial, never calling it a regression', () => {
+    const comparison = compareAgentArms({ control: [{ type: 'session-log' }], candidate: [trial({})] })
+
+    strictEqual(comparison.verdict, 'empty')
+    match(renderAgentComparison(comparison), /Verdict : empty\*\* — un bras n’a aucun essai/)
+  })
 })

@@ -173,8 +173,10 @@ export function compareAgentArms({ control, candidate }) {
   const faster = (percent(overallControl.durationMs, overallCandidate.durationMs) ?? 0) < 0
 
   const errored = overallControl.errors + overallCandidate.errors > 0
+  // A file with no trial-result record is not a run: nothing to compare.
+  const empty = overallControl.trials === 0 || overallCandidate.trials === 0
   return {
-    verdict: errored ? 'errored' : !qualityHeld ? 'quality-regression' : cheaper || faster ? 'improved' : 'no-gain',
+    verdict: errored ? 'errored' : empty ? 'empty' : !qualityHeld ? 'quality-regression' : cheaper || faster ? 'improved' : 'no-gain',
     underpowered: Math.min(overallControl.trials, overallCandidate.trials) < 5,
     overall: {
       control: overallControl,
@@ -215,7 +217,7 @@ export function renderAgentComparison(comparison, { controlRef = 'control', cand
   const lines = [
     `## A/B agent — ${controlRef} → ${candidateRef}`,
     '',
-    `**Verdict : ${comparison.verdict}**${comparison.verdict === 'errored' ? ' — un essai au moins a échoué avant de travailler : rien n’est mesuré, voir run.log de chaque bras' : comparison.underpowered ? ' (moins de 5 essais par bras : indicatif)' : ''}`,
+    `**Verdict : ${comparison.verdict}**${comparison.verdict === 'empty' ? ' — un bras n’a aucun essai : ce fichier n’est pas un results.jsonl de Vally, ou le bras n’a pas fini' : comparison.verdict === 'errored' ? ' — un essai au moins a échoué avant de travailler : rien n’est mesuré, voir run.log de chaque bras' : comparison.underpowered ? ' (moins de 5 essais par bras : indicatif)' : ''}`,
     ...(controlReused ? ['', `> Bras contrôle repris d’un run précédent (${controlReused}) : un tirage figé, indicatif, jamais un verdict à publier.`] : []),
     '',
     `| Mesure (médiane) | ${controlRef} | ${candidateRef} | Δ |`,
