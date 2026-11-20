@@ -196,7 +196,7 @@ error only when read: a red is never chained to a commit; a green is.
 
 | Pass | Commits |
 |---|---|
-| Acceptance tests of the story (skraft DISTILL for the first, DELIVER for every other) | One `test` commit: every remaining scenario's acceptance test and the skeleton they call, after one run whose output shows each failing on a business assertion, formatted and linted before the commit |
+| Acceptance tests of the story (skraft DISTILL) | One `test` commit: every scenario's acceptance test and the skeleton they call, after one run whose output shows each failing on a business assertion, formatted and linted before the commit |
 | Scenario in progress (skraft DELIVER) | The inner cycles commit nothing. One `feat` or `fix` commit once the scenario passes, its unit tests and every format or lint fix included, chained so it commits only when the run passes: `<test command, pending scenarios excluded> && git add <each file> && git commit -s -m "<subject>" -m "Refs: #N"` |
 | No scenario: gates or review sent the story back, mutant kills, a session without skraft | Each cycle: `feat` or `fix` with its test and the code, once green; `refactor` for a change under green |
 
@@ -396,19 +396,22 @@ The story's scenarios are written as executable acceptance tests together, commi
 `test` commit, then made green one scenario at a time. No `[Skip]`, no `[Ignore]`, nothing disabled
 (`craft-discipline` C5): a pending scenario stays an active, failing test.
 
-1. Write the acceptance test of every scenario of the `.feature` that has none, values copied
-   verbatim, each tagged with its scenario id (`[Trait("Scenario", "S4")]`, `describe("S4 …")`,
+1. Write the acceptance test of every scenario of the `.feature` (skraft: the acceptance-designer, in
+   DISTILL; the software-engineer never writes one), values copied verbatim, each tagged with its scenario id (`[Trait("Scenario", "S4")]`, `describe("S4 …")`,
    `@pytest.mark.s4`), with the skeleton signatures they compile against and no behavior.
 2. Run the acceptance tests once, failures listed, and read that each fails on a business
    assertion, never a build or setup error. A test that already passes needs no code: note it.
 3. Commit all of them, formatted and linted, in ONE `test` commit. One command: the run and the
    commit never wait on each other's turn when the output was already read.
-4. For each scenario, in plan order, in one turn: run its tests filtered to it; when they pass, an
-   earlier scenario covers it — no commit, name the covering scenario on its change-log line.
-   Otherwise write the code, then chain the gate and the green commit: every test except the
-   pending scenarios' acceptance tests (*Run one test, then its project* → Pending excluded)
-   `&& git add … && git commit`.
-5. Loop until the last scenario: a red acceptance test after a green commit is a scenario still
+4. Group the scenarios, in plan order, by the rule they pin down: consecutive scenarios that
+   enter through the same use case and state one rule or its edge cases (a rate, its cap, its
+   threshold) form one group; a scenario on its own is a group of one. For each group, in one
+   turn: run its tests filtered to it; scenarios that already pass are covered by an earlier
+   one — no code, name the covering scenario on their change-log line. Write the code the
+   group's red tests demand, nothing more, then chain the gate and ONE green commit for the
+   group: every test except the pending scenarios' acceptance tests (*Run one test, then its
+   project* → Pending excluded) `&& git add … && git commit -m "feat(feature): <rule> S4–S7"`.
+5. Loop until the last group: a red acceptance test after a green commit is a scenario still
    owed, never a reason to stop. After the last one, the whole suite runs green, unfiltered.
 
 Every green commit leaves the delivered scenarios and every other test green; only the
