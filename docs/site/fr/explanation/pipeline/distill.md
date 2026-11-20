@@ -42,13 +42,16 @@ L'ADR et le modèle d'événements entrent. DISTILL écrit le **scénario Gherki
 - Plan d'implémentation ordonnant les tests par couche (Domain, Application, Infrastructure, API).
 - Identification des Test Double nécessaires par frontière.
 - `details/{date}/stack-commands.md`, quand les commandes ont dû être résolues ou corrigées.
+- Le test d'acceptation exécutable de chaque scénario, nommé d'après son scénario (`S4_…`), avec les stubs qui le font compiler, commités RED en un seul commit `test`.
 
 ## Comment DELIVER reçoit la preuve d'exécution
 
 DISTILL résout les commandes de build, test et mutation une seule fois dans
-`stack-commands.md` au lieu de laisser l'engineer les redécouvrir. Il lance le premier
-test d'acceptation et vérifie qu'il échoue sur une assertion métier, sans rien capturer : le
-software engineer commite ce test comme RED du scénario.
+`stack-commands.md` au lieu de laisser l'engineer les redécouvrir. Il écrit le test
+d'acceptation de chaque scénario, les lance une fois et vérifie que chacun échoue sur une
+assertion métier, puis les commite en un seul commit `test` : le RED de tous les scénarios.
+Aucun run RED n'est capturé ; le software engineer n'écrit ni ne modifie jamais un test
+d'acceptation.
 
 ## Du plan approuvé au rapport prévisionnel
 

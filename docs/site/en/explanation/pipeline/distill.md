@@ -42,13 +42,15 @@ The ADR and event model enter. DISTILL writes the **Gherkin scenario**: “Given
 - Implementation plan ordering tests by layer (Domain, Application, Infrastructure, API).
 - Identification of Test Doubles needed at each boundary.
 - `details/{date}/stack-commands.md`, when commands had to be resolved or corrected.
+- The executable acceptance test of every scenario, each named after its scenario (`S4_…`), with the stubs they compile against, committed RED in one `test` commit.
 
 ## How DELIVER receives execution proof
 
 DISTILL resolves build, test and mutation commands once into `stack-commands.md` instead
-of leaving the engineer to rediscover them. It runs the first acceptance test and reads that it
-fails on a business assertion, but captures nothing: the software engineer commits that test
-as the scenario's RED.
+of leaving the engineer to rediscover them. It writes the acceptance test of every scenario, runs
+them once and reads that each fails on a business assertion, then commits them in one `test`
+commit: the RED of every scenario. No RED run is captured; the software engineer never writes
+or edits an acceptance test.
 
 ## From approved plan to forecast
 

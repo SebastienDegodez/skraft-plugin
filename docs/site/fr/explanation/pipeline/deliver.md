@@ -51,8 +51,10 @@ Le bloc porte le `.feature`, `test-plan-{story}.md`, `impl-plan-{story}.md`,
 `stack-commands.md` et le test d'acceptation RED. Les retries portent le même bloc, donc
 le plan de tests et le plan d'implémentation restent présents pendant le rework.
 
-L'inspection RED a lieu dans le dispatch du software-engineer : le commit `test` du scénario
-est l'inspection, et l'engineer continue RED → GREEN → COMMIT sans second dispatch. La
+Le RED est le commit `test` de DISTILL, qui porte le test d'acceptation de chaque scénario.
+L'engineer les rend verts groupe par groupe — les scénarios qui fixent une règle et ses cas
+limites —, un commit vert par groupe, la gate excluant les scénarios encore dus, le dernier
+groupe lançant toute la suite. Un seul dispatch livre tous les scénarios. La
 mutation par cycle est différentielle depuis le dernier commit du cycle précédent et est
 sautée quand aucun fichier de production cœur n'a changé. Seul le run final complet cœur
 puis frontière constitue l'évidence G6.
