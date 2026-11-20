@@ -175,9 +175,11 @@ Refining code instead of revising RED means you are back in 3-step TDD — stop 
 | TypeScript, Vitest | `npx vitest run <file> -t "<name>"` | `npx vitest run <folder>` | `--reporter=dot` |
 | Python, pytest | `pytest <file>::<test>` | `pytest <folder>` | `-q` |
 
-Pending excluded — every test but the acceptance tests of scenarios not delivered yet:
-.NET `--filter "Scenario!=S5&Scenario!=S6"`; Maven `-Dgroups='!S5,!S6'` (JUnit `@Tag`);
-Vitest `-t "^(?!.*\b(S5|S6)\b)"`; pytest `-m "not s5 and not s6"`.
+Pending excluded — every test but the acceptance tests of scenarios not delivered yet, by the
+scenario id that starts each acceptance test's name (`S5_…`, `test_s5_…`): .NET
+`--filter "FullyQualifiedName!~S5_&FullyQualifiedName!~S6_"`; Maven `-Dtest='!*S5_*,!*S6_*'`;
+Vitest `-t "^(?!.*\b[Ss](5|6)_)"`; pytest `-k "not s5_ and not s6_"`. A runner that only
+includes (Gradle `--tests`) lists the delivered scenarios' ids and the unit tests instead.
 
 The stack's test command from the stack-commands file stays the command of record: add only the
 filter and the verbosity to it, never replace it with another runner.
@@ -397,8 +399,8 @@ The story's scenarios are written as executable acceptance tests together, commi
 (`craft-discipline` C5): a pending scenario stays an active, failing test.
 
 1. Write the acceptance test of every scenario of the `.feature` (skraft: the acceptance-designer, in
-   DISTILL; the software-engineer never writes one), values copied verbatim, each tagged with its scenario id (`[Trait("Scenario", "S4")]`, `describe("S4 …")`,
-   `@pytest.mark.s4`), with the skeleton signatures they compile against and no behavior.
+   DISTILL; the software-engineer never writes one), values copied verbatim, each test's name starting with its scenario id and an underscore
+   (`S4_WelcomeFiveTakesFiveEuros`, `test_s4_welcome_five…`) — a name every runner filters on, with the skeleton signatures they compile against and no behavior.
 2. Run the acceptance tests once, failures listed, and read that each fails on a business
    assertion, never a build or setup error. A test that already passes needs no code: note it.
 3. Commit all of them, formatted and linted, in ONE `test` commit. One command: the run and the
