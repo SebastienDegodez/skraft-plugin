@@ -134,6 +134,20 @@ that is the Iron Rule of Tests, mechanically verifiable).
 
 ## Producer flow at the end of the story
 
+One command runs the whole flow below — every gate, the snapshots, `commits_covered`, the log,
+its evidence-only commit and `qg-verify` — and exits with `qg-verify`'s verdict:
+
+```bash
+node "<skill>/scripts/qg-collect.mjs" --root . --evidence "$EV" --story {story} --feature {feature} \
+  --base {DELIVER baseSha} --mutation-gate "<mutation-testing skill>/scripts/mutation-gate/cli/mutation-gate.mjs" \
+  --cycle 1:{red sha}:{green sha}:{acceptance test file} --cycle 2:…
+```
+
+One `--cycle` per scenario that has a green commit, numbered by its rank in the plan; its red is
+the `test` commit holding its acceptance test. It prints one line per gate, then the verdict. A
+`fail` or `inconclusive` is yours to fix: fix the code or the cycles, then run it again. By hand,
+the same flow is:
+
 1. Run G1/G2, G3 (if separate), G4 (if separate), G5, G6 (`mutation-testing`'s gate), G7, G11 —
    each through `capture.mjs` or its script, which write stdout, exit code and hash into `$EV`.
 2. For each scenario, write the RED + GREEN snapshots with `snapshot.mjs --rev`.

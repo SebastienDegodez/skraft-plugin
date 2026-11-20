@@ -181,18 +181,19 @@ Derive the outside-in order from the test plan. The software-engineer runs the s
 
 ### 6. IMPLEMENT OUTER ACCEPTANCE TEST (RED)
 
-Author the executable Application-layer acceptance test (Step 1 of the impl-plan). This is the outer loop — the software-engineer will make it GREEN.
+Author the executable Application-layer acceptance test of EVERY scenario of the `.feature` (`outside-in-tdd` → All Acceptance Tests First). This is the outer loop — the software-engineer makes it GREEN and never writes or edits an acceptance test.
 
 1. **Create the test file** named in Step 1 (e.g. `tests/{Context}.UnitTest/Features/{Feature}/{Feature}AcceptanceTests.cs`), entering through the use case boundary from `contracts-{story}.md`.
-2. **Copy values VERBATIM** from each scenario in the `.feature` / `ac-draft`. Every input and expected outcome must match the AC character-for-character. Add a traceability comment on each case: `// {Scenario title}`.
+2. **Copy values VERBATIM** from each scenario in the `.feature` / `ac-draft`. Every input and expected outcome must match the AC character-for-character. Tag each test with its scenario id (`[Trait("Scenario", "S4")]`, `describe("S4 …")`, `@pytest.mark.s4`) and add a traceability comment on each case: `// {Scenario title}`.
 3. **Parametrize** AC tables with `[Theory]` / `[InlineData]` (see test-design-mandates); one `[InlineData]` row per example line.
-4. **Stub only to compile** — add the minimum production signature(s) so the test compiles. Write NO behavior.
-5. **Run and confirm RED**: take the build and test commands from `.copilot-tracking/skraft-plans/{projectSlug}/details/{date}/stack-commands.md` when the handoff block lists it. When the file is absent or one of its commands fails, resolve the commands via the `resolving-stack-commands` skill — never hardcode them — and write the file per that skill's stack-commands file contract. Run only the new acceptance test, filtered to it. The first scenario MUST fail on a **business assertion**, NOT on a compile or setup error. If it fails for setup reasons, fix the harness — never weaken the assertion. Capture nothing: the software-engineer commits this test as its RED.
-6. Author the executable test for the **first** scenario only, and leave it actively RED. Do NOT write tests for the remaining scenarios yet, and never mark one `Skip` / `[Ignore]` to park it — a skipped test asserts nothing and carries a false green through every commit (`craft-discipline` C1/C5). The remaining scenarios stay recorded in the `.feature` file and in `impl-plan-{story}.md`; the software-engineer authors all of them together at the start of DELIVER (`outside-in-tdd` — All Acceptance Tests First).
+4. **Stub only to compile** — add the minimum production signature(s) every test needs to compile, including the boundaries later scenarios add. Write NO behavior.
+5. **Run and confirm RED**: take the build and test commands from `.copilot-tracking/skraft-plans/{projectSlug}/details/{date}/stack-commands.md` when the handoff block lists it. When the file is absent or one of its commands fails, resolve the commands via the `resolving-stack-commands` skill — never hardcode them — and write the file per that skill's stack-commands file contract. Run the acceptance tests once, failures listed. Every scenario MUST fail on a **business assertion**, NOT on a compile or setup error. If one fails for setup reasons, fix the harness — never weaken the assertion. Capture nothing.
+6. Leave every test actively RED: never mark one `Skip` / `[Ignore]` — a skipped test asserts nothing and carries a false green through every commit (`craft-discipline` C1/C5).
+7. **Commit the RED once**: run formatting and static checks on the tests and stubs, then commit them alone, naming each file, in ONE `git commit -s -m "test(feature): acceptance tests S1–S{N}"`. The plans under `.copilot-tracking/` are not part of it. This is the RED of every scenario: the software-engineer adds no other `test` commit.
 
 **Self-check before persisting** (output the result):
 - [ ] Every input/output value in the test matches the `.feature` exactly (no invented values)
-- [ ] First acceptance scenario runs and fails on a business assertion (RED proven via the resolved test command's output)
+- [ ] Every acceptance scenario runs and fails on a business assertion (RED proven via the resolved test command's output), committed in one `test` commit
 - [ ] No production behavior written — stubs only
 - [ ] The outer acceptance test file lives under `tests/{Context}.UnitTest/**` (Application layer), NOT under `tests/{Context}.IntegrationTest/**`. An HTTP/API/Infrastructure test alone never satisfies this step — it is Phase 2/3 of `outside-in-tdd` Concentric Circle Expansion and can only be authored after Phase 1 (this Application-layer test) is RED.
 
@@ -207,11 +208,11 @@ Write only the declared artefacts under `.copilot-tracking/skraft-plans/{project
 - `details/{date}/impl-plan-{story}.md` — sequenced implementation plan (outside-in order)
 - `details/{date}/stack-commands.md` — only when you resolved or corrected the commands at Step 6
 
-The outer acceptance test file lives under `tests/**` (committed alongside the plan), not under `.copilot-tracking/`.
+The outer acceptance test files live under `tests/**` (committed at Step 6), not under `.copilot-tracking/`.
 
 ### Rework mode (handoff mode `rework`)
 
-When the handoff block's mode line reads `rework`, the previous review's findings are the whole scope of this pass. Read the review the block names, skip Steps 1–2, and edit only the artefacts and the acceptance test the findings name, in place. Re-run the RED check only when the acceptance test changed. Keep every other artefact as it is.
+When the handoff block's mode line reads `rework`, the previous review's findings are the whole scope of this pass. Read the review the block names, skip Steps 1–2, and edit only the artefacts and the acceptance test the findings name, in place. When an acceptance test changed, re-run the RED check and commit the change in one more `test` commit. Keep every other artefact as it is.
 
 ### 8. FORECAST HANDOFF
 
