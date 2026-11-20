@@ -12,7 +12,8 @@
 #
 # Environment:
 #   BENCH_DIR=./bench-results     Output root (worktrees are removed, results kept)
-#   RUNS=<n>                      Trials per stimulus and per arm (default: the spec's)
+#   RUNS=<n>                      Trials per stimulus and per arm, written into each arm's copy
+#                                 of the spec (default: the spec's defaults.runs)
 #   ARMS_SEQUENTIAL=1             Run the arms one after the other (default: in parallel)
 #   KEEP_WORKTREES=1              Keep both worktrees for inspection
 #   plus every variable eng/run-vally-evals.sh reads (MODEL, VALLY, ...).
@@ -46,6 +47,12 @@ prepare_arm() {
   rm -rf "$TREE/tests/agents/$SUITE"
   mkdir -p "$TREE/tests/agents"
   cp -R "$SUITE_DIR" "$TREE/tests/agents/$SUITE"
+  # The runner passes RUNS to skill specs only: an agent suite runs its defaults.runs, so the
+  # copy of the spec carries the trial count (the committed spec stays as it is).
+  if [ -n "${RUNS:-}" ]; then
+    sed -i.bak -E "s/^(  runs:) [0-9]+$/\1 $RUNS/" "$TREE/tests/agents/$SUITE/eval.yaml"
+    rm -f "$TREE/tests/agents/$SUITE/eval.yaml.bak"
+  fi
   # The executor imports the Copilot SDK; both arms share the current checkout's install.
   if [ -d "$ROOT/node_modules" ] && [ ! -e "$TREE/node_modules" ]; then
     ln -s "$ROOT/node_modules" "$TREE/node_modules"
