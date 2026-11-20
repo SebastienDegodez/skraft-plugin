@@ -16,7 +16,7 @@ La phase DELIVER implémente le code fonctionnel, guidé par les tests, avec une
 | | |
 |---|---|
 | **Vient de** | **DISTILL** — les scénarios Gherkin, le plan de tests, le plan d'implémentation et le test d'acceptation RED |
-| **Ce qui entre** | Spécifications exécutables à implémenter, dans l'ordre du plan d'implémentation, avec la couche et le double du plan de tests pour chaque scénario ; contrats, index ADR, conventions de recherche, commandes de stack et rapport prévisionnel du flux de reporting approuvé |
+| **Ce qui entre** | Spécifications exécutables à implémenter, dans l'ordre du plan d'implémentation, avec la couche et le double du plan de tests pour chaque scénario ; contrats, index ADR, conventions de recherche et commandes de stack |
 | **Ce qui sort** | Code testé + évidence qualité (mutation, RED→GREEN) ; rapport de résultat à la fin ou au blocage |
 | **Va vers** | La **Pull Request** — revue humaine puis livraison |
 | **Agent responsable** | `software-engineer` |
@@ -75,8 +75,8 @@ de retry, puis le reviewer refait sa revue.
 
 ## Des preuves au rapport de résultat
 
-**L'intégration du reporting est en cours.** Le flux approuvé transforme le rapport
-prévisionnel DISTILL en comparaison avec l'impact constaté à la fin ou au blocage.
+**L'intégration du reporting est en cours.** Le flux approuvé rapporte, à la fin ou au
+blocage, le plan de tests, les tests exécutés et, pour un front, les captures d'écran.
 Le [software engineer]({{ "/fr/dashboard/#agent-software-engineer" | relative_url }})
 possède les preuves, le journal des changements et les références d'impact.
 L'[engineer reviewer]({{ "/fr/dashboard/#agent-software-engineer-reviewer" | relative_url }})
@@ -110,8 +110,7 @@ du rapport, pas les preuves locales conservées pour la revue. Les omissions res
 visibles. Aucun téléversement, hébergement ou rejeu navigateur automatique n'est ajouté
 pour simplement mettre en forme le rapport.
 
-Le résultat met à jour le second commentaire PR stable ; le rapport prévisionnel
-DISTILL approuvé reste le premier. Les choix de démarrage gouvernent PR complète,
+Le résultat est le commentaire PR stable de la story. Les choix de démarrage gouvernent PR complète,
 issue en mode lien, rapport complet ou aucun rapport, et résumé chat. Les destinations complètes réutilisent
 le même corps rendu ; les liens d'issue sont préparés seulement après réception de
 l'URL retournée du commentaire dans le reçu PR/MR correspondant.
@@ -132,7 +131,7 @@ bout via l'hôte restent non vérifiées.
 
 En cas d'échec de publication, Markdown local, tentative en attente et reçus par
 destination subsistent, même après `DONE`. La reprise réutilise les rapports enregistrés,
-sans nouveau cycle d'ingénierie ni de capture. Contenu prévisionnel/résultat et responsabilité
+sans nouveau cycle d'ingénierie ni de capture. Contenu du résultat et responsabilité
 de revue restent inchangés. Abandonner une tentative locale non résolue exige une
 confirmation humaine explicite et un motif ; les reçus sont conservés et aucune écriture
 distante n'est annulée.
@@ -169,5 +168,5 @@ capacité est active, sa lentille de fidélité rejoint le panel adverse du
 Cette phase franchit les gates de livraison — tests RED/GREEN intègres, build vert,
 score de mutation au seuil (voir le [catalogue des gates]({{ "/fr/reference/gates" | relative_url }})).
 Le reviewer indépendant émet son verdict avant que la livraison soit déclarée approuvée.
-Une **draft PR** peut déjà contenir le rapport prévisionnel après création et push
+Une **draft PR** peut déjà exister après création et push
 autorisés séparément ; son ouverture ne signifie pas que les gates de livraison sont franchies.

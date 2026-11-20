@@ -1,11 +1,11 @@
 # PR and issue reports
 
-Reporting makes the artifact flow visible: approved DISTILL scenarios and test plan
-become a **forecast**; DELIVER code, quality evidence and persisted review become an
-**outcome**, including when delivery is blocked. The approved protocol maintains two
-stable PR comments per story/report identity, updating them rather than adding one
-per retry. Forecast means planned tests and expected impact, not passing tests.
-Outcome compares expected and actual impact, with recorded checks, metrics, changes
+Reporting makes the artifact flow visible: DELIVER code, quality evidence and persisted
+review become an **outcome**, including when delivery is blocked: the test plan, the tests
+executed and, for a front end, the screenshots. DISTILL publishes no report; the QA reads
+its test plan. The approved protocol maintains one stable PR comment per story/report
+identity, updating it rather than adding one per retry. The skill's `forecast` template
+stays available, unused by the pipeline. Outcome compares expected and actual impact, with recorded checks, metrics, changes
 and limitations. Missing proof is not success; delivery is not deployment.
 
 The approved extraction gives [qa-reporting](skills/qa-reporting/SKILL.md) ownership of

@@ -19,7 +19,6 @@ metadata:
   skills:
     - acceptance-review-criteria
     - adversarial-review-lenses
-    - qa-reporting
   inputs:
     required:
       - .copilot-tracking/skraft-plans/{projectSlug}/features/{bounded-context}-{feature}.feature
@@ -117,13 +116,6 @@ Evaluate 4 lenses independently. Each lens sees only its designated inputs — f
 ---
 
 ### Phase 3: SYNTHESIZE + VERDICT
-
-For forecast handoff, load [qa-reporting](../../skills/qa-reporting/SKILL.md) before checking data.
-Check producer JSON against original AC, existing plans and impact sources using
-their returned repository-root-relative refs. Reject invented criteria, unsupported
-impact or planned-as-passed claims. Fold defects into the existing verdict; keep
-four lens inputs isolated. Do not repair data, publish, or require `reviewRef`
-before this review exists: router binds the persisted review afterward.
 
 Apply the severity matrix (from `acceptance-review-criteria` skill):
 

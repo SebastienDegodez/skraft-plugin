@@ -332,12 +332,12 @@ DELIVER has no separate sub-pipeline: you run the engineer↔reviewer loop from 
 1. Do not open the plans yourself. Run `state.mjs handoff --agent "Skraft - Software Engineer"`; its block resolves the recorded DISTILL refs.
 2. Dispatch `Skraft - Software Engineer` with the Dispatch context header, its handoff block pasted verbatim, and these additions — a missing entry makes the engineer re-plan the story:
    - outer acceptance test path(s) the acceptance designer returned
-   - approved forecast ref, exact reporting output directory, confirmed media policy, `qa-reporting` skill name
+   - exact reporting output directory, confirmed media policy, `qa-reporting` skill name
 
    The block carries the `.feature` file(s), `test-plan-{story}.md`, `impl-plan-{story}.md`, `contracts-{story}.md`, `docs/adr/decisions-index.md`, the research conventions and the stack-commands file. Every DELIVER re-dispatch — rework included — carries the same block and the same additions.
 
    Require engineer-owned quality evidence, change log, actual-impact outcome data and frontend manifest on success or blockage. Engineering rigor stays unchanged; resume unfinished COMMIT & VERIFY work, but never rerun gates just to publish.
-3. Record the engineer's change log and quality-evidence log with `state.mjs record-artifact --phase DELIVER`, prepare fresh inputs under Deterministic review preparation, then dispatch `Skraft - Software Engineer Reviewer` with the Dispatch context header, its handoff block (it carries the `.feature`, `test-plan-{story}.md`, `impl-plan-{story}.md`, contracts and decisions index), the prepared paths and `reviewed_sha`, and the raw outcome, forecast, quality-evidence, change-log and manifest refs. Keep all four core lenses mandatory and cold-reader inputs unchanged.
+3. Record the engineer's change log and quality-evidence log with `state.mjs record-artifact --phase DELIVER`, prepare fresh inputs under Deterministic review preparation, then dispatch `Skraft - Software Engineer Reviewer` with the Dispatch context header, its handoff block (it carries the `.feature`, `test-plan-{story}.md`, `impl-plan-{story}.md`, contracts and decisions index), the prepared paths and `reviewed_sha`, and the raw outcome, quality-evidence, change-log and manifest refs. Keep all four core lenses mandatory and cold-reader inputs unchanged.
 4. Handle the verdict with the Step 4 verdict table, using `userPreferences.maxRetriesPerPhase + 1` total attempts.
 5. On final `APPROVED` or blocked DELIVER, record the persisted review and route the outcome below. Engineer owns capture and change-log production, never you. Mark pipeline complete only on engineering approval; publication failure does not change that verdict.
 
@@ -345,7 +345,6 @@ DELIVER has no separate sub-pipeline: you run the engineer↔reviewer loop from 
 
 At report boundaries, load `qa-reporting` before handling producer data or rendering. For publication and publication-only resume, load [host publication lifecycle](../../assets/reporting/mcp-publication.md). Apply Phase 0's conditional provider-skill load before remote operations.
 
-- DISTILL dispatch: pass `qa-reporting` skill name; require designer-owned forecast data from existing test/implementation plans and sourced expected impact; pass raw data and source refs to acceptance reviewer. After `APPROVED`, record review and render forecast before DELIVER.
 - DELIVER approval or blockage: use engineer-owned outcome data and actual gates; record existing reviewer verdict. Missing engineering evidence stays blocking, never hidden by a report.
 - Bind only the persisted `reviewRef` into producer data; render once through qa-reporting's existing CLI using exact returned data/output paths. Do not synthesize impact or a verdict.
 - Hand the existing Markdown, story/kind and confirmed destinations to the lifecycle. Follow its local decision and receipt checkpoints; use the selected provider procedure for remote operations. Return invalid content to its producer.

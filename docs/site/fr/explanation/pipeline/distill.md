@@ -17,7 +17,7 @@ La phase DISTILL transforme les décisions d'architecture en spécifications ex�
 |---|---|
 | **Vient de** | **DESIGN** — l'ADR et le modèle d'événements |
 | **Ce qui entre** | Décisions d'architecture à spécifier |
-| **Ce qui sort** | Scénarios Gherkin + plan de tests + plan d'implémentation + commandes de stack + test d'acceptation RED ; le flux de reporting approuvé ajoute un rapport prévisionnel |
+| **Ce qui sort** | Scénarios Gherkin + plan de tests + plan d'implémentation + commandes de stack + tests d'acceptation RED |
 | **Va vers** | **DELIVER** — qui les implémente en TDD |
 | **Agent responsable** | `acceptance-designer` |
 | **Reviewer associé** | `acceptance-designer-reviewer` |
@@ -53,69 +53,13 @@ assertion métier, puis les commite en un seul commit `test` : le RED de tous le
 Aucun run RED n'est capturé ; le software engineer n'écrit ni ne modifie jamais un test
 d'acceptation.
 
-## Du plan approuvé au rapport prévisionnel
+## Reporting
 
-**L'intégration du reporting est en cours.** Dans le flux approuvé,
+DISTILL ne publie aucun rapport. La QA lit le plan de tests que
 l'[acceptance designer]({{ "/fr/dashboard/#agent-acceptance-designer" | relative_url }})
-possède le plan de tests, la traçabilité critère-scénario/test et l'impact attendu.
-L'[acceptance reviewer]({{ "/fr/dashboard/#agent-acceptance-designer-reviewer" | relative_url }})
-vérifie ces entrées dans la revue existante. Après approbation de DISTILL, le rendu
-déterministe les projette dans un rapport prévisionnel Markdown avant DELIVER si une
-PR est disponible. Il décrit des contrôles **prévus**, jamais un résultat exécuté ni
-une mesure inventée.
-
-La chaîne d'artefacts reste explicite : **décisions DESIGN → scénarios et plan de tests
-revus → rapport prévisionnel → preuves DELIVER → rapport de résultat**. L'orchestrateur
-coordonne la publication ; aucun agent de reporting ni panel de revue supplémentaire
-n'est introduit.
-
-Dans l'extraction approuvée, [qa-reporting]({{ "/fr/dashboard/#skill-qa-reporting" | relative_url }})
-possède les consignes de préparation, le contrat canonique des données de rapport et
-les modèles Markdown prévisionnel/résultat livrés avec le skill. Les scripts rendent
-le modèle prévisionnel à partir du plan revu ; le skill n'exécute pas les tests, ne
-décide pas des gates et ne possède pas le transport. Données de rapport, Markdown et
-reçus générés restent dans les répertoires de suivi résolus du projet consommateur,
-jamais dans le skill installé. Aucune surcharge entreprise, aucun profil ni nouvelle
-clé de configuration n'est introduit. L'intégration des modèles et la parité du rendu
-par défaut restent à valider.
-
-Au démarrage, les choix portent sur les rapports complets dans la PR, l'issue en mode
-lien, rapport complet ou aucun rapport, le résumé chat et un plafond de médias explicite,
-sans valeur par défaut imposée. PR complète + lien dans l'issue + résumé chat est une
-recommandation, pas un automatisme. Les cibles et choix confirmés persistent pour la reprise.
-Sans PR/MR sélectionnée, le rapport prévisionnel reste en attente : créer un brouillon
-exige l'accord de l'utilisateur et une opération exposée par l'hôte ; pousser exige
-un consentement séparé. Les scripts locaux ne créent aucune PR et ne poussent rien.
-
-Le rapport prévisionnel est le premier de deux commentaires PR stables ; le second
-consigne la fin ou le blocage. Les scripts rendent et valident localement ; l'orchestrateur
-assure la publication distante via l'hôte. Pour GitHub, le skill livré
-[github-publication]({{ "/fr/dashboard/#skill-github-publication" | relative_url }})
-possède la procédure : MCP en priorité, repli annoncé vers `gh` dans l'hôte seulement si
-MCP ou une capacité requise est indisponible selon la politique du skill. Aucun skill
-compagnon externe n'est requis. Azure DevOps/GitLab restent des cibles de reporting MCP
-uniquement, sans prise en charge du pipeline complet.
-
-Le reçu compare localement la relecture de l'hôte, sans vérification réseau indépendante
-par les scripts. Un lien d'issue exige l'URL retournée du reçu PR/MR correspondant ; sans
-elle, le lien reste en attente et aucun permalien n'est inventé. Ce sont des commentaires
-Markdown, pas des rapports téléversés ou hébergés. La reprise de publication réutilise le
-rapport enregistré, sans nouveau cycle d'ingénierie. Abandonner une tentative locale non
-résolue exige une confirmation humaine explicite et un motif ; les reçus sont conservés
-et aucune écriture distante n'est annulée.
-
-Les correspondances fournisseur sont testées uniquement par des fixtures locales ;
-disponibilité réelle et intégration de bout en bout via l'hôte restent non vérifiées.
-Un rendu unique évite une nouvelle synthèse, pas le travail de transmission ou de relecture.
-Liens d'issue et résumés chat évitent de répéter les rapports complets ; aucune économie
-de jetons mesurée ni aucun prix n'est annoncé.
-
-Sources de ce protocole en cours d'intégration :
-[contrat d'acceptation CLI MCP](https://github.com/SebastienDegodez/skraft-plugin/blob/main/tests/skraft-framework/reporting/report-mcp-cli.acceptance.test.mjs),
-[contrat de passage MCP](https://github.com/SebastienDegodez/skraft-plugin/blob/main/tests/skraft-framework/reporting/report-mcp-handoff.acceptance.test.mjs),
-[politique de préférences](https://github.com/SebastienDegodez/skraft-plugin/blob/main/plugins/skraft-framework/src/domain/reporting-preferences.mjs)
-et [rendu prévisionnel](https://github.com/SebastienDegodez/skraft-plugin/blob/main/plugins/skraft-framework/src/application/render-report.mjs).
-La publication ne remplace pas la revue des spécifications décrite plus haut.
+écrit et que son reviewer approuve ; le seul rapport QA est le rapport de résultat de
+DELIVER : les tests exécutés et, pour un front, les captures d'écran (voir
+[DELIVER]({{ "/fr/explanation/pipeline/deliver" | relative_url }})).
 
 ## Les gates franchies ici
 

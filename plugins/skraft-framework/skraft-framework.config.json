@@ -83,10 +83,6 @@
       {
         "name": "adversarial-review-lenses",
         "policy": "verify"
-      },
-      {
-        "name": "qa-reporting",
-        "policy": "verify"
       }
     ],
     "Skraft - Acceptance Designer": [
@@ -108,10 +104,6 @@
       },
       {
         "name": "resolving-stack-commands",
-        "policy": "on-demand"
-      },
-      {
-        "name": "qa-reporting",
         "policy": "on-demand"
       }
     ],

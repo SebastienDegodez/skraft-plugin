@@ -24,7 +24,6 @@ metadata:
   on_demand_skills:
     - skraft-quality-bar
     - resolving-stack-commands
-    - qa-reporting
   inputs:
     required:
       - .copilot-tracking/skraft-plans/{projectSlug}/plans/{date}/stories-{milestone}.md
@@ -75,7 +74,6 @@ Your FIRST turn loads every skill below, reads [the outer-loop rules](../../skil
 ### Load on demand (never at startup)
 - `resolving-stack-commands` — at Step 6, only when the stack-commands file is absent or one of its commands fails.
 - `skraft-quality-bar` — at Step 4, only when a test-plan row needs a threshold.
-- `qa-reporting` — at Step 8.
 
 ## Boundaries (Non-Negotiable)
 
@@ -166,9 +164,9 @@ Author the executable Application-layer acceptance test of EVERY scenario of the
 2. **Copy values VERBATIM** from each scenario in the `.feature` / `ac-draft`. Every input and expected outcome must match the AC character-for-character. Start each test's name with its scenario id and an underscore (`S4_WelcomeFiveTakesFiveEuros`, `test_s4_welcome_five…`), whatever the language — the runner's name filter selects or excludes a scenario by it — and add a traceability comment on each case: `// {Scenario title}`.
 3. **Parametrize** AC tables with `[Theory]` / `[InlineData]` (see test-design-mandates); one `[InlineData]` row per example line.
 4. **Stub only to compile** — add the minimum production signature(s) every test needs to compile, including the boundaries later scenarios add. Write NO behavior.
-5. **Run and confirm RED**: take the build and test commands from `.copilot-tracking/skraft-plans/{projectSlug}/details/{date}/stack-commands.md` when the handoff block lists it. When the file is absent or one of its commands fails, resolve the commands via the `resolving-stack-commands` skill — never hardcode them — and write the file per that skill's stack-commands file contract. Run nothing before every test and stub is written; then run the acceptance tests once, failures listed — that run builds the solution, so run no separate build before or after it. Every scenario MUST fail on a **business assertion**, NOT on a compile or setup error. If one fails for setup reasons, fix the harness — never weaken the assertion. Capture nothing.
+5. **Commands**: take the build and acceptance-test commands from `.copilot-tracking/skraft-plans/{projectSlug}/details/{date}/stack-commands.md` when the handoff block lists it. When the file is absent or one of its commands fails, resolve the commands via the `resolving-stack-commands` skill — never hardcode them — and write the file per that skill's stack-commands file contract. Run nothing before every test and stub is written.
 6. Leave every test actively RED: never mark one `Skip` / `[Ignore]` — a skipped test asserts nothing and carries a false green through every commit (outer-loop rules → No placeholder).
-7. **Commit the RED once**: run formatting and static checks on the tests and stubs, then commit them alone, naming each file, in ONE `git commit -s -m "test(feature): acceptance tests S1–S{N}"`. The plans under `.copilot-tracking/` are not part of it. This is the RED of every scenario: the software-engineer adds no other `test` commit. Run no build or test after it.
+7. **RED in one command**: after formatting the tests and stubs, run `node "$SKRAFT_PLUGIN_ROOT/skills/outside-in-tdd/scripts/red-commit.mjs" --build "<build command>" --test "<acceptance-test command>" --message "test(feature): acceptance tests S1–S{N}" -- <each test and stub file>`. It commits those files alone, signed off, only when the build passes and a test fails, and prints the failures. Read them in that result: every scenario must fail on a **business assertion**, never on a setup error. Exit 3 (build) or 4 (nothing failed): fix the tests or stubs and run it again, never weakening an assertion. A setup failure after the commit: fix the harness and run it again with `--message "test(feature): fix the acceptance harness"`. The plans under `.copilot-tracking/` are never part of it. This is the RED of every scenario: the software-engineer adds no other `test` commit. Run no build or test after it.
 
 **Self-check before persisting** (output the result):
 - [ ] Every input/output value in the test matches the `.feature` exactly (no invented values)
@@ -191,14 +189,10 @@ The outer acceptance test files live under `tests/**` (committed at Step 6), not
 
 ### Rework mode (handoff mode `rework`)
 
-When the handoff block's mode line reads `rework`, the previous review's findings are the whole scope of this pass. Read the review the block names, skip Steps 1–2, and edit only the artefacts and the acceptance test the findings name, in place. When an acceptance test changed, re-run the RED check and commit the change in one more `test` commit. Keep every other artefact as it is.
+When the handoff block's mode line reads `rework`, the previous review's findings are the whole scope of this pass. Read the review the block names, skip Steps 1–2, and edit only the artefacts and the acceptance test the findings name, in place. When an acceptance test changed, run `red-commit.mjs` again with a `test` message naming the change. Keep every other artefact as it is.
 
-### 8. FORECAST HANDOFF
+### 8. HANDOFF
 
-Load `qa-reporting` before preparing
-DISTILL reporting data. Write forecast JSON in the dispatched output directory,
-projecting the existing test/implementation plans: AC-to-test mapping and expected
-impact cited to approved sources. Label tests planned, never passed; no new plan,
-raw log dump, publication or state write. Leave `reviewRef` for router binding
-after review. Return exact repository-root-relative plan, forecast-data and acceptance
-test refs, full source revision and limitations; never guess a current-date path.
+Return the exact repository-root-relative plan and acceptance-test refs, the RED commit, the
+full source revision and limitations; never guess a current-date path. Write no report data,
+publication or state.
