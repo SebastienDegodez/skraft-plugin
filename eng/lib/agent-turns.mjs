@@ -36,6 +36,10 @@ export function categoryOf(toolName, command = '') {
   if (EDIT_TOOLS.has(toolName)) return 'edit'
   if (toolName !== 'bash' && toolName !== 'shell' && toolName !== 'powershell') return 'other'
   if (MUTATION.test(command)) return 'mutation'
+  // A heredoc or redirect into a file is a write, whatever runs after it.
+  if (/^\s*(?:cat|tee|printf|echo)\b[^|]*(?:>|\btee\b)/.test(command)) {
+    return TEST.test(command) ? 'edit+test' : 'edit'
+  }
   if (TEST.test(command)) return GIT.test(command) ? 'test+commit' : 'test'
   if (BUILD.test(command)) return 'build'
   if (GIT.test(command)) return 'git'
