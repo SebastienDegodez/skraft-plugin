@@ -1,6 +1,6 @@
 ---
 name: quality-gates-typescript
-description: Use when the repository holds a TypeScript project tested with Vitest — a React front end or a Node package with `vitest` in its `package.json` — and the software-engineer must produce falsifiable evidence for the quality gates. Provides the cross-platform scripts (Node, no shell) that run Vitest, tsc, ESLint and its boundaries rules and v8 coverage, and map their outputs onto the tech-agnostic schema. The G10 RED capture is taken at RED, before any production code.
+description: Use when the repository holds a TypeScript project tested with Vitest — a React front end or a Node package with `vitest` in its `package.json` — and the software-engineer must produce falsifiable evidence for the quality gates. Provides the cross-platform scripts (Node, no shell) that run Vitest, tsc, ESLint and its boundaries rules and v8 coverage, and map their outputs onto the tech-agnostic schema.
 ---
 
 # Quality Gates — TypeScript Adapter (Vitest)
@@ -90,22 +90,15 @@ measured, or on a `v8 ignore` / `c8 ignore` / `istanbul ignore` comment in the c
 only declare types have nothing to run and are listed apart. `--threshold` is refused. Outputs
 `qg-coverage.*`.
 
-## G8 / G9 / G10
+## G8 / G9
 
 As in every adapter: G8 from the Git tree; G9 from `git show <commit>:<test file>` snapshots of
-each scenario's acceptance test file at its `test` commit and at its green commit; G10 at the
-scenario's RED, before its implementation, with the G1 line narrowed to the scenario's acceptance
-test and `--name qg-red-{cycle}`, one cycle per scenario:
-
-```bash
-node "<skill>/scripts/capture.mjs" --root . --evidence "$EV" --name qg-red-1 -- {bin:vitest} run tests/unit/todos/application/CompleteTodo.test.ts
-```
-
-The recorded exit code MUST be non-zero. The capture cannot be reconstructed after GREEN.
+each scenario's acceptance test file at its `test` commit and at its green commit. No RED run is
+captured: the `test` commit is the RED.
 
 ## Producer flow at the end of the story
 
 1. Run G1/G2, G3, G4, G5, G6 (`mutation-testing`'s gate), G7, G11 — each through its script.
-2. Dump the RED and GREEN snapshots per scenario; check every G10 capture exists with a non-zero exit.
+2. Dump the RED and GREEN snapshots per scenario.
 3. `repo_root_rev = git rev-parse HEAD`; build `commits_covered[]` from the DELIVER base.
-4. Assemble `$EV/qg-{story}.json` (contract v5) with `"tech_adapter": "quality-gates-typescript"`, commit `$EV` alone, then run `qg-verify`.
+4. Assemble `$EV/qg-{story}.json` (contract v6) with `"tech_adapter": "quality-gates-typescript"`, commit `$EV` alone, then run `qg-verify`.

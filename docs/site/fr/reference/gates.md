@@ -221,7 +221,7 @@ compromis délibérément — la qualité ne se négocie pas.
 | **G7** | Aucun mock dans le cœur Domain/Application. | Attestation par grep : zéro symbole de framework de mock dans ces couches. |
 | **G8** | Message complet du commit conventionnel. | Chaque commit couvert utilise le scope fonctionnel, le sign-off et l'issue connue ; la cloture exige un travail reellement termine et toutes les gates requises passees. |
 | **G9** | Aucune altération de test (intégrité RED→GREEN). | Pour chaque scénario, son fichier de test d'acceptance n'a changé que par **ajout** entre son commit `test` RED et son commit green. |
-| **G10** | RED constaté : le test a bien été exécuté et a **échoué** avant l'arrivée de l'implémentation. | Pour chaque scénario, le stdout RED de son test d'acceptance capturé avant son implémentation et haché en sha256, plus un code de sortie **non nul** enregistré. |
+| ~~G10~~ | Retirée dans l'évidence v6. | Le commit `test` RED du scénario fait preuve ; aucun run RED n'est capturé. Les logs v2–v5 la vérifient encore. |
 | **G11** | La couverture de lignes atteint la barre. | Le runner de couverture, invoqué avec les drapeaux de seuil de la barre (100 % de lignes sur Domain et Application), sort en `0`. |
 
 **Politique G8 :** consignes de commit directement dans les agents existants,

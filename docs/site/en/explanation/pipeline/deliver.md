@@ -48,10 +48,10 @@ The scenario enters. DELIVER implements the total calculation and loyalty credit
 DELIVER starts from the `state.mjs handoff` block, not from a fresh reconstruction. The
 block carries the `.feature`, `test-plan-{story}.md`, `impl-plan-{story}.md`,
 `contracts-{story}.md`, `docs/adr/decisions-index.md`, research conventions,
-`stack-commands.md` and acceptance RED evidence. Retries carry the same block, so the
+`stack-commands.md` and the RED acceptance test. Retries carry the same block, so the
 test plan and implementation plan are still present during rework.
 
-RED inspection happens inside the software-engineer dispatch: the recorded G10 capture is
+RED inspection happens inside the software-engineer dispatch: the scenario's `test` commit is
 the inspection, and the engineer continues RED → GREEN → COMMIT without a second dispatch.
 Per-cycle mutation is differential since the previous cycle's last commit and is skipped
 when no core production file changed. Only the final full core then boundary mutation run

@@ -215,7 +215,7 @@ repository owner accepted that trade deliberately — quality is not negotiable.
 | **G7** | No mocks in the Domain/Application core. | Grep-based attestation: zero mock-framework symbol in those layers. |
 | **G8** | Full conventional commit message. | Each covered commit uses the feature scope, sign-off and known issue reference; closure requires genuinely finished work and all required gates passed. |
 | **G9** | No test tampering (RED→GREEN integrity). | For each scenario, its acceptance test file changed only by **addition** between its RED `test` commit and its green commit. |
-| **G10** | RED observed: the test ran and **failed** before the implementation landed. | For each scenario, the RED stdout of its acceptance test captured before its implementation and hashed by sha256, plus a recorded **non-zero** exit code. |
+| ~~G10~~ | Removed in evidence v6. | The scenario's RED `test` commit is the proof; no RED run is captured. v2–v5 logs still verify it. |
 | **G11** | Line coverage meets the bar. | The coverage runner, invoked with the bar's threshold flags (100% line on Domain and Application), exited `0`. |
 
 **G8 policy:** inline commit rules in the existing agents, on both native clients
