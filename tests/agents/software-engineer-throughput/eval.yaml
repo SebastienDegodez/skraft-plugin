@@ -214,9 +214,12 @@ stimuli:
               const git = (...args) => execFileSync("git", ["--no-replace-objects", ...args], { encoding: "utf8", timeout: 5000 }).trimEnd();
               const seed = git("rev-list", "--max-parents=0", "HEAD");
               const subjects = git("log", "--reverse", "--format=%s", seed + "..HEAD").split("\n").filter(Boolean);
-              const tests = subjects.filter((subject) => /^test\(/.test(subject)).length;
+              const firstTest = subjects.findIndex((subject) => /^test\(/.test(subject));
               const features = subjects.filter((subject) => /^feat\(/.test(subject)).length;
-              assert.ok(tests >= 11, "expected a test commit for most of S2..S14, got " + tests);
+              const featureBeforeRed = subjects.findIndex((subject) => /^feat\(/.test(subject));
+              // One test commit per scenario or one for the whole story: both put a red before the first green.
+              assert.ok(firstTest >= 0, "expected at least one test commit holding the acceptance tests red");
+              assert.ok(featureBeforeRed > firstTest, "expected the first feat commit after a test commit");
               assert.ok(features >= 10, "expected a feat commit for every scenario that needs code, got " + features);
               console.log(subjects.join("\n"));
           expected_exit_code: 0
