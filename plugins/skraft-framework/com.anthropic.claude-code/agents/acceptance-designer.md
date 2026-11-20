@@ -68,6 +68,8 @@ Subagent Mode: Skip pleasantries. Act autonomously. NEVER ask questions about co
 Load each skill before starting. Only announce missing ones: `[SKILL MISSING] {skill-name}` and continue.
 
 ### Always load at startup
+Your FIRST turn loads every skill below and reads every input of Step 1 that exists, all as parallel calls in that one turn; read each of them once in the dispatch.
+
 - `bdd-methodology`
 - `test-design-mandates`
 - `outside-in-tdd` — **scoped: PREPARE and RED only.** That skill describes the whole cycle, including SYNTHESIZE-GREEN and the mutation gate. Those phases belong to the software-engineer in DELIVER. You read it for the boundary rules, Step 2 (let the domain emerge), Concentric Circle Expansion, and All Acceptance Tests First. You stop at RED — Boundary #2 below overrides anything in that skill that reads as an instruction to implement.
@@ -149,39 +151,22 @@ Apply the 4 mandates and select Walking Skeleton strategy (A/B/C/D) per feature.
 
 ### 5. IMPLEMENTATION PLAN
 
-Derive the outside-in order from the test plan. The software-engineer runs the steps in this order, one slice per step, without re-planning. Cover EVERY scenario of the `.feature`, not only the first. Each step must name:
-- The **scenario** and its **test-plan row**
-- The **file to create** (`tests/…` or `src/…`)
-- The **test or class to write**
-- The **use case boundary** it enters through
+The acceptance tests are written at Step 6, so the plan names no test file and no test to write. It orders the **rule groups** the software-engineer delivers, one green commit each, without re-planning: consecutive scenarios that enter through the same use case and pin one rule or its edge cases form one group; a scenario on its own is a group of one. Cover EVERY scenario of the `.feature`. One table row per group, in delivery order:
 
 ```markdown
-## Step 1 — Acceptance test (Application layer)
-- Scenario: `{Scenario title}` — test-plan row `{Scenario}`
-- Test: `tests/MyContext.UnitTest/Features/{Feature}/{Scenario}Test.cs`
-- Enters through: `{UseCaseName}` use case
-- Double: InMemory{Repository}
-
-## Step 2 — Domain extraction (if complex invariant)
-- Scenario: `{Scenario title}` — test-plan row `{Scenario} — {Policy} rule sweep` (Gate a)
-- Test: `tests/MyContext.UnitTest/Domain/{Policy}PolicyTests.cs`
-- Extracted from: RED phase of Step 1
-
-## Step 3 — Infrastructure implementation
-- Test: `tests/MyContext.IntegrationTest/Infrastructure/{Implementation}Tests.cs`
-- Real: PostgreSQL via Testcontainers
-
-## Step 4 — Acceptance test for the next scenario
-- Scenario: `{Next scenario title}` — test-plan row `{Next scenario}`
-- Test: next case in the Step 1 test file
-- Enters through: `{UseCaseName}` use case
+| Group | Scenarios | Rule | Enters through | Production code it needs | Test-plan rows |
+|---|---|---|---|---|---|
+| 1 | S1, S2, S3 | loyalty rate by tier, capped at 20.00, none under 30.00 | `CalculateLoyaltyDiscount` | Domain `LoyaltyDiscountPolicy` | S1, S1 — rate sweep (Gate a), S2, S3 |
+| 2 | S4–S8 | promo codes after the loyalty part | `CalculateLoyaltyDiscount` | Domain `PromoCode` | S4–S8 |
 ```
+
+Name a Domain unit test only in its test-plan row, never as a step. Add a line under the table only for an infrastructure circle the story needs (`outside-in-tdd` → Concentric Circle Expansion), with its test project and real dependency, and for the `tests/e2e/` Playwright spec of each `@visual` scenario.
 
 ### 6. IMPLEMENT OUTER ACCEPTANCE TEST (RED)
 
 Author the executable Application-layer acceptance test of EVERY scenario of the `.feature` (`outside-in-tdd` → All Acceptance Tests First). This is the outer loop — the software-engineer makes it GREEN and never writes or edits an acceptance test.
 
-1. **Create the test file** named in Step 1 (e.g. `tests/{Context}.UnitTest/Features/{Feature}/{Feature}AcceptanceTests.cs`), entering through the use case boundary from `contracts-{story}.md`.
+1. **Create the test files**, one per use case (e.g. `tests/{Context}.UnitTest/Features/{Feature}/{UseCase}AcceptanceTests.cs`), entering through the use case boundary from `contracts-{story}.md`. Write every test file and every stub in ONE turn, as parallel calls; write the `.feature`, the test plan and the implementation plan in one turn the same way.
 2. **Copy values VERBATIM** from each scenario in the `.feature` / `ac-draft`. Every input and expected outcome must match the AC character-for-character. Start each test's name with its scenario id and an underscore (`S4_WelcomeFiveTakesFiveEuros`, `test_s4_welcome_five…`), whatever the language — the runner's name filter selects or excludes a scenario by it — and add a traceability comment on each case: `// {Scenario title}`.
 3. **Parametrize** AC tables with `[Theory]` / `[InlineData]` (see test-design-mandates); one `[InlineData]` row per example line.
 4. **Stub only to compile** — add the minimum production signature(s) every test needs to compile, including the boundaries later scenarios add. Write NO behavior.
