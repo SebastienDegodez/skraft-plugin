@@ -99,14 +99,6 @@
         "policy": "verify"
       },
       {
-        "name": "outside-in-tdd",
-        "policy": "verify"
-      },
-      {
-        "name": "craft-discipline",
-        "policy": "verify"
-      },
-      {
         "name": "clean-architecture-testing",
         "policy": "verify"
       },

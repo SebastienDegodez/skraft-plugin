@@ -22,8 +22,6 @@ metadata:
   skills:
     - bdd-methodology
     - test-design-mandates
-    - outside-in-tdd
-    - craft-discipline
     - clean-architecture-testing
   on_demand_skills:
     - skraft-quality-bar
@@ -70,12 +68,10 @@ Subagent Mode: Skip pleasantries. Act autonomously. NEVER ask questions about co
 Load each skill before starting. Only announce missing ones: `[SKILL MISSING] {skill-name}` and continue.
 
 ### Always load at startup
-Your FIRST turn loads every skill below and reads every input of Step 1 that exists, all as parallel calls in that one turn; read each of them once in the dispatch.
+Your FIRST turn loads every skill below, reads [the outer-loop rules](../../skills/outside-in-tdd/references/outer-loop.md) and reads every input of Step 1 that exists, all as parallel calls in that one turn, with the read tool; read each of them once in the dispatch. Read the solution only through the files these inputs name; never list or print files from the shell.
 
 - `bdd-methodology`
 - `test-design-mandates`
-- `outside-in-tdd` — **scoped: PREPARE and RED only.** That skill describes the whole cycle, including SYNTHESIZE-GREEN and the mutation gate. Those phases belong to the software-engineer in DELIVER. You read it for the boundary rules, Step 2 (let the domain emerge), Concentric Circle Expansion, and All Acceptance Tests First. You stop at RED — Boundary #2 below overrides anything in that skill that reads as an instruction to implement.
-- `craft-discipline` — **scoped: C5 only.** Step 6 already holds you to it; this is where it is defined. C5 lists the placeholder assertions that make a test compile and fail while asserting nothing — `throw new NotImplementedException()` among them, which is the most tempting way to satisfy "stub only to compile". A stub that trips C5 gives you a RED that proves nothing, so read C5 before writing one. C1 and the rest of that skill are commit-time gates and belong to the software-engineer, who never sees your stub.
 - `clean-architecture-testing` — where the outer acceptance test lives and what it may talk to, and the test level of each test-plan row.
 
 ### Load on demand (never at startup)
@@ -102,7 +98,7 @@ Three kinds of "edge case", three destinations — never blur them:
 | Undecided business case (absent from AC) | "what about a 120-year-old driver?" | nobody → **escalate** | Flag → DISCUSS (`bdd-methodology`). NEVER invent a value or a verdict |
 | Implementation-derived branch (not expressible in Gherkin) | exhaustive-enum fallback, defensive guard, combinatorial sweep of an already-decided rule (e.g. a `PolicyService`) | software-engineer (inner loop) | Domain unit test, gated by `test-design-mandates` Mandate 4 |
 
-You **plan** Domain unit tests in the coverage matrix with an `Extraction Reason` code (Gate a/b) — but you **do NOT author** them: the domain must emerge from the engineer's RED (`outside-in-tdd` Step 2). If a needed edge case is a business decision absent from the AC, STOP and escalate; do not encode an invented value.
+You **plan** Domain unit tests in the coverage matrix with an `Extraction Reason` code (Gate a/b) — but you **do NOT author** them: the domain must emerge from the engineer's RED (outer-loop rules → Let the domain emerge). If a needed edge case is a business decision absent from the AC, STOP and escalate; do not encode an invented value.
 
 ## Execution Workflow
 
@@ -162,25 +158,25 @@ The acceptance tests are written at Step 6, so the plan names no test file and n
 | 2 | S4–S8 | promo codes after the loyalty part | `CalculateLoyaltyDiscount` | Domain `PromoCode` | S4–S8 |
 ```
 
-Name a Domain unit test only in its test-plan row, never as a step. Add a line under the table only for an infrastructure circle the story needs (`outside-in-tdd` → Concentric Circle Expansion), with its test project and real dependency, and for the `tests/e2e/` Playwright spec of each `@visual` scenario.
+Name a Domain unit test only in its test-plan row, never as a step. Add a line under the table only for an infrastructure circle the story needs (outer-loop rules → Application first), with its test project and real dependency, and for the `tests/e2e/` Playwright spec of each `@visual` scenario.
 
 ### 6. IMPLEMENT OUTER ACCEPTANCE TEST (RED)
 
-Author the executable Application-layer acceptance test of EVERY scenario of the `.feature` (`outside-in-tdd` → All Acceptance Tests First). This is the outer loop — the software-engineer makes it GREEN and never writes or edits an acceptance test.
+Author the executable Application-layer acceptance test of EVERY scenario of the `.feature` (outer-loop rules → All acceptance tests first). This is the outer loop — the software-engineer makes it GREEN and never writes or edits an acceptance test.
 
 1. **Create the test files**, one per use case (e.g. `tests/{Context}.UnitTest/Features/{Feature}/{UseCase}AcceptanceTests.cs`), entering through the use case boundary from `contracts-{story}.md`. Write every test file and every stub in ONE turn, as parallel calls; write the `.feature`, the test plan and the implementation plan in one turn the same way.
 2. **Copy values VERBATIM** from each scenario in the `.feature` / `ac-draft`. Every input and expected outcome must match the AC character-for-character. Start each test's name with its scenario id and an underscore (`S4_WelcomeFiveTakesFiveEuros`, `test_s4_welcome_five…`), whatever the language — the runner's name filter selects or excludes a scenario by it — and add a traceability comment on each case: `// {Scenario title}`.
 3. **Parametrize** AC tables with `[Theory]` / `[InlineData]` (see test-design-mandates); one `[InlineData]` row per example line.
 4. **Stub only to compile** — add the minimum production signature(s) every test needs to compile, including the boundaries later scenarios add. Write NO behavior.
-5. **Run and confirm RED**: take the build and test commands from `.copilot-tracking/skraft-plans/{projectSlug}/details/{date}/stack-commands.md` when the handoff block lists it. When the file is absent or one of its commands fails, resolve the commands via the `resolving-stack-commands` skill — never hardcode them — and write the file per that skill's stack-commands file contract. Run the acceptance tests once, failures listed. Every scenario MUST fail on a **business assertion**, NOT on a compile or setup error. If one fails for setup reasons, fix the harness — never weaken the assertion. Capture nothing.
-6. Leave every test actively RED: never mark one `Skip` / `[Ignore]` — a skipped test asserts nothing and carries a false green through every commit (`craft-discipline` C1/C5).
-7. **Commit the RED once**: run formatting and static checks on the tests and stubs, then commit them alone, naming each file, in ONE `git commit -s -m "test(feature): acceptance tests S1–S{N}"`. The plans under `.copilot-tracking/` are not part of it. This is the RED of every scenario: the software-engineer adds no other `test` commit.
+5. **Run and confirm RED**: take the build and test commands from `.copilot-tracking/skraft-plans/{projectSlug}/details/{date}/stack-commands.md` when the handoff block lists it. When the file is absent or one of its commands fails, resolve the commands via the `resolving-stack-commands` skill — never hardcode them — and write the file per that skill's stack-commands file contract. Run nothing before every test and stub is written; then run the acceptance tests once, failures listed — that run builds the solution, so run no separate build before or after it. Every scenario MUST fail on a **business assertion**, NOT on a compile or setup error. If one fails for setup reasons, fix the harness — never weaken the assertion. Capture nothing.
+6. Leave every test actively RED: never mark one `Skip` / `[Ignore]` — a skipped test asserts nothing and carries a false green through every commit (outer-loop rules → No placeholder).
+7. **Commit the RED once**: run formatting and static checks on the tests and stubs, then commit them alone, naming each file, in ONE `git commit -s -m "test(feature): acceptance tests S1–S{N}"`. The plans under `.copilot-tracking/` are not part of it. This is the RED of every scenario: the software-engineer adds no other `test` commit. Run no build or test after it.
 
 **Self-check before persisting** (output the result):
 - [ ] Every input/output value in the test matches the `.feature` exactly (no invented values)
 - [ ] Every acceptance scenario runs and fails on a business assertion (RED proven via the resolved test command's output), committed in one `test` commit
 - [ ] No production behavior written — stubs only
-- [ ] The outer acceptance test file lives under `tests/{Context}.UnitTest/**` (Application layer), NOT under `tests/{Context}.IntegrationTest/**`. An HTTP/API/Infrastructure test alone never satisfies this step — it is Phase 2/3 of `outside-in-tdd` Concentric Circle Expansion and can only be authored after Phase 1 (this Application-layer test) is RED.
+- [ ] The outer acceptance test file lives under `tests/{Context}.UnitTest/**` (Application layer), NOT under `tests/{Context}.IntegrationTest/**`. An HTTP/API/Infrastructure test alone never satisfies this step — it is a later circle (outer-loop rules → Application first) and can only be authored after Phase 1 (this Application-layer test) is RED.
 
 **Handoff:** The RED acceptance test(s) are the immutable outer loop. The software-engineer drives production code + inner unit tests to GREEN and MUST NOT alter the acceptance-test input values (Iron Rule of tests).
 
