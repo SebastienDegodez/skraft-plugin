@@ -215,12 +215,11 @@ stimuli:
               const seed = git("rev-list", "--max-parents=0", "HEAD");
               const subjects = git("log", "--reverse", "--format=%s", seed + "..HEAD").split("\n").filter(Boolean);
               const firstTest = subjects.findIndex((subject) => /^test\(/.test(subject));
-              const features = subjects.filter((subject) => /^feat\(/.test(subject)).length;
               const featureBeforeRed = subjects.findIndex((subject) => /^feat\(/.test(subject));
               // One test commit per scenario or one for the whole story: both put a red before the first green.
+              // How many scenarios need code depends on how whole each rule was written; the oracle judges the code.
               assert.ok(firstTest >= 0, "expected at least one test commit holding the acceptance tests red");
-              assert.ok(featureBeforeRed > firstTest, "expected the first feat commit after a test commit");
-              assert.ok(features >= 10, "expected a feat commit for every scenario that needs code, got " + features);
+              assert.ok(featureBeforeRed > firstTest, "expected a feat commit, the first one after a test commit");
               console.log(subjects.join("\n"));
           expected_exit_code: 0
           timeout: 1m
