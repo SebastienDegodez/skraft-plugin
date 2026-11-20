@@ -25,33 +25,34 @@ charged for both agents.
 
 | | main | this change | Δ |
 |---|---|---|---|
-| Acceptance-designer: agent work | 95 s | 225 s | +130 s |
+| Acceptance-designer: agent work | 140 s | 188 s | +48 s |
 | Software-engineer: agent work | 509 s | 125 s | −384 s |
-| **Both: agent work** | **604 s** | **350 s** | **−42 %** |
-| Both: turns | 76 | 38 | −50 % |
-| Both: tokens | 5.34 M | 2.50 M | −53 % |
-| Both: cost (nano-AIU) | 154.4 G | 133.4 G | −14 % |
+| **Both: agent work** | **649 s** | **313 s** | **−52 %** |
+| Both: turns | 78 | 34 | −56 % |
+| Both: tokens | 5.65 M | 2.08 M | −63 % |
+| Both: cost (nano-AIU) | 166.0 G | 107.9 G | −35 % |
 | Designer pass rate | 100 % | 100 % | |
 | Engineer hidden oracle | 3/3 | 3/3 | |
 
-Software-engineer alone: 63 → 17 turns, 37 → 4 test runs, 4.59 M → 1.02 M tokens, −65 % cost.
+The designer writes 14 acceptance tests instead of one for +48 s, 15 → 17 turns, +37 % of its
+own cost. The engineer then needs 63 → 17 turns, 37 → 4 test runs, 4.59 M → 1.02 M tokens, −65 %
+of its cost.
 
-Measured at `0abdc870` (the designer writes every acceptance test, rule groups, `qg-collect`).
-The designer changes that follow — the outer-loop reference instead of `outside-in-tdd`, one turn
-to read and one to write, a plan by rule group, no build around the test run — are not measured
-yet: their run goes here.
+Designer: both arms at `4ea8f8a1`'s harness, run `20261120T155631Z`. Engineer: run
+`20261120T134834Z`, this change at `0abdc870`; the engineer changes since (the plan's rule groups,
+the journal by group) do not apply to its fixture, whose plan has no groups.
 
 ### Intermediate steps
 
 | Step | Agent | Agent work |
 |---|---|---|
 | No RED capture, tests first inside DELIVER (`af46760b`) | software-engineer | 515 s → 338 s, −34 % |
+| The designer writes every test, rule groups, `qg-collect` (`0abdc870`) | acceptance-designer | 95 s → 225 s (control without the `create` tool) |
+| Outer-loop reference, read and write in bursts, plan by rule group (`5fd75ab5`) | acceptance-designer | 225 s → 188 s, 21 → 17 turns, −28 % cost (against the run above) |
 
 ### Caveats
 
 - 3 trials per arm.
-- The designer control was reused from a run without the executor's `create` tool, fixed since;
-  it favours this change slightly on the designer side.
 - `main`'s engineer passes the hidden oracle but missed a commit-count grader since removed:
   its pass rate reads 0 % at a 0.875 median score. Quality is equal, not 0 → 100.
 

@@ -66,6 +66,24 @@ describe('A/B agent comparison', () => {
     strictEqual(comparison.underpowered, true)
   })
 
+  it('calls a candidate slower and costlier by more than the noise worse, whatever its tokens', () => {
+    const comparison = compareAgentArms({
+      control: [trial({ tokens: 1000, durationMs: 100_000, cost: 100 })],
+      candidate: [trial({ tokens: 998, durationMs: 134_000, cost: 137 })],
+    })
+
+    strictEqual(comparison.verdict, 'worse')
+  })
+
+  it('calls a candidate cheaper but slower mixed', () => {
+    const comparison = compareAgentArms({
+      control: [trial({ durationMs: 100_000, cost: 100 })],
+      candidate: [trial({ durationMs: 130_000, cost: 60 })],
+    })
+
+    strictEqual(comparison.verdict, 'mixed')
+  })
+
   it('calls a faster candidate that loses score a quality regression', () => {
     const comparison = compareAgentArms({
       control: [trial({ score: 1, tokens: 2000 })],

@@ -257,7 +257,9 @@ RUNS=5 ARMS_SEQUENTIAL=1 ./eng/bench-agent-ab.sh <suite> <control-ref> <candidat
   `bench-results/<suite>/<stamp>/comparison.{json,md}`: median duration split into model,
   tool and test time, test runs and the size of their output, tokens (input, output,
   cache read), Copilot cost when reported, turns, tool calls, score and pass rate.
-- Verdict `improved`, `no-gain` or `quality-regression` (exit 3). Quality holds only when
+- Verdict `improved`, `no-gain`, `mixed` (cheaper but slower, or the reverse), `worse` or
+  `quality-regression` (exit 3). Cost is the billed amount when both arms report it, tokens
+  otherwise; a move under 5 % either way counts as none. Quality holds only when
   no stimulus loses median score or pass rate. Under 5 trials per arm, the report is
   marked indicative: the two arms are independent draws, not pairs.
 - `CONTROL_FROM=bench-results/<suite>/<stamp>` reuses the control arm of an earlier run

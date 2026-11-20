@@ -130,6 +130,7 @@ const summarize = (profiles) => {
 const percent = (control, candidate) =>
   control != null && candidate != null && control !== 0 ? round(((candidate - control) / control) * 100) : null
 
+const NOISE_PERCENT = 5
 const trials = (records) => records.filter((record) => record?.type === 'trial-result')
 
 /**
@@ -169,14 +170,20 @@ export function compareAgentArms({ control, candidate }) {
   const overallControl = all(control)
   const overallCandidate = all(candidate)
   const qualityHeld = stimuli.length > 0 && stimuli.every((entry) => entry.qualityHeld)
-  const cheaper = (percent(overallControl.totalTokens, overallCandidate.totalTokens) ?? 0) < 0
-  const faster = (percent(overallControl.durationMs, overallCandidate.durationMs) ?? 0) < 0
+  // Cost is the billed amount when both arms report it, tokens otherwise. A move under
+  // NOISE_PERCENT either way is no move: -0.2 % tokens beside +37 % cost is not cheaper.
+  const costKey = overallControl.costNanoAiu != null && overallCandidate.costNanoAiu != null ? 'costNanoAiu' : 'totalTokens'
+  const costDelta = percent(overallControl[costKey], overallCandidate[costKey]) ?? 0
+  const timeDelta = percent(overallControl.durationMs, overallCandidate.durationMs) ?? 0
+  const cheaper = costDelta <= -NOISE_PERCENT
+  const faster = timeDelta <= -NOISE_PERCENT
+  const worse = costDelta >= NOISE_PERCENT || timeDelta >= NOISE_PERCENT
 
   const errored = overallControl.errors + overallCandidate.errors > 0
   // A file with no trial-result record is not a run: nothing to compare.
   const empty = overallControl.trials === 0 || overallCandidate.trials === 0
   return {
-    verdict: errored ? 'errored' : empty ? 'empty' : !qualityHeld ? 'quality-regression' : cheaper || faster ? 'improved' : 'no-gain',
+    verdict: errored ? 'errored' : empty ? 'empty' : !qualityHeld ? 'quality-regression' : worse ? (cheaper || faster ? 'mixed' : 'worse') : cheaper || faster ? 'improved' : 'no-gain',
     underpowered: Math.min(overallControl.trials, overallCandidate.trials) < 5,
     overall: {
       control: overallControl,
