@@ -21,26 +21,26 @@ whatever tests the agent wrote.
 This change moves the writing of 13 acceptance tests from DELIVER to DISTILL, so a version is
 charged for both agents.
 
-## Results — `main` (`cccf5a02`) → this change
+## Results — `main` (`cccf5a02`) → this change (`68b94e0e`)
+
+Both agents, both arms on the same harness, 21 November 2026 (runs `20261121T090219Z` and
+`20261121T091031Z`).
 
 | | main | this change | Δ |
 |---|---|---|---|
-| Acceptance-designer: agent work | 140 s | 188 s | +48 s |
-| Software-engineer: agent work | 509 s | 125 s | −384 s |
-| **Both: agent work** | **649 s** | **313 s** | **−52 %** |
-| Both: turns | 78 | 34 | −56 % |
-| Both: tokens | 5.65 M | 2.08 M | −63 % |
-| Both: cost (nano-AIU) | 166.0 G | 107.9 G | −35 % |
+| Acceptance-designer: agent work | 145 s | 135 s | −7 % |
+| Software-engineer: agent work | 506 s | 132 s | −74 % |
+| **Both: agent work** | **651 s** | **267 s** | **−59 %** |
+| Both: turns | 79 | 30 | −62 % |
+| Both: test runs | 37 | 7 | −81 % |
+| Both: tokens | 6.23 M | 1.89 M | −70 % |
+| Both: cost (nano-AIU) | 196.4 G | 89.2 G | **−55 %** |
 | Designer pass rate | 100 % | 100 % | |
 | Engineer hidden oracle | 3/3 | 3/3 | |
 
-The designer writes 14 acceptance tests instead of one for +48 s, 15 → 17 turns, +37 % of its
-own cost. The engineer then needs 63 → 17 turns, 37 → 4 test runs, 4.59 M → 1.02 M tokens, −65 %
-of its cost.
-
-Designer: both arms at `4ea8f8a1`'s harness, run `20261120T155631Z`. Engineer: run
-`20261120T134834Z`, this change at `0abdc870`; the engineer changes since (the plan's rule groups,
-the journal by group) do not apply to its fixture, whose plan has no groups.
+The designer now writes the 14 acceptance tests, against one on `main`, in less time (16 → 13
+turns, −21 % of its cost). The engineer needs 63 → 17 turns and 34 → 4 test runs, −67 % of its
+cost.
 
 ### Intermediate steps
 
@@ -53,8 +53,9 @@ the journal by group) do not apply to its fixture, whose plan has no groups.
 ### Caveats
 
 - 3 trials per arm.
-- `main`'s engineer passes the hidden oracle but missed a commit-count grader since removed:
-  its pass rate reads 0 % at a 0.875 median score. Quality is equal, not 0 → 100.
+- `main`'s engineer passes the hidden oracle but misses the red-then-green grader: its S1 test
+  sits in the fixture's seed commit, so its first commit is a `feat`. Its pass rate reads 0 % at
+  a 0.875 median score; quality is equal, not 0 → 100.
 
 ## Reproduce
 
