@@ -59,7 +59,7 @@ test('a repository agent between DESIGN and DISTILL is launched in its place, as
 
 test('in an ejected workflow an agent node runs its agent on the family its model= names, and a review node gives its family to the lenses that name none', async () => {
   const families = edit(BUILT_IN_WORKFLOW,
-    ['phase="DELIVER", each="scenario"]', 'phase="DELIVER", each="scenario", model="frontier"]'],
+    ['phase="DELIVER"]', 'phase="DELIVER", model="frontier"]'],
     ['lens="architecture-compliance"]', 'lens="architecture-compliance", model="frontier"]'],
     ['design_review [shape=tripleoctagon, mandatory=true]', 'design_review [shape=tripleoctagon, mandatory=true, model="standard"]'])
   const host = scripted(repositoryWorkflow(families), nominal)
@@ -75,7 +75,7 @@ test('in an ejected workflow an agent node runs its agent on the family its mode
 
 test('a family is any kebab-case word with a tier, such as gpt-luna; a review node names the refuter\'s family with refuter=, else it runs one tier above the strongest lens of its group', async () => {
   const families = edit(BUILT_IN_WORKFLOW,
-    ['phase="DISTILL", each="scenario"]', 'phase="DISTILL", each="scenario", model="gpt-luna"]'],
+    ['phase="DISTILL"]', 'phase="DISTILL", model="gpt-luna"]'],
     ['lens="consistency"]', 'lens="consistency", model="gpt-luna"]'],
     ['design_review [shape=tripleoctagon, mandatory=true]', 'design_review [shape=tripleoctagon, mandatory=true, refuter="gpt-luna"]'])
   const host = scripted(repositoryWorkflow(families), (it) => [...nominal(it).slice(0, 2), agent()(it), ...nominal(it).slice(2)])

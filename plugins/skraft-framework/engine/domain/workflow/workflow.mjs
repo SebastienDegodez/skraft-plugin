@@ -1,5 +1,6 @@
 import { isAbsolutePath } from '../config/skraft-config.mjs'
 import { edgeAnswers, NODE_QUESTIONS, questionSpec } from '../decisions/questions.mjs'
+import { delivers, writesScenarios } from '../pipeline/roles.mjs'
 import { GATE_ORDER } from '../gates/gate-plan.mjs'
 import { FAMILY, readLensSpec, TRIGGER_NAMES } from '../review/lenses.mjs'
 import { RUN_VALUES } from './call.mjs'
@@ -49,7 +50,7 @@ import { branchReasons, foldReviews, formerFanInReasons, formerReviewReasons } f
  *   workflow is read, the run value each input is bound to, and the id and mandatory= of its
  *   review's fan-in (folded into the call node with its fan-out, branches, lenses and families).
  * @typedef {'pull-request' | 'playwright-visuals'} Publication
- * @typedef {'survivor-file' | 'scenario'} Each
+ * @typedef {'survivor-file'} Each
  * @typedef {'PASS' | 'FAIL' | 'APPROVED' | 'NEEDS_REWORK'} EdgeLabel
  * @typedef {{ from: string, to: string, label: string | null, maxVisits: number | null }} WorkflowEdge
  *   label: PASS or FAIL on an edge leaving a gate (unlabeled means PASS), APPROVED or
@@ -89,10 +90,15 @@ const ATTRIBUTES = Object.freeze({
   publish: { required: ['publish'], optional: ['when'] },
   call: { required: ['workflow'], optional: ['mandatory', `${WITH}<input>`] },
 })
+/** Why each="scenario" is refused, and any other value. @param {string} value */
+const eachProblem = (value) => (value === 'scenario'
+  ? 'is gone: the engine dispatches the acceptance designer once and the software engineer once per story; remove each="scenario" (skraft workflow diff shows the plugin\'s)'
+  : `must be ${EACHES.join(' or ')}`)
+
 /** What `when=` names, by the kind of node it is on. @type {Readonly<Partial<Record<NodeKind, readonly string[]>>>} */
 const WHENS = Object.freeze({ publish: Object.freeze(['frontend']), lens: TRIGGER_NAMES })
 /** What an agent node runs once per. @type {readonly Each[]} */
-const EACHES = Object.freeze(/** @type {Each[]} */ (['survivor-file', 'scenario']))
+const EACHES = Object.freeze(/** @type {Each[]} */ (['survivor-file']))
 /** What a publish node publishes. @type {readonly Publication[]} */
 const PUBLICATIONS = Object.freeze(/** @type {Publication[]} */ (['pull-request', 'playwright-visuals']))
 
@@ -142,7 +148,7 @@ const NODE_CHECKS = {
   outputs: (value) => (listOf(value).every((path) => !isAbsolutePath(path) && !path.split(/[\\/]/).includes('..')) ? null : 'must list paths relative to the tracking folder, without ..'),
   writes: (value) => (listOf(value).every((path) => !isAbsolutePath(path)) ? null : 'must list paths relative to the working copy'),
   max_attempts: positive,
-  each: (value) => (EACHES.some((known) => known === value) ? null : `must be ${EACHES.join(' or ')}`),
+  each: (value) => (EACHES.some((known) => known === value) ? null : eachProblem(value)),
   publish: (value) => (PUBLICATIONS.some((known) => known === value) ? null : `must be ${PUBLICATIONS.join(' or ')}`),
   when: (value, kind) => {
     const known = /** @type {readonly string[]} */ (WHENS[kind])
@@ -459,28 +465,10 @@ const proposalReasons = ({ nodes }) => Object.values(nodes)
   .filter((node) => node.proposal && node.each !== 'survivor-file')
   .map((node) => `node ${node.id}: proposal=true needs each="survivor-file", the mutants it proposes for`)
 
-const SCENARIO_PAIR = 'each="scenario" goes on two agent nodes, the one that writes every scenario\'s failing acceptance test, then the one that makes them pass group by group'
-
-/**
- * The nodes marked each="scenario", in the order the run reaches them: the one that writes every
- * scenario's failing acceptance test, then the one that makes them pass group by group.
- * @param {Pick<Workflow, 'nodes' | 'order'>} workflow
- */
-export const scenarioNodes = ({ nodes, order }) => order.filter((id) => nodes[id].each === 'scenario')
-
-/** The nodes marked each="scenario", in declaration order. @param {Draft} draft */
-const markedScenario = ({ nodes, ids }) => ids.filter((id) => nodes[id]?.each === 'scenario')
-
-/** None or two nodes run per scenario. @param {Draft} draft */
-const scenarioPairReasons = (draft) => {
-  const marked = markedScenario(draft)
-  return when(![0, 2].includes(marked.length), `${SCENARIO_PAIR}; it is on ${marked.length}: ${marked.join(', ')}`)
-}
-
-/** The scenario review shows the scenarios the pair runs. @param {Draft} draft */
-const scenarioReviewReasons = (draft) => Object.values(draft.nodes)
-  .filter((node) => node.question === 'scenario-review' && markedScenario(draft).length === 0)
-  .map((node) => `node ${node.id}: question="scenario-review" needs the two nodes marked each="scenario", whose scenarios it shows`)
+/** The scenario review shows the scenarios the node that writes them leaves and the groups the node that delivers them takes. @param {Draft} draft */
+const scenarioReviewReasons = ({ nodes }) => Object.values(nodes)
+  .filter((node) => node.question === 'scenario-review' && !(Object.values(nodes).some(writesScenarios) && Object.values(nodes).some(delivers)))
+  .map((node) => `node ${node.id}: question="scenario-review" needs the node that writes the scenarios and the node that delivers them`)
 
 /** @param {Draft} draft */
 const startAndExitReasons = ({ starts, exits }) => [
@@ -533,7 +521,6 @@ const WORKFLOW_CHECKS = Object.freeze([
   edgeAttributeReasons,
   outgoingEdgeReasons,
   proposalReasons,
-  scenarioPairReasons,
   scenarioReviewReasons,
   branchReasons,
   startAndExitReasons,
