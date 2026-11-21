@@ -72,16 +72,49 @@ step. Never build a class no active scenario requires.
 
 - **Interactive session:** the developer reviews and explicitly validates the failing test
   before you continue.
-- **skraft DELIVER:** the recorded red commit is the inspection: on a group pass, DISTILL's red
-  of the story's acceptance tests, which the engine replays; on a pass with no group, your own
-  failing test, committed before any production code exists. Continue to GREEN in the same run;
-  never stop after RED to wait.
+- **skraft DELIVER:** the recorded red commit is the inspection: on the story pass, DISTILL's
+  `test` commit of the acceptance tests; on a pass after the story is delivered, your own failing
+  test, committed before any production code exists. Continue to GREEN in the same run; never stop
+  after RED to wait for an inspection.
 - **Delegating a slice to a worker or subagent:** never put RED and SYNTHESIZE GREEN in the same
   instruction. Send RED only (write the test, stub to compile, run, report the failing output);
   inspect that output yourself — show it to the developer and wait for "proceed" when one is
   present; then send GREEN. The inspection stays with whoever delegates; a worker told to act
   unattended reports the failing test and stops. A `PAUSE` note in a plan or inside the worker's
   own instruction does not create the stop: only a separate dispatch does.
+
+### Inner loop, at a model's pace
+
+- **The acceptance test is the first inner test.** When it states the rule with its examples, go
+  from its red to the code: write no unit test of your own. Write one only for what the acceptance
+  test does not pin down: a combinatorial rule `test-design-mandates` Mandate 4 opens a gate for,
+  or a case no example of the scenario reaches.
+- **One RED per rule, not per example.** A unit test is one test, or one parametrized test whose
+  rows triangulate the same rule (`craft-discipline` C11). Rows of two rules never share a RED.
+- **Write a stated rule whole.** When the acceptance criterion states the rule (a rate table, a
+  threshold, a cap, a formula), GREEN writes it; take a smaller step (a constant, then a branch)
+  only when the general rule is not clear from the test.
+- **Run scope.** Run the new test filtered to it, then the test project or module it lives in, as
+  *Run one test, then its project* gives by stack. The whole suite runs once per group, in the
+  command that commits its green.
+- **Short output.** Run tests at their quietest verbosity, failures only; read a full output only
+  to understand a failure.
+- **Checks once per group.** After each inner GREEN, only `git diff --name-only` (step 1 of
+  *Post-GREEN wiring verification*); its other steps and the Object Calisthenics rules
+  (`craft-discipline` C10) run once on the group's whole diff, before its commit.
+
+### Run one test, then its project
+
+| Stack | One test | Its project or module | Quiet, failures only |
+|---|---|---|---|
+| .NET | `dotnet test <test project> --filter "FullyQualifiedName~<Class>.<Method>"` | `dotnet test <test project>` | `--verbosity quiet` |
+| Java, Maven | `mvn -q test -Dtest=<Class>#<method>` (`-pl <module>` in a multi-module build) | `mvn -q test -pl <module>` | `-q` |
+| Java, Gradle | `gradle test --tests "<Class>.<method>"` (`:<module>:test`) | `gradle :<module>:test` | `-q` |
+| TypeScript, Vitest | `npx vitest run <file> -t "<name>"` | `npx vitest run <folder>` | `--reporter=dot` |
+| Python, pytest | `pytest <file>::<test>` | `pytest <folder>` | `-q` |
+
+The component's test command from your brief is the command of record: add only the filter and the
+verbosity to it, never replace it with another runner. Pending excluded: see *Commit policy*.
 
 ## Commit policy
 
@@ -91,7 +124,7 @@ error only when read: a red is never chained to a commit; a green is.
 | Pass | Commits |
 |---|---|
 | Acceptance tests of the story (skraft DISTILL) | One `test` commit: the walking skeleton and the acceptance test of every scenario, with the skeleton they call, after one run whose output shows each failing on a business assertion |
-| Group in progress (skraft DELIVER) | The inner cycles commit nothing. One `feat` or `fix` commit once the group's scenarios pass, its unit tests and every format or lint fix included, chained in bash: `<test command, pending scenarios excluded> && git add <each file> && git commit -s -m "<subject>" -m "Refs: #N"`, the message exactly as the brief gives it |
+| Story in DELIVER, one dispatch | The inner cycles commit nothing. One `feat` or `fix` commit per group, in plan order, once the group's scenarios pass, its unit tests and every format or lint fix included, chained in bash: `<test command, pending scenarios excluded> && git add <each file> && git commit -s -m "<subject>" -m "Refs: #N"`, the line the brief gives for that group; a group whose tests already pass takes none |
 | No scenario: gates or review sent the story back, mutant kills, a session without skraft | Each cycle: `test` with the failing test, then `feat` or `fix` with the code; `refactor` for a change under green |
 
 The acceptance tests of a scenario are its oracle: the green never changes them. A wrong one is
@@ -201,8 +234,12 @@ Code no approved behaviour asks for and no test covers: delete it. Run no mutati
   not delivered yet stays an active, failing test, left out by the name filter (Commit policy).
 - **One group at a time:** the implementation plan groups the scenarios by the rule they pin down:
   consecutive scenarios that enter through the same use case and state one rule or its edge cases
-  form one group; a scenario on its own is a group of one. Each group takes one green commit,
-  the groups in plan order.
+  form one group; a scenario on its own is a group of one. One dispatch delivers every group in
+  plan order, one green commit each. For each group, in one turn: run its tests filtered to it;
+  scenarios that already pass are covered by an earlier one: no code, name the covering scenario
+  on their change-log line; write the code its red tests demand, nothing more; chain the gate and
+  the group's one commit. A red acceptance test after a green is a scenario still owed, never a
+  reason to stop. After the last group the whole suite runs green, unfiltered.
 - A scenario's test that passes on its first run adds no behaviour: it is an example of the
   scenario whose code makes it pass, an `Examples` row of that one.
 
