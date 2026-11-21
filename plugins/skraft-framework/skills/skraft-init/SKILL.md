@@ -39,12 +39,28 @@ For each component, `commands` must hold at least one of `build`, `format`, `lin
 `architecture`, `coverage`, `e2e`; a component with none can prove nothing and the gates refuse
 the run. `mutation` counts for none of them: ask nothing about it here, *Mutation* declares it.
 
-`<cli> init` writes no command: every command is the developer's. For each component, load its
-stack's `quality-gates-<stack>` skill when one exists, and propose the lines of its *Gate command
-lines* table that this working copy can run (a script its manifest declares before a tool it
-implies; the project's `./mvnw` or `./gradlew` before the global tool). Write the interpreter a
-Python line needs as this machine needs it (`.venv/bin/python …`, `.venv\Scripts\python.exe …`):
-the engine starts a program as written. Two commands no table gives:
+`<cli> init` writes no command: every command is the developer's. For each component, load the
+skill of its stack and propose the lines of its *Gate command lines* table that this working copy
+can run (a script its manifest declares before a tool it implies; the project's `./mvnw` or
+`./gradlew` before the global tool):
+
+- `dotnet`: `quality-gates-dotnet`; `python`: `quality-gates-python`;
+- `typescript` and `react` with Vitest: `quality-gates-typescript`; `javascript` run by
+  `node --test`: `quality-gates-javascript`;
+- `java`, which has no such skill:
+
+  | Gate | Maven | Gradle |
+  |---|---|---|
+  | build | `mvn -B -q -DskipTests package` | `gradle build -x test` |
+  | test | `mvn -B -q verify` | `gradle test` |
+
+  with `./mvnw` or `./gradlew` in place of `mvn` or `gradle` when the project ships it.
+
+Write the interpreter a Python line needs as this machine needs it, with forward slashes
+(`.venv/bin/python …` on macOS and Linux, `.venv/Scripts/python.exe …` on Windows; never a
+backslash, which JSON refuses): the engine starts a program as written. A team on several systems
+chooses one form per component, since `skraft-config.json` holds one line. Two commands no table
+gives:
 
 - `architecture` — the command that runs the architecture tests. Look for them in the working
   copy (a test project or folder whose name holds `architecture` or `arch`, a NetArchTest,
@@ -171,8 +187,20 @@ until they ask for it.
 
 1. For each component that has no `mutation` command, propose one from its stack's
    `quality-gates-<stack>` skill and the tool the working copy declares; keep a command already
-   written. When you know no command that writes a report the engine reads, propose one that
-   writes `SKRAFT_MUTATION_RESULT`.
+   written. The `quality-gates-<stack>` skills hold no mutation line: propose the one whose report
+   the engine reads, relative to the component root:
+
+   | Tool | Command | Report |
+   |---|---|---|
+   | Stryker.NET | `dotnet stryker --since:{baseSha} --reporter json --output StrykerOutput` | `StrykerOutput/reports/mutation-report.json` |
+   | PIT, Maven | `mvn -B -q org.pitest:pitest-maven:mutationCoverage -DoutputFormats=XML -DtimestampedReports=false -DwithHistory` | `target/pit-reports/mutations.xml` |
+   | PIT, Gradle | `gradle pitest` with its XML output | `build/reports/pitest/mutations.xml` |
+   | StrykerJS | `npx stryker run --incremental --reporters json,clear-text` | `reports/mutation/mutation.json` |
+
+   `./mvnw` or `./gradlew` replace `mvn` or `gradle` when the project ships them. For any other
+   tool, or one writing elsewhere, propose a command that writes its result to the file
+   `SKRAFT_MUTATION_RESULT` names; mutmut alone (`python -m mutmut run`) writes no report the
+   engine reads.
 2. Show each component's `mutation` command, one line each, and ask the developer to confirm it,
    rewrite it, or leave the component out. Write each confirmed line yourself into
    `commands.mutation` of the component in `skraft-config.json`; a component left out gets no
@@ -181,8 +209,8 @@ until they ask for it.
    Name what the command needs that the working copy lacks (the tool, its plugin, its
    configuration file) and leave it to the developer.
 4. A command the developer writes either writes its result, score already computed, to the file
-   the environment variable `SKRAFT_MUTATION_RESULT` names, or leaves the report its tool writes
-   at the tool's default path. `skraft-quality-bar` gives the result's form and the bar.
+   the environment variable `SKRAFT_MUTATION_RESULT` names, or leaves a report at one of the
+   paths of the table above. `skraft-quality-bar` gives the result's form and the bar.
 5. Run `<cli> doctor`. Its `mutation` line names the components that declare a command; fix every
    `<component>/mutation` failure. Then tell the developer that `skraft mutation` runs mutation on
    the branch HEAD is on, in its own run.

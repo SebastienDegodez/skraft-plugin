@@ -41,8 +41,9 @@ scripts/ folder next to this SKILL.md, never in the consumer repository. Every s
 | coverage | `node "<skill>/scripts/coverage-core.mjs" --root . --evidence .copilot-tracking/skraft-gates/coverage` |
 
 The engine starts a command's program as written: write the `.venv` interpreter path
-(`.venv/bin/python`, or `.venv\Scripts\python.exe` on Windows) in place of `python` when `python`
-is not the project's interpreter on the path. `--evidence`
+(`.venv/bin/python`, or `.venv/Scripts/python.exe` on Windows; forward slashes, a backslash is an
+invalid escape in JSON) in place of `python` when `python` is not the project's interpreter on the
+path. A team on several systems chooses one form per component. `--evidence`
 is the folder where the script keeps its own report files, relative to `--root`.
 
 The core is every Python source under a folder whose name ends with `domain` or `application`
