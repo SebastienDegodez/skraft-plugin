@@ -13,29 +13,39 @@ const machine = (t, programs = TOOLCHAINS) => envWithPath([stubPrograms(join(tem
 /** The lines of doctor's checks, without its tables. @param {string[]} lines */
 const checksOf = (lines) => lines.filter((line) => /^(ok  |WARN|FAIL)  /.test(line))
 
-const initThenDoctor = async (cwd, env, add = [], { gherkin = 'declined' } = {}) => {
-  const init = await skraft(cwd, ['init', ...add.flatMap((folder) => ['--add', folder])], { env })
-  assert.equal(init.status, 0, init.stderr)
-  if (gherkin === 'declined') declineGherkin(cwd)
-  return { init, doctor: await skraft(cwd, ['doctor'], { env }) }
+/** The command lines `/skraft-init` writes for each stack: init detects the components and writes none. */
+const COMMANDS = {
+  dotnet: { build: 'dotnet build --nologo', test: 'dotnet test --nologo', format: 'dotnet format --verify-no-changes' },
+  java: { build: 'mvn -B -q -DskipTests package', test: 'mvn -B -q verify' },
+  python: { build: 'python -m compileall -q src', test: 'python -m pytest -q -p no:cacheprovider' },
+  react: { build: 'npm run build', lint: 'npm run lint', test: 'npm test' },
 }
 
 /**
- * The answer `/skraft-init` would write for a fixture that holds no Gherkin: init detects the pairs
- * and answers nothing when it finds none, and every scenario but the one about that question has it
- * answered.
- * @param {string} cwd
+ * Writes the command lines the developer confirms with `/skraft-init`, to each component of the
+ * file that has none, and the answer about Gherkin when `bdd` is given.
+ * @param {string} cwd @param {{ bdd?: boolean }} [answer]
  */
-const declineGherkin = (cwd) => {
+const answerAsTheSkillDoes = (cwd, { bdd } = {}) => {
   const file = join(cwd, 'skraft-config.json')
   const config = readJson(file)
-  for (const component of config.components) component.bdd = false
+  for (const component of config.components) {
+    component.commands = { ...COMMANDS[component.stack], ...component.commands }
+    if (bdd !== undefined) component.bdd = bdd
+  }
   writeFileSync(file, `${JSON.stringify(config, null, 2)}\n`)
 }
 
+const initThenDoctor = async (cwd, env, add = [], { gherkin = 'declined' } = {}) => {
+  const init = await skraft(cwd, ['init', ...add.flatMap((folder) => ['--add', folder])], { env })
+  assert.equal(init.status, 0, init.stderr)
+  answerAsTheSkillDoes(cwd, gherkin === 'declined' ? { bdd: false } : {})
+  return { init, doctor: await skraft(cwd, ['doctor'], { env }) }
+}
+
 // The stub PATH holds no container runtime: doctor warns of it after the infrastructure of each
-// component's tests, one line per row, never failing. init writes no mutation command, so doctor's
-// mutation line says no component declares one.
+// component's tests, one line per row, never failing. The commands are written after init, as
+// `/skraft-init` would; none is a mutation command, so doctor's mutation line says no component declares one.
 for (const [fixture, stack, commands, paths] of [
   ['payment', 'dotnet', ['build', 'format', 'test'], { src: ['src/'], tests: ['tests/'] }],
   ['payment-spring', 'java', ['build', 'test'], {
@@ -81,7 +91,7 @@ test('init lists skraft-config.local.json in .gitignore, and doctor reads it and
   const home = join(root, 'home')
   const env = machine(t)
   assert.equal((await skraft(cwd, ['init'], { env, home })).status, 0)
-  declineGherkin(cwd)
+  answerAsTheSkillDoes(cwd, { bdd: false })
   assert.match(readFileSync(join(cwd, '.gitignore'), 'utf8'), /^skraft-config\.local\.json$/m)
   const configLine = async () => (await skraft(cwd, ['doctor'], { env, home })).stdout.split(/\r?\n/).find((line) => line.includes(' config: '))
 
@@ -113,7 +123,7 @@ test('doctor\'s tables align each column under its heading, a model list in its 
   const cwd = copyFixture(FIXTURES.payment, join(root, 'payment'))
   const env = machine(t)
   assert.equal((await skraft(cwd, ['init'], { env })).status, 0)
-  declineGherkin(cwd)
+  answerAsTheSkillDoes(cwd, { bdd: false })
   writeFileSync(join(cwd, 'skraft-config.local.json'), JSON.stringify({ models: { implementer: { copilot: { model: ['gpt-6.0', 'gpt-5.5'] } } }, assign: { agents: { 'business-alignment-lens': 'inherit' } } }))
 
   const lines = (await skraft(cwd, ['doctor'], { env })).stdout.split(/\r?\n/)
@@ -133,7 +143,7 @@ test('doctor warns of CLAUDE_CODE_EFFORT_LEVEL and of a ~/.copilot/settings.json
   const home = join(root, 'home')
   const env = machine(t)
   assert.equal((await skraft(cwd, ['init'], { env, home })).status, 0)
-  declineGherkin(cwd)
+  answerAsTheSkillDoes(cwd, { bdd: false })
   writeFileSync(join(cwd, 'skraft-config.local.json'), JSON.stringify({ models: { standard: { copilot: { model: 'gpt-5.5' } } } }))
   mkdirSync(join(home, '.copilot'), { recursive: true })
   const warnings = async (settings, more = {}) => {
@@ -165,7 +175,7 @@ test('doctor names the missing command and exits 1; the developer\'s command the
   const cwd = copyFixture(FIXTURES.payment, join(tempFolder(t), 'payment'))
   const env = machine(t, ['dotnet'])
   assert.equal((await skraft(cwd, ['init'], { env })).status, 0)
-  declineGherkin(cwd)
+  answerAsTheSkillDoes(cwd, { bdd: false })
   const config = readJson(join(cwd, 'skraft-config.json'))
   config.components[0].commands.architecture = 'archunit-cli check'
   writeFileSync(join(cwd, 'skraft-config.json'), JSON.stringify(config, null, 2))
@@ -185,7 +195,7 @@ test('doctor passes on Microcks components without any container runtime on the 
   const cwd = copyFixture(FIXTURES['payment-fastapi'], join(tempFolder(t), 'payment-fastapi'))
   const env = machine(t, ['python'])
   assert.equal((await skraft(cwd, ['init'], { env })).status, 0)
-  declineGherkin(cwd)
+  answerAsTheSkillDoes(cwd, { bdd: false })
 
   const report = await skraft(cwd, ['doctor', '--json'], { env })
 
@@ -204,7 +214,7 @@ test('python runs from the virtual environment of the component, laid out the wa
   try { linkSync(process.execPath, venv) } catch { copyFileSync(process.execPath, venv) }
   const env = envWithPath(toolFolders())
   assert.equal((await skraft(cwd, ['init'], { env })).status, 0)
-  declineGherkin(cwd)
+  answerAsTheSkillDoes(cwd, { bdd: false })
   const path = join(cwd, 'skraft-config.json')
   const config = readJson(path)
   config.components[0].commands = { test: 'python --version' }

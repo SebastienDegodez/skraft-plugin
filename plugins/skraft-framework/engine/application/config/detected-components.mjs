@@ -42,15 +42,15 @@ export const newComponents = async (workspace, starts, components, { workingCopy
 }
 
 /**
- * One component as init writes it: its project, and the pairs its folders show. A project whose
+ * One component as init writes it: its project, no command, and the pairs its folders show. A project whose
  * folders show no pair is written without `bdd`, which leaves the question open: `/skraft-init`
  * asks it, and a run is refused until it is answered.
  * @param {Workspace} workspace @param {FoundProject} found @param {string} name
  * @returns {Promise<ProposedComponent>}
  */
-const proposedComponent = async (workspace, { root, stack, paths, commands }, name) => {
+const proposedComponent = async (workspace, { root, stack, paths }, name) => {
   const bdd = await bddPairs(workspace, root)
-  return { name, root, stack, paths, commands, ...(bdd.length === 0 ? {} : { bdd }) }
+  return { name, root, stack, paths, commands: {}, ...(bdd.length === 0 ? {} : { bdd }) }
 }
 
 /** @param {string} root @param {string} workingCopyName the name of the folder `.` */
