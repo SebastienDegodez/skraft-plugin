@@ -34,8 +34,20 @@ jobs:
       - name: Create the patch tag
         env:
           GH_TOKEN: ${{ github.token }}
+          BEFORE: ${{ github.event.before }}
         run: |
           set -euo pipefail
+          # `paths` starts this workflow when ANY file matches; a push that also
+          # changes code belongs to semantic-release, which a patch tag on HEAD
+          # would silence ("0 commits since last release").
+          if [ "${{ github.event_name }}" = "push" ]; then
+            while IFS= read -r f; do
+              case "$f" in
+                docs/site/*|docs/*.md) ;;
+                *) echo "Not a documentation-only push ($f): left to semantic-release"; exit 0 ;;
+              esac
+            done < <(git diff --name-only "$BEFORE" HEAD)
+          fi
           if git describe --tags --exact-match HEAD >/dev/null 2>&1; then
             echo "HEAD already tagged"; exit 0
           fi
