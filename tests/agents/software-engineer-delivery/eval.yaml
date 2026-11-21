@@ -293,13 +293,14 @@ stimuli:
       - checkout-pricing: . (dotnet), mocking: microcks, contract testing: off, bdd: off, tests: dotnet test CheckoutPricing.slnx --no-restore
       - loyalty-rates: rates (dotnet), mocking: microcks, contract testing: off, bdd: off, tests: dotnet build LoyaltyRates/LoyaltyRates.csproj --no-restore
       - Reference no issue in a commit.
-      - Group: 1 of 1 — S1 "Member receives the approved cart discount" (component checkout-pricing)
-      - Acceptance tests DISTILL committed, which you never change (a wrong one: stop blocked, naming it):
+      - Groups, in the order you deliver them, one green commit each; a group whose acceptance tests already pass takes none (name the scenario whose code makes them pass on its change-log line):
+      - 1 of 1 — S1 "Member receives the approved cart discount" (component checkout-pricing)
+      - Acceptance tests DISTILL committed, which you never change (a wrong one, or one failing on a build or setup error: stop blocked, naming it):
       - "test: approved DISTILL fixture": tests/CheckoutPricing.UnitTest/LoyaltyDiscount/DiscountTests.cs
-      - At your commit every test passes.
-      - Make the group's scenarios pass with outside-in TDD, unit tests included, and commit nothing until they pass; change another component than checkout-pricing only where the group needs it, in the same commit.
-      - Once they pass, commit once, in bash (never PowerShell), naming each file you changed:
-        dotnet test CheckoutPricing.slnx --no-restore && git add <each file you changed> && git commit -s -m "feat(pricing): member receives the approved cart discount"
+      - The walking skeleton passes from group 1's commit on.
+      - Deliver every group in this one pass, in order, with outside-in TDD, unit tests included, and commit nothing until a group's tests pass; change another component than checkout-pricing only where a group needs it, in the same commit. The pass ends when every group is committed and every test passes, or on a blocker.
+      - Commit each group once, in bash (never PowerShell), naming each file you changed:
+      - group 1: dotnet test CheckoutPricing.slnx --no-restore && git add <each file you changed> && git commit -s -m "feat(pricing): S1 member receives the approved cart discount"
     tags:
       agent: software-engineer
       scenario: delivery-across-components
