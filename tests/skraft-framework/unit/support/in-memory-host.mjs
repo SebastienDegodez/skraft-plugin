@@ -215,17 +215,8 @@ export class ScriptedAgentRunner {
     this.batchCostUsd = undefined
     /** @type {((dispatch: {agent: string, label: string, prompt: string}) => Promise<object|void>) | null} what answers a pr-writer, apart from the queue */
     this.writer = null
-    /** @type {(dispatch: {agent: string, label: string, prompt: string}) => Promise<object|string>|object|string} what answers the replay judge, apart from the queue: it accepts */
-    this.judge = () => judgeAnswer('accept')
-    /** @type {Array<{agent: string, label: string, prompt: string}>} the replay judge's dispatches, kept apart from the queue's */
-    this.judged = []
-  }
-  async judging(dispatch) {
-    this.judged.push(dispatch)
-    return answerOf(await this.judge(dispatch))
   }
   async run(dispatch) {
-    if (dispatch.agent === 'replay-judge') return this.judging(dispatch)
     this.dispatches.push(dispatch)
     if (dispatch.agent === 'pr-writer' && this.writer !== null) return (await this.writer(dispatch)) ?? { ok: true, text: 'done' }
     const behaviour = this.behaviours.shift()
@@ -244,12 +235,6 @@ export class ScriptedAgentRunner {
   /** Every lens and refuter dispatch, batch after batch. */
   reviewed() { return this.batches.flat() }
 }
-
-/** The replay judge's answer: its decision and a note, as the brief asks. @param {string} decision @param {string} [note] */
-export const judgeAnswer = (decision, note = 'the logs show it') => ['```yaml', answerYaml({ decision, note }), '```'].join('\n')
-
-/** @param {object | string} answer */
-const answerOf = (answer) => (typeof answer === 'string' ? { ok: true, text: answer } : answer)
 
 /**
  * The human at the host: each question gets the next scripted answer, `{ answer, reason }`,
@@ -608,58 +593,13 @@ export const hexSha = (n) => `c0ffee${n}`.padEnd(40, '0')
 
 const shaPrefix = (top) => (top === '' ? 'root' : top.replaceAll('../', 'up-').replaceAll('/', '-'))
 
-/**
- * Commits replayed in a throwaway checkout: the test command exits 1 (the red test fails)
- * unless `exits` names another code for that commit; null stands for a program that could not
- * start. The clock advances by takesMs per replay.
- */
-export class ScriptedReplay {
-  /**
-   * @param {{ exits?: Record<string, number | null | 'timeout'>, outputs?: Record<string, string>, clock?: FixedClock | null, takesMs?: number }} [options]
-   *   exits: by `'<sha>'`, or by `'<sha> <argv>'` for one command at that commit, `'timeout'` for a command the runner stopped
-   *   when its time ran out; outputs: what a `'<sha> <argv>'` prints
-   */
-  constructor({ exits = {}, outputs = {}, clock = null, takesMs = 0 } = {}) {
-    this.exits = exits
-    this.outputs = outputs
-    this.clock = clock
-    this.takesMs = takesMs
-    /** @type {Array<{ repository: string, sha: string, cwd: string, argv: string[], importRoots: string[] }>} each program tried, in order */
-    this.replays = []
-  }
-  /** One checkout: the first choice whose exit is not scripted null starts, as CommitReplay does. */
-  async run({ choices, ...request }) {
-    await this.clock?.pass(this.takesMs)
-    for (const argv of choices) {
-      this.replays.push({ ...request, argv })
-      const exitCode = this.exitOf({ ...request, argv })
-      if (exitCode === 'timeout') return { started: true, exitCode: null, stdout: '', stderr: '', error: `${argv[0]} did not finish within 600 s` }
-      if (exitCode !== null) return { started: true, exitCode, stdout: this.outputs[`${request.sha} ${argv.join(' ')}`] ?? `${argv.join(' ')} at ${request.sha}\n`, stderr: '' }
-    }
-    return { started: false, exitCode: null, stdout: '', stderr: '', error: `could not start ${choices.map(([program]) => program).join(' nor ')}` }
-  }
-  /**
-   * The exit of `'<sha> <argv>'` when scripted, else of the sha, else 0 at a feat or fix commit
-   * of the git double it reads (its tests pass), else 1 (a failing test).
-   */
-  exitOf({ sha, argv }) {
-    const line = `${sha} ${argv.join(' ')}`
-    if (line in this.exits) return this.exits[line]
-    if (sha in this.exits) return this.exits[sha]
-    return /^(feat|fix)\b/.test(this.git?.subjectOf(sha) ?? '') ? 0 : 1
-  }
-  /** The replays, as `'<sha> <repository>/<cwd> $ <argv>'`, then ` [import <roots>]` for a Python program's import roots. */
-  lines() { return this.replays.map(({ sha, repository, cwd, argv, importRoots }) => `${sha} ${repository}/${cwd} $ ${argv.join(' ')}${importRoots.length > 0 ? ` [import ${importRoots.join(', ')}]` : ''}`) }
-}
-
-
 /** The agents the default workflow starts: its agents, its lenses and the refuter. */
 export const PLUGIN_AGENTS = Object.freeze([
   'solution-researcher', 'solution-architect', 'acceptance-designer', 'software-engineer',
   'consistency-lens', 'architecture-compliance-lens', 'fitness-lens',
   'coverage-lens', 'business-alignment-lens', 'testability-lens', 'boundary-enforcement-lens',
   'test-integrity-lens', 'architecture-boundaries-lens', 'cold-reader-lens', 'mock-fidelity-lens', 'contract-fidelity-lens',
-  'finding-refuter', 'pr-writer', 'replay-judge',
+  'finding-refuter', 'pr-writer',
 ])
 
 /** The mocking and contract testing skills the plugin ships, the skills a component asks for. */

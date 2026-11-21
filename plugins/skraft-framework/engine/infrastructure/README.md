@@ -5,5 +5,5 @@ May import `domain/` and `application/ports/`; never a use case outside `ports/`
 Covered by `tests/skraft-framework/integration/<feature>/` against real temporary folders.
 The adapters the Claude Code mod also loads take their I/O as functions and import no Node API:
 `tracking/`, `templates/`, `crypto/`, `workspace/`, `agents/`, `workflows/`, `source-control/` (Git through
-any CommandRunner, the commit replay in a throwaway worktree included).
+any CommandRunner).
 `process/` and `files/` are Node only.

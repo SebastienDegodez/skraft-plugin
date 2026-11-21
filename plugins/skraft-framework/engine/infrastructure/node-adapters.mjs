@@ -12,7 +12,6 @@ import { createWorkspaceFiles } from './workspace/workspace-files.mjs'
 import { createUserSettings } from './settings/user-settings.mjs'
 import { createHostSettings } from './settings/host-settings.mjs'
 import { createGitSourceControl } from './source-control/git-source-control.mjs'
-import { createGitCommitReplay } from './source-control/git-commit-replay.mjs'
 import { createForges } from './code-host/forges.mjs'
 import { createAgentCatalog } from './agents/agent-catalog.mjs'
 import { createPluginWorkflows } from './workflows/plugin-workflows.mjs'
@@ -92,7 +91,7 @@ const mutationRun = (files, { pluginRoot, cwd }) => {
   return Object.freeze({ ...runs, runLock: createNodeRunLock({ root: cwd, folder: MUTATION_FOLDER }), workflowSource })
 }
 
-/** How long a command may run, by kind: git, and the developer's commands (gates, TDD replay). */
+/** How long a command may run, by kind: git, and the developer's commands (gates). */
 const GIT_TIMEOUT_MS = 300_000
 const COMMAND_TIMEOUT_MS = 7_200_000
 
@@ -107,7 +106,6 @@ const programs = (cwd, env, signal) => {
   return {
     commandRunner,
     sourceControl: createGitSourceControl({ commandRunner: createNodeCommandRunner({ root: cwd, env, signal, timeoutMs: GIT_TIMEOUT_MS }) }),
-    commitReplay: createGitCommitReplay({ commandRunner }),
     forges: createForges({ commandRunner: forge }),
     executables: createNodeExecutables({ root: cwd, env }),
   }
