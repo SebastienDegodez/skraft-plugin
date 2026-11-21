@@ -163,7 +163,7 @@ pipeline, without losing its context:
 | RESEARCH | Cited research document + recommendation |
 | DESIGN | Ratified ADR (payment via ACL) + event model |
 | DISTILL | Gherkin scenarios S1, S2 + red walking skeleton + S1's red acceptance test |
-| DELIVER | One red and one green commit per scenario + reviewed code + pull request |
+| DELIVER | One green commit per group of scenarios, after DISTILL's one red + reviewed code + pull request |
 
 Each artifact became the **context** of the next step, and every handoff stayed readable:
 what was not written down was not passed on.

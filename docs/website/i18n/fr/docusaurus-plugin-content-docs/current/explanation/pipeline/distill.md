@@ -1,6 +1,6 @@
 ---
 title: "DISTILL"
-description: "Pourquoi DISTILL écrit le contrat avant le code : scénarios métier, un test d'acceptation à la fois qui échoue pour la bonne raison, lus par un humain."
+description: "Pourquoi DISTILL écrit le contrat avant le code : scénarios métier, et le test d'acceptation de chacun qui échoue pour la bonne raison, lus par un humain."
 persona: software-engineer
 phase: distill
 ---
@@ -8,7 +8,7 @@ phase: distill
 # DISTILL
 
 Écrire le contrat avant le code : DISTILL transforme les décisions de DESIGN en scénarios que
-le métier peut lire et, un scénario à la fois, en un test d'acceptation qui échoue.
+le métier peut lire et, pour chacun d'eux, en un test d'acceptation qui échoue.
 
 ## Pourquoi cette phase existe
 
@@ -26,23 +26,24 @@ SKRAFT évite qu'un même agent ajuste le test à son code.
 L'ADR et le modèle d'événements entrent. DISTILL écrit chaque scénario de la story, dans l'ordre
 où DELIVER les construira. S1, celui que parcourt le walking skeleton : « Étant donné un panier
 avec un latte / Quand le paiement est validé / Alors un reçu est émis et des points fidélité sont
-crédités ». S2 : « une boisson indisponible ne peut pas être ajoutée au panier ». Il commite
-d'abord le walking skeleton en échec, du point d'entrée de commande jusqu'à la vraie base, puis, à
-son propre passage, le test d'acceptation en échec de S1 par le cas d'usage ; celui de S2 vient
-une fois S1 au vert.
+crédités ». S2 : « une boisson indisponible ne peut pas être ajoutée au panier ». En un seul
+commit, il écrit le walking skeleton en échec, du point d'entrée de commande jusqu'à la vraie
+base, et les tests d'acceptation en échec de S1 et de S2 par le cas d'usage ; son plan
+d'implémentation les range en deux groupes, un par règle.
 :::
 
 ## Un rouge qui prouve quelque chose
 
-À son premier passage, celui du plan, DISTILL écrit les scénarios, le plan de test et le
-[walking skeleton](../deep-dive/walking-skeleton.md), et commite ce test **en échec**, en un seul
-commit `test` dont le brief donne le message (`test(<story>): walking skeleton of …`). Au passage
-qui suit, « scenario 1 of N », il écrit le test d'acceptation de S1 et le commite aussi en échec,
-dans son propre commit `test`. Le moteur rejoue chaque commit avec la commande de test du composant et garde ce qu'elle
-affiche ; quand les tests échouent, il les rejoue aussi au commit parent, et le
-[juge du rejeu](pathname:///dashboard/#agent-replay-judge) lit les deux logs et le commit. Le
-rouge ne tient que si le test du commit échoue sur une **assertion** ; un rouge dont tous les
-tests passent est refusé sans interroger le juge. C'est la boucle
+En un seul passage, DISTILL écrit les scénarios, le plan de test, le plan d'implémentation, le
+[walking skeleton](../deep-dive/walking-skeleton.md) et le test d'acceptation de chaque scénario,
+et commite ces tests **en échec**, en un seul commit `test` dont le brief donne le message
+(`test(<story>): acceptance tests S1–S<n>`). Le nom de chaque test d'acceptation commence par le
+numéro de son scénario (`S2_…`, `test_s2_…`). Le moteur rejoue le commit avec la commande de test
+du composant et garde ce qu'elle affiche ; quand les tests échouent, il les rejoue aussi au
+commit parent, et le [juge du rejeu](pathname:///dashboard/#agent-replay-judge) lit les deux logs
+et le commit, en distinguant les scénarios par ces noms. Le rouge ne tient que si le test de
+chaque scénario échoue sur une **assertion** ; un rouge dont tous les tests passent est refusé
+sans interroger le juge. C'est la boucle
 externe du TDD outside-in : commencer par un test qui décrit ce que le système doit faire, vu
 de l'extérieur ([Freeman & Pryce, 2009](../../reference/citations.mdx#cite-freeman-goos-2009)).
 
@@ -60,7 +61,7 @@ La machine peut aussi être en cause. Quand aucun runtime de conteneurs ne répo
 ont besoin de Docker ou de Podman ne peuvent pas tourner : le juge le lit dans le log et demande
 à un humain d'en démarrer un. L'étape n'est ni sautée ni jouée contre une doublure à la place.
 
-## Un scénario à la fois
+## Tous les scénarios d'un coup, livrés par groupe
 
 Le plan de test liste les scénarios dans un tableau `## Scenarios`, de S1 à SN, dans l'ordre où
 DELIVER les construit, chacun dans le seul composant où vit son test. S1, tagué
@@ -69,20 +70,20 @@ Gherkin, qui traverse un composant back de son vrai point d'entrée jusqu'à une
 n'affirme que le câblage. S1 garde son propre test d'acceptation, le binding de son Gherkin, par
 le cas d'usage comme tout scénario. Une story sans nouveau point d'entrée — une librairie, un
 refactoring, des documents seulement — déclare plutôt cette exemption sous le tableau ; elle perd
-le walking skeleton, jamais le test d'acceptation de S1, et son passage du plan commite ses
-fichiers `.feature` en `docs(<story>): …`.
+le walking skeleton, jamais un test d'acceptation.
 
-Chaque scénario commence tagué `@pending` ; le rouge de chaque scénario retire le tag de ce seul
-scénario, et le lanceur Gherkin du composant sélectionne `not @pending` : un scénario dont le test
-n'est pas encore écrit ne tourne jamais au rouge. `@walking-skeleton` n'est jamais exclu.
+Le plan d'implémentation regroupe les scénarios par la règle qu'ils fixent, dans un tableau
+`| Group | Scenarios | … |` : des scénarios consécutifs qui entrent par le même cas d'usage et
+énoncent une règle ou ses cas limites forment un groupe, S1 dans le premier. DELIVER fait passer
+un groupe par passage, en un commit vert. Un plan sans ce tableau livre un scénario par groupe.
 
-DISTILL n'écrit le test que du scénario en cours. Un test écrit pour un scénario à venir
-resterait rouge pendant toute la livraison, et rien ne distinguerait son rouge d'une régression.
-Alors, après la revue de DISTILL et la lecture d'un humain, le moteur alterne : DELIVER fait
-passer S1 au vert — le test d'acceptation de S1 et le walking skeleton passent tous deux —, puis
-DISTILL écrit le test en échec de S2, DELIVER le fait passer, et ainsi de
-suite. Ces passages suivants ne sont pas revus à nouveau ; le rejeu de chaque rouge, et le vert
-qui doit le faire passer en gardant le walking skeleton au vert, les vérifient.
+Écrire tous les tests d'abord coûte un seul lancement de la suite au lieu d'un par scénario, et la
+revue comme l'humain lisent le contrat entier d'un coup. Le test d'un groupe pas encore livré
+reste rouge jusqu'à son vert : son nom, qui commence par le numéro de son scénario, permet à la
+commande de test de l'ingénieur de l'écarter et au juge du rejeu de le distinguer d'une
+régression. La revue de DISTILL et l'humain lisent ce rouge une fois ; le rejeu de chaque vert,
+qui doit faire passer son groupe en gardant au vert le walking skeleton et les groupes d'avant,
+vérifie le reste.
 
 Le brief dit aussi à DISTILL sur quoi les tests de chaque composant font tourner leurs
 dépendances, dans le test d'acceptation de chaque scénario (ciblé, S1 compris) et dans le walking
@@ -96,8 +97,9 @@ vient des défauts du plugin par stack, qu'une équipe surcharge par composant d
 
 Avant que DELIVER ne construise quoi que ce soit, le run pose à un humain la question
 `scenario-review` : voici les scénarios dans l'ordre, S1 marqué comme celui que parcourt le
-walking skeleton, le commit du walking skeleton en échec (ou l'exemption que déclare la story) et
-le commit du test d'acceptation en échec de S1. `APPROVED` laisse DELIVER les construire un à un ; `REVISE` renvoie DISTILL
+walking skeleton, les groupes dans lesquels DELIVER les construit, l'exemption que déclare la
+story s'il y en a une, et le commit des tests en échec. `APPROVED` laisse DELIVER les construire
+groupe par groupe ; `REVISE` renvoie DISTILL
 avec les corrections, que l'humain peut aussi faire d'abord dans le `.feature` ou les tests. Sous
 Copilot, comme pour la ratification d'un ADR, seule la boîte de dialogue de l'hôte enregistre la
 réponse.
@@ -138,10 +140,10 @@ restent testés.
 
 ## Quatre regards sur le contrat
 
-Quatre lentilles relisent le passage du plan et celui de S1, une fois : la **couverture** (chaque critère a son
+Quatre lentilles relisent le passage, une fois : la **couverture** (chaque critère a son
 scénario, avec ses cas limites), l'**alignement métier** (aucun détail d'implémentation dans une
 étape), la **testabilité** (chaque étape est implémentable, les rouges sont les bons, les tests
-ne portent que le walking skeleton et le scénario en cours), et les **frontières**
+portent le walking skeleton et le test d'acceptation de chaque scénario), et les **frontières**
 (le walking skeleton parcourt S1 depuis le vrai point d'entrée, chaque test d'acceptation ne
 pilote que le cas d'usage).
 Le moteur calcule le verdict ; un `NEEDS_REWORK` renvoie l'acceptance-designer avec les findings

@@ -49,7 +49,7 @@ l'exécute**.
 ```mermaid
 flowchart LR
     V1["Logiciel bien conçu"] --> M1["Gates verrouillées<br/>seuil de qualité fixe"]
-    V2["Ajouter de la valeur<br/>régulièrement"] --> M2["Walking skeleton<br/>un scénario à la fois,<br/>commits rouge → vert"]
+    V2["Ajouter de la valeur<br/>régulièrement"] --> M2["Walking skeleton<br/>chaque test d'acceptation rouge,<br/>un vert par règle"]
     V3["Communauté de<br/>professionnels"] --> M3["Revue avant la revue<br/>lentilles + réfutation"]
     V4["Partenariats<br/>productifs"] --> M4["Décisions humaines<br/>ratification d'ADR, consentements"]
 ```
@@ -132,7 +132,7 @@ que laissé en attente. Voir
 
 ```mermaid
 flowchart LR
-    D["deliver<br/>software-engineer<br/>un scénario à la fois"] --> G["gates verrouillées<br/>build · format · lint · test<br/>architecture · coverage"]
+    D["deliver<br/>software-engineer<br/>un groupe à la fois"] --> G["gates verrouillées<br/>build · format · lint · test<br/>architecture · coverage"]
     G -- "FAIL" --> D
     G -- "PASS" --> DR["revue DELIVER<br/>lentilles + verdict"]
     DR -- "NEEDS_REWORK" --> D

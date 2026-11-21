@@ -1,6 +1,6 @@
 ---
 title: "DELIVER"
-description: "Pourquoi DELIVER passe le contrat au vert un scénario et un commit vérifié à la fois, fait relire le code, et laisse le mutation testing au développeur."
+description: "Pourquoi DELIVER passe le contrat au vert un groupe de scénarios et un commit vérifié à la fois, fait relire le code, et laisse le mutation testing au développeur."
 persona: software-engineer
 phase: deliver
 hide_table_of_contents: true
@@ -10,40 +10,41 @@ import FlowFigure from '@site/src/components/FlowFigure';
 
 # DELIVER
 
-Faire passer le contrat au vert un scénario à la fois, chacun en un commit prouvé, puis faire
-relire le code. Tester les tests reste l'affaire du développeur.
+Faire passer le contrat au vert un groupe de scénarios à la fois, chacun en un commit prouvé,
+puis faire relire le code. Tester les tests reste l'affaire du développeur.
 
 ## Pourquoi cette phase existe
 
 Le code est le seul artefact qui part en production. DELIVER le fait naître du contrat que
-DISTILL a laissé en échec, un scénario à la fois : le `software-engineer` avance en
-**Outside-In TDD**, du test d'acceptation du scénario vers les tests unitaires, puis vers le code
-([Freeman & Pryce, 2009](../../reference/citations.mdx#cite-freeman-goos-2009)). Il tourne la boucle interne
-rouge → vert → refactor sans la commiter, puis commite une fois, quand le scénario passe : un
-`feat(…)` enchaîné à la commande de test, `<test> && git add <fichiers> && git commit …`.
+DISTILL a laissé en échec, un groupe à la fois, dans l'ordre du plan d'implémentation : le
+`software-engineer` avance en **Outside-In TDD**, des tests d'acceptation du groupe vers les tests
+unitaires, puis vers le code ([Freeman & Pryce, 2009](../../reference/citations.mdx#cite-freeman-goos-2009)). Il
+tourne la boucle interne rouge → vert → refactor sans la commiter, puis commite une fois, quand
+le groupe passe : un `feat(…)` enchaîné à la commande de test, qui écarte par leur nom les tests
+des groupes suivants, `<test> <filtre> && git add <fichiers> && git commit …`.
 
 Le moteur ne croit pas l'agent sur parole. Le rouge de DISTILL a été rejoué et prouvé ; le vert de
 DELIVER est rejoué aussi, et le [juge du rejeu](pathname:///dashboard/#agent-replay-judge) lit le
-log du rejeu à côté de celui du rouge : les tests d'acceptation du scénario doivent y passer, le
-[walking skeleton](../deep-dive/walking-skeleton.md) aussi, et aucun test ne doit échouer ni être
-sauté. Le test d'abord ([Beck, 2003](../../reference/citations.mdx#cite-beck-tdd-2003)) devient un fait dans
-l'historique git, pas une promesse : pour chaque scénario, un commit rouge de son test
-d'acceptation, puis un commit vert.
+log du rejeu à côté de celui du rouge : les tests d'acceptation du groupe doivent y passer, ceux
+des groupes d'avant et le [walking skeleton](../deep-dive/walking-skeleton.md) aussi, et aucun
+test ne doit échouer ni être sauté hormis ceux des groupes suivants. Le test d'abord
+([Beck, 2003](../../reference/citations.mdx#cite-beck-tdd-2003)) devient un fait dans l'historique git, pas une
+promesse : un commit rouge de chaque test d'acceptation, puis un commit vert par groupe.
 
 :::info[☕ Fil rouge — Starbucks *(exemple illustratif)*]
 
-S1 entre, rouge, à côté du walking skeleton rouge. DELIVER complète la chaîne du point d'entrée
-de commande jusqu'à la base, implémente le paiement et l'attribution des points et les fait
-passer tous deux au vert en un commit ; DISTILL écrit ensuite le test en échec de S2, la boisson indisponible, et
-DELIVER le fait passer au vert. Les gates passent, la revue relit le code, et le code part en pull
+S1 et S2 entrent, rouges, à côté du walking skeleton rouge. DELIVER complète la chaîne du point
+d'entrée de commande jusqu'à la base, implémente le paiement et l'attribution des points et fait
+passer S1 et le walking skeleton au vert en un commit, S2 encore rouge ; puis il fait passer S2,
+la boisson indisponible, au vert dans le suivant. Les gates passent, la revue relit le code, et le code part en pull
 request. Que les tests protègent réellement la règle de fidélité, la **mutation** que lance le
 développeur l'atteste.
 :::
 
-## Un scénario, un commit vert
+## Un groupe, un commit vert
 
 Un cycle TDD commité coûte deux commits, et un agent paie chacun en tours : lancer les tests, lire
-leur sortie, écrire le message. Par scénario, DELIVER ne commite qu'une fois. Les tests
+leur sortie, écrire le message. Par groupe de scénarios, DELIVER ne commite qu'une fois. Les tests
 unitaires de la boucle interne s'écrivent toujours d'abord ; ils partent dans le vert, et la
 lentille test-integrity de la revue les lit. Qu'ils détecteraient une erreur, la mutation que
 lance le développeur le prouve.
@@ -51,17 +52,17 @@ lance le développeur le prouve.
 Trois règles gardent ce commit unique honnête :
 
 - **Les tests d'acceptation sont un oracle immuable.** DISTILL les a écrits, walking skeleton
-  compris ; le vert ne les change jamais, hors du squelette qu'ils appellent. Le vert de S1 fait
-  passer le test d'acceptation de S1 et le walking skeleton ; chaque vert suivant garde le walking
-  skeleton au vert. Un test ajusté au code ne prouve rien, donc
+  compris ; le vert ne les change jamais, hors du squelette qu'ils appellent. Le vert du groupe
+  qui tient S1 fait passer ses tests d'acceptation et le walking skeleton ; chaque vert suivant les
+  garde au vert. Un test ajusté au code ne prouve rien, donc
   un test faux retourne à DISTILL : l'ingénieur s'arrête en le nommant.
-- **Un scénario appartient à un seul composant.** Son vert ne change aucun autre composant ; un
-  changement nécessaire ailleurs est un scénario qui manque.
+- **Un groupe ne construit que ses scénarios.** Son vert n'écrit aucun comportement que demande
+  un scénario d'un groupe suivant, et ne change un autre composant que là où le groupe en a besoin.
 - **Le commit suit le test, en bash.** Le brief donne la commande exacte, si bien que le commit
   n'a lieu que si les tests passent. Le rouge de DISTILL n'est jamais enchaîné ainsi : seule la
   lecture de la sortie distingue une erreur de build de l'échec attendu.
 
-Une fois le dernier scénario au vert, les gates passent. Un passage que renvoient les gates ou la
+Une fois le dernier groupe au vert, les gates passent. Un passage que renvoient les gates ou la
 revue travaille sur toute la story avec le cycle classique : un rouge, puis la correction ; sur un
 passage que les gates ont renvoyé, leur échec tient lieu du rouge.
 
@@ -133,8 +134,8 @@ et [Contract testing](../deep-dive/contract-testing.md).
 
 ## Les compromis
 
-- **La boucle interne ne laisse aucune trace dans l'historique.** Seuls le rouge et le vert de
-  chaque scénario sont commités ; personne ne voit échouer les tests unitaires écrits entre les
+- **La boucle interne ne laisse aucune trace dans l'historique.** Seuls le rouge de l'histoire et
+  le vert de chaque groupe sont commités ; personne ne voit échouer les tests unitaires écrits entre les
   deux. La revue les juge.
 - **Une story peut partir sans run de mutation.** Le pipeline ne prouve plus que les tests
   détecteraient une erreur ; le run du développeur le fait, quand il le lance.

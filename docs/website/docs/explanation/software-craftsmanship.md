@@ -44,7 +44,7 @@ saying so. skraft starts from there: **a craft rule exists only if a check runs 
 ```mermaid
 flowchart LR
     V1["Well-crafted<br/>software"] --> M1["Locked gates<br/>fixed quality bar"]
-    V2["Steadily<br/>adding value"] --> M2["Walking skeleton<br/>one scenario at a time,<br/>red → green commits"]
+    V2["Steadily<br/>adding value"] --> M2["Walking skeleton<br/>every acceptance test red,<br/>one green per rule"]
     V3["Community of<br/>professionals"] --> M3["Review before review<br/>lenses + refutation"]
     V4["Productive<br/>partnerships"] --> M4["Human decisions<br/>ADR ratification, consents"]
 ```
@@ -77,12 +77,12 @@ Craftsmanship moves in small increments that work. In skraft, this takes two for
   [Walking Skeleton](./deep-dive/walking-skeleton.md).
 - **One scenario, one red, one green.** In DISTILL, the `acceptance-designer` commits the failing
   acceptance test of one scenario and the skeleton it calls; the engine replays it and the replay
-  judge accepts it only when the scenario's test fails on an assertion; the walking skeleton is
-  committed and replayed the same way before S1. In DELIVER, the `software-engineer` runs the
-  red → green → refactor loop of its unit tests, then commits once: a `feat(…)` the engine
-  replays too, which must make the scenario pass without touching its acceptance test, and keep the
-  walking skeleton passing. Then the
-  next scenario. Beck's test first ([Beck, 2003](../reference/citations.mdx#cite-beck-tdd-2003)) becomes a fact
+  judge accepts it only when every scenario's test fails on an assertion; the walking skeleton is
+  in the same commit. In DELIVER, the `software-engineer` runs the red → green → refactor loop of
+  its unit tests, then commits once per group of scenarios: a `feat(…)` the engine replays too,
+  which must make the group pass without touching its acceptance tests, keep the walking skeleton
+  and the groups before passing, and leave only the later groups' tests failing. Then the next
+  group. Beck's test first ([Beck, 2003](../reference/citations.mdx#cite-beck-tdd-2003)) becomes a fact
   checked in the git history, not a promise. See
   [Outside-In TDD](./deep-dive/outside-in-tdd.md).
 
@@ -127,7 +127,7 @@ waiting. See
 
 ```mermaid
 flowchart LR
-    D["deliver<br/>software-engineer<br/>one scenario at a time"] --> G["locked gates<br/>build · format · lint · test<br/>architecture · coverage"]
+    D["deliver<br/>software-engineer<br/>one group at a time"] --> G["locked gates<br/>build · format · lint · test<br/>architecture · coverage"]
     G -- "FAIL" --> D
     G -- "PASS" --> DR["DELIVER review<br/>lenses + verdict"]
     DR -- "NEEDS_REWORK" --> D

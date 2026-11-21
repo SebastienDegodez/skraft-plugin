@@ -37,31 +37,31 @@ boucle externe (acceptation) qui encadre une boucle interne (unitaire).
 
 ## Application dans SKRAFT
 
-Le pipeline applique la **double boucle**, un scénario à la fois. La boucle externe est le
-scénario d'acceptation : DISTILL commite son test en échec, le moteur rejoue ce commit, et le
-[juge du rejeu](pathname:///dashboard/#agent-replay-judge) lit le log du rejeu pour confirmer
-qu'il échoue sur une assertion. La boucle interne est le cycle RED → GREEN → REFACTOR
+Le pipeline applique la **double boucle**, un groupe de scénarios à la fois. La boucle externe est le
+scénario d'acceptation : DISTILL commite en un commit le test en échec de chacun, le moteur rejoue
+ce commit, et le [juge du rejeu](pathname:///dashboard/#agent-replay-judge) lit le log du rejeu
+pour confirmer que chacun échoue sur une assertion. La boucle interne est le cycle RED → GREEN → REFACTOR
 unitaire, que le `software-engineer` tourne en DELIVER sans le commiter.
 
 La story elle-même s'ouvre sur une boucle externe plus large, son
 [walking skeleton](walking-skeleton.md) : un test simple qui entre par le vrai point d'entrée et
-ne vérifie que le câblage. DISTILL le commite en échec avant le test d'acceptation de S1 ; le vert
-de S1 les fait passer tous deux, et chaque vert suivant garde le walking skeleton au vert. Le test
+ne vérifie que le câblage. DISTILL le commite en échec avec les tests d'acceptation ; le vert du
+groupe qui tient S1 les fait passer tous deux, et chaque vert suivant garde le walking skeleton au vert. Le test
 d'acceptation de chaque scénario, S1 compris, entre par le cas d'usage.
 
 ```text
-┌─ Boucle externe (acceptation, scénario k) ───────────────────┐
-│  RED  : DISTILL commite le test du scénario, en échec         │
-│         → test(<story>): <scénario>   (rejoué : assertion)    │
+┌─ Boucle externe (acceptation, groupe g) ─────────────────────┐
+│  RED  : DISTILL commite le test de chaque scénario, une fois  │
+│         → test(<story>): acceptance tests S1–Sn  (rejoué)     │
 │   ┌─ Boucle interne (unitaire, non commitée) ─────────────┐  │
 │   │  RED → un test unitaire échoue                         │   │
 │   │  GREEN → implémentation minimale qui le fait passer    │   │
 │   │  REFACTOR → on nettoie sans changer le comportement    │   │
 │   └────────────────────────────────────────────────────────┘  │
-│  GREEN : le scénario d'acceptation passe à son tour           │
-│         → feat(<story>): <scénario>   (rejoué : passe)        │
+│  GREEN : les scénarios d'acceptation du groupe passent        │
+│         → feat(<story>): <règle>  (rejoué : suivants rouges)  │
 └──────────────────────────────────────────────────────────────┘
-puis le scénario k+1
+puis le groupe g+1
 ```
 
 Concrètement, le `software-engineer` ne crée une interface que lorsqu'un test unitaire en a

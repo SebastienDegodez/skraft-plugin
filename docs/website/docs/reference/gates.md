@@ -155,7 +155,7 @@ The `distill_review` review: 4 lenses, verdict computed by the engine.
 | **G6** | `testability` | Every scenario has an entry in the implementation plan. | high |
 | **G11** | `testability` | Each test lives where its kind puts it: the walking skeleton, a plain test with no Gherkin, in its component's integration-test place (Java: an `*IT` class), entering through the real entry point; the acceptance test of every scenario, S1 included, the binding of its Gherkin, in its language's unit-test place (.NET: the `<Context>.UnitTest`, `<Context>.UnitTests` or `<Context>.Tests` project; Java: a `*Test` class under a module's `src/test`, or a `-unit-test(s)` module; Python, TypeScript, JavaScript, React: `<test path>/unit/`), entering through the use case. | blocker |
 | **T1** | `testability` | Each scenario and test checks one behaviour through an observable outcome and depends on no time, order or randomness it does not fix. | high |
-| **T2** | `testability` | The patch holds the walking skeleton (unless the story is exempt) and the acceptance test of the scenario in progress only; a later scenario tagged `@pending` is no finding. Every input and expected value S1's acceptance test holds equals the `.feature` verbatim; the walking skeleton asserts the status, the shape and one value S1 names, and no value the `.feature` lacks. | blocker |
+| **T2** | `testability` | The patch holds the walking skeleton (unless the story is exempt) and the acceptance test of every scenario, each name starting with its scenario's number; a scenario with no test, or a skipped test, is a finding. Every input and expected value each acceptance test holds equals the `.feature` verbatim; the walking skeleton asserts the status, the shape and one value S1 names, and no value the `.feature` lacks. | blocker |
 | **T3** | `testability` | The walking skeleton and the acceptance test of the scenario in progress exist and each fails on an assertion, not on a compile, import or setup error; the patch's production code is a skeleton whose signatures answer the empty value of their type, with, for the walking skeleton, the entry point, ports and adapters of its chain wired in the composition root. | blocker |
 | **G7** | `boundary-enforcement` | Every scenario in the test plan targets an Application use case the event model names (one of its Commands or Queries); an implementation-plan step that writes no scenario's acceptance test (an API or HTTP test of a later circle) is out of its scope. | blocker |
 | **G8** | `boundary-enforcement` | The story has a walking skeleton walking S1, tagged `@walking-skeleton`, in a back-end component: a plain test with no Gherkin that drives the real entry point through the use case to the real internal gateways, S1 keeping its own acceptance test beside it; or the declared exemption (`library`, `refactoring`, `docs-only`) holds. | blocker |
@@ -192,10 +192,9 @@ component of `skraft-config.json`, S1 alone tagged `@walking-skeleton` in a comp
 ([rules and messages](./phases.md#scenarios)). G8 stays the lens's: whether the walking skeleton
 runs the real path, S1 has its own acceptance test besides, and a declared exemption holds.
 
-The review runs once, after the plan pass and S1's pass: the tests hold the walking skeleton and
-S1's acceptance test alone (T2, T3). The passes
-of `distill` that write the next scenarios' tests are not reviewed; the replay of their red, and
-the green that must make them pass, check them.
+The review runs once, after the pass: the tests hold the walking skeleton and the acceptance test
+of every scenario (T2, T3). The greens of DELIVER are not reviewed by these lenses; their replay,
+which must make each group pass while only the later groups' tests fail, checks them.
 
 ## DELIVER <!-- #deliver -->
 

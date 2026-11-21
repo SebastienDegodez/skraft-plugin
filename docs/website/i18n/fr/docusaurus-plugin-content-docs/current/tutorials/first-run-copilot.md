@@ -218,8 +218,8 @@ Une fois que les quatre lentilles de DISTILL ont approuvé les scénarios, le wa
 marqué walking skeleton, le commit du walking skeleton et le commit du test de S1. Ouvrez le plan
 de test sous `.copilot-tracking/skraft-plans/checkout/details/` et ces commits, lisez-les, puis choisissez **APPROVED** dans le chat.
 
-Le run continue ensuite sans vous : un scénario à la fois, un commit vert que le moteur rejoue,
-puis le test en échec du scénario suivant ; puis les gates, la revue DELIVER, et la description de
+Le run continue ensuite sans vous : un groupe de scénarios à la fois, un commit vert que le moteur rejoue,
+puis le groupe suivant ; puis les gates, la revue DELIVER, et la description de
 la pull request. Le journal de `/workflows` se termine ainsi :
 
 ![Journal du workflow skraft-pipeline : phase PUBLISH, pr-writer, la pull request non ouverte car publish.pullRequest vaut false, PUBLISH closed, puis checkout: done: PUBLISH closed](/img/screenshots/shared/terminal-workflow-log.svg)

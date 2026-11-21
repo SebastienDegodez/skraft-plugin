@@ -216,8 +216,8 @@ the walking skeleton and the commit of S1's test. Open the test plan under
 `.copilot-tracking/skraft-plans/checkout/details/` and those commits, read them, then
 choose **APPROVED** in the chat.
 
-The run then goes on without you: one scenario at a time, a green commit that the engine replays,
-then the next scenario's failing test; then the gates, the DELIVER review, and the pull request
+The run then goes on without you: one group of scenarios at a time, a green commit that the
+engine replays, then the next group; then the gates, the DELIVER review, and the pull request
 description. The `/workflows` log ends like this:
 
 ![skraft-pipeline workflow log: phase PUBLISH, pr-writer, the pull request not opened as publish.pullRequest is false, PUBLISH closed, then checkout: done: PUBLISH closed](/img/screenshots/shared/terminal-workflow-log.svg)

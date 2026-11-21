@@ -116,8 +116,8 @@ Infrastructure or API type (G3) and an interface filed in Infrastructure (G4). T
 the [Domain-Driven Design](./domain-driven-design.md) model.
 
 **In DISTILL, you trace the full path.** The `acceptance-designer` writes, for each scenario, its
-use-case boundary, its layer and its double type, then commits the red walking skeleton, then
-the red acceptance test of one scenario at a time with the skeleton it calls. The walking
+use-case boundary, its layer and its double type, then commits in one red commit the walking
+skeleton and the acceptance test of every scenario with the skeleton they call. The walking
 skeleton walks S1: a plain test, the thinnest slice that crosses every layer, from the real entry
 point to a real database, and proves the wiring exists
 ([Freeman & Pryce, 2009](../reference/citations.mdx#cite-freeman-goos-2009)). The engine requires it,

@@ -164,7 +164,7 @@ d'ingénierie, sans perdre son contexte :
 | RESEARCH | Document de recherche cité + recommandation |
 | DESIGN | ADR ratifié (paiement via ACL) + modèle d'événements |
 | DISTILL | Scénarios Gherkin S1, S2 + walking skeleton rouge + test d'acceptation rouge de S1 |
-| DELIVER | Un commit rouge et un vert par scénario + code revu + pull request |
+| DELIVER | Un commit vert par groupe de scénarios, après le rouge unique de DISTILL + code revu + pull request |
 
 Chaque artefact est devenu le **contexte** de l'étape suivante, et chaque relais est resté
 relisible : ce qui n'était pas écrit n'a pas été transmis.

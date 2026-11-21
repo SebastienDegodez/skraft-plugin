@@ -1,6 +1,6 @@
 ---
 title: "DELIVER"
-description: "Why DELIVER turns the contract green one scenario and one checked commit at a time, has the code reviewed, and leaves mutation testing to the developer."
+description: "Why DELIVER turns the contract green one group of scenarios and one checked commit at a time, has the code reviewed, and leaves mutation testing to the developer."
 persona: software-engineer
 phase: deliver
 hide_table_of_contents: true
@@ -10,55 +10,57 @@ import FlowFigure from '@site/src/components/FlowFigure';
 
 # DELIVER
 
-Turn the contract green one scenario at a time, each in one proven commit, then have the code
-reviewed. Testing the tests stays the developer's.
+Turn the contract green one group of scenarios at a time, each in one proven commit, then have
+the code reviewed. Testing the tests stays the developer's.
 
 ## Why this phase exists
 
 Code is the only artifact that goes to production. DELIVER grows it from the contract DISTILL
-left failing, one scenario at a time: the `software-engineer` works in **Outside-In TDD**, from
-the scenario's acceptance test to the unit tests, then to the code
-([Freeman & Pryce, 2009](../../reference/citations.mdx#cite-freeman-goos-2009)). It runs the inner red → green →
-refactor loop without committing it, then commits once, when the scenario passes: a `feat(…)`
-chained to the test command, `<test> && git add <files> && git commit …`.
+left failing, one group at a time, in the order of the implementation plan: the
+`software-engineer` works in **Outside-In TDD**, from the group's acceptance tests to the unit
+tests, then to the code ([Freeman & Pryce, 2009](../../reference/citations.mdx#cite-freeman-goos-2009)). It runs the
+inner red → green → refactor loop without committing it, then commits once, when the group
+passes: a `feat(…)` chained to the test command, which leaves out the tests of later groups by
+their names, `<test> <filter> && git add <files> && git commit …`.
 
 The engine does not take the agent's word for it. DISTILL's red was replayed and proven; DELIVER's
 green is replayed too, and the [replay judge](pathname:///dashboard/#agent-replay-judge) reads
-the replay's log next to the red's: the scenario's acceptance tests must pass at it, the
-[walking skeleton](../deep-dive/walking-skeleton.md) too, and no test may fail or be skipped.
-Test first ([Beck, 2003](../../reference/citations.mdx#cite-beck-tdd-2003)) becomes a fact in the git history, not a
-promise: for each scenario, a red commit of its acceptance test, then a green commit.
+the replay's log next to the red's: the group's acceptance tests must pass at it, those of the
+groups before and the [walking skeleton](../deep-dive/walking-skeleton.md) too, and no test may
+fail or be skipped but those of the later groups. Test first ([Beck, 2003](../../reference/citations.mdx#cite-beck-tdd-2003))
+becomes a fact in the git history, not a promise: one red commit of every acceptance test, then a
+green commit per group.
 
 :::info[☕ Running example — Starbucks *(illustrative)*]
 
-S1 enters, red, beside the red walking skeleton. DELIVER completes the chain from the ordering
-endpoint to the database, implements payment and loyalty crediting and turns both green in one
-commit; DISTILL then writes the failing test of S2, the unavailable drink, and DELIVER turns it
-green. The gates run, the review reads the code, and the code goes into a pull request. Whether
+S1 and S2 enter red, beside the red walking skeleton. DELIVER completes the chain from the
+ordering endpoint to the database, implements payment and loyalty crediting and turns S1 and the
+walking skeleton green in one commit, S2 still red; then it turns S2, the unavailable drink,
+green in the next. The gates run, the review reads the code, and the code goes into a pull request. Whether
 the tests genuinely protect the loyalty rule, the developer's own **mutation** run shows.
 :::
 
-## One scenario, one green commit
+## One group, one green commit
 
 A committed TDD cycle costs two commits, and an agent pays each one in turns: running the tests,
-reading their output, writing the message. Per scenario, DELIVER commits once. The unit tests
+reading their output, writing the message. Per group of scenarios, DELIVER commits once. The unit tests
 of the inner loop are still written first; they go into the green, and the review's test-integrity
 lens reads them. Whether they would catch a mistake, the developer's own mutation run proves.
 
 Three rules keep that single commit honest:
 
 - **The acceptance tests are an immutable oracle.** DISTILL wrote them, the walking skeleton
-  included; the green never changes them, outside the skeleton they call. S1's green makes S1's
-  acceptance test and the walking skeleton pass; every later green keeps the walking skeleton
-  green. A test fitted to the code proves nothing, so a wrong test
+  included; the green never changes them, outside the skeleton they call. The green of the group
+  holding S1 makes its acceptance tests and the walking skeleton pass; every later green keeps
+  them green. A test fitted to the code proves nothing, so a wrong test
   goes back to DISTILL: the engineer stops, naming it.
-- **A scenario belongs to one component.** Its green changes no other component; a change needed
-  elsewhere is a missing scenario.
+- **A group builds its own scenarios only.** Its green writes no behaviour a later group's
+  scenario asks for, and changes another component only where the group needs it.
 - **The commit follows the test, in bash.** The brief gives the exact command, so the commit
   happens only when the tests pass. DISTILL's red is never chained that way: only reading the
   output tells a build error from the expected failure.
 
-Once the last scenario is green, the gates run. A pass the gates or the review send back works on
+Once the last group is green, the gates run. A pass the gates or the review send back works on
 the whole story with the classic cycle: a red, then the fix; on a pass the gates sent back, their
 failure stands for the red.
 
@@ -126,8 +128,8 @@ contract, the matching fidelity lens joins the review. The why:
 
 ## Trade-offs
 
-- **The inner loop leaves no trace in the history.** Only each scenario's red and green are
-  committed; nobody sees the unit tests written in between fail. The review judges them.
+- **The inner loop leaves no trace in the history.** Only the story's red and each group's green
+  are committed; nobody sees the unit tests written in between fail. The review judges them.
 - **A story can ship without a mutation run.** The pipeline no longer proves the tests would
   catch a mistake; the developer's own run does, when they make it.
 - **No negotiable threshold.** 80 % on the core and on the boundary, whatever the repository:

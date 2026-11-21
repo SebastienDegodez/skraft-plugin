@@ -21,8 +21,8 @@ détail de chaque gate citée : [Gates](./gates.md).
 | DISCUSS | `skraft-backlog` | l'agent, lancé par le développeur | `backlog-planner` | 4 lentilles, verdict de `review-verdict.mjs` | — |
 | RESEARCH | `skraft` | le moteur | `solution-researcher` | sortie remplie, traces RESEARCH | — |
 | DESIGN | `skraft` | le moteur | `solution-architect` | traces DESIGN, scan structurel, revue à 3 lentilles | `adr-ratification` |
-| DISTILL | `skraft` | le moteur | `acceptance-designer` | tableau `## Scenarios`, commits rouges rejoués, revue à 4 lentilles | `scenario-review` |
-| DELIVER | `skraft` | le moteur | `software-engineer` | un commit vert par scénario, rejoué ; gates, revue `review` | — |
+| DISTILL | `skraft` | le moteur | `acceptance-designer` | tableau `## Scenarios`, groupes de livraison, un commit rouge rejoué, revue à 4 lentilles | `scenario-review` |
+| DELIVER | `skraft` | le moteur | `software-engineer` | un commit vert par groupe de scénarios, rejoué ; gates, revue `review` | — |
 | PUBLISH | `skraft` | le moteur | `pr-writer` | prose de la pull request | — |
 
 DISCOVER et DISCUSS ne passent pas par le moteur : aucun journal, aucune gate de commandes.
@@ -141,19 +141,19 @@ ligne `**Status:**`, ligne de `docs/adr/decisions-index.md`) et les commite seul
 
 | Nœud | Type | Rôle |
 | --- | --- | --- |
-| `distill` | agent `acceptance-designer`, `each="scenario"` | passage du plan : chaque scénario de l'histoire, chacun tagué `@pending`, le plan de test et son tableau `## Scenarios`, le [walking skeleton](../explanation/deep-dive/walking-skeleton.md) en échec et le squelette de la chaîne qu'il traverse ; puis, à son propre passage (`scenario 1 of N`), le test d'acceptation en échec de S1 et le squelette qu'il appelle ; puis, avant la livraison de chaque scénario suivant, le test d'acceptation en échec de ce scénario |
-| `distill_review` | revue | lentilles `coverage`, `business-alignment`, `testability`, `boundary-enforcement` ; tourne une fois, après le passage du plan et celui de S1 |
-| `scenario_review` | question `scenario-review` | un humain lit les scénarios, le walking skeleton (ou l'exemption) et le test d'acceptation de S1 avant que DELIVER les construise |
+| `distill` | agent `acceptance-designer`, `each="scenario"` | un passage : chaque scénario de l'histoire, le plan de test et son tableau `## Scenarios`, le plan d'implémentation et son tableau `| Group | Scenarios |`, le [walking skeleton](../explanation/deep-dive/walking-skeleton.md) en échec, le test d'acceptation en échec de chaque scénario et le squelette qu'ils appellent |
+| `distill_review` | revue | lentilles `coverage`, `business-alignment`, `testability`, `boundary-enforcement` ; tourne une fois, après le passage |
+| `scenario_review` | question `scenario-review` | un humain lit les scénarios, leurs groupes et le rouge de leurs tests (ou l'exemption) avant que DELIVER les construise |
 
 | | |
 | --- | --- |
-| Entrées | stories, documents de DESIGN (dans le dossier de suivi et sous `docs/`) ; à partir du deuxième passage, le scénario à écrire (`- Scenario: k of N — "<titre>" (component <c>, tags …)`) |
+| Entrées | stories, documents de DESIGN (dans le dossier de suivi et sous `docs/`) |
 | Sortie déclarée | `details/{date}/test-plan-{slug}.md` |
-| Autres sorties | `details/{date}/impl-plan-{story}.md` ; le `.feature` du dossier propre au composant (`bdd`), en `{bounded-context}/{feature}.feature` (scénarios Gherkin, mots-clés en anglais, chacun tagué `@pending` jusqu'à son rouge ; le lanceur Gherkin du composant, quand il en déclare un, sélectionne `not @pending`) ; dans les composants : au passage du plan, le walking skeleton en échec (place des tests d'intégration, chemins `tests`) et le squelette de sa chaîne (chemins `src`) ; à un passage de scénario, le test d'acceptation en échec du scénario en cours (place des tests unitaires, chemins `tests`), le squelette qu'il appelle (chemins `src`) et `@pending` retiré de ce scénario |
-| Brief | le scénario en cours, le `git commit` exact de son rouge, et la [politique d'infrastructure](./skraft-config.md#infrastructure) effective de chaque composant |
+| Autres sorties | `details/{date}/impl-plan-{story}.md`, son tableau `| Group | Scenarios | Rule | … |` nommant chaque scénario une fois, S1 dans le groupe 1 (sans tableau : un scénario par groupe) ; le `.feature` du dossier propre au composant (`bdd`), en `{bounded-context}/{feature}.feature` (scénarios Gherkin, mots-clés en anglais) ; dans les composants : le walking skeleton en échec (place des tests d'intégration, chemins `tests`), le test d'acceptation en échec de chaque scénario, son nom commençant par le numéro du scénario (place des tests unitaires, chemins `tests`), et le squelette qu'ils appellent (chemins `src`) |
+| Brief | le `git commit` exact du rouge, et la [politique d'infrastructure](./skraft-config.md#infrastructure) effective de chaque composant |
 | Écriture permise | le dossier de suivi, les dossiers features que nomme le `bdd` des composants, les chemins `src` et `tests` de chaque composant, et les fichiers à la racine de ces composants |
-| Commits | mode `red`, un au plus par passage : au passage du plan, `test(<story>): walking skeleton of <titre de S1>`, le walking skeleton, le squelette de sa chaîne et le `.feature` du composant de S1 ensemble (une histoire exemptée de walking skeleton commite plutôt ses `.feature` en `docs(<story>): …`) ; à un passage de scénario, `test(<story>): <titre du scénario>`, le test d'acceptation et son squelette ensemble, dans le seul composant du scénario, aucun `feat`, `fix` ni `refactor` ; rejoué, le juge du rejeu exigeant un échec sur une assertion ([Commits et rejeux](./gates.md#commits)) ; un changement des seuls scénarios, hors des chemins `src` et `tests` des composants, dans un commit `docs(<story>): …` ; un changement laissé non commité est refusé (`uncommitted`) |
-| Contrôles du moteur | un passage du plan d'une histoire non exemptée sans rouge commité (`the story has no failing walking skeleton committed: …`), un passage de scénario sans rouge (`scenario <k> has no failing acceptance test committed: …`) ; emplacement des fichiers de test ajoutés (`testability#layout`, G11) ; le tableau `## Scenarios` du plan de test ([plus bas](#scenarios), `scenarios`) ; les scénarios que nomme le plan de test (`gherkin-records`) : chaque `.feature` cité dans sa matrice de couverture est un fichier d'un dossier que le `bdd` du composant nomme, dont chaque scénario dit Given, When et Then, remplit depuis ses exemples chaque placeholder qu'il ouvre, et porte un titre unique dans son fichier ; et l'histoire tient au moins un scénario par critère d'acceptation de son `ac-draft-{story}.md`. Une ligne de la matrice de couverture qui ne nomme aucun Gherkin écrit `—`, et une histoire dont l'`ac-draft` ne déclare aucun critère ne se voit demander aucun scénario. Le contrôle ne tourne que là où un composant déclare `bdd` : celui qui écrit ses tests sans Gherkin ne se voit demander aucun `.feature`, et un composant qui n'a tranché ni dans un sens ni dans l'autre refuse le run avant son premier agent. Les mots-clés sont en anglais, quelle que soit la langue des phrases : un `.feature` qui déclare une autre langue est renvoyé en la nommant |
+| Commits | mode `red`, un par passage : `test(<story>): acceptance tests S1–S<n>`, le walking skeleton, chaque test d'acceptation, le squelette qu'ils appellent et le `.feature` de leurs composants ensemble, dans les seuls composants que nomment les scénarios, aucun `feat`, `fix` ni `refactor` (une histoire exemptée de walking skeleton commite ses seuls tests d'acceptation) ; rejoué, le juge du rejeu exigeant un échec sur une assertion ([Commits et rejeux](./gates.md#commits)) ; un changement des seuls scénarios, hors des chemins `src` et `tests` des composants, dans un commit `docs(<story>): …` ; un changement laissé non commité est refusé (`uncommitted`) |
+| Contrôles du moteur | un passage sans rouge commité, ni d'un passage précédent (`the story has no failing acceptance tests committed: …`) ; les groupes du plan d'implémentation (`scenarios` : un scénario dans aucun groupe ou dans deux, un que le plan de test ne liste pas, S1 hors du groupe 1) ; emplacement des fichiers de test ajoutés (`testability#layout`, G11) ; le tableau `## Scenarios` du plan de test ([plus bas](#scenarios), `scenarios`) ; les scénarios que nomme le plan de test (`gherkin-records`) : chaque `.feature` cité dans sa matrice de couverture est un fichier d'un dossier que le `bdd` du composant nomme, dont chaque scénario dit Given, When et Then, remplit depuis ses exemples chaque placeholder qu'il ouvre, et porte un titre unique dans son fichier ; et l'histoire tient au moins un scénario par critère d'acceptation de son `ac-draft-{story}.md`. Une ligne de la matrice de couverture qui ne nomme aucun Gherkin écrit `—`, et une histoire dont l'`ac-draft` ne déclare aucun critère ne se voit demander aucun scénario. Le contrôle ne tourne que là où un composant déclare `bdd` : celui qui écrit ses tests sans Gherkin ne se voit demander aucun `.feature`, et un composant qui n'a tranché ni dans un sens ni dans l'autre refuse le run avant son premier agent. Les mots-clés sont en anglais, quelle que soit la langue des phrases : un `.feature` qui déclare une autre langue est renvoyé en la nommant |
 
 | Lentille | Gates |
 | --- | --- |
@@ -169,10 +169,9 @@ ligne `**Status:**`, ligne de `docs/adr/decisions-index.md`) et les commite seul
 | `scenario_review -> deliver` | `APPROVED` | — |
 | `scenario_review -> distill` | `REVISE` (corrections exigées, renvoyées à l'acceptance designer) | 2 |
 
-Après `APPROVED`, aucune arête ne mène les scénarios : le moteur lance `deliver` sur S1, puis
-`distill` sur S2 et `deliver` sur S2, et ainsi de suite, chaque passage étant une visite à part ;
-après le dernier scénario, `deliver` sort par son arête vers `gates`. Un passage de `distill`
-après celui de S1 n'est pas revu. Un run interrompu reprend au scénario en cours.
+Après `APPROVED`, aucune arête ne mène les groupes : le moteur lance `deliver` sur le groupe 1,
+puis sur le groupe 2, et ainsi de suite, chaque passage étant une visite à part ; après le dernier
+groupe, `deliver` sort par son arête vers `gates`. Un run interrompu reprend au groupe en cours.
 
 ### Le tableau `## Scenarios` <!-- #scenarios -->
 
@@ -201,6 +200,25 @@ Walking skeleton exemption: none
 | toute autre exemption | `<plan>: walking skeleton exemption "<valeur>" must be none, library, refactoring, docs-only` |
 | `docs-only` : aucun commit de l'histoire ne change les chemins `src` d'un composant | `the story declares its walking skeleton exempt as docs only, and commit <sha> changes <fichier>, source of <composant>; remove the exemption and tag S1 @walking-skeleton` |
 
+Le plan d'implémentation à côté (`impl-plan-…` pour `test-plan-…`) regroupe les scénarios que
+DELIVER fait passer, un commit vert chacun, dans son ordre, sous n'importe quel titre :
+
+```text
+| Group | Scenarios | Rule |
+|---|---|---|
+| 1 | S1, S2 | paiement par carte |
+| 2 | S3–S5 | cartes expirées |
+```
+
+| Règle | Refusé avec |
+| --- | --- |
+| un groupe nomme au moins un scénario | `<plan>: group <g> names no scenario` |
+| chaque scénario du plan de test dans un seul groupe | `<plan>: S<n> is in no group` ; `<plan>: S<n> is in more than one group` |
+| seulement des scénarios du plan de test | `<plan>: S<n> is no scenario of the test plan` |
+| S1 dans le premier groupe | `<plan>: S1 is in the first group, the one the walking skeleton walks` |
+
+Un plan sans tableau aux colonnes `Group` et `Scenarios` livre un scénario par groupe.
+
 Chaque échec renvoie l'agent du passage avec la ligne ; après sa dernière tentative, ou deux
 tentatives de suite refusées de la même façon, le run pose la question `blocked`, et `STOP` le
 termine avec `scenarios`. Pourquoi le walking skeleton parcourt S1 :
@@ -210,18 +228,18 @@ termine avec `scenarios`. Pourquoi le walking skeleton parcourt S1 :
 
 | Nœud | Type | Rôle |
 | --- | --- | --- |
-| `deliver` | agent `software-engineer`, `each="scenario"` | fait passer chaque scénario à son tour, un commit vert chacun, le vert de S1 faisant passer aussi le walking skeleton et chaque vert suivant le gardant au vert ; après le dernier, les passages que renvoient les gates ou la revue, sur toute l'histoire |
+| `deliver` | agent `software-engineer`, `each="scenario"` | fait passer chaque groupe du plan d'implémentation à son tour, un commit vert chacun, seuls les tests des groupes suivants échouant encore ; le vert du groupe qui tient S1 fait passer aussi le walking skeleton et chaque vert suivant le garde au vert ; après le dernier, les passages que renvoient les gates ou la revue, sur toute l'histoire |
 | `gates` | gates `build,format,lint,test,architecture,coverage`, `goal_gate`, `locked` | commandes des composants modifiés, puis de tous |
 | `deliver_review` | appel `workflow="review"` | lentilles `test-integrity`, `architecture-boundaries`, `cold-reader`, `mock-fidelity` (`when="mock"`), `contract-fidelity` (`when="contract"`) |
 | `visuals` | publication `playwright-visuals`, `when="frontend"` | commande `e2e` de chaque front end, captures commitées |
 
 | | |
 | --- | --- |
-| Brief sur un scénario | le scénario (`- Scenario: k of N — "<titre>" (component <c>, tags …)`) ; les tests d'acceptation que DISTILL a commités jusque-là, walking skeleton compris (`<sha> "<sujet>": <fichiers>`), que l'agent ne change jamais (s'il en trouve un faux, il s'arrête `blocked` en le nommant) ; le walking skeleton du composant du scénario, qui passe aussi à son commit ; le commit, exactement : `<commande de test> && git add <chaque fichier changé> && git commit -s -m "feat(<story>): <titre>" -m "Refs: #<issue>"` |
+| Brief sur un groupe | le groupe (`- Group: g of G — S1 "<titre>" (component <c>, tags …) ; …`) ; le rouge des tests d'acceptation que DISTILL a commités, walking skeleton compris (`<sha> "<sujet>": <fichiers>`), que l'agent ne change jamais (s'il en trouve un faux, il s'arrête `blocked` en le nommant) ; les scénarios des groupes suivants, dont seuls les tests échouent encore à son commit ; le commit, exactement : `<commande de test> [<le filtre qui écarte les scénarios des groupes suivants>] && git add <chaque fichier changé> && git commit -s -m "feat(<story>): <titre d'un groupe d'un scénario, sinon ses scénarios et sa règle>" -m "Refs: #<issue>"` |
 | Sortie déclarée | `changes/{date}/change-log.md` |
 | Preuves | `gates/<composant>/<gate>-<n>.log` ; `visuals/<composant>/e2e-<n>.log` |
 | Écriture permise | le dossier de suivi, les chemins `src` et `tests` de chaque composant, et les fichiers à leur racine ; un changement hors de lui est refusé |
-| Commits | `deliver` sur un scénario : exactement un `feat(<story>): <titre du scénario>` (ou `fix`), enchaîné en bash à la commande de test comme l'écrit le brief ; aucun commit `test`, `refactor`, `style` ni `perf`, la boucle TDD interne restant non commitée ; aucun changement aux tests d'acceptation ni au walking skeleton hors des chemins `src` du composant, ni à un autre composant ; le moteur y rejoue les tests et le juge du rejeu décide, le walking skeleton du composant du scénario passant aussi ([Commits et rejeux](./gates.md#commits)). `deliver` renvoyé par les gates ou la revue : chaque `feat` ou `fix` après un `test(<story>): …` depuis le dernier vert, l'échec des gates tenant lieu de ce rouge sur un passage qu'elles ont renvoyé, `refactor` permis, rouges non rejoués. Chaque message conventionnel finit par `Refs: #<issue>` et ne ferme aucune issue ; un changement laissé non commité est refusé (`uncommitted`) |
+| Commits | `deliver` sur un groupe : exactement un `feat(<story>): …` (ou `fix`), enchaîné en bash à la commande de test comme l'écrit le brief ; aucun commit `test`, `refactor`, `style` ni `perf`, la boucle TDD interne restant non commitée ; aucun changement aux tests d'acceptation ni au walking skeleton hors des chemins `src` du composant ; le moteur y rejoue les tests et le juge du rejeu décide : les scénarios du groupe, ceux d'avant et le walking skeleton passent, seuls les tests des groupes suivants échouent ([Commits et rejeux](./gates.md#commits)). `deliver` renvoyé par les gates ou la revue : chaque `feat` ou `fix` après un `test(<story>): …` depuis le dernier vert, l'échec des gates tenant lieu de ce rouge sur un passage qu'elles ont renvoyé, `refactor` permis, rouges non rejoués. Chaque message conventionnel finit par `Refs: #<issue>` et ne ferme aucune issue ; un changement laissé non commité est refusé (`uncommitted`) |
 | Mutation | aucune : le pipeline du plugin ne lance pas de mutation, le développeur la lance à part ; le workflow propre à une équipe peut encore porter un nœud `gate="mutation"` ([Le workflow DOT](./workflow-dot.mdx)) |
 
 | Lentille (`review`) | Gates |

@@ -118,7 +118,7 @@ dans Infrastructure (G4). C'est la même lentille qui vérifie le modèle de
 
 **En DISTILL, on trace le chemin complet.** L'`acceptance-designer` écrit pour chaque scénario
 sa frontière de cas d'usage, sa couche et son type de doublure, puis commite le walking skeleton
-rouge, puis le test d'acceptation rouge d'un scénario à la fois avec le squelette qu'il appelle.
+rouge avec, dans le même commit, le test d'acceptation rouge de chaque scénario et le squelette qu'ils appellent.
 Le walking skeleton parcourt S1 : un test simple, la plus fine tranche qui traverse toutes les
 couches, du vrai point d'entrée jusqu'à une vraie base, et prouve que le câblage existe
 ([Freeman & Pryce, 2009](../reference/citations.mdx#cite-freeman-goos-2009)). Le moteur l'exige, dans un composant

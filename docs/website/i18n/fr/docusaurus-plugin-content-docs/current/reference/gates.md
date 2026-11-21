@@ -156,7 +156,7 @@ Revue `distill_review` : 4 lentilles, verdict calculé par le moteur.
 | **G6** | `testability` | Chaque scénario a une entrée dans le plan d'implémentation. | high |
 | **G11** | `testability` | Chaque test vit là où sa sorte le place : le walking skeleton, un test simple sans Gherkin, à l'emplacement des tests d'intégration de son composant (Java : une classe `*IT`), en entrant par le vrai point d'entrée ; le test d'acceptation de chaque scénario, S1 compris, le binding de son Gherkin, à l'emplacement des tests unitaires de son langage (.NET : projet `<Context>.UnitTest`, `<Context>.UnitTests` ou `<Context>.Tests` ; Java : une classe `*Test` sous le `src/test` d'un module, ou un module `-unit-test(s)` ; Python, TypeScript, JavaScript, React : `<chemin des tests>/unit/`), en entrant par le cas d'usage. | blocker |
 | **T1** | `testability` | Chaque scénario et chaque test vérifient un comportement par un résultat observable et ne dépendent d'aucun temps, ordre ou aléa qu'ils ne fixent pas. | high |
-| **T2** | `testability` | Le patch ne porte que le walking skeleton (sauf si l'histoire est exemptée) et le test d'acceptation du scénario en cours ; un scénario suivant tagué `@pending` n'est pas un finding. Chaque valeur d'entrée et attendue du test d'acceptation de S1 égale le `.feature` mot pour mot ; le walking skeleton affirme le statut, la forme et une valeur que nomme S1, et aucune valeur absente du `.feature`. | blocker |
+| **T2** | `testability` | Le patch porte le walking skeleton (sauf si l'histoire est exemptée) et le test d'acceptation de chaque scénario, chaque nom commençant par le numéro de son scénario ; un scénario sans test, ou un test sauté, est un finding. Chaque valeur d'entrée et attendue de chaque test d'acceptation égale le `.feature` mot pour mot ; le walking skeleton affirme le statut, la forme et une valeur que nomme S1, et aucune valeur absente du `.feature`. | blocker |
 | **T3** | `testability` | Le walking skeleton et le test d'acceptation du scénario en cours existent et chacun échoue sur une assertion, pas sur une erreur de compilation, d'import ou de mise en place ; le code de production du patch est un squelette dont les signatures rendent la valeur vide de leur type, avec, pour le walking skeleton, le point d'entrée, les ports et les adaptateurs de sa chaîne câblés dans la composition root. | blocker |
 | **G7** | `boundary-enforcement` | Chaque scénario du plan de test vise un cas d'usage Application que nomme le modèle d'événements (une de ses Commands ou Queries) ; une étape du plan d'implémentation qui n'écrit le test d'acceptation d'aucun scénario (un test API ou HTTP d'un cercle suivant) est hors de sa portée. | blocker |
 | **G8** | `boundary-enforcement` | L'histoire a un walking skeleton qui parcourt S1, tagué `@walking-skeleton`, dans un composant back : un test simple sans Gherkin qui pilote le vrai point d'entrée à travers le cas d'usage jusqu'aux vraies gateways internes, S1 gardant à côté son propre test d'acceptation ; ou l'exemption déclarée (`library`, `refactoring`, `docs-only`) tient. | blocker |
@@ -198,9 +198,10 @@ et aucun tag ([règles et messages](./phases.md#scenarios)). G8 reste à la lent
 skeleton parcourt-il le vrai chemin, S1 a-t-il en plus son propre test d'acceptation, une
 exemption déclarée tient-elle.
 
-La revue tourne une fois, après le passage du plan et celui de S1 : les tests ne portent que le
-walking skeleton et le test d'acceptation de S1 (T2, T3). Les passages de `distill` qui écrivent les tests des scénarios suivants ne sont pas revus ;
-le rejeu de leur rouge, et le vert qui doit les faire passer, les vérifient.
+La revue tourne une fois, après le passage : les tests portent le walking skeleton et le test
+d'acceptation de chaque scénario (T2, T3). Les verts de DELIVER ne sont pas revus par ces
+lentilles ; leur rejeu, qui doit faire passer chaque groupe pendant que seuls les tests des
+groupes suivants échouent, les vérifie.
 
 ## DELIVER <!-- #deliver -->
 
