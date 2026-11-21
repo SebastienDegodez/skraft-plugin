@@ -359,8 +359,10 @@ names Gradle). A result or a report that cannot be read fails the gate as `envir
 
 Every program starts as written, from the component's root: the engine substitutes none, `python`
 included. Write the interpreter your machine needs (`.venv/bin/python -m pytest` or
-`.venv\Scripts\python.exe -m pytest`, or `python -m pytest` when it is on the PATH). A program that
-does not start fails the gate as `environment`, naming it.
+`.venv/Scripts/python.exe -m pytest`, or `python -m pytest` when it is on the PATH; forward slashes,
+since a backslash is an invalid escape in JSON). A team on several systems chooses one form per
+component: the file holds one line per command. A program that does not start fails the gate as
+`environment`, naming it.
 
 With Microcks (the default outside React), the tests that use it run Microcks in a container,
 Docker or Podman. The gates do not look for one: such a test fails when no container answers, like

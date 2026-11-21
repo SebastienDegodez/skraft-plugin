@@ -66,7 +66,9 @@ n'en remplit aucune. Écrivez la ligne :
   (`npm run test:ci`, `node scripts/ci-test.mjs`) ;
 - `npm`, `npx`, `gradlew.bat` s'écrivent pareil sous Windows ;
 - un programme démarre tel qu'écrit : `python` reste `python`, écrivez donc `.venv/bin/python` (ou
-  `.venv\Scripts\python.exe`) quand l'interpréteur du projet n'est pas celui du PATH.
+  `.venv/Scripts/python.exe` : barres obliques, une barre inverse est un échappement invalide en
+  JSON) quand l'interpréteur du projet n'est pas celui du PATH. Une équipe sur plusieurs systèmes choisit une forme par composant, car
+  `skraft-config.json` ne porte qu'une ligne par commande.
 
 ## 4. Ajouter une gate
 

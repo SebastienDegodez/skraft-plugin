@@ -191,7 +191,7 @@ $ git commit -m "chore: describe the shop for skraft"
 
 ## 4. Check with `skraft doctor` <!-- #4-check-with-skraft-doctor -->
 
-`skraft doctor` checks that every command can run on your machine and shows which model each agent
+`skraft doctor` checks the file and that every command parses, and shows which model each agent
 will run on:
 
 ```console

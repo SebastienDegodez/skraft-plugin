@@ -63,7 +63,8 @@ Write a command to be started **without a shell**, from the component's root:
   `node scripts/ci-test.mjs`);
 - `npm`, `npx`, `gradlew.bat` are written the same way on Windows;
 - a program starts as written: `python` stays `python`, so write `.venv/bin/python` (or
-  `.venv\Scripts\python.exe`) when the project's interpreter is not the one on the PATH.
+  `.venv/Scripts/python.exe`: forward slashes, a backslash is an invalid escape in JSON) when the
+  project's interpreter is not the one on the PATH. A team on several systems chooses one form per component, since `skraft-config.json` holds one line per command.
 
 ## 4. Add a gate
 

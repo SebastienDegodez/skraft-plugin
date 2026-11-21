@@ -368,8 +368,10 @@ nomme Gradle). Un résultat ou un rapport illisible fait échouer la gate en `en
 
 Tout programme démarre tel qu'écrit, depuis la racine du composant : le moteur n'en substitue
 aucun, `python` compris. Écrivez l'interpréteur dont votre machine a besoin (`.venv/bin/python -m
-pytest` ou `.venv\Scripts\python.exe -m pytest`, ou `python -m pytest` quand il est sur le PATH).
-Un programme qui ne démarre pas fait échouer la gate en `environment`, en le nommant.
+pytest` ou `.venv/Scripts/python.exe -m pytest`, ou `python -m pytest` quand il est sur le PATH ; barres
+obliques, une barre inverse étant un échappement invalide en JSON). Une équipe sur plusieurs
+systèmes choisit une forme par composant : le fichier porte une ligne par commande. Un programme
+qui ne démarre pas fait échouer la gate en `environment`, en le nommant.
 
 Avec Microcks (le défaut hors React), les tests qui l'utilisent font tourner Microcks dans un
 conteneur, Docker ou Podman. Les gates n'en cherchent pas : un tel test échoue quand aucun

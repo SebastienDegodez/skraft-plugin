@@ -564,7 +564,7 @@ de mutation (`.skraft/mutation.skraft.dot` quand la copie de travail l'a √©ject√
 | Code | Raison |
 | --- | --- |
 | `detached-head` | `HEAD is on no branch, and a mutation run is the run of one; check out the branch to mutate, then start it again` |
-| `no-mutation-command` | `no component of skraft-config.json declares a mutation command; declare them with /skraft-init` |
+| `no-mutation-command` | `no component of skraft-config.json declares a mutation command; declare them with /skraft-init mutation` |
 
 Tout autre refus de `init <slug>` ou de la boucle affiche `refused (<code>)` avec sa raison.
 Sorties texte et `--json` : celles de [`next`](#skraft-next---json-et-skraft-record---json).

@@ -555,7 +555,7 @@ workflow (`.skraft/mutation.skraft.dot` when the working copy ejected it, else t
 | Code | Reason |
 | --- | --- |
 | `detached-head` | `HEAD is on no branch, and a mutation run is the run of one; check out the branch to mutate, then start it again` |
-| `no-mutation-command` | `no component of skraft-config.json declares a mutation command; declare them with /skraft-init` |
+| `no-mutation-command` | `no component of skraft-config.json declares a mutation command; declare them with /skraft-init mutation` |
 
 Any other refusal of `init <slug>` or of the loop prints `refused (<code>)` with its reason. Text
 and `--json` output: those of [`next`](#skraft-next---json-and-skraft-record---json).

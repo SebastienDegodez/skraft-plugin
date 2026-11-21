@@ -194,7 +194,7 @@ $ git commit -m "chore: describe the shop for skraft"
 
 ## 4. Vérifier avec `skraft doctor` <!-- #4-check-with-skraft-doctor -->
 
-`skraft doctor` vérifie que chaque commande peut tourner sur votre machine et montre sur quel
+`skraft doctor` vérifie le fichier et que chaque commande se découpe, et montre sur quel
 modèle chaque agent tournera :
 
 ```console
