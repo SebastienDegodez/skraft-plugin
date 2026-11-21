@@ -40,7 +40,7 @@ import { issueOf } from './commits.mjs'
  * @typedef {{
  *   kind: 'plan' | 'delivery', index: number, of: number, component: string | null,
  *   scenarios: Array<{ index: number, title: string, component: string, tags: string[] }>, pending: number[],
- *   oracles: Array<{ sha: string, subject: string, files: string[] }>, skeleton: { sha: string, subject: string, files: string[] } | null, test: string | null,
+ *   oracles: Array<{ sha: string, subject: string, files: string[] }>, skeleton: { sha: string, subject: string, files: string[] } | null, test: string | null, redLog: string | null,
 }} BriefScenario
  *   plan: the pass that writes every scenario and their one red; delivery: the green of group
  *   `index` of `of`. scenarios: the group's, as the test plan lists them; pending: the numbers of
@@ -48,7 +48,8 @@ import { issueOf } from './commits.mjs'
  *   scenario's, null on the plan's pass; oracles: the red of the acceptance tests the delivery
  *   pass may not change; skeleton: the red of the walking skeleton of the group's component when
  *   another commit holds it, which the green keeps passing; test: the component's test command,
- *   null on the plan's pass.
+ *   null on the plan's pass; redLog: where the plan's pass sends the output of its one run of the
+ *   acceptance tests, absolute, which the review of its phase reads; null on a delivery pass.
  */
 
 /**
@@ -148,7 +149,7 @@ const uniqueReds = (reds) => reds.filter((red, at) => reds.findIndex(({ sha }) =
  * @type {Readonly<Record<BriefScenario['kind'], (scenario: BriefScenario, message: string) => string[]>>}
  */
 const SCENARIO_COMMIT = Object.freeze({
-  plan: (_, message) => ['- Run the tests once and read their output: every acceptance test and the walking skeleton fail, each on its assertion. Then commit them, the skeleton they call and the scenarios in one commit, exactly:', `  ${message}`],
+  plan: ({ redLog }, message) => [`- Run the acceptance tests once, sending the whole output to ${redLog}, and read it: every acceptance test and the walking skeleton fail, each on its assertion. Then commit them, the skeleton they call and the scenarios in one commit, exactly:`, `  ${message}`],
   delivery: ({ test, pending }, message) => (pending.length === 0
     ? ['- Once they pass, commit once, in bash (never PowerShell), naming each file you changed:', `  ${test} && git add <each file you changed> && ${message}`]
     : [
@@ -294,8 +295,6 @@ const LANGUAGE_NAMES = Object.freeze({ en: 'English', fr: 'French' })
 /** What sent the work back into a new pass, by the kind of node that did. */
 const PASS_CAUSE = Object.freeze({ gate: 'the gates sent the work back', review: 'the review sent the work back', ask: 'a human sent the work back', answer: 'a human chose how to go on' })
 
-const E2E_COMMITS = '  A test commit whose only failing tests are e2e tests holds all of them, or a failing unit test too; otherwise they go in the feat or fix that makes them pass.'
-
 const TDD_RULES = Object.freeze({
   cycle: [
     '- Commit each TDD cycle: `test(<story>): …` with the failing test, then `feat(<story>): …` or `fix(<story>): …` with the code that makes it pass,',
@@ -303,13 +302,11 @@ const TDD_RULES = Object.freeze({
     '  lint and format fixes in a `style` commit. The engine refuses a feat or fix commit with no test commit since the last feat or fix',
     '  (on a pass the gates sent back, their failure counts as that test),',
     '  and any commit that is not `type(scope): subject`. A refused commit stays refused until you rewrite it.',
-    E2E_COMMITS,
   ].join('\n'),
   red: [
     '- Commit the failing acceptance tests as `test(<story>): …`, with the skeleton they call: the use cases the event model names, each answering',
-    '  the empty value of its type, no behaviour; a test failing on a missing module proves nothing. The engine runs the tests at every test commit and refuses one whose tests pass,',
-    '  and any commit that is not `type(scope): subject`. A refused commit stays refused until you rewrite it.',
-    E2E_COMMITS,
+    '  the empty value of its type, no behaviour; a test failing on a missing module proves nothing. The engine refuses any commit that is not `type(scope): subject`;',
+    '  a refused commit stays refused until you rewrite it.',
   ].join('\n'),
   kill: [
     '- Kill each mutant with a `test(<story>): …` commit whose test passes on the code as it is.',

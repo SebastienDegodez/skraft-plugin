@@ -28,9 +28,8 @@ import { instructionOf } from '../decisions/questions.mjs'
  *   commits a red one, as does a visit a human's choice opened. groups: the surviving mutants this visit works on, one dispatch per file,
  *   or the story's delivery groups, one visit each.
  * @typedef {import('../gates/mutation-report.mjs').SurvivorGroup | import('../pipeline/scenarios.mjs').DeliveryGroup} Group
- * @typedef {{ scenario: number, sha: string, subject: string, component: string, files: string[], command: 'test' | 'e2e' }} Oracle
- *   the red commit holding a scenario's acceptance test: files relative to the working copy;
- *   command: the command whose replay proved it, which its green replays too.
+ * @typedef {{ scenario: number, sha: string, subject: string, component: string, files: string[] }} Oracle
+ *   the red commit holding a scenario's acceptance test: files relative to the working copy.
  * @typedef {{
  *   list: import('../pipeline/scenarios.mjs').StoryScenario[], exemption: import('../pipeline/scenarios.mjs').Exemption,
  *   groups: import('../pipeline/scenarios.mjs').DeliveryGroup[],
@@ -59,8 +58,6 @@ import { instructionOf } from '../decisions/questions.mjs'
  *   last: RunEvent | null,
  *   traversals: Record<string, number>,
  *   phaseStarted: Record<string, string>,
- *   replayMs: Record<string, number>,
- *   replayWarned: string[],
  *   finished: RunEvent | null,
  *   stopped: RunEvent | null,
  *   attempts: number,
@@ -70,8 +67,8 @@ import { instructionOf } from '../decisions/questions.mjs'
  *   scenarios: Scenarios | null,
  * }} RunState
  *   last: the run's last step.recorded; traversals: how often each edge `from->to` was taken;
- *   phaseStarted: when the first step of each phase started; replayMs: time spent replaying
- *   red commits, per phase. questions: by key; question: the last one asked whose answer is not
+ *   phaseStarted: when the first step of each phase started
+ *   questions: by key; question: the last one asked whose answer is not
  *   acted on yet (a step recorded after it, or a RETRY, acts on it).
  */
 
@@ -117,12 +114,9 @@ const untraversed = () => ({
   traversals: {},
 })
 
-/** @returns {Pick<RunState, 'phaseStarted' | 'replayMs' | 'replayWarned'>} */
+/** @returns {Pick<RunState, 'phaseStarted'>} */
 const untimed = () => ({
   phaseStarted: {},
-  replayMs: {},
-  // Stryker disable next-line ArrayDeclaration: no phase is named like the placeholder
-  replayWarned: [],
 })
 
 /** @returns {Pick<RunState, 'finished' | 'stopped' | 'attempts' | 'costUsd' | 'questions' | 'question' | 'scenarios'>} */
@@ -214,7 +208,7 @@ const recorded = (run, event) => {
   node.previous = node.last
   node.last = event
   node.documents = [...new Set([...node.documents, ...(event.documents ?? [])])]
-  addTotals(run, event, /** @type {OpenAttempt} */ (node.open).phase)
+  addTotals(run, event)
   node.open = null
   run.last = event
   run.traversals[edgeKey(event.step, event.next)] = (run.traversals[edgeKey(event.step, event.next)] ?? 0) + 1
@@ -236,9 +230,8 @@ const scenariosAfter = (scenarios, event) => {
 /** @param {Record<number, Oracle>} oracles @param {Oracle[] | undefined} recorded */
 const withOracles = (oracles, recorded = []) => (recorded.length === 0 ? oracles : { ...oracles, ...Object.fromEntries(recorded.map((oracle) => [oracle.scenario, oracle])) })
 
-/** What a recorded step adds to the run's replay time and cost. @param {RunState} run @param {RunEvent} event @param {string} phase */
-const addTotals = (run, event, phase) => {
-  if (typeof event.replayMs === 'number') run.replayMs[phase] = (run.replayMs[phase] ?? 0) + event.replayMs
+/** What a recorded step adds to the run's cost. @param {RunState} run @param {RunEvent} event */
+const addTotals = (run, event) => {
   if (typeof event.cost === 'number') run.costUsd = (run.costUsd ?? 0) + event.cost
 }
 
@@ -290,11 +283,6 @@ const closed = (run, event) => {
 }
 
 /** @param {RunState} run @param {RunEvent} event */
-const replaySlow = (run, event) => {
-  run.replayWarned.push(event.phase)
-}
-
-/** @param {RunState} run @param {RunEvent} event */
 const finished = (run, event) => {
   run.finished = event
 }
@@ -305,7 +293,6 @@ const ON_EVENT = Object.freeze({
   'step.started': started_,
   'step.recorded': recorded,
   'phase.closed': closed,
-  'tdd.replay-slow': replaySlow,
   'question.asked': asked,
   'question.answered': answered,
   'run.finished': finished,

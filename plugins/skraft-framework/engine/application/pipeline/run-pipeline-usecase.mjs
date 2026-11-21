@@ -9,7 +9,7 @@ import { SCAN_FILE } from '../../domain/pipeline/structural-scan.mjs'
 import { proposalPath, proposalTemplate } from '../../domain/pipeline/proposals.mjs'
 import { allowedPaths, checklistsOf, makesCommits, roleFolders, roleOf } from '../../domain/pipeline/roles.mjs'
 import { writesComponentTests } from '../../domain/pipeline/component-skills.mjs'
-import { engineMessage, issueOf, REPLAY_SHARE } from '../../domain/pipeline/commits.mjs'
+import { engineMessage, issueOf } from '../../domain/pipeline/commits.mjs'
 import { RUN_REPORT_FILE, renderRunReport, runReport } from '../../domain/reporting/run-report.mjs'
 import { assignmentsText, modelText, onHost } from '../../domain/reporting/agent-models.mjs'
 import { QA_REPORT_FILE, renderQaReport } from '../../domain/reporting/qa-report.mjs'
@@ -17,7 +17,6 @@ import { statusLine } from '../../domain/reporting/run-status.mjs'
 import { renderWorkflowView, WORKFLOW_FILE } from '../../domain/reporting/workflow-view.mjs'
 import { aliveCount, groupSurvivors, isStalled, ROUNDS_WITHOUT_PROGRESS, survivorLine } from '../../domain/gates/mutation-report.mjs'
 import { gatesOf } from '../../domain/gates/gate-plan.mjs'
-import { REPLAY_JUDGE } from '../../domain/pipeline/replay-verdict.mjs'
 import { openActiveRun } from './active-run.mjs'
 import { holdRun, LockLost, writingWhileHeld } from './run-lock.mjs'
 import { baseOf, loadConfig } from '../config/bases.mjs'
@@ -69,7 +68,6 @@ import { parseCommand } from '../../domain/gates/command-line.mjs'
  *   userSettings: import('../ports/user-settings.mjs').UserSettings,
  *   sourceControl: import('../ports/source-control.mjs').SourceControl,
  *   commandRunner: import('../ports/command-runner.mjs').CommandRunner,
- *   commitReplay: import('../ports/commit-replay.mjs').CommitReplay,
  *   workflowSource: import('../ports/workflow-source.mjs').WorkflowSource,
  *   agentCatalog: import('../ports/agent-catalog.mjs').AgentCatalog,
  *   forges: import('../config/forge.mjs').ForgeDeps['forges'],
@@ -698,13 +696,13 @@ const briefScenarioOf = (context, run, next) => {
  * @param {Context} context @param {RunState} run @param {WorkStep} next
  * @returns {import('../../domain/pipeline/dispatch-brief.mjs').BriefScenario | null}
  */
-const briefScenario = ({ loaded, config }, run, next) => {
+const briefScenario = ({ loaded, config, deps, slug }, run, next) => {
   const pass = scenarioPassOf(loaded.workflow, run, next)
   if (pass === null) return null
   const component = pass.scenario?.component ?? null
   const oracles = pass.kind === 'delivery' ? pass.oracles.slice(0, 1).map((oracle) => oracleTold(oracle, config.components)) : []
   const scenarios = pass.scenarios.map(({ index, title, component: where, tags }) => ({ index, title, component: where, tags }))
-  return { kind: pass.kind, index: pass.index, of: pass.of, component, scenarios, pending: pass.pending.map(({ index }) => index), oracles, skeleton: skeletonTold(pass, component, config.components), test: scenarioTest(config, run, component) }
+  return { kind: pass.kind, index: pass.index, of: pass.of, component, scenarios, pending: pass.pending.map(({ index }) => index), oracles, skeleton: skeletonTold(pass, component, config.components), test: scenarioTest(config, run, component), redLog: pass.kind === 'plan' ? deps.files.location(slug, `logs/${next.node.id}-${next.visit}-red.log`) : null }
 }
 
 /**
@@ -756,7 +754,7 @@ const briefRole = ({ group, groups, node }, { role, drafts, language, checklists
 const acceptanceCommits = ({ journal, loaded }) => {
   const checked = journal.events.filter((event) => event.type === 'commits.checked' && isAcceptanceStep(loaded.workflow.nodes[event.step]))
   const last = [...new Map(checked.map((event) => [`${event.step} ${event.visit}`, event])).values()]
-  // A pass that went on refused none of its commits, so every red it lists was replayed red.
+  // A pass that went on refused none of its commits.
   const reds = last.flatMap((event) => event.commits.filter((/** @type {{ kind: string }} */ commit) => commit.kind === 'red'))
   return [...new Set(reds.map((/** @type {{ sha: string, subject: string }} */ commit) => `${commit.sha.slice(0, 7)} "${commit.subject}"`))]
 }
@@ -811,12 +809,11 @@ const briefComponent = (component, sha) => {
  */
 const judgeAttempt = async (context, run, next, attempt) => {
   const checked = await checkAttempt(context, run, next, attempt)
-  if (checked.commits.length > 0) await context.journal.append('commits.checked', { step: next.node.id, visit: next.visit, attempt: next.attempt, commits: checked.commits, ...unsettled(checked) })
-  if (checked.environment !== null) return checked.incident?.owner === 'interrupted' ? interrupted(context, next.phase, checked.environment) : escalate(context, next, checked.environment, checked.incident)
+  if (checked.commits.length > 0) await context.journal.append('commits.checked', { step: next.node.id, visit: next.visit, attempt: next.attempt, commits: checked.commits })
+  if (checked.environment !== null) return escalate(context, next, checked.environment)
   const committed = await commitDone(context, run, next, checked)
   if (committed !== null && 'environment' in committed) return escalate(context, next, committed.environment, committed.incident, committed.incidents)
   await recordAttempt(context, run, next, { ...attempt, checked, committed })
-  await warnSlowReplay(context, next.phase)
   return null
 }
 
@@ -836,32 +833,16 @@ const failedCheck = ({ missing, failures }) => missing.length > 0 || failures.le
  * @param {Context} context @param {RunState} run @param {WorkStep} next
  * @param {{ job: Job, heads: any, engine: Array<{ path: string, hash: string | null }> }} attempt
  */
-const checkAttempt = ({ deps, slug, config, journal, loaded }, run, { node, visit, attempt, feedback, sentBy, group }, { job, heads, engine }) => {
+const checkAttempt = ({ deps, slug, config, loaded }, run, { node, attempt, feedback, sentBy, group }, { job, heads, engine }) => {
   const inState = attempt > 1
   const { role, outputs, precreated, result } = job
-  const judge = { source: loaded.sources[REPLAY_JUDGE], assignment: judgeAssignment(config), slug, step: node.id, visit, attempt }
-  return checkStep({ deps, slug, config, base: run.base, story: run.story, judge }, {
-    role, outputs, precreated, result, known: knownCommits(journal), scenario: scenarioPassOf(loaded.workflow, run, { node, group }),
+  return checkStep({ deps, slug, config, base: run.base, story: run.story }, {
+    role, outputs, precreated, result, scenario: scenarioPassOf(loaded.workflow, run, { node, group }),
     visitHeads: inState ? run.nodes[node.id].heads : heads,
     engineBefore: engine,
     redByGateFailure: inState ? run.nodes[node.id].redByGateFailure : redByGates(feedback, sentBy),
   })
 }
-
-/** What the replay judge runs on: the configuration's rule for it, else the plugin's. @param {import('../../domain/config/skraft-config.mjs').SkraftConfig} config */
-const judgeAssignment = (config) => assignmentOf(config, { agent: REPLAY_JUDGE, type: 'refuter', named: null })
-
-/**
- * A check the machine stopped settled none of its commits: its verdicts are those before the
- * replays it could not run, and the attempt it resumes on replays them again.
- * @param {{ environment: string | null }} checked
- */
-const unsettled = ({ environment }) => (environment === null ? {} : { settled: false })
-
-/** The commits the journal already judged, by sha, from the checks that settled them. @param {OpenJournal} journal */
-const knownCommits = (journal) => new Map(journal.events
-  .filter((event) => event.type === 'commits.checked' && event.settled !== false)
-  .flatMap((event) => event.commits.map((/** @type {{ sha: string, verdict: string, replay: any }} */ commit) => [commit.sha, commit])))
 
 /**
  * Records the attempt: refused, or done with the node it leads to.
@@ -883,7 +864,7 @@ const attemptRecord = async (context, run, { node, visit, attempt, group, groups
     outcome: failed ? 'failed' : 'done', code: attemptCode(failed, checked, routed),
     missing: checked.missing, failures: checked.failures, incidents,
     next: routed.next, ceiling: routed.ceiling, reason: routed.reason, model,
-    ...spent(context, started, checked.replayMs, withJudge(cost, checked.judgeCost)), ...(committed ? { committed } : {}), ...(failed ? {} : checked.scenario),
+    ...spent(context, started, cost), ...(committed ? { committed } : {}), ...(failed ? {} : checked.scenario),
   }
 }
 
@@ -927,16 +908,9 @@ const loopsOn = ({ loaded }, { node, group, groups }) => {
   return group !== null && group < groups.length
 }
 
-/** @param {Context} context @param {Date} started @param {number | undefined} replayMs @param {number | undefined} cost */
-/**
- * What an attempt cost with the replay judge's share; undefined when the host tells neither.
- * @param {number | undefined} cost @param {number | undefined} judgeCost
- */
-const withJudge = (cost, judgeCost) => (judgeCost === undefined ? cost : (cost ?? 0) + judgeCost)
-
-const spent = ({ deps }, started, replayMs, cost) => ({
+/** @param {Context} context @param {Date} started @param {number | undefined} cost */
+const spent = ({ deps }, started, cost) => ({
   durationMs: deps.clock.now().getTime() - started.getTime(),
-  replayMs,
   cost, // undefined when the host reports none: the journal line leaves it out
 })
 
@@ -948,24 +922,6 @@ const testLine = (line, sha) => (line === undefined ? null : withBase(line, sha)
 
 /** A command line with the base the run diffs against in place of `{baseSha}`. @param {string} line @param {string | undefined} sha */
 const withBase = (line, sha) => (sha ? line.replaceAll('{baseSha}', sha) : line)
-
-/**
- * Tells the developer once per phase that replaying red commits takes more than its share of
- * the phase, while every red commit is replayed.
- * @param {Context} context @param {string} phase
- */
-const warnSlowReplay = async ({ deps, slug, journal, config }, phase) => {
-  if (config.tdd.replay !== 'all') return
-  const run = deriveRun(journal.events)
-  const replayMs = run.replayMs[phase] ?? 0
-  const phaseMs = deps.clock.now().getTime() - Date.parse(run.phaseStarted[phase])
-  if (run.replayWarned.includes(phase) || replayMs <= REPLAY_SHARE * phaseMs) return
-  await journal.append('tdd.replay-slow', { phase, replayMs, phaseMs })
-  deps.progress.log(
-    `${slug}: replaying test commits took ${Math.round((100 * replayMs) / phaseMs)}% of ${phase}; ` +
-    `set "tdd": { "replay": "last-red" } in ${CONFIG_FILE} to replay only the last test commit of each story`,
-  )
-}
 
 /**
  * A gate node: the gates of the components the story touched, then for a goal gate those of

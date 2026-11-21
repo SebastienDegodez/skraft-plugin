@@ -2,7 +2,6 @@ import { commitName } from '../../domain/pipeline/commits.mjs'
 import { isCode, ownersOf } from '../../domain/pipeline/component-files.mjs'
 import { readDeliveryGroups, readScenarioPlan } from '../../domain/pipeline/scenarios.mjs'
 import { scenarioNodes } from '../../domain/workflow/workflow.mjs'
-import { replayGreen } from './commit-replays.mjs'
 
 /**
  * What the engine checks on a pass of a story built from its acceptance tests first: the
@@ -121,32 +120,6 @@ const immutableFiles = ({ oracles, skeleton }, components) => [...new Set([...or
 export const acceptanceFiles = ({ files }, components) => files.filter((file) => !isCode(file, components, ['src']))
 
 /**
- * Replays the tests of the group's components at the green the pass committed, when the commit
- * rules let it: the judge reads that the group's scenarios and those before pass, and that only
- * the scenarios of later groups still fail.
- * @param {import('./commit-replays.mjs').ReplayDeps} deps @param {import('./commit-replays.mjs').ReplayRun} run
- * @param {{ judged: JudgedCommit[], scenario: ScenarioPass | null, components: Component[] }} pass
- * @returns {Promise<string | null>} why the machine could not replay it
- */
-export const replayScenarioGreen = (deps, run, { judged, scenario, components }) => {
-  const green = judged.find((commit) => commit.kind === 'green' && commit.verdict === 'ok')
-  if (scenario?.kind !== 'delivery' || green === undefined) return Promise.resolve(null)
-  const component = /** @type {Component} */ (components.find(({ name }) => name === /** @type {StoryScenario} */ (scenario.scenario).component))
-  const oracle = /** @type {Oracle} */ (scenario.oracles.find((candidate) => candidate.scenario === /** @type {StoryScenario} */ (scenario.scenario).index))
-  return replayGreen(deps, run, green, { component, command: oracle.command, red: oracle.sha, tests: acceptanceFiles(oracle, components), skeleton: skeletonOf(scenario.skeleton, { component, red: oracle.sha }, components) })
-}
-
-/**
- * The walking skeleton a green replays beside its group: the one in the group's component, when
- * another commit than the group's red holds it.
- * @param {Oracle | null} skeleton @param {{ component: Component, red: string }} group @param {Component[]} components
- * @returns {import('./commit-replays.mjs').GreenScenario['skeleton']}
- */
-const skeletonOf = (skeleton, { component, red }, components) => (skeleton?.component === component.name && skeleton.sha !== red
-  ? { red: skeleton.sha, command: skeleton.command, tests: acceptanceFiles(skeleton, components) }
-  : null)
-
-/**
  * The pass's own failures: no red of the acceptance tests after the plan's pass, no green after a
  * delivery pass, a commit changing code of a story declared docs only.
  * @param {JudgedCommit[]} judged @param {ScenarioPass | null} scenario
@@ -187,22 +160,22 @@ const exemptionBreaches = (judged, exemption, components) => (exemption !== 'doc
  * scenario (the one it committed, else the one an earlier plan's pass did), the same red as the
  * walking skeleton's (none for a story exempt of one); the group a green made pass.
  * @param {JudgedCommit[]} judged @param {ScenarioPass | null} scenario
- * @param {{ plan: (ScenarioPlan & { groups: DeliveryGroup[] }) | null, commands: Map<string, 'test' | 'e2e'>, components: Component[] }} context
+ * @param {{ plan: (ScenarioPlan & { groups: DeliveryGroup[] }) | null, components: Component[] }} context
  * @returns {ScenarioRecord}
  */
-export const scenarioRecord = (judged, scenario, { plan, commands, components }) => {
+export const scenarioRecord = (judged, scenario, { plan, components }) => {
   if (scenario === null) return {}
   if (scenario.kind === 'delivery') return greenRecord(judged, scenario, components)
-  return plan === null ? {} : planRecord(judged, scenario, { plan, commands, components })
+  return plan === null ? {} : planRecord(judged, scenario, { plan, components })
 }
 
 /**
  * @param {JudgedCommit[]} judged @param {ScenarioPass} scenario
- * @param {{ plan: ScenarioPlan & { groups: DeliveryGroup[] }, commands: Map<string, 'test' | 'e2e'>, components: Component[] }} context
+ * @param {{ plan: ScenarioPlan & { groups: DeliveryGroup[] }, components: Component[] }} context
  * @returns {ScenarioRecord}
  */
-const planRecord = (judged, scenario, { plan, commands, components }) => {
-  const red = newOracle(judged, { commands, components }) ?? scenario.oracles[0] ?? null
+const planRecord = (judged, scenario, { plan, components }) => {
+  const red = newOracle(judged, { components }) ?? scenario.oracles[0] ?? null
   const oracles = red === null ? [] : plan.scenarios.map(({ index }) => ({ ...red, scenario: index }))
   return { scenarios: plan.scenarios, groups: plan.groups, exemption: plan.exemption, skeleton: plan.exemption === 'none' && red !== null ? { ...red, scenario: 1 } : null, oracles }
 }
@@ -219,14 +192,13 @@ const greenRecord = (judged, { index, scenario }, components) => {
 }
 
 /**
- * The red the pass committed, with the command whose replay proved it.
+ * The red the pass committed.
  * @param {JudgedCommit[]} judged
- * @param {{ commands: Map<string, 'test' | 'e2e'>, components: Component[] }} context
  * @returns {Oracle | null}
  */
-const newOracle = (judged, { commands, components }) => {
+const newOracle = (judged, { components }) => {
   const red = judged.find((commit) => commit.kind === 'red')
   if (red === undefined) return null
   const { name } = ownersOf(components, red.files)[0]
-  return { scenario: 1, sha: red.sha, subject: red.subject, component: name, files: red.files, command: /** @type {'test' | 'e2e'} */ (commands.get(red.sha)) }
+  return { scenario: 1, sha: red.sha, subject: red.subject, component: name, files: red.files }
 }
