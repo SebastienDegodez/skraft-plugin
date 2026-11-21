@@ -293,11 +293,12 @@ stimuli:
       - checkout-pricing: . (dotnet), mocking: microcks, contract testing: off, bdd: off, tests: dotnet test CheckoutPricing.slnx --no-restore
       - loyalty-rates: rates (dotnet), mocking: microcks, contract testing: off, bdd: off, tests: dotnet build LoyaltyRates/LoyaltyRates.csproj --no-restore
       - Reference no issue in a commit.
-      - Scenario: 1 of 1 — "Member receives the approved cart discount" (component checkout-pricing)
+      - Group: 1 of 1 — S1 "Member receives the approved cart discount" (component checkout-pricing)
       - Acceptance tests DISTILL committed, which you never change (a wrong one: stop blocked, naming it):
       - "test: approved DISTILL fixture": tests/CheckoutPricing.UnitTest/LoyaltyDiscount/DiscountTests.cs
-      - Make it pass with outside-in TDD, unit tests included, and commit nothing until it passes; change another component than checkout-pricing only where scenario 1 needs it, in the same commit.
-      - Once it passes, commit once, in bash (never PowerShell), naming each file you changed:
+      - At your commit every test passes.
+      - Make the group's scenarios pass with outside-in TDD, unit tests included, and commit nothing until they pass; change another component than checkout-pricing only where the group needs it, in the same commit.
+      - Once they pass, commit once, in bash (never PowerShell), naming each file you changed:
         dotnet test CheckoutPricing.slnx --no-restore && git add <each file you changed> && git commit -s -m "feat(pricing): member receives the approved cart discount"
     tags:
       agent: software-engineer
