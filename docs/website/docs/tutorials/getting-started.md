@@ -289,7 +289,7 @@ Then a dialog titled **Scenarios** asks, with the scenarios the acceptance desig
 here):
 
 ```text
-Read the 2 scenarios of the story before DELIVER builds them: S1 "<title>" (web, walking skeleton); S2 "<title>" (web). DELIVER makes them pass in one pass, one commit per group, in this order: 1. S1; 2. S2. The acceptance tests, the walking skeleton and the skeleton of its chain are commit <sha> "test(checkout): acceptance tests S1–S2": <files>. skraft does not run them: check that each fails on its own assertion; the designer's run is in <log>. APPROVED delivers them; REVISE sends DISTILL back with your corrections (edit the .feature or the test yourself first if you like, and say so).
+Read the 2 scenarios of the story before DELIVER builds them: S1 "<title>" (web, walking skeleton); S2 "<title>" (web). DELIVER makes them pass in one pass, one commit per group, in this order: 1. S1; 2. S2. The acceptance tests of every scenario, the walking skeleton and the skeleton of its chain are commit <sha> "test(checkout): acceptance tests S1–S2": <files>. skraft does not run them: check that each fails on its own assertion; the designer's run is in <log>. APPROVED delivers them; REVISE sends DISTILL back with your corrections (edit the .feature or the test yourself first if you like, and say so).
 ```
 
 Open the test plan and the commits the question names, read them, then choose **APPROVED**.
