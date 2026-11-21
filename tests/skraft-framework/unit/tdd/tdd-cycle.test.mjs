@@ -185,9 +185,9 @@ test('a timed-out replay goes to the judge, and a human answers when the judge a
   assert.deepEqual(piped.agentRunner.judged, [])
 })
 
-test('a Python component\'s test commits are replayed with the interpreter of its virtual environment, as its gates run, its source folders first on the import path', async () => {
+test('a Python component\'s test commits are replayed with the program as written, as its gates run, its source folders first on the import path', async () => {
   const PYTHON = { name: 'api', root: '.', stack: 'python', bdd: false, paths: { src: ['src', 'lib'], tests: ['tests'] }, commands: { test: 'python -m pytest -q' } }
-  const host = scripted(cycle({ components: [PYTHON], replay: new ScriptedReplay({ exits: { 'root-2 .venv/bin/python -m pytest -q': null } }) }), (it) => [...upToDeliver(it).slice(0, 2), agent({
+  const host = scripted(cycle({ components: [PYTHON], replay: new ScriptedReplay() }), (it) => [...upToDeliver(it).slice(0, 2), agent({
     work: ({ git }) => {
       git.commit('test(checkout): pay', ['tests/test_pay.py'])
       git.commit('test(checkout): refund', ['tests/test_refund.py'])
@@ -198,8 +198,8 @@ test('a Python component\'s test commits are replayed with the interpreter of it
 
   assert.equal(outcome.code, 'agent-unavailable', outcome.reason)
   assert.deepEqual(host.replay.lines(), [
-    'root-1 ./. $ .venv/bin/python -m pytest -q [import src, lib]', 'root-0 ./. $ .venv/bin/python -m pytest -q [import src, lib]',
-    'root-2 ./. $ .venv/bin/python -m pytest -q [import src, lib]', 'root-2 ./. $ .venv/Scripts/python.exe -m pytest -q [import src, lib]', 'root-1 ./. $ .venv/bin/python -m pytest -q [import src, lib]',
+    'root-1 ./. $ python -m pytest -q [import src, lib]', 'root-0 ./. $ python -m pytest -q [import src, lib]',
+    'root-2 ./. $ python -m pytest -q [import src, lib]', 'root-1 ./. $ python -m pytest -q [import src, lib]',
   ])
   assert.deepEqual(checked(host)[0].commits.map(({ verdict, replay }) => [verdict, replay?.exitCode]), [['ok', 1], ['ok', 1]])
 

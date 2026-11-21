@@ -1,6 +1,6 @@
 import { CONFIG_FILE } from '../../domain/config/skraft-config.mjs'
 import { pathUnder } from '../../domain/config/relative-path.mjs'
-import { installerIn, parseCommand, programChoices } from '../../domain/gates/command-line.mjs'
+import { installerIn, parseCommand } from '../../domain/gates/command-line.mjs'
 import { redsToReplay } from '../../domain/pipeline/commits.mjs'
 import { ownersOf } from '../../domain/pipeline/component-files.mjs'
 import { interruptedBy } from '../../domain/pipeline/incidents.mjs'
@@ -315,8 +315,7 @@ const parsedCommand = (base, component, name) => {
 }
 
 /**
- * Runs a program on a commit's files from a component's folder, the first of its choices that
- * starts, as the gates run it (`python`: the component's virtual environment first); its time
+ * Runs a program on a commit's files from a component's folder, as the gates run it; its time
  * counts as replaying. What it printed goes to a log of the run, named by the commit judged, the
  * component and the command, `-parent` added for a replay at its parent.
  * @param {ReplayDeps} deps @param {ReplayRun} run
@@ -329,7 +328,7 @@ const timedRun = async (deps, run, { repository, sha, component, command, log: p
   await deps.files.clearTemporary(run.slug)
   const tmp = deps.files.location(run.slug, '.tmp')
   const env = { TMPDIR: tmp, TEMP: tmp, TMP: tmp }
-  const answer = await deps.commitReplay.run({ repository, sha, cwd, choices: programChoices(command.argv), importRoots: importRootsOf(component), env, javaTmpDir: tmp })
+  const answer = await deps.commitReplay.run({ repository, sha, cwd, argv: command.argv, importRoots: importRootsOf(component), env, javaTmpDir: tmp })
   const durationMs = deps.clock.now().getTime() - started.getTime()
   run.tally.replayMs += durationMs
   const log = await writeLog(deps, run.slug, { sha, component, argv: command.argv, path }, answer)

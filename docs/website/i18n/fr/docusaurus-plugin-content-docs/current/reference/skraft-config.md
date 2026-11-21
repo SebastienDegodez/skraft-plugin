@@ -366,10 +366,10 @@ la racine du composant : `StrykerOutput/reports/mutation-report.json` (.NET),
 `target/pit-reports/mutations.xml` (Java ; `build/reports/pitest/mutations.xml` quand la commande
 nomme Gradle). Un résultat ou un rapport illisible fait échouer la gate en `environment`.
 
-Une ligne qui commence par `python` lance le premier interpréteur trouvé depuis la racine du
-composant : `.venv/bin/python`, `.venv/Scripts/python.exe`, puis `python` et `python3` sur le
-PATH. Le fichier garde `python` et reste le même sous Windows, macOS et Linux. Tout autre
-programme démarre tel qu'écrit.
+Tout programme démarre tel qu'écrit, depuis la racine du composant : le moteur n'en substitue
+aucun, `python` compris. Écrivez l'interpréteur dont votre machine a besoin (`.venv/bin/python -m
+pytest` ou `.venv\Scripts\python.exe -m pytest`, ou `python -m pytest` quand il est sur le PATH).
+Un programme qui ne démarre pas fait échouer la gate en `environment`, en le nommant.
 
 Avec Microcks (le défaut hors React), les tests qui l'utilisent font tourner Microcks dans un
 conteneur, Docker ou Podman. Les gates n'en cherchent pas : un tel test échoue quand aucun

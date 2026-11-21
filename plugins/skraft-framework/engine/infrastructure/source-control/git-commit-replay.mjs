@@ -128,23 +128,21 @@ const shallowFirst = (a, b) => a.split('/').length - b.split('/').length
 const runThenRemoveWorktree = async (commandRunner, replay, worktree) => {
   try {
     if (!(await dependencyLinks(commandRunner, 'link', replay.repository, worktree))) return notCheckedOut(replay, 'the dependencies installed in the working copy could not be linked')
-    return await runFirst(commandRunner, replay, `${worktree.path}/${replay.cwd}`)
+    return await runProgram(commandRunner, replay, `${worktree.path}/${replay.cwd}`)
   } finally {
     await removeWorktree(commandRunner, replay.repository, worktree)
   }
 }
 
 /**
- * The first choice that starts, in the one checkout; none starting is said in fixed words.
- * @param {CommandRunner} commandRunner @param {Pick<Replay, 'choices' | 'importRoots'>} replay @param {string} cwd absolute
+ * The program in the one checkout; one that does not start is said in fixed words.
+ * @param {CommandRunner} commandRunner @param {Pick<Replay, 'argv' | 'importRoots'>} replay @param {string} cwd absolute
  * @returns {Promise<CommandResult>}
  */
-const runFirst = async (commandRunner, { choices, importRoots, env, javaTmpDir }, cwd) => {
-  for (const argv of choices) {
-    const answer = await commandRunner.run({ argv: launched(argv, importRoots), cwd, ...(env === undefined ? {} : { env }), javaTmpDir })
-    if (answer.started && answer.exitCode !== NOT_STARTED) return answer
-  }
-  return { started: false, exitCode: null, stdout: '', stderr: '', error: `could not start ${choices.map(([program]) => program).join(' nor ')}` }
+const runProgram = async (commandRunner, { argv, importRoots, env, javaTmpDir }, cwd) => {
+  const answer = await commandRunner.run({ argv: launched(argv, importRoots), cwd, ...(env === undefined ? {} : { env }), javaTmpDir })
+  if (answer.started && answer.exitCode !== NOT_STARTED) return answer
+  return { started: false, exitCode: null, stdout: '', stderr: '', error: `could not start ${argv[0]}` }
 }
 
 /** What the launcher exits with when its program cannot start, as a shell does. */

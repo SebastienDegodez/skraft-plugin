@@ -205,33 +205,6 @@ test('doctor passes on Microcks components without any container runtime on the 
   assert.equal(checks.find(({ detail }) => detail.includes('external gateway')).detail, 'payment-fastapi (python) external gateway: microcks (targeted), microcks (walking skeleton) — Microcks uber native image via Testcontainers, one container per test session; source plugin')
 })
 
-test('python runs from the virtual environment of the component, laid out the way this OS makes one', async (t) => {
-  const cwd = copyFixture(FIXTURES['payment-fastapi'], join(tempFolder(t), 'payment-fastapi'))
-  // Node stands for the interpreter: `python --version` answers with Node's version.
-  const venv = process.platform === 'win32' ? join(cwd, '.venv', 'Scripts', 'python.exe') : join(cwd, '.venv', 'bin', 'python')
-  mkdirSync(dirname(venv), { recursive: true })
-  try { linkSync(process.execPath, venv) } catch { copyFileSync(process.execPath, venv) }
-  const env = envWithPath(toolFolders())
-  assert.equal((await skraft(cwd, ['init'], { env })).status, 0)
-  answerAsTheSkillDoes(cwd, { bdd: false })
-  const path = join(cwd, 'skraft-config.json')
-  const config = readJson(path)
-  config.components[0].commands = { test: 'python --version' }
-  config.components[0].mocking = { strategy: 'inprocess' }
-  writeFileSync(path, JSON.stringify(config, null, 2))
-  commitAll(cwd)
-  assert.equal((await skraft(cwd, ['init', 'checkout'], { env })).status, 0)
-
-  const doctor = await skraft(cwd, ['doctor'], { env })
-  const gate = await skraft(cwd, ['gate', '--all'], { env })
-
-  assert.equal(doctor.status, 0, doctor.stdout)
-  assert.equal(doctor.stdout.split(/\r?\n/)[4], 'ok    payment-fastapi/test: python --version (parsed; doctor --run starts it)')
-  assert.equal(gate.status, 0, gate.stdout)
-  const evidence = readFileSync(join(cwd, '.copilot-tracking', 'skraft-plans', 'checkout', 'gates', 'payment-fastapi', 'test-1.log'), 'utf8')
-  assert.match(evidence, new RegExp(`--- stdout\\n${process.version.replaceAll('.', '\\.')}\\r?\\n`))
-})
-
 test('doctor --run starts each command once against the base it is given, main by default', async (t) => {
   const cwd = join(tempFolder(t), 'payment')
   mkdirSync(cwd)

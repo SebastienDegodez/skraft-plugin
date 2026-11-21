@@ -633,16 +633,14 @@ export class ScriptedReplay {
     /** @type {Array<{ repository: string, sha: string, cwd: string, argv: string[], importRoots: string[] }>} each program tried, in order */
     this.replays = []
   }
-  /** One checkout: the first choice whose exit is not scripted null starts, as CommitReplay does. */
-  async run({ choices, ...request }) {
+  /** One checkout: the program starts unless its exit is scripted null, as CommitReplay does. */
+  async run({ argv, ...request }) {
     await this.clock?.pass(this.takesMs)
-    for (const argv of choices) {
-      this.replays.push({ ...request, argv })
-      const exitCode = this.exitOf({ ...request, argv })
-      if (exitCode === 'timeout') return { started: true, exitCode: null, stdout: '', stderr: '', error: `${argv[0]} did not finish within 600 s` }
-      if (exitCode !== null) return { started: true, exitCode, stdout: this.outputs[`${request.sha} ${argv.join(' ')}`] ?? `${argv.join(' ')} at ${request.sha}\n`, stderr: '' }
-    }
-    return { started: false, exitCode: null, stdout: '', stderr: '', error: `could not start ${choices.map(([program]) => program).join(' nor ')}` }
+    this.replays.push({ ...request, argv })
+    const exitCode = this.exitOf({ ...request, argv })
+    if (exitCode === 'timeout') return { started: true, exitCode: null, stdout: '', stderr: '', error: `${argv[0]} did not finish within 600 s` }
+    if (exitCode !== null) return { started: true, exitCode, stdout: this.outputs[`${request.sha} ${argv.join(' ')}`] ?? `${argv.join(' ')} at ${request.sha}\n`, stderr: '' }
+    return { started: false, exitCode: null, stdout: '', stderr: '', error: `could not start ${argv[0]}` }
   }
   /**
    * The exit of `'<sha> <argv>'` when scripted, else of the sha, else 0 at a feat or fix commit
@@ -992,8 +990,8 @@ export class InMemoryWorkflowSource {
  * The machine the commands run on: which programs are installed, and how a command line
  * exits (`'<cwd> $ <argv joined by spaces>'` → exit code). Everything else exits 0.
  * It is both the CommandRunner and the Executables port. A program written with a `/`
- * (`.venv/bin/python`) is installed as a path relative to the working copy
- * (`services/py/.venv/bin/python`) and found from the folder it starts in.
+ * is installed as a path relative to the working copy (`services/py/tools/run`) and found from
+ * the folder it starts in.
  */
 export class ScriptedMachine {
   /**

@@ -8,12 +8,6 @@
 /** What a shell would act on in a word written without quotes. */
 const SHELL_SYNTAX = /[|&;<>]/
 
-/**
- * Where `python` is looked for, first found wins: the component's virtual environment, as POSIX
- * then Windows lay it out, then the PATH, where macOS and Linux often have only `python3`.
- */
-const PYTHON = Object.freeze(['.venv/bin/python', '.venv/Scripts/python.exe', 'python', 'python3'])
-
 /** Invocations that install dependencies into the folders a commit replay links from the working copy. */
 const INSTALLERS = Object.freeze([['npm', 'ci'], ['npm', 'install'], ['npm', 'cit'], ['npm', 'install-ci-test'], ['pnpm', 'install'], ['yarn', 'install'], ['uv', 'sync'], ['pip', 'install']])
 
@@ -22,20 +16,6 @@ const INSTALLERS = Object.freeze([['npm', 'ci'], ['npm', 'install'], ['npm', 'ci
  * @param {string[]} argv @returns {string | null}
  */
 export const installerIn = (argv) => INSTALLERS.find((words) => argv.some((_, start) => words.every((word, at) => argv[start + at] === word)))?.join(' ') ?? null
-
-/**
- * The argvs to try for a command, in order. Only `python` has more than one; any other program
- * starts as written.
- * @param {string[]} argv @returns {string[][]}
- */
-export const programChoices = (argv) => (argv[0] === 'python' ? PYTHON.map((program) => [program, ...argv.slice(1)]) : [argv])
-
-/**
- * Where a program with several choices was looked for, as a suffix of the message that it was
- * not found; empty for a program that starts as written.
- * @param {string[][]} choices from programChoices
- */
-export const lookedFor = (choices) => (choices.length === 1 ? '' : `; looked for ${choices.map(([program]) => program).join(', ')}`)
 
 /**
  * An argv written back as one line that parseCommand reads into the same argv: what the

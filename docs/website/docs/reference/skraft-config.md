@@ -357,10 +357,10 @@ to the component root: `StrykerOutput/reports/mutation-report.json` (.NET),
 `target/pit-reports/mutations.xml` (Java; `build/reports/pitest/mutations.xml` when the command
 names Gradle). A result or a report that cannot be read fails the gate as `environment`.
 
-A line that starts with `python` starts the first interpreter found from the component's
-root: `.venv/bin/python`, `.venv/Scripts/python.exe`, then `python` and `python3` on the
-PATH. The file keeps `python` and stays the same on Windows, macOS and Linux. Any other
-program starts as written.
+Every program starts as written, from the component's root: the engine substitutes none, `python`
+included. Write the interpreter your machine needs (`.venv/bin/python -m pytest` or
+`.venv\Scripts\python.exe -m pytest`, or `python -m pytest` when it is on the PATH). A program that
+does not start fails the gate as `environment`, naming it.
 
 With Microcks (the default outside React), the tests that use it run Microcks in a container,
 Docker or Podman. The gates do not look for one: such a test fails when no container answers, like
