@@ -2,7 +2,7 @@ import { CONFIG_FILE, withPublishSetting } from '../../domain/config/skraft-conf
 import { APPLY, BLOCKED, REVIEW_CEILING, acceptable, reviewCeilingText, STOP, blockText, decideUsage, edgeAnswerOf, environmentText, mutationPlanText, questionKey, questionOf, ratificationText, readAnswer, scenarioReviewText } from '../../domain/decisions/questions.mjs'
 import { deriveRun } from '../../domain/journal/run-state.mjs'
 import { namedFeatures } from '../../domain/pipeline/gherkin-records.mjs'
-import { scenarioNodes } from '../../domain/workflow/workflow.mjs'
+import { scenarioWriter } from '../../domain/pipeline/roles.mjs'
 import { trackingFolder } from '../../domain/pipeline/roles.mjs'
 import { causeFields } from '../../domain/pipeline/next-step.mjs'
 import { issueOf } from '../../domain/pipeline/commits.mjs'
@@ -111,10 +111,12 @@ const SCENARIO_REVIEW = {
 const scenarioReviewPlan = async (context, { scenarios, nodes }) => {
   if (scenarios === null) return { environment: 'the run recorded no scenario of the story to show yet; put the scenario review after the node that writes them' }
   const oracle = scenarios.oracles[1]
-  const [plan] = nodes[scenarioNodes(context.loaded.workflow)[0]].outputs
+  const writer = /** @type {string} */ (scenarioWriter(context.loaded.workflow))
+  const [plan] = nodes[writer].outputs
   const features = namedFeatures(/** @type {string} */ (await context.deps.files.read(context.slug, plan)))
   const { skeleton, exemption, list, groups } = scenarios
-  return { text: scenarioReviewText({ scenarios: list, features, skeleton, exemption, oracle, groups }), subjects: oracle.files }
+  const log = context.deps.files.location(context.slug, `logs/${writer}-${nodes[writer].visit}-red.log`)
+  return { text: scenarioReviewText({ scenarios: list, features, skeleton, exemption, oracle, groups, log }), subjects: oracle.files }
 }
 
 /** @type {Readonly<Record<NodeQuestion, Questionnaire>>} */
