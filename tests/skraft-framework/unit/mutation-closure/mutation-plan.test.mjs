@@ -19,7 +19,7 @@ const twoFiles = strykerReport({
 
 const delivering = (it) => agent({
   work: ({ git }) => {
-    git.commit(`feat(${SLUG}): checkout pays by card`, ['tests/CheckoutTests.cs', 'src/Checkout.cs', 'src/Refund.cs'])
+    git.commit(`feat(${SLUG}): S1 checkout pays by card`, ['tests/CheckoutTests.cs', 'src/Checkout.cs', 'src/Refund.cs'])
   },
 })(it)
 const upToDeliver = (it) => [agent()(it), agent()(it), agent()(it), delivering(it)]

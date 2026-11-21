@@ -1,15 +1,15 @@
 import { commitName } from '../../domain/pipeline/commits.mjs'
 import { isCode, ownersOf } from '../../domain/pipeline/component-files.mjs'
-import { readDeliveryGroups, readScenarioPlan } from '../../domain/pipeline/scenarios.mjs'
-import { scenarioNodes } from '../../domain/workflow/workflow.mjs'
+import { delivers, writesScenarios } from '../../domain/pipeline/roles.mjs'
+import { groupLabel, readDeliveryGroups, readScenarioPlan } from '../../domain/pipeline/scenarios.mjs'
 
 /**
  * What the engine checks on a pass of a story built from its acceptance tests first: the
  * scenarios the acceptance designer's test plan lists and the groups its implementation plan
  * delivers them in, one red holding the walking skeleton and the acceptance test of every
- * scenario; then, per group, one green that makes the group's scenarios pass without touching
- * those tests and keeps the walking skeleton and the groups before passing; a walking skeleton
- * declared exempt as docs only that no commit contradicts; and what the pass leaves for the next ones.
+ * scenario; then, in one pass, the software engineer's greens, at most one per group, in the
+ * plan's order, none touching those tests; a walking skeleton declared exempt as docs only that no
+ * commit contradicts; and what the pass leaves for the next ones.
  *
  * @typedef {import('../../domain/pipeline/scenarios.mjs').ScenarioPlan} ScenarioPlan
  * @typedef {import('../../domain/pipeline/scenarios.mjs').StoryScenario} StoryScenario
@@ -18,56 +18,55 @@ import { scenarioNodes } from '../../domain/workflow/workflow.mjs'
  * @typedef {import('../../domain/pipeline/commits.mjs').JudgedCommit} JudgedCommit
  * @typedef {import('../../domain/pipeline/commits.mjs').ScenarioJudging} ScenarioJudging
  * @typedef {import('../../domain/config/skraft-config.mjs').Component} Component
+ * @typedef {{ index: number, scenarios: StoryScenario[], pending: StoryScenario[] }} PassGroup
  * @typedef {{
- *   kind: 'plan' | 'delivery', index: number, of: number, scenario: StoryScenario | null,
- *   scenarios: StoryScenario[], pending: StoryScenario[],
- *   oracles: Oracle[], skeleton: Oracle | null, exemption: import('../../domain/pipeline/scenarios.mjs').Exemption,
+ *   kind: 'plan' | 'delivery' | 'rework', groups: PassGroup[], oracles: Oracle[], reds: Oracle[],
+ *   skeleton: Oracle | null, exemption: import('../../domain/pipeline/scenarios.mjs').Exemption,
  *   approved: StoryScenario[],
  * }} ScenarioPass
  *   plan: the pass that writes the story's scenarios, its groups and the one red of their
- *   acceptance tests and walking skeleton; delivery: the green of group `index`. of: how many
- *   groups the last plan delivers in (scenarios on the plan's pass); scenario: the first of the
- *   group, whose component the green works in; scenarios: the group's; pending: those of the
- *   groups after it, whose tests still fail at its green; oracles: the red of each scenario;
- *   skeleton: the red of the walking skeleton; exemption: the walking skeleton's, as the last plan
- *   declared it; approved: the scenarios of the last plan.
+ *   acceptance tests and walking skeleton; delivery: the one pass that makes every group not yet
+ *   delivered pass, carrying them in the plan's order; rework: a pass after the story is
+ *   delivered (the gates or the review sent it back), which changes no acceptance test. groups:
+ *   each with its scenarios and those of the groups after it, whose tests still fail at its green;
+ *   oracles: the red of each scenario of the last plan; reds: every red of acceptance tests any
+ *   plan committed; skeleton: the red of the walking skeleton; exemption: the walking skeleton's,
+ *   as the last plan declared it; approved: the scenarios of the last plan.
  * @typedef {{ code: 'scenarios' | 'tdd', line: string }} ScenarioFailure
  * @typedef {{ scenarios?: StoryScenario[], groups?: DeliveryGroup[], exemption?: string, skeleton?: Oracle | null, oracles?: Oracle[], green?: { group: number, others?: string[] } }} ScenarioRecord
  *   what a done pass journals for the passes after it.
  */
 
 /**
- * The scenarios a pass of a node marked each="scenario" works on: the plan and the red of every
- * acceptance test on the first node's pass, group `group` on the delivery node's; null on a pass
- * of the delivery node with none, and on any other node.
- * @param {import('../../domain/workflow/workflow.mjs').Workflow} workflow
+ * The scenarios a pass works on: the plan and the one red of every acceptance test on the pass of
+ * the node that writes them; every group not yet delivered on the pass of the node that delivers
+ * them, or the red it keeps whole once the story is delivered; null on any other node, and on a
+ * delivering pass of a run that recorded no plan.
  * @param {import('../../domain/journal/run-state.mjs').RunState} run
- * @param {{ node: import('../../domain/workflow/workflow.mjs').WorkflowNode, group: number | null }} next
+ * @param {import('../../domain/workflow/workflow.mjs').WorkflowNode} node
  * @returns {ScenarioPass | null}
  */
-export const scenarioPassOf = (workflow, run, { node, group }) => {
-  if (node.each !== 'scenario') return null
-  const delivery = node.id !== scenarioNodes(workflow)[0]
-  if (delivery && group === null) return null
+export const scenarioPassOf = (run, node) => {
   const scenarios = run.scenarios ?? NO_SCENARIOS
-  return delivery ? deliveryPass(scenarios, /** @type {number} */ (group)) : planPass(scenarios)
+  if (writesScenarios(node)) return planPass(scenarios)
+  return delivers(node) ? deliveryPass(scenarios) : null
 }
 
 /** What a run that recorded no scenario yet holds. @type {NonNullable<import('../../domain/journal/run-state.mjs').RunState['scenarios']>} */
-const NO_SCENARIOS = Object.freeze({ list: [], exemption: 'none', groups: [], oracles: {}, skeleton: null, delivered: 0 })
+const NO_SCENARIOS = Object.freeze({ list: [], exemption: 'none', groups: [], oracles: {}, skeleton: null, reds: [], delivered: 0 })
 
 /** @param {NonNullable<import('../../domain/journal/run-state.mjs').RunState['scenarios']>} scenarios @returns {ScenarioPass} */
-const planPass = ({ list, exemption, oracles, skeleton }) => ({ kind: 'plan', index: 1, of: list.length, scenario: null, scenarios: [], pending: [], oracles: Object.values(oracles), skeleton, exemption, approved: list })
+const planPass = ({ list, exemption, oracles, skeleton, reds }) => ({ kind: 'plan', groups: [], oracles: Object.values(oracles), reds, skeleton, exemption, approved: list })
 
 /**
- * @param {NonNullable<import('../../domain/journal/run-state.mjs').RunState['scenarios']>} scenarios @param {number} index
- * @returns {ScenarioPass}
+ * @param {NonNullable<import('../../domain/journal/run-state.mjs').RunState['scenarios']>} scenarios
+ * @returns {ScenarioPass | null}
  */
-const deliveryPass = ({ list, exemption, groups, oracles, skeleton }, index) => {
-  const of = (numbers) => list.filter((scenario) => numbers.includes(scenario.index))
-  const scenarios = of(groups[index - 1]?.scenarios ?? [])
-  const pending = of(groups.slice(index).flatMap((group) => group.scenarios))
-  return { kind: 'delivery', index, of: groups.length, scenario: scenarios[0] ?? null, scenarios, pending, oracles: Object.values(oracles), skeleton, exemption, approved: list }
+const deliveryPass = ({ list, exemption, groups, oracles, skeleton, reds, delivered }) => {
+  const of = (/** @type {number[]} */ numbers) => list.filter((scenario) => numbers.includes(scenario.index))
+  const owed = groups.filter(({ index }) => index > delivered).map(({ index, scenarios }) => ({ index, scenarios: of(scenarios), pending: of(groups.slice(index).flatMap((group) => group.scenarios)) }))
+  const kind = owed.length > 0 ? 'delivery' : 'rework'
+  return kind === 'rework' && reds.length === 0 ? null : { kind, groups: owed, oracles: Object.values(oracles), reds, skeleton, exemption, approved: list }
 }
 
 /**
@@ -101,17 +100,18 @@ const implementationPlanOf = (testPlan) => testPlan.replace(/test-plan-([^/]*)$/
  */
 export const scenarioJudging = (scenario, plan, components) => {
   if (scenario === null) return null
-  if (scenario.kind === 'plan') return { kind: 'oracle', index: scenario.index, components: plan === null ? null : [...new Set(plan.scenarios.map(({ component }) => component))] }
-  const component = /** @type {StoryScenario} */ (scenario.scenario).component
-  return { kind: 'delivery', index: scenario.index, component, immutable: immutableFiles(scenario, components) }
+  if (scenario.kind === 'plan') return { kind: 'oracle', components: plan === null ? null : [...new Set(plan.scenarios.map(({ component }) => component))] }
+  const immutable = immutableFiles(scenario, components)
+  if (scenario.kind === 'rework') return { kind: 'rework', immutable }
+  return { kind: 'delivery', groups: scenario.groups.map(({ scenarios }) => groupLabel(scenarios.map(({ index }) => index))), immutable }
 }
 
 /**
- * The files of the red the green may not change, the walking skeleton's included: every one but
- * the skeleton of code the tests call, in the source paths.
+ * The files of every red the greens may not change: the acceptance tests of any plan's red, the
+ * skeleton of code the tests call left out, in the source paths.
  * @param {ScenarioPass} scenario @param {Component[]} components
  */
-const immutableFiles = ({ oracles, skeleton }, components) => [...new Set([...oracles, ...(skeleton === null ? [] : [skeleton])].flatMap((oracle) => acceptanceFiles(oracle, components)))]
+const immutableFiles = ({ reds }, components) => [...new Set(reds.flatMap((red) => acceptanceFiles(red, components)))]
 
 /**
  * The files of a red of an acceptance test the green may not change: all but the skeleton.
@@ -137,12 +137,14 @@ const redCommitted = (judged) => judged.some((commit) => commit.kind === 'red')
 
 /**
  * The commit a pass misses, by kind of pass: the plan's, the one red of every scenario's
- * acceptance test, unless an earlier plan's pass committed it; a delivery's, its green.
+ * acceptance test, unless an earlier plan's pass committed it; a delivery's, a green; a rework's,
+ * none.
  * @type {Readonly<Record<ScenarioPass['kind'], (judged: JudgedCommit[], scenario: ScenarioPass) => ScenarioFailure[]>>}
  */
 const MISSING = Object.freeze({
   plan: (judged, { oracles }) => (redCommitted(judged) || oracles.length > 0 ? [] : [{ code: 'tdd', line: 'the story has no failing acceptance tests committed: write the acceptance test of every scenario, with the walking skeleton and the skeleton they call, and commit them as one test commit' }]),
-  delivery: (judged, { index, scenarios }) => (judged.some((commit) => commit.kind === 'green') ? [] : [{ code: 'tdd', line: `group ${index} (${scenarios.map(({ index: number }) => `S${number}`).join(', ')}) has no feat or fix commit: make its acceptance tests pass, then commit once` }]),
+  delivery: (judged) => (judged.some((commit) => commit.kind === 'green') ? [] : [{ code: 'tdd', line: 'the story has no feat or fix commit: make every group pass, one commit per group whose acceptance tests did not already pass' }]),
+  rework: () => [],
 })
 
 /**
@@ -165,7 +167,7 @@ const exemptionBreaches = (judged, exemption, components) => (exemption !== 'doc
  */
 export const scenarioRecord = (judged, scenario, { plan, components }) => {
   if (scenario === null) return {}
-  if (scenario.kind === 'delivery') return greenRecord(judged, scenario, components)
+  if (scenario.kind !== 'plan') return greenRecord(judged, scenario, components)
   return plan === null ? {} : planRecord(judged, scenario, { plan, components })
 }
 
@@ -181,14 +183,17 @@ const planRecord = (judged, scenario, { plan, components }) => {
 }
 
 /**
- * The group a done delivery pass made pass, and the other components its one green changed.
+ * The last group a done delivery pass delivered, and the other components its greens changed.
  * @param {JudgedCommit[]} judged @param {ScenarioPass} scenario @param {Component[]} components
  * @returns {ScenarioRecord}
  */
-const greenRecord = (judged, { index, scenario }, components) => {
+const greenRecord = (judged, { groups }, components) => {
+  if (groups.length === 0) return {}
   const files = judged.filter((commit) => commit.kind === 'green').flatMap((commit) => commit.files)
-  const others = ownersOf(components, files).map(({ name }) => name).filter((name) => name !== /** @type {StoryScenario} */ (scenario).component)
-  return { green: others.length === 0 ? { group: index } : { group: index, others } }
+  const own = new Set(groups.flatMap(({ scenarios }) => scenarios).map(({ component }) => component))
+  const others = ownersOf(components, files).map(({ name }) => name).filter((name) => !own.has(name))
+  const group = /** @type {PassGroup} */ (groups.at(-1)).index
+  return { green: others.length === 0 ? { group } : { group, others } }
 }
 
 /**

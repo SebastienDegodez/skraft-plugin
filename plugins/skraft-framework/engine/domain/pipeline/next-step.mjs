@@ -1,6 +1,5 @@
 import { edgeKey } from '../journal/run-state.mjs'
 import { acceptedOf, instructionOf, questionSpec } from '../decisions/questions.mjs'
-import { scenarioNodes } from '../workflow/workflow.mjs'
 
 /**
  * @typedef {import('../workflow/workflow.mjs').Workflow} Workflow
@@ -20,8 +19,7 @@ import { scenarioNodes } from '../workflow/workflow.mjs'
  *   new pass the gate failures, review findings, human refusal or human choice that sent the run
  *   on, sentBy naming which; instruction: the instruction a human answered a block with, on the
  *   pass it reopened, null otherwise; resumed: the open attempt a resumed run picks up. groups: the surviving mutants
- *   of a visit the mutation gate opened on a node that takes them by file, or the story's
- *   delivery groups on a node marked each="scenario"; group: the one this attempt works on, from 1;
+ *   of a visit the mutation gate opened on a node that takes them by file; group: the one this attempt works on, from 1;
  *   null with no groups.
  * @typedef {Entry & { kind: 'agent' | 'gate' | 'review' | 'ask' | 'publish' | 'call', phase: string, node: WorkflowNode }} WorkStep
  * @typedef {{ kind: 'skip', phase: string, node: WorkflowNode, visit: number, resumed: OpenAttempt | null }} SkipStep
@@ -76,37 +74,14 @@ export const nextStep = (workflow, run) => {
 }
 
 /**
- * A node done goes on with its next group of surviving mutants, within the story's scenarios,
- * or by its edge.
+ * A node done goes on with its next group of surviving mutants, or by its edge.
  * @param {Workflow} workflow @param {RunState} run @param {WorkflowNode} node @param {RunEvent} last
  * @returns {NextStep}
  */
 const leaveNode = (workflow, run, node, last) => {
   if (node.each === 'survivor-file' && hasNextGroup(run, last)) return nextGroup(node, run, last)
-  return scenarioStep(workflow, run, node, last) ?? advance(workflow, run, node, last)
+  return advance(workflow, run, node, last)
 }
-
-/**
- * The story's groups run without edges: the node that writes every acceptance test leaves by its
- * edge, to the review; a group made to pass hands over to the next one; the last group, or a
- * pass on none, leaves by its edge.
- * @param {Workflow} workflow @param {RunState} run @param {WorkflowNode} node @param {RunEvent} last
- * @returns {NextStep | null}
- */
-const scenarioStep = (workflow, run, node, last) => {
-  if (node.each !== 'scenario' || node.id === scenarioNodes(workflow)[0]) return null
-  return typeof last.group === 'number' && last.group < run.nodes[node.id].groups.length ? enterScenario(node, run, last.group + 1) : null
-}
-
-/**
- * Whether reds of the story's scenarios are still to write: the only phase a run leaves while
- * they are is the one of the node that writes them, for the first green, which does not close it.
- * @param {RunState} run
- */
-const redsPending = (run) => run.scenarios !== null && Object.keys(run.scenarios.oracles).length < run.scenarios.list.length
-
-/** A first attempt on a group, on a visit of its own. @param {WorkflowNode} node @param {RunState} run @param {number} group */
-const enterScenario = (node, run, group) => enter(node, { ...FRESH, visit: run.nodes[node.id].visit + 1, group, groups: /** @type {NonNullable<RunState['scenarios']>} */ (run.scenarios).groups }, run)
 
 /**
  * A run stopped inside an attempt picks that attempt up again.
@@ -228,38 +203,23 @@ const advance = (workflow, run, node, last) => {
   const target = workflow.nodes[last.next]
   if (!target) return changed(last.next)
   const phase = /** @type {string} */ (node.phase)
-  if (closes(run, phase, target) && !redsPending(run)) return { kind: 'close-phase', phase }
+  if (closes(run, phase, target)) return { kind: 'close-phase', phase }
   const visit = (run.nodes[target.id]?.visit ?? 0) + 1
-  const groups = firstGroup(workflow, run, target, last)
+  const groups = firstGroup(target, last)
   // A group of survivors gets its own mutants, not the gates' summary of every file.
   return enter(target, { visit, attempt: 1, missing: [], feedback: groups.group === null ? last.failures : [], instruction: null, sentBy: sentBy(node, last), resumed: null, ...groups }, run)
 }
 
 /**
+
  * A node that takes surviving mutants by file starts its visit on the first file the mutation
- * gate named; the node that makes the story's scenarios pass starts on the first one no green
- * made pass yet, once its red is committed; any other visit has no group.
- * @param {Workflow} workflow @param {RunState} run @param {WorkflowNode} target @param {RunEvent} last what sent the run to it
+ * gate named; any other visit has no group.
+ * @param {WorkflowNode} target @param {RunEvent} last what sent the run to it
  * @returns {Pick<Entry, 'group' | 'groups'>}
  */
-const firstGroup = (workflow, run, target, last) => {
-  if (target.each === 'scenario') return pendingScenario(workflow, run, target)
+const firstGroup = (target, last) => {
   const groups = target.each === 'survivor-file' ? last.survivors ?? [] : []
   return { group: groups.length > 0 ? 1 : null, groups }
-}
-
-/**
- * The group the delivery node goes on with: the next one no green made pass, once the red of
- * every acceptance test is committed; none once every group passes, or for the node that writes the red.
- * @param {Workflow} workflow @param {RunState} run @param {WorkflowNode} target
- * @returns {Pick<Entry, 'group' | 'groups'>}
- */
-const pendingScenario = (workflow, run, target) => {
-  const next = (run.scenarios?.delivered ?? 0) + 1
-  const scenarios = /** @type {NonNullable<RunState['scenarios']>} */ (run.scenarios)
-  const ready = target.id === scenarioNodes(workflow)[1] && next <= scenarios.groups.length && !redsPending(run)
-  // Stryker disable next-line ArrayDeclaration: with group null nothing reads groups (label, brief, route and journal all ask group first)
-  return ready ? { group: next, groups: scenarios.groups } : { group: null, groups: [] }
 }
 
 /** Who sends the run on with failures, by the kind of node it leaves: a call sends it as the review it runs. */

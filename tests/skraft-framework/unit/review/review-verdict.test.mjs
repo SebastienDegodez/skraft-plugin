@@ -188,7 +188,7 @@ test('a lens whose trigger matches a changed path or an added line runs with the
     ...nominal(it).slice(0, 3),
     agent({ work: ({ git }) => {
       git.adds('tests/CheckoutTests.cs', 'var server = WireMockServer.Start();')
-      git.commit('feat(checkout): Checkout pays by card', ['tests/CheckoutTests.cs', 'src/Checkout.cs'])
+      git.commit('feat(checkout): S1 Checkout pays by card', ['tests/CheckoutTests.cs', 'src/Checkout.cs'])
     } })(it),
   ])
 
@@ -204,7 +204,7 @@ test('a lens whose trigger matches a changed path or an added line runs with the
     ...nominal(it).slice(0, 3),
     agent({ work: ({ git }) => {
       git.removes('src/Checkout.cs', 'var server = WireMockServer.Start();')
-      git.commit('feat(checkout): Checkout pays by card', ['tests/Contracts/PaymentContractTests.cs', 'src/Checkout.cs'])
+      git.commit('feat(checkout): S1 Checkout pays by card', ['tests/Contracts/PaymentContractTests.cs', 'src/Checkout.cs'])
     } })(it),
   ])
   await contracts.start()
@@ -785,7 +785,7 @@ test('ACCEPT given with skraft decide at the ceiling of distill_review closes DI
   ])
   const engineer = host.agentRunner.dispatches.find((dispatch) => dispatch.agent === 'software-engineer')
   assert.ok(!engineer.prompt.includes('A human refused') && !engineer.prompt.includes('What pass'), engineer.prompt)
-  assert.deepEqual(host.events().filter((event) => event.type === 'step.started' && event.step === 'deliver').map(({ visit, attempt, missing, feedback, sentBy, instruction, group }) => [visit, attempt, missing, feedback, sentBy, instruction, group]), [[1, 1, [], [], undefined, undefined, 1]])
+  assert.deepEqual(host.events().filter((event) => event.type === 'step.started' && event.step === 'deliver').map(({ visit, attempt, missing, feedback, sentBy, instruction, group }) => [visit, attempt, missing, feedback, sentBy, instruction, group]), [[1, 1, [], [], undefined, undefined, undefined]])
   const report = await host.tracking.read(SLUG, 'run-report.md')
   // Only what the ceiling's question asked about: not design_review's findings, not the consents answered ACCEPTED before.
   assert.equal(report.slice(report.indexOf('## Accepted findings'), report.indexOf('## Forge writes') < 0 ? report.indexOf('Started at') : report.indexOf('## Forge writes')), [
@@ -929,7 +929,7 @@ test('the engine reads in the patch the skips added to tests, the test files del
       git.patched('src/latest.ts', ['--- a/src/latest.ts', '+++ b/src/latest.ts', '@@ -2,1 +2,0 @@', '-  expect(version).toBe(2)'])
       git.patched('tests/fixtures/payment.json', ['deleted file mode 100644', '--- a/tests/fixtures/payment.json', '+++ /dev/null'])
       git.patched('src/specs/payment.yaml', ['deleted file mode 100644', '--- a/src/specs/payment.yaml', '+++ /dev/null'])
-      git.commit('feat(checkout): Checkout pays by card', ['tests/CheckoutTests.cs', 'src/Checkout.cs', 'tests/TotalTests.cs', 'tests/RefundTests.cs', 'src/test_refunds.py', 'src/App.test.tsx', 'src/latest.ts', 'tests/fixtures/payment.json', 'src/specs/payment.yaml'])
+      git.commit('feat(checkout): S1 Checkout pays by card', ['tests/CheckoutTests.cs', 'src/Checkout.cs', 'tests/TotalTests.cs', 'tests/RefundTests.cs', 'src/test_refunds.py', 'src/App.test.tsx', 'src/latest.ts', 'tests/fixtures/payment.json', 'src/specs/payment.yaml'])
     } })(it),
   ])
   const unavailable = { ok: false, text: '', unavailable: true, error: 'finding-refuter is not installed' }

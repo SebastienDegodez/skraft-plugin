@@ -14,7 +14,7 @@ import { issueOf } from './commits.mjs'
  *   visit: number, attempt: number, maxAttempts: number,
  *   skills: string[], nowhere: import('./component-skills.mjs').ComponentSkill[], inputs: string[], outputs: string[], result: string, scratch: { logs: string, tmp: string },
  *   allowed: string[], components: BriefComponent[], tdd: import('./roles.mjs').TddMode, commits: boolean,
- *   missing: string[], feedback: string[], instruction: string | null, sentBy: 'gate' | 'review' | 'ask' | 'answer' | null, acceptance: string[],
+ *   missing: string[], feedback: string[], instruction: string | null, sentBy: 'gate' | 'review' | 'ask' | 'answer' | null,
  *   mutants: { file: string, mutants: string[], group: number, of: number } | null,
  *   drafts: string[], proposal: boolean, language: import('../reporting/language.mjs').Language | null, checklists: string[],
  *   scenario?: BriefScenario | null, policy?: string[],
@@ -27,9 +27,7 @@ import { issueOf } from './commits.mjs'
  *   told how its commits reference the story's issue. feedback: on a retry, why the
  *   previous attempt was refused; on a new pass, the gate failures, the review findings or the
  *   human's refusal or choice behind it, sentBy naming which; instruction: the human's answer to
- *   a block that opened this pass, told after what the block left. acceptance: the failing acceptance tests an
- *   earlier agent committed (`<sha> "<subject>"`), told to a TDD cycle so that it opens with a
- *   test of its own. mutants: the group of surviving mutants the agent kills, one file's.
+ *   a block that opened this pass, told after what the block left. mutants: the group of surviving mutants the agent kills, one file's.
  *   drafts: the Proposed ADRs of the working copy, relative to it, told to an agent that keeps
  *   the DESIGN records; empty for any other. proposal: the agent proposes how to treat its
  *   mutants and changes no code. language: the story's, for an agent that writes the prose of the
@@ -38,18 +36,23 @@ import { issueOf } from './commits.mjs'
  *   scenario: the scenario of the story the pass works on, null for a pass on none; policy: how
  *   the components' tests treat what they depend on, told to the agent that writes the scenarios.
  * @typedef {{
- *   kind: 'plan' | 'delivery', index: number, of: number, component: string | null,
- *   scenarios: Array<{ index: number, title: string, component: string, tags: string[] }>, pending: number[],
- *   oracles: Array<{ sha: string, subject: string, files: string[] }>, skeleton: { sha: string, subject: string, files: string[] } | null, test: string | null, redLog: string | null,
-}} BriefScenario
- *   plan: the pass that writes every scenario and their one red; delivery: the green of group
- *   `index` of `of`. scenarios: the group's, as the test plan lists them; pending: the numbers of
- *   the later groups' scenarios, whose tests still fail at its green; component: the first
- *   scenario's, null on the plan's pass; oracles: the red of the acceptance tests the delivery
- *   pass may not change; skeleton: the red of the walking skeleton of the group's component when
- *   another commit holds it, which the green keeps passing; test: the component's test command,
- *   null on the plan's pass; redLog: where the plan's pass sends the output of its one run of the
- *   acceptance tests, absolute, which the review of its phase reads; null on a delivery pass.
+ *   kind: 'plan' | 'delivery' | 'rework', groups: BriefGroup[],
+ *   oracles: Array<{ sha: string, subject: string, files: string[] }>, skeleton: boolean, redLog: string | null,
+ * }} BriefScenario
+ *   plan: the pass that writes every scenario and their one red; delivery: the one pass that
+ *   makes every group pass, one green each; rework: a pass after the story is delivered, which
+ *   changes no acceptance test. groups: those a delivery pass makes pass, in the order it commits
+ *   them; oracles: every red of acceptance tests DISTILL committed, whose files no pass changes;
+ *   skeleton: whether the story has a walking skeleton, which passes from the first group's
+ *   commit on; redLog: where the plan's pass sends the output of its one run of the acceptance
+ *   tests, absolute, which the review of its phase reads; null on any other pass.
+ * @typedef {{
+ *   index: number, of: number, scenarios: Array<{ index: number, title: string, component: string, tags: string[] }>,
+ *   pending: number[], test: string | null,
+ * }} BriefGroup
+ *   scenarios: the group's, as the test plan lists them; pending: the numbers of the later groups'
+ *   scenarios, whose tests still fail at its green; test: the test command of the component of
+ *   its first scenario.
  */
 
 /**
@@ -84,33 +87,38 @@ const headerLines = ({ agent, phase, slug, story, visit, attempt, maxAttempts, s
 ]
 
 /** What the agent reads, fills and may change, and the commits it makes. @param {Brief} brief */
-const workLines = ({ inputs, outputs, result, scratch, allowed, components, tdd, commits, story, sentBy, acceptance, proposal, scenario = null }) => [
+const workLines = ({ inputs, outputs, result, scratch, allowed, components, tdd, commits, story, sentBy, proposal, scenario = null }) => [
   ...section('- Read first:', inputs),
   ...section('- Fill each output in place; keep the path, create no other copy:', outputs),
   `- Write your result as JSON to ${result}: ${RESULT_SHAPE}`,
   `- Send what the commands you run print to files under ${scratch.logs}, and keep your temporary files under ${scratch.tmp}; write no file outside the working copy, the system's temporary folder included.`,
   ...section('- Change nothing outside these paths of the working copy; the engine refuses the step otherwise:', writablePaths(allowed, components)),
   ...section('- Components:', components.map(componentLine)),
-  ...(scenario === null ? commitLines(tdd, sentBy) : []),
+  ...(scenario === null || scenario.kind === 'rework' ? commitLines(tdd, sentBy) : []),
   ...(proposal ? [PROPOSAL_RULES] : []),
   ...(commits ? [COMMIT_EVERY_CHANGE, issueLine(story)] : []),
-  ...(scenario === null ? acceptanceLines(tdd, acceptance) : []),
 ]
 
 /**
- * The scenario the pass works on and the one commit it makes for it, its message exact.
+ * The scenarios the pass works on and the commits it makes for them, their messages exact.
  * @param {Brief} brief
  */
 const scenarioLines = ({ scenario = null, slug, story, policy }) => {
   if (scenario === null) return []
-  const message = commitCommand(scenario, { slug, issue: issueOf(story) })
-  return [...SCENARIO_WORK[scenario.kind](scenario), ...SCENARIO_COMMIT[scenario.kind](scenario, message), ...section(POLICY, /** @type {string[]} */ (policy))]
+  const issue = issueOf(story)
+  return [...SCENARIO_WORK[scenario.kind](scenario), ...SCENARIO_COMMIT[scenario.kind](scenario, { slug, issue }), ...section(POLICY, /** @type {string[]} */ (policy))]
 }
 
 const POLICY = '- How the tests of each component treat what the code depends on, in the scenarios\' acceptance tests (targeted) and in the walking skeleton:'
 
-/** @param {BriefScenario['scenarios'][number]} scenario */
+/** @param {BriefGroup['scenarios'][number]} scenario */
 const scenarioLine = ({ index, title, component, tags }) => `S${index} "${title}" (component ${component}${tags.length > 0 ? `, tags ${tags.join(' ')}` : ''})`
+
+/** @param {BriefGroup} group */
+const groupLine = ({ index, of, scenarios }) => `${index} of ${of} — ${scenarios.map(scenarioLine).join('; ')}`
+
+/** The red commits DISTILL left, whose files no pass changes. @param {BriefScenario['oracles']} oracles */
+const redLines = (oracles) => section('- Acceptance tests DISTILL committed, which you never change (a wrong one, or one failing on a build or setup error: stop blocked, naming it):', oracles.map(({ sha, subject, files }) => `${sha.slice(0, 7)} "${subject}": ${files.join(', ')}`))
 
 /** What a pass on the story's scenarios does, by kind of pass. @type {Readonly<Record<BriefScenario['kind'], (scenario: BriefScenario) => string[]>>} */
 const SCENARIO_WORK = Object.freeze({
@@ -126,68 +134,42 @@ const SCENARIO_WORK = Object.freeze({
     '- Write the failing acceptance test of every scenario, the binding of its Gherkin entering by its use case, each test\'s name starting with its',
     '  scenario\'s number (`S1_…`, `test_s1_…`); with them, the skeleton of every class they call, each returning an empty value.',
   ],
-  delivery: (scenario) => [
-    `- Group: ${scenario.index} of ${scenario.of} — ${scenario.scenarios.map(scenarioLine).join('; ')}`,
-    ...section('- Acceptance tests DISTILL committed, which you never change (a wrong one: stop blocked, naming it):', uniqueReds([...scenario.oracles, ...(scenario.skeleton === null ? [] : [scenario.skeleton])]).map(({ sha, subject, files }) => `${sha.slice(0, 7)} "${subject}": ${files.join(', ')}`)),
-    ...(scenario.skeleton === null ? [] : [`- The walking skeleton ${scenario.skeleton.sha.slice(0, 7)} passes at your commit too, beside this group's acceptance tests.`]),
-    scenario.pending.length === 0
-      ? '- At your commit every test passes.'
-      : `- At your commit only the tests of ${pendingNames(scenario.pending)}, later groups, still fail; every other test passes.`,
-    `- Make the group's scenarios pass with outside-in TDD, unit tests included, and commit nothing until they pass; change another component than ${scenario.component} only where the group needs it, in the same commit.`,
+  delivery: ({ groups, oracles, skeleton }) => [
+    ...section('- Groups, in the order you deliver them, one green commit each; a group whose acceptance tests already pass takes none (name the scenario whose code makes them pass on its change-log line):', groups.map(groupLine)),
+    ...redLines(oracles),
+    ...(skeleton ? ['- The walking skeleton passes from group 1\'s commit on.'] : []),
+    '- Deliver every group in this one pass, in this order, with outside-in TDD, unit tests included, and commit a group only once its tests pass; change another component than the group\'s own only where the group needs it, in the same commit. The pass ends when every group is committed and every test passes, or on a blocker.',
   ],
+  rework: ({ oracles }) => redLines(oracles),
 })
 
 /** The scenarios of later groups, by number. @param {number[]} pending */
 const pendingNames = (pending) => pending.map((index) => `S${index}`).join(', ')
 
-/** The reds, each once. @param {BriefScenario['oracles']} reds */
-const uniqueReds = (reds) => reds.filter((red, at) => reds.findIndex(({ sha }) => sha === red.sha) === at)
-
 /**
- * The one commit a pass makes: the red, never chained to the test command, whose output tells a
- * failing assertion from a build error; the green, chained in bash to it.
- * @type {Readonly<Record<BriefScenario['kind'], (scenario: BriefScenario, message: string) => string[]>>}
+ * The commits a pass makes: the red, never chained to the test command, whose output tells a
+ * failing assertion from a build error; the greens, each chained in bash to its group's tests.
+ * @type {Readonly<Record<BriefScenario['kind'], (scenario: BriefScenario, story: { slug: string, issue: number | null }) => string[]>>}
  */
 const SCENARIO_COMMIT = Object.freeze({
-  plan: ({ redLog }, message) => [`- Run the acceptance tests once, sending the whole output to ${redLog}, and read it: every acceptance test and the walking skeleton fail, each on its assertion. Then commit them, the skeleton they call and the scenarios in one commit, exactly:`, `  ${message}`],
-  delivery: ({ test, pending }, message) => (pending.length === 0
-    ? ['- Once they pass, commit once, in bash (never PowerShell), naming each file you changed:', `  ${test} && git add <each file you changed> && ${message}`]
-    : [
-      `- Once they pass, commit once, in bash (never PowerShell), naming each file you changed, the test command leaving out the tests of ${pendingNames(pending)} by its name filter (\`outside-in-tdd\`, Pending scenarios excluded):`,
-      `  ${test} <the filter leaving out ${pendingNames(pending)}> && git add <each file you changed> && ${message}`,
-    ]),
+  plan: ({ redLog }, story) => [`- Run the acceptance tests once, sending the whole output to ${redLog}, and read it: every acceptance test and the walking skeleton fail, each on its assertion. Then commit them, the skeleton they call and the scenarios in one commit, exactly:`, `  ${commitCommand('test', 'acceptance tests S1–S<n>, n the last scenario of your test plan', story)}`],
+  delivery: ({ groups }, story) => ['- Commit each group once, in bash (never PowerShell), naming each file you changed:', ...groups.map((group) => `  ${greenLine(group, story)}`)],
+  rework: () => [],
 })
 
-/** The subject's longest length, as the commit convention keeps it. */
-const SUBJECT_LENGTH = 72
-
-/**
- * The exact `git commit` of the red or of a group's green: the scenario's title as the subject of
- * a group of one, the story's issue as the last line of the body.
- * @param {BriefScenario} scenario @param {{ slug: string, issue: number | null }} story
- */
-const commitCommand = ({ kind, scenarios }, { slug, issue }) => {
-  const type = kind === 'delivery' ? 'feat' : 'test'
-  const subject = `${type}(${slug}): ${subjectFor(kind, scenarios, SUBJECT_LENGTH - type.length - slug.length - 4)}`
-  return `git commit -s -m "${subject}"${issue === null ? '' : ` -m "Refs: #${issue}"`}`
-}
-
-/** @param {BriefScenario['kind']} kind @param {BriefScenario['scenarios']} scenarios @param {number} room */
-const subjectFor = (kind, scenarios, room) => {
-  if (kind === 'plan') return 'acceptance tests S1–S<n>, n the last scenario of your test plan'
-  return scenarios.length === 1 ? subjectOf(scenarios[0].title, room) : `${scenarios.map(({ index }) => `S${index}`).join(', ')} <the rule of the group, as your implementation plan names it>`
+/** @param {BriefGroup} group @param {{ slug: string, issue: number | null }} story */
+const greenLine = ({ index, scenarios, pending, test }, story) => {
+  const label = scenarios.map(({ index: number }) => `S${number}`).join(', ')
+  const filter = pending.length === 0 ? '' : ` <the filter leaving out ${pendingNames(pending)}>`
+  return `group ${index}: ${test}${filter} && git add <each file you changed> && ${commitCommand('feat', `${label} <the rule of the group, as your implementation plan names it>`, story)}`
 }
 
 /**
- * A title as a commit subject takes it: no character a shell reads inside double quotes, the first
- * letter lower case, cut on a word to fit.
- * @param {string} title @param {number} room
+ * The exact `git commit` of the red or of a group's green: the story's issue as the last line of
+ * the body.
+ * @param {string} type @param {string} text @param {{ slug: string, issue: number | null }} story
  */
-const subjectOf = (title, room) => {
-  const plain = title.replace(/["$`\\]/g, '').replace(/\s+/g, ' ').trim()
-  const lower = `${plain.charAt(0).toLowerCase()}${plain.slice(1)}`
-  return lower.length <= room ? lower : lower.slice(0, room).replace(/\s\S*$/, '')
-}
+const commitCommand = (type, text, { slug, issue }) => `git commit -s -m "${type}(${slug}): ${text}"${issue === null ? '' : ` -m "Refs: #${issue}"`}`
 
 /** What the agent checks its work against before it writes its result. @param {Brief} brief */
 const selfCheckLines = ({ tdd, components, checklists }) => [
@@ -315,16 +297,6 @@ const TDD_RULES = Object.freeze({
     '  A commit that is not `type(scope): subject` is refused until you rewrite it.',
   ].join('\n'),
 })
-
-/**
- * The acceptance tests an earlier agent committed red: a TDD cycle opens with a failing test of
- * its own, never a feat counting on them.
- * @param {Brief['tdd']} tdd @param {string[]} acceptance
- */
-const acceptanceLines = (tdd, acceptance) => (tdd === 'cycle' && acceptance.length > 0 ? [
-  '- The acceptance tests DISTILL committed stay red until your code passes them; they are not the test of your first cycle:',
-  `  your first commit is a failing \`test(<story>): …\` of the inner loop, never a \`feat\`. DISTILL's: ${acceptance.join(', ')}`,
-] : [])
 
 const REVIEW_COMMITS = [
   '- This pass answers the review: a missing or wrong behaviour takes a failing `test(<story>): …` commit, then `fix(<story>): …`;',

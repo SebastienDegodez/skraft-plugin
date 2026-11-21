@@ -14,7 +14,7 @@ import { instructionOf } from '../decisions/questions.mjs'
  *   instruction: the human's answer to a block that opened this visit, apart from its feedback; group:
  *   which of the visit's groups of surviving mutants the attempt works on, from 1.
  * @typedef {{
- *   visit: number, attempt: number, outputs: string[], documents: string[], heads: Head[],
+ *   visit: number, attempt: number, outputs: string[], documents: string[], heads: Head[], firstHeads: Head[],
  *   sentBy: 'gate' | 'review' | 'ask' | 'answer' | null, redByGateFailure: boolean,
  *   groups: Group[],
  *   open: OpenAttempt | null, last: RunEvent | null, previous: RunEvent | null,
@@ -22,23 +22,25 @@ import { instructionOf } from '../decisions/questions.mjs'
  *   visit: how many times the run entered the node; attempt: within that visit. outputs: the
  *   paths of the node's first dispatch, which every later one reuses. documents: every document of
  *   the tracking folder the node's attempts wrote, outputs included. heads: the first
- *   attempt's of this visit. sentBy: what sent the run back into this visit, kept for each of
+ *   attempt's of this visit; firstHeads: those of the node's first visit, from which the story's
+ *   delivery counts its greens, a visit a human reopened after a block included. sentBy: what sent the run back into this visit, kept for each of
  *   its attempts. redByGateFailure: this visit started on gate failures, which stand for its red
  *   commit; a visit the review or a human refusal opened has no failing test, so its agent
  *   commits a red one, as does a visit a human's choice opened. groups: the surviving mutants this visit works on, one dispatch per file,
- *   or the story's delivery groups, one visit each.
+ *   
  * @typedef {import('../gates/mutation-report.mjs').SurvivorGroup | import('../pipeline/scenarios.mjs').DeliveryGroup} Group
  * @typedef {{ scenario: number, sha: string, subject: string, component: string, files: string[] }} Oracle
  *   the red commit holding a scenario's acceptance test: files relative to the working copy.
  * @typedef {{
  *   list: import('../pipeline/scenarios.mjs').StoryScenario[], exemption: import('../pipeline/scenarios.mjs').Exemption,
  *   groups: import('../pipeline/scenarios.mjs').DeliveryGroup[],
- *   oracles: Record<number, Oracle>, skeleton: Oracle | null, delivered: number,
+ *   oracles: Record<number, Oracle>, skeleton: Oracle | null, reds: Oracle[], delivered: number,
  * }} Scenarios
  *   the story's scenarios as the last plan the acceptance designer wrote lists them, the groups
  *   its implementation plan delivers them in, the one red holding every scenario's acceptance
  *   test (kept by scenario), the same red as the walking skeleton's (null for a story exempt of
- *   one), and how many groups a green made pass since.
+ *   one), every red of acceptance tests any plan recorded (kept past a REVISE: the files no green
+ *   changes), and how many groups a green made pass since.
  *   last and previous: this visit's last two step.recorded.
  * @typedef {{
  *   key: string, kind: import('../decisions/questions.mjs').QuestionKind, step: string, visit: number,
@@ -157,6 +159,7 @@ const enteredNode = (before, event) => {
     attempt: event.attempt,
     outputs: before?.outputs ?? open.outputs,
     documents: before?.documents ?? [],
+    firstHeads: before?.firstHeads ?? open.heads,
     ...thisVisit(before, open, event),
     previous: null,
   }
@@ -222,10 +225,16 @@ const recorded = (run, event) => {
  * @param {Scenarios | null} scenarios @param {RunEvent} event @returns {Scenarios | null}
  */
 const scenariosAfter = (scenarios, event) => {
-  const planned = event.scenarios ? { list: event.scenarios, exemption: event.exemption, groups: event.groups ?? [], oracles: {}, skeleton: event.skeleton ?? null, delivered: 0 } : scenarios
+  const planned = event.scenarios ? planned_(event, scenarios?.reds ?? []) : scenarios
   if (planned === null) return null
-  return { ...planned, oracles: withOracles(planned.oracles, event.oracles), delivered: Math.max(planned.delivered, event.green?.group ?? 0) }
+  return { ...planned, oracles: withOracles(planned.oracles, event.oracles), reds: withReds(planned.reds, event.oracles), delivered: Math.max(planned.delivered, event.green?.group ?? 0) }
 }
+
+/** A plan a step recorded, which starts the story's scenarios over, the reds of earlier plans kept. @param {RunEvent} event @param {Oracle[]} reds @returns {Scenarios} */
+const planned_ = (event, reds) => ({ list: event.scenarios, exemption: event.exemption, groups: event.groups ?? [], oracles: {}, skeleton: event.skeleton ?? null, reds, delivered: 0 })
+
+/** The reds recorded so far and the one a plan's pass just recorded, each once. @param {Oracle[]} reds @param {Oracle[] | undefined} recorded */
+const withReds = (reds, recorded = []) => [...reds, ...recorded.filter(({ sha }) => !reds.some((red) => red.sha === sha)).slice(0, 1)]
 
 /** @param {Record<number, Oracle>} oracles @param {Oracle[] | undefined} recorded */
 const withOracles = (oracles, recorded = []) => (recorded.length === 0 ? oracles : { ...oracles, ...Object.fromEntries(recorded.map((oracle) => [oracle.scenario, oracle])) })

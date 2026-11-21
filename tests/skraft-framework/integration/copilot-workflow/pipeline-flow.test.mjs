@@ -5,7 +5,7 @@ import { join } from 'node:path'
 import { runSkraftPipelineWorkflow } from '../../../../plugins/skraft-framework/engine/drivers/copilot-workflow/skraft-pipeline-workflow.mjs'
 import { PLUGIN_ROOT, copilotHost, actsAs, answeringSession, firstOptionPerson, simulatedContext } from './simulated-host.mjs'
 import {
-  CHECK, LENSES, MUTATION_LOOP_WORKFLOW, NOMINAL, PAY, PAY_OR_NOTHING, SCENARIOS, REFUSED_WORKFLOWS, SECURITY_AGENT, CYCLE_WORKFLOW, SLOW_CHECK, SLUG, acceptanceWith, componentSkillsBriefed, designateWorkflow, twoRedsWith, WRONG_PAY, blocked, briefOf, commit, deliverWith, judgeLabel, killsZero, proposesZero, fillOutputs, batchesSorted, lensDispatches, lensLabels, pipelineRepository, reviewsOf,
+  CHECK, LENSES, MUTATION_LOOP_WORKFLOW, NOMINAL, PAY, PAY_OR_NOTHING, SCENARIOS, REFUSED_WORKFLOWS, SECURITY_AGENT, SLUG, acceptanceWith, componentSkillsBriefed, designateWorkflow, WRONG_PAY, blocked, briefOf, commit, deliverWith, killsZero, proposesZero, fillOutputs, batchesSorted, lensDispatches, lensLabels, pipelineRepository, reviewsOf,
   issueProgressKept, scriptedLlm, visualsKept, writeResult, writesOnly,
 } from '../support/pipeline-repository.mjs'
 import { git, journal } from '../support/workspace.mjs'
@@ -28,11 +28,6 @@ const runOn = async (cwd, { acts, reviews, args = {}, person = firstOptionPerson
 
 const recorded = (events, step) => events.filter((event) => event.type === 'step.recorded' && event.step === step)
 
-/** Each checked attempt of a step with the exit code of each commit's replay, null for a commit not replayed. @param {object[]} events */
-const replaysOf = (events) => events
-  .filter((event) => event.type === 'commits.checked')
-  .map(({ step, commits }) => [step, commits.map(({ replay }) => replay?.exitCode ?? null)])
-
 test('the four phases run on a real repository: each agent commits its part, the gates run the tests, DELIVER closes, then PUBLISH writes the pull request', async (t) => {
   const { cwd } = pipelineRepository(t, { publish: { pullRequest: true, visuals: false, questionVersions: { pullRequest: 2, visuals: 1 } } })
   issueForge(t, cwd)
@@ -45,14 +40,12 @@ test('the four phases run on a real repository: each agent commits its part, the
     `skraft:solution-architect | skraft ${SLUG} · design · attempt 1`,
     ...lensDispatches('design_review'),
     `skraft:acceptance-designer | skraft ${SLUG} · distill · attempt 1`,
-    `skraft:replay-judge | ${judgeLabel(cwd, 'red')}`,
     ...lensDispatches('distill_review'),
-    `skraft:software-engineer | skraft ${SLUG} · deliver · group 1 of 1 · attempt 1`,
-    `skraft:replay-judge | ${judgeLabel(cwd, 'green')}`,
+    `skraft:software-engineer | skraft ${SLUG} · deliver · attempt 1`,
     ...lensDispatches('deliver_review'),
     `skraft:pr-writer | skraft ${SLUG} · pr_writer · attempt 1`,
   ]))
-  assert.deepEqual(calls.filter((call) => !call.prompt.includes('- Story: #42 — Pay by card')).map(({ agent }) => agent), ['skraft:replay-judge', 'skraft:replay-judge', 'skraft:cold-reader-lens'])
+  assert.deepEqual(calls.filter((call) => !call.prompt.includes('- Story: #42 — Pay by card')).map(({ agent }) => agent), ['skraft:cold-reader-lens'])
   const [started] = events
   const issue = join(cwd, '.copilot-tracking', 'skraft-plans', SLUG, ...issueFile(started.at.slice(0, 10)).split('/'))
   assert.deepEqual([started.artifacts, briefOf(calls.find(({ agent }) => agent === 'skraft:solution-researcher').prompt).inputs], [[issueFile(started.at.slice(0, 10))], [issue]])
@@ -60,9 +53,9 @@ test('the four phases run on a real repository: each agent commits its part, the
   assert.deepEqual(reviewsOf(events), [['design_review', 1, 'approved', 'adr'], ['distill_review', 1, 'approved', 'scenario_review'], ['scenario_review', 1, 'answered', 'deliver'], ['deliver_review', 1, 'approved', 'visuals']])
   assert.deepEqual(events.filter((event) => event.type === 'phase.closed').map((event) => event.phase), ['RESEARCH', 'DESIGN', 'DISTILL', 'DELIVER', 'PUBLISH'])
   assert.deepEqual(events.filter((event) => event.type === 'gate.ran').map(({ component, gate, status }) => `${component}/${gate} ${status}`), ['app/test pass'])
-  assert.deepEqual(events.filter((event) => event.type === 'commits.checked').map(({ step, commits }) => [step, commits.map(({ subject, kind, verdict, replay }) => [subject, kind, verdict, replay?.exitCode ?? null])]), [
-    ['distill', [[`test(${SLUG}): pay by card`, 'red', 'ok', 1]]],
-    ['deliver', [[`feat(${SLUG}): pay by card`, 'green', 'ok', 0]]],
+  assert.deepEqual(events.filter((event) => event.type === 'commits.checked').map(({ step, commits }) => [step, commits.map(({ subject, kind, verdict }) => [subject, kind, verdict])]), [
+    ['distill', [[`test(${SLUG}): pay by card`, 'red', 'ok']]],
+    ['deliver', [[`feat(${SLUG}): S1 pay by card`, 'green', 'ok']]],
   ])
   assert.deepEqual(events.filter((event) => event.type === 'step.recorded' && event.step === 'design').map((event) => event.committed.subject), [`docs(${SLUG}): design ${SLUG}`])
   assert.equal(git(cwd, 'log', '--format=%B', '--fixed-strings', `--grep=docs(${SLUG}): design ${SLUG}`), `docs(${SLUG}): design ${SLUG}\n\nRefs: #42`)
@@ -76,7 +69,7 @@ test('the four phases run on a real repository: each agent commits its part, the
   assert.deepEqual(events.filter((event) => event.type === 'step.recorded' && event.step === 'publish').map(({ outcome: result, reason }) => [result, reason]), [['local', `pull request not opened: ${NO_PULL_REQUEST}; pull-request.md holds its description, and skraft publish opens it once that is fixed`]])
   assert.ok(readFileSync(join(cwd, '.copilot-tracking', 'skraft-plans', SLUG, 'pull-request.md'), 'utf8').startsWith('Pay by card at checkout\n\nRefs #42\n\n## What changes\n\npay(amount) answers what was paid.\n'))
   const distillRed = events.find((event) => event.type === 'commits.checked' && event.step === 'distill').commits[0].sha
-  assert.ok(readFileSync(join(cwd, '.copilot-tracking', 'skraft-plans', SLUG, 'pull-request.md'), 'utf8').includes(`\n| \`${git(cwd, 'rev-parse', '--short=7', distillRed)}\` | test(${SLUG}): pay by card | 1 |\n`))
+  assert.ok(readFileSync(join(cwd, '.copilot-tracking', 'skraft-plans', SLUG, 'pull-request.md'), 'utf8').includes(`\n| \`${git(cwd, 'rev-parse', '--short=7', distillRed)}\` | test(${SLUG}): pay by card |\n`))
   assert.deepEqual(logs.filter((line) => line.startsWith('phase ')), ['phase RESEARCH', 'phase DESIGN', 'phase DISTILL', 'phase DELIVER', 'phase PUBLISH'])
   assert.deepEqual(phases, ['RESEARCH', 'DESIGN', 'DISTILL', 'DELIVER', 'PUBLISH'])
   assert.equal(logs.some((line) => line.startsWith('Waiting for you')), false, logs.join('\n'))
@@ -137,21 +130,19 @@ test('a researcher that writes the same invalid result twice is blocked without 
 
 test('gates that fail send DELIVER back as pass 2 with the failing gate in its brief, then the run completes', async (t) => {
   const { cwd } = pipelineRepository(t)
-  // A workflow that builds no scenario takes the wrong code to its gates: none replays the green.
-  designateWorkflow(cwd, CYCLE_WORKFLOW)
 
   const { outcome, calls, events } = await runOn(cwd, { acts: { 'software-engineer': [deliverWith(WRONG_PAY)] } })
 
   assert.deepEqual(outcome, { status: 'done', slug: SLUG, phase: 'PUBLISH', code: null, reason: 'PUBLISH closed' })
-  // research, design and its lenses, distill, the judge of its red and its lenses
-  const delivering = calls.slice(4 + LENSES.design_review.length + LENSES.distill_review.length)
+  // research, design and its lenses, distill and its lenses
+  const delivering = calls.slice(3 + LENSES.design_review.length + LENSES.distill_review.length)
   assert.deepEqual(batchesSorted(delivering.map((call) => call.label)), batchesSorted([`skraft ${SLUG} · deliver · attempt 1`, `skraft ${SLUG} · deliver · pass 2 · attempt 1`, ...lensLabels('deliver_review'), `skraft ${SLUG} · pr_writer · attempt 1`]))
   assert.ok(delivering[1].prompt.includes('- Pass: 2, after the gates sent the work back'), delivering[1].prompt)
   assert.match(delivering[1].prompt, /\nThe gates failed on pass 1:\n- app\/test: exited 1 \(evidence: .+test-1\.log\)/)
   assert.deepEqual(recorded(events, 'gates').map(({ visit, outcome: result, next }) => [visit, result, next]), [[1, 'fail', 'deliver'], [2, 'pass', 'deliver_review']])
   assert.deepEqual(recorded(events, 'deliver_review').map(({ visit, outcome: result, next }) => [visit, result, next]), [[1, 'approved', 'visuals']])
   assert.deepEqual(events.filter((event) => event.type === 'commits.checked' && event.step === 'deliver').map(({ visit, commits }) => [visit, commits.map(({ kind, verdict }) => `${kind} ${verdict}`)]), [
-    [1, ['red ok', 'green ok']],
+    [1, ['green ok']],
     [2, ['red ok', 'green ok']],
   ])
   assert.equal(git(cwd, 'show', 'HEAD:src/pay.mjs'), 'export const pay = (amount) => `paid ${amount}`')
@@ -176,51 +167,10 @@ test('mutants that survive get a proposal per file, the developer answers the mu
   assert.deepEqual(events.filter((event) => event.type === 'gate.ran').map(({ gate, status, survivors }) => `${gate} ${status}${survivors ? ` ${survivors}` : ''}`), ['test pass', 'mutation fail 1', 'test pass', 'mutation pass'])
   assert.deepEqual(recorded(events, 'mutation').map(({ visit, outcome: result, next }) => [visit, result, next]), [[1, 'fail', 'kill_proposal'], [2, 'pass', 'deliver_review']])
   assert.deepEqual(reviewsOf(events).filter(([step]) => step === 'mutation_review'), [['mutation_review', 1, 'approved', 'mutation_gates']])
-  assert.deepEqual(events.filter((event) => event.type === 'commits.checked' && event.step === 'kill_mutants').flatMap(({ commits }) => commits.map(({ subject, kind, verdict, replay }) => [subject, kind, verdict, replay])), [
-    [`test(${SLUG}): pay nothing for zero`, 'red', 'ok', null],
+  assert.deepEqual(events.filter((event) => event.type === 'commits.checked' && event.step === 'kill_mutants').flatMap(({ commits }) => commits.map(({ subject, kind, verdict }) => [subject, kind, verdict])), [
+    [`test(${SLUG}): pay nothing for zero`, 'red', 'ok'],
   ])
   assert.deepEqual(events.filter((event) => event.type === 'commits.checked' && event.step === 'kill_proposal'), [])
-})
-
-test('a test commit whose tests pass is refused as not red', async (t) => {
-  const { cwd } = pipelineRepository(t)
-  const green = (brief) => {
-    fillOutputs(brief, SCENARIOS)
-    commit(cwd, `test(${SLUG}): pay by card`, { 'tests/unit/check.mjs': CHECK, 'src/pay.mjs': PAY })
-    writeResult(brief, { status: 'done', summary: 'acceptance test committed' })
-  }
-
-  const { outcome, calls, events } = await runOn(cwd, { acts: { 'acceptance-designer': [green, blocked('cannot make it fail')] } })
-
-  const sha = git(cwd, 'rev-parse', '--short=7', 'HEAD')
-  const refusal = `commit ${sha} "test(${SLUG}): pay by card" is not red: the tests of app pass at it; the replay's output is in ${join(realpathSync(cwd), '.copilot-tracking', 'skraft-plans', SLUG, 'logs', `replay-${sha}-app-test.log`)}; a test commit must fail on an assertion before the code that makes it pass`
-  assert.deepEqual(recorded(events, 'distill')[0].failures, [refusal])
-  assert.equal(recorded(events, 'distill')[0].code, 'tdd')
-  assert.deepEqual(events.find((event) => event.type === 'commits.checked' && event.step === 'distill').commits.map(({ verdict, replay }) => [verdict, replay.component, replay.exitCode]), [['not-red', 'app', 0]])
-  const retried = calls.find((call) => call.label === `skraft ${SLUG} · distill · attempt 2`)
-  assert.ok(retried.prompt.includes(`Refused in attempt 1 of 3:\n- ${refusal}`), retried.prompt)
-  assert.deepEqual([outcome.code, outcome.reason], ['agent-blocked', 'acceptance-designer is blocked: cannot make it fail'])
-})
-
-test('replaying red commits for more than a fifth of a phase warns the developer of each phase it happens in, in the workflow log, with the way to replay less; with last-red only the last red commit of the story is replayed, and nothing is said', async (t) => {
-  const every = pipelineRepository(t)
-  const lastRed = pipelineRepository(t, { tdd: { replay: 'last-red' } })
-  // Two red commits in one pass take a workflow that builds no scenario.
-  designateWorkflow(lastRed.cwd, CYCLE_WORKFLOW)
-
-  const all = await runOn(every.cwd, { acts: { 'acceptance-designer': [acceptanceWith(SLOW_CHECK)] } })
-  const last = await runOn(lastRed.cwd, { acts: { 'acceptance-designer': [twoRedsWith(SLOW_CHECK)] } })
-
-  assert.deepEqual([all.outcome.status, last.outcome.status], ['done', 'done'], `${all.outcome.reason} / ${last.outcome.reason}`)
-  assert.deepEqual(replaysOf(all.events), [['distill', [1]], ['deliver', [0]]])
-  const slow = all.events.filter((event) => event.type === 'tdd.replay-slow')
-  assert.deepEqual(slow.map(({ phase }) => phase), ['DISTILL', 'DELIVER'])
-  assert.ok(slow.every(({ replayMs, phaseMs }) => replayMs >= 1000 && replayMs > 0.2 * phaseMs), JSON.stringify(slow))
-  const warnings = (logs) => logs.filter((line) => line.includes('replaying test commits took'))
-  assert.deepEqual(warnings(all.logs).map((line) => line.replace(/took \d+%/, 'took N%')), ['DISTILL', 'DELIVER'].map((phase) => `${SLUG}: replaying test commits took N% of ${phase}; set "tdd": { "replay": "last-red" } in skraft-config.json to replay only the last test commit of each story`))
-  assert.deepEqual(replaysOf(last.events), [['distill', [null, 1]], ['deliver', [null, null]]])
-  assert.deepEqual(last.events.filter((event) => event.type === 'tdd.replay-slow'), [])
-  assert.deepEqual(warnings(last.logs), [])
 })
 
 test('the software engineer\'s call opens with the SKILL.md of each skill its components ask for, from .github/skills/ or the plugin, and names the one found nowhere', async (t) => {
@@ -233,10 +183,8 @@ test('the software engineer\'s call opens with the SKILL.md of each skill its co
   componentSkillsBriefed(cwd, skillFolder, calls.map(({ prompt }) => prompt))
 })
 
-test('a feat commit with no test commit before it in the pass is refused, the acceptance test of DISTILL notwithstanding', async (t) => {
+test('a feat commit that names no group of the story is refused, the acceptance test of DISTILL notwithstanding', async (t) => {
   const { cwd } = pipelineRepository(t)
-  // A pass on no scenario, as every DELIVER pass of a workflow that builds none.
-  designateWorkflow(cwd, CYCLE_WORKFLOW)
   const greenFirst = (brief) => {
     fillOutputs(brief, 'Paid by card.\n')
     commit(cwd, `feat(${SLUG}): pay by card`, { 'src/pay.mjs': PAY }, brief)
@@ -246,9 +194,9 @@ test('a feat commit with no test commit before it in the pass is refused, the ac
   const { outcome, calls, events } = await runOn(cwd, { acts: { 'software-engineer': [greenFirst, blocked('cannot rewrite the history')] } })
 
   const sha = git(cwd, 'rev-parse', '--short=7', 'HEAD')
-  const refusal = `commit ${sha} "feat(${SLUG}): pay by card" makes code pass with no test commit since the last feat or fix; rewrite it after a failing test commit`
+  const refusal = `commit ${sha} "feat(${SLUG}): pay by card" names no group still to deliver, or one before the last you committed: commit the groups in the order of your implementation plan, each subject starting with its group's scenarios (S1, S2 <rule>)`
   assert.deepEqual(recorded(events, 'deliver').map(({ outcome: result, code, failures }) => [result, code, failures]), [['failed', 'tdd', [refusal]], ['failed', 'agent-blocked', ['cannot rewrite the history']]])
-  assert.deepEqual(events.filter((event) => event.type === 'commits.checked' && event.step === 'deliver').map(({ commits }) => commits.map(({ kind, verdict, replay }) => [kind, verdict, replay])), [[['green', 'green-without-red', null]]])
+  assert.deepEqual(events.filter((event) => event.type === 'commits.checked' && event.step === 'deliver').map(({ commits }) => commits.map(({ kind, verdict }) => [kind, verdict])), [[['green', 'green-out-of-order']]])
   const retried = calls.find((call) => call.label === `skraft ${SLUG} · deliver · attempt 2`)
   assert.ok(retried.prompt.includes(`Refused in attempt 1 of 3:\n- ${refusal}`), retried.prompt)
   assert.deepEqual(events.filter((event) => event.type === 'gate.ran'), [])
@@ -263,7 +211,7 @@ test('a repository workflow dispatches its own agent between the architect and t
   assert.deepEqual(outcome, { status: 'done', slug: SLUG, phase: 'DELIVER', code: null, reason: 'DELIVER closed' })
   const agents = calls.filter(({ agent }) => !agent.endsWith('-lens') && !agent.endsWith('finding-refuter'))
   assert.deepEqual(agents.map(({ agent }) => agent), [
-    'skraft:solution-researcher', 'skraft:solution-architect', SECURITY_AGENT, 'skraft:acceptance-designer', 'skraft:replay-judge', 'skraft:software-engineer',
+    'skraft:solution-researcher', 'skraft:solution-architect', SECURITY_AGENT, 'skraft:acceptance-designer', 'skraft:software-engineer',
   ])
   assert.equal(agents[2].label, `skraft ${SLUG} · security · attempt 1`)
   assert.match(agents[2].prompt, new RegExp(`^## Skraft dispatch: ${SECURITY_AGENT} \\(DESIGN\\)\\n`))

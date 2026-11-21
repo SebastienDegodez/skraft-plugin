@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { InMemoryGit, InMemoryTracking, MUTATION_WORKFLOW, ScriptedMachine, ScriptedReplay, hexSha, judgeAnswer } from '../support/in-memory-host.mjs'
+import { InMemoryGit, InMemoryTracking, MUTATION_WORKFLOW, ScriptedMachine } from '../support/in-memory-host.mjs'
 import { API, SLUG, TRACKING, agent, green, scripted, tddCycle } from '../support/pipeline-host.mjs'
 import { waitingOnEnvironment } from '../support/decisions.mjs'
 import { ownerOfCause } from '../../../../plugins/skraft-framework/engine/domain/pipeline/incidents.mjs'
@@ -9,7 +9,6 @@ const unavailable = () => ({ ok: false, unavailable: true, text: '' })
 const upToDeliver = (it) => [agent()(it), agent()(it), agent()(it)]
 const asked = (host) => host.events().filter(({ type }) => type === 'question.asked').at(-1)
 const dispatched = (host, step) => host.agentRunner.dispatches.filter(({ label }) => label.includes(` · ${step} `)).length
-const replayLog = (sha, command = 'test') => `${TRACKING}/logs/replay-${sha}-api-${command}.log`
 /** A front end sharing the root of api: what changes there touches both. */
 const LINTED = { name: 'web', root: '.', stack: 'react', bdd: false, mocking: { strategy: 'inprocess' }, paths: { src: ['web/src'], tests: ['web/src'] }, commands: { lint: 'npx eslint .' } }
 
@@ -188,35 +187,6 @@ test('a mutation run stopped by a signal, or by its time running out, is not jud
   }
 })
 
-test('a replay stopped by a signal or a crash goes to the judge with what it printed; the judge asking a human, the designer keeps its attempts', async () => {
-  const host = scripted({ replay: new ScriptedReplay({ exits: { 'root-1': 139 }, outputs: { 'root-1 dotnet test': 'Segmentation fault (core dumped)\n' } }) }, (it) => [agent()(it), agent()(it), agent()(it), unavailable])
-  host.agentRunner.judge = () => judgeAnswer('ask-human', 'the test runner crashed before any test ran')
-
-  const outcome = await host.start()
-
-  const answer = `${TRACKING}/logs/judge-root-1-red.md`
-  assert.equal(outcome.status, 'waiting')
-  assert.ok(outcome.reason.startsWith(waitingOnEnvironment('distill', `the replay judge asks a human about the red commit root-1: read ${answer}`, 1, { owner: 'judge', log: answer }).split('The run so far')[0]))
-  assert.ok(outcome.reason.includes('Commits: root-1 distill ok.'))
-  assert.ok(host.tracking.files.get(`${SLUG}/logs/replay-root-1-api-test.log`).includes('\nexit: 139\n--- stdout\nSegmentation fault (core dumped)\n'))
-  assert.ok(host.agentRunner.judged[0].prompt.includes(`\n- api: \`dotnet test\` at the commit root-1: exit 139; printed to ${replayLog('root-1')}\n`), host.agentRunner.judged[0].prompt)
-  assert.equal(dispatched(host, 'distill'), 1)
-})
-
-test('a replay names its commit by its short sha, in the question and in the names of its logs', async () => {
-  const git = new InMemoryGit({ hex: true, repositories: { '.': { mergeBases: { main: hexSha(0) } } } })
-  const host = scripted({ git }, (it) => [agent()(it), agent()(it), agent()(it), unavailable])
-  host.agentRunner.judge = () => judgeAnswer('ask-human', 'Docker does not answer')
-
-  const outcome = await host.start()
-
-  const answer = `${TRACKING}/logs/judge-c0ffee1-red.md`
-  assert.ok(outcome.reason.startsWith(waitingOnEnvironment('distill', `the replay judge asks a human about the red commit c0ffee1: read ${answer}`, 1, { owner: 'judge', log: answer }).split('The run so far')[0]))
-  assert.ok(outcome.reason.includes('Commits: c0ffee1 distill ok.'))
-  assert.ok(host.progress.lines.includes(`${SLUG}: distill judges the red commit c0ffee1 — standard · sonnet`), host.progress.lines.join('\n'))
-  assert.ok(host.agentRunner.judged[0].prompt.includes(`printed to ${replayLog('c0ffee1')}\n`), host.agentRunner.judged[0].prompt)
-})
-
 test('a gate a person interrupts with Ctrl-C, on POSIX or on Windows, stops the run without a question; the next run runs the gates again', async () => {
   for (const exit of [130, 0xC000013A]) {
     const machine = new ScriptedMachine({ exits: { '. $ dotnet test': exit } })
@@ -250,27 +220,4 @@ test('a mutation run a person interrupts is not judged by its report: the run st
   const outcome = await host.start()
 
   assert.deepEqual([outcome.code, outcome.reason], ['interrupted', `api/mutation: was interrupted by a person (exit 130) (evidence: ${TRACKING}/gates/api/mutation-1.log); run the pipeline again to go on`])
-})
-
-test('a replay a person interrupts stops the run without a question and without a refusal; the next run replays the commit', async () => {
-  const replay = new ScriptedReplay({ exits: { 'root-1': 130 } })
-  const host = scripted({ replay }, (it) => [agent()(it), agent()(it), agent()(it), unavailable])
-
-  const outcome = await host.start()
-
-  assert.deepEqual([outcome.status, outcome.code, outcome.reason], ['blocked', 'interrupted', 'replaying root-1 for api: dotnet test was interrupted by a person (exit 130); run the pipeline again to go on'])
-  assert.deepEqual(host.events().filter(({ type, step }) => type === 'step.recorded' && step === 'distill'), [])
-  replay.exits['root-1'] = 1
-  await host.run()
-  assert.deepEqual(host.replay.lines(), ['root-1 ./. $ dotnet test', 'root-1 ./. $ dotnet test', 'root-0 ./. $ dotnet test'])
-  assert.equal(dispatched(host, 'distill'), 1)
-})
-
-test('a replay a person interrupts names its commit by its short sha', async () => {
-  const git = new InMemoryGit({ hex: true, repositories: { '.': { mergeBases: { main: hexSha(0) } } } })
-  const host = scripted({ git, replay: new ScriptedReplay({ exits: { [hexSha(1)]: 130 } }) }, (it) => [agent()(it), agent()(it), agent()(it), unavailable])
-
-  const outcome = await host.start()
-
-  assert.equal(outcome.reason, 'replaying c0ffee1 for api: dotnet test was interrupted by a person (exit 130); run the pipeline again to go on')
 })

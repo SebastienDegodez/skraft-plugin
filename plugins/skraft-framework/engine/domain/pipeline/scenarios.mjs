@@ -26,6 +26,9 @@
  */
 
 export const WALKING_SKELETON = '@walking-skeleton'
+
+/** A group as the subjects of its green name it: `S1, S2`. @param {number[]} numbers */
+export const groupLabel = (numbers) => numbers.map((index) => `S${index}`).join(', ')
 const EXEMPTIONS = Object.freeze(/** @type {Exemption[]} */ (['none', 'library', 'refactoring', 'docs-only']))
 const HEADING = /^#{2,3}\s+Scenarios\s*$/i
 const ROW = /^\s*\|(.*)\|\s*$/

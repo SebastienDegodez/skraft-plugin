@@ -105,7 +105,7 @@ test('the view follows a run, its open step, its attempts and its cost', async (
 })
 
 test('the view of a run at its gates names them, and of a completed run says done with each review verdict and each gate result', async () => {
-  const host = scripted({}, (it) => [agent()(it), agent()(it), agent()(it), agent({ work: ({ git }) => git.commit('feat(checkout): pay', ['src/Pay.cs', 'tests/PayTests.cs']) })(it)])
+  const host = scripted({}, (it) => [agent()(it), agent()(it), agent()(it), agent({ work: ({ git }) => git.commit('feat(checkout): S1 pay', ['src/Pay.cs', 'tests/PayTests.cs']) })(it)])
   const seen = []
   host.machine.meanwhile['. $ dotnet build'] = async () => { seen.push((await host.view()).current) }
 

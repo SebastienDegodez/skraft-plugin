@@ -3,7 +3,7 @@
 // result JSON it names, change files and make real Git commits. The gates then run the
 // repository's real test command. No doubles: every driver test stages the same repository.
 import assert from 'node:assert/strict'
-import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs'
 import { dirname, isAbsolute, join } from 'node:path'
 import { answerYaml, withContext } from '../../unit/support/answer-yaml.mjs'
 import { PLUGIN_ROOT, commitAll, git, tempFolder } from './workspace.mjs'
@@ -557,11 +557,11 @@ export const writesOnly = (result = { status: 'done', summary: 'outputs written'
   writeResult(brief, result)
 }
 
-/** Whether the brief puts a group of the story's scenarios in the engineer's hands. @param {Brief} brief */
-const onScenario = (brief) => brief.prompt.includes('\n- Group: ')
+/** Whether the brief puts the groups of the story's scenarios in the engineer's hands. @param {Brief} brief */
+const onScenario = (brief) => brief.prompt.includes('\n- Groups, in the order you deliver them')
 
 /**
- * The engineer's work: on a group of scenarios, the one green commit of the code with its unit
+ * The engineer's work: on the groups of the story, the one green commit of the code with its unit
  * test, once the group passes; on a pass with none (the gates or the review sent the work back, or a
  * workflow that builds no scenario), its TDD cycle: a red test commit while the code is missing
  * or wrong, then the code.
@@ -572,16 +572,13 @@ export const deliverWith = (code) => (brief, { cwd, slug }) => {
   const fixing = brief.prompt.includes('The gates failed on pass')
   fillOutputs(brief, fixing ? 'Fixed the amount.\n' : 'Paid by card.\n')
   const test = { [`tests/pay-${fixing ? 'fix' : 'amount'}.md`]: 'pay(10) answers paid 10\n' }
-  if (onScenario(brief)) commit(cwd, `feat(${slug}): pay by card`, { ...test, 'src/pay.mjs': code }, brief)
+  if (onScenario(brief)) commit(cwd, `feat(${slug}): S1 pay by card`, { ...test, 'src/pay.mjs': code }, brief)
   else {
     commit(cwd, `test(${slug}): ${fixing ? 'pay answers the amount paid' : 'pay a card amount'}`, test, brief)
     commit(cwd, `${fixing ? 'fix' : 'feat'}(${slug}): pay by card`, { 'src/pay.mjs': code }, brief)
   }
   writeResult(brief, { status: 'done', summary: 'delivered' })
 }
-
-/** CHECK taking a second before its assertion: replaying a commit then takes longer than the agent's work, on any machine. */
-export const SLOW_CHECK = CHECK.replace("if (pay(10) !== 'paid 10') {\n", "await new Promise((resolve) => setTimeout(resolve, 1000))\nif (pay(10) !== 'paid 10') {\n")
 
 /** The Scenarios table of the test plan: the story's one scenario, its walking skeleton, in `app`. */
 export const SCENARIOS = '\n## Scenarios\n\n| # | Scenario | Component | Tags |\n|---|---|---|---|\n| S1 | Customer pays by card | app | @walking-skeleton |\n'
@@ -598,9 +595,10 @@ const shortShaOf = (cwd, subject) => git(cwd, 'log', '-1', '--format=%H', '--fix
  * walking skeleton and acceptance test.
  * @param {string} cwd @param {string} [slug]
  */
-export const scenarioReviewText = (cwd, slug = SLUG) => {
+export const scenarioReviewText = (cwd, slug = SLUG, visit = 1) => {
   const red = `test(${slug}): pay by card`
-  return `Read the 1 scenario of the story before DELIVER builds them: S1 "Customer pays by card" (app; @walking-skeleton). DELIVER makes them pass in 1 group: 1. S1. The acceptance tests of every scenario, the walking skeleton and the skeleton of its chain are commit ${shortShaOf(cwd, red)} "${red}": src/pay.mjs, ${FIRST_ACCEPTANCE.path}, tests/unit/check.mjs. APPROVED delivers them; REVISE sends DISTILL back with your corrections (edit the .feature or the test yourself first if you like, and say so).`
+  const log = join(realpathSync(cwd), '.copilot-tracking', 'skraft-plans', slug, 'logs', `distill-${visit}-red.log`)
+  return `Read the 1 scenario of the story before DELIVER builds them: S1 "Customer pays by card" (app; @walking-skeleton). DELIVER makes them pass in one pass, one commit per group, in this order: 1. S1. The acceptance tests of every scenario, the walking skeleton and the skeleton of its chain are commit ${shortShaOf(cwd, red)} "${red}": src/pay.mjs, ${FIRST_ACCEPTANCE.path}, tests/unit/check.mjs. skraft does not run them: check that each fails on its own assertion; the designer's run is in ${log}. APPROVED delivers them; REVISE sends DISTILL back with your corrections (edit the .feature or the test yourself first if you like, and say so).`
 }
 
 /**
@@ -616,27 +614,6 @@ export const acceptanceWith = (check) => (brief, { cwd, slug }) => {
   if (!written) commit(cwd, `test(${slug}): pay by card`, files, brief)
   writeResult(brief, { status: 'done', summary: 'acceptance tests committed red' })
 }
-
-/**
- * The acceptance designer of a workflow that builds no scenario committing `check` as acceptanceWith
- * does, then a second failing test of the story.
- * @param {string} check @returns {Act}
- */
-export const twoRedsWith = (check) => (brief, repository) => {
-  acceptanceWith(check)(brief, repository)
-  commit(repository.cwd, `test(${repository.slug}): pay by card twice`, { 'tests/pay-twice.md': 'pay(10) answers paid 10 each time\n' }, brief)
-}
-
-/** The plugin's workflow as a repository ejected it before stories were built scenario by scenario: no each="scenario", no scenario review. */
-export const CYCLE_WORKFLOW = [
-  ['distill  [shape=box, agent="acceptance-designer", phase="DISTILL", each="scenario"]', 'distill  [shape=box, agent="acceptance-designer", phase="DISTILL"]'],
-  ['deliver  [shape=box, agent="software-engineer", phase="DELIVER", each="scenario"]', 'deliver  [shape=box, agent="software-engineer", phase="DELIVER"]'],
-  ['  scenario_review [shape=hexagon, question="scenario-review"]\n', ''],
-  ['  distill_review -> scenario_review [label="APPROVED"]\n  scenario_review -> deliver [label="APPROVED"]\n  scenario_review -> distill [label="REVISE", max_visits=2]\n', '  distill_review -> deliver [label="APPROVED"]\n'],
-].reduce((text, [old, now]) => {
-  if (!text.includes(old)) throw new Error(`the plugin's workflow no longer holds ${JSON.stringify(old)}`)
-  return text.replace(old, now)
-}, readFileSync(join(PLUGIN_ROOT, 'workflows', 'pipeline.skraft.dot'), 'utf8'))
 
 const CONTEXT_MAP = 'docs/architecture/context-map.md'
 
@@ -750,38 +727,16 @@ export const reviewBriefOf = (prompt) => {
  *   what one lens or the refuter answers to one brief: its final message.
  */
 
-/** The replay judge's final message. @param {string} decision @param {string} [note] */
-export const judgeVerdict = (decision, note = 'the logs show it') => ['```yaml', `decision: ${decision}`, `note: "${note}"`, '```'].join('\n')
-
-/**
- * The label the replay judge is started under on the nominal run: `red` for the acceptance
- * designer's red of the walking skeleton and the acceptance tests in DISTILL, `green` for the
- * software engineer's feat commit of the group in DELIVER; each named by the first 7 characters of its sha.
- * @param {string} cwd @param {'red' | 'green'} kind
- */
-export const judgeLabel = (cwd, kind) => {
-  const [step, subject, judged, pass] = {
-    red: ['distill', `test(${SLUG}): pay by card`, 'red', ''],
-    green: ['deliver', `feat(${SLUG}): pay by card`, 'green', ''],
-  }[kind]
-  return `skraft ${SLUG} · ${step} · judge ${judged} ${shortShaOf(cwd, subject)} of attempt 1${pass} · attempt 1`
-}
-
 /**
  * The scripted LLM of one run: each dispatch is answered by the next act queued for its agent,
  * else by its NOMINAL act. A lens `<name>` answers the next of `reviews[name]`, the refuter the
  * next of `reviews.refuter`; what a queue does not script passes, or is confirmed.
- * The replay judge answers the next of `judges`, else accepts.
- * `dispatched` lists the phase briefs in dispatch order, `reviewed` the lens and refuter briefs,
- * `judged` the replay judge's.
- * @param {{ cwd: string, slug?: string, acts?: Record<string, Act[]>, reviews?: Record<string, ReviewAnswer[]>, judges?: string[] }} options
+ * `dispatched` lists the phase briefs in dispatch order, `reviewed` the lens and refuter briefs.
+ * @param {{ cwd: string, slug?: string, acts?: Record<string, Act[]>, reviews?: Record<string, ReviewAnswer[]> }} options
  */
-export const scriptedLlm = ({ cwd, slug = SLUG, acts = {}, reviews = {}, judges = [] }) => {
+export const scriptedLlm = ({ cwd, slug = SLUG, acts = {}, reviews = {} }) => {
   const queues = Object.fromEntries(Object.entries(acts).map(([agent, list]) => [agent, [...list]]))
   const answers = Object.fromEntries(Object.entries(reviews).map(([name, list]) => [name, [...list]]))
-  const verdicts = [...judges]
-  /** @type {string[]} */
-  const judged = []
   /** @type {Brief[]} */
   const dispatched = []
   /** @type {Array<NonNullable<ReturnType<typeof reviewBriefOf>>>} */
@@ -794,21 +749,14 @@ export const scriptedLlm = ({ cwd, slug = SLUG, acts = {}, reviews = {}, judges 
     if (next !== undefined) return next
     return brief.name === 'refuter' ? refutes('confirmed') : says(brief.lens, 'pass')
   }
-  /** The replay judge's final message: the next scripted one, else it accepts. @param {string} prompt @returns {string} */
-  const judge = (prompt) => {
-    judged.push(prompt)
-    return verdicts.shift() ?? judgeVerdict('accept')
-  }
   return {
     dispatched,
     reviewed,
-    judged,
     /**
      * Acts on one brief, as the agent it names; a lens or the refuter returns its final message.
      * @param {string} prompt @returns {string | undefined}
      */
     act: (prompt) => {
-      if (prompt.startsWith('Judge the ')) return judge(prompt)
       const asked = reviewBriefOf(prompt)
       if (asked !== null) return review(asked)
       const brief = briefOf(prompt)

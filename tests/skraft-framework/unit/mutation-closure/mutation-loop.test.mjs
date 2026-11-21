@@ -12,7 +12,7 @@ const REPORT = 'StrykerOutput/reports/mutation-report.json'
 const STRYKER = '. $ dotnet stryker'
 /** The green of the story's scenario: the source files it changes, with their unit test; body: its body. */
 const changing = (files, body = '') => ({ git }) => {
-  git.commit(`feat(${SLUG}): checkout pays by card`, ['tests/CheckoutTests.cs', ...files], body)
+  git.commit(`feat(${SLUG}): S1 checkout pays by card`, ['tests/CheckoutTests.cs', ...files], body)
 }
 const upToDeliver = (it, files = ['src/Checkout.cs', 'src/Refund.cs'], body = '') => [agent()(it), agent()(it), agent()(it), agent({ work: changing(files, body) })(it)]
 const recorded = (host, step) => host.events().filter((event) => event.type === 'step.recorded' && event.step === step)
@@ -119,11 +119,10 @@ test('surviving mutants of the files the story changed get one proposal per file
     ['pass', null, null, [{ scope: 'boundary', bar: 80, score: 100, counted: 2, survivors: [] }]],
   ])
   const killCommits = host.events().filter((event) => event.type === 'commits.checked' && event.step === 'kill_mutants').flatMap((event) => event.commits)
-  assert.deepEqual(killCommits.map(({ subject, kind, verdict, replay }) => [subject, kind, verdict, replay]), [
-    [`test(${SLUG}): kill the mutants of Checkout`, 'red', 'ok', null],
+  assert.deepEqual(killCommits.map(({ subject, kind, verdict }) => [subject, kind, verdict]), [
+    [`test(${SLUG}): kill the mutants of Checkout`, 'red', 'ok'],
   ])
   assert.deepEqual(host.events().filter((event) => event.type === 'commits.checked' && event.step === 'kill_proposal'), [])
-  assert.ok(!host.replay.replays.some(({ sha }) => killCommits.some((commit) => commit.sha === sha)), host.replay.lines().join('\n'))
 })
 
 test('the core and the boundary are judged apart: only the scope that misses its bar hands its survivors out', async () => {
@@ -381,7 +380,7 @@ test('a component reads its mutants where its tool writes them, PIT\'s mutations
     'orders/src/main/java/com/acme/domain/Price.java': 'class Price {}\n',
   }
   const orderGreen = ({ git }) => {
-    git.commit(`feat(${SLUG}): order`, ['orders/src/test/OrderTest.java', ...Object.keys(sources), 'orders/src/main/scala/com/acme/Ship.scala'])
+    git.commit(`feat(${SLUG}): S1 order`, ['orders/src/test/OrderTest.java', ...Object.keys(sources), 'orders/src/main/scala/com/acme/Ship.scala'])
   }
   const killsOrders = (it) => agent({ work: ({ git }) => git.commit(`test(${SLUG}): kill the order mutants`, ['orders/src/test/OrderTest.java']) })(it)
   const host = mutating({ components: [service], machine: new ScriptedMachine(), files: sources, answers: APPLYING }, (it) => [

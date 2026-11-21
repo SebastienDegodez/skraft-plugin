@@ -7,7 +7,7 @@ import { isDocument, writtenDocuments } from '../../domain/pipeline/documents.mj
 import { callsOf, callsPath } from '../../domain/pipeline/precheck-calls.mjs'
 import { SCAN_FILE } from '../../domain/pipeline/structural-scan.mjs'
 import { proposalPath, proposalTemplate } from '../../domain/pipeline/proposals.mjs'
-import { allowedPaths, checklistsOf, makesCommits, roleFolders, roleOf } from '../../domain/pipeline/roles.mjs'
+import { allowedPaths, checklistsOf, delivers, makesCommits, roleFolders, roleOf, writesScenarios } from '../../domain/pipeline/roles.mjs'
 import { writesComponentTests } from '../../domain/pipeline/component-skills.mjs'
 import { engineMessage, issueOf } from '../../domain/pipeline/commits.mjs'
 import { RUN_REPORT_FILE, renderRunReport, runReport } from '../../domain/reporting/run-report.mjs'
@@ -23,7 +23,6 @@ import { baseOf, loadConfig } from '../config/bases.mjs'
 import { assignmentOf, modelOf, reviewAssignmentsOf } from '../config/agent-models.mjs'
 import { runGates } from '../gates/gate-runs.mjs'
 import { loadWorkflow } from '../workflow/load-workflow.mjs'
-import { scenarioNodes } from '../../domain/workflow/workflow.mjs'
 import { policyLines } from '../../domain/config/infrastructure-policy.mjs'
 import { JournalConflict } from '../journal/run-journal.mjs'
 import { runReview } from '../review/review-runs.mjs'
@@ -303,12 +302,12 @@ const work = (context, run, next) => {
 }
 
 /**
- * A node that runs once per scenario of the story stops the run when the configuration lists no
- * component to write the scenarios in; null when it lists one, or for any other node.
+ * The node that writes the story's scenarios and the one that delivers them stop the run when
+ * the configuration lists no component to write them in; null when it lists one, or for any other node.
  * @param {Context} context @param {WorkStep} next
  * @returns {Promise<RunOutcome> | null}
  */
-const noScenarioComponent = (context, { node, phase }) => (node.each === 'scenario' && context.config.components.length === 0
+const noScenarioComponent = (context, { node, phase }) => ((writesScenarios(node) || delivers(node)) && context.config.components.length === 0
   ? stop(context, phase, 'no-components', `${CONFIG_FILE} lists no component, so ${node.id} has no component to write the story's scenarios in; run skraft init to detect them`)
   : null)
 
@@ -675,7 +674,6 @@ const briefOf = (context, run, next, job) => ({
   ...briefStack(context, run, job.role),
   missing: next.missing.map((path) => context.deps.files.location(context.slug, path)),
   ...briefFeedback(next),
-  acceptance: scenarioNodes(context.loaded.workflow).length > 0 ? [] : acceptanceCommits(context),
   ...briefRole(next, job),
   ...briefScenarioOf(context, run, next),
 })
@@ -687,30 +685,29 @@ const briefOf = (context, run, next, job) => ({
  */
 const briefScenarioOf = (context, run, next) => {
   const scenario = briefScenario(context, run, next)
-  return { scenario, policy: scenario === null || scenario.kind === 'delivery' ? [] : context.config.components.flatMap(policyLines) }
+  return { scenario, policy: scenario?.kind === 'plan' ? context.config.components.flatMap(policyLines) : [] }
 }
 
 /**
- * The scenarios a pass works on as the brief tells them, with the red of the acceptance tests its
- * green may not change and the test command it chains its commit to; null for a pass on none.
+ * The scenarios a pass works on as the brief tells them: on the plan's pass where it sends the
+ * output of its run of the acceptance tests, on a delivery pass every group with the test command
+ * its commit chains to, and the reds whose files no later pass changes; null for a pass on none.
  * @param {Context} context @param {RunState} run @param {WorkStep} next
  * @returns {import('../../domain/pipeline/dispatch-brief.mjs').BriefScenario | null}
  */
-const briefScenario = ({ loaded, config, deps, slug }, run, next) => {
-  const pass = scenarioPassOf(loaded.workflow, run, next)
+const briefScenario = ({ config, deps, slug }, run, { node, visit }) => {
+  const pass = scenarioPassOf(run, node)
   if (pass === null) return null
-  const component = pass.scenario?.component ?? null
-  const oracles = pass.kind === 'delivery' ? pass.oracles.slice(0, 1).map((oracle) => oracleTold(oracle, config.components)) : []
-  const scenarios = pass.scenarios.map(({ index, title, component: where, tags }) => ({ index, title, component: where, tags }))
-  return { kind: pass.kind, index: pass.index, of: pass.of, component, scenarios, pending: pass.pending.map(({ index }) => index), oracles, skeleton: skeletonTold(pass, component, config.components), test: scenarioTest(config, run, component), redLog: pass.kind === 'plan' ? deps.files.location(slug, `logs/${next.node.id}-${next.visit}-red.log`) : null }
+  const groups = pass.groups.map((group) => briefGroup(group, pass.groups.length, scenarioTest(config, run, group.scenarios[0]?.component ?? null)))
+  const oracles = pass.kind === 'plan' ? [] : pass.reds.map((red) => oracleTold(red, config.components))
+  return { kind: pass.kind, groups, oracles, skeleton: pass.skeleton !== null, redLog: pass.kind === 'plan' ? deps.files.location(slug, `logs/${node.id}-${visit}-red.log`) : null }
 }
 
-/**
- * The walking skeleton a delivery pass keeps passing: the one of its group's component, when
- * another commit than the acceptance tests' red holds it.
- * @param {import('./scenario-checks.mjs').ScenarioPass} pass @param {string | null} component @param {import('../../domain/config/skraft-config.mjs').Component[]} components
- */
-const skeletonTold = ({ kind, skeleton, oracles }, component, components) => (kind === 'delivery' && skeleton?.component === component && skeleton.sha !== oracles[0]?.sha ? oracleTold(skeleton, components) : null)
+/** @param {import('./scenario-checks.mjs').PassGroup} group @param {number} of @param {string | null} test */
+const briefGroup = ({ index, scenarios, pending }, of, test) => ({
+  index, of, test, pending: pending.map((scenario) => scenario.index),
+  scenarios: scenarios.map(({ index: number, title, component, tags }) => ({ index: number, title, component, tags })),
+})
 
 /**
  * A red of an acceptance test as the engineer is told it: the files it never changes.
@@ -744,23 +741,6 @@ const briefRole = ({ group, groups, node }, { role, drafts, language, checklists
   language: role.prose ? language : null,
   checklists,
 })
-
-/**
- * The red commits the last attempt of each pass of an acceptance step confirmed: what an agent
- * committing failing tests only left for the TDD cycles after it.
- * @param {Context} context
- * @returns {string[]} `<sha> "<subject>"`, each once
- */
-const acceptanceCommits = ({ journal, loaded }) => {
-  const checked = journal.events.filter((event) => event.type === 'commits.checked' && isAcceptanceStep(loaded.workflow.nodes[event.step]))
-  const last = [...new Map(checked.map((event) => [`${event.step} ${event.visit}`, event])).values()]
-  // A pass that went on refused none of its commits.
-  const reds = last.flatMap((event) => event.commits.filter((/** @type {{ kind: string }} */ commit) => commit.kind === 'red'))
-  return [...new Set(reds.map((/** @type {{ sha: string, subject: string }} */ commit) => `${commit.sha.slice(0, 7)} "${commit.subject}"`))]
-}
-
-/** An agent node that commits failing tests only. @param {import('../../domain/workflow/workflow.mjs').WorkflowNode | undefined} node */
-const isAcceptanceStep = (node) => node?.kind === 'agent' && roleOf(node).tdd === 'red'
 
 /** @param {Context} context @param {RunState} run @param {WorkStep} next @param {Job} job */
 const briefPaths = ({ deps, slug, config }, run, next, { role, outputs, result, scan, skills }) => {
@@ -833,12 +813,13 @@ const failedCheck = ({ missing, failures }) => missing.length > 0 || failures.le
  * @param {Context} context @param {RunState} run @param {WorkStep} next
  * @param {{ job: Job, heads: any, engine: Array<{ path: string, hash: string | null }> }} attempt
  */
-const checkAttempt = ({ deps, slug, config, loaded }, run, { node, attempt, feedback, sentBy, group }, { job, heads, engine }) => {
+const checkAttempt = ({ deps, slug, config }, run, { node, attempt, feedback, sentBy }, { job, heads, engine }) => {
   const inState = attempt > 1
+  const scenario = scenarioPassOf(run, node)
   const { role, outputs, precreated, result } = job
   return checkStep({ deps, slug, config, base: run.base, story: run.story }, {
-    role, outputs, precreated, result, scenario: scenarioPassOf(loaded.workflow, run, { node, group }),
-    visitHeads: inState ? run.nodes[node.id].heads : heads,
+    role, outputs, precreated, result, scenario,
+    visitHeads: deliveryHeads(scenario, run.nodes[node.id]) ?? (inState ? run.nodes[node.id].heads : heads),
     engineBefore: engine,
     redByGateFailure: inState ? run.nodes[node.id].redByGateFailure : redByGates(feedback, sentBy),
   })
@@ -890,23 +871,25 @@ const repeatedAttemptRoute = (step, incidents) => {
 }
 
 /**
- * Where a done attempt leads: a group of surviving mutants, or of the story's scenarios, hands
- * over to the next one of its visit; the last one leaves the node, and so does the node that
- * writes every acceptance test.
+ * Where a done attempt leads: a group of surviving mutants hands over to the next one of its
+ * visit; the last one leaves the node.
  * @param {Context} context @param {RunState} run @param {Pick<WorkStep, 'node' | 'group' | 'groups'>} next
  * @returns {{ next: string | null, code?: string, reason?: string, ceiling?: string | null }}
  */
-const routeDone = (context, run, { node, group, groups }) => (loopsOn(context, { node, group, groups }) ? { next: null } : leave(context, run, node.id, null, []))
+const routeDone = (context, run, { node, group, groups }) => (loopsOn({ node, group, groups }) ? { next: null } : leave(context, run, node.id, null, []))
 
 /**
- * Whether a done attempt hands over without an edge: to the next group of surviving mutants, or
- * of the story's scenarios; the node that writes the acceptance tests leaves by its edge, to the review.
- * @param {Context} context @param {Pick<WorkStep, 'node' | 'group' | 'groups'>} next
+ * Whether a done attempt hands over without an edge, to the next group of surviving mutants.
+ * @param {Pick<WorkStep, 'node' | 'group' | 'groups'>} next
  */
-const loopsOn = ({ loaded }, { node, group, groups }) => {
-  if (node.id === scenarioNodes(loaded.workflow)[0]) return false
-  return group !== null && group < groups.length
-}
+const loopsOn = ({ node, group, groups }) => node.each === 'survivor-file' && group !== null && group < groups.length
+
+/**
+ * The heads a delivery pass counts its greens from: those of the node's first visit, so that a
+ * visit a human reopened after a block goes on from the greens already committed.
+ * @param {import('./scenario-checks.mjs').ScenarioPass | null} scenario @param {import('../../domain/journal/run-state.mjs').NodeState | undefined} state
+ */
+const deliveryHeads = (scenario, state) => (scenario?.kind === 'delivery' ? state?.firstHeads : undefined)
 
 /** @param {Context} context @param {Date} started @param {number | undefined} cost */
 const spent = ({ deps }, started, cost) => ({

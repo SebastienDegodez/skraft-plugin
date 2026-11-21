@@ -9,7 +9,7 @@ import { runCli, USAGE } from '../../../../plugins/skraft-framework/engine/drive
 import { runSkraftPipelineWorkflow } from '../../../../plugins/skraft-framework/engine/drivers/copilot-workflow/skraft-pipeline-workflow.mjs'
 import { createNodeAdapters } from '../../../../plugins/skraft-framework/engine/infrastructure/node-adapters.mjs'
 import { actsAs, copilotHost, simulatedContext } from '../copilot-workflow/simulated-host.mjs'
-import { CYCLE_WORKFLOW, NOMINAL, SLUG, blocked, briefOf, commit, designateWorkflow, pipelineRepository, scriptedLlm } from '../support/pipeline-repository.mjs'
+import { PAY, SLUG, blocked, briefOf, deliverWith, designateWorkflow, pipelineRepository, scriptedLlm } from '../support/pipeline-repository.mjs'
 import { journal } from '../support/workspace.mjs'
 import { ISSUE, issueFile, repositoryOnForge } from '../support/issue-forge.mjs'
 import { fillsItsOutputs, scriptedModHost, stops } from '../claude-mod/support/scripted-mod-host.mjs'
@@ -222,18 +222,15 @@ test('skraft init --from-artifacts is refused without DISCUSS stories, and on a 
 
 test('skraft status names the gate node a waiting run stands on, as the pane does, and how to answer its question', async (t) => {
   const { cwd } = pipelineRepository(t)
-  // A workflow that builds no scenario replays no commit of DELIVER: the gates are the first to run its tests.
-  designateWorkflow(cwd, CYCLE_WORKFLOW)
-  // The engineer leaves a test command the machine reports as not found (exit 127): the gates stop the run, their node open.
-  const breaksTheTests = (brief, repository) => {
-    NOMINAL['software-engineer'](brief, repository)
-    commit(cwd, `test(${SLUG}): hand the tests to a missing tool`, { 'tests/unit/check.mjs': 'process.exit(127)\n' })
-  }
+  // The engineer leaves code whose test command the machine reports as not found (exit 127): the gates stop the run, their node open.
+  const breaksTheTests = deliverWith(`process.exit(127)\n${PAY}`)
   const llm = scriptedLlm({ cwd, acts: { 'software-engineer': [breaksTheTests] } })
   const { ctx } = simulatedContext({ args: { slug: SLUG }, otherwise: actsAs(llm) })
   await assert.rejects(runSkraftPipelineWorkflow(ctx, copilotHost(cwd, pluginRoot)), { message: 'paused at adr-1' })
   assert.deepEqual((await inProcess(cwd, ['status'])).out.slice(-3, -1), ['question: adr-ratification (adr)', 'answer: skraft decide adr-1 RATIFIED|REJECTED (--reason <text> with REJECTED)'])
   assert.deepEqual(await inProcess(cwd, ['decide', 'RATIFIED']), { code: 0, out: [`${SLUG}: adr-1 answered RATIFIED; run the pipeline again to go on`], err: [] })
+  await assert.rejects(runSkraftPipelineWorkflow(ctx, copilotHost(cwd, pluginRoot)), { message: 'paused at scenario_review-1' })
+  assert.equal((await inProcess(cwd, ['decide', 'APPROVED'])).code, 0)
   await assert.rejects(runSkraftPipelineWorkflow(ctx, copilotHost(cwd, pluginRoot)), { message: 'paused at gates-1' })
 
   const status = await inProcess(cwd, ['status'])

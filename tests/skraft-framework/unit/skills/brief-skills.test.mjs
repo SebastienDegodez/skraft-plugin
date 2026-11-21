@@ -97,7 +97,7 @@ test('a skill found nowhere is named in the brief with its component, never read
     agent()(it),
     agent({ work: ({ git }) => git.commit('docs(checkout): ADR for the order', ['docs/adr/adr-001-order.md']) })(it),
     agent({ work: ({ git }) => git.commit('test(checkout): acceptance of the order', ['orders/src/test/OrderAcceptanceTest.java']) })(it),
-    agent({ work: ({ git }) => git.commit('feat(checkout): an order needs a line', ['orders/src/main/Order.java', 'orders/src/test/OrderTest.java']) })(it),
+    agent({ work: ({ git }) => git.commit('feat(checkout): S1 an order needs a line', ['orders/src/main/Order.java', 'orders/src/test/OrderTest.java']) })(it),
   ])
 
   await host.start()

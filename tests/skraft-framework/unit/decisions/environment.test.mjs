@@ -60,16 +60,15 @@ test('ABORT ends the run blocked on the environment, and it stays blocked', asyn
 })
 
 test('an agent step the machine cannot check asks the same question, and RETRY checks it again without running the agent', async () => {
-  const bare = { ...API, commands: { build: 'dotnet build' } }
-  const host = scripted({ components: [bare] }, (it) => [
-    agent()(it), agent()(it), agent({ work: ({ git }) => git.commit('test(checkout): pays', ['tests/PayTests.cs']) })(it), () => ({ ok: false, unavailable: true, text: '' }),
+  const host = scripted({}, (it) => [
+    agent()(it), agent()(it), agent({ work: ({ git }) => { git.commit('test(checkout): pays', ['tests/PayTests.cs']); git.commits = async () => null } })(it), () => ({ ok: false, unavailable: true, text: '' }),
   ])
 
   const outcome = await host.start()
 
   assert.deepEqual({ status: outcome.status, code: outcome.code }, { status: 'waiting', code: 'environment' })
-  assert.match((await host.view()).question.text, /^distill cannot run on this machine: component api has no test command/)
-  await host.workspace.write('skraft-config.json', JSON.stringify({ components: [API], publish: SETTLED_PUBLISH }))
+  assert.match((await host.view()).question.text, /^distill cannot run on this machine: Git cannot list what changed in \. since root-0/)
+  delete host.git.commits
   assert.equal((await host.decide({ answer: 'RETRY' })).ok, true)
   assert.equal((await host.run()).code, 'agent-unavailable')
   assert.deepEqual(host.agentRunner.dispatches.map((dispatch) => dispatch.agent), ['solution-researcher', 'solution-architect', 'acceptance-designer', 'software-engineer'])
@@ -161,6 +160,6 @@ test('a human who fixes skraft-config.json in the dialog, then answers RETRY, ge
   const outcome = await host.start()
 
   assert.equal(outcome.status, 'done')
-  assert.deepEqual(host.human.questions.map((question) => question.key), ['distill-1', 'scenario_review-1'])
-  assert.deepEqual(host.machine.lines(), ['. $ npm run build', '. $ npm test'])
+  assert.deepEqual(host.human.questions.map((question) => question.key), ['scenario_review-1', 'gates-1'])
+  assert.deepEqual(host.machine.lines(), ['. $ dotnet build', '. $ npm run build', '. $ npm test'])
 })

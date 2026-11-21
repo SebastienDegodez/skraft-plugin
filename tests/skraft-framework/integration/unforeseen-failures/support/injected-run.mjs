@@ -16,13 +16,12 @@ const ANSWERS = Object.freeze({ ADR: 'RATIFIED', Scenarios: 'APPROVED' })
 /**
  * `/skraft checkout` on the repository, the scripted LLM answering every spawn, until the run
  * stops. `answers` overrides ANSWERS by header with an answer, or a function that gives it; null
- * closes the dialog. `dialogs` keeps each one with the number of spawns made before it. The
- * replay judge answers the next of `judges`, else accepts; `llm.judged` keeps its briefs.
+ * closes the dialog. `dialogs` keeps each one with the number of spawns made before it.
  * @param {string} cwd
- * @param {{ acts?: Record<string, import('../../support/pipeline-repository.mjs').Act[]>, answers?: Record<string, string | null | (() => string | null)>, judges?: string[] }} [options]
+ * @param {{ acts?: Record<string, import('../../support/pipeline-repository.mjs').Act[]>, answers?: Record<string, string | null | (() => string | null)> }} [options]
  */
-export const runOn = async (cwd, { acts, answers = {}, judges = [] } = {}) => {
-  const llm = scriptedLlm({ cwd, acts, judges })
+export const runOn = async (cwd, { acts, answers = {} } = {}) => {
+  const llm = scriptedLlm({ cwd, acts })
   const mod = await scriptedModHost({ cwd, otherwise: actsAs(llm) })
   /** @type {Array<{ header: string, question: string, spawns: number }>} */
   const dialogs = []
@@ -74,7 +73,6 @@ export const recorded = (events, step) => events.filter((event) => event.type ==
 export const CAUSES = Object.freeze({
   environment: 'the machine: a program, a service, a permission or a Git hook it lacks or refuses',
   config: 'skraft-config.json: a command or a path it gives the engine',
-  judge: 'what the replay judge read in the replay of a commit: nothing an agent can change fixes it',
 })
 
 /**

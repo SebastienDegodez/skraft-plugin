@@ -9,7 +9,7 @@ const mutating = (options = {}, script) => scripted({ workflow: MUTATION_WORKFLO
 const DELIVER = ['deliver', 'gates', 'deliver_review', 'mutation']
 const delivering = (it) => agent({
   work: ({ git }) => {
-    git.commit(`feat(${SLUG}): checkout pays by card`, ['tests/CheckoutTests.cs', 'src/Checkout.cs'])
+    git.commit(`feat(${SLUG}): S1 checkout pays by card`, ['tests/CheckoutTests.cs', 'src/Checkout.cs'])
   },
 })(it)
 const renaming = (it) => agent({ work: ({ git }) => git.commit(`refactor(${SLUG}): name the card payment`, ['src/Checkout.cs']) })(it)

@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { withContext } from '../support/answer-yaml.mjs'
-import { agent, API, CYCLE, finding, lenses, nominal, REFS_42, refutes, reviews, says, scripted, SLUG, tddCycle, TRACKING } from '../support/pipeline-host.mjs'
+import { agent, API, finding, green, lenses, nominal, REFS_42, refutes, reviews, says, scripted, SLUG, tddCycle, TRACKING } from '../support/pipeline-host.mjs'
 import { ejectedPipeline, edit, withLenses } from '../workflow/support.mjs'
 import { BUILT_IN_WORKFLOW, InMemoryAgentCatalog, PLUGIN_AGENTS } from '../support/in-memory-host.mjs'
 import { indexFor } from '../support/decisions.mjs'
@@ -461,26 +461,11 @@ test('every attempt of a pass the review opened is told the review sent the work
   assert.deepEqual(host.events().filter((event) => event.type === 'step.started' && event.step === 'design').map(({ visit, attempt, sentBy }) => [visit, attempt, sentBy ?? null]), [
     [1, 1, null], [2, 1, 'review'], [2, 2, 'review'],
   ])
-
-  // DISTILL's acceptance tests are named to DELIVER by a workflow that builds no scenario.
-  const distill = scripted(CYCLE, (it) => [...nominal(it).slice(0, 3), agent({ work: ({ git }) => {
-    git.commit('docs(checkout): note the refusal', ['ACCEPTANCE.md'])
-    git.commit('test(checkout): refuse a zero amount', ['tests/Acceptance/RefusalAcceptanceTests.cs'])
-  } })(it), agent({ work: tddCycle() })(it)])
-  distill.agentRunner.review = lenses({ coverage: [says('coverage', 'fail', [finding('F1', 'blocker', 'a criterion has no scenario')])] })
-  assert.equal((await distill.start()).status, 'done')
-  const failing = distill.agentRunner.dispatches.find((dispatch) => dispatch.label === `skraft ${SLUG} · distill · pass 2 · attempt 1`).prompt
-  assert.ok(failing.includes('- Commit the failing acceptance tests as `test(<story>): …`, with the skeleton they call') && !failing.includes('This pass answers the review'), failing)
-  const reds = distill.events().filter((event) => event.type === 'commits.checked' && event.step === 'distill').flatMap((event) => event.commits).filter(({ kind }) => kind === 'red').map(({ sha, subject }) => `${sha.slice(0, 7)} "${subject}"`)
-  const deliver = distill.agentRunner.dispatches.find((dispatch) => dispatch.agent === 'software-engineer').prompt
-  assert.equal(reds.length, 2)
-  assert.ok(deliver.includes(`never a \`feat\`. DISTILL's: ${reds.join(', ')}`), deliver)
 })
 
 test('a DELIVER pass the review opened is told which commit each finding takes: a fix with no red commit is refused, a strengthened test goes in a refactor', async () => {
   const integrity = says('test-integrity', 'fail', [finding('F1', 'blocker', 'the test asserts nothing', { gate: 'G7' })])
-  // DISTILL's acceptance tests are named to DELIVER by a workflow that builds no scenario.
-  const host = scripted(CYCLE, (it) => [...nominal(it).slice(0, 3), agent({ work: tddCycle() })(it), agent({ work: ({ git }) => git.commit('fix(checkout): assert the card amount', ['src/Checkout.cs']) })(it)])
+  const host = scripted({}, (it) => [...nominal(it).slice(0, 3), agent({ work: green() })(it), agent({ work: ({ git }) => git.commit('fix(checkout): assert the card amount', ['src/Checkout.cs']) })(it)])
   host.agentRunner.review = lenses({ 'test-integrity': [integrity] })
   host.agentRunner.behaviours.push(() => ({ ok: false, unavailable: true, text: '', error: 'stop here' }))
 
@@ -492,7 +477,8 @@ test('a DELIVER pass the review opened is told which commit each finding takes: 
   assert.deepEqual(judged.commits.map(({ subject, verdict }) => [subject, verdict]), [['fix(checkout): assert the card amount', 'green-without-red']])
   const reworked = host.agentRunner.dispatches.find((dispatch) => dispatch.label === `skraft ${SLUG} · deliver · pass 2 · attempt 1`).prompt
   const acceptance = host.events().find((event) => event.type === 'commits.checked' && event.step === 'distill').commits[0]
-  assert.ok(reworked.includes(`never a \`feat\`. DISTILL's: ${acceptance.sha.slice(0, 7)} "${acceptance.subject}"\n`), reworked)
+  assert.ok(reworked.includes(`- Acceptance tests DISTILL committed, which you never change (a wrong one, or one failing on a build or setup error: stop blocked, naming it):\n- ${acceptance.sha.slice(0, 7)} "${acceptance.subject}": `), reworked)
+  assert.ok(!reworked.includes('- Groups, in the order you deliver them'), reworked)
   assert.ok(reworked.includes([
     '- This pass answers the review: a missing or wrong behaviour takes a failing `test(<story>): …` commit, then `fix(<story>): …`;',
     '  a test that proves too little, a name, or any change the tests already pass with takes `refactor(<story>): …`.',
@@ -592,7 +578,7 @@ test('a lens reads the skills its descriptor lists before any other input, and s
 test('a changed path that is no readable file, such as a nested repository, is reviewed by its name', async () => {
   const host = scripted({}, (it) => [
     ...nominal(it).slice(0, 3),
-    agent({ work: ({ git }) => git.commit('feat(checkout): Checkout pays by card with the vendored payments SDK', ['src/Checkout.cs', 'tests/CheckoutTests.cs', 'src/PaymentsSdk']) })(it),
+    agent({ work: ({ git }) => git.commit('feat(checkout): S1 Checkout pays by card with the vendored payments SDK', ['src/Checkout.cs', 'tests/CheckoutTests.cs', 'src/PaymentsSdk']) })(it),
   ])
   const read = host.deps.workspace.read.bind(host.deps.workspace)
   host.deps.workspace.read = async (path) => {

@@ -149,6 +149,26 @@ const ownRole = (node) => {
 }
 
 /**
+ * Whether the node's agent writes the story's scenarios, their groups and the failing acceptance
+ * tests of every scenario: the acceptance designer, dispatched once.
+ * @param {WorkflowNode} node
+ */
+export const writesScenarios = (node) => node.kind === 'agent' && !node.proposal && ownRole(node).scenarios === true
+
+/**
+ * Whether the node's agent delivers the story's code, every group of scenarios in one pass: the
+ * software engineer on a node that takes no surviving mutants.
+ * @param {WorkflowNode} node
+ */
+export const delivers = (node) => node.kind === 'agent' && !node.proposal && node.each === null && ROLES[/** @type {string} */ (node.agent)] === DELIVERING
+
+/**
+ * The node of a workflow that writes the story's scenarios, null when it has none.
+ * @param {{ nodes: Record<string, WorkflowNode>, order: string[] }} workflow
+ */
+export const scenarioWriter = ({ nodes, order }) => order.find((id) => writesScenarios(nodes[id])) ?? null
+
+/**
  * The folders the engine creates before an attempt of an agent node, so that an agent whose
  * tools only create files in existing folders can write on a repository that has none yet: the
  * folders its plugin role writes in, and the folders the components keep their scenarios in when

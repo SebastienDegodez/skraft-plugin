@@ -1,15 +1,12 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { InMemoryGit } from '../support/in-memory-host.mjs'
-import { API, CYCLE, SLUG, agent, scripted, tddCycle } from '../support/pipeline-host.mjs'
+import { API, SLUG, agent, scripted } from '../support/pipeline-host.mjs'
 import { waitingOnEnvironment } from '../support/decisions.mjs'
 
 const unavailable = () => ({ ok: false, unavailable: true, text: '' })
-const upToDeliver = (it) => [agent()(it), agent()(it), agent()(it)]
-/** Research and design, then DISTILL doing `work`, as a repository whose workflow builds no scenario commits it. */
-const distilling = (it, work) => [agent()(it), agent()(it), agent({ work })(it)]
-/** The options of a host whose workflow commits whole TDD cycles. @param {object} [options] */
-const cycle = (options = {}) => ({ ...options, files: { ...CYCLE.files, ...options.files } })
+/** A workflow whose one agent commits whole TDD cycles, as a repository with no scenario to deliver runs it. */
+const ONLY_DELIVER = 'digraph p {\n  start [shape=Mdiamond]\n  deliver [shape=box, agent="software-engineer", phase="DELIVER"]\n  exit [shape=Msquare]\n  start -> deliver -> exit\n}\n'
 const recorded = (host, step) => host.events().filter((event) => event.type === 'step.recorded' && event.step === step)
 const checked = (host) => host.events().filter((event) => event.type === 'commits.checked')
 const NEIGHBOUR = { name: 'web', root: '../web', stack: 'react', bdd: false, mocking: { strategy: 'inprocess' }, paths: { src: ['src'], tests: ['src'] }, commands: { test: 'npx vitest run', mutation: 'npx stryker run' } }
@@ -17,17 +14,17 @@ const twoRepositories = () => new InMemoryGit({ repositories: { '.': { mergeBase
 
 test('the engine runs no command between DISTILL\'s red and the gates: the commits are judged from Git alone', async () => {
   let ranBeforeDeliver = null
-  const host = scripted(cycle(), (it) => [...distilling(it, ({ git }) => { tddCycle()({ git }); git.commit('test(checkout): Checkout refunds', ['tests/RefundTests.cs']) }), agent({ work: () => { ranBeforeDeliver = it.machine.runs.length } })(it)])
+  const host = scripted({}, (it) => [agent()(it), agent()(it), agent()(it), agent({ work: ({ git }) => { ranBeforeDeliver = it.machine.runs.length; git.commit('feat(checkout): S1 pay by card', ['src/Checkout.cs', 'tests/CheckoutTests.cs']) } })(it)])
 
-  await host.start()
+  assert.equal((await host.start()).status, 'done')
 
   assert.equal(ranBeforeDeliver, 0, 'no test command ran at DISTILL\'s red')
-  assert.deepEqual(checked(host)[0].commits.map(({ sha, kind, verdict }) => [sha, kind, verdict]), [['root-1', 'red', 'ok'], ['root-2', 'green', 'ok'], ['root-3', 'refactor', 'ok'], ['root-4', 'red', 'ok']])
+  assert.deepEqual(checked(host).map((event) => [event.step, event.commits.map(({ sha, kind, verdict }) => [sha, kind, verdict])]), [['distill', [['root-1', 'red', 'ok']]], ['deliver', [['root-2', 'green', 'ok']]]])
   assert.deepEqual(Object.keys(checked(host)[0].commits[0]).sort(), ['kind', 'repository', 'sha', 'subject', 'verdict'])
 })
 
 test('a green commit with no red before it is refused, and so is the next green after a green, on the next attempt too', async () => {
-  const host = scripted(cycle(), (it) => [...upToDeliver(it), agent({
+  const host = scripted({ workflow: ONLY_DELIVER }, (it) => [agent({
     work: ({ git }) => {
       git.commit('feat(checkout): pay by card', ['src/Checkout.cs'])
       git.commit('test(checkout): refund', ['tests/RefundTests.cs'])
@@ -66,7 +63,6 @@ test('a commit that is not type(scope): subject is refused; every conventional t
   assert.equal(recorded(host, 'research')[0].code, 'commit-convention')
 })
 
-
 test('a red commit that changes no component is refused', async () => {
   const host = scripted({}, (it) => [agent({ work: ({ git }) => git.commit('test(checkout): notes', ['.copilot-tracking/skraft-plans/checkout/notes.md']) })(it), unavailable])
 
@@ -80,31 +76,29 @@ test('a red commit that changes no component is refused', async () => {
   assert.deepEqual(recorded(outside, 'design')[0].failures, ['commit root-1 "test(checkout): ADR of the card payment" changes no component: a test commit adds a failing test to a component'])
 })
 
-
 test('a refused commit stays refused on the next attempts of the pass', async () => {
-  const host = scripted(cycle(), (it) => [
-    ...distilling(it, ({ git }) => { git.commit('test(checkout): pay', ['tests/PayTests.cs']); git.commit('wip', ['tests/PayTests.cs']) }),
+  const host = scripted({ workflow: ONLY_DELIVER }, (it) => [
+    agent({ work: ({ git }) => { git.commit('test(checkout): pay', ['tests/PayTests.cs']); git.commit('wip', ['tests/PayTests.cs']) } })(it),
     agent()(it),
   ])
 
   const outcome = await host.start()
 
   assert.equal(outcome.code, 'repeated-failure')
-  assert.match(outcome.reason, /^distill stopped after 2 occurrences of failure signature [a-f0-9]+; evidence: unavailable$/)
+  assert.match(outcome.reason, /^deliver stopped after 2 occurrences of failure signature [a-f0-9]+; evidence: unavailable$/)
   assert.deepEqual(checked(host).map((event) => event.commits.map((commit) => `${commit.sha} ${commit.verdict}`)), [
     ['root-1 ok', 'root-2 not-conventional'], ['root-1 ok', 'root-2 not-conventional'],
   ])
 })
 
 test('a refused commit leaves the pass once the agent rewrites the history', async () => {
-  const host = scripted(cycle({ components: [API, NEIGHBOUR], git: twoRepositories() }), (it) => [
-    ...distilling(it, ({ git }) => { git.commit('test(checkout): cart', ['../web/src/Cart.test.tsx']); git.change('docs/notes.md') }),
+  const host = scripted({ workflow: ONLY_DELIVER, components: [API, NEIGHBOUR], git: twoRepositories() }, (it) => [
+    agent({ work: ({ git }) => { git.commit('test(checkout): cart', ['../web/src/Cart.test.tsx']); git.change('docs/notes.md') } })(it),
     agent({ work: ({ git }) => { git.revert('docs/notes.md'); git.reset('../web', 'up-web-0'); git.commit('test(checkout): cart fails', ['../web/src/Cart.test.tsx']); git.commit('feat(checkout): cart', ['../web/src/Cart.tsx']) } })(it),
-    agent()(it),
   ])
 
   assert.equal((await host.start()).status, 'done')
-  assert.deepEqual(recorded(host, 'distill').map((event) => [event.code, event.failures]), [
+  assert.deepEqual(recorded(host, 'deliver').map((event) => [event.code, event.failures]), [
     ['write-scope', ['out of write scope: docs/notes.md']],
     [null, []],
   ])
@@ -120,4 +114,3 @@ test('Git that cannot list a repository\'s commits waits for a human to fix the 
   assert.ok(outcome.reason.startsWith(waitingOnEnvironment('research', 'Git cannot list the commits of . since root-0').split('\nThe run so far')[0]))
   assert.deepEqual(host.types(), ['run.started', 'step.started', 'question.asked'])
 })
-

@@ -274,7 +274,7 @@ const TWO = [['Customer pays by card'], ['Customer is refused an expired card', 
 const S2 = 'tests/Acceptance/S2AcceptanceTests.cs'
 
 /** A commit of scenario k, as the designer and the engineer each make theirs. @param {number} index */
-const greenOf = (index) => ({ git }) => git.commit(`feat(${SLUG}): scenario ${index}`, [`src/Scenario${index}.cs`, `tests/Unit/Scenario${index}Tests.cs`])
+const greenOf = (index) => ({ git }) => git.commit(`feat(${SLUG}): S${index} scenario ${index}`, [`src/Scenario${index}.cs`, `tests/Unit/Scenario${index}Tests.cs`])
 
 const TRAIL = `${SLUG}/logs/precheck-distill.jsonl`
 

@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { BUILT_IN_WORKFLOW, FixedClock, InMemoryGit, ScriptedMachine } from '../support/in-memory-host.mjs'
-import { agent, API, CYCLE, green, scripted, SLUG, tddCycle, TRACKING } from '../support/pipeline-host.mjs'
+import { agent, API, green, scripted, SLUG, tddCycle, TRACKING } from '../support/pipeline-host.mjs'
 import { waitingOnEnvironment, withoutReportSummary } from '../support/decisions.mjs'
 
 const upToDeliver = (it) => [agent()(it), agent()(it), agent()(it)]
@@ -42,7 +42,7 @@ test('DELIVER does not close while a gate fails: the engineer gets a new pass wi
   ].join('\n')), second.prompt)
   assert.ok(second.prompt.endsWith(`\n- Gate commands: before you write your result, run those of each component you changed, from its root, and fix every failure; the gates step runs them next and sends a failure back as a new pass:\n- api: build: dotnet build; test: dotnet test\n\nThe gates failed on pass 1:\n- ${failure}`), second.prompt)
   assert.deepEqual(host.events().filter((event) => event.type === 'step.started' && event.step === 'deliver').map(({ visit, attempt, feedback, outputs, result }) => [visit, attempt, feedback, outputs, result]), [
-    [1, 1, [], ['changes/2026-10-11/change-log.md'], 'results/deliver-1-g1-1.json'],
+    [1, 1, [], ['changes/2026-10-11/change-log.md'], 'results/deliver-1-1.json'],
     [2, 1, [failure], ['changes/2026-10-11/change-log.md'], 'results/deliver-2-1.json'],
   ])
   assert.ok(host.progress.lines.includes(`${SLUG}: software-engineer, pass 2, attempt 1 — implementer · standard · sonnet`))
@@ -98,11 +98,8 @@ test('a gate the machine cannot run waits for a human; once fixed and retried, t
   assert.deepEqual(recorded(host, 'gates').map((event) => [event.visit, event.attempt, event.outcome]), [[1, 1, 'pass']])
 
   const front = { ...WEB, root: 'web', commands: { lint: 'npx eslint .', test: 'npx vitest run' } }
-  const both = scripted({ ...CYCLE, components: [API, front], machine: new ScriptedMachine({ installed: ['git'] }) }, (it) => [...upToDeliver(it), agent({
-    work: ({ git }) => {
-      git.commit('test(checkout): cart', ['tests/CartTests.cs', 'web/src/Cart.test.tsx'])
-      git.commit('feat(checkout): cart', ['src/Cart.cs', 'web/src/Cart.tsx'])
-    },
+  const both = scripted({ components: [API, front], machine: new ScriptedMachine({ installed: ['git'] }) }, (it) => [...upToDeliver(it), agent({
+    work: ({ git }) => git.commit('feat(checkout): S1 cart', ['tests/CartTests.cs', 'web/src/Cart.test.tsx', 'src/Cart.cs', 'web/src/Cart.tsx']),
   })(it)])
   assert.equal(withoutReportSummary((await both.start()).reason), waitingOnEnvironment('gates', [
     `api/build: command not found: dotnet; install it or change the command in skraft-config.json (evidence: ${TRACKING}/gates/api/build-1.log)`,
@@ -128,7 +125,7 @@ test('a gate stopped by a signal is unknown, asks for one host judgment, and nev
 test('the goal gate runs the gates of the components the story touched, then those of every other one', async () => {
   const web = { ...WEB, commands: { lint: 'npx eslint .', test: 'npx vitest run', e2e: 'npx playwright test' } }
   const machine = new ScriptedMachine({ exits: { '. $ dotnet test': 1 } })
-  const host = scripted({ ...CYCLE, components: [API, web], git: twoRepositories(), machine }, (it) => [...upToDeliver(it), agent({ work: ({ git: repos }) => { repos.commit('test(checkout): cart', ['../web/src/Cart.test.tsx']); repos.commit('feat(checkout): cart', ['../web/src/Cart.tsx']) } })(it), unavailable])
+  const host = scripted({ components: [web, API], git: twoRepositories(), machine }, (it) => [agent()(it), agent()(it), agent({ plan: [['Customer fills a cart', 'web', '@happy-path']], exemption: 'library' })(it), agent({ work: ({ git: repos }) => repos.commit('feat(checkout): S1 cart', ['../web/src/Cart.test.tsx', '../web/src/Cart.tsx']) })(it), unavailable])
 
   await host.start()
 
@@ -180,7 +177,7 @@ test('a failing gate with no FAIL edge stops the run with the gate failures', as
   })
 })
 
-test('a run without components stops at the first node that needs one and says how to get them: the scenarios, else the gates', async () => {
+test('a run without components stops at the first node that needs one and says how to get them: the scenarios', async () => {
   const host = scripted({ components: [] }, (it) => [...upToDeliver(it), agent()(it)])
 
   const outcome = await host.start()
@@ -190,12 +187,6 @@ test('a run without components stops at the first node that needs one and says h
     reason: 'skraft-config.json lists no component, so distill has no component to write the story\'s scenarios in; run skraft init to detect them',
   })
   assert.deepEqual(host.agentRunner.dispatches.map(({ agent: id }) => id), ['solution-researcher', 'solution-architect'])
-
-  const cycle = scripted({ ...CYCLE, components: [] }, (it) => [...upToDeliver(it), agent()(it)])
-  assert.deepEqual(await cycle.start(), {
-    status: 'blocked', slug: SLUG, phase: 'DELIVER', code: 'no-components',
-    reason: 'skraft-config.json lists no component, so gates has nothing to run; run skraft init to detect them',
-  })
 })
 
 test('another writer of the journal during the gates stops the run as a conflict', async () => {
