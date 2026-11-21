@@ -6,9 +6,9 @@ import { isConventionalCommitSubject } from './commit-convention.mjs'
 //   fail          — the substrate proves a gate failed or the log contradicts Git;
 //   inconclusive  — a claim cannot be checked (missing, malformed, altered evidence);
 //   pass          — every claim was checked against its substrate.
-// A `notice` finding records what the verdict does not turn on (G6 not run, v5).
+// A `notice` finding records what the verdict does not turn on (G6 not run, v5 and later).
 
-export const SUPPORTED_SCHEMAS = Object.freeze(['v1', 'v2', 'v3', 'v4', 'v5'])
+export const SUPPORTED_SCHEMAS = Object.freeze(['v1', 'v2', 'v3', 'v4', 'v5', 'v6'])
 
 // Gates every log of a schema version must carry (a gate may be not_applicable with a rationale).
 const REQUIRED_GATES = Object.freeze({
@@ -17,10 +17,16 @@ const REQUIRED_GATES = Object.freeze({
   v3: ['G1', 'G2', 'G3', 'G4', 'G5', 'G6', 'G7', 'G8', 'G9', 'G10', 'G11'],
   v4: ['G1', 'G2', 'G3', 'G4', 'G5', 'G6', 'G7', 'G8', 'G9', 'G10', 'G11'],
   v5: ['G1', 'G2', 'G3', 'G4', 'G5', 'G6', 'G7', 'G8', 'G9', 'G10', 'G11'],
+  // v6 drops G10: the acceptance RED commit is the proof, no RED run is captured.
+  v6: ['G1', 'G2', 'G3', 'G4', 'G5', 'G6', 'G7', 'G8', 'G9', 'G11'],
 })
+// Schemas whose cycles carry a captured RED run (G10).
+const RED_CAPTURED = new Set(['v2', 'v3', 'v4', 'v5'])
+// Schemas where G6 may be not_run: mutation is the developer's.
+const MUTATION_OPTIONAL = new Set(['v5', 'v6'])
 const G6_SCOPES = Object.freeze(['core', 'boundary'])
 // Gates attested by the log structure rather than a runner exit: G7 by an empty grep
-// output, G8/G9/G10 by commits and test-integrity cycles.
+// output, G8/G9/G10 by commits and test-integrity cycles (G10 up to v5).
 const STRUCTURAL_GATES = new Set(['G8', 'G9', 'G10'])
 
 const INCONCLUSIVE = 'inconclusive'
@@ -30,7 +36,7 @@ const NOTICE = 'notice'
 const finding = (severity, code, detail, gate) => Object.freeze({ severity, code, detail, ...(gate ? { gate } : {}) })
 const isText = (value) => typeof value === 'string' && value.length > 0
 const versionOf = (log) => (typeof log?.$schema === 'string' ? log.$schema.match(/^quality-gates-evidence\/(v\d+)$/)?.[1] : undefined)
-// v4 records one G6 entry per mutation scope; v5 and earlier schemas carry a single G6.
+// v4 records one G6 entry per mutation scope; every other schema carries a single G6.
 const gateKey = (gate, version) => (version === 'v4' && gate.id === 'G6' ? `G6/${gate.scope}` : gate.id)
 
 // The files a log points at, so the application layer can read exactly those.
@@ -68,14 +74,14 @@ const checkGate = (gate, version, facts, findings) => {
     if (!isText(gate.rationale)) findings.push(finding(INCONCLUSIVE, 'RATIONALE_MISSING', `${key} is not_applicable without a rationale`, key))
     return
   }
-  // v5: mutation is the developer's; without a declared command G6 is not run, and said so.
-  if (gate.status === 'not_run' && gate.id === 'G6' && version === 'v5') {
+  // v5+: mutation is the developer's; without a declared command G6 is not run, and said so.
+  if (gate.status === 'not_run' && gate.id === 'G6' && MUTATION_OPTIONAL.has(version)) {
     if (!isText(gate.rationale)) findings.push(finding(INCONCLUSIVE, 'RATIONALE_MISSING', `${key} is not_run without a rationale`, key))
     else findings.push(finding(NOTICE, 'G6_NOT_RUN', `G6 not run: ${gate.rationale}`, key))
     return
   }
   if (gate.status !== 'pass' && gate.status !== 'fail') {
-    findings.push(finding(INCONCLUSIVE, 'STATUS_INVALID', `${key} status ${gate.status} is not pass, fail or not_applicable${version === 'v5' && gate.id === 'G6' ? ' (or not_run)' : ''}`, key))
+    findings.push(finding(INCONCLUSIVE, 'STATUS_INVALID', `${key} status ${gate.status} is not pass, fail or not_applicable${MUTATION_OPTIONAL.has(version) && gate.id === 'G6' ? ' (or not_run)' : ''}`, key))
     return
   }
   if (gate.status === 'pass' && gate.metrics?.tests_failed > 0) {
@@ -198,7 +204,7 @@ const checkCycles = (log, version, facts, findings) => {
         findings.push(finding(FAIL, 'TEST_TAMPERED', `${label} removed or changed a line of ${testFile} between RED and GREEN`, 'G9'))
       }
     }
-    if (version === 'v1') continue
+    if (!RED_CAPTURED.has(version)) continue
     const redStdout = facts.files.get(cycle?.red_stdout_ref)
     const redExit = parseExit(facts.files.get(cycle?.red_exit_code_ref)?.content)
     if (redStdout === undefined || redExit === undefined) {

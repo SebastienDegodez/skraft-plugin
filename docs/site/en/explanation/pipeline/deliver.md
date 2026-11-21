@@ -16,7 +16,7 @@ The DELIVER phase implements working code, guided by tests, with empirically ver
 | | |
 |---|---|
 | **Comes from** | **DISTILL** — the Gherkin scenarios, the test plan, the implementation plan and the RED acceptance test |
-| **What enters** | Executable specifications to implement, in the implementation plan's order, with the test plan's layer and double per scenario; contracts, ADR index, research conventions, stack commands and forecast from the approved reporting flow |
+| **What enters** | Executable specifications to implement, in the implementation plan's order, with the test plan's layer and double per scenario; contracts, ADR index, research conventions and stack commands |
 | **What exits** | Tested code + quality evidence (mutation, RED→GREEN); outcome report at completion or blockage |
 | **Goes to** | The **Pull Request** — human review then delivery |
 | **Responsible agent** | `software-engineer` |
@@ -48,11 +48,13 @@ The scenario enters. DELIVER implements the total calculation and loyalty credit
 DELIVER starts from the `state.mjs handoff` block, not from a fresh reconstruction. The
 block carries the `.feature`, `test-plan-{story}.md`, `impl-plan-{story}.md`,
 `contracts-{story}.md`, `docs/adr/decisions-index.md`, research conventions,
-`stack-commands.md` and acceptance RED evidence. Retries carry the same block, so the
+`stack-commands.md` and the RED acceptance test. Retries carry the same block, so the
 test plan and implementation plan are still present during rework.
 
-RED inspection happens inside the software-engineer dispatch: the recorded G10 capture is
-the inspection, and the engineer continues RED → GREEN → COMMIT without a second dispatch.
+The RED is DISTILL's `test` commit, which holds the acceptance test of every scenario. The
+engineer makes them green group by group — the scenarios that pin one rule and its edge cases —
+with one green commit per group, the gate excluding the scenarios still owed, and the last group
+running the whole suite. One dispatch delivers every scenario.
 Per-cycle mutation is differential since the previous cycle's last commit and is skipped
 when no core production file changed. Only the final full core then boundary mutation run
 is G6 evidence.
@@ -72,8 +74,8 @@ and consumes no retry, then the reviewer re-reviews.
 
 ## From evidence to outcome
 
-**Reporting integration is in progress.** The approved flow turns the DISTILL forecast
-into a comparison with actual impact at completion or blockage. The
+**Reporting integration is in progress.** The approved flow reports, at completion or
+blockage, the test plan, the tests executed and, for a front end, the screenshots. The
 [software engineer]({{ "/en/dashboard/#agent-software-engineer" | relative_url }})
 owns evidence, change log and impact references. The
 [engineer reviewer]({{ "/en/dashboard/#agent-software-engineer-reviewer" | relative_url }})
@@ -103,8 +105,7 @@ published attachment. The startup-selected media cap may be zero and has no hard
 It limits report links, not local evidence retained for review. Omissions remain visible.
 There is no automatic upload, hosting, or browser rerun merely to format the report.
 
-The outcome updates the second stable PR comment; the approved DISTILL forecast
-remains the first. Startup choices govern full PR reports, an issue link, full report
+The outcome is the story's stable PR comment. Startup choices govern full PR reports, an issue link, full report
 or no issue report, and a chat summary. Full destinations reuse the same rendered body; issue pointers are
 prepared only after the matching PR/MR receipt supplies its returned comment URL.
 
@@ -122,7 +123,7 @@ and end-to-end host integration remain unverified.
 
 On publication failure, local Markdown, pending attempt and per-target receipts survive,
 including after `DONE`. Recovery reuses saved reports, not another engineering or
-capture run. Forecast/outcome content and review ownership remain unchanged. Abandoning
+capture run. Outcome content and review ownership remain unchanged. Abandoning
 an unresolved local attempt requires explicit human confirmation and a reason; it
 preserves receipts and does not undo a remote write.
 
@@ -157,5 +158,5 @@ capability is active, its fidelity lens joins the adversarial panel of the
 This phase crosses the delivery gates — RED/GREEN test integrity, green build,
 mutation score at threshold (see the [gates catalogue]({{ "/en/reference/gates" | relative_url }})).
 The independent reviewer issues its verdict before delivery is declared approved.
-A **draft PR** may already hold the forecast after separately approved creation and
+A **draft PR** may already exist after separately approved creation and
 push; opening it does not mean the delivery gates have passed.

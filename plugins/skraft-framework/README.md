@@ -125,8 +125,8 @@ invariants are deliberately not user-relaxable.
 
 ## Reports in pull requests (in progress)
 
-SKRAFT is gaining two stable PR comments per story: a forecast from the approved scenarios and
-test plan, and an outcome from the delivered code, evidence and review. The scope, the current
+SKRAFT is gaining one stable PR comment per story: an outcome from the delivered code, evidence
+and review — the test plan, the tests executed and, for a front end, the screenshots. The scope, the current
 state and what remains unverified are in [REPORTING.md](REPORTING.md).
 
 ## Documentation

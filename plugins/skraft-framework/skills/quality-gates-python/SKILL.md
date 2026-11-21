@@ -1,6 +1,6 @@
 ---
 name: quality-gates-python
-description: Use when the active repository is a Python project (`pyproject.toml` present) and the software-engineer must produce falsifiable evidence for the quality gates. Provides the cross-platform scripts (Node, no shell) that run pytest, import-linter and coverage.py from the project's virtual environment and map their outputs onto the tech-agnostic schema. The G10 RED capture is taken at RED, before any production code.
+description: Use when the active repository is a Python project (`pyproject.toml` present) and the software-engineer must produce falsifiable evidence for the quality gates. Provides the cross-platform scripts (Node, no shell) that run pytest, import-linter and coverage.py from the project's virtual environment and map their outputs onto the tech-agnostic schema.
 ---
 
 # Quality Gates — Python Adapter
@@ -71,22 +71,15 @@ Runs the whole suite under coverage.py with the core folders as sources and exit
 non-zero below 100%, on a failing test, on a core file never imported, or on a
 `# pragma: no cover` in the core. `--threshold` is refused. Outputs `qg-coverage.*`.
 
-## G8 / G9 / G10
+## G8 / G9
 
 As in every adapter: G8 from the Git tree; G9 from snapshots of each scenario's acceptance test file
 at its `test` commit and at its green commit with `node "<skill>/scripts/snapshot.mjs" --evidence "$EV" --name red-1-test_place_order.py --rev <commit> --file <path>`
-(exact `git show` bytes, `--rev` defaults to `HEAD`); G10 at the scenario's RED, before its implementation, with the G1 line narrowed
-to the scenario's acceptance test and `--name qg-red-{cycle}`, one cycle per scenario:
-
-```bash
-node "<skill>/scripts/capture.mjs" --root . --evidence "$EV" --name qg-red-1 -- {python} -m pytest -q -p no:cacheprovider tests/unit/place_order/test_place_order.py
-```
-
-The recorded exit code MUST be non-zero. The capture cannot be reconstructed after GREEN.
+(exact `git show` bytes, `--rev` defaults to `HEAD`). No RED run is captured: the `test` commit is the RED.
 
 ## Producer flow at the end of the story
 
 1. Run G1/G2, G3, G4, G5, G6 (`mutation-testing`'s gate), G7, G11 — each through its script.
-2. Write the RED and GREEN snapshots per scenario with `snapshot.mjs --rev`; check every G10 capture exists with a non-zero exit.
+2. Write the RED and GREEN snapshots per scenario with `snapshot.mjs --rev`.
 3. `repo_root_rev = git rev-parse HEAD`; build `commits_covered[]` from the DELIVER base.
-4. Assemble `$EV/qg-{story}.json` (contract v5) with `"tech_adapter": "quality-gates-python"`, commit `$EV` alone, then run `node "<skill>/scripts/qg-verify/cli/qg-verify.mjs" --log "$EV/qg-{story}.json"`: it must print `"verdict": "pass"`.
+4. Assemble `$EV/qg-{story}.json` (contract v6) with `"tech_adapter": "quality-gates-python"`, commit `$EV` alone, then run `node "<skill>/scripts/qg-verify/cli/qg-verify.mjs" --log "$EV/qg-{story}.json"`: it must print `"verdict": "pass"`.

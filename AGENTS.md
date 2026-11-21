@@ -143,6 +143,12 @@ prompts an agent pays for on every run, not documentation.
   outputs cannot leak into prepared workspaces.
 - `eng/run-vally-evals.sh` is the only eval entry point. Skill specs run baseline vs
   treatment; agent specs run once through their declared executor.
+- `eng/bench-agent-ab.sh <suite> <control-ref> <candidate-ref>` compares two versions of
+  one agent: it runs the suite of the current checkout through each ref's
+  `run-vally-evals.sh` in its own worktree, then `eng/compare-agent-ab.mjs` reports cost,
+  time (model vs tools vs tests) and quality. A candidate that loses score or pass rate on
+  any stimulus is a `quality-regression` (exit 3), however much cheaper it is. Output goes
+  to `bench-results/`, never committed.
 - `STIMULI=` on the runner narrows a run to named stimuli — the pilot signal check before
   funding a full paired arm. It derives the pilot from the frozen spec and writes to
   `eval-results-pilot/`, so a probe can never be published as a verdict. Never hand-edit a

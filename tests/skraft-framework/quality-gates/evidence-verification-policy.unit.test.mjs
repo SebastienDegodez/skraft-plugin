@@ -237,3 +237,26 @@ test('not_run is only for G6, and only from v5', () => {
   assert.deepEqual(codes(run((l) => { v5(l); l.gates[1] = { id: 'G2', label: 'u', status: 'not_run', rationale: 'x' } })), ['STATUS_INVALID'])
   assert.deepEqual(codes(run((l) => { l.gates[5] = { ...notRun('x'), scope: 'core' } })), ['STATUS_INVALID'])
 })
+
+// v6: no G10 — the acceptance RED commit is the proof; cycles carry no captured RED run.
+const v6 = (l) => {
+  v5(l)
+  l.$schema = 'quality-gates-evidence/v6'
+  l.gates = l.gates.filter((g) => g.id !== 'G10')
+  const cycle = l.test_integrity.cycles[0]
+  delete cycle.red_stdout_ref; delete cycle.red_stdout_sha256; delete cycle.red_exit_code_ref
+}
+
+test('v6 needs no G10 and no captured RED run', () => {
+  assert.deepEqual(run(v6, (f) => { f.files.delete('ev/red.out'); f.files.delete('ev/red.exit') }), { verdict: 'pass', findings: [] })
+  assert.deepEqual(codes(run((l) => { v6(l); l.gates = l.gates.filter((g) => g.id !== 'G9') })), ['GATE_MISSING'])
+  assert.deepEqual(codes(run(v6, (f) => { f.files.delete('ev/g.cs') })), ['SNAPSHOT_MISSING'])
+})
+
+test('v6 G6 may be not_run, like v5', () => {
+  const result = run((l) => { v6(l); l.gates[5] = notRun('no component declares commands.mutation') })
+  assert.equal(result.verdict, 'pass')
+  assert.deepEqual(codes(result), ['G6_NOT_RUN'])
+  assert.equal(only(run((l) => { v6(l); l.gates[1] = { id: 'G2', label: 'u', status: 'not_run' } })).detail, 'G2 status not_run is not pass, fail or not_applicable')
+  assert.equal(only(run((l) => { v6(l); l.gates[5] = { id: 'G6', label: 'm', status: 'skipped' } })).detail, 'G6 status skipped is not pass, fail or not_applicable (or not_run)')
+})

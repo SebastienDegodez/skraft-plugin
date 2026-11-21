@@ -31,7 +31,7 @@ The acceptance test targeted by this iteration MUST pass. No `[Skip]`.
 dotnet test
 ```
 
-Zero red tests. Zero ignored tests.
+Zero red tests, except the committed acceptance tests of the story's scenarios not delivered yet (`outside-in-tdd` → All Acceptance Tests First). Zero ignored tests.
 
 ### C3 — Build passes
 
@@ -98,7 +98,8 @@ Applicable to Domain code only.
 ### C11 — Parametrize Variations
 
 Multiple input variants for the same behavior MUST be a single parameterized test
-(`[Theory]/[InlineData]` in .NET, `@ParameterizedTest` in Java, `pytest.mark.parametrize` in Python),
+(`[Theory]/[InlineData]` in .NET, `@ParameterizedTest` in Java, `pytest.mark.parametrize` in Python,
+`it.each` / `test.each` in TypeScript and JavaScript),
 not duplicated test methods. One test method per behavior, one row per case.
 
 ## When to Execute
