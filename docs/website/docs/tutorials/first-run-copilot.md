@@ -103,8 +103,9 @@ From here on, `skraft …` means that full command, or the `skraft` command that
 
 ![Terminal: skraft init answers "skraft-config.json: web (javascript, web)"](/img/screenshots/shared/terminal-init.svg)
 
-*Figure 1 — One component, `web`, with its `test` and `mutation` commands, is written to
-`skraft-config.json`. The pipeline runs `test`; `mutation` is yours to run.*
+*Figure 1 — One component, `web`, is written to `skraft-config.json`, with no command: write its
+`"commands": { "test": "npm test" }` there. The pipeline runs `test`; `mutation` is yours to write
+and run.*
 
 A run that publishes starts only on a configuration that settles the publication consents, so
 answer them now, in `skraft-config.json`. This repository has no remote, so decline both:

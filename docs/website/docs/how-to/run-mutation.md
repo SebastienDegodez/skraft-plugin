@@ -18,16 +18,10 @@ the tests that kill them.
 
 ## 1. Declare the mutation command of each component
 
-Ask your agent for `/skraft-init mutation`, or write them yourself:
-
-```console
-$ skraft init --mutation
-skraft-config.json already lists every project found (2 components); mutation: api, web
-```
-
-It writes the command of each stack ([the defaults](../reference/skraft-config.md)) to the
-components that have none, and keeps a command you wrote. It installs nothing: Stryker, PIT or
-mutmut, and their configuration, are yours to add. To leave a component out, remove its
+Ask your agent for `/skraft-init mutation`, or write them yourself under `commands.mutation` of
+each component in `skraft-config.json`. skraft holds no mutation command of any stack: the agent
+proposes one per component, and you confirm or rewrite it. Nothing is installed: Stryker, PIT or
+mutmut, and their configuration, are yours to add. To leave a component out, give it no
 `mutation` key.
 
 The command either writes its result, score already computed, to the file the environment

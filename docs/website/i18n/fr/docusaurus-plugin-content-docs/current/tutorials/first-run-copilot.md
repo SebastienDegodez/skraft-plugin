@@ -103,8 +103,9 @@ Dans la suite, `skraft …` veut dire cette commande complète, ou la commande `
 
 ![Terminal : skraft init répond « skraft-config.json: web (javascript, web) »](/img/screenshots/shared/terminal-init.svg)
 
-*Figure 1 — Un composant, `web`, avec ses commandes `test` et `mutation`, est écrit dans
-`skraft-config.json`. Le pipeline lance `test` ; `mutation` est à vous de la lancer.*
+*Figure 1 — Un composant, `web`, est écrit dans `skraft-config.json`, sans commande : écrivez-y
+son `"commands": { "test": "npm test" }`. Le pipeline lance `test` ; `mutation` est à vous de
+l'écrire et de la lancer.*
 
 Un run qui publie ne démarre que sur une configuration dont les consentements de publication sont
 réglés : répondez-y maintenant, dans `skraft-config.json`. Ce dépôt n'a pas de remote, donc

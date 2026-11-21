@@ -42,7 +42,7 @@ JSON.
 | Outil | Arguments | Ligne de commande | Offert à |
 | --- | --- | --- | --- |
 | `skraft_doctor` | `run?`, `base?` | `doctor [--run] [--base <ref>] --json` | tout hôte |
-| `skraft_init` | `add?` (dossiers), `mutation?` | `init [--add <folder>]... [--mutation]` | tout hôte |
+| `skraft_init` | `add?` (dossiers) | `init [--add <folder>]...` | tout hôte |
 | `skraft_mutation` | `record?`, `key?`, `answer?`, `reason?` | `mutation [record] --json` ; avec `answer`, enregistre la réponse humaine sur le run de mutation de la branche, comme `skraft_answer` sur le pipeline | tout hôte |
 | `skraft_start` | `slug`, `issue?`, `title?`, `base?`, `fromArtifacts?` | `init <slug> [--issue <n>] [--title <t>] [--base <ref>] [--from-artifacts]` | VS Code |
 | `skraft_next` | — | `next --json` | VS Code |

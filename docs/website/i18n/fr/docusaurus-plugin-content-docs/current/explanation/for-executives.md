@@ -87,9 +87,9 @@ moteur, jamais par le modèle.
 Chaque dépôt décrit ses composants et leurs commandes dans `skraft-config.json` : build,
 test, format, lint, couverture, architecture, et la commande de mutation propre au développeur.
 SKRAFT détecte les projets
-(.NET, Java, Python, TypeScript, JavaScript, React), propose des commandes par défaut, et
-vérifie que chacune peut tourner. Une commande écrite par l'équipe est toujours celle qui
-tourne. Les seuils de qualité, eux, ne se négocient pas : ils ne sont pas configurables.
+(.NET, Java, Python, TypeScript, JavaScript, React), ne détient aucune ligne de commande d'aucune stack, et
+vérifie que chaque commande écrite par l'équipe se découpe. Toute commande est celle de
+l'équipe. Les seuils de qualité, eux, ne se négocient pas : ils ne sont pas configurables.
 
 ### De quoi qualifier le livrable
 

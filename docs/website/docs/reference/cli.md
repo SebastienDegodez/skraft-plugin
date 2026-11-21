@@ -32,7 +32,7 @@ page writes `skraft <command>`: the command the npm package `@skraft/cli` instal
 
 ```
 usage: skraft --version
-       skraft init [--add <folder>]... [--mutation]                      detect the components into skraft-config.json (--mutation: with their mutation command)
+       skraft init [--add <folder>]...                                   detect the components into skraft-config.json
        skraft init <slug> [--issue <number>] [--title <text>] [--base <ref>] [--from-artifacts]   start or resume a pipeline
        skraft status [--json]
        skraft report [--json]                                            time, cost and retries of each step of the active pipeline
@@ -45,7 +45,7 @@ usage: skraft --version
        skraft record [--json]                                            hand the saved agent replies to the run, then go on
        skraft gate [--all] [--json]                                      run the gates of the changed components (all with --all)
        skraft precheck [--json]                                          run, inside the open attempt, the mechanical checks the engine runs on its submission, and keep what it read
-       skraft doctor [--run] [--base <ref>] [--json]                     check every command can run (--run: run each once)
+       skraft doctor [--run] [--base <ref>] [--json]                     check the configuration and that every command parses (--run: start each once)
        skraft mutation [--json]                                          mutate the branch HEAD is on with the mutation workflow, in its own run, until it needs agents or a human
        skraft mutation record [--json]                                   hand the saved agent replies to the branch's mutation run, then go on
        skraft mutation decide [<key>] <answer> [--reason <text>]         answer the question the branch's mutation run waits on
@@ -93,17 +93,16 @@ The `refused` and `blocked` codes are detailed in
 
 Prints the version read from the plugin's `plugin.json`. Output: one line. Code 0.
 
-## `skraft init [--add <folder>]... [--mutation]`
+## `skraft init [--add <folder>]...`
 
 **Effect.** Detects one component per project found in the working copy and in each
 `--add` folder, and adds them to `skraft-config.json` (created when missing). Components
-already listed and every other key of the file stay as written. Detection rules and stack
-defaults: [skraft-config.json](./skraft-config.md).
+already listed and every other key of the file stay as written. It writes no command: every
+command is the developer's. Detection rules: [skraft-config.json](./skraft-config.md).
 
 | Option | Value | Rule |
 | --- | --- | --- |
 | `--add <folder>` | folder relative to the working copy (`../payment-web`) | repeatable; refused when absolute or not a folder |
-| `--mutation` | — | also writes the mutation command of each project's stack, to the components it adds and to the listed ones that have none; a command already written stays. Without it, no `mutation` command is written: mutating is the developer's choice |
 
 **Output (stdout, code 0)** — one of these lines:
 
@@ -113,7 +112,6 @@ defaults: [skraft-config.json](./skraft-config.md).
 | nothing new, the file already has a `components` key (even empty) | `skraft-config.json already lists every project found (N components)` |
 | no project found, file missing or without a `components` key (the file is written with `"components": []`) | `no project found; skraft-config.json lists no component` |
 
-With `--mutation`, the line goes on with `; mutation: <name>, …`, the components that now carry a mutation command, then `; no mutation command found for <name> (<root> holds no project), …` when some are left without one.
 
 **Errors (stderr, code 1).**
 
@@ -557,7 +555,7 @@ workflow (`.skraft/mutation.skraft.dot` when the working copy ejected it, else t
 | Code | Reason |
 | --- | --- |
 | `detached-head` | `HEAD is on no branch, and a mutation run is the run of one; check out the branch to mutate, then start it again` |
-| `no-mutation-command` | `no component of skraft-config.json declares a mutation command; declare them with /skraft-init mutation, or skraft init --mutation` |
+| `no-mutation-command` | `no component of skraft-config.json declares a mutation command; declare them with /skraft-init` |
 
 Any other refusal of `init <slug>` or of the loop prints `refused (<code>)` with its reason. Text
 and `--json` output: those of [`next`](#skraft-next---json-and-skraft-record---json).

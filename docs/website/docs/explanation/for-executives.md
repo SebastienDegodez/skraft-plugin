@@ -83,8 +83,8 @@ directory, result, output) is written by the engine, never by the model.
 
 Each repository describes its components and their commands in `skraft-config.json`: build,
 test, format, lint, coverage, architecture, and the developer's own mutation command. SKRAFT detects the projects (.NET,
-Java, Python, TypeScript, JavaScript, React), proposes default commands, and checks that each
-one can run. A command written by the team is always the one that runs. Quality thresholds,
+Java, Python, TypeScript, JavaScript, React), holds no command line of any stack, and checks that each
+command the team wrote parses. Every command is the team's. Quality thresholds,
 however, are not negotiable: they are not configurable.
 
 ### What it takes to qualify a delivery

@@ -117,7 +117,8 @@ qui précède `/engine/`. Dans la suite, `skraft …` veut dire cette commande c
 [`npm i -g @skraft/cli`](../how-to/install-on-a-host.mdx#skraft-command) met en place.
 
 `skraft init` cherche les projets du dépôt et écrit un **composant** par projet : une partie du
-dépôt avec sa racine, sa stack, ses chemins et ses commandes. Vous voyez :
+dépôt avec sa racine, sa stack et ses chemins. Il n'écrit aucune commande : les commandes sont
+les vôtres. Vous voyez :
 
 ![Terminal : skraft init répond « skraft-config.json: web (javascript, web) »](/img/screenshots/shared/terminal-init.svg)
 
@@ -136,23 +137,27 @@ Ouvrez `skraft-config.json` à la racine de `shop` :
         "src": ["src/"],
         "tests": ["test/"]
       },
-      "commands": {
-        "test": "npm test",
-        "mutation": "npx stryker run --incremental --reporters json,clear-text"
-      }
+      "commands": {}
     }
   ]
 }
 ```
 
-`test` vient du script de `web/package.json` ; `mutation` est le défaut StrykerJS, une commande à
-vous : le pipeline ne la lance jamais, le mutation testing est à vous de le lancer quand vous le
-choisissez. `paths` est aussi
+`commands` est vide : skraft ne détient aucune ligne de commande d'aucune stack, qui casserait
+quand un outil ou une version change. `paths` est aussi
 le **périmètre d'écriture** de DELIVER : le software engineer ne pourra écrire que dans `web/src` et
 `web/test`. `skraft init` a aussi ajouté `skraft-config.local.json`, votre couche personnelle, au
 `.gitignore`.
 
-Deux réponses vous appartiennent, et `skraft init` n'en écrit aucune. La première est le Gherkin :
+Trois réponses vous appartiennent, et `skraft init` n'en écrit aucune. La première est les
+commandes : les gates lancent celles que vous écrivez, donnez donc à `web` sa commande de test, le
+script de `web/package.json` :
+
+```json title="skraft-config.json"
+      "commands": { "test": "npm test" }
+```
+
+Une commande démarre sans shell, depuis la racine du composant. La deuxième est le Gherkin :
 il détecte les dossiers qu'un runner lit quand un projet en a, et celui-ci n'en a pas, donc dites
 que ses tests s'écrivent sans :
 

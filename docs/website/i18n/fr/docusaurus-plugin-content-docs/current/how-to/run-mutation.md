@@ -18,17 +18,11 @@ survivants à des agents qui proposent puis écrivent les tests qui les tuent.
 
 ## 1. Déclarer la commande de mutation de chaque composant
 
-Demandez `/skraft-init mutation` à votre agent, ou écrivez-les vous-même :
-
-```console
-$ skraft init --mutation
-skraft-config.json already lists every project found (2 components); mutation: api, web
-```
-
-Il écrit la commande de chaque stack ([les défauts](../reference/skraft-config.md)) aux
-composants qui n'en ont pas, et garde une commande que vous avez écrite. Il n'installe rien :
-Stryker, PIT ou mutmut, et leur configuration, sont à vous. Pour laisser un composant de côté,
-retirez sa clé `mutation`.
+Demandez `/skraft-init mutation` à votre agent, ou écrivez-les vous-même sous `commands.mutation`
+de chaque composant dans `skraft-config.json`. skraft ne détient aucune commande de mutation
+d'aucune stack : l'agent en propose une par composant, et vous la confirmez ou la réécrivez. Rien
+n'est installé : Stryker, PIT ou mutmut, et leur configuration, sont à vous. Pour laisser un
+composant de côté, ne lui donnez aucune clé `mutation`.
 
 La commande écrit son résultat, score déjà calculé, dans le fichier que nomme la variable
 d'environnement `SKRAFT_MUTATION_RESULT`, ou laisse le rapport de son outil à son chemin par défaut
