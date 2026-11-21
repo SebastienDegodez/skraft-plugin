@@ -257,6 +257,17 @@ test('--run names a command whose program does not start by its component and co
   ])
 })
 
+test('--run tells a program the system refuses to start from one it does not find: not executable, naming the component and the command', async () => {
+  const { doctor: check } = doctor({ components: [WEB], runner: new ScriptedMachine({ refused: ['npx'] }) })
+
+  const report = await check.check({ run: true })
+
+  assert.deepEqual(failures(report), [
+    'web/test: npx could not be started for web/test: not executable',
+    'web/e2e: npx could not be started for web/e2e: not executable',
+  ])
+})
+
 test('--run without a base cannot start a {baseSha} command and says why', async () => {
   const { doctor: check } = doctor({ components: [API], sourceControl: new InMemorySourceControl({ 'services/payment-api': { top: '.', mergeBases: {} } }) })
 
@@ -315,7 +326,7 @@ test('a command with shell syntax, or that sets variables before its program, is
 
 test('a component with no gate command, mutation, the developer\'s, aside, or a --base that is not a ref, fails the doctor', async () => {
   const { doctor: check } = doctor({ components: [{ ...WEB, commands: { e2e: 'npx playwright test', mutation: 'npx stryker run' } }] })
-  assert.deepEqual(failures(await check.check()), ['web: no gate command; give it at least one of build, format, lint, test, architecture, coverage in skraft-config.json'])
+  assert.deepEqual(failures(await check.check()), ['web: no gate command; give it at least one of build, format, lint, test, architecture, coverage in skraft-config.json; run /skraft-init'])
 
   const flagged = doctor({ components: [{ ...API, mocking: { strategy: 'inprocess' } }] })
   assert.deepEqual(failures(await flagged.doctor.check({ run: true, base: '--independent' }))[0], 'base: --base must be a git ref: text with no blank that does not start with -')

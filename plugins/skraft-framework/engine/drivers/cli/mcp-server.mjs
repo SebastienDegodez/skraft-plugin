@@ -62,7 +62,7 @@ const STARTS = Object.freeze({
 /** What the host passes to its model when it connects. @param {boolean} loop */
 const instructionsFor = (loop) => [
   'skraft runs a delivery pipeline (research, design, distill, deliver) in the repository the host shares.',
-  'Before the first prompt in a repository, call skraft_doctor. When its config check fails, or a run is refused with configuration-incomplete, set skraft up with the skraft-init skill, which calls skraft_init.',
+  'Before the first prompt in a repository, call skraft_doctor. When its config check fails, a component has no gate command, or a run is refused with configuration-incomplete, set skraft up with the skraft-init skill, which calls skraft_init.',
   loop ? STARTS.loop : STARTS.host,
   'For a pipeline question, read skraft_status. For unforeseen only, follow skraft_answer host-llm guidance with observed model/cost/unit, without a human dialog. For every other kind, ask the EXACT text and options through the offered native ask_user or askQuestions tool, and request a refusal reason there. Relay ONLY its returned human reply with skraft_answer {key, answer, reason?, workspace}. After successful record resume the SAME workflow run ID; for the MCP loop call skraft_next in the same workspace. Missing native tool or dismissal: report the concrete blocker, leave paused and record nothing, never infer a human answer or use ordinary prose instead.',
   'Publishing, a review verdict comment and the V2 migration keep terminal consent: the person runs skraft publish, skraft review --publish or skraft migrate in their own terminal.',

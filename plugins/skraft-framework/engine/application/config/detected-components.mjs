@@ -22,7 +22,7 @@ const DEPENDENCIES = 'node_modules'
 
 /**
  * The projects under the starts whose root no component holds yet, each named after its folder
- * with a name no component holds yet;
+ * with a name no component holds yet.
  * @param {Workspace} workspace @param {string[]} starts
  * @param {Array<{ name: string, root: string }>} components already listed
  * @param {{ workingCopyName: string }} request

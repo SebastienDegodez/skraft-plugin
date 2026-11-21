@@ -56,7 +56,7 @@ export const TOOLS = Object.freeze([
   }),
   tool({
     name: 'skraft_doctor', title: 'Check skraft is ready',
-    description: 'Checks the repository is ready for skraft: skraft-config.json, each component command, the workflow and the model of each agent. Call it before the first prompt in a repository; when its config check fails, set skraft up with skraft_init.',
+    description: 'Checks the repository is ready for skraft: skraft-config.json, each component command, the workflow and the model of each agent. Call it before the first prompt in a repository; when its config check fails or a component has no gate command, set skraft up with skraft_init and the skraft-init skill.',
     parameters: { run: { kind: 'boolean', description: 'run each command once' }, base: { kind: 'string', description: 'the ref the changes are measured from' } },
     annotations: { ...LOCAL, idempotentHint: true }, argv: (args) => ['doctor', ...flag('--run', args.run), ...value('--base', args.base), '--json'],
   }),

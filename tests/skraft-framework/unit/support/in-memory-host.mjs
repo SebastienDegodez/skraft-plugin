@@ -995,12 +995,13 @@ export class InMemoryWorkflowSource {
  */
 export class ScriptedMachine {
   /**
-   * @param {{ installed?: string[], exits?: Record<string, number | null>, clock?: FixedClock, takesMs?: number, meanwhile?: Record<string, () => Promise<void> | void>, floods?: string[] }} [options]
-   *   exits: null for a program stopped before it exited; clock advances by takesMs per run;
+   * @param {{ installed?: string[], exits?: Record<string, number | null>, clock?: FixedClock, takesMs?: number, meanwhile?: Record<string, () => Promise<void> | void>, floods?: string[], refused?: string[] }} [options]
+   *   refused: programs the system refuses to start (EACCES); exits: null for a program stopped before it exited; clock advances by takesMs per run;
    *   meanwhile: what happens elsewhere on the machine while that command line runs; floods:
    *   the command lines whose output passes the runner's limit, kept cut
    */
-  constructor({ installed = ['git', 'docker', 'dotnet', 'npm', 'npx', 'mvn', 'python'], exits = {}, clock = null, takesMs = 0, meanwhile = {}, floods = [] } = {}) {
+  constructor({ installed = ['git', 'docker', 'dotnet', 'npm', 'npx', 'mvn', 'python'], exits = {}, clock = null, takesMs = 0, meanwhile = {}, floods = [], refused = [] } = {}) {
+    this.refused = new Set(refused)
     this.installed = new Set(installed)
     this.exits = exits
     this.clock = clock
@@ -1025,6 +1026,7 @@ export class ScriptedMachine {
     this.runs.push({ argv, cwd, ...(timeoutMs === undefined ? {} : { timeoutMs }) })
     this.envs.push(env)
     this.javaTmpDirs.push(javaTmpDir)
+    if (this.refused.has(argv[0])) return { started: false, exitCode: null, stdout: '', stderr: '', error: `${argv[0]} could not be started: the system refused it (EACCES)` }
     if (this.installedAt(argv[0], cwd) === null) return { started: false, exitCode: null, stdout: '', stderr: '', error: `command not found: ${argv[0]}` }
     await this.clock?.pass(this.takesMs)
     const line = `${cwd} $ ${argv.join(' ')}`

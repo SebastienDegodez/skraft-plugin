@@ -13,7 +13,7 @@ import { loadConfig } from '../config/bases.mjs'
  */
 
 export const DETACHED_HEAD = 'HEAD is on no branch, and a mutation run is the run of one; check out the branch to mutate, then start it again'
-export const NO_MUTATION_COMMAND = 'no component of skraft-config.json declares a mutation command; declare them with /skraft-init'
+export const NO_MUTATION_COMMAND = 'no component of skraft-config.json declares a mutation command; declare them with /skraft-init mutation'
 
 /**
  * StartMutation — makes the run of the branch HEAD is on the active run of the mutation folder.

@@ -36,8 +36,8 @@ import { mutationCheck } from './mutation-check.mjs'
 const NODE_MAJOR = 22
 
 /**
- * Doctor — checks that every command of every component can run on this machine: Node, the
- * configuration, the forge, each component's root, each command's line, the skills the agents writing
+ * Doctor — checks the configuration and that every command of every component parses (with `run`,
+ * that it starts): Node, the configuration, the forge, each component's root, each command's line, the skills the agents writing
  * its tests are asked to read, the infrastructure policy of its tests,
  * Docker or Podman when a policy runs a container, then what each agent the workflow dispatches
  * runs on, per host, and last how VS Code runs the pipeline.
@@ -163,7 +163,7 @@ const componentChecks = async (deps, component, { run, baseSha }) => {
     return [{ subject: component.name, status: 'fail', detail: `root ${component.root} is not a folder` }]
   }
   /** @type {DoctorCheck[]} */
-  const checks = gatesOf(component).some((gate) => STORY_GATES.includes(gate)) ? [] : [{ subject: component.name, status: 'fail', detail: NO_GATE }]
+  const checks = gatesOf(component).some((gate) => STORY_GATES.includes(gate)) ? [] : [{ subject: component.name, status: 'fail', detail: `${NO_GATE}; run /skraft-init` }]
   for (const name of commandNames(component)) checks.push(await commandCheck(deps, { component, name, run, baseSha }))
   return [...checks, ...await bddChecks(deps, component), ...await skillChecks(deps, component)]
 }
@@ -259,7 +259,7 @@ const DOCTOR_LOGS = '.copilot-tracking/skraft-doctor'
  */
 const runCheck = async (deps, { subject, name }, { argv, cwd }) => {
   const result = await deps.commandRunner.run({ argv, cwd })
-  if (!result.started) return { subject, status: 'fail', detail: `${argv[0]} did not start for ${subject}; install it or change commands.${name} in ${CONFIG_FILE}` }
+  if (!result.started) return { subject, status: 'fail', detail: notStarted({ argv, subject, name }, result) }
   const ran = commandText(argv)
   const log = `${DOCTOR_LOGS}/${subject}.log`
   await deps.workspace.write(log, commandLog(ran, cwd, result))
@@ -267,6 +267,18 @@ const runCheck = async (deps, { subject, name }, { argv, cwd }) => {
     ? { subject, status: 'ok', detail: `${ran} passed` }
     : { subject, status: 'fail', detail: `${ran} exited ${result.exitCode}; its output is in ${log}` }
 }
+
+/** The system's refusals to start a program that is there: no right to run it. */
+const REFUSED = /\((EACCES|EPERM)\)$/
+
+/**
+ * Why a program did not start, in fixed words: not executable when the system refused it, else not
+ * found or not startable, with what to change.
+ * @param {{ argv: string[], subject: string, name: string }} command @param {import('../ports/command-runner.mjs').CommandResult} result
+ */
+const notStarted = ({ argv, subject, name }, { error }) => (REFUSED.test(error ?? '')
+  ? `${argv[0]} could not be started for ${subject}: not executable`
+  : `${argv[0]} did not start for ${subject}; install it or change commands.${name} in ${CONFIG_FILE}`)
 
 /**
  * The log of a command the doctor ran: the command, where, how it ended, then what it wrote.
