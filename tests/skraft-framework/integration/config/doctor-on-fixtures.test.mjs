@@ -168,10 +168,10 @@ test('skraft init then doctor pass on a .NET API with its React front in a neigh
 
   assert.equal(init.stdout, 'skraft-config.json: payment-api (dotnet, .), payment-web (react, ../payment-web)\n')
   assert.equal(doctor.status, 0, doctor.stdout)
-  assert.match(doctor.stdout, /^ok {4}payment-web\/test: npm → .*npm(\.cmd)?$/im)
+  assert.match(doctor.stdout, /^ok {4}payment-web\/test: npm test \(parsed; doctor --run starts it\)$/m)
 })
 
-test('doctor names the missing command and exits 1; the developer\'s command then wins over the default', async (t) => {
+test('doctor passes a command whose program is on no PATH, since it only parses it, and --run names the one that does not start', async (t) => {
   const cwd = copyFixture(FIXTURES.payment, join(tempFolder(t), 'payment'))
   const env = machine(t, ['dotnet'])
   assert.equal((await skraft(cwd, ['init'], { env })).status, 0)
@@ -179,16 +179,15 @@ test('doctor names the missing command and exits 1; the developer\'s command the
   const config = readJson(join(cwd, 'skraft-config.json'))
   config.components[0].commands.architecture = 'archunit-cli check'
   writeFileSync(join(cwd, 'skraft-config.json'), JSON.stringify(config, null, 2))
+  commitAll(cwd)
 
-  const missing = await skraft(cwd, ['doctor'], { env })
+  const parsed = await skraft(cwd, ['doctor'], { env })
+  const started = await skraft(cwd, ['doctor', '--run'], { env })
 
-  assert.equal(missing.status, 1)
-  assert.match(missing.stdout, /^FAIL {2}payment\/architecture: command not found: archunit-cli \(from \.\); install it or change commands\.architecture in skraft-config\.json$/m)
-  assert.equal(missing.stdout.trim().split(/\r?\n/).at(-1), 'skraft doctor: 1 checks failed')
-
-  config.components[0].commands.architecture = 'dotnet test --filter Category=Architecture'
-  writeFileSync(join(cwd, 'skraft-config.json'), JSON.stringify(config, null, 2))
-  assert.equal((await skraft(cwd, ['doctor'], { env })).status, 0)
+  assert.equal(parsed.status, 0, parsed.stdout)
+  assert.match(parsed.stdout, /^ok {4}payment\/architecture: archunit-cli check \(parsed; doctor --run starts it\)$/m)
+  assert.equal(started.status, 1)
+  assert.match(started.stdout, /^FAIL {2}payment\/architecture: archunit-cli did not start for payment\/architecture; install it or change commands\.architecture in skraft-config\.json$/m)
 })
 
 test('doctor passes on Microcks components without any container runtime on the machine, warning that their container scenarios will be indeterminate', async (t) => {
@@ -227,7 +226,7 @@ test('python runs from the virtual environment of the component, laid out the wa
   const gate = await skraft(cwd, ['gate', '--all'], { env })
 
   assert.equal(doctor.status, 0, doctor.stdout)
-  assert.equal(doctor.stdout.split(/\r?\n/)[4], `ok    payment-fastapi/test: python → ${venv}`)
+  assert.equal(doctor.stdout.split(/\r?\n/)[4], 'ok    payment-fastapi/test: python --version (parsed; doctor --run starts it)')
   assert.equal(gate.status, 0, gate.stdout)
   const evidence = readFileSync(join(cwd, '.copilot-tracking', 'skraft-plans', 'checkout', 'gates', 'payment-fastapi', 'test-1.log'), 'utf8')
   assert.match(evidence, new RegExp(`--- stdout\\n${process.version.replaceAll('.', '\\.')}\\r?\\n`))
@@ -253,7 +252,7 @@ test('doctor --run starts each command once against the base it is given, main b
   assert.deepEqual(JSON.parse(onMain.stdout).checks[3], { subject: 'payment/test', status: 'ok', detail: `node --version ${mainSha} passed` })
   assert.equal(onDevelop.status, 0, onDevelop.stdout)
   assert.equal(onDevelop.stdout.split(/\r?\n/)[4], `ok    payment/test: node --version ${developSha} passed`)
-  assert.match(JSON.parse(dry.stdout).checks[3].detail, /^node → /)
+  assert.equal(JSON.parse(dry.stdout).checks[3].detail, 'node --version {baseSha} (parsed; doctor --run starts it)')
 })
 
 test('doctor names a component root that is missing or a file; a folder it may not read stops it with the system\'s error', async (t) => {

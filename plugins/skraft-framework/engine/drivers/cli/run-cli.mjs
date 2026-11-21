@@ -548,7 +548,7 @@ const TABLE = [
   ['record', loopStep('record'), [{ synopsis: '[--json]', summary: 'hand the saved agent replies to the run, then go on' }]],
   ['gate', gate, [{ synopsis: '[--all] [--json]', summary: 'run the gates of the changed components (all with --all)' }]],
   ['precheck', precheck, [{ synopsis: '[--json]', summary: "run, inside the open attempt, the mechanical checks the engine runs on its submission, and keep what it read" }]],
-  ['doctor', doctor, [{ synopsis: '[--run] [--base <ref>] [--json]', summary: 'check every command can run (--run: run each once)' }]],
+  ['doctor', doctor, [{ synopsis: '[--run] [--base <ref>] [--json]', summary: 'check the configuration and that every command parses (--run: start each once)' }]],
   ['mutation', mutation, [
     { synopsis: '[--json]', summary: 'mutate the branch HEAD is on with the mutation workflow, in its own run, until it needs agents or a human' },
     { synopsis: 'record [--json]', summary: "hand the saved agent replies to the branch's mutation run, then go on" },
