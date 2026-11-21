@@ -38,14 +38,17 @@ import { issueOf } from './commits.mjs'
  *   scenario: the scenario of the story the pass works on, null for a pass on none; policy: how
  *   the components' tests treat what they depend on, told to the agent that writes the scenarios.
  * @typedef {{
- *   kind: 'plan' | 'oracle' | 'delivery', index: number, of: number, title: string | null, component: string | null, tags: string[],
+ *   kind: 'plan' | 'delivery', index: number, of: number, component: string | null,
+ *   scenarios: Array<{ index: number, title: string, component: string, tags: string[] }>, pending: number[],
  *   oracles: Array<{ sha: string, subject: string, files: string[] }>, skeleton: { sha: string, subject: string, files: string[] } | null, test: string | null,
- * }} BriefScenario
- *   test is null only on the pass that writes the plan, whose scenarios are not listed yet.
- *   title, component and tags: as the test plan lists the scenario, null on the pass that writes
- *   the plan; oracles: the reds of the acceptance tests the delivery pass may not change;
- *   skeleton: the red of the walking skeleton of the scenario's component, which the delivery
- *   pass keeps passing and may not change, null when it has none; test: the scenario component's test command.
+}} BriefScenario
+ *   plan: the pass that writes every scenario and their one red; delivery: the green of group
+ *   `index` of `of`. scenarios: the group's, as the test plan lists them; pending: the numbers of
+ *   the later groups' scenarios, whose tests still fail at its green; component: the first
+ *   scenario's, null on the plan's pass; oracles: the red of the acceptance tests the delivery
+ *   pass may not change; skeleton: the red of the walking skeleton of the group's component when
+ *   another commit holds it, which the green keeps passing; test: the component's test command,
+ *   null on the plan's pass.
  */
 
 /**
@@ -105,60 +108,73 @@ const scenarioLines = ({ scenario = null, slug, story, policy }) => {
 
 const POLICY = '- How the tests of each component treat what the code depends on, in the scenarios\' acceptance tests (targeted) and in the walking skeleton:'
 
-/** @param {BriefScenario} scenario */
-const scenarioHeading = ({ index, of, title, component, tags }) => `- Scenario: ${index} of ${of} — "${title}" (component ${component}${tags.length > 0 ? `, tags ${tags.join(' ')}` : ''})`
+/** @param {BriefScenario['scenarios'][number]} scenario */
+const scenarioLine = ({ index, title, component, tags }) => `S${index} "${title}" (component ${component}${tags.length > 0 ? `, tags ${tags.join(' ')}` : ''})`
 
-/** What a pass on a scenario does, by kind of pass. @type {Readonly<Record<BriefScenario['kind'], (scenario: BriefScenario) => string[]>>} */
+/** What a pass on the story's scenarios does, by kind of pass. @type {Readonly<Record<BriefScenario['kind'], (scenario: BriefScenario) => string[]>>} */
 const SCENARIO_WORK = Object.freeze({
   plan: () => [
-    '- Scenarios: write every scenario of the story, each tagged `@pending`, then list them in your test plan under a `## Scenarios` heading, as the table',
-    '  `| # | Scenario | Component | Tags |`, one row per scenario, S1, S2, … in the order DELIVER builds them, each in the component where its test lives.',
+    '- Scenarios: write every scenario of the story, then list them in your test plan under a `## Scenarios` heading, as the table',
+    '  `| # | Scenario | Component | Tags |`, one row per scenario, S1, S2, …, each in the component where its test lives.',
     '  S1 is the scenario the walking skeleton walks, tagged `@walking-skeleton`, in a back-end component; a story with no new entry point writes instead',
     '  `Walking skeleton exemption: library`, `refactoring` or `docs-only` under the table, and tags no scenario `@walking-skeleton`.',
+    '- Groups: in your implementation plan, the table `| Group | Scenarios | Rule | … |`, one row per green DELIVER commits, in its order:',
+    '  the scenarios one rule of the story makes pass together (`S1, S2` or `S3–S5`), every scenario once, S1 in group 1.',
     '- Write the failing walking skeleton, a plain test with no Gherkin in the integration tests of S1\'s component: it enters by the real entry point,',
-    '  crosses the chain the production wiring builds, asserts the response\'s status, its shape and one value S1 names, and no other rule;',
-    '  with it, the skeleton of every class of that chain it lacks, each returning an empty value. Write no binding of a scenario:',
-    '  the acceptance test of S1 gets its own pass next. A story exempt of a walking skeleton writes none and commits its `.feature` files as `docs(<story>): …`.',
-  ],
-  oracle: (scenario) => [
-    scenarioHeading(scenario),
-    '- Write the failing acceptance test of this scenario only, the binding of its Gherkin entering by its use case, beside the earlier ones, and extend the skeleton',
-    '  it calls; remove `@pending` from this scenario alone; change no test of an earlier scenario nor the walking skeleton, write none for a later one, never skip one.',
+    '  crosses the chain the production wiring builds, asserts the response\'s status, its shape and one value S1 names, and no other rule.',
+    '- Write the failing acceptance test of every scenario, the binding of its Gherkin entering by its use case, each test\'s name starting with its',
+    '  scenario\'s number (`S1_…`, `test_s1_…`); with them, the skeleton of every class they call, each returning an empty value.',
   ],
   delivery: (scenario) => [
-    scenarioHeading(scenario),
-    ...section('- Acceptance tests DISTILL committed, which you never change (a wrong one: stop blocked, naming it):', [...scenario.oracles, ...(scenario.skeleton === null ? [] : [scenario.skeleton])].map(({ sha, subject, files }) => `${sha.slice(0, 7)} "${subject}": ${files.join(', ')}`)),
-    ...(scenario.skeleton === null ? [] : [`- The walking skeleton ${scenario.skeleton.sha.slice(0, 7)} passes at your commit too, beside this scenario's acceptance test.`]),
-    `- Make it pass with outside-in TDD, unit tests included, and commit nothing until it passes; change another component than ${scenario.component} only where scenario ${scenario.index} needs it, in the same commit.`,
+    `- Group: ${scenario.index} of ${scenario.of} — ${scenario.scenarios.map(scenarioLine).join('; ')}`,
+    ...section('- Acceptance tests DISTILL committed, which you never change (a wrong one: stop blocked, naming it):', uniqueReds([...scenario.oracles, ...(scenario.skeleton === null ? [] : [scenario.skeleton])]).map(({ sha, subject, files }) => `${sha.slice(0, 7)} "${subject}": ${files.join(', ')}`)),
+    ...(scenario.skeleton === null ? [] : [`- The walking skeleton ${scenario.skeleton.sha.slice(0, 7)} passes at your commit too, beside this group's acceptance tests.`]),
+    scenario.pending.length === 0
+      ? '- At your commit every test passes.'
+      : `- At your commit only the tests of ${pendingNames(scenario.pending)}, later groups, still fail; every other test passes.`,
+    `- Make the group's scenarios pass with outside-in TDD, unit tests included, and commit nothing until they pass; change another component than ${scenario.component} only where the group needs it, in the same commit.`,
   ],
 })
 
+/** The scenarios of later groups, by number. @param {number[]} pending */
+const pendingNames = (pending) => pending.map((index) => `S${index}`).join(', ')
+
+/** The reds, each once. @param {BriefScenario['oracles']} reds */
+const uniqueReds = (reds) => reds.filter((red, at) => reds.findIndex(({ sha }) => sha === red.sha) === at)
+
 /**
- * The one commit a pass on a scenario makes: the red, never chained to the test command, whose
- * output tells a failing assertion from a build error; the green, chained in bash to it.
+ * The one commit a pass makes: the red, never chained to the test command, whose output tells a
+ * failing assertion from a build error; the green, chained in bash to it.
  * @type {Readonly<Record<BriefScenario['kind'], (scenario: BriefScenario, message: string) => string[]>>}
  */
 const SCENARIO_COMMIT = Object.freeze({
-  plan: (_, message) => ['- Run the walking skeleton once and read its output: it fails on an assertion. Then commit it, the skeleton of the chain and the scenarios in one commit, exactly:', `  ${message}`],
-  oracle: ({ index }, message) => [
-    '- Run the test once and read its output: it fails on an assertion. Then commit the test and the skeleton in one commit, exactly:', `  ${message}`,
-    ...(index > 1 ? [`- It passes already because an earlier scenario makes it pass: commit it the same, adding \`-m "Covered-by: S<n>"\` last, n that scenario's number (1 to ${index - 1}); never merge, drop or rewrite a scenario of the approved plan.`] : []),
-  ],
-  delivery: ({ test }, message) => ['- Once it passes, commit once, in bash (never PowerShell), naming each file you changed:', `  ${test} && git add <each file you changed> && ${message}`],
+  plan: (_, message) => ['- Run the tests once and read their output: every acceptance test and the walking skeleton fail, each on its assertion. Then commit them, the skeleton they call and the scenarios in one commit, exactly:', `  ${message}`],
+  delivery: ({ test, pending }, message) => (pending.length === 0
+    ? ['- Once they pass, commit once, in bash (never PowerShell), naming each file you changed:', `  ${test} && git add <each file you changed> && ${message}`]
+    : [
+      `- Once they pass, commit once, in bash (never PowerShell), naming each file you changed, the test command leaving out the tests of ${pendingNames(pending)} by its name filter (\`outside-in-tdd\`, Pending scenarios excluded):`,
+      `  ${test} <the filter leaving out ${pendingNames(pending)}> && git add <each file you changed> && ${message}`,
+    ]),
 })
 
 /** The subject's longest length, as the commit convention keeps it. */
 const SUBJECT_LENGTH = 72
 
 /**
- * The exact `git commit` of the scenario's red or green: the scenario's title as subject, the
- * story's issue as the last line of the body.
+ * The exact `git commit` of the red or of a group's green: the scenario's title as the subject of
+ * a group of one, the story's issue as the last line of the body.
  * @param {BriefScenario} scenario @param {{ slug: string, issue: number | null }} story
  */
-const commitCommand = ({ kind, title }, { slug, issue }) => {
+const commitCommand = ({ kind, scenarios }, { slug, issue }) => {
   const type = kind === 'delivery' ? 'feat' : 'test'
-  const subject = `${type}(${slug}): ${title === null ? 'walking skeleton of <the title of S1, as your test plan writes it>' : subjectOf(title, SUBJECT_LENGTH - type.length - slug.length - 4)}`
+  const subject = `${type}(${slug}): ${subjectFor(kind, scenarios, SUBJECT_LENGTH - type.length - slug.length - 4)}`
   return `git commit -s -m "${subject}"${issue === null ? '' : ` -m "Refs: #${issue}"`}`
+}
+
+/** @param {BriefScenario['kind']} kind @param {BriefScenario['scenarios']} scenarios @param {number} room */
+const subjectFor = (kind, scenarios, room) => {
+  if (kind === 'plan') return 'acceptance tests S1–S<n>, n the last scenario of your test plan'
+  return scenarios.length === 1 ? subjectOf(scenarios[0].title, room) : `${scenarios.map(({ index }) => `S${index}`).join(', ')} <the rule of the group, as your implementation plan names it>`
 }
 
 /**
@@ -331,4 +347,4 @@ export const storyLine = (story) => {
  * Stable across a resume: a host that memoises dispatches by label finds it again.
  * @param {{ slug: string, step: string, visit: number, attempt: number, group?: { index: number, of: number, each?: string | null } | null }} dispatch
  */
-export const dispatchLabel = ({ slug, step, visit, attempt, group = null }) => `skraft ${slug} · ${step}${visit > 1 ? ` · pass ${visit}` : ''}${group === null ? '' : ` · ${group.each === 'scenario' ? 'scenario' : 'group'} ${group.index} of ${group.of}`} · attempt ${attempt}`
+export const dispatchLabel = ({ slug, step, visit, attempt, group = null }) => `skraft ${slug} · ${step}${visit > 1 ? ` · pass ${visit}` : ''}${group === null ? '' : ` · group ${group.index} of ${group.of}`} · attempt ${attempt}`

@@ -461,12 +461,14 @@ const replayed = async (deps, { run, step, judged, tally }) => {
 }
 
 /**
- * The scenario the judge is told the pass works on: the plan's first on the pass that writes it.
- * @param {Parameters<typeof checkCommits>[2]} step @returns {{ index: number, title: string } | null}
+ * The scenarios the judge is told the pass works on: every one of the plan on the pass that
+ * writes it, the group's on a delivery pass with those of later groups still failing.
+ * @param {Parameters<typeof checkCommits>[2]} step @returns {import('../../domain/pipeline/replay-verdict.mjs').JudgedScenario | null}
  */
 const judgedScenario = ({ scenario, plan }) => {
-  const told = scenario?.scenario ?? plan?.scenarios[0] ?? null
-  return told === null ? null : { index: told.index, title: told.title, walkingSkeleton: scenario?.kind === 'plan' }
+  const told = (list) => list.map(({ index, title }) => ({ index, title }))
+  if (scenario?.kind === 'delivery') return { scenarios: told(scenario.scenarios), pending: told(scenario.pending), walkingSkeleton: false }
+  return plan === null ? null : { scenarios: told(plan.scenarios), pending: [], walkingSkeleton: plan.exemption === 'none' }
 }
 
 /** @param {JudgedCommit[]} judged @param {{ details: Map<string, string>, issue: number | null }} context @returns {Failure[]} */

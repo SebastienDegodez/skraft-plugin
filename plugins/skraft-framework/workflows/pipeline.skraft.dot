@@ -11,9 +11,9 @@
 // A hexagon asks a human: the run waits until `skraft decide` answers.
 // A parallelogram with publish="pull-request" pushes the branch and opens or updates its pull request, on the consent publish.pullRequest of skraft-config.json; a run starts only once /skraft-init has settled it.
 // A parallelogram with publish="playwright-visuals" runs each front end's e2e command and commits the screenshots its manifest lists, on the consent publish.visuals; when="frontend" skips it without a front end, and such a node then needs no consent.
-// each="scenario" goes on two agent nodes: the first writes the story's scenarios and its failing walking skeleton, then, on its own pass, the failing acceptance test of the first scenario;
-// the second makes it pass with one green commit, the walking skeleton passing too; then the engine runs them again for each next scenario, one failing test commit, one green commit, without edges and without the review.
-// scenario-review asks a human, once, to read the scenarios, the walking skeleton and the acceptance test of the first scenario before DELIVER builds them: APPROVED goes on, REVISE sends DISTILL back with the corrections.
+// each="scenario" goes on two agent nodes: the first writes the story's scenarios, the groups its implementation plan delivers them in, the failing walking skeleton and the failing acceptance test of every scenario, in one test commit;
+// the second makes one group pass per pass with one green commit, the walking skeleton and the groups before passing too; the engine runs it again for each next group, without edges and without the review.
+// scenario-review asks a human, once, to read the scenarios, their groups and the failing tests before DELIVER builds them: APPROVED goes on, REVISE sends DISTILL back with the corrections.
 // The pipeline runs no mutation: mutation testing is the developer's, run apart from the story's pipeline.
 digraph skraft {
   graph [version="2", goal="Deliver the story"]

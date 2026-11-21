@@ -487,10 +487,9 @@ export const componentSkillsBriefed = (cwd, skillFolder, prompts) => {
     ['solution-researcher', [], []],
     ['solution-architect', [], []],
     ['acceptance-designer', [], []],
-    ['acceptance-designer', [], []],
     ['software-engineer', slashed([join(cwd, ...skillFolder.split('/'), 'SKILL.md'), join(PLUGIN_ROOT, 'skills', 'contract-testing', 'SKILL.md')]), ['contract-testing-javascript (app)']],
   ])
-  for (const path of briefs[4].skills) assert.ok(readFileSync(path, 'utf8').startsWith('---\nname: '), path)
+  for (const path of briefs[3].skills) assert.ok(readFileSync(path, 'utf8').startsWith('---\nname: '), path)
 }
 
 /** @param {string} path @param {string} text */
@@ -558,12 +557,12 @@ export const writesOnly = (result = { status: 'done', summary: 'outputs written'
   writeResult(brief, result)
 }
 
-/** Whether the brief puts a scenario of the story in the agent's hands. @param {Brief} brief */
-const onScenario = (brief) => brief.prompt.includes('\n- Scenario: ')
+/** Whether the brief puts a group of the story's scenarios in the engineer's hands. @param {Brief} brief */
+const onScenario = (brief) => brief.prompt.includes('\n- Group: ')
 
 /**
- * The engineer's work: on a scenario, the one green commit of the code with its unit test, once
- * the scenario passes; on a pass with none (the gates or the review sent the work back, or a
+ * The engineer's work: on a group of scenarios, the one green commit of the code with its unit
+ * test, once the group passes; on a pass with none (the gates or the review sent the work back, or a
  * workflow that builds no scenario), its TDD cycle: a red test commit while the code is missing
  * or wrong, then the code.
  * @param {string} code what src/pay.mjs holds once it is done
@@ -587,7 +586,7 @@ export const SLOW_CHECK = CHECK.replace("if (pay(10) !== 'paid 10') {\n", "await
 /** The Scenarios table of the test plan: the story's one scenario, its walking skeleton, in `app`. */
 export const SCENARIOS = '\n## Scenarios\n\n| # | Scenario | Component | Tags |\n|---|---|---|---|\n| S1 | Customer pays by card | app | @walking-skeleton |\n'
 
-/** The acceptance test of S1, as the acceptance designer commits it on the pass on that scenario. */
+/** The acceptance test of S1, as the acceptance designer commits it beside the walking skeleton. */
 export const FIRST_ACCEPTANCE = Object.freeze({ path: 'tests/acceptance/customer-pays-by-card.md', text: 'Given a basket of 10\nWhen the customer pays by card\nThen pay(10) answers paid 10\n' })
 
 /** The last commit whose subject is `subject`, by its short sha. @param {string} cwd @param {string} subject */
@@ -595,37 +594,27 @@ const shortShaOf = (cwd, subject) => git(cwd, 'log', '-1', '--format=%H', '--fix
 
 /**
  * What the human is asked to read before DELIVER, on a run whose acceptance designer acts as
- * NOMINAL's: the story's one scenario, the last red commit DISTILL made of its walking skeleton,
- * and the last of the acceptance test of S1.
+ * NOMINAL's: the story's one scenario in one group, and the last red commit DISTILL made of its
+ * walking skeleton and acceptance test.
  * @param {string} cwd @param {string} [slug]
  */
 export const scenarioReviewText = (cwd, slug = SLUG) => {
-  const skeleton = `test(${slug}): pay by card`
-  const first = `test(${slug}): customer pays by card`
-  return `Read the 1 scenario of the story before DELIVER builds them, one at a time: S1 "Customer pays by card" (app; @walking-skeleton). The walking skeleton and the skeleton of its chain are commit ${shortShaOf(cwd, skeleton)} "${skeleton}": src/pay.mjs, tests/unit/check.mjs. The acceptance test of S1 is commit ${shortShaOf(cwd, first)} "${first}": ${FIRST_ACCEPTANCE.path}. APPROVED delivers them; REVISE sends DISTILL back with your corrections (edit the .feature or the test yourself first if you like, and say so).`
+  const red = `test(${slug}): pay by card`
+  return `Read the 1 scenario of the story before DELIVER builds them: S1 "Customer pays by card" (app; @walking-skeleton). DELIVER makes them pass in 1 group: 1. S1. The acceptance tests of every scenario, the walking skeleton and the skeleton of its chain are commit ${shortShaOf(cwd, red)} "${red}": src/pay.mjs, ${FIRST_ACCEPTANCE.path}, tests/unit/check.mjs. APPROVED delivers them; REVISE sends DISTILL back with your corrections (edit the .feature or the test yourself first if you like, and say so).`
 }
 
 /**
- * The acceptance designer as its descriptor asks: on the pass that writes the plan, `check` as
- * the failing walking skeleton, with the skeleton it calls, its test plan listing the story's
- * scenario; on the pass on S1, the failing acceptance test of S1, committed once: a pass that
- * finds it already committed (DISTILL sent back) commits nothing.
+ * The acceptance designer as its descriptor asks: `check` as the failing walking skeleton and the
+ * acceptance test of S1, with the skeleton they call, in one red commit, its test plan listing the
+ * story's scenario; a pass that finds them already committed (DISTILL sent back) commits nothing.
  * @param {string} check @returns {Act}
  */
-export const acceptanceWith = (check) => (brief, repository) => {
-  if (onScenario(brief)) return firstAcceptance(brief, repository)
-  const { cwd, slug } = repository
+export const acceptanceWith = (check) => (brief, { cwd, slug }) => {
   fillOutputs(brief, `pay(10) answers paid 10.\n${SCENARIOS}`)
-  commit(cwd, `test(${slug}): pay by card`, { 'tests/unit/check.mjs': check, 'src/pay.mjs': SKELETON }, brief)
-  writeResult(brief, { status: 'done', summary: 'walking skeleton committed red' })
-}
-
-/** The acceptance test of S1, committed red unless an earlier pass committed it. @type {Act} */
-const firstAcceptance = (brief, { cwd, slug }) => {
-  fillOutputs(brief, 'S1 has its acceptance test.\n')
-  const path = join(cwd, ...FIRST_ACCEPTANCE.path.split('/'))
-  if (!existsSync(path) || readFileSync(path, 'utf8') !== FIRST_ACCEPTANCE.text) commit(cwd, `test(${slug}): customer pays by card`, { [FIRST_ACCEPTANCE.path]: FIRST_ACCEPTANCE.text }, brief)
-  writeResult(brief, { status: 'done', summary: 'acceptance test of S1 committed red' })
+  const files = { 'tests/unit/check.mjs': check, 'src/pay.mjs': SKELETON, [FIRST_ACCEPTANCE.path]: FIRST_ACCEPTANCE.text }
+  const written = Object.entries(files).every(([path, text]) => existsSync(join(cwd, ...path.split('/'))) && readFileSync(join(cwd, ...path.split('/')), 'utf8') === text)
+  if (!written) commit(cwd, `test(${slug}): pay by card`, files, brief)
+  writeResult(brief, { status: 'done', summary: 'acceptance tests committed red' })
 }
 
 /**
@@ -766,15 +755,13 @@ export const judgeVerdict = (decision, note = 'the logs show it') => ['```yaml',
 
 /**
  * The label the replay judge is started under on the nominal run: `red` for the acceptance
- * designer's walking skeleton in DISTILL, `first` for its acceptance test of S1 on the next pass,
- * `green` for the software engineer's feat commit of the scenario in DELIVER; each named by the
- * first 7 characters of its sha.
- * @param {string} cwd @param {'red' | 'first' | 'green'} kind
+ * designer's red of the walking skeleton and the acceptance tests in DISTILL, `green` for the
+ * software engineer's feat commit of the group in DELIVER; each named by the first 7 characters of its sha.
+ * @param {string} cwd @param {'red' | 'green'} kind
  */
 export const judgeLabel = (cwd, kind) => {
   const [step, subject, judged, pass] = {
     red: ['distill', `test(${SLUG}): pay by card`, 'red', ''],
-    first: ['distill', `test(${SLUG}): customer pays by card`, 'red', ' · pass 2'],
     green: ['deliver', `feat(${SLUG}): pay by card`, 'green', ''],
   }[kind]
   return `skraft ${SLUG} · ${step} · judge ${judged} ${shortShaOf(cwd, subject)} of attempt 1${pass} · attempt 1`

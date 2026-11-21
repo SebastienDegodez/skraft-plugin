@@ -24,40 +24,34 @@ const SHAPE = ['End your final message with this YAML document, in a fenced bloc
 const SKELETON = 'test(checkout): walking skeleton of customer pays by card'
 const asksAbout = (sha, kind, why = `read ${answerOf(sha, kind)}`) => `the replay judge asks a human about the ${kind} commit ${sha}: ${why}`
 
-test('a red whose tests fail is replayed at its parent too, and the replay judge reads both: accepted, the plan\'s red is the walking skeleton and the next red its scenario\'s oracle', async () => {
-  const host = scripted({}, (it) => [...research(it), agent({ work: ({ git }) => git.commit(SKELETON, ['tests/Integration/WalkingSkeletonTests.cs', 'src/PayOrder.cs']) })(it), unavailable])
-  host.firstReds.push(agent({ work: ({ git }) => git.commit('test(checkout): scenario 1', ['tests/Acceptance/S1AcceptanceTests.cs', 'tests/Acceptance/S1Steps.cs']) }))
+/** What the judge of the plan's red reads of the scenarios it holds, after the commit. */
+const RED_RULES = "Each acceptance test's name starts with its scenario's number (S1_…, test_s1_…). Every scenario's test fails at this commit, on its own assertion."
+
+test('a red whose tests fail is replayed at its parent too, and the replay judge reads both: accepted, the plan\'s one red holds the walking skeleton and the acceptance test of every scenario', async () => {
+  const files = ['tests/Integration/WalkingSkeletonTests.cs', 'tests/Acceptance/S1AcceptanceTests.cs', 'src/PayOrder.cs']
+  const host = scripted({}, (it) => [...research(it), agent({ work: ({ git }) => git.commit(SKELETON, files) })(it), unavailable])
 
   await host.start()
 
-  assert.deepEqual(host.replay.lines(), ['root-1 ./. $ dotnet test', 'root-0 ./. $ dotnet test', 'root-2 ./. $ dotnet test', 'root-1 ./. $ dotnet test'])
-  const [skeleton, first] = judged(host)
+  assert.deepEqual(host.replay.lines(), ['root-1 ./. $ dotnet test', 'root-0 ./. $ dotnet test'])
+  const [skeleton] = judged(host)
   assert.deepEqual([skeleton.agent, skeleton.source, skeleton.label, skeleton.model], ['replay-judge', 'plugin', `skraft ${SLUG} · distill · judge red root-1 of attempt 1 · attempt 1`, 'standard'])
   assert.equal(skeleton.prompt, [
-    `Judge the red commit root-1 "${SKELETON}", the walking skeleton of the story, which walks scenario 1 "Customer pays by card".`,
+    `Judge the red commit root-1 "${SKELETON}", holding the walking skeleton of the story, which walks S1, and the acceptance tests of S1 "Customer pays by card".`,
     'Its repository: .',
-    'Its files: tests/Integration/WalkingSkeletonTests.cs, src/PayOrder.cs',
+    `Its files: ${files.join(', ')}`,
+    RED_RULES,
     'The engine replayed, each in a throwaway checkout, from the component root:',
     `- api: \`dotnet test\` at the commit root-1: exit 1; printed to ${logOf('root-1')}`,
     `- api: \`dotnet test\` at its parent root-0: exit 1; printed to ${logOf('root-1', 'test-parent')}`,
     ...SHAPE,
   ].join('\n'))
-  assert.equal(first.label, `skraft ${SLUG} · distill · judge red root-2 of attempt 1 · pass 2 · attempt 1`)
-  assert.equal(first.prompt, [
-    'Judge the red commit root-2 "test(checkout): scenario 1", for scenario 1 "Customer pays by card".',
-    'Its repository: .',
-    'Its files: tests/Acceptance/S1AcceptanceTests.cs, tests/Acceptance/S1Steps.cs',
-    'The engine replayed, each in a throwaway checkout, from the component root:',
-    `- api: \`dotnet test\` at the commit root-2: exit 1; printed to ${logOf('root-2')}`,
-    `- api: \`dotnet test\` at its parent root-1: exit 1; printed to ${logOf('root-2', 'test-parent')}`,
-    ...SHAPE,
-  ].join('\n'))
   assert.equal(host.tracking.files.get(`${SLUG}/logs/judge-root-1-red.md`), judgeAnswer('accept'))
   const [replay] = checked(host, 'distill')[0].commits.map((commit) => commit.replay)
   assert.deepEqual([replay.exitCode, replay.log, replay.judge.decision, replay.judge.answer, replay.judge.model, replay.judge.assignment.family], [1, logOf('root-1'), 'accept', answerOf('root-1', 'red'), null, 'standard'])
-  const [plan, pass] = recorded(host, 'distill')
-  assert.deepEqual([plan.skeleton, plan.oracle], [{ scenario: 1, sha: 'root-1', subject: SKELETON, component: 'api', files: ['tests/Integration/WalkingSkeletonTests.cs', 'src/PayOrder.cs'], command: 'test' }, undefined])
-  assert.deepEqual([pass.group, pass.oracle, pass.skeleton], [1, { scenario: 1, sha: 'root-2', subject: 'test(checkout): scenario 1', component: 'api', files: ['tests/Acceptance/S1AcceptanceTests.cs', 'tests/Acceptance/S1Steps.cs'], command: 'test' }, undefined])
+  const [plan] = recorded(host, 'distill')
+  const red = { scenario: 1, sha: 'root-1', subject: SKELETON, component: 'api', files, command: 'test' }
+  assert.deepEqual([plan.skeleton, plan.oracles, plan.groups], [red, [red], [{ index: 1, scenarios: [1] }]])
 })
 
 test('a replay that cannot start escalates to config; one that runs out of time goes to the judge with its log', async () => {
@@ -94,10 +88,10 @@ test('a judge that asks for a retry has the commands replayed once more, then is
 
   await host.start()
 
-  assert.deepEqual(host.replay.lines(), ['root-1 ./. $ dotnet test', 'root-0 ./. $ dotnet test', 'root-1 ./. $ dotnet test', 'root-0 ./. $ dotnet test', 'root-2 ./. $ dotnet test', 'root-1 ./. $ dotnet test'])
+  assert.deepEqual(host.replay.lines(), ['root-1 ./. $ dotnet test', 'root-0 ./. $ dotnet test', 'root-1 ./. $ dotnet test', 'root-0 ./. $ dotnet test'])
   assert.deepEqual(judged(host).slice(0, 2).map(({ label }) => label), [`skraft ${SLUG} · distill · judge red root-1 of attempt 1 · attempt 1`, `skraft ${SLUG} · distill · judge red root-1 again of attempt 1 · attempt 1`])
   assert.ok(judged(host)[1].prompt.includes('\nThese replays ran again after your retry: a second retry asks a human.\n'), judged(host)[1].prompt)
-  assert.deepEqual(recorded(host, 'distill').map(({ group, outcome }) => [group, outcome]), [[undefined, 'done'], [1, 'done']])
+  assert.deepEqual(recorded(host, 'distill').map(({ group, outcome }) => [group, outcome]), [[undefined, 'done']])
 
   const twice = scripted({}, (it) => [...research(it), agent()(it), unavailable])
   twice.agentRunner.judge = () => judgeAnswer('retry', 'still dropping')
@@ -118,8 +112,8 @@ test('a judge that finds nothing an agent can fix waits on a human, its answer t
   assert.deepEqual(host.events().filter(({ type }) => type === 'question.asked').at(-1).incident, { owner: 'judge', log: answerOf('root-1', 'red') })
   await host.decide({ answer: 'RETRY' })
   await host.run()
-  assert.deepEqual(recorded(host, 'distill').map(({ group, attempt, outcome: done }) => [group, attempt, done]), [[undefined, 1, 'done'], [1, 1, 'done']])
-  assert.deepEqual(judged(host).filter(({ label }) => label.includes('judge red')).map(({ label }) => label.split(' · ')[2]), ['judge red root-1 of attempt 1', 'judge red root-1 of attempt 1', 'judge red root-2 of attempt 1'])
+  assert.deepEqual(recorded(host, 'distill').map(({ group, attempt, outcome: done }) => [group, attempt, done]), [[undefined, 1, 'done']])
+  assert.deepEqual(judged(host).filter(({ label }) => label.includes('judge red')).map(({ label }) => label.split(' · ')[2]), ['judge red root-1 of attempt 1', 'judge red root-1 of attempt 1'])
 })
 
 test('a judge whose answer the engine cannot read is asked once more, told why; unreadable twice, or not started at all, the judge waits on a human', async () => {
@@ -130,7 +124,7 @@ test('a judge whose answer the engine cannot read is asked once more, told why; 
 
   assert.deepEqual(judged(host).slice(0, 2).map(({ label }) => label), [`skraft ${SLUG} · distill · judge red root-1 of attempt 1 · attempt 1`, `skraft ${SLUG} · distill · judge red root-1 of attempt 1 · attempt 2`])
   assert.ok(judged(host)[1].prompt.includes('\nYour last answer could not be read: the answer is not the YAML document the brief shows.\n'), judged(host)[1].prompt)
-  assert.deepEqual(recorded(host, 'distill').map(({ group, outcome }) => [group, outcome]), [[undefined, 'done'], [1, 'done']])
+  assert.deepEqual(recorded(host, 'distill').map(({ group, outcome }) => [group, outcome]), [[undefined, 'done']])
 
   const cases = [
     [() => judgeAnswer('maybe'), 'replay-judge answered 2 times with no verdict the engine reads (decision is not one of accept, send-back, retry, ask-human)', 2],
@@ -164,53 +158,50 @@ test('what the judge costs counts in the cost of the step it judges, and the mod
   assert.deepEqual([judge.cost, judge.model], [0.25, 'claude-sonnet'])
 })
 
-test('a green is judged with the red of its scenario and the red of the walking skeleton: its brief names where each red printed, at the red and at its parent, and their tests; sent back, the green is refused naming the answer', async () => {
-  const host = scripted({}, (it) => [...research(it), agent({ work: ({ git }) => git.commit(SKELETON, ['tests/Integration/WalkingSkeletonTests.cs', 'src/PayOrder.cs']) })(it), agent()(it), unavailable])
-  host.firstReds.push(agent({ work: ({ git }) => git.commit('test(checkout): scenario 1', ['tests/Acceptance/S1AcceptanceTests.cs', 'tests/Acceptance/S1Steps.cs']) }))
-  host.agentRunner.judge = judging(judgeAnswer('accept'), judgeAnswer('accept'), judgeAnswer('send-back', 'the acceptance test is skipped at it'))
+test('a green is judged with the red of the acceptance tests: its brief names where that red printed, at the red and at its parent, and its tests; sent back, the green is refused naming the answer', async () => {
+  const files = ['tests/Integration/WalkingSkeletonTests.cs', 'tests/Acceptance/S1AcceptanceTests.cs', 'tests/Acceptance/S1Steps.cs', 'src/PayOrder.cs']
+  const host = scripted({}, (it) => [...research(it), agent({ work: ({ git }) => git.commit(SKELETON, files) })(it), agent()(it), unavailable])
+  host.agentRunner.judge = judging(judgeAnswer('accept'), judgeAnswer('send-back', 'the acceptance test is skipped at it'))
 
   await host.start()
 
-  const green = judged(host)[2]
-  assert.equal(green.label, `skraft ${SLUG} · deliver · judge green root-3 of attempt 1 · attempt 1`)
+  const green = judged(host)[1]
+  assert.equal(green.label, `skraft ${SLUG} · deliver · judge green root-2 of attempt 1 · attempt 1`)
   assert.equal(green.prompt, [
-    'Judge the green commit root-3 "feat(checkout): scenario 1", for scenario 1 "Customer pays by card".',
+    'Judge the green commit root-2 "feat(checkout): scenario 1", for S1 "Customer pays by card".',
     'Its repository: .',
     'Its files: src/Scenario1.cs',
-    `The red of its scenario is root-2; its replay printed to ${logOf('root-2')}, and at its parent to ${logOf('root-2', 'test-parent')}`,
-    'The acceptance tests of its scenario: tests/Acceptance/S1AcceptanceTests.cs, tests/Acceptance/S1Steps.cs',
-    `The red of the story's walking skeleton is root-1; its replay printed to ${logOf('root-1')}, and at its parent to ${logOf('root-1', 'test-parent')}`,
-    'The walking skeleton\'s tests, which pass at this green too: tests/Integration/WalkingSkeletonTests.cs',
+    `The red of the story's acceptance tests is root-1; its replay printed to ${logOf('root-1')}, and at its parent to ${logOf('root-1', 'test-parent')}`,
+    'The acceptance tests: tests/Integration/WalkingSkeletonTests.cs, tests/Acceptance/S1AcceptanceTests.cs, tests/Acceptance/S1Steps.cs',
+    "Each acceptance test's name starts with its scenario's number (S1_…, test_s1_…). At this green every test passes.",
     'The engine replayed, each in a throwaway checkout, from the component root:',
-    `- api: \`dotnet test\` at the commit root-3: exit 0; printed to ${logOf('root-3')}`,
+    `- api: \`dotnet test\` at the commit root-2: exit 0; printed to ${logOf('root-2')}`,
     ...SHAPE,
   ].join('\n'))
-  for (const [red, parent] of [['root-2', 'root-1'], ['root-1', 'root-0']]) {
-    assert.ok(host.tracking.files.has(`${SLUG}/logs/replay-${red}-api-test-parent.log`), 'each red\'s parent log the green brief names exists')
-    assert.match(host.tracking.files.get(`${SLUG}/logs/replay-${red}-api-test-parent.log`), new RegExp(`\\ncommit: ${parent}\\n`))
-  }
-  assert.deepEqual(recorded(host, 'deliver')[0].failures, [`commit root-3 "feat(checkout): scenario 1" does not make the scenario pass: the replay judge sends it back: read ${answerOf('root-3', 'green')}`])
+  assert.ok(host.tracking.files.has(`${SLUG}/logs/replay-root-1-api-test-parent.log`), 'the parent log the green brief names exists')
+  assert.match(host.tracking.files.get(`${SLUG}/logs/replay-root-1-api-test-parent.log`), /\ncommit: root-0\n/)
+  assert.deepEqual(recorded(host, 'deliver')[0].failures, [`commit root-2 "feat(checkout): scenario 1" does not make the group pass: the replay judge sends it back: read ${answerOf('root-2', 'green')}`])
   assert.equal(checked(host, 'deliver')[0].commits[0].verdict, 'not-green')
 })
 
 test('a green whose tests fail is judged too, never refused without the judge', async () => {
-  const host = scripted({ replay: new ScriptedReplay({ exits: { 'root-3': 3 } }) }, (it) => [...research(it), agent()(it), agent()(it), unavailable])
+  const host = scripted({ replay: new ScriptedReplay({ exits: { 'root-2': 3 } }) }, (it) => [...research(it), agent()(it), agent()(it), unavailable])
 
   await host.start()
 
-  assert.ok(judged(host)[2].prompt.startsWith('Judge the green commit root-3 '), judged(host)[2].prompt)
-  assert.ok(judged(host)[2].prompt.includes(`\n- api: \`dotnet test\` at the commit root-3: exit 3; printed to ${logOf('root-3')}\n`), judged(host)[2].prompt)
+  assert.ok(judged(host)[1].prompt.startsWith('Judge the green commit root-2 '), judged(host)[1].prompt)
+  assert.ok(judged(host)[1].prompt.includes(`\n- api: \`dotnet test\` at the commit root-2: exit 3; printed to ${logOf('root-2')}\n`), judged(host)[1].prompt)
   assert.deepEqual(recorded(host, 'deliver').map(({ outcome }) => outcome), ['done'])
 })
 
 test('a green the judge asks to retry is replayed once more and judged again', async () => {
   const host = scripted({}, (it) => [...research(it), agent()(it), agent()(it), unavailable])
-  host.agentRunner.judge = judging(judgeAnswer('accept'), judgeAnswer('accept'), judgeAnswer('retry', 'a port was busy'))
+  host.agentRunner.judge = judging(judgeAnswer('accept'), judgeAnswer('retry', 'a port was busy'))
 
   await host.start()
 
-  assert.deepEqual(host.replay.lines().filter((line) => line.startsWith('root-3')), ['root-3 ./. $ dotnet test', 'root-3 ./. $ dotnet test'])
-  assert.deepEqual(judged(host).map(({ label }) => label.split(' · ')[2]), ['judge red root-1 of attempt 1', 'judge red root-2 of attempt 1', 'judge green root-3 of attempt 1', 'judge green root-3 again of attempt 1'])
+  assert.deepEqual(host.replay.lines().filter((line) => line.startsWith('root-2')), ['root-2 ./. $ dotnet test', 'root-2 ./. $ dotnet test'])
+  assert.deepEqual(judged(host).map(({ label }) => label.split(' · ')[2]), ['judge red root-1 of attempt 1', 'judge green root-2 of attempt 1', 'judge green root-2 again of attempt 1'])
   assert.deepEqual(recorded(host, 'deliver').map(({ outcome }) => outcome), ['done'])
 })
 
@@ -227,12 +218,12 @@ test('a red the judge sent back stays refused on the next attempt of the pass, n
 })
 
 test('a green whose replay a person interrupts stops the run before the judge is asked about it', async () => {
-  const host = scripted({ replay: new ScriptedReplay({ exits: { 'root-3': 130 } }) }, (it) => [...research(it), agent()(it), agent()(it), unavailable])
+  const host = scripted({ replay: new ScriptedReplay({ exits: { 'root-2': 130 } }) }, (it) => [...research(it), agent()(it), agent()(it), unavailable])
 
   const outcome = await host.start()
 
-  assert.deepEqual([outcome.code, outcome.reason], ['interrupted', 'replaying root-3 for api: dotnet test was interrupted by a person (exit 130); run the pipeline again to go on'])
-  assert.deepEqual(judged(host).map(({ label }) => label.split(' · ')[2]), ['judge red root-1 of attempt 1', 'judge red root-2 of attempt 1'])
+  assert.deepEqual([outcome.code, outcome.reason], ['interrupted', 'replaying root-2 for api: dotnet test was interrupted by a person (exit 130); run the pipeline again to go on'])
+  assert.deepEqual(judged(host).map(({ label }) => label.split(' · ')[2]), ['judge red root-1 of attempt 1'])
 })
 
 test('what the engine writes in the tracking folder while the judge works is no change of the judge\'s', async () => {
@@ -244,7 +235,7 @@ test('what the engine writes in the tracking folder while the judge works is no 
 
   await host.start()
 
-  assert.deepEqual(recorded(host, 'distill').map(({ group, outcome }) => [group, outcome]), [[undefined, 'done'], [1, 'done']])
+  assert.deepEqual(recorded(host, 'distill').map(({ group, outcome }) => [group, outcome]), [[undefined, 'done']])
 })
 
 test('a judge that changes the working copy while it judges stops the step for a human, whatever it answers', async () => {

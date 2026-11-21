@@ -5,24 +5,23 @@ import { isCode, ownersOf } from './component-files.mjs'
  * cycle: `test(<story>): …` commits the failing test (red), `feat` or `fix` the code that makes
  * it pass (green), `refactor`, `style` or `perf` a change under green; `docs`, `chore`, `build`,
  * `ci` and `revert` stay outside TDD and change no component's source or tests. A story built
- * scenario by scenario takes, per scenario, one red commit of its acceptance test, then one green
- * commit: the inner TDD loop is not committed. The engine replays the test command at the red
- * commits of acceptance tests and at the green of a scenario; that part runs in the application.
+ * from its acceptance tests first takes one red commit holding the acceptance test of every
+ * scenario, then one green commit per group of scenarios: the inner TDD loop is not committed.
+ * The engine replays the test command at that red and at each green; that part runs in the application.
  *
  * @typedef {'red' | 'green' | 'refactor' | 'other' | 'invalid'} CommitKind
  * @typedef {'ok' | 'not-conventional' | 'issue-reference-missing' | 'issue-closed' | 'issue-not-in-story' | 'outside-tdd' | 'green-without-red' | 'not-red' | 'no-component'
  *   | 'oracle-split' | 'oracle-component' | 'oracle-without-test' | 'code-in-oracle' | 'test-in-scenario' | 'refactor-in-scenario' | 'second-green' | 'oracle-touched' | 'not-green'} CommitVerdict
  * @typedef {import('./component-files.mjs').CodeComponent} CodeComponent
- * @typedef {{ kind: 'oracle', index: number, component: string | null }
+ * @typedef {{ kind: 'oracle', index: number, components: string[] | null }
  *   | { kind: 'delivery', index: number, component: string, immutable: string[] }} ScenarioJudging
- *   oracle: a pass that writes scenario `index`'s failing acceptance test, in `component` (null
- *   when the plan names none yet); delivery: a pass that makes it pass, never changing the
- *   `immutable` files of its acceptance tests. The engine opens the delivery of a scenario only
- *   once the red of its acceptance test is committed and proven.
+ *   oracle: the pass that writes every scenario's failing acceptance test, in the `components`
+ *   its plan names (null when it names none yet); delivery: a pass that makes group `index`
+ *   pass, never changing the `immutable` files of the acceptance tests. The engine opens DELIVER
+ *   only once that red is committed and proven.
  * @typedef {{ repository: string, sha: string, parent: string, subject: string, body: string, files: string[] }} StepCommit
  *   parent: its first parent's sha; body: the message after the subject; files relative to the working copy.
- * @typedef {StepCommit & { kind: CommitKind, scope: string | null, verdict: CommitVerdict, covered?: number }} JudgedCommit
- *   covered: on a red whose tests pass at it, the earlier scenario its `Covered-by: S<n>` trailer names.
+ * @typedef {StepCommit & { kind: CommitKind, scope: string | null, verdict: CommitVerdict }} JudgedCommit
  */
 
 const CONVENTIONAL = /^([a-z]+)(?:\(([^()\r\n]+)\))?!?: \S/
@@ -58,19 +57,6 @@ const CLOSING = /\b(?:close[sd]?|fix(?:e[sd])?|resolve[sd]?)\b\s*:?\s*(?:[\w.-]+
 const REFERENCE_LINE = /^(?:refs|close[sd]?)\s*:/im
 /** A git trailer line other than the reference: `Signed-off-by: …`, `Co-authored-by: …`. */
 const TRAILER = /^(?!Refs:)[A-Za-z0-9-]+: \S/
-
-/** The trailer by which a red whose tests already pass names the earlier scenario that makes them pass. */
-const COVERED_BY = /^Covered-by: S(\d+)\s*$/m
-
-/**
- * The earlier scenario a red of scenario `index` says makes its tests pass already; null when
- * its body names none, or names this scenario or a later one.
- * @param {string} body @param {number} index @returns {number | null}
- */
-export const coveringScenario = (body, index) => {
-  const named = Number(COVERED_BY.exec(body)?.[1] ?? 0)
-  return named >= 1 && named < index ? named : null
-}
 
 /** The run's story issue, null when it has none. @param {{ issue?: number | null } | null} story */
 export const issueOf = (story) => story?.issue ?? null
@@ -141,8 +127,8 @@ const codeOf = ({ files }) => files.filter((file) => !TEXT.test(file))
 const cycleVerdict = (commit, { kind, red }) => (kind === 'green' && !red.has(commit.repository) ? 'green-without-red' : 'ok')
 
 /**
- * A pass that writes a scenario's acceptance test commits it red, once, in the scenario's
- * component, with no code of its own; a pass that makes it pass commits one green.
+ * The pass that writes the acceptance tests commits them red, once, in the components of the
+ * scenarios, with no code of its own; a pass that makes a group pass commits one green.
  * @param {StepCommit} commit @param {Judging} judging @param {ScenarioJudging} scenario @returns {CommitVerdict}
  */
 const scenarioVerdict = (commit, judging, scenario) => (scenario.kind === 'delivery' ? deliveryVerdict(commit, judging, scenario) : oracleVerdict(commit, judging, scenario))
@@ -152,7 +138,7 @@ const oracleVerdict = (commit, { kind, seen, components }, scenario) => {
   if (kind !== 'red') return 'code-in-oracle'
   if (seen.includes('red')) return 'oracle-split'
   const owners = ownersOf(components, codeOf(commit)).map(({ name }) => name)
-  if (owners.length > 1 || (scenario.component !== null && owners.some((name) => name !== scenario.component))) return 'oracle-component'
+  if (scenario.components !== null && owners.some((name) => !scenario.components?.includes(name))) return 'oracle-component'
   return commit.files.some((file) => isCode(file, components, ['tests'])) ? 'ok' : 'oracle-without-test'
 }
 
@@ -220,15 +206,15 @@ const FAILURES = Object.freeze({
   'green-without-red': (named) => `${named} makes code pass with no test commit since the last feat or fix; rewrite it after a failing test commit`,
   'not-red': (named, { detail }) => `${named} is not red: ${detail}; a test commit must fail on an assertion before the code that makes it pass`,
   'no-component': (named) => `${named} changes no component: a test commit adds a failing test to a component`,
-  'oracle-split': (named) => `${named} is a second test commit for the scenario; commit its acceptance test and skeleton in one test commit`,
-  'oracle-component': (named) => `${named} changes another component than the scenario's: its acceptance test lives in the component the test plan names for it`,
-  'oracle-without-test': (named) => `${named} commits no test of its component: the acceptance test of the scenario goes in its test paths, with the skeleton it calls`,
-  'code-in-oracle': (named) => `${named} is no test commit: the acceptance test of a scenario and the skeleton it calls go in one test commit, and no behaviour`,
-  'test-in-scenario': (named) => `${named} commits a test on its own: the tests of the inner loop go in the one feat or fix commit that makes the scenario pass`,
-  'refactor-in-scenario': (named) => `${named} commits a change under green on its own: the scenario takes one feat or fix commit, refactoring included`,
-  'second-green': (named) => `${named} is a second feat or fix commit for the scenario; make it pass in one commit`,
-  'oracle-touched': (named) => `${named} changes the scenario's acceptance tests, which DISTILL owns; undo that change, and if the test is wrong, stop blocked naming it`,
-  'not-green': (named, { detail }) => `${named} does not make the scenario pass: ${detail}`,
+  'oracle-split': (named) => `${named} is a second test commit; commit the acceptance tests of every scenario, the walking skeleton and the skeleton they call in one test commit`,
+  'oracle-component': (named) => `${named} changes a component no scenario names: each acceptance test lives in the component the test plan names for its scenario`,
+  'oracle-without-test': (named) => `${named} commits no test of its component: the acceptance tests of the scenarios go in its test paths, with the skeleton they call`,
+  'code-in-oracle': (named) => `${named} is no test commit: the acceptance tests of the scenarios and the skeleton they call go in one test commit, and no behaviour`,
+  'test-in-scenario': (named) => `${named} commits a test on its own: the tests of the inner loop go in the one feat or fix commit that makes the group pass`,
+  'refactor-in-scenario': (named) => `${named} commits a change under green on its own: the group takes one feat or fix commit, refactoring included`,
+  'second-green': (named) => `${named} is a second feat or fix commit for the group; make it pass in one commit`,
+  'oracle-touched': (named) => `${named} changes the acceptance tests, which DISTILL owns; undo that change, and if a test is wrong, stop blocked naming it`,
+  'not-green': (named, { detail }) => `${named} does not make the group pass: ${detail}`,
 })
 
 /**

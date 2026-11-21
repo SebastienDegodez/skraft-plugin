@@ -222,7 +222,7 @@ test('the acceptance designer writes the skeleton its failing test calls in the 
 
   await host.start()
 
-  assert.deepEqual(recorded(host, 'distill').map((event) => [event.group, event.outcome, event.failures]), [[undefined, 'done', []], [1, 'done', []]])
+  assert.deepEqual(recorded(host, 'distill').map((event) => [event.group, event.outcome, event.failures]), [[undefined, 'done', []]])
 
   const designing = scripted({}, (it) => [agent()(it), agent()(it), agent({ work: ({ git }) => { git.change(...DESIGN_DOCUMENTS); git.commit('test(checkout): pay by card', ['tests/Acceptance/PayTests.cs']) } })(it), unavailable])
   await designing.start()
@@ -236,7 +236,7 @@ test('a component whose paths list no folder (no tests folder yet) is written an
 
   await host.start()
 
-  assert.deepEqual(recorded(host, 'distill').map((event) => [event.group, event.outcome, event.failures]), [[undefined, 'done', []], [1, 'done', []]])
+  assert.deepEqual(recorded(host, 'distill').map((event) => [event.group, event.outcome, event.failures]), [[undefined, 'done', []]])
 })
 
 test('a change an agent leaves uncommitted in its paths is refused, and told so, until its commit holds it; the tracking folder needs none', async () => {
@@ -253,15 +253,13 @@ test('a change an agent leaves uncommitted in its paths is refused, and told so,
   assert.deepEqual(recorded(host, 'distill').map((event) => [event.attempt, event.outcome, event.code, event.failures]), [
     [1, 'failed', 'uncommitted', [`left uncommitted: ${FEATURE}; commit it or undo the change`]],
     [2, 'done', null, []],
-    [1, 'done', null, []],
   ])
   assert.ok(host.agentRunner.dispatches[3].prompt.endsWith(`\n\nRefused in attempt 1 of 3:\n- left uncommitted: ${FEATURE}; commit it or undo the change`))
-  const [, plan, first] = host.events().filter((event) => event.type === 'commits.checked' && event.step === 'distill')
+  const [, plan] = host.events().filter((event) => event.type === 'commits.checked' && event.step === 'distill')
   assert.deepEqual(plan.commits.map((commit) => [commit.subject, commit.verdict]), [
     ['test(checkout): acceptance of the card payment', 'ok'],
     ['docs(checkout): state the card holder\'s age', 'ok'],
   ])
-  assert.deepEqual(first.commits.map((commit) => [commit.subject, commit.verdict]), [['test(checkout): scenario 1', 'ok']])
 })
 
 test('an architect, with no shell, is told to commit nothing; once DESIGN is done the engine commits what it wrote in its paths, journaled with the step, and nothing stays uncommitted', async () => {

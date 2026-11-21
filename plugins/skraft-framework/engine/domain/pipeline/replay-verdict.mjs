@@ -5,14 +5,16 @@ import { parseAnswerYaml } from '../review/answer-yaml.mjs'
  * reads the logs of the replays itself: the engine reads no test report and no runner's output.
  *
  * @typedef {'accept' | 'send-back' | 'retry' | 'ask-human'} Decision
- *   accept: the red fails on its scenario's assertion, the green makes its scenario pass;
+ *   accept: the red fails on each scenario's assertion, the green makes its group pass;
  *   send-back: the agent has to change its commit, the note says what; retry: the replay failed
  *   for a reason that passes, run it again once; ask-human: nothing an agent can do, a human has to.
  * @typedef {{ component: string, line: string, sha: string, exitCode: number | null, error?: string, log: string }} ReplayFact
  *   one command the engine replayed: at a commit, its exit code (null when it did not start or
  *   was stopped, error then saying why) and the absolute path of what it printed.
- * @typedef {{ index: number, title: string, walkingSkeleton: boolean }} JudgedScenario
- *   walkingSkeleton: the red judged is the story's walking skeleton, which walks scenario `index`.
+ * @typedef {{ scenarios: Array<{ index: number, title: string }>, pending: Array<{ index: number, title: string }>, walkingSkeleton: boolean }} JudgedScenario
+ *   scenarios: those whose acceptance tests the red holds, or the green makes pass; pending: on a
+ *   green, those of later groups, whose tests alone may still fail; walkingSkeleton: the red holds
+ *   the story's walking skeleton too, which walks S1.
  * @typedef {{ sha: string, log: string, parentLog: string, tests: string[] }} JudgedRed
  * @typedef {{
  *   kind: 'red' | 'green', sha: string, subject: string, repository: string, files: string[],
@@ -80,17 +82,18 @@ export const judgeBrief = (request, retry) => [
 
 /** The commit, its scenario, where it lives and what it changes; on a green, its scenario's red. @param {JudgeRequest} request */
 const commitLines = (request) => [
-  `Judge the ${request.kind} commit ${request.sha} "${request.subject}"${scenarioText(request.scenario)}.`,
+  `Judge the ${request.kind} commit ${request.sha} "${request.subject}"${scenarioText(request)}.`,
   `Its repository: ${request.repository}`,
   `Its files: ${request.files.join(', ')}`,
   ...(request.red === null ? [] : redLines(request.red)),
   ...(request.skeleton === null ? [] : skeletonLines(request.skeleton)),
+  ...scenarioRules(request),
 ]
 
-/** On a green: its scenario's red, where its replay printed, and its acceptance tests. @param {NonNullable<JudgeRequest['red']>} red */
+/** On a green: the red of the acceptance tests, where its replay printed, and their files. @param {NonNullable<JudgeRequest['red']>} red */
 const redLines = ({ sha, log, parentLog, tests }) => [
-  `The red of its scenario is ${sha}; its replay printed to ${log}, and at its parent to ${parentLog}`,
-  `The acceptance tests of its scenario: ${tests.join(', ')}`,
+  `The red of the story's acceptance tests is ${sha}; its replay printed to ${log}, and at its parent to ${parentLog}`,
+  `The acceptance tests: ${tests.join(', ')}`,
 ]
 
 /** On a green: the walking skeleton it keeps passing, where its red printed, and its tests. @param {JudgedRed} skeleton */
@@ -99,10 +102,28 @@ const skeletonLines = ({ sha, log, parentLog, tests }) => [
   `The walking skeleton's tests, which pass at this green too: ${tests.join(', ')}`,
 ]
 
-/** @param {JudgeRequest['scenario']} scenario */
-const scenarioText = (scenario) => {
+/** @param {JudgeRequest} request */
+const scenarioText = ({ kind, scenario }) => {
   if (scenario === null) return ''
-  return `, ${scenario.walkingSkeleton ? 'the walking skeleton of the story, which walks' : 'for'} scenario ${scenario.index} "${scenario.title}"`
+  if (kind === 'green') return `, for ${named(scenario.scenarios)}`
+  return `, holding ${scenario.walkingSkeleton ? 'the walking skeleton of the story, which walks S1, and ' : ''}the acceptance tests of ${named(scenario.scenarios)}`
+}
+
+/** @param {Array<{ index: number, title: string }>} scenarios */
+const named = (scenarios) => scenarios.map(({ index, title }) => `S${index} "${title}"`).join(', ')
+
+/**
+ * What the judge reads in the logs of a red holding many scenarios, or of a green of one group:
+ * each test's name starts with its scenario's number; at a green, only the pending scenarios' fail.
+ * @param {JudgeRequest} request
+ */
+const scenarioRules = ({ kind, scenario }) => {
+  if (scenario === null) return []
+  const prefix = 'Each acceptance test\'s name starts with its scenario\'s number (S1_…, test_s1_…).'
+  if (kind === 'red') return [`${prefix} Every scenario's test fails at this commit, on its own assertion.`]
+  return [scenario.pending.length === 0
+    ? `${prefix} At this green every test passes.`
+    : `${prefix} At this green the tests of ${named(scenario.pending)}, still to deliver, fail; every other test passes.`]
 }
 
 /** @param {ReplayFact} fact @param {string} where */

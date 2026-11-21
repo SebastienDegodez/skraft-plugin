@@ -113,7 +113,7 @@ test('the view of a run at its gates names them, and of a completed run says don
 
   assert.deepEqual(seen, [{ step: 'gates', phase: 'DELIVER', agent: null, gates: ['build', 'format', 'lint', 'test', 'architecture', 'coverage'], question: null, visit: 1, attempt: 1 }])
   assert.deepEqual(core(await host.view()), {
-    slug: SLUG, status: 'done', reason: 'PUBLISH closed', phases: phases('closed', 'closed', 'closed', 'closed', 'closed'), current: null, question: null, attempts: 14, costUsd: null,
+    slug: SLUG, status: 'done', reason: 'PUBLISH closed', phases: phases('closed', 'closed', 'closed', 'closed', 'closed'), current: null, question: null, attempts: 13, costUsd: null,
     reviews: [
       { step: 'design_review', visit: 1, verdict: 'approved', lenses: passing('consistency', 'architecture-compliance', 'fitness') },
       { step: 'distill_review', visit: 1, verdict: 'approved', lenses: passing('coverage', 'business-alignment', 'testability', 'boundary-enforcement') },
@@ -221,7 +221,7 @@ test('the view marks each step of the run done or in progress, with its outcome,
     ['design', 'done', 'done', 2, 2, 1, 1],
     ['design_review', 'done', 'approved', 2, 2, 1, 0.375],
     ['adr', 'done', 'skipped', 1, 1, 0, null],
-    ['distill', 'done', 'done', 2, 2, 1, null],
+    ['distill', 'done', 'done', 1, 1, 0, null],
     ['distill_review', 'done', 'approved', 1, 1, 0, 0.125],
     ['scenario_review', 'done', 'answered', 1, 1, 0, null],
     ['deliver', 'done', 'done', 1, 1, 0, null],

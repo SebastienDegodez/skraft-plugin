@@ -408,7 +408,7 @@ test('an ask node names a question the engine knows, and leads each of its answe
 })
 
 test('each="scenario" pairs the agent that writes each scenario\'s failing acceptance test with the agent that makes it pass, and the scenario review needs that pair', async () => {
-  const pair = 'each="scenario" goes on two agent nodes, the one that writes each scenario\'s failing acceptance test, then the one that makes it pass'
+  const pair = 'each="scenario" goes on two agent nodes, the one that writes every scenario\'s failing acceptance test, then the one that makes them pass group by group'
   const cases = [
     { dot: edit(BUILT_IN_WORKFLOW, ['agent="software-engineer", phase="DELIVER", each="scenario"]', 'agent="software-engineer", phase="DELIVER"]']), errors: [`${pair}; it is on 1: distill`] },
     {

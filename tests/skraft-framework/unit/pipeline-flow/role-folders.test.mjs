@@ -41,9 +41,8 @@ test('the engine creates the docs folders of a role that the repository does not
     ['research', [{ repository: '.', sha: 'root-0', dirty: [] }]],
     ['design', [{ repository: '.', sha: 'root-1', dirty: [] }]],
     ['distill', [{ repository: '.', sha: 'root-3', dirty: [] }]],
-    ['distill', [{ repository: '.', sha: 'root-4', dirty: [] }]],
-    ['deliver', [{ repository: '.', sha: 'root-5', dirty: [] }]],
-    ['pr_writer', [{ repository: '.', sha: 'root-6', dirty: [] }]],
+    ['deliver', [{ repository: '.', sha: 'root-4', dirty: [] }]],
+    ['pr_writer', [{ repository: '.', sha: 'root-5', dirty: [] }]],
   ])
 })
 

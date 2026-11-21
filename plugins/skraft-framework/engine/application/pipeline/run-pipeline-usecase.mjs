@@ -693,7 +693,7 @@ const briefScenarioOf = (context, run, next) => {
 }
 
 /**
- * The scenario a pass works on as the brief tells it, with the reds of the acceptance tests its
+ * The scenarios a pass works on as the brief tells them, with the red of the acceptance tests its
  * green may not change and the test command it chains its commit to; null for a pass on none.
  * @param {Context} context @param {RunState} run @param {WorkStep} next
  * @returns {import('../../domain/pipeline/dispatch-brief.mjs').BriefScenario | null}
@@ -701,19 +701,18 @@ const briefScenarioOf = (context, run, next) => {
 const briefScenario = ({ loaded, config }, run, next) => {
   const pass = scenarioPassOf(loaded.workflow, run, next)
   if (pass === null) return null
-  const told = pass.kind === 'plan' ? NOT_LISTED : /** @type {import('../../domain/pipeline/scenarios.mjs').StoryScenario} */ (pass.scenario)
-  const { title, component, tags } = told
-  return { kind: pass.kind, index: pass.index, of: pass.of, title, component, tags, oracles: pass.oracles.map((oracle) => oracleTold(oracle, config.components)), skeleton: skeletonTold(pass, component, config.components), test: scenarioTest(config, run, component) }
+  const component = pass.scenario?.component ?? null
+  const oracles = pass.kind === 'delivery' ? pass.oracles.slice(0, 1).map((oracle) => oracleTold(oracle, config.components)) : []
+  const scenarios = pass.scenarios.map(({ index, title, component: where, tags }) => ({ index, title, component: where, tags }))
+  return { kind: pass.kind, index: pass.index, of: pass.of, component, scenarios, pending: pass.pending.map(({ index }) => index), oracles, skeleton: skeletonTold(pass, component, config.components), test: scenarioTest(config, run, component) }
 }
 
 /**
- * The walking skeleton a delivery pass keeps passing: the one of its scenario's component.
+ * The walking skeleton a delivery pass keeps passing: the one of its group's component, when
+ * another commit than the acceptance tests' red holds it.
  * @param {import('./scenario-checks.mjs').ScenarioPass} pass @param {string | null} component @param {import('../../domain/config/skraft-config.mjs').Component[]} components
  */
-const skeletonTold = ({ kind, skeleton }, component, components) => (kind === 'delivery' && skeleton?.component === component ? oracleTold(skeleton, components) : null)
-
-/** A scenario the pass that writes the plan has not listed yet. */
-const NOT_LISTED = Object.freeze({ title: null, component: null, tags: Object.freeze([]) })
+const skeletonTold = ({ kind, skeleton, oracles }, component, components) => (kind === 'delivery' && skeleton?.component === component && skeleton.sha !== oracles[0]?.sha ? oracleTold(skeleton, components) : null)
 
 /**
  * A red of an acceptance test as the engineer is told it: the files it never changes.
@@ -878,7 +877,7 @@ const recordAttempt = async (context, run, next, attempt) => context.journal.app
 const attemptRecord = async (context, run, { node, visit, attempt, group, groups }, { job, started, cost, model, checked, committed }) => {
   const failed = failedCheck(checked)
   const incidents = failed ? await attemptIncidents(context, node.id, checked) : []
-  const routed = failed ? repeatedAttemptRoute(node.id, incidents) : routeDone(context, run, { node, group, groups }, checked.scenario)
+  const routed = failed ? repeatedAttemptRoute(node.id, incidents) : routeDone(context, run, { node, group, groups })
   return {
     step: node.id, visit, attempt, ...(group === null ? {} : { group }), ...await attemptFiles(context, job, { step: node.id, visit, attempt }),
     outcome: failed ? 'failed' : 'done', code: attemptCode(failed, checked, routed),
@@ -910,33 +909,21 @@ const repeatedAttemptRoute = (step, incidents) => {
 }
 
 /**
- * Where a done attempt leads: a group of surviving mutants hands over to the next one of its
- * visit, a red of a scenario to its green, a green to the next scenario's red; the last one
- * leaves the node, and so does a red of the last scenario an earlier one already makes pass.
+ * Where a done attempt leads: a group of surviving mutants, or of the story's scenarios, hands
+ * over to the next one of its visit; the last one leaves the node, and so does the node that
+ * writes every acceptance test.
  * @param {Context} context @param {RunState} run @param {Pick<WorkStep, 'node' | 'group' | 'groups'>} next
- * @param {{ green?: { scenario: number } }} [record] what the pass leaves for the next ones
  * @returns {{ next: string | null, code?: string, reason?: string, ceiling?: string | null }}
  */
-const routeDone = (context, run, { node, group, groups }, record = {}) => {
-  if (lastCovered(record, { group, groups })) return leave(context, run, scenarioNodes(context.loaded.workflow)[1], null, [])
-  return loopsOn(context, { node, group, groups }) ? { next: null } : leave(context, run, node.id, null, [])
-}
-
-/**
- * Whether a red of the last scenario counted it passed: an earlier scenario already makes it
- * pass, so the story leaves as its delivery would.
- * @param {{ green?: { scenario: number } }} record @param {{ group: number | null, groups: unknown[] }} next
- */
-const lastCovered = ({ green }, { group, groups }) => green !== undefined && group === groups.length
+const routeDone = (context, run, { node, group, groups }) => (loopsOn(context, { node, group, groups }) ? { next: null } : leave(context, run, node.id, null, []))
 
 /**
  * Whether a done attempt hands over without an edge: to the next group of surviving mutants, or
- * within the story's scenarios, where only the red of the first scenario leaves the node that
- * writes the reds by its edge, to the review.
+ * of the story's scenarios; the node that writes the acceptance tests leaves by its edge, to the review.
  * @param {Context} context @param {Pick<WorkStep, 'node' | 'group' | 'groups'>} next
  */
 const loopsOn = ({ loaded }, { node, group, groups }) => {
-  if (node.id === scenarioNodes(loaded.workflow)[0]) return group !== 1
+  if (node.id === scenarioNodes(loaded.workflow)[0]) return false
   return group !== null && group < groups.length
 }
 

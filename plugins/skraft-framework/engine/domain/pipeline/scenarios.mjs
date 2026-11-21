@@ -1,7 +1,7 @@
 /**
- * The scenarios of a story, as the acceptance designer lists them in its test plan, in the order
- * DELIVER builds them, one failing acceptance test then one green commit each, after the walking
- * skeleton the pass that writes them commits failing:
+ * The scenarios of a story, as the acceptance designer lists them in its test plan; the pass that
+ * writes them commits the walking skeleton and the acceptance test of every scenario as one
+ * failing commit, then DELIVER makes them pass group by group:
  *
  *   ## Scenarios
  *
@@ -20,6 +20,9 @@
  * @typedef {'none' | 'library' | 'refactoring' | 'docs-only'} Exemption
  * @typedef {{ scenarios: StoryScenario[], exemption: Exemption }} ScenarioPlan
  * @typedef {{ name: string, stack: string }} PlanComponent
+ * @typedef {{ index: number, scenarios: number[] }} DeliveryGroup
+ *   one green commit of DELIVER: the scenarios it makes pass, by number, as the implementation
+ *   plan groups them.
  */
 
 export const WALKING_SKELETON = '@walking-skeleton'
@@ -121,21 +124,60 @@ const skeletonFailures = (path, { scenarios, exemption }, components) => {
 const frontEnd = (components, name) => components.some(({ stack }) => stack !== 'react') && components.find((component) => component.name === name)?.stack === 'react'
 
 /**
- * How a test plan rewritten on a pass of an approved story departs from the approved scenarios:
- * another count of rows, or a row whose title or component changed. Empty when it keeps them.
- * @param {readonly StoryScenario[]} approved @param {readonly StoryScenario[]} written @param {number} index the scenario of the pass
- * @returns {string[]}
+ * The groups DELIVER makes pass, one green commit each, as the acceptance designer's
+ * implementation plan lists them under any heading, in the order DELIVER builds them:
+ *
+ *   | Group | Scenarios | Rule | … |
+ *   |---|---|---|---|
+ *   | 1 | S1, S2 | Card payment | … |
+ *   | 2 | S3–S5 | Expired card | … |
+ *
+ * A plan with no such table, or none at all, delivers one scenario per group. A table must name
+ * every scenario once, S1 in the first group.
+ * @param {{ path: string, text: string | null }} plan @param {readonly StoryScenario[]} scenarios
+ * @returns {{ ok: true, groups: DeliveryGroup[] } | { ok: false, failures: string[] }}
  */
-export const approvedPlanChanges = (approved, written, index) => {
-  if (written.length !== approved.length) return [`${APPROVED} lists ${written.length} where the approved plan lists ${approved.length}; ${restore(index)}`]
-  const changed = approved.find((scenario, at) => !sameScenario(scenario, written[at]))
-  return changed === undefined ? [] : [`${APPROVED} changes S${changed.index} of the approved plan; ${restore(index)}`]
+export const readDeliveryGroups = ({ path, text }, scenarios) => {
+  const rows = text === null ? null : groupRows(text.split(/\r?\n/))
+  if (rows === null) return { ok: true, groups: scenarios.map(({ index }) => ({ index, scenarios: [index] })) }
+  const groups = rows.map((cell, at) => ({ index: at + 1, scenarios: scenarioNumbers(cell) }))
+  const failures = groupFailures(path, groups, scenarios.length)
+  return failures.length > 0 ? { ok: false, failures } : { ok: true, groups }
 }
 
-const APPROVED = 'the scenarios are approved: the test plan'
+const GROUP_COLUMNS = Object.freeze(['group', 'scenarios'])
 
-/** @param {number} index */
-const restore = (index) => `a pass on scenario ${index} changes no row of its ## Scenarios table, restore it`
+/** The Scenarios cell of each row of the first table with Group and Scenarios columns; null when none has them. @param {string[]} lines */
+const groupRows = (lines) => {
+  for (let at = 0; at < lines.length; at += 1) {
+    if (!ROW.test(lines[at]) || (at > 0 && ROW.test(lines[at - 1]))) continue
+    const table = tableAfter(lines, at - 1)
+    const header = /** @type {string[][]} */ (table)[0].map((cell) => cell.toLowerCase())
+    if (GROUP_COLUMNS.every((column) => header.includes(column))) {
+      return /** @type {string[][]} */ (table).slice(1).filter((cells) => !SEPARATOR.test(cells.join('|'))).map((cells) => cells[header.indexOf('scenarios')] ?? '')
+    }
+  }
+  return null
+}
 
-/** @param {StoryScenario} left @param {StoryScenario} right */
-const sameScenario = (left, right) => left.title === right.title && left.component === right.component
+/** The scenario numbers a cell names: S1, S2 or a range S3–S5. @param {string} cell @returns {number[]} */
+const scenarioNumbers = (cell) => [...cell.matchAll(/S(\d+)(?:\s*[–—-]\s*S?(\d+))?/gi)].flatMap(([, from, to]) => {
+  const first = Number(from)
+  const last = to === undefined ? first : Number(to)
+  return last < first ? [first] : Array.from({ length: last - first + 1 }, (_, offset) => first + offset)
+})
+
+/**
+ * A table the engine cannot follow: a group naming no scenario, a scenario in none or in two
+ * groups, one the test plan does not list, S1 out of the first group.
+ * @param {string} path @param {DeliveryGroup[]} groups @param {number} count
+ */
+const groupFailures = (path, groups, count) => {
+  const named = groups.flatMap(({ scenarios }) => scenarios)
+  return [
+    ...groups.filter(({ scenarios }) => scenarios.length === 0).map(({ index }) => `${path}: group ${index} names no scenario`),
+    ...Array.from({ length: count }, (_, at) => at + 1).filter((index) => named.filter((number) => number === index).length !== 1).map((index) => `${path}: S${index} is in ${named.includes(index) ? 'more than one group' : 'no group'}`),
+    ...[...new Set(named.filter((index) => index < 1 || index > count))].map((index) => `${path}: S${index} is no scenario of the test plan`),
+    ...(count > 0 && !groups[0]?.scenarios.includes(1) ? [`${path}: S1 is in the first group, the one the walking skeleton walks`] : []),
+  ]
+}

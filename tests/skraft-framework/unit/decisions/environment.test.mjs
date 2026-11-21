@@ -31,7 +31,7 @@ test('a gate the machine cannot run asks the human to fix it; the run waits, and
 
   assert.equal(eventsOf(host, 'step.started').filter((event) => event.step === 'gates').length, 1)
   assert.deepEqual(eventsOf(host, 'step.recorded').filter((event) => event.step === 'gates').map((event) => [event.visit, event.attempt, event.outcome]), [[1, 1, 'pass']])
-  assert.equal(host.agentRunner.dispatches.length, 6)
+  assert.equal(host.agentRunner.dispatches.length, 5)
 })
 
 test('a host that asks in a dialog retries at once; the same failure again stops the run', async () => {
@@ -72,8 +72,8 @@ test('an agent step the machine cannot check asks the same question, and RETRY c
   await host.workspace.write('skraft-config.json', JSON.stringify({ components: [API], publish: SETTLED_PUBLISH }))
   assert.equal((await host.decide({ answer: 'RETRY' })).ok, true)
   assert.equal((await host.run()).code, 'agent-unavailable')
-  assert.deepEqual(host.agentRunner.dispatches.map((dispatch) => dispatch.agent), ['solution-researcher', 'solution-architect', 'acceptance-designer', 'acceptance-designer', 'software-engineer'])
-  assert.deepEqual(eventsOf(host, 'step.recorded').filter((event) => event.step === 'distill').map((event) => [event.group, event.outcome]), [[undefined, 'done'], [1, 'done']])
+  assert.deepEqual(host.agentRunner.dispatches.map((dispatch) => dispatch.agent), ['solution-researcher', 'solution-architect', 'acceptance-designer', 'software-engineer'])
+  assert.deepEqual(eventsOf(host, 'step.recorded').filter((event) => event.step === 'distill').map((event) => [event.group, event.outcome]), [[undefined, 'done']])
 })
 
 test('a configuration the human leaves invalid in the dialog refuses to go on and runs no command; fixed, the run goes on without running an agent again', async () => {
@@ -98,7 +98,7 @@ test('a configuration the human leaves invalid in the dialog refuses to go on an
   await host.workspace.write('skraft-config.json', JSON.stringify({ components: [API], publish: SETTLED_PUBLISH }))
   assert.equal((await host.run()).status, 'done')
   assert.deepEqual(eventsOf(host, 'step.recorded').filter((event) => event.step === 'gates').map((event) => event.outcome), ['pass'])
-  assert.equal(host.agentRunner.dispatches.length, 6)
+  assert.equal(host.agentRunner.dispatches.length, 5)
 })
 
 test('ABORT in the dialog ends the run blocked on the environment, whatever the human left in skraft-config.json', async () => {

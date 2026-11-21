@@ -124,16 +124,17 @@ export const REVIEW_CONSENT_TEXT =
   'ACCEPTED or DECLINED; the answer is kept in ~/.skraft/config.json for this repository, for every later review.'
 
 /**
- * The text of the scenario review question: the scenarios in the order DELIVER builds them, the
- * `.feature` files the test plan names, the red of the walking skeleton (or the exemption the
- * story declares instead) and the red of S1's acceptance test.
+ * The text of the scenario review question: the scenarios, the `.feature` files the test plan
+ * names, the groups DELIVER makes them pass in, the exemption a story with no walking skeleton
+ * declares, and the one red of the acceptance tests.
  * @typedef {{ sha: string, subject: string, files: string[] }} ReviewedRed
- * @param {{ scenarios: Array<{ index: number, title: string, component: string, tags: string[] }>, features: string[], skeleton: ReviewedRed | null, exemption: string, oracle: ReviewedRed }} story
+ * @param {{ scenarios: Array<{ index: number, title: string, component: string, tags: string[] }>, features: string[], skeleton: ReviewedRed | null, exemption: string, oracle: ReviewedRed, groups: Array<{ index: number, scenarios: number[] }> }} story
  */
-export const scenarioReviewText = ({ scenarios, features, skeleton, exemption, oracle }) =>
-  `Read the ${scenarios.length} scenario${scenarios.length === 1 ? '' : 's'} of the story before DELIVER builds them, one at a time${features.length === 0 ? '' : `, as ${features.join(', ')} write${features.length === 1 ? 's' : ''} them`}: ${scenarios.map(scenarioLabel).join('; ')}. ` +
-  `${skeleton === null ? `The story has no walking skeleton (exemption: ${exemption}).` : `The walking skeleton and the skeleton of its chain are ${redText(skeleton)}.`} ` +
-  `The acceptance test of S1 is ${redText(oracle)}. ` +
+export const scenarioReviewText = ({ scenarios, features, skeleton, exemption, oracle, groups }) =>
+  `Read the ${scenarios.length} scenario${scenarios.length === 1 ? '' : 's'} of the story before DELIVER builds them${features.length === 0 ? '' : `, as ${features.join(', ')} write${features.length === 1 ? 's' : ''} them`}: ${scenarios.map(scenarioLabel).join('; ')}. ` +
+  `DELIVER makes them pass in ${groups.length} group${groups.length === 1 ? '' : 's'}: ${groups.map(({ index, scenarios: numbers }) => `${index}. ${numbers.map((number) => `S${number}`).join(', ')}`).join('; ')}. ` +
+  `${skeleton === null ? `The story has no walking skeleton (exemption: ${exemption}). ` : ''}` +
+  `The acceptance tests of every scenario${skeleton === null ? '' : ', the walking skeleton and the skeleton of its chain'} are ${redText(oracle)}. ` +
   'APPROVED delivers them; REVISE sends DISTILL back with your corrections (edit the .feature or the test yourself first if you like, and say so).'
 
 /** @param {ReviewedRed} red */

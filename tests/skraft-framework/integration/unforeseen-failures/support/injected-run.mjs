@@ -47,7 +47,7 @@ export const retry = async (mod) => {
 export const agentsOf = (spawns) => spawns.map(({ prompt }) => briefOf(prompt).agent).filter((agent) => agent !== null)
 
 /** The phase agents of the plugin's workflow, in order: the acceptance designer on its plan, then on S1, each other once. */
-export const NOMINAL_AGENTS = Object.freeze(['solution-researcher', 'solution-architect', 'acceptance-designer', 'acceptance-designer', 'software-engineer', 'pr-writer'])
+export const NOMINAL_AGENTS = Object.freeze(['solution-researcher', 'solution-architect', 'acceptance-designer', 'software-engineer', 'pr-writer'])
 
 /** The journal's events. @param {string} cwd */
 export const eventsOf = (cwd) => journal(cwd, SLUG)

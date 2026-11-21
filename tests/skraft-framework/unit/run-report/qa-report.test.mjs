@@ -64,7 +64,6 @@ test('after each step the tracking folder holds qa-report.md: the test plan, eac
     '| Commit | Subject | Replay exit code |',
     '| --- | --- | ---: |',
     `| \`${shaOf(host, acceptance)}\` | \`${acceptance}\` | 1 |`,
-    `| \`${shaOf(host, 'test(checkout): scenario 1')}\` | \`test(checkout): scenario 1\` | 1 |`,
     '',
     '## Reviews',
     '',
@@ -159,7 +158,6 @@ test('a mutation score names each scope with every survivor, a commit subject wi
   assert.ok(qa.includes('\n| mutation | pass | 0 s | [gates/api/mutation-2.log](gates/api/mutation-2.log) |\n'), qa)
   assert.ok(qa.includes([
     `| \`${shaOf(host, subject)}\` | \`\` ${subject.replace('|', '\\|')} \`\` | 1 |`,
-    `| \`${shaOf(host, 'test(checkout): scenario 1')}\` | \`test(checkout): scenario 1\` | 1 |`,
     `| \`${shaOf(host, kill)}\` | \`${kill}\` | - |`,
   ].join('\n')), qa)
 })

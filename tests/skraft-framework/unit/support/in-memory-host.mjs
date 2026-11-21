@@ -199,9 +199,6 @@ export const passing = (dispatch) => answerYaml({ lens: dispatch.agent.replace(/
  * dispatched together, are answered by `review`: every lens passes and every finding is
  * confirmed unless a test replaces it.
  */
-/** The label of a pass on the first of the story's scenarios. */
-const FIRST_SCENARIO = / · scenario 1 of \d+ · /
-
 export class ScriptedAgentRunner {
   /** @param {Array<(dispatch: {agent: string, label: string, prompt: string}) => Promise<object|void>|object|void>} behaviours */
   constructor(behaviours = []) {
@@ -218,8 +215,6 @@ export class ScriptedAgentRunner {
     this.batchCostUsd = undefined
     /** @type {((dispatch: {agent: string, label: string, prompt: string}) => Promise<object|void>) | null} what answers a pr-writer, apart from the queue */
     this.writer = null
-    /** @type {((dispatch: {agent: string, label: string, prompt: string}) => Promise<object|void>) | null} what answers the acceptance designer's pass on the first scenario, apart from the queue; null: the queue */
-    this.firstRed = null
     /** @type {(dispatch: {agent: string, label: string, prompt: string}) => Promise<object|string>|object|string} what answers the replay judge, apart from the queue: it accepts */
     this.judge = () => judgeAnswer('accept')
     /** @type {Array<{agent: string, label: string, prompt: string}>} the replay judge's dispatches, kept apart from the queue's */
@@ -233,7 +228,6 @@ export class ScriptedAgentRunner {
     if (dispatch.agent === 'replay-judge') return this.judging(dispatch)
     this.dispatches.push(dispatch)
     if (dispatch.agent === 'pr-writer' && this.writer !== null) return (await this.writer(dispatch)) ?? { ok: true, text: 'done' }
-    if (dispatch.agent === 'acceptance-designer' && FIRST_SCENARIO.test(dispatch.label) && this.firstRed !== null) return (await this.firstRed(dispatch)) ?? { ok: true, text: 'done' }
     const behaviour = this.behaviours.shift()
     if (!behaviour) throw new Error(`unexpected dispatch ${dispatch.label}`)
     return (await behaviour(dispatch)) ?? { ok: true, text: 'done' }

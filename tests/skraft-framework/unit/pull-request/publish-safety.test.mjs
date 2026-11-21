@@ -109,7 +109,7 @@ test('a test plan and a consistency matrix an agent wrote are shown inert: no co
     '``Fixes #7`` for ``@alice``, &lt;details',
   ].join('\n'))
   assert.equal(section(body, 'Consistency matrix'), 'From `details/2026-10-11/consistency-matrix-checkout.md` in the tracking folder:\n\n| ADR | Verdict |\n| --- | --- |\n| ADR-001 | kept |\n- consistency-gate: PASS')
-  assert.equal(opening(body, 'RED evidence'), '<details><summary>RED evidence: 2 red commits</summary>')
+  assert.equal(opening(body, 'RED evidence'), '<details><summary>RED evidence: 1 red commit</summary>')
   assert.deepEqual([body.split('<details').length, body.split('</details>').length, body.includes('<!--')], [9, 9, false])
 })
 

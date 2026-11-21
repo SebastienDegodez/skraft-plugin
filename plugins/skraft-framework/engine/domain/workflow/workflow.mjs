@@ -35,8 +35,9 @@ import { branchReasons, foldReviews, formerFanInReasons, formerReviewReasons } f
  *   agent node's agent runs on, or a review node's lenses that name none; refuter: the family a
  *   review node's refuter runs on. each: an agent node the mutation gate sends its surviving
  *   mutants to runs its agent once per file that holds some (`survivor-file`); the two agent
- *   nodes marked `scenario` run once per scenario of the story, the first writing its failing
- *   acceptance test, the second making it pass. publish: what a publish node (a
+ *   nodes marked `scenario` build the story's scenarios, the first writing the failing
+ *   acceptance test of every one in one pass, the second making them pass once per group of the
+ *   implementation plan. publish: what a publish node (a
  *   parallelogram with `publish=`) publishes: the run's pull request, or the screenshots of the
  *   e2e runs of its front ends. when: a publish node runs only when skraft-config.json has a
  *   component of that kind, and is skipped otherwise. refutedBy: the refuter node a review (or the
@@ -458,11 +459,11 @@ const proposalReasons = ({ nodes }) => Object.values(nodes)
   .filter((node) => node.proposal && node.each !== 'survivor-file')
   .map((node) => `node ${node.id}: proposal=true needs each="survivor-file", the mutants it proposes for`)
 
-const SCENARIO_PAIR = 'each="scenario" goes on two agent nodes, the one that writes each scenario\'s failing acceptance test, then the one that makes it pass'
+const SCENARIO_PAIR = 'each="scenario" goes on two agent nodes, the one that writes every scenario\'s failing acceptance test, then the one that makes them pass group by group'
 
 /**
- * The nodes marked each="scenario", in the order the run reaches them: the one that writes each
- * scenario's failing acceptance test, then the one that makes it pass.
+ * The nodes marked each="scenario", in the order the run reaches them: the one that writes every
+ * scenario's failing acceptance test, then the one that makes them pass group by group.
  * @param {Pick<Workflow, 'nodes' | 'order'>} workflow
  */
 export const scenarioNodes = ({ nodes, order }) => order.filter((id) => nodes[id].each === 'scenario')

@@ -161,7 +161,7 @@ test('the changes a lens reads are those since the base of the run, without the 
   assert.equal(await host.tracking.read(SLUG, 'reviews/design_review-1/changed-files.txt'), 'docs/adr/adr-001-card-payment.md\n')
   assert.equal(await host.tracking.read(SLUG, 'reviews/design_review-1/changes.patch'), 'diff --git a/docs/adr/adr-001-card-payment.md b/docs/adr/adr-001-card-payment.md\n+# ADR 001: pay by card\n')
   assert.equal(await host.tracking.read(SLUG, 'reviews/deliver_review-1/changed-files.txt'), [
-    'docs/adr/adr-001-card-payment.md', 'tests/Acceptance/CheckoutAcceptanceTests.cs', 'tests/Acceptance/S1AcceptanceTests.cs', 'src/Checkout.cs', 'tests/CheckoutTests.cs', '',
+    'docs/adr/adr-001-card-payment.md', 'tests/Acceptance/CheckoutAcceptanceTests.cs', 'src/Checkout.cs', 'tests/CheckoutTests.cs', '',
   ].join('\n'))
 })
 
@@ -781,9 +781,7 @@ test('ACCEPT given with skraft decide at the ceiling of distill_review closes DI
     ['deliver_review', 1, 'approved', 'visuals'],
   ])
   assert.deepEqual(host.agentRunner.dispatches.filter((dispatch) => dispatch.agent === 'acceptance-designer').map(({ label }) => label), [
-    `skraft ${SLUG} · distill · attempt 1`, `skraft ${SLUG} · distill · pass 2 · scenario 1 of 1 · attempt 1`,
-    `skraft ${SLUG} · distill · pass 3 · attempt 1`, `skraft ${SLUG} · distill · pass 4 · scenario 1 of 1 · attempt 1`,
-    `skraft ${SLUG} · distill · pass 5 · attempt 1`, `skraft ${SLUG} · distill · pass 6 · scenario 1 of 1 · attempt 1`,
+    `skraft ${SLUG} · distill · attempt 1`, `skraft ${SLUG} · distill · pass 2 · attempt 1`, `skraft ${SLUG} · distill · pass 3 · attempt 1`,
   ])
   const engineer = host.agentRunner.dispatches.find((dispatch) => dispatch.agent === 'software-engineer')
   assert.ok(!engineer.prompt.includes('A human refused') && !engineer.prompt.includes('What pass'), engineer.prompt)

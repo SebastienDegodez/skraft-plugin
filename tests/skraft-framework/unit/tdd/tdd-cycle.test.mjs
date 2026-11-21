@@ -160,8 +160,8 @@ test('a component without a test command waits for a human until it gets one', a
   await host.deps.workspace.write('skraft-config.json', JSON.stringify({ components: [API], publish: SETTLED_PUBLISH }))
   await host.decide({ answer: 'RETRY' })
   assert.equal((await host.run()).code, 'agent-unavailable')
-  assert.equal(host.agentRunner.dispatches.length, 5)
-  assert.deepEqual(recorded(host, 'distill').map((event) => [event.group, event.outcome]), [[undefined, 'done'], [1, 'done']])
+  assert.equal(host.agentRunner.dispatches.length, 4)
+  assert.deepEqual(recorded(host, 'distill').map((event) => [event.group, event.outcome]), [[undefined, 'done']])
 })
 
 test('a timed-out replay goes to the judge, and a human answers when the judge asks; a test command with shell syntax waits for a human to fix the configuration', async () => {

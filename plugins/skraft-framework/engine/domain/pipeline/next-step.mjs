@@ -21,7 +21,7 @@ import { scenarioNodes } from '../workflow/workflow.mjs'
  *   on, sentBy naming which; instruction: the instruction a human answered a block with, on the
  *   pass it reopened, null otherwise; resumed: the open attempt a resumed run picks up. groups: the surviving mutants
  *   of a visit the mutation gate opened on a node that takes them by file, or the story's
- *   scenarios on a node marked each="scenario"; group: the one this attempt works on, from 1;
+ *   delivery groups on a node marked each="scenario"; group: the one this attempt works on, from 1;
  *   null with no groups.
  * @typedef {Entry & { kind: 'agent' | 'gate' | 'review' | 'ask' | 'publish' | 'call', phase: string, node: WorkflowNode }} WorkStep
  * @typedef {{ kind: 'skip', phase: string, node: WorkflowNode, visit: number, resumed: OpenAttempt | null }} SkipStep
@@ -87,41 +87,15 @@ const leaveNode = (workflow, run, node, last) => {
 }
 
 /**
- * The story's scenarios run without edges: the plan and its walking skeleton hand over to the red
- * of the first scenario's acceptance test, a red of a later scenario to the node that makes it
- * pass, and a scenario made to pass, or one an earlier scenario already makes pass, to the red of
- * the next one; null when the node leaves by its
- * edge (the red of the first scenario, to the review; the last scenario; a pass on no scenario).
+ * The story's groups run without edges: the node that writes every acceptance test leaves by its
+ * edge, to the review; a group made to pass hands over to the next one; the last group, or a
+ * pass on none, leaves by its edge.
  * @param {Workflow} workflow @param {RunState} run @param {WorkflowNode} node @param {RunEvent} last
  * @returns {NextStep | null}
  */
 const scenarioStep = (workflow, run, node, last) => {
-  if (node.each !== 'scenario') return null
-  const [oracle, delivery] = scenarioNodes(workflow)
-  if (node.id !== oracle) return nextScenario(workflow.nodes[oracle], run, node, last)
-  if (typeof last.group !== 'number') return enterScenario(node, run, 1)
-  if (last.group === 1) return null
-  if (last.green !== undefined) return nextScenario(node, run, node, last)
-  return closesAfterLastRed(run, node, last.group) ?? enterScenario(workflow.nodes[delivery], run, last.group)
-}
-
-/**
- * A scenario made to pass hands over to the red of the next one; the last, or a pass on none,
- * leaves by its edge.
- * @param {WorkflowNode} oracle @param {RunState} run @param {WorkflowNode} node @param {RunEvent} last
- * @returns {NextStep | null}
- */
-const nextScenario = (oracle, run, node, last) => (typeof last.group === 'number' && last.group < run.nodes[node.id].groups.length ? enterScenario(oracle, run, last.group + 1) : null)
-
-/**
- * The phase of the node that writes the reds closes once the red of the last scenario is written,
- * not before: its edge to the first green left it open.
- * @param {RunState} run @param {WorkflowNode} node the node that writes the reds @param {number} group
- * @returns {ClosePhaseStep | null}
- */
-const closesAfterLastRed = (run, node, group) => {
-  const phase = /** @type {string} */ (node.phase)
-  return group === run.nodes[node.id].groups.length && !run.closed.includes(phase) ? { kind: 'close-phase', phase } : null
+  if (node.each !== 'scenario' || node.id === scenarioNodes(workflow)[0]) return null
+  return typeof last.group === 'number' && last.group < run.nodes[node.id].groups.length ? enterScenario(node, run, last.group + 1) : null
 }
 
 /**
@@ -131,8 +105,8 @@ const closesAfterLastRed = (run, node, group) => {
  */
 const redsPending = (run) => run.scenarios !== null && Object.keys(run.scenarios.oracles).length < run.scenarios.list.length
 
-/** A first attempt on a scenario, on a visit of its own. @param {WorkflowNode} node @param {RunState} run @param {number} group */
-const enterScenario = (node, run, group) => enter(node, { ...FRESH, visit: run.nodes[node.id].visit + 1, group, groups: /** @type {NonNullable<RunState['scenarios']>} */ (run.scenarios).list }, run)
+/** A first attempt on a group, on a visit of its own. @param {WorkflowNode} node @param {RunState} run @param {number} group */
+const enterScenario = (node, run, group) => enter(node, { ...FRESH, visit: run.nodes[node.id].visit + 1, group, groups: /** @type {NonNullable<RunState['scenarios']>} */ (run.scenarios).groups }, run)
 
 /**
  * A run stopped inside an attempt picks that attempt up again.
@@ -275,17 +249,17 @@ const firstGroup = (workflow, run, target, last) => {
 }
 
 /**
- * The scenario the delivery node goes on with: the next one no green made pass, whose red is
- * committed; none once every scenario passes, or for the node that writes the reds.
+ * The group the delivery node goes on with: the next one no green made pass, once the red of
+ * every acceptance test is committed; none once every group passes, or for the node that writes the red.
  * @param {Workflow} workflow @param {RunState} run @param {WorkflowNode} target
  * @returns {Pick<Entry, 'group' | 'groups'>}
  */
 const pendingScenario = (workflow, run, target) => {
   const next = (run.scenarios?.delivered ?? 0) + 1
   const scenarios = /** @type {NonNullable<RunState['scenarios']>} */ (run.scenarios)
-  const ready = target.id === scenarioNodes(workflow)[1] && next in scenarios.oracles
+  const ready = target.id === scenarioNodes(workflow)[1] && next <= scenarios.groups.length && !redsPending(run)
   // Stryker disable next-line ArrayDeclaration: with group null nothing reads groups (label, brief, route and journal all ask group first)
-  return ready ? { group: next, groups: scenarios.list } : { group: null, groups: [] }
+  return ready ? { group: next, groups: scenarios.groups } : { group: null, groups: [] }
 }
 
 /** Who sends the run on with failures, by the kind of node it leaves: a call sends it as the review it runs. */

@@ -42,6 +42,6 @@ test('a gate that fails once then passes sends the work back once, and the run c
   assert.deepEqual(outcome, { status: 'done', slug: 'checkout', phase: 'PUBLISH', code: null, reason: 'PUBLISH closed' })
   assert.deepEqual(gates.map(({ visit, outcome: result, code, next }) => [visit, result, code, next]), [[1, 'fail', null, 'deliver'], [2, 'pass', null, 'deliver_review']])
   assert.deepEqual(events.filter((event) => event.type === 'gate.ran').map(({ gate, status }) => `${gate} ${status}`), ['test fail', 'test pass'])
-  assert.deepEqual(agentsOf(mod.spawns), ['solution-researcher', 'solution-architect', 'acceptance-designer', 'acceptance-designer', 'software-engineer', 'software-engineer', 'pr-writer'])
+  assert.deepEqual(agentsOf(mod.spawns), ['solution-researcher', 'solution-architect', 'acceptance-designer', 'software-engineer', 'software-engineer', 'pr-writer'])
   t.diagnostic(`cost: 1 dispatch of the engineer (pass 2); ${elapsedMs(gates[0], gates[1])} ms from the flaky failure to the gates passing, no stop`)
 })
