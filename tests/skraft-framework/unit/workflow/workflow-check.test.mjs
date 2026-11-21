@@ -12,7 +12,7 @@ const LENSES = {
 const PLUGIN_AGENTS = {
   'solution-researcher': 'plugin', 'solution-architect': 'plugin', 'acceptance-designer': 'plugin', 'software-engineer': 'plugin',
   ...Object.fromEntries(Object.values(LENSES).flat().map((lens) => [`${lens}-lens`, 'plugin'])),
-  'finding-refuter': 'plugin', 'pr-writer': 'plugin', 'replay-judge': 'plugin',
+  'finding-refuter': 'plugin', 'pr-writer': 'plugin',
 }
 /** The line, from 1, of the first line of the text that starts with `start`. */
 const lineOf = (text, start) => text.split('\n').findIndex((line) => line.startsWith(start)) + 1
@@ -69,10 +69,10 @@ test('with no workflow designated, the plugin workflow runs and checks ok with i
         design: node('design', 'agent', { phase: 'DESIGN', agent: 'solution-architect' }),
         design_review: review('design_review', 'DESIGN', { mandatory: ['review'] }),
         adr: node('adr', 'ask', { phase: 'DESIGN', question: 'adr-ratification' }),
-        distill: node('distill', 'agent', { phase: 'DISTILL', agent: 'acceptance-designer', each: 'scenario' }),
+        distill: node('distill', 'agent', { phase: 'DISTILL', agent: 'acceptance-designer' }),
         distill_review: review('distill_review', 'DISTILL', { mandatory: ['review'] }),
         scenario_review: node('scenario_review', 'ask', { phase: 'DISTILL', question: 'scenario-review' }),
-        deliver: node('deliver', 'agent', { phase: 'DELIVER', agent: 'software-engineer', each: 'scenario' }),
+        deliver: node('deliver', 'agent', { phase: 'DELIVER', agent: 'software-engineer' }),
         gates: node('gates', 'gate', { phase: 'DELIVER', gates: ['build', 'format', 'lint', 'test', 'architecture', 'coverage'], goal: true, locked: true }),
         deliver_review: DELIVER_CALL,
         visuals: node('visuals', 'publish', { phase: 'DELIVER', publish: 'playwright-visuals', when: 'frontend' }),
@@ -407,24 +407,24 @@ test('an ask node names a question the engine knows, and leads each of its answe
   }
 })
 
-test('each="scenario" pairs the agent that writes each scenario\'s failing acceptance test with the agent that makes it pass, and the scenario review needs that pair', async () => {
-  const pair = 'each="scenario" goes on two agent nodes, the one that writes every scenario\'s failing acceptance test, then the one that makes them pass group by group'
+test('each="scenario" is gone, and the scenario review needs the node that writes the scenarios and the node that delivers them', async () => {
+  const gone = (id) => `node ${id}: each="scenario" is gone: the engine dispatches the acceptance designer once and the software engineer once per story; remove each="scenario" (skraft workflow diff shows the plugin's)`
   const cases = [
-    { dot: edit(BUILT_IN_WORKFLOW, ['agent="software-engineer", phase="DELIVER", each="scenario"]', 'agent="software-engineer", phase="DELIVER"]']), errors: [`${pair}; it is on 1: distill`] },
+    { dot: edit(BUILT_IN_WORKFLOW, ['agent="software-engineer", phase="DELIVER"]', 'agent="software-engineer", phase="DELIVER", each="scenario"]']), errors: [gone('deliver')] },
     {
-      dot: edit(BUILT_IN_WORKFLOW, ['agent="pr-writer", phase="PUBLISH"]', 'agent="pr-writer", phase="PUBLISH", each="scenario"]']),
-      errors: [`${pair}; it is on 3: distill, deliver, pr_writer`],
+      dot: edit(BUILT_IN_WORKFLOW, ['agent="acceptance-designer", phase="DISTILL"]', 'agent="acceptance-designer", phase="DISTILL", each="scenario"]'], ['agent="pr-writer", phase="PUBLISH"]', 'agent="pr-writer", phase="PUBLISH", each="scenario"]']),
+      errors: [gone('distill'), gone('pr_writer')],
     },
     {
-      dot: edit(BUILT_IN_WORKFLOW, ['phase="DISTILL", each="scenario"]', 'phase="DISTILL"]'], ['phase="DELIVER", each="scenario"]', 'phase="DELIVER"]']),
-      errors: ['node scenario_review: question="scenario-review" needs the two nodes marked each="scenario", whose scenarios it shows'],
+      dot: edit(BUILT_IN_WORKFLOW, ['agent="software-engineer", phase="DELIVER"]', 'agent="pr-writer", phase="DELIVER"]']),
+      errors: ['node scenario_review: question="scenario-review" needs the node that writes the scenarios and the node that delivers them'],
     },
     {
-      dot: edit(BUILT_IN_WORKFLOW, ['phase="DISTILL", each="scenario"]', 'phase="DISTILL"]'], ['phase="DELIVER", each="scenario"]', 'phase="DELIVER"]'], ['distill_review -> scenario_review [label="APPROVED"]', 'distill_review -> deliver [label="APPROVED"]'], ['  scenario_review [shape=hexagon, question="scenario-review"]\n', ''], ['  scenario_review -> deliver [label="APPROVED"]\n', ''], ['  scenario_review -> distill [label="REVISE", max_visits=2]\n', '']),
+      dot: edit(BUILT_IN_WORKFLOW, ['agent="software-engineer", phase="DELIVER"]', 'agent="pr-writer", phase="DELIVER"]'], ['distill_review -> scenario_review [label="APPROVED"]', 'distill_review -> deliver [label="APPROVED"]'], ['  scenario_review [shape=hexagon, question="scenario-review"]\n', ''], ['  scenario_review -> deliver [label="APPROVED"]\n', ''], ['  scenario_review -> distill [label="REVISE", max_visits=2]\n', '']),
       errors: [],
     },
-    { dot: edit(BUILT_IN_WORKFLOW, ['phase="DISTILL", each="scenario"]', 'phase="DISTILL", each="slice"]']), errors: ['node distill: each="slice" must be survivor-file or scenario', `${pair}; it is on 1: deliver`] },
-    { dot: edit(MUTATION_WORKFLOW, ['each="survivor-file", proposal=true]', 'each="scenario", proposal=true]']), errors: ['node kill_proposal: proposal=true needs each="survivor-file", the mutants it proposes for', `${pair}; it is on 3: distill, deliver, kill_proposal`] },
+    { dot: edit(BUILT_IN_WORKFLOW, ['agent="acceptance-designer", phase="DISTILL"]', 'agent="acceptance-designer", phase="DISTILL", each="slice"]']), errors: ['node distill: each="slice" must be survivor-file'] },
+    { dot: edit(MUTATION_WORKFLOW, ['each="survivor-file", proposal=true]', 'each="scenario", proposal=true]']), errors: ['node kill_proposal: each="scenario" is gone: the engine dispatches the acceptance designer once and the software engineer once per story; remove each="scenario" (skraft workflow diff shows the plugin\'s)', 'node kill_proposal: proposal=true needs each="survivor-file", the mutants it proposes for'] },
     { dot: edit(BUILT_IN_WORKFLOW, ['  scenario_review -> distill [label="REVISE", max_visits=2]\n', '']), errors: ['node scenario_review: REVISE needs an edge of its own, back to the node whose work it refuses'] },
   ]
   for (const { dot, errors } of cases) {
@@ -450,7 +450,7 @@ test('a publish node publishes the pull request or the screenshots, runs when a 
     { dot: edit(BUILT_IN_WORKFLOW, ['publish="pull-request"]', 'publish="visuals"]']), errors: ['node publish: publish="visuals" must be pull-request or playwright-visuals'] },
     { dot: edit(BUILT_IN_WORKFLOW, ['publish="pull-request"]', 'publish="pull-request", goal_gate=true]']), errors: ['node publish: attribute goal_gate is not supported on a parallelogram node (supported: label, shape, phase, publish, when)'] },
     { dot: edit(BUILT_IN_WORKFLOW, ['publish="pull-request"]', 'publish="pull-request", when="backend"]']), errors: ['node publish: when="backend" must be frontend'] },
-    { dot: edit(BUILT_IN_WORKFLOW, ['phase="DELIVER", each="scenario"]', 'phase="DELIVER", each="scenario", when="frontend"]']), errors: ['node deliver: attribute when is not supported on a box node (supported: label, shape, phase, agent, model, outputs, writes, max_attempts, each, proposal)'] },
+    { dot: edit(BUILT_IN_WORKFLOW, ['phase="DELIVER"]', 'phase="DELIVER", when="frontend"]']), errors: ['node deliver: attribute when is not supported on a box node (supported: label, shape, phase, agent, model, outputs, writes, max_attempts, each, proposal)'] },
     { dot: edit(BUILT_IN_WORKFLOW, ['agent="pr-writer", phase="PUBLISH"]', 'agent="pr-writer", phase="PUBLISH", publish="pull-request"]']), errors: ['node pr_writer: attribute publish is not supported on a box node (supported: label, shape, phase, agent, model, outputs, writes, max_attempts, each, proposal)'] },
     {
       dot: 'digraph p {\n  start [shape=Mdiamond]\n  publish [shape=parallelogram, publish="pull-request"]\n  exit [shape=Msquare]\n  start -> publish -> exit\n}',
