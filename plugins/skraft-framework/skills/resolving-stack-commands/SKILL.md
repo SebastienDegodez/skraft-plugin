@@ -1,6 +1,6 @@
 ---
 name: resolving-stack-commands
-description: Use whenever an agent must run a toolchain command (build, test, mutation) and needs the concrete invocation. Resolves build/test/mutation commands from the detected stack via the `quality-gates-<tech>` adapters so no agent hardcodes `dotnet test`, `dotnet build`, or any toolchain command. Loaded by acceptance-designer and software-engineer.
+description: Use whenever an agent must run a toolchain command (build, test) and needs the concrete invocation. Resolves build/test commands from the detected stack via the `quality-gates-<tech>` adapters; mutation is the developer's command, run through mutation-testing. No agent hardcodes `dotnet test`, `dotnet build`, or any toolchain command. Loaded by acceptance-designer and software-engineer.
 ---
 
 # Resolving Stack Commands (stack-agnostic)
@@ -15,23 +15,24 @@ it here instead.
 The pipeline must run with .NET today and other stacks tomorrow (Java planned,
 not yet supported). If each agent embeds `dotnet test`, swapping or adding a
 stack means editing every agent. Centralizing the mapping keeps agents
-tech-agnostic: they say "build the solution" / "run the test suite" / "run
-mutation", this skill says how.
+tech-agnostic: they say "build the solution" / "run the test suite", this skill
+says how.
 
 ## Detection → adapter
 
 Detect the stack from markers at the repo root, then resolve the concrete
 commands from the matching `quality-gates-<tech>` adapter (the adapter owns the
-build / test / mutation commands and their evidence mapping):
+build / test commands and their evidence mapping). Mutation is never resolved here: the
+developer declares it in `skraft-config.json` and `mutation-testing`'s gate runs it.
+
 
 | Stack | Detection markers | Adapter | Status |
 |---|---|---|---|
-| .NET | `*.sln`, `*.slnx`, `**/*.csproj`, `Directory.Packages.props` | `quality-gates-dotnet` (`dotnet build` / `dotnet test` / `dotnet stryker`) | supported |
-| Node JavaScript, TAP | Selected `package.json` declares installed StrykerJS core + TAP 9.6.1; explicit checked-in core/boundary configs use `testRunner: 'tap'` | `quality-gates-javascript`: checked-in scripts/native Node tests and sequential mutation runner | narrow support; no G11 coverage enforcement |
-| TypeScript tested with Vitest (React front end, Node package) | A `package.json` whose devDependencies hold `vitest` | `quality-gates-typescript` (`{bin:vitest} run` / `{bin:typescript:tsc} --noEmit` / ESLint boundaries / StrykerJS 10 with the Vitest runner through `mutation-gate.mjs`, run from the package's `node_modules`) | supported; uninstalled dependencies, a missing coverage provider or Stryker runner is a blocker |
-| Node JavaScript without StrykerJS core + TAP 9.6.1 | A `package.json` that neither row above matches (Stryker absent, other runner or version, no Vitest) | No matching supported adapter | NOT SUPPORTED — a missing mutation runner is a blocker, never an exemption |
+| .NET | `*.sln`, `*.slnx`, `**/*.csproj`, `Directory.Packages.props` | `quality-gates-dotnet` (`dotnet build` / `dotnet test`) | supported |
+| TypeScript tested with Vitest (React front end, Node package) | A `package.json` whose devDependencies hold `vitest` | `quality-gates-typescript` (`{bin:vitest} run` / `{bin:typescript:tsc} --noEmit` / ESLint boundaries, run from the package's `node_modules`) | supported; uninstalled dependencies or a missing coverage provider is a blocker |
+| Node JavaScript | A `package.json` without `vitest` | `quality-gates-javascript`: checked-in package scripts and native Node tests | narrow support; no G11 coverage enforcement |
 | TypeScript or browser code under another test runner | Jest, Mocha, Karma or Jasmine without Vitest | No matching supported adapter | NOT SUPPORTED |
-| Python | `pyproject.toml` | `quality-gates-python` (`{python} -m pytest` / `{python} -m compileall` / cosmic-ray through `mutation-gate.mjs`, run from `.venv`) | supported; no `.venv` and no `--python` is a blocker |
+| Python | `pyproject.toml` | `quality-gates-python` (`{python} -m pytest` / `{python} -m compileall`, run from `.venv`) | supported; no `.venv` and no `--python` is a blocker |
 | Java | `pom.xml`, `build.gradle`, `build.gradle.kts` | _(quality-gates-java not yet provided)_ | NOT SUPPORTED |
 
 Every `package.json` (outside `node_modules`), every `pyproject.toml` and every .NET solution in the repository is a stack to resolve; a front end in `web/` is a TypeScript stack beside the backend's. If multiple stacks coexist, run each adapter and aggregate results; an unsupported one blocks the whole delivery, even when another stack passes.
@@ -77,12 +78,11 @@ Inside a SKRAFT pipeline, resolved commands live in one file every later agent r
 | build | {command} | {dir} |
 | test — full suite | {command} | {dir} |
 | test — one test (filter placeholder `{TestName}`) | {command} | {dir} |
-| mutation — core (adapter script) | {command} | {dir} |
-| mutation — boundary (adapter script) | {command} | {dir} |
+| mutation (`mutation-testing` gate; `not declared` when `skraft-config.json` has no `commands.mutation`) | {command} | {dir} |
 ```
 
 ## Contract for callers
 
-- Resolve the command (build / test / mutation) from the matching `quality-gates-<tech>` adapter; do not embed it in workflow steps.
+- Resolve the command (build / test) from the matching `quality-gates-<tech>` adapter; do not embed it in workflow steps. Mutation comes from `skraft-config.json` through `mutation-testing`.
 - Run it, then assert on its output (build succeeds, RED on a business assertion, GREEN gate, mutation score, etc.).
 - Adding a stack = add a `quality-gates-<tech>` adapter and a row here, with zero edits to agents.

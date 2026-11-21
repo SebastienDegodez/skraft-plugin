@@ -63,9 +63,9 @@ export function distributionVersion(python, root, name) {
 	}
 }
 
-export function readToml(python, root, path) {
-	const text = runPython(python, ['-c', 'import json, sys, tomllib; print(json.dumps(tomllib.load(open(sys.argv[1], "rb"))))', path], { cwd: root })
-	return JSON.parse(text)
+// Every Python file of the working copy Git knows or would add: tracked and untracked, ignored left out.
+export function repositoryPythonFiles(root) {
+	return git(root, ['ls-files', '--cached', '--others', '--exclude-standard', '-z', '--', '*.py']).split('\0').filter(Boolean)
 }
 
 export async function pythonFiles(root, modulePaths) {
@@ -84,13 +84,6 @@ export async function pythonFiles(root, modulePaths) {
 		await walk(absolute)
 	}
 	return [...files].sort()
-}
-
-export function changedSince(root, since) {
-	const mergeBase = git(root, ['merge-base', since, 'HEAD'])
-	const changed = git(root, ['diff', '--name-only', '-z', mergeBase, '--']).split('\0').filter(Boolean)
-	const untracked = git(root, ['ls-files', '--others', '--exclude-standard', '-z', '--']).split('\0').filter(Boolean)
-	return { mergeBase, files: [...new Set([...changed, ...untracked])] }
 }
 
 export async function capture(command, args, { cwd, env, stdout, stderr }) {

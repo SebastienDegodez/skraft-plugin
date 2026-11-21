@@ -68,6 +68,13 @@ describe('buildPrComment', () => {
     ok(comment.includes('p=0.500'))
   })
 
+  it('shows a dash for a grader mean an arm never produced', () => {
+    const comment = buildPrComment(
+      results(verdict({ graderScores: { baselineMean: null, skilledMean: 0.836, medianDelta: null } })),
+    )
+    ok(comment.includes('— → 0.836 (—)'))
+  })
+
   it('leaves the rank test empty on a judge-only comparison, which carries no magnitude', () => {
     const comment = buildPrComment(results(verdict({ wilcoxon: { available: false, pValue: null } })))
     ok(comment.includes('| — |'))

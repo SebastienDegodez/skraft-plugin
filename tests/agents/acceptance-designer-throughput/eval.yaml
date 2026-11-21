@@ -1,0 +1,109 @@
+name: acceptance-designer-throughput
+version: 0.1.0
+description: >-
+  Throughput benchmark of the real SKRAFT Acceptance Designer on the fourteen-criteria .NET story
+  that software-engineer-throughput delivers: DESIGN is approved, DISTILL starts. Run at two refs
+  through eng/bench-agent-ab.sh beside the engineer suites, so a version that moves work from
+  DELIVER to DISTILL is charged for it. The graders only say the specification exists, compiles
+  and fails; the benchmark reads cost and time.
+type: capability
+defaults:
+  executor: skraft-agent-runner
+  timeout: 120m
+  model: claude-sonnet-5.5
+  runs: 3
+scoring:
+  threshold: 0.9
+stimuli:
+  - name: Fourteen-criteria pricing story becomes an executable specification
+    turns:
+      - I want to distill the `discount` story of the Checkout Pricing project.
+      - The criteria are agreed, continue. Complete the distillation.
+    tags:
+      agent: acceptance-designer
+      scenario: fourteen-criteria-dotnet-distill
+      permissions: workspace-write
+      cost: high
+    supported_executors:
+      - skraft-agent-runner
+    constraints:
+      max_turns: 2
+      max_duration: 120m
+    environment:
+      files:
+        - src: fixtures/s14-story/.copilot-tracking/skraft-plans/pricing/details/2026-08-07/contracts.md
+          dest: .copilot-tracking/skraft-plans/pricing/details/2026-08-07/contracts.md
+        - src: fixtures/s14-story/.copilot-tracking/skraft-plans/pricing/plans/2026-08-07/ac.md
+          dest: .copilot-tracking/skraft-plans/pricing/plans/2026-08-07/ac.md
+        - src: fixtures/s14-story/.copilot-tracking/skraft-plans/pricing/plans/2026-08-07/stories-m1.md
+          dest: .copilot-tracking/skraft-plans/pricing/plans/2026-08-07/stories-m1.md
+        - src: fixtures/s14-story/.copilot-tracking/skraft-plans/pricing/state.json
+          dest: .copilot-tracking/skraft-plans/pricing/state.json
+        - src: fixtures/s14-story/.gitignore
+          dest: .gitignore
+        - src: fixtures/s14-story/CheckoutPricing.slnx
+          dest: CheckoutPricing.slnx
+        - src: fixtures/s14-story/Directory.Build.props
+          dest: Directory.Build.props
+        - src: fixtures/s14-story/Directory.Packages.props
+          dest: Directory.Packages.props
+        - src: fixtures/s14-story/docs/adr/decisions-index.md
+          dest: docs/adr/decisions-index.md
+        - src: fixtures/s14-story/skraft-config.json
+          dest: skraft-config.json
+        - src: fixtures/s14-story/src/CheckoutPricing.Api/CheckoutPricing.Api.csproj
+          dest: src/CheckoutPricing.Api/CheckoutPricing.Api.csproj
+        - src: fixtures/s14-story/src/CheckoutPricing.Api/Program.cs
+          dest: src/CheckoutPricing.Api/Program.cs
+        - src: fixtures/s14-story/src/CheckoutPricing.Application/CalculateLoyaltyDiscount.cs
+          dest: src/CheckoutPricing.Application/CalculateLoyaltyDiscount.cs
+        - src: fixtures/s14-story/src/CheckoutPricing.Application/CheckoutPricing.Application.csproj
+          dest: src/CheckoutPricing.Application/CheckoutPricing.Application.csproj
+        - src: fixtures/s14-story/src/CheckoutPricing.Domain/CheckoutPricing.Domain.csproj
+          dest: src/CheckoutPricing.Domain/CheckoutPricing.Domain.csproj
+        - src: fixtures/s14-story/src/CheckoutPricing.Domain/LoyaltyTier.cs
+          dest: src/CheckoutPricing.Domain/LoyaltyTier.cs
+        - src: fixtures/s14-story/src/CheckoutPricing.Infrastructure/CheckoutPricing.Infrastructure.csproj
+          dest: src/CheckoutPricing.Infrastructure/CheckoutPricing.Infrastructure.csproj
+        - src: fixtures/s14-story/src/CheckoutPricing.Infrastructure/InfrastructureMarker.cs
+          dest: src/CheckoutPricing.Infrastructure/InfrastructureMarker.cs
+        - src: fixtures/s14-story/tests/CheckoutPricing.IntegrationTest/Architecture/ArchitectureTests.cs
+          dest: tests/CheckoutPricing.IntegrationTest/Architecture/ArchitectureTests.cs
+        - src: fixtures/s14-story/tests/CheckoutPricing.IntegrationTest/CheckoutPricing.IntegrationTest.csproj
+          dest: tests/CheckoutPricing.IntegrationTest/CheckoutPricing.IntegrationTest.csproj
+        - src: fixtures/s14-story/tests/CheckoutPricing.UnitTest/CheckoutPricing.UnitTest.csproj
+          dest: tests/CheckoutPricing.UnitTest/CheckoutPricing.UnitTest.csproj
+      commands:
+        - 'dotnet restore CheckoutPricing.slnx'
+        - 'git init --quiet --object-format=sha1'
+        - 'git config user.email eval@example.invalid'
+        - 'git config user.name "SKRAFT Eval"'
+        - 'git add .'
+        - 'git commit --quiet -m "chore: approved DESIGN fixture"'
+    graders:
+      - type: completed
+      - type: run-command
+        name: The feature holds a scenario for every criterion
+        config:
+          command: bash
+          args:
+            - '-lc'
+            - '[ "$(cat .copilot-tracking/skraft-plans/pricing/features/*.feature | grep -cE "^ *Scenario( Outline)?:")" -ge 14 ]'
+          expected_exit_code: 0
+          timeout: 30s
+      - type: run-command
+        name: The whole solution still compiles
+        config:
+          command: dotnet
+          args: ['build', 'CheckoutPricing.slnx', '--no-restore']
+          expected_exit_code: 0
+          timeout: 3m
+      - type: run-command
+        name: The acceptance tests fail on the missing behaviour, not on a broken build
+        config:
+          command: bash
+          args:
+            - '-lc'
+            - 'dotnet test CheckoutPricing.slnx --no-restore --no-build; [ $? -ne 0 ]'
+          expected_exit_code: 0
+          timeout: 3m

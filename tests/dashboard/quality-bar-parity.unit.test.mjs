@@ -1,117 +1,29 @@
 import { strictEqual } from 'node:assert/strict'
-import { existsSync, readFileSync } from 'node:fs'
+import { readFileSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { describe, it } from 'node:test'
+import { MUTATION_BAR } from '../../plugins/skraft-framework/src/domain/mutation-gate-policy.mjs'
 
 const repoRoot = resolve(join(dirname(fileURLToPath(import.meta.url)), '../..'))
 const barPath = join(repoRoot, 'plugins/skraft-framework/skills/skraft-quality-bar/SKILL.md')
-const scriptsDir = join(repoRoot, 'plugins/skraft-framework/skills/quality-gates-dotnet/scripts')
 
-// Adapter wrappers and the root-config scaffold carry checked copies of the expected
-// values so they stay executable without model judgement. That choice recreates the
-// pattern which produced the defect this whole change removes: a threshold stated in
-// more than one place, drifting silently until two of them disagree
-// (software-engineer.agent.md once claimed 80/90/100 while the routing table said
-// skip/100/100). The literals are therefore allowed, but only as CHECKED
-// restatements: this test is what makes them checked.
-
-function barRows(markdown) {
-  const rows = new Map()
+// The mutation gate carries its bar as a constant so it runs without model judgement. That
+// recreates the pattern this check exists for: a threshold stated in two places, drifting
+// silently until they disagree. The constant is allowed only as a CHECKED restatement.
+function mutationRows(markdown) {
+  const rows = []
   for (const line of markdown.split(/\r?\n/)) {
     const cells = /^\|\s*Mutation score\s*\|\s*(\d+)%\s*\|\s*([^|]+?)\s*\|/.exec(line)
-    if (cells) rows.set(cells[2].replace(/\s+/g, ''), Number(cells[1]))
+    if (cells) rows.push({ bar: Number(cells[1]), scope: cells[2] })
   }
   return rows
 }
 
-function documentedBreakThresholds(markdown) {
-  const thresholds = new Map()
-  for (const line of markdown.split(/\r?\n/)) {
-    const cells = /^\|\s*([^|]+?)\s*\|\s*`thresholds\.break\s*=\s*(\d+)`/.exec(line)
-    if (cells) thresholds.set(cells[1].replace(/\s+/g, ''), Number(cells[2]))
-  }
-  return thresholds
-}
-
-// A scope wrapper passes its bar and scope as object properties (`expected: 100,`); the
-// scaffold declares them as constants (`const CORE_EXPECTED = 100`).
-function scriptProperty(source, name) {
-  const match = new RegExp(`^\\s*${name}:\\s*(?:'([^'\\n]+)'|(\\d+)),?\\s*$`, 'm').exec(source)
-  return match?.[1] ?? match?.[2]
-}
-
-function scriptConstant(source, name) {
-  return new RegExp(`^const ${name} = (\\d+)$`, 'm').exec(source)?.[1]
-}
-
-const SCRIPTS = [
-  { file: 'mutation-core.mjs', scope: 'Domain,Application', scaffoldConstant: 'CORE_EXPECTED' },
-  { file: 'mutation-boundary.mjs', scope: 'API,Infrastructure', scaffoldConstant: 'BOUNDARY_EXPECTED' },
-]
-
 describe('quality bar parity', () => {
-  it('states a mutation bar for both scopes', () => {
-    const rows = barRows(readFileSync(barPath, 'utf8'))
-
-    strictEqual(rows.size, SCRIPTS.length, `expected one bar row per scope, got ${[...rows.keys()].join(' / ')}`)
-    for (const { scope } of SCRIPTS) {
-      strictEqual(typeof rows.get(scope), 'number', `no mutation bar row for scope ${scope}`)
-    }
-  })
-
-  for (const { file, scope } of SCRIPTS) {
-    it(`keeps ${file} in step with the bar`, () => {
-      const path = join(scriptsDir, file)
-      strictEqual(existsSync(path), true, `${file} is missing; the bar names it as the runner for ${scope}`)
-
-      const source = readFileSync(path, 'utf8')
-      const expected = barRows(readFileSync(barPath, 'utf8')).get(scope)
-
-      strictEqual(scriptProperty(source, 'scope'), scope, `${file} declares a different scope than the bar row it implements`)
-      strictEqual(
-        Number(scriptProperty(source, 'expected')),
-        expected,
-        `${file} hardcodes a threshold the bar no longer states — one of the two moved without the other`,
-      )
-    })
-  }
-
-  it('keeps generated config thresholds in step with both scope wrappers', () => {
-    const scaffold = readFileSync(join(scriptsDir, 'configure-mutation.mjs'), 'utf8')
-    const rows = barRows(readFileSync(barPath, 'utf8'))
-
-    for (const { scope, scaffoldConstant } of SCRIPTS) {
-      strictEqual(
-        Number(scriptConstant(scaffold, scaffoldConstant)),
-        rows.get(scope),
-        `${scaffoldConstant} would generate a root config below the quality bar`,
-      )
-    }
-    strictEqual(/'stryker', 'init'/.test(scaffold), true, 'scaffold must delegate config schema to Stryker init')
-    strictEqual(/'--threshold-high', String\(expected\)/.test(scaffold), true)
-    strictEqual(/'--threshold-low', String\(expected\)/.test(scaffold), true)
-    strictEqual(/'--break-at', String\(expected\)/.test(scaffold), true)
-  })
-
-  it('keeps the documented config break thresholds equal to the bar', () => {
-    const markdown = readFileSync(barPath, 'utf8')
-    const rows = barRows(markdown)
-    const thresholds = documentedBreakThresholds(markdown)
-
-    for (const { scope } of SCRIPTS) {
-      strictEqual(thresholds.get(scope), rows.get(scope), `the thresholds.break documented for ${scope} disagrees with the bar row above it`)
-    }
-  })
-
-  it('refuses runtime thresholds and validates checked-in config thresholds', () => {
-    const runner = readFileSync(join(scriptsDir, 'run-mutation-gate.mjs'), 'utf8')
-    strictEqual(/'--expected': 'refusing --expected/.test(runner), true, 'the shared runner must reject --expected explicitly')
-    for (const { file } of SCRIPTS) {
-      const source = readFileSync(join(scriptsDir, file), 'utf8')
-      strictEqual(/runMutationGate\(/.test(source), true, `${file} must go through the shared runner, which refuses --expected`)
-      strictEqual(/'--config-file'/.test(runner), true, 'runner must use the checked-in root config')
-      strictEqual(/config\.thresholds\?\.break !== expected/.test(runner), true, 'runner must reject config threshold drift')
-    }
+  it('states one global mutation bar, the one the mutation gate applies', () => {
+    const rows = mutationRows(readFileSync(barPath, 'utf8'))
+    strictEqual(rows.length, 1, `expected one global mutation bar row, got ${rows.map(({ scope }) => scope).join(' / ')}`)
+    strictEqual(rows[0].bar, MUTATION_BAR, 'the bar and src/domain/mutation-gate-policy.mjs disagree — one moved without the other')
   })
 })

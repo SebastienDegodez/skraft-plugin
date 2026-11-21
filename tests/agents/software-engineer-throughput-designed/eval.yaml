@@ -1,0 +1,269 @@
+name: software-engineer-throughput-designed
+version: 0.1.0
+description: >-
+  Throughput benchmark of the real SKRAFT Software Engineer on the fourteen-scenario .NET story
+  of software-engineer-throughput, handed over the way an acceptance-designer that writes every
+  acceptance test leaves it: the tests of S1 to S14 and their boundary stubs committed RED in one
+  test commit. Same stimulus name, oracle and graders, so eng/bench-agent-ab.sh compares it with
+  software-engineer-throughput through CANDIDATE_SUITE.
+type: capability
+defaults:
+  executor: skraft-agent-runner
+  timeout: 240m
+  model: claude-sonnet-5.5
+  runs: 3
+scoring:
+  threshold: 0.9
+stimuli:
+  - name: Fourteen-scenario .NET pricing story reaches GREEN
+    turns:
+      - I want to develop the `discount` feature for the Checkout Pricing project.
+      - The test is correct, continue. Complete the feature.
+    tags:
+      agent: software-engineer
+      scenario: fourteen-scenario-dotnet-delivery
+      permissions: workspace-write
+      cost: high
+    supported_executors:
+      - skraft-agent-runner
+    constraints:
+      max_turns: 2
+      max_duration: 240m
+    environment:
+      files:
+        - src: fixtures/s14/.gitignore
+          dest: .gitignore
+        - src: fixtures/s14/skraft-config.json
+          dest: skraft-config.json
+        - src: fixtures/s14/CheckoutPricing.slnx
+          dest: CheckoutPricing.slnx
+        - src: fixtures/s14/Directory.Build.props
+          dest: Directory.Build.props
+        - src: fixtures/s14/Directory.Packages.props
+          dest: Directory.Packages.props
+        - src: fixtures/s14/src/CheckoutPricing.Domain/CheckoutPricing.Domain.csproj
+          dest: src/CheckoutPricing.Domain/CheckoutPricing.Domain.csproj
+        - src: fixtures/s14/src/CheckoutPricing.Domain/LoyaltyTier.cs
+          dest: src/CheckoutPricing.Domain/LoyaltyTier.cs
+        - src: fixtures/s14/src/CheckoutPricing.Application/CheckoutPricing.Application.csproj
+          dest: src/CheckoutPricing.Application/CheckoutPricing.Application.csproj
+        - src: fixtures/s14/src/CheckoutPricing.Application/CalculateLoyaltyDiscount.cs
+          dest: src/CheckoutPricing.Application/CalculateLoyaltyDiscount.cs
+        - src: fixtures/s14/src/CheckoutPricing.Infrastructure/CheckoutPricing.Infrastructure.csproj
+          dest: src/CheckoutPricing.Infrastructure/CheckoutPricing.Infrastructure.csproj
+        - src: fixtures/s14/src/CheckoutPricing.Infrastructure/InfrastructureMarker.cs
+          dest: src/CheckoutPricing.Infrastructure/InfrastructureMarker.cs
+        - src: fixtures/s14/src/CheckoutPricing.Api/CheckoutPricing.Api.csproj
+          dest: src/CheckoutPricing.Api/CheckoutPricing.Api.csproj
+        - src: fixtures/s14/src/CheckoutPricing.Api/Program.cs
+          dest: src/CheckoutPricing.Api/Program.cs
+        - src: fixtures/s14/tests/CheckoutPricing.UnitTest/CheckoutPricing.UnitTest.csproj
+          dest: tests/CheckoutPricing.UnitTest/CheckoutPricing.UnitTest.csproj
+        - src: fixtures/s14/tests/CheckoutPricing.UnitTest/LoyaltyDiscount/DiscountTests.cs
+          dest: tests/CheckoutPricing.UnitTest/LoyaltyDiscount/DiscountTests.cs
+        - src: fixtures/s14/tests/CheckoutPricing.IntegrationTest/CheckoutPricing.IntegrationTest.csproj
+          dest: tests/CheckoutPricing.IntegrationTest/CheckoutPricing.IntegrationTest.csproj
+        - src: fixtures/s14/tests/CheckoutPricing.IntegrationTest/Architecture/ArchitectureTests.cs
+          dest: tests/CheckoutPricing.IntegrationTest/Architecture/ArchitectureTests.cs
+        - src: fixtures/s14/.copilot-tracking/skraft-plans/pricing/features/discount.feature
+          dest: .copilot-tracking/skraft-plans/pricing/features/discount.feature
+        - src: fixtures/s14/.copilot-tracking/skraft-plans/pricing/details/2026-08-07/impl.md
+          dest: .copilot-tracking/skraft-plans/pricing/details/2026-08-07/impl.md
+        - src: fixtures/s14/.copilot-tracking/skraft-plans/pricing/state.json
+          dest: .copilot-tracking/skraft-plans/pricing/state.json
+        - src: fixtures/s14-red/src/CheckoutPricing.Domain/LoyaltyTier.cs
+          dest: .designed/src/CheckoutPricing.Domain/LoyaltyTier.cs
+        - src: fixtures/s14-red/src/CheckoutPricing.Application/CalculateLoyaltyDiscount.cs
+          dest: .designed/src/CheckoutPricing.Application/CalculateLoyaltyDiscount.cs
+        - src: fixtures/s14-red/src/CheckoutPricing.Application/CalculateShippingFee.cs
+          dest: .designed/src/CheckoutPricing.Application/CalculateShippingFee.cs
+        - src: fixtures/s14-red/src/CheckoutPricing.Application/QuoteCheckout.cs
+          dest: .designed/src/CheckoutPricing.Application/QuoteCheckout.cs
+        - src: fixtures/s14-red/tests/CheckoutPricing.UnitTest/LoyaltyDiscount/DiscountTests.cs
+          dest: .designed/tests/CheckoutPricing.UnitTest/LoyaltyDiscount/DiscountTests.cs
+        - src: fixtures/s14-red/tests/CheckoutPricing.UnitTest/LoyaltyDiscount/PromoCodeAcceptanceTests.cs
+          dest: .designed/tests/CheckoutPricing.UnitTest/LoyaltyDiscount/PromoCodeAcceptanceTests.cs
+        - src: fixtures/s14-red/tests/CheckoutPricing.UnitTest/Shipping/ShippingFeeAcceptanceTests.cs
+          dest: .designed/tests/CheckoutPricing.UnitTest/Shipping/ShippingFeeAcceptanceTests.cs
+        - src: fixtures/s14-red/tests/CheckoutPricing.UnitTest/Checkout/QuoteCheckoutAcceptanceTests.cs
+          dest: .designed/tests/CheckoutPricing.UnitTest/Checkout/QuoteCheckoutAcceptanceTests.cs
+        - src: fixtures/s14-red/.copilot-tracking/skraft-plans/pricing/details/2026-08-07/impl.md
+          dest: .designed/.copilot-tracking/skraft-plans/pricing/details/2026-08-07/impl.md
+      commands:
+        - 'dotnet restore CheckoutPricing.slnx'
+        - 'git init --quiet --object-format=sha1'
+        - 'git config user.email eval@example.invalid'
+        - 'git config user.name "SKRAFT Eval"'
+        # Seed only environment.files, never injected skills/harness or restore outputs.
+        - >-
+          git -c core.autocrlf=false -c core.attributesFile=/dev/null add --chmod=-x --
+          .gitignore skraft-config.json CheckoutPricing.slnx Directory.Build.props Directory.Packages.props
+          src/CheckoutPricing.Domain/CheckoutPricing.Domain.csproj
+          src/CheckoutPricing.Domain/LoyaltyTier.cs
+          src/CheckoutPricing.Application/CheckoutPricing.Application.csproj
+          src/CheckoutPricing.Application/CalculateLoyaltyDiscount.cs
+          src/CheckoutPricing.Infrastructure/CheckoutPricing.Infrastructure.csproj
+          src/CheckoutPricing.Infrastructure/InfrastructureMarker.cs
+          src/CheckoutPricing.Api/CheckoutPricing.Api.csproj
+          src/CheckoutPricing.Api/Program.cs
+          tests/CheckoutPricing.UnitTest/CheckoutPricing.UnitTest.csproj
+          tests/CheckoutPricing.UnitTest/LoyaltyDiscount/DiscountTests.cs
+          tests/CheckoutPricing.IntegrationTest/CheckoutPricing.IntegrationTest.csproj
+          tests/CheckoutPricing.IntegrationTest/Architecture/ArchitectureTests.cs
+          .copilot-tracking/skraft-plans/pricing/features/discount.feature
+          .copilot-tracking/skraft-plans/pricing/details/2026-08-07/impl.md
+          .copilot-tracking/skraft-plans/pricing/state.json
+        - 'git commit --quiet -m "test: approved DISTILL fixture"'
+        # The acceptance-designer's RED: every acceptance test and the stubs they compile against.
+        - 'cp -R .designed/. .'
+        - 'rm -rf .designed'
+        - >-
+          git -c core.autocrlf=false -c core.attributesFile=/dev/null add --chmod=-x --
+          src/CheckoutPricing.Domain/LoyaltyTier.cs
+          src/CheckoutPricing.Application/CalculateLoyaltyDiscount.cs
+          src/CheckoutPricing.Application/CalculateShippingFee.cs
+          src/CheckoutPricing.Application/QuoteCheckout.cs
+          tests/CheckoutPricing.UnitTest/LoyaltyDiscount/DiscountTests.cs
+          tests/CheckoutPricing.UnitTest/LoyaltyDiscount/PromoCodeAcceptanceTests.cs
+          tests/CheckoutPricing.UnitTest/Shipping/ShippingFeeAcceptanceTests.cs
+          tests/CheckoutPricing.UnitTest/Checkout/QuoteCheckoutAcceptanceTests.cs
+          .copilot-tracking/skraft-plans/pricing/details/2026-08-07/impl.md
+        - 'git commit --quiet -s -m "test(discount): acceptance tests S1–S14"'
+    graders:
+      - type: completed
+      - type: run-command
+        name: Hidden oracle accepts every example of the feature
+        config:
+          command: node
+          args:
+            - -e
+            - |
+              const { execFileSync } = require("node:child_process");
+              const { mkdirSync, writeFileSync, rmSync } = require("node:fs");
+              const dir = "tests/CheckoutPricing.UnitTest/ZzOracle";
+              const file = dir + "/OracleTests.cs";
+              const oracle = `using CheckoutPricing.Application;
+              using CheckoutPricing.Domain;
+              namespace CheckoutPricing.UnitTest.ZzOracle;
+              public sealed class OracleTests
+              {
+                  [Theory]
+                  [InlineData(10_000, LoyaltyTier.Bronze, null, 500)]
+                  [InlineData(10_000, LoyaltyTier.Silver, null, 1_000)]
+                  [InlineData(10_000, LoyaltyTier.Gold, null, 1_500)]
+                  [InlineData(20_000, LoyaltyTier.Gold, null, 2_000)]
+                  [InlineData(30_000, LoyaltyTier.Silver, null, 2_000)]
+                  [InlineData(12_000, LoyaltyTier.Gold, null, 1_800)]
+                  [InlineData(2_999, LoyaltyTier.Gold, null, 0)]
+                  [InlineData(3_000, LoyaltyTier.Gold, null, 450)]
+                  [InlineData(10_000, LoyaltyTier.Silver, "WELCOME5", 1_500)]
+                  [InlineData(2_000, LoyaltyTier.Bronze, "WELCOME5", 500)]
+                  [InlineData(20_000, LoyaltyTier.Gold, "WELCOME5", 2_500)]
+                  [InlineData(30_000, LoyaltyTier.Silver, "WELCOME5", 2_500)]
+                  [InlineData(10_000, LoyaltyTier.Silver, "welcome5", 1_500)]
+                  [InlineData(10_000, LoyaltyTier.Silver, "Welcome5", 1_500)]
+                  [InlineData(10_000, LoyaltyTier.Silver, "SUMMER10", 1_900)]
+                  [InlineData(30_000, LoyaltyTier.Bronze, "SUMMER10", 3_000)]
+                  [InlineData(2_000, LoyaltyTier.Gold, "SUMMER10", 200)]
+                  [InlineData(10_000, LoyaltyTier.Silver, "SPRING", 1_000)]
+                  [InlineData(10_000, LoyaltyTier.Platinum, null, 2_000)]
+                  [InlineData(5_000, LoyaltyTier.Platinum, null, 1_000)]
+                  [InlineData(20_000, LoyaltyTier.Platinum, null, 2_000)]
+                  [InlineData(400, LoyaltyTier.Bronze, "WELCOME5", 400)]
+                  [InlineData(300, LoyaltyTier.Gold, "WELCOME5", 300)]
+                  [InlineData(7, LoyaltyTier.Gold, null, 0)]
+                  [InlineData(4_321, LoyaltyTier.Silver, "SUMMER10", 820)]
+                  public void Discount(int subtotal, LoyaltyTier tier, string? code, int discount) =>
+                      Assert.Equal(
+                          new LoyaltyDiscountQuote(subtotal, discount, subtotal - discount, tier),
+                          new CalculateLoyaltyDiscount().Handle(new CalculateLoyaltyDiscountQuery(subtotal, tier, code)));
+
+                  [Theory]
+                  [InlineData(4_999, LoyaltyTier.Bronze, false, 490)]
+                  [InlineData(5_000, LoyaltyTier.Bronze, false, 0)]
+                  [InlineData(4_999, LoyaltyTier.Silver, false, 490)]
+                  [InlineData(1_000, LoyaltyTier.Gold, false, 0)]
+                  [InlineData(1_000, LoyaltyTier.Platinum, false, 0)]
+                  [InlineData(10_000, LoyaltyTier.Bronze, true, 990)]
+                  [InlineData(1_000, LoyaltyTier.Gold, true, 990)]
+                  [InlineData(1_000, LoyaltyTier.Platinum, true, 0)]
+                  public void Shipping(int payable, LoyaltyTier tier, bool express, int fee) =>
+                      Assert.Equal(fee, new CalculateShippingFee().Handle(new CalculateShippingFeeQuery(payable, tier, express)));
+
+                  [Theory]
+                  [InlineData(10_000, LoyaltyTier.Silver, "WELCOME5", false, 8_500, 0, 8_500)]
+                  [InlineData(5_000, LoyaltyTier.Bronze, null, false, 4_750, 490, 5_240)]
+                  [InlineData(20_000, LoyaltyTier.Platinum, "SUMMER10", true, 16_500, 0, 16_500)]
+                  [InlineData(2_000, LoyaltyTier.Gold, null, true, 2_000, 990, 2_990)]
+                  public void Checkout(int subtotal, LoyaltyTier tier, string? code, bool express, int payable, int shipping, int total) =>
+                      Assert.Equal(
+                          new CheckoutQuote(payable, shipping, total),
+                          new QuoteCheckout().Handle(new QuoteCheckoutQuery(subtotal, tier, code, express)));
+              }
+              `;
+              mkdirSync(dir, { recursive: true });
+              writeFileSync(file, oracle);
+              try {
+                execFileSync("dotnet", ["test", "tests/CheckoutPricing.UnitTest/CheckoutPricing.UnitTest.csproj", "--no-restore", "--filter", "FullyQualifiedName~ZzOracle"], { stdio: "inherit", timeout: 170000 });
+              } finally {
+                rmSync(dir, { recursive: true, force: true });
+              }
+          expected_exit_code: 0
+          timeout: 3m
+      - type: run-command
+        name: Complete repository test suite is GREEN
+        config:
+          command: dotnet
+          args:
+            - test
+            - CheckoutPricing.slnx
+            - --no-restore
+          expected_exit_code: 0
+          timeout: 3m
+      - type: run-command
+        name: Clean Architecture dependency tests are GREEN
+        config:
+          command: dotnet
+          args:
+            - test
+            - tests/CheckoutPricing.IntegrationTest/CheckoutPricing.IntegrationTest.csproj
+            - --no-restore
+            - --filter
+            - FullyQualifiedName~Architecture
+          expected_exit_code: 0
+          timeout: 2m
+      - type: diff-not-contains
+        name: Approved acceptance tests stayed intact
+        config:
+          pattern: '(?m)^diff --git a/tests/CheckoutPricing\.UnitTest/(LoyaltyDiscount/DiscountTests|LoyaltyDiscount/PromoCodeAcceptanceTests|Shipping/ShippingFeeAcceptanceTests|Checkout/QuoteCheckoutAcceptanceTests)\.cs '
+      - type: run-command
+        name: Scenarios are committed red then green
+        config:
+          command: node
+          args:
+            - -e
+            - |
+              const { execFileSync } = require("node:child_process");
+              const assert = require("node:assert/strict");
+              const git = (...args) => execFileSync("git", ["--no-replace-objects", ...args], { encoding: "utf8", timeout: 5000 }).trimEnd();
+              const seed = git("rev-list", "--max-parents=0", "HEAD");
+              const subjects = git("log", "--reverse", "--format=%s", seed + "..HEAD").split("\n").filter(Boolean);
+              const firstTest = subjects.findIndex((subject) => /^test\(/.test(subject));
+              const featureBeforeRed = subjects.findIndex((subject) => /^feat\(/.test(subject));
+              // One test commit per scenario or one for the whole story: both put a red before the first green.
+              // How many scenarios need code depends on how whole each rule was written; the oracle judges the code.
+              assert.ok(firstTest >= 0, "expected at least one test commit holding the acceptance tests red");
+              assert.ok(featureBeforeRed > firstTest, "expected a feat commit, the first one after a test commit");
+              console.log(subjects.join("\n"));
+          expected_exit_code: 0
+          timeout: 1m
+      - type: skill-invocation
+        name: The Java, Python and React Clean Architecture skills stayed out of a .NET solution
+        config:
+          disallowed:
+            - clean-architecture-java
+            - clean-architecture-python
+            - clean-architecture-react
+      - type: output-not-matches
+        config:
+          pattern: '(?i)(?:\[SKILL MISSING\]|skills? could not be loaded|skill directory not present)'
