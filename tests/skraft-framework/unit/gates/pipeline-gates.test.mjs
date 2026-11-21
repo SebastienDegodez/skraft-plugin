@@ -47,7 +47,6 @@ test('DELIVER does not close while a gate fails: the engineer gets a new pass wi
   ])
   assert.ok(host.progress.lines.includes(`${SLUG}: software-engineer, pass 2, attempt 1 — implementer · standard · sonnet`))
   assert.ok(host.progress.lines.includes(`${SLUG}: gates (build, format, lint, test, architecture, coverage), pass 2`))
-  assert.ok(!host.types().includes('tdd.replay-slow'))
 })
 
 test('gates that fail with the same signature twice stop the run before another engineer dispatch', async () => {

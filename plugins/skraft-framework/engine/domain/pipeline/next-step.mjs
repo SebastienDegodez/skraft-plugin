@@ -19,8 +19,8 @@ import { acceptedOf, instructionOf, questionSpec } from '../decisions/questions.
  *   new pass the gate failures, review findings, human refusal or human choice that sent the run
  *   on, sentBy naming which; instruction: the instruction a human answered a block with, on the
  *   pass it reopened, null otherwise; resumed: the open attempt a resumed run picks up. groups: the surviving mutants
- *   of a visit the mutation gate opened on a node that takes them by file; group: the one this attempt works on, from 1;
- *   null with no groups.
+ *   of a visit the mutation gate opened on a node that takes them by file; group: the one this
+ *   attempt works on, from 1; null with no groups.
  * @typedef {Entry & { kind: 'agent' | 'gate' | 'review' | 'ask' | 'publish' | 'call', phase: string, node: WorkflowNode }} WorkStep
  * @typedef {{ kind: 'skip', phase: string, node: WorkflowNode, visit: number, resumed: OpenAttempt | null }} SkipStep
  *   a locked gate the repository's workflow unlocked.

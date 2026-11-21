@@ -22,13 +22,12 @@ import { instructionOf } from '../decisions/questions.mjs'
  *   visit: how many times the run entered the node; attempt: within that visit. outputs: the
  *   paths of the node's first dispatch, which every later one reuses. documents: every document of
  *   the tracking folder the node's attempts wrote, outputs included. heads: the first
- *   attempt's of this visit; firstHeads: those of the node's first visit, from which the story's
- *   delivery counts its greens, a visit a human reopened after a block included. sentBy: what sent the run back into this visit, kept for each of
- *   its attempts. redByGateFailure: this visit started on gate failures, which stand for its red
+ *   attempt's of this visit; firstHeads: those of the node's first visit, from which a delivery
+ *   reopened after a block lists the commits of the earlier visits' attempts. sentBy: what sent
+ *   the run back into this visit, kept for each of its attempts. redByGateFailure: this visit started on gate failures, which stand for its red
  *   commit; a visit the review or a human refusal opened has no failing test, so its agent
- *   commits a red one, as does a visit a human's choice opened. groups: the surviving mutants this visit works on, one dispatch per file,
- *   
- * @typedef {import('../gates/mutation-report.mjs').SurvivorGroup | import('../pipeline/scenarios.mjs').DeliveryGroup} Group
+ *   commits a red one, as does a visit a human's choice opened. groups: the surviving mutants this visit works on, one dispatch per file.
+ * @typedef {import('../gates/mutation-report.mjs').SurvivorGroup} Group
  * @typedef {{ scenario: number, sha: string, subject: string, component: string, files: string[] }} Oracle
  *   the red commit holding a scenario's acceptance test: files relative to the working copy.
  * @typedef {{
@@ -40,7 +39,7 @@ import { instructionOf } from '../decisions/questions.mjs'
  *   its implementation plan delivers them in, the one red holding every scenario's acceptance
  *   test (kept by scenario), the same red as the walking skeleton's (null for a story exempt of
  *   one), every red of acceptance tests any plan recorded (kept past a REVISE: the files no green
- *   changes), and how many groups a green made pass since.
+ *   changes), and delivered: the last group a delivery pass made pass, 0 while none did.
  *   last and previous: this visit's last two step.recorded.
  * @typedef {{
  *   key: string, kind: import('../decisions/questions.mjs').QuestionKind, step: string, visit: number,
@@ -225,13 +224,13 @@ const recorded = (run, event) => {
  * @param {Scenarios | null} scenarios @param {RunEvent} event @returns {Scenarios | null}
  */
 const scenariosAfter = (scenarios, event) => {
-  const planned = event.scenarios ? planned_(event, scenarios?.reds ?? []) : scenarios
+  const planned = event.scenarios ? plannedFrom(event, scenarios?.reds ?? []) : scenarios
   if (planned === null) return null
   return { ...planned, oracles: withOracles(planned.oracles, event.oracles), reds: withReds(planned.reds, event.oracles), delivered: Math.max(planned.delivered, event.green?.group ?? 0) }
 }
 
 /** A plan a step recorded, which starts the story's scenarios over, the reds of earlier plans kept. @param {RunEvent} event @param {Oracle[]} reds @returns {Scenarios} */
-const planned_ = (event, reds) => ({ list: event.scenarios, exemption: event.exemption, groups: event.groups ?? [], oracles: {}, skeleton: event.skeleton ?? null, reds, delivered: 0 })
+const plannedFrom = (event, reds) => ({ list: event.scenarios, exemption: event.exemption, groups: event.groups ?? [], oracles: {}, skeleton: event.skeleton ?? null, reds, delivered: 0 })
 
 /** The reds recorded so far and the one a plan's pass just recorded, each once. @param {Oracle[]} reds @param {Oracle[] | undefined} recorded */
 const withReds = (reds, recorded = []) => [...reds, ...recorded.filter(({ sha }) => !reds.some((red) => red.sha === sha)).slice(0, 1)]
