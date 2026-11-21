@@ -3,6 +3,12 @@
 Toutes les modifications notables de ce projet sont documentées ici.
 Format basé sur [Conventional Commits](https://www.conventionalcommits.org/) — versionnage [SemVer](https://semver.org/).
 
+## [1.17.0](https://github.com/SebastienDegodez/skraft-plugin/compare/v1.16.1...v1.17.0) (2026-11-21)
+
+### ✨ Features
+
+* **quality-gates:** mutation becomes the developer's command, run and judged by one gate ([#607](https://github.com/SebastienDegodez/skraft-plugin/issues/607)) ([c8b9946](https://github.com/SebastienDegodez/skraft-plugin/commit/c8b994617b8a9dfbab1b14210697c76053efa72e)), closes [#640](https://github.com/SebastienDegodez/skraft-plugin/issues/640)
+
 ## [1.16.0](https://github.com/SebastienDegodez/skraft-plugin/compare/v1.15.3...v1.16.0) (2026-11-11)
 
 ### ✨ Features
