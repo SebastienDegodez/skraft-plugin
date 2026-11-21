@@ -53,7 +53,6 @@ const dotnetProject = ({ folder }) => ({
     build: 'dotnet build --nologo',
     test: 'dotnet test --nologo',
     format: 'dotnet format --verify-no-changes',
-    mutation: 'dotnet stryker --since:{baseSha} --reporter json --output StrykerOutput',
   },
 })
 
@@ -64,8 +63,8 @@ const javaProject = ({ has, read }) => {
     stack: 'java',
     paths: javaPaths(maven ? mavenModules(/** @type {string} */ (read('pom.xml'))) : []),
     commands: maven
-      ? javaCommands(has('mvnw') ? './mvnw' : 'mvn', ['-B', '-q', '-DskipTests', 'package'], ['-B', '-q', 'verify'], PIT_MAVEN)
-      : javaCommands(has('gradlew') ? './gradlew' : 'gradle', ['build', '-x', 'test'], ['test'], ['pitest']),
+      ? javaCommands(has('mvnw') ? './mvnw' : 'mvn', ['-B', '-q', '-DskipTests', 'package'], ['-B', '-q', 'verify'])
+      : javaCommands(has('gradlew') ? './gradlew' : 'gradle', ['build', '-x', 'test'], ['test']),
   }
 }
 
@@ -90,7 +89,7 @@ const pythonProject = ({ folder }) => {
   return {
     stack: 'python',
     paths: { src: orRoot(src), tests: folder(['tests', 'test']) },
-    commands: { build: `python -m compileall -q ${src.length > 0 ? 'src' : '.'}`, test: 'python -m pytest -q -p no:cacheprovider', mutation: 'python -m mutmut run' },
+    commands: { build: `python -m compileall -q ${src.length > 0 ? 'src' : '.'}`, test: 'python -m pytest -q -p no:cacheprovider' },
   }
 }
 
@@ -141,9 +140,6 @@ const JAVASCRIPT_COMMANDS = Object.freeze({
   ],
 })
 
-/** StrykerJS, writing `reports/mutation/mutation.json` where the engine reads it. */
-const STRYKER_JS = 'npx stryker run --incremental --reporters json,clear-text'
-
 /** @param {Package} pkg @returns {Record<string, string>} */
 const javascriptCommands = (pkg) => {
   /** @type {Record<string, string>} */
@@ -152,7 +148,7 @@ const javascriptCommands = (pkg) => {
     const choice = choices.find(({ when }) => when(pkg))
     if (choice !== undefined) commands[name] = choice.line
   }
-  return { ...commands, mutation: STRYKER_JS }
+  return commands
 }
 
 /**
@@ -167,17 +163,8 @@ const STACK_DETECTORS = Object.freeze([
   { marks: ({ has }) => has('package.json'), propose: (project) => javascriptProject(manifestOf(project.read('package.json')), project) },
 ])
 
-/**
- * The project's own wrapper when it ships one (`./mvnw`, `./gradlew`); PIT mutates.
- * @param {string} tool @param {readonly string[]} build @param {readonly string[]} test @param {readonly string[]} mutation
- */
-const javaCommands = (tool, build, test, mutation) => ({ build: [tool, ...build].join(' '), test: [tool, ...test].join(' '), mutation: [tool, ...mutation].join(' ') })
-
-/**
- * PIT's Maven goal, writing `target/pit-reports/mutations.xml` where the engine reads it; with
- * its history, a round of the mutation loop reanalyses only the classes and tests that changed.
- */
-const PIT_MAVEN = Object.freeze(['-B', '-q', 'org.pitest:pitest-maven:mutationCoverage', '-DoutputFormats=XML', '-DtimestampedReports=false', '-DwithHistory'])
+/** The project's own wrapper when it ships one (`./mvnw`, `./gradlew`). @param {string} tool @param {readonly string[]} build @param {readonly string[]} test */
+const javaCommands = (tool, build, test) => ({ build: [tool, ...build].join(' '), test: [tool, ...test].join(' ') })
 
 /** @param {string[]} paths */
 const orRoot = (paths) => (paths.length > 0 ? paths : ['./'])

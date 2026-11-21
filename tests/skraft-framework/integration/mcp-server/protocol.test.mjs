@@ -122,7 +122,7 @@ test('tools/list offers every command an agent may run, each with a closed input
     },
   })
   assert.deepEqual(byName.skraft_init.inputSchema.properties.add, { type: 'array', items: { type: 'string', minLength: 1 }, description: 'folders to detect beyond the ones found' })
-  assert.deepEqual(byName.skraft_init.inputSchema.properties.mutation, { type: 'boolean', description: 'write each component\'s mutation command too' })
+  assert.equal(byName.skraft_init.inputSchema.properties.mutation, undefined)
   assert.deepEqual(byName.skraft_review.inputSchema.required, ['pr'])
   assert.deepEqual(Object.keys(byName.skraft_review.inputSchema.properties), ['pr', 'record', 'workspace'])
   assert.deepEqual(byName.skraft_mutation.inputSchema.required, [])

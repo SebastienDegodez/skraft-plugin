@@ -15,8 +15,6 @@ const proposed = async (files, request) => (await configure(files, request)).wor
 const REACT = JSON.stringify({ scripts: { build: 'vite build', lint: 'eslint .', test: 'vitest run' }, dependencies: { react: '^19.0.0' }, devDependencies: { vitest: '^3.0.0' } })
 const DOTNET_COMMANDS = { build: 'dotnet build --nologo', test: 'dotnet test --nologo', format: 'dotnet format --verify-no-changes' }
 const PYTHON_COMMANDS = { build: 'python -m compileall -q .', test: 'python -m pytest -q -p no:cacheprovider' }
-/** What init --mutation proposes to mutate any JavaScript, TypeScript or React package. */
-const STRYKER_JS = 'npx stryker run --incremental --reporters json,clear-text'
 
 test('a .NET repository alone gives one component with the .NET default commands', async () => {
   const { workspace, result } = await configure({
@@ -32,35 +30,7 @@ test('a .NET repository alone gives one component with the .NET default commands
   assert.equal(result.reason, 'skraft-config.json: payment-authorization (dotnet, .)')
 })
 
-test('init --mutation writes the mutation command of each project\'s stack, to the projects it adds and to the listed ones that have none; a command the developer wrote stays', async () => {
-  const { workspace, result } = await configure({
-    'skraft-config.json': JSON.stringify({ components: [
-      { name: 'orders', root: 'orders', stack: 'java', commands: { test: './mvnw -B -q verify' } },
-      { name: 'billing', root: 'billing', stack: 'java', commands: { test: './gradlew test', mutation: './gradlew pitest -Pteam' } },
-      { name: 'docs', root: 'docs', stack: 'javascript', commands: { test: 'npm test' } },
-    ] }),
-    'orders/pom.xml': '<project />', 'orders/mvnw': '',
-    'billing/build.gradle.kts': '', 'billing/gradlew': '',
-    'payment/Payment.sln': '',
-    'fastapi/pyproject.toml': '',
-    'web/package.json': REACT,
-    'ledger/build.gradle': '',
-  }, { mutation: true })
-
-  assert.equal(result.ok, true, result.reason)
-  assert.deepEqual(workspace.config().components.map(({ name, commands }) => [name, commands.mutation ?? null]), [
-    ['orders', './mvnw -B -q org.pitest:pitest-maven:mutationCoverage -DoutputFormats=XML -DtimestampedReports=false -DwithHistory'],
-    ['billing', './gradlew pitest -Pteam'],
-    ['docs', null],
-    ['fastapi', 'python -m mutmut run'],
-    ['ledger', 'gradle pitest'],
-    ['payment', 'dotnet stryker --since:{baseSha} --reporter json --output StrykerOutput'],
-    ['web', STRYKER_JS],
-  ])
-  assert.equal(result.reason, 'skraft-config.json: fastapi (python, fastapi), ledger (java, ledger), payment (dotnet, payment), web (react, web); mutation: orders, billing, fastapi, ledger, payment, web; no mutation command found for docs (docs holds no project)')
-})
-
-test('init without --mutation writes no mutation command: mutating is the developer\'s choice', async () => {
+test('init writes no mutation command: mutating is the developer\'s choice', async () => {
   const components = await proposed({ 'payment/Payment.sln': '', 'web/package.json': REACT })
 
   assert.deepEqual(components.map(({ commands }) => 'mutation' in commands), [false, false])

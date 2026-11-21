@@ -22,13 +22,13 @@ const DEPENDENCIES = 'node_modules'
 
 /**
  * The projects under the starts whose root no component holds yet, each named after its folder
- * with a name no component holds yet; with its mutation command only when `mutation` asks for it.
+ * with a name no component holds yet;
  * @param {Workspace} workspace @param {string[]} starts
  * @param {Array<{ name: string, root: string }>} components already listed
- * @param {{ workingCopyName: string, mutation: boolean }} request
+ * @param {{ workingCopyName: string }} request
  * @returns {Promise<ProposedComponent[]>}
  */
-export const newComponents = async (workspace, starts, components, { workingCopyName, mutation }) => {
+export const newComponents = async (workspace, starts, components, { workingCopyName }) => {
   const roots = new Set(components.map((component) => component.root))
   const names = new Set(components.map((component) => component.name))
   /** @type {ProposedComponent[]} */
@@ -36,25 +36,9 @@ export const newComponents = async (workspace, starts, components, { workingCopy
   for (const found of await projectsUnder(workspace, starts)) {
     if (roots.has(found.root)) continue
     roots.add(found.root)
-    const commands = mutation ? found.commands : withoutMutation(found.commands)
-    added.push(await proposedComponent(workspace, { ...found, commands }, claimName(componentName(folderName(found.root, workingCopyName)), names)))
+    added.push(await proposedComponent(workspace, found, claimName(componentName(folderName(found.root, workingCopyName)), names)))
   }
   return added
-}
-
-/** The commands but mutation, which a developer declares when they choose to mutate. @param {Record<string, string>} commands */
-const withoutMutation = ({ mutation: _mutation, ...commands }) => commands
-
-/**
- * The mutation command init proposes for the project at a root: null when the root holds no
- * project, or a project of a stack with no mutation tool skraft knows.
- * @param {Workspace} workspace @param {string} root
- * @returns {Promise<string | null>}
- */
-export const mutationCommandAt = async (workspace, root) => {
-  const entries = await workspace.list(root)
-  if (entries === null) return null
-  return (await detectAt(workspace, root, entries))?.commands.mutation ?? null
 }
 
 /**

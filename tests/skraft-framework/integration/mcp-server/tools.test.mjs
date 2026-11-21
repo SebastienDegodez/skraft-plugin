@@ -69,9 +69,7 @@ test('in a repository skraft has never seen, the doctor fails on its configurati
   assert.equal(config.components.some(({ commands }) => 'mutation' in commands), false)
 
   const mutation = await host.call('skraft_init', { mutation: true })
-  assert.equal(mutation.isError, false)
-  assert.match(texts(mutation)[0], /; mutation: /)
-  assert.equal(JSON.parse(readFileSync(join(cwd, 'skraft-config.json'), 'utf8')).components.every(({ commands }) => 'mutation' in commands), true)
+  assert.equal(mutation.isError, true)
   await host.close()
 })
 
