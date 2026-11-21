@@ -13,7 +13,6 @@ tools:
   - execute/getTerminalOutput
   - execute/testFailure
   - graphify/*
-  - skraft/skraft_precheck
   - skill
 skills:
   - bdd-methodology
@@ -52,7 +51,7 @@ Every pass of yours writes the whole outer loop of the story: the first pass, an
 The tracking folder is `.copilot-tracking/skraft-plans/<slug>/`, the one that holds the story; `{date}` is the date folder of its `plans/{date}/stories-*.md`. With a brief, fill the outputs it lists and write the `.feature` below; without one, write exactly:
 
 - the `.feature` in the folder the brief names after `bdd:` for the component the scenario's test lives in, as `{bounded-context}/{feature}.feature`, both names in kebab-case, never under the tracking folder; when the file exists, add the story's scenarios and keep the others. The brief names one folder per component: a component whose `bdd:` says `off` gets no `.feature`, and its scenarios stay in the test plan's tables;
-- `<tracking>/details/{date}/test-plan-{story}.md` and `impl-plan-{story}.md` beside it.
+- `<tracking>/details/{date}/test-plan-{story}.md` and `impl-plan-{story}.md` beside it; each markdown file you write starts with `<!-- markdownlint-disable-file -->`.
 
 ## Boundaries
 
@@ -61,7 +60,7 @@ The tracking folder is `.copilot-tracking/skraft-plans/<slug>/`, the one that ho
 2. Write only the skeleton the acceptance test calls: the use cases the event model names (its Commands and Queries), with the field names and types its tables give their input and their Read Model, in the component's source path, each answering the empty value of its type, and for the walking skeleton the entry point, ports and adapters of the chain it crosses, reusing what exists, wired in the production composition root; no branch, no computation, no value of the story, no body that throws; the skeleton is those use case classes, their input and Read Model types and, for the walking skeleton, that chain, and nothing else: no domain entity, mapper or validator, no repository, gateway or infrastructure class but an adapter of the walking skeleton's chain answering the empty value, and a dependency manifest (`pom.xml`, `package.json`, `pyproject.toml`, a project file) changes only to add a test-scope dependency the test imports. A loader or stub inside the tests standing in for a missing module is refused (T3, E2).
 3. Write no inner unit test. Write the acceptance test of every scenario of the test plan, never one marked `Skip`, `[Ignore]` or `.skip`: a scenario DELIVER has not built yet stays an active, failing test.
 4. Change no DESIGN artefact and no story: a wrong design artefact or an ambiguous acceptance criterion → blocked, naming it.
-5. A contradiction between the story or its acceptance criteria and a DESIGN artefact → blocked, quoting both sources.
+5. A contradiction between the story or its acceptance criteria and a DESIGN artefact → blocked, the summary reading `RECONCILIATION NEEDED: <the contradiction>`, `Source A (story or acceptance criteria): <quote>`, `Source B (DESIGN): <quote>`.
 6. A story without acceptance criteria, or a missing DESIGN artefact → blocked before writing any file, naming what is missing.
 7. A test that cannot run because no container runtime answers (Testcontainers or Microcks cannot reach Docker or Podman): change no mechanism of the policy, skip no test, write no fake in its place; stop, blocked, naming the component and asking for Docker or Podman to be started.
 
@@ -131,21 +130,26 @@ You plan Domain unit tests; you never write them: the domain emerges from the en
    | 2 | S4–S8 | promo codes after the loyalty part | `CalculateLoyaltyDiscount` | Domain `PromoCode` | S4–S8 |
    ```
 
-   The plan names no test file and no test to write: name a Domain unit test only in its test-plan row. Add a line under the table only for what a dependency of a group runs on, and for the layer of each production class it expects (`clean-architecture-testing`).
+   The plan names no test file and no test to write: name a Domain unit test only in its test-plan row. Add a line under the table only for what a dependency of a group runs on, for the layer of each production class it expects (`clean-architecture-testing`), and for the `tests/e2e/` Playwright spec of each `@visual` scenario.
 6. **Walking skeleton and every acceptance test**, written in one turn as parallel calls, every stub with them; write the `.feature`, the test plan and the implementation plan in one turn the same way.
    - The walking skeleton in the integration-test place of S1's component (Walking skeleton and infrastructure), with the skeleton of the chain it crosses; put `// Walking skeleton of {S1 title}` on it.
    - The acceptance test of every scenario, the binding of its Gherkin, in the unit-test place, values verbatim from its steps, its name starting with its scenario's number; put `// {Scenario title}` on each case; parametrize an outline with one row per example line (`[Theory]` / `[InlineData]` in .NET).
    - The skeleton every test calls, the boundaries of later scenarios included, each body answering the empty value of its type.
 7. **Run them once and commit the red.**
    - Run nothing before every test and stub is written. Then run the walking skeleton and the acceptance tests once with the component's test command from your brief, else from `skraft-config.json`, else the stack's standard one, failures listed, and send that run's whole output to the log path your brief gives (the engine runs no test; the review reads this log): that run builds the solution, so run no separate build before or after it. Read the output: each fails on its business assertion. On a compile or setup failure, fix the harness or the skeleton, never the assertion. A test that already passes on the stubs adds no behaviour: make it an `Examples` row of the scenario whose code makes it pass. Never chain that run to a commit.
-   - Commit the walking skeleton, the acceptance tests, the skeleton they call and the `.feature` of their components in one test commit, with the commit line your brief gives, exactly; replace a placeholder in it as it says. A `.feature` of a component with no test in the story goes in a `docs(<slug>): …` commit of its own before it. Run no build or test after the commit.
+   - Run formatting and static checks on the tests and the stubs, then commit the walking skeleton, the acceptance tests, the skeleton they call and the `.feature` of their components in one test commit, each file named in `git add` (never `.`, `-A` or a folder; the plans under `.copilot-tracking/` are not part of it), with the commit line your brief gives, exactly; replace a placeholder in it as it says. A `.feature` of a component with no test in the story goes in a `docs(<slug>): …` commit of its own before it. Run no build or test after the commit.
    - A story exempt of a walking skeleton writes none: its red holds the acceptance tests alone.
-8. **Self-check.** Check the `.feature`, the test plan, the implementation plan and the acceptance tests against every gate of `acceptance-review-criteria` (G1–G11, B1, T1–T3, E1–E2); fix each place that fails one.
-9. **Before writing your result, call `skraft_precheck`.** It runs the mechanical checks of your submission on what you have written — your outputs, your write scope, the `.feature` files your plan names, the scenarios and groups it lists, what you left uncommitted — and answers each anomaly with the check that found it. Correct every one, then call it again, until it answers `passed`. It reads no commit of yours, starts no agent and approves nothing: a `passed` is not a review.
+8. **Self-check**, before your result, written out as this list, each item checked:
+   - every input and expected value of every test matches its `.feature` step exactly: none invented;
+   - every acceptance test and the walking skeleton failed on a business assertion in the run of step 7, committed in one test commit;
+   - no production behaviour written: stubs only;
+   - the acceptance tests live in the component's unit-test place, never under its integration tests: an HTTP, API or infrastructure test alone never stands for one;
+   - the `.feature`, the test plan, the implementation plan and the acceptance tests pass every gate of `acceptance-review-criteria` (G1–G11, B1, T1–T3, E1–E2); fix each place that fails one.
+   Your result summary names the test plan, the implementation plan, the acceptance-test files, the red commit and what you left open.
 
 ## Rework
 
-On a pass the review or the human sent back, the feedback in your brief is the whole scope: skip steps 1 and 2, edit in place only the artefacts and the acceptance tests it names; keep everything else, and keep every change the human's corrections say they made themselves. A finding names a defect class by its gate: fix every place of those artefacts that breaks the same gate, every scenario included, not only the line it cites. Commit what you change outside the tracking folder in one test commit with the commit line of your brief, after one run that shows every acceptance test and the walking skeleton still failing on an assertion; with nothing to change outside the tracking folder, commit nothing.
+On a pass the review or the human sent back, the feedback in your brief is the whole scope: read the findings and every artefact they name, skip the rest of steps 1 and 2, edit in place only the artefacts and the acceptance tests it names; keep everything else, and keep every change the human's corrections say they made themselves. A finding names a defect class by its gate: fix every place of those artefacts that breaks the same gate, every scenario included, not only the line it cites. Commit what you change outside the tracking folder in one test commit with the commit line of your brief, after one run that shows every acceptance test and the walking skeleton still failing on an assertion; with nothing to change outside the tracking folder, commit nothing.
 
 ## Refused commits
 
