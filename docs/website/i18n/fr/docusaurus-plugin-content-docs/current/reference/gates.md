@@ -269,8 +269,9 @@ listez-le dans `.gitignore`. Une machine qui ne peut pas lancer une commande (pr
 installé, runtime de conteneurs qui ne répond pas) bloque l'agent, et la question `environment`
 passe la main à un humain.
 
-Un run d'une alpha V2 antérieure arrêté en DELIVER, dont le journal tient un passage par groupe,
-n'est pas repris : relancez-le.
+Un run d'une alpha V2 antérieure arrêté en DELIVER entre deux groupes, dont le journal tient un
+passage par groupe, est refusé à sa reprise avec le code `delivery-shape` et la raison fixe
+« this run was started by an engine that delivered one group per pass; start the story again ».
 
 ## Revue : réponse, réfutation, verdict <!-- #review-run -->
 

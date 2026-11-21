@@ -97,13 +97,6 @@ as for the ratification of an ADR, only the host's dialog records the answer.
 This is the cheapest point to correct the contract: every test that follows is written from it,
 and a scenario missing now is a slice DELIVER cannot build later.
 
-The designer runs those same mechanical checks itself, during its attempt, with
-`skraft_precheck`: the `.feature` files its plan names and the working copy has not got, a
-criterion no scenario answers, a file it left uncommitted, each come back with the check that found
-it, so the pass is corrected on the spot instead of costing a rework of the whole red commit. The
-pre-check reads none of its commits, starts no agent and approves nothing — the engine checks again
-when the step is submitted, and the lenses still review.
-
 ## Scenarios kept in the repository
 
 DISTILL writes its scenarios where the component's `bdd` says, as

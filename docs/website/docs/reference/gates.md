@@ -261,8 +261,9 @@ held to the write scope: list it in `.gitignore`. A machine that cannot run a co
 installed, a container runtime that does not answer) is an agent's block, which the `environment`
 question hands to a human.
 
-A run of an earlier V2 alpha stopped in DELIVER, whose journal holds one dispatch per group, is
-not resumed: start it again.
+A run of an earlier V2 alpha stopped in DELIVER between two groups, whose journal holds one
+dispatch per group, is refused at its resume with code `delivery-shape` and the fixed reason
+"this run was started by an engine that delivered one group per pass; start the story again".
 
 ## Review: answer, refutation, verdict <!-- #review-run -->
 
