@@ -16,8 +16,8 @@ Why an engine and drivers, and the Copilot driver contract:
 | Tool | Version | For |
 | --- | --- | --- |
 | Node | 22 or later | the engine, the `skraft` command line, the Copilot extension; `skraft doctor` checks it |
-| Git | — | each component's base, commits, replays of red and green commits |
-| Docker or Podman | — | the tests that run Microcks or Testcontainers, the walking skeleton's database by default; without either, the replay judge asks a human to start one and the run waits; `skraft doctor` names the one that answers |
+| Git | — | each component's base and commits |
+| Docker or Podman | — | the tests that run Microcks or Testcontainers, the walking skeleton's database by default; without either, the agent stops blocked and a human is asked to start one; `skraft doctor` names the one that answers |
 | `gh` | signed in to the repository's host | only to read the story's issue (`--issue`), open the pull request, comment on the issue, `skraft review --pr`; the engine never goes through an MCP server; see [Forge](./skraft-config.md#github-through-gh) |
 | `az` | signed in to the organization, with its `azure-devops` extension | on Azure DevOps only, to read the story's work item (`--issue`), keep the run's comment on it, open the pull request, and review a pull request (`skraft review --pr`: read it, keep the review's thread); the engine never goes through an MCP server; see [Forge](./skraft-config.md#azure-devops-through-az) |
 | Copilot CLI | — | Copilot CLI; under VS Code, the SDK driver (`skraft-run.mjs`) starts it headless |
@@ -73,7 +73,7 @@ lists.
 ## Claude Code <!-- #claude-code -->
 
 The mod (`hooks/skraft-mod.tsx`, the one module `hooks/hooks.json` declares) calls the engine
-without Node or `import()`: it runs Git, the gates and the replays through `$.process.run`.
+without Node or `import()`: it runs Git and the gates through `$.process.run`.
 Every `/skraft` opens the **Skraft** pane (`skraft-pipeline`).
 
 | In the conversation | Effect | Answer |

@@ -733,6 +733,8 @@ Copilot CLI GitHub Copilot CLI 1.0.101-0. · SDK 1.0.101-0 · Node v22.17.1 · d
 
 ## Rejeu d'un commit rouge (`CommitReplay`, tout hôte) — 2026-10-27 (branche fix/298-e2e-rouge)
 
+> Retiré : le moteur ne rejoue plus les commits (DISTILL commite tous les tests d'acceptation en un rouge, DELIVER livre tous les groupes en un passage). Cette section reste comme historique.
+
 Mesuré à la main, issue #298 : la graine `eng/e2e-scenarios/mastermind/seed` copiée dans un dépôt
 neuf, `npm ci` dans `api/` et `web/` de la copie de travail, puis un commit
 `test(jouer-une-partie): …` qui n'ajoute que `web/e2e/partie.spec.ts` (un bouton absent).

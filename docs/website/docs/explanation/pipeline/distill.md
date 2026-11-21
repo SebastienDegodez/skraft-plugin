@@ -37,16 +37,15 @@ In one pass DISTILL writes the scenarios, the test plan, the implementation plan
 [walking skeleton](../deep-dive/walking-skeleton.md) and the acceptance test of every scenario,
 and commits those tests **failing**, in one `test` commit whose message the brief gives
 (`test(<story>): acceptance tests S1–S<n>`). Each acceptance test's name starts with its
-scenario's number (`S2_…`, `test_s2_…`). The engine replays the commit with the component's test
-command and keeps what it prints; when the tests fail, it replays them at the parent commit too,
-and the [replay judge](pathname:///dashboard/#agent-replay-judge) reads both logs and the commit,
-telling the scenarios apart by those names. The red stands only when every scenario's test fails
-on an **assertion**; a red whose tests all pass is refused without asking the judge. This is the outer loop of
+scenario's number (`S2_…`, `test_s2_…`). The designer runs the tests once with the component's test
+command, reads that each fails on an **assertion**, and sends that run's output to the log the
+brief names. The engine runs no test: it checks the commit's place and content in the history, and
+the DISTILL review reads the tests, the skeleton and that log. This is the outer loop of
 outside-in TDD: start with a test that describes what the system must do, seen from the outside
 ([Freeman & Pryce, 2009](../../reference/citations.mdx#cite-freeman-goos-2009)).
 
 The failure still has to mean something. A test that fails because a module does not exist
-proves nothing: it would fail for a wrong story too, before any assertion runs, so the judge
+proves nothing: it would fail for a wrong story too, before any assertion runs, so the review
 sends it back. DISTILL therefore also writes the **skeleton** the test calls — the use cases the
 event model names, each returning the empty value of its type, with no behaviour; for the walking
 skeleton, every class of the chain it crosses (entry point, use case, ports, adapters, wiring),
@@ -55,7 +54,7 @@ the skeleton is the real module, which DELIVER will fill in. A test that errors,
 passes or never finishes is refused the same way.
 
 The machine can also be the one at fault. When no container runtime answers, the tests that need
-Docker or Podman cannot run: the judge reads it in the log and asks a human to start one. The step is
+Docker or Podman cannot run: the designer stops, blocked, asking for one to be started. The step is
 neither skipped nor run against a double instead.
 
 ## Every scenario at once, delivered by group
@@ -70,15 +69,14 @@ the table instead; it loses the walking skeleton, never an acceptance test.
 
 The implementation plan groups the scenarios by the rule they pin down, in a
 `| Group | Scenarios | … |` table: consecutive scenarios that enter through the same use case and
-state one rule or its edge cases form one group, S1 in the first. DELIVER makes one group pass per
-pass, with one green commit. A plan with no such table delivers one scenario per group.
+state one rule or its edge cases form one group, S1 in the first. DELIVER makes every group pass in
+one pass, one green commit per group. A plan with no such table delivers one scenario per group.
 
 Writing every test first costs one run of the suite instead of one per scenario, and the review
 and the human read the whole contract at once. A test of a group not delivered yet stays red
 until its green: its name, which starts with its scenario's number, is what lets the engineer's
-test command leave it out and lets the replay judge tell it from a regression. The DISTILL review
-and the human read that red once; the replay of each green, which must make its group pass while
-keeping the walking skeleton and the groups before it green, checks the rest.
+test command leave it out. The DISTILL review and the human read that red once; DELIVER's
+review reads the greens.
 
 The brief also tells DISTILL what each component's tests run their dependencies on, in every
 scenario's acceptance test (targeted, S1's included) and in the walking skeleton: the entry point in process or for real, internal
@@ -102,7 +100,7 @@ and a scenario missing now is a slice DELIVER cannot build later.
 The designer runs those same mechanical checks itself, during its attempt, with
 `skraft_precheck`: the `.feature` files its plan names and the working copy has not got, a
 criterion no scenario answers, a file it left uncommitted, each come back with the check that found
-it, so the pass is corrected on the spot instead of costing a replay of the whole red commit. The
+it, so the pass is corrected on the spot instead of costing a rework of the whole red commit. The
 pre-check reads none of its commits, starts no agent and approves nothing — the engine checks again
 when the step is submitted, and the lenses still review.
 

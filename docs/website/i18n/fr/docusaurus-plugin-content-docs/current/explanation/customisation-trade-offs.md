@@ -29,8 +29,8 @@ Ce qui ne se règle pas, et pourquoi :
 
 - **Les seuils qualité.** Un seuil réglable devient un seuil négocié à chaque story difficile ;
   80 % de mutants détectés sur le cœur métier comme ailleurs restent les mêmes pour toutes les équipes.
-- **Les contrôles du moteur** (journal chaîné, droits d'écriture, sorties attendues, rejeu des
-  commits rouges). Ce ne sont pas des nœuds du workflow : aucune copie ne peut les retirer.
+- **Les contrôles du moteur** (journal chaîné, droits d'écriture, sorties attendues, ordre et
+  types des commits). Ce ne sont pas des nœuds du workflow : aucune copie ne peut les retirer.
 - **Les gates de DELIVER et les revues.** Le nœud `gates` est verrouillé :
   le retirer exige d'écrire `unlock="<raison>"`, que `skraft workflow diff` montre et que le
   journal garde. Les fan-in des revues, l'appel `deliver_review` et les lentilles
@@ -52,7 +52,6 @@ peut pas voir, c'est une commande qui tourne et ne prouve rien.
 | Fixer `--base` ou `baseBranch` sur une ref trop récente | Des fichiers modifiés hors du périmètre comparé | `no component changed since its base; no gate to run` alors que du code a changé |
 | Retirer le nœud question `adr` | La ratification humaine des ADR, qui restent `Proposed` | `skraft workflow diff` montre le nœud disparu |
 | Retirer le nœud question `scenario_review` | La lecture par un humain des scénarios, du walking skeleton et du test d'acceptation de S1 avant que DELIVER ne les construise | `skraft workflow diff` montre le nœud disparu |
-| Retirer `each="scenario"` de `distill` et `deliver` | La livraison groupe par groupe et le rejeu de chaque vert : DELIVER fait passer l'histoire en un passage, ses commits jugés sur leur seul ordre | `skraft workflow diff` montre l'attribut disparu |
 | Faire tourner en mémoire le point d'entrée ou les gateways internes du walking skeleton (`infrastructure`) | La preuve d'intégration de la story : le walking skeleton n'atteint plus un vrai point d'entrée ni une vraie base | `skraft doctor` affiche la rangée avec `source skraft-config.json` |
 | Mettre un composant à `bdd: false` | La spécification lisible par le métier de ce composant : aucun `.feature` n'est demandé à DISTILL, donc ses tests d'acceptation ne reprennent plus mot pour mot les valeurs d'un scénario qu'un expert du domaine peut lire | Aucun `.feature` écrit pour ses features, et la colonne `Feature File` du plan de test entièrement à tirets |
 | Modifier `events.jsonl` à la main pour débloquer un run | Le journal comme preuve : le run est bloqué en `journal-tampered` | [Reprendre ou débloquer un run](../how-to/resume-a-run.mdx) |

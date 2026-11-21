@@ -61,7 +61,7 @@ highest-performing teams do not trade speed against stability; they get both.
 The engine checks what an instruction can only hope for. It pre-creates the document an
 agent must fill, checks it is filled, retries the agent with the list of what is missing (at
 most three attempts), then stops and names the cause. It also checks after each step that the
-agent wrote only where it may, that each scenario's red acceptance test really fails, and that its green commit makes it pass. No agent spawns another agent: only the **host
+agent wrote only where it may, that the red of the acceptance tests and the green commit of each group follow one another in the history, and the review reads them. No agent spawns another agent: only the **host
 driver** (the part of SKRAFT specific to each tool) spawns agents, on the engine's order.
 
 ### The same pipeline on every tool and every system

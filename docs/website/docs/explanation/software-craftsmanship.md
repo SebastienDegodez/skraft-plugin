@@ -75,14 +75,12 @@ Craftsmanship moves in small increments that work. In skraft, this takes two for
   does not tag S1 `@walking-skeleton` or declare why the story needs none, and the
   `boundary-enforcement` lens checks that the walking skeleton runs that real path (its G8). See
   [Walking Skeleton](./deep-dive/walking-skeleton.md).
-- **One scenario, one red, one green.** In DISTILL, the `acceptance-designer` commits the failing
-  acceptance test of one scenario and the skeleton it calls; the engine replays it and the replay
-  judge accepts it only when every scenario's test fails on an assertion; the walking skeleton is
-  in the same commit. In DELIVER, the `software-engineer` runs the red → green → refactor loop of
-  its unit tests, then commits once per group of scenarios: a `feat(…)` the engine replays too,
-  which must make the group pass without touching its acceptance tests, keep the walking skeleton
-  and the groups before passing, and leave only the later groups' tests failing. Then the next
-  group. Beck's test first ([Beck, 2003](../reference/citations.mdx#cite-beck-tdd-2003)) becomes a fact
+- **Every scenario's red, then one green per group.** In DISTILL, the `acceptance-designer` commits
+  the failing acceptance test of every scenario, the walking skeleton and the skeleton they call
+  in one commit, after one run that shows each failing on an assertion. In DELIVER, one dispatch of
+  the `software-engineer` runs the red → green → refactor loop of its unit tests, then commits once
+  per group of scenarios, in plan order: a `feat(…)` that makes the group pass without touching
+  its acceptance tests, and keeps the walking skeleton and the groups before passing. Beck's test first ([Beck, 2003](../reference/citations.mdx#cite-beck-tdd-2003)) becomes a fact
   checked in the git history, not a promise. See
   [Outside-In TDD](./deep-dive/outside-in-tdd.md).
 

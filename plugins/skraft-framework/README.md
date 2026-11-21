@@ -15,8 +15,8 @@ command hooks.
   its outputs, checks them afterwards, and refuses a step that wrote outside its scope (git
   diff after each step).
 - **Proof, not claims.** Build, format, lint, tests, architecture and coverage run
-  from the commands in `skraft-config.json`; the engine writes the evidence. Each scenario's red
-  acceptance test is replayed to confirm it fails on an assertion.
+  from the commands in `skraft-config.json`; the engine writes the evidence. The red of the acceptance tests
+  is committed once, and the DISTILL review reads the designer's run of it.
 - **Craft by default.** Outside-In TDD, BDD, Clean Architecture per stack, contract testing,
   ADRs and the kill of surviving mutants ship as skills the agents read before they start.
   Mutation testing itself is the developer's: the pipeline runs none.

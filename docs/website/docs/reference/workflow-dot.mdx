@@ -84,7 +84,7 @@ Attributes common to every shape: `label`, `shape`, `phase`. Any other attribute
 | `outputs` | paths separated by `,`, relative to the tracking folder, without `..` | replaces the outputs of the agent's role; `{date}` and `{slug}` filled at dispatch |
 | `writes` | paths separated by `,`, relative to the working copy | added to the paths the agent's role may write |
 | `max_attempts` | positive integer | attempts per pass; default **3** |
-| `each` | `survivor-file` or `scenario` | `survivor-file`: reached by the mutation gate's `FAIL` edge, one dispatch per file holding surviving mutants; reached by another edge, one dispatch, with what that edge brings. `scenario`: on two agent nodes or on none; the first in run order writes the story's scenarios and its failing walking skeleton, then, on its own pass, the failing acceptance test of S1, then that of each next scenario; the second makes each pass with one green commit, the walking skeleton passing too. The red of S1 leaves the first node by its edge, to the review. The engine alternates them on the scenarios of the test plan's `## Scenarios` table without edges, each pass a visit of its own; after the last scenario, the second leaves by its edge ([Phases](./phases.md#distill)) |
+| `each` | `survivor-file` | `survivor-file`: reached by the mutation gate's `FAIL` edge, one dispatch per file holding surviving mutants; reached by another edge, one dispatch, with what that edge brings. The passes of the story follow the agents' roles, with no attribute: the acceptance designer is dispatched once and commits the red of every scenario, the software engineer is dispatched once and makes every group pass, one green commit each ([Phases](./phases.md#distill)). `each="scenario"` of an earlier version is refused |
 | `proposal` | `true` or `false` | with `each="survivor-file"` (required): the agent writes one proposal per file in the file the engine creates (`proposals/<node>-<visit>-g<n>.md`) and changes no code |
 | `gate` | a list among `build`, `format`, `lint`, `test`, `architecture`, `coverage`, `mutation` | run in that order, whatever the written order |
 | `goal_gate` | `true` or `false` | once the changed components pass, runs the other components too |
@@ -125,10 +125,10 @@ return every error. A workflow is refused when:
 | missing required attribute | `node <id>: a <shape> node needs <key>="…"` |
 | wrong number of outgoing edges | `node <id>: gate node needs exactly one PASS edge, has N`, and so on |
 | label on an edge that takes none | `edge <a> -> <b>: only an edge leaving a gate, a review's fan-in (shape=tripleoctagon), a call (shape=house) or an ask node takes a label` |
-| agent, lens, `finding-refuter`, `replay-judge` (on an agent node whose commits the engine replays: `each="scenario"`, or a role that commits acceptance tests) or a skill a lens lists found nowhere | the node, the agent and the skill named |
+| agent, lens, `finding-refuter` or a skill a lens lists found nowhere | the node, the agent and the skill named |
 | `proposal=true` without `each="survivor-file"` | `node <id>: proposal=true needs each="survivor-file", the mutants it proposes for` |
-| `each="scenario"` on one node, or on more than two | `each="scenario" goes on two agent nodes, the one that writes each scenario's failing acceptance test, then the one that makes it pass; it is on <n>: <nodes>` |
-| `question="scenario-review"` with no node marked `each="scenario"` | `node <id>: question="scenario-review" needs the two nodes marked each="scenario", whose scenarios it shows` |
+| `each="scenario"` on any node | `node <id>: each="scenario" is gone: the engine dispatches the acceptance designer once and the software engineer once per story; remove each="scenario" (skraft workflow diff shows the plugin's)` |
+| `question="scenario-review"` with no node running the acceptance designer, or none running the software engineer | `node <id>: question="scenario-review" needs the node that writes the scenarios and the node that delivers them` |
 | `lenses="…"` form (former) | refused; the message writes out, as DOT, the nodes and edges that replace it |
 
 When valid, `skraft workflow check` prints `<file> is valid: phases RESEARCH, DESIGN, …` and, for
@@ -314,10 +314,10 @@ from the predecessor.
 | `design` | `box` | `agent="solution-architect"` | DESIGN |
 | `design_review_lenses` → `design_review` | review | lenses `consistency`, `architecture-compliance`, `fitness`; fan-in `mandatory=true` | (DESIGN) |
 | `adr` | `hexagon` | `question="adr-ratification"` | (DESIGN) |
-| `distill` | `box` | `agent="acceptance-designer"`, `each="scenario"` | DISTILL |
+| `distill` | `box` | `agent="acceptance-designer"` | DISTILL |
 | `distill_review_lenses` → `distill_review` | review | lenses `coverage`, `business-alignment`, `testability`, `boundary-enforcement`; fan-in `mandatory=true` | (DISTILL) |
 | `scenario_review` | `hexagon` | `question="scenario-review"` | (DISTILL) |
-| `deliver` | `box` | `agent="software-engineer"`, `each="scenario"` | DELIVER |
+| `deliver` | `box` | `agent="software-engineer"` | DELIVER |
 | `gates` | `parallelogram` | `gate="build,format,lint,test,architecture,coverage"`, `goal_gate=true`, `locked=true` | DELIVER |
 | `deliver_review` | `house` | `workflow="review"`, `mandatory=true` | (DELIVER) |
 | `visuals` | `parallelogram` | `publish="playwright-visuals"`, `when="frontend"` | (DELIVER) |
@@ -348,8 +348,8 @@ when the working copy holds one. A team that wants mutation in every story's run
 
 The other edges carry neither label nor ceiling: `start -> research -> design`, `distill -> distill_review_lenses`, `deliver -> gates`,
 `visuals -> pr_writer -> publish -> exit`, and those of
-each review. No edge leads `deliver` back to `distill`: the engine alternates them on the
-scenarios (`each="scenario"`).
+each review. No edge leads `deliver` back to `distill`: the acceptance designer is dispatched once and commits
+the red of every scenario, the software engineer is dispatched once and makes every group pass.
 
 ## See also {/* #see-also */}
 

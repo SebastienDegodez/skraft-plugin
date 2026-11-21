@@ -21,7 +21,7 @@ The description is written in the story's language. What decides shows under a h
 | Decisions applied | heading | engine | a locked gate was skipped |
 | Consistency matrix | folded | engine | never: information only |
 | Tests | folded | engine | never: information only |
-| RED evidence | folded, counts the red commits | engine | a red commit was not replayed |
+| RED evidence | folded, counts the red commits | engine | a red commit is listed |
 | Quality gates | folded, opens itself when a gate failed | engine | a gate failed |
 | Review | folded, opens itself on a finding to fix or to decide | engine | a finding is to fix or to decide |
 | Screenshots | folded | engine | never: information only |
@@ -80,11 +80,11 @@ The description is written in the story's language. What decides shows under a h
 
 ### RED evidence <!-- #red-evidence -->
 
-- **Holds**: a table `Commit | Subject | Replay exit code` (`not replayed` without a replay), then `Output excerpts of the replays are not recorded yet.`; without a red commit, `None recorded: no red commit was accepted in this run.`
+- **Holds**: a table `Commit | Subject`, one row per red commit; without a red commit, `None recorded: no red commit was accepted in this run.`
 - **Shown**: folded; the summary reads `RED evidence: N red commits`, never open by itself.
 - **Written by**: the engine, from the red commits the journal accepted.
 - **Read it to**: see that each test failed before the code that makes it pass.
-- **Act when**: a red commit shows `not replayed` and you want proof.
+- **Act when**: you want the proof that a test failed: read the acceptance designer's run in the run's `logs/`.
 
 ### Quality gates <!-- #quality-gates -->
 

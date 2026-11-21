@@ -65,10 +65,9 @@ flowchart TD
 | `baseBranch` | string | absent (la base retombe sur `main`) | ref git : sans blanc, ne commence pas par `-` ; `null` vaut absent |
 | `forge` | string | absent (déduite du remote Git, voir [Forge](#forge)) | `github` ou `azure-devops` ; `null` vaut absent. Une valeur écrite par vous l'emporte toujours sur le remote |
 | `components` | array d'objets | `[]` | chaque entrée est un composant (ci-dessous) |
-| `tdd` | object | `{ "replay": "all" }` | `{ "replay": "all" }`, `{ "replay": "last-red" }` ; `replay` absent ou `null` vaut `all` ; voir [tdd](#tdd) |
 | `publish` | object | `{}` | voir [publish](#publish) |
 | `models` | object | les alias Claude Code du plugin par palier | famille de modèle → `tier` et, par hôte (`claude-code`, `copilot`), `{ "model": nom ou liste, "effort": niveau }` ; un nom est un seul mot de lettres, de chiffres, de `.`, `_` et `-`, une lettre ou un chiffre en tête, sans espace, et une liste compte au moins un nom (toute autre valeur est refusée : `models.<family>.<host>.model must be a model name or a non-empty list of model names, tried in order (…)`) ; voir [Choisir les modèles des agents](../how-to/choose-models.md) |
-| `assign` | object | lentilles `reviewer`, workers `implementer`, `solution-researcher` `researcher`, `solution-architect` `planner`, `pr-writer` `economy`, `replay-judge` `standard`, défaut `implementer` | `{ "default", "types", "agents" }` : une famille, `inherit`, ou `{ "family", "<hôte>": { "effort" } }` ; lu aussi dans `~/.skraft/config.json` et `skraft-config.local.json` |
+| `assign` | object | lentilles `reviewer`, workers `implementer`, `solution-researcher` `researcher`, `solution-architect` `planner`, `pr-writer` `economy`, défaut `implementer` | `{ "default", "types", "agents" }` : une famille, `inherit`, ou `{ "family", "<hôte>": { "effort" } }` ; lu aussi dans `~/.skraft/config.json` et `skraft-config.local.json` |
 | `rank`, `workflow` | — | — | refusées : `rank is no key: …`, `workflow is no key: …` |
 | `configurationConfirmed` | booléen | `false` | dans `skraft-config.local.json` seulement (refusé dans ce fichier et dans `~/.skraft/config.json`). Écrit `true` par le moteur quand vous répondez START à *Démarrer ce run avec la configuration de cette copie de travail ?*, qu'un run Copilot pose avant sa première phase tant qu'il est absent, et de nouveau avec `configure: true`. L'onglet Configuration du canvas skraft modifie la forge, les composants et les consentements de ce fichier, et l'`assign` et les `models` de `skraft-config.local.json`, vérifiés comme un run les charge |
 | toute autre clé | quelconque | — | conservée telle quelle, jamais lue ni réécrite |
@@ -132,20 +131,6 @@ Docker or Podman runs`. Seul `skraft-config.json` porte `infrastructure`, comme 
 { "name": "api", "root": "services/payment-api", "stack": "dotnet",
   "infrastructure": { "internalGateway": { "walkingSkeleton": "in-memory" } } }
 ```
-
-## `tdd` <!-- #tdd -->
-
-| Clé | Valeur | Effet |
-| --- | --- | --- |
-| `replay` | `all` (défaut) | le moteur rejoue chaque commit rouge d'un test d'acceptation (`test(<story>): …`, DISTILL) avec la commande `test` de son composant, et le juge du rejeu lit ce qu'elle a affiché ([Commits et rejeux](./gates.md#commits)) |
-| `replay` | `last-red` | seul le dernier commit rouge de chaque story (même portée de commit) est rejoué |
-| `replay` | `null` | vaut `all` |
-
-Avec `all`, quand les rejeux dépassent 20 % de la durée d'une phase, le moteur journalise
-`tdd.replay-slow` une fois par phase et affiche `<slug>: replaying test commits took N% of
-<PHASE>; set "tdd": { "replay": "last-red" } in skraft-config.json to replay only the last test
-commit of each story`. Toute autre valeur : `tdd must be { "replay": "all" or "last-red" }`. Le
-rejeu du commit vert d'un scénario ne dépend pas de cette clé.
 
 ## `publish` <!-- #publish -->
 
@@ -263,7 +248,6 @@ Dans les messages, `<label>` vaut `component <name>` si le nom est une chaîne, 
 | pas un objet | `skraft-config.json must hold a JSON object` |
 | `baseBranch` global | `baseBranch must be a git ref, got <valeur JSON>` |
 | `forge` | `forge must be "github" or "azure-devops"` |
-| `tdd` | `tdd must be { "replay": "all" or "last-red" }` |
 | `publish` | `publish must be an object of visuals, pullRequest, reviewComment and draft, each true or false` ; `publish.questionVersions must be an object of visuals, pullRequest and reviewComment, each a whole number from 1` |
 | `rank`, `workflow` | `rank is no key: …` ; `workflow is no key: …` |
 | `components` hors de `skraft-config.json` | `components belongs in skraft-config.json, never in <fichier>` |

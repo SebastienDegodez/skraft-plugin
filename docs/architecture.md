@@ -184,9 +184,8 @@ Après chaque étape d'agent, le moteur vérifie :
   tentatives, et deux échecs identiques arrêtent le run (disjoncteur) ;
 - **périmètre d'écriture** : le diff git de l'étape comparé à ce que l'agent peut écrire (son
   rôle, `writes=` du nœud, chemins `src`/`tests` des composants en DELIVER) ;
-- **commits** : convention de message ; en DELIVER, chaque commit rouge est rejoué pour
-  confirmer que ses tests échouent, un vert sans rouge avant lui est refusé (`tdd.replay` :
-  `all` ou `last-red`) ;
+- **commits** : convention de message ; en DELIVER, l'ordre et les types des commits sont
+  vérifiés dans l'historique, un vert sans rouge avant lui est refusé ; le moteur ne rejoue aucun test ;
 - **ADR** : cycle de vie et ratification par une décision humaine.
 
 Les **gates** lancent les commandes des composants touchés, depuis leur racine, dans l'ordre

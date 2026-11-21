@@ -38,18 +38,16 @@ En un seul passage, DISTILL écrit les scénarios, le plan de test, le plan d'im
 [walking skeleton](../deep-dive/walking-skeleton.md) et le test d'acceptation de chaque scénario,
 et commite ces tests **en échec**, en un seul commit `test` dont le brief donne le message
 (`test(<story>): acceptance tests S1–S<n>`). Le nom de chaque test d'acceptation commence par le
-numéro de son scénario (`S2_…`, `test_s2_…`). Le moteur rejoue le commit avec la commande de test
-du composant et garde ce qu'elle affiche ; quand les tests échouent, il les rejoue aussi au
-commit parent, et le [juge du rejeu](pathname:///dashboard/#agent-replay-judge) lit les deux logs
-et le commit, en distinguant les scénarios par ces noms. Le rouge ne tient que si le test de
-chaque scénario échoue sur une **assertion** ; un rouge dont tous les tests passent est refusé
-sans interroger le juge. C'est la boucle
+numéro de son scénario (`S2_…`, `test_s2_…`). Le designer lance les tests une fois avec la commande de test
+du composant, lit que chacun échoue sur une **assertion**, et envoie la sortie de ce lancement dans
+le log que nomme le brief. Le moteur ne lance aucun test : il vérifie la place et le contenu du
+commit dans l'historique, et la revue DISTILL lit les tests, le squelette et ce log. C'est la boucle
 externe du TDD outside-in : commencer par un test qui décrit ce que le système doit faire, vu
 de l'extérieur ([Freeman & Pryce, 2009](../../reference/citations.mdx#cite-freeman-goos-2009)).
 
 Encore faut-il que l'échec ait du sens. Un test qui échoue parce qu'un module n'existe pas ne
 prouve rien : il échouerait aussi pour une story fausse, avant qu'aucune assertion ne tourne,
-donc le juge le renvoie. DISTILL écrit donc aussi le **squelette** que le test appelle — les cas
+donc la revue le renvoie. DISTILL écrit donc aussi le **squelette** que le test appelle — les cas
 d'usage que nomme le modèle d'événements, chacun rendant la valeur vide de son type, sans
 comportement ; pour le walking skeleton, chaque classe de la chaîne qu'il traverse (point
 d'entrée, cas d'usage, ports, adaptateurs, câblage), en réutilisant l'existant — pour que le test
@@ -58,8 +56,8 @@ par une doublure dans les tests est refusé : le squelette est le vrai module, q
 remplira. Un test qui finit en erreur, est sauté, passe ou ne finit jamais est refusé de même.
 
 La machine peut aussi être en cause. Quand aucun runtime de conteneurs ne répond, les tests qui
-ont besoin de Docker ou de Podman ne peuvent pas tourner : le juge le lit dans le log et demande
-à un humain d'en démarrer un. L'étape n'est ni sautée ni jouée contre une doublure à la place.
+ont besoin de Docker ou de Podman ne peuvent pas tourner : le designer s'arrête, bloqué, et demande
+qu'on en démarre un. L'étape n'est ni sautée ni jouée contre une doublure à la place.
 
 ## Tous les scénarios d'un coup, livrés par groupe
 
@@ -75,15 +73,13 @@ le walking skeleton, jamais un test d'acceptation.
 Le plan d'implémentation regroupe les scénarios par la règle qu'ils fixent, dans un tableau
 `| Group | Scenarios | … |` : des scénarios consécutifs qui entrent par le même cas d'usage et
 énoncent une règle ou ses cas limites forment un groupe, S1 dans le premier. DELIVER fait passer
-un groupe par passage, en un commit vert. Un plan sans ce tableau livre un scénario par groupe.
+tous les groupes en un passage, un commit vert par groupe. Un plan sans ce tableau livre un scénario par groupe.
 
 Écrire tous les tests d'abord coûte un seul lancement de la suite au lieu d'un par scénario, et la
 revue comme l'humain lisent le contrat entier d'un coup. Le test d'un groupe pas encore livré
 reste rouge jusqu'à son vert : son nom, qui commence par le numéro de son scénario, permet à la
-commande de test de l'ingénieur de l'écarter et au juge du rejeu de le distinguer d'une
-régression. La revue de DISTILL et l'humain lisent ce rouge une fois ; le rejeu de chaque vert,
-qui doit faire passer son groupe en gardant au vert le walking skeleton et les groupes d'avant,
-vérifie le reste.
+commande de test de l'ingénieur de l'écarter. La revue de DISTILL et l'humain lisent ce rouge une
+fois ; la revue de DELIVER lit les verts.
 
 Le brief dit aussi à DISTILL sur quoi les tests de chaque composant font tourner leurs
 dépendances, dans le test d'acceptation de chaque scénario (ciblé, S1 compris) et dans le walking
@@ -111,7 +107,7 @@ construire plus tard.
 Le designer lance lui-même ces contrôles mécaniques, pendant sa tentative, avec
 `skraft_precheck` : les `.feature` que son plan nomme et que la copie de travail n'a pas, un
 critère auquel aucun scénario ne répond, un fichier laissé non committé — chacun revient avec le
-contrôle qui l'a trouvé, et la passe se corrige sur place au lieu de coûter un rejeu du commit
+contrôle qui l'a trouvé, et la passe se corrige sur place au lieu de coûter une reprise du commit
 rouge entier. Le précontrôle ne lit aucun de ses commits, ne lance aucun agent et n'approuve rien :
 le moteur revérifie à la remise de l'étape, et les lentilles relisent toujours.
 

@@ -127,12 +127,12 @@ La rangée de la gateway externe suit `mocking.strategy` ; `infrastructure` la r
 
 ## 7. Laisser la commande de test afficher ce qui a échoué
 
-Le moteur rejoue chaque test d'acceptation en échec que DISTILL commite et le vert de chaque
-scénario avec la commande `test` du composant (et `e2e`), et garde ce qu'affiche la commande dans
-un log du run. Il ne lit aucun rapport de test, JUnit ou autre : le juge du rejeu lit ce log
-([Commits et rejeux](../reference/gates.md#commits)). La commande `test` n'a donc besoin d'aucune
-option de reporter pour skraft ; sa sortie par défaut, qui nomme chaque test en échec et pourquoi,
-est ce que lit le juge.
+Les agents lancent eux-mêmes la commande `test` du composant (et `e2e`) ; le designer
+d'acceptation envoie la sortie de son unique lancement dans un log du run, que lit la revue DISTILL.
+Le moteur ne lance aucun test et ne lit aucun rapport de test, JUnit ou autre
+([Commits](../reference/gates.md#commits)). La commande `test` n'a donc besoin d'aucune option de
+reporter pour skraft ; sa sortie par défaut, qui nomme chaque test en échec et pourquoi, est ce que
+lit la revue.
 
 Un rapport qu'une commande écrit dans la copie de travail (le fichier JUnit de votre propre CI, un
 dossier TRX) est un changement comme un autre, tenu au périmètre d'écriture : listez-le dans

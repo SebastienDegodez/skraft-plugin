@@ -59,8 +59,8 @@ engine rereads the journal and recomputes the next step. Nothing is started agai
 A started step whose output is already filled is recorded without starting the agent again; an
 agent the host could not start does not use up its attempt; the git comparison base, journaled
 at first start, stays the run's; the attempts used and the edges taken stay counted, so a failure
-that keeps coming back still reaches its limit; a story built group by group resumes on the
-group in progress. An unanswered question puts the run in waiting; starting it
+that keeps coming back still reaches its limit; a story's DELIVER pass resumes on the
+attempt in progress. An unanswered question puts the run in waiting; starting it
 again asks the same question and starts no agent.
 
 A run v1 left in progress is not lost: `skraft migrate` writes it a journal from its

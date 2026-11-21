@@ -81,13 +81,13 @@ Le craft avance par petits incréments qui marchent. Dans skraft, cela prend deu
   n'en a pas besoin, et la lentille `boundary-enforcement` vérifie que le walking skeleton
   parcourt ce vrai chemin (son G8). Voir
   [Walking Skeleton](./deep-dive/walking-skeleton.md).
-- **Un scénario, un rouge, un vert.** En DISTILL, l'`acceptance-designer` commite le test
-  d'acceptation en échec d'un scénario et le squelette qu'il appelle ; le moteur le rejoue et le juge
-  du rejeu ne l'accepte que si le test du scénario échoue sur une assertion ; le walking skeleton
-  est commité et rejoué de même avant S1. En DELIVER, le `software-engineer` tourne la
-  boucle rouge → vert → refactor de ses tests unitaires, puis commite une fois : un `feat(…)` que
-  le moteur rejoue aussi, et qui doit faire passer le scénario sans toucher à son test
-  d'acceptation, et garder le walking skeleton au vert. Puis le scénario suivant. Le test d'abord de Beck
+- **Le rouge de chaque scénario, puis un vert par groupe.** En DISTILL, l'`acceptance-designer`
+  commite le test d'acceptation en échec de chaque scénario, le walking skeleton et le squelette
+  qu'ils appellent en un commit, après un lancement qui montre chacun échouant sur une assertion.
+  En DELIVER, un seul passage du `software-engineer` tourne la boucle rouge → vert → refactor de ses
+  tests unitaires, puis commite une fois par groupe de scénarios, dans l'ordre du plan : un
+  `feat(…)` qui fait passer le groupe sans toucher à ses tests d'acceptation, en gardant au vert le
+  walking skeleton et les groupes d'avant. Le test d'abord de Beck
   ([Beck, 2003](../reference/citations.mdx#cite-beck-tdd-2003)) devient un fait vérifié dans l'historique git,
   pas une promesse. Voir [Outside-In TDD](./deep-dive/outside-in-tdd.md).
 

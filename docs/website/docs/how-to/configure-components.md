@@ -124,12 +124,11 @@ The external gateway row follows `mocking.strategy`; `infrastructure` refuses it
 
 ## 7. Let the test command print what failed
 
-The engine replays each failing acceptance test DISTILL commits and each scenario's green with
-the component's `test` command (and `e2e`), and keeps what the command prints in a log of the run.
-It reads no test report, JUnit or other: the replay judge reads that log
-([Commits and replays](../reference/gates.md#commits)). So the `test` command needs no reporter
-option for skraft; its default output, which names each failing test and why, is what the judge
-reads.
+The agents run the component's `test` command (and `e2e`) themselves; the acceptance designer
+sends the output of its one run to a log of the run, which the DISTILL review reads. The engine
+runs no test and reads no test report, JUnit or other ([Commits](../reference/gates.md#commits)).
+So the `test` command needs no reporter option for skraft; its default output, which names each
+failing test and why, is what the review reads.
 
 A report a command writes in the working copy (your own CI's JUnit file, a TRX folder) is a change
 like any other, held to the write scope: list it in `.gitignore`. A `testReports` key left from an

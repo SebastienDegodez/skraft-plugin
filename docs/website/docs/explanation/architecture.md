@@ -175,16 +175,13 @@ the workflow that carries them is read and copied:
 
 The engine reads only stable formats: a Conventional Commit message, a file that exists, a folder
 a step may write to, an exit code. It reads no test report (JUnit, TRX or another) and no runner's output.
-To check a red or a green commit, it replays the commit's test commands in a throwaway checkout and
-keeps what each printed, unchanged, in a log. An exit code of 0 is all it tells apart: a red whose
-commands all pass is refused on the spot. Everything else goes to the
-[replay judge](pathname:///dashboard/#agent-replay-judge), an agent the driver starts at depth 1,
-like a lens: it reads the logs, the parent's when a red failed, and the commit, and answers
-`accept`, `send-back`, `retry` or `ask-human` with a note. The engine reads the decision alone and
-keeps the answer as the evidence a human or the next attempt reads. A decision only the machine
-can settle (a program not installed, a container runtime that does not answer) reaches a human
-through the same `environment` question as any other step. The rules:
-[Commits and replays](../reference/gates.md#commits).
+It runs no test to check a red or a green commit: it reads the Git history, the order and the
+kinds of the commits, the files each changes, its message. Whether a red fails on an assertion
+is for the acceptance designer's run, which it logs, and for the DISTILL review; whether a green
+makes its tests pass is for the command that chains the commit to the test command, and the
+DELIVER review. A decision only the machine can settle (a program not installed, a container
+runtime that does not answer) reaches a human through the `environment` question of any other
+step. The rules: [Commits](../reference/gates.md#commits).
 
 ## Alternatives considered
 

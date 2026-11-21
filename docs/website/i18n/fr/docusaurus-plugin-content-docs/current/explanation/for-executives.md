@@ -62,8 +62,8 @@ les plus performantes n'opposent pas vitesse et stabilité, elles obtiennent les
 Le moteur vérifie lui-même ce qu'une consigne ne fait qu'espérer. Il pré-crée le document
 qu'un agent doit remplir, contrôle qu'il est rempli, relance l'agent avec la liste de ce qui
 manque (trois tentatives au plus), puis s'arrête en nommant la cause. Il vérifie aussi après
-chaque étape que l'agent n'a écrit que là où il le peut, que le test d'acceptation
-rouge de chaque scénario échoue vraiment, et que son commit vert le fait passer. Aucun agent ne lance un autre agent :
+chaque étape que l'agent n'a écrit que là où il le peut, que le rouge des tests d'acceptation
+et le commit vert de chaque groupe se suivent dans l'historique, et que la revue les lit. Aucun agent ne lance un autre agent :
 seul le **pilote d'hôte** (la partie de SKRAFT propre à chaque outil) lance les agents, sur
 ordre du moteur.
 

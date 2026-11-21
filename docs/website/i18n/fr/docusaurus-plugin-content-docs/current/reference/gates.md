@@ -199,9 +199,9 @@ skeleton parcourt-il le vrai chemin, S1 a-t-il en plus son propre test d'accepta
 exemption déclarée tient-elle.
 
 La revue tourne une fois, après le passage : les tests portent le walking skeleton et le test
-d'acceptation de chaque scénario (T2, T3). Les verts de DELIVER ne sont pas revus par ces
-lentilles ; leur rejeu, qui doit faire passer chaque groupe pendant que seuls les tests des
-groupes suivants échouent, les vérifie.
+d'acceptation de chaque scénario (T2, T3). Le moteur ne lance aucun de ces tests : la revue lit les tests, le squelette et le log du lancement
+du designer, qui montre chaque test échouant sur son assertion. Les verts de DELIVER ne sont pas
+revus par ces lentilles ; la revue DELIVER les lit.
 
 ## DELIVER <!-- #deliver -->
 
@@ -232,12 +232,13 @@ lentilles jugent une pull request par `skraft review --pr`.
 ([déclencheurs](./workflow-dot.mdx#conditional-lenses)).
 
 Le moteur vérifie aussi, sans identifiant de gate, les commits de chaque tentative
-(`commits.checked`) : [Commits et rejeux](#commits).
+(`commits.checked`) : [Commits](#commits).
 
-## Commits et rejeux <!-- #commits -->
+## Commits <!-- #commits -->
 
-Chaque commit d'une tentative est jugé dans son ordre ; un commit refusé le reste tant qu'il ne
-quitte pas l'historique. Le brief donne le message exact du rouge et du vert d'un scénario.
+Le moteur ne lance aucun test pour vérifier un commit : il juge l'historique Git seul, chaque
+commit d'une tentative dans son ordre ; un commit refusé le reste tant qu'il ne quitte pas
+l'historique. Le brief donne le message exact du rouge et du vert de chaque groupe.
 
 | Type | Sorte | Règle |
 | --- | --- | --- |
@@ -253,63 +254,23 @@ aucune (`issue-closed`).
 
 | Passage | Permis | Refusé |
 | --- | --- | --- |
-| `distill`, passage du plan | un rouge, le walking skeleton, le squelette de sa chaîne et le `.feature` du composant de S1 ; le rouge du walking skeleton existe après le passage, sauf pour une histoire exemptée, dont les fichiers `.feature` vont dans un commit `docs` | comme ci-dessous ; aucun dans une histoire non exemptée |
-| `distill`, qui écrit le test d'acceptation d'un scénario | un rouge, le test et le squelette qu'il appelle, dans le composant du scénario ; le rouge du scénario existe après le passage ; les fichiers `.feature` et Markdown l'accompagnent ou vont dans un commit `docs`, où qu'ils soient | un second rouge (`oracle-split`) ; un rouge dans un autre ou un second composant (`oracle-component`) ; un rouge sans fichier des chemins de test du composant (`oracle-without-test`) ; un vert ou un refactor (`code-in-oracle`) ; aucun |
-| `deliver` sur le scénario k | un vert, enchaîné en bash : `<commande de test> && git add <fichiers> && git commit …` | un rouge (`test-in-scenario`) ; un refactor (`refactor-in-scenario`) ; un second vert (`second-green`) ; un changement à un fichier des commits des tests d'acceptation, walking skeleton compris, hors des chemins `src` du composant (`oracle-touched`) ; aucun. Un changement à un autre composant dont le scénario a besoin est accepté et journalisé sous `green.others` |
-| `deliver` renvoyé par les gates ou la revue, après le dernier scénario | rouges, verts et refactors sur toute l'histoire ; rouges non rejoués | un vert sans rouge depuis le dernier vert (`green-without-red`) ; sur un passage que les gates ont renvoyé, leur échec tient lieu du premier rouge |
+| `distill`, passage du plan | un rouge qui tient le walking skeleton, le test d'acceptation de chaque scénario et le squelette qu'ils appellent, dans les composants que nomment les scénarios, et le `.feature` de ces composants ; aucun pour une histoire exemptée de walking skeleton et de tests ; les fichiers `.feature` et Markdown l'accompagnent ou vont dans un commit `docs`, où qu'ils soient | un second rouge (`oracle-split`) ; un rouge dans un composant qu'aucun scénario ne nomme (`oracle-component`) ; un rouge sans fichier des chemins de test du composant (`oracle-without-test`) ; un vert ou un refactor (`code-in-oracle`) ; aucun |
+| `deliver`, passage de l'histoire | au moins un vert et au plus un par groupe du plan d'implémentation, dans l'ordre du plan, chacun enchaîné en bash : `<commande de test> && git add <fichiers> && git commit …`, son sujet nommant les scénarios de son groupe ; un groupe dont les tests passent déjà n'en prend aucun ; un changement d'un autre composant dont le groupe a besoin est accepté et journalisé sous `green.others` | un rouge (`test-in-scenario`) ; un refactor (`refactor-in-scenario`) ; un vert hors de l'ordre du plan (`green-out-of-order`) ou au-delà du dernier groupe (`green-beyond-groups`) ; un changement d'un fichier du commit des tests d'acceptation, walking skeleton compris, hors des chemins `src` du composant (`oracle-touched`) ; aucun |
+| `deliver` renvoyé par les gates ou la revue, après le passage de l'histoire | rouges, verts et refactors sur toute l'histoire | un vert sans rouge depuis le dernier vert (`green-without-red`) ; un changement d'un fichier du commit des tests d'acceptation (`oracle-touched`) ; sur un passage que les gates ont renvoyé, leur échec tient lieu du premier rouge |
 | `kill_mutants`, dans le workflow propre à une équipe | des tests qui tuent des mutants et passent | — |
 
-**Rejeux.** Le moteur ne lit aucun rapport de test ni la sortie d'aucun runner : il rejoue les
-commandes d'un commit dans une copie jetable, depuis la racine du composant, et ne distingue
-qu'un code de sortie 0. Ce qu'affiche chaque commande va, tel quel, dans
-`logs/replay-<sha court>-<composant>-<commande>.log`, suffixé `-parent` pour un rejeu au parent
-du commit ([Logs](./run-journal.md#logs)). Le juge du rejeu,
-[`replay-judge`](pathname:///dashboard/#agent-replay-judge), un agent que le driver lance à
-profondeur 1, lit chaque log en entier avec son outil de lecture, jamais à travers un outil qui le résume
-(un résumé perd la ligne qui décide : un test sauté, un compte de tests, un échec écrit dans une
-autre langue), puis le commit (`git show`), et ne change rien : un commit ou un fichier
-qu'il change dans la copie de travail arrête l'étape sur la question `environment`, cause `judge`.
-Il finit sur un bloc YAML :
+Qu'un rouge échoue sur une assertion se lit, ne se rejoue pas : le designer d'acceptation lance une
+fois le walking skeleton et les tests d'acceptation, écrit la sortie entière de ce lancement dans
+`logs/<nœud>-<visite>-red.log` ([Logs](./run-journal.md#logs)), et la revue DISTILL (T3) comme
+l'humain la lisent. Qu'un vert fasse passer son groupe, c'est la commande qui le commite : enchaînée
+par `&&`, elle ne commite que si les tests passent. Un fichier que les tests écrivent dans la copie
+de travail (un rapport de test) est un changement comme un autre, tenu au périmètre d'écriture :
+listez-le dans `.gitignore`. Une machine qui ne peut pas lancer une commande (programme non
+installé, runtime de conteneurs qui ne répond pas) bloque l'agent, et la question `environment`
+passe la main à un humain.
 
-```yaml
-decision: send-back    # accept | send-back | retry | ask-human
-note: "<what the logs show, and what the agent or the human has to do>"
-```
-
-Le moteur ne lit que `decision` ; il garde la réponse entière, telle qu'écrite, dans
-`logs/judge-<sha court>-<red|green>.md`. Une réponse qu'il ne peut pas lire est redemandée une
-fois, avec la raison. Un fichier que les tests écrivent dans la copie de travail (un rapport de
-test) est un changement comme un autre, tenu au périmètre d'écriture : listez-le dans
-`.gitignore`.
-
-| Rejoué | Ce qui se passe | Effet |
-| --- | --- | --- |
-| un rouge de test d'acceptation | la commande `test` de chaque composant qu'il touche sort avec 0, puis la commande `e2e` de ceux qui en ont une sort avec 0 aussi | refusé, `not-red`, sans demander au juge : `is not red: the tests of <components> pass at it; the replay's output is in <log>`, `pass at it, and so do the e2e tests of <components>; …` quand des tests e2e ont tourné |
-| | une commande échoue : un code de sortie non nul, un programme qui n'a pas démarré, un délai dépassé | chaque commande en échec rejouée au parent du commit, puis le juge interrogé : le commit, ses fichiers, l'indice et le titre du scénario, chaque ligne de commande, comment elle a fini et son log |
-| le vert du scénario k | la commande `test` de son composant, et `e2e` quand des tests e2e ont prouvé le rouge ou celui du walking skeleton | le juge toujours interrogé, même quand chaque commande sort avec 0, avec le sha du rouge, les logs de son rejeu au rouge et à son parent, et les fichiers de test d'acceptation du rouge ; de même pour le rouge du walking skeleton quand le composant du scénario en a un |
-| un rouge ou un vert, jugé | `accept` | le rouge tient et devient l'oracle du scénario (au passage du plan, le walking skeleton de l'histoire), avec la commande qui l'a prouvé (`test` ou `e2e`) ; le vert tient |
-| | `send-back` | refusé, `not-red` ou `not-green` : `the replay judge sends it back: read <judge answer>` |
-| | `retry` | les commandes tournent encore une fois, le commit rapportant alors ce qu'elles trouvent, et le juge est réinterrogé, son brief le disant ; un second `retry` interroge un humain |
-| | `ask-human` ; deux réponses que le moteur ne peut pas lire ; un hôte qui ne peut pas lancer le juge | l'étape reste ouverte : question `environment`, cause `judge` : `the replay judge asks a human about the <red\|green> commit <short sha>: read <judge answer>` (`replay-judge answered 2 times with no verdict the engine reads (…)`, `the host could not start replay-judge`) ; `RETRY` rejoue et rejuge, sans nouvelle tentative |
-| un rouge ou un vert | une personne a interrompu une commande (sortie 130, ou `0xC000013A` sous Windows) | le run s'arrête (`interrupted`), ne demande rien et ne refuse rien ; le run suivant rejoue le commit |
-| | pas de commande `test`, une commande à syntaxe shell ou qui installe des dépendances | l'étape reste ouverte : question `environment`, cause `config`, rien n'est rejoué |
-
-Le juge accepte un rouge dont le test — le walking skeleton au passage du plan, le test
-d'acceptation du scénario sinon — échoue sur son assertion au commit et, au
-parent, n'existe pas, ne tourne pas ou échoue autrement ; il renvoie un rouge qui échoue avant que
-l'assertion ne tourne (build, collecte des tests, un import, l'exception d'un squelette), où seul
-un autre test échoue ou dont le test du commit est sauté ; un walking skeleton antérieur qui
-échoue au commit comme à son parent ne tranche rien. Il accepte un vert dont toutes les commandes
-sortent avec 0 et dont le log montre que le test du scénario a passé, et le walking skeleton aussi
-quand le brief nomme son rouge, chacun par son nom ou par
-autant de tests lancés qu'au rouge, aucun en échec ni sauté ; il interroge un humain quand le seul
-test en échec échouait déjà avant le rouge. Il répond
-`retry` pour une cause qui passe (un délai réseau, un port occupé), `ask-human` pour ce qu'aucun
-agent ne peut donner (un programme non installé, un runtime de conteneurs qui ne répond pas, un
-identifiant). [`tdd.replay`](./skraft-config.md#tdd) choisit quels rouges d'une tentative sont
-rejoués ; un rouge qu'une tentative précédente de la passe a rejoué garde son verdict. Ce qu'a
-coûté chaque question au juge, réponse illisible comprise, est journalisé avec sa décision et
-s'ajoute au `cost` de l'étape.
+Un run d'une alpha V2 antérieure arrêté en DELIVER, dont le journal tient un passage par groupe,
+n'est pas repris : relancez-le.
 
 ## Revue : réponse, réfutation, verdict <!-- #review-run -->
 

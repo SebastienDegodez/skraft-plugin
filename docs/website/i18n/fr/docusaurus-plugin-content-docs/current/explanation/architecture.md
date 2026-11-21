@@ -182,17 +182,13 @@ qui les porte se lit et se copie : [Workflow DOT](../reference/workflow-dot.mdx)
 
 Le moteur ne lit que des formats stables : un message de Conventional Commit, un fichier qui
 existe, un dossier où une étape a le droit d'écrire, un code de sortie. Il ne lit aucun rapport de
-test (JUnit, TRX ou autre) ni la sortie d'aucun runner. Pour vérifier un commit rouge ou vert, il rejoue
-les commandes de test du commit dans une copie jetable et garde ce que chacune a affiché, tel
-quel, dans un log. Il ne distingue qu'un code de sortie 0 : un rouge dont toutes les commandes
-passent est refusé sur-le-champ. Tout le reste va au
-[juge du rejeu](pathname:///dashboard/#agent-replay-judge), un agent que le pilote lance à
-profondeur 1, comme une lentille : il lit les logs, ceux du parent quand un rouge a échoué, et le
-commit, et répond `accept`, `send-back`, `retry` ou `ask-human` avec une note. Le moteur ne lit
-que la décision et garde la réponse comme la preuve que lit un humain ou la tentative suivante.
-Une décision que seule la machine peut trancher (un programme non installé, un runtime de
+test (JUnit, TRX ou autre) ni la sortie d'aucun runner. Il ne lance aucun test pour vérifier un commit rouge ou vert : il lit l'historique Git, l'ordre
+et les types des commits, les fichiers que chacun change, son message. Qu'un rouge échoue sur une
+assertion, c'est l'affaire du lancement du designer d'acceptation, qu'il journalise, et de la revue
+DISTILL ; qu'un vert fasse passer ses tests, celle de la commande qui enchaîne le commit au test, et
+de la revue DELIVER. Une décision que seule la machine peut trancher (un programme non installé, un runtime de
 conteneurs qui ne répond pas) arrive à un humain par la même question `environment` que toute
-autre étape. Les règles : [Commits et rejeux](../reference/gates.md#commits).
+autre étape. Les règles : [Commits](../reference/gates.md#commits).
 
 ## Alternatives écartées
 

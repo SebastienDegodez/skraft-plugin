@@ -21,7 +21,7 @@ La description est écrite dans la langue de la story. Ce qui décide s'affiche 
 | Décisions appliquées | titre | moteur | une porte verrouillée a été sautée |
 | Matrice de cohérence | repliée | moteur | jamais : information seule |
 | Tests | repliée | moteur | jamais : information seule |
-| Preuves RED | repliée, compte les commits red | moteur | un commit red n'a pas été rejoué |
+| Preuves RED | repliée, compte les commits red | moteur | un commit red est listé |
 | Portes de qualité | repliée, s'ouvre seule quand une porte a échoué | moteur | une porte a échoué |
 | Revue | repliée, s'ouvre seule sur un constat à corriger ou à trancher | moteur | un constat est à corriger ou à trancher |
 | Captures d'écran | repliée | moteur | jamais : information seule |
@@ -80,11 +80,11 @@ La description est écrite dans la langue de la story. Ce qui décide s'affiche 
 
 ### Preuves RED <!-- #red-evidence -->
 
-- **Contient** : un tableau `Commit | Sujet | Code de sortie du rejeu` (`non rejoué` sans rejeu), puis `Les extraits de sortie des rejeux ne sont pas encore consignés.` ; sans commit red, `Aucune consignée : aucun commit red n'a été accepté dans ce run.`
+- **Contient** : un tableau `Commit | Sujet`, une ligne par commit red ; sans commit red, `Aucune consignée : aucun commit red n'a été accepté dans ce run.`
 - **Affichée** : repliée ; le résumé dit `Preuves RED: N commits red`, jamais ouverte seule.
 - **Rédigée par** : le moteur, à partir des commits red que le journal a acceptés.
 - **À lire pour** : voir que chaque test a échoué avant le code qui le fait passer.
-- **Agir quand** : un commit red affiche `non rejoué` et vous voulez une preuve.
+- **Agir quand** : vous voulez la preuve qu'un test a échoué : lisez le lancement du designer d'acceptation dans les `logs/` du run.
 
 ### Portes de qualité <!-- #quality-gates -->
 

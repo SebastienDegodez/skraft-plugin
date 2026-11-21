@@ -29,7 +29,7 @@ What cannot be tuned, and why:
 
 - **Quality thresholds.** A tunable threshold becomes a threshold negotiated at each hard story;
   80 % of mutants detected on the business core and elsewhere stays the same for every team.
-- **The engine's checks** (chained journal, write scope, expected outputs, replay of red commits).
+- **The engine's checks** (chained journal, write scope, expected outputs, order and kinds of commits).
   They are not workflow nodes: no copy can remove them.
 - **DELIVER gates and reviews.** The `gates` node is locked: removing it takes
   writing `unlock="<reason>"`, which `skraft workflow diff` shows and the journal keeps. The review
@@ -52,7 +52,6 @@ command that runs and proves nothing.
 | Set `--base` or `baseBranch` to a ref that is too recent | Changed files fall outside the compared range | `no component changed since its base; no gate to run` while code did change |
 | Remove the `adr` ask node | Human ratification of the ADRs, which stay `Proposed` | `skraft workflow diff` shows the node gone |
 | Remove the `scenario_review` ask node | A human's reading of the scenarios, the walking skeleton and S1's acceptance test before DELIVER builds them | `skraft workflow diff` shows the node gone |
-| Remove `each="scenario"` from `distill` and `deliver` | The delivery group by group and the replay of each green: DELIVER makes the story pass in one pass, its commits judged by their order only | `skraft workflow diff` shows the attribute gone |
 | Run the walking skeleton's entry point or internal gateways in memory (`infrastructure`) | The integration proof of the story: the walking skeleton no longer reaches a real entry point or database | `skraft doctor` prints the row with `source skraft-config.json` |
 | Set a component to `bdd: false` | The business-readable specification of that component: DISTILL is asked for no `.feature`, so its acceptance tests no longer carry the verbatim values of a scenario a domain expert can read | No `.feature` written for its features, and the test plan's `Feature File` column all dashes |
 | Edit `events.jsonl` by hand to unblock a run | The journal as evidence: the run is blocked with `journal-tampered` | [Resume or unblock a run](../how-to/resume-a-run.mdx) |

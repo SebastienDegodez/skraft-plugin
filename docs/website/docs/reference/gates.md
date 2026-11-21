@@ -193,8 +193,9 @@ component of `skraft-config.json`, S1 alone tagged `@walking-skeleton` in a comp
 runs the real path, S1 has its own acceptance test besides, and a declared exemption holds.
 
 The review runs once, after the pass: the tests hold the walking skeleton and the acceptance test
-of every scenario (T2, T3). The greens of DELIVER are not reviewed by these lenses; their replay,
-which must make each group pass while only the later groups' tests fail, checks them.
+of every scenario (T2, T3). The engine runs none of these tests: the review reads the tests, the skeleton and the designer's
+run log, which shows each test failing on its assertion. The greens of DELIVER are not reviewed by
+these lenses; the DELIVER review reads them.
 
 ## DELIVER <!-- #deliver -->
 
@@ -225,12 +226,13 @@ changes that touch contracts (`when="contract"`)
 ([triggers](./workflow-dot.mdx#conditional-lenses)).
 
 The engine also checks, with no gate id, the commits of each attempt (`commits.checked`):
-[Commits and replays](#commits).
+[Commits](#commits).
 
-## Commits and replays <!-- #commits -->
+## Commits <!-- #commits -->
 
-Every commit of an attempt is judged in its order; a commit refused stays refused until it leaves
-the history. The brief gives the exact message of a scenario's red and green.
+The engine runs no test to check a commit: it judges the Git history alone, every commit of an
+attempt in its order; a commit refused stays refused until it leaves the history. The brief gives
+the exact message of the red and of each group's green.
 
 | Type | Kind | Rule |
 | --- | --- | --- |
@@ -245,59 +247,22 @@ cites no other issue (`issue-not-in-story`) and closes none (`issue-closed`).
 
 | Pass | Allowed | Refused |
 | --- | --- | --- |
-| `distill`, plan pass | one red, the walking skeleton, the skeleton of its chain and the `.feature` of S1's component; the walking skeleton's red exists after the pass, unless the story is exempt, whose `.feature` files go in a `docs` commit | as below; none at all in a story that is not exempt |
-| `distill`, writing a scenario's acceptance test | one red, the test and the skeleton it calls, in the scenario's component; the scenario's red exists after the pass; `.feature` and Markdown files go with it or in a `docs` commit, wherever they live | a second red (`oracle-split`); a red in another or a second component (`oracle-component`); a red with no file of the component's test paths (`oracle-without-test`); a green or refactor (`code-in-oracle`); none at all |
-| `deliver` on scenario k | one green, chained in bash: `<test command> && git add <files> && git commit …` | a red (`test-in-scenario`); a refactor (`refactor-in-scenario`); a second green (`second-green`); a change to a file of the acceptance-test commits, the walking skeleton's included, outside the component's `src` paths (`oracle-touched`); none at all. A change to another component the scenario needs is accepted and journaled under `green.others` |
-| `deliver` sent back by the gates or the review, after the last scenario | reds, greens and refactors on the whole story; reds not replayed | a green with no red since the last green (`green-without-red`); on a pass the gates sent back, their failure stands for the first red |
+| `distill`, plan pass | one red holding the walking skeleton, the acceptance test of every scenario and the skeleton they call, in the components the scenarios name, and the `.feature` of those components; none for a story exempt of a walking skeleton and tests; `.feature` and Markdown files go with it or in a `docs` commit, wherever they live | a second red (`oracle-split`); a red in a component no scenario names (`oracle-component`); a red with no file of the component's test paths (`oracle-without-test`); a green or refactor (`code-in-oracle`); none at all |
+| `deliver`, the story's pass | at least one green and at most one per group of the implementation plan, in plan order, each chained in bash: `<test command> && git add <files> && git commit …`, its subject naming its group's scenarios; a group whose tests already pass takes none; a change to another component the group needs is accepted and journaled under `green.others` | a red (`test-in-scenario`); a refactor (`refactor-in-scenario`); a green out of plan order (`green-out-of-order`) or beyond the last group (`green-beyond-groups`); a change to a file of the acceptance-test commit, the walking skeleton's included, outside the component's `src` paths (`oracle-touched`); none at all |
+| `deliver` sent back by the gates or the review, after the story's pass | reds, greens and refactors on the whole story | a green with no red since the last green (`green-without-red`); a change to a file of the acceptance-test commit (`oracle-touched`); on a pass the gates sent back, their failure stands for the first red |
 | `kill_mutants`, in a team's own workflow | tests that kill mutants and pass | — |
 
-**Replays.** The engine reads no test report and no runner's output: it replays a commit's
-commands in a throwaway checkout, from the component root, and tells apart only an exit code of
-0. What each command printed goes, unchanged, to
-`logs/replay-<short sha>-<component>-<command>.log`, `-parent` added for a replay at the commit's
-parent ([Logs](./run-journal.md#logs)). The replay judge,
-[`replay-judge`](pathname:///dashboard/#agent-replay-judge), an agent the driver starts at depth 1,
-reads each log whole with its file-reading tool, never through a tool that summarises it (a
-summary drops the line that settles a decision: a skip, a test count, a failure printed in another
-language), then the commit (`git show`), and changes nothing: a commit or a file it
-changes in the working copy stops the step on the `environment` question, cause `judge`. It ends
-on a YAML block:
+Whether a red fails on an assertion is read, not run: the acceptance designer runs the walking
+skeleton and the acceptance tests once, writes that run's whole output to `logs/<node>-<visit>-red.log`
+([Logs](./run-journal.md#logs)), and the DISTILL review (T3) and the human read it. Whether a green
+makes its group pass is the command that commits it: chained with `&&`, it commits only when the
+tests pass. A file the tests write in the working copy (a test report) is a change like any other,
+held to the write scope: list it in `.gitignore`. A machine that cannot run a command (a program not
+installed, a container runtime that does not answer) is an agent's block, which the `environment`
+question hands to a human.
 
-```yaml
-decision: send-back    # accept | send-back | retry | ask-human
-note: "<what the logs show, and what the agent or the human has to do>"
-```
-
-The engine reads only `decision`; it keeps the whole answer, as written, in
-`logs/judge-<short sha>-<red|green>.md`. An answer it cannot read is asked once more, with the
-reason. A file the tests write in the working copy (a test report) is a change like any other,
-held to the write scope: list it in `.gitignore`.
-
-| Replayed | What happens | Effect |
-| --- | --- | --- |
-| a red of an acceptance test | the `test` command of each component it touches exits 0, then the `e2e` command of those that have one exits 0 too | refused, `not-red`, the judge not asked: `is not red: the tests of <components> pass at it; the replay's output is in <log>`, `pass at it, and so do the e2e tests of <components>; …` when e2e tests ran |
-| | a command fails: a non-zero exit, a program that did not start, a timeout | each failing command replayed at the commit's parent, then the judge asked: the commit, its files, the scenario's index and title, each command line, how it ended and its log |
-| the green of scenario k | its component's `test` command, and `e2e` when e2e tests proved the red or the walking skeleton's | the judge always asked, every command exiting 0 included, with the red's sha, the logs of its replay at the red and at its parent, and the red's acceptance-test files; the same for the walking skeleton's red when the scenario's component has one |
-| a red or a green, judged | `accept` | the red stands and becomes the scenario's oracle (on the plan pass, the story's walking skeleton), with the command that proved it (`test` or `e2e`); the green stands |
-| | `send-back` | refused, `not-red` or `not-green`: `the replay judge sends it back: read <judge answer>` |
-| | `retry` | the commands run again once, the commit then reporting what they find, and the judge is asked again, its brief saying so; a second `retry` asks a human |
-| | `ask-human`; two answers the engine cannot read; a host that cannot start the judge | the step stays open: `environment` question, cause `judge`: `the replay judge asks a human about the <red\|green> commit <short sha>: read <judge answer>` (`replay-judge answered 2 times with no verdict the engine reads (…)`, `the host could not start replay-judge`); `RETRY` replays and judges again, using no new attempt |
-| a red or a green | a person interrupted a command (exit 130, or `0xC000013A` on Windows) | the run stops (`interrupted`), asks nothing and refuses nothing; the next run replays the commit |
-| | no `test` command, a command that uses shell syntax or installs dependencies | the step stays open: `environment` question, cause `config`, nothing replayed |
-
-The judge accepts a red whose test — the walking skeleton on the plan pass, the scenario's
-acceptance test otherwise — fails on its assertion at the commit and does not
-exist, does not run or fails otherwise at the parent; it sends back a red that fails before the
-assertion runs (build, test collection, an import, a skeleton's exception), where only another
-test fails or the commit's test is skipped; an earlier walking skeleton failing at the commit and
-at its parent alike settles nothing. It accepts a green whose commands all exit 0 and whose log
-shows the scenario test passed, and the walking skeleton too when the brief names its red, each by its name or by as many tests run as at its red, none
-failed or skipped; it asks a human when the only failing test already failed before the red. It answers `retry` for a cause that passes
-(a network timeout, a busy port), `ask-human` for what no agent can give (a program not
-installed, a container runtime that does not answer, a credential).
-[`tdd.replay`](./skraft-config.md#tdd) chooses which reds of an attempt are replayed; a red an
-earlier attempt of the pass replayed keeps its verdict. What each ask of the judge cost, an
-unreadable answer included, is journaled with its decision and added to the step's `cost`.
+A run of an earlier V2 alpha stopped in DELIVER, whose journal holds one dispatch per group, is
+not resumed: start it again.
 
 ## Review: answer, refutation, verdict <!-- #review-run -->
 

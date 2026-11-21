@@ -129,7 +129,7 @@ panier. Le plan de test les liste en S1 et S2. Le concepteur écrit d'abord le w
 test simple qui commande par le vrai point d'entrée et vérifie le statut de la réponse, sa forme
 et le reçu que nomme S1, avec le squelette de la chaîne qu'il traverse, et les commite **en
 échec**. À son passage suivant, il écrit le test d'acceptation de S1, le binding du Gherkin par le
-cas d'usage, et le commite en échec lui aussi. Le moteur rejoue chaque test pour vérifier qu'il
+cas d'usage, et le commite en échec lui aussi. Le lancement du designer montre que chacun
 échoue sur une assertion. Après la revue, une personne lit les deux scénarios, le walking
 skeleton et le test de S1, et les approuve.
 
@@ -141,7 +141,7 @@ skeleton et le test de S1, et les approuve.
 ### Étape 6 — DELIVER : implémenter, guidé par les tests
 
 Le `software-engineer` rend S1 vert en **Outside-In TDD** : tests unitaires d'abord, puis le
-code, puis un commit vert, que le moteur rejoue : le test d'acceptation de S1 et le walking
+code, puis un commit vert : le test d'acceptation de S1 et le walking
 skeleton y passent tous deux. DISTILL écrit ensuite le test en échec de S2, et
 l'ingénieur le rend vert de la même façon. Le moteur lance les gates (build, tests, architecture,
 couverture), puis la revue DELIVER relit le code. Que les tests attraperaient une erreur dans la

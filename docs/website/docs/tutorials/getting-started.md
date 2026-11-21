@@ -43,8 +43,8 @@ Create `web/package.json`:
 }
 ```
 
-The `test` script prints each test and why it fails to the standard output: when the engine
-replays a commit, the replay judge reads that output to tell a failing assertion from a build error.
+The `test` script prints each test and why it fails to the standard output: the acceptance
+designer reads that output to tell a failing assertion from a build error.
 
 Create `web/src/cart.js`:
 
@@ -279,10 +279,9 @@ itself: `git log --oneline -1 -- docs/adr` shows `docs(adr): ratify ADR-001`.
 
 `acceptance-designer` writes the scenarios and the test plan
 (`details/<YYYY-MM-DD>/test-plan-checkout.md`): its `## Scenarios` table lists them as S1, S2, …
-in the order DELIVER builds them, all in `web`. It commits the failing walking skeleton first,
-`test(checkout): walking skeleton of <title of S1>`, then, on its next pass, the failing
-acceptance test of S1 alone, `test(checkout): <title of S1>`. The engine replays each commit and
-the replay judge reads what `npm test` printed: a test must fail on an assertion. Four lenses
+in the order DELIVER builds them, all in `web`. It commits the failing walking skeleton and the failing
+acceptance test of every scenario in one commit, `test(checkout): acceptance tests S1–S2`, after one
+run of `npm test` that shows each failing on an assertion, and writes that run's output to a log. Four lenses
 review them (coverage,
 business-alignment, testability, boundary-enforcement).
 
@@ -290,16 +289,15 @@ Then a dialog titled **Scenarios** asks, with the scenarios the acceptance desig
 here):
 
 ```text
-Read the 2 scenarios of the story before DELIVER builds them, one at a time: S1 "<title>" (web, walking skeleton); S2 "<title>" (web). The walking skeleton and the skeleton of its chain are commit <sha> "test(checkout): walking skeleton of <title>": <files>. The acceptance test of S1 is commit <sha> "test(checkout): <title>": <files>. APPROVED delivers them; REVISE sends DISTILL back with your corrections (edit the .feature or the test yourself first if you like, and say so).
+Read the 2 scenarios of the story before DELIVER builds them: S1 "<title>" (web, walking skeleton); S2 "<title>" (web). DELIVER makes them pass in one pass, one commit per group, in this order: 1. S1; 2. S2. The acceptance tests, the walking skeleton and the skeleton of its chain are commit <sha> "test(checkout): acceptance tests S1–S2": <files>. skraft does not run them: check that each fails on its own assertion; the designer's run is in <log>. APPROVED delivers them; REVISE sends DISTILL back with your corrections (edit the .feature or the test yourself first if you like, and say so).
 ```
 
 Open the test plan and the commits the question names, read them, then choose **APPROVED**.
 
-`software-engineer` then makes S1 pass: unit tests and code first, uncommitted, then one commit,
-`feat(checkout): <title of S1>`, chained to `npm test`. The engine replays it and the replay judge
-reads the output: S1's test and the walking skeleton pass and nothing fails. `acceptance-designer` writes the failing
-test of S2, `software-engineer` makes it pass, and so on: the pane shows `distill` and `deliver`
-again, with their pass, for each scenario.
+`software-engineer` then makes every group pass in one pass, in plan order: unit tests and code
+first, uncommitted, then one commit per group, `feat(checkout): S1 <title of S1>`, chained to
+`npm test`, so the commit exists only when the tests pass. The first one makes S1's test and the
+walking skeleton pass; `feat(checkout): S2 <title of S2>` follows.
 
 The engine then runs the component's gates (`test`), then the DELIVER review (test-integrity,
 architecture-boundaries, cold-reader). The pane ticks `gates` and `deliver_review`.
@@ -352,12 +350,12 @@ The tracking folder `.copilot-tracking/skraft-plans/checkout/` now holds:
 | `qa-report.md` | the test plan, the last gates, the red commits, each review's verdict |
 | `pull-request.md` | the pull request description, ready to publish |
 | `gates/web/` | the output of each gate |
-| `logs/` | what each replay of a red or a green commit printed, and the replay judge's answers |
+| `logs/` | the designer's run of the acceptance tests, and what refused commits and agents' commands printed |
 | `reviews/` | what each review pass read, and its `verdict.yaml` |
 
 Open `pull-request.md`: it is the result of your first run. `git log --oneline` shows, on
-`pay-by-card`, the research and design documents, the ratified ADR, then, for each scenario, its
-red `test(checkout): …` and its green `feat(checkout): …`.
+`pay-by-card`, the research and design documents, the ratified ADR, then the red
+`test(checkout): …` of every acceptance test and one green `feat(checkout): …` per group.
 
 ## What you built <!-- #what-you-built -->
 

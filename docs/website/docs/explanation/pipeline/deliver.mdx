@@ -1,6 +1,6 @@
 ---
 title: "DELIVER"
-description: "Why DELIVER turns the contract green one group of scenarios and one checked commit at a time, has the code reviewed, and leaves mutation testing to the developer."
+description: "Why one DELIVER dispatch turns the contract green group by group, one commit each, has the code reviewed, and leaves mutation testing to the developer."
 persona: software-engineer
 phase: deliver
 hide_table_of_contents: true
@@ -10,26 +10,25 @@ import FlowFigure from '@site/src/components/FlowFigure';
 
 # DELIVER
 
-Turn the contract green one group of scenarios at a time, each in one proven commit, then have
+Turn the contract green in one dispatch, one commit per group of scenarios, then have
 the code reviewed. Testing the tests stays the developer's.
 
 ## Why this phase exists
 
 Code is the only artifact that goes to production. DELIVER grows it from the contract DISTILL
-left failing, one group at a time, in the order of the implementation plan: the
+left failing, in one dispatch, group by group in the order of the implementation plan: the
 `software-engineer` works in **Outside-In TDD**, from the group's acceptance tests to the unit
 tests, then to the code ([Freeman & Pryce, 2009](../../reference/citations.mdx#cite-freeman-goos-2009)). It runs the
-inner red → green → refactor loop without committing it, then commits once, when the group
-passes: a `feat(…)` chained to the test command, which leaves out the tests of later groups by
+inner red → green → refactor loop without committing it, then commits once per group, when the
+group passes: a `feat(…)` chained to the test command, which leaves out the tests of later groups by
 their names, `<test> <filter> && git add <files> && git commit …`.
 
-The engine does not take the agent's word for it. DISTILL's red was replayed and proven; DELIVER's
-green is replayed too, and the [replay judge](pathname:///dashboard/#agent-replay-judge) reads
-the replay's log next to the red's: the group's acceptance tests must pass at it, those of the
-groups before and the [walking skeleton](../deep-dive/walking-skeleton.md) too, and no test may
-fail or be skipped but those of the later groups. Test first ([Beck, 2003](../../reference/citations.mdx#cite-beck-tdd-2003))
-becomes a fact in the git history, not a promise: one red commit of every acceptance test, then a
-green commit per group.
+The engine runs no test again. It checks the git history: one red commit of every acceptance
+test, then at least one green commit, at most one per group, in plan order, each naming its group,
+none touching the acceptance tests. The command that commits a green is chained to the test
+command, so the commit exists only when the tests pass; DISTILL's review and the DELIVER review
+read the rest. Test first ([Beck, 2003](../../reference/citations.mdx#cite-beck-tdd-2003))
+becomes a fact in the git history, not a promise.
 
 :::info[☕ Running example — Starbucks *(illustrative)*]
 
@@ -40,10 +39,12 @@ green in the next. The gates run, the review reads the code, and the code goes i
 the tests genuinely protect the loyalty rule, the developer's own **mutation** run shows.
 :::
 
-## One group, one green commit
+## One dispatch, one green commit per group
 
 A committed TDD cycle costs two commits, and an agent pays each one in turns: running the tests,
-reading their output, writing the message. Per group of scenarios, DELIVER commits once. The unit tests
+reading their output, writing the message. Per group of scenarios, DELIVER commits once, and the engineer delivers every group in one
+dispatch: it reads the plans and runs every acceptance test once, then takes the groups in plan
+order. A group whose tests already pass takes no commit. The unit tests
 of the inner loop are still written first; they go into the green, and the review's test-integrity
 lens reads them. Whether they would catch a mistake, the developer's own mutation run proves.
 
@@ -60,7 +61,8 @@ Three rules keep that single commit honest:
   happens only when the tests pass. DISTILL's red is never chained that way: only reading the
   output tells a build error from the expected failure.
 
-Once the last group is green, the gates run. A pass the gates or the review send back works on
+Once the last group is green and the whole suite passes, the gates run. A run whose journal
+holds the earlier per-group DELIVER dispatches of a V2 alpha is not resumed: start it again. A pass the gates or the review send back works on
 the whole story with the classic cycle: a red, then the fix; on a pass the gates sent back, their
 failure stands for the red.
 

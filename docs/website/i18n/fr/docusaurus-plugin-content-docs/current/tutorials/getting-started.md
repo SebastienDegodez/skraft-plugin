@@ -43,9 +43,8 @@ Créez `web/package.json` :
 }
 ```
 
-Le script `test` affiche chaque test et la raison de son échec sur la sortie standard : quand le
-moteur rejoue un commit, le juge du rejeu lit cette sortie pour distinguer une assertion en échec
-d'une erreur de build.
+Le script `test` affiche chaque test et la raison de son échec sur la sortie standard : le designer
+d'acceptation lit cette sortie pour distinguer une assertion en échec d'une erreur de build.
 
 Créez `web/src/cart.js` :
 
@@ -281,10 +280,9 @@ seul : `git log --oneline -1 -- docs/adr` montre `docs(adr): ratify ADR-001`.
 
 `acceptance-designer` écrit les scénarios et le plan de test
 (`details/<AAAA-MM-JJ>/test-plan-checkout.md`) : son tableau `## Scenarios` les liste en S1, S2, …
-dans l'ordre où DELIVER les construit, tous dans `web`. Il commite d'abord le walking skeleton en
-échec, `test(checkout): walking skeleton of <titre de S1>`, puis, à son passage suivant, le seul
-test d'acceptation en échec de S1, `test(checkout): <titre de S1>`. Le moteur rejoue chaque commit
-et le juge du rejeu lit ce qu'a affiché `npm test` : un test doit échouer sur une assertion. Quatre
+dans l'ordre où DELIVER les construit, tous dans `web`. Il commite le walking skeleton en
+échec et le test d'acceptation en échec de chaque scénario en un commit, `test(checkout): acceptance tests S1–S2`,
+après un lancement de `npm test` qui montre chacun échouant sur une assertion, et écrit la sortie de ce lancement dans un log. Quatre
 lentilles les revoient
 (coverage, business-alignment, testability, boundary-enforcement).
 
@@ -292,16 +290,15 @@ Puis une boîte de dialogue intitulée **Scenarios** demande, avec les scénario
 concepteur d'acceptation (deux ici) :
 
 ```text
-Read the 2 scenarios of the story before DELIVER builds them, one at a time: S1 "<title>" (web, walking skeleton); S2 "<title>" (web). The walking skeleton and the skeleton of its chain are commit <sha> "test(checkout): walking skeleton of <title>": <files>. The acceptance test of S1 is commit <sha> "test(checkout): <title>": <files>. APPROVED delivers them; REVISE sends DISTILL back with your corrections (edit the .feature or the test yourself first if you like, and say so).
+Read the 2 scenarios of the story before DELIVER builds them: S1 "<title>" (web, walking skeleton); S2 "<title>" (web). DELIVER makes them pass in one pass, one commit per group, in this order: 1. S1; 2. S2. The acceptance tests, the walking skeleton and the skeleton of its chain are commit <sha> "test(checkout): acceptance tests S1–S2": <files>. skraft does not run them: check that each fails on its own assertion; the designer's run is in <log>. APPROVED delivers them; REVISE sends DISTILL back with your corrections (edit the .feature or the test yourself first if you like, and say so).
 ```
 
 Ouvrez le plan de test et les commits que nomme la question, lisez-les, puis choisissez **APPROVED**.
 
-`software-engineer` fait ensuite passer S1 : tests unitaires et code d'abord, sans commit, puis un
-seul commit, `feat(checkout): <titre de S1>`, enchaîné à `npm test`. Le moteur le rejoue et le juge du
-rejeu lit la sortie : le test de S1 et le walking skeleton passent et rien n'échoue. `acceptance-designer` écrit le test en échec de S2,
-`software-engineer` le fait passer, et ainsi de suite : le panneau montre à nouveau `distill` et
-`deliver`, avec leur passage, pour chaque scénario.
+`software-engineer` fait ensuite passer chaque groupe en un seul passage, dans l'ordre du plan :
+tests unitaires et code d'abord, sans commit, puis un commit par groupe, `feat(checkout): S1 <titre de S1>`,
+enchaîné à `npm test`, si bien que le commit n'existe que si les tests passent. Le premier fait
+passer le test de S1 et le walking skeleton ; `feat(checkout): S2 <titre de S2>` suit.
 
 Le moteur lance ensuite les gates du composant (`test`), puis la revue DELIVER (test-integrity,
 architecture-boundaries, cold-reader). Le panneau coche `gates` et `deliver_review`.
@@ -354,12 +351,12 @@ Le dossier de suivi `.copilot-tracking/skraft-plans/checkout/` contient maintena
 | `qa-report.md` | le plan de test, les dernières gates, les commits rouges, le verdict de chaque revue |
 | `pull-request.md` | la description de la pull request, prête à publier |
 | `gates/web/` | la sortie de chaque gate |
-| `logs/` | ce qu'a affiché chaque rejeu d'un commit rouge ou vert, et les réponses du juge du rejeu |
+| `logs/` | le lancement des tests d'acceptation par le designer, et ce qu'ont affiché les commits refusés et les commandes des agents |
 | `reviews/` | ce que chaque passage de revue a lu, et son `verdict.yaml` |
 
 Ouvrez `pull-request.md` : c'est le résultat de votre premier run. `git log --oneline` montre, sur
-`pay-by-card`, les documents de recherche et de conception, l'ADR ratifié, puis, pour chaque
-scénario, son rouge `test(checkout): …` et son vert `feat(checkout): …`.
+`pay-by-card`, les documents de recherche et de conception, l'ADR ratifié, puis le rouge
+`test(checkout): …` de chaque test d'acceptation et un vert `feat(checkout): …` par groupe.
 
 ## Ce que vous avez construit <!-- #what-you-built -->
 

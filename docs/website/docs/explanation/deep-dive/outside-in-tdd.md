@@ -35,10 +35,9 @@ Freeman & Pryce formalise the "outside-in" variant with its double loop: an oute
 
 ## Application in SKRAFT
 
-The pipeline applies the **double loop**, one group of scenarios at a time. The outer loop is the
-acceptance scenarios: DISTILL commits the failing test of every one in one commit, the engine
-replays that commit, and the [replay judge](pathname:///dashboard/#agent-replay-judge) reads the
-replay's log to confirm each fails on an assertion. The inner loop is the unit RED → GREEN → REFACTOR cycle, which
+The pipeline applies the **double loop**, one dispatch for the whole story. The outer loop is the
+acceptance scenarios: DISTILL commits the failing test of every one in one commit, after one run
+whose output shows each failing on an assertion, which the DISTILL review reads. The inner loop is the unit RED → GREEN → REFACTOR cycle, which
 the `software-engineer` runs in DELIVER without committing it.
 
 The story itself opens on a wider outer loop, its [walking skeleton](walking-skeleton.md): a
@@ -47,18 +46,18 @@ it failing with the acceptance tests; the green of the group holding S1 makes bo
 later green keeps the walking skeleton green. Each scenario's acceptance test, S1's included, enters through the use case.
 
 ```text
-┌─ Outer loop (acceptance, group g) ───────────────────────────┐
+┌─ Outer loop (acceptance, every group in plan order) ─────────┐
 │  RED  : DISTILL commits every scenario's test, failing, once  │
-│         → test(<story>): acceptance tests S1–Sn  (replayed)   │
+│         → test(<story>): acceptance tests S1–Sn               │
 │   ┌─ Inner loop (unit, not committed) ────────────────────┐  │
 │   │  RED → a unit test fails                                │  │
 │   │  GREEN → minimal implementation that makes it pass      │  │
 │   │  REFACTOR → clean up without changing behaviour         │  │
 │   └─────────────────────────────────────────────────────────┘ │
 │  GREEN : the group's acceptance scenarios pass                │
-│         → feat(<story>): <rule>   (replayed: later fail only) │
+│         → feat(<story>): <rule>   (later groups still fail)   │
 └──────────────────────────────────────────────────────────────┘
-then group g+1
+then the next group, in the same dispatch
 ```
 
 Concretely, the `software-engineer` creates an interface only when a unit test needs it to

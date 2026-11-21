@@ -86,7 +86,7 @@ These are the plugin's defaults; a team overrides them per component in `skraft-
 ([infrastructure policy](../../reference/skraft-config.md#infrastructure)). A React front end
 carries no walking skeleton of its own: its targeted tests stand in for the back end with MSW,
 its Playwright end-to-end tests run against Microcks. A test that needs a container never runs
-without one: with neither Docker nor Podman answering, the replay judge asks a human to start one
+without one: with neither Docker nor Podman answering, the agent stops, blocked, asking a human to start one
 and the run waits.
 
 Not every story opens a new path. One that adds no entry point declares why under the table:

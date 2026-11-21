@@ -64,10 +64,9 @@ flowchart TD
 | `baseBranch` | string | absent (the base falls back to `main`) | git ref: no blank, does not start with `-`; `null` counts as absent |
 | `forge` | string | absent (deduced from the Git remote, see [Forge](#forge)) | `github` or `azure-devops`; `null` counts as absent. A value you write always wins over the remote |
 | `components` | array of objects | `[]` | each entry is a component (below) |
-| `tdd` | object | `{ "replay": "all" }` | `{ "replay": "all" }`, `{ "replay": "last-red" }`; `replay` absent or `null` counts as `all`; see [tdd](#tdd) |
 | `publish` | object | `{}` | see [publish](#publish) |
 | `models` | object | the plugin's Claude Code aliases per tier | model family → `tier` and, per host (`claude-code`, `copilot`), `{ "model": name or list, "effort": level }`; a name is one word of letters, digits, `.`, `_` and `-`, a letter or a digit first, no space, and a list holds at least one (any other value is refused: `models.<family>.<host>.model must be a model name or a non-empty list of model names, tried in order (…)`); see [Choose the agents' models](../how-to/choose-models.md) |
-| `assign` | object | lenses `reviewer`, workers `implementer`, `solution-researcher` `researcher`, `solution-architect` `planner`, `pr-writer` `economy`, `replay-judge` `standard`, default `implementer` | `{ "default", "types", "agents" }`: a family, `inherit`, or `{ "family", "<host>": { "effort" } }`; also read from `~/.skraft/config.json` and `skraft-config.local.json` |
+| `assign` | object | lenses `reviewer`, workers `implementer`, `solution-researcher` `researcher`, `solution-architect` `planner`, `pr-writer` `economy`, default `implementer` | `{ "default", "types", "agents" }`: a family, `inherit`, or `{ "family", "<host>": { "effort" } }`; also read from `~/.skraft/config.json` and `skraft-config.local.json` |
 | `rank`, `workflow` | — | — | refused: `rank is no key: …`, `workflow is no key: …` |
 | `configurationConfirmed` | boolean | `false` | in `skraft-config.local.json` only (refused in this file and in `~/.skraft/config.json`). Written `true` by the engine when you answer START to *Start this run with the configuration of this working copy?*, which a Copilot run asks before its first phase while it is absent, and again with `configure: true`. The Configuration tab of the skraft canvas edits the forge, the components and the consents of this file and the `assign` and `models` of `skraft-config.local.json`, checked as a run loads them |
 | any other key | any | — | kept as is, never read or rewritten |
@@ -129,20 +128,6 @@ Docker or Podman runs`. Only `skraft-config.json` holds `infrastructure`, as eve
 { "name": "api", "root": "services/payment-api", "stack": "dotnet",
   "infrastructure": { "internalGateway": { "walkingSkeleton": "in-memory" } } }
 ```
-
-## `tdd` <!-- #tdd -->
-
-| Key | Value | Effect |
-| --- | --- | --- |
-| `replay` | `all` (default) | the engine replays each red commit of an acceptance test (`test(<story>): …`, DISTILL) with its component's `test` command, and the replay judge reads what it printed ([Commits and replays](./gates.md#commits)) |
-| `replay` | `last-red` | only the last red commit of each story (same commit scope) is replayed |
-| `replay` | `null` | counts as `all` |
-
-With `all`, when the replays take more than 20 % of a phase's duration, the engine journals
-`tdd.replay-slow` once per phase and prints `<slug>: replaying test commits took N% of <PHASE>;
-set "tdd": { "replay": "last-red" } in skraft-config.json to replay only the last test commit of
-each story`. Any other value: `tdd must be { "replay": "all" or "last-red" }`. The replay of a
-scenario's green commit does not depend on this key.
 
 ## `publish` <!-- #publish -->
 
@@ -258,7 +243,6 @@ otherwise.
 | not an object | `skraft-config.json must hold a JSON object` |
 | global `baseBranch` | `baseBranch must be a git ref, got <JSON value>` |
 | `forge` | `forge must be "github" or "azure-devops"` |
-| `tdd` | `tdd must be { "replay": "all" or "last-red" }` |
 | `publish` | `publish must be an object of visuals, pullRequest, reviewComment and draft, each true or false`; `publish.questionVersions must be an object of visuals, pullRequest and reviewComment, each a whole number from 1` |
 | `rank`, `workflow` | `rank is no key: …`; `workflow is no key: …` |
 | `components` outside `skraft-config.json` | `components belongs in skraft-config.json, never in <file>` |

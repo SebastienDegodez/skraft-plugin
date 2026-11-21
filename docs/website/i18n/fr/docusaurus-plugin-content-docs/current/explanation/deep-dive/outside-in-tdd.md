@@ -37,10 +37,9 @@ boucle externe (acceptation) qui encadre une boucle interne (unitaire).
 
 ## Application dans SKRAFT
 
-Le pipeline applique la **double boucle**, un groupe de scénarios à la fois. La boucle externe est le
-scénario d'acceptation : DISTILL commite en un commit le test en échec de chacun, le moteur rejoue
-ce commit, et le [juge du rejeu](pathname:///dashboard/#agent-replay-judge) lit le log du rejeu
-pour confirmer que chacun échoue sur une assertion. La boucle interne est le cycle RED → GREEN → REFACTOR
+Le pipeline applique la **double boucle**, un seul passage pour toute la story. La boucle externe est le
+scénario d'acceptation : DISTILL commite en un commit le test en échec de chacun, après un
+lancement dont la sortie montre chacun échouant sur une assertion, que lit la revue DISTILL. La boucle interne est le cycle RED → GREEN → REFACTOR
 unitaire, que le `software-engineer` tourne en DELIVER sans le commiter.
 
 La story elle-même s'ouvre sur une boucle externe plus large, son
@@ -50,18 +49,18 @@ groupe qui tient S1 les fait passer tous deux, et chaque vert suivant garde le w
 d'acceptation de chaque scénario, S1 compris, entre par le cas d'usage.
 
 ```text
-┌─ Boucle externe (acceptation, groupe g) ─────────────────────┐
+┌─ Boucle externe (acceptation, chaque groupe dans l'ordre du plan) ┐
 │  RED  : DISTILL commite le test de chaque scénario, une fois  │
-│         → test(<story>): acceptance tests S1–Sn  (rejoué)     │
+│         → test(<story>): acceptance tests S1–Sn               │
 │   ┌─ Boucle interne (unitaire, non commitée) ─────────────┐  │
 │   │  RED → un test unitaire échoue                         │   │
 │   │  GREEN → implémentation minimale qui le fait passer    │   │
 │   │  REFACTOR → on nettoie sans changer le comportement    │   │
 │   └────────────────────────────────────────────────────────┘  │
 │  GREEN : les scénarios d'acceptation du groupe passent        │
-│         → feat(<story>): <règle>  (rejoué : suivants rouges)  │
+│         → feat(<story>): <règle>  (les groupes suivants restent rouges) │
 └──────────────────────────────────────────────────────────────┘
-puis le groupe g+1
+puis le groupe suivant, dans le même passage
 ```
 
 Concrètement, le `software-engineer` ne crée une interface que lorsqu'un test unitaire en a

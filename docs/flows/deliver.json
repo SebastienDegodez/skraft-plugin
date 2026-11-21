@@ -54,10 +54,9 @@
       "y": 86,
       "w": 304,
       "h": 82,
-      "each": "scenario",
       "role": {
-        "fr": "Fait passer chaque scénario au vert en un seul commit, après le rouge que DISTILL commite pour lui ; le moteur rejoue l'un et l'autre.",
-        "en": "Makes each scenario pass in one green commit, after the red DISTILL commits for it; the engine replays both."
+        "fr": "Fait passer chaque groupe de scénarios au vert dans l'ordre du plan, en un seul passage et un commit par groupe, après le rouge que DISTILL a commité.",
+        "en": "Makes each group of scenarios pass in plan order, in one dispatch and one commit per group, after the red DISTILL committed."
       },
       "in": [
         {
@@ -67,8 +66,8 @@
       ],
       "out": [
         {
-          "fr": "un vert par scénario",
-          "en": "one green per scenario"
+          "fr": "un vert par groupe",
+          "en": "one green per group"
         }
       ]
     },

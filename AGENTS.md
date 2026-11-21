@@ -66,7 +66,7 @@ docs/website/      ← handbook (Docusaurus): book.yml (structure contract), doc
   run as a session's main agent, may dispatch `refactoring-worker`, and that worker dispatches no
   one.
 - Checks live in the engine, not in hooks or prose: phase order, expected outputs, write scope
-  (git diff per step), gates, review verdict, TDD red/green commits.
+  (git diff per step), gates, review verdict, TDD commit order and kinds; no replay.
 - Engine code never calls an MCP server: a server is a tool for an agent. The engine reads and
   writes the forge only through its command line, `gh` (GitHub) or `az` (Azure DevOps), with no
   fallback between them; an issue it cannot read refuses the run.
