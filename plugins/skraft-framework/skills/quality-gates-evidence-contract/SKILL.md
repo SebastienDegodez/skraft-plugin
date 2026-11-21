@@ -27,12 +27,9 @@ One directory per story, never shared with another story:
 ├── qg-tests.stdout                       # captured tool stdout (referenced by sha256)
 ├── qg-tests.exit                         # captured exit code
 ├── qg-build.stdout / qg-build.exit
-├── qg-mutation.*                         # core mutation gate (stdout, exit, report, manifest)
-├── qg-mutation-boundary.*                # boundary mutation gate
+├── qg-mutation.*                         # G6 mutation gate (stdout, exit, reports, manifest)
 ├── qg-mocks.stdout                       # G7 scan output — empty on pass
 ├── qg-coverage.*                         # G11 coverage gate
-├── qg-red-{cycle}.stdout                 # captured stdout of the RED run (referenced by sha256)
-├── qg-red-{cycle}.exit                   # captured exit code of the RED run (non-zero)
 └── snapshots/
     ├── red-{cycle}-{test-file-basename}  # test file at RED commit
     └── green-{cycle}-{test-file-basename} # same test file at GREEN commit
@@ -49,7 +46,7 @@ read-only mode.
 
 ```json
 {
-  "$schema": "quality-gates-evidence/v4",
+  "$schema": "quality-gates-evidence/v6",
   "story": "string — story identifier (e.g. eligibilite-trottinette)",
   "produced_at": "ISO-8601 UTC timestamp",
   "producer": "software-engineer",
@@ -68,7 +65,7 @@ read-only mode.
     {
       "id": "G1",
       "label": "Acceptance test(s) pass",
-      "status": "pass | fail | not_applicable",
+      "status": "pass | fail | not_applicable | not_run (G6 only)",
       "command_executed": "verbatim shell command string",
       "exit_code_ref": "evidence/{date}/{story}/qg-tests.exit",
       "stdout_ref": "evidence/{date}/{story}/qg-tests.stdout",
@@ -91,10 +88,7 @@ read-only mode.
         "red_commit": "sha of the test commit that holds the scenario's acceptance test, RED",
         "green_commit": "sha of the scenario's green commit that makes it pass",
         "red_snapshot_ref": "evidence/{date}/{story}/snapshots/red-1-SomeTests.ext",
-        "green_snapshot_ref": "evidence/{date}/{story}/snapshots/green-1-SomeTests.ext",
-        "red_stdout_ref": "evidence/{date}/{story}/qg-red-1.stdout",
-        "red_stdout_sha256": "hex sha256 of the RED stdout file",
-        "red_exit_code_ref": "evidence/{date}/{story}/qg-red-1.exit"
+        "green_snapshot_ref": "evidence/{date}/{story}/snapshots/green-1-SomeTests.ext"
       }
     ]
   }
@@ -113,29 +107,31 @@ they do NOT invent new ones. Adding a gate id is a contract change (new schema v
 | G3 | Build passes | compilation / static type-check succeeded |
 | G4 | Static analysis pass | linter / analyzer reported no blocking issue |
 | G5 | Architecture rules pass | dependency-direction tests pass (Clean Architecture) |
-| G6 | Mutation score meets the bar | one entry per scope, `"scope": "core"` and `"scope": "boundary"`: the mutation runner, reading the break threshold from the checked-in config of that scope, exited 0 |
+| G6 | Mutation score meets the bar | one global entry: `mutation-testing`'s gate ran every `commands.mutation` the developer declared and exited 0; `not_run` when it exited 3 (no command declared) |
 | G7 | No mocks in Domain/Application core | the adapter's scan of the Domain/Application projects and their unit tests printed nothing |
 | G8 | Conventional commit policy | each exact covered commit's full Git message satisfies feature scope, optional issue reference and sign-off under the shared policy below |
 | G9 | No test tampering (RED→GREEN integrity) | for every cycle, the test file changed only by ADDITION between RED and GREEN snapshots |
 | G11 | Line coverage meets the bar | the adapter's coverage run over Domain and Application exited 0 (the bar is inside the adapter, never a caller argument) |
-| G10 | RED observed | for every cycle, the test was actually RUN and FAILED before the implementation landed: captured RED stdout hashed by sha256, and a NON-zero exit code recorded — both captured at RED time |
 
-G10 is the one gate whose substrate does NOT live in its own `gates[]` entry: that entry carries
-`status` (and `rationale`) only, while the evidence sits in the per-cycle
-`test_integrity.cycles[].red_*` fields — so the generic `gates[].exit_code_ref` rule
-(content MUST be `0` for `status: "pass"`) does not apply to G10, whose expectation is the
-exact inverse.
+There is no G10. The RED of a scenario is its `test` commit: the acceptance test, committed
+before the code that makes it pass. No RED run is captured.
 
 A cycle is one scenario of the story, numbered by its rank in the implementation plan: its
 acceptance test file at the `test` commit that holds it RED (DISTILL's or the engineer's for
 scenario 1) and at the
-green commit that makes it pass, and the captured RED run of that acceptance test. The inner
+green commit that makes it pass. The inner
 unit-test cycles of a scenario are not committed and get no cycle entry; their tests land in the
 scenario's green commit.
 
 A gate that is genuinely irrelevant for the story uses `status: "not_applicable"` and
 MUST include a `rationale` field explaining why. `not_applicable` is **never** a substitute
 for `fail` or for missing evidence.
+
+G6 alone may be `status: "not_run"`, with a `rationale`, when the mutation gate exited 3: no
+component declares `commands.mutation`, and mutation is the developer's responsibility. Cite
+`qg-mutation.stdout` and `qg-mutation.exit` like any gate. `not_run` never stands for a failed
+or crashed run: a declared command that fails is `fail`. `qg-verify` passes it and reports a
+`notice` (`G6_NOT_RUN`) so the report shows it.
 
 ## Falsification surface (what qg-verify checks)
 
@@ -158,8 +154,6 @@ quality-gates lens reports its verdict and checks only the commit policy it cann
 | `test_integrity.cycles[].red_snapshot_ref` | file MUST exist; content MUST equal `git show {red_commit}:{test_file}` |
 | `test_integrity.cycles[].green_snapshot_ref` | same against `green_commit` |
 | RED→GREEN diff | computed by the lens: any line REMOVED or MUTATED in an existing test → G9 violation; only ADDED lines are allowed |
-| `test_integrity.cycles[].red_stdout_ref` | file MUST exist; re-hash MUST equal `red_stdout_sha256` |
-| `test_integrity.cycles[].red_exit_code_ref` | file MUST exist; for G10 `status: "pass"` content MUST be NON-zero — a `0` means the test never failed |
 
 ## G8 — Full-message verification
 
@@ -182,7 +176,6 @@ messages. A verified violation is `fail`; a message nobody can read is `inconclu
 - Tool stdout/exit are captured by the stack adapter's bundled `capture.mjs` (or its gate scripts), never transcribed.
 - `stdout_sha256` comes from the `.stdout.sha256` file that capture writes, never asserted from memory.
 - Snapshots are written by the adapter's `snapshot.mjs` from `git show <commit>:<path>`, never copy-pasted.
-- The RED stdout and its exit code are captured **at RED**, before the implementation lands — they cannot be reconstructed afterwards (G10).
 - A failing gate yields `status: "fail"` AND the file is still written. Do NOT suppress the log to hide a failure — a missing log is `inconclusive` (NEEDS_REWORK), so hiding fails harder than disclosing.
 
 ## Verifier rules (qg-verify)
@@ -196,12 +189,13 @@ messages. A verified violation is `fail`; a message nobody can read is `inconclu
   - a `stdout_sha256` does not match the file content
   - a snapshot does not match `git show {commit}:{path}`
   - G8 actual message or completion claim cannot be independently verified with available tools
+- G6 `not_run` with a rationale in a v5 or v6 log → `pass`, with a `notice` finding; without a
+  rationale → `inconclusive`; `not_run` on any other gate or schema → `inconclusive`
 - Any of the following → `verdict: fail`:
   - a gate has `status: "fail"`
   - `metrics.tests_failed > 0` while `status: "pass"` (internal contradiction)
   - an actual covered commit message violates the shared G8 policy
   - G9 diff shows a line REMOVED or MUTATED in an existing test between RED and GREEN snapshots
-  - G10: a cycle records a zero exit code for its RED run
   - `commits_covered[].sha` does not resolve in Git
   - `files_changed` lists a path absent from the actual commit diff
   - a commit made since the DELIVER base is missing from `commits_covered`
@@ -210,10 +204,16 @@ messages. A verified violation is `fail`; a message nobody can read is `inconclu
 
 ## Schema versioning
 
-`$schema: "quality-gates-evidence/v4"` is part of the contract. Bump the version
+`$schema: "quality-gates-evidence/v6"` is part of the contract. Bump the version
 when adding/removing gates or fields; old logs MUST still be parseable with their
 declared version.
 
+- **v6** — removes gate `G10` and the per-cycle fields `red_stdout_ref`, `red_stdout_sha256`,
+  `red_exit_code_ref`: the `test` commit is the RED, so no RED run is captured. G6 may still be
+  `not_run`. v2–v5 logs still verify their G10.
+- **v5** — G6 is one global entry again: the developer's declared mutation commands, judged
+  together against one bar. G6 alone may be `not_run`, with a rationale, when no command is
+  declared. v4 logs still verify with their two scoped entries.
 - **v4** — G6 is recorded once per mutation scope with a `scope` field (`core`, `boundary`);
   its runner reads the break threshold from the checked-in config, so no `--break-at` flag is
   expected in `command_executed`. Evidence lives in one directory per story.

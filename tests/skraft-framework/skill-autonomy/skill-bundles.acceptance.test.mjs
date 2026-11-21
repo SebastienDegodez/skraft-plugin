@@ -13,6 +13,8 @@ const suites = {
 		files: ['../reporting/report-cli.acceptance.test.mjs', '../reporting/report-mcp-cli.acceptance.test.mjs', '../reporting/report-mcp-recovery.acceptance.test.mjs'],
 		cli: 'cli/report.mjs',
 	},
+	'src/cli/mutation-gate.mjs': { variable: 'SKRAFT_MUTATION_GATE_CLI', files: ['../quality-gates/mutation-gate.acceptance.test.mjs'], cli: 'cli/mutation-gate.mjs' },
+	'src/cli/skraft-init.mjs': { variable: 'SKRAFT_INIT_CLI', files: ['../configuration/skraft-init.acceptance.test.mjs'], cli: 'cli/skraft-init.mjs' },
 }
 
 for (const { entry, targets } of BUNDLES) {

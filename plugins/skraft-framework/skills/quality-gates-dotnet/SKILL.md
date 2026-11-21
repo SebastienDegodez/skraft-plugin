@@ -1,6 +1,6 @@
 ---
 name: quality-gates-dotnet
-description: Use when the active repository is a .NET solution (`.sln` / `.csproj` present) and the software-engineer must produce falsifiable evidence for the quality gates. Most gates are captured once, after the story's last work commit; the G10 RED capture is taken **at RED**, before any production code, and cannot be reconstructed later. Provides the concrete `dotnet` / `stryker` commands and how their outputs map onto the tech-agnostic schema.
+description: Use when the active repository is a .NET solution (`.sln` / `.csproj` present) and the software-engineer must produce falsifiable evidence for the quality gates. Every gate is captured once, after the story's last work commit. Provides the concrete `dotnet` commands and how their outputs map onto the tech-agnostic schema. Mutation (G6) is the developer's, run through `mutation-testing`.
 ---
 
 # Quality Gates — .NET Adapter
@@ -76,79 +76,11 @@ If absent, mark G5 `status: "not_applicable"` with `rationale: "no architecture 
 
 ## G6 — Mutation score
 
-Mutation configuration is repository infrastructure, not an ephemeral agent command.
-Scaffold it once from this adapter, review it, and commit both root files. The script
-discovers scope inputs, then delegates JSON generation and defaults to official
-`dotnet stryker init`; it does not hand-render Stryker's schema:
-
-```bash
-node "<skill>/scripts/configure-mutation.mjs" --root .
-```
-
-The configure script writes:
-
-- `stryker-config-core.json` — whole solution, Domain/Application source globs, 100.
-- `stryker-config-boundary.json` — whole solution, API/Infrastructure source globs, 80.
-
-Canonical mode requires `.Domain`, `.Application`, `.API`, and `.Infrastructure`
-projects. Multiple bounded contexts are allowed. If one solution cannot be selected
-unambiguously, pass `--solution`. For a BFF/non-standard layout, never invent missing
-projects; pass explicit source globs for both scopes:
-
-```bash
-node "<skill>/scripts/configure-mutation.mjs" --root . --solution Storefront.sln --core-mutate "**/Storefront/Core/**/*.cs" --boundary-mutate "**/Storefront/Adapters/**/*.cs"
-```
-
-Generation is idempotent. A differing existing config is preserved; `--force` is
-allowed only after reviewing why regeneration should replace customization. Never add
-`ignore-mutations` or broad exclusions to buy a score.
-
-### Gate execution and evidence
-
-Run checked-in configs through bundled wrappers. Each wrapper validates its config,
-passes the whole solution to Stryker once, captures the aggregate JSON report, and
-returns the gate verdict as its exit code. The verdict is the score recomputed from the
-tested mutants: a report with zero mutants, a mutant no test ran against, or a full run
-with no tested mutant fails. The last stdout line states the score or the failure:
-
-```bash
-node "<skill>/scripts/mutation-core.mjs" --root . --evidence "$EV" --since "$BASE"
-node "<skill>/scripts/mutation-boundary.mjs" --root . --evidence "$EV" --since "$BASE"
-```
-
-`BASE` is `phaseHistory.DELIVER.baseSha` from `state.mjs get --field phaseHistory`. `--since`
-mutates every file changed from that commit through the working tree; drop it only when no
-base is recorded. A scope the story did not change passes with `No … mutant changed`. The
-manifest records the `since` ref.
-
-Core MUST pass before boundary starts. `--config <path>` may select an equivalent custom
-location. `--expected` is refused. Do NOT read a report score and judge it in prose.
-
-Populate two G6 entries, one per scope:
-
-- `{ "id": "G6", "scope": "core", … }` — `command_executed` the core line above,
-  `stdout_ref` / `exit_code_ref` = `evidence/{date}/{story}/qg-mutation.stdout` / `.exit`,
-  `stdout_sha256` = contents of `qg-mutation.stdout.sha256`;
-- `{ "id": "G6", "scope": "boundary", … }` — same with `qg-mutation-boundary.*`.
-  A solution without API/Infrastructure projects records the boundary entry
-  `not_applicable` with its rationale.
-
-### Cadence
-
-- Run no mutation inside a TDD cycle.
-- Once, after the story's last work commit: the core then boundary wrapper runs
-  `--since "$BASE"` into `$EV`. Those two runs are the G6 evidence.
-
-### Local debugging
-
-Developers can invoke the same root config directly; a narrow `--mutate` override is
-diagnostic only.
-
-```bash
-dotnet stryker --config-file stryker-config-core.json
-dotnet stryker --config-file stryker-config-boundary.json
-```
-
+Mutation testing is the developer's responsibility: this adapter runs no mutation tool and
+ships no mutation config. Load `mutation-testing` and run its gate once, after the story's last
+work commit; it runs the `commands.mutation` the developer declared in `skraft-config.json` and
+judges the report. Exit 3 means none is declared: record G6 `not_run`, never `pass`, and tell
+the developer.
 
 ## G7 — No mocks in Domain/Application
 
@@ -200,52 +132,34 @@ the contract. The lens diffs the two snapshots and FAILS G9 if any line was
 removed or mutated in a pre-existing assertion (only additions are allowed —
 that is the Iron Rule of Tests, mechanically verifiable).
 
-## G10 — RED observed
-
-For every scenario, capture the failing run of its acceptance test **at RED**, before the
-scenario's implementation lands. Run the G1/G2 test command narrowed to that acceptance test:
-
-```bash
-# at RED, for scenario {cycle} of story {story} — BEFORE writing its implementation:
-node "<skill>/scripts/capture.mjs" --evidence "$EV" --name qg-red-{cycle} -- dotnet test --nologo --filter "FullyQualifiedName~SomeAcceptanceTests"
-```
-
-This capture CANNOT be reconstructed afterwards: once the implementation is in,
-the same command returns green. Run it while the cycle is red or the evidence
-does not exist.
-
-Populate the matching entry of `test_integrity.cycles[]`:
-
-- `red_stdout_ref` = `evidence/{date}/{story}/qg-red-{cycle}.stdout`
-- `red_stdout_sha256` = contents of `qg-red-{cycle}.stdout.sha256`
-- `red_exit_code_ref` = `evidence/{date}/{story}/qg-red-{cycle}.exit`
-
-G10's `gates[]` entry carries `status` (and `rationale`) **only** — no
-`command_executed`, no `exit_code_ref`. One story runs N RED commands but has a
-single gate entry, and the generic "exit code MUST be `0` for pass" rule is
-inverted here; the per-cycle `red_*` fields above are where its evidence lives.
-
-The recorded exit code MUST be NON-zero: a `0` means the test never failed and
-G10 is `status: "fail"`. G10 attests the RED *run*, nothing about commit SHAs —
-G9 keeps the commit/snapshot job unchanged.
-
 ## Producer flow at the end of the story
 
-1. Run G1/G2, G3 (if separate), G4 (if separate), G5, G6 core then boundary, G7, G11 —
+One command runs the whole flow below — every gate, the snapshots, `commits_covered`, the log,
+its evidence-only commit and `qg-verify` — and exits with `qg-verify`'s verdict:
+
+```bash
+node "<skill>/scripts/qg-collect.mjs" --root . --evidence "$EV" --story {story} --feature {feature} \
+  --base {DELIVER baseSha} --mutation-gate "<mutation-testing skill>/scripts/mutation-gate/cli/mutation-gate.mjs" \
+  --cycle 1:{red sha}:{green sha}:{acceptance test file} --cycle 2:…
+```
+
+One `--cycle` per scenario that has a green commit, numbered by its rank in the plan; its red is
+the `test` commit holding its acceptance test. It prints one line per gate, then the verdict. A
+`fail` or `inconclusive` is yours to fix: fix the code or the cycles, then run it again. By hand,
+the same flow is:
+
+1. Run G1/G2, G3 (if separate), G4 (if separate), G5, G6 (`mutation-testing`'s gate), G7, G11 —
    each through `capture.mjs` or its script, which write stdout, exit code and hash into `$EV`.
 2. For each scenario, write the RED + GREEN snapshots with `snapshot.mjs --rev`.
-3. For each scenario, check the G10 RED captures taken at RED time are present in `$EV`
-   (`qg-red-{cycle}.stdout` / `.exit` / `.stdout.sha256`) with a non-zero exit. They are
-   NOT re-runnable here — a missing capture is `status: "fail"`, never `not_applicable`.
-4. `repo_root_rev = git rev-parse HEAD` — the last work commit.
-5. Build `commits_covered[]` from `git log --format='%H%x09%s' {DELIVER baseSha}..HEAD` and
+3. `repo_root_rev = git rev-parse HEAD` — the last work commit.
+4. Build `commits_covered[]` from `git log --format='%H%x09%s' {DELIVER baseSha}..HEAD` and
    `git show --name-only --format= <sha>` per commit: every commit since DELIVER started.
-6. Assemble `$EV/qg-{story}.json` per `quality-gates-evidence-contract` (v4).
-7. Commit `$EV` alone: `git add "$EV" && git commit -s -m 'chore({feature}): record quality evidence for {story}'`.
-8. `node "<skill>/scripts/qg-verify/cli/qg-verify.mjs" --log "$EV/qg-{story}.json"` must print
+5. Assemble `$EV/qg-{story}.json` per `quality-gates-evidence-contract` (v6).
+6. Commit `$EV` alone: `git add "$EV" && git commit -s -m 'chore({feature}): record quality evidence for {story}'`.
+7. `node "<skill>/scripts/qg-verify/cli/qg-verify.mjs" --log "$EV/qg-{story}.json"` must print
    `"verdict": "pass"`; otherwise fix the gate or the log, never the verifier's input.
 
-If a tool is unavailable in the environment (no Stryker installed, no SDK), the
+If a tool is unavailable in the environment (no SDK), the
 gate is `status: "fail"` with the captured stderr — NOT `not_applicable`. The
 contract treats unverifiable gates strictly so the lens can collapse them to
 `inconclusive` upstream.

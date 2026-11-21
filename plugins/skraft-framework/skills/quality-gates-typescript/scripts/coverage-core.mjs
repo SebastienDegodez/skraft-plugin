@@ -1,12 +1,13 @@
 #!/usr/bin/env node
-// G11 for TypeScript: line coverage of the core sources named by the core Stryker config,
-// measured by Vitest's v8 provider over the whole suite. The bar (100%) lives here.
+// G11 for TypeScript: line coverage of the core sources (every production source under a folder
+// whose last word is domain or application), measured by Vitest's v8 provider over the whole
+// suite. The bar (100%) lives here.
 import { realpathSync } from 'node:fs'
 import { mkdir, readFile, rm, writeFile } from 'node:fs/promises'
 import { join, relative, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { coverageVerdict, hasRuntimeCode, matchSources, noCoverHits, parseArgs, requiredFiles, validateConfig } from './gate-policy.mjs'
-import { ensure, inside, loadScope, majorOf, packageRoot, packageVersion, repositoryRoot, resolveBin, runNode, sha256 } from './ts-toolchain.mjs'
+import { coreRoots, coreSourceFiles, coverageVerdict, hasRuntimeCode, noCoverHits, parseArgs } from './gate-policy.mjs'
+import { ensure, inside, majorOf, packageRoot, packageVersion, repositoryRoot, resolveBin, runNode, sha256, sourceFiles } from './ts-toolchain.mjs'
 
 export async function runCoverageGate(input, { run = runNode } = {}) {
 	const lines = []
@@ -25,16 +26,16 @@ export async function runCoverageGate(input, { run = runNode } = {}) {
 		const providerVersion = packageVersion(pkg, '@vitest/coverage-v8')
 		ensure(majorOf(providerVersion) === majorOf(vitestVersion), `@vitest/coverage-v8 ${providerVersion} does not match vitest ${vitestVersion}`)
 		const vitest = resolveBin(pkg, 'vitest')
-		const scope = await loadScope({ root, pkg, config: input.config ?? 'stryker.core.json', scope: 'core', validate: validateConfig, match: matchSources, required: requiredFiles })
+		const all = await sourceFiles(pkg)
+		const scope = { files: coreSourceFiles(all) }
+		ensure(scope.files.length > 0, 'No Domain or Application source: the core is every source under a folder whose name ends with domain or application')
 		exitCode = 1
 
 		const reports = join(prefix, 'coverage')
 		const args = [
 			'run', '--coverage.enabled', '--coverage.provider=v8', '--coverage.reporter=json-summary',
 			`--coverage.reportsDirectory=${relative(pkg, reports).split('\\').join('/')}`,
-			...scope.options.mutate.map((pattern) => `--coverage.include=${pattern}`),
-			...(scope.options.vitest.configFile ? ['--config', scope.options.vitest.configFile] : []),
-			...(scope.options.vitest.dir ? ['--dir', scope.options.vitest.dir] : []),
+			...coreRoots(all).map((folder) => `--coverage.include=${folder}/**`),
 		]
 		const result = await run(vitest, args, { cwd: pkg, stdout: join(prefix, 'run.stdout') })
 		const output = await readFile(join(prefix, 'run.stdout'), 'utf8')
@@ -71,7 +72,7 @@ export async function runCoverageGate(input, { run = runNode } = {}) {
 async function main() {
 	let result
 	try {
-		const input = parseArgs(process.argv.slice(2), { options: ['root', 'package', 'evidence', 'config', 'threshold'] })
+		const input = parseArgs(process.argv.slice(2), { options: ['root', 'package', 'evidence', 'threshold'] })
 		for (const required of ['root', 'evidence']) ensure(input[required], `--${required} is required`)
 		result = await runCoverageGate(input)
 	} catch (error) {

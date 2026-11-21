@@ -213,9 +213,9 @@ describe('Vally real-agent executor', () => {
     strictEqual(calls.clientOptions[0].env.SKRAFT_GATE_FIXTURE, 'canonical')
     deepStrictEqual(calls.prompts, turns.map((prompt) => ({ prompt })))
     deepStrictEqual(calls.sessions[0].availableTools, [
-      'builtin:skill', 'builtin:glob', 'builtin:grep', 'builtin:view', 'builtin:edit', 'builtin:bash',
+      'builtin:skill', 'builtin:glob', 'builtin:grep', 'builtin:view', 'builtin:create', 'builtin:edit', 'builtin:bash',
     ])
-    deepStrictEqual(calls.sessions[0].customAgents[0].tools, ['skill', 'glob', 'grep', 'view', 'edit', 'bash'])
+    deepStrictEqual(calls.sessions[0].customAgents[0].tools, ['skill', 'glob', 'grep', 'view', 'create', 'edit', 'bash'])
     match(calls.sessions[0].customAgents[0].prompt, /The prepared project workspace is \/tmp\/work/)
     match(calls.sessions[0].customAgents[0].prompt, /Use workspace-relative paths/)
     strictEqual(trajectory.output, [
@@ -276,9 +276,9 @@ describe('Vally real-agent executor', () => {
     strictEqual(config.agent, 'software-engineer-reviewer')
     deepStrictEqual(config.customAgents.map(({ name }) => name), ['software-engineer-reviewer', ...lenses])
     deepStrictEqual(config.customAgents.map(({ infer }) => infer), [undefined, undefined, undefined, undefined, undefined])
-    deepStrictEqual(config.customAgents[0].tools, ['skill', 'glob', 'grep', 'view', 'edit', 'bash', 'task'])
+    deepStrictEqual(config.customAgents[0].tools, ['skill', 'glob', 'grep', 'view', 'create', 'edit', 'bash', 'task'])
     deepStrictEqual(config.availableTools, [
-      'builtin:skill', 'builtin:glob', 'builtin:grep', 'builtin:view', 'builtin:edit', 'builtin:bash', 'builtin:task',
+      'builtin:skill', 'builtin:glob', 'builtin:grep', 'builtin:view', 'builtin:create', 'builtin:edit', 'builtin:bash', 'builtin:task',
     ])
     deepStrictEqual(trajectory.metadata.subagents.map(({ id }) => id), lenses)
     deepStrictEqual(trajectory.metadata.skillsConfigured, ['adversarial-review-lenses', 'qa-reporting'])
@@ -409,8 +409,8 @@ describe('Vally real-agent executor', () => {
     strictEqual(existsSync(join(pluginRoot, 'assets', 'templates')), true)
     strictEqual(existsSync(join(pluginRoot, 'src', 'cli', 'state.mjs')), true)
     // A skill's scripts ship under the plugin root, as in an install; its text never does.
-    strictEqual(existsSync(join(pluginRoot, 'skills', 'quality-gates-dotnet', 'scripts', 'configure-mutation.mjs')), true)
-    strictEqual(existsSync(join(pluginRoot, 'skills', 'quality-gates-javascript', 'scripts', 'run-gates.mjs')), true)
+    strictEqual(existsSync(join(pluginRoot, 'skills', 'quality-gates-dotnet', 'scripts', 'coverage-core.mjs')), true)
+    strictEqual(existsSync(join(pluginRoot, 'skills', 'mutation-testing', 'scripts', 'mutation-gate', 'cli', 'mutation-gate.mjs')), true)
     strictEqual(readdirSync(pluginRoot, { recursive: true }).some(path => path.endsWith('SKILL.md') || path.split(sep).includes('references')), false)
     strictEqual(existsSync(join(pluginRoot, 'com.anthropic.claude-code')), false)
     // The state contract ships as in an install; the descriptors never do.

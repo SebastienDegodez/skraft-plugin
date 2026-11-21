@@ -57,8 +57,10 @@ const wilcoxonCell = (verdict) => {
 const graderCell = (verdict) => {
   const scores = verdict.graderScores
   if (!scores) return signedFixed(verdict.metrics?.quality?.delta)
-  const delta = scores.skilledMean - scores.baselineMean
-  return `${scores.baselineMean.toFixed(3)} → ${scores.skilledMean.toFixed(3)} (${signedFixed(delta)})`
+  const { baselineMean, skilledMean } = scores
+  const delta = baselineMean == null || skilledMean == null ? null : skilledMean - baselineMean
+  const mean = (value) => (value == null ? '—' : value.toFixed(3))
+  return `${mean(baselineMean)} → ${mean(skilledMean)} (${signedFixed(delta)})`
 }
 
 const efficiencyCell = (verdict) => {

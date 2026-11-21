@@ -60,6 +60,8 @@ Mutation Score measures test suite effectiveness, not just code coverage. Mutati
 
 In the DELIVER phase, the Mutation Score serves as a quality gate: an insufficient score blocks the reviewer's PASS verdict.
 
+**Mutation testing is the developer's responsibility.** It must be done on every story, with the tool of your choice: SKRAFT ships no mutation tool, config or scaffold. Declare per component in `skraft-config.json` the command that runs your tool (`components[].commands.mutation`); it writes its scores as JSON to the file named by `SKRAFT_MUTATION_RESULT`, with its surviving mutants as `file:line detail` lines unless the team turns them off — `core` and `boundary` for Clean Architecture, `global` for a single project. The `mutation-testing` skill's gate runs it and holds every scope to 80%. With no command declared, G6 does not run and the report says so.
+
 ## Object Calisthenics
 
 Object Calisthenics are nine discipline rules that improve object design daily. These are not architecture rules but workshop constraints — they apply to code produced by the software-engineer.
