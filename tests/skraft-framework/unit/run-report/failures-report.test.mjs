@@ -30,7 +30,7 @@ test('a run that waits on a human tells in its report the question and how to an
     '| Step | Commit | Subject | Kind | Verdict |',
     '| --- | --- | --- | --- | --- |',
     '| distill | root-1 | test(checkout): walking skeleton | red | ok |',
-    '| deliver | root-2 | feat(checkout): Checkout pays by card | green | ok |',
+    '| deliver | root-2 | feat(checkout): S1 Checkout pays by card | green | ok |',
     '| deliver | root-3 | test(checkout): Pass2 pays by card | red | ok |',
     '| deliver | root-4 | feat(checkout): Pass2 pays by card | green | ok |',
     '| deliver | root-5 | refactor(checkout): name the card payment | refactor | ok |',
@@ -72,13 +72,4 @@ test('an incident asked of a human stays in the report with its cause, its log a
   assert.match(updated, /\| gates \| config \| config \| [a-f0-9]{16} \| 1 \|/)
   assert.ok(updated.endsWith(`| ${TRACKING}/gates/api/build-1.log | RETRY |`))
   assert.ok(!reportOf(host).includes('## Waiting on'), reportOf(host))
-})
-
-test('an incident the configuration must fix, with no command run, has no log in the report', async () => {
-  const UNTESTED = { ...API, commands: { build: 'dotnet build' } }
-  const host = scripted({ components: [UNTESTED] }, (it) => [agent()(it), agent()(it), agent()(it)])
-
-  await host.start()
-
-  assert.equal(sectionOf(reportOf(host), '## Incidents'), ['| Step | Cause | Owner | Signature | Occurrences | Output | Answer |', '| --- | --- | --- | --- | ---: | --- | --- |', '| distill | config | config | - | - | - | waiting |'].join('\n'))
 })

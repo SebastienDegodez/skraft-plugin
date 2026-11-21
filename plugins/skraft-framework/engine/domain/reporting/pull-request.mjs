@@ -241,10 +241,8 @@ const redLines = (reds, words) => (reds.length === 0
   ? [words.noRed]
   : [
     words.redHeader,
-    '| --- | --- | ---: |',
-    ...reds.map(({ sha, subject, exitCode }) => `| ${code(sha)} | ${cell(subject)} | ${exitCode ?? words.notReplayed} |`),
-    '',
-    words.noExcerpt,
+    '| --- | --- |',
+    ...reds.map(({ sha, subject }) => `| ${code(sha)} | ${cell(subject)} |`),
   ])
 
 /** @param {GateFact[]} gates @param {Words} words */

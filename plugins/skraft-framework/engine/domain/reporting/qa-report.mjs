@@ -88,9 +88,9 @@ const redCommitLines = (events) => {
   const commits = redCommits(events)
   if (commits.length === 0) return ['No red commit yet.']
   return [
-    '| Commit | Subject | Replay exit code |',
-    '| --- | --- | ---: |',
-    ...commits.map(({ sha, subject, exitCode }) => `| ${code(sha)} | ${cell(code(subject))} | ${exitCode ?? '-'} |`),
+    '| Commit | Subject |',
+    '| --- | --- |',
+    ...commits.map(({ sha, subject }) => `| ${code(sha)} | ${cell(code(subject))} |`),
   ]
 }
 

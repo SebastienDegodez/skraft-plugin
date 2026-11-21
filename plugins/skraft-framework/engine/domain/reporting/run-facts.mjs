@@ -5,12 +5,11 @@ import { reviewModels } from './agent-models.mjs'
 
 /**
  * The facts of a run a pull request description shows, read from its journal alone: the red
- * commits replayed, the last result of each gate, what the review found and what it refuted,
+ * commits, the last result of each gate, what the review found and what it refuted,
  * the model families and models the agents ran on.
  *
  * @typedef {import('../journal/run-state.mjs').RunEvent} RunEvent
- * @typedef {{ sha: string, subject: string, exitCode: number | null }} RedCommit
- *   exitCode: that of the replay that proved the commit red (its test or e2e command), null when it was not replayed (a test that kills mutants).
+ * @typedef {{ sha: string, subject: string }} RedCommit
  * @typedef {{ component: string, gate: string, command: string, status: string, durationMs: number, evidence: string, survivors?: number | null }} GateFact
  *   survivors: the mutants a mutation gate handed out, null when it passed or could not tell; absent for any other gate.
  * @typedef {{ step: string, lens: string, id: string, gate: string, severity: string, location: string, description: string, verdict: string | null, reason: string | null, dissent: boolean, carried: number | null, since: number | null, accepted: boolean, rule: string | null }} FindingFact
@@ -36,16 +35,15 @@ import { reviewModels } from './agent-models.mjs'
  */
 
 /**
- * The red commits the run accepted, each once, in commit order; a check the machine stopped
- * (`settled: false`) accepted none of its commits.
+ * The red commits the run accepted, each once, in commit order.
  * @param {RunEvent[]} events @returns {RedCommit[]}
  */
 export const redCommits = (events) => {
-  const commits = events.filter((event) => event.type === 'commits.checked' && event.settled !== false).flatMap((event) => event.commits)
+  const commits = events.filter((event) => event.type === 'commits.checked').flatMap((event) => event.commits)
   const last = new Map(commits.map((/** @type {any} */ commit) => [commit.sha, commit]))
   return [...last.values()]
     .filter((commit) => commit.kind === 'red' && commit.verdict === 'ok')
-    .map((commit) => ({ sha: commit.sha.slice(0, 7), subject: commit.subject, exitCode: commit.replay?.exitCode ?? null }))
+    .map((commit) => ({ sha: commit.sha.slice(0, 7), subject: commit.subject }))
 }
 
 /**

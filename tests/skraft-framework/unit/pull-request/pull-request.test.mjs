@@ -1,8 +1,8 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { BUILT_IN_WORKFLOW, InMemoryCodeHost, InMemoryGit, ScriptedMachine, ScriptedReplay } from '../support/in-memory-host.mjs'
+import { BUILT_IN_WORKFLOW, InMemoryCodeHost, InMemoryGit, ScriptedMachine } from '../support/in-memory-host.mjs'
 import { edit } from '../workflow/support.mjs'
-import { agent, API, CYCLE, finding, forgeLostAtFirstAgent, lenses, nominal, prWriter, PROSE_TEMPLATE, refutes, REFS_42, says, scripted, SLUG, tddCycle, TRACKING } from '../support/pipeline-host.mjs'
+import { agent, API, finding, forgeLostAtFirstAgent, lenses, nominal, prWriter, PROSE_TEMPLATE, refutes, REFS_42, says, scripted, SLUG, tddCycle, TRACKING } from '../support/pipeline-host.mjs'
 import { passing } from '../support/in-memory-host.mjs'
 import { eventsOf } from '../support/decisions.mjs'
 import { opening, section } from '../support/description.mjs'
@@ -71,11 +71,9 @@ test('the run ends by opening a draft pull request from its branch to its base, 
     '',
     '<details><summary>RED evidence: 1 red commit</summary>',
     '',
-    '| Commit | Subject | Replay exit code |',
-    '| --- | --- | ---: |',
-    '| `root-2` | test(checkout): acceptance of the card payment | 1 |',
-    '',
-    'Output excerpts of the replays are not recorded yet.',
+    '| Commit | Subject |',
+    '| --- | --- |',
+    '| `root-2` | test(checkout): acceptance of the card payment |',
     '',
     '</details>',
     '',
@@ -453,18 +451,18 @@ test('two reviews with the same lens each show what the refuter said of their ow
 })
 
 test('a red commit the engine refused is not shown as evidence, only the one that replaced it', async () => {
-  const host = scripted({ config: CONSENTED, replay: new ScriptedReplay({ exits: { 'root-2': 0 } }) }, (it) => [
+  const host = scripted({ config: CONSENTED }, (it) => [
     ...nominal(it).slice(0, 2),
-    agent({ work: ({ git }) => { git.commit('test(checkout): pay passes already', ['tests/PayTests.cs']) } })(it),
-    agent({ work: ({ git }) => { git.reset('.', 'root-1'); git.commit('test(checkout): pay fails first | twice', ['tests/PayTests.cs']) } })(it),
-    agent({ work: ({ git }) => { git.commit('feat(checkout): pay', ['src/Pay.cs']) } })(it),
+    agent({ work: ({ git }) => { git.commit('test(checkout): pay fails first | twice', ['tests/PayTests.cs']); git.commit('test(checkout): pay passes already', ['tests/PayTests.cs']) } })(it),
+    agent({ work: ({ git }) => { git.reset('.', 'root-2') } })(it),
+    agent({ work: ({ git }) => { git.commit('feat(checkout): S1 pay', ['src/Pay.cs']) } })(it),
   ])
 
   assert.equal((await host.start()).status, 'done')
 
   const evidence = section(await host.tracking.read(SLUG, 'pull-request-body.md'), 'RED evidence')
   assert.ok(!evidence.includes('pay passes already'), evidence)
-  assert.ok(evidence.includes('| test(checkout): pay fails first \\| twice | 1 |'), evidence)
+  assert.ok(evidence.includes('| test(checkout): pay fails first \\| twice |'), evidence)
 })
 
 test('the decisions the description shows: each ADR ratified in the run with its title, each locked gate unlocked with its reason', async () => {
@@ -475,7 +473,7 @@ test('the decisions the description shows: each ADR ratified in the run with its
   const host = scripted({ config: CONSENTED, files, answers: [{ answer: 'REJECTED', reason: 'drop the tokens' }, { answer: 'RATIFIED' }] }, (it) => [
     agent()(it), agent()(it),
     agent({ work: ({ workspace }) => { workspace.files.delete('docs/adr/adr-002-card-tokens.md') } })(it),
-    agent()(it), agent({ work: ({ git }) => { git.commit('feat(checkout): pay', ['tests/PayTests.cs', 'src/Pay.cs']) } })(it),
+    agent()(it), agent({ work: ({ git }) => { git.commit('feat(checkout): S1 pay', ['tests/PayTests.cs', 'src/Pay.cs']) } })(it),
   ])
 
   await host.start()
@@ -491,22 +489,13 @@ test('the decisions the description shows: each ADR ratified in the run with its
   assert.equal(section(await skipping.tracking.read(SLUG, 'pull-request-body.md'), 'Decisions applied'), '- Locked gate `gates` skipped, unlocked: the team runs the gates in its own CI')
 })
 
-test('a red commit replayed only as the last of its story says so, and a component the machine could not gate shows only the gates that ran once fixed', async () => {
-  const lastRed = scripted({ ...CYCLE, config: { ...CONSENTED, tdd: { replay: 'last-red' } } }, (it) => [...nominal(it).slice(0, 2), agent({ work: (h) => {
-    h.git.commit('test(checkout): acceptance of the card payment', ['tests/Acceptance/CheckoutAcceptanceTests.cs'])
-    tddCycle()(h)
-    h.git.commit('test(checkout): Checkout refunds', ['tests/RefundTests.cs'])
-    h.git.commit('feat(checkout): Checkout refunds', ['src/Refund.cs'])
-  } })(it), agent()(it)])
-  await lastRed.start()
-  assert.ok(section(await lastRed.tracking.read(SLUG, 'pull-request-body.md'), 'RED evidence').includes('\n| `root-3` | test(checkout): Checkout pays by card | not replayed |\n'))
-
+test('a component the machine could not gate shows only the gates that ran once fixed', async () => {
   const fixing = async (question) => {
     await ungated.workspace.write('skraft-config.json', JSON.stringify({ ...CONSENTED, components: [{ ...API, commands: { build: 'dotnet build', test: 'dotnet test' } }] }))
     return { answer: 'RETRY' }
   }
-  const ungated = scripted({ ...CYCLE, config: CONSENTED, components: [{ ...API, commands: {} }], answers: [fixing] }, (it) => [
-    agent()(it), agent()(it), agent()(it), agent({ work: ({ git }) => { git.commit('refactor(checkout): name the payment', ['src/Pay.cs']) } })(it),
+  const ungated = scripted({ config: CONSENTED, components: [{ ...API, commands: {} }], answers: [fixing] }, (it) => [
+    agent()(it), agent()(it), agent()(it), agent()(it),
   ])
   assert.equal((await ungated.start()).status, 'done')
   assert.deepEqual(section(await ungated.tracking.read(SLUG, 'pull-request-body.md'), 'Quality gates').split('\n').slice(2).map((row) => row.split(' | ')[1]), ['build', 'test'])

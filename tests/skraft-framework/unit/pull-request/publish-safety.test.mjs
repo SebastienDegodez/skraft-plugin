@@ -122,7 +122,7 @@ test('a red commit subject breaks no table: its pipes are escaped and its lines 
 
   await host.start()
 
-  assert.ok(section(await host.tracking.read(SLUG, 'pull-request-body.md'), 'RED evidence').includes('| test(checkout): pays \\| refunds and more | 1 |'))
+  assert.ok(section(await host.tracking.read(SLUG, 'pull-request-body.md'), 'RED evidence').includes('| test(checkout): pays \\| refunds and more |'))
 })
 
 test('a pr-writer that leaves a placeholder is refused, its output still missing', async () => {

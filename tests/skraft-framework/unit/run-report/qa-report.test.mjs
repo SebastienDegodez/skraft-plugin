@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { agent, API, finding, lenses, nominal, REFS_42, refutes, says, scripted, SLUG } from '../support/pipeline-host.mjs'
-import { InMemoryGit, MUTATION_WORKFLOW, ScriptedMachine, ScriptedReplay, judgeAnswer } from '../support/in-memory-host.mjs'
+import { InMemoryGit, MUTATION_WORKFLOW, ScriptedMachine } from '../support/in-memory-host.mjs'
 import { ALL_KILLED, strykerReport } from '../support/mutation-reports.mjs'
 
 /** A front end in a repository of its own, which the story does not change. */
@@ -61,9 +61,9 @@ test('after each step the tracking folder holds qa-report.md: the test plan, eac
     '',
     '## TDD red commits',
     '',
-    '| Commit | Subject | Replay exit code |',
-    '| --- | --- | ---: |',
-    `| \`${shaOf(host, acceptance)}\` | \`${acceptance}\` | 1 |`,
+    '| Commit | Subject |',
+    '| --- | --- |',
+    `| \`${shaOf(host, acceptance)}\` | \`${acceptance}\` |`,
     '',
     '## Reviews',
     '',
@@ -106,9 +106,8 @@ test('before DISTILL the QA report has no test plan, no red commit and no gate; 
   ].join('\n'))
 })
 
-test('a red commit the machine could not replay is no TDD red commit of the QA report while the run waits for a human', async () => {
-  const host = scripted({ replay: new ScriptedReplay({ exits: { 'root-1': null } }) }, (it) => [agent()(it), agent()(it), agent({ work: ({ git }) => git.commit('test(checkout): acceptance', ['tests/AcceptanceTests.cs']) })(it)])
-  host.agentRunner.judge = () => judgeAnswer('ask-human', 'dotnet is not installed')
+test('a red commit of a check the machine could not finish is no TDD red commit of the QA report while the run waits for a human', async () => {
+  const host = scripted({}, (it) => [agent()(it), agent()(it), agent({ work: ({ git }) => { git.commit('test(checkout): acceptance', ['tests/AcceptanceTests.cs']); git.changedFiles = async () => null } })(it)])
 
   const outcome = await host.start()
 
@@ -117,7 +116,7 @@ test('a red commit the machine could not replay is no TDD red commit of the QA r
   assert.ok(qa.includes('\n## TDD red commits\n\nNo red commit yet.\n'), qa)
 })
 
-test('a mutation score names each scope with every survivor, a commit subject with backticks or a pipe stays one code span in its cell, a failed gate shows fail, and a test that kills mutants has no replayed exit code', async () => {
+test('a mutation score names each scope with every survivor, a commit subject with backticks or a pipe stays one code span in its cell, a failed gate shows fail, and a test that kills mutants is listed like any other', async () => {
   const report = strykerReport({
     'src/Checkout.Domain/Order.cs': [[10, 'Equality', '!=', 'Survived'], [11, 'Equality', '==', 'Killed']],
     'src/Checkout.Api/Endpoints.cs': [[3, 'String', null, 'Killed'], [4, 'Boolean', 'false', 'Killed'], [5, 'Boolean', 'true', 'Killed'], [6, 'Boolean', 'true', 'Killed'], [9, 'Equality', '!=', 'NoCoverage']],
@@ -126,7 +125,7 @@ test('a mutation score names each scope with every survivor, a commit subject wi
   const subject = 'test(checkout): `Order` pays by card | refund'
   const kill = 'test(checkout): kill the mutants of Order'
   const red = ({ git }) => git.commit(subject, ['tests/OrderTests.cs'])
-  const work = ({ git }) => git.commit('feat(checkout): Order pays by card', ['src/Checkout.Domain/Order.cs', 'src/Checkout.Api/Endpoints.cs'])
+  const work = ({ git }) => git.commit('feat(checkout): S1 Order pays by card', ['src/Checkout.Domain/Order.cs', 'src/Checkout.Api/Endpoints.cs'])
   const seen = []
   const killer = (it) => async (dispatch) => {
     seen.push(await it.tracking.read(SLUG, QA))
@@ -157,8 +156,8 @@ test('a mutation score names each scope with every survivor, a commit subject wi
   const qa = await host.tracking.read(SLUG, QA)
   assert.ok(qa.includes('\n| mutation | pass | 0 s | [gates/api/mutation-2.log](gates/api/mutation-2.log) |\n'), qa)
   assert.ok(qa.includes([
-    `| \`${shaOf(host, subject)}\` | \`\` ${subject.replace('|', '\\|')} \`\` | 1 |`,
-    `| \`${shaOf(host, kill)}\` | \`${kill}\` | - |`,
+    `| \`${shaOf(host, subject)}\` | \`\` ${subject.replace('|', '\\|')} \`\` |`,
+    `| \`${shaOf(host, kill)}\` | \`${kill}\` |`,
   ].join('\n')), qa)
 })
 
@@ -174,7 +173,7 @@ test('a review a lens the host could not start left open is in progress, with wh
 
 test('a component whose gates stopped before mutation shows its gates alone', async () => {
   const machine = new ScriptedMachine({ exits: { '. $ dotnet test': 1 } })
-  const deliver = (it) => agent({ work: ({ git }) => git.commit('feat(checkout): pay', ['tests/PayTests.cs', 'src/Pay.cs']) })(it)
+  const deliver = (it) => agent({ work: ({ git }) => git.commit('feat(checkout): S1 pay', ['tests/PayTests.cs', 'src/Pay.cs']) })(it)
   const host = scripted({ machine }, (it) => [agent()(it), agent()(it), agent()(it), deliver(it), () => ({ ok: false, unavailable: true, text: '' })])
 
   await host.start()
@@ -190,7 +189,7 @@ test('a component whose gates stopped before mutation shows its gates alone', as
 
 test('a mutation run whose report was not read says so, and shows no score or survivor of an earlier run', async () => {
   const machine = new ScriptedMachine()
-  const work = ({ git }) => git.commit('feat(checkout): Order pays by card', ['tests/OrderTests.cs', 'src/Checkout.Domain/Order.cs'])
+  const work = ({ git }) => git.commit('feat(checkout): S1 Order pays by card', ['tests/OrderTests.cs', 'src/Checkout.Domain/Order.cs'])
   const seen = []
   const kill = ({ git, tracking }) => {
     seen.push(tracking.files.get(`${SLUG}/${QA}`))
