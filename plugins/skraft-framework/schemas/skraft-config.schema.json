@@ -11,9 +11,6 @@
     "forge": {
       "$ref": "skraft-config.local.schema.json#/$defs/forge"
     },
-    "tdd": {
-      "$ref": "skraft-config.local.schema.json#/$defs/tdd"
-    },
     "publish": {
       "$ref": "skraft-config.local.schema.json#/$defs/publish"
     },
