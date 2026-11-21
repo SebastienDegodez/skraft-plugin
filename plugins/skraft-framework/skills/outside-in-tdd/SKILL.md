@@ -72,8 +72,8 @@ step. Never build a class no active scenario requires.
 
 - **Interactive session:** the developer reviews and explicitly validates the failing test
   before you continue.
-- **skraft DELIVER:** the recorded red commit is the inspection: on a scenario pass, DISTILL's red
-  of the scenario's acceptance test, which the engine replays; on a pass with no scenario, your own
+- **skraft DELIVER:** the recorded red commit is the inspection: on a group pass, DISTILL's red
+  of the story's acceptance tests, which the engine replays; on a pass with no group, your own
   failing test, committed before any production code exists. Continue to GREEN in the same run;
   never stop after RED to wait.
 - **Delegating a slice to a worker or subagent:** never put RED and SYNTHESIZE GREEN in the same
@@ -90,12 +90,20 @@ error only when read: a red is never chained to a commit; a green is.
 
 | Pass | Commits |
 |---|---|
-| Acceptance test of the scenario in progress (skraft DISTILL) | One `test` commit: its acceptance test and the skeleton it calls, after a run whose output shows a failing business assertion |
-| Scenario in progress (skraft DELIVER) | The inner cycles commit nothing. One `feat` or `fix` commit once the scenario passes, its unit tests and every format or lint fix included, chained in bash: `<test command> && git add <each file> && git commit -s -m "<subject>" -m "Refs: #N"`, the message exactly as the brief gives it |
+| Acceptance tests of the story (skraft DISTILL) | One `test` commit: the walking skeleton and the acceptance test of every scenario, with the skeleton they call, after one run whose output shows each failing on a business assertion |
+| Group in progress (skraft DELIVER) | The inner cycles commit nothing. One `feat` or `fix` commit once the group's scenarios pass, its unit tests and every format or lint fix included, chained in bash: `<test command, pending scenarios excluded> && git add <each file> && git commit -s -m "<subject>" -m "Refs: #N"`, the message exactly as the brief gives it |
 | No scenario: gates or review sent the story back, mutant kills, a session without skraft | Each cycle: `test` with the failing test, then `feat` or `fix` with the code; `refactor` for a change under green |
 
 The acceptance tests of a scenario are its oracle: the green never changes them. A wrong one is
 named and sent back to whoever wrote it.
+
+**Pending scenarios excluded.** Until the last group, the acceptance tests of the scenarios not
+delivered yet fail. Each acceptance test's name starts with its scenario's number and an
+underscore (`S5_…`, `test_s5_…`), so the runner's name filter leaves them out: .NET
+`--filter "FullyQualifiedName!~S5_&FullyQualifiedName!~S6_"`; Maven `-Dtest='!*S5_*,!*S6_*'`;
+Vitest `-t "^(?!.*\b[Ss](5|6)_)"`; pytest `-k "not s5_ and not s6_"`. A runner that only includes
+(Gradle `--tests`) lists the delivered scenarios' ids and the unit tests instead. Add only the
+filter to the component's test command, never another runner. The last group runs it unfiltered.
 
 ## Ordered test list (TPP + FLFI)
 
@@ -181,17 +189,22 @@ Code no approved behaviour asks for and no test covers: delete it. Run no mutati
   clock as the infrastructure policy says (`test-design-mandates`). It asserts the status, the
   shape and one value S1 names. A pure library, a refactoring with no new public interface, or a
   configuration or documentation change has none.
-- **Double loop:** each scenario's acceptance test, S1's included, is an inner loop entering by the
-  use case. S1 is green when its acceptance test and the walking skeleton both pass: thinnest
-  slice, hardcoded values, minimal branching. Every later green keeps the walking skeleton green.
+- **Double loop:** each scenario's acceptance test, S1's included, enters by the use case; the inner
+  loop drives it green. The group holding S1 is green when its acceptance tests and the walking
+  skeleton both pass: thinnest slice, hardcoded values, minimal branching. Every later green keeps
+  the walking skeleton and the groups before it green.
 - **First delivery** holds only the approved outcome; defer unapproved validations, states and
   abstractions.
-- **One acceptance test at a time:** the `.feature` file is the backlog. Only the scenario in
-  progress has an executable acceptance test: write it, see it fail on an assertion, drive it to
-  green, commit, then write the next. Never author them all up front with all but one skipped.
+- **All acceptance tests first:** write the acceptance test of every scenario, each name starting
+  with its scenario's number, run them once and read that each fails on a business assertion,
+  never a build or setup error; commit them all in one `test` commit. Never skip one: a scenario
+  not delivered yet stays an active, failing test, left out by the name filter (Commit policy).
+- **One group at a time:** the implementation plan groups the scenarios by the rule they pin down:
+  consecutive scenarios that enter through the same use case and state one rule or its edge cases
+  form one group; a scenario on its own is a group of one. Each group takes one green commit,
+  the groups in plan order.
 - A scenario's test that passes on its first run adds no behaviour: it is an example of the
-  earlier scenario whose code makes it pass, an `Examples` row of that one. Under skraft its red
-  is refused: name both scenarios and stop.
+  scenario whose code makes it pass, an `Examples` row of that one.
 
 ## Concentric circles
 

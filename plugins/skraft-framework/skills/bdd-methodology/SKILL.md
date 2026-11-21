@@ -120,7 +120,6 @@ Scenario: ...
 | `@edge-case` | Boundary values, limit conditions |
 | `@error-case` | System errors, missing data, invalid state |
 | `@walking-skeleton` | S1 of the story, the scenario its walking skeleton walks, unless the test plan declares an exemption (`test-design-mandates`); S1 still runs in the Gherkin runner like any scenario |
-| `@pending` | A scenario whose acceptance test is not written yet: DISTILL tags every scenario with it, each scenario's red removes it from that scenario alone; the runner selects `not @pending` |
 | `@visual` | Marks a scenario whose AC is expressed in visual/positional/style terms — requires a companion Playwright E2E test with a real measurement, see Visual AC Rule below |
 | `@frontend` `@backend` `@api` `@http` `@ui` `@infrastructure` `@database` `@persistence` | ❌ FORBIDDEN — layer leak: embed implementation vocabulary in the Gherkin layer |
 

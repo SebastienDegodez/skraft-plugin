@@ -118,7 +118,7 @@ each phase: [Phases](https://sebastiendegodez.github.io/skraft-plugin/reference/
 | Expected outputs | Each output is pre-created from its template; a missing or invalid one is asked again with what was wrong, up to three attempts, and the same failure twice stops the run |
 | Write scope | After each step, the git diff is compared with what that agent may write; a step outside it is refused |
 | Gates | DELIVER closes only when the commands of `skraft-config.json` pass |
-| TDD | One scenario at a time: a red acceptance test that fails on no assertion, a second green, or a green that changes the acceptance test or another component is refused |
+| TDD | Every acceptance test first, then one group at a time: a red whose tests fail on no assertion, a second green, or a green that changes an acceptance test is refused |
 | Review verdict | Lenses return typed findings; the engine refutes, counts and decides |
 | Human decisions | A question waits for a person's answer; under Copilot, only a host-confirmed answer is recorded |
 | Journal | `events.jsonl` is hash-chained and signed with a key of your machine; a hand edit stops the run |

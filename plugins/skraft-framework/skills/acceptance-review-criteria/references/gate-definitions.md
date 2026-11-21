@@ -136,8 +136,8 @@ If YES → ambiguous → flag.
 **Why this gate exists:** `outside-in-tdd`'s Concentric circles put the Application-layer acceptance test of a targeted scenario in the fast unit suite, and the walking skeleton's real path in the integration suite. A targeted scenario covered only by an HTTP or Integration test is one circle removed from the boundary DELIVER implements against; a walking skeleton entering through the use case proves no wiring. G1–G10 check Gherkin and plan artefacts, never the test files on disk.
 
 **How to check:**
-1. Find the scenario in progress (S1) in the test plan's `## Scenarios` table: its component, and whether the story declares a walking skeleton exemption.
-2. Search the place each kind takes (tables above): the walking skeleton (unless exempt) and S1's acceptance test.
+1. Find the scenarios in the test plan's `## Scenarios` table: the component of each, and whether the story declares a walking skeleton exemption.
+2. Search the place each kind takes (tables above): the walking skeleton (unless exempt) and the acceptance test of every scenario.
 3. Flag a missing file, a file in the other place, or a test entering anywhere but its entry.
 
 **Auto-fail example:**
@@ -245,7 +245,7 @@ during DELIVER integration otherwise, after both implementations are already wri
 | G6 | testability | Impl plan covers all scenarios | HIGH |
 | G11 | testability | Each test is in the place its kind takes: the walking skeleton in the integration place through the entry point; each scenario's acceptance test, S1's included, in the unit-test place through the use case | BLOCKER |
 | T1 | testability | One observable behaviour per scenario, nothing unfixed (time, order, randomness) | HIGH |
-| T2 | testability | The tests hold the walking skeleton and the scenario in progress only, their values equal to the `.feature` verbatim; the walking skeleton asserts the wiring and one value of S1 | BLOCKER |
+| T2 | testability | The tests hold the walking skeleton and the acceptance test of every scenario, each named by its scenario's number, their values equal to the `.feature` verbatim; the walking skeleton asserts the wiring and one value of S1 | BLOCKER |
 | T3 | testability | The walking skeleton and the acceptance test fail on an assertion, not on setup; production code is a skeleton answering empty values (and the walking skeleton's chain wired to it) | BLOCKER |
 | G7 | boundary-enforcement | Coverage matrix → valid use case boundary | BLOCKER |
 | G8 | boundary-enforcement | The story's walking skeleton walks S1 through the real entry point, or the declared exemption holds | BLOCKER |
