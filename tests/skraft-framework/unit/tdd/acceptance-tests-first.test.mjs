@@ -1,6 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { BUILT_IN_WORKFLOW, InMemoryGit, ScriptedMachine } from '../support/in-memory-host.mjs'
+import { openJournal } from '../../../../plugins/skraft-framework/engine/application/journal/run-journal.mjs'
 import { API, REFS_42, SLUG, TRACKING, agent, scripted, tddCycle } from '../support/pipeline-host.mjs'
 import { waitingOnEnvironment } from '../support/decisions.mjs'
 
@@ -355,7 +356,51 @@ test('an engineer that stops blocked after the first group is told by a human ho
   assert.equal(outcome.status, 'done', outcome.reason)
   assert.deepEqual(labels(host).filter((label) => /deliver/.test(label)), [`skraft ${SLUG} · deliver · attempt 1`, `skraft ${SLUG} · deliver · pass 2 · attempt 1`])
   assert.deepEqual(checked(host, 'deliver').at(-1).commits.map(({ subject, verdict }) => [subject, verdict]), [['feat(checkout): S1, S2 rule', 'ok'], ['feat(checkout): S3 rule', 'ok']])
-  assert.ok(promptOf(host, `skraft ${SLUG} · deliver · pass 2 · attempt 1`).includes('\n- 1 of 2 — S1 "Customer pays by card"'))
+  const reopened = promptOf(host, `skraft ${SLUG} · deliver · pass 2 · attempt 1`)
+  assert.ok(reopened.includes('(component api, tags @error-case) — already committed as root-2: commit nothing for it\n'), reopened)
+  assert.ok(reopened.includes('\n- 2 of 2 — S3 "Customer gets a receipt" (component api, tags @happy-path)\n'), reopened)
+  assert.ok(reopened.includes('\n  group 2: dotnet test && git add'), reopened)
+  assert.ok(!reopened.includes('\n  group 1: '), reopened)
+})
+
+test('the group of S12 is not the group of S1: a green names its group by the whole number', async () => {
+  const twelve = Array.from({ length: 12 }, (_, at) => [`Scenario ${at + 1}`, 'api', at === 0 ? '@walking-skeleton' : '@happy-path'])
+  const host = scripted({}, (it) => [...research(it), agent({ plan: twelve, work: designing(12, 'S1', 'S2–S11', 'S12') })(it), agent({ work: (h) => { greenOf('S1')(h); greenOf('S12')(h) } })(it)])
+
+  const outcome = await host.start()
+
+  assert.equal(outcome.status, 'done', outcome.reason)
+  assert.deepEqual(checked(host, 'deliver')[0].commits.map(({ subject, verdict }) => [subject, verdict]), [['feat(checkout): S1 rule', 'ok'], ['feat(checkout): S12 rule', 'ok']])
+})
+
+test('a commit a person makes while a delivery waits on a block is never judged as the engineer\'s on the reopened pass', async () => {
+  const blocked = { status: 'blocked', summary: 'the expired card rule is undecided' }
+  let host
+  const person = () => {
+    host.git.commit('test(checkout): the expired card, by hand', ['tests/Unit/ByHandTests.cs'])
+    host.git.commit('fix(checkout): the acceptance step, by hand', ['tests/Acceptance/S1AcceptanceTests.cs'])
+    return { answer: 'Refuse a card that expired before today' }
+  }
+  host = scripted({ answers: [person] }, (it) => [
+    ...research(it), agent({ plan: THREE, work: designing(3, 'S1, S2', 'S3') })(it),
+    agent({ result: blocked, work: greenOf('S1, S2') })(it), agent({ work: greenOf('S3') })(it),
+  ])
+
+  const outcome = await host.start()
+
+  assert.equal(outcome.status, 'done', outcome.reason)
+  assert.deepEqual(checked(host, 'deliver').at(-1).commits.map(({ subject, verdict }) => [subject, verdict]), [['feat(checkout): S1, S2 rule', 'ok'], ['feat(checkout): S3 rule', 'ok']])
+})
+
+test('a run journaled by the engine that delivered one group per pass is refused at its resume, never judged green by green', async () => {
+  const host = scripted({}, (it) => [...research(it), agent({ plan: THREE, work: designing(3, 'S1, S2', 'S3') })(it), unavailable])
+  assert.equal((await host.start()).code, 'agent-unavailable')
+  const { journal } = await openJournal(host.deps, SLUG)
+  await journal.append('step.recorded', { step: 'deliver', visit: 1, attempt: 0, outcome: 'done', next: 'gates', failures: [], missing: [], green: { group: 1 } })
+
+  const outcome = await host.run()
+
+  assert.deepEqual([outcome.status, outcome.code, outcome.reason], ['blocked', 'delivery-shape', 'this run was started by an engine that delivered one group per pass; start the story again'])
 })
 
 test('a scenario review a workflow asks before the scenarios are written waits on the machine, saying where it belongs', async () => {

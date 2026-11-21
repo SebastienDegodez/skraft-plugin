@@ -975,3 +975,22 @@ test('the engine reads in the patch the skips added to tests, the test files del
   await clean.start()
   assert.deepEqual(clean.events().filter((event) => event.type === 'review.lens' && event.lens === 'test-integrity#patch'), [])
 })
+
+test('the review of DISTILL reads the designer\'s run of the acceptance tests among the documents of its phase', async () => {
+  const host = scripted({}, (it) => [
+    agent()(it), agent()(it),
+    async (dispatch) => {
+      await it.tracking.write(SLUG, 'logs/distill-1-red.log', 'S1_pays: expected paid 10, got nothing\n')
+      await it.tracking.write(SLUG, 'logs/other.log', 'noise\n')
+      return agent()(it)(dispatch)
+    },
+    agent()(it),
+  ])
+
+  await host.start()
+
+  const lens = host.agentRunner.reviewed().find((dispatch) => dispatch.agent === 'testability-lens' && dispatch.label.includes('distill_review'))
+  assert.ok(lens.prompt.includes(`  - Documents of this phase: ${TRACKING}/logs/distill-1-red.log\n`), lens.prompt)
+  assert.ok(!lens.prompt.includes('logs/other.log'), lens.prompt)
+})
+

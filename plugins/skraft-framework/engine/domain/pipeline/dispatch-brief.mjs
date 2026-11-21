@@ -1,5 +1,6 @@
 import { RESULT_SHAPE } from './agent-result.mjs'
 import { issueOf } from './commits.mjs'
+import { groupLabel } from './scenarios.mjs'
 
 /**
  * @typedef {{ name: string, root: string, stack: string, mocking: string, contractTesting: boolean, bdd: BddPair[], test: string | null, gates: BriefGate[] }} BriefComponent
@@ -47,12 +48,13 @@ import { issueOf } from './commits.mjs'
  *   commit on; redLog: where the plan's pass sends the output of its one run of the acceptance
  *   tests, absolute, which the review of its phase reads; null on any other pass.
  * @typedef {{
- *   index: number, of: number, scenarios: Array<{ index: number, title: string, component: string, tags: string[] }>,
+ *   index: number, of: number, done: string | null, scenarios: Array<{ index: number, title: string, component: string, tags: string[] }>,
  *   pending: number[], test: string | null,
  * }} BriefGroup
  *   scenarios: the group's, as the test plan lists them; pending: the numbers of the later groups'
  *   scenarios, whose tests still fail at its green; test: the test command of the component of
- *   its first scenario.
+ *   its first scenario; done: the short sha of the green an earlier pass committed for it, null
+ *   for a group with none.
  */
 
 /**
@@ -115,7 +117,7 @@ const POLICY = '- How the tests of each component treat what the code depends on
 const scenarioLine = ({ index, title, component, tags }) => `S${index} "${title}" (component ${component}${tags.length > 0 ? `, tags ${tags.join(' ')}` : ''})`
 
 /** @param {BriefGroup} group */
-const groupLine = ({ index, of, scenarios }) => `${index} of ${of} — ${scenarios.map(scenarioLine).join('; ')}`
+const groupLine = ({ index, of, scenarios, done }) => `${index} of ${of} — ${scenarios.map(scenarioLine).join('; ')}${done === null ? '' : ` — already committed as ${done}: commit nothing for it`}`
 
 /** The red commits DISTILL left, whose files no pass changes. @param {BriefScenario['oracles']} oracles */
 const redLines = (oracles) => section('- Acceptance tests DISTILL committed, which you never change (a wrong one, or one failing on a build or setup error: stop blocked, naming it):', oracles.map(({ sha, subject, files }) => `${sha.slice(0, 7)} "${subject}": ${files.join(', ')}`))
@@ -153,13 +155,13 @@ const pendingNames = (pending) => pending.map((index) => `S${index}`).join(', ')
  */
 const SCENARIO_COMMIT = Object.freeze({
   plan: ({ redLog }, story) => [`- Run the acceptance tests once, sending the whole output to ${redLog}, and read it: every acceptance test and the walking skeleton fail, each on its assertion. Then commit them, the skeleton they call and the scenarios in one commit, exactly:`, `  ${commitCommand('test', 'acceptance tests S1–S<n>, n the last scenario of your test plan', story)}`],
-  delivery: ({ groups }, story) => ['- Commit each group once, in bash (never PowerShell), naming each file you changed:', ...groups.map((group) => `  ${greenLine(group, story)}`)],
+  delivery: ({ groups }, story) => ['- Commit each group once, in bash (never PowerShell), naming each file you changed:', ...groups.filter(({ done }) => done === null).map((group) => `  ${greenLine(group, story)}`)],
   rework: () => [],
 })
 
 /** @param {BriefGroup} group @param {{ slug: string, issue: number | null }} story */
 const greenLine = ({ index, scenarios, pending, test }, story) => {
-  const label = scenarios.map(({ index: number }) => `S${number}`).join(', ')
+  const label = groupLabel(scenarios.map(({ index: number }) => number))
   const filter = pending.length === 0 ? '' : ` <the filter leaving out ${pendingNames(pending)}>`
   return `group ${index}: ${test}${filter} && git add <each file you changed> && ${commitCommand('feat', `${label} <the rule of the group, as your implementation plan names it>`, story)}`
 }

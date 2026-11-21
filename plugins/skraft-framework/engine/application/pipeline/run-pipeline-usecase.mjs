@@ -35,7 +35,8 @@ import { publishStep } from './publish-step.mjs'
 import { reportProgress } from '../publish/issue-progress.mjs'
 import { storyLanguage } from '../publish/story-language.mjs'
 import { checkStep, engineHashes, headsOf } from './step-checks.mjs'
-import { acceptanceFiles, scenarioPassOf } from './scenario-checks.mjs'
+import { acceptanceFiles, committedGreens, scenarioPassOf } from './scenario-checks.mjs'
+import { groupLabel } from '../../domain/pipeline/scenarios.mjs'
 import { commitForAgent } from './agent-commits.mjs'
 import { writeStructuralScan } from './structural-scan.mjs'
 import { findComponentSkills } from './component-skills.mjs'
@@ -192,7 +193,19 @@ const blockedBeforeStart = (slug, code, reason) => ({ status: 'blocked', slug, p
  */
 const confirmedThenRun = async (context) => (await confirmConfiguration(context, deriveRun(context.journal.events), context.confirm))
   ?? (await cannotStart(context))
+  ?? perGroupJournal(context)
   ?? runFrom(context)
+
+/**
+ * A journal an engine that delivered one group per pass wrote, stopped between two groups, is not
+ * resumed: this engine delivers every group in one pass, and such a story starts again.
+ * @param {Context} context @returns {RunOutcome | null}
+ */
+const perGroupJournal = ({ slug, journal }) => {
+  const { scenarios } = deriveRun(journal.events)
+  const partial = scenarios !== null && scenarios.delivered > 0 && scenarios.delivered < scenarios.groups.length
+  return partial ? blockedBeforeStart(slug, 'delivery-shape', 'this run was started by an engine that delivered one group per pass; start the story again') : null
+}
 
 /** @param {Context} context @returns {Promise<RunOutcome>} */
 const runFrom = async (context) => {
@@ -501,8 +514,8 @@ const lastStarted = (journal, step) => journal.events.findLast((/** @type {impor
 const ENGINE_REFUSALS = new Set([`out of write scope: ${CONFIG_FILE}`])
 
 /**
- * The group an attempt works on; the attempt that opens a visit also lists them all: a visit starts
- * on the first group of surviving mutants, on each scenario, or on the group a human reopens.
+ * The group of surviving mutants an attempt works on; the attempt that opens a visit also lists
+ * them all: a visit starts on the first group, or on the group a human reopens.
  * @param {RunState} run @param {WorkStep} next
  */
 const groupFields = (run, { group, groups, node, visit }) => {
@@ -695,17 +708,18 @@ const briefScenarioOf = (context, run, next) => {
  * @param {Context} context @param {RunState} run @param {WorkStep} next
  * @returns {import('../../domain/pipeline/dispatch-brief.mjs').BriefScenario | null}
  */
-const briefScenario = ({ config, deps, slug }, run, { node, visit }) => {
+const briefScenario = ({ config, deps, slug, journal }, run, { node, visit }) => {
   const pass = scenarioPassOf(run, node)
   if (pass === null) return null
-  const groups = pass.groups.map((group) => briefGroup(group, pass.groups.length, scenarioTest(config, run, group.scenarios[0]?.component ?? null)))
+  const done = committedGreens(journal.events, { step: node.id, visit }, pass.groups.map(({ scenarios }) => groupLabel(scenarios.map(({ index }) => index))))
+  const groups = pass.groups.map((group, at) => briefGroup(group, { of: pass.groups.length, done: done[at], test: scenarioTest(config, run, group.scenarios[0]?.component ?? null) }))
   const oracles = pass.kind === 'plan' ? [] : pass.reds.map((red) => oracleTold(red, config.components))
   return { kind: pass.kind, groups, oracles, skeleton: pass.skeleton !== null, redLog: pass.kind === 'plan' ? deps.files.location(slug, `logs/${node.id}-${visit}-red.log`) : null }
 }
 
-/** @param {import('./scenario-checks.mjs').PassGroup} group @param {number} of @param {string | null} test */
-const briefGroup = ({ index, scenarios, pending }, of, test) => ({
-  index, of, test, pending: pending.map((scenario) => scenario.index),
+/** @param {import('./scenario-checks.mjs').PassGroup} group @param {{ of: number, done: string | null, test: string | null }} told */
+const briefGroup = ({ index, scenarios, pending }, { of, done, test }) => ({
+  index, of, test, done, pending: pending.map((scenario) => scenario.index),
   scenarios: scenarios.map(({ index: number, title, component, tags }) => ({ index: number, title, component, tags })),
 })
 
@@ -813,13 +827,14 @@ const failedCheck = ({ missing, failures }) => missing.length > 0 || failures.le
  * @param {Context} context @param {RunState} run @param {WorkStep} next
  * @param {{ job: Job, heads: any, engine: Array<{ path: string, hash: string | null }> }} attempt
  */
-const checkAttempt = ({ deps, slug, config }, run, { node, attempt, feedback, sentBy }, { job, heads, engine }) => {
+const checkAttempt = ({ deps, slug, config, journal }, run, { node, visit, attempt, feedback, sentBy }, { job, heads, engine }) => {
   const inState = attempt > 1
   const scenario = scenarioPassOf(run, node)
   const { role, outputs, precreated, result } = job
   return checkStep({ deps, slug, config, base: run.base, story: run.story }, {
     role, outputs, precreated, result, scenario,
-    visitHeads: deliveryHeads(scenario, run.nodes[node.id]) ?? (inState ? run.nodes[node.id].heads : heads),
+    visitHeads: inState ? run.nodes[node.id].heads : heads,
+    carried: carriedOf(scenario, run.nodes[node.id], { events: journal.events, step: node.id, visit }),
     engineBefore: engine,
     redByGateFailure: inState ? run.nodes[node.id].redByGateFailure : redByGates(feedback, sentBy),
   })
@@ -885,11 +900,19 @@ const routeDone = (context, run, { node, group, groups }) => (loopsOn({ node, gr
 const loopsOn = ({ node, group, groups }) => node.each === 'survivor-file' && group !== null && group < groups.length
 
 /**
- * The heads a delivery pass counts its greens from: those of the node's first visit, so that a
- * visit a human reopened after a block goes on from the greens already committed.
- * @param {import('./scenario-checks.mjs').ScenarioPass | null} scenario @param {import('../../domain/journal/run-state.mjs').NodeState | undefined} state
+ * What a delivery pass of a visit a human reopened after a block counts besides its own commits:
+ * the commits the attempts of the visits before made, since the node's first visit. A commit a
+ * person made while the run waited is none of them, and is never judged as the engineer's.
+ * @param {import('./scenario-checks.mjs').ScenarioPass | null} scenario
+ * @param {import('../../domain/journal/run-state.mjs').NodeState | undefined} state
+ * @param {{ events: import('../../domain/journal/run-state.mjs').RunEvent[], step: string, visit: number }} at
+ * @returns {import('./step-checks.mjs').Carried | null}
  */
-const deliveryHeads = (scenario, state) => (scenario?.kind === 'delivery' ? state?.firstHeads : undefined)
+const carriedOf = (scenario, state, { events, step, visit }) => {
+  if (scenario?.kind !== 'delivery' || state === undefined || visit === 1) return null
+  const earlier = events.filter((event) => event.type === 'commits.checked' && event.step === step && event.visit < visit)
+  return { heads: state.firstHeads, shas: earlier.flatMap((event) => event.commits.map((/** @type {{ sha: string }} */ commit) => commit.sha)) }
+}
 
 /** @param {Context} context @param {Date} started @param {number | undefined} cost */
 const spent = ({ deps }, started, cost) => ({

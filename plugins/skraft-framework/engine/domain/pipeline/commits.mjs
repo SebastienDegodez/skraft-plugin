@@ -168,7 +168,7 @@ const greenOrder = ({ subject }, greens, labels) => {
 }
 
 /** Whether the subject's text after its type and scope starts with the group's label. @param {string} subject @param {string} label */
-const namesGroup = (subject, label) => new RegExp(`^[a-z]+(?:\\([^()]*\\))?!?: ${label}(?![0-9])`).test(subject)
+export const namesGroup = (subject, label) => new RegExp(`^[a-z]+(?:\\([^()]*\\))?!?: ${label}(?![0-9])`).test(subject)
 
 /** @param {StepCommit} commit @param {{ immutable: string[] }} scenario @returns {CommitVerdict} */
 const touching = (commit, { immutable }) => (commit.files.some((file) => immutable.includes(file)) ? 'oracle-touched' : 'ok')

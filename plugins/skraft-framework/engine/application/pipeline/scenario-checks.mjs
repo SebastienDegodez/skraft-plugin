@@ -1,4 +1,4 @@
-import { commitName } from '../../domain/pipeline/commits.mjs'
+import { commitName, namesGroup } from '../../domain/pipeline/commits.mjs'
 import { isCode, ownersOf } from '../../domain/pipeline/component-files.mjs'
 import { delivers, writesScenarios } from '../../domain/pipeline/roles.mjs'
 import { groupLabel, readDeliveryGroups, readScenarioPlan } from '../../domain/pipeline/scenarios.mjs'
@@ -67,6 +67,21 @@ const deliveryPass = ({ list, exemption, groups, oracles, skeleton, reds, delive
   const owed = groups.filter(({ index }) => index > delivered).map(({ index, scenarios }) => ({ index, scenarios: of(scenarios), pending: of(groups.slice(index).flatMap((group) => group.scenarios)) }))
   const kind = owed.length > 0 ? 'delivery' : 'rework'
   return kind === 'rework' && reds.length === 0 ? null : { kind, groups: owed, oracles: Object.values(oracles), reds, skeleton, exemption, approved: list }
+}
+
+/**
+ * The short sha of the green an earlier visit of the node committed for each group, null for a
+ * group with none: the pass a human reopened tells them, so the engineer does not commit them again.
+ * @param {import('../../domain/journal/run-state.mjs').RunEvent[]} events
+ * @param {{ step: string, visit: number }} at @param {string[]} labels the groups' labels, as the subjects of their greens name them
+ * @returns {Array<string | null>}
+ */
+export const committedGreens = (events, { step, visit }, labels) => {
+  const greens = events
+    .filter((event) => event.type === 'commits.checked' && event.step === step && event.visit < visit)
+    .flatMap((event) => event.commits)
+    .filter((/** @type {{ kind: string, verdict: string }} */ commit) => commit.kind === 'green' && commit.verdict === 'ok')
+  return labels.map((label) => greens.find((/** @type {{ subject: string }} */ commit) => namesGroup(commit.subject, label))?.sha.slice(0, 7) ?? null)
 }
 
 /**

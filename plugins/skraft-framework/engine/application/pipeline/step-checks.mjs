@@ -46,6 +46,10 @@ import { planOf, scenarioFailures, scenarioJudging, scenarioRecord } from './sce
  *   base: import('../config/bases.mjs').Base[], story: { issue?: number | null } | null,
  * }} CheckContext
  * @typedef {import('./scenario-checks.mjs').ScenarioPass} ScenarioPass
+ * @typedef {{ heads: Head[], shas: string[] }} Carried
+ *   what a delivery pass reopened after a block carries from the visits before it: the heads of
+ *   the node's first visit, and the commits those visits' attempts made (commits.checked), so
+ *   that a commit a person made while the run waited is no attempt's.
  */
 
 /** Failure codes, the first one found naming the step's refusal. */
@@ -114,13 +118,25 @@ const contentHash = async ({ workspace, hasher }, path) => {
  */
 export const checkStep = async (context, step) => {
   const read = await readAttempt(context, step)
-  if ('stop' in read) return read.stop
+  if ('stop' in read) return withCommitsOfBlocked(context, step, read.stop)
   const commits = await checkCommits(context.deps, context, { ...step, plan: read.plan.plan })
   if (commits.environment !== null) return { ...environmentOnly(commits.environment), commits: commits.checked }
   const adr = await adrFailures(context.deps, { base: context.base, touched: read.touched })
   if (typeof adr === 'string') return { ...environmentOnly(adr), commits: commits.checked }
   const found = [...resultFailures(read.reading), ...read.records, ...read.plan.failures, ...read.prose, ...read.scope.failures, ...adrLines(adr), ...commits.found]
   return { ...refusal(read.missing, found, commits), uncommitted: read.scope.uncommitted, scenario: commits.scenario }
+}
+
+/**
+ * An attempt that stops blocked still made commits: they are recorded as the attempt's, so that
+ * the pass a human reopens counts them and never a commit the person made meanwhile.
+ * @param {CheckContext} context @param {Parameters<typeof checkStep>[1]} step @param {StepCheck} stop
+ * @returns {Promise<StepCheck>}
+ */
+const withCommitsOfBlocked = async (context, step, stop) => {
+  if (!('code' in stop) || stop.code !== 'agent-blocked') return stop
+  const made = await checkCommits(context.deps, context, { ...step, plan: null })
+  return { ...stop, commits: made.checked }
 }
 
 /**
@@ -372,11 +388,11 @@ const isRootFile = (path, root) => {
  * the scenario the pass works on; the environment reason when the machine cannot list them.
  * @param {CheckDeps} deps
  * @param {Pick<CheckContext, 'config' | 'base' | 'story'>} run
- * @param {{ role: import('../../domain/pipeline/roles.mjs').Role, visitHeads: Head[], redByGateFailure: boolean, scenario: ScenarioPass | null, plan: import('../../domain/pipeline/scenarios.mjs').ScenarioPlan | null }} step
+ * @param {{ role: import('../../domain/pipeline/roles.mjs').Role, visitHeads: Head[], redByGateFailure: boolean, scenario: ScenarioPass | null, plan: import('../../domain/pipeline/scenarios.mjs').ScenarioPlan | null, carried?: Carried | null }} step
  * @returns {Promise<{ environment: string, checked: CheckedCommit[] } | { environment: null, checked: CheckedCommit[], found: Failure[], scenario: import('./scenario-checks.mjs').ScenarioRecord }>}
  */
 const checkCommits = async (deps, run, step) => {
-  const history = await commitsOf(deps, step.visitHeads)
+  const history = await commitsOf(deps, step.visitHeads, step.carried)
   if (typeof history === 'string') return { environment: history, checked: [] }
   const issue = issueOf(run.story)
   const { components } = run.config
@@ -399,14 +415,29 @@ const commitFailures = (judged, issue) => judged
   .map((commit) => ({ code: breaksConvention(commit.verdict) ? 'commit-convention' : 'tdd', line: commitFailure(commit, { issue }) }))
 
 /**
- * The commits of the pass in every repository, oldest first; a string when Git cannot tell.
+ * The commits of the pass in every repository, oldest first, and with `carried` the commits the
+ * earlier visits' attempts made, in their place; a string when Git cannot tell. Greens are
+ * ordered by repository, one repository after the other: a group's green is judged in its own.
  * @param {Pick<CheckDeps, 'sourceControl'>} deps
- * @param {Head[]} visitHeads
+ * @param {Head[]} visitHeads @param {Carried | null | undefined} carried
  * @returns {Promise<import('../../domain/pipeline/commits.mjs').StepCommit[] | string>}
  */
-const commitsOf = async ({ sourceControl }, visitHeads) => {
+const commitsOf = async (deps, visitHeads, carried) => {
+  const own = await listedSince(deps, visitHeads)
+  if (carried === null || carried === undefined || typeof own === 'string') return own
+  const since = await listedSince(deps, carried.heads)
+  if (typeof since === 'string') return since
+  return since.filter(({ sha }) => carried.shas.includes(sha) || own.some((commit) => commit.sha === sha))
+}
+
+/**
+ * The commits since the heads in every repository; a string when Git cannot tell.
+ * @param {Pick<CheckDeps, 'sourceControl'>} deps @param {Head[]} heads
+ * @returns {Promise<import('../../domain/pipeline/commits.mjs').StepCommit[] | string>}
+ */
+const listedSince = async ({ sourceControl }, heads) => {
   const commits = []
-  for (const { repository, sha } of visitHeads) {
+  for (const { repository, sha } of heads) {
     const listed = await sourceControl.commits(repository, sha)
     if (listed === null) return `Git cannot list the commits of ${repository} since ${sha}`
     commits.push(...listed.map((commit) => ({ repository, sha: commit.sha, parent: commit.parent, subject: commit.subject, body: commit.body, files: commit.files.map((file) => joinRelative(repository, file)) })))
