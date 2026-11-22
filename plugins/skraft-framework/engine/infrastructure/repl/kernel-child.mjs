@@ -108,8 +108,18 @@ const startRun = (kernel, command, options) => {
   const handle = new Handle(kernel, kernel.nextRun, command)
   kernel.nextRun += 1
   kernel.handles.set(handle.id, handle)
-  kernel.ipc.send({ t: 'run', rid: handle.id, cell: handle.cell, command, cwd: options.cwd ?? '.', timeout: options.timeout ?? DEFAULT_TIMEOUT_S, gate: options.gate ?? null, label: options.label ?? null })
+  const given = isOptions(options) ? options : {}
+  kernel.ipc.send({ t: 'run', rid: handle.id, cell: handle.cell, command, cwd: given.cwd ?? '.', timeout: given.timeout ?? DEFAULT_TIMEOUT_S, gate: given.gate ?? null, label: given.label ?? null, options: optionNames(options) })
   return handle
+}
+
+/** @param {unknown} options @returns {options is Record<string, unknown>} */
+const isOptions = (options) => typeof options === 'object' && options !== null && !Array.isArray(options)
+
+/** The names of the options a cell gave, for the server to refuse one it does not know; options that are no object name none run() takes. @param {unknown} options */
+const optionNames = (options) => {
+  if (options === undefined) return []
+  return isOptions(options) ? Object.keys(options) : ['(not an object)']
 }
 
 /** @param {Kernel} kernel @param {any} message */

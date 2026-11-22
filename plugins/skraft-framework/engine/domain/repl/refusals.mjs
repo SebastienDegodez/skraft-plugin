@@ -27,4 +27,5 @@ export const RUN_REFUSALS = Object.freeze({
   cwd: 'run() takes a cwd that is a non-empty text',
   timeout: 'run() takes a timeout of 1 to 7200 seconds',
   option: 'run() takes a gate and a label that are non-empty texts',
+  unknown: 'run() takes only these options: cwd, timeout, gate, label',
 })

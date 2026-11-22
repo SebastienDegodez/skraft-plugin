@@ -155,13 +155,14 @@ test('a run that finished while another cell went on is told at the start of the
   assert.match(answers[1].text, /^\[run-done r1 exit 1 in \d+\.\d s: npm test\]$/)
 })
 
-test('a run the cell asks for with a timeout outside 1 to 7200 seconds, or an empty command, never starts a program', async () => {
+test('a run the cell asks for with a timeout outside 1 to 7200 seconds, an empty command or an option run() does not know never starts a program, and is traced as not started', async () => {
   const kernels = new ScriptedKernelHost()
   const launcher = new ScriptedLauncher()
   kernels.script.set('bad', async ({ run }) => {
     const results = []
     results.push(await run('npm test', { timeout: 7201 }))
     results.push(await run(['npm', ''], {}))
+    results.push(await run('npm test', { timout: 5 }))
     return results.map(({ error }) => error).join(' | ')
   })
   const answers = []
@@ -169,8 +170,27 @@ test('a run the cell asks for with a timeout outside 1 to 7200 seconds, or an em
 
   await host.start()
 
+  const trace = host.tracking.files.get(`${SLUG}/logs/runs/distill-1-1/runs.jsonl`).trim().split('\n').map((line) => JSON.parse(line))
   assert.equal(launcher.started.length, 0)
-  assert.match(answers[0].text, /=> run\(\) takes a timeout of 1 to 7200 seconds \| run\(\) takes a non-empty command line, or an argv array of non-empty strings$/)
+  assert.match(answers[0].text, /=> run\(\) takes a timeout of 1 to 7200 seconds \| run\(\) takes a non-empty command line, or an argv array of non-empty strings \| run\(\) takes only these options: cwd, timeout, gate, label$/)
+  assert.deepEqual(trace.map(({ type, started }) => [type, started]), [['run', false], ['run', false], ['run', false]])
+})
+
+test('a run request whose id the server did not expect starts nothing, writes no trace line and throws nothing; the fact goes to unexpected.log', async () => {
+  const launcher = new ScriptedLauncher({ outputs: { 'npm test': { exitCode: 0 } } })
+  const kernels = new ScriptedKernelHost()
+  const { host } = replRun({ kernels, launcher, calls: { 2: async (repl) => {
+    await repl.call({ code: '1' })
+    for (const rid of ['../x', 1, 1, 5000]) kernels.kernels[0].events.onRun({ rid, cell: 1, command: 'npm test', cwd: '.', timeout: 60, gate: null, label: null, options: [] })
+    await sleep(10)
+  } } })
+
+  assert.equal((await host.start()).status, 'done')
+
+  const trace = host.tracking.files.get(`${SLUG}/logs/runs/distill-1-1/runs.jsonl`).trim().split('\n').map((line) => JSON.parse(line))
+  assert.equal(launcher.started.length, 1)
+  assert.deepEqual(trace.map(({ type, run }) => [type, run]), [['start', 1], ['run', 1]])
+  assert.equal(host.tracking.files.get(`${SLUG}/logs/unexpected.log`).match(/^Error: a run request carried an id the server did not expect; it was ignored$/gm).length, 3)
 })
 
 test('a lease on the attempt held by a running server refuses the call, and one whose server is gone is taken over', async () => {

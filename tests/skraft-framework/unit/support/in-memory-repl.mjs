@@ -66,7 +66,7 @@ class ScriptedKernel {
     if (this.flying !== null) return { status: 'busy', printed: '', value: null, error: null }
     this.cells += 1
     const printed = []
-    const run = (command, { cwd = '.', timeout = 600, gate = null, label = null } = {}) => this.ask({ cell: this.cells, command, cwd, timeout, gate, label })
+    const run = (command, options = {}) => this.ask({ cell: this.cells, command, cwd: options.cwd ?? '.', timeout: options.timeout ?? 600, gate: options.gate ?? null, label: options.label ?? null, options: Object.keys(options) })
     const work = (this.script.get(code) ?? (async () => null))({ run, print: (text) => printed.push(text), id: this.cells })
     const restarted = new Promise((resolve) => { this.restartCell = () => resolve({ status: 'restarted', printed: printed.join(''), value: null, error: null }) })
     const ended = work.then((value) => ({ status: 'done', printed: printed.join(''), value, error: null }), (error) => ({ status: 'error', printed: printed.join(''), value: null, error: error.message }))

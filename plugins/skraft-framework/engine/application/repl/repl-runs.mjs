@@ -1,5 +1,6 @@
 import { RUN_REFUSALS } from '../../domain/repl/refusals.mjs'
 import { gitFacts, traceEnd, traceStart } from './repl-trace.mjs'
+import { keepUnexpected } from './repl-unexpected.mjs'
 
 /**
  * The programs a cell asked to start. The kernel only asks: this server validates the request,
@@ -15,7 +16,7 @@ import { gitFacts, traceEnd, traceStart } from './repl-trace.mjs'
  * @typedef {{
  *   key: string, slug: string, folder: string, kernel: import('../ports/kernel-host.mjs').Kernel, lease: string,
  *   runs: Map<number, Run>, cells: number, lastUsed: number, gone: string | null, pending: Set<Promise<void>>, signingKey: string | null, chain: Promise<void>,
- *   retired?: boolean, cellSince?: number | null, recording?: Promise<void>, tracked?: Map<number, Promise<{ pid: number, created: string | null }>>,
+ *   retired?: boolean, cellSince?: number | null, topRid?: number, recording?: Promise<void>, tracked?: Map<number, Promise<{ pid: number, created: string | null }>>,
  * }} Entry
  *   retired: the kernel is being ended, and no run starts any more; cellSince: when the cell in flight started, null when none runs; recording: the last write of the orphan journal; tracked: each process recorded, with its start time, by pid.
  */
@@ -23,12 +24,20 @@ import { gitFacts, traceEnd, traceStart } from './repl-trace.mjs'
 /** The longest a program may run, and the output kept of it. */
 export const MAX_TIMEOUT_S = 7200
 const MAX_OUTPUT_BYTES = 67_108_864
+/** The options run() takes. */
+const RUN_OPTIONS = Object.freeze(['cwd', 'timeout', 'gate', 'label'])
 
 /** @param {unknown} value */
 const isText = (value) => typeof value === 'string' && value.trim() !== ''
 
 /** @param {RunRequest} request @returns {string | null} what is wrong with the request, null when nothing */
-export const refusalOfRun = ({ command, cwd, timeout, gate, label }) => {
+export const refusalOfRun = (request) => {
+  if (!(request.options ?? []).every((name) => RUN_OPTIONS.includes(name))) return RUN_REFUSALS.unknown
+  return refusalOfValues(request)
+}
+
+/** @param {RunRequest} request @returns {string | null} */
+const refusalOfValues = ({ command, cwd, timeout, gate, label }) => {
   const words = Array.isArray(command) ? command : [command]
   if (words.length === 0 || !words.every(isText)) return RUN_REFUSALS.command
   if (!isText(cwd)) return RUN_REFUSALS.cwd
@@ -47,11 +56,32 @@ const shownCommand = (command) => (Array.isArray(command) ? command.join(' ') : 
  * @param {any} deps @param {Entry} entry @param {RunRequest} request
  */
 export const serveRun = async (deps, entry, request) => {
+  if (!expected(entry, request.rid)) return unexpectedRid(deps, entry)
   try {
     await carry(deps, entry, request)
   } catch {
     entry.kernel.exited(request.rid, { exitCode: null, signal: null, timedOut: false, killed: false, durationMs: 0, log: null, error: 'skraft could not run it' })
   }
+}
+
+/** How far ahead of the highest id seen a request id may be. */
+const RID_WINDOW = 1000
+
+/**
+ * Whether the id is one the kernel would give next: a positive integer never seen, not far
+ * ahead of the highest one seen. The kernel counts from 1; any other id is no request of it.
+ * @param {Entry} entry @param {unknown} rid
+ */
+const expected = (entry, rid) => {
+  if (!Number.isInteger(rid) || /** @type {number} */ (rid) < 1 || entry.runs.has(/** @type {number} */ (rid))) return false
+  if (/** @type {number} */ (rid) >= (entry.topRid ?? 0) + RID_WINDOW) return false
+  entry.topRid = Math.max(entry.topRid ?? 0, /** @type {number} */ (rid))
+  return true
+}
+
+/** A request the kernel did not send is ignored; the run's unexpected.log keeps the fact. @param {any} deps @param {Entry} entry */
+const unexpectedRid = async (deps, entry) => {
+  await keepUnexpected(deps, entry.slug, new Error('a run request carried an id the server did not expect; it was ignored')).catch(() => undefined)
 }
 
 /** @param {any} deps @param {Entry} entry @param {RunRequest} request */

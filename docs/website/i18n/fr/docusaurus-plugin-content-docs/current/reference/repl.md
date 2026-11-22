@@ -36,7 +36,7 @@ La cellule est du JavaScript. Les variables restent d'un appel au suivant et une
 
 | Nom | Fait |
 | --- | --- |
-| `run(command, { cwd = '.', timeout = 600, gate, label })` | lance un programme et rend aussitôt une poignée. `command` est un tableau argv (sans shell) ou une chaîne, exécutée par `sh -c` ; sous Windows par Git Bash s'il est installé, sinon par `pwsh` ou `powershell`. `cwd` est relatif à la copie de travail et n'en sort jamais. `timeout` est en secondes, de 1 à 7200 |
+| `run(command, { cwd = '.', timeout = 600, gate, label })` | lance un programme et rend aussitôt une poignée. `command` est un tableau argv (sans shell) ou une chaîne, exécutée par `sh -c` ; sous Windows par Git Bash s'il est installé, sinon par `pwsh` ou `powershell`. `cwd` est relatif à la copie de travail et n'en sort jamais. `timeout` est en secondes, de 1 à 7200. Toute autre option est refusée, et le run ne démarre pas (la trace le note non démarré) |
 | poignée | `id`, `command`, `running`, `tail(n = 50)`, `output()`, `poll()` (le résultat, ou `null` tant qu'il tourne), `kill(signal = 'SIGTERM', grace = 5)` ; `await handle` donne `{ exitCode, output, durationMs, head, log }` (`head` : le HEAD du dépôt qui contient `cwd` à la fin du programme, la valeur de `headAfter` dans la trace) |
 | `gate(name, command, options)` | `run` avec la gate nommée : `build`, `format`, `lint`, `test`, `architecture`, `coverage` ou `e2e` |
 | `absent(gate, component, reason)` | déclare que l'`AGENTS.md` du projet ne nomme aucune gate de ce nom pour le composant |

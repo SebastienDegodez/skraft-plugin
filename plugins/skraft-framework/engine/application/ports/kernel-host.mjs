@@ -10,8 +10,8 @@
  * @typedef {{ status: CellStatus, printed: string, value: string | null, error: string | null }} CellOutcome
  *   printed: what the cell and the runs of earlier cells printed since the last outcome; value:
  *   the cell's trailing value, inspected at depth 2; error: the cell's error, with its stack.
- * @typedef {{ rid: number, cell: number | null, command: string | string[], cwd: string, timeout: number, gate: string | null, label: string | null }} RunRequest
- *   what a cell asked to start; every field is the cell's, so the server validates each.
+ * @typedef {{ rid: number, cell: number | null, command: string | string[], cwd: string, timeout: number, gate: string | null, label: string | null, options?: string[] }} RunRequest
+ *   what a cell asked to start; every field is the cell's, so the server validates each. options: the names of the options the cell gave.
  * @typedef {{ gate: string, component: string, reason: string, cell: number | null }} AbsentNotice
  * @typedef {{
  *   onRun: (request: RunRequest) => void,
