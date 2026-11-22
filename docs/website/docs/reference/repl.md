@@ -65,7 +65,7 @@ A skill script is a program first: an agent starts it as `node "<absolute path>"
 | Script | In a cell |
 | --- | --- |
 | a gate script (the coverage, architecture or no-mocks script of a `quality-gates-<stack>` skill) | runs through `gate(name, ['node', '<absolute path>', …], { cwd })`: its exit code is evidence only when the server started it, and the trace holds that run. Imported, it proves nothing: no run is traced |
-| a script that calls neither the engine nor the MCP server, and whose run is no gate's evidence (the report of `qa-reporting`, for instance) | may be imported; the cell then calls its exported function with an explicit root (`runReport(argv, { cwd, env })`), never the process's folder |
+| a script that calls neither the engine nor the MCP server, and whose run is no gate's evidence (the request body of `azure-devops-forge-writes`, for instance) | may be imported; the cell then calls its exported function (`commentRequest(markdown)`), with an explicit root when it reads files, never the process's folder |
 
 Importing a skill script does nothing by itself: a script runs its command only when it is the program `node` started, and a contract test imports every one of them and checks that it prints nothing and exits 0. Starting a script costs a Node start, about 17 ms (median of 20 starts, macOS, Node 22.23; Windows not measured); the gate scripts run once per pass, so they stay programs.
 

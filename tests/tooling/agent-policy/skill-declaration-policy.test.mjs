@@ -6,7 +6,7 @@ import { validateSkillDeclarations } from '../../../eng/lib/skill-declaration-po
 test('a skill listed as both mandatory and on-demand is a violation naming the agent and the skill', () => {
   const violations = validateSkillDeclarations([
     { name: 'software-engineer', skills: ['outside-in-tdd', 'mutation-testing'], onDemandSkills: ['mutation-testing'] },
-    { name: 'acceptance-designer', skills: ['bdd-methodology'], onDemandSkills: ['qa-reporting'] },
+    { name: 'acceptance-designer', skills: ['bdd-methodology'], onDemandSkills: ['playwright-evidence'] },
     { name: 'bare' },
   ])
   assert.deepEqual(violations, [{

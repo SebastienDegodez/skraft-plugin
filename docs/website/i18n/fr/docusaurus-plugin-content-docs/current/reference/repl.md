@@ -65,7 +65,7 @@ Un script de skill est d'abord un programme : un agent le lance par `node "<chem
 | Script | Dans une cellule |
 | --- | --- |
 | un script de gate (le script de couverture, d'architecture ou de no-mocks d'une skill `quality-gates-<stack>`) | passe par `gate(name, ['node', '<chemin absolu>', …], { cwd })` : son code de sortie n'est une preuve que si le serveur l'a lancé, et la trace garde ce run. Importé, il ne prouve rien : aucun run n'est tracé |
-| un script qui n'appelle ni le moteur ni le serveur MCP, et dont le run n'est la preuve d'aucune gate (le rapport de `qa-reporting`, par exemple) | peut être importé ; la cellule appelle alors sa fonction exportée avec une racine explicite (`runReport(argv, { cwd, env })`), jamais le dossier du processus |
+| un script qui n'appelle ni le moteur ni le serveur MCP, et dont le run n'est la preuve d'aucune gate (le corps de requête d'`azure-devops-forge-writes`, par exemple) | peut être importé ; la cellule appelle alors sa fonction exportée (`commentRequest(markdown)`), avec une racine explicite quand elle lit des fichiers, jamais le dossier du processus |
 
 Importer un script de skill ne fait rien par soi-même : un script ne lance sa commande que s'il est le programme que `node` a démarré, et un test de contrat les importe tous et vérifie qu'aucun n'écrit rien et que chacun sort avec 0. Lancer un script coûte un démarrage de Node, environ 17 ms (médiane de 20 démarrages, macOS, Node 22.23 ; Windows non mesuré) ; les scripts de gate tournent une fois par passe, et restent donc des programmes.
 
