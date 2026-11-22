@@ -64,6 +64,12 @@ export const serveRun = async (deps, entry, request) => {
   }
 }
 
+/** How many runs of an attempt may live at once. */
+const MAX_LIVE_RUNS = 8
+
+/** @param {Entry} entry @returns {string | null} why one more run does not start */
+const tooMany = (entry) => (liveRuns(entry).length >= MAX_LIVE_RUNS ? RUN_REFUSALS.many : null)
+
 /** How far ahead of the highest id seen a request id may be. */
 const RID_WINDOW = 1000
 
@@ -86,7 +92,7 @@ const unexpectedRid = async (deps, entry) => {
 
 /** @param {any} deps @param {Entry} entry @param {RunRequest} request */
 const carry = async (deps, entry, request) => {
-  const refusal = refusalOfRun(request)
+  const refusal = refusalOfRun(request) ?? tooMany(entry)
   const run = openRun(deps, entry, request)
   if (refusal !== null) return end(deps, entry, run, { ...NOT_STARTED, error: refusal })
   run.before = await gitFacts(deps, request.cwd)

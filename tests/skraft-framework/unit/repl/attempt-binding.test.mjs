@@ -176,6 +176,22 @@ test('a run the cell asks for with a timeout outside 1 to 7200 seconds, an empty
   assert.deepEqual(trace.map(({ type, started }) => [type, started]), [['run', false], ['run', false], ['run', false]])
 })
 
+test('at most eight runs of an attempt live at once: a ninth is not started and the cell reads why', async () => {
+  const launcher = new ScriptedLauncher()
+  const kernels = new ScriptedKernelHost()
+  kernels.script.set('nine', async ({ run }) => {
+    for (let index = 1; index <= 8; index += 1) void run(`npm run e2e-${index}`)
+    return (await run('npm test')).error
+  })
+  const answers = []
+  const { host } = replRun({ kernels, launcher, calls: { 2: async (repl) => { answers.push(await repl.call({ code: 'nine' })) } } })
+
+  await host.start()
+
+  assert.equal(launcher.started.length, 8)
+  assert.match(answers[0].text, /=> run\(\) runs at most 8 programs of an attempt at once: await or kill one first$/)
+})
+
 test('a kill a cell asks for takes SIGTERM, SIGINT or SIGKILL and a grace of 0 to 30 seconds; any other is refused and the program goes on', async () => {
   const launcher = new ScriptedLauncher()
   const kernels = new ScriptedKernelHost()

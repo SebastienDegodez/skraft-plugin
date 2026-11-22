@@ -28,6 +28,7 @@ export const RUN_REFUSALS = Object.freeze({
   timeout: 'run() takes a timeout of 1 to 7200 seconds',
   option: 'run() takes a gate and a label that are non-empty texts',
   unknown: 'run() takes only these options: cwd, timeout, gate, label',
+  many: 'run() runs at most 8 programs of an attempt at once: await or kill one first',
 })
 
 /** The signals a cell may end its run with, and the longest grace before SIGKILL, in seconds. */
