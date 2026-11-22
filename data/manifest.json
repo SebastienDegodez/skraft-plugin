@@ -1,5 +1,5 @@
 {
-  "generated": "2026-11-22T16:47:34.964Z",
+  "generated": "2026-11-22T17:26:09.611Z",
   "sessions": [
     {
       "id": "scheduled/2026-09-28/acceptance-designer/absent-acceptance-criteria-halt-the-distillation--main--run0",
@@ -6331,1462 +6331,6 @@
         "pr-644"
       ],
       "mtime": 1795295018862.083
-    },
-    {
-      "id": "pr/645/acceptance-designer/a-criterion-an-existing-test-already-covers-is-relied-on-only-once-that-test-is-run-else-tested-anew--main--run0",
-      "name": "acceptance-designer / A criterion an existing test already covers is relied on only once that test is run, else tested anew (main, run 0)",
-      "url": "sessions/pr/645/acceptance-designer/a-criterion-an-existing-test-already-covers-is-relied-on-only-once-that-test-is-run-else-tested-anew--main--run0.jsonl",
-      "tags": [
-        "pr",
-        "acceptance-designer",
-        "main",
-        "a-criterion-an-existing-test-already-covers-is-relied-on-only-once-that-test-is-run-else-tested-anew",
-        "pr-645"
-      ],
-      "mtime": 1795339692025.0205
-    },
-    {
-      "id": "pr/645/acceptance-designer/a-criterion-an-existing-test-already-covers-is-relied-on-only-once-that-test-is-run-else-tested-anew--main--run1",
-      "name": "acceptance-designer / A criterion an existing test already covers is relied on only once that test is run, else tested anew (main, run 1)",
-      "url": "sessions/pr/645/acceptance-designer/a-criterion-an-existing-test-already-covers-is-relied-on-only-once-that-test-is-run-else-tested-anew--main--run1.jsonl",
-      "tags": [
-        "pr",
-        "acceptance-designer",
-        "main",
-        "a-criterion-an-existing-test-already-covers-is-relied-on-only-once-that-test-is-run-else-tested-anew",
-        "pr-645"
-      ],
-      "mtime": 1795339692075.0217
-    },
-    {
-      "id": "pr/645/acceptance-designer/a-criterion-an-existing-test-already-covers-is-relied-on-only-once-that-test-is-run-else-tested-anew--main--run2",
-      "name": "acceptance-designer / A criterion an existing test already covers is relied on only once that test is run, else tested anew (main, run 2)",
-      "url": "sessions/pr/645/acceptance-designer/a-criterion-an-existing-test-already-covers-is-relied-on-only-once-that-test-is-run-else-tested-anew--main--run2.jsonl",
-      "tags": [
-        "pr",
-        "acceptance-designer",
-        "main",
-        "a-criterion-an-existing-test-already-covers-is-relied-on-only-once-that-test-is-run-else-tested-anew",
-        "pr-645"
-      ],
-      "mtime": 1795339692125.023
-    },
-    {
-      "id": "pr/645/acceptance-designer/a-criterion-an-existing-test-already-covers-is-relied-on-only-once-that-test-is-run-else-tested-anew--main--run3",
-      "name": "acceptance-designer / A criterion an existing test already covers is relied on only once that test is run, else tested anew (main, run 3)",
-      "url": "sessions/pr/645/acceptance-designer/a-criterion-an-existing-test-already-covers-is-relied-on-only-once-that-test-is-run-else-tested-anew--main--run3.jsonl",
-      "tags": [
-        "pr",
-        "acceptance-designer",
-        "main",
-        "a-criterion-an-existing-test-already-covers-is-relied-on-only-once-that-test-is-run-else-tested-anew",
-        "pr-645"
-      ],
-      "mtime": 1795339692126.023
-    },
-    {
-      "id": "pr/645/acceptance-designer/a-criterion-an-existing-test-already-covers-is-relied-on-only-once-that-test-is-run-else-tested-anew--main--run4",
-      "name": "acceptance-designer / A criterion an existing test already covers is relied on only once that test is run, else tested anew (main, run 4)",
-      "url": "sessions/pr/645/acceptance-designer/a-criterion-an-existing-test-already-covers-is-relied-on-only-once-that-test-is-run-else-tested-anew--main--run4.jsonl",
-      "tags": [
-        "pr",
-        "acceptance-designer",
-        "main",
-        "a-criterion-an-existing-test-already-covers-is-relied-on-only-once-that-test-is-run-else-tested-anew",
-        "pr-645"
-      ],
-      "mtime": 1795339692175.2224
-    },
-    {
-      "id": "pr/645/acceptance-designer/absent-acceptance-criteria-halt-the-distillation--main--run0",
-      "name": "acceptance-designer / Absent acceptance criteria halt the distillation (main, run 0)",
-      "url": "sessions/pr/645/acceptance-designer/absent-acceptance-criteria-halt-the-distillation--main--run0.jsonl",
-      "tags": [
-        "pr",
-        "acceptance-designer",
-        "main",
-        "absent-acceptance-criteria-halt-the-distillation",
-        "pr-645"
-      ],
-      "mtime": 1795339692175.2224
-    },
-    {
-      "id": "pr/645/acceptance-designer/absent-acceptance-criteria-halt-the-distillation--main--run1",
-      "name": "acceptance-designer / Absent acceptance criteria halt the distillation (main, run 1)",
-      "url": "sessions/pr/645/acceptance-designer/absent-acceptance-criteria-halt-the-distillation--main--run1.jsonl",
-      "tags": [
-        "pr",
-        "acceptance-designer",
-        "main",
-        "absent-acceptance-criteria-halt-the-distillation",
-        "pr-645"
-      ],
-      "mtime": 1795339692175.2224
-    },
-    {
-      "id": "pr/645/acceptance-designer/absent-acceptance-criteria-halt-the-distillation--main--run2",
-      "name": "acceptance-designer / Absent acceptance criteria halt the distillation (main, run 2)",
-      "url": "sessions/pr/645/acceptance-designer/absent-acceptance-criteria-halt-the-distillation--main--run2.jsonl",
-      "tags": [
-        "pr",
-        "acceptance-designer",
-        "main",
-        "absent-acceptance-criteria-halt-the-distillation",
-        "pr-645"
-      ],
-      "mtime": 1795339692175.2224
-    },
-    {
-      "id": "pr/645/acceptance-designer/absent-acceptance-criteria-halt-the-distillation--main--run3",
-      "name": "acceptance-designer / Absent acceptance criteria halt the distillation (main, run 3)",
-      "url": "sessions/pr/645/acceptance-designer/absent-acceptance-criteria-halt-the-distillation--main--run3.jsonl",
-      "tags": [
-        "pr",
-        "acceptance-designer",
-        "main",
-        "absent-acceptance-criteria-halt-the-distillation",
-        "pr-645"
-      ],
-      "mtime": 1795339692224.1404
-    },
-    {
-      "id": "pr/645/acceptance-designer/absent-acceptance-criteria-halt-the-distillation--main--run4",
-      "name": "acceptance-designer / Absent acceptance criteria halt the distillation (main, run 4)",
-      "url": "sessions/pr/645/acceptance-designer/absent-acceptance-criteria-halt-the-distillation--main--run4.jsonl",
-      "tags": [
-        "pr",
-        "acceptance-designer",
-        "main",
-        "absent-acceptance-criteria-halt-the-distillation",
-        "pr-645"
-      ],
-      "mtime": 1795339692224.1404
-    },
-    {
-      "id": "pr/645/acceptance-designer/agreed-criteria-become-an-executable-specification-that-fails-on-business-meaning--main--run0",
-      "name": "acceptance-designer / Agreed criteria become an executable specification that fails on business meaning (main, run 0)",
-      "url": "sessions/pr/645/acceptance-designer/agreed-criteria-become-an-executable-specification-that-fails-on-business-meaning--main--run0.jsonl",
-      "tags": [
-        "pr",
-        "acceptance-designer",
-        "main",
-        "agreed-criteria-become-an-executable-specification-that-fails-on-business-meaning",
-        "pr-645"
-      ],
-      "mtime": 1795339692226.0251
-    },
-    {
-      "id": "pr/645/acceptance-designer/agreed-criteria-become-an-executable-specification-that-fails-on-business-meaning--main--run1",
-      "name": "acceptance-designer / Agreed criteria become an executable specification that fails on business meaning (main, run 1)",
-      "url": "sessions/pr/645/acceptance-designer/agreed-criteria-become-an-executable-specification-that-fails-on-business-meaning--main--run1.jsonl",
-      "tags": [
-        "pr",
-        "acceptance-designer",
-        "main",
-        "agreed-criteria-become-an-executable-specification-that-fails-on-business-meaning",
-        "pr-645"
-      ],
-      "mtime": 1795339692226.0251
-    },
-    {
-      "id": "pr/645/acceptance-designer/agreed-criteria-become-an-executable-specification-that-fails-on-business-meaning--main--run2",
-      "name": "acceptance-designer / Agreed criteria become an executable specification that fails on business meaning (main, run 2)",
-      "url": "sessions/pr/645/acceptance-designer/agreed-criteria-become-an-executable-specification-that-fails-on-business-meaning--main--run2.jsonl",
-      "tags": [
-        "pr",
-        "acceptance-designer",
-        "main",
-        "agreed-criteria-become-an-executable-specification-that-fails-on-business-meaning",
-        "pr-645"
-      ],
-      "mtime": 1795339692272.593
-    },
-    {
-      "id": "pr/645/acceptance-designer/agreed-criteria-become-an-executable-specification-that-fails-on-business-meaning--main--run3",
-      "name": "acceptance-designer / Agreed criteria become an executable specification that fails on business meaning (main, run 3)",
-      "url": "sessions/pr/645/acceptance-designer/agreed-criteria-become-an-executable-specification-that-fails-on-business-meaning--main--run3.jsonl",
-      "tags": [
-        "pr",
-        "acceptance-designer",
-        "main",
-        "agreed-criteria-become-an-executable-specification-that-fails-on-business-meaning",
-        "pr-645"
-      ],
-      "mtime": 1795339692273.0264
-    },
-    {
-      "id": "pr/645/acceptance-designer/agreed-criteria-become-an-executable-specification-that-fails-on-business-meaning--main--run4",
-      "name": "acceptance-designer / Agreed criteria become an executable specification that fails on business meaning (main, run 4)",
-      "url": "sessions/pr/645/acceptance-designer/agreed-criteria-become-an-executable-specification-that-fails-on-business-meaning--main--run4.jsonl",
-      "tags": [
-        "pr",
-        "acceptance-designer",
-        "main",
-        "agreed-criteria-become-an-executable-specification-that-fails-on-business-meaning",
-        "pr-645"
-      ],
-      "mtime": 1795339692273.0264
-    },
-    {
-      "id": "pr/645/acceptance-designer/an-undecided-tier-is-escalated-rather-than-given-an-invented-price--main--run0",
-      "name": "acceptance-designer / An undecided tier is escalated rather than given an invented price (main, run 0)",
-      "url": "sessions/pr/645/acceptance-designer/an-undecided-tier-is-escalated-rather-than-given-an-invented-price--main--run0.jsonl",
-      "tags": [
-        "pr",
-        "acceptance-designer",
-        "main",
-        "an-undecided-tier-is-escalated-rather-than-given-an-invented-price",
-        "pr-645"
-      ],
-      "mtime": 1795339692273.0264
-    },
-    {
-      "id": "pr/645/acceptance-designer/an-undecided-tier-is-escalated-rather-than-given-an-invented-price--main--run1",
-      "name": "acceptance-designer / An undecided tier is escalated rather than given an invented price (main, run 1)",
-      "url": "sessions/pr/645/acceptance-designer/an-undecided-tier-is-escalated-rather-than-given-an-invented-price--main--run1.jsonl",
-      "tags": [
-        "pr",
-        "acceptance-designer",
-        "main",
-        "an-undecided-tier-is-escalated-rather-than-given-an-invented-price",
-        "pr-645"
-      ],
-      "mtime": 1795339692322.0276
-    },
-    {
-      "id": "pr/645/acceptance-designer/an-undecided-tier-is-escalated-rather-than-given-an-invented-price--main--run2",
-      "name": "acceptance-designer / An undecided tier is escalated rather than given an invented price (main, run 2)",
-      "url": "sessions/pr/645/acceptance-designer/an-undecided-tier-is-escalated-rather-than-given-an-invented-price--main--run2.jsonl",
-      "tags": [
-        "pr",
-        "acceptance-designer",
-        "main",
-        "an-undecided-tier-is-escalated-rather-than-given-an-invented-price",
-        "pr-645"
-      ],
-      "mtime": 1795339692322.0276
-    },
-    {
-      "id": "pr/645/acceptance-designer/an-undecided-tier-is-escalated-rather-than-given-an-invented-price--main--run3",
-      "name": "acceptance-designer / An undecided tier is escalated rather than given an invented price (main, run 3)",
-      "url": "sessions/pr/645/acceptance-designer/an-undecided-tier-is-escalated-rather-than-given-an-invented-price--main--run3.jsonl",
-      "tags": [
-        "pr",
-        "acceptance-designer",
-        "main",
-        "an-undecided-tier-is-escalated-rather-than-given-an-invented-price",
-        "pr-645"
-      ],
-      "mtime": 1795339692322.0276
-    },
-    {
-      "id": "pr/645/acceptance-designer/an-undecided-tier-is-escalated-rather-than-given-an-invented-price--main--run4",
-      "name": "acceptance-designer / An undecided tier is escalated rather than given an invented price (main, run 4)",
-      "url": "sessions/pr/645/acceptance-designer/an-undecided-tier-is-escalated-rather-than-given-an-invented-price--main--run4.jsonl",
-      "tags": [
-        "pr",
-        "acceptance-designer",
-        "main",
-        "an-undecided-tier-is-escalated-rather-than-given-an-invented-price",
-        "pr-645"
-      ],
-      "mtime": 1795339692322.0276
-    },
-    {
-      "id": "pr/645/acceptance-designer/every-scenario-s-acceptance-test-is-written-first-in-one-red-commit-and-grouped-by-rule-for-deliver--main--run0",
-      "name": "acceptance-designer / Every scenario's acceptance test is written first, in one red commit, and grouped by rule for DELIVER (main, run 0)",
-      "url": "sessions/pr/645/acceptance-designer/every-scenario-s-acceptance-test-is-written-first-in-one-red-commit-and-grouped-by-rule-for-deliver--main--run0.jsonl",
-      "tags": [
-        "pr",
-        "acceptance-designer",
-        "main",
-        "every-scenario-s-acceptance-test-is-written-first-in-one-red-commit-and-grouped-by-rule-for-deliver",
-        "pr-645"
-      ],
-      "mtime": 1795339692331.0496
-    },
-    {
-      "id": "pr/645/acceptance-designer/every-scenario-s-acceptance-test-is-written-first-in-one-red-commit-and-grouped-by-rule-for-deliver--main--run1",
-      "name": "acceptance-designer / Every scenario's acceptance test is written first, in one red commit, and grouped by rule for DELIVER (main, run 1)",
-      "url": "sessions/pr/645/acceptance-designer/every-scenario-s-acceptance-test-is-written-first-in-one-red-commit-and-grouped-by-rule-for-deliver--main--run1.jsonl",
-      "tags": [
-        "pr",
-        "acceptance-designer",
-        "main",
-        "every-scenario-s-acceptance-test-is-written-first-in-one-red-commit-and-grouped-by-rule-for-deliver",
-        "pr-645"
-      ],
-      "mtime": 1795339692331.0496
-    },
-    {
-      "id": "pr/645/acceptance-designer/every-scenario-s-acceptance-test-is-written-first-in-one-red-commit-and-grouped-by-rule-for-deliver--main--run2",
-      "name": "acceptance-designer / Every scenario's acceptance test is written first, in one red commit, and grouped by rule for DELIVER (main, run 2)",
-      "url": "sessions/pr/645/acceptance-designer/every-scenario-s-acceptance-test-is-written-first-in-one-red-commit-and-grouped-by-rule-for-deliver--main--run2.jsonl",
-      "tags": [
-        "pr",
-        "acceptance-designer",
-        "main",
-        "every-scenario-s-acceptance-test-is-written-first-in-one-red-commit-and-grouped-by-rule-for-deliver",
-        "pr-645"
-      ],
-      "mtime": 1795339692372.0286
-    },
-    {
-      "id": "pr/645/acceptance-designer/every-scenario-s-acceptance-test-is-written-first-in-one-red-commit-and-grouped-by-rule-for-deliver--main--run3",
-      "name": "acceptance-designer / Every scenario's acceptance test is written first, in one red commit, and grouped by rule for DELIVER (main, run 3)",
-      "url": "sessions/pr/645/acceptance-designer/every-scenario-s-acceptance-test-is-written-first-in-one-red-commit-and-grouped-by-rule-for-deliver--main--run3.jsonl",
-      "tags": [
-        "pr",
-        "acceptance-designer",
-        "main",
-        "every-scenario-s-acceptance-test-is-written-first-in-one-red-commit-and-grouped-by-rule-for-deliver",
-        "pr-645"
-      ],
-      "mtime": 1795339692373.0288
-    },
-    {
-      "id": "pr/645/acceptance-designer/every-scenario-s-acceptance-test-is-written-first-in-one-red-commit-and-grouped-by-rule-for-deliver--main--run4",
-      "name": "acceptance-designer / Every scenario's acceptance test is written first, in one red commit, and grouped by rule for DELIVER (main, run 4)",
-      "url": "sessions/pr/645/acceptance-designer/every-scenario-s-acceptance-test-is-written-first-in-one-red-commit-and-grouped-by-rule-for-deliver--main--run4.jsonl",
-      "tags": [
-        "pr",
-        "acceptance-designer",
-        "main",
-        "every-scenario-s-acceptance-test-is-written-first-in-one-red-commit-and-grouped-by-rule-for-deliver",
-        "pr-645"
-      ],
-      "mtime": 1795339692373.0288
-    },
-    {
-      "id": "pr/645/commit-convention/finish-the-approved-customer-guide-issue--main--run0",
-      "name": "commit-convention / Finish the approved customer guide issue (main, run 0)",
-      "url": "sessions/pr/645/commit-convention/finish-the-approved-customer-guide-issue--main--run0.jsonl",
-      "tags": [
-        "pr",
-        "commit-convention",
-        "main",
-        "finish-the-approved-customer-guide-issue",
-        "pr-645"
-      ],
-      "mtime": 1795339692445.0305
-    },
-    {
-      "id": "pr/645/commit-convention/finish-the-approved-customer-guide-issue--main--run1",
-      "name": "commit-convention / Finish the approved customer guide issue (main, run 1)",
-      "url": "sessions/pr/645/commit-convention/finish-the-approved-customer-guide-issue--main--run1.jsonl",
-      "tags": [
-        "pr",
-        "commit-convention",
-        "main",
-        "finish-the-approved-customer-guide-issue",
-        "pr-645"
-      ],
-      "mtime": 1795339692445.0305
-    },
-    {
-      "id": "pr/645/commit-convention/finish-the-approved-customer-guide-issue--main--run2",
-      "name": "commit-convention / Finish the approved customer guide issue (main, run 2)",
-      "url": "sessions/pr/645/commit-convention/finish-the-approved-customer-guide-issue--main--run2.jsonl",
-      "tags": [
-        "pr",
-        "commit-convention",
-        "main",
-        "finish-the-approved-customer-guide-issue",
-        "pr-645"
-      ],
-      "mtime": 1795339692445.0305
-    },
-    {
-      "id": "pr/645/commit-convention/finish-the-approved-customer-guide-issue--main--run3",
-      "name": "commit-convention / Finish the approved customer guide issue (main, run 3)",
-      "url": "sessions/pr/645/commit-convention/finish-the-approved-customer-guide-issue--main--run3.jsonl",
-      "tags": [
-        "pr",
-        "commit-convention",
-        "main",
-        "finish-the-approved-customer-guide-issue",
-        "pr-645"
-      ],
-      "mtime": 1795339692445.0305
-    },
-    {
-      "id": "pr/645/commit-convention/finish-the-approved-customer-guide-issue--main--run4",
-      "name": "commit-convention / Finish the approved customer guide issue (main, run 4)",
-      "url": "sessions/pr/645/commit-convention/finish-the-approved-customer-guide-issue--main--run4.jsonl",
-      "tags": [
-        "pr",
-        "commit-convention",
-        "main",
-        "finish-the-approved-customer-guide-issue",
-        "pr-645"
-      ],
-      "mtime": 1795339692444.0303
-    },
-    {
-      "id": "pr/645/commit-convention/record-a-customer-guide-increment-while-the-issue-remains-open--main--run0",
-      "name": "commit-convention / Record a customer guide increment while the issue remains open (main, run 0)",
-      "url": "sessions/pr/645/commit-convention/record-a-customer-guide-increment-while-the-issue-remains-open--main--run0.jsonl",
-      "tags": [
-        "pr",
-        "commit-convention",
-        "main",
-        "record-a-customer-guide-increment-while-the-issue-remains-open",
-        "pr-645"
-      ],
-      "mtime": 1795339692444.0303
-    },
-    {
-      "id": "pr/645/commit-convention/record-a-customer-guide-increment-while-the-issue-remains-open--main--run1",
-      "name": "commit-convention / Record a customer guide increment while the issue remains open (main, run 1)",
-      "url": "sessions/pr/645/commit-convention/record-a-customer-guide-increment-while-the-issue-remains-open--main--run1.jsonl",
-      "tags": [
-        "pr",
-        "commit-convention",
-        "main",
-        "record-a-customer-guide-increment-while-the-issue-remains-open",
-        "pr-645"
-      ],
-      "mtime": 1795339692445.0305
-    },
-    {
-      "id": "pr/645/commit-convention/record-a-customer-guide-increment-while-the-issue-remains-open--main--run2",
-      "name": "commit-convention / Record a customer guide increment while the issue remains open (main, run 2)",
-      "url": "sessions/pr/645/commit-convention/record-a-customer-guide-increment-while-the-issue-remains-open--main--run2.jsonl",
-      "tags": [
-        "pr",
-        "commit-convention",
-        "main",
-        "record-a-customer-guide-increment-while-the-issue-remains-open",
-        "pr-645"
-      ],
-      "mtime": 1795339692445.0305
-    },
-    {
-      "id": "pr/645/commit-convention/record-a-customer-guide-increment-while-the-issue-remains-open--main--run3",
-      "name": "commit-convention / Record a customer guide increment while the issue remains open (main, run 3)",
-      "url": "sessions/pr/645/commit-convention/record-a-customer-guide-increment-while-the-issue-remains-open--main--run3.jsonl",
-      "tags": [
-        "pr",
-        "commit-convention",
-        "main",
-        "record-a-customer-guide-increment-while-the-issue-remains-open",
-        "pr-645"
-      ],
-      "mtime": 1795339692444.0303
-    },
-    {
-      "id": "pr/645/commit-convention/record-a-customer-guide-increment-while-the-issue-remains-open--main--run4",
-      "name": "commit-convention / Record a customer guide increment while the issue remains open (main, run 4)",
-      "url": "sessions/pr/645/commit-convention/record-a-customer-guide-increment-while-the-issue-remains-open--main--run4.jsonl",
-      "tags": [
-        "pr",
-        "commit-convention",
-        "main",
-        "record-a-customer-guide-increment-while-the-issue-remains-open",
-        "pr-645"
-      ],
-      "mtime": 1795339692484.843
-    },
-    {
-      "id": "pr/645/commit-convention/record-the-approved-guide-edit-without-a-known-issue--main--run0",
-      "name": "commit-convention / Record the approved guide edit without a known issue (main, run 0)",
-      "url": "sessions/pr/645/commit-convention/record-the-approved-guide-edit-without-a-known-issue--main--run0.jsonl",
-      "tags": [
-        "pr",
-        "commit-convention",
-        "main",
-        "record-the-approved-guide-edit-without-a-known-issue",
-        "pr-645"
-      ],
-      "mtime": 1795339692485.0312
-    },
-    {
-      "id": "pr/645/commit-convention/record-the-approved-guide-edit-without-a-known-issue--main--run1",
-      "name": "commit-convention / Record the approved guide edit without a known issue (main, run 1)",
-      "url": "sessions/pr/645/commit-convention/record-the-approved-guide-edit-without-a-known-issue--main--run1.jsonl",
-      "tags": [
-        "pr",
-        "commit-convention",
-        "main",
-        "record-the-approved-guide-edit-without-a-known-issue",
-        "pr-645"
-      ],
-      "mtime": 1795339692485.0312
-    },
-    {
-      "id": "pr/645/commit-convention/record-the-approved-guide-edit-without-a-known-issue--main--run2",
-      "name": "commit-convention / Record the approved guide edit without a known issue (main, run 2)",
-      "url": "sessions/pr/645/commit-convention/record-the-approved-guide-edit-without-a-known-issue--main--run2.jsonl",
-      "tags": [
-        "pr",
-        "commit-convention",
-        "main",
-        "record-the-approved-guide-edit-without-a-known-issue",
-        "pr-645"
-      ],
-      "mtime": 1795339692485.0312
-    },
-    {
-      "id": "pr/645/commit-convention/record-the-approved-guide-edit-without-a-known-issue--main--run3",
-      "name": "commit-convention / Record the approved guide edit without a known issue (main, run 3)",
-      "url": "sessions/pr/645/commit-convention/record-the-approved-guide-edit-without-a-known-issue--main--run3.jsonl",
-      "tags": [
-        "pr",
-        "commit-convention",
-        "main",
-        "record-the-approved-guide-edit-without-a-known-issue",
-        "pr-645"
-      ],
-      "mtime": 1795339692485.0312
-    },
-    {
-      "id": "pr/645/commit-convention/record-the-approved-guide-edit-without-a-known-issue--main--run4",
-      "name": "commit-convention / Record the approved guide edit without a known issue (main, run 4)",
-      "url": "sessions/pr/645/commit-convention/record-the-approved-guide-edit-without-a-known-issue--main--run4.jsonl",
-      "tags": [
-        "pr",
-        "commit-convention",
-        "main",
-        "record-the-approved-guide-edit-without-a-known-issue",
-        "pr-645"
-      ],
-      "mtime": 1795339692485.0312
-    },
-    {
-      "id": "pr/645/outside-in-tdd/do-not-invent-an-unresolved-business-outcome--baseline--run0",
-      "name": "outside-in-tdd / Do not invent an unresolved business outcome (baseline, run 0)",
-      "url": "sessions/pr/645/outside-in-tdd/do-not-invent-an-unresolved-business-outcome--baseline--run0.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "baseline",
-        "do-not-invent-an-unresolved-business-outcome",
-        "pr-645"
-      ],
-      "mtime": 1795339692526.0322
-    },
-    {
-      "id": "pr/645/outside-in-tdd/do-not-invent-an-unresolved-business-outcome--baseline--run1",
-      "name": "outside-in-tdd / Do not invent an unresolved business outcome (baseline, run 1)",
-      "url": "sessions/pr/645/outside-in-tdd/do-not-invent-an-unresolved-business-outcome--baseline--run1.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "baseline",
-        "do-not-invent-an-unresolved-business-outcome",
-        "pr-645"
-      ],
-      "mtime": 1795339692524.0322
-    },
-    {
-      "id": "pr/645/outside-in-tdd/do-not-invent-an-unresolved-business-outcome--baseline--run2",
-      "name": "outside-in-tdd / Do not invent an unresolved business outcome (baseline, run 2)",
-      "url": "sessions/pr/645/outside-in-tdd/do-not-invent-an-unresolved-business-outcome--baseline--run2.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "baseline",
-        "do-not-invent-an-unresolved-business-outcome",
-        "pr-645"
-      ],
-      "mtime": 1795339692524.0322
-    },
-    {
-      "id": "pr/645/outside-in-tdd/do-not-invent-an-unresolved-business-outcome--baseline--run3",
-      "name": "outside-in-tdd / Do not invent an unresolved business outcome (baseline, run 3)",
-      "url": "sessions/pr/645/outside-in-tdd/do-not-invent-an-unresolved-business-outcome--baseline--run3.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "baseline",
-        "do-not-invent-an-unresolved-business-outcome",
-        "pr-645"
-      ],
-      "mtime": 1795339692524.0322
-    },
-    {
-      "id": "pr/645/outside-in-tdd/hand-off-a-tdd-slice-to-an-unattended-worker--baseline--run0",
-      "name": "outside-in-tdd / Hand off a TDD slice to an unattended worker (baseline, run 0)",
-      "url": "sessions/pr/645/outside-in-tdd/hand-off-a-tdd-slice-to-an-unattended-worker--baseline--run0.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "baseline",
-        "hand-off-a-tdd-slice-to-an-unattended-worker",
-        "pr-645"
-      ],
-      "mtime": 1795339692521.0322
-    },
-    {
-      "id": "pr/645/outside-in-tdd/hand-off-a-tdd-slice-to-an-unattended-worker--baseline--run1",
-      "name": "outside-in-tdd / Hand off a TDD slice to an unattended worker (baseline, run 1)",
-      "url": "sessions/pr/645/outside-in-tdd/hand-off-a-tdd-slice-to-an-unattended-worker--baseline--run1.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "baseline",
-        "hand-off-a-tdd-slice-to-an-unattended-worker",
-        "pr-645"
-      ],
-      "mtime": 1795339692524.0322
-    },
-    {
-      "id": "pr/645/outside-in-tdd/hand-off-a-tdd-slice-to-an-unattended-worker--baseline--run2",
-      "name": "outside-in-tdd / Hand off a TDD slice to an unattended worker (baseline, run 2)",
-      "url": "sessions/pr/645/outside-in-tdd/hand-off-a-tdd-slice-to-an-unattended-worker--baseline--run2.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "baseline",
-        "hand-off-a-tdd-slice-to-an-unattended-worker",
-        "pr-645"
-      ],
-      "mtime": 1795339692524.0322
-    },
-    {
-      "id": "pr/645/outside-in-tdd/hand-off-a-tdd-slice-to-an-unattended-worker--baseline--run3",
-      "name": "outside-in-tdd / Hand off a TDD slice to an unattended worker (baseline, run 3)",
-      "url": "sessions/pr/645/outside-in-tdd/hand-off-a-tdd-slice-to-an-unattended-worker--baseline--run3.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "baseline",
-        "hand-off-a-tdd-slice-to-an-unattended-worker",
-        "pr-645"
-      ],
-      "mtime": 1795339692524.0322
-    },
-    {
-      "id": "pr/645/outside-in-tdd/keep-wider-integration-work-behind-the-failing-behavior--baseline--run0",
-      "name": "outside-in-tdd / Keep wider integration work behind the failing behavior (baseline, run 0)",
-      "url": "sessions/pr/645/outside-in-tdd/keep-wider-integration-work-behind-the-failing-behavior--baseline--run0.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "baseline",
-        "keep-wider-integration-work-behind-the-failing-behavior",
-        "pr-645"
-      ],
-      "mtime": 1795339692521.0322
-    },
-    {
-      "id": "pr/645/outside-in-tdd/keep-wider-integration-work-behind-the-failing-behavior--baseline--run1",
-      "name": "outside-in-tdd / Keep wider integration work behind the failing behavior (baseline, run 1)",
-      "url": "sessions/pr/645/outside-in-tdd/keep-wider-integration-work-behind-the-failing-behavior--baseline--run1.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "baseline",
-        "keep-wider-integration-work-behind-the-failing-behavior",
-        "pr-645"
-      ],
-      "mtime": 1795339692525.0322
-    },
-    {
-      "id": "pr/645/outside-in-tdd/keep-wider-integration-work-behind-the-failing-behavior--baseline--run2",
-      "name": "outside-in-tdd / Keep wider integration work behind the failing behavior (baseline, run 2)",
-      "url": "sessions/pr/645/outside-in-tdd/keep-wider-integration-work-behind-the-failing-behavior--baseline--run2.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "baseline",
-        "keep-wider-integration-work-behind-the-failing-behavior",
-        "pr-645"
-      ],
-      "mtime": 1795339692524.0322
-    },
-    {
-      "id": "pr/645/outside-in-tdd/keep-wider-integration-work-behind-the-failing-behavior--baseline--run3",
-      "name": "outside-in-tdd / Keep wider integration work behind the failing behavior (baseline, run 3)",
-      "url": "sessions/pr/645/outside-in-tdd/keep-wider-integration-work-behind-the-failing-behavior--baseline--run3.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "baseline",
-        "keep-wider-integration-work-behind-the-failing-behavior",
-        "pr-645"
-      ],
-      "mtime": 1795339692524.0322
-    },
-    {
-      "id": "pr/645/outside-in-tdd/make-the-domain-emerge-from-an-approved-scenario--baseline--run0",
-      "name": "outside-in-tdd / Make the domain emerge from an approved scenario (baseline, run 0)",
-      "url": "sessions/pr/645/outside-in-tdd/make-the-domain-emerge-from-an-approved-scenario--baseline--run0.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "baseline",
-        "make-the-domain-emerge-from-an-approved-scenario",
-        "pr-645"
-      ],
-      "mtime": 1795339692525.0322
-    },
-    {
-      "id": "pr/645/outside-in-tdd/make-the-domain-emerge-from-an-approved-scenario--baseline--run1",
-      "name": "outside-in-tdd / Make the domain emerge from an approved scenario (baseline, run 1)",
-      "url": "sessions/pr/645/outside-in-tdd/make-the-domain-emerge-from-an-approved-scenario--baseline--run1.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "baseline",
-        "make-the-domain-emerge-from-an-approved-scenario",
-        "pr-645"
-      ],
-      "mtime": 1795339692524.0322
-    },
-    {
-      "id": "pr/645/outside-in-tdd/make-the-domain-emerge-from-an-approved-scenario--baseline--run2",
-      "name": "outside-in-tdd / Make the domain emerge from an approved scenario (baseline, run 2)",
-      "url": "sessions/pr/645/outside-in-tdd/make-the-domain-emerge-from-an-approved-scenario--baseline--run2.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "baseline",
-        "make-the-domain-emerge-from-an-approved-scenario",
-        "pr-645"
-      ],
-      "mtime": 1795339692524.0322
-    },
-    {
-      "id": "pr/645/outside-in-tdd/make-the-domain-emerge-from-an-approved-scenario--baseline--run3",
-      "name": "outside-in-tdd / Make the domain emerge from an approved scenario (baseline, run 3)",
-      "url": "sessions/pr/645/outside-in-tdd/make-the-domain-emerge-from-an-approved-scenario--baseline--run3.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "baseline",
-        "make-the-domain-emerge-from-an-approved-scenario",
-        "pr-645"
-      ],
-      "mtime": 1795339692525.0322
-    },
-    {
-      "id": "pr/645/outside-in-tdd/prove-the-first-route-through-a-new-feature--baseline--run0",
-      "name": "outside-in-tdd / Prove the first route through a new feature (baseline, run 0)",
-      "url": "sessions/pr/645/outside-in-tdd/prove-the-first-route-through-a-new-feature--baseline--run0.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "baseline",
-        "prove-the-first-route-through-a-new-feature",
-        "pr-645"
-      ],
-      "mtime": 1795339692519.0322
-    },
-    {
-      "id": "pr/645/outside-in-tdd/prove-the-first-route-through-a-new-feature--baseline--run1",
-      "name": "outside-in-tdd / Prove the first route through a new feature (baseline, run 1)",
-      "url": "sessions/pr/645/outside-in-tdd/prove-the-first-route-through-a-new-feature--baseline--run1.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "baseline",
-        "prove-the-first-route-through-a-new-feature",
-        "pr-645"
-      ],
-      "mtime": 1795339692521.0322
-    },
-    {
-      "id": "pr/645/outside-in-tdd/prove-the-first-route-through-a-new-feature--baseline--run2",
-      "name": "outside-in-tdd / Prove the first route through a new feature (baseline, run 2)",
-      "url": "sessions/pr/645/outside-in-tdd/prove-the-first-route-through-a-new-feature--baseline--run2.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "baseline",
-        "prove-the-first-route-through-a-new-feature",
-        "pr-645"
-      ],
-      "mtime": 1795339692521.0322
-    },
-    {
-      "id": "pr/645/outside-in-tdd/prove-the-first-route-through-a-new-feature--baseline--run3",
-      "name": "outside-in-tdd / Prove the first route through a new feature (baseline, run 3)",
-      "url": "sessions/pr/645/outside-in-tdd/prove-the-first-route-through-a-new-feature--baseline--run3.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "baseline",
-        "prove-the-first-route-through-a-new-feature",
-        "pr-645"
-      ],
-      "mtime": 1795339692521.0322
-    },
-    {
-      "id": "pr/645/outside-in-tdd/reach-a-failure-that-witnesses-the-missing-behaviour--baseline--run0",
-      "name": "outside-in-tdd / Reach a failure that witnesses the missing behaviour (baseline, run 0)",
-      "url": "sessions/pr/645/outside-in-tdd/reach-a-failure-that-witnesses-the-missing-behaviour--baseline--run0.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "baseline",
-        "reach-a-failure-that-witnesses-the-missing-behaviour",
-        "pr-645"
-      ],
-      "mtime": 1795339692519.0322
-    },
-    {
-      "id": "pr/645/outside-in-tdd/reach-a-failure-that-witnesses-the-missing-behaviour--baseline--run1",
-      "name": "outside-in-tdd / Reach a failure that witnesses the missing behaviour (baseline, run 1)",
-      "url": "sessions/pr/645/outside-in-tdd/reach-a-failure-that-witnesses-the-missing-behaviour--baseline--run1.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "baseline",
-        "reach-a-failure-that-witnesses-the-missing-behaviour",
-        "pr-645"
-      ],
-      "mtime": 1795339692521.0322
-    },
-    {
-      "id": "pr/645/outside-in-tdd/reach-a-failure-that-witnesses-the-missing-behaviour--baseline--run2",
-      "name": "outside-in-tdd / Reach a failure that witnesses the missing behaviour (baseline, run 2)",
-      "url": "sessions/pr/645/outside-in-tdd/reach-a-failure-that-witnesses-the-missing-behaviour--baseline--run2.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "baseline",
-        "reach-a-failure-that-witnesses-the-missing-behaviour",
-        "pr-645"
-      ],
-      "mtime": 1795339692521.0322
-    },
-    {
-      "id": "pr/645/outside-in-tdd/reach-a-failure-that-witnesses-the-missing-behaviour--baseline--run3",
-      "name": "outside-in-tdd / Reach a failure that witnesses the missing behaviour (baseline, run 3)",
-      "url": "sessions/pr/645/outside-in-tdd/reach-a-failure-that-witnesses-the-missing-behaviour--baseline--run3.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "baseline",
-        "reach-a-failure-that-witnesses-the-missing-behaviour",
-        "pr-645"
-      ],
-      "mtime": 1795339692523.0322
-    },
-    {
-      "id": "pr/645/outside-in-tdd/replace-a-fixture-provided-discount-with-production-behavior--baseline--run0",
-      "name": "outside-in-tdd / Replace a fixture-provided discount with production behavior (baseline, run 0)",
-      "url": "sessions/pr/645/outside-in-tdd/replace-a-fixture-provided-discount-with-production-behavior--baseline--run0.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "baseline",
-        "replace-a-fixture-provided-discount-with-production-behavior",
-        "pr-645"
-      ],
-      "mtime": 1795339692519.0322
-    },
-    {
-      "id": "pr/645/outside-in-tdd/replace-a-fixture-provided-discount-with-production-behavior--baseline--run1",
-      "name": "outside-in-tdd / Replace a fixture-provided discount with production behavior (baseline, run 1)",
-      "url": "sessions/pr/645/outside-in-tdd/replace-a-fixture-provided-discount-with-production-behavior--baseline--run1.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "baseline",
-        "replace-a-fixture-provided-discount-with-production-behavior",
-        "pr-645"
-      ],
-      "mtime": 1795339692523.0322
-    },
-    {
-      "id": "pr/645/outside-in-tdd/replace-a-fixture-provided-discount-with-production-behavior--baseline--run2",
-      "name": "outside-in-tdd / Replace a fixture-provided discount with production behavior (baseline, run 2)",
-      "url": "sessions/pr/645/outside-in-tdd/replace-a-fixture-provided-discount-with-production-behavior--baseline--run2.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "baseline",
-        "replace-a-fixture-provided-discount-with-production-behavior",
-        "pr-645"
-      ],
-      "mtime": 1795339692523.0322
-    },
-    {
-      "id": "pr/645/outside-in-tdd/replace-a-fixture-provided-discount-with-production-behavior--baseline--run3",
-      "name": "outside-in-tdd / Replace a fixture-provided discount with production behavior (baseline, run 3)",
-      "url": "sessions/pr/645/outside-in-tdd/replace-a-fixture-provided-discount-with-production-behavior--baseline--run3.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "baseline",
-        "replace-a-fixture-provided-discount-with-production-behavior",
-        "pr-645"
-      ],
-      "mtime": 1795339692523.0322
-    },
-    {
-      "id": "pr/645/outside-in-tdd/tidy-a-green-test-class-without-inventing-new-work--baseline--run0",
-      "name": "outside-in-tdd / Tidy a green test class without inventing new work (baseline, run 0)",
-      "url": "sessions/pr/645/outside-in-tdd/tidy-a-green-test-class-without-inventing-new-work--baseline--run0.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "baseline",
-        "tidy-a-green-test-class-without-inventing-new-work",
-        "pr-645"
-      ],
-      "mtime": 1795339692520.0322
-    },
-    {
-      "id": "pr/645/outside-in-tdd/tidy-a-green-test-class-without-inventing-new-work--baseline--run1",
-      "name": "outside-in-tdd / Tidy a green test class without inventing new work (baseline, run 1)",
-      "url": "sessions/pr/645/outside-in-tdd/tidy-a-green-test-class-without-inventing-new-work--baseline--run1.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "baseline",
-        "tidy-a-green-test-class-without-inventing-new-work",
-        "pr-645"
-      ],
-      "mtime": 1795339692521.0322
-    },
-    {
-      "id": "pr/645/outside-in-tdd/tidy-a-green-test-class-without-inventing-new-work--baseline--run2",
-      "name": "outside-in-tdd / Tidy a green test class without inventing new work (baseline, run 2)",
-      "url": "sessions/pr/645/outside-in-tdd/tidy-a-green-test-class-without-inventing-new-work--baseline--run2.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "baseline",
-        "tidy-a-green-test-class-without-inventing-new-work",
-        "pr-645"
-      ],
-      "mtime": 1795339692521.0322
-    },
-    {
-      "id": "pr/645/outside-in-tdd/tidy-a-green-test-class-without-inventing-new-work--baseline--run3",
-      "name": "outside-in-tdd / Tidy a green test class without inventing new work (baseline, run 3)",
-      "url": "sessions/pr/645/outside-in-tdd/tidy-a-green-test-class-without-inventing-new-work--baseline--run3.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "baseline",
-        "tidy-a-green-test-class-without-inventing-new-work",
-        "pr-645"
-      ],
-      "mtime": 1795339692522.0322
-    },
-    {
-      "id": "pr/645/outside-in-tdd/turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome--baseline--run0",
-      "name": "outside-in-tdd / Turn an untrustworthy failure into evidence of the approved outcome (baseline, run 0)",
-      "url": "sessions/pr/645/outside-in-tdd/turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome--baseline--run0.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "baseline",
-        "turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome",
-        "pr-645"
-      ],
-      "mtime": 1795339692523.0322
-    },
-    {
-      "id": "pr/645/outside-in-tdd/turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome--baseline--run1",
-      "name": "outside-in-tdd / Turn an untrustworthy failure into evidence of the approved outcome (baseline, run 1)",
-      "url": "sessions/pr/645/outside-in-tdd/turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome--baseline--run1.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "baseline",
-        "turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome",
-        "pr-645"
-      ],
-      "mtime": 1795339692524.0322
-    },
-    {
-      "id": "pr/645/outside-in-tdd/turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome--baseline--run2",
-      "name": "outside-in-tdd / Turn an untrustworthy failure into evidence of the approved outcome (baseline, run 2)",
-      "url": "sessions/pr/645/outside-in-tdd/turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome--baseline--run2.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "baseline",
-        "turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome",
-        "pr-645"
-      ],
-      "mtime": 1795339692524.0322
-    },
-    {
-      "id": "pr/645/outside-in-tdd/turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome--baseline--run3",
-      "name": "outside-in-tdd / Turn an untrustworthy failure into evidence of the approved outcome (baseline, run 3)",
-      "url": "sessions/pr/645/outside-in-tdd/turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome--baseline--run3.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "baseline",
-        "turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome",
-        "pr-645"
-      ],
-      "mtime": 1795339692524.0322
-    },
-    {
-      "id": "pr/645/outside-in-tdd/do-not-invent-an-unresolved-business-outcome--skilled--run0",
-      "name": "outside-in-tdd / Do not invent an unresolved business outcome (skilled, run 0)",
-      "url": "sessions/pr/645/outside-in-tdd/do-not-invent-an-unresolved-business-outcome--skilled--run0.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "skilled",
-        "do-not-invent-an-unresolved-business-outcome",
-        "pr-645"
-      ],
-      "mtime": 1795339692544.2173
-    },
-    {
-      "id": "pr/645/outside-in-tdd/do-not-invent-an-unresolved-business-outcome--skilled--run1",
-      "name": "outside-in-tdd / Do not invent an unresolved business outcome (skilled, run 1)",
-      "url": "sessions/pr/645/outside-in-tdd/do-not-invent-an-unresolved-business-outcome--skilled--run1.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "skilled",
-        "do-not-invent-an-unresolved-business-outcome",
-        "pr-645"
-      ],
-      "mtime": 1795339692547.0327
-    },
-    {
-      "id": "pr/645/outside-in-tdd/do-not-invent-an-unresolved-business-outcome--skilled--run2",
-      "name": "outside-in-tdd / Do not invent an unresolved business outcome (skilled, run 2)",
-      "url": "sessions/pr/645/outside-in-tdd/do-not-invent-an-unresolved-business-outcome--skilled--run2.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "skilled",
-        "do-not-invent-an-unresolved-business-outcome",
-        "pr-645"
-      ],
-      "mtime": 1795339692547.0327
-    },
-    {
-      "id": "pr/645/outside-in-tdd/do-not-invent-an-unresolved-business-outcome--skilled--run3",
-      "name": "outside-in-tdd / Do not invent an unresolved business outcome (skilled, run 3)",
-      "url": "sessions/pr/645/outside-in-tdd/do-not-invent-an-unresolved-business-outcome--skilled--run3.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "skilled",
-        "do-not-invent-an-unresolved-business-outcome",
-        "pr-645"
-      ],
-      "mtime": 1795339692546.9653
-    },
-    {
-      "id": "pr/645/outside-in-tdd/hand-off-a-tdd-slice-to-an-unattended-worker--skilled--run0",
-      "name": "outside-in-tdd / Hand off a TDD slice to an unattended worker (skilled, run 0)",
-      "url": "sessions/pr/645/outside-in-tdd/hand-off-a-tdd-slice-to-an-unattended-worker--skilled--run0.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "skilled",
-        "hand-off-a-tdd-slice-to-an-unattended-worker",
-        "pr-645"
-      ],
-      "mtime": 1795339692546.9653
-    },
-    {
-      "id": "pr/645/outside-in-tdd/hand-off-a-tdd-slice-to-an-unattended-worker--skilled--run1",
-      "name": "outside-in-tdd / Hand off a TDD slice to an unattended worker (skilled, run 1)",
-      "url": "sessions/pr/645/outside-in-tdd/hand-off-a-tdd-slice-to-an-unattended-worker--skilled--run1.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "skilled",
-        "hand-off-a-tdd-slice-to-an-unattended-worker",
-        "pr-645"
-      ],
-      "mtime": 1795339692548.0327
-    },
-    {
-      "id": "pr/645/outside-in-tdd/hand-off-a-tdd-slice-to-an-unattended-worker--skilled--run2",
-      "name": "outside-in-tdd / Hand off a TDD slice to an unattended worker (skilled, run 2)",
-      "url": "sessions/pr/645/outside-in-tdd/hand-off-a-tdd-slice-to-an-unattended-worker--skilled--run2.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "skilled",
-        "hand-off-a-tdd-slice-to-an-unattended-worker",
-        "pr-645"
-      ],
-      "mtime": 1795339692548.0327
-    },
-    {
-      "id": "pr/645/outside-in-tdd/hand-off-a-tdd-slice-to-an-unattended-worker--skilled--run3",
-      "name": "outside-in-tdd / Hand off a TDD slice to an unattended worker (skilled, run 3)",
-      "url": "sessions/pr/645/outside-in-tdd/hand-off-a-tdd-slice-to-an-unattended-worker--skilled--run3.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "skilled",
-        "hand-off-a-tdd-slice-to-an-unattended-worker",
-        "pr-645"
-      ],
-      "mtime": 1795339692548.0327
-    },
-    {
-      "id": "pr/645/outside-in-tdd/keep-wider-integration-work-behind-the-failing-behavior--skilled--run0",
-      "name": "outside-in-tdd / Keep wider integration work behind the failing behavior (skilled, run 0)",
-      "url": "sessions/pr/645/outside-in-tdd/keep-wider-integration-work-behind-the-failing-behavior--skilled--run0.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "skilled",
-        "keep-wider-integration-work-behind-the-failing-behavior",
-        "pr-645"
-      ],
-      "mtime": 1795339692546.9653
-    },
-    {
-      "id": "pr/645/outside-in-tdd/keep-wider-integration-work-behind-the-failing-behavior--skilled--run1",
-      "name": "outside-in-tdd / Keep wider integration work behind the failing behavior (skilled, run 1)",
-      "url": "sessions/pr/645/outside-in-tdd/keep-wider-integration-work-behind-the-failing-behavior--skilled--run1.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "skilled",
-        "keep-wider-integration-work-behind-the-failing-behavior",
-        "pr-645"
-      ],
-      "mtime": 1795339692548.0327
-    },
-    {
-      "id": "pr/645/outside-in-tdd/keep-wider-integration-work-behind-the-failing-behavior--skilled--run2",
-      "name": "outside-in-tdd / Keep wider integration work behind the failing behavior (skilled, run 2)",
-      "url": "sessions/pr/645/outside-in-tdd/keep-wider-integration-work-behind-the-failing-behavior--skilled--run2.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "skilled",
-        "keep-wider-integration-work-behind-the-failing-behavior",
-        "pr-645"
-      ],
-      "mtime": 1795339692546.9653
-    },
-    {
-      "id": "pr/645/outside-in-tdd/keep-wider-integration-work-behind-the-failing-behavior--skilled--run3",
-      "name": "outside-in-tdd / Keep wider integration work behind the failing behavior (skilled, run 3)",
-      "url": "sessions/pr/645/outside-in-tdd/keep-wider-integration-work-behind-the-failing-behavior--skilled--run3.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "skilled",
-        "keep-wider-integration-work-behind-the-failing-behavior",
-        "pr-645"
-      ],
-      "mtime": 1795339692546.9653
-    },
-    {
-      "id": "pr/645/outside-in-tdd/make-the-domain-emerge-from-an-approved-scenario--skilled--run0",
-      "name": "outside-in-tdd / Make the domain emerge from an approved scenario (skilled, run 0)",
-      "url": "sessions/pr/645/outside-in-tdd/make-the-domain-emerge-from-an-approved-scenario--skilled--run0.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "skilled",
-        "make-the-domain-emerge-from-an-approved-scenario",
-        "pr-645"
-      ],
-      "mtime": 1795339692548.0327
-    },
-    {
-      "id": "pr/645/outside-in-tdd/make-the-domain-emerge-from-an-approved-scenario--skilled--run1",
-      "name": "outside-in-tdd / Make the domain emerge from an approved scenario (skilled, run 1)",
-      "url": "sessions/pr/645/outside-in-tdd/make-the-domain-emerge-from-an-approved-scenario--skilled--run1.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "skilled",
-        "make-the-domain-emerge-from-an-approved-scenario",
-        "pr-645"
-      ],
-      "mtime": 1795339692548.0327
-    },
-    {
-      "id": "pr/645/outside-in-tdd/make-the-domain-emerge-from-an-approved-scenario--skilled--run2",
-      "name": "outside-in-tdd / Make the domain emerge from an approved scenario (skilled, run 2)",
-      "url": "sessions/pr/645/outside-in-tdd/make-the-domain-emerge-from-an-approved-scenario--skilled--run2.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "skilled",
-        "make-the-domain-emerge-from-an-approved-scenario",
-        "pr-645"
-      ],
-      "mtime": 1795339692548.0327
-    },
-    {
-      "id": "pr/645/outside-in-tdd/make-the-domain-emerge-from-an-approved-scenario--skilled--run3",
-      "name": "outside-in-tdd / Make the domain emerge from an approved scenario (skilled, run 3)",
-      "url": "sessions/pr/645/outside-in-tdd/make-the-domain-emerge-from-an-approved-scenario--skilled--run3.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "skilled",
-        "make-the-domain-emerge-from-an-approved-scenario",
-        "pr-645"
-      ],
-      "mtime": 1795339692549.033
-    },
-    {
-      "id": "pr/645/outside-in-tdd/prove-the-first-route-through-a-new-feature--skilled--run0",
-      "name": "outside-in-tdd / Prove the first route through a new feature (skilled, run 0)",
-      "url": "sessions/pr/645/outside-in-tdd/prove-the-first-route-through-a-new-feature--skilled--run0.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "skilled",
-        "prove-the-first-route-through-a-new-feature",
-        "pr-645"
-      ],
-      "mtime": 1795339692547.0327
-    },
-    {
-      "id": "pr/645/outside-in-tdd/prove-the-first-route-through-a-new-feature--skilled--run1",
-      "name": "outside-in-tdd / Prove the first route through a new feature (skilled, run 1)",
-      "url": "sessions/pr/645/outside-in-tdd/prove-the-first-route-through-a-new-feature--skilled--run1.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "skilled",
-        "prove-the-first-route-through-a-new-feature",
-        "pr-645"
-      ],
-      "mtime": 1795339692548.0327
-    },
-    {
-      "id": "pr/645/outside-in-tdd/prove-the-first-route-through-a-new-feature--skilled--run2",
-      "name": "outside-in-tdd / Prove the first route through a new feature (skilled, run 2)",
-      "url": "sessions/pr/645/outside-in-tdd/prove-the-first-route-through-a-new-feature--skilled--run2.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "skilled",
-        "prove-the-first-route-through-a-new-feature",
-        "pr-645"
-      ],
-      "mtime": 1795339692547.0327
-    },
-    {
-      "id": "pr/645/outside-in-tdd/prove-the-first-route-through-a-new-feature--skilled--run3",
-      "name": "outside-in-tdd / Prove the first route through a new feature (skilled, run 3)",
-      "url": "sessions/pr/645/outside-in-tdd/prove-the-first-route-through-a-new-feature--skilled--run3.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "skilled",
-        "prove-the-first-route-through-a-new-feature",
-        "pr-645"
-      ],
-      "mtime": 1795339692548.0327
-    },
-    {
-      "id": "pr/645/outside-in-tdd/reach-a-failure-that-witnesses-the-missing-behaviour--skilled--run0",
-      "name": "outside-in-tdd / Reach a failure that witnesses the missing behaviour (skilled, run 0)",
-      "url": "sessions/pr/645/outside-in-tdd/reach-a-failure-that-witnesses-the-missing-behaviour--skilled--run0.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "skilled",
-        "reach-a-failure-that-witnesses-the-missing-behaviour",
-        "pr-645"
-      ],
-      "mtime": 1795339692547.0327
-    },
-    {
-      "id": "pr/645/outside-in-tdd/reach-a-failure-that-witnesses-the-missing-behaviour--skilled--run1",
-      "name": "outside-in-tdd / Reach a failure that witnesses the missing behaviour (skilled, run 1)",
-      "url": "sessions/pr/645/outside-in-tdd/reach-a-failure-that-witnesses-the-missing-behaviour--skilled--run1.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "skilled",
-        "reach-a-failure-that-witnesses-the-missing-behaviour",
-        "pr-645"
-      ],
-      "mtime": 1795339692548.0327
-    },
-    {
-      "id": "pr/645/outside-in-tdd/reach-a-failure-that-witnesses-the-missing-behaviour--skilled--run2",
-      "name": "outside-in-tdd / Reach a failure that witnesses the missing behaviour (skilled, run 2)",
-      "url": "sessions/pr/645/outside-in-tdd/reach-a-failure-that-witnesses-the-missing-behaviour--skilled--run2.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "skilled",
-        "reach-a-failure-that-witnesses-the-missing-behaviour",
-        "pr-645"
-      ],
-      "mtime": 1795339692548.0327
-    },
-    {
-      "id": "pr/645/outside-in-tdd/reach-a-failure-that-witnesses-the-missing-behaviour--skilled--run3",
-      "name": "outside-in-tdd / Reach a failure that witnesses the missing behaviour (skilled, run 3)",
-      "url": "sessions/pr/645/outside-in-tdd/reach-a-failure-that-witnesses-the-missing-behaviour--skilled--run3.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "skilled",
-        "reach-a-failure-that-witnesses-the-missing-behaviour",
-        "pr-645"
-      ],
-      "mtime": 1795339692548.0327
-    },
-    {
-      "id": "pr/645/outside-in-tdd/replace-a-fixture-provided-discount-with-production-behavior--skilled--run0",
-      "name": "outside-in-tdd / Replace a fixture-provided discount with production behavior (skilled, run 0)",
-      "url": "sessions/pr/645/outside-in-tdd/replace-a-fixture-provided-discount-with-production-behavior--skilled--run0.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "skilled",
-        "replace-a-fixture-provided-discount-with-production-behavior",
-        "pr-645"
-      ],
-      "mtime": 1795339692547.0327
-    },
-    {
-      "id": "pr/645/outside-in-tdd/replace-a-fixture-provided-discount-with-production-behavior--skilled--run1",
-      "name": "outside-in-tdd / Replace a fixture-provided discount with production behavior (skilled, run 1)",
-      "url": "sessions/pr/645/outside-in-tdd/replace-a-fixture-provided-discount-with-production-behavior--skilled--run1.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "skilled",
-        "replace-a-fixture-provided-discount-with-production-behavior",
-        "pr-645"
-      ],
-      "mtime": 1795339692548.0327
-    },
-    {
-      "id": "pr/645/outside-in-tdd/replace-a-fixture-provided-discount-with-production-behavior--skilled--run2",
-      "name": "outside-in-tdd / Replace a fixture-provided discount with production behavior (skilled, run 2)",
-      "url": "sessions/pr/645/outside-in-tdd/replace-a-fixture-provided-discount-with-production-behavior--skilled--run2.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "skilled",
-        "replace-a-fixture-provided-discount-with-production-behavior",
-        "pr-645"
-      ],
-      "mtime": 1795339692548.0327
-    },
-    {
-      "id": "pr/645/outside-in-tdd/replace-a-fixture-provided-discount-with-production-behavior--skilled--run3",
-      "name": "outside-in-tdd / Replace a fixture-provided discount with production behavior (skilled, run 3)",
-      "url": "sessions/pr/645/outside-in-tdd/replace-a-fixture-provided-discount-with-production-behavior--skilled--run3.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "skilled",
-        "replace-a-fixture-provided-discount-with-production-behavior",
-        "pr-645"
-      ],
-      "mtime": 1795339692548.0327
-    },
-    {
-      "id": "pr/645/outside-in-tdd/tidy-a-green-test-class-without-inventing-new-work--skilled--run0",
-      "name": "outside-in-tdd / Tidy a green test class without inventing new work (skilled, run 0)",
-      "url": "sessions/pr/645/outside-in-tdd/tidy-a-green-test-class-without-inventing-new-work--skilled--run0.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "skilled",
-        "tidy-a-green-test-class-without-inventing-new-work",
-        "pr-645"
-      ],
-      "mtime": 1795339692546.0327
-    },
-    {
-      "id": "pr/645/outside-in-tdd/tidy-a-green-test-class-without-inventing-new-work--skilled--run1",
-      "name": "outside-in-tdd / Tidy a green test class without inventing new work (skilled, run 1)",
-      "url": "sessions/pr/645/outside-in-tdd/tidy-a-green-test-class-without-inventing-new-work--skilled--run1.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "skilled",
-        "tidy-a-green-test-class-without-inventing-new-work",
-        "pr-645"
-      ],
-      "mtime": 1795339692547.0327
-    },
-    {
-      "id": "pr/645/outside-in-tdd/tidy-a-green-test-class-without-inventing-new-work--skilled--run2",
-      "name": "outside-in-tdd / Tidy a green test class without inventing new work (skilled, run 2)",
-      "url": "sessions/pr/645/outside-in-tdd/tidy-a-green-test-class-without-inventing-new-work--skilled--run2.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "skilled",
-        "tidy-a-green-test-class-without-inventing-new-work",
-        "pr-645"
-      ],
-      "mtime": 1795339692547.0327
-    },
-    {
-      "id": "pr/645/outside-in-tdd/tidy-a-green-test-class-without-inventing-new-work--skilled--run3",
-      "name": "outside-in-tdd / Tidy a green test class without inventing new work (skilled, run 3)",
-      "url": "sessions/pr/645/outside-in-tdd/tidy-a-green-test-class-without-inventing-new-work--skilled--run3.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "skilled",
-        "tidy-a-green-test-class-without-inventing-new-work",
-        "pr-645"
-      ],
-      "mtime": 1795339692548.0327
-    },
-    {
-      "id": "pr/645/outside-in-tdd/turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome--skilled--run0",
-      "name": "outside-in-tdd / Turn an untrustworthy failure into evidence of the approved outcome (skilled, run 0)",
-      "url": "sessions/pr/645/outside-in-tdd/turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome--skilled--run0.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "skilled",
-        "turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome",
-        "pr-645"
-      ],
-      "mtime": 1795339692548.0327
-    },
-    {
-      "id": "pr/645/outside-in-tdd/turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome--skilled--run1",
-      "name": "outside-in-tdd / Turn an untrustworthy failure into evidence of the approved outcome (skilled, run 1)",
-      "url": "sessions/pr/645/outside-in-tdd/turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome--skilled--run1.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "skilled",
-        "turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome",
-        "pr-645"
-      ],
-      "mtime": 1795339692548.0327
-    },
-    {
-      "id": "pr/645/outside-in-tdd/turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome--skilled--run2",
-      "name": "outside-in-tdd / Turn an untrustworthy failure into evidence of the approved outcome (skilled, run 2)",
-      "url": "sessions/pr/645/outside-in-tdd/turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome--skilled--run2.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "skilled",
-        "turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome",
-        "pr-645"
-      ],
-      "mtime": 1795339692548.0327
-    },
-    {
-      "id": "pr/645/outside-in-tdd/turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome--skilled--run3",
-      "name": "outside-in-tdd / Turn an untrustworthy failure into evidence of the approved outcome (skilled, run 3)",
-      "url": "sessions/pr/645/outside-in-tdd/turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome--skilled--run3.jsonl",
-      "tags": [
-        "pr",
-        "outside-in-tdd",
-        "skilled",
-        "turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome",
-        "pr-645"
-      ],
-      "mtime": 1795339692548.0327
     },
     {
       "id": "pr/647/acceptance-designer/a-criterion-an-existing-test-already-covers-is-relied-on-only-once-that-test-is-run-else-tested-anew--main--run0",
@@ -16120,6 +14664,526 @@
         "pr-646"
       ],
       "mtime": 1795366049494.9373
+    },
+    {
+      "id": "pr/645/acceptance-designer/a-criterion-an-existing-test-already-covers-is-relied-on-only-once-that-test-is-run-else-tested-anew--main--run0",
+      "name": "acceptance-designer / A criterion an existing test already covers is relied on only once that test is run, else tested anew (main, run 0)",
+      "url": "sessions/pr/645/acceptance-designer/a-criterion-an-existing-test-already-covers-is-relied-on-only-once-that-test-is-run-else-tested-anew--main--run0.jsonl",
+      "tags": [
+        "pr",
+        "acceptance-designer",
+        "main",
+        "a-criterion-an-existing-test-already-covers-is-relied-on-only-once-that-test-is-run-else-tested-anew",
+        "pr-645"
+      ],
+      "mtime": 1795368364491.8752
+    },
+    {
+      "id": "pr/645/acceptance-designer/a-criterion-an-existing-test-already-covers-is-relied-on-only-once-that-test-is-run-else-tested-anew--main--run1",
+      "name": "acceptance-designer / A criterion an existing test already covers is relied on only once that test is run, else tested anew (main, run 1)",
+      "url": "sessions/pr/645/acceptance-designer/a-criterion-an-existing-test-already-covers-is-relied-on-only-once-that-test-is-run-else-tested-anew--main--run1.jsonl",
+      "tags": [
+        "pr",
+        "acceptance-designer",
+        "main",
+        "a-criterion-an-existing-test-already-covers-is-relied-on-only-once-that-test-is-run-else-tested-anew",
+        "pr-645"
+      ],
+      "mtime": 1795368364520.8752
+    },
+    {
+      "id": "pr/645/acceptance-designer/a-criterion-an-existing-test-already-covers-is-relied-on-only-once-that-test-is-run-else-tested-anew--main--run2",
+      "name": "acceptance-designer / A criterion an existing test already covers is relied on only once that test is run, else tested anew (main, run 2)",
+      "url": "sessions/pr/645/acceptance-designer/a-criterion-an-existing-test-already-covers-is-relied-on-only-once-that-test-is-run-else-tested-anew--main--run2.jsonl",
+      "tags": [
+        "pr",
+        "acceptance-designer",
+        "main",
+        "a-criterion-an-existing-test-already-covers-is-relied-on-only-once-that-test-is-run-else-tested-anew",
+        "pr-645"
+      ],
+      "mtime": 1795368364521.8752
+    },
+    {
+      "id": "pr/645/acceptance-designer/a-criterion-an-existing-test-already-covers-is-relied-on-only-once-that-test-is-run-else-tested-anew--main--run3",
+      "name": "acceptance-designer / A criterion an existing test already covers is relied on only once that test is run, else tested anew (main, run 3)",
+      "url": "sessions/pr/645/acceptance-designer/a-criterion-an-existing-test-already-covers-is-relied-on-only-once-that-test-is-run-else-tested-anew--main--run3.jsonl",
+      "tags": [
+        "pr",
+        "acceptance-designer",
+        "main",
+        "a-criterion-an-existing-test-already-covers-is-relied-on-only-once-that-test-is-run-else-tested-anew",
+        "pr-645"
+      ],
+      "mtime": 1795368364550.875
+    },
+    {
+      "id": "pr/645/acceptance-designer/a-criterion-an-existing-test-already-covers-is-relied-on-only-once-that-test-is-run-else-tested-anew--main--run4",
+      "name": "acceptance-designer / A criterion an existing test already covers is relied on only once that test is run, else tested anew (main, run 4)",
+      "url": "sessions/pr/645/acceptance-designer/a-criterion-an-existing-test-already-covers-is-relied-on-only-once-that-test-is-run-else-tested-anew--main--run4.jsonl",
+      "tags": [
+        "pr",
+        "acceptance-designer",
+        "main",
+        "a-criterion-an-existing-test-already-covers-is-relied-on-only-once-that-test-is-run-else-tested-anew",
+        "pr-645"
+      ],
+      "mtime": 1795368364550.875
+    },
+    {
+      "id": "pr/645/acceptance-designer/absent-acceptance-criteria-halt-the-distillation--main--run0",
+      "name": "acceptance-designer / Absent acceptance criteria halt the distillation (main, run 0)",
+      "url": "sessions/pr/645/acceptance-designer/absent-acceptance-criteria-halt-the-distillation--main--run0.jsonl",
+      "tags": [
+        "pr",
+        "acceptance-designer",
+        "main",
+        "absent-acceptance-criteria-halt-the-distillation",
+        "pr-645"
+      ],
+      "mtime": 1795368364550.875
+    },
+    {
+      "id": "pr/645/acceptance-designer/absent-acceptance-criteria-halt-the-distillation--main--run1",
+      "name": "acceptance-designer / Absent acceptance criteria halt the distillation (main, run 1)",
+      "url": "sessions/pr/645/acceptance-designer/absent-acceptance-criteria-halt-the-distillation--main--run1.jsonl",
+      "tags": [
+        "pr",
+        "acceptance-designer",
+        "main",
+        "absent-acceptance-criteria-halt-the-distillation",
+        "pr-645"
+      ],
+      "mtime": 1795368364577.875
+    },
+    {
+      "id": "pr/645/acceptance-designer/absent-acceptance-criteria-halt-the-distillation--main--run2",
+      "name": "acceptance-designer / Absent acceptance criteria halt the distillation (main, run 2)",
+      "url": "sessions/pr/645/acceptance-designer/absent-acceptance-criteria-halt-the-distillation--main--run2.jsonl",
+      "tags": [
+        "pr",
+        "acceptance-designer",
+        "main",
+        "absent-acceptance-criteria-halt-the-distillation",
+        "pr-645"
+      ],
+      "mtime": 1795368364578.875
+    },
+    {
+      "id": "pr/645/acceptance-designer/absent-acceptance-criteria-halt-the-distillation--main--run3",
+      "name": "acceptance-designer / Absent acceptance criteria halt the distillation (main, run 3)",
+      "url": "sessions/pr/645/acceptance-designer/absent-acceptance-criteria-halt-the-distillation--main--run3.jsonl",
+      "tags": [
+        "pr",
+        "acceptance-designer",
+        "main",
+        "absent-acceptance-criteria-halt-the-distillation",
+        "pr-645"
+      ],
+      "mtime": 1795368364578.875
+    },
+    {
+      "id": "pr/645/acceptance-designer/absent-acceptance-criteria-halt-the-distillation--main--run4",
+      "name": "acceptance-designer / Absent acceptance criteria halt the distillation (main, run 4)",
+      "url": "sessions/pr/645/acceptance-designer/absent-acceptance-criteria-halt-the-distillation--main--run4.jsonl",
+      "tags": [
+        "pr",
+        "acceptance-designer",
+        "main",
+        "absent-acceptance-criteria-halt-the-distillation",
+        "pr-645"
+      ],
+      "mtime": 1795368364578.875
+    },
+    {
+      "id": "pr/645/acceptance-designer/agreed-criteria-become-an-executable-specification-that-fails-on-business-meaning--main--run0",
+      "name": "acceptance-designer / Agreed criteria become an executable specification that fails on business meaning (main, run 0)",
+      "url": "sessions/pr/645/acceptance-designer/agreed-criteria-become-an-executable-specification-that-fails-on-business-meaning--main--run0.jsonl",
+      "tags": [
+        "pr",
+        "acceptance-designer",
+        "main",
+        "agreed-criteria-become-an-executable-specification-that-fails-on-business-meaning",
+        "pr-645"
+      ],
+      "mtime": 1795368364604.875
+    },
+    {
+      "id": "pr/645/acceptance-designer/agreed-criteria-become-an-executable-specification-that-fails-on-business-meaning--main--run1",
+      "name": "acceptance-designer / Agreed criteria become an executable specification that fails on business meaning (main, run 1)",
+      "url": "sessions/pr/645/acceptance-designer/agreed-criteria-become-an-executable-specification-that-fails-on-business-meaning--main--run1.jsonl",
+      "tags": [
+        "pr",
+        "acceptance-designer",
+        "main",
+        "agreed-criteria-become-an-executable-specification-that-fails-on-business-meaning",
+        "pr-645"
+      ],
+      "mtime": 1795368364606.875
+    },
+    {
+      "id": "pr/645/acceptance-designer/agreed-criteria-become-an-executable-specification-that-fails-on-business-meaning--main--run2",
+      "name": "acceptance-designer / Agreed criteria become an executable specification that fails on business meaning (main, run 2)",
+      "url": "sessions/pr/645/acceptance-designer/agreed-criteria-become-an-executable-specification-that-fails-on-business-meaning--main--run2.jsonl",
+      "tags": [
+        "pr",
+        "acceptance-designer",
+        "main",
+        "agreed-criteria-become-an-executable-specification-that-fails-on-business-meaning",
+        "pr-645"
+      ],
+      "mtime": 1795368364607.875
+    },
+    {
+      "id": "pr/645/acceptance-designer/agreed-criteria-become-an-executable-specification-that-fails-on-business-meaning--main--run3",
+      "name": "acceptance-designer / Agreed criteria become an executable specification that fails on business meaning (main, run 3)",
+      "url": "sessions/pr/645/acceptance-designer/agreed-criteria-become-an-executable-specification-that-fails-on-business-meaning--main--run3.jsonl",
+      "tags": [
+        "pr",
+        "acceptance-designer",
+        "main",
+        "agreed-criteria-become-an-executable-specification-that-fails-on-business-meaning",
+        "pr-645"
+      ],
+      "mtime": 1795368364606.875
+    },
+    {
+      "id": "pr/645/acceptance-designer/agreed-criteria-become-an-executable-specification-that-fails-on-business-meaning--main--run4",
+      "name": "acceptance-designer / Agreed criteria become an executable specification that fails on business meaning (main, run 4)",
+      "url": "sessions/pr/645/acceptance-designer/agreed-criteria-become-an-executable-specification-that-fails-on-business-meaning--main--run4.jsonl",
+      "tags": [
+        "pr",
+        "acceptance-designer",
+        "main",
+        "agreed-criteria-become-an-executable-specification-that-fails-on-business-meaning",
+        "pr-645"
+      ],
+      "mtime": 1795368364606.875
+    },
+    {
+      "id": "pr/645/acceptance-designer/an-undecided-tier-is-escalated-rather-than-given-an-invented-price--main--run0",
+      "name": "acceptance-designer / An undecided tier is escalated rather than given an invented price (main, run 0)",
+      "url": "sessions/pr/645/acceptance-designer/an-undecided-tier-is-escalated-rather-than-given-an-invented-price--main--run0.jsonl",
+      "tags": [
+        "pr",
+        "acceptance-designer",
+        "main",
+        "an-undecided-tier-is-escalated-rather-than-given-an-invented-price",
+        "pr-645"
+      ],
+      "mtime": 1795368364633.4246
+    },
+    {
+      "id": "pr/645/acceptance-designer/an-undecided-tier-is-escalated-rather-than-given-an-invented-price--main--run1",
+      "name": "acceptance-designer / An undecided tier is escalated rather than given an invented price (main, run 1)",
+      "url": "sessions/pr/645/acceptance-designer/an-undecided-tier-is-escalated-rather-than-given-an-invented-price--main--run1.jsonl",
+      "tags": [
+        "pr",
+        "acceptance-designer",
+        "main",
+        "an-undecided-tier-is-escalated-rather-than-given-an-invented-price",
+        "pr-645"
+      ],
+      "mtime": 1795368364633.875
+    },
+    {
+      "id": "pr/645/acceptance-designer/an-undecided-tier-is-escalated-rather-than-given-an-invented-price--main--run2",
+      "name": "acceptance-designer / An undecided tier is escalated rather than given an invented price (main, run 2)",
+      "url": "sessions/pr/645/acceptance-designer/an-undecided-tier-is-escalated-rather-than-given-an-invented-price--main--run2.jsonl",
+      "tags": [
+        "pr",
+        "acceptance-designer",
+        "main",
+        "an-undecided-tier-is-escalated-rather-than-given-an-invented-price",
+        "pr-645"
+      ],
+      "mtime": 1795368364633.875
+    },
+    {
+      "id": "pr/645/acceptance-designer/an-undecided-tier-is-escalated-rather-than-given-an-invented-price--main--run3",
+      "name": "acceptance-designer / An undecided tier is escalated rather than given an invented price (main, run 3)",
+      "url": "sessions/pr/645/acceptance-designer/an-undecided-tier-is-escalated-rather-than-given-an-invented-price--main--run3.jsonl",
+      "tags": [
+        "pr",
+        "acceptance-designer",
+        "main",
+        "an-undecided-tier-is-escalated-rather-than-given-an-invented-price",
+        "pr-645"
+      ],
+      "mtime": 1795368364634.875
+    },
+    {
+      "id": "pr/645/acceptance-designer/an-undecided-tier-is-escalated-rather-than-given-an-invented-price--main--run4",
+      "name": "acceptance-designer / An undecided tier is escalated rather than given an invented price (main, run 4)",
+      "url": "sessions/pr/645/acceptance-designer/an-undecided-tier-is-escalated-rather-than-given-an-invented-price--main--run4.jsonl",
+      "tags": [
+        "pr",
+        "acceptance-designer",
+        "main",
+        "an-undecided-tier-is-escalated-rather-than-given-an-invented-price",
+        "pr-645"
+      ],
+      "mtime": 1795368364633.875
+    },
+    {
+      "id": "pr/645/acceptance-designer/every-scenario-s-acceptance-test-is-written-first-in-one-red-commit-and-grouped-by-rule-for-deliver--main--run0",
+      "name": "acceptance-designer / Every scenario's acceptance test is written first, in one red commit, and grouped by rule for DELIVER (main, run 0)",
+      "url": "sessions/pr/645/acceptance-designer/every-scenario-s-acceptance-test-is-written-first-in-one-red-commit-and-grouped-by-rule-for-deliver--main--run0.jsonl",
+      "tags": [
+        "pr",
+        "acceptance-designer",
+        "main",
+        "every-scenario-s-acceptance-test-is-written-first-in-one-red-commit-and-grouped-by-rule-for-deliver",
+        "pr-645"
+      ],
+      "mtime": 1795368364634.875
+    },
+    {
+      "id": "pr/645/acceptance-designer/every-scenario-s-acceptance-test-is-written-first-in-one-red-commit-and-grouped-by-rule-for-deliver--main--run1",
+      "name": "acceptance-designer / Every scenario's acceptance test is written first, in one red commit, and grouped by rule for DELIVER (main, run 1)",
+      "url": "sessions/pr/645/acceptance-designer/every-scenario-s-acceptance-test-is-written-first-in-one-red-commit-and-grouped-by-rule-for-deliver--main--run1.jsonl",
+      "tags": [
+        "pr",
+        "acceptance-designer",
+        "main",
+        "every-scenario-s-acceptance-test-is-written-first-in-one-red-commit-and-grouped-by-rule-for-deliver",
+        "pr-645"
+      ],
+      "mtime": 1795368364660.875
+    },
+    {
+      "id": "pr/645/acceptance-designer/every-scenario-s-acceptance-test-is-written-first-in-one-red-commit-and-grouped-by-rule-for-deliver--main--run2",
+      "name": "acceptance-designer / Every scenario's acceptance test is written first, in one red commit, and grouped by rule for DELIVER (main, run 2)",
+      "url": "sessions/pr/645/acceptance-designer/every-scenario-s-acceptance-test-is-written-first-in-one-red-commit-and-grouped-by-rule-for-deliver--main--run2.jsonl",
+      "tags": [
+        "pr",
+        "acceptance-designer",
+        "main",
+        "every-scenario-s-acceptance-test-is-written-first-in-one-red-commit-and-grouped-by-rule-for-deliver",
+        "pr-645"
+      ],
+      "mtime": 1795368364662.875
+    },
+    {
+      "id": "pr/645/acceptance-designer/every-scenario-s-acceptance-test-is-written-first-in-one-red-commit-and-grouped-by-rule-for-deliver--main--run3",
+      "name": "acceptance-designer / Every scenario's acceptance test is written first, in one red commit, and grouped by rule for DELIVER (main, run 3)",
+      "url": "sessions/pr/645/acceptance-designer/every-scenario-s-acceptance-test-is-written-first-in-one-red-commit-and-grouped-by-rule-for-deliver--main--run3.jsonl",
+      "tags": [
+        "pr",
+        "acceptance-designer",
+        "main",
+        "every-scenario-s-acceptance-test-is-written-first-in-one-red-commit-and-grouped-by-rule-for-deliver",
+        "pr-645"
+      ],
+      "mtime": 1795368364662.875
+    },
+    {
+      "id": "pr/645/acceptance-designer/every-scenario-s-acceptance-test-is-written-first-in-one-red-commit-and-grouped-by-rule-for-deliver--main--run4",
+      "name": "acceptance-designer / Every scenario's acceptance test is written first, in one red commit, and grouped by rule for DELIVER (main, run 4)",
+      "url": "sessions/pr/645/acceptance-designer/every-scenario-s-acceptance-test-is-written-first-in-one-red-commit-and-grouped-by-rule-for-deliver--main--run4.jsonl",
+      "tags": [
+        "pr",
+        "acceptance-designer",
+        "main",
+        "every-scenario-s-acceptance-test-is-written-first-in-one-red-commit-and-grouped-by-rule-for-deliver",
+        "pr-645"
+      ],
+      "mtime": 1795368364662.875
+    },
+    {
+      "id": "pr/645/commit-convention/finish-the-approved-customer-guide-issue--main--run0",
+      "name": "commit-convention / Finish the approved customer guide issue (main, run 0)",
+      "url": "sessions/pr/645/commit-convention/finish-the-approved-customer-guide-issue--main--run0.jsonl",
+      "tags": [
+        "pr",
+        "commit-convention",
+        "main",
+        "finish-the-approved-customer-guide-issue",
+        "pr-645"
+      ],
+      "mtime": 1795368364725.158
+    },
+    {
+      "id": "pr/645/commit-convention/finish-the-approved-customer-guide-issue--main--run1",
+      "name": "commit-convention / Finish the approved customer guide issue (main, run 1)",
+      "url": "sessions/pr/645/commit-convention/finish-the-approved-customer-guide-issue--main--run1.jsonl",
+      "tags": [
+        "pr",
+        "commit-convention",
+        "main",
+        "finish-the-approved-customer-guide-issue",
+        "pr-645"
+      ],
+      "mtime": 1795368364725.158
+    },
+    {
+      "id": "pr/645/commit-convention/finish-the-approved-customer-guide-issue--main--run2",
+      "name": "commit-convention / Finish the approved customer guide issue (main, run 2)",
+      "url": "sessions/pr/645/commit-convention/finish-the-approved-customer-guide-issue--main--run2.jsonl",
+      "tags": [
+        "pr",
+        "commit-convention",
+        "main",
+        "finish-the-approved-customer-guide-issue",
+        "pr-645"
+      ],
+      "mtime": 1795368364725.8748
+    },
+    {
+      "id": "pr/645/commit-convention/finish-the-approved-customer-guide-issue--main--run3",
+      "name": "commit-convention / Finish the approved customer guide issue (main, run 3)",
+      "url": "sessions/pr/645/commit-convention/finish-the-approved-customer-guide-issue--main--run3.jsonl",
+      "tags": [
+        "pr",
+        "commit-convention",
+        "main",
+        "finish-the-approved-customer-guide-issue",
+        "pr-645"
+      ],
+      "mtime": 1795368364725.158
+    },
+    {
+      "id": "pr/645/commit-convention/finish-the-approved-customer-guide-issue--main--run4",
+      "name": "commit-convention / Finish the approved customer guide issue (main, run 4)",
+      "url": "sessions/pr/645/commit-convention/finish-the-approved-customer-guide-issue--main--run4.jsonl",
+      "tags": [
+        "pr",
+        "commit-convention",
+        "main",
+        "finish-the-approved-customer-guide-issue",
+        "pr-645"
+      ],
+      "mtime": 1795368364725.158
+    },
+    {
+      "id": "pr/645/commit-convention/record-a-customer-guide-increment-while-the-issue-remains-open--main--run0",
+      "name": "commit-convention / Record a customer guide increment while the issue remains open (main, run 0)",
+      "url": "sessions/pr/645/commit-convention/record-a-customer-guide-increment-while-the-issue-remains-open--main--run0.jsonl",
+      "tags": [
+        "pr",
+        "commit-convention",
+        "main",
+        "record-a-customer-guide-increment-while-the-issue-remains-open",
+        "pr-645"
+      ],
+      "mtime": 1795368364743.3318
+    },
+    {
+      "id": "pr/645/commit-convention/record-a-customer-guide-increment-while-the-issue-remains-open--main--run1",
+      "name": "commit-convention / Record a customer guide increment while the issue remains open (main, run 1)",
+      "url": "sessions/pr/645/commit-convention/record-a-customer-guide-increment-while-the-issue-remains-open--main--run1.jsonl",
+      "tags": [
+        "pr",
+        "commit-convention",
+        "main",
+        "record-a-customer-guide-increment-while-the-issue-remains-open",
+        "pr-645"
+      ],
+      "mtime": 1795368364743.3318
+    },
+    {
+      "id": "pr/645/commit-convention/record-a-customer-guide-increment-while-the-issue-remains-open--main--run2",
+      "name": "commit-convention / Record a customer guide increment while the issue remains open (main, run 2)",
+      "url": "sessions/pr/645/commit-convention/record-a-customer-guide-increment-while-the-issue-remains-open--main--run2.jsonl",
+      "tags": [
+        "pr",
+        "commit-convention",
+        "main",
+        "record-a-customer-guide-increment-while-the-issue-remains-open",
+        "pr-645"
+      ],
+      "mtime": 1795368364743.8748
+    },
+    {
+      "id": "pr/645/commit-convention/record-a-customer-guide-increment-while-the-issue-remains-open--main--run3",
+      "name": "commit-convention / Record a customer guide increment while the issue remains open (main, run 3)",
+      "url": "sessions/pr/645/commit-convention/record-a-customer-guide-increment-while-the-issue-remains-open--main--run3.jsonl",
+      "tags": [
+        "pr",
+        "commit-convention",
+        "main",
+        "record-a-customer-guide-increment-while-the-issue-remains-open",
+        "pr-645"
+      ],
+      "mtime": 1795368364743.8748
+    },
+    {
+      "id": "pr/645/commit-convention/record-a-customer-guide-increment-while-the-issue-remains-open--main--run4",
+      "name": "commit-convention / Record a customer guide increment while the issue remains open (main, run 4)",
+      "url": "sessions/pr/645/commit-convention/record-a-customer-guide-increment-while-the-issue-remains-open--main--run4.jsonl",
+      "tags": [
+        "pr",
+        "commit-convention",
+        "main",
+        "record-a-customer-guide-increment-while-the-issue-remains-open",
+        "pr-645"
+      ],
+      "mtime": 1795368364743.8748
+    },
+    {
+      "id": "pr/645/commit-convention/record-the-approved-guide-edit-without-a-known-issue--main--run0",
+      "name": "commit-convention / Record the approved guide edit without a known issue (main, run 0)",
+      "url": "sessions/pr/645/commit-convention/record-the-approved-guide-edit-without-a-known-issue--main--run0.jsonl",
+      "tags": [
+        "pr",
+        "commit-convention",
+        "main",
+        "record-the-approved-guide-edit-without-a-known-issue",
+        "pr-645"
+      ],
+      "mtime": 1795368364772.8752
+    },
+    {
+      "id": "pr/645/commit-convention/record-the-approved-guide-edit-without-a-known-issue--main--run1",
+      "name": "commit-convention / Record the approved guide edit without a known issue (main, run 1)",
+      "url": "sessions/pr/645/commit-convention/record-the-approved-guide-edit-without-a-known-issue--main--run1.jsonl",
+      "tags": [
+        "pr",
+        "commit-convention",
+        "main",
+        "record-the-approved-guide-edit-without-a-known-issue",
+        "pr-645"
+      ],
+      "mtime": 1795368364772.8752
+    },
+    {
+      "id": "pr/645/commit-convention/record-the-approved-guide-edit-without-a-known-issue--main--run2",
+      "name": "commit-convention / Record the approved guide edit without a known issue (main, run 2)",
+      "url": "sessions/pr/645/commit-convention/record-the-approved-guide-edit-without-a-known-issue--main--run2.jsonl",
+      "tags": [
+        "pr",
+        "commit-convention",
+        "main",
+        "record-the-approved-guide-edit-without-a-known-issue",
+        "pr-645"
+      ],
+      "mtime": 1795368364773.8748
+    },
+    {
+      "id": "pr/645/commit-convention/record-the-approved-guide-edit-without-a-known-issue--main--run3",
+      "name": "commit-convention / Record the approved guide edit without a known issue (main, run 3)",
+      "url": "sessions/pr/645/commit-convention/record-the-approved-guide-edit-without-a-known-issue--main--run3.jsonl",
+      "tags": [
+        "pr",
+        "commit-convention",
+        "main",
+        "record-the-approved-guide-edit-without-a-known-issue",
+        "pr-645"
+      ],
+      "mtime": 1795368364772.8752
+    },
+    {
+      "id": "pr/645/commit-convention/record-the-approved-guide-edit-without-a-known-issue--main--run4",
+      "name": "commit-convention / Record the approved guide edit without a known issue (main, run 4)",
+      "url": "sessions/pr/645/commit-convention/record-the-approved-guide-edit-without-a-known-issue--main--run4.jsonl",
+      "tags": [
+        "pr",
+        "commit-convention",
+        "main",
+        "record-the-approved-guide-edit-without-a-known-issue",
+        "pr-645"
+      ],
+      "mtime": 1795368364773.8748
     }
   ]
 }
