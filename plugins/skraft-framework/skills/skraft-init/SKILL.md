@@ -70,10 +70,10 @@ gives:
 - `e2e` — the end-to-end command, for a front end only.
 
 Propose each command and have the developer confirm it. A command the developer writes always
-wins. A command runs with no shell, the same under sh, PowerShell and cmd: a pipe, a redirection,
-`&&` or a `VAR=value` before the program is refused. A command that needs variables or several
-steps is a script of the component, and the command calls the script. Then run `<cli> doctor --run` and fix every failure before you go on: a command that does
-not run is worse than an absent one.
+wins. The software engineer runs each command through `skraft_repl` from the component's root,
+under sh, Git Bash or PowerShell: a command that needs variables or several steps is a script of
+the component, and the command calls the script. Then run `<cli> doctor` and fix every failure
+before you go on.
 
 ## 4. The two publication consents
 

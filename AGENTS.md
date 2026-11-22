@@ -65,13 +65,15 @@ docs/website/      ← handbook (Docusaurus): book.yml (structure contract), doc
   agent spawns another agent, with one exception: `brownfield-refactorer` (skraft-brownfield),
   run as a session's main agent, may dispatch `refactoring-worker`, and that worker dispatches no
   one.
-- Checks live in the engine, not in hooks or prose: phase order, expected outputs, write scope
-  (git diff per step), the gate runs a DELIVER attempt's trace must hold, review verdict, TDD commit
-  order and kinds; no replay.
+- The engine checks only what the workflow needs to move on and what v1 checked by script: phase
+  order, expected outputs, write scope (git diff per step), the journal and `.active-slug`, the
+  review verdict, and the commits (convention, issue reference, TDD red/green, acceptance tests
+  untouched, one green per story). Acceptance-criteria coverage, Gherkin form, the scenario plan's
+  content and quality evidence belong to the agents' prose and the review lenses.
 - A project command runs only when an agent asks for it through `skraft_repl`, which records each
-  run, signed, under `logs/runs/<step>-<visit>-<attempt>/`. Agents keep `Bash`, but only the runs of
-  the REPL count as proof: the engine refuses a DELIVER attempt (`evidence`) that holds no passing
-  traced run of each gate, on its last commit, for each component the story changed. Only `infrastructure/process/` and
+  run, signed, under `logs/runs/<step>-<visit>-<attempt>/`. The engine refuses no attempt for it:
+  it journals the runs whose trace reads through its signatures, and the DELIVER review's
+  `quality-gates` lens judges them. Only `infrastructure/process/` and
   `infrastructure/repl/` start programs, apart from `git`, `gh` and `az`. The journal of the programs a killed MCP server left behind
   is `.copilot-tracking/skraft-repl/<pid>.json`, outside any story's tracking folder.
 - `.repl/` of a working copy belongs to the project: the engine reads it, never writes it;
@@ -92,7 +94,7 @@ docs/website/      ← handbook (Docusaurus): book.yml (structure contract), doc
 - Developer configuration is `skraft-config.json` with components (root, stack, paths,
   commands, mocking, contractTesting, bdd). The engine holds no command line of any stack: every command is the developer's. Quality thresholds are not configurable.
 - The workflow is a DOT graph shipped in the plugin and copied into a repo with
-  `skraft workflow eject`. DELIVER gates are `locked`; removing one needs `unlock="<reason>"`.
+  `skraft workflow eject`.
 
 ## Copilot host driver rules
 
