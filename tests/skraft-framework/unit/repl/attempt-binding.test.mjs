@@ -401,6 +401,46 @@ test('a kernel whose attempt is over, or that no one has used for 15 minutes wit
   assert.equal(kernels.kernels[0].stopped, true, 'once the attempt is closed, the sweep ends the kernel')
 })
 
+test('ending a kernel whose run does not close after its SIGKILL waits for it until its time is spent, then ends', async () => {
+  const launcher = new ScriptedLauncher({ stubborn: true })
+  const kernels = new ScriptedKernelHost()
+  kernels.script.set('start', async ({ run }) => { void run('npm run e2e'); return null })
+  const seen = []
+  const { host } = replRun({ kernels, launcher, calls: { 2: async (repl, run) => {
+    await repl.call({ code: 'start' })
+    await sleep(10)
+    const closing = repl.close().then(() => 'ended')
+    await sleep(10)
+    seen.push(await Promise.race([closing, sleep(50).then(() => 'waiting')]))
+    run.clock.advance(10_000)
+    seen.push(await Promise.race([closing, sleep(50).then(() => 'waiting')]))
+  } } })
+
+  await host.start()
+
+  assert.deepEqual(seen, ['waiting', 'ended'])
+  assert.deepEqual(launcher.started[0].program.killed, [['SIGKILL', 0]])
+})
+
+test('a program the launcher starts while the kernel ends is killed as soon as the launcher hands it over', async () => {
+  const launcher = new ScriptedLauncher()
+  const kernels = new ScriptedKernelHost()
+  kernels.script.set('start', async ({ run }) => { void run('npm run e2e'); return null })
+  const { host } = replRun({ kernels, launcher, calls: { 2: async (repl) => {
+    let release = () => undefined
+    launcher.holdStart = new Promise((resolve) => { release = resolve })
+    await repl.call({ code: 'start' })
+    await sleep(10)
+    const closing = repl.close()
+    release()
+    await Promise.race([closing, sleep(100)])
+  } } })
+
+  await host.start()
+
+  assert.deepEqual(launcher.started[0].program.killed, [['SIGKILL', 0]])
+})
+
 test('a reset during a cell that never ends ends its kernel and its runs, starts a fresh kernel and says the variables are gone', async () => {
   const kernels = new ScriptedKernelHost()
   const launcher = new ScriptedLauncher()

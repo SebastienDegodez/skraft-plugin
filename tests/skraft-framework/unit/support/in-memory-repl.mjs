@@ -25,16 +25,21 @@ class ScriptedProgram {
  * scripted there, and stays running otherwise.
  */
 export class ScriptedLauncher {
-  /** @param {{ outputs?: Record<string, { exitCode?: number, text?: string }>, refuses?: string | null }} [options] */
-  constructor({ outputs = {}, refuses = null } = {}) {
+  /**
+   * @param {{ outputs?: Record<string, { exitCode?: number, text?: string }>, refuses?: string | null, stubborn?: boolean }} [options]
+   *   stubborn: a program a kill never ends. A test that sets `holdStart` to a promise holds each start until it settles.
+   */
+  constructor({ outputs = {}, refuses = null, stubborn = false } = {}) {
     this.outputs = outputs
     this.refuses = refuses
+    this.stubborn = stubborn
     /** @type {Array<{ command: string | string[], cwd: string, timeoutMs: number, maxOutputBytes: number, program: ScriptedProgram }>} */
     this.started = []
   }
   async start({ command, cwd, timeoutMs, maxOutputBytes, onData }) {
+    await this.holdStart
     if (this.refuses !== null) return { ok: false, reason: this.refuses }
-    const program = new ScriptedProgram(5000 + this.started.length, (one) => one.finish({ exitCode: null, killed: true, signal: 'SIGTERM' }))
+    const program = new ScriptedProgram(5000 + this.started.length, (one) => { if (!this.stubborn) one.finish({ exitCode: null, killed: true, signal: 'SIGTERM' }) })
     this.started.push({ command, cwd, timeoutMs, maxOutputBytes, program })
     const scripted = this.outputs[Array.isArray(command) ? command.join(' ') : command]
     if (scripted !== undefined) {
