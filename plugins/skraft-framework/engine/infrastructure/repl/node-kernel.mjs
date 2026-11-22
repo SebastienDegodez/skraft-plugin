@@ -7,8 +7,9 @@ import { fileURLToPath } from 'node:url'
  * @typedef {import('../../application/ports/kernel-host.mjs').KernelEvents} KernelEvents
  * @typedef {import('../../application/ports/kernel-host.mjs').CellOutcome} CellOutcome
  * @typedef {import('node:child_process').ChildProcess} Child
- * @typedef {{ id: number, printed: string[], taken: number, interrupted: boolean, settle: (outcome: CellOutcome) => void, done: Promise<CellOutcome> }} Cell
- * @typedef {{ child: Child, events: KernelEvents, cell: Cell | null, late: string[], stopped: boolean, cells: number }} State
+ * @typedef {{ id: number, printed: string[], taken: number, interrupted: boolean, abandoned: boolean, settle: (outcome: CellOutcome) => void, done: Promise<CellOutcome> }} Cell
+ * @typedef {{ child: Child, events: KernelEvents, cell: Cell | null, late: string[], stopped: boolean, cells: number, left: CellOutcome | null }} State
+ *   left: the end of a cell that ended after its budget, while nobody waited for it; the next `wait` hands it over.
  */
 
 const KERNEL_CHILD = fileURLToPath(new URL('./kernel-child.mjs', import.meta.url))
@@ -30,7 +31,7 @@ export const createNodeKernelHost = ({ entry = KERNEL_CHILD } = {}) => Object.fr
 const start = (entry, events, cwd) => new Promise((resolve, reject) => {
   const child = fork(entry, [], { cwd, stdio: ['ignore', 'ignore', 'ignore', 'ipc'], windowsHide: true })
   /** @type {State} */
-  const state = { child, events, cell: null, late: [], stopped: false, cells: 0 }
+  const state = { child, events, cell: null, late: [], stopped: false, cells: 0, left: null }
   child.once('error', reject)
   child.once('exit', () => reject(new Error('the kernel exited before it was ready')))
   child.on('message', (/** @type {any} */ message) => route(state, message, () => resolve(kernelOf(state))))
@@ -97,24 +98,47 @@ const send = (state, message) => {
 /** @param {State} state @param {string} code @param {number} budgetMs @returns {Promise<CellOutcome>} */
 const evaluate = (state, code, budgetMs) => {
   if (state.cell !== null) return Promise.resolve({ status: 'busy', printed: '', value: null, error: null })
-  state.cells += 1
-  /** @type {Cell} */
-  const cell = { id: state.cells, printed: [], taken: 0, interrupted: false, settle: () => undefined, done: Promise.resolve(/** @type {any} */ (null)) }
-  cell.done = new Promise((settle) => { cell.settle = (outcome) => { state.cell = null; settle(outcome) } })
-  state.cell = cell
+  const cell = openCell(state)
   send(state, { t: 'cell', id: cell.id, code })
   return within(state, cell, budgetMs)
 }
 
+/** The cell now in flight. What an earlier cell left unclaimed is kept as printed text. @param {State} state @returns {Cell} */
+const openCell = (state) => {
+  if (state.left !== null) state.late.push(state.left.printed)
+  state.left = null
+  state.cells += 1
+  /** @type {Cell} */
+  const cell = { id: state.cells, printed: [], taken: 0, interrupted: false, abandoned: false, settle: () => undefined, done: Promise.resolve(/** @type {any} */ (null)) }
+  cell.done = new Promise((settle) => { cell.settle = (outcome) => leave(state, cell, outcome, settle) })
+  state.cell = cell
+  return cell
+}
+
+/** @param {State} state @param {Cell} cell @param {CellOutcome} outcome @param {(outcome: CellOutcome) => void} settle */
+const leave = (state, cell, outcome, settle) => {
+  state.cell = null
+  if (cell.abandoned) state.left = outcome
+  settle(outcome)
+}
+
 /** @param {State} state @param {number} budgetMs @returns {Promise<CellOutcome>} */
 const wait = (state, budgetMs) => {
-  if (state.cell === null) return Promise.resolve({ status: 'done', printed: state.late.splice(0).join(''), value: null, error: null })
+  if (state.cell === null) return Promise.resolve(claimLeft(state))
   return within(state, state.cell, budgetMs)
+}
+
+/** The end of a cell nobody waited for, or nothing; what was printed since comes with it. @param {State} state @returns {CellOutcome} */
+const claimLeft = (state) => {
+  const left = state.left ?? { status: /** @type {const} */ ('done'), printed: '', value: null, error: null }
+  state.left = null
+  return { ...left, printed: [...state.late.splice(0), left.printed].join('') }
 }
 
 /** The cell's end, or what it printed so far once the budget is spent. @param {State} state @param {Cell} cell @param {number} budgetMs @returns {Promise<CellOutcome>} */
 const within = (state, cell, budgetMs) => new Promise((resolve) => {
-  const timer = setTimeout(() => resolve(outcome(state, cell, 'running')), budgetMs)
+  cell.abandoned = false
+  const timer = setTimeout(() => { cell.abandoned = true; resolve(outcome(state, cell, 'running')) }, budgetMs)
   cell.done.then((result) => {
     clearTimeout(timer)
     resolve(result)

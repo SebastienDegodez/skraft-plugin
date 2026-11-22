@@ -122,6 +122,19 @@ test('a cell past its budget answers with what it printed, runs on, and its end 
   assert.deepEqual([ended.status, ended.value], ['done', "'finished'"])
 })
 
+test('a cell that ends after its budget, before anyone waits, still hands its value and what it printed last to the next wait', BOUNDED, async (t) => {
+  const { kernel } = await openKernel(t)
+
+  const running = await cell(kernel, 'console.log("a"); await new Promise((r) => setTimeout(r, 300)); console.log("b"); "late value"', 50)
+  await new Promise((done) => setTimeout(done, 600))
+  const ended = await kernel.wait(1000)
+  const nothing = await kernel.wait(1000)
+
+  assert.deepEqual([running.status, running.printed], ['running', 'a\n'])
+  assert.deepEqual([ended.status, ended.printed, ended.value], ['done', 'b\n', "'late value'"])
+  assert.deepEqual([nothing.status, nothing.printed, nothing.value], ['done', '', null])
+})
+
 test('an interrupt ends the awaits of the cell in flight, which reports it was interrupted, and the kernel keeps its variables', BOUNDED, async (t) => {
   const { kernel } = await openKernel(t)
   await cell(kernel, 'const kept = 7')

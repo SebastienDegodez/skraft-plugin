@@ -157,7 +157,10 @@ const settled = (error, value) => {
 }
 
 /** @param {any} error */
-const errorText = (error) => String(error?.stack ?? error ?? 'the cell failed').slice(0, 4000)
+const errorText = (error) => String(error?.stack ?? error ?? 'the cell failed').split('\n').filter((line) => !FRAMEWORK_FRAME.test(line)).join('\n').slice(0, 4000)
+
+/** The frames of the kernel and of Node itself say nothing of the agent's cell. */
+const FRAMEWORK_FRAME = /kernel-child\.mjs|\(node:|node:internal|node:vm|node:repl|node:domain|at new Promise/
 
 // Started by the MCP server with `fork`; imported by the tests, which hand it a channel of their own.
 if (process.send !== undefined && process.argv[1] === fileURLToPath(import.meta.url)) {
