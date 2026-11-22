@@ -1,0 +1,158 @@
+import { test } from 'node:test'
+import assert from 'node:assert/strict'
+import { createNodeKernelHost } from '../../../../plugins/skraft-framework/engine/infrastructure/repl/node-kernel.mjs'
+import { createLiveProcesses } from '../../../../plugins/skraft-framework/engine/infrastructure/process/live-processes.mjs'
+import { tempFolder } from '../support/workspace.mjs'
+
+// A kernel the test fails to end would hold the test run: each test has a time limit.
+const BOUNDED = { timeout: 30_000 }
+const BUDGET = 20_000
+
+/**
+ * A kernel on a real child process, whose `run()` requests this test serves with real programs,
+ * as the MCP server does: it starts them and streams their output and exit back.
+ */
+const openKernel = async (t) => {
+  const root = tempFolder(t)
+  const seen = { runs: [], absent: [], gone: [], killed: [] }
+  const live = new Map()
+  let kernel = null
+  const processes = createLiveProcesses()
+  const events = {
+    onRun: async (request) => {
+      seen.runs.push(request)
+      const argv = Array.isArray(request.command) ? request.command : [process.execPath, '-e', request.command]
+      const program = await processes.start({ argv, cwd: root, timeoutMs: request.timeout * 1000, maxOutputBytes: 100_000, onData: (text) => kernel.chunk(request.rid, text) })
+      live.set(request.rid, program)
+      const result = await program.done
+      kernel.exited(request.rid, { exitCode: result.exitCode, signal: result.signal, timedOut: result.timedOut, killed: result.killed, durationMs: 1, log: `${request.rid}.log`, error: result.error })
+    },
+    onKill: (rid, signal, grace) => { seen.killed.push(rid); live.get(rid)?.kill(signal, grace * 1000) },
+    onAbsent: (notice) => seen.absent.push(notice),
+    onGone: (why) => seen.gone.push(why),
+  }
+  kernel = await createNodeKernelHost().start(events, root)
+  t.after(() => {
+    kernel.stop()
+    for (const program of live.values()) program.kill('SIGKILL', 0)
+  })
+  return { kernel, seen, root }
+}
+
+const cell = (kernel, code, budget = BUDGET) => kernel.evaluate(code, budget)
+
+test('variables persist from one cell to the next, a cell may await at its top level, and its trailing value comes back inspected', BOUNDED, async (t) => {
+  const { kernel } = await openKernel(t)
+
+  await cell(kernel, 'const base = await Promise.resolve(41)')
+  const second = await cell(kernel, 'base + 1')
+  const third = await cell(kernel, '({ nested: { deeper: { deepest: { gone: 1 } } }, list: [1, 2] })')
+
+  assert.deepEqual([second.status, second.value, second.error], ['done', '42', null])
+  assert.equal(third.value, '{ nested: { deeper: { deepest: [Object] } }, list: [ 1, 2 ] }')
+})
+
+test('a cell that throws, awaits a rejection, names nothing it declared or is cut short ends as an error and leaves the kernel usable', BOUNDED, async (t) => {
+  const { kernel } = await openKernel(t)
+
+  const thrown = await cell(kernel, 'throw new Error("boom")')
+  const rejected = await cell(kernel, 'await Promise.reject(new TypeError("later"))')
+  const missing = await cell(kernel, 'nothingDeclared()')
+  const incomplete = await cell(kernel, 'function open() {')
+  const after = await cell(kernel, '1 + 1')
+
+  assert.deepEqual([thrown.status, rejected.status, missing.status, incomplete.status, after.status], ['error', 'error', 'error', 'error', 'done'])
+  assert.match(thrown.error, /^Error: boom/)
+  assert.match(rejected.error, /^TypeError: later/)
+  assert.match(missing.error, /nothingDeclared is not defined/)
+  assert.equal(incomplete.error, 'SyntaxError: the cell is incomplete')
+})
+
+test('what a cell prints comes back with it, and what a later run prints arrives with the next cell', BOUNDED, async (t) => {
+  const { kernel } = await openKernel(t)
+
+  const first = await cell(kernel, 'console.log("one", { a: 1 }); setTimeout(() => console.log("late"), 50); 1')
+  await new Promise((done) => setTimeout(done, 300))
+  const second = await cell(kernel, 'console.error("two")')
+
+  assert.equal(first.printed, 'one { a: 1 }\n')
+  assert.equal(second.printed, 'late\ntwo\n')
+})
+
+test('run() hands back a handle that is awaited, polled, tailed and read, with the exit code and the output', BOUNDED, async (t) => {
+  const { kernel, seen } = await openKernel(t)
+
+  await cell(kernel, "const h = run(['" + process.execPath.replaceAll('\\', '\\\\') + "', '-e', 'for (let i = 1; i <= 5; i++) console.log(\"line \" + i); process.exit(4)'], { label: 'five', gate: 'test' })")
+  const early = await cell(kernel, 'h.id')
+  const done = await cell(kernel, 'const result = await h; [result.exitCode, h.running, h.poll() === result, h.tail(2), h.output().split("\\n").length]')
+
+  assert.equal(early.value, '1')
+  assert.equal(done.value, "[ 4, false, true, 'line 4\\nline 5', 6 ]")
+  assert.deepEqual([seen.runs[0].gate, seen.runs[0].label, seen.runs[0].cwd, seen.runs[0].timeout, seen.runs[0].cell], ['test', 'five', '.', 600, 1])
+})
+
+test('gate() is run() with its gate named, and absent() reports a gate the project does not have', BOUNDED, async (t) => {
+  const { kernel, seen } = await openKernel(t)
+
+  await cell(kernel, `await gate('lint', ['${process.execPath.replaceAll('\\', '\\\\')}', '-e', '0'], { cwd: 'api' }); absent('coverage', 'api', 'the AGENTS.md names none')`)
+
+  assert.deepEqual([seen.runs[0].gate, seen.runs[0].cwd], ['lint', 'api'])
+  assert.deepEqual(seen.absent, [{ t: 'absent', gate: 'coverage', component: 'api', reason: 'the AGENTS.md names none', cell: 1 }])
+})
+
+test('a run that is killed through its handle ends with the signal it was killed by', { ...BOUNDED, skip: process.platform === 'win32' && 'POSIX signals' }, async (t) => {
+  const { kernel, seen } = await openKernel(t)
+
+  await cell(kernel, "const long = run(['" + process.execPath.replaceAll('\\', '\\\\') + "', '-e', 'setInterval(() => {}, 1000)'])")
+  const ended = await cell(kernel, 'await new Promise((r) => setTimeout(r, 300)); long.kill("SIGTERM", 1); const r = await long; [r.killed, r.timedOut, long.running]')
+
+  assert.equal(ended.value, '[ true, false, false ]')
+  assert.deepEqual(seen.killed, [1])
+})
+
+test('a cell past its budget answers with what it printed, runs on, and its end is awaited apart; a second cell meanwhile is busy', BOUNDED, async (t) => {
+  const { kernel } = await openKernel(t)
+
+  const running = await cell(kernel, 'console.log("started"); await new Promise((r) => setTimeout(r, 800)); "finished"', 150)
+  const busy = await cell(kernel, '1', 150)
+  const ended = await kernel.wait(5000)
+
+  assert.deepEqual([running.status, running.printed], ['running', 'started\n'])
+  assert.equal(busy.status, 'busy')
+  assert.deepEqual([ended.status, ended.value], ['done', "'finished'"])
+})
+
+test('an interrupt ends the awaits of the cell in flight, which reports it was interrupted, and the kernel keeps its variables', BOUNDED, async (t) => {
+  const { kernel } = await openKernel(t)
+  await cell(kernel, 'const kept = 7')
+
+  const flying = cell(kernel, "await run(['" + process.execPath.replaceAll('\\', '\\\\') + "', '-e', 'setInterval(() => {}, 1000)'])", 10_000)
+  await new Promise((done) => setTimeout(done, 300))
+  kernel.interrupt()
+  const interrupted = await flying
+  const after = await cell(kernel, 'kept')
+
+  assert.deepEqual([interrupted.status, after.value], ['interrupted', '7'])
+  assert.match(interrupted.error, /interrupted/)
+})
+
+test('an interrupt of a cell that never yields restarts the kernel, which reports it, and its variables are gone', BOUNDED, async (t) => {
+  const { kernel, seen } = await openKernel(t)
+
+  const flying = cell(kernel, 'while (true) {}', 10_000)
+  await new Promise((done) => setTimeout(done, 200))
+  kernel.interrupt()
+  const outcome = await flying
+
+  assert.equal(outcome.status, 'restarted')
+  assert.deepEqual(seen.gone, ['restarted'])
+})
+
+test('a kernel that exits by itself reports it crashed with the cell it was running', BOUNDED, async (t) => {
+  const { kernel, seen } = await openKernel(t)
+
+  const outcome = await cell(kernel, 'process.exit(3)')
+
+  assert.equal(outcome.status, 'crashed')
+  assert.deepEqual(seen.gone, ['crashed'])
+})
