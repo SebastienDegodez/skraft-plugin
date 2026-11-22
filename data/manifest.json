@@ -1,5 +1,5 @@
 {
-  "generated": "2026-11-22T22:45:44.957Z",
+  "generated": "2026-11-22T23:09:45.163Z",
   "sessions": [
     {
       "id": "scheduled/2026-09-28/acceptance-designer/absent-acceptance-criteria-halt-the-distillation--main--run0",
@@ -10984,7 +10984,7 @@
         "finish-the-approved-customer-guide-issue",
         "pr-647"
       ],
-      "mtime": 1795387541405.0283
+      "mtime": 1795388981141.9387
     },
     {
       "id": "pr/647/commit-convention/finish-the-approved-customer-guide-issue--main--run1",
@@ -10997,7 +10997,7 @@
         "finish-the-approved-customer-guide-issue",
         "pr-647"
       ],
-      "mtime": 1795387541393.0283
+      "mtime": 1795388981219.9395
     },
     {
       "id": "pr/647/commit-convention/finish-the-approved-customer-guide-issue--main--run2",
@@ -11010,7 +11010,7 @@
         "finish-the-approved-customer-guide-issue",
         "pr-647"
       ],
-      "mtime": 1795387541419.0283
+      "mtime": 1795388981373.9412
     },
     {
       "id": "pr/647/commit-convention/finish-the-approved-customer-guide-issue--main--run3",
@@ -11023,7 +11023,7 @@
         "finish-the-approved-customer-guide-issue",
         "pr-647"
       ],
-      "mtime": 1795387541420.0283
+      "mtime": 1795388981375.9412
     },
     {
       "id": "pr/647/commit-convention/finish-the-approved-customer-guide-issue--main--run4",
@@ -11036,7 +11036,7 @@
         "finish-the-approved-customer-guide-issue",
         "pr-647"
       ],
-      "mtime": 1795387541421.0283
+      "mtime": 1795388981451.942
     },
     {
       "id": "pr/647/commit-convention/record-a-customer-guide-increment-while-the-issue-remains-open--main--run0",
@@ -11049,7 +11049,7 @@
         "record-a-customer-guide-increment-while-the-issue-remains-open",
         "pr-647"
       ],
-      "mtime": 1795387541430.0283
+      "mtime": 1795388981453.204
     },
     {
       "id": "pr/647/commit-convention/record-a-customer-guide-increment-while-the-issue-remains-open--main--run1",
@@ -11062,7 +11062,7 @@
         "record-a-customer-guide-increment-while-the-issue-remains-open",
         "pr-647"
       ],
-      "mtime": 1795387541431.0283
+      "mtime": 1795388981530.1443
     },
     {
       "id": "pr/647/commit-convention/record-a-customer-guide-increment-while-the-issue-remains-open--main--run2",
@@ -11075,7 +11075,7 @@
         "record-a-customer-guide-increment-while-the-issue-remains-open",
         "pr-647"
       ],
-      "mtime": 1795387541433.0283
+      "mtime": 1795388981530.1443
     },
     {
       "id": "pr/647/commit-convention/record-a-customer-guide-increment-while-the-issue-remains-open--main--run3",
@@ -11088,7 +11088,7 @@
         "record-a-customer-guide-increment-while-the-issue-remains-open",
         "pr-647"
       ],
-      "mtime": 1795387541431.0283
+      "mtime": 1795388981606.9436
     },
     {
       "id": "pr/647/commit-convention/record-a-customer-guide-increment-while-the-issue-remains-open--main--run4",
@@ -11101,7 +11101,7 @@
         "record-a-customer-guide-increment-while-the-issue-remains-open",
         "pr-647"
       ],
-      "mtime": 1795387541440.0283
+      "mtime": 1795388981608.9436
     },
     {
       "id": "pr/647/commit-convention/record-the-approved-guide-edit-without-a-known-issue--main--run0",
@@ -11114,7 +11114,7 @@
         "record-the-approved-guide-edit-without-a-known-issue",
         "pr-647"
       ],
-      "mtime": 1795387541447.1633
+      "mtime": 1795388981608.5613
     },
     {
       "id": "pr/647/commit-convention/record-the-approved-guide-edit-without-a-known-issue--main--run1",
@@ -11127,7 +11127,7 @@
         "record-the-approved-guide-edit-without-a-known-issue",
         "pr-647"
       ],
-      "mtime": 1795387541448.0283
+      "mtime": 1795388981686.9446
     },
     {
       "id": "pr/647/commit-convention/record-the-approved-guide-edit-without-a-known-issue--main--run2",
@@ -11140,7 +11140,7 @@
         "record-the-approved-guide-edit-without-a-known-issue",
         "pr-647"
       ],
-      "mtime": 1795387541448.0283
+      "mtime": 1795388981681.9443
     },
     {
       "id": "pr/647/commit-convention/record-the-approved-guide-edit-without-a-known-issue--main--run3",
@@ -11153,7 +11153,7 @@
         "record-the-approved-guide-edit-without-a-known-issue",
         "pr-647"
       ],
-      "mtime": 1795387541448.0283
+      "mtime": 1795388981686.9446
     },
     {
       "id": "pr/647/commit-convention/record-the-approved-guide-edit-without-a-known-issue--main--run4",
@@ -11166,7 +11166,7 @@
         "record-the-approved-guide-edit-without-a-known-issue",
         "pr-647"
       ],
-      "mtime": 1795387541449.0283
+      "mtime": 1795388981685.9446
     }
   ]
 }

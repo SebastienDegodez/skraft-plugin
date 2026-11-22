@@ -6159,33 +6159,6 @@
   "agents": {
     "software-engineer": [
       {
-        "id": "45022999338:agent:software-engineer:2026-11-22T12:39:30.769Z",
-        "timestamp": "2026-11-22T12:39:30.769Z",
-        "commit": "5cf16ca59404ccfd5bfcba32c76f96bfb6b62e77",
-        "run": "45022999338",
-        "url": "https://github.com/SebastienDegodez/skraft-plugin/actions/runs/45022999338",
-        "runner": "vally-agent",
-        "model": "gpt-5.6-luna",
-        "judgeModel": "none",
-        "state": "pass",
-        "reason": "conforms on every trial (15/15 at or above 1)",
-        "descriptorSha": "acc9295cd63df5319c5dbb25b14f7c793b87d715945ff17e13197459c565fe31",
-        "netWin": 1,
-        "trialCount": 15,
-        "meanScore": 1,
-        "confidenceInterval": {
-          "low": null,
-          "high": null
-        },
-        "signTest": {
-          "wins": 0,
-          "ties": 0,
-          "losses": 0,
-          "pValue": null
-        },
-        "metrics": null
-      },
-      {
         "id": "45023477948:agent:software-engineer:2026-11-22T12:45:43.498Z",
         "timestamp": "2026-11-22T12:45:43.498Z",
         "commit": "389e5a19c7e1652f3cf601322372e2ecd73a21ff",
@@ -6416,6 +6389,33 @@
         "netWin": 1,
         "trialCount": 15,
         "meanScore": 1,
+        "confidenceInterval": {
+          "low": null,
+          "high": null
+        },
+        "signTest": {
+          "wins": 0,
+          "ties": 0,
+          "losses": 0,
+          "pValue": null
+        },
+        "metrics": null
+      },
+      {
+        "id": "45081172169:agent:software-engineer:2026-11-22T23:08:53.508Z",
+        "timestamp": "2026-11-22T23:08:53.508Z",
+        "commit": "ec7c85baef2dbf0773b0bfbd61077af3ef6254ac",
+        "run": "45081172169",
+        "url": "https://github.com/SebastienDegodez/skraft-plugin/actions/runs/45081172169",
+        "runner": "vally-agent",
+        "model": "gpt-5.6-luna",
+        "judgeModel": "none",
+        "state": "flaky",
+        "reason": "conforms on 14 of 15 trial(s); every scenario at or above 2/3 (threshold 1)",
+        "descriptorSha": "86db4a5542118c2aa48e030952575d6cf1538f3b775370253525ea1567bfdf79",
+        "netWin": 0.8666666666666667,
+        "trialCount": 15,
+        "meanScore": 0.983,
         "confidenceInterval": {
           "low": null,
           "high": null
