@@ -437,7 +437,7 @@ test('a configuration that became invalid stops the run before anything is dispa
   assert.equal(host.agentRunner.dispatches.length, 0)
 })
 
-test('the engineer works on every component, each with its test command when it has one and the gate commands it runs before its result, mutation and other commands left out, a path list left out being the whole root', async () => {
+test('the engineer works on every component, each with its test command when it has one and the gate commands it runs before its result, a front end\'s e2e command last among them and mutation left out, a path list left out being the whole root', async () => {
   const WEB = { name: 'web', root: '../web', stack: 'react', mocking: { strategy: 'inprocess' }, bdd: false, paths: { src: ['src'], tests: ['src'] }, commands: { lint: 'npx eslint .' } }
   const host = scripted({ components: [API, WEB] }, (it) => [agent()(it), agent()(it), agent()(it), () => ({ ok: false, unavailable: true, text: '' })])
 
@@ -448,12 +448,12 @@ test('the engineer works on every component, each with its test command when it 
   assert.ok(host.agentRunner.dispatches[2].prompt.includes(`- .copilot-tracking/skraft-plans/${SLUG}\n- src\n- tests\n- ../web/src\n- ./* (the files right in the root of api)`))
   assert.ok(deliver.endsWith(`- Gate commands: run those of each component you changed, from its root, through skraft_repl, and fix every failure; the DELIVER review reads the traced runs of your attempt:\n- api: build: dotnet build; test: dotnet test\n- web: lint: npx eslint .\n${EVIDENCE}`), deliver)
 
-  const partial = scripted({ components: [{ ...API, paths: { src: ['src'] } }, { ...WEB, paths: { tests: ['src'] }, commands: { e2e: 'npx playwright test' } }] }, (it) => [agent()(it), agent()(it), agent()(it), () => ({ ok: false, unavailable: true, text: '' })])
+  const partial = scripted({ components: [{ ...API, paths: { src: ['src'] } }, { ...WEB, paths: { tests: ['src'] }, commands: { e2e: 'npx playwright test', mutation: 'npx stryker run' } }] }, (it) => [agent()(it), agent()(it), agent()(it), () => ({ ok: false, unavailable: true, text: '' })])
   await partial.start()
   const [distill, engineer] = partial.agentRunner.dispatches.slice(2).map((dispatch) => dispatch.prompt)
   assert.ok(distill.includes(`- .copilot-tracking/skraft-plans/${SLUG}\n- src\n- .\n- ../web\n- ../web/src\n- ./* (the files right in the root of api)`), distill)
   assert.ok(engineer.includes(`- .copilot-tracking/skraft-plans/${SLUG}\n- src\n- .\n- ../web\n- ../web/src\n- ./* (the files right in the root of api)`), engineer)
-  assert.ok(engineer.endsWith(`- Gate commands: run those of each component you changed, from its root, through skraft_repl, and fix every failure; the DELIVER review reads the traced runs of your attempt:\n- api: build: dotnet build; test: dotnet test\n${EVIDENCE}`), engineer)
+  assert.ok(engineer.endsWith(`- Gate commands: run those of each component you changed, from its root, through skraft_repl, and fix every failure; the DELIVER review reads the traced runs of your attempt:\n- api: build: dotnet build; test: dotnet test\n- web: e2e: npx playwright test\n${EVIDENCE}`), engineer)
 })
 
 test('the test and gate commands the engineer is given have the run\'s base in place of {baseSha}', async () => {

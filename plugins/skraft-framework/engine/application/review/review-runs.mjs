@@ -312,13 +312,16 @@ const documentInputs = (documents, folder, present) => {
 
 /**
  * What each component builds on, how its tests stand in for what it calls, whether it wants
- * contract tests, and the gates that passed on it.
+ * contract tests, whether it declares an e2e command, and the gates that passed on it.
  * @param {Review} review
  */
 const componentsOf = ({ inputs }) => {
-  const described = /** @type {NonNullable<ReviewInputs['components']>} */ (inputs.components).map(({ name, root, stack, mocking, contractTesting, bdd, gates }) => ({ name, root, stack, mocking, contractTesting, bdd, gates }))
+  const described = /** @type {NonNullable<ReviewInputs['components']>} */ (inputs.components).map(describedComponent)
   return `${JSON.stringify(described, null, 2)}\n`
 }
+
+/** @param {NonNullable<ReviewInputs['components']>[number]} component */
+const describedComponent = ({ name, root, stack, mocking, contractTesting, bdd, commands, gates }) => ({ name, root, stack, mocking, contractTesting, bdd, e2e: 'e2e' in commands, gates })
 
 /** Whether the review is a run's DELIVER review, the one bound to the delivery's trace. @param {Review} review */
 const delivers = ({ inputs }) => inputs.trace !== undefined

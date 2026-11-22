@@ -48,7 +48,7 @@ test('a pull request of the .NET fixture that weakens an assertion needs rework:
     'pr-12: NEEDS_REWORK: 1 reason to address',
   ])
   assert.equal(host.events().at(-1).durationMs, 0)
-  assert.deepEqual(JSON.parse(await host.reviews.read(SLUG, 'reviews/verdict-1/components.json')), [{ name: API.name, root: API.root, stack: API.stack, mocking: API.mocking, contractTesting: false, bdd: false, gates: [] }])
+  assert.deepEqual(JSON.parse(await host.reviews.read(SLUG, 'reviews/verdict-1/components.json')), [{ name: API.name, root: API.root, stack: API.stack, mocking: API.mocking, contractTesting: false, bdd: false, e2e: false, gates: [] }])
   const started = host.events()[0]
   assert.deepEqual([started.phase, started.pullRequest, started.base, started.head, started.lenses], ['DELIVER', 12, 'root-0', 'root-1', ['test-integrity', 'architecture-boundaries', 'cold-reader', 'quality-gates', 'mock-fidelity', 'contract-fidelity']])
 })

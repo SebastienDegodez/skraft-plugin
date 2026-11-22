@@ -1,4 +1,4 @@
-import { GATE_NAMES } from '../../domain/evidence/gate-names.mjs'
+import { DELIVERED_GATES } from '../../domain/evidence/gate-names.mjs'
 import { pathUnder } from '../../domain/config/relative-path.mjs'
 import { qualityEvidence } from '../../domain/reporting/run-facts.mjs'
 import { runsFolder } from '../../domain/evidence/run-trace.mjs'
@@ -107,7 +107,7 @@ const writersOf = (workflow, run, phase) => workflow.order
  * The gates the delivery holds a traced run of under a component's folder, in gate order.
  * @param {RunFacts['events']} events @param {{ root: string }} component
  */
-const gatesWithRuns = (events, { root }) => GATE_NAMES.filter((gate) => qualityEvidence(events).some((fact) => fact.gate === gate && pathUnder(fact.folder, root) !== null))
+const gatesWithRuns = (events, { root }) => DELIVERED_GATES.filter((gate) => qualityEvidence(events).some((fact) => fact.gate === gate && pathUnder(fact.folder, root) !== null))
 
 /** @param {RunState['nodes'][string]} node */
 const writtenBy = (node) => [...new Set([...node.outputs, ...node.documents])]

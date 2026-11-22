@@ -16,7 +16,7 @@ import { statusLine } from '../../domain/reporting/run-status.mjs'
 import { renderWorkflowView, WORKFLOW_FILE } from '../../domain/reporting/workflow-view.mjs'
 import { openActiveRun } from './active-run.mjs'
 import { holdRun, LockLost, writingWhileHeld } from './run-lock.mjs'
-import { gatesOf } from '../../domain/evidence/gate-names.mjs'
+import { deliveredGatesOf } from '../../domain/evidence/gate-names.mjs'
 import { baseOf, loadConfig } from '../config/bases.mjs'
 import { assignmentOf, modelOf, reviewAssignmentsOf } from '../config/agent-models.mjs'
 import { loadWorkflow } from '../workflow/load-workflow.mjs'
@@ -767,7 +767,7 @@ const briefStack = ({ config }, run, role) => ({
  */
 const briefComponent = (component, sha) => {
   const { name, root, stack, mocking, contractTesting, bddPaths, commands } = component
-  const gates = gatesOf(component).map((gate) => ({ gate, line: withBase(commands[gate], sha) }))
+  const gates = deliveredGatesOf(component).map((gate) => ({ gate, line: withBase(commands[gate], sha) }))
   return { name, root, stack, mocking: mocking.strategy, contractTesting, bdd: bddPaths, test: testLine(commands.test, sha), gates }
 }
 

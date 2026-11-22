@@ -199,9 +199,9 @@ test('a lens whose trigger matches a changed path or an added line runs with the
   assert.deepEqual(host.agentRunner.batches.at(-1).map(({ agent: id }) => id), ['test-integrity-lens', 'architecture-boundaries-lens', 'cold-reader-lens', 'quality-gates-lens', 'mock-fidelity-lens'])
   const mocks = host.agentRunner.batches.at(-1).at(-1).prompt
   assert.ok(mocks.includes(`  - Components (stack, mocking strategy, contract testing, BDD, gates with a traced run): ${TRACKING}/reviews/deliver_review-1/components.json`), mocks)
-  assert.deepEqual(JSON.parse(await host.tracking.read(SLUG, 'reviews/deliver_review-1/components.json')), [{ name: 'api', root: '.', stack: 'dotnet', mocking: { strategy: 'inprocess' }, contractTesting: false, bdd: false, gates: ['build', 'format', 'lint', 'test', 'architecture', 'coverage'] }])
+  assert.deepEqual(JSON.parse(await host.tracking.read(SLUG, 'reviews/deliver_review-1/components.json')), [{ name: 'api', root: '.', stack: 'dotnet', mocking: { strategy: 'inprocess' }, contractTesting: false, bdd: false, e2e: false, gates: ['build', 'format', 'lint', 'test', 'architecture', 'coverage'] }])
 
-  const web = { ...API, name: 'web', root: 'web', bdd: false, paths: { src: ['src'], tests: ['tests'] } }
+  const web = { ...API, name: 'web', root: 'web', bdd: false, paths: { src: ['src'], tests: ['tests'] }, commands: { ...API.commands, e2e: 'npx playwright test' } }
   const contracts = scripted({ components: [{ ...API, mocking: undefined, contractTesting: true, bdd: [{ features: 'docs/features', steps: 'tests/Steps' }], commands: { architecture: 'dotnet test --filter Architecture', ...API.commands } }, web] }, (it) => [
     ...nominal(it).slice(0, 3),
     agent({ work: ({ git }) => {
@@ -212,8 +212,8 @@ test('a lens whose trigger matches a changed path or an added line runs with the
   await contracts.start()
   assert.deepEqual(contracts.agentRunner.batches.at(-1).map(({ agent: id }) => id), ['test-integrity-lens', 'architecture-boundaries-lens', 'cold-reader-lens', 'quality-gates-lens', 'contract-fidelity-lens'])
   assert.deepEqual(JSON.parse(await contracts.tracking.read(SLUG, 'reviews/deliver_review-1/components.json')), [
-    { name: 'api', root: '.', stack: 'dotnet', mocking: { strategy: 'microcks' }, contractTesting: true, bdd: true, gates: ['build', 'format', 'lint', 'test', 'architecture', 'coverage'] },
-    { name: 'web', root: 'web', stack: 'dotnet', mocking: { strategy: 'inprocess' }, contractTesting: false, bdd: false, gates: ['build', 'format', 'lint', 'test', 'architecture', 'coverage'] },
+    { name: 'api', root: '.', stack: 'dotnet', mocking: { strategy: 'microcks' }, contractTesting: true, bdd: true, e2e: false, gates: ['build', 'format', 'lint', 'test', 'architecture', 'coverage'] },
+    { name: 'web', root: 'web', stack: 'dotnet', mocking: { strategy: 'inprocess' }, contractTesting: false, bdd: false, e2e: true, gates: ['build', 'format', 'lint', 'test', 'architecture', 'coverage'] },
   ])
   assert.deepEqual(JSON.parse(await contracts.tracking.read(SLUG, 'reviews/design_review-1/components.json'))[0].gates, [])
 })
