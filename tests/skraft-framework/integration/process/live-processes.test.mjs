@@ -141,7 +141,7 @@ test('a server starting later ends what a server killed without cleaning up left
   t.after(() => { try { process.kill(-run.pid, 'SIGKILL') } catch { /* gone */ } })
   const journal = createOrphanJournal({ folder })
   const server = await deadServer()
-  await journal.keep({ server: { pid: server, created: 'a time long ago' }, kernel: null, runs: [{ pid: run.pid, created: processCreation(run.pid) }] })
+  await journal.keep({ server: { pid: server, created: 'a time long ago' }, kernel: null, runs: [{ pid: run.pid, created: await processCreation(run.pid) }] })
 
   const reaped = await journal.reap()
 
@@ -155,7 +155,7 @@ test('a server that still runs keeps what it started', POSIX, async (t) => {
   const run = startsDetached()
   t.after(() => { try { process.kill(-run.pid, 'SIGKILL') } catch { /* gone */ } })
   const journal = createOrphanJournal({ folder })
-  await journal.keep({ server: { pid: process.pid, created: processCreation(process.pid) }, kernel: null, runs: [{ pid: run.pid, created: processCreation(run.pid) }] })
+  await journal.keep({ server: { pid: process.pid, created: await processCreation(process.pid) }, kernel: null, runs: [{ pid: run.pid, created: await processCreation(run.pid) }] })
 
   assert.equal(await journal.reap(), 0)
   assert.equal(await stillAlive(run.pid), true)

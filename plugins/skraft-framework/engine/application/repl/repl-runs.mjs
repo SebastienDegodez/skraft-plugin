@@ -15,7 +15,9 @@ import { gitFacts, traceEnd, traceStart } from './repl-trace.mjs'
  * @typedef {{
  *   key: string, slug: string, folder: string, kernel: import('../ports/kernel-host.mjs').Kernel, lease: string,
  *   runs: Map<number, Run>, cells: number, lastUsed: number, gone: string | null, pending: Set<Promise<void>>, signingKey: string | null, chain: Promise<void>,
+ *   recording?: Promise<void>, tracked?: Map<number, Promise<{ pid: number, created: string | null }>>,
  * }} Entry
+ *   recording: the last write of the orphan journal; tracked: each process recorded, with its start time, by pid.
  */
 
 /** The longest a program may run, and the output kept of it. */
@@ -81,11 +83,31 @@ const openRun = (deps, entry, request) => {
   return run
 }
 
-/** The processes this server started are recorded for a server that finds them left behind. @param {any} deps @param {Entry} entry */
-export const recordProcesses = async (deps, entry) => {
-  const { orphans, server } = deps.repl
-  const runs = liveRuns(entry).filter((run) => run.program?.pid != null).map((run) => orphans.track(/** @type {number} */ (run.program?.pid)))
-  await orphans.keep({ server, kernel: entry.kernel.pid == null ? null : orphans.track(entry.kernel.pid), runs })
+/**
+ * The processes this server started are recorded for a server that finds them left behind: one
+ * write after the other, each with the processes alive when it is written. The start time of each
+ * process is asked of the system once, while the server goes on.
+ * @param {any} deps @param {Entry} entry @returns {Promise<void>}
+ */
+export const recordProcesses = (deps, entry) => {
+  const written = (entry.recording ?? Promise.resolve()).then(() => writeProcesses(deps, entry))
+  entry.recording = written.catch(() => undefined)
+  return written
+}
+
+/** @param {any} deps @param {Entry} entry */
+const writeProcesses = async (deps, entry) => {
+  const pids = liveRuns(entry).map((run) => run.program?.pid).filter((pid) => pid != null)
+  const runs = await Promise.all(pids.map((pid) => trackedOf(deps, entry, /** @type {number} */ (pid))))
+  const kernel = entry.kernel.pid == null ? null : await trackedOf(deps, entry, entry.kernel.pid)
+  await deps.repl.orphans.keep({ server: deps.repl.server, kernel, runs })
+}
+
+/** A process with its start time, read once per pid. @param {any} deps @param {Entry} entry @param {number} pid */
+const trackedOf = (deps, entry, pid) => {
+  entry.tracked ??= new Map()
+  if (!entry.tracked.has(pid)) entry.tracked.set(pid, Promise.resolve(deps.repl.orphans.track(pid)))
+  return /** @type {Promise<{ pid: number, created: string | null }>} */ (entry.tracked.get(pid))
 }
 
 /** How a run ended when it did not simply exit. @param {import('../ports/program-launcher.mjs').ProgramResult} result @returns {string | null} */

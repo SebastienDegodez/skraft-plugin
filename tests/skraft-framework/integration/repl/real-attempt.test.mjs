@@ -14,13 +14,14 @@ import { tempFolder } from '../support/workspace.mjs'
 // process, real programs started in a real folder, the real orphan journal.
 const BOUNDED = { timeout: 60_000 }
 const NODE = JSON.stringify(process.execPath)
+const SERVER_CREATED = await processCreation(process.pid)
 
 const realRun = (t, call) => {
   const root = tempFolder(t)
   mkdirSync(join(root, 'api'))
   const orphans = createOrphanJournal({ folder: join(root, '.copilot-tracking', 'skraft-repl') })
   const host = scripted({}, (it) => nominal(it).map((behaviour, index) => (index === 3 ? agent({ work: async (repos) => { await call(repl, root); green(SLUG, 'Checkout', '')(repos) } })(it) : behaviour)))
-  host.deps.repl = { root, kernels: createNodeKernelHost(), launcher: createProgramLauncher({ root }), orphans, locks: new InMemoryRunLock(host.tracking, 'a'), server: { pid: process.pid, created: processCreation(process.pid) }, budgetMs: 30_000 }
+  host.deps.repl = { root, kernels: createNodeKernelHost(), launcher: createProgramLauncher({ root }), orphans, locks: new InMemoryRunLock(host.tracking, 'a'), server: { pid: process.pid, created: SERVER_CREATED }, budgetMs: 30_000 }
   const repl = createRepl(host.deps, { entry: null, reaped: false })
   t.after(() => repl.close())
   return { host, repl, root, orphans }

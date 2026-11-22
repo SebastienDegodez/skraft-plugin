@@ -182,6 +182,7 @@ const retire = async (deps, state) => {
   endRuns(entry, 'SIGKILL', 0)
   entry.kernel.stop()
   await Promise.allSettled([...entry.pending])
+  await entry.recording
   await deps.repl.orphans.forget(deps.repl.server.pid)
   await releaseLease(deps, entry, entry.lease)
 }
