@@ -33,7 +33,7 @@ lancés. Non mesurés non plus : `reset: true` sur un hôte qui n'envoie jamais 
 
 ## Ce qu'une cellule peut faire <!-- #cell -->
 
-La cellule est du JavaScript. Les variables restent d'un appel au suivant et une cellule peut faire `await` au premier niveau. Un `const` ou un `let` de premier niveau vit aussi longtemps que le noyau : le déclarer une seconde fois échoue (Node 22 : `Identifier '<nom>' has already been declared`), et le résultat ajoute une indication fixe : le réaffecter, prendre un autre nom, ou appeler avec `reset: true`.
+La cellule est du JavaScript. Les variables restent d'un appel au suivant et une cellule peut faire `await` au premier niveau. Un `const` ou un `let` de premier niveau vit aussi longtemps que le noyau : le déclarer une seconde fois échoue (Node 22 : `Identifier '<nom>' has already been declared`), et le résultat ajoute une indication fixe : déclarer avec `var`, ou sous un nouveau nom, une variable réutilisée d'une cellule à l'autre, ou appeler avec `reset: true`.
 
 | Nom | Fait |
 | --- | --- |

@@ -65,7 +65,7 @@ test('a cell that declares a top-level const or let a second time reads why, and
 
   await host.start()
 
-  assert.equal(answers[0].text, "error: SyntaxError: Identifier 'unit' has already been declared\nhint: a top-level const or let lives as long as the kernel: assign it again without const or let, use another name, or call skraft_repl with reset: true for a fresh kernel")
+  assert.equal(answers[0].text, "error: SyntaxError: Identifier 'unit' has already been declared\nhint: a top-level const or let lives as long as the kernel: declare a variable reused across cells with var, or under a new name, or call skraft_repl with reset: true for a fresh kernel")
 })
 
 test('an agent that commits no code, or a call with no attempt open, is refused with a fixed text and no kernel starts', async () => {

@@ -52,7 +52,7 @@ const closing = ({ value, error, status }) => {
 
 /** Node's error for a top-level const or let declared again (measured on Node 22). */
 const REDECLARED = /^SyntaxError: Identifier '[^']+' has already been declared/
-const REDECLARED_HINT = 'hint: a top-level const or let lives as long as the kernel: assign it again without const or let, use another name, or call skraft_repl with reset: true for a fresh kernel'
+const REDECLARED_HINT = 'hint: a top-level const or let lives as long as the kernel: declare a variable reused across cells with var, or under a new name, or call skraft_repl with reset: true for a fresh kernel'
 
 /** @param {string} error @returns {string[]} */
 const hintOf = (error) => (REDECLARED.test(error) ? [REDECLARED_HINT] : [])

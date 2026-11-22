@@ -33,7 +33,7 @@ host that never sends a cancellation, and `.repl/lib` (loading, `require`) under
 
 ## What a cell can do <!-- #cell -->
 
-The cell is JavaScript. Variables stay from one call to the next and a cell may `await` at its top level. A top-level `const` or `let` lives as long as the kernel: declaring it a second time fails (Node 22: `Identifier '<name>' has already been declared`), and the result adds a fixed hint: assign it again, use another name, or call with `reset: true`.
+The cell is JavaScript. Variables stay from one call to the next and a cell may `await` at its top level. A top-level `const` or `let` lives as long as the kernel: declaring it a second time fails (Node 22: `Identifier '<name>' has already been declared`), and the result adds a fixed hint: declare a variable reused across cells with `var`, or under a new name, or call with `reset: true`.
 
 | Name | Does |
 | --- | --- |
