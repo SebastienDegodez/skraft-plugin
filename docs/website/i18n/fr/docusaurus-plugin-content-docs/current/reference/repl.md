@@ -61,7 +61,7 @@ Le résultat contient, dans l'ordre, 24 Kio au plus : les runs finis depuis le d
 
 ## La trace <!-- #trace -->
 
-Le serveur, pas la cellule, lance chaque programme et écrit `runs.jsonl` dans le dossier de la tentative `logs/runs/<étape>-<visite>-<tentative>/` :
+Le serveur, pas la cellule, lance chaque programme et écrit `runs.jsonl` dans le dossier de la tentative `logs/runs/<étape>-<visite>-<tentative>/`. Les ids de runs continuent d'un noyau à l'autre d'une tentative (un reset, un crash, un autre serveur) : un id, et son journal, ne sert jamais deux fois.
 
 | Ligne | Quand | Contient |
 | --- | --- | --- |

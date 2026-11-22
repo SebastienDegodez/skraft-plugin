@@ -14,13 +14,10 @@ export const MAX_LOG_BYTES = 67_108_864
 const encoder = new TextEncoder()
 
 /**
- * The log starts empty: a fresh kernel numbers its runs from 1 again, in the same folder.
- * @param {any} deps @param {string} slug @param {string} log @returns {RunLog}
+ * A run's log is new: run ids are never reused within an attempt, so no earlier log is touched.
+ * @param {any} deps @returns {RunLog}
  */
-export const openLog = (deps, slug, log) => ({ digest: deps.repl.digests.start(), writing: emptied(deps, slug, log), bytes: 0, cut: false })
-
-/** @param {any} deps @param {string} slug @param {string} log */
-const emptied = (deps, slug, log) => Promise.resolve().then(() => deps.files.write(slug, log, '')).catch(() => undefined)
+export const openLog = (deps) => ({ digest: deps.repl.digests.start(), writing: Promise.resolve(), bytes: 0, cut: false })
 
 /**
  * Output of the program: written at the end of its log, up to the limit.

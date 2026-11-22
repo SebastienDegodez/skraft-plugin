@@ -37,12 +37,12 @@ const KERNEL_FLAGS = Object.freeze(['--max-old-space-size=2048'])
  * @returns {KernelHost}
  */
 export const createNodeKernelHost = ({ entry = KERNEL_CHILD } = {}) => Object.freeze({
-  start: (events, cwd) => start(entry, events, cwd),
+  start: (events, cwd, { firstRid = 1 } = {}) => start(entry, events, { cwd, firstRid }),
 })
 
-/** @param {string} entry @param {KernelEvents} events @param {string} cwd @returns {Promise<Kernel>} */
-const start = (entry, events, cwd) => new Promise((resolve, reject) => {
-  const child = fork(entry, [join(cwd, '.repl', 'lib')], { cwd, execArgv: [...KERNEL_FLAGS], detached: GROUPED, stdio: ['ignore', 'ignore', 'ignore', 'ipc'], windowsHide: true })
+/** @param {string} entry @param {KernelEvents} events @param {{ cwd: string, firstRid: number }} where @returns {Promise<Kernel>} */
+const start = (entry, events, { cwd, firstRid }) => new Promise((resolve, reject) => {
+  const child = fork(entry, [join(cwd, '.repl', 'lib'), String(firstRid)], { cwd, execArgv: [...KERNEL_FLAGS], detached: GROUPED, stdio: ['ignore', 'ignore', 'ignore', 'ipc'], windowsHide: true })
   if (GROUPED && child.pid !== undefined) groupStarted(child.pid)
   /** @type {State} */
   const state = { child, events, cell: null, late: [], stopped: false, cells: 0, left: null }

@@ -113,9 +113,10 @@ export class ScriptedKernelHost {
     /** Cell behaviours every kernel starts with, by code. @type {Map<string, Function>} */
     this.script = new Map()
   }
-  async start(events) {
+  async start(events, _cwd, { firstRid = 1 } = {}) {
     if (this.fails) throw new Error('no kernel')
     const kernel = new ScriptedKernel(events, 4000 + this.kernels.length)
+    kernel.nextRid = firstRid - 1
     kernel.restartsOnInterrupt = this.restartsOnInterrupt
     kernel.lib = this.lib
     for (const [code, behaviour] of this.script) kernel.on(code, behaviour)

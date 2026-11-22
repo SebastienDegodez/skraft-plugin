@@ -95,6 +95,17 @@ test('a .repl/package.json with dependencies and no .repl/node_modules is told a
   assert.equal(answers[0].text, 'lib: the packages of .repl/package.json are not installed: run npm ci --prefix .repl in the working copy\n=> 1')
 })
 
+test('a real kernel started again by a reset gives its first run the next id of the attempt', BOUNDED, async (t) => {
+  const answers = []
+  const { host } = realRun(t, async (repl) => {
+    answers.push(await repl.call({ code: "await run([process.execPath, '-e', '0'])" }), await repl.call({ code: "await run([process.execPath, '-e', '0'])", reset: true }))
+  })
+
+  await host.start()
+
+  assert.match(answers[1].text, /\nr2 exit 0 \(\d+\.\d s\) .* - logs\/runs\/deliver-1-1\/2\.log(\n|$)/)
+})
+
 test('a cell that prints 8 MiB leaves a cell log of 1 MiB at most, its first and last lines kept', BOUNDED, async (t) => {
   const { host } = realRun(t, async (repl) => {
     await repl.call({ code: "const line = 'x'.repeat(1023); console.log('first'); for (let i = 0; i < 8192; i += 1) console.log(line); console.log('last')" })

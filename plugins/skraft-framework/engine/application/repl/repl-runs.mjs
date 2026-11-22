@@ -128,7 +128,7 @@ const NOT_STARTED = { started: false, exitCode: null, signal: null, timedOut: fa
 
 /** @param {any} deps @param {Entry} entry @param {RunRequest} request @returns {Run} */
 const openRun = (deps, entry, request) => {
-  const run = { id: request.rid, command: shownCommand(request.command), status: /** @type {const} */ ('running'), exitCode: null, outcome: null, durationMs: 0, log: `${entry.folder}/${request.rid}.log`, gate: request.gate ?? null, label: request.label ?? null, cell: request.cell, reported: false, program: null, startedAt: deps.clock.now().getTime(), argv: [], shell: null, cwd: String(request.cwd), before: { top: null, head: null, clean: false }, logFile: openLog(deps, entry.slug, `${entry.folder}/${request.rid}.log`) }
+  const run = { id: request.rid, command: shownCommand(request.command), status: /** @type {const} */ ('running'), exitCode: null, outcome: null, durationMs: 0, log: `${entry.folder}/${request.rid}.log`, gate: request.gate ?? null, label: request.label ?? null, cell: request.cell, reported: false, program: null, startedAt: deps.clock.now().getTime(), argv: [], shell: null, cwd: String(request.cwd), before: { top: null, head: null, clean: false }, logFile: openLog(deps) }
   entry.runs.set(run.id, run)
   return run
 }

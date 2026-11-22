@@ -61,7 +61,7 @@ The result holds, in order, at most 24 KiB: the runs that finished since the las
 
 ## The trace <!-- #trace -->
 
-The server, not the cell, starts every program and writes `runs.jsonl` in the attempt's folder `logs/runs/<step>-<visit>-<attempt>/`:
+The server, not the cell, starts every program and writes `runs.jsonl` in the attempt's folder `logs/runs/<step>-<visit>-<attempt>/`. Run ids go on across the kernels of an attempt (a reset, a crash, another server): an id, and its log, is never reused.
 
 | Line | When | Holds |
 | --- | --- | --- |

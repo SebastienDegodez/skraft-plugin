@@ -1,7 +1,7 @@
 import { composeCell, libraryLines } from '../../domain/repl/cell-result.mjs'
 import { refusalText } from '../../domain/repl/refusals.mjs'
 import { signingKeyOf } from '../evidence/run-trace-store.mjs'
-import { closeLostRuns, traceAbsent } from './repl-trace.mjs'
+import { closeLostRuns, nextRunId, traceAbsent } from './repl-trace.mjs'
 import { keepUnexpected } from './repl-unexpected.mjs'
 import { bindAttempt, releaseLease, renewLease, takeLease } from './repl-attempt.mjs'
 import { endRuns, killRun, liveRuns, recordProcesses, serveRun } from './repl-runs.mjs'
@@ -164,7 +164,9 @@ const reapOnce = async (deps, state) => {
  */
 const startKernel = async (deps, entry) => {
   try {
-    entry.kernel = await deps.repl.kernels.start(eventsOf(deps, entry), deps.repl.root)
+    const firstRid = await nextRunId(deps, entry)
+    entry.topRid = firstRid - 1
+    entry.kernel = await deps.repl.kernels.start(eventsOf(deps, entry), deps.repl.root, { firstRid })
     await recordProcesses(deps, entry)
     return null
   } catch (error) {

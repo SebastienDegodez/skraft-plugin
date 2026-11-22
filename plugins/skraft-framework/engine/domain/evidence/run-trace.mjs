@@ -55,10 +55,16 @@ export const absentRecord = ({ cell, at, gate, component, reason }) => {
 export const lostRecord = ({ run, at }) => ({ type: 'lost', run, at })
 
 /**
- * The runs started and not ended, by run id; a run closed as lost is ended.
+ * The runs started and not ended, by run id, read in order: a run closed as lost is ended, and an
+ * id started again after its end is open again.
  * @param {TraceRecord[]} records @returns {number[]}
  */
 export const openRuns = (records) => {
-  const ended = new Set(records.filter((record) => record.type === 'run' || record.type === 'lost').map((record) => /** @type {RunRecord | LostRecord} */ (record).run))
-  return records.filter((record) => record.type === 'start' && !ended.has(record.run)).map((record) => /** @type {StartRecord} */ (record).run)
+  /** @type {Set<number>} */
+  const open = new Set()
+  for (const record of records) {
+    if (record.type === 'start') open.add(record.run)
+    else if (record.type === 'run' || record.type === 'lost') open.delete(record.run)
+  }
+  return [...open]
 }

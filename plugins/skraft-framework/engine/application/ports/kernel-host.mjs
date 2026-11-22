@@ -33,7 +33,8 @@
  *   evaluate: runs a cell and answers when it ends or at the budget; wait: the same, for the cell
  *   already in flight; interrupt: stops the awaits of the cell in flight, and ends the kernel when
  *   the cell still does not end; chunk, exited: what a run the server started writes and how it ended.
- * @typedef {{ start: (events: KernelEvents, cwd: string) => Promise<Kernel> }} KernelHost
+ * @typedef {{ start: (events: KernelEvents, cwd: string, options?: { firstRid?: number }) => Promise<Kernel> }} KernelHost
+ *   firstRid: the id the kernel gives its first run; ids go on across the kernels of an attempt.
  *   start: rejects when the kernel cannot start, or has not said it is ready within ten seconds.
  */
 export {}
