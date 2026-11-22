@@ -18,7 +18,7 @@ cycles, green, commits, mutation) belongs to the software-engineer.
 - **All acceptance tests first.** Write the walking skeleton and the test of every scenario, each
   name starting with its scenario's number and an underscore (`S4_…`, `test_s4_…`), run them once,
   and read that each fails on a business assertion — never a build or setup error. One that
-  already passes on the stubs adds no behaviour: make it an `Examples` row of the scenario whose
-  code makes it pass. Commit them all in one `test` commit: the red of every scenario.
+  already passes on the stubs needs no code: note it and keep its scenario; never merge it into
+  another scenario's `Examples`. Commit them all in one `test` commit: the red of every scenario.
 - **Iron rule.** The values are the `.feature`'s, verbatim. Once committed, the engineer never
   edits an acceptance test; a wrong one comes back to you.

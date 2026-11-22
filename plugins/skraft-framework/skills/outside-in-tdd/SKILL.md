@@ -204,11 +204,12 @@ Code no approved behaviour asks for and no test covers: delete it. Run no mutati
   its edge cases form one group; a scenario on its own is a group of one. One dispatch works every
   group in plan order and makes one green commit for the story. For each group, in one turn: run its
   acceptance tests filtered by their numbers; scenarios that already pass are covered by an earlier
-  one: no code, name the covering scenario on the change-log line; write the code its red tests
-  demand, nothing more. After the last group run the gates once, then the chained commit, whose
+  one: confirm it with the deletion test (*Post-GREEN wiring verification*), write no code for
+  them, name the covering scenario on the change-log line; write the code its red tests demand,
+  nothing more. After the last group run the gates once, then the chained commit, whose
   unfiltered test run is the one run of the whole suite.
-- A scenario's test that passes on its first run adds no behaviour: it is an example of the
-  scenario whose code makes it pass, an `Examples` row of that one.
+- A scenario's acceptance test that already passes on the stubs needs no code: note it and keep
+  its scenario; never merge it into another scenario's `Examples`.
 
 ## Concentric circles
 
