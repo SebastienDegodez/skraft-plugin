@@ -170,13 +170,13 @@ export const agent = ({ result = { status: 'done', summary: 'done' }, fill = tru
  * What a scripted agent with no work of its own commits, as its descriptor asks: the acceptance
  * designer one red holding the walking skeleton and every acceptance test on the pass that writes
  * the plan (the acceptance tests alone for a story exempt of a walking skeleton), the software
- * engineer one green per group of the plan the story is still owed; nothing on any other pass.
+ * engineer one green for every group of the plan the story is still owed; nothing on any other pass.
  * @param {ReturnType<typeof pipelineHost>} host @param {object} step its step.started @param {string} [exemption]
  */
 const scenarioWork = (host, step, exemption) => {
   if (plansScenarios(step)) return exemption === undefined ? scenarioCommit(host, { type: 'test', subject: 'walking skeleton', paths: 'tests', file: 'Integration/WalkingSkeletonTests.cs' }) : scenarioCommit(host, { type: 'test', subject: 'acceptance tests', paths: 'tests', file: 'Acceptance/AcceptanceTests.cs' })
   const owed = step.agent === 'software-engineer' ? groupsOwed(host) : []
-  return (repos) => owed.forEach(({ index, label }) => scenarioCommit(host, { type: 'feat', subject: `${label} group ${index}`, paths: 'src', file: `Scenario${index}.cs` })(repos))
+  return (repos) => { if (owed.length > 0) scenarioCommit(host, { type: 'feat', subject: `${owed.map(({ label }) => label).join(', ')} delivered`, paths: 'src', file: 'Delivery.cs' })(repos) }
 }
 
 /**
@@ -225,7 +225,7 @@ export const scenarioTable = (host, plan, exemption) => {
 export const scenarioReview = ({ sha = 'root-1', subject = `test(${SLUG}): walking skeleton`, files = 'tests/Integration/WalkingSkeletonTests.cs', key = 'scenario_review-1' } = {}) => ({
   key,
   kind: 'scenario-review',
-  text: `Read the 1 scenario of the story before DELIVER builds them: S1 "Customer pays by card" (api; @walking-skeleton). DELIVER makes them pass in one pass, one commit per group, in this order: 1. S1. The acceptance tests of every scenario, the walking skeleton and the skeleton of its chain are commit ${sha} "${subject}": ${files}. skraft does not run them: check that each fails on its own assertion; the designer's run is in ${TRACKING}/logs/distill-1-red.log. APPROVED delivers them; REVISE sends DISTILL back with your corrections (edit the .feature or the test yourself first if you like, and say so).`,
+  text: `Read the 1 scenario of the story before DELIVER builds them: S1 "Customer pays by card" (api; @walking-skeleton). DELIVER makes them pass in one pass and one commit, working the groups in this order: 1. S1. The acceptance tests of every scenario, the walking skeleton and the skeleton of its chain are commit ${sha} "${subject}": ${files}. skraft does not run them: check that each fails on its own assertion; the designer's run is in ${TRACKING}/logs/distill-1-red.log. APPROVED delivers them; REVISE sends DISTILL back with your corrections (edit the .feature or the test yourself first if you like, and say so).`,
   options: ['APPROVED', 'REVISE'],
   refusals: ['REVISE'],
   header: 'Scenarios',

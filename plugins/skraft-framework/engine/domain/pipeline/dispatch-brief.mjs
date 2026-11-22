@@ -1,6 +1,5 @@
 import { RESULT_SHAPE } from './agent-result.mjs'
 import { issueOf } from './commits.mjs'
-import { groupLabel } from './scenarios.mjs'
 
 /**
  * @typedef {{ name: string, root: string, stack: string, mocking: string, contractTesting: boolean, bdd: BddPair[], test: string | null, gates: BriefGate[] }} BriefComponent
@@ -41,20 +40,17 @@ import { groupLabel } from './scenarios.mjs'
  *   oracles: Array<{ sha: string, subject: string, files: string[] }>, skeleton: boolean, redLog: string | null,
  * }} BriefScenario
  *   plan: the pass that writes every scenario and their one red; delivery: the one pass that
- *   makes every group pass, one green each; rework: a pass after the story is delivered, which
+ *   makes every group pass in one green commit; rework: a pass after the story is delivered, which
  *   changes no acceptance test. groups: those a delivery pass makes pass, in the order it commits
- *   them; oracles: every red of acceptance tests DISTILL committed, whose files no pass changes;
- *   skeleton: whether the story has a walking skeleton, which passes from the first group's
- *   commit on; redLog: where the plan's pass sends the output of its one run of the acceptance
+ *   them, the green holding all of them; oracles: every red of acceptance tests DISTILL committed, whose files no pass changes;
+ *   skeleton: whether the story has a walking skeleton, which passes in that commit; redLog: where the plan's pass sends the output of its one run of the acceptance
  *   tests, absolute, which the review of its phase reads; null on any other pass.
  * @typedef {{
- *   index: number, of: number, done: string | null, scenarios: Array<{ index: number, title: string, component: string, tags: string[] }>,
- *   pending: number[], test: string | null,
+ *   index: number, of: number, scenarios: Array<{ index: number, title: string, component: string, tags: string[] }>,
+ *   test: string | null,
  * }} BriefGroup
- *   scenarios: the group's, as the test plan lists them; pending: the numbers of the later groups'
- *   scenarios, whose tests still fail at its green; test: the test command of the component of
- *   its first scenario; done: the short sha of the green an earlier pass committed for it, null
- *   for a group with none.
+ *   scenarios: the group's, as the test plan lists them; test: the test command of the component
+ *   of its first scenario.
  */
 
 /**
@@ -117,7 +113,7 @@ const POLICY = '- How the tests of each component treat what the code depends on
 const scenarioLine = ({ index, title, component, tags }) => `S${index} "${title}" (component ${component}${tags.length > 0 ? `, tags ${tags.join(' ')}` : ''})`
 
 /** @param {BriefGroup} group */
-const groupLine = ({ index, of, scenarios, done }) => `${index} of ${of} — ${scenarios.map(scenarioLine).join('; ')}${done === null ? '' : ` — already committed as ${done}: commit nothing for it`}`
+const groupLine = ({ index, of, scenarios }) => `${index} of ${of} — ${scenarios.map(scenarioLine).join('; ')}`
 
 /** The red commits DISTILL left, whose files no pass changes. @param {BriefScenario['oracles']} oracles */
 const redLines = (oracles) => section('- Acceptance tests DISTILL committed, which you never change (a wrong one, or one failing on a build or setup error: stop blocked, naming it):', oracles.map(({ sha, subject, files }) => `${sha.slice(0, 7)} "${subject}": ${files.join(', ')}`))
@@ -137,37 +133,40 @@ const SCENARIO_WORK = Object.freeze({
     '  scenario\'s number (`S1_…`, `test_s1_…`); with them, the skeleton of every class they call, each returning an empty value.',
   ],
   delivery: ({ groups, oracles, skeleton }) => [
-    ...section('- Groups, in the order you deliver them, one green commit each; a group whose acceptance tests already pass takes none (name the scenario whose code makes them pass on its change-log line):', groups.map(groupLine)),
+    ...section('- Groups, in the order you work them; their code and their unit tests go in one green commit (a group whose acceptance tests already pass needs no code: name the scenario whose code makes them pass on the change-log line):', groups.map(groupLine)),
     ...redLines(oracles),
-    ...(skeleton ? ['- The walking skeleton passes from group 1\'s commit on.'] : []),
-    '- Deliver every group in this one pass, in this order, with outside-in TDD, unit tests included, and commit a group only once its tests pass; change another component than the group\'s own only where the group needs it, in the same commit. The pass ends when every group is committed and every test passes, or on a blocker.',
+    ...(skeleton ? ['- The walking skeleton passes in that commit, with every acceptance test and the whole suite.'] : []),
+    '- Deliver every group in this one pass, in this order, with outside-in TDD, unit tests included, and commit nothing until every acceptance test and the whole suite pass; change another component than the groups\' own only where a group needs it, in the same commit. The pass ends when that one commit is made, or on a blocker.',
   ],
   rework: ({ oracles }) => redLines(oracles),
 })
 
-/** The scenarios of later groups, by number. @param {number[]} pending */
-const pendingNames = (pending) => pending.map((index) => `S${index}`).join(', ')
-
 /**
  * The commits a pass makes: the red, never chained to the test command, whose output tells a
- * failing assertion from a build error; the greens, each chained in bash to its group's tests.
+ * failing assertion from a build error; the green, once, chained in bash to the tests of every component of the story.
  * @type {Readonly<Record<BriefScenario['kind'], (scenario: BriefScenario, story: { slug: string, issue: number | null }) => string[]>>}
  */
 const SCENARIO_COMMIT = Object.freeze({
   plan: ({ redLog }, story) => [`- Run the acceptance tests once, sending the whole output to ${redLog}, and read it: every acceptance test and the walking skeleton fail, each on its assertion. Then commit them, the skeleton they call and the scenarios in one commit, exactly:`, `  ${commitCommand('test', 'acceptance tests S1–S<n>, n the last scenario of your test plan', story)}`],
-  delivery: ({ groups }, story) => ['- Commit each group once, in bash (never PowerShell), naming each file you changed:', ...groups.filter(({ done }) => done === null).map((group) => `  ${greenLine(group, story)}`)],
+  delivery: ({ groups }, story) => ['- Commit once, in bash (never PowerShell), naming each file you changed:', `  ${greenLine(groups, story)}`],
   rework: () => [],
 })
 
-/** @param {BriefGroup} group @param {{ slug: string, issue: number | null }} story */
-const greenLine = ({ index, scenarios, pending, test }, story) => {
-  const label = groupLabel(scenarios.map(({ index: number }) => number))
-  const filter = pending.length === 0 ? '' : ` <the filter leaving out ${pendingNames(pending)}>`
-  return `group ${index}: ${test}${filter} && git add <each file you changed> && ${commitCommand('feat', `${label} <the rule of the group, as your implementation plan names it>`, story)}`
+/** The scenarios of every group, as the green's subject names them: `S1`, or `S1–S4`. @param {BriefGroup[]} groups */
+const deliveryLabel = (groups) => {
+  const numbers = groups.flatMap(({ scenarios }) => scenarios.map(({ index }) => index))
+  const [first, last] = [Math.min(...numbers), Math.max(...numbers)]
+  return first === last ? `S${first}` : `S${first}–S${last}`
 }
 
+/** The test command of each component the groups touch, once. @param {BriefGroup[]} groups */
+const testsOf = (groups) => [...new Set(groups.map(({ test }) => test ?? '<the test command>'))].join(' && ')
+
+/** @param {BriefGroup[]} groups @param {{ slug: string, issue: number | null }} story */
+const greenLine = (groups, story) => `${testsOf(groups)} && git add <each file you changed> && ${commitCommand('feat', `${deliveryLabel(groups)} <the rules of the story, as your implementation plan names them>`, story)}`
+
 /**
- * The exact `git commit` of the red or of a group's green: the story's issue as the last line of
+ * The exact `git commit` of the red or of the green: the story's issue as the last line of
  * the body.
  * @param {string} type @param {string} text @param {{ slug: string, issue: number | null }} story
  */

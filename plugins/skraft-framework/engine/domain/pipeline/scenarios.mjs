@@ -1,7 +1,7 @@
 /**
  * The scenarios of a story, as the acceptance designer lists them in its test plan; the pass that
  * writes them commits the walking skeleton and the acceptance test of every scenario as one
- * failing commit, then DELIVER makes them pass group by group:
+ * failing commit, then DELIVER makes them pass group by group, in one green commit:
  *
  *   ## Scenarios
  *
@@ -127,7 +127,7 @@ const skeletonFailures = (path, { scenarios, exemption }, components) => {
 const frontEnd = (components, name) => components.some(({ stack }) => stack !== 'react') && components.find((component) => component.name === name)?.stack === 'react'
 
 /**
- * The groups DELIVER makes pass, one green commit each, as the acceptance designer's
+ * The groups DELIVER works through, in one green commit, as the acceptance designer's
  * implementation plan lists them under any heading, in the order DELIVER builds them:
  *
  *   | Group | Scenarios | Rule | … |

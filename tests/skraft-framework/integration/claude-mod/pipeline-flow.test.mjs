@@ -171,20 +171,21 @@ test('the software engineer\'s spawn opens with the SKILL.md of each skill its c
   componentSkillsBriefed(cwd, skillFolder, spawns.map(({ prompt }) => prompt))
 })
 
-test('a feat commit that names no group of the story is refused, the acceptance test of DISTILL notwithstanding', async (t) => {
+test('a second feat commit in the delivery is refused: the story takes one, whatever its subject names', async (t) => {
   const { cwd } = pipelineRepository(t)
   const greenFirst = (brief) => {
     fillOutputs(brief, 'Paid by card.\n')
-    commit(cwd, `feat(${SLUG}): pay by card`, { 'src/pay.mjs': PAY }, brief)
+    commit(cwd, `feat(${SLUG}): S1 pay by card`, { 'src/pay.mjs': PAY }, brief)
+    commit(cwd, `feat(${SLUG}): pay by card again`, { 'src/again.mjs': PAY }, brief)
     writeResult(brief, { status: 'done', summary: 'delivered' })
   }
 
   const { outcome, spawns, events } = await runOn(cwd, { acts: { 'software-engineer': [greenFirst, blocked('cannot rewrite the history')] } })
 
   const sha = git(cwd, 'rev-parse', '--short=7', 'HEAD')
-  const refusal = `commit ${sha} "feat(${SLUG}): pay by card" names no group still to deliver, or one before the last you committed: commit the groups in the order of your implementation plan, each subject starting with its group's scenarios (S1, S2 <rule>)`
+  const refusal = `commit ${sha} "feat(${SLUG}): pay by card again" is a second feat or fix commit: the story takes one, with the code, the unit tests and the fixes of every group; squash it into the first`
   assert.deepEqual(recorded(events, 'deliver').map(({ outcome: result, code, failures }) => [result, code, failures]), [['failed', 'tdd', [refusal]], ['failed', 'agent-blocked', ['cannot rewrite the history']]])
-  assert.deepEqual(events.filter((event) => event.type === 'commits.checked' && event.step === 'deliver').map(({ commits }) => commits.map(({ kind, verdict }) => [kind, verdict])), [[['green', 'green-out-of-order']], [['green', 'green-out-of-order']]])
+  assert.deepEqual(events.filter((event) => event.type === 'commits.checked' && event.step === 'deliver').map(({ commits }) => commits.map(({ kind, verdict }) => [kind, verdict])), [[['green', 'ok'], ['green', 'green-split']], [['green', 'ok'], ['green', 'green-split']]])
   const retried = spawns.find((spawn) => spawn.description === `skraft ${SLUG} · deliver · attempt 2`)
   assert.ok(retried.prompt.includes(`Refused in attempt 1 of 3:\n- ${refusal}`), retried.prompt)
   assert.deepEqual(events.filter((event) => event.type === 'gate.ran'), [])

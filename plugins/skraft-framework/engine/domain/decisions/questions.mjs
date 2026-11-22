@@ -125,7 +125,7 @@ export const REVIEW_CONSENT_TEXT =
 
 /**
  * The text of the scenario review question: the scenarios, the `.feature` files the test plan
- * names, the groups DELIVER makes them pass in, in one pass with one commit per group, the
+ * names, the groups DELIVER makes them pass in, in one pass with one commit, the
  * exemption a story with no walking skeleton declares, the one red of the acceptance tests and
  * where the designer's run of them is, which the engine does not repeat.
  * @typedef {{ sha: string, subject: string, files: string[] }} ReviewedRed
@@ -133,7 +133,7 @@ export const REVIEW_CONSENT_TEXT =
  */
 export const scenarioReviewText = ({ scenarios, features, skeleton, exemption, oracle, groups, log }) =>
   `Read the ${scenarios.length} scenario${scenarios.length === 1 ? '' : 's'} of the story before DELIVER builds them${features.length === 0 ? '' : `, as ${features.join(', ')} write${features.length === 1 ? 's' : ''} them`}: ${scenarios.map(scenarioLabel).join('; ')}. ` +
-  `DELIVER makes them pass in one pass, one commit per group, in this order: ${groups.map(({ index, scenarios: numbers }) => `${index}. ${numbers.map((number) => `S${number}`).join(', ')}`).join('; ')}. ` +
+  `DELIVER makes them pass in one pass and one commit, working the groups in this order: ${groups.map(({ index, scenarios: numbers }) => `${index}. ${numbers.map((number) => `S${number}`).join(', ')}`).join('; ')}. ` +
   `${skeleton === null ? `The story has no walking skeleton (exemption: ${exemption}). ` : ''}` +
   `The acceptance tests of every scenario${skeleton === null ? '' : ', the walking skeleton and the skeleton of its chain'} are ${redText(oracle)}. ` +
   `skraft does not run them: check that each fails on its own assertion; the designer's run is in ${log}. ` +

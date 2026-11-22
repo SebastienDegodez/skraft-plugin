@@ -1,14 +1,14 @@
-import { commitName, namesGroup } from '../../domain/pipeline/commits.mjs'
+import { commitName } from '../../domain/pipeline/commits.mjs'
 import { isCode, ownersOf } from '../../domain/pipeline/component-files.mjs'
 import { delivers, writesScenarios } from '../../domain/pipeline/roles.mjs'
-import { groupLabel, readDeliveryGroups, readScenarioPlan } from '../../domain/pipeline/scenarios.mjs'
+import { readDeliveryGroups, readScenarioPlan } from '../../domain/pipeline/scenarios.mjs'
 
 /**
  * What the engine checks on a pass of a story built from its acceptance tests first: the
  * scenarios the acceptance designer's test plan lists and the groups its implementation plan
  * delivers them in, one red holding the walking skeleton and the acceptance test of every
- * scenario; then, in one pass, the software engineer's greens, at most one per group, in the
- * plan's order, none touching those tests; a walking skeleton declared exempt as docs only that no
+ * scenario; then, in one pass, the software engineer's one green for every group, not touching
+ * those tests; a walking skeleton declared exempt as docs only that no
  * commit contradicts; and what the pass leaves for the next ones.
  *
  * @typedef {import('../../domain/pipeline/scenarios.mjs').ScenarioPlan} ScenarioPlan
@@ -18,7 +18,7 @@ import { groupLabel, readDeliveryGroups, readScenarioPlan } from '../../domain/p
  * @typedef {import('../../domain/pipeline/commits.mjs').JudgedCommit} JudgedCommit
  * @typedef {import('../../domain/pipeline/commits.mjs').ScenarioJudging} ScenarioJudging
  * @typedef {import('../../domain/config/skraft-config.mjs').Component} Component
- * @typedef {{ index: number, scenarios: StoryScenario[], pending: StoryScenario[] }} PassGroup
+ * @typedef {{ index: number, scenarios: StoryScenario[] }} PassGroup
  * @typedef {{
  *   kind: 'plan' | 'delivery' | 'rework', groups: PassGroup[], oracles: Oracle[], reds: Oracle[],
  *   skeleton: Oracle | null, exemption: import('../../domain/pipeline/scenarios.mjs').Exemption,
@@ -28,7 +28,7 @@ import { groupLabel, readDeliveryGroups, readScenarioPlan } from '../../domain/p
  *   acceptance tests and walking skeleton; delivery: the one pass that makes every group not yet
  *   delivered pass, carrying them in the plan's order; rework: a pass after the story is
  *   delivered (the gates or the review sent it back), which changes no acceptance test. groups:
- *   each with its scenarios and those of the groups after it, whose tests still fail at its green;
+ *   each with its scenarios;
  *   oracles: the red of each scenario of the last plan; reds: every red of acceptance tests any
  *   plan committed; skeleton: the red of the walking skeleton; exemption: the walking skeleton's,
  *   as the last plan declared it; approved: the scenarios of the last plan.
@@ -64,24 +64,9 @@ const planPass = ({ list, exemption, oracles, skeleton, reds }) => ({ kind: 'pla
  */
 const deliveryPass = ({ list, exemption, groups, oracles, skeleton, reds, delivered }) => {
   const of = (/** @type {number[]} */ numbers) => list.filter((scenario) => numbers.includes(scenario.index))
-  const owed = groups.filter(({ index }) => index > delivered).map(({ index, scenarios }) => ({ index, scenarios: of(scenarios), pending: of(groups.slice(index).flatMap((group) => group.scenarios)) }))
+  const owed = groups.filter(({ index }) => index > delivered).map(({ index, scenarios }) => ({ index, scenarios: of(scenarios) }))
   const kind = owed.length > 0 ? 'delivery' : 'rework'
   return kind === 'rework' && reds.length === 0 ? null : { kind, groups: owed, oracles: Object.values(oracles), reds, skeleton, exemption, approved: list }
-}
-
-/**
- * The short sha of the green an earlier visit of the node committed for each group, null for a
- * group with none: the pass a human reopened tells them, so the engineer does not commit them again.
- * @param {import('../../domain/journal/run-state.mjs').RunEvent[]} events
- * @param {{ step: string, visit: number }} at @param {string[]} labels the groups' labels, as the subjects of their greens name them
- * @returns {Array<string | null>}
- */
-export const committedGreens = (events, { step, visit }, labels) => {
-  const greens = events
-    .filter((event) => event.type === 'commits.checked' && event.step === step && event.visit < visit)
-    .flatMap((event) => event.commits)
-    .filter((/** @type {{ kind: string, verdict: string }} */ commit) => commit.kind === 'green' && commit.verdict === 'ok')
-  return labels.map((label) => greens.find((/** @type {{ subject: string }} */ commit) => namesGroup(commit.subject, label))?.sha.slice(0, 7) ?? null)
 }
 
 /**
@@ -118,7 +103,7 @@ export const scenarioJudging = (scenario, plan, components) => {
   if (scenario.kind === 'plan') return { kind: 'oracle', components: plan === null ? null : [...new Set(plan.scenarios.map(({ component }) => component))] }
   const immutable = immutableFiles(scenario, components)
   if (scenario.kind === 'rework') return { kind: 'rework', immutable }
-  return { kind: 'delivery', groups: scenario.groups.map(({ scenarios }) => groupLabel(scenarios.map(({ index }) => index))), immutable }
+  return { kind: 'delivery', immutable }
 }
 
 /**
@@ -158,7 +143,7 @@ const redCommitted = (judged) => judged.some((commit) => commit.kind === 'red')
  */
 const MISSING = Object.freeze({
   plan: (judged, { oracles }) => (redCommitted(judged) || oracles.length > 0 ? [] : [{ code: 'tdd', line: 'the story has no failing acceptance tests committed: write the acceptance test of every scenario, with the walking skeleton and the skeleton they call, and commit them as one test commit' }]),
-  delivery: (judged) => (judged.some((commit) => commit.kind === 'green') ? [] : [{ code: 'tdd', line: 'the story has no feat or fix commit: make every group pass, one commit per group whose acceptance tests did not already pass' }]),
+  delivery: (judged) => (judged.some((commit) => commit.kind === 'green') ? [] : [{ code: 'tdd', line: 'the story has no feat or fix commit: make every group pass, in one commit' }]),
   rework: () => [],
 })
 
