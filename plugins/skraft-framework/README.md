@@ -164,6 +164,10 @@ resolved assignment. How-to: [Choose the agents' models](https://sebastiendegode
 Contract testing is off by default; a component turns it on with `"contractTesting": true`. In
 DELIVER, the engineer runs the gates of each component through `skraft_repl`; a gate the
 project names no command for is declared absent: SKRAFT never guesses a command.
+Helpers the agents reuse in every cell live in your repository under `.repl/lib/`, their packages
+in `.repl/package.json`; agents never write them during an attempt, and each cell's code is kept
+beside the trace as `cell-<n>.mjs`, ready to copy into the library
+([Keep your REPL scripts in `.repl`](https://sebastiendegodez.github.io/skraft-plugin/how-to/keep-repl-scripts)).
 
 ## Pull request at the end of a run
 

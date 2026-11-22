@@ -259,6 +259,13 @@ parts:
             doc: how-to/run-gates
             purpose_fr: "Lancer chaque gate par skraft_repl, declarer une gate absente, lire le refus evidence du moteur."
             purpose_en: "Run each gate through skraft_repl, declare a gate absent, read the engine's evidence refusal."
+          - id: keep-repl-scripts
+            type: editorial
+            label_fr: "Garder ses scripts REPL dans .repl"
+            label_en: "Keep your REPL scripts in .repl"
+            doc: how-to/keep-repl-scripts
+            purpose_fr: "Ecrire les outils du projet dans .repl/lib, installer leurs paquets, les recharger par skraft_repl_reset, garder le cell-<n>.mjs d'un agent."
+            purpose_en: "Write the project's helpers in .repl/lib, install their packages, reload them with skraft_repl_reset, keep an agent's cell-<n>.mjs."
           - id: run-mutation
             type: editorial
             label_fr: "Lancer la mutation sur sa branche"

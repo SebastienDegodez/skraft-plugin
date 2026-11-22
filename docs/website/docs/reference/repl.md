@@ -58,6 +58,8 @@ A cell that runs past 90 seconds answers with what it printed so far while its r
 
 The packages a library needs are declared in `.repl/package.json`, with its lockfile, both committed; the developer installs them with `npm ci --prefix .repl`, under `.repl/node_modules/`, which is not committed. `require` in a cell looks in `.repl/` first, then in the working copy. When `.repl/package.json` names packages and `.repl/node_modules/` is absent, the first result says so and names that command.
 
+How to write a library, install its packages and reload it: [Keep your REPL scripts in `.repl`](../how-to/keep-repl-scripts.md).
+
 ## Skill scripts in a cell <!-- #skill-scripts -->
 
 A skill script is a program first: an agent starts it as `node "<absolute path>" …`, and in a cell through `run()` or `gate()`.
@@ -77,7 +79,7 @@ The result holds, in order, at most 24 KiB: the runs that finished since the las
 
 The server, not the cell, starts every program and writes `runs.jsonl` in the attempt's folder `logs/runs/<step>-<visit>-<attempt>/`. Run ids go on across the kernels of an attempt (a reset, a crash, another server): an id, and its log, is never reused.
 
-The code of each cell is written to `cell-<n>.mjs` in the same folder before the cell runs, whole, even when its result is cut. `<n>` is the number of the cell in the attempt and goes on across its kernels, as run ids do: after a reset the next cell takes the next number, and no file is written over. A cut result's `cell-<n>.log` carries the same number, so a cell's code and its output sit side by side. Like the rest of `logs/`, these files are never committed, and the engine never deletes them. A file that cannot be written heads every next result with `repl-trace-failed`, and the cell runs.
+The code of each cell is written to `cell-<n>.mjs` in the same folder before the cell runs, whole, even when its result is cut. `<n>` is the number of the cell in the attempt and goes on across its kernels, as run ids do: after a reset the next cell takes the next number, and no file is written over. A cut result's `cell-<n>.log` carries the same number, so a cell's code and its output sit side by side. Like the rest of `logs/`, these files are never committed, and the engine never deletes them. A file that cannot be written heads every next result with `repl-trace-failed`, and the cell runs. To keep a script an agent wrote, copy its `cell-<n>.mjs` into the project's library: [Keep your REPL scripts in `.repl`](../how-to/keep-repl-scripts.md).
 
 | Line | When | Holds |
 | --- | --- | --- |

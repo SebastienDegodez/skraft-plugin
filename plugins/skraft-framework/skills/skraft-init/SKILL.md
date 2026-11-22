@@ -72,8 +72,12 @@ gives:
 Propose each command and have the developer confirm it. A command the developer writes always
 wins. The software engineer runs each command through `skraft_repl` from the component's root,
 under sh, Git Bash or PowerShell: a command that needs variables or several steps is a script of
-the component, and the command calls the script. Then run `<cli> doctor` and fix every failure
-before you go on.
+the component, and the command calls the script. Helpers the agents reuse across cells belong in
+the project's `.repl/lib/<name>.mjs`, written and committed by the developer, their packages in
+`.repl/package.json` with its lockfile; `<cli> init` lists `.repl/node_modules/` in `.gitignore`.
+When the developer asks about `.repl/`, point to
+https://sebastiendegodez.github.io/skraft-plugin/how-to/keep-repl-scripts and write nothing under
+`.repl/` yourself. Then run `<cli> doctor` and fix every failure before you go on.
 
 ## 4. The two publication consents
 

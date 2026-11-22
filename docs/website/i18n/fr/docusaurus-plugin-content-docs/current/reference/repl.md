@@ -58,6 +58,8 @@ Une cellule qui dépasse 90 secondes répond avec ce qu'elle a affiché, ses run
 
 Les paquets dont une bibliothèque a besoin sont déclarés dans `.repl/package.json`, avec son lockfile, tous deux commités ; le développeur les installe par `npm ci --prefix .repl`, sous `.repl/node_modules/`, qui n'est pas commité. `require` dans une cellule cherche d'abord dans `.repl/`, puis dans la copie de travail. Quand `.repl/package.json` nomme des paquets et que `.repl/node_modules/` est absent, le premier résultat le dit et nomme cette commande.
 
+Écrire une bibliothèque, installer ses paquets et la recharger : [Garder vos scripts REPL dans `.repl`](../how-to/keep-repl-scripts.md).
+
 ## Les scripts de skill dans une cellule <!-- #skill-scripts -->
 
 Un script de skill est d'abord un programme : un agent le lance par `node "<chemin absolu>" …`, et dans une cellule par `run()` ou `gate()`.
@@ -77,7 +79,7 @@ Le résultat contient, dans l'ordre, 24 Kio au plus : les runs finis depuis le d
 
 Le serveur, pas la cellule, lance chaque programme et écrit `runs.jsonl` dans le dossier de la tentative `logs/runs/<étape>-<visite>-<tentative>/`. Les ids de runs continuent d'un noyau à l'autre d'une tentative (un reset, un crash, un autre serveur) : un id, et son journal, ne sert jamais deux fois.
 
-Le code de chaque cellule s'écrit dans `cell-<n>.mjs` du même dossier avant que la cellule tourne, en entier, même quand son résultat est coupé. `<n>` est le numéro de la cellule dans la tentative et continue d'un noyau à l'autre, comme les ids de runs : après un reset la cellule suivante prend le numéro suivant, et aucun fichier n'est réécrit. Le `cell-<n>.log` d'un résultat coupé porte le même numéro, si bien que le code d'une cellule et sa sortie se trouvent côte à côte. Comme le reste de `logs/`, ces fichiers ne sont jamais commités, et le moteur ne les supprime jamais. Un fichier qui ne peut pas s'écrire met `repl-trace-failed` en tête de chaque résultat suivant, et la cellule tourne.
+Le code de chaque cellule s'écrit dans `cell-<n>.mjs` du même dossier avant que la cellule tourne, en entier, même quand son résultat est coupé. `<n>` est le numéro de la cellule dans la tentative et continue d'un noyau à l'autre, comme les ids de runs : après un reset la cellule suivante prend le numéro suivant, et aucun fichier n'est réécrit. Le `cell-<n>.log` d'un résultat coupé porte le même numéro, si bien que le code d'une cellule et sa sortie se trouvent côte à côte. Comme le reste de `logs/`, ces fichiers ne sont jamais commités, et le moteur ne les supprime jamais. Un fichier qui ne peut pas s'écrire met `repl-trace-failed` en tête de chaque résultat suivant, et la cellule tourne. Pour garder un script écrit par un agent, copiez son `cell-<n>.mjs` dans la bibliothèque du projet : [Garder vos scripts REPL dans `.repl`](../how-to/keep-repl-scripts.md).
 
 | Ligne | Quand | Contient |
 | --- | --- | --- |

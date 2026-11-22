@@ -147,6 +147,10 @@
     "message": "Lancer les gates",
     "description": "The label for the doc item 'Run the gates' in sidebar 'howTo', linking to the doc how-to/run-gates"
   },
+  "sidebar.howTo.doc.how-to/keep-repl-scripts": {
+    "message": "Garder ses scripts REPL dans .repl",
+    "description": "The label for the doc item 'Keep your REPL scripts in .repl' in sidebar 'howTo', linking to the doc how-to/keep-repl-scripts"
+  },
   "sidebar.howTo.doc.how-to/run-mutation": {
     "message": "Lancer la mutation sur sa branche",
     "description": "The label for the doc item 'Run mutation on your branch' in sidebar 'howTo', linking to the doc how-to/run-mutation"
