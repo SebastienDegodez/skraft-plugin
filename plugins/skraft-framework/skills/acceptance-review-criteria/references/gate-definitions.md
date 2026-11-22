@@ -8,7 +8,7 @@ Formal checklist for the DISTILL review lenses the engine runs. One section per 
 
 ### G1 — AC–Scenario Bijection
 
-**Definition:** No scenario in the `.feature` files exists without a traceable AC in `ac-draft-{story}.md`, and every value of a scenario equals its criterion's. The engine refuses a criterion that no scenario holds, one that two scenarios hold and a scenario that holds two: never report them.
+**Definition:** Every acceptance criterion in `ac-draft-{story}.md` has its own scenario in the `.feature` files, no scenario holds two criteria, no scenario lacks a source criterion; every value of a scenario equals its criterion's.
 
 **How to check:**
 1. Extract all ACs from `ac-draft-{story}.md` — label them AC-01, AC-02, …
@@ -17,9 +17,11 @@ Formal checklist for the DISTILL review lenses the engine runs. One section per 
    ```
    AC-01 → Scenario "Driver with clean record obtains eligibility" ✅
    AC-02 → Scenario "Driver at age limit obtains eligibility" ✅
+   AC-03 → [NO SCENARIO] ❌ BLOCKER
+   AC-04, AC-05 → Scenario "Driver renews a licence" ❌ BLOCKER (two criteria, one scenario)
    [NO AC] → Scenario "Driver pays a late fee" ❌ BLOCKER
    ```
-4. Flag: orphan scenarios (no AC) and values that differ from their AC's
+4. Flag: missing coverage (AC with no scenario of its own), merged criteria (one scenario holding two), orphan scenarios (no AC) and values that differ from their AC's
 
 **Severity:** BLOCKER
 **Common cause:** Designer forgot to translate an AC, or a scenario was written without an AC source.
