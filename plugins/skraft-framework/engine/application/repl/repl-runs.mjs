@@ -16,10 +16,10 @@ import { logChunk, openLog } from './run-log.mjs'
  * }} Run
  * @typedef {{
  *   key: string, slug: string, folder: string, kernel: import('../ports/kernel-host.mjs').Kernel, lease: string,
- *   runs: Map<number, Run>, cells: number, lastUsed: number, gone: string | null, pending: Set<Promise<void>>, signingKey: string | null, chain: Promise<void>,
+ *   runs: Map<number, Run>, cells: number, cellBase: number, lastUsed: number, gone: string | null, pending: Set<Promise<void>>, signingKey: string | null, chain: Promise<void>,
  *   told?: string[], retired?: boolean, endedBy?: string, cellSince?: number | null, topRid?: number, traceError?: unknown, traceFailed?: string | null, recording?: Promise<void>, tracked?: Map<number, Promise<{ pid: number, created: string | null }>>,
  * }} Entry
- *   told: what the next result tells first, once (the REPL library loaded, the runs a gone server left open, closed as lost); traceError: the first write of the trace or a log that failed; traceFailed: the unexpected.log that holds it, once kept; retired: the kernel is being ended, and no run starts any more; endedBy: the notice its cell in flight answers when a reset ended it; cellSince: when the cell in flight started, null when none runs; recording: the last write of the orphan journal; tracked: each process recorded, with its start time, by pid.
+ *   cellBase: the cells earlier kernels of the attempt ran, so that its `cell-<n>` files are numbered across them; told: what the next result tells first, once (the REPL library loaded, the runs a gone server left open, closed as lost); traceError: the first write of the trace or a log that failed; traceFailed: the unexpected.log that holds it, once kept; retired: the kernel is being ended, and no run starts any more; endedBy: the notice its cell in flight answers when a reset ended it; cellSince: when the cell in flight started, null when none runs; recording: the last write of the orphan journal; tracked: each process recorded, with its start time, by pid.
  */
 
 /** The longest a program may run. */

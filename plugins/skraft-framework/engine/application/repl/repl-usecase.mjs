@@ -1,7 +1,7 @@
 import { composeCell, libraryLines } from '../../domain/repl/cell-result.mjs'
 import { refusalText } from '../../domain/repl/refusals.mjs'
 import { signingKeyOf } from '../evidence/run-trace-store.mjs'
-import { closeLostRuns, nextRunId, traceAbsent } from './repl-trace.mjs'
+import { cellsBefore, closeLostRuns, nextRunId, traceAbsent } from './repl-trace.mjs'
 import { keepUnexpected } from './repl-unexpected.mjs'
 import { bindAttempt, heldElsewhere, releaseLease, renewLease, takeLease } from './repl-attempt.mjs'
 import { endRuns, killRun, liveRuns, recordProcesses, serveRun } from './repl-runs.mjs'
@@ -186,7 +186,7 @@ const startEntry = async (deps, state, bound) => {
 }
 
 /** @param {any} deps @param {{ slug: string, folder: string, key: string, events: any[] }} bound @param {string} lease @returns {Promise<Entry>} */
-const newEntry = async (deps, bound, lease) => /** @type {Entry} */ ({ ...bound, lease, runs: new Map(), cells: 0, lastUsed: deps.clock.now().getTime(), gone: null, pending: new Set(), signingKey: await signingKeyOf(deps, bound.events), chain: Promise.resolve() })
+const newEntry = async (deps, bound, lease) => /** @type {Entry} */ ({ ...bound, lease, runs: new Map(), cells: 0, cellBase: 0, lastUsed: deps.clock.now().getTime(), gone: null, pending: new Set(), signingKey: await signingKeyOf(deps, bound.events), chain: Promise.resolve() })
 
 /** The kernel did not start: the lease is given back and the run's unexpected.log holds why. @param {any} deps @param {{ slug: string, folder: string }} bound @param {{ lease: string, error: unknown }} failure */
 const kernelFailed = async (deps, bound, { lease, error }) => {
@@ -210,8 +210,7 @@ const reapOnce = async (deps, state) => {
  */
 const startKernel = async (deps, entry) => {
   try {
-    const firstRid = await nextRunId(deps, entry)
-    entry.topRid = firstRid - 1
+    const firstRid = await numberOn(deps, entry)
     entry.kernel = await deps.repl.kernels.start(eventsOf(deps, entry), deps.repl.root, { firstRid })
     await recordProcesses(deps, entry)
     return null
@@ -219,6 +218,18 @@ const startKernel = async (deps, entry) => {
     entry.kernel?.stop()
     return { error }
   }
+}
+
+/**
+ * Where the new kernel's numbering takes up the attempt's: its runs after the last id of the
+ * trace, its cells after the last `cell-<n>` file.
+ * @param {any} deps @param {Entry} entry @returns {Promise<number>} the id of its first run
+ */
+const numberOn = async (deps, entry) => {
+  const firstRid = await nextRunId(deps, entry)
+  entry.topRid = firstRid - 1
+  entry.cellBase = await cellsBefore(deps, entry)
+  return firstRid
 }
 
 /** A run in flight is kept until it is over, so that closing the entry waits for it. @param {Entry} entry @param {Promise<void>} work */
@@ -272,13 +283,40 @@ const evaluate = async (deps, entry, { code, flight }, notice) => {
   if (flight.cancelled) return refused('repl-interrupted')
   flight.launched = true
   const startedAt = (entry.lastUsed = deps.clock.now().getTime())
-  const budget = deps.repl.budgetMs ?? DEFAULT_BUDGET_MS
   const waiting = code.trim() === ''
-  const outcome = waiting ? await entry.kernel.wait(budget) : await entry.kernel.evaluate(code, budget)
+  const outcome = await runCell(deps, entry, code, waiting)
   if (outcome.status === 'busy') return refused('repl-busy')
   if (!waiting) entry.cells += 1
   entry.cellSince = cellSince(entry, outcome, waiting ? null : startedAt)
   return present(deps, entry, outcome, notice)
+}
+
+/**
+ * The cell runs, its code kept first; empty code waits for the cell in flight.
+ * @param {any} deps @param {Entry} entry @param {string} code @param {boolean} waiting
+ * @returns {Promise<import('../ports/kernel-host.mjs').CellOutcome>}
+ */
+const runCell = async (deps, entry, code, waiting) => {
+  const budget = deps.repl.budgetMs ?? DEFAULT_BUDGET_MS
+  if (waiting) return entry.kernel.wait(budget)
+  await keepSource(deps, entry, code)
+  return entry.kernel.evaluate(code, budget)
+}
+
+/** The number of the attempt's last cell, across its kernels: its `cell-<n>` files. @param {Entry} entry */
+const cellNumber = (entry) => entry.cellBase + entry.cells
+
+/**
+ * The cell's code is kept as `cell-<n>.mjs` before it runs; a write that fails is told as the
+ * trace's, and the cell runs.
+ * @param {any} deps @param {Entry} entry @param {string} code
+ */
+const keepSource = async (deps, entry, code) => {
+  try {
+    await deps.files.write(entry.slug, `${entry.folder}/cell-${cellNumber(entry) + 1}.mjs`, code)
+  } catch (error) {
+    entry.traceError ??= error
+  }
 }
 
 /**
@@ -293,7 +331,7 @@ const cellSince = (entry, outcome, startedAt) => {
 
 /** @param {any} deps @param {Entry} entry @param {import('../ports/kernel-host.mjs').CellOutcome} outcome @param {string | null} notice @returns {Promise<ReplOutcome>} */
 const present = async (deps, entry, outcome, notice) => {
-  const cellLog = `${entry.folder}/cell-${entry.cells}.log`
+  const cellLog = `${entry.folder}/cell-${cellNumber(entry)}.log`
   const { text, cut } = composeCell(partsOf(entry, outcome, cellLog))
   if (cut) await deps.files.write(entry.slug, cellLog, outcome.printed)
   const lost = lostOf(entry, outcome)

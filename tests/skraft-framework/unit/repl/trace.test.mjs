@@ -53,7 +53,7 @@ test('a trace line that cannot be written is told at the head of each next resul
   const { host } = delivery({ kernels, launcher: new ScriptedLauncher({ outputs: { 'npm test': { exitCode: 0 } } }), work: async (repl, one) => {
     const tracking = one.tracking
     one.deps.files = {
-      read: (slug, path) => tracking.read(slug, path), write: (slug, path, text) => tracking.write(slug, path, text), location: (slug, path) => tracking.location(slug, path),
+      read: (slug, path) => tracking.read(slug, path), list: (slug, folder) => tracking.list(slug, folder), write: (slug, path, text) => tracking.write(slug, path, text), location: (slug, path) => tracking.location(slug, path),
       appendText: async (slug, path, text) => {
         if (path.endsWith('runs.jsonl')) throw new Error('EACCES: permission denied, open /secret/runs.jsonl')
         return tracking.appendText(slug, path, text)
@@ -167,6 +167,52 @@ test('run ids go on across the kernels of an attempt: a run after a reset or a c
   assert.equal(host.tracking.files.get(`${SLUG}/logs/runs/deliver-1-1/1.log`), 'first\n')
   assert.equal(host.tracking.files.get(`${SLUG}/logs/runs/deliver-1-1/2.log`), 'second\n')
   assert.equal(ended[0].sha256, await host.deps.hasher.sha256('first\n'))
+})
+
+test('each cell keeps its code in cell-<n>.mjs beside the trace, written before it runs, and the numbering goes on after a reset', async () => {
+  const kernels = new ScriptedKernelHost()
+  const CELL = (n) => `${SLUG}/logs/runs/deliver-1-1/cell-${n}.mjs`
+  let seenWhileRunning = null
+  kernels.script.set('await run("npm test")', async () => { seenWhileRunning = host.tracking.files.get(CELL(1)) ?? null })
+  kernels.script.set('lib.e2e.only("S2")', async () => {})
+  kernels.script.set('1 + 1', async () => {})
+  const { host } = delivery({ kernels, work: async (repl) => {
+    await repl.call({ code: 'await run("npm test")' })
+    await repl.call({ code: 'lib.e2e.only("S2")' })
+    await repl.reset()
+    await repl.call({ code: '1 + 1' })
+  } })
+
+  await host.start()
+
+  assert.equal(seenWhileRunning, 'await run("npm test")')
+  assert.deepEqual([1, 2, 3].map((n) => host.tracking.files.get(CELL(n))), ['await run("npm test")', 'lib.e2e.only("S2")', '1 + 1'])
+})
+
+test('a cell whose code cannot be kept still runs, and its result says the trace is incomplete, naming the run\'s unexpected.log', async () => {
+  const kernels = new ScriptedKernelHost()
+  let ran = false
+  kernels.script.set('work', async () => { ran = true })
+  const answers = []
+  const { host } = delivery({ kernels, work: async (repl, one) => {
+    const tracking = one.tracking
+    one.deps.files = {
+      read: (slug, path) => tracking.read(slug, path), list: (slug, folder) => tracking.list(slug, folder), appendText: (slug, path, text) => tracking.appendText(slug, path, text), location: (slug, path) => tracking.location(slug, path),
+      write: async (slug, path, text) => {
+        if (path.endsWith('.mjs')) throw new Error('ENOSPC: no space left on device, open /secret/cell-1.mjs')
+        return tracking.write(slug, path, text)
+      },
+    }
+    answers.push(await repl.call({ code: 'work' }))
+    one.deps.files = tracking
+  } })
+
+  await host.start()
+
+  assert.equal(ran, true)
+  assert.equal(answers[0].text.split('\n')[0], `repl-trace-failed: a line of the trace of this attempt could not be written, so the trace is incomplete; the error is in /work/.copilot-tracking/skraft-plans/${SLUG}/logs/unexpected.log`)
+  assert.equal(answers[0].text.includes('ENOSPC'), false)
+  assert.match(host.tracking.files.get(`${SLUG}/logs/unexpected.log`), /ENOSPC/)
 })
 
 test('a run refused before it started, and a program that could not start, are lines too, with started false', async () => {

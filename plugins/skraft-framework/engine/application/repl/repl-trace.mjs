@@ -87,6 +87,16 @@ export const nextRunId = async (deps, where) => {
   return Math.max(0, ...ids) + 1
 }
 
+/**
+ * How many cells earlier kernels of the attempt ran: the highest number of a `cell-<n>` file in
+ * its folder, so that a cell's code and its cut output are never written over.
+ * @param {any} deps @param {{ slug: string, folder: string }} where @returns {Promise<number>}
+ */
+export const cellsBefore = async (deps, { slug, folder }) => {
+  const numbers = (await deps.files.list(slug, folder)).map((path) => /\/cell-(\d+)\.(?:mjs|log)$/.exec(path)?.[1]).filter((n) => n !== undefined)
+  return Math.max(0, ...numbers.map(Number))
+}
+
 /** The trace's records as they stand, signed or not. @param {any} deps @param {{ slug: string, folder: string }} where @returns {Promise<any[]>} */
 const recordsAsWritten = async (deps, { slug, folder }) => {
   const text = (await deps.files.read(slug, tracePath(folder))) ?? ''

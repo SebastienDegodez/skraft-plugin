@@ -77,6 +77,8 @@ Le résultat contient, dans l'ordre, 24 Kio au plus : les runs finis depuis le d
 
 Le serveur, pas la cellule, lance chaque programme et écrit `runs.jsonl` dans le dossier de la tentative `logs/runs/<étape>-<visite>-<tentative>/`. Les ids de runs continuent d'un noyau à l'autre d'une tentative (un reset, un crash, un autre serveur) : un id, et son journal, ne sert jamais deux fois.
 
+Le code de chaque cellule s'écrit dans `cell-<n>.mjs` du même dossier avant que la cellule tourne, en entier, même quand son résultat est coupé. `<n>` est le numéro de la cellule dans la tentative et continue d'un noyau à l'autre, comme les ids de runs : après un reset la cellule suivante prend le numéro suivant, et aucun fichier n'est réécrit. Le `cell-<n>.log` d'un résultat coupé porte le même numéro, si bien que le code d'une cellule et sa sortie se trouvent côte à côte. Comme le reste de `logs/`, ces fichiers ne sont jamais commités, et le moteur ne les supprime jamais. Un fichier qui ne peut pas s'écrire met `repl-trace-failed` en tête de chaque résultat suivant, et la cellule tourne.
+
 | Ligne | Quand | Contient |
 | --- | --- | --- |
 | `start` | un programme démarre | id du run, cellule, commande, dossier (relatif à la copie de travail, `/` entre ses parties, `.` pour la copie de travail elle-même), gate, étiquette |
