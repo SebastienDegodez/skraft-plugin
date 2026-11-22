@@ -67,11 +67,6 @@ own acceptance test, the binding of its Gherkin, through the use case like every
 with no new entry point — a library, a refactoring, documents only — declares that exemption under
 the table instead; it loses the walking skeleton, never an acceptance test.
 
-When the story's acceptance criteria open with `## AC-<n>`, `### AC-<n>` or `**AC-<n>:**` (the backlog's story template), each scenario's row cites its criterion by the
-`@AC-<n>` tag of its Tags column, and the engine refuses a table where a criterion has no scenario or
-two, or where one scenario holds two: a scenario per criterion, an outline holding the examples of
-one criterion only.
-
 The implementation plan groups the scenarios by the rule they pin down, in a
 `| Group | Scenarios | … |` table: consecutive scenarios that enter through the same use case and
 state one rule or its edge cases form one group, S1 in the first. The table gives DELIVER its order of work: it makes every group pass in

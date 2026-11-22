@@ -2,20 +2,18 @@
  * The DISTILL records the engine checks when the acceptance designer finishes, instead of a lens:
  *   scenarios  every `.feature` its test plan names is a file of the features folder, each of
  *              whose scenarios says Given, When and Then, fills every placeholder it opens from
- *              its examples, and is titled once in its file; and the story has at least one
- *              scenario per acceptance criterion it holds (#524)
+ *              its examples, and is titled once in its file (#524)
  *
  * The plan declares which `.feature` files are the story's in the rows of its coverage matrix: a
  * row that names none writes `—`, as `test-design-mandates` lays it out for a domain invariant or
  * an adapter test. Its prose may mention another story's file, which stays out. So the files of
  * another story are never read, and a plan that names none is asked for no scenario.
- * The criteria answer how many it takes: a story whose `ac-draft` declares none is asked for none.
  *
  * @typedef {{ path: string, text: string }} Document a file of the run, as the engine read it
  * @typedef {{ kind: string, title: string, steps: string[], examples: string[][] }} Scenario
- * @typedef {{ plans: Document[], features: Document[], criteria: Document[] }} Records
+ * @typedef {{ plans: Document[], features: Document[] }} Records
  *   plans: the test plans of the tracking folder; features: the files of the features folders of
- *   the working copy that the plans name, the story's; criteria: the acceptance criteria of the story, `ac-draft-<story>.md`.
+ *   the working copy that the plans name, the story's.
  */
 
 /** A test plan names its scenarios' file in a cell of its coverage matrix, as a path or in backticks. */
@@ -30,8 +28,6 @@ const EXAMPLES = /^\s*(Examples|Scenarios):/
 const ROW = /^\s*\|(.*)\|\s*$/
 /** A placeholder an outline opens, filled from a column of its examples. */
 const PLACEHOLDER = /<([^<>]+)>/g
-/** How DISCUSS heads one acceptance criterion (`## AC-1 — A card is paid`). */
-const CRITERION = '## AC-'
 /** The language a `.feature` declares, as the Gherkin specification writes it. */
 const LANGUAGE = /^[^\S\n]*#[^\S\n]*language[^\S\n]*:[^\S\n]*([\w-]+)/m
 /** What skraft reads, and the only keywords it knows. */
@@ -78,13 +74,12 @@ const cellsOf = (line) => /** @type {string[]} */ (ROW.exec(line))[1].split('|')
  * Why the Gherkin of the story sends the acceptance designer back; empty when it holds.
  * @param {Records} records @returns {string[]}
  */
-export const gherkinFailures = ({ plans, features, criteria }) => {
+export const gherkinFailures = ({ plans, features }) => {
   const unread = features.flatMap(unreadable)
   if (unread.length > 0) return unread
   return [
     ...plans.flatMap((plan) => missingFeatures(plan, features)),
     ...features.flatMap(featureFailures),
-    ...criteria.flatMap((file) => coverageFailures(file, features)),
   ]
 }
 
@@ -108,18 +103,6 @@ const unreadable = ({ path, text }) => {
  * @param {string[]} named from namedFeatures @param {string} path
  */
 export const citedBy = (named, path) => named.some((name) => path === name || path.endsWith(`/${name}`))
-
-/**
- * Whether the story has a scenario for each criterion it holds. An outline counts once, however
- * many rows its examples carry: one criterion may be a grid.
- * @param {Document} file @param {Document[]} features @returns {string[]}
- */
-const coverageFailures = ({ path, text }, features) => {
-  const criteria = text.split(/\r?\n/).filter((line) => line.startsWith(CRITERION)).length
-  const scenarios = features.flatMap(({ text: feature }) => scenariosOf(feature)).length
-  if (scenarios >= criteria) return []
-  return [`${path} declares ${criteria} ${criteria === 1 ? 'acceptance criterion' : 'acceptance criteria'}, and ${scenarios === 1 ? '1 scenario is' : `${scenarios} scenarios are`} written for ${criteria === 1 ? 'it' : 'them'} (#524)`]
-}
 
 /** Each `.feature` a plan names that the working copy does not hold. @param {Document} plan @param {Document[]} features */
 const missingFeatures = ({ path, text }, features) => namedFeatures(text)

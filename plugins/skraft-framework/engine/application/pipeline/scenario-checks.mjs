@@ -1,9 +1,7 @@
 import { commitName } from '../../domain/pipeline/commits.mjs'
 import { isCode, ownersOf } from '../../domain/pipeline/component-files.mjs'
 import { delivers, writesScenarios } from '../../domain/pipeline/roles.mjs'
-import { criteriaFailures } from '../../domain/pipeline/scenario-criteria.mjs'
 import { readDeliveryGroups, readScenarioPlan } from '../../domain/pipeline/scenarios.mjs'
-import { storyCriteria } from './story-criteria.mjs'
 
 /**
  * What the engine checks on a pass of a story built from its acceptance tests first: the
@@ -86,9 +84,7 @@ export const planOf = async ({ files }, { slug, components }, { scenario, output
   if (!read.ok) return refused(read.failures)
   const path = implementationPlanOf(outputs[0])
   const grouped = readDeliveryGroups({ path, text: (await files.read(slug, path)) ?? null }, read.plan.scenarios)
-  if (!grouped.ok) return refused(grouped.failures)
-  const cited = criteriaFailures(outputs[0], read.plan.scenarios, await storyCriteria(files, slug))
-  return cited.length > 0 ? refused(cited) : { plan: { ...read.plan, groups: grouped.groups }, failures: [] }
+  return grouped.ok ? { plan: { ...read.plan, groups: grouped.groups }, failures: [] } : refused(grouped.failures)
 }
 
 /** @param {string[]} lines @returns {{ plan: null, failures: ScenarioFailure[] }} */

@@ -86,7 +86,6 @@ test('a test plan that names a .feature the working copy does not hold sends the
     [1, 'failed', 'gherkin-records', [
       `${PLAN} names pay-by-card.feature, which is no .feature of the working copy (#524)`,
       `${PLAN} names pay-later.feature, which is no .feature of the working copy (#524)`,
-      `${CRITERIA} declares 1 acceptance criterion, and 0 scenarios are written for it (#524)`,
     ]],
     [2, 'failed', 'gherkin-records', [`${PLAN} names pay-later.feature, which is no .feature of the working copy (#524)`]],
     [3, 'done', null, []],
@@ -123,7 +122,6 @@ test('a designer that pre-checks its Gherkin records is told what its plan names
 
   assert.deepEqual(answers.map(({ status, failures }) => [status, failures.map(({ code, line }) => `${code}: ${line}`)]), [['failed', [
     `gherkin-records: ${PLAN} names pay-by-card.feature, which is no .feature of the working copy (#524)`,
-    `gherkin-records: ${CRITERIA} declares 1 acceptance criterion, and 0 scenarios are written for it (#524)`,
   ]]], 'the pre-check answers the gherkin-records lines of its own submission, each under the check that found them')
   assert.deepEqual(distill(host), [[1, 'done', null, []]], 'the designer corrected them inside its attempt: one attempt, where the send-back cost three')
   assert.deepEqual(receipt(host, 'distill').inputs.filter(({ source }) => source === 'workspace-list'),
@@ -241,24 +239,6 @@ test('two scenarios of a file under the same title send the designer back, the t
     [1, 'failed', 'gherkin-records', [
       `${CARD}: two scenarios are titled "A returning customer pays a basket with a valid card" (#524)`,
     ]],
-    [2, 'done', null, []],
-  ])
-  assert.equal(outcome.status, 'done', outcome.reason)
-})
-
-test('a story whose criteria outnumber its scenarios sends the designer back, and goes on once each has one', async () => {
-  const two = '# Acceptance criteria — checkout\n\n## AC-1 — A card is paid\n\n## AC-2 — A card is refused\n'
-  const second = [SCENARIO, '  Scenario: A card is refused', '    Given a card the bank refuses',
-    '    When a basket of 10000 cents is paid', '    Then the payment is refused', ''].join('\n')
-  const host = runOf([
-    designer({ features: { [CARD]: SCENARIO }, criteria: two }),
-    designer({ features: { [CARD]: second }, criteria: two }),
-  ])
-
-  const outcome = await host.start()
-
-  assert.deepEqual(distill(host), [
-    [1, 'failed', 'gherkin-records', [`${CRITERIA} declares 2 acceptance criteria, and 1 scenario is written for them (#524)`]],
     [2, 'done', null, []],
   ])
   assert.equal(outcome.status, 'done', outcome.reason)

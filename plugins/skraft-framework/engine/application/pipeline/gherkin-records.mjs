@@ -1,6 +1,5 @@
 import { featuresFolders } from '../../domain/config/bdd-folders.mjs'
 import { citedBy, gherkinFailures, namedFeatures } from '../../domain/pipeline/gherkin-records.mjs'
-import { CRITERIA } from './story-criteria.mjs'
 
 /**
  * The Gherkin the acceptance designer's attempt leaves: every `.feature` its test plan names is a
@@ -24,9 +23,8 @@ const FEATURE = /\.feature$/
 export const checkGherkinRecords = async (deps, { slug, components }) => {
   const tracked = await deps.files.list(slug, '')
   const plans = await documentsOf(deps, slug, tracked.filter((path) => TEST_PLAN.test(path)))
-  const criteria = await documentsOf(deps, slug, tracked.filter((path) => CRITERIA.test(path)))
   const named = plans.flatMap(({ text }) => namedFeatures(text))
-  return gherkinFailures({ plans, criteria, features: await featuresOf(deps.workspace, components, named) })
+  return gherkinFailures({ plans, features: await featuresOf(deps.workspace, components, named) })
 }
 
 /** Each tracked file with its text. @param {GherkinDeps} deps @param {string} slug @param {string[]} paths */
