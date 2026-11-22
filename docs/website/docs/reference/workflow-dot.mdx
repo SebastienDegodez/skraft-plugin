@@ -1,6 +1,6 @@
 ---
 title: "The DOT workflow"
-description: "skraft workflow syntax: files, graph attributes, node shapes and attributes, edges, validity, locked and mandatory nodes, reviews, call node, review.skraft.dot."
+description: "skraft workflow syntax: files, graph, node shapes and attributes, edges, validity, retired attributes, mandatory nodes, reviews, call node."
 persona: tech-lead
 ---
 
@@ -60,9 +60,8 @@ digraph skraft {
 | --- | --- | --- | --- | --- |
 | `Mdiamond` | start | — | — | —; exactly one per workflow; no edge enters it |
 | `Msquare` | exit | — | — | none; at least one per workflow |
-| `box` | agent | `agent` | `model`, `outputs`, `writes`, `max_attempts`, `each`, `proposal` | exactly one, unlabeled |
-| `parallelogram` | command gate | `gate` | `goal_gate`, `locked`, `unlock` | one `PASS` (an unlabeled edge is `PASS`), at most one `FAIL` |
-| `parallelogram` + `publish=` | publication | `publish` | `when` | exactly one, unlabeled |
+| `box` | agent | `agent` | `model`, `outputs`, `writes`, `max_attempts` | exactly one, unlabeled |
+| `parallelogram` | publication | `publish` | `when` | exactly one, unlabeled |
 | `component` | review fan-out | — | — | one per lens node |
 | `note` | lens node | `lens` | `model`, `when`, `mandatory` | exactly one, to the refuter |
 | `octagon` | review refuter | — | `mandatory` | exactly one, to the fan-in |
@@ -84,17 +83,12 @@ Attributes common to every shape: `label`, `shape`, `phase`. Any other attribute
 | `outputs` | paths separated by `,`, relative to the tracking folder, without `..` | replaces the outputs of the agent's role; `{date}` and `{slug}` filled at dispatch |
 | `writes` | paths separated by `,`, relative to the working copy | added to the paths the agent's role may write |
 | `max_attempts` | positive integer | attempts per pass; default **3** |
-| `each` | `survivor-file` | `survivor-file`: reached by the mutation gate's `FAIL` edge, one dispatch per file holding surviving mutants; reached by another edge, one dispatch, with what that edge brings. The passes of the story follow the agents' roles, with no attribute: the acceptance designer is dispatched once and commits the red of every scenario, the software engineer is dispatched once and makes every group pass, one green commit each ([Phases](./phases.md#distill)). `each="scenario"` of an earlier version is refused |
-| `proposal` | `true` or `false` | with `each="survivor-file"` (required): the agent writes one proposal per file in the file the engine creates (`proposals/<node>-<visit>-g<n>.md`) and changes no code |
-| `gate` | a list among `build`, `format`, `lint`, `test`, `architecture`, `coverage`, `mutation` | run in that order, whatever the written order |
-| `goal_gate` | `true` or `false` | once the changed components pass, runs the other components too |
-| `locked` | `true` or `false` | see [Locked nodes](#locked-nodes) |
-| `unlock` | non-empty text | why a locked node is skipped |
+| `each` | — | gone: see [Retired attributes](#retired-attributes). The passes of the story follow the agents' roles, with no attribute: the acceptance designer is dispatched once and commits the red of every scenario, the software engineer is dispatched once and makes every group pass, one green commit each ([Phases](./phases.md#distill)). `each="scenario"` of an earlier version is refused |
 | `publish` | `pull-request` or `playwright-visuals` | what the node publishes |
 | `when` (publication) | `frontend` | skips the node when no component is a front end |
 | `lens` | kebab-case name | the lens `<name>` is the agent `<name>-lens`; at most once per review |
 | `when` (lens) | `mock` or `contract` | see [Conditional lenses](#conditional-lenses) |
-| `question` | `adr-ratification`, `scenario-review` or `mutation-plan` | see [Phases](./phases.md#human-questions) |
+| `question` | `adr-ratification` or `scenario-review` | see [Phases](./phases.md#human-questions) |
 | `workflow` | kebab-case base name (`review`) | the called workflow |
 | `with_<input>` | `base`, `head`, `story`, `documents` or `components` | binds the called workflow's input `<input>` to this value of the run |
 | `mandatory` | `true` | see [Mandatory nodes](#mandatory-nodes); `mandatory=false` is refused |
@@ -103,7 +97,7 @@ Attributes common to every shape: `label`, `shape`, `phase`. Any other attribute
 
 | Attribute | Value | Rule |
 | --- | --- | --- |
-| `label` | depends on the node it leaves | gate: `PASS`, `FAIL`; fan-in and call: `APPROVED`, `NEEDS_REWORK`; question: an answer of the question; any other edge takes none |
+| `label` | depends on the node it leaves | fan-in and call: `APPROVED`, `NEEDS_REWORK`; question: an answer of the question; any other edge takes none |
 | `max_visits` | positive integer | how many times the run may take the edge; required on every loop |
 
 ## Validity rules {/* #validity */}
@@ -123,34 +117,31 @@ return every error. A workflow is refused when:
 | working node with no phase | `node <id> has no phase; set phase="<PHASE>" on it or on a node before it` |
 | missing or unknown shape | `node <id> has no shape; …`, `node <id>: shape <shape> is not supported (supported: …)` |
 | missing required attribute | `node <id>: a <shape> node needs <key>="…"` |
-| wrong number of outgoing edges | `node <id>: gate node needs exactly one PASS edge, has N`, and so on |
-| label on an edge that takes none | `edge <a> -> <b>: only an edge leaving a gate, a review's fan-in (shape=tripleoctagon), a call (shape=house) or an ask node takes a label` |
+| wrong number of outgoing edges | `node <id>: a review fan-in needs exactly one APPROVED edge, has N`, and so on |
+| label on an edge that takes none | `edge <a> -> <b>: only an edge leaving a review's fan-in (shape=tripleoctagon), a call (shape=house) or an ask node takes a label` |
 | agent, lens, `finding-refuter` or a skill a lens lists found nowhere | the node, the agent and the skill named |
-| `proposal=true` without `each="survivor-file"` | `node <id>: proposal=true needs each="survivor-file", the mutants it proposes for` |
 | `each="scenario"` on any node | `node <id>: each="scenario" is gone: the engine dispatches the acceptance designer once and the software engineer once per story; remove each="scenario" (skraft workflow diff shows the plugin's)` |
 | `question="scenario-review"` with no node running the acceptance designer, or none running the software engineer | `node <id>: question="scenario-review" needs the node that writes the scenarios and the node that delivers them` |
+| a gate node, `goal_gate`, `locked`, `unlock`, `each`, `proposal` of an earlier version | refused with a migration message: [Retired attributes](#retired-attributes) |
 | `lenses="…"` form (former) | refused; the message writes out, as DOT, the nodes and edges that replace it |
 
-When valid, `skraft workflow check` prints `<file> is valid: phases RESEARCH, DESIGN, …` and, for
-each unlocked node, `; <node> is unlocked and skipped: <reason>`.
+When valid, `skraft workflow check` prints `<file> is valid: phases RESEARCH, DESIGN, …`.
 
-## Locked nodes {/* #locked-nodes */}
+## Retired attributes {/* #retired-attributes */}
 
-The DELIVER gates of the plugin's workflow (`gates`) carry `locked=true`. A copy that
-removes or changes them is refused, unless it skips them with `unlock="<reason>"`, which the
-journal and the pull request repeat.
+skraft runs no gate and no mutation any more: the software engineer runs each gate through
+`skraft_repl`, and the engine checks the traced runs of its attempt ([Gates](./gates.md#command-gates)).
+A repository workflow ejected earlier that still holds a gate node or one of these attributes is
+refused, one message per attribute:
 
-| A copy is refused when the locked node… | Message |
+| Found | Message |
 | --- | --- |
-| is missing | `locked node <id> is missing; keep it with unlock="<reason>" to skip it` |
-| loses one of its gates | `locked node <id> drops <gates>; keep them, or skip the node with unlock="<reason>"` |
-| loses `goal_gate=true` | `locked node <id> must stay goal_gate=true; skip it with unlock="<reason>" instead` |
-| has no `FAIL` edge back to an agent of its phase | `locked node <id> has no FAIL edge back to an agent of <PHASE>` |
-| is bypassed | `<node> reaches the exit without passing <id>; keep the run going through <id>, or skip <id> with unlock="<reason>"` |
+| a gate node (`gate="…"`) | `a gate node is gone: skraft runs no gate. The software engineer runs each gate through skraft_repl, and the engine checks the traced runs of its attempt; remove the node and its PASS and FAIL edges (skraft workflow diff shows the plugin's pipeline)` |
+| `goal_gate`, `locked`, `unlock` | `<attribute> is gone with the gate node: skraft runs no gate` |
+| `each`, `proposal` | `<attribute> is gone with the mutation the engine ran: mutation testing is a recipe of the session (the skraft-mutation skill), not a node` |
 
-A gate node that runs every gate of a locked node (its `goal_gate` included) and is not unlocked
-stands in for it in this check: in a team's workflow that runs mutation, a `mutation_gates` node
-running every gate of `gates` stands in for it on the path `kill_mutants -> … -> mutation`.
+A review or a call node keeps its `APPROVED` and `NEEDS_REWORK` labels. A run in progress that
+points at a retired node blocks with the code `node-retired` ([Gates](./gates.md#command-gates)).
 
 ## Mandatory nodes {/* #mandatory-nodes */}
 
@@ -161,7 +152,7 @@ The plugin's workflows mark `mandatory=true`:
 - in `review.skraft.dot`: the fan-in `verdict`, its refuter `refuter` and the lenses
   `test_integrity` and `architecture_boundaries`.
 
-Nothing lets a repository skip one: no `unlock`, no CLI option, no setting in
+Nothing lets a repository skip one: no CLI option, no setting in
 `skraft-config.json`. The plugin's workflow decides: removing the attribute from the copy
 changes nothing, and `mandatory=false` is refused.
 
@@ -218,7 +209,7 @@ distill_review -> deliver [label="APPROVED"]
 
 ```dot
 deliver_review [shape=house, workflow="review", mandatory=true]
-gates -> deliver_review [label="PASS"]
+deliver -> deliver_review
 deliver_review -> deliver [label="NEEDS_REWORK", max_visits=2]
 deliver_review -> visuals [label="APPROVED"]
 ```
@@ -318,7 +309,6 @@ from the predecessor.
 | `distill_review_lenses` → `distill_review` | review | lenses `coverage`, `business-alignment`, `testability`, `boundary-enforcement`; fan-in `mandatory=true` | (DISTILL) |
 | `scenario_review` | `hexagon` | `question="scenario-review"` | (DISTILL) |
 | `deliver` | `box` | `agent="software-engineer"` | DELIVER |
-| `gates` | `parallelogram` | `gate="build,format,lint,test,architecture,coverage"`, `goal_gate=true`, `locked=true` | DELIVER |
 | `deliver_review` | `house` | `workflow="review"`, `mandatory=true` | (DELIVER) |
 | `visuals` | `parallelogram` | `publish="playwright-visuals"`, `when="frontend"` | (DELIVER) |
 | `pr_writer` | `box` | `agent="pr-writer"` | PUBLISH |
@@ -335,18 +325,12 @@ from the predecessor.
 | `distill_review -> scenario_review` | `APPROVED` | — |
 | `scenario_review -> deliver` | `APPROVED` | — |
 | `scenario_review -> distill` | `REVISE` | 2 |
-| `gates -> deliver` | `FAIL` | 3 |
-| `gates -> deliver_review` | `PASS` | — |
 | `deliver_review -> deliver` | `NEEDS_REWORK` | 2 |
 | `deliver_review -> visuals` | `APPROVED` | — |
 
-The plugin's pipeline runs no mutation: the developer runs it apart, in a run that follows
-`workflows/mutation.skraft.dot` (the gate `mutation`, then the kill loop the attributes above allow:
-`each="survivor-file"`, `proposal=true`, `question="mutation-plan"`), or `.skraft/mutation.skraft.dot`
-when the working copy holds one. A team that wants mutation in every story's run adds a
-`gate="mutation"` node to its own pipeline.
+The plugin's pipeline runs no mutation and no gate: the software engineer runs the gates through `skraft_repl`, and mutation is a recipe of the developer's session ([Run mutation](../how-to/run-mutation.md)).
 
-The other edges carry neither label nor ceiling: `start -> research -> design`, `distill -> distill_review_lenses`, `deliver -> gates`,
+The other edges carry neither label nor ceiling: `start -> research -> design`, `distill -> distill_review_lenses`, `deliver -> deliver_review`,
 `visuals -> pr_writer -> publish -> exit`, and those of
 each review. No edge leads `deliver` back to `distill`: the acceptance designer is dispatched once and commits
 the red of every scenario, the software engineer is dispatched once and makes every group pass.

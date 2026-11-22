@@ -81,12 +81,12 @@ SKRAFT V2 se construit par **lots**, suivis dans l'epic [#211](https://github.co
 
 | Lot | Capacité | État |
 | --- | --- | --- |
-| 0 – 2 | Phase **RESEARCH** de bout en bout (document pré-créé, relance si manquant, arrêt au plafond), journal chaîné, reprise, `skraft-config.json` à composants, détection (`skraft init`), `skraft doctor`, base par dépôt, gates lancées à la main (`skraft gate`) | Disponible |
-| 3 | DESIGN, DISTILL et DELIVER conduits par le moteur sur un workflow DOT ; droits d'écriture par diff git ; gates étapes du pipeline | Disponible |
+| 0 – 2 | Phase **RESEARCH** de bout en bout (document pré-créé, relance si manquant, arrêt au plafond), journal chaîné, reprise, `skraft-config.json` à composants, détection (`skraft init`), `skraft doctor` (liste les commandes de chaque composant), base par dépôt | Disponible |
+| 3 | DESIGN, DISTILL et DELIVER conduits par le moteur sur un workflow DOT ; droits d'écriture par diff git ; gates lancées par l'ingénieur par `skraft_repl`, le moteur contrôle leurs exécutions tracées | Disponible |
 | 4 | Revue du code par lentilles isolées, réfutateur, verdict calculé, re-revue incrémentale | Disponible |
 | 5 | Décisions humaines (`skraft decide`, boîtes de dialogue, boutons du panneau), ratification d'ADR | Disponible |
 | 6 | Agents et skills de la v1 élagués | Disponible |
-| 7 | Run de mutation du développeur (80 % par périmètre) | Disponible |
+| 7 | Mutation testing en recette de la session du développeur, le skill `skraft-mutation` (80 % par périmètre) | Disponible |
 | 8 | Vue du panneau, rapports de run et QA, pull request de fin de run, publication des captures, progression sur l'issue | Disponible ; affichage du Canvas Copilot dans l'app à vérifier à la main |
 | 9 | Plugin `skraft-brownfield` | Disponible |
 | 10 | VS Code : pilote SDK Copilot, puis repli `skraft next` / `skraft record` | Disponible |

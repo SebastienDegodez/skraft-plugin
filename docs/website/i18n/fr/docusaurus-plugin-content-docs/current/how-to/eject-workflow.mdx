@@ -19,7 +19,7 @@ gardez-la à jour avec le plugin.
 
 | Pour adapter… | Commande | Fichier écrit |
 |---|---|---|
-| le pipeline (phases, revues DESIGN et DISTILL, gates, publication) | `skraft workflow eject` | `.skraft/pipeline.skraft.dot` |
+| le pipeline (phases, revues DESIGN et DISTILL, DELIVER et sa revue, publication) | `skraft workflow eject` | `.skraft/pipeline.skraft.dot` |
 | la revue DELIVER, aussi lancée par `skraft review --pr` | `skraft workflow eject review` | `.skraft/review.skraft.dot` |
 
 ```text
@@ -39,15 +39,13 @@ Quelques modifications courantes, dans `.skraft/pipeline.skraft.dot` :
 
 | Pour… | Écrire |
 |---|---|
-| sauter les gates verrouillées (`gates`) | `unlock="<raison>"` sur le nœud, qui reste en place : `gates [shape=parallelogram, gate="build,format,lint,test,architecture,coverage", goal_gate=true, locked=true, unlock="l'équipe lance les gates dans sa propre CI", phase="DELIVER"]` |
-| lancer la mutation dans le pipeline, que celui du plugin laisse au développeur | un nœud `mutation [shape=parallelogram, gate="mutation", goal_gate=true, phase="DELIVER"]` entre les gates et la revue : `gates -> mutation [label="PASS"]`, `mutation -> deliver_review [label="PASS"]`, `mutation -> deliver [label="FAIL", max_visits=3]` |
 | permettre plus de reprises d'une boucle | changer `max_visits` sur l'arête retour : `design_review -> design [label="NEEDS_REWORK", max_visits=5]` |
 | retirer une lentille non obligatoire | supprimer son nœud `shape=note` et ses deux arêtes |
 | ajouter une lentille de l'équipe | [Ajouter une lentille à une revue](./customise-review.md) |
 | ajouter une étape confiée à un agent du dépôt | [Ajouter un agent du dépôt au pipeline](./add-repository-agent.md) |
 | changer la famille de modèle d'un agent | `model="<famille>"` sur son nœud ([Choisir les modèles des agents](./choose-models.md)) |
 
-La raison d'un `unlock` est reprise dans le journal et dans la pull request du run. Les fan-in
+Le pipeline ne contient aucun nœud gate : l'ingénieur logiciel lance les gates par `skraft_repl`, et la mutation est une recette de votre session ([Lancer la mutation](./run-mutation.md)). Les fan-in
 des revues, l'appel `deliver_review` et, dans la revue, `verdict`, `test_integrity` et
 `architecture_boundaries` sont obligatoires : aucune copie ne peut les retirer ni les contourner.
 
@@ -58,11 +56,11 @@ $ skraft workflow check
 $ skraft workflow diff
 ```
 
-Résultat attendu, pour des gates sautées :
+Résultat attendu, pour une boucle qui tolère plus de reprises :
 
 ```text
-.skraft/pipeline.skraft.dot is valid: phases RESEARCH, DESIGN, DISTILL, DELIVER, PUBLISH; gates is unlocked and skipped: l'équipe lance les gates dans sa propre CI
-~ node gates: unlock none → l'équipe lance les gates dans sa propre CI
+.skraft/pipeline.skraft.dot is valid: phases RESEARCH, DESIGN, DISTILL, DELIVER, PUBLISH
+~ edge design_review -> design: max_visits 2 → 5
 .skraft/pipeline.skraft.dot: 1 changes from the skraft 2.0.0-alpha.19 workflow
 ```
 
@@ -74,7 +72,7 @@ Après la mise à jour du plugin, `diff` signale l'écart de version en premièr
 
 ```text
 skraft_version 2.0.0-alpha.17 → 2.0.0-alpha.19
-~ edge gates -> deliver: max_visits 2 → 3
+~ edge deliver_review -> deliver: max_visits 2 → 3
 .skraft/pipeline.skraft.dot carries skraft_version 2.0.0-alpha.17, this plugin is 2.0.0-alpha.19; 1 changes from the skraft 2.0.0-alpha.19 workflow
 ```
 
@@ -98,8 +96,7 @@ Supprimez la copie (`.skraft/pipeline.skraft.dot` ou `.skraft/review.skraft.dot`
 | Message | Action |
 |---|---|
 | `.skraft/pipeline.skraft.dot already exists; edit it, or remove it` | Modifier la copie existante, ou la renommer avant de copier (étape 4). |
-| `locked node gates is missing; keep it with unlock="<reason>" to skip it` | Remettre le nœud et ajouter `unlock="<raison>"`. |
-| `<nœud> reaches the exit without passing gates; keep the run going through gates, or skip gates with unlock="<reason>"` | Un nœud ajouté après les gates les contourne : le placer avant `gates`. |
+| `a gate node is gone: skraft runs no gate. …` (ou `goal_gate`, `locked`, `unlock`, `each`, `proposal` `is gone …`) | La copie a été éjectée avant que le moteur abandonne ses gates et sa mutation : retirer le nœud ou l'attribut, avec ses arêtes PASS et FAIL ; `skraft workflow diff` montre le pipeline du plugin ([Attributs retirés](../reference/workflow-dot.mdx#retired-attributes)). |
 | `loop a -> b -> a has no max_visits` | Ajouter `max_visits` sur une arête de la boucle. |
 | `mandatory node … is missing; this node is mandatory and cannot be removed` | Remettre le nœud obligatoire. |
 | `the workflow has no node <id> any more; restore the workflow the run started with` | Un run en cours se trouvait sur le nœud retiré : remettre le nœud le temps de finir ce run, ou démarrer un nouveau slug. |
@@ -107,7 +104,7 @@ Supprimez la copie (`.skraft/pipeline.skraft.dot` ou `.skraft/review.skraft.dot`
 ## Étapes suivantes {/* #next-steps */}
 
 - [Le workflow DOT](../reference/workflow-dot.mdx) — syntaxe, règles de
-  validité, [nœuds verrouillés](../reference/workflow-dot.mdx#locked-nodes) et
+  validité, [attributs retirés](../reference/workflow-dot.mdx#retired-attributes) et
   [obligatoires](../reference/workflow-dot.mdx#mandatory-nodes).
 - [`skraft workflow`](../reference/cli-maintenance.md) — sorties et codes de sortie.
 - [Adapter skraft : ce que coûte chaque réglage](../explanation/customisation-trade-offs.md)

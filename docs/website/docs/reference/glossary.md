@@ -10,7 +10,7 @@ A word you do not understand should not block your reading. This glossary explai
 ## A
 
 **Active pipeline**
-The slug written in `.copilot-tracking/skraft-plans/.active-slug`: the run that `skraft status`, `skraft gate` and resume act on. One per working copy (so per worktree); it changes only through an explicit init, never by a guess.
+The slug written in `.copilot-tracking/skraft-plans/.active-slug`: the run that `skraft status` and resume act on. One per working copy (so per worktree); it changes only through an explicit init, never by a guess.
 → See [Active pipeline](./run-journal.md)
 
 **ADR (Architecture Decision Record)**
@@ -18,7 +18,7 @@ A short document that records an architectural decision: the context, the option
 → See [Patterns](./patterns.md)
 
 **Ask node**
-A workflow node of shape `hexagon` that puts a question to a human (`question="adr-ratification"`, `"scenario-review"`, `"mutation-plan"`). Its outgoing edges are labelled with the answers; a refusal (`REJECTED`, `REVISE`) leads back to the node whose work it refuses.
+A workflow node of shape `hexagon` that puts a question to a human (`question="adr-ratification"`, `"scenario-review"`). Its outgoing edges are labelled with the answers; a refusal (`REJECTED`, `REVISE`) leads back to the node whose work it refuses.
 → See [Answer a run's question](../how-to/answer-a-question.mdx)
 
 **Agent**
@@ -80,11 +80,11 @@ An eight-item checklist a story must pass before entering engineering: problem, 
 ## E
 
 **Engine**
-The SKRAFT code that decides every pipeline step (order, expected outputs, retries, gates), the same on every host.
+The SKRAFT code that decides every pipeline step (order, expected outputs, retries, the evidence of the gate runs), the same on every host.
 → See [Engine](../explanation/architecture.md)
 
 **Environment question**
-The question the engine asks when a step cannot run on the machine or with what `skraft-config.json` gives it (program not found, Git failing, a gate command missing). It names the cause (the machine or `skraft-config.json`) and the log of the failing command. `RETRY` runs the same step again where it stopped, using no new attempt; `ABORT` blocks the run.
+The question the engine asks when a step cannot run on the machine or with what `skraft-config.json` gives it (program not found, Git failing, a command missing). It names the cause (the machine or `skraft-config.json`) and the log of the failing command. `RETRY` runs the same step again where it stopped, using no new attempt; `ABORT` blocks the run.
 → See [The environment question](./run-journal.md#environment-question)
 
 **Event Modeling**
@@ -96,7 +96,7 @@ An architectural pattern where the state of a system is reconstructed from a seq
 ## F
 
 **Failure class**
-What a failed gate is: `interrupted` (a person stopped it: the run stops), `environment` (the machine or the config must change: missing program, refused command line, unreadable mutation report: a human acts) or `deterministic` (the command failed, a signal or a crash included: the agent gets its evidence through the `FAIL` edge).
+What a failed command is: `interrupted` (a person stopped it: the run stops), `environment` (the machine or the config must change: missing program, refused command line: a human acts) or `deterministic` (the command failed, a signal or a crash included).
 → See [Failure class](../how-to/run-gates.md)
 
 **Finding**
@@ -106,8 +106,8 @@ A defect a lens reports: the gate concerned, a severity (`blocker`, `high`, `med
 ## G
 
 **Gate (quality gate)**
-A named command of a component (`build`, `format`, `lint`, `test`, `architecture`, `coverage`, `mutation`) that the engine runs itself to prove quality. Each gate leaves an evidence file and a `gate.ran` event. The engine runs them in DELIVER (the locked `gates` node); `skraft gate` runs them by hand. `mutation` is the developer's: the plugin's pipeline runs it nowhere.
-→ See [skraft-config.json](./skraft-config.md); the lenses' review criteria: [Gates](./gates.md)
+A named command of a component (`build`, `format`, `lint`, `test`, `architecture`, `coverage`) that proves quality. The engine runs none: in DELIVER the software engineer runs each one through `skraft_repl`, and the engine checks the signed trace of its attempt (`evidence`, `evidence.checked`). A gate the project names no command for is declared `absent`; `test` never is. `mutation` is the developer's: a recipe of their session.
+→ See [Gates](./gates.md#command-gates); the lenses' review criteria: [Gates](./gates.md)
 
 **Gherkin**
 A structured language for writing BDD scenarios: `Given` (context), `When` (action), `Then` (expected result).

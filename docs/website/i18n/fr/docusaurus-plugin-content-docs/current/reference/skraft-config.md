@@ -36,7 +36,7 @@ flowchart TD
     F -->|lu et validé| V{valide ?}
     V -->|non| R[refus config-invalid<br/>toutes les erreurs]
     V -->|oui| B[base par dépôt<br/>git merge-base HEAD ref]
-    B --> G[skraft gate<br/>build → format → lint → test<br/>→ architecture → coverage]
+    B --> G[gates par skraft_repl<br/>build → format → lint → test<br/>→ architecture → coverage]
     F --> D[skraft doctor]
 ```
 
@@ -302,34 +302,32 @@ script.
 
 ## Gates <!-- #gates -->
 
-Une **gate** est une commande dont le nom est l'un des sept noms ci-dessous. Elles tournent
-dans cet ordre, quel que soit l'ordre du fichier :
+Une **gate** est une commande dont le nom est l'un des six noms ci-dessous. Le moteur n'en lance
+aucune : l'ingénieur logiciel lance chacune par `skraft_repl` dans DELIVER, et le moteur contrôle les
+exécutions tracées ([Gates](./gates.md#command-gates)).
 
-| Ordre | Nom |
-| --- | --- |
-| 1 | `build` |
-| 2 | `format` |
-| 3 | `lint` |
-| 4 | `test` |
-| 5 | `architecture` |
-| 6 | `coverage` |
-| 7 | `mutation` |
+| Nom |
+| --- |
+| `build` |
+| `format` |
+| `lint` |
+| `test` |
+| `architecture` |
+| `coverage` |
 
-`mutation` revient au développeur : ni le pipeline de la story ni `skraft gate` ne la lancent ;
-le run de mutation du développeur (`workflows/mutation.skraft.dot`) la lance, comme un nœud
-`gate="mutation"` du workflow propre à une équipe, et `skraft doctor` vérifie que son programme
-est trouvé ([Le résultat de mutation](#mutation-result)). `e2e`, le seul autre nom permis, n'est pas une gate : `skraft gate` ne la lance pas, mais
-`skraft doctor` la vérifie. Un nom mal écrit (`tset`) rend la configuration invalide au lieu
-de sauter la gate en silence. Un composant sans aucune commande de gate échoue (gate `none`,
-classe `environment`) : `no gate command; give it at least one of build, format, lint, test,
-architecture, coverage in skraft-config.json` ; une commande `mutation` seule ne compte pas. Un composant s'arrête à sa première
-gate en échec.
+`mutation` n'est pas une gate : elle revient au développeur, recette de sa propre session (le skill
+`skraft-mutation`, [Lancer la mutation](../how-to/run-mutation.md)), et `skraft doctor` la liste avec
+les autres commandes ([Le résultat de mutation](#mutation-result)). `e2e`, l'autre nom permis, est la
+commande de bout en bout d'un front end, que l'ingénieur lance par `gate('e2e', ...)` quand la story le
+modifie. Un nom mal écrit (`tset`) rend la configuration invalide au lieu de sauter la gate en
+silence. Une gate sans commande dans un composant est déclarée absente par l'ingénieur, avec sa
+raison (`test` ne l'est jamais).
 
 ### Le résultat de mutation <!-- #mutation-result -->
 
-La commande `mutation` trouve dans la variable d'environnement `SKRAFT_MUTATION_RESULT` le chemin
-d'un fichier du run, à côté de son journal de preuve. Elle peut y écrire son résultat, score déjà
-calculé :
+La commande `mutation` peut écrire son résultat, score déjà calculé, dans le fichier que nomme la
+variable d'environnement `SKRAFT_MUTATION_RESULT` (la recette `skraft-mutation` la fixe sur un fichier
+de son dossier de travail) :
 
 ```json
 { "scopes": [
@@ -342,53 +340,41 @@ calculé :
 | --- | --- |
 | `name` | `core` et `boundary` pour un composant en Clean Architecture, chacun une fois au plus ; `global` seul pour un projet unique |
 | `score` | un pourcentage, de 0 à 100 ; chaque périmètre doit atteindre 80 |
-| `survivors` | facultatif : une ligne par mutant resté vivant, `<fichier>:<ligne> <détail>`, le fichier relatif à la racine du composant ; un périmètre sous 80 les confie à une proposition par fichier |
+| `survivors` | facultatif : une ligne par mutant resté vivant, `<fichier>:<ligne> <détail>`, le fichier relatif à la racine du composant ; un périmètre sous 80 les laisse à tuer par des tests |
 
-Quand la commande n'y écrit rien, le moteur lit le rapport qu'écrit l'outil de la stack, relatif à
+Quand la commande n'y écrit rien, la recette lit le rapport qu'écrit l'outil de la stack, relatif à
 la racine du composant : `StrykerOutput/reports/mutation-report.json` (.NET),
 `reports/mutation/mutation.json` (TypeScript, JavaScript, React), `mutation-report.json` (Python),
 `target/pit-reports/mutations.xml` (Java ; `build/reports/pitest/mutations.xml` quand la commande
-nomme Gradle). Un résultat ou un rapport illisible fait échouer la gate en `environment`.
+nomme Gradle). Un résultat ou un rapport illisible est un échec de l'environnement, que la recette signale.
 
 Tout programme démarre tel qu'écrit, depuis la racine du composant : le moteur n'en substitue
 aucun, `python` compris. Écrivez l'interpréteur dont votre machine a besoin (`.venv/bin/python -m
 pytest` ou `.venv/Scripts/python.exe -m pytest`, ou `python -m pytest` quand il est sur le PATH ; barres
 obliques, une barre inverse étant un échappement invalide en JSON). Une équipe sur plusieurs
 systèmes choisit une forme par composant : le fichier porte une ligne par commande. Un programme
-qui ne démarre pas fait échouer la gate en `environment`, en le nommant.
+qui ne démarre pas fait échouer son exécution dans le REPL.
 
 Avec Microcks (le défaut hors React), les tests qui l'utilisent font tourner Microcks dans un
-conteneur, Docker ou Podman. Les gates n'en cherchent pas : un tel test échoue quand aucun
-conteneur ne répond, comme tout test en échec ; `skraft doctor` avertit quand aucun ne répond.
+conteneur, Docker ou Podman. Rien n'en cherche : un tel test échoue quand aucun
+conteneur ne répond, comme tout test en échec.
 
 ## Classes d'échec <!-- #failure-classes -->
 
-| Classe | Cas | Raison affichée | Qui agit |
-| --- | --- | --- | --- |
-| `environment` | programme ou dossier introuvable, programme impossible à lancer | `<erreur>; install it or change the command in skraft-config.json` | un humain, sur la machine ou la config : la question `environment` ; jamais un agent |
-| `environment` | code de sortie 127 (sh) ou 9009 (cmd) | `exited <code>` | idem |
-| `environment` | ligne refusée (syntaxe shell, guillemet, `{baseSha}`) | `command "<ligne>" <raison>` | idem |
-| `environment` | composant sans commande de gate | message `no gate command` ci-dessus | idem, cause `config` |
-| `environment` | `mutation` seulement : un run fini avant que son outil puisse finir (sans code de sortie, un signal ou un plantage), un rapport illisible, ou un run en échec dont le rapport ne compte aucun mutant | comment il a fini, puis `; the mutation report <chemin> …` quand le rapport est en cause (`is missing; …`, `counts no mutant of a run that failed`) | idem |
-| `interrupted` | code de sortie 130 (SIGINT sous POSIX) ou `0xC000013A` (Ctrl-C sous Windows) : une personne a arrêté la commande | `was interrupted by a person (exit <code>)` | personne : le run s'arrête (`interrupted`), ne demande rien, et le run suivant reprend l'étape |
-| `deterministic` | tout autre code de sortie non nul : une vérification en échec, 128 (erreur fatale de Git), un signal sous POSIX (128 + son numéro), un code de plantage à partir de `0xC0000000` sous Windows | `exited <code>` ; `was stopped by a signal or crashed (exit <code>), not by a failing check` | l'agent, par l'arête `FAIL` de la gate, avec la preuve : il corrige le code, ou s'arrête `blocked` en nommant ce qui manque à la machine |
-| `deterministic` | programme arrêté sans code de sortie (un signal, un délai dépassé) | `<erreur>; run it again` (`<programme> was stopped by <signal>; run it again`) | idem |
-
-Sous la CLI et Copilot, la sortie d'une commande est gardée jusqu'à 64 Mio par flux. Au-delà, la preuve en garde le
-début et la fin autour de `… output cut …`, la commande va jusqu'au bout, et son code de sortie
-juge toujours la gate ; sa raison, réussie ou non, se termine par `; its output passed the
-runner's limit: the evidence keeps only its head and its tail`.
+Le moteur ne lance aucune commande du projet, il n'en classe donc aucune. Une exécution de
+`skraft_repl` enregistre son code de sortie, son commit et son log dans la trace signée de la
+tentative ([Le REPL](./repl.md)), et le moteur juge les exécutions tracées à la soumission de la
+tentative : une gate dont la dernière exécution n'est pas sortie avec 0 est refusée avec le code
+d'échec `evidence` ([Gates](./gates.md#command-gates)).
 
 ## Composants modifiés <!-- #changed-components -->
 
-Sans `--all`, `skraft gate` ne lance que les composants **modifiés depuis leur base** :
-fichiers changés depuis le SHA de base (commits, index, copie de travail) et fichiers non
-suivis, dans la racine du composant. Ne comptent pas : les fichiers sous `.copilot-tracking/`
-et ceux d'un composant imbriqué dans celui-ci. Un composant sans base (racine hors de tout
-dépôt Git), ou dont Git ne sait pas lister les changements, compte comme modifié.
-`skraft gate --all` les lance tous. En DELIVER, un nœud de gate lance d'abord les composants
-modifiés ; une fois qu'ils passent, une gate d'objectif (`goal_gate=true`) lance aussi les
-autres, si bien que DELIVER se clôt sur tous les composants.
+Les composants que l'histoire a modifiés sont ceux dont des fichiers ont changé depuis leur SHA de
+base (commits, index, copie de travail) ou qui ont des fichiers non suivis, dans la racine du
+composant. Ne comptent pas : les fichiers sous `.copilot-tracking/` et ceux d'un composant imbriqué
+dans celui-ci. Un composant sans base (racine hors de tout dépôt Git), ou dont Git ne sait pas lister
+les changements, compte comme modifié. Le moteur n'exige la preuve de chaque gate que pour ces
+composants.
 
 ## Règle de base <!-- #base -->
 
@@ -533,8 +519,8 @@ de sortie nul. Sans pratique Gherkin, utiliser `"bdd": false`.
   dans un script et appelez-le.
 - **Compter sur une variable d'environnement** (`$HOME`, `%PATH%`) dans une ligne : elle part
   telle quelle au programme.
-- **Un nom de gate mal écrit** (`Test`, `unit-test`) : ce n'est pas une gate, elle ne tourne
-  jamais dans `skraft gate`.
+- **Un nom de gate mal écrit** (`Test`, `unit-test`) : ce n'est pas une gate, aucune de ses
+  exécutions ne compte dans la preuve.
 - **Une racine absolue** : refusée ; un dépôt voisin s'écrit `../nom`.
 - **Oublier Docker ou Podman avec Microcks** : démarrez-en un avant les tests, ou passez le
   composant en `inprocess` s'il ne mocke pas avec Microcks.

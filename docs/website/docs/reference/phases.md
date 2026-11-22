@@ -22,10 +22,10 @@ The detail of each gate cited: [Gates](./gates.md).
 | RESEARCH | `skraft` | the engine | `solution-researcher` | output filled, research records | — |
 | DESIGN | `skraft` | the engine | `solution-architect` | DESIGN records, structural scan, 3-lens review | `adr-ratification` |
 | DISTILL | `skraft` | the engine | `acceptance-designer` | `## Scenarios` table, delivery groups, one red commit, 4-lens review | `scenario-review` |
-| DELIVER | `skraft` | the engine | `software-engineer` | one green commit for the story, the groups worked in plan order, in one dispatch; gates, `review` | — |
+| DELIVER | `skraft` | the engine | `software-engineer` | one green commit for the story, the groups worked in plan order, in one dispatch, its gate runs traced; `review` | — |
 | PUBLISH | `skraft` | the engine | `pr-writer` | pull request prose | — |
 
-DISCOVER and DISCUSS do not go through the engine: no journal, no command gate. RESEARCH to
+DISCOVER and DISCUSS do not go through the engine: no journal, no gate run. RESEARCH to
 PUBLISH are the phases of `workflows/pipeline.skraft.dot`; an ejected workflow may add more. In
 any engine phase, a human may get the `environment` and `blocked` questions
 ([below](#human-questions)).
@@ -171,7 +171,7 @@ Verdict: `review-verdict.mjs --phase discuss`, same rules and same budget as DIS
 
 After `APPROVED`, no edge leads the groups: the engine runs `deliver` once for the story, the
 software engineer working the groups in the plan's order; `deliver` then leaves by its edge to
-`gates`.
+`deliver_review`.
 
 ### The `## Scenarios` table <!-- #scenarios -->
 
@@ -227,19 +227,18 @@ with `scenarios`. Why the walking skeleton walks S1: [Walking Skeleton](../expla
 
 | Node | Kind | Role |
 | --- | --- | --- |
-| `deliver` | agent `software-engineer` | one dispatch per story: works each group of the implementation plan in plan order and commits one green for the whole story (a second one is refused, `green-split`); that green makes the walking skeleton pass too; after the last, the passes the gates or the review send back, on the whole story |
-| `gates` | gates `build,format,lint,test,architecture,coverage`, `goal_gate`, `locked` | commands of the changed components, then of all |
+| `deliver` | agent `software-engineer` | one dispatch per story: works each group of the implementation plan in plan order and commits one green for the whole story (a second one is refused, `green-split`); that green makes the walking skeleton pass too; after the last, the passes the review sends back, on the whole story. The engineer runs every gate of each component the story changed through `skraft_repl`; the engine checks the traced runs at the submission of the attempt ([Gates](./gates.md#command-gates)) |
 | `deliver_review` | call `workflow="review"` | lenses `test-integrity`, `architecture-boundaries`, `cold-reader`, `mock-fidelity` (`when="mock"`), `contract-fidelity` (`when="contract"`) |
-| `visuals` | publication `playwright-visuals`, `when="frontend"` | each front end's `e2e` command, screenshots committed |
+| `visuals` | publication `playwright-visuals`, `when="frontend"` | commits the screenshots of the last traced e2e run (`gate('e2e', …)`) of each front end |
 
 | | |
 | --- | --- |
-| Brief | the groups, in the order the engineer works them (`- <g> of <G> — S1 "<title>" (component <c>, tags …); …`); the commit of the acceptance tests DISTILL committed, the walking skeleton included (`<sha> "<subject>": <files>`), which the agent never changes (a wrong one, or one failing on a build or setup error: it stops `blocked`, naming it); one commit line, exactly: `<the test command of each component> && git add <each file you changed> && git commit -s -m "feat(<story>): S1–S<n> <the rules of the story>" -m "Refs: #<issue>"`. A pass the gates or the review sent back lists no group: only the acceptance tests it never changes, and the commit rules of the cycle |
+| Brief | the groups, in the order the engineer works them (`- <g> of <G> — S1 "<title>" (component <c>, tags …); …`); the commit of the acceptance tests DISTILL committed, the walking skeleton included (`<sha> "<subject>": <files>`), which the agent never changes (a wrong one, or one failing on a build or setup error: it stops `blocked`, naming it); one commit line, exactly: `<the test command of each component> && git add <each file you changed> && git commit -s -m "feat(<story>): S1–S<n> <the rules of the story>" -m "Refs: #<issue>"`. A pass the review sent back lists no group: only the acceptance tests it never changes, and the commit rules of the cycle |
 | Declared output | `changes/{date}/change-log.md` |
-| Evidence | `gates/<component>/<gate>-<n>.log`; `visuals/<component>/e2e-<n>.log` |
+| Evidence | `logs/runs/<step>-<visit>-<attempt>/runs.jsonl` and the logs of the traced runs; the journal's `evidence.checked` ([Gates](./gates.md#command-gates)); `visuals/<component>/e2e-<n>.log` |
 | Allowed writes | the tracking folder, each component's `src` and `tests` paths, and the files at their roots; a change outside it is refused |
-| Commits | `deliver`, the story's pass: one `feat(<story>): …` (or `fix`) for the whole story, whatever its subject names, chained in bash to the test command as the brief writes it; a second one is refused (`green-split`); no `test`, `refactor`, `style` or `perf` commit, the inner TDD loop staying uncommitted; no change to the acceptance tests or the walking skeleton outside the component's `src` paths; the engine runs no test ([Commits](./gates.md#commits)). `deliver` sent back by the gates or the review: each `feat` or `fix` after a `test(<story>): …` since the last green, the gate failure standing for that red on a pass the gates sent back, `refactor` allowed. A DELIVER journal of an earlier V2 alpha, one dispatch per group, is not resumed. Each conventional message ends with `Refs: #<issue>` and closes no issue; a change left uncommitted is refused (`uncommitted`) |
-| Mutation | none: the plugin's pipeline runs no mutation, the developer runs it apart; a team's own workflow may still hold a `gate="mutation"` node ([The DOT workflow](./workflow-dot.mdx)) |
+| Commits | `deliver`, the story's pass: one `feat(<story>): …` (or `fix`) for the whole story, whatever its subject names, chained in bash to the test command as the brief writes it; a second one is refused (`green-split`); no `test`, `refactor`, `style` or `perf` commit, the inner TDD loop staying uncommitted; no change to the acceptance tests or the walking skeleton outside the component's `src` paths; the engine runs no test ([Commits](./gates.md#commits)). `deliver` sent back by the review: each `feat` or `fix` after a `test(<story>): …` since the last green, the finding standing for that red on a pass the review sent back, `refactor` allowed. A DELIVER journal of an earlier V2 alpha, one dispatch per group, is not resumed. Each conventional message ends with `Refs: #<issue>` and closes no issue; a change left uncommitted is refused (`uncommitted`) |
+| Mutation | none: neither the pipeline nor the engine runs mutation; it is a recipe of the developer's session ([Run mutation](../how-to/run-mutation.md)) |
 
 | Lens (`review`) | Gates |
 | --- | --- |
@@ -251,8 +250,6 @@ with `scenarios`. Why the walking skeleton walks S1: [Walking Skeleton](../expla
 
 | Edge | Label | `max_visits` |
 | --- | --- | --- |
-| `gates -> deliver` | `FAIL` | 3 |
-| `gates -> deliver_review` | `PASS` | — |
 | `deliver_review -> deliver` | `NEEDS_REWORK` | 2 |
 | `deliver_review -> visuals` | `APPROVED` | — |
 
@@ -277,7 +274,6 @@ with `scenarios`. Why the walking skeleton walks S1: [Walking Skeleton](../expla
 | --- | --- | --- | --- | --- |
 | `adr-ratification` | node `adr` | `RATIFIED`, `REJECTED` | `REJECTED` | `ADR` |
 | `scenario-review` | node `scenario_review` | `APPROVED`, `REVISE` | `REVISE` | `Scenarios` |
-| `mutation-plan` | a `question="mutation-plan"` node of a team's own workflow; the plugin's asks none | `APPLY`, an instruction, or `STOP` | — | `Mutation` |
 | `environment` | the engine, when a step cannot run on the machine or with what `skraft-config.json` gives it; its text names the cause and the log ([causes](./run-journal.md#environment-question)) | `RETRY`, `ABORT` | — | `Environment` |
 | `blocked` | the engine, when an agent answers `blocked`, an agent is refused the same way on two attempts in a row or on its last attempt, a loop reaches its `max_visits` or a lens answers `inconclusive` | an instruction, or `STOP` | — | `Blocked` |
 | `review-consent` | `skraft review --pr --publish` | `ACCEPTED`, `DECLINED` | — | `PR comment` |

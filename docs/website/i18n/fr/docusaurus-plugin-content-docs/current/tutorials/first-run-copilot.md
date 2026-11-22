@@ -104,7 +104,7 @@ Dans la suite, `skraft …` veut dire cette commande complète, ou la commande `
 ![Terminal : skraft init répond « skraft-config.json: web (javascript, web) »](/img/screenshots/shared/terminal-init.svg)
 
 *Figure 1 — Un composant, `web`, est écrit dans `skraft-config.json`, sans commande : écrivez-y
-son `"commands": { "test": "npm test" }`. Le pipeline lance `test` ; `mutation` est à vous de
+son `"commands": { "test": "npm test" }`. L'ingénieur lance `test` par `skraft_repl` ; `mutation` est à vous de
 l'écrire et de la lancer.*
 
 Un run qui publie ne démarre que sur une configuration dont les consentements de publication sont
@@ -220,7 +220,7 @@ marqué walking skeleton, les groupes que DELIVER fait passer et le commit des t
 de test sous `.copilot-tracking/skraft-plans/checkout/details/` et ces commits, lisez-les, puis choisissez **APPROVED** dans le chat.
 
 Le run continue ensuite sans vous : un seul passage du software engineer, un seul commit vert pour tous les groupes de scénarios,
-travaillés dans l'ordre du plan ; puis les gates, la revue DELIVER, et la description de
+travaillés dans l'ordre du plan ; puis le moteur contrôle les exécutions tracées de gates, la revue DELIVER, et la description de
 la pull request. Le journal de `/workflows` se termine ainsi :
 
 ![Journal du workflow skraft-pipeline : phase PUBLISH, pr-writer, la pull request non ouverte car publish.pullRequest vaut false, PUBLISH closed, puis checkout: done: PUBLISH closed](/img/screenshots/shared/terminal-workflow-log.svg)

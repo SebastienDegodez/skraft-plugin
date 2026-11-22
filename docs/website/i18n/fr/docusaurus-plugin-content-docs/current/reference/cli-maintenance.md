@@ -174,17 +174,17 @@ une copie.
 | copié | `.skraft/pipeline.skraft.dot holds the skraft <version> pipeline; the run follows it` (review : `… holds the skraft <version> review; every call to review runs it`) sur stdout | 0 |
 | la copie existe | `<chemin> already exists; edit it, or remove it` sur stderr | 1 |
 
-Syntaxe, règles de validité et nœuds verrouillés ou obligatoires : [Le workflow DOT](./workflow-dot.mdx).
+Syntaxe, règles de validité et nœuds obligatoires : [Le workflow DOT](./workflow-dot.mdx).
 
 **`skraft workflow check`** valide le workflow qu'un run suivrait (la copie du dépôt s'il y en a
 une, sinon celui du plugin) et les workflows qu'il appelle, face à `skraft-config.json` : un
 début et une fin, chaque nœud atteignable, `max_visits` sur toute boucle, formes et attributs
-connus, agents existants, nœuds verrouillés gardés ou `unlock="<raison>"`, nœuds obligatoires
+connus, agents existants, aucun nœud gate ni attribut `goal_gate`, `locked`, `unlock`, `each` ou `proposal` (chacun est refusé avec un message de migration, voir [Gates](./gates.md#command-gates)), nœuds obligatoires
 gardés.
 
 | Cas | Sortie | Code |
 | --- | --- | --- |
-| valide | des lignes `warning: <avertissement>` (une famille de modèle que la configuration masque), puis `<fichier> is valid: phases RESEARCH, DESIGN, …`, suivi de `; <nœud> is unlocked and skipped: <raison>` pour chaque nœud déverrouillé | 0 |
+| valide | des lignes `warning: <avertissement>` (une famille de modèle que la configuration masque), puis `<fichier> is valid: phases RESEARCH, DESIGN, …` | 0 |
 | invalide | `skraft-config.json is invalid: …` ou les erreurs du workflow, sur stderr | 1 |
 
 **`skraft workflow diff`** compare les copies du dépôt aux workflows du plugin sans rien
@@ -196,19 +196,17 @@ gardés.
 | rien d'éjecté | `the working copy has neither .skraft/pipeline.skraft.dot nor .skraft/review.skraft.dot; the plugin's run as shipped (skraft workflow eject [review] copies them)` sur stderr | 1 |
 | copie invalide | `<fichier> is invalid: <erreurs>` sur stderr | 1 |
 
-Avec `--json`, `check` affiche `{ ok, name, errors, unlocked: [{ node, reason }], warnings,
+Avec `--json`, `check` affiche `{ ok, name, errors, warnings,
 reason }` et `diff` affiche `{ ok, name, changes, reason }`. `eject` ne prend aucune option.
 
-## `skraft doctor [--run] [--base <ref>] [--json]`
+## `skraft doctor [--json]`
 
-**Effet.** Vérifie la configuration et que chaque commande de chaque composant se découpe ; avec `--run`, lance chacune. Il ne cherche jamais un programme sur le PATH.
+**Effet.** Vérifie la configuration et que chaque commande de chaque composant se découpe, et liste les commandes de chaque composant. Il n'en lance aucune et ne cherche jamais un programme sur le PATH.
 N'écrit rien dans le journal. La première ligne nomme la version du plugin qui répond
 (`ok    plugin: skraft <version>` ; `plugin` dans le JSON) ; elle ne compte pas comme un contrôle.
 
 | Option | Effet |
 | --- | --- |
-| `--run` | lance chaque commande une fois depuis la racine de son composant, avec la base calculée, et écrit ce qu'elle a affiché dans `.copilot-tracking/skraft-doctor/<composant>/<commande>.log` (remplacé à chaque lancement) |
-| `--base <ref>` | ref de base pour `--run` ; sans `--run`, elle n'est pas lue |
 | `--json` | sortie JSON |
 
 Contrôles, dans l'ordre :
@@ -218,22 +216,18 @@ Contrôles, dans l'ordre :
 | `node` | Node 22 ou plus | `Node <version>; skraft needs Node 22 or later` |
 | `config` | fichier présent, valide, au moins un composant | `skraft-config.json is invalid: …` ; `no skraft-config.json; run skraft init to detect the components` ; `skraft-config.json lists no component; run skraft init to detect them` |
 | `forge` | la forge du run est joignable d'ici (sur `github` : un remote, `gh` installé et connecté à son hôte ; sur `azure-devops` : un remote qui nomme organisation, projet et dépôt, `az` avec son extension `azure-devops` installé et connecté à cette organisation) ; sinon un avertissement, jamais un échec | avertissement : `<forge>, named in the configuration: <reason>` ou `<forge>, deduced from the Git remote: <reason>` ; raisons : `the working copy has no Git remote whose URL names a host and a repository`, `gh, the GitHub CLI, is not installed`, `gh is not signed in to <host>; run gh auth login --hostname <host>`, `the working copy has no Git remote whose URL names an Azure DevOps organization, project and repository`, `az, the Azure CLI, is not installed`, `skraft runs az under Windows only from the Azure CLI installer (MSI or winget), …`, `the azure-devops extension of the Azure CLI is not installed; run az extension add --name azure-devops`, `az is not signed in to the Azure DevOps organization <URL de l'organisation>, …` |
-| `base` (avec `--run`) | la base se calcule | message de `invalid-base`, `base-unresolved` ou `source-control-unavailable` |
 | `<composant>` | la racine est un dossier | `root <racine> is not a folder` (ses commandes ne sont pas contrôlées) |
-| `<composant>` | au moins une commande de gate | `no gate command; give it at least one of build, format, lint, test, architecture, coverage, mutation in skraft-config.json; run /skraft-init` |
-| `<composant>/<commande>` | la ligne se découpe | `"<ligne>" <raison>` ; quand elle passe, `ok <composant>/<commande>: <ligne> (parsed; doctor --run starts it)` (`skraft mutation starts it` pour `mutation`, que `--run` ne lance jamais) |
-| `<composant>/<commande>` avec `--run` | la commande sort avec 0 | `<programme> did not start for <composant>/<commande>; install it or change commands.<nom> in skraft-config.json` ; `<programme> could not be started for <composant>/<commande>: not executable` quand le système le refuse ; `<commande lancée> exited <code>; its output is in .copilot-tracking/skraft-doctor/<composant>/<commande>.log` (base remplacée) |
+| `<composant>` | au moins une commande de gate | `no gate command; give it at least one of build, format, lint, test, architecture, coverage in skraft-config.json; run /skraft-init` |
+| `<composant>/<commande>` | la ligne se découpe | `"<ligne>" <raison>` ; quand elle passe, `ok <composant>/<commande>: <ligne> (parsed)` |
 | `<composant>` (après ses commandes) | chaque skill de mocking et de contract testing que demande le composant existe dans le plugin ou la copie de travail (`.claude/skills/`, `.github/skills/`) ; sinon un avertissement | avertissement : `skills found nowhere, in the plugin or the working copy: <skills>; mocking-strategy-roster and contract-testing say which recipe its tests use instead, or that they stop` |
 | `infrastructure` (après les composants) | `ok` : une ligne par rangée de la [politique d'infrastructure](./skraft-config.md#infrastructure) de chaque composant | `<composant> (<stack>) <rangée>: <mécanisme> (targeted), <mécanisme> (walking skeleton) — <outil>; source plugin` (`source skraft-config.json` pour une surcharge, `source skraft-config.json (mocking.strategy)` pour une stratégie de mocking autre que celle par défaut de la stack ; `(e2e)` pour une rangée `react`) |
-| `container-runtime` | seulement quand une rangée fait tourner `testcontainers` ou `microcks` : `docker`, sinon `podman`, trouvé sur le PATH, répond à `<runtime> info` (code 0 en 15 s au plus) ; sinon un avertissement, jamais un échec | ok : `<runtime> answers <runtime> info` ; avertissement : `neither docker nor podman is on the PATH; …` ou `docker does not answer docker info[, podman does not answer podman info]; the tests that need Microcks or Testcontainers cannot run until Docker or Podman runs` |
 | `vscode` | toujours `ok` | nomme le pilote VS Code : `Copilot SDK <version> (<chemin>): under VS Code, run the pipeline through it with engine/drivers/copilot-sdk/skraft-run.mjs`, ou `no Copilot SDK under <dossier>: under VS Code, the Skraft - Orchestrator agent conducts skraft next and skraft record; …` |
 | `models` | chaque agent que nomme `assign.agents` existe dans le plugin ou la copie de travail | `assign.agents.<id>: no agent <id> in the plugin, .claude/agents/ or .github/agents/; did you mean <le plus proche>?` |
 | `models/<hôte>` (`claude-code`, `copilot`) | chaque famille sur laquelle tournent les agents du workflow a un modèle pour cet hôte ; sinon un avertissement avec le nombre de lancements qui retombent sur l'hôte | avertissements : `no model on <hôte> for <famille> (<n> dispatches)…` ; `CLAUDE_CODE_EFFORT_LEVEL is set…` ; `max effort on <agent> (<modèle>)…` pour un modèle Copilot dont le nom ne contient pas `claude` ; `~/.copilot/settings.json sets subagents.agents for <agent>…` quand skraft passe son propre modèle ou niveau |
 
 Les commandes d'un composant sont contrôlées gates d'abord (dans l'ordre des gates), puis
 `e2e` dans l'ordre du fichier. Le doctor s'arrête après `config` si la config
-est invalide, absente ou vide. Sans `--run`, `{baseSha}` est remplacé par `HEAD` pour le
-seul découpage.
+est invalide, absente ou vide.
 
 **Sortie texte** :
 

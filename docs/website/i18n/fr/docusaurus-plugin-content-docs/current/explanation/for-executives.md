@@ -77,10 +77,10 @@ et PowerShell. Les tests du moteur tournent sous Windows, macOS et Linux.
 ### Une traçabilité auditable
 
 Chaque run écrit un **journal d'événements** : une ligne par fait (étape lancée, résultat
-enregistré, phase close, gate lancée). Chaque ligne porte l'empreinte SHA-256 de la ligne
+enregistré, phase close, preuve de gate contrôlée). Chaque ligne porte l'empreinte SHA-256 de la ligne
 précédente et une signature sous une clé de la machine qui le fait tourner. Une
-modification à la main casse cette chaîne et le moteur s'arrête en le disant. Les **preuves de gate** (commande, dossier, résultat, sorties) sont écrites par le
-moteur, jamais par le modèle.
+modification à la main casse cette chaîne et le moteur s'arrête en le disant. Les **preuves de gate** (les exécutions signées de
+l'ingénieur logiciel, par gate, dossier et hash de log) sont contrôlées par le moteur, jamais affirmées par le modèle.
 
 ### Des équipes autonomes, sans attendre une release
 
@@ -93,10 +93,10 @@ l'équipe. Les seuils de qualité, eux, ne se négocient pas : ils ne sont pas c
 
 ### De quoi qualifier le livrable
 
-La gate de couverture laisse ses preuves dans le dossier du run. Le mutation testing revient au
-développeur : le pipeline n'en lance aucun, et le run du développeur doit atteindre 80 % sur le
+Chaque gate, couverture comprise, laisse son exécution tracée dans le dossier du run. Le mutation testing revient au
+développeur : ni le pipeline ni le moteur ne le lancent, et le run du développeur doit atteindre 80 % sur le
 cœur métier comme ailleurs. `qa-report.md` rassemble pour l'équipe de qualification le plan de
-test, les gates et les verdicts de revue ; `run-report.md` donne le
+test, les preuves de qualité et les verdicts de revue ; `run-report.md` donne le
 temps, le coût et les relances de chaque étape. Le run se termine par une pull request décrite
 depuis le journal, avec les captures d'un front.
 

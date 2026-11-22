@@ -73,9 +73,8 @@ n'en remplit aucune. Écrivez la ligne :
 ## 4. Ajouter une gate
 
 Ajoutez la commande sous l'un des noms `build`, `format`, `lint`, `test`, `architecture`,
-`coverage` (l'ordre d'exécution) ; `mutation`, votre propre commande de mutation, que le pipeline
-ne lance jamais et que [Lancer la mutation sur sa branche](./run-mutation.md) déclare ; ou `e2e`,
-que `skraft doctor` vérifie mais qu'aucune gate ne lance :
+`coverage`, les gates que l'ingénieur logiciel lance par `skraft_repl` ([Lancer les gates](./run-gates.md)) ; `mutation`, votre propre commande de mutation, qu'aucun run du moteur ne démarre
+et que [Lancer la mutation sur sa branche](./run-mutation.md) déclare ; ou `e2e`, la commande de bout en bout d'un front end :
 
 ```json
 "commands": {
@@ -200,24 +199,20 @@ antérieure n'est pas réglée. Sans elles, un run est refusé avant son premier
 $ skraft doctor
 ```
 
-Sans `--run`, aucune de vos commandes n'est lancée : le doctor vérifie Node, le fichier, la forge, la
-racine de chaque composant, au moins une gate par composant et que chaque commande se découpe. Il
-ne cherche jamais un programme sur le PATH ; `--run` le lance.
+Le doctor ne lance aucune de vos commandes : il vérifie Node, le fichier, la forge, la racine de
+chaque composant, au moins une gate par composant et que chaque commande se découpe, et liste les
+commandes de chaque composant. Il ne cherche jamais un programme sur le PATH.
 
 ```text
 ok    node: Node v22.11.0
 ok    config: 2 components: api, web
 ok    forge: github, deduced from the Git remote
-ok    api/build: dotnet build --nologo (parsed; doctor --run starts it)
+ok    api/build: dotnet build --nologo (parsed)
 FAIL  web/test: "npm test > out.txt" uses shell syntax (>); put the steps in a script and call the script
 skraft doctor: 1 checks failed
 ```
 
-Corrigez chaque `FAIL`, puis lancez chaque commande une fois, avec la base calculée :
-
-```console
-$ skraft doctor --run
-```
+Corrigez chaque `FAIL`, puis relancez `skraft doctor`.
 
 Résultat attendu : `skraft doctor: every check passed`, ou `no check failed, N with a warning`.
 Code de sortie 0.

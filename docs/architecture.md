@@ -65,7 +65,7 @@ est en TypeScript.
 (Node) de charger le même code. Une règle d'architecture le vérifie en intégration.
 
 Les features de `application/` : `pipeline` (Init, RunPipeline, Observe), `decisions`
-(Decide), `config` (ConfigureComponents), `diagnostics` (Doctor), `gates` (RunGate),
+(Decide), `config` (ConfigureComponents), `diagnostics` (Doctor),
 `workflow` (WorkflowCommands), `review` (ReviewPullRequest), `journal` (AdoptJournal),
 `publish` (Publish), `migration` (Migrate).
 Un point d'entrée porte le suffixe `-usecase.mjs` ; un helper reste dans sa feature, ou dans
@@ -91,7 +91,7 @@ conduit la boucle `next` / `record`. Sous Claude Code, il n'a pour seul outil qu
 `mcp__skraft__run_pipeline`, aucun outil d'édition ; sous VS Code, il n'écrit que les fichiers
 de réponse que la boucle liste.
 
-Le CLI (`drivers/cli/skraft.mjs`) expose `init`, `status`, `report`, `decide`, `gate`,
+Le CLI (`drivers/cli/skraft.mjs`) expose `init`, `status`, `report`, `decide`,
 `doctor`, `workflow eject|check|diff`, `journal adopt`, `publish`, `migrate`, `review --pr`, et
 la boucle `next` / `record` du repli VS Code. La référence complète est sur le site :
 [La ligne de commande](website/i18n/fr/docusaurus-plugin-content-docs/current/reference/cli.md).
@@ -105,8 +105,8 @@ arêtes, attributs, sous-graphes, commentaires).
 | Forme | Type de nœud |
 |---|---|
 | `Mdiamond`, `Msquare` | début, fin |
-| `box` | agent (`agent=`, `outputs=`, `writes=`, `each="survivor-file"`) |
-| `parallelogram` | gate de commandes (`gate=`), ou publication (`publish="pull-request"`, `publish="playwright-visuals"`) |
+| `box` | agent (`agent=`, `outputs=`, `writes=`) |
+| `parallelogram` | publication (`publish="pull-request"`, `publish="playwright-visuals"`) |
 | `component` → `note` → `octagon` → `tripleoctagon` | revue : fan-out, une lentille par branche (`lens=`, `when="mock"`/`"contract"`), réfuteur (`finding-refuter` sur les findings blocker, high et medium), fan-in qui calcule le verdict |
 | `hexagon` | question humaine (`question=`) |
 | `house` | appel d'un autre workflow (`workflow="review"`) |
@@ -114,8 +114,6 @@ arêtes, attributs, sous-graphes, commentaires).
 - **Garde-fous du graphe** : un seul début, au moins une fin, chaque nœud atteignable, un
   `max_visits` sur toute boucle, des agents qui existent. Un graphe fautif est refusé avec la
   raison avant tout run.
-- **Nœuds `locked`** (gates de DELIVER) : une copie ne les retire qu'avec `unlock="<raison>"`,
-  journalisé et repris dans la pull request.
 - **Nœuds `mandatory`** (revues, lentilles test-integrity et architecture-boundaries) : rien ne
   permet de les retirer, de les contourner ou de les affaiblir ; c'est le graphe du plugin qui
   fait foi, pas l'attribut de la copie.
@@ -188,15 +186,12 @@ Après chaque étape d'agent, le moteur vérifie :
   vérifiés dans l'historique, un vert sans rouge avant lui est refusé ; le moteur ne rejoue aucun test ;
 - **ADR** : cycle de vie et ratification par une décision humaine.
 
-Les **gates** lancent les commandes des composants touchés, depuis leur racine, dans l'ordre
-build, format, lint, test, architecture, coverage ; le moteur écrit les preuves sous
-`<slug>/gates/`. Un échec est classé `environment` (commande introuvable, ligne refusée) ou `deterministic`. La **mutation**
-revient au développeur : le pipeline du plugin n'en lance aucune (`deliver -> gates ->
-deliver_review -> visuals`), et `skraft gate` laisse la commande `mutation` d'un composant. Un
-nœud `gate="mutation"` du workflow propre à une équipe la fait juger par périmètre : 100 % pour
-le cœur (un dossier dont le nom finit par `domain` ou `application`), 80 % pour la frontière (le
-reste) ; il peut être suivi de la boucle `each="survivor-file"` / `proposal=true` / question
-`mutation-plan`. Gates et
+Le moteur ne lance aucune **gate** : dans DELIVER, l'ingénieur logiciel lance build, format,
+lint, test, architecture et coverage de chaque composant touché par `skraft_repl`, et à la
+soumission de la tentative le moteur lit la trace signée (`logs/runs/`) ; sans une exécution
+réussie de chaque gate sur le dernier commit, la tentative est refusée (`evidence`). La
+**mutation** revient au développeur : une recette de sa session (skill `skraft-mutation`), que le
+pipeline ne lance pas (`deliver -> deliver_review -> visuals`). Gates et
 critères de chaque lentille : [Gates](website/i18n/fr/docusaurus-plugin-content-docs/current/reference/gates.md).
 
 ## 8. Revue
@@ -223,12 +218,12 @@ au-delà de `frontier`.
   journalisée non publiée, et le run continue.
 - **Observe** calcule depuis le journal la vue que lisent `skraft status`, le panneau Claude
   Code et, quand l'hôte affiche les canvas (affichage dans l'app Copilot et le terminal du CLI
-  pas encore mesuré), le canvas Copilot `skraft-pipeline` (graphe du workflow, verdicts, gates, coût,
+  pas encore mesuré), le canvas Copilot `skraft-pipeline` (graphe du workflow, verdicts, preuves de qualité, coût,
   question en attente, sans réponse possible : elle se pose dans le chat ; le canvas ne montre pas de coût, Copilot
   comptant en crédits). Sous Copilot, le journal `/workflows` montre aussi les phases et les
   messages du run.
   Après chaque étape, le moteur réécrit `WORKFLOW.md`, `run-report.md` (temps, coût, relances
-  par étape) et `qa-report.md` (plan de test, gates, commits rouges, verdicts) pour
+  par étape) et `qa-report.md` (plan de test, preuves de qualité, commits rouges, verdicts) pour
   l'équipe de qualification.
 
 ## 10. Agents et skills

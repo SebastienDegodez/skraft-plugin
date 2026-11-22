@@ -69,9 +69,8 @@ Write a command to be started **without a shell**, from the component's root:
 ## 4. Add a gate
 
 Add the command under one of the names `build`, `format`, `lint`, `test`, `architecture`,
-`coverage` (the run order); `mutation`, your own mutation command, which the pipeline never runs
-and [Run mutation on your branch](./run-mutation.md) declares; or `e2e`, which `skraft doctor`
-checks but no gate runs:
+`coverage`, the gates the software engineer runs through `skraft_repl` ([Run the gates](./run-gates.md)); `mutation`, your own mutation command, which no engine run starts
+and [Run mutation on your branch](./run-mutation.md) declares; or `e2e`, the end-to-end command of a front end:
 
 ```json
 "commands": {
@@ -192,24 +191,20 @@ Without them a run is refused before its first agent, with
 $ skraft doctor
 ```
 
-Without `--run`, none of your commands runs: the doctor checks Node, the file, the forge, each component's
-root, at least one gate per component and that each command parses. It never looks a program up on
-the PATH; `--run` starts it.
+The doctor starts none of your commands: it checks Node, the file, the forge, each component's
+root, at least one gate per component and that each command parses, and lists each component's
+commands. It never looks a program up on the PATH.
 
 ```text
 ok    node: Node v22.11.0
 ok    config: 2 components: api, web
 ok    forge: github, deduced from the Git remote
-ok    api/build: dotnet build --nologo (parsed; doctor --run starts it)
+ok    api/build: dotnet build --nologo (parsed)
 FAIL  web/test: "npm test > out.txt" uses shell syntax (>); put the steps in a script and call the script
 skraft doctor: 1 checks failed
 ```
 
-Fix each `FAIL`, then run each command once, with the computed base:
-
-```console
-$ skraft doctor --run
-```
+Fix each `FAIL`, then run `skraft doctor` again.
 
 Expected result: `skraft doctor: every check passed`, or `no check failed, N with a warning`.
 Exit code 0.

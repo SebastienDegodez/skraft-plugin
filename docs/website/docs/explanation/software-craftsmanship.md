@@ -43,7 +43,7 @@ saying so. skraft starts from there: **a craft rule exists only if a check runs 
 
 ```mermaid
 flowchart LR
-    V1["Well-crafted<br/>software"] --> M1["Locked gates<br/>fixed quality bar"]
+    V1["Well-crafted<br/>software"] --> M1["Traced gates<br/>fixed quality bar"]
     V2["Steadily<br/>adding value"] --> M2["Walking skeleton<br/>every acceptance test red,<br/>one green per story"]
     V3["Community of<br/>professionals"] --> M3["Review before review<br/>lenses + refutation"]
     V4["Productive<br/>partnerships"] --> M4["Human decisions<br/>ADR ratification, consents"]
@@ -59,8 +59,8 @@ The `skraft-quality-bar` skill is the only place a threshold is written: 80 % mu
 Domain and Application and on API and Infrastructure, judged apart, and 100 % line coverage on
 Domain and Application. There is
 no "advisory" level, no waiver and no per-repository setting; `skraft-config.json` chooses the
-gates' **commands**, never their thresholds. In `pipeline.skraft.dot`, the DELIVER `gates` node
-is `locked`: removing it from a copy of the workflow needs a written reason (`unlock="<reason>"`).
+gates' **commands**, never their thresholds. In DELIVER, the engine refuses an attempt that holds
+no passing traced run of each gate (`evidence`), whatever the workflow copy.
 
 This is skraft's answer to Mancuso's point: quality is not an adjustment variable. The details of
 each gate are in the [gates reference](../reference/gates.md).
@@ -89,8 +89,8 @@ Craftsmanship moves in small increments that work. In skraft, this takes two for
 A green suite does not prove it would catch a mistake. Mutation testing injects small faults into
 the code and measures how many the tests catch
 ([Jia & Harman, 2011](../reference/citations.mdx#cite-jia-mutation-2011)). In skraft, mutation testing is the
-developer's: the plugin's pipeline runs none. The developer picks the tool, writes its
-configuration and runs it apart, against the bar of `skraft-quality-bar`; an agent asked to help
+developer's: neither the plugin's pipeline nor the engine runs it. The developer picks the tool, writes its
+configuration and runs it in their own session (the `skraft-mutation` skill), against the bar of `skraft-quality-bar`; an agent asked to help
 with the survivors reads them with the component's `quality-gates-<stack>` skill. Inside the
 pipeline, the `test-integrity` lens checks that the tests can really fail (its G7) and that no
 test was weakened to pass (its G9).
@@ -125,9 +125,8 @@ waiting. See
 
 ```mermaid
 flowchart LR
-    D["deliver<br/>software-engineer<br/>the groups in plan order"] --> G["locked gates<br/>build · format · lint · test<br/>architecture · coverage"]
-    G -- "FAIL" --> D
-    G -- "PASS" --> DR["DELIVER review<br/>lenses + verdict"]
+    D["deliver<br/>software-engineer<br/>the groups in plan order"] --> G["traced gate runs<br/>build · format · lint · test<br/>architecture · coverage"]
+    G --> DR["DELIVER review<br/>lenses + verdict"]
     DR -- "NEEDS_REWORK" --> D
     DR -- "APPROVED" --> P["pr-writer then publication"]
 ```

@@ -1,6 +1,6 @@
 ---
 title: "Le workflow DOT"
-description: "Syntaxe des workflows skraft : fichiers, graphe, formes de nœud, attributs, arêtes, validité, nœuds verrouillés, obligatoires, revues, appel, review.skraft.dot."
+description: "Syntaxe des workflows skraft : fichiers, graphe, formes et attributs de nœud, arêtes, validité, attributs retirés, nœuds obligatoires, revues, appel."
 persona: tech-lead
 ---
 
@@ -60,9 +60,8 @@ digraph skraft {
 | --- | --- | --- | --- | --- |
 | `Mdiamond` | début | — | — | — ; exactement un par workflow ; aucune arête n'y entre |
 | `Msquare` | fin | — | — | aucune ; au moins une par workflow |
-| `box` | agent | `agent` | `model`, `outputs`, `writes`, `max_attempts`, `each`, `proposal` | exactement une, sans étiquette |
-| `parallelogram` | gate de commandes | `gate` | `goal_gate`, `locked`, `unlock` | une `PASS` (une arête sans étiquette vaut `PASS`), au plus une `FAIL` |
-| `parallelogram` + `publish=` | publication | `publish` | `when` | exactement une, sans étiquette |
+| `box` | agent | `agent` | `model`, `outputs`, `writes`, `max_attempts` | exactement une, sans étiquette |
+| `parallelogram` | publication | `publish` | `when` | exactement une, sans étiquette |
 | `component` | fan-out d'une revue | — | — | une par nœud lentille |
 | `note` | nœud lentille | `lens` | `model`, `when`, `mandatory` | exactement une, vers le réfuteur |
 | `octagon` | réfuteur d'une revue | — | `mandatory` | exactement une, vers le fan-in |
@@ -84,17 +83,12 @@ refusé (`attribute <clé> is not supported on a <forme> node (supported: …)`)
 | `outputs` | chemins séparés par `,`, relatifs au dossier de suivi, sans `..` | remplace les sorties du rôle de l'agent ; `{date}` et `{slug}` remplis au lancement |
 | `writes` | chemins séparés par `,`, relatifs à la copie de travail | s'ajoutent aux chemins que le rôle de l'agent peut écrire |
 | `max_attempts` | entier positif | tentatives par passage ; défaut **3** |
-| `each` | `survivor-file` | `survivor-file` : atteint par l'arête `FAIL` de la gate de mutation, un lancement par fichier portant des mutants survivants ; atteint par une autre arête, un seul lancement, avec ce que l'arête apporte. Les passages de l'histoire suivent les rôles des agents, sans attribut : le designer d'acceptation est lancé une fois et commite le rouge de chaque scénario, l'ingénieur est lancé une fois et fait passer chaque groupe, un commit vert chacun ([Phases](./phases.md#distill)). `each="scenario"` d'une version antérieure est refusé |
-| `proposal` | `true` ou `false` | avec `each="survivor-file"` (obligatoire) : l'agent écrit une proposition par fichier dans le fichier que crée le moteur (`proposals/<nœud>-<visite>-g<n>.md`) et ne change aucun code |
-| `gate` | liste parmi `build`, `format`, `lint`, `test`, `architecture`, `coverage`, `mutation` | lancées dans cet ordre, quel que soit l'ordre écrit |
-| `goal_gate` | `true` ou `false` | une fois les composants modifiés passés, lance aussi les autres composants |
-| `locked` | `true` ou `false` | voir [Nœuds verrouillés](#locked-nodes) |
-| `unlock` | texte non vide | la raison pour laquelle un nœud verrouillé est sauté |
+| `each` | — | retiré : voir [Attributs retirés](#retired-attributes). Les passages de l'histoire suivent les rôles des agents, sans attribut : le designer d'acceptation est lancé une fois et commite le rouge de chaque scénario, l'ingénieur est lancé une fois et fait passer chaque groupe, un commit vert chacun ([Phases](./phases.md#distill)). `each="scenario"` d'une version antérieure est refusé |
 | `publish` | `pull-request` ou `playwright-visuals` | ce que le nœud publie |
 | `when` (publication) | `frontend` | saute le nœud quand aucun composant n'est un front end |
 | `lens` | nom kebab-case | la lentille `<nom>` est l'agent `<nom>-lens` ; une fois au plus par revue |
 | `when` (lentille) | `mock` ou `contract` | voir [Lentilles conditionnelles](#conditional-lenses) |
-| `question` | `adr-ratification`, `scenario-review` ou `mutation-plan` | voir [Phases](./phases.md#human-questions) |
+| `question` | `adr-ratification` ou `scenario-review` | voir [Phases](./phases.md#human-questions) |
 | `workflow` | nom de base kebab-case (`review`) | le workflow appelé |
 | `with_<entrée>` | `base`, `head`, `story`, `documents` ou `components` | lie l'entrée `<entrée>` du workflow appelé à cette valeur du run |
 | `mandatory` | `true` | voir [Nœuds obligatoires](#mandatory-nodes) ; `mandatory=false` est refusé |
@@ -103,7 +97,7 @@ refusé (`attribute <clé> is not supported on a <forme> node (supported: …)`)
 
 | Attribut | Valeur | Règle |
 | --- | --- | --- |
-| `label` | selon le nœud de départ | gate : `PASS`, `FAIL` ; fan-in et appel : `APPROVED`, `NEEDS_REWORK` ; question : une réponse de la question ; toute autre arête n'en prend aucun |
+| `label` | selon le nœud de départ | fan-in et appel : `APPROVED`, `NEEDS_REWORK` ; question : une réponse de la question ; toute autre arête n'en prend aucun |
 | `max_visits` | entier positif | nombre de fois où le run peut prendre l'arête ; obligatoire sur toute boucle |
 
 ## Règles de validité {/* #validity */}
@@ -123,35 +117,31 @@ rendent toutes les erreurs. Un workflow est refusé quand :
 | nœud de travail sans phase | `node <id> has no phase; set phase="<PHASE>" on it or on a node before it` |
 | forme absente ou inconnue | `node <id> has no shape; …`, `node <id>: shape <forme> is not supported (supported: …)` |
 | attribut obligatoire absent | `node <id>: a <forme> node needs <clé>="…"` |
-| nombre d'arêtes sortantes faux | `node <id>: gate node needs exactly one PASS edge, has N`, etc. |
-| étiquette sur une arête qui n'en prend pas | `edge <a> -> <b>: only an edge leaving a gate, a review's fan-in (shape=tripleoctagon), a call (shape=house) or an ask node takes a label` |
+| nombre d'arêtes sortantes faux | `node <id>: a review fan-in needs exactly one APPROVED edge, has N`, etc. |
+| étiquette sur une arête qui n'en prend pas | `edge <a> -> <b>: only an edge leaving a review's fan-in (shape=tripleoctagon), a call (shape=house) or an ask node takes a label` |
 | agent, lentille, `finding-refuter` ou skill qu'une lentille liste introuvable | le nœud, l'agent et la skill nommés |
-| `proposal=true` sans `each="survivor-file"` | `node <id>: proposal=true needs each="survivor-file", the mutants it proposes for` |
 | `each="scenario"` sur un nœud | `node <id>: each="scenario" is gone: the engine dispatches the acceptance designer once and the software engineer once per story; remove each="scenario" (skraft workflow diff shows the plugin's)` |
 | `question="scenario-review"` sans nœud qui lance le designer d'acceptation, ou sans nœud qui lance l'ingénieur | `node <id>: question="scenario-review" needs the node that writes the scenarios and the node that delivers them` |
+| un nœud gate, `goal_gate`, `locked`, `unlock`, `each`, `proposal` d'une version antérieure | refusé avec un message de migration : [Attributs retirés](#retired-attributes) |
 | forme `lenses="…"` (ancienne) | refusée ; le message écrit, en DOT, les nœuds et arêtes qui la remplacent |
 
-Valide, `skraft workflow check` affiche `<fichier> is valid: phases RESEARCH, DESIGN, …` et, pour
-chaque nœud déverrouillé, `; <nœud> is unlocked and skipped: <raison>`.
+Valide, `skraft workflow check` affiche `<fichier> is valid: phases RESEARCH, DESIGN, …`.
 
-## Nœuds verrouillés {/* #locked-nodes */}
+## Attributs retirés {/* #retired-attributes */}
 
-Les gates de DELIVER du workflow du plugin (`gates`) portent `locked=true`. Une copie
-qui les retire ou les change est refusée, sauf à les sauter avec `unlock="<raison>"`, que le
-journal et la pull request reprennent.
+skraft ne lance plus ni gate ni mutation : l'ingénieur logiciel lance chaque gate par `skraft_repl`, et
+le moteur contrôle les exécutions tracées de sa tentative ([Gates](./gates.md#command-gates)). Un
+workflow de dépôt éjecté plus tôt qui contient encore un nœud gate ou l'un de ces attributs est
+refusé, un message par attribut :
 
-| Une copie est refusée quand le nœud verrouillé… | Message |
+| Trouvé | Message |
 | --- | --- |
-| manque | `locked node <id> is missing; keep it with unlock="<reason>" to skip it` |
-| perd une de ses gates | `locked node <id> drops <gates>; keep them, or skip the node with unlock="<reason>"` |
-| perd `goal_gate=true` | `locked node <id> must stay goal_gate=true; skip it with unlock="<reason>" instead` |
-| n'a plus d'arête `FAIL` vers un agent de sa phase | `locked node <id> has no FAIL edge back to an agent of <PHASE>` |
-| est contourné | `<nœud> reaches the exit without passing <id>; keep the run going through <id>, or skip <id> with unlock="<reason>"` |
+| un nœud gate (`gate="…"`) | `a gate node is gone: skraft runs no gate. The software engineer runs each gate through skraft_repl, and the engine checks the traced runs of its attempt; remove the node and its PASS and FAIL edges (skraft workflow diff shows the plugin's pipeline)` |
+| `goal_gate`, `locked`, `unlock` | `<attribut> is gone with the gate node: skraft runs no gate` |
+| `each`, `proposal` | `<attribut> is gone with the mutation the engine ran: mutation testing is a recipe of the session (the skraft-mutation skill), not a node` |
 
-Un nœud de gates qui lance toutes les gates d'un nœud verrouillé (son `goal_gate` compris) et
-n'est pas déverrouillé tient lieu de lui pour ce contrôle : dans le workflow d'une équipe qui
-lance la mutation, un nœud `mutation_gates` qui lance toutes les gates de `gates` en tient lieu
-sur le chemin `kill_mutants -> … -> mutation`.
+Un nœud de revue ou d'appel garde ses étiquettes `APPROVED` et `NEEDS_REWORK`. Un run en cours qui
+pointe sur un nœud retiré se bloque avec le code `node-retired` ([Gates](./gates.md#command-gates)).
 
 ## Nœuds obligatoires {/* #mandatory-nodes */}
 
@@ -162,7 +152,7 @@ Les workflows du plugin marquent `mandatory=true` :
 - dans `review.skraft.dot` : le fan-in `verdict`, son réfuteur `refuter` et les lentilles
   `test_integrity` et `architecture_boundaries`.
 
-Rien ne permet à un dépôt d'en sauter un : pas d'`unlock`, pas d'option CLI, pas de réglage
+Rien ne permet à un dépôt d'en sauter un : pas d'option CLI, pas de réglage
 dans `skraft-config.json`. Le workflow du plugin décide : retirer l'attribut de la copie ne
 change rien, et `mandatory=false` est refusé.
 
@@ -220,7 +210,7 @@ distill_review -> deliver [label="APPROVED"]
 
 ```dot
 deliver_review [shape=house, workflow="review", mandatory=true]
-gates -> deliver_review [label="PASS"]
+deliver -> deliver_review
 deliver_review -> deliver [label="NEEDS_REWORK", max_visits=2]
 deliver_review -> visuals [label="APPROVED"]
 ```
@@ -322,7 +312,6 @@ parenthèses est héritée du prédécesseur.
 | `distill_review_lenses` → `distill_review` | revue | lentilles `coverage`, `business-alignment`, `testability`, `boundary-enforcement` ; fan-in `mandatory=true` | (DISTILL) |
 | `scenario_review` | `hexagon` | `question="scenario-review"` | (DISTILL) |
 | `deliver` | `box` | `agent="software-engineer"` | DELIVER |
-| `gates` | `parallelogram` | `gate="build,format,lint,test,architecture,coverage"`, `goal_gate=true`, `locked=true` | DELIVER |
 | `deliver_review` | `house` | `workflow="review"`, `mandatory=true` | (DELIVER) |
 | `visuals` | `parallelogram` | `publish="playwright-visuals"`, `when="frontend"` | (DELIVER) |
 | `pr_writer` | `box` | `agent="pr-writer"` | PUBLISH |
@@ -339,18 +328,12 @@ parenthèses est héritée du prédécesseur.
 | `distill_review -> scenario_review` | `APPROVED` | — |
 | `scenario_review -> deliver` | `APPROVED` | — |
 | `scenario_review -> distill` | `REVISE` | 2 |
-| `gates -> deliver` | `FAIL` | 3 |
-| `gates -> deliver_review` | `PASS` | — |
 | `deliver_review -> deliver` | `NEEDS_REWORK` | 2 |
 | `deliver_review -> visuals` | `APPROVED` | — |
 
-Le pipeline du plugin ne lance aucune mutation : le développeur la lance à part, dans un run qui
-suit `workflows/mutation.skraft.dot` (la gate `mutation`, puis la boucle de kill que les attributs
-ci-dessus permettent : `each="survivor-file"`, `proposal=true`, `question="mutation-plan"`), ou
-`.skraft/mutation.skraft.dot` quand la copie de travail en a une. Une équipe qui veut la mutation
-à chaque run de story ajoute un nœud `gate="mutation"` à son propre pipeline.
+Le pipeline du plugin ne lance ni mutation ni gate : l'ingénieur logiciel lance les gates par `skraft_repl`, et la mutation est une recette de la session du développeur ([Lancer la mutation](../how-to/run-mutation.md)).
 
-Les autres arêtes n'ont ni étiquette ni plafond : `start -> research -> design`, `distill -> distill_review_lenses`, `deliver -> gates`,
+Les autres arêtes n'ont ni étiquette ni plafond : `start -> research -> design`, `distill -> distill_review_lenses`, `deliver -> deliver_review`,
 `visuals -> pr_writer -> publish -> exit`, et celles
 de chaque revue. Aucune arête ne ramène `deliver` à `distill` : le designer d'acceptation est lancé une fois et
 commite le rouge de chaque scénario, l'ingénieur est lancé une fois et fait passer chaque groupe.

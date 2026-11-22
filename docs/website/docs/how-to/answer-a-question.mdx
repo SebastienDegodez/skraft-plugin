@@ -1,6 +1,6 @@
 ---
 title: "Answer a run's question"
-description: "Answer the question a run waits on (an ADR, a consent, the machine, a blocked agent, the mutants) from your host, and what becomes of a refusal."
+description: "Answer the question a run waits on (an ADR, a consent, the machine, a blocked agent) from your host, and what becomes of a refusal."
 persona: software-engineer
 ---
 
@@ -41,7 +41,6 @@ The `answer:` line gives the key (`adr-1`) and the allowed answers:
 | `scenario-review` (header `Scenarios`) | `APPROVED`, `REVISE` | with `REVISE`: your corrections, sent to DISTILL |
 | `review-consent` (`skraft review --pr --publish`, header `PR comment`) | `ACCEPTED`, `DECLINED` | — |
 | `environment` | `RETRY` (once the machine or `skraft-config.json` is repaired), `ABORT` | — |
-| `mutation-plan` | `APPLY`, an instruction of your own, or `STOP` | — |
 | `blocked` | an instruction for the agent, or `STOP` | — |
 
 What each answer triggers: [Questions to a human](../reference/run-journal.md#human-questions).
@@ -69,8 +68,8 @@ printed on its `Output:` line:
 
 1. Pick an option in the dialog the mod opens (header `ADR`, `Pull request`, `Environment`…).
 2. For a refusal (`REJECTED`, `REVISE`), a second dialog asks for the reason: type it under **Other**.
-3. For a `blocked` or `mutation-plan` question, type your instruction under **Other**, or pick
-   `STOP` (`APPLY`).
+3. For a `blocked` question, type your instruction under **Other**, or pick
+   `STOP`.
 
 With the dialog closed, the run waits. Answer later with a button of the **Skraft** pane, or in
 the conversation:

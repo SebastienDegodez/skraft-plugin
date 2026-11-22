@@ -148,7 +148,7 @@ version changes. `paths` is also the **write scope** of DELIVER: the software en
 `.gitignore`.
 
 Three answers are yours to give, and `skraft init` writes none. The first is the commands: the
-gates run the ones you write, so give `web` its test command, the script of `web/package.json`:
+engineer runs the ones you write, so give `web` its test command, the script of `web/package.json`:
 
 ```json title="skraft-config.json"
       "commands": { "test": "npm test" }
@@ -303,8 +303,9 @@ first, uncommitted, then one commit for the story, `feat(checkout): S1–S2 <the
 `npm test`, so the commit exists only when the tests pass. It makes S1's test, S2's and the
 walking skeleton pass together; a second green commit is refused (`green-split`).
 
-The engine then runs the component's gates (`test`), then the DELIVER review (test-integrity,
-architecture-boundaries, cold-reader). The pane ticks `gates` and `deliver_review`.
+The engineer runs the component's gates through `skraft_repl` (the commit line is the `test` run),
+the engine checks their signed trace, then the DELIVER review (test-integrity,
+architecture-boundaries, cold-reader) runs. The pane ticks `deliver` and `deliver_review`.
 
 ## 9. PUBLISH <!-- #9-publish -->
 
@@ -334,16 +335,6 @@ $ skraft status
 *Figure 3 — A finished run: every phase is `closed`. Captured on the integration tests' scripted
 repository; under Claude Code, a `cost:` line is added with the cost the host reported.*
 
-Run the gates yourself on the delivered code:
-
-```console
-$ skraft gate --all
-```
-
-![Terminal: skraft gate --all, pass web/test, "1 gates passed on web"](/img/screenshots/shared/terminal-gates.svg)
-
-*Figure 4 — The gate of the `web` component passes; its `mutation` command is yours to run.*
-
 The tracking folder `.copilot-tracking/skraft-plans/checkout/` now holds:
 
 | File | What it is |
@@ -351,10 +342,9 @@ The tracking folder `.copilot-tracking/skraft-plans/checkout/` now holds:
 | `events.jsonl` | the journal: one signed, chained event per fact |
 | `WORKFLOW.md` | the workflow graph with each step done |
 | `run-report.md` | the table `skraft report` prints (time, cost and retries of each step), then each commit the engine checked with its verdict |
-| `qa-report.md` | the test plan, the last gates, the red commits, each review's verdict |
+| `qa-report.md` | the test plan, the quality evidence, the red commits, each review's verdict |
 | `pull-request.md` | the pull request description, ready to publish |
-| `gates/web/` | the output of each gate |
-| `logs/` | the designer's run of the acceptance tests, and what refused commits and agents' commands printed |
+| `logs/` | the designer's run of the acceptance tests, the signed trace of the engineer's gate runs (`logs/runs/`), and what refused commits printed |
 | `reviews/` | what each review pass read, and its `verdict.yaml` |
 
 Open `pull-request.md`: it is the result of your first run. `git log --oneline` shows, on
@@ -372,7 +362,7 @@ RESEARCH to PUBLISH and its pull request description. On the way, you learned th
   on;
 - `/skraft <slug> #<issue> <title>` starts the story; the engine drives each phase, asks you only
   for decisions, and records everything;
-- `skraft status` reads the run from a terminal, and `skraft gate` runs its gates again;
+- `skraft status` reads the run from a terminal, and the pull request lists the quality evidence of the delivery;
 - the run ends with a pull request description, published when you consent.
 
 ## Next steps <!-- #next-steps -->

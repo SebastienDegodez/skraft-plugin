@@ -78,7 +78,7 @@ Le calcul exact du verdict : [Gates](../../reference/gates.md#review-run).
 
 ## Les lentilles de DELIVER en pratique
 
-En DELIVER, les gates de commandes passent d'abord ; viennent ensuite les lentilles, chacune
+En DELIVER, le moteur contrôle d'abord les exécutions tracées de gates de la tentative ; viennent ensuite les lentilles, chacune
 indépendante et sur un angle différent.
 
 | Lentille | Ce qu'elle vérifie |

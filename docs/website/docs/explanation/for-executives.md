@@ -74,10 +74,10 @@ PowerShell. The engine's tests run on Windows, macOS and Linux.
 ### Auditable traceability
 
 Every run writes an **event journal**: one line per fact (step started, result recorded,
-phase closed, gate run). Each line carries the SHA-256 hash of the previous line and a
+phase closed, gate evidence checked). Each line carries the SHA-256 hash of the previous line and a
 signature under a key of the machine that runs it. A hand edit breaks that chain and the
-engine stops and says so. **Gate evidence** (command,
-directory, result, output) is written by the engine, never by the model.
+engine stops and says so. **Gate evidence** (the signed runs of the
+software engineer, by gate, folder and log hash) is checked by the engine, never asserted by the model.
 
 ### Autonomous teams, without waiting for a release
 
@@ -89,9 +89,9 @@ however, are not negotiable: they are not configurable.
 
 ### What it takes to qualify a delivery
 
-The coverage gate leaves its evidence in the run folder. Mutation testing is the developer's:
-the pipeline runs none, and the developer's own run must reach 80 % on the business core and
-elsewhere. `qa-report.md` gathers the test plan, the gates and the review verdicts for the
+Each gate, coverage included, leaves its traced run in the run folder. Mutation testing is the developer's:
+neither the pipeline nor the engine runs it, and the developer's own run must reach 80 % on the business core and
+elsewhere. `qa-report.md` gathers the test plan, the quality evidence and the review verdicts for the
 QA team;
 `run-report.md` gives the time, cost and retries of each step. The run ends with a pull request
 described from the journal, with the screenshots of a front end.

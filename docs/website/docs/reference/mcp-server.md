@@ -36,20 +36,18 @@ end.
 
 Every tool also takes `workspace` ([the folder a tool works in](#workspace)). Its answer is the
 command's stdout, then its log; it is an error only when the command failed without printing an
-answer, so a failing doctor or gate still answers its JSON.
+answer, so a failing doctor still answers its JSON.
 
 | Tool | Arguments | Command line | Offered to |
 | --- | --- | --- | --- |
-| `skraft_doctor` | `run?`, `base?` | `doctor [--run] [--base <ref>] --json` | every host |
+| `skraft_doctor` | — | `doctor --json` | every host |
 | `skraft_init` | `add?` (folders) | `init [--add <folder>]...` | every host |
-| `skraft_mutation` | `record?`, `key?`, `answer?`, `reason?` | `mutation [record] --json`; with `answer`, records the human reply on the branch's mutation run, as `skraft_answer` does on the pipeline | every host |
 | `skraft_start` | `slug`, `issue?`, `title?`, `base?`, `fromArtifacts?` | `init <slug> [--issue <n>] [--title <t>] [--base <ref>] [--from-artifacts]` | VS Code |
 | `skraft_next` | — | `next --json` | VS Code |
 | `skraft_record` | — | `record --json` | VS Code |
 | `skraft_status` | — | `status --json` | every host |
 | `skraft_report` | — | `report --json` | every host |
 | `skraft_journal` | `last?` | `journal show [--last <n>] --json` | every host |
-| `skraft_gate` | `all?` | `gate [--all] --json` | every host |
 | `skraft_precheck` | — | `precheck --json` | every host |
 | `skraft_repl` | `code` | the REPL of the open attempt, [`skraft_repl`](./repl.md); no command line: the use case answers, outside the queue | every host; the agents that name it |
 | `skraft_review` | `pr`, `record?` | `review --pr <n> [--record] --json` | VS Code |

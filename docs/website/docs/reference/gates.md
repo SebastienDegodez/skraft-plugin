@@ -5,7 +5,7 @@ description: "The engine's command gates and the review criteria (Gxx and other 
 
 # Gates
 
-A gate is a binary criterion written in advance: a command that exits with 0, or a criterion a review lens declares held or not.
+A gate is a binary criterion written in advance: a command that exits with 0 in a traced run, or a criterion a review lens declares held or not.
 
 Why written criteria and an independent review:
 [Review before review](../explanation/deep-dive/review-before-review.md).
@@ -15,7 +15,7 @@ Where each review sits in the pipeline: [Phases](./phases.md).
 
 | Kind | Ids | Who judges it | Where |
 | --- | --- | --- | --- |
-| Command gate | `build`, `format`, `lint`, `test`, `architecture`, `coverage`, `mutation` | the engine, by the exit code of the component's command | DELIVER's `gates` node and `skraft gate`; `mutation` only in a team's own workflow |
+| Command gate | `build`, `format`, `lint`, `test`, `architecture`, `coverage` | the software engineer runs it through `skraft_repl`; the engine checks the signed trace | DELIVER, at the submission of the attempt |
 | Review criterion | `G<n>`, and `C1`, `F1`, `B1`, `T<n>`, `E<n>`, `M<n>`, `K<n>` | a lens, then the engine (DESIGN, DISTILL, DELIVER) or `review-verdict.mjs` (DISCOVER, DISCUSS) | each phase's reviews |
 | Engine check tied to a criterion | G2, G10, G12, G14 (DESIGN); G1 (`gherkin-records`), G11 (`testability#layout`) (DISTILL); G9 (`test-integrity#patch`) | the engine, without a lens | after the architect's attempt; after the acceptance designer's attempt; in a review's patch |
 
@@ -24,32 +24,48 @@ its agent descriptor, is the source; a lens puts the id in the `gate` field of e
 
 ## Command gates <!-- #command-gates -->
 
-The gates are a component's commands whose name is one of the seven below, in
-`skraft-config.json`. They run in that order, whatever the file's order, from the component's
-root; a component stops at its first failing gate.
+The gates are a component's commands whose name is one of the six below, in
+`skraft-config.json`. The engine runs none of them: in DELIVER the software engineer runs each one
+through the MCP tool `skraft_repl` (`gate(name, command, { cwd })`, see [The REPL](./repl.md)), and
+the engine reads the signed trace of those runs when the attempt is submitted.
 
-| Order | Gate | Node of the plugin's workflow |
-| --- | --- | --- |
-| 1 | `build` | `gates` |
-| 2 | `format` | `gates` |
-| 3 | `lint` | `gates` |
-| 4 | `test` | `gates` |
-| 5 | `architecture` | `gates` |
-| 6 | `coverage` | `gates` |
-| 7 | `mutation` | none: the developer's; `skraft gate` and `skraft doctor --run` leave it too |
+| Gate | What it proves |
+| --- | --- |
+| `build` | the component compiles |
+| `format` | the code is formatted |
+| `lint` | the linter is silent |
+| `test` | the whole test suite passes; the run of the commit line (the whole unfiltered suite chained to `git add` and `git commit`, label `green`) is this run |
+| `architecture` | the dependency rules hold |
+| `coverage` | the coverage bar holds |
+
+`mutation` is not a gate: it is a recipe of the developer's session ([Run mutation](../how-to/run-mutation.md)).
 
 | Rule | Detail |
 | --- | --- |
-| Result | `pass` (exit 0) or `fail`, class `interrupted`, `environment` or `deterministic` ([failure classes](./skraft-config.md#failure-classes)) |
-| Component with no gate command | gate `none`, `fail`, class `environment`; in a run, the `environment` question names the cause `config` |
-| Scope | the components changed since their base; `goal_gate=true` then runs all the others; `skraft gate --all` runs them all |
-| Edges | every gate of the node passes: the `PASS` edge; one fails: the `FAIL` edge (`gates`: `PASS` to `deliver_review`, `FAIL` to `deliver`) |
-| Machine | a gate step that fails as `environment` takes no edge: the run asks the `environment` question ([causes](./run-journal.md#environment-question)), sends nothing back to an agent and uses none of its attempts; a gate stopped by a signal or a crash fails as `deterministic` and takes the `FAIL` edge with its evidence, like a failing check |
-| Loop ceiling | a failed gate step takes its `FAIL` edge until that edge's `max_visits`; one more failure asks the `blocked` question (code `loop-ceiling`) about the node that edge leads to; an instruction sends the work back there, `STOP` ends the run |
-| Mutation | the story's pipeline runs none: the developer's mutation run (`workflows/mutation.skraft.dot`) runs the `mutation` command, as does a `gate="mutation"` node of a team's own workflow. The engine judges the result the command writes to `SKRAFT_MUTATION_RESULT`, else the report its tool writes, against **80 %** on the core (Domain, Application) and **80 %** on the boundary (the rest), judged apart ([The mutation result](./skraft-config.md#mutation-result)) |
-| Thresholds | none is configurable |
-| Lock | `gates` is `locked=true`: a copy of the workflow drops them only with `unlock="<reason>"` ([The DOT workflow](./workflow-dot.mdx#locked-nodes)) |
-| Evidence | `gates/<component>/<gate>-<n>.log` and a `gate.ran` event ([Tracking folder and journal](./run-journal.md#gate-evidence)) |
+| Who runs | the software engineer, through `skraft_repl`, in each component the story changed |
+| Absent gate | a gate the project's documents name no command for is declared with `absent(gate, component, reason)`; `test` is never absent |
+| Trace | `logs/runs/<step>-<visit>-<attempt>/runs.jsonl`, signed; one folder per attempt |
+| Check | at the submission of the attempt, for each component the story changed, the last run of each gate under its folder exited 0, started on a clean tree (the commit line's run excepted) and ended on the final commit; or the gate was declared absent |
+| Refusal | the failure code `evidence`, one fixed line per gate, with no output and no command; open runs, an unsigned or edited trace and a missing key refuse the attempt too |
+| Journal | `evidence.checked` with `runs: [{ run, gate, cwd, log, sha256 }]` ([Tracking folder and journal](./run-journal.md#gate-evidence)) |
+| Report | the "Quality evidence" table of the pull request, the issue comment and `qa-report.md` (Gate, Folder, Run, Evidence), the Claude Code pane row `Quality evidence: build run 1, test run 4` and the Copilot canvas line |
+| Thresholds | none is configurable; the mutation bar (80 on the core, 80 on the boundary) is a read-only number of the configuration view |
+
+### Workflows that still hold a gate
+
+A workflow ejected earlier that holds a gate node or one of its attributes is refused, one
+message per attribute:
+
+| Found in the workflow | Message |
+| --- | --- |
+| a node of shape `parallelogram` or a `gate` attribute | `a gate node is gone: skraft runs no gate. The software engineer runs each gate through skraft_repl, and the engine checks the traced runs of its attempt; remove the node and its PASS and FAIL edges (skraft workflow diff shows the plugin's pipeline)` |
+| `goal_gate`, `locked` or `unlock` | `<attribute> is gone with the gate node: skraft runs no gate` |
+| `each` or `proposal` | `<attribute> is gone with the mutation the engine ran: mutation testing is a recipe of the session (the skraft-mutation skill), not a node` |
+
+A run in progress that points at a retired node (`gates`, `mutation`, `mutation_gates`,
+`kill_proposal`, `kill_mutants`, or a step that ran gates) blocks with the code `node-retired`:
+"the node X was retired: skraft runs no gate and no mutation any more ... start the story again
+with the plugin's workflow".
 
 ## Review criteria <!-- #review-criteria -->
 
@@ -199,7 +215,7 @@ these lenses; the DELIVER review reads them.
 
 ## DELIVER <!-- #deliver -->
 
-DELIVER goes through the `gates` gates, then the `deliver_review` call of the `review` workflow.
+DELIVER goes through the software engineer's traced gate runs, then the `deliver_review` call of the `review` workflow.
 The same lenses judge
 a pull request through `skraft review --pr`.
 
@@ -208,7 +224,7 @@ a pull request through `skraft review --pr`.
 | **G7** | `test-integrity` | No test theater: every test can fail when the behaviour it names breaks. | blocker |
 | **G9** | `test-integrity` | No test changed to pass: no weakened assertion, no deleted test, no skip or focus added, no acceptance value that drifted from the `.feature`. | blocker |
 | **G4** | `architecture-boundaries` | No test double on a Domain or Application type in a unit test. | blocker |
-| **G5** | `architecture-boundaries` | Dependencies point inward: Domain → nothing, Application → Domain, API and Infrastructure → Application; skipped for a component whose `architecture` gate passed in this run. | blocker |
+| **G5** | `architecture-boundaries` | Dependencies point inward: Domain → nothing, Application → Domain, API and Infrastructure → Application; skipped for a component whose `architecture` gate has a passing traced run in this attempt. | blocker |
 | **G10** | `architecture-boundaries` | Domain code follows the 9 Object Calisthenics rules. | medium |
 | **G11** | `cold-reader` | Tests and production code speak the business language and show their intent. | medium |
 | **M1** | `mock-fidelity` | The test follows its component's mocking strategy. | high |
@@ -249,8 +265,7 @@ cites no other issue (`issue-not-in-story`) and closes none (`issue-closed`).
 | --- | --- | --- |
 | `distill`, plan pass | one red holding the walking skeleton, the acceptance test of every scenario and the skeleton they call, in the components the scenarios name, and the `.feature` of those components; none for a story exempt of a walking skeleton and tests; `.feature` and Markdown files go with it or in a `docs` commit, wherever they live | a second red (`oracle-split`); a red in a component no scenario names (`oracle-component`); a red with no file of the component's test paths (`oracle-without-test`); a green or refactor (`code-in-oracle`); none at all |
 | `deliver`, the story's pass | one green, for the whole story, whatever its subject names, chained in bash: `<test command> && git add <files> && git commit …`; the groups of the implementation plan are the order of work, not a count of commits; a change to another component a group needs is accepted and journaled under `green.others` | a red (`test-in-scenario`); a refactor (`refactor-in-scenario`); a second green (`green-split`: squash it into the first); a change to a file of the acceptance-test commit, the walking skeleton's included, outside the component's `src` paths (`oracle-touched`); none at all |
-| `deliver` sent back by the gates or the review, after the story's pass | reds, greens and refactors on the whole story | a green with no red since the last green (`green-without-red`); a change to a file of the acceptance-test commit (`oracle-touched`); on a pass the gates sent back, their failure stands for the first red |
-| `kill_mutants`, in a team's own workflow | tests that kill mutants and pass | — |
+| `deliver` sent back by the review, after the story's pass | reds, greens and refactors on the whole story | a green with no red since the last green (`green-without-red`); a change to a file of the acceptance-test commit (`oracle-touched`); on a pass the review sent back, its finding stands for the first red |
 
 Whether a red fails on an assertion is read, not run: the acceptance designer runs the walking
 skeleton and the acceptance tests once, writes that run's whole output to `logs/<node>-<visit>-red.log`

@@ -43,12 +43,8 @@ usage: skraft --version
        skraft migrate [--dry-run] [--json]                               turn the v1 runs in progress and skraft-config.json into V2 ones
        skraft next [--json]                                              run the active pipeline until it needs agents or a human
        skraft record [--json]                                            hand the saved agent replies to the run, then go on
-       skraft gate [--all] [--json]                                      run the gates of the changed components (all with --all)
        skraft precheck [--json]                                          run, inside the open attempt, the mechanical checks the engine runs on its submission, and keep what it read
-       skraft doctor [--run] [--base <ref>] [--json]                     check the configuration and that every command parses (--run: start each once)
-       skraft mutation [--json]                                          mutate the branch HEAD is on with the mutation workflow, in its own run, until it needs agents or a human
-       skraft mutation record [--json]                                   hand the saved agent replies to the branch's mutation run, then go on
-       skraft mutation decide [<key>] <answer> [--reason <text>]         answer the question the branch's mutation run waits on
+       skraft doctor [--json]                                            check the configuration and list each component's commands (it starts none)
        skraft review --pr <number> [--publish] [--record] [--json]       review one pull request with the review workflow (--publish: keep its verdict in a comment)
        skraft workflow eject [review]                                    copy the plugin pipeline into .skraft/ (review: the review alone)
        skraft workflow check [--json]                                    validate the workflow a run follows
@@ -78,9 +74,6 @@ Option rules shared by every command:
 | `journal adopt` | journal adopted | refusal or not confirmed (below) | other than `adopt [--pr <number>]` |
 | `migrate` | nothing needs a person | a run refused, a key unmapped, no component listed, no run migratable | any argument but `--dry-run`, `--json` |
 | `next`, `record` | `dispatch`, `waiting` or `done` | `blocked` or `refused` | argument other than `--json` |
-| `mutation`, `mutation record` | `dispatch`, `waiting` or `done` | `blocked` or `refused` | argument other than `--json` |
-| `mutation decide` | as `decide` | as `decide` | as `decide` |
-| `gate` | gates `passed` (including no component changed) | `failed`, `refused`, `blocked` | malformed line |
 | `doctor` | no `FAIL` check (warnings allowed) | at least one `FAIL` check | malformed line |
 | `workflow eject`, `check`, `diff` | copied, valid, compared | copy exists, invalid, nothing ejected | unknown action or option |
 | `review` | `APPROVED`, or agents handed over (`dispatch`) | `NEEDS_REWORK`, `BLOCKED`, `stopped`, `refused` | no `--pr`, a number that is not a positive integer, malformed line |
@@ -168,10 +161,10 @@ cost: ~$<amount>
 ```
 
 With no active pipeline, the first line is `skraft: idle`. The `agent:` line becomes
-`gates: <gates> (<step>)` on a gate node and `question: <kind> (<step>)` on an ask node;
+`question: <kind> (<step>)` on an ask node;
 `, pass <n>` follows the step from the second visit on. The `answer:` line shows only while
 the run waits on a question; for a `blocked` question it reads
-`answer: skraft decide <key> "<instruction>"|STOP`, for the `mutation-plan` question `APPLY|"<instruction>"|STOP`. A run waiting on ADR ratification, for example:
+`answer: skraft decide <key> "<instruction>"|STOP`. A run waiting on ADR ratification, for example:
 
 ```
 skraft checkout-by-card: waiting
@@ -189,15 +182,15 @@ Ratify the Proposed ADRs docs/adr/adr-001-card-provider.md? RATIFIED marks them 
 | `status` | string | `idle`, `not-initialised`, `running`, `waiting`, `done`, `blocked`, `tampered` |
 | `reason` | string | reason for the status (the question text while `waiting`), empty when none |
 | `phases` | `[{ phase, state }]` | one entry per phase; `state` = `pending`, `open` or `closed` |
-| `current` | `{ step, phase, agent, gates, question, visit, attempt }` or null | the node in progress, `null` otherwise; `question` is the question kind on an ask node, `null` elsewhere |
-| `question` | `{ key, kind, text, options, refusals, header }` or null | the question the run waits on, `null` when nothing waits; `header` = the short label a dialog or the pane shows beside it (`ADR`, `Reporting`, `Pull request`, `Scenarios`, `Mutation`, `Environment`, `Blocked`) |
+| `current` | `{ step, phase, agent, question, visit, attempt }` or null | the node in progress, `null` otherwise; `question` is the question kind on an ask node, `null` elsewhere |
+| `question` | `{ key, kind, text, options, refusals, header }` or null | the question the run waits on, `null` when nothing waits; `header` = the short label a dialog or the pane shows beside it (`ADR`, `Reporting`, `Pull request`, `Scenarios`, `Environment`, `Blocked`) |
 | `attempts` | number | number of attempts started |
 | `costUsd` | number or null | sum of journaled costs, `null` when none |
 | `graph` | `{ nodes, edges }` | the graph of the workflow the run follows (default or `.skraft/`); with no readable workflow, the steps the journal names and no edge |
-| `graph.nodes` | `[{ id, kind, phase, what, state, outcome, visits, attempts, retries, durationMs, costUsd }]` | one entry per step (neither `start` nor `exit`) in workflow order; `what` = the agent, gates, lenses, question or publication; `state` = `pending`, `open` or `done`; `outcome` = what the last attempt recorded, `null` while an attempt is open; `costUsd` = the step's cost, `null` when none |
+| `graph.nodes` | `[{ id, kind, phase, what, state, outcome, visits, attempts, retries, durationMs, costUsd }]` | one entry per step (neither `start` nor `exit`) in workflow order; `what` = the agent, lenses, question or publication; `state` = `pending`, `open` or `done`; `outcome` = what the last attempt recorded, `null` while an attempt is open; `costUsd` = the step's cost, `null` when none |
 | `graph.edges` | `[{ from, to, label, taken }]` | the edges between those steps; `taken` = how many times the run took it |
 | `reviews` | `[{ step, visit, verdict, lenses: [{ lens, verdict, findings }] }]` | the last pass of each review step; `verdict` = `approved`, `needs-rework` or `blocked`, `null` until the pass is recorded; `findings` = how many findings the lens gave |
-| `gates` | `[{ component, gate, command, status, durationMs, evidence, survivors }]` | the last result of each gate of each component (the tests among them); `survivors` only for `mutation` |
+| `evidence` | `[{ gate, folder, run, log }]` | the traced runs of `skraft_repl` the last delivery attempt that held its evidence stands on, in the order they ran (the `evidence.checked` event); `[]` before one did |
 
 What each status means:
 [Tracking folder and journal](./run-journal.md). Code 1 only
@@ -215,7 +208,7 @@ acts on the answer, without starting again an agent that already finished.
 
 | Argument / option | Value | Rule |
 | --- | --- | --- |
-| `<key>` | question key (`adr-1`, `gates-2`) | optional; without it, the question the run waits on |
+| `<key>` | question key (`adr-1`, `scenario_review-2`) | optional; without it, the question the run waits on |
 | `<answer>` | one of the question's options (`RATIFIED`, `REJECTED`, `RETRY`, `ABORT`…); for a `blocked` question, the instruction in quotes, or `STOP` | an option in any case; an instruction is kept on one line, the `--reason` text after it, at most 1000 characters (refused beyond, never cut) |
 | `--reason <text>` | the reason, sent back to the agent | required with a refusal (`REJECTED`); kept on one line, at most 500 characters |
 
@@ -225,18 +218,17 @@ The questions, their options and their refusals:
 | --- | --- | --- | --- |
 | `adr-ratification` | `<node>-<n>` (`adr-1`) | `RATIFIED`, `REJECTED` | `REJECTED` |
 | `scenario-review` | `<node>-<n>` (`scenario_review-1`) | `APPROVED`, `REVISE` | `REVISE` |
-| `environment` | `<node>-<n>`, the node that cannot run (`gates-1`) | `RETRY`, `ABORT` | — |
-| `mutation-plan` | `<node>-<n>` (`mutation_plan-1`) | `APPLY`, an instruction, or `STOP` (ends the run `blocked`, code `stopped`) | — |
+| `environment` | `<node>-<n>`, the node that cannot run (`deliver-1`) | `RETRY`, `ABORT` | — |
 | `blocked` | `<node>-<n>`, the node an instruction runs again (`design-1`) | an instruction, or `STOP` | — |
 
 A block no longer ends the run by itself. When an agent answers `blocked`, an agent is refused
 the same way on two attempts in a row of a pass or on its last attempt (`max_attempts`), a loop
-reaches its `max_visits` (the gates' `FAIL` edge included), or a lens of a review answers
+reaches its `max_visits` (the review's `NEEDS_REWORK` edge included), or a lens of a review answers
 `inconclusive`, the engine asks the `blocked` question about the node to run again: the agent
-itself, the node the capped edge leads back to (the engineer after the gates, the architect
+itself, the node the capped edge leads back to (the engineer after the review, the architect
 after a review or a rejected ADR), or the review. Its text holds what the
 engine checked, what the blocked step left (the agent's reason, its missing outputs and
-refusals, the gates' failures), the file that keeps the agent's own words, and where the run
+refusals, the findings of the review), the file that keeps the agent's own words, and where the run
 report is:
 
 ```
@@ -253,9 +245,9 @@ Left by research (2):
 The run so far (commits, refusals, incidents): <tracking folder>/run-report.md
 design_review is blocked: a lens answered inconclusive; the verdict is in <tracking folder>/reviews/design_review-1/verdict.yaml. An instruction runs design_review again on a new pass with it; STOP ends the run.
 The run so far (commits, refusals, incidents): <tracking folder>/run-report.md
-deliver is blocked: gates -> deliver was taken as often as its max_visits allows.
-Left by gates (1):
-- api/test: exited 1 (evidence: <tracking folder>/gates/api/test-3.log)
+deliver is blocked: deliver_review -> deliver was taken as often as its max_visits allows.
+Left by deliver_review (1):
+- G7 tests/Orders.UnitTest/RefundTests.cs:42: the expected amount 90 became Assert.NotNull
  An instruction runs deliver again on a new pass with what is left above and the instruction; STOP ends the run.
 The run so far (commits, refusals, incidents): <tracking folder>/run-report.md
 ```
@@ -295,7 +287,7 @@ a human's feedback (to each lens the review asks, for a review); no edge into th
 as taken any more, so its loop has its whole budget again. Blocked again, it asks again
 (`design-2`). `STOP` (in any case) ends the run `blocked`, with the code and reason of the
 block, and nothing else: for a refused agent, the code of its last refusal (`missing-outputs`,
-`research-records`…). A missing edge, a stalled mutation loop or a node the workflow no longer
+`research-records`…). A missing edge, a node retired from the workflow (`node-retired`) or a node the workflow no longer
 holds (`workflow-changed`) still end the run without a question.
 
 A key names the node that asks the question, then the question's rank among those that node
@@ -310,64 +302,9 @@ stdout, code 0. Refusal: the message on stderr, code 1.
 | `no-active-pipeline`, `slug-mismatch` | see [Tracking folder and journal](./run-journal.md) |
 | `no-question` | `no question adr-2; waiting: adr-1`, or `no question to answer; no question is waiting` |
 | `already-answered` | `adr-1 was already answered RATIFIED` |
-| `invalid-answer` | `the answer must be one of RATIFIED, REJECTED`; `REJECTED needs the reason, which goes back to the agent`; for a `blocked` question `the answer must be an instruction, or STOP` (`… or APPLY or STOP` for `mutation-plan`) and `an instruction is at most 1000 characters` (the value is never echoed) |
+| `invalid-answer` | `the answer must be one of RATIFIED, REJECTED`; `REJECTED needs the reason, which goes back to the agent`; for a `blocked` question `the answer must be an instruction, or STOP` and `an instruction is at most 1000 characters` (the value is never echoed) |
 | `no-terminal` | `skraft decide records a person's answer: run it yourself in an interactive terminal of your own, not an agent's shell; nothing was recorded` |
 | `not-confirmed` | `not confirmed; nothing was recorded` |
-
-## `skraft gate [--all] [--json]`
-
-**Effect.** Runs the gates of the active pipeline: the commands named `build`, `format`,
-`lint`, `test`, `architecture`, `coverage` of each component, in that order, from the
-component's root; a `mutation` command is the developer's and never runs here. Each gate writes evidence and one `gate.ran` event. A component
-stops at its first failing gate; the other components go on.
-
-| Option | Effect |
-| --- | --- |
-| (none) | scope `touched`: only the components changed since their base |
-| `--all` | scope `all`: every component |
-| `--json` | JSON output instead of text |
-
-**Text output** — one line per gate run, then a summary line:
-
-```
-pass  web/lint
-fail (environment)  web/test: <reason>
-skraft <slug>: gates <status> — <reason>
-```
-
-On a refusal or a block, the summary carries the code: `skraft <slug>: gates refused
-(<code>) — <reason>`.
-
-**`--json` output**:
-
-| Field | Type | Content |
-| --- | --- | --- |
-| `status` | string | `passed`, `failed`, `refused`, `blocked` |
-| `slug` | string or null | active pipeline |
-| `scope` | string | `touched` or `all` |
-| `components` | string[] | components selected |
-| `gates` | `GateResult[]` | see below |
-| `failure` | string or null | `interrupted` when a person stopped a gate, otherwise `environment` when at least one environment failure, otherwise `deterministic` on failure (a gate stopped by a signal or a crash included), `null` with no failure |
-| `code` | string or null | refusal or block code |
-| `reason` | string | summary |
-| `phase` | null | present only on a refusal or block coming from the active pipeline |
-
-Each `GateResult`: `component`, `gate` (`none` for a component with no gate command),
-`status` (`pass`, `fail`), `failure` (`interrupted`, `environment`, `deterministic`, `null`), `reason`,
-`evidence` (absolute path of the evidence file; for the `none` gate, the `gates/<component>`
-folder, where no file is written).
-
-| Result | Summary `reason` |
-| --- | --- |
-| everything passes | `N gates passed on <components>` |
-| no component changed | `no component changed since its base; no gate to run` |
-| at least one failure | `<component>/<gate>: <reason>; …` |
-
-Possible codes: `no-active-pipeline`, `not-initialised`, `config-invalid`, `no-components`
-(refused); `journal-tampered`, `journal-changed` (blocked). Failure reasons, failure classes
-and evidence format:
-[skraft-config.json](./skraft-config.md) and
-[Tracking folder and journal](./run-journal.md).
 
 ## `skraft precheck [--json]`
 
@@ -440,7 +377,7 @@ person gave it (`host`, `decide`, `host-confirmed`, `cli-tty`); it shows only on
 was answered. `run-report.md` holds it under `## Human answers`.
 
 Steps come in the order they first started. A step started again (a retry, or a new visit a
-gate, a review or a human sent back) counts one retry. `Cost` is approximate, `~$<amount>`,
+review or a human sent back) counts one retry. `Cost` is approximate, `~$<amount>`,
 followed by the note above: only the Claude Code mod journals a cost, the session's cost before
 and after each agent. `Cost` is `-` when nothing was
 journaled; `Outcome` is `in progress` while an attempt is open. With no active pipeline, no
@@ -452,7 +389,7 @@ durationMs, costUsd, outcome }], totals: { attempts, retries, durationMs, costUs
 [{ key, kind, step, answer, reason, by }], waiting: { key, kind, step, text, options } or null,
 commits: [{ step, sha, subject, kind, verdict }], refusals: [{ step, times, failure }],
 incidents: [{ key, step, owner, log, answer }], startedAt, elapsedMs }`: `sha` short, `times` how
-often an attempt or a gate step of that node failed, `failure` the first failure, `answer` `null`
+often an attempt of that node failed, `failure` the first failure, `answer` `null`
 while the question waits. Code 1 only for
 `tampered`.
 
@@ -521,7 +458,7 @@ carries the question kind as its code (`waiting (adr-ratification) in DESIGN`).
 | First line | When | `then:` | Code |
 | --- | --- | --- | --- |
 | `skraft <slug>: dispatch in <phase> — …` | agents handed over | `… record` | 0 |
-| `skraft <slug>: waiting (<question kind>) in <phase> — <question> Options: <A>, <B>. Stop here and ask the human to answer it with skraft decide in their own terminal; then run next.` (for a `blocked` question, `Options: an instruction in quotes, or STOP.`; for `mutation-plan`, `Options: APPLY, an instruction in quotes, or STOP.`) | a question waits | `… next` | 0 |
+| `skraft <slug>: waiting (<question kind>) in <phase> — <question> Options: <A>, <B>. Stop here and ask the human to answer it with skraft decide in their own terminal; then run next.` (for a `blocked` question, `Options: an instruction in quotes, or STOP.`) | a question waits | `… next` | 0 |
 | `skraft <slug>: done in PUBLISH — PUBLISH closed` | the run ended | none | 0 |
 | `skraft <slug>: blocked (<code>) in <phase> — <reason>` | the run stopped | none | 1 |
 | `skraft <slug>: refused (not-recorded) — N handed over agents are not recorded yet: start each one, save its reply, then record` | `next` with agents pending; the agents are listed again | `… record` | 1 |
@@ -534,32 +471,6 @@ Any other refusal of the run (`no-active-pipeline`, `pipeline-locked`…) prints
 **`--json` output**: `{ status, slug, phase, code, reason, dispatches: [{ agent, model, prompt,
 brief, reply }], then }`, `status` = `dispatch`, `waiting`, `done`, `blocked` or `refused`,
 `then` = `null` when the loop ends.
-
-## `skraft mutation [--json]`, `skraft mutation record [--json]`, `skraft mutation decide [<key>] <answer> [--reason <text>]` <!-- #mutation -->
-
-**Effect.** The developer's mutation run of the branch HEAD is on, through the agent loop of
-[`next` and `record`](#skraft-next---json-and-skraft-record---json): it follows the mutation
-workflow (`.skraft/mutation.skraft.dot` when the working copy ejected it, else the plugin's
-`workflows/mutation.skraft.dot`), apart from any story's pipeline.
-
-| Step | Rule |
-| --- | --- |
-| Run | one per branch, named after it (`feat/Card_Refund` → `feat-card-refund`), in `.copilot-tracking/skraft-mutation/<branch>/` with its own `events.jsonl`, `.active-slug` and lease |
-| Start | `skraft mutation` starts the branch's run, or resumes it while it goes on or waits on a person; a run that ended (finished or stopped) is forgotten, journal and files, so each start mutates the code as it stands, uncommitted changes included |
-| Base | each component's merge base with its `baseBranch`, as for a pipeline; `{baseSha}` takes it |
-| Agents | `dispatch` hands the agents over as `next` does; `skraft mutation record` hands their replies back; `then:` names `… mutation record` |
-| Question | the mutation plan (`mutation-plan`: `APPLY`, an instruction in quotes, or `STOP`) is answered with `skraft mutation decide`, typed in your own terminal, or the MCP tool `skraft_mutation` with `key` and `answer`; `then:` names `… mutation` |
-
-**Refusals (code 1).**
-
-| Code | Reason |
-| --- | --- |
-| `detached-head` | `HEAD is on no branch, and a mutation run is the run of one; check out the branch to mutate, then start it again` |
-| `no-mutation-command` | `no component of skraft-config.json declares a mutation command; declare them with /skraft-init mutation` |
-
-Any other refusal of `init <slug>` or of the loop prints `refused (<code>)` with its reason. Text
-and `--json` output: those of [`next`](#skraft-next---json-and-skraft-record---json).
-`skraft doctor` gives the verdict of the branch's last run on its `mutation` line.
 
 ## `skraft review --pr <number> [--publish] [--record] [--json]`
 
@@ -587,7 +498,7 @@ goes on (the refuter is handed over the same way).
 ## Pitfalls & anti-patterns
 
 - **Running skraft outside the root**: the config and the tracking folder are read from the
-  current folder. Elsewhere, `status` answers `idle` and `gate` refuses.
+  current folder. Elsewhere, `status` answers `idle`.
 - **Reading `status` exit code 1 as a run error**: only `tampered` exits with 1. A `blocked`
   run exits with 0; read the status.
 - **Passing `--base` for an existing slug**: the base is fixed at the first init. Start a new

@@ -142,8 +142,8 @@ a person reads the two scenarios, the walking skeleton and S1's test, and approv
 The `software-engineer` makes S1 green with **Outside-In TDD**: unit tests first, then the code,
 then one green commit: S1's acceptance test and the walking skeleton
 both pass at it. DISTILL then writes S2's failing test, and the
-engineer turns it green the same way. The engine runs the gates (build, tests, architecture,
-coverage), then the DELIVER review reads the code. Whether the tests would catch a mistake in the
+engineer turns it green the same way. The engineer runs the gates (build, tests, architecture,
+coverage) through `skraft_repl` and the engine checks their traced runs, then the DELIVER review reads the code. Whether the tests would catch a mistake in the
 loyalty rule, the developer's own **mutation** run shows, apart from the pipeline.
 
 - **What enters:** the red walking skeleton + S1's red acceptance test + the plan.

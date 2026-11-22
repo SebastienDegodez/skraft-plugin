@@ -22,7 +22,7 @@ unitaires, puis vers le code ([Freeman & Pryce, 2009](../../reference/citations.
 tourne la boucle interne rouge → vert → refactor sans la commiter, puis commite une seule fois, quand
 tous les groupes passent : un `feat(…)` enchaîné à la commande de test, `<test> && git add <fichiers> && git commit …`.
 
-Le moteur ne rejoue aucun test. Il vérifie l'historique git : un commit rouge de chaque test
+Le moteur ne lance aucun test. Il vérifie l'historique git et les exécutions tracées de la tentative : un commit rouge de chaque test
 d'acceptation, puis un seul commit vert, quoi que nomme son sujet, ne touchant pas aux tests d'acceptation ; un
 deuxième est refusé (`green-split`). Le tableau de groupes du plan d'implémentation est l'ordre de travail, non un nombre de commits. La commande qui commite un vert est
 enchaînée à la commande de test : le commit n'existe que si les tests passent ; la revue DISTILL et
@@ -34,7 +34,7 @@ promesse.
 
 S1 et S2 entrent, rouges, à côté du walking skeleton rouge. DELIVER complète la chaîne du point
 d'entrée de commande jusqu'à la base, implémente le paiement et l'attribution des points et fait
-passer S1 et le walking skeleton au vert, et S2, la boisson indisponible, avec eux, en un seul commit. Les gates passent, la revue relit le code, et le code part en pull
+passer S1 et le walking skeleton au vert, et S2, la boisson indisponible, avec eux, en un seul commit. Les exécutions tracées de gates de l'ingénieur sont contrôlées, la revue relit le code, et le code part en pull
 request. Que les tests protègent réellement la règle de fidélité, la **mutation** que lance le
 développeur l'atteste.
 :::
@@ -61,25 +61,30 @@ Trois règles gardent ce commit unique honnête :
   n'a lieu que si les tests passent. Le rouge de DISTILL n'est jamais enchaîné ainsi : seule la
   lecture de la sortie distingue une erreur de build de l'échec attendu.
 
-Une fois le vert commité et toute la suite verte, les gates passent. Un run dont le journal
-contient les dispatches DELIVER par groupe d'une alpha V2 antérieure n'est pas repris : relancez-le. Un passage que renvoient les gates ou la
-revue travaille sur toute la story avec le cycle classique : un rouge, puis la correction ; sur un
-passage que les gates ont renvoyé, leur échec tient lieu du rouge.
+Une fois le vert commité, l'ingénieur lance les gates restantes et soumet la tentative. Un run dont le journal
+contient les dispatches DELIVER par groupe d'une alpha V2 antérieure n'est pas repris : relancez-le. Un passage que renvoie la
+revue travaille sur toute la story avec le cycle classique : un rouge, puis la correction.
 
-## L'ordre : gates, puis revue
+## L'ordre : gates tracées, puis revue
 
 <FlowFigure flow="deliver" />
 
-Les gates de commandes passent d'abord : elles sont rapides, déterministes, et un build rouge
-n'a pas besoin d'un relecteur. Viennent ensuite les lentilles de la revue DELIVER : intégrité des
-tests, frontières d'architecture, lisibilité à froid, et, quand le changement en touche, fidélité
-des mocks et des contrats. Une reprise demandée par la revue repart par `deliver` et les gates.
+Le moteur ne lance aucune gate. L'ingénieur logiciel lance chaque gate (`build`, `format`, `lint`,
+`test`, `architecture`, `coverage`) de chaque composant que l'histoire a modifié par l'outil MCP
+`skraft_repl` (`gate(name, command, { cwd })`, voir [Le REPL](../../reference/repl.md)) ;
+l'exécution de la ligne de commit est l'exécution `test`, et une gate dont les documents du projet
+ne nomment aucune commande se déclare avec `absent`. À la soumission de la tentative, le moteur lit
+la trace signée : pour chaque composant que l'histoire a modifié, la dernière exécution de chaque
+gate est sortie avec 0, a démarré sur un arbre propre (hors l'exécution de la ligne de commit) et
+s'est terminée sur le dernier commit, ou la gate a été déclarée absente. Sinon la tentative est
+refusée avec le code d'échec `evidence`, une ligne fixe par gate ; quand la trace tient, le journal
+enregistre `evidence.checked` ([Gates](../../reference/gates.md#command-gates)).
 
-L'engineer lance les mêmes commandes avant de rendre la main. Son brief liste les commandes de
-gates de chaque composant qu'il peut modifier, mutation exclue (elle revient au développeur), avec la base du run à la place de
-`{baseSha}`, et lui demande de corriger chaque échec avant d'écrire son résultat, à une passe de
-reprise aussi. L'étape des gates reste le contrôle ; le brief évite la passe que coûterait un
-échec de format ou de build découvert là seulement.
+Viennent ensuite les lentilles de la revue DELIVER : intégrité des tests, frontières
+d'architecture, lisibilité à froid, et, quand le changement en touche, fidélité des mocks et des
+contrats. Une reprise demandée par la revue repart par `deliver`. Après la revue, l'étape des visuels
+commite les captures de la dernière exécution e2e tracée de chaque front end (`gate('e2e', ...)`)
+au lieu de la lancer, puis viennent le `pr-writer` et la publication.
 
 ### Pourquoi la mutation revient au développeur
 
@@ -89,20 +94,17 @@ dit si une suite verte détecterait une erreur, et c'est aussi l'étape la plus 
 story puisse payer.
 
 Jusqu'à la version 2.0.0-alpha.18, elle passait juste après les gates, avant la revue, puis de
-nouveau plusieurs fois : après chaque passe de correction des survivants, après chaque reprise
-demandée par la revue. À partir de 2.0.0-alpha.19, elle passait **une fois, en dernier**, sur le
-code que la revue avait approuvé, et un échec menait à une proposition par fichier de survivants
-et à une question `mutation-plan`. Même ainsi, elle restait l'étape la plus lente de chaque run,
-elle demandait une configuration de mutation que skraft écrivait pour le développeur, et ses
-survivants arrêtaient le run sur une question, tout à la fin.
+nouveau plusieurs fois. C'était l'étape la plus lente de chaque run, elle demandait une
+configuration de mutation que skraft écrivait pour le développeur, et ses survivants arrêtaient le
+run sur une question, tout à la fin.
 
-Le pipeline de la story ne la lance donc plus. Le développeur choisit l'outil, écrit sa
-configuration et la lance quand il le décide, à part du pipeline de la story : skraft donne à ce
-run un workflow à lui, `workflows/mutation.skraft.dot`, avec son propre journal. La commande peut
-rendre son score déjà calculé ([Le résultat de mutation](../../reference/skraft-config.md#mutation-result)),
-et les survivants d'un périmètre sous la barre vont à une proposition, au choix du développeur,
-puis à un kill. Le seuil ne bouge
-pas : 80 % sur le cœur et 80 % sur la frontière, jugés à part, fixés par `skraft-quality-bar`.
+Ni le pipeline de la story ni le moteur ne la lancent donc. Le mutation testing est une recette de
+la session du développeur, le skill `skraft-mutation` : il lance la `commands.mutation` du composant
+dans Bash, lit le rapport, juge chaque périmètre au seuil sur les fichiers que la branche a
+modifiés, et tue les survivants par des tests ([Lancer la mutation](../../how-to/run-mutation.md)).
+La commande peut rendre son score déjà calculé ([Le résultat de mutation](../../reference/skraft-config.md#mutation-result)).
+Le seuil ne bouge pas : 80 % sur le cœur et 80 % sur la frontière, jugés à part, fixés par
+`skraft-quality-bar`.
 
 Un mutant survivant n'a toujours pas une seule bonne réponse. Il finit de l'une de trois façons :
 

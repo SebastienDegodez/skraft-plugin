@@ -1,110 +1,87 @@
 ---
 title: "Lancer les gates et lire leurs preuves"
-description: "Lancer les gates des composants modifiés ou de tous, lire la sortie, ouvrir le fichier de preuve et traiter un échec environment ou deterministic."
+description: "Comment l'ingénieur lance chaque gate par skraft_repl, en déclare une absente, et ce que le moteur contrôle et refuse à la soumission d'une tentative."
 persona: software-engineer
 ---
 
 # Lancer les gates et lire leurs preuves
 
-Lancez à la main les gates de vos composants, avant ou après un run, et sachez quoi faire de chaque
-échec.
+Le moteur ne lance aucune gate. Dans DELIVER, l'ingénieur logiciel lance toutes les gates de chaque
+composant que l'histoire a modifié par l'outil MCP `skraft_repl`, et le moteur lit la trace signée de
+ces exécutions à la soumission de la tentative. Cette page montre ce que cela demande à l'ingénieur
+et comment lire un refus.
 
 ## Prérequis
 
-- Un `skraft-config.json` avec au moins une gate par composant
-  ([Configurer les composants](./configure-components.md)).
+- Un `skraft-config.json` avec les commandes de chaque composant
+  ([Configurer les composants](./configure-components.md)) ; `skraft doctor` les liste, il n'en lance aucune.
 - Un pipeline actif : `skraft init <slug>` ou `/skraft <slug>` (sinon refus
   `no-active-pipeline`).
-- Un terminal à la racine de la copie de travail ; `skraft` est la commande que [`npm i -g @skraft/cli`](./install-on-a-host.mdx#skraft-command) met en place ; la ligne longue `node "<dossier du plugin>/engine/drivers/cli/skraft.mjs"` marche sans elle.
 
-## 1. Lancer les gates des composants modifiés
+## 1. Lancer chaque gate par le REPL
 
-```console
-$ skraft gate
+Pour chaque composant que l'histoire a modifié, l'ingénieur lance les six gates, dans des cellules de
+`skraft_repl` ([Le REPL](../reference/repl.md)) :
+
+```js
+await gate('build', 'dotnet build --nologo', { cwd: 'api' })
+await gate('format', 'dotnet format --verify-no-changes', { cwd: 'api' })
+await gate('lint', 'dotnet build -warnaserror', { cwd: 'api' })
+await gate('architecture', 'dotnet test api/Architecture.Tests', { cwd: 'api' })
+await gate('coverage', 'node scripts/coverage.mjs', { cwd: 'api' })
 ```
 
-Seuls les composants modifiés depuis leur base sont retenus (commits, index, fichiers modifiés
-ou non suivis). Pour chacun, les gates tournent dans l'ordre `build`, `format`, `lint`, `test`,
-`architecture`, `coverage` ; un composant s'arrête à sa première gate en échec, les autres
-continuent. Une commande `mutation` ne tourne jamais ici : le mutation testing revient au
-développeur, qui le lance à part. Si rien n'a changé :
+La gate `test` est l'exécution de la ligne de commit : toute la suite de tests non filtrée, enchaînée à
+`git add` et `git commit`, étiquette `green`. Cette exécution est l'exécution `test` ; l'ingénieur ne
+relance pas `test` une seconde fois. La commande de chaque gate est celle que `skraft-config.json`
+donne au composant.
 
-```console
-skraft checkout: gates passed — no component changed since its base; no gate to run
+## 2. Déclarer une gate absente
+
+Une gate dont les documents du projet ne nomment aucune commande se déclare, avec sa raison :
+
+```js
+absent('architecture', 'api', 'le projet n\'a aucune règle de dépendance à vérifier')
 ```
 
-## 2. Lancer les gates de tous les composants
+`test` n'est jamais absente. Une gate déclarée absente n'a besoin d'aucune exécution.
 
-```console
-$ skraft gate --all
-```
+## 3. Ce que le moteur contrôle
 
-## 3. Lire la sortie
+À la soumission de la tentative, le moteur lit `logs/runs/<step>-<visit>-<attempt>/runs.jsonl`. Pour
+chaque composant que l'histoire a modifié, il tient chaque gate à la même règle : la dernière
+exécution de la gate sous le dossier du composant est sortie avec 0, a démarré sur un arbre propre
+(hors l'exécution de la ligne de commit) et s'est terminée sur le dernier commit ; ou la gate a été
+déclarée absente. Des exécutions ouvertes, une trace non signée ou modifiée et une clé manquante
+refusent aussi la tentative. Quand la règle tient, le journal enregistre `evidence.checked` avec les
+exécutions sur lesquelles elle s'appuie, et les rapports les montrent sous « Preuves de qualité »
+([Gates](../reference/gates.md#command-gates)).
 
-```text
-pass  web/build
-pass  web/lint
-fail (deterministic)  web/test: exited 1
-pass  api/build
-fail (environment)  api/test: command not found: dotnet; install it or change the command in skraft-config.json
-skraft checkout: gates failed — web/test: exited 1; api/test: command not found: dotnet; …
-```
+## 4. Lire un refus `evidence`
 
-Code de sortie : 0 si `passed`, 1 sinon. `--json` donne le même résultat pour un script, avec
-le chemin de chaque preuve dans `evidence`.
+Une tentative refusée échoue avec le code `evidence`, une ligne fixe par gate, sans sortie ni
+commande. L'ingénieur relance la gate par le REPL, sur un arbre propre, puis commite ; le log de chaque
+exécution est sous `logs/runs/<step>-<visit>-<attempt>/`.
 
-## 4. Ouvrir le fichier de preuve
-
-```text
-.copilot-tracking/skraft-plans/<slug>/gates/<component>/<gate>-<n>.log
-```
-
-`<n>` augmente à chaque lancement ; les preuves précédentes restent. Lisez la ligne `result:`,
-puis `--- stderr` :
-
-```text
-$ npm test
-cwd: ../payment-web
-result: fail (deterministic): exited 1
---- stdout
-…
---- stderr
-…
-```
-
-## 5. Traiter l'échec selon sa classe
-
-| Classe | Ce qui s'est passé | Quoi faire |
-|---|---|---|
-| `deterministic` | la commande a tourné et rendu un code non nul, a été arrêtée par un signal ou a planté (sortie au-dessus de 128), ou a fini sans code de sortie | corriger le code ou le test d'après `stderr`, libérer de la mémoire ou corriger le plantage, puis relancer |
-| `environment` | programme introuvable, syntaxe shell, composant sans gate | réparer la machine ou la commande, puis relancer ; relancer sans rien changer redonne le même échec |
-
-Pendant un run, un échec `environment` ne renvoie rien à l'ingénieur et ne consomme aucune
-tentative : le run pose la question `environment`, dont la ligne `Cause:` dit qui corrige et la
-ligne `Output:`, quand une commande a tourné, nomme son fichier de preuve. Réparez, puis répondez
-`RETRY` ([Répondre à une question du run](./answer-a-question.mdx)). Un échec `deterministic`, un
-signal ou un plantage compris, revient à l'ingénieur avec sa preuve par l'arête `FAIL` des gates,
-jusqu'au `max_visits` de cette arête ; le run pose alors la question `blocked`. L'ingénieur
-corrige le code, ou s'arrête `blocked` en nommant ce qui manque à la machine.
+| Cause derrière une ligne | Ce que fait l'ingénieur |
+| --- | --- |
+| la gate n'a jamais tourné dans ce composant | la lancer avec `gate(name, command, { cwd })` |
+| sa dernière exécution est sortie non nulle | corriger le code ou le test d'après le log de l'exécution, relancer |
+| elle a démarré sur un arbre modifié | commiter ou annuler le changement, relancer |
+| elle s'est terminée sur un commit antérieur au dernier | relancer après le dernier commit |
+| une exécution est restée ouverte | l'attendre, ou relancer la gate |
+| la trace n'est pas signée ou a été modifiée | recommencer la tentative ; une trace ne se répare jamais à la main |
 
 ## Dépannage
 
 | Raison | Action |
-|---|---|
-| `command not found: dotnet; install it or change the command in skraft-config.json` | Installer le programme, ou écrire une commande qui marche chez vous. |
-| `command "npm ci && npx vitest run" uses shell syntax (&&); put the steps in a script and call the script` | Mettre les étapes dans un script (`"test:ci": "npm ci && vitest run"` dans `package.json`) et écrire `"test": "npm run test:ci"`. |
-| `no gate command; give it at least one of build, format, lint, test, architecture, coverage in skraft-config.json` | Ajouter au moins une gate au composant. |
-| `npx was stopped by SIGKILL; run it again` | Relancer (mémoire, interruption). |
-| `was stopped by a signal or crashed (exit 137), not by a failing check` | Lire le fichier de preuve, libérer de la mémoire ou corriger le plantage, puis relancer. |
-| Un test qui a besoin de Microcks échoue faute de conteneur | Démarrer Docker ou Podman, puis `skraft gate` ; ou passer le composant en `"mocking": { "strategy": "inprocess" }` ([ce que vous perdez](../explanation/customisation-trade-offs.md)). |
-| Windows : `npm.cmd` écrit dans la commande | Écrire `npm`, `npx` ou `gradlew.bat` : le moteur trouve le programme avec PATHEXT et lance `.cmd` et `.bat` par cmd.exe. |
-
-Pour vérifier qu'un programme est trouvé sans lancer les gates : `skraft doctor`.
+| --- | --- |
+| Un programme est introuvable | L'installer, ou changer la commande dans `skraft-config.json` ; `skraft doctor` liste les commandes de chaque composant. |
+| Un test qui a besoin de Microcks échoue faute de conteneur | Démarrer Docker ou Podman, puis relancer la gate ; ou passer le composant à `"mocking": { "strategy": "inprocess" }` ([ce à quoi vous renoncez](../explanation/customisation-trade-offs.md)). |
+| Une gate n'a pas de commande | L'ajouter au composant, ou la déclarer avec `absent`. |
 
 ## Étapes suivantes <!-- #next-steps -->
 
-- [`skraft gate`](../reference/cli.md) — options, sortie JSON, codes.
-- [Gates](../reference/gates.md) — les gates de commandes et les gates
-  de revue.
-- [Preuves des gates](../reference/run-journal.md#gate-evidence) — format
-  et événement `gate.ran`.
+- [Gates](../reference/gates.md) : les gates, les règles de preuve, les critères de revue.
+- [Le REPL](../reference/repl.md) : `gate`, `absent`, la trace.
+- [Dossier de suivi et journal](../reference/run-journal.md#gate-evidence) : l'événement `evidence.checked`.

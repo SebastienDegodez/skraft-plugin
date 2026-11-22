@@ -16,14 +16,6 @@ const Anchors = ({ direction }) => {
   )
 }
 
-const Lock = ({ unlock }) => (
-  <svg className={styles.lock} viewBox="0 0 16 16" width="14" height="14" role="img"
-    aria-label={unlock ? translate({ id: 'skraft.workflowViewer.unlocked', message: 'unlocked' }) : translate({ id: 'skraft.workflowViewer.locked', message: 'locked' })}>
-    <rect x="3" y="7" width="10" height="8" rx="1.5" fill="currentColor" />
-    <path d={unlock ? 'M5 7V5a3 3 0 0 1 6 0' : 'M5 7V5a3 3 0 0 1 6 0v2'} fill="none" stroke="currentColor" strokeWidth="1.6" />
-  </svg>
-)
-
 const Mandatory = () => (
   <span className={styles.badge} title="mandatory=true">
     {translate({ id: 'skraft.workflowViewer.mandatory', message: 'mandatory' })}
@@ -41,7 +33,6 @@ const Header = ({ data }) => (
   <div className={styles.header}>
     {data.node.kind !== 'review' && <span className={styles.kind}>{data.node.kind}</span>}
     <span className={styles.title}>{data.title}</span>
-    {(data.node.locked || data.node.unlock) && <Lock unlock={data.node.unlock} />}
     {data.node.mandatory && <Mandatory />}
   </div>
 )

@@ -9,7 +9,7 @@
   <text x="18" y="83" xml:space="preserve"><tspan fill="#4fc27a" font-weight="600">ok</tspan>    node: Node v22.17.1</text>
   <text x="18" y="103" xml:space="preserve"><tspan fill="#4fc27a" font-weight="600">ok</tspan>    config: 1 components: web</text>
   <text x="18" y="123" xml:space="preserve"><tspan fill="#e3b341" font-weight="600">WARN</tspan>  forge: github, deduced from the Git remote: the working copy has no Git remote whose URL names a host and a repository</text>
-  <text x="18" y="143" xml:space="preserve"><tspan fill="#4fc27a" font-weight="600">ok</tspan>    web/test: npm test (parsed; doctor --run starts it)</text>
+  <text x="18" y="143" xml:space="preserve"><tspan fill="#4fc27a" font-weight="600">ok</tspan>    web/test: npm test (parsed)</text>
   <text x="18" y="163" xml:space="preserve"><tspan fill="#e3b341" font-weight="600">WARN</tspan>  web: skills found nowhere, in the plugin or the working copy: mocking-inprocess-javascript; mocking-strategy-roster and</text>
   <text x="18" y="183" xml:space="preserve">      contract-testing say which recipe its tests use instead, or that they stop</text>
   <text x="18" y="203" xml:space="preserve"><tspan fill="#4fc27a" font-weight="600">ok</tspan>    models/claude-code: every family the workflow&apos;s agents run on has a model on claude-code</text>

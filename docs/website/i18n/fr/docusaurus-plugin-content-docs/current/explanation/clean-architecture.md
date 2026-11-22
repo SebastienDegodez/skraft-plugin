@@ -99,7 +99,7 @@ flowchart TB
     end
     subgraph DEL["DELIVER"]
         direction LR
-        C1["gate architecture<br/>verrouillée"] --> C3["lentille architecture-boundaries<br/>G4 · G5"]
+        C1["gate architecture<br/>exécution tracée"] --> C3["lentille architecture-boundaries<br/>G4 · G5"]
     end
     DES --> DIS --> DEL
 ```
@@ -128,8 +128,7 @@ d'usage et le pilote en process, avec les gateways internes en mémoire
 ([politique d'infrastructure](../reference/skraft-config.md#infrastructure)). Voir
 [Walking Skeleton](./deep-dive/walking-skeleton.md).
 
-**En DELIVER, une gate le vérifie à chaque passage.** `architecture` est l'une des gates du nœud
-verrouillé de DELIVER, entre `test` et `coverage`. Sa commande, déclarée par composant dans
+**En DELIVER, une gate le vérifie à chaque passage.** `architecture` est l'une des six gates que l'ingénieur logiciel lance par `skraft_repl`, et le moteur exige son exécution tracée. Sa commande, déclarée par composant dans
 `skraft-config.json`, lance les tests d'architecture du projet : un filtre `ArchitectureTests`
 en .NET, `import-linter` en Python, un script `architecture-gate.mjs` en TypeScript, selon le
 skill `quality-gates-<stack>` du composant. En revue, la lentille `architecture-boundaries`,
@@ -148,7 +147,7 @@ l'Infrastructure.
 **Le seuil de mutation suit la couche.** La skill `skraft-quality-bar` classe chaque fichier par
 le nom de ses dossiers : un dossier qui finit par `domain` ou `application` est le cœur ;
 tout le reste — API, Infrastructure — est la frontière. Chacun est tenu à 80 %, à part. Le run de mutation
-du développeur est jugé ainsi, comme un nœud `gate="mutation"` du workflow propre à une équipe. La règle de dépendance décide donc aussi de l'exigence de test.
+du développeur est jugé ainsi. La règle de dépendance décide donc aussi de l'exigence de test.
 
 ## skraft s'applique la règle à lui-même
 

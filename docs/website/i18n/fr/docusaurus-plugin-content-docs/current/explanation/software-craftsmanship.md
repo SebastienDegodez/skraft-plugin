@@ -48,7 +48,7 @@ l'exécute**.
 
 ```mermaid
 flowchart LR
-    V1["Logiciel bien conçu"] --> M1["Gates verrouillées<br/>seuil de qualité fixe"]
+    V1["Logiciel bien conçu"] --> M1["Gates tracées<br/>seuil de qualité fixe"]
     V2["Ajouter de la valeur<br/>régulièrement"] --> M2["Walking skeleton<br/>chaque test d'acceptation rouge,<br/>un vert par histoire"]
     V3["Communauté de<br/>professionnels"] --> M3["Revue avant la revue<br/>lentilles + réfutation"]
     V4["Partenariats<br/>productifs"] --> M4["Décisions humaines<br/>ratification d'ADR, consentements"]
@@ -64,8 +64,8 @@ Le skill `skraft-quality-bar` est l'unique endroit où un seuil est écrit : 80 
 mutation sur Domain et Application comme sur API et Infrastructure, jugés à part, et 100 % de
 couverture de lignes sur Domain et Application. Il n'y a ni niveau « conseil », ni dérogation, ni réglage par dépôt ;
 la configuration `skraft-config.json` choisit les **commandes** des gates, jamais leurs seuils.
-Dans `pipeline.skraft.dot`, le nœud `gates` de DELIVER est `locked` : le retirer d'une copie du
-workflow exige une raison écrite (`unlock="<raison>"`).
+Dans DELIVER, le moteur refuse une tentative qui ne contient pas une exécution tracée réussie de
+chaque gate (`evidence`), quelle que soit la copie du workflow.
 
 C'est la réponse de skraft à l'idée de Mancuso : la qualité n'est pas une variable
 d'ajustement. Le détail des gates est dans la [référence des gates](../reference/gates.md).
@@ -96,8 +96,8 @@ Le craft avance par petits incréments qui marchent. Dans skraft, cela prend deu
 Une suite verte ne prouve pas qu'elle détecterait une erreur. Le mutation testing injecte de
 petites fautes dans le code et mesure la part que les tests attrapent
 ([Jia & Harman, 2011](../reference/citations.mdx#cite-jia-mutation-2011)). Dans skraft, le mutation testing
-revient au développeur : le pipeline du plugin n'en lance aucun. Le développeur choisit l'outil,
-écrit sa configuration et le lance à part, contre le seuil de `skraft-quality-bar` ; un agent à
+revient au développeur : ni le pipeline du plugin ni le moteur n'en lancent. Le développeur choisit l'outil,
+écrit sa configuration et le lance dans sa propre session (le skill `skraft-mutation`), contre le seuil de `skraft-quality-bar` ; un agent à
 qui il demande de l'aide lit les survivants avec la skill `quality-gates-<stack>` du composant.
 Dans le pipeline, la lentille `test-integrity` vérifie que les tests peuvent réellement échouer
 (son G7) et qu'aucun test n'a été affaibli pour passer (son G9).
@@ -132,9 +132,8 @@ que laissé en attente. Voir
 
 ```mermaid
 flowchart LR
-    D["deliver<br/>software-engineer<br/>les groupes dans l'ordre du plan"] --> G["gates verrouillées<br/>build · format · lint · test<br/>architecture · coverage"]
-    G -- "FAIL" --> D
-    G -- "PASS" --> DR["revue DELIVER<br/>lentilles + verdict"]
+    D["deliver<br/>software-engineer<br/>les groupes dans l'ordre du plan"] --> G["exécutions de gates tracées<br/>build · format · lint · test<br/>architecture · coverage"]
+    G --> DR["revue DELIVER<br/>lentilles + verdict"]
     DR -- "NEEDS_REWORK" --> D
     DR -- "APPROVED" --> P["pr-writer puis publication"]
 ```

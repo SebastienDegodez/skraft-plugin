@@ -36,7 +36,7 @@ The lens answers in the format the engine reads:
 
 | Review | Command | File copied |
 |---|---|---|
-| DESIGN, DISTILL or mutation | `skraft workflow eject` | `.skraft/pipeline.skraft.dot` |
+| DESIGN, DISTILL or DELIVER | `skraft workflow eject` | `.skraft/pipeline.skraft.dot` |
 | DELIVER (and `skraft review --pr`) | `skraft workflow eject review` | `.skraft/review.skraft.dot` |
 
 ```text

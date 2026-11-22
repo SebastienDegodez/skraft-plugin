@@ -27,7 +27,7 @@ The **engine** (`plugins/skraft-framework/engine/`) follows the Clean Architectu
 rule: the pure rules (`domain/`) depend on nothing, the use cases (`application/`) depend only on
 them, and the details — files, git, processes, hosts — are outside
 ([Martin, 2017](../reference/citations.mdx#cite-martin-cleanarch-2017)). A **use case** is a complete action from
-the user's point of view: start a pipeline, move it forward, observe its state, run the gates,
+the user's point of view: start a pipeline, move it forward, observe its state,
 answer a question. It decides; it does no input or output itself, it goes through contracts the
 outside implements — the ports-and-adapters idea
 ([Cockburn, 2005](../reference/citations.mdx#cite-cockburn-hexagonal-2005)).
@@ -137,10 +137,8 @@ A missing output starts the agent again with the list of what is missing, within
 An agent whose last two refused attempts failed exactly the same way (the same missing outputs
 and the same failures, compared as written) is not started a third time, because an identical
 attempt would teach nothing: the run asks a human for an instruction, as it does after the
-agent's last attempt, and the instruction starts the agent again on a new pass. A failed gate step sends the work back through its `FAIL` edge
-until that edge's `max_visits`; then the run asks a human for an instruction. Attempts and
-edges taken are read from the journal, so a resumed run keeps them. A gate stopped by a signal or
-a crash fails like a check: its evidence goes back to the agent. A step the machine cannot run
+agent's last attempt, and the instruction starts the agent again on a new pass. Attempts and
+edges taken are read from the journal, so a resumed run keeps them. A step the machine cannot run
 (program not found, git failing), or cannot run with what `skraft-config.json` gives it, is not
 blamed on the agent and uses none of its attempts: the
 engine asks a human, naming whose it is to fix and the log of what the command printed, then
@@ -164,7 +162,7 @@ the computation: [Gates](../reference/gates.md#review-run).
 ## The checks live in the code
 
 What an agent could forget, the engine checks: the phase order, computed from the workflow graph;
-the expected outputs, pre-created then checked; the journal's integrity; the command gates; what
+the expected outputs, pre-created then checked; the journal's integrity; the traced gate runs of a DELIVER attempt; what
 each step may write, through a git diff; the red and green TDD commits; the ADR lifecycle; the
 review verdict. Each of these checks is tested without a host, and behaves the same everywhere.
 Why they left the v1 hooks: [Guardrails](./guardrails.md). How

@@ -19,8 +19,8 @@
     "panel": 360
   },
   "title": {
-    "fr": "La boucle de DELIVER : gates, revue, publication",
-    "en": "The DELIVER loop: gates, review, publication"
+    "fr": "La boucle de DELIVER : preuves tracées, revue, publication",
+    "en": "The DELIVER loop: traced evidence, review, publication"
   },
   "figcaption": {
     "fr": "Figure 1 — La boucle de DELIVER, lue dans `workflows/pipeline.skraft.dot` comme l'onglet Workflow du canvas. Ouvrez une étape pour voir ses sous-tâches, ou choisissez un scénario pour suivre le chemin du moteur.",
@@ -46,8 +46,8 @@
     },
     "deliver": {
       "role": {
-        "fr": "Fait passer chaque groupe de scénarios au vert dans l'ordre du plan, en un seul passage et un seul commit vert, après le rouge que DISTILL a commité.",
-        "en": "Makes each group of scenarios pass in plan order, in one dispatch and one green commit, after the red DISTILL committed."
+        "fr": "Fait passer chaque groupe de scénarios au vert dans l'ordre du plan, en un seul passage et un seul commit vert, puis lance chaque gate par skraft_repl : le moteur lit les runs tracés.",
+        "en": "Makes each group of scenarios pass in plan order, in one dispatch and one green commit, then runs each gate through skraft_repl: the engine reads the traced runs."
       },
       "in": [
         {
@@ -59,16 +59,11 @@
         {
           "fr": "un seul vert",
           "en": "one green"
+        },
+        {
+          "fr": "runs tracés",
+          "en": "traced runs"
         }
-      ]
-    },
-    "gates": {
-      "role": {
-        "fr": "Lance les commandes des composants modifiés, puis de tous : la première qui échoue renvoie à deliver.",
-        "en": "Runs the commands of the changed components, then of all: the first that fails sends the run back to deliver."
-      },
-      "in": [
-        "commits"
       ]
     },
     "deliver_review": {
@@ -79,8 +74,8 @@
     },
     "visuals": {
       "role": {
-        "fr": "Lance les e2e de chaque front et commite les captures.",
-        "en": "Runs each front end's e2e and commits the screenshots."
+        "fr": "Commite les captures que le dernier run e2e tracé de chaque front a laissées.",
+        "en": "Commits the screenshots the last traced e2e run of each front end left."
       },
       "in": [
         "e2e"
@@ -139,37 +134,13 @@
       "path": [
         "scenario_review",
         "deliver",
-        "gates",
-        {
-          "inside": "gates"
-        },
         "deliver_review",
         "...",
         "exit"
       ],
       "caption": {
-        "fr": "chaque étape attend le verdict de la précédente : chaque gate `PASS`, revue `APPROVED`, puis seulement le moteur écrit et publie la pull request.",
-        "en": "each step waits for the previous verdict: every gate `PASS`, review `APPROVED`, and only then does the engine write and publish the pull request."
-      }
-    },
-    {
-      "id": "gate-red",
-      "label": {
-        "fr": "Gate rouge",
-        "en": "Red gate"
-      },
-      "path": [
-        "deliver",
-        "gates",
-        {
-          "inside": "gates",
-          "fail": "test"
-        },
-        "deliver"
-      ],
-      "caption": {
-        "fr": "la première commande en échec arrête la gate et renvoie à `deliver` sans passer par la revue : un build rouge n'a pas besoin de relecteur.",
-        "en": "the first failing command stops the gate and sends the run back to `deliver` without the review: a red build needs no reviewer."
+        "fr": "chaque étape attend le verdict de la précédente : les runs tracés de chaque gate sont vérifiés, revue `APPROVED`, puis seulement le moteur écrit et publie la pull request.",
+        "en": "each step waits for the previous verdict: the traced run of every gate is checked, review `APPROVED`, and only then does the engine write and publish the pull request."
       }
     },
     {
@@ -180,7 +151,6 @@
       },
       "path": [
         "deliver",
-        "gates",
         "deliver_review",
         {
           "inside": "deliver_review",
@@ -190,8 +160,8 @@
         "deliver"
       ],
       "caption": {
-        "fr": "les lentilles lisent en parallèle, le refuter confirme un constat bloquant, le verdict est `NEEDS_REWORK` : retour à `deliver` et aux gates.",
-        "en": "the lenses read in parallel, the refuter confirms a blocking finding, the verdict is `NEEDS_REWORK`: back to `deliver` and the gates."
+        "fr": "les lentilles lisent en parallèle, le refuter confirme un constat bloquant, le verdict est `NEEDS_REWORK` : retour à `deliver`, qui relance ses gates.",
+        "en": "the lenses read in parallel, the refuter confirms a blocking finding, the verdict is `NEEDS_REWORK`: back to `deliver`, which runs its gates again."
       }
     },
     {

@@ -257,15 +257,15 @@ parts:
             label_fr: "Lancer les gates"
             label_en: "Run the gates"
             doc: how-to/run-gates
-            purpose_fr: "Lancer les gates des composants modifies ou de tous, lire leurs preuves, traiter un echec environment ou deterministic."
-            purpose_en: "Run the gates of the changed components or of all, read their evidence, handle an environment or deterministic failure."
+            purpose_fr: "Lancer chaque gate par skraft_repl, declarer une gate absente, lire le refus evidence du moteur."
+            purpose_en: "Run each gate through skraft_repl, declare a gate absent, read the engine's evidence refusal."
           - id: run-mutation
             type: editorial
             label_fr: "Lancer la mutation sur sa branche"
             label_en: "Run mutation on your branch"
             doc: how-to/run-mutation
-            purpose_fr: "Declarer la commande de mutation, lancer skraft mutation sur sa branche, tuer les survivants, lire le verdict."
-            purpose_en: "Declare the mutation command, run skraft mutation on your branch, kill the survivors, read the verdict."
+            purpose_fr: "Declarer la commande de mutation, lancer la recette skraft-mutation sur sa branche, tuer les survivants, lire le verdict."
+            purpose_en: "Declare the mutation command, run the skraft-mutation recipe on your branch, kill the survivors, read the verdict."
           - id: resume-a-run
             type: editorial
             label_fr: "Reprendre un run"
@@ -327,8 +327,8 @@ parts:
             label_fr: "Copier et adapter le workflow"
             label_en: "Copy and adapt the workflow"
             doc: how-to/eject-workflow
-            purpose_fr: "Copier le workflow dans .skraft/, sauter une gate verrouillee avec sa raison, valider avec check, comparer avec diff, le mettre a jour apres une montee de version."
-            purpose_en: "Copy the workflow into .skraft/, skip a locked gate with its reason, validate with check, compare with diff, update it after a plugin upgrade."
+            purpose_fr: "Copier le workflow dans .skraft/, valider avec check, comparer avec diff, le mettre a jour apres une montee de version."
+            purpose_en: "Copy the workflow into .skraft/, validate with check, compare with diff, update it after a plugin upgrade."
           - id: add-repository-agent
             type: editorial
             label_fr: "Ajouter un agent du dépôt au pipeline"
@@ -502,8 +502,8 @@ parts:
             sidebar_position: 8
             doc: explanation/pipeline/deliver
             source: "plugins/skraft-framework/com.github.copilot/agents/software-engineer.agent.md"
-            purpose_fr: "Phase DELIVER : Outside-In TDD vérifié, revue, puis mutation en dernier avec le choix du développeur sur les survivants."
-            purpose_en: "DELIVER phase: checked Outside-In TDD, review, then mutation last with the developer's choice on survivors."
+            purpose_fr: "Phase DELIVER : Outside-In TDD vérifié, revue, gates tracées par skraft_repl ; la mutation reste au développeur."
+            purpose_en: "DELIVER phase: checked Outside-In TDD, review, gates traced through skraft_repl; mutation stays the developer's."
       - id: brownfield-journey
         title_fr: "Parcours Brownfield"
         title_en: "Brownfield journey"
@@ -746,8 +746,8 @@ parts:
             label_en: "DOT workflow"
             sidebar_position: 5
             doc: reference/workflow-dot
-            purpose_fr: "La syntaxe des workflows .skraft.dot : formes de noeud, attributs, aretes, regles de validite, noeuds verrouilles et obligatoires, revues, noeud d'appel."
-            purpose_en: "The syntax of .skraft.dot workflows: node shapes, attributes, edges, validity rules, locked and mandatory nodes, reviews, call node."
+            purpose_fr: "La syntaxe des workflows .skraft.dot : formes de noeud, attributs, aretes, regles de validite, noeuds obligatoires, revues, noeud d'appel."
+            purpose_en: "The syntax of .skraft.dot workflows: node shapes, attributes, edges, validity rules, mandatory nodes, reviews, call node."
           - id: phases-reference
             type: editorial
             label_fr: "Phases"
@@ -848,8 +848,8 @@ parts:
             sidebar_position: 1
             doc: reference/gates
             source: "plugins/skraft-framework/skills/*-review-criteria/SKILL.md"
-            purpose_fr: "Les gates de commandes du moteur et les criteres de revue (Gxx) de chaque lentille, par phase, et le calcul du verdict."
-            purpose_en: "The engine's command gates and each lens's review criteria (Gxx), per phase, and how the verdict is computed."
+            purpose_fr: "Les gates de commandes, leurs preuves tracees, et les criteres de revue (Gxx) de chaque lentille, par phase, et le calcul du verdict."
+            purpose_en: "The command gates, their traced evidence, and each lens's review criteria (Gxx), per phase, and how the verdict is computed."
       - id: patterns
         title_fr: "Patterns"
         title_en: "Patterns"

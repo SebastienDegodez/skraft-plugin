@@ -5,7 +5,7 @@ description: "Les gates de commandes du moteur et les critères de revue (Gxx et
 
 # Gates
 
-Une gate est un critère binaire, écrit d'avance : une commande qui sort avec 0, ou un critère qu'une lentille de revue déclare tenu ou non.
+Une gate est un critère binaire, écrit d'avance : une commande qui sort avec 0 dans une exécution tracée, ou un critère qu'une lentille de revue déclare tenu ou non.
 
 Pourquoi des critères écrits et une revue indépendante :
 [La revue avant la revue](../explanation/deep-dive/review-before-review.md).
@@ -15,7 +15,7 @@ Où chaque revue se place dans le pipeline : [Phases](./phases.md).
 
 | Sorte | Identifiants | Qui la juge | Où |
 | --- | --- | --- | --- |
-| Gate de commandes | `build`, `format`, `lint`, `test`, `architecture`, `coverage`, `mutation` | le moteur, par le code de sortie de la commande du composant | nœud `gates` de DELIVER et `skraft gate` ; `mutation` seulement dans le workflow propre à une équipe |
+| Gate de commandes | `build`, `format`, `lint`, `test`, `architecture`, `coverage` | l'ingénieur logiciel la lance par `skraft_repl` ; le moteur contrôle la trace signée | DELIVER, à la soumission de la tentative |
 | Critère de revue | `G<n>`, et `C1`, `F1`, `B1`, `T<n>`, `E<n>`, `M<n>`, `K<n>` | une lentille, puis le moteur (DESIGN, DISTILL, DELIVER) ou `review-verdict.mjs` (DISCOVER, DISCUSS) | revues de chaque phase |
 | Contrôle du moteur rattaché à un critère | G2, G10, G12, G14 (DESIGN) ; G1 (`gherkin-records`), G11 (`testability#layout`) (DISTILL) ; G9 (`test-integrity#patch`) | le moteur, sans lentille | après la tentative de l'architecte ; après la tentative du concepteur d'acceptation ; dans le patch d'une revue |
 
@@ -25,32 +25,48 @@ l'identifiant dans le champ `gate` de chaque finding.
 
 ## Gates de commandes <!-- #command-gates -->
 
-Les gates sont les commandes d'un composant dont le nom est l'un des sept ci-dessous, dans
-`skraft-config.json`. Elles tournent dans cet ordre, quel que soit l'ordre du fichier, depuis la
-racine du composant ; un composant s'arrête à sa première gate en échec.
+Les gates sont les commandes d'un composant dont le nom est l'un des six ci-dessous, dans
+`skraft-config.json`. Le moteur n'en lance aucune : dans DELIVER, l'ingénieur logiciel lance
+chacune par l'outil MCP `skraft_repl` (`gate(name, command, { cwd })`, voir [Le REPL](./repl.md)),
+et le moteur lit la trace signée de ces exécutions à la soumission de la tentative.
 
-| Ordre | Gate | Nœud du workflow du plugin |
-| --- | --- | --- |
-| 1 | `build` | `gates` |
-| 2 | `format` | `gates` |
-| 3 | `lint` | `gates` |
-| 4 | `test` | `gates` |
-| 5 | `architecture` | `gates` |
-| 6 | `coverage` | `gates` |
-| 7 | `mutation` | aucun : elle revient au développeur ; `skraft gate` et `skraft doctor --run` la laissent aussi |
+| Gate | Ce qu'elle prouve |
+| --- | --- |
+| `build` | le composant compile |
+| `format` | le code est formaté |
+| `lint` | le linter se tait |
+| `test` | toute la suite de tests passe ; l'exécution de la ligne de commit (toute la suite non filtrée, enchaînée à `git add` et `git commit`, étiquette `green`) est cette exécution |
+| `architecture` | les règles de dépendance tiennent |
+| `coverage` | le seuil de couverture tient |
+
+`mutation` n'est pas une gate : c'est une recette de la session du développeur ([Lancer la mutation](../how-to/run-mutation.md)).
 
 | Règle | Détail |
 | --- | --- |
-| Résultat | `pass` (sortie 0) ou `fail`, classe `interrupted`, `environment` ou `deterministic` ([classes d'échec](./skraft-config.md#failure-classes)) |
-| Composant sans commande de gate | gate `none`, `fail`, classe `environment` ; dans un run, la question `environment` nomme la cause `config` |
-| Portée | les composants modifiés depuis leur base ; `goal_gate=true` lance ensuite tous les autres ; `skraft gate --all` les lance tous |
-| Arêtes | toutes les gates du nœud passent : arête `PASS` ; une échoue : arête `FAIL` (`gates` : `PASS` vers `deliver_review`, `FAIL` vers `deliver`) |
-| Machine | une étape de gates qui échoue en `environment` ne prend aucune arête : le run pose la question `environment` ([causes](./run-journal.md#environment-question)), ne renvoie rien à un agent et ne consomme aucune de ses tentatives ; une gate arrêtée par un signal ou un plantage échoue en `deterministic` et prend l'arête `FAIL` avec sa preuve, comme une vérification en échec |
-| Plafond de boucle | une étape de gates en échec prend son arête `FAIL` jusqu'au `max_visits` de cette arête ; un échec de plus pose la question `blocked` (code `loop-ceiling`) sur le nœud vers lequel mène cette arête ; une consigne y renvoie le travail, `STOP` termine le run |
-| Mutation | le pipeline de la story n'en lance aucune : le run de mutation du développeur (`workflows/mutation.skraft.dot`) lance la commande `mutation`, comme un nœud `gate="mutation"` du workflow propre à une équipe. Le moteur juge le résultat que la commande écrit dans `SKRAFT_MUTATION_RESULT`, sinon le rapport qu'écrit son outil, contre **80 %** sur le cœur (Domain, Application) et **80 %** sur la frontière (le reste), jugés à part ([Le résultat de mutation](./skraft-config.md#mutation-result)) |
-| Seuils | aucun n'est configurable |
-| Verrou | `gates` est `locked=true` : une copie du workflow ne le retire qu'avec `unlock="<raison>"` ([Le workflow DOT](./workflow-dot.mdx#locked-nodes)) |
-| Preuve | `gates/<composant>/<gate>-<n>.log` et un événement `gate.ran` ([Dossier de suivi et journal](./run-journal.md#gate-evidence)) |
+| Qui lance | l'ingénieur logiciel, par `skraft_repl`, dans chaque composant que l'histoire a modifié |
+| Gate absente | une gate dont les documents du projet ne nomment aucune commande se déclare par `absent(gate, component, reason)` ; `test` n'est jamais absente |
+| Trace | `logs/runs/<step>-<visit>-<attempt>/runs.jsonl`, signée ; un dossier par tentative |
+| Contrôle | à la soumission de la tentative, pour chaque composant que l'histoire a modifié, la dernière exécution de chaque gate sous son dossier est sortie avec 0, a démarré sur un arbre propre (hors l'exécution de la ligne de commit) et s'est terminée sur le dernier commit ; ou la gate a été déclarée absente |
+| Refus | le code d'échec `evidence`, une ligne fixe par gate, sans sortie ni commande ; des exécutions ouvertes, une trace non signée ou modifiée et une clé manquante refusent aussi la tentative |
+| Journal | `evidence.checked` avec `runs: [{ run, gate, cwd, log, sha256 }]` ([Dossier de suivi et journal](./run-journal.md#gate-evidence)) |
+| Rapport | le tableau « Preuves de qualité » de la pull request, du commentaire d'issue et de `qa-report.md` (Gate, Dossier, Exécution, Preuve), la ligne du panneau Claude Code `Preuves de qualité : build exécution 1, test exécution 4` et la ligne du canvas Copilot |
+| Seuils | aucun n'est configurable ; le seuil de mutation (80 sur le cœur, 80 sur la frontière) est un nombre en lecture seule de la vue de configuration |
+
+### Workflows qui contiennent encore une gate
+
+Un workflow éjecté plus tôt qui contient un nœud gate ou l'un de ses attributs est refusé, un
+message par attribut :
+
+| Trouvé dans le workflow | Message |
+| --- | --- |
+| un nœud de forme `parallelogram` ou un attribut `gate` | `a gate node is gone: skraft runs no gate. The software engineer runs each gate through skraft_repl, and the engine checks the traced runs of its attempt; remove the node and its PASS and FAIL edges (skraft workflow diff shows the plugin's pipeline)` |
+| `goal_gate`, `locked` ou `unlock` | `<attribut> is gone with the gate node: skraft runs no gate` |
+| `each` ou `proposal` | `<attribut> is gone with the mutation the engine ran: mutation testing is a recipe of the session (the skraft-mutation skill), not a node` |
+
+Un run en cours qui pointe sur un nœud retiré (`gates`, `mutation`, `mutation_gates`,
+`kill_proposal`, `kill_mutants`, ou une étape qui lançait des gates) se bloque avec le code
+`node-retired` : « the node X was retired: skraft runs no gate and no mutation any more ... start
+the story again with the plugin's workflow ».
 
 ## Critères de revue <!-- #review-criteria -->
 
@@ -205,7 +221,7 @@ revus par ces lentilles ; la revue DELIVER les lit.
 
 ## DELIVER <!-- #deliver -->
 
-DELIVER passe par les gates `gates`, puis par l'appel `deliver_review` du workflow `review`.
+DELIVER passe par les exécutions tracées de gates de l'ingénieur logiciel, puis par l'appel `deliver_review` du workflow `review`.
 Les mêmes
 lentilles jugent une pull request par `skraft review --pr`.
 
@@ -214,7 +230,7 @@ lentilles jugent une pull request par `skraft review --pr`.
 | **G7** | `test-integrity` | Aucun test de façade : chaque test peut échouer quand le comportement qu'il nomme casse. | blocker |
 | **G9** | `test-integrity` | Aucun test changé pour passer : ni assertion affaiblie, ni test supprimé, ni skip ou focus ajouté, ni valeur d'acceptation qui s'écarte du `.feature`. | blocker |
 | **G4** | `architecture-boundaries` | Aucune doublure d'un type Domain ou Application dans un test unitaire. | blocker |
-| **G5** | `architecture-boundaries` | Les dépendances pointent vers l'intérieur : Domain → rien, Application → Domain, API et Infrastructure → Application ; sautée pour un composant dont la gate `architecture` a passé dans ce run. | blocker |
+| **G5** | `architecture-boundaries` | Les dépendances pointent vers l'intérieur : Domain → rien, Application → Domain, API et Infrastructure → Application ; sautée pour un composant dont la gate `architecture` a une exécution tracée réussie dans cette tentative. | blocker |
 | **G10** | `architecture-boundaries` | Le code du domaine suit les 9 règles d'Object Calisthenics. | medium |
 | **G11** | `cold-reader` | Tests et code de production parlent la langue du métier et montrent leur intention. | medium |
 | **M1** | `mock-fidelity` | Le test suit la stratégie de mocking de son composant. | high |
@@ -256,8 +272,7 @@ aucune (`issue-closed`).
 | --- | --- | --- |
 | `distill`, passage du plan | un rouge qui tient le walking skeleton, le test d'acceptation de chaque scénario et le squelette qu'ils appellent, dans les composants que nomment les scénarios, et le `.feature` de ces composants ; aucun pour une histoire exemptée de walking skeleton et de tests ; les fichiers `.feature` et Markdown l'accompagnent ou vont dans un commit `docs`, où qu'ils soient | un second rouge (`oracle-split`) ; un rouge dans un composant qu'aucun scénario ne nomme (`oracle-component`) ; un rouge sans fichier des chemins de test du composant (`oracle-without-test`) ; un vert ou un refactor (`code-in-oracle`) ; aucun |
 | `deliver`, passage de l'histoire | un seul vert, pour toute l'histoire, quoi que nomme son sujet, enchaîné en bash : `<commande de test> && git add <fichiers> && git commit …` ; les groupes du plan d'implémentation donnent l'ordre de travail, non un nombre de commits ; un changement d'un autre composant dont un groupe a besoin est accepté et journalisé sous `green.others` | un rouge (`test-in-scenario`) ; un refactor (`refactor-in-scenario`) ; un deuxième vert (`green-split` : le fusionner dans le premier) ; un changement d'un fichier du commit des tests d'acceptation, walking skeleton compris, hors des chemins `src` du composant (`oracle-touched`) ; aucun |
-| `deliver` renvoyé par les gates ou la revue, après le passage de l'histoire | rouges, verts et refactors sur toute l'histoire | un vert sans rouge depuis le dernier vert (`green-without-red`) ; un changement d'un fichier du commit des tests d'acceptation (`oracle-touched`) ; sur un passage que les gates ont renvoyé, leur échec tient lieu du premier rouge |
-| `kill_mutants`, dans le workflow propre à une équipe | des tests qui tuent des mutants et passent | — |
+| `deliver` renvoyé par la revue, après le passage de l'histoire | rouges, verts et refactors sur toute l'histoire | un vert sans rouge depuis le dernier vert (`green-without-red`) ; un changement d'un fichier du commit des tests d'acceptation (`oracle-touched`) ; sur un passage que la revue a renvoyé, son finding tient lieu du premier rouge |
 
 Qu'un rouge échoue sur une assertion se lit, ne se rejoue pas : le designer d'acceptation lance une
 fois le walking skeleton et les tests d'acceptation, écrit la sortie entière de ce lancement dans

@@ -1,6 +1,6 @@
 ---
 title: "Répondre à une question du run"
-description: "Répondre à la question qu'un run attend (ADR, consentement, machine, agent bloqué, mutants) depuis votre hôte, et ce que devient un refus."
+description: "Répondre à la question qu'un run attend (ADR, consentement, machine, agent bloqué) depuis votre hôte, et ce que devient un refus."
 persona: software-engineer
 ---
 
@@ -42,7 +42,6 @@ La ligne `answer:` donne la clé (`adr-1`) et les réponses permises :
 | `scenario-review` (en-tête `Scenarios`) | `APPROVED`, `REVISE` | avec `REVISE` : vos corrections, envoyées à DISTILL |
 | `review-consent` (`skraft review --pr --publish`, en-tête `PR comment`) | `ACCEPTED`, `DECLINED` | — |
 | `environment` | `RETRY` (après avoir réparé la machine ou `skraft-config.json`), `ABORT` | — |
-| `mutation-plan` | `APPLY`, une consigne à vous, ou `STOP` | — |
 | `blocked` | une consigne pour l'agent, ou `STOP` | — |
 
 Ce que chaque réponse déclenche : [Questions à un humain](../reference/run-journal.md#human-questions).
@@ -71,8 +70,8 @@ Une question `environment` dit qui corrige sur sa ligne `Cause:`, et où la comm
 1. Choisissez une option dans la boîte de dialogue que le mod ouvre (en-tête `ADR`,
    `Pull request`, `Environment`…).
 2. Pour un refus (`REJECTED`, `REVISE`), une deuxième boîte demande la raison : tapez-la sous **Other**.
-3. Pour une question `blocked` ou `mutation-plan`, tapez votre consigne sous **Other**, ou
-   choisissez `STOP` (`APPLY`).
+3. Pour une question `blocked`, tapez votre consigne sous **Other**, ou
+   choisissez `STOP`.
 
 Boîte fermée, le run attend. Répondez plus tard par un bouton du panneau **Skraft**, ou dans la
 conversation :

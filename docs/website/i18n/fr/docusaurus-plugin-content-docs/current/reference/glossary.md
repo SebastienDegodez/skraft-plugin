@@ -39,7 +39,7 @@ Liste priorisée de fonctionnalités ou User Stories à développer. Le backlog 
 ## C
 
 **Classe d'échec**
-Nature d'une gate en échec : `interrupted` (une personne l'a arrêtée : le run s'arrête), `environment` (la machine ou la config doit changer : programme absent, ligne de commande refusée, rapport de mutation illisible : un humain agit) ou `deterministic` (la commande a échoué, un signal ou un plantage compris : l'agent reçoit sa preuve par l'arête `FAIL`).
+Nature d'une commande en échec : `interrupted` (une personne l'a arrêtée : le run s'arrête), `environment` (la machine ou la config doit changer : programme absent, ligne de commande refusée : un humain agit) ou `deterministic` (la commande a échoué, un signal ou un plantage compris).
 → Voir [Classe d'échec](../how-to/run-gates.md)
 
 **Composant**
@@ -94,8 +94,8 @@ Un défaut qu'une lentille signale : la gate concernée, une sévérité (`block
 ## G
 
 **Gate (porte de qualité)**
-Une commande nommée d'un composant (`build`, `format`, `lint`, `test`, `architecture`, `coverage`, `mutation`) que le moteur lance lui-même pour prouver la qualité. Chaque gate laisse un fichier de preuve et un événement `gate.ran`. Le moteur les lance en DELIVER (le nœud verrouillé `gates`) ; `skraft gate` les lance à la main. `mutation` revient au développeur : le pipeline du plugin ne la lance nulle part.
-→ Voir [skraft-config.json](./skraft-config.md) ; les critères de revue des lentilles : [Gates](./gates.md)
+Une commande nommée d'un composant (`build`, `format`, `lint`, `test`, `architecture`, `coverage`) qui prouve la qualité. Le moteur n'en lance aucune : dans DELIVER, l'ingénieur logiciel lance chacune par `skraft_repl`, et le moteur contrôle la trace signée de sa tentative (`evidence`, `evidence.checked`). Une gate dont le projet ne nomme aucune commande se déclare `absent` ; `test` ne l'est jamais. `mutation` revient au développeur : une recette de sa session.
+→ Voir [Gates](./gates.md#command-gates) ; les critères de revue des lentilles : [Gates](./gates.md)
 
 **Gherkin**
 Langage structuré pour écrire des scénarios BDD : `Given` (contexte), `When` (action), `Then` (résultat attendu).
@@ -137,7 +137,7 @@ Outil qui simule les API dont dépend un composant, à partir de leurs contrats 
 Priorisation en *Must*, *Should*, *Could*, *Won't* utilisée par le triage et la carte des stories.
 
 **Moteur**
-Le code de SKRAFT qui décide de chaque étape du pipeline (ordre, sorties attendues, relances, gates), le même sur tous les hôtes.
+Le code de SKRAFT qui décide de chaque étape du pipeline (ordre, sorties attendues, relances, preuves des exécutions de gates), le même sur tous les hôtes.
 → Voir [Moteur](../explanation/architecture.md)
 
 **Mutant survivant**
@@ -150,7 +150,7 @@ Technique qui modifie légèrement le code source (introduit des "mutants") pour
 ## N
 
 **Nœud question**
-Un nœud du workflow de forme `hexagon` qui pose une question à un humain (`question="adr-ratification"`, `"scenario-review"`, `"mutation-plan"`). Ses arêtes sortantes portent les réponses en label ; un refus (`REJECTED`, `REVISE`) ramène au nœud dont il refuse le travail.
+Un nœud du workflow de forme `hexagon` qui pose une question à un humain (`question="adr-ratification"`, `"scenario-review"`). Ses arêtes sortantes portent les réponses en label ; un refus (`REJECTED`, `REVISE`) ramène au nœud dont il refuse le travail.
 → Voir [Répondre à une question du run](../how-to/answer-a-question.mdx)
 
 ## O
@@ -177,7 +177,7 @@ Les quatre phases RESEARCH → DESIGN → DISTILL → DELIVER qu'une story trave
 → Voir [Le pipeline](../explanation/pipeline/index.mdx)
 
 **Pipeline actif**
-Le slug écrit dans `.copilot-tracking/skraft-plans/.active-slug` : le run sur lequel agissent `skraft status`, `skraft gate` et la reprise. Un par copie de travail (donc par worktree) ; il ne change que par un init explicite, jamais deviné.
+Le slug écrit dans `.copilot-tracking/skraft-plans/.active-slug` : le run sur lequel agissent `skraft status` et la reprise. Un par copie de travail (donc par worktree) ; il ne change que par un init explicite, jamais deviné.
 → Voir [Pipeline actif](./run-journal.md)
 
 **Politique d'infrastructure**
@@ -187,7 +187,7 @@ Sur quoi les tests d'un composant font tourner chaque sorte de dépendance, dans
 ## Q
 
 **Question d'environnement**
-La question que le moteur pose quand une étape ne peut pas tourner sur la machine ou avec ce que lui donne `skraft-config.json` (programme introuvable, Git en échec, une commande de gate absente). Elle nomme la cause (la machine ou `skraft-config.json`) et le log de la commande en échec. `RETRY` relance la même étape là où elle s'est arrêtée, sans consommer de tentative ; `ABORT` bloque le run.
+La question que le moteur pose quand une étape ne peut pas tourner sur la machine ou avec ce que lui donne `skraft-config.json` (programme introuvable, Git en échec, une commande absente). Elle nomme la cause (la machine ou `skraft-config.json`) et le log de la commande en échec. `RETRY` relance la même étape là où elle s'est arrêtée, sans consommer de tentative ; `ABORT` bloque le run.
 → Voir [La question environment](./run-journal.md#environment-question)
 
 ## R

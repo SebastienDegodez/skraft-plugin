@@ -17,7 +17,7 @@ Why an engine and drivers, and the Copilot driver contract:
 | --- | --- | --- |
 | Node | 22 or later | the engine, the `skraft` command line, the Copilot extension; `skraft doctor` checks it |
 | Git | — | each component's base and commits |
-| Docker or Podman | — | the tests that run Microcks or Testcontainers, the walking skeleton's database by default; without either, the agent stops blocked and a human is asked to start one; `skraft doctor` names the one that answers |
+| Docker or Podman | — | the tests that run Microcks or Testcontainers, the walking skeleton's database by default; without either, the agent stops blocked and a human is asked to start one |
 | `gh` | signed in to the repository's host | only to read the story's issue (`--issue`), open the pull request, comment on the issue, `skraft review --pr`; the engine never goes through an MCP server; see [Forge](./skraft-config.md#github-through-gh) |
 | `az` | signed in to the organization, with its `azure-devops` extension | on Azure DevOps only, to read the story's work item (`--issue`), keep the run's comment on it, open the pull request, and review a pull request (`skraft review --pr`: read it, keep the review's thread); the engine never goes through an MCP server; see [Forge](./skraft-config.md#azure-devops-through-az) |
 | Copilot CLI | — | Copilot CLI; under VS Code, the SDK driver (`skraft-run.mjs`) starts it headless |
@@ -73,7 +73,7 @@ lists.
 ## Claude Code <!-- #claude-code -->
 
 The mod (`hooks/skraft-mod.tsx`, the one module `hooks/hooks.json` declares) calls the engine
-without Node or `import()`: it runs Git and the gates through `$.process.run`.
+without Node or `import()`: it runs Git through `$.process.run`.
 Every `/skraft` opens the **Skraft** pane (`skraft-pipeline`).
 
 | In the conversation | Effect | Answer |
@@ -94,8 +94,8 @@ form the title; `--base <ref>` and `--from-artifacts` may go anywhere after the 
 
 In `/skraft decide`, a first word shaped like a key (`adr-1`) names the question; without
 it, the answer goes to the question the run waits on. The words after the answer are the
-reason. For a `blocked` or `mutation-plan` question, every word after the key is the instruction
-(`/skraft decide design-1 use the bank gateway`), and an option (`STOP`, `APPLY`) counts only typed alone.
+reason. For a `blocked` question, every word after the key is the instruction
+(`/skraft decide design-1 use the bank gateway`), and an option (`STOP`) counts only typed alone.
 
 When the engine asks a question, the mod opens a `$.ui.ask` dialog with the question, its
 options and a header (`ADR`, `Reporting`, `Environment`):
@@ -104,7 +104,7 @@ options and a header (`ADR`, `Reporting`, `Environment`):
 | --- | --- |
 | an option that is not a refusal | recorded as the answer; the run goes on |
 | a refusal (`REJECTED`) | a second dialog: `Why REJECTED? Type the reason under Other; it goes back to the agent.`; the text typed under Other is the reason; `Not now` or `Answer later` give no answer |
-| text typed under Other in the first dialog | an option typed in any case is that option; other text is a refusal with that text as its reason when the question has one (`adr-ratification`, `scenario-review`), the instruction for a `blocked` or `mutation-plan` question, and is refused as an answer otherwise (the run waits) |
+| text typed under Other in the first dialog | an option typed in any case is that option; other text is a refusal with that text as its reason when the question has one (`adr-ratification`, `scenario-review`), the instruction for a `blocked` question, and is refused as an answer otherwise (the run waits) |
 | an instruction typed under Other | shown back in a dialog `Send this instruction to <step>? <instruction>` with `SEND` and `CANCEL`: `SEND` records it and the run goes on; `CANCEL` puts the question again |
 | a text with no word typed as an instruction (`5`, `42?`, `ok`) | refused without being shown back, and the question is put again |
 | dialog dismissed, the `SEND`/`CANCEL` one included | no answer: the run waits for `/skraft decide` |
@@ -119,12 +119,11 @@ The **Skraft** pane shows the phases, each followed by its steps of the workflow
 (`  ✓ design — solution-architect: done, pass 2, $1.00`: `✓` done, `▶` in progress, `·` to
 come; what the step runs, its outcome, its pass from the second on, its cost), the current
 agent, the last pass of each review (`review design_review: needs-rework — consistency fail
-(1), fitness pass`), the last result of each gate by component (`gates api: test pass,
-coverage fail`), the cost and the latest lines of the progress log, as many as
+(1), fitness pass`), the quality evidence of the last delivery (`Quality evidence: build run 1, test run 4`), the cost and the latest lines of the progress log, as many as
 the pane's height allows. `/skraft` prints the same view without the steps. While the run
 waits, the pane and `/skraft` show the question and `answer: /skraft decide adr-1
 RATIFIED|REJECTED (with your reason after REJECTED)`, or `answer: /skraft decide design-1
-<instruction>|STOP` for a `blocked` question, whose only button is `STOP` (`APPLY|<instruction>|STOP` for `mutation-plan`, buttons `APPLY` and `STOP`).
+<instruction>|STOP` for a `blocked` question, whose only button is `STOP`.
 
 The pane also shows one button per option of the question the run waits on. A press is the
 person's answer, recorded as `/skraft decide` records it (same refusals), journaled
@@ -149,7 +148,7 @@ skraft checkout — running
 The block shows the pane's text for a `checkout` run in DESIGN, as the mod's view tests check it.
 Next to a dialog, while a question waits (the figure was captured when the publication consent was
 still asked inside a run; `/skraft-init` settles it beforehand now, and the question a run stops on
-is one of `adr-ratification`, `scenario-review`, `mutation-plan`, `environment` or `blocked`):
+is one of `adr-ratification`, `scenario-review`, `environment` or `blocked`):
 
 ![Claude Code: on the left the Pull request dialog with ACCEPTED, DECLINED and Type something; on the right the Skraft pane, "skraft checkout — waiting", RESEARCH open on publish_consent, the steps of the other phases to come, then the question and how to answer it](/img/screenshots/shared/claude-skraft-pane.png)
 
@@ -277,7 +276,7 @@ an instruction over 1000 characters or without words is refused, with no record.
 | Rule | Detail |
 | --- | --- |
 | Input | `tab` only, the tab the page shows first (`run`, `configuration` or `workflow`); a slug or any other key is refused; it shows the active pipeline (`.active-slug`) of the session's directory, read on each open, action and refresh |
-| Content | four tabs. **Run**: each phase and its steps, the last pass of each review, each component's last gate results, the edges taken, the question waiting; no cost. **Configuration**: the forge, the components as written, the consents, the models (one text field per family and host: the names tried in order, separated by commas; a field left empty leaves the layers below it and the host to decide) and what each agent of the workflow receives per host, the quality bar read-only. **Workflow**: each workflow the run can follow, step by step, with the run's current step highlighted. **Journal**: read-only, from `events.jsonl`; each step recorded (pass, attempt, outcome, the edge taken) and each human decision (answer, reason, `by`), the last 200, with the state of the hash chain (intact, broken, unverifiable); a broken chain shows no entry |
+| Content | four tabs. **Run**: each phase and its steps, the last pass of each review, the quality evidence of the last delivery, the edges taken, the question waiting; no cost. **Configuration**: the forge, the components as written, the consents, the models (one text field per family and host: the names tried in order, separated by commas; a field left empty leaves the layers below it and the host to decide) and what each agent of the workflow receives per host, the quality bar read-only. **Workflow**: each workflow the run can follow, step by step, with the run's current step highlighted. **Journal**: read-only, from `events.jsonl`; each step recorded (pass, attempt, outcome, the edge taken) and each human decision (answer, reason, `by`), the last 200, with the state of the hash chain (intact, broken, unverifiable); a broken chain shows no entry |
 | Action | `get_pipeline` and `get_configuration`, read-only; the page has no answer form nor route. The one write is an edit of the configuration from the Configuration tab: components and consents go to `skraft-config.json`, `assign` and `models` to `skraft-config.local.json`; the engine checks every edit as a run loads it and writes nothing it would refuse. The page applies the model-name rule as you type: a refused name is flagged on its field and nothing is sent while one is flagged |
 | Server | one server on 127.0.0.1 per open instance, token in the URL, CSP `default-src 'none'`; 4 instances at most; the only route that writes is `POST /configuration` (token in `X-Skraft-Token`, JSON of at most 64 KiB) |
 

@@ -18,11 +18,11 @@ The description is written in the story's language. What decides shows under a h
 |---|---|---|---|
 | What changes | heading | pr-writer | the text does not match the change |
 | Why | heading | pr-writer | the text does not match the story |
-| Decisions applied | heading | engine | a locked gate was skipped |
+| Decisions applied | heading | engine | a decision does not match the code |
 | Consistency matrix | folded | engine | never: information only |
 | Tests | folded | engine | never: information only |
 | RED evidence | folded, counts the red commits | engine | a red commit is listed |
-| Quality gates | folded, opens itself when a gate failed | engine | a gate failed |
+| Quality evidence | folded | engine | a gate has no run listed |
 | Review | folded, opens itself on a finding to fix or to decide | engine | a finding is to fix or to decide |
 | Screenshots | folded | engine | never: information only |
 | More Domain tests than acceptance tests | heading, only when the Domain rows outnumber the acceptance rows | engine | you want to prune tests |
@@ -56,11 +56,11 @@ The description is written in the story's language. What decides shows under a h
 
 ### Decisions applied <!-- #decisions -->
 
-- **Holds**: `- ADR-00N <title> (<path>), ratified in this run`; `- Locked gate <node> skipped, unlocked: <reason>`; else `None recorded: no ADR was ratified and no locked gate was unlocked in this run.`
+- **Holds**: `- ADR-00N <title> (<path>), ratified in this run`; else `None recorded: no ADR was ratified in this run.`
 - **Shown**: under its heading.
 - **Written by**: the engine, from the run's journal.
-- **Read it to**: see the architecture decisions the code follows and the locked gates somebody skipped.
-- **Act when**: a locked gate was skipped and you do not accept the reason.
+- **Read it to**: see the architecture decisions the code follows.
+- **Act when**: a decision does not match the code.
 
 ### Consistency matrix <!-- #consistency-matrix -->
 
@@ -86,13 +86,13 @@ The description is written in the story's language. What decides shows under a h
 - **Read it to**: see that each test failed before the code that makes it pass.
 - **Act when**: you want the proof that a test failed: read the acceptance designer's run in the run's `logs/`.
 
-### Quality gates <!-- #quality-gates -->
+### Quality evidence <!-- #quality-evidence -->
 
-- **Holds**: a table `Component | Gate | Command | Result | Time | Evidence`; without a gate, `None recorded: no gate ran in this run.`
-- **Shown**: folded; the summary reads `Quality gates: [N failed, ]M passed` and the block opens itself when a gate failed.
-- **Written by**: the engine, from the gates the journal recorded.
-- **Read it to**: see which checks ran, with which command, and how long they took.
-- **Act when**: a gate failed.
+- **Holds**: a table `Gate | Folder | Run | Evidence`, one row per gate of each component the story changed, read from the `evidence.checked` event; without it, `None recorded: no gate evidence was checked in this run.`
+- **Shown**: folded; the summary reads `Quality evidence: N gate runs`.
+- **Written by**: the engine, from the traced runs of the software engineer's attempt ([Gates](./gates.md#command-gates)); it carries no command, no output and no duration.
+- **Read it to**: see which gate each traced run stands for, in which folder, and the hash of its log.
+- **Act when**: a gate you expected is missing, or its run is not the one you trust.
 
 ### Review <!-- #review -->
 

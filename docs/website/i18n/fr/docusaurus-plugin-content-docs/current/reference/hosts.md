@@ -17,7 +17,7 @@ Pourquoi un moteur et des pilotes, et le contrat du pilote Copilot :
 | --- | --- | --- |
 | Node | 22 ou plus | le moteur, la ligne de commande `skraft`, l'extension Copilot ; `skraft doctor` le vérifie |
 | Git | — | la base de chaque composant et les commits |
-| Docker ou Podman | — | les tests qui font tourner Microcks ou Testcontainers, la base du walking skeleton par défaut ; sans l'un ni l'autre, l'agent s'arrête bloqué et un humain est prié d'en démarrer un ; `skraft doctor` nomme celui qui répond |
+| Docker ou Podman | — | les tests qui font tourner Microcks ou Testcontainers, la base du walking skeleton par défaut ; sans l'un ni l'autre, l'agent s'arrête bloqué et un humain est prié d'en démarrer un |
 | `gh` | connecté à l'hôte du dépôt | seulement pour lire l'issue de la story (`--issue`), ouvrir la pull request, commenter l'issue, `skraft review --pr` ; le moteur ne passe jamais par un serveur MCP ; voir [Forge](./skraft-config.md#github-through-gh) |
 | `az` | connecté à l'organisation, avec son extension `azure-devops` | sur Azure DevOps seulement, pour lire le work item de la story (`--issue`), y tenir le commentaire du run et ouvrir la pull request, et revoir une pull request (`skraft review --pr` : la lire, tenir le fil de revue) ; le moteur ne passe jamais par un serveur MCP ; voir [Forge](./skraft-config.md#azure-devops-through-az) |
 | Copilot CLI | — | Copilot CLI ; sous VS Code, le pilote SDK (`skraft-run.mjs`) le lance sans interface |
@@ -73,7 +73,7 @@ réponse qu'elle liste.
 ## Claude Code <!-- #claude-code -->
 
 Le mod (`hooks/skraft-mod.tsx`, seul module déclaré dans `hooks/hooks.json`) appelle le moteur
-sans Node ni `import()` : il lance Git et les gates par `$.process.run`. Chaque
+sans Node ni `import()` : il lance Git par `$.process.run`. Chaque
 `/skraft` ouvre le panneau **Skraft** (`skraft-pipeline`).
 
 | Dans la conversation | Effet | Réponse |
@@ -95,8 +95,8 @@ réponses :
 
 Dans `/skraft decide`, un premier mot en forme de clé (`adr-1`) nomme la question ; sans
 lui, la réponse va à la question que le run attend. Les mots après la réponse forment la
-raison. Pour une question `blocked` ou `mutation-plan`, tous les mots après la clé forment la consigne
-(`/skraft decide design-1 utiliser la passerelle bancaire`), et une option (`STOP`, `APPLY`) ne compte que seule.
+raison. Pour une question `blocked`, tous les mots après la clé forment la consigne
+(`/skraft decide design-1 utiliser la passerelle bancaire`), et une option (`STOP`) ne compte que seule.
 
 Quand le moteur pose une question, le mod ouvre une boîte de dialogue `$.ui.ask` avec la
 question, ses options et un en-tête (`ADR`, `Reporting`, `Environment`) :
@@ -105,7 +105,7 @@ question, ses options et un en-tête (`ADR`, `Reporting`, `Environment`) :
 | --- | --- |
 | une option qui n'est pas un refus | enregistrée comme réponse ; le run continue |
 | un refus (`REJECTED`) | une deuxième boîte : `Why REJECTED? Type the reason under Other; it goes back to the agent.` ; le texte tapé sous Other est la raison ; `Not now` ou `Answer later` ne donnent pas de réponse |
-| du texte tapé sous Other dans la première boîte | une option tapée, quelle que soit la casse, vaut cette option ; un autre texte est un refus avec ce texte pour raison quand la question en a un (`adr-ratification`, `scenario-review`), la consigne d'une question `blocked` ou `mutation-plan`, et sinon une réponse refusée (le run attend) |
+| du texte tapé sous Other dans la première boîte | une option tapée, quelle que soit la casse, vaut cette option ; un autre texte est un refus avec ce texte pour raison quand la question en a un (`adr-ratification`, `scenario-review`), la consigne d'une question `blocked`, et sinon une réponse refusée (le run attend) |
 | une consigne tapée sous Other | montrée en retour dans une boîte `Send this instruction to <step>? <instruction>` avec `SEND` et `CANCEL` : `SEND` l'enregistre et le run continue ; `CANCEL` repose la question |
 | un texte sans mot tapé comme consigne (`5`, `42?`, `ok`) | refusé sans être montré en retour, et la question est reposée |
 | boîte fermée, celle de `SEND`/`CANCEL` comprise | pas de réponse : le run attend `/skraft decide` |
@@ -121,13 +121,13 @@ Le panneau **Skraft** montre les phases, chacune suivie de ses étapes du graphe
 (`  ✓ design — solution-architect: done, pass 2, $1.00` : `✓` faite, `▶` en cours, `·` à
 venir ; ce que l'étape exécute, son résultat, son passage à partir du deuxième, son coût),
 l'agent en cours, le dernier passage de chaque revue (`review design_review: needs-rework —
-consistency fail (1), fitness pass`), le dernier résultat de chaque gate par composant
-(`gates api: test pass, coverage fail`), le coût et les dernières lignes du
+consistency fail (1), fitness pass`), les preuves de qualité de la dernière livraison
+(`Preuves de qualité : build exécution 1, test exécution 4`), le coût et les dernières lignes du
 journal de progression, autant que la hauteur du panneau en laisse. `/skraft` affiche la même
 vue sans les étapes. Tant que le run attend, le panneau et `/skraft` montrent la question et
 `answer: /skraft decide adr-1 RATIFIED|REJECTED (with your reason after REJECTED)`, ou
 `answer: /skraft decide design-1 <instruction>|STOP` pour une question `blocked`, dont le seul
-bouton est `STOP` (`APPLY|<instruction>|STOP` pour `mutation-plan`, boutons `APPLY` et `STOP`).
+bouton est `STOP`.
 
 Le panneau montre aussi un bouton par option de la question que le run attend. Un appui est
 la réponse de la personne, enregistrée comme `/skraft decide` l'enregistre (mêmes refus),
@@ -154,7 +154,7 @@ Le bloc montre le texte du panneau pour un run `checkout` en DESIGN, tel que le 
 de vue du mod. À côté d'une boîte de dialogue, tant qu'une question attend (la capture a été faite
 quand le consentement de publication était encore demandé pendant un run ; `/skraft-init` le règle
 avant, et la question sur laquelle un run s'arrête est l'une de `adr-ratification`,
-`scenario-review`, `mutation-plan`, `environment` ou `blocked`) :
+`scenario-review`, `environment` ou `blocked`) :
 
 ![Claude Code : à gauche la boîte de dialogue Pull request avec ACCEPTED, DECLINED et Type something ; à droite le panneau Skraft, « skraft checkout — waiting », RESEARCH ouverte sur publish_consent, les étapes des autres phases à venir, puis la question et la façon d'y répondre](/img/screenshots/shared/claude-skraft-pane.png)
 
@@ -281,7 +281,7 @@ consigne : plus de 1000 caractères ou aucun mot est refusé, sans enregistremen
 | Règle | Détail |
 | --- | --- |
 | Entrée | `tab` seulement, l'onglet que la page montre d'abord (`run`, `configuration` ou `workflow`) ; un slug ou toute autre clé est refusé ; il montre le pipeline actif (`.active-slug`) du répertoire de la session, relu à chaque ouverture, action et rafraîchissement |
-| Contenu | quatre onglets. **Run** : chaque phase et ses étapes, le dernier passage de chaque revue, les derniers résultats de gate de chaque composant, les arêtes empruntées, la question en attente ; aucun coût. **Configuration** : la forge, les composants tels qu'écrits, les consentements, les modèles (un champ texte par famille et par hôte : les noms essayés dans l'ordre, séparés par des virgules ; un champ laissé vide laisse décider les couches en dessous et l'hôte) et ce que chaque agent du workflow reçoit par hôte, la barre de qualité en lecture seule. **Workflow** : chaque workflow que le run peut suivre, pas à pas, l'étape en cours du run mise en évidence. **Journal** : en lecture seule, d'après `events.jsonl` ; chaque étape enregistrée (passe, essai, résultat, arête empruntée) et chaque décision humaine (réponse, raison, `by`), les 200 dernières, avec l'état de la chaîne de hachage (intacte, rompue, invérifiable) ; une chaîne rompue n'affiche aucune entrée |
+| Contenu | quatre onglets. **Run** : chaque phase et ses étapes, le dernier passage de chaque revue, les preuves de qualité de la dernière livraison, les arêtes empruntées, la question en attente ; aucun coût. **Configuration** : la forge, les composants tels qu'écrits, les consentements, les modèles (un champ texte par famille et par hôte : les noms essayés dans l'ordre, séparés par des virgules ; un champ laissé vide laisse décider les couches en dessous et l'hôte) et ce que chaque agent du workflow reçoit par hôte, la barre de qualité en lecture seule. **Workflow** : chaque workflow que le run peut suivre, pas à pas, l'étape en cours du run mise en évidence. **Journal** : en lecture seule, d'après `events.jsonl` ; chaque étape enregistrée (passe, essai, résultat, arête empruntée) et chaque décision humaine (réponse, raison, `by`), les 200 dernières, avec l'état de la chaîne de hachage (intacte, rompue, invérifiable) ; une chaîne rompue n'affiche aucune entrée |
 | Action | `get_pipeline` et `get_configuration`, en lecture seule ; la page n'a ni formulaire ni route de réponse. La seule écriture est une modification de la configuration depuis l'onglet Configuration : composants et consentements vont dans `skraft-config.json`, `assign` et `models` dans `skraft-config.local.json` ; le moteur vérifie chaque modification comme un run la charge et n'écrit rien qu'il refuserait. La page applique la règle du nom de modèle à la frappe : un nom refusé est signalé sur son champ et rien n'est envoyé tant qu'un nom est signalé |
 | Serveur | un serveur sur 127.0.0.1 par instance ouverte, jeton dans l'URL, CSP `default-src 'none'` ; 4 instances au plus ; la seule route qui écrit est `POST /configuration` (jeton dans `X-Skraft-Token`, JSON d'au plus 64 Kio) |
 

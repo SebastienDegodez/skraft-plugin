@@ -98,7 +98,7 @@ flowchart TB
     end
     subgraph DEL["DELIVER"]
         direction LR
-        C1["architecture gate<br/>locked"] --> C3["architecture-boundaries lens<br/>G4 · G5"]
+        C1["architecture gate<br/>traced run"] --> C3["architecture-boundaries lens<br/>G4 · G5"]
     end
     DES --> DIS --> DEL
 ```
@@ -127,8 +127,7 @@ the use case and drives it in process, with internal gateways in
 memory ([infrastructure policy](../reference/skraft-config.md#infrastructure)). See
 [Walking Skeleton](./deep-dive/walking-skeleton.md).
 
-**In DELIVER, a gate checks it on every pass.** `architecture` is one of the gates of DELIVER's
-locked node, between `test` and `coverage`. Its command, declared per component in
+**In DELIVER, a gate checks it on every pass.** `architecture` is one of the six gates the software engineer runs through `skraft_repl`, and the engine requires its traced run. Its command, declared per component in
 `skraft-config.json`, runs the project's architecture tests: an `ArchitectureTests` filter in
 .NET, `import-linter` in Python, an `architecture-gate.mjs` script in TypeScript, according to the
 component's `quality-gates-<stack>` skill. In review, the `architecture-boundaries` lens,
@@ -145,7 +144,7 @@ Infrastructure.
 **The mutation bar follows the layer.** The `skraft-quality-bar` skill classifies each file by the
 names of its folders: a folder ending in `domain` or `application` is the core;
 everything else — API, Infrastructure — is the boundary. Each is held to 80 %, apart. The developer's own
-mutation run is judged that way, and so is a `gate="mutation"` node of a team's own workflow. The
+mutation run is judged that way. The
 dependency rule therefore also decides how demanding the tests must be.
 
 ## skraft applies the rule to itself

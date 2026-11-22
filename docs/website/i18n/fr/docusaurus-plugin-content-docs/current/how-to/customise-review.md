@@ -36,7 +36,7 @@ La lentille rend sa réponse dans le format que lit le moteur :
 
 | Revue | Commande | Fichier copié |
 |---|---|---|
-| DESIGN, DISTILL ou mutation | `skraft workflow eject` | `.skraft/pipeline.skraft.dot` |
+| DESIGN, DISTILL ou DELIVER | `skraft workflow eject` | `.skraft/pipeline.skraft.dot` |
 | DELIVER (et `skraft review --pr`) | `skraft workflow eject review` | `.skraft/review.skraft.dot` |
 
 ```text
