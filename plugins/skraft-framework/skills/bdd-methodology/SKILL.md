@@ -13,7 +13,7 @@ Behaviour-Driven Development translates acceptance criteria into executable spec
 
 **Keywords in English**, whatever language the domain speaks: `Feature:`, `Scenario:`,
 `Scenario Outline:`, `Examples:`, `Given`, `When`, `Then`, `And`. Never a `# language:` header —
-the engine reads one keyword set, and a file declaring another language is sent back naming it. The
+skraft reads one keyword set, and the review sends a file declaring another language back naming it. The
 sentences stay in the domain's own language; only the keywords are fixed.
 
 ## Mapping AC → Gherkin
@@ -169,6 +169,13 @@ Each violation is a BLOCKER — do not proceed until the step is rewritten in do
 | HTTP verb in step text (`POST`, `GET`, `PUT`, `DELETE`, `PATCH`) | `When I call POST /api/eligibility` | `When the driver requests an eligibility check` |
 | Class or service name (`*Service`, `*Repository`, `*Controller`, `*Handler`, `*UseCase`) | `When I invoke the EligibilityService` | `When the driver requests an eligibility check` |
 | Infrastructure vocabulary (`database`, `table`, `record`, `queue`, `topic`, `container`, `DTO`, `schema`) | `Given the database contains a record` | `Given a driver with a completed profile` |
+
+### Form
+
+- Every scenario says `Given`, `When` and `Then`.
+- An outline's `Examples` have a column for every `<placeholder>` its title and steps open.
+- No two scenarios of one file share a title.
+- Every `.feature` the test plan's coverage matrix cites exists under the folder its component's `bdd` names.
 
 ### Forbidden tags
 

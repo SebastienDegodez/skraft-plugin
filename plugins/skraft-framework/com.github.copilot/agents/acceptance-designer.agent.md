@@ -147,7 +147,7 @@ You plan Domain unit tests; you never write them: the domain emerges from the en
    - every acceptance test and the walking skeleton failed on a business assertion in the run of step 7, committed in one test commit;
    - no production behaviour written: stubs only;
    - the acceptance tests live in the component's unit-test place, never under its integration tests: an HTTP, API or infrastructure test alone never stands for one;
-   - the `.feature`, the test plan, the implementation plan and the acceptance tests pass every gate of `acceptance-review-criteria` (G1–G11, B1, T1–T3, E1–E2); fix each place that fails one.
+   - the `.feature`, the test plan, the implementation plan and the acceptance tests pass every gate of `acceptance-review-criteria` (G1–G11, B1, T1–T4, E1–E2); fix each place that fails one.
    Your result summary names the test plan, the implementation plan, the acceptance-test files, the red commit and what you left open.
 
 ## Rework

@@ -11,7 +11,7 @@ Formal gate definitions and verdict rubric for the DISTILL review. Applied acros
 
 ---
 
-## Gate Definitions (G1–G11, B1, T1–T3, E1–E2)
+## Gate Definitions (G1–G11, B1, T1–T4, E1–E2)
 
 Every gate id is unique across the four lenses: a finding's `gate` names one row below.
 
@@ -56,6 +56,7 @@ Every gate id is unique across the four lenses: a finding's `gate` names one row
 | Implementation plan completeness | G6 | Every scenario listed in the `.feature` files has a corresponding entry in `impl-plan-{story}.md` with a file path and a use case boundary, except a scenario whose test-plan row is a proven `existing` row (below). | Bijection feature scenarios ↔ impl-plan entries other than proven `existing` rows; an `existing` row without its proof is a G6 finding. The group table of `impl-plan-{story}.md` (its Group and Scenarios columns) names every scenario of the test plan's `## Scenarios` table exactly once, none the table does not list, S1 in group 1. | HIGH |
 | Every scenario's test | T2 | The patch holds the walking skeleton (unless the story is exempt) and the acceptance test of every scenario of the test plan's `## Scenarios` table (`outside-in-tdd`: all acceptance tests first), each name starting with its scenario's number (`S4_…`, `test_s4_…`): a scenario with no test, or a test marked skipped, is a finding. Every input and expected value each acceptance test holds equals its scenario in the `.feature` verbatim (same numbers, texts, units). The walking skeleton asserts the wiring: status, shape, and one value S1 names; a value it holds that the `.feature` lacks is a finding, the absence of S1's other values is not. | The walking skeleton and one acceptance test per scenario; no value they hold differs from the `.feature`. | BLOCKER |
 | Failing for the business reason | T3 | The walking skeleton and the acceptance test of every scenario exist in the patch and each fails on an assertion (an expected outcome not met), not on a compile, import or setup error. The production code they call exists as a skeleton: the use case the event model names with its input and output types, each answering the empty value of its type, with no behaviour; for the walking skeleton, the entry point, ports and adapters of the chain it crosses too, wired in the composition root. | The test file is in the changes, its failure is an assertion on the expected outcome, and every production file of the patch holds only that skeleton. | BLOCKER |
+| Well-formed Gherkin | T4 | Every `.feature` the coverage matrix of the test plan cites is a file under a folder its component's `bdd` names; each scenario says Given, When and Then; an outline's `Examples` fill every placeholder its title and steps open; no two scenarios of one file share a title; keywords in English and no `# language:` header other than `en`. | Every cited `.feature` exists where its component reads it, and every scenario in it is well formed. | BLOCKER |
 | One observable behaviour | T1 | Each scenario and test checks one behaviour through an observable outcome and depends on no time, order or randomness it does not fix. | No scenario asserts two behaviours; no test reads the clock, the order of other tests or a random value it does not set. | HIGH |
 | Inner-loop boundary presence | G11 | Each test lives where its kind puts it, per `clean-architecture-testing`, and the file physically exists in the repo, referenced from `impl-plan-{story}.md`. The walking skeleton, a plain test with no Gherkin: the integration-test place of its component, entering through the real entry point. The acceptance test of every scenario, S1 included, the binding of its Gherkin: the unit-test place of its component's language, entering at the Application layer: .NET a `<Context>.UnitTest` project (`.UnitTests`, `.Unit.Test`, `.Unit.Tests`, `.Test` and `.Tests` too); Java a `*Test` class (Surefire) in the `src/test` of the module that holds the use case, or a `<context>-unit-test(s)` module; any other language (Python, TypeScript, JavaScript, React) a `unit` folder right under the component's test path (`tests/unit/`, `test/unit/`), or that test path itself when it is named `unit`; an Integration/HTTP test never stands for it. | The test of every scenario is a real file in the place its kind takes. | BLOCKER |
 
@@ -68,6 +69,8 @@ Every gate id is unique across the four lenses: a finding's `gate` names one row
 1. Read the test: a failure only because a module, file or import is missing is a setup failure, a finding, in a new component too: DISTILL writes the skeleton instead. A failure on `assert.equal(result, expected)`-like code is the business failure T3 asks for.
 2. Read every production file of the patch. Each declares only the use case the event model names and what it needs to be called (function, class, method, the use case's input and output types; for the walking skeleton, the entry point, ports and adapters of its chain, wired to it), each body answering the empty value of its type (`undefined`, `null`, `None`, `default`, an empty collection). A body that throws is a finding: a thrown error is not an assertion failing. A branch, a computation, a value of the story, or a file the use case does not need is a finding at its line.
 3. A loader, harness or stub inside the tests standing in for missing production code is a finding at its line: the skeleton is the only way to a business failure.
+
+**Checking T4:** list the `.feature` files the coverage matrix's rows cite (never one the plan's prose mentions); a cited file absent from the changed files and from the folders the component's `bdd` names is a finding; for each scenario of each file, a missing Given, When or Then, an outline placeholder `<name>` no column of its `Examples` names, a title shared with another scenario of the file, or a non-English keyword or `# language:` header other than `en` is a finding at its line.
 
 **Checking G11:** the engine reads where the patch adds test files and reports, as `testability#layout`, a test added outside the unit and integration places of its component's language. Never report those again; judge the rest:
 1. Find the scenarios in the test plan's `## Scenarios` table, the component of each and whether the story declares a walking skeleton exemption.
@@ -164,7 +167,7 @@ vocabulary. Not a technical identifier. Verdict remains approved."
 | `fail` | ≥1 gate in this lens has a finding. |
 
 Each finding includes:
-- `gate` — one id of the tables above (G1–G11, B1, T1–T3, E1–E2)
+- `gate` — one id of the tables above (G1–G11, B1, T1–T4, E1–E2)
 - `severity` — BLOCKER / HIGH / MEDIUM / LOW
 - `finding` — plain-language description of the problem
 - `location` — file path and line/scenario reference
