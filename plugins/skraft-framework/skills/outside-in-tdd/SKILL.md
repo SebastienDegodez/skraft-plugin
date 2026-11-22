@@ -129,8 +129,8 @@ error only when read: a red is never chained to a commit; a green is.
 |---|---|
 | Acceptance tests of the story (skraft DISTILL) | One `test` commit: the walking skeleton and the acceptance test of every scenario, with the skeleton they call, after one run whose output shows each failing on a business assertion |
 | Story in DELIVER, one dispatch | The inner cycles commit nothing. One `feat` or `fix` commit for the whole story, once every group's scenarios and the walking skeleton pass: its unit tests and every format or lint fix included, chained: `<test command, unfiltered> && git add <each file> && git commit -s -m "<subject>" -m "Refs: #N"` in sh and PowerShell 7; in Windows PowerShell 5.1, `<test command, unfiltered>; if ($?) { git add <each file>; if ($?) { git commit -s -m "<subject>" -m "Refs: #N" } }`; the lines the brief gives; the gates (`build`, `format`, `lint`) ran just before it |
-| Gates or review sent the story back (skraft DELIVER, after the story's commit) | Each cycle: one `feat` or `fix` commit holding its test and its code, once green, never a `test` commit of its own; `refactor` for a change under green, `style` for format or lint fixes |
-| No scenario: mutant kills, a session without skraft | Each cycle: `test` with the failing test, then `feat` or `fix` with the code; `refactor` for a change under green |
+| The review sent the story back (skraft DELIVER, after the story's commit) | Each cycle: one `feat` or `fix` commit holding its test and its code, once green, never a `test` commit of its own; `refactor` for a change under green, `style` for format or lint fixes |
+| No scenario: a session without skraft | Each cycle: `test` with the failing test, then `feat` or `fix` with the code; `refactor` for a change under green |
 
 The acceptance tests of a scenario are its oracle: the green never changes them. A wrong one is
 named and sent back to whoever wrote it.

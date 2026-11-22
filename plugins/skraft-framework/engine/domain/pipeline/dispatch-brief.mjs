@@ -4,7 +4,7 @@ import { issueOf } from './commits.mjs'
 /**
  * @typedef {{ name: string, root: string, stack: string, mocking: string, contractTesting: boolean, bdd: BddPair[], test: string | null, gates: BriefGate[] }} BriefComponent
  *   gates: the gate commands of the component the agent runs before its result, in the order the
- *   gates step runs them, mutation left out. bdd: where its scenarios and their bindings live,
+ *   developer lists them, mutation left out. bdd: where its scenarios and their bindings live,
  *   relative to its root; empty when its tests are written without Gherkin.
  * @typedef {import('../config/skraft-config.mjs').BddPair} BddPair
  * @typedef {{ gate: string, line: string }} BriefGate

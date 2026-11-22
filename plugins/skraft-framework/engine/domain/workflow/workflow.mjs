@@ -33,11 +33,7 @@ import { branchReasons, foldReviews, formerFanInReasons, formerReviewReasons } f
  *   question: what an ask node asks a human. outputs: relative to the tracking folder (`{date}`,
  *   `{slug}` filled at dispatch); writes: relative to the working copy. model: the family an
  *   agent node's agent runs on, or a review node's lenses that name none; refuter: the family a
- *   review node's refuter runs on. each: an agent node the mutation gate sends its surviving
- *   mutants to runs its agent once per file that holds some (`survivor-file`); the two agent
- *   nodes marked `scenario` build the story's scenarios, the first writing the failing
- *   acceptance test of every one in one pass, the second making them pass once per group of the
- *   implementation plan. publish: what a publish node (a
+ *   review node's refuter runs on. publish: what a publish node (a
  *   parallelogram with `publish=`) publishes: the run's pull request, or the screenshots of the
  *   e2e runs of its front ends. when: a publish node runs only when skraft-config.json has a
  *   component of that kind, and is skipped otherwise. refutedBy: the refuter node a review (or the
@@ -49,7 +45,6 @@ import { branchReasons, foldReviews, formerFanInReasons, formerReviewReasons } f
  *   workflow is read, the run value each input is bound to, and the id and mandatory= of its
  *   review's fan-in (folded into the call node with its fan-out, branches, lenses and families).
  * @typedef {'pull-request' | 'playwright-visuals'} Publication
- * @typedef {'survivor-file'} Each
  * @typedef {'PASS' | 'FAIL' | 'APPROVED' | 'NEEDS_REWORK'} EdgeLabel
  * @typedef {{ from: string, to: string, label: string | null, maxVisits: number | null }} WorkflowEdge
  *   label: PASS or FAIL on an edge leaving a gate (unlabeled means PASS), APPROVED or

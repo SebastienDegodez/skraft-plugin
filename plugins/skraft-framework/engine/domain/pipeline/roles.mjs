@@ -22,8 +22,7 @@ import { joinRelative } from '../config/relative-path.mjs'
  *   citations: the engine checks the citations of the research document its attempts leave;
  *   scenarios: the agent writes the story's scenarios, in the folders the components' bdd names;
  *   tdd: how its commits drive the tests; prose: the engine checks the pull request prose its
- *   output holds (a summary line of at most 72 characters, no section left empty); proposal: it
- *   writes a proposal for surviving mutants in the file the engine creates, and changes no code;
+ *   output holds (a summary line of at most 72 characters, no section left empty);
  *   shell: false when its descriptor grants no shell: the engine commits its changes once its step
  *   is done; any other agent, a repository agent included, commits its own.
  * @typedef {import('../workflow/workflow.mjs').WorkflowNode} WorkflowNode

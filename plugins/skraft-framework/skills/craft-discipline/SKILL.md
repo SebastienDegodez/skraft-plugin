@@ -72,16 +72,10 @@ Check UnitTest files:
 Test names, variables, and assertions use business vocabulary
 (see the project's FR→EN lexicon). No `test1`, `data`, `ProcessData`.
 
-### C8 — mutation score meets the bar
+### C8 — mutation is the developer's
 
-Mutation testing is the developer's: never launch a mutation run inside a skraft pipeline step.
-When the developer, or a workflow of their own, hands you survivors:
-
-1. Real survivor → write ONE test at the exact edge.
-2. Equivalent mutant → suppress that one construct with a reason, the way the component's
-   `quality-gates-<stack>` skill states.
-
-Each scope at the bar of `skraft-quality-bar` (equivalent mutants suppressed with a reason).
+Mutation belongs to the developer, outside the pipeline: never launch a mutation run inside a
+skraft pipeline step.
 
 ### C9 — Conventional commit format
 
