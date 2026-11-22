@@ -183,13 +183,14 @@ const greenRecord = (judged, { groups }, components) => {
 }
 
 /**
- * The red the pass committed.
+ * The red the pass committed, once judged ok: a red refused (one that changes no component, say)
+ * names no oracle.
  * @param {JudgedCommit[]} judged
  * @returns {Oracle | null}
  */
 const newOracle = (judged, { components }) => {
   const red = judged.find((commit) => commit.kind === 'red')
-  if (red === undefined) return null
+  if (red === undefined || red.verdict !== 'ok') return null
   const { name } = ownersOf(components, red.files)[0]
   return { scenario: 1, sha: red.sha, subject: red.subject, component: name, files: red.files }
 }

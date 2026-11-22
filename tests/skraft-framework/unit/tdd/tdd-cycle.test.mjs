@@ -74,6 +74,13 @@ test('a red commit that changes no component is refused', async () => {
   const outside = scripted({ components: [{ ...API, root: 'api' }] }, (it) => [agent()(it), agent({ work: ({ git }) => git.commit('test(checkout): ADR of the card payment', ['docs/adr/adr-001.md']) })(it), unavailable])
   await outside.start()
   assert.deepEqual(recorded(outside, 'design')[0].failures, ['commit root-1 "test(checkout): ADR of the card payment" changes no component: a test commit adds a failing test to a component'])
+
+  // The plan's red holds only the .feature files of a features/ folder beside the components api/ and web/.
+  const features = scripted({ components: [{ ...API, root: 'api' }, { ...API, name: 'web', root: 'web' }] }, (it) => [agent()(it), agent()(it), agent({ work: ({ git }) => git.commit('test(checkout): card payment scenarios', ['features/checkout.feature']) })(it), unavailable])
+  const stopped = await features.start()
+  assert.equal(stopped.status, 'blocked', stopped.reason)
+  assert.deepEqual(recorded(features, 'distill')[0].failures, ['out of write scope: features/checkout.feature', 'commit root-1 "test(checkout): card payment scenarios" changes no component: a test commit adds a failing test to a component'])
+  assert.deepEqual([recorded(features, 'distill')[0].oracles, recorded(features, 'distill')[0].skeleton], [undefined, undefined])
 })
 
 test('a refused commit stays refused on the next attempts of the pass', async () => {
