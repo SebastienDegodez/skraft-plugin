@@ -197,11 +197,11 @@ Walking skeleton exemption: none
 | le walking skeleton dans un composant qui n'est pas `react` | `<plan>: the walking skeleton S1 runs in a back-end component; <c> is a react front end` |
 | exemption `library`, `refactoring` ou `docs-only` : aucun scénario tagué `@walking-skeleton` | `<plan>: the story declares its walking skeleton exempt (<exemption>), and S<n> carries @walking-skeleton` |
 | toute autre exemption | `<plan>: walking skeleton exemption "<valeur>" must be none, library, refactoring, docs-only` |
-| quand l'`ac-draft-…` de l'histoire intitule ses critères `## AC-<n>` : chaque critère cité par une ligne, dans sa cellule Tags, en `@AC-<n>` | `<plan>: AC-<n> is cited by no scenario; give it one scenario of its own, tagged @AC-<n> in the Tags column` ; `<plan>: AC-<n> is cited by S<a>, S<b>; one scenario holds a criterion: merge them into one, an outline whose examples are the cases of AC-<n>` |
+| quand l'`ac-draft-…` de l'histoire ouvre ses critères par `## AC-<n>`, `### AC-<n>` ou `**AC-<n>:**` (le modèle d'histoire du backlog) : chaque critère cité par une ligne, dans sa cellule Tags, en `@AC-<n>` | `<plan>: AC-<n> is cited by no scenario; give it one scenario of its own, tagged @AC-<n> in the Tags column` ; `<plan>: AC-<n> is cited by S<a>, S<b>; one scenario holds a criterion: merge them into one, an outline whose examples are the cases of AC-<n>` |
 | une ligne cite un seul critère | `<plan>: S<n> cites AC-<a>, AC-<b>; a scenario holds one criterion: give each criterion a scenario of its own` |
 | `docs-only` : aucun commit de l'histoire ne change les chemins `src` d'un composant | `the story declares its walking skeleton exempt as docs only, and commit <sha> changes <fichier>, source of <composant>; remove the exemption and tag S1 @walking-skeleton` |
 
-Une histoire dont les documents `ac-draft` n'intitulent aucun `## AC-<n>`, ou intitulent deux fois le même numéro d'un document à l'autre, n'est pas contrôlée sur ce point : le moteur ne sait pas quel critère un tag désigne. Un numéro complété de zéros (`AC-01`) et la casse du tag se lisent comme le même critère.
+Une histoire dont les documents `ac-draft` n'ouvrent aucun critère sous l'une de ces formes, ou intitulent deux fois le même numéro d'un document à l'autre, n'est pas contrôlée sur ce point : le moteur ne sait pas quel critère un tag désigne. Un critère et un tag se correspondent par leur numéro, sans égard aux zéros de tête ni à la casse : `**AC-01:**` est cité par `@AC-1` comme par `@AC-01` ou `@ac-01`.
 
 Le plan d'implémentation à côté (`impl-plan-…` pour `test-plan-…`) regroupe les scénarios que
 DELIVER fait passer, dans son ordre, sous n'importe quel titre ; le tableau donne l'ordre de travail, et l'histoire prend un seul commit vert :

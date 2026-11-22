@@ -70,7 +70,7 @@ le cas d'usage comme tout scénario. Une story sans nouveau point d'entrée — 
 refactoring, des documents seulement — déclare plutôt cette exemption sous le tableau ; elle perd
 le walking skeleton, jamais un test d'acceptation.
 
-Quand les critères d'acceptation de l'histoire sont intitulés `## AC-<n>`, la ligne de chaque scénario cite son
+Quand les critères d'acceptation de l'histoire s'ouvrent par `## AC-<n>`, `### AC-<n>` ou `**AC-<n>:**` (le modèle d'histoire du backlog), la ligne de chaque scénario cite son
 critère par le tag `@AC-<n>` de sa colonne Tags, et le moteur refuse un tableau où un critère n'a aucun
 scénario ou en a deux, ou où un scénario en porte deux : un scénario par critère, un Scenario Outline
 ne regroupant que les exemples d'un seul critère.

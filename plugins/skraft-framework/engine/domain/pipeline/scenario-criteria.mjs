@@ -1,17 +1,19 @@
 /**
- * One scenario per acceptance criterion: the criteria of a story are headed `## AC-<n>` in its
+ * One scenario per acceptance criterion: the criteria of a story are headed `## AC-<n>` or
+ * `### AC-<n>`, or opened `**AC-<n>:**` as the backlog's story template writes them, in its
  * `ac-draft-<story>.md`, and each row of the test plan's `## Scenarios` table cites its criterion
  * by the tag `@AC-<n>` in its Tags column (the tag its `.feature` scenario carries). Every
  * criterion is cited by exactly one scenario and a scenario cites one criterion, an outline
  * holding the examples of its criterion alone. A story whose documents declare no criterion
  * identifier, or declare one twice, is not checked: the table cannot say which criterion a
- * citation means.
+ * citation means. A criterion and a tag match by their number: `AC-01`, `@AC-1` and `@ac-01` are one
+ * criterion.
  *
  * @typedef {{ index: number, tags: string[] }} CitingScenario
  */
 
-/** How DISCUSS heads one acceptance criterion (`## AC-1 — A card is paid`); the number may be zero-padded. */
-const HEADING = /^##\s+AC-0*(\d+)\b/
+/** How DISCUSS opens one acceptance criterion (`## AC-1 — A card is paid`, `### AC-1`, `**AC-01:** A card is paid`); the number may be zero-padded. */
+const HEADING = /^(?:#{2,3}\s+AC-0*(\d+)\b|\*\*AC-0*(\d+)(?::\*\*|\*\*\s*:))/
 /** How a scenario cites it, in its tags (`@AC-1`). */
 const CITATION = /^@AC-0*(\d+)$/i
 
@@ -24,9 +26,12 @@ const labels = (numbers, prefix = 'AC-') => numbers.map((number) => `${prefix}${
  * @param {string[]} texts @returns {number[]}
  */
 export const criteriaOf = (texts) => {
-  const found = texts.flatMap((text) => text.split(/\r?\n/)).flatMap((line) => HEADING.exec(line)?.slice(1) ?? []).map(Number)
+  const found = texts.flatMap((text) => text.split(/\r?\n/)).flatMap((line) => numberOf(HEADING.exec(line))).map(Number)
   return new Set(found).size === found.length ? found : []
 }
+
+/** The number a criterion's opening line captures, in whichever form it takes. @param {RegExpExecArray | null} match @returns {string[]} */
+const numberOf = (match) => (match ? match.slice(1).filter((group) => group !== undefined) : [])
 
 /** The criteria a scenario cites. @param {string[]} tags */
 const citedIn = (tags) => [...new Set(tags.flatMap((tag) => CITATION.exec(tag)?.slice(1) ?? []).map(Number))]

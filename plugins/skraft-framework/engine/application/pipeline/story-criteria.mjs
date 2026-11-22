@@ -7,7 +7,7 @@ import { criteriaOf } from '../../domain/pipeline/scenario-criteria.mjs'
 export const CRITERIA = /(^|\/)plans\/[^/]+\/ac-draft-[^/]+\.md$/
 
 /**
- * The numbers of the criteria the story's `ac-draft` documents head `## AC-<n>`.
+ * The numbers of the criteria the story's `ac-draft` documents open `## AC-<n>`, `### AC-<n>` or `**AC-<n>:**`.
  * @param {TrackingFiles} files @param {string} slug @returns {Promise<number[]>}
  */
 export const storyCriteria = async (files, slug) => {
