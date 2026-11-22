@@ -26,6 +26,9 @@ ones before it; a `null` removes what a lower layer set:
 | 3 | `skraft-config.json` (root of the working copy) | yes | every key |
 | 4 | `skraft-config.local.json` (beside the previous one) | no | any key but `components` |
 
+`skraft init` lists `skraft-config.local.json` and `/.repl/node_modules/` (the packages of the
+project's [REPL library](./repl.md#lib)) in the working copy's `.gitignore`, each once.
+
 Each file is validated on its own, then the merge is validated. JSON schemas:
 `schemas/skraft-config.schema.json` and `schemas/skraft-config.local.schema.json` in the plugin.
 

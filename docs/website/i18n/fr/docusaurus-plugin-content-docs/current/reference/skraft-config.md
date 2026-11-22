@@ -26,6 +26,9 @@ sur les précédentes ; un `null` retire ce qu'une couche inférieure a posé :
 | 3 | `skraft-config.json` (racine de la copie de travail) | oui | toutes les clés |
 | 4 | `skraft-config.local.json` (à côté du précédent) | non | toute clé sauf `components` |
 
+`skraft init` inscrit `skraft-config.local.json` et `/.repl/node_modules/` (les paquets de la
+[bibliothèque REPL](./repl.md#lib) du projet) dans le `.gitignore` de la copie de travail, chacun une fois.
+
 Chaque fichier est validé seul, puis la fusion est validée. Schémas JSON :
 `schemas/skraft-config.schema.json` et `schemas/skraft-config.local.schema.json` dans le
 plugin.
