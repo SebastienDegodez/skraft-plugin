@@ -19,7 +19,7 @@ plugins/
     engine/                          ← V2 engine: package.json, stryker.config.mjs, jsconfig.json
       domain/                        ← pure policies
       application/  application/ports/ ← use cases and port contracts (JSDoc typedefs)
-      infrastructure/                ← adapters: files, git, processes
+      infrastructure/                ← adapters: files, git, processes, the REPL kernel (infrastructure/repl/)
       drivers/copilot-workflow/      ← GitHub Copilot dynamic workflow + Canvas
       drivers/claude-mod/            ← Claude Code mod + panel
       drivers/copilot-sdk/           ← VS Code through the Copilot SDK
@@ -67,6 +67,10 @@ docs/website/      ← handbook (Docusaurus): book.yml (structure contract), doc
   one.
 - Checks live in the engine, not in hooks or prose: phase order, expected outputs, write scope
   (git diff per step), gates, review verdict, TDD commit order and kinds; no replay.
+- Besides the DELIVER gates, a project command runs only when an agent asks for it through
+  `skraft_repl`, which records each run, signed, under `logs/runs/<step>-<visit>-<attempt>/`. Agents
+  keep `Bash`, but only the runs of the REPL are a record. Only `infrastructure/process/` and
+  `infrastructure/repl/` start programs, apart from `git`, `gh` and `az`.
 - Engine code never calls an MCP server: a server is a tool for an agent. The engine reads and
   writes the forge only through its command line, `gh` (GitHub) or `az` (Azure DevOps), with no
   fallback between them; an issue it cannot read refuses the run.
@@ -105,9 +109,12 @@ the probe or a test says otherwise.
   `reason`; only a cancellation is rethrown.
 - **Arguments are model-written.** Refuse unknown keys; never let an argument choose an
   executable, an agent or a model outside the workflow and `skraft-config.json`; never echo a
-  refused value.
+  refused value. One exception, `skraft_repl` alone: its `code` is agent-written JavaScript that
+  may start any program, only during the open attempt of an agent that commits code and whose
+  `tools:` names it; unknown keys are still refused and `workspace` is checked as for every tool.
 - **Messages are fixed by code.** No exception text or stderr in the journal, an outcome, a prompt
-  or a tool result. An exception goes only to `logs/unexpected.log` of the run's tracking folder,
+  or a tool result, except the output and the errors of an agent's own cell in a `skraft_repl`
+  result, capped at 24 KiB, which never reach the journal. An exception goes only to `logs/unexpected.log` of the run's tracking folder,
   which nothing reads back, and the outcome names its path.
 - **Human pipeline questions use native chat.** The model asks the engine's exact question and
   options through the offered native `ask_user` or `askQuestions` tool, requests a refusal
@@ -124,7 +131,9 @@ the probe or a test says otherwise.
   At most one automated intervention per signature; the next occurrence asks a person.
   Human questions refuse `host-llm`. The versioned known-signature table contains only
   author-reviewed incidents and records `by: 'known-signature'`, never a human provenance.
-- **Commands are bounded.** `signal`, `timeoutMs`, output cap, process group ended as a whole.
+- **Commands are bounded.** `signal`, `timeoutMs`, output cap, process group ended as a whole;
+  every `run()` of `skraft_repl` too: a timeout always set (7200 s at most), an output cap, its
+  process group (its tree under Windows) ended as a whole.
 - **No pre-tool hook**, ever; a returning post-tool hook gives `additionalContext` only.
 - **A check counts once seen failing**, and a report says what it examined.
 
@@ -173,6 +182,9 @@ Everything must run on Windows and macOS, under Claude Code, Copilot CLI and VS 
 
 - Node code: `node:path` for paths, `spawnSync`/`spawn` with an argv array, never a shell string
   and never `shell: true` (it hides a missing program behind cmd.exe's exit code).
+- A `run(string)` of `skraft_repl` starts through an explicit shell program, `sh -c`, under Windows
+  Git Bash when it is installed, else `pwsh` or `powershell`, as an argv array and never
+  `shell: true`; the shell is named in the trace.
 - Commands that an agent runs: no environment variable (`$SKRAFT_PLUGIN_ROOT` and the like), no
   heredoc, no pipe; data goes through files at paths the engine gives; the command form
   `node "<absolute path>" <subcommand> --option value` works in sh and PowerShell.
