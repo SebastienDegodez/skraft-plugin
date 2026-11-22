@@ -1,8 +1,9 @@
 #!/usr/bin/env node
 import { execFileSync } from 'node:child_process'
 import { createHash, randomUUID } from 'node:crypto'
-import { existsSync, readFileSync } from 'node:fs'
+import { existsSync, readFileSync, realpathSync } from 'node:fs'
 import { join, resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { isDeepStrictEqual } from 'node:util'
 import { renderReport } from '../application/render-report.mjs'
 import { preparePublication, decidePublication, recordPublication } from '../application/report-publication-handoff.mjs'
@@ -67,7 +68,7 @@ function unwrap(result) {
 	return result.value
 }
 
-const git = (args) => execFileSync('git', args, { encoding: 'utf8', shell: false, stdio: ['ignore', 'pipe', 'pipe'] }).trim()
+const git = (args, cwd) => execFileSync('git', args, { cwd, encoding: 'utf8', shell: false, stdio: ['ignore', 'pipe', 'pipe'] }).trim()
 const hashText = (text) => createHash('sha256').update(text).digest('hex')
 
 function readOptional(files, path) {
@@ -112,7 +113,7 @@ function assertCurrentPacket(packet, preferences, previousReceipt, currentBranch
 	}
 }
 
-async function publicationCommand(command, options, { files, tracking, reportingPath, readPreferences }) {
+async function publicationCommand(command, options, { files, tracking, reportingPath, readPreferences, cwd }) {
 	const release = tracking.acquirePublicationLock(resolve(reportingPath, '.publish.lock'))
 	try {
 		const pendingPath = resolve(reportingPath, 'pending.json')
@@ -129,7 +130,7 @@ async function publicationCommand(command, options, { files, tracking, reporting
 		const preferences = readPreferences()
 		if (!preferences) throw new Error('Reporting preferences missing; setup confirmed consent first')
 		unwrap(validateReportingPreferences(preferences))
-		const currentBranch = preferences.branch ? git(['symbolic-ref', '--quiet', '--short', 'HEAD']) : undefined
+		const currentBranch = preferences.branch ? git(['symbolic-ref', '--quiet', '--short', 'HEAD'], cwd) : undefined
 		const identityPath = (story, kind) => tracking.pathFor(resolve(reportingPath, kind, `${story}.json`))
 		const previous = (story, kind) => scopedReceipt(readOptional(tracking, identityPath(story, kind)), preferences, story, kind)
 
@@ -183,20 +184,20 @@ async function publicationCommand(command, options, { files, tracking, reporting
 	}
 }
 
-async function run() {
-	const parsed = parse(process.argv.slice(2))
+async function run(argv, { cwd, env }) {
+	const parsed = parse(argv)
 	if (parsed.help) return help
 	const { command, options } = parsed
 	const { slug } = options
-	const repoRoot = git(['rev-parse', '--show-toplevel'])
+	const repoRoot = git(['rev-parse', '--show-toplevel'], cwd)
 	const files = createReportFiles(repoRoot)
 	// Default layout cannot escape the repository. Explicit roots authorize their
 	// own realpath boundary, but never authorize report sources outside the repo.
-	const trackingRoot = process.env.SKRAFT_TRACKING_ROOT || join(repoRoot, '.copilot-tracking', 'skraft-plans')
-	const tracking = process.env.SKRAFT_TRACKING_ROOT
-		? createReportFiles(resolve(trackingRoot))
+	const trackingRoot = env.SKRAFT_TRACKING_ROOT || join(repoRoot, '.copilot-tracking', 'skraft-plans')
+	const tracking = env.SKRAFT_TRACKING_ROOT
+		? createReportFiles(resolve(cwd, trackingRoot))
 		: files
-	const reportingPath = resolve(trackingRoot, slug, 'reporting')
+	const reportingPath = resolve(cwd, trackingRoot, slug, 'reporting')
 	const preferencesPath = tracking.pathFor(resolve(reportingPath, 'preferences.json'))
 	const readPreferences = () => readOptional(tracking, preferencesPath)
 	if (command === 'setup') {
@@ -226,7 +227,7 @@ async function run() {
 		}
 		return { ...pending, ...(previousReceipt ? { previousReceipt } : {}), ...(scopeChanged ? { scopeChanged: true } : {}) }
 	}
-	if (command !== 'render') return publicationCommand(command, options, { files, tracking, reportingPath, readPreferences })
+	if (command !== 'render') return publicationCommand(command, options, { files, tracking, reportingPath, readPreferences, cwd })
 
 	const preferences = readPreferences()
 
@@ -252,7 +253,34 @@ async function run() {
 	}
 }
 
-run().then((result) => process.stdout.write(JSON.stringify(result) + '\n')).catch((error) => {
-	process.stderr.write(JSON.stringify({ code: String(error.code ?? 'REPORT_ERROR'), reason: error.message }) + '\n')
-	process.exitCode = 1
-})
+/**
+ * One command of the report CLI, run in `cwd` with `env`, without touching the process: its exit
+ * code and the lines it would print.
+ * @param {string[]} argv @param {{ cwd: string, env: Record<string, string | undefined> }} context
+ * @returns {Promise<{ exitCode: number, stdout: string, stderr: string }>}
+ */
+export async function runReport(argv, { cwd, env }) {
+	try {
+		const result = await run(argv, { cwd, env })
+		return { exitCode: 0, stdout: JSON.stringify(result) + '\n', stderr: '' }
+	} catch (error) {
+		return { exitCode: 1, stdout: '', stderr: JSON.stringify({ code: String(error.code ?? 'REPORT_ERROR'), reason: error.message }) + '\n' }
+	}
+}
+
+/** Whether this file is the program node started, not a module another one imported. */
+const startedAsProgram = () => {
+	if (!process.argv[1]) return false
+	try {
+		return realpathSync(process.argv[1]) === realpathSync(fileURLToPath(import.meta.url))
+	} catch {
+		return false
+	}
+}
+
+if (startedAsProgram()) {
+	const { exitCode, stdout, stderr } = await runReport(process.argv.slice(2), { cwd: process.cwd(), env: process.env })
+	process.stdout.write(stdout)
+	process.stderr.write(stderr)
+	process.exitCode = exitCode
+}
