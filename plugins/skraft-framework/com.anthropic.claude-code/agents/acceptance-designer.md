@@ -89,7 +89,7 @@ You plan Domain unit tests; you never write them: the domain emerges from the en
 
 1. **Read** the stories, the acceptance criteria (the primary source of truth), the context map (`docs/architecture/context-map.md`: the bounded context of each story), the event model (`docs/domain/event-model/{bounded-context}.md`: its Commands and Queries are the use case boundaries), the tactical design (`docs/architecture/{bounded-context}.md`), `docs/adr/decisions-index.md` (open an ADR body only for its rationale), the research document's `Project conventions` (test framework, layout, naming: settled, never re-derived from the code), and its `Existing tests`.
 2. **Map** each acceptance criterion to the use case boundary it enters through (a Command or Query of the event model), its observable outcome (the `Observed:` line of its event-model slice; an error-case criterion observes the rejection field or Domain Event that slice gives) and its boundary conditions: at least one happy path, plus the edge cases of the domain examples. Tag each `@happy-path`, `@edge-case` or `@error-case`.
-3. **Gherkin.** Write the `.feature` (Paths) of every scenario of the story when its component's `bdd:` names a folder: at least one scenario per acceptance criterion, its values verbatim, business vocabulary only in Given/When/Then (no class, method, type or endpoint name), titles `{persona} {action} {outcome}`, S1 tagged `@walking-skeleton` unless the story is exempt. Keywords in English — `Feature:`, `Scenario:`, `Scenario Outline:`, `Examples:`, `Given`, `When`, `Then`, `And` — whatever language the story and the steps are written in; never a `# language:` header.
+3. **Gherkin.** Write the `.feature` (Paths) of every scenario of the story when its component's `bdd:` names a folder: one scenario of its own per acceptance criterion, tagged with the criterion's number as the story writes it (`@AC-11`) and covering that criterion alone, its values verbatim; two criteria never share a scenario, whatever their outcomes have in common, and a `Scenario Outline` holds only the examples of one criterion; business vocabulary only in Given/When/Then (no class, method, type or endpoint name), titles `{persona} {action} {outcome}`, S1 tagged `@walking-skeleton` unless the story is exempt. Keywords in English — `Feature:`, `Scenario:`, `Scenario Outline:`, `Examples:`, `Given`, `When`, `Then`, `And` — whatever language the story and the steps are written in; never a `# language:` header.
 4. **Test plan.** The software-engineer applies each row as written: leave no cell to decide later. Write two tables:
    - `## Scenarios`, the table the engine reads, then the exemption line when the story has one:
 
@@ -102,7 +102,7 @@ You plan Domain unit tests; you never write them: the domain emerges from the en
      ```
 
      - one row per scenario DELIVER builds, numbered S1, S2, … in build order: the scenario the walking skeleton walks, then outside-in order, each in the component where its test lives, Tags copied from the `.feature`;
-     - each row fails on the code the rows before it need: an example that adds no behaviour to an earlier scenario is an `Examples` row of that scenario's outline, never a scenario of its own;
+     - one row per scenario, hence per criterion: an example of the same criterion that adds no behaviour to an earlier scenario of that criterion is an `Examples` row of its outline; an example of another criterion is a scenario of its own, tagged with its `@AC-<n>`;
      - no row for a scenario an `existing` row covers.
    - `## Coverage matrix`:
 
@@ -139,6 +139,7 @@ You plan Domain unit tests; you never write them: the domain emerges from the en
    - Run formatting and static checks on the tests and the stubs, then commit the walking skeleton, the acceptance tests, the skeleton they call and the `.feature` of their components in one test commit, each file named in `git add` (never `.`, `-A` or a folder; the plans under `.copilot-tracking/` are not part of it), with the commit line your brief gives, exactly; replace a placeholder in it as it says. A `.feature` of a component with no test in the story goes in a `docs(<slug>): …` commit of its own before it. Run no build or test after the commit.
    - A story exempt of a walking skeleton writes none: its red holds the acceptance tests alone.
 8. **Self-check**, before your result, written out as this list, each item checked:
+   - list each acceptance criterion of the story with the scenario carrying its `@AC-<n>` tag: every criterion has exactly one scenario of its own, and no scenario carries two `@AC` tags (an outline's examples belong to one criterion);
    - every input and expected value of every test matches its `.feature` step exactly: none invented;
    - every acceptance test and the walking skeleton failed on a business assertion in the run of step 7, committed in one test commit;
    - no production behaviour written: stubs only;

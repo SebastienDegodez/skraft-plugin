@@ -6,20 +6,19 @@ import { isCode, ownersOf } from './component-files.mjs'
  * it pass (green), `refactor`, `style` or `perf` a change under green; `docs`, `chore`, `build`,
  * `ci` and `revert` stay outside TDD and change no component's source or tests. A story built
  * from its acceptance tests first takes one red commit holding the acceptance test of every
- * scenario, then, in one pass, at most one green commit per group of scenarios, in the order of
- * the implementation plan: the inner TDD loop is not committed.
+ * scenario, then, in one pass, one green commit for every group of scenarios: the inner TDD loop
+ * is not committed.
  *
  * @typedef {'red' | 'green' | 'refactor' | 'other' | 'invalid'} CommitKind
  * @typedef {'ok' | 'not-conventional' | 'issue-reference-missing' | 'issue-closed' | 'issue-not-in-story' | 'outside-tdd' | 'green-without-red' | 'no-component'
- *   | 'oracle-split' | 'oracle-component' | 'oracle-without-test' | 'code-in-oracle' | 'test-in-scenario' | 'refactor-in-scenario' | 'green-out-of-order' | 'green-beyond-groups' | 'oracle-touched'} CommitVerdict
+ *   | 'oracle-split' | 'oracle-component' | 'oracle-without-test' | 'code-in-oracle' | 'test-in-scenario' | 'refactor-in-scenario' | 'green-split' | 'oracle-touched'} CommitVerdict
  * @typedef {import('./component-files.mjs').CodeComponent} CodeComponent
  * @typedef {{ kind: 'oracle', components: string[] | null }
- *   | { kind: 'delivery', groups: string[], immutable: string[] }
+ *   | { kind: 'delivery', immutable: string[] }
  *   | { kind: 'rework', immutable: string[] }} ScenarioJudging
  *   oracle: the pass that writes every scenario's failing acceptance test, in the `components`
- *   its plan names (null when it names none yet); delivery: the one pass that makes the `groups`
- *   pass (each as its green's subject names it), at most one green per group in that order, never
- *   changing the `immutable` files of the acceptance tests; rework: a pass after the story is
+ *   its plan names (null when it names none yet); delivery: the one pass that makes every group
+ *   pass, in one green commit, never changing the `immutable` files of the acceptance tests; rework: a pass after the story is
  *   delivered, whose commits follow the TDD cycle and never change the `immutable` files either.
  *   The engine opens DELIVER only once that red is committed.
  * @typedef {{ repository: string, sha: string, parent: string, subject: string, body: string, files: string[] }} StepCommit
@@ -75,9 +74,9 @@ export const engineMessage = (subject, issue) => (issue === null ? subject : `${
  * @typedef {{ redByGateFailure: boolean, issue: number | null, scenario: ScenarioJudging | null, components: readonly CodeComponent[] }} Pass
  *   scenario: the scenario the pass works on, null for a pass that works on none (the gates or
  *   the review sent the story back, or the workflow builds no scenario).
- * @typedef {{ kind: CommitKind, red: Set<string>, seen: CommitKind[], greens: { next: number, count: number }, issue: number | null, scenario: ScenarioJudging | null, components: readonly CodeComponent[] }} Judging
+ * @typedef {{ kind: CommitKind, red: Set<string>, seen: CommitKind[], greens: { count: number }, issue: number | null, scenario: ScenarioJudging | null, components: readonly CodeComponent[] }} Judging
  *   red: the repositories with a red since their last green; seen: the kinds judged before;
- *   greens.next: the first group of a delivery no green named yet; greens.count: the greens judged.
+ *   greens.count: the greens judged.
  */
 
 /**
@@ -93,7 +92,7 @@ export const engineMessage = (subject, issue) => (issue === null ? subject : `${
  */
 export const judgeCommits = (commits, { redByGateFailure, issue, scenario, components }) => {
   // Stryker disable next-line ArrayDeclaration: no commit is in a repository named like the placeholder
-  const judging = { red: new Set(redByGateFailure ? commits.map((commit) => commit.repository) : []), seen: /** @type {CommitKind[]} */ ([]), greens: { next: 0, count: 0 }, issue, scenario, components }
+  const judging = { red: new Set(redByGateFailure ? commits.map((commit) => commit.repository) : []), seen: /** @type {CommitKind[]} */ ([]), greens: { count: 0 }, issue, scenario, components }
   return commits.map((commit) => judgeOne(commit, judging))
 }
 
@@ -149,26 +148,9 @@ const oracleVerdict = (commit, { kind, seen, components }, scenario) => {
 /** @param {StepCommit} commit @param {Judging} judging @param {Extract<ScenarioJudging, { kind: 'delivery' }>} scenario @returns {CommitVerdict} */
 const deliveryVerdict = (commit, { kind, greens }, scenario) => {
   if (kind !== 'green') return kind === 'red' ? 'test-in-scenario' : 'refactor-in-scenario'
-  const order = greenOrder(commit, greens, scenario.groups)
-  return order === 'ok' ? touching(commit, scenario) : order
-}
-
-/**
- * A green names the group it makes pass first in its subject: the groups come in the plan's order,
- * one green each; a group whose tests already pass takes none.
- * @param {StepCommit} commit @param {Judging['greens']} greens @param {string[]} labels @returns {CommitVerdict}
- */
-const greenOrder = ({ subject }, greens, labels) => {
-  const named = labels.findIndex((label) => namesGroup(subject, label))
   greens.count += 1
-  if (greens.count > labels.length) return 'green-beyond-groups'
-  if (named < greens.next) return 'green-out-of-order'
-  greens.next = named + 1
-  return 'ok'
+  return greens.count > 1 ? 'green-split' : touching(commit, scenario)
 }
-
-/** Whether the subject's text after its type and scope starts with the group's label. @param {string} subject @param {string} label */
-export const namesGroup = (subject, label) => new RegExp(`^[a-z]+(?:\\([^()]*\\))?!?: ${label}(?![0-9])`).test(subject)
 
 /** @param {StepCommit} commit @param {{ immutable: string[] }} scenario @returns {CommitVerdict} */
 const touching = (commit, { immutable }) => (commit.files.some((file) => immutable.includes(file)) ? 'oracle-touched' : 'ok')
@@ -227,10 +209,9 @@ const FAILURES = Object.freeze({
   'oracle-component': (named) => `${named} changes a component no scenario names: each acceptance test lives in the component the test plan names for its scenario`,
   'oracle-without-test': (named) => `${named} commits no test of its component: the acceptance tests of the scenarios go in its test paths, with the skeleton they call`,
   'code-in-oracle': (named) => `${named} is no test commit: the acceptance tests of the scenarios and the skeleton they call go in one test commit, and no behaviour`,
-  'test-in-scenario': (named) => `${named} commits a test on its own: the tests of the inner loop go in the one feat or fix commit that makes the group pass`,
-  'refactor-in-scenario': (named) => `${named} commits a change under green on its own: the group takes one feat or fix commit, refactoring included`,
-  'green-out-of-order': (named) => `${named} names no group still to deliver, or one before the last you committed: commit the groups in the order of your implementation plan, each subject starting with its group's scenarios (S1, S2 <rule>)`,
-  'green-beyond-groups': (named) => `${named} is a feat or fix commit with no group left: one commit per group, no more`,
+  'test-in-scenario': (named) => `${named} commits a test on its own: the tests of the inner loop go in the one feat or fix commit that makes the story pass`,
+  'refactor-in-scenario': (named) => `${named} commits a change under green on its own: the story takes one feat or fix commit, refactoring included`,
+  'green-split': (named) => `${named} is a second feat or fix commit: the story takes one, with the code, the unit tests and the fixes of every group; squash it into the first`,
   'oracle-touched': (named) => `${named} changes the acceptance tests, which DISTILL owns; undo that change, and if a test is wrong, stop blocked naming it`,
 })
 

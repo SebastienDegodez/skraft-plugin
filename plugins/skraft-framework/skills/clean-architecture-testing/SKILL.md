@@ -77,9 +77,9 @@ not "which ticket created it?"
   `@walking-skeleton` included. `IntegrationTest` uses ordinary tests, including the walking
   skeleton through the real entry point; it never executes Gherkin.
 - Every scenario of the story has its binding from DISTILL on; the scenarios not delivered yet
-  fail until their group's green. Never exclude `@walking-skeleton`, a whole feature or a tag of
-  a scenario from the runner: the test command's name filter leaves pending scenarios out
-  (`outside-in-tdd`).
+  fail until the story's one green. Never exclude `@walking-skeleton`, a whole feature or a tag of
+  a scenario from the runner: the engineer filters a group's scenarios by their numbers while it
+  works (`outside-in-tdd`).
 - Declare the folders actually read by each runner in the component's `bdd` list, relative to
   its root. One pair per independent runner/binding scope, not one global pair per language.
   Existing confirmed paths are not moved by configuration detection.

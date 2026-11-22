@@ -35,8 +35,7 @@ import { publishStep } from './publish-step.mjs'
 import { reportProgress } from '../publish/issue-progress.mjs'
 import { storyLanguage } from '../publish/story-language.mjs'
 import { checkStep, engineHashes, headsOf } from './step-checks.mjs'
-import { acceptanceFiles, committedGreens, scenarioPassOf } from './scenario-checks.mjs'
-import { groupLabel } from '../../domain/pipeline/scenarios.mjs'
+import { acceptanceFiles, scenarioPassOf } from './scenario-checks.mjs'
 import { commitForAgent } from './agent-commits.mjs'
 import { writeStructuralScan } from './structural-scan.mjs'
 import { findComponentSkills } from './component-skills.mjs'
@@ -704,22 +703,21 @@ const briefScenarioOf = (context, run, next) => {
 /**
  * The scenarios a pass works on as the brief tells them: on the plan's pass where it sends the
  * output of its run of the acceptance tests, on a delivery pass every group with the test command
- * its commit chains to, and the reds whose files no later pass changes; null for a pass on none.
+ * the story's commit chains to, and the reds whose files no later pass changes; null for a pass on none.
  * @param {Context} context @param {RunState} run @param {WorkStep} next
  * @returns {import('../../domain/pipeline/dispatch-brief.mjs').BriefScenario | null}
  */
-const briefScenario = ({ config, deps, slug, journal }, run, { node, visit }) => {
+const briefScenario = ({ config, deps, slug }, run, { node, visit }) => {
   const pass = scenarioPassOf(run, node)
   if (pass === null) return null
-  const done = committedGreens(journal.events, { step: node.id, visit }, pass.groups.map(({ scenarios }) => groupLabel(scenarios.map(({ index }) => index))))
-  const groups = pass.groups.map((group, at) => briefGroup(group, { of: pass.groups.length, done: done[at], test: scenarioTest(config, run, group.scenarios[0]?.component ?? null) }))
+  const groups = pass.groups.map((group) => briefGroup(group, { of: pass.groups.length, test: scenarioTest(config, run, group.scenarios[0]?.component ?? null) }))
   const oracles = pass.kind === 'plan' ? [] : pass.reds.map((red) => oracleTold(red, config.components))
   return { kind: pass.kind, groups, oracles, skeleton: pass.skeleton !== null, redLog: pass.kind === 'plan' ? deps.files.location(slug, `logs/${node.id}-${visit}-red.log`) : null }
 }
 
-/** @param {import('./scenario-checks.mjs').PassGroup} group @param {{ of: number, done: string | null, test: string | null }} told */
-const briefGroup = ({ index, scenarios, pending }, { of, done, test }) => ({
-  index, of, test, done, pending: pending.map((scenario) => scenario.index),
+/** @param {import('./scenario-checks.mjs').PassGroup} group @param {{ of: number, test: string | null }} told */
+const briefGroup = ({ index, scenarios }, { of, test }) => ({
+  index, of, test,
   scenarios: scenarios.map(({ index: number, title, component, tags }) => ({ index: number, title, component, tags })),
 })
 

@@ -24,7 +24,7 @@ const designing = (count, ...cells) => async (host) => { reds(count)(host); if (
 /** The green of a group, as the software engineer commits it: its subject starts with the group's scenarios. @param {string} label @param {string[]} [files] @param {string} [body] */
 const greenOf = (label, files = [`src/${label.replace(/\W+/g, '')}.cs`, `tests/Unit/${label.replace(/\W+/g, '')}Tests.cs`], body = '') => ({ git }) => git.commit(`feat(${SLUG}): ${label} rule`, files, body)
 
-test('a story of three scenarios in two groups is delivered in one dispatch after one red holding every acceptance test: one green per group, in the order of the implementation plan', async () => {
+test('a story of three scenarios in two groups is delivered in one dispatch after one red holding every acceptance test: one green for every group, once all of them pass', async () => {
   const host = scripted({}, (it) => [...research(it), agent({ plan: THREE, work: designing(3, 'S1, S2', 'S3') })(it), agent()(it)])
 
   const outcome = await host.start()
@@ -33,7 +33,7 @@ test('a story of three scenarios in two groups is delivered in one dispatch afte
   assert.deepEqual(labels(host).filter((label) => /distill|deliver/.test(label)), [`skraft ${SLUG} · distill · attempt 1`, `skraft ${SLUG} · deliver · attempt 1`])
   assert.deepEqual([...checked(host, 'distill'), ...checked(host, 'deliver')].map((event) => event.commits.map(({ subject, kind, verdict }) => [subject, kind, verdict])), [
     [['test(checkout): acceptance tests S1–S3', 'red', 'ok']],
-    [['feat(checkout): S1, S2 group 1', 'green', 'ok'], ['feat(checkout): S3 group 2', 'green', 'ok']],
+    [['feat(checkout): S1, S2, S3 delivered', 'green', 'ok']],
   ])
   assert.deepEqual(recorded(host, 'distill').map(({ group, next, groups }) => [group, next, groups]), [[undefined, 'distill_review', [{ index: 1, scenarios: [1, 2] }, { index: 2, scenarios: [3] }]]], 'the plan leaves by its edge to the review')
   assert.deepEqual(host.events().filter((event) => event.type === 'phase.closed').map(({ phase }) => phase), ['RESEARCH', 'DESIGN', 'DISTILL', 'DELIVER', 'PUBLISH'])
@@ -41,14 +41,14 @@ test('a story of three scenarios in two groups is delivered in one dispatch afte
   assert.deepEqual(host.events().filter((event) => event.type === 'step.started' && event.step === 'deliver').map(({ group, groups }) => [group, groups]), [[undefined, undefined]])
 })
 
-test('an implementation plan with no group table delivers one scenario per group, in the one dispatch', async () => {
+test('an implementation plan with no group table delivers every scenario in the one dispatch, in one green', async () => {
   const host = scripted({}, (it) => [...research(it), agent({ plan: THREE.slice(0, 2), work: designing(2) })(it), agent()(it)])
 
   const outcome = await host.start()
 
   assert.equal(outcome.status, 'done', outcome.reason)
   assert.deepEqual(labels(host).filter((label) => /deliver/.test(label)), [`skraft ${SLUG} · deliver · attempt 1`])
-  assert.deepEqual(checked(host, 'deliver')[0].commits.map(({ subject, verdict }) => [subject, verdict]), [['feat(checkout): S1 group 1', 'ok'], ['feat(checkout): S2 group 2', 'ok']])
+  assert.deepEqual(checked(host, 'deliver')[0].commits.map(({ subject, verdict }) => [subject, verdict]), [['feat(checkout): S1, S2 delivered', 'ok']])
 })
 
 test('a group table that misses a scenario, names one twice, one the test plan does not list, or leaves S1 out of the first group sends the designer back', async () => {
@@ -64,23 +64,22 @@ test('a group table that misses a scenario, names one twice, one the test plan d
   ]]])
 })
 
-test('the engineer is told every group, the acceptance tests it never changes, the walking skeleton and the exact green of each group; the designer the exact red and where to send its run', async () => {
-  const host = scripted({}, (it) => [...research(it), agent({ plan: THREE, work: async (h) => { reds(3, undefined, REFS_42)(h); await grouped('S1, S2', 'S3')(h) } })(it), agent({ work: (h) => { greenOf('S1, S2', undefined, REFS_42)(h); greenOf('S3', undefined, REFS_42)(h) } })(it)])
+test('the engineer is told every group, the acceptance tests it never changes, the walking skeleton and the one exact green of the story; the designer the exact red and where to send its run', async () => {
+  const host = scripted({}, (it) => [...research(it), agent({ plan: THREE, work: async (h) => { reds(3, undefined, REFS_42)(h); await grouped('S1, S2', 'S3')(h) } })(it), agent({ work: greenOf('S1, S2, S3', undefined, REFS_42) })(it)])
 
   await host.start({ story: { issue: 42, title: 'Pay by card' } })
 
   const deliver = promptOf(host, `skraft ${SLUG} · deliver · attempt 1`)
   assert.ok(deliver.includes([
-    '- Groups, in the order you deliver them, one green commit each; a group whose acceptance tests already pass takes none (name the scenario whose code makes them pass on its change-log line):',
+    '- Groups, in the order you work them; their code and their unit tests go in one green commit (a group whose acceptance tests already pass needs no code: name the scenario whose code makes them pass on the change-log line):',
     '- 1 of 2 — S1 "Customer pays by card" (component api, tags @walking-skeleton); S2 "Customer is refused an expired card" (component api, tags @error-case)',
     '- 2 of 2 — S3 "Customer gets a receipt" (component api, tags @happy-path)',
     '- Acceptance tests DISTILL committed, which you never change (a wrong one, or one failing on a build or setup error: stop blocked, naming it):',
     '- root-1 "test(checkout): acceptance tests S1–S3": tests/Integration/WalkingSkeletonTests.cs, tests/Acceptance/S1AcceptanceTests.cs, tests/Acceptance/S2AcceptanceTests.cs, tests/Acceptance/S3AcceptanceTests.cs',
-    "- The walking skeleton passes from group 1's commit on.",
-    "- Deliver every group in this one pass, in this order, with outside-in TDD, unit tests included, and commit a group only once its tests pass; change another component than the group's own only where the group needs it, in the same commit. The pass ends when every group is committed and every test passes, or on a blocker.",
-    '- Commit each group once, in bash (never PowerShell), naming each file you changed:',
-    '  group 1: dotnet test <the filter leaving out S3> && git add <each file you changed> && git commit -s -m "feat(checkout): S1, S2 <the rule of the group, as your implementation plan names it>" -m "Refs: #42"',
-    '  group 2: dotnet test && git add <each file you changed> && git commit -s -m "feat(checkout): S3 <the rule of the group, as your implementation plan names it>" -m "Refs: #42"',
+    '- The walking skeleton passes in that commit, with every acceptance test and the whole suite.',
+    "- Deliver every group in this one pass, in this order, with outside-in TDD, unit tests included, and commit nothing until every acceptance test and the whole suite pass; change another component than the groups' own only where a group needs it, in the same commit. The pass ends when that one commit is made, or on a blocker.",
+    '- Commit once, in bash (never PowerShell), naming each file you changed:',
+    '  dotnet test && git add <each file you changed> && git commit -s -m "feat(checkout): S1–S3 <the rules of the story, as your implementation plan names them>" -m "Refs: #42"',
   ].join('\n')), deliver)
   assert.doesNotMatch(deliver, /Commit each TDD cycle|walking skeleton root-/)
   const plan = promptOf(host, `skraft ${SLUG} · distill · attempt 1`)
@@ -119,17 +118,15 @@ test('the red commits once, the acceptance tests of every scenario in the compon
   }
 })
 
-test('a green that changes an acceptance test or the walking skeleton, commits its inner tests apart, or breaks the order of the groups is refused', async () => {
+test('a green that changes an acceptance test or the walking skeleton, commits its inner tests apart, or splits the delivery in two greens is refused', async () => {
   const touched = 'changes the acceptance tests, which DISTILL owns; undo that change, and if a test is wrong, stop blocked naming it'
-  const outOfOrder = (named) => `${named} names no group still to deliver, or one before the last you committed: commit the groups in the order of your implementation plan, each subject starting with its group's scenarios (S1, S2 <rule>)`
   const cases = [
     [[API, WEB], reds(), greenOf('S1', ['src/Group1.cs', 'tests/Acceptance/S1AcceptanceTests.cs']), `commit root-2 "feat(checkout): S1 rule" ${touched}`],
     [[API, WEB], reds(), greenOf('S1', ['src/Group1.cs', 'tests/Integration/WalkingSkeletonTests.cs']), `commit root-2 "feat(checkout): S1 rule" ${touched}`],
-    [[API, WEB], reds(), (h) => { h.git.commit('test(checkout): unit of the payment', ['tests/Unit/PaymentTests.cs']); greenOf('S1')(h) }, 'commit root-2 "test(checkout): unit of the payment" commits a test on its own: the tests of the inner loop go in the one feat or fix commit that makes the group pass'],
-    [[API, WEB], reds(), (h) => { greenOf('S1')(h); h.git.commit('feat(checkout): S1 receipt', ['src/Receipt.cs']) }, 'commit root-3 "feat(checkout): S1 receipt" is a feat or fix commit with no group left: one commit per group, no more'],
-    [[API, WEB], reds(), (h) => { greenOf('S1')(h); h.git.commit('refactor(checkout): name the payment', ['src/S1.cs']) }, 'commit root-3 "refactor(checkout): name the payment" commits a change under green on its own: the group takes one feat or fix commit, refactoring included'],
-    [[API, WEB], reds(), () => {}, 'the story has no feat or fix commit: make every group pass, one commit per group whose acceptance tests did not already pass'],
-    [[API, WEB], reds(), ({ git }) => git.commit('feat(checkout): pay by card', ['src/Pay.cs']), outOfOrder('commit root-2 "feat(checkout): pay by card"')],
+    [[API, WEB], reds(), (h) => { h.git.commit('test(checkout): unit of the payment', ['tests/Unit/PaymentTests.cs']); greenOf('S1')(h) }, 'commit root-2 "test(checkout): unit of the payment" commits a test on its own: the tests of the inner loop go in the one feat or fix commit that makes the story pass'],
+    [[API, WEB], reds(), (h) => { greenOf('S1')(h); h.git.commit('feat(checkout): S1 receipt', ['src/Receipt.cs']) }, 'commit root-3 "feat(checkout): S1 receipt" is a second feat or fix commit: the story takes one, with the code, the unit tests and the fixes of every group; squash it into the first'],
+    [[API, WEB], reds(), (h) => { greenOf('S1')(h); h.git.commit('refactor(checkout): name the payment', ['src/S1.cs']) }, 'commit root-3 "refactor(checkout): name the payment" commits a change under green on its own: the story takes one feat or fix commit, refactoring included'],
+    [[API, WEB], reds(), () => {}, 'the story has no feat or fix commit: make every group pass, in one commit'],
   ]
   for (const [COMPONENTS, work, deliverWork, why] of cases) {
     const host = scripted({ components: COMPONENTS }, (it) => [...research(it), agent({ work })(it), agent({ work: deliverWork })(it), unavailable])
@@ -138,12 +135,8 @@ test('a green that changes an acceptance test or the walking skeleton, commits i
   }
 
   const THREE_GROUPS = (deliverWork) => scripted({}, (it) => [...research(it), agent({ plan: THREE, work: designing(3, 'S1, S2', 'S3') })(it), agent({ work: deliverWork })(it), unavailable])
-  const reversed = THREE_GROUPS((h) => { greenOf('S3')(h); greenOf('S1, S2')(h) })
-  await reversed.start()
-  assert.deepEqual(recorded(reversed, 'deliver')[0].failures, [outOfOrder('commit root-3 "feat(checkout): S1, S2 rule"')])
-
   const covered = THREE_GROUPS(greenOf('S1, S2'))
-  assert.equal((await covered.start()).status, 'done', 'a group whose acceptance tests already pass takes no commit')
+  assert.equal((await covered.start()).status, 'done', 'the one green names the scenarios it likes: the engine judges its place, not its subject')
   assert.deepEqual(recorded(covered, 'deliver').map(({ outcome, green }) => [outcome, green]), [['done', { group: 2 }]])
 })
 
@@ -158,17 +151,17 @@ test('a component whose source path is its whole root keeps its acceptance tests
   assert.deepEqual(recorded(documented, 'distill').map(({ outcome, failures }) => [outcome, failures]), [['done', []]])
 })
 
-test('two components sharing a root each own the files of their own paths: each group is delivered by its own commit', async () => {
+test('two components sharing a root each own the files of their own paths: one green delivers both', async () => {
   const SHARED = [API, { ...WEB, root: '.', paths: { src: ['web/src'], tests: ['web/tests'] } }]
   const host = scripted({ components: SHARED }, (it) => [
     ...research(it), agent({ plan: [['Customer pays by card'], ['Customer sees the receipt', 'web', '@happy-path']], work: reds(2, ['tests/Integration/WalkingSkeletonTests.cs', 'tests/Acceptance/S1AcceptanceTests.cs', 'web/tests/receipt.test.tsx']) })(it),
-    agent({ work: (h) => { greenOf('S1')(h); greenOf('S2', ['web/src/Receipt.tsx', 'web/tests/unit/receipt-total.test.ts'])(h) } })(it),
+    agent({ work: greenOf('S1, S2', ['src/Group1.cs', 'tests/Unit/Group1Tests.cs', 'web/src/Receipt.tsx', 'web/tests/unit/receipt-total.test.ts']) })(it),
   ])
 
   const outcome = await host.start()
 
   assert.equal(outcome.status, 'done', outcome.reason)
-  assert.deepEqual(checked(host, 'deliver')[0].commits.map(({ subject, verdict }) => [subject, verdict]), [['feat(checkout): S1 rule', 'ok'], ['feat(checkout): S2 rule', 'ok']])
+  assert.deepEqual(checked(host, 'deliver')[0].commits.map(({ subject, verdict }) => [subject, verdict]), [['feat(checkout): S1, S2 rule', 'ok']])
 })
 
 test('a docs or chore commit that changes a component\'s source or tests is refused, wherever it is made', async () => {
@@ -264,7 +257,7 @@ test('a human reads the scenarios, their groups, the red and the designer\'s run
 
   assert.equal(outcome.status, 'done', outcome.reason)
   const [first, second] = host.human.questions.filter(({ kind }) => kind === 'scenario-review')
-  const read = (visit) => `Read the 2 scenarios of the story before DELIVER builds them: S1 "Customer pays by card" (api; @walking-skeleton); S2 "Customer is refused an expired card" (api; @error-case). DELIVER makes them pass in one pass, one commit per group, in this order: 1. S1, S2. The acceptance tests of every scenario, the walking skeleton and the skeleton of its chain are commit root-1 "test(checkout): acceptance tests S1–S2": tests/Integration/WalkingSkeletonTests.cs, tests/Acceptance/S1AcceptanceTests.cs, tests/Acceptance/S2AcceptanceTests.cs. skraft does not run them: check that each fails on its own assertion; the designer's run is in ${TRACKING}/logs/distill-${visit}-red.log. APPROVED delivers them; REVISE sends DISTILL back with your corrections (edit the .feature or the test yourself first if you like, and say so).`
+  const read = (visit) => `Read the 2 scenarios of the story before DELIVER builds them: S1 "Customer pays by card" (api; @walking-skeleton); S2 "Customer is refused an expired card" (api; @error-case). DELIVER makes them pass in one pass and one commit, working the groups in this order: 1. S1, S2. The acceptance tests of every scenario, the walking skeleton and the skeleton of its chain are commit root-1 "test(checkout): acceptance tests S1–S2": tests/Integration/WalkingSkeletonTests.cs, tests/Acceptance/S1AcceptanceTests.cs, tests/Acceptance/S2AcceptanceTests.cs. skraft does not run them: check that each fails on its own assertion; the designer's run is in ${TRACKING}/logs/distill-${visit}-red.log. APPROVED delivers them; REVISE sends DISTILL back with your corrections (edit the .feature or the test yourself first if you like, and say so).`
   assert.equal(first.text, read(1))
   assert.equal(second.text, read(2), 'the pass REVISE sent back committed nothing new: the red stands, the designer\'s run is the one of the new pass')
   assert.equal(second.key, 'scenario_review-2')
@@ -321,7 +314,7 @@ test('a pass the gates send back after the story is delivered fixes the whole st
   assert.deepEqual(recorded(refused, 'deliver').at(-1).failures, ['commit root-3 "test(checkout): weaken the acceptance test" changes the acceptance tests, which DISTILL owns; undo that change, and if a test is wrong, stop blocked naming it'])
 })
 
-test('the exact green of each group names its scenarios, and its test command leaves out the scenarios of the groups after it', async () => {
+test('the exact green of the story names its scenarios and runs the whole test command, no filter', async () => {
   const LONG = 'Customer   pays "$5" by `card` with a \\ voucher that the shop accepts only on weekdays before noon'
   const host = scripted({}, (it) => [...research(it), agent({ plan: [[LONG, 'api', '@walking-skeleton @happy-path'], ['Customer gets a receipt', 'api', '']], work: designing(2) })(it), unavailable])
 
@@ -329,7 +322,8 @@ test('the exact green of each group names its scenarios, and its test command le
 
   const deliver = promptOf(host, `skraft ${SLUG} · deliver · attempt 1`)
   assert.ok(deliver.includes(`\n- 1 of 2 — S1 "${LONG}" (component api, tags @walking-skeleton @happy-path)\n- 2 of 2 — S2 "Customer gets a receipt" (component api)\n`), deliver)
-  assert.ok(deliver.includes('\n  group 1: dotnet test <the filter leaving out S2> && git add <each file you changed> && git commit -s -m "feat(checkout): S1 <the rule of the group, as your implementation plan names it>"\n  group 2: dotnet test && git add <each file you changed> && git commit -s -m "feat(checkout): S2 <the rule of the group, as your implementation plan names it>"\n'), deliver)
+  assert.ok(deliver.includes('\n  dotnet test && git add <each file you changed> && git commit -s -m "feat(checkout): S1–S2 <the rules of the story, as your implementation plan names them>"\n'), deliver)
+  assert.ok(!deliver.includes('filter'), deliver)
 })
 
 test('the engineer is told the acceptance-test files of the red by its short sha, a red of a neighbour repository too', async () => {
@@ -344,33 +338,21 @@ test('the engineer is told the acceptance-test files of the red by its short sha
   assert.ok(promptOf(host, `skraft ${SLUG} · deliver · attempt 1`).includes('\n- up-web- "test(checkout): acceptance tests S1–S1": ../web/tests/receipt.test.tsx, ../web/tests/receipt-steps.ts\n'))
 })
 
-test('an engineer that stops blocked after the first group is told by a human how to go on: the next pass counts the greens already committed and delivers the groups after them', async () => {
+test('an engineer that stops blocked before its commit is told by a human how to go on: the next pass delivers every group again, in one green', async () => {
   const blocked = { status: 'blocked', summary: 'the expired card rule is undecided' }
   const host = scripted({ answers: [{ answer: 'Refuse a card that expired before today' }] }, (it) => [
     ...research(it), agent({ plan: THREE, work: designing(3, 'S1, S2', 'S3') })(it),
-    agent({ result: blocked, work: greenOf('S1, S2') })(it), agent({ work: greenOf('S3') })(it),
+    agent({ result: blocked, work: () => {} })(it), agent({ work: greenOf('S1, S2, S3') })(it),
   ])
 
   const outcome = await host.start()
 
   assert.equal(outcome.status, 'done', outcome.reason)
   assert.deepEqual(labels(host).filter((label) => /deliver/.test(label)), [`skraft ${SLUG} · deliver · attempt 1`, `skraft ${SLUG} · deliver · pass 2 · attempt 1`])
-  assert.deepEqual(checked(host, 'deliver').at(-1).commits.map(({ subject, verdict }) => [subject, verdict]), [['feat(checkout): S1, S2 rule', 'ok'], ['feat(checkout): S3 rule', 'ok']])
+  assert.deepEqual(checked(host, 'deliver').at(-1).commits.map(({ subject, verdict }) => [subject, verdict]), [['feat(checkout): S1, S2, S3 rule', 'ok']])
   const reopened = promptOf(host, `skraft ${SLUG} · deliver · pass 2 · attempt 1`)
-  assert.ok(reopened.includes('(component api, tags @error-case) — already committed as root-2: commit nothing for it\n'), reopened)
   assert.ok(reopened.includes('\n- 2 of 2 — S3 "Customer gets a receipt" (component api, tags @happy-path)\n'), reopened)
-  assert.ok(reopened.includes('\n  group 2: dotnet test && git add'), reopened)
-  assert.ok(!reopened.includes('\n  group 1: '), reopened)
-})
-
-test('the group of S12 is not the group of S1: a green names its group by the whole number', async () => {
-  const twelve = Array.from({ length: 12 }, (_, at) => [`Scenario ${at + 1}`, 'api', at === 0 ? '@walking-skeleton' : '@happy-path'])
-  const host = scripted({}, (it) => [...research(it), agent({ plan: twelve, work: designing(12, 'S1', 'S2–S11', 'S12') })(it), agent({ work: (h) => { greenOf('S1')(h); greenOf('S12')(h) } })(it)])
-
-  const outcome = await host.start()
-
-  assert.equal(outcome.status, 'done', outcome.reason)
-  assert.deepEqual(checked(host, 'deliver')[0].commits.map(({ subject, verdict }) => [subject, verdict]), [['feat(checkout): S1 rule', 'ok'], ['feat(checkout): S12 rule', 'ok']])
+  assert.ok(reopened.includes('\n  dotnet test && git add'), reopened)
 })
 
 test('a commit a person makes while a delivery waits on a block is never judged as the engineer\'s on the reopened pass', async () => {
@@ -383,13 +365,13 @@ test('a commit a person makes while a delivery waits on a block is never judged 
   }
   host = scripted({ answers: [person] }, (it) => [
     ...research(it), agent({ plan: THREE, work: designing(3, 'S1, S2', 'S3') })(it),
-    agent({ result: blocked, work: greenOf('S1, S2') })(it), agent({ work: greenOf('S3') })(it),
+    agent({ result: blocked, work: () => {} })(it), agent({ work: greenOf('S1, S2, S3') })(it),
   ])
 
   const outcome = await host.start()
 
   assert.equal(outcome.status, 'done', outcome.reason)
-  assert.deepEqual(checked(host, 'deliver').at(-1).commits.map(({ subject, verdict }) => [subject, verdict]), [['feat(checkout): S1, S2 rule', 'ok'], ['feat(checkout): S3 rule', 'ok']])
+  assert.deepEqual(checked(host, 'deliver').at(-1).commits.map(({ subject, verdict }) => [subject, verdict]), [['feat(checkout): S1, S2, S3 rule', 'ok']])
 })
 
 test('a run journaled by the engine that delivered one group per pass is refused at its resume, never judged green by green', async () => {

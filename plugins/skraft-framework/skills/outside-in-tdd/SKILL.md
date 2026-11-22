@@ -94,27 +94,28 @@ step. Never build a class no active scenario requires.
 - **Write a stated rule whole.** When the acceptance criterion states the rule (a rate table, a
   threshold, a cap, a formula), GREEN writes it; take a smaller step (a constant, then a branch)
   only when the general rule is not clear from the test.
-- **Run scope.** Run the new test filtered to it, then the test project or module it lives in, as
-  *Run one test, then its project* gives by stack. The whole suite runs once per group, in the
-  command that commits its green.
+- **Run scope.** During RED and GREEN run only the test at hand, filtered to it (*Run one test*);
+  no project or suite run until the story's commit. The component's gates (`build`, `format`,
+  `lint`) and the whole suite run once each, before that one commit, the suite in the command
+  that commits; never a confirmation re-run, never a separate build when the test run compiles.
 - **Short output.** Run tests at their quietest verbosity, failures only; read a full output only
   to understand a failure.
 - **Checks once per group.** After each inner GREEN, only `git diff --name-only` (step 1 of
   *Post-GREEN wiring verification*); its other steps and the Object Calisthenics rules
-  (`craft-discipline` C10) run once on the group's whole diff, before its commit.
+  (`craft-discipline` C10) run once on the group's whole diff, when its acceptance tests pass.
 
-### Run one test, then its project
+### Run one test
 
-| Stack | One test | Its project or module | Quiet, failures only |
-|---|---|---|---|
-| .NET | `dotnet test <test project> --filter "FullyQualifiedName~<Class>.<Method>"` | `dotnet test <test project>` | `--verbosity quiet` |
-| Java, Maven | `mvn -q test -Dtest=<Class>#<method>` (`-pl <module>` in a multi-module build) | `mvn -q test -pl <module>` | `-q` |
-| Java, Gradle | `gradle test --tests "<Class>.<method>"` (`:<module>:test`) | `gradle :<module>:test` | `-q` |
-| TypeScript, Vitest | `npx vitest run <file> -t "<name>"` | `npx vitest run <folder>` | `--reporter=dot` |
-| Python, pytest | `pytest <file>::<test>` | `pytest <folder>` | `-q` |
+| Stack | One test | Quiet, failures only |
+|---|---|---|
+| .NET | `dotnet test <test project> --filter "FullyQualifiedName~<Class>.<Method>"` | `--verbosity quiet` |
+| Java, Maven | `mvn -q test -Dtest=<Class>#<method>` (`-pl <module>` in a multi-module build) | `-q` |
+| Java, Gradle | `gradle test --tests "<Class>.<method>"` (`:<module>:test`) | `-q` |
+| TypeScript, Vitest | `npx vitest run <file> -t "<name>"` | `--reporter=dot` |
+| Python, pytest | `pytest <file>::<test>` | `-q` |
 
 The component's test command from your brief is the command of record: add only the filter and the
-verbosity to it, never replace it with another runner. Pending excluded: see *Commit policy*.
+verbosity to it, never replace it with another runner.
 
 ## Commit policy
 
@@ -124,19 +125,11 @@ error only when read: a red is never chained to a commit; a green is.
 | Pass | Commits |
 |---|---|
 | Acceptance tests of the story (skraft DISTILL) | One `test` commit: the walking skeleton and the acceptance test of every scenario, with the skeleton they call, after one run whose output shows each failing on a business assertion |
-| Story in DELIVER, one dispatch | The inner cycles commit nothing. One `feat` or `fix` commit per group, in plan order, once the group's scenarios pass, its unit tests and every format or lint fix included, chained in bash: `<test command, pending scenarios excluded> && git add <each file> && git commit -s -m "<subject>" -m "Refs: #N"`, the line the brief gives for that group; a group whose tests already pass takes none |
+| Story in DELIVER, one dispatch | The inner cycles commit nothing. One `feat` or `fix` commit for the whole story, once every group's scenarios and the walking skeleton pass: its unit tests and every format or lint fix included, chained in bash: `<test command, unfiltered> && git add <each file> && git commit -s -m "<subject>" -m "Refs: #N"`, the line the brief gives; the gates (`build`, `format`, `lint`) ran just before it |
 | No scenario: gates or review sent the story back, mutant kills, a session without skraft | Each cycle: `test` with the failing test, then `feat` or `fix` with the code; `refactor` for a change under green |
 
 The acceptance tests of a scenario are its oracle: the green never changes them. A wrong one is
 named and sent back to whoever wrote it.
-
-**Pending scenarios excluded.** Until the last group, the acceptance tests of the scenarios not
-delivered yet fail. Each acceptance test's name starts with its scenario's number and an
-underscore (`S5_…`, `test_s5_…`), so the runner's name filter leaves them out: .NET
-`--filter "FullyQualifiedName!~S5_&FullyQualifiedName!~S6_"`; Maven `-Dtest='!*S5_*,!*S6_*'`;
-Vitest `-t "^(?!.*\b[Ss](5|6)_)"`; pytest `-k "not s5_ and not s6_"`. A runner that only includes
-(Gradle `--tests`) lists the delivered scenarios' ids and the unit tests instead. Add only the
-filter to the component's test command, never another runner. The last group runs it unfiltered.
 
 ## Ordered test list (TPP + FLFI)
 
@@ -223,23 +216,23 @@ Code no approved behaviour asks for and no test covers: delete it. Run no mutati
   shape and one value S1 names. A pure library, a refactoring with no new public interface, or a
   configuration or documentation change has none.
 - **Double loop:** each scenario's acceptance test, S1's included, enters by the use case; the inner
-  loop drives it green. The group holding S1 is green when its acceptance tests and the walking
-  skeleton both pass: thinnest slice, hardcoded values, minimal branching. Every later green keeps
-  the walking skeleton and the groups before it green.
+  loop drives it green. The group holding S1 is done when its acceptance tests and the walking
+  skeleton both pass: thinnest slice, hardcoded values, minimal branching. Every later group keeps
+  the walking skeleton and the groups before it passing.
 - **First delivery** holds only the approved outcome; defer unapproved validations, states and
   abstractions.
 - **All acceptance tests first:** write the acceptance test of every scenario, each name starting
   with its scenario's number, run them once and read that each fails on a business assertion,
   never a build or setup error; commit them all in one `test` commit. Never skip one: a scenario
   not delivered yet stays an active, failing test, left out by the name filter (Commit policy).
-- **One group at a time:** the implementation plan groups the scenarios by the rule they pin down:
-  consecutive scenarios that enter through the same use case and state one rule or its edge cases
-  form one group; a scenario on its own is a group of one. One dispatch delivers every group in
-  plan order, one green commit each. For each group, in one turn: run its tests filtered to it;
-  scenarios that already pass are covered by an earlier one: no code, name the covering scenario
-  on their change-log line; write the code its red tests demand, nothing more; chain the gate and
-  the group's one commit. A red acceptance test after a green is a scenario still owed, never a
-  reason to stop. After the last group the whole suite runs green, unfiltered.
+- **One group at a time, one commit:** the implementation plan groups the scenarios by the rule
+  they pin down: consecutive scenarios that enter through the same use case and state one rule or
+  its edge cases form one group; a scenario on its own is a group of one. One dispatch works every
+  group in plan order and makes one green commit for the story. For each group, in one turn: run its
+  acceptance tests filtered by their numbers; scenarios that already pass are covered by an earlier
+  one: no code, name the covering scenario on the change-log line; write the code its red tests
+  demand, nothing more. After the last group run the gates once, then the chained commit, whose
+  unfiltered test run is the one run of the whole suite.
 - A scenario's test that passes on its first run adds no behaviour: it is an example of the
   scenario whose code makes it pass, an `Examples` row of that one.
 

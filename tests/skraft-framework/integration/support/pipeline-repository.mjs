@@ -558,7 +558,7 @@ export const writesOnly = (result = { status: 'done', summary: 'outputs written'
 }
 
 /** Whether the brief puts the groups of the story's scenarios in the engineer's hands. @param {Brief} brief */
-const onScenario = (brief) => brief.prompt.includes('\n- Groups, in the order you deliver them')
+const onScenario = (brief) => brief.prompt.includes('\n- Groups, in the order you work them')
 
 /**
  * The engineer's work: on the groups of the story, the one green commit of the code with its unit
@@ -598,7 +598,7 @@ const shortShaOf = (cwd, subject) => git(cwd, 'log', '-1', '--format=%H', '--fix
 export const scenarioReviewText = (cwd, slug = SLUG, visit = 1) => {
   const red = `test(${slug}): pay by card`
   const log = join(realpathSync(cwd), '.copilot-tracking', 'skraft-plans', slug, 'logs', `distill-${visit}-red.log`)
-  return `Read the 1 scenario of the story before DELIVER builds them: S1 "Customer pays by card" (app; @walking-skeleton). DELIVER makes them pass in one pass, one commit per group, in this order: 1. S1. The acceptance tests of every scenario, the walking skeleton and the skeleton of its chain are commit ${shortShaOf(cwd, red)} "${red}": src/pay.mjs, ${FIRST_ACCEPTANCE.path}, tests/unit/check.mjs. skraft does not run them: check that each fails on its own assertion; the designer's run is in ${log}. APPROVED delivers them; REVISE sends DISTILL back with your corrections (edit the .feature or the test yourself first if you like, and say so).`
+  return `Read the 1 scenario of the story before DELIVER builds them: S1 "Customer pays by card" (app; @walking-skeleton). DELIVER makes them pass in one pass and one commit, working the groups in this order: 1. S1. The acceptance tests of every scenario, the walking skeleton and the skeleton of its chain are commit ${shortShaOf(cwd, red)} "${red}": src/pay.mjs, ${FIRST_ACCEPTANCE.path}, tests/unit/check.mjs. skraft does not run them: check that each fails on its own assertion; the designer's run is in ${log}. APPROVED delivers them; REVISE sends DISTILL back with your corrections (edit the .feature or the test yourself first if you like, and say so).`
 }
 
 /**
