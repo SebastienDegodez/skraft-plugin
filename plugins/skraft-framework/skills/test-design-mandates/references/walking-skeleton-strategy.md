@@ -16,7 +16,7 @@ other scenario.
 | Enters by | the real entry point (HTTP, CLI, message), wired by the production composition root | the use case |
 | Runs on | the walking skeleton column of the policy below | the targeted column |
 | Asserts | the status, the shape of the response, and one value S1 names, word for word | every value of the scenario, word for word |
-| Written | in DISTILL, first, with the skeleton of every class of the chain it lacks | in DISTILL, on its own pass after the walking skeleton |
+| Written | in DISTILL, first, with the skeleton of every class of the chain it lacks | in DISTILL, in the same pass, after the walking skeleton |
 | One per | story | scenario |
 
 - S1 is the scenario the walking skeleton walks: tagged `@walking-skeleton` in the `.feature`

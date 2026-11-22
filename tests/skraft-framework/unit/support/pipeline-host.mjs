@@ -267,6 +267,15 @@ export const tddCycle = (story = SLUG, name = 'Checkout', body = '') => ({ git }
 }
 
 /**
+ * A whole TDD cycle after the story is delivered: one fix holding its test and its code, then a
+ * refactor under green.
+ */
+export const reworkCycle = (story = SLUG, name = 'Checkout', body = '') => ({ git }) => {
+  git.commit(`fix(${story}): ${name} pays by card`, [`src/${name}.cs`, `tests/${name}Tests.cs`], body)
+  git.commit(`refactor(${story}): name the card payment`, [`src/${name}.cs`], body)
+}
+
+/**
  * The one green commit that makes a group of scenarios pass in the api component: the code and
  * the unit tests of its inner loop, its subject starting with the group's scenarios.
  * @param {string} [story] @param {string} [name] @param {string} [body] its body: `Refs: #<issue>` for a story with one

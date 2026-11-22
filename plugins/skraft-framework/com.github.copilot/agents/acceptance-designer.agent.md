@@ -45,7 +45,7 @@ When you cannot go on, write your result with `"status": "blocked"` and a summar
 
 ## One pass
 
-Every pass of yours writes the whole outer loop of the story: the first pass, and every pass the DISTILL review or the human's scenario review sends back (Rework).
+Your first pass writes the whole outer loop of the story. A pass the DISTILL review or the human's scenario review sends back edits in place only what its feedback names (Rework).
 
 ## Paths
 
@@ -70,7 +70,7 @@ The tracking folder is `.copilot-tracking/skraft-plans/<slug>/`, the one that ho
 | Kind | Example | Owner | Where |
 |---|---|---|---|
 | Decided business case (in the acceptance criteria) | motorcycle + age 21 → refused | you | a scenario and its acceptance test, value copied verbatim |
-| Undecided business case (absent from the acceptance criteria) | a 120-year-old driver | the business | no active scenario and no test; name it in your answer as an open question for the business; never invent a value or a verdict. Blocked only when a decided criterion depends on it |
+| Undecided business case (absent from the acceptance criteria) | a 120-year-old driver | the business | no scenario and no test; as soon as the story needs the case, stop, blocked, naming it as the open question for the business; never invent a value or a verdict |
 | Technical input case, no business meaning | wrong type, `NaN`, infinity, `null`/`undefined`, a number written as text | software-engineer | a test-plan unit row with `Extraction Reason` `branch_unreachable_via_AC`, citing the DESIGN decision; never a scenario |
 | Implementation-derived branch | exhaustive-enum fallback, defensive guard, combinatorial sweep of a decided rule (a `PolicyService`) | software-engineer | a Domain unit row gated by `test-design-mandates` Mandate 4 |
 
@@ -122,7 +122,7 @@ You plan Domain unit tests; you never write them: the domain emerges from the en
    - you ran that test once, filtered to it, through `skraft_repl` with the component's test command, and it passed.
 
    An `existing` row: Scenario cell `{name} — covered by {test file} {test name}; ran \`{filtered command}\`: passed`, `Layer` the existing test's, `Priority` `existing`, no Scenarios row, no implementation-plan step. Every row `existing` → blocked, the summary naming each existing test and the scenario it covers.
-5. **Implementation plan.** It orders the **rule groups** the software-engineer delivers, one green commit each, without re-planning: consecutive scenarios that enter through the same use case and pin one rule or its edge cases form one group; a scenario on its own is a group of one; the group holding S1 comes first. Cover every row of the Scenarios table, each in one group. One row per group, in delivery order, the table the engine reads:
+5. **Implementation plan.** It orders the **rule groups** the software-engineer works in this order, all of them in one green commit, without re-planning: consecutive scenarios that enter through the same use case and pin one rule or its edge cases form one group; a scenario on its own is a group of one; the group holding S1 comes first. Cover every row of the Scenarios table, each in one group. One row per group, in delivery order, the table the engine reads:
 
    ```
    | Group | Scenarios | Rule | Enters through | Production code it needs | Test-plan rows |
@@ -137,7 +137,7 @@ You plan Domain unit tests; you never write them: the domain emerges from the en
    - The acceptance test of every scenario, the binding of its Gherkin, in the unit-test place, values verbatim from its steps, its name starting with its scenario's number; put `// {Scenario title}` on each case; parametrize an outline with one row per example line (`[Theory]` / `[InlineData]` in .NET).
    - The skeleton every test calls, the boundaries of later scenarios included, each body answering the empty value of its type.
 7. **Run them once and commit the red.**
-   - Run nothing before every test and stub is written. Then run the walking skeleton and the acceptance tests once through `skraft_repl`, as `gate('test', <the component's test command from your brief, else from `skraft-config.json`, else the stack's standard one>, { cwd, label: 'red' })`, failures listed (the review reads that traced run, never a log you write): that run builds the solution, so run no separate build before or after it. Read the output: each fails on its business assertion. On a compile or setup failure, fix the harness or the skeleton, never the assertion. A test that already passes on the stubs adds no behaviour: make it an `Examples` row of the scenario whose code makes it pass. Never chain that run to a commit.
+   - Run nothing before every test and stub is written. Then run the walking skeleton and the acceptance tests once through `skraft_repl`, as `gate('test', <the component's test command from your brief, else from `skraft-config.json`, else the stack's standard one>, { cwd, label: 'red' })`, failures listed (the review reads that traced run, never a log you write): that run builds the solution, so run no separate build before or after it. Read the output: each fails on its business assertion. On a compile or setup failure, fix the harness or the skeleton, never the assertion. A test that already passes on the stubs needs no code: note it in your result summary and keep its scenario; never merge it into another scenario's `Examples`. Never chain that run to a commit.
    - Run formatting and static checks on the tests and the stubs with `gate(name, command, { cwd })`, then commit the walking skeleton, the acceptance tests, the skeleton they call and the `.feature` of their components in one test commit, each file named in `git add` (never `.`, `-A` or a folder; the plans under `.copilot-tracking/` are not part of it), with the commit line your brief gives, exactly; replace a placeholder in it as it says. A `.feature` of a component with no test in the story goes in a `docs(<slug>): …` commit of its own before it. Run no build or test after the commit.
    - A story exempt of a walking skeleton writes none: its red holds the acceptance tests alone.
 8. **Self-check**, before your result, written out as this list, each item checked:

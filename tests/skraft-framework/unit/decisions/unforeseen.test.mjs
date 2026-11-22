@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { ScriptedMachine } from '../support/in-memory-host.mjs'
-import { agent, green, scripted, SLUG, TRACKING, tddCycle } from '../support/pipeline-host.mjs'
+import { agent, green, scripted, SLUG, TRACKING, reworkCycle } from '../support/pipeline-host.mjs'
 
 const incidentHost = () => {
   const machine = new ScriptedMachine({ exits: { '. $ dotnet test': 137 } })

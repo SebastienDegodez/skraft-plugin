@@ -19,14 +19,14 @@ Every gate id is unique across the four lenses: a finding's `gate` names one row
 
 | Gate | ID | Definition | Pass condition | Fail severity |
 |---|---|---|---|---|
-| AC–Scenario bijection | G1 | Every AC in `ac-draft-{story}.md` maps to ≥1 scenario. No scenario exists without a traceable AC. | All ACs covered, no orphan scenarios. | BLOCKER |
-| Edge case representation | G2 | Boundary conditions and negative cases from the domain examples in the story are represented as scenarios. Only the story and its acceptance criteria give examples: a Gherkin mapping, an example or a variant a DESIGN document writes (event model, tactical design) is none, and a variant an earlier rule of the story already decides (a precedence) adds no boundary. A technical input case (a value of the wrong type, `NaN`, infinity, `null`/`undefined`, a number written as text) is no business rule: it is never asked for as a scenario, and belongs in the test plan as an inner-loop unit case citing its DESIGN decision. | ≥1 edge case or boundary condition scenario per business rule; every technical input case DESIGN decides is in the test plan. | HIGH |
+| AC–Scenario bijection | G1 | Every scenario traces, by its `@AC-<n>` tag, to an AC of `ac-draft-{story}.md`, and every input and expected value of the scenario is one its AC states. Whether each AC has a scenario of its own is the engine's check: never report it. | No orphan scenario; no value its AC does not state. | BLOCKER |
+| Edge case representation | G2 | Boundary conditions and negative cases from the domain examples in the story are represented, each as an `Examples` row of the scenario of the criterion it belongs to, or as the scenario of a criterion of its own. Only the story and its acceptance criteria give examples: a Gherkin mapping, an example or a variant a DESIGN document writes (event model, tactical design) is none, and a variant an earlier rule of the story already decides (a precedence) adds no boundary. A technical input case (a value of the wrong type, `NaN`, infinity, `null`/`undefined`, a number written as text) is no business rule: it is never asked for as a scenario, and belongs in the test plan as an inner-loop unit case citing its DESIGN decision. | ≥1 edge case or boundary condition per business rule, an `Examples` row of its criterion's scenario or a criterion's own scenario; every technical input case DESIGN decides is in the test plan. | HIGH |
 
 **Checking G1:**
 1. List all ACs from `ac-draft-{story}.md`
-2. List all scenarios from `*.feature`
-3. Build a trace matrix: AC → scenario(s)
-4. Flag any AC with no scenario (missing) and any scenario with no AC (orphan)
+2. List all scenarios from `*.feature` with their `@AC-<n>` tag
+3. Flag any scenario whose tag names no AC (orphan)
+4. Flag any input or expected value of a scenario that its AC does not state
 
 ---
 

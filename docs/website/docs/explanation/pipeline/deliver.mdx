@@ -54,13 +54,15 @@ Three rules keep that single commit honest:
   goes back to DISTILL: the engineer stops, naming it.
 - **The green builds the story's scenarios only.** It writes no behaviour no scenario asks for,
   and changes another component only where a group needs it.
-- **The commit follows the test, in bash.** The brief gives the exact command, so the commit
+- **The commit follows the test.** The brief gives the exact command, for sh or PowerShell 7 and for
+  Windows PowerShell 5.1, so the commit
   happens only when the tests pass. DISTILL's red is never chained that way: only reading the
   output tells a build error from the expected failure.
 
 Once the green is committed, the engineer runs the remaining gates and submits the attempt. A run whose journal
 holds the earlier per-group DELIVER dispatches of a V2 alpha is not resumed: start it again. A pass the review sends back works on
-the whole story with the classic cycle: a red, then the fix.
+the whole story, as in v1: each cycle is one `feat` or `fix` commit holding its test and its code,
+once green, and no `test` commit of its own.
 
 ## The order: traced gates, then review
 

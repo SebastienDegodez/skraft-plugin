@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { agent, API, finding, green, lenses, nominal, REFS_42, refutes, reviews, says, scripted, SLUG, tddCycle, TRACKING } from '../support/pipeline-host.mjs'
+import { agent, API, finding, green, lenses, nominal, REFS_42, refutes, reviews, says, scripted, SLUG, reworkCycle, TRACKING } from '../support/pipeline-host.mjs'
 import { opening, section } from '../support/description.mjs'
 import { answerYaml } from '../support/answer-yaml.mjs'
 
@@ -801,7 +801,7 @@ test('ACCEPT given with skraft decide at the ceiling of distill_review closes DI
 test('ACCEPT at the ceiling of deliver_review, a call to .skraft/review.skraft.dot, goes on by its APPROVED edge to the visuals (#499)', async () => {
   const host = scripted({ answers: [{ answer: 'ACCEPT' }] }, (it) => [
     ...nominal(it),
-    agent({ work: tddCycle(SLUG, 'Refund') })(it), agent({ work: tddCycle(SLUG, 'Discount') })(it),
+    agent({ work: reworkCycle(SLUG, 'Refund') })(it), agent({ work: reworkCycle(SLUG, 'Discount') })(it),
   ])
   const low = says('test-integrity', 'fail', [finding('F1', 'low', 'the refund test name says nothing', { gate: 'G7', location: 'tests/CheckoutTests.cs:9' })])
   host.agentRunner.review = lenses({ 'test-integrity': [low, low, low] })

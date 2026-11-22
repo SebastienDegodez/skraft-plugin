@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { agent, finding, green, lenses, nominal, PASSING_MATRIX, pipelineHost, refutes, says, scripted, SLUG, tddCycle } from '../support/pipeline-host.mjs'
+import { agent, finding, green, lenses, nominal, PASSING_MATRIX, pipelineHost, refutes, says, scripted, SLUG, reworkCycle } from '../support/pipeline-host.mjs'
 import { edit, WITH_SECURITY } from '../workflow/support.mjs'
 import { BUILT_IN_WORKFLOW, FixedClock, InMemoryAgentCatalog, ScriptedMachine } from '../support/in-memory-host.mjs'
 
@@ -235,7 +235,7 @@ test('the last pass of a review shows only the lenses that pass ran, and no verd
   }
   const noMoreMocks = ({ git }) => {
     git.patches = {}
-    tddCycle(SLUG, 'Refund')({ git })
+    reworkCycle(SLUG, 'Refund')({ git })
   }
   const host = scripted({}, (it) => [agent()(it), agent()(it), agent()(it), agent({ work: mocks })(it), agent({ work: noMoreMocks })(it)])
   const answer = lenses({
