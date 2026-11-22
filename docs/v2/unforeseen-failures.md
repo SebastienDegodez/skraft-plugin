@@ -29,12 +29,10 @@ avec `invalid-judgment`. Aucune disponibilité automatique de ces métriques dan
 interactif n'est affirmée. Les valeurs d'usage valides restent journalisées même si l'action
 est refusée.
 
-Menu fermé : `RETRY`, `RETRY_WITH_NOTE`, `SEND_TO:<producteur>` et `STOP`. Une note contient
+Menu fermé : `RETRY`, `RETRY_WITH_NOTE` et `STOP`. Une note contient
 1 à 500 caractères après `inert` et mise sur une ligne ; elle reste une donnée de suivi,
-jamais une commande. `SEND_TO` n'offre que les arêtes `FAIL` vers un agent déjà prévu par
-le graphe : aucun saut par-dessus une gate verrouillée ou une question humaine. Les plafonds
-de visite restent applicables et une arête modifiée pendant la pause ne remplace pas le choix
-journalisé. Toute réponse hors menu ou invalide arrête avec diagnostic. Une seule intervention
+jamais une commande. Aucun retour vers un producteur n'est offert : le graphe n'a plus de nœud
+de gates ni d'arête `FAIL`. Toute réponse hors menu ou invalide arrête avec diagnostic. Une seule intervention
 automatisée par signature sur tout le journal ; la suivante pose `environment` à une personne,
 y compris après reprise.
 
@@ -325,8 +323,7 @@ fermé.
 
 **Conception, si les données le justifient :**
 1. Un nouveau type de question, `unforeseen`, distinct des questions humaines, avec un menu
-   fermé : `RETRY`, `RETRY_WITH_NOTE` (note bornée, passée par le filtre `inert`),
-   `SEND_TO:<nœud du graphe>`, `STOP`.
+   fermé : `RETRY`, `RETRY_WITH_NOTE` (note bornée, passée par le filtre `inert`), `STOP`.
 2. La réponse est journalisée `by: host-llm`, avec son coût et son modèle.
 3. `review-ceiling`, `adr-ratification` et `blocked` **refusent** toute réponse `by: host-llm`,
    et un test le prouve.
@@ -352,7 +349,7 @@ Il faut décider sur des données, pas sur un nombre arbitraire d'incidents :
 |---|---|---|
 | Runs réels observés | ≥ 10 runs complets, d'au moins 2 développeurs, sur 2 hôtes | assez de variété d'environnements |
 | Signatures **inconnues distinctes** | ≥ 5 | sinon une table codée en dur (lot 7) suffit |
-| Part des inconnus qu'un humain a réglés par RETRY ou SEND_TO | ≥ 50 % | c'est la part qu'un LLM pourrait trancher ; en dessous, le gain ne vaut pas le risque |
+| Part des inconnus qu'un humain a réglés par RETRY | ≥ 50 % | c'est la part qu'un LLM pourrait trancher ; en dessous, le gain ne vaut pas le risque |
 | Temps humain perdu par arrêt | mesuré | justifie l'effort |
 
 Lecture : si la plupart des arrêts se règlent par une action simple et sûre, le lot 6 vaut la

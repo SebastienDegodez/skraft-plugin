@@ -17,7 +17,7 @@ import { refusedCommit } from './refused-commits.mjs'
 import { RUN_REPORT_FILE, runReport } from '../../domain/reporting/run-report.mjs'
 import { REPEATED_FAILURES } from '../../domain/pipeline/failure-signature.mjs'
 import { mayAnswerQuestion } from '../../domain/decisions/questions.mjs'
-import { mayJudgeIncident, recoveryOptions, unforeseenStop, unforeseenText } from '../../domain/decisions/unforeseen.mjs'
+import { mayJudgeIncident, unforeseenStop, unforeseenText } from '../../domain/decisions/unforeseen.mjs'
 import { recordJudgment } from '../decisions/decide-usecase.mjs'
 import { knownRecovery } from '../../domain/decisions/known-recoveries.mjs'
 
@@ -298,11 +298,10 @@ const askEnvironment = async (context, step, visit, reason, incident, incidents)
 
 /** @param {Context} context @param {string} step @param {number} visit @param {import('../../domain/pipeline/incidents.mjs').Incident} incident @param {import('../../domain/pipeline/incidents.mjs').FailureIncident[]} incidents */
 const askUnforeseen = async (context, step, visit, incident, incidents) => {
-  const { journal, loaded } = context
+  const { journal } = context
   const question = questionOf('unforeseen', nextKey(journal, step), withReport(context, unforeseenText(step, incident.log), step, incidents))
-  const options = recoveryOptions(loaded.workflow, step)
-  await journal.append('question.asked', { ...question, options, step, visit, subjects: [], incident, incidents })
-  const action = knownRecovery(incidents, options)
+  await journal.append('question.asked', { ...question, step, visit, subjects: [], incident, incidents })
+  const action = knownRecovery(incidents, question.options)
   if (action !== null) await journal.append('question.answered', { key: question.key, answer: action, reason: null, by: 'known-signature' })
   return null
 }
@@ -311,32 +310,8 @@ const askUnforeseen = async (context, step, visit, incident, incidents) => {
 export const settleUnforeseen = async (context, run, asked) => {
   const open = /** @type {OpenAttempt} */ (run.nodes[asked.step].open)
   if (asked.answer === null) return answerOrWait(context, asked, open.phase)
-  if (asked.answer.startsWith('SEND_TO:')) return sendIncidentBack(context, run, asked, open)
   await context.journal.append('step.recorded', {
     step: asked.step, visit: open.visit, attempt: open.attempt, outcome: 'aborted', ...unforeseenStop(asked),
-    missing: [], failures: [], next: null, durationMs: 0,
-  })
-  return null
-}
-
-/** @param {Context} context @param {RunState} run @param {AskedQuestion} asked @param {OpenAttempt} open */
-const sendIncidentBack = async (context, run, asked, open) => {
-  const failures = [`Unforeseen incident at ${asked.step}; read ${asked.incident?.log ?? 'the run report'}`]
-  const routed = leave(context, run, asked.step, 'FAIL', failures)
-  if (routed.next !== null && `SEND_TO:${routed.next}` !== asked.answer) return stopChangedRecovery(context, asked, open)
-  await context.journal.append('step.recorded', {
-    step: asked.step, visit: open.visit, attempt: open.attempt, outcome: 'fail',
-    code: routed.code ?? null, reason: routed.reason ?? null, next: routed.next, ceiling: routed.ceiling,
-    missing: [], failures, durationMs: 0,
-  })
-  return null
-}
-
-/** @param {Context} context @param {AskedQuestion} asked @param {OpenAttempt} open */
-const stopChangedRecovery = async ({ journal }, asked, open) => {
-  await journal.append('step.recorded', {
-    step: asked.step, visit: open.visit, attempt: open.attempt, outcome: 'aborted', code: 'workflow-changed',
-    reason: 'the selected unforeseen recovery edge changed; restore the workflow before continuing',
     missing: [], failures: [], next: null, durationMs: 0,
   })
   return null

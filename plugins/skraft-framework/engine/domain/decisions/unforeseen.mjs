@@ -8,17 +8,6 @@ export const UNFORESEEN_GUIDANCE =
   'If usage is unavailable, submit the chosen action with by:"host-llm" and omit missing fields: the engine stops diagnostically. ' +
   'RETRY_WITH_NOTE needs a reason of 1 to 500 inert characters. Resume the SAME run after recording.'
 
-/**
- * Recovery may return only through the graph's FAIL edge to a producer, never jump over
- * a locked gate or a human decision.
- * @param {import('../workflow/workflow.mjs').Workflow} workflow @param {string} step
- */
-export const recoveryOptions = (workflow, step) => [
-  'RETRY', 'RETRY_WITH_NOTE',
-  ...workflow.edges.filter((edge) => edge.from === step && edge.label === 'FAIL' && workflow.nodes[edge.to].kind === 'agent').map((edge) => `SEND_TO:${edge.to}`),
-  'STOP',
-]
-
 /** @param {import('../pipeline/incidents.mjs').FailureIncident[]} incidents @param {import('../journal/run-state.mjs').RunEvent[]} events */
 export const mayJudgeIncident = (incidents, events) => incidents.some(({ owner }) => owner === 'unknown') &&
   !events.some((event) => event.type === 'question.asked' && event.kind === 'unforeseen' && event.incidents?.some((prior) => incidents.some(({ signature }) => prior.signature === signature)))
@@ -26,7 +15,7 @@ export const mayJudgeIncident = (incidents, events) => incidents.some(({ owner }
 /** @param {string} step @param {string | null} log */
 export const unforeseenText = (step, log) =>
   `${step} stopped on an unforeseen incident. Read ${log ?? 'the run report'} before choosing an action from this menu only. ` +
-  'RETRY runs the same step; RETRY_WITH_NOTE retries with a bounded inert note; SEND_TO returns to a producer allowed by the workflow; STOP ends the run. ' +
+  'RETRY runs the same step; RETRY_WITH_NOTE retries with a bounded inert note; STOP ends the run. ' +
   'Report the observed model and cost with its unit; never invent missing usage. This is not a human question.'
 
 /**

@@ -82,7 +82,7 @@ test('STOP ends the unforeseen run with a diagnostic and no later work', async (
 
 test('an invalid action or missing usage stops diagnostically instead of waiting or guessing', async () => {
   for (const decision of [
-    judgment('RUN:untrusted'), judgment('SEND_TO:pr_writer'), judgment('RETRY', { by: undefined }),
+    judgment('RUN:untrusted'), judgment('RETRY', { by: undefined }),
     ...[-1, NaN, Infinity, '0.02'].map((cost) => judgment('RETRY', { cost })),
     ...[undefined, '', '@untrusted'].map((model) => judgment('RETRY', { model })),
     judgment('RETRY', { costUnit: undefined }),
