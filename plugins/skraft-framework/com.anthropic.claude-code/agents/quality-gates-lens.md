@@ -18,7 +18,7 @@ Find every gate of a component the DELIVER changes touch that the trace of the s
 - No `runs.jsonl` among your documents while they list the change log: the engine could not read the trace (edited or unsigned), or the engineer traced none; report every gate of every touched component missing. No documents at all (a pull request reviewed outside a run): answer `pass` with `findings: []`.
 - A touched component: one whose `root` (components file, relative to the working copy) holds a path of the changed files.
 - A run belongs to the component whose `root` holds its `cwd`, the deepest one when roots nest; `.` is the working copy, `../web` a sibling repository.
-- Lines: `start` (a run began), `run` (it ended: `exitCode`, `killed`, `timedOut`, `started`, `headBefore`, `headAfter`, `clean`, `log`, `gate`, `label`), `absent` (a gate declared absent, with `component` and `reason`), `lost` (a run its server lost: it never ended). For each gate, judge the last `run` line of that gate under the component.
+- Lines: `start` (a run began), `run` (it ended: `exitCode`, `killed`, `timedOut`, `started`, `headBefore`, `headAfter`, `clean`, `log`, `gate`, `label`), `absent` (a gate declared absent, with `component` and `reason`), `lost` (a run its server lost: it never ended). A run id is unique within the attempt, across kernels and resets: match a `start` to its `run` or `lost` line by id, and for each gate judge the `run` line with the highest id among that gate's runs under the component.
 - The final commit is the last commit of the change log (`<short sha> <subject>`); a run is on it when its `headAfter` starts with that sha.
 
 | Gate | Name | Criterion | Severity |
