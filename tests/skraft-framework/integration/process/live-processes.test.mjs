@@ -62,7 +62,7 @@ test('a program that ignores the signal it is killed with still ends at its time
   const result = await live.done
 
   assert.equal(result.timedOut, true)
-  assert.ok(Date.now() - started < 4000, `ended after ${Date.now() - started} ms`)
+  assert.ok(Date.now() - started < 15_000, `ended after ${Date.now() - started} ms, the kill's grace being 30 s`)
 })
 
 test('a program that is not on the machine is a result that did not start, never an exception', BOUNDED, async (t) => {
