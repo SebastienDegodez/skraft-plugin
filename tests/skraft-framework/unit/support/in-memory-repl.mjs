@@ -67,6 +67,8 @@ class ScriptedKernel {
   }
   /** @param {string} code @param {(cell: any) => Promise<string | null>} behaviour */
   on(code, behaviour) { this.script.set(code, behaviour); return this }
+  /** Whether a cell is in flight, as the real kernel says it. */
+  busy() { return this.flying !== null }
   async evaluate(code, budgetMs) {
     if (this.flying !== null) return { status: 'busy', printed: '', value: null, error: null }
     this.cells += 1

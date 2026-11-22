@@ -127,10 +127,12 @@ test('a cell past its budget answers with what it printed, runs on, and its end 
 
   const running = await cell(kernel, 'console.log("started"); await new Promise((r) => setTimeout(r, 800)); "finished"', 150)
   const busy = await cell(kernel, '1', 150)
+  const whileRunning = kernel.busy()
   const ended = await kernel.wait(5000)
+  const afterEnd = kernel.busy()
 
   assert.deepEqual([running.status, running.printed], ['running', 'started\n'])
-  assert.equal(busy.status, 'busy')
+  assert.deepEqual([busy.status, whileRunning, afterEnd], ['busy', true, false])
   assert.deepEqual([ended.status, ended.value], ['done', "'finished'"])
 })
 

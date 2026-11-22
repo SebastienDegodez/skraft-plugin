@@ -189,6 +189,29 @@ test('each cell keeps its code in cell-<n>.mjs beside the trace, written before 
   assert.deepEqual([1, 2, 3].map((n) => host.tracking.files.get(CELL(n))), ['await run("npm test")', 'lib.e2e.only("S2")', '1 + 1'])
 })
 
+test('a cell refused as busy keeps no file, and the trace numbers a cell as its file does, across a reset and two calls at once', async () => {
+  const kernels = new ScriptedKernelHost()
+  const CELL = (n) => `${SLUG}/logs/runs/deliver-1-1/cell-${n}.mjs`
+  kernels.script.set('slow', async () => { await sleep(400) })
+  kernels.script.set('gate', async ({ run }) => { await run('npm test', { gate: 'test' }) })
+  const answers = []
+  const { host } = delivery({ kernels, launcher: new ScriptedLauncher({ outputs: { 'npm test': { exitCode: 0 } } }), work: async (repl, one) => {
+    answers.push(await repl.call({ code: 'slow' }), await repl.call({ code: 'refused while slow runs' }))
+    await repl.reset()
+    // A cell's code takes a while to keep: the second call arrives while the first one's is written.
+    const tracking = one.tracking
+    one.deps.files = Object.assign(Object.create(tracking), { write: async (slug, path, text) => { if (path.endsWith('.mjs')) await sleep(20); return tracking.write(slug, path, text) } })
+    answers.push(...(await Promise.all([repl.call({ code: 'gate' }), repl.call({ code: 'refused at once' })])))
+    one.deps.files = tracking
+  } })
+
+  await host.start()
+
+  assert.deepEqual(answers.map(({ code }) => code), [null, 'repl-busy', null, 'repl-busy'])
+  assert.deepEqual([1, 2, 3].map((n) => host.tracking.files.get(CELL(n)) ?? null), ['slow', 'gate', null])
+  assert.deepEqual(traced(host).map(({ type, cell }) => [type, cell]), [['start', 2], ['run', 2]])
+})
+
 test('a cell whose code cannot be kept still runs, and its result says the trace is incomplete, naming the run\'s unexpected.log', async () => {
   const kernels = new ScriptedKernelHost()
   let ran = false

@@ -240,9 +240,9 @@ const track = (entry, work) => {
 
 /** What the kernel asks of this server. @param {any} deps @param {Entry} entry @returns {import('../ports/kernel-host.mjs').KernelEvents} */
 const eventsOf = (deps, entry) => ({
-  onRun: (request) => track(entry, serveRun(deps, entry, request)),
+  onRun: (request) => track(entry, serveRun(deps, entry, { ...request, cell: attemptCell(entry, request.cell) })),
   onKill: (rid, signal, graceSeconds) => killRun(entry, { rid, signal, graceSeconds }),
-  onAbsent: (notice) => { track(entry, traceAbsent(deps, entry, notice)) },
+  onAbsent: (notice) => { track(entry, traceAbsent(deps, entry, { ...notice, cell: attemptCell(entry, notice.cell) })) },
   onGone: (why) => { entry.gone = `repl-${why}`; endRuns(entry, 'SIGKILL', 0) },
 })
 
@@ -286,7 +286,6 @@ const evaluate = async (deps, entry, { code, flight }, notice) => {
   const waiting = code.trim() === ''
   const outcome = await runCell(deps, entry, code, waiting)
   if (outcome.status === 'busy') return refused('repl-busy')
-  if (!waiting) entry.cells += 1
   entry.cellSince = cellSince(entry, outcome, waiting ? null : startedAt)
   return present(deps, entry, outcome, notice)
 }
@@ -299,21 +298,44 @@ const evaluate = async (deps, entry, { code, flight }, notice) => {
 const runCell = async (deps, entry, code, waiting) => {
   const budget = deps.repl.budgetMs ?? DEFAULT_BUDGET_MS
   if (waiting) return entry.kernel.wait(budget)
+  if (entry.claimed === true || entry.kernel.busy()) return BUSY
+  return claimedCell(deps, entry, { code, budget })
+}
+
+/** What the kernel answers a cell while another is in flight. @type {import('../ports/kernel-host.mjs').CellOutcome} */
+const BUSY = Object.freeze({ status: /** @type {const} */ ('busy'), printed: '', value: null, error: null })
+
+/**
+ * A cell taken: its number counted and its code kept, then handed to the kernel; no other cell is
+ * taken in between, so that a cell refused as busy keeps no file and two at once never share one.
+ * @param {any} deps @param {Entry} entry @param {{ code: string, budget: number }} cell
+ */
+const claimedCell = async (deps, entry, { code, budget }) => {
+  entry.claimed = true
+  entry.cells += 1
   await keepSource(deps, entry, code)
-  return entry.kernel.evaluate(code, budget)
+  const outcome = entry.kernel.evaluate(code, budget)
+  entry.claimed = false
+  return outcome
 }
 
 /** The number of the attempt's last cell, across its kernels: its `cell-<n>` files. @param {Entry} entry */
 const cellNumber = (entry) => entry.cellBase + entry.cells
 
 /**
- * The cell's code is kept as `cell-<n>.mjs` before it runs; a write that fails is told as the
- * trace's, and the cell runs.
+ * The number a cell of the kernel, counted from 1 in each kernel, has across the attempt: the
+ * number of its `cell-<n>` file, which the trace names. @param {Entry} entry @param {number | null} cell
+ */
+const attemptCell = (entry, cell) => (cell === null ? null : entry.cellBase + cell)
+
+/**
+ * The cell's code is kept as `cell-<n>.mjs` once taken, before it runs; a write that fails is told
+ * as the trace's, and the cell runs.
  * @param {any} deps @param {Entry} entry @param {string} code
  */
 const keepSource = async (deps, entry, code) => {
   try {
-    await deps.files.write(entry.slug, `${entry.folder}/cell-${cellNumber(entry) + 1}.mjs`, code)
+    await deps.files.write(entry.slug, `${entry.folder}/cell-${cellNumber(entry)}.mjs`, code)
   } catch (error) {
     entry.traceError ??= error
   }
@@ -391,8 +413,8 @@ const traceNotice = async (deps, entry) => {
 /** @param {Entry} entry @param {import('../ports/kernel-host.mjs').CellOutcome} outcome @param {string} cellLog */
 const partsOf = (entry, outcome, cellLog) => {
   const all = [...entry.runs.values()]
-  const finished = all.filter((run) => run.status === 'finished' && !run.reported && run.cell !== entry.cells)
-  const runs = all.filter((run) => run.cell === entry.cells)
+  const finished = all.filter((run) => run.status === 'finished' && !run.reported && run.cell !== cellNumber(entry))
+  const runs = all.filter((run) => run.cell === cellNumber(entry))
   for (const run of [...finished, ...runs]) run.reported = run.status === 'finished'
   const still = outcome.status === 'running' ? '\n[the cell still runs: call skraft_repl with empty code to wait for it]' : ''
   return { finished, runs, printed: `${outcome.printed}${still}`, value: outcome.value, error: outcome.error, status: outcome.status, cellLog }
@@ -410,7 +432,7 @@ const interruptCell = (state) => {
   const entry = state.entry
   if (entry === null) return
   entry.kernel.interrupt()
-  for (const run of liveRuns(entry)) if (run.cell === entry.cells + 1 || run.cell === entry.cells) run.program?.kill('SIGTERM', 1000)
+  for (const run of liveRuns(entry)) if (run.cell === cellNumber(entry)) run.program?.kill('SIGTERM', 1000)
 }
 
 /**

@@ -143,6 +143,7 @@ const outcome = (state, cell, status, { value = null, error = null } = {}) => {
 const kernelOf = (state, lib) => Object.freeze({
   lib,
   pid: state.child.pid ?? null,
+  busy: () => state.cell !== null,
   evaluate: (/** @type {string} */ code, /** @type {number} */ budgetMs) => evaluate(state, code, budgetMs),
   wait: (/** @type {number} */ budgetMs) => wait(state, budgetMs),
   interrupt: () => interrupt(state),
