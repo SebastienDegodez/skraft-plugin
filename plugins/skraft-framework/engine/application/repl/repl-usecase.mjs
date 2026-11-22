@@ -1,7 +1,7 @@
 import { composeCell } from '../../domain/repl/cell-result.mjs'
 import { refusalText } from '../../domain/repl/refusals.mjs'
 import { signingKeyOf } from '../evidence/run-trace-store.mjs'
-import { traceAbsent } from './repl-trace.mjs'
+import { closeLostRuns, traceAbsent } from './repl-trace.mjs'
 import { keepUnexpected } from './repl-unexpected.mjs'
 import { bindAttempt, releaseLease, renewLease, takeLease } from './repl-attempt.mjs'
 import { endRuns, killRun, liveRuns, recordProcesses, serveRun } from './repl-runs.mjs'
@@ -134,6 +134,7 @@ const startEntry = async (deps, state, bound) => {
   const entry = await newEntry(deps, bound, lease)
   const failure = await startKernel(deps, entry)
   if (failure !== null) return kernelFailed(deps, bound, { lease, error: failure.error })
+  entry.lost = await closeLostRuns(deps, entry)
   state.entry = entry
   return { ok: /** @type {const} */ (true), entry }
 }
@@ -241,7 +242,15 @@ const present = async (deps, entry, outcome, notice) => {
   if (cut) await deps.files.write(entry.slug, cellLog, outcome.printed)
   const lost = ['restarted', 'crashed'].includes(outcome.status) ? `repl-${outcome.status}` : null
   const heading = [lost ?? notice].filter((code) => code !== null).map((code) => refusalText(code))
-  return { ok: lost === null, code: lost, text: [...(await traceNotice(deps, entry)), ...heading, text].join('\n') }
+  const lines = [...(await traceNotice(deps, entry)), ...heading, ...lostNotice(entry), text]
+  return { ok: lost === null, code: lost, text: lines.join('\n') }
+}
+
+/** The runs a gone server left open are told once, by the first result after they were closed. @param {Entry} entry */
+const lostNotice = (entry) => {
+  const told = (entry.lost ?? []).map((run) => `r${run} lost with the server that started it`)
+  entry.lost = []
+  return told
 }
 
 /**

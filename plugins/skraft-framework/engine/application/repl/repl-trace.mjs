@@ -1,5 +1,5 @@
-import { absentRecord, runRecord, startRecord } from '../../domain/evidence/run-trace.mjs'
-import { appendRecord } from '../evidence/run-trace-store.mjs'
+import { absentRecord, lostRecord, openRuns, runRecord, startRecord } from '../../domain/evidence/run-trace.mjs'
+import { appendRecord, tracePath } from '../evidence/run-trace-store.mjs'
 import { closeLog } from './run-log.mjs'
 
 /**
@@ -63,6 +63,29 @@ const endedRecord = (run, result, { headAfter, sha256, cut }) => runRecord({
   durationMs: run.durationMs, exitCode: result.exitCode, signal: result.signal, timedOut: result.timedOut, killed: result.killed, started: result.started,
   bytes: result.bytes, cut, sha256, log: run.log, headBefore: run.before.head, headAfter, clean: run.before.clean,
 })
+
+/**
+ * The runs a server that is gone left open in the attempt's trace are closed as lost, each by a
+ * line of this server. The trace is read as it stands, signed or not: closing a run proves nothing.
+ * @param {any} deps @param {Entry} entry @returns {Promise<number[]>} the runs closed
+ */
+export const closeLostRuns = async (deps, entry) => {
+  const text = (await deps.files.read(entry.slug, tracePath(entry.folder))) ?? ''
+  const lost = openRuns(text.split('\n').map(recordOf).filter((record) => record !== null))
+  const at = iso(deps.clock.now().getTime())
+  for (const run of lost) await appendRecord(deps, entry, lostRecord({ run, at }))
+  return lost
+}
+
+/** @param {string} line @returns {any} null when the line is no record */
+const recordOf = (line) => {
+  try {
+    const record = JSON.parse(line)
+    return typeof record === 'object' && record !== null ? record : null
+  } catch {
+    return null
+  }
+}
 
 /** A gate the cell declares the project has none of. @param {any} deps @param {Entry} entry @param {{ gate: unknown, component: unknown, reason: unknown, cell: number | null }} notice */
 export const traceAbsent = async (deps, entry, notice) => {

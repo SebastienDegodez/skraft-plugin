@@ -61,6 +61,7 @@ Le serveur, pas la cellule, lance chaque programme et écrit `runs.jsonl` dans l
 | `start` | un programme démarre | id du run, cellule, commande, dossier (relatif à la copie de travail, `/` entre ses parties, `.` pour la copie de travail elle-même), gate, étiquette |
 | `run` | il se termine | l'argv réellement lancé et le shell, le code de sortie, le signal, s'il a dépassé son délai ou été tué, la taille de sa sortie et si elle a été coupée, le SHA-256 de son journal, le `HEAD` Git du dépôt qui contient son dossier avant et après, et si l'arbre était propre au départ |
 | `absent` | une gate est déclarée absente | gate, composant, raison |
+| `lost` | un noyau démarre pour une tentative dont la trace contient un `start` sans `run` (un serveur tué pendant le run) | id du run, heure de la clôture ; le premier résultat suivant dit `rN lost with the server that started it` |
 
 Un arbre est propre quand Git ne liste aucun fichier non commité hors du dossier de suivi. Chaque ligne se termine par un HMAC de la clé du journal du run, gardée hors de la copie de travail : la trace montre une altération, elle ne l'empêche pas, car une commande lancée par un agent peut lire la clé aussi.
 

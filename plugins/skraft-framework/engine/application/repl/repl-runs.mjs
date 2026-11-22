@@ -17,9 +17,9 @@ import { logChunk, openLog } from './run-log.mjs'
  * @typedef {{
  *   key: string, slug: string, folder: string, kernel: import('../ports/kernel-host.mjs').Kernel, lease: string,
  *   runs: Map<number, Run>, cells: number, lastUsed: number, gone: string | null, pending: Set<Promise<void>>, signingKey: string | null, chain: Promise<void>,
- *   retired?: boolean, cellSince?: number | null, topRid?: number, traceError?: unknown, traceFailed?: string | null, recording?: Promise<void>, tracked?: Map<number, Promise<{ pid: number, created: string | null }>>,
+ *   lost?: number[], retired?: boolean, cellSince?: number | null, topRid?: number, traceError?: unknown, traceFailed?: string | null, recording?: Promise<void>, tracked?: Map<number, Promise<{ pid: number, created: string | null }>>,
  * }} Entry
- *   traceError: the first write of the trace or a log that failed; traceFailed: the unexpected.log that holds it, once kept; retired: the kernel is being ended, and no run starts any more; cellSince: when the cell in flight started, null when none runs; recording: the last write of the orphan journal; tracked: each process recorded, with its start time, by pid.
+ *   lost: the runs a gone server left open, closed as lost, which the next result tells; traceError: the first write of the trace or a log that failed; traceFailed: the unexpected.log that holds it, once kept; retired: the kernel is being ended, and no run starts any more; cellSince: when the cell in flight started, null when none runs; recording: the last write of the orphan journal; tracked: each process recorded, with its start time, by pid.
  */
 
 /** The longest a program may run. */

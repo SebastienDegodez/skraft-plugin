@@ -225,7 +225,7 @@ test('a run request whose id the server did not expect starts nothing, writes no
   assert.equal(host.tracking.files.get(`${SLUG}/logs/unexpected.log`).match(/^Error: a run request carried an id the server did not expect; it was ignored$/gm).length, 3)
 })
 
-test('a lease on the attempt held by a running server refuses the call, and one whose server is gone is taken over', async () => {
+test('a lease on the attempt held by a running server refuses the call, and one whose server is gone is taken over, with the runs it left open closed as lost', async () => {
   const answers = []
   const running = new InMemoryOrphans({ holderGone: false })
   const first = replRun({ orphans: running, calls: { 2: async (repl, host) => {
@@ -233,18 +233,22 @@ test('a lease on the attempt held by a running server refuses the call, and one 
     answers.push(await repl.call({ code: '1' }))
   } } })
   await first.host.start()
+  const trace = `${SLUG}/logs/runs/distill-1-1/runs.jsonl`
   const taken = replRun({ calls: { 2: async (repl, host) => {
     await host.deps.repl.locks.create(`${SLUG}/logs/runs/distill-1-1`, JSON.stringify({ pid: 777, created: 'elsewhere' }))
-    answers.push(await repl.call({ code: '1' }))
+    host.tracking.files.set(trace, `${JSON.stringify({ type: 'start', run: 3, cell: 2, at: '2026-10-11T08:00:00.000Z', command: 'npm run e2e', cwd: '.', gate: 'e2e', label: null })}\n`)
+    answers.push(await repl.call({ code: '1' }), await repl.call({ code: '2' }))
     answers.push(host.deps.repl.locks.held(`${SLUG}/logs/runs/distill-1-1`))
   } } })
 
   await taken.host.start()
 
+  const lost = JSON.parse(taken.host.tracking.files.get(trace).trim().split('\n')[1] ?? '{}')
   assert.deepEqual([answers[0].ok, answers[0].code], [false, 'repl-held-elsewhere'])
   assert.equal(first.kernels.kernels.length, 0)
-  assert.equal(answers[1].ok, true)
-  assert.deepEqual(JSON.parse(answers[2]), { pid: 100, created: 'server-start', renewedAt: taken.host.deps.clock.now().toISOString() })
+  assert.deepEqual([answers[1].ok, answers[1].text, answers[2].text], [true, 'r3 lost with the server that started it\n', ''])
+  assert.deepEqual([lost.type, lost.run, lost.at, typeof lost.sig], ['lost', 3, taken.host.deps.clock.now().toISOString(), 'string'])
+  assert.deepEqual(JSON.parse(answers[3]), { pid: 100, created: 'server-start', renewedAt: taken.host.deps.clock.now().toISOString() })
 })
 
 test('a lease whose running holder has not renewed it for five minutes is taken over, one renewed within them is respected, and the sweep renews the lease it holds', async () => {

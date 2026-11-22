@@ -1,6 +1,7 @@
 /**
  * The trace of an attempt's REPL runs, `logs/runs/<step>-<visit>-<attempt>/runs.jsonl`: one signed
- * line when a run starts, one when it ends, one for each gate an agent declares absent. The
+ * line when a run starts, one when it ends, one for each gate an agent declares absent, one for a
+ * run a gone server left open. The
  * engine writes it from what the program did, never from what an agent says of it; the agent's
  * cells can reach the file as they reach any file of the working copy, so each line is signed with
  * the run's journal key: tamper-evident, not tamper-proof.
@@ -14,7 +15,9 @@
  *   at: when it started; headBefore, headAfter: the repository's HEAD that holds `cwd`, before and after the program; clean: no
  *   uncommitted file but the tracking folder's when it started; sha256: of the log file's text; cut: the output passed the limit.
  * @typedef {{ type: 'absent', cell: number | null, at: string, gate: string, component: string, reason: string }} AbsentRecord
- * @typedef {StartRecord | RunRecord | AbsentRecord} TraceRecord
+ * @typedef {{ type: 'lost', run: number, at: string }} LostRecord
+ *   at: when the server that took the attempt over closed it.
+ * @typedef {StartRecord | RunRecord | AbsentRecord | LostRecord} TraceRecord
  */
 
 /** The gates a component's commands may be recorded under. */
@@ -46,10 +49,16 @@ export const absentRecord = ({ cell, at, gate, component, reason }) => {
 }
 
 /**
- * The runs started and not ended, by run id.
+ * A run a server that is gone left open, closed by the server that took the attempt over.
+ * @param {{ run: number, at: string }} lost @returns {LostRecord}
+ */
+export const lostRecord = ({ run, at }) => ({ type: 'lost', run, at })
+
+/**
+ * The runs started and not ended, by run id; a run closed as lost is ended.
  * @param {TraceRecord[]} records @returns {number[]}
  */
 export const openRuns = (records) => {
-  const ended = new Set(records.filter((record) => record.type === 'run').map((record) => /** @type {RunRecord} */ (record).run))
+  const ended = new Set(records.filter((record) => record.type === 'run' || record.type === 'lost').map((record) => /** @type {RunRecord | LostRecord} */ (record).run))
   return records.filter((record) => record.type === 'start' && !ended.has(record.run)).map((record) => /** @type {StartRecord} */ (record).run)
 }

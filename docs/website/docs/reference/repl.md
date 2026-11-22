@@ -60,6 +60,7 @@ The server, not the cell, starts every program and writes `runs.jsonl` in the at
 | `start` | a program starts | run id, cell, command, folder (relative to the working copy, `/` between its parts, `.` for the working copy itself), gate, label |
 | `run` | it ends | the argv actually started and the shell, exit code, signal, whether it timed out or was killed, its output size and whether it was cut, the SHA-256 of its log, Git's `HEAD` of the repository holding its folder before and after, and whether the tree was clean when it started |
 | `absent` | a gate is declared absent | gate, component, reason |
+| `lost` | a kernel starts for an attempt whose trace holds a `start` with no `run` (a server killed while the run went on) | run id, when it was closed; the first result after it says `rN lost with the server that started it` |
 
 A tree is clean when Git lists no uncommitted file but the tracking folder's. Each line ends with an HMAC of the run's journal key, kept outside the working copy: the trace is tamper-evident, not tamper-proof, because a command an agent runs can read the key too.
 
