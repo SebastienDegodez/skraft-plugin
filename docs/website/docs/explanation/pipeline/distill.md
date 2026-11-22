@@ -57,7 +57,7 @@ The machine can also be the one at fault. When no container runtime answers, the
 Docker or Podman cannot run: the designer stops, blocked, asking for one to be started. The step is
 neither skipped nor run against a double instead.
 
-## Every scenario at once, delivered by group
+## Every scenario at once, worked by group
 
 The test plan lists the scenarios in a `## Scenarios` table, S1 to SN, in the order DELIVER builds
 them, each in the one component where its test lives. S1, tagged `@walking-skeleton`, is the
@@ -69,13 +69,12 @@ the table instead; it loses the walking skeleton, never an acceptance test.
 
 The implementation plan groups the scenarios by the rule they pin down, in a
 `| Group | Scenarios | … |` table: consecutive scenarios that enter through the same use case and
-state one rule or its edge cases form one group, S1 in the first. DELIVER makes every group pass in
-one pass, one green commit per group. A plan with no such table delivers one scenario per group.
+state one rule or its edge cases form one group, S1 in the first. The table gives DELIVER its order of work: it makes every group pass in
+one pass and commits one green for the whole story. A plan with no such table works one scenario per group.
 
 Writing every test first costs one run of the suite instead of one per scenario, and the review
 and the human read the whole contract at once. A test of a group not delivered yet stays red
-until its green: its name, which starts with its scenario's number, is what lets the engineer's
-test command leave it out. The DISTILL review and the human read that red once; DELIVER's
+until the green: the engineer commits nothing before every acceptance test passes. The DISTILL review and the human read that red once; DELIVER's
 review reads the greens.
 
 The brief also tells DISTILL what each component's tests run their dependencies on, in every
@@ -90,7 +89,7 @@ defaults per stack, which a team overrides per component in `skraft-config.json`
 Before DELIVER builds anything, the run asks a human the `scenario-review` question: here are the
 scenarios in order, S1 marked as the one the walking skeleton walks, the groups DELIVER builds them
 in, the exemption the story declares if any, and the commit of the failing tests.
-`APPROVED` lets DELIVER build them group by group; `REVISE` sends DISTILL back with the
+`APPROVED` lets DELIVER build them, working the groups in that order; `REVISE` sends DISTILL back with the
 corrections, which the human may also make in the `.feature` or the tests first. Under Copilot,
 as for the ratification of an ADR, only the host's dialog records the answer.
 

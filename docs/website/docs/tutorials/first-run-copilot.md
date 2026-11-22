@@ -216,7 +216,7 @@ DELIVER makes pass and the commit of the acceptance tests. Open the test plan un
 `.copilot-tracking/skraft-plans/checkout/details/` and those commits, read them, then
 choose **APPROVED** in the chat.
 
-The run then goes on without you: one pass of the software engineer, a green commit per group of
+The run then goes on without you: one pass of the software engineer, one green commit for all the groups of
 scenarios, in plan order; then the gates, the DELIVER review, and the pull request
 description. The `/workflows` log ends like this:
 

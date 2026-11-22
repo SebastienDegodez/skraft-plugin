@@ -49,7 +49,7 @@ l'exécute**.
 ```mermaid
 flowchart LR
     V1["Logiciel bien conçu"] --> M1["Gates verrouillées<br/>seuil de qualité fixe"]
-    V2["Ajouter de la valeur<br/>régulièrement"] --> M2["Walking skeleton<br/>chaque test d'acceptation rouge,<br/>un vert par règle"]
+    V2["Ajouter de la valeur<br/>régulièrement"] --> M2["Walking skeleton<br/>chaque test d'acceptation rouge,<br/>un vert par histoire"]
     V3["Communauté de<br/>professionnels"] --> M3["Revue avant la revue<br/>lentilles + réfutation"]
     V4["Partenariats<br/>productifs"] --> M4["Décisions humaines<br/>ratification d'ADR, consentements"]
 ```
@@ -81,13 +81,13 @@ Le craft avance par petits incréments qui marchent. Dans skraft, cela prend deu
   n'en a pas besoin, et la lentille `boundary-enforcement` vérifie que le walking skeleton
   parcourt ce vrai chemin (son G8). Voir
   [Walking Skeleton](./deep-dive/walking-skeleton.md).
-- **Le rouge de chaque scénario, puis un vert par groupe.** En DISTILL, l'`acceptance-designer`
+- **Le rouge de chaque scénario, puis un seul vert pour l'histoire.** En DISTILL, l'`acceptance-designer`
   commite le test d'acceptation en échec de chaque scénario, le walking skeleton et le squelette
   qu'ils appellent en un commit, après un lancement qui montre chacun échouant sur une assertion.
   En DELIVER, un seul passage du `software-engineer` tourne la boucle rouge → vert → refactor de ses
-  tests unitaires, puis commite une fois par groupe de scénarios, dans l'ordre du plan : un
-  `feat(…)` qui fait passer le groupe sans toucher à ses tests d'acceptation, en gardant au vert le
-  walking skeleton et les groupes d'avant. Le test d'abord de Beck
+  tests unitaires, puis commite une seule fois, après avoir travaillé les groupes de scénarios dans l'ordre du plan : un
+  unique `feat(…)` qui fait passer chaque groupe et le walking skeleton sans toucher aux tests d'acceptation ;
+  le moteur refuse un deuxième (`green-split`). Le test d'abord de Beck
   ([Beck, 2003](../reference/citations.mdx#cite-beck-tdd-2003)) devient un fait vérifié dans l'historique git,
   pas une promesse. Voir [Outside-In TDD](./deep-dive/outside-in-tdd.md).
 
@@ -132,7 +132,7 @@ que laissé en attente. Voir
 
 ```mermaid
 flowchart LR
-    D["deliver<br/>software-engineer<br/>un groupe à la fois"] --> G["gates verrouillées<br/>build · format · lint · test<br/>architecture · coverage"]
+    D["deliver<br/>software-engineer<br/>les groupes dans l'ordre du plan"] --> G["gates verrouillées<br/>build · format · lint · test<br/>architecture · coverage"]
     G -- "FAIL" --> D
     G -- "PASS" --> DR["revue DELIVER<br/>lentilles + verdict"]
     DR -- "NEEDS_REWORK" --> D

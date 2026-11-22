@@ -232,7 +232,7 @@ The engine also checks, with no gate id, the commits of each attempt (`commits.c
 
 The engine runs no test to check a commit: it judges the Git history alone, every commit of an
 attempt in its order; a commit refused stays refused until it leaves the history. The brief gives
-the exact message of the red and of each group's green.
+the exact message of the red and of the green.
 
 | Type | Kind | Rule |
 | --- | --- | --- |
@@ -248,14 +248,14 @@ cites no other issue (`issue-not-in-story`) and closes none (`issue-closed`).
 | Pass | Allowed | Refused |
 | --- | --- | --- |
 | `distill`, plan pass | one red holding the walking skeleton, the acceptance test of every scenario and the skeleton they call, in the components the scenarios name, and the `.feature` of those components; none for a story exempt of a walking skeleton and tests; `.feature` and Markdown files go with it or in a `docs` commit, wherever they live | a second red (`oracle-split`); a red in a component no scenario names (`oracle-component`); a red with no file of the component's test paths (`oracle-without-test`); a green or refactor (`code-in-oracle`); none at all |
-| `deliver`, the story's pass | at least one green and at most one per group of the implementation plan, in plan order, each chained in bash: `<test command> && git add <files> && git commit …`, its subject naming its group's scenarios; a group whose tests already pass takes none; a change to another component the group needs is accepted and journaled under `green.others` | a red (`test-in-scenario`); a refactor (`refactor-in-scenario`); a green out of plan order (`green-out-of-order`) or beyond the last group (`green-beyond-groups`); a change to a file of the acceptance-test commit, the walking skeleton's included, outside the component's `src` paths (`oracle-touched`); none at all |
+| `deliver`, the story's pass | one green, for the whole story, whatever its subject names, chained in bash: `<test command> && git add <files> && git commit …`; the groups of the implementation plan are the order of work, not a count of commits; a change to another component a group needs is accepted and journaled under `green.others` | a red (`test-in-scenario`); a refactor (`refactor-in-scenario`); a second green (`green-split`: squash it into the first); a change to a file of the acceptance-test commit, the walking skeleton's included, outside the component's `src` paths (`oracle-touched`); none at all |
 | `deliver` sent back by the gates or the review, after the story's pass | reds, greens and refactors on the whole story | a green with no red since the last green (`green-without-red`); a change to a file of the acceptance-test commit (`oracle-touched`); on a pass the gates sent back, their failure stands for the first red |
 | `kill_mutants`, in a team's own workflow | tests that kill mutants and pass | — |
 
 Whether a red fails on an assertion is read, not run: the acceptance designer runs the walking
 skeleton and the acceptance tests once, writes that run's whole output to `logs/<node>-<visit>-red.log`
-([Logs](./run-journal.md#logs)), and the DISTILL review (T3) and the human read it. Whether a green
-makes its group pass is the command that commits it: chained with `&&`, it commits only when the
+([Logs](./run-journal.md#logs)), and the DISTILL review (T3) and the human read it. Whether the green
+makes the story pass is the command that commits it: chained with `&&`, it commits only when the
 tests pass. A file the tests write in the working copy (a test report) is a change like any other,
 held to the write scope: list it in `.gitignore`. A machine that cannot run a command (a program not
 installed, a container runtime that does not answer) is an agent's block, which the `environment`

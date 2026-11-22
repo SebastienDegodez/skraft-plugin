@@ -238,7 +238,7 @@ Le moteur vérifie aussi, sans identifiant de gate, les commits de chaque tentat
 
 Le moteur ne lance aucun test pour vérifier un commit : il juge l'historique Git seul, chaque
 commit d'une tentative dans son ordre ; un commit refusé le reste tant qu'il ne quitte pas
-l'historique. Le brief donne le message exact du rouge et du vert de chaque groupe.
+l'historique. Le brief donne le message exact du rouge et du vert.
 
 | Type | Sorte | Règle |
 | --- | --- | --- |
@@ -255,14 +255,14 @@ aucune (`issue-closed`).
 | Passage | Permis | Refusé |
 | --- | --- | --- |
 | `distill`, passage du plan | un rouge qui tient le walking skeleton, le test d'acceptation de chaque scénario et le squelette qu'ils appellent, dans les composants que nomment les scénarios, et le `.feature` de ces composants ; aucun pour une histoire exemptée de walking skeleton et de tests ; les fichiers `.feature` et Markdown l'accompagnent ou vont dans un commit `docs`, où qu'ils soient | un second rouge (`oracle-split`) ; un rouge dans un composant qu'aucun scénario ne nomme (`oracle-component`) ; un rouge sans fichier des chemins de test du composant (`oracle-without-test`) ; un vert ou un refactor (`code-in-oracle`) ; aucun |
-| `deliver`, passage de l'histoire | au moins un vert et au plus un par groupe du plan d'implémentation, dans l'ordre du plan, chacun enchaîné en bash : `<commande de test> && git add <fichiers> && git commit …`, son sujet nommant les scénarios de son groupe ; un groupe dont les tests passent déjà n'en prend aucun ; un changement d'un autre composant dont le groupe a besoin est accepté et journalisé sous `green.others` | un rouge (`test-in-scenario`) ; un refactor (`refactor-in-scenario`) ; un vert hors de l'ordre du plan (`green-out-of-order`) ou au-delà du dernier groupe (`green-beyond-groups`) ; un changement d'un fichier du commit des tests d'acceptation, walking skeleton compris, hors des chemins `src` du composant (`oracle-touched`) ; aucun |
+| `deliver`, passage de l'histoire | un seul vert, pour toute l'histoire, quoi que nomme son sujet, enchaîné en bash : `<commande de test> && git add <fichiers> && git commit …` ; les groupes du plan d'implémentation donnent l'ordre de travail, non un nombre de commits ; un changement d'un autre composant dont un groupe a besoin est accepté et journalisé sous `green.others` | un rouge (`test-in-scenario`) ; un refactor (`refactor-in-scenario`) ; un deuxième vert (`green-split` : le fusionner dans le premier) ; un changement d'un fichier du commit des tests d'acceptation, walking skeleton compris, hors des chemins `src` du composant (`oracle-touched`) ; aucun |
 | `deliver` renvoyé par les gates ou la revue, après le passage de l'histoire | rouges, verts et refactors sur toute l'histoire | un vert sans rouge depuis le dernier vert (`green-without-red`) ; un changement d'un fichier du commit des tests d'acceptation (`oracle-touched`) ; sur un passage que les gates ont renvoyé, leur échec tient lieu du premier rouge |
 | `kill_mutants`, dans le workflow propre à une équipe | des tests qui tuent des mutants et passent | — |
 
 Qu'un rouge échoue sur une assertion se lit, ne se rejoue pas : le designer d'acceptation lance une
 fois le walking skeleton et les tests d'acceptation, écrit la sortie entière de ce lancement dans
 `logs/<nœud>-<visite>-red.log` ([Logs](./run-journal.md#logs)), et la revue DISTILL (T3) comme
-l'humain la lisent. Qu'un vert fasse passer son groupe, c'est la commande qui le commite : enchaînée
+l'humain la lisent. Que le vert fasse passer l'histoire, c'est la commande qui le commite : enchaînée
 par `&&`, elle ne commite que si les tests passent. Un fichier que les tests écrivent dans la copie
 de travail (un rapport de test) est un changement comme un autre, tenu au périmètre d'écriture :
 listez-le dans `.gitignore`. Une machine qui ne peut pas lancer une commande (programme non

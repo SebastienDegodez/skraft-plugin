@@ -1,6 +1,6 @@
 ---
 title: "DELIVER"
-description: "Pourquoi un seul passage DELIVER passe le contrat au vert groupe par groupe, un commit chacun, fait relire le code et laisse la mutation au développeur."
+description: "Pourquoi un seul passage DELIVER passe le contrat au vert en un seul commit, fait relire le code et laisse la mutation au développeur."
 persona: software-engineer
 phase: deliver
 hide_table_of_contents: true
@@ -10,22 +10,21 @@ import FlowFigure from '@site/src/components/FlowFigure';
 
 # DELIVER
 
-Faire passer le contrat au vert en un seul passage, un commit par groupe de scénarios,
+Faire passer le contrat au vert en un seul passage et un seul commit,
 puis faire relire le code. Tester les tests reste l'affaire du développeur.
 
 ## Pourquoi cette phase existe
 
 Le code est le seul artefact qui part en production. DELIVER le fait naître du contrat que
-DISTILL a laissé en échec, en un seul passage, groupe par groupe dans l'ordre du plan d'implémentation : le
+DISTILL a laissé en échec, en un seul passage, en travaillant les groupes dans l'ordre du plan d'implémentation : le
 `software-engineer` avance en **Outside-In TDD**, des tests d'acceptation du groupe vers les tests
 unitaires, puis vers le code ([Freeman & Pryce, 2009](../../reference/citations.mdx#cite-freeman-goos-2009)). Il
-tourne la boucle interne rouge → vert → refactor sans la commiter, puis commite une fois par groupe, quand
-le groupe passe : un `feat(…)` enchaîné à la commande de test, qui écarte par leur nom les tests
-des groupes suivants, `<test> <filtre> && git add <fichiers> && git commit …`.
+tourne la boucle interne rouge → vert → refactor sans la commiter, puis commite une seule fois, quand
+tous les groupes passent : un `feat(…)` enchaîné à la commande de test, `<test> && git add <fichiers> && git commit …`.
 
 Le moteur ne rejoue aucun test. Il vérifie l'historique git : un commit rouge de chaque test
-d'acceptation, puis au moins un commit vert, au plus un par groupe, dans l'ordre du plan, chacun
-nommant son groupe, aucun ne touchant aux tests d'acceptation. La commande qui commite un vert est
+d'acceptation, puis un seul commit vert, quoi que nomme son sujet, ne touchant pas aux tests d'acceptation ; un
+deuxième est refusé (`green-split`). Le tableau de groupes du plan d'implémentation est l'ordre de travail, non un nombre de commits. La commande qui commite un vert est
 enchaînée à la commande de test : le commit n'existe que si les tests passent ; la revue DISTILL et
 la revue DELIVER lisent le reste. Le test d'abord
 ([Beck, 2003](../../reference/citations.mdx#cite-beck-tdd-2003)) devient un fait dans l'historique git, pas une
@@ -35,18 +34,17 @@ promesse.
 
 S1 et S2 entrent, rouges, à côté du walking skeleton rouge. DELIVER complète la chaîne du point
 d'entrée de commande jusqu'à la base, implémente le paiement et l'attribution des points et fait
-passer S1 et le walking skeleton au vert en un commit, S2 encore rouge ; puis il fait passer S2,
-la boisson indisponible, au vert dans le suivant. Les gates passent, la revue relit le code, et le code part en pull
+passer S1 et le walking skeleton au vert, et S2, la boisson indisponible, avec eux, en un seul commit. Les gates passent, la revue relit le code, et le code part en pull
 request. Que les tests protègent réellement la règle de fidélité, la **mutation** que lance le
 développeur l'atteste.
 :::
 
-## Un seul passage, un commit vert par groupe
+## Un seul passage, un seul commit vert
 
 Un cycle TDD commité coûte deux commits, et un agent paie chacun en tours : lancer les tests, lire
-leur sortie, écrire le message. Par groupe de scénarios, DELIVER ne commite qu'une fois, et l'ingénieur livre tous les groupes en un
-passage : il lit les plans et lance une fois tous les tests d'acceptation, puis prend les groupes dans l'ordre
-du plan. Un groupe dont les tests passent déjà ne prend aucun commit. Les tests
+leur sortie, écrire le message. DELIVER ne commite qu'une fois pour l'histoire, et l'ingénieur livre tous les groupes en un
+passage : il lit les plans et lance une fois tous les tests d'acceptation, puis travaille les groupes dans l'ordre
+du plan, sans rien commiter avant que tous les tests d'acceptation et toute la suite passent. Les tests
 unitaires de la boucle interne s'écrivent toujours d'abord ; ils partent dans le vert, et la
 lentille test-integrity de la revue les lit. Qu'ils détecteraient une erreur, la mutation que
 lance le développeur le prouve.
@@ -54,17 +52,16 @@ lance le développeur le prouve.
 Trois règles gardent ce commit unique honnête :
 
 - **Les tests d'acceptation sont un oracle immuable.** DISTILL les a écrits, walking skeleton
-  compris ; le vert ne les change jamais, hors du squelette qu'ils appellent. Le vert du groupe
-  qui tient S1 fait passer ses tests d'acceptation et le walking skeleton ; chaque vert suivant les
-  garde au vert. Un test ajusté au code ne prouve rien, donc
+  compris ; le vert ne les change jamais, hors du squelette qu'ils appellent. Le vert fait passer
+  tous les tests d'acceptation et le walking skeleton. Un test ajusté au code ne prouve rien, donc
   un test faux retourne à DISTILL : l'ingénieur s'arrête en le nommant.
-- **Un groupe ne construit que ses scénarios.** Son vert n'écrit aucun comportement que demande
-  un scénario d'un groupe suivant, et ne change un autre composant que là où le groupe en a besoin.
+- **Le vert ne construit que les scénarios de l'histoire.** Il n'écrit aucun comportement qu'aucun scénario ne demande,
+  et ne change un autre composant que là où un groupe en a besoin.
 - **Le commit suit le test, en bash.** Le brief donne la commande exacte, si bien que le commit
   n'a lieu que si les tests passent. Le rouge de DISTILL n'est jamais enchaîné ainsi : seule la
   lecture de la sortie distingue une erreur de build de l'échec attendu.
 
-Une fois le dernier groupe au vert et toute la suite verte, les gates passent. Un run dont le journal
+Une fois le vert commité et toute la suite verte, les gates passent. Un run dont le journal
 contient les dispatches DELIVER par groupe d'une alpha V2 antérieure n'est pas repris : relancez-le. Un passage que renvoient les gates ou la
 revue travaille sur toute la story avec le cycle classique : un rouge, puis la correction ; sur un
 passage que les gates ont renvoyé, leur échec tient lieu du rouge.
@@ -134,7 +131,7 @@ et [Contract testing](../deep-dive/contract-testing.md).
 ## Les compromis
 
 - **La boucle interne ne laisse aucune trace dans l'historique.** Seuls le rouge de l'histoire et
-  le vert de chaque groupe sont commités ; personne ne voit échouer les tests unitaires écrits entre les
+  son vert sont commités ; personne ne voit échouer les tests unitaires écrits entre les
   deux. La revue les juge.
 - **Une story peut partir sans run de mutation.** Le pipeline ne prouve plus que les tests
   détecteraient une erreur ; le run du développeur le fait, quand il le lance.
