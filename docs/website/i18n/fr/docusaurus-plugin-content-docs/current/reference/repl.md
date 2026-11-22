@@ -48,6 +48,10 @@ Une cellule vit 7260 secondes au plus (le plus long run et une minute) : au-del�
 
 Une cellule qui dépasse 90 secondes répond avec ce qu'elle a affiché, ses runs continuent. Un appel au code vide attend alors la cellule et en rend la fin. Un run fini pendant qu'une autre cellule continue est annoncé en tête du résultat suivant (`[run-done r3 exit 0 …]`).
 
+## La bibliothèque REPL du projet <!-- #lib -->
+
+`.repl/` à la racine de la copie de travail appartient au projet : le moteur le lit et ne l'écrit jamais ; le développeur le tient à jour. Chaque `.repl/lib/<nom>.mjs` est importé par le noyau à son démarrage, dans l'ordre alphabétique des noms, et chaque cellule reçoit ses exports nommés en `lib.<nom>`. Un module tourne dans le noyau : il peut appeler `run` et `gate` comme une cellule. Un module qui lève une exception au chargement, ou prend plus de dix secondes, est laissé de côté et le noyau continue. Le premier résultat d'un noyau nomme ce qu'il a chargé (`lib: a, b`) et chaque module qu'il n'a pas pu charger.
+
 ## Ce que l'agent relit <!-- #result -->
 
 Le résultat contient, dans l'ordre, 24 Kio au plus : les runs finis depuis le dernier appel, ce que la cellule a affiché, une ligne par run qu'elle a lancé (id, fin, durée, commande, journal), puis la valeur finale inspectée à la profondeur 2 ou l'erreur de la cellule. Ce qui est coupé vit dans `cell-<n>.log` à côté des runs, et le résultat le nomme. Ce qu'une cellule affiche est gardé à 1 Mio, ses 512 premiers et 512 derniers Kio autour d'un marqueur, dans le résultat comme dans ce fichier. Le noyau garde la sortie de ses 50 derniers runs ; l'`output()` d'une poignée plus ancienne nomme le journal du run. Le journal d'un run s'écrit pendant que le programme tourne, on peut donc le lire pendant le run ; il contient les 64 premiers Mio de la sortie, et la ligne `run` dit quand le reste a été coupé (`cut`). Son SHA-256 se calcule à mesure qu'il s'écrit. Chaque ligne de `runs.jsonl` est ajoutée à la fin ; une ligne ou un journal qui ne peut pas s'écrire met `repl-trace-failed` en tête de chaque résultat suivant, qui nomme le `logs/unexpected.log` du run.

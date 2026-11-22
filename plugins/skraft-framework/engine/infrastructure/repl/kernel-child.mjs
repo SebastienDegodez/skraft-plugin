@@ -6,6 +6,7 @@ import { inspect } from 'node:util'
 import { createOutput } from '../process/output-cut.mjs'
 import { refusalOfKill } from '../../domain/repl/refusals.mjs'
 import { createPrintWindow } from './print-window.mjs'
+import { loadLibrary } from './repl-library.mjs'
 
 /**
  * The process behind one `skraft_repl` attempt: a `node:repl` server on streams of its own, whose
@@ -14,7 +15,8 @@ import { createPrintWindow } from './print-window.mjs'
  * Variables persist from one cell to the next; top-level await works (through the REPL's own
  * eval, which is behaviour rather than documented API: the pin test in kernel.test.mjs watches it).
  *
- * To the server: ready, run, kill, absent, print, cell-done. From it: cell, chunk, exit, interrupt.
+ * To the server: alive, ready (with what it loaded of the project's REPL library), run, kill, absent,
+ * print, cell-done. From it: cell, chunk, exit, interrupt.
  * Standard output and error of this process go nowhere: only IPC carries data.
  *
  * @typedef {{ send: (message: object) => void, on: (event: string, listener: (...args: any[]) => void) => unknown }} Ipc
@@ -78,17 +80,29 @@ class Handle {
 
 /**
  * Starts the kernel on an IPC channel (the child's `process`, or a test's double).
- * @param {Ipc} ipc @returns {Kernel}
+ * @param {Ipc} ipc @param {{ libFolder?: string | null }} [options] libFolder: the working copy's absolute .repl/lib folder @returns {Kernel}
  */
-export const startKernel = (ipc) => {
+export const startKernel = (ipc, { libFolder = null } = {}) => {
   /** @type {Kernel} */
   const kernel = /** @type {Kernel} */ ({ ipc, handles: new Map(), nextRun: 1, cell: null, prompted: null, server: null })
   routeConsole(kernel)
   kernel.server = replServer(kernel)
   defineApi(kernel)
   ipc.on('message', (/** @type {any} */ message) => onMessage(kernel, message))
-  ipc.send({ t: 'ready' })
+  ipc.send({ t: 'alive' })
+  void announce(kernel, libFolder)
   return kernel
+}
+
+/**
+ * The project's REPL library is loaded, then given to the cells as `lib`; the server hears what
+ * was loaded with `ready`.
+ * @param {Kernel} kernel @param {string | null} folder
+ */
+const announce = async (kernel, folder) => {
+  const library = folder === null ? { lib: {}, loaded: [], failed: [] } : await loadLibrary(folder)
+  Object.assign(globalThis, { lib: Object.freeze(library.lib) })
+  kernel.ipc.send({ t: 'ready', lib: { loaded: library.loaded, failed: library.failed } })
 }
 
 /** What a cell prints, and what runs later print, goes to the server as `print`. @param {Kernel} kernel */
@@ -219,7 +233,7 @@ const FRAMEWORK_FRAME = /kernel-child\.mjs|\(node:|node:internal|node:vm|node:re
 
 // Started by the MCP server with `fork`; imported by the tests, which hand it a channel of their own.
 if (process.send !== undefined && process.argv[1] === fileURLToPath(import.meta.url)) {
-  const kernel = startKernel(process)
+  const kernel = startKernel(process, { libFolder: process.argv[2] ?? null })
   routeStdio(kernel)
   process.on('disconnect', () => process.exit(0))
   for (const event of ['uncaughtException', 'unhandledRejection']) process.on(event, (error) => kernel.ipc.send({ t: 'print', cell: null, text: `${errorText(error)}\n` }))

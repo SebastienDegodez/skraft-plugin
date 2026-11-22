@@ -1,4 +1,5 @@
 import { fork, spawn } from 'node:child_process'
+import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { groupStarted, stopGroup } from '../process/process-groups.mjs'
 import { windowsTreeKill } from '../process/node-processes.mjs'
@@ -41,14 +42,14 @@ export const createNodeKernelHost = ({ entry = KERNEL_CHILD } = {}) => Object.fr
 
 /** @param {string} entry @param {KernelEvents} events @param {string} cwd @returns {Promise<Kernel>} */
 const start = (entry, events, cwd) => new Promise((resolve, reject) => {
-  const child = fork(entry, [], { cwd, execArgv: [...KERNEL_FLAGS], detached: GROUPED, stdio: ['ignore', 'ignore', 'ignore', 'ipc'], windowsHide: true })
+  const child = fork(entry, [join(cwd, '.repl', 'lib')], { cwd, execArgv: [...KERNEL_FLAGS], detached: GROUPED, stdio: ['ignore', 'ignore', 'ignore', 'ipc'], windowsHide: true })
   if (GROUPED && child.pid !== undefined) groupStarted(child.pid)
   /** @type {State} */
   const state = { child, events, cell: null, late: [], stopped: false, cells: 0, left: null }
   const late = setTimeout(() => notReady(state, reject), READY_MS)
   child.once('error', reject)
   child.once('exit', () => reject(new Error('the kernel exited before it was ready')))
-  child.on('message', (/** @type {any} */ message) => route(state, message, () => { clearTimeout(late); resolve(kernelOf(state)) }))
+  child.on('message', (/** @type {any} */ message) => route(state, message, { alive: () => clearTimeout(late), ready: (lib) => resolve(kernelOf(state, lib)) }))
   child.on('exit', () => crashed(state))
 })
 
@@ -59,12 +60,23 @@ const notReady = (state, reject) => {
   reject(new Error('the kernel was not ready within ten seconds'))
 }
 
-/** @param {State} state @param {any} message @param {() => void} ready */
-const route = (state, message, ready) => {
+/**
+ * The kernel says it is alive at once, then ready once it has loaded the project's REPL library,
+ * each module of which it bounds itself.
+ * @param {State} state @param {any} message @param {{ alive: () => void, ready: (lib: { loaded: string[], failed: string[] }) => void }} starting
+ */
+const route = (state, message, starting) => {
   const handler = FROM_KERNEL[message?.t]
-  if (message?.t === 'ready') ready()
+  if (message?.t === 'alive') starting.alive()
+  else if (message?.t === 'ready') starting.ready(libraryOf(message.lib))
   else if (handler !== undefined) handler(state, message)
 }
+
+/** @param {any} lib @returns {{ loaded: string[], failed: string[] }} */
+const libraryOf = (lib) => ({ loaded: namesOf(lib?.loaded), failed: namesOf(lib?.failed) })
+
+/** @param {unknown} names */
+const namesOf = (names) => (Array.isArray(names) ? names.filter((name) => typeof name === 'string') : [])
 
 /** @type {Record<string, (state: State, message: any) => void>} */
 const FROM_KERNEL = {
@@ -124,8 +136,9 @@ const outcome = (state, cell, status, { value = null, error = null } = {}) => {
   return { status, printed: text, value, error }
 }
 
-/** @param {State} state */
-const kernelOf = (state) => Object.freeze({
+/** @param {State} state @param {{ loaded: string[], failed: string[] }} lib what the kernel loaded of the project's REPL library */
+const kernelOf = (state, lib) => Object.freeze({
+  lib,
   pid: state.child.pid ?? null,
   evaluate: (/** @type {string} */ code, /** @type {number} */ budgetMs) => evaluate(state, code, budgetMs),
   wait: (/** @type {number} */ budgetMs) => wait(state, budgetMs),

@@ -46,6 +46,17 @@ test('an agent that commits code runs a cell in its attempt, and gets the cell\'
   assert.equal(kernels.kernels.length, 1)
 })
 
+test('the first result of a kernel names the modules of the project\'s REPL library it loaded and the ones it could not; the next results do not', async () => {
+  const kernels = new ScriptedKernelHost({ lib: { loaded: ['greet', 'stack'], failed: ['broken'] } })
+  const answers = []
+  const { host } = replRun({ kernels, calls: { 2: async (repl) => { answers.push(await repl.call({ code: '1' }), await repl.call({ code: '2' })) } } })
+
+  await host.start()
+
+  assert.equal(answers[0].text, 'lib: greet, stack\nlib: broken could not be loaded (it threw, or took more than 10 seconds); the kernel goes on without it\n')
+  assert.equal(answers[1].text, '')
+})
+
 test('an agent that commits no code, or a call with no attempt open, is refused with a fixed text and no kernel starts', async () => {
   const answers = []
   const kernels = new ScriptedKernelHost()

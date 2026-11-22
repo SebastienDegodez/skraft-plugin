@@ -103,8 +103,9 @@ class ScriptedKernel {
 
 /** The kernels the REPL starts, one per attempt, each scripted by the test. */
 export class ScriptedKernelHost {
-  /** @param {{ fails?: boolean, restartsOnInterrupt?: boolean }} [options] restartsOnInterrupt: a cell interrupted never stops, and its kernel is restarted */
-  constructor({ fails = false, restartsOnInterrupt = false } = {}) {
+  /** @param {{ fails?: boolean, restartsOnInterrupt?: boolean, lib?: { loaded: string[], failed: string[] } }} [options] restartsOnInterrupt: a cell interrupted never stops, and its kernel is restarted; lib: what each kernel says it loaded of the project's REPL library */
+  constructor({ fails = false, restartsOnInterrupt = false, lib = { loaded: [], failed: [] } } = {}) {
+    this.lib = lib
     this.fails = fails
     this.restartsOnInterrupt = restartsOnInterrupt
     /** @type {ScriptedKernel[]} */
@@ -116,6 +117,7 @@ export class ScriptedKernelHost {
     if (this.fails) throw new Error('no kernel')
     const kernel = new ScriptedKernel(events, 4000 + this.kernels.length)
     kernel.restartsOnInterrupt = this.restartsOnInterrupt
+    kernel.lib = this.lib
     for (const [code, behaviour] of this.script) kernel.on(code, behaviour)
     this.kernels.push(kernel)
     return kernel

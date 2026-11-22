@@ -47,6 +47,10 @@ A cell lives 7260 seconds at most (the longest run and a minute): past it the ce
 
 A cell that runs past 90 seconds answers with what it printed so far while its runs go on. A call with empty code then waits for the cell and gets its end. A run that finishes while another cell goes on is told at the start of the next result (`[run-done r3 exit 0 …]`).
 
+## The project's REPL library <!-- #lib -->
+
+`.repl/` at the root of the working copy belongs to the project: the engine reads it and never writes it; the developer keeps it. Each `.repl/lib/<name>.mjs` is imported by the kernel when it starts, in the alphabetical order of the names, and every cell gets its named exports as `lib.<name>`. A module runs in the kernel, so it may call `run` and `gate` as a cell does. A module that throws on load, or takes more than ten seconds, is left out and the kernel goes on. The first result of a kernel names what it loaded (`lib: a, b`) and each module it could not.
+
 ## What the agent reads back <!-- #result -->
 
 The result holds, in order, at most 24 KiB: the runs that finished since the last call, what the cell printed, one line per run it started (id, how it ended, duration, command, log), then the trailing value inspected at depth 2 or the cell's error. What is cut lives in `cell-<n>.log` beside the runs, and the result names it. What a cell prints is kept to 1 MiB, its first and last 512 KiB around a marker, in the result and in that file alike. The kernel keeps the output of its last 50 runs; the `output()` of an older handle names the run's log. The log of a run is written as the program runs, so it can be read while the run goes on; it holds the first 64 MiB of the output, and the `run` line says when the rest was cut (`cut`). Its SHA-256 is computed as it is written. Each line of `runs.jsonl` is appended; a line or a log that cannot be written heads every next result with `repl-trace-failed`, which names the run's `logs/unexpected.log`.
