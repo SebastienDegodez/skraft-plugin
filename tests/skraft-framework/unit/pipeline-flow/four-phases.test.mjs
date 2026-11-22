@@ -2,7 +2,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { agent, API, nominal, pipelineHost, REFS_42, RESEARCH_TEMPLATE, scripted, SLUG, TRACKING } from '../support/pipeline-host.mjs'
 
-const EVIDENCE = "- Evidence: run every gate command through `skraft_repl` with `gate(name, command, { cwd: <the component's root> })`, on your last commit, a clean tree; the run of the commit line, labelled `green`, is the run of `test`. The DELIVER review reports a gate of a component you changed with no passing traced run on that commit, unless you declared it with `absent(gate, component, reason)`; `test` is never absent. Await or kill every run before your result."
+const EVIDENCE = "- Evidence: run every gate command through `skraft_repl` with `gate(name, command, { cwd: <the component's root> })`, on your last commit, a clean tree; the run of the commit line, labelled `green`, is the run of `test`. Run every gate of a component in one `skraft_repl` cell, one after the other (`await` each `gate()` before the next), never in parallel. The DELIVER review reports a gate of a component you changed with no passing traced run on that commit, unless you declared it with `absent(gate, component, reason)`; `test` is never absent. Await or kill every run before your result."
 
 const RESEARCH = 'research/2026-10-11/checkout-research.md'
 const MATRIX = 'details/2026-10-11/consistency-matrix-checkout.md'

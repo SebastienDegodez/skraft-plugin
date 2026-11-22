@@ -235,7 +235,7 @@ const gateLines = (tdd, components) => (GATED.includes(/** @type {string} */ (td
 /** What the engine requires of the runs of an attempt that delivers: for `cycle` only. @param {Brief['tdd']} tdd */
 const evidenceLine = (tdd) => (tdd === 'cycle' ? [EVIDENCE] : [])
 
-const EVIDENCE = "- Evidence: run every gate command through `skraft_repl` with `gate(name, command, { cwd: <the component's root> })`, on your last commit, a clean tree; the run of the commit line, labelled `green`, is the run of `test`. The DELIVER review reports a gate of a component you changed with no passing traced run on that commit, unless you declared it with `absent(gate, component, reason)`; `test` is never absent. Await or kill every run before your result."
+const EVIDENCE = "- Evidence: run every gate command through `skraft_repl` with `gate(name, command, { cwd: <the component's root> })`, on your last commit, a clean tree; the run of the commit line, labelled `green`, is the run of `test`. Run every gate of a component in one `skraft_repl` cell, one after the other (`await` each `gate()` before the next), never in parallel. The DELIVER review reports a gate of a component you changed with no passing traced run on that commit, unless you declared it with `absent(gate, component, reason)`; `test` is never absent. Await or kill every run before your result."
 
 /** @param {BriefComponent} component */
 const gatesLine = ({ name, gates }) => (gates.length === 0 ? [] : [`${name}: ${gates.map(({ gate, line }) => `${gate}: ${line}`).join('; ')}`])
