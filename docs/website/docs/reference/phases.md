@@ -182,8 +182,8 @@ The test plan lists the scenarios in the order DELIVER builds them:
 
 | # | Scenario | Component | Tags |
 |---|---|---|---|
-| S1 | Customer pays an order by card | api | @walking-skeleton @happy-path |
-| S2 | Customer is refused an expired card | api | @error-case |
+| S1 | Customer pays an order by card | api | @walking-skeleton @happy-path @AC-1 |
+| S2 | Customer is refused an expired card | api | @error-case @AC-2 |
 
 Walking skeleton exemption: none
 ```
@@ -198,7 +198,11 @@ Walking skeleton exemption: none
 | the walking skeleton in a component that is not `react` | `<plan>: the walking skeleton S1 runs in a back-end component; <c> is a react front end` |
 | exemption `library`, `refactoring` or `docs-only`: no scenario tagged `@walking-skeleton` | `<plan>: the story declares its walking skeleton exempt (<exemption>), and S<n> carries @walking-skeleton` |
 | any other exemption | `<plan>: walking skeleton exemption "<value>" must be none, library, refactoring, docs-only` |
+| when the story's `ac-draft-…` heads its criteria `## AC-<n>`: each criterion cited by one row, in its Tags cell as `@AC-<n>` | `<plan>: AC-<n> is cited by no scenario; give it one scenario of its own, tagged @AC-<n> in the Tags column`; `<plan>: AC-<n> is cited by S<a>, S<b>; one scenario holds a criterion: merge them into one, an outline whose examples are the cases of AC-<n>` |
+| a row cites one criterion | `<plan>: S<n> cites AC-<a>, AC-<b>; a scenario holds one criterion: give each criterion a scenario of its own` |
 | `docs-only`: no commit of the story changes a component's `src` paths | `the story declares its walking skeleton exempt as docs only, and commit <sha> changes <file>, source of <component>; remove the exemption and tag S1 @walking-skeleton` |
+
+A story whose `ac-draft` documents head no `## AC-<n>`, or head the same number twice across documents, is not checked for this: the engine cannot tell which criterion a tag means. Zero-padded numbers (`AC-01`) and the tag's case are read as the same criterion.
 
 The implementation plan beside it (`impl-plan-…` for `test-plan-…`) groups the scenarios DELIVER
 makes pass, in its order, under any heading; the table gives the order of work, and the story takes one green commit:
