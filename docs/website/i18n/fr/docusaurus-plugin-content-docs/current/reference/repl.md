@@ -58,6 +58,17 @@ Une cellule qui dépasse 90 secondes répond avec ce qu'elle a affiché, ses run
 
 Les paquets dont une bibliothèque a besoin sont déclarés dans `.repl/package.json`, avec son lockfile, tous deux commités ; le développeur les installe par `npm ci --prefix .repl`, sous `.repl/node_modules/`, qui n'est pas commité. `require` dans une cellule cherche d'abord dans `.repl/`, puis dans la copie de travail. Quand `.repl/package.json` nomme des paquets et que `.repl/node_modules/` est absent, le premier résultat le dit et nomme cette commande.
 
+## Les scripts de skill dans une cellule <!-- #skill-scripts -->
+
+Un script de skill est d'abord un programme : un agent le lance par `node "<chemin absolu>" …`, et dans une cellule par `run()` ou `gate()`.
+
+| Script | Dans une cellule |
+| --- | --- |
+| un script de gate (le script de couverture, d'architecture ou de no-mocks d'une skill `quality-gates-<stack>`) | passe par `gate(name, ['node', '<chemin absolu>', …], { cwd })` : son code de sortie n'est une preuve que si le serveur l'a lancé, et la trace garde ce run. Importé, il ne prouve rien : aucun run n'est tracé |
+| un script qui n'appelle ni le moteur ni le serveur MCP, et dont le run n'est la preuve d'aucune gate (le rapport de `qa-reporting`, par exemple) | peut être importé ; la cellule appelle alors sa fonction exportée avec une racine explicite (`runReport(argv, { cwd, env })`), jamais le dossier du processus |
+
+Importer un script de skill ne fait rien par soi-même : un script ne lance sa commande que s'il est le programme que `node` a démarré, et un test de contrat les importe tous et vérifie qu'aucun n'écrit rien et que chacun sort avec 0. Lancer un script coûte un démarrage de Node, environ 17 ms (médiane de 20 démarrages, macOS, Node 22.23 ; Windows non mesuré) ; les scripts de gate tournent une fois par passe, et restent donc des programmes.
+
 ## Ce que l'agent relit <!-- #result -->
 
 Le résultat contient, dans l'ordre, 24 Kio au plus : les runs finis depuis le dernier appel, ce que la cellule a affiché, une ligne par run qu'elle a lancé (id, fin, durée, commande, journal), puis la valeur finale inspectée à la profondeur 2 ou l'erreur de la cellule. Ce qui est coupé vit dans `cell-<n>.log` à côté des runs, et le résultat le nomme. Ce qu'une cellule affiche est gardé à 1 Mio, ses 512 premiers et 512 derniers Kio autour d'un marqueur, dans le résultat comme dans ce fichier. Le noyau garde la sortie de ses 50 derniers runs ; l'`output()` d'une poignée plus ancienne nomme le journal du run. Le journal d'un run s'écrit pendant que le programme tourne, on peut donc le lire pendant le run ; au-delà de 64 Mio de sortie il garde les 32 premiers et les 32 derniers Mio autour d'un marqueur, coupés sur des caractères entiers, et la ligne `run` le dit (`cut`). Son SHA-256 se calcule à mesure qu'il s'écrit. Chaque ligne de `runs.jsonl` est ajoutée à la fin ; une ligne ou un journal qui ne peut pas s'écrire met `repl-trace-failed` en tête de chaque résultat suivant, qui nomme le `logs/unexpected.log` du run.

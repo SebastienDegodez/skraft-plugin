@@ -58,6 +58,17 @@ A cell that runs past 90 seconds answers with what it printed so far while its r
 
 The packages a library needs are declared in `.repl/package.json`, with its lockfile, both committed; the developer installs them with `npm ci --prefix .repl`, under `.repl/node_modules/`, which is not committed. `require` in a cell looks in `.repl/` first, then in the working copy. When `.repl/package.json` names packages and `.repl/node_modules/` is absent, the first result says so and names that command.
 
+## Skill scripts in a cell <!-- #skill-scripts -->
+
+A skill script is a program first: an agent starts it as `node "<absolute path>" …`, and in a cell through `run()` or `gate()`.
+
+| Script | In a cell |
+| --- | --- |
+| a gate script (the coverage, architecture or no-mocks script of a `quality-gates-<stack>` skill) | runs through `gate(name, ['node', '<absolute path>', …], { cwd })`: its exit code is evidence only when the server started it, and the trace holds that run. Imported, it proves nothing: no run is traced |
+| a script that calls neither the engine nor the MCP server, and whose run is no gate's evidence (the report of `qa-reporting`, for instance) | may be imported; the cell then calls its exported function with an explicit root (`runReport(argv, { cwd, env })`), never the process's folder |
+
+Importing a skill script does nothing by itself: a script runs its command only when it is the program `node` started, and a contract test imports every one of them and checks that it prints nothing and exits 0. Starting a script costs a Node start, about 17 ms (median of 20 starts, macOS, Node 22.23; Windows not measured); the gate scripts run once per pass, so they stay programs.
+
 ## What the agent reads back <!-- #result -->
 
 The result holds, in order, at most 24 KiB: the runs that finished since the last call, what the cell printed, one line per run it started (id, how it ended, duration, command, log), then the trailing value inspected at depth 2 or the cell's error. What is cut lives in `cell-<n>.log` beside the runs, and the result names it. What a cell prints is kept to 1 MiB, its first and last 512 KiB around a marker, in the result and in that file alike. The kernel keeps the output of its last 50 runs; the `output()` of an older handle names the run's log. The log of a run is written as the program runs, so it can be read while the run goes on; past 64 MiB of output it keeps the first and the last 32 MiB around a marker, cut on whole characters, and the `run` line says so (`cut`). Its SHA-256 is computed as it is written. Each line of `runs.jsonl` is appended; a line or a log that cannot be written heads every next result with `repl-trace-failed`, which names the run's `logs/unexpected.log`.

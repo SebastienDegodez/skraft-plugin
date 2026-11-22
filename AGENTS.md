@@ -205,9 +205,13 @@ Everything must run on Windows and macOS, under Claude Code, Copilot CLI and VS 
 - A skill carries every script it runs, even if that duplicates another skill's script; skills
   reference each other by name, never by path. `npm run skills:sync` / `skills:check` maintain
   declared copies.
+- A skill script is a program first (`node "<absolute path>" …`). A cell may import it only when
+  it calls neither the engine nor the MCP server and its run is no gate's evidence; it then calls
+  its exported function with an explicit root, and importing it does nothing. A gate script runs
+  through `gate()`: its exit code is evidence only when the server started it.
 - A skill script called often (per tool call or per TDD cycle) is written as `.sh` + `.ps1`
   twins tested by one contract suite on the three OS; a script called once per story may stay in
-  Node.
+  Node; the gate scripts run once per pass and stay in Node.
 
 ## Testing rules
 
