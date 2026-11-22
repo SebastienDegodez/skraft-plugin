@@ -21,33 +21,37 @@ const delivered = async (trace = {}) => {
   return host
 }
 
-/** The Scenarios section of qa-report.md. */
-const scenariosOf = async (host) => {
+/** The rows of the scenario table of qa-report.md, the one the pull request folds. */
+const scenariosOf = async (host) => (await sectionOf(host, 'Scenario outcomes')).split('\n').slice(2)
+
+/** A section of qa-report.md, without its heading. */
+const sectionOf = async (host, heading) => {
   const report = await host.tracking.read(SLUG, 'qa-report.md')
-  const start = report.indexOf('## Scenarios\n')
+  const start = report.indexOf(`## ${heading}\n\n`)
   assert.ok(start >= 0, report)
-  return report.slice(start).split('\n\n')[1].split('\n')
+  return report.slice(start + `## ${heading}\n\n`.length).split('\n\n## ')[0].trim()
 }
 
 test('a scenario passed when its acceptance test is its red commit\'s, a green delivered its group and the whole suite passed on the final commit; its test named in the log is said', async () => {
   const host = await delivered()
 
   assert.deepEqual(await scenariosOf(host), [
-    '- S1 Customer pays by card (api, @AC-1): passed (red root-1, green root-2, suite run 4 on root-2, named in its log)',
-    '- S2 Customer is refused an expired card (api, @AC-2): passed (red root-1, green root-2, suite run 4 on root-2, suite green; the log does not name this test)',
+    '| S1 | Customer pays by card | `@AC-1` | api | `root-1` | `root-2` | r4 on `root-2` | yes | — |',
+    '| S2 | Customer is refused an expired card | `@AC-2` | api | `root-1` | `root-2` | r4 on `root-2` | no | — |',
   ])
+  assert.ok((await sectionOf(host, 'QA')).startsWith('QA: 2/2 scenarios passed on `root-2` (run r4, 0 s).'))
 })
 
 test('a whole suite that failed, or ran on another commit than the final one, proves no scenario', async () => {
   const failed = await delivered({ edit: (run) => (run.gate === 'test' ? { ...run, exitCode: 1 } : run) })
   assert.deepEqual(await scenariosOf(failed), [
-    '- S1 Customer pays by card (api, @AC-1): not proven: the whole test suite failed on the final commit',
-    '- S2 Customer is refused an expired card (api, @AC-2): not proven: the whole test suite failed on the final commit',
+    '| S1 | Customer pays by card | `@AC-1` | api | `root-1` | `root-2` | not proven: the whole test suite failed on the final commit | yes | — |',
+    '| S2 | Customer is refused an expired card | `@AC-2` | api | `root-1` | `root-2` | not proven: the whole test suite failed on the final commit | no | — |',
   ])
 
   const elsewhere = await delivered({ edit: (run) => (run.gate === 'test' ? { ...run, headAfter: 'root-1' } : run) })
-  assert.deepEqual((await scenariosOf(elsewhere))[0], '- S1 Customer pays by card (api, @AC-1): not proven: the whole test suite did not run on the final commit')
+  assert.deepEqual((await scenariosOf(elsewhere))[0], '| S1 | Customer pays by card | `@AC-1` | api | `root-1` | `root-2` | not proven: the whole test suite did not run on the final commit | yes | — |')
 
   const none = await delivered({ omit: ['api/test'] })
-  assert.deepEqual((await scenariosOf(none))[1], '- S2 Customer is refused an expired card (api, @AC-2): not proven: no traced run of the whole test suite of its component')
+  assert.deepEqual((await scenariosOf(none))[1], '| S2 | Customer is refused an expired card | `@AC-2` | api | `root-1` | `root-2` | not proven: no traced run of the whole test suite of its component | — | — |')
 })

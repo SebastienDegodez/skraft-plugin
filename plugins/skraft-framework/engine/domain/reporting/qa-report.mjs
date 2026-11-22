@@ -1,5 +1,6 @@
 import { cell, code } from './markdown-safety.mjs'
-import { qualityEvidence, isTestPlan, redCommits } from './run-facts.mjs'
+import { qualityEvidence, isTestPlan, redCommits, testPlanPaths } from './run-facts.mjs'
+import { qaLines, qaTable } from './qa-evidence.mjs'
 import { lensesText, reviewPasses } from './review-passes.mjs'
 
 /**
@@ -13,7 +14,11 @@ import { lensesText, reviewPasses } from './review-passes.mjs'
 
 export const QA_REPORT_FILE = 'qa-report.md'
 
-/** @param {{ slug: string, status: string, events: RunEvent[], outcomes: import('./scenario-outcomes.mjs').ScenarioOutcome[] }} report */
+/**
+ * The scenarios are shown as the pull request's QA section shows them, by the same renderer, its
+ * paths those of the tracking folder.
+ * @param {{ slug: string, status: string, events: RunEvent[], outcomes: import('./scenario-outcomes.mjs').ScenarioOutcome[] }} report
+ */
 export const renderQaReport = ({ slug, status, events, outcomes }) => [
   '<!-- markdownlint-disable-file -->',
   `# QA report — ${slug}`,
@@ -21,11 +26,24 @@ export const renderQaReport = ({ slug, status, events, outcomes }) => [
   `Status: ${code(status)}`,
   '',
   ...section('Test plan', testPlanLines(events)),
-  ...section('Scenarios', scenarioLines(outcomes)),
+  ...qaSections(qaFacts(events, outcomes)),
   ...section('Quality evidence', gateLines(events)),
   ...section('TDD red commits', redCommitLines(events)),
   ...section('Reviews', reviewLines(events)),
 ].join('\n')
+
+/**
+ * What the QA renderer reads, in English: the outcomes, the test plans the journal names, the last visuals step's screenshots.
+ * @param {RunEvent[]} events @param {import('./scenario-outcomes.mjs').ScenarioOutcome[]} outcomes
+ * @returns {import('./qa-evidence.mjs').QaFacts}
+ */
+const qaFacts = (events, outcomes) => {
+  const visuals = events.findLast((event) => event.type === 'visuals.recorded')
+  return { outcomes, visuals: visuals === undefined ? null : { commit: visuals.commit, components: visuals.components }, testPlans: testPlanPaths(events).map((path) => ({ path })), language: 'en' }
+}
+
+/** @param {import('./qa-evidence.mjs').QaFacts} facts */
+const qaSections = (facts) => [...section('QA', qaLines(facts)), ...section('Scenario outcomes', qaTable(facts))]
 
 /** @param {string} title @param {string[]} lines */
 const section = (title, lines) => [`## ${title}`, '', ...lines, '']
@@ -37,20 +55,6 @@ const testPlanLines = (events) => {
   const path = step.outputs.find(isTestPlan)
   return [`[${path}](${path}), written in ${step.phase}.`]
 }
-
-/** Each scenario, what proves it or why it is not proven. @param {import('./scenario-outcomes.mjs').ScenarioOutcome[]} outcomes */
-const scenarioLines = (outcomes) => (outcomes.length === 0 ? ['No scenario yet: DISTILL lists them.'] : outcomes.map(scenarioLine))
-
-/** @param {import('./scenario-outcomes.mjs').ScenarioOutcome} outcome */
-const scenarioLine = (outcome) => {
-  const named = `${outcome.index === 0 ? '' : `S${outcome.index} `}${oneLineOf(outcome.title)} (${[outcome.component, ...outcome.ac].join(', ')})`
-  if (outcome.status !== 'passed') return `- ${named}: not proven: ${outcome.reason}`
-  const { red, green, suite } = outcome
-  return `- ${named}: passed (red ${red}, green ${green}, suite run ${suite?.run} on ${suite?.sha}, ${outcome.named ? 'named in its log' : 'suite green; the log does not name this test'})`
-}
-
-/** @param {string} text */
-const oneLineOf = (text) => text.replace(/\s+/g, ' ')
 
 /** The traced runs the delivery stands on. @param {RunEvent[]} events */
 const gateLines = (events) => {
