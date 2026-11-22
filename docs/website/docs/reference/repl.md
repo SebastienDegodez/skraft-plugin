@@ -49,7 +49,7 @@ A cell that runs past 90 seconds answers with what it printed so far while its r
 
 ## What the agent reads back <!-- #result -->
 
-The result holds, in order, at most 24 KiB: the runs that finished since the last call, what the cell printed, one line per run it started (id, how it ended, duration, command, log), then the trailing value inspected at depth 2 or the cell's error. What is cut lives whole in `cell-<n>.log` beside the runs, and the result names it. The log of a run holds its output, 64 MiB at most with the head and the tail kept.
+The result holds, in order, at most 24 KiB: the runs that finished since the last call, what the cell printed, one line per run it started (id, how it ended, duration, command, log), then the trailing value inspected at depth 2 or the cell's error. What is cut lives whole in `cell-<n>.log` beside the runs, and the result names it. The log of a run is written as the program runs, so it can be read while the run goes on; it holds the first 64 MiB of the output, and the `run` line says when the rest was cut (`cut`). Its SHA-256 is computed as it is written. Each line of `runs.jsonl` is appended; a line or a log that cannot be written heads every next result with `repl-trace-failed`, which names the run's `logs/unexpected.log`.
 
 ## The trace <!-- #trace -->
 
@@ -72,6 +72,7 @@ A tree is clean when Git lists no uncommitted file but the tracking folder's. Ea
 | `repl-held-elsewhere` | another server holds the attempt's REPL |
 | `repl-restarted` | a cell would not stop and the kernel was ended: its variables are gone |
 | `repl-crashed` | the kernel exited by itself: its variables are gone |
+| `repl-trace-failed` | heads every result once a line of the trace or a run's log could not be written: the trace is incomplete |
 | `repl-reset` | heads the result of a call with `reset: true`: the kernel was ended and a fresh one started, its variables are gone |
 | `repl-failed` | the kernel could not start; the refusal names the run's `logs/unexpected.log`, which holds why |
 | `repl-unexpected` | skraft itself failed during the call; the refusal names the run's `logs/unexpected.log`, which holds the exception |

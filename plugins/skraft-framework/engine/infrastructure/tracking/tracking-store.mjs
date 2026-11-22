@@ -105,6 +105,7 @@ const createTrackingFiles = ({ files, at, base, relative }) =>
   Object.freeze({
     read: (slug, path) => files.read(at(slug, path)),
     write: (slug, path, text) => files.write(at(slug, path), text),
+    appendText: (slug, path, text) => files.append(at(slug, path), text),
     clearTemporary: (slug) => files.clearDirectory(at(slug, '.tmp')),
     forget: (slug) => files.clearDirectory(at(slug, '')),
     location: at,

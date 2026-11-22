@@ -2,7 +2,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { createRepl } from '../../../../plugins/skraft-framework/engine/application/repl/repl-usecase.mjs'
 import { InMemoryRunLock } from '../support/in-memory-host.mjs'
-import { InMemoryOrphans, ScriptedKernelHost, ScriptedLauncher } from '../support/in-memory-repl.mjs'
+import { HasherDigests, InMemoryOrphans, ScriptedKernelHost, ScriptedLauncher } from '../support/in-memory-repl.mjs'
 import { agent, green, nominal, scripted, SLUG } from '../support/pipeline-host.mjs'
 
 /** What each nominal agent commits, which the agent that calls the REPL still does after it. */
@@ -21,7 +21,7 @@ const sleep = (ms) => new Promise((done) => setTimeout(done, ms))
  */
 const replRun = ({ calls, kernels = new ScriptedKernelHost(), launcher = new ScriptedLauncher(), orphans = new InMemoryOrphans(), state = { entry: null, reaped: false }, budgetMs = 40 } = {}) => {
   const host = scripted({}, (it) => nominal(it).map((behaviour, index) => (calls[index] === undefined ? behaviour : agent({ work: async (repos) => { await calls[index](repl, host, repos); NOMINAL_WORK[index]?.(repos) } })(it))))
-  host.deps.repl = { root: '/work', kernels, launcher, orphans, locks: new InMemoryRunLock(host.tracking, 'a'), server: { pid: 100, created: 'server-start' }, budgetMs }
+  host.deps.repl = { root: '/work', kernels, launcher, orphans, locks: new InMemoryRunLock(host.tracking, 'a'), server: { pid: 100, created: 'server-start' }, budgetMs, digests: new HasherDigests(host.deps.hasher) }
   const repl = createRepl(host.deps, state)
   return { host, repl, kernels, launcher, orphans, state }
 }

@@ -50,7 +50,7 @@ Une cellule qui dépasse 90 secondes répond avec ce qu'elle a affiché, ses run
 
 ## Ce que l'agent relit <!-- #result -->
 
-Le résultat contient, dans l'ordre, 24 Kio au plus : les runs finis depuis le dernier appel, ce que la cellule a affiché, une ligne par run qu'elle a lancé (id, fin, durée, commande, journal), puis la valeur finale inspectée à la profondeur 2 ou l'erreur de la cellule. Ce qui est coupé vit en entier dans `cell-<n>.log` à côté des runs, et le résultat le nomme. Le journal d'un run contient sa sortie, 64 Mio au plus, tête et queue gardées.
+Le résultat contient, dans l'ordre, 24 Kio au plus : les runs finis depuis le dernier appel, ce que la cellule a affiché, une ligne par run qu'elle a lancé (id, fin, durée, commande, journal), puis la valeur finale inspectée à la profondeur 2 ou l'erreur de la cellule. Ce qui est coupé vit en entier dans `cell-<n>.log` à côté des runs, et le résultat le nomme. Le journal d'un run s'écrit pendant que le programme tourne, on peut donc le lire pendant le run ; il contient les 64 premiers Mio de la sortie, et la ligne `run` dit quand le reste a été coupé (`cut`). Son SHA-256 se calcule à mesure qu'il s'écrit. Chaque ligne de `runs.jsonl` est ajoutée à la fin ; une ligne ou un journal qui ne peut pas s'écrire met `repl-trace-failed` en tête de chaque résultat suivant, qui nomme le `logs/unexpected.log` du run.
 
 ## La trace <!-- #trace -->
 
@@ -73,6 +73,7 @@ Un arbre est propre quand Git ne liste aucun fichier non commité hors du dossie
 | `repl-held-elsewhere` | un autre serveur tient le REPL de la tentative |
 | `repl-restarted` | une cellule ne s'arrêtait pas et le noyau a été arrêté : ses variables sont perdues |
 | `repl-crashed` | le noyau s'est arrêté seul : ses variables sont perdues |
+| `repl-trace-failed` | en tête de chaque résultat dès qu'une ligne de la trace ou le journal d'un run n'a pas pu s'écrire : la trace est incomplète |
 | `repl-reset` | en tête du résultat d'un appel avec `reset: true` : le noyau a été arrêté et un neuf démarré, ses variables sont perdues |
 | `repl-failed` | le noyau n'a pas pu démarrer ; le refus nomme le `logs/unexpected.log` du run, qui dit pourquoi |
 | `repl-unexpected` | skraft lui-même a échoué pendant l'appel ; le refus nomme le `logs/unexpected.log` du run, qui contient l'exception |

@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 import { existsSync, mkdirSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { createRepl } from '../../../../plugins/skraft-framework/engine/application/repl/repl-usecase.mjs'
+import { createRunDigests } from '../../../../plugins/skraft-framework/engine/infrastructure/repl/run-digests.mjs'
 import { createProgramLauncher } from '../../../../plugins/skraft-framework/engine/infrastructure/process/program-launcher.mjs'
 import { createNodeKernelHost } from '../../../../plugins/skraft-framework/engine/infrastructure/repl/node-kernel.mjs'
 import { createOrphanJournal, processCreation } from '../../../../plugins/skraft-framework/engine/infrastructure/repl/orphans.mjs'
@@ -21,7 +22,7 @@ const realRun = (t, call) => {
   mkdirSync(join(root, 'api'))
   const orphans = createOrphanJournal({ folder: join(root, '.copilot-tracking', 'skraft-repl') })
   const host = scripted({}, (it) => nominal(it).map((behaviour, index) => (index === 3 ? agent({ work: async (repos) => { await call(repl, root); green(SLUG, 'Checkout', '')(repos) } })(it) : behaviour)))
-  host.deps.repl = { root, kernels: createNodeKernelHost(), launcher: createProgramLauncher({ root }), orphans, locks: new InMemoryRunLock(host.tracking, 'a'), server: { pid: process.pid, created: SERVER_CREATED }, budgetMs: 30_000 }
+  host.deps.repl = { root, kernels: createNodeKernelHost(), launcher: createProgramLauncher({ root }), orphans, locks: new InMemoryRunLock(host.tracking, 'a'), server: { pid: process.pid, created: SERVER_CREATED }, budgetMs: 30_000, digests: createRunDigests() }
   const repl = createRepl(host.deps, { entry: null, reaped: false })
   t.after(() => repl.close())
   return { host, repl, root, orphans }

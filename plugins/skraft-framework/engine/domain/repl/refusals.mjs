@@ -13,6 +13,7 @@ export const REFUSALS = Object.freeze({
   'repl-crashed': 'the kernel ended by itself: its variables are gone, and the runs it had started were ended',
   'repl-interrupted': 'the call was cancelled before its cell started; nothing ran',
   'repl-failed': 'skraft could not start the kernel of this attempt',
+  'repl-trace-failed': 'a line of the trace of this attempt could not be written, so the trace is incomplete',
   'repl-unexpected': 'the call stopped on an unexpected error of skraft; what was left of it did not run',
 })
 

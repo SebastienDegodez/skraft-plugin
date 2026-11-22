@@ -1,5 +1,6 @@
 import { absentRecord, runRecord, startRecord } from '../../domain/evidence/run-trace.mjs'
 import { appendRecord } from '../evidence/run-trace-store.mjs'
+import { closeLog } from './run-log.mjs'
 
 /**
  * What the server writes of a run, from what the program did: Git's HEAD before and after it,
@@ -45,22 +46,22 @@ const iso = (at) => new Date(at).toISOString()
 export const traceStart = (deps, entry, run) => appendRecord(deps, entry, startRecord({ run: run.id, cell: run.cell, at: iso(run.startedAt), command: run.command, cwd: run.cwd, gate: run.gate, label: run.label }))
 
 /**
- * The run is over: its log is written, then its line.
+ * The run is over: every write of its log is done, then its line is.
  * @param {any} deps @param {Entry} entry @param {Run & { before: GitFacts }} run @param {import('../ports/program-launcher.mjs').ProgramResult} result
  * @returns {Promise<string | null>} the HEAD the line holds as `headAfter`
  */
 export const traceEnd = async (deps, entry, run, result) => {
-  await deps.files.write(entry.slug, run.log, result.text)
-  const after = { headAfter: await headNow(deps, run.before.top), sha256: await deps.hasher.sha256(result.text) }
+  const { sha256, cut } = await closeLog(deps, entry, run)
+  const after = { headAfter: await headNow(deps, run.before.top), sha256, cut }
   await appendRecord(deps, entry, endedRecord(run, result, after))
   return after.headAfter
 }
 
-/** @param {Run & { before: GitFacts }} run @param {import('../ports/program-launcher.mjs').ProgramResult} result @param {{ headAfter: string | null, sha256: string }} after */
-const endedRecord = (run, result, { headAfter, sha256 }) => runRecord({
+/** @param {Run & { before: GitFacts }} run @param {import('../ports/program-launcher.mjs').ProgramResult} result @param {{ headAfter: string | null, sha256: string, cut: boolean }} after */
+const endedRecord = (run, result, { headAfter, sha256, cut }) => runRecord({
   run: run.id, cell: run.cell, at: iso(run.startedAt), command: run.command, argv: run.argv, shell: run.shell, cwd: run.cwd, gate: run.gate, label: run.label,
   durationMs: run.durationMs, exitCode: result.exitCode, signal: result.signal, timedOut: result.timedOut, killed: result.killed, started: result.started,
-  bytes: result.bytes, cut: result.cut, sha256, log: run.log, headBefore: run.before.head, headAfter, clean: run.before.clean,
+  bytes: result.bytes, cut, sha256, log: run.log, headBefore: run.before.head, headAfter, clean: run.before.clean,
 })
 
 /** A gate the cell declares the project has none of. @param {any} deps @param {Entry} entry @param {{ gate: unknown, component: unknown, reason: unknown, cell: number | null }} notice */

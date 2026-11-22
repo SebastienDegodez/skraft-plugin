@@ -137,3 +137,13 @@ export class InMemoryOrphans {
   track(pid) { return { pid, created: `started-${pid}` } }
   gone() { return this.holderGone }
 }
+
+/** The digests of runs' logs, on the hasher the test gives: the text is kept and hashed at the end. */
+export class HasherDigests {
+  /** @param {{ sha256: (text: string) => Promise<string> }} hasher */
+  constructor(hasher) { this.hasher = hasher }
+  start() {
+    const parts = []
+    return { update: (text) => { parts.push(text) }, digest: () => this.hasher.sha256(parts.join('')) }
+  }
+}

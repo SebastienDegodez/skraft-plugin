@@ -14,18 +14,7 @@ const textOf = (error) => (error instanceof Error ? (error.stack ?? error.messag
  * Appends the exception to the run's unexpected.log; rejects when the file cannot be written.
  * @param {any} deps @param {string} slug @param {unknown} error @returns {Promise<string>} the absolute path of the file
  */
-export const keepUnexpected = (deps, slug, error) => {
-  const kept = writing.then(() => append(deps, slug, error))
-  writing = kept.catch(() => undefined)
-  return kept
-}
-
-/** One write after the other, so that none is lost. @type {Promise<unknown>} */
-let writing = Promise.resolve()
-
-/** @param {any} deps @param {string} slug @param {unknown} error */
-const append = async (deps, slug, error) => {
-  const before = (await deps.files.read(slug, UNEXPECTED_LOG)) ?? ''
-  await deps.files.write(slug, UNEXPECTED_LOG, `${before}${textOf(error)}\n`)
+export const keepUnexpected = async (deps, slug, error) => {
+  await deps.files.appendText(slug, UNEXPECTED_LOG, `${textOf(error)}\n`)
   return deps.files.location(slug, UNEXPECTED_LOG)
 }

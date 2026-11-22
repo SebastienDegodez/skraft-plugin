@@ -20,6 +20,7 @@ import { createNodeCommandRunner, createNodeExecutables } from './process/node-p
 import { createCopilotSdkLocator } from './copilot/copilot-sdk-locator.mjs'
 import { createProgramLauncher } from './process/program-launcher.mjs'
 import { createNodeKernelHost } from './repl/node-kernel.mjs'
+import { createRunDigests } from './repl/run-digests.mjs'
 import { createOrphanJournal, processCreation } from './repl/orphans.mjs'
 
 /**
@@ -144,6 +145,7 @@ const replAdapters = (cwd, env) => Object.freeze({
   root: cwd,
   kernels: createNodeKernelHost(),
   launcher: createProgramLauncher({ root: cwd, env }),
+  digests: createRunDigests(),
   orphans: createOrphanJournal({ folder: join(cwd, '.copilot-tracking', 'skraft-repl') }),
   locks: createNodeRunLock({ root: cwd }),
   get server() { return thisServer() },

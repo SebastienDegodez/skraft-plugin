@@ -23,12 +23,13 @@ export const signingKeyOf = async (deps, events) => {
 }
 
 /**
- * Appends a record, signed when a key is held, after every record asked for before it.
- * @param {any} deps @param {{ slug: string, folder: string, signingKey: string | null, chain: Promise<void> }} where @param {TraceRecord} record
+ * Appends a record, signed when a key is held, after every record asked for before it. A write
+ * that fails leaves its error in `where.traceError`, the first one kept, and the chain goes on.
+ * @param {any} deps @param {{ slug: string, folder: string, signingKey: string | null, chain: Promise<void>, traceError?: unknown }} where @param {TraceRecord} record
  * @returns {Promise<void>} when this record is written; the entry's chain follows it
  */
 export const appendRecord = (deps, where, record) => {
-  where.chain = where.chain.then(() => write(deps, where, record)).catch(() => undefined)
+  where.chain = where.chain.then(() => write(deps, where, record)).catch((error) => { where.traceError ??= error })
   return where.chain
 }
 
@@ -36,8 +37,7 @@ export const appendRecord = (deps, where, record) => {
 const write = async (deps, { slug, folder, signingKey: key }, record) => {
   const body = JSON.stringify(record)
   const line = key === null ? body : signedLine(body, await deps.hasher.hmacSha256(key, body))
-  const before = (await deps.files.read(slug, tracePath(folder))) ?? ''
-  await deps.files.write(slug, tracePath(folder), `${before}${line}\n`)
+  await deps.files.appendText(slug, tracePath(folder), `${line}\n`)
 }
 
 /**

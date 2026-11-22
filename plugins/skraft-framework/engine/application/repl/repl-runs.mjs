@@ -1,6 +1,7 @@
 import { RUN_REFUSALS, refusalOfKill } from '../../domain/repl/refusals.mjs'
 import { gitFacts, traceEnd, traceStart } from './repl-trace.mjs'
 import { keepUnexpected } from './repl-unexpected.mjs'
+import { logChunk, openLog } from './run-log.mjs'
 
 /**
  * The programs a cell asked to start. The kernel only asks: this server validates the request,
@@ -11,19 +12,20 @@ import { keepUnexpected } from './repl-unexpected.mjs'
  * @typedef {import('../ports/program-launcher.mjs').Program} Program
  * @typedef {import('../../domain/repl/cell-result.mjs').RunLine & {
  *   cell: number | null, reported: boolean, program: Program | null, startedAt: number, argv: string[], shell: string | null, cwd: string,
- *   before: import('./repl-trace.mjs').GitFacts,
+ *   before: import('./repl-trace.mjs').GitFacts, logFile: import('./run-log.mjs').RunLog,
  * }} Run
  * @typedef {{
  *   key: string, slug: string, folder: string, kernel: import('../ports/kernel-host.mjs').Kernel, lease: string,
  *   runs: Map<number, Run>, cells: number, lastUsed: number, gone: string | null, pending: Set<Promise<void>>, signingKey: string | null, chain: Promise<void>,
- *   retired?: boolean, cellSince?: number | null, topRid?: number, recording?: Promise<void>, tracked?: Map<number, Promise<{ pid: number, created: string | null }>>,
+ *   retired?: boolean, cellSince?: number | null, topRid?: number, traceError?: unknown, traceFailed?: string | null, recording?: Promise<void>, tracked?: Map<number, Promise<{ pid: number, created: string | null }>>,
  * }} Entry
- *   retired: the kernel is being ended, and no run starts any more; cellSince: when the cell in flight started, null when none runs; recording: the last write of the orphan journal; tracked: each process recorded, with its start time, by pid.
+ *   traceError: the first write of the trace or a log that failed; traceFailed: the unexpected.log that holds it, once kept; retired: the kernel is being ended, and no run starts any more; cellSince: when the cell in flight started, null when none runs; recording: the last write of the orphan journal; tracked: each process recorded, with its start time, by pid.
  */
 
-/** The longest a program may run, and the output kept of it. */
+/** The longest a program may run. */
 export const MAX_TIMEOUT_S = 7200
-const MAX_OUTPUT_BYTES = 67_108_864
+/** What the launcher keeps of a run's output in memory: its log on disk holds it. */
+const MEMORY_TAIL_BYTES = 1_048_576
 /** The options run() takes. */
 const RUN_OPTIONS = Object.freeze(['cwd', 'timeout', 'gate', 'label'])
 
@@ -106,7 +108,7 @@ const ENDED = "the attempt's REPL was ended"
 /** @param {any} deps @param {Entry} entry @param {Run} run @param {RunRequest} request */
 const launch = async (deps, entry, run, request) => {
   if (entry.retired === true) return end(deps, entry, run, { ...NOT_STARTED, error: ENDED })
-  const launched = await deps.repl.launcher.start({ command: request.command, cwd: request.cwd, timeoutMs: request.timeout * 1000, maxOutputBytes: MAX_OUTPUT_BYTES, onData: (text) => entry.kernel.chunk(request.rid, text) })
+  const launched = await deps.repl.launcher.start({ command: request.command, cwd: request.cwd, timeoutMs: request.timeout * 1000, maxOutputBytes: MEMORY_TAIL_BYTES, onData: (text) => output(deps, entry, run, text) })
   if (!launched.ok) return end(deps, entry, run, { ...NOT_STARTED, error: launched.reason })
   if (entry.retired === true) launched.program.kill('SIGKILL', 0)
   Object.assign(run, { program: launched.program, argv: launched.argv, shell: launched.shell })
@@ -115,12 +117,18 @@ const launch = async (deps, entry, run, request) => {
   return end(deps, entry, run, await launched.program.done)
 }
 
+/** What the program writes goes to the cell and to the run's log. @param {any} deps @param {Entry} entry @param {Run} run @param {string} text */
+const output = (deps, entry, run, text) => {
+  entry.kernel.chunk(run.id, text)
+  logChunk(deps, entry, run, text)
+}
+
 /** @type {import('../ports/program-launcher.mjs').ProgramResult} */
 const NOT_STARTED = { started: false, exitCode: null, signal: null, timedOut: false, killed: false, text: '', cut: false, bytes: 0, error: null }
 
 /** @param {any} deps @param {Entry} entry @param {RunRequest} request @returns {Run} */
 const openRun = (deps, entry, request) => {
-  const run = { id: request.rid, command: shownCommand(request.command), status: /** @type {const} */ ('running'), exitCode: null, outcome: null, durationMs: 0, log: `${entry.folder}/${request.rid}.log`, gate: request.gate ?? null, label: request.label ?? null, cell: request.cell, reported: false, program: null, startedAt: deps.clock.now().getTime(), argv: [], shell: null, cwd: String(request.cwd), before: { top: null, head: null, clean: false } }
+  const run = { id: request.rid, command: shownCommand(request.command), status: /** @type {const} */ ('running'), exitCode: null, outcome: null, durationMs: 0, log: `${entry.folder}/${request.rid}.log`, gate: request.gate ?? null, label: request.label ?? null, cell: request.cell, reported: false, program: null, startedAt: deps.clock.now().getTime(), argv: [], shell: null, cwd: String(request.cwd), before: { top: null, head: null, clean: false }, logFile: openLog(deps) }
   entry.runs.set(run.id, run)
   return run
 }
@@ -167,6 +175,7 @@ const outcomeOf = ({ started, timedOut, killed, signal }) => {
 const end = async (deps, entry, run, result) => {
   Object.assign(run, { status: 'finished', exitCode: result.exitCode, outcome: outcomeOf(result), durationMs: deps.clock.now().getTime() - run.startedAt })
   const head = await traceEnd(deps, entry, /** @type {any} */ (run), result)
+  run.program = null
   await recordProcesses(deps, entry)
   entry.kernel.exited(run.id, { exitCode: run.exitCode, signal: result.signal, timedOut: result.timedOut, killed: result.killed, durationMs: run.durationMs, head, log: run.log, error: result.started ? null : result.error })
 }

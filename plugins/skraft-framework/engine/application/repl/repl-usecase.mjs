@@ -241,7 +241,18 @@ const present = async (deps, entry, outcome, notice) => {
   if (cut) await deps.files.write(entry.slug, cellLog, outcome.printed)
   const lost = ['restarted', 'crashed'].includes(outcome.status) ? `repl-${outcome.status}` : null
   const heading = [lost ?? notice].filter((code) => code !== null).map((code) => refusalText(code))
-  return { ok: lost === null, code: lost, text: [...heading, text].join('\n') }
+  return { ok: lost === null, code: lost, text: [...(await traceNotice(deps, entry)), ...heading, text].join('\n') }
+}
+
+/**
+ * Once a line of the trace or a log could not be written, every result says so first; the error
+ * goes to the run's unexpected.log, which the notice names.
+ * @param {any} deps @param {Entry} entry @returns {Promise<string[]>}
+ */
+const traceNotice = async (deps, entry) => {
+  if (entry.traceError === undefined) return []
+  entry.traceFailed ??= await keepUnexpected(deps, entry.slug, entry.traceError)
+  return [refusalText('repl-trace-failed', entry.traceFailed)]
 }
 
 /** @param {Entry} entry @param {import('../ports/kernel-host.mjs').CellOutcome} outcome @param {string} cellLog */
