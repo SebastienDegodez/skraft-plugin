@@ -1,5 +1,5 @@
 {
-  "generated": "2026-11-22T19:36:20.826Z",
+  "generated": "2026-11-22T20:44:04.832Z",
   "sessions": [
     {
       "id": "scheduled/2026-09-28/acceptance-designer/absent-acceptance-criteria-halt-the-distillation--main--run0",
@@ -10984,7 +10984,7 @@
         "a-criterion-an-existing-test-already-covers-is-relied-on-only-once-that-test-is-run-else-tested-anew",
         "pr-647"
       ],
-      "mtime": 1795376177231.6294
+      "mtime": 1795380241435.0237
     },
     {
       "id": "pr/647/acceptance-designer/a-criterion-an-existing-test-already-covers-is-relied-on-only-once-that-test-is-run-else-tested-anew--main--run1",
@@ -10997,7 +10997,7 @@
         "a-criterion-an-existing-test-already-covers-is-relied-on-only-once-that-test-is-run-else-tested-anew",
         "pr-647"
       ],
-      "mtime": 1795376177232.6294
+      "mtime": 1795380241446.0237
     },
     {
       "id": "pr/647/acceptance-designer/a-criterion-an-existing-test-already-covers-is-relied-on-only-once-that-test-is-run-else-tested-anew--main--run2",
@@ -11010,7 +11010,7 @@
         "a-criterion-an-existing-test-already-covers-is-relied-on-only-once-that-test-is-run-else-tested-anew",
         "pr-647"
       ],
-      "mtime": 1795376177235.6294
+      "mtime": 1795380241453.024
     },
     {
       "id": "pr/647/acceptance-designer/a-criterion-an-existing-test-already-covers-is-relied-on-only-once-that-test-is-run-else-tested-anew--main--run3",
@@ -11023,7 +11023,7 @@
         "a-criterion-an-existing-test-already-covers-is-relied-on-only-once-that-test-is-run-else-tested-anew",
         "pr-647"
       ],
-      "mtime": 1795376177233.6294
+      "mtime": 1795380241455.024
     },
     {
       "id": "pr/647/acceptance-designer/a-criterion-an-existing-test-already-covers-is-relied-on-only-once-that-test-is-run-else-tested-anew--main--run4",
@@ -11036,7 +11036,7 @@
         "a-criterion-an-existing-test-already-covers-is-relied-on-only-once-that-test-is-run-else-tested-anew",
         "pr-647"
       ],
-      "mtime": 1795376177232.6294
+      "mtime": 1795380241458.024
     },
     {
       "id": "pr/647/acceptance-designer/absent-acceptance-criteria-halt-the-distillation--main--run0",
@@ -11049,7 +11049,7 @@
         "absent-acceptance-criteria-halt-the-distillation",
         "pr-647"
       ],
-      "mtime": 1795376177225.6294
+      "mtime": 1795380241460.024
     },
     {
       "id": "pr/647/acceptance-designer/absent-acceptance-criteria-halt-the-distillation--main--run1",
@@ -11062,7 +11062,7 @@
         "absent-acceptance-criteria-halt-the-distillation",
         "pr-647"
       ],
-      "mtime": 1795376177225.6294
+      "mtime": 1795380241460.024
     },
     {
       "id": "pr/647/acceptance-designer/absent-acceptance-criteria-halt-the-distillation--main--run2",
@@ -11075,7 +11075,7 @@
         "absent-acceptance-criteria-halt-the-distillation",
         "pr-647"
       ],
-      "mtime": 1795376177225.6294
+      "mtime": 1795380241465.024
     },
     {
       "id": "pr/647/acceptance-designer/absent-acceptance-criteria-halt-the-distillation--main--run3",
@@ -11088,7 +11088,7 @@
         "absent-acceptance-criteria-halt-the-distillation",
         "pr-647"
       ],
-      "mtime": 1795376177227.6294
+      "mtime": 1795380241466.14
     },
     {
       "id": "pr/647/acceptance-designer/absent-acceptance-criteria-halt-the-distillation--main--run4",
@@ -11101,7 +11101,7 @@
         "absent-acceptance-criteria-halt-the-distillation",
         "pr-647"
       ],
-      "mtime": 1795376177225.6294
+      "mtime": 1795380241467.024
     },
     {
       "id": "pr/647/acceptance-designer/agreed-criteria-become-an-executable-specification-that-fails-on-business-meaning--main--run0",
@@ -11114,7 +11114,7 @@
         "agreed-criteria-become-an-executable-specification-that-fails-on-business-meaning",
         "pr-647"
       ],
-      "mtime": 1795376177232.6294
+      "mtime": 1795380241467.024
     },
     {
       "id": "pr/647/acceptance-designer/agreed-criteria-become-an-executable-specification-that-fails-on-business-meaning--main--run1",
@@ -11127,7 +11127,7 @@
         "agreed-criteria-become-an-executable-specification-that-fails-on-business-meaning",
         "pr-647"
       ],
-      "mtime": 1795376177232.6294
+      "mtime": 1795380241484.0242
     },
     {
       "id": "pr/647/acceptance-designer/agreed-criteria-become-an-executable-specification-that-fails-on-business-meaning--main--run2",
@@ -11140,7 +11140,7 @@
         "agreed-criteria-become-an-executable-specification-that-fails-on-business-meaning",
         "pr-647"
       ],
-      "mtime": 1795376177236.6294
+      "mtime": 1795380241488.0242
     },
     {
       "id": "pr/647/acceptance-designer/agreed-criteria-become-an-executable-specification-that-fails-on-business-meaning--main--run3",
@@ -11153,7 +11153,7 @@
         "agreed-criteria-become-an-executable-specification-that-fails-on-business-meaning",
         "pr-647"
       ],
-      "mtime": 1795376177236.6294
+      "mtime": 1795380241489.0242
     },
     {
       "id": "pr/647/acceptance-designer/agreed-criteria-become-an-executable-specification-that-fails-on-business-meaning--main--run4",
@@ -11166,7 +11166,7 @@
         "agreed-criteria-become-an-executable-specification-that-fails-on-business-meaning",
         "pr-647"
       ],
-      "mtime": 1795376177228.6294
+      "mtime": 1795380241489.0242
     },
     {
       "id": "pr/647/acceptance-designer/an-undecided-tier-is-escalated-rather-than-given-an-invented-price--main--run0",
@@ -11179,7 +11179,7 @@
         "an-undecided-tier-is-escalated-rather-than-given-an-invented-price",
         "pr-647"
       ],
-      "mtime": 1795376177234.6294
+      "mtime": 1795380241490.0242
     },
     {
       "id": "pr/647/acceptance-designer/an-undecided-tier-is-escalated-rather-than-given-an-invented-price--main--run1",
@@ -11192,7 +11192,7 @@
         "an-undecided-tier-is-escalated-rather-than-given-an-invented-price",
         "pr-647"
       ],
-      "mtime": 1795376177229.6294
+      "mtime": 1795380241490.0242
     },
     {
       "id": "pr/647/acceptance-designer/an-undecided-tier-is-escalated-rather-than-given-an-invented-price--main--run2",
@@ -11205,7 +11205,7 @@
         "an-undecided-tier-is-escalated-rather-than-given-an-invented-price",
         "pr-647"
       ],
-      "mtime": 1795376177234.6294
+      "mtime": 1795380241490.0242
     },
     {
       "id": "pr/647/acceptance-designer/an-undecided-tier-is-escalated-rather-than-given-an-invented-price--main--run3",
@@ -11218,7 +11218,7 @@
         "an-undecided-tier-is-escalated-rather-than-given-an-invented-price",
         "pr-647"
       ],
-      "mtime": 1795376177237.6294
+      "mtime": 1795380241490.0242
     },
     {
       "id": "pr/647/acceptance-designer/an-undecided-tier-is-escalated-rather-than-given-an-invented-price--main--run4",
@@ -11231,7 +11231,7 @@
         "an-undecided-tier-is-escalated-rather-than-given-an-invented-price",
         "pr-647"
       ],
-      "mtime": 1795376177231.6294
+      "mtime": 1795380241491.0242
     },
     {
       "id": "pr/647/acceptance-designer/every-scenario-s-acceptance-test-is-written-first-in-one-red-commit-and-grouped-by-rule-for-deliver--main--run0",
@@ -11244,7 +11244,7 @@
         "every-scenario-s-acceptance-test-is-written-first-in-one-red-commit-and-grouped-by-rule-for-deliver",
         "pr-647"
       ],
-      "mtime": 1795376177236.6294
+      "mtime": 1795380241490.0242
     },
     {
       "id": "pr/647/acceptance-designer/every-scenario-s-acceptance-test-is-written-first-in-one-red-commit-and-grouped-by-rule-for-deliver--main--run1",
@@ -11257,7 +11257,7 @@
         "every-scenario-s-acceptance-test-is-written-first-in-one-red-commit-and-grouped-by-rule-for-deliver",
         "pr-647"
       ],
-      "mtime": 1795376177233.6294
+      "mtime": 1795380241490.0242
     },
     {
       "id": "pr/647/acceptance-designer/every-scenario-s-acceptance-test-is-written-first-in-one-red-commit-and-grouped-by-rule-for-deliver--main--run2",
@@ -11270,7 +11270,7 @@
         "every-scenario-s-acceptance-test-is-written-first-in-one-red-commit-and-grouped-by-rule-for-deliver",
         "pr-647"
       ],
-      "mtime": 1795376177237.6294
+      "mtime": 1795380241491.0242
     },
     {
       "id": "pr/647/acceptance-designer/every-scenario-s-acceptance-test-is-written-first-in-one-red-commit-and-grouped-by-rule-for-deliver--main--run3",
@@ -11283,7 +11283,7 @@
         "every-scenario-s-acceptance-test-is-written-first-in-one-red-commit-and-grouped-by-rule-for-deliver",
         "pr-647"
       ],
-      "mtime": 1795376177232.6294
+      "mtime": 1795380241491.0242
     },
     {
       "id": "pr/647/acceptance-designer/every-scenario-s-acceptance-test-is-written-first-in-one-red-commit-and-grouped-by-rule-for-deliver--main--run4",
@@ -11296,7 +11296,7 @@
         "every-scenario-s-acceptance-test-is-written-first-in-one-red-commit-and-grouped-by-rule-for-deliver",
         "pr-647"
       ],
-      "mtime": 1795376177234.6294
+      "mtime": 1795380241491.0242
     },
     {
       "id": "pr/647/commit-convention/finish-the-approved-customer-guide-issue--main--run0",
@@ -11309,7 +11309,7 @@
         "finish-the-approved-customer-guide-issue",
         "pr-647"
       ],
-      "mtime": 1795376177310.6294
+      "mtime": 1795380241540.0247
     },
     {
       "id": "pr/647/commit-convention/finish-the-approved-customer-guide-issue--main--run1",
@@ -11322,7 +11322,7 @@
         "finish-the-approved-customer-guide-issue",
         "pr-647"
       ],
-      "mtime": 1795376177311.6294
+      "mtime": 1795380241541.0247
     },
     {
       "id": "pr/647/commit-convention/finish-the-approved-customer-guide-issue--main--run2",
@@ -11335,7 +11335,7 @@
         "finish-the-approved-customer-guide-issue",
         "pr-647"
       ],
-      "mtime": 1795376177312.6294
+      "mtime": 1795380241541.0247
     },
     {
       "id": "pr/647/commit-convention/finish-the-approved-customer-guide-issue--main--run3",
@@ -11348,7 +11348,7 @@
         "finish-the-approved-customer-guide-issue",
         "pr-647"
       ],
-      "mtime": 1795376177310.6294
+      "mtime": 1795380241540.0247
     },
     {
       "id": "pr/647/commit-convention/finish-the-approved-customer-guide-issue--main--run4",
@@ -11361,7 +11361,7 @@
         "finish-the-approved-customer-guide-issue",
         "pr-647"
       ],
-      "mtime": 1795376177311.6294
+      "mtime": 1795380241540.0247
     },
     {
       "id": "pr/647/commit-convention/record-a-customer-guide-increment-while-the-issue-remains-open--main--run0",
@@ -11374,7 +11374,7 @@
         "record-a-customer-guide-increment-while-the-issue-remains-open",
         "pr-647"
       ],
-      "mtime": 1795376177312.6294
+      "mtime": 1795380241541.0247
     },
     {
       "id": "pr/647/commit-convention/record-a-customer-guide-increment-while-the-issue-remains-open--main--run1",
@@ -11387,7 +11387,7 @@
         "record-a-customer-guide-increment-while-the-issue-remains-open",
         "pr-647"
       ],
-      "mtime": 1795376177313.6294
+      "mtime": 1795380241540.0247
     },
     {
       "id": "pr/647/commit-convention/record-a-customer-guide-increment-while-the-issue-remains-open--main--run2",
@@ -11400,7 +11400,7 @@
         "record-a-customer-guide-increment-while-the-issue-remains-open",
         "pr-647"
       ],
-      "mtime": 1795376177313.6294
+      "mtime": 1795380241543.0247
     },
     {
       "id": "pr/647/commit-convention/record-a-customer-guide-increment-while-the-issue-remains-open--main--run3",
@@ -11413,7 +11413,7 @@
         "record-a-customer-guide-increment-while-the-issue-remains-open",
         "pr-647"
       ],
-      "mtime": 1795376177313.6294
+      "mtime": 1795380241541.0247
     },
     {
       "id": "pr/647/commit-convention/record-a-customer-guide-increment-while-the-issue-remains-open--main--run4",
@@ -11426,7 +11426,7 @@
         "record-a-customer-guide-increment-while-the-issue-remains-open",
         "pr-647"
       ],
-      "mtime": 1795376177310.6294
+      "mtime": 1795380241541.0247
     },
     {
       "id": "pr/647/commit-convention/record-the-approved-guide-edit-without-a-known-issue--main--run0",
@@ -11439,7 +11439,7 @@
         "record-the-approved-guide-edit-without-a-known-issue",
         "pr-647"
       ],
-      "mtime": 1795376177312.6294
+      "mtime": 1795380241540.0247
     },
     {
       "id": "pr/647/commit-convention/record-the-approved-guide-edit-without-a-known-issue--main--run1",
@@ -11452,7 +11452,7 @@
         "record-the-approved-guide-edit-without-a-known-issue",
         "pr-647"
       ],
-      "mtime": 1795376177309.6294
+      "mtime": 1795380241540.0247
     },
     {
       "id": "pr/647/commit-convention/record-the-approved-guide-edit-without-a-known-issue--main--run2",
@@ -11465,7 +11465,7 @@
         "record-the-approved-guide-edit-without-a-known-issue",
         "pr-647"
       ],
-      "mtime": 1795376177310.6294
+      "mtime": 1795380241539.0247
     },
     {
       "id": "pr/647/commit-convention/record-the-approved-guide-edit-without-a-known-issue--main--run3",
@@ -11478,7 +11478,7 @@
         "record-the-approved-guide-edit-without-a-known-issue",
         "pr-647"
       ],
-      "mtime": 1795376177310.6294
+      "mtime": 1795380241541.0247
     },
     {
       "id": "pr/647/commit-convention/record-the-approved-guide-edit-without-a-known-issue--main--run4",
@@ -11491,7 +11491,7 @@
         "record-the-approved-guide-edit-without-a-known-issue",
         "pr-647"
       ],
-      "mtime": 1795376177311.6294
+      "mtime": 1795380241540.0247
     }
   ]
 }
