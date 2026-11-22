@@ -47,11 +47,13 @@ export const traceStart = (deps, entry, run) => appendRecord(deps, entry, startR
 /**
  * The run is over: its log is written, then its line.
  * @param {any} deps @param {Entry} entry @param {Run & { before: GitFacts }} run @param {import('../ports/program-launcher.mjs').ProgramResult} result
+ * @returns {Promise<string | null>} the HEAD the line holds as `headAfter`
  */
 export const traceEnd = async (deps, entry, run, result) => {
   await deps.files.write(entry.slug, run.log, result.text)
   const after = { headAfter: await headNow(deps, run.before.top), sha256: await deps.hasher.sha256(result.text) }
   await appendRecord(deps, entry, endedRecord(run, result, after))
+  return after.headAfter
 }
 
 /** @param {Run & { before: GitFacts }} run @param {import('../ports/program-launcher.mjs').ProgramResult} result @param {{ headAfter: string | null, sha256: string }} after */

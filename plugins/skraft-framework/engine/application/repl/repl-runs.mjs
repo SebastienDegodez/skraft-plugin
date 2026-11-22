@@ -102,9 +102,9 @@ const outcomeOf = ({ started, timedOut, killed, signal }) => {
  */
 const end = async (deps, entry, run, result) => {
   Object.assign(run, { status: 'finished', exitCode: result.exitCode, outcome: outcomeOf(result), durationMs: deps.clock.now().getTime() - run.startedAt })
-  await traceEnd(deps, entry, /** @type {any} */ (run), result)
+  const head = await traceEnd(deps, entry, /** @type {any} */ (run), result)
   await recordProcesses(deps, entry)
-  entry.kernel.exited(run.id, { exitCode: run.exitCode, signal: result.signal, timedOut: result.timedOut, killed: result.killed, durationMs: run.durationMs, log: run.log, error: result.started ? null : result.error })
+  entry.kernel.exited(run.id, { exitCode: run.exitCode, signal: result.signal, timedOut: result.timedOut, killed: result.killed, durationMs: run.durationMs, head, log: run.log, error: result.started ? null : result.error })
 }
 
 /** The programs of the entry that still run. @param {Entry} entry @returns {Run[]} */

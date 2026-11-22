@@ -84,6 +84,25 @@ test('the line of a run holds Git\'s HEAD before and after it, so that a commit 
   assert.equal(ended[1].headAfter, during)
 })
 
+test('the awaited handle gives the HEAD the run ended on, the very value its line holds', async () => {
+  const kernels = new ScriptedKernelHost()
+  let awaited = null
+  const { host, launcher } = delivery({
+    kernels,
+    commits: false,
+    work: async (repl, one, { git }) => {
+      kernels.script.set('commit', async ({ run }) => { const pending = run('mvn verify', { gate: 'test' }); await sleep(5); green(SLUG, 'Checkout', '')({ git }); launcher.started[0].program.finish(); awaited = await pending })
+      await repl.call({ code: 'commit' })
+    },
+  })
+
+  await host.start()
+
+  const ended = traced(host).find(({ type }) => type === 'run')
+  assert.notEqual(ended.headAfter, ended.headBefore)
+  assert.equal(awaited.head, ended.headAfter)
+})
+
 test('a run refused before it started, and a program that could not start, are lines too, with started false', async () => {
   const kernels = new ScriptedKernelHost()
   kernels.script.set('bad', async ({ run }) => { await run('npm test', { timeout: 0, gate: 'test' }) })
