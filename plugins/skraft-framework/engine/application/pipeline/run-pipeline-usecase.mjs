@@ -694,7 +694,7 @@ const briefScenario = ({ config, deps, slug }, run, { node, visit }) => {
   if (pass === null) return null
   const groups = pass.groups.map((group) => briefGroup(group, { of: pass.groups.length, test: scenarioTest(config, run, group.scenarios[0]?.component ?? null) }))
   const oracles = pass.kind === 'plan' ? [] : pass.reds.map((red) => oracleTold(red, config.components))
-  return { kind: pass.kind, groups, oracles, skeleton: pass.skeleton !== null, redLog: pass.kind === 'plan' ? deps.files.location(slug, `logs/${node.id}-${visit}-red.log`) : null }
+  return { kind: pass.kind, groups, oracles, skeleton: pass.skeleton !== null, redRun: pass.kind === 'plan' }
 }
 
 /** @param {import('./scenario-checks.mjs').PassGroup} group @param {{ of: number, test: string | null }} told */
@@ -794,7 +794,7 @@ const judgeAttempt = async (context, run, next, attempt) => {
  */
 const keepEvidence = async ({ journal }, { node, visit, attempt }, checked) => {
   if (checked.evidence === undefined || checked.evidence.length === 0 || failedCheck(checked)) return
-  await journal.append('evidence.checked', { step: node.id, visit, attempt, runs: checked.evidence })
+  await journal.append('evidence.checked', { step: node.id, visit, attempt, ...(checked.red === true ? { red: true } : {}), runs: checked.evidence })
 }
 
 /**

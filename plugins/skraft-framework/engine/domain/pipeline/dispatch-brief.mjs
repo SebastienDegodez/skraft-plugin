@@ -35,14 +35,14 @@ import { issueOf } from './commits.mjs'
  *   the components' tests treat what they depend on, told to the agent that writes the scenarios.
  * @typedef {{
  *   kind: 'plan' | 'delivery' | 'rework', groups: BriefGroup[],
- *   oracles: Array<{ sha: string, subject: string, files: string[] }>, skeleton: boolean, redLog: string | null,
+ *   oracles: Array<{ sha: string, subject: string, files: string[] }>, skeleton: boolean, redRun: boolean,
  * }} BriefScenario
  *   plan: the pass that writes every scenario and their one red; delivery: the one pass that
  *   makes every group pass in one green commit; rework: a pass after the story is delivered, which
  *   changes no acceptance test. groups: those a delivery pass makes pass, in the order it commits
  *   them, the green holding all of them; oracles: every red of acceptance tests DISTILL committed, whose files no pass changes;
- *   skeleton: whether the story has a walking skeleton, which passes in that commit; redLog: where the plan's pass sends the output of its one run of the acceptance
- *   tests, absolute, which the review of its phase reads; null on any other pass.
+ *   skeleton: whether the story has a walking skeleton, which passes in that commit; redRun: whether the plan's pass runs its one run of the acceptance
+ *   tests through `skraft_repl`, labelled `red`, which the review of its phase reads.
  * @typedef {{
  *   index: number, of: number, scenarios: Array<{ index: number, title: string, component: string, tags: string[] }>,
  *   test: string | null,
@@ -143,7 +143,7 @@ const SCENARIO_WORK = Object.freeze({
  * @type {Readonly<Record<BriefScenario['kind'], (scenario: BriefScenario, story: { slug: string, issue: number | null }) => string[]>>}
  */
 const SCENARIO_COMMIT = Object.freeze({
-  plan: ({ redLog }, story) => [`- Run the acceptance tests once, sending the whole output to ${redLog}, and read it: every acceptance test and the walking skeleton fail, each on its assertion. Then commit them, the skeleton they call and the scenarios in one commit, exactly:`, `  ${commitCommand('test', 'acceptance tests S1–S<n>, n the last scenario of your test plan', story)}`],
+  plan: (_scenario, story) => [`- Run the acceptance tests once through \`skraft_repl\`, as \`gate('test', <the component's test command>, { cwd, label: 'red' })\`, and read its output: every acceptance test and the walking skeleton fail, each on its assertion. Then commit them, the skeleton they call and the scenarios in one commit, exactly:`, `  ${commitCommand('test', 'acceptance tests S1–S<n>, n the last scenario of your test plan', story)}`],
   delivery: ({ groups }, story) => ['- Commit once, in bash (never PowerShell), naming each file you changed:', `  ${greenLine(groups, story)}`],
   rework: () => [],
 })

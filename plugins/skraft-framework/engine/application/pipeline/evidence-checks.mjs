@@ -29,6 +29,19 @@ export const checkEvidence = async (deps, { slug, folder, events, config, base }
 }
 
 /**
+ * The traced run of the acceptance tests the designer labelled `red`: the last one of the attempt,
+ * which the review of DISTILL reads in place of a log; null when the trace holds none or cannot be read.
+ * @param {any} deps @param {{ slug: string, folder: string, events: any[] }} attempt
+ * @returns {Promise<{ run: number, gate: string, cwd: string, log: string, sha256: string } | null>}
+ */
+export const redRunOf = async (deps, { slug, folder, events }) => {
+  const trace = await readTrace(deps, { slug, folder, events })
+  const found = trace.ok ? trace.records.findLast((record) => record.type === 'run' && record.label === 'red') : undefined
+  if (found === undefined || found.type !== 'run') return null
+  return { run: found.run, gate: found.gate ?? '', cwd: found.cwd, log: found.log, sha256: found.sha256 }
+}
+
+/**
  * The components the story changed since their base, with the commit their repository stands
  * on; a string when Git cannot tell.
  * @param {any} deps @param {import('../../domain/config/skraft-config.mjs').Component[]} components @param {import('../config/bases.mjs').Base[]} base

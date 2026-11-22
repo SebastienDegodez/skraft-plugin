@@ -3,7 +3,7 @@
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { answerYaml, withContext } from './answer-yaml.mjs'
-import { writeDeliveryTrace } from './delivery-trace.mjs'
+import { writeDeliveryTrace, writeRedTrace } from './delivery-trace.mjs'
 import { createInit } from '../../../../plugins/skraft-framework/engine/application/pipeline/init-usecase.mjs'
 import { createObserve } from '../../../../plugins/skraft-framework/engine/application/pipeline/observe-usecase.mjs'
 import { createRunPipeline } from '../../../../plugins/skraft-framework/engine/application/pipeline/run-pipeline-usecase.mjs'
@@ -162,6 +162,7 @@ export const agent = ({ result = { status: 'done', summary: 'done' }, fill = tru
   if (result !== null) await host.tracking.write(host.slug, step.result, typeof result === 'string' ? result : JSON.stringify(result))
   await (work ?? scenarioWork(host, step, exemption))(host)
   if (step.agent === 'software-engineer' && trace !== false) await writeDeliveryTrace(host, step, trace)
+  if (plansScenarios(step) && trace !== false) await writeRedTrace(host, step)
   return answer
 }
 
@@ -224,7 +225,7 @@ export const scenarioTable = (host, plan, exemption) => {
 export const scenarioReview = ({ sha = 'root-1', subject = `test(${SLUG}): walking skeleton`, files = 'tests/Integration/WalkingSkeletonTests.cs', key = 'scenario_review-1' } = {}) => ({
   key,
   kind: 'scenario-review',
-  text: `Read the 1 scenario of the story before DELIVER builds them: S1 "Customer pays by card" (api; @walking-skeleton). DELIVER makes them pass in one pass and one commit, working the groups in this order: 1. S1. The acceptance tests of every scenario, the walking skeleton and the skeleton of its chain are commit ${sha} "${subject}": ${files}. skraft does not run them: check that each fails on its own assertion; the designer's run is in ${TRACKING}/logs/distill-1-red.log. APPROVED delivers them; REVISE sends DISTILL back with your corrections (edit the .feature or the test yourself first if you like, and say so).`,
+  text: `Read the 1 scenario of the story before DELIVER builds them: S1 "Customer pays by card" (api; @walking-skeleton). DELIVER makes them pass in one pass and one commit, working the groups in this order: 1. S1. The acceptance tests of every scenario, the walking skeleton and the skeleton of its chain are commit ${sha} "${subject}": ${files}. skraft does not run them: check that each fails on its own assertion; the designer's traced run is in ${TRACKING}/logs/runs/distill-1-1/1.log. APPROVED delivers them; REVISE sends DISTILL back with your corrections (edit the .feature or the test yourself first if you like, and say so).`,
   options: ['APPROVED', 'REVISE'],
   refusals: ['REVISE'],
   header: 'Scenarios',

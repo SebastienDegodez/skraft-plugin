@@ -42,7 +42,6 @@ Le dossier de suivi vit **dans la copie de travail qui lance le run** :
     │   └── verdict.yaml                           le verdict de la passe, écrit par le moteur
     ├── logs/                                      ce que les commandes ont affiché
     │   ├── runs/<step>-<visit>-<attempt>/         les exécutions tracées d'une tentative : runs.jsonl (signé) et un log par exécution
-    │   ├── <nœud>-<visite>-red.log                l'unique lancement des tests d'acceptation par le designer, tel qu'affiché
     │   ├── commit-<nœud>.log                      ce que Git a affiché en refusant un commit du moteur
     │   └── …                                      ce qu'affichent les commandes que lance un agent
     ├── .tmp/                                      les fichiers temporaires des agents
@@ -388,7 +387,6 @@ question nomment ce fichier, sans jamais recopier ce qu'il contient.
 
 | Fichier | Écrit quand | Contenu |
 | --- | --- | --- |
-| `logs/<nœud>-<visite>-red.log` | l'unique lancement du walking skeleton et des tests d'acceptation par le designer, au chemin que donne son brief | ce qu'a affiché la commande de test, tel quel ; le moteur n'en lit rien, la revue DISTILL et l'humain si |
 | `logs/commit-<nœud>.log` | Git refuse un commit que fait le moteur (un hook, une identité absente, un verrou) : le commit pour un agent sans shell, le commit de ratification des ADR | `$ git commit (<nœud>)`, `result: git commit failed: exit N`, puis `--- output` et ce que Git a affiché |
 | tout autre fichier de `logs/` | un agent lance une commande | ce que la commande a affiché |
 

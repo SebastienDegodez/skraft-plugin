@@ -69,6 +69,15 @@ const SCENARIO_REVIEW = {
 }
 
 /**
+ * Where the designer's traced run of the acceptance tests, labelled `red`, left its output; null when it traced none.
+ * @param {Context} context @param {string} writer the node that writes the scenarios
+ */
+const redLogOf = ({ deps, slug, journal }, writer) => {
+  const kept = journal.events.findLast((/** @type {RunEvent} */ event) => event.type === 'evidence.checked' && event.red === true && event.step === writer)
+  return kept === undefined ? null : deps.files.location(slug, kept.runs[0].log)
+}
+
+/**
  * The scenarios, the `.feature` files the test plan names, the groups and the red of the
  * acceptance tests, once the node that writes them recorded them; a question the machine cannot ask before.
  * @param {Context} context @param {RunState} run @returns {Promise<Plan>}
@@ -80,7 +89,7 @@ const scenarioReviewPlan = async (context, { scenarios, nodes }) => {
   const [plan] = nodes[writer].outputs
   const features = namedFeatures(/** @type {string} */ (await context.deps.files.read(context.slug, plan)))
   const { skeleton, exemption, list, groups } = scenarios
-  const log = context.deps.files.location(context.slug, `logs/${writer}-${nodes[writer].visit}-red.log`)
+  const log = redLogOf(context, writer)
   return { text: scenarioReviewText({ scenarios: list, features, skeleton, exemption, oracle, groups, log }), subjects: oracle.files }
 }
 

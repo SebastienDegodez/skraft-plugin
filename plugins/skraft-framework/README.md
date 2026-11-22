@@ -16,7 +16,7 @@ command hooks.
   diff after each step).
 - **Proof, not claims.** Build, format, lint, tests, architecture and coverage run
   from the commands in `skraft-config.json`; the engine writes the evidence. The red of the acceptance tests
-  is committed once, and the DISTILL review reads the designer's run of it.
+  is committed once, and the DISTILL review reads the designer's traced run of it, labelled `red`.
 - **Craft by default.** Outside-In TDD, BDD, Clean Architecture per stack, contract testing,
   ADRs and the kill of surviving mutants ship as skills the agents read before they start.
   Mutation testing itself is the developer's: the pipeline runs none.

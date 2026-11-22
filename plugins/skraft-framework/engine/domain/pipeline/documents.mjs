@@ -2,10 +2,10 @@
  * The documents of a pipeline: every file of its tracking folder but those the engine keeps
  * (the journal, the session's lease, the agents' result files, the review inputs) and what
  * commands and the engine's own checks printed or left behind (the logs, a pre-check's trail and
- * its receipt, the temporary files). The one log the review of DISTILL reads is a document: the
- * acceptance designer's run of the acceptance tests, `logs/<node>-<visit>-red.log`.
+ * its receipt, the temporary files). The designer's run of the acceptance tests the review of DISTILL
+ * reads is a traced run (`logs/runs/`), which the review inputs name, never a document.
  */
-const ENGINE_FILES = /^(events\.jsonl$|\.lock(\.|$)|results\/|reviews\/|logs\/(?![^/]*-red\.log$)|\.tmp\/)/
+const ENGINE_FILES = /^(events\.jsonl$|\.lock(\.|$)|results\/|reviews\/|logs\/|\.tmp\/)/
 
 /** @param {string} path relative to the pipeline's tracking folder */
 export const isDocument = (path) => !ENGINE_FILES.test(path)

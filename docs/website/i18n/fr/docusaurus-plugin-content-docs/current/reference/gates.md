@@ -275,9 +275,9 @@ aucune (`issue-closed`).
 | `deliver` renvoyé par la revue, après le passage de l'histoire | rouges, verts et refactors sur toute l'histoire | un vert sans rouge depuis le dernier vert (`green-without-red`) ; un changement d'un fichier du commit des tests d'acceptation (`oracle-touched`) ; sur un passage que la revue a renvoyé, son finding tient lieu du premier rouge |
 
 Qu'un rouge échoue sur une assertion se lit, ne se rejoue pas : le designer d'acceptation lance une
-fois le walking skeleton et les tests d'acceptation, écrit la sortie entière de ce lancement dans
-`logs/<nœud>-<visite>-red.log` ([Logs](./run-journal.md#logs)), et la revue DISTILL (T3) comme
-l'humain la lisent. Que le vert fasse passer l'histoire, c'est la commande qui le commite : enchaînée
+fois le walking skeleton et les tests d'acceptation par `skraft_repl` avec l'étiquette `red`, le
+moteur consigne ce run tracé (`evidence.checked` avec `red`), et la revue DISTILL (T3) comme
+l'humain en lisent le log sous `logs/runs/` ([Logs](./run-journal.md#logs)). Que le vert fasse passer l'histoire, c'est la commande qui le commite : enchaînée
 par `&&`, elle ne commite que si les tests passent. Un fichier que les tests écrivent dans la copie
 de travail (un rapport de test) est un changement comme un autre, tenu au périmètre d'écriture :
 listez-le dans `.gitignore`. Une machine qui ne peut pas lancer une commande (programme non

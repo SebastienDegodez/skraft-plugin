@@ -268,8 +268,9 @@ cites no other issue (`issue-not-in-story`) and closes none (`issue-closed`).
 | `deliver` sent back by the review, after the story's pass | reds, greens and refactors on the whole story | a green with no red since the last green (`green-without-red`); a change to a file of the acceptance-test commit (`oracle-touched`); on a pass the review sent back, its finding stands for the first red |
 
 Whether a red fails on an assertion is read, not run: the acceptance designer runs the walking
-skeleton and the acceptance tests once, writes that run's whole output to `logs/<node>-<visit>-red.log`
-([Logs](./run-journal.md#logs)), and the DISTILL review (T3) and the human read it. Whether the green
+skeleton and the acceptance tests once through `skraft_repl` with the label `red`, the engine
+journals that traced run (`evidence.checked` with `red`), and the DISTILL review (T3) and the human
+read its log under `logs/runs/` ([Logs](./run-journal.md#logs)). Whether the green
 makes the story pass is the command that commits it: chained with `&&`, it commits only when the
 tests pass. A file the tests write in the working copy (a test report) is a change like any other,
 held to the write scope: list it in `.gitignore`. A machine that cannot run a command (a program not

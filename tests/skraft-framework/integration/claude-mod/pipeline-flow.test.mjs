@@ -57,7 +57,7 @@ test('/skraft runs the four phases on a real repository: each subagent commits i
   assert.deepEqual(JSON.parse(readFileSync(join(cwd, 'skraft-config.json'), 'utf8')).publish, { pullRequest: true, visuals: false, questionVersions: { pullRequest: 2, visuals: 1 } })
   assert.deepEqual(recorded(events, 'publish').map(({ outcome: result, reason }) => [result, reason]), [['local', `pull request not opened: ${NO_PULL_REQUEST}; pull-request.md holds its description, and skraft publish opens it once that is fixed`]])
   assert.ok(readFileSync(join(cwd, '.copilot-tracking', 'skraft-plans', SLUG, 'pull-request.md'), 'utf8').startsWith('Pay by card at checkout\n\nRefs #42\n'))
-  assert.deepEqual(events.filter((event) => event.type === 'evidence.checked').map(({ step, runs }) => [step, runs.map(({ gate }) => gate)]), [['deliver', ['build', 'format', 'lint', 'test', 'architecture', 'coverage']]])
+  assert.deepEqual(events.filter((event) => event.type === 'evidence.checked').map(({ step, runs }) => [step, runs.map(({ gate }) => gate)]), [['distill', ['test']], ['deliver', ['build', 'format', 'lint', 'test', 'architecture', 'coverage']]])
   assert.deepEqual(events.filter((event) => event.type === 'commits.checked').map(({ step, commits }) => [step, commits.map(({ kind, verdict }) => `${kind} ${verdict}`)]), [
     ['distill', ['red ok']],
     ['deliver', ['green ok']],

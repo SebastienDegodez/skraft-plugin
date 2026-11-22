@@ -2,7 +2,7 @@
 // agents act as a model would: they read their brief, fill the outputs it lists, write the
 // result JSON it names, change files and make real Git commits. The gates then run the
 // repository's real test command. No doubles: every driver test stages the same repository.
-import { traceDelivery } from './delivery-trace.mjs'
+import { traceDelivery, traceRed } from './delivery-trace.mjs'
 import assert from 'node:assert/strict'
 import { existsSync, mkdirSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs'
 import { dirname, isAbsolute, join } from 'node:path'
@@ -484,8 +484,8 @@ const shortShaOf = (cwd, subject) => git(cwd, 'log', '-1', '--format=%H', '--fix
  */
 export const scenarioReviewText = (cwd, slug = SLUG, visit = 1) => {
   const red = `test(${slug}): pay by card`
-  const log = join(realpathSync(cwd), '.copilot-tracking', 'skraft-plans', slug, 'logs', `distill-${visit}-red.log`)
-  return `Read the 1 scenario of the story before DELIVER builds them: S1 "Customer pays by card" (app; @walking-skeleton). DELIVER makes them pass in one pass and one commit, working the groups in this order: 1. S1. The acceptance tests of every scenario, the walking skeleton and the skeleton of its chain are commit ${shortShaOf(cwd, red)} "${red}": src/pay.mjs, ${FIRST_ACCEPTANCE.path}, tests/unit/check.mjs. skraft does not run them: check that each fails on its own assertion; the designer's run is in ${log}. APPROVED delivers them; REVISE sends DISTILL back with your corrections (edit the .feature or the test yourself first if you like, and say so).`
+  const log = join(realpathSync(cwd), '.copilot-tracking', 'skraft-plans', slug, 'logs', 'runs', `distill-${visit}-1`, '1.log')
+  return `Read the 1 scenario of the story before DELIVER builds them: S1 "Customer pays by card" (app; @walking-skeleton). DELIVER makes them pass in one pass and one commit, working the groups in this order: 1. S1. The acceptance tests of every scenario, the walking skeleton and the skeleton of its chain are commit ${shortShaOf(cwd, red)} "${red}": src/pay.mjs, ${FIRST_ACCEPTANCE.path}, tests/unit/check.mjs. skraft does not run them: check that each fails on its own assertion; the designer's traced run is in ${log}. APPROVED delivers them; REVISE sends DISTILL back with your corrections (edit the .feature or the test yourself first if you like, and say so).`
 }
 
 /**
@@ -499,6 +499,7 @@ export const acceptanceWith = (check) => (brief, { cwd, slug }) => {
   const files = { 'tests/unit/check.mjs': check, 'src/pay.mjs': SKELETON, [FIRST_ACCEPTANCE.path]: FIRST_ACCEPTANCE.text }
   const written = Object.entries(files).every(([path, text]) => existsSync(join(cwd, ...path.split('/'))) && readFileSync(join(cwd, ...path.split('/')), 'utf8') === text)
   if (!written) commit(cwd, `test(${slug}): pay by card`, files, brief)
+  traceRed(cwd, slug)
   writeResult(brief, { status: 'done', summary: 'acceptance tests committed red' })
 }
 

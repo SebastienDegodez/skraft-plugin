@@ -83,7 +83,7 @@ test('the engineer is told every group, the acceptance tests it never changes, t
   ].join('\n')), deliver)
   assert.doesNotMatch(deliver, /Commit each TDD cycle|walking skeleton root-/)
   const plan = promptOf(host, `skraft ${SLUG} · distill · attempt 1`)
-  assert.ok(plan.includes(`- Run the acceptance tests once, sending the whole output to ${TRACKING}/logs/distill-1-red.log, and read it: every acceptance test and the walking skeleton fail, each on its assertion. Then commit them, the skeleton they call and the scenarios in one commit, exactly:`), plan)
+  assert.ok(plan.includes(`- Run the acceptance tests once through \`skraft_repl\`, as \`gate('test', <the component\'s test command>, { cwd, label: 'red' })\`, and read its output: every acceptance test and the walking skeleton fail, each on its assertion. Then commit them, the skeleton they call and the scenarios in one commit, exactly:`), plan)
   assert.match(plan, /\n {2}git commit -s -m "test\(checkout\): acceptance tests S1–S<n>, n the last scenario of your test plan" -m "Refs: #42"\n/)
   const policy = [
     '- How the tests of each component treat what the code depends on, in the scenarios\' acceptance tests (targeted) and in the walking skeleton:',
@@ -257,7 +257,7 @@ test('a human reads the scenarios, their groups, the red and the designer\'s run
 
   assert.equal(outcome.status, 'done', outcome.reason)
   const [first, second] = host.human.questions.filter(({ kind }) => kind === 'scenario-review')
-  const read = (visit) => `Read the 2 scenarios of the story before DELIVER builds them: S1 "Customer pays by card" (api; @walking-skeleton); S2 "Customer is refused an expired card" (api; @error-case). DELIVER makes them pass in one pass and one commit, working the groups in this order: 1. S1, S2. The acceptance tests of every scenario, the walking skeleton and the skeleton of its chain are commit root-1 "test(checkout): acceptance tests S1–S2": tests/Integration/WalkingSkeletonTests.cs, tests/Acceptance/S1AcceptanceTests.cs, tests/Acceptance/S2AcceptanceTests.cs. skraft does not run them: check that each fails on its own assertion; the designer's run is in ${TRACKING}/logs/distill-${visit}-red.log. APPROVED delivers them; REVISE sends DISTILL back with your corrections (edit the .feature or the test yourself first if you like, and say so).`
+  const read = (visit) => `Read the 2 scenarios of the story before DELIVER builds them: S1 "Customer pays by card" (api; @walking-skeleton); S2 "Customer is refused an expired card" (api; @error-case). DELIVER makes them pass in one pass and one commit, working the groups in this order: 1. S1, S2. The acceptance tests of every scenario, the walking skeleton and the skeleton of its chain are commit root-1 "test(checkout): acceptance tests S1–S2": tests/Integration/WalkingSkeletonTests.cs, tests/Acceptance/S1AcceptanceTests.cs, tests/Acceptance/S2AcceptanceTests.cs. skraft does not run them: check that each fails on its own assertion; the designer's traced run is in ${TRACKING}/logs/runs/distill-${visit}-1/1.log. APPROVED delivers them; REVISE sends DISTILL back with your corrections (edit the .feature or the test yourself first if you like, and say so).`
   assert.equal(first.text, read(1))
   assert.equal(second.text, read(2), 'the pass REVISE sent back committed nothing new: the red stands, the designer\'s run is the one of the new pass')
   assert.equal(second.key, 'scenario_review-2')

@@ -42,7 +42,6 @@ The tracking folder lives **in the working copy that starts the run**:
     │   └── verdict.yaml                           the verdict of the pass, written by the engine
     ├── logs/                                      what commands printed
     │   ├── runs/<step>-<visit>-<attempt>/         the traced runs of an attempt: runs.jsonl (signed) and one log per run
-    │   ├── <node>-<visit>-red.log                 the acceptance designer's one run of the acceptance tests, as printed
     │   ├── commit-<node>.log                      what Git printed when it refused a commit of the engine
     │   └── …                                      what the commands an agent runs print
     ├── .tmp/                                      the agents' temporary files
@@ -385,7 +384,6 @@ file, never copy what it holds.
 
 | File | Written when | Content |
 | --- | --- | --- |
-| `logs/<node>-<visit>-red.log` | the acceptance designer's one run of the walking skeleton and the acceptance tests, the path its brief gives | what the test command printed, unchanged; the engine reads none of it, the DISTILL review and the human do |
 | `logs/commit-<node>.log` | Git refuses a commit the engine makes (a hook, a missing identity, a lock): the commit for an agent with no shell, the ADR ratification commit | `$ git commit (<node>)`, `result: git commit failed: exit N`, then `--- output` and what Git printed |
 | any other file of `logs/` | an agent runs a command | what the command printed |
 

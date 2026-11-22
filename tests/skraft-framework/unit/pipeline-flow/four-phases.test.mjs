@@ -58,7 +58,7 @@ test('the nominal run goes through RESEARCH, DESIGN, DISTILL and DELIVER, the tr
     'step.started', 'step.recorded',
     'step.started', 'review.lens', 'review.lens', 'review.lens', 'step.recorded',
     'step.started', 'step.recorded', 'phase.closed', 'issue.comment-skipped',
-    'step.started', 'commits.checked', 'step.recorded',
+    'step.started', 'commits.checked', 'evidence.checked', 'step.recorded',
     'step.started', 'review.lens', 'review.lens', 'review.lens', 'review.lens', 'step.recorded',
     'step.started', 'question.asked', 'question.answered', 'step.recorded', 'phase.closed', 'issue.comment-skipped',
     'step.started', 'commits.checked', 'evidence.checked', 'step.recorded',
@@ -204,7 +204,7 @@ test('each agent is told its story, inputs, outputs, result file and the paths i
     '  crosses the chain the production wiring builds, asserts the response\'s status, its shape and one value S1 names, and no other rule.',
     '- Write the failing acceptance test of every scenario, the binding of its Gherkin entering by its use case, each test\'s name starting with its',
     '  scenario\'s number (`S1_…`, `test_s1_…`); with them, the skeleton of every class they call, each returning an empty value.',
-    `- Run the acceptance tests once, sending the whole output to ${TRACKING}/logs/distill-1-red.log, and read it: every acceptance test and the walking skeleton fail, each on its assertion. Then commit them, the skeleton they call and the scenarios in one commit, exactly:`,
+    `- Run the acceptance tests once through \`skraft_repl\`, as \`gate('test', <the component\'s test command>, { cwd, label: 'red' })\`, and read its output: every acceptance test and the walking skeleton fail, each on its assertion. Then commit them, the skeleton they call and the scenarios in one commit, exactly:`,
     '  git commit -s -m "test(checkout): acceptance tests S1–S<n>, n the last scenario of your test plan" -m "Refs: #42"',
     ...POLICY,
   ].join('\n')), host.agentRunner.dispatches[2].prompt)

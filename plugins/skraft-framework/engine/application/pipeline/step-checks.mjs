@@ -11,7 +11,7 @@ import { checkDesignRecords } from './design-records.mjs'
 import { checkGherkinRecords } from './gherkin-records.mjs'
 import { checkResearchRecords } from './research-records.mjs'
 import { EJECTED } from '../workflow/called-workflows.mjs'
-import { checkEvidence } from './evidence-checks.mjs'
+import { checkEvidence, redRunOf } from './evidence-checks.mjs'
 import { planOf, scenarioFailures, scenarioJudging, scenarioRecord } from './scenario-checks.mjs'
 
 /**
@@ -24,7 +24,7 @@ import { planOf, scenarioFailures, scenarioJudging, scenarioRecord } from './sce
  * @typedef {{
  *   missing: string[], failures: string[], code: FailureCode | null, commits: CheckedCommit[],
  *   environment: null, uncommitted?: UncommittedFile[], scenario?: import('./scenario-checks.mjs').ScenarioRecord,
- *   evidence?: Array<{ run: number, gate: string, cwd: string, log: string, sha256: string }>,
+ *    evidence?: Array<{ run: number, gate: string, cwd: string, log: string, sha256: string }>, red?: boolean,
  * } | { commits: CheckedCommit[], environment: string }} StepCheck
  *   environment: why the machine could not check the step (Git failing); the step then stays
  *   open. uncommitted: the files in its scope the agent changed
@@ -129,19 +129,30 @@ export const checkStep = async (context, step) => {
   const evidence = await evidenceOf(context, step)
   if (typeof evidence === 'string') return { ...environmentOnly(evidence), commits: commits.checked }
   const found = [...resultFailures(read.reading), ...read.records, ...read.plan.failures, ...read.prose, ...read.scope.failures, ...adrLines(adr), ...commits.found, ...evidence.failures]
-  return { ...refusal(read.missing, found, commits), uncommitted: read.scope.uncommitted, scenario: commits.scenario, evidence: evidence.checked }
+  return { ...refusal(read.missing, found, commits), uncommitted: read.scope.uncommitted, scenario: commits.scenario, evidence: evidence.checked, ...(evidence.red === true ? { red: true } : {}) }
 }
 
 /**
  * The runs the REPL traced for an attempt that delivers code, checked against its final commit;
  * nothing for any other role. A string when the machine could not read Git.
  * @param {CheckContext} context @param {Parameters<typeof checkStep>[1]} step
- * @returns {Promise<{ failures: Failure[], checked: Array<{ run: number, gate: string, cwd: string, log: string, sha256: string }> } | string>}
+ * @returns {Promise<{ failures: Failure[], checked: Array<{ run: number, gate: string, cwd: string, log: string, sha256: string }>, red?: boolean } | string>}
  */
 const evidenceOf = async ({ deps, slug, config, base }, { role, evidence }) => {
-  if (role.tdd !== 'cycle' || evidence === null || evidence === undefined) return { failures: [], checked: [] }
+  if (evidence === null || evidence === undefined) return { failures: [], checked: [] }
+  if (role.tdd === 'red') return redEvidence(deps, { slug, folder: evidence.folder, events: evidence.events })
+  if (role.tdd !== 'cycle') return { failures: [], checked: [] }
   const checked = await checkEvidence(deps, { slug, folder: evidence.folder, events: evidence.events, config, base })
   return checked.ok ? { failures: checked.failures, checked: checked.checked } : checked.reason
+}
+
+/**
+ * The designer's traced run of the acceptance tests, labelled `red`: kept for the review, never required.
+ * @param {any} deps @param {{ slug: string, folder: string, events: any[] }} attempt
+ */
+const redEvidence = async (deps, attempt) => {
+  const red = await redRunOf(deps, attempt)
+  return { failures: [], checked: red === null ? [] : [red], red: true }
 }
 
 /**

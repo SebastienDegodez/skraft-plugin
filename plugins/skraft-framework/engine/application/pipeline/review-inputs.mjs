@@ -48,18 +48,26 @@ const runInputs = (facts) => ({
  * the tracking folder. A node the workflow dropped since it ran counts for nothing.
  * @param {RunFacts} facts @returns {ReviewDocuments}
  */
-const documentsOf = ({ workflow, run, phase }) => {
+const documentsOf = ({ workflow, run, phase, events }) => {
   const nodes = Object.entries(run.nodes).filter(([id]) => id in workflow.nodes)
   const ofPhase = (/** @type {boolean} */ same) => nodes
     .filter(([id]) => (workflow.nodes[id].phase === phase) === same)
     .flatMap(([, state]) => writtenBy(state))
   return {
-    outputs: [...new Set(ofPhase(true))],
+    outputs: [...new Set([...ofPhase(true), ...redLogsOf(events, workflow, phase)])],
     context: [...new Set([...run.artifacts, ...ofPhase(false)])],
     artifacts: run.artifacts,
     phases: workflow.phases.map((each) => ({ phase: each, steps: writersOf(workflow, run, each) })).filter(({ steps }) => steps.length > 0),
   }
 }
+
+/**
+ * The output of the designer's traced run of the acceptance tests, labelled `red`, of the nodes of the phase.
+ * @param {RunFacts['events']} events @param {Workflow} workflow @param {string} phase @returns {string[]}
+ */
+const redLogsOf = (events, workflow, phase) => events
+  .filter((event) => event.type === 'evidence.checked' && event.red === true && workflow.nodes[event.step]?.phase === phase)
+  .map((event) => event.runs[0].log)
 
 /**
  * The agent nodes of a phase that ran, each with the documents it filled or wrote.

@@ -39,3 +39,20 @@ const signed = (record, key) => {
   const body = JSON.stringify(record)
   return `${body.slice(0, -1)},"sig":"${createHmac('sha256', key).update(body, 'utf8').digest('hex')}"}`
 }
+
+/**
+ * The designer's run of its acceptance tests, the way `skraft_repl` writes it: one signed line labelled `red`, its log beside it.
+ * @param {string} cwd @param {string} slug
+ */
+export const traceRed = (cwd, slug) => {
+  const events = journal(cwd, slug)
+  const { step, visit, attempt } = events.findLast((event) => event.type === 'step.started')
+  const relative = `logs/runs/${step}-${visit}-${attempt}`
+  const folder = join(cwd, '.copilot-tracking', 'skraft-plans', slug, ...relative.split('/'))
+  mkdirSync(folder, { recursive: true })
+  const key = Buffer.from(readFileSync(join(`${cwd}-home`, '.skraft', 'journal-keys', `${events[0].keyId}.key`), 'utf8').trim(), 'hex')
+  const text = 'check: expected paid 10, got nothing\n'
+  writeFileSync(join(folder, '1.log'), text)
+  const record = { type: 'run', run: 1, cell: 1, at: 'then', command: 'node tests/unit/check.mjs', argv: ['sh', '-c', 'node tests/unit/check.mjs'], shell: 'sh', cwd: '.', gate: 'test', label: 'red', durationMs: 1, exitCode: 1, signal: null, timedOut: false, killed: false, started: true, bytes: text.length, cut: false, sha256: createHash('sha256').update(text).digest('hex'), log: `${relative}/1.log`, headBefore: null, headAfter: null, clean: true }
+  writeFileSync(join(folder, 'runs.jsonl'), `${signed(record, key)}\n`)
+}

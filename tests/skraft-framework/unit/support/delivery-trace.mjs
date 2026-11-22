@@ -50,3 +50,16 @@ export const writeE2eTrace = async (host, { cwd, command, exitCode, folder = 'lo
   await host.tracking.write(host.slug, `${folder}/1.log`, '')
   await host.tracking.write(host.slug, `${folder}/runs.jsonl`, `${await lineOf(host, record, false)}\n`)
 }
+
+/**
+ * The designer's run of its acceptance tests, the way `skraft_repl` writes it: one signed line labelled `red`, its log beside it.
+ * @param {any} host @param {{ step: string, visit: number, attempt: number }} step
+ */
+export const writeRedTrace = async (host, { step, visit, attempt }) => {
+  const folder = `logs/runs/${step}-${visit}-${attempt}`
+  const [first] = componentsOf(host)
+  const text = 'S1_pays: expected paid 10, got nothing\n'
+  const record = { type: 'run', run: 1, cell: 1, at: 'then', command: 'dotnet test', argv: ['sh', '-c', 'dotnet test'], shell: 'sh', cwd: first?.root ?? '.', gate: 'test', label: 'red', durationMs: 1, exitCode: 1, signal: null, timedOut: false, killed: false, started: true, bytes: text.length, cut: false, sha256: await host.deps.hasher.sha256(text), log: `${folder}/1.log`, headBefore: null, headAfter: null, clean: true }
+  await host.tracking.write(host.slug, `${folder}/1.log`, text)
+  await host.tracking.write(host.slug, `${folder}/runs.jsonl`, `${await lineOf(host, record, false)}\n`)
+}

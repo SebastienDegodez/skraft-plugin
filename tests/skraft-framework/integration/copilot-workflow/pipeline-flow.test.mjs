@@ -53,7 +53,7 @@ test('the four phases run on a real repository: each agent commits its part, the
   assert.equal(readFileSync(issue, 'utf8'), `# Issue #42: ${ISSUE.title}\n\n${ISSUE.url}\n\n${ISSUE.body}\n`)
   assert.deepEqual(reviewsOf(events), [['design_review', 1, 'approved', 'adr'], ['distill_review', 1, 'approved', 'scenario_review'], ['scenario_review', 1, 'answered', 'deliver'], ['deliver_review', 1, 'approved', 'visuals']])
   assert.deepEqual(events.filter((event) => event.type === 'phase.closed').map((event) => event.phase), ['RESEARCH', 'DESIGN', 'DISTILL', 'DELIVER', 'PUBLISH'])
-  assert.deepEqual(events.filter((event) => event.type === 'evidence.checked').map(({ step, runs }) => [step, runs.map(({ gate }) => gate)]), [['deliver', ['build', 'format', 'lint', 'test', 'architecture', 'coverage']]])
+  assert.deepEqual(events.filter((event) => event.type === 'evidence.checked').map(({ step, runs }) => [step, runs.map(({ gate }) => gate)]), [['distill', ['test']], ['deliver', ['build', 'format', 'lint', 'test', 'architecture', 'coverage']]])
   assert.deepEqual(events.filter((event) => event.type === 'commits.checked').map(({ step, commits }) => [step, commits.map(({ subject, kind, verdict }) => [subject, kind, verdict])]), [
     ['distill', [[`test(${SLUG}): pay by card`, 'red', 'ok']]],
     ['deliver', [[`feat(${SLUG}): S1 pay by card`, 'green', 'ok']]],

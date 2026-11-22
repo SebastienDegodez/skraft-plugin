@@ -51,7 +51,7 @@ export const redCommits = (events) => {
  * @param {RunEvent[]} events @returns {EvidenceFact[]}
  */
 export const qualityEvidence = (events) => {
-  const checked = events.findLast((event) => event.type === 'evidence.checked')
+  const checked = events.findLast((event) => event.type === 'evidence.checked' && event.red !== true)
   if (checked === undefined) return []
   return checked.runs.map((/** @type {{ gate: string, cwd: string, run: number, log: string }} */ { gate, cwd, run, log }) => ({ gate, folder: cwd, run, log }))
 }
