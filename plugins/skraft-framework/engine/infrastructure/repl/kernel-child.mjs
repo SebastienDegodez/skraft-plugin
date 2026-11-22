@@ -4,6 +4,7 @@ import { PassThrough, Writable } from 'node:stream'
 import { fileURLToPath } from 'node:url'
 import { inspect } from 'node:util'
 import { createOutput } from '../process/output-cut.mjs'
+import { refusalOfKill } from '../../domain/repl/refusals.mjs'
 
 /**
  * The process behind one `skraft_repl` attempt: a `node:repl` server on streams of its own, whose
@@ -52,9 +53,12 @@ class Handle {
 
   poll() { return this.result }
 
-  /** @param {string} [signal] @param {number} [grace] seconds before SIGKILL */
+  /** @param {string} [signal] @param {number} [grace] seconds before SIGKILL @returns {string | undefined} why it is refused; the server refuses it too */
   kill(signal = 'SIGTERM', grace = 5) {
+    const refusal = refusalOfKill(signal, grace)
+    if (refusal !== null) return refusal
     if (this.running) this.kernel.ipc.send({ t: 'kill', rid: this.id, signal, grace })
+    return undefined
   }
 
   /** @param {(value: unknown) => unknown} resolve @param {(error: unknown) => unknown} reject */

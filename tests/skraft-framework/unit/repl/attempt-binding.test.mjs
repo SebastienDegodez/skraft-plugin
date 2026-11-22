@@ -176,6 +176,22 @@ test('a run the cell asks for with a timeout outside 1 to 7200 seconds, an empty
   assert.deepEqual(trace.map(({ type, started }) => [type, started]), [['run', false], ['run', false], ['run', false]])
 })
 
+test('a kill a cell asks for takes SIGTERM, SIGINT or SIGKILL and a grace of 0 to 30 seconds; any other is refused and the program goes on', async () => {
+  const launcher = new ScriptedLauncher()
+  const kernels = new ScriptedKernelHost()
+  kernels.script.set('start', async ({ run }) => { void run('npm run e2e'); return null })
+  const { host } = replRun({ kernels, launcher, calls: { 2: async (repl) => {
+    await repl.call({ code: 'start' })
+    await sleep(10)
+    const { events } = kernels.kernels[0]
+    for (const [signal, grace] of [['SIGTERM', 2e6], ['SIGHUP', 5], ['SIGTERM', 1.5], ['SIGINT', 2]]) events.onKill(1, signal, grace)
+  } } })
+
+  await host.start()
+
+  assert.deepEqual(launcher.started[0].program.killed[0], ['SIGINT', 2000])
+})
+
 test('a run request whose id the server did not expect starts nothing, writes no trace line and throws nothing; the fact goes to unexpected.log', async () => {
   const launcher = new ScriptedLauncher({ outputs: { 'npm test': { exitCode: 0 } } })
   const kernels = new ScriptedKernelHost()

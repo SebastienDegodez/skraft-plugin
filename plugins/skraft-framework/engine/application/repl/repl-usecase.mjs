@@ -4,7 +4,7 @@ import { signingKeyOf } from '../evidence/run-trace-store.mjs'
 import { traceAbsent } from './repl-trace.mjs'
 import { keepUnexpected } from './repl-unexpected.mjs'
 import { bindAttempt, releaseLease, renewLease, takeLease } from './repl-attempt.mjs'
-import { endRuns, liveRuns, recordProcesses, serveRun } from './repl-runs.mjs'
+import { endRuns, killRun, liveRuns, recordProcesses, serveRun } from './repl-runs.mjs'
 
 /**
  * The REPL of an agent's attempt, `skraft_repl`: a JavaScript kernel, one per attempt, whose cells
@@ -181,7 +181,7 @@ const track = (entry, work) => {
 /** What the kernel asks of this server. @param {any} deps @param {Entry} entry @returns {import('../ports/kernel-host.mjs').KernelEvents} */
 const eventsOf = (deps, entry) => ({
   onRun: (request) => track(entry, serveRun(deps, entry, request)),
-  onKill: (rid, signal, graceSeconds) => entry.runs.get(rid)?.program?.kill(signal, graceSeconds * 1000),
+  onKill: (rid, signal, graceSeconds) => killRun(entry, { rid, signal, graceSeconds }),
   onAbsent: (notice) => { track(entry, traceAbsent(deps, entry, notice)) },
   onGone: (why) => { entry.gone = `repl-${why}`; endRuns(entry, 'SIGKILL', 0) },
 })

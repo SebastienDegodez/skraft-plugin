@@ -112,12 +112,22 @@ const settle = (live, { output, seen, timer }, finish) => {
  * @param {Live} live @param {{ signal: NodeJS.Signals, graceMs: number, timedOut: boolean }} how
  */
 const end = (live, { signal, graceMs, timedOut }) => {
-  if (live.ended) return
+  if (live.ended) return timedOut ? overdue(live) : undefined
   live.ended = true
   live.timedOut = timedOut
   live.killed = !timedOut
   if (live.grouped) stopGroup(/** @type {number} */ (live.child.pid), { signal, graceMs })
   else stopTree(live.child)
+}
+
+/**
+ * The time limit passes while a kill's grace runs: the program is timed out and ends now, so
+ * that no grace ever outlasts the limit.
+ * @param {Live} live
+ */
+const overdue = (live) => {
+  live.timedOut = true
+  if (live.grouped) stopGroup(/** @type {number} */ (live.child.pid), { signal: 'SIGKILL', graceMs: 0 })
 }
 
 /** Windows: taskkill ends the tree, then the pipes are let go so the program closes. @param {Live['child']} child */

@@ -29,3 +29,14 @@ export const RUN_REFUSALS = Object.freeze({
   option: 'run() takes a gate and a label that are non-empty texts',
   unknown: 'run() takes only these options: cwd, timeout, gate, label',
 })
+
+/** The signals a cell may end its run with, and the longest grace before SIGKILL, in seconds. */
+export const KILL_SIGNALS = Object.freeze(['SIGTERM', 'SIGINT', 'SIGKILL'])
+export const MAX_GRACE_S = 30
+export const KILL_REFUSAL = 'kill() takes SIGTERM, SIGINT or SIGKILL and a grace of 0 to 30 whole seconds'
+
+/** @param {unknown} signal @param {unknown} grace seconds @returns {string | null} why the kill is refused, null when it is not */
+export const refusalOfKill = (signal, grace) => {
+  const bounded = Number.isInteger(grace) && /** @type {number} */ (grace) >= 0 && /** @type {number} */ (grace) <= MAX_GRACE_S
+  return KILL_SIGNALS.includes(/** @type {string} */ (signal)) && bounded ? null : KILL_REFUSAL
+}

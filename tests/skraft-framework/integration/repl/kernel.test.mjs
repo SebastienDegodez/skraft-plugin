@@ -105,9 +105,9 @@ test('a run that is killed through its handle ends with the signal it was killed
   const { kernel, seen } = await openKernel(t)
 
   await cell(kernel, "const long = run(['" + process.execPath.replaceAll('\\', '\\\\') + "', '-e', 'setInterval(() => {}, 1000)'])")
-  const ended = await cell(kernel, 'await new Promise((r) => setTimeout(r, 300)); long.kill("SIGTERM", 1); const r = await long; [r.killed, r.timedOut, long.running]')
+  const ended = await cell(kernel, 'await new Promise((r) => setTimeout(r, 300)); const refused = long.kill("SIGHUP"); long.kill("SIGTERM", 1); const r = await long; [r.killed, r.timedOut, long.running, refused]')
 
-  assert.equal(ended.value, '[ true, false, false ]')
+  assert.equal(ended.value, "[\n  true,\n  false,\n  false,\n  'kill() takes SIGTERM, SIGINT or SIGKILL and a grace of 0 to 30 whole seconds'\n]")
   assert.deepEqual(seen.killed, [1])
 })
 

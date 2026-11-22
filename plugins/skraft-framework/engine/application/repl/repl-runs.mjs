@@ -1,4 +1,4 @@
-import { RUN_REFUSALS } from '../../domain/repl/refusals.mjs'
+import { RUN_REFUSALS, refusalOfKill } from '../../domain/repl/refusals.mjs'
 import { gitFacts, traceEnd, traceStart } from './repl-trace.mjs'
 import { keepUnexpected } from './repl-unexpected.mjs'
 
@@ -167,6 +167,15 @@ const end = async (deps, entry, run, result) => {
 
 /** The programs of the entry that still run. @param {Entry} entry @returns {Run[]} */
 export const liveRuns = (entry) => [...entry.runs.values()].filter((run) => run.status === 'running')
+
+/**
+ * A kill a cell asked for, bounded: any other signal or grace is refused and the program goes on.
+ * @param {Entry} entry @param {{ rid: number, signal: unknown, graceSeconds: unknown }} kill
+ */
+export const killRun = (entry, { rid, signal, graceSeconds }) => {
+  if (refusalOfKill(signal, graceSeconds) !== null) return
+  entry.runs.get(rid)?.program?.kill(/** @type {string} */ (signal), /** @type {number} */ (graceSeconds) * 1000)
+}
 
 /** Ends every program of the entry, with what each started. @param {Entry} entry @param {string} signal @param {number} graceMs */
 export const endRuns = (entry, signal, graceMs) => {
